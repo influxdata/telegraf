@@ -36,8 +36,7 @@ func getMetric(t *testing.T) telegraf.Metric {
 	return m
 }
 
-func getMetrics(t *testing.T) []telegraf.Metric {
-	const count = 10
+func getMetrics(t *testing.T, count int) []telegraf.Metric {
 	var metrics = make([]telegraf.Metric, count)
 
 	for i := 0; i < count; i++ {
@@ -480,6 +479,8 @@ func TestMaxRequestBodySize(t *testing.T) {
 	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
 	require.NoError(t, err)
 
+	const count = 100
+
 	testcases := []struct {
 		name                 string
 		plugin               func() *SumoLogic
@@ -505,33 +506,83 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.URL = u.String()
 				return s
 			},
-			metrics:              getMetrics(t),
+			metrics:              getMetrics(t, count),
 			expectedError:        false,
 			expectedRequestCount: 1,
 		},
 		{
-			name: "max request body size properly splits requests - max 2500",
+			name: "when short by at least 1B the request is split",
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 2500
+				// getMetrics returns metrics that serialized (using carbon2),
+				// uncompressed size is 43750B
+				s.MaxRequstBodySize = 43_749
 				return s
 			},
-			metrics:              getMetrics(t),
+			metrics:              getMetrics(t, count),
 			expectedError:        false,
 			expectedRequestCount: 2,
 		},
 		{
-			name: "max request body size properly splits requests - max 1000",
+			name: "max request body size properly splits requests - max 10_000",
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 1000
+				s.MaxRequstBodySize = 10_000
 				return s
 			},
-			metrics:              getMetrics(t),
+			metrics:              getMetrics(t, count),
 			expectedError:        false,
 			expectedRequestCount: 5,
+		},
+		{
+			name: "max request body size properly splits requests - max 5_000",
+			plugin: func() *SumoLogic {
+				s := Default()
+				s.URL = u.String()
+				s.MaxRequstBodySize = 5_000
+				return s
+			},
+			metrics:              getMetrics(t, count),
+			expectedError:        false,
+			expectedRequestCount: 10,
+		},
+		{
+			name: "max request body size properly splits requests - max 2_500",
+			plugin: func() *SumoLogic {
+				s := Default()
+				s.URL = u.String()
+				s.MaxRequstBodySize = 2_500
+				return s
+			},
+			metrics:              getMetrics(t, count),
+			expectedError:        false,
+			expectedRequestCount: 20,
+		},
+		{
+			name: "max request body size properly splits requests - max 1_000",
+			plugin: func() *SumoLogic {
+				s := Default()
+				s.URL = u.String()
+				s.MaxRequstBodySize = 1_000
+				return s
+			},
+			metrics:              getMetrics(t, count),
+			expectedError:        false,
+			expectedRequestCount: 50,
+		},
+		{
+			name: "max request body size properly splits requests - max 500",
+			plugin: func() *SumoLogic {
+				s := Default()
+				s.URL = u.String()
+				s.MaxRequstBodySize = 500
+				return s
+			},
+			metrics:              getMetrics(t, count),
+			expectedError:        false,
+			expectedRequestCount: 100,
 		},
 		{
 			name: "max request body size properly splits requests - max 300",
@@ -541,25 +592,25 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.MaxRequstBodySize = 300
 				return s
 			},
-			metrics:              getMetrics(t),
+			metrics:              getMetrics(t, count),
 			expectedError:        false,
-			expectedRequestCount: 10,
+			expectedRequestCount: 100,
 		},
 	}
 
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			var requestCount int
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				requestCount++
-				w.WriteHeader(http.StatusOK)
-			})
-
 			serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
 			require.NoError(t, err)
 
 			plugin := tt.plugin()
 			plugin.SetSerializer(serializer)
+
+			var requestCount int
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requestCount++
+				w.WriteHeader(http.StatusOK)
+			})
 
 			err = plugin.Connect()
 			require.NoError(t, err)
@@ -573,4 +624,26 @@ func TestMaxRequestBodySize(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTryingToSendEmptyMetricsDoesntFail(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	metrics := make([]telegraf.Metric, 0)
+	plugin := Default()
+	plugin.URL = u.String()
+
+	serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
+	require.NoError(t, err)
+	plugin.SetSerializer(serializer)
+
+	err = plugin.Connect()
+	require.NoError(t, err)
+
+	err = plugin.Write(metrics)
+	require.NoError(t, err)
 }

@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -189,6 +190,9 @@ func (s *SumoLogic) Write(metrics []telegraf.Metric) error {
 	if s.serializer == nil {
 		return errors.New("sumologic: serializer unset")
 	}
+	if len(metrics) == 0 {
+		return nil
+	}
 
 	reqBody, err := s.serializer.SerializeBatch(metrics)
 	if err != nil {
@@ -196,26 +200,9 @@ func (s *SumoLogic) Write(metrics []telegraf.Metric) error {
 	}
 
 	if l := len(reqBody); l > int(s.MaxRequstBodySize) {
-		var (
-			// Do the rounded up integer division
-			numChunks  = (l + int(s.MaxRequstBodySize) - 1) / int(s.MaxRequstBodySize)
-			chunks     = make([][]byte, 0, numChunks)
-			numMetrics = len(metrics)
-			// Do the rounded up integer division
-			stepMetrics = (numMetrics + numChunks - 1) / numChunks
-		)
-
-		for i := 0; i < numMetrics; i += stepMetrics {
-			boundary := i + stepMetrics
-			if boundary > numMetrics {
-				boundary = numMetrics - 1
-			}
-
-			chunkBody, err := s.serializer.SerializeBatch(metrics[i:boundary])
-			if err != nil {
-				return err
-			}
-			chunks = append(chunks, chunkBody)
+		chunks, err := s.splitIntoChunks(metrics)
+		if err != nil {
+			return err
 		}
 
 		return s.writeRequestChunks(chunks)
@@ -280,6 +267,68 @@ func (s *SumoLogic) write(reqBody []byte) error {
 	}
 
 	return nil
+}
+
+// splitIntoChunks splits metrics to be sent into chunks so that every request
+// is smaller than s.MaxRequstBodySize unless it was configured so small so that
+// even a single metric cannot fit.
+// In such a situation metrics will be sent one by one with a warning being logged
+// for every request sent even though they don't fit in s.MaxRequstBodySize bytes.
+func (s *SumoLogic) splitIntoChunks(metrics []telegraf.Metric) ([][]byte, error) {
+	var (
+		numMetrics = len(metrics)
+		chunks     = make([][]byte, 0)
+	)
+
+	for i := 0; i < numMetrics; {
+		var toAppend []byte
+		for i < numMetrics {
+			chunkBody, err := s.serializer.Serialize(metrics[i])
+			if err != nil {
+				return nil, err
+			}
+
+			la := len(toAppend)
+			if la != 0 {
+				// We already have something to append ...
+				if la+len(chunkBody) > int(s.MaxRequstBodySize) {
+					// ... and it's just the right size, without currently processed chunk.
+					break
+				} else {
+					// ... we can try appending more.
+					i++
+					toAppend = append(toAppend, chunkBody...)
+					continue
+				}
+			} else { // la == 0
+				i++
+				toAppend = chunkBody
+
+				if len(chunkBody) > int(s.MaxRequstBodySize) {
+					log.Printf(
+						"W! [SumoLogic] max_request_body_size set to %d which is too small even for a single metric (len: %d), sending without split",
+						s.MaxRequstBodySize, len(chunkBody),
+					)
+
+					// The serialized metric is too big but we have no choice
+					// but to send it.
+					// max_request_body_size was set so small that it wouldn't
+					// even accomodate a single metric.
+					break
+				}
+
+				continue
+			}
+		}
+
+		if toAppend == nil {
+			break
+		}
+
+		chunks = append(chunks, toAppend)
+	}
+
+	return chunks, nil
 }
 
 func setHeaderIfSetInConfig(r *http.Request, h header, value string) {
