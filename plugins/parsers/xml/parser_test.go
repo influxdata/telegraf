@@ -84,6 +84,7 @@ func TestMergeNodes(t *testing.T) {
 	p := XMLParser{
 		MetricName: "xml_test",
 		MergeNodes: true,
+		DetectType: true,
 	}
 
 	metrics, err := p.Parse([]byte(dataOnlyInNodes))
@@ -106,6 +107,7 @@ func TestMultiplueNodes(t *testing.T) {
 		MetricName: "xml_test",
 		MergeNodes: false,
 		TagNode:    true,
+		DetectType: true,
 		Query:      "//VHost/*",
 		TagKeys:    []string{"Name"},
 	}
@@ -146,6 +148,7 @@ func TestArrayParsing(t *testing.T) {
 		MetricName: "xml_test",
 		ParseArray: true,
 		TagNode:    true,
+		DetectType: true,
 		Query:      "//Data/*",
 		Tags:       []string{"//Extra"},
 		Fields:     []string{"../../Extra/@value"},

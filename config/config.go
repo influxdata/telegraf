@@ -1433,7 +1433,8 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 
 func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	c := &parsers.Config{
-		JSONStrict: true,
+		JSONStrict:    true,
+		XMLDetectType: true,
 	}
 
 	if node, ok := tbl.Fields["data_format"]; ok {
@@ -1876,6 +1877,18 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["xml_type_detection"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.Boolean); ok {
+				val, err := strconv.ParseBool(str.Value)
+				c.XMLDetectType = val
+				if err != nil {
+					return nil, fmt.Errorf("E! parsing to bool: %v", err)
+				}
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["xml_query"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -1955,6 +1968,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "xml_merge_nodes")
 	delete(tbl.Fields, "xml_node_to_tag")
 	delete(tbl.Fields, "xml_array")
+	delete(tbl.Fields, "xml_type_detection")
 	delete(tbl.Fields, "xml_query")
 	delete(tbl.Fields, "xml_tags")
 	delete(tbl.Fields, "xml_fields")

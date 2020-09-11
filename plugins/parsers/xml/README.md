@@ -26,6 +26,10 @@ This plugin using [etree package](https://github.com/beevik/etree)
   ##  If xml_node_to_tag equals "true", the name of the node is recorded 
   ##  in the tags with the key "xml_node_name". Default - false
   xml_node_to_tag = true
+
+  ##  Indicates whether the parser will dynamically determine the data type 
+  ##  in an element. Default - true
+  xml_type_detection = true
   
   ##  Selected nodes or attributes will be added to each metric
   ##  Queries can be absolute or relative - in this case, 
@@ -196,15 +200,21 @@ Note:
  - even if the query returns multiple nodes, the value is fetched only from the first
  - аdditional tags and fields are extracted from the document and added to the metric after analyzing the current node  
  This means that if the tag or field name matches the one already extracted, the key will be overwritten
- - the syntax for getting the attribute value given in the example (`//Name/@custom`) is unique and works only in this parameters
-
-
+ - the syntax for getting the attribute value given in the example (`../../Server/@hosts_count`) is unique and works only in this parameters
+This is due to the fact that the package used was originally intended for easy navigation through document nodes.  
+If you miss the capabilities provided by the parser, please open an issue with a description of the case - we will consider the possibility of switching to another library for working with XML.
+  
 You can find more information about XPath queries in the [documentation for the etree package](https://pkg.go.dev/github.com/beevik/etree?tab=doc#Path).  
+
+#### xml_type_detection
+By default, each value sequentially passes conversion attempts to Int64, Float64 and Boolean using **strconv**. If the conversion was successful, the result of the conversion is written in the field, otherwise the string is returned.
+  
+Since XML itself does not provide the ability to unambiguously determine the data type, you may want to control this yourself.  
+When this parameter is `false`, all fields are written as strings. After that, you can convert each field to the type you want using [converter processor](../../../plugins/processors/converter).
+
+
+### Metrics
+If the node or attribute value contains only *\s*, *\t*, *\r* or *\n* characters, it will be discarded.
   
 If your XML document is complex, you can try using [execd processor plugin](../../../plugins/processors/execd). Get your document through the [value parser](../value), and then use custom processor to retrieve data.
 
-### Metrics
-
-If the node or attribute value contains only *\s*, *\t*, *\r* or *\n* characters, it will be discarded.  
-Each value sequentially passes conversion attempts to Int64, Float64 and Boolean using **strconv**.  
-If the conversion was successful, the result of the conversion is written in the field, otherwise the string is returned.

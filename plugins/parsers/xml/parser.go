@@ -25,6 +25,7 @@ type XMLParser struct {
 	MergeNodes  bool
 	ParseArray  bool
 	TagNode     bool
+	DetectType  bool
 	Query       string
 	Tags        []string
 	Fields      []string
@@ -36,6 +37,7 @@ func NewXMLParser(
 	xmlMergeNodes bool,
 	xmlTagNode bool,
 	xmlParseArray bool,
+	xmlDetectType bool,
 	xmlQuery string,
 	xmlTags []string,
 	xmlFields []string,
@@ -52,6 +54,7 @@ func NewXMLParser(
 		MergeNodes:  xmlMergeNodes,
 		TagNode:     xmlTagNode,
 		ParseArray:  xmlParseArray,
+		DetectType:  xmlDetectType,
 		Query:       xmlQuery,
 		Tags:        xmlTags,
 		Fields:      xmlFields,
@@ -188,7 +191,7 @@ func (p *XMLParser) ParseXmlNode(node *etree.Element) (tags map[string]string, f
 		if p.isTag(node.Tag) {
 			tags[node.Tag] = node.Text()
 		} else {
-			fields[node.Tag] = convertField(node.Text())
+			fields[node.Tag] = p.convertField(node.Text())
 		}
 	}
 
@@ -200,7 +203,7 @@ func (p *XMLParser) ParseXmlNode(node *etree.Element) (tags map[string]string, f
 				if p.isTag(e.Key) {
 					tags[e.Key] = e.Value
 				} else {
-					fields[e.Key] = convertField(e.Value)
+					fields[e.Key] = p.convertField(e.Value)
 				}
 			}
 		}
@@ -225,7 +228,7 @@ func (p *XMLParser) GetExtraValues(doc *etree.Element) (tags map[string]string, 
 		for _, q := range p.Fields {
 			k, v := selectSingleValue(doc, q)
 			if (k != "") && (v != "") {
-				fields[k] = convertField(v)
+				fields[k] = p.convertField(v)
 			}
 		}
 	}
@@ -275,6 +278,22 @@ func (p *XMLParser) isTag(str string) bool {
 	return false
 }
 
+func (p *XMLParser) convertField(value string) interface{} {
+	if p.DetectType {
+		if i, err := strconv.ParseInt(value, 10, 64); err == nil {
+			return i
+		} else if f, err := strconv.ParseFloat(value, 64); err == nil {
+			return f
+		} else if b, err := strconv.ParseBool(value); err == nil {
+			return b
+		} else {
+			return value
+		}
+	} else {
+		return value
+	}
+}
+
 func mergeTwoFieldMaps(parent map[string]interface{}, child map[string]interface{}) map[string]interface{} {
 	for key, value := range child {
 		parent[key] = value
@@ -287,18 +306,6 @@ func mergeTwoTagMaps(parent map[string]string, child map[string]string) map[stri
 		parent[key] = value
 	}
 	return parent
-}
-
-func convertField(value string) interface{} {
-	if i, err := strconv.ParseInt(value, 10, 64); err == nil {
-		return i
-	} else if f, err := strconv.ParseFloat(value, 64); err == nil {
-		return f
-	} else if b, err := strconv.ParseBool(value); err == nil {
-		return b
-	} else {
-		return value
-	}
 }
 
 func trimEmptyChars(s string) string {
