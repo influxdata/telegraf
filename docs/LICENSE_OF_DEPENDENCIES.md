@@ -94,6 +94,7 @@ following works:
 - github.com/kubernetes/apimachinery [Apache License 2.0](https://github.com/kubernetes/apimachinery/blob/master/LICENSE)
 - github.com/leodido/ragel-machinery [MIT License](https://github.com/leodido/ragel-machinery/blob/develop/LICENSE)
 - github.com/mailru/easyjson [MIT License](https://github.com/mailru/easyjson/blob/master/LICENSE)
+- github.com/mattn/go-sqlite3 [MIT License](https://github.com/mattn/go-sqlite3/blob/master/LICENSE)
 - github.com/matttproud/golang_protobuf_extensions [Apache License 2.0](https://github.com/matttproud/golang_protobuf_extensions/blob/master/LICENSE)
 - github.com/mdlayher/apcupsd [MIT License](https://github.com/mdlayher/apcupsd/blob/master/LICENSE.md)
 - github.com/mdlayher/genetlink [MIT License](https://github.com/mdlayher/genetlink/blob/master/LICENSE.md)
