@@ -329,7 +329,7 @@ var (
 				"name":   "Temperature_Sensor_3",
 			},
 			map[string]interface{}{
-				"raw_value": 9223372036854775807,
+				"raw_value": int64(9223372036854775807),
 			},
 			time.Unix(0, 0),
 		),
@@ -340,7 +340,7 @@ var (
 				"name":   "Temperature_Sensor_4",
 			},
 			map[string]interface{}{
-				"raw_value": -9223372036854775808,
+				"raw_value": int64(-9223372036854775808),
 			},
 			time.Unix(0, 0),
 		),
