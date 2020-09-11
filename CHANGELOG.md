@@ -1,4 +1,4 @@
-## v1.15.3 [2020-08-30]
+## v1.15.3 [2020-09-11]
 
 #### Release Notes
 
@@ -30,14 +30,6 @@
 - [#7905](https://github.com/influxdata/telegraf/issues/7905): Fix RPM /var/log/telegraf permissions
 - [#7880](https://github.com/influxdata/telegraf/issues/7880): Fix tail following on EOF
 
-## v1.15.1 [2020-07-22]
-
-#### Bugfixes
-
-- [#7877](https://github.com/influxdata/telegraf/pull/7877): Fix architecture in non-amd64 deb and rpm packages.
-
-## v1.15.0 [2020-07-22]
-## v1.15 [unreleased]
 ## v1.15.1 [2020-07-22]
 
 #### Bugfixes
