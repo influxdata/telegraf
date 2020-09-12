@@ -465,13 +465,19 @@ SET @SqlStatement = @SqlStatement + CAST(N' WHERE	(
 				''Readahead pages/sec'',
 				''Lazy writes/sec'',
 				''Checkpoint pages/sec'',
+				''Free pages'',
+				''Extension free pages'',
+				''Table Lock Escalations/sec'',
 				''Page life expectancy'',
 				''Log File(s) Size (KB)'',
 				''Log File(s) Used Size (KB)'',
 				''Data File(s) Size (KB)'',
 				''Transactions/sec'',
 				''Write Transactions/sec'',
+				''Active Transactions'',
+				''Log Growths'',
 				''Active Temp Tables'',
+				''Logical Connections'',
 				''Temp Tables Creation Rate'',
 				''Temp Tables For Destruction'',
 				''Free Space in tempdb (KB)'',
@@ -527,7 +533,10 @@ SET @SqlStatement = @SqlStatement + CAST(N' WHERE	(
 				''Redo Queue KB'',
 				''Mirrored Write Transactions/sec'',
 				''Group Commit Time'',
-				''Group Commits/Sec''
+				''Group Commits/Sec'',
+				''Distributed Query'',
+				''DTC calls'',
+				''Query Store CPU usage''
 			)
 		) OR (
 			object_name LIKE ''%User Settable%''
