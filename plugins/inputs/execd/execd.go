@@ -98,12 +98,11 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 				"not as a space-delimited string. See the plugin readme for an example.")
 		}
 		return fmt.Errorf("failed to start process %s: %w", e.Command, err)
-	} else {
-		if len(e.WriteOnStart) > 0 {
-			if _, err := io.WriteString(e.process.Stdin, e.WriteOnStart); err != nil {
+	}
+	if len(e.WriteOnStart) > 0 {
+		if _, err := io.WriteString(e.process.Stdin, e.WriteOnStart); err != nil {
 
-				return fmt.Errorf("Error writing to process's stdin: %s", err)
-			}
+			return fmt.Errorf("Error writing to process's stdin: %s", err)
 		}
 	}
 
@@ -165,7 +164,7 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
-	for	scanner.Scan() {
+	for scanner.Scan() {
 		e.Log.Errorf("stderr: %q", scanner.Text())
 	}
 
