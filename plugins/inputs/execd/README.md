@@ -48,12 +48,12 @@ telegraf's configuration has been refreshed via a SIGHUP.
   ## standard input, as if a user had typed them or redirected them from
   ## a file.  Exed allows this by setting a write_on_start parameter.
   ## 
-  ## !IMPORTANT! This setting is ignored unless signal="STDIN".
-  ## !IMPORTANT! Newlines are not automatic - add \n if you want one.  
+  ## !IMPORTANT! Newlines are not automatic - add \n if you want one.
+  ## (You can also send a null character with \000)  
   ##
   ## write_on_start is sent ONCE when the daemon is started.  If this string is
-  ## not specified or is zero-length, nothing is sent.  Note that TOM supports
-  ## multi-line string inputs.
+  ## not specified or is zero-length, nothing is sent.
+  ##
   write_on_start=""
 
   ## String to trigger periodic Gather (metric updates) from daemon
