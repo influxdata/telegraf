@@ -145,14 +145,6 @@ func (p *Process) cmdLoop(ctx context.Context) error {
 			if p.RestartNotificationFn != nil {
 				p.RestartNotificationFn(p)
 			}
-
-			/*
-			 * Restart appears to have been successful.  If the caller
-			 * has requested they be notified on restart do so here.
-			 */
-			if p.RestartNotificationFn != nil {
-				p.RestartNotificationFn(p)
-			}
 		}
 	}
 }
