@@ -54,6 +54,10 @@ telegraf's configuration has been refreshed via a SIGHUP.
   ## write_on_start is sent ONCE when the daemon is started.  If this string is
   ## not specified or is zero-length, nothing is sent.
   ##
+  ## !IMPORTANT! Newlines are not automatic - add \n if you want one.  
+  ##
+  ## write_on_start is sent ONCE when the daemon is started.  If this string is
+  ## not specified or is zero-length, nothing is sent.
   write_on_start=""
 
   ## String to trigger periodic Gather (metric updates) from daemon
