@@ -111,8 +111,7 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 }
 
 func (e *Execd) Stop() {
-	e.process.Stdin.Close()
-	e.process.Stop()
+	e.process.Stop() /* also closes stdin */
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
@@ -166,7 +165,7 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
-	for scanner.Scan() {
+	for	scanner.Scan() {
 		e.Log.Errorf("stderr: %q", scanner.Text())
 	}
 
