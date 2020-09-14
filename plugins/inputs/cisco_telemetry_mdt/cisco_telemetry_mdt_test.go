@@ -238,6 +238,7 @@ func TestHandleNXAPI(t *testing.T) {
 	// error is expected since we are passing in dummy transport
 	require.Error(t, err)
 
+
 	telemetry := &telemetry.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "show nxapi",
@@ -311,9 +312,9 @@ func TestHandleNXAPI(t *testing.T) {
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
 
-	tags1 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i1", "source": "hostname", "subscription": "subscription"}
+	tags1 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i1", "row_number":"0", "source": "hostname", "subscription": "subscription"}
 	fields1 := map[string]interface{}{"value": "foo"}
-	tags2 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i2", "source": "hostname", "subscription": "subscription"}
+	tags2 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i2", "row_number":"0", "source": "hostname", "subscription": "subscription"}
 	fields2 := map[string]interface{}{"value": "bar"}
 	acc.AssertContainsTaggedFields(t, "nxapi", fields1, tags1)
 	acc.AssertContainsTaggedFields(t, "nxapi", fields2, tags2)
