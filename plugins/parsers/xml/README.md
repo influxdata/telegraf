@@ -190,7 +190,7 @@ When this parameter is `false`, all fields are written as strings. After that, y
 If the node or attribute value contains only *\s*, *\t*, *\r* or *\n* characters, it will be discarded.
   
 
-When composing the name of a tag or field, the index of the element in the tree is taken into account. So, if several nodes with the same name are found at the same level, an index will be added to the key. Index counting starts from zero.  
+When composing a tag or field name, the element's index in the tree is added to the path. So, if several nodes with the same name are found at the same level, an index will be added to the key. Index counting starts from zero.  
 Example:
 ```xml
 <?xml version="1.0"?>
