@@ -193,35 +193,52 @@ If the node or attribute value contains only *\s*, *\t*, *\r* or *\n* characters
 When composing the name of a tag or field, the index of the element in the tree is taken into account. So, if several nodes with the same name are found at the same level, an index will be added to the key. Index counting starts from zero.  
 Example:
 ```xml
-<DATA>
-    <INDEXES>
-        <INDEX>
-            <ID>1</ID>
-            <NAME>Primary</NAME>
-            <KEY_SIZE>8</KEY_SIZE>
-        </INDEX>
-        <INDEX>
-            <ID>2</ID>
-            <NAME>Secondary</NAME>
-            <KEY_SIZE>4</KEY_SIZE>
-        </INDEX>
-        <RECORD_COUNT>270</RECORD_COUNT>
-        <MEMORY_USED>19440</MEMORY_USED>
-        <MEMORY_ALLOCATED>34624</MEMORY_ALLOCATED>
-    </INDEXES>
-</DATA>
+<?xml version="1.0"?>
+<Gateway>
+  <Name attr="NEW_NAME">Main_Gateway</Name>
+  <Timestamp>2020-08-01T15:04:03Z</Timestamp>
+  <Sequence>12</Sequence>
+  <Status>ok</Status>
+</Gateway>
+
+<Bus>
+  <Sensor name="Sensor Facility A">
+    <Variable temperature="20.0"/>
+    <Variable power="123.4"/>
+    <Variable frequency="49.78"/>
+    <Variable consumers="3"/>
+    <Mode>busy</Mode>
+  </Sensor>
+  <Sensor name="Sensor Facility B">
+    <Variable temperature="23.1"/>
+    <Variable power="14.3"/>
+    <Variable frequency="49.78"/>
+    <Variable consumers="1"/>
+    <Mode>standby</Mode>
+  </Sensor>
+  <Sensor name="Sensor Facility C">
+    <Variable temperature="19.7"/>
+    <Variable power="0.02"/>
+    <Variable frequency="49.78"/>
+    <Variable consumers="0"/>
+    <Mode>error</Mode>
+  </Sensor>
+</Bus>
 ```
 Configuration:
 ```toml
 [[inputs.file]]
   files = [ "data.xml" ]
   data_format = "xml"
-  xml_query = "/DATA/"
-  xml_merge_nodes = true
+  xml_query = "/Bus/Sensor"
+  xml_array = true
+  tag_keys = [ "@name" ]
 ```
 Output:
 ```
-file DATA_INDEXES_INDEX_0_ID=1i,DATA_INDEXES_INDEX_0_KEY_SIZE=8i,DATA_INDEXES_INDEX_0_NAME="Primary",DATA_INDEXES_INDEX_1_ID=2i,DATA_INDEXES_INDEX_1_KEY_SIZE=4i,DATA_INDEXES_INDEX_1_NAME="Secondary",DATA_INDEXES_MEMORY_ALLOCATED=34624i,DATA_INDEXES_MEMORY_USED=19440i,DATA_INDEXES_RECORD_COUNT=270i 1600031792000000000
+file,@name=Sensor\ Facility\ A Mode=1i,Variable_0@temperature=20,Variable_1@power=123.4,Variable_2@frequency=49.78,Variable_3@consumers=3i 1600063993000000000
+file,@name=Sensor\ Facility\ B Mode=1i,Variable_0@temperature=23.1,Variable_1@power=14.3,Variable_2@frequency=49.78,Variable_3@consumers=1i 1600063993000000000
+file,@name=Sensor\ Facility\ C Mode=0i,Variable_0@temperature=19.7,Variable_1@power=0.02,Variable_2@frequency=49.78,Variable_3@consumers=0i 1600063993000000000
 ```
   
 If your XML document is complex, you can try using [execd processor plugin](../../../plugins/processors/execd). Get your document through the [value parser](../value), and then use custom processor to retrieve data.
