@@ -410,6 +410,7 @@ For documentation on the latest development code see the [documentation index][d
 * [cratedb](./plugins/outputs/cratedb)
 * [datadog](./plugins/outputs/datadog)
 * [discard](./plugins/outputs/discard)
+* [dynatrace](./plugins/outputs/dynatrace)
 * [elasticsearch](./plugins/outputs/elasticsearch)
 * [exec](./plugins/outputs/exec)
 * [execd](./plugins/outputs/execd)
@@ -436,3 +437,4 @@ For documentation on the latest development code see the [documentation index][d
 * [udp](./plugins/outputs/socket_writer)
 * [warp10](./plugins/outputs/warp10)
 * [wavefront](./plugins/outputs/wavefront)
+* [sumologic](./plugins/outputs/sumologic)

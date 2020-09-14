@@ -1,3 +1,58 @@
+## v1.16.0 [unreleased]
+
+#### Release Notes
+
+  - Many documentation updates
+  - New [code examples](https://github.com/influxdata/telegraf/tree/master/plugins/processors/starlark/testdata) for the [Starlark processor](https://github.com/influxdata/telegraf/blob/master/plugins/processors/starlark/README.md)
+  - [#7837](https://github.com/influxdata/telegraf/pull/7837) `build` update Go versions: 1.14.5, 1.13.13
+  - [#7920](https://github.com/influxdata/telegraf/pull/7920) `inputs.rabbitmq` remove deprecated healthcheck
+
+#### Features
+
+  - [#7814](https://github.com/influxdata/telegraf/pull/7814) `agent` Send metrics in FIFO order
+  - [#7869](https://github.com/influxdata/telegraf/pull/7869) `inputs.modbus` extend support of fixed point values on input
+  - [#7870](https://github.com/influxdata/telegraf/pull/7870) `inputs.mongodb` Added new metric "pages written from cache"
+  - [#7808](https://github.com/influxdata/telegraf/pull/7808) `inputs.sqlserver` added new counter - Lock Timeouts (timeout > 0)/sec
+  - [#7904](https://github.com/influxdata/telegraf/pull/7904) `inputs.clickhouse` add additional metrics to clickhouse input plugin
+  - [#7986](https://github.com/influxdata/telegraf/pull/7986) `inputs.http_listener_v2` make http header tags case insensitive
+
+#### Bugfixes
+
+  - [#7819](https://github.com/influxdata/telegraf/pull/7819) `inputs.tail` Close file to ensure it has been flushed
+  - [#7818](https://github.com/influxdata/telegraf/pull/7818) `build` Fix darwin package build flags
+  - [#7816](https://github.com/influxdata/telegraf/pull/7816) `shim` fix bug with loading plugins in shim with no config
+  - [#7867](https://github.com/influxdata/telegraf/pull/7867) `agent` fix issue with execd restart_delay being ignored
+  - [#7908](https://github.com/influxdata/telegraf/pull/7908) `outputs.opentsdb` now skips NaN and Inf JSON values
+
+#### New Input Plugins
+
+- [proxmox](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/proxmox/README.md) - Contributed by @effitient
+- [opcua](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/opcua/README.md) - Contributed by @influxdata
+
+#### New Output Plugins
+
+- [dynatrace](https://github.com/influxdata/telegraf/blob/master/plugins/outputs/dynatrace/README.md) - Contributed by @thschue
+- [sumologic](https://github.com/influxdata/telegraf/blob/master/plugins/outputs/dynatrace/README.md) - Contributed by @pmalek-sumo
+
+<!--
+#### New Processor Plugins
+#### New Aggregator Plugins
+-->
+
+#### New External Plugins
+
+  See [EXTERNAL_PLUGINS.md](https://github.com/influxdata/telegraf/blob/master/EXTERNAL_PLUGINS.md) for a full list of external plugins
+
+  - [awsalarms](https://github.com/vipinvkmenon/awsalarms) - Simple plugin to gather/monitor alarms generated  in AWS.
+  - [youtube-telegraf-plugin](https://github.com/inabagumi/youtube-telegraf-plugin) - Gather view and subscriber stats from your youtube videos
+
+## v1.15.2 [2020-07-31]
+
+#### Bugfixes
+
+- [#7905](https://github.com/influxdata/telegraf/issues/7905): Fix RPM /var/log/telegraf permissions
+- [#7880](https://github.com/influxdata/telegraf/issues/7880): Fix tail following on EOF
+
 ## v1.15.1 [2020-07-22]
 
 #### Bugfixes
