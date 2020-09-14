@@ -90,7 +90,7 @@ func TestSampleConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := &Snmp{
-		Agents: []string{"udp://127.0.0.1:161"},
+		Agents:       []string{"udp://127.0.0.1:161"},
 		AgentHostTag: "",
 		ClientConfig: config.ClientConfig{
 			Timeout:        internal.Duration{Duration: 5 * time.Second},
