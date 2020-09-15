@@ -8,9 +8,9 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
-	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -43,9 +43,9 @@ type Prometheus struct {
 	// Basic authentication credentials
 	Username string `toml:"username"`
 	Password string `toml:"password"`
-	
+
 	// Headers map
-	Headers         map[string]string
+	Headers map[string]string
 
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
@@ -71,7 +71,6 @@ type Prometheus struct {
 var sampleConfig = `
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
-
   ## Metric version controls the mapping from Prometheus metrics into
   ## Telegraf metrics.  When using the prometheus_client output, use the same
   ## value in both plugins to ensure metrics are round-tripped without
@@ -80,16 +79,12 @@ var sampleConfig = `
   ##   example: metric_version = 1; deprecated in 1.13
   ##            metric_version = 2; recommended version
   # metric_version = 1
-
   ## Url tag name (tag containing scrapped url. optional, default is "url")
   # url_tag = "scrapeUrl"
-
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
-
   ## Kubernetes config file to create client from.
   # kube_config = "/path/to/kubernetes.config"
-
   ## Scrape Kubernetes pods for the following prometheus annotations:
   ## - prometheus.io/scrape: Enable scraping for this pod
   ## - prometheus.io/scheme: If the metrics endpoint is secured then you will need to
@@ -105,25 +100,20 @@ var sampleConfig = `
   # field selector to target pods
   # eg. To scrape pods on a specific node
   # kubernetes_field_selector = "spec.nodeName=$HOSTNAME"
-
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   # bearer_token = "/path/to/bearer/token"
   ## OR
   # bearer_token_string = "abc_123"
-
   ## HTTP Basic Authentication username and password. ('bearer_token' and
   ## 'bearer_token_string' take priority)
   # username = ""
   # password = ""
-
   ## HTTP Headers (all values must be strings)
   # [inputs.prometheus.headers]
   #   X-Auth-Token = "my-xauth-token"
   #   apiVersion = "v1"
-
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
-
   ## Optional TLS Config
   # tls_ca = /path/to/cafile
   # tls_cert = /path/to/certfile
@@ -309,7 +299,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	} else if p.Username != "" || p.Password != "" {
 		req.SetBasicAuth(p.Username, p.Password)
 	}
-	
+
 	// Add header parameters
 	for k, v := range p.Headers {
 		if strings.ToLower(k) == "host" {
