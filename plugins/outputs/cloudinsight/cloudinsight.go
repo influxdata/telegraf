@@ -156,7 +156,7 @@ func (c *CloudInsight) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	var data []interface{} // -> map[string]interface{}{}
+	var data []interface{}
 	for _, m := range cimetrics {
 		e := map[string]interface{}{}
 		for n, v := range m.Dimensions {

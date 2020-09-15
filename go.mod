@@ -2,8 +2,6 @@ module github.com/influxdata/telegraf
 
 go 1.15
 
-replace github.com/Azure/go-autorest/autorest => github.com/samjegal/go-autorest/autorest v0.0.0-20200908011700-76a89b3e2bac
-
 require (
 	cloud.google.com/go v0.53.0
 	cloud.google.com/go/datastore v1.1.0 // indirect
@@ -12,7 +10,7 @@ require (
 	collectd.org v0.3.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
 	github.com/Azure/azure-storage-queue-go v0.0.0-20181215014128-6ed74e755687
-	github.com/Azure/go-autorest/autorest v0.11.4
+	github.com/Azure/go-autorest/autorest v0.11.5
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
@@ -109,8 +107,7 @@ require (
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.9.1
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
-	github.com/samjegal/fincloud-sdk-for-go v1.9.2
-	github.com/samjegal/go-fincloud-helpers v0.2.4
+	github.com/samjegal/fincloud-sdk-for-go v1.9.6-0.20200914045106-be9f55ea73c4
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec // indirect
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
 	github.com/shirou/gopsutil v2.20.5+incompatible
