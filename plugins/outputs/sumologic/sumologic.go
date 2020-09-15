@@ -214,7 +214,7 @@ func (s *SumoLogic) Write(metrics []telegraf.Metric) error {
 func (s *SumoLogic) writeRequestChunks(chunks [][]byte) error {
 	for _, reqChunk := range chunks {
 		if err := s.write(reqChunk); err != nil {
-			return err
+			log.Printf("E! [SumoLogic] Error sending chunk: %v", err)
 		}
 	}
 	return nil
