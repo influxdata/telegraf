@@ -22,6 +22,8 @@ following works:
 - github.com/alecthomas/units [MIT License](https://github.com/alecthomas/units/blob/master/COPYING)
 - github.com/amir/raidman [The Unlicense](https://github.com/amir/raidman/blob/master/UNLICENSE)
 - github.com/apache/thrift [Apache License 2.0](https://github.com/apache/thrift/blob/master/LICENSE)
+- github.com/arangodb/go-driver [Apache License 2.0](https://github.com/arangodb/go-driver/blob/master/LICENSE)
+- github.com/arangodb/go-velocypack [Apache License 2.0](https://github.com/arangodb/go-velocypack/blob/master/LICENSE)
 - github.com/aristanetworks/glog [Apache License 2.0](https://github.com/aristanetworks/glog/blob/master/LICENSE)
 - github.com/aristanetworks/goarista [Apache License 2.0](https://github.com/aristanetworks/goarista/blob/master/COPYING)
 - github.com/aws/aws-sdk-go [Apache License 2.0](https://github.com/aws/aws-sdk-go/blob/master/LICENSE.txt)
