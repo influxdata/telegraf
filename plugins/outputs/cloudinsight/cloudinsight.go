@@ -17,52 +17,64 @@ import (
 	"github.com/samjegal/fincloud-sdk-for-go/services/cloudinsight"
 )
 
-// CloudInsight main structure
+// CloudInsight allows publishing of metrics to the Cloud Insight custom metrics
 type CloudInsight struct {
 	// Region data center name
 	Region string `toml:"region"`
 
-	// NBP Cloud Insight Custom Schema Credentials (filter)
+	// Cloud Insight Custom Schema Credentials (filter)
 	ProductName string `toml:"product_name"`
 	ProductKey  string `toml:"cw_key"`
 
-	// NBP Credentials
+	// Credentials for CloudInsight
 	AccessKey     string `toml:"access_key"`
 	SecretKey     string `toml:"secret_key"`
 	ApiGatewayKey string `toml:"api_gateway_key"`
 
-	// TODO: add cloudinsight client
-	client *cloudinsight.BaseClient
-
-	// TODO: deprecated because replaced tag value
-	// Make dimension by custom schema. InstanceId used by server instance.
+	// InstanceID make dimension by custom schema. InstanceId used by server instance.
 	InstanceID string `toml:"instance_id"`
 
+	client *cloudinsight.BaseClient
 	filter string
 
 	timeFunc func() time.Time
 }
 
 var sampleConfig = `
-  ## Financial Cloud Region (ncloud.com/fin-ncloud.com)
-  region = "FKR"
+  ## Financial Cloud Region (fin-ncloud.com)
+  # region = "FKR"
 
-  ##
-  access_key = ""
-  secret_key = ""
+  ## This option specifies the custom metric type recognized by Cloud Insight.
+  ## The prefix must be typed as /Custom.
+  # product_name = "Custom/"
 
-  ##
-  api_gateway_key = ""
+  ## Key assigned when registering a custom schema in Cloud Insight is complete
+  # cw_key = ""
+
+  ## These are the basic authentication keys to access the cloud, and basically,
+  ## an access and secret key are required.
+  # access_key = ""
+  # secret_key = ""
+
+  ## Key issued by API Gateway
+  # api_gateway_key = ""
+
+  ## Instance ID is a unique ID of each VM, and you need to enter the information
+  ## of the VM on which telegraf will run
+  # instance_id
 `
 
+// Description provides a description of the plugin
 func (c *CloudInsight) Description() string {
 	return "Configuration for NBP Cloud Insight output plugin."
 }
 
+// SampleConfig provides a sample configuration for the plugin
 func (c *CloudInsight) SampleConfig() string {
 	return sampleConfig
 }
 
+// Init provides product name verification and client initialization
 func (c *CloudInsight) Init() error {
 	r, _ := regexp.Compile("[a-zA-Z]+/[a-zA-Z]+")
 	if r.MatchString(c.ProductName) {
@@ -80,7 +92,6 @@ func (c *CloudInsight) Init() error {
 		Client:  autorest.NewClientWithUserAgent(cloudinsight.UserAgent()),
 		BaseURI: cloudinsight.DefaultBaseURI,
 	}
-	//c.client.Sender = sender.BuildSender("fincloud")
 	c.authorize(c.client)
 
 	return nil
@@ -93,6 +104,7 @@ func (c *CloudInsight) authorize(client *cloudinsight.BaseClient) {
 	client.APIGatewayAPIKey = c.ApiGatewayKey
 }
 
+// Connect check the status of registered custom metrics
 func (c *CloudInsight) Connect() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(float64(60)*float64(time.Second)))
 	defer cancel()
@@ -110,6 +122,7 @@ func (c *CloudInsight) Connect() error {
 	return nil
 }
 
+// Close Initialize client parameters
 func (c *CloudInsight) Close() error {
 	c.client = nil
 	return nil
@@ -127,6 +140,7 @@ type cloudInsightData struct {
 	Value  interface{}
 }
 
+// Write writes metrics to the remote endpoint
 func (c *CloudInsight) Write(metrics []telegraf.Metric) error {
 	var cimetrics = make(map[uint64]*cloudInsightMetric, len(metrics))
 	for _, m := range metrics {
