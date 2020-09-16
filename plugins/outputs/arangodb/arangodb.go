@@ -134,7 +134,10 @@ func (a *ArangoDb) Write(metrics []telegraf.Metric) error {
 		entries := make([]map[string]interface{}, len(metrics))
 
 		for _, metric := range metrics {
-			entries = append(entries, metric.Fields())
+			fields := metric.Fields()
+			fields["measurement"] = metric.Name()
+
+			entries = append(entries, fields)
 		}
 		_, _, err := col.CreateDocuments(ctx, entries)
 		if err != nil {
@@ -143,8 +146,10 @@ func (a *ArangoDb) Write(metrics []telegraf.Metric) error {
 		}
 	} else {
 		for _, metric := range metrics {
+			fields := metric.Fields()
+			fields["measurement"] = metric.Name()
 
-			_, err := col.CreateDocument(ctx, metric.Fields())
+			_, err := col.CreateDocument(ctx, fields)
 			if err != nil {
 				a.Log.Errorf("Could not write entry: %v", err)
 			}
