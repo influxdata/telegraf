@@ -22,6 +22,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/apache/thrift v0.12.0
+	github.com/arangodb/go-driver v0.0.0-20200831144536-17278d36b7e8
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-metrics v0.3.0 // indirect
@@ -131,12 +132,11 @@ require (
 	go.starlark.net v0.0.0-20191227232015-caa3e9aa5008
 	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
+	golang.org/x/net v0.0.0-20200625001655-4c5254603344
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
+	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 	golang.org/x/text v0.3.3
-	golang.org/x/tools v0.0.0-20200317043434-63da46f3035e // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	gonum.org/v1/gonum v0.6.2 // indirect
 	google.golang.org/api v0.20.0
