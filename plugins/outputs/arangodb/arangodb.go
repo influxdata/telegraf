@@ -25,7 +25,7 @@ type ArangoDb struct {
 
 var sampleConfig = `
   ## ArangoDb URL to connect to
-  url = "http://10.20.1.83:8529"
+  url = "http://192.168.1.100:8529"
 
   ## Username to connect to ArangoDb
   username = "user"
