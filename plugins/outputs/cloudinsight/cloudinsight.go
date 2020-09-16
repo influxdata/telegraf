@@ -188,8 +188,6 @@ func (c *CloudInsight) Write(metrics []telegraf.Metric) error {
 		CwKey: &c.ProductKey,
 		Data:  &data,
 	})
-
-	return nil
 }
 
 func (c *CloudInsight) convert(m telegraf.Metric) (*cloudInsightMetric, error) {
