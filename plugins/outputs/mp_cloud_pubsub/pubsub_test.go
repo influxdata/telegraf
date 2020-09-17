@@ -73,7 +73,7 @@ func TestPubSub_WriteMultiple(t *testing.T) {
 	for _, testM := range testMetrics {
 		verifyRawMetricPublished(t, testM.m, topic.published)
 	}
-	assert.Equalf(t, 1, topic.bundleCount, "unexpected bundle count")
+	assert.Equalf(t, 1, topic.getBundleCount(), "unexpected bundle count")
 }
 
 func TestPubSub_WriteOverCountThreshold(t *testing.T) {
@@ -97,7 +97,7 @@ func TestPubSub_WriteOverCountThreshold(t *testing.T) {
 	for _, testM := range testMetrics {
 		verifyRawMetricPublished(t, testM.m, topic.published)
 	}
-	assert.Equalf(t, 2, topic.bundleCount, "unexpected bundle count")
+	assert.Equalf(t, 2, topic.getBundleCount(), "unexpected bundle count")
 }
 
 func TestPubSub_WriteOverByteThreshold(t *testing.T) {
@@ -120,7 +120,7 @@ func TestPubSub_WriteOverByteThreshold(t *testing.T) {
 	for _, testM := range testMetrics {
 		verifyRawMetricPublished(t, testM.m, topic.published)
 	}
-	assert.Equalf(t, 2, topic.bundleCount, "unexpected bundle count")
+	assert.Equalf(t, 2, topic.getBundleCount(), "unexpected bundle count")
 }
 
 func TestPubSub_WriteBase64Single(t *testing.T) {

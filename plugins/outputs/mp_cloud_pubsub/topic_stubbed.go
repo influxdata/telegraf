@@ -123,8 +123,7 @@ func (t *stubTopic) Publish(ctx context.Context, msg *pubsub.Message) publishRes
 	}
 
 	bundled := &bundledMsg{msg, r}
-	err := t.bundler.Add(bundled, len(msg.Data))
-	if err != nil {
+	if err := t.bundler.Add(bundled, len(msg.Data)); err != nil {
 		t.Fatalf("unexpected error while adding to bundle: %v", err)
 	}
 	return r
@@ -209,4 +208,10 @@ func (r *stubResult) Get(ctx context.Context) (string, error) {
 	case <-r.done:
 		return fmt.Sprintf("id-%s", r.metricIds[0]), nil
 	}
+}
+
+func (t *stubTopic) getBundleCount() int {
+	t.bLock.Lock()
+	defer t.bLock.Unlock()
+	return t.bundleCount
 }
