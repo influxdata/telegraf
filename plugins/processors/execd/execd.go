@@ -70,7 +70,7 @@ func (e *Execd) Description() string {
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	if l := e.BufferSize; l > 0 && l <= e.minBufferSize {
 		e.Log.Warn(fmt.Sprintf("The buffer size cannot be less than the allowed minimum value - %d. ", e.minBufferSize) +
-					"The default value will be used.")
+			"The default value will be used.")
 		e.BufferSize = e.defBufferSize
 	}
 
