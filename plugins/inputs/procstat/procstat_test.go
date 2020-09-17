@@ -95,15 +95,21 @@ func (pg *testPgrep) FullPattern(_ string) ([]PID, error) {
 }
 
 type testProc struct {
-	pid  PID
-	tags map[string]string
+	pid    PID
+	exists bool
+	tags   map[string]string
 }
 
 func newTestProc(_ PID) (Process, error) {
 	proc := &testProc{
-		tags: make(map[string]string),
+		exists: true,
+		tags:   make(map[string]string),
 	}
 	return proc, nil
+}
+
+func (p *testProc) Exists() (bool, error) {
+	return p.exists, nil
 }
 
 func (p *testProc) PID() PID {

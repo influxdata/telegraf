@@ -10,6 +10,7 @@ import (
 
 type Process interface {
 	PID() PID
+	Exists() (bool, error)
 	Tags() map[string]string
 
 	PageFaults() (*process.PageFaultsStat, error)
@@ -54,6 +55,14 @@ func NewProc(pid PID) (Process, error) {
 		tags:        make(map[string]string),
 	}
 	return proc, nil
+}
+
+func (p *Proc) Exists() (bool, error) {
+	exists, err := process.PidExists(int32(p.PID()))
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 func (p *Proc) Tags() map[string]string {

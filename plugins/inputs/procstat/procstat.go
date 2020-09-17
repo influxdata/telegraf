@@ -323,6 +323,10 @@ func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo 
 			if name, _ := info.Name(); name == "" {
 				continue
 			}
+			if exists, err := info.Exists(); err != nil || !exists {
+				// process has gone
+				continue
+			}
 			procs[pid] = info
 		} else {
 			proc, err := p.createProcess(pid)
