@@ -5,18 +5,18 @@ using a configurable parser into [metrics][].  This allows, for example, the
 `kafka_consumer` input plugin to process messages in either InfluxDB Line
 Protocol or in JSON format.
 
-- [InfluxDB Line Protocol](/plugins/parsers/influx)
 - [Collectd](/plugins/parsers/collectd)
 - [CSV](/plugins/parsers/csv)
 - [Dropwizard](/plugins/parsers/dropwizard)
 - [Graphite](/plugins/parsers/graphite)
 - [Grok](/plugins/parsers/grok)
+- [InfluxDB Line Protocol](/plugins/parsers/influx)
 - [JSON](/plugins/parsers/json)
 - [Logfmt](/plugins/parsers/logfmt)
 - [Nagios](/plugins/parsers/nagios)
+- [Prometheus](/plugins/parsers/prometheus)
 - [Value](/plugins/parsers/value), ie: 45 or "booyah"
 - [Wavefront](/plugins/parsers/wavefront)
-- [Prometheus](/plugins/parsers/prometheus)
 
 Any input plugin containing the `data_format` option can use it to select the
 desired parser:
