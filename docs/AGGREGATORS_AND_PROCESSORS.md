@@ -64,7 +64,4 @@ Since aggregates are created for each measurement, field, and unique tag combina
 the plugin receives, you can make use of `taginclude` to group
 aggregates by specific tags only. 
 
-**NOTE** That since aggregators only aggregate metrics within their period, that
-historical data is not supported. In other words, if your metric timestamp is more
-than `now() - period` in the past, it will not be aggregated. If this is a feature
-that you need, please comment on this [github issue](https://github.com/influxdata/telegraf/issues/1992)
+**Note:** Aggregator plugins only aggregate metrics within their periods (`now() - period`). Data with a timestamp earlier than `now() - period` cannot be included.

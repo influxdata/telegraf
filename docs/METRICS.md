@@ -12,7 +12,7 @@ four main components:
 - **Timestamp**: Date and time associated with the fields.
 
 This metric type exists only in memory and must be converted to a concrete
-representation in order to be transmitted or viewed.  To acheive this we
+representation in order to be transmitted or viewed.  To achieve this we
 provide several [output data formats][] sometimes referred to as
 *serializers*.  Our default serializer converts to [InfluxDB Line
 Protocol][line protocol] which provides a high performance and one-to-one

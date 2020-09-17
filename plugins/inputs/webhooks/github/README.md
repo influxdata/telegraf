@@ -78,7 +78,7 @@ The tag values and field values show the place on the incoming JSON object where
 * 'issues' = `event.repository.open_issues_count` int
 * 'commit' = `event.deployment.sha` string
 * 'task' = `event.deployment.task` string
-* 'environment' = `event.deployment.evnironment` string
+* 'environment' = `event.deployment.environment` string
 * 'description' = `event.deployment.description` string
 
 #### [`deployment_status` event](https://developer.github.com/v3/activity/events/types/#deploymentstatusevent)
@@ -96,7 +96,7 @@ The tag values and field values show the place on the incoming JSON object where
 * 'issues' = `event.repository.open_issues_count` int
 * 'commit' = `event.deployment.sha` string
 * 'task' = `event.deployment.task` string
-* 'environment' = `event.deployment.evnironment` string
+* 'environment' = `event.deployment.environment` string
 * 'description' = `event.deployment.description` string
 * 'depState' = `event.deployment_status.state` string
 * 'depDescription' = `event.deployment_status.description` string

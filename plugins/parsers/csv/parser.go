@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -15,29 +16,66 @@ import (
 
 type TimeFunc func() time.Time
 
+type Config struct {
+	ColumnNames       []string `toml:"csv_column_names"`
+	ColumnTypes       []string `toml:"csv_column_types"`
+	Comment           string   `toml:"csv_comment"`
+	Delimiter         string   `toml:"csv_delimiter"`
+	HeaderRowCount    int      `toml:"csv_header_row_count"`
+	MeasurementColumn string   `toml:"csv_measurement_column"`
+	MetricName        string   `toml:"metric_name"`
+	SkipColumns       int      `toml:"csv_skip_columns"`
+	SkipRows          int      `toml:"csv_skip_rows"`
+	TagColumns        []string `toml:"csv_tag_columns"`
+	TimestampColumn   string   `toml:"csv_timestamp_column"`
+	TimestampFormat   string   `toml:"csv_timestamp_format"`
+	Timezone          string   `toml:"csv_timezone"`
+	TrimSpace         bool     `toml:"csv_trim_space"`
+
+	TimeFunc    func() time.Time
+	DefaultTags map[string]string
+}
+
+// Parser is a CSV parser, you should use NewParser to create a new instance.
 type Parser struct {
-	MetricName        string
-	HeaderRowCount    int
-	SkipRows          int
-	SkipColumns       int
-	Delimiter         string
-	Comment           string
-	TrimSpace         bool
-	ColumnNames       []string
-	ColumnTypes       []string
-	TagColumns        []string
-	MeasurementColumn string
-	TimestampColumn   string
-	TimestampFormat   string
-	DefaultTags       map[string]string
-	TimeFunc          func() time.Time
+	*Config
+}
+
+func NewParser(c *Config) (*Parser, error) {
+	if c.HeaderRowCount == 0 && len(c.ColumnNames) == 0 {
+		return nil, fmt.Errorf("`csv_header_row_count` must be defined if `csv_column_names` is not specified")
+	}
+
+	if c.Delimiter != "" {
+		runeStr := []rune(c.Delimiter)
+		if len(runeStr) > 1 {
+			return nil, fmt.Errorf("csv_delimiter must be a single character, got: %s", c.Delimiter)
+		}
+	}
+
+	if c.Comment != "" {
+		runeStr := []rune(c.Comment)
+		if len(runeStr) > 1 {
+			return nil, fmt.Errorf("csv_delimiter must be a single character, got: %s", c.Comment)
+		}
+	}
+
+	if len(c.ColumnNames) > 0 && len(c.ColumnTypes) > 0 && len(c.ColumnNames) != len(c.ColumnTypes) {
+		return nil, fmt.Errorf("csv_column_names field count doesn't match with csv_column_types")
+	}
+
+	if c.TimeFunc == nil {
+		c.TimeFunc = time.Now
+	}
+
+	return &Parser{Config: c}, nil
 }
 
 func (p *Parser) SetTimeFunc(fn TimeFunc) {
 	p.TimeFunc = fn
 }
 
-func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
+func (p *Parser) compile(r io.Reader) (*csv.Reader, error) {
 	csvReader := csv.NewReader(r)
 	// ensures that the reader reads records of different lengths without an error
 	csvReader.FieldsPerRecord = -1
@@ -59,7 +97,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 	// skip first rows
 	for i := 0; i < p.SkipRows; i++ {
-		csvReader.Read()
+		_, err := csvReader.Read()
+		if err != nil {
+			return nil, err
+		}
 	}
 	// if there is a header and nothing in DataColumns
 	// set DataColumns to names extracted from the header
@@ -87,7 +128,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	} else {
 		// if columns are named, just skip header rows
 		for i := 0; i < p.HeaderRowCount; i++ {
-			csvReader.Read()
+			_, err := csvReader.Read()
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -207,14 +251,20 @@ outer:
 
 	// will default to plugin name
 	measurementName := p.MetricName
-	if recordFields[p.MeasurementColumn] != nil && recordFields[p.MeasurementColumn] != "" {
-		measurementName = fmt.Sprintf("%v", recordFields[p.MeasurementColumn])
+	if p.MeasurementColumn != "" {
+		if recordFields[p.MeasurementColumn] != nil && recordFields[p.MeasurementColumn] != "" {
+			measurementName = fmt.Sprintf("%v", recordFields[p.MeasurementColumn])
+		}
 	}
 
-	metricTime, err := parseTimestamp(p.TimeFunc, recordFields, p.TimestampColumn, p.TimestampFormat)
+	metricTime, err := parseTimestamp(p.TimeFunc, recordFields, p.TimestampColumn, p.TimestampFormat, p.Timezone)
 	if err != nil {
 		return nil, err
 	}
+
+	// Exclude `TimestampColumn` and `MeasurementColumn`
+	delete(recordFields, p.TimestampColumn)
+	delete(recordFields, p.MeasurementColumn)
 
 	m, err := metric.New(measurementName, tags, recordFields, metricTime)
 	if err != nil {
@@ -227,7 +277,7 @@ outer:
 // will be the current timestamp, else it will try to parse the time according
 // to the format.
 func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
-	timestampColumn, timestampFormat string,
+	timestampColumn, timestampFormat string, Timezone string,
 ) (time.Time, error) {
 	if timestampColumn != "" {
 		if recordFields[timestampColumn] == nil {
@@ -238,7 +288,7 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 		case "":
 			return time.Time{}, fmt.Errorf("timestamp format must be specified")
 		default:
-			metricTime, err := internal.ParseTimestamp(timestampFormat, recordFields[timestampColumn], "UTC")
+			metricTime, err := internal.ParseTimestamp(timestampFormat, recordFields[timestampColumn], Timezone)
 			if err != nil {
 				return time.Time{}, err
 			}

@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -207,6 +207,9 @@ func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Metadata, error) {
 
 func (k *Kubernetes) LoadJson(url string, v interface{}) error {
 	var req, err = http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
 	var resp *http.Response
 	tlsCfg, err := k.ClientConfig.TLSConfig()
 	if err != nil {

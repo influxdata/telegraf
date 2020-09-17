@@ -35,7 +35,7 @@ func NewTestStatsd() *Statsd {
 	return &s
 }
 
-// Test that MaxTCPConections is respected
+// Test that MaxTCPConnections is respected
 func TestConcurrentConns(t *testing.T) {
 	listener := Statsd{
 		Log:                    testutil.Logger{},
@@ -66,7 +66,7 @@ func TestConcurrentConns(t *testing.T) {
 	assert.Zero(t, acc.NFields())
 }
 
-// Test that MaxTCPConections is respected when max==1
+// Test that MaxTCPConnections is respected when max==1
 func TestConcurrentConns1(t *testing.T) {
 	listener := Statsd{
 		Log:                    testutil.Logger{},
@@ -95,7 +95,7 @@ func TestConcurrentConns1(t *testing.T) {
 	assert.Zero(t, acc.NFields())
 }
 
-// Test that MaxTCPConections is respected
+// Test that MaxTCPConnections is respected
 func TestCloseConcurrentConns(t *testing.T) {
 	listener := Statsd{
 		Log:                    testutil.Logger{},

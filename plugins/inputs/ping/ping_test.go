@@ -3,7 +3,9 @@
 package ping
 
 import (
+	"context"
 	"errors"
+	"net"
 	"reflect"
 	"sort"
 	"testing"
@@ -25,6 +27,20 @@ PING www.google.com (216.58.217.36): 56 data bytes
 --- www.google.com ping statistics ---
 5 packets transmitted, 5 packets received, 0.0% packet loss
 round-trip min/avg/max/stddev = 15.087/20.224/27.263/4.076 ms
+`
+
+// FreeBSD ping6 output
+var freebsdPing6Output = `
+PING6(64=40+8+16 bytes) 2001:db8::1 --> 2a00:1450:4001:824::2004
+24 bytes from 2a00:1450:4001:824::2004, icmp_seq=0 hlim=117 time=93.870 ms
+24 bytes from 2a00:1450:4001:824::2004, icmp_seq=1 hlim=117 time=40.278 ms
+24 bytes from 2a00:1450:4001:824::2004, icmp_seq=2 hlim=120 time=59.077 ms
+24 bytes from 2a00:1450:4001:824::2004, icmp_seq=3 hlim=117 time=37.102 ms
+24 bytes from 2a00:1450:4001:824::2004, icmp_seq=4 hlim=117 time=35.727 ms
+
+--- www.google.com ping6 statistics ---
+5 packets transmitted, 5 packets received, 0.0% packet loss
+round-trip min/avg/max/std-dev = 35.727/53.211/93.870/22.000 ms
 `
 
 // Linux ping output
@@ -65,17 +81,27 @@ func TestProcessPingOutput(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 55, ttl, "ttl value is 55")
 	assert.Equal(t, 5, trans, "5 packets were transmitted")
-	assert.Equal(t, 5, rec, "5 packets were transmitted")
+	assert.Equal(t, 5, rec, "5 packets were received")
 	assert.InDelta(t, 15.087, min, 0.001)
 	assert.InDelta(t, 20.224, avg, 0.001)
 	assert.InDelta(t, 27.263, max, 0.001)
 	assert.InDelta(t, 4.076, stddev, 0.001)
 
+	trans, rec, ttl, min, avg, max, stddev, err = processPingOutput(freebsdPing6Output)
+	assert.NoError(t, err)
+	assert.Equal(t, 117, ttl, "ttl value is 117")
+	assert.Equal(t, 5, trans, "5 packets were transmitted")
+	assert.Equal(t, 5, rec, "5 packets were received")
+	assert.InDelta(t, 35.727, min, 0.001)
+	assert.InDelta(t, 53.211, avg, 0.001)
+	assert.InDelta(t, 93.870, max, 0.001)
+	assert.InDelta(t, 22.000, stddev, 0.001)
+
 	trans, rec, ttl, min, avg, max, stddev, err = processPingOutput(linuxPingOutput)
 	assert.NoError(t, err)
 	assert.Equal(t, 63, ttl, "ttl value is 63")
 	assert.Equal(t, 5, trans, "5 packets were transmitted")
-	assert.Equal(t, 5, rec, "5 packets were transmitted")
+	assert.Equal(t, 5, rec, "5 packets were received")
 	assert.InDelta(t, 35.225, min, 0.001)
 	assert.InDelta(t, 43.628, avg, 0.001)
 	assert.InDelta(t, 51.806, max, 0.001)
@@ -85,7 +111,7 @@ func TestProcessPingOutput(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 56, ttl, "ttl value is 56")
 	assert.Equal(t, 4, trans, "4 packets were transmitted")
-	assert.Equal(t, 4, rec, "4 packets were transmitted")
+	assert.Equal(t, 4, rec, "4 packets were received")
 	assert.InDelta(t, 15.810, min, 0.001)
 	assert.InDelta(t, 17.611, avg, 0.001)
 	assert.InDelta(t, 22.559, max, 0.001)
@@ -126,7 +152,7 @@ func TestErrorProcessPingOutput(t *testing.T) {
 	assert.Error(t, err, "Error was expected from processPingOutput")
 }
 
-// Test that arg lists and created correctly
+// Test that default arg lists are created correctly
 func TestArgs(t *testing.T) {
 	p := Ping{
 		Count:        2,
@@ -141,6 +167,35 @@ func TestArgs(t *testing.T) {
 		output []string
 	}{
 		{"darwin", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12000", "-t", "24", "-I", "eth0", "www.google.com"}},
+		{"linux", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-I", "eth0", "www.google.com"}},
+		{"anything else", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-i", "eth0", "www.google.com"}},
+	}
+	for i := range systemCases {
+		actual := p.args("www.google.com", systemCases[i].system)
+		expected := systemCases[i].output
+		sort.Strings(actual)
+		sort.Strings(expected)
+		require.True(t, reflect.DeepEqual(expected, actual),
+			"Expected: %s Actual: %s", expected, actual)
+	}
+}
+
+// Test that default arg lists for ping6 are created correctly
+func TestArgs6(t *testing.T) {
+	p := Ping{
+		Count:        2,
+		Interface:    "eth0",
+		Timeout:      12.0,
+		Deadline:     24,
+		PingInterval: 1.2,
+		Binary:       "ping6",
+	}
+
+	var systemCases = []struct {
+		system string
+		output []string
+	}{
+		{"freebsd", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-x", "12000", "-X", "24", "-S", "eth0", "www.google.com"}},
 		{"linux", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-I", "eth0", "www.google.com"}},
 		{"anything else", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-i", "eth0", "www.google.com"}},
 	}
@@ -340,6 +395,12 @@ func TestPingBinary(t *testing.T) {
 	acc.GatherError(p.Gather)
 }
 
+func mockHostResolver(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error) {
+	ipaddr := net.IPAddr{}
+	ipaddr.IP = net.IPv4(127, 0, 0, 1)
+	return &ipaddr, nil
+}
+
 // Test that Gather function works using native ping
 func TestPingGatherNative(t *testing.T) {
 	if testing.Short() {
@@ -348,12 +409,35 @@ func TestPingGatherNative(t *testing.T) {
 
 	var acc testutil.Accumulator
 	p := Ping{
-		Urls:   []string{"localhost", "127.0.0.2"},
-		Method: "native",
-		Count:  5,
+		Urls:        []string{"localhost", "127.0.0.2"},
+		Method:      "native",
+		Count:       5,
+		resolveHost: mockHostResolver,
 	}
 
 	assert.NoError(t, acc.GatherError(p.Gather))
 	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
 	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
+}
+
+func mockHostResolverError(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error) {
+	return nil, errors.New("myMock error")
+}
+
+// Test failed DNS resolutions
+func TestDNSLookupError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test due to permission requirements.")
+	}
+
+	var acc testutil.Accumulator
+	p := Ping{
+		Urls:        []string{"localhost"},
+		Method:      "native",
+		IPv6:        false,
+		resolveHost: mockHostResolverError,
+	}
+
+	acc.GatherError(p.Gather)
+	assert.True(t, len(acc.Errors) > 0)
 }

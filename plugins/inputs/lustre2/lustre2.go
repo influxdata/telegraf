@@ -366,7 +366,7 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping, a
 	for _, file := range files {
 		/* Turn /proc/fs/lustre/obdfilter/<ost_name>/stats and similar
 		 * into just the object store target name
-		 * Assumpion: the target name is always second to last,
+		 * Assumption: the target name is always second to last,
 		 * which is true in Lustre 2.1->2.8
 		 */
 		path := strings.Split(file, "/")

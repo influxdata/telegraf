@@ -2,18 +2,18 @@ package execd
 
 import (
 	"bufio"
-	"context"
+	"errors"
 	"fmt"
 	"io"
-	"log"
-	"os/exec"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/process"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 )
 
 const sampleConfig = `
@@ -41,16 +41,14 @@ const sampleConfig = `
 `
 
 type Execd struct {
-	Command      []string
-	Signal       string
-	RestartDelay internal.Duration
+	Command      []string        `toml:"command"`
+	Signal       string          `toml:"signal"`
+	RestartDelay config.Duration `toml:"restart_delay"`
+	Log          telegraf.Logger `toml:"-"`
 
-	acc    telegraf.Accumulator
-	cmd    *exec.Cmd
-	parser parsers.Parser
-	stdin  io.WriteCloser
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	process *process.Process
+	acc     telegraf.Accumulator
+	parser  parsers.Parser
 }
 
 func (e *Execd) SampleConfig() string {
@@ -67,116 +65,47 @@ func (e *Execd) SetParser(parser parsers.Parser) {
 
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.acc = acc
-
-	if len(e.Command) == 0 {
-		return fmt.Errorf("E! [inputs.execd] FATAL no command specified")
+	var err error
+	e.process, err = process.New(e.Command)
+	if err != nil {
+		return fmt.Errorf("error creating new process: %w", err)
 	}
+	e.process.Log = e.Log
+	e.process.RestartDelay = time.Duration(e.RestartDelay)
+	e.process.ReadStdoutFn = e.cmdReadOut
+	e.process.ReadStderrFn = e.cmdReadErr
 
-	e.wg.Add(1)
-
-	var ctx context.Context
-	ctx, e.cancel = context.WithCancel(context.Background())
-
-	go func() {
-		e.cmdLoop(ctx)
-		e.wg.Done()
-	}()
+	if err = e.process.Start(); err != nil {
+		// if there was only one argument, and it contained spaces, warn the user
+		// that they may have configured it wrong.
+		if len(e.Command) == 1 && strings.Contains(e.Command[0], " ") {
+			e.Log.Warn("The inputs.execd Command contained spaces but no arguments. " +
+				"This setting expects the program and arguments as an array of strings, " +
+				"not as a space-delimited string. See the plugin readme for an example.")
+		}
+		return fmt.Errorf("failed to start process %s: %w", e.Command, err)
+	}
 
 	return nil
 }
 
 func (e *Execd) Stop() {
-	e.cancel()
-	e.wg.Wait()
-}
-
-func (e *Execd) cmdLoop(ctx context.Context) {
-	for {
-		// Use a buffered channel to ensure goroutine below can exit
-		// if `ctx.Done` is selected and nothing reads on `done` anymore
-		done := make(chan error, 1)
-		go func() {
-			done <- e.cmdRun()
-		}()
-
-		select {
-		case <-ctx.Done():
-			e.stdin.Close()
-			// Immediately exit process but with a graceful shutdown
-			// period before killing
-			internal.WaitTimeout(e.cmd, 200*time.Millisecond)
-			return
-		case err := <-done:
-			log.Printf("E! [inputs.execd] Process %s terminated: %s", e.Command, err)
-		}
-
-		log.Printf("E! [inputs.execd] Restarting in %s...", e.RestartDelay.Duration)
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(e.RestartDelay.Duration):
-			// Continue the loop and restart the process
-		}
-	}
-}
-
-func (e *Execd) cmdRun() error {
-	var wg sync.WaitGroup
-
-	if len(e.Command) > 1 {
-		e.cmd = exec.Command(e.Command[0], e.Command[1:]...)
-	} else {
-		e.cmd = exec.Command(e.Command[0])
-	}
-
-	stdin, err := e.cmd.StdinPipe()
-	if err != nil {
-		return fmt.Errorf("E! [inputs.execd] Error opening stdin pipe: %s", err)
-	}
-
-	e.stdin = stdin
-
-	stdout, err := e.cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("E! [inputs.execd] Error opening stdout pipe: %s", err)
-	}
-
-	stderr, err := e.cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("E! [inputs.execd] Error opening stderr pipe: %s", err)
-	}
-
-	log.Printf("D! [inputs.execd] Starting process: %s", e.Command)
-
-	err = e.cmd.Start()
-	if err != nil {
-		return fmt.Errorf("E! [inputs.execd] Error starting process: %s", err)
-	}
-
-	wg.Add(2)
-
-	go func() {
-		e.cmdReadOut(stdout)
-		wg.Done()
-	}()
-
-	go func() {
-		e.cmdReadErr(stderr)
-		wg.Done()
-	}()
-
-	wg.Wait()
-	return e.cmd.Wait()
+	e.process.Stop()
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
+	if _, isInfluxParser := e.parser.(*influx.Parser); isInfluxParser {
+		// work around the lack of built-in streaming parser. :(
+		e.cmdReadOutStream(out)
+		return
+	}
+
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
 		metrics, err := e.parser.Parse(scanner.Bytes())
 		if err != nil {
-			e.acc.AddError(fmt.Errorf("E! [inputs.execd] Parse error: %s", err))
+			e.acc.AddError(fmt.Errorf("parse error: %w", err))
 		}
 
 		for _, metric := range metrics {
@@ -185,7 +114,30 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		e.acc.AddError(fmt.Errorf("E! [inputs.execd] Error reading stdout: %s", err))
+		e.acc.AddError(fmt.Errorf("error reading stdout: %w", err))
+	}
+}
+
+func (e *Execd) cmdReadOutStream(out io.Reader) {
+	parser := influx.NewStreamParser(out)
+
+	for {
+		metric, err := parser.Next()
+		if err != nil {
+			if err == influx.EOF {
+				break // stream ended
+			}
+			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
+				// parse error.
+				e.acc.AddError(parseErr)
+				continue
+			}
+			// some non-recoverable error?
+			e.acc.AddError(err)
+			return
+		}
+
+		e.acc.AddMetric(metric)
 	}
 }
 
@@ -193,19 +145,26 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
-		log.Printf("E! [inputs.execd] stderr: %q", scanner.Text())
+		e.Log.Errorf("stderr: %q", scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
-		e.acc.AddError(fmt.Errorf("E! [inputs.execd] Error reading stderr: %s", err))
+		e.acc.AddError(fmt.Errorf("error reading stderr: %w", err))
 	}
+}
+
+func (e *Execd) Init() error {
+	if len(e.Command) == 0 {
+		return errors.New("no command specified")
+	}
+	return nil
 }
 
 func init() {
 	inputs.Add("execd", func() telegraf.Input {
 		return &Execd{
 			Signal:       "none",
-			RestartDelay: internal.Duration{Duration: 10 * time.Second},
+			RestartDelay: config.Duration(10 * time.Second),
 		}
 	})
 }

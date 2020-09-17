@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-// Implemention of PIDGatherer that execs pgrep to find processes
+// Implementation of PIDGatherer that execs pgrep to find processes
 type Pgrep struct {
 	path string
 }

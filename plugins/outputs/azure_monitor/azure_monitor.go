@@ -392,7 +392,7 @@ func translate(m telegraf.Metric, prefix string) (*azureMonitorMetric, error) {
 	var dimensionValues []string
 	for _, tag := range m.TagList() {
 		// Azure custom metrics service supports up to 10 dimensions
-		if len(dimensionNames) > 10 {
+		if len(dimensionNames) >= 10 {
 			continue
 		}
 

@@ -222,7 +222,7 @@ func TestSocketListenerDecode_udp(t *testing.T) {
 
 func testSocketListener(t *testing.T, sl *SocketListener, client net.Conn) {
 	mstr12 := []byte("test,foo=bar v=1i 123456789\ntest,foo=baz v=2i 123456790\n")
-	mstr3 := []byte("test,foo=zab v=3i 123456791")
+	mstr3 := []byte("test,foo=zab v=3i 123456791\n")
 
 	if sl.ContentEncoding == "gzip" {
 		encoder, err := internal.NewContentEncoder(sl.ContentEncoding)
@@ -238,10 +238,6 @@ func testSocketListener(t *testing.T, sl *SocketListener, client net.Conn) {
 
 	client.Write(mstr12)
 	client.Write(mstr3)
-	if client.LocalAddr().Network() != "udp" {
-		// stream connection. needs trailing newline to terminate mstr3
-		client.Write([]byte{'\n'})
-	}
 
 	acc := sl.Accumulator.(*testutil.Accumulator)
 

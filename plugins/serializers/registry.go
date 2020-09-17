@@ -49,8 +49,14 @@ type Config struct {
 	// Dataformat can be one of the serializer types listed in NewSerializer.
 	DataFormat string `toml:"data_format"`
 
+	// Carbon2 metric format.
+	Carbon2Format string `toml:"carbon2_format"`
+
 	// Support tags in graphite protocol
 	GraphiteTagSupport bool `toml:"graphite_tag_support"`
+
+	// Character for separating metric name and field for Graphite tags
+	GraphiteSeparator string `toml:"graphite_separator"`
 
 	// Maximum line length in bytes; influx format only
 	InfluxMaxLineBytes int `toml:"influx_max_line_bytes"`
@@ -68,6 +74,9 @@ type Config struct {
 	// Template for converting telegraf metrics into Graphite
 	// only supports Graphite
 	Template string `toml:"template"`
+
+	// Templates same Template, but multiple
+	Templates []string `toml:"templates"`
 
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration `toml:"timestamp_units"`
@@ -105,7 +114,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "influx":
 		serializer, err = NewInfluxSerializerConfig(config)
 	case "graphite":
-		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport)
+		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteSeparator, config.Templates)
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
 	case "splunkmetric":
@@ -113,7 +122,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "nowmetric":
 		serializer, err = NewNowSerializer()
 	case "carbon2":
-		serializer, err = NewCarbon2Serializer()
+		serializer, err = NewCarbon2Serializer(config.Carbon2Format)
 	case "wavefront":
 		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
 	case "prometheus":
@@ -161,8 +170,8 @@ func NewUBazaarSerializer() (Serializer, error) {
 	return ubazaar.NewSerializer()
 }
 
-func NewCarbon2Serializer() (Serializer, error) {
-	return carbon2.NewSerializer()
+func NewCarbon2Serializer(carbon2format string) (Serializer, error) {
+	return carbon2.NewSerializer(carbon2format)
 }
 
 func NewSplunkmetricSerializer(splunkmetric_hec_routing bool, splunkmetric_multimetric bool) (Serializer, error) {
@@ -195,10 +204,26 @@ func NewInfluxSerializer() (Serializer, error) {
 	return influx.NewSerializer(), nil
 }
 
-func NewGraphiteSerializer(prefix, template string, tag_support bool) (Serializer, error) {
+func NewGraphiteSerializer(prefix, template string, tag_support bool, separator string, templates []string) (Serializer, error) {
+	graphiteTemplates, defaultTemplate, err := graphite.InitGraphiteTemplates(templates)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if defaultTemplate != "" {
+		template = defaultTemplate
+	}
+
+	if separator == "" {
+		separator = "."
+	}
+
 	return &graphite.GraphiteSerializer{
 		Prefix:     prefix,
 		Template:   template,
 		TagSupport: tag_support,
+		Separator:  separator,
+		Templates:  graphiteTemplates,
 	}, nil
 }

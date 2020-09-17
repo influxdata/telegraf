@@ -14,7 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -111,7 +111,12 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	defer ssl.removeConnection(c)
 	defer c.Close()
 
-	scnr := bufio.NewScanner(c)
+	decoder, err := internal.NewStreamContentDecoder(ssl.ContentEncoding, c)
+	if err != nil {
+		ssl.Log.Error("Read error: %v", err)
+	}
+
+	scnr := bufio.NewScanner(decoder)
 	for {
 		if ssl.ReadTimeout != nil && ssl.ReadTimeout.Duration > 0 {
 			c.SetReadDeadline(time.Now().Add(ssl.ReadTimeout.Duration))
@@ -120,11 +125,7 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 			break
 		}
 
-		body, err := ssl.decoder.Decode(scnr.Bytes())
-		if err != nil {
-			ssl.Log.Errorf("Unable to decode incoming line: %s", err.Error())
-			continue
-		}
+		body := scnr.Bytes()
 
 		metrics, err := ssl.Parse(body)
 		if err != nil {
@@ -149,6 +150,7 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 type packetSocketListener struct {
 	net.PacketConn
 	*SocketListener
+	decoder internal.ContentDecoder
 }
 
 func (psl *packetSocketListener) listen() {
@@ -196,7 +198,6 @@ type SocketListener struct {
 	parsers.Parser
 	telegraf.Accumulator
 	io.Closer
-	decoder internal.ContentDecoder
 }
 
 func (sl *SocketListener) Description() string {
@@ -283,12 +284,6 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 	protocol := spl[0]
 	addr := spl[1]
 
-	var err error
-	sl.decoder, err = internal.NewContentDecoder(sl.ContentEncoding)
-	if err != nil {
-		return err
-	}
-
 	if protocol == "unix" || protocol == "unixpacket" || protocol == "unixgram" {
 		// no good way of testing for "file does not exist".
 		// Instead just ignore error and blow up when we try to listen, which will
@@ -298,16 +293,12 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 
 	switch protocol {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
-		var (
-			err error
-			l   net.Listener
-		)
-
 		tlsCfg, err := sl.ServerConfig.TLSConfig()
 		if err != nil {
 			return err
 		}
 
+		var l net.Listener
 		if tlsCfg == nil {
 			l, err = net.Listen(protocol, addr)
 		} else {
@@ -344,6 +335,11 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			ssl.listen()
 		}()
 	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
+		decoder, err := internal.NewContentDecoder(sl.ContentEncoding)
+		if err != nil {
+			return err
+		}
+
 		pc, err := udpListen(protocol, addr)
 		if err != nil {
 			return err
@@ -373,6 +369,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		psl := &packetSocketListener{
 			PacketConn:     pc,
 			SocketListener: sl,
+			decoder:        decoder,
 		}
 
 		sl.Closer = psl

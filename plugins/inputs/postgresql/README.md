@@ -1,4 +1,4 @@
-# PostgreSQL plugin
+# PostgreSQL Input Plugin
 
 This postgresql plugin provides metrics for your postgres database. It currently works with postgres versions 8.1+. It uses data from the built in _pg_stat_database_ and pg_stat_bgwriter views. The metrics recorded depend on your version of postgres. See table:
 ```
@@ -57,7 +57,7 @@ host=localhost user=pgotest dbname=app_production sslmode=require sslkey=/etc/te
 ```
 
 ### Configuration example
-```
+```toml
 [[inputs.postgresql]]
   address = "postgres://telegraf@localhost/someDB"
   ignored_databases = ["template0", "template1"]

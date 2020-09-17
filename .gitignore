@@ -1,6 +1,8 @@
+/.idea
 /build
 /telegraf
 /telegraf.exe
 /telegraf.gz
-.idea
 cmd/config.toml
+/vendor
+.DS_Store

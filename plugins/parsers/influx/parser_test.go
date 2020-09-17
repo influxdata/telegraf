@@ -2,6 +2,8 @@ package influx
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"strconv"
 	"strings"
 	"testing"
@@ -789,7 +791,7 @@ func TestParserErrorString(t *testing.T) {
 		{
 			name:      "buffer too long",
 			input:     []byte("cpu " + strings.Repeat("ab", maxErrorBufferSize) + "=invalid\ncpu value=42"),
-			errString: "metric parse error: expected field at 1:2054: \"cpu " + strings.Repeat("ab", maxErrorBufferSize)[:maxErrorBufferSize-4] + "...\"",
+			errString: "metric parse error: expected field at 1:2054: \"...b" + strings.Repeat("ab", maxErrorBufferSize/2-1) + "=<-- here\"",
 		},
 		{
 			name:      "multiple line error",
@@ -833,7 +835,7 @@ func TestStreamParserErrorString(t *testing.T) {
 			name:  "buffer too long",
 			input: []byte("cpu " + strings.Repeat("ab", maxErrorBufferSize) + "=invalid\ncpu value=42"),
 			errs: []string{
-				"metric parse error: expected field at 1:2054: \"cpu " + strings.Repeat("ab", maxErrorBufferSize)[:maxErrorBufferSize-4] + "...\"",
+				"metric parse error: expected field at 1:2054: \"...b" + strings.Repeat("ab", maxErrorBufferSize/2-1) + "=<-- here\"",
 			},
 		},
 		{
@@ -868,4 +870,45 @@ func TestStreamParserErrorString(t *testing.T) {
 			}
 		})
 	}
+}
+
+type MockReader struct {
+	ReadF func(p []byte) (int, error)
+}
+
+func (r *MockReader) Read(p []byte) (int, error) {
+	return r.ReadF(p)
+}
+
+// Errors from the Reader are returned from the Parser
+func TestStreamParserReaderError(t *testing.T) {
+	readerErr := errors.New("error but not eof")
+
+	parser := NewStreamParser(&MockReader{
+		ReadF: func(p []byte) (int, error) {
+			return 0, readerErr
+		},
+	})
+	_, err := parser.Next()
+	require.Error(t, err)
+	require.Equal(t, err, readerErr)
+
+	_, err = parser.Next()
+	require.Equal(t, err, EOF)
+}
+
+func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
+	r, w := io.Pipe()
+
+	parser := NewStreamParser(r)
+	parser.SetTimeFunc(DefaultTime)
+
+	go w.Write([]byte("metric value=1\nmetric2 value=1\n"))
+
+	_, err := parser.Next()
+	require.NoError(t, err)
+
+	// should not block on second read
+	_, err = parser.Next()
+	require.NoError(t, err)
 }

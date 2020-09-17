@@ -16,13 +16,13 @@ func TestSqlServer_QueriesInclusionExclusion(t *testing.T) {
 	cases := []map[string]interface{}{
 		{
 			"IncludeQuery": []string{},
-			"ExcludeQuery": []string{"WaitStatsCategorized", "DatabaseIO", "ServerProperties", "MemoryClerk", "Schedulers"},
+			"ExcludeQuery": []string{"WaitStatsCategorized", "DatabaseIO", "ServerProperties", "MemoryClerk", "Schedulers", "VolumeSpace", "Cpu"},
 			"queries":      []string{"PerformanceCounters", "SqlRequests"},
 			"queriesTotal": 2,
 		},
 		{
 			"IncludeQuery": []string{"PerformanceCounters", "SqlRequests"},
-			"ExcludeQuery": []string{"SqlRequests", "WaitStatsCategorized", "DatabaseIO"},
+			"ExcludeQuery": []string{"SqlRequests", "WaitStatsCategorized", "DatabaseIO", "VolumeSpace", "Cpu"},
 			"queries":      []string{"PerformanceCounters"},
 			"queriesTotal": 1,
 		},
@@ -47,16 +47,16 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
 	queries := make(MapQuery)
-	queries["PerformanceCounters"] = Query{Script: mockPerformanceCounters, ResultByRow: true}
-	queries["WaitStatsCategorized"] = Query{Script: mockWaitStatsCategorized, ResultByRow: false}
-	queries["CPUHistory"] = Query{Script: mockCPUHistory, ResultByRow: false}
-	queries["DatabaseIO"] = Query{Script: mockDatabaseIO, ResultByRow: false}
-	queries["DatabaseSize"] = Query{Script: mockDatabaseSize, ResultByRow: false}
-	queries["DatabaseStats"] = Query{Script: mockDatabaseStats, ResultByRow: false}
-	queries["DatabaseProperties"] = Query{Script: mockDatabaseProperties, ResultByRow: false}
-	queries["VolumeSpace"] = Query{Script: mockVolumeSpace, ResultByRow: false}
-	queries["MemoryClerk"] = Query{Script: mockMemoryClerk, ResultByRow: false}
-	queries["PerformanceMetrics"] = Query{Script: mockPerformanceMetrics, ResultByRow: false}
+	queries["PerformanceCounters"] = Query{ScriptName: "PerformanceCounters", Script: mockPerformanceCounters, ResultByRow: true}
+	queries["WaitStatsCategorized"] = Query{ScriptName: "WaitStatsCategorized", Script: mockWaitStatsCategorized, ResultByRow: false}
+	queries["CPUHistory"] = Query{ScriptName: "CPUHistory", Script: mockCPUHistory, ResultByRow: false}
+	queries["DatabaseIO"] = Query{ScriptName: "DatabaseIO", Script: mockDatabaseIO, ResultByRow: false}
+	queries["DatabaseSize"] = Query{ScriptName: "DatabaseSize", Script: mockDatabaseSize, ResultByRow: false}
+	queries["DatabaseStats"] = Query{ScriptName: "DatabaseStats", Script: mockDatabaseStats, ResultByRow: false}
+	queries["DatabaseProperties"] = Query{ScriptName: "DatabaseProperties", Script: mockDatabaseProperties, ResultByRow: false}
+	queries["VolumeSpace"] = Query{ScriptName: "VolumeSpace", Script: mockVolumeSpace, ResultByRow: false}
+	queries["MemoryClerk"] = Query{ScriptName: "MemoryClerk", Script: mockMemoryClerk, ResultByRow: false}
+	queries["PerformanceMetrics"] = Query{ScriptName: "PerformanceMetrics", Script: mockPerformanceMetrics, ResultByRow: false}
 
 	var headers, mock, row []string
 	var tags = make(map[string]string)
