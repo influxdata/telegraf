@@ -53,6 +53,7 @@ type InfluxDBV2Listener struct {
 	bytesRecv       selfstat.Stat
 	requestsServed  selfstat.Stat
 	writesServed    selfstat.Stat
+	readysServed    selfstat.Stat
 	requestsRecv    selfstat.Stat
 	notFoundsServed selfstat.Stat
 	authFailures    selfstat.Stat
@@ -115,6 +116,7 @@ func (h *InfluxDBV2Listener) routes() {
 	)
 
 	h.mux.Handle("/api/v2/write", authHandler(h.handleWrite()))
+	h.mux.Handle("/api/v2/ready", h.handleReady())
 	h.mux.Handle("/", authHandler(h.handleDefault()))
 }
 
@@ -125,6 +127,7 @@ func (h *InfluxDBV2Listener) Init() error {
 	h.bytesRecv = selfstat.Register("influxdb_v2_listener", "bytes_received", tags)
 	h.requestsServed = selfstat.Register("influxdb_v2_listener", "requests_served", tags)
 	h.writesServed = selfstat.Register("influxdb_v2_listener", "writes_served", tags)
+	h.readysServed = selfstat.Register("influxdb_v2_listener", "readys_served", tags)
 	h.requestsRecv = selfstat.Register("influxdb_v2_listener", "requests_received", tags)
 	h.notFoundsServed = selfstat.Register("influxdb_v2_listener", "not_founds_served", tags)
 	h.authFailures = selfstat.Register("influxdb_v2_listener", "auth_failures", tags)
@@ -193,6 +196,21 @@ func (h *InfluxDBV2Listener) ServeHTTP(res http.ResponseWriter, req *http.Reques
 	h.requestsRecv.Incr(1)
 	h.mux.ServeHTTP(res, req)
 	h.requestsServed.Incr(1)
+}
+
+func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		defer h.readysServed.Incr(1)
+
+		// respond to ready requests
+		res.Header().Set("Content-Type", "application/json")
+		res.WriteHeader(http.StatusOK)
+		b, _ := json.Marshal(map[string]string{
+			"started": h.startTime.Format(time.RFC3339Nano),
+			"status":  "ready",
+			"up":      h.timeFunc().Sub(h.startTime).String()})
+		res.Write(b)
+	}
 }
 
 func (h *InfluxDBV2Listener) handleDefault() http.HandlerFunc {
