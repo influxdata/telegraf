@@ -31,6 +31,10 @@ Telegraf minimum version: Telegraf 1.15.0
 
   ## Delay before the process is restarted after an unexpected termination
   # restart_delay = "10s"
+
+  ## Buffer size for storing metrics received from the process in bytes
+  ## The minimum allowed value is 4096
+  # buffer_size = 65536
 ```
 
 ### Example
