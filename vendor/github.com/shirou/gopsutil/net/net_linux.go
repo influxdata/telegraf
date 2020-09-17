@@ -50,7 +50,7 @@ func IOCounters(pernic bool) ([]IOCountersStat, error) {
 
 func IOCountersWithContext(ctx context.Context, pernic bool) ([]IOCountersStat, error) {
 	filename := common.HostProc("net/dev")
-	return IOCountersByFile(pernic, filename)
+	return IOCountersByFileWithContext(ctx, pernic, filename)
 }
 
 func IOCountersByFile(pernic bool, filename string) ([]IOCountersStat, error) {

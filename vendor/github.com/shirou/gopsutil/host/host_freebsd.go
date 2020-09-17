@@ -11,9 +11,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"sync/atomic"
-	"syscall"
-	"time"
 	"unsafe"
 
 	"github.com/shirou/gopsutil/internal/common"
@@ -78,45 +75,6 @@ func InfoWithContext(ctx context.Context) (*InfoStat, error) {
 	}
 
 	return ret, nil
-}
-
-// cachedBootTime must be accessed via atomic.Load/StoreUint64
-var cachedBootTime uint64
-
-func BootTime() (uint64, error) {
-	return BootTimeWithContext(context.Background())
-}
-
-func BootTimeWithContext(ctx context.Context) (uint64, error) {
-	t := atomic.LoadUint64(&cachedBootTime)
-	if t != 0 {
-		return t, nil
-	}
-	buf, err := unix.SysctlRaw("kern.boottime")
-	if err != nil {
-		return 0, err
-	}
-
-	tv := *(*syscall.Timeval)(unsafe.Pointer((&buf[0])))
-	atomic.StoreUint64(&cachedBootTime, uint64(tv.Sec))
-
-	return t, nil
-}
-
-func uptime(boot uint64) uint64 {
-	return uint64(time.Now().Unix()) - boot
-}
-
-func Uptime() (uint64, error) {
-	return UptimeWithContext(context.Background())
-}
-
-func UptimeWithContext(ctx context.Context) (uint64, error) {
-	boot, err := BootTime()
-	if err != nil {
-		return 0, err
-	}
-	return uptime(boot), nil
 }
 
 func Users() ([]UserStat, error) {

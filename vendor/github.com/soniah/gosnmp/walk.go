@@ -1,4 +1,4 @@
-// Copyright 2012-2018 The GoSNMP Authors. All rights reserved.  Use of this
+// Copyright 2012-2020 The GoSNMP Authors. All rights reserved.  Use of this
 // source code is governed by a BSD-style license that can be found in the
 // LICENSE file.
 
@@ -81,6 +81,12 @@ RequestLoop:
 				if requests == 1 && i == 0 {
 					getRequestType = GetRequest
 					continue RequestLoop
+				} else if pdu.Name == rootOid && pdu.Type != NoSuchInstance {
+					// Call walk function if the pdu instance is found
+					// considering that the rootOid is a leafOid
+					if err := walkFn(pdu); err != nil {
+						return err
+					}
 				}
 				break RequestLoop
 			}

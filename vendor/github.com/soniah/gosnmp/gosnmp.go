@@ -1,4 +1,4 @@
-// Copyright 2012-2018 The GoSNMP Authors. All rights reserved.  Use of this
+// Copyright 2012-2020 The GoSNMP Authors. All rights reserved.  Use of this
 // source code is governed by a BSD-style license that can be found in the
 // LICENSE file.
 
@@ -9,6 +9,7 @@
 package gosnmp
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -54,10 +55,13 @@ type GoSNMP struct {
 	// Version is an SNMP Version
 	Version SnmpVersion
 
-	// Timeout is the timeout for the SNMP Query
+	// Context allows for overall deadlines and cancellation
+	Context context.Context
+
+	// Timeout is the timeout for one SNMP request/response
 	Timeout time.Duration
 
-	// Set the number of retries to attempt within timeout.
+	// Set the number of retries to attempt within timeout
 	Retries int
 
 	// Double timeout in each retry
@@ -68,7 +72,8 @@ type GoSNMP struct {
 	// x.Logger = log.New(os.Stdout, "", 0)
 	Logger Logger
 
-	// loggingEnabled is set if the Logger is nil, short circuits any 'Logger' calls
+	// loggingEnabled is set if the Logger isn't nil, otherwise any logging calls
+	// are ignored via shortcircuit
 	loggingEnabled bool
 
 	// MaxOids is the maximum number of oids allowed in a Get()
@@ -268,7 +273,8 @@ func (x *GoSNMP) connect(networkSuffix string) error {
 func (x *GoSNMP) netConnect() error {
 	var err error
 	addr := net.JoinHostPort(x.Target, strconv.Itoa(int(x.Port)))
-	x.Conn, err = net.DialTimeout(x.Transport, addr, x.Timeout)
+	dialer := net.Dialer{Timeout: x.Timeout}
+	x.Conn, err = dialer.DialContext(x.Context, x.Transport, addr)
 	return err
 }
 
@@ -300,6 +306,10 @@ func (x *GoSNMP) validateParameters() error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if x.Context == nil {
+		x.Context = context.Background()
 	}
 
 	return nil
@@ -470,7 +480,7 @@ func (x *GoSNMP) SnmpDecodePacket(resp []byte) (*SnmpPacket, error) {
 		return result, err
 	}
 
-	if result == nil || len(result.Variables) < 1 {
+	if result == nil {
 		err = fmt.Errorf("Unable to decode packet: no variables")
 		return result, err
 	}

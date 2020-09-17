@@ -1,4 +1,4 @@
-// Copyright 2012-2018 The GoSNMP Authors. All rights reserved.  Use of this
+// Copyright 2012-2020 The GoSNMP Authors. All rights reserved.  Use of this
 // source code is governed by a BSD-style license that can be found in the
 // LICENSE file.
 
@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -96,7 +98,9 @@ type TrapListener struct {
 
 	// These unexported fields are for letting test cases
 	// know we are ready.
-	conn      *net.UDPConn
+	conn  *net.UDPConn
+	proto string
+
 	finish    int32 // Atomic flag; set to 1 when closing connection
 	done      chan bool
 	listening chan bool
@@ -124,10 +128,117 @@ func (t *TrapListener) Listening() <-chan bool {
 func (t *TrapListener) Close() {
 	// Prevent concurrent calls to Close
 	if atomic.CompareAndSwapInt32(&t.finish, 0, 1) {
-		if t.conn != nil {
+		if t.conn.LocalAddr().Network() == "udp" {
 			t.conn.Close()
 		}
 		<-t.done
+	}
+}
+
+func (t *TrapListener) listenUDP(addr string) error {
+	// udp
+
+	udpAddr, err := net.ResolveUDPAddr(t.proto, addr)
+	if err != nil {
+		return err
+	}
+	t.conn, err = net.ListenUDP("udp", udpAddr)
+	if err != nil {
+		return err
+	}
+
+	defer t.conn.Close()
+
+	// Mark that we are listening now.
+	t.listening <- true
+
+	for {
+		switch {
+		case atomic.LoadInt32(&t.finish) == 1:
+			t.done <- true
+			return nil
+
+		default:
+			var buf [4096]byte
+			rlen, remote, err := t.conn.ReadFromUDP(buf[:])
+			if err != nil {
+				if atomic.LoadInt32(&t.finish) == 1 {
+					// err most likely comes from reading from a closed connection
+					continue
+				}
+				t.Params.logPrintf("TrapListener: error in read %s\n", err)
+				continue
+			}
+
+			msg := buf[:rlen]
+			traps := t.Params.UnmarshalTrap(msg)
+			if traps != nil {
+				t.OnNewTrap(traps, remote)
+			}
+		}
+	}
+}
+
+func (t *TrapListener) handleTCPRequest(conn net.Conn) {
+	// Make a buffer to hold incoming data.
+	buf := make([]byte, 4096)
+	// Read the incoming connection into the buffer.
+	reqLen, err := conn.Read(buf)
+	if err != nil {
+		t.Params.logPrintf("TrapListener: error in read %s\n", err)
+		return
+	}
+
+	//fmt.Printf("TEST: handleTCPRequest:%s, %s", t.proto, conn.RemoteAddr())
+
+	msg := buf[:reqLen]
+	traps := t.Params.UnmarshalTrap(msg)
+
+	if traps != nil {
+		// TODO: lieing for backward compatibility reason - create UDP Address ... not nice
+		r, _ := net.ResolveUDPAddr("", conn.RemoteAddr().String())
+		t.OnNewTrap(traps, r)
+	}
+	// Close the connection when you're done with it.
+	conn.Close()
+}
+
+func (t *TrapListener) listenTCP(addr string) error {
+	// udp
+
+	tcpAddr, err := net.ResolveTCPAddr(t.proto, addr)
+	if err != nil {
+		return err
+	}
+
+	l, err := net.ListenTCP("tcp", tcpAddr)
+	if err != nil {
+		return err
+	}
+
+	defer l.Close()
+
+	// Mark that we are listening now.
+	t.listening <- true
+
+	for {
+
+		switch {
+		case atomic.LoadInt32(&t.finish) == 1:
+			t.done <- true
+			return nil
+		default:
+
+			// Listen for an incoming connection.
+			conn, err := l.Accept()
+			fmt.Printf("ACCEPT: %s", conn)
+			if err != nil {
+				fmt.Println("Error accepting: ", err.Error())
+				os.Exit(1)
+			}
+			// Handle connections in a new goroutine.
+			go t.handleTCPRequest(conn)
+		}
 	}
 }
 
@@ -151,45 +262,22 @@ func (t *TrapListener) Listen(addr string) error {
 		t.OnNewTrap = debugTrapHandler
 	}
 
-	udpAddr, err := net.ResolveUDPAddr("udp", addr)
-	if err != nil {
-		return err
+	splitted := strings.SplitN(addr, "://", 2)
+	t.proto = "udp"
+	if len(splitted) > 1 {
+		t.proto = splitted[0]
+		addr = splitted[1]
 	}
-	conn, err := net.ListenUDP("udp", udpAddr)
-	if err != nil {
-		return err
+
+	//fmt.Printf("TEST: Adress:%s, %s", t.proto, addr)
+
+	if t.proto == "tcp" {
+		return t.listenTCP(addr)
+	} else if t.proto == "udp" {
+		return t.listenUDP(addr)
 	}
-	t.conn = conn
-	defer conn.Close()
 
-	// Mark that we are listening now.
-	t.listening <- true
-
-	for {
-		switch {
-		case atomic.LoadInt32(&t.finish) == 1:
-			t.done <- true
-			return nil
-
-		default:
-			var buf [4096]byte
-			rlen, remote, err := conn.ReadFromUDP(buf[:])
-			if err != nil {
-				if atomic.LoadInt32(&t.finish) == 1 {
-					// err most likely comes from reading from a closed connection
-					continue
-				}
-				t.Params.logPrintf("TrapListener: error in read %s\n", err)
-				continue
-			}
-
-			msg := buf[:rlen]
-			traps := t.Params.UnmarshalTrap(msg)
-			if traps != nil {
-				t.OnNewTrap(traps, remote)
-			}
-		}
-	}
+	return fmt.Errorf("Not implemented network protocol: %s [use: tcp/udp]", t.proto)
 }
 
 // Default trap handler

@@ -13,7 +13,7 @@ import (
 type errMissingTag string
 
 func (e errMissingTag) Error() string {
-	return fmt.Sprintf("missing required tag: %q", e)
+	return fmt.Sprintf("missing required tag: %q", string(e))
 }
 
 type serializer struct{}

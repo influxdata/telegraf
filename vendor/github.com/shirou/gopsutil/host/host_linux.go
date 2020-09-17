@@ -460,6 +460,38 @@ func SensorsTemperaturesWithContext(ctx context.Context) ([]TemperatureStat, err
 	}
 	var warns Warnings
 
+	if len(files) == 0 { // handle distributions without hwmon, like raspbian #391, parse legacy thermal_zone files
+		files, err = filepath.Glob(common.HostSys("/class/thermal/thermal_zone*/"))
+		if err != nil {
+			return temperatures, err
+		}
+		for _, file := range files {
+			// Get the name of the temperature you are reading
+			name, err := ioutil.ReadFile(filepath.Join(file, "type"))
+			if err != nil {
+				warns.Add(err)
+				continue
+			}
+			// Get the temperature reading
+			current, err := ioutil.ReadFile(filepath.Join(file, "temp"))
+			if err != nil {
+				warns.Add(err)
+				continue
+			}
+			temperature, err := strconv.ParseInt(strings.TrimSpace(string(current)), 10, 64)
+			if err != nil {
+				warns.Add(err)
+				continue
+			}
+
+			temperatures = append(temperatures, TemperatureStat{
+				SensorKey:   strings.TrimSpace(string(name)),
+				Temperature: float64(temperature) / 1000.0,
+			})
+		}
+		return temperatures, warns.Reference()
+	}
+
 	// example directory
 	// device/           temp1_crit_alarm  temp2_crit_alarm  temp3_crit_alarm  temp4_crit_alarm  temp5_crit_alarm  temp6_crit_alarm  temp7_crit_alarm
 	// name              temp1_input       temp2_input       temp3_input       temp4_input       temp5_input       temp6_input       temp7_input

@@ -71,9 +71,9 @@ The dot and wildcard characters can be escaped with '\\'.
   "children": ["Sara","Alex","Jack"],
   "fav.movie": "Deer Hunter",
   "friends": [
-    {"first": "Dale", "last": "Murphy", "age": 44},
-    {"first": "Roger", "last": "Craig", "age": 68},
-    {"first": "Jane", "last": "Murphy", "age": 47}
+    {"first": "Dale", "last": "Murphy", "age": 44, "nets": ["ig", "fb", "tw"]},
+    {"first": "Roger", "last": "Craig", "age": 68, "nets": ["fb", "tw"]},
+    {"first": "Jane", "last": "Murphy", "age": 47, "nets": ["ig", "tw"]}
   ]
 }
 ```
@@ -90,16 +90,24 @@ The dot and wildcard characters can be escaped with '\\'.
 "friends.1.last"     >> "Craig"
 ```
 
-You can also query an array for the first match by using `#[...]`, or find all matches with `#[...]#`. 
-Queries support the `==`, `!=`, `<`, `<=`, `>`, `>=` comparison operators and the simple pattern matching `%` (like) and `!%` (not like) operators.
+You can also query an array for the first match by using `#(...)`, or find all 
+matches with `#(...)#`. Queries support the `==`, `!=`, `<`, `<=`, `>`, `>=` 
+comparison operators and the simple pattern matching `%` (like) and `!%` 
+(not like) operators.
 
 ```
-friends.#[last=="Murphy"].first    >> "Dale"
-friends.#[last=="Murphy"]#.first   >> ["Dale","Jane"]
-friends.#[age>45]#.last            >> ["Craig","Murphy"]
-friends.#[first%"D*"].last         >> "Murphy"
-friends.#[first!%"D*"].last        >> "Craig"
+friends.#(last=="Murphy").first    >> "Dale"
+friends.#(last=="Murphy")#.first   >> ["Dale","Jane"]
+friends.#(age>45)#.last            >> ["Craig","Murphy"]
+friends.#(first%"D*").last         >> "Murphy"
+friends.#(first!%"D*").last        >> "Craig"
+friends.#(nets.#(=="fb"))#.first   >> ["Dale","Roger"]
 ```
+
+*Please note that prior to v1.3.0, queries used the `#[...]` brackets. This was
+changed in v1.3.0 as to avoid confusion with the new
+[multipath](SYNTAX.md#multipaths) syntax. For backwards compatibility, 
+`#[...]` will continue to work until the next major release.*
 
 ## Result Type
 
@@ -185,11 +193,15 @@ we'll get `children` array and reverse the order:
 "children|@reverse|0"         >> "Jack"
 ```
 
-There are currently three built-in modifiers:
+There are currently the following built-in modifiers:
 
 - `@reverse`: Reverse an array or the members of an object.
 - `@ugly`: Remove all whitespace from a json document.
 - `@pretty`: Make the json document more human readable.
+- `@this`: Returns the current element. It can be used to retrieve the root element.
+- `@valid`: Ensure the json document is valid.
+- `@flatten`: Flattens an array.
+- `@join`: Joins multiple objects into a single object.
 
 ### Modifier arguments
 
@@ -263,7 +275,7 @@ For example:
 ..1                   >> {"name": "Alexa", "age": 34}
 ..3                   >> {"name": "Deloise", "age": 44}
 ..#.name              >> ["Gilbert","Alexa","May","Deloise"]
-..#[name="May"].age   >> 57
+..#(name="May").age   >> 57
 ```
 
 The `ForEachLines` function will iterate through JSON lines.
@@ -308,7 +320,7 @@ for _, name := range result.Array() {
 You can also query an object inside an array:
 
 ```go
-name := gjson.Get(json, `programmers.#[lastName="Hunter"].firstName`)
+name := gjson.Get(json, `programmers.#(lastName="Hunter").firstName`)
 println(name.String())  // prints "Elliotte"
 ```
 

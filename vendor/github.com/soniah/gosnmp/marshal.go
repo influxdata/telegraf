@@ -1,4 +1,4 @@
-// Copyright 2012-2018 The GoSNMP Authors. All rights reserved.  Use of this
+// Copyright 2012-2020 The GoSNMP Authors. All rights reserved.  Use of this
 // source code is governed by a BSD-style license that can be found in the
 // LICENSE file.
 
@@ -6,14 +6,16 @@ package gosnmp
 
 import (
 	"bytes"
+	"context"
 	"encoding/asn1"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
+	"reflect"
+	"runtime"
 	"strings"
 	"sync/atomic"
-	"time"
 )
 
 //
@@ -144,8 +146,14 @@ func (x *GoSNMP) sendOneRequest(packetOut *SnmpPacket,
 		}
 		err = nil
 
-		reqDeadline := time.Now().Add(timeout)
-		err = x.Conn.SetDeadline(reqDeadline)
+		if x.Context.Err() != nil {
+			return nil, x.Context.Err()
+		}
+
+		ctx, cancel := context.WithTimeout(x.Context, timeout)
+		defer cancel()
+		deadline, _ := ctx.Deadline()
+		err = x.Conn.SetDeadline(deadline)
 		if err != nil {
 			return nil, err
 		}
@@ -226,7 +234,6 @@ func (x *GoSNMP) sendOneRequest(packetOut *SnmpPacket,
 			cursor, err = x.unmarshalHeader(resp, result)
 			if err != nil {
 				x.logPrintf("ERROR on unmarshall header: %s", err)
-				err = fmt.Errorf("Unable to decode packet: %s", err.Error())
 				continue
 			}
 
@@ -236,18 +243,16 @@ func (x *GoSNMP) sendOneRequest(packetOut *SnmpPacket,
 					x.logPrintf("ERROR on Test Authentication on v3: %s", err)
 					break
 				}
-				resp, cursor, err = x.decryptPacket(resp, cursor, result)
+				resp, cursor, _ = x.decryptPacket(resp, cursor, result)
 			}
 
 			err = x.unmarshalPayload(resp, cursor, result)
 			if err != nil {
 				x.logPrintf("ERROR on UnmarshalPayload on v3: %s", err)
-				err = fmt.Errorf("Unable to decode packet: %s", err.Error())
 				continue
 			}
-			if result == nil || len(result.Variables) < 1 {
+			if len(result.Variables) < 1 {
 				x.logPrintf("ERROR on UnmarshalPayload on v3: %s", err)
-				err = fmt.Errorf("Unable to decode packet: nil")
 				continue
 			}
 
@@ -274,7 +279,6 @@ func (x *GoSNMP) sendOneRequest(packetOut *SnmpPacket,
 			}
 			if !validID {
 				x.logPrint("ERROR  out of order")
-				err = fmt.Errorf("Out of order response")
 				continue
 			}
 
@@ -298,7 +302,10 @@ func (x *GoSNMP) sendOneRequest(packetOut *SnmpPacket,
 func (x *GoSNMP) send(packetOut *SnmpPacket, wait bool) (result *SnmpPacket, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("recover: %v", e)
+			var buf = make([]byte, 8192)
+			runtime.Stack(buf, true)
+
+			err = fmt.Errorf("recover: %v\nStack:%v\n", e, string(buf))
 		}
 	}()
 
@@ -352,6 +359,11 @@ func (x *GoSNMP) send(packetOut *SnmpPacket, wait bool) (result *SnmpPacket, err
 		result, err = x.sendOneRequest(packetOut, wait)
 	}
 	return result, err
+}
+func (packet *SnmpPacket) logPrintf(format string, v ...interface{}) {
+	if packet.Logger != nil {
+		packet.Logger.Printf(format, v...)
+	}
 }
 
 // -- Marshalling Logic --------------------------------------------------------
@@ -483,6 +495,7 @@ func (packet *SnmpPacket) marshalPDU() ([]byte, error) {
 		}
 
 		buf.Write(snmpV1TrapHeader)
+
 	default:
 		// requestid
 		buf.Write([]byte{2, 4})
@@ -493,10 +506,10 @@ func (packet *SnmpPacket) marshalPDU() ([]byte, error) {
 		}
 
 		// error
-		buf.Write([]byte{2, 1, 0})
+		buf.Write([]byte{2, 1, byte(packet.Error)})
 
 		// error index
-		buf.Write([]byte{2, 1, 0})
+		buf.Write([]byte{2, 1, byte(packet.ErrorIndex)})
 
 	}
 
@@ -617,8 +630,11 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		case uint32:
 			intBytes, err = marshalUint32(value)
 			pdu.Check(err)
+		case uint:
+			intBytes, err = marshalUint32(uint32(value))
+			pdu.Check(err)
 		default:
-			return nil, fmt.Errorf("Unable to marshal pdu.Type %v; unknown pdu.Value %v", pdu.Type, pdu.Value)
+			return nil, fmt.Errorf("Unable to marshal pdu.Type %v; unknown pdu.Value %v[type=%v]", pdu.Type, pdu.Value, reflect.TypeOf(pdu.Value))
 		}
 		tmpBuf.Write([]byte{byte(pdu.Type), byte(len(intBytes))})
 		tmpBuf.Write(intBytes)
@@ -628,7 +644,7 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		pduBuf.WriteByte(byte(len(oid) + len(intBytes) + 4))
 		pduBuf.Write(tmpBuf.Bytes())
 
-	case OctetString:
+	case OctetString, BitString:
 		//Oid
 		tmpBuf.Write([]byte{byte(ObjectIdentifier), byte(len(oid))})
 		tmpBuf.Write(oid)
@@ -649,7 +665,7 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		tmpBuf.WriteByte(byte(OctetString))
+		tmpBuf.WriteByte(byte(pdu.Type))
 		tmpBuf.Write(length)
 		tmpBuf.Write(octetStringBytes)
 
@@ -714,7 +730,42 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		pduBuf.WriteByte(byte(Sequence))
 		pduBuf.WriteByte(byte(len(oid) + len(ipAddressBytes) + 4))
 		pduBuf.Write(tmpBuf.Bytes())
-
+	case Counter64, OpaqueFloat, OpaqueDouble:
+		converters := map[Asn1BER]func(interface{}) ([]byte, error){
+			Counter64:    marshalUint64,
+			OpaqueFloat:  marshalFloat32,
+			OpaqueDouble: marshalFloat64,
+		}
+		tmpBuf.Write([]byte{byte(ObjectIdentifier), byte(len(oid))})
+		tmpBuf.Write(oid)
+		tmpBuf.WriteByte(byte(pdu.Type))
+		intBytes, err := converters[pdu.Type](pdu.Value)
+		pdu.Check(err)
+		tmpBuf.WriteByte(byte(len(intBytes)))
+		tmpBuf.Write(intBytes)
+		tmpBytes := tmpBuf.Bytes()
+		length, err := marshalLength(len(tmpBytes))
+		if err != nil {
+			return nil, err
+		}
+		// Sequence, length of oid + oid, then oid/oid data
+		pduBuf.WriteByte(byte(Sequence))
+		pduBuf.Write(length)
+		pduBuf.Write(tmpBytes)
+	case NoSuchInstance, NoSuchObject, EndOfMibView:
+		tmpBuf.Write([]byte{byte(ObjectIdentifier), byte(len(oid))})
+		tmpBuf.Write(oid)
+		tmpBuf.WriteByte(byte(pdu.Type))
+		tmpBuf.WriteByte(byte(EndOfContents))
+		tmpBytes := tmpBuf.Bytes()
+		length, err := marshalLength(len(tmpBytes))
+		if err != nil {
+			return nil, err
+		}
+		// Sequence, length of oid + oid, then oid/oid data
+		pduBuf.WriteByte(byte(Sequence))
+		pduBuf.Write(length)
+		pduBuf.Write(tmpBytes)
 	default:
 		return nil, fmt.Errorf("Unable to marshal PDU: unknown BER type %q", pdu.Type)
 	}
@@ -755,16 +806,22 @@ func (x *GoSNMP) unmarshalHeader(packet []byte, response *SnmpPacket) (int, erro
 	}
 
 	cursor += count
+	if cursor > len(packet) {
+		return 0, fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if version, ok := rawVersion.(int); ok {
 		response.Version = SnmpVersion(version)
 		x.logPrintf("Parsed version %d", version)
 	}
 
 	if response.Version == Version3 {
+		oldcursor := cursor
 		cursor, err = x.unmarshalV3Header(packet, cursor, response)
 		if err != nil {
 			return 0, err
 		}
+		x.logPrintf("UnmarshalV3Header done. [with SecurityParameters]. Header Size %d. Last 4 Bytes=[%v]", cursor-oldcursor, packet[cursor-4:cursor])
 	} else {
 		// Parse community
 		rawCommunity, count, err := parseRawField(packet[cursor:], "community")
@@ -772,6 +829,10 @@ func (x *GoSNMP) unmarshalHeader(packet []byte, response *SnmpPacket) (int, erro
 			return 0, fmt.Errorf("Error parsing community string: %s", err.Error())
 		}
 		cursor += count
+		if cursor > len(packet) {
+			return 0, fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+		}
+
 		if community, ok := rawCommunity.(string); ok {
 			response.Community = community
 			x.logPrintf("Parsed community %s", community)
@@ -784,9 +845,10 @@ func (x *GoSNMP) unmarshalPayload(packet []byte, cursor int, response *SnmpPacke
 	var err error
 	// Parse SNMP packet type
 	requestType := PDUType(packet[cursor])
+	x.logPrintf("UnmarshalPayload Meet PDUType %#x. Offset %v", requestType, cursor)
 	switch requestType {
 	// known, supported types
-	case GetResponse, GetNextRequest, GetBulkRequest, Report, SNMPv2Trap:
+	case GetResponse, GetNextRequest, GetBulkRequest, Report, SNMPv2Trap, GetRequest, SetRequest, InformRequest:
 		response.PDUType = requestType
 		err = x.unmarshalResponse(packet[cursor:], response)
 		if err != nil {
@@ -799,6 +861,7 @@ func (x *GoSNMP) unmarshalPayload(packet []byte, cursor int, response *SnmpPacke
 			return fmt.Errorf("Error in unmarshalTrapV1: %s", err.Error())
 		}
 	default:
+		x.logPrintf("UnmarshalPayload Meet Unknown PDUType %#x. Offset %v", requestType, cursor)
 		return fmt.Errorf("Unknown PDUType %#x", requestType)
 	}
 	return nil
@@ -819,6 +882,10 @@ func (x *GoSNMP) unmarshalResponse(packet []byte, response *SnmpPacket) error {
 		return fmt.Errorf("Error parsing SNMP packet request ID: %s", err.Error())
 	}
 	cursor += count
+	if cursor > len(packet) {
+		return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if requestid, ok := rawRequestID.(int); ok {
 		response.RequestID = uint32(requestid)
 		x.logPrintf("requestID: %d", response.RequestID)
@@ -831,6 +898,10 @@ func (x *GoSNMP) unmarshalResponse(packet []byte, response *SnmpPacket) error {
 			return fmt.Errorf("Error parsing SNMP packet non repeaters: %s", err.Error())
 		}
 		cursor += count
+		if cursor > len(packet) {
+			return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+		}
+
 		if nonRepeaters, ok := rawNonRepeaters.(int); ok {
 			response.NonRepeaters = uint8(nonRepeaters)
 		}
@@ -841,6 +912,10 @@ func (x *GoSNMP) unmarshalResponse(packet []byte, response *SnmpPacket) error {
 			return fmt.Errorf("Error parsing SNMP packet max repetitions: %s", err.Error())
 		}
 		cursor += count
+		if cursor > len(packet) {
+			return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+		}
+
 		if maxRepetitions, ok := rawMaxRepetitions.(int); ok {
 			response.MaxRepetitions = uint8(maxRepetitions)
 		}
@@ -851,6 +926,10 @@ func (x *GoSNMP) unmarshalResponse(packet []byte, response *SnmpPacket) error {
 			return fmt.Errorf("Error parsing SNMP packet error: %s", err.Error())
 		}
 		cursor += count
+		if cursor > len(packet) {
+			return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+		}
+
 		if errorStatus, ok := rawError.(int); ok {
 			response.Error = SNMPError(errorStatus)
 			x.logPrintf("errorStatus: %d", uint8(errorStatus))
@@ -862,6 +941,10 @@ func (x *GoSNMP) unmarshalResponse(packet []byte, response *SnmpPacket) error {
 			return fmt.Errorf("Error parsing SNMP packet error index: %s", err.Error())
 		}
 		cursor += count
+		if cursor > len(packet) {
+			return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+		}
+
 		if errorindex, ok := rawErrorIndex.(int); ok {
 			response.ErrorIndex = uint8(errorindex)
 			x.logPrintf("error-index: %d", uint8(errorindex))
@@ -886,6 +969,10 @@ func (x *GoSNMP) unmarshalTrapV1(packet []byte, response *SnmpPacket) error {
 		return fmt.Errorf("Error parsing SNMP packet error: %s", err.Error())
 	}
 	cursor += count
+	if cursor > len(packet) {
+		return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if Enterprise, ok := rawEnterprise.([]int); ok {
 		response.Enterprise = oidToString(Enterprise)
 		x.logPrintf("Enterprise: %+v", Enterprise)
@@ -897,6 +984,10 @@ func (x *GoSNMP) unmarshalTrapV1(packet []byte, response *SnmpPacket) error {
 		return fmt.Errorf("Error parsing SNMP packet error: %s", err.Error())
 	}
 	cursor += count
+	if cursor > len(packet) {
+		return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if AgentAddress, ok := rawAgentAddress.(string); ok {
 		response.AgentAddress = AgentAddress
 		x.logPrintf("AgentAddress: %s", AgentAddress)
@@ -908,6 +999,10 @@ func (x *GoSNMP) unmarshalTrapV1(packet []byte, response *SnmpPacket) error {
 		return fmt.Errorf("Error parsing SNMP packet error: %s", err.Error())
 	}
 	cursor += count
+	if cursor > len(packet) {
+		return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if GenericTrap, ok := rawGenericTrap.(int); ok {
 		response.GenericTrap = GenericTrap
 		x.logPrintf("GenericTrap: %d", GenericTrap)
@@ -919,6 +1014,10 @@ func (x *GoSNMP) unmarshalTrapV1(packet []byte, response *SnmpPacket) error {
 		return fmt.Errorf("Error parsing SNMP packet error: %s", err.Error())
 	}
 	cursor += count
+	if cursor > len(packet) {
+		return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if SpecificTrap, ok := rawSpecificTrap.(int); ok {
 		response.SpecificTrap = SpecificTrap
 		x.logPrintf("SpecificTrap: %d", SpecificTrap)
@@ -930,6 +1029,10 @@ func (x *GoSNMP) unmarshalTrapV1(packet []byte, response *SnmpPacket) error {
 		return fmt.Errorf("Error parsing SNMP packet error: %s", err.Error())
 	}
 	cursor += count
+	if cursor > len(packet) {
+		return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if Timestamp, ok := rawTimestamp.(uint); ok {
 		response.Timestamp = Timestamp
 		x.logPrintf("Timestamp: %d", Timestamp)
@@ -943,11 +1046,20 @@ func (x *GoSNMP) unmarshalVBL(packet []byte, response *SnmpPacket) error {
 
 	var cursor, cursorInc int
 	var vblLength int
+
+	if len(packet) == 0 || cursor > len(packet) {
+		return fmt.Errorf("Truncated packet when unmarshalling a VBL, got length %d cursor %d", len(packet), cursor)
+	}
+
 	if packet[cursor] != 0x30 {
 		return fmt.Errorf("Expected a sequence when unmarshalling a VBL, got %x", packet[cursor])
 	}
 
 	vblLength, cursor = parseLength(packet)
+	if vblLength == 0 || vblLength > len(packet) {
+		return fmt.Errorf("Truncated packet when unmarshalling a VBL, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if len(packet) != vblLength {
 		return fmt.Errorf("error verifying: packet length %d vbl length %d", len(packet), vblLength)
 	}
@@ -966,13 +1078,20 @@ func (x *GoSNMP) unmarshalVBL(packet []byte, response *SnmpPacket) error {
 
 		_, cursorInc = parseLength(packet[cursor:])
 		cursor += cursorInc
+		if cursor > len(packet) {
+			return fmt.Errorf("Error parsing OID Value: packet %d cursor %d", len(packet), cursor)
+		}
 
 		// Parse OID
 		rawOid, oidLength, err := parseRawField(packet[cursor:], "OID")
 		if err != nil {
 			return fmt.Errorf("Error parsing OID Value: %s", err.Error())
 		}
+
 		cursor += oidLength
+		if cursor > len(packet) {
+			return fmt.Errorf("Error parsing OID Value: truncated, packet length %d cursor %d", len(packet), cursor)
+		}
 
 		var oid []int
 		var ok bool
@@ -987,8 +1106,13 @@ func (x *GoSNMP) unmarshalVBL(packet []byte, response *SnmpPacket) error {
 		if err != nil {
 			return fmt.Errorf("Error decoding value: %v", err)
 		}
+
 		valueLength, _ := parseLength(packet[cursor:])
 		cursor += valueLength
+		if cursor > len(packet) {
+			return fmt.Errorf("Error decoding OID Value: truncated, packet length %d cursor %d", len(packet), cursor)
+		}
+
 		response.Variables = append(response.Variables, SnmpPDU{oidStr, v.Type, v.Value, x.Logger})
 	}
 	return nil

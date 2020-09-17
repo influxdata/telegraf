@@ -27,6 +27,7 @@ type Process struct {
 	numCtxSwitches *NumCtxSwitchesStat
 	uids           []int32
 	gids           []int32
+	groups         []int32
 	numThreads     int32
 	memInfo        *MemoryInfoStat
 	sigInfo        *SignalInfoStat
@@ -311,4 +312,9 @@ func (p *Process) CPUPercentWithContext(ctx context.Context) (float64, error) {
 	}
 
 	return 100 * cput.Total() / totalTime, nil
+}
+
+// Groups returns all group IDs(include supplementary groups) of the process as a slice of the int
+func (p *Process) Groups() ([]int32, error) {
+       return p.GroupsWithContext(context.Background())
 }

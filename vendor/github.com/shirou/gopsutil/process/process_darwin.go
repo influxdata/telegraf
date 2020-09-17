@@ -267,6 +267,20 @@ func (p *Process) GidsWithContext(ctx context.Context) ([]int32, error) {
 
 	return gids, nil
 }
+
+func (p *Process) GroupsWithContext(ctx context.Context) ([]int32, error) {
+	k, err := p.getKProc()
+	if err != nil {
+		return nil, err
+	}
+
+	groups := make([]int32, k.Eproc.Ucred.Ngroups)
+	for i := int16(0); i < k.Eproc.Ucred.Ngroups; i++ {
+		groups[i] = int32(k.Eproc.Ucred.Groups[i])
+	}
+
+	return groups, nil
+}
 func (p *Process) Terminal() (string, error) {
 	return p.TerminalWithContext(context.Background())
 }

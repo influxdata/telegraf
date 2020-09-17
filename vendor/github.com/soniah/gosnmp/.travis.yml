@@ -2,6 +2,8 @@ language: go
 
 go:
 - "1.11"
+- "1.12"
+- "1.13"
 
 # $TRAVIS_GOARCH hack - see https://github.com/travis-ci/travis-ci/issues/6126
 

@@ -2,6 +2,10 @@
 
 package kinesis
 
+import (
+	"github.com/aws/aws-sdk-go/private/protocol"
+)
+
 const (
 
 	// ErrCodeExpiredIteratorException for service response error code
@@ -103,3 +107,20 @@ const (
 	// correctly.
 	ErrCodeResourceNotFoundException = "ResourceNotFoundException"
 )
+
+var exceptionFromCode = map[string]func(protocol.ResponseMetadata) error{
+	"ExpiredIteratorException":               newErrorExpiredIteratorException,
+	"ExpiredNextTokenException":              newErrorExpiredNextTokenException,
+	"InternalFailureException":               newErrorInternalFailureException,
+	"InvalidArgumentException":               newErrorInvalidArgumentException,
+	"KMSAccessDeniedException":               newErrorKMSAccessDeniedException,
+	"KMSDisabledException":                   newErrorKMSDisabledException,
+	"KMSInvalidStateException":               newErrorKMSInvalidStateException,
+	"KMSNotFoundException":                   newErrorKMSNotFoundException,
+	"KMSOptInRequired":                       newErrorKMSOptInRequired,
+	"KMSThrottlingException":                 newErrorKMSThrottlingException,
+	"LimitExceededException":                 newErrorLimitExceededException,
+	"ProvisionedThroughputExceededException": newErrorProvisionedThroughputExceededException,
+	"ResourceInUseException":                 newErrorResourceInUseException,
+	"ResourceNotFoundException":              newErrorResourceNotFoundException,
+}

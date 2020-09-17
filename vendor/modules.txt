@@ -71,6 +71,7 @@ github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.5.0
 github.com/Azure/go-autorest/tracing
 # github.com/BurntSushi/toml v0.3.1
+## explicit
 github.com/BurntSushi/toml
 # github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
 ## explicit
@@ -120,7 +121,7 @@ github.com/aristanetworks/goarista/lanz
 github.com/aristanetworks/goarista/lanz/proto
 # github.com/armon/go-metrics v0.3.0
 ## explicit
-# github.com/aws/aws-sdk-go v1.19.41
+# github.com/aws/aws-sdk-go v1.30.9
 ## explicit
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/awserr
@@ -141,11 +142,15 @@ github.com/aws/aws-sdk-go/aws/endpoints
 github.com/aws/aws-sdk-go/aws/request
 github.com/aws/aws-sdk-go/aws/session
 github.com/aws/aws-sdk-go/aws/signer/v4
+github.com/aws/aws-sdk-go/internal/context
 github.com/aws/aws-sdk-go/internal/ini
 github.com/aws/aws-sdk-go/internal/sdkio
+github.com/aws/aws-sdk-go/internal/sdkmath
 github.com/aws/aws-sdk-go/internal/sdkrand
 github.com/aws/aws-sdk-go/internal/sdkuri
 github.com/aws/aws-sdk-go/internal/shareddefaults
+github.com/aws/aws-sdk-go/internal/strings
+github.com/aws/aws-sdk-go/internal/sync/singleflight
 github.com/aws/aws-sdk-go/private/protocol
 github.com/aws/aws-sdk-go/private/protocol/eventstream
 github.com/aws/aws-sdk-go/private/protocol/eventstream/eventstreamapi
@@ -162,12 +167,17 @@ github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface
 github.com/aws/aws-sdk-go/service/kinesis
 github.com/aws/aws-sdk-go/service/kinesis/kinesisiface
 github.com/aws/aws-sdk-go/service/sts
+github.com/aws/aws-sdk-go/service/sts/stsiface
+# github.com/benbjohnson/clock v1.0.3
+## explicit
+github.com/benbjohnson/clock
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
 # github.com/bitly/go-hostpool v0.1.0
 ## explicit
 # github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
 ## explicit
+github.com/bmizerany/assert
 # github.com/caio/go-tdigest v2.3.0+incompatible
 ## explicit
 github.com/caio/go-tdigest
@@ -205,6 +215,7 @@ github.com/devigned/tab
 ## explicit
 github.com/dgrijalva/jwt-go
 # github.com/dimchansky/utfbom v1.1.0
+## explicit
 github.com/dimchansky/utfbom
 # github.com/docker/distribution v2.6.0-rc.1.0.20170726174610-edc3ab29cdff+incompatible
 ## explicit
@@ -288,7 +299,7 @@ github.com/go-redis/redis/internal/pool
 github.com/go-redis/redis/internal/proto
 github.com/go-redis/redis/internal/singleflight
 github.com/go-redis/redis/internal/util
-# github.com/go-sql-driver/mysql v1.4.1
+# github.com/go-sql-driver/mysql v1.5.0
 ## explicit
 github.com/go-sql-driver/mysql
 # github.com/goburrow/modbus v0.1.0
@@ -322,9 +333,6 @@ github.com/golang/geo/s1
 github.com/golang/geo/s2
 # github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
 github.com/golang/groupcache/lru
-# github.com/golang/mock v1.4.3
-## explicit
-github.com/golang/mock/gomock
 # github.com/golang/protobuf v1.3.5
 ## explicit
 github.com/golang/protobuf/proto
@@ -361,6 +369,16 @@ github.com/google/go-querystring/query
 github.com/google/uuid
 # github.com/googleapis/gax-go/v2 v2.0.5
 github.com/googleapis/gax-go/v2
+# github.com/gopcua/opcua v0.1.12
+## explicit
+github.com/gopcua/opcua
+github.com/gopcua/opcua/debug
+github.com/gopcua/opcua/errors
+github.com/gopcua/opcua/id
+github.com/gopcua/opcua/ua
+github.com/gopcua/opcua/uacp
+github.com/gopcua/opcua/uapolicy
+github.com/gopcua/opcua/uasc
 # github.com/gorilla/context v1.1.1
 github.com/gorilla/context
 # github.com/gorilla/mux v1.6.2
@@ -399,7 +417,7 @@ github.com/influxdata/go-syslog/v2/common
 github.com/influxdata/go-syslog/v2/nontransparent
 github.com/influxdata/go-syslog/v2/octetcounting
 github.com/influxdata/go-syslog/v2/rfc5424
-# github.com/influxdata/tail v1.0.1-0.20180327235535-c43482518d41
+# github.com/influxdata/tail v1.0.1-0.20200707181643-03a791b270e4
 ## explicit
 github.com/influxdata/tail
 github.com/influxdata/tail/ratelimiter
@@ -428,7 +446,7 @@ github.com/jackc/pgx/stdlib
 ## explicit
 github.com/jcmturner/gofork/encoding/asn1
 github.com/jcmturner/gofork/x/crypto/pbkdf2
-# github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af
+# github.com/jmespath/go-jmespath v0.3.0
 github.com/jmespath/go-jmespath
 # github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7
 github.com/jpillora/backoff
@@ -456,6 +474,10 @@ github.com/klauspost/compress/zstd/internal/xxhash
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515
 github.com/kr/logfmt
+# github.com/kr/pretty v0.1.0
+github.com/kr/pretty
+# github.com/kr/text v0.1.0
+github.com/kr/text
 # github.com/kubernetes/apimachinery v0.0.0-20190119020841-d41becfba9ee
 ## explicit
 github.com/kubernetes/apimachinery/pkg/api/resource
@@ -517,6 +539,12 @@ github.com/nats-io/nats.go/util
 github.com/nats-io/nkeys
 # github.com/nats-io/nuid v1.0.1
 github.com/nats-io/nuid
+# github.com/newrelic/newrelic-telemetry-sdk-go v0.2.0
+## explicit
+github.com/newrelic/newrelic-telemetry-sdk-go/cumulative
+github.com/newrelic/newrelic-telemetry-sdk-go/internal
+github.com/newrelic/newrelic-telemetry-sdk-go/internal/jsonx
+github.com/newrelic/newrelic-telemetry-sdk-go/telemetry
 # github.com/nsqio/go-nsq v1.0.7
 ## explicit
 github.com/nsqio/go-nsq
@@ -550,7 +578,7 @@ github.com/openzipkin/zipkin-go-opentracing/wire
 # github.com/pierrec/lz4 v2.2.6+incompatible
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
-# github.com/pkg/errors v0.8.1
+# github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
@@ -583,7 +611,7 @@ github.com/samuel/go-zookeeper/zk
 # github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b => github.com/gofrs/uuid v3.2.0+incompatible
 ## explicit
 github.com/satori/go.uuid
-# github.com/shirou/gopsutil v2.20.2+incompatible
+# github.com/shirou/gopsutil v2.20.7+incompatible
 ## explicit
 github.com/shirou/gopsutil/cpu
 github.com/shirou/gopsutil/disk
@@ -598,7 +626,7 @@ github.com/shirou/gopsutil/process
 # github.com/sirupsen/logrus v1.4.2
 ## explicit
 github.com/sirupsen/logrus
-# github.com/soniah/gosnmp v1.22.0
+# github.com/soniah/gosnmp v1.25.0
 ## explicit
 github.com/soniah/gosnmp
 # github.com/streadway/amqp v0.0.0-20180528204448-e5adc2ada8b8
@@ -606,7 +634,7 @@ github.com/soniah/gosnmp
 github.com/streadway/amqp
 # github.com/stretchr/objx v0.1.1
 github.com/stretchr/objx
-# github.com/stretchr/testify v1.4.0
+# github.com/stretchr/testify v1.5.1
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/mock
@@ -616,7 +644,7 @@ github.com/stretchr/testify/require
 github.com/tbrandon/mbserver
 # github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00
 ## explicit
-# github.com/tidwall/gjson v1.3.0
+# github.com/tidwall/gjson v1.6.0
 ## explicit
 github.com/tidwall/gjson
 # github.com/tidwall/match v1.0.1
@@ -691,7 +719,14 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# golang.org/x/crypto v0.0.0-20200204104054-c9f3fb736b72
+# go.starlark.net v0.0.0-20191227232015-caa3e9aa5008
+## explicit
+go.starlark.net/internal/compile
+go.starlark.net/internal/spell
+go.starlark.net/resolve
+go.starlark.net/starlark
+go.starlark.net/syntax
+# golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/curve25519
@@ -746,15 +781,17 @@ golang.org/x/oauth2/jwt
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4
+# golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 ## explicit
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
 golang.org/x/sys/windows/svc
 golang.org/x/sys/windows/svc/eventlog
 golang.org/x/sys/windows/svc/mgr
-# golang.org/x/text v0.3.2
+# golang.org/x/text v0.3.3
+## explicit
 golang.org/x/text/cases
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
@@ -833,7 +870,6 @@ google.golang.org/api/transport/http
 google.golang.org/api/transport/http/internal/propagation
 # google.golang.org/appengine v1.6.5
 google.golang.org/appengine
-google.golang.org/appengine/cloudsql
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/app_identity
 google.golang.org/appengine/internal/base
