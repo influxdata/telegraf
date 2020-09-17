@@ -1,0 +1,26 @@
+# this config file generates a changelog for a tagged release
+# on Github. You need to have a GITHUB_TOKEN environment
+# variable set and goreleaser installed. Then run
+#
+#     goreleaser release --rm-dist
+#
+# on the tagged commit.
+#
+# Note:
+# goreleaser will try to upload an empty checksum file.
+# I have not yet found a way to disable this. You can
+# cancel this with ctrl-c.
+
+
+# no binaries to build
+builds:
+  -
+    goos:
+      - none
+checksum:
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'

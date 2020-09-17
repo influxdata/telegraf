@@ -1,0 +1,6 @@
+github.com/influxdata/tail v1.0.0 h1:RGikfjB/b5C/YP3p47YD48eE0WSsJyAVbBHNpoTHdX0=
+github.com/influxdata/tail v1.0.0/go.mod h1:xTFF2SILpIYc5N+Srb0d5qpx7d+f733nBrbasb13DtQ=
+gopkg.in/fsnotify.v1 v1.2.1 h1:x2hwAFVlj5ptNfCIgr3KRZm9IQcKDCWJbQDO7QxUXOo=
+gopkg.in/fsnotify.v1 v1.2.1/go.mod h1:Tz8NjZHkW78fSQdbUxIjBTcgA1z1m8ZHf0WmKUhAMys=
+gopkg.in/tomb.v1 v1.0.0-20140529071818-c131134a1947 h1:aNEcl02ps/eZaBJi2LycKl0jPsUryySSSgrCxieZRYA=
+gopkg.in/tomb.v1 v1.0.0-20140529071818-c131134a1947/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=
