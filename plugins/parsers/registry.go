@@ -147,9 +147,9 @@ type Config struct {
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
 
 	// FormData configuration
-	FormUrlencodedTagKeys            []string `toml:"form_urlencoded_tag_keys"`
+	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 	// Field data should be trimmed before value is parsed
-	FormUrlencodedTrimFieldDataSpace bool     `toml:"trim_field_data_space"`
+	FormUrlencodedTrimFieldDataSpace bool `toml:"trim_field_data_space"`
 }
 
 // NewParser returns a Parser interface based on the given config.

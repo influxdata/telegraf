@@ -11,7 +11,7 @@ const (
 	encodedFormData            = "tag1=%24%24%24&field1=1e%2B3"
 	notEscapedProperlyFormData = "invalid=%Y5"
 	blankKeyFormData           = "=42&field2=69"
-	trimableSpaceFormData = "tag1=foo%20%20&tag2=%20%20bar&tag3=%20%20baz%20%20&field1=1.234%20%20&field2=%20%2012.34&field3=%20%20123.4%20%20"
+	trimableSpaceFormData      = "tag1=foo%20%20&tag2=%20%20bar&tag3=%20%20baz%20%20&field1=1.234%20%20&field2=%20%2012.34&field3=%20%20123.4%20%20"
 	emptyFormData              = ""
 )
 
@@ -164,8 +164,8 @@ func TestParseInvalidFormDataEmptyKey(t *testing.T) {
 
 func TestParseTrimableFormDataWithTags(t *testing.T) {
 	parser := Parser{
-		MetricName: "form_urlencoded_test",
-		TagKeys:    []string{"tag1", "tag2", "tag3"},
+		MetricName:         "form_urlencoded_test",
+		TagKeys:            []string{"tag1", "tag2", "tag3"},
 		TrimFieldDataSpace: bool(true),
 	}
 
