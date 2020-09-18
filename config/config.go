@@ -1839,6 +1839,18 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["trim_field_data_space"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.Boolean); ok {
+				val, err := strconv.ParseBool(str.Value)
+				c.FormUrlencodedTrimFieldDataSpace = val
+				if err != nil {
+					return nil, fmt.Errorf("E! parsing to bool: %v", err)
+				}
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1883,6 +1895,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "csv_timezone")
 	delete(tbl.Fields, "csv_trim_space")
 	delete(tbl.Fields, "form_urlencoded_tag_keys")
+	delete(tbl.Fields, "trim_field_data_space")
 
 	return c, nil
 }

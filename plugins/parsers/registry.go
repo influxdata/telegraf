@@ -147,7 +147,9 @@ type Config struct {
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
 
 	// FormData configuration
-	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
+	FormUrlencodedTagKeys            []string `toml:"form_urlencoded_tag_keys"`
+	// Field data should be trimmed before value is parsed
+	FormUrlencodedTrimFieldDataSpace bool     `toml:"trim_field_data_space"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -231,6 +233,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.MetricName,
 			config.DefaultTags,
 			config.FormUrlencodedTagKeys,
+			config.FormUrlencodedTrimFieldDataSpace,
 		)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
@@ -332,10 +335,12 @@ func NewFormUrlencodedParser(
 	metricName string,
 	defaultTags map[string]string,
 	tagKeys []string,
+	trimFieldDataSpace bool,
 ) (Parser, error) {
 	return &form_urlencoded.Parser{
-		MetricName:  metricName,
-		DefaultTags: defaultTags,
-		TagKeys:     tagKeys,
+		MetricName:         metricName,
+		DefaultTags:        defaultTags,
+		TagKeys:            tagKeys,
+		TrimFieldDataSpace: trimFieldDataSpace,
 	}, nil
 }
