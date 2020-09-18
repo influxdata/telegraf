@@ -199,7 +199,7 @@ func (w *Wavefront) buildMetrics(m telegraf.Metric) []*MetricPoint {
 
 		metricValue, buildError := buildValue(value, metric.Metric, w)
 		if buildError != nil {
-			w.Log.Debug("Error building tags: %s\n", buildError.Error())
+			w.Log.Debugf("Error building tags: %s\n", buildError.Error())
 			continue
 		}
 		metric.Value = metricValue
