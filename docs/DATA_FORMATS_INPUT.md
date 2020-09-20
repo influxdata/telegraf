@@ -16,6 +16,7 @@ Protocol or in JSON format.
 - [Nagios](/plugins/parsers/nagios)
 - [Value](/plugins/parsers/value), ie: 45 or "booyah"
 - [Wavefront](/plugins/parsers/wavefront)
+- [XML](/plugins/parsers/xml)
 
 Any input plugin containing the `data_format` option can use it to select the
 desired parser:
