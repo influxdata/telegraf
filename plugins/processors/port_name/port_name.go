@@ -15,12 +15,20 @@ var sampleConfig = `
 [[processors.port_name]]
   ## Name of tag holding the port number
   # tag = "port"
+  ## Or name of the field holding the port number
+  # field = "port"
 
-  ## Name of output tag where service name will be added
+  ## Name of output tag or field (depending on the source) where service name will be added
   # dest = "service"
 
   ## Default tcp or udp
   # default_protocol = "tcp"
+
+  ## Tag containing the protocol (tcp or udp, case-insensitive)
+  # protocol_tag = "proto"
+
+  ## Field containing the protocol (tcp or udp, case-insensitive)
+  # protocol_field = "proto"
 `
 
 type sMap map[string]map[int]string // "https" == services["tcp"][443]
@@ -29,8 +37,11 @@ var services sMap
 
 type PortName struct {
 	SourceTag       string `toml:"tag"`
+	SourceField     string `toml:"field"`
 	DestTag         string `toml:"dest"`
 	DefaultProtocol string `toml:"default_protocol"`
+	ProtocolTag     string `toml:"protocol_tag"`
+	ProtocolField   string `toml:"protocol_field"`
 
 	Log telegraf.Logger `toml:"-"`
 }
@@ -40,7 +51,7 @@ func (d *PortName) SampleConfig() string {
 }
 
 func (d *PortName) Description() string {
-	return "Given a tag of a TCP or UDP port number, add a tag of the service name looked up in the system services file"
+	return "Given a tag/field of a TCP or UDP port number, add a tag/field of the service name looked up in the system services file"
 }
 
 func readServicesFile() {
@@ -97,11 +108,26 @@ func readServices(r io.Reader) sMap {
 
 func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	for _, m := range metrics {
-		portProto, ok := m.GetTag(d.SourceTag)
-		if !ok {
-			// Nonexistent tag
+
+		var portProto string
+		var fromField bool
+
+		if len(d.SourceTag) > 0 {
+			if tag, ok := m.GetTag(d.SourceTag); ok {
+				portProto = string([]byte(tag))
+			}
+		}
+		if len(d.SourceField) > 0 {
+			if field, ok := m.GetField(d.SourceField); ok {
+				portProto = field.(string)
+				fromField = true
+			}
+		}
+
+		if len(portProto) == 0 {
 			continue
 		}
+
 		portProtoSlice := strings.SplitN(portProto, "/", 2)
 		l := len(portProtoSlice)
 
@@ -127,6 +153,17 @@ func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		if l > 1 && len(portProtoSlice[1]) > 0 {
 			proto = portProtoSlice[1]
 		}
+		if len(d.ProtocolTag) > 0 {
+			if tag, ok := m.GetTag(d.ProtocolTag); ok {
+				proto = tag
+			}
+		}
+		if len(d.ProtocolField) > 0 {
+			if field, ok := m.GetField(d.ProtocolField); ok {
+				proto = field.(string)
+			}
+		}
+
 		proto = strings.ToLower(proto)
 
 		protoMap, ok := services[proto]
@@ -151,7 +188,11 @@ func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			continue
 		}
 
-		m.AddTag(d.DestTag, service)
+		if fromField {
+			m.AddField(d.DestTag, service)
+		} else {
+			m.AddTag(d.DestTag, service)
+		}
 	}
 
 	return metrics
@@ -167,8 +208,11 @@ func init() {
 	processors.Add("port_name", func() telegraf.Processor {
 		return &PortName{
 			SourceTag:       "port",
+			SourceField:     "port",
 			DestTag:         "service",
 			DefaultProtocol: "tcp",
+			ProtocolTag:     "proto",
+			ProtocolField:   "proto",
 		}
 	})
 }
