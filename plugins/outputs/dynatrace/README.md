@@ -41,4 +41,4 @@ You will either need a Dynatrace OneAgent (version 1.201 or higher) installed on
 You will either need a Dynatrace OneAgent (version 1.201 or higher) installed on the same host as Telegraf; or a Dynatrace environment with version 1.202 or higher  
 
 ## Limitations
-Telegraf measurements which can't be converted to a float64 are skipped. 
+Telegraf measurements which can't be converted to a float64 are skipped.
