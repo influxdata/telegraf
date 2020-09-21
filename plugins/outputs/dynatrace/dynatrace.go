@@ -193,11 +193,15 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				fmt.Fprintf(&buf, "%s", tagb.String())
 
 				// write measured value
-				fmt.Fprintf(&buf, " %v\n", value)
+				switch metric.Type() {
+				case telegraf.Counter:
+					fmt.Fprintf(&buf, " count,%v\n", value)
+				default:
+					fmt.Fprintf(&buf, " %v\n", value)
+				}
 			}
 		}
 	}
-
 	return d.send(buf.Bytes())
 }
 
