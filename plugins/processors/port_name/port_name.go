@@ -38,7 +38,7 @@ var services sMap
 type PortName struct {
 	SourceTag       string `toml:"tag"`
 	SourceField     string `toml:"field"`
-	DestTag         string `toml:"dest"`
+	Dest            string `toml:"dest"`
 	DefaultProtocol string `toml:"default_protocol"`
 	ProtocolTag     string `toml:"protocol_tag"`
 	ProtocolField   string `toml:"protocol_field"`
@@ -119,7 +119,15 @@ func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		}
 		if len(d.SourceField) > 0 {
 			if field, ok := m.GetField(d.SourceField); ok {
-				portProto = field.(string)
+				switch v := field.(type) {
+				default:
+					d.Log.Errorf("Unexpected type %t in source field; must be string or int", v)
+					continue
+				case int64:
+					portProto = strconv.FormatInt(field.(int64), 10)
+				case string:
+					portProto = field.(string)
+				}
 				fromField = true
 			}
 		}
@@ -160,7 +168,13 @@ func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		}
 		if len(d.ProtocolField) > 0 {
 			if field, ok := m.GetField(d.ProtocolField); ok {
-				proto = field.(string)
+				switch v := field.(type) {
+				default:
+					d.Log.Errorf("Unexpected type %t in protocol field; must be string", v)
+					continue
+				case string:
+					proto = field.(string)
+				}
 			}
 		}
 
@@ -189,9 +203,9 @@ func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		}
 
 		if fromField {
-			m.AddField(d.DestTag, service)
+			m.AddField(d.Dest, service)
 		} else {
-			m.AddTag(d.DestTag, service)
+			m.AddTag(d.Dest, service)
 		}
 	}
 
@@ -209,7 +223,7 @@ func init() {
 		return &PortName{
 			SourceTag:       "port",
 			SourceField:     "port",
-			DestTag:         "service",
+			Dest:            "service",
 			DefaultProtocol: "tcp",
 			ProtocolTag:     "proto",
 			ProtocolField:   "proto",
