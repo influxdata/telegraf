@@ -78,22 +78,22 @@ func (c *RealHTTPClient) HTTPClient() *http.Client {
 var sampleConfig = `
   ## API endpoint, currently supported API:
   ##
-  ##   - multiple  (Ex http://<host>:12900/system/metrics/multiple)
-  ##   - namespace (Ex http://<host>:12900/system/metrics/namespace/{namespace})
+  ##   - multiple  (Ex http://<host>:9000/api/system/metrics/multiple)
+  ##   - namespace (Ex http://<host>:9000/api/system/metrics/namespace/{namespace})
   ##
   ## For namespace endpoint, the metrics array will be ignored for that call.
   ## Endpoint can contain namespace and multiple type calls.
   ##
-  ## Please check http://[graylog-server-ip]:12900/api-browser for full list
+  ## Please check http://[graylog-server-ip]:9000/api/api-browser for full list
   ## of endpoints
   servers = [
-    "http://[graylog-server-ip]:12900/system/metrics/multiple",
+    "http://[graylog-server-ip]:9000/api/system/metrics/multiple",
   ]
 
   ## Metrics list
   ## List of metrics can be found on Graylog webservice documentation.
   ## Or by hitting the the web service api at:
-  ##   http://[graylog-host]:12900/system/metrics
+  ##   http://[graylog-host]:9000/api/system/metrics
   metrics = [
     "jvm.cl.loaded",
     "jvm.memory.pools.Metaspace.committed"
