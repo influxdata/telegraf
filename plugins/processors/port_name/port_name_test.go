@@ -248,7 +248,7 @@ func TestTable(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			p := PortName{
 				SourceTag:       tt.tag,
-				DestTag:         tt.dest,
+				Dest:            tt.dest,
 				DefaultProtocol: tt.prot,
 				Log:             testutil.Logger{},
 			}
