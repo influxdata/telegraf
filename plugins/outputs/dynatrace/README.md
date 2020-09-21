@@ -38,6 +38,7 @@ You will also need to configure an API token for secure access. Find out how to 
 ## Requirements
 
 You will either need a Dynatrace OneAgent (version 1.201 or higher) installed on the same host as Telegraf; or a Dynatrace environment with version 1.202 or higher. Monotonic counters (e.g. diskio.reads, system.uptime) require release 208 or later.
+You will either need a Dynatrace OneAgent (version 1.201 or higher) installed on the same host as Telegraf; or a Dynatrace environment with version 1.202 or higher  
 
 ## Limitations
 Telegraf measurements which can't be converted to a float64 are skipped. 
