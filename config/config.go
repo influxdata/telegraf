@@ -210,7 +210,7 @@ func (c *Config) OutputNames() []string {
 	return PluginNameCounts(name)
 }
 
-// PluginNameCounts returns a list of plugin names and their count
+// PluginNameCounts returns a list of sorted plugin names and their count
 func PluginNameCounts(plugins []string) []string {
 	names := make(map[string]int)
 	for _, plugin := range plugins {
@@ -226,6 +226,7 @@ func PluginNameCounts(plugins []string) []string {
 		}
 	}
 
+	sort.Strings(namecount)
 	return namecount
 }
 
@@ -1933,6 +1934,14 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["carbon2_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.Carbon2Format = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["influx_max_line_bytes"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if integer, ok := kv.Value.(*ast.Integer); ok {
@@ -2089,6 +2098,7 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	delete(tbl.Fields, "carbon2_format")
 	delete(tbl.Fields, "influx_max_line_bytes")
 	delete(tbl.Fields, "influx_sort_fields")
 	delete(tbl.Fields, "influx_uint_support")
