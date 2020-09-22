@@ -12,6 +12,6 @@ load("json", "encode", "decode", "indent")
 def apply(metric):
     j = decode(metric.fields.get('value'))
     metric.fields.pop('value')
-    metric.tags["label"] = j.get("label")
-    metric.fields["count"] = j.get("count")
+    metric.tags["label"] = j["label"]
+    metric.fields["count"] = j["count"]
     return metric
