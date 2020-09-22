@@ -102,6 +102,12 @@ var sampleConfig = `
   ## data point exceeding this limit if not truncated. Defaults to 'false' to provide backwards compatibility.
   #truncate_tags = false
 
+  ## Flush the internal buffers after each batch. This effectively bypasses the background sending of metrics
+  ## normally done by the Wavefront SDK. This can be used if you are experiencing buffer overruns. The sending 
+  ## of metrics will block for a longer time, but this will be handled gracefully by the internal buffering in
+  ## Telegraf.
+  #immediate_flush = false
+
   ## Define a mapping, namespaced by metric prefix, from string values to numeric values
   ##   deprecated in 1.9; use the enum processor plugin
   #[[outputs.wavefront.string_to_number.elasticsearch]]
