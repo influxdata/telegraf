@@ -161,6 +161,33 @@ clean:
 docker-image:
 	docker build -f scripts/stretch.docker -t "telegraf:$(commit)" .
 
+## This builds the telegraf binary for the host system's architecture in a docker container.
+## This avoids the need for go toolchain to be installed on the host and produces the binary
+## in repository's root directory.
+.PHONY: telegraf-in-docker
+telegraf-in-docker:
+	@GOOS=$(GOOS) GOARCH=$(GOARCH) ./scripts/telegraf-build-in-docker.sh
+
+.PHONY: reflex-docker-build-image
+reflex-docker-build-image:
+	docker build -t telegraf-reflex -f ./scripts/reflex.docker ./scripts
+
+## This target will repeatedly run tests when any of the .go source files or go.mod files change.
+##
+## The tests themselves are run in a docker container so go toolchain on the host machine
+## is not required.
+.PHONY: reflex-test
+reflex-test: reflex-docker-build-image
+	@./scripts/reflex.sh test
+
+## This target will repeatedly build telegraf when any of the .go source files or go.mod files change.
+##
+## The build itself is run in a docker container so go toolchain on the host machine
+## is not required.
+.PHONY: reflex-build
+reflex-build: reflex-docker-build-image
+	@./scripts/reflex.sh build
+
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
 
@@ -322,16 +349,6 @@ $(tars):
 	@$(MAKE) install
 	@mkdir -p $(pkgdir)
 	tar --owner 0 --group 0 -czvf $(pkgdir)/$@ -C $(dir $(DESTDIR)) .
-
-.PHONY: upload-nightly
-upload-nightly:
-	aws s3 sync $(pkgdir) s3://dl.influxdata.com/telegraf/nightlies/ \
-		--exclude "*" \
-		--include "*.tar.gz" \
-		--include "*.deb" \
-		--include "*.rpm" \
-		--include "*.zip" \
-		--acl public-read
 
 %amd64.deb %x86_64.rpm %linux_amd64.tar.gz: export GOOS := linux
 %amd64.deb %x86_64.rpm %linux_amd64.tar.gz: export GOARCH := amd64

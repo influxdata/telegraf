@@ -1,0 +1,35 @@
+name: Create PR from upstream
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+jobs:
+  create-pr-from-upstream:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Reset to upstream's master
+        run: |
+          git remote add upstream https://github.com/influxdata/telegraf.git
+          git fetch upstream master:upstream-master
+          git reset --hard upstream-master
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.PAT }}
+          title: Upstream changes
+          labels: |
+            automated PR
+          body: |
+            - Upstream changes
+
+            Auto-generated using [create-pull-request][1].
+
+            **Do not edit**: just merge it via `Create a merge commit`.
+
+            [1]: https://github.com/peter-evans/create-pull-request
+          branch: upstream-changes
+          team-reviewers: opensource-collection-team
