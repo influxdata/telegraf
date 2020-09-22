@@ -118,7 +118,7 @@ const sampleConfig = `
   ## multiline parser/codec
   ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
   #[inputs.tail.multiline]
-    ## The pattern should be a regexp which matches what you believe to be an 
+    ## The pattern should be a regexp which matches what you believe to be an
 	## indicator that the field is part of an event consisting of multiple lines of log data.
     #pattern = "^\s"
 
@@ -127,8 +127,8 @@ const sampleConfig = `
 	## whereas "next" indicates that the line belongs to the next one.
     #match_which_line = "previous"
 
-    ## The invert_match field can be true or false (defaults to false). 
-    ## If true, a message not matching the pattern will constitute a match of the multiline 
+    ## The invert_match field can be true or false (defaults to false).
+    ## If true, a message not matching the pattern will constitute a match of the multiline
 	## filter and the what will be applied. (vice-versa is also true)
     #invert_match = false
 
@@ -325,6 +325,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 	}
 
 	channelOpen := true
+	tailerOpen := true
 	var line *tail.Line
 
 	for {
@@ -337,7 +338,10 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 		select {
 		case <-t.ctx.Done():
 			channelOpen = false
-		case line, channelOpen = <-tailer.Lines:
+		case line, tailerOpen = <-tailer.Lines:
+			if !tailerOpen {
+				channelOpen = false
+			}
 		case <-timeout:
 		}
 
@@ -352,8 +356,9 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 					continue
 				}
 			}
-		} else {
-			if text = t.multiline.Flush(&buffer); text == "" {
+		}
+		if line == nil || !channelOpen || !tailerOpen {
+			if text += t.multiline.Flush(&buffer); text == "" {
 				if !channelOpen {
 					return
 				}
@@ -377,6 +382,18 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 
 		for _, metric := range metrics {
 			metric.AddTag("path", tailer.Filename)
+		}
+
+		// try writing out metric first without blocking
+		select {
+		case t.sem <- empty{}:
+			t.acc.AddTrackingMetricGroup(metrics)
+			if t.ctx.Err() != nil {
+				return // exit!
+			}
+			continue // next loop
+		default:
+			// no room. switch to blocking write.
 		}
 
 		// Block until plugin is stopping or room is available to add metrics.

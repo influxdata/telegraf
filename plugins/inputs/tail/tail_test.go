@@ -152,12 +152,12 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	// This seems neccessary in order to get the test to read the following lines.
-	_, err = tmpfile.WriteString(" ")
+	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] INFO HelloExample: This is fluff\r\n")
 	require.NoError(t, err)
 	require.NoError(t, tmpfile.Sync())
 
 	// set tight timeout for tests
-	duration := 1 * time.Second
+	duration := 10 * time.Millisecond
 
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
@@ -176,18 +176,18 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	assert.NoError(t, tt.Start(&acc))
-	time.Sleep(5 * time.Second) // will force timeout
+	time.Sleep(11 * time.Millisecond) // will force timeout
 	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] INFO HelloExample: This is info\r\n")
 	require.NoError(t, err)
 	require.NoError(t, tmpfile.Sync())
-	acc.Wait(1)
-	time.Sleep(5 * time.Second) // will force timeout
+	acc.Wait(2)
+	time.Sleep(11 * time.Millisecond) // will force timeout
 	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] WARN HelloExample: This is warn\r\n")
 	require.NoError(t, err)
 	require.NoError(t, tmpfile.Sync())
-	acc.Wait(2)
+	acc.Wait(3)
 	tt.Stop()
-	assert.Equal(t, uint64(2), acc.NMetrics())
+	assert.Equal(t, uint64(3), acc.NMetrics())
 	expectedPath := tmpfile.Name()
 
 	acc.AssertContainsTaggedFields(t, "tail_grok",
@@ -211,7 +211,7 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *testing.T) {
 	thisdir := getCurrentDir()
 	//we make sure the timeout won't kick in
-	duration, _ := time.ParseDuration("100s")
+	duration := 100 * time.Second
 
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
