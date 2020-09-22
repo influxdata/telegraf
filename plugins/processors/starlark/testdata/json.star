@@ -1,4 +1,5 @@
-#
+# Example of parsing json out of a field and modifying the metric with it.
+# this is great to use in conjunction with the value parser.
 #
 # Example Input:
 # json value="{\"label\": \"hero\", \"count\": 14}" 1465839830100400201
