@@ -21,7 +21,7 @@ import (
 const sqlServerMemoryClerks = `
 DECLARE
 	 @SqlStatement AS nvarchar(max)
-	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	,@Columns AS nvarchar(max) = ''
 
 IF @MajorMinorVersion >= 1100
@@ -134,9 +134,9 @@ EXEC(@SqlStatement)
 const sqlServerDatabaseIO = ` 
 DECLARE 
 	 @SqlStatement AS nvarchar(max)
-	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
-	,@Columns as nvarchar(max) = ''
-	,@Tables as nvarchar(max) = ''
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
+	,@Columns AS nvarchar(max) = ''
+	,@Tables AS nvarchar(max) = ''
 
 IF @MajorMinorVersion >= 1050 BEGIN 
 	/*in [volume_mount_point] any trailing "\" char will be automatically removed by telegraf */
@@ -177,7 +177,7 @@ EXEC sp_executesql @SqlStatement
 const sqlServerProperties = `
 DECLARE
 	 @SqlStatement AS nvarchar(max) = ''
-	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	,@Columns AS nvarchar(MAX) = ''
 
 IF @MajorMinorVersion >= 1050
@@ -223,7 +223,7 @@ EXEC sp_executesql @SqlStatement
 const sqlServerSchedulers string = `
 DECLARE
 	 @SqlStatement AS nvarchar(max)
-	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	,@Columns AS nvarchar(MAX) = ''
 
 IF @MajorMinorVersion >= 1300 BEGIN
@@ -236,8 +236,8 @@ SET @SqlStatement = N'
 SELECT
 	 ''sqlserver_schedulers'' AS [measurement]
 	,REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance]
-	,cast(s.[scheduler_id] AS VARCHAR(4)) AS [scheduler_id]
-	,cast(s.[cpu_id] AS VARCHAR(4)) AS [cpu_id]
+	,CAST(s.[scheduler_id] AS VARCHAR(4)) AS [scheduler_id]
+	,CAST(s.[cpu_id] AS VARCHAR(4)) AS [cpu_id]
 	,s.[is_online]
 	,s.[is_idle]
 	,s.[preemptive_switches_count]
@@ -260,7 +260,7 @@ const sqlServerPerformanceCounters string = `
 DECLARE
 	 @SqlStatement AS nvarchar(max)
 	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
-	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	,@Columns AS nvarchar(MAX) = ''
 	,@PivotColumns AS nvarchar(MAX) = ''
 
@@ -279,7 +279,7 @@ BEGIN
 	SET @SqlStatement = N'SELECT DISTINCT
 			RTrim(spi.object_name) object_name,
 			RTrim(spi.counter_name) counter_name,
-			RTRIM(spi.instance_name) as instance_name, 
+			RTRIM(spi.instance_name) AS instance_name, 
 			CAST(spi.cntr_value AS BIGINT) AS cntr_value,
 			spi.cntr_type
 			FROM	sys.dm_os_performance_counters AS spi 
@@ -426,8 +426,8 @@ BEGIN
 			pc.counter_name AS [counter],
 			CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
 			CAST(CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS float(10)) AS [value],
-			-- cast to string as TAG
-			cast(pc.cntr_type as varchar(25)) as [counter_type]
+			-- CAST to string AS TAG
+			CAST(pc.cntr_type AS varchar(25)) AS [counter_type]
 	FROM	@PCounters AS pc
 			LEFT OUTER JOIN @PCounters AS pc1
 				ON (
@@ -1006,36 +1006,36 @@ const sqlServerRequests string = `
 DECLARE 
 	 @SqlStatement AS nvarchar(max)
 	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
-	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
-	,@Columns as nvarchar(max) = ''
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
+	,@Columns AS nvarchar(max) = ''
 
 IF @MajorMinorVersion >= 1200 BEGIN
 	SET @Columns = '
-	,DB_NAME(COALESCE(r.database_id, s.database_id)) as session_db_name
-	,COALESCE(r.open_transaction_count, s.open_transaction_count) as open_transaction'
+	,DB_NAME(COALESCE(r.database_id, s.database_id)) AS session_db_name
+	,COALESCE(r.open_transaction_count, s.open_transaction_count) AS open_transaction'
 END
 ELSE BEGIN
 	SET @Columns = '
-	,DB_NAME(r.database_id) as session_db_name
-	,r.open_transaction_count as open_transaction '
+	,DB_NAME(r.database_id) AS session_db_name
+	,r.open_transaction_count AS open_transaction '
 END
 
 SET @SqlStatement = N'
 SELECT blocking_session_id into #blockingSessions FROM sys.dm_exec_requests WHERE blocking_session_id != 0
-CREATE INDEX ix_blockingSessions_1 on #blockingSessions (blocking_session_id)
+CREATE INDEX ix_blockingSessions_1 ON #blockingSessions (blocking_session_id)
 
 SELECT 
 	 ''sqlserver_requests'' AS [measurement]
 	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
 	,s.session_id
-	,ISNULL(r.request_id,0) as [request_id]
+	,ISNULL(r.request_id,0) AS [request_id]
 	,COALESCE(r.status,s.status) AS [status]
 	,COALESCE(r.cpu_time,s.cpu_time) AS cpu_time_ms
 	,COALESCE(r.total_elapsed_time,s.total_elapsed_time) AS total_elapsed_time_ms
 	,COALESCE(r.logical_reads,s.logical_reads) AS logical_reads
 	,COALESCE(r.writes,s.writes) AS writes
 	,r.command
-	,r.wait_time as wait_time_ms
+	,r.wait_time AS wait_time_ms
 	,r.wait_type
 	,r.wait_resource
 	,r.blocking_session_id
@@ -1051,7 +1051,7 @@ SELECT
 		WHEN 5 THEN ''5-Snapshot'' 
 		ELSE CONVERT (varchar(30), r.transaction_isolation_level) + ''-UNKNOWN'' 
 	END, 30) AS transaction_isolation_level
-	,r.granted_query_memory as granted_query_memory_pages
+	,r.granted_query_memory AS granted_query_memory_pages
 	,r.percent_complete
 	,SUBSTRING(
 		qt.text, 
@@ -1062,10 +1062,10 @@ SELECT
 		 END - r.statement_start_offset) / 2 + 1
 	) AS statement_text
 	,qt.objectid
-	,QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + ''.'' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) as stmt_object_name
+	,QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + ''.'' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) AS stmt_object_name
 	,DB_NAME(qt.dbid) stmt_db_name
-	,CONVERT(varchar(20),[query_hash],1) as [query_hash]
-	,CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]'
+	,CONVERT(varchar(20),[query_hash],1) AS [query_hash]
+	,CONVERT(varchar(20),[query_plan_hash],1) AS [query_plan_hash]'
 	+ @Columns + N'
 FROM sys.dm_exec_sessions AS s
 LEFT OUTER JOIN sys.dm_exec_requests AS r 
@@ -1083,7 +1083,7 @@ EXEC sp_executesql @SqlStatement
 const sqlServerVolumeSpace string = `
 DECLARE
 	 @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
-	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	
 IF @MajorMinorVersion >= 1050
 	SELECT DISTINCT
@@ -1095,8 +1095,8 @@ IF @MajorMinorVersion >= 1050
 		,vs.[total_bytes] AS [total_space_bytes]
 		,vs.[available_bytes] AS [available_space_bytes]
 		,vs.[total_bytes] - vs.[available_bytes] AS [used_space_bytes]
-	FROM sys.master_files as mf
-	CROSS APPLY sys.dm_os_volume_stats(mf.database_id, mf.file_id) as vs
+	FROM sys.master_files AS mf
+	CROSS APPLY sys.dm_os_volume_stats(mf.database_id, mf.file_id) AS vs
 `
 
 const sqlServerRingBufferCpu string = `
@@ -1128,5 +1128,5 @@ FROM (
 			) AS x
 		) AS y
 	ORDER BY record_id DESC
-) as z
+) AS z
 `
