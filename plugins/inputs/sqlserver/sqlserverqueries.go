@@ -1081,28 +1081,22 @@ EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerVolumeSpace string = `
-/* Only for on-prem version of SQL Server
-Gets data about disk space, only for volumes used by SQL Server (data available form sql 2008R2 and later)
-*/
 DECLARE
 	 @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
 	
-IF @EngineEdition IN (2,3,4) AND @MajorMinorVersion >= 1050
-	BEGIN
+IF @MajorMinorVersion >= 1050
 	SELECT DISTINCT
 		'sqlserver_volume_space' AS [measurement]
-		,SERVERPROPERTY('machinename') AS [server_name]
+		,SERVERPROPERTY('MachineName') AS [server_name]
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 		/*in [volume_mount_point] any trailing "\" char will be removed by telegraf */
 		,[volume_mount_point]
 		,vs.[total_bytes] AS [total_space_bytes]
 		,vs.[available_bytes] AS [available_space_bytes]
 		,vs.[total_bytes] - vs.[available_bytes] AS [used_space_bytes]
-	FROM
-		sys.master_files as mf
-		CROSS APPLY sys.dm_os_volume_stats(mf.database_id, mf.file_id) as vs
-	END
+	FROM sys.master_files as mf
+	CROSS APPLY sys.dm_os_volume_stats(mf.database_id, mf.file_id) as vs
 `
 
 const sqlServerRingBufferCpu string = `
