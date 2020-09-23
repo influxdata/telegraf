@@ -147,8 +147,8 @@ IF @MajorMinorVersion >= 1050 BEGIN
 END
 IF @MajorMinorVersion > 1100 BEGIN
 	SET @Columns += N'
-	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] 
-	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]'
+	,vfs.[io_stall_queued_read_ms] AS [rg_read_stall_ms] 
+	,vfs.[io_stall_queued_write_ms] AS [rg_write_stall_ms]'
 END
 
 SET @SqlStatement = N'
@@ -191,29 +191,29 @@ SET @SqlStatement = '
 SELECT
 	 ''sqlserver_server_properties'' AS [measurement]
 	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
-	,[cpu_count]
+	,si.[cpu_count]
 	,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
 	,SERVERPROPERTY(''Edition'') AS [sku]
 	,CAST(SERVERPROPERTY(''EngineEdition'') AS int) AS [engine_edition]
-	,DATEDIFF(MINUTE,[sqlserver_start_time],GETDATE()) AS [uptime]
+	,DATEDIFF(MINUTE,si.[sqlserver_start_time],GETDATE()) AS [uptime]
 	,SERVERPROPERTY(''ProductVersion'') AS [sql_version]
-	,db_online
-	,db_restoring
-	,db_recovering
-	,db_recoveryPending
-	,db_suspect
-	,db_offline'
+	,dbs.[db_online]
+	,dbs.[db_restoring]
+	,dbs.[db_recovering]
+	,dbs.[db_recoveryPending]
+	,dbs.[db_suspect]
+	,dbs.[db_offline]'
 	+ @Columns + N'
-	FROM sys.[dm_os_sys_info]
+	FROM sys.[dm_os_sys_info] AS si
 	CROSS APPLY (
 		SELECT  
-			 SUM(CASE WHEN state = 0 THEN 1 ELSE 0 END) AS db_online
-			,SUM(CASE WHEN state = 1 THEN 1 ELSE 0 END) AS db_restoring
-			,SUM(CASE WHEN state = 2 THEN 1 ELSE 0 END) AS db_recovering
-			,SUM(CASE WHEN state = 3 THEN 1 ELSE 0 END) AS db_recoveryPending
-			,SUM(CASE WHEN state = 4 THEN 1 ELSE 0 END) AS db_suspect
-			,SUM(CASE WHEN state IN(6, 10) THEN 1 ELSE 0 END ) AS db_offline
-		FROM    sys.databases
+			 SUM(CASE WHEN state = 0 THEN 1 ELSE 0 END) AS [db_online]
+			,SUM(CASE WHEN state = 1 THEN 1 ELSE 0 END) AS [db_restoring]
+			,SUM(CASE WHEN state = 2 THEN 1 ELSE 0 END) AS [db_recovering]
+			,SUM(CASE WHEN state = 3 THEN 1 ELSE 0 END) AS [db_recoveryPending]
+			,SUM(CASE WHEN state = 4 THEN 1 ELSE 0 END) AS [db_suspect]
+			,SUM(CASE WHEN state IN(6, 10) THEN 1 ELSE 0 END) AS [db_offline]
+		FROM sys.databases
 	) AS dbs
 '
 
@@ -446,13 +446,13 @@ const sqlServerWaitStatsCategorized string = `
 SELECT
 	 'sqlserver_waitstats' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	,ws.wait_type
-	,wait_time_ms
-	,wait_time_ms - signal_wait_time_ms AS [resource_wait_ms]
-	,signal_wait_time_ms
-	,max_wait_time_ms
-	,waiting_tasks_count
-	,ISNULL(wc.wait_category,'OTHER') AS [wait_category]
+	,ws.[wait_type]
+	,ws.[wait_time_ms]
+	,ws.[wait_time_ms] - ws.[signal_wait_time_ms] AS [resource_wait_ms]
+	,ws.[signal_wait_time_ms]
+	,ws.[max_wait_time_ms]
+	,ws.[waiting_tasks_count]
+	,ISNULL(wc.[wait_category],'OTHER') AS [wait_category]
 FROM sys.dm_os_wait_stats AS ws WITH (NOLOCK)
 LEFT OUTER JOIN ( VALUES
 	('ASYNC_IO_COMPLETION','Other Disk IO'),
@@ -960,10 +960,10 @@ LEFT OUTER JOIN ( VALUES
 	('XACTWORKSPACE_MUTEX','Transaction'),
 	('XE_DISPATCHER_WAIT','Idle'),
 	('XE_TIMER_EVENT','Idle')
-) AS wc(wait_type, wait_category)
-	ON ws.wait_type = wc.wait_type
+) AS wc([wait_type], [wait_category])
+	ON ws.[wait_type] = wc.[wait_type]
 WHERE
-	ws.wait_type NOT IN (
+	ws.[wait_type] NOT IN (
 		N'BROKER_EVENTHANDLER', N'BROKER_RECEIVE_WAITFOR', N'BROKER_TASK_STOP',
 		N'BROKER_TO_FLUSH', N'BROKER_TRANSMITTER', N'CHECKPOINT_QUEUE',
 		N'CHKPT', N'CLR_AUTO_EVENT', N'CLR_MANUAL_EVENT', N'CLR_SEMAPHORE',
@@ -998,8 +998,8 @@ WHERE
 		N'XE_DISPATCHER_WAIT', N'XE_LIVE_TARGET_TVF', N'XE_TIMER_EVENT',
 		N'SOS_WORK_DISPATCHER','RESERVED_MEMORY_ALLOCATION_EXT'
 	)
-	AND waiting_tasks_count > 0
-	AND wait_time_ms > 100
+	AND ws.[waiting_tasks_count] > 0
+	AND ws.[wait_time_ms] > 100
 `
 
 const sqlServerRequests string = `
@@ -1011,70 +1011,70 @@ DECLARE
 
 IF @MajorMinorVersion >= 1200 BEGIN
 	SET @Columns = '
-	,DB_NAME(COALESCE(r.database_id, s.database_id)) AS session_db_name
-	,COALESCE(r.open_transaction_count, s.open_transaction_count) AS open_transaction'
+	,DB_NAME(COALESCE(r.[database_id], s.[database_id])) AS [session_db_name]
+	,COALESCE(r.[open_transaction_count], s.[open_transaction_count]) AS [open_transaction]'
 END
 ELSE BEGIN
 	SET @Columns = '
-	,DB_NAME(r.database_id) AS session_db_name
-	,r.open_transaction_count AS open_transaction '
+	,DB_NAME(r.[database_id]) AS [session_db_name]
+	,r.[open_transaction_count] AS [open_transaction] '
 END
 
 SET @SqlStatement = N'
-SELECT blocking_session_id into #blockingSessions FROM sys.dm_exec_requests WHERE blocking_session_id != 0
-CREATE INDEX ix_blockingSessions_1 ON #blockingSessions (blocking_session_id)
+SELECT [blocking_session_id] into #blockingSessions FROM sys.dm_exec_requests WHERE [blocking_session_id] != 0
+CREATE INDEX ix_blockingSessions_1 ON #blockingSessions ([blocking_session_id])
 
 SELECT 
 	 ''sqlserver_requests'' AS [measurement]
 	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
 	,s.session_id
-	,ISNULL(r.request_id,0) AS [request_id]
-	,COALESCE(r.status,s.status) AS [status]
-	,COALESCE(r.cpu_time,s.cpu_time) AS cpu_time_ms
-	,COALESCE(r.total_elapsed_time,s.total_elapsed_time) AS total_elapsed_time_ms
-	,COALESCE(r.logical_reads,s.logical_reads) AS logical_reads
-	,COALESCE(r.writes,s.writes) AS writes
-	,r.command
-	,r.wait_time AS wait_time_ms
-	,r.wait_type
-	,r.wait_resource
-	,r.blocking_session_id
-	,s.program_name
-	,s.host_name
-	,s.nt_user_name
-	,LEFT (CASE COALESCE(r.transaction_isolation_level, s.transaction_isolation_level)
+	,ISNULL(r.[request_id], 0) AS [request_id]
+	,COALESCE(r.[status], s.[status]) AS [status]
+	,COALESCE(r.[cpu_time], s.[cpu_time]) AS [cpu_time_ms]
+	,COALESCE(r.[total_elapsed_time], s.total_elapsed_time) AS [total_elapsed_time_ms]
+	,COALESCE(r.[logical_reads], s.[logical_reads]) AS [logical_reads]
+	,COALESCE(r.[writes], s.[writes]) AS [writes]
+	,r.[command]
+	,r.[wait_time] AS [wait_time_ms]
+	,r.[wait_type]
+	,r.[wait_resource]
+	,r.[blocking_session_id]
+	,s.[program_name]
+	,s.[host_name]
+	,s.[nt_user_name]
+	,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
 		WHEN 0 THEN ''0-Read Committed'' 
 		WHEN 1 THEN ''1-Read Uncommitted (NOLOCK)'' 
 		WHEN 2 THEN ''2-Read Committed'' 
 		WHEN 3 THEN ''3-Repeatable Read'' 
 		WHEN 4 THEN ''4-Serializable'' 
 		WHEN 5 THEN ''5-Snapshot'' 
-		ELSE CONVERT (varchar(30), r.transaction_isolation_level) + ''-UNKNOWN'' 
-	END, 30) AS transaction_isolation_level
-	,r.granted_query_memory AS granted_query_memory_pages
-	,r.percent_complete
+		ELSE CONVERT (varchar(30), r.[transaction_isolation_level]) + ''-UNKNOWN'' 
+	END, 30) AS [transaction_isolation_level]
+	,r.[granted_query_memory] AS [granted_query_memory_pages]
+	,r.[percent_complete]
 	,SUBSTRING(
-		qt.text, 
-		r.statement_start_offset / 2 + 1,
-		(CASE WHEN r.statement_end_offset = -1
-			  THEN DATALENGTH(qt.text)
-			  ELSE r.statement_end_offset
-		 END - r.statement_start_offset) / 2 + 1
-	) AS statement_text
-	,qt.objectid
-	,QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + ''.'' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) AS stmt_object_name
-	,DB_NAME(qt.dbid) stmt_db_name
+		qt.[text], 
+		r.[statement_start_offset] / 2 + 1,
+		(CASE WHEN r.[statement_end_offset] = -1
+			  THEN DATALENGTH(qt.[text])
+			  ELSE r.[statement_end_offset]
+		 END - r.[statement_start_offset]) / 2 + 1
+	) AS [statement_text]
+	,qt.[objectid]
+	,QUOTENAME(OBJECT_SCHEMA_NAME(qt.[objectid], qt.[dbid])) + ''.'' +  QUOTENAME(OBJECT_NAME(qt.[objectid], qt.[dbid])) AS [stmt_object_name]
+	,DB_NAME(qt.dbid) AS [stmt_db_name]
 	,CONVERT(varchar(20),[query_hash],1) AS [query_hash]
 	,CONVERT(varchar(20),[query_plan_hash],1) AS [query_plan_hash]'
 	+ @Columns + N'
 FROM sys.dm_exec_sessions AS s
 LEFT OUTER JOIN sys.dm_exec_requests AS r 
-	ON s.session_id = r.session_id
-OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) AS qt
+	ON s.[session_id] = r.[session_id]
+OUTER APPLY sys.dm_exec_sql_text(r.[sql_handle]) AS qt
 WHERE 1 = 1
-	AND (r.session_id IS NOT NULL AND (s.is_user_process = 1 
-	OR r.status COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')))
-	OR  (s.session_id IN (SELECT blocking_session_id FROM #blockingSessions))
+	AND (r.[session_id] IS NOT NULL AND (s.is_user_process = 1 
+	OR r.[status] COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')))
+	OR  (s.[session_id] IN (SELECT blocking_session_id FROM #blockingSessions))
 OPTION(MAXDOP 1)'
 
 EXEC sp_executesql @SqlStatement
@@ -1127,6 +1127,6 @@ FROM (
 				AND [record] LIKE '%<SystemHealth>%'
 			) AS x
 		) AS y
-	ORDER BY record_id DESC
+	ORDER BY [record_id] DESC
 ) AS z
 `
