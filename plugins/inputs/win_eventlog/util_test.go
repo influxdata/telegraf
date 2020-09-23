@@ -23,7 +23,7 @@ func TestDecodeUTF16(t *testing.T) {
 	for i := 0; i < lb; i++ {
 		word := make([]byte, 2)
 		binary.LittleEndian.PutUint16(word, utf16s[i])
-		_, err:= writer.Write(word)
+		_, err := writer.Write(word)
 		if err != nil {
 			t.Errorf("error preparing UTF-16 test string")
 			return
