@@ -127,9 +127,9 @@ LEFT OUTER JOIN ( VALUES
 	,(''MEMORYCLERK_QUERYDISKSTORE_HASHMAP'',''QDS Query/Plan Hash Table'')
 ) AS clerk_names([system_name],[name])
 	ON mc.[type] = clerk_names.[system_name]
-GROUP BY 
+GROUP BY
 	ISNULL(clerk_names.[name], mc.[type])
-HAVING 
+HAVING
 	SUM(' + @Columns + N') >= 1024
 OPTION(RECOMPILE);
 '
@@ -144,13 +144,13 @@ IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterp
 	RETURN
 END
 
-DECLARE 
+DECLARE
 	 @SqlStatement AS nvarchar(max)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	,@Columns AS nvarchar(max) = ''
 	,@Tables AS nvarchar(max) = ''
 
-IF @MajorMinorVersion >= 1050 BEGIN 
+IF @MajorMinorVersion >= 1050 BEGIN
 	/*in [volume_mount_point] any trailing "\" char will be automatically removed by telegraf */
 	SET @Columns += N'
 	,[volume_mount_point]'
@@ -159,7 +159,7 @@ IF @MajorMinorVersion >= 1050 BEGIN
 END
 IF @MajorMinorVersion > 1100 BEGIN
 	SET @Columns += N'
-	,vfs.[io_stall_queued_read_ms] AS [rg_read_stall_ms] 
+	,vfs.[io_stall_queued_read_ms] AS [rg_read_stall_ms]
 	,vfs.[io_stall_queued_write_ms] AS [rg_write_stall_ms]'
 END
 
@@ -224,7 +224,7 @@ SELECT
 	+ @Columns + N'
 	FROM sys.[dm_os_sys_info] AS si
 	CROSS APPLY (
-		SELECT  
+		SELECT
 			 SUM(CASE WHEN state = 0 THEN 1 ELSE 0 END) AS [db_online]
 			,SUM(CASE WHEN state = 1 THEN 1 ELSE 0 END) AS [db_restoring]
 			,SUM(CASE WHEN state = 2 THEN 1 ELSE 0 END) AS [db_recovering]
@@ -293,7 +293,6 @@ DECLARE
 	,@Columns AS nvarchar(MAX) = ''
 	,@PivotColumns AS nvarchar(MAX) = ''
 
-
 DECLARE @PCounters TABLE
 (
 	 [object_name] nvarchar(128)
@@ -311,8 +310,8 @@ SELECT DISTINCT
 	,RTRIM(spi.[instance_name]) AS [instance_name]
 	,CAST(spi.[cntr_value] AS bigint) AS [cntr_value]
 	,spi.[cntr_type]
-	FROM sys.dm_os_performance_counters AS spi 
-	WHERE 
+	FROM sys.dm_os_performance_counters AS spi
+	WHERE
 		counter_name IN (
 			 ''SQL Compilations/sec''
 			,''SQL Re-Compilations/sec''
@@ -1042,7 +1041,7 @@ IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterp
 	RETURN
 END
 
-DECLARE 
+DECLARE
 	 @SqlStatement AS nvarchar(max)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	,@Columns AS nvarchar(max) = ''
@@ -1055,14 +1054,14 @@ END
 ELSE BEGIN
 	SET @Columns = '
 	,DB_NAME(r.[database_id]) AS [session_db_name]
-	,r.[open_transaction_count] AS [open_transaction] '
+	,r.[open_transaction_count] AS [open_transaction]'
 END
 
 SET @SqlStatement = N'
 SELECT [blocking_session_id] into #blockingSessions FROM sys.dm_exec_requests WHERE [blocking_session_id] != 0
 CREATE INDEX ix_blockingSessions_1 ON #blockingSessions ([blocking_session_id])
 
-SELECT 
+SELECT
 	 ''sqlserver_requests'' AS [measurement]
 	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
 	,s.session_id
@@ -1081,18 +1080,18 @@ SELECT
 	,s.[host_name]
 	,s.[nt_user_name]
 	,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
-		WHEN 0 THEN ''0-Read Committed'' 
-		WHEN 1 THEN ''1-Read Uncommitted (NOLOCK)'' 
-		WHEN 2 THEN ''2-Read Committed'' 
-		WHEN 3 THEN ''3-Repeatable Read'' 
-		WHEN 4 THEN ''4-Serializable'' 
-		WHEN 5 THEN ''5-Snapshot'' 
-		ELSE CONVERT (varchar(30), r.[transaction_isolation_level]) + ''-UNKNOWN'' 
+		WHEN 0 THEN ''0-Read Committed''
+		WHEN 1 THEN ''1-Read Uncommitted (NOLOCK)''
+		WHEN 2 THEN ''2-Read Committed''
+		WHEN 3 THEN ''3-Repeatable Read''
+		WHEN 4 THEN ''4-Serializable''
+		WHEN 5 THEN ''5-Snapshot''
+		ELSE CONVERT (varchar(30), r.[transaction_isolation_level]) + ''-UNKNOWN''
 	END, 30) AS [transaction_isolation_level]
 	,r.[granted_query_memory] AS [granted_query_memory_pages]
 	,r.[percent_complete]
 	,SUBSTRING(
-		qt.[text], 
+		qt.[text],
 		r.[statement_start_offset] / 2 + 1,
 		(CASE WHEN r.[statement_end_offset] = -1
 			  THEN DATALENGTH(qt.[text])
@@ -1106,11 +1105,11 @@ SELECT
 	,CONVERT(varchar(20),[query_plan_hash],1) AS [query_plan_hash]'
 	+ @Columns + N'
 FROM sys.dm_exec_sessions AS s
-LEFT OUTER JOIN sys.dm_exec_requests AS r 
+LEFT OUTER JOIN sys.dm_exec_requests AS r
 	ON s.[session_id] = r.[session_id]
 OUTER APPLY sys.dm_exec_sql_text(r.[sql_handle]) AS qt
 WHERE 1 = 1
-	AND (r.[session_id] IS NOT NULL AND (s.is_user_process = 1 
+	AND (r.[session_id] IS NOT NULL AND (s.is_user_process = 1
 	OR r.[status] COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')))
 	OR  (s.[session_id] IN (SELECT blocking_session_id FROM #blockingSessions))
 OPTION(MAXDOP 1)'
@@ -1128,18 +1127,19 @@ END
 DECLARE
 	@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	
-IF @MajorMinorVersion >= 1050
+IF @MajorMinorVersion >= 1050 BEGIN
 	SELECT DISTINCT
 		'sqlserver_volume_space' AS [measurement]
 		,SERVERPROPERTY('MachineName') AS [server_name]
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 		/*in [volume_mount_point] any trailing "\" char will be removed by telegraf */
-		,[volume_mount_point]
+		,vs.[volume_mount_point]
 		,vs.[total_bytes] AS [total_space_bytes]
 		,vs.[available_bytes] AS [available_space_bytes]
 		,vs.[total_bytes] - vs.[available_bytes] AS [used_space_bytes]
 	FROM sys.master_files AS mf
 	CROSS APPLY sys.dm_os_volume_stats(mf.[database_id], mf.[file_id]) AS vs
+END
 `
 
 const sqlServerRingBufferCpu string = `
@@ -1149,7 +1149,7 @@ IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterp
 	RETURN
 END
 
-SELECT 
+SELECT
 	 'sqlserver_cpu' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,[SQLProcessUtilization] AS [sqlserver_process_cpu]
@@ -1161,7 +1161,7 @@ FROM (
 		,[SQLProcessUtilization]
 		,[SystemIdle]
 	FROM (
-		SELECT 
+		SELECT
 			 record.value('(./Record/@id)[1]', 'int') AS [record_id]
 			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/SystemIdle)[1]', 'int') AS [SystemIdle]
 			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') AS [SQLProcessUtilization]
@@ -1171,7 +1171,7 @@ FROM (
 				 [TIMESTAMP]
 				,convert(XML, [record]) AS [record]
 			FROM sys.dm_os_ring_buffers
-			WHERE 
+			WHERE
 				[ring_buffer_type] = N'RING_BUFFER_SCHEDULER_MONITOR'
 				AND [record] LIKE '%<SystemHealth>%'
 			) AS x
