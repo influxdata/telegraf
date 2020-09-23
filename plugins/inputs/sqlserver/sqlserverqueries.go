@@ -19,6 +19,11 @@ import (
 // and the folks at Stack Overflow (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
 // for putting most of the memory clerk definitions online!
 const sqlServerMemoryClerks = `
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
+	THROW 50000, @ErrorMessage, 1
+END
+
 DECLARE
 	 @SqlStatement AS nvarchar(max)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
@@ -131,7 +136,12 @@ OPTION(RECOMPILE);
 EXEC(@SqlStatement)
 `
 
-const sqlServerDatabaseIO = ` 
+const sqlServerDatabaseIO = `
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
+	THROW 50000, @ErrorMessage, 1
+END
+
 DECLARE 
 	 @SqlStatement AS nvarchar(max)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
@@ -175,6 +185,11 @@ EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerProperties = `
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
+	THROW 50000, @ErrorMessage, 1
+END
+
 DECLARE
 	 @SqlStatement AS nvarchar(max) = ''
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
@@ -221,6 +236,11 @@ EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerSchedulers string = `
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
+	THROW 50000, @ErrorMessage, 1
+END
+
 DECLARE
 	 @SqlStatement AS nvarchar(max)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
@@ -257,6 +277,11 @@ EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerPerformanceCounters string = `
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
+	THROW 50000, @ErrorMessage, 1
+END
+
 DECLARE
 	 @SqlStatement AS nvarchar(max)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
@@ -441,6 +466,11 @@ OPTION(RECOMPILE)
 `
 
 const sqlServerWaitStatsCategorized string = `
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
+	THROW 50000, @ErrorMessage, 1
+END
+
 SELECT
 	 'sqlserver_waitstats' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
@@ -1001,6 +1031,11 @@ WHERE
 `
 
 const sqlServerRequests string = `
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
+	THROW 50000, @ErrorMessage, 1
+END
+
 DECLARE 
 	 @SqlStatement AS nvarchar(max)
 	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
@@ -1079,6 +1114,11 @@ EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerVolumeSpace string = `
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
+	THROW 50000, @ErrorMessage, 1
+END
+
 DECLARE
 	 @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
@@ -1098,6 +1138,11 @@ IF @MajorMinorVersion >= 1050
 `
 
 const sqlServerRingBufferCpu string = `
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
+	THROW 50000, @ErrorMessage, 1
+END
+
 SELECT 
 	 'sqlserver_cpu' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
