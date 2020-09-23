@@ -33,26 +33,26 @@ func TestResolveEventEndpointUrl(t *testing.T) {
 		expectedEndpointUrl string
 	}{
 		{
-			name:                "agent event endpoint",
-			plugin:             &Sensu{
+			name: "agent event endpoint",
+			plugin: &Sensu{
 				AgentApiUrl: &agentApiUrl,
 			},
 			expectedEndpointUrl: "http://127.0.0.1:3031/events",
 		},
 		{
-			name:                "backend event endpoint with default namespace",
-			plugin:             &Sensu{
-				AgentApiUrl: &agentApiUrl,
+			name: "backend event endpoint with default namespace",
+			plugin: &Sensu{
+				AgentApiUrl:   &agentApiUrl,
 				BackendApiUrl: &backendApiUrl,
 			},
 			expectedEndpointUrl: "http://127.0.0.1:8080/api/core/v2/namespaces/default/events",
 		},
 		{
-			name:                "backend event endpoint with namespace declared",
-			plugin:             &Sensu{
-				AgentApiUrl: &agentApiUrl,
+			name: "backend event endpoint with namespace declared",
+			plugin: &Sensu{
+				AgentApiUrl:   &agentApiUrl,
 				BackendApiUrl: &backendApiUrl,
-				Entity: &SensuEntity {
+				Entity: &SensuEntity{
 					Namespace: &entityNamespace,
 				},
 			},
