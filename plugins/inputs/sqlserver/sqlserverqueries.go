@@ -134,49 +134,45 @@ EXEC(@SqlStatement)
 const sqlServerDatabaseIO = ` 
 DECLARE 
 	 @SqlStatement AS nvarchar(max)
-	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@Columns as nvarchar(max) = ''
+	,@Tables as nvarchar(max) = ''
 
-	DECLARE @MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+IF @MajorMinorVersion >= 1050 BEGIN 
+	/*in [volume_mount_point] any trailing "\" char will be automatically removed by telegraf */
+	SET @Columns += N'
+	,[volume_mount_point]'
+	SET @Tables += N'
+	CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs'
+END
+IF @MajorMinorVersion > 1100 BEGIN
+	SET @Columns += N'
+	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] 
+	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]'
+END
 
-	IF @EngineEdition IN (2,3,4) /*Standard,Enterpris,Express*/
-	BEGIN
-		DECLARE @Columns as nvarchar(max) = ''
-		DECLARE @Tables as nvarchar(max) = ''
-		IF @MajorMinorVersion >= 1050 BEGIN 
-			/*in [volume_mount_point] any trailing "\" char will be removed by telegraf */
-			SET @Columns += N',[volume_mount_point]'
-			SET @Tables += N'CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs'
-		END
-			
-		IF @MajorMinorVersion > 1100 BEGIN
-			SET @Columns += N'
-			,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] 
-			,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]'
-		END
-		
-		SET @SqlStatement = N'
-		SELECT
-			''sqlserver_database_io'' AS [measurement]
-			,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
-			,DB_NAME(vfs.[database_id]) AS [database_name]
-			,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
-			,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
-			,mf.[type_desc] AS [file_type]
-			,vfs.[io_stall_read_ms] AS [read_latency_ms]
-			,vfs.[num_of_reads] AS [reads]
-			,vfs.[num_of_bytes_read] AS [read_bytes]
-			,vfs.[io_stall_write_ms] AS [write_latency_ms]
-			,vfs.[num_of_writes] AS [writes]
-			,vfs.[num_of_bytes_written] AS [write_bytes]'
-			+ @Columns + N'
-		FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
-		INNER JOIN sys.master_files AS mf WITH (NOLOCK)
-			ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
-		'
-		+ @Tables;
-		EXEC sp_executesql @SqlStatement
-	END
-	`
+SET @SqlStatement = N'
+SELECT
+	''sqlserver_database_io'' AS [measurement]
+	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
+	,DB_NAME(vfs.[database_id]) AS [database_name]
+	,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
+	,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
+	,mf.[type_desc] AS [file_type]
+	,vfs.[io_stall_read_ms] AS [read_latency_ms]
+	,vfs.[num_of_reads] AS [reads]
+	,vfs.[num_of_bytes_read] AS [read_bytes]
+	,vfs.[io_stall_write_ms] AS [write_latency_ms]
+	,vfs.[num_of_writes] AS [writes]
+	,vfs.[num_of_bytes_written] AS [write_bytes]'
+	+ @Columns + N'
+FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
+INNER JOIN sys.master_files AS mf WITH (NOLOCK)
+	ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]'
++ @Tables;
+
+EXEC sp_executesql @SqlStatement
+`
 
 const sqlServerProperties = `
 DECLARE
