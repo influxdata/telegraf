@@ -1100,9 +1100,6 @@ IF @MajorMinorVersion >= 1050
 `
 
 const sqlServerRingBufferCpu string = `
-/*The ring buffer has a new value every minute*/
-IF SERVERPROPERTY('EngineEdition') IN (2,3,4) /*Standard,Enterpris,Express*/
-BEGIN
 SELECT 
 	 'sqlserver_cpu' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
@@ -1112,23 +1109,24 @@ SELECT
 FROM (
 	SELECT TOP 1
 		 [record_id]
-		/*,dateadd(ms, (y.[timestamp] - (SELECT CAST([ms_ticks] AS BIGINT) FROM sys.dm_os_sys_info)), GETDATE()) AS [EventTime] --use for check/debug purpose*/
 		,[SQLProcessUtilization]
 		,[SystemIdle]
 	FROM (
-		SELECT record.value('(./Record/@id)[1]', 'int') AS [record_id]
+		SELECT 
+			 record.value('(./Record/@id)[1]', 'int') AS [record_id]
 			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/SystemIdle)[1]', 'int') AS [SystemIdle]
 			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') AS [SQLProcessUtilization]
 			,[TIMESTAMP]
 		FROM (
-			SELECT [TIMESTAMP]
+			SELECT
+				 [TIMESTAMP]
 				,convert(XML, [record]) AS [record]
 			FROM sys.dm_os_ring_buffers
-			WHERE [ring_buffer_type] = N'RING_BUFFER_SCHEDULER_MONITOR'
+			WHERE 
+				[ring_buffer_type] = N'RING_BUFFER_SCHEDULER_MONITOR'
 				AND [record] LIKE '%<SystemHealth>%'
 			) AS x
 		) AS y
 	ORDER BY record_id DESC
 ) as z
-END
 `
