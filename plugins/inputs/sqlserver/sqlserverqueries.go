@@ -1134,7 +1134,7 @@ IF @MajorMinorVersion >= 1050
 		,vs.[available_bytes] AS [available_space_bytes]
 		,vs.[total_bytes] - vs.[available_bytes] AS [used_space_bytes]
 	FROM sys.master_files AS mf
-	CROSS APPLY sys.dm_os_volume_stats(mf.database_id, mf.file_id) AS vs
+	CROSS APPLY sys.dm_os_volume_stats(mf.[database_id], mf.[file_id]) AS vs
 `
 
 const sqlServerRingBufferCpu string = `
