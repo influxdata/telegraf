@@ -1038,7 +1038,6 @@ END
 
 DECLARE 
 	 @SqlStatement AS nvarchar(max)
-	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	,@Columns AS nvarchar(max) = ''
 
@@ -1120,8 +1119,7 @@ IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterp
 END
 
 DECLARE
-	 @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
-	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
+	@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
 	
 IF @MajorMinorVersion >= 1050
 	SELECT DISTINCT
