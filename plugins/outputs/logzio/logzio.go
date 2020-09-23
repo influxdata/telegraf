@@ -5,14 +5,14 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"ido-telegraf/telegraf/internal"
+	"ido-telegraf/telegraf/plugins/common/tls"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -63,7 +63,7 @@ func (l *Logzio) Connect() error {
 		l.URL = defaultLogzioURL
 	}
 
-	if l.Timeout.Duration == 0 {
+	if l.Timeout.Duration <= 0 {
 		l.Timeout.Duration = defaultLogzioRequestTimeout
 	}
 
