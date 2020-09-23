@@ -176,50 +176,48 @@ EXEC sp_executesql @SqlStatement
 
 const sqlServerProperties = `
 DECLARE
-	@SqlStatement AS nvarchar(max) = ''
-	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
+	 @SqlStatement AS nvarchar(max) = ''
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@Columns AS nvarchar(MAX) = ''
 
-IF @EngineEdition IN (2,3,4) /*Standard,Enterpris,Express*/
-BEGIN	
-	DECLARE @MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
-	DECLARE @Columns AS nvarchar(MAX) = ''
+IF @MajorMinorVersion >= 1050
+	SET @Columns = N'
+	,CASE [virtual_machine_type_desc]
+		WHEN ''NONE'' THEN ''PHYSICAL Machine''
+		ELSE [virtual_machine_type_desc]
+	END AS [hardware_type]'
 
-	IF @MajorMinorVersion >= 1050
-			SET @Columns = N',CASE [virtual_machine_type_desc]
-					WHEN ''NONE'' THEN ''PHYSICAL Machine''
-					ELSE [virtual_machine_type_desc]
-			END AS [hardware_type]';
-	ELSE /*data not available*/
-			SET @Columns = N',''<n/a>'' AS [hardware_type]';
-	
-	SET @SqlStatement =  'SELECT	''sqlserver_server_properties'' AS [measurement],
-				REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance],
-				[cpu_count]
-				,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
-				,CAST(SERVERPROPERTY(''Edition'') AS NVARCHAR) AS [sku]
-				,@EngineEdition AS [engine_edition]
-				,DATEDIFF(MINUTE,[sqlserver_start_time],GETDATE()) AS [uptime]
-				' + @Columns + ',
-		SERVERPROPERTY(''ProductVersion'') AS sql_version,
-				db_online,
-				db_restoring,
-				db_recovering,
-				db_recoveryPending,
-				db_suspect,
-				db_offline
-		FROM sys.[dm_os_sys_info]
-		CROSS APPLY
-				(        SELECT  SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
-									SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
-									SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
-									SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
-									SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
-									SUM( CASE WHEN state = 6 or state = 10 THEN 1 ELSE 0 END ) AS db_offline
-						FROM    sys.databases
-				) AS dbs';
-		
-	EXEC sp_executesql @SqlStatement , N'@EngineEdition smallint', @EngineEdition = @EngineEdition;
-END
+SET @SqlStatement = '
+SELECT
+	 ''sqlserver_server_properties'' AS [measurement]
+	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
+	,[cpu_count]
+	,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
+	,SERVERPROPERTY(''Edition'') AS [sku]
+	,CAST(SERVERPROPERTY(''EngineEdition'') AS int) AS [engine_edition]
+	,DATEDIFF(MINUTE,[sqlserver_start_time],GETDATE()) AS [uptime]
+	,SERVERPROPERTY(''ProductVersion'') AS [sql_version]
+	,db_online
+	,db_restoring
+	,db_recovering
+	,db_recoveryPending
+	,db_suspect
+	,db_offline'
+	+ @Columns + N'
+	FROM sys.[dm_os_sys_info]
+	CROSS APPLY (
+		SELECT  
+			 SUM(CASE WHEN state = 0 THEN 1 ELSE 0 END) AS db_online
+			,SUM(CASE WHEN state = 1 THEN 1 ELSE 0 END) AS db_restoring
+			,SUM(CASE WHEN state = 2 THEN 1 ELSE 0 END) AS db_recovering
+			,SUM(CASE WHEN state = 3 THEN 1 ELSE 0 END) AS db_recoveryPending
+			,SUM(CASE WHEN state = 4 THEN 1 ELSE 0 END) AS db_suspect
+			,SUM(CASE WHEN state IN(6, 10) THEN 1 ELSE 0 END ) AS db_offline
+		FROM    sys.databases
+	) AS dbs
+'
+
+EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerSchedulers string = `
