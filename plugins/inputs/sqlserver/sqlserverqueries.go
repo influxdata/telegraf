@@ -221,41 +221,39 @@ EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerSchedulers string = `
-IF SERVERPROPERTY('EngineEdition') IN (2,3,4) /*Standard,Enterpris,Express*/
-BEGIN
-	DECLARE
-		@SqlStatement AS nvarchar(max)
-		,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
-		,@Columns AS nvarchar(MAX) = ''
+DECLARE
+	 @SqlStatement AS nvarchar(max)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@Columns AS nvarchar(MAX) = ''
 
-		IF @MajorMinorVersion >= 1300 BEGIN
-			SET @Columns += N',s.[total_cpu_usage_ms]
-		,s.[total_scheduler_delay_ms]'
-		END
-
-	SET @SqlStatement = N'
-	SELECT 
-		''sqlserver_schedulers'' AS [measurement]
-		,REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance]
-		,cast(s.[scheduler_id] AS VARCHAR(4)) AS [scheduler_id]
-		,cast(s.[cpu_id] AS VARCHAR(4)) AS [cpu_id]
-		,s.[is_online]
-		,s.[is_idle]
-		,s.[preemptive_switches_count]
-		,s.[context_switches_count]
-		,s.[current_tasks_count]
-		,s.[runnable_tasks_count]
-		,s.[current_workers_count]
-		,s.[active_workers_count]
-		,s.[work_queue_count]
-		,s.[pending_disk_io_count]
-		,s.[load_factor]
-		,s.[yield_count]
-		' + @Columns + N'
-	FROM sys.dm_os_schedulers AS s'
-
-	EXEC sp_executesql @SqlStatement
+IF @MajorMinorVersion >= 1300 BEGIN
+	SET @Columns += N'
+	,s.[total_cpu_usage_ms]
+	,s.[total_scheduler_delay_ms]'
 END
+
+SET @SqlStatement = N'
+SELECT
+	 ''sqlserver_schedulers'' AS [measurement]
+	,REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance]
+	,cast(s.[scheduler_id] AS VARCHAR(4)) AS [scheduler_id]
+	,cast(s.[cpu_id] AS VARCHAR(4)) AS [cpu_id]
+	,s.[is_online]
+	,s.[is_idle]
+	,s.[preemptive_switches_count]
+	,s.[context_switches_count]
+	,s.[current_tasks_count]
+	,s.[runnable_tasks_count]
+	,s.[current_workers_count]
+	,s.[active_workers_count]
+	,s.[work_queue_count]
+	,s.[pending_disk_io_count]
+	,s.[load_factor]
+	,s.[yield_count]'
+	+ @Columns + N'
+FROM sys.dm_os_schedulers AS s'
+
+EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerPerformanceCounters string = `
