@@ -17,6 +17,9 @@ func TestGTFS(t *testing.T) {
 	var (
 		testID                  = "123"
 		testStopID              = "stop123"
+		testStopSequence        = uint32(2)
+		testArrival             = int64(3)
+		testDeparture           = int64(4)
 		testTripID              = "trip123"
 		testVehicleID           = "vehicle123"
 		testRouteID             = "route123"
@@ -42,7 +45,7 @@ func TestGTFS(t *testing.T) {
 			name:               "vehicle positions",
 			measurement:        "position",
 			expectedTagCount:   2,
-			expectedFieldCount: 12,
+			expectedFieldCount: 13,
 			responses: map[string]*gtfsbindings.FeedMessage{
 				"/VehiclePositions.pb": {
 					Header: testHeader, // required
@@ -66,6 +69,45 @@ func TestGTFS(t *testing.T) {
 									Speed:     &testSpeed,
 								},
 								StopId:    &testStopID,
+								Timestamp: &testTimestamp,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:               "trip updates",
+			measurement:        "update",
+			expectedTagCount:   2,
+			expectedFieldCount: 9,
+			responses: map[string]*gtfsbindings.FeedMessage{
+				"/TripUpdates.pb": {
+					Header: testHeader, // required
+					Entity: []*gtfsbindings.FeedEntity{
+						{
+							Id: &testID,
+							TripUpdate: &gtfsbindings.TripUpdate{
+								Trip: &gtfsbindings.TripDescriptor{
+									TripId:      &testTripID,
+									RouteId:     &testRouteID,
+									DirectionId: &testDirectionID,
+								},
+								Vehicle: &gtfsbindings.VehicleDescriptor{
+									Id: &testVehicleID,
+								},
+								StopTimeUpdate: []*gtfsbindings.TripUpdate_StopTimeUpdate{
+									{
+										StopSequence: &testStopSequence,
+										StopId:       &testStopID,
+										Arrival: &gtfsbindings.TripUpdate_StopTimeEvent{
+											Time: &testArrival,
+										},
+										Departure: &gtfsbindings.TripUpdate_StopTimeEvent{
+											Time: &testDeparture,
+										},
+									},
+								},
 								Timestamp: &testTimestamp,
 							},
 						},
@@ -97,8 +139,8 @@ func TestGTFS(t *testing.T) {
 			require.Len(t, acc.Metrics, 1)
 			var metric = acc.Metrics[0]
 			require.Equal(t, metric.Measurement, test.measurement)
-			require.Len(t, metric.Tags, 2)
-			require.Len(t, metric.Fields, 12)
+			require.Len(t, metric.Tags, test.expectedTagCount)
+			require.Len(t, metric.Fields, test.expectedFieldCount)
 		})
 	}
 }

@@ -161,6 +161,7 @@ func (g *GTFS) gatherVehiclePositions(acc telegraf.Accumulator, t time.Time) err
 			"vehicle_id":    v.Vehicle.Id,
 			"vehicle_label": v.Vehicle.Label,
 			"trip_id":       v.Trip.TripId,
+			"direction_id":  v.Trip.DirectionId,
 			"stop_id":       v.StopId,
 			"status":        v.CurrentStatus,
 			"congestion":    v.CongestionLevel,
@@ -195,15 +196,26 @@ func (g *GTFS) gatherTripUpdates(acc telegraf.Accumulator, t time.Time) error {
 			return err
 		}
 
-		fields := map[string]interface{}{
-			"json": b,
-		}
+		for _, update := range u.StopTimeUpdate {
+			fields := map[string]interface{}{
+				"vehicle_id":    u.Vehicle.Id,
+				"vehicle_label": u.Vehicle.Label,
+				"trip_id":       u.Trip.TripId,
+				"stop_id":       update.StopId,
+				"stop_sequence": update.StopSequence,
+				"arrival":       update.Arrival.Time,
+				"departure":     update.Departure.Time,
+				"delay":         u.Delay,
+				"json":          b,
+			}
 
-		tags := map[string]string{
-			"route_id": *u.Trip.RouteId,
-		}
+			tags := map[string]string{
+				"route_id":     *u.Trip.RouteId,
+				"direction_id": fmt.Sprintf("%d", u.Trip.DirectionId),
+			}
 
-		acc.AddFields("update", fields, tags, time.Unix(int64(*u.Timestamp), 0))
+			acc.AddFields("update", fields, tags, time.Unix(int64(*u.Timestamp), 0))
+		}
 	}
 
 	return nil
