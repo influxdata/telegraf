@@ -21,7 +21,8 @@ import (
 const sqlServerMemoryClerks = `
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
-	THROW 50000, @ErrorMessage, 1
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
 END
 
 DECLARE
@@ -139,7 +140,8 @@ EXEC(@SqlStatement)
 const sqlServerDatabaseIO = `
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
-	THROW 50000, @ErrorMessage, 1
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
 END
 
 DECLARE 
@@ -187,7 +189,8 @@ EXEC sp_executesql @SqlStatement
 const sqlServerProperties = `
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
-	THROW 50000, @ErrorMessage, 1
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
 END
 
 DECLARE
@@ -238,7 +241,8 @@ EXEC sp_executesql @SqlStatement
 const sqlServerSchedulers string = `
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
-	THROW 50000, @ErrorMessage, 1
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
 END
 
 DECLARE
@@ -279,7 +283,8 @@ EXEC sp_executesql @SqlStatement
 const sqlServerPerformanceCounters string = `
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
-	THROW 50000, @ErrorMessage, 1
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
 END
 
 DECLARE
@@ -468,7 +473,8 @@ OPTION(RECOMPILE)
 const sqlServerWaitStatsCategorized string = `
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
-	THROW 50000, @ErrorMessage, 1
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
 END
 
 SELECT
@@ -1033,7 +1039,8 @@ WHERE
 const sqlServerRequests string = `
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
-	THROW 50000, @ErrorMessage, 1
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
 END
 
 DECLARE 
@@ -1115,7 +1122,8 @@ EXEC sp_executesql @SqlStatement
 const sqlServerVolumeSpace string = `
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
-	THROW 50000, @ErrorMessage, 1
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
 END
 
 DECLARE
@@ -1138,7 +1146,8 @@ IF @MajorMinorVersion >= 1050
 const sqlServerRingBufferCpu string = `
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - '+ @@SERVERNAME +' is not a SQL Server Standard, Enterprise or Express, check the database_type parameter in the telegraf configuration.';
-	THROW 50000, @ErrorMessage, 1
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
 END
 
 SELECT 
