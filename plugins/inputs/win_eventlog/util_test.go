@@ -16,14 +16,18 @@ import (
 
 func TestDecodeUTF16(t *testing.T) {
 	testString := "Test String"
-	utf16 := utf16.Encode([]rune(testString))
+	utf16s := utf16.Encode([]rune(testString))
 	var bytesUtf16 bytes.Buffer
 	writer := io.Writer(&bytesUtf16)
-	lb := len(utf16)
+	lb := len(utf16s)
 	for i := 0; i < lb; i++ {
 		word := make([]byte, 2)
-		binary.LittleEndian.PutUint16(word, utf16[i])
-		writer.Write(word)
+		binary.LittleEndian.PutUint16(word, utf16s[i])
+		_, err:= writer.Write(word)
+		if err != nil {
+			t.Errorf("error preparing UTF-16 test string")
+			return
+		}
 	}
 	type args struct {
 		b []byte
@@ -92,7 +96,11 @@ type testEvent struct {
 
 func TestUnrollXMLFields(t *testing.T) {
 	container := testEvent{}
-	xml.Unmarshal([]byte(xmldata), &container)
+	err := xml.Unmarshal([]byte(xmldata), &container)
+	if err != nil {
+		t.Errorf("couldn't unmarshal precooked xml string xmldata")
+		return
+	}
 
 	type args struct {
 		data        []byte

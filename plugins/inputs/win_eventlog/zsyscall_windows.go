@@ -49,19 +49,6 @@ const (
 	// null-terminated strings. Increment through the strings until your pointer
 	// points past the end of the used buffer.
 	EvtFormatMessageKeyword
-	// Format the message string of the channel specified in the event.
-	EvtFormatMessageChannel
-	// Format the provider's message string.
-	EvtFormatMessageProvider
-	// Format the message string associated with a resource identifier. The
-	// provider's metadata contains the resource identifiers; the message
-	// compiler assigns a resource identifier to each string when it compiles
-	// the manifest.
-	//revive:disable-next-line:confusing-naming
-	EvtFormatMessageId
-	// Format all the message strings in the event. The formatted message is an
-	// XML string that contains the event details and the message strings.
-	EvtFormatMessageXml
 	//revive:enable:var-naming
 )
 

@@ -132,7 +132,7 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 	if w.subscription == 0 {
 		w.subscription, err = w.evtSubscribe(w.EventlogName, w.Query)
 		if err != nil {
-			w.Log.Error("Subscription error:", err.Error())
+			return fmt.Errorf("Windows Event Log subscription error: %v", err.Error())
 		}
 	}
 	w.Log.Debug("Subscription handle id:", w.subscription)
@@ -397,13 +397,16 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 	if err != nil {
 		return event, err
 	}
-	xml.Unmarshal([]byte(eventXML), &event)
-
-	publisherHandle, err := openPublisherMetadata(0, event.Source.Name, w.Locale)
+	err = xml.Unmarshal([]byte(eventXML), &event)
 	if err != nil {
 		// We can return event without most text values,
 		// that way we will not loose information
 		// This can happen when processing Forwarded Events
+		return event, nil
+	}
+
+	publisherHandle, err := openPublisherMetadata(0, event.Source.Name, w.Locale)
+	if err != nil {
 		return event, nil
 	}
 	defer _EvtClose(publisherHandle)

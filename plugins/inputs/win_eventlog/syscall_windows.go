@@ -12,7 +12,6 @@ const (
 	//revive:disable:var-naming
 	ERROR_INSUFFICIENT_BUFFER syscall.Errno = 122
 	ERROR_NO_MORE_ITEMS       syscall.Errno = 259
-	RPC_S_INVALID_BOUND       syscall.Errno = 1734
 	ERROR_INVALID_OPERATION   syscall.Errno = 4317
 	//revive:enable:var-naming
 )
@@ -33,10 +32,8 @@ type EvtRenderFlag uint32
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa385563(v=vs.85).aspx
 const (
 	//revive:disable:var-naming
-	// Render the event properties specified in the rendering context.
-	EvtRenderEventValues EvtRenderFlag = iota
 	// Render the event as an XML string. For details on the contents of the
 	// XML string, see the Event schema.
-	EvtRenderEventXml
+	EvtRenderEventXml EvtRenderFlag = 1
 	//revive:enable:var-naming
 )
