@@ -443,20 +443,18 @@ END
 `
 
 const sqlServerWaitStatsCategorized string = `
-IF SERVERPROPERTY('EngineEdition') IN (2,3,4) /*Standard,Enterpris,Express*/
-	SELECT
-		'sqlserver_waitstats' AS [measurement],
-	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-	ws.wait_type,
-	wait_time_ms,
-	wait_time_ms - signal_wait_time_ms AS [resource_wait_ms],
-	signal_wait_time_ms,
-	max_wait_time_ms,
-	waiting_tasks_count,
-	ISNULL(wc.wait_category,'OTHER') AS [wait_category]
-	FROM
-	sys.dm_os_wait_stats AS ws WITH (NOLOCK)
-	LEFT OUTER JOIN ( VALUES
+SELECT
+	 'sqlserver_waitstats' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,ws.wait_type
+	,wait_time_ms
+	,wait_time_ms - signal_wait_time_ms AS [resource_wait_ms]
+	,signal_wait_time_ms
+	,max_wait_time_ms
+	,waiting_tasks_count
+	,ISNULL(wc.wait_category,'OTHER') AS [wait_category]
+FROM sys.dm_os_wait_stats AS ws WITH (NOLOCK)
+LEFT OUTER JOIN ( VALUES
 	('ASYNC_IO_COMPLETION','Other Disk IO'),
 	('ASYNC_NETWORK_IO','Network IO'),
 	('BACKUPIO','Other Disk IO'),
@@ -961,9 +959,10 @@ IF SERVERPROPERTY('EngineEdition') IN (2,3,4) /*Standard,Enterpris,Express*/
 	('XACTLOCKINFO','Transaction'),
 	('XACTWORKSPACE_MUTEX','Transaction'),
 	('XE_DISPATCHER_WAIT','Idle'),
-	('XE_TIMER_EVENT','Idle')) AS wc(wait_type, wait_category)
-		ON ws.wait_type = wc.wait_type
-	WHERE
+	('XE_TIMER_EVENT','Idle')
+) AS wc(wait_type, wait_category)
+	ON ws.wait_type = wc.wait_type
+WHERE
 	ws.wait_type NOT IN (
 		N'BROKER_EVENTHANDLER', N'BROKER_RECEIVE_WAITFOR', N'BROKER_TASK_STOP',
 		N'BROKER_TO_FLUSH', N'BROKER_TRANSMITTER', N'CHECKPOINT_QUEUE',
@@ -997,9 +996,10 @@ IF SERVERPROPERTY('EngineEdition') IN (2,3,4) /*Standard,Enterpris,Express*/
 		N'WAIT_XTP_OFFLINE_CKPT_NEW_LOG', N'WAIT_XTP_CKPT_CLOSE',
 		N'XE_BUFFERMGR_ALLPROCESSED_EVENT', N'XE_DISPATCHER_JOIN',
 		N'XE_DISPATCHER_WAIT', N'XE_LIVE_TARGET_TVF', N'XE_TIMER_EVENT',
-		N'SOS_WORK_DISPATCHER','RESERVED_MEMORY_ALLOCATION_EXT')
+		N'SOS_WORK_DISPATCHER','RESERVED_MEMORY_ALLOCATION_EXT'
+	)
 	AND waiting_tasks_count > 0
-	AND wait_time_ms > 100;
+	AND wait_time_ms > 100
 `
 
 const sqlServerRequests string = `
