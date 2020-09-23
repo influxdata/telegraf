@@ -5,14 +5,15 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"ido-telegraf/telegraf/internal"
-	"ido-telegraf/telegraf/plugins/common/tls"
+
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
