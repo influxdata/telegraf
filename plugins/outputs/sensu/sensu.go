@@ -221,6 +221,15 @@ func (s *Sensu) write(reqBody []byte) error {
 	method := http.MethodPost
 
 	var err error
+	if s.ContentEncoding == "gzip" {
+		rc, err := internal.CompressWithGzip(reqBodyBuffer)
+		if err != nil {
+			return err
+		}
+		defer rc.Close()
+		reqBodyBuffer = rc
+	}
+
 	endpointUrl, err := s.GetEndpointUrl()
 	if err != nil {
 		return err
