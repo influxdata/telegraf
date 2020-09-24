@@ -1,4 +1,6 @@
 # Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/) [![telegraf](https://snapcraft.io//telegraf/badge.svg)](https://snapcraft.io/telegraf)
+# Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
+[![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://www.influxdata.com/slack)
 
 Telegraf is an agent for collecting, processing, aggregating, and writing metrics.
 
@@ -410,6 +412,7 @@ For documentation on the latest development code see the [documentation index][d
 * [cratedb](./plugins/outputs/cratedb)
 * [datadog](./plugins/outputs/datadog)
 * [discard](./plugins/outputs/discard)
+* [dynatrace](./plugins/outputs/dynatrace)
 * [elasticsearch](./plugins/outputs/elasticsearch)
 * [exec](./plugins/outputs/exec)
 * [execd](./plugins/outputs/execd)
@@ -436,3 +439,4 @@ For documentation on the latest development code see the [documentation index][d
 * [udp](./plugins/outputs/socket_writer)
 * [warp10](./plugins/outputs/warp10)
 * [wavefront](./plugins/outputs/wavefront)
+* [sumologic](./plugins/outputs/sumologic)
