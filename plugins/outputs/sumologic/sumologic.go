@@ -108,6 +108,8 @@ type SumoLogic struct {
 	SourceCategory string `toml:"source_category"`
 	Dimensions     string `toml:"dimensions"`
 
+	Log telegraf.Logger `toml:"-"`
+
 	client     *http.Client
 	serializer serializers.Serializer
 
@@ -214,7 +216,7 @@ func (s *SumoLogic) Write(metrics []telegraf.Metric) error {
 func (s *SumoLogic) writeRequestChunks(chunks [][]byte) error {
 	for _, reqChunk := range chunks {
 		if err := s.write(reqChunk); err != nil {
-			log.Printf("E! [SumoLogic] Error sending chunk: %v", err)
+			s.Log.Errorf("Error sending chunk: %v", err)
 		}
 	}
 	return nil
