@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -488,8 +489,8 @@ func TestMaxRequestBodySize(t *testing.T) {
 		plugin                   func() *SumoLogic
 		metrics                  []telegraf.Metric
 		expectedError            bool
-		expectedRequestCount     int
-		expectedMetricLinesCount int
+		expectedRequestCount     int32
+		expectedMetricLinesCount int32
 	}{
 		{
 			name: "default max request body size is 1MB and doesn't split small enough metric slices",
@@ -613,14 +614,14 @@ func TestMaxRequestBodySize(t *testing.T) {
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
 			var (
-				requestCount int
-				linesCount   int
+				requestCount int32
+				linesCount   int32
 			)
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				requestCount++
+				atomic.AddInt32(&requestCount, 1)
 
 				if tt.expectedMetricLinesCount != 0 {
-					linesCount += countLines(t, r.Body)
+					atomic.AddInt32(&linesCount, int32(countLines(t, r.Body)))
 				}
 
 				w.WriteHeader(http.StatusOK)
@@ -640,8 +641,8 @@ func TestMaxRequestBodySize(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tt.expectedRequestCount, requestCount)
-				require.Equal(t, tt.expectedMetricLinesCount, linesCount)
+				require.Equal(t, tt.expectedRequestCount, atomic.LoadInt32(&requestCount))
+				require.Equal(t, tt.expectedMetricLinesCount, atomic.LoadInt32(&linesCount))
 			}
 		})
 	}
