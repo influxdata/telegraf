@@ -275,15 +275,17 @@ type NVMeDevice struct {
 }
 
 type Smart struct {
-	PathSmartctl     string
-	PathNVMe         string
-	Nocheck          string
-	EnableExtensions []string
-	Attributes       bool
-	Excludes         []string
-	Devices          []string
-	UseSudo          bool
-	Timeout          internal.Duration
+	Path             string            `toml:"path"` //deprecated - to keep backward compatibility
+	PathSmartctl     string            `toml:"path_smartctl"`
+	PathNVMe         string            `toml:"path_nvme"`
+	Nocheck          string            `toml:"nocheck"`
+	EnableExtensions []string          `toml:"enable_extensions"`
+	Attributes       bool              `toml:"attributes"`
+	Excludes         []string          `toml:"excludes"`
+	Devices          []string          `toml:"devices"`
+	UseSudo          bool              `toml:"use_sudo"`
+	Timeout          internal.Duration `toml:"timeout"`
+	Log              telegraf.Logger   `toml:"-"`
 }
 
 var sampleConfig = `
@@ -342,18 +344,47 @@ func (m *Smart) Description() string {
 	return "Read metrics from storage devices supporting S.M.A.R.T."
 }
 
-func (m *Smart) Gather(acc telegraf.Accumulator) error {
-	isNVMe := len(m.PathNVMe) != 0
-	isSmartctl := len(m.PathSmartctl) != 0
-	isVendorExtension := len(m.EnableExtensions) != 0
-
-	if !isSmartctl {
-		return fmt.Errorf("smartctl not found: verify that smartctl is installed and that smartctl is in your PATH")
+func (m *Smart) Init() error {
+	//if deprecated `path` (to smartctl binary) is provided in config and `path_smartctl` override does not exist
+	if len(m.Path) > 0 && len(m.PathSmartctl) == 0 {
+		m.PathSmartctl = m.Path
 	}
+
+	//if `path_smartctl` is not provided in config, try to find smartctl binary in PATH
+	if len(m.PathSmartctl) == 0 {
+		m.PathSmartctl, _ = exec.LookPath("smartctl")
+	}
+
+	//if `path_nvme` is not provided in config, try to find nvme binary in PATH
+	if len(m.PathNVMe) == 0 {
+		m.PathNVMe, _ = exec.LookPath("nvme")
+	}
+
+	err := validatePath(m.PathSmartctl)
+	if err != nil {
+		m.PathSmartctl = ""
+		//without smartctl, plugin will not be able to gather basic metrics
+		return fmt.Errorf("smartctl not found: verify that smartctl is installed and it is in your PATH (or specified in config): %s", err.Error())
+	}
+
+	err = validatePath(m.PathNVMe)
+	if err != nil {
+		m.PathNVMe = ""
+		//without nvme, plugin will not be able to gather vendor specific attributes (but it can work without it)
+		m.Log.Warnf("nvme not found: verify that nvme is installed and it is in your PATH (or specified in config) to gather vendor specific attributes: %s", err.Error())
+	}
+
+	return nil
+}
+
+func (m *Smart) Gather(acc telegraf.Accumulator) error {
 	var err error
 	var scannedNVMeDevices []string
 	var scannedNonNVMeDevices []string
+
 	devicesFromConfig := m.Devices
+	isNVMe := len(m.PathNVMe) != 0
+	isVendorExtension := len(m.EnableExtensions) != 0
 
 	if len(m.Devices) != 0 {
 		devicesFromConfig = excludeWrongDeviceNames(devicesFromConfig)
@@ -451,7 +482,7 @@ func (m *Smart) scanDevices(ignoreExcludes bool, scanArgs ...string) ([]string, 
 	if err != nil {
 		return []string{}, fmt.Errorf("failed to run command '%s %s': %s - %s", m.PathSmartctl, scanArgs, err, string(out))
 	}
-	devices := []string{}
+	var devices []string
 	for _, line := range strings.Split(string(out), "\n") {
 		dev := strings.Split(line, " ")
 		if len(dev) <= 1 {
@@ -681,7 +712,7 @@ func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, co
 
 		health := smartOverallHealth.FindStringSubmatch(line)
 		if len(health) > 2 {
-			deviceFields["health_ok"] = (health[2] == "PASSED" || health[2] == "OK")
+			deviceFields["health_ok"] = health[2] == "PASSED" || health[2] == "OK"
 		}
 
 		tags := map[string]string{}
@@ -946,20 +977,23 @@ func parseTemperatureSensor(fields, deviceFields map[string]interface{}, str str
 	return nil
 }
 
+func validatePath(path string) error {
+	pathInfo, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("provided path does not exist: [%s]", path)
+	}
+	if mode := pathInfo.Mode(); !mode.IsRegular() {
+		return fmt.Errorf("provided path does not point to a regular file: [%s]", path)
+	}
+	return nil
+}
+
 func init() {
 	// Set LC_NUMERIC to uniform numeric output from cli tools
 	_ = os.Setenv("LC_NUMERIC", "en_US.UTF-8")
 
 	inputs.Add("smart", func() telegraf.Input {
 		m := NewSmart()
-		pathSmartctl, _ := exec.LookPath("smartctl")
-		pathNVMe, _ := exec.LookPath("nvme")
-		if len(pathSmartctl) > 0 {
-			m.PathSmartctl = pathSmartctl
-		}
-		if len(pathNVMe) > 0 {
-			m.PathNVMe = pathNVMe
-		}
 		m.Nocheck = "standby"
 		return m
 	})
