@@ -29,6 +29,7 @@ var (
 )
 
 var counts map[string]string
+var sent = 0
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
@@ -210,6 +211,11 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				}
 			}
 		}
+	}
+	sent++
+	// in typical interval of 10s, we will clean the counter state once in 24h which is 8640 iterations
+	if sent%8640 == 0 {
+		counts = make(map[string]string)
 	}
 	return d.send(buf.Bytes())
 }
