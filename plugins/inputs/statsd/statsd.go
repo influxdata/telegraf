@@ -98,10 +98,12 @@ type Statsd struct {
 	// Cache gauges, counters & sets so they can be aggregated as they arrive
 	// gauges and counters map measurement/tags hash -> field name -> metrics
 	// sets and timings map measurement/tags hash -> metrics
-	gauges   map[string]cachedgauge
-	counters map[string]cachedcounter
-	sets     map[string]cachedset
-	timings  map[string]cachedtimings
+	// distributions aggregate measurement/tags and are published directly
+	gauges        map[string]cachedgauge
+	counters      map[string]cachedcounter
+	sets          map[string]cachedset
+	timings       map[string]cachedtimings
+	distributions []cacheddistributions
 
 	// bucket -> influx templates
 	Templates []string
@@ -190,6 +192,12 @@ type cachedtimings struct {
 	expiresAt time.Time
 }
 
+type cacheddistributions struct {
+	name   string
+	fields map[string]interface{}
+	tags   map[string]string
+}
+
 func (_ *Statsd) Description() string {
 	return "Statsd UDP/TCP Server"
 }
@@ -265,6 +273,11 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	defer s.Unlock()
 	now := time.Now()
 
+	for _, m := range s.distributions {
+		acc.AddFields(m.name, m.fields, m.tags, now)
+	}
+	s.distributions = []cacheddistributions{}
+
 	for _, m := range s.timings {
 		// Defining a template to parse field names for timers allows us to split
 		// out multiple fields per timer. In this case we prefix each stat with the
@@ -336,6 +349,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
 	s.timings = make(map[string]cachedtimings)
+	s.distributions = []cacheddistributions{}
 
 	s.Lock()
 	defer s.Unlock()
@@ -749,6 +763,15 @@ func (s *Statsd) aggregate(m metric) {
 	defer s.Unlock()
 
 	switch m.mtype {
+	case "d":
+		fields := make(map[string]interface{})
+		fields[m.field] = m.floatvalue
+		cached := cacheddistributions{
+			name:   m.name,
+			fields: fields,
+			tags:   m.tags,
+		}
+		s.distributions = append(s.distributions, cached)
 	case "ms", "h":
 		// Check if the measurement exists
 		cached, ok := s.timings[m.hash]
