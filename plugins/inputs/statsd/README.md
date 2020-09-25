@@ -98,6 +98,10 @@ implementation. In short, the telegraf statsd listener will accept:
     - `load.time:320|ms`
     - `load.time.nanoseconds:1|h`
     - `load.time:200|ms|@0.1` <- sampled 1/10 of the time
+- Distributions
+    - `load.time:320|d`
+    - `load.time.nanoseconds:1|d`
+    - `load.time:200|d|@0.1` <- sampled 1/10 of the time
 
 It is possible to omit repetitive names and merge individual stats into a
 single line by separating them with additional colons:
@@ -172,6 +176,9 @@ metric type:
         that `P%` of all the values statsd saw for that stat during that time
         period are below x. The most common value that people use for `P` is the
         `90`, this is a great number to try to optimize.
+- Distributions
+    - The Distribution metric represents the global statistical distribution of a set of values calculated across your entire distributed infrastructure in one time interval. A Distribution can be used to instrument logical objects, like services, independently from the underlying hosts.
+    - Unlike the Histogram metric type, which aggregates on the Agent during a given time interval, a Distribution metric sends all the raw data during a time interval.
 
 ### Plugin arguments
 
