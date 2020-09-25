@@ -36,7 +36,6 @@ func TestGatherAttributes(t *testing.T) {
 
 	t.Run("Wrong path to smartctl", func(t *testing.T) {
 		s.PathSmartctl = "this_path_to_smartctl_does_not_exist"
-
 		err := s.Init()
 
 		assert.Error(t, err)
