@@ -37,8 +37,6 @@ type Shim struct {
 	Processor telegraf.StreamingProcessor
 	Output    telegraf.Output
 
-	log *Logger
-
 	// streams
 	stdin  io.Reader
 	stdout io.Writer
@@ -58,7 +56,6 @@ func New() *Shim {
 		stdin:    os.Stdin,
 		stdout:   os.Stdout,
 		stderr:   os.Stderr,
-		log:      NewLogger(),
 	}
 }
 
@@ -130,5 +127,5 @@ func (s *Shim) MakeMetric(m telegraf.Metric) telegraf.Metric {
 
 // Log satisfies the MetricMaker interface
 func (s *Shim) Log() telegraf.Logger {
-	return s.log
+	return nil
 }

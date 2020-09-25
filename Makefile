@@ -1,5 +1,11 @@
+ifeq ($(OS), Windows_NT)
+	devnull := nul
+else
+	devnull := /dev/null
+endif
+
 next_version := 1.16.0
-tag := $(shell git describe --exact-match --tags 2>git_describe_error.tmp; rm -f git_describe_error.tmp)
+tag := $(shell git describe --exact-match --tags 2>$(devnull))
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
 
@@ -88,11 +94,6 @@ deps:
 telegraf:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
-# Used by dockerfile builds
-.PHONY: go-install
-go-install:
-	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
-
 .PHONY: test
 test:
 	go test -short $(race_detector) ./...
@@ -159,7 +160,7 @@ clean:
 
 .PHONY: docker-image
 docker-image:
-	docker build -f scripts/stretch.docker -t "telegraf:$(commit)" .
+	docker build -f scripts/stretch.docker -t "telegraf:$(COMMIT)" .
 
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@

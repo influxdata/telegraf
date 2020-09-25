@@ -13,7 +13,7 @@ import (
 
 // AddInput adds the input to the shim. Later calls to Run() will run this input.
 func (s *Shim) AddInput(input telegraf.Input) error {
-	setLoggerOnPlugin(input, s.Log())
+	setLoggerOnPlugin(input, NewLogger())
 	if p, ok := input.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {

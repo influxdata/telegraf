@@ -1,16 +1,10 @@
 package starlark
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -2792,73 +2786,4 @@ def apply(metric):
 			require.NoError(b, err)
 		})
 	}
-}
-func TestAllScriptTestData(t *testing.T) {
-	// can be run from multiple folders
-	paths := []string{"testdata", "plugins/processors/starlark/testdata"}
-	for _, testdataPath := range paths {
-		filepath.Walk(testdataPath, func(path string, info os.FileInfo, err error) error {
-			if info == nil || info.IsDir() {
-				return nil
-			}
-			fn := path
-			t.Run(fn, func(t *testing.T) {
-				b, err := ioutil.ReadFile(fn)
-				require.NoError(t, err)
-				lines := strings.Split(string(b), "\n")
-				inputMetrics := parseMetricsFrom(t, lines, "Example Input:")
-				outputMetrics := parseMetricsFrom(t, lines, "Example Output:")
-				plugin := &Starlark{
-					Script: fn,
-					Log:    testutil.Logger{},
-				}
-				require.NoError(t, plugin.Init())
-
-				acc := &testutil.Accumulator{}
-
-				err = plugin.Start(acc)
-				require.NoError(t, err)
-
-				for _, m := range inputMetrics {
-					err = plugin.Add(m, acc)
-					require.NoError(t, err)
-				}
-
-				err = plugin.Stop()
-				require.NoError(t, err)
-
-				testutil.RequireMetricsEqual(t, outputMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
-			})
-			return nil
-		})
-	}
-}
-
-var parser, _ = parsers.NewInfluxParser() // literally never returns errors.
-
-// parses metric lines out of line protocol following a header, with a trailing blank line
-func parseMetricsFrom(t *testing.T, lines []string, header string) (metrics []telegraf.Metric) {
-	require.NotZero(t, len(lines), "Expected some lines to parse from .star file, found none")
-	startIdx := -1
-	endIdx := len(lines)
-	for i := range lines {
-		if strings.TrimLeft(lines[i], "# ") == header {
-			startIdx = i + 1
-			break
-		}
-	}
-	require.NotEqual(t, -1, startIdx, fmt.Sprintf("Header %q must exist in file", header))
-	for i := startIdx; i < len(lines); i++ {
-		line := strings.TrimLeft(lines[i], "# ")
-		if line == "" || line == "'''" {
-			endIdx = i
-			break
-		}
-	}
-	for i := startIdx; i < endIdx; i++ {
-		m, err := parser.ParseLine(strings.TrimLeft(lines[i], "# "))
-		require.NoError(t, err, fmt.Sprintf("Expected to be able to parse %q metric, but found error", header))
-		metrics = append(metrics, m)
-	}
-	return metrics
 }

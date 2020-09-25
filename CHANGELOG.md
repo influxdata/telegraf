@@ -27,12 +27,10 @@
 #### New Input Plugins
 
 - [proxmox](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/proxmox/README.md) - Contributed by @effitient
-- [opcua](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/opcua/README.md) - Contributed by @influxdata
 
 #### New Output Plugins
 
 - [dynatrace](https://github.com/influxdata/telegraf/blob/master/plugins/outputs/dynatrace/README.md) - Contributed by @thschue
-- [sumologic](https://github.com/influxdata/telegraf/blob/master/plugins/outputs/dynatrace/README.md) - Contributed by @pmalek-sumo
 
 <!--
 #### New Processor Plugins

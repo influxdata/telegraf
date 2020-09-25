@@ -348,11 +348,7 @@ func (e *Endpoint) getMetadata(ctx context.Context, obj *objectRef, sampling int
 	return metrics, nil
 }
 
-func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache map[string]string, r types.ManagedObjectReference) (string, bool) {
-	return e.getAncestorName(ctx, client, "Datacenter", cache, r)
-}
-
-func (e *Endpoint) getAncestorName(ctx context.Context, client *Client, resourceType string, cache map[string]string, r types.ManagedObjectReference) (string, bool) {
+func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache map[string]string, r types.ManagedObjectReference) string {
 	path := make([]string, 0)
 	returnVal := ""
 	here := r
@@ -374,7 +370,7 @@ func (e *Endpoint) getAncestorName(ctx context.Context, client *Client, resource
 				e.Parent.Log.Warnf("Error while resolving parent. Assuming no parent exists. Error: %s", err.Error())
 				return true
 			}
-			if result.Reference().Type == resourceType {
+			if result.Reference().Type == "Datacenter" {
 				// Populate cache for the entire chain of objects leading here.
 				returnVal = result.Name
 				return true
@@ -390,7 +386,7 @@ func (e *Endpoint) getAncestorName(ctx context.Context, client *Client, resource
 	for _, s := range path {
 		cache[s] = returnVal
 	}
-	return returnVal, returnVal != ""
+	return returnVal
 }
 
 func (e *Endpoint) discover(ctx context.Context) error {
@@ -440,7 +436,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 			if res.name != "Datacenter" {
 				for k, obj := range objects {
 					if obj.parentRef != nil {
-						obj.dcname, _ = e.getDatacenterName(ctx, client, dcNameCache, *obj.parentRef)
+						obj.dcname = e.getDatacenterName(ctx, client, dcNameCache, *obj.parentRef)
 						objects[k] = obj
 					}
 				}
@@ -453,11 +449,11 @@ func (e *Endpoint) discover(ctx context.Context) error {
 				} else {
 					e.complexMetadataSelect(ctx, res, objects)
 				}
-			}
-			newObjects[k] = objects
+				newObjects[k] = objects
 
-			SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": res.name}, int64(len(objects)))
-			numRes += int64(len(objects))
+				SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": res.name}, int64(len(objects)))
+				numRes += int64(len(objects))
+			}
 		}
 		if err != nil {
 			e.log.Error(err)
@@ -642,12 +638,6 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 					p = &pp
 					cache[r.Parent.Value] = p
 				}
-			}
-			m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
-				name:         r.Name,
-				ref:          r.ExtensibleManagedObject.Reference(),
-				parentRef:    p,
-				customValues: e.loadCustomAttributes(&r.ManagedEntity),
 			}
 			return nil
 		}()
@@ -897,7 +887,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			// Determine time of last successful collection
 			metricName := e.getMetricNameForId(metric.CounterId)
 			if metricName == "" {
-				e.log.Infof("Unable to find metric name for id %d. Skipping!", metric.CounterId)
+				e.log.Info("Unable to find metric name for id %d. Skipping!", metric.CounterId)
 				continue
 			}
 			start, ok := e.hwMarks.Get(object.ref.Value, metricName)

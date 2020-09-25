@@ -174,59 +174,40 @@ type AgentConfig struct {
 	OmitHostname bool
 }
 
-// InputNames returns a list of strings of the configured inputs.
+// Inputs returns a list of strings of the configured inputs.
 func (c *Config) InputNames() []string {
 	var name []string
 	for _, input := range c.Inputs {
 		name = append(name, input.Config.Name)
 	}
-	return PluginNameCounts(name)
+	return name
 }
 
-// AggregatorNames returns a list of strings of the configured aggregators.
+// Outputs returns a list of strings of the configured aggregators.
 func (c *Config) AggregatorNames() []string {
 	var name []string
 	for _, aggregator := range c.Aggregators {
 		name = append(name, aggregator.Config.Name)
 	}
-	return PluginNameCounts(name)
+	return name
 }
 
-// ProcessorNames returns a list of strings of the configured processors.
+// Outputs returns a list of strings of the configured processors.
 func (c *Config) ProcessorNames() []string {
 	var name []string
 	for _, processor := range c.Processors {
 		name = append(name, processor.Config.Name)
 	}
-	return PluginNameCounts(name)
+	return name
 }
 
-// OutputNames returns a list of strings of the configured outputs.
+// Outputs returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() []string {
 	var name []string
 	for _, output := range c.Outputs {
 		name = append(name, output.Config.Name)
 	}
-	return PluginNameCounts(name)
-}
-
-// PluginNameCounts returns a list of plugin names and their count
-func PluginNameCounts(plugins []string) []string {
-	names := make(map[string]int)
-	for _, plugin := range plugins {
-		names[plugin]++
-	}
-
-	var namecount []string
-	for name, count := range names {
-		if count == 1 {
-			namecount = append(namecount, name)
-		} else {
-			namecount = append(namecount, fmt.Sprintf("%s (%dx)", name, count))
-		}
-	}
-
-	return namecount
+	return name
 }
 
 // ListTags returns a string of tags specified in the config,
@@ -1052,7 +1033,8 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// If the input has a SetParser function, then this means it can accept
 	// arbitrary types of input, so build the parser and set it.
-	if t, ok := input.(parsers.ParserInput); ok {
+	switch t := input.(type) {
+	case parsers.ParserInput:
 		parser, err := buildParser(name, table)
 		if err != nil {
 			return err
@@ -1060,7 +1042,8 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		t.SetParser(parser)
 	}
 
-	if t, ok := input.(parsers.ParserFuncInput); ok {
+	switch t := input.(type) {
+	case parsers.ParserFuncInput:
 		config, err := getParserConfig(name, table)
 		if err != nil {
 			return err
@@ -1933,14 +1916,6 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
-	if node, ok := tbl.Fields["carbon2_format"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				c.Carbon2Format = str.Value
-			}
-		}
-	}
-
 	if node, ok := tbl.Fields["influx_max_line_bytes"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if integer, ok := kv.Value.(*ast.Integer); ok {
@@ -2097,7 +2072,6 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
-	delete(tbl.Fields, "carbon2_format")
 	delete(tbl.Fields, "influx_max_line_bytes")
 	delete(tbl.Fields, "influx_sort_fields")
 	delete(tbl.Fields, "influx_uint_support")

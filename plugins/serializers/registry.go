@@ -48,9 +48,6 @@ type Config struct {
 	// Dataformat can be one of the serializer types listed in NewSerializer.
 	DataFormat string `toml:"data_format"`
 
-	// Carbon2 metric format.
-	Carbon2Format string `toml:"carbon2_format"`
-
 	// Support tags in graphite protocol
 	GraphiteTagSupport bool `toml:"graphite_tag_support"`
 
@@ -121,7 +118,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "nowmetric":
 		serializer, err = NewNowSerializer()
 	case "carbon2":
-		serializer, err = NewCarbon2Serializer(config.Carbon2Format)
+		serializer, err = NewCarbon2Serializer()
 	case "wavefront":
 		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
 	case "prometheus":
@@ -163,8 +160,8 @@ func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return json.NewSerializer(timestampUnits)
 }
 
-func NewCarbon2Serializer(carbon2format string) (Serializer, error) {
-	return carbon2.NewSerializer(carbon2format)
+func NewCarbon2Serializer() (Serializer, error) {
+	return carbon2.NewSerializer()
 }
 
 func NewSplunkmetricSerializer(splunkmetric_hec_routing bool, splunkmetric_multimetric bool) (Serializer, error) {

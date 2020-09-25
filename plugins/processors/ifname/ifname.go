@@ -139,13 +139,13 @@ func (d *IfName) Init() error {
 func (d *IfName) addTag(metric telegraf.Metric) error {
 	agent, ok := metric.GetTag(d.AgentTag)
 	if !ok {
-		d.Log.Warn("Agent tag missing.")
+		//agent tag missing
 		return nil
 	}
 
 	num_s, ok := metric.GetTag(d.SourceTag)
 	if !ok {
-		d.Log.Warn("Source tag missing.")
+		//source tag missing
 		return nil
 	}
 

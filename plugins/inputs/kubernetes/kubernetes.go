@@ -207,9 +207,6 @@ func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Metadata, error) {
 
 func (k *Kubernetes) LoadJson(url string, v interface{}) error {
 	var req, err = http.NewRequest("GET", url, nil)
-	if err != nil {
-		return err
-	}
 	var resp *http.Response
 	tlsCfg, err := k.ClientConfig.TLSConfig()
 	if err != nil {

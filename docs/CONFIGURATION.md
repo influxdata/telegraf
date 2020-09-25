@@ -45,7 +45,6 @@ in the `/etc/default/telegraf` file.
 **Example**:
 
 `/etc/default/telegraf`:
-
 For InfluxDB 1.x:
 ```
 USER="alice"
@@ -54,22 +53,18 @@ INFLUX_SKIP_DATABASE_CREATION="true"
 INFLUX_PASSWORD="monkey123"
 ```
 For InfluxDB OSS 2:
-```
 INFLUX_HOST="http://localhost:9999"
-INFLUX_TOKEN="replace_with_your_token"
+INFLUX_TOKEN=”replace_with_your_token”
 INFLUX_ORG="your_username"
 INFLUX_BUCKET="replace_with_your_bucket_name"
-```
 
 For InfluxDB Cloud 2:
-```
-# For AWS West (Oregon)
+# For AWS Oregon:
 INFLUX_HOST="https://us-west-2-1.aws.cloud2.influxdata.com"
 # Other Cloud URLs at https://v2.docs.influxdata.com/v2.0/reference/urls/#influxdb-cloud-urls
 INFLUX_TOKEN=”replace_with_your_token”
 INFLUX_ORG="yourname@yourcompany.com"
 INFLUX_BUCKET="replace_with_your_bucket_name"
-```
 
 `/etc/telegraf.conf`:
 ```toml
@@ -78,25 +73,10 @@ INFLUX_BUCKET="replace_with_your_bucket_name"
 
 [[inputs.mem]]
 
-# For InfluxDB 1.x:
 [[outputs.influxdb]]
   urls = ["${INFLUX_URL}"]
   skip_database_creation = ${INFLUX_SKIP_DATABASE_CREATION}
   password = "${INFLUX_PASSWORD}"
-  
-# For InfluxDB OSS 2:
-[[outputs.influxdb_v2]]
-  urls = ["${INFLUX_HOST}"]
-  token = ["${INFLUX_TOKEN}"]
-  org = ["${INFLUX_ORG}"]
-  bucket = ["${INFLUX_BUCKET}"]
-
-# For InfluxDB Cloud 2:
-[[outputs.influxdb_v2]]
-  urls = ["${INFLUX_HOST}"]
-  token = ["${INFLUX_TOKEN}"]
-  org = ["${INFLUX_ORG}"]
-  bucket = ["${INFLUX_BUCKET}"]
 ```
 
 The above files will produce the following effective configuration file to be
@@ -104,8 +84,6 @@ parsed:
 ```toml
 [global_tags]
   user = "alice"
-
-[[inputs.mem]]
 
 # For InfluxDB 1.x:
 [[outputs.influxdb]]
@@ -115,19 +93,19 @@ parsed:
   
 # For InfluxDB OSS 2:
 [[outputs.influxdb_v2]]
-  urls = ["http://127.0.0.1:9999"]
-  token = "replace_with_your_token"
-  org = "your_username"
-  bucket = "replace_with_your_bucket_name"
+urls = ["http://127.0.0.1:9999"]
+token = "replace_with_your_token"
+org = "your_username"
+bucket = "replace_with_your_bucket_name"
 
 # For InfluxDB Cloud 2:
 [[outputs.influxdb_v2]]
-  # For AWS West (Oregon)
-  INFLUX_HOST="https://us-west-2-1.aws.cloud2.influxdata.com"
-  # Other Cloud URLs at https://v2.docs.influxdata.com/v2.0/reference/urls/#influxdb-cloud-urls
-  token = "replace_with_your_token"
-  org = "yourname@yourcompany.com"
-  bucket = "replace_with_your_bucket_name"
+# For AWS Oregon:
+urls = ["https://us-west-2-1.aws.cloud2.influxdata.com"]
+# Other Cloud URLs at https://v2.docs.influxdata.com/v2.0/reference/urls/#influxdb-cloud-urls
+token = "replace_with_your_token"
+org = "yourname@yourcompany.com"
+bucket = "replace_with_your_bucket_name"
 ```
 
 ### Intervals
@@ -498,10 +476,6 @@ patterns is emitted.
 - **tagdrop**:
 The inverse of `tagpass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `tagpass` test.
-
-> NOTE: Due to the way TOML is parsed, `tagpass` and `tagdrop` parameters must be 
-defined at the *_end_* of the plugin definition, otherwise subsequent plugin config 
-options will be interpreted as part of the tagpass/tagdrop tables.
 
 #### Modifiers
 

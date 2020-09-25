@@ -2,14 +2,13 @@ package carbon2
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/stretchr/testify/assert"
 )
 
 func MustMetric(v telegraf.Metric, err error) telegraf.Metric {
@@ -28,33 +27,14 @@ func TestSerializeMetricFloat(t *testing.T) {
 		"usage_idle": float64(91.5),
 	}
 	m, err := metric.New("cpu", tags, fields, now)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	testcases := []struct {
-		format   string
-		expected string
-	}{
-		{
-			format:   Carbon2FormatFieldSeparate,
-			expected: fmt.Sprintf("metric=cpu field=usage_idle cpu=cpu0  91.5 %d\n", now.Unix()),
-		},
-		{
-			format:   Carbon2FormatMetricIncludesField,
-			expected: fmt.Sprintf("metric=cpu_usage_idle cpu=cpu0  91.5 %d\n", now.Unix()),
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
-			require.NoError(t, err)
-
-			buf, err := s.Serialize(m)
-			require.NoError(t, err)
-
-			assert.Equal(t, tc.expected, string(buf))
-		})
-	}
+	s, _ := NewSerializer()
+	var buf []byte
+	buf, err = s.Serialize(m)
+	assert.NoError(t, err)
+	expS := []byte(fmt.Sprintf(`metric=cpu field=usage_idle cpu=cpu0  91.5 %d`, now.Unix()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
 }
 
 func TestSerializeMetricWithEmptyStringTag(t *testing.T) {
@@ -66,33 +46,14 @@ func TestSerializeMetricWithEmptyStringTag(t *testing.T) {
 		"usage_idle": float64(91.5),
 	}
 	m, err := metric.New("cpu", tags, fields, now)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	testcases := []struct {
-		format   string
-		expected string
-	}{
-		{
-			format:   Carbon2FormatFieldSeparate,
-			expected: fmt.Sprintf("metric=cpu field=usage_idle cpu=null  91.5 %d\n", now.Unix()),
-		},
-		{
-			format:   Carbon2FormatMetricIncludesField,
-			expected: fmt.Sprintf("metric=cpu_usage_idle cpu=null  91.5 %d\n", now.Unix()),
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
-			require.NoError(t, err)
-
-			buf, err := s.Serialize(m)
-			require.NoError(t, err)
-
-			assert.Equal(t, tc.expected, string(buf))
-		})
-	}
+	s, _ := NewSerializer()
+	var buf []byte
+	buf, err = s.Serialize(m)
+	assert.NoError(t, err)
+	expS := []byte(fmt.Sprintf(`metric=cpu field=usage_idle cpu=null  91.5 %d`, now.Unix()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
 }
 
 func TestSerializeWithSpaces(t *testing.T) {
@@ -104,33 +65,14 @@ func TestSerializeWithSpaces(t *testing.T) {
 		"usage_idle 1": float64(91.5),
 	}
 	m, err := metric.New("cpu metric", tags, fields, now)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	testcases := []struct {
-		format   string
-		expected string
-	}{
-		{
-			format:   Carbon2FormatFieldSeparate,
-			expected: fmt.Sprintf("metric=cpu_metric field=usage_idle_1 cpu_0=cpu_0  91.5 %d\n", now.Unix()),
-		},
-		{
-			format:   Carbon2FormatMetricIncludesField,
-			expected: fmt.Sprintf("metric=cpu_metric_usage_idle_1 cpu_0=cpu_0  91.5 %d\n", now.Unix()),
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
-			require.NoError(t, err)
-
-			buf, err := s.Serialize(m)
-			require.NoError(t, err)
-
-			assert.Equal(t, tc.expected, string(buf))
-		})
-	}
+	s, _ := NewSerializer()
+	var buf []byte
+	buf, err = s.Serialize(m)
+	assert.NoError(t, err)
+	expS := []byte(fmt.Sprintf(`metric=cpu_metric field=usage_idle_1 cpu_0=cpu_0  91.5 %d`, now.Unix()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
 }
 
 func TestSerializeMetricInt(t *testing.T) {
@@ -142,33 +84,15 @@ func TestSerializeMetricInt(t *testing.T) {
 		"usage_idle": int64(90),
 	}
 	m, err := metric.New("cpu", tags, fields, now)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	testcases := []struct {
-		format   string
-		expected string
-	}{
-		{
-			format:   Carbon2FormatFieldSeparate,
-			expected: fmt.Sprintf("metric=cpu field=usage_idle cpu=cpu0  90 %d\n", now.Unix()),
-		},
-		{
-			format:   Carbon2FormatMetricIncludesField,
-			expected: fmt.Sprintf("metric=cpu_usage_idle cpu=cpu0  90 %d\n", now.Unix()),
-		},
-	}
+	s, _ := NewSerializer()
+	var buf []byte
+	buf, err = s.Serialize(m)
+	assert.NoError(t, err)
 
-	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
-			require.NoError(t, err)
-
-			buf, err := s.Serialize(m)
-			require.NoError(t, err)
-
-			assert.Equal(t, tc.expected, string(buf))
-		})
-	}
+	expS := []byte(fmt.Sprintf(`metric=cpu field=usage_idle cpu=cpu0  90 %d`, now.Unix()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
 }
 
 func TestSerializeMetricString(t *testing.T) {
@@ -182,31 +106,13 @@ func TestSerializeMetricString(t *testing.T) {
 	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
-	testcases := []struct {
-		format   string
-		expected string
-	}{
-		{
-			format:   Carbon2FormatFieldSeparate,
-			expected: "",
-		},
-		{
-			format:   Carbon2FormatMetricIncludesField,
-			expected: "",
-		},
-	}
+	s, _ := NewSerializer()
+	var buf []byte
+	buf, err = s.Serialize(m)
+	assert.NoError(t, err)
 
-	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
-			require.NoError(t, err)
-
-			buf, err := s.Serialize(m)
-			require.NoError(t, err)
-
-			assert.Equal(t, tc.expected, string(buf))
-		})
-	}
+	expS := []byte("")
+	assert.Equal(t, string(expS), string(buf))
 }
 
 func TestSerializeBatch(t *testing.T) {
@@ -222,34 +128,11 @@ func TestSerializeBatch(t *testing.T) {
 	)
 
 	metrics := []telegraf.Metric{m, m}
-
-	testcases := []struct {
-		format   string
-		expected string
-	}{
-		{
-			format: Carbon2FormatFieldSeparate,
-			expected: `metric=cpu field=value  42 0
+	s, _ := NewSerializer()
+	buf, err := s.SerializeBatch(metrics)
+	require.NoError(t, err)
+	expS := []byte(`metric=cpu field=value  42 0
 metric=cpu field=value  42 0
-`,
-		},
-		{
-			format: Carbon2FormatMetricIncludesField,
-			expected: `metric=cpu_value  42 0
-metric=cpu_value  42 0
-`,
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
-			require.NoError(t, err)
-
-			buf, err := s.SerializeBatch(metrics)
-			require.NoError(t, err)
-
-			assert.Equal(t, tc.expected, string(buf))
-		})
-	}
+`)
+	assert.Equal(t, string(expS), string(buf))
 }

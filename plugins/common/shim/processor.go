@@ -14,14 +14,14 @@ import (
 
 // AddProcessor adds the processor to the shim. Later calls to Run() will run this.
 func (s *Shim) AddProcessor(processor telegraf.Processor) error {
-	setLoggerOnPlugin(processor, s.Log())
+	setLoggerOnPlugin(processor, NewLogger())
 	p := processors.NewStreamingProcessorFromProcessor(processor)
 	return s.AddStreamingProcessor(p)
 }
 
 // AddStreamingProcessor adds the processor to the shim. Later calls to Run() will run this.
 func (s *Shim) AddStreamingProcessor(processor telegraf.StreamingProcessor) error {
-	setLoggerOnPlugin(processor, s.Log())
+	setLoggerOnPlugin(processor, NewLogger())
 	if p, ok := processor.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {
