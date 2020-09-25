@@ -34,11 +34,10 @@ func TestGatherAttributes(t *testing.T) {
 		return nil, errors.New("command not found")
 	}
 
-	t.Run("Lack of smartctl", func(t *testing.T) {
-		var acc testutil.Accumulator
-		s.PathSmartctl = ""
+	t.Run("Wrong path to smartctl", func(t *testing.T) {
+		s.PathSmartctl = "this_path_to_smartctl_does_not_exist"
 
-		err := s.Gather(&acc)
+		err := s.Init()
 
 		assert.Error(t, err)
 	})
