@@ -1,6 +1,7 @@
 package sumologic
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -37,8 +39,7 @@ func getMetric(t *testing.T) telegraf.Metric {
 	return m
 }
 
-func getMetrics(t *testing.T) []telegraf.Metric {
-	const count = 10
+func getMetrics(t *testing.T, count int) []telegraf.Metric {
 	var metrics = make([]telegraf.Metric, count)
 
 	for i := 0; i < count; i++ {
@@ -506,12 +507,15 @@ func TestMaxRequestBodySize(t *testing.T) {
 	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
 	require.NoError(t, err)
 
+	const count = 100
+
 	testcases := []struct {
-		name                 string
-		plugin               func() *SumoLogic
-		metrics              []telegraf.Metric
-		expectedError        bool
-		expectedRequestCount int
+		name                     string
+		plugin                   func() *SumoLogic
+		metrics                  []telegraf.Metric
+		expectedError            bool
+		expectedRequestCount     int32
+		expectedMetricLinesCount int32
 	}{
 		{
 			name: "default max request body size is 1MB and doesn't split small enough metric slices",
@@ -520,9 +524,10 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.URL = u.String()
 				return s
 			},
-			metrics:              []telegraf.Metric{getMetric(t)},
-			expectedError:        false,
-			expectedRequestCount: 1,
+			metrics:                  []telegraf.Metric{getMetric(t)},
+			expectedError:            false,
+			expectedRequestCount:     1,
+			expectedMetricLinesCount: 1,
 		},
 		{
 			name: "default max request body size is 1MB and doesn't split small even medium sized metrics",
@@ -531,33 +536,90 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.URL = u.String()
 				return s
 			},
-			metrics:              getMetrics(t),
-			expectedError:        false,
-			expectedRequestCount: 1,
+			metrics:                  getMetrics(t, count),
+			expectedError:            false,
+			expectedRequestCount:     1,
+			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
 		},
 		{
-			name: "max request body size properly splits requests - max 2500",
+			name: "when short by at least 1B the request is split",
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 2500
+				// getMetrics returns metrics that serialized (using carbon2),
+				// uncompressed size is 43750B
+				s.MaxRequstBodySize = 43_749
 				return s
 			},
-			metrics:              getMetrics(t),
-			expectedError:        false,
-			expectedRequestCount: 2,
+			metrics:                  getMetrics(t, count),
+			expectedError:            false,
+			expectedRequestCount:     2,
+			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
 		},
 		{
-			name: "max request body size properly splits requests - max 1000",
+			name: "max request body size properly splits requests - max 10_000",
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 1000
+				s.MaxRequstBodySize = 10_000
 				return s
 			},
-			metrics:              getMetrics(t),
-			expectedError:        false,
-			expectedRequestCount: 5,
+			metrics:                  getMetrics(t, count),
+			expectedError:            false,
+			expectedRequestCount:     5,
+			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
+		},
+		{
+			name: "max request body size properly splits requests - max 5_000",
+			plugin: func() *SumoLogic {
+				s := Default()
+				s.URL = u.String()
+				s.MaxRequstBodySize = 5_000
+				return s
+			},
+			metrics:                  getMetrics(t, count),
+			expectedError:            false,
+			expectedRequestCount:     10,
+			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
+		},
+		{
+			name: "max request body size properly splits requests - max 2_500",
+			plugin: func() *SumoLogic {
+				s := Default()
+				s.URL = u.String()
+				s.MaxRequstBodySize = 2_500
+				return s
+			},
+			metrics:                  getMetrics(t, count),
+			expectedError:            false,
+			expectedRequestCount:     20,
+			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
+		},
+		{
+			name: "max request body size properly splits requests - max 1_000",
+			plugin: func() *SumoLogic {
+				s := Default()
+				s.URL = u.String()
+				s.MaxRequstBodySize = 1_000
+				return s
+			},
+			metrics:                  getMetrics(t, count),
+			expectedError:            false,
+			expectedRequestCount:     50,
+			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
+		},
+		{
+			name: "max request body size properly splits requests - max 500",
+			plugin: func() *SumoLogic {
+				s := Default()
+				s.URL = u.String()
+				s.MaxRequstBodySize = 500
+				return s
+			},
+			metrics:                  getMetrics(t, count),
+			expectedError:            false,
+			expectedRequestCount:     100,
+			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
 		},
 		{
 			name: "max request body size properly splits requests - max 300",
@@ -567,17 +629,26 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.MaxRequstBodySize = 300
 				return s
 			},
-			metrics:              getMetrics(t),
-			expectedError:        false,
-			expectedRequestCount: 10,
+			metrics:                  getMetrics(t, count),
+			expectedError:            false,
+			expectedRequestCount:     100,
+			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
 		},
 	}
 
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			var requestCount int
+			var (
+				requestCount int32
+				linesCount   int32
+			)
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				requestCount++
+				atomic.AddInt32(&requestCount, 1)
+
+				if tt.expectedMetricLinesCount != 0 {
+					atomic.AddInt32(&linesCount, int32(countLines(t, r.Body)))
+				}
+
 				w.WriteHeader(http.StatusOK)
 			})
 
@@ -595,8 +666,44 @@ func TestMaxRequestBodySize(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tt.expectedRequestCount, requestCount)
+				require.Equal(t, tt.expectedRequestCount, atomic.LoadInt32(&requestCount))
+				require.Equal(t, tt.expectedMetricLinesCount, atomic.LoadInt32(&linesCount))
 			}
 		})
 	}
+}
+
+func TestTryingToSendEmptyMetricsDoesntFail(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	metrics := make([]telegraf.Metric, 0)
+	plugin := Default()
+	plugin.URL = u.String()
+
+	serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+	require.NoError(t, err)
+	plugin.SetSerializer(serializer)
+
+	err = plugin.Connect()
+	require.NoError(t, err)
+
+	err = plugin.Write(metrics)
+	require.NoError(t, err)
+}
+
+func countLines(t *testing.T, body io.Reader) int {
+	// All requests coming from Sumo Logic output plugin are gzipped.
+	gz, err := gzip.NewReader(body)
+	require.NoError(t, err)
+
+	var linesCount int
+	for s := bufio.NewScanner(gz); s.Scan(); {
+		linesCount++
+	}
+
+	return linesCount
 }

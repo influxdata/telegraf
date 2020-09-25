@@ -386,6 +386,17 @@ FROM sys.dm_os_schedulers AS s'
 EXEC sp_executesql @SqlStatement
 `
 
+/*
+This string defines a SQL statements to retrieve Performance Counters as documented here -
+	SQL Server Performance Objects - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects?view=sql-server-ver15#SQLServerPOs
+Some of the specific objects used are -
+	MSSQL$*:Access Methods - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-access-methods-object?view=sql-server-ver15
+	MSSQL$*:Buffer Manager - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object?view=sql-server-ver15
+	MSSQL$*:Databases - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-databases-object?view=sql-server-ver15
+	MSSQL$*:General Statistics - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-general-statistics-object?view=sql-server-ver15
+	MSSQL$*:Exec Statistics - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-execstatistics-object?view=sql-server-ver15
+	SQLServer:Query Store - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-query-store-object?view=sql-server-ver15
+*/
 const sqlPerformanceCountersV2 string = `
 SET DEADLOCK_PRIORITY -10;
 
@@ -465,13 +476,19 @@ SET @SqlStatement = @SqlStatement + CAST(N' WHERE	(
 				''Readahead pages/sec'',
 				''Lazy writes/sec'',
 				''Checkpoint pages/sec'',
+				''Free pages'',
+				''Extension free pages'',
+				''Table Lock Escalations/sec'',
 				''Page life expectancy'',
 				''Log File(s) Size (KB)'',
 				''Log File(s) Used Size (KB)'',
 				''Data File(s) Size (KB)'',
 				''Transactions/sec'',
 				''Write Transactions/sec'',
+				''Active Transactions'',
+				''Log Growths'',
 				''Active Temp Tables'',
+				''Logical Connections'',
 				''Temp Tables Creation Rate'',
 				''Temp Tables For Destruction'',
 				''Free Space in tempdb (KB)'',
@@ -527,7 +544,10 @@ SET @SqlStatement = @SqlStatement + CAST(N' WHERE	(
 				''Redo Queue KB'',
 				''Mirrored Write Transactions/sec'',
 				''Group Commit Time'',
-				''Group Commits/Sec''
+				''Group Commits/Sec'',
+				''Distributed Query'',
+				''DTC calls'',
+				''Query Store CPU usage''
 			)
 		) OR (
 			object_name LIKE ''%User Settable%''

@@ -154,7 +154,7 @@ Attempting to modify the global scope will fail with an error.
 - [scale](/plugins/processors/starlark/testdata/scale.star) - Multiply any field by a number
 - [number logic](/plugins/processors/starlark/testdata/number_logic.star) - transform a numerical value to another numerical value
 - [pivot](/plugins/processors/starlark/testdata/pivot.star) - Pivots a key's value to be the key for another key.
-- [value filter](plugins/processors/starlark/testdata/value_filter.star) - remove a metric based on a field value.
+- [value filter](/plugins/processors/starlark/testdata/value_filter.star) - remove a metric based on a field value.
 
 [All examples](/plugins/processors/starlark/testdata) are in the testdata folder.
 

@@ -465,6 +465,27 @@ func TestWriteEmpty(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
+func TestReady(t *testing.T) {
+	listener := newTestListener()
+	listener.timeFunc = func() time.Time {
+		return time.Unix(42, 123456789)
+	}
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post ping to listener
+	resp, err := http.Get(createURL(listener, "http", "/api/v2/ready", ""))
+	require.NoError(t, err)
+	require.Equal(t, "application/json", resp.Header["Content-Type"][0])
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Contains(t, string(bodyBytes), "\"status\":\"ready\"")
+	resp.Body.Close()
+	require.EqualValues(t, 200, resp.StatusCode)
+}
+
 func TestWriteWithPrecision(t *testing.T) {
 	listener := newTestListener()
 
