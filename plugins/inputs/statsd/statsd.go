@@ -615,7 +615,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 		// Validate metric type
 		switch pipesplit[1] {
-		case "g", "c", "s", "ms", "h":
+		case "g", "c", "s", "ms", "h", "d":
 			m.mtype = pipesplit[1]
 		default:
 			s.Log.Errorf("Metric type %q unsupported", pipesplit[1])
@@ -632,7 +632,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		}
 
 		switch m.mtype {
-		case "g", "ms", "h":
+		case "g", "ms", "h", "d":
 			v, err := strconv.ParseFloat(pipesplit[0], 64)
 			if err != nil {
 				s.Log.Errorf("Parsing value to float64, unable to parse metric: %s", line)
@@ -672,6 +672,8 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			m.tags["metric_type"] = "timing"
 		case "h":
 			m.tags["metric_type"] = "histogram"
+		case "d":
+			m.tags["metric_type"] = "distribution"
 		}
 		if len(lineTags) > 0 {
 			for k, v := range lineTags {
