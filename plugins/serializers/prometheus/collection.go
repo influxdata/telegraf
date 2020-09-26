@@ -281,6 +281,10 @@ func (c *Collection) Add(metric telegraf.Metric, now time.Time) {
 			default:
 				continue
 			}
+			// always update AddTime otherwise histogram is removed on
+			// every expiration_interval (without this AddTime is updated
+			// only when histogram is first created).
+			m.AddTime = now
 
 			entry.Metrics[metricKey] = m
 		case telegraf.Summary:
