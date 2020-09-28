@@ -5,29 +5,34 @@ import (
 )
 
 // Only executed if AzureDB flag is set
-const sqlAzureDBResourceStats string = `SET DEADLOCK_PRIORITY -10;
-IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
-BEGIN
-        SELECT TOP(1)
-                'sqlserver_azure_db_resource_stats' AS [measurement],
-                REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-                DB_NAME() as [database_name],
-                cast(avg_cpu_percent as float) as avg_cpu_percent,
-                cast(avg_data_io_percent as float) as avg_data_io_percent,
-                cast(avg_log_write_percent as float) as avg_log_write_percent,
-                cast(avg_memory_usage_percent as float) as avg_memory_usage_percent,
-                cast(xtp_storage_percent as float) as xtp_storage_percent,
-                cast(max_worker_percent as float) as max_worker_percent,
-                cast(max_session_percent as float) as max_session_percent,
-                dtu_limit,
-                cast(avg_login_rate_percent as float) as avg_login_rate_percent  ,
-                end_time,
-                cast(avg_instance_memory_percent as float) as avg_instance_memory_percent ,
-                cast(avg_instance_cpu_percent as float) as avg_instance_cpu_percent
-        FROM
-                sys.dm_db_resource_stats WITH (NOLOCK)
-        ORDER BY
-                end_time DESC
+const sqlAzureDBResourceStats string = `
+SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
+SELECT TOP(1)
+	 'sqlserver_azure_db_resource_stats' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,DB_NAME() as [database_name]
+	,cast([avg_cpu_percent] as float) as [avg_cpu_percent]
+	,cast([avg_data_io_percent] as float) as [avg_data_io_percent]
+	,cast([avg_log_write_percent] as float) as [avg_log_write_percent]
+	,cast([avg_memory_usage_percent] as float) as [avg_memory_usage_percent]
+	,cast([xtp_storage_percent] as float) as [xtp_storage_percent]
+	,cast([max_worker_percent] as float) as [max_worker_percent]
+	,cast([max_session_percent] as float) as [max_session_percent]
+	,[dtu_limit]
+	,cast([avg_login_rate_percent] as float) as [avg_login_rate_percent]  
+	,[end_time]
+	,cast([avg_instance_memory_percent] as float) as [avg_instance_memory_percent] 
+	,cast([avg_instance_cpu_percent] as float) as [avg_instance_cpu_percent]
+FRO
+	sys.dm_db_resource_stats WITH (NOLOCK)
+ORDER BY
+	[end_time] DESC
 END
 `
 
