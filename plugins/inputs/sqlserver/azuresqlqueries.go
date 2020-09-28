@@ -910,172 +910,174 @@ AND [wait_time_ms] > 100;
 
 const sqlAzureMIPerformanceCounters = `
 SET DEADLOCK_PRIORITY -10;
-IF  SERVERPROPERTY('EngineEdition') = 8  /*Managed Instance*/
+IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
 DECLARE @PCounters TABLE
 (
-	object_name nvarchar(128),
-	counter_name nvarchar(128),
-	instance_name nvarchar(128),
-	cntr_value bigint,
-	cntr_type INT ,
-	Primary Key(object_name, counter_name,instance_name)
+	[object_name] nvarchar(128),
+	[counter_name] nvarchar(128),
+	[instance_name] nvarchar(128),
+	[cntr_value] bigint,
+	[cntr_type] INT ,
+	Primary Key([object_name],[counter_name],[instance_name])
 );
 
-WITH PerfCounters AS 
-	(
-		SELECT DISTINCT
-		RTrim(spi.object_name) object_name,
-		RTrim(spi.counter_name) counter_name,
-		CASE WHEN (
-                          RTRIM(spi.object_name) LIKE '%:Databases'
-                             OR RTRIM(spi.object_name) LIKE '%:Database Replica'
-                             OR RTRIM(spi.object_name) LIKE '%:Catalog Metadata'
-                             OR RTRIM(spi.object_name) LIKE '%:Query Store'
-                             OR RTRIM(spi.object_name) LIKE '%:Columnstore'
-                             OR RTRIM(spi.object_name) LIKE '%:Advanced Analytics')
-                             AND TRY_CONVERT(uniqueidentifier, spi.instance_name) 
-							 IS NOT NULL -- for cloud only
-					THEN ISNULL(d.name,RTRIM(spi.instance_name)) -- Elastic Pools counters exist for all databases but sys.databases only has current DB value
-			  WHEN RTRIM(object_name) LIKE '%:Availability Replica'
-				AND TRY_CONVERT(uniqueidentifier, spi.instance_name) IS NOT NULL -- for cloud only
-					THEN ISNULL(d.name,RTRIM(spi.instance_name)) + RTRIM(SUBSTRING(spi.instance_name, 37, LEN(spi.instance_name)))
-                       ELSE RTRIM(spi.instance_name)
-              END AS instance_name,
-		CAST(spi.cntr_value AS BIGINT) AS cntr_value,
-		spi.cntr_type
-		FROM	sys.dm_os_performance_counters AS spi 
-		LEFT JOIN sys.databases AS d
-			ON LEFT(spi.instance_name, 36) -- some instance_name values have an additional identifier appended after the GUID
-			=CASE WHEN -- in SQL DB standalone, physical_database_name for master is the GUID of the user database
-                d.name = 'master' AND TRY_CONVERT(uniqueidentifier, d.physical_database_name) IS NOT NULL
-                THEN d.name
-				ELSE d.physical_database_name
-			 END
- WHERE	(
-			counter_name IN (
-				'SQL Compilations/sec',
-				'SQL Re-Compilations/sec',
-				'User Connections',
-				'Batch Requests/sec',
-				'Logouts/sec',
-				'Logins/sec',
-				'Processes blocked',
-				'Latch Waits/sec',
-				'Full Scans/sec',
-				'Index Searches/sec',
-				'Page Splits/sec',
-				'Page lookups/sec',
-				'Page reads/sec',
-				'Page writes/sec',
-				'Readahead pages/sec',
-				'Lazy writes/sec',
-				'Checkpoint pages/sec',
-				'Page life expectancy',
-				'Log File(s) Size (KB)',
-				'Log File(s) Used Size (KB)',
-				'Data File(s) Size (KB)',
-				'Transactions/sec',
-				'Write Transactions/sec',
-				'Active Temp Tables',
-				'Temp Tables Creation Rate',
-				'Temp Tables For Destruction',
-				'Free Space in tempdb (KB)',
-				'Version Store Size (KB)',
-				'Memory Grants Pending',
-				'Memory Grants Outstanding',
-				'Free list stalls/sec',
-				'Buffer cache hit ratio',
-				'Buffer cache hit ratio base',
-				'RBPEX cache hit ratio',                                                                                                           
-				'RBPEX cache hit ratio base',
-				'Backup/Restore Throughput/sec',
-				'Total Server Memory (KB)',
-				'Target Server Memory (KB)',
-				'Log Flushes/sec',
-				'Log Flush Wait Time',
-				'Memory broker clerk size',
-				'Log Bytes Flushed/sec',
-				'Bytes Sent to Replica/sec',
-				'Log Send Queue',
-				'Bytes Sent to Transport/sec',
-				'Sends to Replica/sec',
-				'Bytes Sent to Transport/sec',
-				'Sends to Transport/sec',
-				'Bytes Received from Replica/sec',
-				'Receives from Replica/sec',
-				'Flow Control Time (ms/sec)',
-				'Flow Control/sec',
-				'Resent Messages/sec',
-				'Redone Bytes/sec',
-				'XTP Memory Used (KB)',
-				'Transaction Delay',
-				'Log Bytes Received/sec',
-				'Log Apply Pending Queue',
-				'Redone Bytes/sec',
-				'Recovery Queue',
-				'Log Apply Ready Queue',
-				'CPU usage %',
-				'CPU usage % base',
-				'Queued requests',
-				'Requests completed/sec',
-				'Blocked tasks',
-				'Active memory grant amount (KB)',
-				'Disk Read Bytes/sec',
-				'Disk Read IO Throttled/sec',
-				'Disk Read IO/sec',
-				'Disk Write Bytes/sec',
-				'Disk Write IO Throttled/sec',
-				'Disk Write IO/sec',
-				'Used memory (KB)',
-				'Forwarded Records/sec',
-				'Background Writer pages/sec',
-				'Percent Log Used',
-				'Log Send Queue KB',
-				'Redo Queue KB',
-				'Mirrored Write Transactions/sec',
-				'Group Commit Time',
-				'Group Commits/Sec'
-			)
+WITH PerfCounters AS (
+	SELECT DISTINCT
+	 RTrim(spi.[object_name]) [object_name]
+	,RTrim(spi.[counter_name]) [counter_name]
+	,CASE WHEN (
+		   RTRIM(spi.[object_name]) LIKE '%:Databases'
+		OR RTRIM(spi.[object_name]) LIKE '%:Database Replica'
+		OR RTRIM(spi.[object_name]) LIKE '%:Catalog Metadata'
+		OR RTRIM(spi.[object_name]) LIKE '%:Query Store'
+		OR RTRIM(spi.[object_name]) LIKE '%:Columnstore'
+		OR RTRIM(spi.[object_name]) LIKE '%:Advanced Analytics')
+		AND TRY_CONVERT([uniqueidentifier], spi.[instance_name]) IS NOT NULL -- for cloud only
+			THEN ISNULL(d.[name],RTRIM(spi.instance_name)) -- Elastic Pools counters exist for all databases but sys.databases only has current DB value
+		WHEN 
+			RTRIM([object_name]) LIKE '%:Availability Replica'
+			AND TRY_CONVERT([uniqueidentifier], spi.[instance_name]) IS NOT NULL -- for cloud only
+				THEN ISNULL(d.[name],RTRIM(spi.[instance_name])) + RTRIM(SUBSTRING(spi.[instance_name], 37, LEN(spi.[instance_name])))
+		ELSE RTRIM(spi.instance_name)
+	END AS [instance_name]
+	,CAST(spi.[cntr_value] AS BIGINT) AS [cntr_value]
+	,spi.[cntr_type]
+	FROM sys.dm_os_performance_counters AS spi 
+	LEFT JOIN sys.databases AS d
+		ON LEFT(spi.[instance_name], 36) -- some instance_name values have an additional identifier appended after the GUID
+		= CASE
+			/*in SQL DB standalone, physical_database_name for master is the GUID of the user database*/
+			WHEN d.[name] = 'master' AND TRY_CONVERT([uniqueidentifier], d.[physical_database_name]) IS NOT NULL
+				THEN d.[name]
+			ELSE d.[physical_database_name]
+		END
+	WHERE
+		counter_name IN (
+			 ''SQL Compilations/sec''
+			,''SQL Re-Compilations/sec''
+			,''User Connections''
+			,''Batch Requests/sec''
+			,''Logouts/sec''
+			,''Logins/sec''
+			,''Processes blocked''
+			,''Latch Waits/sec''
+			,''Full Scans/sec''
+			,''Index Searches/sec''
+			,''Page Splits/sec''
+			,''Page lookups/sec''
+			,''Page reads/sec''
+			,''Page writes/sec''
+			,''Readahead pages/sec''
+			,''Lazy writes/sec''
+			,''Checkpoint pages/sec''
+			,''Page life expectancy''
+			,''Log File(s) Size (KB)''
+			,''Log File(s) Used Size (KB)''
+			,''Data File(s) Size (KB)''
+			,''Transactions/sec''
+			,''Write Transactions/sec''
+			,''Active Temp Tables''
+			,''Temp Tables Creation Rate''
+			,''Temp Tables For Destruction''
+			,''Free Space in tempdb (KB)''
+			,''Version Store Size (KB)''
+			,''Memory Grants Pending''
+			,''Memory Grants Outstanding''
+			,''Free list stalls/sec''
+			,''Buffer cache hit ratio''
+			,''Buffer cache hit ratio base''
+			,''Backup/Restore Throughput/sec''
+			,''Total Server Memory (KB)''
+			,''Target Server Memory (KB)''
+			,''Log Flushes/sec''
+			,''Log Flush Wait Time''
+			,''Memory broker clerk size''
+			,''Log Bytes Flushed/sec''
+			,''Bytes Sent to Replica/sec''
+			,''Log Send Queue''
+			,''Bytes Sent to Transport/sec''
+			,''Sends to Replica/sec''
+			,''Bytes Sent to Transport/sec''
+			,''Sends to Transport/sec''
+			,''Bytes Received from Replica/sec''
+			,''Receives from Replica/sec''
+			,''Flow Control Time (ms/sec)''
+			,''Flow Control/sec''
+			,''Resent Messages/sec''
+			,''Redone Bytes/sec''
+			,''XTP Memory Used (KB)''
+			,''Transaction Delay''
+			,''Log Bytes Received/sec''
+			,''Log Apply Pending Queue''
+			,''Redone Bytes/sec''
+			,''Recovery Queue''
+			,''Log Apply Ready Queue''
+			,''CPU usage %''
+			,''CPU usage % base''
+			,''Queued requests''
+			,''Requests completed/sec''
+			,''Blocked tasks''
+			,''Active memory grant amount (KB)''
+			,''Disk Read Bytes/sec''
+			,''Disk Read IO Throttled/sec''
+			,''Disk Read IO/sec''
+			,''Disk Write Bytes/sec''
+			,''Disk Write IO Throttled/sec''
+			,''Disk Write IO/sec''
+			,''Used memory (KB)''
+			,''Forwarded Records/sec''
+			,''Background Writer pages/sec''
+			,''Percent Log Used''
+			,''Log Send Queue KB''
+			,''Redo Queue KB''
+			,''Mirrored Write Transactions/sec''
+			,''Group Commit Time''
+			,''Group Commits/Sec''
 		) OR (
-			object_name LIKE '%User Settable%'
-			OR object_name LIKE '%SQL Errors%'
+			spi.[object_name] LIKE ''%User Settable%''
+			OR spi.[object_name] LIKE ''%SQL Errors%''
+			OR spi.[object_name] LIKE ''%Batch Resp Statistics%''
 		) OR (
-			object_name LIKE '%Batch Resp Statistics%'
-		) OR (
-			instance_name IN ('_Total')
-			AND counter_name IN (
-				'Lock Timeouts/sec',
-				'Number of Deadlocks/sec',
-				'Lock Waits/sec',
-				'Latch Waits/sec'
+			spi.[instance_name] IN (''_Total'')
+			AND spi.[counter_name] IN (
+				 ''Lock Timeouts/sec''
+				,''Lock Timeouts (timeout > 0)/sec''
+				,''Number of Deadlocks/sec''
+				,''Lock Waits/sec''
+				,''Latch Waits/sec''
 			)
 		)
-	)  
+
 INSERT INTO @PCounters select * from PerfCounters
 
-select 
-	'sqlserver_performance' AS [measurement],
-		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-		pc.object_name AS [object],
-		pc.counter_name AS [counter],
-		CASE pc.instance_name 
-			WHEN '_Total' THEN 'Total' 
-			ELSE ISNULL(pc.instance_name,'') 
-		END AS [instance],
-		CAST(CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS float(10)) AS [value],
-		-- cast to string as TAG
-		cast(pc.cntr_type as varchar(25)) as [counter_type]
+SELECT 
+	'sqlserver_performance' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,pc.[object_name] AS [object]
+	,pc.[counter_name] AS [counter]
+	,CASE pc.[instance_name] 
+		WHEN '_Total' THEN 'Total' 
+		ELSE ISNULL(pc.[instance_name],'') 
+	END AS [instance]
+	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value],
+	,cast(pc.[cntr_type] as varchar(25)) as [counter_type]
 from @PCounters pc
-	LEFT OUTER JOIN @PCounters AS pc1
-			ON (
-				pc.counter_name = REPLACE(pc1.counter_name,' base','')
-				OR pc.counter_name = REPLACE(pc1.counter_name,' base',' (ms)')
-			)
-			AND pc.object_name = pc1.object_name
-			AND pc.instance_name = pc1.instance_name
-			AND pc1.counter_name LIKE '%base'
-WHERE	pc.counter_name NOT LIKE '% base'
-OPTION (RECOMPILE)
+LEFT OUTER JOIN @PCounters AS pc1
+	ON (
+		pc.[counter_name] = REPLACE(pc1.[counter_name],' base','')
+		OR pc.[counter_name] = REPLACE(pc1.[counter_name],' base',' (ms)')
+	)
+	AND pc.[object_name] = pc1.[object_name]
+	AND pc.[instance_name] = pc1.[instance_name]
+	AND pc1.[counter_name] LIKE '%base'
+WHERE
+	pc.[counter_name] NOT LIKE '% base'
+OPTION (RECOMPILE);
 `
 
 const sqlAzureMIRequests string = `
