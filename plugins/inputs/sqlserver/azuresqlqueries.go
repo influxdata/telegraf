@@ -4,6 +4,9 @@ import (
 	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
 )
 
+//------------------------------------------------------------------------------------------------
+//------------------ Azure SQL Database ------------------------------------------------------
+//------------------------------------------------------------------------------------------------
 // Only executed if AzureDB flag is set
 const sqlAzureDBResourceStats string = `
 SET DEADLOCK_PRIORITY -10;
@@ -631,6 +634,33 @@ WHERE
 OPTION(MAXDOP 1)
 `
 
+const sqlAzureDBSchedulers string = `
+SET DEADLOCK_PRIORITY -10;
+SELECT
+	 'sqlserver_schedulers' AS [measurement]
+	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
+	,CAST(s.[scheduler_id] AS VARCHAR(4)) AS [scheduler_id]
+	,CAST(s.[cpu_id] AS VARCHAR(4)) AS [cpu_id]
+	,s.[is_online]
+	,s.[is_idle]
+	,s.[preemptive_switches_count]
+	,s.[context_switches_count]
+	,s.[current_tasks_count]
+	,s.[runnable_tasks_count]
+	,s.[current_workers_count]
+	,s.[active_workers_count]
+	,s.[work_queue_count]
+	,s.[pending_disk_io_count]
+	,s.[load_factor]
+	,s.[yield_count]
+	,s.[total_cpu_usage_ms]
+	,s.[total_scheduler_delay_ms]
+FROM sys.dm_os_schedulers AS s
+`
+
+//------------------------------------------------------------------------------------------------
+//------------------ Azure Managed Instance ------------------------------------------------------
+//------------------------------------------------------------------------------------------------
 const sqlAzureMIProperties = `
 DECLARE @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
 IF  @EngineEdition = 8  /*Managed Instance*/
@@ -1068,4 +1098,28 @@ BEGIN
 		OR  (s.session_id IN (SELECT blocking_session_id FROM #blockingSessions))
 	OPTION(MAXDOP 1)
 END
+`
+
+const sqlAzureMISchedulers string = `
+SET DEADLOCK_PRIORITY -10;
+SELECT
+	 'sqlserver_schedulers' AS [measurement]
+	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
+	,CAST(s.[scheduler_id] AS VARCHAR(4)) AS [scheduler_id]
+	,CAST(s.[cpu_id] AS VARCHAR(4)) AS [cpu_id]
+	,s.[is_online]
+	,s.[is_idle]
+	,s.[preemptive_switches_count]
+	,s.[context_switches_count]
+	,s.[current_tasks_count]
+	,s.[runnable_tasks_count]
+	,s.[current_workers_count]
+	,s.[active_workers_count]
+	,s.[work_queue_count]
+	,s.[pending_disk_io_count]
+	,s.[load_factor]
+	,s.[yield_count]
+	,s.[total_cpu_usage_ms]
+	,s.[total_scheduler_delay_ms]
+FROM sys.dm_os_schedulers AS s
 `
