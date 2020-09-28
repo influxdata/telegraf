@@ -376,7 +376,7 @@ func (e *EventHub) createMetrics(event *eventhub.Event) ([]telegraf.Metric, erro
 		}
 
 		if event.SystemProperties.PartitionID != nil && e.PartitionIDTag != "" {
-			metrics[i].AddTag(e.PartitionIDTag, fmt.Sprint(*event.SystemProperties.PartitionID))
+			metrics[i].AddTag(e.PartitionIDTag, string(*event.SystemProperties.PartitionID))
 		}
 		if event.SystemProperties.PartitionKey != nil && e.PartitionKeyTag != "" {
 			metrics[i].AddTag(e.PartitionKeyTag, *event.SystemProperties.PartitionKey)
