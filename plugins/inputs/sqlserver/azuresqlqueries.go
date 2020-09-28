@@ -738,25 +738,32 @@ FROM sys.dm_instance_resource_governance;
 
 const sqlAzureMIDatabaseIO = `
 SET DEADLOCK_PRIORITY -10;
-IF  SERVERPROPERTY('EngineEdition') = 8  /*Managed Instance*/
-	SELECT
-		'sqlserver_database_io' AS [measurement]
-		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-		,COALESCE(mf.[physical_name],'RBPEX') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
-		,COALESCE(mf.[name],'RBPEX') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
-		,mf.[type_desc] AS [file_type]
-		,vfs.[io_stall_read_ms] AS [read_latency_ms]
-		,vfs.[num_of_reads] AS [reads]
-		,vfs.[num_of_bytes_read] AS [read_bytes]
-		,vfs.[io_stall_write_ms] AS [write_latency_ms]
-		,vfs.[num_of_writes] AS [writes]
-		,vfs.[num_of_bytes_written] AS [write_bytes]
-		,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] 
-		,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
-	FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
-	LEFT OUTER JOIN sys.master_files AS mf WITH (NOLOCK)
-	ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
-	where vfs.[database_id] < 32760
+IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
+SELECT
+	'sqlserver_database_io' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,COALESCE(mf.[physical_name],'RBPEX') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
+	,COALESCE(mf.[name],'RBPEX') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
+	,mf.[type_desc] AS [file_type]
+	,vfs.[io_stall_read_ms] AS [read_latency_ms]
+	,vfs.[num_of_reads] AS [reads]
+	,vfs.[num_of_bytes_read] AS [read_bytes]
+	,vfs.[io_stall_write_ms] AS [write_latency_ms]
+	,vfs.[num_of_writes] AS [writes]
+	,vfs.[num_of_bytes_written] AS [write_bytes]
+	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] 
+	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
+FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
+LEFT OUTER JOIN sys.master_files AS mf WITH (NOLOCK)
+	ON vfs.[database_id] = mf.[database_id] 
+	AND vfs.[file_id] = mf.[file_id]
+WHERE
+	vfs.[database_id] < 32760
 `
 
 const sqlAzureMIMemoryClerks = `
