@@ -85,22 +85,28 @@ FROM
 
 // DB level wait stats that are only relevant to Azure SQL DB into separate collector
 // This will only be collected for Azure SQL Database.
-const sqlAzureDBWaitStats string = `SET DEADLOCK_PRIORITY -10;
-IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
-	SELECT
-	'sqlserver_azuredb_waitstats' AS [measurement],
-	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-	DB_NAME() as [database_name'],
-	dbws.wait_type,
-	dbws.wait_time_ms,
-	dbws.wait_time_ms - signal_wait_time_ms AS [resource_wait_ms],
-	dbws.signal_wait_time_ms,
-	dbws.max_wait_time_ms,
-	dbws.waiting_tasks_count
-	FROM
+const sqlAzureDBWaitStats string = `
+SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
+SELECT
+	 'sqlserver_azuredb_waitstats' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,DB_NAME() as [database_name']
+	,dbws.[wait_type]
+	,dbws.[wait_time_ms]
+	,dbws.[wait_time_ms] - [signal_wait_time_ms] AS [resource_wait_ms]
+	,dbws.[signal_wait_time_ms]
+	,dbws.[max_wait_time_ms]
+	,dbws.[waiting_tasks_count]
+FROM
 	sys.dm_db_wait_stats AS dbws WITH (NOLOCK)
-	WHERE
-		dbws.wait_type NOT IN (
+WHERE
+	dbws.[wait_type] NOT IN (
 		N'BROKER_EVENTHANDLER', N'BROKER_RECEIVE_WAITFOR', N'BROKER_TASK_STOP',
 		N'BROKER_TO_FLUSH', N'BROKER_TRANSMITTER', N'CHECKPOINT_QUEUE',
 		N'CHKPT', N'CLR_AUTO_EVENT', N'CLR_MANUAL_EVENT', N'CLR_SEMAPHORE',
@@ -134,8 +140,8 @@ IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 		N'XE_BUFFERMGR_ALLPROCESSED_EVENT', N'XE_DISPATCHER_JOIN',
 		N'XE_DISPATCHER_WAIT', N'XE_LIVE_TARGET_TVF', N'XE_TIMER_EVENT',
 		N'SOS_WORK_DISPATCHER','RESERVED_MEMORY_ALLOCATION_EXT')
-	AND waiting_tasks_count > 0
-	AND wait_time_ms > 100;
+	AND [waiting_tasks_count] > 0
+	AND [wait_time_ms] > 100;
 `
 
 const sqlAzureDBDatabaseIO = `
