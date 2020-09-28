@@ -365,7 +365,12 @@ AND [wait_time_ms] > 100;
 
 const sqlAzureDBMemoryClerks = `
 SET DEADLOCK_PRIORITY -10;
-IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
+IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
 SELECT
 	 'sqlserver_memory_clerks' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
@@ -373,10 +378,10 @@ SELECT
 	,mc.[type] AS [clerk_type]
 	,SUM(mc.[pages_kb]) AS [size_kb]
 FROM sys.[dm_os_memory_clerks] AS mc WITH (NOLOCK)
-GROUP BY 
-	 mc.[type]
+GROUP BY
+	mc.[type]
 HAVING 
-	SUM(mc.[pages_kb])  >= 1024
+	SUM(mc.[pages_kb]) >= 1024
 OPTION(RECOMPILE);
 `
 
