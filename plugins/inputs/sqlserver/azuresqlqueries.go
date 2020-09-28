@@ -389,8 +389,13 @@ OPTION(RECOMPILE);
 `
 
 const sqlAzureDBPerformanceCounters = `
-IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
-BEGIN
+SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
 DECLARE @PCounters TABLE
 (
 	[object_name] nvarchar(128),
