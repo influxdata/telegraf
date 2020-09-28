@@ -3,11 +3,13 @@
 package tail
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/dimchansky/utfbom"
 	"github.com/influxdata/tail"
@@ -45,11 +47,16 @@ type Tail struct {
 	offsets    map[string]int64
 	parserFunc parsers.ParserFunc
 	wg         sync.WaitGroup
-	ctx        context.Context
-	cancel     context.CancelFunc
-	acc        telegraf.TrackingAccumulator
-	sem        semaphore
-	decoder    *encoding.Decoder
+
+	acc telegraf.TrackingAccumulator
+
+	MultilineConfig MultilineConfig `toml:"multiline"`
+	multiline       *Multiline
+
+	ctx     context.Context
+	cancel  context.CancelFunc
+	sem     semaphore
+	decoder *encoding.Decoder
 }
 
 func NewTail() *Tail {
@@ -107,6 +114,27 @@ const sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## multiline parser/codec
+  ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
+  #[inputs.tail.multiline]
+    ## The pattern should be a regexp which matches what you believe to be an
+	## indicator that the field is part of an event consisting of multiple lines of log data.
+    #pattern = "^\s"
+
+    ## This field must be either "previous" or "next".
+	## If a line matches the pattern, "previous" indicates that it belongs to the previous line,
+	## whereas "next" indicates that the line belongs to the next one.
+    #match_which_line = "previous"
+
+    ## The invert_match field can be true or false (defaults to false).
+    ## If true, a message not matching the pattern will constitute a match of the multiline
+	## filter and the what will be applied. (vice-versa is also true)
+    #invert_match = false
+
+    ## After the specified timeout, this plugin sends a multiline event even if no new pattern
+	## is found to start a new event. The default timeout is 5s.
+    #timeout = 5s
 `
 
 func (t *Tail) SampleConfig() string {
@@ -150,9 +178,16 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 		}
 	}()
 
+	var err error
+	t.multiline, err = t.MultilineConfig.NewMultiline()
+
+	if err != nil {
+		return err
+	}
+
 	t.tailers = make(map[string]*tail.Tail)
 
-	err := t.tailNewFiles(t.FromBeginning)
+	err = t.tailNewFiles(t.FromBeginning)
 
 	// clear offsets
 	t.offsets = make(map[string]int64)
@@ -212,6 +247,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 						return r
 					},
 				})
+
 			if err != nil {
 				t.Log.Debugf("Failed to open file (%s): %v", file, err)
 				continue
@@ -227,6 +263,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 
 			// create a goroutine for each "tailer"
 			t.wg.Add(1)
+
 			go func() {
 				defer t.wg.Done()
 				t.receiver(parser, tailer)
@@ -237,6 +274,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 					t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
 				}
 			}()
+
 			t.tailers[tailer.Filename] = tailer
 		}
 	}
@@ -272,24 +310,90 @@ func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.M
 // for changes, parse any incoming msgs, and add to the accumulator.
 func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 	var firstLine = true
-	for line := range tailer.Lines {
-		if line.Err != nil {
+
+	// holds the individual lines of multi-line log entries.
+	var buffer bytes.Buffer
+
+	var timer *time.Timer
+	var timeout <-chan time.Time
+
+	// The multiline mode requires a timer in order to flush the multiline buffer
+	// if no new lines are incoming.
+	if t.multiline.IsEnabled() {
+		timer = time.NewTimer(t.MultilineConfig.Timeout.Duration)
+		timeout = timer.C
+	}
+
+	channelOpen := true
+	tailerOpen := true
+	var line *tail.Line
+
+	for {
+		line = nil
+
+		if timer != nil {
+			timer.Reset(t.MultilineConfig.Timeout.Duration)
+		}
+
+		select {
+		case <-t.ctx.Done():
+			channelOpen = false
+		case line, tailerOpen = <-tailer.Lines:
+			if !tailerOpen {
+				channelOpen = false
+			}
+		case <-timeout:
+		}
+
+		var text string
+
+		if line != nil {
+			// Fix up files with Windows line endings.
+			text = strings.TrimRight(line.Text, "\r")
+
+			if t.multiline.IsEnabled() {
+				if text = t.multiline.ProcessLine(text, &buffer); text == "" {
+					continue
+				}
+			}
+		}
+		if line == nil || !channelOpen || !tailerOpen {
+			if text += t.multiline.Flush(&buffer); text == "" {
+				if !channelOpen {
+					return
+				}
+
+				continue
+			}
+		}
+
+		if line != nil && line.Err != nil {
 			t.Log.Errorf("Tailing %q: %s", tailer.Filename, line.Err.Error())
 			continue
 		}
-		// Fix up files with Windows line endings.
-		text := strings.TrimRight(line.Text, "\r")
 
 		metrics, err := parseLine(parser, text, firstLine)
 		if err != nil {
 			t.Log.Errorf("Malformed log line in %q: [%q]: %s",
-				tailer.Filename, line.Text, err.Error())
+				tailer.Filename, text, err.Error())
 			continue
 		}
 		firstLine = false
 
 		for _, metric := range metrics {
 			metric.AddTag("path", tailer.Filename)
+		}
+
+		// try writing out metric first without blocking
+		select {
+		case t.sem <- empty{}:
+			t.acc.AddTrackingMetricGroup(metrics)
+			if t.ctx.Err() != nil {
+				return // exit!
+			}
+			continue // next loop
+		default:
+			// no room. switch to blocking write.
 		}
 
 		// Block until plugin is stopping or room is available to add metrics.

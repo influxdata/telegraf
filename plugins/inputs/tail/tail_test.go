@@ -5,10 +5,13 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -86,6 +89,173 @@ func TestTailDosLineendings(t *testing.T) {
 		map[string]interface{}{
 			"usage_idle": float64(200),
 		})
+}
+
+func TestGrokParseLogFilesWithMultiline(t *testing.T) {
+	thisdir := getCurrentDir()
+	//we make sure the timeout won't kick in
+	duration, _ := time.ParseDuration("100s")
+
+	tt := NewTail()
+	tt.Log = testutil.Logger{}
+	tt.FromBeginning = true
+	tt.Files = []string{thisdir + "testdata/test_multiline.log"}
+	tt.MultilineConfig = MultilineConfig{
+		Pattern:        `^[^\[]`,
+		MatchWhichLine: Previous,
+		InvertMatch:    false,
+		Timeout:        &internal.Duration{Duration: duration},
+	}
+	tt.SetParserFunc(createGrokParser)
+
+	err := tt.Init()
+	require.NoError(t, err)
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
+
+	acc.Wait(3)
+
+	expectedPath := thisdir + "testdata/test_multiline.log"
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is debug",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "DEBUG",
+		})
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is info",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "INFO",
+		})
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: Sorry, something wrong! java.lang.ArithmeticException: / by zero\tat com.foo.HelloExample2.divide(HelloExample2.java:24)\tat com.foo.HelloExample2.main(HelloExample2.java:14)",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "ERROR",
+		})
+
+	assert.Equal(t, uint64(3), acc.NMetrics())
+}
+
+func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
+	tmpfile, err := ioutil.TempFile("", "")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	// This seems neccessary in order to get the test to read the following lines.
+	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] INFO HelloExample: This is fluff\r\n")
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Sync())
+
+	// set tight timeout for tests
+	duration := 10 * time.Millisecond
+
+	tt := NewTail()
+	tt.Log = testutil.Logger{}
+	tt.FromBeginning = true
+	tt.Files = []string{tmpfile.Name()}
+	tt.MultilineConfig = MultilineConfig{
+		Pattern:        `^[^\[]`,
+		MatchWhichLine: Previous,
+		InvertMatch:    false,
+		Timeout:        &internal.Duration{Duration: duration},
+	}
+	tt.SetParserFunc(createGrokParser)
+
+	err = tt.Init()
+	require.NoError(t, err)
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, tt.Start(&acc))
+	time.Sleep(11 * time.Millisecond) // will force timeout
+	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] INFO HelloExample: This is info\r\n")
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Sync())
+	acc.Wait(2)
+	time.Sleep(11 * time.Millisecond) // will force timeout
+	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] WARN HelloExample: This is warn\r\n")
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Sync())
+	acc.Wait(3)
+	tt.Stop()
+	assert.Equal(t, uint64(3), acc.NMetrics())
+	expectedPath := tmpfile.Name()
+
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is info",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "INFO",
+		})
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is warn",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "WARN",
+		})
+}
+
+func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *testing.T) {
+	thisdir := getCurrentDir()
+	//we make sure the timeout won't kick in
+	duration := 100 * time.Second
+
+	tt := NewTail()
+	tt.Log = testutil.Logger{}
+	tt.FromBeginning = true
+	tt.Files = []string{thisdir + "testdata/test_multiline.log"}
+	tt.MultilineConfig = MultilineConfig{
+		Pattern:        `^[^\[]`,
+		MatchWhichLine: Previous,
+		InvertMatch:    false,
+		Timeout:        &internal.Duration{Duration: duration},
+	}
+	tt.SetParserFunc(createGrokParser)
+
+	err := tt.Init()
+	require.NoError(t, err)
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, tt.Start(&acc))
+	acc.Wait(3)
+	assert.Equal(t, uint64(3), acc.NMetrics())
+	// Close tailer, so multiline buffer is flushed
+	tt.Stop()
+	acc.Wait(4)
+
+	expectedPath := thisdir + "testdata/test_multiline.log"
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is warn",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "WARN",
+		})
+}
+
+func createGrokParser() (parsers.Parser, error) {
+	grokConfig := &parsers.Config{
+		MetricName:             "tail_grok",
+		GrokPatterns:           []string{"%{TEST_LOG_MULTILINE}"},
+		GrokCustomPatternFiles: []string{getCurrentDir() + "testdata/test-patterns"},
+		DataFormat:             "grok",
+	}
+	parser, err := parsers.NewParser(grokConfig)
+	return parser, err
 }
 
 // The csv parser should only parse the header line once per file.
@@ -202,6 +372,11 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	}
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
+}
+
+func getCurrentDir() string {
+	_, filename, _, _ := runtime.Caller(1)
+	return strings.Replace(filename, "tail_test.go", "", 1)
 }
 
 func TestCharacterEncoding(t *testing.T) {
