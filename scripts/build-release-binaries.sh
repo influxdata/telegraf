@@ -29,14 +29,33 @@ git fetch ${FLAGS} --tags
 git checkout ${FLAGS} "${GIT_TAG}"
 echo "Checked out telegraf at ${GIT_TAG}"
 
-# go mod download
+go mod download
 for OS in windows darwin linux; do
     echo "Building telegraf for ${OS}..."
+    BINARY_PATH="telegraf-${GIT_TAG}_${OS}_amd64"
     if [[ "${OS}" == "windows" ]] ; then
-        BINARY_PATH="${DIR}/telegraf-${GIT_TAG}_${OS}_amd64.exe"
-    else
-        BINARY_PATH="${DIR}/telegraf-${GIT_TAG}_${OS}_amd64"
+        BINARY_PATH="${BINARY_PATH}.exe"
     fi
+
     GOOS=${OS} GOARCH=amd64 go build -o "${BINARY_PATH}" ./cmd/telegraf
-    echo "Successfully built ${BINARY_PATH}"
+
+    if [[ "${OS}" == "windows" ]] ; then
+        ARCHIVE_PATH="$(basename "${BINARY_PATH}.zip")"
+        zip -q "${ARCHIVE_PATH}" "${BINARY_PATH}"
+    else
+        ARCHIVE_PATH="$(basename "${BINARY_PATH}.tar.gz")"
+        tar -czvf "${ARCHIVE_PATH}" "$(basename "${BINARY_PATH}")"
+    fi
+
+    if [[ -f "${DIR}/${ARCHIVE_PATH}" ]]; then
+        rm "${DIR}/${ARCHIVE_PATH}"
+    fi
+    cp "${ARCHIVE_PATH}" "${DIR}"
+
+    if [[ -f "${DIR}/${BINARY_PATH}" ]];then
+        rm "${DIR}/${BINARY_PATH}"
+    fi
+    cp "${BINARY_PATH}" "${DIR}"
+
+    echo "Successfully built ${BINARY_PATH} (compressed into ${ARCHIVE_PATH})"
 done

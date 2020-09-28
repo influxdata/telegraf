@@ -4,5 +4,6 @@ docker run \
     --rm \
     --volume "$(pwd)":/app \
     --workdir /app \
-    --entrypoint /app/scripts/build-release-binaries.sh \
+    --env GIT_TAG \
+    --entrypoint /app/scripts/build-release-binaries-docker-entrypoint.sh \
     golang:1.15
