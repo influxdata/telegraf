@@ -210,32 +210,40 @@ WHERE
 `
 
 const sqlAzureDBProperties = `
-DECLARE @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
-IF @EngineEdition = 5  -- Is this Azure SQL DB?
-SELECT	'sqlserver_server_properties' AS [measurement],
-		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-		DB_NAME() as [database_name],
-                    (SELECT count(*) FROM sys.dm_os_schedulers WHERE status = 'VISIBLE ONLINE') AS cpu_count,
-                    (SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
-                    slo.edition as sku,
-                    @EngineEdition  AS engine_edition,
-                    slo.service_objective AS hardware_type,
-		CASE 
-				WHEN slo.edition = 'Hyperscale' then NULL 
-				ELSE  cast(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024)  
-		END AS total_storage_mb,
-		CASE
-				WHEN slo.edition = 'Hyperscale' then NULL
-				ELSE
-			(cast(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024)-
-				(select  SUM(size/128 - CAST(FILEPROPERTY(name, 'SpaceUsed') AS int)/128)	FROM sys.database_files )
-			)	
-		END AS available_storage_mb,   
-                    (select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info)  as uptime
-		FROM     sys.databases d
-		-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
-		CROSS JOIN sys.database_service_objectives slo
-		WHERE d.name = DB_NAME() AND slo.database_id = DB_ID();
+SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
+SELECT	
+	 'sqlserver_server_properties' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,DB_NAME() as [database_name]
+	,(SELECT count(*) FROM sys.dm_os_schedulers WHERE status = 'VISIBLE ONLINE') AS [cpu_count]
+	,(SELECT [process_memory_limit_mb] FROM sys.dm_os_job_object) AS [server_memory]
+	,slo.[edition] as [sku]
+	,@EngineEdition AS [engine_edition]
+	,slo.[service_objective] AS [hardware_type]
+	,CASE
+		WHEN slo.[edition] = 'Hyperscale' then NULL
+		ELSE CAST(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024)
+	END AS [total_storage_mb]
+	,CASE
+		WHEN slo.[edition] = 'Hyperscale' then NULL
+		ELSE (
+			cast(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024) -
+			(select SUM([size]/128 - CAST(FILEPROPERTY(name, 'SpaceUsed') AS int)/128) FROM sys.database_files)
+		)
+	END AS [available_storage_mb]
+	,(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as [uptime]
+	FROM sys.[databases] AS d
+	-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
+	CROSS JOIN sys.[database_service_objectives] AS slo
+	WHERE
+		d.[name] = DB_NAME()
+		AND slo.[database_id] = DB_ID();
 `
 
 const sqlAzureDBOsWaitStats = `
