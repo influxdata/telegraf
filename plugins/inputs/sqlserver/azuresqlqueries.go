@@ -224,7 +224,7 @@ SELECT
 	,(SELECT count(*) FROM sys.dm_os_schedulers WHERE status = 'VISIBLE ONLINE') AS [cpu_count]
 	,(SELECT [process_memory_limit_mb] FROM sys.dm_os_job_object) AS [server_memory]
 	,slo.[edition] as [sku]
-	,@EngineEdition AS [engine_edition]
+	,SERVERPROPERTY('EngineEdition') AS [engine_edition]
 	,slo.[service_objective] AS [hardware_type]
 	,CASE
 		WHEN slo.[edition] = 'Hyperscale' then NULL
