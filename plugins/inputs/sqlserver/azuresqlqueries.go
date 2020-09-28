@@ -1081,6 +1081,13 @@ OPTION (RECOMPILE);
 `
 
 const sqlAzureMIRequests string = `
+SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
 SELECT [blocking_session_id] INTO #blockingSessions FROM sys.dm_exec_requests WHERE [blocking_session_id] != 0
 CREATE INDEX ix_blockingSessions_1 on #blockingSessions ([blocking_session_id])
 
