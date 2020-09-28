@@ -1155,6 +1155,12 @@ OPTION(MAXDOP 1);
 
 const sqlAzureMISchedulers string = `
 SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
 SELECT
 	 'sqlserver_schedulers' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
