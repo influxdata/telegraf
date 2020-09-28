@@ -789,76 +789,86 @@ OPTION(RECOMPILE);
 
 const sqlAzureMIOsWaitStats = `
 SET DEADLOCK_PRIORITY -10;
-IF  SERVERPROPERTY('EngineEdition') = 8  /*Managed Instance*/
+IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
 SELECT
-'sqlserver_waitstats' AS [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-ws.wait_type,
-wait_time_ms,
-wait_time_ms - signal_wait_time_ms AS [resource_wait_ms],
-signal_wait_time_ms,
-max_wait_time_ms,
-waiting_tasks_count,
-CASE 
-  WHEN ws.wait_type LIKE 'SOS_SCHEDULER_YIELD' then 'CPU'
-  WHEN ws.wait_type = 'THREADPOOL' THEN 'Worker Thread'
-  WHEN ws.wait_type LIKE 'LCK[_]%' THEN 'Lock'
-  WHEN ws.wait_type LIKE 'LATCH[_]%' THEN 'Latch'
-  WHEN ws.wait_type LIKE 'PAGELATCH[_]%' THEN 'Buffer Latch'
-  WHEN ws.wait_type LIKE 'PAGEIOLATCH[_]%' THEN 'Buffer IO'
-  WHEN ws.wait_type LIKE 'RESOURCE_SEMAPHORE_QUERY_COMPILE%' THEN 'Compilation'
-  WHEN ws.wait_type LIKE 'CLR[_]%' or ws.wait_type like 'SQLCLR%' THEN 'SQL CLR'
-  WHEN ws.wait_type LIKE 'DBMIRROR_%' THEN 'Mirroring'
-  WHEN ws.wait_type LIKE 'DTC[_]%' or ws.wait_type LIKE 'DTCNEW%' or ws.wait_type LIKE 'TRAN_%' 
-     or ws.wait_type LIKE 'XACT%' or ws.wait_type like 'MSQL_XACT%' THEN 'Transaction'
-   WHEN ws.wait_type LIKE 'SLEEP[_]%' or
-   ws.wait_type IN ('LAZYWRITER_SLEEP', 'SQLTRACE_BUFFER_FLUSH', 'SQLTRACE_INCREMENTAL_FLUSH_SLEEP'
-   , 'SQLTRACE_WAIT_ENTRIES', 'FT_IFTS_SCHEDULER_IDLE_WAIT', 'XE_DISPATCHER_WAIT'
-   , 'REQUEST_FOR_DEADLOCK_SEARCH', 'LOGMGR_QUEUE', 'ONDEMAND_TASK_QUEUE'
-   , 'CHECKPOINT_QUEUE', 'XE_TIMER_EVENT') THEN 'Idle'
-  WHEN ws.wait_type IN('ASYNC_IO_COMPLETION','BACKUPIO','CHKPT','WRITE_COMPLETION'
-	,'IO_QUEUE_LIMIT', 'IO_RETRY') THEN 'Other Disk IO'
-  WHEN ws.wait_type LIKE 'PREEMPTIVE_%' THEN 'Preemptive'
-  WHEN ws.wait_type LIKE 'BROKER[_]%' THEN 'Service Broker'
-  WHEN ws.wait_type IN ('WRITELOG','LOGBUFFER','LOGMGR_RESERVE_APPEND'
-  , 'LOGMGR_FLUSH', 'LOGMGR_PMM_LOG')  THEN 'Tran Log IO'
-  WHEN ws.wait_type LIKE 'LOG_RATE%' then 'Log Rate Governor'
-  WHEN ws.wait_type LIKE 'HADR_THROTTLE[_]%' 
-  or ws.wait_type = 'THROTTLE_LOG_RATE_LOG_STORAGE' THEN 'HADR Log Rate Governor'
-  WHEN ws.wait_type LIKE 'RBIO_RG%' or ws.wait_type like 'WAIT_RBIO_RG%' then 'VLDB Log Rate Governor'
-  WHEN ws.wait_type LIKE 'RBIO[_]%' or ws.wait_type like 'WAIT_RBIO[_]%' then 'VLDB RBIO'
-  WHEN ws.wait_type IN('ASYNC_NETWORK_IO','EXTERNAL_SCRIPT_NETWORK_IOF'
-	,'NET_WAITFOR_PACKET','PROXY_NETWORK_IO') THEN 'Network IO'
-  WHEN ws.wait_type IN ( 'CXPACKET', 'CXCONSUMER')
-	or ws.wait_type like 'HT%' or ws.wait_type like 'BMP%'
-	or ws.wait_type like 'BP%' THEN 'Parallelism'
-WHEN ws.wait_type IN('CMEMTHREAD','CMEMPARTITIONED','EE_PMOLOCK','EXCHANGE'
-		,'RESOURCE_SEMAPHORE','MEMORY_ALLOCATION_EXT'
-		,'RESERVED_MEMORY_ALLOCATION_EXT', 'MEMORY_GRANT_UPDATE')  THEN 'Memory'
- WHEN ws.wait_type IN ('WAITFOR','WAIT_FOR_RESULTS')  THEN 'User Wait'
- WHEN ws.wait_type LIKE 'HADR[_]%' or ws.wait_type LIKE 'PWAIT_HADR%'
-	or ws.wait_type LIKE 'REPLICA[_]%' or ws.wait_type LIKE 'REPL_%' 
-    or ws.wait_type LIKE 'SE_REPL[_]%'
-	or ws.wait_type LIKE 'FCB_REPLICA%' THEN 'Replication' 
- WHEN ws.wait_type LIKE 'SQLTRACE[_]%' or ws.wait_type 
-  IN ('TRACEWRITE', 'SQLTRACE_LOCK', 'SQLTRACE_FILE_BUFFER', 'SQLTRACE_FILE_WRITE_IO_COMPLETION'
-	, 'SQLTRACE_FILE_READ_IO_COMPLETION', 'SQLTRACE_PENDING_BUFFER_WRITERS', 'SQLTRACE_SHUTDOWN'
-	, 'QUERY_TRACEOUT', 'TRACE_EVTNOTIF') THEN 'Tracing'
- WHEN ws.wait_type IN ('FT_RESTART_CRAWL', 'FULLTEXT GATHERER', 'MSSEARCH', 'FT_METADATA_MUTEX', 
-  'FT_IFTSHC_MUTEX', 'FT_IFTSISM_MUTEX', 'FT_IFTS_RWLOCK', 'FT_COMPROWSET_RWLOCK'
-  , 'FT_MASTER_MERGE', 'FT_PROPERTYLIST_CACHE', 'FT_MASTER_MERGE_COORDINATOR'
-  , 'PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC') THEN 'Full Text Search'
- ELSE 'Other'
-END as wait_category
-FROM
-sys.dm_os_wait_stats AS ws WITH (NOLOCK)
+	 'sqlserver_waitstats' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,ws.[wait_type]
+	,[wait_time_ms]
+	,[wait_time_ms] - [signal_wait_time_ms] AS [resource_wait_ms]
+	,[signal_wait_time_ms]
+	,[max_wait_time_ms]
+	,[waiting_tasks_count]
+	,CASE 
+		WHEN ws.[wait_type] LIKE 'SOS_SCHEDULER_YIELD' then 'CPU'
+		WHEN ws.[wait_type] = 'THREADPOOL' THEN 'Worker Thread'
+		WHEN ws.[wait_type] LIKE 'LCK[_]%' THEN 'Lock'
+		WHEN ws.[wait_type] LIKE 'LATCH[_]%' THEN 'Latch'
+		WHEN ws.[wait_type] LIKE 'PAGELATCH[_]%' THEN 'Buffer Latch'
+		WHEN ws.[wait_type] LIKE 'PAGEIOLATCH[_]%' THEN 'Buffer IO'
+		WHEN ws.[wait_type] LIKE 'RESOURCE_SEMAPHORE_QUERY_COMPILE%' THEN 'Compilation'
+		WHEN ws.[wait_type] LIKE 'CLR[_]%' or ws.[wait_type] like 'SQLCLR%' THEN 'SQL CLR'
+		WHEN ws.[wait_type] LIKE 'DBMIRROR_%' THEN 'Mirroring'
+		WHEN ws.[wait_type] LIKE 'DTC[_]%' or ws.[wait_type] LIKE 'DTCNEW%' or ws.[wait_type] LIKE 'TRAN_%' 
+     		or ws.[wait_type] LIKE 'XACT%' or ws.[wait_type] like 'MSQL_XACT%' THEN 'Transaction'
+		WHEN ws.[wait_type] LIKE 'SLEEP[_]%'
+			or ws.[wait_type] IN (
+				'LAZYWRITER_SLEEP', 'SQLTRACE_BUFFER_FLUSH', 'SQLTRACE_INCREMENTAL_FLUSH_SLEEP',
+				'SQLTRACE_WAIT_ENTRIES', 'FT_IFTS_SCHEDULER_IDLE_WAIT', 'XE_DISPATCHER_WAIT',
+				'REQUEST_FOR_DEADLOCK_SEARCH', 'LOGMGR_QUEUE', 'ONDEMAND_TASK_QUEUE',
+				'CHECKPOINT_QUEUE', 'XE_TIMER_EVENT') THEN 'Idle'
+		WHEN ws.[wait_type] IN(
+			'ASYNC_IO_COMPLETION','BACKUPIO','CHKPT','WRITE_COMPLETION',
+			'IO_QUEUE_LIMIT', 'IO_RETRY') THEN 'Other Disk IO'
+		WHEN ws.[wait_type] LIKE 'PREEMPTIVE_%' THEN 'Preemptive'
+		WHEN ws.[wait_type] LIKE 'BROKER[_]%' THEN 'Service Broker'
+		WHEN ws.[wait_type] IN (
+			'WRITELOG','LOGBUFFER','LOGMGR_RESERVE_APPEND',
+			'LOGMGR_FLUSH', 'LOGMGR_PMM_LOG')  THEN 'Tran Log IO'
+		WHEN ws.[wait_type] LIKE 'LOG_RATE%' then 'Log Rate Governor'
+		WHEN ws.[wait_type] LIKE 'HADR_THROTTLE[_]%' 
+			or ws.[wait_type] = 'THROTTLE_LOG_RATE_LOG_STORAGE' THEN 'HADR Log Rate Governor'
+		WHEN ws.[wait_type] LIKE 'RBIO_RG%' or ws.[wait_type] like 'WAIT_RBIO_RG%' then 'VLDB Log Rate Governor'
+		WHEN ws.[wait_type] LIKE 'RBIO[_]%' or ws.[wait_type] like 'WAIT_RBIO[_]%' then 'VLDB RBIO'
+		WHEN ws.[wait_type] IN(
+			'ASYNC_NETWORK_IO','EXTERNAL_SCRIPT_NETWORK_IOF',
+			'NET_WAITFOR_PACKET','PROXY_NETWORK_IO') THEN 'Network IO'
+		WHEN ws.[wait_type] IN ( 'CXPACKET', 'CXCONSUMER')
+			or ws.[wait_type] like 'HT%' or ws.[wait_type] like 'BMP%'
+			or ws.[wait_type] like 'BP%' THEN 'Parallelism'
+		WHEN ws.[wait_type] IN(
+			'CMEMTHREAD','CMEMPARTITIONED','EE_PMOLOCK','EXCHANGE',
+			'RESOURCE_SEMAPHORE','MEMORY_ALLOCATION_EXT',
+			'RESERVED_MEMORY_ALLOCATION_EXT', 'MEMORY_GRANT_UPDATE')  THEN 'Memory'
+		WHEN ws.[wait_type] IN ('WAITFOR','WAIT_FOR_RESULTS')  THEN 'User Wait'
+		WHEN ws.[wait_type] LIKE 'HADR[_]%' or ws.[wait_type] LIKE 'PWAIT_HADR%'
+			or ws.[wait_type] LIKE 'REPLICA[_]%' or ws.[wait_type] LIKE 'REPL_%' 
+			or ws.[wait_type] LIKE 'SE_REPL[_]%'
+			or ws.[wait_type] LIKE 'FCB_REPLICA%' THEN 'Replication' 
+		WHEN ws.[wait_type] LIKE 'SQLTRACE[_]%' 
+			or ws.[wait_type] IN (
+				'TRACEWRITE', 'SQLTRACE_LOCK', 'SQLTRACE_FILE_BUFFER', 'SQLTRACE_FILE_WRITE_IO_COMPLETION',
+				'SQLTRACE_FILE_READ_IO_COMPLETION', 'SQLTRACE_PENDING_BUFFER_WRITERS', 'SQLTRACE_SHUTDOWN',
+				'QUERY_TRACEOUT', 'TRACE_EVTNOTIF') THEN 'Tracing'
+		WHEN ws.[wait_type] IN (
+			'FT_RESTART_CRAWL', 'FULLTEXT GATHERER', 'MSSEARCH', 'FT_METADATA_MUTEX', 
+  			'FT_IFTSHC_MUTEX', 'FT_IFTSISM_MUTEX', 'FT_IFTS_RWLOCK', 'FT_COMPROWSET_RWLOCK',
+  			'FT_MASTER_MERGE', 'FT_PROPERTYLIST_CACHE', 'FT_MASTER_MERGE_COORDINATOR',
+  			'PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC') THEN 'Full Text Search'
+ 		ELSE 'Other'
+	END as [wait_category]
+FROM sys.dm_os_wait_stats AS ws WITH (NOLOCK)
 WHERE
-ws.wait_type NOT IN (
+	ws.[wait_type] NOT IN (
         N'BROKER_EVENTHANDLER', N'BROKER_RECEIVE_WAITFOR', N'BROKER_TASK_STOP',
         N'BROKER_TO_FLUSH', N'BROKER_TRANSMITTER', N'CHECKPOINT_QUEUE',
         N'CHKPT', N'CLR_AUTO_EVENT', N'CLR_MANUAL_EVENT', N'CLR_SEMAPHORE',
-        N'DBMIRROR_DBM_EVENT', N'DBMIRROR_EVENTS_QUEUE', N'DBMIRROR_
-		_QUEUE',
+        N'DBMIRROR_DBM_EVENT', N'DBMIRROR_EVENTS_QUEUE', N'DBMIRROR_QUEUE',
         N'DBMIRRORING_CMD', N'DIRTY_PAGE_POLL', N'DISPATCHER_QUEUE_SEMAPHORE',
         N'EXECSYNC', N'FSAGENT', N'FT_IFTS_SCHEDULER_IDLE_WAIT', N'FT_IFTSHC_MUTEX',
         N'HADR_CLUSAPI_CALL', N'HADR_FILESTREAM_IOMGR_IOCOMPLETION', N'HADR_LOGCAPTURE_WAIT',
@@ -881,16 +891,16 @@ ws.wait_type NOT IN (
         N'SLEEP_DCOMSTARTUP', N'SLEEP_MASTERDBREADY', N'SLEEP_MASTERMDREADY',
         N'SLEEP_MASTERUPGRADED', N'SLEEP_MSDBSTARTUP', N'SLEEP_SYSTEMTASK', N'SLEEP_TASK',
         N'SLEEP_TEMPDBSTARTUP', N'SNI_HTTP_ACCEPT', N'SP_SERVER_DIAGNOSTICS_SLEEP',
-		        N'SQLTRACE_BUFFER_FLUSH', N'SQLTRACE_INCREMENTAL_FLUSH_SLEEP',
+		N'SQLTRACE_BUFFER_FLUSH', N'SQLTRACE_INCREMENTAL_FLUSH_SLEEP',
         N'SQLTRACE_WAIT_ENTRIES',
         N'WAIT_FOR_RESULTS', N'WAITFOR', N'WAITFOR_TASKSHUTDOWN', N'WAIT_XTP_HOST_WAIT',
         N'WAIT_XTP_OFFLINE_CKPT_NEW_LOG', N'WAIT_XTP_CKPT_CLOSE',
         N'XE_BUFFERMGR_ALLPROCESSED_EVENT', N'XE_DISPATCHER_JOIN',
         N'XE_DISPATCHER_WAIT', N'XE_LIVE_TARGET_TVF', N'XE_TIMER_EVENT',
-        N'SOS_WORK_DISPATCHER','RESERVED_MEMORY_ALLOCATION_EXT','SQLTRACE_WAIT_ENTRIES'
-		, 'RBIO_COMM_RETRY')
-AND waiting_tasks_count > 10
-AND wait_time_ms > 100;
+        N'SOS_WORK_DISPATCHER','RESERVED_MEMORY_ALLOCATION_EXT','SQLTRACE_WAIT_ENTRIES',
+		N'RBIO_COMM_RETRY')
+AND [waiting_tasks_count] > 10
+AND [wait_time_ms] > 100;
 `
 
 const sqlAzureMIPerformanceCounters = `
