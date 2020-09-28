@@ -712,23 +712,28 @@ FROM
 `
 
 const sqlAzureMIResourceGovernance string = `
-IF SERVERPROPERTY('EngineEdition') = 8  -- Is this Azure SQL Managed Instance?
-         SELECT
-           'sqlserver_instance_resource_governance' AS [measurement],
-           REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-           instance_cap_cpu,
-           instance_max_log_rate,
-           instance_max_worker_threads,
-           tempdb_log_file_number,
-           volume_local_iops,
-           volume_external_xstore_iops,
-           volume_managed_xstore_iops,
-           volume_type_local_iops as voltype_local_iops,
-           volume_type_managed_xstore_iops as voltype_man_xtore_iops,
-           volume_type_external_xstore_iops as voltype_ext_xtore_iops,
-           volume_external_xstore_iops  as vol_ext_xtore_iops
-           from
-            sys.dm_instance_resource_governance;
+SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
+SELECT
+	 'sqlserver_instance_resource_governance' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,[instance_cap_cpu]
+	,[instance_max_log_rate]
+	,[instance_max_worker_threads]
+	,[tempdb_log_file_number]
+	,[volume_local_iops]
+	,[volume_external_xstore_iops]
+	,[volume_managed_xstore_iops]
+	,[volume_type_local_iops] as [voltype_local_iops]
+	,[volume_type_managed_xstore_iops] as [voltype_man_xtore_iops]
+	,[volume_type_external_xstore_iops] as [voltype_ext_xtore_iops]
+	,[volume_external_xstore_iops] as [vol_ext_xtore_iops]
+FROM sys.dm_instance_resource_governance;
 `
 
 const sqlAzureMIDatabaseIO = `
