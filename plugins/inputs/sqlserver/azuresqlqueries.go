@@ -696,13 +696,19 @@ ORDER BY
 `
 
 const sqlAzureMIResourceStats = `
-IF  SERVERPROPERTY('EngineEdition') = 8  /*Managed Instance*/
-        SELECT TOP(1)
-                'sqlserver_azure_db_resource_stats' AS [measurement],
-                REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-                cast(avg_cpu_percent as float) as avg_cpu_percent
-  		FROM
-		    sys.server_resource_stats;
+SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
+SELECT TOP(1)
+	 'sqlserver_azure_db_resource_stats' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,cast([avg_cpu_percent] as float) as [avg_cpu_percent]
+FROM
+    sys.server_resource_stats;
 `
 
 const sqlAzureMIResourceGovernance string = `
