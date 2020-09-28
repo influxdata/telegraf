@@ -1039,65 +1039,69 @@ OPTION (RECOMPILE)
 `
 
 const sqlAzureMIRequests string = `
-SET NOCOUNT ON; 
-IF SERVERPROPERTY('EngineEdition') = 8  -- Is this Azure SQL DB?
-BEGIN
-	SELECT  blocking_session_id into #blockingSessions FROM sys.dm_exec_requests WHERE blocking_session_id != 0
-	create index ix_blockingSessions_1 on #blockingSessions (blocking_session_id)
-	SELECT	
-	'sqlserver_requests' AS [measurement]
-	, REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	, DB_NAME() as [database_name]
-	, s.session_id
-	, ISNULL(r.request_id,0) as request_id
-	, DB_NAME(s.database_id) as session_db_name
-	, COALESCE(r.status,s.status) AS status
-	, COALESCE(r.cpu_time,s.cpu_time) AS cpu_time_ms
-	, COALESCE(r.total_elapsed_time,s.total_elapsed_time) AS total_elapsed_time_ms
-	, COALESCE(r.logical_reads,s.logical_reads) AS logical_reads
-	, COALESCE(r.writes,s.writes) AS writes
-	, r.command
-	, r.wait_time as wait_time_ms
-	, r.wait_type
-	, r.wait_resource
-	, r.blocking_session_id
-	, s.program_name
-	, s.host_name
-	, s.nt_user_name
-	, s.open_transaction_count  AS open_transaction
-	, LEFT (CASE COALESCE(r.transaction_isolation_level, s.transaction_isolation_level)
-				WHEN 0 THEN '0-Read Committed' 
-				WHEN 1 THEN '1-Read Uncommitted (NOLOCK)' 
-				WHEN 2 THEN '2-Read Committed' 
-				WHEN 3 THEN '3-Repeatable Read' 
-				WHEN 4 THEN '4-Serializable' 
-				WHEN 5 THEN '5-Snapshot' 
-				ELSE CONVERT (varchar(30), r.transaction_isolation_level) + '-UNKNOWN' 
-			END, 30) AS transaction_isolation_level
-	, r.granted_query_memory as granted_query_memory_pages
-	, r.percent_complete
-	, SUBSTRING(
-					qt.text, 
-					r.statement_start_offset / 2 + 1,
-					(CASE WHEN r.statement_end_offset = -1
-						THEN DATALENGTH(qt.text)
-						ELSE r.statement_end_offset
-					END - r.statement_start_offset) / 2 + 1
-			) AS statement_text
-	, qt.objectid
-	, QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + '.' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) as stmt_object_name
-	, DB_NAME(qt.dbid) stmt_db_name
-	, CONVERT(varchar(20),[query_hash],1) as [query_hash]
-	, CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
-	FROM sys.dm_exec_sessions AS s
-	LEFT OUTER JOIN sys.dm_exec_requests AS r 
-		ON s.session_id = r.session_id
-	OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) AS qt
-	WHERE 1 = 1
-		AND (r.session_id IS NOT NULL AND (s.is_user_process = 1 OR r.status COLLATE Latin1_General_BIN NOT IN ('background', 'sleeping')))
-		OR  (s.session_id IN (SELECT blocking_session_id FROM #blockingSessions))
-	OPTION(MAXDOP 1)
-END
+SELECT [blocking_session_id] INTO #blockingSessions FROM sys.dm_exec_requests WHERE [blocking_session_id] != 0
+CREATE INDEX ix_blockingSessions_1 on #blockingSessions ([blocking_session_id])
+
+SELECT	
+	 'sqlserver_requests' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,DB_NAME() as [database_name]
+	,s.[session_id]
+	,ISNULL(r.[request_id], 0) as [request_id]
+	,DB_NAME(s.[database_id]) as [session_db_name]
+	,COALESCE(r.[status], s.[status]) AS [status]
+	,COALESCE(r.[cpu_time], s.[cpu_time]) AS [cpu_time_ms]
+	,COALESCE(r.[total_elapsed_time], s.[total_elapsed_time]) AS [total_elapsed_time_ms]
+	,COALESCE(r.[logical_reads], s.[logical_reads]) AS [logical_reads]
+	,COALESCE(r.[writes], s.[writes]) AS [writes]
+	,r.[command]
+	,r.[wait_time] as [wait_time_ms]
+	,r.[wait_type]
+	,r.[wait_resource]
+	,r.[blocking_session_id]
+	,s.[program_name]
+	,s.[host_name]
+	,s.[nt_user_name]
+	,COALESCE(r.[open_transaction_count], s.[open_transaction_count]) AS [open_transaction]
+	,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
+		WHEN 0 THEN '0-Read Committed' 
+		WHEN 1 THEN '1-Read Uncommitted (NOLOCK)' 
+		WHEN 2 THEN '2-Read Committed' 
+		WHEN 3 THEN '3-Repeatable Read' 
+		WHEN 4 THEN '4-Serializable' 
+		WHEN 5 THEN '5-Snapshot' 
+		ELSE CONVERT (varchar(30), r.[transaction_isolation_level]) + '-UNKNOWN' 
+	END, 30) AS [transaction_isolation_level]
+	,r.[granted_query_memory] as [granted_query_memory_pages]
+	,r.[percent_complete]
+	,SUBSTRING(
+		qt.[text], 
+		r.[statement_start_offset] / 2 + 1,
+		(CASE WHEN r.[statement_end_offset] = -1
+			THEN DATALENGTH(qt.text)
+			ELSE r.[statement_end_offset]
+		END - r.[statement_start_offset]) / 2 + 1
+	) AS [statement_text]
+	,qt.[objectid]
+	,QUOTENAME(OBJECT_SCHEMA_NAME(qt.[objectid], qt.[dbid])) + '.' +  QUOTENAME(OBJECT_NAME(qt.[objectid], qt.[dbid])) as [stmt_object_name]
+	,DB_NAME(qt.[dbid]) [stmt_db_name]
+	,CONVERT(varchar(20),[query_hash],1) as [query_hash]
+	,CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
+	,DB_NAME(COALESCE(r.[database_id], s.[database_id])) AS [session_db_name]
+FROM sys.dm_exec_sessions AS s
+LEFT OUTER JOIN sys.dm_exec_requests AS r 
+	ON s.[session_id] = r.[session_id]
+OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) AS qt
+WHERE
+	(s.session_id IN (SELECT blocking_session_id FROM #blockingSessions))
+	OR (
+		r.session_id IS NOT NULL 
+		AND (
+			s.is_user_process = 1 
+			OR r.status COLLATE Latin1_General_BIN NOT IN ('background', 'sleeping')
+		)
+	)  
+OPTION(MAXDOP 1);
 `
 
 const sqlAzureMISchedulers string = `
