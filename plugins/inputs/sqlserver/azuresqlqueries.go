@@ -146,44 +146,67 @@ WHERE
 
 const sqlAzureDBDatabaseIO = `
 SET DEADLOCK_PRIORITY -10;
-IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
+IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
 SELECT
-		 'sqlserver_database_io' As [measurement]
-		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-		,DB_NAME() as database_name
-		,vfs.database_id   -- /*needed as tempdb is different for each Azure SQL DB as grouping has to be by logical server + db_name + database_id*/
-		,vfs.file_id
-		,vfs.io_stall_read_ms AS read_latency_ms
-		,vfs.num_of_reads AS reads
-		,vfs.num_of_bytes_read AS read_bytes
-		,vfs.io_stall_write_ms AS write_latency_ms
-		,vfs.num_of_writes AS writes
-		,vfs.num_of_bytes_written AS write_bytes
-		,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
-                ,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
-		 ,CASE
-                        WHEN (vfs.database_id = 0) THEN 'RBPEX'
-                        ELSE b.logical_filename
-                  END as logical_filename
-                 ,CASE
-                        WHEN (vfs.database_id = 0) THEN 'RBPEX'
-                        ELSE b.physical_filename
-                  END as physical_filename
-		,CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
-		,ISNULL(size,0)/128 AS current_size_mb
-		,ISNULL(FILEPROPERTY(b.logical_filename,'SpaceUsed')/128,0) as space_used_mb
-	FROM [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
+	 'sqlserver_database_io' As [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,DB_NAME() as [database_name]
+	,vfs.[database_id]  /*needed as tempdb is different for each Azure SQL DB as grouping has to be by logical server + db_name + database_id*/
+	,vfs.[file_id]
+	,vfs.[io_stall_read_ms] AS [read_latency_ms]
+	,vfs.[num_of_reads] AS [reads]
+	,vfs.[num_of_bytes_read] AS [read_bytes]
+	,vfs.[io_stall_write_ms] AS [write_latency_ms]
+	,vfs.[num_of_writes] AS [writes]
+	,vfs.[num_of_bytes_written] AS [write_bytes]
+	,vfs.[io_stall_queued_read_ms] AS [rg_read_stall_ms]
+	,vfs.[io_stall_queued_write_ms] AS [rg_write_stall_ms]
+	,CASE
+		WHEN (vfs.[database_id] = 0) THEN 'RBPEX'
+		ELSE b.[logical_filename]
+	END as [logical_filename]
+	,CASE
+		WHEN (vfs.[database_id] = 0) THEN 'RBPEX'
+		ELSE b.[physical_filename]
+	 END as [physical_filename]
+	,CASE 
+		WHEN vfs.[file_id] = 2 THEN 'LOG' 
+		ELSE 'DATA' 
+	END AS [file_type]
+	,ISNULL([size],0)/128 AS [current_size_mb]
+	,ISNULL(FILEPROPERTY(b.[logical_filename],'SpaceUsed')/128,0) as [space_used_mb]
+FROM 
+	[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
 	-- needed to get Tempdb file names  on Azure SQL DB so you can join appropriately. Without this had a bug where join was only on file_id
-        LEFT OUTER join
-        (
-             SELECT DB_ID() as database_id, file_id, logical_filename=name COLLATE SQL_Latin1_General_CP1_CI_AS
-                , physical_filename = physical_name COLLATE SQL_Latin1_General_CP1_CI_AS, size from  sys.database_files
-                where type <> 2
-             UNION ALL
-             SELECT 2 as database_id, file_id, logical_filename = name , physical_filename = physical_name, size
-                from  tempdb.sys.database_files
-         ) b ON b.database_id = vfs.database_id and b.file_id = vfs.file_id
-		  where vfs.database_id IN (DB_ID(),0,2)
+LEFT OUTER join	(
+	SELECT 
+		 DB_ID() as [database_id]
+		,[file_id]
+		,[logical_filename]= [name] COLLATE SQL_Latin1_General_CP1_CI_AS
+		,[physical_filename] = [physical_name] COLLATE SQL_Latin1_General_CP1_CI_AS
+		,[size] 
+	FROM sys.database_files
+	WHERE 
+		[type] <> 2
+	UNION ALL
+	SELECT 
+		 2 as [database_id]
+		,[file_id]
+		,[logical_filename] = [name] 
+		,[physical_filename] = [physical_name]
+		,[size]
+	FROM tempdb.sys.database_files
+) b 
+	ON
+		b.[database_id] = vfs.[database_id] 
+		AND b.[file_id] = vfs.[file_id]
+WHERE 
+	vfs.[database_id] IN (DB_ID(),0,2)
 `
 
 const sqlAzureDBProperties = `
