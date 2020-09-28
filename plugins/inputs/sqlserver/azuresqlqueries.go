@@ -656,35 +656,43 @@ FROM sys.dm_os_schedulers AS s
 //------------------ Azure Managed Instance ------------------------------------------------------
 //------------------------------------------------------------------------------------------------
 const sqlAzureMIProperties = `
-DECLARE @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
-IF  @EngineEdition = 8  /*Managed Instance*/
-      SELECT TOP 1 'sqlserver_server_properties' AS [measurement],
-			REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-			virtual_core_count AS cpu_count,
-        	(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
-            sku,
-            @EngineEdition AS engine_edition,
-            hardware_generation AS hardware_type,
-            cast(reserved_storage_mb as bigint) AS total_storage_mb,
-            cast((reserved_storage_mb - storage_space_used_mb) as bigint) AS available_storage_mb,
-            (select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as uptime,
-			SERVERPROPERTY('ProductVersion') AS sql_version,
-			db_online,
-			db_restoring,
-			db_recovering,
-			db_recoveryPending,
-			db_suspect
-			FROM    sys.server_resource_stats
-			CROSS APPLY
-			(SELECT  SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
-                                 SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
-                                 SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
-                                 SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
-                                 SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
-                                 SUM( CASE WHEN state = 6 or state = 10 THEN 1 ELSE 0 END ) AS db_offline
-                        FROM    sys.databases
-			) AS dbs	
-			ORDER BY start_time DESC;
+SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
+SELECT TOP 1 
+	 'sqlserver_server_properties' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,[virtual_core_count] AS [cpu_count]
+	,(SELECT [process_memory_limit_mb] FROM sys.dm_os_job_object) AS [server_memory]
+	,[sku]
+	,SERVERPROPERTY('EngineEdition') AS [engine_edition]
+	,[hardware_generation] AS [hardware_type]
+	,cast([reserved_storage_mb] as bigint) AS [total_storage_mb]
+	,cast(([reserved_storage_mb] - [storage_space_used_mb]) as bigint) AS [available_storage_mb]
+	,(SELECT DATEDIFF(MINUTE,[sqlserver_start_time],GETDATE()) from sys.dm_os_sys_info) as [uptime]
+	,SERVERPROPERTY('ProductVersion') AS [sql_version]
+	,[db_online]
+	,[db_restoring]
+	,[db_recovering]
+	,[db_recoveryPending]
+	,[db_suspect]
+FROM sys.server_resource_stats
+CROSS APPLY	(
+	SELECT  
+		 SUM( CASE WHEN [state] = 0 THEN 1 ELSE 0 END ) AS [db_online]
+		,SUM( CASE WHEN [state] = 1 THEN 1 ELSE 0 END ) AS [db_restoring]
+		,SUM( CASE WHEN [state] = 2 THEN 1 ELSE 0 END ) AS [db_recovering]
+		,SUM( CASE WHEN [state] = 3 THEN 1 ELSE 0 END ) AS [db_recoveryPending]
+		,SUM( CASE WHEN [state] = 4 THEN 1 ELSE 0 END ) AS [db_suspect]
+		,SUM( CASE WHEN [state] IN (6,10) THEN 1 ELSE 0 END ) AS [db_offline]
+	FROM sys.databases
+) AS dbs	
+ORDER BY 
+	[start_time] DESC;
 `
 
 const sqlAzureMIResourceStats = `
