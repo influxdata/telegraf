@@ -29,53 +29,58 @@ SELECT TOP(1)
 	,[end_time]
 	,cast([avg_instance_memory_percent] as float) as [avg_instance_memory_percent] 
 	,cast([avg_instance_cpu_percent] as float) as [avg_instance_cpu_percent]
-FRO
+FROM
 	sys.dm_db_resource_stats WITH (NOLOCK)
 ORDER BY
-	[end_time] DESC
-END
+	[end_time] DESC;
 `
 
 // Resource Governamce is only relevant to Azure SQL DB into separate collector
 // This will only be collected for Azure SQL Database.
 const sqlAzureDBResourceGovernance string = `
-IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
+SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - the instance "'+ @@SERVERNAME +'" is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
 SELECT
-  'sqlserver_db_resource_governance' AS [measurement],
-   REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-   DB_NAME() as [database_name],
-   slo_name,
-	dtu_limit,
-	max_cpu,
-	cap_cpu,
-	instance_cap_cpu,
-	max_db_memory,
-	max_db_max_size_in_mb,
-	db_file_growth_in_mb,
-	log_size_in_mb,
-	instance_max_worker_threads,
-	primary_group_max_workers,
-	instance_max_log_rate,
-	primary_min_log_rate,
-	primary_max_log_rate,
-	primary_group_min_io,
-	primary_group_max_io,
-	primary_group_min_cpu,
-	primary_group_max_cpu,
-	primary_pool_max_workers,
-	pool_max_io,
-	checkpoint_rate_mbps,
-	checkpoint_rate_io,
-	volume_local_iops,
-	volume_managed_xstore_iops,
-	volume_external_xstore_iops,
-	volume_type_local_iops,
-	volume_type_managed_xstore_iops,
-	volume_type_external_xstore_iops,
-	volume_pfs_iops,
-	volume_type_pfs_iops
-    FROM
-    sys.dm_user_db_resource_governance WITH (NOLOCK);
+	'sqlserver_db_resource_governance' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,DB_NAME() as [database_name]
+	,[slo_name]
+	,[dtu_limit]
+	,[max_cpu]
+	,[cap_cpu]
+	,[instance_cap_cpu]
+	,[max_db_memory]
+	,[max_db_max_size_in_mb]
+	,[db_file_growth_in_mb]
+	,[log_size_in_mb]
+	,[instance_max_worker_threads]
+	,[primary_group_max_workers]
+	,[instance_max_log_rate]
+	,[primary_min_log_rate]
+	,[primary_max_log_rate]
+	,[primary_group_min_io]
+	,[primary_group_max_io]
+	,[primary_group_min_cpu]
+	,[primary_group_max_cpu]
+	,[primary_pool_max_workers]
+	,[pool_max_io]
+	,[checkpoint_rate_mbps]
+	,[checkpoint_rate_io]
+	,[volume_local_iops]
+	,[volume_managed_xstore_iops]
+	,[volume_external_xstore_iops]
+	,[volume_type_local_iops]
+	,[volume_type_managed_xstore_iops]
+	,[volume_type_external_xstore_iops]
+	,[volume_pfs_iops]
+	,[volume_type_pfs_iops]
+FROM 
+	sys.dm_user_db_resource_governance WITH (NOLOCK);
 `
 
 // DB level wait stats that are only relevant to Azure SQL DB into separate collector
