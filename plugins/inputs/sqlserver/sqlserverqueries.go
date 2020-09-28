@@ -1115,10 +1115,15 @@ FROM sys.dm_exec_sessions AS s
 LEFT OUTER JOIN sys.dm_exec_requests AS r
 	ON s.[session_id] = r.[session_id]
 OUTER APPLY sys.dm_exec_sql_text(r.[sql_handle]) AS qt
-WHERE 1 = 1
-	AND (r.[session_id] IS NOT NULL AND (s.is_user_process = 1
-	OR r.[status] COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')))
-	OR  (s.[session_id] IN (SELECT blocking_session_id FROM #blockingSessions))
+WHERE
+	(s.[session_id] IN (SELECT blocking_session_id FROM #blockingSessions))
+	OR (
+		r.[session_id] IS NOT NULL
+		AND (
+			s.is_user_process = 1 
+			OR r.[status] COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')
+		)
+	)
 OPTION(MAXDOP 1)'
 
 EXEC sp_executesql @SqlStatement
