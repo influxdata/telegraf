@@ -157,6 +157,16 @@ clean:
 	rm -f telegraf.exe
 	rm -rf build
 
+# In order to specify which tag to build provide GIT_TAG environment variables with desired revision
+.PHONY: build-release-binaries-in-docker
+build-release-binaries-in-docker:
+	@./scripts/build-release-binaries-in-docker.sh
+
+# In order to specify which tag to build provide GIT_TAG environment variables with desired revision
+.PHONY: build-release-binaries-locally
+build-release-binaries-locally:
+	@./scripts/build-release-binaries.sh
+
 .PHONY: docker-image
 docker-image:
 	docker build -f scripts/stretch.docker -t "telegraf:$(commit)" .
