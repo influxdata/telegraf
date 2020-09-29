@@ -9,7 +9,6 @@ import (
 //------------------------------------------------------------------------------------------------
 // Only executed if AzureDB flag is set
 const sqlAzureDBResourceStats string = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -41,7 +40,6 @@ ORDER BY
 // Resource Governamce is only relevant to Azure SQL DB into separate collector
 // This will only be collected for Azure SQL Database.
 const sqlAzureDBResourceGovernance string = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -89,7 +87,6 @@ FROM
 // DB level wait stats that are only relevant to Azure SQL DB into separate collector
 // This will only be collected for Azure SQL Database.
 const sqlAzureDBWaitStats string = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -213,7 +210,6 @@ WHERE
 `
 
 const sqlAzureDBProperties = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -250,7 +246,6 @@ SELECT
 `
 
 const sqlAzureDBOsWaitStats = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -367,7 +362,6 @@ AND [wait_time_ms] > 100;
 `
 
 const sqlAzureDBMemoryClerks = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -562,7 +556,6 @@ OPTION (RECOMPILE);
 `
 
 const sqlAzureDBRequests string = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -634,7 +627,6 @@ OPTION(MAXDOP 1);
 `
 
 const sqlAzureDBSchedulers string = `
-SET DEADLOCK_PRIORITY -10;
 SELECT
 	 'sqlserver_schedulers' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
@@ -661,7 +653,6 @@ FROM sys.dm_os_schedulers AS s
 //------------------ Azure Managed Instance ------------------------------------------------------
 //------------------------------------------------------------------------------------------------
 const sqlAzureMIProperties = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -701,7 +692,6 @@ ORDER BY
 `
 
 const sqlAzureMIResourceStats = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -717,7 +707,6 @@ FROM
 `
 
 const sqlAzureMIResourceGovernance string = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -772,7 +761,6 @@ WHERE
 `
 
 const sqlAzureMIMemoryClerks = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -793,7 +781,6 @@ OPTION(RECOMPILE);
 `
 
 const sqlAzureMIOsWaitStats = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -1081,7 +1068,6 @@ OPTION (RECOMPILE);
 `
 
 const sqlAzureMIRequests string = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
@@ -1154,7 +1140,6 @@ OPTION(MAXDOP 1);
 `
 
 const sqlAzureMISchedulers string = `
-SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
