@@ -7,10 +7,11 @@
 # Example Output:
 # json,label=hero count=14i 1465839830100400201
 
-load("json", "encode", "decode", "indent")
+load("starlarkjson", "json")
+# loads json.encode(), json.decode(), json.indent()
 
 def apply(metric):
-    j = decode(metric.fields.get('value'))
+    j = json.decode(metric.fields.get('value'))
     metric.fields.pop('value')
     metric.tags["label"] = j["label"]
     metric.fields["count"] = j["count"]

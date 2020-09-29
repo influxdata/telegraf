@@ -218,8 +218,10 @@ func init() {
 
 func loadFunc(thread *starlark.Thread, module string) (starlark.StringDict, error) {
 	switch module {
-	case "json":
-		return starlarkjson.Module.Members, nil
+	case "starlarkjson":
+		return starlark.StringDict{
+			"json": starlarkjson.Module,
+		}, nil
 	default:
 		return nil, errors.New("module " + module + " is not available")
 	}
