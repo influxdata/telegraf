@@ -17,7 +17,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+type RedisCommand struct {
+	Command []interface{}
+	Key     string
+	Type    string
+}
+
 type Redis struct {
+	Commands []*RedisCommand
 	Servers  []string
 	Password string
 	tls.ClientConfig
@@ -29,6 +36,7 @@ type Redis struct {
 }
 
 type Client interface {
+	Do(returnType string, args ...interface{}) (interface{}, error)
 	Info() *redis.StringCmd
 	BaseTags() map[string]string
 }
@@ -36,6 +44,37 @@ type Client interface {
 type RedisClient struct {
 	client *redis.Client
 	tags   map[string]string
+}
+
+func (r *RedisClient) Do(returnType string, args ...interface{}) (interface{}, error) {
+	rawVal := r.client.Do(args...)
+
+	switch returnType {
+	case "integer":
+		intVal, err := rawVal.Int64()
+		if err != nil {
+			return nil, err
+		}
+		return intVal, nil
+	case "string":
+		strVal, err := rawVal.String()
+		if err != nil {
+			return nil, err
+		}
+		return strVal, nil
+	case "float":
+		floatVal, err := rawVal.Float64()
+		if err != nil {
+			return nil, err
+		}
+		return floatVal, nil
+	default:
+		strVal, err := rawVal.String()
+		if err != nil {
+			return nil, err
+		}
+		return strVal, nil
+	}
 }
 
 func (r *RedisClient) Info() *redis.StringCmd {
@@ -63,6 +102,11 @@ var sampleConfig = `
   ## If no servers are specified, then localhost is used as the host.
   ## If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
+
+  ## Optional. Specify redis commands to retrieve values, under key "commands"
+  # command = ["get", "sample-key"]
+  # key = "sample-key-value"
+  # type = "string"
 
   ## specify server password
   # password = "s#cr@t%"
@@ -179,10 +223,27 @@ func (r *Redis) Gather(acc telegraf.Accumulator) error {
 		go func(client Client) {
 			defer wg.Done()
 			acc.AddError(r.gatherServer(client, acc))
+			acc.AddError(r.gatherCommandValues(client, acc))
 		}(client)
 	}
 
 	wg.Wait()
+	return nil
+}
+
+func (r *Redis) gatherCommandValues(client Client, acc telegraf.Accumulator) error {
+	fields := make(map[string]interface{})
+	for _, command := range r.Commands {
+		val, err := client.Do(command.Type, command.Command...)
+		if err != nil {
+			return err
+		}
+
+		fields[command.Key] = val
+	}
+
+	acc.AddFields("redis_commands", fields, client.BaseTags())
+
 	return nil
 }
 
