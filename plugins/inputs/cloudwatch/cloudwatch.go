@@ -35,14 +35,13 @@ type CloudWatch struct {
 	StatisticInclude []string        `toml:"statistic_include"`
 	Timeout          config.Duration `toml:"timeout"`
 
-	Period    config.Duration `toml:"period"`
-	Delay     config.Duration `toml:"delay"`
-	Namespace string          `toml:"namespace"`
-	Metrics   []*Metric       `toml:"metrics"`
-	CacheTTL  config.Duration `toml:"cache_ttl"`
-	RateLimit int             `toml:"ratelimit"`
-	RecentlyActive string     `toml:"recently_active"`
-
+	Period         config.Duration `toml:"period"`
+	Delay          config.Duration `toml:"delay"`
+	Namespace      string          `toml:"namespace"`
+	Metrics        []*Metric       `toml:"metrics"`
+	CacheTTL       config.Duration `toml:"cache_ttl"`
+	RateLimit      int             `toml:"ratelimit"`
+	RecentlyActive string          `toml:"recently_active"`
 
 	Log telegraf.Logger `toml:"-"`
 
