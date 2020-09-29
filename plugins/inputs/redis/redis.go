@@ -19,7 +19,7 @@ import (
 
 type RedisCommand struct {
 	Command []interface{}
-	Key     string
+	Field   string
 	Type    string
 }
 
@@ -51,29 +51,13 @@ func (r *RedisClient) Do(returnType string, args ...interface{}) (interface{}, e
 
 	switch returnType {
 	case "integer":
-		intVal, err := rawVal.Int64()
-		if err != nil {
-			return nil, err
-		}
-		return intVal, nil
+		return rawVal.Int64()
 	case "string":
-		strVal, err := rawVal.String()
-		if err != nil {
-			return nil, err
-		}
-		return strVal, nil
+		return rawVal.String()
 	case "float":
-		floatVal, err := rawVal.Float64()
-		if err != nil {
-			return nil, err
-		}
-		return floatVal, nil
+		return rawVal.Float64()
 	default:
-		strVal, err := rawVal.String()
-		if err != nil {
-			return nil, err
-		}
-		return strVal, nil
+		return rawVal.String()
 	}
 }
 
@@ -103,9 +87,10 @@ var sampleConfig = `
   ## If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
 
-  ## Optional. Specify redis commands to retrieve values, under key "commands"
+  ## Optional. Specify redis commands to retrieve values
+  # [[inputs.redis.commands]]
   # command = ["get", "sample-key"]
-  # key = "sample-key-value"
+  # field = "sample-key-value"
   # type = "string"
 
   ## specify server password
@@ -239,7 +224,7 @@ func (r *Redis) gatherCommandValues(client Client, acc telegraf.Accumulator) err
 			return err
 		}
 
-		fields[command.Key] = val
+		fields[command.Field] = val
 	}
 
 	acc.AddFields("redis_commands", fields, client.BaseTags())

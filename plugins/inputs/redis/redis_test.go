@@ -54,7 +54,7 @@ func TestRedis_Commands(t *testing.T) {
 
 	rc := &RedisCommand{
 		Command: []interface{}{"llen", "test-list"},
-		Key:     redisListKey,
+		Field:   redisListKey,
 		Type:    "integer",
 	}
 
