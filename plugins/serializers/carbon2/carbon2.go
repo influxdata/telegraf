@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/influxdata/telegraf"
 )
@@ -25,8 +24,7 @@ var formats = map[format]struct{}{
 }
 
 type Serializer struct {
-	metricsFormat     format
-	metricsFormatLock sync.RWMutex
+	metricsFormat format
 }
 
 func NewSerializer(metricsFormat string) (*Serializer, error) {
@@ -95,20 +93,14 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 }
 
 func (s *Serializer) SetMetricsFormat(f format) {
-	s.metricsFormatLock.Lock()
 	s.metricsFormat = f
-	s.metricsFormatLock.Unlock()
 }
 
 func (s *Serializer) getMetricsFormat() format {
-	s.metricsFormatLock.RLock()
-	defer s.metricsFormatLock.RUnlock()
 	return s.metricsFormat
 }
 
 func (s *Serializer) IsMetricsFormatUnset() bool {
-	s.metricsFormatLock.RLock()
-	defer s.metricsFormatLock.RUnlock()
 	return s.metricsFormat == Carbon2FormatFieldEmpty
 }
 
