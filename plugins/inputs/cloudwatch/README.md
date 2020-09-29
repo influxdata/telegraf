@@ -157,7 +157,7 @@ To maximize efficiency and savings, consider making fewer requests by increasing
 
 ### Measurements & Fields:
 
-Each CloudWatch Namespace monitored records a measurement with fields for each available Metric Statistic
+Each CloudWatch Namespace monitored records a measurement with fields for each available Metric Statistic.
 Namespace and Metrics are represented in [snake case](https://en.wikipedia.org/wiki/Snake_case)
 
 - cloudwatch_{namespace}
