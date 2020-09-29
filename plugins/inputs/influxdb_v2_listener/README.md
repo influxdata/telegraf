@@ -14,7 +14,7 @@ defer to the output plugins configuration.
 ```toml
 [[inputs.influxdb_v2_listener]]
   ## Address and port to host InfluxDB listener on
-  ## (Double check the port. Could be 9999 depending on version)
+  ## (Double check the port. Could be 9999 if using OSS Beta)
   service_address = ":8086"
 
   ## Maximum allowed HTTP request body size in bytes.

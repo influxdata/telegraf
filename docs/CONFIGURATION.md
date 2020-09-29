@@ -115,7 +115,7 @@ parsed:
 
 # For InfluxDB OSS 2:
 [[outputs.influxdb_v2]]
-  urls = ["http://127.0.0.1:8086"] # double check the port. could be 9999 depending on version
+  urls = ["http://127.0.0.1:8086"] # double check the port. could be 9999 if using OSS Beta
   token = "replace_with_your_token"
   org = "your_username"
   bucket = "replace_with_your_bucket_name"
