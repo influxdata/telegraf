@@ -16,9 +16,9 @@ var sampleConfig = `
   ## want to monitor if you have a large number of cgroups, to avoid
   ## any cardinality issues.
   # paths = [
-  #   "/cgroup/memory",
-  #   "/cgroup/memory/child1",
-  #   "/cgroup/memory/child2/*",
+  #   "/sys/fs/cgroup/memory",
+  #   "/sys/fs/cgroup/memory/child1",
+  #   "/sys/fs/cgroup/memory/child2/*",
   # ]
   ## cgroup stat fields, as file names, globs are supported.
   ## these file names are appended to each path from above.

@@ -1,4 +1,4 @@
-#New Relic output plugin
+# New Relic output plugin
 
 This plugins writes to New Relic Insights using the [Metrics API][].
 

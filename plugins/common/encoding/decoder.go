@@ -7,8 +7,6 @@ import (
 	"golang.org/x/text/encoding/unicode"
 )
 
-type Decoder = encoding.Decoder
-
 // NewDecoder returns a x/text Decoder for the specified text encoding.  The
 // Decoder converts a character encoding into utf-8 bytes.  If a BOM is found
 // it will be converted into a utf-8 BOM, you can use
@@ -24,13 +22,13 @@ type Decoder = encoding.Decoder
 func NewDecoder(enc string) (*Decoder, error) {
 	switch enc {
 	case "utf-8":
-		return unicode.UTF8.NewDecoder(), nil
+		return &Decoder{Transformer: unicode.UTF8.NewDecoder()}, nil
 	case "utf-16le":
-		return unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder(), nil
+		return newDecoder(unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder()), nil
 	case "utf-16be":
-		return unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM).NewDecoder(), nil
+		return newDecoder(unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM).NewDecoder()), nil
 	case "none", "":
-		return encoding.Nop.NewDecoder(), nil
+		return newDecoder(encoding.Nop.NewDecoder()), nil
 	}
 	return nil, errors.New("unknown character encoding")
 }
