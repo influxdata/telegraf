@@ -7,7 +7,7 @@
 # Example Output:
 # json,label=hero count=14i 1465839830100400201
 
-load("starlarkjson", "json")
+load("json.star", "json")
 # loads json.encode(), json.decode(), json.indent()
 
 def apply(metric):

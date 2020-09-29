@@ -218,7 +218,7 @@ func init() {
 
 func loadFunc(thread *starlark.Thread, module string) (starlark.StringDict, error) {
 	switch module {
-	case "starlarkjson":
+	case "json.star":
 		return starlark.StringDict{
 			"json": starlarkjson.Module,
 		}, nil
