@@ -62,6 +62,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 		switch metricsFormat {
 		// Field separate is the default when no format specified.
 		case Carbon2FormatFieldEmpty:
+			fallthrough
 		case Carbon2FormatFieldSeparate:
 			m.WriteString(serializeMetricFieldSeparate(
 				metric.Name(), fieldName,

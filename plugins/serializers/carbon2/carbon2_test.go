@@ -39,6 +39,11 @@ func TestSerializeMetricFloat(t *testing.T) {
 			expected: fmt.Sprintf("metric=cpu field=usage_idle cpu=cpu0  91.5 %d\n", now.Unix()),
 		},
 		{
+			// Fall back to separate field name
+			format:   Carbon2FormatFieldEmpty,
+			expected: fmt.Sprintf("metric=cpu field=usage_idle cpu=cpu0  91.5 %d\n", now.Unix()),
+		},
+		{
 			format:   Carbon2FormatMetricIncludesField,
 			expected: fmt.Sprintf("metric=cpu_usage_idle cpu=cpu0  91.5 %d\n", now.Unix()),
 		},
@@ -74,6 +79,11 @@ func TestSerializeMetricWithEmptyStringTag(t *testing.T) {
 	}{
 		{
 			format:   Carbon2FormatFieldSeparate,
+			expected: fmt.Sprintf("metric=cpu field=usage_idle cpu=null  91.5 %d\n", now.Unix()),
+		},
+		{
+			// Fall back to separate field name
+			format:   Carbon2FormatFieldEmpty,
 			expected: fmt.Sprintf("metric=cpu field=usage_idle cpu=null  91.5 %d\n", now.Unix()),
 		},
 		{
@@ -115,6 +125,11 @@ func TestSerializeWithSpaces(t *testing.T) {
 			expected: fmt.Sprintf("metric=cpu_metric field=usage_idle_1 cpu_0=cpu_0  91.5 %d\n", now.Unix()),
 		},
 		{
+			// Fall back to separate field name
+			format:   Carbon2FormatFieldEmpty,
+			expected: fmt.Sprintf("metric=cpu_metric field=usage_idle_1 cpu_0=cpu_0  91.5 %d\n", now.Unix()),
+		},
+		{
 			format:   Carbon2FormatMetricIncludesField,
 			expected: fmt.Sprintf("metric=cpu_metric_usage_idle_1 cpu_0=cpu_0  91.5 %d\n", now.Unix()),
 		},
@@ -150,6 +165,11 @@ func TestSerializeMetricInt(t *testing.T) {
 	}{
 		{
 			format:   Carbon2FormatFieldSeparate,
+			expected: fmt.Sprintf("metric=cpu field=usage_idle cpu=cpu0  90 %d\n", now.Unix()),
+		},
+		{
+			// Fall back to separate field name
+			format:   Carbon2FormatFieldEmpty,
 			expected: fmt.Sprintf("metric=cpu field=usage_idle cpu=cpu0  90 %d\n", now.Unix()),
 		},
 		{
@@ -191,6 +211,10 @@ func TestSerializeMetricString(t *testing.T) {
 			expected: "",
 		},
 		{
+			format:   Carbon2FormatFieldEmpty,
+			expected: "",
+		},
+		{
 			format:   Carbon2FormatMetricIncludesField,
 			expected: "",
 		},
@@ -229,6 +253,13 @@ func TestSerializeBatch(t *testing.T) {
 	}{
 		{
 			format: Carbon2FormatFieldSeparate,
+			expected: `metric=cpu field=value  42 0
+metric=cpu field=value  42 0
+`,
+		},
+		{
+			// Fall back to separate field name
+			format: Carbon2FormatFieldEmpty,
 			expected: `metric=cpu field=value  42 0
 metric=cpu field=value  42 0
 `,
