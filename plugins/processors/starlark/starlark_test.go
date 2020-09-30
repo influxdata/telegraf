@@ -2793,6 +2793,7 @@ def apply(metric):
 		})
 	}
 }
+
 func TestAllScriptTestData(t *testing.T) {
 	// can be run from multiple folders
 	paths := []string{"testdata", "plugins/processors/starlark/testdata"}

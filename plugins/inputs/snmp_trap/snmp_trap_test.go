@@ -224,11 +224,12 @@ func TestReceiveTrap(t *testing.T) {
 				testutil.MustMetric(
 					"snmp_trap", // name
 					map[string]string{ // tags
-						"oid":     ".1.3.6.1.6.3.1.1.5.1",
-						"name":    "coldStart",
-						"mib":     "SNMPv2-MIB",
-						"version": "2c",
-						"source":  "127.0.0.1",
+						"oid":       ".1.3.6.1.6.3.1.1.5.1",
+						"name":      "coldStart",
+						"mib":       "SNMPv2-MIB",
+						"version":   "2c",
+						"source":    "127.0.0.1",
+						"community": "public",
 					},
 					map[string]interface{}{ // fields
 						"sysUpTimeInstance": now,
@@ -305,6 +306,7 @@ func TestReceiveTrap(t *testing.T) {
 						"version":       "1",
 						"source":        "127.0.0.1",
 						"agent_address": "10.20.30.40",
+						"community":     "public",
 					},
 					map[string]interface{}{ // fields
 						"sysUpTimeInstance": uint(now),
@@ -358,6 +360,7 @@ func TestReceiveTrap(t *testing.T) {
 						"version":       "1",
 						"source":        "127.0.0.1",
 						"agent_address": "10.20.30.40",
+						"community":     "public",
 					},
 					map[string]interface{}{ // fields
 						"sysUpTimeInstance": uint(now),
