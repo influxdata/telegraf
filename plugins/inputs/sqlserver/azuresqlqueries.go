@@ -627,6 +627,12 @@ OPTION(MAXDOP 1);
 `
 
 const sqlAzureDBSchedulers string = `
+IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
 SELECT
 	 'sqlserver_schedulers' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
