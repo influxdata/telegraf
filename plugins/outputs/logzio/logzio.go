@@ -60,6 +60,13 @@ type Logzio struct {
 	sender *lg.LogzioSender
 }
 
+type Metric struct {
+	Metric     map[string]interface{} `json:"metrics"`
+	Dimensions map[string]string      `json:"dimensions"`
+	Time       time.Time              `json:"@timestamp"`
+	Type       string                 `json:"type"`
+}
+
 func (l *Logzio) initializeSender() error {
 	if l.Token == "" || l.Token == "your logz.io token" {
 		return fmt.Errorf("[logzio] token is required")
@@ -124,15 +131,14 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 
 	log.Printf("D! [logzio] Recived %d metrics\n", len(metrics))
 	for _, metric := range metrics {
-		var name = metric.Name()
-		m := make(map[string]interface{})
-
-		m["@timestamp"] = metric.Time()
-		m["measurement_name"] = name
-		m["telegraf_tags"] = metric.Tags()
-		m["value_type"] = metric.Type()
-		m["type"] = logzioType
-		m[name] = metric.Fields()
+		m := &Metric{
+			Metric: map[string]interface{}{
+				metric.Name(): metric.Fields(),
+			},
+			Dimensions: metric.Tags(),
+			Time:       metric.Time(),
+			Type:       logzioType,
+		}
 
 		serialized, err := json.Marshal(m)
 		if err != nil {
