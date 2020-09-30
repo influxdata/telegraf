@@ -122,11 +122,19 @@ func (s *SumoLogic) SetSerializer(serializer serializers.Serializer) {
 		s.headers = make(map[string]string)
 	}
 
-	switch serializer.(type) {
+	switch sr := serializer.(type) {
 	case *carbon2.Serializer:
 		s.headers[contentTypeHeader] = carbon2ContentType
+
+		// In case Carbon2 is used and the metrics format was unset, default to
+		// include field in metric name.
+		if sr.IsMetricsFormatUnset() {
+			sr.SetMetricsFormat(carbon2.Carbon2FormatMetricIncludesField)
+		}
+
 	case *graphite.GraphiteSerializer:
 		s.headers[contentTypeHeader] = graphiteContentType
+
 	case *prometheus.Serializer:
 		s.headers[contentTypeHeader] = prometheusContentType
 

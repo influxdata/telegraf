@@ -12,35 +12,29 @@ import (
 type format string
 
 const (
-	Carbon2FormatFieldSeparate       string = "field_separate"
-	Carbon2FormatMetricIncludesField string = "metric_includes_field"
-
-	formatFieldSeparate       = format(Carbon2FormatFieldSeparate)
-	formatMetricIncludesField = format(Carbon2FormatMetricIncludesField)
+	Carbon2FormatFieldEmpty          = format("")
+	Carbon2FormatFieldSeparate       = format("field_separate")
+	Carbon2FormatMetricIncludesField = format("metric_includes_field")
 )
 
-var formats = map[string]format{
-	// Field separate is the default when no format specified.
-	"":                               formatFieldSeparate,
-	Carbon2FormatFieldSeparate:       formatFieldSeparate,
-	Carbon2FormatMetricIncludesField: formatMetricIncludesField,
+var formats = map[format]struct{}{
+	Carbon2FormatFieldEmpty:          {},
+	Carbon2FormatFieldSeparate:       {},
+	Carbon2FormatMetricIncludesField: {},
 }
 
 type Serializer struct {
 	metricsFormat format
 }
 
-func NewSerializer(f string) (*Serializer, error) {
-	var (
-		ok            bool
-		metricsFormat format
-	)
-	if metricsFormat, ok = formats[f]; !ok {
+func NewSerializer(metricsFormat string) (*Serializer, error) {
+	var f = format(metricsFormat)
+	if _, ok := formats[f]; !ok {
 		return nil, fmt.Errorf("unknown carbon2 format: %s", f)
 	}
 
 	return &Serializer{
-		metricsFormat: metricsFormat,
+		metricsFormat: f,
 	}, nil
 }
 
@@ -58,17 +52,22 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 	var m bytes.Buffer
+	metricsFormat := s.getMetricsFormat()
+
 	for fieldName, fieldValue := range metric.Fields() {
 		if !isNumeric(fieldValue) {
 			continue
 		}
 
-		switch s.metricsFormat {
-		case formatFieldSeparate:
+		switch metricsFormat {
+		// Field separate is the default when no format specified.
+		case Carbon2FormatFieldEmpty:
+		case Carbon2FormatFieldSeparate:
 			m.WriteString(serializeMetricFieldSeparate(
 				metric.Name(), fieldName,
 			))
-		case formatMetricIncludesField:
+
+		case Carbon2FormatMetricIncludesField:
 			m.WriteString(serializeMetricIncludeField(
 				metric.Name(), fieldName,
 			))
@@ -91,6 +90,18 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 		m.WriteString("\n")
 	}
 	return m.Bytes()
+}
+
+func (s *Serializer) SetMetricsFormat(f format) {
+	s.metricsFormat = f
+}
+
+func (s *Serializer) getMetricsFormat() format {
+	return s.metricsFormat
+}
+
+func (s *Serializer) IsMetricsFormatUnset() bool {
+	return s.metricsFormat == Carbon2FormatFieldEmpty
 }
 
 func serializeMetricFieldSeparate(name, fieldName string) string {
