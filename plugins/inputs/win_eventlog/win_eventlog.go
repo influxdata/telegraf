@@ -20,7 +20,6 @@ import (
 )
 
 var sampleConfig = `
-[[inputs.win_eventlog]]
   ## Telegraf should have Administrator permissions to subscribe for some Windows Events channels
   ## (System log, for example)
 
