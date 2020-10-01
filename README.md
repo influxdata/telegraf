@@ -211,6 +211,7 @@ For documentation on the latest development code see the [documentation index][d
 * [infiniband](./plugins/inputs/infiniband)
 * [influxdb](./plugins/inputs/influxdb)
 * [influxdb_listener](./plugins/inputs/influxdb_listener)
+* [intel_rdt](./plugins/inputs/intel_rdt)
 * [internal](./plugins/inputs/internal)
 * [interrupts](./plugins/inputs/interrupts)
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)

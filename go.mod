@@ -109,6 +109,7 @@ require (
 	github.com/prometheus/client_golang v1.5.1
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.9.1
+	github.com/prometheus/procfs v0.0.8
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec // indirect
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
