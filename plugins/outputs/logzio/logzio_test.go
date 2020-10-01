@@ -1,13 +1,28 @@
 package logzio
 
 import (
+	"fmt"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"os"
 	"testing"
+	"time"
 )
 
+func defaultLogzio() *Logzio {
+	return &Logzio{
+		CheckDiskSpace: defaultLogzioCheckDiskSpace,
+		DiskThreshold:  defaultLogzioDiskThreshold,
+		DrainDuration:  defaultLogzioDrainDuration,
+		Log:            testutil.Logger{},
+		QueueDir: fmt.Sprintf("%s%s%s%s%d", os.TempDir(), string(os.PathSeparator),
+			"logzio-queue", string(os.PathSeparator), time.Now().UnixNano()),
+		URL: defaultLogzioURL,
+	}
+}
+
 func TestNewLogzioOutput(t *testing.T) {
-	l := CreateDefultLogizoOutput()
+	l := defaultLogzio()
 	require.Equal(t, l.CheckDiskSpace, defaultLogzioCheckDiskSpace)
 	require.Equal(t, l.DiskThreshold, defaultLogzioDiskThreshold)
 	require.Equal(t, l.DrainDuration, defaultLogzioDrainDuration)
@@ -17,7 +32,7 @@ func TestNewLogzioOutput(t *testing.T) {
 }
 
 func TestConnectAndWrite(t *testing.T) {
-	l := CreateDefultLogizoOutput()
+	l := defaultLogzio()
 	l.Token = "123456789"
 
 	err := l.Connect()
@@ -29,7 +44,7 @@ func TestConnectAndWrite(t *testing.T) {
 }
 
 func TestLogzioConnectWitoutToken(t *testing.T) {
-	l := CreateDefultLogizoOutput()
+	l := defaultLogzio()
 	err := l.Connect()
 	require.Error(t, err)
 }

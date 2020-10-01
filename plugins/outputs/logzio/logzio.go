@@ -3,7 +3,6 @@ package logzio
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -50,12 +49,13 @@ var sampleConfig = `
 `
 
 type Logzio struct {
-	CheckDiskSpace bool   `toml:"check_disk_space"`
-	DiskThreshold  int    `toml:"disk_threshold"`
-	DrainDuration  string `toml:"drain_duration"`
-	QueueDir       string `toml:"queue_dir"`
-	Token          string `toml:"token"`
-	URL            string `toml:"url"`
+	CheckDiskSpace bool            `toml:"check_disk_space"`
+	DiskThreshold  int             `toml:"disk_threshold"`
+	DrainDuration  string          `toml:"drain_duration"`
+	Log            telegraf.Logger `toml:"-"`
+	QueueDir       string          `toml:"queue_dir"`
+	Token          string          `toml:"token"`
+	URL            string          `toml:"url"`
 
 	sender *lg.LogzioSender
 }
@@ -69,17 +69,17 @@ type Metric struct {
 
 func (l *Logzio) initializeSender() error {
 	if l.Token == "" || l.Token == "your logz.io token" {
-		return fmt.Errorf("[logzio] token is required")
+		return fmt.Errorf("token is required")
 	}
 
 	drainDuration, err := time.ParseDuration(l.DrainDuration)
 	if err != nil {
-		return fmt.Errorf("[logzio] failed to parse drain_duration: %s", err)
+		return fmt.Errorf("failed to parse drain_duration: %s", err)
 	}
 
 	diskThreshold := l.DiskThreshold
 	if diskThreshold < minDiskThreshold || diskThreshold > maxDiskThreshold {
-		return fmt.Errorf("[logzio] threshold has to be between %d and %d", minDiskThreshold, maxDiskThreshold)
+		return fmt.Errorf("threshold has to be between %d and %d", minDiskThreshold, maxDiskThreshold)
 	}
 
 	l.sender, err = lg.New(
@@ -92,23 +92,23 @@ func (l *Logzio) initializeSender() error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("[logzio] failed to create new logzio sender: %v", err)
+		return fmt.Errorf("failed to create new logzio sender: %v", err)
 	}
 
-	log.Printf("I! [logzio] Successfuly created Logz.io sender: %s %s %s %d\n", l.URL, l.QueueDir,
+	l.Log.Infof("Successfuly created Logz.io sender: %s %s %s %d", l.URL, l.QueueDir,
 		l.DrainDuration, l.DiskThreshold)
 	return nil
 }
 
 // Connect to the Output
 func (l *Logzio) Connect() error {
-	log.Printf("D! [logzio] Connecting to logz.io output...\n")
+	l.Log.Debug("Connecting to logz.io output...")
 	return l.initializeSender()
 }
 
 // Close any connections to the Output
 func (l *Logzio) Close() error {
-	log.Printf("D! [logzio] Closing logz.io output\n")
+	l.Log.Debug("Closing logz.io output")
 	l.sender.Stop()
 	return nil
 }
@@ -129,7 +129,7 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	log.Printf("D! [logzio] Recived %d metrics\n", len(metrics))
+	l.Log.Debugf("Recived %d metrics", len(metrics))
 	for _, metric := range metrics {
 		m := &Metric{
 			Metric: map[string]interface{}{
@@ -142,11 +142,11 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 
 		serialized, err := json.Marshal(m)
 		if err != nil {
-			return fmt.Errorf("E! [logzio] Failed to marshal: %+v\n", m)
+			return fmt.Errorf("Failed to marshal: %+v\n", m)
 		}
 		err = l.sender.Send(serialized)
 		if err != nil {
-			return fmt.Errorf("E! [logzio] Failed to send metric: %v\n", err)
+			return fmt.Errorf("Failed to send metric: %v\n", err)
 		}
 	}
 
