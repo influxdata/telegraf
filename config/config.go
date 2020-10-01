@@ -1634,6 +1634,30 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 						}
 					}
 				}
+
+				if val, ok := subtbl.Fields["field_selection"]; ok {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						if str, ok := kv.Value.(*ast.String); ok {
+							c.XMLConfig[i].FieldSelection = str.Value
+						}
+					}
+				}
+
+				if val, ok := subtbl.Fields["field_name"]; ok {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						if str, ok := kv.Value.(*ast.String); ok {
+							c.XMLConfig[i].FieldNameQuery = str.Value
+						}
+					}
+				}
+
+				if val, ok := subtbl.Fields["field_value"]; ok {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						if str, ok := kv.Value.(*ast.String); ok {
+							c.XMLConfig[i].FieldValueQuery = str.Value
+						}
+					}
+				}
 			}
 		}
 	}
