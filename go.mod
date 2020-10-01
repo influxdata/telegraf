@@ -112,7 +112,7 @@ require (
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec // indirect
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
-	github.com/shirou/gopsutil v2.20.7+incompatible
+	github.com/shirou/gopsutil v2.20.9+incompatible
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/soniah/gosnmp v1.25.0
