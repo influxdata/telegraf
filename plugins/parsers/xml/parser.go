@@ -247,7 +247,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 					return nil, fmt.Errorf("failed to query field name with query '%s': %v", fieldnamequery, err)
 				}
 				name, ok := n.(string)
-				if ! ok {
+				if !ok {
 					return nil, fmt.Errorf("failed to query field name with query '%s': result is not a string (%v)", fieldnamequery, n)
 				}
 				v, err := executeQuery(doc, selectedfield, fieldvaluequery)

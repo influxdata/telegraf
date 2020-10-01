@@ -55,6 +55,54 @@ that need to be specified in a `fields_int` section.
 A configuration can contain muliple *xml* subsections for e.g. the file plugin to process the xml-string multiple times.
 Consult the [XPath syntax][xpath] and the [underlying library's functions][xpath lib] for details and help regarding XPath queries.
 
+Alternativly to the configuration above, fields can also be specified in a batch way. So contrary to specify the fields
+in a section, you can define a `name` and a `value` selector used to determine the name and value of the fields in the
+metric.
+```toml
+[[inputs.file]]
+  files = ["example.xml"]
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "xml"
+
+  ## Multiple parsing sections are allowed
+  [[inputs.file.xml]]
+    ## Optional: XPath-query to select a subset of nodes from the XML document.
+    selected_nodes = "/Bus/child::Sensor"
+
+    ## Optional: XPath-query to set the metric (measurement) name.
+    #metric_name = "string('example')"
+
+    ## Optional: Query to extract metric timestamp.
+    ## If not specified the time of execution is used.
+    #timestamp = "/Gateway/Timestamp"
+    ## Optional: Format of the timestamp determined by the query above.
+    ## This can be any of "unix", "unix_ms", "unix_us", "unix_ns" or a valid Golang
+    ## time format. If not specified, a "unix" timestamp (in seconds) is expected.
+    #timestamp_format = "2006-01-02T15:04:05Z"
+
+    ## Field specifications using a selector.
+    field_selection = "child::*"
+    ## Optional: Queries to specify field name and value.
+    ## These options are only to be used in combination with 'field_selection'!
+    ## By default the node name and node content is used if a field-selection
+    ## is specified.
+    #field_name  = "name()"
+    #field_value = "."
+
+    ## Tag definitions using the given XPath queries.
+    [inputs.file.xml.tags]
+      name   = "substring-after(Sensor/@name, ' ')"
+      device = "string('the ultimate sensor')"
+
+```
+*Please note*: The resulting fields are _always_ of type string!
+
+It is also possible to specify a mixture of the two alternative ways of specifying fields.
+
 #### selected_nodes (optional)
 
 You can specify a [XPath][xpath] query to select a subset of nodes from the XML document. For each of the selected nodes subsequent queries are performed to generate metrics with the specified fields, tags etc.
@@ -95,6 +143,19 @@ The type of the field is specified in the [XPath][xpath] query using the type co
 If no conversion is performed in the query the field will be of type string.
 
 **NOTE: Path conversion functions will always succeed even if you convert a text to float!**
+
+
+#### field_selection, field_name, field_value
+
+You can specify a [XPath][xpath] query to select a set of nodes forming the fields of the metric. The specified path can be absolute (starting with `/`) or relative to the currently selected node. Each node selected by `field_selection` forms a new field within the metric.
+
+The *name* and the *value* of each field can be specified using the optional `field_name` and `field_value` queries. The queries are relative to the selected field if not starting with `/`. If not specified the field's *name* defaults to the node name and the field's *value* defaults to the content of the selected field node.
+**NOTE**: `field_name` and `field_value` queries are only evaluated if a `field_selection` is specified.
+
+Specifying `field_selection` is optional. This is an alternative way to specify fields especially for documents where the node names are not known a priori or if there is a large number of fields to be specified. These options can also be combined with the field specifications above.
+
+**NOTE: Path conversion functions will always succeed even if you convert a text to float!**
+
 
 ### Examples
 
@@ -231,6 +292,41 @@ sensors,host=Hugin,name=Facility\ C consumers=0i,frequency=49.78,ok=false,power=
 ```
 
 Using the `selected_nodes` option we select all `Sensor` nodes in the XML document. Please note that all field and tag definitions are relative to these selected nodes. An exception is the timestamp definition which is relative to the root node of the XML document.
+
+#### Batch field processing with multi-node selection
+
+For XML documents containing metrics with a large number of fields or where the fields are not known before (e.g. an unknown set of `Variable` nodes in the *example.xml*), field selectors can be used. This example shows how to generate a metric for each *Sensor* in the example with fields derived from the *Variable* nodes.
+
+Config:
+```toml
+[[inputs.file]]
+  files = ["example.xml"]
+  data_format = "xml"
+
+  [[inputs.file.xml]]
+    selected_nodes = "/Bus/child::Sensor"
+    metric_name = "string('sensors')"
+
+    timestamp = "/Gateway/Timestamp"
+    timestamp_format = "2006-01-02T15:04:05Z"
+
+    field_selection = "child::Variable"
+    field_name = "name(@*[1])"
+    field_value = "number(@*[1])"
+
+    [inputs.file.xml.tags]
+      name = "substring-after(@name, ' ')"
+```
+
+Output:
+```
+sensors,host=Hugin,name=Facility\ A consumers=3,frequency=49.78,power=123.4,temperature=20 1596294243000000000
+sensors,host=Hugin,name=Facility\ B consumers=1,frequency=49.78,power=14.3,temperature=23.1 1596294243000000000
+sensors,host=Hugin,name=Facility\ C consumers=0,frequency=49.78,power=0.02,temperature=19.7 1596294243000000000
+```
+
+Using the `selected_nodes` option we select all `Sensor` nodes in the XML document. For each *Sensor* we then use `field_selection` to select all child nodes of the sensor as *field-nodes* Please note that the field selection is relative to the selected nodes.
+For each selected *field-node* we use `field_name` and `field_value` to determining the field's name and value, respectively. The `field_name` derives the name of the first attribute of the node, while `field_value` derives the value of the first attribute  and converts the result to a number.
 
 [xpath lib]:    https://github.com/antchfx/xpath
 [xml]:          https://www.w3.org/XML/
