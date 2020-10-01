@@ -751,6 +751,18 @@ func TestSeriesParser(t *testing.T) {
 				buf:        "cpu,a=",
 			},
 		},
+		{
+			name:    "error with carriage return in long line",
+			input:   []byte("cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b"),
+			metrics: []telegraf.Metric{},
+			err: &ParseError{
+				Offset:     1031,
+				LineNumber: 1,
+				Column:     1032,
+				msg:        "parse error",
+				buf:        "cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -762,6 +774,9 @@ func TestSeriesParser(t *testing.T) {
 
 			metrics, err := parser.Parse(tt.input)
 			require.Equal(t, tt.err, err)
+			if err != nil {
+				require.Equal(t, tt.err.Error(), err.Error())
+			}
 
 			require.Equal(t, len(tt.metrics), len(metrics))
 			for i, expected := range tt.metrics {

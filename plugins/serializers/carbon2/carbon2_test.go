@@ -31,7 +31,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	require.NoError(t, err)
 
 	testcases := []struct {
-		format   string
+		format   format
 		expected string
 	}{
 		{
@@ -45,8 +45,8 @@ func TestSerializeMetricFloat(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
+		t.Run(string(tc.format), func(t *testing.T) {
+			s, err := NewSerializer(string(tc.format))
 			require.NoError(t, err)
 
 			buf, err := s.Serialize(m)
@@ -69,7 +69,7 @@ func TestSerializeMetricWithEmptyStringTag(t *testing.T) {
 	require.NoError(t, err)
 
 	testcases := []struct {
-		format   string
+		format   format
 		expected string
 	}{
 		{
@@ -83,8 +83,8 @@ func TestSerializeMetricWithEmptyStringTag(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
+		t.Run(string(tc.format), func(t *testing.T) {
+			s, err := NewSerializer(string(tc.format))
 			require.NoError(t, err)
 
 			buf, err := s.Serialize(m)
@@ -107,7 +107,7 @@ func TestSerializeWithSpaces(t *testing.T) {
 	require.NoError(t, err)
 
 	testcases := []struct {
-		format   string
+		format   format
 		expected string
 	}{
 		{
@@ -121,8 +121,8 @@ func TestSerializeWithSpaces(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
+		t.Run(string(tc.format), func(t *testing.T) {
+			s, err := NewSerializer(string(tc.format))
 			require.NoError(t, err)
 
 			buf, err := s.Serialize(m)
@@ -145,7 +145,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	require.NoError(t, err)
 
 	testcases := []struct {
-		format   string
+		format   format
 		expected string
 	}{
 		{
@@ -159,8 +159,8 @@ func TestSerializeMetricInt(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
+		t.Run(string(tc.format), func(t *testing.T) {
+			s, err := NewSerializer(string(tc.format))
 			require.NoError(t, err)
 
 			buf, err := s.Serialize(m)
@@ -183,7 +183,7 @@ func TestSerializeMetricString(t *testing.T) {
 	assert.NoError(t, err)
 
 	testcases := []struct {
-		format   string
+		format   format
 		expected string
 	}{
 		{
@@ -197,8 +197,8 @@ func TestSerializeMetricString(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
+		t.Run(string(tc.format), func(t *testing.T) {
+			s, err := NewSerializer(string(tc.format))
 			require.NoError(t, err)
 
 			buf, err := s.Serialize(m)
@@ -224,7 +224,7 @@ func TestSerializeBatch(t *testing.T) {
 	metrics := []telegraf.Metric{m, m}
 
 	testcases := []struct {
-		format   string
+		format   format
 		expected string
 	}{
 		{
@@ -242,8 +242,8 @@ metric=cpu_value  42 0
 	}
 
 	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
+		t.Run(string(tc.format), func(t *testing.T) {
+			s, err := NewSerializer(string(tc.format))
 			require.NoError(t, err)
 
 			buf, err := s.SerializeBatch(metrics)
