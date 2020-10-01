@@ -27,6 +27,10 @@ type Config struct {
 	Tags         map[string]string
 	Fields       map[string]string
 	FieldsInt    map[string]string
+
+	FieldSelection  string
+	FieldNameQuery  string
+	FieldValueQuery string
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -218,6 +222,41 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 			return nil, fmt.Errorf("failed to query field '%s': %v", name, err)
 		}
 		fields[name] = v
+	}
+
+	// Handle the field batch definitions if any.
+	if len(config.FieldSelection) > 0 {
+		fieldnamequery := "name()"
+		fieldvaluequery := "."
+		if len(config.FieldNameQuery) > 0 {
+			fieldnamequery = config.FieldNameQuery
+		}
+		if len(config.FieldValueQuery) > 0 {
+			fieldvaluequery = config.FieldValueQuery
+		}
+
+		// Query all fields
+		selectedFieldNodes, err := xmlquery.QueryAll(selected, config.FieldSelection)
+		if err != nil {
+			return nil, err
+		}
+		if len(selectedFieldNodes) > 0 && selectedFieldNodes[0] != nil {
+			for _, selectedfield := range selectedFieldNodes {
+				n, err := executeQuery(doc, selectedfield, fieldnamequery)
+				if err != nil {
+					return nil, fmt.Errorf("failed to query field name with query '%s': %v", fieldnamequery, err)
+				}
+				name, ok := n.(string)
+				if ! ok {
+					return nil, fmt.Errorf("failed to query field name with query '%s': result is not a string (%v)", fieldnamequery, n)
+				}
+				v, err := executeQuery(doc, selectedfield, fieldvaluequery)
+				if err != nil {
+					return nil, fmt.Errorf("failed to query field value for '%s': %v", name, err)
+				}
+				fields[name] = v
+			}
+		}
 	}
 
 	return metric.New(metricname, tags, fields, timestamp)
