@@ -246,20 +246,6 @@ func TestContentType(t *testing.T) {
 			expectedBody: []byte("metric=cpu field=value  42 0\n"),
 		},
 		{
-			name: "carbon2 (data format unset) is supported and falls back to include field in metric name",
-			plugin: func() *SumoLogic {
-				s := Default()
-				s.headers = map[string]string{
-					contentTypeHeader: carbon2ContentType,
-				}
-				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldEmpty))
-				require.NoError(t, err)
-				s.SetSerializer(sr)
-				return s
-			},
-			expectedBody: []byte("metric=cpu_value  42 0\n"),
-		},
-		{
 			name: "carbon2 (data format = metric includes field) is supported",
 			plugin: func() *SumoLogic {
 				s := Default()
