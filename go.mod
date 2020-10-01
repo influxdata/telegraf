@@ -64,7 +64,6 @@ require (
 	github.com/golang/protobuf v1.3.5
 	github.com/google/go-cmp v0.4.0
 	github.com/google/go-github/v32 v32.1.0
-	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/gopcua/opcua v0.1.12
 	github.com/gorilla/mux v1.6.2
