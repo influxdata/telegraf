@@ -63,9 +63,9 @@ require (
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/protobuf v1.3.5
 	github.com/google/go-cmp v0.4.0
+	github.com/google/go-github/v32 v32.1.0
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/uuid v1.1.1
-	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.1.12
 	github.com/gorilla/mux v1.6.2
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
