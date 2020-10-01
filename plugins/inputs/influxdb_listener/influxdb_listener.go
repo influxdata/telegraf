@@ -12,7 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/selfstat"
@@ -29,13 +29,14 @@ type InfluxDBListener struct {
 	port           int
 	tlsint.ServerConfig
 
-	ReadTimeout   internal.Duration `toml:"read_timeout"`
-	WriteTimeout  internal.Duration `toml:"write_timeout"`
-	MaxBodySize   internal.Size     `toml:"max_body_size"`
-	MaxLineSize   internal.Size     `toml:"max_line_size"` // deprecated in 1.14; ignored
-	BasicUsername string            `toml:"basic_username"`
-	BasicPassword string            `toml:"basic_password"`
-	DatabaseTag   string            `toml:"database_tag"`
+	ReadTimeout        internal.Duration `toml:"read_timeout"`
+	WriteTimeout       internal.Duration `toml:"write_timeout"`
+	MaxBodySize        internal.Size     `toml:"max_body_size"`
+	MaxLineSize        internal.Size     `toml:"max_line_size"` // deprecated in 1.14; ignored
+	BasicUsername      string            `toml:"basic_username"`
+	BasicPassword      string            `toml:"basic_password"`
+	DatabaseTag        string            `toml:"database_tag"`
+	RetentionPolicyTag string            `toml:"retention_policy_tag"`
 
 	timeFunc influx.TimeFunc
 
@@ -72,11 +73,15 @@ const sampleConfig = `
   ## 0 means to use the default of 32MiB.
   max_body_size = "32MiB"
 
-  ## Optional tag name used to store the database. 
+  ## Optional tag name used to store the database.
   ## If the write has a database in the query string then it will be kept in this tag name.
   ## This tag can be used in downstream outputs.
   ## The default value of nothing means it will be off and the database will not be recorded.
   # database_tag = ""
+
+  ## If set the retention policy specified in the write query will be added as
+  ## the value of this tag name.
+  # retention_policy_tag = ""
 
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
@@ -255,6 +260,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 		}
 
 		db := req.URL.Query().Get("db")
+		rp := req.URL.Query().Get("rp")
 
 		body := req.Body
 		body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
@@ -314,6 +320,10 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 
 			if h.DatabaseTag != "" && db != "" {
 				m.AddTag(h.DatabaseTag, db)
+			}
+
+			if h.RetentionPolicyTag != "" && rp != "" {
+				m.AddTag(h.RetentionPolicyTag, rp)
 			}
 
 			h.acc.AddMetric(m)

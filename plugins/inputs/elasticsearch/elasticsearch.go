@@ -13,7 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
@@ -545,11 +545,12 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 		}
 
 		if e.IndicesLevel == "shards" {
-			for shardNumber, shard := range index.Shards {
-				if len(shard) > 0 {
+			for shardNumber, shards := range index.Shards {
+				for _, shard := range shards {
+
 					// Get Shard Stats
 					flattened := jsonparser.JSONFlattener{}
-					err := flattened.FullFlattenJSON("", shard[0], true, true)
+					err := flattened.FullFlattenJSON("", shard, true, true)
 					if err != nil {
 						return err
 					}

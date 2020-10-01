@@ -9,6 +9,16 @@ type Initializer interface {
 	Init() error
 }
 
+// PluginDescriber contains the functions all plugins must implement to describe
+// themselves to Telegraf
+type PluginDescriber interface {
+	// SampleConfig returns the default configuration of the Processor
+	SampleConfig() string
+
+	// Description returns a one-sentence description on the Processor
+	Description() string
+}
+
 // Logger defines an interface for logging.
 type Logger interface {
 	// Errorf logs an error message, patterned after log.Printf.

@@ -26,6 +26,10 @@ The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The 
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
 
+  ## Optional file with Bearer token
+  ## file content is added as an Authorization header
+  # bearer_token = "/path/to/file"
+
   ## Optional HTTP Basic Auth Credentials
   # username = "username"
   # password = "pa$$word"

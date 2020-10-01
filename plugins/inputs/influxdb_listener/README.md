@@ -54,6 +54,10 @@ submits data to InfluxDB determines the destination database.
   ## the tag will be overwritten with the database supplied.
   # database_tag = ""
 
+  ## If set the retention policy specified in the write query will be added as
+  ## the value of this tag name.
+  # retention_policy_tag = ""
+
   ## Optional username and password to accept for HTTP basic authentication.
   ## You probably want to make sure you have TLS configured above for this.
   # basic_username = "foobar"

@@ -57,7 +57,7 @@ type Metric interface {
 	Time() time.Time
 
 	// Type returns a general type for the entire metric that describes how you
-	// might interprete, aggregate the values.
+	// might interpret, aggregate the values.
 	//
 	// This method may be removed in the future and its use is discouraged.
 	Type() ValueType

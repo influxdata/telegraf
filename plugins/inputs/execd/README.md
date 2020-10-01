@@ -1,25 +1,32 @@
 # Execd Input Plugin
 
-The `execd` plugin runs an external program as a daemon. The programs must output metrics in any one of the accepted 
-[Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md) on its standard output.
+The `execd` plugin runs an external program as a long-running daemon. 
+The programs must output metrics in any one of the accepted 
+[Input Data Formats][] on the process's STDOUT, and is expected to
+stay running. If you'd instead like the process to collect metrics and then exit,
+check out the [inputs.exec][] plugin.
 
-The `signal` can be configured to send a signal the running daemon on each collection interval.
+The `signal` can be configured to send a signal the running daemon on each
+collection interval. This is used for when you want to have Telegraf notify the
+plugin when it's time to run collection. STDIN is recommended, which writes a
+new line to the process's STDIN.
 
-Program output on standard error is mirrored to the telegraf log.
+STDERR from the process will be relayed to Telegraf as errors in the logs.
 
 ### Configuration:
 
 ```toml
 [[inputs.execd]]
-  ## Program to run as daemon
+  ## One program to run as daemon.
+  ## NOTE: process and each argument should each be their own string
   command = ["telegraf-smartctl", "-d", "/dev/sda"]
 
   ## Define how the process is signaled on each collection interval.
   ## Valid values are:
-  ##   "none"    : Do not signal anything.
-  ##              The process must output metrics by itself.
-  ##   "STDIN"   : Send a newline on STDIN.
-  ##   "SIGHUP"  : Send a HUP signal. Not available on Windows.
+  ##   "none"    : Do not signal anything. (Recommended for service inputs)
+  ##               The process must output metrics by itself.
+  ##   "STDIN"   : Send a newline on STDIN. (Recommended for gather inputs)
+  ##   "SIGHUP"  : Send a HUP signal. Not available on Windows. (not recommended)
   ##   "SIGUSR1" : Send a USR1 signal. Not available on Windows.
   ##   "SIGUSR2" : Send a USR2 signal. Not available on Windows.
   signal = "none"
@@ -110,3 +117,6 @@ end
   command = ["plugins/inputs/execd/examples/count.rb"]
   signal = "none"
 ```
+
+[Input Data Formats]: https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+[inputs.exec]: https://github.com/influxdata/telegraf/blob/master/plugins/inputs/exec/README.md

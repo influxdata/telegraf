@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v32/github"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -24,7 +24,7 @@ type GitHub struct {
 	HTTPTimeout       internal.Duration `toml:"http_timeout"`
 	githubClient      *github.Client
 
-	obfusticatedToken string
+	obfuscatedToken string
 
 	RateLimit       selfstat.Stat
 	RateLimitErrors selfstat.Stat
@@ -67,7 +67,7 @@ func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error)
 		Timeout: g.HTTPTimeout.Duration,
 	}
 
-	g.obfusticatedToken = "Unauthenticated"
+	g.obfuscatedToken = "Unauthenticated"
 
 	if g.AccessToken != "" {
 		tokenSource := oauth2.StaticTokenSource(
@@ -76,7 +76,7 @@ func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error)
 		oauthClient := oauth2.NewClient(ctx, tokenSource)
 		ctx = context.WithValue(ctx, oauth2.HTTPClient, oauthClient)
 
-		g.obfusticatedToken = g.AccessToken[0:4] + "..." + g.AccessToken[len(g.AccessToken)-3:]
+		g.obfuscatedToken = g.AccessToken[0:4] + "..." + g.AccessToken[len(g.AccessToken)-3:]
 
 		return g.newGithubClient(oauthClient)
 	}
@@ -105,7 +105,7 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 		g.githubClient = githubClient
 
 		tokenTags := map[string]string{
-			"access_token": g.obfusticatedToken,
+			"access_token": g.obfuscatedToken,
 		}
 
 		g.RateLimitErrors = selfstat.Register("github", "rate_limit_blocks", tokenTags)

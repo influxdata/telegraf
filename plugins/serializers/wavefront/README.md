@@ -9,7 +9,7 @@ The `wavefront` serializer translates the Telegraf metric format to the [Wavefro
   files = ["stdout"]
 
   ## Use Strict rules to sanitize metric and tag names from invalid characters
-  ## When enabled forward slash (/) and comma (,) will be accpeted
+  ## When enabled forward slash (/) and comma (,) will be accepted
   # wavefront_use_strict = false
 
   ## point tags to use as the source name for Wavefront (if none found, host will be used)

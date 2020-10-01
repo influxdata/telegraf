@@ -39,6 +39,11 @@ func (ki *KubernetesInventory) gatherStatefulSet(s v1.StatefulSet, acc telegraf.
 		"statefulset_name": *s.Metadata.Name,
 		"namespace":        *s.Metadata.Namespace,
 	}
+	for key, val := range s.GetSpec().GetSelector().GetMatchLabels() {
+		if ki.selectorFilter.Match(key) {
+			tags["selector_"+key] = val
+		}
+	}
 
 	acc.AddFields(statefulSetMeasurement, fields, tags)
 

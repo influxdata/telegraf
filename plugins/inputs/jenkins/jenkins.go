@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -137,7 +137,7 @@ func (j *Jenkins) newHTTPClient() (*http.Client, error) {
 	}, nil
 }
 
-// seperate the client as dependency to use httptest Client for mocking
+// separate the client as dependency to use httptest Client for mocking
 func (j *Jenkins) initialize(client *http.Client) error {
 	var err error
 

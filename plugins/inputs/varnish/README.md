@@ -19,7 +19,7 @@ This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
   stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
 
   ## Optional name for the varnish instance (or working directory) to query
-  ## Usually appened after -n in varnish cli
+  ## Usually append after -n in varnish cli
   # instance_name = instanceName
 
   ## Timeout for varnishstat command
@@ -92,7 +92,7 @@ MEMPOOL, etc). In the output, the prefix will be used as a tag, and removed from
     - MAIN.s_pipe                                    (uint64, count,  Total pipe sessions)
     - MAIN.s_pass                                    (uint64, count,  Total pass- ed requests)
     - MAIN.s_fetch                                   (uint64, count,  Total backend fetches)
-    - MAIN.s_synth                                   (uint64, count,  Total synthethic responses)
+    - MAIN.s_synth                                   (uint64, count,  Total synthetic responses)
     - MAIN.s_req_hdrbytes                            (uint64, count,  Request header bytes)
     - MAIN.s_req_bodybytes                           (uint64, count,  Request body bytes)
     - MAIN.s_resp_hdrbytes                           (uint64, count,  Response header bytes)

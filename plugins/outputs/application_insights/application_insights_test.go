@@ -288,7 +288,7 @@ func TestTagsAppliedToTelemetry(t *testing.T) {
 			transmitter.AssertNumberOfCalls(t, "Track", len(tt.metricValueFields))
 			transmitter.AssertCalled(t, "Track", mock.AnythingOfType("*appinsights.MetricTelemetry"))
 
-			// Will verify that all original tags are present in telemetry.Properies map
+			// Will verify that all original tags are present in telemetry.Properties map
 			verifyAdditionalTelemetry(assert, m, transmitter, tt.metricValueFields, metricName)
 		}
 

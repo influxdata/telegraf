@@ -23,7 +23,6 @@ type CommonTags struct {
 
 type HECTimeSeries struct {
 	Time   float64                `json:"time"`
-	Event  string                 `json:"event"`
 	Host   string                 `json:"host,omitempty"`
 	Index  string                 `json:"index,omitempty"`
 	Source string                 `json:"source,omitempty"`
@@ -76,14 +75,13 @@ func (s *serializer) createMulti(metric telegraf.Metric, dataGroup HECTimeSeries
 	var metricJSON []byte
 
 	// Set the event data from the commonTags above.
-	dataGroup.Event = "metric"
 	dataGroup.Time = commonTags.Time
 	dataGroup.Host = commonTags.Host
 	dataGroup.Index = commonTags.Index
 	dataGroup.Source = commonTags.Source
 	dataGroup.Fields = commonTags.Fields
 
-	// Stuff the metrid data into the structure.
+	// Stuff the metric data into the structure.
 	for _, field := range metric.FieldList() {
 		value, valid := verifyValue(field.Value)
 
@@ -101,7 +99,7 @@ func (s *serializer) createMulti(metric telegraf.Metric, dataGroup HECTimeSeries
 		// Output the data as a fields array and host,index,time,source overrides for the HEC.
 		metricJSON, err = json.Marshal(dataGroup)
 	default:
-		// Just output the data and the time, useful for file based outuputs
+		// Just output the data and the time, useful for file based outputs
 		dataGroup.Fields["time"] = dataGroup.Time
 		metricJSON, err = json.Marshal(dataGroup.Fields)
 	}
@@ -115,7 +113,7 @@ func (s *serializer) createMulti(metric telegraf.Metric, dataGroup HECTimeSeries
 }
 
 func (s *serializer) createSingle(metric telegraf.Metric, dataGroup HECTimeSeries, commonTags CommonTags) (metricGroup []byte, err error) {
-	/* The default mode is to generate one JSON entitiy per metric (required for pre-8.0 Splunks)
+	/* The default mode is to generate one JSON entity per metric (required for pre-8.0 Splunks)
 	**
 	** The format for single metric is 'nameOfMetric = valueOfMetric'
 	 */
@@ -130,8 +128,6 @@ func (s *serializer) createSingle(metric telegraf.Metric, dataGroup HECTimeSerie
 			log.Printf("D! Can not parse value: %v for key: %v", field.Value, field.Key)
 			continue
 		}
-
-		dataGroup.Event = "metric"
 
 		dataGroup.Time = commonTags.Time
 
@@ -149,7 +145,7 @@ func (s *serializer) createSingle(metric telegraf.Metric, dataGroup HECTimeSerie
 			// Output the data as a fields array and host,index,time,source overrides for the HEC.
 			metricJSON, err = json.Marshal(dataGroup)
 		default:
-			// Just output the data and the time, useful for file based outuputs
+			// Just output the data and the time, useful for file based outputs
 			dataGroup.Fields["time"] = dataGroup.Time
 			metricJSON, err = json.Marshal(dataGroup.Fields)
 		}
@@ -179,12 +175,7 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 	// The tags are common to all events in this timeseries
 	commonTags := CommonTags{}
 
-	commonObj := map[string]interface{}{}
-
-	commonObj["config:hecRouting"] = s.HecRouting
-	commonObj["config:multiMetric"] = s.SplunkmetricMultiMetric
-
-	commonTags.Fields = commonObj
+	commonTags.Fields = map[string]interface{}{}
 
 	// Break tags out into key(n)=value(t) pairs
 	for n, t := range metric.Tags() {

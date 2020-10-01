@@ -48,11 +48,37 @@ The plugin expects messages in one of the
   ## line and the size of the output's metric_batch_size.
   # max_undelivered_lines = 1000
 
+  ## Character encoding to use when interpreting the file contents.  Invalid
+  ## characters are replaced using the unicode replacement character.  When set
+  ## to the empty string the data is not decoded to text.
+  ##   ex: character_encoding = "utf-8"
+  ##       character_encoding = "utf-16le"
+  ##       character_encoding = "utf-16be"
+  ##       character_encoding = ""
+  # character_encoding = ""
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## multiline parser/codec
+  ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
+  #[inputs.tail.multiline]
+    ## The pattern should be a regexp which matches what you believe to be an indicator that the field is part of an event consisting of multiple lines of log data.
+    #pattern = "^\s"
+
+    ## The field's value must be previous or next and indicates the relation to the
+    ## multi-line event.
+    #match_which_line = "previous"
+
+    ## The invert_match can be true or false (defaults to false). 
+    ## If true, a message not matching the pattern will constitute a match of the multiline filter and the what will be applied. (vice-versa is also true)
+    #invert_match = false
+
+    #After the specified timeout, this plugin sends the multiline event even if no new pattern is found to start a new event. The default is 5s.
+    #timeout = 5s
 ```
 
 ### Metrics

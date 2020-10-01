@@ -45,7 +45,7 @@ This plugin gathers the statistic data from MySQL server
   ##           <1.6: metric_version = 1 (or unset)
   metric_version = 2
 
-  ## if the list is empty, then metrics are gathered from all databasee tables
+  ## if the list is empty, then metrics are gathered from all database tables
   # table_schema_databases = []
 
   ## gather metrics from INFORMATION_SCHEMA.TABLES for databases provided above list
@@ -117,7 +117,7 @@ InfluxDB due to the change of types.  For this reason, you should keep the
 
 If preserving your old data is not required you may wish to drop conflicting
 measurements:
-```
+```sql
 DROP SERIES from mysql
 DROP SERIES from mysql_variables
 DROP SERIES from mysql_innodb
@@ -153,7 +153,7 @@ If you wish to remove the `name_suffix` you may use Kapacitor to copy the
 historical data to the default name.  Do this only after retiring the old
 measurement name.
 
-1. Use the techinique described above to write to multiple locations:
+1. Use the technique described above to write to multiple locations:
    ```toml
    [[inputs.mysql]]
      servers = ["tcp(127.0.0.1:3306)/"]
@@ -283,7 +283,7 @@ The unit of fields varies by the tags.
     * events_statements_rows_examined_total(float, number)
     * events_statements_tmp_tables_total(float, number)
     * events_statements_tmp_disk_tables_total(float, number)
-    * events_statements_sort_merge_passes_totales(float, number)
+    * events_statements_sort_merge_passes_totals(float, number)
     * events_statements_sort_rows_total(float, number)
     * events_statements_no_index_used_total(float, number)
 * Table schema - gathers statistics of each schema. It has following measurements

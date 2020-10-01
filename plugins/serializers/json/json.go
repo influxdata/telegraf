@@ -2,6 +2,7 @@ package json
 
 import (
 	"encoding/json"
+	"math"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -49,8 +50,26 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 func (s *serializer) createObject(metric telegraf.Metric) map[string]interface{} {
 	m := make(map[string]interface{}, 4)
-	m["tags"] = metric.Tags()
-	m["fields"] = metric.Fields()
+
+	tags := make(map[string]string, len(metric.TagList()))
+	for _, tag := range metric.TagList() {
+		tags[tag.Key] = tag.Value
+	}
+	m["tags"] = tags
+
+	fields := make(map[string]interface{}, len(metric.FieldList()))
+	for _, field := range metric.FieldList() {
+		switch fv := field.Value.(type) {
+		case float64:
+			// JSON does not support these special values
+			if math.IsNaN(fv) || math.IsInf(fv, 0) {
+				continue
+			}
+		}
+		fields[field.Key] = field.Value
+	}
+	m["fields"] = fields
+
 	m["name"] = metric.Name()
 	m["timestamp"] = metric.Time().UnixNano() / int64(s.TimestampUnits)
 	return m

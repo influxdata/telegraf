@@ -7,7 +7,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -289,7 +289,7 @@ func TestConsumerGroupHandler_ConsumeClaim(t *testing.T) {
 	}
 
 	go func() {
-		err = cg.ConsumeClaim(session, claim)
+		err := cg.ConsumeClaim(session, claim)
 		require.NoError(t, err)
 	}()
 

@@ -141,7 +141,7 @@ func TestConnectTCP(t *testing.T) {
 	}
 }
 
-// Test that MaxTCPConections is respected
+// Test that MaxTCPConnections is respected
 func TestConcurrentConns(t *testing.T) {
 	listener := TcpListener{
 		Log:                    testutil.Logger{},
@@ -177,7 +177,7 @@ func TestConcurrentConns(t *testing.T) {
 	assert.Equal(t, io.EOF, err)
 }
 
-// Test that MaxTCPConections is respected when max==1
+// Test that MaxTCPConnections is respected when max==1
 func TestConcurrentConns1(t *testing.T) {
 	listener := TcpListener{
 		Log:                    testutil.Logger{},
@@ -211,7 +211,7 @@ func TestConcurrentConns1(t *testing.T) {
 	assert.Equal(t, io.EOF, err)
 }
 
-// Test that MaxTCPConections is respected
+// Test that MaxTCPConnections is respected
 func TestCloseConcurrentConns(t *testing.T) {
 	listener := TcpListener{
 		Log:                    testutil.Logger{},

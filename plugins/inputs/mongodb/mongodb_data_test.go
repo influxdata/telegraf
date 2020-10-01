@@ -52,6 +52,10 @@ func TestAddNonReplStats(t *testing.T) {
 			CurrentC:            0,
 			AvailableC:          0,
 			TotalCreatedC:       0,
+			ScanAndOrderOp:      0,
+			WriteConflictsOp:    0,
+			TotalKeysScanned:    0,
+			TotalObjectsScanned: 0,
 		},
 		tags,
 	)
@@ -102,6 +106,7 @@ func TestAddWiredTigerStats(t *testing.T) {
 			BytesReadInto:             0,
 			PagesEvictedByAppThread:   0,
 			PagesQueuedForEviction:    0,
+			PagesWrittenFromCache:     1247,
 			ServerEvictingPages:       0,
 			WorkerThreadEvictingPages: 0,
 			FaultsCnt:                 204,
@@ -169,11 +174,39 @@ func TestAddLatencyStats(t *testing.T) {
 	}
 }
 
+func TestAddAssertsStats(t *testing.T) {
+	d := NewMongodbData(
+		&StatLine{
+			Regular:   3,
+			Warning:   9,
+			Msg:       2,
+			User:      34,
+			Rollovers: 0,
+		},
+		tags,
+	)
+
+	var acc testutil.Accumulator
+
+	d.AddDefaultStats()
+	d.flush(&acc)
+
+	for key := range DefaultAssertsStats {
+		assert.True(t, acc.HasInt64Field("mongodb", key))
+	}
+}
+
 func TestAddCommandsStats(t *testing.T) {
 	d := NewMongodbData(
 		&StatLine{
+			AggregateCommandTotal:      12,
+			AggregateCommandFailed:     2,
+			CountCommandTotal:          18,
+			CountCommandFailed:         5,
 			DeleteCommandTotal:         73,
 			DeleteCommandFailed:        364,
+			DistinctCommandTotal:       87,
+			DistinctCommandFailed:      19,
 			FindCommandTotal:           113,
 			FindCommandFailed:          201,
 			FindAndModifyCommandTotal:  7,
@@ -194,6 +227,62 @@ func TestAddCommandsStats(t *testing.T) {
 	d.flush(&acc)
 
 	for key := range DefaultCommandsStats {
+		assert.True(t, acc.HasInt64Field("mongodb", key))
+	}
+}
+
+func TestAddTCMallocStats(t *testing.T) {
+	d := NewMongodbData(
+		&StatLine{
+			TCMallocCurrentAllocatedBytes:        5877253096,
+			TCMallocHeapSize:                     8067108864,
+			TCMallocPageheapFreeBytes:            1054994432,
+			TCMallocPageheapUnmappedBytes:        677859328,
+			TCMallocMaxTotalThreadCacheBytes:     1073741824,
+			TCMallocCurrentTotalThreadCacheBytes: 80405312,
+			TCMallocTotalFreeBytes:               457002008,
+			TCMallocCentralCacheFreeBytes:        375131800,
+			TCMallocTransferCacheFreeBytes:       1464896,
+			TCMallocThreadCacheFreeBytes:         80405312,
+			TCMallocPageheapComittedBytes:        7389249536,
+			TCMallocPageheapScavengeCount:        396394,
+			TCMallocPageheapCommitCount:          641765,
+			TCMallocPageheapTotalCommitBytes:     102248751104,
+			TCMallocPageheapDecommitCount:        396394,
+			TCMallocPageheapTotalDecommitBytes:   94859501568,
+			TCMallocPageheapReserveCount:         6179,
+			TCMallocPageheapTotalReserveBytes:    8067108864,
+			TCMallocSpinLockTotalDelayNanos:      2344453860,
+		},
+		tags,
+	)
+
+	var acc testutil.Accumulator
+
+	d.AddDefaultStats()
+	d.flush(&acc)
+
+	for key := range DefaultTCMallocStats {
+		assert.True(t, acc.HasInt64Field("mongodb", key))
+	}
+}
+
+func TestAddStorageStats(t *testing.T) {
+	d := NewMongodbData(
+		&StatLine{
+			StorageFreelistSearchBucketExhausted: 0,
+			StorageFreelistSearchRequests:        0,
+			StorageFreelistSearchScanned:         0,
+		},
+		tags,
+	)
+
+	var acc testutil.Accumulator
+
+	d.AddDefaultStats()
+	d.flush(&acc)
+
+	for key := range DefaultStorageStats {
 		assert.True(t, acc.HasInt64Field("mongodb", key))
 	}
 }
@@ -245,6 +334,7 @@ func TestStateTag(t *testing.T) {
 			NodeType:      "PRI",
 			NodeState:     "PRIMARY",
 			ReplSetName:   "rs1",
+			Version:       "3.6.17",
 		},
 		tags,
 	)
@@ -258,88 +348,140 @@ func TestStateTag(t *testing.T) {
 	d.AddDefaultStats()
 	d.flush(&acc)
 	fields := map[string]interface{}{
-		"active_reads":                   int64(0),
-		"active_writes":                  int64(0),
-		"available_reads":                int64(0),
-		"available_writes":               int64(0),
-		"total_tickets_reads":            int64(0),
-		"total_tickets_writes":           int64(0),
-		"commands":                       int64(0),
-		"commands_per_sec":               int64(0),
-		"deletes":                        int64(0),
-		"deletes_per_sec":                int64(0),
-		"flushes":                        int64(0),
-		"flushes_per_sec":                int64(0),
-		"flushes_total_time_ns":          int64(0),
-		"getmores":                       int64(0),
-		"getmores_per_sec":               int64(0),
-		"inserts":                        int64(0),
-		"inserts_per_sec":                int64(0),
-		"member_status":                  "PRI",
-		"state":                          "PRIMARY",
-		"net_in_bytes_count":             int64(0),
-		"net_in_bytes":                   int64(0),
-		"net_out_bytes_count":            int64(0),
-		"net_out_bytes":                  int64(0),
-		"open_connections":               int64(0),
-		"queries":                        int64(0),
-		"queries_per_sec":                int64(0),
-		"queued_reads":                   int64(0),
-		"queued_writes":                  int64(0),
-		"repl_commands":                  int64(0),
-		"repl_commands_per_sec":          int64(0),
-		"repl_deletes":                   int64(0),
-		"repl_deletes_per_sec":           int64(0),
-		"repl_getmores":                  int64(0),
-		"repl_getmores_per_sec":          int64(0),
-		"repl_inserts":                   int64(0),
-		"repl_inserts_per_sec":           int64(0),
-		"repl_queries":                   int64(0),
-		"repl_queries_per_sec":           int64(0),
-		"repl_updates":                   int64(0),
-		"repl_updates_per_sec":           int64(0),
-		"repl_lag":                       int64(0),
-		"resident_megabytes":             int64(0),
-		"updates":                        int64(0),
-		"updates_per_sec":                int64(0),
-		"uptime_ns":                      int64(0),
-		"vsize_megabytes":                int64(0),
-		"ttl_deletes":                    int64(0),
-		"ttl_deletes_per_sec":            int64(0),
-		"ttl_passes":                     int64(0),
-		"ttl_passes_per_sec":             int64(0),
-		"jumbo_chunks":                   int64(0),
-		"total_in_use":                   int64(0),
-		"total_available":                int64(0),
-		"total_created":                  int64(0),
-		"total_refreshing":               int64(0),
-		"cursor_timed_out":               int64(0),
-		"cursor_timed_out_count":         int64(0),
-		"cursor_no_timeout":              int64(0),
-		"cursor_no_timeout_count":        int64(0),
-		"cursor_pinned":                  int64(0),
-		"cursor_pinned_count":            int64(0),
-		"cursor_total":                   int64(0),
-		"cursor_total_count":             int64(0),
-		"document_deleted":               int64(0),
-		"document_inserted":              int64(0),
-		"document_returned":              int64(0),
-		"document_updated":               int64(0),
-		"connections_current":            int64(0),
-		"connections_available":          int64(0),
-		"connections_total_created":      int64(0),
-		"delete_command_total":           int64(0),
-		"delete_command_failed":          int64(0),
-		"find_command_total":             int64(0),
-		"find_command_failed":            int64(0),
-		"find_and_modify_command_total":  int64(0),
-		"find_and_modify_command_failed": int64(0),
-		"get_more_command_total":         int64(0),
-		"get_more_command_failed":        int64(0),
-		"insert_command_total":           int64(0),
-		"insert_command_failed":          int64(0),
-		"update_command_total":           int64(0),
-		"update_command_failed":          int64(0),
+		"active_reads":                              int64(0),
+		"active_writes":                             int64(0),
+		"aggregate_command_failed":                  int64(0),
+		"aggregate_command_total":                   int64(0),
+		"assert_msg":                                int64(0),
+		"assert_regular":                            int64(0),
+		"assert_rollovers":                          int64(0),
+		"assert_user":                               int64(0),
+		"assert_warning":                            int64(0),
+		"available_reads":                           int64(0),
+		"available_writes":                          int64(0),
+		"commands":                                  int64(0),
+		"commands_per_sec":                          int64(0),
+		"connections_available":                     int64(0),
+		"connections_current":                       int64(0),
+		"connections_total_created":                 int64(0),
+		"count_command_failed":                      int64(0),
+		"count_command_total":                       int64(0),
+		"cursor_no_timeout":                         int64(0),
+		"cursor_no_timeout_count":                   int64(0),
+		"cursor_pinned":                             int64(0),
+		"cursor_pinned_count":                       int64(0),
+		"cursor_timed_out":                          int64(0),
+		"cursor_timed_out_count":                    int64(0),
+		"cursor_total":                              int64(0),
+		"cursor_total_count":                        int64(0),
+		"delete_command_failed":                     int64(0),
+		"delete_command_total":                      int64(0),
+		"deletes":                                   int64(0),
+		"deletes_per_sec":                           int64(0),
+		"distinct_command_failed":                   int64(0),
+		"distinct_command_total":                    int64(0),
+		"document_deleted":                          int64(0),
+		"document_inserted":                         int64(0),
+		"document_returned":                         int64(0),
+		"document_updated":                          int64(0),
+		"find_and_modify_command_failed":            int64(0),
+		"find_and_modify_command_total":             int64(0),
+		"find_command_failed":                       int64(0),
+		"find_command_total":                        int64(0),
+		"flushes":                                   int64(0),
+		"flushes_per_sec":                           int64(0),
+		"flushes_total_time_ns":                     int64(0),
+		"get_more_command_failed":                   int64(0),
+		"get_more_command_total":                    int64(0),
+		"getmores":                                  int64(0),
+		"getmores_per_sec":                          int64(0),
+		"insert_command_failed":                     int64(0),
+		"insert_command_total":                      int64(0),
+		"inserts":                                   int64(0),
+		"inserts_per_sec":                           int64(0),
+		"jumbo_chunks":                              int64(0),
+		"member_status":                             "PRI",
+		"net_in_bytes":                              int64(0),
+		"net_in_bytes_count":                        int64(0),
+		"net_out_bytes":                             int64(0),
+		"net_out_bytes_count":                       int64(0),
+		"open_connections":                          int64(0),
+		"operation_scan_and_order":                  int64(0),
+		"operation_write_conflicts":                 int64(0),
+		"queries":                                   int64(0),
+		"queries_per_sec":                           int64(0),
+		"queued_reads":                              int64(0),
+		"queued_writes":                             int64(0),
+		"repl_apply_batches_num":                    int64(0),
+		"repl_apply_batches_total_millis":           int64(0),
+		"repl_apply_ops":                            int64(0),
+		"repl_buffer_count":                         int64(0),
+		"repl_buffer_size_bytes":                    int64(0),
+		"repl_commands":                             int64(0),
+		"repl_commands_per_sec":                     int64(0),
+		"repl_deletes":                              int64(0),
+		"repl_deletes_per_sec":                      int64(0),
+		"repl_executor_pool_in_progress_count":      int64(0),
+		"repl_executor_queues_network_in_progress":  int64(0),
+		"repl_executor_queues_sleepers":             int64(0),
+		"repl_executor_unsignaled_events":           int64(0),
+		"repl_getmores":                             int64(0),
+		"repl_getmores_per_sec":                     int64(0),
+		"repl_inserts":                              int64(0),
+		"repl_inserts_per_sec":                      int64(0),
+		"repl_lag":                                  int64(0),
+		"repl_network_bytes":                        int64(0),
+		"repl_network_getmores_num":                 int64(0),
+		"repl_network_getmores_total_millis":        int64(0),
+		"repl_network_ops":                          int64(0),
+		"repl_queries":                              int64(0),
+		"repl_queries_per_sec":                      int64(0),
+		"repl_updates":                              int64(0),
+		"repl_updates_per_sec":                      int64(0),
+		"repl_state":                                int64(0),
+		"resident_megabytes":                        int64(0),
+		"state":                                     "PRIMARY",
+		"storage_freelist_search_bucket_exhausted":  int64(0),
+		"storage_freelist_search_requests":          int64(0),
+		"storage_freelist_search_scanned":           int64(0),
+		"tcmalloc_central_cache_free_bytes":         int64(0),
+		"tcmalloc_current_allocated_bytes":          int64(0),
+		"tcmalloc_current_total_thread_cache_bytes": int64(0),
+		"tcmalloc_heap_size":                        int64(0),
+		"tcmalloc_max_total_thread_cache_bytes":     int64(0),
+		"tcmalloc_pageheap_commit_count":            int64(0),
+		"tcmalloc_pageheap_committed_bytes":         int64(0),
+		"tcmalloc_pageheap_decommit_count":          int64(0),
+		"tcmalloc_pageheap_free_bytes":              int64(0),
+		"tcmalloc_pageheap_reserve_count":           int64(0),
+		"tcmalloc_pageheap_scavenge_count":          int64(0),
+		"tcmalloc_pageheap_total_commit_bytes":      int64(0),
+		"tcmalloc_pageheap_total_decommit_bytes":    int64(0),
+		"tcmalloc_pageheap_total_reserve_bytes":     int64(0),
+		"tcmalloc_pageheap_unmapped_bytes":          int64(0),
+		"tcmalloc_spinlock_total_delay_ns":          int64(0),
+		"tcmalloc_thread_cache_free_bytes":          int64(0),
+		"tcmalloc_total_free_bytes":                 int64(0),
+		"tcmalloc_transfer_cache_free_bytes":        int64(0),
+		"total_available":                           int64(0),
+		"total_created":                             int64(0),
+		"total_docs_scanned":                        int64(0),
+		"total_in_use":                              int64(0),
+		"total_keys_scanned":                        int64(0),
+		"total_refreshing":                          int64(0),
+		"total_tickets_reads":                       int64(0),
+		"total_tickets_writes":                      int64(0),
+		"ttl_deletes":                               int64(0),
+		"ttl_deletes_per_sec":                       int64(0),
+		"ttl_passes":                                int64(0),
+		"ttl_passes_per_sec":                        int64(0),
+		"update_command_failed":                     int64(0),
+		"update_command_total":                      int64(0),
+		"updates":                                   int64(0),
+		"updates_per_sec":                           int64(0),
+		"uptime_ns":                                 int64(0),
+		"version":                                   "3.6.17",
+		"vsize_megabytes":                           int64(0),
 	}
 	acc.AssertContainsTaggedFields(t, "mongodb", fields, stateTags)
 }

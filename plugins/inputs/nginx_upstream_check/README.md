@@ -1,4 +1,4 @@
-# Telegraf Plugin: Nginx_upstream_check
+# Nginx Upstream Check Input Plugin
 
 Read the status output of the nginx_upstream_check (https://github.com/yaoweibin/nginx_upstream_check_module).
 This module can periodically check the servers in the Nginx's upstream with configured request and interval to determine
@@ -10,7 +10,7 @@ checks. This information can be exported in JSON format and parsed by this input
 
 ### Configuration:
 
-```
+```toml
   ## An URL where Nginx Upstream check module is enabled
   ## It should be set to return a JSON formatted response
   url = "http://127.0.0.1/status?format=json"
@@ -63,7 +63,7 @@ state of every server and, possible, add some monitoring to watch over it. Influ
 ### Example Output:
 
 When run with:
-```
+```sh
 ./telegraf --config telegraf.conf --input-filter nginx_upstream_check --test
 ```
 

@@ -53,7 +53,7 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
   # queue_name_include = []
   # queue_name_exclude = []
 
-  ## Federation upstreams to include and exlude specified as an array of glob
+  ## Federation upstreams to include and exclude specified as an array of glob
   ## pattern strings.  Federation links can also be limited by the queue and
   ## exchange filters.
   # federation_upstream_include = []
@@ -105,7 +105,6 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
     - sockets_used (int, sockets)
     - running (int, node up)
     - uptime (int, milliseconds)
-    - health_check_status (int, 1 or 0)
     - mnesia_disk_tx_count (int, number of disk transaction)
     - mnesia_ram_tx_count (int, number of ram transaction)
     - mnesia_disk_tx_count_rate (float, number of disk transaction per second)

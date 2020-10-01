@@ -218,7 +218,7 @@ func (c *stackdriverMetricClient) ListMetricDescriptors(
 			mdDesc, mdErr := mdResp.Next()
 			if mdErr != nil {
 				if mdErr != iterator.Done {
-					c.log.Errorf("Failed iterating metric desciptor responses: %q: %v", req.String(), mdErr)
+					c.log.Errorf("Failed iterating metric descriptor responses: %q: %v", req.String(), mdErr)
 				}
 				break
 			}
@@ -544,7 +544,7 @@ func (s *Stackdriver) generatetimeSeriesConfs(
 	for _, filter := range filters {
 		// Add filter for list metric descriptors if
 		// includeMetricTypePrefixes is specified,
-		// this is more effecient than iterating over
+		// this is more efficient than iterating over
 		// all metric descriptors
 		req.Filter = filter
 		mdRespChan, err := s.client.ListMetricDescriptors(ctx, req)

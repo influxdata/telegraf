@@ -5,12 +5,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
 	"math"
-	"math/big"
+	"math/rand"
 	"os"
 	"os/exec"
 	"runtime"
@@ -211,12 +210,8 @@ func RandomSleep(max time.Duration, shutdown chan struct{}) {
 	if max == 0 {
 		return
 	}
-	maxSleep := big.NewInt(max.Nanoseconds())
 
-	var sleepns int64
-	if j, err := rand.Int(rand.Reader, maxSleep); err == nil {
-		sleepns = j.Int64()
-	}
+	sleepns := rand.Int63n(max.Nanoseconds())
 
 	t := time.NewTimer(time.Nanosecond * time.Duration(sleepns))
 	select {
@@ -234,11 +229,7 @@ func RandomDuration(max time.Duration) time.Duration {
 		return 0
 	}
 
-	var sleepns int64
-	maxSleep := big.NewInt(max.Nanoseconds())
-	if j, err := rand.Int(rand.Reader, maxSleep); err == nil {
-		sleepns = j.Int64()
-	}
+	sleepns := rand.Int63n(max.Nanoseconds())
 
 	return time.Duration(sleepns)
 }

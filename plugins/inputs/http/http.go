@@ -11,7 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -28,6 +28,9 @@ type HTTP struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 	tls.ClientConfig
+
+	// Absolute path to file with Bearer token
+	BearerToken string `toml:"bearer_token"`
 
 	SuccessStatusCodes []int `toml:"success_status_codes"`
 
@@ -51,6 +54,10 @@ var sampleConfig = `
 
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
+
+  ## Optional file with Bearer token
+  ## file content is added as an Authorization header
+  # bearer_token = "/path/to/file"
 
   ## Optional HTTP Basic Auth Credentials
   # username = "username"
@@ -158,6 +165,15 @@ func (h *HTTP) gatherURL(
 	request, err := http.NewRequest(h.Method, url, body)
 	if err != nil {
 		return err
+	}
+
+	if h.BearerToken != "" {
+		token, err := ioutil.ReadFile(h.BearerToken)
+		if err != nil {
+			return err
+		}
+		bearer := "Bearer " + strings.Trim(string(token), "\n")
+		request.Header.Set("Authorization", bearer)
 	}
 
 	if h.ContentEncoding == "gzip" {

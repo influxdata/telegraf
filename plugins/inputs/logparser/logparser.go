@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/influxdata/tail"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -136,6 +135,11 @@ func (l *LogParserPlugin) SampleConfig() string {
 // Description returns the human readable description for the plugin
 func (l *LogParserPlugin) Description() string {
 	return "Stream and parse log file(s)."
+}
+
+func (l *LogParserPlugin) Init() error {
+	l.Log.Warnf(`The logparser plugin is deprecated; please use the 'tail' input with the 'grok' data_format`)
+	return nil
 }
 
 // Gather is the primary function to collect the metrics for the plugin

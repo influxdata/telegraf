@@ -1,0 +1,63 @@
+<!--
+CREATE DICTIONARY IF NOT EXISTS default.test_dict1(
+    nom String,
+    code String DEFAULT Null,
+    cur String DEFAULT Null
+) PRIMARY KEY nom
+SOURCE(
+    MYSQL(port 9000 host '127.0.0.1' user 'wrong' password 'wrong' db 'default' table 'test')
+)
+LAYOUT(COMPLEX_KEY_HASHED())
+LIFETIME(MIN 300 MAX 600);
+-->
+<yandex>
+    <dictionary>
+        <name>default.test_dict</name>
+
+        <structure>
+            <!-- Complex key configuration -->
+            <id>
+                <name>Nom</name>
+            </id>
+            <attribute>
+                <!-- Attribute parameters -->
+                <attribute>
+                    <name>Nom</name>
+                    <type>String</type>
+                </attribute>
+                <attribute>
+                    <name>Code</name>
+                    <type>String</type>
+                </attribute>
+                <attribute>
+                    <name>Cur</name>
+                    <type>String</type>
+                </attribute>
+            </attribute>
+        </structure>
+
+        <source>
+            <!-- Source configuration -->
+            <mysql>
+                <port>3306</port>
+                <user>wrong</user>
+                <password>wrong</password>
+                <replica>
+                    <host>127.0.0.1</host>
+                    <priority>1</priority>
+                </replica>
+                <db>default</db>
+                <table>test</table>
+            </mysql>
+        </source>
+
+        <layout>
+            <!-- Memory layout configuration -->
+            <complex_key_hashed />
+        </layout>
+
+        <lifetime>
+            <!-- Lifetime of dictionary in memory -->
+        </lifetime>
+    </dictionary>
+</yandex>
