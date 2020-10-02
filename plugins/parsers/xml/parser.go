@@ -263,6 +263,17 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 					}
 				}
 
+				// Check if field name already exists and if so, append an index number.
+				if _, ok := fields[path]; ok {
+					for i := 1; ; i++ {
+						p := path + "_" + strconv.Itoa(i)
+						if _, ok := fields[p]; !ok {
+							path = p
+							break
+						}
+					}
+				}
+
 				fields[path] = v
 			}
 		}
