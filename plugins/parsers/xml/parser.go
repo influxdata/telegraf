@@ -31,6 +31,7 @@ type Config struct {
 	FieldSelection  string
 	FieldNameQuery  string
 	FieldValueQuery string
+	FieldNameExpand bool
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -254,12 +255,43 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 				if err != nil {
 					return nil, fmt.Errorf("failed to query field value for '%s': %v", name, err)
 				}
-				fields[name] = v
+				path := name
+				if config.FieldNameExpand {
+					p := getNodePath(selectedfield, selected, "_")
+					if len(p) > 0 {
+						path = p + "_" + name
+					}
+				}
+
+				fields[path] = v
 			}
 		}
 	}
 
 	return metric.New(metricname, tags, fields, timestamp)
+}
+
+func getNodePath(node, relativeTo *xmlquery.Node, sep string) string {
+	names := make([]string, 0)
+
+	// Climb up the tree and collect the node names
+	n := node.Parent
+	for n != nil && n != relativeTo {
+		names = append(names, n.Data)
+		n = n.Parent
+	}
+
+	if len(names) < 1 {
+		return ""
+	}
+
+	// Construct the nodes
+	path := ""
+	for _, name := range names {
+		path = name + sep + path
+	}
+
+	return path[:len(path)-1]
 }
 
 func executeQuery(doc, selected *xmlquery.Node, query string) (r interface{}, err error) {
