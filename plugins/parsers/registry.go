@@ -378,6 +378,7 @@ func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs [
 		configs[i].FieldNameQuery = cfg.FieldNameQuery
 		configs[i].FieldValueQuery = cfg.FieldValueQuery
 
+		configs[i].FieldNameExpand = cfg.FieldNameExpand
 	}
 
 	return &xml.Parser{

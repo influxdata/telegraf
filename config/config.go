@@ -1643,6 +1643,19 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 					}
 				}
 
+				// Parse the flag for expand the field names relative to the selected nodes
+				if val, ok := subtbl.Fields["expand_field_names"]; ok {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						if b, ok := kv.Value.(*ast.Boolean); ok {
+							flag, err := b.Boolean()
+							if err != nil {
+								return nil, err
+							}
+							c.XMLConfig[i].FieldNameExpand = flag
+						}
+					}
+				}
+
 				if val, ok := subtbl.Fields["field_name"]; ok {
 					if kv, ok := val.(*ast.KeyValue); ok {
 						if str, ok := kv.Value.(*ast.String); ok {
