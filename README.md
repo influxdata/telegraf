@@ -329,6 +329,7 @@ For documentation on the latest development code see the [documentation index][d
   * [papertrail](./plugins/inputs/webhooks/papertrail)
   * [particle](./plugins/inputs/webhooks/particle)
   * [rollbar](./plugins/inputs/webhooks/rollbar)
+* [win_eventlog](./plugins/inputs/win_eventlog)
 * [win_perf_counters](./plugins/inputs/win_perf_counters) (windows performance counters)
 * [win_services](./plugins/inputs/win_services)
 * [wireguard](./plugins/inputs/wireguard)

@@ -28,6 +28,7 @@
 
 - [proxmox](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/proxmox/README.md) - Contributed by @effitient
 - [opcua](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/opcua/README.md) - Contributed by @influxdata
+- [win_eventlog](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/win_eventlog) - Contributed by @simnv and @anuar45
 
 #### New Output Plugins
 
