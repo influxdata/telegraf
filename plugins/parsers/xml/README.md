@@ -93,6 +93,10 @@ metric.
     #field_name  = "name()"
     #field_value = "."
 
+    ## Optional: Expand field names relative to the selected node
+    ## This allows to flatten out nodes with non-unique names in the subtree
+    #expand_field_names = false
+
     ## Tag definitions using the given XPath queries.
     [inputs.file.xml.tags]
       name   = "substring-after(Sensor/@name, ' ')"
@@ -145,7 +149,7 @@ If no conversion is performed in the query the field will be of type string.
 **NOTE: Path conversion functions will always succeed even if you convert a text to float!**
 
 
-#### field_selection, field_name, field_value
+#### field_selection, field_name, field_value (optional)
 
 You can specify a [XPath][xpath] query to select a set of nodes forming the fields of the metric. The specified path can be absolute (starting with `/`) or relative to the currently selected node. Each node selected by `field_selection` forms a new field within the metric.
 
@@ -156,6 +160,11 @@ Specifying `field_selection` is optional. This is an alternative way to specify 
 
 **NOTE: Path conversion functions will always succeed even if you convert a text to float!**
 
+#### expand_field_names (optional)
+
+When *true*, field names selected with `field_selection` are expanded to a *path* relative to the *selected node*. This
+is necessary if we e.g. select all leaf nodes as fields and those leaf nodes do not have unique names. That is in case
+you have duplicate names in the fields you select you should set this to `true`.
 
 ### Examples
 
