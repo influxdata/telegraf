@@ -131,19 +131,13 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 
 	l.Log.Debugf("Recived %d metrics", len(metrics))
 	for _, metric := range metrics {
-		m := &Metric{
-			Metric: map[string]interface{}{
-				metric.Name(): metric.Fields(),
-			},
-			Dimensions: metric.Tags(),
-			Time:       metric.Time(),
-			Type:       logzioType,
-		}
+		m := l.parseMetric(metric)
 
 		serialized, err := json.Marshal(m)
 		if err != nil {
 			return fmt.Errorf("Failed to marshal: %+v\n", m)
 		}
+
 		err = l.sender.Send(serialized)
 		if err != nil {
 			return fmt.Errorf("Failed to send metric: %v\n", err)
@@ -151,6 +145,17 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 	}
 
 	return nil
+}
+
+func (l *Logzio) parseMetric(metric telegraf.Metric) *Metric {
+	return &Metric{
+		Metric: map[string]interface{}{
+			metric.Name(): metric.Fields(),
+		},
+		Dimensions: metric.Tags(),
+		Time:       metric.Time(),
+		Type:       logzioType,
+	}
 }
 
 func CreateDefultLogizoOutput() *Logzio {
