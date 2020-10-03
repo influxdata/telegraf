@@ -31,16 +31,15 @@ func TestNewLogzioOutput(t *testing.T) {
 	require.Equal(t, l.Token, "")
 }
 
-func TestConnectAndWrite(t *testing.T) {
+func TestParseMetric(t *testing.T) {
 	l := defaultLogzio()
-	l.Token = "123456789"
-
-	err := l.Connect()
-	require.NoError(t, err)
-
-	err = l.Write(testutil.MockMetrics())
-	l.Close()
-	require.NoError(t, err)
+	for _, tm := range testutil.MockMetrics() {
+		lm := l.parseMetric(tm)
+		require.Equal(t, tm.Fields(), lm.Metric[tm.Name()])
+		require.Equal(t, logzioType, lm.Type)
+		require.Equal(t, tm.Tags(), lm.Dimensions)
+		require.Equal(t, tm.Time(), lm.Time)
+	}
 }
 
 func TestLogzioConnectWitoutToken(t *testing.T) {
