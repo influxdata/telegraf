@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 	"runtime"
 	"sort"
 	"sync"
@@ -325,6 +326,160 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	log.Printf("D! [agent] Stopped Successfully")
 	return err
+}
+
+// updateStructValuesHelper updates the reflect config, returning the original plugin otherwise
+func updateStructValuesHelper(pluginPtr reflect.Value, newConfig map[string]interface{}) (reflect.Value, error) {
+
+	plugin := pluginPtr.Elem() // extract Value of type interface{} from Value pointer to interface
+
+	if plugin.Kind() == reflect.Struct {
+		// iterate through all fields, return original if invalid
+
+		pType := plugin.Type()
+
+		values := make(map[string]reflect.Type)
+
+		for i := 0; i < plugin.NumField(); i++ {
+			field := pType.Field(i)
+			values[field.Name] = field.Type
+		}
+
+		for configKey, configValue := range newConfig {
+			t, exists := values[configKey]
+			if !exists || reflect.ValueOf(configValue).Type() != t {
+				return plugin, fmt.Errorf("could not update plugin")
+			}
+		}
+
+		for configKey, configValue := range newConfig {
+			pluginField := plugin.FieldByName(configKey) // cast new value as Value
+			reflectedNew := reflect.ValueOf(configValue)
+			// if any errors found, return original plugin
+			if !(pluginField.IsValid()) {
+				return pluginPtr.Elem(), fmt.Errorf("invalid field name %s", configKey)
+			} else if !(pluginField.CanSet()) {
+				return pluginPtr.Elem(), fmt.Errorf("unsettable field %s", configKey)
+			} else if !(pluginField.Type() == reflectedNew.Type()) {
+				return pluginPtr.Elem(), fmt.Errorf("value type mismatch for field %s", configKey)
+			} else {
+				pluginField.Set(reflectedNew)
+			}
+		}
+		return plugin, nil
+	}
+	return plugin, fmt.Errorf("could not update plugin")
+}
+
+// TODO Replace this after merge.
+func (a *Agent) AddInput(pluginName string) {
+	plugin := inputs.Inputs[pluginName]
+	inputConfig := models.InputConfig{
+		Name: pluginName,
+		// TODO rest of config?
+	}
+	runningPlugin := models.NewRunningInput(plugin(), &inputConfig)
+	a.Config.Inputs = append(a.Config.Inputs, runningPlugin)
+}
+
+// TODO Replace this after merge.
+func (a *Agent) AddOutput(pluginName string) {
+	plugin := outputs.Outputs[pluginName]
+	outputConfig := models.OutputConfig{
+		Name: pluginName,
+		// TODO rest of config?
+	}
+	runningPlugin := models.NewRunningOutput(pluginName, plugin(), &outputConfig, 0, 0)
+	a.Config.Outputs = append(a.Config.Outputs, runningPlugin)
+}
+
+// GetInputPlugin gets the InputConfig for a plugin given its name
+func (a *Agent) GetInputPlugin(name string) (telegraf.Input, error) {
+	for _, input := range a.Config.Inputs {
+		if name == input.Config.Name {
+			return input.Input, nil
+		}
+	}
+	return nil, fmt.Errorf("could not find input with name: %s", name)
+}
+
+// UpdateInputPlugin gets the InputConfig for a plugin given its name
+func (a *Agent) UpdateInputPlugin(name string, config map[string]interface{}) (telegraf.Input, error) {
+
+	for _, input := range a.Config.Inputs {
+		if name == input.Config.Name {
+			// TODO: STOP PLUGIN
+			plugin := input.Input
+			shallowPluginCopy := plugin
+
+			reflectedPlugin := reflect.ValueOf(shallowPluginCopy)
+			_, err := updateStructValuesHelper(reflectedPlugin, config)
+			// only update the input if there was no error, indicating
+			// that all fields were updated properly
+			if err == nil {
+				log.Printf("D! updating input, no error!")
+				input.Input = shallowPluginCopy
+			}
+
+			// TODO: START PLUGIN
+			if err != nil {
+				return plugin, fmt.Errorf("could not update input plugin %s with error: %s", name, err)
+			}
+
+			return plugin, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot update %s because input plugin is not running", name)
+}
+
+// GetOutputPlugin gets the OutputConfig for a plugin given its name
+func (a *Agent) GetOutputPlugin(name string) (telegraf.Output, error) {
+	for _, output := range a.Config.Outputs {
+		if name == output.Config.Name {
+			return output.Output, nil
+		}
+	}
+	return nil, fmt.Errorf("could not find output with name: %s", name)
+}
+
+// UpdateOutputPlugin gets the InputConfig for a plugin given its name
+func (a *Agent) UpdateOutputPlugin(name string, config map[string]interface{}) (telegraf.Output, error) {
+	for _, output := range a.Config.Outputs {
+		if name == output.Config.Name {
+			plugin := output.Output
+			reflectedPlugin := reflect.ValueOf(plugin)
+			newPlugin, err := updateStructValuesHelper(reflectedPlugin, config)
+			reflectedPlugin.Set(newPlugin)
+			// TODO: START PLUGIN
+			if err != nil {
+				return plugin, fmt.Errorf("could not update output plugin %s with error: %s", name, err)
+			}
+
+			return plugin, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot update %s because output plugin is not running", name)
+}
+
+// GetAggregatorPlugin gets the AggregatorConfig for a plugin given its name
+func (a *Agent) GetAggregatorPlugin(name string) (telegraf.Aggregator, error) {
+	for _, aggregator := range a.Config.Aggregators {
+		if name == aggregator.Config.Name {
+			return aggregator.Aggregator, nil
+		}
+	}
+	return nil, fmt.Errorf("could not find aggregator with name: %s", name)
+}
+
+// GetProcessorPlugin gets the ProcessorConfig for a plugin given its name
+func (a *Agent) GetProcessorPlugin(name string) (telegraf.StreamingProcessor, error) {
+	for _, processor := range a.Config.Processors {
+		if name == processor.Config.Name {
+			return processor.Processor, nil
+		}
+	}
+	return nil, fmt.Errorf("could not find processor with name: %s", name)
+
 }
 
 // initPlugins runs the Init function on plugins.

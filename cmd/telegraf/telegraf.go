@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/agent"
+	"github.com/influxdata/telegraf/assistant"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/goplugin"
@@ -203,6 +204,21 @@ func runAgent(ctx context.Context,
 			}()
 		}
 	}
+
+	// init assistant
+	astConfig := &assistant.AssistantConfig{Host: "localhost:8080", Path: "/echo", RetryInterval: 15}
+	ast, err := assistant.NewAssistant(astConfig, ag)
+	if err != nil {
+		log.Printf("E! [assistant] Error initializing Assistant: %s", err)
+	}
+
+	// run assistant
+	go func() {
+		err := ast.Run(ctx)
+		if err != nil {
+			log.Printf("E! [assistant] Error running Assistant: %s", err)
+		}
+	}()
 
 	return ag.Run(ctx)
 }
