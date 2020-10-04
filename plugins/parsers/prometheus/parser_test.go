@@ -1,9 +1,12 @@
 package prometheus
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -45,90 +48,296 @@ apiserver_request_latencies_count{resource="bindings",verb="POST"} 2025
 `
 )
 
-func ParseValidGauge(t *testing.T) {
+func TestParsingValidGauge(t *testing.T) {
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"osVersion":        "CentOS Linux 7 (Core)",
+				"cadvisorRevision": "",
+				"cadvisorVersion":  "",
+				"dockerVersion":    "1.8.2",
+				"kernelVersion":    "3.10.0-229.20.1.el7.x86_64",
+			},
+			map[string]interface{}{
+				"cadvisor_version_info": float64(1),
+			},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+	}
+
 	metrics, err := parse([]byte(validUniqueGauge))
+
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	assert.Equal(t, "cadvisor_version_info", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
-		"gauge": float64(1),
-	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{
-		"osVersion":        "CentOS Linux 7 (Core)",
-		"cadvisorRevision": "",
-		"cadvisorVersion":  "",
-		"dockerVersion":    "1.8.2",
-		"kernelVersion":    "3.10.0-229.20.1.el7.x86_64",
-	}, metrics[0].Tags())
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func ParseValieCounter(t *testing.T) {
-	// Counter value
+func TestParsingValieCounter(t *testing.T) {
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{},
+			map[string]interface{}{
+				"get_token_fail_count": float64(0),
+			},
+			time.Unix(0, 0),
+			telegraf.Counter,
+		),
+	}
+
 	metrics, err := parse([]byte(validUniqueCounter))
+
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	assert.Equal(t, "get_token_fail_count", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
-		"counter": float64(0),
-	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func ParseValidSummary(t *testing.T) {
-	// Summary data
-	//SetDefaultTags(map[string]string{})
+func TestParsingValidSummary(t *testing.T) {
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"handler": "prometheus",
+			},
+			map[string]interface{}{
+				"http_request_duration_microseconds_sum":   float64(1.8909097205e+07),
+				"http_request_duration_microseconds_count": float64(9.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Summary,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"handler":  "prometheus",
+				"quantile": "0.5",
+			},
+			map[string]interface{}{
+				"http_request_duration_microseconds": float64(552048.506),
+			},
+			time.Unix(0, 0),
+			telegraf.Summary,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"handler":  "prometheus",
+				"quantile": "0.9",
+			},
+			map[string]interface{}{
+				"http_request_duration_microseconds": float64(5.876804288e+06),
+			},
+			time.Unix(0, 0),
+			telegraf.Summary,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"handler":  "prometheus",
+				"quantile": "0.99",
+			},
+			map[string]interface{}{
+				"http_request_duration_microseconds": float64(5.876804288e+6),
+			},
+			time.Unix(0, 0),
+			telegraf.Summary,
+		),
+	}
+
 	metrics, err := parse([]byte(validUniqueSummary))
+
 	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "http_request_duration_microseconds", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
-		"0.5":   552048.506,
-		"0.9":   5.876804288e+06,
-		"0.99":  5.876804288e+06,
-		"count": 9.0,
-		"sum":   1.8909097205e+07,
-	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{"handler": "prometheus"}, metrics[0].Tags())
+	assert.Len(t, metrics, 4)
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func ParseValidHistogram(t *testing.T) {
-	// histogram data
+func TestParsingValidHistogram(t *testing.T) {
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_count": float64(2025.0),
+				"apiserver_request_latencies_sum":   float64(1.02726334e+08),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "125000",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(1994.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "250000",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(1997.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "500000",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2000.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "1e+06",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2005.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "2e+06",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2012.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "4e+06",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2017.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "8e+06",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2024.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"verb":     "POST",
+				"resource": "bindings",
+				"le":       "+Inf",
+			},
+			map[string]interface{}{
+				"apiserver_request_latencies_bucket": float64(2025.0),
+			},
+			time.Unix(0, 0),
+			telegraf.Histogram,
+		),
+	}
+
 	metrics, err := parse([]byte(validUniqueHistogram))
+
 	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "apiserver_request_latencies", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
-		"500000": 2000.0,
-		"count":  2025.0,
-		"sum":    1.02726334e+08,
-		"250000": 1997.0,
-		"2e+06":  2012.0,
-		"4e+06":  2017.0,
-		"8e+06":  2024.0,
-		"+Inf":   2025.0,
-		"125000": 1994.0,
-		"1e+06":  2005.0,
-	}, metrics[0].Fields())
-	assert.Equal(t,
-		map[string]string{"verb": "POST", "resource": "bindings"},
-		metrics[0].Tags())
+	assert.Len(t, metrics, 9)
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func AddsDefautTags(t *testing.T) {
+func TestDefautTags(t *testing.T) {
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"osVersion":        "CentOS Linux 7 (Core)",
+				"cadvisorRevision": "",
+				"cadvisorVersion":  "",
+				"dockerVersion":    "1.8.2",
+				"kernelVersion":    "3.10.0-229.20.1.el7.x86_64",
+				"defaultTag":       "defaultTagValue",
+			},
+			map[string]interface{}{
+				"cadvisor_version_info": float64(1),
+			},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+	}
+
 	parser := Parser{
 		DefaultTags: map[string]string{
-			"defaultTag": "defaultTagValue",
+			"defaultTag":    "defaultTagValue",
+			"dockerVersion": "to_be_overriden",
 		},
 	}
-	metrics, _ := parser.Parse([]byte(validUniqueGauge))
-	assert.Equal(t, map[string]string{
-		"osVersion":        "CentOS Linux 7 (Core)",
-		"cadvisorRevision": "",
-		"cadvisorVersion":  "",
-		"dockerVersion":    "1.8.2",
-		"kernelVersion":    "3.10.0-229.20.1.el7.x86_64",
-		"defaultTag":       "defaultTagValue",
-	}, metrics[0].Tags())
+	metrics, err := parser.Parse([]byte(validUniqueGauge))
+
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func TestMetricsWithTimestamp(t *testing.T) {
+	testTime := time.Date(2020, time.October, 4, 17, 0, 0, 0, time.UTC)
+	testTimeUnix := testTime.UnixNano() / int64(time.Millisecond)
+	metricsWithTimestamps := fmt.Sprintf(`
+# TYPE test_counter counter
+test_counter{label="test"} 1 %d
+`, testTimeUnix)
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"label": "test",
+			},
+			map[string]interface{}{
+				"test_counter": float64(1.0),
+			},
+			testTime,
+			telegraf.Counter,
+		),
+	}
+
+	metrics, _ := parse([]byte(metricsWithTimestamps))
+
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.SortMetrics())
 }
 
 func parse(buf []byte) ([]telegraf.Metric, error) {

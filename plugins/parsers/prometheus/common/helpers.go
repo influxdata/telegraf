@@ -23,16 +23,13 @@ func ValueType(mt dto.MetricType) telegraf.ValueType {
 // Get labels from metric
 func MakeLabels(m *dto.Metric, defaultTags map[string]string) map[string]string {
 	result := map[string]string{}
-	for _, lp := range m.Label {
-		result[lp.GetName()] = lp.GetValue()
+
+	for key, value := range defaultTags {
+		result[key] = value
 	}
 
-	if defaultTags != nil {
-		for k, v := range defaultTags {
-			if _, exists := result[k]; exists {
-				result[k] = v
-			}
-		}
+	for _, lp := range m.Label {
+		result[lp.GetName()] = lp.GetValue()
 	}
 
 	return result

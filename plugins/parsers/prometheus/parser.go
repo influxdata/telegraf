@@ -59,12 +59,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				fields = getNameAndValue(m, metricName)
 				// converting to telegraf metric
 				if len(fields) > 0 {
-					var t time.Time
-					if m.TimestampMs != nil && *m.TimestampMs > 0 {
-						t = time.Unix(0, *m.TimestampMs*1000000)
-					} else {
-						t = now
-					}
+					t := getTimestamp(m, now)
 					metric, err := metric.New("prometheus", tags, fields, t, ValueType(mf.GetType()))
 					if err == nil {
 						metrics = append(metrics, metric)
@@ -102,12 +97,8 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, now time.Time) []telegraf.Metric {
 	var metrics []telegraf.Metric
 	fields := make(map[string]interface{})
-	var t time.Time
-	if m.TimestampMs != nil && *m.TimestampMs > 0 {
-		t = time.Unix(0, *m.TimestampMs*1000000)
-	} else {
-		t = now
-	}
+	t := getTimestamp(m, now)
+
 	fields[metricName+"_count"] = float64(m.GetSummary().GetSampleCount())
 	fields[metricName+"_sum"] = float64(m.GetSummary().GetSampleSum())
 	met, err := metric.New("prometheus", tags, fields, t, ValueType(metricType))
@@ -134,12 +125,8 @@ func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, met
 func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, now time.Time) []telegraf.Metric {
 	var metrics []telegraf.Metric
 	fields := make(map[string]interface{})
-	var t time.Time
-	if m.TimestampMs != nil && *m.TimestampMs > 0 {
-		t = time.Unix(0, *m.TimestampMs*1000000)
-	} else {
-		t = now
-	}
+	t := getTimestamp(m, now)
+
 	fields[metricName+"_count"] = float64(m.GetHistogram().GetSampleCount())
 	fields[metricName+"_sum"] = float64(m.GetHistogram().GetSampleSum())
 
@@ -179,4 +166,14 @@ func getNameAndValue(m *dto.Metric, metricName string) map[string]interface{} {
 		}
 	}
 	return fields
+}
+
+func getTimestamp(m *dto.Metric, now time.Time) time.Time {
+	var t time.Time
+	if m.TimestampMs != nil && *m.TimestampMs > 0 {
+		t = time.Unix(0, m.GetTimestampMs()*1000000)
+	} else {
+		t = now
+	}
+	return t
 }
