@@ -1,11 +1,11 @@
 package devo
 
 import (
-	"os"
 	"fmt"
-	"time"
-	"strconv"
 	"math"
+	"os"
+	"strconv"
+	"time"
 
 	"github.com/influxdata/telegraf"
 )
@@ -14,7 +14,7 @@ type DevoMapper struct {
 	DefaultHostname     string
 	DefaultSeverityCode uint8
 	DefaultFacilityCode uint8
-	DefaultTag     			string
+	DefaultTag          string
 }
 
 func (ds *DevoMapper) devoMapper(metric telegraf.Metric, msg []byte) ([]byte, error) {
@@ -24,7 +24,6 @@ func (ds *DevoMapper) devoMapper(metric telegraf.Metric, msg []byte) ([]byte, er
 	severityCode := ds.DefaultSeverityCode
 	facilityCode := ds.DefaultFacilityCode
 	hostname := ds.DefaultHostname
-
 
 	if value, ok := metric.GetTag("devo_tag"); ok {
 		devoTag = formatValue(value)

@@ -15,16 +15,16 @@ import (
 )
 
 type DevoWriter struct {
-  Address         		string
-	ContentEncoding 		string `toml:"content_encoding"`
-	DefaultHostname			string
+	Address             string
+	ContentEncoding     string `toml:"content_encoding"`
+	DefaultHostname     string
 	DefaultSeverityCode uint8
 	DefaultFacilityCode uint8
-	DefaultTag					string
-	KeepAlivePeriod 		*internal.Duration
-	mapper							*DevoMapper
-  encoder 						internal.ContentEncoder
-  net.Conn
+	DefaultTag          string
+	KeepAlivePeriod     *internal.Duration
+	mapper              *DevoMapper
+	encoder             internal.ContentEncoder
+	net.Conn
 	serializers.Serializer
 	tlsint.ClientConfig
 }
@@ -205,21 +205,21 @@ func (s *DevoWriter) initializeDevoMapper() {
 		return
 	}
 	s.mapper = &DevoMapper{
-		DefaultTag: s.DefaultTag,
+		DefaultTag:          s.DefaultTag,
 		DefaultSeverityCode: s.DefaultSeverityCode,
 		DefaultFacilityCode: s.DefaultFacilityCode,
-		DefaultHostname: s.DefaultHostname,
+		DefaultHostname:     s.DefaultHostname,
 	}
 }
 
 func newDevoWriter() *DevoWriter {
 	s, _ := serializers.NewInfluxSerializer()
 	return &DevoWriter{
-		Serializer: s,
-		DefaultTag: "my.app.telegraf.untagged",
+		Serializer:          s,
+		DefaultTag:          "my.app.telegraf.untagged",
 		DefaultSeverityCode: uint8(5), // notice
 		DefaultFacilityCode: uint8(1), //user-level
-		DefaultHostname: "unknown",
+		DefaultHostname:     "unknown",
 	}
 }
 

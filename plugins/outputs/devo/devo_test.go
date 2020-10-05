@@ -45,11 +45,11 @@ func testSocketWriter_stream(t *testing.T, dw *DevoWriter, lconn net.Conn) {
 	metrics := []telegraf.Metric{}
 	metrics = append(metrics, testutil.TestMetric(1, "test"))
 	mbs1out, _ := dw.Serialize(metrics[0])
-  mbs1out, _ = dw.mapper.devoMapper(metrics[0], mbs1out)
+	mbs1out, _ = dw.mapper.devoMapper(metrics[0], mbs1out)
 	mbs1out, _ = dw.encoder.Encode(mbs1out)
 	metrics = append(metrics, testutil.TestMetric(2, "test"))
 	mbs2out, _ := dw.Serialize(metrics[1])
-  mbs2out, _ = dw.mapper.devoMapper(metrics[1], mbs2out)
+	mbs2out, _ = dw.mapper.devoMapper(metrics[1], mbs2out)
 	mbs2out, _ = dw.encoder.Encode(mbs2out)
 
 	err := dw.Write(metrics)
@@ -69,12 +69,12 @@ func testSocketWriter_packet(t *testing.T, dw *DevoWriter, lconn net.PacketConn)
 	metrics := []telegraf.Metric{}
 	metrics = append(metrics, testutil.TestMetric(1, "test"))
 	mbs1out, _ := dw.Serialize(metrics[0])
-  mbs1out, _ = dw.mapper.devoMapper(metrics[0], mbs1out)
+	mbs1out, _ = dw.mapper.devoMapper(metrics[0], mbs1out)
 	mbs1out, _ = dw.encoder.Encode(mbs1out)
 	mbs1str := string(mbs1out)
 	metrics = append(metrics, testutil.TestMetric(2, "test"))
 	mbs2out, _ := dw.Serialize(metrics[1])
-  mbs2out, _ = dw.mapper.devoMapper(metrics[1], mbs2out)
+	mbs2out, _ = dw.mapper.devoMapper(metrics[1], mbs2out)
 	mbs2out, _ = dw.encoder.Encode(mbs2out)
 	mbs2str := string(mbs2out)
 
@@ -127,7 +127,7 @@ func TestSocketWriter_Write_reconnect(t *testing.T) {
 	assert.NoError(t, lerr)
 
 	mbsout, _ := dw.Serialize(metrics[0])
-  mbsout, _ = dw.mapper.devoMapper(metrics[0], mbsout)
+	mbsout, _ = dw.mapper.devoMapper(metrics[0], mbsout)
 	buf := make([]byte, 256)
 	n, err := lconn.Read(buf)
 	require.NoError(t, err)

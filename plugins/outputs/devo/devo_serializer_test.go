@@ -23,9 +23,9 @@ func TestDevoMapperWithDefaults(t *testing.T) {
 	)
 	hostname, err := os.Hostname()
 	assert.NoError(t, err)
-  bs, err := dw.Serialize(m1)
-  bs, _ = dw.mapper.devoMapper(m1, bs)
-  str := string(bs)
+	bs, err := dw.Serialize(m1)
+	bs, _ = dw.mapper.devoMapper(m1, bs)
+	str := string(bs)
 	assert.Equal(t, "<13>2010-11-10T23:00:00Z "+hostname+" my.app.telegraf.untagged: ", str, "Wrong syslog message")
 }
 
@@ -44,9 +44,9 @@ func TestDevoMapperWithHostname(t *testing.T) {
 		map[string]interface{}{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-  bs, _ := dw.Serialize(m1)
-  bs, _ = dw.mapper.devoMapper(m1, bs)
-  str := string(bs)
+	bs, _ := dw.Serialize(m1)
+	bs, _ = dw.mapper.devoMapper(m1, bs)
+	str := string(bs)
 	assert.Equal(t, "<13>2010-11-10T23:00:00Z testhost my.app.telegraf.untagged: ", str, "Wrong syslog message")
 }
 func TestDevoMapperWithHostnameSourceFallback(t *testing.T) {
@@ -63,9 +63,9 @@ func TestDevoMapperWithHostnameSourceFallback(t *testing.T) {
 		map[string]interface{}{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-  bs, _ := dw.Serialize(m1)
-  bs, _ = dw.mapper.devoMapper(m1, bs)
-  str := string(bs)
+	bs, _ := dw.Serialize(m1)
+	bs, _ = dw.mapper.devoMapper(m1, bs)
+	str := string(bs)
 	assert.Equal(t, "<13>2010-11-10T23:00:00Z sourcevalue my.app.telegraf.untagged: ", str, "Wrong syslog message")
 }
 
@@ -82,9 +82,9 @@ func TestDevoMapperWithHostnameHostFallback(t *testing.T) {
 		map[string]interface{}{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-  bs, _ := dw.Serialize(m1)
-  bs, _ = dw.mapper.devoMapper(m1, bs)
-  str := string(bs)
+	bs, _ := dw.Serialize(m1)
+	bs, _ = dw.mapper.devoMapper(m1, bs)
+	str := string(bs)
 	assert.Equal(t, "<13>2010-11-10T23:00:00Z hostvalue my.app.telegraf.untagged: ", str, "Wrong syslog message")
 }
 
@@ -98,7 +98,7 @@ func TestDevoMapperWithNoErrors(t *testing.T) {
 		"testmetric",
 		map[string]string{
 			"appname":            "testapp",
-      "devo_tag":           "my.app.telegraf.devotagapp",
+			"devo_tag":           "my.app.telegraf.devotagapp",
 			"hostname":           "testhost",
 			"tag1":               "bar",
 			"default@32473_tag2": "foobar",
@@ -121,7 +121,7 @@ func TestDevoMapperWithNoErrors(t *testing.T) {
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
-  bs, err := dw.Serialize(m1)
-  bs, err = dw.mapper.devoMapper(m1, bs)
+	bs, err := dw.Serialize(m1)
+	bs, err = dw.mapper.devoMapper(m1, bs)
 	require.NoError(t, err)
 }
