@@ -1,5 +1,8 @@
 # Devo Output Plugin
-This plugin send metrics in influx data format to Devo platform by tcp, udp and tcp+tls connection.
+This plugin sends metrics in any serializable data format to Devo platform by tcp, udp and tcp+tls connection.
+
+You can use the `devo_tag` label in your metrics to properly tag your events when you send to Devo. If no valid
+data is serializable an empty message will be generated.
 
 ### Configuration:
 
