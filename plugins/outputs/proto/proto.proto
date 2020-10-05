@@ -1,0 +1,386 @@
+syntax = "proto3";
+
+message CPU {
+  message Fields {
+    double usage_guest = 1;
+    double usage_guest_nice = 2;
+    double usage_idle = 3;
+    double usage_iowait = 4;
+    double usage_irq = 5;
+    double usage_nice = 6;
+    double usage_softirq = 7;
+    double usage_steal = 8;
+    double usage_system = 9;
+    double usage_user = 10;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string cpu = 1;
+    string host = 2;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message Kernel {
+  message Fields {
+    int64 boot_time = 1;
+    int64 context_switches = 2;
+    int64 entropy_avail = 3;
+    int64 interrupts = 4;
+    int64 processes_forked = 5;
+  }
+
+  message Tags {
+    string host = 1;
+  }
+
+  string name = 1;
+  Fields fields = 2;
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message LinuxSysctlFs {
+  message Fields {
+    double aio_max_nr = 1;
+    double aio_nr = 2;
+    double dentry_age_limit = 3;
+    double dentry_nr = 4;
+    double dentry_unused_nr = 5;
+    double dentry_want_pages = 6;
+    double file_max = 7;
+    double file_nr = 8;
+    double inode_free_nr = 9;
+    double inode_nr = 10;
+    double inode_preshrink_nr = 11;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string host = 1;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message System {
+
+  message Fields {
+    double load1 = 1;
+    double load15 = 2;
+    double load5 = 3;
+    int64 n_cpus = 4;
+    int64 uptime = 5;
+    string uptime_format = 6;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string host = 1;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message Net {
+  message Fields {
+    int64 bytes_recv = 1;
+    int64 bytes_sent = 2;
+    int64 drop_in = 3;
+    int64 drop_out = 4;
+    int64 err_in = 5;
+    int64 err_out = 6;
+    int64 packets_recv = 7;
+    int64 packets_sent = 8;
+    int64 icmp_inaddrmaskreps = 9;
+    int64 icmp_inaddrmasks = 10;
+    int64 icmp_incsumerrors = 11;
+    int64 icmp_indestunreachs = 12;
+    int64 icmp_inechoreps = 13;
+    int64 icmp_inechos = 14;
+    int64 icmp_inerrors = 15;
+    int64 icmp_inmsgs = 16;
+    int64 icmp_inparmprobs = 17;
+    int64 icmp_inredirects = 18;
+    int64 icmp_insrcquenchs = 19;
+    int64 icmp_intimeexcds = 20;
+    int64 icmp_intimestampreps = 21;
+    int64 icmp_intimestamps = 22;
+    int64 icmp_outaddrmaskreps = 23;
+    int64 icmp_outaddrmasks = 24;
+    int64 icmp_outdestunreachs = 25;
+    int64 icmp_outechoreps = 26;
+    int64 icmp_outechos = 27;
+    int64 icmp_outerrors = 28;
+    int64 icmp_outmsgs = 29;
+    int64 icmp_outparmprobs = 30;
+    int64 icmp_outredirects = 31;
+    int64 icmp_outsrcquenchs = 32;
+    int64 icmp_outtimeexcds = 33;
+    int64 icmp_outtimestampreps = 34;
+    int64 icmp_outtimestamps = 35;
+    int64 ip_defaultttl = 36;
+    int64 ip_forwarding = 37;
+    int64 ip_forwdatagrams = 38;
+    int64 ip_fragcreates = 39;
+    int64 ip_fragfails = 40;
+    int64 ip_fragoks = 41;
+    int64 ip_inaddrerrors = 42;
+    int64 ip_indelivers = 43;
+    int64 ip_indiscards = 44;
+    int64 ip_inhdrerrors = 45;
+    int64 ip_inreceives = 46;
+    int64 ip_inunknownprotos = 47;
+    int64 ip_outdiscards = 48;
+    int64 ip_outnoroutes = 49;
+    int64 ip_outrequests = 50;
+    int64 ip_reasmfails = 51;
+    int64 ip_reasmoks = 52;
+    int64 ip_reasmreqds = 53;
+    int64 ip_reasmtimeout = 54;
+    int64 tcp_activeopens = 55;
+    int64 tcp_attemptfails = 56;
+    int64 tcp_currestab = 57;
+    int64 tcp_estabresets = 58;
+    int64 tcp_incsumerrors = 59;
+    int64 tcp_inerrs = 60;
+    int64 tcp_insegs = 61;
+    int64 tcp_maxconn = 62;
+    int64 tcp_outrsts = 63;
+    int64 tcp_outsegs = 64;
+    int64 tcp_passiveopens = 65;
+    int64 tcp_retranssegs = 66;
+    int64 tcp_rtoalgorithm = 67;
+    int64 tcp_rtomax = 68;
+    int64 tcp_rtomin = 69;
+    int64 udp_ignoredmulti = 70;
+    int64 udp_incsumerrors = 71;
+    int64 udp_indatagrams = 72;
+    int64 udp_inerrors = 73;
+    int64 udp_noports = 74;
+    int64 udp_outdatagrams = 75;
+    int64 udp_rcvbuferrors = 76;
+    int64 udp_sndbuferrors = 77;
+    int64 udplite_ignoredmulti = 78;
+    int64 udplite_incsumerrors = 79;
+    int64 udplite_indatagrams = 80;
+    int64 udplite_inerrors = 81;
+    int64 udplite_noports = 82;
+    int64 udplite_outdatagrams = 83;
+    int64 udplite_rcvbuferrors = 84;
+    int64 udplite_sndbuferrors = 85;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string host = 1;
+    string interface = 2;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message Interrupts {
+
+  message Fields {
+    int64 CPU0 = 1;
+    int64 CPU1 = 2;
+    int64 CPU2 = 3;
+    int64 CPU3 = 4;
+    int64 CPU4 = 5;
+    int64 CPU5 = 6;
+    int64 total = 7;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string device = 1;
+    string host = 2;
+    string irq = 3;
+    string type = 4;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message Mem {
+
+  message Fields {
+    int64 active = 1;
+    int64 available = 2;
+    double available_percent = 3;
+    int64 buffered = 4;
+    int64 cached = 5;
+    int64 commit_limit = 6;
+    int64 committed_as = 7;
+    int64 dirty = 8;
+    int64 free = 9;
+    int64 high_free = 10;
+    int64 high_total = 11;
+    int64 huge_page_size = 12;
+    int64 huge_pages_free = 13;
+    int64 huge_pages_total = 14;
+    int64 inactive = 15;
+    int64 low_free = 16;
+    int64 low_total = 17;
+    int64 mapped = 18;
+    int64 page_tables = 19;
+    int64 shared = 20;
+    int64 slab = 21;
+    int64 sreclaimable = 22;
+    int64 sunreclaim = 23;
+    int64 swap_cached = 24;
+    int64 swap_free = 25;
+    int64 swap_total = 26;
+    int64 total = 27;
+    int64 used = 28;
+    double used_percent = 29;
+    int64 vmalloc_chunk = 30;
+    int64 vmalloc_total = 31;
+    int64 vmalloc_used = 32;
+    int64 write_back = 33;
+    int64 write_back_tmp = 34;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string host = 1;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message Disk {
+  message Fields {
+    int64 free = 1;
+    int64 inodes_free = 2;
+    int64 inodes_total = 3;
+    int64 inodes_used = 4;
+    int64 total = 5;
+    int64 used = 6;
+    double used_percent = 7;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string device = 1;
+    string fstype = 2;
+    string host = 3;
+    string mode = 4;
+    string path = 5;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message Swap {
+  message Fields {
+    int64 free = 1;
+    int64 total = 2;
+    int64 used = 3;
+    double used_percent = 4;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string host = 1;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+
+message Processes {
+  message Fields {
+    int64 blocked = 1;
+    int64 dead = 2;
+    int64 idle = 3;
+    int64 paging = 4;
+    int64 running = 5;
+    int64 sleeping = 6;
+    int64 stopped = 7;
+    int64 total = 8;
+    int64 total_threads = 9;
+    int64 unknown = 10;
+    int64 zombies = 11;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string host = 1;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message Docker {
+  message Fields {
+    int64 n_containers = 1;
+    int64 n_containers_paused = 2;
+    int64 n_containers_running = 3;
+    int64 n_containers_stopped = 4;
+    int64 n_cpus = 5;
+    int64 n_goroutines = 6;
+    int64 n_images = 7;
+    int64 n_listener_events = 8;
+    int64 n_used_file_descriptors = 9;
+    int64 memory_total = 10;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string engine_host = 1;
+    string host = 2;
+    string server_version = 3;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message Influx {
+  repeated Kernel kernel = 1;
+  repeated LinuxSysctlFs linux_sysctl_fs = 2;
+  repeated System system = 3;
+  repeated Net net = 4;
+  repeated Interrupts interrupts = 5;
+  repeated Mem mem = 6;
+  repeated Disk disk = 7;
+  repeated Processes processes = 8;
+  repeated Docker docker = 9;
+  repeated CPU cpu = 10;
+  repeated Swap swap = 11;
+}
+
+
