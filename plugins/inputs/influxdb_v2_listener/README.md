@@ -9,6 +9,8 @@ The `/api/v2/write` endpoint supports the `precision` query parameter and can be
 to one of `ns`, `us`, `ms`, `s`.  All other parameters are ignored and
 defer to the output plugins configuration.
 
+Telegraf minimum version: Telegraf 1.16.0
+
 ### Configuration:
 
 ```toml
