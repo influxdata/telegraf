@@ -1,4 +1,6 @@
 # Intel RDT Input Plugin
+Telegraf minimum version: Telegraf 1.16.0
+
 The intel_rdt plugin collects information provided by monitoring features of 
 Intel Resource Director Technology (Intel(R) RDT) like Cache Monitoring Technology (CMT), 
 Memory Bandwidth Monitoring (MBM), Cache Allocation Technology (CAT) and Code 

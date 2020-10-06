@@ -2,6 +2,8 @@
 
 The `RAS` plugin gathers and counts errors provided by [RASDaemon](https://github.com/mchehab/rasdaemon).
 
+Telegraf minimum version: Telegraf 1.16.0
+
 ### Configuration
 
 ```toml

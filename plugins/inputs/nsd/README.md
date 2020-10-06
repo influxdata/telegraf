@@ -4,6 +4,8 @@ This plugin gathers stats from
 [NSD](https://www.nlnetlabs.nl/projects/nsd/about) - an authoritative DNS name
 server.
 
+Telegraf minimum version: Telegraf 1.16.0
+
 ### Configuration:
 
 ```toml
