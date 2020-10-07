@@ -12,13 +12,13 @@ import (
 type format string
 
 const (
-	Carbon2FormatFieldEmpty          = format("")
+	carbon2FormatFieldEmpty          = format("")
 	Carbon2FormatFieldSeparate       = format("field_separate")
 	Carbon2FormatMetricIncludesField = format("metric_includes_field")
 )
 
 var formats = map[format]struct{}{
-	Carbon2FormatFieldEmpty:          {},
+	carbon2FormatFieldEmpty:          {},
 	Carbon2FormatFieldSeparate:       {},
 	Carbon2FormatMetricIncludesField: {},
 }
@@ -29,8 +29,14 @@ type Serializer struct {
 
 func NewSerializer(metricsFormat string) (*Serializer, error) {
 	var f = format(metricsFormat)
+
 	if _, ok := formats[f]; !ok {
 		return nil, fmt.Errorf("unknown carbon2 format: %s", f)
+	}
+
+	// When unset, default to field separate.
+	if f == carbon2FormatFieldEmpty {
+		f = Carbon2FormatFieldSeparate
 	}
 
 	return &Serializer{
@@ -60,8 +66,6 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 		}
 
 		switch metricsFormat {
-		// Field separate is the default when no format specified.
-		case Carbon2FormatFieldEmpty:
 		case Carbon2FormatFieldSeparate:
 			m.WriteString(serializeMetricFieldSeparate(
 				metric.Name(), fieldName,
@@ -101,7 +105,7 @@ func (s *Serializer) getMetricsFormat() format {
 }
 
 func (s *Serializer) IsMetricsFormatUnset() bool {
-	return s.metricsFormat == Carbon2FormatFieldEmpty
+	return s.metricsFormat == carbon2FormatFieldEmpty
 }
 
 func serializeMetricFieldSeparate(name, fieldName string) string {
