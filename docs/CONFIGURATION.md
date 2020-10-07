@@ -55,7 +55,7 @@ INFLUX_PASSWORD="monkey123"
 ```
 For InfluxDB OSS 2:
 ```
-INFLUX_HOST="http://localhost:9999"
+INFLUX_HOST="http://localhost:8086" # used to be 9999
 INFLUX_TOKEN="replace_with_your_token"
 INFLUX_ORG="your_username"
 INFLUX_BUCKET="replace_with_your_bucket_name"
@@ -83,7 +83,7 @@ INFLUX_BUCKET="replace_with_your_bucket_name"
   urls = ["${INFLUX_URL}"]
   skip_database_creation = ${INFLUX_SKIP_DATABASE_CREATION}
   password = "${INFLUX_PASSWORD}"
-  
+
 # For InfluxDB OSS 2:
 [[outputs.influxdb_v2]]
   urls = ["${INFLUX_HOST}"]
@@ -112,10 +112,10 @@ parsed:
   urls = "http://localhost:8086"
   skip_database_creation = true
   password = "monkey123"
-  
+
 # For InfluxDB OSS 2:
 [[outputs.influxdb_v2]]
-  urls = ["http://127.0.0.1:9999"]
+  urls = ["http://127.0.0.1:8086"] # double check the port. could be 9999 if using OSS Beta
   token = "replace_with_your_token"
   org = "your_username"
   bucket = "replace_with_your_bucket_name"
@@ -499,8 +499,8 @@ patterns is emitted.
 The inverse of `tagpass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `tagpass` test.
 
-> NOTE: Due to the way TOML is parsed, `tagpass` and `tagdrop` parameters must be 
-defined at the *_end_* of the plugin definition, otherwise subsequent plugin config 
+> NOTE: Due to the way TOML is parsed, `tagpass` and `tagdrop` parameters must be
+defined at the *_end_* of the plugin definition, otherwise subsequent plugin config
 options will be interpreted as part of the tagpass/tagdrop tables.
 
 #### Modifiers
