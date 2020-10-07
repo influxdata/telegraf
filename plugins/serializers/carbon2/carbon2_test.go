@@ -228,7 +228,7 @@ func TestSerializeMetricBool(t *testing.T) {
 
 	testcases := []struct {
 		metric   telegraf.Metric
-		format   string
+		format   format
 		expected string
 	}{
 		{
@@ -254,8 +254,8 @@ func TestSerializeMetricBool(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
+		t.Run(string(tc.format), func(t *testing.T) {
+			s, err := NewSerializer(string(tc.format))
 			require.NoError(t, err)
 
 			buf, err := s.Serialize(tc.metric)
