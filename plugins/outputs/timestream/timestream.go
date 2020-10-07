@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash/fnv"
-	"log"
 	"reflect"
 	"strconv"
 	"time"
@@ -40,8 +39,6 @@ type (
 		CreateTableMagneticStoreRetentionPeriodInDays int64             `toml:"create_table_magnetic_store_retention_period_in_days"`
 		CreateTableMemoryStoreRetentionPeriodInHours  int64             `toml:"create_table_memory_store_retention_period_in_hours"`
 		CreateTableTags                               map[string]string `toml:"create_table_tags"`
-
-		Debug bool `toml:"debug"`
 
 		Log telegraf.Logger
 		svc WriteClient
@@ -173,9 +170,6 @@ var sampleConfig = `
   ## Specifies the Timestream table tags.
   ## Check Timestream documentation for more details
   # create_table_tags = { "foo" = "bar", "environment" = "dev"}
-
-  ## Debug will show more information, including data being written to Timestream.
-  debug = false
 `
 
 // WriteFactory function provides a way to mock the client instantiation for testing purposes.
@@ -229,7 +223,7 @@ func (t *Timestream) Connect() error {
 		}
 	}
 
-	log.Printf("I! Timestream: Constructing Timestream client for '%s' mode", t.MappingMode)
+	t.Log.Infof("Constructing Timestream client for '%s' mode", t.MappingMode)
 
 	credentialConfig := &internalaws.CredentialConfig{
 		Region:      t.Region,
@@ -244,17 +238,17 @@ func (t *Timestream) Connect() error {
 	svc := WriteFactory(credentialConfig)
 
 	if t.DescribeDatabaseOnStart {
-		log.Printf("I! Timestream: Describing database '%s' in region '%s'", t.DatabaseName, t.Region)
+		t.Log.Infof("Describing database '%s' in region '%s'", t.DatabaseName, t.Region)
 
 		describeDatabaseInput := &timestreamwrite.DescribeDatabaseInput{
 			DatabaseName: aws.String(t.DatabaseName),
 		}
 		describeDatabaseOutput, err := svc.DescribeDatabase(describeDatabaseInput)
 		if err != nil {
-			log.Printf("E! Timestream: Couldn't describe database '%s'. Check error, fix permissions, connectivity, create database.", t.DatabaseName)
+			t.Log.Errorf("Couldn't describe database '%s'. Check error, fix permissions, connectivity, create database.", t.DatabaseName)
 			return err
 		}
-		log.Printf("I! Timestream: Describe database '%s' returned: '%s'.", t.DatabaseName, describeDatabaseOutput)
+		t.Log.Infof("Describe database '%s' returned: '%s'.", t.DatabaseName, describeDatabaseOutput)
 	}
 
 	t.svc = svc
@@ -290,9 +284,7 @@ func (t *Timestream) Write(metrics []telegraf.Metric) error {
 }
 
 func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteRecordsInput, resourceNotFoundRetry bool) error {
-	if t.Debug {
-		log.Printf("I! Timestream: Writing to Timestream: '%v' with ResourceNotFoundRetry: '%t'", writeRecordsInput, resourceNotFoundRetry)
-	}
+	t.Log.Debugf("Writing to Timestream: '%v' with ResourceNotFoundRetry: '%t'", writeRecordsInput, resourceNotFoundRetry)
 
 	_, err := t.svc.WriteRecords(writeRecordsInput)
 	if err != nil {
@@ -302,7 +294,7 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 			switch e.Code() {
 			case timestreamwrite.ErrCodeResourceNotFoundException:
 				if resourceNotFoundRetry {
-					log.Printf("W! Timestream: Failed to write to Timestream database '%s' table '%s'. Error: '%s'",
+					t.Log.Warnf("Failed to write to Timestream database '%s' table '%s'. Error: '%s'",
 						t.DatabaseName, *writeRecordsInput.TableName, e)
 					return t.createTableAndRetry(writeRecordsInput)
 				}
@@ -326,21 +318,21 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 }
 
 func (t *Timestream) logWriteToTimestreamError(err error, tableName *string) {
-	log.Printf("E! Timestream: Failed to write to Timestream database '%s' table '%s'. Skipping metric! Error: '%s'",
+	t.Log.Errorf("Failed to write to Timestream database '%s' table '%s'. Skipping metric! Error: '%s'",
 		t.DatabaseName, *tableName, err)
 }
 
 func (t *Timestream) createTableAndRetry(writeRecordsInput *timestreamwrite.WriteRecordsInput) error {
 	if t.CreateTableIfNotExists {
-		log.Printf("I! Timestream: Trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'true'.", *writeRecordsInput.TableName, t.DatabaseName)
+		t.Log.Infof("Trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'true'.", *writeRecordsInput.TableName, t.DatabaseName)
 		if err := t.createTable(writeRecordsInput.TableName); err != nil {
-			log.Printf("E! Timestream: Failed to create table '%s' in database '%s': %s. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName, err)
+			t.Log.Errorf("Failed to create table '%s' in database '%s': %s. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName, err)
 		} else {
-			log.Printf("I! Timestream: Table '%s' in database '%s' created. Retrying writing.", *writeRecordsInput.TableName, t.DatabaseName)
+			t.Log.Infof("Table '%s' in database '%s' created. Retrying writing.", *writeRecordsInput.TableName, t.DatabaseName)
 			return t.writeToTimestream(writeRecordsInput, false)
 		}
 	} else {
-		log.Printf("E! Timestream: Not trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'false'. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName)
+		t.Log.Errorf("Not trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'false'. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName)
 	}
 	return nil
 }
@@ -384,7 +376,7 @@ func (t *Timestream) TransformMetrics(metrics []telegraf.Metric) []*timestreamwr
 	writeRequests := make(map[uint64]*timestreamwrite.WriteRecordsInput, len(metrics))
 	for _, m := range metrics {
 		// build MeasureName, MeasureValue, MeasureValueType
-		records := buildWriteRecords(m)
+		records := t.buildWriteRecords(m)
 		if len(records) == 0 {
 			continue
 		}
@@ -479,12 +471,12 @@ func (t *Timestream) buildDimensions(point telegraf.Metric) []*timestreamwrite.D
 // Tags and time are not included - common attributes are built separately.
 // Records with unsupported Metric Field type are skipped.
 // It returns an array of Timestream write records.
-func buildWriteRecords(point telegraf.Metric) []*timestreamwrite.Record {
+func (t *Timestream) buildWriteRecords(point telegraf.Metric) []*timestreamwrite.Record {
 	var records []*timestreamwrite.Record
 	for fieldName, fieldValue := range point.Fields() {
 		stringFieldValue, stringFieldValueType, ok := convertValue(fieldValue)
 		if !ok {
-			log.Printf("E! Timestream: Skipping field '%s'. The type '%s' is not supported in Timestream as MeasureValue. "+
+			t.Log.Errorf("Skipping field '%s'. The type '%s' is not supported in Timestream as MeasureValue. "+
 				"Supported values are: [int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool]",
 				fieldName, reflect.TypeOf(fieldValue))
 			continue

@@ -115,9 +115,6 @@ The Timestream output plugin writes metrics to the [Amazon Timestream] service.
   ## Specifies the Timestream table tags.
   ## Check Timestream documentation for more details
   # create_table_tags = { "foo" = "bar", "environment" = "dev"}
-
-  ## Debug will show more information, including data being written to Timestream.
-  debug = false
 ```
 
 ### Batching
@@ -142,14 +139,14 @@ In case of receiving any other AWS error from Timestream, the records are droppe
 
 ### Logging
 
-Turn debug option in the plugin itself to turn on detailed logging (including records being written to Timestream), separate from the agent debug option.
+Turn on debug flag in the Telegraf to turn on detailed logging (including records being written to Timestream).
 
 ### Testing
 
 Execute unit tests with:
 
 ```
-go test -v ./plugins/outputs/timestream/timestream_test.go ./plugins/outputs/timestream/timestream_internal_test.go ./plugins/outputs/timestream/timestream.go
+go test -v ./plugins/outputs/timestream/...
 ```
 
 [Amazon Timestream]: https://aws.amazon.com/timestream/
