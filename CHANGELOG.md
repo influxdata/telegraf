@@ -60,6 +60,7 @@
   - [#8200](https://github.com/influxdata/telegraf/pull/8200) `inputs.sqlserver` Fixed Query mapping
   - [#8201](https://github.com/influxdata/telegraf/pull/8201) `outputs.sumologic` Fix carbon2 serializer not falling through to field separate when carbon2_format field is unset
   - [#8210](https://github.com/influxdata/telegraf/pull/8210) update gopsutil: fix procstat performance regression
+  - [#8162](https://github.com/influxdata/telegraf/pull/8162) Fix bool serialization when using carbon2
 
 #### New Input Plugins
 
