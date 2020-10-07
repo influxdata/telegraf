@@ -63,18 +63,18 @@
 
 #### New Input Plugins
 
-  - [influxdb_v2_listener](/plugins/inputs/influxdb_v2_listener/README.md) Influxdb v2 listener
-  - [intel_rdt](/plugins/inputs/intel_rdt/README.md) New input plugin for Intel RDT (Intel Resource Director Technology)
-  - [nsd](/plugins/inputs/nsd/README.md) add nsd input plugin
-  - [opcua](/plugins/inputs/opcua/README.md) Add OPC UA input plugin
-  - [proxmox](/plugins/inputs/proxmox/README.md) Proxmox plugin
-  - [ras](/plugins/inputs/ras/README.md) New input plugin for RAS (Reliability, Availability and Serviceability)
-  - [win_eventlog](/plugins/inputs/win_eventlog/README.md) Windows eventlog input plugin
+  - [influxdb_v2_listener](/plugins/inputs/influxdb_v2_listener/README.md) Influxdb v2 listener - Contributed by @magichair
+  - [intel_rdt](/plugins/inputs/intel_rdt/README.md) New input plugin for Intel RDT (Intel Resource Director Technology) - Contributed by @p-zak
+  - [nsd](/plugins/inputs/nsd/README.md) add nsd input plugin - Contributed by @gearnode
+  - [opcua](/plugins/inputs/opcua/README.md) Add OPC UA input plugin - Contributed by InfluxData
+  - [proxmox](/plugins/inputs/proxmox/README.md) Proxmox plugin - Contributed by @effitient
+  - [ras](/plugins/inputs/ras/README.md) New input plugin for RAS (Reliability, Availability and Serviceability) - Contributed by @p-zak
+  - [win_eventlog](/plugins/inputs/win_eventlog/README.md) Windows eventlog input plugin - Contributed by @simnv
 
 #### New Output Plugins
 
-  - [dynatrace](/plugins/outputs/dynatrace/README.md) Dynatrace output plugin
-  - [sumologic](/plugins/outputs/dynatrace/README.md) Sumo Logic output plugin
+  - [dynatrace](/plugins/outputs/dynatrace/README.md) Dynatrace output plugin - Contributed by @thschue
+  - [sumologic](/plugins/outputs/sumologic/README.md) Sumo Logic output plugin - Contributed by @pmalek-sumo
 
 #### New External Plugins
 
