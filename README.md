@@ -54,7 +54,7 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 Telegraf requires Go version 1.13 or newer, the Makefile requires GNU make.
 
-1. [Install Go](https://golang.org/doc/install) >=1.13 (1.14 recommended)
+1. [Install Go](https://golang.org/doc/install) >=1.13 (1.15 recommended)
 2. Clone the Telegraf repository:
    ```
    cd ~/src
