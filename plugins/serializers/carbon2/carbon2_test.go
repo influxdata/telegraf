@@ -209,6 +209,63 @@ func TestSerializeMetricString(t *testing.T) {
 	}
 }
 
+func TestSerializeMetricBool(t *testing.T) {
+	requireMetric := func(t *testing.T, tim time.Time, value bool) telegraf.Metric {
+		tags := map[string]string{
+			"tag_name": "tag_value",
+		}
+		fields := map[string]interface{}{
+			"java_lang_GarbageCollector_Valid": value,
+		}
+
+		m, err := metric.New("cpu", tags, fields, tim)
+		require.NoError(t, err)
+
+		return m
+	}
+
+	now := time.Now()
+
+	testcases := []struct {
+		metric   telegraf.Metric
+		format   string
+		expected string
+	}{
+		{
+			metric:   requireMetric(t, now, false),
+			format:   Carbon2FormatFieldSeparate,
+			expected: fmt.Sprintf("metric=cpu field=java_lang_GarbageCollector_Valid tag_name=tag_value  0 %d\n", now.Unix()),
+		},
+		{
+			metric:   requireMetric(t, now, false),
+			format:   Carbon2FormatMetricIncludesField,
+			expected: fmt.Sprintf("metric=cpu_java_lang_GarbageCollector_Valid tag_name=tag_value  0 %d\n", now.Unix()),
+		},
+		{
+			metric:   requireMetric(t, now, true),
+			format:   Carbon2FormatFieldSeparate,
+			expected: fmt.Sprintf("metric=cpu field=java_lang_GarbageCollector_Valid tag_name=tag_value  1 %d\n", now.Unix()),
+		},
+		{
+			metric:   requireMetric(t, now, true),
+			format:   Carbon2FormatMetricIncludesField,
+			expected: fmt.Sprintf("metric=cpu_java_lang_GarbageCollector_Valid tag_name=tag_value  1 %d\n", now.Unix()),
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.format, func(t *testing.T) {
+			s, err := NewSerializer(tc.format)
+			require.NoError(t, err)
+
+			buf, err := s.Serialize(tc.metric)
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.expected, string(buf))
+		})
+	}
+}
+
 func TestSerializeBatch(t *testing.T) {
 	m := MustMetric(
 		metric.New(
