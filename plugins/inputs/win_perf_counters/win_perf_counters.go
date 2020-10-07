@@ -47,6 +47,8 @@ var sampleConfig = `
     # IncludeTotal=false
     # Print out when the performance counter is missing from object, counter or instance.
     # WarnOnMissing = false
+    # Gather raw values instead of formatted. Raw value is stored in the field name with the "_Raw" suffix, e.g. "Disk_Read_Bytes_sec_Raw".
+    # UseRawValues = true
 
   [[inputs.win_perf_counters.object]]
     # Disk times and queues
@@ -137,6 +139,9 @@ var sampleConfig = `
     Measurement = "win_swap"
 `
 
+var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
+	" ", "_", "%", "Percent", `\`, "")
+
 type Win_PerfCounters struct {
 	PrintValid bool
 	//deprecated: determined dynamically
@@ -161,6 +166,7 @@ type perfobject struct {
 	WarnOnMissing bool
 	FailOnMissing bool
 	IncludeTotal  bool
+	UseRawValues  bool
 }
 
 type counter struct {
@@ -170,7 +176,21 @@ type counter struct {
 	instance      string
 	measurement   string
 	includeTotal  bool
+	useRawValue   bool
 	counterHandle PDH_HCOUNTER
+}
+
+func newCounter(counterHandle PDH_HCOUNTER, counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool, useRawValue bool) *counter {
+	measurementName := sanitizedChars.Replace(measurement)
+	if measurementName == "" {
+		measurementName = "win_perf_counters"
+	}
+	newCounterName := sanitizedChars.Replace(counterName)
+	if useRawValue {
+		newCounterName += "_Raw"
+	}
+	return &counter{counterPath, objectName, newCounterName, instance, measurementName,
+		includeTotal, useRawValue, counterHandle}
 }
 
 type instanceGrouping struct {
@@ -178,9 +198,6 @@ type instanceGrouping struct {
 	instance   string
 	objectname string
 }
-
-var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
-	" ", "_", "%", "Percent", `\`, "")
 
 // extractCounterInfoFromCounterPath gets object name, instance name (if available) and counter name from counter path
 // General Counter path pattern is: \\computer\object(parent/instance#index)\counter
@@ -245,7 +262,7 @@ func (m *Win_PerfCounters) SampleConfig() string {
 }
 
 //objectName string, counter string, instance string, measurement string, include_total bool
-func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool) error {
+func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool, useRawValue bool) error {
 	var err error
 	var counterHandle PDH_HCOUNTER
 	if !m.query.IsVistaOrNewer() {
@@ -285,8 +302,8 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 				continue
 			}
 
-			newItem := &counter{counterPath, objectName, counterName, instance, measurement,
-				includeTotal, counterHandle}
+			newItem := newCounter(counterHandle, counterPath, objectName, instance, counterName, measurement,
+				includeTotal, useRawValue)
 			m.counters = append(m.counters, newItem)
 
 			if m.PrintValid {
@@ -294,8 +311,8 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			}
 		}
 	} else {
-		newItem := &counter{counterPath, objectName, counterName, instance, measurement,
-			includeTotal, counterHandle}
+		newItem := newCounter(counterHandle, counterPath, objectName, instance, counterName, measurement,
+			includeTotal, useRawValue)
 		m.counters = append(m.counters, newItem)
 		if m.PrintValid {
 			m.Log.Infof("Valid: %s", counterPath)
@@ -311,6 +328,9 @@ func (m *Win_PerfCounters) ParseConfig() error {
 	if len(m.Object) > 0 {
 		for _, PerfObject := range m.Object {
 			for _, counter := range PerfObject.Counters {
+				if len(PerfObject.Instances) == 0 {
+					m.Log.Warnf("Missing 'Instances' param for object '%s'\n", PerfObject.ObjectName)
+				}
 				for _, instance := range PerfObject.Instances {
 					objectname := PerfObject.ObjectName
 
@@ -320,7 +340,7 @@ func (m *Win_PerfCounters) ParseConfig() error {
 						counterPath = "\\" + objectname + "(" + instance + ")\\" + counter
 					}
 
-					err := m.AddItem(counterPath, objectname, instance, counter, PerfObject.Measurement, PerfObject.IncludeTotal)
+					err := m.AddItem(counterPath, objectname, instance, counter, PerfObject.Measurement, PerfObject.IncludeTotal, PerfObject.UseRawValues)
 
 					if err != nil {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
@@ -380,12 +400,16 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-
+	var value interface{}
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.counters {
 		// collect
 		if m.UseWildcardsExpansion {
-			value, err := m.query.GetFormattedCounterValueDouble(metric.counterHandle)
+			if metric.useRawValue {
+				value, err = m.query.GetRawCounterValue(metric.counterHandle)
+			} else {
+				value, err = m.query.GetFormattedCounterValueDouble(metric.counterHandle)
+			}
 			if err == nil {
 				addCounterMeasurement(metric, metric.instance, value, collectFields)
 			} else {
@@ -395,7 +419,12 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 		} else {
-			counterValues, err := m.query.GetFormattedCounterArrayDouble(metric.counterHandle)
+			var counterValues []CounterValue
+			if metric.useRawValue {
+				counterValues, err = m.query.GetRawCounterArray(metric.counterHandle)
+			} else {
+				counterValues, err = m.query.GetFormattedCounterArrayDouble(metric.counterHandle)
+			}
 			if err == nil {
 				for _, cValue := range counterValues {
 					var add bool
@@ -443,16 +472,12 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func addCounterMeasurement(metric *counter, instanceName string, value float64, collectFields map[instanceGrouping]map[string]interface{}) {
-	measurement := sanitizedChars.Replace(metric.measurement)
-	if measurement == "" {
-		measurement = "win_perf_counters"
-	}
-	var instance = instanceGrouping{measurement, instanceName, metric.objectName}
+func addCounterMeasurement(metric *counter, instanceName string, value interface{}, collectFields map[instanceGrouping]map[string]interface{}) {
+	var instance = instanceGrouping{metric.measurement, instanceName, metric.objectName}
 	if collectFields[instance] == nil {
 		collectFields[instance] = make(map[string]interface{})
 	}
-	collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value)
+	collectFields[instance][metric.counter] = value
 }
 
 func isKnownCounterDataError(err error) bool {

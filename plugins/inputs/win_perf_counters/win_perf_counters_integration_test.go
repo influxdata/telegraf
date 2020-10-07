@@ -68,8 +68,13 @@ func TestWinPerformanceQueryImpl(t *testing.T) {
 	err = query.CollectData()
 	require.NoError(t, err)
 
-	_, err = query.GetFormattedCounterValueDouble(hCounter)
+	fcounter, err := query.GetFormattedCounterValueDouble(hCounter)
 	require.NoError(t, err)
+	assert.True(t, fcounter > 0)
+
+	rcounter, err := query.GetRawCounterValue(hCounter)
+	require.NoError(t, err)
+	assert.True(t, rcounter > 10000000)
 
 	now := time.Now()
 	mtime, err := query.CollectDataWithTime()
@@ -103,13 +108,17 @@ func TestWinPerformanceQueryImpl(t *testing.T) {
 	err = query.CollectData()
 	require.NoError(t, err)
 
-	arr, err := query.GetFormattedCounterArrayDouble(hCounter)
+	farr, err := query.GetFormattedCounterArrayDouble(hCounter)
 	if phderr, ok := err.(*PdhError); ok && phderr.ErrorCode != PDH_INVALID_DATA && phderr.ErrorCode != PDH_CALC_NEGATIVE_VALUE {
 		time.Sleep(time.Second)
-		arr, err = query.GetFormattedCounterArrayDouble(hCounter)
+		farr, err = query.GetFormattedCounterArrayDouble(hCounter)
 	}
 	require.NoError(t, err)
-	assert.True(t, len(arr) > 0, "Too")
+	assert.True(t, len(farr) > 0)
+
+	rarr, err := query.GetRawCounterArray(hCounter)
+	require.NoError(t, err)
+	assert.True(t, len(rarr) > 0)
 
 	err = query.Close()
 	require.NoError(t, err)
@@ -143,7 +152,7 @@ func TestWinPerfcountersConfigGet1(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}, Log: testutil.Logger{}}
 	m.query.Open()
 
 	err := m.ParseConfig()
@@ -177,7 +186,7 @@ func TestWinPerfcountersConfigGet2(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}, Log: testutil.Logger{}}
 	m.query.Open()
 
 	err := m.ParseConfig()
@@ -224,7 +233,7 @@ func TestWinPerfcountersConfigGet3(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}, Log: testutil.Logger{}}
 	m.query.Open()
 
 	err := m.ParseConfig()
@@ -273,7 +282,7 @@ func TestWinPerfcountersConfigGet4(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}, Log: testutil.Logger{}}
 	m.query.Open()
 
 	err := m.ParseConfig()
@@ -323,7 +332,7 @@ func TestWinPerfcountersConfigGet5(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}, Log: testutil.Logger{}}
 	m.query.Open()
 
 	err := m.ParseConfig()
@@ -369,7 +378,7 @@ func TestWinPerfcountersConfigGet6(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}, Log: testutil.Logger{}}
 	m.query.Open()
 
 	err := m.ParseConfig()
@@ -401,11 +410,12 @@ func TestWinPerfcountersConfigGet7(t *testing.T) {
 		false,
 		false,
 		false,
+		false,
 	}
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}, Log: testutil.Logger{}}
 	m.query.Open()
 
 	err := m.ParseConfig()
@@ -451,7 +461,7 @@ func TestWinPerfcountersConfigError1(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}, Log: testutil.Logger{}}
 	m.query.Open()
 
 	err := m.ParseConfig()
@@ -485,7 +495,7 @@ func TestWinPerfcountersConfigError2(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}, Log: testutil.Logger{}}
 	m.query.Open()
 
 	err := m.ParseConfig()
@@ -521,7 +531,7 @@ func TestWinPerfcountersConfigError3(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}, Log: testutil.Logger{}}
 	m.query.Open()
 
 	err := m.ParseConfig()
@@ -556,7 +566,7 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}, Log: testutil.Logger{}}
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
@@ -602,7 +612,7 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, UsePerfCounterTime: true, Object: perfobjects, query: &PerformanceQueryImpl{}, UseWildcardsExpansion: true}
+	m := Win_PerfCounters{PrintValid: false, UsePerfCounterTime: true, Object: perfobjects, query: &PerformanceQueryImpl{}, UseWildcardsExpansion: true, Log: testutil.Logger{}}
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
@@ -616,6 +626,74 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 	for _, metric := range acc.Metrics {
 		_, ok := metric.Fields[expectedCounter]
 		assert.True(t, ok)
+	}
+
+}
+
+func TestWinPerfcountersCollectRaw(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	var instances = make([]string, 1)
+	var counters = make([]string, 1)
+	var perfobjects = make([]perfobject, 1)
+
+	objectname := "Processor"
+	instances[0] = "*"
+	counters[0] = "% Idle Time"
+
+	var expectedCounter = "Percent_Idle_Time_Raw"
+
+	var measurement = "test"
+
+	PerfObject := perfobject{
+		ObjectName:    objectname,
+		Instances:     instances,
+		Counters:      counters,
+		Measurement:   measurement,
+		WarnOnMissing: false,
+		FailOnMissing: true,
+		IncludeTotal:  false,
+		UseRawValues:  true,
+	}
+
+	perfobjects[0] = PerfObject
+
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, UseWildcardsExpansion: true, query: &PerformanceQueryImpl{}, Log: testutil.Logger{}}
+	var acc testutil.Accumulator
+	err := m.Gather(&acc)
+	require.NoError(t, err)
+
+	time.Sleep(2000 * time.Millisecond)
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+	assert.True(t, len(acc.Metrics) > 1)
+
+	for _, metric := range acc.Metrics {
+		val, ok := metric.Fields[expectedCounter]
+		assert.True(t, ok, "Expected presence of %s field", expectedCounter)
+		valInt64, ok := val.(int64)
+		assert.True(t, ok, fmt.Sprintf("Expected int64, got %T", val))
+		assert.True(t, valInt64 > 0, fmt.Sprintf("Expected > 0, got %d, for %#v", valInt64, metric))
+	}
+
+	// Test *Array way
+	m = Win_PerfCounters{PrintValid: false, Object: perfobjects, UseWildcardsExpansion: false, query: &PerformanceQueryImpl{}, Log: testutil.Logger{}}
+	var acc2 testutil.Accumulator
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+
+	time.Sleep(2000 * time.Millisecond)
+	err = m.Gather(&acc2)
+	require.NoError(t, err)
+	assert.True(t, len(acc2.Metrics) > 1)
+
+	for _, metric := range acc2.Metrics {
+		val, ok := metric.Fields[expectedCounter]
+		assert.True(t, ok, "Expected presence of %s field", expectedCounter)
+		valInt64, ok := val.(int64)
+		assert.True(t, ok, fmt.Sprintf("Expected int64, got %T", val))
+		assert.True(t, valInt64 > 0, fmt.Sprintf("Expected > 0, got %d, for %#v", valInt64, metric))
 	}
 
 }
