@@ -91,7 +91,7 @@ telegraf:
 # Used by dockerfile builds
 .PHONY: go-install
 go-install:
-	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
+	go install -mod=mod -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: test
 test:
@@ -159,7 +159,7 @@ clean:
 
 .PHONY: docker-image
 docker-image:
-	docker build -f scripts/stretch.docker -t "telegraf:$(commit)" .
+	docker build -f scripts/buster.docker -t "telegraf:$(commit)" .
 
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
@@ -169,15 +169,15 @@ plugin-%:
 	@echo "Starting dev environment for $${$(@)} input plugin..."
 	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
 
+.PHONY: ci-1.15
+ci-1.15:
+	docker build -t quay.io/influxdb/telegraf-ci:1.15.2 - < scripts/ci-1.15.docker
+	docker push quay.io/influxdb/telegraf-ci:1.15.2
+
 .PHONY: ci-1.14
 ci-1.14:
-	docker build -t quay.io/influxdb/telegraf-ci:1.14.5 - < scripts/ci-1.14.docker
-	docker push quay.io/influxdb/telegraf-ci:1.14.5
-
-.PHONY: ci-1.13
-ci-1.13:
-	docker build -t quay.io/influxdb/telegraf-ci:1.13.13 - < scripts/ci-1.13.docker
-	docker push quay.io/influxdb/telegraf-ci:1.13.13
+	docker build -t quay.io/influxdb/telegraf-ci:1.14.9 - < scripts/ci-1.14.docker
+	docker push quay.io/influxdb/telegraf-ci:1.14.9
 
 .PHONY: install
 install: $(buildbin)

@@ -91,6 +91,14 @@ While Starlark is similar to Python, there are important differences to note:
   except         is             yield
   ```
 
+### Libraries available
+
+The ability to load external scripts other than your own is pretty limited. The following libraries are available for loading:
+
+* json: `load("json.star", "json")` provides the following functions: `json.encode()`, `json.decode()`, `json.indent()`. See [json.star](/plugins/processors/starlark/testdata/json.star) for an example.
+
+If you would like to see support for something else here, please open an issue.
+
 ### Common Questions
 
 **How can I drop/delete a metric?**
@@ -149,11 +157,12 @@ Attempting to modify the global scope will fail with an error.
 
 ### Examples
 
+- [json](/plugins/processors/starlark/testdata/json.star) - an example of processing JSON from a field in a metric
+- [number logic](/plugins/processors/starlark/testdata/number_logic.star) - transform a numerical value to another numerical value
+- [pivot](/plugins/processors/starlark/testdata/pivot.star) - Pivots a key's value to be the key for another key.
 - [ratio](/plugins/processors/starlark/testdata/ratio.star) - Compute the ratio of two integer fields
 - [rename](/plugins/processors/starlark/testdata/rename.star) - Rename tags or fields using a name mapping.
 - [scale](/plugins/processors/starlark/testdata/scale.star) - Multiply any field by a number
-- [number logic](/plugins/processors/starlark/testdata/number_logic.star) - transform a numerical value to another numerical value
-- [pivot](/plugins/processors/starlark/testdata/pivot.star) - Pivots a key's value to be the key for another key.
 - [value filter](/plugins/processors/starlark/testdata/value_filter.star) - remove a metric based on a field value.
 
 [All examples](/plugins/processors/starlark/testdata) are in the testdata folder.
