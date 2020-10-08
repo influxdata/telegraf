@@ -3,10 +3,6 @@ package dynatrace
 import (
 	"bytes"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/common/tls"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -15,6 +11,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 const (
@@ -22,10 +23,13 @@ const (
 )
 
 var (
-	reNameAllowedCharList = regexp.MustCompile("[^A-Za-z0-9.]+")
+	reNameAllowedCharList = regexp.MustCompile("[^A-Za-z0-9.-]+")
 	maxDimKeyLen          = 100
 	maxMetricKeyLen       = 250
 )
+
+var counts map[string]string
+var sent = 0
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
@@ -188,16 +192,31 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				if err != nil {
 					continue
 				}
-				fmt.Fprintf(&buf, "%s", metricID)
-				// add the tag string
-				fmt.Fprintf(&buf, "%s", tagb.String())
-
-				// write measured value
-				fmt.Fprintf(&buf, " %v\n", value)
+				// write metric id,tags and value
+				switch metric.Type() {
+				case telegraf.Counter:
+					if lastvalue, ok := counts[metricID+tagb.String()]; ok {
+						// only send a counter if a lastvalue is found in the map
+						// if last value is found we can calc and send the delta value
+						if v, err := strconv.ParseFloat(lastvalue, 32); err == nil {
+							if v2, err := strconv.ParseFloat(value, 32); err == nil {
+								fmt.Fprintf(&buf, "%s%s count,delta=%f\n", metricID, tagb.String(), v2-v)
+							}
+						}
+					}
+					// put the current value into the map as last value
+					counts[metricID+tagb.String()] = value
+				default:
+					fmt.Fprintf(&buf, "%s%s %v\n", metricID, tagb.String(), value)
+				}
 			}
 		}
 	}
-
+	sent++
+	// in typical interval of 10s, we will clean the counter state once in 24h which is 8640 iterations
+	if sent%8640 == 0 {
+		counts = make(map[string]string)
+	}
 	return d.send(buf.Bytes())
 }
 
@@ -240,6 +259,7 @@ func (d *Dynatrace) send(msg []byte) error {
 }
 
 func (d *Dynatrace) Init() error {
+	counts = make(map[string]string)
 	if len(d.URL) == 0 {
 		d.Log.Infof("Dynatrace URL is empty, defaulting to OneAgent metrics interface")
 		d.URL = oneAgentMetricsUrl

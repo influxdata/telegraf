@@ -3,6 +3,8 @@
 This plugin sends metrics to [Sumo Logic HTTP Source](https://help.sumologic.com/03Send-Data/Sources/02Sources-for-Hosted-Collectors/HTTP-Source/Upload-Metrics-to-an-HTTP-Source)
 in HTTP messages, encoded using one of the output data formats.
 
+Telegraf minimum version: Telegraf 1.16.0
+
 Currently metrics can be sent using one of the following data formats, supported
 by Sumologic HTTP Source:
 
