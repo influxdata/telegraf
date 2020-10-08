@@ -136,6 +136,9 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 
 	for _, filename := range filenames {
 		_, err := os.Stat(filename)
+		if err != nil {
+			return err
+		}
 		data, err := p.readProcFile(filename)
 		if err != nil {
 			return err
