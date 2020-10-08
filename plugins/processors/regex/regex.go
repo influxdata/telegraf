@@ -19,6 +19,7 @@ type converter struct {
 	Replacement string
 	ResultKey   string
 	Append      bool
+	Overwrite   bool
 }
 
 const sampleConfig = `
@@ -106,6 +107,10 @@ func (r *Regex) convert(c converter, src string) (string, string) {
 	value := ""
 	if c.ResultKey == "" || regex.MatchString(src) {
 		value = regex.ReplaceAllString(src, c.Replacement)
+	}
+
+	if c.Overwrite {
+		value = c.Replacement
 	}
 
 	if c.ResultKey != "" {

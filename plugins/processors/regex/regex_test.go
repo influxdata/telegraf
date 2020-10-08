@@ -69,6 +69,33 @@ func TestFieldConversions(t *testing.T) {
 				"normalized_request": "/users/{id}/",
 			},
 		},
+		{
+			message: "Should add new field and partially overwrite original value",
+			converter: converter{
+				Key:         "request",
+				Pattern:     "^/users",
+				Replacement: "users",
+				ResultKey:   "normalized_request",
+			},
+			expectedFields: map[string]interface{}{
+				"request":            "/users/42/",
+				"normalized_request": "users/42/",
+			},
+		},
+		{
+			message: "Should add new field and fully overwrite original value",
+			converter: converter{
+				Key:         "request",
+				Pattern:     "^/users",
+				Replacement: "users",
+				ResultKey:   "normalized_request",
+				Overwrite:   true,
+			},
+			expectedFields: map[string]interface{}{
+				"request":            "/users/42/",
+				"normalized_request": "users",
+			},
+		},
 	}
 
 	for _, test := range tests {

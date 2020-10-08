@@ -4,6 +4,8 @@ The `regex` plugin transforms tag and field values with regex pattern. If `resul
 
 For tags transforms, if `append` is set to `true`, it will append the transformation to the existing tag value, instead of overwriting it.
 
+If `overwrite` is set to `true`, it will be fully overwritten with replacement field, instead of only patterns match part.
+
 ### Configuration:
 
 ```toml
