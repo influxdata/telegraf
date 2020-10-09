@@ -1,0 +1,15 @@
+FROM golang:1.15.2-buster as builder
+WORKDIR /go/src/github.com/influxdata/telegraf
+
+COPY . /go/src/github.com/influxdata/telegraf
+RUN make go-install
+
+FROM buildpack-deps:buster-curl
+COPY --from=builder /go/bin/* /usr/bin/
+COPY etc/telegraf.conf /etc/telegraf/telegraf.conf
+
+EXPOSE 8125/udp 8092/udp 8094
+
+COPY scripts/docker-entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["telegraf"]

@@ -393,7 +393,7 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 
 		// if nvme-cli is present, vendor specific attributes can be gathered
 		if isVendorExtension && isNVMe {
-			scannedNVMeDevices, scannedNonNVMeDevices, err = m.scanAllDevices(true)
+			scannedNVMeDevices, _, err = m.scanAllDevices(true)
 			if err != nil {
 				return err
 			}

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v32/github"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -74,7 +74,7 @@ func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error)
 			&oauth2.Token{AccessToken: g.AccessToken},
 		)
 		oauthClient := oauth2.NewClient(ctx, tokenSource)
-		ctx = context.WithValue(ctx, oauth2.HTTPClient, oauthClient)
+		_ = context.WithValue(ctx, oauth2.HTTPClient, oauthClient)
 
 		g.obfuscatedToken = g.AccessToken[0:4] + "..." + g.AccessToken[len(g.AccessToken)-3:]
 

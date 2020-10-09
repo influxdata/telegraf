@@ -198,21 +198,22 @@ func (p *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumula
 func (p *phpfpm) gatherHttp(addr string, acc telegraf.Accumulator) error {
 	u, err := url.Parse(addr)
 	if err != nil {
-		return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
+		return fmt.Errorf("unable parse server address '%s': %v", addr, err)
 	}
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s%s", u.Scheme,
-		u.Host, u.Path), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path), nil)
+	if err != nil {
+		return fmt.Errorf("unable to create new request '%s': %v", addr, err)
+	}
+
 	res, err := p.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("Unable to connect to phpfpm status page '%s': %v",
-			addr, err)
+		return fmt.Errorf("unable to connect to phpfpm status page '%s': %v", addr, err)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("Unable to get valid stat result from '%s': %v",
-			addr, err)
+		return fmt.Errorf("unable to get valid stat result from '%s': %v", addr, err)
 	}
 
 	importMetric(res.Body, acc, addr)
@@ -220,7 +221,7 @@ func (p *phpfpm) gatherHttp(addr string, acc telegraf.Accumulator) error {
 }
 
 // Import stat data into Telegraf system
-func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) (poolStat, error) {
+func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) poolStat {
 	stats := make(poolStat)
 	var currentPool string
 
@@ -273,7 +274,7 @@ func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) (poolStat,
 		acc.AddFields("phpfpm", fields, tags)
 	}
 
-	return stats, nil
+	return stats
 }
 
 func expandUrls(urls []string) ([]string, error) {
