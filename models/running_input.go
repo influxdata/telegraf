@@ -35,7 +35,7 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 		inputErrorsRegister.Incr(1)
 		GlobalGatherErrors.Incr(1)
 	})
-	setLoggerOnPlugin(input, logger)
+	SetLoggerOnPlugin(input, logger)
 
 	return &RunningInput{
 		Input:  input,
