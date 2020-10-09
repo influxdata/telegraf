@@ -8,7 +8,9 @@ use the `metric_version = 2` option in order to properly round trip metrics.
 not be correct if the metric spans multiple batches.  This issue can be
 somewhat, but not fully, mitigated by using outputs that support writing in
 "batch format".  When using histogram and summary types, it is recommended to
-use only the `prometheus_client` output.
+use only the `prometheus_client` output. When histogram buckets change,
+old buckets are not automatically expired and might require restarting telegraf
+agent.
 
 ### Configuration
 
