@@ -63,7 +63,7 @@ var containerList = []types.Container{
 	{
 		ID:      "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
 		Names:   []string{"/etcd"},
-		Image:   "quay.io/coreos/etcd:v2.2.2",
+		Image:   "quay.io/coreos/etcd:v3.3.25",
 		Command: "/etcd -name etcd0 -advertise-client-urls http://localhost:2379 -listen-client-urls http://0.0.0.0:2379",
 		Created: 1455941930,
 		Status:  "Up 4 hours",
@@ -100,7 +100,7 @@ var containerList = []types.Container{
 	{
 		ID:      "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 		Names:   []string{"/etcd2"},
-		Image:   "quay.io:4443/coreos/etcd:v2.2.2",
+		Image:   "quay.io:4443/coreos/etcd:v3.3.25",
 		Command: "/etcd -name etcd2 -advertise-client-urls http://localhost:2379 -listen-client-urls http://0.0.0.0:2379",
 		Created: 1455941933,
 		Status:  "Up 4 hours",

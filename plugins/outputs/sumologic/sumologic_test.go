@@ -2,6 +2,7 @@ package sumologic
 
 import (
 	"bufio"
+	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -20,7 +21,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
@@ -135,7 +135,7 @@ func TestMethod(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
+			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
 			require.NoError(t, err)
 
 			plugin := tt.plugin()
@@ -212,7 +212,7 @@ func TestStatusCode(t *testing.T) {
 				w.WriteHeader(tt.statusCode)
 			})
 
-			serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
+			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
 			require.NoError(t, err)
 
 			tt.plugin.SetSerializer(serializer)
@@ -226,77 +226,88 @@ func TestStatusCode(t *testing.T) {
 }
 
 func TestContentType(t *testing.T) {
-	ts := httptest.NewServer(http.NotFoundHandler())
-	defer ts.Close()
-
-	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
-	require.NoError(t, err)
-
-	carbon2Serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
-	require.NoError(t, err)
-
 	tests := []struct {
-		name        string
-		plugin      func() *SumoLogic
-		expectedErr bool
-		serializer  serializers.Serializer
+		name         string
+		plugin       func() *SumoLogic
+		expectedBody []byte
 	}{
 		{
-			name: "carbon2 is supported",
+			name: "carbon2 (data format = field separate) is supported",
 			plugin: func() *SumoLogic {
 				s := Default()
-				s.URL = u.String()
 				s.headers = map[string]string{
 					contentTypeHeader: carbon2ContentType,
 				}
+				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+				require.NoError(t, err)
+				s.SetSerializer(sr)
 				return s
 			},
-			serializer:  carbon2Serializer,
-			expectedErr: false,
+			expectedBody: []byte("metric=cpu field=value  42 0\n"),
+		},
+		{
+			name: "carbon2 (data format = metric includes field) is supported",
+			plugin: func() *SumoLogic {
+				s := Default()
+				s.headers = map[string]string{
+					contentTypeHeader: carbon2ContentType,
+				}
+				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatMetricIncludesField))
+				require.NoError(t, err)
+				s.SetSerializer(sr)
+				return s
+			},
+			expectedBody: []byte("metric=cpu_value  42 0\n"),
 		},
 		{
 			name: "graphite is supported",
 			plugin: func() *SumoLogic {
 				s := Default()
-				s.URL = u.String()
 				s.headers = map[string]string{
 					contentTypeHeader: graphiteContentType,
 				}
+				s.SetSerializer(&graphite.GraphiteSerializer{})
 				return s
 			},
-			serializer:  &graphite.GraphiteSerializer{},
-			expectedErr: false,
 		},
 		{
 			name: "prometheus is supported",
 			plugin: func() *SumoLogic {
 				s := Default()
-				s.URL = u.String()
 				s.headers = map[string]string{
 					contentTypeHeader: prometheusContentType,
 				}
+				s.SetSerializer(&prometheus.Serializer{})
 				return s
 			},
-			serializer:  &prometheus.Serializer{},
-			expectedErr: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin := tt.plugin()
+			var body bytes.Buffer
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gz, err := gzip.NewReader(r.Body)
+				require.NoError(t, err)
+				io.Copy(&body, gz)
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer ts.Close()
 
-			plugin.SetSerializer(tt.serializer)
-
-			err := plugin.Connect()
+			u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
 			require.NoError(t, err)
+
+			plugin := tt.plugin()
+			plugin.URL = u.String()
+
+			require.NoError(t, plugin.Connect())
 
 			err = plugin.Write([]telegraf.Metric{getMetric(t)})
 			require.NoError(t, err)
+
+			if tt.expectedBody != nil {
+				require.Equal(t, string(tt.expectedBody), body.String())
+			}
 		})
 	}
 }
@@ -338,7 +349,7 @@ func TestContentEncodingGzip(t *testing.T) {
 				w.WriteHeader(http.StatusNoContent)
 			})
 
-			serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
+			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
 			require.NoError(t, err)
 
 			plugin := tt.plugin()
@@ -374,7 +385,7 @@ func TestDefaultUserAgent(t *testing.T) {
 			MaxRequstBodySize: Default().MaxRequstBodySize,
 		}
 
-		serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
+		serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
 		require.NoError(t, err)
 
 		plugin.SetSerializer(serializer)
@@ -627,7 +638,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
+			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
 			require.NoError(t, err)
 
 			plugin := tt.plugin()
@@ -659,7 +670,7 @@ func TestTryingToSendEmptyMetricsDoesntFail(t *testing.T) {
 	plugin := Default()
 	plugin.URL = u.String()
 
-	serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
+	serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
 	require.NoError(t, err)
 	plugin.SetSerializer(serializer)
 
