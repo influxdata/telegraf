@@ -135,10 +135,6 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 	}
 
 	for _, filename := range filenames {
-		_, err := os.Stat(filename)
-		if err != nil {
-			return err
-		}
 		data, err := p.readProcFile(filename)
 		if err != nil {
 			return err
@@ -196,6 +192,10 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 }
 
 func readProcFile(filename string) ([]byte, error) {
+	_, err := os.Stat(filename)
+	if err != nil {
+		return nil, err
+	}
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
