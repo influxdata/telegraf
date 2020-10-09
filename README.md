@@ -1,5 +1,6 @@
 # Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://www.influxdata.com/slack)
+# Telegraf [![Circle CI](https://circleci.com/gh/SumoLogic/telegraf.svg?style=svg)](https://circleci.com/gh/SumoLogic/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
 
 Telegraf is an agent for collecting, processing, aggregating, and writing metrics.
 
@@ -66,12 +67,25 @@ Telegraf requires Go version 1.13 or newer, the Makefile requires GNU make.
    make
    ```
 
-### Changelog
+### Using docker for development
+
+If one would like to develop without `go` toolchain installed on the host
+the following `make` targets can be used to ease and speed up the development cycle:
+
+* `make telegraf-in-docker` - this will build telegraf binary in a docker container
+  targeting host's architecture and OS. The resulting binary will be placed in
+  repository's root directory.
+* `make reflex-test` - this will repeatedly run tests in a docker container when any
+  of the .go source files or go.mod files change.
+* `make reflex-build` - this will repeatedly build telegraf in a docker container
+  when any of the .go source files or go.mod files change.
+
+## Changelog
 
 View the [changelog](/CHANGELOG.md) for the latest updates and changes by
 version.
 
-### Nightly Builds
+## Nightly Builds
 
 These builds are generated from the master branch:
 - [telegraf-nightly_darwin_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_darwin_amd64.tar.gz)

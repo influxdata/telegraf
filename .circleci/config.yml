@@ -37,30 +37,6 @@ jobs:
           root: '/go'
           paths:
             - '*'
-  macdeps:
-    <<: [ *mac ]
-    steps:
-      - checkout
-      - restore_cache:
-          key: mac-go-mod-v1-{{ checksum "go.sum" }}
-      - run: 'brew install go' # latest
-      - run: 'make deps'
-      - run: 'make tidy'
-      - save_cache:
-          name: 'go module cache'
-          key: mac-go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - '~/go/pkg/mod'
-            - '/usr/local/Cellar/go'
-            - '/usr/local/bin/go'
-            - '/usr/local/bin/gofmt'
-      - persist_to_workspace:
-          root: '/'
-          paths:
-            - 'usr/local/bin/go'
-            - 'usr/local/Cellar/go'
-            - 'usr/local/bin/gofmt'
-            - 'Users/distiller/go'
 
   test-go-1.14:
     <<: [ *defaults, *go-1_14 ]
@@ -93,14 +69,6 @@ jobs:
       - run: 'GOARCH=386 make'
       - run: 'GOARCH=386 make check'
       - run: 'GOARCH=386 make test'
-  test-go-darwin:
-    <<: [ *mac ]
-    steps:
-      - attach_workspace:
-          at: '/'
-      - run: 'make'
-      - run: 'make check'
-      - run: 'make test'
 
   package:
     <<: [ *defaults, *go-1_15 ]
@@ -136,10 +104,6 @@ workflows:
   version: 2
   check:
     jobs:
-      - 'macdeps':
-          filters:
-            tags:
-              only: /.*/
       - 'deps':
           filters:
             tags:
@@ -167,12 +131,6 @@ workflows:
             - 'deps'
           filters:
             tags:
-              only: /.*/
-      - 'test-go-darwin':
-          requires:
-            - 'macdeps'
-          filters:
-            tags: # only runs on tags if you specify this filter
               only: /.*/
       - 'package':
           requires:
