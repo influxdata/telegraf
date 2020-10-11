@@ -1,38 +1,34 @@
 package logzio
 
 import (
-	"fmt"
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
-	"os"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
-	"time"
 )
 
-func defaultLogzio() *Logzio {
-	return &Logzio{
-		CheckDiskSpace: defaultLogzioCheckDiskSpace,
-		DiskThreshold:  defaultLogzioDiskThreshold,
-		DrainDuration:  defaultLogzioDrainDuration,
-		Log:            testutil.Logger{},
-		QueueDir: fmt.Sprintf("%s%s%s%s%d", os.TempDir(), string(os.PathSeparator),
-			"logzio-queue", string(os.PathSeparator), time.Now().UnixNano()),
-		URL: defaultLogzioURL,
+const (
+	testToken = "123456789"
+	testURL   = "https://logzio.com"
+)
+
+func TestConnetWithoutToken(t *testing.T) {
+	l := &Logzio{
+		URL: testURL,
+		Log: testutil.Logger{},
 	}
-}
-
-func TestNewLogzioOutput(t *testing.T) {
-	l := defaultLogzio()
-	require.Equal(t, l.CheckDiskSpace, defaultLogzioCheckDiskSpace)
-	require.Equal(t, l.DiskThreshold, defaultLogzioDiskThreshold)
-	require.Equal(t, l.DrainDuration, defaultLogzioDrainDuration)
-	require.Equal(t, l.URL, defaultLogzioURL)
-
-	require.Equal(t, l.Token, "")
+	err := l.Connect()
+	require.Error(t, err)
 }
 
 func TestParseMetric(t *testing.T) {
-	l := defaultLogzio()
+	l := &Logzio{}
 	for _, tm := range testutil.MockMetrics() {
 		lm := l.parseMetric(tm)
 		require.Equal(t, tm.Fields(), lm.Metric[tm.Name()])
@@ -42,8 +38,57 @@ func TestParseMetric(t *testing.T) {
 	}
 }
 
-func TestLogzioConnectWitoutToken(t *testing.T) {
-	l := defaultLogzio()
+func TestBadStatusCode(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	l := &Logzio{
+		Token: testToken,
+		URL:   ts.URL,
+		Log:   testutil.Logger{},
+	}
+
 	err := l.Connect()
+	require.NoError(t, err)
+
+	err = l.Write(testutil.MockMetrics())
 	require.Error(t, err)
+}
+
+func TestWrite(t *testing.T) {
+	tm := testutil.TestMetric(float64(3.14), "test1")
+	var body bytes.Buffer
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gz, err := gzip.NewReader(r.Body)
+		require.NoError(t, err)
+
+		_, err = io.Copy(&body, gz)
+		require.NoError(t, err)
+
+		var lm Metric
+		err = json.Unmarshal(body.Bytes(), &lm)
+		require.NoError(t, err)
+
+		require.Equal(t, tm.Fields(), lm.Metric[tm.Name()])
+		require.Equal(t, logzioType, lm.Type)
+		require.Equal(t, tm.Tags(), lm.Dimensions)
+		require.Equal(t, tm.Time(), lm.Time)
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	l := &Logzio{
+		Token: testToken,
+		URL:   ts.URL,
+		Log:   testutil.Logger{},
+	}
+
+	err := l.Connect()
+	require.NoError(t, err)
+
+	err = l.Write([]telegraf.Metric{tm})
+	require.NoError(t, err)
 }
