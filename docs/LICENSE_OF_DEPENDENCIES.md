@@ -142,7 +142,6 @@ following works:
 - github.com/yuin/gopher-lua [MIT License](https://github.com/yuin/gopher-lua/blob/master/LICENSE)
 - go.opencensus.io [Apache License 2.0](https://github.com/census-instrumentation/opencensus-go/blob/master/LICENSE)
 - go.starlark.net [BSD 3-Clause "New" or "Revised" License](https://github.com/google/starlark-go/blob/master/LICENSE)
-- go.uber.org/atomic [MIT License](https://github.com/uber-go/atomic/blob/master/LICENSE.txt)
 - golang.org/x/crypto [BSD 3-Clause Clear License](https://github.com/golang/crypto/blob/master/LICENSE)
 - golang.org/x/net [BSD 3-Clause Clear License](https://github.com/golang/net/blob/master/LICENSE)
 - golang.org/x/oauth2 [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/oauth2/blob/master/LICENSE)
