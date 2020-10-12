@@ -58,19 +58,19 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 	}
 
 	// checking base arguments
-	noDatabaseName := ts.Timestream{ Log: testutil.Logger{} }
+	noDatabaseName := ts.Timestream{Log: testutil.Logger{}}
 	assertions.Contains(noDatabaseName.Connect().Error(), "DatabaseName")
 
 	noMappingMode := ts.Timestream{
 		DatabaseName: tsDbName,
-		Log: testutil.Logger{},
+		Log:          testutil.Logger{},
 	}
 	assertions.Contains(noMappingMode.Connect().Error(), "MappingMode")
 
 	incorrectMappingMode := ts.Timestream{
 		DatabaseName: tsDbName,
 		MappingMode:  "foo",
-		Log: testutil.Logger{},
+		Log:          testutil.Logger{},
 	}
 	assertions.Contains(incorrectMappingMode.Connect().Error(), "single-table")
 
@@ -78,7 +78,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 	validMappingModeMultiTable := ts.Timestream{
 		DatabaseName: tsDbName,
 		MappingMode:  ts.MappingModeMultiTable,
-		Log: testutil.Logger{},
+		Log:          testutil.Logger{},
 	}
 	assertions.Nil(validMappingModeMultiTable.Connect())
 
@@ -86,7 +86,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		DatabaseName:    tsDbName,
 		MappingMode:     ts.MappingModeMultiTable,
 		SingleTableName: testSingleTableName,
-		Log: testutil.Logger{},
+		Log:             testutil.Logger{},
 	}
 	assertions.Contains(singleTableNameWithMultiTable.Connect().Error(), "SingleTableName")
 
@@ -103,7 +103,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 	noTableNameMappingModeSingleTable := ts.Timestream{
 		DatabaseName: tsDbName,
 		MappingMode:  ts.MappingModeSingleTable,
-		Log: testutil.Logger{},
+		Log:          testutil.Logger{},
 	}
 	assertions.Contains(noTableNameMappingModeSingleTable.Connect().Error(), "SingleTableName")
 
@@ -111,7 +111,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		DatabaseName:    tsDbName,
 		MappingMode:     ts.MappingModeSingleTable,
 		SingleTableName: testSingleTableName,
-		Log: testutil.Logger{},
+		Log:             testutil.Logger{},
 	}
 	assertions.Contains(noDimensionNameMappingModeSingleTable.Connect().Error(),
 		"SingleTableDimensionNameForTelegrafMeasurementName")
@@ -130,7 +130,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		DatabaseName:           tsDbName,
 		MappingMode:            ts.MappingModeMultiTable,
 		CreateTableIfNotExists: true,
-		Log: testutil.Logger{},
+		Log:                    testutil.Logger{},
 	}
 	assertions.Contains(createTableNoMagneticRetention.Connect().Error(),
 		"CreateTableMagneticStoreRetentionPeriodInDays")
@@ -160,11 +160,10 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		DatabaseName:            tsDbName,
 		MappingMode:             ts.MappingModeMultiTable,
 		DescribeDatabaseOnStart: true,
-		Log: testutil.Logger{},
+		Log:                     testutil.Logger{},
 	}
 	assertions.Contains(describeTableInvoked.Connect().Error(), "hello from DescribeDatabase")
 }
-
 
 type mockTimestreamErrorClient struct {
 	ErrorToReturnOnWriteRecords error
@@ -192,7 +191,7 @@ func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
 	plugin := ts.Timestream{
 		MappingMode:  ts.MappingModeMultiTable,
 		DatabaseName: tsDbName,
-		Log: testutil.Logger{},
+		Log:          testutil.Logger{},
 	}
 	plugin.Connect()
 	input := testutil.MustMetric(
@@ -204,7 +203,7 @@ func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
 
 	err := plugin.Write([]telegraf.Metric{input})
 
-	assertions.NotNil(err, "Expected an error to be returned to Telegraf, " +
+	assertions.NotNil(err, "Expected an error to be returned to Telegraf, "+
 		"so that the write will be retried by Telegraf later.")
 }
 
@@ -220,7 +219,7 @@ func TestRejectedRecordsErrorResultsInMetricsBeingSkipped(t *testing.T) {
 	plugin := ts.Timestream{
 		MappingMode:  ts.MappingModeMultiTable,
 		DatabaseName: tsDbName,
-		Log: testutil.Logger{},
+		Log:          testutil.Logger{},
 	}
 	plugin.Connect()
 	input := testutil.MustMetric(
@@ -232,7 +231,7 @@ func TestRejectedRecordsErrorResultsInMetricsBeingSkipped(t *testing.T) {
 
 	err := plugin.Write([]telegraf.Metric{input})
 
-	assertions.Nil(err, "Expected to silently swallow the RejectedRecordsException, " +
+	assertions.Nil(err, "Expected to silently swallow the RejectedRecordsException, "+
 		"as retrying this error doesn't make sense.")
 }
 
@@ -653,7 +652,7 @@ func comparisonTest(t *testing.T,
 		plugin = ts.Timestream{
 			MappingMode:  mappingMode,
 			DatabaseName: tsDbName,
-			Log: testutil.Logger{},
+			Log:          testutil.Logger{},
 		}
 	}
 	assertions := assert.New(t)
