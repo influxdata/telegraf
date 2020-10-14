@@ -138,7 +138,7 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLDBMemoryClerks"] = Query{ScriptName: "AzureSQLDBMemoryClerks", Script: sqlAzureDBMemoryClerks, ResultByRow: false}
 		queries["AzureSQLDBPerformanceCounters"] = Query{ScriptName: "AzureSQLDBPerformanceCounters", Script: sqlAzureDBPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLDBRequests"] = Query{ScriptName: "AzureSQLDBRequests", Script: sqlAzureDBRequests, ResultByRow: false}
-		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlServerSchedulers, ResultByRow: false}
+		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlAzureDBSchedulers, ResultByRow: false}
 	} else if s.DatabaseType == "AzureSQLManagedInstance" {
 		queries["AzureSQLMIResourceStats"] = Query{ScriptName: "AzureSQLMIResourceStats", Script: sqlAzureMIResourceStats, ResultByRow: false}
 		queries["AzureSQLMIResourceGovernance"] = Query{ScriptName: "AzureSQLMIResourceGovernance", Script: sqlAzureMIResourceGovernance, ResultByRow: false}
@@ -147,8 +147,8 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLMIOsWaitstats"] = Query{ScriptName: "AzureSQLMIOsWaitstats", Script: sqlAzureMIOsWaitStats, ResultByRow: false}
 		queries["AzureSQLMIMemoryClerks"] = Query{ScriptName: "AzureSQLMIMemoryClerks", Script: sqlAzureMIMemoryClerks, ResultByRow: false}
 		queries["AzureSQLMIPerformanceCounters"] = Query{ScriptName: "AzureSQLMIPerformanceCounters", Script: sqlAzureMIPerformanceCounters, ResultByRow: false}
-		queries["AzureSQLMISqlRequests"] = Query{ScriptName: "AzureSQLMISqlRequests", Script: sqlAzureMIRequests, ResultByRow: false}
-		queries["AzureSQLMISchedulers"] = Query{ScriptName: "AzureSQLMISchedulers", Script: sqlServerSchedulers, ResultByRow: false}
+		queries["AzureSQLMIRequests"] = Query{ScriptName: "AzureSQLMIRequests", Script: sqlAzureMIRequests, ResultByRow: false}
+		queries["AzureSQLMISchedulers"] = Query{ScriptName: "AzureSQLMISchedulers", Script: sqlAzureMISchedulers, ResultByRow: false}
 	} else if s.DatabaseType == "SQLServer" { //These are still V2 queries and have not been refactored yet.
 		queries["SQLServerPerformanceCounters"] = Query{ScriptName: "SQLServerPerformanceCounters", Script: sqlServerPerformanceCounters, ResultByRow: false}
 		queries["SQLServerWaitStatsCategorized"] = Query{ScriptName: "SQLServerWaitStatsCategorized", Script: sqlServerWaitStatsCategorized, ResultByRow: false}

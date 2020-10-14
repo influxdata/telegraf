@@ -34,6 +34,9 @@ const sampleConfig = `
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
 
+  ## Agent host tag; the tag used to reference the source host
+  # agent_host_tag = "agent_host"
+
   ## SNMP community string.
   # community = "public"
 
@@ -95,6 +98,9 @@ type Snmp struct {
 	// udp://1.2.3.4:161).  If the scheme is not specified then "udp" is used.
 	Agents []string `toml:"agents"`
 
+	// The tag used to name the agent host
+	AgentHostTag string `toml:"agent_host_tag"`
+
 	snmp.ClientConfig
 
 	Tables []Table `toml:"table"`
@@ -126,6 +132,10 @@ func (s *Snmp) init() error {
 		if err := s.Fields[i].init(); err != nil {
 			return fmt.Errorf("initializing field %s: %w", s.Fields[i].Name, err)
 		}
+	}
+
+	if len(s.AgentHostTag) == 0 {
+		s.AgentHostTag = "agent_host"
 	}
 
 	s.initialized = true
@@ -374,8 +384,8 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 				}
 			}
 		}
-		if _, ok := tr.Tags["agent_host"]; !ok {
-			tr.Tags["agent_host"] = gs.Host()
+		if _, ok := tr.Tags[s.AgentHostTag]; !ok {
+			tr.Tags[s.AgentHostTag] = gs.Host()
 		}
 		acc.AddFields(rt.Name, tr.Fields, tr.Tags, rt.Time)
 	}

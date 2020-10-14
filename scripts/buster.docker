@@ -1,10 +1,10 @@
-FROM golang:1.14.9-stretch as builder
+FROM golang:1.15.2-buster as builder
 WORKDIR /go/src/github.com/influxdata/telegraf
 
 COPY . /go/src/github.com/influxdata/telegraf
 RUN make go-install
 
-FROM buildpack-deps:stretch-curl
+FROM buildpack-deps:buster-curl
 COPY --from=builder /go/bin/* /usr/bin/
 COPY etc/telegraf.conf /etc/telegraf/telegraf.conf
 

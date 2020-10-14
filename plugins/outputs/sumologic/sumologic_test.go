@@ -64,16 +64,6 @@ func getMetrics(t *testing.T, count int) []telegraf.Metric {
 	return metrics
 }
 
-func TestInvalidMethod(t *testing.T) {
-	plugin := &SumoLogic{
-		URL:    "",
-		Method: http.MethodGet,
-	}
-
-	err := plugin.Connect()
-	require.Error(t, err)
-}
-
 func TestMethod(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
@@ -92,36 +82,6 @@ func TestMethod(t *testing.T) {
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				return s
-			},
-			expectedMethod: http.MethodPost,
-		},
-		{
-			name: "put is okay",
-			plugin: func() *SumoLogic {
-				s := Default()
-				s.URL = u.String()
-				s.Method = http.MethodPut
-				return s
-			},
-			expectedMethod: http.MethodPut,
-		},
-		{
-			name: "get is invalid",
-			plugin: func() *SumoLogic {
-				s := Default()
-				s.URL = u.String()
-				s.Method = http.MethodGet
-				return s
-			},
-			connectError: true,
-		},
-		{
-			name: "method is case insensitive",
-			plugin: func() *SumoLogic {
-				s := Default()
-				s.URL = u.String()
-				s.Method = "poST"
 				return s
 			},
 			expectedMethod: http.MethodPost,
@@ -244,20 +204,6 @@ func TestContentType(t *testing.T) {
 				return s
 			},
 			expectedBody: []byte("metric=cpu field=value  42 0\n"),
-		},
-		{
-			name: "carbon2 (data format unset) is supported and falls back to include field in metric name",
-			plugin: func() *SumoLogic {
-				s := Default()
-				s.headers = map[string]string{
-					contentTypeHeader: carbon2ContentType,
-				}
-				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldEmpty))
-				require.NoError(t, err)
-				s.SetSerializer(sr)
-				return s
-			},
-			expectedBody: []byte("metric=cpu_value  42 0\n"),
 		},
 		{
 			name: "carbon2 (data format = metric includes field) is supported",
@@ -395,7 +341,6 @@ func TestDefaultUserAgent(t *testing.T) {
 
 		plugin := &SumoLogic{
 			URL:               u.String(),
-			Method:            defaultMethod,
 			MaxRequstBodySize: Default().MaxRequstBodySize,
 		}
 
@@ -465,7 +410,6 @@ func TestTOMLConfig(t *testing.T) {
   url = "https://localhost:3000"
   data_format = "carbon2"
   timeout = "5s"
-  method = "POST"
   source_name = "name"
   source_host = "hosta"
   source_category = "category"
@@ -480,7 +424,6 @@ func TestTOMLConfig(t *testing.T) {
   url = "https://localhost:3000"
   data_format = "carbon2"
   timeout = "5s"
-  method = "POST"
   source_name = "name"
   sumo_metadata = "metadata"
             `),

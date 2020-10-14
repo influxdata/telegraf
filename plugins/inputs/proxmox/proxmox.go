@@ -79,6 +79,9 @@ func init() {
 func getNodeSearchDomain(px *Proxmox) error {
 	apiUrl := "/nodes/" + px.hostname + "/dns"
 	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
+	if err != nil {
+		return err
+	}
 
 	var nodeDns NodeDns
 	err = json.Unmarshal(jsonData, &nodeDns)

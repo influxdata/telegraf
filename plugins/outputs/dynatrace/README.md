@@ -2,6 +2,9 @@
 
 This plugin is sending telegraf metrics to [Dynatrace](www.dynatrace.com). It has two operational modes.
 
+Telegraf minimum version: Telegraf 1.16 
+Plugin minimum tested version: 1.16
+
 ## Running alongside Dynatrace OneAgent
 
 if you run the Telegraf agent on a host or VM that is monitored by the Dynatrace OneAgent then you only need to enable the plugin but need no further configuration. The Dynatrace telegraf output plugin will send all metrics to the OneAgent which will use its secure and load balanced connection to send the metrics to your Dynatrace SaaS or Managed environment.
