@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	proxyint "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -38,6 +39,9 @@ type (
 		RequiredAcks     int         `toml:"required_acks"`
 		MaxRetry         int         `toml:"max_retry"`
 		MaxMessageBytes  int         `toml:"max_message_bytes"`
+
+		EnableSocks5 *bool `toml:"enable_socks5"`
+		proxyint.Socks5ProxyConfig
 
 		Version string `toml:"version"`
 
@@ -201,6 +205,12 @@ var sampleConfig = `
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional SOCKS5 proxy to use when connecting to brokers
+  # enable_socks5 = true
+  # socks5_address = "127.0.0.1:1080"
+  # socks5_username = "alice"
+  # socks5_password = "pass123"
+
   ## Optional SASL Config
   # sasl_username = "kafka"
   # sasl_password = "secret"
@@ -319,6 +329,17 @@ func (k *Kafka) Connect() error {
 			k.Log.Warnf("Use of deprecated configuration: enable_tls should be set when using TLS")
 			config.Net.TLS.Enable = true
 		}
+	}
+
+	if k.EnableSocks5 != nil && *k.EnableSocks5 {
+		config.Net.Proxy.Enable = true
+
+		dialer, err := k.Socks5ProxyConfig.GetDialer()
+		if err != nil {
+			log.Fatalf("Error while connecting to proxy server: %s", err)
+			return err
+		}
+		config.Net.Proxy.Dialer = *dialer
 	}
 
 	if k.SASLUsername != "" && k.SASLPassword != "" {
