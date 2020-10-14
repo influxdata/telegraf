@@ -1,4 +1,4 @@
-# RAS Input Plugin
+# RAS Daemon Input Plugin
 
 The `RAS` plugin gathers and counts errors provided by [RASDaemon](https://github.com/mchehab/rasdaemon).
 
