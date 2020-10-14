@@ -1,6 +1,6 @@
 # Dynatrace Output Plugin
 
-This plugin is sending telegraf metrics to [Dynatrace](www.dynatrace.com). It has two operational modes.
+This plugin is sending telegraf metrics to [Dynatrace](https://www.dynatrace.com). It has two operational modes.
 
 Telegraf minimum version: Telegraf 1.16 
 Plugin minimum tested version: 1.16
