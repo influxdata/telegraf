@@ -12,3 +12,4 @@ Pull requests welcome.
 - [youtube](https://github.com/inabagumi/youtube-telegraf-plugin) - Gather account information from YouTube channels
 - [awsalarms](https://github.com/vipinvkmenon/awsalarms) - Simple plugin to gather/monitor alarms generated  in AWS.
 - [octoprint](https://github.com/BattleBas/octoprint-telegraf-plugin) - Gather 3d print information from the octoprint API.
+- [systemd-timings](https://github.com/pdmorrow/telegraf-execd-systemd-timings) - Gather systemd boot and unit timestamp metrics.
