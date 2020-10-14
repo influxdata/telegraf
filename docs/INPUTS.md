@@ -38,7 +38,8 @@ import (
 )
 
 type Simple struct {
-    Ok bool `toml:"ok"`
+    Ok  bool            `toml:"ok"`
+    Log telegraf.Logger `toml:"-"`
 }
 
 func (s *Simple) Description() string {
@@ -52,6 +53,7 @@ func (s *Simple) SampleConfig() string {
 `
 }
 
+// Init is for setup, and validating config.
 func (s *Simple) Init() error {
 	return nil
 }
