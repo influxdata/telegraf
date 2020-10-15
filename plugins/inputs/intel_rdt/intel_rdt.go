@@ -541,7 +541,7 @@ func makeRange(min, max int) []int {
 }
 
 func init() {
-	inputs.Add("IntelRDT", func() telegraf.Input {
+	inputs.Add("intel_rdt", func() telegraf.Input {
 		rdt := IntelRDT{}
 		pathPqos, _ := exec.LookPath("pqos")
 		if len(pathPqos) > 0 {
