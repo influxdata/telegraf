@@ -56,16 +56,16 @@ func (s *Suricata) SampleConfig() string {
 	return sampleConfig
 }
 
-// Start initiates background collection of JSON data from the socket
-// provided to Suricata.
-func (s *Suricata) Start(acc telegraf.Accumulator) error {
+// Gather reads stats from the socket provided to Suricata.
+func (s *Suricata) Gather(acc telegraf.Accumulator) error {
 	var err error
 	s.inputListener, err = net.ListenUnix("unix", &net.UnixAddr{
 		Name: s.Source,
 		Net:  "unix",
 	})
 	if err != nil {
-		return err
+		acc.AddError(err)
+		return nil
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancel = cancel
@@ -211,12 +211,6 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 			acc.AddFields("suricata", fields[k], map[string]string{"thread": k})
 		}
 	}
-}
-
-// Gather measures and submits one full set of telemetry to Telegraf.
-// Not used here, submission is completely input-driven.
-func (s *Suricata) Gather(acc telegraf.Accumulator) error {
-	return nil
 }
 
 func init() {
