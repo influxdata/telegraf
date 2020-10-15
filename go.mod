@@ -26,7 +26,7 @@ require (
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-metrics v0.3.0 // indirect
-	github.com/aws/aws-sdk-go v1.33.12
+	github.com/aws/aws-sdk-go v1.34.34
 	github.com/benbjohnson/clock v1.0.3
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
@@ -151,7 +151,7 @@ require (
 	gopkg.in/ldap.v3 v3.1.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/olivere/elastic.v5 v5.0.70
-	gopkg.in/yaml.v2 v2.2.5
+	gopkg.in/yaml.v2 v2.2.8
 	gotest.tools v2.2.0+incompatible // indirect
 	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
 	k8s.io/apimachinery v0.17.1 // indirect
