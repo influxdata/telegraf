@@ -31,6 +31,8 @@ SELECT TOP(1)
 	,[end_time]
 	,cast([avg_instance_memory_percent] as float) as [avg_instance_memory_percent] 
 	,cast([avg_instance_cpu_percent] as float) as [avg_instance_cpu_percent]
+	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
+	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
 FROM
 	sys.dm_db_resource_stats WITH (NOLOCK)
 ORDER BY
@@ -80,6 +82,8 @@ SELECT
 	,[volume_type_external_xstore_iops]
 	,[volume_pfs_iops]
 	,[volume_type_pfs_iops]
+	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
+	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
 FROM 
 	sys.dm_user_db_resource_governance WITH (NOLOCK);
 `
@@ -103,6 +107,8 @@ SELECT
 	,dbws.[signal_wait_time_ms]
 	,dbws.[max_wait_time_ms]
 	,dbws.[waiting_tasks_count]
+	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
+	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
 FROM
 	sys.dm_db_wait_stats AS dbws WITH (NOLOCK)
 WHERE
@@ -180,6 +186,8 @@ SELECT
 	END AS [file_type]
 	,ISNULL([size],0)/128 AS [current_size_mb]
 	,ISNULL(FILEPROPERTY(b.[logical_filename],'SpaceUsed')/128,0) as [space_used_mb]
+	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
+	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
 FROM 
 	[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
 	-- needed to get Tempdb file names  on Azure SQL DB so you can join appropriately. Without this had a bug where join was only on file_id
@@ -237,6 +245,8 @@ SELECT
 		)
 	END AS [available_storage_mb]
 	,(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as [uptime]
+	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
+	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
 	FROM sys.[databases] AS d
 	-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
 	CROSS JOIN sys.[database_service_objectives] AS slo
@@ -320,6 +330,8 @@ SELECT
   			'PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC') THEN 'Full Text Search'
  		ELSE 'Other'
 	END as [wait_category]
+	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
+	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
 FROM sys.dm_os_wait_stats AS ws WITH (NOLOCK)
 WHERE
 	ws.[wait_type] NOT IN (
@@ -374,6 +386,8 @@ SELECT
 	,DB_NAME() AS [database_name]
 	,mc.[type] AS [clerk_type]
 	,SUM(mc.[pages_kb]) AS [size_kb]
+	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
+	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
 FROM sys.[dm_os_memory_clerks] AS mc WITH (NOLOCK)
 GROUP BY
 	mc.[type]
@@ -541,6 +555,8 @@ SELECT
 	END AS [instance]
 	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value],
 	,cast(pc.[cntr_type] as varchar(25)) as [counter_type]
+	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
+	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
 from @PCounters pc
 LEFT OUTER JOIN @PCounters AS pc1
 	ON (
@@ -610,6 +626,8 @@ SELECT
 	,DB_NAME(qt.[dbid]) [stmt_db_name]
 	,CONVERT(varchar(20),[query_hash],1) as [query_hash]
 	,CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
+	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
+	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
 FROM sys.dm_exec_sessions AS s
 LEFT OUTER JOIN sys.dm_exec_requests AS r 
 	ON s.[session_id] = r.[session_id]
@@ -652,6 +670,8 @@ SELECT
 	,s.[yield_count]
 	,s.[total_cpu_usage_ms]
 	,s.[total_scheduler_delay_ms]
+	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
+	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
 FROM sys.dm_os_schedulers AS s
 `
 
