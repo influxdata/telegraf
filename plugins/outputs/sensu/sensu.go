@@ -320,7 +320,7 @@ func init() {
 type OutputEvent struct {
 	Entity    *OutputEntity  `json:"entity,omitempty"`
 	Check     *OutputCheck   `json:"check"`
-	Metrics   *OutputMetrics `json:"name"`
+	Metrics   *OutputMetrics `json:"metrics"`
 	Timestamp int64          `json:"timestamp"`
 }
 
@@ -389,9 +389,10 @@ func (s *Sensu) GetCheck(metricPoints []*OutputMetric) (*OutputCheck, error) {
 		Metadata: &OutputMetadata{
 			Name: *s.Check.Name,
 		},
-		Status: 0, // Always OK
-		Issued: time.Now().Unix(),
-		Output: "Telegraf agent processed " + strconv.Itoa(count) + " metrics",
+		Status:               0, // Always OK
+		Issued:               time.Now().Unix(),
+		Output:               "Telegraf agent processed " + strconv.Itoa(count) + " metrics",
+		OutputMetricHandlers: s.GetHandlers(),
 	}, nil
 }
 
@@ -424,15 +425,16 @@ type OutputEntity struct {
 }
 
 type OutputCheck struct {
-	Metadata *OutputMetadata `json:"metadata"`
-	Status   int             `json:"status"`
-	Output   string          `json:"output"`
-	Issued   int64           `json:"issued"`
+	Metadata             *OutputMetadata `json:"metadata"`
+	Status               int             `json:"status"`
+	Output               string          `json:"output"`
+	Issued               int64           `json:"issued"`
+	OutputMetricHandlers []string        `json:"output_metric_handlers"`
 }
 
 type OutputMetrics struct {
 	Handlers []string        `json:"handlers"`
-	Metrics  []*OutputMetric `json:"metrics"`
+	Metrics  []*OutputMetric `json:"points"`
 }
 
 type OutputMetric struct {
