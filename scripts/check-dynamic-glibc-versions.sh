@@ -16,9 +16,16 @@ prog=$1
 max=$2
 
 #make sure dependencies are installed
+have_deps=true
 for i in objdump sort uniq sed; do
-    which $i > /dev/null
+    if ! command -v "$i" > /dev/null; then
+	echo "$i not in path"
+	have_deps=false
+    fi
 done
+if [[ $have_deps = false ]]; then
+    exit 1
+fi
 
 #compare dotted versions
 #see https://stackoverflow.com/questions/4023830/how-to-compare-two-strings-in-dot-separated-version-format-in-bash
