@@ -17,7 +17,7 @@ max=$2
 
 #make sure dependencies are installed
 have_deps=true
-for i in objdump sort uniq sed; do
+for i in objdump grep sort uniq sed; do
     if ! command -v "$i" > /dev/null; then
 	echo "$i not in path"
 	have_deps=false
@@ -59,6 +59,11 @@ vercomp () {
     done
     return 0
 }
+
+if ! objdump -p "$prog" | grep -m 1 NEEDED > /dev/null; then
+    echo "$prog doesn't have dynamic library dependencies"
+    exit 0
+fi
 
 objdump -T "$prog" | # get the dynamic symbol table
     sed -n "s/.* GLIBC_\([0-9.]\+\).*/\1/p" | # find the entries for glibc and grab the version
