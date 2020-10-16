@@ -37,6 +37,8 @@
   - [#8189](https://github.com/influxdata/telegraf/pull/8189) `inputs.snmp_trap` If the community string is available, add it as a tag
   - [#8190](https://github.com/influxdata/telegraf/pull/8190) `inputs.tail` Semigroupoid multiline (#8167)
   - [#8196](https://github.com/influxdata/telegraf/pull/8196) `inputs.redis` add functionality to get values from redis commands
+  - [#8032](https://github.com/influxdata/telegraf/pull/8032) `inputs.http_response` http_response: match on status code
+  - [#8172](https://github.com/influxdata/telegraf/pull/8172) `inputs.sqlserver` New sql server queries (on-prem) - refactoring and formatting
 
 #### Bugfixes
 
@@ -64,6 +66,8 @@
   - [#8210](https://github.com/influxdata/telegraf/pull/8210) update gopsutil: fix procstat performance regression
   - [#8162](https://github.com/influxdata/telegraf/pull/8162) Fix bool serialization when using carbon2
   - [#8240](https://github.com/influxdata/telegraf/pull/8240) Fix bugs found by LGTM analysis platform
+  - [#8251](https://github.com/influxdata/telegraf/pull/8251) `outputs.dynatrace` Dynatrace Output Plugin: Fixed behaviour when state map is cleared
+  - [#8274](https://github.com/influxdata/telegraf/pull/8274) `common.shim` fix issue with loading processor config from execd
 
 #### New Input Plugins
 
@@ -79,6 +83,7 @@
 
   - [dynatrace](/plugins/outputs/dynatrace/README.md) Dynatrace output plugin - Contributed by @thschue
   - [sumologic](/plugins/outputs/sumologic/README.md) Sumo Logic output plugin - Contributed by @pmalek-sumo
+  - [timestream](/plugins/outputs/timestream) Timestream Output Plugin - Contributed by @piotrwest
 
 #### New External Plugins
 
@@ -87,6 +92,7 @@
   - [awsalarms](https://github.com/vipinvkmenon/awsalarms) - Simple plugin to gather/monitor alarms generated  in AWS.
   - [youtube-telegraf-plugin](https://github.com/inabagumi/youtube-telegraf-plugin) - Gather view and subscriber stats from your youtube videos
   - [octoprint](https://github.com/BattleBas/octoprint-telegraf-plugin) - Gather 3d print information from the octoprint API.
+  - [systemd-timings](https://github.com/pdmorrow/telegraf-execd-systemd-timings) - Gather systemd boot and unit timestamp metrics.
 
 ## v1.15.3 [2020-09-11]
 
