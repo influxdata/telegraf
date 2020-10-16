@@ -1115,3 +1115,24 @@ func TestTrimRegression(t *testing.T) {
 	)
 	require.Equal(t, expected, actual)
 }
+
+func TestAdvanceFieldName(t *testing.T) {
+	// https://github.com/influxdata/telegraf/issues/4998
+	p := &Parser{
+		Patterns: []string{`%{GREEDYDATA:message.a-b}`},
+	}
+	require.NoError(t, p.Compile())
+
+	actual, err := p.ParseLine(`level=info msg="ok"`)
+	require.NoError(t, err)
+
+	expected := testutil.MustMetric(
+		"",
+		map[string]string{},
+		map[string]interface{}{
+			"message.a-b": `level=info msg="ok"`,
+		},
+		actual.Time(),
+	)
+	require.Equal(t, expected, actual)
+}
