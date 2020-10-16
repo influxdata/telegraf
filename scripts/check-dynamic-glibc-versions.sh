@@ -60,7 +60,7 @@ vercomp () {
     return 0
 }
 
-if ! objdump -p "$prog" | grep -m 1 NEEDED > /dev/null; then
+if ! objdump -p "$prog" | grep -q NEEDED; then
     echo "$prog doesn't have dynamic library dependencies"
     exit 0
 fi
