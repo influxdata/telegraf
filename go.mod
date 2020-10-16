@@ -32,6 +32,7 @@ require (
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
 	github.com/caio/go-tdigest v2.3.0+incompatible // indirect
 	github.com/cenkalti/backoff v2.0.0+incompatible // indirect
+	github.com/circonus-labs/go-apiclient v0.7.9
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/containerd/containerd v1.4.1 // indirect
@@ -63,6 +64,7 @@ require (
 	github.com/golang/protobuf v1.3.5
 	github.com/google/go-cmp v0.4.0
 	github.com/google/go-github/v32 v32.1.0
+	github.com/google/uuid v1.1.1
 	github.com/gopcua/opcua v0.1.12
 	github.com/gorilla/mux v1.6.2
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
