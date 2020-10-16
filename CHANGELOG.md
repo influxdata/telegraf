@@ -2,17 +2,12 @@
 
 #### Release Notes
 
-  - Many documentation updates
   - New [code examples](/plugins/processors/starlark/testdata) for the [Starlark processor](/plugins/processors/starlark/README.md)
-  - [#8220](https://github.com/influxdata/telegraf/pull/8220) `build` update to go 1.15
-  - [#7864](https://github.com/influxdata/telegraf/pull/7864) `processors.starlark` Add logic starlark example
-  - [#7865](https://github.com/influxdata/telegraf/pull/7865) `common.shim` shim logger improvements
   - [#7920](https://github.com/influxdata/telegraf/pull/7920) `inputs.rabbitmq` remove deprecated healthcheck
-  - [#7932](https://github.com/influxdata/telegraf/pull/7932) Support for AWS Cloudwatch Alarms #7931
   - [#7953](https://github.com/influxdata/telegraf/pull/7953) Add details to connect to InfluxDB OSS 2 and Cloud 2
-  - [#7980](https://github.com/influxdata/telegraf/pull/7980) `processors.starlark` add example input/outputs to starlark examples
   - [#8054](https://github.com/influxdata/telegraf/pull/8054) add guidelines run to external plugins with execd
   - [#8198](https://github.com/influxdata/telegraf/pull/8198) `inputs.influxdb_v2_listener` change default influxdb port from 9999 to 8086 to match OSS 2.0 release
+  - [starlark](https://github.com/influxdata/telegraf/tree/release-1.16/plugins/processors/starlark/testdata) `processors.starlark` add various code exampels for the Starlark processor
 
 #### Features
 
@@ -37,6 +32,7 @@
   - [#8189](https://github.com/influxdata/telegraf/pull/8189) `inputs.snmp_trap` If the community string is available, add it as a tag
   - [#8190](https://github.com/influxdata/telegraf/pull/8190) `inputs.tail` Semigroupoid multiline (#8167)
   - [#8196](https://github.com/influxdata/telegraf/pull/8196) `inputs.redis` add functionality to get values from redis commands
+  - [#8220](https://github.com/influxdata/telegraf/pull/8220) `build` update to Go 1.15
   - [#8032](https://github.com/influxdata/telegraf/pull/8032) `inputs.http_response` http_response: match on status code
   - [#8172](https://github.com/influxdata/telegraf/pull/8172) `inputs.sqlserver` New sql server queries (on-prem) - refactoring and formatting
 
@@ -46,6 +42,7 @@
   - [#7818](https://github.com/influxdata/telegraf/pull/7818) `build` Fix darwin package build flags
   - [#7819](https://github.com/influxdata/telegraf/pull/7819) `inputs.tail` Close file to ensure it has been flushed
   - [#7853](https://github.com/influxdata/telegraf/pull/7853) Initialize aggregation processors
+  - [#7865](https://github.com/influxdata/telegraf/pull/7865) `common.shim` shim logger improvements
   - [#7867](https://github.com/influxdata/telegraf/pull/7867) `inputs.execd` fix issue with execd restart_delay being ignored
   - [#7872](https://github.com/influxdata/telegraf/pull/7872) `inputs.gnmi` Recv next message after send returns EOF
   - [#7877](https://github.com/influxdata/telegraf/pull/7877) Fix arch name in deb/rpm builds
