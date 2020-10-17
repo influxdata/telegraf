@@ -138,7 +138,12 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	req, err := http.NewRequest("POST", w.WarpURL+"/api/v0/update", bytes.NewBufferString(payload))
+	addr := w.WarpURL + "/api/v0/update"
+	req, err := http.NewRequest("POST", addr, bytes.NewBufferString(payload))
+	if err != nil {
+		return fmt.Errorf("unable to create new request '%s': %s", addr, err)
+	}
+
 	req.Header.Set("X-Warp10-Token", w.Token)
 	req.Header.Set("Content-Type", "text/plain")
 

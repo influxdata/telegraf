@@ -78,8 +78,9 @@ type DebugLogger struct {
 
 func (*DebugLogger) Print(v ...interface{}) {
 	args := make([]interface{}, 0, len(v)+1)
-	args = append(args, "D! [sarama] ")
-	log.Print(v...)
+	args = append(append(args, "D! [sarama] "), v...)
+	log.Print(args...)
+
 }
 
 func (*DebugLogger) Printf(format string, v ...interface{}) {
@@ -88,7 +89,7 @@ func (*DebugLogger) Printf(format string, v ...interface{}) {
 
 func (*DebugLogger) Println(v ...interface{}) {
 	args := make([]interface{}, 0, len(v)+1)
-	args = append(args, "D! [sarama] ")
+	args = append(append(args, "D! [sarama] "), v...)
 	log.Println(args...)
 }
 

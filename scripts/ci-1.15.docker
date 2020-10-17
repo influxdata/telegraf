@@ -1,4 +1,4 @@
-FROM golang:1.13.13
+FROM golang:1.15.2
 
 RUN chmod -R 755 "$GOPATH"
 
@@ -21,8 +21,3 @@ RUN locale-gen C.UTF-8 || true
 ENV LANG=C.UTF-8
 
 RUN gem install fpm
-
-RUN go get -d github.com/golang/dep && \
-    cd src/github.com/golang/dep && \
-    git checkout -q v0.5.0 && \
-    go install -ldflags="-X main.version=v0.5.0" ./cmd/dep

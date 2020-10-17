@@ -116,7 +116,11 @@ func createPluginsWithTomlConfig(md toml.MetaData, conf config) (loadedConfig, e
 		plugin := creator()
 		if len(primitives) > 0 {
 			primitive := primitives[0]
-			if err := md.PrimitiveDecode(primitive, plugin); err != nil {
+			var p telegraf.PluginDescriber = plugin
+			if processor, ok := plugin.(unwrappable); ok {
+				p = processor.Unwrap()
+			}
+			if err := md.PrimitiveDecode(primitive, p); err != nil {
 				return loadedConf, err
 			}
 		}
@@ -168,4 +172,8 @@ func DefaultImportedPlugins() (config, error) {
 		return conf, nil
 	}
 	return conf, nil
+}
+
+type unwrappable interface {
+	Unwrap() telegraf.Processor
 }

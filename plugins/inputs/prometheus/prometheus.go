@@ -265,7 +265,11 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		if path == "" {
 			path = "/metrics"
 		}
-		req, err = http.NewRequest("GET", "http://localhost"+path, nil)
+		addr := "http://localhost" + path
+		req, err = http.NewRequest("GET", addr, nil)
+		if err != nil {
+			return fmt.Errorf("unable to create new request '%s': %s", addr, err)
+		}
 
 		// ignore error because it's been handled before getting here
 		tlsCfg, _ := p.ClientConfig.TLSConfig()
@@ -285,6 +289,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 			u.URL.Path = "/metrics"
 		}
 		req, err = http.NewRequest("GET", u.URL.String(), nil)
+		if err != nil {
+			return fmt.Errorf("unable to create new request '%s': %s", u.URL.String(), err)
+		}
 	}
 
 	req.Header.Add("Accept", acceptHeader)
