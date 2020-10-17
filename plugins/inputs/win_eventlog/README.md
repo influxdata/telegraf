@@ -202,6 +202,14 @@ Locale should be present on the computer. English locale is usually available on
 
 <https://docs.microsoft.com/en-us/openspecs/office_standards/ms-oe376/6c085406-a698-4e12-9d4d-c3b0ee3dbc4a>
 
+### Bookmarking
+
+win_eventlog plugin tracks processed events and automatically saves bookmarks in Windows Registry. So even if Windows is rebooted or plugin was in stopped state for some time, no events will be missed.
+
+Current event bookmark is saved under `Software\InfluxData\Telegraf` key in the `EventBookmark` string value. By default plugin tries to use `HKEY_LOCAL_MACHINE` hive, assuming it has Administrator privileges, but if it can't open key in this hive for writing, it tries to use `HKEY_CURRENT_USER` hive instead.
+
+If even `HKEY_CURRENT_USER` couldn't be opened (telegraf is started with no priviliges at all) or there was no previous bookmark saved, plugin subscribes to events starting from the current time.
+
 ### Example Output
 
 Some values are changed for anonymity.

@@ -16,6 +16,9 @@ var _ unsafe.Pointer
 // EvtHandle uintptr
 type EvtHandle uintptr
 
+// BookmarkHandle uintptr
+type BookmarkHandle uintptr
+
 // Do the interface allocations only once for common
 // Errno values.
 const (
@@ -74,9 +77,11 @@ var (
 	procEvtNext                  = modwevtapi.NewProc("EvtNext")
 	procEvtFormatMessage         = modwevtapi.NewProc("EvtFormatMessage")
 	procEvtOpenPublisherMetadata = modwevtapi.NewProc("EvtOpenPublisherMetadata")
+	procEvtCreateBookmark        = modwevtapi.NewProc("EvtCreateBookmark")
+	procEvtUpdateBookmark        = modwevtapi.NewProc("EvtUpdateBookmark")
 )
 
-func _EvtSubscribe(session EvtHandle, signalEvent uintptr, channelPath *uint16, query *uint16, bookmark EvtHandle, context uintptr, callback syscall.Handle, flags EvtSubscribeFlag) (handle EvtHandle, err error) {
+func _EvtSubscribe(session EvtHandle, signalEvent uintptr, channelPath *uint16, query *uint16, bookmark BookmarkHandle, context uintptr, callback syscall.Handle, flags EvtSubscribeFlag) (handle EvtHandle, err error) {
 	r0, _, e1 := syscall.Syscall9(procEvtSubscribe.Addr(), 8, uintptr(session), uintptr(signalEvent), uintptr(unsafe.Pointer(channelPath)), uintptr(unsafe.Pointer(query)), uintptr(bookmark), uintptr(context), uintptr(callback), uintptr(flags), 0)
 	handle = EvtHandle(r0)
 	if handle == 0 {
@@ -141,6 +146,31 @@ func _EvtOpenPublisherMetadata(session EvtHandle, publisherIdentity *uint16, log
 	r0, _, e1 := syscall.Syscall6(procEvtOpenPublisherMetadata.Addr(), 5, uintptr(session), uintptr(unsafe.Pointer(publisherIdentity)), uintptr(unsafe.Pointer(logFilePath)), uintptr(locale), uintptr(flags), 0)
 	handle = EvtHandle(r0)
 	if handle == 0 {
+		if e1 != 0 {
+			err = errnoErr(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func _EvtCreateBookmark(bookmarkXML *uint16) (handle BookmarkHandle, err error) {
+	r0, _, e1 := syscall.Syscall(procEvtCreateBookmark.Addr(), 1, uintptr(unsafe.Pointer(bookmarkXML)), 0, 0)
+	handle = BookmarkHandle(r0)
+	if handle == 0 {
+		if e1 != 0 {
+			err = errnoErr(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func _EvtUpdateBookmark(bookmark BookmarkHandle, event EvtHandle) (err error) {
+	r1, _, e1 := syscall.Syscall(procEvtUpdateBookmark.Addr(), 2, uintptr(bookmark), uintptr(event), 0)
+	if r1 == 0 {
 		if e1 != 0 {
 			err = errnoErr(e1)
 		} else {

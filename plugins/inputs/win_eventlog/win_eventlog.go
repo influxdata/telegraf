@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/registry"
 )
 
 var sampleConfig = `
@@ -115,6 +116,9 @@ type WinEventLog struct {
 	subscription           EvtHandle
 	buf                    []byte
 	Log                    telegraf.Logger
+	bookmarkName           string
+	bookmarkKey            registry.Key
+	bookmarkHandle         BookmarkHandle
 }
 
 var bufferSize = 1 << 14
@@ -129,6 +133,47 @@ func (w *WinEventLog) Description() string {
 // SampleConfig for win_eventlog
 func (w *WinEventLog) SampleConfig() string {
 	return sampleConfig
+}
+
+// Start is called from telegraf core when a plugin is started and allows it to
+// perform initialization tasks.
+func (w *WinEventLog) Start(acc telegraf.Accumulator) error {
+	w.Log.Info("Starting plugin")
+	registryPath := `Software\InfluxData\Telegraf`
+	// First we try to open HKLM key (works when running as SYSTEM or with administrator privileges)
+	registryKey, _, err := registry.CreateKey(registry.LOCAL_MACHINE, registryPath, registry.QUERY_VALUE|registry.WRITE)
+	if err != nil {
+		// If it fails, we try to work as if plugin is run with a non-privileged user permissions
+		w.Log.Debug("Couldn't open HKLM bookmark registry key (no administrator privileges), trying to open HKCU bookmark registry key")
+		registryKey, _, err = registry.CreateKey(registry.CURRENT_USER, registryPath, registry.QUERY_VALUE|registry.WRITE)
+		if err != nil {
+			w.Log.Warnf("Error opening HKLM or HKCU bookmark registry key for writing, bookmarking functionality is disabled: %v", err)
+			w.bookmarkKey = 0
+		} else {
+			w.bookmarkKey = registryKey
+		}
+	} else {
+		w.bookmarkKey = registryKey
+	}
+
+	return nil
+}
+
+// Stop is called from telegraf core when a plugin is stopped and allows it to
+// perform shutdown tasks.
+func (w *WinEventLog) Stop() {
+	w.Log.Info("Stopping plugin")
+	if w.bookmarkHandle != 0 {
+		// Force bookmark save before closing
+		err := w.saveBookmark(w.bookmarkHandle, w.bookmarkName)
+		if err != nil {
+			w.Log.Warnf("Error saving bookmark to registry: %v", err)
+		}
+		_EvtClose(EvtHandle(w.bookmarkHandle))
+	}
+	if w.bookmarkKey != 0 {
+		w.bookmarkKey.Close()
+	}
 }
 
 // Gather Windows Event Log entries
@@ -274,6 +319,12 @@ loop:
 			acc.AddFields("win_eventlog", fields, tags, timeStamp)
 		}
 	}
+	if w.bookmarkHandle != 0 && w.bookmarkKey != 0 {
+		err = w.saveBookmark(w.bookmarkHandle, w.bookmarkName)
+		if err != nil {
+			w.Log.Warnf("Error saving bookmark to registry: %v", err)
+		}
+	}
 
 	return nil
 }
@@ -323,8 +374,64 @@ func (w *WinEventLog) shouldExcludeEmptyField(field string, fieldType string, fi
 	return false
 }
 
+func (w *WinEventLog) saveBookmark(bookmark BookmarkHandle, valueName string) error {
+	var bufferUsed, propertyCount uint32
+
+	_EvtRender(0, EvtHandle(bookmark), EvtRenderBookmark, 0, nil, &bufferUsed, &propertyCount)
+	buffer := make([]byte, bufferUsed)
+	err := _EvtRender(0, EvtHandle(bookmark), EvtRenderBookmark, uint32(len(buffer)), &buffer[0], &bufferUsed, &propertyCount)
+	if err != nil {
+		return err
+	}
+
+	bookmarkXML, err := DecodeUTF16(buffer[:bufferUsed])
+	if err != nil {
+		return err
+	}
+
+	// Zero trailing prevents registry recognizing value as string
+	bookmarkXML = bytes.Trim(bookmarkXML, "\x00")
+	stringValue := string(bookmarkXML)
+	err = w.bookmarkKey.SetStringValue(valueName, stringValue)
+	return err
+}
+
+func (w *WinEventLog) getSavedBookmark(valueName string) (bookmark BookmarkHandle, err error) {
+	if w.bookmarkKey == 0 {
+		return 0, fmt.Errorf("no bookmark registry key handle")
+	}
+	bookmarkXML, _, err := w.bookmarkKey.GetStringValue(valueName)
+	if err != nil {
+		return 0, err
+	}
+	wideXML, err := syscall.UTF16PtrFromString(bookmarkXML)
+	if err != nil {
+		return 0, err
+	}
+	bookmarkHandle, err := _EvtCreateBookmark(wideXML)
+	if bookmarkHandle == 0 {
+		return 0, err
+	}
+	return bookmarkHandle, nil
+}
+
 func (w *WinEventLog) evtSubscribe(logName, xquery string) (EvtHandle, error) {
 	var logNamePtr, xqueryPtr *uint16
+
+	subscribeFlag := EvtSubscribeStartAfterBookmark
+	bookmarkHandle, err := w.getSavedBookmark(w.bookmarkName)
+	if err != nil || bookmarkHandle == 0 {
+		w.Log.Warnf("Couldn't get bookmark from registry, subscribing to events starting from Now(): %v", err)
+		subscribeFlag = EvtSubscribeToFutureEvents
+		bookmarkHandle, err = _EvtCreateBookmark(nil)
+		if err != nil {
+			return 0, err
+		}
+		w.bookmarkHandle = bookmarkHandle
+		bookmarkHandle = 0
+	} else {
+		w.bookmarkHandle = bookmarkHandle
+	}
 
 	sigEvent, err := windows.CreateEvent(nil, 0, 0, nil)
 	if err != nil {
@@ -343,7 +450,7 @@ func (w *WinEventLog) evtSubscribe(logName, xquery string) (EvtHandle, error) {
 	}
 
 	subsHandle, err := _EvtSubscribe(0, uintptr(sigEvent), logNamePtr, xqueryPtr,
-		0, 0, 0, EvtSubscribeToFutureEvents)
+		bookmarkHandle, 0, 0, subscribeFlag)
 	if err != nil {
 		return 0, err
 	}
@@ -384,6 +491,12 @@ func (w *WinEventLog) fetchEvents(subsHandle EvtHandle) ([]Event, error) {
 			if err == nil {
 				// w.Log.Debugf("Got event: %v", event)
 				events = append(events, event)
+				if w.bookmarkHandle != 0 {
+					err := _EvtUpdateBookmark(w.bookmarkHandle, eventHandle)
+					if err != nil {
+						w.Log.Debugf("Can't update event bookmark: %v", err)
+					}
+				}
 			}
 		}
 	}
@@ -524,6 +637,7 @@ func init() {
 			Separator:              "_",
 			OnlyFirstLineOfMessage: true,
 			TimeStampFromEvent:     true,
+			bookmarkName:           "EventBookmark",
 			EventTags:              []string{"Source", "EventID", "Level", "LevelText", "Keywords", "Channel", "Computer"},
 			EventFields:            []string{"*"},
 			ExcludeEmpty:           []string{"Task", "Opcode", "*ActivityID", "UserID"},
