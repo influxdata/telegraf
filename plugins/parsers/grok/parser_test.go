@@ -1117,22 +1117,20 @@ func TestTrimRegression(t *testing.T) {
 }
 
 func TestAdvanceFieldName(t *testing.T) {
-	// https://github.com/influxdata/telegraf/issues/4998
 	p := &Parser{
-		Patterns: []string{`%{GREEDYDATA:message.a-b}`},
+		Patterns: []string{`rts=%{NUMBER:response-time.s} local=%{IP:local-ip} remote=%{IP:remote.ip}`},
 	}
-	require.NoError(t, p.Compile())
+	assert.NoError(t, p.Compile())
 
-	actual, err := p.ParseLine(`level=info msg="ok"`)
-	require.NoError(t, err)
-
-	expected := testutil.MustMetric(
-		"",
-		map[string]string{},
+	metricA, err := p.ParseLine(`rts=1.283 local=127.0.0.1 remote=10.0.0.1`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
 		map[string]interface{}{
-			"message.a-b": `level=info msg="ok"`,
+			"response-time.s": "1.283",
+			"local-ip":        "127.0.0.1",
+			"remote.ip":       "10.0.0.1",
 		},
-		actual.Time(),
-	)
-	require.Equal(t, expected, actual)
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
 }
