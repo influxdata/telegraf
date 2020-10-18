@@ -125,6 +125,8 @@ func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 					continue
 				case int64:
 					portProto = strconv.FormatInt(v, 10)
+				case uint64:
+					portProto = strconv.FormatUint(v, 10)
 				case string:
 					portProto = v
 				}
