@@ -124,9 +124,9 @@ func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 					d.Log.Errorf("Unexpected type %t in source field; must be string or int", v)
 					continue
 				case int64:
-					portProto = strconv.FormatInt(field.(int64), 10)
+					portProto = strconv.FormatInt(v, 10)
 				case string:
-					portProto = field.(string)
+					portProto = v
 				}
 				fromField = true
 			}
@@ -173,7 +173,7 @@ func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 					d.Log.Errorf("Unexpected type %t in protocol field; must be string", v)
 					continue
 				case string:
-					proto = field.(string)
+					proto = v
 				}
 			}
 		}
