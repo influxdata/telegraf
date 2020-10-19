@@ -48,11 +48,13 @@ func (px *Proxmox) Gather(acc telegraf.Accumulator) error {
 }
 
 func (px *Proxmox) Init() error {
-	hostname, err := os.Hostname()
-	if err != nil {
-		return err
+	if px.NodeName == "" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			return err
+		}
+		px.NodeName = hostname
 	}
-	px.hostname = hostname
 
 	tlsCfg, err := px.ClientConfig.TLSConfig()
 	if err != nil {
@@ -77,7 +79,7 @@ func init() {
 }
 
 func getNodeSearchDomain(px *Proxmox) error {
-	apiUrl := "/nodes/" + px.hostname + "/dns"
+	apiUrl := "/nodes/" + px.NodeName + "/dns"
 	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
 	if err != nil {
 		return err
@@ -137,7 +139,12 @@ func gatherVmData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
 			return
 		}
 		tags := getTags(px, vmStat.Name, vmConfig, rt)
-		fields, err := getFields(vmStat)
+		currentVMStatus, err := getCurrentVMStatus(px, rt, vmStat.ID)
+		if err != nil {
+			px.Log.Error("Error getting VM curent VM status: %v", err)
+			return
+		}
+		fields, err := getFields(currentVMStatus)
 		if err != nil {
 			px.Log.Error("Error getting VM measurements: %v", err)
 			return
@@ -146,8 +153,25 @@ func gatherVmData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
 	}
 }
 
+func getCurrentVMStatus(px *Proxmox, rt ResourceType, id string) (VmStat, error) {
+	apiUrl := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + id + "/status/current"
+
+	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
+	if err != nil {
+		return VmStat{}, err
+	}
+
+	var currentVmStatus VmCurrentStats
+	err = json.Unmarshal(jsonData, &currentVmStatus)
+	if err != nil {
+		return VmStat{}, err
+	}
+
+	return currentVmStatus.Data, nil
+}
+
 func getVmStats(px *Proxmox, rt ResourceType) (VmStats, error) {
-	apiUrl := "/nodes/" + px.hostname + "/" + string(rt)
+	apiUrl := "/nodes/" + px.NodeName + "/" + string(rt)
 	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
 	if err != nil {
 		return VmStats{}, err
@@ -163,7 +187,7 @@ func getVmStats(px *Proxmox, rt ResourceType) (VmStats, error) {
 }
 
 func getVmConfig(px *Proxmox, vmId string, rt ResourceType) (VmConfig, error) {
-	apiUrl := "/nodes/" + px.hostname + "/" + string(rt) + "/" + vmId + "/config"
+	apiUrl := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + vmId + "/config"
 	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
 	if err != nil {
 		return VmConfig{}, err
@@ -245,7 +269,7 @@ func getTags(px *Proxmox, name string, vmConfig VmConfig, rt ResourceType) map[s
 	fqdn := hostname + "." + domain
 
 	return map[string]string{
-		"node_fqdn": px.hostname + "." + px.nodeSearchDomain,
+		"node_fqdn": px.NodeName + "." + px.nodeSearchDomain,
 		"vm_name":   name,
 		"vm_fqdn":   fqdn,
 		"vm_type":   string(rt),

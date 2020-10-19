@@ -14,6 +14,8 @@ var qemuTestData = `{"data":[{"name":"qemu1","status":"running","maxdisk":107374
 var qemuConfigTestData = `{"data":{"hostname":"qemu1","searchdomain":"test.example.com"}}`
 var lxcTestData = `{"data":[{"vmid":"111","type":"lxc","uptime":2078164,"swap":9412608,"disk":"744189952","maxmem":536870912,"mem":98500608,"maxswap":536870912,"cpu":0.00371567669193613,"status":"running","maxdisk":"5217320960","name":"container1"}]}`
 var lxcConfigTestData = `{"data":{"hostname":"container1","searchdomain":"test.example.com"}}`
+var lxcCurrentStatusTestData = `{"data":{"vmid":"111","type":"lxc","uptime":2078164,"swap":9412608,"disk":"744189952","maxmem":536870912,"mem":98500608,"maxswap":536870912,"cpu":0.00371567669193613,"status":"running","maxdisk":"5217320960","name":"container1"}}`
+var qemuCurrentStatusTestData = `{"data":{"name":"qemu1","status":"running","maxdisk":10737418240,"cpu":0.029336643550795,"vmid":"113","uptime":2159739,"disk":0,"maxmem":2147483648,"mem":1722451796}}`
 
 func performTestRequest(px *Proxmox, apiUrl string, method string, data url.Values) ([]byte, error) {
 	var bytedata = []byte("")
@@ -28,6 +30,10 @@ func performTestRequest(px *Proxmox, apiUrl string, method string, data url.Valu
 		bytedata = []byte(lxcTestData)
 	} else if strings.HasSuffix(apiUrl, "111/config") {
 		bytedata = []byte(lxcConfigTestData)
+	} else if strings.HasSuffix(apiUrl, "111/status/current") {
+		bytedata = []byte(lxcCurrentStatusTestData)
+	} else if strings.HasSuffix(apiUrl, "113/status/current") {
+		bytedata = []byte(qemuCurrentStatusTestData)
 	}
 
 	return bytedata, nil
@@ -40,8 +46,8 @@ func setUp(t *testing.T) *Proxmox {
 
 	require.NoError(t, px.Init())
 
-	// Override hostname and logger for test
-	px.hostname = "testnode"
+	// Override NodeName and logger for test
+	px.NodeName = "testnode"
 	px.Log = testutil.Logger{}
 	return px
 }
