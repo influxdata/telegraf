@@ -81,7 +81,7 @@ const sampleConfig = `
 
   ## Jobs to include or exclude from gathering
   ## When using both lists, job_exclude has priority.
-  # job_include = [ "jobA", "jobB/subjobA/subjobB", "jobC/*"]
+  # job_include = [ "jobA", "jobB/subjobA/subjobB", "jobC*"]
   # job_exclude = [ "job1", "job2/subjob1/subjob2", "job3/*"]
 
   ## Nodes to exclude from gathering
