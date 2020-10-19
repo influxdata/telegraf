@@ -26,14 +26,12 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 			jsonFilePath = "testdata/queues.json"
 		case "/api/exchanges":
 			jsonFilePath = "testdata/exchanges.json"
-		case "/api/vhosts":
-			jsonFilePath = "testdata/vhosts.json"
-		case "/api/healthchecks/node/rabbit@vagrant-ubuntu-trusty-64":
-			jsonFilePath = "testdata/healthchecks.json"
 		case "/api/federation-links":
 			jsonFilePath = "testdata/federation-links.json"
 		case "/api/nodes/rabbit@vagrant-ubuntu-trusty-64/memory":
 			jsonFilePath = "testdata/memory.json"
+		case "/api/vhosts":
+			jsonFilePath = "testdata/vhosts.json"
 		default:
 			panic("Cannot handle request")
 		}
