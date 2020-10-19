@@ -12,35 +12,35 @@ import (
 type format string
 
 const (
-	Carbon2FormatFieldSeparate       string = "field_separate"
-	Carbon2FormatMetricIncludesField string = "metric_includes_field"
-
-	formatFieldSeparate       = format(Carbon2FormatFieldSeparate)
-	formatMetricIncludesField = format(Carbon2FormatMetricIncludesField)
+	carbon2FormatFieldEmpty          = format("")
+	Carbon2FormatFieldSeparate       = format("field_separate")
+	Carbon2FormatMetricIncludesField = format("metric_includes_field")
 )
 
-var formats = map[string]format{
-	// Field separate is the default when no format specified.
-	"":                               formatFieldSeparate,
-	Carbon2FormatFieldSeparate:       formatFieldSeparate,
-	Carbon2FormatMetricIncludesField: formatMetricIncludesField,
+var formats = map[format]struct{}{
+	carbon2FormatFieldEmpty:          {},
+	Carbon2FormatFieldSeparate:       {},
+	Carbon2FormatMetricIncludesField: {},
 }
 
 type Serializer struct {
 	metricsFormat format
 }
 
-func NewSerializer(f string) (*Serializer, error) {
-	var (
-		ok            bool
-		metricsFormat format
-	)
-	if metricsFormat, ok = formats[f]; !ok {
+func NewSerializer(metricsFormat string) (*Serializer, error) {
+	var f = format(metricsFormat)
+
+	if _, ok := formats[f]; !ok {
 		return nil, fmt.Errorf("unknown carbon2 format: %s", f)
 	}
 
+	// When unset, default to field separate.
+	if f == carbon2FormatFieldEmpty {
+		f = Carbon2FormatFieldSeparate
+	}
+
 	return &Serializer{
-		metricsFormat: metricsFormat,
+		metricsFormat: f,
 	}, nil
 }
 
@@ -58,17 +58,20 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 	var m bytes.Buffer
+	metricsFormat := s.getMetricsFormat()
+
 	for fieldName, fieldValue := range metric.Fields() {
-		if !isNumeric(fieldValue) {
+		if isString(fieldValue) {
 			continue
 		}
 
-		switch s.metricsFormat {
-		case formatFieldSeparate:
+		switch metricsFormat {
+		case Carbon2FormatFieldSeparate:
 			m.WriteString(serializeMetricFieldSeparate(
 				metric.Name(), fieldName,
 			))
-		case formatMetricIncludesField:
+
+		case Carbon2FormatMetricIncludesField:
 			m.WriteString(serializeMetricIncludeField(
 				metric.Name(), fieldName,
 			))
@@ -85,12 +88,24 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 			m.WriteString(" ")
 		}
 		m.WriteString(" ")
-		m.WriteString(fmt.Sprintf("%v", fieldValue))
+		m.WriteString(formatValue(fieldValue))
 		m.WriteString(" ")
 		m.WriteString(strconv.FormatInt(metric.Time().Unix(), 10))
 		m.WriteString("\n")
 	}
 	return m.Bytes()
+}
+
+func (s *Serializer) SetMetricsFormat(f format) {
+	s.metricsFormat = f
+}
+
+func (s *Serializer) getMetricsFormat() format {
+	return s.metricsFormat
+}
+
+func (s *Serializer) IsMetricsFormatUnset() bool {
+	return s.metricsFormat == carbon2FormatFieldEmpty
 }
 
 func serializeMetricFieldSeparate(name, fieldName string) string {
@@ -107,11 +122,33 @@ func serializeMetricIncludeField(name, fieldName string) string {
 	)
 }
 
-func isNumeric(v interface{}) bool {
+func formatValue(fieldValue interface{}) string {
+	switch v := fieldValue.(type) {
+	case bool:
+		// Print bools as 0s and 1s
+		return fmt.Sprintf("%d", bool2int(v))
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+func isString(v interface{}) bool {
 	switch v.(type) {
 	case string:
-		return false
-	default:
 		return true
+	default:
+		return false
 	}
+}
+
+func bool2int(b bool) int {
+	// Slightly more optimized than a usual if ... return ... else return ... .
+	// See: https://0x0f.me/blog/golang-compiler-optimization/
+	var i int
+	if b {
+		i = 1
+	} else {
+		i = 0
+	}
+	return i
 }

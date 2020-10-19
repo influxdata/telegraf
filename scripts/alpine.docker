@@ -1,4 +1,4 @@
-FROM golang:1.14.7 as builder
+FROM golang:1.15.2 as builder
 WORKDIR /go/src/github.com/influxdata/telegraf
 
 COPY . /go/src/github.com/influxdata/telegraf

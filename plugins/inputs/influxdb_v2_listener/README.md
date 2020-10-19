@@ -9,17 +9,21 @@ The `/api/v2/write` endpoint supports the `precision` query parameter and can be
 to one of `ns`, `us`, `ms`, `s`.  All other parameters are ignored and
 defer to the output plugins configuration.
 
+Telegraf minimum version: Telegraf 1.16.0
+
 ### Configuration:
 
 ```toml
+[[inputs.influxdb_v2_listener]]
   ## Address and port to host InfluxDB listener on
-  service_address = ":9999"
+  ## (Double check the port. Could be 9999 if using OSS Beta)
+  service_address = ":8086"
 
   ## Maximum allowed HTTP request body size in bytes.
   ## 0 means to use the default of 32MiB.
   # max_body_size = "32MiB"
 
-  ## Optional tag to determine the bucket. 
+  ## Optional tag to determine the bucket.
   ## If the write has a bucket in the query string then it will be kept in this tag name.
   ## This tag can be used in downstream outputs.
   ## The default value of nothing means it will be off and the database will not be recorded.
