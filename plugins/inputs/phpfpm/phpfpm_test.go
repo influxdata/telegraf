@@ -25,12 +25,17 @@ func (s statServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
-	sv := statServer{}
-	ts := httptest.NewServer(sv)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "ok", r.URL.Query().Get("test"))
+		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Content-Length", fmt.Sprint(len(outputSample)))
+		fmt.Fprint(w, outputSample)
+	}))
 	defer ts.Close()
 
+	url := ts.URL + "?test=ok"
 	r := &phpfpm{
-		Urls: []string{ts.URL},
+		Urls: []string{url},
 	}
 
 	err := r.Init()
@@ -43,7 +48,7 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 
 	tags := map[string]string{
 		"pool": "www",
-		"url":  ts.URL,
+		"url":  url,
 	}
 
 	fields := map[string]interface{}{
