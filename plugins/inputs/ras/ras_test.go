@@ -1,4 +1,4 @@
-// +build !windows,!darwin,!mips,!mipsel
+// +build !windows,!darwin,!mips,!mipsle
 
 package ras
 

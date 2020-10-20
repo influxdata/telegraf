@@ -1,3 +1,3 @@
-// +build mips mipsel
+// +build mips mipsle
 
 package ras
