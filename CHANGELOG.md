@@ -2,17 +2,12 @@
 
 #### Release Notes
 
-  - Many documentation updates
   - New [code examples](/plugins/processors/starlark/testdata) for the [Starlark processor](/plugins/processors/starlark/README.md)
-  - [#8220](https://github.com/influxdata/telegraf/pull/8220) `build` update to go 1.15
-  - [#7864](https://github.com/influxdata/telegraf/pull/7864) `processors.starlark` Add logic starlark example
-  - [#7865](https://github.com/influxdata/telegraf/pull/7865) `common.shim` shim logger improvements
   - [#7920](https://github.com/influxdata/telegraf/pull/7920) `inputs.rabbitmq` remove deprecated healthcheck
-  - [#7932](https://github.com/influxdata/telegraf/pull/7932) Support for AWS Cloudwatch Alarms #7931
   - [#7953](https://github.com/influxdata/telegraf/pull/7953) Add details to connect to InfluxDB OSS 2 and Cloud 2
-  - [#7980](https://github.com/influxdata/telegraf/pull/7980) `processors.starlark` add example input/outputs to starlark examples
   - [#8054](https://github.com/influxdata/telegraf/pull/8054) add guidelines run to external plugins with execd
   - [#8198](https://github.com/influxdata/telegraf/pull/8198) `inputs.influxdb_v2_listener` change default influxdb port from 9999 to 8086 to match OSS 2.0 release
+  - [starlark](https://github.com/influxdata/telegraf/tree/release-1.16/plugins/processors/starlark/testdata) `processors.starlark` add various code exampels for the Starlark processor
 
 #### Features
 
@@ -37,6 +32,9 @@
   - [#8189](https://github.com/influxdata/telegraf/pull/8189) `inputs.snmp_trap` If the community string is available, add it as a tag
   - [#8190](https://github.com/influxdata/telegraf/pull/8190) `inputs.tail` Semigroupoid multiline (#8167)
   - [#8196](https://github.com/influxdata/telegraf/pull/8196) `inputs.redis` add functionality to get values from redis commands
+  - [#8220](https://github.com/influxdata/telegraf/pull/8220) `build` update to Go 1.15
+  - [#8032](https://github.com/influxdata/telegraf/pull/8032) `inputs.http_response` http_response: match on status code
+  - [#8172](https://github.com/influxdata/telegraf/pull/8172) `inputs.sqlserver` New sql server queries (on-prem) - refactoring and formatting
 
 #### Bugfixes
 
@@ -44,6 +42,7 @@
   - [#7818](https://github.com/influxdata/telegraf/pull/7818) `build` Fix darwin package build flags
   - [#7819](https://github.com/influxdata/telegraf/pull/7819) `inputs.tail` Close file to ensure it has been flushed
   - [#7853](https://github.com/influxdata/telegraf/pull/7853) Initialize aggregation processors
+  - [#7865](https://github.com/influxdata/telegraf/pull/7865) `common.shim` shim logger improvements
   - [#7867](https://github.com/influxdata/telegraf/pull/7867) `inputs.execd` fix issue with execd restart_delay being ignored
   - [#7872](https://github.com/influxdata/telegraf/pull/7872) `inputs.gnmi` Recv next message after send returns EOF
   - [#7877](https://github.com/influxdata/telegraf/pull/7877) Fix arch name in deb/rpm builds
@@ -64,6 +63,8 @@
   - [#8210](https://github.com/influxdata/telegraf/pull/8210) update gopsutil: fix procstat performance regression
   - [#8162](https://github.com/influxdata/telegraf/pull/8162) Fix bool serialization when using carbon2
   - [#8240](https://github.com/influxdata/telegraf/pull/8240) Fix bugs found by LGTM analysis platform
+  - [#8251](https://github.com/influxdata/telegraf/pull/8251) `outputs.dynatrace` Dynatrace Output Plugin: Fixed behaviour when state map is cleared
+  - [#8274](https://github.com/influxdata/telegraf/pull/8274) `common.shim` fix issue with loading processor config from execd
 
 #### New Input Plugins
 
@@ -72,13 +73,13 @@
   - [nsd](/plugins/inputs/nsd/README.md) add nsd input plugin - Contributed by @gearnode
   - [opcua](/plugins/inputs/opcua/README.md) Add OPC UA input plugin - Contributed by InfluxData
   - [proxmox](/plugins/inputs/proxmox/README.md) Proxmox plugin - Contributed by @effitient
-  - [ras](/plugins/inputs/ras/README.md) New input plugin for RAS (Reliability, Availability and Serviceability) - Contributed by @p-zak
   - [win_eventlog](/plugins/inputs/win_eventlog/README.md) Windows eventlog input plugin - Contributed by @simnv
 
 #### New Output Plugins
 
   - [dynatrace](/plugins/outputs/dynatrace/README.md) Dynatrace output plugin - Contributed by @thschue
   - [sumologic](/plugins/outputs/sumologic/README.md) Sumo Logic output plugin - Contributed by @pmalek-sumo
+  - [timestream](/plugins/outputs/timestream) Timestream Output Plugin - Contributed by @piotrwest
 
 #### New External Plugins
 
@@ -87,6 +88,7 @@
   - [awsalarms](https://github.com/vipinvkmenon/awsalarms) - Simple plugin to gather/monitor alarms generated  in AWS.
   - [youtube-telegraf-plugin](https://github.com/inabagumi/youtube-telegraf-plugin) - Gather view and subscriber stats from your youtube videos
   - [octoprint](https://github.com/BattleBas/octoprint-telegraf-plugin) - Gather 3d print information from the octoprint API.
+  - [systemd-timings](https://github.com/pdmorrow/telegraf-execd-systemd-timings) - Gather systemd boot and unit timestamp metrics.
 
 ## v1.15.3 [2020-09-11]
 

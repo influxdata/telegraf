@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -80,6 +81,10 @@ var sampleConfig = `
   ## Get only first line of Message field. For most events first line is usually more than enough
   only_first_line_of_message = true
 
+  ## Parse timestamp from TimeCreated.SystemTime event field.
+  ## Will default to current time of telegraf processing on parsing error or if set to false
+  timestamp_from_event = true
+
   ## Fields to include as tags. Globbing supported ("Level*" for both "Level" and "LevelText")
   event_tags = ["Source", "EventID", "Level", "LevelText", "Task", "TaskText", "Opcode", "OpcodeText", "Keywords", "Channel", "Computer"]
 
@@ -87,7 +92,7 @@ var sampleConfig = `
   event_fields = ["*"]
 
   ## Fields to exclude. Also applied to data fields. Globbing supported
-  exclude_fields = ["Binary", "Data_Address*"]
+  exclude_fields = ["TimeCreated", "Binary", "Data_Address*"]
 
   ## Skip those tags or fields if their value is empty or equals to zero. Globbing supported
   exclude_empty = ["*ActivityID", "UserID"]
@@ -102,6 +107,7 @@ type WinEventLog struct {
 	ProcessEventData       bool     `toml:"process_eventdata"`
 	Separator              string   `toml:"separator"`
 	OnlyFirstLineOfMessage bool     `toml:"only_first_line_of_message"`
+	TimeStampFromEvent     bool     `toml:"timestamp_from_event"`
 	EventTags              []string `toml:"event_tags"`
 	EventFields            []string `toml:"event_fields"`
 	ExcludeFields          []string `toml:"exclude_fields"`
@@ -157,6 +163,7 @@ loop:
 			tags := map[string]string{}
 			fields := map[string]interface{}{}
 			evt := reflect.ValueOf(&event).Elem()
+			timeStamp := time.Now()
 			// Walk through all fields of Event struct to process System tags or fields
 			for i := 0; i < evt.NumField(); i++ {
 				fieldName := evt.Type().Field(i).Name
@@ -181,6 +188,12 @@ loop:
 				case "TimeCreated":
 					fieldValue = event.TimeCreated.SystemTime
 					fieldType = reflect.TypeOf(fieldValue).String()
+					if w.TimeStampFromEvent {
+						timeStamp, err = time.Parse(time.RFC3339Nano, fmt.Sprintf("%v", fieldValue))
+						if err != nil {
+							w.Log.Warnf("Error parsing timestamp %q: %v", fieldValue, err)
+						}
+					}
 				case "Correlation":
 					if should, _ := w.shouldProcessField("ActivityID"); should {
 						activityID := event.Correlation.ActivityID
@@ -258,7 +271,7 @@ loop:
 			}
 
 			// Pass collected metrics
-			acc.AddFields("win_eventlog", fields, tags)
+			acc.AddFields("win_eventlog", fields, tags, timeStamp)
 		}
 	}
 
@@ -510,6 +523,7 @@ func init() {
 			ProcessEventData:       true,
 			Separator:              "_",
 			OnlyFirstLineOfMessage: true,
+			TimeStampFromEvent:     true,
 			EventTags:              []string{"Source", "EventID", "Level", "LevelText", "Keywords", "Channel", "Computer"},
 			EventFields:            []string{"*"},
 			ExcludeEmpty:           []string{"Task", "Opcode", "*ActivityID", "UserID"},
