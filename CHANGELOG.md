@@ -73,6 +73,7 @@
   - [nsd](/plugins/inputs/nsd/README.md) add nsd input plugin - Contributed by @gearnode
   - [opcua](/plugins/inputs/opcua/README.md) Add OPC UA input plugin - Contributed by InfluxData
   - [proxmox](/plugins/inputs/proxmox/README.md) Proxmox plugin - Contributed by @effitient
+  - [ras](/plugins/inputs/ras/README.md) New input plugin for RAS (Reliability, Availability and Serviceability) - Contributed by @p-zak
   - [win_eventlog](/plugins/inputs/win_eventlog/README.md) Windows eventlog input plugin - Contributed by @simnv
 
 #### New Output Plugins
