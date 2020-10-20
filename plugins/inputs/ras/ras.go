@@ -1,4 +1,4 @@
-// +build !windows,!darwin,!mips,!mipsle,!s390x
+// +build linux,!mips,!mipsle,!s390x
 
 package ras
 
