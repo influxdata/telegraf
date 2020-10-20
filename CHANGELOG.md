@@ -91,6 +91,13 @@
   - [octoprint](https://github.com/BattleBas/octoprint-telegraf-plugin) - Gather 3d print information from the octoprint API.
   - [systemd-timings](https://github.com/pdmorrow/telegraf-execd-systemd-timings) - Gather systemd boot and unit timestamp metrics.
 
+## v1.15.4 [2020-10-20]
+
+#### Bugfixes
+
+  - [#8274](https://github.com/influxdata/telegraf/pull/8274) `common.shim` fix issue with loading processor config from execd
+  - [#8176](https://github.com/influxdata/telegraf/pull/8176) `agent` fix panic on streaming processers using logging
+
 ## v1.15.3 [2020-09-11]
 
 #### Release Notes
