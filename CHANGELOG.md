@@ -1,4 +1,4 @@
-## v1.16.0 [unreleased]
+## v1.16.0 [2020-10-21]
 
 #### Release Notes
 
