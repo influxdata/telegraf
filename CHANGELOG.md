@@ -35,6 +35,9 @@
   - [#8220](https://github.com/influxdata/telegraf/pull/8220) `build` update to Go 1.15
   - [#8032](https://github.com/influxdata/telegraf/pull/8032) `inputs.http_response` http_response: match on status code
   - [#8172](https://github.com/influxdata/telegraf/pull/8172) `inputs.sqlserver` New sql server queries (on-prem) - refactoring and formatting
+  - [#8216](https://github.com/influxdata/telegraf/pull/8216) `inputs.win_eventlog` Use TimeCreated timestamp from the event log as the metric timestamp (#8216)
+  - [#8157](https://github.com/influxdata/telegraf/pull/8157) `processors.port_name` Add support for fields and protocol lookups (#8157)
+  - [#8269](https://github.com/influxdata/telegraf/pull/8269) `outputs.influxdb` Default to gzip content encoding (#8269)
 
 #### Bugfixes
 
@@ -65,6 +68,10 @@
   - [#8240](https://github.com/influxdata/telegraf/pull/8240) Fix bugs found by LGTM analysis platform
   - [#8251](https://github.com/influxdata/telegraf/pull/8251) `outputs.dynatrace` Dynatrace Output Plugin: Fixed behaviour when state map is cleared
   - [#8274](https://github.com/influxdata/telegraf/pull/8274) `common.shim` fix issue with loading processor config from execd
+  - [#8282](https://github.com/influxdata/telegraf/pull/8282) `outputs.azure_monitor` Fix using empty string as the namespace prefix (#8282)
+  - [#7263](https://github.com/influxdata/telegraf/issues/7263) `inputs.kafka_consumer` Fix using old partition leader during Kafka cluster node failure (#7263)
+  - [#1906](https://github.com/influxdata/telegraf/issues/1906) `inputs.phpfpm` Fix handling URLs with question mark (#1906)
+  - [#8290](https://github.com/influxdata/telegraf/pull/8290) `inputs.proxmox` Fix wrong memory measurements of containers and vms (#8290)
 
 #### New Input Plugins
 
