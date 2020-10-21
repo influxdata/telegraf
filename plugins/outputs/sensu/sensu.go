@@ -399,26 +399,26 @@ func (s *Sensu) GetHandlers() []string {
 }
 
 func getFloat(unk interface{}) (float64, error) {
-    switch i := unk.(type) {
-    case float64:
-        return i, nil
-    case float32:
-        return float64(i), nil
-    case int64:
-        return float64(i), nil
-    case int32:
-        return float64(i), nil
-    case int:
-        return float64(i), nil
-    case uint64:
-        return float64(i), nil
-    case uint32:
-        return float64(i), nil
-    case uint:
-        return float64(i), nil
-    default:
-        return math.NaN(), fmt.Errorf("Non-numeric type could not be converted to float")
-    }
+	switch i := unk.(type) {
+	case float64:
+		return i, nil
+	case float32:
+		return float64(i), nil
+	case int64:
+		return float64(i), nil
+	case int32:
+		return float64(i), nil
+	case int:
+		return float64(i), nil
+	case uint64:
+		return float64(i), nil
+	case uint32:
+		return float64(i), nil
+	case uint:
+		return float64(i), nil
+	default:
+		return math.NaN(), fmt.Errorf("Non-numeric type could not be converted to float")
+	}
 }
 
 type SensuEntity struct {
