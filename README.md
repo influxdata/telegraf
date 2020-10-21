@@ -446,3 +446,4 @@ For documentation on the latest development code see the [documentation index][d
 * [warp10](./plugins/outputs/warp10)
 * [wavefront](./plugins/outputs/wavefront)
 * [sumologic](./plugins/outputs/sumologic)
+* [yandex_cloud_monitoring](./plugins/outputs/yandex_cloud_monitoring)
