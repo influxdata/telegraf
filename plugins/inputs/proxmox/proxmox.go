@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
@@ -48,12 +49,9 @@ func (px *Proxmox) Gather(acc telegraf.Accumulator) error {
 }
 
 func (px *Proxmox) Init() error {
+
 	if px.NodeName == "" {
-		hostname, err := os.Hostname()
-		if err != nil {
-			return err
-		}
-		px.NodeName = hostname
+		return errors.New("node_name must be configured")
 	}
 
 	tlsCfg, err := px.ClientConfig.TLSConfig()
@@ -75,6 +73,10 @@ func init() {
 		requestFunction: performRequest,
 	}
 
+	// Set hostname as default node name for backwards compatibility
+	hostname, _ := os.Hostname()
+	px.NodeName = hostname
+
 	inputs.Add("proxmox", func() telegraf.Input { return &px })
 }
 
@@ -89,6 +91,10 @@ func getNodeSearchDomain(px *Proxmox) error {
 	err = json.Unmarshal(jsonData, &nodeDns)
 	if err != nil {
 		return err
+	}
+
+	if nodeDns.Data.Searchdomain == "" {
+		return errors.New("node_name not found")
 	}
 	px.nodeSearchDomain = nodeDns.Data.Searchdomain
 

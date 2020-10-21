@@ -42,12 +42,12 @@ func performTestRequest(px *Proxmox, apiUrl string, method string, data url.Valu
 func setUp(t *testing.T) *Proxmox {
 	px := &Proxmox{
 		requestFunction: performTestRequest,
+		NodeName:        "testnode",
 	}
 
 	require.NoError(t, px.Init())
 
-	// Override NodeName and logger for test
-	px.NodeName = "testnode"
+	// Override logger for test
 	px.Log = testutil.Logger{}
 	return px
 }
