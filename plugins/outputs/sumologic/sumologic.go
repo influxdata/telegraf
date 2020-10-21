@@ -50,7 +50,7 @@ const (
   ## Bear in mind that in some serializer a metric even though serialized to multiple
   ## lines cannot be split any further so setting this very low might not work
   ## as expected.
-  # max_request_body_size = 1_000_000
+  # max_request_body_size = 1000000
 
   ## Additional, Sumo specific options.
   ## Full list can be found here:
