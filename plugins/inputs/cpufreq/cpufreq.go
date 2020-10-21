@@ -58,15 +58,19 @@ func (g *CPUFreq) Gather(acc telegraf.Accumulator) error {
 		fileds := make(map[string]interface{})
 		tags := make(map[string]string)
 
-		_, cpuName := filepath.Split(cpu)
-		cpuNum := strings.TrimPrefix(cpuName, "cpu")
-
-		tags["cpu"] = cpuNum
-
 		// sysfs cpufreq values are kHz, thus multiply by 1000 to export base units (hz).
 		if _, err := os.Stat(filepath.Join(cpu, "cpufreq")); os.IsNotExist(err) {
-			acc.AddError(err)
+			tags["cpu"] = "Unsupported CPU"
+			fileds["cur_freq"] = 0 //"Unsupported CPU"
+			fileds["min_freq"] = 0 //"Unsupported CPU"
+			fileds["max_freq"] = 0 //"Unsupported CPU"
+			acc.AddFields("cpufreq", fileds, tags)
+			continue
 		} else {
+			_, cpuName := filepath.Split(cpu)
+			cpuNum := strings.TrimPrefix(cpuName, "cpu")
+
+			tags["cpu"] = cpuNum
 			if value, err = readUintFromFile(filepath.Join(cpu, "cpufreq", "scaling_cur_freq")); err != nil {
 				acc.AddError(err)
 				continue
