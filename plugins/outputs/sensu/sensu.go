@@ -178,18 +178,13 @@ func (s *Sensu) Write(metrics []telegraf.Metric) error {
 			tagList = append(tagList, tag)
 		}
 
-		// Filter valid float64 values
+		// Get all valid numeric values, convert to float64
 		for _, fieldSet := range metric.FieldList() {
 			key := fieldSet.Key
-			switch fv := fieldSet.Value.(type) {
-			// Only support float64 values
-			case float64:
-				// JSON does not support these special values
-				if math.IsNaN(fv) || math.IsInf(fv, 0) {
-					continue
-				}
-			default:
-				// Ignore unsupported value types
+			// don't need err since math.NaN is returned with err
+			value, _ := getFloat(fieldSet.Value)
+			// JSON does not support these special values
+			if math.IsNaN(value) || math.IsInf(value, 0) {
 				continue
 			}
 
@@ -197,7 +192,7 @@ func (s *Sensu) Write(metrics []telegraf.Metric) error {
 				Name:      metric.Name() + "." + key,
 				Tags:      tagList,
 				Timestamp: metric.Time().Unix(),
-				Value:     fieldSet.Value,
+				Value:     value,
 			}
 			points = append(points, point)
 		}
@@ -401,6 +396,29 @@ func (s *Sensu) GetHandlers() []string {
 		return []string{}
 	}
 	return s.Metrics.Handlers
+}
+
+func getFloat(unk interface{}) (float64, error) {
+    switch i := unk.(type) {
+    case float64:
+        return i, nil
+    case float32:
+        return float64(i), nil
+    case int64:
+        return float64(i), nil
+    case int32:
+        return float64(i), nil
+    case int:
+        return float64(i), nil
+    case uint64:
+        return float64(i), nil
+    case uint32:
+        return float64(i), nil
+    case uint:
+        return float64(i), nil
+    default:
+        return math.NaN(), fmt.Errorf("Non-numeric type could not be converted to float")
+    }
 }
 
 type SensuEntity struct {
