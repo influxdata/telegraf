@@ -1,4 +1,4 @@
-next_version := 1.16.0
+next_version :=  $(shell cat build_version.txt)
 tag := $(shell git describe --exact-match --tags 2>git_describe_error.tmp; rm -f git_describe_error.tmp)
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
@@ -41,7 +41,7 @@ GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 
-LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch)
+LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
 ifneq ($(tag),)
 	LDFLAGS += -X main.version=$(version)
 endif
