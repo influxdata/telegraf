@@ -114,7 +114,7 @@ func TestMissingDatabase(t *testing.T) {
 	var acc testutil.Accumulator
 	ras := newRas()
 	ras.DBPath = "/tmp/test.db"
-	err := ras.Gather(&acc)
+	err := ras.Start(&acc)
 	assert.Error(t, err)
 }
 
