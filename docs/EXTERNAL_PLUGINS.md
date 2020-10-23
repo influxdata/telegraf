@@ -56,7 +56,7 @@ This is a guide to help you set up your plugin to use it with `execd`
   block to look for this plugin. 
   1. Add usage and development instructions in the homepage of your repository for running 
   your plugin with its respective `execd` plugin. Please refer to 
-  [openvpn](/danielnelson/telegraf-execd-openvpn#usage) and [awsalarms](/vipinvkmenon/awsalarms#installation) 
+  [openvpn](/danielnelson/telegraf-execd-openvpn#usage) and [awsalarms](https://github.com/vipinvkmenon/awsalarms#installation) 
   for examples. Include the following steps:
      1. How to download the release package for your platform or how to clone the binary for your external plugin
      1. The commands to unpack or build your binary
