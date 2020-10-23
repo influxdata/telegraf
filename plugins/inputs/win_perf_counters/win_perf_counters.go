@@ -386,45 +386,28 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		// collect
 		if m.UseWildcardsExpansion {
 			value, err := m.query.GetFormattedCounterValueDouble(metric.counterHandle)
-			if err == nil {
-				addCounterMeasurement(metric, metric.instance, value, collectFields)
-			} else {
+			if err != nil {
 				//ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
 				}
+				m.Log.Warnf("error while getting value for counter %q, will skip metric: %v", metric.counterPath, err)
+				continue
 			}
+			addCounterMeasurement(metric, metric.instance, value, collectFields)
 		} else {
 			counterValues, err := m.query.GetFormattedCounterArrayDouble(metric.counterHandle)
-			if err == nil {
-				for _, cValue := range counterValues {
-					var add bool
-					if metric.includeTotal {
-						// If IncludeTotal is set, include all.
-						add = true
-					} else if metric.instance == "*" && !strings.Contains(cValue.InstanceName, "_Total") {
-						// Catch if set to * and that it is not a '*_Total*' instance.
-						add = true
-					} else if metric.instance == cValue.InstanceName {
-						// Catch if we set it to total or some form of it
-						add = true
-					} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, cValue.InstanceName) {
-						// If you are using a multiple instance identifier such as "w3wp#1"
-						// phd.dll returns only the first 2 characters of the identifier.
-						add = true
-						cValue.InstanceName = metric.instance
-					} else if metric.instance == "------" {
-						add = true
-					}
-
-					if add {
-						addCounterMeasurement(metric, cValue.InstanceName, cValue.Value, collectFields)
-					}
-				}
-			} else {
-				//ignore invalid data as some counters from process instances returns this sometimes
+			if err != nil {
+				//ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
+				}
+				m.Log.Warnf("error while getting value for counter %q, will skip metric: %v", metric.counterPath, err)
+				continue
+			}
+			for _, cValue := range counterValues {
+				if shouldIncludeMetric(metric, cValue) {
+					addCounterMeasurement(metric, cValue.InstanceName, cValue.Value, collectFields)
 				}
 			}
 		}
@@ -443,6 +426,27 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func shouldIncludeMetric(metric *counter, cValue CounterValue) {
+	if metric.includeTotal {
+		// If IncludeTotal is set, include all.
+		return true
+	} else if metric.instance == "*" && !strings.Contains(cValue.InstanceName, "_Total") {
+		// Catch if set to * and that it is not a '*_Total*' instance.
+		return true
+	} else if metric.instance == cValue.InstanceName {
+		// Catch if we set it to total or some form of it
+		return true
+	} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, cValue.InstanceName) {
+		// If you are using a multiple instance identifier such as "w3wp#1"
+		// phd.dll returns only the first 2 characters of the identifier.
+		return true
+		cValue.InstanceName = metric.instance
+	} else if metric.instance == "------" {
+		return true
+	}
+	return false
+}
+
 func addCounterMeasurement(metric *counter, instanceName string, value float64, collectFields map[instanceGrouping]map[string]interface{}) {
 	measurement := sanitizedChars.Replace(metric.measurement)
 	if measurement == "" {
@@ -457,6 +461,7 @@ func addCounterMeasurement(metric *counter, instanceName string, value float64, 
 
 func isKnownCounterDataError(err error) bool {
 	if pdhErr, ok := err.(*PdhError); ok && (pdhErr.ErrorCode == PDH_INVALID_DATA ||
+		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_DENOMINATOR ||
 		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_VALUE ||
 		pdhErr.ErrorCode == PDH_CSTATUS_INVALID_DATA ||
 		pdhErr.ErrorCode == PDH_NO_DATA) {
