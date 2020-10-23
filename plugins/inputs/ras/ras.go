@@ -107,11 +107,6 @@ func (r *Ras) Stop() {
 
 // Gather reads the stats provided by RASDaemon and writes it to the Accumulator.
 func (r *Ras) Gather(acc telegraf.Accumulator) error {
-	err := r.db.Ping()
-	if err != nil {
-		return fmt.Errorf("connection to DB (%s) couldn't be established: %v", r.DBPath, err)
-	}
-
 	rows, err := r.db.Query(mceQuery, r.latestTimestamp)
 	if err != nil {
 		return err
