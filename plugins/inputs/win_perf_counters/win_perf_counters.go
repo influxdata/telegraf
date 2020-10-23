@@ -406,6 +406,13 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				continue
 			}
 			for _, cValue := range counterValues {
+
+				if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, cValue.InstanceName) {
+					// If you are using a multiple instance identifier such as "w3wp#1"
+					// phd.dll returns only the first 2 characters of the identifier.
+					cValue.InstanceName = metric.instance
+				}
+
 				if shouldIncludeMetric(metric, cValue) {
 					addCounterMeasurement(metric, cValue.InstanceName, cValue.Value, collectFields)
 				}
@@ -430,18 +437,16 @@ func shouldIncludeMetric(metric *counter, cValue CounterValue) bool {
 	if metric.includeTotal {
 		// If IncludeTotal is set, include all.
 		return true
-	} else if metric.instance == "*" && !strings.Contains(cValue.InstanceName, "_Total") {
+	}
+	if metric.instance == "*" && !strings.Contains(cValue.InstanceName, "_Total") {
 		// Catch if set to * and that it is not a '*_Total*' instance.
 		return true
-	} else if metric.instance == cValue.InstanceName {
+	}
+	if metric.instance == cValue.InstanceName {
 		// Catch if we set it to total or some form of it
 		return true
-	} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, cValue.InstanceName) {
-		// If you are using a multiple instance identifier such as "w3wp#1"
-		// phd.dll returns only the first 2 characters of the identifier.
-		return true
-		cValue.InstanceName = metric.instance
-	} else if metric.instance == "------" {
+	}
+	if metric.instance == "------" {
 		return true
 	}
 	return false
