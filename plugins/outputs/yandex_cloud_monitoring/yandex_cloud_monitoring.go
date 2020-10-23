@@ -18,13 +18,13 @@ import (
 // YandexCloudMonitoring allows publishing of metrics to the Yandex Cloud Monitoring custom metrics
 // service
 type YandexCloudMonitoring struct {
-	Timeout            internal.Duration
-	EndpointUrl        string `toml:"endpoint_url"`
-	MetadataTokenUrl   string `toml:"metadata_token_url"`
-	MetadataFolderUrl  string `toml:"metadata_folder_url"`
-	Service            string `toml:"service"`
-	FolderID           string `toml:"folder_id"`
-	IAMTokenFromConfig string `toml:"iam_token"`
+	Timeout            internal.Duration `toml:"timeout"`
+	EndpointUrl        string            `toml:"endpoint_url"`
+	MetadataTokenUrl   string            `toml:"metadata_token_url"`
+	MetadataFolderUrl  string            `toml:"metadata_folder_url"`
+	Service            string            `toml:"service"`
+	FolderID           string            `toml:"folder_id"`
+	IAMTokenFromConfig string            `toml:"iam_token"`
 
 	IAMToken               string
 	IamTokenExpirationTime time.Time
@@ -90,7 +90,7 @@ func (a *YandexCloudMonitoring) SampleConfig() string {
 
 // Connect initializes the plugin and validates connectivity
 func (a *YandexCloudMonitoring) Connect() error {
-	if a.Timeout.Duration == 0 {
+	if a.Timeout.Duration <= 0 {
 		a.Timeout.Duration = defaultRequestTimeout
 	}
 
