@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/http_listener_v2"
 	"github.com/influxdata/telegraf/plugins/inputs/memcached"
 	"github.com/influxdata/telegraf/plugins/inputs/procstat"
+	"github.com/influxdata/telegraf/plugins/outputs/azure_monitor"
 	httpOut "github.com/influxdata/telegraf/plugins/outputs/http"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/stretchr/testify/assert"
@@ -256,4 +257,24 @@ func TestConfig_BadOrdering(t *testing.T) {
 	err := c.LoadConfig("./testdata/non_slice_slice.toml")
 	require.Error(t, err, "bad ordering")
 	assert.Equal(t, "Error loading config file ./testdata/non_slice_slice.toml: Error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
+}
+
+func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
+	// #8256 Cannot use empty string as the namespace prefix
+	c := NewConfig()
+	defaultPrefixConfig := `[[outputs.azure_monitor]]`
+	err := c.LoadConfigData([]byte(defaultPrefixConfig))
+	assert.NoError(t, err)
+	azureMonitor, ok := c.Outputs[0].Output.(*azure_monitor.AzureMonitor)
+	assert.Equal(t, "Telegraf/", azureMonitor.NamespacePrefix)
+	assert.Equal(t, true, ok)
+
+	c = NewConfig()
+	customPrefixConfig := `[[outputs.azure_monitor]]
+	namespace_prefix = ""`
+	err = c.LoadConfigData([]byte(customPrefixConfig))
+	assert.NoError(t, err)
+	azureMonitor, ok = c.Outputs[0].Output.(*azure_monitor.AzureMonitor)
+	assert.Equal(t, "", azureMonitor.NamespacePrefix)
+	assert.Equal(t, true, ok)
 }

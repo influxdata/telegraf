@@ -13,9 +13,10 @@ type Proxmox struct {
 	BaseURL         string            `toml:"base_url"`
 	APIToken        string            `toml:"api_token"`
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	NodeName        string            `toml:"node_name"`
+
 	tls.ClientConfig
 
-	hostname         string
 	httpClient       *http.Client
 	nodeSearchDomain string
 
@@ -32,6 +33,10 @@ var (
 
 type VmStats struct {
 	Data []VmStat `json:"data"`
+}
+
+type VmCurrentStats struct {
+	Data VmStat `json:"data"`
 }
 
 type VmStat struct {

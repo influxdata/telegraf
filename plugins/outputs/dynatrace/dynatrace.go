@@ -195,17 +195,26 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				// write metric id,tags and value
 				switch metric.Type() {
 				case telegraf.Counter:
+					var delta float64 = 0
+
+					// Check if LastValue exists
 					if lastvalue, ok := counts[metricID+tagb.String()]; ok {
-						// only send a counter if a lastvalue is found in the map
-						// if last value is found we can calc and send the delta value
-						if v, err := strconv.ParseFloat(lastvalue, 32); err == nil {
-							if v2, err := strconv.ParseFloat(value, 32); err == nil {
-								fmt.Fprintf(&buf, "%s%s count,delta=%f\n", metricID, tagb.String(), v2-v)
-							}
+						// Convert Strings to Floats
+						floatLastValue, err := strconv.ParseFloat(lastvalue, 32)
+						if err != nil {
+							d.Log.Debugf("Could not parse last value: %s", lastvalue)
+						}
+						floatCurrentValue, err := strconv.ParseFloat(value, 32)
+						if err != nil {
+							d.Log.Debugf("Could not parse current value: %s", value)
+						}
+						if floatCurrentValue > floatLastValue {
+							delta = floatCurrentValue - floatLastValue
+							fmt.Fprintf(&buf, "%s%s count,delta=%f\n", metricID, tagb.String(), delta)
 						}
 					}
-					// put the current value into the map as last value
 					counts[metricID+tagb.String()] = value
+
 				default:
 					fmt.Fprintf(&buf, "%s%s %v\n", metricID, tagb.String(), value)
 				}
@@ -214,6 +223,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 	}
 	sent++
 	// in typical interval of 10s, we will clean the counter state once in 24h which is 8640 iterations
+
 	if sent%8640 == 0 {
 		counts = make(map[string]string)
 	}
