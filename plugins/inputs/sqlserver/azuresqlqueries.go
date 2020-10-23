@@ -446,98 +446,98 @@ WITH PerfCounters AS (
 		END
 	WHERE
 		counter_name IN (
-			 ''SQL Compilations/sec''
-			,''SQL Re-Compilations/sec''
-			,''User Connections''
-			,''Batch Requests/sec''
-			,''Logouts/sec''
-			,''Logins/sec''
-			,''Processes blocked''
-			,''Latch Waits/sec''
-			,''Full Scans/sec''
-			,''Index Searches/sec''
-			,''Page Splits/sec''
-			,''Page lookups/sec''
-			,''Page reads/sec''
-			,''Page writes/sec''
-			,''Readahead pages/sec''
-			,''Lazy writes/sec''
-			,''Checkpoint pages/sec''
-			,''Page life expectancy''
-			,''Log File(s) Size (KB)''
-			,''Log File(s) Used Size (KB)''
-			,''Data File(s) Size (KB)''
-			,''Transactions/sec''
-			,''Write Transactions/sec''
-			,''Active Temp Tables''
-			,''Temp Tables Creation Rate''
-			,''Temp Tables For Destruction''
-			,''Free Space in tempdb (KB)''
-			,''Version Store Size (KB)''
-			,''Memory Grants Pending''
-			,''Memory Grants Outstanding''
-			,''Free list stalls/sec''
-			,''Buffer cache hit ratio''
-			,''Buffer cache hit ratio base''
-			,''Backup/Restore Throughput/sec''
-			,''Total Server Memory (KB)''
-			,''Target Server Memory (KB)''
-			,''Log Flushes/sec''
-			,''Log Flush Wait Time''
-			,''Memory broker clerk size''
-			,''Log Bytes Flushed/sec''
-			,''Bytes Sent to Replica/sec''
-			,''Log Send Queue''
-			,''Bytes Sent to Transport/sec''
-			,''Sends to Replica/sec''
-			,''Bytes Sent to Transport/sec''
-			,''Sends to Transport/sec''
-			,''Bytes Received from Replica/sec''
-			,''Receives from Replica/sec''
-			,''Flow Control Time (ms/sec)''
-			,''Flow Control/sec''
-			,''Resent Messages/sec''
-			,''Redone Bytes/sec''
-			,''XTP Memory Used (KB)''
-			,''Transaction Delay''
-			,''Log Bytes Received/sec''
-			,''Log Apply Pending Queue''
-			,''Redone Bytes/sec''
-			,''Recovery Queue''
-			,''Log Apply Ready Queue''
-			,''CPU usage %''
-			,''CPU usage % base''
-			,''Queued requests''
-			,''Requests completed/sec''
-			,''Blocked tasks''
-			,''Active memory grant amount (KB)''
-			,''Disk Read Bytes/sec''
-			,''Disk Read IO Throttled/sec''
-			,''Disk Read IO/sec''
-			,''Disk Write Bytes/sec''
-			,''Disk Write IO Throttled/sec''
-			,''Disk Write IO/sec''
-			,''Used memory (KB)''
-			,''Forwarded Records/sec''
-			,''Background Writer pages/sec''
-			,''Percent Log Used''
-			,''Log Send Queue KB''
-			,''Redo Queue KB''
-			,''Mirrored Write Transactions/sec''
-			,''Group Commit Time''
-			,''Group Commits/Sec''
+			'SQL Compilations/sec'
+			,'SQL Re-Compilations/sec'
+			,'User Connections'
+			,'Batch Requests/sec'
+			,'Logouts/sec'
+			,'Logins/sec'
+			,'Processes blocked'
+			,'Latch Waits/sec'
+			,'Full Scans/sec'
+			,'Index Searches/sec'
+			,'Page Splits/sec'
+			,'Page lookups/sec'
+			,'Page reads/sec'
+			,'Page writes/sec'
+			,'Readahead pages/sec'
+			,'Lazy writes/sec'
+			,'Checkpoint pages/sec'
+			,'Page life expectancy'
+			,'Log File(s) Size (KB)'
+			,'Log File(s) Used Size (KB)'
+			,'Data File(s) Size (KB)'
+			,'Transactions/sec'
+			,'Write Transactions/sec'
+			,'Active Temp Tables'
+			,'Temp Tables Creation Rate'
+			,'Temp Tables For Destruction'
+			,'Free Space in tempdb (KB)'
+			,'Version Store Size (KB)'
+			,'Memory Grants Pending'
+			,'Memory Grants Outstanding'
+			,'Free list stalls/sec'
+			,'Buffer cache hit ratio'
+			,'Buffer cache hit ratio base'
+			,'Backup/Restore Throughput/sec'
+			,'Total Server Memory (KB)'
+			,'Target Server Memory (KB)'
+			,'Log Flushes/sec'
+			,'Log Flush Wait Time'
+			,'Memory broker clerk size'
+			,'Log Bytes Flushed/sec'
+			,'Bytes Sent to Replica/sec'
+			,'Log Send Queue'
+			,'Bytes Sent to Transport/sec'
+			,'Sends to Replica/sec'
+			,'Bytes Sent to Transport/sec'
+			,'Sends to Transport/sec'
+			,'Bytes Received from Replica/sec'
+			,'Receives from Replica/sec'
+			,'Flow Control Time (ms/sec)'
+			,'Flow Control/sec'
+			,'Resent Messages/sec'
+			,'Redone Bytes/sec'
+			,'XTP Memory Used (KB)'
+			,'Transaction Delay'
+			,'Log Bytes Received/sec'
+			,'Log Apply Pending Queue'
+			,'Redone Bytes/sec'
+			,'Recovery Queue'
+			,'Log Apply Ready Queue'
+			,'CPU usage %'
+			,'CPU usage % base'
+			,'Queued requests'
+			,'Requests completed/sec'
+			,'Blocked tasks'
+			,'Active memory grant amount (KB)'
+			,'Disk Read Bytes/sec'
+			,'Disk Read IO Throttled/sec'
+			,'Disk Read IO/sec'
+			,'Disk Write Bytes/sec'
+			,'Disk Write IO Throttled/sec'
+			,'Disk Write IO/sec'
+			,'Used memory (KB)'
+			,'Forwarded Records/sec'
+			,'Background Writer pages/sec'
+			,'Percent Log Used'
+			,'Log Send Queue KB'
+			,'Redo Queue KB'
+			,'Mirrored Write Transactions/sec'
+			,'Group Commit Time'
+			,'Group Commits/Sec'
 		) OR (
-			spi.[object_name] LIKE ''%User Settable%''
-			OR spi.[object_name] LIKE ''%SQL Errors%''
-			OR spi.[object_name] LIKE ''%Batch Resp Statistics%''
+			spi.[object_name] LIKE '%User Settable%'
+			OR spi.[object_name] LIKE '%SQL Errors%'
+			OR spi.[object_name] LIKE '%Batch Resp Statistics%'
 		) OR (
-			spi.[instance_name] IN (''_Total'')
+			spi.[instance_name] IN ('_Total')
 			AND spi.[counter_name] IN (
-				 ''Lock Timeouts/sec''
-				,''Lock Timeouts (timeout > 0)/sec''
-				,''Number of Deadlocks/sec''
-				,''Lock Waits/sec''
-				,''Latch Waits/sec''
+				 'Lock Timeouts/sec'
+				,'Lock Timeouts (timeout > 0)/sec'
+				,'Number of Deadlocks/sec'
+				,'Lock Waits/sec'
+				,'Latch Waits/sec')
 			)
 		)
 
@@ -553,7 +553,7 @@ SELECT
 		WHEN '_Total' THEN 'Total' 
 		ELSE ISNULL(pc.[instance_name],'') 
 	END AS [instance]
-	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value],
+	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value]
 	,cast(pc.[cntr_type] as varchar(25)) as [counter_type]
 	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
 	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
@@ -702,8 +702,8 @@ SELECT TOP 1
 	,[db_recovering]
 	,[db_recoveryPending]
 	,[db_suspect]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
+	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
 FROM sys.server_resource_stats
 CROSS APPLY	(
 	SELECT  
@@ -730,8 +730,8 @@ SELECT TOP(1)
 	 'sqlserver_azure_db_resource_stats' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,cast([avg_cpu_percent] as float) as [avg_cpu_percent]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
+	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
 FROM
     sys.server_resource_stats;
 `
@@ -757,8 +757,8 @@ SELECT
 	,[volume_type_managed_xstore_iops] as [voltype_man_xtore_iops]
 	,[volume_type_external_xstore_iops] as [voltype_ext_xtore_iops]
 	,[volume_external_xstore_iops] as [vol_ext_xtore_iops]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
+	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
 FROM sys.dm_instance_resource_governance;
 `
 
@@ -784,8 +784,8 @@ SELECT
 	,vfs.[num_of_bytes_written] AS [write_bytes]
 	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] 
 	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
+	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
 FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
 LEFT OUTER JOIN sys.master_files AS mf WITH (NOLOCK)
 	ON vfs.[database_id] = mf.[database_id] 
@@ -806,8 +806,8 @@ SELECT
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
 	,mc.[type] AS [clerk_type]
 	,SUM(mc.[pages_kb]) AS [size_kb]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
+	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
 FROM sys.[dm_os_memory_clerks] AS mc WITH (NOLOCK)
 GROUP BY
 	 mc.[type]
@@ -890,8 +890,8 @@ SELECT
   			'PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC') THEN 'Full Text Search'
  		ELSE 'Other'
 	END as [wait_category]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
+	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
 FROM sys.dm_os_wait_stats AS ws WITH (NOLOCK)
 WHERE
 	ws.[wait_type] NOT IN (
@@ -983,98 +983,98 @@ WITH PerfCounters AS (
 		END
 	WHERE
 		counter_name IN (
-			 ''SQL Compilations/sec''
-			,''SQL Re-Compilations/sec''
-			,''User Connections''
-			,''Batch Requests/sec''
-			,''Logouts/sec''
-			,''Logins/sec''
-			,''Processes blocked''
-			,''Latch Waits/sec''
-			,''Full Scans/sec''
-			,''Index Searches/sec''
-			,''Page Splits/sec''
-			,''Page lookups/sec''
-			,''Page reads/sec''
-			,''Page writes/sec''
-			,''Readahead pages/sec''
-			,''Lazy writes/sec''
-			,''Checkpoint pages/sec''
-			,''Page life expectancy''
-			,''Log File(s) Size (KB)''
-			,''Log File(s) Used Size (KB)''
-			,''Data File(s) Size (KB)''
-			,''Transactions/sec''
-			,''Write Transactions/sec''
-			,''Active Temp Tables''
-			,''Temp Tables Creation Rate''
-			,''Temp Tables For Destruction''
-			,''Free Space in tempdb (KB)''
-			,''Version Store Size (KB)''
-			,''Memory Grants Pending''
-			,''Memory Grants Outstanding''
-			,''Free list stalls/sec''
-			,''Buffer cache hit ratio''
-			,''Buffer cache hit ratio base''
-			,''Backup/Restore Throughput/sec''
-			,''Total Server Memory (KB)''
-			,''Target Server Memory (KB)''
-			,''Log Flushes/sec''
-			,''Log Flush Wait Time''
-			,''Memory broker clerk size''
-			,''Log Bytes Flushed/sec''
-			,''Bytes Sent to Replica/sec''
-			,''Log Send Queue''
-			,''Bytes Sent to Transport/sec''
-			,''Sends to Replica/sec''
-			,''Bytes Sent to Transport/sec''
-			,''Sends to Transport/sec''
-			,''Bytes Received from Replica/sec''
-			,''Receives from Replica/sec''
-			,''Flow Control Time (ms/sec)''
-			,''Flow Control/sec''
-			,''Resent Messages/sec''
-			,''Redone Bytes/sec''
-			,''XTP Memory Used (KB)''
-			,''Transaction Delay''
-			,''Log Bytes Received/sec''
-			,''Log Apply Pending Queue''
-			,''Redone Bytes/sec''
-			,''Recovery Queue''
-			,''Log Apply Ready Queue''
-			,''CPU usage %''
-			,''CPU usage % base''
-			,''Queued requests''
-			,''Requests completed/sec''
-			,''Blocked tasks''
-			,''Active memory grant amount (KB)''
-			,''Disk Read Bytes/sec''
-			,''Disk Read IO Throttled/sec''
-			,''Disk Read IO/sec''
-			,''Disk Write Bytes/sec''
-			,''Disk Write IO Throttled/sec''
-			,''Disk Write IO/sec''
-			,''Used memory (KB)''
-			,''Forwarded Records/sec''
-			,''Background Writer pages/sec''
-			,''Percent Log Used''
-			,''Log Send Queue KB''
-			,''Redo Queue KB''
-			,''Mirrored Write Transactions/sec''
-			,''Group Commit Time''
-			,''Group Commits/Sec''
+			'SQL Compilations/sec'
+			,'SQL Re-Compilations/sec'
+			,'User Connections'
+			,'Batch Requests/sec'
+			,'Logouts/sec'
+			,'Logins/sec'
+			,'Processes blocked'
+			,'Latch Waits/sec'
+			,'Full Scans/sec'
+			,'Index Searches/sec'
+			,'Page Splits/sec'
+			,'Page lookups/sec'
+			,'Page reads/sec'
+			,'Page writes/sec'
+			,'Readahead pages/sec'
+			,'Lazy writes/sec'
+			,'Checkpoint pages/sec'
+			,'Page life expectancy'
+			,'Log File(s) Size (KB)'
+			,'Log File(s) Used Size (KB)'
+			,'Data File(s) Size (KB)'
+			,'Transactions/sec'
+			,'Write Transactions/sec'
+			,'Active Temp Tables'
+			,'Temp Tables Creation Rate'
+			,'Temp Tables For Destruction'
+			,'Free Space in tempdb (KB)'
+			,'Version Store Size (KB)'
+			,'Memory Grants Pending'
+			,'Memory Grants Outstanding'
+			,'Free list stalls/sec'
+			,'Buffer cache hit ratio'
+			,'Buffer cache hit ratio base'
+			,'Backup/Restore Throughput/sec'
+			,'Total Server Memory (KB)'
+			,'Target Server Memory (KB)'
+			,'Log Flushes/sec'
+			,'Log Flush Wait Time'
+			,'Memory broker clerk size'
+			,'Log Bytes Flushed/sec'
+			,'Bytes Sent to Replica/sec'
+			,'Log Send Queue'
+			,'Bytes Sent to Transport/sec'
+			,'Sends to Replica/sec'
+			,'Bytes Sent to Transport/sec'
+			,'Sends to Transport/sec'
+			,'Bytes Received from Replica/sec'
+			,'Receives from Replica/sec'
+			,'Flow Control Time (ms/sec)'
+			,'Flow Control/sec'
+			,'Resent Messages/sec'
+			,'Redone Bytes/sec'
+			,'XTP Memory Used (KB)'
+			,'Transaction Delay'
+			,'Log Bytes Received/sec'
+			,'Log Apply Pending Queue'
+			,'Redone Bytes/sec'
+			,'Recovery Queue'
+			,'Log Apply Ready Queue'
+			,'CPU usage %'
+			,'CPU usage % base'
+			,'Queued requests'
+			,'Requests completed/sec'
+			,'Blocked tasks'
+			,'Active memory grant amount (KB)'
+			,'Disk Read Bytes/sec'
+			,'Disk Read IO Throttled/sec'
+			,'Disk Read IO/sec'
+			,'Disk Write Bytes/sec'
+			,'Disk Write IO Throttled/sec'
+			,'Disk Write IO/sec'
+			,'Used memory (KB)'
+			,'Forwarded Records/sec'
+			,'Background Writer pages/sec'
+			,'Percent Log Used'
+			,'Log Send Queue KB'
+			,'Redo Queue KB'
+			,'Mirrored Write Transactions/sec'
+			,'Group Commit Time'
+			,'Group Commits/Sec'
 		) OR (
-			spi.[object_name] LIKE ''%User Settable%''
-			OR spi.[object_name] LIKE ''%SQL Errors%''
-			OR spi.[object_name] LIKE ''%Batch Resp Statistics%''
+			spi.[object_name] LIKE '%User Settable%'
+			OR spi.[object_name] LIKE '%SQL Errors%'
+			OR spi.[object_name] LIKE '%Batch Resp Statistics%'
 		) OR (
-			spi.[instance_name] IN (''_Total'')
+			spi.[instance_name] IN ('_Total')
 			AND spi.[counter_name] IN (
-				 ''Lock Timeouts/sec''
-				,''Lock Timeouts (timeout > 0)/sec''
-				,''Number of Deadlocks/sec''
-				,''Lock Waits/sec''
-				,''Latch Waits/sec''
+				 'Lock Timeouts/sec'
+				,'Lock Timeouts (timeout > 0)/sec'
+				,'Number of Deadlocks/sec'
+				,'Lock Waits/sec'
+				,'Latch Waits/sec')
 			)
 		)
 
@@ -1089,10 +1089,10 @@ SELECT
 		WHEN '_Total' THEN 'Total' 
 		ELSE ISNULL(pc.[instance_name],'') 
 	END AS [instance]
-	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value],
+	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value]
 	,cast(pc.[cntr_type] as varchar(25)) as [counter_type]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
+	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
 from @PCounters pc
 LEFT OUTER JOIN @PCounters AS pc1
 	ON (
@@ -1163,8 +1163,8 @@ SELECT
 	,CONVERT(varchar(20),[query_hash],1) as [query_hash]
 	,CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
 	,DB_NAME(COALESCE(r.[database_id], s.[database_id])) AS [session_db_name]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
+	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
 FROM sys.dm_exec_sessions AS s
 LEFT OUTER JOIN sys.dm_exec_requests AS r 
 	ON s.[session_id] = r.[session_id]
@@ -1207,7 +1207,7 @@ SELECT
 	,s.[yield_count]
 	,s.[total_cpu_usage_ms]
 	,s.[total_scheduler_delay_ms]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
+	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
 FROM sys.dm_os_schedulers AS s
 `
