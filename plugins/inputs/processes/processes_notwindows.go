@@ -129,7 +129,6 @@ func (p *Processes) gatherFromPS(fields map[string]interface{}) error {
 // get process states from /proc/(pid)/stat files
 func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 	filenames, err := filepath.Glob(linux_sysctl_fs.GetHostProc() + "/[0-9]*/stat")
-
 	if err != nil {
 		return err
 	}
@@ -192,10 +191,6 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 }
 
 func readProcFile(filename string) ([]byte, error) {
-	_, err := os.Stat(filename)
-	if err != nil {
-		return nil, err
-	}
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
