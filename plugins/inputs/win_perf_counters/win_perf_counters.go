@@ -426,7 +426,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func shouldIncludeMetric(metric *counter, cValue CounterValue) {
+func shouldIncludeMetric(metric *counter, cValue CounterValue) bool {
 	if metric.includeTotal {
 		// If IncludeTotal is set, include all.
 		return true
