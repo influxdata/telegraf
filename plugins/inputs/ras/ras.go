@@ -20,6 +20,9 @@ import (
 type Ras struct {
 	DBPath string `toml:"db_path"`
 
+	Log telegraf.Logger `toml:"-"`
+	db  *sql.DB         `toml:"-"`
+
 	latestTimestamp   time.Time              `toml:"-"`
 	cpuSocketCounters map[int]metricCounters `toml:"-"`
 	serverCounters    metricCounters         `toml:"-"`
@@ -77,20 +80,34 @@ func (r *Ras) Description() string {
 	return "RAS plugin exposes counter metrics for Machine Check Errors provided by RASDaemon (sqlite3 output is required)."
 }
 
-// Gather reads the stats provided by RASDaemon and writes it to the Accumulator.
-func (r *Ras) Gather(acc telegraf.Accumulator) error {
+// Start initializes connection to DB, metrics are gathered in Gather
+func (r *Ras) Start(telegraf.Accumulator) error {
 	err := validateDbPath(r.DBPath)
 	if err != nil {
 		return err
 	}
 
-	db, err := connectToDB(r.DBPath)
+	r.db, err = connectToDB(r.DBPath)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
-	rows, err := db.Query(mceQuery, r.latestTimestamp)
+	return nil
+}
+
+// Stop closes any existing DB connection
+func (r *Ras) Stop() {
+	if r.db != nil {
+		err := r.db.Close()
+		if err != nil {
+			r.Log.Errorf("Error appeared during closing DB (%s): %v", r.DBPath, err)
+		}
+	}
+}
+
+// Gather reads the stats provided by RASDaemon and writes it to the Accumulator.
+func (r *Ras) Gather(acc telegraf.Accumulator) error {
+	rows, err := r.db.Query(mceQuery, r.latestTimestamp)
 	if err != nil {
 		return err
 	}
