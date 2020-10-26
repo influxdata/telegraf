@@ -30,7 +30,7 @@ func (pg *Pgrep) PidFile(path string) ([]PID, error) {
 		return pids, fmt.Errorf("Failed to read pidfile '%s'. Error: '%s'",
 			path, err)
 	}
-	pid, err := strconv.Atoi(strings.TrimSpace(string(pidString)))
+	pid, err := strconv.ParseInt(strings.TrimSpace(string(pidString)), 10, 32)
 	if err != nil {
 		return pids, err
 	}
@@ -80,13 +80,11 @@ func parseOutput(out string) ([]PID, error) {
 	pids := []PID{}
 	fields := strings.Fields(out)
 	for _, field := range fields {
-		pid, err := strconv.Atoi(field)
+		pid, err := strconv.ParseInt(field, 10, 32)
 		if err != nil {
 			return nil, err
 		}
-		if err == nil {
-			pids = append(pids, PID(pid))
-		}
+		pids = append(pids, PID(pid))
 	}
 	return pids, nil
 }

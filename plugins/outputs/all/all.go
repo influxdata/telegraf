@@ -25,6 +25,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/kafka"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kinesis"
 	_ "github.com/influxdata/telegraf/plugins/outputs/librato"
+	_ "github.com/influxdata/telegraf/plugins/outputs/logzio"
 	_ "github.com/influxdata/telegraf/plugins/outputs/mqtt"
 	_ "github.com/influxdata/telegraf/plugins/outputs/nats"
 	_ "github.com/influxdata/telegraf/plugins/outputs/newrelic"
@@ -37,6 +38,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/stackdriver"
 	_ "github.com/influxdata/telegraf/plugins/outputs/sumologic"
 	_ "github.com/influxdata/telegraf/plugins/outputs/syslog"
+	_ "github.com/influxdata/telegraf/plugins/outputs/timestream"
 	_ "github.com/influxdata/telegraf/plugins/outputs/warp10"
 	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
 )

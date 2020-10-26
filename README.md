@@ -431,6 +431,7 @@ For documentation on the latest development code see the [documentation index][d
 * [instrumental](./plugins/outputs/instrumental)
 * [kafka](./plugins/outputs/kafka)
 * [librato](./plugins/outputs/librato)
+* [logz.io](./plugins/outputs/logzio)
 * [mqtt](./plugins/outputs/mqtt)
 * [nats](./plugins/outputs/nats)
 * [newrelic](./plugins/outputs/newrelic)

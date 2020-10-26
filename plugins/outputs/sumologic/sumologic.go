@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -46,16 +44,13 @@ const (
   ## Timeout used for HTTP request
   # timeout = "5s"
   
-  ## HTTP method, one of: "POST" or "PUT". "POST" is used by default if unset.
-  # method = "POST"
-
   ## Max HTTP request body size in bytes before compression (if applied).
   ## By default 1MB is recommended.
   ## NOTE:
   ## Bear in mind that in some serializer a metric even though serialized to multiple
   ## lines cannot be split any further so setting this very low might not work
   ## as expected.
-  # max_request_body_size = 1_000_000
+  # max_request_body_size = 1000000
 
   ## Additional, Sumo specific options.
   ## Full list can be found here:
@@ -100,7 +95,6 @@ const (
 type SumoLogic struct {
 	URL               string            `toml:"url"`
 	Timeout           internal.Duration `toml:"timeout"`
-	Method            string            `toml:"method"`
 	MaxRequstBodySize config.Size       `toml:"max_request_body_size"`
 
 	SourceName     string `toml:"source_name"`
@@ -157,14 +151,6 @@ func (s *SumoLogic) createClient(ctx context.Context) (*http.Client, error) {
 func (s *SumoLogic) Connect() error {
 	if s.err != nil {
 		return errors.Wrap(s.err, "sumologic: incorrect configuration")
-	}
-
-	if s.Method == "" {
-		s.Method = defaultMethod
-	}
-	s.Method = strings.ToUpper(s.Method)
-	if s.Method != http.MethodPost && s.Method != http.MethodPut {
-		return fmt.Errorf("invalid method [%s] %s", s.URL, s.Method)
 	}
 
 	if s.Timeout.Duration == 0 {
@@ -245,7 +231,7 @@ func (s *SumoLogic) write(reqBody []byte) error {
 		return err
 	}
 
-	req, err := http.NewRequest(s.Method, s.URL, &buff)
+	req, err := http.NewRequest(defaultMethod, s.URL, &buff)
 	if err != nil {
 		return err
 	}
@@ -352,7 +338,6 @@ func Default() *SumoLogic {
 		Timeout: internal.Duration{
 			Duration: defaultClientTimeout,
 		},
-		Method:            defaultMethod,
 		MaxRequstBodySize: defaultMaxRequestBodySize,
 		headers:           make(map[string]string),
 	}
