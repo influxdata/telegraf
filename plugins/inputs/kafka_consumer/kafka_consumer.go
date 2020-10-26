@@ -104,6 +104,7 @@ type KafkaConsumer struct {
 	Version                string   `toml:"version"`
 	SASLPassword           string   `toml:"sasl_password"`
 	SASLUsername           string   `toml:"sasl_username"`
+	SASLMechanism          string   `toml:"sasl_mechanism"`
 	SASLVersion            *int     `toml:"sasl_version"`
 
 	EnableTLS *bool `toml:"enable_tls"`
@@ -191,9 +192,14 @@ func (k *KafkaConsumer) Init() error {
 		}
 	}
 
-	if k.SASLUsername != "" && k.SASLPassword != "" {
-		config.Net.SASL.User = k.SASLUsername
-		config.Net.SASL.Password = k.SASLPassword
+	config.Net.SASL.User = k.SASLUsername
+	config.Net.SASL.Password = k.SASLPassword
+
+	if k.SASLMechanism != "" {
+		config.Net.SASL.Mechanism = sarama.SASLMechanism(k.SASLMechanism)
+	}
+
+	if k.SASLUsername != "" || k.SASLMechanism != "" {
 		config.Net.SASL.Enable = true
 
 		version, err := kafka.SASLVersion(config.Version, k.SASLVersion)
