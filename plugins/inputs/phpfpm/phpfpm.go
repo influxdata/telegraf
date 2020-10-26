@@ -201,7 +201,7 @@ func (p *phpfpm) gatherHttp(addr string, acc telegraf.Accumulator) error {
 		return fmt.Errorf("unable parse server address '%s': %v", addr, err)
 	}
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path), nil)
+	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return fmt.Errorf("unable to create new request '%s': %v", addr, err)
 	}

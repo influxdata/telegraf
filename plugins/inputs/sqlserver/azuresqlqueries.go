@@ -709,7 +709,9 @@ SELECT TOP(1)
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,cast([avg_cpu_percent] as float) as [avg_cpu_percent]
 FROM
-    sys.server_resource_stats;
+    sys.server_resource_stats
+ORDER BY
+    [end_time] DESC;
 `
 
 const sqlAzureMIResourceGovernance string = `
