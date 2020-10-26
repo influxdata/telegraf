@@ -66,3 +66,10 @@ As Graph
   ╱       ->      |
 _╱             ___|
 ```
+
+## Contact
+
+- Author: Tom Hollingworth
+- Email: tom.hollingworth@spruiktec.com
+- Github: [@tomhollingworth](https://github.com/tomhollingworth)
+- Influx Community Slack: [@tomhollingworth](https://influxcommunity.slack.com)
