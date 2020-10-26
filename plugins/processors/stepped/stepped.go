@@ -49,7 +49,7 @@ func (d *Stepped) SampleConfig() string {
 }
 
 func (d *Stepped) Description() string {
-	return "Insert a record for the previous unique field value and tag set just before the current one to display field as stepped."
+	return "Emit a metric of the previous unique field value and tag with the timestamp set just before the current one to display the field as stepped."
 }
 
 // Remove single item from slice

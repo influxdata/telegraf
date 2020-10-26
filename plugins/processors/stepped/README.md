@@ -1,10 +1,10 @@
 # Stepped Processor Plugin
 
-Insert a record for the previous unique field value and tag set just before the current one to display field as stepped. See [Step Function](https://en.wikipedia.org/wiki/Step_function). 
+Emit a metric of the previous unique field value and tag with the timestamp set just before the current one to display the field as stepped. See [Step Function](https://en.wikipedia.org/wiki/Step_function). 
 
 ## How?
 
-The stepped processor plugin caches the last field value for a set of tags. When processing, it compares the processing metrics against the cache, if a field in `unique_fields` has changed between the current value and cache, then this processor emits an addition metric that is the last value at the timestamp of the current record minus the `step_offset`. Add a metric to the cache if it has a `unique_field` and isn't already in the cache. Remove a metric from the cache if it hasn't been updated in `cache_interval`. Identical `unique_field` values will update the timestamp in the cache.
+The stepped processor plugin caches the last field value for a set of tags. When processing, it compares the processing metrics against the cache, if a field in `unique_fields` has changed between the current value and cache, then this processor emits an additional metric that is the last value at the timestamp of the current record minus the `step_offset`. Add a metric to the cache if it has a `unique_field` and isn't already in the cache. Remove a metric from the cache if it hasn't been updated in `cache_interval`. Identical `unique_field` values will update the timestamp in the cache.
 
 Note that different fields don't overwrite the cache metric and get merged. Consider the following stream:
 
