@@ -292,8 +292,6 @@ END
 DECLARE
 	 @SqlStatement AS nvarchar(max)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
-	,@Columns AS nvarchar(MAX) = '
-	,@PivotColumns AS nvarchar(MAX) = '
 
 DECLARE @PCounters TABLE
 (
