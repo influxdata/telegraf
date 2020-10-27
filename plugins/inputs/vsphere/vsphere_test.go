@@ -4,13 +4,15 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"os"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 	"unsafe"
 
 	"github.com/influxdata/telegraf/internal"
-	itls "github.com/influxdata/telegraf/internal/tls"
+	itls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
@@ -150,6 +152,7 @@ func defaultVSphere() *VSphere {
 		ForceDiscoverOnInit:     true,
 		DiscoverConcurrency:     1,
 		CollectConcurrency:      1,
+		Separator:               ".",
 	}
 }
 
@@ -416,8 +419,9 @@ func TestFolders(t *testing.T) {
 	defer m.Remove()
 	defer s.Close()
 
-	v := defaultVSphere()
 	ctx := context.Background()
+
+	v := defaultVSphere()
 
 	c, err := NewClient(ctx, s.URL, v)
 
@@ -440,27 +444,110 @@ func TestFolders(t *testing.T) {
 	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/**", 4, "")
 }
 
-func TestAll(t *testing.T) {
-	// Don't run test on 32-bit machines due to bug in simulator.
-	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
-		return
-	}
+func TestCollection(t *testing.T) {
+	testCollection(t, false)
+}
 
-	m, s, err := createSim(0)
-	if err != nil {
-		t.Fatal(err)
+func TestCollectionNoClusterMetrics(t *testing.T) {
+	testCollection(t, true)
+}
+
+func testCollection(t *testing.T, excludeClusters bool) {
+	mustHaveMetrics := map[string]struct{}{
+		"vsphere.vm.cpu":         {},
+		"vsphere.vm.mem":         {},
+		"vsphere.vm.net":         {},
+		"vsphere.host.cpu":       {},
+		"vsphere.host.mem":       {},
+		"vsphere.host.net":       {},
+		"vsphere.datastore.disk": {},
 	}
-	defer m.Remove()
-	defer s.Close()
+	vCenter := os.Getenv("VCENTER_URL")
+	username := os.Getenv("VCENTER_USER")
+	password := os.Getenv("VCENTER_PASSWORD")
+	v := defaultVSphere()
+	if vCenter != "" {
+		v.Vcenters = []string{vCenter}
+		v.Username = username
+		v.Password = password
+	} else {
+
+		// Don't run test on 32-bit machines due to bug in simulator.
+		// https://github.com/vmware/govmomi/issues/1330
+		var i int
+		if unsafe.Sizeof(i) < 8 {
+			return
+		}
+
+		m, s, err := createSim(0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer m.Remove()
+		defer s.Close()
+		v.Vcenters = []string{s.URL.String()}
+	}
+	if excludeClusters {
+		v.ClusterMetricExclude = []string{"*"}
+	}
 
 	var acc testutil.Accumulator
-	v := defaultVSphere()
-	v.Vcenters = []string{s.URL.String()}
-	v.Start(&acc)
+
+	require.NoError(t, v.Start(&acc))
 	defer v.Stop()
 	require.NoError(t, v.Gather(&acc))
 	require.Equal(t, 0, len(acc.Errors), fmt.Sprintf("Errors found: %s", acc.Errors))
 	require.True(t, len(acc.Metrics) > 0, "No metrics were collected")
+	cache := make(map[string]string)
+	client, err := v.endpoints[0].clientFactory.GetClient(context.Background())
+	require.NoError(t, err)
+	hostCache := make(map[string]string)
+	for _, m := range acc.Metrics {
+		delete(mustHaveMetrics, m.Measurement)
+
+		if strings.HasPrefix(m.Measurement, "vsphere.vm.") {
+			mustContainAll(t, m.Tags, []string{"esxhostname", "moid", "vmname", "guest", "dcname", "uuid", "vmname"})
+			hostName := m.Tags["esxhostname"]
+			hostMoid, ok := hostCache[hostName]
+			if !ok {
+				// We have to follow the host parent path to locate a cluster. Look up the host!
+				finder := Finder{client}
+				var hosts []mo.HostSystem
+				finder.Find(context.Background(), "HostSystem", "/**/"+hostName, &hosts)
+				require.NotEmpty(t, hosts)
+				hostMoid = hosts[0].Reference().Value
+				hostCache[hostName] = hostMoid
+			}
+			if isInCluster(t, v, client, cache, "HostSystem", hostMoid) { // If the VM lives in a cluster
+				mustContainAll(t, m.Tags, []string{"clustername"})
+			}
+		} else if strings.HasPrefix(m.Measurement, "vsphere.host.") {
+			if isInCluster(t, v, client, cache, "HostSystem", m.Tags["moid"]) { // If the host lives in a cluster
+				mustContainAll(t, m.Tags, []string{"esxhostname", "clustername", "moid", "dcname"})
+			} else {
+				mustContainAll(t, m.Tags, []string{"esxhostname", "moid", "dcname"})
+			}
+		} else if strings.HasPrefix(m.Measurement, "vsphere.cluster.") {
+			mustContainAll(t, m.Tags, []string{"clustername", "moid", "dcname"})
+		} else {
+			mustContainAll(t, m.Tags, []string{"moid", "dcname"})
+		}
+	}
+	require.Empty(t, mustHaveMetrics, "Some metrics were not found")
+}
+
+func isInCluster(t *testing.T, v *VSphere, client *Client, cache map[string]string, resourceKind, moid string) bool {
+	ctx := context.Background()
+	ref := types.ManagedObjectReference{
+		Type:  resourceKind,
+		Value: moid,
+	}
+	_, ok := v.endpoints[0].getAncestorName(ctx, client, "ClusterComputeResource", cache, ref)
+	return ok
+}
+
+func mustContainAll(t *testing.T, tagMap map[string]string, mustHave []string) {
+	for _, tag := range mustHave {
+		require.Contains(t, tagMap, tag)
+	}
 }

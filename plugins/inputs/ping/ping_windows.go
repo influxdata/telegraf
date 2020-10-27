@@ -13,10 +13,6 @@ import (
 )
 
 func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
-	if p.Count < 1 {
-		p.Count = 1
-	}
-
 	tags := map[string]string{"url": u}
 	fields := map[string]interface{}{"result_code": 0}
 

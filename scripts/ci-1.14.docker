@@ -1,4 +1,4 @@
-FROM golang:1.14.3
+FROM golang:1.14.9
 
 RUN chmod -R 755 "$GOPATH"
 
@@ -9,7 +9,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
 	libtool \
 	locales \
 	make \
-	python-boto \
+	awscli \
 	rpm \
 	ruby \
 	ruby-dev \

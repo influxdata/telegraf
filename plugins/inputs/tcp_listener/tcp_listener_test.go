@@ -264,11 +264,12 @@ func TestRunParserInvalidMsg(t *testing.T) {
 
 	listener.parser, _ = parsers.NewInfluxParser()
 	listener.wg.Add(1)
-	go listener.tcpParser()
 
 	buf := bytes.NewBuffer(nil)
 	log.SetOutput(buf)
 	defer log.SetOutput(os.Stderr)
+
+	go listener.tcpParser()
 	in <- testmsg
 
 	scnr := bufio.NewScanner(buf)

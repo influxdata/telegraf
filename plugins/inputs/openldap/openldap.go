@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"gopkg.in/ldap.v3"
 )
@@ -123,6 +123,10 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 				return nil
 			}
 			err = l.StartTLS(tlsConfig)
+			if err != nil {
+				acc.AddError(err)
+				return nil
+			}
 		} else {
 			acc.AddError(fmt.Errorf("Invalid setting for ssl: %s", o.TLS))
 			return nil

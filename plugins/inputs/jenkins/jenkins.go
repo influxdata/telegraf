@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -439,7 +439,9 @@ type jobRequest struct {
 }
 
 func (jr jobRequest) combined() []string {
-	return append(jr.parents, jr.name)
+	path := make([]string, len(jr.parents))
+	copy(path, jr.parents)
+	return append(path, jr.name)
 }
 
 func (jr jobRequest) combinedEscaped() []string {

@@ -28,12 +28,15 @@ func TestFakeServices(t *testing.T) {
 
 func TestTable(t *testing.T) {
 	var tests = []struct {
-		name     string
-		tag      string
-		dest     string
-		prot     string
-		input    []telegraf.Metric
-		expected []telegraf.Metric
+		name      string
+		tag       string
+		field     string
+		dest      string
+		prot      string
+		protField string
+		protTag   string
+		input     []telegraf.Metric
+		expected  []telegraf.Metric
 	}{
 		{
 			name: "ordinary tcp default",
@@ -239,6 +242,93 @@ func TestTable(t *testing.T) {
 				),
 			},
 		},
+		{
+			name:  "read from field instead of tag",
+			field: "foo",
+			dest:  "bar",
+			prot:  "tcp",
+			input: []telegraf.Metric{
+				testutil.MustMetric(
+					"meas",
+					map[string]string{},
+					map[string]interface{}{
+						"foo": "80",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"meas",
+					map[string]string{},
+					map[string]interface{}{
+						"foo": "80",
+						"bar": "http",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:      "read proto from field",
+			field:     "foo",
+			dest:      "bar",
+			prot:      "udp",
+			protField: "proto",
+			input: []telegraf.Metric{
+				testutil.MustMetric(
+					"meas",
+					map[string]string{},
+					map[string]interface{}{
+						"foo":   "80",
+						"proto": "tcp",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"meas",
+					map[string]string{},
+					map[string]interface{}{
+						"foo":   "80",
+						"bar":   "http",
+						"proto": "tcp",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:    "read proto from tag",
+			tag:     "foo",
+			dest:    "bar",
+			prot:    "udp",
+			protTag: "proto",
+			input: []telegraf.Metric{
+				testutil.MustMetric(
+					"meas",
+					map[string]string{
+						"foo":   "80",
+						"proto": "tcp",
+					},
+					map[string]interface{}{},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"meas",
+					map[string]string{
+						"foo":   "80",
+						"bar":   "http",
+						"proto": "tcp",
+					},
+					map[string]interface{}{},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	r := strings.NewReader(fakeServices)
@@ -248,8 +338,11 @@ func TestTable(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			p := PortName{
 				SourceTag:       tt.tag,
-				DestTag:         tt.dest,
+				SourceField:     tt.field,
+				Dest:            tt.dest,
 				DefaultProtocol: tt.prot,
+				ProtocolField:   tt.protField,
+				ProtocolTag:     tt.protTag,
 				Log:             testutil.Logger{},
 			}
 

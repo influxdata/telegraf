@@ -10,7 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
@@ -131,7 +131,7 @@ var sampleConfig = `
 
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
-  # content_encoding = "identity"
+  # content_encoding = "gzip"
 
   ## When true, Telegraf will output unsigned integers as unsigned values,
   ## i.e.: "42u".  You will need a version of InfluxDB supporting unsigned
@@ -315,6 +315,7 @@ func init() {
 			CreateUDPClientF: func(config *UDPConfig) (Client, error) {
 				return NewUDPClient(*config)
 			},
+			ContentEncoding: "gzip",
 		}
 	})
 }

@@ -45,11 +45,30 @@ in the `/etc/default/telegraf` file.
 **Example**:
 
 `/etc/default/telegraf`:
+
+For InfluxDB 1.x:
 ```
 USER="alice"
 INFLUX_URL="http://localhost:8086"
 INFLUX_SKIP_DATABASE_CREATION="true"
 INFLUX_PASSWORD="monkey123"
+```
+For InfluxDB OSS 2:
+```
+INFLUX_HOST="http://localhost:8086" # used to be 9999
+INFLUX_TOKEN="replace_with_your_token"
+INFLUX_ORG="your_username"
+INFLUX_BUCKET="replace_with_your_bucket_name"
+```
+
+For InfluxDB Cloud 2:
+```
+# For AWS West (Oregon)
+INFLUX_HOST="https://us-west-2-1.aws.cloud2.influxdata.com"
+# Other Cloud URLs at https://v2.docs.influxdata.com/v2.0/reference/urls/#influxdb-cloud-urls
+INFLUX_TOKEN=”replace_with_your_token”
+INFLUX_ORG="yourname@yourcompany.com"
+INFLUX_BUCKET="replace_with_your_bucket_name"
 ```
 
 `/etc/telegraf.conf`:
@@ -59,10 +78,25 @@ INFLUX_PASSWORD="monkey123"
 
 [[inputs.mem]]
 
+# For InfluxDB 1.x:
 [[outputs.influxdb]]
   urls = ["${INFLUX_URL}"]
   skip_database_creation = ${INFLUX_SKIP_DATABASE_CREATION}
   password = "${INFLUX_PASSWORD}"
+
+# For InfluxDB OSS 2:
+[[outputs.influxdb_v2]]
+  urls = ["${INFLUX_HOST}"]
+  token = ["${INFLUX_TOKEN}"]
+  org = ["${INFLUX_ORG}"]
+  bucket = ["${INFLUX_BUCKET}"]
+
+# For InfluxDB Cloud 2:
+[[outputs.influxdb_v2]]
+  urls = ["${INFLUX_HOST}"]
+  token = ["${INFLUX_TOKEN}"]
+  org = ["${INFLUX_ORG}"]
+  bucket = ["${INFLUX_BUCKET}"]
 ```
 
 The above files will produce the following effective configuration file to be
@@ -71,10 +105,29 @@ parsed:
 [global_tags]
   user = "alice"
 
+[[inputs.mem]]
+
+# For InfluxDB 1.x:
 [[outputs.influxdb]]
   urls = "http://localhost:8086"
   skip_database_creation = true
   password = "monkey123"
+
+# For InfluxDB OSS 2:
+[[outputs.influxdb_v2]]
+  urls = ["http://127.0.0.1:8086"] # double check the port. could be 9999 if using OSS Beta
+  token = "replace_with_your_token"
+  org = "your_username"
+  bucket = "replace_with_your_bucket_name"
+
+# For InfluxDB Cloud 2:
+[[outputs.influxdb_v2]]
+  # For AWS West (Oregon)
+  INFLUX_HOST="https://us-west-2-1.aws.cloud2.influxdata.com"
+  # Other Cloud URLs at https://v2.docs.influxdata.com/v2.0/reference/urls/#influxdb-cloud-urls
+  token = "replace_with_your_token"
+  org = "yourname@yourcompany.com"
+  bucket = "replace_with_your_bucket_name"
 ```
 
 ### Intervals
@@ -131,7 +184,6 @@ The agent table configures Telegraf and the defaults used across all plugins.
   by a random amount. This is primarily to avoid large write spikes for users
   running a large number of telegraf instances. ie, a jitter of 5s and interval
   10s means flushes will happen every 10-15s.
-
 
 - **precision**:
   Collected metrics are rounded to the precision specified as an [interval][].
@@ -194,13 +246,32 @@ driven operation.
 Parameters that can be used with any input plugin:
 
 - **alias**: Name an instance of a plugin.
-- **interval**: How often to gather this metric. Normal plugins use a single
-  global interval, but if one particular input should be run less or more
-  often, you can configure that here.
+
+- **interval**:
+  Overrides the `interval` setting of the [agent][Agent] for the plugin.  How
+  often to gather this metric. Normal plugins use a single global interval, but
+  if one particular input should be run less or more often, you can configure
+  that here.
+
+- **precision**:
+  Overrides the `precision` setting of the [agent][Agent] for the plugin.
+  Collected metrics are rounded to the precision specified as an [interval][].
+
+  When this value is set on a service input, multiple events occuring at the
+  same timestamp may be merged by the output database.
+
+- **collection_jitter**:
+  Overrides the `collection_jitter` setting of the [agent][Agent] for the
+  plugin.  Collection jitter is used to jitter the collection by a random
+  [interval][].
+
 - **name_override**: Override the base name of the measurement.  (Default is
   the name of the input).
+
 - **name_prefix**: Specifies a prefix to attach to the measurement name.
+
 - **name_suffix**: Specifies a suffix to attach to the measurement name.
+
 - **tags**: A map of tags to apply to a specific input's measurements.
 
 The [metric filtering][] parameters can be used to limit what metrics are
@@ -427,6 +498,10 @@ patterns is emitted.
 - **tagdrop**:
 The inverse of `tagpass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `tagpass` test.
+
+> NOTE: Due to the way TOML is parsed, `tagpass` and `tagdrop` parameters must be
+defined at the *_end_* of the plugin definition, otherwise subsequent plugin config
+options will be interpreted as part of the tagpass/tagdrop tables.
 
 #### Modifiers
 

@@ -360,7 +360,7 @@ func TestRunningOutputWriteFailOrder(t *testing.T) {
 	// Verify that 10 metrics were written
 	assert.Len(t, m.Metrics(), 10)
 	// Verify that they are in order
-	expected := append(reverse(next5), reverse(first5)...)
+	expected := append(first5, next5...)
 	assert.Equal(t, expected, m.Metrics())
 }
 
@@ -421,9 +421,9 @@ func TestRunningOutputWriteFailOrder2(t *testing.T) {
 	// Verify that 20 metrics were written
 	assert.Len(t, m.Metrics(), 20)
 	// Verify that they are in order
-	expected := append(reverse(next5), reverse(first5)...)
-	expected = append(expected, reverse(next5)...)
-	expected = append(expected, reverse(first5)...)
+	expected := append(first5, next5...)
+	expected = append(expected, first5...)
+	expected = append(expected, next5...)
 	assert.Equal(t, expected, m.Metrics())
 }
 
@@ -464,7 +464,7 @@ func TestRunningOutputWriteFailOrder3(t *testing.T) {
 	// Verify that 6 metrics were written
 	assert.Len(t, m.Metrics(), 6)
 	// Verify that they are in order
-	expected := []telegraf.Metric{next5[0], first5[4], first5[3], first5[2], first5[1], first5[0]}
+	expected := []telegraf.Metric{first5[0], first5[1], first5[2], first5[3], first5[4], next5[0]}
 	assert.Equal(t, expected, m.Metrics())
 }
 

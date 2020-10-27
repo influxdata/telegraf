@@ -2,6 +2,7 @@ package processors
 
 import (
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
 )
 
 // NewStreamingProcessorFromProcessor is a converter that turns a standard
@@ -16,6 +17,7 @@ func NewStreamingProcessorFromProcessor(p telegraf.Processor) telegraf.Streaming
 type streamingProcessor struct {
 	processor telegraf.Processor
 	acc       telegraf.Accumulator
+	Log       telegraf.Logger
 }
 
 func (sp *streamingProcessor) SampleConfig() string {
@@ -31,10 +33,11 @@ func (sp *streamingProcessor) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (sp *streamingProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) {
+func (sp *streamingProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 	for _, m := range sp.processor.Apply(m) {
 		acc.AddMetric(m)
 	}
+	return nil
 }
 
 func (sp *streamingProcessor) Stop() error {
@@ -45,6 +48,7 @@ func (sp *streamingProcessor) Stop() error {
 // to call the Init method of the wrapped processor if
 // needed
 func (sp *streamingProcessor) Init() error {
+	models.SetLoggerOnPlugin(sp.processor, sp.Log)
 	if p, ok := sp.processor.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {

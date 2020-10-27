@@ -10,8 +10,8 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -78,8 +78,9 @@ type DebugLogger struct {
 
 func (*DebugLogger) Print(v ...interface{}) {
 	args := make([]interface{}, 0, len(v)+1)
-	args = append(args, "D! [sarama] ")
-	log.Print(v...)
+	args = append(append(args, "D! [sarama] "), v...)
+	log.Print(args...)
+
 }
 
 func (*DebugLogger) Printf(format string, v ...interface{}) {
@@ -88,7 +89,7 @@ func (*DebugLogger) Printf(format string, v ...interface{}) {
 
 func (*DebugLogger) Println(v ...interface{}) {
 	args := make([]interface{}, 0, len(v)+1)
-	args = append(args, "D! [sarama] ")
+	args = append(append(args, "D! [sarama] "), v...)
 	log.Println(args...)
 }
 

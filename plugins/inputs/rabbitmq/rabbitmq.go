@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -506,19 +506,6 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				"io_write_bytes":            node.IoWriteBytes,
 				"io_write_bytes_rate":       node.IoWriteBytesDetails.Rate,
 				"running":                   boolToInt(node.Running),
-			}
-
-			var health HealthCheck
-			err := r.requestJSON("/api/healthchecks/node/"+node.Name, &health)
-			if err != nil {
-				acc.AddError(err)
-				return
-			}
-
-			if health.Status == "ok" {
-				fields["health_check_status"] = int64(1)
-			} else {
-				fields["health_check_status"] = int64(0)
 			}
 
 			var memory MemoryResponse

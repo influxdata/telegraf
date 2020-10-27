@@ -174,40 +174,60 @@ type AgentConfig struct {
 	OmitHostname bool
 }
 
-// Inputs returns a list of strings of the configured inputs.
+// InputNames returns a list of strings of the configured inputs.
 func (c *Config) InputNames() []string {
 	var name []string
 	for _, input := range c.Inputs {
 		name = append(name, input.Config.Name)
 	}
-	return name
+	return PluginNameCounts(name)
 }
 
-// Outputs returns a list of strings of the configured aggregators.
+// AggregatorNames returns a list of strings of the configured aggregators.
 func (c *Config) AggregatorNames() []string {
 	var name []string
 	for _, aggregator := range c.Aggregators {
 		name = append(name, aggregator.Config.Name)
 	}
-	return name
+	return PluginNameCounts(name)
 }
 
-// Outputs returns a list of strings of the configured processors.
+// ProcessorNames returns a list of strings of the configured processors.
 func (c *Config) ProcessorNames() []string {
 	var name []string
 	for _, processor := range c.Processors {
 		name = append(name, processor.Config.Name)
 	}
-	return name
+	return PluginNameCounts(name)
 }
 
-// Outputs returns a list of strings of the configured outputs.
+// OutputNames returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() []string {
 	var name []string
 	for _, output := range c.Outputs {
 		name = append(name, output.Config.Name)
 	}
-	return name
+	return PluginNameCounts(name)
+}
+
+// PluginNameCounts returns a list of sorted plugin names and their count
+func PluginNameCounts(plugins []string) []string {
+	names := make(map[string]int)
+	for _, plugin := range plugins {
+		names[plugin]++
+	}
+
+	var namecount []string
+	for name, count := range names {
+		if count == 1 {
+			namecount = append(namecount, name)
+		} else {
+			namecount = append(namecount, fmt.Sprintf("%s (%dx)", name, count))
+		}
+	}
+
+	sort.Strings(namecount)
+	return namecount
 }
 
 // ListTags returns a string of tags specified in the config,
@@ -510,6 +530,9 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 
 	// Print Inputs
 	for _, pname := range pnames {
+		if pname == "cisco_telemetry_gnmi" {
+			continue
+		}
 		creator := inputs.Inputs[pname]
 		input := creator()
 
@@ -863,6 +886,7 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 		req.Header.Add("Authorization", "Token "+v)
 	}
 	req.Header.Add("Accept", "application/toml")
+	req.Header.Set("User-Agent", internal.ProductToken())
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -1029,8 +1053,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// If the input has a SetParser function, then this means it can accept
 	// arbitrary types of input, so build the parser and set it.
-	switch t := input.(type) {
-	case parsers.ParserInput:
+	if t, ok := input.(parsers.ParserInput); ok {
 		parser, err := buildParser(name, table)
 		if err != nil {
 			return err
@@ -1038,8 +1061,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		t.SetParser(parser)
 	}
 
-	switch t := input.(type) {
-	case parsers.ParserFuncInput:
+	if t, ok := input.(parsers.ParserFuncInput); ok {
 		config, err := getParserConfig(name, table)
 		if err != nil {
 			return err
@@ -1075,51 +1097,25 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		Grace:  time.Second * 0,
 	}
 
-	if node, ok := tbl.Fields["period"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-
-				conf.Period = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "period", &conf.Period); err != nil {
+		return nil, err
 	}
 
-	if node, ok := tbl.Fields["delay"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-
-				conf.Delay = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "delay", &conf.Delay); err != nil {
+		return nil, err
 	}
 
-	if node, ok := tbl.Fields["grace"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-
-				conf.Grace = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "grace", &conf.Grace); err != nil {
+		return nil, err
 	}
+
 	if node, ok := tbl.Fields["drop_original"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if b, ok := kv.Value.(*ast.Boolean); ok {
 				var err error
 				conf.DropOriginal, err = strconv.ParseBool(b.Value)
 				if err != nil {
-					log.Printf("Error parsing boolean value for %s: %s\n", name, err)
+					return nil, fmt.Errorf("error parsing boolean value for %s: %s", name, err)
 				}
 			}
 		}
@@ -1161,14 +1157,11 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
 			if err := toml.UnmarshalTable(subtbl, conf.Tags); err != nil {
-				log.Printf("Could not parse tags for input %s\n", name)
+				return nil, fmt.Errorf("could not parse tags for input %s", name)
 			}
 		}
 	}
 
-	delete(tbl.Fields, "period")
-	delete(tbl.Fields, "delay")
-	delete(tbl.Fields, "grace")
 	delete(tbl.Fields, "drop_original")
 	delete(tbl.Fields, "name_prefix")
 	delete(tbl.Fields, "name_suffix")
@@ -1195,7 +1188,7 @@ func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error
 				var err error
 				conf.Order, err = strconv.ParseInt(b.Value, 10, 64)
 				if err != nil {
-					log.Printf("Error parsing int value for %s: %s\n", name, err)
+					return nil, fmt.Errorf("error parsing int value for %s: %s", name, err)
 				}
 			}
 		}
@@ -1361,17 +1354,17 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 // models.InputConfig to be inserted into models.RunningInput
 func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	cp := &models.InputConfig{Name: name}
-	if node, ok := tbl.Fields["interval"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
 
-				cp.Interval = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "interval", &cp.Interval); err != nil {
+		return nil, err
+	}
+
+	if err := getConfigDuration(tbl, "precision", &cp.Precision); err != nil {
+		return nil, err
+	}
+
+	if err := getConfigDuration(tbl, "collection_jitter", &cp.CollectionJitter); err != nil {
+		return nil, err
 	}
 
 	if node, ok := tbl.Fields["name_prefix"]; ok {
@@ -1410,7 +1403,7 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
 			if err := toml.UnmarshalTable(subtbl, cp.Tags); err != nil {
-				log.Printf("E! Could not parse tags for input %s\n", name)
+				return nil, fmt.Errorf("could not parse tags for input %s\n", name)
 			}
 		}
 	}
@@ -1419,7 +1412,6 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	delete(tbl.Fields, "name_suffix")
 	delete(tbl.Fields, "name_override")
 	delete(tbl.Fields, "alias")
-	delete(tbl.Fields, "interval")
 	delete(tbl.Fields, "tags")
 	var err error
 	cp.Filter, err = buildFilter(tbl)
@@ -1942,6 +1934,14 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["carbon2_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.Carbon2Format = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["influx_max_line_bytes"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if integer, ok := kv.Value.(*ast.Integer); ok {
@@ -2098,6 +2098,7 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	delete(tbl.Fields, "carbon2_format")
 	delete(tbl.Fields, "influx_max_line_bytes")
 	delete(tbl.Fields, "influx_sort_fields")
 	delete(tbl.Fields, "influx_uint_support")
@@ -2141,30 +2142,12 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		oc.Filter.NamePass = oc.Filter.FieldPass
 	}
 
-	if node, ok := tbl.Fields["flush_interval"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-
-				oc.FlushInterval = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "flush_interval", &oc.FlushInterval); err != nil {
+		return nil, err
 	}
 
-	if node, ok := tbl.Fields["flush_jitter"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-				oc.FlushJitter = new(time.Duration)
-				*oc.FlushJitter = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "flush_jitter", &oc.FlushJitter); err != nil {
+		return nil, err
 	}
 
 	if node, ok := tbl.Fields["metric_buffer_limit"]; ok {
@@ -2223,8 +2206,6 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		}
 	}
 
-	delete(tbl.Fields, "flush_interval")
-	delete(tbl.Fields, "flush_jitter")
 	delete(tbl.Fields, "metric_buffer_limit")
 	delete(tbl.Fields, "metric_batch_size")
 	delete(tbl.Fields, "alias")
@@ -2240,4 +2221,20 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 // look inside composed types.
 type unwrappable interface {
 	Unwrap() telegraf.Processor
+}
+
+func getConfigDuration(tbl *ast.Table, key string, target *time.Duration) error {
+	if node, ok := tbl.Fields[key]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				d, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return err
+				}
+				delete(tbl.Fields, key)
+				*target = d
+			}
+		}
+	}
+	return nil
 }

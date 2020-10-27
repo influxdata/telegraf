@@ -2,16 +2,15 @@ package execd
 
 import (
 	"bufio"
-	"context"
+	"errors"
 	"fmt"
 	"io"
-	"log"
-	"os/exec"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/process"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -42,18 +41,14 @@ const sampleConfig = `
 `
 
 type Execd struct {
-	Command      []string
-	Signal       string
-	RestartDelay config.Duration
+	Command      []string        `toml:"command"`
+	Signal       string          `toml:"signal"`
+	RestartDelay config.Duration `toml:"restart_delay"`
+	Log          telegraf.Logger `toml:"-"`
 
-	acc        telegraf.Accumulator
-	cmd        *exec.Cmd
-	parser     parsers.Parser
-	stdin      io.WriteCloser
-	stdout     io.ReadCloser
-	stderr     io.ReadCloser
-	cancel     context.CancelFunc
-	mainLoopWg sync.WaitGroup
+	process *process.Process
+	acc     telegraf.Accumulator
+	parser  parsers.Parser
 }
 
 func (e *Execd) SampleConfig() string {
@@ -70,131 +65,32 @@ func (e *Execd) SetParser(parser parsers.Parser) {
 
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.acc = acc
-
-	if len(e.Command) == 0 {
-		return fmt.Errorf("FATAL no command specified")
+	var err error
+	e.process, err = process.New(e.Command)
+	if err != nil {
+		return fmt.Errorf("error creating new process: %w", err)
 	}
+	e.process.Log = e.Log
+	e.process.RestartDelay = time.Duration(e.RestartDelay)
+	e.process.ReadStdoutFn = e.cmdReadOut
+	e.process.ReadStderrFn = e.cmdReadErr
 
-	e.mainLoopWg.Add(1)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	e.cancel = cancel
-
-	if err := e.cmdStart(); err != nil {
-		return err
-	}
-
-	go func() {
-		if err := e.cmdLoop(ctx); err != nil {
-			log.Printf("Process quit with message: %s", err.Error())
+	if err = e.process.Start(); err != nil {
+		// if there was only one argument, and it contained spaces, warn the user
+		// that they may have configured it wrong.
+		if len(e.Command) == 1 && strings.Contains(e.Command[0], " ") {
+			e.Log.Warn("The inputs.execd Command contained spaces but no arguments. " +
+				"This setting expects the program and arguments as an array of strings, " +
+				"not as a space-delimited string. See the plugin readme for an example.")
 		}
-		e.mainLoopWg.Done()
-	}()
+		return fmt.Errorf("failed to start process %s: %w", e.Command, err)
+	}
 
 	return nil
 }
 
 func (e *Execd) Stop() {
-	// don't try to stop before all stream readers have started.
-	e.cancel()
-	e.mainLoopWg.Wait()
-}
-
-// cmdLoop watches an already running process, restarting it when appropriate.
-func (e *Execd) cmdLoop(ctx context.Context) error {
-	for {
-		// Use a buffered channel to ensure goroutine below can exit
-		// if `ctx.Done` is selected and nothing reads on `done` anymore
-		done := make(chan error, 1)
-		go func() {
-			done <- e.cmdWait()
-		}()
-
-		select {
-		case <-ctx.Done():
-			if e.stdin != nil {
-				e.stdin.Close()
-				gracefulStop(e.cmd, 5*time.Second)
-			}
-			return nil
-		case err := <-done:
-			log.Printf("Process %s terminated: %s", e.Command, err)
-			if isQuitting(ctx) {
-				return err
-			}
-		}
-
-		log.Printf("Restarting in %s...", time.Duration(e.RestartDelay))
-
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-time.After(time.Duration(e.RestartDelay)):
-			// Continue the loop and restart the process
-			if err := e.cmdStart(); err != nil {
-				return err
-			}
-		}
-	}
-}
-
-func isQuitting(ctx context.Context) bool {
-	select {
-	case <-ctx.Done():
-		return true
-	default:
-		return false
-	}
-}
-
-func (e *Execd) cmdStart() (err error) {
-	if len(e.Command) > 1 {
-		e.cmd = exec.Command(e.Command[0], e.Command[1:]...)
-	} else {
-		e.cmd = exec.Command(e.Command[0])
-	}
-
-	e.stdin, err = e.cmd.StdinPipe()
-	if err != nil {
-		return fmt.Errorf("Error opening stdin pipe: %s", err)
-	}
-
-	e.stdout, err = e.cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("Error opening stdout pipe: %s", err)
-	}
-
-	e.stderr, err = e.cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("Error opening stderr pipe: %s", err)
-	}
-
-	log.Printf("Starting process: %s", e.Command)
-
-	err = e.cmd.Start()
-	if err != nil {
-		return fmt.Errorf("Error starting process: %s", err)
-	}
-
-	return nil
-}
-
-func (e *Execd) cmdWait() error {
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	go func() {
-		e.cmdReadOut(e.stdout)
-		wg.Done()
-	}()
-
-	go func() {
-		e.cmdReadErr(e.stderr)
-		wg.Done()
-	}()
-
-	wg.Wait()
-	return e.cmd.Wait()
+	e.process.Stop()
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
@@ -209,7 +105,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 	for scanner.Scan() {
 		metrics, err := e.parser.Parse(scanner.Bytes())
 		if err != nil {
-			e.acc.AddError(fmt.Errorf("Parse error: %s", err))
+			e.acc.AddError(fmt.Errorf("parse error: %w", err))
 		}
 
 		for _, metric := range metrics {
@@ -218,7 +114,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		e.acc.AddError(fmt.Errorf("Error reading stdout: %s", err))
+		e.acc.AddError(fmt.Errorf("error reading stdout: %w", err))
 	}
 }
 
@@ -249,12 +145,19 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
-		log.Printf("stderr: %q", scanner.Text())
+		e.Log.Errorf("stderr: %q", scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
-		e.acc.AddError(fmt.Errorf("Error reading stderr: %s", err))
+		e.acc.AddError(fmt.Errorf("error reading stderr: %w", err))
 	}
+}
+
+func (e *Execd) Init() error {
+	if len(e.Command) == 0 {
+		return errors.New("no command specified")
+	}
+	return nil
 }
 
 func init() {

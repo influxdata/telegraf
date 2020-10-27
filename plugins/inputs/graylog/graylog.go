@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -169,11 +169,12 @@ func (h *GrayLog) gatherServer(
 		return err
 	}
 	requestURL, err := url.Parse(serverURL)
+	if err != nil {
+		return fmt.Errorf("unable to parse address '%s': %s", serverURL, err)
+	}
+
 	host, port, _ := net.SplitHostPort(requestURL.Host)
 	var dat ResponseMetrics
-	if err != nil {
-		return err
-	}
 	if err := json.Unmarshal([]byte(resp), &dat); err != nil {
 		return err
 	}
