@@ -16,11 +16,6 @@ https://en.wikipedia.org/wiki/Df_(Unix) for more details.
 
   ## Ignore mount points by filesystem type.
   ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
-
-  ## collect aggregate (summed) stats of all discovered mounts on the host
-  # aggregate_counts = false
-  ## drop specified mount points for aggregation
-  # aggregate_drops = ["/"]
 ```
 
 #### Docker container
@@ -52,20 +47,6 @@ docker run -v /:/hostfs:ro -e HOST_MOUNT_PREFIX=/hostfs -e HOST_PROC=/hostfs/pro
     - inodes_free (integer, files)
     - inodes_total (integer, files)
     - inodes_used (integer, files)
-- disk_agg (optional)
-  - fields
-    - free (integer, bytes)
-    - total (integer, bytes)
-    - used (integer, bytes)
-    - used_percent (float, percent)
-    - inodes_free (integer, files)
-    - inodes_total (integer, files)
-    - inodes_used (integer, files)
-
-### Aggregation
-To help aleviate increasing cardinality as the number of disks on a host increases, we can collect "aggregate" stats of mount points on the host. These stats are simply sums of each individual disk stat (with the potential to filter specific mount points).
-
-As with the per-disk stats, used_percent is defined as `aggused` / (`aggused` + `aggfee`) * 100.
 
 ### Troubleshooting
 

@@ -32,9 +32,6 @@ The diskio input plugin gathers metrics about disk traffic and timing.
   ## The typical use case is for LVM volumes, to get the VG/LV name instead of
   ## the near-meaningless DM-0 name.
   # name_templates = ["$ID_FS_LABEL","$DM_VG_NAME/$DM_LV_NAME"]
-  #
-  ## Collect aggregate diskio stats
-  # diskio_aggregates = false
 ```
 
 #### Docker container
@@ -116,9 +113,6 @@ Reads and writes which are adjacent to each other may be merged for
 efficiency.  Thus two 4K reads may become one 8K read before it is
 ultimately handed to the disk, and so it will be counted (and queued)
 as only one I/O. These fields lets you know how often this was done.
-
-### Aggregation
-As the number of devices on a host grows, showing the aggregate IO stats for all devices becomes more expensive. We can pre-aggregate these stats at the host as we collect the normal IO stats. The `diskio_agg` measurement will hold these aggregate measurements.
 
 ### Sample Queries:
 
