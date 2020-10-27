@@ -33,11 +33,11 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann_legacy"
+	_ "github.com/influxdata/telegraf/plugins/outputs/sensu"
 	_ "github.com/influxdata/telegraf/plugins/outputs/socket_writer"
 	_ "github.com/influxdata/telegraf/plugins/outputs/stackdriver"
 	_ "github.com/influxdata/telegraf/plugins/outputs/sumologic"
 	_ "github.com/influxdata/telegraf/plugins/outputs/syslog"
 	_ "github.com/influxdata/telegraf/plugins/outputs/warp10"
 	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
-	_ "github.com/influxdata/telegraf/plugins/outputs/sensu" 
 )
