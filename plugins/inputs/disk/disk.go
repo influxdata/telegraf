@@ -17,8 +17,6 @@ type DiskStats struct {
 
 	MountPoints     []string `toml:"mount_points"`
 	IgnoreFS        []string `toml:"ignore_fs"`
-	AggregateCounts bool     `toml:"aggregate_counts"`
-	AggDropMounts   []string `toml:"aggregate_drops"`
 }
 
 func (_ *DiskStats) Description() string {
@@ -32,11 +30,6 @@ var diskSampleConfig = `
 
   ## Ignore mount points by filesystem type.
   ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
-
-  ## collect aggregate (summed) stats of all discovered mounts on the host
-  # aggregate_counts = false
-  ## drop specified mount points for aggregation
-  # aggregate_drops = ["/"]
 `
 
 func (_ *DiskStats) SampleConfig() string {
@@ -52,15 +45,6 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 	disks, partitions, err := s.ps.DiskUsage(s.MountPoints, s.IgnoreFS)
 	if err != nil {
 		return fmt.Errorf("error getting disk usage info: %s", err)
-	}
-	aggFields := map[string]interface{}{
-		"total":        uint64(0),
-		"free":         uint64(0),
-		"used":         uint64(0),
-		"used_percent": uint64(0),
-		"inodes_total": uint64(0),
-		"inodes_free":  uint64(0),
-		"inodes_used":  uint64(0),
 	}
 	for i, du := range disks {
 		if du.Total == 0 {
@@ -90,29 +74,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			"inodes_used":  du.InodesUsed,
 		}
 		acc.AddGauge("disk", fields, tags)
-		if s.AggregateCounts {
-			addAgg := true
-			for _, possibleMount := range s.AggDropMounts {
-				if possibleMount == du.Path {
-					addAgg = false
-					break
-				}
-			}
-			if addAgg {
-				aggFields["total"] = aggFields["total"].(uint64) + du.Total
-				aggFields["free"] = aggFields["free"].(uint64) + du.Free
-				aggFields["used"] = aggFields["used"].(uint64) + du.Used
-				aggFields["inodes_total"] = aggFields["inodes_total"].(uint64) + du.InodesTotal
-				aggFields["inodes_free"] = aggFields["inodes_free"].(uint64) + du.InodesFree
-				aggFields["inodes_used"] = aggFields["inodes_used"].(uint64) + du.InodesUsed
-			}
-		}
 	}
-	if s.AggregateCounts {
-		aggFields["used_percent"] = (float64(aggFields["used"].(uint64)) / (float64(aggFields["used"].(uint64)) + float64(aggFields["free"].(uint64)))) * 100
-		acc.AddGauge("disk_agg", aggFields, nil)
-	}
-
 	return nil
 }
 
