@@ -28,7 +28,6 @@ type DiskIO struct {
 	infoCache        map[string]diskInfoCache
 	deviceFilter     filter.Filter
 	initialized      bool
-	DiskIOAggregates bool `toml:"diskio_aggregates"`
 }
 
 func (_ *DiskIO) Description() string {
@@ -61,9 +60,6 @@ var diskIOsampleConfig = `
   ## The typical use case is for LVM volumes, to get the VG/LV name instead of
   ## the near-meaningless DM-0 name.
   # name_templates = ["$ID_FS_LABEL","$DM_VG_NAME/$DM_LV_NAME"]
-  #
-  ## Collect aggregate diskio stats
-  # diskio_aggregates = false
 `
 
 func (_ *DiskIO) SampleConfig() string {
@@ -107,19 +103,6 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("error getting disk io info: %s", err.Error())
 	}
 
-	aggFields := map[string]interface{}{
-		"reads":            uint64(0),
-		"writes":           uint64(0),
-		"read_bytes":       uint64(0),
-		"write_bytes":      uint64(0),
-		"read_time":        uint64(0),
-		"write_time":       uint64(0),
-		"io_time":          uint64(0),
-		"weighted_io_time": uint64(0),
-		"iops_in_progress": uint64(0),
-		"merged_reads":     uint64(0),
-		"merged_writes":    uint64(0),
-	}
 	for _, io := range diskio {
 
 		match := false
@@ -169,22 +152,6 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 			"merged_writes":    io.MergedWriteCount,
 		}
 		acc.AddCounter("diskio", fields, tags)
-		if s.DiskIOAggregates {
-			aggFields["reads"] = aggFields["reads"].(uint64) + io.ReadCount
-			aggFields["writes"] = aggFields["writes"].(uint64) + io.WriteCount
-			aggFields["read_bytes"] = aggFields["read_bytes"].(uint64) + io.ReadBytes
-			aggFields["write_bytes"] = aggFields["write_bytes"].(uint64) + io.WriteBytes
-			aggFields["read_time"] = aggFields["read_time"].(uint64) + io.ReadTime
-			aggFields["write_time"] = aggFields["write_time"].(uint64) + io.WriteTime
-			aggFields["io_time"] = aggFields["io_time"].(uint64) + io.IoTime
-			aggFields["weighted_io_time"] = aggFields["weighted_io_time"].(uint64) + io.WeightedIO
-			aggFields["iops_in_progress"] = aggFields["iops_in_progress"].(uint64) + io.IopsInProgress
-			aggFields["merged_reads"] = aggFields["merged_reads"].(uint64) + io.MergedReadCount
-			aggFields["merged_writes"] = aggFields["merged_writes"].(uint64) + io.MergedWriteCount
-		}
-	}
-	if s.DiskIOAggregates {
-		acc.AddCounter("diskio_agg", aggFields, nil)
 	}
 
 	return nil

@@ -18,7 +18,6 @@ type NetIOStats struct {
 	skipChecks          bool
 	IgnoreProtocolStats bool
 	Interfaces          []string
-	NetAggregates       bool `toml:"network_aggregates"`
 }
 
 func (_ *NetIOStats) Description() string {
@@ -36,9 +35,6 @@ var netSampleConfig = `
   ## Setting ignore_protocol_stats to true will skip reporting of protocol metrics.
   ##
   # ignore_protocol_stats = false
-  ##
-  ## Collect aggregate network stats
-  # network_aggregates = false
 `
 
 func (_ *NetIOStats) SampleConfig() string {
@@ -65,17 +61,6 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 	for _, iface := range interfaces {
 		interfacesByName[iface.Name] = iface
 	}
-	aggFields := map[string]interface{}{
-		"bytes_sent":   uint64(0),
-		"bytes_recv":   uint64(0),
-		"packets_sent": uint64(0),
-		"packets_recv": uint64(0),
-		"err_in":       uint64(0),
-		"err_out":      uint64(0),
-		"drop_in":      uint64(0),
-		"drop_out":     uint64(0),
-	}
-
 	for _, io := range netio {
 		if len(s.Interfaces) != 0 {
 			var found bool
@@ -117,20 +102,6 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 			"drop_out":     io.Dropout,
 		}
 		acc.AddCounter("net", fields, tags)
-		if s.NetAggregates {
-			aggFields["bytes_sent"] = aggFields["bytes_sent"].(uint64) + io.BytesSent
-			aggFields["bytes_recv"] = aggFields["bytes_recv"].(uint64) + io.BytesRecv
-			aggFields["packets_sent"] = aggFields["packets_sent"].(uint64) + io.PacketsSent
-			aggFields["packets_recv"] = aggFields["packets_recv"].(uint64) + io.PacketsRecv
-			aggFields["err_in"] = aggFields["err_in"].(uint64) + io.Errin
-			aggFields["err_out"] = aggFields["err_out"].(uint64) + io.Errout
-			aggFields["drop_in"] = aggFields["drop_in"].(uint64) + io.Dropin
-			aggFields["drop_out"] = aggFields["drop_out"].(uint64) + io.Dropout
-		}
-	}
-	if s.NetAggregates {
-		acc.AddCounter("net_agg", aggFields, nil)
-	}
 
 	// Get system wide stats for different network protocols
 	// (ignore these stats if the call fails)
