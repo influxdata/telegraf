@@ -48,6 +48,23 @@ const sampleConfig = `
   # sasl_username = "kafka"
   # sasl_password = "secret"
 
+  ## Optional SASL:
+  ## one of: OAUTHBEARER, PLAIN, SCRAM-SHA-256, SCRAM-SHA-512, GSSAPI
+  ## (defaults to PLAIN)
+  # sasl_mechanism = ""
+
+  ## used if sasl_mechanism is GSSAPI (experimental)
+  # sasl_gssapi_service_name = ""
+  # ## One of: KRB5_USER_AUTH and KRB5_KEYTAB_AUTH
+  # sasl_gssapi_auth_type = "KRB5_USER_AUTH"
+  # sasl_gssapi_kerberos_config_path = "/"
+  # sasl_gssapi_realm = "realm"
+  # sasl_gssapi_key_tab_path = ""
+  # sasl_gssapi_disable_pafxfast = false
+
+  ## used if sasl_mechanism is OAUTHBEARER (experimental)
+  # sasl_access_token = ""
+
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
 
@@ -102,10 +119,8 @@ type KafkaConsumer struct {
 	Topics                 []string `toml:"topics"`
 	TopicTag               string   `toml:"topic_tag"`
 	Version                string   `toml:"version"`
-	SASLPassword           string   `toml:"sasl_password"`
-	SASLUsername           string   `toml:"sasl_username"`
-	SASLMechanism          string   `toml:"sasl_mechanism"`
-	SASLVersion            *int     `toml:"sasl_version"`
+
+	kafka.SASLAuth
 
 	EnableTLS *bool `toml:"enable_tls"`
 	tls.ClientConfig
@@ -192,21 +207,8 @@ func (k *KafkaConsumer) Init() error {
 		}
 	}
 
-	config.Net.SASL.User = k.SASLUsername
-	config.Net.SASL.Password = k.SASLPassword
-
-	if k.SASLMechanism != "" {
-		config.Net.SASL.Mechanism = sarama.SASLMechanism(k.SASLMechanism)
-	}
-
-	if k.SASLUsername != "" || k.SASLMechanism != "" {
-		config.Net.SASL.Enable = true
-
-		version, err := kafka.SASLVersion(config.Version, k.SASLVersion)
-		if err != nil {
-			return err
-		}
-		config.Net.SASL.Version = version
+	if err := k.SetSASLConfig(config); err != nil {
+		return err
 	}
 
 	if k.ClientID != "" {
