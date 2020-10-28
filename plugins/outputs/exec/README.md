@@ -18,6 +18,9 @@ On non-zero exit stderr will be logged at error level.
   ## Timeout for command to complete.
   # timeout = "5s"
 
+  ## truncate errors after this many characters. Use 0 to disable error truncation.
+  # error_truncate_length = 512
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
