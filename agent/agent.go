@@ -14,6 +14,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
@@ -92,6 +94,38 @@ type aggregatorUnit struct {
 type outputUnit struct {
 	src     <-chan telegraf.Metric
 	outputs []*models.RunningOutput
+}
+
+func GetAllInputPlugins() []string {
+	var res []string
+	for name, _ := range inputs.Inputs {
+		res = append(res, name)
+	}
+	return res
+}
+
+func GetAllOutputPlugins() []string {
+	var res []string
+	for name, _ := range outputs.Outputs {
+		res = append(res, name)
+	}
+	return res
+}
+
+func (a *Agent) GetInputPlugins() []string {
+	var res []string
+	for _, runningInput := range a.Config.Inputs {
+		res = append(res, runningInput.Config.Name)
+	}
+	return res
+}
+
+func (a *Agent) GetOutputPlugins() []string {
+	var res []string
+	for _, runningOutput := range a.Config.Outputs {
+		res = append(res, runningOutput.Config.Name)
+	}
+	return res
 }
 
 // Run starts and runs the Agent until the context is done.
