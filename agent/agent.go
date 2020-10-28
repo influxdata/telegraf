@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -21,13 +22,33 @@ import (
 
 // Agent runs a set of plugins.
 type Agent struct {
-	Config *config.Config
+	Config    *config.Config
+	iu        *inputUnit
+	wg        *sync.WaitGroup
+	statusMap map[string](map[string]chan string)
+	statusMux *sync.Mutex
 }
+
+type PluginStatus string
+
+const (
+	Running PluginStatus = "RUNNING"
+	Stop                 = "STOP"
+)
 
 // NewAgent returns an Agent for the given Config.
 func NewAgent(config *config.Config) (*Agent, error) {
+	inputStatusMap := make(map[string]chan string)
+	outputStatusMap := make(map[string]chan string)
+
+	statusMap := make(map[string]map[string]chan string)
+	statusMap["input"] = inputStatusMap
+	statusMap["output"] = outputStatusMap
 	a := &Agent{
-		Config: config,
+		Config:    config,
+		statusMap: statusMap,
+		wg:        new(sync.WaitGroup),
+		statusMux: new(sync.Mutex),
 	}
 	return a, nil
 }
@@ -94,6 +115,76 @@ type aggregatorUnit struct {
 type outputUnit struct {
 	src     <-chan telegraf.Metric
 	outputs []*models.RunningOutput
+}
+
+// RunSingleInput runs a single input and can be called after an agent is created
+func (a *Agent) RunSingleInput(inputConfig *models.InputConfig, ctx context.Context) error {
+
+	// NOTE: we can't just use `defer a.statusMutex.Unlock()` since except for the input validation,
+	// this function only returns once the gatherLoop is done -- i.e. when the plugin is stopped.
+	// Be careful to manually unlock the statusMutex in this function.
+
+	// validating if an input plugin is already running, and therefore shouldn't be run again
+	a.statusMux.Lock()
+	_, ok := a.statusMap["input"][inputConfig.Name]
+	a.statusMux.Unlock()
+
+	if ok {
+		log.Printf("E! [agent] You are trying to run an input that is already running: %s \n", inputConfig.Name)
+		return errors.New("you are trying to run an input that is already running")
+	}
+
+	startTime := time.Now()
+
+	// seeing if the plugin is valid
+	plugin, ok := inputs.Inputs[inputConfig.Name]
+	if !ok {
+		log.Printf("E! [agent] input config's name is not valid: %s \n", inputConfig.Name)
+		return errors.New("input config's name is not valid")
+	}
+
+	input := models.NewRunningInput(plugin(), inputConfig)
+
+	statusCase := make(chan string)
+	a.statusMap["input"][input.Config.Name] = statusCase
+
+	// Overwrite agent interval if this plugin has its own.
+	interval := a.Config.Agent.Interval.Duration
+	if input.Config.Interval != 0 {
+		interval = input.Config.Interval
+	}
+
+	// Overwrite agent precision if this plugin has its own.
+	precision := a.Config.Agent.Precision.Duration
+	if input.Config.Precision != 0 {
+		precision = input.Config.Precision
+	}
+
+	// Overwrite agent collection_jitter if this plugin has its own.
+	jitter := a.Config.Agent.CollectionJitter.Duration
+	if input.Config.CollectionJitter != 0 {
+		jitter = input.Config.CollectionJitter
+	}
+
+	var ticker Ticker
+	if a.Config.Agent.RoundInterval {
+		ticker = NewAlignedTicker(startTime, interval, jitter)
+	} else {
+		ticker = NewUnalignedTicker(interval, jitter)
+	}
+
+	acc := NewAccumulator(input, a.iu.dst)
+	acc.SetPrecision(getPrecision(precision, interval))
+
+	a.wg.Add(1)
+	go func(input *models.RunningInput) {
+		defer ticker.Stop()
+		defer a.wg.Done()
+		a.gatherLoop(ctx, acc, input, ticker, interval)
+	}(input)
+
+	a.Config.Inputs = append(a.Config.Inputs, input)
+	return nil
 }
 
 func GetAllInputPlugins() []string {
@@ -175,6 +266,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 
 	iu, err := a.startInputs(next, a.Config.Inputs)
+	a.iu = iu
 	if err != nil {
 		return err
 	}
@@ -323,48 +415,14 @@ func (a *Agent) runInputs(
 	startTime time.Time,
 	unit *inputUnit,
 ) error {
-	var wg sync.WaitGroup
+
 	for _, input := range unit.inputs {
-		// Overwrite agent interval if this plugin has its own.
-		interval := a.Config.Agent.Interval.Duration
-		if input.Config.Interval != 0 {
-			interval = input.Config.Interval
-		}
-
-		// Overwrite agent precision if this plugin has its own.
-		precision := a.Config.Agent.Precision.Duration
-		if input.Config.Precision != 0 {
-			precision = input.Config.Precision
-		}
-
-		// Overwrite agent collection_jitter if this plugin has its own.
-		jitter := a.Config.Agent.CollectionJitter.Duration
-		if input.Config.CollectionJitter != 0 {
-			jitter = input.Config.CollectionJitter
-		}
-
-		var ticker Ticker
-		if a.Config.Agent.RoundInterval {
-			ticker = NewAlignedTicker(startTime, interval, jitter)
-		} else {
-			ticker = NewUnalignedTicker(interval, jitter)
-		}
-		defer ticker.Stop()
-
-		acc := NewAccumulator(input, unit.dst)
-		acc.SetPrecision(getPrecision(precision, interval))
-
-		wg.Add(1)
-		go func(input *models.RunningInput) {
-			defer wg.Done()
-			a.gatherLoop(ctx, acc, input, ticker, interval)
-		}(input)
+		a.RunSingleInput(input.Config, ctx)
 	}
-
-	wg.Wait()
+	a.wg.Wait()
 
 	log.Printf("D! [agent] Stopping service inputs")
-	stopServiceInputs(unit.inputs)
+	stopServiceInputs(a.Config.Inputs)
 
 	close(unit.dst)
 	log.Printf("D! [agent] Input channel closed")
@@ -448,7 +506,6 @@ func (a *Agent) testRunInputs(
 				if err := input.Input.Gather(nulAcc); err != nil {
 					nulAcc.AddError(err)
 				}
-
 				time.Sleep(500 * time.Millisecond)
 			}
 
@@ -481,6 +538,34 @@ func stopServiceInputs(inputs []*models.RunningInput) {
 	}
 }
 
+// StopInputPlugin stops an input plugin
+func (a *Agent) StopInputPlugin(input string) {
+
+	// NOTE: don't use `defer a.statusMux.Unlock()` here,
+	// since we write to a channel that gatherLoop() is waiting on,
+	// and we need to maintain our invariant for gatherLoop()
+	// that it is given an unlocked mutex and returns an unlocked mutex.
+
+	a.statusMux.Lock()
+	// will write "STOP" to the channel as a case for gatherLoop
+	statusChannel, ok := a.statusMap["input"][input]
+	a.statusMux.Unlock()
+
+	if !ok {
+		log.Printf("E! [agent] You are trying to stop an input that is not running: %s \n", input)
+		return
+	}
+
+	statusChannel <- Stop
+
+	for i, other := range a.Config.Inputs {
+		if other.Config.Name == input {
+			a.Config.Inputs = append(a.Config.Inputs[:i], a.Config.Inputs[i+1:]...)
+			break
+		}
+	}
+}
+
 // gather runs an input's gather function periodically until the context is
 // done.
 func (a *Agent) gatherLoop(
@@ -492,13 +577,27 @@ func (a *Agent) gatherLoop(
 ) {
 	defer panicRecover(input)
 
+	a.statusMux.Lock()
+	pluginChannel := a.statusMap["input"][input.Config.Name]
+	a.statusMux.Unlock()
+
 	for {
+		// INVARIANT: received unlocked mutex, return unlocked mutex
+		// NOTE: Again, don't just use defer to unlock because of the ticker.Elapsed() case
+		// Be careful of changing locks here -- could easily make it sequential
 		select {
+		case status, ok := <-pluginChannel:
+			if ok && status == Stop {
+				log.Println("I! [agent] stopping input plugin", input.Config.Name)
+				delete(a.statusMap["input"], input.Config.Name)
+				return
+			}
 		case <-ticker.Elapsed():
 			err := a.gatherOnce(acc, input, ticker, interval)
 			if err != nil {
 				acc.AddError(err)
 			}
+
 		case <-ctx.Done():
 			return
 		}
