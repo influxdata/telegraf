@@ -677,6 +677,7 @@ SELECT TOP 1
 	,cast(([reserved_storage_mb] - [storage_space_used_mb]) as bigint) AS [available_storage_mb]
 	,(SELECT DATEDIFF(MINUTE,[sqlserver_start_time],GETDATE()) from sys.dm_os_sys_info) as [uptime]
 	,SERVERPROPERTY('ProductVersion') AS [sql_version]
+	,LEFT(@@VERSION,CHARINDEX(' - ',@@VERSION)) AS [sql_version_desc]
 	,[db_online]
 	,[db_restoring]
 	,[db_recovering]
@@ -709,7 +710,9 @@ SELECT TOP(1)
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,cast([avg_cpu_percent] as float) as [avg_cpu_percent]
 FROM
-    sys.server_resource_stats;
+    sys.server_resource_stats
+ORDER BY
+    [end_time] DESC;
 `
 
 const sqlAzureMIResourceGovernance string = `
