@@ -147,7 +147,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 
 // OPT FUNCTIONS
 
-func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, policy, mode, auth, username, password string) []opcua.Option {
+func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, policy, mode, auth, username, password string, requestTimeout time.Duration) []opcua.Option {
 	opts := []opcua.Option{}
 	appuri := "urn:telegraf:gopcua:client"
 	appname := "Telegraf"
@@ -155,6 +155,8 @@ func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, 
 	// ApplicationURI is automatically read from the cert so is not required if a cert if provided
 	opts = append(opts, opcua.ApplicationURI(appuri))
 	opts = append(opts, opcua.ApplicationName(appname))
+
+	opts = append(opts, opcua.RequestTimeout(requestTimeout))
 
 	if certFile == "" && keyFile == "" {
 		if policy != "None" || mode != "None" {
