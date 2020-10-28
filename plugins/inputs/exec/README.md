@@ -22,6 +22,9 @@ This plugin can be used to poll for custom metrics from any source.
   ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
+  ## truncate errors after this many characters. Use 0 to disable error truncation.
+  # error_truncate_length = 512
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:

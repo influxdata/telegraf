@@ -30,7 +30,10 @@ const sampleConfig = `
   timeout = "5s"
 
   ## measurement name suffix (for separating different commands)
-  name_suffix = "_mycollector"
+	name_suffix = "_mycollector"
+
+  ## truncate errors after this many characters. Use 0 to disable error truncation.
+  # error_truncate_length = 512
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -39,12 +42,13 @@ const sampleConfig = `
   data_format = "influx"
 `
 
-const MaxStderrBytes = 512
+const MaxStderrBytes int = 512
 
 type Exec struct {
-	Commands []string
-	Command  string
-	Timeout  internal.Duration
+	Commands            []string          `toml:"commands"`
+	Command             string            `toml:"command"`
+	Timeout             internal.Duration `toml:"timeout"`
+	ErrorTruncateLength int               `toml:"error_truncate_length"`
 
 	parser parsers.Parser
 
@@ -54,7 +58,10 @@ type Exec struct {
 
 func NewExec() *Exec {
 	return &Exec{
-		runner:  CommandRunner{},
+		ErrorTruncateLength: MaxStderrBytes,
+		runner: CommandRunner{
+			ErrorTruncateLength: MaxStderrBytes,
+		},
 		Timeout: internal.Duration{Duration: time.Second * 5},
 	}
 }
@@ -63,7 +70,9 @@ type Runner interface {
 	Run(string, time.Duration) ([]byte, []byte, error)
 }
 
-type CommandRunner struct{}
+type CommandRunner struct {
+	ErrorTruncateLength int
+}
 
 func (c CommandRunner) Run(
 	command string,
@@ -85,20 +94,23 @@ func (c CommandRunner) Run(
 
 	runErr := internal.RunTimeout(cmd, timeout)
 
-	out = removeCarriageReturns(out)
+	out = removeWindowsCarriageReturns(out)
 	if stderr.Len() > 0 {
-		stderr = removeCarriageReturns(stderr)
-		stderr = truncate(stderr)
+		stderr = removeWindowsCarriageReturns(stderr)
+		stderr = c.truncate(stderr)
 	}
 
 	return out.Bytes(), stderr.Bytes(), runErr
 }
 
-func truncate(buf bytes.Buffer) bytes.Buffer {
+func (c CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
+	if c.ErrorTruncateLength <= 0 {
+		return buf
+	}
 	// Limit the number of bytes.
 	didTruncate := false
-	if buf.Len() > MaxStderrBytes {
-		buf.Truncate(MaxStderrBytes)
+	if buf.Len() > c.ErrorTruncateLength {
+		buf.Truncate(c.ErrorTruncateLength)
 		didTruncate = true
 	}
 	if i := bytes.IndexByte(buf.Bytes(), '\n'); i > 0 {
@@ -114,9 +126,9 @@ func truncate(buf bytes.Buffer) bytes.Buffer {
 	return buf
 }
 
-// removeCarriageReturns removes all carriage returns from the input if the
+// removeWindowsCarriageReturns removes all carriage returns from the input if the
 // OS is Windows. It does not return any errors.
-func removeCarriageReturns(b bytes.Buffer) bytes.Buffer {
+func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
 	if runtime.GOOS == "windows" {
 		var buf bytes.Buffer
 		for {
@@ -228,6 +240,9 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 }
 
 func (e *Exec) Init() error {
+	if runner, ok := e.runner.(CommandRunner); ok {
+		runner.ErrorTruncateLength = e.ErrorTruncateLength
+	}
 	return nil
 }
 
