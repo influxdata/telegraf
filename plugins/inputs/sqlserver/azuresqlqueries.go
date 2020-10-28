@@ -446,7 +446,7 @@ WITH PerfCounters AS (
 		END
 	WHERE
 		counter_name IN (
-			'SQL Compilations/sec'
+			 'SQL Compilations/sec'
 			,'SQL Re-Compilations/sec'
 			,'User Connections'
 			,'Batch Requests/sec'
@@ -537,9 +537,10 @@ WITH PerfCounters AS (
 				,'Lock Timeouts (timeout > 0)/sec'
 				,'Number of Deadlocks/sec'
 				,'Lock Waits/sec'
-				,'Latch Waits/sec')
+				,'Latch Waits/sec'
 			)
 		)
+)
 
 INSERT INTO @PCounters select * from PerfCounters
 
@@ -697,6 +698,7 @@ SELECT TOP 1
 	,cast(([reserved_storage_mb] - [storage_space_used_mb]) as bigint) AS [available_storage_mb]
 	,(SELECT DATEDIFF(MINUTE,[sqlserver_start_time],GETDATE()) from sys.dm_os_sys_info) as [uptime]
 	,SERVERPROPERTY('ProductVersion') AS [sql_version]
+	,LEFT(@@VERSION,CHARINDEX(' - ',@@VERSION)) AS [sql_version_desc]
 	,[db_online]
 	,[db_restoring]
 	,[db_recovering]
@@ -985,7 +987,7 @@ WITH PerfCounters AS (
 		END
 	WHERE
 		counter_name IN (
-			'SQL Compilations/sec'
+			 'SQL Compilations/sec'
 			,'SQL Re-Compilations/sec'
 			,'User Connections'
 			,'Batch Requests/sec'
@@ -1076,9 +1078,10 @@ WITH PerfCounters AS (
 				,'Lock Timeouts (timeout > 0)/sec'
 				,'Number of Deadlocks/sec'
 				,'Lock Waits/sec'
-				,'Latch Waits/sec')
+				,'Latch Waits/sec'
 			)
 		)
+)
 
 INSERT INTO @PCounters select * from PerfCounters
 
