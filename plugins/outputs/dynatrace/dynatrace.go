@@ -37,7 +37,7 @@ type Dynatrace struct {
 	Prefix   string            `toml:"prefix"`
 	Log      telegraf.Logger   `toml:"-"`
 	Timeout  internal.Duration `toml:"timeout"`
-	State	 map[string]string
+	State    map[string]string
 
 	tls.ClientConfig
 
