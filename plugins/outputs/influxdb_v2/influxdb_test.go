@@ -16,7 +16,7 @@ func TestDefaultURL(t *testing.T) {
 	if len(output.URLs) < 1 {
 		t.Fatal("Default URL failed to get set")
 	}
-	require.Equal(t, "http://localhost:9999", output.URLs[0])
+	require.Equal(t, "http://localhost:8086", output.URLs[0])
 }
 func TestConnect(t *testing.T) {
 	tests := []struct {
@@ -26,7 +26,7 @@ func TestConnect(t *testing.T) {
 		{
 			out: influxdb.InfluxDB{
 				URLs:      []string{"http://localhost:1234"},
-				HTTPProxy: "http://localhost:9999",
+				HTTPProxy: "http://localhost:8086",
 				HTTPHeaders: map[string]string{
 					"x": "y",
 				},
@@ -36,7 +36,7 @@ func TestConnect(t *testing.T) {
 			err: true,
 			out: influxdb.InfluxDB{
 				URLs:      []string{"!@#$qwert"},
-				HTTPProxy: "http://localhost:9999",
+				HTTPProxy: "http://localhost:8086",
 				HTTPHeaders: map[string]string{
 					"x": "y",
 				},
@@ -56,7 +56,7 @@ func TestConnect(t *testing.T) {
 			err: true,
 			out: influxdb.InfluxDB{
 				URLs:      []string{"!@#$%^&*()_+"},
-				HTTPProxy: "http://localhost:9999",
+				HTTPProxy: "http://localhost:8086",
 				HTTPHeaders: map[string]string{
 					"x": "y",
 				},
@@ -66,7 +66,7 @@ func TestConnect(t *testing.T) {
 			err: true,
 			out: influxdb.InfluxDB{
 				URLs:      []string{":::@#$qwert"},
-				HTTPProxy: "http://localhost:9999",
+				HTTPProxy: "http://localhost:8086",
 				HTTPHeaders: map[string]string{
 					"x": "y",
 				},

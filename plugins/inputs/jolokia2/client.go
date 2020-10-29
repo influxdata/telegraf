@@ -131,6 +131,10 @@ func (c *Client) read(requests []ReadRequest) ([]ReadResponse, error) {
 	}
 
 	req, err := http.NewRequest("POST", requestUrl, bytes.NewBuffer(requestBody))
+	if err != nil {
+		return nil, fmt.Errorf("unable to create new request '%s': %s", requestUrl, err)
+	}
+
 	req.Header.Add("Content-type", "application/json")
 
 	resp, err := c.client.Do(req)

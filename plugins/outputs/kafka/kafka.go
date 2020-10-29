@@ -24,53 +24,50 @@ var ValidTopicSuffixMethods = []string{
 
 var zeroTime = time.Unix(0, 0)
 
-type (
-	Kafka struct {
-		Brokers          []string    `toml:"brokers"`
-		Topic            string      `toml:"topic"`
-		TopicTag         string      `toml:"topic_tag"`
-		ExcludeTopicTag  bool        `toml:"exclude_topic_tag"`
-		ClientID         string      `toml:"client_id"`
-		TopicSuffix      TopicSuffix `toml:"topic_suffix"`
-		RoutingTag       string      `toml:"routing_tag"`
-		RoutingKey       string      `toml:"routing_key"`
-		CompressionCodec int         `toml:"compression_codec"`
-		RequiredAcks     int         `toml:"required_acks"`
-		MaxRetry         int         `toml:"max_retry"`
-		MaxMessageBytes  int         `toml:"max_message_bytes"`
+type Kafka struct {
+	Brokers          []string    `toml:"brokers"`
+	Topic            string      `toml:"topic"`
+	TopicTag         string      `toml:"topic_tag"`
+	ExcludeTopicTag  bool        `toml:"exclude_topic_tag"`
+	ClientID         string      `toml:"client_id"`
+	TopicSuffix      TopicSuffix `toml:"topic_suffix"`
+	RoutingTag       string      `toml:"routing_tag"`
+	RoutingKey       string      `toml:"routing_key"`
+	CompressionCodec int         `toml:"compression_codec"`
+	RequiredAcks     int         `toml:"required_acks"`
+	MaxRetry         int         `toml:"max_retry"`
+	MaxMessageBytes  int         `toml:"max_message_bytes"`
 
-		Version string `toml:"version"`
+	Version string `toml:"version"`
 
-		// Legacy TLS config options
-		// TLS client certificate
-		Certificate string
-		// TLS client key
-		Key string
-		// TLS certificate authority
-		CA string
+	// Legacy TLS config options
+	// TLS client certificate
+	Certificate string
+	// TLS client key
+	Key string
+	// TLS certificate authority
+	CA string
 
-		EnableTLS *bool `toml:"enable_tls"`
-		tlsint.ClientConfig
+	EnableTLS *bool `toml:"enable_tls"`
+	tlsint.ClientConfig
 
-		SASLUsername string `toml:"sasl_username"`
-		SASLPassword string `toml:"sasl_password"`
-		SASLVersion  *int   `toml:"sasl_version"`
+	kafka.SASLAuth
 
-		Log telegraf.Logger `toml:"-"`
+	Log telegraf.Logger `toml:"-"`
 
-		tlsConfig tls.Config
+	tlsConfig tls.Config
 
-		producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
-		producer     sarama.SyncProducer
+	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
+	producer     sarama.SyncProducer
 
-		serializer serializers.Serializer
-	}
-	TopicSuffix struct {
-		Method    string   `toml:"method"`
-		Keys      []string `toml:"keys"`
-		Separator string   `toml:"separator"`
-	}
-)
+	serializer serializers.Serializer
+}
+
+type TopicSuffix struct {
+	Method    string   `toml:"method"`
+	Keys      []string `toml:"keys"`
+	Separator string   `toml:"separator"`
+}
 
 // DebugLogger logs messages from sarama at the debug level.
 type DebugLogger struct {
@@ -78,8 +75,9 @@ type DebugLogger struct {
 
 func (*DebugLogger) Print(v ...interface{}) {
 	args := make([]interface{}, 0, len(v)+1)
-	args = append(args, "D! [sarama] ")
-	log.Print(v...)
+	args = append(append(args, "D! [sarama] "), v...)
+	log.Print(args...)
+
 }
 
 func (*DebugLogger) Printf(format string, v ...interface{}) {
@@ -88,7 +86,7 @@ func (*DebugLogger) Printf(format string, v ...interface{}) {
 
 func (*DebugLogger) Println(v ...interface{}) {
 	args := make([]interface{}, 0, len(v)+1)
-	args = append(args, "D! [sarama] ")
+	args = append(append(args, "D! [sarama] "), v...)
 	log.Println(args...)
 }
 
@@ -203,6 +201,23 @@ var sampleConfig = `
   ## Optional SASL Config
   # sasl_username = "kafka"
   # sasl_password = "secret"
+
+  ## Optional SASL:
+  ## one of: OAUTHBEARER, PLAIN, SCRAM-SHA-256, SCRAM-SHA-512, GSSAPI
+  ## (defaults to PLAIN)
+  # sasl_mechanism = ""
+
+  ## used if sasl_mechanism is GSSAPI (experimental)
+  # sasl_gssapi_service_name = ""
+  # ## One of: KRB5_USER_AUTH and KRB5_KEYTAB_AUTH
+  # sasl_gssapi_auth_type = "KRB5_USER_AUTH"
+  # sasl_gssapi_kerberos_config_path = "/"
+  # sasl_gssapi_realm = "realm"
+  # sasl_gssapi_key_tab_path = ""
+  # sasl_gssapi_disable_pafxfast = false
+
+  ## used if sasl_mechanism is OAUTHBEARER (experimental)
+  # sasl_access_token = ""
 
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
@@ -320,16 +335,8 @@ func (k *Kafka) Connect() error {
 		}
 	}
 
-	if k.SASLUsername != "" && k.SASLPassword != "" {
-		config.Net.SASL.User = k.SASLUsername
-		config.Net.SASL.Password = k.SASLPassword
-		config.Net.SASL.Enable = true
-
-		version, err := kafka.SASLVersion(config.Version, k.SASLVersion)
-		if err != nil {
-			return err
-		}
-		config.Net.SASL.Version = version
+	if err := k.SetSASLConfig(config); err != nil {
+		return err
 	}
 
 	producer, err := k.producerFunc(k.Brokers, config)

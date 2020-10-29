@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
+	"go.starlark.net/starlarkjson"
 )
 
 const (
@@ -51,6 +52,7 @@ func (s *Starlark) Init() error {
 
 	s.thread = &starlark.Thread{
 		Print: func(_ *starlark.Thread, msg string) { s.Log.Debug(msg) },
+		Load:  loadFunc,
 	}
 
 	builtins := starlark.StringDict{}
@@ -212,4 +214,15 @@ func init() {
 	processors.AddStreaming("starlark", func() telegraf.StreamingProcessor {
 		return &Starlark{}
 	})
+}
+
+func loadFunc(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+	switch module {
+	case "json.star":
+		return starlark.StringDict{
+			"json": starlarkjson.Module,
+		}, nil
+	default:
+		return nil, errors.New("module " + module + " is not available")
+	}
 }

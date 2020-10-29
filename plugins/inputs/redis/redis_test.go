@@ -7,10 +7,26 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-redis/redis"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type testClient struct {
+}
+
+func (t *testClient) BaseTags() map[string]string {
+	return map[string]string{"host": "redis.net"}
+}
+
+func (t *testClient) Info() *redis.StringCmd {
+	return nil
+}
+
+func (t *testClient) Do(returnType string, args ...interface{}) (interface{}, error) {
+	return 2, nil
+}
 
 func TestRedisConnect(t *testing.T) {
 	if testing.Short() {
@@ -28,6 +44,33 @@ func TestRedisConnect(t *testing.T) {
 
 	err := acc.GatherError(r.Gather)
 	require.NoError(t, err)
+}
+
+func TestRedis_Commands(t *testing.T) {
+	const redisListKey = "test-list-length"
+	var acc testutil.Accumulator
+
+	tc := &testClient{}
+
+	rc := &RedisCommand{
+		Command: []interface{}{"llen", "test-list"},
+		Field:   redisListKey,
+		Type:    "integer",
+	}
+
+	r := &Redis{
+		Commands: []*RedisCommand{rc},
+		clients:  []Client{tc},
+	}
+
+	err := r.gatherCommandValues(tc, &acc)
+	require.NoError(t, err)
+
+	fields := map[string]interface{}{
+		redisListKey: 2,
+	}
+
+	acc.AssertContainsFields(t, "redis_commands", fields)
 }
 
 func TestRedis_ParseMetrics(t *testing.T) {

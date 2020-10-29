@@ -17,7 +17,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+type RedisCommand struct {
+	Command []interface{}
+	Field   string
+	Type    string
+}
+
 type Redis struct {
+	Commands []*RedisCommand
 	Servers  []string
 	Password string
 	tls.ClientConfig
@@ -29,6 +36,7 @@ type Redis struct {
 }
 
 type Client interface {
+	Do(returnType string, args ...interface{}) (interface{}, error)
 	Info() *redis.StringCmd
 	BaseTags() map[string]string
 }
@@ -36,6 +44,21 @@ type Client interface {
 type RedisClient struct {
 	client *redis.Client
 	tags   map[string]string
+}
+
+func (r *RedisClient) Do(returnType string, args ...interface{}) (interface{}, error) {
+	rawVal := r.client.Do(args...)
+
+	switch returnType {
+	case "integer":
+		return rawVal.Int64()
+	case "string":
+		return rawVal.String()
+	case "float":
+		return rawVal.Float64()
+	default:
+		return rawVal.String()
+	}
 }
 
 func (r *RedisClient) Info() *redis.StringCmd {
@@ -63,6 +86,12 @@ var sampleConfig = `
   ## If no servers are specified, then localhost is used as the host.
   ## If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
+
+  ## Optional. Specify redis commands to retrieve values
+  # [[inputs.redis.commands]]
+  # command = ["get", "sample-key"]
+  # field = "sample-key-value"
+  # type = "string"
 
   ## specify server password
   # password = "s#cr@t%"
@@ -179,10 +208,27 @@ func (r *Redis) Gather(acc telegraf.Accumulator) error {
 		go func(client Client) {
 			defer wg.Done()
 			acc.AddError(r.gatherServer(client, acc))
+			acc.AddError(r.gatherCommandValues(client, acc))
 		}(client)
 	}
 
 	wg.Wait()
+	return nil
+}
+
+func (r *Redis) gatherCommandValues(client Client, acc telegraf.Accumulator) error {
+	fields := make(map[string]interface{})
+	for _, command := range r.Commands {
+		val, err := client.Do(command.Type, command.Command...)
+		if err != nil {
+			return err
+		}
+
+		fields[command.Field] = val
+	}
+
+	acc.AddFields("redis_commands", fields, client.BaseTags())
+
 	return nil
 }
 

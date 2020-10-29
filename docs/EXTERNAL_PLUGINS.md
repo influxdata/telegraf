@@ -39,7 +39,7 @@ This is a guide to help you set up your plugin to use it with `execd`
   in the new repo. For a further example of what this might look like, take a
   look at [ssoroka/rand](https://github.com/ssoroka/rand) or
   [danielnelson/telegraf-execd-openvpn](https://github.com/danielnelson//telegraf-execd-openvpn)
-  1. Copy [main.go](./example/cmd/main.go) into your project under the `cmd` folder.
+  1. Copy [main.go](/plugins/common/shim/example/cmd/main.go) into your project under the `cmd` folder.
   This will be the entrypoint to the plugin when run as a stand-alone program, and
   it will call the shim code for you to make that happen. It's recommended to
   have only one plugin per repo, as the shim is not designed to run multiple

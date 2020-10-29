@@ -210,7 +210,7 @@ func (c *Config) OutputNames() []string {
 	return PluginNameCounts(name)
 }
 
-// PluginNameCounts returns a list of plugin names and their count
+// PluginNameCounts returns a list of sorted plugin names and their count
 func PluginNameCounts(plugins []string) []string {
 	names := make(map[string]int)
 	for _, plugin := range plugins {
@@ -226,6 +226,7 @@ func PluginNameCounts(plugins []string) []string {
 		}
 	}
 
+	sort.Strings(namecount)
 	return namecount
 }
 
