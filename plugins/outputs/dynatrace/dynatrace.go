@@ -28,8 +28,6 @@ var (
 	maxMetricKeyLen       = 250
 )
 
-var sent = 0
-
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
 	URL      string            `toml:"url"`
@@ -38,6 +36,7 @@ type Dynatrace struct {
 	Log      telegraf.Logger   `toml:"-"`
 	Timeout  internal.Duration `toml:"timeout"`
 	State    map[string]string
+	SendCounter int
 
 	tls.ClientConfig
 
@@ -223,12 +222,13 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 			}
 		}
 	}
-	sent++
+	d.SendCounter++
 	// in typical interval of 10s, we will clean the counter state once in 24h which is 8640 iterations
 
-	if sent%8640 == 0 {
+	if d.SendCounter%8640 == 0 {
 		d.State = make(map[string]string)
 	}
+	fmt.Println(d.SendCounter)
 	return d.send(buf.Bytes())
 }
 
@@ -300,6 +300,7 @@ func init() {
 	outputs.Add("dynatrace", func() telegraf.Output {
 		return &Dynatrace{
 			Timeout: internal.Duration{Duration: time.Second * 5},
+			SendCounter: 0,
 		}
 	})
 }
