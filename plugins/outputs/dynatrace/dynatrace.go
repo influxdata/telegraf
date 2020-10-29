@@ -30,12 +30,12 @@ var (
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL      string            `toml:"url"`
-	APIToken string            `toml:"api_token"`
-	Prefix   string            `toml:"prefix"`
-	Log      telegraf.Logger   `toml:"-"`
-	Timeout  internal.Duration `toml:"timeout"`
-	State    map[string]string
+	URL         string            `toml:"url"`
+	APIToken    string            `toml:"api_token"`
+	Prefix      string            `toml:"prefix"`
+	Log         telegraf.Logger   `toml:"-"`
+	Timeout     internal.Duration `toml:"timeout"`
+	State       map[string]string
 	SendCounter int
 
 	tls.ClientConfig
@@ -299,7 +299,7 @@ func (d *Dynatrace) Init() error {
 func init() {
 	outputs.Add("dynatrace", func() telegraf.Output {
 		return &Dynatrace{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout:     internal.Duration{Duration: time.Second * 5},
 			SendCounter: 0,
 		}
 	})
