@@ -228,7 +228,6 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 	if d.SendCounter%8640 == 0 {
 		d.State = make(map[string]string)
 	}
-	fmt.Println(d.SendCounter)
 	return d.send(buf.Bytes())
 }
 
