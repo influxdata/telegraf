@@ -81,7 +81,6 @@ const (
 
 const description = `Retrieve data from OPCUA devices`
 const sampleConfig = `
-[[inputs.opcua]]
   ## Device name
   # name = "localhost"
   #
