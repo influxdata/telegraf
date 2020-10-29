@@ -324,14 +324,15 @@ func (e *Endpoint) reloadMetricNameMap(ctx context.Context) error {
 		return err
 	}
 
-	mn, err := client.CounterInfoByName(ctx)
+	mn, err := client.CounterInfoByKey(ctx)
 	if err != nil {
 		return err
 	}
 	e.metricNameLookup = make(map[int32]string)
-	for name, m := range mn {
-		e.metricNameLookup[m.Key] = name
+	for key, m := range mn {
+		e.metricNameLookup[key] = m.Name()
 	}
+	e.log.Debugf("452 --> %s", e.metricNameLookup[452])
 	return nil
 }
 
