@@ -178,6 +178,16 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 		c.extraTags[dir][path.Base(tag)] = struct{}{}
 	}
 
+	// Fill extra tags
+	c.extraTags = make(map[string]map[string]struct{})
+	for _, tag := range c.EmbeddedTags {
+		dir := strings.Replace(path.Dir(tag), "-", "_", -1)
+		if _, hasKey := c.extraTags[dir]; !hasKey {
+			c.extraTags[dir] = make(map[string]struct{})
+		}
+		c.extraTags[dir][path.Base(tag)] = struct{}{}
+	}
+
 	// Create a goroutine for each device, dial and subscribe
 	c.wg.Add(len(c.Addresses))
 	for _, addr := range c.Addresses {
@@ -572,7 +582,6 @@ func decodeTag(update *gnmiLib.Update) string {
 
 // Parse path to path-buffer and tag-field
 func (c *GNMI) handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, prefix string, updateTags bool) (pathBuffer string, aliasPath string, err error) {
-
 	builder := bytes.NewBufferString(prefix)
 
 	// Prefix with origin

@@ -47,6 +47,10 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
     ## Define (for certain nested telemetry measurements with embedded tags) which additional fields are tags
     # embedded_tags = ["Cisco-IOS-XR-pfi-im-cmd-oper:/interfaces/interface-summary/interface-type/interface-type-name"]
 
+  ## Define (for certain nested telemetry measurements with embedded tags) which additional fields are tags
+  # embedded_tags = ["Cisco-IOS-XR-pfi-im-cmd-oper:/interfaces/interface-summary/interface-type/interface-type-name"]
+
+  [[inputs.cisco_telemetry_gnmi.subscription]]
     ## Name of the measurement that will be emitted
     name = "ifcounters"
 
@@ -68,6 +72,13 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
 
     ## If suppression is enabled, send updates at least every X seconds anyway
     # heartbeat_interval = "60s"
+
+  [[inputs.cisco_telemetry_gnmi.subscription]]
+    origin = "Cisco-IOS-XR-pfi-im-cmd-oper"
+    path = "/interfaces/interface-summary"
+    subscription_mode = "sample"
+    sample_interval = "60s"
+```
 
   #[[inputs.gnmi.subscription]]
     # name = "descr"
