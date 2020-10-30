@@ -44,6 +44,9 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
   #   ifcounters = "openconfig:/interfaces/interface/state/counters"
 
   [[inputs.gnmi.subscription]]
+    ## Define (for certain nested telemetry measurements with embedded tags) which additional fields are tags
+    # embedded_tags = ["Cisco-IOS-XR-pfi-im-cmd-oper:/interfaces/interface-summary/interface-type/interface-type-name"]
+
     ## Name of the measurement that will be emitted
     name = "ifcounters"
 
@@ -87,6 +90,11 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
 
     ## Define (for certain nested telemetry measurements with embedded tags) which additional fields are tags
     # embedded_tags = ["Cisco-IOS-XR-pfi-im-cmd-oper:/interfaces/interface-summary/interface-type/interface-type-name"]
+  [[inputs.gnmi.subscription]]
+    origin = "Cisco-IOS-XR-pfi-im-cmd-oper"
+    path = "/interfaces/interface-summary"
+    subscription_mode = "sample"
+    sample_interval = "60s"
 ```
 
 ## Example Output
