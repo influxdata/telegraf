@@ -61,6 +61,11 @@ Any of the following parameters will be added to the aformentioned query if they
 
   ## Optionally provide the hex key for the IMPI connection.
   # hex_key = ""
+  ## If ipmitool should use a cache
+  use_cache = true
+
+  ## Path to the ipmitools cache file (defaults to OS temp dir)
+  cache_path = "/tmp"
 ```
 
 ### Measurements
