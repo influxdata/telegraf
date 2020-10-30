@@ -18,9 +18,7 @@ func TestWrite(t *testing.T) {
 		decoder := json.NewDecoder(r.Body)
 		var message yandexCloudMonitoringMessage
 		err := decoder.Decode(&message)
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(t, err)
 		return message, nil
 	}
 
@@ -83,6 +81,7 @@ func TestWrite(t *testing.T) {
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				tt.handler(t, w, r)
 			})
+			tt.plugin.Log = testutil.Logger{}
 			tt.plugin.EndpointUrl = url
 			tt.plugin.MetadataTokenUrl = metadataTokenUrl
 			tt.plugin.MetadataFolderUrl = metadataFolderUrl

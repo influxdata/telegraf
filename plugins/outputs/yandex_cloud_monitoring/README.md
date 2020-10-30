@@ -8,16 +8,13 @@ https://cloud.yandex.com/services/monitoring
 ```toml
 [[outputs.yandex_cloud_monitoring]]
   ## Timeout for HTTP writes.
-  # timeout = "20s"
+  # timeout = "5s"
 
-  ## Normally should not be changed
+  ## Yandex.Cloud monitoring API endpoint. Normally should not be changed
   # endpoint_url = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
 
-  ## Normally folder ID is taken from Compute instance metadata
-  # folder_id = "..."
-
-  ## Can be set explicitly for authentification debugging purposes 
-  # iam_token = "..."  
+  ## All user metrics should be sent with "custom" service specified. Normally should not be changed
+  # service = "custom"
 ```
 
 ### Authentication

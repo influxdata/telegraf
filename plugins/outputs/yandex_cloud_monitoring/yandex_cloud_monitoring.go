@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 
@@ -18,14 +17,15 @@ import (
 // YandexCloudMonitoring allows publishing of metrics to the Yandex Cloud Monitoring custom metrics
 // service
 type YandexCloudMonitoring struct {
-	Timeout            internal.Duration `toml:"timeout"`
-	EndpointUrl        string            `toml:"endpoint_url"`
-	MetadataTokenUrl   string            `toml:"metadata_token_url"`
-	MetadataFolderUrl  string            `toml:"metadata_folder_url"`
-	Service            string            `toml:"service"`
-	FolderID           string            `toml:"folder_id"`
-	IAMTokenFromConfig string            `toml:"iam_token"`
+	Timeout     internal.Duration `toml:"timeout"`
+	EndpointUrl string            `toml:"endpoint_url"`
+	Service     string            `toml:"service"`
 
+	Log telegraf.Logger
+
+	MetadataTokenUrl       string
+	MetadataFolderUrl      string
+	FolderID               string
 	IAMToken               string
 	IamTokenExpirationTime time.Time
 
@@ -61,21 +61,17 @@ const (
 	defaultEndpointUrl       = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
 	defaultMetadataTokenUrl  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
 	defaultMetadataFolderUrl = "http://169.254.169.254/computeMetadata/v1/instance/attributes/folder-id"
-	maxRequestBodySize       = 4000000
 )
 
 var sampleConfig = `
   ## Timeout for HTTP writes.
-  # timeout = "20s"
+  # timeout = "5s"
 
-  ## Normally should not be changed
+  ## Yandex.Cloud monitoring API endpoint. Normally should not be changed
   # endpoint_url = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
 
-  ## Normally folder ID is taken from Compute instance metadata
-  # folder_id = "..."
-
-  ## Can be set explicitly for authentification debugging purposes 
-  # iam_token = "..."  
+  ## All user metrics should be sent with "custom" service specified. Normally should not be changed
+  # service = "custom"
 `
 
 // Description provides a description of the plugin
@@ -93,6 +89,18 @@ func (a *YandexCloudMonitoring) Connect() error {
 	if a.Timeout.Duration <= 0 {
 		a.Timeout.Duration = defaultRequestTimeout
 	}
+	if a.EndpointUrl == "" {
+		a.EndpointUrl = defaultEndpointUrl
+	}
+	if a.Service == "" {
+		a.Service = "custom"
+	}
+	if a.MetadataTokenUrl == "" {
+		a.MetadataTokenUrl = defaultMetadataTokenUrl
+	}
+	if a.MetadataFolderUrl == "" {
+		a.MetadataFolderUrl = defaultMetadataFolderUrl
+	}
 
 	a.client = &http.Client{
 		Transport: &http.Transport{
@@ -101,27 +109,13 @@ func (a *YandexCloudMonitoring) Connect() error {
 		Timeout: a.Timeout.Duration,
 	}
 
-	if a.EndpointUrl == "" {
-		a.EndpointUrl = defaultEndpointUrl
-	}
-	if a.MetadataTokenUrl == "" {
-		a.MetadataTokenUrl = defaultMetadataTokenUrl
-	}
-	if a.MetadataFolderUrl == "" {
-		a.MetadataFolderUrl = defaultMetadataFolderUrl
-	}
-	if a.FolderID == "" {
-		folderID, err := getFolderIDFromMetadata(a.client, a.MetadataFolderUrl)
-		if err != nil {
-			return err
-		}
-		a.FolderID = folderID
-	}
-	if a.Service == "" {
-		a.Service = "custom"
+	var err error
+	a.FolderID, err = a.getFolderIDFromMetadata()
+	if err != nil {
+		return err
 	}
 
-	log.Printf("D! Writing to Yandex.Cloud Monitoring URL: %s", a.EndpointUrl)
+	a.Log.Infof("Writing to Yandex.Cloud Monitoring URL: %s", a.EndpointUrl)
 
 	tags := map[string]string{}
 	a.MetricOutsideWindow = selfstat.Register("yandex_cloud_monitoring", "metric_outside_window", tags)
@@ -162,17 +156,8 @@ func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return err
 	}
-	// Send batches that exceed this size via separate write requests.
-	if (len(body) + len(jsonBytes) + 1) > maxRequestBodySize {
-		err := a.send(body)
-		if err != nil {
-			return err
-		}
-		body = nil
-	}
 	body = append(body, jsonBytes...)
-	body = append(body, '\n')
-
+	body = append(jsonBytes, '\n')
 	return a.send(body)
 }
 
@@ -199,22 +184,22 @@ func getResponseFromMetadata(c *http.Client, metadataUrl string) ([]byte, error)
 	return body, nil
 }
 
-func getFolderIDFromMetadata(c *http.Client, metadataUrl string) (string, error) {
-	log.Printf("!D getting folder ID in %s", metadataUrl)
-	body, err := getResponseFromMetadata(c, metadataUrl)
+func (a *YandexCloudMonitoring) getFolderIDFromMetadata() (string, error) {
+	a.Log.Infof("getting folder ID in %s", a.MetadataFolderUrl)
+	body, err := getResponseFromMetadata(a.client, a.MetadataFolderUrl)
 	if err != nil {
 		return "", err
 	}
 	folderID := string(body)
 	if folderID == "" {
-		return "", fmt.Errorf("unable to fetch folder id from URL %s: %v", metadataUrl, err)
+		return "", fmt.Errorf("unable to fetch folder id from URL %s: %v", a.MetadataFolderUrl, err)
 	}
 	return folderID, nil
 }
 
-func getIAMTokenFromMetadata(c *http.Client, metadataUrl string) (string, int, error) {
-	log.Printf("!D getting new IAM token in %s", metadataUrl)
-	body, err := getResponseFromMetadata(c, metadataUrl)
+func (a *YandexCloudMonitoring) getIAMTokenFromMetadata() (string, int, error) {
+	a.Log.Debugf("getting new IAM token in %s", a.MetadataTokenUrl)
+	body, err := getResponseFromMetadata(a.client, a.MetadataTokenUrl)
 	if err != nil {
 		return "", 0, err
 	}
@@ -223,7 +208,7 @@ func getIAMTokenFromMetadata(c *http.Client, metadataUrl string) (string, int, e
 		return "", 0, err
 	}
 	if metadata.AccessToken == "" || metadata.ExpiresIn == 0 {
-		return "", 0, fmt.Errorf("unable to fetch authentication credentials: %v", err)
+		return "", 0, fmt.Errorf("unable to fetch authentication credentials %s: %v", a.MetadataTokenUrl, err)
 	}
 	return metadata.AccessToken, int(metadata.ExpiresIn), nil
 }
@@ -240,10 +225,8 @@ func (a *YandexCloudMonitoring) send(body []byte) error {
 
 	req.Header.Set("Content-Type", "application/json")
 	isTokenExpired := !a.IamTokenExpirationTime.After(time.Now())
-	if a.IAMTokenFromConfig != "" {
-		a.IAMToken = a.IAMTokenFromConfig
-	} else if isTokenExpired {
-		token, expiresIn, err := getIAMTokenFromMetadata(a.client, a.MetadataTokenUrl)
+	if a.IAMToken == "" || isTokenExpired {
+		token, expiresIn, err := a.getIAMTokenFromMetadata()
 		if err != nil {
 			return err
 		}
@@ -252,7 +235,7 @@ func (a *YandexCloudMonitoring) send(body []byte) error {
 	}
 	req.Header.Set("Authorization", "Bearer "+a.IAMToken)
 
-	log.Printf("!D sending metrics to %s", req.URL.String())
+	a.Log.Debugf("sending metrics to %s", req.URL.String())
 	resp, err := a.client.Do(req)
 	if err != nil {
 		return err
