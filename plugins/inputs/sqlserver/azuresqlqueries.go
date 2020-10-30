@@ -15,6 +15,10 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
+		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
+		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+
 SELECT TOP(1)
 	 'sqlserver_azure_db_resource_stats' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
@@ -31,8 +35,15 @@ SELECT TOP(1)
 	,[end_time]
 	,cast([avg_instance_memory_percent] as float) as [avg_instance_memory_percent] 
 	,cast([avg_instance_cpu_percent] as float) as [avg_instance_cpu_percent]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM
 	sys.dm_db_resource_stats WITH (NOLOCK)
 ORDER BY
@@ -47,6 +58,10 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
+
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
+		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
+		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
 
 SELECT
 	'sqlserver_db_resource_governance' AS [measurement]
@@ -82,8 +97,15 @@ SELECT
 	,[volume_type_external_xstore_iops]
 	,[volume_pfs_iops]
 	,[volume_type_pfs_iops]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM 
 	sys.dm_user_db_resource_governance WITH (NOLOCK);
 `
@@ -97,6 +119,10 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
+		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
+		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+
 SELECT
 	 'sqlserver_azuredb_waitstats' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
@@ -107,8 +133,15 @@ SELECT
 	,dbws.[signal_wait_time_ms]
 	,dbws.[max_wait_time_ms]
 	,dbws.[waiting_tasks_count]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM
 	sys.dm_db_wait_stats AS dbws WITH (NOLOCK)
 WHERE
@@ -158,6 +191,10 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
+		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
+		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+
 SELECT
 	 'sqlserver_database_io' As [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
@@ -186,8 +223,15 @@ SELECT
 	END AS [file_type]
 	,ISNULL([size],0)/128 AS [current_size_mb]
 	,ISNULL(FILEPROPERTY(b.[logical_filename],'SpaceUsed')/128,0) as [space_used_mb]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM 
 	[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
 	-- needed to get Tempdb file names  on Azure SQL DB so you can join appropriately. Without this had a bug where join was only on file_id
@@ -224,6 +268,10 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
+		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
+		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+
 SELECT	
 	 'sqlserver_server_properties' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
@@ -245,8 +293,15 @@ SELECT
 		)
 	END AS [available_storage_mb]
 	,(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as [uptime]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 	FROM sys.[databases] AS d
 	-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
 	CROSS JOIN sys.[database_service_objectives] AS slo
@@ -261,6 +316,10 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
+
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
+		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
+		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
 
 SELECT
 	 'sqlserver_waitstats' AS [measurement]
@@ -330,8 +389,15 @@ SELECT
   			'PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC') THEN 'Full Text Search'
  		ELSE 'Other'
 	END as [wait_category]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM sys.dm_os_wait_stats AS ws WITH (NOLOCK)
 WHERE
 	ws.[wait_type] NOT IN (
@@ -380,14 +446,25 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
+		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
+		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+
 SELECT
 	 'sqlserver_memory_clerks' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
 	,DB_NAME() AS [database_name]
 	,mc.[type] AS [clerk_type]
 	,SUM(mc.[pages_kb]) AS [size_kb]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM sys.[dm_os_memory_clerks] AS mc WITH (NOLOCK)
 GROUP BY
 	mc.[type]
@@ -403,6 +480,10 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
+
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
+		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
+		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
 
 DECLARE @PCounters TABLE
 (
@@ -556,8 +637,15 @@ SELECT
 	END AS [instance]
 	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value]
 	,cast(pc.[cntr_type] as varchar(25)) as [counter_type]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 from @PCounters pc
 LEFT OUTER JOIN @PCounters AS pc1
 	ON (
@@ -578,6 +666,10 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
+
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
+		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
+		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
 
 SELECT [blocking_session_id] INTO #blockingSessions FROM sys.dm_exec_requests WHERE [blocking_session_id] != 0
 CREATE INDEX ix_blockingSessions_1 on #blockingSessions ([blocking_session_id])
@@ -627,8 +719,15 @@ SELECT
 	,DB_NAME(qt.[dbid]) [stmt_db_name]
 	,CONVERT(varchar(20),[query_hash],1) as [query_hash]
 	,CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM sys.dm_exec_sessions AS s
 LEFT OUTER JOIN sys.dm_exec_requests AS r 
 	ON s.[session_id] = r.[session_id]
@@ -652,6 +751,10 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
+		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
+		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+
 SELECT
 	 'sqlserver_schedulers' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
@@ -671,8 +774,15 @@ SELECT
 	,s.[yield_count]
 	,s.[total_cpu_usage_ms]
 	,s.[total_scheduler_delay_ms]
-	,cast((SELECT replica_id FROM sys.dm_database_replica_states) as varchar(36)) AS [replica_id]
-	,cast((SELECT is_primary_replica FROM sys.dm_database_replica_states) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM sys.dm_os_schedulers AS s
 `
 
@@ -685,6 +795,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
+
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
+		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
+		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
 
 SELECT TOP 1 
 	 'sqlserver_server_properties' AS [measurement]
@@ -704,8 +818,15 @@ SELECT TOP 1
 	,[db_recovering]
 	,[db_recoveryPending]
 	,[db_suspect]
-	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
-	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM sys.server_resource_stats
 CROSS APPLY	(
 	SELECT  
@@ -728,12 +849,23 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	RETURN
 END
 
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
+		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
+		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
+
 SELECT TOP(1)
 	 'sqlserver_azure_db_resource_stats' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,cast([avg_cpu_percent] as float) as [avg_cpu_percent]
-	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
-	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM
     sys.server_resource_stats
 ORDER BY
@@ -746,6 +878,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
+
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
+		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
+		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
 
 SELECT
 	 'sqlserver_instance_resource_governance' AS [measurement]
@@ -761,8 +897,15 @@ SELECT
 	,[volume_type_managed_xstore_iops] as [voltype_man_xtore_iops]
 	,[volume_type_external_xstore_iops] as [voltype_ext_xtore_iops]
 	,[volume_external_xstore_iops] as [vol_ext_xtore_iops]
-	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
-	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM sys.dm_instance_resource_governance;
 `
 
@@ -773,6 +916,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
+
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
+		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
+		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
 
 SELECT
 	'sqlserver_database_io' AS [measurement]
@@ -788,8 +935,15 @@ SELECT
 	,vfs.[num_of_bytes_written] AS [write_bytes]
 	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] 
 	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
-	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
-	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
 LEFT OUTER JOIN sys.master_files AS mf WITH (NOLOCK)
 	ON vfs.[database_id] = mf.[database_id] 
@@ -805,13 +959,24 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	RETURN
 END
 
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
+		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
+		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
+
 SELECT
 	 'sqlserver_memory_clerks' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
 	,mc.[type] AS [clerk_type]
 	,SUM(mc.[pages_kb]) AS [size_kb]
-	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
-	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM sys.[dm_os_memory_clerks] AS mc WITH (NOLOCK)
 GROUP BY
 	 mc.[type]
@@ -826,6 +991,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
+
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
+		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
+		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
 
 SELECT
 	 'sqlserver_waitstats' AS [measurement]
@@ -894,8 +1063,15 @@ SELECT
   			'PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC') THEN 'Full Text Search'
  		ELSE 'Other'
 	END as [wait_category]
-	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
-	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM sys.dm_os_wait_stats AS ws WITH (NOLOCK)
 WHERE
 	ws.[wait_type] NOT IN (
@@ -944,6 +1120,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
+
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
+		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
+		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
 
 DECLARE @PCounters TABLE
 (
@@ -1096,8 +1276,15 @@ SELECT
 	END AS [instance]
 	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value]
 	,cast(pc.[cntr_type] as varchar(25)) as [counter_type]
-	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
-	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 from @PCounters pc
 LEFT OUTER JOIN @PCounters AS pc1
 	ON (
@@ -1118,6 +1305,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
+
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
+		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
+		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
 
 SELECT [blocking_session_id] INTO #blockingSessions FROM sys.dm_exec_requests WHERE [blocking_session_id] != 0
 CREATE INDEX ix_blockingSessions_1 on #blockingSessions ([blocking_session_id])
@@ -1168,8 +1359,15 @@ SELECT
 	,CONVERT(varchar(20),[query_hash],1) as [query_hash]
 	,CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
 	,DB_NAME(COALESCE(r.[database_id], s.[database_id])) AS [session_db_name]
-	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
-	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM sys.dm_exec_sessions AS s
 LEFT OUTER JOIN sys.dm_exec_requests AS r 
 	ON s.[session_id] = r.[session_id]
@@ -1193,6 +1391,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	RETURN
 END
 
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
+		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
+		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
+
 SELECT
 	 'sqlserver_schedulers' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
@@ -1212,7 +1414,14 @@ SELECT
 	,s.[yield_count]
 	,s.[total_cpu_usage_ms]
 	,s.[total_scheduler_delay_ms]
-	,cast((SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as varchar(36)) AS [replica_id]
-	,cast((SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()) as int) AS [is_primary_replica]
+	-- only show replica information if the instance is on Business Critical tier
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @replica_id
+		ELSE 'N/A'
+	END AS [replica_id]
+	,CASE
+		WHEN @tier = 'BusinessCritical' THEN @is_primary_replica
+		ELSE 'N/A'
+	END AS [is_primary_replica]
 FROM sys.dm_os_schedulers AS s
 `
