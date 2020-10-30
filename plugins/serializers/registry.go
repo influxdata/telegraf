@@ -103,6 +103,9 @@ type Config struct {
 	// Output string fields as metric labels; when false string fields are
 	// discarded.
 	PrometheusStringAsLabel bool `toml:"prometheus_string_as_label"`
+
+	// Output as text or remote_write
+	PrometheusWriteFormat string `toml:"prometheus_write_format"`
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -134,7 +137,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 
 func NewPrometheusSerializer(config *Config) (Serializer, error) {
 	exportTimestamp := prometheus.NoExportTimestamp
-	if config.PrometheusExportTimestamp {
+	if config.PrometheusExportTimestamp || config.PrometheusWriteFormat == "remote_write" {
 		exportTimestamp = prometheus.ExportTimestamp
 	}
 
@@ -148,10 +151,21 @@ func NewPrometheusSerializer(config *Config) (Serializer, error) {
 		stringAsLabels = prometheus.StringAsLabel
 	}
 
+	format := prometheus.Format
+	if config.PrometheusWriteFormat != "" {
+		format = prometheus.Formating(config.PrometheusWriteFormat)
+		switch format {
+		case prometheus.FormatText, prometheus.FormatRemoteWrite:
+		default:
+			return nil, fmt.Errorf("invalid prometheus write format: %s", config.PrometheusWriteFormat)
+		}
+	}
+
 	return prometheus.NewSerializer(prometheus.FormatConfig{
 		TimestampExport: exportTimestamp,
 		MetricSortOrder: sortMetrics,
 		StringHandling:  stringAsLabels,
+		Format:          format,
 	})
 }
 

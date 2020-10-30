@@ -1,6 +1,12 @@
 package prometheus
 
 import (
+	"bytes"
+	"fmt"
+	"github.com/gogo/protobuf/proto"
+	"github.com/golang/snappy"
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/prompb"
 	"strings"
 	"testing"
 	"time"
@@ -10,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSerialize(t *testing.T) {
+func TestRemoteWriteSerialize(t *testing.T) {
 	tests := []struct {
 		name     string
 		config   FormatConfig
@@ -30,8 +36,6 @@ func TestSerialize(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []byte(`
-# HELP cpu_time_idle Telegraf collected metric
-# TYPE cpu_time_idle untyped
 cpu_time_idle{host="example.org"} 42
 `),
 		},
@@ -50,9 +54,7 @@ cpu_time_idle{host="example.org"} 42
 				telegraf.Untyped,
 			),
 			expected: []byte(`
-# HELP http_requests_total Telegraf collected metric
-# TYPE http_requests_total untyped
-http_requests_total{code="400",method="post"} 3
+http_requests_total{code="400", method="post"} 3
 `),
 		},
 		{
@@ -70,9 +72,7 @@ http_requests_total{code="400",method="post"} 3
 				telegraf.Counter,
 			),
 			expected: []byte(`
-# HELP http_requests_total Telegraf collected metric
-# TYPE http_requests_total counter
-http_requests_total{code="400",method="post"} 3
+http_requests_total{code="400", method="post"} 3
 `),
 		},
 		{
@@ -90,9 +90,7 @@ http_requests_total{code="400",method="post"} 3
 				telegraf.Gauge,
 			),
 			expected: []byte(`
-# HELP http_requests_total Telegraf collected metric
-# TYPE http_requests_total gauge
-http_requests_total{code="400",method="post"} 3
+http_requests_total{code="400", method="post"} 3
 `),
 		},
 		{
@@ -108,8 +106,6 @@ http_requests_total{code="400",method="post"} 3
 				telegraf.Histogram,
 			),
 			expected: []byte(`
-# HELP http_request_duration_seconds Telegraf collected metric
-# TYPE http_request_duration_seconds histogram
 http_request_duration_seconds_bucket{le="+Inf"} 144320
 http_request_duration_seconds_sum 53423
 http_request_duration_seconds_count 144320
@@ -129,33 +125,10 @@ http_request_duration_seconds_count 144320
 				telegraf.Histogram,
 			),
 			expected: []byte(`
-# HELP http_request_duration_seconds Telegraf collected metric
-# TYPE http_request_duration_seconds histogram
 http_request_duration_seconds_bucket{le="0.5"} 129389
 http_request_duration_seconds_bucket{le="+Inf"} 0
 http_request_duration_seconds_sum 0
 http_request_duration_seconds_count 0
-`),
-		},
-		{
-			name: "simple with timestamp",
-			config: FormatConfig{
-				TimestampExport: ExportTimestamp,
-			},
-			metric: testutil.MustMetric(
-				"cpu",
-				map[string]string{
-					"host": "example.org",
-				},
-				map[string]interface{}{
-					"time_idle": 42.0,
-				},
-				time.Unix(1574279268, 0),
-			),
-			expected: []byte(`
-# HELP cpu_time_idle Telegraf collected metric
-# TYPE cpu_time_idle untyped
-cpu_time_idle{host="example.org"} 42 1574279268000
 `),
 		},
 	}
@@ -163,12 +136,13 @@ cpu_time_idle{host="example.org"} 42 1574279268000
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := NewSerializer(FormatConfig{
 				MetricSortOrder: SortMetrics,
-				TimestampExport: tt.config.TimestampExport,
+				TimestampExport: ExportTimestamp,
 				StringHandling:  tt.config.StringHandling,
-				Format:          FormatText,
+				Format:          FormatRemoteWrite,
 			})
 			require.NoError(t, err)
-			actual, err := s.Serialize(tt.metric)
+			data, err := s.Serialize(tt.metric)
+			actual, err := prompbToText(data)
 			require.NoError(t, err)
 
 			require.Equal(t, strings.TrimSpace(string(tt.expected)),
@@ -177,7 +151,7 @@ cpu_time_idle{host="example.org"} 42 1574279268000
 	}
 }
 
-func TestSerializeBatch(t *testing.T) {
+func TestRemoteWriteSerializeBatch(t *testing.T) {
 	tests := []struct {
 		name     string
 		config   FormatConfig
@@ -209,8 +183,6 @@ func TestSerializeBatch(t *testing.T) {
 				),
 			},
 			expected: []byte(`
-# HELP cpu_time_idle Telegraf collected metric
-# TYPE cpu_time_idle untyped
 cpu_time_idle{host="one.example.org"} 42
 cpu_time_idle{host="two.example.org"} 42
 `),
@@ -231,11 +203,7 @@ cpu_time_idle{host="two.example.org"} 42
 				),
 			},
 			expected: []byte(`
-# HELP cpu_time_guest Telegraf collected metric
-# TYPE cpu_time_guest untyped
 cpu_time_guest{host="one.example.org"} 42
-# HELP cpu_time_idle Telegraf collected metric
-# TYPE cpu_time_idle untyped
 cpu_time_idle{host="one.example.org"} 42
 `),
 		},
@@ -308,8 +276,6 @@ cpu_time_idle{host="one.example.org"} 42
 				),
 			},
 			expected: []byte(`
-# HELP http_request_duration_seconds Telegraf collected metric
-# TYPE http_request_duration_seconds histogram
 http_request_duration_seconds_bucket{le="0.05"} 24054
 http_request_duration_seconds_bucket{le="0.1"} 33444
 http_request_duration_seconds_bucket{le="0.2"} 100392
@@ -321,7 +287,7 @@ http_request_duration_seconds_count 144320
 `),
 		},
 		{
-			name: "",
+			name: "summary with quantile",
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"prometheus",
@@ -380,14 +346,12 @@ http_request_duration_seconds_count 144320
 				),
 			},
 			expected: []byte(`
-# HELP rpc_duration_seconds Telegraf collected metric
-# TYPE rpc_duration_seconds summary
 rpc_duration_seconds{quantile="0.01"} 3102
 rpc_duration_seconds{quantile="0.05"} 3272
 rpc_duration_seconds{quantile="0.5"} 4773
 rpc_duration_seconds{quantile="0.9"} 9001
 rpc_duration_seconds{quantile="0.99"} 76656
-rpc_duration_seconds_sum 1.7560473e+07
+rpc_duration_seconds_sum 17560473
 rpc_duration_seconds_count 2693
 `),
 		},
@@ -412,8 +376,6 @@ rpc_duration_seconds_count 2693
 				),
 			},
 			expected: []byte(`
-# HELP cpu_time_idle Telegraf collected metric
-# TYPE cpu_time_idle untyped
 cpu_time_idle 43
 `),
 		},
@@ -430,8 +392,6 @@ cpu_time_idle 43
 				),
 			},
 			expected: []byte(`
-# HELP cpu::xyzzy_time_idle Telegraf collected metric
-# TYPE cpu::xyzzy_time_idle untyped
 cpu::xyzzy_time_idle 42
 `),
 		},
@@ -448,8 +408,6 @@ cpu::xyzzy_time_idle 42
 				),
 			},
 			expected: []byte(`
-# HELP cpu_time:idle Telegraf collected metric
-# TYPE cpu_time:idle untyped
 cpu_time:idle 42
 `),
 		},
@@ -468,8 +426,6 @@ cpu_time:idle 42
 				),
 			},
 			expected: []byte(`
-# HELP cpu_time_idle Telegraf collected metric
-# TYPE cpu_time_idle untyped
 cpu_time_idle{host_name="example.org"} 42
 `),
 		},
@@ -488,8 +444,6 @@ cpu_time_idle{host_name="example.org"} 42
 				),
 			},
 			expected: []byte(`
-# HELP cpu_time_idle Telegraf collected metric
-# TYPE cpu_time_idle untyped
 cpu_time_idle{host_name="example.org"} 42
 `),
 		},
@@ -507,8 +461,6 @@ cpu_time_idle{host_name="example.org"} 42
 				),
 			},
 			expected: []byte(`
-# HELP cpu_time_idle Telegraf collected metric
-# TYPE cpu_time_idle untyped
 cpu_time_idle 42
 `),
 		},
@@ -529,8 +481,6 @@ cpu_time_idle 42
 				),
 			},
 			expected: []byte(`
-# HELP cpu_time_idle Telegraf collected metric
-# TYPE cpu_time_idle untyped
 cpu_time_idle{cpu="cpu0"} 42
 `),
 		},
@@ -553,8 +503,6 @@ cpu_time_idle{cpu="cpu0"} 42
 				),
 			},
 			expected: []byte(`
-# HELP cpu_time_idle Telegraf collected metric
-# TYPE cpu_time_idle untyped
 cpu_time_idle{cpu="cpu0"} 42
 `),
 		},
@@ -575,8 +523,6 @@ cpu_time_idle{cpu="cpu0"} 42
 				),
 			},
 			expected: []byte(`
-# HELP cpu_time_idle Telegraf collected metric
-# TYPE cpu_time_idle untyped
 cpu_time_idle{host_name="example.org"} 42
 `),
 		},
@@ -633,20 +579,14 @@ cpu_time_idle{host_name="example.org"} 42
 				),
 			},
 			expected: []byte(`
-# HELP cpu_time_guest Telegraf collected metric
-# TYPE cpu_time_guest untyped
 cpu_time_guest{cpu="cpu0"} 8106.04
 cpu_time_guest{cpu="cpu1"} 8181.63
 cpu_time_guest{cpu="cpu2"} 7470.04
 cpu_time_guest{cpu="cpu3"} 7517.95
-# HELP cpu_time_system Telegraf collected metric
-# TYPE cpu_time_system untyped
 cpu_time_system{cpu="cpu0"} 26271.4
 cpu_time_system{cpu="cpu1"} 25351.49
 cpu_time_system{cpu="cpu2"} 24998.43
 cpu_time_system{cpu="cpu3"} 24970.82
-# HELP cpu_time_user Telegraf collected metric
-# TYPE cpu_time_user untyped
 cpu_time_user{cpu="cpu0"} 92904.33
 cpu_time_user{cpu="cpu1"} 96912.57
 cpu_time_user{cpu="cpu2"} 96034.08
@@ -668,9 +608,7 @@ cpu_time_user{cpu="cpu3"} 94148
 				),
 			},
 			expected: []byte(`
-# HELP rpc_duration_seconds Telegraf collected metric
-# TYPE rpc_duration_seconds summary
-rpc_duration_seconds_sum 1.7560473e+07
+rpc_duration_seconds_sum 17560473
 rpc_duration_seconds_count 2693
 `),
 		},
@@ -679,12 +617,14 @@ rpc_duration_seconds_count 2693
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := NewSerializer(FormatConfig{
 				MetricSortOrder: SortMetrics,
-				TimestampExport: tt.config.TimestampExport,
+				TimestampExport: ExportTimestamp,
 				StringHandling:  tt.config.StringHandling,
-				Format:          FormatText,
+				Format:          FormatRemoteWrite,
 			})
 			require.NoError(t, err)
-			actual, err := s.SerializeBatch(tt.metrics)
+			data, err := s.SerializeBatch(tt.metrics)
+			require.NoError(t, err)
+			actual, err := prompbToText(data)
 			require.NoError(t, err)
 
 			require.Equal(t,
@@ -692,4 +632,44 @@ rpc_duration_seconds_count 2693
 				strings.TrimSpace(string(actual)))
 		})
 	}
+}
+
+func prompbToText(data []byte) ([]byte, error) {
+	var buf = bytes.Buffer{}
+	protobuff, err := snappy.Decode(nil, data)
+	if err != nil {
+		return nil, err
+	}
+	var req prompb.WriteRequest
+	err = proto.Unmarshal(protobuff, &req)
+	if err != nil {
+		return nil, err
+	}
+	samples := protoToSamples(&req)
+	for _, sample := range samples {
+		buf.Write([]byte(fmt.Sprintf("%s %s\n", sample.Metric.String(), sample.Value.String())))
+	}
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func protoToSamples(req *prompb.WriteRequest) model.Samples {
+	var samples model.Samples
+	for _, ts := range req.Timeseries {
+		metric := make(model.Metric, len(ts.Labels))
+		for _, l := range ts.Labels {
+			metric[model.LabelName(l.Name)] = model.LabelValue(l.Value)
+		}
+
+		for _, s := range ts.Samples {
+			samples = append(samples, &model.Sample{
+				Metric:    metric,
+				Value:     model.SampleValue(s.Value),
+				Timestamp: model.Time(s.Timestamp),
+			})
+		}
+	}
+	return samples
 }

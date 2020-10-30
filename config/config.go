@@ -1366,6 +1366,7 @@ func (c *Config) buildSerializer(name string, tbl *ast.Table) (serializers.Seria
 	c.getFieldBool(tbl, "prometheus_export_timestamp", &sc.PrometheusExportTimestamp)
 	c.getFieldBool(tbl, "prometheus_sort_metrics", &sc.PrometheusSortMetrics)
 	c.getFieldBool(tbl, "prometheus_string_as_label", &sc.PrometheusStringAsLabel)
+	c.getFieldString(tbl, "prometheus_write_format", &sc.PrometheusWriteFormat)
 
 	if c.hasErrs() {
 		return nil, c.firstErr()
@@ -1425,7 +1426,7 @@ func (c *Config) missingTomlField(typ reflect.Type, key string) error {
 		"metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
 		"name_suffix", "namedrop", "namepass", "order", "pass", "period", "precision",
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
-		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
+		"prometheus_write_format", "separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "template", "templates",
 		"wavefront_source_override", "wavefront_use_strict":
 

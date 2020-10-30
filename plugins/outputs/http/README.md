@@ -48,4 +48,14 @@ data formats.  For data_formats that support batching, metrics are sent in batch
   # [outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format
   #   Content-Type = "text/plain; charset=utf-8"
+
+  ## Exemple prometheus remote_write
+  # [[outputs.http]]
+  #   url = "http://127.0.0.1:1234/receive"
+  #   data_format = "prometheus"
+  #   prometheus_remote_write_format = true
+  #   [outputs.http.headers]
+  #     Content-Type = "application/x-protobuf"
+  #     Content-Encoding = "snappy"
+  #     X-Prometheus-Remote-Write-Version = "0.1.0"
 ```
