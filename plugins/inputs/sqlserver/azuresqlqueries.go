@@ -15,9 +15,12 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
-DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
-		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
-		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives)
+DECLARE @replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(replica_id AS nvarchar(128)), 
+			   @is_primary_replica = cast(is_primary_replica AS char(1))
+		FROM sys.dm_database_replica_states
+		WHERE is_local = 1;
 
 SELECT TOP(1)
 	 'sqlserver_azure_db_resource_stats' AS [measurement]
@@ -59,9 +62,12 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
-DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
-		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
-		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives)
+DECLARE @replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(replica_id AS nvarchar(128)), 
+			   @is_primary_replica = cast(is_primary_replica AS char(1))
+		FROM sys.dm_database_replica_states
+		WHERE is_local = 1;
 
 SELECT
 	'sqlserver_db_resource_governance' AS [measurement]
@@ -119,9 +125,12 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
-DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
-		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
-		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives)
+DECLARE @replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(replica_id AS nvarchar(128)), 
+			   @is_primary_replica = cast(is_primary_replica AS char(1))
+		FROM sys.dm_database_replica_states
+		WHERE is_local = 1;
 
 SELECT
 	 'sqlserver_azuredb_waitstats' AS [measurement]
@@ -191,9 +200,12 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
-DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
-		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
-		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives)
+DECLARE @replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(replica_id AS nvarchar(128)), 
+			   @is_primary_replica = cast(is_primary_replica AS char(1))
+		FROM sys.dm_database_replica_states
+		WHERE is_local = 1;
 
 SELECT
 	 'sqlserver_database_io' As [measurement]
@@ -268,9 +280,12 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
-DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
-		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
-		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives)
+DECLARE @replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(replica_id AS nvarchar(128)), 
+			   @is_primary_replica = cast(is_primary_replica AS char(1))
+		FROM sys.dm_database_replica_states
+		WHERE is_local = 1;
 
 SELECT	
 	 'sqlserver_server_properties' AS [measurement]
@@ -317,9 +332,12 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
-DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
-		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
-		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives)
+DECLARE @replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(replica_id AS nvarchar(128)), 
+			   @is_primary_replica = cast(is_primary_replica AS char(1))
+		FROM sys.dm_database_replica_states
+		WHERE is_local = 1;
 
 SELECT
 	 'sqlserver_waitstats' AS [measurement]
@@ -446,9 +464,12 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
-DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
-		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
-		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives)
+DECLARE @replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(replica_id AS nvarchar(128)), 
+			   @is_primary_replica = cast(is_primary_replica AS char(1))
+		FROM sys.dm_database_replica_states
+		WHERE is_local = 1;
 
 SELECT
 	 'sqlserver_memory_clerks' AS [measurement]
@@ -481,9 +502,12 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
-DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
-		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
-		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives)
+DECLARE @replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(replica_id AS nvarchar(128)), 
+			   @is_primary_replica = cast(is_primary_replica AS char(1))
+		FROM sys.dm_database_replica_states
+		WHERE is_local = 1;
 
 DECLARE @PCounters TABLE
 (
@@ -667,9 +691,12 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
-DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
-		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
-		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives)
+DECLARE @replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(replica_id AS nvarchar(128)), 
+			   @is_primary_replica = cast(is_primary_replica AS char(1))
+		FROM sys.dm_database_replica_states
+		WHERE is_local = 1;
 
 SELECT [blocking_session_id] INTO #blockingSessions FROM sys.dm_exec_requests WHERE [blocking_session_id] != 0
 CREATE INDEX ix_blockingSessions_1 on #blockingSessions ([blocking_session_id])
@@ -751,9 +778,12 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END
 
-DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives), 
-		@replica_id AS nvarchar(128) = (SELECT TOP(1) replica_id FROM sys.dm_database_replica_states), 
-		@is_primary_replica AS nvarchar(128) = (SELECT TOP(1) is_primary_replica FROM sys.dm_database_replica_states)
+DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) edition from sys.database_service_objectives)
+DECLARE @replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(replica_id AS nvarchar(128)), 
+			   @is_primary_replica = cast(is_primary_replica AS char(1))
+		FROM sys.dm_database_replica_states
+		WHERE is_local = 1;
 
 SELECT
 	 'sqlserver_schedulers' AS [measurement]
@@ -797,8 +827,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 END
 
 DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
-		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
-		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
+		@replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(rep.replica_id as nvarchar(128)) , 
+			   @is_primary_replica = cast(rep.is_primary_replica as char(1))
+		FROM sys.dm_database_replica_states AS rep JOIN sys.databases AS dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()
 
 SELECT TOP 1 
 	 'sqlserver_server_properties' AS [measurement]
@@ -850,8 +882,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 END
 
 DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
-		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
-		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
+		@replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(rep.replica_id as nvarchar(128)) , 
+			   @is_primary_replica = cast(rep.is_primary_replica as char(1))
+		FROM sys.dm_database_replica_states AS rep JOIN sys.databases AS dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()
 
 SELECT TOP(1)
 	 'sqlserver_azure_db_resource_stats' AS [measurement]
@@ -880,8 +914,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 END
 
 DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
-		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
-		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
+		@replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(rep.replica_id as nvarchar(128)) , 
+			   @is_primary_replica = cast(rep.is_primary_replica as char(1))
+		FROM sys.dm_database_replica_states AS rep JOIN sys.databases AS dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()
 
 SELECT
 	 'sqlserver_instance_resource_governance' AS [measurement]
@@ -918,8 +954,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 END
 
 DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
-		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
-		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
+		@replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(rep.replica_id as nvarchar(128)) , 
+			   @is_primary_replica = cast(rep.is_primary_replica as char(1))
+		FROM sys.dm_database_replica_states AS rep JOIN sys.databases AS dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()
 
 SELECT
 	'sqlserver_database_io' AS [measurement]
@@ -960,8 +998,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 END
 
 DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
-		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
-		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
+		@replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(rep.replica_id as nvarchar(128)) , 
+			   @is_primary_replica = cast(rep.is_primary_replica as char(1))
+		FROM sys.dm_database_replica_states AS rep JOIN sys.databases AS dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()
 
 SELECT
 	 'sqlserver_memory_clerks' AS [measurement]
@@ -993,8 +1033,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 END
 
 DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
-		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
-		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
+		@replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(rep.replica_id as nvarchar(128)) , 
+			   @is_primary_replica = cast(rep.is_primary_replica as char(1))
+		FROM sys.dm_database_replica_states AS rep JOIN sys.databases AS dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()
 
 SELECT
 	 'sqlserver_waitstats' AS [measurement]
@@ -1122,8 +1164,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 END
 
 DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
-		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
-		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
+		@replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(rep.replica_id as nvarchar(128)) , 
+			   @is_primary_replica = cast(rep.is_primary_replica as char(1))
+		FROM sys.dm_database_replica_states AS rep JOIN sys.databases AS dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()
 
 DECLARE @PCounters TABLE
 (
@@ -1307,8 +1351,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 END
 
 DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
-		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
-		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
+		@replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(rep.replica_id as nvarchar(128)) , 
+			   @is_primary_replica = cast(rep.is_primary_replica as char(1))
+		FROM sys.dm_database_replica_states AS rep JOIN sys.databases AS dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()
 
 SELECT [blocking_session_id] INTO #blockingSessions FROM sys.dm_exec_requests WHERE [blocking_session_id] != 0
 CREATE INDEX ix_blockingSessions_1 on #blockingSessions ([blocking_session_id])
@@ -1392,8 +1438,10 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 END
 
 DECLARE @tier AS nvarchar(128) = (SELECT TOP(1) sku from sys.server_resource_stats),
-		@replica_id AS nvarchar(128) = (SELECT rep.replica_id FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()),
-		@is_primary_replica AS nvarchar(128) = (SELECT rep.is_primary_replica FROM sys.dm_database_replica_states as rep JOIN sys.databases as dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME())
+		@replica_id AS nvarchar(128), @is_primary_replica AS char(1)
+		SELECT @replica_id = cast(rep.replica_id as nvarchar(128)) , 
+			   @is_primary_replica = cast(rep.is_primary_replica as char(1))
+		FROM sys.dm_database_replica_states AS rep JOIN sys.databases AS dbs ON dbs.database_id = rep.database_id WHERE dbs.name = DB_NAME()
 
 SELECT
 	 'sqlserver_schedulers' AS [measurement]
