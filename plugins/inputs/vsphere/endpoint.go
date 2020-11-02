@@ -332,7 +332,6 @@ func (e *Endpoint) reloadMetricNameMap(ctx context.Context) error {
 	for key, m := range mn {
 		e.metricNameLookup[key] = m.Name()
 	}
-	e.log.Debugf("452 --> %s", e.metricNameLookup[452])
 	return nil
 }
 
@@ -948,7 +947,6 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 		for _, bucket := range timeBuckets {
 			pqs = append(pqs, *bucket)
 			numQs += len(bucket.MetricId)
-			e.log.Debugf("Added bucket. Total buffered queries is now %d", numQs)
 			if (!res.realTime && numQs > e.Parent.MaxQueryObjects) || numQs > maxRealtimeMetrics {
 				e.log.Debugf("Submitting final bucket job for %s: %d metrics", res.name, numQs)
 				submitChunkJob(ctx, te, job, pqs)
