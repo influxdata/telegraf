@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
-	"os"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -32,7 +32,7 @@ type Procstat struct {
 	ProcessName string
 	User        string
 	SystemdUnit string
-	SystemdAll  bool `toml:"systemd_all"`
+	SystemdAll  bool   `toml:"systemd_all"`
 	CGroup      string `toml:"cgroup"`
 	PidTag      bool
 	WinService  string `toml:"win_service"`
@@ -388,7 +388,7 @@ func (p *Procstat) findPids() []PIDS_TAGS_ERR_GROUP {
 		return groups
 	} else {
 		pids, tags, err := p.SimpleFindPids(f)
-                pids_tags_err_groups = append(pids_tags_err_groups, PIDS_TAGS_ERR_GROUP{pids, tags, err})
+		pids_tags_err_groups = append(pids_tags_err_groups, PIDS_TAGS_ERR_GROUP{pids, tags, err})
 	}
 
 	return pids_tags_err_groups
@@ -468,7 +468,6 @@ func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
 	return pids, nil
 }
 
-
 func (p *Procstat) cgroupPIDs() []PIDS_TAGS_ERR_GROUP {
 	var pids_tags_err_group []PIDS_TAGS_ERR_GROUP
 
@@ -483,8 +482,8 @@ func (p *Procstat) cgroupPIDs() []PIDS_TAGS_ERR_GROUP {
 	}
 	for _, item := range items {
 		pids, err := p.singleCgroupPIDs(item)
-                tags := map[string]string{"cgroup": p.CGroup, "cgroup_full": item}
-                pids_tags_err_group = append(pids_tags_err_group, PIDS_TAGS_ERR_GROUP{pids, tags, err})
+		tags := map[string]string{"cgroup": p.CGroup, "cgroup_full": item}
+		pids_tags_err_group = append(pids_tags_err_group, PIDS_TAGS_ERR_GROUP{pids, tags, err})
 	}
 
 	return pids_tags_err_group
