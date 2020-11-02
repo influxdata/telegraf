@@ -5,14 +5,14 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"os"
-	"path/filepath"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -132,7 +132,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 	}
 	opts = append(opts, "sdr")
 	if m.UseCache {
-		cacheFile := filepath.Join(m.CachePath, server + "_ipmi_cache")
+		cacheFile := filepath.Join(m.CachePath, server+"_ipmi_cache")
 		_, err := os.Stat(cacheFile)
 		if os.IsNotExist(err) {
 			dumpOpts := opts
