@@ -75,10 +75,12 @@ var sampleConfig = `
   # hex_key = ""
 
   ## If ipmitool should use a cache
-  use_cache = true
+  ## for me ipmitool runs about 2 to 10 times faster enabled on HP G10 servers (when using ubuntu20.04)
+  ## the cache file may not work well for you if some sensensors come up late
+  # use_cache = true
 
-  ## Path to the ipmitools cache file (defaults to OS temp dir)
-  cache_path = "/tmp"
+  ## Path to the ipmitools cache file (defaults to OS temp dir)	  ## Path to the ipmitools cache file (defaults to OS temp dir e.g. /tmp)
+  # cache_path = ""
 `
 
 // SampleConfig returns the documentation about the sample configuration
@@ -149,7 +151,6 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 				return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 			}
 		}
-		// -S /tmp/cache_file speeds up ipmitool runs (by 2 to 10 times on HP servers)
 		opts = append(opts, "-S")
 		opts = append(opts, cacheFile)
 	}
