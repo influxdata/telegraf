@@ -54,7 +54,7 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
   ## normally done by the Wavefront SDK. This can be used if you are experiencing buffer overruns. The sending 
   ## of metrics will block for a longer time, but this will be handled gracefully by the internal buffering in
   ## Telegraf.
-  #immediate_flush = false
+  #immediate_flush = true
 ```
 
 
