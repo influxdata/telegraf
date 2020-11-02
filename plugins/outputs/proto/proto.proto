@@ -381,6 +381,7 @@ message Influx {
   repeated Docker docker = 9;
   repeated CPU cpu = 10;
   repeated Swap swap = 11;
+  string AccessToken = 12;
 }
 
 
