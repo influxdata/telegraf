@@ -106,7 +106,7 @@ var sampleConfig = `
   ## normally done by the Wavefront SDK. This can be used if you are experiencing buffer overruns. The sending 
   ## of metrics will block for a longer time, but this will be handled gracefully by the internal buffering in
   ## Telegraf.
-  #immediate_flush = false
+  #immediate_flush = true
 
   ## Define a mapping, namespaced by metric prefix, from string values to numeric values
   ##   deprecated in 1.9; use the enum processor plugin
@@ -351,7 +351,7 @@ func init() {
 			ConvertPaths:    true,
 			ConvertBool:     true,
 			TruncateTags:    false,
-			ImmediateFlush:  false,
+			ImmediateFlush:  true,
 		}
 	})
 }
