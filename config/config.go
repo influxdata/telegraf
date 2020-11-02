@@ -2014,6 +2014,14 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["json_timestamp_layout"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.TimestampLayout = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["splunkmetric_hec_routing"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if b, ok := kv.Value.(*ast.Boolean); ok {
@@ -2109,6 +2117,7 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	delete(tbl.Fields, "template")
 	delete(tbl.Fields, "templates")
 	delete(tbl.Fields, "json_timestamp_units")
+	delete(tbl.Fields, "json_timestamp_layout")
 	delete(tbl.Fields, "splunkmetric_hec_routing")
 	delete(tbl.Fields, "splunkmetric_multimetric")
 	delete(tbl.Fields, "wavefront_source_override")

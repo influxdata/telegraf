@@ -19,6 +19,13 @@ The `json` output data format converts metrics into JSON documents.
   ## such as "1ns", "1us", "1ms", "10ms", "1s".  Durations are truncated to
   ## the power of 10 less than the specified units.
   json_timestamp_units = "1s"
+
+  ## The default timestamp format is Unix epoch time, subject to the
+  # resolution configured in json_timestamp_units.
+  # Other timestamp layout can be configured using the Go language time
+  # layout specification from https://golang.org/pkg/time/#Time.Format
+  # e.g.: json_timestamp_layout = "2006-01-02T15:04:05Z07:00"
+  #json_timestamp_layout = ""
 ```
 
 ### Examples:

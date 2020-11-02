@@ -9,12 +9,14 @@ import (
 )
 
 type serializer struct {
-	TimestampUnits time.Duration
+	TimestampUnits  time.Duration
+	TimestampLayout string
 }
 
-func NewSerializer(timestampUnits time.Duration) (*serializer, error) {
+func NewSerializer(timestampUnits time.Duration, timestamplayout string) (*serializer, error) {
 	s := &serializer{
-		TimestampUnits: truncateDuration(timestampUnits),
+		TimestampUnits:  truncateDuration(timestampUnits),
+		TimestampLayout: timestamplayout,
 	}
 	return s, nil
 }
@@ -71,7 +73,11 @@ func (s *serializer) createObject(metric telegraf.Metric) map[string]interface{}
 	m["fields"] = fields
 
 	m["name"] = metric.Name()
-	m["timestamp"] = metric.Time().UnixNano() / int64(s.TimestampUnits)
+	if s.TimestampLayout == "" {
+		m["timestamp"] = metric.Time().UnixNano() / int64(s.TimestampUnits)
+	} else {
+		m["timestamp"] = metric.Time().UTC().Format(s.TimestampLayout)
+	}
 	return m
 }
 

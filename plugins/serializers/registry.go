@@ -80,6 +80,9 @@ type Config struct {
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration `toml:"timestamp_units"`
 
+	// Timestamp format to use for JSON formatted output
+	TimestampLayout string `toml:"timestamp_layout"`
+
 	// Include HEC routing fields for splunkmetric output
 	HecRouting bool `toml:"hec_routing"`
 
@@ -115,7 +118,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteSeparator, config.Templates)
 	case "json":
-		serializer, err = NewJsonSerializer(config.TimestampUnits)
+		serializer, err = NewJsonSerializer(config.TimestampUnits, config.TimestampLayout)
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric)
 	case "nowmetric":
@@ -159,8 +162,8 @@ func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []stri
 	return wavefront.NewSerializer(prefix, useStrict, sourceOverride)
 }
 
-func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
-	return json.NewSerializer(timestampUnits)
+func NewJsonSerializer(timestampUnits time.Duration, timestampLayout string) (Serializer, error) {
+	return json.NewSerializer(timestampUnits, timestampLayout)
 }
 
 func NewCarbon2Serializer(carbon2format string) (Serializer, error) {
