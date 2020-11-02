@@ -1045,6 +1045,7 @@ SELECT
 	,s.[program_name]
 	,s.[host_name]
 	,s.[nt_user_name]
+	,s.[login_name]
 	,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
 		WHEN 0 THEN ''0-Read Committed''
 		WHEN 1 THEN ''1-Read Uncommitted (NOLOCK)''
