@@ -23,8 +23,8 @@ type YandexCloudMonitoring struct {
 
 	Log telegraf.Logger
 
-	MetadataTokenUrl       string
-	MetadataFolderUrl      string
+	MetadataTokenURL       string
+	MetadataFolderURL      string
 	FolderID               string
 	IAMToken               string
 	IamTokenExpirationTime time.Time
@@ -57,7 +57,7 @@ type MetadataIamToken struct {
 }
 
 const (
-	defaultRequestTimeout    = time.Second * 5
+	defaultRequestTimeout    = time.Second * 20
 	defaultEndpointUrl       = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
 	defaultMetadataTokenUrl  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
 	defaultMetadataFolderUrl = "http://169.254.169.254/computeMetadata/v1/instance/attributes/folder-id"
@@ -65,7 +65,7 @@ const (
 
 var sampleConfig = `
   ## Timeout for HTTP writes.
-  # timeout = "5s"
+  # timeout = "20s"
 
   ## Yandex.Cloud monitoring API endpoint. Normally should not be changed
   # endpoint_url = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
@@ -95,11 +95,11 @@ func (a *YandexCloudMonitoring) Connect() error {
 	if a.Service == "" {
 		a.Service = "custom"
 	}
-	if a.MetadataTokenUrl == "" {
-		a.MetadataTokenUrl = defaultMetadataTokenUrl
+	if a.MetadataTokenURL == "" {
+		a.MetadataTokenURL = defaultMetadataTokenUrl
 	}
-	if a.MetadataFolderUrl == "" {
-		a.MetadataFolderUrl = defaultMetadataFolderUrl
+	if a.MetadataFolderURL == "" {
+		a.MetadataFolderURL = defaultMetadataFolderUrl
 	}
 
 	a.client = &http.Client{
@@ -185,21 +185,21 @@ func getResponseFromMetadata(c *http.Client, metadataUrl string) ([]byte, error)
 }
 
 func (a *YandexCloudMonitoring) getFolderIDFromMetadata() (string, error) {
-	a.Log.Infof("getting folder ID in %s", a.MetadataFolderUrl)
-	body, err := getResponseFromMetadata(a.client, a.MetadataFolderUrl)
+	a.Log.Infof("getting folder ID in %s", a.MetadataFolderURL)
+	body, err := getResponseFromMetadata(a.client, a.MetadataFolderURL)
 	if err != nil {
 		return "", err
 	}
 	folderID := string(body)
 	if folderID == "" {
-		return "", fmt.Errorf("unable to fetch folder id from URL %s: %v", a.MetadataFolderUrl, err)
+		return "", fmt.Errorf("unable to fetch folder id from URL %s: %v", a.MetadataFolderURL, err)
 	}
 	return folderID, nil
 }
 
 func (a *YandexCloudMonitoring) getIAMTokenFromMetadata() (string, int, error) {
-	a.Log.Debugf("getting new IAM token in %s", a.MetadataTokenUrl)
-	body, err := getResponseFromMetadata(a.client, a.MetadataTokenUrl)
+	a.Log.Debugf("getting new IAM token in %s", a.MetadataTokenURL)
+	body, err := getResponseFromMetadata(a.client, a.MetadataTokenURL)
 	if err != nil {
 		return "", 0, err
 	}
@@ -208,7 +208,7 @@ func (a *YandexCloudMonitoring) getIAMTokenFromMetadata() (string, int, error) {
 		return "", 0, err
 	}
 	if metadata.AccessToken == "" || metadata.ExpiresIn == 0 {
-		return "", 0, fmt.Errorf("unable to fetch authentication credentials %s: %v", a.MetadataTokenUrl, err)
+		return "", 0, fmt.Errorf("unable to fetch authentication credentials %s: %v", a.MetadataTokenURL, err)
 	}
 	return metadata.AccessToken, int(metadata.ExpiresIn), nil
 }

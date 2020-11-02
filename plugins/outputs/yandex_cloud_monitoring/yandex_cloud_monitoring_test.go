@@ -83,8 +83,8 @@ func TestWrite(t *testing.T) {
 			})
 			tt.plugin.Log = testutil.Logger{}
 			tt.plugin.EndpointUrl = url
-			tt.plugin.MetadataTokenUrl = metadataTokenUrl
-			tt.plugin.MetadataFolderUrl = metadataFolderUrl
+			tt.plugin.MetadataTokenURL = metadataTokenUrl
+			tt.plugin.MetadataFolderURL = metadataFolderUrl
 			err := tt.plugin.Connect()
 			require.NoError(t, err)
 

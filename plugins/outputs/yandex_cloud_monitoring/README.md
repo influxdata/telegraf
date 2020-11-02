@@ -8,7 +8,7 @@ https://cloud.yandex.com/services/monitoring
 ```toml
 [[outputs.yandex_cloud_monitoring]]
   ## Timeout for HTTP writes.
-  # timeout = "5s"
+  # timeout = "20s"
 
   ## Yandex.Cloud monitoring API endpoint. Normally should not be changed
   # endpoint_url = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
