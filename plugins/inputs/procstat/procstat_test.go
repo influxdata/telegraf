@@ -369,10 +369,15 @@ func TestGather_systemdUnitPIDs(t *testing.T) {
 		createPIDFinder: pidFinder([]PID{}),
 		SystemdUnit:     "TestGather_systemdUnitPIDs",
 	}
-	pids, tags, err := p.findPids()
-	require.NoError(t, err)
-	assert.Equal(t, []PID{11408}, pids)
-	assert.Equal(t, "TestGather_systemdUnitPIDs", tags["systemd_unit"])
+	pids_tags_err_groups := p.findPids()
+	for _, pid_tag_err_group := range pids_tags_err_groups {
+		pids := pid_tag_err_group.PIDS
+		tags := pid_tag_err_group.Tags
+		err := pid_tag_err_group.Err
+		require.NoError(t, err)
+		assert.Equal(t, []PID{11408}, pids)
+		assert.Equal(t, "TestGather_systemdUnitPIDs", tags["systemd_unit"])
+	}
 }
 
 func TestGather_cgroupPIDs(t *testing.T) {
@@ -390,10 +395,15 @@ func TestGather_cgroupPIDs(t *testing.T) {
 		createPIDFinder: pidFinder([]PID{}),
 		CGroup:          td,
 	}
-	pids, tags, err := p.findPids()
-	require.NoError(t, err)
-	assert.Equal(t, []PID{1234, 5678}, pids)
-	assert.Equal(t, td, tags["cgroup"])
+	pids_tags_err_groups := p.findPids()
+	for _, pid_tag_err_group := range pids_tags_err_groups {
+		pids := pid_tag_err_group.PIDS
+		tags := pid_tag_err_group.Tags
+		err := pid_tag_err_group.Err
+		require.NoError(t, err)
+		assert.Equal(t, []PID{1234, 5678}, pids)
+		assert.Equal(t, td, tags["cgroup"])
+	}
 }
 
 func TestProcstatLookupMetric(t *testing.T) {
