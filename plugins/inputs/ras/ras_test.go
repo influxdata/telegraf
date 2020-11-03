@@ -1,4 +1,5 @@
-// +build linux,!mips,!mipsle,!s390x
+// +build linux
+// +build 386 amd64 arm arm64
 
 package ras
 
@@ -113,8 +114,8 @@ func TestMultipleSockets(t *testing.T) {
 func TestMissingDatabase(t *testing.T) {
 	var acc testutil.Accumulator
 	ras := newRas()
-	ras.DBPath = "/tmp/test.db"
-	err := ras.Gather(&acc)
+	ras.DBPath = "/nonexistent/ras.db"
+	err := ras.Start(&acc)
 	assert.Error(t, err)
 }
 
