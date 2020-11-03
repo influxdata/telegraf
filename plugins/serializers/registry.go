@@ -2,6 +2,7 @@ package serializers
 
 import (
 	"fmt"
+	"github.com/influxdata/telegraf/plugins/serializers/prometheus_remote_write"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -126,10 +127,29 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
 	case "prometheus":
 		serializer, err = NewPrometheusSerializer(config)
+	case "prometheus_remote_write":
+		serializer, err = NewPrometheusRemoteWriteSerializer(config)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
 	return serializer, err
+}
+
+func NewPrometheusRemoteWriteSerializer(config *Config) (Serializer, error) {
+	sortMetrics := prometheus_remote_write.NoSortMetrics
+	if config.PrometheusExportTimestamp {
+		sortMetrics = prometheus_remote_write.SortMetrics
+	}
+
+	stringAsLabels := prometheus_remote_write.DiscardStrings
+	if config.PrometheusStringAsLabel {
+		stringAsLabels = prometheus_remote_write.StringAsLabel
+	}
+
+	return prometheus_remote_write.NewSerializer(prometheus_remote_write.FormatConfig{
+		MetricSortOrder: sortMetrics,
+		StringHandling:  stringAsLabels,
+	})
 }
 
 func NewPrometheusSerializer(config *Config) (Serializer, error) {
