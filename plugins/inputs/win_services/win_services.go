@@ -119,7 +119,7 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 	}
 	defer scmgr.Disconnect()
 
-	serviceNames, err := listServices(scmgr, m.ServiceNames)
+	serviceNames, err := m.listServices(scmgr, m.ServiceNames)
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 }
 
 // listServices returns a list of services to gather.
-func listServices(scmgr WinServiceManager, userServices []string) ([]string, error) {
+func (m *WinServices) listServices(scmgr WinServiceManager, userServices []string) ([]string, error) {
 	hasWildcard := false
 
 	for _, userService := range userServices {
@@ -176,20 +176,24 @@ func listServices(scmgr WinServiceManager, userServices []string) ([]string, err
 	results := []string{}
 
 	for _, userService := range userServices {
-		matches := getMatchingServices(userService, names)
+		matches := m.getMatchingServices(userService, names)
 		results = append(results, matches...)
 	}
 
 	return results, nil
 }
 
-func getMatchingServices(userService string, names []string) []string {
+func (m *WinServices) getMatchingServices(userService string, names []string) []string {
 	results := []string{}
 	s := regexp.QuoteMeta(userService)
 	// * -> \*
 	s = strings.ReplaceAll(s, "\\*", ".*")
 	// \* -> .*
-	reg := regexp.Compile("^" + s + "$")
+	reg, err := regexp.Compile("^" + s + "$")
+	if err != nil {
+		m.Log.Error("failed to build string matcher: ", err)
+		return nil
+	}
 
 	for _, name := range names {
 		if reg.MatchString(name) {
