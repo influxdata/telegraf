@@ -189,7 +189,10 @@ var testSimpleData = []testData{
 }
 
 func TestGather2(t *testing.T) {
-	winServices := &WinServices{testutil.Logger{}, nil, &FakeMgProvider{testSimpleData[0]}}
+	winServices := &WinServices{
+		Log:         testutil.Logger{},
+		mgrProvider: &FakeMgProvider{testSimpleData[0]},
+	}
 	var acc1 testutil.Accumulator
 	require.NoError(t, winServices.Gather(&acc1))
 	assert.Len(t, acc1.Errors, 0, "There should be no errors after gather")
@@ -208,8 +211,8 @@ func TestGather2(t *testing.T) {
 func TestGatherWildcard(t *testing.T) {
 	winServices := &WinServices{
 		ServiceNames: []string{"Fake *"},
-		Log: testutil.Logger{},
-		mgrProvider: &FakeMgProvider{testSimpleData[0]}
+		Log:          testutil.Logger{},
+		mgrProvider:  &FakeMgProvider{testSimpleData[0]},
 	}
 	var acc1 testutil.Accumulator
 	require.NoError(t, winServices.Gather(&acc1))
