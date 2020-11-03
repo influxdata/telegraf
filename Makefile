@@ -161,6 +161,18 @@ clean:
 docker-image:
 	docker build -f scripts/stretch.docker -t "telegraf:$(commit)" .
 
+hayden-docker-image:
+	docker build --platform linux/arm64 -f scripts/stretch.docker -t "103206102534.dkr.ecr.us-west-2.amazonaws.com/telegraf-base:$(commit)" .
+
+hayden-push: login-ecr
+	@echo "Pushing 103206102534.dkr.ecr.us-west-2.amazonaws.com/telegraf-base:$(commit) container..."
+	@docker push "103206102534.dkr.ecr.us-west-2.amazonaws.com/telegraf-base:$(commit)"
+	@echo "The 103206102534.dkr.ecr.us-west-2.amazonaws.com/telegraf-base:$(commit) container has been push".
+
+#login-ecr: @ Login docker to ECR registry
+login-ecr:
+	aws ecr get-login-password --region us-west-2 |	docker login --username AWS --password-stdin 103206102534.dkr.ecr.us-west-2.amazonaws.com
+
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
 
