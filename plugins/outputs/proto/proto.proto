@@ -79,7 +79,6 @@ message System {
     double load5 = 3;
     int64 n_cpus = 4;
     int64 uptime = 5;
-    string uptime_format = 6;
   }
 
   Fields fields = 1;
