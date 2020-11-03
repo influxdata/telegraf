@@ -3,6 +3,7 @@ package proto
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -24,6 +25,7 @@ type Proto struct {
 	Password           string `toml:"password"`
 	CognitoAppClientID string `toml:"cognito_app_client_id"`
 	AWSRegion          string `toml:"aws_region"`
+	VerifyTLS          bool   `toml:"verify_tls"`
 
 	Log        telegraf.Logger `toml:"-"`
 	serializer serializers.Serializer
@@ -174,6 +176,9 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 	}
 	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", *accessToken))
+	if f.VerifyTLS == false {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "[outputs.proto]")
@@ -187,6 +192,7 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("proto", func() telegraf.Output {
 		return &Proto{
+			VerifyTLS: true,
 		}
 	})
 }
