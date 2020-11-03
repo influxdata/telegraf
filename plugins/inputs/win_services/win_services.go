@@ -5,6 +5,8 @@ package win_services
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -153,7 +155,16 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 
 // listServices returns a list of services to gather.
 func listServices(scmgr WinServiceManager, userServices []string) ([]string, error) {
-	if len(userServices) != 0 {
+	hasWildcard := false
+
+	for _, userService := range userServices {
+		if strings.Contains(userService, "*") {
+			hasWildcard = true
+			break
+		}
+	}
+
+	if len(userServices) != 0 && !hasWildcard {
 		return userServices, nil
 	}
 
@@ -161,7 +172,31 @@ func listServices(scmgr WinServiceManager, userServices []string) ([]string, err
 	if err != nil {
 		return nil, fmt.Errorf("Could not list services: %s", err)
 	}
-	return names, nil
+
+	results := []string{}
+
+	for _, userService := range userServices {
+		matches := getMatchingServices(userService, names)
+		results = append(results, matches...)
+	}
+
+	return results, nil
+}
+
+func getMatchingServices(userService string, names []string) []string {
+	results := []string{}
+	s := regexp.QuoteMeta(userService)
+	// * -> \*
+	s = strings.ReplaceAll(s, "\\*", ".*")
+	// \* -> .*
+	reg := regexp.Compile("^" + s + "$")
+
+	for _, name := range names {
+		if reg.MatchString(name) {
+			results = append(results, name)
+		}
+	}
+	return results
 }
 
 // collectServiceInfo gathers info about a service.

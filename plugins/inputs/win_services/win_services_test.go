@@ -178,10 +178,14 @@ func TestServiceErrors(t *testing.T) {
 }
 
 var testSimpleData = []testData{
-	{[]string{"Service 1", "Service 2"}, nil, nil, []serviceTestInfo{
-		{nil, nil, nil, "Service 1", "Fake service 1", 1, 2},
-		{nil, nil, nil, "Service 2", "Fake service 2", 1, 2},
-	}},
+	{
+		queryServiceList: []string{"Service 1", "Service 2"},
+		services: []serviceTestInfo{
+			{nil, nil, nil, "Fake Service 1", "Fake service 1", 1, 2},
+			{nil, nil, nil, "Fake Service 2", "Fake service 2", 1, 2},
+			{nil, nil, nil, "Another Service 3", "Another service 3", 1, 2},
+		},
+	},
 }
 
 func TestGather2(t *testing.T) {
@@ -199,4 +203,17 @@ func TestGather2(t *testing.T) {
 		tags["display_name"] = s.displayName
 		acc1.AssertContainsTaggedFields(t, "win_services", fields, tags)
 	}
+}
+
+func TestGatherWildcard(t *testing.T) {
+	winServices := &WinServices{
+		ServiceNames: []string{"Fake *"},
+		Log: testutil.Logger{},
+		mgrProvider: &FakeMgProvider{testSimpleData[0]}
+	}
+	var acc1 testutil.Accumulator
+	require.NoError(t, winServices.Gather(&acc1))
+	assert.Len(t, acc1.Errors, 0, "There should be no errors after gather")
+
+	require.Equal(t, acc1.NMetrics(), 2)
 }

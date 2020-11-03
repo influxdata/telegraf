@@ -12,6 +12,7 @@ Monitoring some services may require running Telegraf with administrator privile
   service_names = [
     "LanmanServer",
     "TermService",
+    "*Service",
   ]
 ```
 
