@@ -130,28 +130,28 @@ var testErrors = []testData{
 
 func TestBasicInfo(t *testing.T) {
 
-	winServices := &WinServices{testutil.Logger{}, nil, &FakeMgProvider{testErrors[0]}}
+	winServices := &WinServices{Log: testutil.Logger{}, mgrProvider: &FakeMgProvider{testErrors[0]}}
 	assert.NotEmpty(t, winServices.SampleConfig())
 	assert.NotEmpty(t, winServices.Description())
 }
 
 func TestMgrErrors(t *testing.T) {
 	//mgr.connect error
-	winServices := &WinServices{testutil.Logger{}, nil, &FakeMgProvider{testErrors[0]}}
+	winServices := &WinServices{Log: testutil.Logger{}, mgrProvider: &FakeMgProvider{testErrors[0]}}
 	var acc1 testutil.Accumulator
 	err := winServices.Gather(&acc1)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), testErrors[0].mgrConnectError.Error())
 
 	////mgr.listServices error
-	winServices = &WinServices{testutil.Logger{}, nil, &FakeMgProvider{testErrors[1]}}
+	winServices = &WinServices{Log: testutil.Logger{}, mgrProvider: &FakeMgProvider{testErrors[1]}}
 	var acc2 testutil.Accumulator
 	err = winServices.Gather(&acc2)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), testErrors[1].mgrListServicesError.Error())
 
 	////mgr.listServices error 2
-	winServices = &WinServices{testutil.Logger{}, []string{"Fake service 1"}, &FakeMgProvider{testErrors[3]}}
+	winServices = &WinServices{Log: testutil.Logger{}, mgrProvider: &FakeMgProvider{testErrors[3]}, ServiceNames: []string{"Fake service 1"}}
 	var acc3 testutil.Accumulator
 
 	buf := &bytes.Buffer{}
@@ -162,7 +162,7 @@ func TestMgrErrors(t *testing.T) {
 }
 
 func TestServiceErrors(t *testing.T) {
-	winServices := &WinServices{testutil.Logger{}, nil, &FakeMgProvider{testErrors[2]}}
+	winServices := &WinServices{Log: testutil.Logger{}, mgrProvider: &FakeMgProvider{testErrors[2]}}
 	var acc1 testutil.Accumulator
 
 	buf := &bytes.Buffer{}
@@ -218,5 +218,5 @@ func TestGatherWildcard(t *testing.T) {
 	require.NoError(t, winServices.Gather(&acc1))
 	assert.Len(t, acc1.Errors, 0, "There should be no errors after gather")
 
-	require.Equal(t, acc1.NMetrics(), 2)
+	require.Equal(t, int64(2), acc1.NMetrics())
 }
