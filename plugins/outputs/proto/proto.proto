@@ -398,6 +398,20 @@ message Docker {
     int64 n_listener_events = 8;
     int64 n_used_file_descriptors = 9;
     int64 memory_total = 10;
+    // net
+    string container_id = 11;
+    double rx_bytes = 12;
+    double tx_bytes = 16;
+
+    //cpu
+    double usage_total = 20;
+
+    //mem
+    double usage = 31;
+    double usage_percent = 22;
+
+    //disk
+    double io_service_bytes_recursive_write = 50;
   }
 
   Fields fields = 1;
@@ -407,6 +421,12 @@ message Docker {
     string engine_host = 1;
     string host = 2;
     string server_version = 3;
+    string container_image = 4;
+    string container_name = 5;
+    string container_status = 6;
+    string container_version = 7;
+    string network = 8;
+    string cpu = 9;
   }
 
   Tags tags = 3;

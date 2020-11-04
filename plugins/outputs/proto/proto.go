@@ -124,7 +124,7 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return err
 			}
 			influx.Disk = append(influx.Disk, &m)
-		case "docker":
+		case "docker", "docker_container_mem", "docker_container_cpu", "docker_container_blkio":
 			m := Docker{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
