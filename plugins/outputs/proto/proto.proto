@@ -1,5 +1,50 @@
 syntax = "proto3";
 
+message Tegrastats {
+  message Fields {
+    double ao_temp = 1;
+    double ape = 2;
+    double aux_temp = 3;
+    double cpu1freq = 4;
+    double cpu1proc = 5;
+    double cpu2freq = 6;
+    double cpu2proc = 7;
+    double cpu_temp = 8;
+    double emcfreq = 9;
+    double emcfreqproc = 10;
+    double gpu_temp = 11;
+    double gr3dfreq = 12;
+    double gr3dfreqproc = 13;
+    double mts_bg = 14;
+    double mts_fg = 15;
+    double pages = 16;
+    double ram_total = 17;
+    double ram_used = 18;
+    double swap_cached = 19;
+    double swap_total = 20;
+    double swap_used = 21;
+    double thermal_temp = 22;
+    double vdd_cpu_gpu_cv_avg_miliwats = 23;
+    double vdd_cpu_gpu_cv_current_miliwats = 24;
+    double vdd_in_avg_miliwats = 25;
+    double vdd_in_current_miliwats = 26;
+    double vdd_soc_avg_miliwats = 27;
+    double vdd_soc_current_miliwats = 28;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string host = 1;
+    string path = 2;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+
 message CPU {
   message Fields {
     double usage_guest = 1;
@@ -380,7 +425,7 @@ message Influx {
   repeated Docker docker = 9;
   repeated CPU cpu = 10;
   repeated Swap swap = 11;
-  string AccessToken = 12;
+  repeated Tegrastats tegrastats = 12;
 }
 
 

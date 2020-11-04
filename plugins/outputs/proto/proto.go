@@ -148,6 +148,12 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return err
 			}
 			influx.Swap = append(influx.Swap, &m)
+		case "tegrastats":
+			m := Tegrastats{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build tegrastats")
+			}
+			influx.Tegrastats = append(influx.Tegrastats, &m)
 		}
 	}
 
@@ -155,7 +161,6 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return errors.Wrapf(err, "[outputs.proto] unable to get access token")
 	}
-	influx.AccessToken = *accessToken
 	b, err := protobuf.Marshal(&influx)
 	if err != nil {
 		return errors.Wrap(err, "[outputs.proto]")
