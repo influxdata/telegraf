@@ -19,6 +19,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+const MaxUint64 = ^uint64(0)
+const MaxInt64 = int64(MaxUint64 >> 1)
+
 type Proto struct {
 	HostURL            string `toml:"host_url"`
 	User               string `toml:"user"`
@@ -125,7 +128,20 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			}
 			influx.Disk = append(influx.Disk, &m)
 		case "docker":
-			m := DockerStats{}
+			m := DockerStats{
+				Fields: &DockerStats_FIELDS{
+					NContainers:          MaxInt64,
+					NContainersPaused:    MaxInt64,
+					NContainersRunning:   MaxInt64,
+					NContainersStopped:   MaxInt64,
+					NCpus:                MaxInt64,
+					NGoroutines:          MaxInt64,
+					NImages:              MaxInt64,
+					NListenerEvents:      MaxInt64,
+					NUsedFileDescriptors: MaxInt64,
+					MemoryTotal:          MaxInt64,
+				},
+			}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}

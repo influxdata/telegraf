@@ -430,6 +430,7 @@ message DockerStats {
     int64 n_images = 7;
     int64 n_listener_events = 8;
     int64 n_used_file_descriptors = 9;
+    int64 memory_total = 10;
   }
 
   FIELDS fields = 1;
