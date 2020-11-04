@@ -216,6 +216,7 @@ SELECT
 	,CAST(SERVERPROPERTY(''EngineEdition'') AS int) AS [engine_edition]
 	,DATEDIFF(MINUTE,si.[sqlserver_start_time],GETDATE()) AS [uptime]
 	,SERVERPROPERTY(''ProductVersion'') AS [sql_version]
+	,LEFT(@@VERSION,CHARINDEX('' - '',@@VERSION)) AS [sql_version_desc]
 	,dbs.[db_online]
 	,dbs.[db_restoring]
 	,dbs.[db_recovering]
@@ -292,8 +293,6 @@ END
 DECLARE
 	 @SqlStatement AS nvarchar(max)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
-	,@Columns AS nvarchar(MAX) = ''
-	,@PivotColumns AS nvarchar(MAX) = ''
 
 DECLARE @PCounters TABLE
 (
@@ -305,7 +304,7 @@ DECLARE @PCounters TABLE
 	PRIMARY KEY([object_name], [counter_name], [instance_name])
 );
 
-SET @SqlStatement = N'
+WITH PerfCounters AS (
 SELECT DISTINCT
 	 RTRIM(spi.[object_name]) [object_name]
 	,RTRIM(spi.[counter_name]) [counter_name]
@@ -315,138 +314,103 @@ SELECT DISTINCT
 	FROM sys.dm_os_performance_counters AS spi
 	WHERE
 		counter_name IN (
-			 ''SQL Compilations/sec''
-			,''SQL Re-Compilations/sec''
-			,''User Connections''
-			,''Batch Requests/sec''
-			,''Logouts/sec''
-			,''Logins/sec''
-			,''Processes blocked''
-			,''Latch Waits/sec''
-			,''Full Scans/sec''
-			,''Index Searches/sec''
-			,''Page Splits/sec''
-			,''Page lookups/sec''
-			,''Page reads/sec''
-			,''Page writes/sec''
-			,''Readahead pages/sec''
-			,''Lazy writes/sec''
-			,''Checkpoint pages/sec''
-			,''Page life expectancy''
-			,''Log File(s) Size (KB)''
-			,''Log File(s) Used Size (KB)''
-			,''Data File(s) Size (KB)''
-			,''Transactions/sec''
-			,''Write Transactions/sec''
-			,''Active Temp Tables''
-			,''Temp Tables Creation Rate''
-			,''Temp Tables For Destruction''
-			,''Free Space in tempdb (KB)''
-			,''Version Store Size (KB)''
-			,''Memory Grants Pending''
-			,''Memory Grants Outstanding''
-			,''Free list stalls/sec''
-			,''Buffer cache hit ratio''
-			,''Buffer cache hit ratio base''
-			,''Backup/Restore Throughput/sec''
-			,''Total Server Memory (KB)''
-			,''Target Server Memory (KB)''
-			,''Log Flushes/sec''
-			,''Log Flush Wait Time''
-			,''Memory broker clerk size''
-			,''Log Bytes Flushed/sec''
-			,''Bytes Sent to Replica/sec''
-			,''Log Send Queue''
-			,''Bytes Sent to Transport/sec''
-			,''Sends to Replica/sec''
-			,''Bytes Sent to Transport/sec''
-			,''Sends to Transport/sec''
-			,''Bytes Received from Replica/sec''
-			,''Receives from Replica/sec''
-			,''Flow Control Time (ms/sec)''
-			,''Flow Control/sec''
-			,''Resent Messages/sec''
-			,''Redone Bytes/sec''
-			,''XTP Memory Used (KB)''
-			,''Transaction Delay''
-			,''Log Bytes Received/sec''
-			,''Log Apply Pending Queue''
-			,''Redone Bytes/sec''
-			,''Recovery Queue''
-			,''Log Apply Ready Queue''
-			,''CPU usage %''
-			,''CPU usage % base''
-			,''Queued requests''
-			,''Requests completed/sec''
-			,''Blocked tasks''
-			,''Active memory grant amount (KB)''
-			,''Disk Read Bytes/sec''
-			,''Disk Read IO Throttled/sec''
-			,''Disk Read IO/sec''
-			,''Disk Write Bytes/sec''
-			,''Disk Write IO Throttled/sec''
-			,''Disk Write IO/sec''
-			,''Used memory (KB)''
-			,''Forwarded Records/sec''
-			,''Background Writer pages/sec''
-			,''Percent Log Used''
-			,''Log Send Queue KB''
-			,''Redo Queue KB''
-			,''Mirrored Write Transactions/sec''
-			,''Group Commit Time''
-			,''Group Commits/Sec''
+			 'SQL Compilations/sec'
+			,'SQL Re-Compilations/sec'
+			,'User Connections'
+			,'Batch Requests/sec'
+			,'Logouts/sec'
+			,'Logins/sec'
+			,'Processes blocked'
+			,'Latch Waits/sec'
+			,'Full Scans/sec'
+			,'Index Searches/sec'
+			,'Page Splits/sec'
+			,'Page lookups/sec'
+			,'Page reads/sec'
+			,'Page writes/sec'
+			,'Readahead pages/sec'
+			,'Lazy writes/sec'
+			,'Checkpoint pages/sec'
+			,'Page life expectancy'
+			,'Log File(s) Size (KB)'
+			,'Log File(s) Used Size (KB)'
+			,'Data File(s) Size (KB)'
+			,'Transactions/sec'
+			,'Write Transactions/sec'
+			,'Active Temp Tables'
+			,'Temp Tables Creation Rate'
+			,'Temp Tables For Destruction'
+			,'Free Space in tempdb (KB)'
+			,'Version Store Size (KB)'
+			,'Memory Grants Pending'
+			,'Memory Grants Outstanding'
+			,'Free list stalls/sec'
+			,'Buffer cache hit ratio'
+			,'Buffer cache hit ratio base'
+			,'Backup/Restore Throughput/sec'
+			,'Total Server Memory (KB)'
+			,'Target Server Memory (KB)'
+			,'Log Flushes/sec'
+			,'Log Flush Wait Time'
+			,'Memory broker clerk size'
+			,'Log Bytes Flushed/sec'
+			,'Bytes Sent to Replica/sec'
+			,'Log Send Queue'
+			,'Bytes Sent to Transport/sec'
+			,'Sends to Replica/sec'
+			,'Bytes Sent to Transport/sec'
+			,'Sends to Transport/sec'
+			,'Bytes Received from Replica/sec'
+			,'Receives from Replica/sec'
+			,'Flow Control Time (ms/sec)'
+			,'Flow Control/sec'
+			,'Resent Messages/sec'
+			,'Redone Bytes/sec'
+			,'XTP Memory Used (KB)'
+			,'Transaction Delay'
+			,'Log Bytes Received/sec'
+			,'Log Apply Pending Queue'
+			,'Redone Bytes/sec'
+			,'Recovery Queue'
+			,'Log Apply Ready Queue'
+			,'CPU usage %'
+			,'CPU usage % base'
+			,'Queued requests'
+			,'Requests completed/sec'
+			,'Blocked tasks'
+			,'Active memory grant amount (KB)'
+			,'Disk Read Bytes/sec'
+			,'Disk Read IO Throttled/sec'
+			,'Disk Read IO/sec'
+			,'Disk Write Bytes/sec'
+			,'Disk Write IO Throttled/sec'
+			,'Disk Write IO/sec'
+			,'Used memory (KB)'
+			,'Forwarded Records/sec'
+			,'Background Writer pages/sec'
+			,'Percent Log Used'
+			,'Log Send Queue KB'
+			,'Redo Queue KB'
+			,'Mirrored Write Transactions/sec'
+			,'Group Commit Time'
+			,'Group Commits/Sec'
 		) OR (
-			spi.[object_name] LIKE ''%User Settable%''
-			OR spi.[object_name] LIKE ''%SQL Errors%''
-			OR spi.[object_name] LIKE ''%Batch Resp Statistics%''
+			spi.[object_name] LIKE '%User Settable%'
+			OR spi.[object_name] LIKE '%SQL Errors%'
+			OR spi.[object_name] LIKE '%Batch Resp Statistics%'
 		) OR (
-			spi.[instance_name] IN (''_Total'')
+			spi.[instance_name] IN ('_Total')
 			AND spi.[counter_name] IN (
-				 ''Lock Timeouts/sec''
-				,''Lock Timeouts (timeout > 0)/sec''
-				,''Number of Deadlocks/sec''
-				,''Lock Waits/sec''
-				,''Latch Waits/sec''
+				 'Lock Timeouts/sec'
+				,'Lock Timeouts (timeout > 0)/sec'
+				,'Number of Deadlocks/sec'
+				,'Lock Waits/sec'
+				,'Latch Waits/sec'
 			)
 		)
-'
+)
 
-INSERT INTO @PCounters EXEC(@SqlStatement)
-
-IF @MajorMinorVersion >= 1300 BEGIN
-	SET @Columns += N'
-	,rgwg.[total_cpu_usage_preemptive_ms] AS [Preemptive CPU Usage (time)]'
-	SET @PivotColumns += N',[Preemptive CPU Usage (time)]'
-END
-
-SET  @SqlStatement = N'
-SELECT
-	''SQLServer:Workload Group Stats'' AS [object]
-	,[counter]
-	,[instance]
-	,CAST(vs.[value] AS bigint) AS [value]
-	,1
-FROM
-(
-	SELECT
-		 rgwg.[name] AS [instance]
-		,rgwg.[total_request_count] AS [Request Count]
-		,rgwg.[total_queued_request_count] AS [Queued Request Count]
-		,rgwg.[total_cpu_limit_violation_count] AS [CPU Limit Violation Count]
-		,rgwg.[total_cpu_usage_ms] AS [CPU Usage (time)]
-		,rgwg.[total_lock_wait_count] AS [Lock Wait Count]
-		,rgwg.[total_lock_wait_time_ms] AS [Lock Wait Time]
-		,rgwg.[total_reduced_memgrant_count] AS [Reduced Memory Grant Count]'
-		+ @Columns + N'
-	FROM sys.dm_resource_governor_workload_groups AS rgwg
-	INNER JOIN sys.dm_resource_governor_resource_pools AS rgrp /*No fields from this table. remove?*/
-		ON rgwg.[pool_id] = rgrp.[pool_id]
-) AS rg
-UNPIVOT (
-	[value] FOR [counter] IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], [Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] ' + @PivotColumns + N')
-) AS vs'
-
-INSERT INTO @PCounters EXEC(@SqlStatement)
+INSERT INTO @PCounters SELECT * FROM PerfCounters;
 
 SELECT
 	 'sqlserver_performance' AS [measurement]

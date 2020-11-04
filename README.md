@@ -430,6 +430,7 @@ For documentation on the latest development code see the [documentation index][d
 * [instrumental](./plugins/outputs/instrumental)
 * [kafka](./plugins/outputs/kafka)
 * [librato](./plugins/outputs/librato)
+* [logz.io](./plugins/outputs/logzio)
 * [mqtt](./plugins/outputs/mqtt)
 * [nats](./plugins/outputs/nats)
 * [newrelic](./plugins/outputs/newrelic)
@@ -446,3 +447,4 @@ For documentation on the latest development code see the [documentation index][d
 * [warp10](./plugins/outputs/warp10)
 * [wavefront](./plugins/outputs/wavefront)
 * [sumologic](./plugins/outputs/sumologic)
+* [yandex_cloud_monitoring](./plugins/outputs/yandex_cloud_monitoring)
