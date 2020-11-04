@@ -124,12 +124,36 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return err
 			}
 			influx.Disk = append(influx.Disk, &m)
-		case "docker", "docker_container_mem", "docker_container_cpu", "docker_container_blkio":
-			m := Docker{}
+		case "docker":
+			m := DockerStats{}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return err
 			}
-			influx.Docker = append(influx.Docker, &m)
+			influx.DockerStats = append(influx.DockerStats, &m)
+		case "docker_container_mem":
+			m := DockerMem{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return err
+			}
+			influx.DockerMem = append(influx.DockerMem, &m)
+		case "docker_container_cpu":
+			m := DockerCpu{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return err
+			}
+			influx.DockerCpu = append(influx.DockerCpu, &m)
+		case "docker_container_net":
+			m := DockerNet{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return err
+			}
+			influx.DockerNet = append(influx.DockerNet, &m)
+		case "docker_container_blkio":
+			m := DockerBlkio{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return err
+			}
+			influx.DockerBlkio = append(influx.DockerBlkio, &m)
 		case "mem":
 			m := Mem{}
 			if err := json.Unmarshal(b, &m); err != nil {

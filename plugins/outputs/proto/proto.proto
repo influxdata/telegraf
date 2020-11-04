@@ -386,8 +386,41 @@ message Processes {
   double timestamp = 4;
 }
 
-message Docker {
+message DockerBlkio {
+
   message Fields {
+    int64 io_service_bytes_recursive_async = 2;
+    int64 io_service_bytes_recursive_read = 3;
+    int64 io_service_bytes_recursive_sync = 4;
+    int64 io_service_bytes_recursive_total = 5;
+    int64 io_service_bytes_recursive_write = 6;
+    int64 io_serviced_recursive_async = 7;
+    int64 io_serviced_recursive_read = 8;
+    int64 io_serviced_recursive_sync = 9;
+    int64 io_serviced_recursive_total = 10;
+    int64 io_serviced_recursive_write = 11;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string container_image = 1;
+    string container_name = 2;
+    string container_status = 3;
+    string container_version = 4;
+    string device = 5;
+    string engine_host = 6;
+    string host = 7;
+    string server_version = 8;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message DockerStats {
+  message FIELDS {
     int64 n_containers = 1;
     int64 n_containers_paused = 2;
     int64 n_containers_running = 3;
@@ -397,36 +430,94 @@ message Docker {
     int64 n_images = 7;
     int64 n_listener_events = 8;
     int64 n_used_file_descriptors = 9;
-    int64 memory_total = 10;
-    // net
-    string container_id = 11;
-    double rx_bytes = 12;
-    double tx_bytes = 16;
+  }
 
-    //cpu
-    double usage_total = 20;
+  FIELDS fields = 1;
+  string name = 2;
 
-    //mem
-    double usage = 31;
-    double usage_percent = 22;
+  message TAGS {
+    string engine_host = 1;
+    string host = 2;
+    string server_version = 3;
+  }
 
-    //disk
-    double io_service_bytes_recursive_write = 50;
+  TAGS tags = 3;
+  double timestamp = 4;
+}
+
+
+message DockerMem {
+  message Fields {
+    double usage_percent = 1;
+  }
+
+  Fields fields = 2;
+  string name = 3;
+
+  message Tags {
+    string container_image = 1;
+    string container_name = 2;
+    string container_status = 3;
+    string container_version = 4;
+    string engine_host = 5;
+    string host = 6;
+    string server_version = 7;
+  }
+
+  Tags tags = 4;
+  double timestamp = 5;
+}
+
+message DockerCpu {
+  message Fields {
+    double usage_percent = 6;
+    int64 usage_system = 7;
+    int64 usage_total = 8;
   }
 
   Fields fields = 1;
   string name = 2;
 
   message Tags {
-    string engine_host = 1;
-    string host = 2;
-    string server_version = 3;
-    string container_image = 4;
-    string container_name = 5;
-    string container_status = 6;
-    string container_version = 7;
-    string network = 8;
-    string cpu = 9;
+    string container_image = 1;
+    string container_name = 2;
+    string container_status = 3;
+    string container_version = 4;
+    string cpu = 5;
+    string engine_host = 6;
+    string host = 7;
+    string server_version = 8;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+
+message DockerNet {
+  message Fields {
+    int64 rx_bytes = 2;
+    int64 rx_dropped = 3;
+    int64 rx_errors = 4;
+    int64 rx_packets = 5;
+    int64 tx_bytes = 6;
+    int64 tx_dropped = 7;
+    int64 tx_errors = 8;
+    int64 tx_packets = 9;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string container_image = 1;
+    string container_name = 2;
+    string container_status = 3;
+    string container_version = 4;
+    string engine_host = 5;
+    string host = 6;
+    string network = 7;
+    string server_version = 8;
   }
 
   Tags tags = 3;
@@ -442,10 +533,14 @@ message Influx {
   repeated Mem mem = 6;
   repeated Disk disk = 7;
   repeated Processes processes = 8;
-  repeated Docker docker = 9;
-  repeated CPU cpu = 10;
-  repeated Swap swap = 11;
-  repeated Tegrastats tegrastats = 12;
+  repeated CPU cpu = 9;
+  repeated Swap swap = 10;
+  repeated Tegrastats tegrastats = 11;
+  repeated DockerBlkio dockerBlkio = 12;
+  repeated DockerNet dockerNet = 13;
+  repeated DockerCpu dockerCpu = 14;
+  repeated DockerMem dockerMem = 15;
+  repeated DockerStats dockerStats = 16;
 }
 
 
