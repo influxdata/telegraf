@@ -1,0 +1,43 @@
+name: Go
+
+on: 
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'     
+        required: true
+        default: 'warning'
+      tags:
+        description: 'Test scenario tags'  
+
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.13
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+      with: 
+        ref: a10_sflow 
+
+    - name: Run make
+      run: make && mkdir ./artifacts && mv telegraf ./artifacts/
+    - name: Azure Blob Storage Upload
+    # You may pin to the exact commit or the version.
+    # uses: bacongobbler/azure-blob-storage-upload@ea73f5341f672d0fbf37c83d546dad23f5724722
+      uses: bacongobbler/azure-blob-storage-upload@v1.1.0
+      with:
+        # The connection string for the storage account
+        connection_string: ${{ secrets.DDOS_TELEGRAF_CONNECTION_STRING }}
+        # The name of the storage account container these assets will be uploaded to
+        container_name: ddostelegraf
+        # The name of the directory you want to upload
+        source_dir: artifacts
+        sync: false  
