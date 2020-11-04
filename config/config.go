@@ -1409,8 +1409,26 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 
 func (c *Config) missingTomlField(typ reflect.Type, key string) error {
 	switch key {
-	case "interval", "tagpass", "tagdrop", "namepass", "namedrop", "name_suffix",
-		"fieldpass", "fielddrop", "pass", "drop", "taginclude", "tagexclude", "data_format":
+	case "alias", "carbon2_format", "collectd_auth_file", "collectd_parse_multivalue",
+		"collectd_security_level", "collectd_typesdb", "collection_jitter", "csv_column_names",
+		"csv_column_types", "csv_comment", "csv_delimiter", "csv_header_row_count",
+		"csv_measurement_column", "csv_skip_columns", "csv_skip_rows", "csv_tag_columns",
+		"csv_timestamp_column", "csv_timestamp_format", "csv_timezone", "csv_trim_space",
+		"data_format", "data_type", "delay", "drop", "drop_original", "dropwizard_metric_registry_path",
+		"dropwizard_tag_paths", "dropwizard_tags_path", "dropwizard_time_format", "dropwizard_time_path",
+		"fielddrop", "fieldpass", "flush_interval", "flush_jitter", "form_urlencoded_tag_keys",
+		"grace", "graphite_separator", "graphite_tag_support", "grok_custom_pattern_files",
+		"grok_custom_patterns", "grok_named_patterns", "grok_patterns", "grok_timezone",
+		"grok_unique_timestamp", "influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
+		"interval", "json_name_key", "json_query", "json_strict", "json_string_fields",
+		"json_time_format", "json_time_key", "json_timestamp_units", "json_timezone",
+		"metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
+		"name_suffix", "namedrop", "namepass", "order", "pass", "period", "precision",
+		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
+		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
+		"tagdrop", "tagexclude", "taginclude", "tagpass", "template", "templates",
+		"wavefront_source_override", "wavefront_use_strict":
+
 		// ignore fields that are common to all plugins.
 	default:
 		c.UnusedFields[key] = true
