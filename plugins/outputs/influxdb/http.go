@@ -202,13 +202,16 @@ func (c *httpClient) Database() string {
 // Note that some names are not allowed by the server, notably those with
 // non-printable characters or slashes.
 func (c *httpClient) CreateDatabase(ctx context.Context, database string) error {
-	query := fmt.Sprintf(`CREATE DATABASE "%s"`,
-		escapeIdentifier.Replace(database))
+	query := fmt.Sprintf(`CREATE DATABASE "%s"`, escapeIdentifier.Replace(database))
 
 	req, err := c.makeQueryRequest(query)
+	if err != nil {
+		return err
+	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -236,7 +239,7 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 	}
 
 	// Don't attempt to recreate the database after a 403 Forbidden error.
-	// This behavior exists only to maintain backwards compatiblity.
+	// This behavior exists only to maintain backwards compatibility.
 	if resp.StatusCode == http.StatusForbidden {
 		c.createDatabaseExecuted[database] = true
 	}
@@ -311,7 +314,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []telegraf.Metric) error {
-	url, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
+	loc, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
 	if err != nil {
 		return err
 	}
@@ -322,13 +325,14 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 	}
 	defer reader.Close()
 
-	req, err := c.makeWriteRequest(url, reader)
+	req, err := c.makeWriteRequest(loc, reader)
 	if err != nil {
 		return err
 	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -505,5 +509,5 @@ func makeQueryURL(loc *url.URL) (string, error) {
 }
 
 func (c *httpClient) Close() {
-	internal.CloseIdleConnections(c.client)
+	c.client.CloseIdleConnections()
 }

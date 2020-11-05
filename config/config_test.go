@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/http_listener_v2"
 	"github.com/influxdata/telegraf/plugins/inputs/memcached"
 	"github.com/influxdata/telegraf/plugins/inputs/procstat"
+	"github.com/influxdata/telegraf/plugins/outputs/azure_monitor"
 	httpOut "github.com/influxdata/telegraf/plugins/outputs/http"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/stretchr/testify/assert"
@@ -207,20 +208,19 @@ func TestConfig_FieldNotDefined(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/invalid_field.toml")
 	require.Error(t, err, "invalid field name")
-	assert.Equal(t, "Error parsing ./testdata/invalid_field.toml, line 2: field corresponding to `not_a_field' is not defined in http_listener_v2.HTTPListenerV2", err.Error())
-
+	assert.Equal(t, "Error loading config file ./testdata/invalid_field.toml: plugin inputs.http_listener_v2: line 1: configuration specified the fields [\"not_a_field\"], but they weren't used", err.Error())
 }
 
 func TestConfig_WrongFieldType(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/wrong_field_type.toml")
 	require.Error(t, err, "invalid field type")
-	assert.Equal(t, "Error parsing ./testdata/wrong_field_type.toml, line 2: (http_listener_v2.HTTPListenerV2.Port) cannot unmarshal TOML string into int", err.Error())
+	assert.Equal(t, "Error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: (http_listener_v2.HTTPListenerV2.Port) cannot unmarshal TOML string into int", err.Error())
 
 	c = NewConfig()
 	err = c.LoadConfig("./testdata/wrong_field_type2.toml")
 	require.Error(t, err, "invalid field type2")
-	assert.Equal(t, "Error parsing ./testdata/wrong_field_type2.toml, line 2: (http_listener_v2.HTTPListenerV2.Methods) cannot unmarshal TOML string into []string", err.Error())
+	assert.Equal(t, "Error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (http_listener_v2.HTTPListenerV2.Methods) cannot unmarshal TOML string into []string", err.Error())
 }
 
 func TestConfig_InlineTables(t *testing.T) {
@@ -255,5 +255,25 @@ func TestConfig_BadOrdering(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/non_slice_slice.toml")
 	require.Error(t, err, "bad ordering")
-	assert.Equal(t, "Error parsing ./testdata/non_slice_slice.toml, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
+	assert.Equal(t, "Error loading config file ./testdata/non_slice_slice.toml: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
+}
+
+func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
+	// #8256 Cannot use empty string as the namespace prefix
+	c := NewConfig()
+	defaultPrefixConfig := `[[outputs.azure_monitor]]`
+	err := c.LoadConfigData([]byte(defaultPrefixConfig))
+	assert.NoError(t, err)
+	azureMonitor, ok := c.Outputs[0].Output.(*azure_monitor.AzureMonitor)
+	assert.Equal(t, "Telegraf/", azureMonitor.NamespacePrefix)
+	assert.Equal(t, true, ok)
+
+	c = NewConfig()
+	customPrefixConfig := `[[outputs.azure_monitor]]
+	namespace_prefix = ""`
+	err = c.LoadConfigData([]byte(customPrefixConfig))
+	assert.NoError(t, err)
+	azureMonitor, ok = c.Outputs[0].Output.(*azure_monitor.AzureMonitor)
+	assert.Equal(t, "", azureMonitor.NamespacePrefix)
+	assert.Equal(t, true, ok)
 }

@@ -1,5 +1,7 @@
 package shim
 
+// this package is deprecated. use plugins/common/shim instead
+
 import (
 	"bufio"
 	"context"
@@ -9,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -23,9 +26,11 @@ import (
 type empty struct{}
 
 var (
-	stdout  io.Writer = os.Stdout
-	stdin   io.Reader = os.Stdin
-	forever           = 100 * 365 * 24 * time.Hour
+	forever       = 100 * 365 * 24 * time.Hour
+	envVarEscaper = strings.NewReplacer(
+		`"`, `\"`,
+		`\`, `\\`,
+	)
 )
 
 const (
@@ -40,11 +45,26 @@ type Shim struct {
 	Inputs            []telegraf.Input
 	gatherPromptChans []chan empty
 	metricCh          chan telegraf.Metric
+
+	stdin  io.Reader
+	stdout io.Writer
+	stderr io.Writer
 }
+
+var (
+	oldpkg = "github.com/influxdata/telegraf/plugins/inputs/execd/shim"
+	newpkg = "github.com/influxdata/telegraf/plugins/common/shim"
+)
 
 // New creates a new shim interface
 func New() *Shim {
-	return &Shim{}
+	fmt.Fprintf(os.Stderr, "%s is deprecated; please change your import to %s\n",
+		oldpkg, newpkg)
+	return &Shim{
+		stdin:  os.Stdin,
+		stdout: os.Stdout,
+		stderr: os.Stderr,
+	}
 }
 
 // AddInput adds the input to the shim. Later calls to Run() will run this input.
@@ -101,9 +121,9 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 		}
 		gatherPromptCh := make(chan empty, 1)
 		s.gatherPromptChans = append(s.gatherPromptChans, gatherPromptCh)
-		wg.Add(1)
+		wg.Add(1) // one per input
 		go func(input telegraf.Input) {
-			startGathering(ctx, input, acc, gatherPromptCh, pollInterval)
+			s.startGathering(ctx, input, acc, gatherPromptCh, pollInterval)
 			if serviceInput, ok := input.(telegraf.ServiceInput); ok {
 				serviceInput.Stop()
 			}
@@ -136,7 +156,7 @@ loop:
 				return fmt.Errorf("failed to serialize metric: %s", err)
 			}
 			// Write this to stdout
-			fmt.Fprint(stdout, string(b))
+			fmt.Fprint(s.stdout, string(b))
 		}
 	}
 
@@ -158,7 +178,7 @@ func (s *Shim) stdinCollectMetricsPrompt(ctx context.Context, cancel context.Can
 		close(collectMetricsPrompt)
 	}()
 
-	scanner := bufio.NewScanner(stdin)
+	scanner := bufio.NewScanner(s.stdin)
 	// for every line read from stdin, make sure we're not supposed to quit,
 	// then push a message on to the collectMetricsPrompt
 	for scanner.Scan() {
@@ -196,7 +216,7 @@ func (s *Shim) collectMetrics(ctx context.Context) {
 	}
 }
 
-func startGathering(ctx context.Context, input telegraf.Input, acc telegraf.Accumulator, gatherPromptCh <-chan empty, pollInterval time.Duration) {
+func (s *Shim) startGathering(ctx context.Context, input telegraf.Input, acc telegraf.Accumulator, gatherPromptCh <-chan empty, pollInterval time.Duration) {
 	if pollInterval == PollIntervalDisabled {
 		return // don't poll
 	}
@@ -211,17 +231,13 @@ func startGathering(ctx context.Context, input telegraf.Input, acc telegraf.Accu
 		select {
 		case <-ctx.Done():
 			return
-		case _, open := <-gatherPromptCh:
-			if !open {
-				// stdin has closed.
-				return
-			}
+		case <-gatherPromptCh:
 			if err := input.Gather(acc); err != nil {
-				fmt.Fprintf(os.Stderr, "failed to gather metrics: %s", err)
+				fmt.Fprintf(s.stderr, "failed to gather metrics: %s", err)
 			}
 		case <-t.C:
 			if err := input.Gather(acc); err != nil {
-				fmt.Fprintf(os.Stderr, "failed to gather metrics: %s", err)
+				fmt.Fprintf(s.stderr, "failed to gather metrics: %s", err)
 			}
 		}
 	}
@@ -257,21 +273,28 @@ func LoadConfig(filePath *string) ([]telegraf.Input, error) {
 		return nil, err
 	}
 
+	s := expandEnvVars(b)
+
 	conf := struct {
 		Inputs map[string][]toml.Primitive
 	}{}
 
-	md, err := toml.Decode(string(b), &conf)
+	md, err := toml.Decode(s, &conf)
 	if err != nil {
 		return nil, err
 	}
 
-	loadedInputs, err := loadConfigIntoInputs(md, conf.Inputs)
+	return loadConfigIntoInputs(md, conf.Inputs)
+}
 
-	if len(md.Undecoded()) > 0 {
-		fmt.Fprintf(stdout, "Some plugins were loaded but not used: %q\n", md.Undecoded())
-	}
-	return loadedInputs, err
+func expandEnvVars(contents []byte) string {
+	return os.Expand(string(contents), getEnv)
+}
+
+func getEnv(key string) string {
+	v := os.Getenv(key)
+
+	return envVarEscaper.Replace(v)
 }
 
 func loadConfigIntoInputs(md toml.MetaData, inputConfigs map[string][]toml.Primitive) ([]telegraf.Input, error) {

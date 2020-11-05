@@ -1,4 +1,4 @@
-# PostgreSQL plugin
+# PostgreSQL Extensible Input Plugin
 
 This postgresql plugin provides metrics for your postgres database. It has been
 designed to parse SQL queries in the plugin section of your `telegraf.conf`.
@@ -11,12 +11,12 @@ The example below has two queries are specified, with the following parameters:
 * The name of the measurement
 * A list of the columns to be defined as tags
 
-```
+```toml
 [[inputs.postgresql_extensible]]
   # specify address via a url matching:
   # postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=...
   # or a simple string:
-  #   host=localhost port=5432 user=pqotest password=... sslmode=... dbname=app_production
+  #   host=localhost port=5432 user=pqgotest password=... sslmode=... dbname=app_production
   #
   # All connection parameters are optional.
   # Without the dbname parameter, the driver will default to a database
@@ -71,12 +71,12 @@ The example below has two queries are specified, with the following parameters:
 ```
 
 The system can be easily extended using homemade metrics collection tools or
-using postgreql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab) or [powa](http://dalibo.github.io/powa/))
+using postgresql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab) or [powa](http://dalibo.github.io/powa/))
 
 # Sample Queries :
 - telegraf.conf postgresql_extensible queries (assuming that you have configured
  correctly your connection)
-```
+```toml
 [[inputs.postgresql_extensible.query]]
   sqlquery="SELECT * FROM pg_stat_database"
   version=901

@@ -31,6 +31,18 @@ type mibEntry struct {
 type SnmpTrap struct {
 	ServiceAddress string            `toml:"service_address"`
 	Timeout        internal.Duration `toml:"timeout"`
+	Version        string            `toml:"version"`
+
+	// Settings for version 3
+	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
+	SecLevel string `toml:"sec_level"`
+	SecName  string `toml:"sec_name"`
+	// Values: "MD5", "SHA", "". Default: ""
+	AuthProtocol string `toml:"auth_protocol"`
+	AuthPassword string `toml:"auth_password"`
+	// Values: "DES", "AES", "". Default: ""
+	PrivProtocol string `toml:"priv_protocol"`
+	PrivPassword string `toml:"priv_password"`
 
 	acc      telegraf.Accumulator
 	listener *gosnmp.TrapListener
@@ -58,6 +70,22 @@ var sampleConfig = `
   # service_address = "udp://:162"
   ## Timeout running snmptranslate command
   # timeout = "5s"
+  ## Snmp version, defaults to 2c
+  # version = "2c"
+  ## SNMPv3 authentication and encryption options.
+  ##
+  ## Security Name.
+  # sec_name = "myuser"
+  ## Authentication protocol; one of "MD5", "SHA" or "".
+  # auth_protocol = "MD5"
+  ## Authentication password.
+  # auth_password = "pass"
+  ## Security Level; one of "noAuthNoPriv", "authNoPriv", or "authPriv".
+  # sec_level = "authNoPriv"
+  ## Privacy protocol used for encrypted messages; one of "DES", "AES", "AES192", "AES192C", "AES256", "AES256C" or "".
+  # priv_protocol = ""
+  ## Privacy password used for encrypted messages.
+  # priv_password = ""
 `
 
 func (s *SnmpTrap) SampleConfig() string {
@@ -78,6 +106,7 @@ func init() {
 			timeFunc:       time.Now,
 			ServiceAddress: "udp://:162",
 			Timeout:        defaultTimeout,
+			Version:        "2c",
 		}
 	})
 }
@@ -104,6 +133,81 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	s.listener = gosnmp.NewTrapListener()
 	s.listener.OnNewTrap = makeTrapHandler(s)
 	s.listener.Params = gosnmp.Default
+
+	switch s.Version {
+	case "3":
+		s.listener.Params.Version = gosnmp.Version3
+	case "2c":
+		s.listener.Params.Version = gosnmp.Version2c
+	case "1":
+		s.listener.Params.Version = gosnmp.Version1
+	default:
+		s.listener.Params.Version = gosnmp.Version2c
+	}
+
+	if s.listener.Params.Version == gosnmp.Version3 {
+		s.listener.Params.SecurityModel = gosnmp.UserSecurityModel
+
+		switch strings.ToLower(s.SecLevel) {
+		case "noauthnopriv", "":
+			s.listener.Params.MsgFlags = gosnmp.NoAuthNoPriv
+		case "authnopriv":
+			s.listener.Params.MsgFlags = gosnmp.AuthNoPriv
+		case "authpriv":
+			s.listener.Params.MsgFlags = gosnmp.AuthPriv
+		default:
+			return fmt.Errorf("unknown security level '%s'", s.SecLevel)
+		}
+
+		var authenticationProtocol gosnmp.SnmpV3AuthProtocol
+		switch strings.ToLower(s.AuthProtocol) {
+		case "md5":
+			authenticationProtocol = gosnmp.MD5
+		case "sha":
+			authenticationProtocol = gosnmp.SHA
+		//case "sha224":
+		//	authenticationProtocol = gosnmp.SHA224
+		//case "sha256":
+		//	authenticationProtocol = gosnmp.SHA256
+		//case "sha384":
+		//	authenticationProtocol = gosnmp.SHA384
+		//case "sha512":
+		//	authenticationProtocol = gosnmp.SHA512
+		case "":
+			authenticationProtocol = gosnmp.NoAuth
+		default:
+			return fmt.Errorf("unknown authentication protocol '%s'", s.AuthProtocol)
+		}
+
+		var privacyProtocol gosnmp.SnmpV3PrivProtocol
+		switch strings.ToLower(s.PrivProtocol) {
+		case "aes":
+			privacyProtocol = gosnmp.AES
+		case "des":
+			privacyProtocol = gosnmp.DES
+		case "aes192":
+			privacyProtocol = gosnmp.AES192
+		case "aes192c":
+			privacyProtocol = gosnmp.AES192C
+		case "aes256":
+			privacyProtocol = gosnmp.AES256
+		case "aes256c":
+			privacyProtocol = gosnmp.AES256C
+		case "":
+			privacyProtocol = gosnmp.NoPriv
+		default:
+			return fmt.Errorf("unknown privacy protocol '%s'", s.PrivProtocol)
+		}
+
+		s.listener.Params.SecurityParameters = &gosnmp.UsmSecurityParameters{
+			UserName:                 s.SecName,
+			PrivacyProtocol:          privacyProtocol,
+			PrivacyPassphrase:        s.PrivPassword,
+			AuthenticationPassphrase: s.AuthPassword,
+			AuthenticationProtocol:   authenticationProtocol,
+		}
+
+	}
 
 	// wrap the handler, used in unit tests
 	if nil != s.makeHandlerWrapper {
@@ -245,6 +349,20 @@ func makeTrapHandler(s *SnmpTrap) handler {
 			fields[name] = value
 		}
 
+		if packet.Version == gosnmp.Version3 {
+			if packet.ContextName != "" {
+				tags["context_name"] = packet.ContextName
+			}
+			if packet.ContextEngineID != "" {
+				// SNMP RFCs like 3411 and 5343 show engine ID as a hex string
+				tags["engine_id"] = fmt.Sprintf("%x", packet.ContextEngineID)
+			}
+		} else {
+			if packet.Community != "" {
+				tags["community"] = packet.Community
+			}
+		}
+
 		s.acc.AddFields("snmp_trap", fields, tags, tm)
 	}
 }
@@ -254,7 +372,7 @@ func (s *SnmpTrap) lookup(oid string) (e mibEntry, err error) {
 	defer s.cacheLock.Unlock()
 	var ok bool
 	if e, ok = s.cache[oid]; !ok {
-		// cache miss.  exec snmptranlate
+		// cache miss.  exec snmptranslate
 		e, err = s.snmptranslate(oid)
 		if err == nil {
 			s.cache[oid] = e

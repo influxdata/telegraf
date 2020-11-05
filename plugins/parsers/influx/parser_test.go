@@ -3,6 +3,7 @@ package influx
 import (
 	"bytes"
 	"errors"
+	"io"
 	"strconv"
 	"strings"
 	"testing"
@@ -750,6 +751,18 @@ func TestSeriesParser(t *testing.T) {
 				buf:        "cpu,a=",
 			},
 		},
+		{
+			name:    "error with carriage return in long line",
+			input:   []byte("cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b"),
+			metrics: []telegraf.Metric{},
+			err: &ParseError{
+				Offset:     1031,
+				LineNumber: 1,
+				Column:     1032,
+				msg:        "parse error",
+				buf:        "cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -761,6 +774,9 @@ func TestSeriesParser(t *testing.T) {
 
 			metrics, err := parser.Parse(tt.input)
 			require.Equal(t, tt.err, err)
+			if err != nil {
+				require.Equal(t, tt.err.Error(), err.Error())
+			}
 
 			require.Equal(t, len(tt.metrics), len(metrics))
 			for i, expected := range tt.metrics {
@@ -790,7 +806,7 @@ func TestParserErrorString(t *testing.T) {
 		{
 			name:      "buffer too long",
 			input:     []byte("cpu " + strings.Repeat("ab", maxErrorBufferSize) + "=invalid\ncpu value=42"),
-			errString: "metric parse error: expected field at 1:2054: \"cpu " + strings.Repeat("ab", maxErrorBufferSize)[:maxErrorBufferSize-4] + "...\"",
+			errString: "metric parse error: expected field at 1:2054: \"...b" + strings.Repeat("ab", maxErrorBufferSize/2-1) + "=<-- here\"",
 		},
 		{
 			name:      "multiple line error",
@@ -834,7 +850,7 @@ func TestStreamParserErrorString(t *testing.T) {
 			name:  "buffer too long",
 			input: []byte("cpu " + strings.Repeat("ab", maxErrorBufferSize) + "=invalid\ncpu value=42"),
 			errs: []string{
-				"metric parse error: expected field at 1:2054: \"cpu " + strings.Repeat("ab", maxErrorBufferSize)[:maxErrorBufferSize-4] + "...\"",
+				"metric parse error: expected field at 1:2054: \"...b" + strings.Repeat("ab", maxErrorBufferSize/2-1) + "=<-- here\"",
 			},
 		},
 		{
@@ -894,4 +910,20 @@ func TestStreamParserReaderError(t *testing.T) {
 
 	_, err = parser.Next()
 	require.Equal(t, err, EOF)
+}
+
+func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
+	r, w := io.Pipe()
+
+	parser := NewStreamParser(r)
+	parser.SetTimeFunc(DefaultTime)
+
+	go w.Write([]byte("metric value=1\nmetric2 value=1\n"))
+
+	_, err := parser.Next()
+	require.NoError(t, err)
+
+	// should not block on second read
+	_, err = parser.Next()
+	require.NoError(t, err)
 }

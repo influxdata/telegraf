@@ -184,7 +184,7 @@ The above measurements for the devicemapper storage driver can now be found in t
     - container_status
     - container_version
   + fields:
-    - total_pgmafault
+    - total_pgmajfault
     - cache
     - mapped_file
     - total_inactive_file

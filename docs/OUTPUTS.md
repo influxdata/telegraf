@@ -30,7 +30,8 @@ import (
 )
 
 type Simple struct {
-    Ok bool `toml:"ok"`
+    Ok  bool            `toml:"ok"`
+    Log telegraf.Logger `toml:"-"`
 }
 
 func (s *Simple) Description() string {
@@ -43,20 +44,25 @@ func (s *Simple) SampleConfig() string {
 `
 }
 
+// Init is for setup, and validating config.
 func (s *Simple) Init() error {
 	return nil
 }
 
 func (s *Simple) Connect() error {
-    // Make a connection to the URL here
+    // Make any connection required here
     return nil
 }
 
 func (s *Simple) Close() error {
-    // Close connection to the URL here
+    // Close any connections here.
+    // Write will not be called once Close is called, so there is no need to synchronize.
     return nil
 }
 
+// Write should write immediately to the output, and not buffer writes
+// (Telegraf manages the buffer for you). Returning an error will fail this
+// batch of writes and the entire batch will be retried automatically.
 func (s *Simple) Write(metrics []telegraf.Metric) error {
     for _, metric := range metrics {
         // write `metric` to the output sink here
@@ -102,9 +108,9 @@ Metrics are flushed to outputs when any of the following events happen:
 - The telegraf process has received a SIGUSR1 signal
 
 Note that if the flush takes longer than the `agent.interval` to write the metrics
-to the output, you'll see a message saying the output `did not complete within its 
-flush interval`. This may mean your output is not keeping up with the flow of metrics, 
-and you may want to look into enabling compression, reducing the size of your metrics, 
+to the output, you'll see a message saying the output `did not complete within its
+flush interval`. This may mean your output is not keeping up with the flow of metrics,
+and you may want to look into enabling compression, reducing the size of your metrics,
 or investigate other reasons why the writes might be taking longer than expected.
 
 [file]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/file

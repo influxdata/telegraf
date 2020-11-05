@@ -51,7 +51,7 @@ var sampleConfig = `
   template = "host.tags.measurement.field"
   ## Timeout in seconds to connect
   timeout = "2s"
-  ## Display Communcation to Instrumental
+  ## Display Communication to Instrumental
   debug = false
 `
 
@@ -86,7 +86,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	s, err := serializers.NewGraphiteSerializer(i.Prefix, i.Template, false, i.Templates)
+	s, err := serializers.NewGraphiteSerializer(i.Prefix, i.Template, false, ".", i.Templates)
 	if err != nil {
 		return err
 	}

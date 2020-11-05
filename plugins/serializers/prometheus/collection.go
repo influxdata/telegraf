@@ -446,10 +446,6 @@ func (c *Collection) GetProto() []*dto.MetricFamily {
 					})
 				}
 
-				if len(buckets) == 0 {
-					continue
-				}
-
 				m.Histogram = &dto.Histogram{
 					Bucket:      buckets,
 					SampleCount: proto.Uint64(metric.Histogram.Count),
@@ -462,10 +458,6 @@ func (c *Collection) GetProto() []*dto.MetricFamily {
 						Quantile: proto.Float64(quantile.Quantile),
 						Value:    proto.Float64(quantile.Value),
 					})
-				}
-
-				if len(quantiles) == 0 {
-					continue
 				}
 
 				m.Summary = &dto.Summary{

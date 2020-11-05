@@ -1,4 +1,4 @@
-# `nvidia-smi` Input Plugin
+# Nvidia System Management Interface (SMI) Input Plugin
 
 This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvidia-system-management-interface) binary to pull GPU stats including memory and GPU usage, temp and other.
 
@@ -31,6 +31,9 @@ You'll need to escape the `\` within the `telegraf.conf` like this: `C:\\Program
     - `uuid` (A unique identifier for the GPU e.g. `GPU-f9ba66fc-a7f5-94c5-da19-019ef2f9c665`)
   - fields
     - `fan_speed` (integer, percentage)
+    - `fbc_stats_session_count` (integer)
+    - `fbc_stats_average_fps` (integer)
+    - `fbc_stats_average_latency` (integer)
     - `memory_free` (integer, MiB)
     - `memory_used` (integer, MiB)
     - `memory_total` (integer, MiB)
@@ -38,6 +41,8 @@ You'll need to escape the `\` within the `telegraf.conf` like this: `C:\\Program
     - `temperature_gpu` (integer, degrees C)
     - `utilization_gpu` (integer, percentage)
     - `utilization_memory` (integer, percentage)
+    - `utilization_encoder` (integer, percentage)
+    - `utilization_decoder` (integer, percentage)
     - `pcie_link_gen_current` (integer)
     - `pcie_link_width_current` (integer)
     - `encoder_stats_session_count` (integer)
@@ -52,7 +57,7 @@ You'll need to escape the `\` within the `telegraf.conf` like this: `C:\\Program
 
 The below query could be used to alert on the average temperature of the your GPUs over the last minute
 
-```
+```sql
 SELECT mean("temperature_gpu") FROM "nvidia_smi" WHERE time > now() - 5m GROUP BY time(1m), "index", "name", "host"
 ```
 
@@ -61,7 +66,7 @@ SELECT mean("temperature_gpu") FROM "nvidia_smi" WHERE time > now() - 5m GROUP B
 Check the full output by running `nvidia-smi` binary manually.
 
 Linux:
-```
+```sh
 sudo -u telegraf -- /usr/bin/nvidia-smi -q -x
 ```
 

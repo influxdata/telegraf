@@ -75,15 +75,38 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 
 		// For each field compare value with the cached one
 		changed := false
+		added := false
+		sametime := metric.Time() == m.Time()
 		for _, f := range metric.FieldList() {
-			if value, ok := m.GetField(f.Key); ok && value != f.Value {
-				changed = true
-				continue
+			if value, ok := m.GetField(f.Key); ok {
+				if value != f.Value {
+					changed = true
+					break
+				}
+			} else if sametime {
+				// This field isn't in the cached metric but it's the
+				// same series and timestamp. Merge it into the cached
+				// metric.
+
+				// Metrics have a ValueType that applies to all values
+				// in the metric. If an input needs to produce values
+				// with different ValueTypes but the same timestamp,
+				// they have to produce multiple metrics. (See the
+				// system input for an example.) In this case, dedup
+				// ignores the ValueTypes of the metrics and merges
+				// the fields into one metric for the dup check.
+
+				m.AddField(f.Key, f.Value)
+				added = true
 			}
 		}
 		// If any field value has changed then refresh the cache
 		if changed {
 			d.save(metric, id)
+			continue
+		}
+
+		if sametime && added {
 			continue
 		}
 

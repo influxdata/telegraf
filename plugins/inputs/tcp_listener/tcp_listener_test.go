@@ -141,7 +141,7 @@ func TestConnectTCP(t *testing.T) {
 	}
 }
 
-// Test that MaxTCPConections is respected
+// Test that MaxTCPConnections is respected
 func TestConcurrentConns(t *testing.T) {
 	listener := TcpListener{
 		Log:                    testutil.Logger{},
@@ -177,7 +177,7 @@ func TestConcurrentConns(t *testing.T) {
 	assert.Equal(t, io.EOF, err)
 }
 
-// Test that MaxTCPConections is respected when max==1
+// Test that MaxTCPConnections is respected when max==1
 func TestConcurrentConns1(t *testing.T) {
 	listener := TcpListener{
 		Log:                    testutil.Logger{},
@@ -211,7 +211,7 @@ func TestConcurrentConns1(t *testing.T) {
 	assert.Equal(t, io.EOF, err)
 }
 
-// Test that MaxTCPConections is respected
+// Test that MaxTCPConnections is respected
 func TestCloseConcurrentConns(t *testing.T) {
 	listener := TcpListener{
 		Log:                    testutil.Logger{},
@@ -264,16 +264,17 @@ func TestRunParserInvalidMsg(t *testing.T) {
 
 	listener.parser, _ = parsers.NewInfluxParser()
 	listener.wg.Add(1)
-	go listener.tcpParser()
 
 	buf := bytes.NewBuffer(nil)
 	log.SetOutput(buf)
 	defer log.SetOutput(os.Stderr)
+
+	go listener.tcpParser()
 	in <- testmsg
 
 	scnr := bufio.NewScanner(buf)
 	for scnr.Scan() {
-		if strings.Contains(scnr.Text(), fmt.Sprintf(malformedwarn, 1)) {
+		if strings.Contains(scnr.Text(), "tcp_listener has received 1 malformed packets thus far.") {
 			break
 		}
 	}

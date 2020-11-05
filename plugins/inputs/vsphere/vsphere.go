@@ -7,7 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/vmware/govmomi/vim25/soap"
 )
@@ -200,11 +200,11 @@ var sampleConfig = `
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
 
-  ## number of objects to retreive per query for realtime resources (vms and hosts)
+  ## number of objects to retrieve per query for realtime resources (vms and hosts)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
   # max_query_objects = 256
 
-  ## number of metrics to retreive per query for non-realtime resources (clusters and datastores)
+  ## number of metrics to retrieve per query for non-realtime resources (clusters and datastores)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
   # max_query_metrics = 256
 
@@ -229,10 +229,10 @@ var sampleConfig = `
   ## Custom attributes from vCenter can be very useful for queries in order to slice the
   ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
   ## by default, since they can add a considerable amount of tags to the resulting metrics. To
-  ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  ## enable, simply set custom_attribute_exclude to [] (empty set) and use custom_attribute_include
   ## to select the attributes you want to include.
   ## By default, since they can add a considerable amount of tags to the resulting metrics. To
-  ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  ## enable, simply set custom_attribute_exclude to [] (empty set) and use custom_attribute_include
   ## to select the attributes you want to include.
   # custom_attribute_include = []
   # custom_attribute_exclude = ["*"]

@@ -145,7 +145,7 @@ sockets and the `ping_group_range` setting.
   - fields:
     - packets_transmitted (integer)
     - packets_received (integer)
-    - percent_packets_loss (float)
+    - percent_packet_loss (float)
     - ttl (integer, Not available on Windows)
     - average_response_ms (integer)
     - minimum_response_ms (integer)

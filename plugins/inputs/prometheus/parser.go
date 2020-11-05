@@ -74,8 +74,7 @@ func ParseV2(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 			} else {
 				// standard metric
 				// reading fields
-				fields := make(map[string]interface{})
-				fields = getNameAndValueV2(m, metricName)
+				fields := getNameAndValueV2(m, metricName)
 				// converting to telegraf metric
 				if len(fields) > 0 {
 					var t time.Time
@@ -203,7 +202,7 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 			// reading tags
 			tags := makeLabels(m)
 			// reading fields
-			fields := make(map[string]interface{})
+			var fields map[string]interface{}
 			if mf.GetType() == dto.MetricType_SUMMARY {
 				// summary metric
 				fields = makeQuantiles(m)

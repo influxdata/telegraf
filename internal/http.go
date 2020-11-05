@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"net"
 	"net/http"
+	"net/url"
 )
 
 type BasicAuthErrorFunc func(rw http.ResponseWriter)
@@ -38,6 +39,41 @@ func (h *basicAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 			subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.password)) != 1 {
 
 			rw.Header().Set("WWW-Authenticate", "Basic realm=\""+h.realm+"\"")
+			h.onError(rw)
+			http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+	}
+
+	h.next.ServeHTTP(rw, req)
+}
+
+type GenericAuthErrorFunc func(rw http.ResponseWriter)
+
+// GenericAuthHandler returns a http handler that requires `Authorization: <credentials>`
+func GenericAuthHandler(credentials string, onError GenericAuthErrorFunc) func(h http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		return &genericAuthHandler{
+			credentials: credentials,
+			onError:     onError,
+			next:        h,
+		}
+	}
+}
+
+// Generic auth scheme handler - exact match on `Authorization: <credentials>`
+type genericAuthHandler struct {
+	credentials string
+	onError     GenericAuthErrorFunc
+	next        http.Handler
+}
+
+func (h *genericAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if h.credentials != "" {
+		// Scheme checking
+		authorization := req.Header.Get("Authorization")
+		if subtle.ConstantTimeCompare([]byte(authorization), []byte(h.credentials)) != 1 {
+
 			h.onError(rw)
 			http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
@@ -94,4 +130,14 @@ func (h *ipRangeHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	h.onError(rw, http.StatusForbidden)
+}
+
+func OnClientError(client *http.Client, err error) {
+	// Close connection after a timeout error. If this is a HTTP2
+	// connection this ensures that next interval a new connection will be
+	// used and name lookup will be performed.
+	//   https://github.com/golang/go/issues/36026
+	if err, ok := err.(*url.Error); ok && err.Timeout() {
+		client.CloseIdleConnections()
+	}
 }

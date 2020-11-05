@@ -292,7 +292,7 @@ func (e *EventHub) onDelivery(
 	delete(groups, track.ID())
 	if !ok {
 		// The metrics should always be found, this message indicates a programming error.
-		e.Log.Errorf("Could not find delievery: %d", track.ID())
+		e.Log.Errorf("Could not find delivery: %d", track.ID())
 		return true
 	}
 
@@ -376,7 +376,7 @@ func (e *EventHub) createMetrics(event *eventhub.Event) ([]telegraf.Metric, erro
 		}
 
 		if event.SystemProperties.PartitionID != nil && e.PartitionIDTag != "" {
-			metrics[i].AddTag(e.PartitionIDTag, string(*event.SystemProperties.PartitionID))
+			metrics[i].AddTag(e.PartitionIDTag, fmt.Sprintf("%d", *event.SystemProperties.PartitionID))
 		}
 		if event.SystemProperties.PartitionKey != nil && e.PartitionKeyTag != "" {
 			metrics[i].AddTag(e.PartitionKeyTag, *event.SystemProperties.PartitionKey)
