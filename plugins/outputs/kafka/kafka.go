@@ -291,7 +291,11 @@ func (k *Kafka) routingKey(metric telegraf.Metric) string {
 func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	msgs := make([]*sarama.ProducerMessage, 0, len(metrics))
 	for _, metric := range metrics {
-		buf, err := k.serializer.Serialize(metric)
+
+		s := Serializer{}
+
+        buf, err :=  s.Serialize(metric)
+		//buf, err := k.serializer.Serialize(metric)
 		if err != nil {
 			log.Printf("D! [outputs.kafka] Could not serialize metric: %v", err)
 			continue
