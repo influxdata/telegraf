@@ -684,6 +684,11 @@ SELECT TOP 1
 	,[db_recovering]
 	,[db_recoveryPending]
 	,[db_suspect]
+	,CASE
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_WRITE') THEN '1'
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_ONLY') THEN '0'
+		ELSE 'N/A'
+	END as [is_primary_replica]
 FROM sys.server_resource_stats
 CROSS APPLY	(
 	SELECT  
@@ -710,6 +715,11 @@ SELECT TOP(1)
 	 'sqlserver_azure_db_resource_stats' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,cast([avg_cpu_percent] as float) as [avg_cpu_percent]
+	,CASE
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_WRITE') THEN '1'
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_ONLY') THEN '0'
+		ELSE 'N/A'
+	END as [is_primary_replica]
 FROM
     sys.server_resource_stats
 ORDER BY
@@ -737,6 +747,11 @@ SELECT
 	,[volume_type_managed_xstore_iops] as [voltype_man_xtore_iops]
 	,[volume_type_external_xstore_iops] as [voltype_ext_xtore_iops]
 	,[volume_external_xstore_iops] as [vol_ext_xtore_iops]
+	,CASE
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_WRITE') THEN '1'
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_ONLY') THEN '0'
+		ELSE 'N/A'
+	END as [is_primary_replica]
 FROM sys.dm_instance_resource_governance;
 `
 
@@ -762,6 +777,11 @@ SELECT
 	,vfs.[num_of_bytes_written] AS [write_bytes]
 	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] 
 	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
+	,CASE
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_WRITE') THEN '1'
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_ONLY') THEN '0'
+		ELSE 'N/A'
+	END as [is_primary_replica]
 FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
 LEFT OUTER JOIN sys.master_files AS mf WITH (NOLOCK)
 	ON vfs.[database_id] = mf.[database_id] 
@@ -782,6 +802,11 @@ SELECT
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
 	,mc.[type] AS [clerk_type]
 	,SUM(mc.[pages_kb]) AS [size_kb]
+	,CASE
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_WRITE') THEN '1'
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_ONLY') THEN '0'
+		ELSE 'N/A'
+	END as [is_primary_replica]
 FROM sys.[dm_os_memory_clerks] AS mc WITH (NOLOCK)
 GROUP BY
 	 mc.[type]
@@ -864,6 +889,11 @@ SELECT
   			'PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC') THEN 'Full Text Search'
  		ELSE 'Other'
 	END as [wait_category]
+	,CASE
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_WRITE') THEN '1'
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_ONLY') THEN '0'
+		ELSE 'N/A'
+	END as [is_primary_replica]
 FROM sys.dm_os_wait_stats AS ws WITH (NOLOCK)
 WHERE
 	ws.[wait_type] NOT IN (
@@ -1064,6 +1094,11 @@ SELECT
 	END AS [instance]
 	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value]
 	,cast(pc.[cntr_type] as varchar(25)) as [counter_type]
+	,CASE
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_WRITE') THEN '1'
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_ONLY') THEN '0'
+		ELSE 'N/A'
+	END as [is_primary_replica]
 from @PCounters pc
 LEFT OUTER JOIN @PCounters AS pc1
 	ON (
@@ -1134,6 +1169,11 @@ SELECT
 	,CONVERT(varchar(20),[query_hash],1) as [query_hash]
 	,CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
 	,DB_NAME(COALESCE(r.[database_id], s.[database_id])) AS [session_db_name]
+	,CASE
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_WRITE') THEN '1'
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_ONLY') THEN '0'
+		ELSE 'N/A'
+	END as [is_primary_replica]
 FROM sys.dm_exec_sessions AS s
 LEFT OUTER JOIN sys.dm_exec_requests AS r 
 	ON s.[session_id] = r.[session_id]
@@ -1176,5 +1216,10 @@ SELECT
 	,s.[yield_count]
 	,s.[total_cpu_usage_ms]
 	,s.[total_scheduler_delay_ms]
+	,CASE
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_WRITE') THEN '1'
+		WHEN (DATABASEPROPERTYEX(DB_NAME(),'Updateability') = 'READ_ONLY') THEN '0'
+		ELSE 'N/A'
+	END as [is_primary_replica]
 FROM sys.dm_os_schedulers AS s
 `
