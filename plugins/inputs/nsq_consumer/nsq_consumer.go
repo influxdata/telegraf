@@ -2,7 +2,6 @@ package nsq_consumer
 
 import (
 	"context"
-	"log"
 	"sync"
 
 	"github.com/influxdata/telegraf"
@@ -18,10 +17,12 @@ const (
 type empty struct{}
 type semaphore chan empty
 
-type logger struct{}
+type logger struct {
+	log telegraf.Logger
+}
 
 func (l *logger) Output(calldepth int, s string) error {
-	log.Println("D! [inputs.nsq_consumer] " + s)
+	l.log.Debug(s)
 	return nil
 }
 
@@ -39,6 +40,8 @@ type NSQConsumer struct {
 	parser   parsers.Parser
 	consumer *nsq.Consumer
 
+	Log telegraf.Logger
+
 	mu       sync.Mutex
 	messages map[telegraf.TrackingID]*nsq.Message
 	wg       sync.WaitGroup
@@ -48,8 +51,10 @@ type NSQConsumer struct {
 var sampleConfig = `
   ## Server option still works but is deprecated, we just prepend it to the nsqd array.
   # server = "localhost:4150"
+
   ## An array representing the NSQD TCP HTTP Endpoints
   nsqd = ["localhost:4150"]
+
   ## An array representing the NSQLookupd HTTP Endpoints
   nsqlookupd = ["localhost:4161"]
   topic = "telegraf"
@@ -98,7 +103,7 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 	n.cancel = cancel
 
 	n.connect()
-	n.consumer.SetLogger(&logger{}, nsq.LogLevelInfo)
+	n.consumer.SetLogger(&logger{log: n.Log}, nsq.LogLevelInfo)
 	n.consumer.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
 		metrics, err := n.parser.Parse(message.Body)
 		if err != nil {

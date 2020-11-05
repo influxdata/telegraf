@@ -4,7 +4,6 @@ package win_services
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/influxdata/telegraf"
@@ -90,6 +89,8 @@ var description = "Input plugin to report Windows services info."
 
 //WinServices is an implementation if telegraf.Input interface, providing info about Windows Services
 type WinServices struct {
+	Log telegraf.Logger
+
 	ServiceNames []string `toml:"service_names"`
 	mgrProvider  ManagerProvider
 }
@@ -125,9 +126,9 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 		service, err := collectServiceInfo(scmgr, srvName)
 		if err != nil {
 			if IsPermission(err) {
-				log.Printf("D! Error in plugin [inputs.win_services]: %v", err)
+				m.Log.Debug(err.Error())
 			} else {
-				acc.AddError(err)
+				m.Log.Error(err.Error())
 			}
 			continue
 		}

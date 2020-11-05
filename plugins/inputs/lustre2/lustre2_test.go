@@ -6,6 +6,9 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/toml"
+	"github.com/influxdata/toml/ast"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,7 +42,7 @@ cache_miss                11653333250 samples [pages] 1 1 11653333250
 `
 
 const obdfilterJobStatsContents = `job_stats:
-- job_id:          testjob1
+- job_id:          cluster-testjob1
   snapshot_time:   1461772761
   read_bytes:      { samples:           1, unit: bytes, min:    4096, max:    4096, sum:            4096 }
   write_bytes:     { samples:          25, unit: bytes, min: 1048576, max: 1048576, sum:        26214400 }
@@ -89,7 +92,7 @@ crossdir_rename           369571 samples [reqs]
 `
 
 const mdtJobStatsContents = `job_stats:
-- job_id:          testjob1
+- job_id:          cluster-testjob1
   snapshot_time:   1461772761
   open:            { samples:           5, unit:  reqs }
   close:           { samples:           4, unit:  reqs }
@@ -204,7 +207,7 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 
 	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
 	ost_name := "OST0001"
-	job_names := []string{"testjob1", "testjob2"}
+	job_names := []string{"cluster-testjob1", "testjob2"}
 
 	mdtdir := tempdir + "/mdt/"
 	err := os.MkdirAll(mdtdir+"/"+ost_name, 0755)
@@ -329,4 +332,39 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
 	require.NoError(t, err)
+}
+
+func TestLustre2CanParseConfiguration(t *testing.T) {
+	config := []byte(`
+[[inputs.lustre2]]
+   ost_procfiles = [
+     "/proc/fs/lustre/obdfilter/*/stats",
+     "/proc/fs/lustre/osd-ldiskfs/*/stats",
+   ]
+   mds_procfiles = [
+     "/proc/fs/lustre/mdt/*/md_stats",
+   ]`)
+
+	table, err := toml.Parse([]byte(config))
+	require.NoError(t, err)
+
+	inputs, ok := table.Fields["inputs"]
+	require.True(t, ok)
+
+	lustre2, ok := inputs.(*ast.Table).Fields["lustre2"]
+	require.True(t, ok)
+
+	var plugin Lustre2
+
+	require.NoError(t, toml.UnmarshalTable(lustre2.([]*ast.Table)[0], &plugin))
+
+	assert.Equal(t, Lustre2{
+		Ost_procfiles: []string{
+			"/proc/fs/lustre/obdfilter/*/stats",
+			"/proc/fs/lustre/osd-ldiskfs/*/stats",
+		},
+		Mds_procfiles: []string{
+			"/proc/fs/lustre/mdt/*/md_stats",
+		},
+	}, plugin)
 }

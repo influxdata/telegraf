@@ -47,7 +47,7 @@ var info = types.Info{
 	HTTPSProxy:        "",
 	Labels:            []string{},
 	MemoryLimit:       false,
-	DriverStatus:      [][2]string{{"Pool Name", "docker-8:1-1182287-pool"}, {"Pool Blocksize", "65.54 kB"}, {"Backing Filesystem", "extfs"}, {"Data file", "/dev/loop0"}, {"Metadata file", "/dev/loop1"}, {"Data Space Used", "17.3 GB"}, {"Data Space Total", "107.4 GB"}, {"Data Space Available", "36.53 GB"}, {"Metadata Space Used", "20.97 MB"}, {"Metadata Space Total", "2.147 GB"}, {"Metadata Space Available", "2.127 GB"}, {"Udev Sync Supported", "true"}, {"Deferred Removal Enabled", "false"}, {"Data loop file", "/var/lib/docker/devicemapper/devicemapper/data"}, {"Metadata loop file", "/var/lib/docker/devicemapper/devicemapper/metadata"}, {"Library Version", "1.02.115 (2016-01-25)"}},
+	DriverStatus:      [][2]string{{"Pool Name", "docker-8:1-1182287-pool"}, {"Base Device Size", "10.74 GB"}, {"Pool Blocksize", "65.54 kB"}, {"Backing Filesystem", "extfs"}, {"Data file", "/dev/loop0"}, {"Metadata file", "/dev/loop1"}, {"Data Space Used", "17.3 GB"}, {"Data Space Total", "107.4 GB"}, {"Data Space Available", "36.53 GB"}, {"Metadata Space Used", "20.97 MB"}, {"Metadata Space Total", "2.147 GB"}, {"Metadata Space Available", "2.127 GB"}, {"Udev Sync Supported", "true"}, {"Deferred Removal Enabled", "false"}, {"Data loop file", "/var/lib/docker/devicemapper/devicemapper/data"}, {"Metadata loop file", "/var/lib/docker/devicemapper/devicemapper/metadata"}, {"Library Version", "1.02.115 (2016-01-25)"}, {"Thin Pool Minimum Free Space", "10.74GB"}},
 	NFd:               19,
 	HTTPProxy:         "",
 	Driver:            "devicemapper",
@@ -63,7 +63,7 @@ var containerList = []types.Container{
 	{
 		ID:      "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
 		Names:   []string{"/etcd"},
-		Image:   "quay.io/coreos/etcd:v2.2.2",
+		Image:   "quay.io/coreos/etcd:v3.3.25",
 		Command: "/etcd -name etcd0 -advertise-client-urls http://localhost:2379 -listen-client-urls http://0.0.0.0:2379",
 		Created: 1455941930,
 		Status:  "Up 4 hours",
@@ -100,7 +100,7 @@ var containerList = []types.Container{
 	{
 		ID:      "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 		Names:   []string{"/etcd2"},
-		Image:   "quay.io:4443/coreos/etcd:v2.2.2",
+		Image:   "quay.io:4443/coreos/etcd:v3.3.25",
 		Command: "/etcd -name etcd2 -advertise-client-urls http://localhost:2379 -listen-client-urls http://0.0.0.0:2379",
 		Created: 1455941933,
 		Status:  "Up 4 hours",
@@ -492,32 +492,34 @@ func containerStatsWindows() types.ContainerStats {
 	return stat
 }
 
-var containerInspect = types.ContainerJSON{
-	Config: &container.Config{
-		Env: []string{
-			"ENVVAR1=loremipsum",
-			"ENVVAR1FOO=loremipsum",
-			"ENVVAR2=dolorsitamet",
-			"ENVVAR3==ubuntu:10.04",
-			"ENVVAR4",
-			"ENVVAR5=",
-			"ENVVAR6= ",
-			"ENVVAR7=ENVVAR8=ENVVAR9",
-			"PATH=/bin:/sbin",
-		},
-	},
-	ContainerJSONBase: &types.ContainerJSONBase{
-		State: &types.ContainerState{
-			Health: &types.Health{
-				FailingStreak: 1,
-				Status:        "Unhealthy",
+func containerInspect() types.ContainerJSON {
+	return types.ContainerJSON{
+		Config: &container.Config{
+			Env: []string{
+				"ENVVAR1=loremipsum",
+				"ENVVAR1FOO=loremipsum",
+				"ENVVAR2=dolorsitamet",
+				"ENVVAR3==ubuntu:10.04",
+				"ENVVAR4",
+				"ENVVAR5=",
+				"ENVVAR6= ",
+				"ENVVAR7=ENVVAR8=ENVVAR9",
+				"PATH=/bin:/sbin",
 			},
-			Status:     "running",
-			OOMKilled:  false,
-			Pid:        1234,
-			ExitCode:   0,
-			StartedAt:  "2018-06-14T05:48:53.266176036Z",
-			FinishedAt: "0001-01-01T00:00:00Z",
 		},
-	},
+		ContainerJSONBase: &types.ContainerJSONBase{
+			State: &types.ContainerState{
+				Health: &types.Health{
+					FailingStreak: 1,
+					Status:        "Unhealthy",
+				},
+				Status:     "running",
+				OOMKilled:  false,
+				Pid:        1234,
+				ExitCode:   0,
+				StartedAt:  "2018-06-14T05:48:53.266176036Z",
+				FinishedAt: "0001-01-01T00:00:00Z",
+			},
+		},
+	}
 }

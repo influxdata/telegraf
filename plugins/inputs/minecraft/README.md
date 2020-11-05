@@ -67,7 +67,7 @@ View the current scores with a command, substituting your player name:
 ### Sample Queries:
 
 Get the number of jumps per player in the last hour:
-```
+```sql
 SELECT SPREAD("jumps") FROM "minecraft" WHERE time > now() - 1h GROUP BY "player"
 ```
 
@@ -78,7 +78,7 @@ minecraft,player=dinnerbone,source=127.0.0.1,port=25575 deaths=1i,jumps=1999i,co
 minecraft,player=jeb,source=127.0.0.1,port=25575 d_pickaxe=1i,damage_dealt=80i,d_sword=2i,hunger=20i,health=20i,kills=1i,level=33i,jumps=264i,armor=15i 1498261397000000000
 ```
 
-[server.properies]: https://minecraft.gamepedia.com/Server.properties
+[server.properties]: https://minecraft.gamepedia.com/Server.properties
 [scoreboard]: http://minecraft.gamepedia.com/Scoreboard
 [objectives]: https://minecraft.gamepedia.com/Scoreboard#Objectives
 [rcon]: http://wiki.vg/RCON

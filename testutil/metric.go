@@ -123,8 +123,13 @@ func SortMetrics() cmp.Option {
 	return cmpopts.SortSlices(lessFunc)
 }
 
+// IgnoreTime disables comparison of timestamp.
+func IgnoreTime() cmp.Option {
+	return cmpopts.IgnoreFields(metricDiff{}, "Time")
+}
+
 // MetricEqual returns true if the metrics are equal.
-func MetricEqual(expected, actual telegraf.Metric) bool {
+func MetricEqual(expected, actual telegraf.Metric, opts ...cmp.Option) bool {
 	var lhs, rhs *metricDiff
 	if expected != nil {
 		lhs = newMetricDiff(expected)
@@ -133,12 +138,13 @@ func MetricEqual(expected, actual telegraf.Metric) bool {
 		rhs = newMetricDiff(actual)
 	}
 
-	return cmp.Equal(lhs, rhs)
+	opts = append(opts, cmpopts.EquateNaNs())
+	return cmp.Equal(lhs, rhs, opts...)
 }
 
 // RequireMetricEqual halts the test with an error if the metrics are not
 // equal.
-func RequireMetricEqual(t *testing.T, expected, actual telegraf.Metric) {
+func RequireMetricEqual(t *testing.T, expected, actual telegraf.Metric, opts ...cmp.Option) {
 	t.Helper()
 
 	var lhs, rhs *metricDiff
@@ -149,7 +155,8 @@ func RequireMetricEqual(t *testing.T, expected, actual telegraf.Metric) {
 		rhs = newMetricDiff(actual)
 	}
 
-	if diff := cmp.Diff(lhs, rhs); diff != "" {
+	opts = append(opts, cmpopts.EquateNaNs())
+	if diff := cmp.Diff(lhs, rhs, opts...); diff != "" {
 		t.Fatalf("telegraf.Metric\n--- expected\n+++ actual\n%s", diff)
 	}
 }
@@ -167,6 +174,8 @@ func RequireMetricsEqual(t *testing.T, expected, actual []telegraf.Metric, opts 
 	for _, m := range actual {
 		rhs = append(rhs, newMetricDiff(m))
 	}
+
+	opts = append(opts, cmpopts.EquateNaNs())
 	if diff := cmp.Diff(lhs, rhs, opts...); diff != "" {
 		t.Fatalf("[]telegraf.Metric\n--- expected\n+++ actual\n%s", diff)
 	}
@@ -188,7 +197,7 @@ func MustMetric(
 }
 
 func FromTestMetric(met *Metric) telegraf.Metric {
-	m, err := metric.New(met.Measurement, met.Tags, met.Fields, met.Time)
+	m, err := metric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
 	if err != nil {
 		panic("MustMetric")
 	}

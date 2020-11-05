@@ -2,9 +2,12 @@ version: '3'
 
 services:
   aerospike:
-    image: aerospike/aerospike-server:3.9.0
+    image: aerospike/aerospike-server:4.9.0.11
     ports:
       - "3000:3000"
+      - "3001:3001"
+      - "3002:3002"
+      - "3003:3003"
   zookeeper:
     image: wurstmeister/zookeeper
     environment:
@@ -24,12 +27,13 @@ services:
     depends_on:
       - zookeeper
   elasticsearch:
-    image: elasticsearch:5
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
     environment:
-    - JAVA_OPTS="-Xms256m -Xmx256m"
+    - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    - discovery.type=single-node
+    - xpack.security.enabled=false
     ports:
       - "9200:9200"
-      - "9300:9300"
   mysql:
     image: mysql
     environment:
@@ -41,14 +45,16 @@ services:
     ports:
       - "11211:11211"
   pgbouncer:
-    image: mbed/pgbouncer
+    image: mbentley/ubuntu-pgbouncer
     environment:
-      PG_ENV_POSTGRESQL_USER: pgbouncer
-      PG_ENV_POSTGRESQL_PASS: pgbouncer
+      - PG_ENV_POSTGRESQL_USER=pgbouncer
+      - PG_ENV_POSTGRESQL_PASS=pgbouncer
     ports:
       - "6432:6432"
   postgres:
     image: postgres:alpine
+    environment: 
+      - POSTGRES_HOST_AUTH_METHOD=trust
     ports:
       - "5432:5432"
   rabbitmq:
@@ -95,6 +101,5 @@ services:
       - crate
       - -Cnetwork.host=0.0.0.0
       - -Ctransport.host=localhost
-      - -Clicense.enterprise=false
     environment:
       - CRATE_HEAP_SIZE=128m

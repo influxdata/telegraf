@@ -27,15 +27,15 @@ type v3Memory struct {
 		// Omitted nodes: references, maxinuse, blocksize, pools, hiwater, lowater
 		Id    string `xml:"id"`
 		Name  string `xml:"name"`
-		Total int    `xml:"total"`
-		InUse int    `xml:"inuse"`
+		Total int64  `xml:"total"`
+		InUse int64  `xml:"inuse"`
 	} `xml:"contexts>context"`
 	Summary struct {
-		TotalUse    int
-		InUse       int
-		BlockSize   int
-		ContextSize int
-		Lost        int
+		TotalUse    int64
+		InUse       int64
+		BlockSize   int64
+		ContextSize int64
+		Lost        int64
 	} `xml:"summary"`
 }
 
@@ -53,7 +53,7 @@ type v3View struct {
 		Name   string `xml:"name,attr"`
 		RRSets []struct {
 			Name  string `xml:"name"`
-			Value int    `xml:"counter"`
+			Value int64  `xml:"counter"`
 		} `xml:"rrset"`
 	} `xml:"cache"`
 }
@@ -63,7 +63,7 @@ type v3CounterGroup struct {
 	Type     string `xml:"type,attr"`
 	Counters []struct {
 		Name  string `xml:"name,attr"`
-		Value int    `xml:",chardata"`
+		Value int64  `xml:",chardata"`
 	} `xml:"counter"`
 }
 

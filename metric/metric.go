@@ -50,13 +50,15 @@ func New(
 		sort.Slice(m.tags, func(i, j int) bool { return m.tags[i].Key < m.tags[j].Key })
 	}
 
-	m.fields = make([]*telegraf.Field, 0, len(fields))
-	for k, v := range fields {
-		v := convertField(v)
-		if v == nil {
-			continue
+	if len(fields) > 0 {
+		m.fields = make([]*telegraf.Field, 0, len(fields))
+		for k, v := range fields {
+			v := convertField(v)
+			if v == nil {
+				continue
+			}
+			m.AddField(k, v)
 		}
-		m.AddField(k, v)
 	}
 
 	return m, nil
@@ -240,11 +242,11 @@ func (m *metric) Copy() telegraf.Metric {
 	}
 
 	for i, tag := range m.tags {
-		m2.tags[i] = tag
+		m2.tags[i] = &telegraf.Tag{Key: tag.Key, Value: tag.Value}
 	}
 
 	for i, field := range m.fields {
-		m2.fields[i] = field
+		m2.fields[i] = &telegraf.Field{Key: field.Key, Value: field.Value}
 	}
 	return m2
 }

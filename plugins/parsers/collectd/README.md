@@ -20,8 +20,8 @@ You can also change the path to the typesdb or add additional typesdb using
 ### Configuration
 
 ```toml
-[[inputs.file]]
-  files = ["example"]
+[[inputs.socket_listener]]
+  service_address = "udp://:25826"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -41,4 +41,17 @@ You can also change the path to the typesdb or add additional typesdb using
   ## "join" will parse and store the multi-value plugin as a single multi-value measurement.
   ## "split" is the default behavior for backward compatability with previous versions of influxdb.
   collectd_parse_multivalue = "split"
+```
+
+### Example Output
+
+```
+memory,type=memory,type_instance=buffered value=2520051712 1560455990829955922
+memory,type=memory,type_instance=used value=3710791680 1560455990829955922
+memory,type=memory,type_instance=buffered value=2520047616 1560455980830417318
+memory,type=memory,type_instance=cached value=9472626688 1560455980830417318
+memory,type=memory,type_instance=slab_recl value=2088894464 1560455980830417318
+memory,type=memory,type_instance=slab_unrecl value=146984960 1560455980830417318
+memory,type=memory,type_instance=free value=2978258944 1560455980830417318
+memory,type=memory,type_instance=used value=3707047936 1560455980830417318
 ```

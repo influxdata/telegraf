@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v32/github"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -18,12 +18,13 @@ import (
 
 // GitHub - plugin main structure
 type GitHub struct {
-	Repositories []string          `toml:"repositories"`
-	AccessToken  string            `toml:"access_token"`
-	HTTPTimeout  internal.Duration `toml:"http_timeout"`
-	githubClient *github.Client
+	Repositories      []string          `toml:"repositories"`
+	AccessToken       string            `toml:"access_token"`
+	EnterpriseBaseURL string            `toml:"enterprise_base_url"`
+	HTTPTimeout       internal.Duration `toml:"http_timeout"`
+	githubClient      *github.Client
 
-	obfusticatedToken string
+	obfuscatedToken string
 
 	RateLimit       selfstat.Stat
 	RateLimitErrors selfstat.Stat
@@ -32,10 +33,16 @@ type GitHub struct {
 
 const sampleConfig = `
   ## List of repositories to monitor.
-  repositories = ["influxdata/telegraf"]
+  repositories = [
+	  "influxdata/telegraf",
+	  "influxdata/influxdb"
+  ]
 
   ## Github API access token.  Unauthenticated requests are limited to 60 per hour.
   # access_token = ""
+
+  ## Github API enterprise url. Github Enterprise accounts must specify their base url.
+  # enterprise_base_url = ""
 
   ## Timeout for HTTP requests.
   # http_timeout = "5s"
@@ -60,20 +67,27 @@ func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error)
 		Timeout: g.HTTPTimeout.Duration,
 	}
 
-	g.obfusticatedToken = "Unauthenticated"
+	g.obfuscatedToken = "Unauthenticated"
 
 	if g.AccessToken != "" {
 		tokenSource := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: g.AccessToken},
 		)
 		oauthClient := oauth2.NewClient(ctx, tokenSource)
-		ctx = context.WithValue(ctx, oauth2.HTTPClient, oauthClient)
+		_ = context.WithValue(ctx, oauth2.HTTPClient, oauthClient)
 
-		g.obfusticatedToken = g.AccessToken[0:4] + "..." + g.AccessToken[len(g.AccessToken)-3:]
+		g.obfuscatedToken = g.AccessToken[0:4] + "..." + g.AccessToken[len(g.AccessToken)-3:]
 
-		return github.NewClient(oauthClient), nil
+		return g.newGithubClient(oauthClient)
 	}
 
+	return g.newGithubClient(httpClient)
+}
+
+func (g *GitHub) newGithubClient(httpClient *http.Client) (*github.Client, error) {
+	if g.EnterpriseBaseURL != "" {
+		return github.NewEnterpriseClient(g.EnterpriseBaseURL, "", httpClient)
+	}
 	return github.NewClient(httpClient), nil
 }
 
@@ -91,7 +105,7 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 		g.githubClient = githubClient
 
 		tokenTags := map[string]string{
-			"access_token": g.obfusticatedToken,
+			"access_token": g.obfuscatedToken,
 		}
 
 		g.RateLimitErrors = selfstat.Register("github", "rate_limit_blocks", tokenTags)
@@ -148,9 +162,9 @@ func splitRepositoryName(repositoryName string) (string, string, error) {
 	return splits[0], splits[1], nil
 }
 
-func getLicense(repositoryInfo *github.Repository) string {
-	if repositoryInfo.GetLicense() != nil {
-		return *repositoryInfo.License.Name
+func getLicense(rI *github.Repository) string {
+	if licenseName := rI.GetLicense().GetName(); licenseName != "" {
+		return licenseName
 	}
 
 	return "None"
@@ -158,19 +172,22 @@ func getLicense(repositoryInfo *github.Repository) string {
 
 func getTags(repositoryInfo *github.Repository) map[string]string {
 	return map[string]string{
-		"owner":    *repositoryInfo.Owner.Login,
-		"name":     *repositoryInfo.Name,
-		"language": *repositoryInfo.Language,
+		"owner":    repositoryInfo.GetOwner().GetLogin(),
+		"name":     repositoryInfo.GetName(),
+		"language": repositoryInfo.GetLanguage(),
 		"license":  getLicense(repositoryInfo),
 	}
 }
 
 func getFields(repositoryInfo *github.Repository) map[string]interface{} {
 	return map[string]interface{}{
-		"stars":       *repositoryInfo.StargazersCount,
-		"forks":       *repositoryInfo.ForksCount,
-		"open_issues": *repositoryInfo.OpenIssuesCount,
-		"size":        *repositoryInfo.Size,
+		"stars":       repositoryInfo.GetStargazersCount(),
+		"subscribers": repositoryInfo.GetSubscribersCount(),
+		"watchers":    repositoryInfo.GetWatchersCount(),
+		"networks":    repositoryInfo.GetNetworkCount(),
+		"forks":       repositoryInfo.GetForksCount(),
+		"open_issues": repositoryInfo.GetOpenIssuesCount(),
+		"size":        repositoryInfo.GetSize(),
 	}
 }
 

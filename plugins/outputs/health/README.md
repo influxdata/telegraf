@@ -11,9 +11,9 @@ must fail in order for the resource to enter the failed state.
 ```toml
 [[outputs.health]]
   ## Address and port to listen on.
-  ##   ex: service_address = "tcp://localhost:8080"
+  ##   ex: service_address = "http://localhost:8080"
   ##       service_address = "unix:///var/run/telegraf-health.sock"
-  # service_address = "tcp://:8080"
+  # service_address = "http://:8080"
 
   ## The maximum duration for reading the entire request.
   # read_timeout = "5s"
@@ -51,11 +51,14 @@ must fail in order for the resource to enter the failed state.
 #### compares
 
 The `compares` check is used to assert basic mathematical relationships.  Use
-it by choosing a field key and one or more comparisons.  All comparisons must
-be true on all metrics for the check to pass.  If the field is not found on a
-metric no comparison will be made.
+it by choosing a field key and one or more comparisons that must hold true.  If
+the field is not found on a metric no comparison will be made.
+
+Comparisons must be hold true on all metrics for the check to pass.
 
 #### contains
 
 The `contains` check can be used to require a field key to exist on at least
 one metric.
+
+If the field is found on any metric the check passes.

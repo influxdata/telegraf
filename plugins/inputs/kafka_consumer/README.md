@@ -10,19 +10,20 @@ and use the old zookeeper connection method.
 
 ```toml
 [[inputs.kafka_consumer]]
-  ## kafka servers
+  ## Kafka brokers.
   brokers = ["localhost:9092"]
-  ## topic(s) to consume
+
+  ## Topics to consume.
   topics = ["telegraf"]
-  ## Add topic as tag if topic_tag is not empty
+
+  ## When set this tag will be added to all metrics with the topic as the value.
   # topic_tag = ""
 
   ## Optional Client id
   # client_id = "Telegraf"
 
   ## Set the minimal supported Kafka version.  Setting this enables the use of new
-  ## Kafka features and APIs.  Of particular interest, lz4 compression
-  ## requires at least version 0.10.0.0.
+  ## Kafka features and APIs.  Must be 0.10.2.0 or greater.
   ##   ex: version = "1.1.0"
   # version = ""
 
@@ -33,14 +34,39 @@ and use the old zookeeper connection method.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Optional SASL Config
+  ## SASL authentication credentials.  These settings should typically be used
+  ## with TLS encryption enabled using the "enable_tls" option.
   # sasl_username = "kafka"
   # sasl_password = "secret"
 
-  ## the name of the consumer group
-  consumer_group = "telegraf_metrics_consumers"
-  ## Offset (must be either "oldest" or "newest")
-  offset = "oldest"
+  ## Optional SASL:
+  ## one of: OAUTHBEARER, PLAIN, SCRAM-SHA-256, SCRAM-SHA-512, GSSAPI
+  ## (defaults to PLAIN)
+  # sasl_mechanism = ""
+
+  ## used if sasl_mechanism is GSSAPI (experimental)
+  # sasl_gssapi_service_name = ""
+  # ## One of: KRB5_USER_AUTH and KRB5_KEYTAB_AUTH
+  # sasl_gssapi_auth_type = "KRB5_USER_AUTH"
+  # sasl_gssapi_kerberos_config_path = "/"
+  # sasl_gssapi_realm = "realm"
+  # sasl_gssapi_key_tab_path = ""
+  # sasl_gssapi_disable_pafxfast = false
+
+  ## used if sasl_mechanism is OAUTHBEARER (experimental)
+  # sasl_access_token = ""
+
+  ## SASL protocol version.  When connecting to Azure EventHub set to 0.
+  # sasl_version = 1
+
+  ## Name of the consumer group.
+  # consumer_group = "telegraf_metrics_consumers"
+
+  ## Initial offset position; one of "oldest" or "newest".
+  # offset = "oldest"
+
+  ## Consumer group partition assignment strategy; one of "range", "roundrobin" or "sticky".
+  # balance_strategy = "range"
 
   ## Maximum length of a message to consume, in bytes (default 0/unlimited);
   ## larger messages are dropped

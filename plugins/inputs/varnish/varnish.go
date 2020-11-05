@@ -49,7 +49,7 @@ var sampleConfig = `
   stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
 
   ## Optional name for the varnish instance (or working directory) to query
-  ## Usually appened after -n in varnish cli
+  ## Usually append after -n in varnish cli
   # instance_name = instanceName
 
   ## Timeout for varnishstat command

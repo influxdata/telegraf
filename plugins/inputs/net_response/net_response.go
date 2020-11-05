@@ -141,6 +141,11 @@ func (n *NetResponse) UDPGather() (tags map[string]string, fields map[string]int
 	start := time.Now()
 	// Resolving
 	udpAddr, err := net.ResolveUDPAddr("udp", n.Address)
+	// Handle error
+	if err != nil {
+		setResult(ConnectionFailed, fields, tags, n.Expect)
+		return tags, fields
+	}
 	// Connecting
 	conn, err := net.DialUDP("udp", nil, udpAddr)
 	// Handle error
@@ -222,9 +227,6 @@ func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 		tags["protocol"] = "udp"
 	} else {
 		return errors.New("Bad protocol")
-	}
-	for key, value := range returnTags {
-		tags[key] = value
 	}
 	// Merge the tags
 	for k, v := range returnTags {

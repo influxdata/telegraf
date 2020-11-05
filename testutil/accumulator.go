@@ -18,8 +18,8 @@ var (
 )
 
 func newTrackingID() telegraf.TrackingID {
-	atomic.AddUint64(&lastID, 1)
-	return telegraf.TrackingID(lastID)
+	id := atomic.AddUint64(&lastID, 1)
+	return telegraf.TrackingID(id)
 }
 
 // Metric defines a single point measurement
@@ -28,6 +28,7 @@ type Metric struct {
 	Tags        map[string]string
 	Fields      map[string]interface{}
 	Time        time.Time
+	Type        telegraf.ValueType
 }
 
 func (p *Metric) String() string {
@@ -75,11 +76,11 @@ func (a *Accumulator) ClearMetrics() {
 	a.Metrics = make([]*Metric, 0)
 }
 
-// AddFields adds a measurement point with a specified timestamp.
-func (a *Accumulator) AddFields(
+func (a *Accumulator) addFields(
 	measurement string,
-	fields map[string]interface{},
 	tags map[string]string,
+	fields map[string]interface{},
+	tp telegraf.ValueType,
 	timestamp ...time.Time,
 ) {
 	a.Lock()
@@ -132,9 +133,20 @@ func (a *Accumulator) AddFields(
 		Fields:      fieldsCopy,
 		Tags:        tagsCopy,
 		Time:        t,
+		Type:        tp,
 	}
 
 	a.Metrics = append(a.Metrics, p)
+}
+
+// AddFields adds a measurement point with a specified timestamp.
+func (a *Accumulator) AddFields(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	timestamp ...time.Time,
+) {
+	a.addFields(measurement, tags, fields, telegraf.Untyped, timestamp...)
 }
 
 func (a *Accumulator) AddCounter(
@@ -143,7 +155,7 @@ func (a *Accumulator) AddCounter(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.AddFields(measurement, fields, tags, timestamp...)
+	a.addFields(measurement, tags, fields, telegraf.Counter, timestamp...)
 }
 
 func (a *Accumulator) AddGauge(
@@ -152,12 +164,12 @@ func (a *Accumulator) AddGauge(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.AddFields(measurement, fields, tags, timestamp...)
+	a.addFields(measurement, tags, fields, telegraf.Gauge, timestamp...)
 }
 
 func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
 	for _, m := range metrics {
-		a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+		a.addFields(m.Name(), m.Tags(), m.Fields(), m.Type(), m.Time())
 	}
 }
 
@@ -167,7 +179,7 @@ func (a *Accumulator) AddSummary(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.AddFields(measurement, fields, tags, timestamp...)
+	a.addFields(measurement, tags, fields, telegraf.Summary, timestamp...)
 }
 
 func (a *Accumulator) AddHistogram(
@@ -176,11 +188,11 @@ func (a *Accumulator) AddHistogram(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.AddFields(measurement, fields, tags, timestamp...)
+	a.addFields(measurement, tags, fields, telegraf.Histogram, timestamp...)
 }
 
 func (a *Accumulator) AddMetric(m telegraf.Metric) {
-	a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+	a.addFields(m.Name(), m.Tags(), m.Fields(), m.Type(), m.Time())
 }
 
 func (a *Accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
@@ -200,9 +212,11 @@ func (a *Accumulator) AddTrackingMetricGroup(group []telegraf.Metric) telegraf.T
 }
 
 func (a *Accumulator) Delivered() <-chan telegraf.DeliveryInfo {
+	a.Lock()
 	if a.delivered == nil {
 		a.delivered = make(chan telegraf.DeliveryInfo)
 	}
+	a.Unlock()
 	return a.delivered
 }
 
@@ -258,6 +272,18 @@ func (a *Accumulator) HasTag(measurement string, key string) bool {
 	return false
 }
 
+func (a *Accumulator) TagSetValue(measurement string, key string) string {
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			v, ok := p.Tags[key]
+			if ok {
+				return v
+			}
+		}
+	}
+	return ""
+}
+
 func (a *Accumulator) TagValue(measurement string, key string) string {
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
@@ -299,13 +325,13 @@ func (a *Accumulator) NFields() int {
 // Wait waits for the given number of metrics to be added to the accumulator.
 func (a *Accumulator) Wait(n int) {
 	a.Lock()
+	defer a.Unlock()
 	if a.Cond == nil {
 		a.Cond = sync.NewCond(&a.Mutex)
 	}
 	for int(a.NMetrics()) < n {
 		a.Cond.Wait()
 	}
-	a.Unlock()
 }
 
 // WaitError waits for the given number of errors to be added to the accumulator.
@@ -337,7 +363,13 @@ func (a *Accumulator) AssertContainsTaggedFields(
 			return
 		}
 	}
-	msg := fmt.Sprintf("unknown measurement %s with tags %v", measurement, tags)
+	// We've failed. spit out some debug logging
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			t.Log("measurement", p.Measurement, "tags", p.Tags, "fields", p.Fields)
+		}
+	}
+	msg := fmt.Sprintf("unknown measurement %q with tags %v", measurement, tags)
 	assert.Fail(t, msg)
 }
 
@@ -377,7 +409,7 @@ func (a *Accumulator) AssertContainsFields(
 			return
 		}
 	}
-	msg := fmt.Sprintf("unknown measurement %s", measurement)
+	msg := fmt.Sprintf("unknown measurement %q", measurement)
 	assert.Fail(t, msg)
 }
 
@@ -691,3 +723,22 @@ func (a *Accumulator) BoolField(measurement string, field string) (bool, bool) {
 
 	return false, false
 }
+
+// NopAccumulator is used for benchmarking to isolate the plugin from the internal
+// telegraf accumulator machinery.
+type NopAccumulator struct{}
+
+func (n *NopAccumulator) AddFields(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+}
+func (n *NopAccumulator) AddGauge(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+}
+func (n *NopAccumulator) AddCounter(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+}
+func (n *NopAccumulator) AddSummary(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+}
+func (n *NopAccumulator) AddHistogram(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+}
+func (n *NopAccumulator) AddMetric(telegraf.Metric)                                {}
+func (n *NopAccumulator) SetPrecision(precision time.Duration)                     {}
+func (n *NopAccumulator) AddError(err error)                                       {}
+func (n *NopAccumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator { return nil }

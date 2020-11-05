@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -182,6 +183,7 @@ func TestUDP_ErrorLogging(t *testing.T) {
 						return conn, nil
 					},
 				},
+				Log: testutil.Logger{},
 			},
 			metrics:     []telegraf.Metric{getMetric()},
 			logContains: `could not serialize metric: "cpu": need more space`,
@@ -196,6 +198,7 @@ func TestUDP_ErrorLogging(t *testing.T) {
 						return conn, nil
 					},
 				},
+				Log: testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
 				func() telegraf.Metric {

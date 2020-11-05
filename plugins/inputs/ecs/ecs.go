@@ -1,7 +1,8 @@
 package ecs
 
 import (
-	"net/url"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -24,13 +25,14 @@ type Ecs struct {
 	LabelInclude []string `toml:"ecs_label_include"`
 	LabelExclude []string `toml:"ecs_label_exclude"`
 
-	newClient func(timeout time.Duration) (*EcsClient, error)
+	newClient func(timeout time.Duration, endpoint string, version int) (*EcsClient, error)
 
 	client              Client
 	filtersCreated      bool
 	labelFilter         filter.Filter
 	containerNameFilter filter.Filter
 	statusFilter        filter.Filter
+	metadataVersion     int
 }
 
 const (
@@ -39,11 +41,15 @@ const (
 	GB = 1000 * MB
 	TB = 1000 * GB
 	PB = 1000 * TB
+
+	v2Endpoint = "http://169.254.170.2"
 )
 
 var sampleConfig = `
-  ## ECS metadata url
-  # endpoint_url = "http://169.254.170.2"
+  ## ECS metadata url.
+  ## Metadata v2 API is used if set explicitly. Otherwise,
+  ## v3 metadata endpoint API is used if available.
+  # endpoint_url = ""
 
   ## Containers to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all containers
@@ -51,7 +57,9 @@ var sampleConfig = `
   # container_name_exclude = []
 
   ## Container states to include and exclude. Globs accepted.
-  ## When empty only containers in the "running" state will be captured.
+  ## When empty only containers in the "RUNNING" state will be captured.
+  ## Possible values are "NONE", "PULLED", "CREATED", "RUNNING",
+  ## "RESOURCES_PROVISIONED", "STOPPED".
   # container_status_include = []
   # container_status_exclude = []
 
@@ -60,13 +68,13 @@ var sampleConfig = `
   ecs_label_include = [ "com.amazonaws.ecs.*" ]
   ecs_label_exclude = []
 
-  ## Timeout for docker list, info, and stats commands
-  timeout = "5s"
+  ## Timeout for queries.
+  # timeout = "5s"
 `
 
 // Description describes ECS plugin
 func (ecs *Ecs) Description() string {
-	return "Read metrics about docker containers from Fargate/ECS v2 meta endpoints."
+	return "Read metrics about docker containers from Fargate/ECS v2, v3 meta endpoints."
 }
 
 // SampleConfig returns the ECS example config
@@ -104,18 +112,12 @@ func (ecs *Ecs) Gather(acc telegraf.Accumulator) error {
 
 func initSetup(ecs *Ecs) error {
 	if ecs.client == nil {
-		var err error
-		var c *EcsClient
-		c, err = ecs.newClient(ecs.Timeout.Duration)
+		resolveEndpoint(ecs)
+
+		c, err := ecs.newClient(ecs.Timeout.Duration, ecs.EndpointURL, ecs.metadataVersion)
 		if err != nil {
 			return err
 		}
-
-		c.BaseURL, err = url.Parse(ecs.EndpointURL)
-		if err != nil {
-			return err
-		}
-
 		ecs.client = c
 	}
 
@@ -139,6 +141,29 @@ func initSetup(ecs *Ecs) error {
 	return nil
 }
 
+func resolveEndpoint(ecs *Ecs) {
+	if ecs.EndpointURL != "" {
+		// Use metadata v2 API since endpoint is set explicitly.
+		ecs.metadataVersion = 2
+		return
+	}
+
+	// Auto-detect metadata endpoint version.
+
+	// Use metadata v3 if available.
+	// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v3.html
+	v3Endpoint := os.Getenv("ECS_CONTAINER_METADATA_URI")
+	if v3Endpoint != "" {
+		ecs.EndpointURL = v3Endpoint
+		ecs.metadataVersion = 3
+		return
+	}
+
+	// Use v2 endpoint if nothing else is available.
+	ecs.EndpointURL = v2Endpoint
+	ecs.metadataVersion = 2
+}
+
 func (ecs *Ecs) accTask(task *Task, tags map[string]string, acc telegraf.Accumulator) {
 	taskFields := map[string]interface{}{
 		"revision":       task.Revision,
@@ -157,7 +182,7 @@ func (ecs *Ecs) accContainers(task *Task, taskTags map[string]string, acc telegr
 			continue
 		}
 
-		if !ecs.statusFilter.Match(c.KnownStatus) {
+		if !ecs.statusFilter.Match(strings.ToUpper(c.KnownStatus)) {
 			continue
 		}
 
@@ -215,8 +240,17 @@ func (ecs *Ecs) createLabelFilters() error {
 
 func (ecs *Ecs) createContainerStatusFilters() error {
 	if len(ecs.ContainerStatusInclude) == 0 && len(ecs.ContainerStatusExclude) == 0 {
-		ecs.ContainerStatusInclude = []string{"running"}
+		ecs.ContainerStatusInclude = []string{"RUNNING"}
 	}
+
+	// ECS uses uppercase status names, normalizing for comparison.
+	for i, include := range ecs.ContainerStatusInclude {
+		ecs.ContainerStatusInclude[i] = strings.ToUpper(include)
+	}
+	for i, exclude := range ecs.ContainerStatusExclude {
+		ecs.ContainerStatusExclude[i] = strings.ToUpper(exclude)
+	}
+
 	filter, err := filter.NewIncludeExcludeFilter(ecs.ContainerStatusInclude, ecs.ContainerStatusExclude)
 	if err != nil {
 		return err
@@ -228,7 +262,7 @@ func (ecs *Ecs) createContainerStatusFilters() error {
 func init() {
 	inputs.Add("ecs", func() telegraf.Input {
 		return &Ecs{
-			EndpointURL:    "http://169.254.170.2",
+			EndpointURL:    "",
 			Timeout:        internal.Duration{Duration: 5 * time.Second},
 			newClient:      NewClient,
 			filtersCreated: false,

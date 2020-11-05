@@ -26,12 +26,17 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.24/)
   ## Deprecated (1.4.0), use container_name_include
   container_names = []
 
+  ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
+  source_tag = false
+
   ## Containers to include and exclude. Collect all if empty. Globs accepted.
   container_name_include = []
   container_name_exclude = []
 
   ## Container states to include and exclude. Globs accepted.
   ## When empty only containers in the "running" state will be captured.
+  ## example: container_state_include = ["created", "restarting", "running", "removing", "paused", "exited", "dead"]
+  ## example: container_state_exclude = ["created", "restarting", "running", "removing", "paused", "exited", "dead"]
   # container_state_include = []
   # container_state_exclude = []
 
@@ -91,6 +96,17 @@ volumes:
   - /var/run/docker.sock:/var/run/docker.sock
 ```
 
+#### source tag
+
+Selecting the containers measurements can be tricky if you have many containers with the same name.
+To alleviate this issue you can set the below value to `true`
+
+```toml
+source_tag = true
+```
+
+This will cause all measurements to have the `source` tag be set to the first 12 characters of the container id. The first 12 characters is the common hostname for containers that have no explicit hostname set, as defined by docker.
+
 #### Kubernetes Labels
 
 Kubernetes may add many labels to your containers, if they are not needed you
@@ -106,7 +122,7 @@ may prefer to exclude them:
     - unit
     - engine_host
     - server_version
-  - fields:
+  + fields:
     - n_used_file_descriptors
     - n_cpus
     - n_containers
@@ -117,32 +133,49 @@ may prefer to exclude them:
     - n_goroutines
     - n_listener_events
     - memory_total
-    - pool_blocksize (requires devicemapper storage driver)
+    - pool_blocksize (requires devicemapper storage driver) (deprecated see: `docker_devicemapper`)
 
 The `docker_data` and `docker_metadata` measurements are available only for
 some storage drivers such as devicemapper.
 
-- docker_data
++ docker_data (deprecated see: `docker_devicemapper`)
   - tags:
     - unit
     - engine_host
     - server_version
-  - fields:
+  + fields:
     - available
     - total
     - used
 
-- docker_metadata
+- docker_metadata (deprecated see: `docker_devicemapper`)
   - tags:
     - unit
     - engine_host
     - server_version
-  - fields:
+  + fields:
     - available
     - total
     - used
 
-- docker_container_mem
+The above measurements for the devicemapper storage driver can now be found in the new `docker_devicemapper` measurement
+
+- docker_devicemapper
+  - tags:
+    - engine_host
+    - server_version
+    - pool_name
+  + fields:
+    - pool_blocksize_bytes
+    - data_space_used_bytes
+    - data_space_total_bytes
+    - data_space_available_bytes
+    - metadata_space_used_bytes
+    - metadata_space_total_bytes
+    - metadata_space_available_bytes
+    - thin_pool_minimum_free_space_bytes
+
++ docker_container_mem
   - tags:
     - engine_host
     - server_version
@@ -150,8 +183,8 @@ some storage drivers such as devicemapper.
     - container_name
     - container_status
     - container_version
-  - fields:
-    - total_pgmafault
+  + fields:
+    - total_pgmajfault
     - cache
     - mapped_file
     - total_inactive_file
@@ -195,7 +228,7 @@ some storage drivers such as devicemapper.
     - container_status
     - container_version
     - cpu
-  - fields:
+  + fields:
     - throttling_periods
     - throttling_throttled_periods
     - throttling_throttled_time
@@ -206,7 +239,7 @@ some storage drivers such as devicemapper.
     - usage_percent
     - container_id
 
-- docker_container_net
++ docker_container_net
   - tags:
     - engine_host
     - server_version
@@ -215,7 +248,7 @@ some storage drivers such as devicemapper.
     - container_status
     - container_version
     - network
-  - fields:
+  + fields:
     - rx_dropped
     - rx_bytes
     - rx_errors
@@ -273,11 +306,13 @@ status if configured.
     - container_status
     - container_version
   - fields:
+    - container_id
     - oomkilled (boolean)
     - pid (integer)
     - exitcode (integer)
     - started_at (integer)
     - finished_at (integer)
+    - uptime_ns (integer)
 
 - docker_swarm
   - tags:

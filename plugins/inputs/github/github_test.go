@@ -1,12 +1,25 @@
 package github
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
 
-	gh "github.com/google/go-github/github"
+	gh "github.com/google/go-github/v32/github"
 	"github.com/stretchr/testify/require"
 )
+
+func TestNewGithubClient(t *testing.T) {
+	httpClient := &http.Client{}
+	g := &GitHub{}
+	client, err := g.newGithubClient(httpClient)
+	require.NoError(t, err)
+	require.Contains(t, client.BaseURL.String(), "api.github.com")
+	g.EnterpriseBaseURL = "api.example.com/"
+	enterpriseClient, err := g.newGithubClient(httpClient)
+	require.NoError(t, err)
+	require.Contains(t, enterpriseClient.BaseURL.String(), "api.example.com")
+}
 
 func TestSplitRepositoryNameWithWorkingExample(t *testing.T) {
 	var validRepositoryNames = []struct {
@@ -38,7 +51,7 @@ func TestSplitRepositoryNameWithNoSlash(t *testing.T) {
 		t.Run(tt, func(t *testing.T) {
 			_, _, err := splitRepositoryName(tt)
 
-			require.NotNil(t, err)
+			require.Error(t, err)
 		})
 	}
 }
@@ -98,12 +111,17 @@ func TestGetFields(t *testing.T) {
 	forks := 2
 	openIssues := 3
 	size := 4
+	subscribers := 5
+	watchers := 6
 
 	repository := gh.Repository{
-		StargazersCount: &stars,
-		ForksCount:      &forks,
-		OpenIssuesCount: &openIssues,
-		Size:            &size,
+		StargazersCount:  &stars,
+		ForksCount:       &forks,
+		OpenIssuesCount:  &openIssues,
+		Size:             &size,
+		NetworkCount:     &forks,
+		SubscribersCount: &subscribers,
+		WatchersCount:    &watchers,
 	}
 
 	getFieldsReturn := getFields(&repository)
@@ -112,8 +130,11 @@ func TestGetFields(t *testing.T) {
 
 	correctFieldReturn["stars"] = 1
 	correctFieldReturn["forks"] = 2
+	correctFieldReturn["networks"] = 2
 	correctFieldReturn["open_issues"] = 3
 	correctFieldReturn["size"] = 4
+	correctFieldReturn["subscribers"] = 5
+	correctFieldReturn["watchers"] = 6
 
 	require.Equal(t, true, reflect.DeepEqual(getFieldsReturn, correctFieldReturn))
 }
