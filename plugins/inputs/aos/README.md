@@ -84,6 +84,16 @@ The fields included the process_info metric are:
 The fields included in the file_info metric are:
 * file_size
 
+The fields included in the probe_message metric are:
+* int64 
+* float
+* string
+* EvpnType3RouteEvent
+* EvpnType5RouteEvent
+* InterfaceCountersUtilization
+* SystemInterfaceUtilization
+* ActiveFloodlistEvent
+
 ### alerts
 Alert metrics include a value of 0 or 1.  
 1 - indicates that the alert is active.  
@@ -134,4 +144,4 @@ When using AOS in sequenced mode, each streamed message will include a sequence 
 Receiving a high rate of telemetry messages can cause metric buffer drops if the metric_buffer_limit is too low. Testing with both Prometheus and InfluxDB as output the plugin, we've found that setting the metric_buffer_limit to 35000 eliminates buffer drops with an input stream of 2000 perfmon messages/sec.
 
 ## Support 
-This plugin supports AOS up to version 3.2.0.
+This plugin supports AOS up to version 4.0.0.

@@ -25,7 +25,7 @@ func TestExtractProbeMessage(t *testing.T) {
 	plugin := &Aos{
 		Port:            PORT,
 		Address:         "127.0.0.1",
-		StreamingType:   []string{"alerts"},
+		StreamingType:   []string{"perfmon"},
 		AosServer:       "127.0.0.1",
 		AosPort:         443,
 		AosLogin:        "admin",
@@ -45,16 +45,26 @@ func TestExtractProbeMessage(t *testing.T) {
 	tags := make(map[string]string)
 	tags["device"] = "probe_msg_1"
 
-	val := &aos_streaming.ProbeMessage_Int64Value{Int64Value: 10}
-	alert := &aos_streaming.ProbeMessage{
-		Value: val,
+	probe_id := "1234-5678"
+	stage_name := "test_stage"
+	blueprint_id := "test_blueprint"
+	item_id := "test_route"
+	probe_label := "probe_msg_label"
+	probe_value := int64(10)
+
+	perfmon := &aos_streaming.ProbeMessage{
+		Value:       &aos_streaming.ProbeMessage_Int64Value{probe_value},
+		ProbeId:     &probe_id,
+		StageName:   &stage_name,
+		BlueprintId: &blueprint_id,
+		ItemId:      &item_id,
+		ProbeLabel:  &probe_label,
 	}
-	ssl.ExtractProbeData(alert, tags)
+	ssl.ExtractProbeData(perfmon, tags)
 	tag_value := acc.TagValue("probe_message", "device")
 	plugin.Stop()
 	assert.Equal(
 		t, tag_value, "probe_msg_1", "The probe message was not added.")
-
 }
 
 func TestExtractAlertDataForProbeAlert(t *testing.T) {
@@ -910,6 +920,146 @@ func TestUnsequencedVersion(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, plugin.Start(&acc))
+}
+
+func TestProbeMessageOverTCP(t *testing.T) {
+	PORT++
+	plugin := &Aos{
+		Port:            PORT,
+		Address:         "127.0.0.1",
+		StreamingType:   []string{"perfmon"},
+		AosServer:       "127.0.0.1",
+		AosPort:         443,
+		AosLogin:        "admin",
+		AosPassword:     "admin",
+		AosProtocol:     "https",
+		RefreshInterval: 1000,
+	}
+
+	acc := testutil.Accumulator{}
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	perfmon := CreateEvpnType3ProbeMessage()
+	socket := fmt.Sprintf("127.0.0.1:%v", PORT)
+	conn, err := net.Dial("tcp", socket)
+	assert.NoError(t, err)
+	_, err = conn.Write(perfmon)
+	assert.NoError(t, err)
+
+	tags := make(map[string]string)
+	tags["blueprint"] = "dev-testing"
+	tags["device_name"] = "spine99"
+	tags["device"] = "spine99"
+	tags["role"] = "spine"
+	tags["device_key"] = "52540077DE72"
+
+	probe_id := "1234-5678"
+	stage_name := "test_stage"
+	blueprint_id := "test_blueprint"
+	item_id := "test_route"
+	probe_label := "test_probe_label"
+
+	fields := make(map[string]interface{})
+	fields["probe_label"] = probe_label
+	fields["blueprint_id"] = blueprint_id
+	fields["item_id"] = item_id
+	fields["probe_id"] = probe_id
+	fields["stage_name"] = stage_name
+	fields["property"] = "[name:\"property_name\" value:\"property_value\" ]"
+	fields["value"] = "&{state:ROUTE_ADD system_id:\"1234567\" vni:5 next_hop:\"10.1.1.1\" rd:\"100\" rt:\"100\" }"
+
+	acc.Wait(2)
+	acc.AssertContainsTaggedFields(t, "probe_message", fields, tags)
+}
+
+func CreateEvpnType3ProbeMessage() []byte {
+	state := aos_streaming.RouteState_ROUTE_ADD
+	system_id := "1234567"
+	vni := uint32(5)
+	next_hop := "10.1.1.1"
+	rd := "100"
+	rt := "100"
+	evpn_type_3_event := &aos_streaming.EvpnType3RouteEvent{
+		State:    &state,
+		SystemId: &system_id,
+		Vni:      &vni,
+		NextHop:  &next_hop,
+		Rd:       &rd,
+		Rt:       &rt,
+	}
+
+	property_name := "property_name"
+	property_value := "property_value"
+	probe_property := aos_streaming.ProbeProperty{
+		Name:  &property_name,
+		Value: &property_value,
+	}
+
+	probe_id := "1234-5678"
+	stage_name := "test_stage"
+	blueprint_id := "test_blueprint"
+	item_id := "test_route"
+	probe_label := "test_probe_label"
+	probe_message := &aos_streaming.ProbeMessage{
+		Property:    []*aos_streaming.ProbeProperty{&probe_property},
+		Value:       &aos_streaming.ProbeMessage_EvpnType3RouteState{evpn_type_3_event},
+		ProbeId:     &probe_id,
+		StageName:   &stage_name,
+		BlueprintId: &blueprint_id,
+		ItemId:      &item_id,
+		ProbeLabel:  &probe_label,
+	}
+
+	// perfmon
+	perfmon := &aos_streaming.PerfMon{
+		Data: &aos_streaming.PerfMon_ProbeMessage{
+			ProbeMessage: probe_message,
+		},
+	}
+
+	// aos message
+	now := time.Now()
+	secs := now.Unix()
+	timestamp := uint64(secs)
+	origin_name := "52540077DE72"
+	origin_hostname := "spine99"
+	origin_label := "dev-testing"
+	origin_role := "spine"
+	aos_message := &aos_streaming.AosMessage{
+		Timestamp:      &timestamp,
+		OriginName:     &origin_name,
+		OriginHostname: &origin_hostname,
+		BlueprintLabel: &origin_label,
+		OriginRole:     &origin_role,
+		Data:           &aos_streaming.AosMessage_PerfMon{perfmon},
+	}
+
+	data, err := proto.Marshal(aos_message)
+	if err != nil {
+		log.Fatal("marshaling error: ", err)
+	}
+
+	// aos sequenced message
+	sequence_number := uint64(99)
+	aos_sequenced_message := &aos_streaming.AosSequencedMessage{
+		SeqNum:   &sequence_number,
+		AosProto: data,
+	}
+
+	seq_msg_data, err := proto.Marshal(aos_sequenced_message)
+	if err != nil {
+		log.Fatal("marshaling error: ", err)
+	}
+
+	msg_size := uint16(len(seq_msg_data))
+	fmt.Printf("length of message %d\n", msg_size)
+
+	size_buff := make([]byte, 2)
+	binary.BigEndian.PutUint16(size_buff, msg_size)
+
+	send_buff := append(size_buff, seq_msg_data...)
+	return send_buff
 }
 
 const aosVersionSequencedJSON = `
