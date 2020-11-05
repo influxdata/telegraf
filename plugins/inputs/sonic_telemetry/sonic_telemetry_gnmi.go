@@ -18,8 +18,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/metric"
+	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/openconfig/gnmi/proto/gnmi"
@@ -81,7 +81,6 @@ type Subscription struct {
 	TagOnly bool `toml:"tag_only"`
 }
 
-
 // Start the http listener service
 func (c *SONiCTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	var err error
@@ -90,7 +89,7 @@ func (c *SONiCTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	var request *gnmi.SubscribeRequest
 	c.acc = acc
 	ctx, c.cancel = context.WithCancel(context.Background())
-        c.lookup = make(map[string]map[string]map[string]map[string]interface{})
+	c.lookup = make(map[string]map[string]map[string]map[string]interface{})
 
 	// Validate configuration
 	if request, err = c.newSubscribeRequest(); err != nil {
