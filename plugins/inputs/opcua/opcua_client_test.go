@@ -15,7 +15,6 @@ type OPCTags struct {
 	Namespace      string
 	IdentifierType string
 	Identifier     string
-	DataType       string
 	Want           string
 }
 
@@ -25,9 +24,9 @@ func TestClient1(t *testing.T) {
 	}
 
 	var testopctags = []OPCTags{
-		{"ProductName", "0", "i", "2261", "string", "open62541 OPC UA Server"},
-		{"ProductUri", "0", "i", "2262", "string", "http://open62541.org"},
-		{"ManufacturerName", "0", "i", "2263", "string", "open62541"},
+		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
+		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
+		{"ManufacturerName", "0", "i", "2263", "open62541"},
 	}
 
 	var o OpcUA
@@ -71,7 +70,6 @@ func MapOPCTag(tags OPCTags) (out OPCTag) {
 	out.Namespace = tags.Namespace
 	out.IdentifierType = tags.IdentifierType
 	out.Identifier = tags.Identifier
-	out.DataType = tags.DataType
 	return out
 }
 
@@ -90,8 +88,8 @@ auth_method = "Anonymous"
 username = ""
 password = ""
 nodes = [
-  {name="name", namespace="", identifier_type="", identifier="", data_type="", description=""},
-  {name="name2", namespace="", identifier_type="", identifier="", data_type="", description=""},
+  {name="name", namespace="", identifier_type="", identifier="", description=""},
+  {name="name2", namespace="", identifier_type="", identifier="", description=""},
 ]
 `
 

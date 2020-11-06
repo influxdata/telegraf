@@ -53,7 +53,6 @@ type OPCTag struct {
 	Namespace      string `toml:"namespace"`
 	IdentifierType string `toml:"identifier_type"`
 	Identifier     string `toml:"identifier"`
-	DataType       string `toml:"data_type"`
 	Description    string `toml:"description"`
 }
 
@@ -228,13 +227,6 @@ func (o *OpcUA) validateOPCTags() error {
 			break
 		default:
 			return fmt.Errorf("invalid identifier type '%s' in '%s'", item.IdentifierType, item.Name)
-		}
-		// search data type
-		switch item.DataType {
-		case "boolean", "byte", "short", "int", "uint", "uint16", "int16", "uint32", "int32", "float", "double", "string", "datetime", "number":
-			break
-		default:
-			return fmt.Errorf("invalid data type '%s' in '%s'", item.DataType, item.Name)
 		}
 
 		// build nodeid
