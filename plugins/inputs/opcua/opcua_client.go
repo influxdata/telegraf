@@ -53,7 +53,6 @@ type OPCTag struct {
 	Namespace      string `toml:"namespace"`
 	IdentifierType string `toml:"identifier_type"`
 	Identifier     string `toml:"identifier"`
-	Description    string `toml:"description"`
 }
 
 // OPCData type

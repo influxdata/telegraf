@@ -88,8 +88,8 @@ auth_method = "Anonymous"
 username = ""
 password = ""
 nodes = [
-  {name="name", namespace="", identifier_type="", identifier="", description=""},
-  {name="name2", namespace="", identifier_type="", identifier="", description=""},
+  {name="name", namespace="", identifier_type="", identifier=""},
+  {name="name2", namespace="", identifier_type="", identifier=""},
 ]
 `
 
