@@ -23,6 +23,9 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
   ## redial in case of failures after
   redial = "10s"
 
+  # timestamp updates using the collector's time instead of the timestamp of the update
+  # use_local_timestamp = true
+
   ## enable client-side TLS and define CA to authenticate the device
   # enable_tls = true
   # tls_ca = "/etc/telegraf/ca.pem"

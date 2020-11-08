@@ -427,6 +427,38 @@ func TestSubscribeResponseError(t *testing.T) {
 	require.Equal(t, ml.lastArgs, []interface{}{mc, me})
 }
 
+func TestLocalTimestamp(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	c := &GNMI{acc: acc, Log: testutil.Logger{}}
+	notification := mockGNMINotification()
+	notification.Timestamp = 42
+	resp := &gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}}
+	tFixed := time.Unix(0, 42)
+
+	c.handleSubscribeResponse("", resp)
+	if len(acc.Metrics) == 0 {
+		t.Fatalf("got no metrics")
+	}
+	for _, v := range acc.Metrics {
+		if !v.Time.Equal(tFixed) {
+			t.Fatalf("expected timestamp %s, got %s", tFixed, v.Time)
+		}
+	}
+
+	c.UseLocalTimestamp = true
+	acc = &testutil.Accumulator{}
+	c.acc = acc
+	c.handleSubscribeResponse("", resp)
+	if len(acc.Metrics) == 0 {
+		t.Fatalf("got no metrics")
+	}
+	for _, v := range acc.Metrics {
+		if v.Time.Equal(tFixed) {
+			t.Fatalf("expected timestamp not to equal magic value %s, got %s", tFixed, v.Time)
+		}
+	}
+}
+
 func TestRedial(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)

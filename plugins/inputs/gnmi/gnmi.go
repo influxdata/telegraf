@@ -28,9 +28,10 @@ import (
 
 // gNMI plugin instance
 type GNMI struct {
-	Addresses     []string          `toml:"addresses"`
-	Subscriptions []Subscription    `toml:"subscription"`
-	Aliases       map[string]string `toml:"aliases"`
+	Addresses         []string          `toml:"addresses"`
+	Subscriptions     []Subscription    `toml:"subscription"`
+	Aliases           map[string]string `toml:"aliases"`
+	UseLocalTimestamp bool              `toml:"use_local_timestamp"`
 
 	// Optional subscription configuration
 	Encoding    string
@@ -253,7 +254,13 @@ func (c *GNMI) handleSubscribeResponse(address string, reply *gnmi.SubscribeResp
 func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.SubscribeResponse_Update) {
 	var prefix, prefixAliasPath string
 	grouper := metric.NewSeriesGrouper()
-	timestamp := time.Unix(0, response.Update.Timestamp)
+
+	var timestamp time.Time
+	if c.UseLocalTimestamp {
+		timestamp = time.Now()
+	} else {
+		timestamp = time.Unix(0, response.Update.Timestamp)
+	}
 	prefixTags := make(map[string]string)
 
 	if response.Update.Prefix != nil {
@@ -494,6 +501,9 @@ const sampleConfig = `
 
  ## redial in case of failures after
  redial = "10s"
+
+ # timestamp updates using the collector's time instead of the timestamp of the update
+ # use_local_timestamp = true
 
  ## enable client-side TLS and define CA to authenticate the device
  # enable_tls = true
