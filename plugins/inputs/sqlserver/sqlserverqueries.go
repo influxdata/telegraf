@@ -216,7 +216,7 @@ SELECT
 	,CAST(SERVERPROPERTY(''EngineEdition'') AS int) AS [engine_edition]
 	,DATEDIFF(MINUTE,si.[sqlserver_start_time],GETDATE()) AS [uptime]
 	,SERVERPROPERTY(''ProductVersion'') AS [sql_version]
-	,LEFT(@@VERSION,CHARINDEX(' - ',@@VERSION)) AS [sql_version_desc]
+	,LEFT(@@VERSION,CHARINDEX('' - '',@@VERSION)) AS [sql_version_desc]
 	,dbs.[db_online]
 	,dbs.[db_restoring]
 	,dbs.[db_recovering]
@@ -1149,4 +1149,92 @@ FROM (
 		) AS y
 	ORDER BY [record_id] DESC
 ) AS z
+`
+
+const sqlServerAvailabilityReplicaStates string = `
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@ServerName + ',Database:' + DB_NAME() +' is not a SQL Server Standard,Enterprise or Express. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
+SELECT
+	'sqlserver_hadr_avreplica_states' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	hars.replica_id,
+	ar.replica_server_name,
+	hars.group_id,
+	ag.name AS group_name,
+	ar.replica_metadata_id,
+	availability_mode,
+	availability_mode_desc,
+	failover_mode,
+	failover_mode_desc,
+	session_timeout,
+	primary_role_allow_connections,
+	primary_role_allow_connections_desc,
+	secondary_role_allow_connections,
+	secondary_role_allow_connections_desc,
+	seeding_mode,
+	seeding_mode_desc,
+	basic_features,
+	is_distributed,
+	is_local,
+	role,
+	role_desc,
+	operational_state,
+	operational_state_desc,
+	connected_state,
+	connected_state_desc,
+	recovery_health,
+	recovery_health_desc,
+	synchronization_health,
+	synchronization_health_desc,
+	last_connect_error_number,
+	last_connect_error_description,
+	last_connect_error_timestamp
+from sys.dm_hadr_availability_replica_states hars
+inner join sys.availability_replicas ar on hars.replica_id = ar.replica_id
+inner join sys.availability_groups AS ag on ar.group_id = ag.group_id
+`
+
+const sqlServerDatabaseReplicaStates string = `
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@ServerName + ',Database:' + DB_NAME() +' is not a SQL Server Standard,Enterprise or Express. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
+SELECT
+	'sqlserver_hadr_dbreplica_states' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	database_id,
+	db_name(database_id) as database_name,
+	drs.replica_id,
+	ar.replica_server_name,
+	drs.group_database_id,
+	is_primary_replica,
+	synchronization_state,
+	synchronization_state_desc,
+	is_commit_participant,
+	synchronization_health,
+	synchronization_health_desc,
+	database_state,
+	database_state_desc,
+	is_suspended,
+	suspend_reason,
+	suspend_reason_desc,
+	last_sent_time,
+	last_received_time,
+	last_hardened_time,
+	last_redone_time,
+	log_send_queue_size,
+	log_send_rate,
+	redo_queue_size,
+	redo_rate,
+	filestream_send_rate,
+	last_commit_time,
+	secondary_lag_seconds
+from sys.dm_hadr_database_replica_states drs
+inner join sys.availability_replicas ar on drs.replica_id = ar.replica_id
 `
