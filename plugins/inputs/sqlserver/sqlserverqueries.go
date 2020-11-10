@@ -1159,11 +1159,11 @@ IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterp
 END
 
 SELECT
-	'sqlserver_hadr_avreplica_states' AS [measurement]
-	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	hars.replica_id,
+	'sqlserver_hadr_avreplica_states' AS [measurement],
+	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+	convert(nvarchar(36), hars.replica_id) as replica_id,
 	ar.replica_server_name,
-	hars.group_id,
+	convert(nvarchar(36), hars.group_id) as group_id,
 	ag.name AS group_name,
 	ar.replica_metadata_id,
 	availability_mode,
@@ -1193,8 +1193,8 @@ SELECT
 	last_connect_error_number,
 	last_connect_error_description,
 	last_connect_error_timestamp
-from sys.dm_hadr_availability_replica_states hars
-inner join sys.availability_replicas ar on hars.replica_id = ar.replica_id
+from sys.dm_hadr_availability_replica_states AS hars
+inner join sys.availability_replicas AS ar on hars.replica_id = ar.replica_id
 inner join sys.availability_groups AS ag on ar.group_id = ag.group_id
 `
 
@@ -1206,13 +1206,13 @@ IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterp
 END
 
 SELECT
-	'sqlserver_hadr_dbreplica_states' AS [measurement]
-	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	'sqlserver_hadr_dbreplica_states' AS [measurement],
+	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 	database_id,
 	db_name(database_id) as database_name,
-	drs.replica_id,
+	convert(nvarchar(36), drs.replica_id) as replica_id,
 	ar.replica_server_name,
-	drs.group_database_id,
+	convert(nvarchar(36), drs.group_database_id) as group_database_id,
 	is_primary_replica,
 	synchronization_state,
 	synchronization_state_desc,
@@ -1235,6 +1235,6 @@ SELECT
 	filestream_send_rate,
 	last_commit_time,
 	secondary_lag_seconds
-from sys.dm_hadr_database_replica_states drs
-inner join sys.availability_replicas ar on drs.replica_id = ar.replica_id
+from sys.dm_hadr_database_replica_states AS drs
+inner join sys.availability_replicas AS ar on drs.replica_id = ar.replica_id
 `
