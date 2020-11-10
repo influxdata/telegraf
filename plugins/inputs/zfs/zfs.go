@@ -2,13 +2,16 @@ package zfs
 
 type Sysctl func(metric string) ([]string, error)
 type Zpool func() ([]string, error)
+type Zdataset func(properties []string) ([]string, error)
 
 type Zfs struct {
-	KstatPath    string
-	KstatMetrics []string
-	PoolMetrics  bool
-	sysctl       Sysctl
-	zpool        Zpool
+	KstatPath      string
+	KstatMetrics   []string
+	PoolMetrics    bool
+	DatasetMetrics bool
+	sysctl         Sysctl
+	zpool          Zpool
+	zdataset       Zdataset
 }
 
 var sampleConfig = `
@@ -24,6 +27,8 @@ var sampleConfig = `
   #   "dmu_tx", "fm", "vdev_mirror_stats", "zfetchstats", "zil"]
   ## By default, don't gather zpool stats
   # poolMetrics = false
+  ## By default, don't gather zdataset stats
+  # datasetMetrics = false
 `
 
 func (z *Zfs) SampleConfig() string {
@@ -31,5 +36,5 @@ func (z *Zfs) SampleConfig() string {
 }
 
 func (z *Zfs) Description() string {
-	return "Read metrics of ZFS from arcstats, zfetchstats, vdev_cache_stats, and pools"
+	return "Read metrics of ZFS from arcstats, zfetchstats, vdev_cache_stats, pools and datasets"
 }
