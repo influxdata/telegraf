@@ -17,7 +17,7 @@ import (
 
 // OpcUA type
 type OpcUA struct {
-	Name           string          `toml:"name"`
+	MetricName     string          `toml:"metric_name"`
 	Endpoint       string          `toml:"endpoint"`
 	SecurityPolicy string          `toml:"security_policy"`
 	SecurityMode   string          `toml:"security_mode"`
@@ -49,7 +49,7 @@ type OpcUA struct {
 
 // OPCTag type
 type OPCTag struct {
-	Name           string `toml:"name"`
+	FieldName      string `toml:"field_name"`
 	Namespace      string `toml:"namespace"`
 	IdentifierType string `toml:"identifier_type"`
 	Identifier     string `toml:"identifier"`
@@ -163,7 +163,7 @@ func (o *OpcUA) Init() error {
 }
 
 func (o *OpcUA) validateEndpoint() error {
-	if o.Name == "" {
+	if o.MetricName == "" {
 		return fmt.Errorf("device name is empty")
 	}
 
@@ -181,14 +181,14 @@ func (o *OpcUA) validateEndpoint() error {
 	case "None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "auto":
 		break
 	default:
-		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityPolicy, o.Name)
+		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityPolicy, o.MetricName)
 	}
 	//search security mode type
 	switch o.SecurityMode {
 	case "None", "Sign", "SignAndEncrypt", "auto":
 		break
 	default:
-		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityMode, o.Name)
+		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityMode, o.MetricName)
 	}
 	return nil
 }
@@ -211,21 +211,21 @@ func (o *OpcUA) validateOPCTags() error {
 	nameEncountered := map[string]bool{}
 	for i, item := range o.NodeList {
 		//check empty name
-		if item.Name == "" {
-			return fmt.Errorf("empty name in '%s'", item.Name)
+		if item.FieldName == "" {
+			return fmt.Errorf("empty name in '%s'", item.FieldName)
 		}
 		//search name duplicate
-		if nameEncountered[item.Name] {
-			return fmt.Errorf("name '%s' is duplicated in '%s'", item.Name, item.Name)
+		if nameEncountered[item.FieldName] {
+			return fmt.Errorf("name '%s' is duplicated", item.FieldName)
 		} else {
-			nameEncountered[item.Name] = true
+			nameEncountered[item.FieldName] = true
 		}
 		//search identifier type
 		switch item.IdentifierType {
 		case "s", "i", "g", "b":
 			break
 		default:
-			return fmt.Errorf("invalid identifier type '%s' in '%s'", item.IdentifierType, item.Name)
+			return fmt.Errorf("invalid identifier type '%s' in '%s'", item.IdentifierType, item.FieldName)
 		}
 
 		// build nodeid
@@ -323,7 +323,7 @@ func (o *OpcUA) getData() error {
 		if d.Status != ua.StatusOK {
 			return fmt.Errorf("Status not OK: %v", d.Status)
 		}
-		o.NodeData[i].TagName = o.NodeList[i].Name
+		o.NodeData[i].TagName = o.NodeList[i].FieldName
 		if d.Value != nil {
 			o.NodeData[i].Value = d.Value.Value()
 			o.NodeData[i].DataType = d.Value.Type()
@@ -385,13 +385,13 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	for i, n := range o.NodeList {
 		fields := make(map[string]interface{})
 		tags := map[string]string{
-			"name": n.Name,
+			"name": n.FieldName,
 			"id":   BuildNodeID(n),
 		}
 
 		fields[o.NodeData[i].TagName] = o.NodeData[i].Value
 		fields["quality"] = strings.TrimSpace(fmt.Sprint(o.NodeData[i].Quality))
-		acc.AddFields(o.Name, fields, tags)
+		acc.AddFields(o.MetricName, fields, tags)
 	}
 	return nil
 }
@@ -400,7 +400,7 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("opcua", func() telegraf.Input {
 		return &OpcUA{
-			Name:           "localhost",
+			MetricName:     "opcua",
 			Endpoint:       "opc.tcp://localhost:4840",
 			SecurityPolicy: "auto",
 			SecurityMode:   "auto",

@@ -10,7 +10,7 @@ Plugin minimum tested version: 1.16
 ```toml
 [[inputs.opcua]]
   ## Metric name
-  # name = "localhost"
+  # metric_name = "opcua"
   #
   ## OPC UA Endpoint URL
   # endpoint = "opc.tcp://localhost:4840"
@@ -47,15 +47,15 @@ Plugin minimum tested version: 1.16
   # password = ""
   #
   ## Node ID configuration
-  ## name       			- the variable name
-  ## namespace  			- integer value 0 thru 3
+  ## field_name			- the field name
+  ## namespace				- integer value 0 thru 3
   ## identifier_type		- s=string, i=numeric, g=guid, b=opaque
   ## identifier			- tag as shown in opcua browser
   ## Example:
   ## {name="ProductUri", namespace="0", identifier_type="i", identifier="2262"}
   nodes = [
-    {name="", namespace="", identifier_type="", identifier=""},
-    {name="", namespace="", identifier_type="", identifier=""},
+    {field_name="", namespace="", identifier_type="", identifier=""},
+    {field_name="", namespace="", identifier_type="", identifier=""},
   ]
 ```
 
@@ -66,13 +66,13 @@ An OPC UA node ID may resemble: "n=3;s=Temperature". In this example:
 - This example temperature node has a value of 79.0
 To gather data from this node enter the following line into the 'nodes' property above:
 ```
-{name="temp", namespace="3", identifier_type="s", identifier="Temperature"},
+{field_name="temp", namespace="3", identifier_type="s", identifier="Temperature"},
 ```
 
 
 ### Example Output
 
 ```
-localhost,name=temp,id=n\=3;s\=Temperature temp=79.0,quality="OK (0x0)" 1597820490000000000
+opcua,name=temp,id=n\=3;s\=Temperature temp=79.0,quality="OK (0x0)" 1597820490000000000
 
 ```

@@ -32,7 +32,7 @@ func TestClient1(t *testing.T) {
 	var o OpcUA
 	var err error
 
-	o.Name = "testing"
+	o.MetricName = "testing"
 	o.Endpoint = "opc.tcp://opcua.rocks:4840"
 	o.AuthMethod = "Anonymous"
 	o.ConnectTimeout = config.Duration(10 * time.Second)
@@ -57,16 +57,16 @@ func TestClient1(t *testing.T) {
 			value := reflect.ValueOf(v.Value)
 			compare := fmt.Sprintf("%v", value.Interface())
 			if compare != testopctags[i].Want {
-				t.Errorf("Tag %s: Values %v for type %s  does not match record", o.NodeList[i].Name, value.Interface(), types)
+				t.Errorf("Tag %s: Values %v for type %s  does not match record", o.NodeList[i].FieldName, value.Interface(), types)
 			}
 		} else {
-			t.Errorf("Tag: %s has value: %v", o.NodeList[i].Name, v.Value)
+			t.Errorf("Tag: %s has value: %v", o.NodeList[i].FieldName, v.Value)
 		}
 	}
 }
 
 func MapOPCTag(tags OPCTags) (out OPCTag) {
-	out.Name = tags.Name
+	out.FieldName = tags.Name
 	out.Namespace = tags.Namespace
 	out.IdentifierType = tags.IdentifierType
 	out.Identifier = tags.Identifier
@@ -76,7 +76,7 @@ func MapOPCTag(tags OPCTags) (out OPCTag) {
 func TestConfig(t *testing.T) {
 	toml := `
 [[inputs.opcua]]
-name = "localhost"
+metric_name = "localhost"
 endpoint = "opc.tcp://localhost:4840"
 connect_timeout = "10s"
 request_timeout = "5s"
@@ -88,8 +88,8 @@ auth_method = "Anonymous"
 username = ""
 password = ""
 nodes = [
-  {name="name", namespace="", identifier_type="", identifier=""},
-  {name="name2", namespace="", identifier_type="", identifier=""},
+  {field_name="name", namespace="1", identifier_type="s", identifier="one"},
+  {field_name="name2", namespace="2", identifier_type="s", identifier="two"},
 ]
 `
 
@@ -103,6 +103,6 @@ nodes = [
 	require.True(t, ok)
 
 	require.Len(t, o.NodeList, 2)
-	require.Equal(t, o.NodeList[0].Name, "name")
-	require.Equal(t, o.NodeList[1].Name, "name2")
+	require.Equal(t, o.NodeList[0].FieldName, "name")
+	require.Equal(t, o.NodeList[1].FieldName, "name2")
 }
