@@ -419,8 +419,7 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	for i, n := range o.nodes {
 		fields := make(map[string]interface{})
 		tags := map[string]string{
-			"name": n.tag.FieldName,
-			"id":   n.idStr,
+			"id": n.idStr,
 		}
 
 		fields[o.nodeData[i].TagName] = o.nodeData[i].Value
