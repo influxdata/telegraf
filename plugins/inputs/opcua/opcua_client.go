@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 // OpcUA type
@@ -38,9 +39,8 @@ type OpcUA struct {
 	state       ConnectionState
 
 	// status
-	ReadSuccess  int `toml:"-"`
-	ReadError    int `toml:"-"`
-	NumberOfTags int `toml:"-"`
+	ReadSuccess selfstat.Stat `toml:"-"`
+	ReadError   selfstat.Stat `toml:"-"`
 
 	// internal values
 	client *opcua.Client
@@ -168,9 +168,14 @@ func (o *OpcUA) Init() error {
 	if err != nil {
 		return err
 	}
-	o.NumberOfTags = len(o.nodes)
 
 	o.setupOptions()
+
+	tags := map[string]string{
+		"endpoint": o.Endpoint,
+	}
+	o.ReadError = selfstat.Register("opcua", "read_error", tags)
+	o.ReadSuccess = selfstat.Register("opcua", "read_success", tags)
 
 	return nil
 
@@ -349,10 +354,10 @@ func (o *OpcUA) setupOptions() error {
 func (o *OpcUA) getData() error {
 	resp, err := o.client.Read(o.req)
 	if err != nil {
-		o.ReadError++
+		o.ReadError.Incr(1)
 		return fmt.Errorf("RegisterNodes Read failed: %v", err)
 	}
-	o.ReadSuccess++
+	o.ReadSuccess.Incr(1)
 	for i, d := range resp.Results {
 		if d.Status != ua.StatusOK {
 			return fmt.Errorf("Status not OK: %v", d.Status)
@@ -382,9 +387,6 @@ func disconnect(o *OpcUA) error {
 	if err != nil {
 		return err
 	}
-
-	o.ReadError = 0
-	o.ReadSuccess = 0
 
 	switch u.Scheme {
 	case "opc.tcp":
