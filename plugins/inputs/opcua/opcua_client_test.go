@@ -40,7 +40,7 @@ func TestClient1(t *testing.T) {
 	o.SecurityPolicy = "None"
 	o.SecurityMode = "None"
 	for _, tags := range testopctags {
-		o.NodeList = append(o.NodeList, MapOPCTag(tags))
+		o.RootNodes = append(o.RootNodes, MapOPCTag(tags))
 	}
 	err = o.Init()
 	if err != nil {
@@ -51,21 +51,21 @@ func TestClient1(t *testing.T) {
 		t.Fatalf("Connect Error: %s", err)
 	}
 
-	for i, v := range o.NodeData {
+	for i, v := range o.nodeData {
 		if v.Value != nil {
 			types := reflect.TypeOf(v.Value)
 			value := reflect.ValueOf(v.Value)
 			compare := fmt.Sprintf("%v", value.Interface())
 			if compare != testopctags[i].Want {
-				t.Errorf("Tag %s: Values %v for type %s  does not match record", o.NodeList[i].FieldName, value.Interface(), types)
+				t.Errorf("Tag %s: Values %v for type %s  does not match record", o.nodes[i].tag.FieldName, value.Interface(), types)
 			}
 		} else {
-			t.Errorf("Tag: %s has value: %v", o.NodeList[i].FieldName, v.Value)
+			t.Errorf("Tag: %s has value: %v", o.nodes[i].tag.FieldName, v.Value)
 		}
 	}
 }
 
-func MapOPCTag(tags OPCTags) (out OPCTag) {
+func MapOPCTag(tags OPCTags) (out NodeSettings) {
 	out.FieldName = tags.Name
 	out.Namespace = tags.Namespace
 	out.IdentifierType = tags.IdentifierType
@@ -91,6 +91,11 @@ nodes = [
   {field_name="name", namespace="1", identifier_type="s", identifier="one"},
   {field_name="name2", namespace="2", identifier_type="s", identifier="two"},
 ]
+[[inputs.opcua.group]]
+metric_name = "foo"
+namespace = "3"
+identifier_type = "i"
+nodes = [{field_name="name3", identifier="3000"}]
 `
 
 	c := config.NewConfig()
@@ -102,7 +107,15 @@ nodes = [
 	o, ok := c.Inputs[0].Input.(*OpcUA)
 	require.True(t, ok)
 
-	require.Len(t, o.NodeList, 2)
-	require.Equal(t, o.NodeList[0].FieldName, "name")
-	require.Equal(t, o.NodeList[1].FieldName, "name2")
+	require.Len(t, o.RootNodes, 2)
+	require.Equal(t, o.RootNodes[0].FieldName, "name")
+	require.Equal(t, o.RootNodes[1].FieldName, "name2")
+
+	require.Len(t, o.Groups, 1)
+	require.Equal(t, o.Groups[0].MetricName, "foo")
+	require.Len(t, o.Groups[0].Nodes, 1)
+	require.Equal(t, o.Groups[0].Nodes[0].Identifier, "3000")
+
+	require.NoError(t, o.InitNodes())
+	require.Len(t, o.nodes, 3)
 }

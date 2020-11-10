@@ -28,12 +28,13 @@ type OpcUA struct {
 	AuthMethod     string          `toml:"auth_method"`
 	ConnectTimeout config.Duration `toml:"connect_timeout"`
 	RequestTimeout config.Duration `toml:"request_timeout"`
-	NodeList       []OPCTag        `toml:"nodes"`
+	RootNodes      []NodeSettings  `toml:"nodes"`
+	Groups         []GroupSettings `toml:"group"`
 
-	Nodes       []string     `toml:"-"`
-	NodeData    []OPCData    `toml:"-"`
-	NodeIDs     []*ua.NodeID `toml:"-"`
-	NodeIDerror []error      `toml:"-"`
+	nodes       []Node
+	nodeData    []OPCData
+	nodeIDs     []*ua.NodeID
+	nodeIDerror []error
 	state       ConnectionState
 
 	// status
@@ -48,11 +49,24 @@ type OpcUA struct {
 }
 
 // OPCTag type
-type OPCTag struct {
+type NodeSettings struct {
 	FieldName      string `toml:"field_name"`
 	Namespace      string `toml:"namespace"`
 	IdentifierType string `toml:"identifier_type"`
 	Identifier     string `toml:"identifier"`
+}
+
+type Node struct {
+	tag        NodeSettings
+	idStr      string
+	metricName string
+}
+
+type GroupSettings struct {
+	MetricName     string         `toml:"metric_name"`     // Overrides plugin's setting
+	Namespace      string         `toml:"namespace"`       // Can be overridden by node setting
+	IdentifierType string         `toml:"identifier_type"` // Can be overridden by node setting
+	Nodes          []NodeSettings `toml:"nodes"`
 }
 
 // OPCData type
@@ -154,7 +168,7 @@ func (o *OpcUA) Init() error {
 	if err != nil {
 		return err
 	}
-	o.NumberOfTags = len(o.NodeList)
+	o.NumberOfTags = len(o.nodes)
 
 	o.setupOptions()
 
@@ -195,8 +209,29 @@ func (o *OpcUA) validateEndpoint() error {
 
 //InitNodes Method on OpcUA
 func (o *OpcUA) InitNodes() error {
-	if len(o.NodeList) == 0 {
-		return nil
+	for _, node := range o.RootNodes {
+		o.nodes = append(o.nodes, Node{
+			metricName: o.MetricName,
+			tag:        node,
+		})
+	}
+
+	for _, group := range o.Groups {
+		if group.MetricName == "" {
+			group.MetricName = o.MetricName
+		}
+		for _, node := range group.Nodes {
+			if node.Namespace == "" {
+				node.Namespace = group.Namespace
+			}
+			if node.IdentifierType == "" {
+				node.IdentifierType = group.IdentifierType
+			}
+			o.nodes = append(o.nodes, Node{
+				metricName: group.MetricName,
+				tag:        node,
+			})
+		}
 	}
 
 	err := o.validateOPCTags()
@@ -209,41 +244,40 @@ func (o *OpcUA) InitNodes() error {
 
 func (o *OpcUA) validateOPCTags() error {
 	nameEncountered := map[string]bool{}
-	for i, item := range o.NodeList {
+	for _, node := range o.nodes {
 		//check empty name
-		if item.FieldName == "" {
-			return fmt.Errorf("empty name in '%s'", item.FieldName)
+		if node.tag.FieldName == "" {
+			return fmt.Errorf("empty field_name in '%s'", node.tag.FieldName)
 		}
 		//search name duplicate
-		if nameEncountered[item.FieldName] {
-			return fmt.Errorf("name '%s' is duplicated", item.FieldName)
+		if nameEncountered[node.tag.FieldName] {
+			return fmt.Errorf("field_name '%s' is duplicated", node.tag.FieldName)
 		} else {
-			nameEncountered[item.FieldName] = true
+			nameEncountered[node.tag.FieldName] = true
 		}
 		//search identifier type
-		switch item.IdentifierType {
+		switch node.tag.IdentifierType {
 		case "s", "i", "g", "b":
 			break
 		default:
-			return fmt.Errorf("invalid identifier type '%s' in '%s'", item.IdentifierType, item.FieldName)
+			return fmt.Errorf("invalid identifier type '%s' in '%s'", node.tag.IdentifierType, node.tag.FieldName)
 		}
 
-		// build nodeid
-		o.Nodes = append(o.Nodes, BuildNodeID(item))
+		node.idStr = BuildNodeID(node.tag)
 
 		//parse NodeIds and NodeIds errors
-		nid, niderr := ua.ParseNodeID(o.Nodes[i])
+		nid, niderr := ua.ParseNodeID(node.idStr)
 		// build NodeIds and Errors
-		o.NodeIDs = append(o.NodeIDs, nid)
-		o.NodeIDerror = append(o.NodeIDerror, niderr)
+		o.nodeIDs = append(o.nodeIDs, nid)
+		o.nodeIDerror = append(o.nodeIDerror, niderr)
 		// Grow NodeData for later input
-		o.NodeData = append(o.NodeData, OPCData{})
+		o.nodeData = append(o.nodeData, OPCData{})
 	}
 	return nil
 }
 
 // BuildNodeID build node ID from OPC tag
-func BuildNodeID(tag OPCTag) string {
+func BuildNodeID(tag NodeSettings) string {
 	return "ns=" + tag.Namespace + ";" + tag.IdentifierType + "=" + tag.Identifier
 }
 
@@ -270,7 +304,7 @@ func Connect(o *OpcUA) error {
 		}
 
 		regResp, err := o.client.RegisterNodes(&ua.RegisterNodesRequest{
-			NodesToRegister: o.NodeIDs,
+			NodesToRegister: o.nodeIDs,
 		})
 		if err != nil {
 			return fmt.Errorf("RegisterNodes failed: %v", err)
@@ -323,14 +357,14 @@ func (o *OpcUA) getData() error {
 		if d.Status != ua.StatusOK {
 			return fmt.Errorf("Status not OK: %v", d.Status)
 		}
-		o.NodeData[i].TagName = o.NodeList[i].FieldName
+		o.nodeData[i].TagName = o.nodes[i].tag.FieldName
 		if d.Value != nil {
-			o.NodeData[i].Value = d.Value.Value()
-			o.NodeData[i].DataType = d.Value.Type()
+			o.nodeData[i].Value = d.Value.Value()
+			o.nodeData[i].DataType = d.Value.Type()
 		}
-		o.NodeData[i].Quality = d.Status
-		o.NodeData[i].TimeStamp = d.ServerTimestamp.String()
-		o.NodeData[i].Time = d.SourceTimestamp.String()
+		o.nodeData[i].Quality = d.Status
+		o.nodeData[i].TimeStamp = d.ServerTimestamp.String()
+		o.nodeData[i].Time = d.SourceTimestamp.String()
 	}
 	return nil
 }
@@ -382,16 +416,16 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	for i, n := range o.NodeList {
+	for i, n := range o.nodes {
 		fields := make(map[string]interface{})
 		tags := map[string]string{
-			"name": n.FieldName,
-			"id":   BuildNodeID(n),
+			"name": n.tag.FieldName,
+			"id":   n.idStr,
 		}
 
-		fields[o.NodeData[i].TagName] = o.NodeData[i].Value
-		fields["quality"] = strings.TrimSpace(fmt.Sprint(o.NodeData[i].Quality))
-		acc.AddFields(o.MetricName, fields, tags)
+		fields[o.nodeData[i].TagName] = o.nodeData[i].Value
+		fields["quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
+		acc.AddFields(n.metricName, fields, tags)
 	}
 	return nil
 }
