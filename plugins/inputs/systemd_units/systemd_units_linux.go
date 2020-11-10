@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -199,6 +200,7 @@ func setSystemctl(Timeout internal.Duration, UnitType string) (*bytes.Buffer, er
 	}
 
 	cmd := exec.Command(systemctlPath, "list-units", "--all", fmt.Sprintf("--type=%s", UnitType), "--no-legend")
+	cmd.Env = append(os.Environ(), "LC_ALL=C")
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
