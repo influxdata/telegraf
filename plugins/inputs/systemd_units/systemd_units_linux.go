@@ -146,6 +146,8 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	for scanner.Scan() {
 		line := scanner.Text()
 
+		// not found or failed units might have a leading asterisk
+		line = strings.TrimPrefix(line, "*")
 		data := strings.Fields(line)
 		if len(data) < 4 {
 			acc.AddError(fmt.Errorf("Error parsing line (expected at least 4 fields): %s", line))
