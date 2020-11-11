@@ -98,6 +98,6 @@ To gather data from this node enter the following line into the 'nodes' property
 ### Example Output
 
 ```
-opcua,name=temp,id=n\=3;s\=Temperature temp=79.0,quality="OK (0x0)" 1597820490000000000
+opcua,id=n\=3;s\=Temperature temp=79.0,quality="OK (0x0)" 1597820490000000000
 
 ```
