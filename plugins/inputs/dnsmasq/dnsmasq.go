@@ -50,7 +50,7 @@ func (d *Dnsmasq) Gather(acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{}, 2)
 	tags := map[string]string{
 		"server": d.Server,
-		"port":   string(d.Port),
+		"port":   fmt.Sprint(d.Port),
 	}
 	msg := &dns.Msg{
 		MsgHdr: dns.MsgHdr{
