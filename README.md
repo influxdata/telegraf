@@ -20,6 +20,9 @@ Telegraf is plugin-driven and has the concept of 4 distinct plugin types:
 New plugins are designed to be easy to contribute, we'll eagerly accept pull
 requests and will manage the set of plugins that Telegraf supports.
 
+New plugins are designed to be easy to contribute, we'll eagerly accept pull
+requests and will manage the set of plugins that Telegraf supports.
+
 ## Contributing
 
 New plugins are designed to be easy to contribute, pull requests are welcomed and we work to incorporate as many pull requests as possible. If none of the internal plugins fit your needs, you could have a look at the
