@@ -490,6 +490,104 @@ func TestNotification(t *testing.T) {
 				),
 			},
 		},
+
+		{
+			name: "embedded tag: protocol",
+			plugin: &GNMI{
+				Log:      testutil.Logger{},
+				Encoding: "proto",
+				Redial:   config.Duration(1 * time.Second),
+				EmbeddedTags: []string{
+					"Cisco-IOS-XR-infra-statsd-oper:/infra-statistics/interfaces/interface/protocols/protocol/protocol",
+				},
+				Subscriptions: []Subscription{
+					{
+						Name:             "protocols",
+						Origin:           "Cisco-IOS-XR-infra-statsd-oper",
+						Path:             "/infra-statistics/interfaces/interface/protocols/protocol",
+						SubscriptionMode: "sample",
+					},
+				},
+			},
+			server: &MockServer{
+				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
+					response := &gnmiLib.SubscribeResponse{
+						Response: &gnmiLib.SubscribeResponse_Update{
+							Update: &gnmiLib.Notification{
+								Timestamp: 1543236572000000000,
+								Prefix: &gnmiLib.Path{
+									Origin: "Cisco-IOS-XR-infra-statsd-oper",
+									Elem: []*gnmiLib.PathElem{
+										{
+											Name: "infra-statistics",
+										},
+										{
+											Name: "interfaces",
+										},
+										{
+											Name: "interface",
+											Key:  map[string]string{"interface-name": "GigabitEthernet0/0/0/0"},
+										},
+										{
+											Name: "protocols",
+										},
+										{
+											Name: "protocol",
+											Key:  map[string]string{"protocol-name": "IPV6_UNICAST"},
+										},
+									},
+									Target: "subscription",
+								},
+								Update: []*gnmiLib.Update{
+									{
+										Path: &gnmiLib.Path{
+											Elem: []*gnmiLib.PathElem{
+												{
+													Name: "protocol",
+												},
+											},
+										},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_IntVal{IntVal: 19},
+										},
+									},
+									{
+										Path: &gnmiLib.Path{
+											Elem: []*gnmiLib.PathElem{
+												{
+													Name: "bytes-received",
+												},
+											},
+										},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_IntVal{IntVal: 42},
+										},
+									},
+								},
+							},
+						},
+					}
+					server.Send(response)
+					return nil
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"protocols",
+					map[string]string{
+						"path":           "Cisco-IOS-XR-infra-statsd-oper:/infra-statistics/interfaces/interface/protocols/protocol",
+						"source":         "127.0.0.1",
+						"interface_name": "GigabitEthernet0/0/0/0",
+						"protocol_name":  "IPV6_UNICAST",
+						"protocol":       "19",
+					},
+					map[string]interface{}{
+						"bytes_received": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
