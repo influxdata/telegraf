@@ -179,7 +179,7 @@ func (c *GNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
 		return nil, err
 	}
 
-	if c.Encoding != "proto" && c.Encoding != "json" && c.Encoding != "json_ietf" {
+	if c.Encoding != "proto" && c.Encoding != "json" && c.Encoding != "json_ietf" && c.Encoding != "bytes" {
 		return nil, fmt.Errorf("unsupported encoding %s", c.Encoding)
 	}
 
@@ -217,7 +217,11 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Co
 	}
 
 	if err = subscribeClient.Send(request); err != nil {
-		return fmt.Errorf("failed to send subscription request: %v", err)
+		// If io.EOF is returned, the stream may have ended and stream status
+		// can be determined by calling Recv.
+		if err != io.EOF {
+			return fmt.Errorf("failed to send subscription request: %v", err)
+		}
 	}
 
 	c.Log.Debugf("Connection to gNMI device %s established", address)
@@ -482,7 +486,7 @@ const sampleConfig = `
  username = "cisco"
  password = "cisco"
 
- ## gNMI encoding requested (one of: "proto", "json", "json_ietf")
+ ## gNMI encoding requested (one of: "proto", "json", "json_ietf", "bytes")
  # encoding = "proto"
 
  ## redial in case of failures after

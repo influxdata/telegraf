@@ -73,8 +73,11 @@ func prettyToBytes(v string) uint64 {
 func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 	tags := getTags(bdev)
 	metrics, err := filepath.Glob(bdev + "/stats_total/*")
-	if len(metrics) < 0 {
-		return errors.New("Can't read any stats file")
+	if err != nil {
+		return err
+	}
+	if len(metrics) == 0 {
+		return errors.New("can't read any stats file")
 	}
 	file, err := ioutil.ReadFile(bdev + "/dirty_data")
 	if err != nil {

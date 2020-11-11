@@ -9,7 +9,7 @@ Existing Python code is unlikely to work unmodified.  The execution environment
 is sandboxed, and it is not possible to do I/O operations such as reading from
 files or sockets.
 
-The Starlark [specification][] has details about the syntax and available
+The **[Starlark specification][]** has details about the syntax and available
 functions.
 
 Telegraf minimum version: Telegraf 1.15.0
@@ -44,7 +44,7 @@ def apply(metric):
 ```
 
 For a list of available types and functions that can be used in the code, see
-the Starlark [specification][].
+the [Starlark specification][].
 
 In addition to these, the following InfluxDB-specific
 types and functions are exposed to the script.
@@ -90,6 +90,14 @@ While Starlark is similar to Python, there are important differences to note:
   del            import         with
   except         is             yield
   ```
+
+### Libraries available
+
+The ability to load external scripts other than your own is pretty limited. The following libraries are available for loading:
+
+* json: `load("json.star", "json")` provides the following functions: `json.encode()`, `json.decode()`, `json.indent()`. See [json.star](/plugins/processors/starlark/testdata/json.star) for an example.
+
+If you would like to see support for something else here, please open an issue.
 
 ### Common Questions
 
@@ -149,13 +157,18 @@ Attempting to modify the global scope will fail with an error.
 
 ### Examples
 
-- [ratio](/plugins/processors/starlark/testdata/ratio.star)
-- [rename](/plugins/processors/starlark/testdata/rename.star)
-- [scale](/plugins/processors/starlark/testdata/scale.star)
-- [number logic](/plugins/processors/starlark/testdata/number_logic.star)
+- [json](/plugins/processors/starlark/testdata/json.star) - an example of processing JSON from a field in a metric
+- [number logic](/plugins/processors/starlark/testdata/number_logic.star) - transform a numerical value to another numerical value
+- [pivot](/plugins/processors/starlark/testdata/pivot.star) - Pivots a key's value to be the key for another key.
+- [ratio](/plugins/processors/starlark/testdata/ratio.star) - Compute the ratio of two integer fields
+- [rename](/plugins/processors/starlark/testdata/rename.star) - Rename tags or fields using a name mapping.
+- [scale](/plugins/processors/starlark/testdata/scale.star) - Multiply any field by a number
+- [value filter](/plugins/processors/starlark/testdata/value_filter.star) - remove a metric based on a field value.
 
-Open a [PR](https://github.com/influxdata/telegraf/compare) to add any other useful Starlark examples. 
+[All examples](/plugins/processors/starlark/testdata) are in the testdata folder.
 
-[specification]: https://github.com/google/starlark-go/blob/master/doc/spec.md
+Open a Pull Request to add any other useful Starlark examples.
+
+[Starlark specification]: https://github.com/google/starlark-go/blob/master/doc/spec.md
 [string]: https://github.com/google/starlark-go/blob/master/doc/spec.md#strings
 [dict]: https://github.com/google/starlark-go/blob/master/doc/spec.md#dictionaries
