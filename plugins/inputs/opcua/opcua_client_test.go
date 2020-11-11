@@ -96,6 +96,11 @@ metric_name = "foo"
 namespace = "3"
 identifier_type = "i"
 nodes = [{field_name="name3", identifier="3000"}]
+[[inputs.opcua.group]]
+metric_name = "bar"
+namespace = "0"
+identifier_type = "i"
+nodes = [{field_name="name4", identifier="4000"}]
 `
 
 	c := config.NewConfig()
@@ -111,11 +116,11 @@ nodes = [{field_name="name3", identifier="3000"}]
 	require.Equal(t, o.RootNodes[0].FieldName, "name")
 	require.Equal(t, o.RootNodes[1].FieldName, "name2")
 
-	require.Len(t, o.Groups, 1)
+	require.Len(t, o.Groups, 2)
 	require.Equal(t, o.Groups[0].MetricName, "foo")
 	require.Len(t, o.Groups[0].Nodes, 1)
 	require.Equal(t, o.Groups[0].Nodes[0].Identifier, "3000")
 
 	require.NoError(t, o.InitNodes())
-	require.Len(t, o.nodes, 3)
+	require.Len(t, o.nodes, 4)
 }

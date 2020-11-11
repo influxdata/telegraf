@@ -93,8 +93,8 @@ const (
 
 const description = `Retrieve data from OPCUA devices`
 const sampleConfig = `
-  ## Device name
-  # name = "localhost"
+  ## Metric name
+  # metric_name = "opcua"
   #
   ## OPC UA Endpoint URL
   # endpoint = "opc.tcp://localhost:4840"
@@ -131,18 +131,41 @@ const sampleConfig = `
   # password = ""
   #
   ## Node ID configuration
-  ## name       			- the variable name
-  ## namespace  			- integer value 0 thru 3
-  ## identifier_type		- s=string, i=numeric, g=guid, b=opaque
-  ## identifier			- tag as shown in opcua browser
-  ## data_type  			- boolean, byte, short, int, uint, uint16, int16,
-  ##                        uint32, int32, float, double, string, datetime, number
+  ## field_name        - field name to use in the output
+  ## namespace         - OPC UA namespace of the node (integer value 0 thru 3)
+  ## identifier_type   - OPC UA ID type (s=string, i=numeric, g=guid, b=opaque)
+  ## identifier        - OPC UA ID (tag as shown in opcua browser)
   ## Example:
-  ## {name="ProductUri", namespace="0", identifier_type="i", identifier="2262", data_type="string", description="http://open62541.org"}
-  nodes = [
-    {name="", namespace="", identifier_type="", identifier="", data_type="", description=""},
-    {name="", namespace="", identifier_type="", identifier="", data_type="", description=""},
-  ]
+  ## {name="ProductUri", namespace="0", identifier_type="i", identifier="2262"}
+  # nodes = [
+  #  {field_name="", namespace="", identifier_type="", identifier=""},
+  #  {field_name="", namespace="", identifier_type="", identifier=""},
+  #]
+  #
+  ## Node Group
+  ## Sets defaults for OPC UA namespace and ID type so they aren't required in
+  ## every node.  A group can also have a metric name that overrides the main
+  ## plugin metric name.
+  ##
+  ## Multiple node groups are allowed
+  #[[inputs.opcua.group]]
+  ## Group Metric name. Overrides the top level metric_name.  If unset, the
+  ## top level metric_name is used.
+  # metric_name =
+  #
+  ## Group default namespace. If a node in the group doesn't set its
+  ## namespace, this is used.
+  # namespace =
+  #
+  ## Group default identifier type. If a node in the group doesn't set its
+  ## namespace, this is used.
+  # identifier_type =
+  #
+  ## Node ID Configuration.  Array of nodes with the same settings as above.
+  # nodes = [
+  #  {field_name="", namespace="", identifier_type="", identifier=""},
+  #  {field_name="", namespace="", identifier_type="", identifier=""},
+  #]
 `
 
 // Description will appear directly above the plugin definition in the config file
