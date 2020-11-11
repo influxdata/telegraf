@@ -12,9 +12,9 @@ import (
 
 func MockInit() {
 	libhoney.Init(libhoney.Config{
-		APIKey:"foo",
-		Dataset: "bar",
-		APIHost: "http://localhost:1234",
+		APIKey:       "foo",
+		Dataset:      "bar",
+		APIHost:      "http://localhost:1234",
 		Transmission: &transmission.MockSender{},
 	})
 }
@@ -52,14 +52,13 @@ func TestBuildEventSimple(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !reflect.DeepEqual(testEvent.Fields(), retEvent.Fields()){
+	if !reflect.DeepEqual(testEvent.Fields(), retEvent.Fields()) {
 		t.Errorf("\nexpected\t%+v \nreceived\t%+v \n", testEvent.Fields(), retEvent.Fields())
 	}
 	if testEvent.Timestamp != retEvent.Timestamp {
 		t.Errorf("\nexpected\t%+v \nreceived\t%+v \n", testEvent.Timestamp, retEvent.Timestamp)
 	}
 }
-
 
 func TestBuildEventSimpleWithHost(t *testing.T) {
 
@@ -73,7 +72,7 @@ func TestBuildEventSimpleWithHost(t *testing.T) {
 		"testName.tag2": "value2",
 		"testName.foo":  int64(1),
 		"testName.bar":  100.123,
-		"host": "host-1",
+		"host":          "host-1",
 	})
 	testEvent.Timestamp = testTime
 	testMetric, _ := metric.New("testName", map[string]string{"tag1": "value1", "tag2": "value2", "host": "host-1"}, map[string]interface{}{"foo": 1, "bar": 100.123}, testTime)
@@ -84,14 +83,13 @@ func TestBuildEventSimpleWithHost(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !reflect.DeepEqual(testEvent.Fields(), retEvent.Fields()){
+	if !reflect.DeepEqual(testEvent.Fields(), retEvent.Fields()) {
 		t.Errorf("\nexpected\t%+v \nreceived\t%+v \n", testEvent.Fields(), retEvent.Fields())
 	}
 	if testEvent.Timestamp != retEvent.Timestamp {
 		t.Errorf("\nexpected\t%+v \nreceived\t%+v \n", testEvent.Timestamp, retEvent.Timestamp)
 	}
 }
-
 
 func TestBuildEventSimpleWithSpecialTags(t *testing.T) {
 
@@ -101,12 +99,12 @@ func TestBuildEventSimpleWithSpecialTags(t *testing.T) {
 	testTime := time.Now()
 	testEvent := libhoney.NewEvent()
 	testEvent.Add(map[string]interface{}{
-		"tag1": "value1",
+		"tag1":          "value1",
 		"testName.tag2": "value2",
 		"testName.foo":  int64(1),
 		"testName.bar":  100.123,
 		"testName.host": "host-1",
-		"special2": "another-value",
+		"special2":      "another-value",
 	})
 	testEvent.Timestamp = testTime
 	testMetric, _ := metric.New("testName", map[string]string{"tag1": "value1", "tag2": "value2", "host": "host-1", "special2": "another-value"}, map[string]interface{}{"foo": 1, "bar": 100.123}, testTime)
@@ -117,7 +115,7 @@ func TestBuildEventSimpleWithSpecialTags(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !reflect.DeepEqual(testEvent.Fields(), retEvent.Fields()){
+	if !reflect.DeepEqual(testEvent.Fields(), retEvent.Fields()) {
 		t.Errorf("\nexpected\t%+v \nreceived\t%+v \n", testEvent.Fields(), retEvent.Fields())
 	}
 	if testEvent.Timestamp != retEvent.Timestamp {

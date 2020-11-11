@@ -9,10 +9,10 @@ import (
 )
 
 type Honeycomb struct {
-	APIKey         string    `toml:"apiKey"`
-	Dataset        string    `toml:"dataset"`
-	APIHost        string    `toml:"apiHost"`
-	SpecialTags    []string    `toml:"specialTags"`
+	APIKey      string   `toml:"apiKey"`
+	Dataset     string   `toml:"dataset"`
+	APIHost     string   `toml:"apiHost"`
+	SpecialTags []string `toml:"specialTags"`
 }
 
 var sampleConfig = `
@@ -42,16 +42,16 @@ func (h *Honeycomb) Connect() error {
 	}
 
 	err := libhoney.Init(libhoney.Config{
-		APIKey: h.APIKey,
-		Dataset: h.Dataset,
-		APIHost: h.APIHost,
+		APIKey:       h.APIKey,
+		Dataset:      h.Dataset,
+		APIHost:      h.APIHost,
 		MaxBatchSize: 500,
 	})
 	if err != nil {
 		return fmt.Errorf("Honeycomb Init error: %s", err.Error())
 	}
 
-    return nil
+	return nil
 }
 
 func (h *Honeycomb) Write(metrics []telegraf.Metric) error {
@@ -81,7 +81,7 @@ func (h *Honeycomb) BuildEvent(m telegraf.Metric) (*libhoney.Event, error) {
 
 	// add each field and value prefixed by metric / measurement name to data payload
 	for _, f := range m.FieldList() {
-		data[m.Name() + "." + f.Key] = f.Value
+		data[m.Name()+"."+f.Key] = f.Value
 	}
 
 	// add each tag and value to data payload
@@ -95,7 +95,7 @@ func (h *Honeycomb) BuildEvent(m telegraf.Metric) (*libhoney.Event, error) {
 			}
 		}
 		if prefixTag {
-			data[m.Name() + "." + t.Key] = t.Value
+			data[m.Name()+"."+t.Key] = t.Value
 		} else {
 			data[t.Key] = t.Value
 		}
