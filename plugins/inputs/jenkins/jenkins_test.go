@@ -603,6 +603,59 @@ func TestGatherJobs(t *testing.T) {
 			},
 		},
 		{
+			name: "gather metrics for nested jobs with space exercising append slice behaviour",
+			input: mockHandler{
+				responseMap: map[string]interface{}{
+					"/api/json": &jobResponse{
+						Jobs: []innerJob{
+							{Name: "l1"},
+						},
+					},
+					"/job/l1/api/json": &jobResponse{
+						Jobs: []innerJob{
+							{Name: "l2"},
+						},
+					},
+					"/job/l1/job/l2/api/json": &jobResponse{
+						Jobs: []innerJob{
+							{Name: "job 1"},
+						},
+					},
+					"/job/l1/job/l2/job/job%201/api/json": &jobResponse{
+						Jobs: []innerJob{
+							{Name: "job 2"},
+						},
+					},
+					"/job/l1/job/l2/job/job%201/job/job%202/api/json": &jobResponse{
+						LastBuild: jobBuild{
+							Number: 3,
+						},
+					},
+					"/job/l1/job/l2/job/job%201/job/job%202/3/api/json": &buildResponse{
+						Building:  false,
+						Result:    "SUCCESS",
+						Duration:  25558,
+						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
+					},
+				},
+			},
+			output: &testutil.Accumulator{
+				Metrics: []*testutil.Metric{
+					{
+						Tags: map[string]string{
+							"name":    "job 2",
+							"parents": "l1/l2/job 1",
+							"result":  "SUCCESS",
+						},
+						Fields: map[string]interface{}{
+							"duration":    int64(25558),
+							"result_code": 0,
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "gather sub jobs, jobs filter",
 			input: mockHandler{
 				responseMap: map[string]interface{}{

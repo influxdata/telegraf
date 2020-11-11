@@ -118,6 +118,8 @@ func (e *Execd) Stop() error {
 
 func (e *Execd) cmdReadOut(out io.Reader) {
 	scanner := bufio.NewScanner(out)
+	scanBuf := make([]byte, 4096)
+	scanner.Buffer(scanBuf, 262144)
 
 	for scanner.Scan() {
 		metrics, err := e.parser.Parse(scanner.Bytes())

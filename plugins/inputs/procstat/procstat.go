@@ -413,7 +413,7 @@ func (p *Procstat) systemdUnitPIDs() ([]PID, error) {
 		if len(kv[1]) == 0 || bytes.Equal(kv[1], []byte("0")) {
 			return nil, nil
 		}
-		pid, err := strconv.Atoi(string(kv[1]))
+		pid, err := strconv.ParseInt(string(kv[1]), 10, 32)
 		if err != nil {
 			return nil, fmt.Errorf("invalid pid '%s'", kv[1])
 		}
@@ -438,7 +438,7 @@ func (p *Procstat) cgroupPIDs() ([]PID, error) {
 		if len(pidBS) == 0 {
 			continue
 		}
-		pid, err := strconv.Atoi(string(pidBS))
+		pid, err := strconv.ParseInt(string(pidBS), 10, 32)
 		if err != nil {
 			return nil, fmt.Errorf("invalid pid '%s'", pidBS)
 		}

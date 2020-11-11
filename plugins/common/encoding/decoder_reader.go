@@ -112,7 +112,7 @@ func (r *Reader) Read(p []byte) (int, error) {
 	r.err = nil
 	r.transformComplete = false
 
-	n, err := 0, error(nil)
+	n := 0
 	for {
 		// Copy out any transformed bytes and return the final error if we are done.
 		if r.dst0 != r.dst1 {
@@ -131,6 +131,7 @@ func (r *Reader) Read(p []byte) (int, error) {
 		// As the io.Reader documentation says, "process the n > 0 bytes returned
 		// before considering the error".
 		if r.src0 != r.src1 || r.err != nil {
+			var err error
 			r.dst0 = 0
 			r.dst1, n, err = r.t.Transform(r.dst, r.src[r.src0:r.src1], r.err == io.EOF)
 			r.src0 += n

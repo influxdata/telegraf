@@ -164,6 +164,10 @@ var TableTracking = []string{
 
 func (s *Server) addTableStats(acc telegraf.Accumulator) error {
 	tablesCursor, err := gorethink.DB("rethinkdb").Table("table_status").Run(s.session)
+	if err != nil {
+		return fmt.Errorf("table stats query error, %s\n", err.Error())
+	}
+
 	defer tablesCursor.Close()
 	var tables []tableStatus
 	err = tablesCursor.All(&tables)

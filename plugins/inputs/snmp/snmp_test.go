@@ -90,7 +90,8 @@ func TestSampleConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := &Snmp{
-		Agents: []string{"udp://127.0.0.1:161"},
+		Agents:       []string{"udp://127.0.0.1:161"},
+		AgentHostTag: "",
 		ClientConfig: config.ClientConfig{
 			Timeout:        internal.Duration{Duration: 5 * time.Second},
 			Version:        2,
@@ -634,7 +635,7 @@ func TestGather(t *testing.T) {
 
 	m := acc.Metrics[0]
 	assert.Equal(t, "mytable", m.Measurement)
-	assert.Equal(t, "tsc", m.Tags["agent_host"])
+	assert.Equal(t, "tsc", m.Tags[s.AgentHostTag])
 	assert.Equal(t, "baz", m.Tags["myfield1"])
 	assert.Len(t, m.Fields, 2)
 	assert.Equal(t, 234, m.Fields["myfield2"])
@@ -644,7 +645,7 @@ func TestGather(t *testing.T) {
 
 	m2 := acc.Metrics[1]
 	assert.Equal(t, "myOtherTable", m2.Measurement)
-	assert.Equal(t, "tsc", m2.Tags["agent_host"])
+	assert.Equal(t, "tsc", m2.Tags[s.AgentHostTag])
 	assert.Equal(t, "baz", m2.Tags["myfield1"])
 	assert.Len(t, m2.Fields, 1)
 	assert.Equal(t, 123456, m2.Fields["myOtherField"])
