@@ -246,7 +246,7 @@ func mockEventNotification() testutil.Metric {
 			"alarm-text":     "got: 1000000444 expected: 1000000443", "device": "xrv",
 			"kind-of-alarm": "root-cause", "probable-cause": uint64(0),
 			"event-time":       "1970-01-01T00:00:00.00001+00:00",
-			"specific-problem": nil,
+			"specific-problem": interface{}(nil),
 		},
 	}
 }
@@ -417,6 +417,8 @@ func TestCiscoTelemetryNETCONF_connectClient(t *testing.T) {
 				} else {
 					_, _, _, err = ssh.NewServerConn(conn, config)
 					if err != nil {
+					} else {
+						log.Println("Client connected to server.")
 					}
 				}
 			}
@@ -441,6 +443,7 @@ func TestCiscoTelemetryNETCONF_connectClient(t *testing.T) {
 			}()
 
 			time.Sleep(100 * time.Millisecond)
+			cancel()
 			switch tt.testType {
 			case goodConn:
 				assert.NotEqual(t, tt.args.s.Client, nil)
@@ -697,10 +700,13 @@ func TestCiscoTelemetryNETCONF_Start(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+
 		t.Run(tt.name, func(t *testing.T) {
 			assert.NoError(t, tt.c.Start(tt.args.acc))
 		})
 
+		time.Sleep(100 * time.Millisecond)
+		tt.c.Stop()
 		assert.Exactly(t, len(tt.c.userXpaths), tt.wantLengths[0])
 		assert.Exactly(t, len(tt.c.userKeys), tt.wantLengths[1])
 

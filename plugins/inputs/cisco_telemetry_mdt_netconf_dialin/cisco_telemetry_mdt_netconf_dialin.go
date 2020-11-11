@@ -221,6 +221,7 @@ type CiscoTelemetryNETCONF struct {
 // createService calls functionalities for the dial-in subscriptions service
 func (dsrs *dialinSubscriptionRequestsService) createService(
 	ctx context.Context, c *CiscoTelemetryNETCONF) {
+
 	dsrs.setting = &setting{Client: nil, Session: nil,
 		Mutex: new(sync.Mutex), state: 0}
 
@@ -914,8 +915,11 @@ func (c *CiscoTelemetryNETCONF) Start(acc telegraf.Accumulator) error {
 			log.Printf(
 				"%s: starting Cisco NETCONF notification subscription service on %s",
 				pluginName, c.ServerAddress)
-			c.waitgroup.Add(1)
-			go c.Dsrs.createService(ctx, c)
+			// Create the Dsrs service only if it was not already created
+			if len(c.Dsrs.Subscriptions) == 0 {
+				c.waitgroup.Add(1)
+				go c.Dsrs.createService(ctx, c)
+			}
 		}
 	}()
 
