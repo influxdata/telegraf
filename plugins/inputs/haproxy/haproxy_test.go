@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -74,7 +75,7 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 	}
 
 	fields := HaproxyGetFieldValues()
-	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
+	assertContainsMatchingValue(t, &acc, "haproxy", fields, tags)
 
 	//Here, we should get error because we don't pass authentication data
 	r = &haproxy{
@@ -108,7 +109,7 @@ func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
 	}
 
 	fields := HaproxyGetFieldValues()
-	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
+	assertContainsMatchingValue(t, &acc, "haproxy", fields, tags)
 }
 
 func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
@@ -152,7 +153,7 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 			"type":   "server",
 		}
 
-		acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
+		assertContainsMatchingValue(t, &acc, "haproxy", fields, tags)
 	}
 
 	// This mask should not match any socket
@@ -219,7 +220,32 @@ func TestHaproxyKeepFieldNames(t *testing.T) {
 	fields["hrsp_other"] = fields["http_response.other"]
 	delete(fields, "http_response.other")
 
-	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
+	assertContainsMatchingValue(t, &acc, "haproxy", fields, tags)
+}
+
+func assertContainsMatchingValue(
+	t *testing.T,
+	a *testutil.Accumulator,
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if !reflect.DeepEqual(tags, p.Tags) {
+			continue
+		}
+
+		if p.Measurement == measurement {
+			for k, v := range p.Fields {
+				assert.Equal(t, fields[k], v)
+			}
+			return
+		}
+	}
+	msg := fmt.Sprintf("unknown measurement %s with tags %v", measurement, tags)
+	assert.Fail(t, msg)
 }
 
 func HaproxyGetFieldValues() map[string]interface{} {
