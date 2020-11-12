@@ -30,14 +30,14 @@ var (
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL         string            `toml:"url"`
-	APIToken    string            `toml:"api_token"`
-	Prefix      string            `toml:"prefix"`
-	Log         telegraf.Logger   `toml:"-"`
-	Timeout     internal.Duration `toml:"timeout"`
-	AddCounterMetrics	[]string `toml:"additional_counters"`
-	State       map[string]string
-	SendCounter int
+	URL               string            `toml:"url"`
+	APIToken          string            `toml:"api_token"`
+	Prefix            string            `toml:"prefix"`
+	Log               telegraf.Logger   `toml:"-"`
+	Timeout           internal.Duration `toml:"timeout"`
+	AddCounterMetrics []string          `toml:"additional_counters"`
+	State             map[string]string
+	SendCounter       int
 
 	tls.ClientConfig
 
@@ -201,7 +201,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 
 				metricType := metric.Type()
 				for _, i := range d.AddCounterMetrics {
-					if metric.Name() + "." + metricKey == i {
+					if metric.Name()+"."+metricKey == i {
 						metricType = telegraf.Counter
 					}
 				}
