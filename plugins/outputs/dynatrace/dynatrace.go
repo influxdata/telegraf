@@ -64,7 +64,7 @@ const sampleConfig = `
   prefix = "telegraf."
 
   ## Metric Names which should be treated as gauges 
-  additional_counters = [ "my.demo.counter", "my_second.demo.counter"]
+  additional_counters = [ ]
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
