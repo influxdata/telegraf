@@ -3,10 +3,6 @@ package dynatrace
 import (
 	"bytes"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/common/tls"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -15,6 +11,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 const (
@@ -22,18 +23,20 @@ const (
 )
 
 var (
-	reNameAllowedCharList = regexp.MustCompile("[^A-Za-z0-9.]+")
+	reNameAllowedCharList = regexp.MustCompile("[^A-Za-z0-9.-]+")
 	maxDimKeyLen          = 100
 	maxMetricKeyLen       = 250
 )
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL      string            `toml:"url"`
-	APIToken string            `toml:"api_token"`
-	Prefix   string            `toml:"prefix"`
-	Log      telegraf.Logger   `toml:"-"`
-	Timeout  internal.Duration `toml:"timeout"`
+	URL         string            `toml:"url"`
+	APIToken    string            `toml:"api_token"`
+	Prefix      string            `toml:"prefix"`
+	Log         telegraf.Logger   `toml:"-"`
+	Timeout     internal.Duration `toml:"timeout"`
+	State       map[string]string
+	SendCounter int
 
 	tls.ClientConfig
 
@@ -113,6 +116,8 @@ func (d *Dynatrace) normalize(s string, max int) (string, error) {
 		normalizedString = normalizedString[:len(normalizedString)-1]
 	}
 
+	normalizedString = strings.ReplaceAll(normalizedString, "..", "_")
+
 	if len(normalizedString) == 0 {
 		return "", fmt.Errorf("error normalizing the string: %s", s)
 	}
@@ -188,16 +193,41 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				if err != nil {
 					continue
 				}
-				fmt.Fprintf(&buf, "%s", metricID)
-				// add the tag string
-				fmt.Fprintf(&buf, "%s", tagb.String())
+				// write metric id,tags and value
+				switch metric.Type() {
+				case telegraf.Counter:
+					var delta float64 = 0
 
-				// write measured value
-				fmt.Fprintf(&buf, " %v\n", value)
+					// Check if LastValue exists
+					if lastvalue, ok := d.State[metricID+tagb.String()]; ok {
+						// Convert Strings to Floats
+						floatLastValue, err := strconv.ParseFloat(lastvalue, 32)
+						if err != nil {
+							d.Log.Debugf("Could not parse last value: %s", lastvalue)
+						}
+						floatCurrentValue, err := strconv.ParseFloat(value, 32)
+						if err != nil {
+							d.Log.Debugf("Could not parse current value: %s", value)
+						}
+						if floatCurrentValue > floatLastValue {
+							delta = floatCurrentValue - floatLastValue
+							fmt.Fprintf(&buf, "%s%s count,delta=%f\n", metricID, tagb.String(), delta)
+						}
+					}
+					d.State[metricID+tagb.String()] = value
+
+				default:
+					fmt.Fprintf(&buf, "%s%s %v\n", metricID, tagb.String(), value)
+				}
 			}
 		}
 	}
+	d.SendCounter++
+	// in typical interval of 10s, we will clean the counter state once in 24h which is 8640 iterations
 
+	if d.SendCounter%8640 == 0 {
+		d.State = make(map[string]string)
+	}
 	return d.send(buf.Bytes())
 }
 
@@ -240,6 +270,7 @@ func (d *Dynatrace) send(msg []byte) error {
 }
 
 func (d *Dynatrace) Init() error {
+	d.State = make(map[string]string)
 	if len(d.URL) == 0 {
 		d.Log.Infof("Dynatrace URL is empty, defaulting to OneAgent metrics interface")
 		d.URL = oneAgentMetricsUrl
@@ -267,7 +298,8 @@ func (d *Dynatrace) Init() error {
 func init() {
 	outputs.Add("dynatrace", func() telegraf.Output {
 		return &Dynatrace{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout:     internal.Duration{Duration: time.Second * 5},
+			SendCounter: 0,
 		}
 	})
 }

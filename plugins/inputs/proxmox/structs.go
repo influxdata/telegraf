@@ -2,20 +2,22 @@ package proxmox
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/url"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
-	"net/http"
-	"net/url"
 )
 
 type Proxmox struct {
 	BaseURL         string            `toml:"base_url"`
 	APIToken        string            `toml:"api_token"`
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	NodeName        string            `toml:"node_name"`
+
 	tls.ClientConfig
 
-	hostname         string
 	httpClient       *http.Client
 	nodeSearchDomain string
 
@@ -32,6 +34,10 @@ var (
 
 type VmStats struct {
 	Data []VmStat `json:"data"`
+}
+
+type VmCurrentStats struct {
+	Data VmStat `json:"data"`
 }
 
 type VmStat struct {
@@ -52,6 +58,7 @@ type VmConfig struct {
 	Data struct {
 		Searchdomain string `json:"searchdomain"`
 		Hostname     string `json:"hostname"`
+		Template     int    `json:"template"`
 	} `json:"data"`
 }
 

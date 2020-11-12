@@ -706,6 +706,9 @@ func (h *Host) GetSNMPClient() (*gosnmp.GoSNMP, error) {
 	}
 	// convert port_str to port in uint16
 	port_64, err := strconv.ParseUint(port_str, 10, 16)
+	if err != nil {
+		return nil, err
+	}
 	port := uint16(port_64)
 	// Get SNMP client
 	snmpClient := &gosnmp.GoSNMP{

@@ -25,6 +25,7 @@ type Wavefront struct {
 	UseRegex        bool
 	UseStrict       bool
 	TruncateTags    bool
+	ImmediateFlush  bool
 	SourceOverride  []string
 	StringToNumber  map[string][]map[string]float64
 
@@ -101,6 +102,12 @@ var sampleConfig = `
   ## data point exceeding this limit if not truncated. Defaults to 'false' to provide backwards compatibility.
   #truncate_tags = false
 
+  ## Flush the internal buffers after each batch. This effectively bypasses the background sending of metrics
+  ## normally done by the Wavefront SDK. This can be used if you are experiencing buffer overruns. The sending 
+  ## of metrics will block for a longer time, but this will be handled gracefully by the internal buffering in
+  ## Telegraf.
+  #immediate_flush = true
+
   ## Define a mapping, namespaced by metric prefix, from string values to numeric values
   ##   deprecated in 1.9; use the enum processor plugin
   #[[outputs.wavefront.string_to_number.elasticsearch]]
@@ -123,12 +130,16 @@ func (w *Wavefront) Connect() error {
 		w.Log.Warn("The string_to_number option is deprecated; please use the enum processor instead")
 	}
 
+	flushSeconds := 5
+	if w.ImmediateFlush {
+		flushSeconds = 86400 // Set a very long flush interval if we're flushing directly
+	}
 	if w.Url != "" {
 		w.Log.Debug("connecting over http/https using Url: %s", w.Url)
 		sender, err := wavefront.NewDirectSender(&wavefront.DirectConfiguration{
 			Server:               w.Url,
 			Token:                w.Token,
-			FlushIntervalSeconds: 5,
+			FlushIntervalSeconds: flushSeconds,
 		})
 		if err != nil {
 			return fmt.Errorf("Wavefront: Could not create Wavefront Sender for Url: %s", w.Url)
@@ -139,7 +150,7 @@ func (w *Wavefront) Connect() error {
 		sender, err := wavefront.NewProxySender(&wavefront.ProxyConfiguration{
 			Host:                 w.Host,
 			MetricsPort:          w.Port,
-			FlushIntervalSeconds: 5,
+			FlushIntervalSeconds: flushSeconds,
 		})
 		if err != nil {
 			return fmt.Errorf("Wavefront: Could not create Wavefront Sender for Host: %q and Port: %d", w.Host, w.Port)
@@ -165,6 +176,10 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 				return fmt.Errorf("Wavefront sending error: %s", err.Error())
 			}
 		}
+	}
+	if w.ImmediateFlush {
+		w.Log.Debugf("Flushing batch of %d points", len(metrics))
+		return w.sender.Flush()
 	}
 	return nil
 }
@@ -336,6 +351,7 @@ func init() {
 			ConvertPaths:    true,
 			ConvertBool:     true,
 			TruncateTags:    false,
+			ImmediateFlush:  true,
 		}
 	})
 }
