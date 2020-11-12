@@ -35,6 +35,7 @@ type Dynatrace struct {
 	Prefix      string            `toml:"prefix"`
 	Log         telegraf.Logger   `toml:"-"`
 	Timeout     internal.Duration `toml:"timeout"`
+	AddCounterMetrics	[]string `toml:"additional_counters"`
 	State       map[string]string
 	SendCounter int
 
@@ -61,6 +62,9 @@ const sampleConfig = `
 
   ## Optional prefix for metric names (e.g.: "telegraf.")
   prefix = "telegraf."
+
+  ## Metric Names which should be treated as gauges 
+  additional_counters = [ "my.demo.counter", "my_second.demo.counter"]
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -194,7 +198,15 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 					continue
 				}
 				// write metric id,tags and value
-				switch metric.Type() {
+
+				metricType := metric.Type()
+				for _, i := range d.AddCounterMetrics {
+					if metric.Name() + "." + metricKey == i {
+						metricType = telegraf.Counter
+					}
+				}
+
+				switch metricType {
 				case telegraf.Counter:
 					var delta float64 = 0
 
@@ -209,7 +221,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 						if err != nil {
 							d.Log.Debugf("Could not parse current value: %s", value)
 						}
-						if floatCurrentValue > floatLastValue {
+						if floatCurrentValue >= floatLastValue {
 							delta = floatCurrentValue - floatLastValue
 							fmt.Fprintf(&buf, "%s%s count,delta=%f\n", metricID, tagb.String(), delta)
 						}
