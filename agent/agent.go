@@ -24,27 +24,27 @@ import (
 // Agent runs a set of plugins.
 type Agent struct {
 	Config    *config.Config
+	Context   context.Context
 	iu        *inputUnit
 	wg        *sync.WaitGroup
-	statusMap map[string](map[string]chan string)
+	statusMap map[string]map[string]pluginChannels // The 0-th Element is to stop
 	statusMux *sync.Mutex
 }
 
-type PluginStatus string
-
-const (
-	Running PluginStatus = "RUNNING"
-	Stop                 = "STOP"
-)
+type pluginChannels struct {
+	stop    chan struct{}
+	stopped chan struct{}
+}
 
 // NewAgent returns an Agent for the given Config.
 func NewAgent(config *config.Config) (*Agent, error) {
-	inputStatusMap := make(map[string]chan string)
-	outputStatusMap := make(map[string]chan string)
+	inputStatusMap := make(map[string]pluginChannels)
+	outputStatusMap := make(map[string]pluginChannels)
 
-	statusMap := make(map[string]map[string]chan string)
+	statusMap := make(map[string]map[string]pluginChannels)
 	statusMap["input"] = inputStatusMap
 	statusMap["output"] = outputStatusMap
+
 	a := &Agent{
 		Config:    config,
 		statusMap: statusMap,
@@ -119,7 +119,7 @@ type outputUnit struct {
 }
 
 // RunSingleInput runs a single input and can be called after an agent is created
-func (a *Agent) RunSingleInput(inputConfig *models.InputConfig, ctx context.Context) error {
+func (a *Agent) RunSingleInput(inputConfig *models.InputConfig, plugin telegraf.Input, ctx context.Context) error {
 
 	// NOTE: we can't just use `defer a.statusMutex.Unlock()` since except for the input validation,
 	// this function only returns once the gatherLoop is done -- i.e. when the plugin is stopped.
@@ -137,17 +137,23 @@ func (a *Agent) RunSingleInput(inputConfig *models.InputConfig, ctx context.Cont
 
 	startTime := time.Now()
 
-	// seeing if the plugin is valid
-	plugin, ok := inputs.Inputs[inputConfig.Name]
-	if !ok {
-		log.Printf("E! [agent] input config's name is not valid: %s \n", inputConfig.Name)
-		return errors.New("input config's name is not valid")
+	if plugin == nil {
+		// if not, look at global list of plugins and init default
+		pluginCreator, ok := inputs.Inputs[inputConfig.Name]
+		if !ok {
+			log.Printf("E! [agent] input config's name is not valid: %s \n", inputConfig.Name)
+			return errors.New("input config's name is not valid")
+		}
+		plugin = pluginCreator()
 	}
+	input := models.NewRunningInput(plugin, inputConfig)
 
-	input := models.NewRunningInput(plugin(), inputConfig)
+	a.statusMux.Lock()
 
-	statusCase := make(chan string)
-	a.statusMap["input"][input.Config.Name] = statusCase
+	pChannels := pluginChannels{make(chan struct{}), make(chan struct{})}
+	a.statusMap["input"][input.Config.Name] = pChannels
+
+	a.statusMux.Unlock()
 
 	// Overwrite agent interval if this plugin has its own.
 	interval := a.Config.Agent.Interval.Duration
@@ -184,13 +190,24 @@ func (a *Agent) RunSingleInput(inputConfig *models.InputConfig, ctx context.Cont
 		a.gatherLoop(ctx, acc, input, ticker, interval)
 	}(input)
 
-	a.Config.Inputs = append(a.Config.Inputs, input)
+	alreadyInArray := false
+
+	for _, i := range a.Config.Inputs {
+		if i.Config.Name == input.Config.Name {
+			alreadyInArray = true
+		}
+	}
+
+	if !alreadyInArray {
+		a.Config.Inputs = append(a.Config.Inputs, input)
+	}
+
 	return nil
 }
 
 func GetAllInputPlugins() []string {
 	var res []string
-	for name, _ := range inputs.Inputs {
+	for name := range inputs.Inputs {
 		res = append(res, name)
 	}
 	return res
@@ -198,13 +215,13 @@ func GetAllInputPlugins() []string {
 
 func GetAllOutputPlugins() []string {
 	var res []string
-	for name, _ := range outputs.Outputs {
+	for name := range outputs.Outputs {
 		res = append(res, name)
 	}
 	return res
 }
 
-func (a *Agent) GetInputPlugins() []string {
+func (a *Agent) GetRunningInputPlugins() []string {
 	var res []string
 	for _, runningInput := range a.Config.Inputs {
 		res = append(res, runningInput.Config.Name)
@@ -212,7 +229,7 @@ func (a *Agent) GetInputPlugins() []string {
 	return res
 }
 
-func (a *Agent) GetOutputPlugins() []string {
+func (a *Agent) GetRunningOutputPlugins() []string {
 	var res []string
 	for _, runningOutput := range a.Config.Outputs {
 		res = append(res, runningOutput.Config.Name)
@@ -334,24 +351,8 @@ func updateStructValuesHelper(pluginPtr reflect.Value, newConfig map[string]inte
 	plugin := pluginPtr.Elem() // extract Value of type interface{} from Value pointer to interface
 
 	if plugin.Kind() == reflect.Struct {
-		// iterate through all fields, return original if invalid
 
-		pType := plugin.Type()
-
-		values := make(map[string]reflect.Type)
-
-		for i := 0; i < plugin.NumField(); i++ {
-			field := pType.Field(i)
-			values[field.Name] = field.Type
-		}
-
-		for configKey, configValue := range newConfig {
-			t, exists := values[configKey]
-			if !exists || reflect.ValueOf(configValue).Type() != t {
-				return plugin, fmt.Errorf("could not update plugin")
-			}
-		}
-
+		// initial check for errors
 		for configKey, configValue := range newConfig {
 			pluginField := plugin.FieldByName(configKey) // cast new value as Value
 			reflectedNew := reflect.ValueOf(configValue)
@@ -362,39 +363,42 @@ func updateStructValuesHelper(pluginPtr reflect.Value, newConfig map[string]inte
 				return pluginPtr.Elem(), fmt.Errorf("unsettable field %s", configKey)
 			} else if !(pluginField.Type() == reflectedNew.Type()) {
 				return pluginPtr.Elem(), fmt.Errorf("value type mismatch for field %s", configKey)
-			} else {
-				pluginField.Set(reflectedNew)
 			}
+		}
+
+		// if no error, update all
+		for configKey, configValue := range newConfig {
+			pluginField := plugin.FieldByName(configKey) // cast new value as Value
+			reflectedNew := reflect.ValueOf(configValue)
+			pluginField.Set(reflectedNew)
 		}
 		return plugin, nil
 	}
+
 	return plugin, fmt.Errorf("could not update plugin")
 }
 
-// TODO Replace this after merge.
-func (a *Agent) AddInput(pluginName string) {
-	plugin := inputs.Inputs[pluginName]
+// StartInput adds an input plugin with default config
+func (a *Agent) StartInput(pluginName string) error {
 	inputConfig := models.InputConfig{
 		Name: pluginName,
-		// TODO rest of config?
 	}
-	runningPlugin := models.NewRunningInput(plugin(), &inputConfig)
-	a.Config.Inputs = append(a.Config.Inputs, runningPlugin)
+	return a.RunSingleInput(&inputConfig, nil, a.Context)
 }
 
-// TODO Replace this after merge.
+// Add Output adds an output plugin with default config
 func (a *Agent) AddOutput(pluginName string) {
 	plugin := outputs.Outputs[pluginName]
 	outputConfig := models.OutputConfig{
 		Name: pluginName,
-		// TODO rest of config?
 	}
+	// TODO Implement add output plugin
 	runningPlugin := models.NewRunningOutput(pluginName, plugin(), &outputConfig, 0, 0)
 	a.Config.Outputs = append(a.Config.Outputs, runningPlugin)
 }
 
-// GetInputPlugin gets the InputConfig for a plugin given its name
-func (a *Agent) GetInputPlugin(name string) (telegraf.Input, error) {
+// GetRunningInputPlugin gets the InputConfig for a running plugin given its name
+func (a *Agent) GetRunningInputPlugin(name string) (telegraf.Input, error) {
 	for _, input := range a.Config.Inputs {
 		if name == input.Config.Name {
 			return input.Input, nil
@@ -403,29 +407,39 @@ func (a *Agent) GetInputPlugin(name string) (telegraf.Input, error) {
 	return nil, fmt.Errorf("could not find input with name: %s", name)
 }
 
+// GetDefaultInputPlugin gets the default InputConfig for a default plugin given its name
+func (a *Agent) GetDefaultInputPlugin(name string) (telegraf.Input, error) {
+	p, exists := inputs.Inputs[name]
+	if exists {
+		return p(), nil
+	}
+	return nil, fmt.Errorf("could not find input with name: %s", name)
+}
+
 // UpdateInputPlugin gets the InputConfig for a plugin given its name
 func (a *Agent) UpdateInputPlugin(name string, config map[string]interface{}) (telegraf.Input, error) {
-
 	for _, input := range a.Config.Inputs {
 		if name == input.Config.Name {
-			// TODO: STOP PLUGIN
 			plugin := input.Input
-			shallowPluginCopy := plugin
 
-			reflectedPlugin := reflect.ValueOf(shallowPluginCopy)
-			_, err := updateStructValuesHelper(reflectedPlugin, config)
-			// only update the input if there was no error, indicating
-			// that all fields were updated properly
-			if err == nil {
-				log.Printf("D! updating input, no error!")
-				input.Input = shallowPluginCopy
+			if len(a.Config.Inputs) == 1 {
+				a.wg.Add(1)
 			}
 
-			// TODO: START PLUGIN
+			a.StopInputPlugin(name)
+
+			reflectedPlugin := reflect.ValueOf(plugin)
+			_, err := updateStructValuesHelper(reflectedPlugin, config)
+
+			a.RunSingleInput(input.Config, plugin, a.Context)
+
+			if len(a.Config.Inputs) == 1 {
+				a.wg.Add(1)
+			}
+
 			if err != nil {
 				return plugin, fmt.Errorf("could not update input plugin %s with error: %s", name, err)
 			}
-
 			return plugin, nil
 		}
 	}
@@ -444,21 +458,8 @@ func (a *Agent) GetOutputPlugin(name string) (telegraf.Output, error) {
 
 // UpdateOutputPlugin gets the InputConfig for a plugin given its name
 func (a *Agent) UpdateOutputPlugin(name string, config map[string]interface{}) (telegraf.Output, error) {
-	for _, output := range a.Config.Outputs {
-		if name == output.Config.Name {
-			plugin := output.Output
-			reflectedPlugin := reflect.ValueOf(plugin)
-			newPlugin, err := updateStructValuesHelper(reflectedPlugin, config)
-			reflectedPlugin.Set(newPlugin)
-			// TODO: START PLUGIN
-			if err != nil {
-				return plugin, fmt.Errorf("could not update output plugin %s with error: %s", name, err)
-			}
-
-			return plugin, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot update %s because output plugin is not running", name)
+	// TODO Implement when can start output plugin
+	return nil, nil
 }
 
 // GetAggregatorPlugin gets the AggregatorConfig for a plugin given its name
@@ -571,8 +572,10 @@ func (a *Agent) runInputs(
 	unit *inputUnit,
 ) error {
 
+	a.Context = ctx
+
 	for _, input := range unit.inputs {
-		a.RunSingleInput(input.Config, ctx)
+		a.RunSingleInput(input.Config, nil, ctx)
 	}
 	a.wg.Wait()
 
@@ -694,7 +697,7 @@ func stopServiceInputs(inputs []*models.RunningInput) {
 }
 
 // StopInputPlugin stops an input plugin
-func (a *Agent) StopInputPlugin(input string) {
+func (a *Agent) StopInputPlugin(input string) error {
 
 	// NOTE: don't use `defer a.statusMux.Unlock()` here,
 	// since we write to a channel that gatherLoop() is waiting on,
@@ -708,17 +711,23 @@ func (a *Agent) StopInputPlugin(input string) {
 
 	if !ok {
 		log.Printf("E! [agent] You are trying to stop an input that is not running: %s \n", input)
-		return
+		return fmt.Errorf("you are trying to stop an input that is not running")
 	}
 
-	statusChannel <- Stop
+	statusChannel.stop <- struct{}{}
+	<-statusChannel.stopped
+
+	close(statusChannel.stop)
+	close(statusChannel.stopped)
 
 	for i, other := range a.Config.Inputs {
 		if other.Config.Name == input {
 			a.Config.Inputs = append(a.Config.Inputs[:i], a.Config.Inputs[i+1:]...)
-			break
+			return nil
 		}
 	}
+
+	return fmt.Errorf("input was not found in running inputs list")
 }
 
 // gather runs an input's gather function periodically until the context is
@@ -741,18 +750,21 @@ func (a *Agent) gatherLoop(
 		// NOTE: Again, don't just use defer to unlock because of the ticker.Elapsed() case
 		// Be careful of changing locks here -- could easily make it sequential
 		select {
-		case status, ok := <-pluginChannel:
-			if ok && status == Stop {
-				log.Println("I! [agent] stopping input plugin", input.Config.Name)
-				delete(a.statusMap["input"], input.Config.Name)
-				return
-			}
+		case <-pluginChannel.stop:
+			log.Println("I! [agent] stopping input plugin", input.Config.Name)
+			a.statusMux.Lock()
+			delete(a.statusMap["input"], input.Config.Name)
+			a.statusMux.Unlock()
+			pluginChannel.stopped <- struct{}{}
+			return
 		case <-ticker.Elapsed():
 			err := a.gatherOnce(acc, input, ticker, interval)
 			if err != nil {
 				acc.AddError(err)
 			}
-
+			if err != nil {
+				acc.AddError(err)
+			}
 		case <-ctx.Done():
 			return
 		}
