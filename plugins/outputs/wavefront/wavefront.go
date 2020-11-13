@@ -173,7 +173,10 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 		for _, point := range w.buildMetrics(m) {
 			err := w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
 			if err != nil {
-				return fmt.Errorf("Wavefront sending error: %s", err.Error())
+				if isRetryable(err) {
+					return fmt.Errorf("Wavefront sending error: %v", err)
+				}
+				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
 			}
 		}
 	}
@@ -354,4 +357,22 @@ func init() {
 			ImmediateFlush:  true,
 		}
 	})
+}
+
+// TODO: Currently there's no canonical way to exhaust all
+// retryable/non-retryable errors from wavefront, so this implementation just
+// handles known non-retryable errors in a case-by-case basis and assumes all
+// other errors are retryable.
+// A support ticket has been filed against wavefront to provide a canonical way
+// to distinguish between retryable and non-retryable errors (link is not
+// public).
+func isRetryable(err error) bool {
+	if err != nil {
+		// "empty metric name" errors are non-retryable as retry will just keep
+		// getting the same error again and again.
+		if strings.Contains(err.Error(), "empty metric name") {
+			return false
+		}
+	}
+	return true
 }
