@@ -2378,6 +2378,46 @@ def apply(metric):
 				),
 			},
 		},
+		{
+			name: "support errors",
+			source: `
+load("json.star", "json")
+
+def apply(metric):
+    msg = catch(lambda: process(metric))
+    if msg != None:
+	    metric.fields["error"] = msg
+	    metric.fields["value"] = "default"
+    return metric
+
+def process(metric):
+    metric.fields["field1"] = "value1"
+    metric.tags["tags1"] = "value2"
+    # Throw an error
+    json.decode(metric.fields.get('value'))
+    # Should never be called
+    metric.fields["msg"] = "value4"
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": "non-json-content", "msg": "value3"},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{"tags1": "value2"},
+					map[string]interface{}{
+						"value":  "default",
+						"field1": "value1",
+						"msg":    "value3",
+						"error":  "json.decode: at offset 0, unexpected character 'n'",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
