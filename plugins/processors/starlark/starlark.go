@@ -58,6 +58,7 @@ func (s *Starlark) Init() error {
 	builtins := starlark.StringDict{}
 	builtins["Metric"] = starlark.NewBuiltin("Metric", newMetric)
 	builtins["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
+	builtins["catch"] = starlark.NewBuiltin("catch", catch)
 
 	program, err := s.sourceProgram(builtins)
 	if err != nil {
