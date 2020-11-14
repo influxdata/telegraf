@@ -48,4 +48,21 @@ aggregator to calculate those fields. If not all statistic fields are available,
 all fields would still be sent as raw metrics.
 
 ### high_resolution_metrics
-Enable high resolution metrics (1 second precision) instead of standard ones (60 seconds precision)
+
+Enable high resolution metrics (1 second precision) instead of standard ones (60 seconds precision).
+
+### dimensions_excluded
+
+Remove dimension keys and their corresponding values.
+
+Example:
+
+```toml
+[[outputs.cloudwatch]]
+  region = "us-east-1"
+  namespace = "namespace"
+  write_statistics = false
+  high_resolution_metrics = false
+  [outputs.cloudwatch.dimensions_excluded]
+    dimension_to_remove = true
+```

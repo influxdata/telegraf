@@ -25,6 +25,7 @@ type CloudWatch struct {
 	Token       string `toml:"token"`
 	EndpointURL string `toml:"endpoint_url"`
 
+	DimensionsExcluded    map[string]bool `toml:"dimensions_excluded"`
 	Namespace             string `toml:"namespace"` // CloudWatch Metrics Namespace
 	HighResolutionMetrics bool   `toml:"high_resolution_metrics"`
 	svc                   *cloudwatch.CloudWatch
@@ -44,7 +45,7 @@ const (
 
 type cloudwatchField interface {
 	addValue(sType statisticType, value float64)
-	buildDatum() []*cloudwatch.MetricDatum
+	buildDatum(dimensionsExcluded map[string]bool) []*cloudwatch.MetricDatum
 }
 
 type statisticField struct {
@@ -62,7 +63,7 @@ func (f *statisticField) addValue(sType statisticType, value float64) {
 	}
 }
 
-func (f *statisticField) buildDatum() []*cloudwatch.MetricDatum {
+func (f *statisticField) buildDatum(dimensionsExcluded map[string]bool) []*cloudwatch.MetricDatum {
 
 	var datums []*cloudwatch.MetricDatum
 
@@ -75,7 +76,7 @@ func (f *statisticField) buildDatum() []*cloudwatch.MetricDatum {
 
 		datum := &cloudwatch.MetricDatum{
 			MetricName: aws.String(strings.Join([]string{f.metricName, f.fieldName}, "_")),
-			Dimensions: BuildDimensions(f.tags),
+			Dimensions: BuildDimensions(f.tags, dimensionsExcluded),
 			Timestamp:  aws.Time(f.timestamp),
 			StatisticValues: &cloudwatch.StatisticSet{
 				Minimum:     aws.Float64(min),
@@ -93,7 +94,7 @@ func (f *statisticField) buildDatum() []*cloudwatch.MetricDatum {
 		for sType, value := range f.values {
 			datum := &cloudwatch.MetricDatum{
 				Value:      aws.Float64(value),
-				Dimensions: BuildDimensions(f.tags),
+				Dimensions: BuildDimensions(f.tags, dimensionsExcluded),
 				Timestamp:  aws.Time(f.timestamp),
 			}
 
@@ -143,13 +144,13 @@ func (f *valueField) addValue(sType statisticType, value float64) {
 	}
 }
 
-func (f *valueField) buildDatum() []*cloudwatch.MetricDatum {
+func (f *valueField) buildDatum(dimensionsExcluded map[string]bool) []*cloudwatch.MetricDatum {
 
 	return []*cloudwatch.MetricDatum{
 		{
 			MetricName:        aws.String(strings.Join([]string{f.metricName, f.fieldName}, "_")),
 			Value:             aws.Float64(f.value),
-			Dimensions:        BuildDimensions(f.tags),
+			Dimensions:        BuildDimensions(f.tags, dimensionsExcluded),
 			Timestamp:         aws.Time(f.timestamp),
 			StorageResolution: aws.Int64(f.storageResolution),
 		},
@@ -228,7 +229,7 @@ func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
 
 	var datums []*cloudwatch.MetricDatum
 	for _, m := range metrics {
-		d := BuildMetricDatum(c.WriteStatistics, c.HighResolutionMetrics, m)
+		d := BuildMetricDatum(c.WriteStatistics, c.DimensionsExcluded, c.HighResolutionMetrics, m)
 		datums = append(datums, d...)
 	}
 
@@ -286,7 +287,7 @@ func PartitionDatums(size int, datums []*cloudwatch.MetricDatum) [][]*cloudwatch
 // Make a MetricDatum from telegraf.Metric. It would check if all required fields of
 // cloudwatch.StatisticSet are available. If so, it would build MetricDatum from statistic values.
 // Otherwise, fields would still been built independently.
-func BuildMetricDatum(buildStatistic bool, highResolutionMetrics bool, point telegraf.Metric) []*cloudwatch.MetricDatum {
+func BuildMetricDatum(buildStatistic bool, dimensionsExcluded map[string]bool, highResolutionMetrics bool, point telegraf.Metric) []*cloudwatch.MetricDatum {
 
 	fields := make(map[string]cloudwatchField)
 	tags := point.Tags()
@@ -340,7 +341,7 @@ func BuildMetricDatum(buildStatistic bool, highResolutionMetrics bool, point tel
 
 	var datums []*cloudwatch.MetricDatum
 	for _, f := range fields {
-		d := f.buildDatum()
+		d := f.buildDatum(dimensionsExcluded)
 		datums = append(datums, d...)
 	}
 
@@ -350,7 +351,7 @@ func BuildMetricDatum(buildStatistic bool, highResolutionMetrics bool, point tel
 // Make a list of Dimensions by using a Point's tags. CloudWatch supports up to
 // 10 dimensions per metric so we only keep up to the first 10 alphabetically.
 // This always includes the "host" tag if it exists.
-func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
+func BuildDimensions(mTags map[string]string, dimensionExcluded map[string]bool) []*cloudwatch.Dimension {
 	const MaxDimensions = 10
 	dimensions := make([]*cloudwatch.Dimension, 0, MaxDimensions)
 
@@ -376,7 +377,7 @@ func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
 		}
 
 		value := mTags[k]
-		if value == "" {
+		if dimensionExcluded[k] || value == "" {
 			continue
 		}
 
