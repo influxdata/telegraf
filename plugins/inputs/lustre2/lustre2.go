@@ -1,3 +1,5 @@
+// +build !windows
+
 /*
 Lustre 2.x telegraf plugin
 

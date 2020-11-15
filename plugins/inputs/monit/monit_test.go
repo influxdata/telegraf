@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -572,21 +573,19 @@ func TestAllowHosts(t *testing.T) {
 }
 
 func TestConnection(t *testing.T) {
-
 	r := &Monit{
 		Address:  "http://127.0.0.1:2812",
 		Username: "test",
 		Password: "test",
 	}
 
-	var acc testutil.Accumulator
-
 	r.Init()
 
+	var acc testutil.Accumulator
 	err := r.Gather(&acc)
-
 	if assert.Error(t, err) {
-		assert.Contains(t, err.Error(), "connect: connection refused")
+		_, ok := err.(*url.Error)
+		assert.True(t, ok)
 	}
 }
 

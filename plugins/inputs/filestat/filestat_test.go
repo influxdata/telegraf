@@ -1,6 +1,11 @@
+// +build !windows
+
+// TODO: should be enabled for Windows when Glob related issues for Windows are fixed
+
 package filestat
 
 import (
+	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -18,7 +23,7 @@ func TestGatherNoMd5(t *testing.T) {
 	fs.Files = []string{
 		dir + "log1.log",
 		dir + "log2.log",
-		"/non/existant/file",
+		dir + "non_existent_file",
 	}
 
 	acc := testutil.Accumulator{}
@@ -37,7 +42,7 @@ func TestGatherNoMd5(t *testing.T) {
 	require.True(t, acc.HasPoint("filestat", tags2, "exists", int64(1)))
 
 	tags3 := map[string]string{
-		"file": "/non/existant/file",
+		"file": dir + "non_existent_file",
 	}
 	require.True(t, acc.HasPoint("filestat", tags3, "exists", int64(0)))
 }
@@ -50,7 +55,7 @@ func TestGatherExplicitFiles(t *testing.T) {
 	fs.Files = []string{
 		dir + "log1.log",
 		dir + "log2.log",
-		"/non/existant/file",
+		dir + "non_existent_file",
 	}
 
 	acc := testutil.Accumulator{}
@@ -71,7 +76,7 @@ func TestGatherExplicitFiles(t *testing.T) {
 	require.True(t, acc.HasPoint("filestat", tags2, "md5_sum", "d41d8cd98f00b204e9800998ecf8427e"))
 
 	tags3 := map[string]string{
-		"file": "/non/existant/file",
+		"file": dir + "non_existent_file",
 	}
 	require.True(t, acc.HasPoint("filestat", tags3, "exists", int64(0)))
 }
@@ -157,17 +162,18 @@ func TestModificationTime(t *testing.T) {
 }
 
 func TestNoModificationTime(t *testing.T) {
+	dir := getTestdataDir()
 	fs := NewFileStat()
 	fs.Log = testutil.Logger{}
 	fs.Files = []string{
-		"/non/existant/file",
+		dir + "non_existent_file",
 	}
 
 	acc := testutil.Accumulator{}
 	acc.GatherError(fs.Gather)
 
 	tags1 := map[string]string{
-		"file": "/non/existant/file",
+		"file": dir + "non_existent_file",
 	}
 	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(0)))
 	require.False(t, acc.HasInt64Field("filestat", "modification_time"))
@@ -185,5 +191,9 @@ func TestGetMd5(t *testing.T) {
 
 func getTestdataDir() string {
 	_, filename, _, _ := runtime.Caller(1)
-	return strings.Replace(filename, "filestat_test.go", "testdata/", 1)
+	testdataDir := strings.Replace(filename, "filestat_test.go", "testdata/", 1)
+
+	// runtime.Caller always returns '/' as path separator https://github.com/golang/go/issues/3335
+	// make sure that path separator is always OS dependent
+	return strings.ReplaceAll(testdataDir, "/", string(os.PathSeparator))
 }

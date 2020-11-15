@@ -3,6 +3,7 @@ package powerdns
 import (
 	"fmt"
 	"net"
+	"os"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -71,7 +72,7 @@ func (s statServer) serverSocket(l net.Listener) {
 func TestPowerdnsGeneratesMetrics(t *testing.T) {
 	// We create a fake server to return test data
 	randomNumber := int64(5239846799706671610)
-	socket, err := net.Listen("unix", fmt.Sprintf("/tmp/pdns%d.controlsocket", randomNumber))
+	socket, err := net.Listen("unix", fmt.Sprintf("%s%cpdns%d.controlsocket", os.TempDir(), os.PathSeparator, randomNumber))
 	if err != nil {
 		t.Fatal("Cannot initialize server on port ")
 	}
@@ -82,7 +83,7 @@ func TestPowerdnsGeneratesMetrics(t *testing.T) {
 	go s.serverSocket(socket)
 
 	p := &Powerdns{
-		UnixSockets: []string{fmt.Sprintf("/tmp/pdns%d.controlsocket", randomNumber)},
+		UnixSockets: []string{fmt.Sprintf("%s%cpdns%d.controlsocket", os.TempDir(), os.PathSeparator, randomNumber)},
 	}
 
 	var acc testutil.Accumulator
