@@ -143,7 +143,7 @@ func (gcs *GCS) processMeasurementsInObject(name string, bucket *storage.BucketH
 	return nil
 }
 
-func (gcs *GCS) fetchedMetrics(r *storage.Reader) ([] telegraf.Metric, error) {
+func (gcs *GCS) fetchedMetrics(r *storage.Reader) ([]telegraf.Metric, error) {
 	buf := new(bytes.Buffer)
 	if _, err := buf.ReadFrom(r); err != nil {
 		return nil, err
