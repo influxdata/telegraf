@@ -322,7 +322,7 @@ following works:
 - google.golang.org/api [BSD 3-Clause "New" or "Revised" License](https://github.com/googleapis/google-api-go-client/blob/master/LICENSE)
 - google.golang.org/genproto [Apache License 2.0](https://github.com/google/go-genproto/blob/master/LICENSE)
 - google.golang.org/grpc [Apache License 2.0](https://github.com/grpc/grpc-go/blob/master/LICENSE)
-- google.golang.org/protobuf [BSD 3-Clause "New" or "Revised" License](https://pkg.go.dev/google.golang.org/protobuf?tab=licenses)
+- google.golang.org/protobuf [BSD-3-Clause](https://pkg.go.dev/google.golang.org/protobuf?tab=licenses)
 - gopkg.in/asn1-ber.v1 [MIT License](https://github.com/go-asn1-ber/asn1-ber/blob/v1.3/LICENSE)
 - gopkg.in/fatih/pool.v2 [MIT License](https://github.com/fatih/pool/blob/v2.0.0/LICENSE)
 - gopkg.in/fsnotify.v1 [BSD 3-Clause "New" or "Revised" License](https://github.com/fsnotify/fsnotify/blob/v1.4.7/LICENSE)
