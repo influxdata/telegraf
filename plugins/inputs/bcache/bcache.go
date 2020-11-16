@@ -1,5 +1,7 @@
 // +build !windows
 
+// bcache doesn't aim for Windows
+
 package bcache
 
 import (

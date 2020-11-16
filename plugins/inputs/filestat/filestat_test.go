@@ -1,107 +1,107 @@
 // +build !windows
 
-// TODO: should be enabled for Windows when Glob related issues for Windows are fixed
+// TODO: Windows - should be enabled for Windows when Glob related issues for Windows are fixed
 
 package filestat
 
 import (
 	"os"
-	"runtime"
-	"strings"
+	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+)
+
+var (
+	testdataDir = getTestdataDir()
 )
 
 func TestGatherNoMd5(t *testing.T) {
-	dir := getTestdataDir()
 	fs := NewFileStat()
 	fs.Log = testutil.Logger{}
 	fs.Files = []string{
-		dir + "log1.log",
-		dir + "log2.log",
-		dir + "non_existent_file",
+		filepath.Join(testdataDir, "log1.log"),
+		filepath.Join(testdataDir, "log2.log"),
+		filepath.Join(testdataDir, "non_existent_file"),
 	}
 
 	acc := testutil.Accumulator{}
 	acc.GatherError(fs.Gather)
 
 	tags1 := map[string]string{
-		"file": dir + "log1.log",
+		"file": filepath.Join(testdataDir, "log1.log"),
 	}
 	require.True(t, acc.HasPoint("filestat", tags1, "size_bytes", int64(0)))
 	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(1)))
 
 	tags2 := map[string]string{
-		"file": dir + "log2.log",
+		"file": filepath.Join(testdataDir, "log2.log"),
 	}
 	require.True(t, acc.HasPoint("filestat", tags2, "size_bytes", int64(0)))
 	require.True(t, acc.HasPoint("filestat", tags2, "exists", int64(1)))
 
 	tags3 := map[string]string{
-		"file": dir + "non_existent_file",
+		"file": filepath.Join(testdataDir, "non_existent_file"),
 	}
 	require.True(t, acc.HasPoint("filestat", tags3, "exists", int64(0)))
 }
 
 func TestGatherExplicitFiles(t *testing.T) {
-	dir := getTestdataDir()
 	fs := NewFileStat()
 	fs.Log = testutil.Logger{}
 	fs.Md5 = true
 	fs.Files = []string{
-		dir + "log1.log",
-		dir + "log2.log",
-		dir + "non_existent_file",
+		filepath.Join(testdataDir, "log1.log"),
+		filepath.Join(testdataDir, "log2.log"),
+		filepath.Join(testdataDir, "non_existent_file"),
 	}
 
 	acc := testutil.Accumulator{}
 	acc.GatherError(fs.Gather)
 
 	tags1 := map[string]string{
-		"file": dir + "log1.log",
+		"file": filepath.Join(testdataDir, "log1.log"),
 	}
 	require.True(t, acc.HasPoint("filestat", tags1, "size_bytes", int64(0)))
 	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(1)))
 	require.True(t, acc.HasPoint("filestat", tags1, "md5_sum", "d41d8cd98f00b204e9800998ecf8427e"))
 
 	tags2 := map[string]string{
-		"file": dir + "log2.log",
+		"file": filepath.Join(testdataDir, "log2.log"),
 	}
 	require.True(t, acc.HasPoint("filestat", tags2, "size_bytes", int64(0)))
 	require.True(t, acc.HasPoint("filestat", tags2, "exists", int64(1)))
 	require.True(t, acc.HasPoint("filestat", tags2, "md5_sum", "d41d8cd98f00b204e9800998ecf8427e"))
 
 	tags3 := map[string]string{
-		"file": dir + "non_existent_file",
+		"file": filepath.Join(testdataDir, "non_existent_file"),
 	}
 	require.True(t, acc.HasPoint("filestat", tags3, "exists", int64(0)))
 }
 
 func TestGatherGlob(t *testing.T) {
-	dir := getTestdataDir()
 	fs := NewFileStat()
 	fs.Log = testutil.Logger{}
 	fs.Md5 = true
 	fs.Files = []string{
-		dir + "*.log",
+		filepath.Join(testdataDir, "*.log"),
 	}
 
 	acc := testutil.Accumulator{}
 	acc.GatherError(fs.Gather)
 
 	tags1 := map[string]string{
-		"file": dir + "log1.log",
+		"file": filepath.Join(testdataDir, "log1.log"),
 	}
 	require.True(t, acc.HasPoint("filestat", tags1, "size_bytes", int64(0)))
 	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(1)))
 	require.True(t, acc.HasPoint("filestat", tags1, "md5_sum", "d41d8cd98f00b204e9800998ecf8427e"))
 
 	tags2 := map[string]string{
-		"file": dir + "log2.log",
+		"file": filepath.Join(testdataDir, "log2.log"),
 	}
 	require.True(t, acc.HasPoint("filestat", tags2, "size_bytes", int64(0)))
 	require.True(t, acc.HasPoint("filestat", tags2, "exists", int64(1)))
@@ -109,33 +109,32 @@ func TestGatherGlob(t *testing.T) {
 }
 
 func TestGatherSuperAsterisk(t *testing.T) {
-	dir := getTestdataDir()
 	fs := NewFileStat()
 	fs.Log = testutil.Logger{}
 	fs.Md5 = true
 	fs.Files = []string{
-		dir + "**",
+		filepath.Join(testdataDir, "**"),
 	}
 
 	acc := testutil.Accumulator{}
 	acc.GatherError(fs.Gather)
 
 	tags1 := map[string]string{
-		"file": dir + "log1.log",
+		"file": filepath.Join(testdataDir, "log1.log"),
 	}
 	require.True(t, acc.HasPoint("filestat", tags1, "size_bytes", int64(0)))
 	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(1)))
 	require.True(t, acc.HasPoint("filestat", tags1, "md5_sum", "d41d8cd98f00b204e9800998ecf8427e"))
 
 	tags2 := map[string]string{
-		"file": dir + "log2.log",
+		"file": filepath.Join(testdataDir, "log2.log"),
 	}
 	require.True(t, acc.HasPoint("filestat", tags2, "size_bytes", int64(0)))
 	require.True(t, acc.HasPoint("filestat", tags2, "exists", int64(1)))
 	require.True(t, acc.HasPoint("filestat", tags2, "md5_sum", "d41d8cd98f00b204e9800998ecf8427e"))
 
 	tags3 := map[string]string{
-		"file": dir + "test.conf",
+		"file": filepath.Join(testdataDir, "test.conf"),
 	}
 	require.True(t, acc.HasPoint("filestat", tags3, "size_bytes", int64(104)))
 	require.True(t, acc.HasPoint("filestat", tags3, "exists", int64(1)))
@@ -143,18 +142,17 @@ func TestGatherSuperAsterisk(t *testing.T) {
 }
 
 func TestModificationTime(t *testing.T) {
-	dir := getTestdataDir()
 	fs := NewFileStat()
 	fs.Log = testutil.Logger{}
 	fs.Files = []string{
-		dir + "log1.log",
+		filepath.Join(testdataDir, "log1.log"),
 	}
 
 	acc := testutil.Accumulator{}
 	acc.GatherError(fs.Gather)
 
 	tags1 := map[string]string{
-		"file": dir + "log1.log",
+		"file": filepath.Join(testdataDir, "log1.log"),
 	}
 	require.True(t, acc.HasPoint("filestat", tags1, "size_bytes", int64(0)))
 	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(1)))
@@ -162,26 +160,24 @@ func TestModificationTime(t *testing.T) {
 }
 
 func TestNoModificationTime(t *testing.T) {
-	dir := getTestdataDir()
 	fs := NewFileStat()
 	fs.Log = testutil.Logger{}
 	fs.Files = []string{
-		dir + "non_existent_file",
+		filepath.Join(testdataDir, "non_existent_file"),
 	}
 
 	acc := testutil.Accumulator{}
 	acc.GatherError(fs.Gather)
 
 	tags1 := map[string]string{
-		"file": dir + "non_existent_file",
+		"file": filepath.Join(testdataDir, "non_existent_file"),
 	}
 	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(0)))
 	require.False(t, acc.HasInt64Field("filestat", "modification_time"))
 }
 
 func TestGetMd5(t *testing.T) {
-	dir := getTestdataDir()
-	md5, err := getMd5(dir + "test.conf")
+	md5, err := getMd5(filepath.Join(testdataDir, "test.conf"))
 	assert.NoError(t, err)
 	assert.Equal(t, "5a7e9b77fa25e7bb411dbd17cf403c1f", md5)
 
@@ -190,10 +186,11 @@ func TestGetMd5(t *testing.T) {
 }
 
 func getTestdataDir() string {
-	_, filename, _, _ := runtime.Caller(1)
-	testdataDir := strings.Replace(filename, "filestat_test.go", "testdata/", 1)
+	dir, err := os.Getwd()
+	if err != nil {
+		// if we cannot even establish the test directory, further progress is meaningless
+		panic(err)
+	}
 
-	// runtime.Caller always returns '/' as path separator https://github.com/golang/go/issues/3335
-	// make sure that path separator is always OS dependent
-	return strings.ReplaceAll(testdataDir, "/", string(os.PathSeparator))
+	return filepath.Join(dir, "testdata")
 }

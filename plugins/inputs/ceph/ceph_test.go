@@ -1,12 +1,10 @@
-// +build !windows
-
 package ceph
 
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -165,7 +163,7 @@ func assertFoundSocket(t *testing.T, dir, sockType string, i int, sockets []*soc
 	} else {
 		prefix = monPrefix
 	}
-	expected := path.Join(dir, sockFile(prefix, i))
+	expected := filepath.Join(dir, sockFile(prefix, i))
 	found := false
 	for _, s := range sockets {
 		fmt.Printf("Checking %s\n", s.socket)
@@ -185,7 +183,7 @@ func sockFile(prefix string, i int) string {
 func createTestFiles(dir string, st *SockTest) {
 	writeFile := func(prefix string, i int) {
 		f := sockFile(prefix, i)
-		fpath := path.Join(dir, f)
+		fpath := filepath.Join(dir, f)
 		ioutil.WriteFile(fpath, []byte(""), 0777)
 	}
 	tstFileApply(st, writeFile)
@@ -194,7 +192,7 @@ func createTestFiles(dir string, st *SockTest) {
 func cleanupTestFiles(dir string, st *SockTest) {
 	rmFile := func(prefix string, i int) {
 		f := sockFile(prefix, i)
-		fpath := path.Join(dir, f)
+		fpath := filepath.Join(dir, f)
 		err := os.Remove(fpath)
 		if err != nil {
 			fmt.Printf("Error removing test file %s: %v\n", fpath, err)

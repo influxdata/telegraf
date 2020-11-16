@@ -1,6 +1,6 @@
 // +build !windows
 
-// TODO: should be enabled for Windows when test are ready for this OS
+// TODO: Windows - should be enabled for Windows when tests are ready for this OS
 
 package reverse_dns
 

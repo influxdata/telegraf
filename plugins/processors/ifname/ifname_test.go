@@ -1,6 +1,6 @@
 // +build !windows
 
-// TODO: should be enabled for Windows when test are ready for this OS
+// TODO: Windows - should be enabled for Windows when Glob related issues for Windows are fixed
 // `require.NotZero(t, age) // Age is nonzero when map comes from cache` fails on Windows (it passes during debug)
 
 package ifname

@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type statServer struct{}
@@ -72,7 +74,8 @@ func (s statServer) serverSocket(l net.Listener) {
 func TestPowerdnsGeneratesMetrics(t *testing.T) {
 	// We create a fake server to return test data
 	randomNumber := int64(5239846799706671610)
-	socket, err := net.Listen("unix", fmt.Sprintf("%s%cpdns%d.controlsocket", os.TempDir(), os.PathSeparator, randomNumber))
+	sockname := filepath.Join(os.TempDir(), fmt.Sprintf("pdns%d.controlsocket", randomNumber))
+	socket, err := net.Listen("unix", sockname)
 	if err != nil {
 		t.Fatal("Cannot initialize server on port ")
 	}
@@ -83,7 +86,7 @@ func TestPowerdnsGeneratesMetrics(t *testing.T) {
 	go s.serverSocket(socket)
 
 	p := &Powerdns{
-		UnixSockets: []string{fmt.Sprintf("%s%cpdns%d.controlsocket", os.TempDir(), os.PathSeparator, randomNumber)},
+		UnixSockets: []string{sockname},
 	}
 
 	var acc testutil.Accumulator

@@ -1,5 +1,7 @@
 //+build !windows
 
+// TODO: Windows - should be enabled for Windows when tests are ready for this OS
+
 package passenger
 
 import (

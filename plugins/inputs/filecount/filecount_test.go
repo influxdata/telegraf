@@ -1,6 +1,6 @@
 // +build !windows
 
-// TODO: should be enabled for Windows when Glob related issues for Windows are fixed
+// TODO: Windows - should be enabled for Windows when Glob related issues for Windows are fixed
 
 package filecount
 
