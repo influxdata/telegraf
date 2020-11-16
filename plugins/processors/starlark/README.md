@@ -154,6 +154,27 @@ def apply(metric):
 Telegraf freezes the global scope, which prevents it from being modified.
 Attempting to modify the global scope will fail with an error.
 
+**How to manage errors that occur in the apply function?**
+
+In case you need to call some code that may return an error, you can delegate the call
+to the built-in function `catch` which takes as argument a `Callable` and returns the error
+that occured if any, `None` otherwise.
+
+So for example:
+
+```python
+load("json.star", "json")
+
+def apply(metric):
+    error = catch(lambda: failing(metric))
+    if error != None:
+        # Some code to execute in case of an error
+        metric.fields["error"] = error
+    return metric
+
+def failing(metric):
+    json.decode("non-json-content")
+```
 
 ### Examples
 
