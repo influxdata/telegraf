@@ -12,12 +12,12 @@ clone_folder: C:\gopath\src\github.com\influxdata\telegraf
 environment:
   GOPATH: C:\gopath
 
-stack: go 1.14
+stack: go 1.15
 
 platform: x64
 
 install:
-  - choco install make
+  - choco install make mingw
   - cd "%GOPATH%\src\github.com\influxdata\telegraf"
   - git config --system core.longpaths true
   - go version

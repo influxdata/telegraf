@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -115,12 +116,13 @@ func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
 func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 	var randomNumber int64
 	var sockets [5]net.Listener
-	_globmask := fmt.Sprintf("%s%ctest-haproxy*.sock", os.TempDir(), os.PathSeparator)
-	_badmask := fmt.Sprintf("%s%ctest-fail-haproxy*.sock", os.TempDir(), os.PathSeparator)
+
+	_globmask := filepath.Join(os.TempDir(), "test-haproxy*.sock")
+	_badmask := filepath.Join(os.TempDir(), "test-fail-haproxy*.sock")
 
 	for i := 0; i < 5; i++ {
 		binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
-		sockname := fmt.Sprintf("%s%ctest-haproxy%d.sock", os.TempDir(), os.PathSeparator, randomNumber)
+		sockname := filepath.Join(os.TempDir(), fmt.Sprintf("test-haproxy%d.sock", randomNumber))
 
 		sock, err := net.Listen("unix", sockname)
 		if err != nil {
