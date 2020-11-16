@@ -17,7 +17,7 @@ stack: go 1.15
 platform: x64
 
 install:
-  - choco install make mingw
+  - choco install make
   - cd "%GOPATH%\src\github.com\influxdata\telegraf"
   - git config --system core.longpaths true
   - go version
