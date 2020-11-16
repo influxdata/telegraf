@@ -640,8 +640,8 @@ func TestGather(t *testing.T) {
 	assert.Len(t, m.Fields, 2)
 	assert.Equal(t, 234, m.Fields["myfield2"])
 	assert.Equal(t, "baz", m.Fields["myfield3"])
-	assert.True(t, tstart.Before(m.Time) || tstart.Equal(m.Time))
-	assert.True(t, tstop.After(m.Time) || tstop.Equal(m.Time))
+	assert.True(t, !tstart.After(m.Time))
+	assert.True(t, !tstop.Before(m.Time))
 
 	m2 := acc.Metrics[1]
 	assert.Equal(t, "myOtherTable", m2.Measurement)
