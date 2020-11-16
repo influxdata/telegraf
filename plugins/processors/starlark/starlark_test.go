@@ -2535,6 +2535,31 @@ func TestScript(t *testing.T) {
 				),
 			},
 		},
+		{
+			name: "logging",
+			plugin: &Starlark{
+				Script: "testdata/logging.star",
+				Log:    testutil.Logger{},
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric("log",
+					map[string]string{},
+					map[string]interface{}{
+						"debug": "a debug message",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("log",
+					map[string]string{},
+					map[string]interface{}{
+						"debug": "a debug message",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
