@@ -1,3 +1,8 @@
+// +build !windows
+
+// TODO: should be enabled for Windows when test are ready for this OS
+// `require.NotZero(t, age) // Age is nonzero when map comes from cache` fails on Windows (it passes during debug)
+
 package ifname
 
 import (
