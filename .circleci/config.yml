@@ -255,7 +255,6 @@ jobs:
         default: false
     executor: telegraf-ci
     steps:
-<<<<<<< HEAD
       - package-build:
           type: windows
           nightly: << parameters.nightly >>
@@ -265,14 +264,6 @@ jobs:
         type: boolean
         default: false
     executor: go-1_17
-=======
-      - attach_workspace:
-          at: '/go'
-      - run: 'make'
-      - run: 'make test'
-  test-go-1.14-386:
-    <<: [ *defaults, *go-1_14 ]
->>>>>>> ec62ab010 (dependency swap test)
     steps:
       - package-build:
           type: darwin-amd64
