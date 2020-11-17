@@ -659,8 +659,6 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		return v, nil
 	}
 
-	// fmt.Println(conv)
-
 	split := strings.Split(conv, ":")
 	if split[0] == "hextoint" && len(split) == 3 {
 
