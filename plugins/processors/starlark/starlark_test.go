@@ -2560,6 +2560,70 @@ func TestScript(t *testing.T) {
 				),
 			},
 		},
+		{
+			name: "multiple_metrics",
+			plugin: &Starlark{
+				Script: "testdata/multiple_metrics.star",
+				Log:    testutil.Logger{},
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric("mm",
+					map[string]string{},
+					map[string]interface{}{
+						"value": "a",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("mm2",
+					map[string]string{},
+					map[string]interface{}{
+						"value": "b",
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric("mm1",
+					map[string]string{},
+					map[string]interface{}{
+						"value": "a",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "multiple_metrics_with_json",
+			plugin: &Starlark{
+				Script: "testdata/multiple_metrics_with_json.star",
+				Log:    testutil.Logger{},
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric("json",
+					map[string]string{},
+					map[string]interface{}{
+						"value": "[{\"label\": \"hello\"}, {\"label\": \"world\"}]",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("json",
+					map[string]string{},
+					map[string]interface{}{
+						"value": "hello",
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric("json",
+					map[string]string{},
+					map[string]interface{}{
+						"value": "world",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
