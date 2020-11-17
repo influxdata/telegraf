@@ -75,6 +75,7 @@ type requestType string
 
 const (
 	GET_PLUGIN          = requestType("GET_PLUGIN")
+	GET_PLUGIN_SCHEMA   = requestType("GET_PLUGIN_SCHEMA")
 	UPDATE_PLUGIN       = requestType("UPDATE_PLUGIN")
 	START_PLUGIN        = requestType("START_PLUGIN")
 	STOP_PLUGIN         = requestType("STOP_PLUGIN")
@@ -180,6 +181,8 @@ func (assistant *Assistant) listenToServer(ctx context.Context) {
 		switch req.Operation {
 		case GET_PLUGIN:
 			res = assistant.getPlugin(req)
+		case GET_PLUGIN_SCHEMA:
+			res = assistant.getSchema(req)
 		case START_PLUGIN:
 			data, err := assistant.startPlugin(req)
 			if err != nil || req.Plugin.Config == nil {
@@ -220,7 +223,7 @@ func (assistant *Assistant) getPlugin(req request) response {
 	case "INPUT":
 		data, err = assistant.agent.GetRunningInputPlugin(req.Plugin.Name)
 	case "OUTPUT":
-		data, err = assistant.agent.GetOutputPlugin(req.Plugin.Name)
+		data, err = assistant.agent.GetRunningOutputPlugin(req.Plugin.Name)
 	case "AGGREGATOR":
 		data, err = assistant.agent.GetAggregatorPlugin(req.Plugin.Name)
 	case "PROCESSOR":
@@ -234,6 +237,49 @@ func (assistant *Assistant) getPlugin(req request) response {
 	}
 
 	return response{SUCCESS, req.UUID, data}
+}
+
+type schema struct {
+	Types    map[string]interface{}
+	Defaults interface{}
+}
+
+// getSchema returns the struct response containing config schema for a single plugin
+func (assistant *Assistant) getSchema(req request) response {
+	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.Name, "\n")
+
+	var plugin interface{}
+	var err error
+	switch req.Plugin.Type {
+	case "INPUT":
+		// TODO implement error checking for types
+		plugin, err = assistant.agent.GetDefaultInputPlugin(req.Plugin.Name)
+	case "OUTPUT":
+		// TODO implement error checking for types
+		plugin, err = assistant.agent.GetDefaultOutputPlugin(req.Plugin.Name)
+	case "AGGREGATOR":
+		// TODO
+	case "PROCESSOR":
+		// TODO
+	default:
+		err = fmt.Errorf("did not provide a valid plugin type")
+	}
+	if err != nil {
+		return response{FAILURE, req.UUID, err.Error()}
+	}
+
+	var types map[string]interface{}
+	types, err = assistant.agent.GetPluginTypes(plugin)
+	if err != nil {
+		return response{FAILURE, req.UUID, err.Error()}
+	}
+
+	// TODO convert plugin to map[string]interface{} ?
+	// pluginMap, ok := plugin.(map[string]interface{})
+	// if !ok {
+	// 	return response{FAILURE, req.UUID, fmt.Errorf("plugin format is not a map[string]interface{}")}
+	// }
+	return response{SUCCESS, req.UUID, schema{types, plugin}}
 }
 
 // startPlugin starts a single plugin

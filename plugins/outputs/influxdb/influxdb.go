@@ -56,8 +56,8 @@ type InfluxDB struct {
 
 	clients []Client
 
-	CreateHTTPClientF func(config *HTTPConfig) (Client, error)
-	CreateUDPClientF  func(config *UDPConfig) (Client, error)
+	CreateHTTPClientF func(config *HTTPConfig) (Client, error) `json:"-"`
+	CreateUDPClientF  func(config *UDPConfig) (Client, error)  `json:"-"`
 
 	Log telegraf.Logger
 }

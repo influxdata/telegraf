@@ -241,6 +241,57 @@ func (a *Agent) GetRunningOutputPlugins() []string {
 	return res
 }
 
+type MapFieldSchema struct {
+	Value interface{}
+	Key   string
+}
+
+type ArrayFieldSchema struct {
+	Value  interface{}
+	Length int // Will be 0 if slice and array length if array
+}
+
+// GetPluginTypes returns a map of a plugin's field names to field value types
+func (a *Agent) GetPluginTypes(p interface{}) (map[string]interface{}, error) {
+
+	data := reflect.ValueOf(p).Elem() // extract Value of type interface{} from Value pointer to interface
+	schema := a.getFieldSchema(data.Type())
+
+	s, ok := schema.(map[string]interface{})
+
+	if ok {
+		return s, nil
+	}
+
+	return nil, fmt.Errorf("returned schema is not a map")
+}
+
+func (a *Agent) getFieldSchema(data reflect.Type) interface{} {
+	switch data.Kind() {
+	case reflect.Struct:
+		dataFields := make(map[string]interface{})
+		for i := 0; i < data.NumField(); i++ {
+			field := data.Field(i)
+			if field.PkgPath == "" { // only take exported fields
+				dataFields[field.Name] = a.getFieldSchema(field.Type)
+			}
+		}
+		return dataFields
+	case reflect.Array:
+		valueType := a.getFieldSchema(data.Elem())
+		return ArrayFieldSchema{valueType, data.Len()}
+	case reflect.Slice:
+		valueType := a.getFieldSchema(data.Elem())
+		return ArrayFieldSchema{valueType, 0}
+	case reflect.Map:
+		keyType := data.Key().Name()
+		valueType := a.getFieldSchema(data.Elem())
+		return MapFieldSchema{valueType, keyType}
+	default:
+		return data.Kind().String()
+	}
+}
+
 // Run starts and runs the Agent until the context is done.
 func (a *Agent) Run(ctx context.Context) error {
 	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
@@ -358,7 +409,7 @@ func updateStructValuesHelper(pluginPtr reflect.Value, newConfig map[string]inte
 	if plugin.Kind() == reflect.Struct {
 
 		// initial check for errors, loop through twice to ensure that
-                // all fields are valid before updating
+		// all fields are valid before updating
 		for configKey, configValue := range newConfig {
 			pluginField := plugin.FieldByName(configKey) // cast new value as Value
 			reflectedNew := reflect.ValueOf(configValue)
@@ -373,21 +424,21 @@ func updateStructValuesHelper(pluginPtr reflect.Value, newConfig map[string]inte
 			}
 		}
 
-                // if no error, update all
-                for configKey, configValue := range newConfig {
-                        pluginField := plugin.FieldByName(configKey) // cast new value as Value
-                        reflectedNew := reflect.ValueOf(configValue)
-                        pluginField.Set(reflectedNew)
-                        field, _ := pType.FieldByName(configKey)
+		// if no error, update all
+		for configKey, configValue := range newConfig {
+			pluginField := plugin.FieldByName(configKey) // cast new value as Value
+			reflectedNew := reflect.ValueOf(configValue)
+			pluginField.Set(reflectedNew)
+			field, _ := pType.FieldByName(configKey)
 
-                        tomlTag := field.Tag.Get("toml")
-                        if tomlTag == "" {
-                                tomlTag = configKey
-                        }
+			tomlTag := field.Tag.Get("toml")
+			if tomlTag == "" {
+				tomlTag = configKey
+			}
 
-                        tomlMap[tomlTag] = configValue
+			tomlMap[tomlTag] = configValue
 
-                }
+		}
 		return plugin, tomlMap, nil
 	}
 	return plugin, map[string]interface{}{}, fmt.Errorf("could not update plugin")
@@ -419,7 +470,7 @@ func (a *Agent) GetRunningInputPlugin(name string) (telegraf.Input, error) {
 			return input.Input, nil
 		}
 	}
-	return nil, fmt.Errorf("could not find input with name: %s", name)
+	return nil, fmt.Errorf("could not find input plugin with name: %s", name)
 }
 
 // GetDefaultInputPlugin gets the default InputConfig for a default plugin given its name
@@ -428,7 +479,7 @@ func (a *Agent) GetDefaultInputPlugin(name string) (telegraf.Input, error) {
 	if exists {
 		return p(), nil
 	}
-	return nil, fmt.Errorf("could not find input with name: %s", name)
+	return nil, fmt.Errorf("could not find input plugin with name: %s", name)
 }
 
 // UpdateInputPlugin gets the InputConfig for a plugin given its name
@@ -437,9 +488,7 @@ func (a *Agent) UpdateInputPlugin(name string, config map[string]interface{}) (t
 		if name == input.Config.Name {
 			plugin := input.Input
 
-			if len(a.Config.Inputs) == 1 {
-				a.wg.Add(1)
-			}
+			a.wg.Add(1)
 
 			a.StopInputPlugin(name, false)
 
@@ -462,14 +511,23 @@ func (a *Agent) UpdateInputPlugin(name string, config map[string]interface{}) (t
 	return nil, fmt.Errorf("cannot update %s because input plugin is not running", name)
 }
 
-// GetOutputPlugin gets the OutputConfig for a plugin given its name
-func (a *Agent) GetOutputPlugin(name string) (telegraf.Output, error) {
+// GetRunningOutputPlugin gets the OutputConfig for a running plugin given its name
+func (a *Agent) GetRunningOutputPlugin(name string) (telegraf.Output, error) {
 	for _, output := range a.Config.Outputs {
 		if name == output.Config.Name {
 			return output.Output, nil
 		}
 	}
-	return nil, fmt.Errorf("could not find output with name: %s", name)
+	return nil, fmt.Errorf("could not find output plugin with name: %s", name)
+}
+
+// GetDefaultOutputPlugin gets the default InputConfig for a default plugin given its name
+func (a *Agent) GetDefaultOutputPlugin(name string) (telegraf.Output, error) {
+	p, exists := outputs.Outputs[name]
+	if exists {
+		return p(), nil
+	}
+	return nil, fmt.Errorf("could not find output plugin with name: %s", name)
 }
 
 // UpdateOutputPlugin gets the InputConfig for a plugin given its name

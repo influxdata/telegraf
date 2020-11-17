@@ -3,6 +3,7 @@ package assistant
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -28,6 +29,97 @@ func initAgentAndAssistant(ctx context.Context, configName string) (*agent.Agent
 	time.Sleep(5 * time.Second)
 
 	return ag, ast
+}
+
+func TestAssistant_GetInputPluginSchema(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	_, ast := initAgentAndAssistant(ctx, "single_plugin")
+
+	req := request{GET_PLUGIN_SCHEMA, "123", pluginInfo{"httpjson", "INPUT", nil}}
+	res := ast.getSchema(req)
+	assert.Equal(t, SUCCESS, res.Status)
+
+	s, isSchema := res.Data.(schema)
+	_, err := json.Marshal(res)
+	if err != nil {
+		t.Log(err)
+	}
+
+	m := s.Types
+
+	assert.NoError(t, err)
+	assert.True(t, isSchema)
+	assert.Equal(t, "string", m["Name"])
+	assert.Equal(t, agent.ArrayFieldSchema{"string", 0}, m["Servers"])
+	assert.Equal(t, "string", m["Method"])
+	assert.Equal(t, agent.ArrayFieldSchema{"string", 0}, m["TagKeys"])
+	assert.Equal(t, agent.MapFieldSchema{"string", "string"}, m["Parameters"])
+	assert.Equal(t, agent.MapFieldSchema{"string", "string"}, m["Headers"])
+	assert.Equal(t, map[string]interface{}{
+		"Duration": "int64",
+	}, m["ResponseTimeout"])
+
+	d, _ := json.Marshal(s.Defaults)
+
+	var config map[string]interface{}
+	_ = json.Unmarshal([]byte(d), &config)
+
+	fmt.Println(config)
+
+	cancel()
+}
+
+func TestAssistant_GetOutputPluginSchema(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	_, ast := initAgentAndAssistant(ctx, "slice_comment") // single output plugin http
+
+	req := request{GET_PLUGIN_SCHEMA, "123", pluginInfo{"http", "OUTPUT", nil}}
+	res := ast.getSchema(req)
+	assert.Equal(t, SUCCESS, res.Status)
+
+	s, isSchema := res.Data.(schema)
+	_, err := json.Marshal(res)
+	if err != nil {
+		t.Log(err)
+	}
+
+	m := s.Types
+	// d := s.Defaults
+
+	assert.NoError(t, err)
+	assert.True(t, isSchema)
+	assert.Equal(t, map[string]interface{}{
+		"InsecureSkipVerify": "bool",
+		"SSLCA":              "string",
+		"SSLCert":            "string",
+		"SSLKey":             "string",
+		"TLSCA":              "string",
+		"TLSCert":            "string",
+		"TLSKey":             "string",
+	}, m["ClientConfig"])
+	assert.Equal(t, "string", m["Method"])
+	assert.Equal(t, agent.ArrayFieldSchema{"string", 0}, m["Scopes"])
+	assert.Equal(t, agent.MapFieldSchema{"string", "string"}, m["Headers"])
+	assert.Equal(t, map[string]interface{}{
+		"Duration": "int64",
+	}, m["Timeout"])
+
+	// TODO complete check for defaults
+	// assert.Equal(t, "http://127.0.0.1:8080/telegraf", d["URL"])
+	// assert.Equal(t, false, d["InsecureSkipVerify"])
+	// assert.Equal(t, "", d["ClientID"])
+	// assert.Equal(t, map[string]interface{}{
+	// 	"Duration": 5000000000,
+	// }, d["Timeout"])
+
+	_, _ = json.Marshal(s.Defaults)
+
+	// var config map[string]interface{}
+	// _ = json.Unmarshal([]byte(d), &config)
+
+	// fmt.Println(config)
+
+	cancel()
 }
 
 func TestAssistant_GetSinglePlugin(t *testing.T) {
