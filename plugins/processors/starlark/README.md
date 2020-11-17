@@ -187,6 +187,8 @@ def failing(metric):
 - [scale](/plugins/processors/starlark/testdata/scale.star) - Multiply any field by a number
 - [value filter](/plugins/processors/starlark/testdata/value_filter.star) - remove a metric based on a field value.
 - [logging](/plugins/processors/starlark/testdata/logging.star) - Log messages with the logger of Telegraf
+- [multiple metrics](/plugins/processors/starlark/testdata/multiple_metrics.star) - Return multiple metrics by using [a list](https://docs.bazel.build/versions/master/skylark/lib/list.html) of metrics.
+- [multiple metrics from json array](/plugins/processors/starlark/testdata/multiple_metrics_with_json.star) - Builds a new metric from each element of a json array then returns all the created metrics.
 
 [All examples](/plugins/processors/starlark/testdata) are in the testdata folder.
 
