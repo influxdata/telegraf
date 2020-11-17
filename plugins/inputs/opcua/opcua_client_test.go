@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -95,12 +96,14 @@ nodes = [
 name = "foo"
 namespace = "3"
 identifier_type = "i"
-nodes = [{name="name3", identifier="3000"}]
+tags = [["tag1", "val1"], ["tag2", "val2"]]
+nodes = [{name="name3", identifier="3000", tags=[["tag3", "val3"]]}]
 [[inputs.opcua.group]]
 name = "bar"
 namespace = "0"
 identifier_type = "i"
-nodes = [{name="name4", identifier="4000"}]
+tags = [["tag1", "val1"], ["tag2", "val2"]]
+nodes = [{name="name4", identifier="4000", tags=[["tag1", "override"]]}]
 `
 
 	c := config.NewConfig()
@@ -123,4 +126,27 @@ nodes = [{name="name4", identifier="4000"}]
 
 	require.NoError(t, o.InitNodes())
 	require.Len(t, o.nodes, 4)
+	require.Len(t, o.nodes[2].metricTags, 3)
+	require.Len(t, o.nodes[3].metricTags, 2)
+}
+
+func TestTagsSliceToMap(t *testing.T) {
+	m, err := tagsSliceToMap([][]string{[]string{"foo", "bar"}, []string{"baz", "bat"}})
+	assert.NoError(t, err)
+	assert.Len(t, m, 2)
+	assert.Equal(t, m["foo"], "bar")
+	assert.Equal(t, m["baz"], "bat")
+}
+
+func TestTagsSliceToMap_twoStrings(t *testing.T) {
+	var err error
+	_, err = tagsSliceToMap([][]string{[]string{"foo", "bar", "baz"}})
+	assert.Error(t, err)
+	_, err = tagsSliceToMap([][]string{[]string{"foo"}})
+	assert.Error(t, err)
+}
+
+func TestTagsSliceToMap_dupeKey(t *testing.T) {
+	_, err := tagsSliceToMap([][]string{[]string{"foo", "bar"}, []string{"foo", "bat"}})
+	assert.Error(t, err)
 }

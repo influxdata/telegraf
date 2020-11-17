@@ -57,14 +57,13 @@ type NodeSettings struct {
 	DataType       string     `toml:"data_type"`   // Kept for backward compatibility but was never used.
 	Description    string     `toml:"description"` // Kept for backward compatibility but was never used.
 	TagsSlice      [][]string `toml:"tags"`
-
-	tags map[string]string
 }
 
 type Node struct {
 	tag        NodeSettings
 	idStr      string
 	metricName string
+	metricTags map[string]string
 }
 
 type GroupSettings struct {
@@ -72,7 +71,7 @@ type GroupSettings struct {
 	Namespace      string         `toml:"namespace"`       // Can be overridden by node setting
 	IdentifierType string         `toml:"identifier_type"` // Can be overridden by node setting
 	Nodes          []NodeSettings `toml:"nodes"`
-	Tags           [][]string     `toml:"tags"`
+	TagsSlice      [][]string     `toml:"tags"`
 }
 
 // OPCData type
@@ -241,6 +240,20 @@ func (o *OpcUA) validateEndpoint() error {
 	return nil
 }
 
+func tagsSliceToMap(tags [][]string) (map[string]string, error) {
+	m := make(map[string]string)
+	for i, tag := range tags {
+		if len(tag) != 2 {
+			return nil, fmt.Errorf("tag %d needs 2 values, has %d: %v", i+1, len(tag), tag)
+		}
+		if _, ok := m[tag[0]]; ok {
+			return nil, fmt.Errorf("tag %d has duplicate key: %v", i+1, tag[0])
+		}
+		m[tag[0]] = tag[1]
+	}
+	return m, nil
+}
+
 //InitNodes Method on OpcUA
 func (o *OpcUA) InitNodes() error {
 	for _, node := range o.RootNodes {
@@ -254,6 +267,10 @@ func (o *OpcUA) InitNodes() error {
 		if group.MetricName == "" {
 			group.MetricName = o.MetricName
 		}
+		groupTags, err := tagsSliceToMap(group.TagsSlice)
+		if err != nil {
+			return err
+		}
 		for _, node := range group.Nodes {
 			if node.Namespace == "" {
 				node.Namespace = group.Namespace
@@ -261,9 +278,21 @@ func (o *OpcUA) InitNodes() error {
 			if node.IdentifierType == "" {
 				node.IdentifierType = group.IdentifierType
 			}
+			nodeTags, err := tagsSliceToMap(node.TagsSlice)
+			if err != nil {
+				return err
+			}
+			mergedTags := make(map[string]string)
+			for k, v := range groupTags {
+				mergedTags[k] = v
+			}
+			for k, v := range nodeTags {
+				mergedTags[k] = v
+			}
 			o.nodes = append(o.nodes, Node{
 				metricName: group.MetricName,
 				tag:        node,
+				metricTags: mergedTags,
 			})
 		}
 	}
