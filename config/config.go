@@ -1575,7 +1575,7 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 				}
 
 				// Parse the root node selector
-				if val, ok := subtbl.Fields["selected_nodes"]; ok {
+				if val, ok := subtbl.Fields["metric_selection"]; ok {
 					if kv, ok := val.(*ast.KeyValue); ok {
 						if str, ok := kv.Value.(*ast.String); ok {
 							c.XMLConfig[i].Selection = str.Value
@@ -1644,7 +1644,7 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 				}
 
 				// Parse the flag for expand the field names relative to the selected nodes
-				if val, ok := subtbl.Fields["expand_field_names"]; ok {
+				if val, ok := subtbl.Fields["field_name_expansion"]; ok {
 					if kv, ok := val.(*ast.KeyValue); ok {
 						if b, ok := kv.Value.(*ast.Boolean); ok {
 							flag, err := b.Boolean()

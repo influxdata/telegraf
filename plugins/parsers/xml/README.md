@@ -21,7 +21,7 @@ that need to be specified in a `fields_int` section.
   ## Multiple parsing sections are allowed
   [[inputs.file.xml]]
     ## Optional: XPath-query to select a subset of nodes from the XML document.
-    #selected_nodes = "/Bus/child::Sensor"
+    #metric_selection = "/Bus/child::Sensor"
 
     ## Optional: XPath-query to set the metric (measurement) name.
     #metric_name = "string('example')"
@@ -55,7 +55,7 @@ that need to be specified in a `fields_int` section.
 A configuration can contain muliple *xml* subsections for e.g. the file plugin to process the xml-string multiple times.
 Consult the [XPath syntax][xpath] and the [underlying library's functions][xpath lib] for details and help regarding XPath queries.
 
-Alternativly to the configuration above, fields can also be specified in a batch way. So contrary to specify the fields
+Alternatively to the configuration above, fields can also be specified in a batch way. So contrary to specify the fields
 in a section, you can define a `name` and a `value` selector used to determine the name and value of the fields in the
 metric.
 ```toml
@@ -71,7 +71,7 @@ metric.
   ## Multiple parsing sections are allowed
   [[inputs.file.xml]]
     ## Optional: XPath-query to select a subset of nodes from the XML document.
-    selected_nodes = "/Bus/child::Sensor"
+    metric_selection = "/Bus/child::Sensor"
 
     ## Optional: XPath-query to set the metric (measurement) name.
     #metric_name = "string('example')"
@@ -95,7 +95,7 @@ metric.
 
     ## Optional: Expand field names relative to the selected node
     ## This allows to flatten out nodes with non-unique names in the subtree
-    #expand_field_names = false
+    #field_name_expansion = false
 
     ## Tag definitions using the given XPath queries.
     [inputs.file.xml.tags]
@@ -107,13 +107,14 @@ metric.
 
 It is also possible to specify a mixture of the two alternative ways of specifying fields.
 
-#### selected_nodes (optional)
+#### metric_selection (optional)
 
-You can specify a [XPath][xpath] query to select a subset of nodes from the XML document. For each of the selected nodes subsequent queries are performed to generate metrics with the specified fields, tags etc.
+You can specify a [XPath][xpath] query to select a subset of nodes from the XML document, each used to generate a new
+metrics with the specified fields, tags etc.
 
-For relative queries in subsequent queries they are relative to the `selected_nodes`. To specify absolute paths, please start the query with a slash (`/`).
+For relative queries in subsequent queries they are relative to the `metric_selection`. To specify absolute paths, please start the query with a slash (`/`).
 
-Specifying `selected_nodes` is optional. If not specified all relative queries are relative to the root node of the XML document.
+Specifying `metric_selection` is optional. If not specified all relative queries are relative to the root node of the XML document.
 
 #### metric_name (optional)
 
@@ -160,7 +161,7 @@ Specifying `field_selection` is optional. This is an alternative way to specify 
 
 **NOTE: Path conversion functions will always succeed even if you convert a text to float!**
 
-#### expand_field_names (optional)
+#### field_name_expansion (optional)
 
 When *true*, field names selected with `field_selection` are expanded to a *path* relative to the *selected node*. This
 is necessary if we e.g. select all leaf nodes as fields and those leaf nodes do not have unique names. That is in case
@@ -272,7 +273,7 @@ Config:
   data_format = "xml"
 
   [[inputs.file.xml]]
-    selected_nodes = "/Bus/child::Sensor"
+    metric_selection = "/Bus/child::Sensor"
 
     metric_name = "string('sensors')"
 
@@ -300,7 +301,7 @@ sensors,host=Hugin,name=Facility\ B consumers=1i,frequency=49.78,ok=true,power=1
 sensors,host=Hugin,name=Facility\ C consumers=0i,frequency=49.78,ok=false,power=0.02,temperature=19.7 1596294243000000000
 ```
 
-Using the `selected_nodes` option we select all `Sensor` nodes in the XML document. Please note that all field and tag definitions are relative to these selected nodes. An exception is the timestamp definition which is relative to the root node of the XML document.
+Using the `metric_selection` option we select all `Sensor` nodes in the XML document. Please note that all field and tag definitions are relative to these selected nodes. An exception is the timestamp definition which is relative to the root node of the XML document.
 
 #### Batch field processing with multi-node selection
 
@@ -313,7 +314,7 @@ Config:
   data_format = "xml"
 
   [[inputs.file.xml]]
-    selected_nodes = "/Bus/child::Sensor"
+    metric_selection = "/Bus/child::Sensor"
     metric_name = "string('sensors')"
 
     timestamp = "/Gateway/Timestamp"
@@ -334,7 +335,7 @@ sensors,host=Hugin,name=Facility\ B consumers=1,frequency=49.78,power=14.3,tempe
 sensors,host=Hugin,name=Facility\ C consumers=0,frequency=49.78,power=0.02,temperature=19.7 1596294243000000000
 ```
 
-Using the `selected_nodes` option we select all `Sensor` nodes in the XML document. For each *Sensor* we then use `field_selection` to select all child nodes of the sensor as *field-nodes* Please note that the field selection is relative to the selected nodes.
+Using the `metric_selection` option we select all `Sensor` nodes in the XML document. For each *Sensor* we then use `field_selection` to select all child nodes of the sensor as *field-nodes* Please note that the field selection is relative to the selected nodes.
 For each selected *field-node* we use `field_name` and `field_value` to determining the field's name and value, respectively. The `field_name` derives the name of the first attribute of the node, while `field_value` derives the value of the first attribute  and converts the result to a number.
 
 [xpath lib]:    https://github.com/antchfx/xpath
