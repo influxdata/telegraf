@@ -54,6 +54,8 @@ type NodeSettings struct {
 	Namespace      string `toml:"namespace"`
 	IdentifierType string `toml:"identifier_type"`
 	Identifier     string `toml:"identifier"`
+	DataType       string `toml:"data_type"`   // Kept for backward compatibility but was never used.
+	Description    string `toml:"description"` // Kept for backward compatibility but was never used.
 }
 
 type Node struct {
