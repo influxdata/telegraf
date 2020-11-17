@@ -18,7 +18,7 @@ import (
 
 // OpcUA type
 type OpcUA struct {
-	MetricName     string          `toml:"metric_name"`
+	MetricName     string          `toml:"name"`
 	Endpoint       string          `toml:"endpoint"`
 	SecurityPolicy string          `toml:"security_policy"`
 	SecurityMode   string          `toml:"security_mode"`
@@ -50,7 +50,7 @@ type OpcUA struct {
 
 // OPCTag type
 type NodeSettings struct {
-	FieldName      string `toml:"field_name"`
+	FieldName      string `toml:"name"`
 	Namespace      string `toml:"namespace"`
 	IdentifierType string `toml:"identifier_type"`
 	Identifier     string `toml:"identifier"`
@@ -63,7 +63,7 @@ type Node struct {
 }
 
 type GroupSettings struct {
-	MetricName     string         `toml:"metric_name"`     // Overrides plugin's setting
+	MetricName     string         `toml:"name"`            // Overrides plugin's setting
 	Namespace      string         `toml:"namespace"`       // Can be overridden by node setting
 	IdentifierType string         `toml:"identifier_type"` // Can be overridden by node setting
 	Nodes          []NodeSettings `toml:"nodes"`
@@ -94,7 +94,7 @@ const (
 const description = `Retrieve data from OPCUA devices`
 const sampleConfig = `
   ## Metric name
-  # metric_name = "opcua"
+  # name = "opcua"
   #
   ## OPC UA Endpoint URL
   # endpoint = "opc.tcp://localhost:4840"
@@ -131,15 +131,15 @@ const sampleConfig = `
   # password = ""
   #
   ## Node ID configuration
-  ## field_name        - field name to use in the output
+  ## name              - field name to use in the output
   ## namespace         - OPC UA namespace of the node (integer value 0 thru 3)
   ## identifier_type   - OPC UA ID type (s=string, i=numeric, g=guid, b=opaque)
   ## identifier        - OPC UA ID (tag as shown in opcua browser)
   ## Example:
   ## {name="ProductUri", namespace="0", identifier_type="i", identifier="2262"}
   # nodes = [
-  #  {field_name="", namespace="", identifier_type="", identifier=""},
-  #  {field_name="", namespace="", identifier_type="", identifier=""},
+  #  {name="", namespace="", identifier_type="", identifier=""},
+  #  {name="", namespace="", identifier_type="", identifier=""},
   #]
   #
   ## Node Group
@@ -149,9 +149,9 @@ const sampleConfig = `
   ##
   ## Multiple node groups are allowed
   #[[inputs.opcua.group]]
-  ## Group Metric name. Overrides the top level metric_name.  If unset, the
-  ## top level metric_name is used.
-  # metric_name =
+  ## Group Metric name. Overrides the top level name.  If unset, the
+  ## top level name is used.
+  # name =
   #
   ## Group default namespace. If a node in the group doesn't set its
   ## namespace, this is used.
@@ -163,8 +163,8 @@ const sampleConfig = `
   #
   ## Node ID Configuration.  Array of nodes with the same settings as above.
   # nodes = [
-  #  {field_name="", namespace="", identifier_type="", identifier=""},
-  #  {field_name="", namespace="", identifier_type="", identifier=""},
+  #  {name="", namespace="", identifier_type="", identifier=""},
+  #  {name="", namespace="", identifier_type="", identifier=""},
   #]
 `
 
@@ -275,11 +275,11 @@ func (o *OpcUA) validateOPCTags() error {
 	for _, node := range o.nodes {
 		//check empty name
 		if node.tag.FieldName == "" {
-			return fmt.Errorf("empty field_name in '%s'", node.tag.FieldName)
+			return fmt.Errorf("empty name in '%s'", node.tag.FieldName)
 		}
 		//search name duplicate
 		if nameEncountered[node.tag.FieldName] {
-			return fmt.Errorf("field_name '%s' is duplicated", node.tag.FieldName)
+			return fmt.Errorf("name '%s' is duplicated", node.tag.FieldName)
 		} else {
 			nameEncountered[node.tag.FieldName] = true
 		}

@@ -10,7 +10,7 @@ Plugin minimum tested version: 1.16
 ```toml
 [[inputs.opcua]]
   ## Metric name
-  # metric_name = "opcua"
+  # name = "opcua"
   #
   ## OPC UA Endpoint URL
   # endpoint = "opc.tcp://localhost:4840"
@@ -47,15 +47,15 @@ Plugin minimum tested version: 1.16
   # password = ""
   #
   ## Node ID configuration
-  ## field_name        - field name to use in the output
+  ## name              - field name to use in the output
   ## namespace         - OPC UA namespace of the node (integer value 0 thru 3)
   ## identifier_type   - OPC UA ID type (s=string, i=numeric, g=guid, b=opaque)
   ## identifier        - OPC UA ID (tag as shown in opcua browser)
   ## Example:
   ## {name="ProductUri", namespace="0", identifier_type="i", identifier="2262"}
   # nodes = [
-  #  {field_name="", namespace="", identifier_type="", identifier=""},
-  #  {field_name="", namespace="", identifier_type="", identifier=""},
+  #  {name="", namespace="", identifier_type="", identifier=""},
+  #  {name="", namespace="", identifier_type="", identifier=""},
   #]
   #
   ## Node Group
@@ -65,9 +65,9 @@ Plugin minimum tested version: 1.16
   ##
   ## Multiple node groups are allowed
   #[[inputs.opcua.group]]
-  ## Group Metric name. Overrides the top level metric_name.  If unset, the
-  ## top level metric_name is used.
-  # metric_name =
+  ## Group Metric name. Overrides the top level name.  If unset, the
+  ## top level name is used.
+  # name =
   #
   ## Group default namespace. If a node in the group doesn't set its
   ## namespace, this is used.
@@ -79,8 +79,8 @@ Plugin minimum tested version: 1.16
   #
   ## Node ID Configuration.  Array of nodes with the same settings as above.
   # nodes = [
-  #  {field_name="", namespace="", identifier_type="", identifier=""},
-  #  {field_name="", namespace="", identifier_type="", identifier=""},
+  #  {name="", namespace="", identifier_type="", identifier=""},
+  #  {name="", namespace="", identifier_type="", identifier=""},
   #]
 ```
 
