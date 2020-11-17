@@ -50,12 +50,15 @@ type OpcUA struct {
 
 // OPCTag type
 type NodeSettings struct {
-	FieldName      string `toml:"name"`
-	Namespace      string `toml:"namespace"`
-	IdentifierType string `toml:"identifier_type"`
-	Identifier     string `toml:"identifier"`
-	DataType       string `toml:"data_type"`   // Kept for backward compatibility but was never used.
-	Description    string `toml:"description"` // Kept for backward compatibility but was never used.
+	FieldName      string     `toml:"name"`
+	Namespace      string     `toml:"namespace"`
+	IdentifierType string     `toml:"identifier_type"`
+	Identifier     string     `toml:"identifier"`
+	DataType       string     `toml:"data_type"`   // Kept for backward compatibility but was never used.
+	Description    string     `toml:"description"` // Kept for backward compatibility but was never used.
+	TagsSlice      [][]string `toml:"tags"`
+
+	tags map[string]string
 }
 
 type Node struct {
@@ -69,6 +72,7 @@ type GroupSettings struct {
 	Namespace      string         `toml:"namespace"`       // Can be overridden by node setting
 	IdentifierType string         `toml:"identifier_type"` // Can be overridden by node setting
 	Nodes          []NodeSettings `toml:"nodes"`
+	Tags           [][]string     `toml:"tags"`
 }
 
 // OPCData type

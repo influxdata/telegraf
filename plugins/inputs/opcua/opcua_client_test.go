@@ -76,7 +76,7 @@ func MapOPCTag(tags OPCTags) (out NodeSettings) {
 func TestConfig(t *testing.T) {
 	toml := `
 [[inputs.opcua]]
-metric_name = "localhost"
+name = "localhost"
 endpoint = "opc.tcp://localhost:4840"
 connect_timeout = "10s"
 request_timeout = "5s"
@@ -88,19 +88,19 @@ auth_method = "Anonymous"
 username = ""
 password = ""
 nodes = [
-  {field_name="name", namespace="1", identifier_type="s", identifier="one"},
-  {field_name="name2", namespace="2", identifier_type="s", identifier="two"},
+  {name="name", namespace="1", identifier_type="s", identifier="one"},
+  {name="name2", namespace="2", identifier_type="s", identifier="two"},
 ]
 [[inputs.opcua.group]]
-metric_name = "foo"
+name = "foo"
 namespace = "3"
 identifier_type = "i"
-nodes = [{field_name="name3", identifier="3000"}]
+nodes = [{name="name3", identifier="3000"}]
 [[inputs.opcua.group]]
-metric_name = "bar"
+name = "bar"
 namespace = "0"
 identifier_type = "i"
-nodes = [{field_name="name4", identifier="4000"}]
+nodes = [{name="name4", identifier="4000"}]
 `
 
 	c := config.NewConfig()
