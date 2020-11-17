@@ -3,6 +3,7 @@ package snmp
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"math"
@@ -654,6 +655,14 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 			v = net.HardwareAddr(vt).String()
 		default:
 			return nil, fmt.Errorf("invalid type (%T) for hwaddr conversion", v)
+		}
+		return v, nil
+	}
+
+	if conv == "hextoint" {
+		if bs, ok := v.([]byte); ok {
+			qq := binary.BigEndian.Uint64(bs)
+			return qq, nil
 		}
 		return v, nil
 	}

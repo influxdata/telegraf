@@ -113,15 +113,16 @@ option operate similar to the `snmpget` utility.
     # is_tag = false
 
     ## Apply one of the following conversions to the variable value:
-    ##   float(X) Convert the input value into a float and divides by the
-    ##            Xth power of 10. Effectively just moves the decimal left
-    ##            X places. For example a value of `123` with `float(2)`
-    ##            will result in `1.23`.
-    ##   float:   Convert the value into a float with no adjustment. Same
-    ##            as `float(0)`.
-    ##   int:     Convert the value into an integer.
-    ##   hwaddr:  Convert the value to a MAC address.
-    ##   ipaddr:  Convert the value to an IP address.
+    ##   float(X):  Convert the input value into a float and divides by the
+    ##              Xth power of 10. Effectively just moves the decimal left
+    ##              X places. For example a value of `123` with `float(2)`
+    ##              will result in `1.23`.
+    ##   float:     Convert the value into a float with no adjustment. Same
+    ##              as `float(0)`.
+    ##   int:       Convert the value into an integer.
+    ##   hwaddr:    Convert the value to a MAC address.
+    ##   ipaddr:    Convert the value to an IP address.
+    ##   hextoint:  Convert a hex string value to integer.
     # conversion = ""
 ```
 
