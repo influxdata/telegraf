@@ -659,11 +659,45 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		return v, nil
 	}
 
-	if conv == "hextoint" {
-		if bs, ok := v.([]byte); ok {
-			qq := binary.BigEndian.Uint64(bs)
-			return qq, nil
+	// fmt.Println(conv)
+
+	split := strings.Split(conv, ":")
+	if split[0] == "hextoint" && len(split) == 3 {
+
+		endian := split[1]
+		bit := split[2]
+
+		bv, ok := v.([]byte)
+		if !ok {
+			return v, nil
 		}
+
+		if endian == "LittleEndian" {
+			switch bit {
+			case "uint64":
+				v = binary.LittleEndian.Uint64(bv)
+			case "uint32":
+				v = binary.LittleEndian.Uint32(bv)
+			case "uint16":
+				v = binary.LittleEndian.Uint16(bv)
+			default:
+				return nil, fmt.Errorf("invalid bit value (%s) for hex to int conversion", bit)
+			}
+		} else if endian == "BigEndian" {
+			switch bit {
+			case "uint64":
+				v = binary.BigEndian.Uint64(bv)
+			case "uint32":
+				v = binary.BigEndian.Uint32(bv)
+			case "uint16":
+				v = binary.BigEndian.Uint16(bv)
+			default:
+				return nil, fmt.Errorf("invalid bit value (%s) for hex to int conversion", bit)
+			}
+		} else {
+			return nil, fmt.Errorf("invalid Endian value (%s) for hex to int conversion", endian)
+		}
+
 		return v, nil
 	}
 

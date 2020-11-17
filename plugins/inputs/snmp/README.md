@@ -113,16 +113,21 @@ option operate similar to the `snmpget` utility.
     # is_tag = false
 
     ## Apply one of the following conversions to the variable value:
-    ##   float(X):  Convert the input value into a float and divides by the
-    ##              Xth power of 10. Effectively just moves the decimal left
-    ##              X places. For example a value of `123` with `float(2)`
-    ##              will result in `1.23`.
-    ##   float:     Convert the value into a float with no adjustment. Same
-    ##              as `float(0)`.
-    ##   int:       Convert the value into an integer.
-    ##   hwaddr:    Convert the value to a MAC address.
-    ##   ipaddr:    Convert the value to an IP address.
-    ##   hextoint:  Convert a hex string value to integer.
+    ##   float(X):    Convert the input value into a float and divides by the
+    ##                Xth power of 10. Effectively just moves the decimal left
+    ##                X places. For example a value of `123` with `float(2)`
+    ##                will result in `1.23`.
+    ##   float:       Convert the value into a float with no adjustment. Same
+    ##                as `float(0)`.
+    ##   int:         Convert the value into an integer.
+    ##   hwaddr:      Convert the value to a MAC address.
+    ##   ipaddr:      Convert the value to an IP address.
+    ##   hextoint:X:Y Convert a hex string value to integer. Where X is the Endian
+    ##                and Y the bit size. For example: hextoint:LittleEndian:uint64
+    ##                or hextoint:BigEndian:uint32. Valid options for the Endian are:
+    ##                BigEndian and LittleEndian. For the bit size: uint16, uint32
+    ##                and uint64.
+    ##                      
     # conversion = ""
 ```
 
