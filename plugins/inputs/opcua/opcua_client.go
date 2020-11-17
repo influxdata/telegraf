@@ -450,7 +450,7 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 		}
 
 		fields[o.nodeData[i].TagName] = o.nodeData[i].Value
-		fields["quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
+		fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
 		acc.AddFields(n.metricName, fields, tags)
 	}
 	return nil
