@@ -131,7 +131,7 @@ nodes = [{name="name4", identifier="4000", tags=[["tag1", "override"]]}]
 }
 
 func TestTagsSliceToMap(t *testing.T) {
-	m, err := tagsSliceToMap([][]string{[]string{"foo", "bar"}, []string{"baz", "bat"}})
+	m, err := tagsSliceToMap([][]string{{"foo", "bar"}, {"baz", "bat"}})
 	assert.NoError(t, err)
 	assert.Len(t, m, 2)
 	assert.Equal(t, m["foo"], "bar")
@@ -140,13 +140,13 @@ func TestTagsSliceToMap(t *testing.T) {
 
 func TestTagsSliceToMap_twoStrings(t *testing.T) {
 	var err error
-	_, err = tagsSliceToMap([][]string{[]string{"foo", "bar", "baz"}})
+	_, err = tagsSliceToMap([][]string{{"foo", "bar", "baz"}})
 	assert.Error(t, err)
-	_, err = tagsSliceToMap([][]string{[]string{"foo"}})
+	_, err = tagsSliceToMap([][]string{{"foo"}})
 	assert.Error(t, err)
 }
 
 func TestTagsSliceToMap_dupeKey(t *testing.T) {
-	_, err := tagsSliceToMap([][]string{[]string{"foo", "bar"}, []string{"foo", "bat"}})
+	_, err := tagsSliceToMap([][]string{{"foo", "bar"}, {"foo", "bat"}})
 	assert.Error(t, err)
 }
