@@ -255,6 +255,7 @@ jobs:
         default: false
     executor: telegraf-ci
     steps:
+<<<<<<< HEAD
       - package-build:
           type: windows
           nightly: << parameters.nightly >>
@@ -263,7 +264,18 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: go-1_17
+=======
+      - attach_workspace:
+          at: '/go'
+      - run: chmod 777 /go/pkg/mod/github.com/ericchiang/k8s@v1.2.0/watch/versioned/generated.pb.go
+      - run: sed 's/github.com\/ericchiang.k8s.watch.versioned.Event/k8s.io.kubernetes.pkg.watch.versioned.Event/g' /go/pkg/mod/github.com/ericchiang/k8s@v1.2.0/watch/versioned/generated.pb.go > newfile.go
+      - run: mv newfile.go /go/pkg/mod/github.com/ericchiang/k8s@v1.2.0/watch/versioned/generated.pb.go
+      - run: 'make'
+      - run: 'make test'
+  test-go-1.14-386:
+    <<: [ *defaults, *go-1_14 ]
+>>>>>>> ec62ab010 (dependency swap test)
     steps:
       - package-build:
           type: darwin-amd64
