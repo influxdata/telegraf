@@ -1603,8 +1603,8 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 
 				// Create the tags and fields and fill them
 				c.XMLConfig[i].Tags = make(map[string]string)
-				if subtbl_defs, ok := subtbl.Fields["tags"].(*ast.Table); ok {
-					for name, val := range subtbl_defs.Fields {
+				if subsubtbl, ok := subtbl.Fields["tags"].(*ast.Table); ok {
+					for name, val := range subsubtbl.Fields {
 						if kv, ok := val.(*ast.KeyValue); ok {
 							if str, ok := kv.Value.(*ast.String); ok {
 								c.XMLConfig[i].Tags[name] = str.Value
@@ -1614,8 +1614,8 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 				}
 
 				c.XMLConfig[i].Fields = make(map[string]string)
-				if subtbl_defs, ok := subtbl.Fields["fields"].(*ast.Table); ok {
-					for name, val := range subtbl_defs.Fields {
+				if subsubtbl, ok := subtbl.Fields["fields"].(*ast.Table); ok {
+					for name, val := range subsubtbl.Fields {
 						if kv, ok := val.(*ast.KeyValue); ok {
 							if str, ok := kv.Value.(*ast.String); ok {
 								c.XMLConfig[i].Fields[name] = str.Value
@@ -1625,8 +1625,8 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 				}
 
 				c.XMLConfig[i].FieldsInt = make(map[string]string)
-				if subtbl_defs, ok := subtbl.Fields["fields_int"].(*ast.Table); ok {
-					for name, val := range subtbl_defs.Fields {
+				if subsubtbl, ok := subtbl.Fields["fields_int"].(*ast.Table); ok {
+					for name, val := range subsubtbl.Fields {
 						if kv, ok := val.(*ast.KeyValue); ok {
 							if str, ok := kv.Value.(*ast.String); ok {
 								c.XMLConfig[i].FieldsInt[name] = str.Value
