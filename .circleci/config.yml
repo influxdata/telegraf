@@ -268,9 +268,6 @@ jobs:
 =======
       - attach_workspace:
           at: '/go'
-      - run: chmod 777 /go/pkg/mod/github.com/ericchiang/k8s@v1.2.0/watch/versioned/generated.pb.go
-      - run: sed 's/github.com\/ericchiang.k8s.watch.versioned.Event/k8s.io.kubernetes.pkg.watch.versioned.Event/g' /go/pkg/mod/github.com/ericchiang/k8s@v1.2.0/watch/versioned/generated.pb.go > newfile.go
-      - run: mv newfile.go /go/pkg/mod/github.com/ericchiang/k8s@v1.2.0/watch/versioned/generated.pb.go
       - run: 'make'
       - run: 'make test'
   test-go-1.14-386:
