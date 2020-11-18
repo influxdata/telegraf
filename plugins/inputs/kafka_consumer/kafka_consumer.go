@@ -12,7 +12,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -36,7 +35,6 @@ const sampleConfig = `
   # version = ""
 
   ## Optional TLS Config
-  # enable_tls = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
@@ -44,7 +42,7 @@ const sampleConfig = `
   # insecure_skip_verify = false
 
   ## SASL authentication credentials.  These settings should typically be used
-  ## with TLS encryption enabled using the "enable_tls" option.
+  ## with TLS encryption enabled
   # sasl_username = "kafka"
   # sasl_password = "secret"
 
@@ -70,6 +68,14 @@ const sampleConfig = `
 
   ## Name of the consumer group.
   # consumer_group = "telegraf_metrics_consumers"
+
+  ## CompressionCodec represents the various compression codecs recognized by
+  ## Kafka in messages.
+  ##  0 : None
+  ##  1 : Gzip
+  ##  2 : Snappy
+  ##  3 : LZ4
+  ##  4 : ZSTD
 
   ## Initial offset position; one of "oldest" or "newest".
   # offset = "oldest"
@@ -110,7 +116,6 @@ type semaphore chan empty
 
 type KafkaConsumer struct {
 	Brokers                []string `toml:"brokers"`
-	ClientID               string   `toml:"client_id"`
 	ConsumerGroup          string   `toml:"consumer_group"`
 	MaxMessageLen          int      `toml:"max_message_len"`
 	MaxUndeliveredMessages int      `toml:"max_undelivered_messages"`
@@ -118,12 +123,8 @@ type KafkaConsumer struct {
 	BalanceStrategy        string   `toml:"balance_strategy"`
 	Topics                 []string `toml:"topics"`
 	TopicTag               string   `toml:"topic_tag"`
-	Version                string   `toml:"version"`
 
-	kafka.SASLAuth
-
-	EnableTLS *bool `toml:"enable_tls"`
-	tls.ClientConfig
+	kafka.Config
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -173,49 +174,11 @@ func (k *KafkaConsumer) Init() error {
 	}
 
 	config := sarama.NewConfig()
-	config.Consumer.Return.Errors = true
 
 	// Kafka version 0.10.2.0 is required for consumer groups.
 	config.Version = sarama.V0_10_2_0
 
-	if k.Version != "" {
-		version, err := sarama.ParseKafkaVersion(k.Version)
-		if err != nil {
-			return err
-		}
-
-		config.Version = version
-	}
-
-	if k.EnableTLS != nil && *k.EnableTLS {
-		config.Net.TLS.Enable = true
-	}
-
-	tlsConfig, err := k.ClientConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-
-	if tlsConfig != nil {
-		config.Net.TLS.Config = tlsConfig
-
-		// To maintain backwards compatibility, if the enable_tls option is not
-		// set TLS is enabled if a non-default TLS config is used.
-		if k.EnableTLS == nil {
-			k.Log.Warnf("Use of deprecated configuration: enable_tls should be set when using TLS")
-			config.Net.TLS.Enable = true
-		}
-	}
-
-	if err := k.SetSASLConfig(config); err != nil {
-		return err
-	}
-
-	if k.ClientID != "" {
-		config.ClientID = k.ClientID
-	} else {
-		config.ClientID = "Telegraf"
-	}
+	k.SetConfig(config)
 
 	switch strings.ToLower(k.Offset) {
 	case "oldest", "":
