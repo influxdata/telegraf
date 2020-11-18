@@ -27,6 +27,7 @@ type configuredStats struct {
 	diff              bool
 	non_negative_diff bool
 	start_time        bool
+	gt_zero_diff      bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -189,6 +190,9 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 				if b.statsConfig.non_negative_diff && v.diff >= 0 {
 					fields[k+"_non_negative_diff"] = v.diff
 				}
+				if b.statsConfig.gt_zero_diff && v.diff > 0 {
+					fields[k+"_gt_zero_diff"] = v.diff
+				}
 
 			}
 			//if count == 1 StdDev = infinite => so I won't send data
@@ -224,6 +228,8 @@ func (b *BasicStats) parseStats() *configuredStats {
 			parsed.diff = true
 		case "non_negative_diff":
 			parsed.non_negative_diff = true
+		case "gt_zero_diff":
+			parsed.gt_zero_diff = true
 		case "start_time":
 			parsed.start_time = true
 
