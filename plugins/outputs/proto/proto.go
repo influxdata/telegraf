@@ -194,6 +194,12 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return errors.Wrap(err, "build tegrastats")
 			}
 			influx.Tegrastats = append(influx.Tegrastats, &m)
+		case "smart_device":
+			m := SMART{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build smart_device")
+			}
+			influx.Smart = append(influx.Smart, &m)
 		}
 	}
 

@@ -1,5 +1,27 @@
 syntax = "proto3";
 
+message SMART {
+  message Fields {
+    double exit_status = 1;
+    bool health_ok = 2;
+    double temp_c = 3;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message TAGS {
+    string device = 1;
+    string host = 2;
+    string model = 3;
+    string serial_no = 4;
+  }
+
+  TAGS tags = 3;
+  double timestamp = 4;
+}
+
+
 message Tegrastats {
   message Fields {
     double ao_temp = 1;
@@ -542,6 +564,7 @@ message Influx {
   repeated DockerCpu dockerCpu = 14;
   repeated DockerMem dockerMem = 15;
   repeated DockerStats dockerStats = 16;
+  repeated SMART smart = 17;
 }
 
 
