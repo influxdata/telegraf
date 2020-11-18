@@ -496,6 +496,8 @@ func TestBasicStatsWithDiff(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
 }
+
+// Test only aggregating greater than zero diff
 func TestBasicStatsWithGtZeroDiff(t *testing.T) {
 
 	aggregator := NewBasicStats()
