@@ -307,7 +307,8 @@ func (o *OpcUA) InitNodes() error {
 
 func (o *OpcUA) validateOPCTags() error {
 	nameEncountered := map[string]bool{}
-	for _, node := range o.nodes {
+	for i := range o.nodes {
+		node := &o.nodes[i]
 		//check empty name
 		if node.tag.FieldName == "" {
 			return fmt.Errorf("empty name in '%s'", node.tag.FieldName)
@@ -480,6 +481,9 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 		fields := make(map[string]interface{})
 		tags := map[string]string{
 			"id": n.idStr,
+		}
+		for k, v := range n.metricTags {
+			tags[k] = v
 		}
 
 		fields[o.nodeData[i].TagName] = o.nodeData[i].Value
