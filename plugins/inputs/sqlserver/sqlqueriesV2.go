@@ -476,8 +476,6 @@ SET @SqlStatement = @SqlStatement + CAST(N' WHERE	(
 				''Readahead pages/sec'',
 				''Lazy writes/sec'',
 				''Checkpoint pages/sec'',
-				''Free pages'',
-				''Extension free pages'',
 				''Table Lock Escalations/sec'',
 				''Page life expectancy'',
 				''Log File(s) Size (KB)'',
