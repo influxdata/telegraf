@@ -1,5 +1,36 @@
 syntax = "proto3";
 
+message LTE {
+  message Fields {
+    string cell_id = 1;
+    double dl_bandwidth = 2;
+    double earfcn = 3;
+    double freq_band_ind = 4;
+    string is_tdd = 5;
+    double mmc = 6;
+    double mnc = 7;
+    double pc_id = 8;
+    string rsrp = 9;
+    double rsrq = 10;
+    double rssi = 11;
+    double sinr = 12;
+    double srxlev = 13;
+    string state = 14;
+    double ul_bandwidth = 15;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string host = 1;
+    string path = 2;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
 message SMART {
   message Fields {
     double exit_status = 1;
@@ -565,6 +596,7 @@ message Influx {
   repeated DockerMem dockerMem = 15;
   repeated DockerStats dockerStats = 16;
   repeated SMART smart = 17;
+  repeated LTE lte = 18;
 }
 
 
