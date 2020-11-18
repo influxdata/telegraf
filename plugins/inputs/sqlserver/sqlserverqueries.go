@@ -1152,7 +1152,7 @@ FROM (
 `
 
 const sqlServerAvailabilityReplicaStates string = `
-IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) OR SERVERPROPERTY('IsHadrEnabled') = 0 BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@ServerName + ',Database:' + DB_NAME() +' is not a SQL Server Standard,Enterprise or Express. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
@@ -1199,7 +1199,7 @@ inner join sys.availability_groups AS ag on ar.group_id = ag.group_id
 `
 
 const sqlServerDatabaseReplicaStates string = `
-IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) OR SERVERPROPERTY('IsHadrEnabled') = 0 BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@ServerName + ',Database:' + DB_NAME() +' is not a SQL Server Standard,Enterprise or Express. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN

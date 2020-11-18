@@ -88,8 +88,9 @@ include_query = []
 ## SQLServerAvailabilityReplicaStates and SQLServerDatabaseReplicaStates are optional queries and hence excluded here as default
 exclude_query = ["SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"]
 
-## Set this flag to true only when you don't want to use the default server used for collecting SQL Server (database_type = "SQLServer") metrics.
-## This setting has not bearing on other database_type values
+## When no connection strings are specified in "servers" list, then the default 'local' instance is connected to.
+## You can set this flag to true only when you don't want to use the default server used for collecting SQL Server (database_type = "SQLServer") metrics.
+## This setting has not bearing on other database_type values - "AzureSQLDB" or "AzureSQLManagedInstance"
 # ignore_default_server = true
 
 ## Following are old config settings, you may use them only if you are using the earlier flavor of queries, however it is recommended to use 
