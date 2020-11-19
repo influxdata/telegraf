@@ -124,7 +124,7 @@ type KafkaConsumer struct {
 	Topics                 []string `toml:"topics"`
 	TopicTag               string   `toml:"topic_tag"`
 
-	kafka.Config
+	kafka.ReadConfig
 
 	Log telegraf.Logger `toml:"-"`
 
