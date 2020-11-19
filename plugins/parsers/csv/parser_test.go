@@ -85,6 +85,26 @@ func TestTimestamp(t *testing.T) {
 	require.Equal(t, metrics[1].Time().UnixNano(), int64(1257609906000000000))
 }
 
+func TestTimestampYYYYMMDDHHmm(t *testing.T) {
+	p, err := NewParser(
+		&Config{
+			HeaderRowCount:    1,
+			ColumnNames:       []string{"first", "second", "third"},
+			MeasurementColumn: "third",
+			TimestampColumn:   "first",
+			TimestampFormat:   "200601021504",
+			TimeFunc:          DefaultTime,
+		},
+	)
+	testCSV := `line1,line2,line3
+200905231605,70,test_name
+200907111605,80,test_name2`
+	metrics, err := p.Parse([]byte(testCSV))
+
+	require.NoError(t, err)
+	require.Equal(t, metrics[0].Time().UnixNano(), int64(1243094700000000000))
+	require.Equal(t, metrics[1].Time().UnixNano(), int64(1247328300000000000))
+}
 func TestTimestampError(t *testing.T) {
 	p, err := NewParser(
 		&Config{
