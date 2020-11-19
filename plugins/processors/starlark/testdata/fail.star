@@ -1,4 +1,5 @@
 # Example of the way to return a custom error thanks to the built-in function fail
+# Returning an error will drop the current metric. Consider using logging instead if you want to keep the metric.
 #
 # Example Input:
 # fail value=1 1465839830100400201
