@@ -104,14 +104,13 @@ func (s *SMI) genTagsFields() []metric {
 		}
 		fields := map[string]interface{}{}
 
-
 		setTagIfUsed(tags, "pstate", gpu.PState)
 		setTagIfUsed(tags, "name", gpu.ProdName)
 		setTagIfUsed(tags, "uuid", gpu.UUID)
 		setTagIfUsed(tags, "compute_mode", gpu.ComputeMode)
 
 		setIfUsed("str", fields, "driver_version", s.DriverVersion)
-		setIfUsed("str", fields,"cuda_version", s.CUDAVersion)
+		setIfUsed("str", fields, "cuda_version", s.CUDAVersion)
 		setIfUsed("int", fields, "fan_speed", gpu.FanSpeed)
 		setIfUsed("int", fields, "memory_total", gpu.Memory.Total)
 		setIfUsed("int", fields, "memory_used", gpu.Memory.Used)
@@ -181,11 +180,10 @@ func setIfUsed(t string, m map[string]interface{}, k, v string) {
 
 // SMI defines the structure for the output of _nvidia-smi -q -x_.
 type SMI struct {
-	GPU 			GPU 	`xml:"gpu"`
-	DriverVersion 	string 	`xml:"driver_version"`
-	CUDAVersion		string	`xml:"cuda_version"`
+	GPU           GPU    `xml:"gpu"`
+	DriverVersion string `xml:"driver_version"`
+	CUDAVersion   string `xml:"cuda_version"`
 }
-
 
 // GPU defines the structure of the GPU portion of the smi output.
 type GPU []struct {

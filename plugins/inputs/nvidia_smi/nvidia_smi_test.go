@@ -69,8 +69,8 @@ func TestGatherValidXML(t *testing.T) {
 						"clocks_current_memory":         405,
 						"clocks_current_sm":             300,
 						"clocks_current_video":          540,
-						"cuda_version":					"10.1",
-						"driver_version":				"418.43",
+						"cuda_version":                  "10.1",
+						"driver_version":                "418.43",
 						"encoder_stats_average_fps":     0,
 						"encoder_stats_average_latency": 0,
 						"encoder_stats_session_count":   0,
@@ -111,8 +111,8 @@ func TestGatherValidXML(t *testing.T) {
 						"clocks_current_memory":         405,
 						"clocks_current_sm":             139,
 						"clocks_current_video":          544,
-						"cuda_version":					"10.1",
-						"driver_version":				"418.43",
+						"cuda_version":                  "10.1",
+						"driver_version":                "418.43",
 						"encoder_stats_average_fps":     0,
 						"encoder_stats_average_latency": 0,
 						"encoder_stats_session_count":   0,
@@ -134,7 +134,6 @@ func TestGatherValidXML(t *testing.T) {
 					time.Unix(0, 0)),
 			},
 		},
-
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
