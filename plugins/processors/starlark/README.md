@@ -157,6 +157,7 @@ Attempting to modify the global scope will fail with an error.
 
 ### Examples
 
+- [drop string fields](/plugins/processors/starlark/testdata/drop_string_fields.star) - Drop fields containing string values.
 - [json](/plugins/processors/starlark/testdata/json.star) - an example of processing JSON from a field in a metric
 - [number logic](/plugins/processors/starlark/testdata/number_logic.star) - transform a numerical value to another numerical value
 - [pivot](/plugins/processors/starlark/testdata/pivot.star) - Pivots a key's value to be the key for another key.
