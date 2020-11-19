@@ -178,7 +178,9 @@ func (k *KafkaConsumer) Init() error {
 	// Kafka version 0.10.2.0 is required for consumer groups.
 	config.Version = sarama.V0_10_2_0
 
-	k.SetConfig(config)
+	if err := k.SetConfig(config); err != nil {
+		return err
+	}
 
 	switch strings.ToLower(k.Offset) {
 	case "oldest", "":

@@ -278,7 +278,9 @@ func (k *Kafka) Init() error {
 	}
 	config := sarama.NewConfig()
 
-	k.SetConfig(config)
+	if err := k.SetConfig(config); err != nil {
+		return err
+	}
 
 	// Legacy support ssl config
 	if k.Certificate != "" {
@@ -388,8 +390,10 @@ func init() {
 	sarama.Logger = &DebugLogger{}
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
-			MaxRetry:     3,
-			RequiredAcks: -1,
+			WriteConfig: kafka.WriteConfig{
+				MaxRetry:     3,
+				RequiredAcks: -1,
+			},
 			producerFunc: sarama.NewSyncProducer,
 		}
 	})
