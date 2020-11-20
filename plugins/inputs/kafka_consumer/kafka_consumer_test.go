@@ -69,8 +69,10 @@ func TestInit(t *testing.T) {
 		{
 			name: "parses valid version string",
 			plugin: &KafkaConsumer{
-				Config: kafka.Config{
-					Version: "1.0.0",
+				ReadConfig: kafka.ReadConfig{
+					Config: kafka.Config{
+						Version: "1.0.0",
+					},
 				},
 				Log: testutil.Logger{},
 			},
@@ -81,8 +83,10 @@ func TestInit(t *testing.T) {
 		{
 			name: "invalid version string",
 			plugin: &KafkaConsumer{
-				Config: kafka.Config{
-					Version: "100",
+				ReadConfig: kafka.ReadConfig{
+					Config: kafka.Config{
+						Version: "100",
+					},
 				},
 				Log: testutil.Logger{},
 			},
@@ -91,8 +95,10 @@ func TestInit(t *testing.T) {
 		{
 			name: "custom client_id",
 			plugin: &KafkaConsumer{
-				Config: kafka.Config{
-					ClientID: "custom",
+				ReadConfig: kafka.ReadConfig{
+					Config: kafka.Config{
+						ClientID: "custom",
+					},
 				},
 				Log: testutil.Logger{},
 			},
@@ -130,10 +136,11 @@ func TestInit(t *testing.T) {
 		{
 			name: "default tls with a tls config",
 			plugin: &KafkaConsumer{
-				Config: kafka.Config{
-
-					ClientConfig: tls.ClientConfig{
-						InsecureSkipVerify: true,
+				ReadConfig: kafka.ReadConfig{
+					Config: kafka.Config{
+						ClientConfig: tls.ClientConfig{
+							InsecureSkipVerify: true,
+						},
 					},
 				},
 				Log: testutil.Logger{},
@@ -145,9 +152,11 @@ func TestInit(t *testing.T) {
 		{
 			name: "Insecure tls",
 			plugin: &KafkaConsumer{
-				Config: kafka.Config{
-					ClientConfig: tls.ClientConfig{
-						InsecureSkipVerify: true,
+				ReadConfig: kafka.ReadConfig{
+					Config: kafka.Config{
+						ClientConfig: tls.ClientConfig{
+							InsecureSkipVerify: true,
+						},
 					},
 				},
 				Log: testutil.Logger{},
