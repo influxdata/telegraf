@@ -111,7 +111,7 @@ func (b *Buffer) add(m telegraf.Metric) int {
 		b.metricDropped(b.buf[b.last])
 		dropped++
 
-		if b.last == b.batchFirst && b.batchSize > 0 {
+		if b.batchSize > 0 {
 			b.batchSize--
 			b.batchFirst = b.next(b.batchFirst)
 		}
@@ -146,8 +146,8 @@ func (b *Buffer) Add(metrics ...telegraf.Metric) int {
 	return dropped
 }
 
-// Batch returns a slice containing up to batchSize of the most recently added
-// metrics.  Metrics are ordered from newest to oldest in the batch.  The
+// Batch returns a slice containing up to batchSize of the oldest metrics not
+// yet dropped.  Metrics are ordered from oldest to newest in the batch.  The
 // batch must not be modified by the client.
 func (b *Buffer) Batch(batchSize int) []telegraf.Metric {
 	b.Lock()
@@ -159,18 +159,17 @@ func (b *Buffer) Batch(batchSize int) []telegraf.Metric {
 		return out
 	}
 
-	b.batchFirst = b.cap + b.last - outLen
-	b.batchFirst %= b.cap
+	b.batchFirst = b.first
 	b.batchSize = outLen
 
 	batchIndex := b.batchFirst
 	for i := range out {
-		out[len(out)-1-i] = b.buf[batchIndex]
+		out[i] = b.buf[batchIndex]
 		b.buf[batchIndex] = nil
 		batchIndex = b.next(batchIndex)
 	}
 
-	b.last = b.batchFirst
+	b.first = b.nextby(b.first, b.batchSize)
 	b.size -= outLen
 	return out
 }
@@ -198,38 +197,22 @@ func (b *Buffer) Reject(batch []telegraf.Metric) {
 		return
 	}
 
-	older := b.dist(b.first, b.batchFirst)
 	free := b.cap - b.size
-	restore := min(len(batch), free+older)
+	restore := min(len(batch), free)
+	skip := len(batch) - restore
 
-	// Rotate newer metrics forward the number of metrics that we can restore.
-	rb := b.batchFirst
-	rp := b.last
-	re := b.nextby(rp, restore)
-	b.last = re
+	b.first = b.prevby(b.first, restore)
+	b.size = min(b.size+restore, b.cap)
 
-	for rb != rp && rp != re {
-		rp = b.prev(rp)
-		re = b.prev(re)
+	re := b.first
 
-		if b.buf[re] != nil {
-			b.metricDropped(b.buf[re])
-			b.first = b.next(b.first)
-		}
-
-		b.buf[re] = b.buf[rp]
-		b.buf[rp] = nil
-	}
-
-	// Copy metrics from the batch back into the buffer; recall that the
-	// batch is in reverse order compared to b.buf
+	// Copy metrics from the batch back into the buffer
 	for i := range batch {
-		if i < restore {
-			re = b.prev(re)
-			b.buf[re] = batch[i]
-			b.size = min(b.size+1, b.cap)
-		} else {
+		if i < skip {
 			b.metricDropped(batch[i])
+		} else {
+			b.buf[re] = batch[i]
+			re = b.next(re)
 		}
 	}
 
@@ -270,6 +253,17 @@ func (b *Buffer) prev(index int) int {
 	if index < 0 {
 		return b.cap - 1
 	}
+	return index
+}
+
+// prevby returns the index that is count older with wrapping.
+func (b *Buffer) prevby(index, count int) int {
+	index -= count
+	for index < 0 {
+		index += b.cap
+	}
+
+	index %= b.cap
 	return index
 }
 

@@ -24,7 +24,7 @@ type OutputConfig struct {
 	Filter Filter
 
 	FlushInterval     time.Duration
-	FlushJitter       *time.Duration
+	FlushJitter       time.Duration
 	MetricBufferLimit int
 	MetricBatchSize   int
 
@@ -72,7 +72,7 @@ func NewRunningOutput(
 	logger.OnErr(func() {
 		writeErrorsRegister.Incr(1)
 	})
-	setLogIfExist(output, logger)
+	SetLoggerOnPlugin(output, logger)
 
 	if config.MetricBufferLimit > 0 {
 		bufferLimit = config.MetricBufferLimit

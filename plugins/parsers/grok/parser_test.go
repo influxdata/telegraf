@@ -400,7 +400,7 @@ func TestParseEpochDecimal(t *testing.T) {
 
 			if tt.noMatch {
 				require.Nil(t, m)
-				require.Nil(t, err)
+				require.NoError(t, err)
 				return
 			}
 

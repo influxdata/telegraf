@@ -58,7 +58,7 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 			tags := MakeLabels(m, nil)
 
 			// reading fields
-			fields := make(map[string]interface{})
+			var fields map[string]interface{}
 			if mf.GetType() == dto.MetricType_SUMMARY {
 				// summary metric
 				fields = makeQuantiles(m)

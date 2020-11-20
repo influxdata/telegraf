@@ -39,7 +39,7 @@ You can also change the path to the typesdb or add additional typesdb using
   ## Multi-value plugins can be handled two ways.
   ## "split" will parse and store the multi-value plugin data into separate measurements
   ## "join" will parse and store the multi-value plugin as a single multi-value measurement.
-  ## "split" is the default behavior for backward compatability with previous versions of influxdb.
+  ## "split" is the default behavior for backward compatibility with previous versions of influxdb.
   collectd_parse_multivalue = "split"
 ```
 

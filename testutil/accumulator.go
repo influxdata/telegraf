@@ -212,9 +212,11 @@ func (a *Accumulator) AddTrackingMetricGroup(group []telegraf.Metric) telegraf.T
 }
 
 func (a *Accumulator) Delivered() <-chan telegraf.DeliveryInfo {
+	a.Lock()
 	if a.delivered == nil {
 		a.delivered = make(chan telegraf.DeliveryInfo)
 	}
+	a.Unlock()
 	return a.delivered
 }
 
@@ -361,7 +363,13 @@ func (a *Accumulator) AssertContainsTaggedFields(
 			return
 		}
 	}
-	msg := fmt.Sprintf("unknown measurement %s with tags %v", measurement, tags)
+	// We've failed. spit out some debug logging
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			t.Log("measurement", p.Measurement, "tags", p.Tags, "fields", p.Fields)
+		}
+	}
+	msg := fmt.Sprintf("unknown measurement %q with tags %v", measurement, tags)
 	assert.Fail(t, msg)
 }
 
@@ -401,7 +409,7 @@ func (a *Accumulator) AssertContainsFields(
 			return
 		}
 	}
-	msg := fmt.Sprintf("unknown measurement %s", measurement)
+	msg := fmt.Sprintf("unknown measurement %q", measurement)
 	assert.Fail(t, msg)
 }
 

@@ -7,12 +7,14 @@ metrics in influx line protocol to standard output (STDOUT).
 
 Program output on standard error is mirrored to the telegraf log.
 
+Telegraf minimum version: Telegraf 1.15.0
+
 ### Caveats
 
 - Metrics with tracking will be considered "delivered" as soon as they are passed
   to the external process. There is currently no way to match up which metric
   coming out of the execd process relates to which metric going in (keep in mind
-  that processors can add and drop metrics, and that this is all done 
+  that processors can add and drop metrics, and that this is all done
   asynchronously).
 - it's not currently possible to use a data_format other than "influx", due to
   the requirement that it is serialize-parse symmetrical and does not lose any
@@ -22,7 +24,8 @@ Program output on standard error is mirrored to the telegraf log.
 
 ```toml
 [[processor.execd]]
-  ## Program to run as daemon
+  ## One program to run as daemon.
+  ## NOTE: process and each argument should each be their own string
   ## eg: command = ["/path/to/your_program", "arg1", "arg2"]
   command = ["cat"]
 
@@ -100,7 +103,7 @@ to run it, you'd build the binary using go, eg `go build -o multiplier.exe main.
   command = ["multiplier.exe"]
 ```
 
-#### Ruby daemon using SIGHUP
+#### Ruby daemon
 
 - See [Ruby daemon](./examples/multiplier_line_protocol/multiplier_line_protocol.rb)
 

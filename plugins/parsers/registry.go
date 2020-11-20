@@ -2,7 +2,6 @@ package parsers
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
@@ -207,21 +206,25 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokTimezone,
 			config.GrokUniqueTimestamp)
 	case "csv":
-		parser, err = newCSVParser(config.MetricName,
-			config.CSVHeaderRowCount,
-			config.CSVSkipRows,
-			config.CSVSkipColumns,
-			config.CSVDelimiter,
-			config.CSVComment,
-			config.CSVTrimSpace,
-			config.CSVColumnNames,
-			config.CSVColumnTypes,
-			config.CSVTagColumns,
-			config.CSVMeasurementColumn,
-			config.CSVTimestampColumn,
-			config.CSVTimestampFormat,
-			config.CSVTimezone,
-			config.DefaultTags)
+		config := &csv.Config{
+			MetricName:        config.MetricName,
+			HeaderRowCount:    config.CSVHeaderRowCount,
+			SkipRows:          config.CSVSkipRows,
+			SkipColumns:       config.CSVSkipColumns,
+			Delimiter:         config.CSVDelimiter,
+			Comment:           config.CSVComment,
+			TrimSpace:         config.CSVTrimSpace,
+			ColumnNames:       config.CSVColumnNames,
+			ColumnTypes:       config.CSVColumnTypes,
+			TagColumns:        config.CSVTagColumns,
+			MeasurementColumn: config.CSVMeasurementColumn,
+			TimestampColumn:   config.CSVTimestampColumn,
+			TimestampFormat:   config.CSVTimestampFormat,
+			Timezone:          config.CSVTimezone,
+			DefaultTags:       config.DefaultTags,
+		}
+
+		return csv.NewParser(config)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
 	case "form_urlencoded":
@@ -236,66 +239,6 @@ func NewParser(config *Config) (Parser, error) {
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
 	return parser, err
-}
-
-func newCSVParser(metricName string,
-	headerRowCount int,
-	skipRows int,
-	skipColumns int,
-	delimiter string,
-	comment string,
-	trimSpace bool,
-	columnNames []string,
-	columnTypes []string,
-	tagColumns []string,
-	nameColumn string,
-	timestampColumn string,
-	timestampFormat string,
-	timezone string,
-	defaultTags map[string]string) (Parser, error) {
-
-	if headerRowCount == 0 && len(columnNames) == 0 {
-		return nil, fmt.Errorf("`csv_header_row_count` must be defined if `csv_column_names` is not specified")
-	}
-
-	if delimiter != "" {
-		runeStr := []rune(delimiter)
-		if len(runeStr) > 1 {
-			return nil, fmt.Errorf("csv_delimiter must be a single character, got: %s", delimiter)
-		}
-	}
-
-	if comment != "" {
-		runeStr := []rune(comment)
-		if len(runeStr) > 1 {
-			return nil, fmt.Errorf("csv_delimiter must be a single character, got: %s", comment)
-		}
-	}
-
-	if len(columnNames) > 0 && len(columnTypes) > 0 && len(columnNames) != len(columnTypes) {
-		return nil, fmt.Errorf("csv_column_names field count doesn't match with csv_column_types")
-	}
-
-	parser := &csv.Parser{
-		MetricName:        metricName,
-		HeaderRowCount:    headerRowCount,
-		SkipRows:          skipRows,
-		SkipColumns:       skipColumns,
-		Delimiter:         delimiter,
-		Comment:           comment,
-		TrimSpace:         trimSpace,
-		ColumnNames:       columnNames,
-		ColumnTypes:       columnTypes,
-		TagColumns:        tagColumns,
-		MeasurementColumn: nameColumn,
-		TimestampColumn:   timestampColumn,
-		TimestampFormat:   timestampFormat,
-		Timezone:          timezone,
-		DefaultTags:       defaultTags,
-		TimeFunc:          time.Now,
-	}
-
-	return parser, nil
 }
 
 func newGrokParser(metricName string,

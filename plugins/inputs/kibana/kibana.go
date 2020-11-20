@@ -43,7 +43,7 @@ type overallStatus struct {
 }
 
 type metrics struct {
-	UptimeInMillis             int64         `json:"uptime_in_millis"`
+	UptimeInMillis             float64       `json:"uptime_in_millis"`
 	ConcurrentConnections      int64         `json:"concurrent_connections"`
 	CollectionIntervalInMilles int64         `json:"collection_interval_in_millis"`
 	ResponseTimes              responseTimes `json:"response_times"`
@@ -57,9 +57,9 @@ type responseTimes struct {
 }
 
 type process struct {
-	Mem            mem    `json:"mem"`
-	Memory         memory `json:"memory"`
-	UptimeInMillis int64  `json:"uptime_in_millis"`
+	Mem            mem     `json:"mem"`
+	Memory         memory  `json:"memory"`
+	UptimeInMillis float64 `json:"uptime_in_millis"`
 }
 
 type requests struct {
@@ -220,12 +220,12 @@ func (k *Kibana) gatherKibanaStatus(baseUrl string, acc telegraf.Accumulator) er
 	// Same value will be assigned to both the metrics [heap_max_bytes and heap_total_bytes ]
 	// Which keeps the code backward compatible
 	if versionNumber >= 6.4 {
-		fields["uptime_ms"] = kibanaStatus.Metrics.Process.UptimeInMillis
+		fields["uptime_ms"] = int64(kibanaStatus.Metrics.Process.UptimeInMillis)
 		fields["heap_max_bytes"] = kibanaStatus.Metrics.Process.Memory.Heap.TotalInBytes
 		fields["heap_total_bytes"] = kibanaStatus.Metrics.Process.Memory.Heap.TotalInBytes
 		fields["heap_used_bytes"] = kibanaStatus.Metrics.Process.Memory.Heap.UsedInBytes
 	} else {
-		fields["uptime_ms"] = kibanaStatus.Metrics.UptimeInMillis
+		fields["uptime_ms"] = int64(kibanaStatus.Metrics.UptimeInMillis)
 		fields["heap_max_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapMaxInBytes
 		fields["heap_total_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapMaxInBytes
 		fields["heap_used_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapUsedInBytes
@@ -238,8 +238,10 @@ func (k *Kibana) gatherKibanaStatus(baseUrl string, acc telegraf.Accumulator) er
 }
 
 func (k *Kibana) gatherJsonData(url string, v interface{}) (host string, err error) {
-
 	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("unable to create new request '%s': %v", url, err)
+	}
 
 	if (k.Username != "") || (k.Password != "") {
 		request.SetBasicAuth(k.Username, k.Password)

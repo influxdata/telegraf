@@ -25,22 +25,30 @@ func (s statServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
-	sv := statServer{}
-	ts := httptest.NewServer(sv)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "ok", r.URL.Query().Get("test"))
+		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Content-Length", fmt.Sprint(len(outputSample)))
+		fmt.Fprint(w, outputSample)
+	}))
 	defer ts.Close()
 
+	url := ts.URL + "?test=ok"
 	r := &phpfpm{
-		Urls: []string{ts.URL},
+		Urls: []string{url},
 	}
+
+	err := r.Init()
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(r.Gather)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
 		"pool": "www",
-		"url":  ts.URL,
+		"url":  url,
 	}
 
 	fields := map[string]interface{}{
@@ -75,6 +83,9 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 	r := &phpfpm{
 		Urls: []string{"fcgi://" + tcp.Addr().String() + "/status"},
 	}
+
+	err = r.Init()
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 	err = acc.GatherError(r.Gather)
@@ -120,6 +131,9 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 	r := &phpfpm{
 		Urls: []string{tcp.Addr().String()},
 	}
+
+	err = r.Init()
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 
@@ -177,6 +191,9 @@ func TestPhpFpmGeneratesMetrics_From_Multiple_Sockets_With_Glob(t *testing.T) {
 		Urls: []string{"/tmp/test-fpm[\\-0-9]*.sock"},
 	}
 
+	err = r.Init()
+	require.NoError(t, err)
+
 	var acc1, acc2 testutil.Accumulator
 
 	err = acc1.GatherError(r.Gather)
@@ -232,6 +249,9 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 		Urls: []string{tcp.Addr().String() + ":custom-status-path"},
 	}
 
+	err = r.Init()
+	require.NoError(t, err)
+
 	var acc testutil.Accumulator
 
 	err = acc.GatherError(r.Gather)
@@ -264,9 +284,12 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 func TestPhpFpmDefaultGetFromLocalhost(t *testing.T) {
 	r := &phpfpm{}
 
+	err := r.Init()
+	require.NoError(t, err)
+
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(r.Gather)
+	err = acc.GatherError(r.Gather)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "127.0.0.1/status")
 }
@@ -276,11 +299,14 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t 
 		Urls: []string{"http://aninvalidone"},
 	}
 
+	err := r.Init()
+	require.NoError(t, err)
+
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(r.Gather)
+	err = acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), `Unable to connect to phpfpm status page 'http://aninvalidone'`)
+	assert.Contains(t, err.Error(), `unable to connect to phpfpm status page 'http://aninvalidone'`)
 	assert.Contains(t, err.Error(), `lookup aninvalidone`)
 }
 
@@ -289,9 +315,12 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testi
 		Urls: []string{"/tmp/invalid.sock"},
 	}
 
+	err := r.Init()
+	require.NoError(t, err)
+
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(r.Gather)
+	err = acc.GatherError(r.Gather)
 	require.Error(t, err)
 	assert.Equal(t, `dial unix /tmp/invalid.sock: connect: no such file or directory`, err.Error())
 

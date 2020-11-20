@@ -3,26 +3,21 @@
 package process
 
 import (
+	"context"
 	"os/exec"
 	"syscall"
 	"time"
 )
 
-func gracefulStop(cmd *exec.Cmd, timeout time.Duration) {
-	time.AfterFunc(timeout, func() {
-		if cmd.ProcessState == nil {
-			return
-		}
-		if !cmd.ProcessState.Exited() {
-			cmd.Process.Signal(syscall.SIGTERM)
-			time.AfterFunc(timeout, func() {
-				if cmd.ProcessState == nil {
-					return
-				}
-				if !cmd.ProcessState.Exited() {
-					cmd.Process.Kill()
-				}
-			})
-		}
-	})
+func gracefulStop(ctx context.Context, cmd *exec.Cmd, timeout time.Duration) {
+	select {
+	case <-time.After(timeout):
+		cmd.Process.Signal(syscall.SIGTERM)
+	case <-ctx.Done():
+	}
+	select {
+	case <-time.After(timeout):
+		cmd.Process.Kill()
+	case <-ctx.Done():
+	}
 }

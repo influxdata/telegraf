@@ -1,4 +1,4 @@
-package models
+package models_test
 
 import (
 	"sort"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -52,7 +53,7 @@ func (p *MockProcessorToInit) Init() error {
 
 func TestRunningProcessor_Init(t *testing.T) {
 	mock := MockProcessorToInit{}
-	rp := &RunningProcessor{
+	rp := &models.RunningProcessor{
 		Processor: processors.NewStreamingProcessorFromProcessor(&mock),
 	}
 	rp.Init()
@@ -75,7 +76,7 @@ func TagProcessor(key, value string) *MockProcessor {
 func TestRunningProcessor_Apply(t *testing.T) {
 	type args struct {
 		Processor telegraf.StreamingProcessor
-		Config    *ProcessorConfig
+		Config    *models.ProcessorConfig
 	}
 
 	tests := []struct {
@@ -88,8 +89,8 @@ func TestRunningProcessor_Apply(t *testing.T) {
 			name: "inactive filter applies metrics",
 			args: args{
 				Processor: processors.NewStreamingProcessorFromProcessor(TagProcessor("apply", "true")),
-				Config: &ProcessorConfig{
-					Filter: Filter{},
+				Config: &models.ProcessorConfig{
+					Filter: models.Filter{},
 				},
 			},
 			input: []telegraf.Metric{
@@ -119,8 +120,8 @@ func TestRunningProcessor_Apply(t *testing.T) {
 			name: "filter applies",
 			args: args{
 				Processor: processors.NewStreamingProcessorFromProcessor(TagProcessor("apply", "true")),
-				Config: &ProcessorConfig{
-					Filter: Filter{
+				Config: &models.ProcessorConfig{
+					Filter: models.Filter{
 						NamePass: []string{"cpu"},
 					},
 				},
@@ -152,8 +153,8 @@ func TestRunningProcessor_Apply(t *testing.T) {
 			name: "filter doesn't apply",
 			args: args{
 				Processor: processors.NewStreamingProcessorFromProcessor(TagProcessor("apply", "true")),
-				Config: &ProcessorConfig{
-					Filter: Filter{
+				Config: &models.ProcessorConfig{
+					Filter: models.Filter{
 						NameDrop: []string{"cpu"},
 					},
 				},
@@ -183,7 +184,7 @@ func TestRunningProcessor_Apply(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rp := &RunningProcessor{
+			rp := &models.RunningProcessor{
 				Processor: tt.args.Processor,
 				Config:    tt.args.Config,
 			}
@@ -204,25 +205,25 @@ func TestRunningProcessor_Apply(t *testing.T) {
 }
 
 func TestRunningProcessor_Order(t *testing.T) {
-	rp1 := &RunningProcessor{
-		Config: &ProcessorConfig{
+	rp1 := &models.RunningProcessor{
+		Config: &models.ProcessorConfig{
 			Order: 1,
 		},
 	}
-	rp2 := &RunningProcessor{
-		Config: &ProcessorConfig{
+	rp2 := &models.RunningProcessor{
+		Config: &models.ProcessorConfig{
 			Order: 2,
 		},
 	}
-	rp3 := &RunningProcessor{
-		Config: &ProcessorConfig{
+	rp3 := &models.RunningProcessor{
+		Config: &models.ProcessorConfig{
 			Order: 3,
 		},
 	}
 
-	procs := RunningProcessors{rp2, rp3, rp1}
+	procs := models.RunningProcessors{rp2, rp3, rp1}
 	sort.Sort(procs)
 	require.Equal(t,
-		RunningProcessors{rp1, rp2, rp3},
+		models.RunningProcessors{rp1, rp2, rp3},
 		procs)
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
+	"go.starlark.net/starlarkjson"
 )
 
 const (
@@ -51,11 +52,15 @@ func (s *Starlark) Init() error {
 
 	s.thread = &starlark.Thread{
 		Print: func(_ *starlark.Thread, msg string) { s.Log.Debug(msg) },
+		Load: func(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+			return loadFunc(thread, module, s.Log)
+		},
 	}
 
 	builtins := starlark.StringDict{}
 	builtins["Metric"] = starlark.NewBuiltin("Metric", newMetric)
 	builtins["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
+	builtins["catch"] = starlark.NewBuiltin("catch", catch)
 
 	program, err := s.sourceProgram(builtins)
 	if err != nil {
@@ -212,4 +217,19 @@ func init() {
 	processors.AddStreaming("starlark", func() telegraf.StreamingProcessor {
 		return &Starlark{}
 	})
+}
+
+func loadFunc(thread *starlark.Thread, module string, logger telegraf.Logger) (starlark.StringDict, error) {
+	switch module {
+	case "json.star":
+		return starlark.StringDict{
+			"json": starlarkjson.Module,
+		}, nil
+	case "logging.star":
+		return starlark.StringDict{
+			"log": LogModule(logger),
+		}, nil
+	default:
+		return nil, errors.New("module " + module + " is not available")
+	}
 }

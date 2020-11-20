@@ -52,6 +52,7 @@ func TestExternalProcessorWorks(t *testing.T) {
 
 	acc.Wait(1)
 	require.NoError(t, e.Stop())
+	acc.Wait(9)
 
 	metrics = acc.GetTelegrafMetrics()
 	m := metrics[0]
@@ -70,7 +71,7 @@ func TestExternalProcessorWorks(t *testing.T) {
 
 	metricTime := m.Time().UnixNano()
 
-	// read the other 9 and make sure they're ordered properly
+	// make sure the other 9 are ordered properly
 	for i := 0; i < 9; i++ {
 		m = metrics[i+1]
 		require.EqualValues(t, metricTime+1, m.Time().UnixNano())
