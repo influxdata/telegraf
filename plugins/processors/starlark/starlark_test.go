@@ -2624,6 +2624,24 @@ func TestScript(t *testing.T) {
 				),
 			},
 		},
+		{
+			name: "fail",
+			plugin: &Starlark{
+				Script: "testdata/fail.star",
+				Log:    testutil.Logger{},
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric("fail",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 1,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "fail: The field value should be greater than 1",
+		},
 	}
 
 	for _, tt := range tests {
@@ -2937,7 +2955,11 @@ func TestAllScriptTestData(t *testing.T) {
 				require.NoError(t, err)
 				lines := strings.Split(string(b), "\n")
 				inputMetrics := parseMetricsFrom(t, lines, "Example Input:")
-				outputMetrics := parseMetricsFrom(t, lines, "Example Output:")
+				expectedErrorStr := parseErrorMessage(t, lines, "Example Output Error:")
+				outputMetrics := []telegraf.Metric{}
+				if expectedErrorStr == "" {
+					outputMetrics = parseMetricsFrom(t, lines, "Example Output:")
+				}
 				plugin := &Starlark{
 					Script: fn,
 					Log:    testutil.Logger{},
@@ -2951,7 +2973,11 @@ func TestAllScriptTestData(t *testing.T) {
 
 				for _, m := range inputMetrics {
 					err = plugin.Add(m, acc)
-					require.NoError(t, err)
+					if expectedErrorStr != "" {
+						require.EqualError(t, err, expectedErrorStr)
+					} else {
+						require.NoError(t, err)
+					}
 				}
 
 				err = plugin.Stop()
@@ -2991,4 +3017,21 @@ func parseMetricsFrom(t *testing.T, lines []string, header string) (metrics []te
 		metrics = append(metrics, m)
 	}
 	return metrics
+}
+
+// parses error message out of line protocol following a header
+func parseErrorMessage(t *testing.T, lines []string, header string) string {
+	require.NotZero(t, len(lines), "Expected some lines to parse from .star file, found none")
+	startIdx := -1
+	for i := range lines {
+		if strings.TrimLeft(lines[i], "# ") == header {
+			startIdx = i + 1
+			break
+		}
+	}
+	if startIdx == -1 {
+		return ""
+	}
+	require.True(t, startIdx < len(lines), fmt.Sprintf("Expected to find the error message after %q, but found none", header))
+	return strings.TrimLeft(lines[startIdx], "# ")
 }
