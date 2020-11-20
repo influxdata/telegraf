@@ -2478,6 +2478,40 @@ func TestScript(t *testing.T) {
 			},
 		},
 		{
+			name: "drop fields with unexpected type",
+			plugin: &Starlark{
+				Script: "testdata/drop_fields_with_unexpected_type.star",
+				Log:    testutil.Logger{},
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric("device",
+					map[string]string{},
+					map[string]interface{}{
+						"a": 42,
+						"b": "42",
+						"c": 42.0,
+						"d": "42.0",
+						"e": true,
+						"f": 23.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("device",
+					map[string]string{},
+					map[string]interface{}{
+						"a": 42,
+						"c": 42.0,
+						"d": "42.0",
+						"e": true,
+						"f": 23.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
 			name: "scale",
 			plugin: &Starlark{
 				Script: "testdata/scale.star",
