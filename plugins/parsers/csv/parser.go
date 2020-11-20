@@ -204,6 +204,12 @@ outer:
 				}
 			}
 
+			// If the field name is the timestamp column, then keep field name as is.
+			if fieldName == p.TimestampColumn {
+				recordFields[fieldName] = value
+				continue
+			}
+
 			// Try explicit conversion only when column types is defined.
 			if len(p.ColumnTypes) > 0 {
 				// Throw error if current column count exceeds defined types.
