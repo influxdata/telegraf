@@ -17,6 +17,11 @@ type Metric struct {
 	frozen         bool
 }
 
+// Create a new starlark.Metric from the given telegraf.Metric.
+func WrapMetric(metric telegraf.Metric) *Metric {
+	return &Metric{metric: metric}
+}
+
 // Wrap updates the starlark.Metric to wrap a new telegraf.Metric.
 func (m *Metric) Wrap(metric telegraf.Metric) {
 	m.metric = metric

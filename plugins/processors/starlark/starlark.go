@@ -40,6 +40,41 @@ type Starlark struct {
 	applyFunc *starlark.Function
 	args      starlark.Tuple
 	results   []telegraf.Metric
+	state     State
+}
+
+// The struct that defines the shared state used
+type State struct {
+	content map[string]interface{}
+}
+
+// Load from the shared state, the value corresponding to the given key
+func (s *State) Load(key string) starlark.Value {
+	var value = s.content[key]
+	if value == nil {
+		return starlark.None
+	}
+	switch v := value.(type) {
+	case telegraf.Metric:
+		return WrapMetric(v)
+	default:
+		return v.(starlark.Value)
+	}
+}
+
+// Store the pair (key, value) into the shared state. If the value is None, the pair (key, value) will be
+// removed from the shared state if it exists
+func (s *State) Store(key string, value starlark.Value) {
+	if value == starlark.None {
+		delete(s.content, key)
+	} else {
+		switch v := value.(type) {
+		case *Metric:
+			s.content[key] = v.Unwrap()
+		default:
+			s.content[key] = v
+		}
+	}
 }
 
 func (s *Starlark) Init() error {
@@ -61,6 +96,16 @@ func (s *Starlark) Init() error {
 	builtins["Metric"] = starlark.NewBuiltin("Metric", newMetric)
 	builtins["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
 	builtins["catch"] = starlark.NewBuiltin("catch", catch)
+	builtins["Load"] = starlark.NewBuiltin("Load",
+		func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			return load(&s.state, thread, b, args, kwargs)
+		},
+	)
+	builtins["Store"] = starlark.NewBuiltin("Store",
+		func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			return store(&s.state, thread, b, args, kwargs)
+		},
+	)
 
 	program, err := s.sourceProgram(builtins)
 	if err != nil {
@@ -103,6 +148,11 @@ func (s *Starlark) Init() error {
 
 	// Preallocate a slice for return values.
 	s.results = make([]telegraf.Metric, 0, 10)
+
+	// Initialize the shared state
+	s.state = State{
+		content: make(map[string]interface{}),
+	}
 
 	return nil
 }

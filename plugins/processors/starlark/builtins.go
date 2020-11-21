@@ -47,6 +47,26 @@ func catch(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kw
 	return starlark.None, nil
 }
 
+// load from the shared state, the value assigned to the provided key.
+func load(state *State, thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var key starlark.String
+	if err := starlark.UnpackPositionalArgs("Load", args, kwargs, 1, &key); err != nil {
+		return nil, err
+	}
+	return state.Load(string(key)), nil
+}
+
+// store into the shared state the provided pair (key, value).
+func store(state *State, thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var key starlark.String
+	var value starlark.Value
+	if err := starlark.UnpackArgs("Store", args, kwargs, "key", &key, "value", &value); err != nil {
+		return nil, err
+	}
+	state.Store(string(key), value)
+	return starlark.None, nil
+}
+
 type builtinMethod func(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error)
 
 func builtinAttr(recv starlark.Value, name string, methods map[string]builtinMethod) (starlark.Value, error) {

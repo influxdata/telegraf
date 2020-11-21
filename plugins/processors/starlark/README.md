@@ -190,6 +190,7 @@ def failing(metric):
 - [multiple metrics](/plugins/processors/starlark/testdata/multiple_metrics.star) - Return multiple metrics by using [a list](https://docs.bazel.build/versions/master/skylark/lib/list.html) of metrics.
 - [multiple metrics from json array](/plugins/processors/starlark/testdata/multiple_metrics_with_json.star) - Builds a new metric from each element of a json array then returns all the created metrics.
 - [custom error](/plugins/processors/starlark/testdata/fail.star) - Return a custom error with [fail](https://docs.bazel.build/versions/master/skylark/lib/globals.html#fail).
+- [compare with previous metric](/plugins/processors/starlark/testdata/compare_metrics.star) - Compare the current metric with the previous one using the shared state.
 
 [All examples](/plugins/processors/starlark/testdata) are in the testdata folder.
 
