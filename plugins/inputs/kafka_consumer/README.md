@@ -69,7 +69,7 @@ and use the old zookeeper connection method.
   ##  2 : Snappy
   ##  3 : LZ4
   ##  4 : ZSTD
-
+  # compression_codec = 0
   ## Initial offset position; one of "oldest" or "newest".
   # offset = "oldest"
 
