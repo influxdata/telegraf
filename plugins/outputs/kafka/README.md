@@ -79,7 +79,8 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##  2 : Snappy
   ##  3 : LZ4
   ##  4 : ZSTD
-
+   # compression_codec = 0
+   
   ## Idempotent Writes
   ## If enabled, exactly one copy of each message is written.
   # idempotent_writes = false
