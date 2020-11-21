@@ -72,7 +72,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##       routing_key = "telegraf"
   # routing_key = ""
 
-  ## CompressionCodec represents the various compression codecs recognized by
+  ## Compression codec represents the various compression codecs recognized by
   ## Kafka in messages.
   ##  0 : None
   ##  1 : Gzip
