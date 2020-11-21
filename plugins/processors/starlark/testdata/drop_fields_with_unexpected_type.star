@@ -10,15 +10,15 @@
 # measurement,host=hostname a=1i,b=4.2,c=42.0,d="v3.14",e=true,f=23.0 1597255410000000000
 # measurement,host=hostname a=1i,c=42.0,d="v3.14",e=true,f=23.0 1597255410000000000
 
+expected_type = {
+    "a": "int",
+    "b": "float",
+    "c": "float",
+    "d": "string",
+    "e": "bool"
+}
+    
 def apply(metric):
-    expected_type = {
-        "a": "int",
-        "b": "float",
-        "c": "float",
-        "d": "string",
-        "e": "bool"
-    }
-
     for k, v in metric.fields.items():
         if type(v) != expected_type.get(k, type(v)):
             metric.fields.pop(k)
