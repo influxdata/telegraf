@@ -147,7 +147,7 @@ var sampleConfig = `
   ##       routing_key = "telegraf"
   # routing_key = ""
 
-  ## CompressionCodec represents the various compression codecs recognized by
+  ## Compression codec represents the various compression codecs recognized by
   ## Kafka in messages.
   ##  0 : None
   ##  1 : Gzip
