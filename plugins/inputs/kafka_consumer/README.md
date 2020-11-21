@@ -62,7 +62,7 @@ and use the old zookeeper connection method.
   ## Name of the consumer group.
   # consumer_group = "telegraf_metrics_consumers"
 
-  ## CompressionCodec represents the various compression codecs recognized by
+  ## Compression codec represents the various compression codecs recognized by
   ## Kafka in messages.
   ##  0 : None
   ##  1 : Gzip
