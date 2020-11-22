@@ -12,7 +12,7 @@ type (
 	}
 
 	Stream struct {
-		key string `json:"-"`
+		key string
 
 		Labels map[string]string `json:"stream"`
 		Logs   []Log             `json:"values"`
