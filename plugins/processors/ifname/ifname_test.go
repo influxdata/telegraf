@@ -1,8 +1,3 @@
-// +build !windows
-
-// TODO: Windows - should be enabled for Windows when TestGetMap starts working
-// `require.NotZero(t, age) // Age is nonzero when map comes from cache` fails on Windows (it passes during debug)
-
 package ifname
 
 import (
@@ -11,12 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTable(t *testing.T) {
