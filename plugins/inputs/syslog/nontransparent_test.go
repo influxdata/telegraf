@@ -1,7 +1,3 @@
-//+build !windows
-
-// TODO: Windows - should be enabled for Windows when tests are ready for this OS
-
 package syslog
 
 import (
@@ -13,11 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	framing "github.com/influxdata/telegraf/internal/syslog"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func getTestCasesForNonTransparent() []testCaseStream {

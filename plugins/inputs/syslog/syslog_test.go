@@ -1,19 +1,17 @@
-//+build !windows
-
-// TODO: Windows - should be enabled for Windows when tests are ready for this OS
-
 package syslog
 
 import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const (
@@ -53,13 +51,16 @@ func TestAddress(t *testing.T) {
 	require.NoError(t, err)
 	sock := filepath.Join(tmpdir, "syslog.TestAddress.sock")
 
-	rec = &Syslog{
-		Address: "unixgram://" + sock,
+	if runtime.GOOS != "windows" {
+		// Skipping on Windows, as unixgram sockets are not supported
+		rec = &Syslog{
+			Address: "unixgram://" + sock,
+		}
+		err = rec.Start(&testutil.Accumulator{})
+		require.NoError(t, err)
+		require.Equal(t, sock, rec.Address)
+		rec.Stop()
 	}
-	err = rec.Start(&testutil.Accumulator{})
-	require.NoError(t, err)
-	require.Equal(t, sock, rec.Address)
-	rec.Stop()
 
 	// Default port is 6514
 	rec = &Syslog{
