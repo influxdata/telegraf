@@ -32,7 +32,7 @@ func (l Log) MarshalJSON() ([]byte, error) {
 
 func (s *Streams) insertLog(ts []*telegraf.Tag, l Log) {
 	var (
-		key = uniqKeyFromTagList(ts)
+		key   = uniqKeyFromTagList(ts)
 		index int
 		found bool
 	)
