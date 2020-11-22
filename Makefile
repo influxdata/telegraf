@@ -114,7 +114,7 @@ fmtcheck:
 
 .PHONY: test-windows
 test-windows:
-	go test -short ./...
+	go test -short $(race_detector) ./...
 
 .PHONY: vet
 vet:
