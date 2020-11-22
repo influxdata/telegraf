@@ -75,7 +75,7 @@ require (
 	github.com/harlow/kinesis-consumer v0.3.1-0.20181230152818-2f58b136fee0
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
-	github.com/influxdata/go-syslog/v2 v2.0.1
+	github.com/influxdata/go-syslog/v3 v3.0.0
 	github.com/influxdata/influxdb-observability/common v0.0.0-20210429174543-86ae73cafd31
 	github.com/influxdata/influxdb-observability/otel2influx v0.0.0-20210429174543-86ae73cafd31
 	github.com/influxdata/influxdb-observability/otlp v0.0.0-20210429174543-86ae73cafd31
