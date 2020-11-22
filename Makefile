@@ -212,7 +212,7 @@ debs += telegraf_$(deb_version)_i386.deb
 debs += telegraf_$(deb_version)_mips.deb
 debs += telegraf_$(deb_version)_mipsel.deb
 debs += telegraf_$(deb_version)_s390x.deb
-debs += telegraf_$(deb_version)_ppc64le.deb
+debs += telegraf_$(deb_version)_ppc64el.deb
 
 rpms += telegraf-$(rpm_version).aarch64.rpm
 rpms += telegraf-$(rpm_version).armel.rpm
@@ -284,7 +284,7 @@ $(rpms):
 deb_amd64 := amd64
 deb_386 := i386
 deb_s390x := s390x
-deb_ppc64le := ppc64le
+deb_ppc64le := ppc64el
 deb_arm5 := armel
 deb_arm6 := armhf
 deb_arm647 := arm64
@@ -370,8 +370,8 @@ upload-nightly:
 %s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOOS := linux
 %s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOARCH := s390x
 
-%ppc64le.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOOS := linux
-%ppc64le.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOARCH := ppc64le
+%ppc64el.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOOS := linux
+%ppc64el.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOARCH := ppc64le
 
 %freebsd_amd64.tar.gz: export GOOS := freebsd
 %freebsd_amd64.tar.gz: export GOARCH := amd64
