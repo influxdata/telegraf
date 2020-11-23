@@ -25,13 +25,16 @@ func TestConnectAndWrite(t *testing.T) {
 	brokers := []string{testutil.GetLocalHost() + ":9092"}
 	s, _ := serializers.NewInfluxSerializer()
 	k := &Kafka{
-		Brokers:    brokers,
-		Topic:      "Test",
-		serializer: s,
+		Brokers:      brokers,
+		Topic:        "Test",
+		serializer:   s,
+		producerFunc: sarama.NewSyncProducer,
 	}
 
 	// Verify that we can connect to the Kafka broker
-	err := k.Connect()
+	err := k.Init()
+	require.NoError(t, err)
+	err = k.Connect()
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the kafka broker
