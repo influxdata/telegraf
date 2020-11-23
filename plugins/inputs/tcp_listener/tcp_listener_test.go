@@ -274,7 +274,7 @@ func TestRunParserInvalidMsg(t *testing.T) {
 
 	scnr := bufio.NewScanner(buf)
 	for scnr.Scan() {
-		if strings.Contains(scnr.Text(), fmt.Sprintf(malformedwarn, 1)) {
+		if strings.Contains(scnr.Text(), "tcp_listener has received 1 malformed packets thus far.") {
 			break
 		}
 	}

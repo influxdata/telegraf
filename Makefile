@@ -114,12 +114,7 @@ fmtcheck:
 
 .PHONY: test-windows
 test-windows:
-	go test -short $(race_detector) ./plugins/inputs/ping/...
-	go test -short $(race_detector) ./plugins/inputs/win_perf_counters/...
-	go test -short $(race_detector) ./plugins/inputs/win_services/...
-	go test -short $(race_detector) ./plugins/inputs/procstat/...
-	go test -short $(race_detector) ./plugins/inputs/ntpq/...
-	go test -short $(race_detector) ./plugins/processors/port_name/...
+	go test -short ./...
 
 .PHONY: vet
 vet:
@@ -172,8 +167,8 @@ plugin-%:
 
 .PHONY: ci-1.15
 ci-1.15:
-	docker build -t quay.io/influxdb/telegraf-ci:1.15.2 - < scripts/ci-1.15.docker
-	docker push quay.io/influxdb/telegraf-ci:1.15.2
+	docker build -t quay.io/influxdb/telegraf-ci:1.15.5 - < scripts/ci-1.15.docker
+	docker push quay.io/influxdb/telegraf-ci:1.15.5
 
 .PHONY: ci-1.14
 ci-1.14:

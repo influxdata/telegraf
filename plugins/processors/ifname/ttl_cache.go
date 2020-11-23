@@ -1,6 +1,7 @@
 package ifname
 
 import (
+	"runtime"
 	"time"
 )
 
@@ -30,6 +31,15 @@ func (c *TTLCache) Get(key keyType) (valType, bool, time.Duration) {
 	if !ok {
 		return valType{}, false, 0
 	}
+
+	if runtime.GOOS == "windows" {
+		// Sometimes on Windows `c.now().Sub(v.time) == 0` due to clock resolution issues:
+		// https://github.com/golang/go/issues/17696
+		// https://github.com/golang/go/issues/29485
+		// Force clock to refresh:
+		time.Sleep(time.Nanosecond)
+	}
+
 	age := c.now().Sub(v.time)
 	if age < c.validDuration {
 		return v.val, ok, age

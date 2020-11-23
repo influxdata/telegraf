@@ -14,7 +14,7 @@ import (
 )
 
 func TestGatherAttributes(t *testing.T) {
-	s := NewSmart()
+	s := newSmart()
 	s.Attributes = true
 
 	assert.Equal(t, time.Second*30, s.Timeout.Duration)
@@ -78,7 +78,7 @@ func TestGatherAttributes(t *testing.T) {
 }
 
 func TestGatherNoAttributes(t *testing.T) {
-	s := NewSmart()
+	s := newSmart()
 	s.Attributes = false
 
 	assert.Equal(t, time.Second*30, s.Timeout.Duration)
@@ -244,7 +244,7 @@ func TestGatherIntelNvme(t *testing.T) {
 	var (
 		acc    = &testutil.Accumulator{}
 		wg     = &sync.WaitGroup{}
-		device = NVMeDevice{
+		device = nvmeDevice{
 			name:         "nvme0",
 			model:        mockModel,
 			serialNumber: mockSerial,
@@ -273,13 +273,6 @@ func Test_checkForNVMeDevices(t *testing.T) {
 	expectedNVMeDevices := []string{"nvme0", "nvme2"}
 	resultNVMeDevices := distinguishNVMeDevices(devices, expectedNVMeDevices)
 	assert.Equal(t, expectedNVMeDevices, resultNVMeDevices)
-}
-
-func Test_excludeWrongDeviceNames(t *testing.T) {
-	devices := []string{"/dev/sda", "/dev/nvme -d nvme", "/dev/sda1 -d megaraid,1", "/dev/sda ; ./suspicious_script.sh"}
-	validDevices := []string{"/dev/sda", "/dev/nvme -d nvme", "/dev/sda1 -d megaraid,1"}
-	result := excludeWrongDeviceNames(devices)
-	assert.Equal(t, validDevices, result)
 }
 
 func Test_contains(t *testing.T) {
