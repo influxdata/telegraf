@@ -27,14 +27,21 @@ var sampleConfig = `
   ## Connection timeout, defaults to "5s" if not set.
   timeout = "5s"
 
-  ## The URLs of the Loki instance
+  ## The URL of Loki
   # url = "https://loki.domain.tld"
+
+  ## Basic auth credential
+  # username = "loki"
+  # password = "pass"
 
   ## Additional HTTP headers
   # http_headers = {"X-Scope-OrgID" = "1"}
 
   ## The field containing the log
   # field_line = "log"
+
+  ## If the request must be gzip encoded
+  # gzip_request = false
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -65,7 +72,7 @@ func (l *Loki) SampleConfig() string {
 }
 
 func (l *Loki) Description() string {
-	return "Send logs to Loki instance"
+	return "Send logs to Loki"
 }
 
 func (l *Loki) createClient(ctx context.Context) (*http.Client, error) {
