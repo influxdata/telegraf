@@ -2,11 +2,13 @@ package loki
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -146,60 +148,64 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 			continue
 		}
 
-		s.insertLog(tags, Log{
-			Timestamp: m.Time().UnixNano(),
-			Line:      line.(string),
-		})
+		s.insertLog(tags, Log{fmt.Sprintf("%d", m.Time().UnixNano()), line.(string)})
 	}
 
 	return l.write(s)
 }
 
-func (l *Loki) write(s Streams) (err error) {
-	var (
-		buf     bytes.Buffer
-		encoder *json.Encoder
-	)
+func (l *Loki) write(s Streams) error {
+	bs, err := json.Marshal(s)
+	if err != nil {
+		return fmt.Errorf("json.Marshal: %w", err)
+	}
+
+	var reqBodyBuffer io.Reader = bytes.NewBuffer(bs)
 
 	if l.GZipRequest {
-		gz := gzip.NewWriter(&buf)
-		defer gz.Close()
-
-		encoder = json.NewEncoder(gz)
-	} else {
-		encoder = json.NewEncoder(&buf)
+		rc, err := internal.CompressWithGzip(reqBodyBuffer)
+		if err != nil {
+			return err
+		}
+		defer rc.Close()
+		reqBodyBuffer = rc
 	}
 
-	if err := encoder.Encode(s); err != nil {
-		return fmt.Errorf("new json encoder fail: %w", err)
-	}
-
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s%s", l.URL, l.Endpoint), &buf)
+	url := fmt.Sprintf("%s%s", l.URL, l.Endpoint)
+	req, err := http.NewRequest(http.MethodPost, url, reqBodyBuffer)
 	if err != nil {
-		return fmt.Errorf("new request fail: %w", err)
+		return err
+	}
+
+	if l.Username != "" || l.Password != "" {
+		req.SetBasicAuth(l.Username, l.Password)
 	}
 
 	for k, v := range l.Headers {
-		req.Header.Add(k, v)
+		if strings.ToLower(k) == "host" {
+			req.Host = v
+		}
+		req.Header.Set(k, v)
 	}
 
-	req.SetBasicAuth(l.Username, l.Password)
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Set("User-Agent", internal.ProductToken())
+	req.Header.Set("Content-Type", "application/json")
 	if l.GZipRequest {
-		req.Header.Add("Content-Encoding", "gzip")
+		req.Header.Set("Content-Encoding", "gzip")
 	}
 
 	resp, err := l.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("client do fail: %w", err)
+		return err
 	}
 	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("received bad status code %d", resp.StatusCode)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("when writing to [%s] received status code: %d", url, resp.StatusCode)
 	}
 
-	return
+	return nil
 }
 
 func init() {

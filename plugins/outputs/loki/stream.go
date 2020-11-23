@@ -7,6 +7,8 @@ import (
 )
 
 type (
+	Log []string
+
 	Streams struct {
 		Streams []Stream `json:"streams"`
 	}
@@ -17,18 +19,7 @@ type (
 		Labels map[string]string `json:"stream"`
 		Logs   []Log             `json:"values"`
 	}
-
-	Log struct {
-		Timestamp int64
-		Line      string
-	}
 )
-
-func (l Log) MarshalJSON() ([]byte, error) {
-	v := fmt.Sprintf("[\"%d\",\"%s\"]", l.Timestamp, l.Line)
-
-	return []byte(v), nil
-}
 
 func (s *Streams) insertLog(ts []*telegraf.Tag, l Log) {
 	var (
