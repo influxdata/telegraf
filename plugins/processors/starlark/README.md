@@ -96,6 +96,7 @@ While Starlark is similar to Python, there are important differences to note:
 The ability to load external scripts other than your own is pretty limited. The following libraries are available for loading:
 
 * json: `load("json.star", "json")` provides the following functions: `json.encode()`, `json.decode()`, `json.indent()`. See [json.star](/plugins/processors/starlark/testdata/json.star) for an example.
+* log: `load("logging.star", "log")` provides the following functions: `log.debug()`, `log.info()`, `log.warn()`, `log.error()`. See [logging.star](/plugins/processors/starlark/testdata/logging.star) for an example.
 
 If you would like to see support for something else here, please open an issue.
 
@@ -154,6 +155,27 @@ def apply(metric):
 Telegraf freezes the global scope, which prevents it from being modified.
 Attempting to modify the global scope will fail with an error.
 
+**How to manage errors that occur in the apply function?**
+
+In case you need to call some code that may return an error, you can delegate the call
+to the built-in function `catch` which takes as argument a `Callable` and returns the error
+that occured if any, `None` otherwise.
+
+So for example:
+
+```python
+load("json.star", "json")
+
+def apply(metric):
+    error = catch(lambda: failing(metric))
+    if error != None:
+        # Some code to execute in case of an error
+        metric.fields["error"] = error
+    return metric
+
+def failing(metric):
+    json.decode("non-json-content")
+```
 
 ### Examples
 
@@ -164,6 +186,10 @@ Attempting to modify the global scope will fail with an error.
 - [rename](/plugins/processors/starlark/testdata/rename.star) - Rename tags or fields using a name mapping.
 - [scale](/plugins/processors/starlark/testdata/scale.star) - Multiply any field by a number
 - [value filter](/plugins/processors/starlark/testdata/value_filter.star) - remove a metric based on a field value.
+- [logging](/plugins/processors/starlark/testdata/logging.star) - Log messages with the logger of Telegraf
+- [multiple metrics](/plugins/processors/starlark/testdata/multiple_metrics.star) - Return multiple metrics by using [a list](https://docs.bazel.build/versions/master/skylark/lib/list.html) of metrics.
+- [multiple metrics from json array](/plugins/processors/starlark/testdata/multiple_metrics_with_json.star) - Builds a new metric from each element of a json array then returns all the created metrics.
+- [custom error](/plugins/processors/starlark/testdata/fail.star) - Return a custom error with [fail](https://docs.bazel.build/versions/master/skylark/lib/globals.html#fail).
 
 [All examples](/plugins/processors/starlark/testdata) are in the testdata folder.
 
