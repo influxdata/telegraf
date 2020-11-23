@@ -360,7 +360,7 @@ func TestDefaultUserAgent(t *testing.T) {
 		})
 
 		client := &Loki{
-			URL:    u.String(),
+			URL: u.String(),
 		}
 
 		err = client.Connect()
