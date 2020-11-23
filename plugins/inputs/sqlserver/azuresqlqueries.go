@@ -710,6 +710,12 @@ SELECT TOP(1)
 	 'sqlserver_azure_db_resource_stats' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,cast([avg_cpu_percent] as float) as [avg_cpu_percent]
+	,virtual_core_count
+	,reserved_storage_mb
+	,cast([storage_space_used_mb] as float) as [storage_space_used_mb]
+	,io_requests
+	,io_bytes_read
+	,io_bytes_written	
 FROM
     sys.server_resource_stats
 ORDER BY
