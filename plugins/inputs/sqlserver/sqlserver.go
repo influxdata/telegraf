@@ -31,6 +31,8 @@ type Query struct {
 	Script         string
 	ResultByRow    bool
 	OrderedColumns []string
+	HasCachedData  bool
+	DataCache      QueryDataCache
 }
 
 // MapQuery type
@@ -69,6 +71,44 @@ query_version = 2
 # azuredb = false
 
 ## Possible queries
+## Database type AzureSQLDB:
+## - AzureSQLDBResourceStats
+## - AzureSQLDBResourceGovernance
+## - AzureSQLDBWaitStats
+## - AzureSQLDBDatabaseIO
+## - AzureSQLDBServerProperties
+## - AzureSQLDBOsWaitstats
+## - AzureSQLDBMemoryClerks
+## - AzureSQLDBPerformanceCounters
+## - AzureSQLDBRequests
+## - AzureSQLDBSchedulers
+## - AzureSQLDBQueryStoreRuntimeStatistics
+## - AzureSQLDBQueryStoreWaitStatistics
+
+## Database type AzureSQLManagedInstance:
+## - AzureSQLMIResourceStats
+## - AzureSQLMIResourceGovernance
+## - AzureSQLMIDatabaseIO
+## - AzureSQLMIServerProperties
+## - AzureSQLMIOsWaitstats
+## - AzureSQLMIMemoryClerks
+## - AzureSQLMIPerformanceCounters
+## - AzureSQLMIRequests
+## - AzureSQLMISchedulers
+## - AzureSQLMIQueryStoreRuntimeStatistics
+## - AzureSQLMIQueryStoreWaitStatistics
+
+## Database type SQLServer:
+## - SQLServerPerformanceCounters
+## - SQLServerWaitStatsCategorized
+## - SQLServerDatabaseIO
+## - SQLServerProperties
+## - SQLServerMemoryClerks
+## - SQLServerSchedulers
+## - SQLServerRequests
+## - SQLServerVolumeSpace
+## - SQLServerCpu
+
 ## Version 2:
 ## - PerformanceCounters
 ## - WaitStatsCategorized
@@ -101,7 +141,7 @@ query_version = 2
 # include_query = []
 
 ## A list of queries to explicitly ignore.
-exclude_query = [ 'Schedulers' , 'SqlRequests']
+exclude_query = [ 'Schedulers', 'SqlRequests', 'AzureSQLDBSchedulers', 'AzureSQLDBRequests', 'AzureSQLDBQueryStoreRuntimeStatistics', 'AzureSQLDBQueryStoreWaitStatistics', 'AzureSQLMISchedulers', 'AzureSQLMIRequests', 'AzureSQLMIQueryStoreRuntimeStatistics', 'AzureSQLMIQueryStoreWaitStatistics', 'SQLServerSchedulers', 'SQLServerRequests']
 `
 
 // SampleConfig return the sample configuration
@@ -139,6 +179,8 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLDBPerformanceCounters"] = Query{ScriptName: "AzureSQLDBPerformanceCounters", Script: sqlAzureDBPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLDBRequests"] = Query{ScriptName: "AzureSQLDBRequests", Script: sqlAzureDBRequests, ResultByRow: false}
 		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlAzureDBSchedulers, ResultByRow: false}
+		queries["AzureSQLDBQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreRuntimeStatistics", Script: sqlAzureDBQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: *InitQueryDataCache()}
+		queries["AzureSQLDBQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreWaitStatistics", Script: sqlAzureDBQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: *InitQueryDataCache()}
 	} else if s.DatabaseType == "AzureSQLManagedInstance" {
 		queries["AzureSQLMIResourceStats"] = Query{ScriptName: "AzureSQLMIResourceStats", Script: sqlAzureMIResourceStats, ResultByRow: false}
 		queries["AzureSQLMIResourceGovernance"] = Query{ScriptName: "AzureSQLMIResourceGovernance", Script: sqlAzureMIResourceGovernance, ResultByRow: false}
@@ -149,6 +191,8 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLMIPerformanceCounters"] = Query{ScriptName: "AzureSQLMIPerformanceCounters", Script: sqlAzureMIPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLMIRequests"] = Query{ScriptName: "AzureSQLMIRequests", Script: sqlAzureMIRequests, ResultByRow: false}
 		queries["AzureSQLMISchedulers"] = Query{ScriptName: "AzureSQLMISchedulers", Script: sqlAzureMISchedulers, ResultByRow: false}
+		queries["AzureSQLMIQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLMIQueryStoreRuntimeStatistics", Script: sqlAzureMIQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: *InitQueryDataCache()}
+		queries["AzureSQLMIQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLMIQueryStoreWaitStatistics", Script: sqlAzureMIQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: *InitQueryDataCache()}
 	} else if s.DatabaseType == "SQLServer" { //These are still V2 queries and have not been refactored yet.
 		queries["SQLServerPerformanceCounters"] = Query{ScriptName: "SQLServerPerformanceCounters", Script: sqlServerPerformanceCounters, ResultByRow: false}
 		queries["SQLServerWaitStatsCategorized"] = Query{ScriptName: "SQLServerWaitStatsCategorized", Script: sqlServerWaitStatsCategorized, ResultByRow: false}
@@ -251,8 +295,16 @@ func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumu
 	}
 	defer conn.Close()
 
+	var rows *sql.Rows
+
 	// execute query
-	rows, err := conn.Query(query.Script)
+	if query.HasCachedData {
+		cachedData, _ := query.DataCache.Get(server)
+		rows, err = conn.Query(query.Script, sql.Named("p1", cachedData))
+	} else {
+		rows, err = conn.Query(query.Script)
+	}
+
 	if err != nil {
 		return fmt.Errorf("Script %s failed: %w", query.ScriptName, err)
 		//return   err
@@ -271,6 +323,13 @@ func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumu
 			return err
 		}
 	}
+
+	if rows.Err() == nil && query.HasCachedData && rows.NextResultSet() && rows.Next() {
+		var newCachedData string
+		rows.Scan(&newCachedData)
+		query.DataCache.Set(server, newCachedData)
+	}
+
 	return rows.Err()
 }
 
@@ -329,4 +388,26 @@ func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
 		return &SQLServer{}
 	})
+}
+
+type QueryDataCache struct {
+	mx sync.RWMutex
+	m  map[string]string
+}
+
+func (c *QueryDataCache) Get(key string) (string, bool) {
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+	val, ok := c.m[key]
+	return val, ok
+}
+
+func (c *QueryDataCache) Set(key string, value string) {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+	c.m[key] = value
+}
+
+func InitQueryDataCache() *QueryDataCache {
+	return &QueryDataCache{m: make(map[string]string)}
 }

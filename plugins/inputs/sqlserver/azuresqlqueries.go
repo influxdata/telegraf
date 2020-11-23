@@ -382,6 +382,116 @@ HAVING
 OPTION(RECOMPILE);
 `
 
+const sqlAzureDBPartQueryPeriod = `
+DECLARE @QueryData NVARCHAR(MAX) = ?1; --input parameter
+
+DECLARE @lastIntervalEndTimestamp BIGINT = 0;
+
+IF @QueryData != '' AND @QueryData IS NOT NULL
+	SET @lastIntervalEndTimestamp = CAST(@QueryData AS BIGINT);
+
+DECLARE @magicNumberDays BIGINT = 4294967296, @magicNumberSeconds BIGINT = 300, @secondsInDay INT = 86400;
+
+DECLARE @timeGrain BIGINT = (SELECT interval_length_minutes * 60 FROM sys.database_query_store_options WITH (NOLOCK)); --use query store time grain
+
+DECLARE @currDate DATETIME = GETUTCDATE();
+DECLARE @currIntervalEndTimestamp BIGINT = CONVERT(BIGINT, DATEDIFF(day, 0, @currDate)) * @secondsInDay + DATEDIFF(second, DATEADD(day, DATEDIFF(day, 0, @currDate), 0), @currDate) / @timeGrain * @timeGrain;
+IF @lastIntervalEndTimestamp = @currIntervalEndTimestamp
+	RETURN;
+
+DECLARE @currIntervalStartTimestamp BIGINT = @currIntervalEndTimestamp - @timeGrain;
+IF @lastIntervalEndTimestamp != 0
+	SET @currIntervalStartTimestamp = @lastIntervalEndTimestamp;
+
+DECLARE @currIntervalEndDate datetime = DATEADD(second, @currIntervalEndTimestamp % @secondsInDay, DATEADD(day, @currIntervalEndTimestamp / @secondsInDay, 0));
+DECLARE @currIntervalStartDate datetime = DATEADD(second, @currIntervalStartTimestamp % @secondsInDay, DATEADD(day, @currIntervalStartTimestamp / @secondsInDay, 0));
+
+`
+
+const sqlAzureDBQueryStoreRuntimeStatistics = sqlAzureDBPartQueryPeriod + `
+SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
+BEGIN
+SELECT
+	'sqlserver_azuredb_querystore_runtime_stats' AS [measurement],
+	CONVERT(varchar(36), NEWID()) AS [measurement_id],
+	REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance],
+	DB_NAME() AS [database_name],
+	CONVERT(datetime, rsi.start_time, 1) AS interval_start_time,
+	CONVERT(datetime, rsi.end_time, 1) AS interval_end_time,
+	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1)), CONVERT(datetime, rsi.start_time, 1))) * @magicNumberSeconds AS interval_start_time_d,
+	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1)), CONVERT(datetime, rsi.end_time, 1))) * @magicNumberSeconds AS interval_end_time_d,
+	q.query_id,
+	CONVERT(nvarchar(max), q.query_hash, 1) as query_hash,
+	p.plan_id,
+	CONVERT(nvarchar(max), q.last_compile_batch_sql_handle, 1) as last_compile_batch_sql_handle,
+	CONVERT(nvarchar(max), p.query_plan_hash, 1) as query_plan_hash,
+	rs.max_logical_io_reads as max_logical_io_reads,
+	rs.avg_logical_io_reads as avg_logical_io_reads,
+	rs.avg_logical_io_reads as logical_io_reads,
+	rs.max_physical_io_reads as max_physical_io_reads,
+	rs.avg_physical_io_reads as avg_physical_io_reads,
+	rs.max_logical_io_writes as max_logical_io_writes,
+	rs.avg_logical_io_writes as avg_logical_io_writes,
+	rs.execution_type,
+	rs.count_executions as count_executions,
+	rs.max_cpu_time as max_cpu_time,
+	rs.avg_cpu_time as avg_cpu_time,
+	rs.max_dop as max_dop,
+	rs.avg_dop as avg_dop,
+	rs.max_rowcount as max_rowcount,
+	rs.avg_rowcount as avg_rowcount,
+	rs.max_query_max_used_memory AS max_query_max_used_memory,
+	rs.avg_query_max_used_memory AS avg_query_max_used_memory,
+	rs.max_duration as [max_duration],
+	rs.avg_duration as avg_duration,
+	rs.max_num_physical_io_reads as max_num_physical_io_reads,
+	rs.avg_num_physical_io_reads as avg_num_physical_io_reads,
+	rs.max_log_bytes_used as [max_log_bytes_used],
+	rs.avg_log_bytes_used as avg_log_bytes_used
+FROM sys.query_store_query q WITH (NOLOCK)
+	JOIN sys.query_store_plan p WITH (NOLOCK) ON q.query_id = p.query_id
+	JOIN sys.query_store_runtime_stats rs WITH (NOLOCK) ON p.plan_id = rs.plan_id
+	JOIN sys.query_store_runtime_stats_interval rsi WITH (NOLOCK) ON rs.runtime_stats_interval_id = rsi.runtime_stats_interval_id
+WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate;
+
+SELECT CAST(@currIntervalEndTimestamp AS nvarchar(20)) AS QueryData;
+END;
+`
+
+const sqlAzureDBQueryStoreWaitStatistics = sqlAzureDBPartQueryPeriod + `
+SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
+BEGIN
+SELECT
+	'sqlserver_azuredb_querystore_wait_stats' AS [measurement],
+	CONVERT(varchar(36), NEWID()) AS [measurement_id],
+	REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance],
+	DB_NAME() AS [database_name],
+	CONVERT(datetime, rsi.start_time, 1) AS interval_start_time,
+	CONVERT(datetime, rsi.end_time, 1) AS interval_end_time,
+	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1)), CONVERT(datetime, rsi.start_time, 1))) * @magicNumberSeconds AS interval_start_time_d,
+	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1)), CONVERT(datetime, rsi.end_time, 1))) * @magicNumberSeconds AS interval_end_time_d,
+	q.query_id,
+	CONVERT(nvarchar(max), q.query_hash, 1) as query_hash,
+	p.plan_id,
+	CONVERT(nvarchar(max), q.last_compile_batch_sql_handle, 1) as last_compile_batch_sql_handle,
+	CONVERT(nvarchar(max), p.query_plan_hash, 1) as query_plan_hash,
+	ws.wait_category_desc AS wait_category_s,
+	ws.execution_type AS exec_type_d,
+	ws.total_query_wait_time_ms AS total_query_wait_time_ms_d,
+	ws.max_query_wait_time_ms AS max_query_wait_time_ms_d,
+	q.query_parameterization_type AS query_param_type_d
+FROM sys.query_store_query q WITH (NOLOCK)
+	JOIN sys.query_store_plan p WITH (NOLOCK) ON q.query_id = p.query_id
+	JOIN sys.query_store_wait_stats ws WITH (NOLOCK) ON p.plan_id = ws.plan_id
+	JOIN sys.query_store_runtime_stats_interval rsi WITH (NOLOCK) on ws.runtime_stats_interval_id = rsi.runtime_stats_interval_id
+WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate;
+
+SELECT CAST(@currIntervalEndTimestamp AS nvarchar(20)) AS QueryData;
+END;
+`
+
 const sqlAzureDBPerformanceCounters = `
 SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
@@ -1177,4 +1287,236 @@ SELECT
 	,s.[total_cpu_usage_ms]
 	,s.[total_scheduler_delay_ms]
 FROM sys.dm_os_schedulers AS s
+`
+
+const sqlAzureMIPartQueryPeriod = `
+DECLARE @QueryData NVARCHAR(MAX) = ?1; --input parameter
+
+IF SERVERPROPERTY('EngineEdition') != 8
+	RETURN;
+
+IF OBJECT_ID ('tempdb.dbo.#ExecForeachDb') IS NOT NULL DROP PROCEDURE #ExecForeachDb;
+EXEC('CREATE PROCEDURE #ExecForeachDb @queryText NVARCHAR(MAX)
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+	DECLARE dbCursor CURSOR LOCAL FOR 
+	SELECT 
+		[name] 
+	FROM sys.databases
+	WHERE HAS_DBACCESS([name]) = 1 
+		AND [name] NOT IN (''master'', ''tempdb'', ''model'', ''msdb'');
+	DECLARE @CurrSqlText nvarchar(max);
+	DECLARE @dbName sysname;
+
+	OPEN dbCursor;
+	FETCH NEXT FROM dbCursor INTO @dbName;
+
+	WHILE @@Fetch_Status=0 BEGIN
+		SET @CurrSqlText = N''USE ''+ QUOTENAME(@dbName ,''"'') + @queryText
+		EXEC sp_executesql @CurrSqlText
+		FETCH NEXT FROM dbCursor INTO @dbName;
+	END
+
+	CLOSE dbCursor;
+	DEALLOCATE dbCursor;
+END');
+
+IF OBJECT_ID ('tempdb.dbo.#CachedDbTimestamps') IS NOT NULL DROP TABLE #CachedDbTimestamps;
+CREATE TABLE #CachedDbTimestamps (
+	[id] INT,
+	[timestamp] BIGINT
+);
+
+DECLARE @XmlQueryData XML = @QueryData;
+INSERT INTO #CachedDbTimestamps
+SELECT
+	s.value('./id[1]', 'int') AS [id],
+	s.value('./timestamp[1]', 'bigint') AS [timestamp]
+FROM @XmlQueryData.nodes('/Timestamps/ts') t(s);
+
+IF OBJECT_ID ('tempdb.dbo.#DbTimestamps') IS NOT NULL DROP TABLE #DbTimestamps;
+CREATE TABLE #DbTimestamps (
+	[id] INT,
+	[timestamp] BIGINT
+);
+
+DECLARE @SqlText NVARCHAR(MAX) = N'
+
+DECLARE @lastIntervalEndTimestamp BIGINT = 0;
+SELECT TOP 1 @lastIntervalEndTimestamp = [timestamp] FROM #CachedDbTimestamps WHERE [id] = DB_ID();
+
+INSERT INTO #DbTimestamps([id], [timestamp]) VALUES(DB_ID(), @lastIntervalEndTimestamp)
+
+DECLARE @magicNumberDays BIGINT = 4294967296, @magicNumberSeconds BIGINT = 300, @secondsInDay INT = 86400;
+
+DECLARE @timeGrain BIGINT = (SELECT interval_length_minutes * 60 FROM sys.database_query_store_options WITH (NOLOCK)); --use query store time grain
+
+DECLARE @currDate DATETIME = GETUTCDATE();
+DECLARE @currIntervalEndTimestamp BIGINT = CONVERT(BIGINT, DATEDIFF(day, 0, @currDate)) * @secondsInDay + DATEDIFF(second, DATEADD(day, DATEDIFF(day, 0, @currDate), 0), @currDate) / @timeGrain * @timeGrain;
+IF @lastIntervalEndTimestamp = @currIntervalEndTimestamp
+	RETURN;
+
+DECLARE @currIntervalStartTimestamp BIGINT = @currIntervalEndTimestamp - @timeGrain;
+IF @lastIntervalEndTimestamp != 0 AND @lastIntervalEndTimestamp IS NOT NULL
+	SET @currIntervalStartTimestamp = @lastIntervalEndTimestamp;
+
+DECLARE @currIntervalEndDate datetime = DATEADD(second, @currIntervalEndTimestamp % @secondsInDay, DATEADD(day, @currIntervalEndTimestamp / @secondsInDay, 0));
+DECLARE @currIntervalStartDate datetime = DATEADD(second, @currIntervalStartTimestamp % @secondsInDay, DATEADD(day, @currIntervalStartTimestamp / @secondsInDay, 0));
+
+UPDATE #DbTimestamps SET [timestamp] = @currIntervalEndTimestamp WHERE [id] = DB_ID()
+';
+`
+
+const sqlAzureMIQueryStoreRuntimeStatistics = sqlAzureMIPartQueryPeriod + `
+IF OBJECT_ID ('tempdb.dbo.#QueryStoreMetrics') IS NOT NULL DROP TABLE #QueryStoreMetrics;
+CREATE TABLE #QueryStoreMetrics(
+	measurement varchar(27),
+	measurement_id varchar(36),
+	sql_instance nvarchar(256),
+	[database_name] nvarchar(128),
+	interval_start_time datetime,
+	interval_end_time datetime,
+	interval_start_time_d bigint,
+	interval_end_time_d bigint,
+	query_id bigint,
+	query_hash nvarchar(max),
+	plan_id bigint,
+	last_compile_batch_sql_handle nvarchar(max),
+	query_plan_hash nvarchar(max),
+	max_logical_io_reads bigint,
+	avg_logical_io_reads float,
+	logical_io_reads float,
+	max_physical_io_reads bigint,
+	avg_physical_io_reads float,
+	max_logical_io_writes bigint,
+	avg_logical_io_writes float,
+	execution_type tinyint,
+	count_executions bigint,
+	max_cpu_time bigint,
+	avg_cpu_time float,
+	max_dop bigint,
+	avg_dop float,
+	max_rowcount bigint,
+	avg_rowcount float,
+	max_query_max_used_memory bigint,
+	avg_query_max_used_memory float,
+	[max_duration] bigint,
+	avg_duration float,
+	max_num_physical_io_reads bigint,
+	avg_num_physical_io_reads float,
+	max_log_bytes_used bigint,
+	avg_log_bytes_used float
+);
+
+SET @SqlText = @SqlText + N'
+INSERT INTO #QueryStoreMetrics
+SELECT
+	''sqlserver_azuremi_querystore_runtime_stats'' AS [measurement],
+	CONVERT(varchar(36), NEWID()) AS [measurement_id],
+	REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance],
+	DB_NAME() AS [database_name],
+	CONVERT(datetime, rsi.start_time, 1) AS interval_start_time,
+	CONVERT(datetime, rsi.end_time, 1) AS interval_end_time,
+	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1)), CONVERT(datetime, rsi.start_time, 1))) * @magicNumberSeconds AS interval_start_time_d,
+	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1)), CONVERT(datetime, rsi.end_time, 1))) * @magicNumberSeconds AS interval_end_time_d,
+	q.query_id,
+	CONVERT(nvarchar(max), q.query_hash, 1) as query_hash,
+	p.plan_id,
+	CONVERT(nvarchar(max), q.last_compile_batch_sql_handle, 1) as last_compile_batch_sql_handle,
+	CONVERT(nvarchar(max), p.query_plan_hash, 1) as query_plan_hash,
+	rs.max_logical_io_reads as max_logical_io_reads,
+	rs.avg_logical_io_reads as avg_logical_io_reads,
+	rs.avg_logical_io_reads as logical_io_reads,
+	rs.max_physical_io_reads as max_physical_io_reads,
+	rs.avg_physical_io_reads as avg_physical_io_reads,
+	rs.max_logical_io_writes as max_logical_io_writes,
+	rs.avg_logical_io_writes as avg_logical_io_writes,
+	rs.execution_type,
+	rs.count_executions as count_executions,
+	rs.max_cpu_time as max_cpu_time,
+	rs.avg_cpu_time as avg_cpu_time,
+	rs.max_dop as max_dop,
+	rs.avg_dop as avg_dop,
+	rs.max_rowcount as max_rowcount,
+	rs.avg_rowcount as avg_rowcount,
+	rs.max_query_max_used_memory AS max_query_max_used_memory,
+	rs.avg_query_max_used_memory AS avg_query_max_used_memory,
+	rs.max_duration as [max_duration],
+	rs.avg_duration as avg_duration,
+	rs.max_num_physical_io_reads as max_num_physical_io_reads,
+	rs.avg_num_physical_io_reads as avg_num_physical_io_reads,
+	rs.max_log_bytes_used as [max_log_bytes_used],
+	rs.avg_log_bytes_used as avg_log_bytes_used
+FROM sys.query_store_query q WITH (NOLOCK)
+	JOIN sys.query_store_plan p WITH (NOLOCK) ON q.query_id = p.query_id
+	JOIN sys.query_store_runtime_stats rs WITH (NOLOCK) ON p.plan_id = rs.plan_id
+	JOIN sys.query_store_runtime_stats_interval rsi WITH (NOLOCK) ON rs.runtime_stats_interval_id = rsi.runtime_stats_interval_id
+WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate;
+'
+
+EXEC #ExecForeachDb @SqlText
+
+SELECT * FROM #QueryStoreMetrics;
+
+SELECT CONVERT(NVARCHAR(MAX),(SELECT * FROM #DbTimestamps FOR XML PATH('ts'), ROOT('Timestamps'))) AS CachedData;
+`
+
+const sqlAzureMIQueryStoreWaitStatistics = sqlAzureMIPartQueryPeriod + `
+IF OBJECT_ID ('tempdb.dbo.#QueryStoreWaitStat') IS NOT NULL DROP TABLE #QueryStoreWaitStat;
+CREATE TABLE #QueryStoreWaitStat(
+	measurement varchar(24),
+	measurement_id varchar(36),
+	sql_instance nvarchar(256),
+	[database_name] nvarchar(128),
+	interval_start_time datetime,
+	interval_end_time datetime,
+	interval_start_time_d bigint,
+	interval_end_time_d bigint,
+	query_id bigint,
+	query_hash nvarchar(max),
+	plan_id bigint,
+	last_compile_batch_sql_handle nvarchar(max),
+	query_plan_hash nvarchar(max),
+	wait_category_s nvarchar(60),
+	exec_type_d tinyint,
+	total_query_wait_time_ms_d bigint,
+	max_query_wait_time_ms_d bigint,
+	query_param_type_d tinyint
+);
+
+SET @SqlText = @SqlText + N'
+INSERT INTO #QueryStoreWaitStat
+SELECT
+	''sqlserver_azuremi_querystore_wait_stats'' AS [measurement],
+	CONVERT(varchar(36), NEWID()) AS [measurement_id],
+	REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance],
+	DB_NAME() AS [database_name],
+	CONVERT(datetime, rsi.start_time, 1) AS interval_start_time,
+	CONVERT(datetime, rsi.end_time, 1) AS interval_end_time,
+	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1)), CONVERT(datetime, rsi.start_time, 1))) * @magicNumberSeconds AS interval_start_time_d,
+	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1)), CONVERT(datetime, rsi.end_time, 1))) * @magicNumberSeconds AS interval_end_time_d,
+	q.query_id,
+	CONVERT(nvarchar(max), q.query_hash, 1) as query_hash,
+	p.plan_id,
+	CONVERT(nvarchar(max), q.last_compile_batch_sql_handle, 1) as last_compile_batch_sql_handle,
+	CONVERT(nvarchar(max), p.query_plan_hash, 1) as query_plan_hash,
+	ws.wait_category_desc AS wait_category_s,
+	ws.execution_type AS exec_type_d,
+	ws.total_query_wait_time_ms AS total_query_wait_time_ms_d,
+	ws.max_query_wait_time_ms AS max_query_wait_time_ms_d,
+	q.query_parameterization_type AS query_param_type_d
+FROM sys.query_store_query q WITH (NOLOCK)
+	JOIN sys.query_store_plan p WITH (NOLOCK) ON q.query_id = p.query_id
+	JOIN sys.query_store_wait_stats ws WITH (NOLOCK) ON p.plan_id = ws.plan_id
+	JOIN sys.query_store_runtime_stats_interval rsi WITH (NOLOCK) on ws.runtime_stats_interval_id = rsi.runtime_stats_interval_id
+WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate;
+'
+
+EXEC #ExecForeachDb @SqlText
+
+SELECT * FROM #QueryStoreWaitStat;
+
+SELECT CONVERT(NVARCHAR(MAX),(SELECT * FROM #DbTimestamps FOR XML PATH('ts'), ROOT('Timestamps'))) AS CachedData;
 `
