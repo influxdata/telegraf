@@ -497,6 +497,31 @@ func TestBasicStatsWithDiff(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
 }
 
+// Test only aggregating greater than zero diff
+func TestBasicStatsWithGtZeroDiff(t *testing.T) {
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"gt_zero_diff"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
+
+	aggregator.Add(m1)
+	aggregator.Add(m2)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	expectedFields := map[string]interface{}{
+		"b_gt_zero_diff": float64(2),
+		"c_gt_zero_diff": float64(2),
+		"d_gt_zero_diff": float64(4),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
 // Test only aggregating non_negative_diff
 func TestBasicStatsWithNonNegativeDiff(t *testing.T) {
 
