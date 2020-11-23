@@ -179,6 +179,7 @@ func TestServiceType(t *testing.T) {
 						"request":                "",
 						"protocol":               "DEFAULT",
 						"type":                   "TCP",
+						"response_time":          0.000145,
 					},
 					time.Unix(0, 0),
 				),
