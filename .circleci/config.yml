@@ -9,7 +9,7 @@ defaults:
       - image: 'quay.io/influxdb/telegraf-ci:1.14.9'
   go-1_15: &go-1_15
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.15.2'
+      - image: 'quay.io/influxdb/telegraf-ci:1.15.5'
   mac: &mac
     macos:
       xcode: 11.3.1
