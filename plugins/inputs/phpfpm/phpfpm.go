@@ -300,7 +300,7 @@ func globUnixSocket(url string) ([]string, error) {
 	}
 	paths := glob.Match()
 	if len(paths) == 0 {
-		return nil, fmt.Errorf("socket doesn't exist  '%s': %s", pattern, err)
+		return nil, fmt.Errorf("socket doesn't exist %q: %v", pattern, err)
 	}
 
 	addresses := make([]string, 0, len(paths))
