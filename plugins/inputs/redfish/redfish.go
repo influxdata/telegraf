@@ -181,6 +181,7 @@ func (r *Redfish) getData(url string, payload interface{}) error {
 	req.SetBasicAuth(r.Username, r.Password)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("OData-Version", "4.0")
 	resp, err := r.client.Do(req)
 	if err != nil {
 		return err

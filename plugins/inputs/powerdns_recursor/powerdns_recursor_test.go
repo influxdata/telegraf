@@ -99,8 +99,8 @@ var intOverflowMetrics = "all-outqueries\t18446744073709550195\nanswers-slow\t36
 	"x-ourtime2-4\t302\nx-ourtime4-8\t194\nx-ourtime8-16\t24\n"
 
 func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
-	if runtime.GOOS == "darwin" {
-		t.Skip("Skipping test on darwin")
+	if runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
+		t.Skip("Skipping on windows and darwin, as unixgram sockets are not supported")
 	}
 	// We create a fake server to return test data
 	controlSocket := "/tmp/pdns5724354148158589552.controlsocket"
