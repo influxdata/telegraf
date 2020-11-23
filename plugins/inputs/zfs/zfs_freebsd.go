@@ -106,6 +106,7 @@ func (z *Zfs) gatherDatasetStats(acc telegraf.Accumulator) (string, error) {
 		for _, line := range lines {
 			col := strings.Split(line, "\t")
 			if len(col) != len(properties) {
+				z.Log.Warnf("Invalid number of columns for line: %s", line)
 				continue
 			}
 
@@ -183,7 +184,7 @@ func zpool() ([]string, error) {
 }
 
 func zdataset(properties []string) ([]string, error) {
-	return run("zfs", []string{"list", "-Hp", "-o", strings.join(properties, ',')}...)
+	return run("zfs", []string{"list", "-Hp", "-o", strings.Join(properties, ",")}...)
 }
 
 func sysctl(metric string) ([]string, error) {

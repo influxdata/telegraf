@@ -1,5 +1,9 @@
 package zfs
 
+import (
+	"github.com/influxdata/telegraf"
+)
+
 type Sysctl func(metric string) ([]string, error)
 type Zpool func() ([]string, error)
 type Zdataset func(properties []string) ([]string, error)
@@ -12,6 +16,7 @@ type Zfs struct {
 	sysctl         Sysctl
 	zpool          Zpool
 	zdataset       Zdataset
+	Log            telegraf.Logger `toml:"-"`
 }
 
 var sampleConfig = `
