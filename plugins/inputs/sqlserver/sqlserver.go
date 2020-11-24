@@ -32,7 +32,7 @@ type Query struct {
 	ResultByRow    bool
 	OrderedColumns []string
 	HasCachedData  bool
-	DataCache      QueryDataCache
+	DataCache      *QueryDataCache
 }
 
 // MapQuery type
@@ -179,8 +179,8 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLDBPerformanceCounters"] = Query{ScriptName: "AzureSQLDBPerformanceCounters", Script: sqlAzureDBPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLDBRequests"] = Query{ScriptName: "AzureSQLDBRequests", Script: sqlAzureDBRequests, ResultByRow: false}
 		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlAzureDBSchedulers, ResultByRow: false}
-		queries["AzureSQLDBQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreRuntimeStatistics", Script: sqlAzureDBQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: *InitQueryDataCache()}
-		queries["AzureSQLDBQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreWaitStatistics", Script: sqlAzureDBQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: *InitQueryDataCache()}
+		queries["AzureSQLDBQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreRuntimeStatistics", Script: sqlAzureDBQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
+		queries["AzureSQLDBQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreWaitStatistics", Script: sqlAzureDBQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
 	} else if s.DatabaseType == "AzureSQLManagedInstance" {
 		queries["AzureSQLMIResourceStats"] = Query{ScriptName: "AzureSQLMIResourceStats", Script: sqlAzureMIResourceStats, ResultByRow: false}
 		queries["AzureSQLMIResourceGovernance"] = Query{ScriptName: "AzureSQLMIResourceGovernance", Script: sqlAzureMIResourceGovernance, ResultByRow: false}
@@ -191,8 +191,8 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLMIPerformanceCounters"] = Query{ScriptName: "AzureSQLMIPerformanceCounters", Script: sqlAzureMIPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLMIRequests"] = Query{ScriptName: "AzureSQLMIRequests", Script: sqlAzureMIRequests, ResultByRow: false}
 		queries["AzureSQLMISchedulers"] = Query{ScriptName: "AzureSQLMISchedulers", Script: sqlAzureMISchedulers, ResultByRow: false}
-		queries["AzureSQLMIQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLMIQueryStoreRuntimeStatistics", Script: sqlAzureMIQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: *InitQueryDataCache()}
-		queries["AzureSQLMIQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLMIQueryStoreWaitStatistics", Script: sqlAzureMIQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: *InitQueryDataCache()}
+		queries["AzureSQLMIQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLMIQueryStoreRuntimeStatistics", Script: sqlAzureMIQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
+		queries["AzureSQLMIQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLMIQueryStoreWaitStatistics", Script: sqlAzureMIQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
 	} else if s.DatabaseType == "SQLServer" { //These are still V2 queries and have not been refactored yet.
 		queries["SQLServerPerformanceCounters"] = Query{ScriptName: "SQLServerPerformanceCounters", Script: sqlServerPerformanceCounters, ResultByRow: false}
 		queries["SQLServerWaitStatsCategorized"] = Query{ScriptName: "SQLServerWaitStatsCategorized", Script: sqlServerWaitStatsCategorized, ResultByRow: false}

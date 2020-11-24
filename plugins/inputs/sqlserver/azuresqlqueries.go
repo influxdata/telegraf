@@ -1372,7 +1372,7 @@ UPDATE #DbTimestamps SET [timestamp] = @currIntervalEndTimestamp WHERE [id] = DB
 const sqlAzureMIQueryStoreRuntimeStatistics = sqlAzureMIPartQueryPeriod + `
 IF OBJECT_ID ('tempdb.dbo.#QueryStoreMetrics') IS NOT NULL DROP TABLE #QueryStoreMetrics;
 CREATE TABLE #QueryStoreMetrics(
-	measurement varchar(27),
+	measurement varchar(42),
 	measurement_id varchar(36),
 	sql_instance nvarchar(256),
 	[database_name] nvarchar(128),
@@ -1466,7 +1466,7 @@ SELECT CONVERT(NVARCHAR(MAX),(SELECT * FROM #DbTimestamps FOR XML PATH('ts'), RO
 const sqlAzureMIQueryStoreWaitStatistics = sqlAzureMIPartQueryPeriod + `
 IF OBJECT_ID ('tempdb.dbo.#QueryStoreWaitStat') IS NOT NULL DROP TABLE #QueryStoreWaitStat;
 CREATE TABLE #QueryStoreWaitStat(
-	measurement varchar(24),
+	measurement varchar(39),
 	measurement_id varchar(36),
 	sql_instance nvarchar(256),
 	[database_name] nvarchar(128),
