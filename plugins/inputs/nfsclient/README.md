@@ -72,7 +72,8 @@ Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/b
         - attrinvalidates - (int, count) - How many times an inode has had cached inode attributes invalidated.
         - vfsopen - (int, count) - How many times files or directories have been `open()`'d.
         - vfslookup - (int, count) - How many name lookups in directories there have been.
-        - vfspermission - (int, count) - Number of calls to `access()`.
+        - vfsaccess - (int, count) - Number of calls to `access()`. (formerly called "vfspermission")
+
         - vfsupdatepage - (int, count) - Count of updates (and potential writes) to pages.
         - vfsreadpage - (int, count) - Number of pages read.
         - vfsreadpages - (int, count) - Count of how many times a _group_ of pages was read (possibly via `mmap()`?).

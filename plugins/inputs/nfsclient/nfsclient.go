@@ -47,7 +47,7 @@ var eventsFields = []string{
 	"attrinvalidates",
 	"vfsopen",
 	"vfslookup",
-	"vfspermission",
+	"vfsaccess",
 	"vfsupdatepage",
 	"vfsreadpage",
 	"vfsreadpages",

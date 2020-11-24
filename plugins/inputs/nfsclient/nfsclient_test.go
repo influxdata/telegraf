@@ -215,7 +215,7 @@ func TestNFSClientProcessFull(t *testing.T) {
 		"attrinvalidates":   int64(26188427),
 		"vfsopen":           int64(27525),
 		"vfslookup":         int64(9140),
-		"vfspermission":     int64(114420),
+		"vfsaccess":         int64(114420),
 		"vfsupdatepage":     int64(30785253),
 		"vfsreadpage":       int64(5308856),
 		"vfsreadpages":      int64(5364858),
