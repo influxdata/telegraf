@@ -243,34 +243,39 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 
 	var fields = make(map[string]interface{})
 
-	if fullstat && first == "events" && len(nline) >= len(eventsFields) {
-		for i, t := range eventsFields {
-			fields[t] = nline[i]
-		}
-		acc.AddFields("nfs_events", fields, tags)
-	} else if fullstat && first == "bytes" && len(nline) >= len(bytesFields) {
-		for i, t := range bytesFields {
-			fields[t] = nline[i]
-		}
-		acc.AddFields("nfs_bytes", fields, tags)
-	} else if fullstat && first == "xprt" && len(line) > 1 {
-		switch line[1] {
-		case "tcp":
-			if len(nline)+2 >= len(xprttcpFields) {
-				for i, t := range xprttcpFields {
-					fields[t] = nline[i+2]
-				}
-				acc.AddFields("nfs_xprt_tcp", fields, tags)
+	if fullstat {
+
+		if first == "events" && len(nline) >= len(eventsFields) {
+			for i, t := range eventsFields {
+				fields[t] = nline[i]
 			}
-		case "udp":
-			if len(nline)+2 >= len(xprtudpFields) {
-				for i, t := range xprtudpFields {
-					fields[t] = nline[i+2]
+			acc.AddFields("nfs_events", fields, tags)
+
+		} else if first == "bytes" && len(nline) >= len(bytesFields) {
+			for i, t := range bytesFields {
+				fields[t] = nline[i]
+			}
+			acc.AddFields("nfs_bytes", fields, tags)
+
+		} else if first == "xprt" && len(line) > 1 {
+			switch line[1] {
+			case "tcp":
+				if len(nline)+2 >= len(xprttcpFields) {
+					for i, t := range xprttcpFields {
+						fields[t] = nline[i+2]
+					}
+					acc.AddFields("nfs_xprt_tcp", fields, tags)
 				}
-				acc.AddFields("nfs_xprt_udp", fields, tags)
+			case "udp":
+				if len(nline)+2 >= len(xprtudpFields) {
+					for i, t := range xprtudpFields {
+						fields[t] = nline[i+2]
+					}
+					acc.AddFields("nfs_xprt_udp", fields, tags)
+				}
 			}
 		}
-	} else if fullstat {
+
 		if version == "3" {
 			if nfs3Ops[first] && (len(nline) <= len(nfsopFields)) {
 				for i, t := range nline {
@@ -288,6 +293,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 				acc.AddFields("nfs_ops", fields, tags)
 			}
 		}
+
 	} else {
 		if first == "READ" {
 			fields["read_ops"] = nline[0]

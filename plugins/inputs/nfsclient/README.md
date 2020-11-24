@@ -9,10 +9,12 @@
 
 #### Description
 
-The NFSClient plugin collects data from /proc/self/mountstats, by default it will only include a quite limited set of IO metrics.
-If fullstat is set, it will collect a lot of per-operation statistics.
+The NFSClient plugin collects data from /proc/self/mountstats. By default, only a limited number of general system-level metrics are collected, including `nfsstat_read` and `nfsstat_write`.
+If `fullstat` is set, a great deal of additional metrics are collected
 
 #### Measurements & Fields
+
+Always collected:
 
 - nfsstat_read
     - read_bytes (integer, bytes) - The number of bytes exchanged doing READ operations.
