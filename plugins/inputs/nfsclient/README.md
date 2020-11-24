@@ -17,21 +17,21 @@ If `fullstat` is set, a great deal of additional metrics are collected
 Always collected:
 
 - nfsstat_read
-    - read_bytes (integer, bytes) - The number of bytes exchanged doing READ operations.
+    - read_bytes (integer, bytes) - The number of bytes exchanged doing READ operations.  (sum bytes sent *and* received for WRITE Ops)
     - read_ops (integer, count) - The number of RPC READ operations executed. 
     - read_retrans (integer, count) - The number of times an RPC READ operation had to be retried.
     - read_exe (integer, miliseconds) - The number of miliseconds it took to process the RPC READ operations.
     - read_rtt (integer, miliseconds) - The round-trip time for RPC READ operations.
 
 - nfsstat_write
-    - write_bytes (integer, bytes) - The number of bytes exchanged doing WRITE operations.
+    - write_bytes (integer, bytes) - The number of bytes exchanged doing WRITE operations.  (sum bytes sent *and* received for WRITE Ops)
     - write_ops (integer, count) - The number of RPC WRITE operations executed.
     - write_retrans (integer, count) - The number of times an RPC WRITE operation had to be retried.
     - write_exe (integer, miliseconds) - The number of miliseconds it took to process the RPC WRITE operations.
     - write_rtt (integer, miliseconds) - The rount-trip time for RPC WRITE operations.
 
-In addition enabling fullstat will make many more metrics available, but description of those is beyond the scope here.
-See references for more details.
+In addition enabling `fullstat` will make many more metrics available.  Please see the References for explanations of the the specific fields.
+See References for more details.
 
 #### Tags
 
@@ -126,12 +126,11 @@ Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/b
     - tags:
         - mountpoint - The local mountpoint, for instance: "/var/www"
         - serverexport - The full server export, for instance: "nfsserver.example.org:/export"
-    -fields - in all cases, "OP" is replaced with the uppercase name of the NFS operation, (_e.g._ "READ", "FSINFO", etc)
+    -fields - in all cases, **"OP"** is replaced with the uppercase name of the NFS operation, (_e.g._ "READ", "FSINFO", etc)
         - OP_ops - (int, count) - Total operations of this type.
         - OP_trans - (int, count) - Total transmissions of this type, including retransmissions: OP_ops - OP_trans = total_retransmissions (lower is better).
         - OP_timeouts - (int, count) - Number of major timeouts.
-        - OP_bytes_sent - (int, count) - Bytes received, including headers (should also be close to on-wire size).
-        - OP_bytes_recv - (int, count) - Bytes sent, including headers (should be close to on-wire size).
+        - OP_bytes_sent - (int, count) - Bytes received, including headers (should also be close to on-wire size).          - OP_bytes_recv - (int, count) - Bytes sent, including headers (should be close to on-wire size).
         - OP_queue_time - (int, milliseconds) - Cumulative time a request waited in the queue before sending this OP type.
         - OP_response_time - (int, milliseconds) - Cumulative time waiting for a response for this OP type.
         - OP_total_time - (int, milliseconds) - Cumulative time a request waited in the queue before sending.
