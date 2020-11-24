@@ -463,7 +463,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				}
 
 				// snmptranslate table field value here
-				if f.Translate && !f.IsTag{
+				if f.Translate {
 					switch ent.Value.(interface{}).(type) {
 						case string: {
 							entOid := ent.Value.(string)
