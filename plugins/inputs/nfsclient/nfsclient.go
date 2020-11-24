@@ -14,9 +14,11 @@ import (
 )
 
 type NFSClient struct {
-	Fullstat      bool
-	IncludeMounts []string
-	ExcludeMounts []string
+	Fullstat          bool
+	IncludeMounts     []string
+	ExcludeMounts     []string
+	IncludeOperations []string
+	ExcludeOperations []string
 }
 
 var sampleConfig = `
@@ -27,9 +29,24 @@ var sampleConfig = `
   # The pattern (Go regexp) is matched against the mount point (not the
   # device being mounted).  If include_mounts is set, all mounts are ignored
   # unless present in the list. If a mount is listed in both include_mounts
-  # and exclude_monuts, it is excluded.  Go regexp patterns can be used.
+  # and exclude_mounts, it is excluded.  Go regexp patterns can be used.
   include_mounts = []
   exclude_mounts = []
+
+  # List of operations to include or exclude from collecting.  This applies
+  # only when fullstat=true.  Symantics are similar to {include,exclude}_mounts:
+  # the default is to collect everything; when include_operations is set, only
+  # those OPs are collected; when exclude_operations is set, all are collected
+  # except those listed.  If include and exclude are set, the OP is excluded.
+  # See /proc/self/mountstats for a list of valid operations; note that
+  # NFSv3 and NFSv4 have different lists.  While it is not possible to
+  # have different include/exclude lists for NFSv3/4, unused elements
+  # in the list should be okay.  It is possible to have different lists
+  # for different mountpoints:  use mulitple [[input.nfsclient]] stanzas,
+  # with their own lists.  See "include_mounts" above, and be careful of
+  # duplicate metrics.
+  include_operations = []
+  exclude_operations = []
 `
 
 func (n *NFSClient) SampleConfig() string {
@@ -198,6 +215,7 @@ var nfsopFields = []string{
 	"queue_time",
 	"response_time",
 	"total_time",
+	"errors",
 }
 
 func convert(line []string) []int64 {
@@ -218,7 +236,7 @@ func in(list []string, val string) bool {
 	return false
 }
 
-func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, fullstat bool, acc telegraf.Accumulator) error {
+func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, fullstat bool, nfs3Ops map[string]bool, nfs4Ops map[string]bool, acc telegraf.Accumulator) error {
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
 	nline := convert(line)
 	first := strings.Replace(line[0], ":", "", 1)
@@ -252,34 +270,17 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 				acc.AddFields("nfs_xprt_udp", fields, tags)
 			}
 		}
-	} else if version == "3" || version == "4" {
-		if in(nfs3Fields, first) && len(nline) > 7 {
-			if first == "READ" {
-				fields["read_ops"] = nline[0]
-				fields["read_retrans"] = (nline[1] - nline[0])
-				fields["read_bytes"] = (nline[3] + nline[4])
-				fields["read_rtt"] = nline[6]
-				fields["read_exe"] = nline[7]
-				acc.AddFields("nfsstat_read", fields, tags)
-			} else if first == "WRITE" {
-				fields["write_ops"] = nline[0]
-				fields["write_retrans"] = (nline[1] - nline[0])
-				fields["write_bytes"] = (nline[3] + nline[4])
-				fields["write_rtt"] = nline[6]
-				fields["write_exe"] = nline[7]
-				acc.AddFields("nfsstat_write", fields, tags)
-			}
-		}
-		if fullstat && version == "3" {
-			if in(nfs3Fields, first) && len(nline) <= len(nfsopFields) {
+	} else if fullstat {
+		if version == "3" {
+			if nfs3Ops[first] && (len(nline) <= len(nfsopFields)) {
 				for i, t := range nline {
 					item := fmt.Sprintf("%s_%s", first, nfsopFields[i])
 					fields[item] = t
 				}
 				acc.AddFields("nfs_ops", fields, tags)
 			}
-		} else if fullstat && version == "4" {
-			if in(nfs4Fields, first) && len(nline) <= len(nfsopFields) {
+		} else if version == "4" {
+			if nfs4Ops[first] && (len(nline) <= len(nfsopFields)) {
 				for i, t := range nline {
 					item := fmt.Sprintf("%s_%s", first, nfsopFields[i])
 					fields[item] = t
@@ -287,7 +288,23 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 				acc.AddFields("nfs_ops", fields, tags)
 			}
 		}
-	}
+	} else {
+                if first == "READ" {
+                        fields["read_ops"] = nline[0]
+                        fields["read_retrans"] = (nline[1] - nline[0])
+                        fields["read_bytes"] = (nline[3] + nline[4])
+                        fields["read_rtt"] = nline[6]
+                        fields["read_exe"] = nline[7]
+                        acc.AddFields("nfsstat_read", fields, tags)
+                } else if first == "WRITE" {
+                        fields["write_ops"] = nline[0]
+                        fields["write_retrans"] = (nline[1] - nline[0])
+                        fields["write_bytes"] = (nline[3] + nline[4])
+                        fields["write_rtt"] = nline[6]
+                        fields["write_exe"] = nline[7]
+                        acc.AddFields("nfsstat_write", fields, tags)
+                }
+            }
 
 	return nil
 }
@@ -297,6 +314,37 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 	var version string
 	var export string
 	var skip bool
+	var nfs3Ops map[string]bool
+	var nfs4Ops map[string]bool
+	nfs3Ops = make(map[string]bool)
+	nfs4Ops = make(map[string]bool)
+
+	if len(n.IncludeOperations) == 0 {
+		for _, Op := range nfs3Fields {
+			nfs3Ops[Op] = true
+		}
+		for _, Op := range nfs4Fields {
+			nfs4Ops[Op] = true
+		}
+	} else {
+		for _, Op := range n.IncludeOperations {
+			nfs3Ops[Op] = true
+		}
+		for _, Op := range n.IncludeOperations {
+			nfs4Ops[Op] = true
+		}
+	}
+
+	if len(n.ExcludeOperations) > 0 {
+		for _, Op := range n.ExcludeOperations {
+			if nfs3Ops[Op] {
+				delete(nfs3Ops, Op)
+			}
+			if nfs4Ops[Op] {
+				delete(nfs4Ops, Op)
+			}
+		}
+	}
 
 	for scanner.Scan() {
 		line := strings.Fields(scanner.Text())
@@ -331,7 +379,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 		}
 
 		if !skip && len(line) > 0 {
-			n.parseStat(device, export, version, line, n.Fullstat, acc)
+			n.parseStat(device, export, version, line, n.Fullstat, nfs3Ops, nfs4Ops, acc)
 		}
 	}
 	return nil

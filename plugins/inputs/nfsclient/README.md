@@ -1,7 +1,11 @@
 # Telegraf plugin: NFSClient
 
 #### Plugin arguments:
-- **fullstat** bool: Collect per-operation type metrics
+- **fullstat** bool: Collect per-operation type metrics.  Defaults to false.
+- **include_mounts** list(string): gather metrics for only these mounts.  Default is to watch all mounts.
+- **exclude_mounts** list(string): gather metrics for all mounts, except those listed in this option. Excludes take precedence over includes.
+- **include_operations** list(string): List of specific NFS operations to track.  See /proc/self/mountstats (the "per-op statistics" section) for complete lists of valid options for NFSv3 and NFSV4.  The default is to gather all metrics, but this is almost certainly *not* what you want (there are 22 operations for NFSv3, and 59 for NFSv4).  A 'minimal' list for basic usage:  ['READ','WRITE','ACCESS','GETATTR','READDIR','LOOKUP','LOOKUP']
+- **exclude_operations** list(string): Gather all metrics, except those listed.  Excludes take precedence over includes.
 
 #### Description
 
