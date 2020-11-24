@@ -237,6 +237,8 @@ type Field struct {
 	//  "hwaddr" will convert a 6-byte string to a MAC address.
 	//  "ipaddr" will convert the value to an IPv4 or IPv6 address.
 	Conversion string
+	// Translate tells if the value of the field should be snmptranslated
+	Translate bool
 
 	initialized bool
 }
@@ -427,6 +429,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
+
 				fv, err := fieldConvert(f.Conversion, ent.Value)
 				if err != nil {
 					return nil, fmt.Errorf("converting %q (OID %s) for field %s: %w", ent.Value, ent.Name, f.Name, err)
@@ -458,6 +461,16 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 						}
 						return r
 					}, idx)
+				}
+
+				// snmptranslate table field value here
+				if f.Translate {
+					entOid := ent.Value.(string)
+					_, _, oidText, _, err := SnmpTranslate(entOid)
+					if err == nil {
+						// If no error translating, the original value for ent.Value should be replaced
+						ent.Value = oidText
+					}
 				}
 
 				fv, err := fieldConvert(f.Conversion, ent.Value)
