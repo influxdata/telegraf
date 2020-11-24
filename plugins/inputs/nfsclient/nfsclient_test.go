@@ -133,8 +133,8 @@ func TestNFSClientParsev3(t *testing.T) {
 	var acc testutil.Accumulator
 
 	nfsclient := NFSClient{}
-        nfs3Ops := map[string] bool {"READLINK":true, "GETATTR":false}
-        nfs4Ops := map[string] bool {"READLINK":true, "GETATTR":false}
+	nfs3Ops := map[string]bool{"READLINK": true, "GETATTR": false}
+	nfs4Ops := map[string]bool{"READLINK": true, "GETATTR": false}
 	data := strings.Fields("         READLINK: 500 501 502 503 504 505 506 507")
 	nfsclient.parseStat("1.2.3.4:/storage/NFS", "/NFS", "3", data, true, nfs3Ops, nfs4Ops, &acc)
 
@@ -155,8 +155,8 @@ func TestNFSClientParsev4(t *testing.T) {
 	var acc testutil.Accumulator
 
 	nfsclient := NFSClient{}
-        nfs3Ops := map[string] bool {"DESTROY_SESSION":true, "GETATTR":false}
-        nfs4Ops := map[string] bool {"DESTROY_SESSION":true, "GETATTR":false}
+	nfs3Ops := map[string]bool{"DESTROY_SESSION": true, "GETATTR": false}
+	nfs4Ops := map[string]bool{"DESTROY_SESSION": true, "GETATTR": false}
 	data := strings.Fields("    DESTROY_SESSION: 500 501 502 503 504 505 506 507")
 	nfsclient.parseStat("2.2.2.2:/nfsdata/", "/mnt", "4", data, true, nfs3Ops, nfs4Ops, &acc)
 
