@@ -494,9 +494,9 @@ func TestTableBuild_walk(t *testing.T) {
 				OidIndexLength: 1,
 			},
 			{
-				Name:			"myfield6",
-				Oid:			".1.0.0.0.1.2",
-				Translate:		true,
+				Name:      "myfield6",
+				Oid:       ".1.0.0.0.1.2",
+				Translate: true,
 			},
 		},
 	}
