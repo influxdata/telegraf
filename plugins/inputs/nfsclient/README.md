@@ -34,9 +34,6 @@ See references for more details.
     - serverexport The full server export, for instance: "nfsserver.example.org:/export"
 
 #### References
-[nfsiostat](http://git.linux-nfs.org/?p=steved/nfs-utils.git;a=summary)
-[net/sunrpc/stats.c - Linux source code](https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/net/sunrpc/stats.c)
-[What is in /proc/self/mountstats for NFS mounts: an introduction](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)
 1. [nfsiostat](http://git.linux-nfs.org/?p=steved/nfs-utils.git;a=summary)
 2. [net/sunrpc/stats.c - Linux source code](https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/net/sunrpc/stats.c)
 3. [What is in /proc/self/mountstats for NFS mounts: an introduction](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)
@@ -117,3 +114,18 @@ Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/b
         - [same as nfs_xprt_tcp]
     - fields:
         - [same as nfs_xprt_tcp, except for connect_count, connect_time, and idle_time]
+
+- nfs_ops
+    - tags:
+        - mountpoint - The local mountpoint, for instance: "/var/www"
+        - serverexport - The full server export, for instance: "nfsserver.example.org:/export"
+    -fields - in all cases, "OP" is replaced with the uppercase name of the NFS operation, (_e.g._ "READ", "FSINFO", etc)
+        - OP_ops - (int, count) - Total operations of this type.
+        - OP_trans - (int, count) - Total transmissions of this type, including retransmissions: OP_ops - OP_trans = total_retransmissions (lower is better).
+        - OP_timeouts - (int, count) - Number of major timeouts.
+        - OP_bytes_sent - (int, count) - Bytes received, including headers (should also be close to on-wire size).
+        - OP_bytes_recv - (int, count) - Bytes sent, including headers (should be close to on-wire size).
+        - OP_queue_time - (int, milliseconds) - Cumulative time a request waited in the queue before sending this OP type.
+        - OP_response_time - (int, milliseconds) - Cumulative time waiting for a response for this OP type.
+        - OP_total_time - (int, milliseconds) - Cumulative time a request waited in the queue before sending.
+        - OP_errors - (int, count) - Total number operations that complete with tk_status < 0 (usually errors).  This is a new field, present in kernel >=5.3, mountstats version 1.1
