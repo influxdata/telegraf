@@ -307,7 +307,9 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 		}
 	}
 
-	tags["measurement_db_type"] = s.DatabaseType
+	if s.DatabaseType != "" {
+		tags["measurement_db_type"] = s.DatabaseType
+	}
 
 	if query.ResultByRow {
 		// add measurement to Accumulator
