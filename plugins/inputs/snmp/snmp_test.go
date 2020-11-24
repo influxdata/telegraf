@@ -493,6 +493,11 @@ func TestTableBuild_walk(t *testing.T) {
 				Oid:            ".1.0.0.2.1.5",
 				OidIndexLength: 1,
 			},
+			{
+				Name:			"myfield6",
+				Oid:			".1.0.0.0.1.2",
+				Translate:		true,
+			},
 		},
 	}
 
@@ -510,6 +515,7 @@ func TestTableBuild_walk(t *testing.T) {
 			"myfield3": float64(0.123),
 			"myfield4": 11,
 			"myfield5": 11,
+			"myfield6": 1,
 		},
 	}
 	rtr2 := RTableRow{
@@ -522,6 +528,7 @@ func TestTableBuild_walk(t *testing.T) {
 			"myfield3": float64(0.456),
 			"myfield4": 22,
 			"myfield5": 22,
+			"myfield6": 2,
 		},
 	}
 	rtr3 := RTableRow{
@@ -531,6 +538,7 @@ func TestTableBuild_walk(t *testing.T) {
 		Fields: map[string]interface{}{
 			"myfield2": 0,
 			"myfield3": float64(0.0),
+			"myfield6": 0,
 		},
 	}
 	rtr4 := RTableRow{
