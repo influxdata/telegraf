@@ -1,7 +1,11 @@
 # Telegraf plugin: NFSClient
 
 #### Plugin arguments:
-- **fullstat** bool: Collect per-operation type metrics
+- **fullstat** bool: Collect per-operation type metrics.  Defaults to false.
+- **include_mounts** list(string): gather metrics for only these mounts.  Default is to watch all mounts.
+- **exclude_mounts** list(string): gather metrics for all mounts, except those listed in this option. Excludes take precedence over includes.
+- **include_operations** list(string): List of specific NFS operations to track.  See /proc/self/mountstats (the "per-op statistics" section) for complete lists of valid options for NFSv3 and NFSV4.  The default is to gather all metrics, but this is almost certainly *not* what you want (there are 22 operations for NFSv3, and 59 for NFSv4).  A 'minimal' list for basic usage:  ['READ','WRITE','ACCESS','GETATTR','READDIR','LOOKUP','LOOKUP']
+- **exclude_operations** list(string): Gather all metrics, except those listed.  Excludes take precedence over includes.
 
 #### Description
 
@@ -34,9 +38,6 @@ See references for more details.
     - serverexport The full server export, for instance: "nfsserver.example.org:/export"
 
 #### References
-[nfsiostat](http://git.linux-nfs.org/?p=steved/nfs-utils.git;a=summary)
-[net/sunrpc/stats.c - Linux source code](https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/net/sunrpc/stats.c)
-[What is in /proc/self/mountstats for NFS mounts: an introduction](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)
 1. [nfsiostat](http://git.linux-nfs.org/?p=steved/nfs-utils.git;a=summary)
 2. [net/sunrpc/stats.c - Linux source code](https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/net/sunrpc/stats.c)
 3. [What is in /proc/self/mountstats for NFS mounts: an introduction](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)
@@ -75,13 +76,14 @@ Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/b
         - attrinvalidates - (int, count) - How many times an inode has had cached inode attributes invalidated.
         - vfsopen - (int, count) - How many times files or directories have been `open()`'d.
         - vfslookup - (int, count) - How many name lookups in directories there have been.
-        - vfspermission - (int, count) - Number of calls to `access()`.
+        - vfsaccess - (int, count) - Number of calls to `access()`. (formerly called "vfspermission")
+
         - vfsupdatepage - (int, count) - Count of updates (and potential writes) to pages.
         - vfsreadpage - (int, count) - Number of pages read.
         - vfsreadpages - (int, count) - Count of how many times a _group_ of pages was read (possibly via `mmap()`?).
         - vfswritepage - (int, count) - Number of pages written.
         - vfswritepages - (int, count) - Count of how many times a _group_ of pages was written (possibly via `mmap()`?)
-        - vfsreaddir - (int, count) - Count of directory entry reads with getdents(). These reads can be served from cache and don't necessarily imply actual NFS requests.
+        - vfsgetdents - (int, count) - Count of directory entry reads with getdents(). These reads can be served from cache and don't necessarily imply actual NFS requests. (formerly called "vfsreaddir")
         - vfssetattr - (int, count) - How many times we've set attributes on inodes.
         - vfsflush - (int, count) - Count of times pending writes have been forcibly flushed to the server.
         - vfsfsync - (int, count) - Count of calls to `fsync()` on directories and files.
@@ -117,3 +119,18 @@ Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/b
         - [same as nfs_xprt_tcp]
     - fields:
         - [same as nfs_xprt_tcp, except for connect_count, connect_time, and idle_time]
+
+- nfs_ops
+    - tags:
+        - mountpoint - The local mountpoint, for instance: "/var/www"
+        - serverexport - The full server export, for instance: "nfsserver.example.org:/export"
+    -fields - in all cases, "OP" is replaced with the uppercase name of the NFS operation, (_e.g._ "READ", "FSINFO", etc)
+        - OP_ops - (int, count) - Total operations of this type.
+        - OP_trans - (int, count) - Total transmissions of this type, including retransmissions: OP_ops - OP_trans = total_retransmissions (lower is better).
+        - OP_timeouts - (int, count) - Number of major timeouts.
+        - OP_bytes_sent - (int, count) - Bytes received, including headers (should also be close to on-wire size).
+        - OP_bytes_recv - (int, count) - Bytes sent, including headers (should be close to on-wire size).
+        - OP_queue_time - (int, milliseconds) - Cumulative time a request waited in the queue before sending this OP type.
+        - OP_response_time - (int, milliseconds) - Cumulative time waiting for a response for this OP type.
+        - OP_total_time - (int, milliseconds) - Cumulative time a request waited in the queue before sending.
+        - OP_errors - (int, count) - Total number operations that complete with tk_status < 0 (usually errors).  This is a new field, present in kernel >=5.3, mountstats version 1.1
