@@ -79,7 +79,7 @@ Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/b
         - vfsreadpages - (int, count) - Count of how many times a _group_ of pages was read (possibly via `mmap()`?).
         - vfswritepage - (int, count) - Number of pages written.
         - vfswritepages - (int, count) - Count of how many times a _group_ of pages was written (possibly via `mmap()`?)
-        - vfsreaddir - (int, count) - Count of directory entry reads with getdents(). These reads can be served from cache and don't necessarily imply actual NFS requests.
+        - vfsgetdents - (int, count) - Count of directory entry reads with getdents(). These reads can be served from cache and don't necessarily imply actual NFS requests. (formerly called "vfsreaddir")
         - vfssetattr - (int, count) - How many times we've set attributes on inodes.
         - vfsflush - (int, count) - Count of times pending writes have been forcibly flushed to the server.
         - vfsfsync - (int, count) - Count of calls to `fsync()` on directories and files.

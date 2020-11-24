@@ -221,7 +221,7 @@ func TestNFSClientProcessFull(t *testing.T) {
 		"vfsreadpages":      int64(5364858),
 		"vfswritepage":      int64(30784819),
 		"vfswritepages":     int64(79832668),
-		"vfsreaddir":        int64(170),
+		"vfsgetdents":       int64(170),
 		"vfssetattr":        int64(64),
 		"vfsflush":          int64(18194),
 		"vfsfsync":          int64(29294718),

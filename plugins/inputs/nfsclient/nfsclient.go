@@ -53,7 +53,7 @@ var eventsFields = []string{
 	"vfsreadpages",
 	"vfswritepage",
 	"vfswritepages",
-	"vfsreaddir",
+	"vfsgetdents",
 	"vfssetattr",
 	"vfsflush",
 	"vfsfsync",
