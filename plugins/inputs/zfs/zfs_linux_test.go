@@ -245,6 +245,29 @@ preferred_not_found             4    43
 
 var testKstatPath = os.TempDir() + "/telegraf/proc/spl/kstat/zfs"
 
+// $ zpool list -Hp -o name,health,size,alloc,free,fragmentation,capacity,dedupratio,freeing,leaked
+var zpool_output = []string{
+	"HOME	ONLINE	319975063552	202555169792	117419893760	22	63	1.00	0	0",
+	"STORAGE	ONLINE	15942918602752	1172931735552	14769986867200	12	7	1.00	0	0",
+}
+
+func mock_zpool_one_pool() ([]string, error) {
+	return zpool_output[0:1], nil
+}
+
+func mock_zpool() ([]string, error) {
+	return zpool_output, nil
+}
+
+// $ zpool list -Hp -o name,health,size,alloc,free,fragmentation,capacity,dedupratio
+var zpool_output_unavail = []string{
+	"HOME	UNAVAIL	-	-	-	-	-	-	-	-",
+}
+
+func mock_zpool_unavail() ([]string, error) {
+	return zpool_output_unavail, nil
+}
+
 func TestZfsPoolMetrics(t *testing.T) {
 	err := os.MkdirAll(testKstatPath, 0755)
 	require.NoError(t, err)
@@ -262,20 +285,21 @@ func TestZfsPoolMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	z := &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}}
+	z := &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}, zpool: mock_zpool_one_pool}
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
 	require.False(t, acc.HasMeasurement("zfs_pool"))
 	acc.Metrics = nil
 
-	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}, PoolMetrics: true}
+	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}, PoolMetrics: true, zpool: mock_zpool_one_pool}
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
 	//one pool, all metrics
 	tags := map[string]string{
-		"pool": "HOME",
+		"pool":   "HOME",
+		"health": "ONLINE",
 	}
 
 	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
@@ -321,7 +345,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 		"pools": "HOME",
 	}
 
-	z := &Zfs{KstatPath: testKstatPath}
+	z := &Zfs{KstatPath: testKstatPath, zpool: mock_zpool_one_pool}
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
@@ -339,7 +363,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 		"pools": "HOME::STORAGE",
 	}
 
-	z = &Zfs{KstatPath: testKstatPath}
+	z = &Zfs{KstatPath: testKstatPath, zpool: mock_zpool}
 	acc2 := testutil.Accumulator{}
 	err = z.Gather(&acc2)
 	require.NoError(t, err)
@@ -350,12 +374,51 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	intMetrics = getKstatMetricsArcOnly()
 
 	//two pools, one metric
-	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}}
+	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}, zpool: mock_zpool}
 	acc3 := testutil.Accumulator{}
 	err = z.Gather(&acc3)
 	require.NoError(t, err)
 
 	acc3.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
+
+	err = os.RemoveAll(os.TempDir() + "/telegraf")
+	require.NoError(t, err)
+}
+
+func TestZfsPoolUnavailMetrics(t *testing.T) {
+	err := os.MkdirAll(testKstatPath, 0755)
+	require.NoError(t, err)
+
+	err = os.MkdirAll(testKstatPath+"/HOME", 0755)
+	require.NoError(t, err)
+
+	err = ioutil.WriteFile(testKstatPath+"/HOME/io", []byte(pool_ioContents), 0644)
+	require.NoError(t, err)
+
+	err = ioutil.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0644)
+	require.NoError(t, err)
+
+	poolMetrics := getPoolUnavailMetrics()
+
+	var acc testutil.Accumulator
+
+	z := &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}, zpool: mock_zpool_unavail}
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	require.False(t, acc.HasMeasurement("zfs_pool"))
+	acc.Metrics = nil
+
+	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}, PoolMetrics: true, zpool: mock_zpool_unavail}
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	//one pool, all metrics
+	tags := map[string]string{
+		"pool":   "HOME",
+		"health": "UNAVAIL",
+	}
+	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
 
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
 	require.NoError(t, err)
@@ -524,6 +587,31 @@ func getKstatMetricsAll() map[string]interface{} {
 
 func getPoolMetrics() map[string]interface{} {
 	return map[string]interface{}{
+		"nread":         int64(1884160),
+		"nwritten":      int64(6450688),
+		"reads":         int64(22),
+		"writes":        int64(978),
+		"wtime":         int64(272187126),
+		"wlentime":      int64(2850519036),
+		"wupdate":       int64(2263669418655),
+		"rtime":         int64(424226814),
+		"rlentime":      int64(2850519036),
+		"rupdate":       int64(2263669871823),
+		"wcnt":          int64(0),
+		"rcnt":          int64(0),
+		"allocated":     int64(202555169792),
+		"capacity":      int64(63),
+		"dedupratio":    float64(1.0),
+		"fragmentation": int64(22),
+		"free":          int64(117419893760),
+		"size":          int64(319975063552),
+		"freeing":       int64(0),
+		"leaked":        int64(0),
+	}
+}
+
+func getPoolUnavailMetrics() map[string]interface{} {
+	return map[string]interface{}{
 		"nread":    int64(1884160),
 		"nwritten": int64(6450688),
 		"reads":    int64(22),
@@ -536,5 +624,6 @@ func getPoolMetrics() map[string]interface{} {
 		"rupdate":  int64(2263669871823),
 		"wcnt":     int64(0),
 		"rcnt":     int64(0),
+		"size":     int64(0),
 	}
 }

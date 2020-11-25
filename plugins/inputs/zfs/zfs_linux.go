@@ -31,27 +31,16 @@ func getPools(kstatPath string) []poolInfo {
 	return pools
 }
 
-func getTags(pools []poolInfo) map[string]string {
-	var poolNames string
+func getSinglePoolKstat(pool poolInfo) (map[string]interface{}, error) {
+	fields := make(map[string]interface{})
 
-	for _, pool := range pools {
-		if len(poolNames) != 0 {
-			poolNames += "::"
-		}
-		poolNames += pool.name
-	}
-
-	return map[string]string{"pools": poolNames}
-}
-
-func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	lines, err := internal.ReadLines(pool.ioFilename)
 	if err != nil {
-		return err
+		return fields, err
 	}
 
 	if len(lines) != 3 {
-		return err
+		return fields, err
 	}
 
 	keys := strings.Fields(lines[1])
@@ -60,24 +49,21 @@ func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	keyCount := len(keys)
 
 	if keyCount != len(values) {
-		return fmt.Errorf("Key and value count don't match Keys:%v Values:%v", keys, values)
+		return fields, fmt.Errorf("Key and value count don't match Keys:%v Values:%v", keys, values)
 	}
 
-	tag := map[string]string{"pool": pool.name}
-	fields := make(map[string]interface{})
 	for i := 0; i < keyCount; i++ {
 		value, err := strconv.ParseInt(values[i], 10, 64)
 		if err != nil {
-			return err
+			return fields, err
 		}
 		fields[keys[i]] = value
 	}
-	acc.AddFields("zfs_pool", fields, tag)
 
-	return nil
+	return fields, nil
 }
 
-func (z *Zfs) Gather(acc telegraf.Accumulator) error {
+func (z *Zfs) getKstatMetrics() []string {
 	kstatMetrics := z.KstatMetrics
 	if len(kstatMetrics) == 0 {
 		// vdev_cache_stats is deprecated
@@ -86,26 +72,23 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 		kstatMetrics = []string{"abdstats", "arcstats", "dnodestats", "dbufcachestats",
 			"dmu_tx", "fm", "vdev_mirror_stats", "zfetchstats", "zil"}
 	}
+	return kstatMetrics
+}
 
+func (z *Zfs) getKstatPath() string {
 	kstatPath := z.KstatPath
 	if len(kstatPath) == 0 {
 		kstatPath = "/proc/spl/kstat/zfs"
 	}
+	return kstatPath
+}
 
-	pools := getPools(kstatPath)
-	tags := getTags(pools)
-
-	if z.PoolMetrics {
-		for _, pool := range pools {
-			err := gatherPoolStats(pool, acc)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
+func (z *Zfs) gatherZfsKstats(acc telegraf.Accumulator, poolNames string) error {
+	tags := map[string]string{"pools": poolNames}
 	fields := make(map[string]interface{})
-	for _, metric := range kstatMetrics {
+	kstatPath := z.getKstatPath()
+
+	for _, metric := range z.getKstatMetrics() {
 		lines, err := internal.ReadLines(kstatPath + "/" + metric)
 		if err != nil {
 			continue
@@ -131,8 +114,47 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func (z *Zfs) Gather(acc telegraf.Accumulator) error {
+
+	//Gather pools metrics from kstats
+	poolFields, err := z.getZpoolStats()
+	if err != nil {
+		return err
+	}
+
+	poolNames := []string{}
+	pools := getPools(z.getKstatPath())
+	for _, pool := range pools {
+		poolNames = append(poolNames, pool.name)
+
+		if z.PoolMetrics {
+
+			//Merge zpool list with kstats
+			fields, err := getSinglePoolKstat(pool)
+			if err != nil {
+				return err
+			} else {
+				for k, v := range poolFields[pool.name] {
+					fields[k] = v
+				}
+				tags := map[string]string{
+					"pool":   pool.name,
+					"health": fields["health"].(string),
+				}
+
+				delete(fields, "name")
+				delete(fields, "health")
+
+				acc.AddFields("zfs_pool", fields, tags)
+			}
+		}
+	}
+
+	return z.gatherZfsKstats(acc, strings.Join(poolNames, "::"))
+}
+
 func init() {
 	inputs.Add("zfs", func() telegraf.Input {
-		return &Zfs{}
+		return &Zfs{zpool: zpool}
 	})
 }
