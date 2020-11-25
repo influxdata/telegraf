@@ -23,12 +23,6 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
   ## Timeout for each request
   timeout = "1s"
 
-  ## Do not add Device Name as Tag
-  omit_device_name = false
-
-  ## Do not add Register Type as Tag
-  omit_register_type = false
-
   ## Maximum number of retries and the time to wait between retries
   ## when a slave-device is busy.
   # busy_retries = 0

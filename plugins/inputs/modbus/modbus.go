@@ -30,8 +30,6 @@ type Modbus struct {
 	Timeout          internal.Duration `toml:"timeout"`
 	Retries          int               `toml:"busy_retries"`
 	RetriesWaitTime  internal.Duration `toml:"busy_retries_wait"`
-	OmitDeviceName   bool              `toml:"omit_device_name"`
-	OmitRegisterType bool              `toml:"omit_register_type"`
 	Measurements     []measurement     `toml:"measurement"`
 	isConnected      bool
 	tcpHandler       *mb.TCPClientHandler
@@ -98,12 +96,6 @@ const sampleConfig = `
 
   ## Timeout for each request
   timeout = "1s"
-
-  ## Do not add Device Name as Tag
-  omit_device_name = false
-
-  ## Do not add Register Type as Tag
-  omit_register_type = false
 
   ## Maximum number of retries and the time to wait between retries
   ## when a slave-device is busy.
@@ -753,15 +745,12 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	for _, meas := range m.Measurements {
 		grouper := metric.NewSeriesGrouper()
 		for _, reg := range meas.registers {
-			tags := map[string]string{}
+			tags := map[string]string{
+				"device_name": m.Name,
+				"type": reg.Type,
+			}
 			for _, tag := range meas.Tags {
 				tags[tag.Key] = tag.Value
-			}
-			if !m.OmitDeviceName {
-				tags["device_name"] = m.Name
-			}
-			if !m.OmitRegisterType {
-				tags["type"] = reg.Type
 			}
 
 			for _, field := range reg.Fields {
