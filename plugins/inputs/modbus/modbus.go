@@ -132,7 +132,8 @@ const sampleConfig = `
   ##  |---BA, DCBA   - Little Endian
   ##  |---BADC       - Mid-Big Endian
   ##  |---CDAB       - Mid-Little Endian
-  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32-IEEE (the IEEE 754 binary representation)
+  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64,
+  ##              FLOAT32-IEEE, FLOAT64-IEEE (the IEEE 754 binary representation)
   ##              FLOAT32, FIXED, UFIXED (fixed-point representation on input)
   ## scale      - the final numeric variable representation
   ## address    - variable address
@@ -355,7 +356,7 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 
 			// search data type
 			switch item.DataType {
-			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64", "FLOAT32-IEEE", "FLOAT32", "FIXED", "UFIXED":
+			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
 				break
 			default:
 				return fmt.Errorf("invalid data type '%s' in '%s' - '%s'", item.DataType, n, item.Name)
@@ -512,6 +513,10 @@ func convertDataType(t fieldContainer, bytes []byte) interface{} {
 		e32 := convertEndianness32(t.ByteOrder, bytes)
 		f32 := math.Float32frombits(e32)
 		return scaleFloat32(t.Scale, f32)
+	case "FLOAT64-IEEE":
+		e64 := convertEndianness64(t.ByteOrder, bytes)
+		f64 := math.Float64frombits(e64)
+		return scaleFloat64(t.Scale, f64)
 	case "FIXED":
 		if len(bytes) == 2 {
 			e16 := convertEndianness16(t.ByteOrder, bytes)
@@ -660,6 +665,10 @@ func scaleInt32(s float64, v int32) int32 {
 
 func scaleFloat32(s float64, v float32) float32 {
 	return float32(float64(v) * s)
+}
+
+func scaleFloat64(s float64, v float64) float64 {
+	return float64(float64(v) * s)
 }
 
 func scaleUint64(s float64, v uint64) uint64 {
