@@ -747,7 +747,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		for _, reg := range meas.registers {
 			tags := map[string]string{
 				"device_name": m.Name,
-				"type": reg.Type,
+				"type":        reg.Type,
 			}
 			for _, tag := range meas.Tags {
 				tags[tag.Key] = tag.Value
