@@ -234,7 +234,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 					fmt.Fprintf(&buf, "%s%s %v\n", metricID, tagb.String(), value)
 				}
 
-				if metricCounter % 1000 == 0 {
+				if metricCounter%1000 == 0 {
 					fmt.Println("Flushing Buffer after 1000 lines")
 					err = d.send(buf.Bytes())
 					if err != nil {
@@ -243,7 +243,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 					}
 					buf.Reset()
 				}
-				metricCounter ++
+				metricCounter++
 			}
 		}
 	}
