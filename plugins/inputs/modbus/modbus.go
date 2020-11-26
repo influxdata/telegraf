@@ -668,7 +668,7 @@ func scaleFloat32(s float64, v float32) float32 {
 }
 
 func scaleFloat64(s float64, v float64) float64 {
-	return float64(float64(v) * s)
+	return v * s
 }
 
 func scaleUint64(s float64, v uint64) uint64 {
