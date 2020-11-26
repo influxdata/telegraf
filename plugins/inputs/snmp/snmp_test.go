@@ -81,6 +81,7 @@ var tsc = &testSNMPConnection{
 		".1.0.0.1.3":         []byte("byte slice"),
 		".1.0.0.2.1.5.0.9.9": 11,
 		".1.0.0.2.1.5.1.9.9": 22,
+		".1.0.0.0.1.6.0":	  ".1.0.0.0.1.7",
 	},
 }
 
@@ -495,8 +496,13 @@ func TestTableBuild_walk(t *testing.T) {
 			},
 			{
 				Name:      "myfield6",
-				Oid:       ".1.0.0.0.1.2",
+				Oid:       ".1.0.0.0.1.6",
 				Translate: true,
+			},
+			{
+				Name:      "myfield7",
+				Oid:       ".1.0.0.0.1.6",
+				Translate: false,
 			},
 		},
 	}
@@ -515,7 +521,8 @@ func TestTableBuild_walk(t *testing.T) {
 			"myfield3": float64(0.123),
 			"myfield4": 11,
 			"myfield5": 11,
-			"myfield6": 1,
+			"myfield6": "testTableEntry.7",
+			"myfield7": ".1.0.0.0.1.7",
 		},
 	}
 	rtr2 := RTableRow{
@@ -528,7 +535,6 @@ func TestTableBuild_walk(t *testing.T) {
 			"myfield3": float64(0.456),
 			"myfield4": 22,
 			"myfield5": 22,
-			"myfield6": 2,
 		},
 	}
 	rtr3 := RTableRow{
@@ -538,7 +544,6 @@ func TestTableBuild_walk(t *testing.T) {
 		Fields: map[string]interface{}{
 			"myfield2": 0,
 			"myfield3": float64(0.0),
-			"myfield6": 0,
 		},
 	}
 	rtr4 := RTableRow{
