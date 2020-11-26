@@ -134,6 +134,7 @@ func (d *Dynatrace) escape(v string) string {
 
 func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 	var buf bytes.Buffer
+	metricCounter := 1
 	var tagb bytes.Buffer
 	if len(metrics) == 0 {
 		return nil
@@ -160,6 +161,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 			}
 		}
 		if len(metric.Fields()) > 0 {
+			fmt.Println(metric.Name())
 			for k, v := range metric.Fields() {
 				var value string
 				switch v := v.(type) {
@@ -231,6 +233,17 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				default:
 					fmt.Fprintf(&buf, "%s%s %v\n", metricID, tagb.String(), value)
 				}
+
+				if metricCounter % 1000 == 0 {
+					fmt.Println("Flushing Buffer after 1000 lines")
+					err = d.send(buf.Bytes())
+					if err != nil {
+						fmt.Println("Error Flushing Buffer")
+						return err
+					}
+					buf.Reset()
+				}
+				metricCounter ++
 			}
 		}
 	}
