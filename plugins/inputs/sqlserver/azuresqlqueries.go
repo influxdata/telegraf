@@ -96,7 +96,7 @@ END
 SELECT
 	 'sqlserver_azuredb_waitstats' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	,DB_NAME() as [database_name']
+	,DB_NAME() as [database_name]
 	,dbws.[wait_type]
 	,dbws.[wait_time_ms]
 	,dbws.[wait_time_ms] - [signal_wait_time_ms] AS [resource_wait_ms]

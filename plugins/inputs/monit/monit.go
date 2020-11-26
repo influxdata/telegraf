@@ -114,11 +114,12 @@ type Upload struct {
 }
 
 type Port struct {
-	Hostname   string `xml:"hostname"`
-	PortNumber int64  `xml:"portnumber"`
-	Request    string `xml:"request"`
-	Protocol   string `xml:"protocol"`
-	Type       string `xml:"type"`
+	Hostname     string  `xml:"hostname"`
+	PortNumber   int64   `xml:"portnumber"`
+	Request      string  `xml:"request"`
+	ResponseTime float64 `xml:"responsetime"`
+	Protocol     string  `xml:"protocol"`
+	Type         string  `xml:"type"`
 }
 
 type Block struct {
@@ -301,6 +302,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 				fields["remote_hostname"] = service.Port.Hostname
 				fields["port_number"] = service.Port.PortNumber
 				fields["request"] = service.Port.Request
+				fields["response_time"] = service.Port.ResponseTime
 				fields["protocol"] = service.Port.Protocol
 				fields["type"] = service.Port.Type
 				acc.AddFields("monit_remote_host", fields, tags)
