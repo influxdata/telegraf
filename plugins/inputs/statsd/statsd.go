@@ -58,6 +58,8 @@ type Statsd struct {
 	DeleteTimings  bool
 	ConvertNames   bool
 
+	FirstCounterMetricGatherFillWithZero bool `toml:"first_counter_metric_gather_fill_with_zero"`
+
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string
 	// This flag enables parsing of tags in the dogstatsd extension to the
@@ -99,8 +101,9 @@ type Statsd struct {
 	// sets and timings map measurement/tags hash -> metrics
 	gauges   map[string]cachedgauge
 	counters map[string]cachedcounter
-	sets     map[string]cachedset
-	timings  map[string]cachedtimings
+
+	sets    map[string]cachedset
+	timings map[string]cachedtimings
 
 	// bucket -> influx templates
 	Templates []string
@@ -171,9 +174,10 @@ type cachedgauge struct {
 }
 
 type cachedcounter struct {
-	name   string
-	fields map[string]interface{}
-	tags   map[string]string
+	name      string
+	fields    map[string]interface{}
+	tags      map[string]string
+	firstInit bool
 }
 
 type cachedtimings struct {
@@ -215,6 +219,16 @@ const sampleConfig = `
   delete_sets = true
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
+
+  ## When resetting counter or the telegraf daemon, first gather will put a 0
+  ## This is useful for metric collectors systems like prometheus
+  ## where the transition from none to X value results in "none". 
+  ## With this option activated you will send first a 0 and 
+  ## then the incremented value in the next gather resulting in the 
+  ## real incremental from 0 to the current value
+  ## Note: Using this with Delete Counters enabled
+  ## will push in the series: [0,value,0,value,0,value...]
+  first_counter_metric_gather_fill_with_zero = true (default=false)
 
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [50.0, 90.0, 99.0, 99.9, 99.95, 100.0]
@@ -289,11 +303,25 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 		s.gauges = make(map[string]cachedgauge)
 	}
 
-	for _, m := range s.counters {
-		acc.AddCounter(m.name, m.fields, m.tags, now)
-	}
-	if s.DeleteCounters {
-		s.counters = make(map[string]cachedcounter)
+	for key, m := range s.counters {
+		if s.FirstCounterMetricGatherFillWithZero && m.firstInit {
+			zeroFields := make(map[string]interface{})
+			for k := range m.fields {
+				zeroFields[k] = int64(0)
+			}
+			acc.AddCounter(m.name, zeroFields, m.tags, now)
+			s.counters[key] = cachedcounter{
+				name:      m.name,
+				fields:    m.fields,
+				tags:      m.tags,
+				firstInit: false,
+			}
+		} else {
+			acc.AddCounter(m.name, m.fields, m.tags, now)
+			if s.DeleteCounters {
+				delete(s.counters, key)
+			}
+		}
 	}
 
 	for _, m := range s.sets {
@@ -767,9 +795,10 @@ func (s *Statsd) aggregate(m metric) {
 		_, ok := s.counters[m.hash]
 		if !ok {
 			s.counters[m.hash] = cachedcounter{
-				name:   m.name,
-				fields: make(map[string]interface{}),
-				tags:   m.tags,
+				name:      m.name,
+				fields:    make(map[string]interface{}),
+				tags:      m.tags,
+				firstInit: true,
 			}
 		}
 		// check if the field exists

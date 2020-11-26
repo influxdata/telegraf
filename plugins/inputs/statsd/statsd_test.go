@@ -1463,6 +1463,139 @@ func TestParse_Timings_Delete(t *testing.T) {
 	}
 }
 
+func TestParse_Counter_PushZero(t *testing.T) {
+	s := NewTestStatsd()
+	s.FirstCounterMetricGatherFillWithZero = true
+	fakeacc := &testutil.Accumulator{}
+	var err error
+
+	line := "my_counter:1|c"
+
+	err = s.parseStatsdLine(line)
+	if err != nil {
+		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+	}
+
+	if len(s.counters) != 1 {
+		t.Errorf("Should be 1 count, found %d", len(s.counters))
+	}
+	valueOfFirstInit := s.counters["metric_type=countermy_counter"].firstInit
+	if !valueOfFirstInit {
+		t.Errorf("first iteration on gather must result the firstInit in True: %t", valueOfFirstInit)
+	}
+
+	s.Gather(fakeacc)
+
+	valueOfFirstInit = s.counters["metric_type=countermy_counter"].firstInit
+	if valueOfFirstInit {
+		t.Errorf("first iteration on gather must result the firstInit in False: %t", valueOfFirstInit)
+	}
+
+	valueOfMetric := fakeacc.Metrics[0].Fields["value"]
+
+	if valueOfMetric != int64(0) {
+		t.Errorf("first iteration on gather must result the firstInit in accumulator to 0: %d", valueOfMetric)
+	}
+
+	fakeacc = &testutil.Accumulator{}
+
+	s.Gather(fakeacc)
+
+	valueOfFirstInit = s.counters["metric_type=countermy_counter"].firstInit
+	if valueOfFirstInit {
+		t.Errorf("next iterations on gather must result the firstInit in False: %t", valueOfFirstInit)
+	}
+
+	valueOfMetric = fakeacc.Metrics[0].Fields["value"]
+
+	if valueOfMetric != int64(1) {
+		t.Errorf("first iteration on gather must result the firstInit in accumulator to 1: %d", valueOfMetric)
+	}
+}
+
+func TestParse_Counter_PushZero_With_Delete_Counter(t *testing.T) {
+	s := NewTestStatsd()
+	s.FirstCounterMetricGatherFillWithZero = true
+	s.DeleteCounters = true
+	fakeacc := &testutil.Accumulator{}
+	var err error
+
+	line := "my_counter:1|c"
+
+	err = s.parseStatsdLine(line)
+	if err != nil {
+		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+	}
+
+	if len(s.counters) != 1 {
+		t.Errorf("Should be 1 count, found %d", len(s.counters))
+	}
+	valueOfFirstInit := s.counters["metric_type=countermy_counter"].firstInit
+	if !valueOfFirstInit {
+		t.Errorf("first iteration on gather must result the firstInit in True: %t", valueOfFirstInit)
+	}
+
+	s.Gather(fakeacc)
+
+	valueOfFirstInit = s.counters["metric_type=countermy_counter"].firstInit
+	if valueOfFirstInit {
+		t.Errorf("first iteration on gather must result the firstInit in False: %t", valueOfFirstInit)
+	}
+
+	valueOfMetric := fakeacc.Metrics[0].Fields["value"]
+
+	if valueOfMetric != int64(0) {
+		t.Errorf("first iteration on gather must result the firstInit in accumulator to 0: %d", valueOfMetric)
+	}
+
+	fakeacc = &testutil.Accumulator{}
+
+	s.Gather(fakeacc)
+
+	valueOfFirstInit = s.counters["metric_type=countermy_counter"].firstInit
+	if valueOfFirstInit {
+		t.Errorf("next iterations on gather must result the firstInit in False: %t", valueOfFirstInit)
+	}
+
+	valueOfMetric = fakeacc.Metrics[0].Fields["value"]
+
+	if valueOfMetric != int64(1) {
+		t.Errorf("first iteration on gather must result the firstInit in accumulator to 1: %d", valueOfMetric)
+	}
+
+	line = "my_counter:10|c"
+
+	err = s.parseStatsdLine(line)
+
+	fakeacc = &testutil.Accumulator{}
+
+	s.Gather(fakeacc)
+
+	valueOfFirstInit = s.counters["metric_type=countermy_counter"].firstInit
+	if valueOfFirstInit {
+		t.Errorf("next iterations on gather must result the firstInit in False: %t", valueOfFirstInit)
+	}
+	valueOfMetric = fakeacc.Metrics[0].Fields["value"]
+
+	if valueOfMetric != int64(0) {
+		t.Errorf("first iteration on gather must result the firstInit in accumulator to 0: %d", valueOfMetric)
+	}
+
+	fakeacc = &testutil.Accumulator{}
+
+	s.Gather(fakeacc)
+
+	valueOfFirstInit = s.counters["metric_type=countermy_counter"].firstInit
+	if valueOfFirstInit {
+		t.Errorf("next iterations on gather must result the firstInit in False: %t", valueOfFirstInit)
+	}
+	valueOfMetric = fakeacc.Metrics[0].Fields["value"]
+
+	if valueOfMetric != int64(10) {
+		t.Errorf("first iteration on gather must result the firstInit in accumulator to 10: %d", valueOfMetric)
+	}
+}
+
 // Tests the delete_gauges option
 func TestParse_Gauges_Delete(t *testing.T) {
 	s := NewTestStatsd()
