@@ -107,7 +107,7 @@ These types are used for integer input values. Select the one that matches your 
 
 #### Floating Point: `FLOAT32-IEEE`, `FLOAT64-IEEE`
 
-Use these types if your modbus registers contain a value that is encoded in this format. This type
+Use these types if your modbus registers contain a value that is encoded in this format. These types
 always includes the sign and therefore there exists no variant.
 
 #### Fixed Point: `FIXED`, `UFIXED` (`FLOAT32`)
