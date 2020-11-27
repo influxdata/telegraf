@@ -3,164 +3,154 @@ package json
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
-	"math"
-	"regexp"
 )
 
 var (
-	utf8BOM = []byte("\xef\xbb\xbf")
+	utf8BOM      = []byte("\xef\xbb\xbf")
+	ErrWrongType = errors.New("must be an object or an array of objects")
 )
 
-type JSONParser struct {
-	MetricName     string
-	TagKeys        []string
-	StringFields   []string
-	JSONNameKey    string
-	JSONQuery      string
-	JSONTimeKey    string
-	JSONTimeFormat string
-	DefaultTags    map[string]string
+type Config struct {
+	MetricName   string
+	TagKeys      []string
+	NameKey      string
+	StringFields []string
+	Query        string
+	TimeKey      string
+	TimeFormat   string
+	Timezone     string
+	DefaultTags  map[string]string
+	Strict       bool
 }
 
-func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
-	metrics := make([]telegraf.Metric, 0)
+type Parser struct {
+	metricName   string
+	tagKeys      []string
+	stringFields filter.Filter
+	nameKey      string
+	query        string
+	timeKey      string
+	timeFormat   string
+	timezone     string
+	defaultTags  map[string]string
+	strict       bool
+}
 
-	var jsonOut []map[string]interface{}
-	err := json.Unmarshal(buf, &jsonOut)
+func New(config *Config) (*Parser, error) {
+	stringFilter, err := filter.Compile(config.StringFields)
 	if err != nil {
-		err = fmt.Errorf("unable to parse out as JSON Array, %s", err)
 		return nil, err
 	}
-	for _, item := range jsonOut {
-		metrics, err = p.parseObject(metrics, item)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return metrics, nil
+
+	return &Parser{
+		metricName:   config.MetricName,
+		tagKeys:      config.TagKeys,
+		nameKey:      config.NameKey,
+		stringFields: stringFilter,
+		query:        config.Query,
+		timeKey:      config.TimeKey,
+		timeFormat:   config.TimeFormat,
+		timezone:     config.Timezone,
+		defaultTags:  config.DefaultTags,
+		strict:       config.Strict,
+	}, nil
 }
 
-// format = "unix": epoch is assumed to be in seconds and can come as number or string. Can have a decimal part.
-// format = "unix_ms": epoch is assumed to be in milliseconds and can come as number or string. Cannot have a decimal part.
-func parseUnixTimestamp(jsonValue interface{}, format string) (time.Time, error) {
-	timeInt, timeFractional := int64(0), int64(0)
-	timeEpochStr, ok := jsonValue.(string)
-	var err error
+func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf.Metric, error) {
+	results := make([]telegraf.Metric, 0)
 
-	if !ok {
-		timeEpochFloat, ok := jsonValue.(float64)
-		if !ok {
-			err := fmt.Errorf("time: %v could not be converted to string nor float64", jsonValue)
-			return time.Time{}, err
-		}
-		intPart, frac := math.Modf(timeEpochFloat)
-		timeInt, timeFractional = int64(intPart), int64(frac*1e9)
-	} else {
-		splitted := regexp.MustCompile("[.,]").Split(timeEpochStr, 2)
-		timeInt, err = strconv.ParseInt(splitted[0], 10, 64)
-		if err != nil {
-			return time.Time{}, err
-		}
-
-		if len(splitted) == 2 {
-			if len(splitted[1]) > 9 {
-				splitted[1] = splitted[1][:9] //truncates decimal part to nanoseconds precision
-			}
-			nanosecStr := splitted[1] + strings.Repeat("0", 9-len(splitted[1])) //adds 0's to the right to obtain a valid number of nanoseconds
-
-			timeFractional, err = strconv.ParseInt(nanosecStr, 10, 64)
+	for _, item := range data {
+		switch v := item.(type) {
+		case map[string]interface{}:
+			metrics, err := p.parseObject(v, timestamp)
 			if err != nil {
-				return time.Time{}, err
+				if p.strict {
+					return nil, err
+				}
+				continue
 			}
+			results = append(results, metrics...)
+		default:
+			return nil, ErrWrongType
+
 		}
 	}
-	if strings.EqualFold(format, "unix") {
-		return time.Unix(timeInt, timeFractional).UTC(), nil
-	} else if strings.EqualFold(format, "unix_ms") {
-		return time.Unix(timeInt/1000, (timeInt%1000)*1e6).UTC(), nil
-	} else {
-		return time.Time{}, errors.New("Invalid unix format")
-	}
+
+	return results, nil
 }
 
-func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]interface{}) ([]telegraf.Metric, error) {
-
+func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) ([]telegraf.Metric, error) {
 	tags := make(map[string]string)
-	for k, v := range p.DefaultTags {
+	for k, v := range p.defaultTags {
 		tags[k] = v
 	}
 
 	f := JSONFlattener{}
-	err := f.FullFlattenJSON("", jsonOut, true, true)
+	err := f.FullFlattenJSON("", data, true, true)
 	if err != nil {
 		return nil, err
 	}
 
+	name := p.metricName
+
 	//checks if json_name_key is set
-	if p.JSONNameKey != "" {
-		p.MetricName = f.Fields[p.JSONNameKey].(string)
+	if p.nameKey != "" {
+		switch field := f.Fields[p.nameKey].(type) {
+		case string:
+			name = field
+		}
 	}
 
-	//if time key is specified, set it to nTime
-	nTime := time.Now().UTC()
-	if p.JSONTimeKey != "" {
-		if p.JSONTimeFormat == "" {
+	//if time key is specified, set timestamp to it
+	if p.timeKey != "" {
+		if p.timeFormat == "" {
 			err := fmt.Errorf("use of 'json_time_key' requires 'json_time_format'")
 			return nil, err
 		}
 
-		if f.Fields[p.JSONTimeKey] == nil {
+		if f.Fields[p.timeKey] == nil {
 			err := fmt.Errorf("JSON time key could not be found")
 			return nil, err
 		}
 
-		if strings.EqualFold(p.JSONTimeFormat, "unix") || strings.EqualFold(p.JSONTimeFormat, "unix_ms") {
-			nTime, err = parseUnixTimestamp(f.Fields[p.JSONTimeKey], p.JSONTimeFormat)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			timeStr, ok := f.Fields[p.JSONTimeKey].(string)
-			if !ok {
-				err := fmt.Errorf("time: %v could not be converted to string", f.Fields[p.JSONTimeKey])
-				return nil, err
-			}
-			nTime, err = time.Parse(p.JSONTimeFormat, timeStr)
-			if err != nil {
-				return nil, err
-			}
+		timestamp, err = internal.ParseTimestamp(p.timeFormat, f.Fields[p.timeKey], p.timezone)
+		if err != nil {
+			return nil, err
 		}
 
+		delete(f.Fields, p.timeKey)
+
 		//if the year is 0, set to current year
-		if nTime.Year() == 0 {
-			nTime = nTime.AddDate(time.Now().Year(), 0, 0)
+		if timestamp.Year() == 0 {
+			timestamp = timestamp.AddDate(time.Now().Year(), 0, 0)
 		}
 	}
 
 	tags, nFields := p.switchFieldToTag(tags, f.Fields)
-	metric, err := metric.New(p.MetricName, tags, nFields, nTime)
+	metric, err := metric.New(name, tags, nFields, timestamp)
 	if err != nil {
 		return nil, err
 	}
-	return append(metrics, metric), nil
+	return []telegraf.Metric{metric}, nil
 }
 
 //will take in field map with strings and bools,
 //search for TagKeys that match fieldnames and add them to tags
 //will delete any strings/bools that shouldn't be fields
 //assumes that any non-numeric values in TagKeys should be displayed as tags
-func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
-	for _, name := range p.TagKeys {
+func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
+	for _, name := range p.tagKeys {
 		//switch any fields in tagkeys into tags
 		if fields[name] == nil {
 			continue
@@ -181,31 +171,21 @@ func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]
 	}
 
 	//remove any additional string/bool values from fields
-	for k := range fields {
-		//check if field is in StringFields
-		sField := false
-		for _, v := range p.StringFields {
-			if v == k {
-				sField = true
+	for fk := range fields {
+		switch fields[fk].(type) {
+		case string, bool:
+			if p.stringFields != nil && p.stringFields.Match(fk) {
+				continue
 			}
-		}
-		if sField {
-			continue
-		}
-
-		switch fields[k].(type) {
-		case string:
-			delete(fields, k)
-		case bool:
-			delete(fields, k)
+			delete(fields, fk)
 		}
 	}
 	return tags, fields
 }
 
-func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	if p.JSONQuery != "" {
-		result := gjson.GetBytes(buf, p.JSONQuery)
+func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	if p.query != "" {
+		result := gjson.GetBytes(buf, p.query)
 		buf = []byte(result.Raw)
 		if !result.IsArray() && !result.IsObject() {
 			err := fmt.Errorf("E! Query path must lead to a JSON object or array of objects, but lead to: %v", result.Type)
@@ -219,20 +199,24 @@ func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return make([]telegraf.Metric, 0), nil
 	}
 
-	if !isarray(buf) {
-		metrics := make([]telegraf.Metric, 0)
-		var jsonOut map[string]interface{}
-		err := json.Unmarshal(buf, &jsonOut)
-		if err != nil {
-			err = fmt.Errorf("unable to parse out as JSON, %s", err)
-			return nil, err
-		}
-		return p.parseObject(metrics, jsonOut)
+	var data interface{}
+	err := json.Unmarshal(buf, &data)
+	if err != nil {
+		return nil, err
 	}
-	return p.parseArray(buf)
+
+	timestamp := time.Now().UTC()
+	switch v := data.(type) {
+	case map[string]interface{}:
+		return p.parseObject(v, timestamp)
+	case []interface{}:
+		return p.parseArray(v, timestamp)
+	default:
+		return nil, ErrWrongType
+	}
 }
 
-func (p *JSONParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := p.Parse([]byte(line + "\n"))
 
 	if err != nil {
@@ -246,8 +230,8 @@ func (p *JSONParser) ParseLine(line string) (telegraf.Metric, error) {
 	return metrics[0], nil
 }
 
-func (p *JSONParser) SetDefaultTags(tags map[string]string) {
-	p.DefaultTags = tags
+func (p *Parser) SetDefaultTags(tags map[string]string) {
+	p.defaultTags = tags
 }
 
 type JSONFlattener struct {
@@ -275,19 +259,27 @@ func (f *JSONFlattener) FullFlattenJSON(
 	if f.Fields == nil {
 		f.Fields = make(map[string]interface{})
 	}
-	fieldname = strings.Trim(fieldname, "_")
+
 	switch t := v.(type) {
 	case map[string]interface{}:
 		for k, v := range t {
-			err := f.FullFlattenJSON(fieldname+"_"+k+"_", v, convertString, convertBool)
+			fieldkey := k
+			if fieldname != "" {
+				fieldkey = fieldname + "_" + fieldkey
+			}
+
+			err := f.FullFlattenJSON(fieldkey, v, convertString, convertBool)
 			if err != nil {
 				return err
 			}
 		}
 	case []interface{}:
 		for i, v := range t {
-			k := strconv.Itoa(i)
-			err := f.FullFlattenJSON(fieldname+"_"+k+"_", v, convertString, convertBool)
+			fieldkey := strconv.Itoa(i)
+			if fieldname != "" {
+				fieldkey = fieldname + "_" + fieldkey
+			}
+			err := f.FullFlattenJSON(fieldkey, v, convertString, convertBool)
 			if err != nil {
 				return nil
 			}
@@ -313,14 +305,4 @@ func (f *JSONFlattener) FullFlattenJSON(
 			t, t, fieldname)
 	}
 	return nil
-}
-
-func isarray(buf []byte) bool {
-	ia := bytes.IndexByte(buf, '[')
-	ib := bytes.IndexByte(buf, '{')
-	if ia > -1 && ia < ib {
-		return true
-	} else {
-		return false
-	}
 }

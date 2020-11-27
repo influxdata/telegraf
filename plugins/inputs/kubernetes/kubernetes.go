@@ -6,12 +6,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -20,7 +21,13 @@ type Kubernetes struct {
 	URL string
 
 	// Bearer Token authorization file path
-	BearerToken string `toml:"bearer_token"`
+	BearerToken       string `toml:"bearer_token"`
+	BearerTokenString string `toml:"bearer_token_string"`
+
+	LabelInclude []string `toml:"label_include"`
+	LabelExclude []string `toml:"label_exclude"`
+
+	labelFilter filter.Filter
 
 	// HTTP Timeout specified as a string - 3s, 1m, 1h
 	ResponseTimeout internal.Duration
@@ -32,10 +39,19 @@ type Kubernetes struct {
 
 var sampleConfig = `
   ## URL for the kubelet
-  url = "http://1.1.1.1:10255"
+  url = "http://127.0.0.1:10255"
 
-  ## Use bearer token for authorization
-  # bearer_token = /path/to/bearer/token
+  ## Use bearer token for authorization. ('bearer_token' takes priority)
+  ## If both of these are empty, we'll use the default serviceaccount:
+  ## at: /run/secrets/kubernetes.io/serviceaccount/token
+  # bearer_token = "/path/to/bearer/token"
+  ## OR
+  # bearer_token_string = "abc_123"
+
+  ## Pod labels to be added as tags.  An empty array for both include and
+  ## exclude will include all labels.
+  # label_include = []
+  # label_exclude = ["*"]
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
@@ -49,12 +65,16 @@ var sampleConfig = `
 `
 
 const (
-	summaryEndpoint = `%s/stats/summary`
+	summaryEndpoint           = `%s/stats/summary`
+	defaultServiceAccountPath = "/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 func init() {
 	inputs.Add("kubernetes", func() telegraf.Input {
-		return &Kubernetes{}
+		return &Kubernetes{
+			LabelInclude: []string{},
+			LabelExclude: []string{"*"},
+		}
 	})
 }
 
@@ -68,15 +88,33 @@ func (k *Kubernetes) Description() string {
 	return "Read metrics from the kubernetes kubelet api"
 }
 
+func (k *Kubernetes) Init() error {
+
+	// If neither are provided, use the default service account.
+	if k.BearerToken == "" && k.BearerTokenString == "" {
+		k.BearerToken = defaultServiceAccountPath
+	}
+
+	if k.BearerToken != "" {
+		token, err := ioutil.ReadFile(k.BearerToken)
+		if err != nil {
+			return err
+		}
+		k.BearerTokenString = strings.TrimSpace(string(token))
+	}
+
+	labelFilter, err := filter.NewIncludeExcludeFilter(k.LabelInclude, k.LabelExclude)
+	if err != nil {
+		return err
+	}
+	k.labelFilter = labelFilter
+
+	return nil
+}
+
 //Gather collects kubernetes metrics from a given URL
 func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func(k *Kubernetes) {
-		defer wg.Done()
-		acc.AddError(k.gatherSummary(k.URL, acc))
-	}(k)
-	wg.Wait()
+	acc.AddError(k.gatherSummary(k.URL, acc))
 	return nil
 }
 
@@ -90,54 +128,19 @@ func buildURL(endpoint string, base string) (*url.URL, error) {
 }
 
 func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) error {
-	url := fmt.Sprintf("%s/stats/summary", baseURL)
-	var req, err = http.NewRequest("GET", url, nil)
-	var token []byte
-	var resp *http.Response
-
-	tlsCfg, err := k.ClientConfig.TLSConfig()
+	summaryMetrics := &SummaryMetrics{}
+	err := k.LoadJson(fmt.Sprintf("%s/stats/summary", baseURL), summaryMetrics)
 	if err != nil {
 		return err
 	}
 
-	if k.RoundTripper == nil {
-		// Set default values
-		if k.ResponseTimeout.Duration < time.Second {
-			k.ResponseTimeout.Duration = time.Second * 5
-		}
-		k.RoundTripper = &http.Transport{
-			TLSHandshakeTimeout:   5 * time.Second,
-			TLSClientConfig:       tlsCfg,
-			ResponseHeaderTimeout: k.ResponseTimeout.Duration,
-		}
-	}
-
-	if k.BearerToken != "" {
-		token, err = ioutil.ReadFile(k.BearerToken)
-		if err != nil {
-			return err
-		}
-		req.Header.Set("Authorization", "Bearer "+string(token))
-	}
-
-	resp, err = k.RoundTripper.RoundTrip(req)
+	podInfos, err := k.gatherPodInfo(baseURL)
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
-	}
-
-	summaryMetrics := &SummaryMetrics{}
-	err = json.NewDecoder(resp.Body).Decode(summaryMetrics)
-	if err != nil {
-		return fmt.Errorf(`Error parsing response: %s`, err)
+		return err
 	}
 	buildSystemContainerMetrics(summaryMetrics, acc)
 	buildNodeMetrics(summaryMetrics, acc)
-	buildPodMetrics(summaryMetrics, acc)
+	buildPodMetrics(baseURL, summaryMetrics, podInfos, k.labelFilter, acc)
 	return nil
 }
 
@@ -157,7 +160,7 @@ func buildSystemContainerMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Ac
 		fields["memory_major_page_faults"] = container.Memory.MajorPageFaults
 		fields["rootfs_available_bytes"] = container.RootFS.AvailableBytes
 		fields["rootfs_capacity_bytes"] = container.RootFS.CapacityBytes
-		fields["logsfs_avaialble_bytes"] = container.LogsFS.AvailableBytes
+		fields["logsfs_available_bytes"] = container.LogsFS.AvailableBytes
 		fields["logsfs_capacity_bytes"] = container.LogsFS.CapacityBytes
 		acc.AddFields("kubernetes_system_container", fields, tags)
 	}
@@ -189,7 +192,59 @@ func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) 
 	acc.AddFields("kubernetes_node", fields, tags)
 }
 
-func buildPodMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) {
+func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Metadata, error) {
+	var podApi Pods
+	err := k.LoadJson(fmt.Sprintf("%s/pods", baseURL), &podApi)
+	if err != nil {
+		return nil, err
+	}
+	var podInfos []Metadata
+	for _, podMetadata := range podApi.Items {
+		podInfos = append(podInfos, podMetadata.Metadata)
+	}
+	return podInfos, nil
+}
+
+func (k *Kubernetes) LoadJson(url string, v interface{}) error {
+	var req, err = http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	var resp *http.Response
+	tlsCfg, err := k.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+	if k.RoundTripper == nil {
+		if k.ResponseTimeout.Duration < time.Second {
+			k.ResponseTimeout.Duration = time.Second * 5
+		}
+		k.RoundTripper = &http.Transport{
+			TLSHandshakeTimeout:   5 * time.Second,
+			TLSClientConfig:       tlsCfg,
+			ResponseHeaderTimeout: k.ResponseTimeout.Duration,
+		}
+	}
+	req.Header.Set("Authorization", "Bearer "+k.BearerTokenString)
+	req.Header.Add("Accept", "application/json")
+	resp, err = k.RoundTripper.RoundTrip(req)
+	if err != nil {
+		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(v)
+	if err != nil {
+		return fmt.Errorf(`Error parsing response: %s`, err)
+	}
+
+	return nil
+}
+
+func buildPodMetrics(baseURL string, summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFilter filter.Filter, acc telegraf.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
 		for _, container := range pod.Containers {
 			tags := map[string]string{
@@ -198,6 +253,16 @@ func buildPodMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) {
 				"container_name": container.Name,
 				"pod_name":       pod.PodRef.Name,
 			}
+			for _, info := range podInfo {
+				if info.Name == pod.PodRef.Name && info.Namespace == pod.PodRef.Namespace {
+					for k, v := range info.Labels {
+						if labelFilter.Match(k) {
+							tags[k] = v
+						}
+					}
+				}
+			}
+
 			fields := make(map[string]interface{})
 			fields["cpu_usage_nanocores"] = container.CPU.UsageNanoCores
 			fields["cpu_usage_core_nanoseconds"] = container.CPU.UsageCoreNanoSeconds
@@ -209,7 +274,7 @@ func buildPodMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) {
 			fields["rootfs_available_bytes"] = container.RootFS.AvailableBytes
 			fields["rootfs_capacity_bytes"] = container.RootFS.CapacityBytes
 			fields["rootfs_used_bytes"] = container.RootFS.UsedBytes
-			fields["logsfs_avaialble_bytes"] = container.LogsFS.AvailableBytes
+			fields["logsfs_available_bytes"] = container.LogsFS.AvailableBytes
 			fields["logsfs_capacity_bytes"] = container.LogsFS.CapacityBytes
 			fields["logsfs_used_bytes"] = container.LogsFS.UsedBytes
 			acc.AddFields("kubernetes_pod_container", fields, tags)

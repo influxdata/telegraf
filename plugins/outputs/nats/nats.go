@@ -2,37 +2,46 @@ package nats
 
 import (
 	"fmt"
-
-	nats_client "github.com/nats-io/go-nats"
+	"log"
+	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/nats-io/nats.go"
 )
 
 type NATS struct {
-	// Servers is the NATS server pool to connect to
-	Servers []string
-	// Credentials
-	Username string
-	Password string
-	// NATS subject to publish metrics to
-	Subject string
+	Servers     []string `toml:"servers"`
+	Secure      bool     `toml:"secure"`
+	Username    string   `toml:"username"`
+	Password    string   `toml:"password"`
+	Credentials string   `toml:"credentials"`
+	Subject     string   `toml:"subject"`
+
 	tls.ClientConfig
 
-	conn       *nats_client.Conn
+	conn       *nats.Conn
 	serializer serializers.Serializer
 }
 
 var sampleConfig = `
   ## URLs of NATS servers
   servers = ["nats://localhost:4222"]
+
   ## Optional credentials
   # username = ""
   # password = ""
+
+  ## Optional NATS 2.0 and NATS NGS compatible user credentials
+  # credentials = "/etc/telegraf/nats.creds"
+
   ## NATS subject for producer messages
   subject = "telegraf"
+
+  ## Use Transport Layer Security
+  # secure = false
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -55,34 +64,26 @@ func (n *NATS) SetSerializer(serializer serializers.Serializer) {
 func (n *NATS) Connect() error {
 	var err error
 
-	// set default NATS connection options
-	opts := nats_client.DefaultOptions
-
-	// override max reconnection tries
-	opts.MaxReconnect = -1
-
-	// override servers, if any were specified
-	opts.Servers = n.Servers
+	opts := []nats.Option{
+		nats.MaxReconnects(-1),
+	}
 
 	// override authentication, if any was specified
 	if n.Username != "" {
-		opts.User = n.Username
-		opts.Password = n.Password
+		opts = append(opts, nats.UserInfo(n.Username, n.Password))
 	}
 
-	// override TLS, if it was specified
-	tlsConfig, err := n.ClientConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-	if tlsConfig != nil {
-		// set NATS connection TLS options
-		opts.Secure = true
-		opts.TLSConfig = tlsConfig
+	if n.Secure {
+		tlsConfig, err := n.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+
+		opts = append(opts, nats.Secure(tlsConfig))
 	}
 
 	// try and connect
-	n.conn, err = opts.Connect()
+	n.conn, err = nats.Connect(strings.Join(n.Servers, ","), opts...)
 
 	return err
 }
@@ -108,7 +109,8 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
-			return err
+			log.Printf("D! [outputs.nats] Could not serialize metric: %v", err)
+			continue
 		}
 
 		err = n.conn.Publish(n.Subject, buf)

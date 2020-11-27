@@ -5,7 +5,6 @@ package win_perf_counters
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -36,9 +35,12 @@ var sampleConfig = `
     ObjectName = "Processor"
     Instances = ["*"]
     Counters = [
-      "%% Idle Time", "%% Interrupt Time",
-      "%% Privileged Time", "%% User Time",
-      "%% Processor Time"
+      "% Idle Time",
+      "% Interrupt Time",
+      "% Privileged Time",
+      "% User Time",
+      "% Processor Time",
+      "% DPC Time",
     ]
     Measurement = "win_cpu"
     # Set to true to include _Total instance when querying for all (*).
@@ -51,14 +53,56 @@ var sampleConfig = `
     ObjectName = "LogicalDisk"
     Instances = ["*"]
     Counters = [
-      "%% Idle Time", "%% Disk Time","%% Disk Read Time",
-      "%% Disk Write Time", "%% User Time", "Current Disk Queue Length"
+      "% Idle Time",
+      "% Disk Time",
+      "% Disk Read Time",
+      "% Disk Write Time",
+      "% User Time",
+      "% Free Space",
+      "Current Disk Queue Length",
+      "Free Megabytes",
     ]
     Measurement = "win_disk"
 
   [[inputs.win_perf_counters.object]]
+    ObjectName = "PhysicalDisk"
+    Instances = ["*"]
+    Counters = [
+      "Disk Read Bytes/sec",
+      "Disk Write Bytes/sec",
+      "Current Disk Queue Length",
+      "Disk Reads/sec",
+      "Disk Writes/sec",
+      "% Disk Time",
+      "% Disk Read Time",
+      "% Disk Write Time",
+    ]
+    Measurement = "win_diskio"
+
+  [[inputs.win_perf_counters.object]]
+    ObjectName = "Network Interface"
+    Instances = ["*"]
+    Counters = [
+      "Bytes Received/sec",
+      "Bytes Sent/sec",
+      "Packets Received/sec",
+      "Packets Sent/sec",
+      "Packets Received Discarded",
+      "Packets Outbound Discarded",
+      "Packets Received Errors",
+      "Packets Outbound Errors",
+    ]
+    Measurement = "win_net"
+
+
+  [[inputs.win_perf_counters.object]]
     ObjectName = "System"
-    Counters = ["Context Switches/sec","System Calls/sec"]
+    Counters = [
+      "Context Switches/sec",
+      "System Calls/sec",
+      "Processor Queue Length",
+      "System Up Time",
+    ]
     Instances = ["------"]
     Measurement = "win_system"
 
@@ -67,12 +111,30 @@ var sampleConfig = `
     # such as from the Memory object.
     ObjectName = "Memory"
     Counters = [
-      "Available Bytes", "Cache Faults/sec", "Demand Zero Faults/sec",
-      "Page Faults/sec", "Pages/sec", "Transition Faults/sec",
-      "Pool Nonpaged Bytes", "Pool Paged Bytes"
+      "Available Bytes",
+      "Cache Faults/sec",
+      "Demand Zero Faults/sec",
+      "Page Faults/sec",
+      "Pages/sec",
+      "Transition Faults/sec",
+      "Pool Nonpaged Bytes",
+      "Pool Paged Bytes",
+      "Standby Cache Reserve Bytes",
+      "Standby Cache Normal Priority Bytes",
+      "Standby Cache Core Bytes",
     ]
     Instances = ["------"] # Use 6 x - to remove the Instance bit from the counterPath.
     Measurement = "win_mem"
+
+  [[inputs.win_perf_counters.object]]
+    # Example query where the Instance portion must be removed to get data back,
+    # such as from the Paging File object.
+    ObjectName = "Paging File"
+    Counters = [
+      "% Usage",
+    ]
+    Instances = ["_Total"]
+    Measurement = "win_swap"
 `
 
 type Win_PerfCounters struct {
@@ -83,6 +145,8 @@ type Win_PerfCounters struct {
 	Object                  []perfobject
 	CountersRefreshInterval internal.Duration
 	UseWildcardsExpansion   bool
+
+	Log telegraf.Logger
 
 	lastRefreshed time.Time
 	counters      []*counter
@@ -226,7 +290,7 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			m.counters = append(m.counters, newItem)
 
 			if m.PrintValid {
-				log.Printf("Valid: %s\n", counterPath)
+				m.Log.Infof("Valid: %s", counterPath)
 			}
 		}
 	} else {
@@ -234,7 +298,7 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			includeTotal, counterHandle}
 		m.counters = append(m.counters, newItem)
 		if m.PrintValid {
-			log.Printf("Valid: %s\n", counterPath)
+			m.Log.Infof("Valid: %s", counterPath)
 		}
 	}
 
@@ -260,7 +324,7 @@ func (m *Win_PerfCounters) ParseConfig() error {
 
 					if err != nil {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							log.Printf("Invalid counterPath: '%s'. Error: %s\n", counterPath, err.Error())
+							m.Log.Errorf("Invalid counterPath: '%s'. Error: %s\n", counterPath, err.Error())
 						}
 						if PerfObject.FailOnMissing {
 							return err
@@ -322,45 +386,35 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		// collect
 		if m.UseWildcardsExpansion {
 			value, err := m.query.GetFormattedCounterValueDouble(metric.counterHandle)
-			if err == nil {
-				addCounterMeasurement(metric, metric.instance, value, collectFields)
-			} else {
+			if err != nil {
 				//ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
 				}
+				m.Log.Warnf("error while getting value for counter %q, will skip metric: %v", metric.counterPath, err)
+				continue
 			}
+			addCounterMeasurement(metric, metric.instance, value, collectFields)
 		} else {
 			counterValues, err := m.query.GetFormattedCounterArrayDouble(metric.counterHandle)
-			if err == nil {
-				for _, cValue := range counterValues {
-					var add bool
-					if metric.includeTotal {
-						// If IncludeTotal is set, include all.
-						add = true
-					} else if metric.instance == "*" && !strings.Contains(cValue.InstanceName, "_Total") {
-						// Catch if set to * and that it is not a '*_Total*' instance.
-						add = true
-					} else if metric.instance == cValue.InstanceName {
-						// Catch if we set it to total or some form of it
-						add = true
-					} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, cValue.InstanceName) {
-						// If you are using a multiple instance identifier such as "w3wp#1"
-						// phd.dll returns only the first 2 characters of the identifier.
-						add = true
-						cValue.InstanceName = metric.instance
-					} else if metric.instance == "------" {
-						add = true
-					}
-
-					if add {
-						addCounterMeasurement(metric, cValue.InstanceName, cValue.Value, collectFields)
-					}
-				}
-			} else {
-				//ignore invalid data as some counters from process instances returns this sometimes
+			if err != nil {
+				//ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
+				}
+				m.Log.Warnf("error while getting value for counter %q, will skip metric: %v", metric.counterPath, err)
+				continue
+			}
+			for _, cValue := range counterValues {
+
+				if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, cValue.InstanceName) {
+					// If you are using a multiple instance identifier such as "w3wp#1"
+					// phd.dll returns only the first 2 characters of the identifier.
+					cValue.InstanceName = metric.instance
+				}
+
+				if shouldIncludeMetric(metric, cValue) {
+					addCounterMeasurement(metric, cValue.InstanceName, cValue.Value, collectFields)
 				}
 			}
 		}
@@ -379,6 +433,25 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func shouldIncludeMetric(metric *counter, cValue CounterValue) bool {
+	if metric.includeTotal {
+		// If IncludeTotal is set, include all.
+		return true
+	}
+	if metric.instance == "*" && !strings.Contains(cValue.InstanceName, "_Total") {
+		// Catch if set to * and that it is not a '*_Total*' instance.
+		return true
+	}
+	if metric.instance == cValue.InstanceName {
+		// Catch if we set it to total or some form of it
+		return true
+	}
+	if metric.instance == "------" {
+		return true
+	}
+	return false
+}
+
 func addCounterMeasurement(metric *counter, instanceName string, value float64, collectFields map[instanceGrouping]map[string]interface{}) {
 	measurement := sanitizedChars.Replace(metric.measurement)
 	if measurement == "" {
@@ -393,8 +466,10 @@ func addCounterMeasurement(metric *counter, instanceName string, value float64, 
 
 func isKnownCounterDataError(err error) bool {
 	if pdhErr, ok := err.(*PdhError); ok && (pdhErr.ErrorCode == PDH_INVALID_DATA ||
+		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_DENOMINATOR ||
 		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_VALUE ||
-		pdhErr.ErrorCode == PDH_CSTATUS_INVALID_DATA) {
+		pdhErr.ErrorCode == PDH_CSTATUS_INVALID_DATA ||
+		pdhErr.ErrorCode == PDH_NO_DATA) {
 		return true
 	}
 	return false

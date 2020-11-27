@@ -1,6 +1,6 @@
-# InfluxDB Output Plugin
+# InfluxDB v1.x Output Plugin
 
-This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/influxdata/influxdb) HTTP or UDP service.
+The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP service.
 
 ### Configuration:
 
@@ -16,7 +16,15 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
   # urls = ["http://127.0.0.1:8086"]
 
   ## The target database for metrics; will be created as needed.
+  ## For UDP url endpoint database needs to be configured on server side.
   # database = "telegraf"
+
+  ## The value of this tag will be used to determine the database.  If this
+  ## tag is not set the 'database' option is used as the default.
+  # database_tag = ""
+
+  ## If true, the 'database_tag' will not be included in the written metric.
+  # exclude_database_tag = false
 
   ## If true, no CREATE DATABASE queries will be sent.  Set to true when using
   ## Telegraf with a user without permissions to create databases or when the
@@ -26,6 +34,13 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
   ## Name of existing retention policy to write to.  Empty string writes to
   ## the default retention policy.  Only takes effect when using HTTP.
   # retention_policy = ""
+
+  ## The value of this tag will be used to determine the retention policy.  If this
+  ## tag is not set the 'retention_policy' option is used as the default.
+  # retention_policy_tag = ""
+
+  ## If true, the 'retention_policy_tag' will not be included in the written metric.
+  # exclude_retention_policy_tag = false
 
   ## Write consistency (clusters only), can be: "any", "one", "quorum", "all".
   ## Only takes effect when using HTTP.
@@ -42,7 +57,7 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
   # user_agent = "telegraf"
 
   ## UDP payload size is the maximum packet size to send.
-  # udp_payload = 512
+  # udp_payload = "512B"
 
   ## Optional TLS Config for use on HTTP connections.
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -60,7 +75,7 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
 
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
-  # content_encoding = "identity"
+  # content_encoding = "gzip"
 
   ## When true, Telegraf will output unsigned integers as unsigned values,
   ## i.e.: "42u".  You will need a version of InfluxDB supporting unsigned
@@ -68,3 +83,10 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
   ## existing data has been written.
   # influx_uint_support = false
 ```
+
+### Metrics
+￼
+Reference the [influx serializer][] for details about metric production.
+￼
+[InfluxDB v1.x]: https://github.com/influxdata/influxdb
+[influx serializer]: /plugins/serializers/influx/README.md#Metrics

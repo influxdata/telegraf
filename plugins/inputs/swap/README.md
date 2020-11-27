@@ -16,12 +16,12 @@ For more information on what swap memory is, read [All about Linux swap space](h
 
 - swap
   - fields:
-    - free (int)
-    - total (int)
-    - used (int)
-    - used_percent (float)
-    - in (int)
-    - out (int)
+    - free (int, bytes): free swap memory
+    - total (int, bytes): total swap memory
+    - used (int, bytes): used swap memory
+    - used_percent (float, percent): percentage of swap memory used
+    - in (int, bytes): data swapped in since last boot calculated from page number
+    - out (int, bytes): data swapped out since last boot calculated from page number
 
 ### Example Output:
 

@@ -21,10 +21,11 @@ func newMetric(name string, tags map[string]string, fields map[string]interface{
 }
 
 func TestMeasurementRename(t *testing.T) {
-	r := Rename{}
-	r.Measurement = []renamer{
-		{From: "foo", To: "bar"},
-		{From: "baz", To: "quux"},
+	r := Rename{
+		Replaces: []Replace{
+			{Measurement: "foo", Dest: "bar"},
+			{Measurement: "baz", Dest: "quux"},
+		},
 	}
 	m1 := newMetric("foo", nil, nil)
 	m2 := newMetric("bar", nil, nil)
@@ -36,9 +37,10 @@ func TestMeasurementRename(t *testing.T) {
 }
 
 func TestTagRename(t *testing.T) {
-	r := Rename{}
-	r.Tag = []renamer{
-		{From: "hostname", To: "host"},
+	r := Rename{
+		Replaces: []Replace{
+			{Tag: "hostname", Dest: "host"},
+		},
 	}
 	m := newMetric("foo", map[string]string{"hostname": "localhost", "region": "east-1"}, nil)
 	results := r.Apply(m)
@@ -47,9 +49,10 @@ func TestTagRename(t *testing.T) {
 }
 
 func TestFieldRename(t *testing.T) {
-	r := Rename{}
-	r.Field = []renamer{
-		{From: "time_msec", To: "time"},
+	r := Rename{
+		Replaces: []Replace{
+			{Field: "time_msec", Dest: "time"},
+		},
 	}
 	m := newMetric("foo", nil, map[string]interface{}{"time_msec": int64(1250), "snakes": true})
 	results := r.Apply(m)

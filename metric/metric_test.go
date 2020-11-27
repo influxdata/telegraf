@@ -334,7 +334,7 @@ func TestValueType(t *testing.T) {
 	assert.Equal(t, telegraf.Gauge, m.Type())
 }
 
-func TestCopyAggreate(t *testing.T) {
+func TestCopyAggregate(t *testing.T) {
 	m1 := baseMetric()
 	m1.SetAggregate(true)
 	m2 := m1.Copy()

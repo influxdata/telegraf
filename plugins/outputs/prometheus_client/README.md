@@ -1,14 +1,22 @@
-# Prometheus Client Service Output Plugin
+# Prometheus Output Plugin
 
-This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all metrics on `/metrics` (default) to be polled by a Prometheus server.
+This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes
+all metrics on `/metrics` (default) to be polled by a Prometheus server.
 
-## Configuration
+### Configuration
 
 ```toml
-# Publish all metrics to /metrics for Prometheus to scrape
 [[outputs.prometheus_client]]
   ## Address to listen on.
   listen = ":9273"
+
+  ## Metric version controls the mapping from Telegraf metrics into
+  ## Prometheus format.  When using the prometheus input, use the same value in
+  ## both plugins to ensure metrics are round-tripped without modification.
+  ##
+  ##   example: metric_version = 1; deprecated in 1.13
+  ##            metric_version = 2; recommended version
+  # metric_version = 1
 
   ## Use HTTP Basic Authentication.
   # basic_username = "Foo"
@@ -35,4 +43,17 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
   ## If set, enable TLS with the given certificate.
   # tls_cert = "/etc/ssl/telegraf.crt"
   # tls_key = "/etc/ssl/telegraf.key"
+
+  ## Set one or more allowed client CA certificate file names to
+  ## enable mutually authenticated TLS connections
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+
+  ## Export metric collection time.
+  # export_timestamp = false
 ```
+
+### Metrics
+
+Prometheus metrics are produced in the same manner as the [prometheus serializer][].
+
+[prometheus serializer]: /plugins/serializers/prometheus/README.md#Metrics

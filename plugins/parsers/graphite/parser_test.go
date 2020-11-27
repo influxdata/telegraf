@@ -1,14 +1,14 @@
 package graphite
 
 import (
-	"reflect"
+	"math"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf/internal/templating"
 	"github.com/influxdata/telegraf/metric"
-
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -241,7 +241,7 @@ func TestParseLine(t *testing.T) {
 				len(test.tags), len(metric.Tags()))
 		}
 		f := metric.Fields()["value"].(float64)
-		if metric.Fields()["value"] != f {
+		if f != test.value {
 			t.Fatalf("floatValue value mismatch.  expected %v, got %v",
 				test.value, f)
 		}
@@ -355,14 +355,40 @@ func TestParse(t *testing.T) {
 
 func TestParseNaN(t *testing.T) {
 	p, err := NewGraphiteParser("", []string{"measurement*"}, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	_, err = p.ParseLine("servers.localhost.cpu_load NaN 1435077219")
-	assert.Error(t, err)
+	m, err := p.ParseLine("servers.localhost.cpu_load NaN 1435077219")
+	require.NoError(t, err)
 
-	if _, ok := err.(*UnsupposedValueError); !ok {
-		t.Fatalf("expected *ErrUnsupportedValue, got %v", reflect.TypeOf(err))
-	}
+	expected := testutil.MustMetric(
+		"servers.localhost.cpu_load",
+		map[string]string{},
+		map[string]interface{}{
+			"value": math.NaN(),
+		},
+		time.Unix(1435077219, 0),
+	)
+
+	testutil.RequireMetricEqual(t, expected, m)
+}
+
+func TestParseInf(t *testing.T) {
+	p, err := NewGraphiteParser("", []string{"measurement*"}, nil)
+	require.NoError(t, err)
+
+	m, err := p.ParseLine("servers.localhost.cpu_load +Inf 1435077219")
+	require.NoError(t, err)
+
+	expected := testutil.MustMetric(
+		"servers.localhost.cpu_load",
+		map[string]string{},
+		map[string]interface{}{
+			"value": math.Inf(1),
+		},
+		time.Unix(1435077219, 0),
+	)
+
+	testutil.RequireMetricEqual(t, expected, m)
 }
 
 func TestFilterMatchDefault(t *testing.T) {

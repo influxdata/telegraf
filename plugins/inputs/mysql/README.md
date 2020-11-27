@@ -21,10 +21,9 @@ This plugin gathers the statistic data from MySQL server
 ### Configuration
 
 ```toml
-# Read metrics from one or many mysql servers
 [[inputs.mysql]]
   ## specify servers via a url matching:
-  ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+  ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify|custom]]
   ##  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
   ##  e.g.
   ##    servers = ["user:passwd@tcp(127.0.0.1:3306)/?tls=false"]
@@ -32,60 +31,80 @@ This plugin gathers the statistic data from MySQL server
   #
   ## If no servers are specified, then localhost is used as the host.
   servers = ["tcp(127.0.0.1:3306)/"]
-  ## the limits for metrics form perf_events_statements
-  perf_events_statements_digest_text_limit  = 120
-  perf_events_statements_limit              = 250
-  perf_events_statements_time_limit         = 86400
-  #
+
+  ## Selects the metric output format.
+  ##
+  ## This option exists to maintain backwards compatibility, if you have
+  ## existing metrics do not set or change this value until you are ready to
+  ## migrate to the new format.
+  ##
+  ## If you do not have existing metrics from this plugin set to the latest
+  ## version.
+  ##
+  ## Telegraf >=1.6: metric_version = 2
+  ##           <1.6: metric_version = 1 (or unset)
+  metric_version = 2
+
   ## if the list is empty, then metrics are gathered from all database tables
-  table_schema_databases                    = []
-  #
+  # table_schema_databases = []
+
   ## gather metrics from INFORMATION_SCHEMA.TABLES for databases provided above list
-  gather_table_schema                       = false
-  #
+  # gather_table_schema = false
+
   ## gather thread state counts from INFORMATION_SCHEMA.PROCESSLIST
-  gather_process_list                       = true
-  #
-  ## gather thread state counts from INFORMATION_SCHEMA.USER_STATISTICS
-  gather_user_statistics                    = true
-  #
+  # gather_process_list = false
+
+  ## gather user statistics from INFORMATION_SCHEMA.USER_STATISTICS
+  # gather_user_statistics = false
+
   ## gather auto_increment columns and max values from information schema
-  gather_info_schema_auto_inc               = true
-  #
+  # gather_info_schema_auto_inc = false
+
   ## gather metrics from INFORMATION_SCHEMA.INNODB_METRICS
-  gather_innodb_metrics                     = true
-  #
+  # gather_innodb_metrics = false
+
   ## gather metrics from SHOW SLAVE STATUS command output
-  gather_slave_status                       = true
-  #
+  # gather_slave_status = false
+
   ## gather metrics from SHOW BINARY LOGS command output
-  gather_binary_logs                        = false
-  #
+  # gather_binary_logs = false
+
+  ## gather metrics from SHOW GLOBAL VARIABLES command output
+  # gather_global_variables = true
+
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_TABLE
-  gather_table_io_waits                     = false
-  #
+  # gather_table_io_waits = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_LOCK_WAITS
-  gather_table_lock_waits                   = false
-  #
+  # gather_table_lock_waits = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_INDEX_USAGE
-  gather_index_io_waits                     = false
-  #
+  # gather_index_io_waits = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.EVENT_WAITS
-  gather_event_waits                        = false
-  #
+  # gather_event_waits = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.FILE_SUMMARY_BY_EVENT_NAME
-  gather_file_events_stats                  = false
-  #
+  # gather_file_events_stats = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.EVENTS_STATEMENTS_SUMMARY_BY_DIGEST
-  gather_perf_events_statements             = false
-  #
+  # gather_perf_events_statements = false
+
+  ## the limits for metrics form perf_events_statements
+  # perf_events_statements_digest_text_limit = 120
+  # perf_events_statements_limit = 250
+  # perf_events_statements_time_limit = 86400
+
   ## Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
-  interval_slow                             = "30m"
+  ##   example: interval_slow = "30m"
+  # interval_slow = ""
 
   ## Optional TLS Config (will be used if tls=custom parameter specified in server uri)
-  tls_ca = "/etc/telegraf/ca.pem"
-  tls_cert = "/etc/telegraf/cert.pem"
-  tls_key = "/etc/telegraf/key.pem"
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
 #### Metric Version
@@ -98,7 +117,7 @@ InfluxDB due to the change of types.  For this reason, you should keep the
 
 If preserving your old data is not required you may wish to drop conflicting
 measurements:
-```
+```sql
 DROP SERIES from mysql
 DROP SERIES from mysql_variables
 DROP SERIES from mysql_innodb
@@ -134,7 +153,7 @@ If you wish to remove the `name_suffix` you may use Kapacitor to copy the
 historical data to the default name.  Do this only after retiring the old
 measurement name.
 
-1. Use the techinique described above to write to multiple locations:
+1. Use the technique described above to write to multiple locations:
    ```toml
    [[inputs.mysql]]
      servers = ["tcp(127.0.0.1:3306)/"]
@@ -264,7 +283,7 @@ The unit of fields varies by the tags.
     * events_statements_rows_examined_total(float, number)
     * events_statements_tmp_tables_total(float, number)
     * events_statements_tmp_disk_tables_total(float, number)
-    * events_statements_sort_merge_passes_totales(float, number)
+    * events_statements_sort_merge_passes_totals(float, number)
     * events_statements_sort_rows_total(float, number)
     * events_statements_no_index_used_total(float, number)
 * Table schema - gathers statistics of each schema. It has following measurements

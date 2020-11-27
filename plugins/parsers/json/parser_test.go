@@ -2,9 +2,11 @@ package json
 
 import (
 	"fmt"
-	"log"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,6 +17,7 @@ const (
 	validJSONArrayMultiple = "[{\"a\": 5, \"b\": {\"c\": 6}}, {\"a\": 7, \"b\": {\"c\": 8}}]"
 	invalidJSON            = "I don't think this is JSON"
 	invalidJSON2           = "{\"a\": 5, \"b\": \"c\": 6}}"
+	mixedValidityJSON      = "[{\"a\": 5, \"time\": \"2006-01-02T15:04:05\"}, {\"a\": 2}]"
 )
 
 const validJSONTags = `
@@ -50,9 +53,10 @@ const validJSONArrayTags = `
 `
 
 func TestParseValidJSON(t *testing.T) {
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName: "json_test",
-	}
+	})
+	require.NoError(t, err)
 
 	// Most basic vanilla test
 	metrics, err := parser.Parse([]byte(validJSON))
@@ -99,9 +103,10 @@ func TestParseValidJSON(t *testing.T) {
 }
 
 func TestParseLineValidJSON(t *testing.T) {
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName: "json_test",
-	}
+	})
+	require.NoError(t, err)
 
 	// Most basic vanilla test
 	metric, err := parser.ParseLine(validJSON)
@@ -135,11 +140,12 @@ func TestParseLineValidJSON(t *testing.T) {
 }
 
 func TestParseInvalidJSON(t *testing.T) {
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName: "json_test",
-	}
+	})
+	require.NoError(t, err)
 
-	_, err := parser.Parse([]byte(invalidJSON))
+	_, err = parser.Parse([]byte(invalidJSON))
 	require.Error(t, err)
 	_, err = parser.Parse([]byte(invalidJSON2))
 	require.Error(t, err)
@@ -147,12 +153,49 @@ func TestParseInvalidJSON(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestParseJSONImplicitStrictness(t *testing.T) {
+	parserImplicitNoStrict, err := New(&Config{
+		MetricName: "json_test",
+		TimeKey:    "time",
+	})
+	require.NoError(t, err)
+
+	_, err = parserImplicitNoStrict.Parse([]byte(mixedValidityJSON))
+	require.NoError(t, err)
+}
+
+func TestParseJSONExplicitStrictnessFalse(t *testing.T) {
+	parserNoStrict, err := New(&Config{
+		MetricName: "json_test",
+		TimeKey:    "time",
+		Strict:     false,
+	})
+	require.NoError(t, err)
+
+	_, err = parserNoStrict.Parse([]byte(mixedValidityJSON))
+	require.NoError(t, err)
+}
+
+func TestParseJSONExplicitStrictnessTrue(t *testing.T) {
+	parserStrict, err := New(&Config{
+		MetricName: "json_test",
+		TimeKey:    "time",
+		Strict:     true,
+	})
+	require.NoError(t, err)
+
+	_, err = parserStrict.Parse([]byte(mixedValidityJSON))
+	require.Error(t, err)
+}
+
 func TestParseWithTagKeys(t *testing.T) {
 	// Test that strings not matching tag keys are ignored
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName: "json_test",
 		TagKeys:    []string{"wrongtagkey"},
-	}
+	})
+	require.NoError(t, err)
+
 	metrics, err := parser.Parse([]byte(validJSONTags))
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
@@ -164,10 +207,12 @@ func TestParseWithTagKeys(t *testing.T) {
 	require.Equal(t, map[string]string{}, metrics[0].Tags())
 
 	// Test that single tag key is found and applied
-	parser = JSONParser{
+	parser, err = New(&Config{
 		MetricName: "json_test",
 		TagKeys:    []string{"mytag"},
-	}
+	})
+	require.NoError(t, err)
+
 	metrics, err = parser.Parse([]byte(validJSONTags))
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
@@ -181,10 +226,11 @@ func TestParseWithTagKeys(t *testing.T) {
 	}, metrics[0].Tags())
 
 	// Test that both tag keys are found and applied
-	parser = JSONParser{
+	parser, err = New(&Config{
 		MetricName: "json_test",
 		TagKeys:    []string{"mytag", "othertag"},
-	}
+	})
+	require.NoError(t, err)
 	metrics, err = parser.Parse([]byte(validJSONTags))
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
@@ -201,10 +247,11 @@ func TestParseWithTagKeys(t *testing.T) {
 
 func TestParseLineWithTagKeys(t *testing.T) {
 	// Test that strings not matching tag keys are ignored
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName: "json_test",
 		TagKeys:    []string{"wrongtagkey"},
-	}
+	})
+	require.NoError(t, err)
 	metric, err := parser.ParseLine(validJSONTags)
 	require.NoError(t, err)
 	require.Equal(t, "json_test", metric.Name())
@@ -215,10 +262,12 @@ func TestParseLineWithTagKeys(t *testing.T) {
 	require.Equal(t, map[string]string{}, metric.Tags())
 
 	// Test that single tag key is found and applied
-	parser = JSONParser{
+	parser, err = New(&Config{
 		MetricName: "json_test",
 		TagKeys:    []string{"mytag"},
-	}
+	})
+	require.NoError(t, err)
+
 	metric, err = parser.ParseLine(validJSONTags)
 	require.NoError(t, err)
 	require.Equal(t, "json_test", metric.Name())
@@ -231,10 +280,12 @@ func TestParseLineWithTagKeys(t *testing.T) {
 	}, metric.Tags())
 
 	// Test that both tag keys are found and applied
-	parser = JSONParser{
+	parser, err = New(&Config{
 		MetricName: "json_test",
 		TagKeys:    []string{"mytag", "othertag"},
-	}
+	})
+	require.NoError(t, err)
+
 	metric, err = parser.ParseLine(validJSONTags)
 	require.NoError(t, err)
 	require.Equal(t, "json_test", metric.Name())
@@ -249,13 +300,14 @@ func TestParseLineWithTagKeys(t *testing.T) {
 }
 
 func TestParseValidJSONDefaultTags(t *testing.T) {
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName: "json_test",
 		TagKeys:    []string{"mytag"},
 		DefaultTags: map[string]string{
 			"t4g": "default",
 		},
-	}
+	})
+	require.NoError(t, err)
 
 	// Most basic vanilla test
 	metrics, err := parser.Parse([]byte(validJSON))
@@ -285,13 +337,14 @@ func TestParseValidJSONDefaultTags(t *testing.T) {
 
 // Test that default tags are overridden by tag keys
 func TestParseValidJSONDefaultTagsOverride(t *testing.T) {
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName: "json_test",
 		TagKeys:    []string{"mytag"},
 		DefaultTags: map[string]string{
 			"mytag": "default",
 		},
-	}
+	})
+	require.NoError(t, err)
 
 	// Most basic vanilla test
 	metrics, err := parser.Parse([]byte(validJSON))
@@ -320,9 +373,10 @@ func TestParseValidJSONDefaultTagsOverride(t *testing.T) {
 
 // Test that json arrays can be parsed
 func TestParseValidJSONArray(t *testing.T) {
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName: "json_array_test",
-	}
+	})
+	require.NoError(t, err)
 
 	// Most basic vanilla test
 	metrics, err := parser.Parse([]byte(validJSONArray))
@@ -355,10 +409,12 @@ func TestParseValidJSONArray(t *testing.T) {
 
 func TestParseArrayWithTagKeys(t *testing.T) {
 	// Test that strings not matching tag keys are ignored
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName: "json_array_test",
 		TagKeys:    []string{"wrongtagkey"},
-	}
+	})
+	require.NoError(t, err)
+
 	metrics, err := parser.Parse([]byte(validJSONArrayTags))
 	require.NoError(t, err)
 	require.Len(t, metrics, 2)
@@ -377,10 +433,12 @@ func TestParseArrayWithTagKeys(t *testing.T) {
 	require.Equal(t, map[string]string{}, metrics[1].Tags())
 
 	// Test that single tag key is found and applied
-	parser = JSONParser{
+	parser, err = New(&Config{
 		MetricName: "json_array_test",
 		TagKeys:    []string{"mytag"},
-	}
+	})
+	require.NoError(t, err)
+
 	metrics, err = parser.Parse([]byte(validJSONArrayTags))
 	require.NoError(t, err)
 	require.Len(t, metrics, 2)
@@ -403,10 +461,12 @@ func TestParseArrayWithTagKeys(t *testing.T) {
 	}, metrics[1].Tags())
 
 	// Test that both tag keys are found and applied
-	parser = JSONParser{
+	parser, err = New(&Config{
 		MetricName: "json_array_test",
 		TagKeys:    []string{"mytag", "othertag"},
-	}
+	})
+	require.NoError(t, err)
+
 	metrics, err = parser.Parse([]byte(validJSONArrayTags))
 	require.NoError(t, err)
 	require.Len(t, metrics, 2)
@@ -434,12 +494,13 @@ func TestParseArrayWithTagKeys(t *testing.T) {
 var jsonBOM = []byte("\xef\xbb\xbf[{\"value\":17}]")
 
 func TestHttpJsonBOM(t *testing.T) {
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName: "json_test",
-	}
+	})
+	require.NoError(t, err)
 
 	// Most basic vanilla test
-	_, err := parser.Parse(jsonBOM)
+	_, err = parser.Parse(jsonBOM)
 	require.NoError(t, err)
 }
 
@@ -463,15 +524,16 @@ func TestJSONParseNestedArray(t *testing.T) {
 	}
 	}`
 
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName: "json_test",
 		TagKeys:    []string{"total_devices", "total_threads", "shares_tester3_fun"},
-	}
+	})
+	require.NoError(t, err)
 
 	metrics, err := parser.Parse([]byte(testString))
-	log.Printf("m[0] name: %v, tags: %v, fields: %v", metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields())
+	require.Len(t, metrics, 1)
 	require.NoError(t, err)
-	require.Equal(t, len(parser.TagKeys), len(metrics[0].Tags()))
+	require.Equal(t, 3, len(metrics[0].Tags()))
 }
 
 func TestJSONQueryErrorOnArray(t *testing.T) {
@@ -491,13 +553,14 @@ func TestJSONQueryErrorOnArray(t *testing.T) {
 		}
 	}`
 
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName: "json_test",
 		TagKeys:    []string{},
-		JSONQuery:  "shares.myArr",
-	}
+		Query:      "shares.myArr",
+	})
+	require.NoError(t, err)
 
-	_, err := parser.Parse([]byte(testString))
+	_, err = parser.Parse([]byte(testString))
 	require.Error(t, err)
 }
 
@@ -524,11 +587,12 @@ func TestArrayOfObjects(t *testing.T) {
 		"more_stuff":"junk"
 	}`
 
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName: "json_test",
 		TagKeys:    []string{"ice"},
-		JSONQuery:  "meta.shares",
-	}
+		Query:      "meta.shares",
+	})
+	require.NoError(t, err)
 
 	metrics, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
@@ -550,12 +614,13 @@ func TestUseCaseJSONQuery(t *testing.T) {
 		}
 	}`
 
-	parser := JSONParser{
+	parser, err := New(&Config{
 		MetricName:   "json_test",
 		StringFields: []string{"last"},
 		TagKeys:      []string{"first"},
-		JSONQuery:    "obj.friends",
-	}
+		Query:        "obj.friends",
+	})
+	require.NoError(t, err)
 
 	metrics, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
@@ -585,15 +650,34 @@ func TestTimeParser(t *testing.T) {
 		}
 	]`
 
-	parser := JSONParser{
-		MetricName:     "json_test",
-		JSONTimeKey:    "b_time",
-		JSONTimeFormat: "02 Jan 06 15:04 MST",
-	}
+	parser, err := New(&Config{
+		MetricName: "json_test",
+		TimeKey:    "b_time",
+		TimeFormat: "02 Jan 06 15:04 MST",
+	})
+	require.NoError(t, err)
 	metrics, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
 	require.Equal(t, 2, len(metrics))
 	require.Equal(t, false, metrics[0].Time() == metrics[1].Time())
+}
+
+func TestTimeParserWithTimezone(t *testing.T) {
+	testString := `{
+		"time": "04 Jan 06 15:04"
+	}`
+
+	parser, err := New(&Config{
+		MetricName: "json_test",
+		TimeKey:    "time",
+		TimeFormat: "02 Jan 06 15:04",
+		Timezone:   "America/New_York",
+	})
+	require.NoError(t, err)
+	metrics, err := parser.Parse([]byte(testString))
+	require.NoError(t, err)
+	require.Equal(t, 1, len(metrics))
+	require.EqualValues(t, int64(1136405040000000000), metrics[0].Time().UnixNano())
 }
 
 func TestUnixTimeParser(t *testing.T) {
@@ -618,11 +702,13 @@ func TestUnixTimeParser(t *testing.T) {
 		}
 	]`
 
-	parser := JSONParser{
-		MetricName:     "json_test",
-		JSONTimeKey:    "b_time",
-		JSONTimeFormat: "unix",
-	}
+	parser, err := New(&Config{
+		MetricName: "json_test",
+		TimeKey:    "b_time",
+		TimeFormat: "unix",
+	})
+	require.NoError(t, err)
+
 	metrics, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
 	require.Equal(t, 2, len(metrics))
@@ -651,11 +737,13 @@ func TestUnixMsTimeParser(t *testing.T) {
 		}
 	]`
 
-	parser := JSONParser{
-		MetricName:     "json_test",
-		JSONTimeKey:    "b_time",
-		JSONTimeFormat: "unix_ms",
-	}
+	parser, err := New(&Config{
+		MetricName: "json_test",
+		TimeKey:    "b_time",
+		TimeFormat: "unix_ms",
+	})
+	require.NoError(t, err)
+
 	metrics, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
 	require.Equal(t, 2, len(metrics))
@@ -673,11 +761,12 @@ func TestTimeErrors(t *testing.T) {
 		"my_tag_2": "baz"
 	}`
 
-	parser := JSONParser{
-		MetricName:     "json_test",
-		JSONTimeKey:    "b_time",
-		JSONTimeFormat: "02 January 06 15:04 MST",
-	}
+	parser, err := New(&Config{
+		MetricName: "json_test",
+		TimeKey:    "b_time",
+		TimeFormat: "02 January 06 15:04 MST",
+	})
+	require.NoError(t, err)
 
 	metrics, err := parser.Parse([]byte(testString))
 	require.Error(t, err)
@@ -692,17 +781,29 @@ func TestTimeErrors(t *testing.T) {
 		"my_tag_2": "baz"
 	}`
 
-	parser = JSONParser{
-		MetricName:     "json_test",
-		JSONTimeKey:    "b_time",
-		JSONTimeFormat: "02 January 06 15:04 MST",
-	}
+	parser, err = New(&Config{
+		MetricName: "json_test",
+		TimeKey:    "b_time",
+		TimeFormat: "02 January 06 15:04 MST",
+	})
+	require.NoError(t, err)
 
 	metrics, err = parser.Parse([]byte(testString2))
-	log.Printf("err: %v", err)
 	require.Error(t, err)
 	require.Equal(t, 0, len(metrics))
 	require.Equal(t, fmt.Errorf("JSON time key could not be found"), err)
+}
+
+func TestShareTimestamp(t *testing.T) {
+	parser, err := New(&Config{
+		MetricName: "json_test",
+	})
+	require.NoError(t, err)
+
+	metrics, err := parser.Parse([]byte(validJSONArrayMultiple))
+	require.NoError(t, err)
+	require.Equal(t, 2, len(metrics))
+	require.Equal(t, true, metrics[0].Time() == metrics[1].Time())
 }
 
 func TestNameKey(t *testing.T) {
@@ -716,11 +817,134 @@ func TestNameKey(t *testing.T) {
 		"my_tag_2": "baz"
 	}`
 
-	parser := JSONParser{
-		JSONNameKey: "b_c",
-	}
+	parser, err := New(&Config{
+		NameKey: "b_c",
+	})
+	require.NoError(t, err)
 
 	metrics, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
 	require.Equal(t, "this is my name", metrics[0].Name())
+}
+
+func TestParseArrayWithWrongType(t *testing.T) {
+	data := `[{"answer": 42}, 123]`
+
+	parser, err := New(&Config{})
+	require.NoError(t, err)
+
+	_, err = parser.Parse([]byte(data))
+	require.Error(t, err)
+}
+
+func TestParse(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   *Config
+		input    []byte
+		expected []telegraf.Metric
+	}{
+		{
+			name: "tag keys with underscore issue 6705",
+			config: &Config{
+				MetricName: "json",
+				TagKeys:    []string{"metric___name__"},
+			},
+			input: []byte(`{"metric": {"__name__": "howdy", "time_idle": 42}}`),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json",
+					map[string]string{
+						"metric___name__": "howdy",
+					},
+					map[string]interface{}{
+						"metric_time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:     "parse empty array",
+			config:   &Config{},
+			input:    []byte(`[]`),
+			expected: []telegraf.Metric{},
+		},
+		{
+			name: "parse simple array",
+			config: &Config{
+				MetricName: "json",
+			},
+			input: []byte(`[{"answer": 42}]`),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json",
+					map[string]string{},
+					map[string]interface{}{
+						"answer": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "string field glob",
+			config: &Config{
+				MetricName:   "json",
+				StringFields: []string{"*"},
+			},
+			input: []byte(`
+{
+    "color": "red",
+    "status": "error"
+}
+`),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json",
+					map[string]string{},
+					map[string]interface{}{
+						"color":  "red",
+						"status": "error",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "time key is deleted from fields",
+			config: &Config{
+				MetricName: "json",
+				TimeKey:    "timestamp",
+				TimeFormat: "unix",
+			},
+			input: []byte(`
+{
+	"value": 42,
+	"timestamp":  1541183052
+}
+`),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(1541183052, 0),
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser, err := New(tt.config)
+			require.NoError(t, err)
+
+			actual, err := parser.Parse(tt.input)
+			require.NoError(t, err)
+
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
+		})
+	}
 }

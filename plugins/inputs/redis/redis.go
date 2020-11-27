@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -13,20 +13,30 @@ import (
 
 	"github.com/go-redis/redis"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+type RedisCommand struct {
+	Command []interface{}
+	Field   string
+	Type    string
+}
+
 type Redis struct {
+	Commands []*RedisCommand
 	Servers  []string
 	Password string
 	tls.ClientConfig
+
+	Log telegraf.Logger
 
 	clients     []Client
 	initialized bool
 }
 
 type Client interface {
+	Do(returnType string, args ...interface{}) (interface{}, error)
 	Info() *redis.StringCmd
 	BaseTags() map[string]string
 }
@@ -36,8 +46,23 @@ type RedisClient struct {
 	tags   map[string]string
 }
 
+func (r *RedisClient) Do(returnType string, args ...interface{}) (interface{}, error) {
+	rawVal := r.client.Do(args...)
+
+	switch returnType {
+	case "integer":
+		return rawVal.Int64()
+	case "string":
+		return rawVal.String()
+	case "float":
+		return rawVal.Float64()
+	default:
+		return rawVal.String()
+	}
+}
+
 func (r *RedisClient) Info() *redis.StringCmd {
-	return r.client.Info()
+	return r.client.Info("ALL")
 }
 
 func (r *RedisClient) BaseTags() map[string]string {
@@ -47,6 +72,8 @@ func (r *RedisClient) BaseTags() map[string]string {
 	}
 	return tags
 }
+
+var replicationSlaveMetricPrefix = regexp.MustCompile(`^slave\d+`)
 
 var sampleConfig = `
   ## specify servers via a url matching:
@@ -59,6 +86,12 @@ var sampleConfig = `
   ## If no servers are specified, then localhost is used as the host.
   ## If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
+
+  ## Optional. Specify redis commands to retrieve values
+  # [[inputs.redis.commands]]
+  # command = ["get", "sample-key"]
+  # field = "sample-key-value"
+  # type = "string"
 
   ## specify server password
   # password = "s#cr@t%"
@@ -98,13 +131,13 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 
 	for i, serv := range r.Servers {
 		if !strings.HasPrefix(serv, "tcp://") && !strings.HasPrefix(serv, "unix://") {
-			log.Printf("W! [inputs.redis]: server URL found without scheme; please update your configuration file")
+			r.Log.Warn("Server URL found without scheme; please update your configuration file")
 			serv = "tcp://" + serv
 		}
 
 		u, err := url.Parse(serv)
 		if err != nil {
-			return fmt.Errorf("Unable to parse to address %q: %v", serv, err)
+			return fmt.Errorf("unable to parse to address %q: %s", serv, err.Error())
 		}
 
 		password := ""
@@ -175,10 +208,27 @@ func (r *Redis) Gather(acc telegraf.Accumulator) error {
 		go func(client Client) {
 			defer wg.Done()
 			acc.AddError(r.gatherServer(client, acc))
+			acc.AddError(r.gatherCommandValues(client, acc))
 		}(client)
 	}
 
 	wg.Wait()
+	return nil
+}
+
+func (r *Redis) gatherCommandValues(client Client, acc telegraf.Accumulator) error {
+	fields := make(map[string]interface{})
+	for _, command := range r.Commands {
+		val, err := client.Do(command.Type, command.Command...)
+		if err != nil {
+			return err
+		}
+
+		fields[command.Field] = val
+	}
+
+	acc.AddFields("redis_commands", fields, client.BaseTags())
+
 	return nil
 }
 
@@ -248,10 +298,24 @@ func gatherInfoOutput(
 				gatherKeyspaceLine(name, kline, acc, tags)
 				continue
 			}
+			if section == "Commandstats" {
+				kline := strings.TrimSpace(parts[1])
+				gatherCommandstateLine(name, kline, acc, tags)
+				continue
+			}
+			if section == "Replication" && replicationSlaveMetricPrefix.MatchString(name) {
+				kline := strings.TrimSpace(parts[1])
+				gatherReplicationLine(name, kline, acc, tags)
+				continue
+			}
+
 			metric = name
 		}
 
 		val := strings.TrimSpace(parts[1])
+
+		// Some percentage values have a "%" suffix that we need to get rid of before int/float conversion
+		val = strings.TrimSuffix(val, "%")
 
 		// Try parsing as int
 		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
@@ -319,6 +383,95 @@ func gatherKeyspaceLine(
 		}
 		acc.AddFields("redis_keyspace", fields, tags)
 	}
+}
+
+// Parse the special cmdstat lines.
+// Example:
+//     cmdstat_publish:calls=33791,usec=208789,usec_per_call=6.18
+// Tag: cmdstat=publish; Fields: calls=33791i,usec=208789i,usec_per_call=6.18
+func gatherCommandstateLine(
+	name string,
+	line string,
+	acc telegraf.Accumulator,
+	global_tags map[string]string,
+) {
+	if !strings.HasPrefix(name, "cmdstat") {
+		return
+	}
+
+	fields := make(map[string]interface{})
+	tags := make(map[string]string)
+	for k, v := range global_tags {
+		tags[k] = v
+	}
+	tags["command"] = strings.TrimPrefix(name, "cmdstat_")
+	parts := strings.Split(line, ",")
+	for _, part := range parts {
+		kv := strings.Split(part, "=")
+		if len(kv) != 2 {
+			continue
+		}
+
+		switch kv[0] {
+		case "calls":
+			fallthrough
+		case "usec":
+			ival, err := strconv.ParseInt(kv[1], 10, 64)
+			if err == nil {
+				fields[kv[0]] = ival
+			}
+		case "usec_per_call":
+			fval, err := strconv.ParseFloat(kv[1], 64)
+			if err == nil {
+				fields[kv[0]] = fval
+			}
+		}
+	}
+	acc.AddFields("redis_cmdstat", fields, tags)
+}
+
+// Parse the special Replication line
+// Example:
+//     slave0:ip=127.0.0.1,port=7379,state=online,offset=4556468,lag=0
+// This line will only be visible when a node has a replica attached.
+func gatherReplicationLine(
+	name string,
+	line string,
+	acc telegraf.Accumulator,
+	global_tags map[string]string,
+) {
+	fields := make(map[string]interface{})
+	tags := make(map[string]string)
+	for k, v := range global_tags {
+		tags[k] = v
+	}
+
+	tags["replica_id"] = strings.TrimLeft(name, "slave")
+	tags["replication_role"] = "slave"
+
+	parts := strings.Split(line, ",")
+	for _, part := range parts {
+		kv := strings.Split(part, "=")
+		if len(kv) != 2 {
+			continue
+		}
+
+		switch kv[0] {
+		case "ip":
+			tags["replica_ip"] = kv[1]
+		case "port":
+			tags["replica_port"] = kv[1]
+		case "state":
+			tags[kv[0]] = kv[1]
+		default:
+			ival, err := strconv.ParseInt(kv[1], 10, 64)
+			if err == nil {
+				fields[kv[0]] = ival
+			}
+		}
+	}
+
+	acc.AddFields("redis_replication", fields, tags)
 }
 
 func init() {

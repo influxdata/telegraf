@@ -17,8 +17,9 @@ var m1, _ = metric.New("m1",
 		"b": int64(1),
 		"c": float64(2),
 		"d": float64(2),
+		"g": int64(3),
 	},
-	time.Now(),
+	time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
 )
 var m2, _ = metric.New("m1",
 	map[string]string{"foo": "bar"},
@@ -31,12 +32,15 @@ var m2, _ = metric.New("m1",
 		"f":        uint64(200),
 		"ignoreme": "string",
 		"andme":    true,
+		"g":        int64(1),
 	},
-	time.Now(),
+	time.Date(2000, 1, 1, 0, 0, 0, 1e6, time.UTC),
 )
 
 func BenchmarkApply(b *testing.B) {
 	minmax := NewBasicStats()
+	minmax.Log = testutil.Logger{}
+	minmax.getConfiguredStats()
 
 	for n := 0; n < b.N; n++ {
 		minmax.Add(m1)
@@ -48,6 +52,8 @@ func BenchmarkApply(b *testing.B) {
 func TestBasicStatsWithPeriod(t *testing.T) {
 	acc := testutil.Accumulator{}
 	minmax := NewBasicStats()
+	minmax.Log = testutil.Logger{}
+	minmax.getConfiguredStats()
 
 	minmax.Add(m1)
 	minmax.Add(m2)
@@ -86,6 +92,12 @@ func TestBasicStatsWithPeriod(t *testing.T) {
 		"f_max":   float64(200),
 		"f_min":   float64(200),
 		"f_mean":  float64(200),
+		"g_count": float64(2), //g
+		"g_max":   float64(3),
+		"g_min":   float64(1),
+		"g_mean":  float64(2),
+		"g_s2":    float64(2),
+		"g_stdev": math.Sqrt(2),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -98,6 +110,8 @@ func TestBasicStatsWithPeriod(t *testing.T) {
 func TestBasicStatsDifferentPeriods(t *testing.T) {
 	acc := testutil.Accumulator{}
 	minmax := NewBasicStats()
+	minmax.Log = testutil.Logger{}
+	minmax.getConfiguredStats()
 
 	minmax.Add(m1)
 	minmax.Push(&acc)
@@ -118,6 +132,10 @@ func TestBasicStatsDifferentPeriods(t *testing.T) {
 		"d_max":   float64(2),
 		"d_min":   float64(2),
 		"d_mean":  float64(2),
+		"g_count": float64(1), //g
+		"g_max":   float64(3),
+		"g_min":   float64(3),
+		"g_mean":  float64(3),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -153,6 +171,10 @@ func TestBasicStatsDifferentPeriods(t *testing.T) {
 		"f_max":   float64(200),
 		"f_min":   float64(200),
 		"f_mean":  float64(200),
+		"g_count": float64(1), //g
+		"g_max":   float64(1),
+		"g_min":   float64(1),
+		"g_mean":  float64(1),
 	}
 	expectedTags = map[string]string{
 		"foo": "bar",
@@ -165,6 +187,8 @@ func TestBasicStatsWithOnlyCount(t *testing.T) {
 
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"count"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -179,6 +203,7 @@ func TestBasicStatsWithOnlyCount(t *testing.T) {
 		"d_count": float64(2),
 		"e_count": float64(1),
 		"f_count": float64(1),
+		"g_count": float64(2),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -191,6 +216,8 @@ func TestBasicStatsWithOnlyMin(t *testing.T) {
 
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"min"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -205,6 +232,7 @@ func TestBasicStatsWithOnlyMin(t *testing.T) {
 		"d_min": float64(2),
 		"e_min": float64(200),
 		"f_min": float64(200),
+		"g_min": float64(1),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -217,6 +245,8 @@ func TestBasicStatsWithOnlyMax(t *testing.T) {
 
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"max"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -231,6 +261,7 @@ func TestBasicStatsWithOnlyMax(t *testing.T) {
 		"d_max": float64(6),
 		"e_max": float64(200),
 		"f_max": float64(200),
+		"g_max": float64(3),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -243,6 +274,8 @@ func TestBasicStatsWithOnlyMean(t *testing.T) {
 
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"mean"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -257,6 +290,7 @@ func TestBasicStatsWithOnlyMean(t *testing.T) {
 		"d_mean": float64(4),
 		"e_mean": float64(200),
 		"f_mean": float64(200),
+		"g_mean": float64(2),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -269,6 +303,8 @@ func TestBasicStatsWithOnlySum(t *testing.T) {
 
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"sum"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -283,6 +319,7 @@ func TestBasicStatsWithOnlySum(t *testing.T) {
 		"d_sum": float64(8),
 		"e_sum": float64(200),
 		"f_sum": float64(200),
+		"g_sum": float64(4),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -291,7 +328,7 @@ func TestBasicStatsWithOnlySum(t *testing.T) {
 }
 
 // Verify that sum doesn't suffer from floating point errors.  Early
-// implementations of sum were calulated from mean and count, which
+// implementations of sum were calculated from mean and count, which
 // e.g. summed "1, 1, 5, 1" as "7.999999..." instead of 8.
 func TestBasicStatsWithOnlySumFloatingPointErrata(t *testing.T) {
 
@@ -326,6 +363,8 @@ func TestBasicStatsWithOnlySumFloatingPointErrata(t *testing.T) {
 
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"sum"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
 
 	aggregator.Add(sum1)
 	aggregator.Add(sum2)
@@ -347,6 +386,8 @@ func TestBasicStatsWithOnlyVariance(t *testing.T) {
 
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"s2"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -359,6 +400,7 @@ func TestBasicStatsWithOnlyVariance(t *testing.T) {
 		"b_s2": float64(2),
 		"c_s2": float64(2),
 		"d_s2": float64(8),
+		"g_s2": float64(2),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -371,6 +413,8 @@ func TestBasicStatsWithOnlyStandardDeviation(t *testing.T) {
 
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"stdev"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -383,6 +427,7 @@ func TestBasicStatsWithOnlyStandardDeviation(t *testing.T) {
 		"b_stdev": math.Sqrt(2),
 		"c_stdev": math.Sqrt(2),
 		"d_stdev": math.Sqrt(8),
+		"g_stdev": math.Sqrt(2),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -395,6 +440,8 @@ func TestBasicStatsWithMinAndMax(t *testing.T) {
 
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"min", "max"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -415,6 +462,136 @@ func TestBasicStatsWithMinAndMax(t *testing.T) {
 		"e_min": float64(200),
 		"f_max": float64(200), //f
 		"f_min": float64(200),
+		"g_max": float64(3), //g
+		"g_min": float64(1),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
+// Test only aggregating diff
+func TestBasicStatsWithDiff(t *testing.T) {
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"diff"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
+
+	aggregator.Add(m1)
+	aggregator.Add(m2)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	expectedFields := map[string]interface{}{
+		"a_diff": float64(0),
+		"b_diff": float64(2),
+		"c_diff": float64(2),
+		"d_diff": float64(4),
+		"g_diff": float64(-2),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
+func TestBasicStatsWithRate(t *testing.T) {
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"rate"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
+
+	aggregator.Add(m1)
+	aggregator.Add(m2)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+	expectedFields := map[string]interface{}{
+		"a_rate": float64(0),
+		"b_rate": float64(2000),
+		"c_rate": float64(2000),
+		"d_rate": float64(4000),
+		"g_rate": float64(-2000),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
+func TestBasicStatsWithNonNegativeRate(t *testing.T) {
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"non_negative_rate"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
+
+	aggregator.Add(m1)
+	aggregator.Add(m2)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	expectedFields := map[string]interface{}{
+		"a_non_negative_rate": float64(0),
+		"b_non_negative_rate": float64(2000),
+		"c_non_negative_rate": float64(2000),
+		"d_non_negative_rate": float64(4000),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+func TestBasicStatsWithInterval(t *testing.T) {
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"interval"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
+
+	aggregator.Add(m1)
+	aggregator.Add(m2)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	expectedFields := map[string]interface{}{
+		"a_interval": int64(time.Millisecond),
+		"b_interval": int64(time.Millisecond),
+		"c_interval": int64(time.Millisecond),
+		"d_interval": int64(time.Millisecond),
+		"g_interval": int64(time.Millisecond),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
+// Test only aggregating non_negative_diff
+func TestBasicStatsWithNonNegativeDiff(t *testing.T) {
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"non_negative_diff"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
+
+	aggregator.Add(m1)
+	aggregator.Add(m2)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	expectedFields := map[string]interface{}{
+		"a_non_negative_diff": float64(0),
+		"b_non_negative_diff": float64(2),
+		"c_non_negative_diff": float64(2),
+		"d_non_negative_diff": float64(4),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -426,7 +603,9 @@ func TestBasicStatsWithMinAndMax(t *testing.T) {
 func TestBasicStatsWithAllStats(t *testing.T) {
 	acc := testutil.Accumulator{}
 	minmax := NewBasicStats()
+	minmax.Log = testutil.Logger{}
 	minmax.Stats = []string{"count", "min", "max", "mean", "stdev", "s2", "sum"}
+	minmax.getConfiguredStats()
 
 	minmax.Add(m1)
 	minmax.Add(m2)
@@ -471,6 +650,13 @@ func TestBasicStatsWithAllStats(t *testing.T) {
 		"f_min":   float64(200),
 		"f_mean":  float64(200),
 		"f_sum":   float64(200),
+		"g_count": float64(2), //g
+		"g_max":   float64(3),
+		"g_min":   float64(1),
+		"g_mean":  float64(2),
+		"g_s2":    float64(2),
+		"g_stdev": math.Sqrt(2),
+		"g_sum":   float64(4),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -483,6 +669,8 @@ func TestBasicStatsWithNoStats(t *testing.T) {
 
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -498,6 +686,8 @@ func TestBasicStatsWithUnknownStat(t *testing.T) {
 
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"crazy"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -509,12 +699,14 @@ func TestBasicStatsWithUnknownStat(t *testing.T) {
 }
 
 // Test that if Stats isn't supplied, then we only do count, min, max, mean,
-// stdev, and s2.  We purposely exclude sum for backwards compatability,
+// stdev, and s2.  We purposely exclude sum for backwards compatibility,
 // otherwise user's working systems will suddenly (and surprisingly) start
 // capturing sum without their input.
 func TestBasicStatsWithDefaultStats(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)

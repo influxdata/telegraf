@@ -1,180 +1,230 @@
-# SNMP Plugin
+# SNMP Input Plugin
 
-The SNMP input plugin gathers metrics from SNMP agents.
+The `snmp` input plugin uses polling to gather metrics from SNMP agents.
+Support for gathering individual OIDs as well as complete SNMP tables is
+included.
 
-## Configuration:
+### Prerequisites
 
-See additional SNMP plugin configuration examples [here](./CONFIG-EXAMPLES.md).
+This plugin uses the `snmptable` and `snmptranslate` programs from the
+[net-snmp][] project.  These tools will need to be installed into the `PATH` in
+order to be located.  Other utilities from the net-snmp project may be useful
+for troubleshooting, but are not directly used by the plugin.
 
-### Example:
+These programs will load available MIBs on the system.  Typically the default
+directory for MIBs is `/usr/share/snmp/mibs`, but if your MIBs are in a
+different location you may need to make the paths known to net-snmp.  The
+location of these files can be configured in the `snmp.conf` or via the
+`MIBDIRS` environment variable. See [`man 1 snmpcmd`][man snmpcmd] for more
+information.
 
-SNMP data:
-```
-.1.0.0.0.1.1.0 octet_str "foo"
-.1.0.0.0.1.1.1 octet_str "bar"
-.1.0.0.0.1.102 octet_str "bad"
-.1.0.0.0.1.2.0 integer 1
-.1.0.0.0.1.2.1 integer 2
-.1.0.0.0.1.3.0 octet_str "0.123"
-.1.0.0.0.1.3.1 octet_str "0.456"
-.1.0.0.0.1.3.2 octet_str "9.999"
-.1.0.0.1.1 octet_str "baz"
-.1.0.0.1.2 uinteger 54321
-.1.0.0.1.3 uinteger 234
-```
-
-Telegraf config:
+### Configuration
 ```toml
 [[inputs.snmp]]
-  agents = [ "127.0.0.1:161" ]
-  version = 2
-  community = "public"
+  ## Agent addresses to retrieve values from.
+  ##   example: agents = ["udp://127.0.0.1:161"]
+  ##            agents = ["tcp://127.0.0.1:161"]
+  agents = ["udp://127.0.0.1:161"]
 
-  name = "system"
+  ## Timeout for each request.
+  # timeout = "5s"
+
+  ## SNMP version; can be 1, 2, or 3.
+  # version = 2
+
+  ## SNMP community string.
+  # community = "public"
+
+  ## Agent host tag
+  # agent_host_tag = "agent_host"
+
+  ## Number of retries to attempt.
+  # retries = 3
+
+  ## The GETBULK max-repetitions parameter.
+  # max_repetitions = 10
+
+  ## SNMPv3 authentication and encryption options.
+  ##
+  ## Security Name.
+  # sec_name = "myuser"
+  ## Authentication protocol; one of "MD5", "SHA", or "".
+  # auth_protocol = "MD5"
+  ## Authentication password.
+  # auth_password = "pass"
+  ## Security Level; one of "noAuthNoPriv", "authNoPriv", or "authPriv".
+  # sec_level = "authNoPriv"
+  ## Context Name.
+  # context_name = ""
+  ## Privacy protocol used for encrypted messages; one of "DES", "AES" or "".
+  # priv_protocol = ""
+  ## Privacy password used for encrypted messages.
+  # priv_password = ""
+
+  ## Add fields and tables defining the variables you wish to collect.  This
+  ## example collects the system uptime and interface variables.  Reference the
+  ## full plugin documentation for configuration details.
   [[inputs.snmp.field]]
-    name = "hostname"
-    oid = ".1.0.0.1.1"
-    is_tag = true
-  [[inputs.snmp.field]]
+    oid = "RFC1213-MIB::sysUpTime.0"
     name = "uptime"
-    oid = ".1.0.0.1.2"
-  [[inputs.snmp.field]]
-    name = "loadavg"
-    oid = ".1.0.0.1.3"
-    conversion = "float(2)"
-
-  [[inputs.snmp.table]]
-    name = "remote_servers"
-    inherit_tags = [ "hostname" ]
-    [[inputs.snmp.table.field]]
-      name = "server"
-      oid = ".1.0.0.0.1.1"
-      is_tag = true
-    [[inputs.snmp.table.field]]
-      name = "connections"
-      oid = ".1.0.0.0.1.2"
-    [[inputs.snmp.table.field]]
-      name = "latency"
-      oid = ".1.0.0.0.1.3"
-      conversion = "float"
-```
-
-Resulting output:
-```
-* Plugin: snmp, Collection 1
-> system,agent_host=127.0.0.1,host=mylocalhost,hostname=baz loadavg=2.34,uptime=54321i 1468953135000000000
-> remote_servers,agent_host=127.0.0.1,host=mylocalhost,hostname=baz,server=foo connections=1i,latency=0.123 1468953135000000000
-> remote_servers,agent_host=127.0.0.1,host=mylocalhost,hostname=baz,server=bar connections=2i,latency=0.456 1468953135000000000
-```
-
-#### Configuration via MIB:
-
-This example uses the SNMP data above, but is configured via the MIB.
-The example MIB file can be found in the `testdata` directory. See the [MIB lookups](#mib-lookups) section for more information.
-
-Telegraf config:
-```toml
-[[inputs.snmp]]
-  agents = [ "127.0.0.1:161" ]
-  version = 2
-  community = "public"
 
   [[inputs.snmp.field]]
-    oid = "TEST::hostname"
+    oid = "RFC1213-MIB::sysName.0"
+    name = "source"
     is_tag = true
 
   [[inputs.snmp.table]]
-    oid = "TEST::testTable"
-    inherit_tags = [ "hostname" ]
+    oid = "IF-MIB::ifTable"
+    name = "interface"
+    inherit_tags = ["source"]
+
+    [[inputs.snmp.table.field]]
+      oid = "IF-MIB::ifDescr"
+      name = "ifDescr"
+      is_tag = true
 ```
 
-Resulting output:
+#### Configure SNMP Requests
+
+This plugin provides two methods for configuring the SNMP requests: `fields`
+and `tables`.  Use the `field` option to gather single ad-hoc variables.
+To collect SNMP tables, use the `table` option.
+
+##### Field
+
+Use a `field` to collect a variable by OID.  Requests specified with this
+option operate similar to the `snmpget` utility.
+
+```toml
+[[inputs.snmp]]
+  # ... snip ...
+
+  [[inputs.snmp.field]]
+    ## Object identifier of the variable as a numeric or textual OID.
+    oid = "RFC1213-MIB::sysName.0"
+
+    ## Name of the field or tag to create.  If not specified, it defaults to
+    ## the value of 'oid'. If 'oid' is numeric, an attempt to translate the
+    ## numeric OID into a textual OID will be made.
+    # name = ""
+
+    ## If true the variable will be added as a tag, otherwise a field will be
+    ## created.
+    # is_tag = false
+
+    ## Apply one of the following conversions to the variable value:
+    ##   float(X) Convert the input value into a float and divides by the
+    ##            Xth power of 10. Effectively just moves the decimal left
+    ##            X places. For example a value of `123` with `float(2)`
+    ##            will result in `1.23`.
+    ##   float:   Convert the value into a float with no adjustment. Same
+    ##            as `float(0)`.
+    ##   int:     Convert the value into an integer.
+    ##   hwaddr:  Convert the value to a MAC address.
+    ##   ipaddr:  Convert the value to an IP address.
+    # conversion = ""
 ```
-* Plugin: snmp, Collection 1
-> testTable,agent_host=127.0.0.1,host=mylocalhost,hostname=baz,server=foo connections=1i,latency="0.123" 1468953135000000000
-> testTable,agent_host=127.0.0.1,host=mylocalhost,hostname=baz,server=bar connections=2i,latency="0.456" 1468953135000000000
+
+##### Table
+
+Use a `table` to configure the collection of a SNMP table.  SNMP requests
+formed with this option operate similarly way to the `snmptable` command.
+
+Control the handling of specific table columns using a nested `field`.  These
+nested fields are specified similarly to a top-level `field`.
+
+By default all columns of the SNMP table will be collected - it is not required
+to add a nested field for each column, only those which you wish to modify. To
+*only* collect certain columns, omit the `oid` from the `table` section and only
+include `oid` settings in `field` sections. For more complex include/exclude
+cases for columns use [metric filtering][].
+
+One [metric][] is created for each row of the SNMP table.
+
+```toml
+[[inputs.snmp]]
+  # ... snip ...
+
+  [[inputs.snmp.table]]
+    ## Object identifier of the SNMP table as a numeric or textual OID.
+    oid = "IF-MIB::ifTable"
+
+    ## Name of the field or tag to create.  If not specified, it defaults to
+    ## the value of 'oid'.  If 'oid' is numeric an attempt to translate the
+    ## numeric OID into a textual OID will be made.
+    # name = ""
+
+    ## Which tags to inherit from the top-level config and to use in the output
+    ## of this table's measurement.
+    ## example: inherit_tags = ["source"]
+    # inherit_tags = []
+
+    ## Add an 'index' tag with the table row number.  Use this if the table has
+    ## no indexes or if you are excluding them.  This option is normally not
+    ## required as any index columns are automatically added as tags.
+    # index_as_tag = false
+
+    [[inputs.snmp.table.field]]
+      ## OID to get. May be a numeric or textual module-qualified OID.
+      oid = "IF-MIB::ifDescr"
+
+      ## Name of the field or tag to create.  If not specified, it defaults to
+      ## the value of 'oid'. If 'oid' is numeric an attempt to translate the
+      ## numeric OID into a textual OID will be made.
+      # name = ""
+
+      ## Output this field as a tag.
+      # is_tag = false
+
+      ## The OID sub-identifier to strip off so that the index can be matched
+      ## against other fields in the table.
+      # oid_index_suffix = ""
+
+      ## Specifies the length of the index after the supplied table OID (in OID
+      ## path segments). Truncates the index after this point to remove non-fixed
+      ## value or length index suffixes.
+      # oid_index_length = 0
+
+      ## Specifies if the value of given field should be snmptranslated
+      ## by default no field values are translated
+      # translate = true
 ```
 
-### Config parameters
+### Troubleshooting
 
-* `agents`: Default: `[]`
-List of SNMP agents to connect to in the form of `IP[:PORT]`. If `:PORT` is unspecified, it defaults to `161`.
+Check that a numeric field can be translated to a textual field:
+```
+$ snmptranslate .1.3.6.1.2.1.1.3.0
+DISMAN-EVENT-MIB::sysUpTimeInstance
+```
 
-* `version`: Default: `2`
-SNMP protocol version to use.
+Request a top-level field:
+```
+$ snmpget -v2c -c public 127.0.0.1 sysUpTime.0
+```
 
-* `community`: Default: `"public"`
-SNMP community to use.
+Request a table:
+```
+$ snmptable -v2c -c public 127.0.0.1 ifTable
+```
 
-* `max_repetitions`: Default: `50`
-Maximum number of iterations for repeating variables.
+To collect a packet capture, run this command in the background while running
+Telegraf or one of the above commands.  Adjust the interface, host and port as
+needed:
+```
+$ sudo tcpdump -s 0 -i eth0 -w telegraf-snmp.pcap host 127.0.0.1 and port 161
+```
 
-* `sec_name`:
-Security name for authenticated SNMPv3 requests.
+### Example Output
 
-* `auth_protocol`: Values: `"MD5"`,`"SHA"`,`""`. Default: `""`
-Authentication protocol for authenticated SNMPv3 requests.
+```
+snmp,agent_host=127.0.0.1,source=loaner uptime=11331974i 1575509815000000000
+interface,agent_host=127.0.0.1,ifDescr=wlan0,ifIndex=3,source=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=0i,ifInOctets=3436617431i,ifInUcastPkts=2717778i,ifInUnknownProtos=0i,ifLastChange=0i,ifMtu=1500i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=581368041i,ifOutQLen=0i,ifOutUcastPkts=1354338i,ifPhysAddress="c8:5b:76:c9:e6:8c",ifSpecific=".0.0",ifSpeed=0i,ifType=6i 1575509815000000000
+interface,agent_host=127.0.0.1,ifDescr=eth0,ifIndex=2,source=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=21i,ifInOctets=3852386380i,ifInUcastPkts=3634004i,ifInUnknownProtos=0i,ifLastChange=9088763i,ifMtu=1500i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=434865441i,ifOutQLen=0i,ifOutUcastPkts=2110394i,ifPhysAddress="c8:5b:76:c9:e6:8c",ifSpecific=".0.0",ifSpeed=1000000000i,ifType=6i 1575509815000000000
+interface,agent_host=127.0.0.1,ifDescr=lo,ifIndex=1,source=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=0i,ifInOctets=51555569i,ifInUcastPkts=339097i,ifInUnknownProtos=0i,ifLastChange=0i,ifMtu=65536i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=51555569i,ifOutQLen=0i,ifOutUcastPkts=339097i,ifSpecific=".0.0",ifSpeed=10000000i,ifType=24i 1575509815000000000
+```
 
-* `auth_password`:
-Authentication password for authenticated SNMPv3 requests.
-
-* `sec_level`: Values: `"noAuthNoPriv"`,`"authNoPriv"`,`"authPriv"`. Default: `"noAuthNoPriv"`
-Security level used for SNMPv3 messages.
-
-* `context_name`:
-Context name used for SNMPv3 requests.
-
-* `priv_protocol`: Values: `"DES"`,`"AES"`,`""`. Default: `""`
-Privacy protocol used for encrypted SNMPv3 messages.
-
-* `priv_password`:
-Privacy password used for encrypted SNMPv3 messages.
-
-
-* `name`:
-Output measurement name.
-
-#### Field parameters:
-* `oid`:
-OID to get. May be a numeric or textual OID.
-
-* `oid_index_suffix`:
-The OID sub-identifier to strip off so that the index can be matched against other fields in the table.
-
-* `oid_index_length`:
-Specifies the length of the index after the supplied table OID (in OID path segments). Truncates the index after this point to remove non-fixed value or length index suffixes.
-
-* `name`:
-Output field/tag name.
-If not specified, it defaults to the value of `oid`. If `oid` is numeric, an attempt to translate the numeric OID into a texual OID will be made.
-
-* `is_tag`:
-Output this field as a tag.
-
-* `conversion`: Values: `"float(X)"`,`"float"`,`"int"`,`""`. Default: `""`
-Converts the value according to the given specification.
-
-    - `float(X)`: Converts the input value into a float and divides by the Xth power of 10. Efficively just moves the decimal left X places. For example a value of `123` with `float(2)` will result in `1.23`.
-    - `float`: Converts the value into a float with no adjustment. Same as `float(0)`.
-    - `int`: Convertes the value into an integer.
-    - `hwaddr`: Converts the value to a MAC address.
-    - `ipaddr`: Converts the value to an IP address.
-
-#### Table parameters:
-* `oid`:
-Automatically populates the table's fields using data from the MIB.
-
-* `name`:
-Output measurement name.
-If not specified, it defaults to the value of `oid`.  If `oid` is numeric, an attempt to translate the numeric OID into a texual OID will be made.
-
-* `inherit_tags`:
-Which tags to inherit from the top-level config and to use in the output of this table's measurement.
-
-* `index_as_tag`:
-Adds each row's index within the table as a tag.  
-
-### MIB lookups
-If the plugin is configured such that it needs to perform lookups from the MIB, it will use the net-snmp utilities `snmptranslate` and `snmptable`.
-
-When performing the lookups, the plugin will load all available MIBs. If your MIB files are in a custom path, you may add the path using the `MIBDIRS` environment variable. See [`man 1 snmpcmd`](http://net-snmp.sourceforge.net/docs/man/snmpcmd.html#lbAK) for more information on the variable.
+[net-snmp]: http://www.net-snmp.org/
+[man snmpcmd]: http://net-snmp.sourceforge.net/docs/man/snmpcmd.html#lbAK
+[metric filtering]: /docs/CONFIGURATION.md#metric-filtering
+[metric]: /docs/METRICS.md

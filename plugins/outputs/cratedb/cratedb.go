@@ -165,7 +165,7 @@ func escapeObject(m map[string]interface{}) (string, error) {
 	// We find all keys and sort them first because iterating a map in go is
 	// randomized and we need consistent output for our unit tests.
 	keys := make([]string, 0, len(m))
-	for k, _ := range m {
+	for k := range m {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
@@ -183,7 +183,7 @@ func escapeObject(m map[string]interface{}) (string, error) {
 	return `{` + strings.Join(pairs, ", ") + `}`, nil
 }
 
-// escapeString wraps s in the given quote string and replaces all occurences
+// escapeString wraps s in the given quote string and replaces all occurrences
 // of it inside of s with a double quote.
 func escapeString(s string, quote string) string {
 	return quote + strings.Replace(s, quote, quote+quote, -1) + quote
@@ -191,7 +191,7 @@ func escapeString(s string, quote string) string {
 
 // hashID returns a cryptographic hash int64 hash that includes the metric name
 // and tags. It's used instead of m.HashID() because it's not considered stable
-// and because a cryptogtaphic hash makes more sense for the use case of
+// and because a cryptographic hash makes more sense for the use case of
 // deduplication.
 // [1] https://github.com/influxdata/telegraf/pull/3210#discussion_r148411201
 func hashID(m telegraf.Metric) int64 {

@@ -63,7 +63,7 @@ var sampleConfig = `
   # expect = "ssh"
 
   ## Uncomment to remove deprecated fields
-  # fieldexclude = ["result_type", "string_found"]
+  # fielddrop = ["result_type", "string_found"]
 `
 
 // SampleConfig will return a complete configuration example with details about each field.
@@ -141,9 +141,13 @@ func (n *NetResponse) UDPGather() (tags map[string]string, fields map[string]int
 	start := time.Now()
 	// Resolving
 	udpAddr, err := net.ResolveUDPAddr("udp", n.Address)
-	LocalAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
+	// Handle error
+	if err != nil {
+		setResult(ConnectionFailed, fields, tags, n.Expect)
+		return tags, fields
+	}
 	// Connecting
-	conn, err := net.DialUDP("udp", LocalAddr, udpAddr)
+	conn, err := net.DialUDP("udp", nil, udpAddr)
 	// Handle error
 	if err != nil {
 		setResult(ConnectionFailed, fields, tags, n.Expect)
@@ -223,9 +227,6 @@ func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 		tags["protocol"] = "udp"
 	} else {
 		return errors.New("Bad protocol")
-	}
-	for key, value := range returnTags {
-		tags[key] = value
 	}
 	// Merge the tags
 	for k, v := range returnTags {

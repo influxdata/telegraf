@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -16,9 +16,12 @@ type Consul struct {
 	Token      string
 	Username   string
 	Password   string
-	Datacentre string
+	Datacentre string // deprecated in 1.10; use Datacenter
+	Datacenter string
 	tls.ClientConfig
-	TagDelimiter string
+	TagDelimiter  string
+	MetricVersion int
+	Log           telegraf.Logger
 
 	// client used to connect to Consul agnet
 	client *api.Client
@@ -26,10 +29,17 @@ type Consul struct {
 
 var sampleConfig = `
   ## Consul server address
-  # address = "localhost"
+  # address = "localhost:8500"
 
   ## URI scheme for the Consul server, one of "http", "https"
   # scheme = "http"
+
+  ## Metric version controls the mapping from Consul metrics into
+  ## Telegraf metrics.
+  ##
+  ##   example: metric_version = 1; deprecated in 1.15
+  ##            metric_version = 2; recommended version
+  # metric_version = 1
 
   ## ACL token used in every request
   # token = ""
@@ -38,8 +48,8 @@ var sampleConfig = `
   # username = ""
   # password = ""
 
-  ## Data centre to query the health checks from
-  # datacentre = ""
+  ## Data center to query the health checks from
+  # datacenter = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -53,6 +63,14 @@ var sampleConfig = `
   # they will be splitted and reported as proper key:value in Telegraf
   # tag_delimiter = ":"
 `
+
+func (c *Consul) Init() error {
+	if c.MetricVersion != 2 {
+		c.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
+	}
+
+	return nil
+}
 
 func (c *Consul) Description() string {
 	return "Gather health check statuses from services registered in Consul"
@@ -75,6 +93,10 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 
 	if c.Datacentre != "" {
 		config.Datacenter = c.Datacentre
+	}
+
+	if c.Datacenter != "" {
+		config.Datacenter = c.Datacenter
 	}
 
 	if c.Token != "" {
@@ -105,14 +127,20 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 		record := make(map[string]interface{})
 		tags := make(map[string]string)
 
-		record["check_name"] = check.Name
-		record["service_id"] = check.ServiceID
-
-		record["status"] = check.Status
 		record["passing"] = 0
 		record["critical"] = 0
 		record["warning"] = 0
 		record[check.Status] = 1
+
+		if c.MetricVersion == 2 {
+			tags["check_name"] = check.Name
+			tags["service_id"] = check.ServiceID
+			tags["status"] = check.Status
+		} else {
+			record["check_name"] = check.Name
+			record["service_id"] = check.ServiceID
+			record["status"] = check.Status
+		}
 
 		tags["node"] = check.Node
 		tags["service_name"] = check.ServiceName
@@ -121,12 +149,12 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 		for _, checkTag := range check.ServiceTags {
 			if c.TagDelimiter != "" {
 				splittedTag := strings.SplitN(checkTag, c.TagDelimiter, 2)
-				if len(splittedTag) == 1 {
+				if len(splittedTag) == 1 && checkTag != "" {
 					tags[checkTag] = checkTag
-				} else if len(splittedTag) == 2 {
+				} else if len(splittedTag) == 2 && splittedTag[1] != "" {
 					tags[splittedTag[0]] = splittedTag[1]
 				}
-			} else {
+			} else if checkTag != "" {
 				tags[checkTag] = checkTag
 			}
 		}

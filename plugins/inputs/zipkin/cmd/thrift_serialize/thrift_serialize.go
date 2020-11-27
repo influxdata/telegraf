@@ -5,7 +5,7 @@ vice versa.
 To convert from json to thrift,
 the json is unmarshalled, converted to zipkincore.Span structures, and
 marshalled into thrift binary protocol. The json must be in an array format (even if it only has one object),
-because the tool automatically tries to unmarshall the json into an array of structs.
+because the tool automatically tries to unmarshal the json into an array of structs.
 
 To convert from thrift to json,
 the opposite process must happen. The thrift binary data must be read into an array of

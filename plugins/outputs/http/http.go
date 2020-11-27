@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -11,16 +12,20 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
+const (
+	defaultURL = "http://127.0.0.1:8080/telegraf"
+)
+
 var sampleConfig = `
   ## URL is the address to send metrics to
-  url = "http://127.0.0.1:8080/metric"
+  url = "http://127.0.0.1:8080/telegraf"
 
   ## Timeout for HTTP message
   # timeout = "5s"
@@ -51,6 +56,10 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
 
+  ## HTTP Content-Encoding for write request body, can be set to "gzip" to
+  ## compress body or "identity" to apply no encoding.
+  # content_encoding = "identity"
+
   ## Additional HTTP headers
   # [outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format
@@ -64,16 +73,17 @@ const (
 )
 
 type HTTP struct {
-	URL          string            `toml:"url"`
-	Timeout      internal.Duration `toml:"timeout"`
-	Method       string            `toml:"method"`
-	Username     string            `toml:"username"`
-	Password     string            `toml:"password"`
-	Headers      map[string]string `toml:"headers"`
-	ClientID     string            `toml:"client_id"`
-	ClientSecret string            `toml:"client_secret"`
-	TokenURL     string            `toml:"token_url"`
-	Scopes       []string          `toml:"scopes"`
+	URL             string            `toml:"url"`
+	Timeout         internal.Duration `toml:"timeout"`
+	Method          string            `toml:"method"`
+	Username        string            `toml:"username"`
+	Password        string            `toml:"password"`
+	Headers         map[string]string `toml:"headers"`
+	ClientID        string            `toml:"client_id"`
+	ClientSecret    string            `toml:"client_secret"`
+	TokenURL        string            `toml:"token_url"`
+	Scopes          []string          `toml:"scopes"`
+	ContentEncoding string            `toml:"content_encoding"`
 	tls.ClientConfig
 
 	client     *http.Client
@@ -162,7 +172,19 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 }
 
 func (h *HTTP) write(reqBody []byte) error {
-	req, err := http.NewRequest(h.Method, h.URL, bytes.NewBuffer(reqBody))
+	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
+
+	var err error
+	if h.ContentEncoding == "gzip" {
+		rc, err := internal.CompressWithGzip(reqBodyBuffer)
+		if err != nil {
+			return err
+		}
+		defer rc.Close()
+		reqBodyBuffer = rc
+	}
+
+	req, err := http.NewRequest(h.Method, h.URL, reqBodyBuffer)
 	if err != nil {
 		return err
 	}
@@ -171,8 +193,15 @@ func (h *HTTP) write(reqBody []byte) error {
 		req.SetBasicAuth(h.Username, h.Password)
 	}
 
+	req.Header.Set("User-Agent", internal.ProductToken())
 	req.Header.Set("Content-Type", defaultContentType)
+	if h.ContentEncoding == "gzip" {
+		req.Header.Set("Content-Encoding", "gzip")
+	}
 	for k, v := range h.Headers {
+		if strings.ToLower(k) == "host" {
+			req.Host = v
+		}
 		req.Header.Set(k, v)
 	}
 
@@ -195,6 +224,7 @@ func init() {
 		return &HTTP{
 			Timeout: internal.Duration{Duration: defaultClientTimeout},
 			Method:  defaultMethod,
+			URL:     defaultURL,
 		}
 	})
 }

@@ -109,6 +109,20 @@ func TestTagConversions(t *testing.T) {
 			},
 		},
 		{
+			message: "Should append to existing tag",
+			converter: converter{
+				Key:         "verb",
+				Pattern:     "^(.*)$",
+				Replacement: " (${1})",
+				ResultKey:   "resp_code",
+				Append:      true,
+			},
+			expectedTags: map[string]string{
+				"verb":      "GET",
+				"resp_code": "200 (GET)",
+			},
+		},
+		{
 			message: "Should add new tag",
 			converter: converter{
 				Key:         "resp_code",

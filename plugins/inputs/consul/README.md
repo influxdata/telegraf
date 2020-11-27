@@ -12,10 +12,18 @@ report those stats already using StatsD protocol if needed.
 # Gather health check statuses from services registered in Consul
 [[inputs.consul]]
   ## Consul server address
-  # address = "localhost"
+  # address = "localhost:8500"
 
   ## URI scheme for the Consul server, one of "http", "https"
   # scheme = "http"
+
+  ## Metric version controls the mapping from Consul metrics into
+  ## Telegraf metrics. Version 2 moved all fields with string values
+  ## to tags.
+  ##
+  ##   example: metric_version = 1; deprecated in 1.16
+  ##            metric_version = 2; recommended version
+  # metric_version = 1
 
   ## ACL token used in every request
   # token = ""
@@ -24,8 +32,8 @@ report those stats already using StatsD protocol if needed.
   # username = ""
   # password = ""
 
-  ## Data centre to query the health checks from
-  # datacentre = ""
+  ## Data center to query the health checks from
+  # datacenter = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -41,10 +49,10 @@ report those stats already using StatsD protocol if needed.
 ```
 
 ### Metrics:
-
+##### metric_version = 1:
 - consul_health_checks
   - tags:
-  	- node (node that check/service is registred on)
+  	- node (node that check/service is registered on)
   	- service_name
   	- check_id
   - fields:
@@ -55,9 +63,23 @@ report those stats already using StatsD protocol if needed.
     - critical (integer)
     - warning (integer)
 
+##### metric_version = 2:
+- consul_health_checks
+  - tags:
+  	- node (node that check/service is registered on)
+  	- service_name
+  	- check_id
+  	- check_name
+    - service_id
+    - status
+  - fields:
+    - passing (integer)
+    - critical (integer)
+    - warning (integer)
+    
 `passing`, `critical`, and `warning` are integer representations of the health
 check state. A value of `1` represents that the status was the state of the
-the health check at this sample.
+the health check at this sample. `status` is string representation of the same state.
 
 ## Example output
 

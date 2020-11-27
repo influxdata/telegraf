@@ -41,10 +41,3 @@ func (s *stat) Tags() map[string]string {
 	}
 	return m
 }
-
-func (s *stat) Key() uint64 {
-	if s.key == 0 {
-		s.key = key(s.measurement, s.tags)
-	}
-	return s.key
-}

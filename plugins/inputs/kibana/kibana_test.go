@@ -9,11 +9,20 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func defaultTags() map[string]string {
+func defaultTags6_3() map[string]string {
 	return map[string]string{
 		"name":    "my-kibana",
 		"source":  "example.com:5601",
 		"version": "6.3.2",
+		"status":  "green",
+	}
+}
+
+func defaultTags6_5() map[string]string {
+	return map[string]string{
+		"name":    "my-kibana",
+		"source":  "example.com:5601",
+		"version": "6.5.4",
 		"status":  "green",
 	}
 }
@@ -41,22 +50,34 @@ func (t *transportMock) RoundTrip(r *http.Request) (*http.Response, error) {
 	return res, nil
 }
 
-func checkKibanaStatusResult(t *testing.T, acc *testutil.Accumulator) {
-	tags := defaultTags()
-	acc.AssertContainsTaggedFields(t, "kibana", kibanaStatusExpected, tags)
+func checkKibanaStatusResult(version string, t *testing.T, acc *testutil.Accumulator) {
+	if version == "6.3.2" {
+		tags := defaultTags6_3()
+		acc.AssertContainsTaggedFields(t, "kibana", kibanaStatusExpected6_3, tags)
+	} else {
+		tags := defaultTags6_5()
+		acc.AssertContainsTaggedFields(t, "kibana", kibanaStatusExpected6_5, tags)
+	}
 }
 
 func TestGather(t *testing.T) {
 	ks := newKibanahWithClient()
 	ks.Servers = []string{"http://example.com:5601"}
-	ks.client.Transport = newTransportMock(http.StatusOK, kibanaStatusResponse)
-
-	var acc testutil.Accumulator
-	if err := acc.GatherError(ks.Gather); err != nil {
+	// Unit test for Kibana version < 6.4
+	ks.client.Transport = newTransportMock(http.StatusOK, kibanaStatusResponse6_3)
+	var acc1 testutil.Accumulator
+	if err := acc1.GatherError(ks.Gather); err != nil {
 		t.Fatal(err)
 	}
+	checkKibanaStatusResult(defaultTags6_3()["version"], t, &acc1)
 
-	checkKibanaStatusResult(t, &acc)
+	//Unit test for Kibana version >= 6.4
+	ks.client.Transport = newTransportMock(http.StatusOK, kibanaStatusResponse6_5)
+	var acc2 testutil.Accumulator
+	if err := acc2.GatherError(ks.Gather); err != nil {
+		t.Fatal(err)
+	}
+	checkKibanaStatusResult(defaultTags6_5()["version"], t, &acc2)
 }
 
 func newKibanahWithClient() *Kibana {
