@@ -562,12 +562,6 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 }
 
 // fieldConvert converts from any type according to the conv specification
-//  "float"/"float(0)" will convert the value into a float.
-//  "float(X)" will convert the value into a float, and then move the decimal before Xth right-most digit.
-//  "int" will convert the value into an integer.
-//  "hwaddr" will convert the value into a MAC address.
-//  "ipaddr" will convert the value into into an IP address.
-//  "" will convert a byte slice into a string.
 func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	if conv == "" {
 		if bs, ok := v.([]byte); ok {
