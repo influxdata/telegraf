@@ -18,6 +18,7 @@ import (
 // Socketstat is a telegraf plugin to gather indicators from established connections, using iproute2's  `ss` command.
 type Socketstat struct {
 	lister      socketLister
+        Log         telegraf.Logger
 	SocketProto []string
 	Timeout     internal.Duration
 }
@@ -90,7 +91,7 @@ func socketList(proto string, Timeout internal.Duration) (*bytes.Buffer, error) 
 	return &out, nil
 }
 
-var validFields = "(bytes_acked|bytes_received|segs_out|segs_in|data_segs_in|data_segs_out)"
+const validFields = "(bytes_acked|bytes_received|segs_out|segs_in|data_segs_in|data_segs_out)"
 var validValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
 var beginsWithBlank = regexp.MustCompile("^\\s+.*$")
 
@@ -123,14 +124,16 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 			}
 			// Delegate the real parsing to getTagsAndState, which manages various
 			// formats depending on the protocol
-			tags, fields = getTagsAndState(proto, words)
+			tags, fields = getTagsAndState(proto, words, ss.Log)
 			flushData = true
 		} else {
 			for _, word := range words {
 				if validValues.MatchString(word) {
+                                        // kv matches will have 2 fileds as it matched the regexp
 					kv := strings.Split(word, ":")
 					fields[kv[0]], err = strconv.ParseUint(kv[1], 10, 64)
 					if err != nil {
+                                                ss.Log.Infof("Couldn't parse metric: %s", word)
 						continue
 					}
 				}
@@ -145,7 +148,7 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 	return nil
 }
 
-func getTagsAndState(proto string, words []string) (map[string]string, map[string]interface{}) {
+func getTagsAndState(proto string, words []string, log telegraf.Logger) (map[string]string, map[string]interface{}) {
 	tags := map[string]string{}
 	fields := make(map[string]interface{})
 	tags["proto"] = proto
@@ -157,12 +160,14 @@ func getTagsAndState(proto string, words []string) (map[string]string, map[strin
 	}
 	switch proto {
 	case "tcp", "udp", "raw", "dccp", "sctp":
-		local := strings.Split(words[3], ":")
-		remote := strings.Split(words[4], ":")
-		tags["local_addr"] = strings.Join(local[:len(local)-1], ":")
-		tags["local_port"] = local[len(local)-1]
-		tags["remote_addr"] = strings.Join(remote[:len(remote)-1], ":")
-		tags["remote_port"] = remote[len(remote)-1]
+		// Local and remote addresses are fields 3 and 4
+		// Separate addresses and ports with the last ':'
+		local_index := strings.LastIndex(words[3], ":")
+		remote_index := strings.LastIndex(words[4], ":")
+		tags["local_addr"] = words[3][:local_index]
+		tags["local_port"] = words[3][local_index+1:]
+		tags["remote_addr"] = words[4][:remote_index]
+		tags["remote_port"] = words[4][remote_index+1:]
 	case "unix", "packet":
 		fields["netid"] = words[0]
 		tags["local_addr"] = words[4]
@@ -174,6 +179,7 @@ func getTagsAndState(proto string, words []string) (map[string]string, map[strin
 	fields["recv_q"], err = strconv.ParseUint(words[1], 10, 64)
 	fields["send_q"], err = strconv.ParseUint(words[2], 10, 64)
 	if err != nil {
+                log.Infof("Couldn't read recv_q and send_q in: %s", words)
 	}
 	return tags, fields
 }
