@@ -79,7 +79,7 @@ require (
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.6.0+incompatible
 	github.com/kardianos/service v1.0.0
-	github.com/karrick/godirwalk v1.12.0
+	github.com/karrick/godirwalk v1.16.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kubernetes/apimachinery v0.0.0-20190119020841-d41becfba9ee
 	github.com/kylelemons/godebug v1.1.0 // indirect
