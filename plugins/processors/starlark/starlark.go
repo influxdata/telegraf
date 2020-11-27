@@ -48,15 +48,51 @@ type State struct {
 	content map[string]interface{}
 }
 
+// The struct that defines a Tuple
+type tuple struct {
+	values []interface{}
+}
+
 // Load from the shared state, the value corresponding to the given key
 func (s *State) Load(key string) starlark.Value {
 	var value = s.content[key]
 	if value == nil {
 		return starlark.None
 	}
-	switch v := value.(type) {
+	return toValue(value)
+}
+
+// Convert the given value extrated from the shared state into a starlark value
+func toValue(original interface{}) starlark.Value {
+	switch v := original.(type) {
 	case telegraf.Metric:
 		return WrapMetric(v)
+	case []interface{}:
+		length := len(v)
+		array := make([]starlark.Value, length)
+		for i := 0; i < length; i++ {
+			array[i] = toValue(v[i])
+		}
+		return starlark.NewList(array)
+	case map[interface{}]interface{}:
+		dict := starlark.NewDict(len(v))
+		for key, val := range v {
+			dict.SetKey(toValue(key), toValue(val))
+		}
+		return dict
+	case map[interface{}]bool:
+		set := starlark.NewSet(len(v))
+		for key := range v {
+			set.Insert(toValue(key))
+		}
+		return set
+	case tuple:
+		length := len(v.values)
+		array := make([]starlark.Value, length)
+		for i := 0; i < length; i++ {
+			array[i] = toValue(v.values[i])
+		}
+		return starlark.Tuple(array)
 	default:
 		return v.(starlark.Value)
 	}
@@ -68,12 +104,49 @@ func (s *State) Store(key string, value starlark.Value) {
 	if value == starlark.None {
 		delete(s.content, key)
 	} else {
-		switch v := value.(type) {
-		case *Metric:
-			s.content[key] = v.Unwrap()
-		default:
-			s.content[key] = v
+		s.content[key] = fromValue(value)
+	}
+}
+
+// Convert the given starlark value into a type that can be stored into the shared cache
+func fromValue(original starlark.Value) interface{} {
+	switch v := original.(type) {
+	case *Metric:
+		return v.Unwrap()
+	case *starlark.List:
+		length := v.Len()
+		array := make([]interface{}, length)
+		for i := 0; i < length; i++ {
+			array[i] = fromValue(v.Index(i))
 		}
+		return array
+	case *starlark.Dict:
+		dict := make(map[interface{}]interface{})
+		for _, xitem := range v.Items() {
+			key, val := xitem[0], xitem[1]
+			dict[fromValue(key)] = fromValue(val)
+		}
+		return dict
+	case *starlark.Set:
+		set := make(map[interface{}]bool)
+		iter := v.Iterate()
+		defer iter.Done()
+		var key starlark.Value
+		for iter.Next(&key) {
+			set[fromValue(key)] = true
+		}
+		return set
+	case starlark.Tuple:
+		length := v.Len()
+		array := make([]interface{}, length)
+		for i := 0; i < length; i++ {
+			array[i] = fromValue(v.Index(i))
+		}
+		return tuple{
+			values: array,
+		}
+	default:
+		return v
 	}
 }
 
