@@ -13,7 +13,7 @@
 1. Ensure you have added proper unit tests and documentation.
 1. Open a new [pull request][].
 
-#### Contributing an External Plugin *(experimental)*
+#### Contributing an External Plugin *(new)*
 Input, output, and processor plugins written for internal Telegraf can be run as externally-compiled plugins through the [Execd Input](plugins/inputs/execd), [Execd Output](/plugins/inputs/execd), and [Execd Processor](plugins/processors/execd) Plugins without having to change the plugin code.
 
 Follow the guidelines of how to integrate your plugin with the [Execd Go Shim](/plugins/common/shim) to easily compile it as a separate app and run it with the respective `execd` plugin. 
