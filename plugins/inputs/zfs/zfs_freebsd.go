@@ -116,7 +116,7 @@ func (z *Zfs) gatherDatasetStats(acc telegraf.Accumulator) (string, error) {
 			for i, key := range properties[1:] {
 				value, err := strconv.ParseInt(col[i+1], 10, 64)
 				if err != nil {
-					return "", fmt.Errorf("Error parsing %s: %s", key, err)
+					return "", fmt.Errorf("Error parsing %s %q: %s", key, col[i+1], err)
 				}
 				fields[key] = value
 			}
