@@ -15,23 +15,23 @@ import (
 
 func TestGTFS(t *testing.T) {
 	var (
-		testID                  = "123"
-		testStopID              = "stop123"
-		testStopSequence        = uint32(2)
-		testArrival             = int64(3)
-		testDeparture           = int64(4)
-		testTripID              = "trip123"
-		testVehicleID           = "vehicle123"
-		testRouteID             = "route123"
-		testDirectionID         = uint32(123)
-		testTimestamp           = uint64(100)
-		testLat                 = float32(42.42)
-		testLng                 = float32(20.20)
-		testBearing             = float32(270)
-		testOdometer            = float64(1000)
-		testSpeed               = float32(60)
-		testGtfsRealtimeVersion = "v0.0.0"
-		testHeader              = &gtfsbindings.FeedHeader{GtfsRealtimeVersion: &testGtfsRealtimeVersion}
+		testID           = "123"
+		testStopID       = "stop123"
+		testStopSequence = uint32(2)
+		testArrival      = int64(3)
+		testDeparture    = int64(4)
+		testTripID       = "trip123"
+		testVehicleID    = "vehicle123"
+		testRouteID      = "route123"
+		testDirectionID  = uint32(123)
+		testTimestamp    = uint64(100)
+		testLat          = float32(42.42)
+		testLng          = float32(20.20)
+		testBearing      = float32(270)
+		testOdometer     = float64(1000)
+		testSpeed        = float32(60)
+		testVersion      = "v0.0.0"
+		testHeader       = &gtfsbindings.FeedHeader{GtfsRealtimeVersion: &testVersion}
 	)
 
 	for _, test := range []struct {
@@ -109,6 +109,32 @@ func TestGTFS(t *testing.T) {
 									},
 								},
 								Timestamp: &testTimestamp,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:               "service alerts",
+			measurement:        "alert",
+			expectedTagCount:   1,
+			expectedFieldCount: 2,
+			responses: map[string]*gtfsbindings.FeedMessage{
+				"/ServiceAlerts.pb": {
+					Header: testHeader, // required
+					Entity: []*gtfsbindings.FeedEntity{
+						{
+							Id: &testID,
+							Alert: &gtfsbindings.Alert{
+								Cause: func() *gtfsbindings.Alert_Cause {
+									a := gtfsbindings.Alert_TECHNICAL_PROBLEM
+									return &a
+								}(),
+								SeverityLevel: func() *gtfsbindings.Alert_SeverityLevel {
+									a := gtfsbindings.Alert_WARNING
+									return &a
+								}(),
 							},
 						},
 					},
