@@ -93,10 +93,9 @@ const sampleConfig = `
   ## gather metrics from SHOW SLAVE STATUS command output
   # gather_slave_status = false
 
-  #
   ## gather metrics from all channels from SHOW SLAVE STATUS command output
-  gather_all_slave_channels                 = false
-  #
+  # gather_all_slave_channels = false
+
   ## gather metrics from SHOW BINARY LOGS command output
   # gather_binary_logs = false
 
