@@ -5,6 +5,7 @@ import (
 	"log"
 	"reflect"
 
+	"github.com/vapourismo/knx-go/knx"
 	"github.com/vapourismo/knx-go/knx/dpt"
 
 	"github.com/influxdata/telegraf"
@@ -40,7 +41,7 @@ func (kl *KNXListener) Description() string {
 func (kl *KNXListener) SampleConfig() string {
 	return `
   # Type of KNX-IP interface.
-  # Can be either "tunnel", "router" or "dummy" (for testing only).
+  # Can be either "tunnel" or "router".
   service_type = "tunnel"
 
   # Address of the KNX-IP interface.
@@ -90,16 +91,29 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 
 	// Connect to the KNX-IP interface
 	log.Printf("I! [inputs.KNXListener] Trying to connect to \"%s\" at \"%s\"", kl.ServiceType, kl.ServiceAddress)
-	client, err := getKNXInterface(kl.ServiceType, kl.ServiceAddress)
-	if err != nil {
-		return err
+	switch kl.ServiceType {
+	case "tunnel":
+		c, err := knx.NewGroupTunnel(kl.ServiceAddress, knx.DefaultTunnelConfig)
+		if err != nil {
+			return err
+		}
+		kl.client = &c
+	case "router":
+		c, err := knx.NewGroupRouter(kl.ServiceAddress, knx.DefaultRouterConfig)
+		if err != nil {
+			return err
+		}
+		kl.client = &c
+	case "dummy":
+		c, err := NewDummyInterface()
+		if err != nil {
+			return err
+		}
+		kl.client = &c
+	default:
+		return fmt.Errorf("invalid interface type: %s", kl.ServiceAddress)
 	}
-	kl.client = client
-	if kl.ServiceType == "dummy" {
-		log.Printf("W! [inputs.KNXListener] Dummy running!")
-	} else {
-		log.Printf("I! [inputs.KNXListener] Connected!")
-	}
+	log.Printf("I! [inputs.KNXListener] Connected!")
 
 	// Listen to the KNX bus
 	go kl.listen()

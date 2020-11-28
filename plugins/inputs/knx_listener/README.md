@@ -13,7 +13,7 @@ This is a sample config for the plugin.
 # Listener capable of handling KNX bus messages provided trough a KNX-IP Interface.
 [[inputs.KNXListener]]
   # Type of KNX-IP interface.
-  # Can be either "tunnel", "router" or "dummy" (for testing only).
+  # Can be either "tunnel" or "router".
   service_type = "tunnel"
 
   # Address of the KNX-IP interface.

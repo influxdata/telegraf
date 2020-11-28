@@ -17,26 +17,6 @@ type KNXInterface interface {
 	Close()
 }
 
-func getKNXInterface(mode string, address string) (client KNXInterface, err error) {
-	switch mode {
-	case "tunnel":
-		c, e := knx.NewGroupTunnel(address, knx.DefaultTunnelConfig)
-		client, err = &c, e
-	case "router":
-		c, e := knx.NewGroupRouter(address, knx.DefaultRouterConfig)
-		client, err = &c, e
-	case "dummy":
-		c, e := NewDummyInterface()
-		client, err = &c, e
-
-		data := generateData()
-		go sendRegularly(&c, 1000.0*time.Millisecond, data)
-	default:
-		client, err = nil, fmt.Errorf("invalid interface type: %s", mode)
-	}
-	return client, err
-}
-
 func sendRegularly(di *KNXDummyInterface, period time.Duration, data []knx.GroupEvent) {
 	idx := 0
 	for range time.Tick(period) {
