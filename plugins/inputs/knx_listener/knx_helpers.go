@@ -18,7 +18,7 @@ type KNXInterface interface {
 	Close()
 }
 
-func GetKNXInterface(mode string, address string) (client KNXInterface, err error) {
+func getKNXInterface(mode string, address string) (client KNXInterface, err error) {
 	switch mode {
 	case "tunnel":
 		c, e := knx.NewGroupTunnel(address, knx.DefaultTunnelConfig)

@@ -89,7 +89,7 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 
 	// Connect to the KNX-IP interface
 	log.Printf("I! [inputs.KNXListener] Trying to connect to \"%s\" at \"%s\"", kl.ServiceType, kl.ServiceAddress)
-	client, err := GetKNXInterface(kl.ServiceType, kl.ServiceAddress)
+	client, err := getKNXInterface(kl.ServiceType, kl.ServiceAddress)
 	if err != nil {
 		return err
 	}
