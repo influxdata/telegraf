@@ -1,7 +1,6 @@
 package knx_listener
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -12,11 +11,6 @@ import (
 )
 
 // Helper to abstract away router or tunnel interfaces
-type KNXInterface interface {
-	Inbound() <-chan knx.GroupEvent
-	Close()
-}
-
 func sendRegularly(di *KNXDummyInterface, period time.Duration, data []knx.GroupEvent) {
 	idx := 0
 	for range time.Tick(period) {

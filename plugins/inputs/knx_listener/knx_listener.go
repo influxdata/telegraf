@@ -12,6 +12,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+type KNXInterface interface {
+	Inbound() <-chan knx.GroupEvent
+	Close()
+}
+
 type addressTarget struct {
 	measurement string
 	datapoint   dpt.DatapointValue
