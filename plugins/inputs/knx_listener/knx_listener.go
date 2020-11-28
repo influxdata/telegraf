@@ -78,7 +78,7 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 			log.Printf("D! [inputs.KNXListener]     %v --> %s", ga, m.Dpt)
 			d, ok := dpt.Produce(m.Dpt)
 			if !ok {
-				return fmt.Errorf("cannot create datapoint-type %v for address %v!", m.Dpt, ga)
+				return fmt.Errorf("cannot create datapoint-type %v for address %v", m.Dpt, ga)
 			}
 			kl.gaTargetMap[ga] = addressTarget{m.Name, d}
 		}
