@@ -3,21 +3,11 @@ package knx_listener
 import (
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/vapourismo/knx-go/knx"
 	"github.com/vapourismo/knx-go/knx/cemi"
 	"github.com/vapourismo/knx-go/knx/dpt"
 )
-
-// Helper to abstract away router or tunnel interfaces
-func sendRegularly(di *KNXDummyInterface, period time.Duration, data []knx.GroupEvent) {
-	idx := 0
-	for range time.Tick(period) {
-		di.Send(data[idx])
-		idx = (idx + 1) % len(data)
-	}
-}
 
 func generateEvent(a string, d dpt.DatapointValue) knx.GroupEvent {
 	parts := strings.Split(a, "/")
