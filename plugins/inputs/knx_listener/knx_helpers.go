@@ -2,7 +2,6 @@ package knx_listener
 
 import (
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -120,19 +119,4 @@ func generateData() []knx.GroupEvent {
 	data = append(data, generateEvent("13/1/5", &d_13015))
 
 	return data
-}
-
-func GetBasicDatapointValue(d dpt.DatapointValue) (v interface{}, err error) {
-	vi := reflect.Indirect(reflect.ValueOf(d))
-	switch vi.Kind() {
-	case reflect.Bool:
-		return vi.Bool(), nil
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return vi.Int(), nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return vi.Uint(), nil
-	case reflect.Float32, reflect.Float64:
-		return vi.Float(), nil
-	}
-	return nil, fmt.Errorf("cannot convert type: %v", vi.Kind())
 }

@@ -3,6 +3,7 @@ package knx_listener
 import (
 	"fmt"
 	"log"
+	"reflect"
 
 	"github.com/vapourismo/knx-go/knx/dpt"
 
@@ -128,9 +129,19 @@ func (kl *KNXListener) listen() {
 			// Convert the DatapointValue interface back to its basic type again
 			// as otherwise telegraf will not push out the metrics and eat it
 			// silently.
-			value, err := GetBasicDatapointValue(target.datapoint)
-			if err != nil {
-				log.Printf("E! [inputs.KNXListener] Type conversion failed: %v", err)
+			var value interface{}
+			vi := reflect.Indirect(reflect.ValueOf(target.datapoint))
+			switch vi.Kind() {
+			case reflect.Bool:
+				value = vi.Bool()
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				value = vi.Int()
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				value = vi.Uint()
+			case reflect.Float32, reflect.Float64:
+				value = vi.Float()
+			default:
+				log.Printf("E! [inputs.KNXListener] Type conversion %v failed for address %v", ga, vi.Kind())
 				continue
 			}
 
