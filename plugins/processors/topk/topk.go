@@ -90,7 +90,7 @@ var sampleConfig = `
   # add_rank_fields = []
 
   ## These settings provide a way to know what values the plugin is generating
-  ## when aggregating metrics. The 'add_agregate_field' setting allows to
+  ## when aggregating metrics. The 'add_aggregate_field' setting allows to
   ## specify for which fields the final aggregation value is required. If the
   ## list is non empty, then a field will be added to each every metric for
   ## each field present in this setting. This field will contain

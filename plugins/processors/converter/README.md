@@ -9,7 +9,7 @@ Values that cannot be converted are dropped.
 uniquely identifiable.  Fields with the same series key (measurement + tags)
 will overwrite one another.
 
-### Configuration:
+### Configuration
 ```toml
 # Convert values to another metric value type
 [[processors.converter]]
@@ -19,6 +19,7 @@ will overwrite one another.
   ## select the keys to convert.  The array may contain globs.
   ##   <target-type> = [<tag-key>...]
   [processors.converter.tags]
+    measurement = []
     string = []
     integer = []
     unsigned = []
@@ -31,6 +32,7 @@ will overwrite one another.
   ## select the keys to convert.  The array may contain globs.
   ##   <target-type> = [<field-key>...]
   [processors.converter.fields]
+    measurement = []
     tag = []
     string = []
     integer = []
@@ -39,19 +41,40 @@ will overwrite one another.
     float = []
 ```
 
-### Examples:
+### Example
 
+Convert `port` tag to a string field:
 ```toml
 [[processors.converter]]
   [processors.converter.tags]
     string = ["port"]
-
-  [processors.converter.fields]
-    integer = ["scboard_*"]
-    tag = ["ParentServerConfigGeneration"]
 ```
 
 ```diff
-- apache,port=80,server=debian-stretch-apache BusyWorkers=1,BytesPerReq=0,BytesPerSec=0,CPUChildrenSystem=0,CPUChildrenUser=0,CPULoad=0.00995025,CPUSystem=0.01,CPUUser=0.01,ConnsAsyncClosing=0,ConnsAsyncKeepAlive=0,ConnsAsyncWriting=0,ConnsTotal=0,IdleWorkers=49,Load1=0.01,Load15=0,Load5=0,ParentServerConfigGeneration=3,ParentServerMPMGeneration=2,ReqPerSec=0.00497512,ServerUptimeSeconds=201,TotalAccesses=1,TotalkBytes=0,Uptime=201,scboard_closing=0,scboard_dnslookup=0,scboard_finishing=0,scboard_idle_cleanup=0,scboard_keepalive=0,scboard_logging=0,scboard_open=100,scboard_reading=0,scboard_sending=1,scboard_starting=0,scboard_waiting=49 1502489900000000000
-+ apache,server=debian-stretch-apache,ParentServerConfigGeneration=3 port="80",BusyWorkers=1,BytesPerReq=0,BytesPerSec=0,CPUChildrenSystem=0,CPUChildrenUser=0,CPULoad=0.00995025,CPUSystem=0.01,CPUUser=0.01,ConnsAsyncClosing=0,ConnsAsyncKeepAlive=0,ConnsAsyncWriting=0,ConnsTotal=0,IdleWorkers=49,Load1=0.01,Load15=0,Load5=0,ParentServerMPMGeneration=2,ReqPerSec=0.00497512,ServerUptimeSeconds=201,TotalAccesses=1,TotalkBytes=0,Uptime=201,scboard_closing=0i,scboard_dnslookup=0i,scboard_finishing=0i,scboard_idle_cleanup=0i,scboard_keepalive=0i,scboard_logging=0i,scboard_open=100i,scboard_reading=0i,scboard_sending=1i,scboard_starting=0i,scboard_waiting=49i 1502489900000000000
+- apache,port=80,server=debian-stretch-apache BusyWorkers=1,BytesPerReq=0
++ apache,server=debian-stretch-apache port="80",BusyWorkers=1,BytesPerReq=0
+```
+
+Convert all `scboard_*` fields to an integer:
+```toml
+[[processors.converter]]
+  [processors.converter.fields]
+    integer = ["scboard_*"]
+```
+
+```diff
+- apache scboard_closing=0,scboard_dnslookup=0,scboard_finishing=0,scboard_idle_cleanup=0,scboard_keepalive=0,scboard_logging=0,scboard_open=100,scboard_reading=0,scboard_sending=1,scboard_starting=0,scboard_waiting=49
++ apache scboard_closing=0i,scboard_dnslookup=0i,scboard_finishing=0i,scboard_idle_cleanup=0i,scboard_keepalive=0i,scboard_logging=0i,scboard_open=100i,scboard_reading=0i,scboard_sending=1i,scboard_starting=0i,scboard_waiting=49i
+```
+
+Rename the measurement from a tag value:
+```toml
+[[processors.converter]]
+  [processors.converter.tags]
+    measurement = ["topic"]
+```
+
+```diff
+- mqtt_consumer,topic=sensor temp=42
++ sensor temp=42
 ```

@@ -15,6 +15,10 @@ or [HTTP statistics page](https://cbonte.github.io/haproxy-dconv/1.9/management.
   ## Make sure you specify the complete path to the stats endpoint
   ## including the protocol, ie http://10.10.3.33:1936/haproxy?stats
 
+  ## Credentials for basic HTTP authentication
+  # username = "admin"
+  # password = "admin"
+
   ## If no servers are specified, then default to 127.0.0.1:1936/haproxy?stats
   servers = ["http://myhaproxy.com:1936/haproxy?stats"]
 

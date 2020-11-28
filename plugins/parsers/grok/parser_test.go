@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -276,6 +277,28 @@ func TestParsePatternsWithoutCustom(t *testing.T) {
 	assert.Equal(t, time.Unix(0, 1466004605359052000), metricA.Time())
 }
 
+func TestParseEpochMilli(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{MYAPP}"},
+		CustomPatterns: `
+			MYAPP %{POSINT:ts:ts-epochmilli} response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}
+		`,
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`1568540909963 response_time=20821 mymetric=10890.645`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"response_time": int64(20821),
+			"metric":        float64(10890.645),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
+	assert.Equal(t, time.Unix(0, 1568540909963000000), metricA.Time())
+}
+
 func TestParseEpochNano(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{MYAPP}"},
@@ -377,7 +400,7 @@ func TestParseEpochDecimal(t *testing.T) {
 
 			if tt.noMatch {
 				require.Nil(t, m)
-				require.Nil(t, err)
+				require.NoError(t, err)
 				return
 			}
 
@@ -571,61 +594,106 @@ func TestCompileErrors(t *testing.T) {
 	assert.Error(t, p.Compile())
 }
 
-func TestParseErrors(t *testing.T) {
-	// Parse fails because the pattern doesn't exist
+func TestParseErrors_MissingPattern(t *testing.T) {
 	p := &Parser{
-		Patterns: []string{"%{TEST_LOG_B}"},
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_B}"},
 		CustomPatterns: `
 			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:int} %{}
 		`,
 	}
-	assert.Error(t, p.Compile())
+	require.Error(t, p.Compile())
 	_, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] notnumber 200 192.168.1.1 5.432µs 101`)
-	assert.Error(t, err)
+	require.Error(t, err)
+}
 
-	// Parse fails because myword is not an int
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
+func TestParseErrors_WrongIntegerType(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
 		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:int}
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:int}
+		`,
+	}
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
+
+func TestParseErrors_WrongFloatType(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
+		CustomPatterns: `
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:float}
+		`,
+	}
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
+
+func TestParseErrors_WrongDurationType(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
+		CustomPatterns: `
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:duration}
+		`,
+	}
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
+
+func TestParseErrors_WrongTimeLayout(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
+		CustomPatterns: `
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:duration}
+		`,
+	}
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
+
+func TestParseInteger_Base16(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{TEST_LOG_C}"},
+		CustomPatterns: `
+			DURATION %{NUMBER}[nuµm]?s
+			BASE10OR16NUM (?:%{BASE10NUM}|%{BASE16NUM})
+			TEST_LOG_C %{NUMBER:myfloat} %{BASE10OR16NUM:response_code:int} %{IPORHOST:clientip} %{DURATION:rt}
 		`,
 	}
 	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
 
-	// Parse fails because myword is not a float
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
-		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:float}
-		`,
-	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
-
-	// Parse fails because myword is not a duration
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
-		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:duration}
-		`,
-	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
-
-	// Parse fails because the time layout is wrong.
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
-		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-unix} %{WORD:myword:duration}
-		`,
-	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
+	metricA, err := p.ParseLine(`1.25 0xc8 192.168.1.1 5.432µs`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"clientip":      "192.168.1.1",
+			"response_code": int64(200),
+			"myfloat":       "1.25",
+			"rt":            "5.432µs",
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
 }
 
 func TestTsModder(t *testing.T) {
@@ -1025,4 +1093,25 @@ func TestEmptyYearInTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, m)
 	require.Equal(t, time.Now().Year(), m.Time().Year())
+}
+
+func TestTrimRegression(t *testing.T) {
+	// https://github.com/influxdata/telegraf/issues/4998
+	p := &Parser{
+		Patterns: []string{`%{GREEDYDATA:message:string}`},
+	}
+	require.NoError(t, p.Compile())
+
+	actual, err := p.ParseLine(`level=info msg="ok"`)
+	require.NoError(t, err)
+
+	expected := testutil.MustMetric(
+		"",
+		map[string]string{},
+		map[string]interface{}{
+			"message": `level=info msg="ok"`,
+		},
+		actual.Time(),
+	)
+	require.Equal(t, expected, actual)
 }

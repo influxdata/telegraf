@@ -7,18 +7,21 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 	"unicode"
 
-	"github.com/influxdata/go-syslog"
-	"github.com/influxdata/go-syslog/nontransparent"
-	"github.com/influxdata/go-syslog/octetcounting"
-	"github.com/influxdata/go-syslog/rfc5424"
+	"github.com/influxdata/go-syslog/v2"
+	"github.com/influxdata/go-syslog/v2/nontransparent"
+	"github.com/influxdata/go-syslog/v2/octetcounting"
+	"github.com/influxdata/go-syslog/v2/rfc5424"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	tlsConfig "github.com/influxdata/telegraf/internal/tls"
+	framing "github.com/influxdata/telegraf/internal/syslog"
+	tlsConfig "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -32,7 +35,7 @@ type Syslog struct {
 	KeepAlivePeriod *internal.Duration
 	MaxConnections  int
 	ReadTimeout     *internal.Duration
-	Framing         Framing
+	Framing         framing.Framing
 	Trailer         nontransparent.TrailerType
 	BestEffort      bool
 	Separator       string `toml:"sdparam_separator"`
@@ -83,10 +86,10 @@ var sampleConfig = `
   ## The framing technique with which it is expected that messages are transported (default = "octet-counting").
   ## Whether the messages come using the octect-counting (RFC5425#section-4.3.1, RFC6587#section-3.4.1),
   ## or the non-transparent framing technique (RFC6587#section-3.4.2).
-  ## Must be one of "octect-counting", "non-transparent".
+  ## Must be one of "octet-counting", "non-transparent".
   # framing = "octet-counting"
 
-  ## The trailer to be expected in case of non-trasparent framing (default = "LF").
+  ## The trailer to be expected in case of non-transparent framing (default = "LF").
   ## Must be one of "LF", or "NUL".
   # trailer = "LF"
 
@@ -194,7 +197,10 @@ func getAddressParts(a string) (string, string, error) {
 		return "", "", fmt.Errorf("missing protocol within address '%s'", a)
 	}
 
-	u, _ := url.Parse(a)
+	u, err := url.Parse(filepath.ToSlash(a)) //convert backslashes to slashes (to make Windows path a valid URL)
+	if err != nil {
+		return "", "", fmt.Errorf("could not parse address '%s': %v", a, err)
+	}
 	switch u.Scheme {
 	case "unix", "unixpacket", "unixgram":
 		return parts[0], parts[1], nil
@@ -312,8 +318,8 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 		opts = append(opts, syslog.WithBestEffort())
 	}
 
-	// Select the parser to use depeding on transport framing
-	if s.Framing == OctetCounting {
+	// Select the parser to use depending on transport framing
+	if s.Framing == framing.OctetCounting {
 		// Octet counting transparent framing
 		p = octetcounting.NewParser(opts...)
 	} else {
@@ -445,7 +451,7 @@ func init() {
 			ReadTimeout: &internal.Duration{
 				Duration: defaultReadTimeout,
 			},
-			Framing:   OctetCounting,
+			Framing:   framing.OctetCounting,
 			Trailer:   nontransparent.LF,
 			Separator: "_",
 		}

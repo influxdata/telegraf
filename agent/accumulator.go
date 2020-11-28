@@ -1,21 +1,16 @@
 package agent
 
 import (
-	"log"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/selfstat"
-)
-
-var (
-	NErrors = selfstat.Register("agent", "gather_errors", map[string]string{})
 )
 
 type MetricMaker interface {
-	Name() string
+	LogName() string
 	MakeMetric(metric telegraf.Metric) telegraf.Metric
+	Log() telegraf.Logger
 }
 
 type accumulator struct {
@@ -110,25 +105,11 @@ func (ac *accumulator) AddError(err error) {
 	if err == nil {
 		return
 	}
-	NErrors.Incr(1)
-	log.Printf("E! [%s]: Error in plugin: %v", ac.maker.Name(), err)
+	ac.maker.Log().Errorf("Error in plugin: %v", err)
 }
 
-func (ac *accumulator) SetPrecision(precision, interval time.Duration) {
-	if precision > 0 {
-		ac.precision = precision
-		return
-	}
-	switch {
-	case interval >= time.Second:
-		ac.precision = time.Second
-	case interval >= time.Millisecond:
-		ac.precision = time.Millisecond
-	case interval >= time.Microsecond:
-		ac.precision = time.Microsecond
-	default:
-		ac.precision = time.Nanosecond
-	}
+func (ac *accumulator) SetPrecision(precision time.Duration) {
+	ac.precision = precision
 }
 
 func (ac *accumulator) getTime(t []time.Time) time.Time {

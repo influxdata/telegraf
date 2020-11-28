@@ -324,6 +324,102 @@ var tests = []struct {
 		output: []byte("cpu,host=x\\ny value=42i 0\n"),
 	},
 	{
+		name: "empty tag value is removed",
+		input: MustMetric(
+			metric.New(
+				"cpu",
+				map[string]string{
+					"host": "",
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("cpu value=42i 0\n"),
+	},
+	{
+		name: "empty tag key is removed",
+		input: MustMetric(
+			metric.New(
+				"cpu",
+				map[string]string{
+					"": "example.org",
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("cpu value=42i 0\n"),
+	},
+	{
+		name: "tag value ends with backslash is trimmed",
+		input: MustMetric(
+			metric.New(
+				"disk",
+				map[string]string{
+					"path": `C:\`,
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("disk,path=C: value=42i 0\n"),
+	},
+	{
+		name: "tag key ends with backslash is trimmed",
+		input: MustMetric(
+			metric.New(
+				"disk",
+				map[string]string{
+					`path\`: "/",
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("disk,path=/ value=42i 0\n"),
+	},
+	{
+		name: "tag key backslash is trimmed and removed",
+		input: MustMetric(
+			metric.New(
+				"disk",
+				map[string]string{
+					`\`: "example.org",
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("disk value=42i 0\n"),
+	},
+	{
+		name: "tag value backslash is trimmed and removed",
+		input: MustMetric(
+			metric.New(
+				"disk",
+				map[string]string{
+					"host": `\`,
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("disk value=42i 0\n"),
+	},
+	{
 		name: "string newline",
 		input: MustMetric(
 			metric.New(
@@ -385,7 +481,6 @@ var tests = []struct {
 					"cpu_time_nice":                 float64(0),
 					"cpu_time_soft_irq":             float64(0),
 					"cpu_time_steal":                float64(0),
-					"cpu_time_stolen":               float64(0),
 					"cpu_time_system":               float64(0),
 					"cpu_time_user":                 float64(0.02),
 					"cpu_usage":                     float64(0),
@@ -433,7 +528,7 @@ var tests = []struct {
 				time.Unix(0, 1517620624000000000),
 			),
 		),
-		output: []byte("procstat,exe=bash,process_name=bash cpu_time=0i,cpu_time_guest=0,cpu_time_guest_nice=0,cpu_time_idle=0,cpu_time_iowait=0,cpu_time_irq=0,cpu_time_nice=0,cpu_time_soft_irq=0,cpu_time_steal=0,cpu_time_stolen=0,cpu_time_system=0,cpu_time_user=0.02,cpu_usage=0,involuntary_context_switches=2i,memory_data=1576960i,memory_locked=0i,memory_rss=5103616i,memory_stack=139264i,memory_swap=0i,memory_vms=21659648i,nice_priority=20i,num_fds=4i,num_threads=1i,pid=29417i,read_bytes=0i,read_count=259i,realtime_priority=0i,rlimit_cpu_time_hard=2147483647i,rlimit_cpu_time_soft=2147483647i,rlimit_file_locks_hard=2147483647i,rlimit_file_locks_soft=2147483647i,rlimit_memory_data_hard=2147483647i,rlimit_memory_data_soft=2147483647i,rlimit_memory_locked_hard=65536i,rlimit_memory_locked_soft=65536i,rlimit_memory_rss_hard=2147483647i,rlimit_memory_rss_soft=2147483647i,rlimit_memory_stack_hard=2147483647i,rlimit_memory_stack_soft=8388608i,rlimit_memory_vms_hard=2147483647i,rlimit_memory_vms_soft=2147483647i,rlimit_nice_priority_hard=0i,rlimit_nice_priority_soft=0i,rlimit_num_fds_hard=4096i,rlimit_num_fds_soft=1024i,rlimit_realtime_priority_hard=0i,rlimit_realtime_priority_soft=0i,rlimit_signals_pending_hard=78994i,rlimit_signals_pending_soft=78994i,signals_pending=0i,voluntary_context_switches=42i,write_bytes=106496i,write_count=35i 1517620624000000000\n"),
+		output: []byte("procstat,exe=bash,process_name=bash cpu_time=0i,cpu_time_guest=0,cpu_time_guest_nice=0,cpu_time_idle=0,cpu_time_iowait=0,cpu_time_irq=0,cpu_time_nice=0,cpu_time_soft_irq=0,cpu_time_steal=0,cpu_time_system=0,cpu_time_user=0.02,cpu_usage=0,involuntary_context_switches=2i,memory_data=1576960i,memory_locked=0i,memory_rss=5103616i,memory_stack=139264i,memory_swap=0i,memory_vms=21659648i,nice_priority=20i,num_fds=4i,num_threads=1i,pid=29417i,read_bytes=0i,read_count=259i,realtime_priority=0i,rlimit_cpu_time_hard=2147483647i,rlimit_cpu_time_soft=2147483647i,rlimit_file_locks_hard=2147483647i,rlimit_file_locks_soft=2147483647i,rlimit_memory_data_hard=2147483647i,rlimit_memory_data_soft=2147483647i,rlimit_memory_locked_hard=65536i,rlimit_memory_locked_soft=65536i,rlimit_memory_rss_hard=2147483647i,rlimit_memory_rss_soft=2147483647i,rlimit_memory_stack_hard=2147483647i,rlimit_memory_stack_soft=8388608i,rlimit_memory_vms_hard=2147483647i,rlimit_memory_vms_soft=2147483647i,rlimit_nice_priority_hard=0i,rlimit_nice_priority_soft=0i,rlimit_num_fds_hard=4096i,rlimit_num_fds_soft=1024i,rlimit_realtime_priority_hard=0i,rlimit_realtime_priority_soft=0i,rlimit_signals_pending_hard=78994i,rlimit_signals_pending_soft=78994i,signals_pending=0i,voluntary_context_switches=42i,write_bytes=106496i,write_count=35i 1517620624000000000\n"),
 	},
 }
 

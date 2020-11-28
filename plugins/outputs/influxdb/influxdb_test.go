@@ -8,9 +8,10 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,6 +20,9 @@ type MockClient struct {
 	WriteF          func(context.Context, []telegraf.Metric) error
 	CreateDatabaseF func(ctx context.Context, database string) error
 	DatabaseF       func() string
+	CloseF          func()
+
+	log telegraf.Logger
 }
 
 func (c *MockClient) URL() string {
@@ -37,6 +41,14 @@ func (c *MockClient) Database() string {
 	return c.DatabaseF()
 }
 
+func (c *MockClient) Close() {
+	c.CloseF()
+}
+
+func (c *MockClient) SetLogger(log telegraf.Logger) {
+	c.log = log
+}
+
 func TestDeprecatedURLSupport(t *testing.T) {
 	var actual *influxdb.UDPConfig
 	output := influxdb.InfluxDB{
@@ -47,6 +59,9 @@ func TestDeprecatedURLSupport(t *testing.T) {
 			return &MockClient{}, nil
 		},
 	}
+
+	output.Log = testutil.Logger{}
+
 	err := output.Connect()
 	require.NoError(t, err)
 	require.Equal(t, "udp://localhost:8089", actual.URL.String())
@@ -67,6 +82,9 @@ func TestDefaultURL(t *testing.T) {
 			}, nil
 		},
 	}
+
+	output.Log = testutil.Logger{}
+
 	err := output.Connect()
 	require.NoError(t, err)
 	require.Equal(t, "http://localhost:8086", actual.URL.String())
@@ -84,6 +102,8 @@ func TestConnectUDPConfig(t *testing.T) {
 			return &MockClient{}, nil
 		},
 	}
+	output.Log = testutil.Logger{}
+
 	err := output.Connect()
 	require.NoError(t, err)
 
@@ -125,6 +145,9 @@ func TestConnectHTTPConfig(t *testing.T) {
 			}, nil
 		},
 	}
+
+	output.Log = testutil.Logger{}
+
 	err := output.Connect()
 	require.NoError(t, err)
 
@@ -148,7 +171,6 @@ func TestConnectHTTPConfig(t *testing.T) {
 func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 	output := influxdb.InfluxDB{
 		URLs: []string{"http://localhost:8086"},
-
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return &MockClient{
 				DatabaseF: func() string {
@@ -168,11 +190,12 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 				},
 				URLF: func() string {
 					return "http://localhost:8086"
-
 				},
 			}, nil
 		},
 	}
+
+	output.Log = testutil.Logger{}
 
 	err := output.Connect()
 	require.NoError(t, err)

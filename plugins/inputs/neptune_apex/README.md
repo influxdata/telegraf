@@ -59,8 +59,8 @@ programming. These tags are clearly marked in the list below and should be consi
     - amp (float, Ampere) is the amount of current flowing through the 120V outlet.
     - watt (float, Watt) represents the amount of energy flowing through the 120V outlet.
     - xstatus (string) indicates the xstatus of an outlet. Found on wireless Vortech devices.
-    - power_failed (int64, Unix epoch in ns) when the controller last lost power.
-    - power_restored (int64, Unix epoch in ns) when the controller last powered on.
+    - power_failed (int64, Unix epoch in ns) when the controller last lost power. Omitted if the apex reports it as "none"
+    - power_restored (int64, Unix epoch in ns) when the controller last powered on. Omitted if the apex reports it as "none"
     - serial (string, serial number)
    - time:
      - The time used for the metric is parsed from the status.xml page. This helps when cross-referencing events with
@@ -71,7 +71,7 @@ programming. These tags are clearly marked in the list below and should be consi
 
 
 Get the max, mean, and min for the temperature in the last hour:
-```
+```sql
 SELECT mean("value") FROM "neptune_apex" WHERE ("probe_type" = 'Temp') AND time >= now() - 6h GROUP BY time(20s)
 ```
 
@@ -79,7 +79,7 @@ SELECT mean("value") FROM "neptune_apex" WHERE ("probe_type" = 'Temp') AND time 
 
 #### sendRequest failure
 This indicates a problem communicating with the local Apex controller. If on Mac/Linux, try curl:
-```
+```sh
 $ curl apex.local/cgi-bin/status.xml
 ```
 to isolate the problem.

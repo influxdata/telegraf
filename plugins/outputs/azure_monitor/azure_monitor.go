@@ -43,6 +43,35 @@ type AzureMonitor struct {
 	MetricOutsideWindow selfstat.Stat
 }
 
+// VirtualMachineMetadata contains information about a VM from the metadata service
+type virtualMachineMetadata struct {
+	Compute struct {
+		Location          string `json:"location"`
+		Name              string `json:"name"`
+		ResourceGroupName string `json:"resourceGroupName"`
+		SubscriptionID    string `json:"subscriptionId"`
+		VMScaleSetName    string `json:"vmScaleSetName"`
+	} `json:"compute"`
+}
+
+func (m *virtualMachineMetadata) ResourceID() string {
+	if m.Compute.VMScaleSetName != "" {
+		return fmt.Sprintf(
+			resourceIDScaleSetTemplate,
+			m.Compute.SubscriptionID,
+			m.Compute.ResourceGroupName,
+			m.Compute.VMScaleSetName,
+		)
+	} else {
+		return fmt.Sprintf(
+			resourceIDTemplate,
+			m.Compute.SubscriptionID,
+			m.Compute.ResourceGroupName,
+			m.Compute.Name,
+		)
+	}
+}
+
 type dimension struct {
 	name  string
 	value string
@@ -63,11 +92,12 @@ const (
 	defaultNamespacePrefix = "Telegraf/"
 	defaultAuthResource    = "https://monitoring.azure.com/"
 
-	vmInstanceMetadataURL = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
-	resourceIDTemplate    = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
-	urlTemplate           = "https://%s.monitoring.azure.com%s/metrics"
-	urlOverrideTemplate   = "%s%s/metrics"
-	maxRequestBodySize    = 4000000
+	vmInstanceMetadataURL      = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
+	resourceIDTemplate         = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
+	resourceIDScaleSetTemplate = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachineScaleSets/%s"
+	urlTemplate                = "https://%s.monitoring.azure.com%s/metrics"
+	urlOverrideTemplate        = "%s%s/metrics"
+	maxRequestBodySize         = 4000000
 )
 
 var sampleConfig = `
@@ -123,10 +153,6 @@ func (a *AzureMonitor) Connect() error {
 			Proxy: http.ProxyFromEnvironment,
 		},
 		Timeout: a.Timeout.Duration,
-	}
-
-	if a.NamespacePrefix == "" {
-		a.NamespacePrefix = defaultNamespacePrefix
 	}
 
 	var err error
@@ -200,31 +226,17 @@ func vmInstanceMetadata(c *http.Client) (string, string, error) {
 		return "", "", err
 	}
 	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		return "", "", fmt.Errorf("unable to fetch instance metadata: [%v] %s", resp.StatusCode, body)
+		return "", "", fmt.Errorf("unable to fetch instance metadata: [%s] %d",
+			vmInstanceMetadataURL, resp.StatusCode)
 	}
 
-	// VirtualMachineMetadata contains information about a VM from the metadata service
-	type VirtualMachineMetadata struct {
-		Compute struct {
-			Location          string `json:"location"`
-			Name              string `json:"name"`
-			ResourceGroupName string `json:"resourceGroupName"`
-			SubscriptionID    string `json:"subscriptionId"`
-		} `json:"compute"`
-	}
-
-	var metadata VirtualMachineMetadata
+	var metadata virtualMachineMetadata
 	if err := json.Unmarshal(body, &metadata); err != nil {
 		return "", "", err
 	}
 
 	region := metadata.Compute.Location
-	resourceID := fmt.Sprintf(
-		resourceIDTemplate,
-		metadata.Compute.SubscriptionID,
-		metadata.Compute.ResourceGroupName,
-		metadata.Compute.Name,
-	)
+	resourceID := metadata.ResourceID()
 
 	return region, resourceID, nil
 }
@@ -376,7 +388,7 @@ func translate(m telegraf.Metric, prefix string) (*azureMonitorMetric, error) {
 	var dimensionValues []string
 	for _, tag := range m.TagList() {
 		// Azure custom metrics service supports up to 10 dimensions
-		if len(dimensionNames) > 10 {
+		if len(dimensionNames) >= 10 {
 			continue
 		}
 
@@ -630,7 +642,8 @@ func (a *AzureMonitor) Reset() {
 func init() {
 	outputs.Add("azure_monitor", func() telegraf.Output {
 		return &AzureMonitor{
-			timeFunc: time.Now,
+			timeFunc:        time.Now,
+			NamespacePrefix: defaultNamespacePrefix,
 		}
 	})
 }

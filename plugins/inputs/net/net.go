@@ -54,6 +54,15 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return fmt.Errorf("error getting list of interfaces: %s", err)
+	}
+	interfacesByName := map[string]net.Interface{}
+	for _, iface := range interfaces {
+		interfacesByName[iface.Name] = iface
+	}
+
 	for _, io := range netio {
 		if len(s.Interfaces) != 0 {
 			var found bool
@@ -66,8 +75,8 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 				continue
 			}
 		} else if !s.skipChecks {
-			iface, err := net.InterfaceByName(io.Name)
-			if err != nil {
+			iface, ok := interfacesByName[io.Name]
+			if !ok {
 				continue
 			}
 

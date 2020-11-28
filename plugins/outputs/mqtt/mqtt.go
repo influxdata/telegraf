@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -9,7 +10,7 @@ import (
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -150,9 +151,9 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 			metricsmap[topic] = append(metricsmap[topic], metric)
 		} else {
 			buf, err := m.serializer.Serialize(metric)
-
 			if err != nil {
-				return err
+				log.Printf("D! [outputs.mqtt] Could not serialize metric: %v", err)
+				continue
 			}
 
 			err = m.publish(topic, buf)
@@ -222,7 +223,7 @@ func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	}
 
 	if len(m.Servers) == 0 {
-		return opts, fmt.Errorf("could not get host infomations")
+		return opts, fmt.Errorf("could not get host informations")
 	}
 	for _, host := range m.Servers {
 		server := fmt.Sprintf("%s://%s", scheme, host)

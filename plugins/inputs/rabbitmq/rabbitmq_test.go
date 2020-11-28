@@ -6,10 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"io/ioutil"
+
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 )
 
 func TestRabbitMQGeneratesMetrics(t *testing.T) {
@@ -25,8 +26,10 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 			jsonFilePath = "testdata/queues.json"
 		case "/api/exchanges":
 			jsonFilePath = "testdata/exchanges.json"
-		case "/api/healthchecks/node/rabbit@vagrant-ubuntu-trusty-64":
-			jsonFilePath = "testdata/healthchecks.json"
+		case "/api/federation-links":
+			jsonFilePath = "testdata/federation-links.json"
+		case "/api/nodes/rabbit@vagrant-ubuntu-trusty-64/memory":
+			jsonFilePath = "testdata/memory.json"
 		default:
 			panic("Cannot handle request")
 		}
@@ -93,6 +96,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"messages_redeliver":        33,
 		"messages_redeliver_rate":   2.5,
 		"idle_since":                "2015-11-01 8:22:14",
+		"slave_nodes":               1,
+		"synchronised_slave_nodes":  1,
 	}
 	compareMetrics(t, queuesMetrics, acc, "rabbitmq_queue")
 
@@ -112,7 +117,6 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"sockets_used":              45,
 		"uptime":                    7464827,
 		"running":                   1,
-		"health_check_status":       1,
 		"mnesia_disk_tx_count":      16,
 		"mnesia_ram_tx_count":       296,
 		"mnesia_disk_tx_count_rate": 1.1,
@@ -129,6 +133,26 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"io_write_avg_time_rate":    4.32,
 		"io_write_bytes":            823,
 		"io_write_bytes_rate":       32.8,
+		"mem_connection_readers":    1234,
+		"mem_connection_writers":    5678,
+		"mem_connection_channels":   1133,
+		"mem_connection_other":      2840,
+		"mem_queue_procs":           2840,
+		"mem_queue_slave_procs":     0,
+		"mem_plugins":               1755976,
+		"mem_other_proc":            23056584,
+		"mem_metrics":               196536,
+		"mem_mgmt_db":               491272,
+		"mem_mnesia":                115600,
+		"mem_other_ets":             2121872,
+		"mem_binary":                418848,
+		"mem_msg_index":             42848,
+		"mem_code":                  25179322,
+		"mem_atom":                  1041593,
+		"mem_other_system":          14741981,
+		"mem_allocated_unused":      38208528,
+		"mem_reserved_unallocated":  0,
+		"mem_total":                 83025920,
 	}
 	compareMetrics(t, nodeMetrics, acc, "rabbitmq_node")
 
@@ -139,6 +163,18 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"messages_publish_out_rate": 5.1,
 	}
 	compareMetrics(t, exchangeMetrics, acc, "rabbitmq_exchange")
+
+	federationLinkMetrics := map[string]interface{}{
+		"acks_uncommitted":           1,
+		"consumers":                  2,
+		"messages_unacknowledged":    3,
+		"messages_uncommitted":       4,
+		"messages_unconfirmed":       5,
+		"messages_confirm":           67,
+		"messages_publish":           890,
+		"messages_return_unroutable": 1,
+	}
+	compareMetrics(t, federationLinkMetrics, acc, "rabbitmq_federation")
 }
 
 func compareMetrics(t *testing.T, expectedMetrics map[string]interface{},

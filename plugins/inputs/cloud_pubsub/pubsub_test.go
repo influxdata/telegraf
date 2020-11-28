@@ -1,11 +1,13 @@
 package cloud_pubsub
 
 import (
+	"encoding/base64"
 	"errors"
+	"testing"
+
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const (
@@ -25,6 +27,7 @@ func TestRunParse(t *testing.T) {
 	sub.receiver = testMessagesReceive(sub)
 
 	ps := &PubSub{
+		Log:                    testutil.Logger{},
 		parser:                 testParser,
 		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
@@ -55,6 +58,51 @@ func TestRunParse(t *testing.T) {
 	validateTestInfluxMetric(t, metric)
 }
 
+// Test ingesting InfluxDB-format PubSub message
+func TestRunBase64(t *testing.T) {
+	subId := "sub-run-base64"
+
+	testParser, _ := parsers.NewInfluxParser()
+
+	sub := &stubSub{
+		id:       subId,
+		messages: make(chan *testMsg, 100),
+	}
+	sub.receiver = testMessagesReceive(sub)
+
+	ps := &PubSub{
+		Log:                    testutil.Logger{},
+		parser:                 testParser,
+		stubSub:                func() subscription { return sub },
+		Project:                "projectIDontMatterForTests",
+		Subscription:           subId,
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		Base64Data:             true,
+	}
+
+	acc := &testutil.Accumulator{}
+	if err := ps.Start(acc); err != nil {
+		t.Fatalf("test PubSub failed to start: %s", err)
+	}
+	defer ps.Stop()
+
+	if ps.sub == nil {
+		t.Fatal("expected plugin subscription to be non-nil")
+	}
+
+	testTracker := &testTracker{}
+	msg := &testMsg{
+		value:   base64.StdEncoding.EncodeToString([]byte(msgInflux)),
+		tracker: testTracker,
+	}
+	sub.messages <- msg
+
+	acc.Wait(1)
+	assert.Equal(t, acc.NFields(), 1)
+	metric := acc.Metrics[0]
+	validateTestInfluxMetric(t, metric)
+}
+
 func TestRunInvalidMessages(t *testing.T) {
 	subId := "sub-invalid-messages"
 
@@ -67,6 +115,7 @@ func TestRunInvalidMessages(t *testing.T) {
 	sub.receiver = testMessagesReceive(sub)
 
 	ps := &PubSub{
+		Log:                    testutil.Logger{},
 		parser:                 testParser,
 		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
@@ -113,6 +162,7 @@ func TestRunOverlongMessages(t *testing.T) {
 	sub.receiver = testMessagesReceive(sub)
 
 	ps := &PubSub{
+		Log:                    testutil.Logger{},
 		parser:                 testParser,
 		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
@@ -160,6 +210,7 @@ func TestRunErrorInSubscriber(t *testing.T) {
 	sub.receiver = testMessagesError(sub, errors.New("a fake error"))
 
 	ps := &PubSub{
+		Log:                      testutil.Logger{},
 		parser:                   testParser,
 		stubSub:                  func() subscription { return sub },
 		Project:                  "projectIDontMatterForTests",

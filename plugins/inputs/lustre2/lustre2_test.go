@@ -1,3 +1,5 @@
+// +build !windows
+
 package lustre2
 
 import (
@@ -6,6 +8,9 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/toml"
+	"github.com/influxdata/toml/ast"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,10 +44,24 @@ cache_miss                11653333250 samples [pages] 1 1 11653333250
 `
 
 const obdfilterJobStatsContents = `job_stats:
-- job_id:          testjob1
+- job_id:          cluster-testjob1
   snapshot_time:   1461772761
   read_bytes:      { samples:           1, unit: bytes, min:    4096, max:    4096, sum:            4096 }
   write_bytes:     { samples:          25, unit: bytes, min: 1048576, max: 1048576, sum:        26214400 }
+  getattr:         { samples:           0, unit:  reqs }
+  setattr:         { samples:           0, unit:  reqs }
+  punch:           { samples:           1, unit:  reqs }
+  sync:            { samples:           0, unit:  reqs }
+  destroy:         { samples:           0, unit:  reqs }
+  create:          { samples:           0, unit:  reqs }
+  statfs:          { samples:           0, unit:  reqs }
+  get_info:        { samples:           0, unit:  reqs }
+  set_info:        { samples:           0, unit:  reqs }
+  quotactl:        { samples:           0, unit:  reqs }
+- job_id:          testjob2
+  snapshot_time:   1461772761
+  read_bytes:      { samples:           1, unit: bytes, min:    1024, max:    1024, sum:            1024 }
+  write_bytes:     { samples:          25, unit: bytes, min:    2048, max:    2048, sum:           51200 }
   getattr:         { samples:           0, unit:  reqs }
   setattr:         { samples:           0, unit:  reqs }
   punch:           { samples:           1, unit:  reqs }
@@ -75,7 +94,7 @@ crossdir_rename           369571 samples [reqs]
 `
 
 const mdtJobStatsContents = `job_stats:
-- job_id:          testjob1
+- job_id:          cluster-testjob1
   snapshot_time:   1461772761
   open:            { samples:           5, unit:  reqs }
   close:           { samples:           4, unit:  reqs }
@@ -93,6 +112,24 @@ const mdtJobStatsContents = `job_stats:
   sync:            { samples:           2, unit:  reqs }
   samedir_rename:  { samples:         705, unit:  reqs }
   crossdir_rename: { samples:         200, unit:  reqs }
+- job_id:          testjob2
+  snapshot_time:   1461772761
+  open:            { samples:           6, unit:  reqs }
+  close:           { samples:           7, unit:  reqs }
+  mknod:           { samples:           8, unit:  reqs }
+  link:            { samples:           9, unit:  reqs }
+  unlink:          { samples:          20, unit:  reqs }
+  mkdir:           { samples:         200, unit:  reqs }
+  rmdir:           { samples:         210, unit:  reqs }
+  rename:          { samples:           8, unit:  reqs }
+  getattr:         { samples:          10, unit:  reqs }
+  setattr:         { samples:           2, unit:  reqs }
+  getxattr:        { samples:           4, unit:  reqs }
+  setxattr:        { samples:           5, unit:  reqs }
+  statfs:          { samples:        1207, unit:  reqs }
+  sync:            { samples:           3, unit:  reqs }
+  samedir_rename:  { samples:         706, unit:  reqs }
+  crossdir_rename: { samples:         201, unit:  reqs }
 `
 
 func TestLustre2GeneratesMetrics(t *testing.T) {
@@ -172,7 +209,7 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 
 	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
 	ost_name := "OST0001"
-	job_name := "testjob1"
+	job_names := []string{"cluster-testjob1", "testjob2"}
 
 	mdtdir := tempdir + "/mdt/"
 	err := os.MkdirAll(mdtdir+"/"+ost_name, 0755)
@@ -199,12 +236,23 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 	err = m.Gather(&acc)
 	require.NoError(t, err)
 
-	tags := map[string]string{
-		"name":  ost_name,
-		"jobid": job_name,
+	// make this two tags
+	// and even further make this dependent on summing per OST
+	tags := []map[string]string{
+		{
+			"name":  ost_name,
+			"jobid": job_names[0],
+		},
+		{
+			"name":  ost_name,
+			"jobid": job_names[1],
+		},
 	}
 
-	fields := map[string]interface{}{
+	// make this for two tags
+	var fields []map[string]interface{}
+
+	fields = append(fields, map[string]interface{}{
 		"jobstats_read_calls":      uint64(1),
 		"jobstats_read_min_size":   uint64(4096),
 		"jobstats_read_max_size":   uint64(4096),
@@ -239,10 +287,86 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 		"jobstats_sync":            uint64(2),
 		"jobstats_samedir_rename":  uint64(705),
 		"jobstats_crossdir_rename": uint64(200),
+	})
+
+	fields = append(fields, map[string]interface{}{
+		"jobstats_read_calls":      uint64(1),
+		"jobstats_read_min_size":   uint64(1024),
+		"jobstats_read_max_size":   uint64(1024),
+		"jobstats_read_bytes":      uint64(1024),
+		"jobstats_write_calls":     uint64(25),
+		"jobstats_write_min_size":  uint64(2048),
+		"jobstats_write_max_size":  uint64(2048),
+		"jobstats_write_bytes":     uint64(51200),
+		"jobstats_ost_getattr":     uint64(0),
+		"jobstats_ost_setattr":     uint64(0),
+		"jobstats_punch":           uint64(1),
+		"jobstats_ost_sync":        uint64(0),
+		"jobstats_destroy":         uint64(0),
+		"jobstats_create":          uint64(0),
+		"jobstats_ost_statfs":      uint64(0),
+		"jobstats_get_info":        uint64(0),
+		"jobstats_set_info":        uint64(0),
+		"jobstats_quotactl":        uint64(0),
+		"jobstats_open":            uint64(6),
+		"jobstats_close":           uint64(7),
+		"jobstats_mknod":           uint64(8),
+		"jobstats_link":            uint64(9),
+		"jobstats_unlink":          uint64(20),
+		"jobstats_mkdir":           uint64(200),
+		"jobstats_rmdir":           uint64(210),
+		"jobstats_rename":          uint64(8),
+		"jobstats_getattr":         uint64(10),
+		"jobstats_setattr":         uint64(2),
+		"jobstats_getxattr":        uint64(4),
+		"jobstats_setxattr":        uint64(5),
+		"jobstats_statfs":          uint64(1207),
+		"jobstats_sync":            uint64(3),
+		"jobstats_samedir_rename":  uint64(706),
+		"jobstats_crossdir_rename": uint64(201),
+	})
+
+	for index := 0; index < len(fields); index++ {
+		acc.AssertContainsTaggedFields(t, "lustre2", fields[index], tags[index])
 	}
 
-	acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
+	// run this over both tags
 
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
 	require.NoError(t, err)
+}
+
+func TestLustre2CanParseConfiguration(t *testing.T) {
+	config := []byte(`
+[[inputs.lustre2]]
+   ost_procfiles = [
+     "/proc/fs/lustre/obdfilter/*/stats",
+     "/proc/fs/lustre/osd-ldiskfs/*/stats",
+   ]
+   mds_procfiles = [
+     "/proc/fs/lustre/mdt/*/md_stats",
+   ]`)
+
+	table, err := toml.Parse([]byte(config))
+	require.NoError(t, err)
+
+	inputs, ok := table.Fields["inputs"]
+	require.True(t, ok)
+
+	lustre2, ok := inputs.(*ast.Table).Fields["lustre2"]
+	require.True(t, ok)
+
+	var plugin Lustre2
+
+	require.NoError(t, toml.UnmarshalTable(lustre2.([]*ast.Table)[0], &plugin))
+
+	assert.Equal(t, Lustre2{
+		Ost_procfiles: []string{
+			"/proc/fs/lustre/obdfilter/*/stats",
+			"/proc/fs/lustre/osd-ldiskfs/*/stats",
+		},
+		Mds_procfiles: []string{
+			"/proc/fs/lustre/mdt/*/md_stats",
+		},
+	}, plugin)
 }

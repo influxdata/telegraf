@@ -18,8 +18,12 @@ const (
 	measurement = "ceph"
 	typeMon     = "monitor"
 	typeOsd     = "osd"
+	typeMds     = "mds"
+	typeRgw     = "rgw"
 	osdPrefix   = "ceph-osd"
 	monPrefix   = "ceph-mon"
+	mdsPrefix   = "ceph-mds"
+	rgwPrefix   = "ceph-client"
 	sockSuffix  = "asok"
 )
 
@@ -27,6 +31,8 @@ type Ceph struct {
 	CephBinary             string
 	OsdPrefix              string
 	MonPrefix              string
+	MdsPrefix              string
+	RgwPrefix              string
 	SocketDir              string
 	SocketSuffix           string
 	CephUser               string
@@ -36,7 +42,7 @@ type Ceph struct {
 }
 
 func (c *Ceph) Description() string {
-	return "Collects performance metrics from the MON and OSD nodes in a Ceph storage cluster."
+	return "Collects performance metrics from the MON, OSD, MDS and RGW nodes in a Ceph storage cluster."
 }
 
 var sampleConfig = `
@@ -55,6 +61,8 @@ var sampleConfig = `
   ## prefix of MON and OSD socket files, used to determine socket type
   mon_prefix = "ceph-mon"
   osd_prefix = "ceph-osd"
+  mds_prefix = "ceph-mds"
+  rgw_prefix = "ceph-client"
 
   ## suffix used to identify socket files
   socket_suffix = "asok"
@@ -101,12 +109,12 @@ func (c *Ceph) gatherAdminSocketStats(acc telegraf.Accumulator) error {
 	for _, s := range sockets {
 		dump, err := perfDump(c.CephBinary, s)
 		if err != nil {
-			acc.AddError(fmt.Errorf("E! error reading from socket '%s': %v", s.socket, err))
+			acc.AddError(fmt.Errorf("error reading from socket '%s': %v", s.socket, err))
 			continue
 		}
 		data, err := parseDump(dump)
 		if err != nil {
-			acc.AddError(fmt.Errorf("E! error parsing dump from socket '%s': %v", s.socket, err))
+			acc.AddError(fmt.Errorf("error parsing dump from socket '%s': %v", s.socket, err))
 			continue
 		}
 		for tag, metrics := range data {
@@ -148,6 +156,8 @@ func init() {
 		CephBinary:             "/usr/bin/ceph",
 		OsdPrefix:              osdPrefix,
 		MonPrefix:              monPrefix,
+		MdsPrefix:              mdsPrefix,
+		RgwPrefix:              rgwPrefix,
 		SocketDir:              "/var/run/ceph",
 		SocketSuffix:           sockSuffix,
 		CephUser:               "client.admin",
@@ -165,6 +175,10 @@ var perfDump = func(binary string, socket *socket) (string, error) {
 		cmdArgs = append(cmdArgs, "perf", "dump")
 	} else if socket.sockType == typeMon {
 		cmdArgs = append(cmdArgs, "perfcounters_dump")
+	} else if socket.sockType == typeMds {
+		cmdArgs = append(cmdArgs, "perf", "dump")
+	} else if socket.sockType == typeRgw {
+		cmdArgs = append(cmdArgs, "perf", "dump")
 	} else {
 		return "", fmt.Errorf("ignoring unknown socket type: %s", socket.sockType)
 	}
@@ -199,7 +213,18 @@ var findSockets = func(c *Ceph) ([]*socket, error) {
 			sockPrefix = osdPrefix
 
 		}
-		if sockType == typeOsd || sockType == typeMon {
+		if strings.HasPrefix(f, c.MdsPrefix) {
+			sockType = typeMds
+			sockPrefix = mdsPrefix
+
+		}
+		if strings.HasPrefix(f, c.RgwPrefix) {
+			sockType = typeRgw
+			sockPrefix = rgwPrefix
+
+		}
+
+		if sockType == typeOsd || sockType == typeMon || sockType == typeMds || sockType == typeRgw {
 			path := filepath.Join(c.SocketDir, f)
 			sockets = append(sockets, &socket{parseSockId(f, sockPrefix, c.SocketSuffix), sockType, path})
 		}
@@ -287,7 +312,7 @@ func flatten(data interface{}) []*metric {
 			}
 		}
 	default:
-		log.Printf("I! Ignoring unexpected type '%T' for value %v", val, val)
+		log.Printf("I! [inputs.ceph] ignoring unexpected type '%T' for value %v", val, val)
 	}
 
 	return metrics

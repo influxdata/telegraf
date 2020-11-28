@@ -9,10 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	framing "github.com/influxdata/telegraf/internal/syslog"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func getTestCasesForNonTransparent() []testCaseStream {
@@ -20,10 +22,16 @@ func getTestCasesForNonTransparent() []testCaseStream {
 		{
 			name: "1st/avg/ok",
 			data: []byte(`<29>1 2016-02-21T04:32:57+00:00 web1 someservice 2341 2 [origin][meta sequence="14125553" service="someservice"] "GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`),
-			wantStrict: []testutil.Metric{
-				{
-					Measurement: "syslog",
-					Fields: map[string]interface{}{
+			wantStrict: []telegraf.Metric{
+				testutil.MustMetric(
+					"syslog",
+					map[string]string{
+						"severity": "notice",
+						"facility": "daemon",
+						"hostname": "web1",
+						"appname":  "someservice",
+					},
+					map[string]interface{}{
 						"version":       uint16(1),
 						"timestamp":     time.Unix(1456029177, 0).UnixNano(),
 						"procid":        "2341",
@@ -35,19 +43,19 @@ func getTestCasesForNonTransparent() []testCaseStream {
 						"severity_code": 5,
 						"facility_code": 3,
 					},
-					Tags: map[string]string{
-						"severity": "notice",
-						"facility": "daemon",
-						"hostname": "web1",
-						"appname":  "someservice",
-					},
-					Time: defaultTime,
-				},
+					defaultTime,
+				),
 			},
-			wantBestEffort: []testutil.Metric{
-				{
-					Measurement: "syslog",
-					Fields: map[string]interface{}{
+			wantBestEffort: []telegraf.Metric{
+				testutil.MustMetric(
+					"syslog",
+					map[string]string{
+						"severity": "notice",
+						"facility": "daemon",
+						"hostname": "web1",
+						"appname":  "someservice",
+					},
+					map[string]interface{}{
 						"version":       uint16(1),
 						"timestamp":     time.Unix(1456029177, 0).UnixNano(),
 						"procid":        "2341",
@@ -59,75 +67,69 @@ func getTestCasesForNonTransparent() []testCaseStream {
 						"severity_code": 5,
 						"facility_code": 3,
 					},
-					Tags: map[string]string{
-						"severity": "notice",
-						"facility": "daemon",
-						"hostname": "web1",
-						"appname":  "someservice",
-					},
-					Time: defaultTime,
-				},
+					defaultTime,
+				),
 			},
 			werr: 1,
 		},
 		{
 			name: "1st/min/ok//2nd/min/ok",
 			data: []byte("<1>2 - - - - - -\n<4>11 - - - - - -\n"),
-			wantStrict: []testutil.Metric{
-				{
-					Measurement: "syslog",
-					Fields: map[string]interface{}{
+			wantStrict: []telegraf.Metric{
+				testutil.MustMetric(
+					"syslog",
+					map[string]string{
+						"severity": "alert",
+						"facility": "kern",
+					},
+					map[string]interface{}{
 						"version":       uint16(2),
 						"severity_code": 1,
 						"facility_code": 0,
 					},
-					Tags: map[string]string{
-						"severity": "alert",
+					defaultTime,
+				),
+				testutil.MustMetric(
+					"syslog",
+					map[string]string{
+						"severity": "warning",
 						"facility": "kern",
 					},
-					Time: defaultTime,
-				},
-				{
-					Measurement: "syslog",
-					Fields: map[string]interface{}{
+					map[string]interface{}{
 						"version":       uint16(11),
 						"severity_code": 4,
 						"facility_code": 0,
 					},
-					Tags: map[string]string{
-						"severity": "warning",
-						"facility": "kern",
-					},
-					Time: defaultTime.Add(time.Nanosecond),
-				},
+					defaultTime.Add(time.Nanosecond),
+				),
 			},
-			wantBestEffort: []testutil.Metric{
-				{
-					Measurement: "syslog",
-					Fields: map[string]interface{}{
+			wantBestEffort: []telegraf.Metric{
+				testutil.MustMetric(
+					"syslog",
+					map[string]string{
+						"severity": "alert",
+						"facility": "kern",
+					},
+					map[string]interface{}{
 						"version":       uint16(2),
 						"severity_code": 1,
 						"facility_code": 0,
 					},
-					Tags: map[string]string{
-						"severity": "alert",
+					defaultTime,
+				),
+				testutil.MustMetric(
+					"syslog",
+					map[string]string{
+						"severity": "warning",
 						"facility": "kern",
 					},
-					Time: defaultTime,
-				},
-				{
-					Measurement: "syslog",
-					Fields: map[string]interface{}{
+					map[string]interface{}{
 						"version":       uint16(11),
 						"severity_code": 4,
 						"facility_code": 0,
 					},
-					Tags: map[string]string{
-						"severity": "warning",
-						"facility": "kern",
-					},
-					Time: defaultTime.Add(time.Nanosecond),
-				},
+					defaultTime.Add(time.Nanosecond),
+				),
 			},
 		},
 	}
@@ -138,7 +140,7 @@ func testStrictNonTransparent(t *testing.T, protocol string, address string, wan
 	for _, tc := range getTestCasesForNonTransparent() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false, NonTransparent)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false, framing.NonTransparent)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()
@@ -185,13 +187,7 @@ func testStrictNonTransparent(t *testing.T, protocol string, address string, wan
 			if len(acc.Errors) != tc.werr {
 				t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tc.werr, acc.Errors)
 			}
-			var got []testutil.Metric
-			for _, metric := range acc.Metrics {
-				got = append(got, *metric)
-			}
-			if !cmp.Equal(tc.wantStrict, got) {
-				t.Fatalf("Got (+) / Want (-)\n %s", cmp.Diff(tc.wantStrict, got))
-			}
+			testutil.RequireMetricsEqual(t, tc.wantStrict, acc.GetTelegrafMetrics())
 		})
 	}
 }
@@ -200,7 +196,7 @@ func testBestEffortNonTransparent(t *testing.T, protocol string, address string,
 	for _, tc := range getTestCasesForNonTransparent() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true, NonTransparent)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true, framing.NonTransparent)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()
@@ -239,14 +235,7 @@ func testBestEffortNonTransparent(t *testing.T, protocol string, address string,
 				acc.Wait(len(tc.wantBestEffort))
 			}
 
-			// Verify
-			var got []testutil.Metric
-			for _, metric := range acc.Metrics {
-				got = append(got, *metric)
-			}
-			if !cmp.Equal(tc.wantBestEffort, got) {
-				t.Fatalf("Got (+) / Want (-)\n %s", cmp.Diff(tc.wantBestEffort, got))
-			}
+			testutil.RequireMetricsEqual(t, tc.wantStrict, acc.GetTelegrafMetrics())
 		})
 	}
 }

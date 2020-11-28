@@ -50,13 +50,15 @@ func New(
 		sort.Slice(m.tags, func(i, j int) bool { return m.tags[i].Key < m.tags[j].Key })
 	}
 
-	m.fields = make([]*telegraf.Field, 0, len(fields))
-	for k, v := range fields {
-		v := convertField(v)
-		if v == nil {
-			continue
+	if len(fields) > 0 {
+		m.fields = make([]*telegraf.Field, 0, len(fields))
+		for k, v := range fields {
+			v := convertField(v)
+			if v == nil {
+				continue
+			}
+			m.AddField(k, v)
 		}
-		m.AddField(k, v)
 	}
 
 	return m, nil
@@ -240,11 +242,11 @@ func (m *metric) Copy() telegraf.Metric {
 	}
 
 	for i, tag := range m.tags {
-		m2.tags[i] = tag
+		m2.tags[i] = &telegraf.Tag{Key: tag.Key, Value: tag.Value}
 	}
 
 	for i, field := range m.fields {
-		m2.fields[i] = field
+		m2.fields[i] = &telegraf.Field{Key: field.Key, Value: field.Value}
 	}
 	return m2
 }
@@ -312,7 +314,68 @@ func convertField(v interface{}) interface{} {
 		return uint64(v)
 	case float32:
 		return float64(v)
+	case *float64:
+		if v != nil {
+			return *v
+		}
+	case *int64:
+		if v != nil {
+			return *v
+		}
+	case *string:
+		if v != nil {
+			return *v
+		}
+	case *bool:
+		if v != nil {
+			return *v
+		}
+	case *int:
+		if v != nil {
+			return int64(*v)
+		}
+	case *uint:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *uint64:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *[]byte:
+		if v != nil {
+			return string(*v)
+		}
+	case *int32:
+		if v != nil {
+			return int64(*v)
+		}
+	case *int16:
+		if v != nil {
+			return int64(*v)
+		}
+	case *int8:
+		if v != nil {
+			return int64(*v)
+		}
+	case *uint32:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *uint16:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *uint8:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *float32:
+		if v != nil {
+			return float64(*v)
+		}
 	default:
 		return nil
 	}
+	return nil
 }

@@ -9,17 +9,17 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type NginxPlusApi struct {
-	Urls []string
-
-	ApiVersion int64
+	Urls            []string          `toml:"urls"`
+	ApiVersion      int64             `toml:"api_version"`
+	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	tls.ClientConfig
 
 	client *http.Client
-
-	ResponseTimeout internal.Duration
 }
 
 const (
@@ -31,10 +31,13 @@ const (
 	connectionsPath = "connections"
 	sslPath         = "ssl"
 
-	httpRequestsPath    = "http/requests"
-	httpServerZonesPath = "http/server_zones"
-	httpUpstreamsPath   = "http/upstreams"
-	httpCachesPath      = "http/caches"
+	httpRequestsPath      = "http/requests"
+	httpServerZonesPath   = "http/server_zones"
+	httpLocationZonesPath = "http/location_zones"
+	httpUpstreamsPath     = "http/upstreams"
+	httpCachesPath        = "http/caches"
+
+	resolverZonesPath = "resolvers"
 
 	streamServerZonesPath = "stream/server_zones"
 	streamUpstreamsPath   = "stream/upstreams"
@@ -49,6 +52,13 @@ var sampleConfig = `
 
   # HTTP response timeout (default: 5s)
   response_timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (n *NginxPlusApi) SampleConfig() string {
@@ -100,9 +110,16 @@ func (n *NginxPlusApi) createHttpClient() (*http.Client, error) {
 		n.ResponseTimeout.Duration = time.Second * 5
 	}
 
+	tlsConfig, err := n.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	client := &http.Client{
-		Transport: &http.Transport{},
-		Timeout:   n.ResponseTimeout.Duration,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+		Timeout: n.ResponseTimeout.Duration,
 	}
 
 	return client, nil

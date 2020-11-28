@@ -12,16 +12,20 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
+const (
+	defaultURL = "http://127.0.0.1:8080/telegraf"
+)
+
 var sampleConfig = `
   ## URL is the address to send metrics to
-  url = "http://127.0.0.1:8080/metric"
+  url = "http://127.0.0.1:8080/telegraf"
 
   ## Timeout for HTTP message
   # timeout = "5s"
@@ -52,14 +56,14 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
 
+  ## HTTP Content-Encoding for write request body, can be set to "gzip" to
+  ## compress body or "identity" to apply no encoding.
+  # content_encoding = "identity"
+
   ## Additional HTTP headers
   # [outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format
   #   Content-Type = "text/plain; charset=utf-8"
-
-  ## HTTP Content-Encoding for write request body, can be set to "gzip" to
-  ## compress body or "identity" to apply no encoding.
-  # content_encoding = "identity"
 `
 
 const (
@@ -172,10 +176,12 @@ func (h *HTTP) write(reqBody []byte) error {
 
 	var err error
 	if h.ContentEncoding == "gzip" {
-		reqBodyBuffer, err = internal.CompressWithGzip(reqBodyBuffer)
+		rc, err := internal.CompressWithGzip(reqBodyBuffer)
 		if err != nil {
 			return err
 		}
+		defer rc.Close()
+		reqBodyBuffer = rc
 	}
 
 	req, err := http.NewRequest(h.Method, h.URL, reqBodyBuffer)
@@ -187,12 +193,15 @@ func (h *HTTP) write(reqBody []byte) error {
 		req.SetBasicAuth(h.Username, h.Password)
 	}
 
-	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
+	req.Header.Set("User-Agent", internal.ProductToken())
 	req.Header.Set("Content-Type", defaultContentType)
 	if h.ContentEncoding == "gzip" {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
 	for k, v := range h.Headers {
+		if strings.ToLower(k) == "host" {
+			req.Host = v
+		}
 		req.Header.Set(k, v)
 	}
 
@@ -215,6 +224,7 @@ func init() {
 		return &HTTP{
 			Timeout: internal.Duration{Duration: defaultClientTimeout},
 			Method:  defaultMethod,
+			URL:     defaultURL,
 		}
 	})
 }

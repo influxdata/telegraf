@@ -33,7 +33,7 @@ func TestKapacitor(t *testing.T) {
 		"alloc_bytes":         int64(6950624),
 		"buck_hash_sys_bytes": int64(1446737),
 		"frees":               int64(129656),
-		"gcc_pu_fraction":     float64(0.006757149597237818),
+		"gc_cpu_fraction":     float64(0.006757149597237818),
 		"gc_sys_bytes":        int64(575488),
 		"heap_alloc_bytes":    int64(6950624),
 		"heap_idle_bytes":     int64(499712),

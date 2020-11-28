@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"encoding/base64"
+
 	"cloud.google.com/go/pubsub"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -122,8 +124,7 @@ func (t *stubTopic) Publish(ctx context.Context, msg *pubsub.Message) publishRes
 	}
 
 	bundled := &bundledMsg{msg, r}
-	err := t.bundler.Add(bundled, len(msg.Data))
-	if err != nil {
+	if err := t.bundler.Add(bundled, len(msg.Data)); err != nil {
 		t.Fatalf("unexpected error while adding to bundle: %v", err)
 	}
 	return r
@@ -180,8 +181,17 @@ func (t *stubTopic) parseIDs(msg *pubsub.Message) []string {
 	p, _ := parsers.NewInfluxParser()
 	metrics, err := p.Parse(msg.Data)
 	if err != nil {
-		t.Fatalf("unexpected parsing error: %v", err)
+		// Just attempt to base64-decode first before returning error.
+		d, err := base64.StdEncoding.DecodeString(string(msg.Data))
+		if err != nil {
+			t.Errorf("unable to base64-decode potential test message: %v", err)
+		}
+		metrics, err = p.Parse(d)
+		if err != nil {
+			t.Fatalf("unexpected parsing error: %v", err)
+		}
 	}
+
 	ids := make([]string, len(metrics))
 	for i, met := range metrics {
 		id, _ := met.GetField("value")
@@ -199,4 +209,10 @@ func (r *stubResult) Get(ctx context.Context) (string, error) {
 	case <-r.done:
 		return fmt.Sprintf("id-%s", r.metricIds[0]), nil
 	}
+}
+
+func (t *stubTopic) getBundleCount() int {
+	t.bLock.Lock()
+	defer t.bLock.Unlock()
+	return t.bundleCount
 }

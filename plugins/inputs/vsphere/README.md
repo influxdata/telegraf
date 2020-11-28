@@ -1,22 +1,25 @@
 # VMware vSphere Input Plugin
 
 The VMware vSphere plugin uses the vSphere API to gather metrics from multiple vCenter servers.
- 
+
 * Clusters
 * Hosts
 * VMs
 * Datastores
 
+## Supported versions of vSphere
+This plugin supports vSphere version 5.5 through 6.7.
+
 ## Configuration
 
-NOTE: To disable collection of a specific resource type, simply exclude all metrics using the XX_metric_exclude. 
+NOTE: To disable collection of a specific resource type, simply exclude all metrics using the XX_metric_exclude.
 For example, to disable collection of VMs, add this:
 
 ```
 vm_metric_exclude = [ "*" ]
 ```
 
-```
+```toml
 # Read metrics from one or many vCenters
 [[inputs.vsphere]]
     ## List of vCenter URLs to be monitored. These three lines must be uncommented
@@ -28,6 +31,7 @@ vm_metric_exclude = [ "*" ]
   ## VMs
   ## Typical VM metrics (if omitted or empty, all metrics are collected)
   # vm_include = [ "/*/vm/**"] # Inventory path to VMs to collect (by default all are collected)
+  # vm_exclude = [] # Inventory paths to exclude
   vm_metric_include = [
     "cpu.demand.average",
     "cpu.idle.summation",
@@ -52,7 +56,7 @@ vm_metric_exclude = [ "*" ]
     "net.droppedRx.summation",
     "net.droppedTx.summation",
     "net.usage.average",
-    "power.power.average",    
+    "power.power.average",
     "virtualDisk.numberReadAveraged.average",
     "virtualDisk.numberWriteAveraged.average",
     "virtualDisk.read.average",
@@ -67,9 +71,10 @@ vm_metric_exclude = [ "*" ]
   # vm_metric_exclude = [] ## Nothing is excluded by default
   # vm_instances = true ## true by default
 
-  ## Hosts 
+  ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
   # host_include = [ "/*/host/**"] # Inventory path to hosts to collect (by default all are collected)
+  # host_exclude [] # Inventory paths to exclude
   host_metric_include = [
     "cpu.coreUtilization.average",
     "cpu.costop.summation",
@@ -118,36 +123,43 @@ vm_metric_exclude = [ "*" ]
     "storageAdapter.write.average",
     "sys.uptime.latest",
   ]
+    ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
+  # ip_addresses = ["ipv6", "ipv4" ]
+
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
-  ## Clusters 
+
+  ## Clusters
   # cluster_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
+  # cluster_exclude = [] # Inventory paths to exclude
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
-  # cluster_instances = false ## false by default 
+  # cluster_instances = false ## false by default
 
-  ## Datastores 
-  # cluster_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
+  ## Datastores
+  # datastore_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
+  # datastore_exclude = [] # Inventory paths to exclude
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
-  # datastore_instances = false ## false by default 
+  # datastore_instances = false ## false by default
 
   ## Datacenters
   # datacenter_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
+  # datacenter_exclude = [] # Inventory paths to exclude
   datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
-  # datacenter_instances = false ## false by default 
+  # datacenter_instances = false ## false by default
 
-  ## Plugin Settings  
+  ## Plugin Settings
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
 
-  ## number of objects to retreive per query for realtime resources (vms and hosts)
+  ## number of objects to retrieve per query for realtime resources (vms and hosts)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
   # max_query_objects = 256
 
-  ## number of metrics to retreive per query for non-realtime resources (clusters and datastores)
+  ## number of metrics to retrieve per query for non-realtime resources (clusters and datastores)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
   # max_query_metrics = 256
 
@@ -155,16 +167,30 @@ vm_metric_exclude = [ "*" ]
   # collect_concurrency = 1
   # discover_concurrency = 1
 
-  ## whether or not to force discovery of new objects on initial gather call before collecting metrics
-  ## when true for large environments this may cause errors for time elapsed while collecting metrics
-  ## when false (default) the first collection cycle may result in no or limited metrics while objects are discovered
-  # force_discover_on_init = false
-
   ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
   # object_discovery_interval = "300s"
 
   ## timeout applies to any of the api request made to vcenter
   # timeout = "60s"
+
+  ## When set to true, all samples are sent as integers. This makes the output
+  ## data types backwards compatible with Telegraf 1.9 or lower. Normally all
+  ## samples from vCenter, with the exception of percentages, are integer
+  ## values, but under some conditions, some averaging takes place internally in
+  ## the plugin. Setting this flag to "false" will send values as floats to
+  ## preserve the full precision when averaging takes place.
+  # use_int_samples = true
+
+  ## Custom attributes from vCenter can be very useful for queries in order to slice the
+  ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
+  ## by default, since they can add a considerable amount of tags to the resulting metrics. To
+  ## enable, simply set custom_attribute_exclude to [] (empty set) and use custom_attribute_include
+  ## to select the attributes you want to include.
+  ## By default, since they can add a considerable amount of tags to the resulting metrics. To
+  ## enable, simply set custom_attribute_exclude to [] (empty set) and use custom_attribute_include
+  ## to select the attributes you want to include.
+  # custom_attribute_include = []
+  # custom_attribute_exclude = ["*"]
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
@@ -172,17 +198,17 @@ vm_metric_exclude = [ "*" ]
   # ssl_key = "/path/to/keyfile"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
-``` 
+```
 
 ### Objects and Metrics Per Query
 
-By default, in vCenter's configuration a limit is set to the number of entities that are included in a performance chart query. Default settings for vCenter 6.5 and above is 256. Prior versions of vCenter have this set to 64. 
+By default, in vCenter's configuration a limit is set to the number of entities that are included in a performance chart query. Default settings for vCenter 6.5 and above is 256. Prior versions of vCenter have this set to 64.
 A vCenter administrator can change this setting, see this [VMware KB article](https://kb.vmware.com/s/article/2107096) for more information.
 
 Any modification should be reflected in this plugin by modifying the parameter `max_query_objects`
 
 ```
-  ## number of objects to retreive per query for realtime resources (vms and hosts)
+  ## number of objects to retrieve per query for realtime resources (vms and hosts)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
   # max_query_objects = 256
 ```
@@ -233,34 +259,34 @@ to a file system. A vSphere inventory has a structure similar to this:
 #### Using Inventory Paths
 Using familiar UNIX-style paths, one could select e.g. VM2 with the path ```/DC0/vm/VM2```.
 
-Often, we want to select a group of resource, such as all the VMs in a folder. We could use the path ```/DC0/vm/Folder1/*``` for that. 
+Often, we want to select a group of resource, such as all the VMs in a folder. We could use the path ```/DC0/vm/Folder1/*``` for that.
 
 Another possibility is to select objects using a partial name, such as ```/DC0/vm/Folder1/hadoop*``` yielding all vms in Folder1 with a name starting with "hadoop".
 
 Finally, due to the arbitrary nesting of the folder structure, we need a "recursive wildcard" for traversing multiple folders. We use the "**" symbol for that. If we want to look for a VM with a name starting with "hadoop" in any folder, we could use the following path: ```/DC0/vm/**/hadoop*```
 
 #### Multiple paths to VMs
-As we can see from the example tree above, VMs appear both in its on folder under the datacenter, as well as under the hosts. This is useful when you like to select VMs on a specific host. For example, ```/DC0/host/Cluster1/Host1/hadoop*``` selects all VMs with a name starting with "hadoop" that are running on Host1. 
+As we can see from the example tree above, VMs appear both in its on folder under the datacenter, as well as under the hosts. This is useful when you like to select VMs on a specific host. For example, ```/DC0/host/Cluster1/Host1/hadoop*``` selects all VMs with a name starting with "hadoop" that are running on Host1.
 
 We can extend this to looking at a cluster level: ```/DC0/host/Cluster1/*/hadoop*```. This selects any VM matching "hadoop*" on any host in Cluster1.
 ## Performance Considerations
 
 ### Realtime vs. historical metrics
 
-vCenter keeps two different kinds of metrics, known as realtime and historical metrics. 
+vCenter keeps two different kinds of metrics, known as realtime and historical metrics.
 
-* Realtime metrics: Avaialable at a 20 second granularity. These metrics are stored in memory and are very fast and cheap to query. Our tests have shown that a complete set of realtime metrics for 7000 virtual machines can be obtained in less than 20 seconds. Realtime metrics are only available on **ESXi hosts** and **virtual machine** resources. Realtime metrics are only stored for 1 hour in vCenter. 
+* Realtime metrics: Available at a 20 second granularity. These metrics are stored in memory and are very fast and cheap to query. Our tests have shown that a complete set of realtime metrics for 7000 virtual machines can be obtained in less than 20 seconds. Realtime metrics are only available on **ESXi hosts** and **virtual machine** resources. Realtime metrics are only stored for 1 hour in vCenter.
 * Historical metrics: Available at a 5 minute, 30 minutes, 2 hours and 24 hours rollup levels. The vSphere Telegraf plugin only uses the 5 minute rollup. These metrics are stored in the vCenter database and can be expensive and slow to query. Historical metrics are the only type of metrics available for **clusters**, **datastores** and **datacenters**.
 
 For more information, refer to the vSphere documentation here: https://pubs.vmware.com/vsphere-50/index.jsp?topic=%2Fcom.vmware.wssdk.pg.doc_50%2FPG_Ch16_Performance.18.2.html
 
-This distinction has an impact on how Telegraf collects metrics. A single instance of an input plugin can have one and only one collection interval, which means that you typically set the collection interval based on the most frequently collected metric. Let's assume you set the collection interval to 1 minute. All realtime metrics will be collected every minute. Since the historical metrics are only available on a 5 minute interval, the vSphere Telegraf plugin automatically skips four out of five collection cycles for these metrics. This works fine in many cases. Problems arise when the collection of historical metrics takes longer than the collecition interval. This will cause error messages similar to this to appear in the Telegraf logs:
+This distinction has an impact on how Telegraf collects metrics. A single instance of an input plugin can have one and only one collection interval, which means that you typically set the collection interval based on the most frequently collected metric. Let's assume you set the collection interval to 1 minute. All realtime metrics will be collected every minute. Since the historical metrics are only available on a 5 minute interval, the vSphere Telegraf plugin automatically skips four out of five collection cycles for these metrics. This works fine in many cases. Problems arise when the collection of historical metrics takes longer than the collection interval. This will cause error messages similar to this to appear in the Telegraf logs:
 
 ```2019-01-16T13:41:10Z W! [agent] input "inputs.vsphere" did not complete within its interval```
 
 This will disrupt the metric collection and can result in missed samples. The best practice workaround is to specify two instances of the vSphere plugin, one for the realtime metrics with a short collection interval and one for the historical metrics with a longer interval. You can use the ```*_metric_exclude``` to turn off the resources you don't want to collect metrics for in each instance. For example:
 
-```
+```toml
 ## Realtime instance
 [[inputs.vsphere]]
   interval = "60s"
@@ -293,7 +319,7 @@ This will disrupt the metric collection and can result in missed samples. The be
   host_metric_exclude = ["*"] # Exclude realtime metrics
   vm_metric_exclude = ["*"] # Exclude realtime metrics
 
-  max_query_metrics = 256 
+  max_query_metrics = 256
   collect_concurrency = 3
 ```
 
@@ -303,7 +329,7 @@ The ```max_query_metrics``` determines the maximum number of metrics to attempt 
 
 ```2019-01-21T03:24:18Z W! [input.vsphere] Configured max_query_metrics is 256, but server limits it to 64. Reducing.```
 
-You may ask a vCenter administrator to increase this limit to help boost performance. 
+You may ask a vCenter administrator to increase this limit to help boost performance.
 
 ### Cluster metrics and the max_query_metrics setting
 
@@ -313,7 +339,7 @@ Cluster metrics are handled a bit differently by vCenter. They are aggregated fr
 
 There are two ways of addressing this:
 * Ask your vCenter administrator to set ```config.vpxd.stats.maxQueryMetrics``` to a number that's higher than the total number of virtual machines managed by a vCenter instance.
-* Exclude the cluster metrics and use either the basicstats aggregator to calculate sums and averages per cluster or use queries in the visualization tool to obtain the same result. 
+* Exclude the cluster metrics and use either the basicstats aggregator to calculate sums and averages per cluster or use queries in the visualization tool to obtain the same result.
 
 ### Concurrency settings
 
@@ -321,7 +347,7 @@ The vSphere plugin allows you to specify two concurrency settings:
 * ```collect_concurrency```: The maximum number of simultaneous queries for performance metrics allowed per resource type.
 * ```discover_concurrency```: The  maximum number of simultaneous queries for resource discovery allowed.
 
-While a higher level of concurrency typically has a positive impact on performance, increasing these numbers too much can cause performance issues at the vCenter server. A rule of thumb is to set these parameters to the number of virtual machines divided by 1500 and rounded up to the nearest integer. 
+While a higher level of concurrency typically has a positive impact on performance, increasing these numbers too much can cause performance issues at the vCenter server. A rule of thumb is to set these parameters to the number of virtual machines divided by 1500 and rounded up to the nearest integer.
 
 ## Measurements &amp; Fields
 
@@ -342,7 +368,7 @@ While a higher level of concurrency typically has a positive impact on performan
 	- Storage Path: commands, latency, # reads/writes
 	- System Resources: cpu active, cpu max, cpu running, cpu usage, mem allocated, mem consumed, mem shared, swap
 	- System: uptime
-	- Flash Module: active VMDKs 
+	- Flash Module: active VMDKs
 - VM Stats:
 	- CPU: demand, usage, readiness, cost, mhz
 	- Datastore: latency, # reads/writes
@@ -352,12 +378,12 @@ While a higher level of concurrency typically has a positive impact on performan
 	- Power: energy, usage
 	- Res CPU: active, max, running
 	- System: operating system uptime, uptime
-	- Virtual Disk: seeks, # reads/writes, latency, load 
+	- Virtual Disk: seeks, # reads/writes, latency, load
 - Datastore stats:
-	- Disk: Capacity, provisioned, used  
+	- Disk: Capacity, provisioned, used
 
 For a detailed list of commonly available metrics, please refer to [METRICS.md](METRICS.md)
-	
+
 ## Tags
 
 - all metrics
@@ -380,7 +406,7 @@ For a detailed list of commonly available metrics, please refer to [METRICS.md](
 	- interface (name of network interface)
 - storageAdapter stats for Host
 	- adapter (name of storage adapter)
-- storagePath stats for Host 
+- storagePath stats for Host
 	- path (id of storage path)
 - sys.resource* stats for Host
 	- resource (resource type)

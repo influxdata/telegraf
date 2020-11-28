@@ -11,10 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vjeantet/grok"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/vjeantet/grok"
 )
 
 var timeLayouts = map[string]string{
@@ -29,12 +28,13 @@ var timeLayouts = map[string]string{
 	"ts-rfc3339":     "2006-01-02T15:04:05Z07:00",
 	"ts-rfc3339nano": "2006-01-02T15:04:05.999999999Z07:00",
 	"ts-httpd":       "02/Jan/2006:15:04:05 -0700",
-	// These three are not exactly "layouts", but they are special cases that
+	// These four are not exactly "layouts", but they are special cases that
 	// will get handled in the ParseLine function.
-	"ts-epoch":     "EPOCH",
-	"ts-epochnano": "EPOCH_NANO",
-	"ts-syslog":    "SYSLOG_TIMESTAMP",
-	"ts":           "GENERIC_TIMESTAMP", // try parsing all known timestamp layouts.
+	"ts-epoch":      "EPOCH",
+	"ts-epochnano":  "EPOCH_NANO",
+	"ts-epochmilli": "EPOCH_MILLI",
+	"ts-syslog":     "SYSLOG_TIMESTAMP",
+	"ts":            "GENERIC_TIMESTAMP", // try parsing all known timestamp layouts.
 }
 
 const (
@@ -46,6 +46,7 @@ const (
 	DURATION          = "duration"
 	DROP              = "drop"
 	EPOCH             = "EPOCH"
+	EPOCH_MILLI       = "EPOCH_MILLI"
 	EPOCH_NANO        = "EPOCH_NANO"
 	SYSLOG_TIMESTAMP  = "SYSLOG_TIMESTAMP"
 	GENERIC_TIMESTAMP = "GENERIC_TIMESTAMP"
@@ -249,7 +250,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case MEASUREMENT:
 			p.Measurement = v
 		case INT:
-			iv, err := strconv.ParseInt(v, 10, 64)
+			iv, err := strconv.ParseInt(v, 0, 64)
 			if err != nil {
 				log.Printf("E! Error parsing %s to int: %s", v, err)
 			} else {
@@ -272,7 +273,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case TAG:
 			tags[k] = v
 		case STRING:
-			fields[k] = strings.Trim(v, `"`)
+			fields[k] = v
 		case EPOCH:
 			parts := strings.SplitN(v, ".", 2)
 			if len(parts) == 0 {
@@ -298,6 +299,13 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				ts = ts.Add(time.Duration(nanosec) * time.Nanosecond)
 			}
 			timestamp = ts
+		case EPOCH_MILLI:
+			ms, err := strconv.ParseInt(v, 10, 64)
+			if err != nil {
+				log.Printf("E! Error parsing %s to int: %s", v, err)
+			} else {
+				timestamp = time.Unix(0, ms*int64(time.Millisecond))
+			}
 		case EPOCH_NANO:
 			iv, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
@@ -359,10 +367,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				log.Printf("E! Error parsing %s to time layout [%s]: %s", v, t, err)
 			}
 		}
-	}
-
-	if len(fields) == 0 {
-		return nil, fmt.Errorf("grok: must have one or more fields")
 	}
 
 	if p.UniqueTimestamp != "auto" {

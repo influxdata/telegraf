@@ -1,8 +1,10 @@
 package influx_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -14,41 +16,59 @@ type TestingHandler struct {
 }
 
 func (h *TestingHandler) SetMeasurement(name []byte) error {
+	n := make([]byte, len(name))
+	copy(n, name)
+
 	mname := Result{
 		Name:  Measurement,
-		Value: name,
+		Value: n,
 	}
 	h.results = append(h.results, mname)
 	return nil
 }
 
 func (h *TestingHandler) AddTag(key []byte, value []byte) error {
+	k := make([]byte, len(key))
+	copy(k, key)
+	v := make([]byte, len(value))
+	copy(v, value)
+
 	tagkey := Result{
 		Name:  TagKey,
-		Value: key,
+		Value: k,
 	}
 	tagvalue := Result{
 		Name:  TagValue,
-		Value: value,
+		Value: v,
 	}
 	h.results = append(h.results, tagkey, tagvalue)
 	return nil
 }
 
 func (h *TestingHandler) AddInt(key []byte, value []byte) error {
+	k := make([]byte, len(key))
+	copy(k, key)
+	v := make([]byte, len(value))
+	copy(v, value)
+
 	fieldkey := Result{
 		Name:  FieldKey,
-		Value: key,
+		Value: k,
 	}
 	fieldvalue := Result{
 		Name:  FieldInt,
-		Value: value,
+		Value: v,
 	}
 	h.results = append(h.results, fieldkey, fieldvalue)
 	return nil
 }
 
 func (h *TestingHandler) AddUint(key []byte, value []byte) error {
+	k := make([]byte, len(key))
+	copy(k, key)
+	v := make([]byte, len(value))
+	copy(v, value)
+
 	fieldkey := Result{
 		Name:  FieldKey,
 		Value: key,
@@ -62,48 +82,66 @@ func (h *TestingHandler) AddUint(key []byte, value []byte) error {
 }
 
 func (h *TestingHandler) AddFloat(key []byte, value []byte) error {
+	k := make([]byte, len(key))
+	copy(k, key)
+	v := make([]byte, len(value))
+	copy(v, value)
+
 	fieldkey := Result{
 		Name:  FieldKey,
-		Value: key,
+		Value: k,
 	}
 	fieldvalue := Result{
 		Name:  FieldFloat,
-		Value: value,
+		Value: v,
 	}
 	h.results = append(h.results, fieldkey, fieldvalue)
 	return nil
 }
 
 func (h *TestingHandler) AddString(key []byte, value []byte) error {
+	k := make([]byte, len(key))
+	copy(k, key)
+	v := make([]byte, len(value))
+	copy(v, value)
+
 	fieldkey := Result{
 		Name:  FieldKey,
-		Value: key,
+		Value: k,
 	}
 	fieldvalue := Result{
 		Name:  FieldString,
-		Value: value,
+		Value: v,
 	}
 	h.results = append(h.results, fieldkey, fieldvalue)
 	return nil
 }
 
 func (h *TestingHandler) AddBool(key []byte, value []byte) error {
+	k := make([]byte, len(key))
+	copy(k, key)
+	v := make([]byte, len(value))
+	copy(v, value)
+
 	fieldkey := Result{
 		Name:  FieldKey,
-		Value: key,
+		Value: k,
 	}
 	fieldvalue := Result{
 		Name:  FieldBool,
-		Value: value,
+		Value: v,
 	}
 	h.results = append(h.results, fieldkey, fieldvalue)
 	return nil
 }
 
 func (h *TestingHandler) SetTimestamp(tm []byte) error {
+	t := make([]byte, len(tm))
+	copy(t, tm)
+
 	timestamp := Result{
 		Name:  Timestamp,
-		Value: tm,
+		Value: t,
 	}
 	h.results = append(h.results, timestamp)
 	return nil
@@ -829,6 +867,27 @@ var tests = []struct {
 			{
 				Name:  FieldString,
 				Value: []byte("4\n2"),
+			},
+			{
+				Name: Success,
+			},
+		},
+	},
+	{
+		name:  "cr in string field",
+		input: []byte("cpu value=\"4\r2\""),
+		results: []Result{
+			{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			{
+				Name:  FieldString,
+				Value: []byte("4\r2"),
 			},
 			{
 				Name: Success,
@@ -1676,63 +1735,64 @@ func TestMachine(t *testing.T) {
 	}
 }
 
+var positionTests = []struct {
+	name   string
+	input  []byte
+	lineno int
+	column int
+}{
+	{
+		name:   "empty string",
+		input:  []byte(""),
+		lineno: 1,
+		column: 1,
+	},
+	{
+		name:   "minimal",
+		input:  []byte("cpu value=42"),
+		lineno: 1,
+		column: 13,
+	},
+	{
+		name:   "one newline",
+		input:  []byte("cpu value=42\ncpu value=42"),
+		lineno: 2,
+		column: 13,
+	},
+	{
+		name:   "several newlines",
+		input:  []byte("cpu value=42\n\n\n"),
+		lineno: 4,
+		column: 1,
+	},
+	{
+		name:   "error on second line",
+		input:  []byte("cpu value=42\ncpu value=invalid"),
+		lineno: 2,
+		column: 11,
+	},
+	{
+		name:   "error after comment line",
+		input:  []byte("cpu value=42\n# comment\ncpu value=invalid"),
+		lineno: 3,
+		column: 11,
+	},
+	{
+		name:   "dos line endings",
+		input:  []byte("cpu value=42\r\ncpu value=invalid"),
+		lineno: 2,
+		column: 11,
+	},
+	{
+		name:   "mac line endings not supported",
+		input:  []byte("cpu value=42\rcpu value=invalid"),
+		lineno: 1,
+		column: 14,
+	},
+}
+
 func TestMachinePosition(t *testing.T) {
-	var tests = []struct {
-		name   string
-		input  []byte
-		lineno int
-		column int
-	}{
-		{
-			name:   "empty string",
-			input:  []byte(""),
-			lineno: 1,
-			column: 1,
-		},
-		{
-			name:   "minimal",
-			input:  []byte("cpu value=42"),
-			lineno: 1,
-			column: 13,
-		},
-		{
-			name:   "one newline",
-			input:  []byte("cpu value=42\ncpu value=42"),
-			lineno: 2,
-			column: 13,
-		},
-		{
-			name:   "several newlines",
-			input:  []byte("cpu value=42\n\n\n"),
-			lineno: 4,
-			column: 1,
-		},
-		{
-			name:   "error on second line",
-			input:  []byte("cpu value=42\ncpu value=invalid"),
-			lineno: 2,
-			column: 11,
-		},
-		{
-			name:   "error after comment line",
-			input:  []byte("cpu value=42\n# comment\ncpu value=invalid"),
-			lineno: 3,
-			column: 11,
-		},
-		{
-			name:   "dos line endings",
-			input:  []byte("cpu value=42\r\ncpu value=invalid"),
-			lineno: 2,
-			column: 11,
-		},
-		{
-			name:   "mac line endings not supported",
-			input:  []byte("cpu value=42\rcpu value=invalid"),
-			lineno: 1,
-			column: 14,
-		},
-	}
-	for _, tt := range tests {
+	for _, tt := range positionTests {
 		t.Run(tt.name, func(t *testing.T) {
 			handler := &TestingHandler{}
 			fsm := influx.NewMachine(handler)
@@ -1773,7 +1833,7 @@ func BenchmarkMachine(b *testing.B) {
 }
 
 func TestMachineProcstat(t *testing.T) {
-	input := []byte("procstat,exe=bash,process_name=bash voluntary_context_switches=42i,memory_rss=5103616i,rlimit_memory_data_hard=2147483647i,cpu_time_user=0.02,rlimit_file_locks_soft=2147483647i,pid=29417i,cpu_time_nice=0,rlimit_memory_locked_soft=65536i,read_count=259i,rlimit_memory_vms_hard=2147483647i,memory_swap=0i,rlimit_num_fds_soft=1024i,rlimit_nice_priority_hard=0i,cpu_time_soft_irq=0,cpu_time=0i,rlimit_memory_locked_hard=65536i,realtime_priority=0i,signals_pending=0i,nice_priority=20i,cpu_time_idle=0,memory_stack=139264i,memory_locked=0i,rlimit_memory_stack_soft=8388608i,cpu_time_iowait=0,cpu_time_guest=0,cpu_time_guest_nice=0,rlimit_memory_data_soft=2147483647i,read_bytes=0i,rlimit_cpu_time_soft=2147483647i,involuntary_context_switches=2i,write_bytes=106496i,cpu_time_system=0,cpu_time_irq=0,cpu_usage=0,memory_vms=21659648i,memory_data=1576960i,rlimit_memory_stack_hard=2147483647i,num_threads=1i,cpu_time_stolen=0,rlimit_memory_rss_soft=2147483647i,rlimit_realtime_priority_soft=0i,num_fds=4i,write_count=35i,rlimit_signals_pending_soft=78994i,cpu_time_steal=0,rlimit_num_fds_hard=4096i,rlimit_file_locks_hard=2147483647i,rlimit_cpu_time_hard=2147483647i,rlimit_signals_pending_hard=78994i,rlimit_nice_priority_soft=0i,rlimit_memory_rss_hard=2147483647i,rlimit_memory_vms_soft=2147483647i,rlimit_realtime_priority_hard=0i 1517620624000000000")
+	input := []byte("procstat,exe=bash,process_name=bash voluntary_context_switches=42i,memory_rss=5103616i,rlimit_memory_data_hard=2147483647i,cpu_time_user=0.02,rlimit_file_locks_soft=2147483647i,pid=29417i,cpu_time_nice=0,rlimit_memory_locked_soft=65536i,read_count=259i,rlimit_memory_vms_hard=2147483647i,memory_swap=0i,rlimit_num_fds_soft=1024i,rlimit_nice_priority_hard=0i,cpu_time_soft_irq=0,cpu_time=0i,rlimit_memory_locked_hard=65536i,realtime_priority=0i,signals_pending=0i,nice_priority=20i,cpu_time_idle=0,memory_stack=139264i,memory_locked=0i,rlimit_memory_stack_soft=8388608i,cpu_time_iowait=0,cpu_time_guest=0,cpu_time_guest_nice=0,rlimit_memory_data_soft=2147483647i,read_bytes=0i,rlimit_cpu_time_soft=2147483647i,involuntary_context_switches=2i,write_bytes=106496i,cpu_time_system=0,cpu_time_irq=0,cpu_usage=0,memory_vms=21659648i,memory_data=1576960i,rlimit_memory_stack_hard=2147483647i,num_threads=1i,rlimit_memory_rss_soft=2147483647i,rlimit_realtime_priority_soft=0i,num_fds=4i,write_count=35i,rlimit_signals_pending_soft=78994i,cpu_time_steal=0,rlimit_num_fds_hard=4096i,rlimit_file_locks_hard=2147483647i,rlimit_cpu_time_hard=2147483647i,rlimit_signals_pending_hard=78994i,rlimit_nice_priority_soft=0i,rlimit_memory_rss_hard=2147483647i,rlimit_memory_vms_soft=2147483647i,rlimit_realtime_priority_hard=0i 1517620624000000000")
 	handler := &TestingHandler{}
 	fsm := influx.NewMachine(handler)
 	fsm.SetData(input)
@@ -1786,7 +1846,7 @@ func TestMachineProcstat(t *testing.T) {
 }
 
 func BenchmarkMachineProcstat(b *testing.B) {
-	input := []byte("procstat,exe=bash,process_name=bash voluntary_context_switches=42i,memory_rss=5103616i,rlimit_memory_data_hard=2147483647i,cpu_time_user=0.02,rlimit_file_locks_soft=2147483647i,pid=29417i,cpu_time_nice=0,rlimit_memory_locked_soft=65536i,read_count=259i,rlimit_memory_vms_hard=2147483647i,memory_swap=0i,rlimit_num_fds_soft=1024i,rlimit_nice_priority_hard=0i,cpu_time_soft_irq=0,cpu_time=0i,rlimit_memory_locked_hard=65536i,realtime_priority=0i,signals_pending=0i,nice_priority=20i,cpu_time_idle=0,memory_stack=139264i,memory_locked=0i,rlimit_memory_stack_soft=8388608i,cpu_time_iowait=0,cpu_time_guest=0,cpu_time_guest_nice=0,rlimit_memory_data_soft=2147483647i,read_bytes=0i,rlimit_cpu_time_soft=2147483647i,involuntary_context_switches=2i,write_bytes=106496i,cpu_time_system=0,cpu_time_irq=0,cpu_usage=0,memory_vms=21659648i,memory_data=1576960i,rlimit_memory_stack_hard=2147483647i,num_threads=1i,cpu_time_stolen=0,rlimit_memory_rss_soft=2147483647i,rlimit_realtime_priority_soft=0i,num_fds=4i,write_count=35i,rlimit_signals_pending_soft=78994i,cpu_time_steal=0,rlimit_num_fds_hard=4096i,rlimit_file_locks_hard=2147483647i,rlimit_cpu_time_hard=2147483647i,rlimit_signals_pending_hard=78994i,rlimit_nice_priority_soft=0i,rlimit_memory_rss_hard=2147483647i,rlimit_memory_vms_soft=2147483647i,rlimit_realtime_priority_hard=0i 1517620624000000000")
+	input := []byte("procstat,exe=bash,process_name=bash voluntary_context_switches=42i,memory_rss=5103616i,rlimit_memory_data_hard=2147483647i,cpu_time_user=0.02,rlimit_file_locks_soft=2147483647i,pid=29417i,cpu_time_nice=0,rlimit_memory_locked_soft=65536i,read_count=259i,rlimit_memory_vms_hard=2147483647i,memory_swap=0i,rlimit_num_fds_soft=1024i,rlimit_nice_priority_hard=0i,cpu_time_soft_irq=0,cpu_time=0i,rlimit_memory_locked_hard=65536i,realtime_priority=0i,signals_pending=0i,nice_priority=20i,cpu_time_idle=0,memory_stack=139264i,memory_locked=0i,rlimit_memory_stack_soft=8388608i,cpu_time_iowait=0,cpu_time_guest=0,cpu_time_guest_nice=0,rlimit_memory_data_soft=2147483647i,read_bytes=0i,rlimit_cpu_time_soft=2147483647i,involuntary_context_switches=2i,write_bytes=106496i,cpu_time_system=0,cpu_time_irq=0,cpu_usage=0,memory_vms=21659648i,memory_data=1576960i,rlimit_memory_stack_hard=2147483647i,num_threads=1i,rlimit_memory_rss_soft=2147483647i,rlimit_realtime_priority_soft=0i,num_fds=4i,write_count=35i,rlimit_signals_pending_soft=78994i,cpu_time_steal=0,rlimit_num_fds_hard=4096i,rlimit_file_locks_hard=2147483647i,rlimit_cpu_time_hard=2147483647i,rlimit_signals_pending_hard=78994i,rlimit_nice_priority_soft=0i,rlimit_memory_rss_hard=2147483647i,rlimit_memory_vms_soft=2147483647i,rlimit_realtime_priority_hard=0i 1517620624000000000")
 	handler := &BenchmarkingHandler{}
 	fsm := influx.NewMachine(handler)
 	for n := 0; n < b.N; n++ {
@@ -1932,135 +1992,136 @@ func (h *MockHandler) SetTimestamp(tm []byte) error {
 	return h.SetTimestampF(tm)
 }
 
+var errorRecoveryTests = []struct {
+	name    string
+	input   []byte
+	handler *MockHandler
+	results []Result
+}{
+	{
+		name:  "integer",
+		input: []byte("cpu value=43i\ncpu value=42i"),
+		handler: &MockHandler{
+			SetMeasurementF: func(name []byte) error {
+				return nil
+			},
+			AddIntF: func(name, value []byte) error {
+				if string(value) != "42i" {
+					return errors.New("handler error")
+				}
+				return nil
+			},
+		},
+		results: []Result{
+			{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			{
+				Name: Error,
+				err:  errors.New("handler error"),
+			},
+			{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			{
+				Name:  FieldInt,
+				Value: []byte("42i"),
+			},
+			{
+				Name: Success,
+			},
+		},
+	},
+	{
+		name:  "integer with timestamp",
+		input: []byte("cpu value=43i 1516241192000000000\ncpu value=42i"),
+		handler: &MockHandler{
+			SetMeasurementF: func(name []byte) error {
+				return nil
+			},
+			AddIntF: func(name, value []byte) error {
+				if string(value) != "42i" {
+					return errors.New("handler error")
+				}
+				return nil
+			},
+		},
+		results: []Result{
+			{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			{
+				Name: Error,
+				err:  errors.New("handler error"),
+			},
+			{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			{
+				Name:  FieldInt,
+				Value: []byte("42i"),
+			},
+			{
+				Name: Success,
+			},
+		},
+	},
+	{
+		name:  "unsigned",
+		input: []byte("cpu value=43u\ncpu value=42u"),
+		handler: &MockHandler{
+			SetMeasurementF: func(name []byte) error {
+				return nil
+			},
+			AddUintF: func(name, value []byte) error {
+				if string(value) != "42u" {
+					return errors.New("handler error")
+				}
+				return nil
+			},
+		},
+		results: []Result{
+			{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			{
+				Name: Error,
+				err:  errors.New("handler error"),
+			},
+			{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			{
+				Name:  FieldUint,
+				Value: []byte("42u"),
+			},
+			{
+				Name: Success,
+			},
+		},
+	},
+}
+
 func TestHandlerErrorRecovery(t *testing.T) {
-	var tests = []struct {
-		name    string
-		input   []byte
-		handler *MockHandler
-		results []Result
-	}{
-		{
-			name:  "integer",
-			input: []byte("cpu value=43i\ncpu value=42i"),
-			handler: &MockHandler{
-				SetMeasurementF: func(name []byte) error {
-					return nil
-				},
-				AddIntF: func(name, value []byte) error {
-					if string(value) != "42i" {
-						return errors.New("handler error")
-					}
-					return nil
-				},
-			},
-			results: []Result{
-				{
-					Name:  Measurement,
-					Value: []byte("cpu"),
-				},
-				{
-					Name: Error,
-					err:  errors.New("handler error"),
-				},
-				{
-					Name:  Measurement,
-					Value: []byte("cpu"),
-				},
-				{
-					Name:  FieldKey,
-					Value: []byte("value"),
-				},
-				{
-					Name:  FieldInt,
-					Value: []byte("42i"),
-				},
-				{
-					Name: Success,
-				},
-			},
-		},
-		{
-			name:  "integer with timestamp",
-			input: []byte("cpu value=43i 1516241192000000000\ncpu value=42i"),
-			handler: &MockHandler{
-				SetMeasurementF: func(name []byte) error {
-					return nil
-				},
-				AddIntF: func(name, value []byte) error {
-					if string(value) != "42i" {
-						return errors.New("handler error")
-					}
-					return nil
-				},
-			},
-			results: []Result{
-				{
-					Name:  Measurement,
-					Value: []byte("cpu"),
-				},
-				{
-					Name: Error,
-					err:  errors.New("handler error"),
-				},
-				{
-					Name:  Measurement,
-					Value: []byte("cpu"),
-				},
-				{
-					Name:  FieldKey,
-					Value: []byte("value"),
-				},
-				{
-					Name:  FieldInt,
-					Value: []byte("42i"),
-				},
-				{
-					Name: Success,
-				},
-			},
-		},
-		{
-			name:  "unsigned",
-			input: []byte("cpu value=43u\ncpu value=42u"),
-			handler: &MockHandler{
-				SetMeasurementF: func(name []byte) error {
-					return nil
-				},
-				AddUintF: func(name, value []byte) error {
-					if string(value) != "42u" {
-						return errors.New("handler error")
-					}
-					return nil
-				},
-			},
-			results: []Result{
-				{
-					Name:  Measurement,
-					Value: []byte("cpu"),
-				},
-				{
-					Name: Error,
-					err:  errors.New("handler error"),
-				},
-				{
-					Name:  Measurement,
-					Value: []byte("cpu"),
-				},
-				{
-					Name:  FieldKey,
-					Value: []byte("value"),
-				},
-				{
-					Name:  FieldUint,
-					Value: []byte("42u"),
-				},
-				{
-					Name: Success,
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
+	for _, tt := range errorRecoveryTests {
 		t.Run(tt.name, func(t *testing.T) {
 			fsm := influx.NewMachine(tt.handler)
 			fsm.SetData(tt.input)
@@ -2075,6 +2136,82 @@ func TestHandlerErrorRecovery(t *testing.T) {
 
 			results := tt.handler.Results()
 			require.Equal(t, tt.results, results)
+		})
+	}
+}
+
+func TestStreamMachine(t *testing.T) {
+	type testcase struct {
+		name    string
+		input   io.Reader
+		results []Result
+		err     error
+	}
+
+	var tc []testcase
+	for _, tt := range tests {
+		tc = append(tc, testcase{
+			name:    tt.name,
+			input:   bytes.NewBuffer([]byte(tt.input)),
+			results: tt.results,
+			err:     tt.err,
+		})
+	}
+
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := &TestingHandler{}
+			fsm := influx.NewStreamMachine(tt.input, handler)
+
+			// Parse only up to 20 metrics; to avoid any bugs where the parser
+			// isn't terminated.
+			for i := 0; i < 20; i++ {
+				err := fsm.Next()
+				if err != nil && err == influx.EOF {
+					break
+				}
+				handler.Result(err)
+			}
+
+			results := handler.Results()
+			require.Equal(t, tt.results, results)
+		})
+	}
+}
+
+func TestStreamMachinePosition(t *testing.T) {
+	type testcase struct {
+		name   string
+		input  io.Reader
+		lineno int
+		column int
+	}
+
+	var tc []testcase
+	for _, tt := range positionTests {
+		tc = append(tc, testcase{
+			name:   tt.name,
+			input:  bytes.NewBuffer([]byte(tt.input)),
+			lineno: tt.lineno,
+			column: tt.column,
+		})
+	}
+
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := &TestingHandler{}
+			fsm := influx.NewStreamMachine(tt.input, handler)
+
+			// Parse until an error or eof
+			for i := 0; i < 20; i++ {
+				err := fsm.Next()
+				if err != nil {
+					break
+				}
+			}
+
+			require.Equal(t, tt.lineno, fsm.LineNumber(), "lineno")
+			require.Equal(t, tt.column, fsm.Column(), "column")
 		})
 	}
 }

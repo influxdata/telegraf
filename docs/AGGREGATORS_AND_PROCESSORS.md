@@ -52,7 +52,7 @@ all metrics or adding a tag to all metrics that pass through.
 ### Aggregator
 Aggregator plugins, on the other hand, are a bit more complicated. Aggregators
 are typically for emitting new _aggregate_ metrics, such as a running mean,
-minimum, maximum, quantiles, or standard deviation. For this reason, all _aggregator_
+minimum, maximum, or standard deviation. For this reason, all _aggregator_
 plugins are configured with a `period`. The `period` is the size of the window
 of metrics that each _aggregate_ represents. In other words, the emitted
 _aggregate_ metric will be the aggregated value of the past `period` seconds.
@@ -64,7 +64,4 @@ Since aggregates are created for each measurement, field, and unique tag combina
 the plugin receives, you can make use of `taginclude` to group
 aggregates by specific tags only. 
 
-**NOTE** That since aggregators only aggregate metrics within their period, that
-historical data is not supported. In other words, if your metric timestamp is more
-than `now() - period` in the past, it will not be aggregated. If this is a feature
-that you need, please comment on this [github issue](https://github.com/influxdata/telegraf/issues/1992)
+**Note:** Aggregator plugins only aggregate metrics within their periods (`now() - period`). Data with a timestamp earlier than `now() - period` cannot be included.

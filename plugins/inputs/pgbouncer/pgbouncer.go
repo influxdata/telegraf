@@ -2,14 +2,13 @@ package pgbouncer
 
 import (
 	"bytes"
-	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
-
-	// register in driver.
-	_ "github.com/jackc/pgx/stdlib"
+	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
+	_ "github.com/jackc/pgx/stdlib" // register driver
 )
 
 type PgBouncer struct {
@@ -25,7 +24,7 @@ var sampleConfig = `
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
   ##       ?sslmode=[disable|verify-ca|verify-full]
   ## or a simple string:
-  ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
   ##
   ## All connection parameters are optional.
   ##
@@ -71,11 +70,30 @@ func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 		fields := make(map[string]interface{})
 		for col, val := range columnMap {
 			_, ignore := ignoredColumns[col]
-			if !ignore {
-				fields[col] = *val
+			if ignore {
+				continue
+			}
+
+			switch v := (*val).(type) {
+			case int64:
+				// Integer fields are returned in pgbouncer 1.5 through 1.9
+				fields[col] = v
+			case string:
+				// Integer fields are returned in pgbouncer 1.12
+				integer, err := strconv.ParseInt(v, 10, 64)
+				if err != nil {
+					return err
+				}
+
+				fields[col] = integer
 			}
 		}
 		acc.AddFields("pgbouncer", fields, tags)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return err
 	}
 
 	query = `SHOW POOLS`
@@ -98,12 +116,16 @@ func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		if s, ok := (*columnMap["user"]).(string); ok && s != "" {
-			tags["user"] = s
+		if user, ok := columnMap["user"]; ok {
+			if s, ok := (*user).(string); ok && s != "" {
+				tags["user"] = s
+			}
 		}
 
-		if s, ok := (*columnMap["pool_mode"]).(string); ok && s != "" {
-			tags["pool_mode"] = s
+		if poolMode, ok := columnMap["pool_mode"]; ok {
+			if s, ok := (*poolMode).(string); ok && s != "" {
+				tags["pool_mode"] = s
+			}
 		}
 
 		fields := make(map[string]interface{})

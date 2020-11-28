@@ -1,14 +1,15 @@
 package telegraf
 
 type Output interface {
-	// Connect to the Output
+	PluginDescriber
+
+	// Connect to the Output; connect is only called once when the plugin starts
 	Connect() error
-	// Close any connections to the Output
+	// Close any connections to the Output. Close is called once when the output
+	// is shutting down. Close will not be called until all writes have finished,
+	// and Write() will not be called once Close() has been, so locking is not
+	// necessary.
 	Close() error
-	// Description returns a one-sentence description on the Output
-	Description() string
-	// SampleConfig returns the default configuration of the Output
-	SampleConfig() string
 	// Write takes in group of points to be written to the Output
 	Write(metrics []Metric) error
 }

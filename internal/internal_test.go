@@ -3,8 +3,12 @@ package internal
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/rand"
+	"io"
 	"io/ioutil"
+	"log"
 	"os/exec"
+	"regexp"
 	"testing"
 	"time"
 
@@ -62,6 +66,30 @@ func TestRunTimeout(t *testing.T) {
 	assert.Equal(t, TimeoutErr, err)
 	// Verify that command gets killed in 20ms, with some breathing room
 	assert.True(t, elapsed < time.Millisecond*75)
+}
+
+// Verifies behavior of a command that doesn't get killed.
+func TestRunTimeoutFastExit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test due to random failures.")
+	}
+	if echobin == "" {
+		t.Skip("'echo' binary not available on OS, skipping.")
+	}
+	cmd := exec.Command(echobin)
+	start := time.Now()
+	err := RunTimeout(cmd, time.Millisecond*20)
+	buf := &bytes.Buffer{}
+	log.SetOutput(buf)
+	elapsed := time.Since(start)
+
+	require.NoError(t, err)
+	// Verify that command gets killed in 20ms, with some breathing room
+	assert.True(t, elapsed < time.Millisecond*75)
+
+	// Verify "process already finished" log doesn't occur.
+	time.Sleep(time.Millisecond * 75)
+	require.Equal(t, "", buf.String())
 }
 
 func TestCombinedOutputTimeout(t *testing.T) {
@@ -207,13 +235,45 @@ func TestCompressWithGzip(t *testing.T) {
 	assert.Equal(t, testData, string(output))
 }
 
+type mockReader struct {
+	readN uint64 // record the number of calls to Read
+}
+
+func (r *mockReader) Read(p []byte) (n int, err error) {
+	r.readN++
+	return rand.Read(p)
+}
+
+func TestCompressWithGzipEarlyClose(t *testing.T) {
+	mr := &mockReader{}
+
+	rc, err := CompressWithGzip(mr)
+	assert.NoError(t, err)
+
+	n, err := io.CopyN(ioutil.Discard, rc, 10000)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(10000), n)
+
+	r1 := mr.readN
+	err = rc.Close()
+	assert.NoError(t, err)
+
+	n, err = io.CopyN(ioutil.Discard, rc, 10000)
+	assert.Error(t, io.EOF, err)
+	assert.Equal(t, int64(0), n)
+
+	r2 := mr.readN
+	// no more read to the source after closing
+	assert.Equal(t, r1, r2)
+}
+
 func TestVersionAlreadySet(t *testing.T) {
 	err := SetVersion("foo")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	err = SetVersion("bar")
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.IsType(t, VersionAlreadySetError, err)
 
 	assert.Equal(t, "foo", Version())
@@ -271,33 +331,161 @@ func TestAlignDuration(t *testing.T) {
 	}
 }
 
-func TestParseTimestamp(t *testing.T) {
-	time, err := ParseTimestamp("2019-02-20 21:50:34.029665", "2006-01-02 15:04:05.000000")
-	assert.Nil(t, err)
-	assert.EqualValues(t, int64(1550699434029665000), time.UnixNano())
+func TestAlignTime(t *testing.T) {
+	rfc3339 := func(value string) time.Time {
+		t, _ := time.Parse(time.RFC3339, value)
+		return t
+	}
 
-	time, err = ParseTimestamp("2019-02-20 21:50:34.029665-04:00", "2006-01-02 15:04:05.000000-07:00")
-	assert.Nil(t, err)
-	assert.EqualValues(t, int64(1550713834029665000), time.UnixNano())
+	tests := []struct {
+		name     string
+		now      time.Time
+		interval time.Duration
+		expected time.Time
+	}{
+		{
+			name:     "aligned",
+			now:      rfc3339("2018-01-01T01:01:00Z"),
+			interval: 10 * time.Second,
+			expected: rfc3339("2018-01-01T01:01:00Z"),
+		},
+		{
+			name:     "aligned",
+			now:      rfc3339("2018-01-01T01:01:01Z"),
+			interval: 10 * time.Second,
+			expected: rfc3339("2018-01-01T01:01:10Z"),
+		},
+	}
 
-	time, err = ParseTimestamp("2019-02-20 21:50:34.029665", "2006-01-02 15:04:05.000000-06:00")
-	assert.NotNil(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := AlignTime(tt.now, tt.interval)
+			require.Equal(t, tt.expected, actual)
+		})
+	}
 }
 
-func TestParseTimestampWithLocation(t *testing.T) {
-	time, err := ParseTimestampWithLocation("2019-02-20 21:50:34.029665", "2006-01-02 15:04:05.000000", "UTC")
-	assert.Nil(t, err)
-	assert.EqualValues(t, int64(1550699434029665000), time.UnixNano())
+func TestParseTimestamp(t *testing.T) {
+	rfc3339 := func(value string) time.Time {
+		tm, err := time.Parse(time.RFC3339Nano, value)
+		if err != nil {
+			panic(err)
+		}
+		return tm
+	}
 
-	time, err = ParseTimestampWithLocation("2019-02-20 21:50:34.029665", "2006-01-02 15:04:05.000000", "America/New_York")
-	assert.Nil(t, err)
-	assert.EqualValues(t, int64(1550717434029665000), time.UnixNano())
+	tests := []struct {
+		name      string
+		format    string
+		timestamp interface{}
+		location  string
+		expected  time.Time
+		err       bool
+	}{
+		{
+			name:      "parse layout string in utc",
+			format:    "2006-01-02 15:04:05",
+			timestamp: "2019-02-20 21:50:34",
+			location:  "UTC",
+			expected:  rfc3339("2019-02-20T21:50:34Z"),
+		},
+		{
+			name:      "parse layout string with invalid timezone",
+			format:    "2006-01-02 15:04:05",
+			timestamp: "2019-02-20 21:50:34",
+			location:  "InvalidTimeZone",
+			err:       true,
+		},
+		{
+			name:      "layout regression 6386",
+			format:    "02.01.2006 15:04:05",
+			timestamp: "09.07.2019 00:11:00",
+			expected:  rfc3339("2019-07-09T00:11:00Z"),
+		},
+		{
+			name:      "default location is utc",
+			format:    "2006-01-02 15:04:05",
+			timestamp: "2019-02-20 21:50:34",
+			expected:  rfc3339("2019-02-20T21:50:34Z"),
+		},
+		{
+			name:      "unix seconds without fractional",
+			format:    "unix",
+			timestamp: "1568338208",
+			expected:  rfc3339("2019-09-13T01:30:08Z"),
+		},
+		{
+			name:      "unix seconds with fractional",
+			format:    "unix",
+			timestamp: "1568338208.500",
+			expected:  rfc3339("2019-09-13T01:30:08.500Z"),
+		},
+		{
+			name:      "unix seconds with fractional and comma decimal point",
+			format:    "unix",
+			timestamp: "1568338208,500",
+			expected:  rfc3339("2019-09-13T01:30:08.500Z"),
+		},
+		{
+			name:      "unix seconds extra precision",
+			format:    "unix",
+			timestamp: "1568338208.00000050042",
+			expected:  rfc3339("2019-09-13T01:30:08.000000500Z"),
+		},
+		{
+			name:      "unix seconds integer",
+			format:    "unix",
+			timestamp: int64(1568338208),
+			expected:  rfc3339("2019-09-13T01:30:08Z"),
+		},
+		{
+			name:      "unix seconds float",
+			format:    "unix",
+			timestamp: float64(1568338208.500),
+			expected:  rfc3339("2019-09-13T01:30:08.500Z"),
+		},
+		{
+			name:      "unix milliseconds",
+			format:    "unix_ms",
+			timestamp: "1568338208500",
+			expected:  rfc3339("2019-09-13T01:30:08.500Z"),
+		},
+		{
+			name:      "unix milliseconds with fractional is ignored",
+			format:    "unix_ms",
+			timestamp: "1568338208500.42",
+			expected:  rfc3339("2019-09-13T01:30:08.500Z"),
+		},
+		{
+			name:      "unix microseconds",
+			format:    "unix_us",
+			timestamp: "1568338208000500",
+			expected:  rfc3339("2019-09-13T01:30:08.000500Z"),
+		},
+		{
+			name:      "unix nanoseconds",
+			format:    "unix_ns",
+			timestamp: "1568338208000000500",
+			expected:  rfc3339("2019-09-13T01:30:08.000000500Z"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tm, err := ParseTimestamp(tt.format, tt.timestamp, tt.location)
+			if tt.err {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, tm)
+			}
+		})
+	}
+}
 
-	//Provided location is ignored if an offset is successfully parsed
-	time, err = ParseTimestampWithLocation("2019-02-20 21:50:34.029665-07:00", "2006-01-02 15:04:05.000000-07:00", "America/New_York")
-	assert.Nil(t, err)
-	assert.EqualValues(t, int64(1550724634029665000), time.UnixNano())
-
-	time, err = ParseTimestampWithLocation("2019-02-20 21:50:34.029665", "2006-01-02 15:04:05.000000", "InvalidTimeZone")
-	assert.NotNil(t, err)
+func TestProductToken(t *testing.T) {
+	token := ProductToken()
+	// Telegraf version depends on the call to SetVersion, it cannot be set
+	// multiple times and is not thread-safe.
+	re := regexp.MustCompile(`^Telegraf/[^\s]+ Go/\d+.\d+(.\d+)?$`)
+	require.True(t, re.MatchString(token), token)
 }

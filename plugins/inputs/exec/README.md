@@ -1,6 +1,6 @@
 # Exec Input Plugin
 
-The `exec` plugin executes the `commands` on every interval and parses metrics from
+The `exec` plugin executes all the `commands` in parallel on every interval and parses metrics from
 their output in any one of the accepted [Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
 
 This plugin can be used to poll for custom metrics from any source.
@@ -50,8 +50,16 @@ It can be paired with the following configuration and will be run at the `interv
 
 ### Common Issues:
 
-#### Q: My script works when I run it by hand, but not when Telegraf is running as a service.
+#### My script works when I run it by hand, but not when Telegraf is running as a service.
 
 This may be related to the Telegraf service running as a different user.  The
 official packages run Telegraf as the `telegraf` user and group on Linux
 systems.
+
+#### With a PowerShell on Windows, the output of the script appears to be truncated.
+
+You may need to set a variable in your script to increase the number of columns
+available for output:
+```
+$host.UI.RawUI.BufferSize = new-object System.Management.Automation.Host.Size(1024,50)
+```

@@ -26,14 +26,20 @@ The commands & flags are:
   --processor-filter <filter>    filter the processors to enable, separator is :
   --quiet                        run in quiet mode
   --sample-config                print out full sample configuration
-  --test                         gather metrics, print them out, and exit;
-                                 processors, aggregators, and outputs are not run
+  --section-filter               filter config sections to output, separator is :
+                                 Valid values are 'agent', 'global_tags', 'outputs',
+                                 'processors', 'aggregators' and 'inputs'
+  --once                         enable once mode: gather metrics once, write them, and exit
+  --test                         enable test mode: gather metrics once and print them
+  --test-wait                    wait up to this many seconds for service
+                                 inputs to complete in test or once mode
   --usage <plugin>               print usage for a plugin, ie, 'telegraf --usage mysql'
   --version                      display the version and exit
 
   --console                      run as console application (windows only)
   --service <service>            operate on the service (windows only)
   --service-name                 service name (windows only)
+  --service-display-name         service display name (windows only)
 
 Examples:
 
@@ -43,7 +49,7 @@ Examples:
   # generate config with only cpu input & influxdb output plugins defined
   telegraf --input-filter cpu --output-filter influxdb config
 
-  # run a single telegraf collection, outputing metrics to stdout
+  # run a single telegraf collection, outputting metrics to stdout
   telegraf --config telegraf.conf --test
 
   # run telegraf with all plugins defined in config file
@@ -62,5 +68,5 @@ Examples:
   telegraf --service install --config "C:\Program Files\Telegraf\telegraf.conf"
 
   # install telegraf service with custom name
-  telegraf --service install --service-name=my-telegraf
+  telegraf --service install --service-name=my-telegraf --service-display-name="My Telegraf"
 `

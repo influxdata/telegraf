@@ -21,7 +21,7 @@ var (
 	execCommand             = exec.Command // execCommand is used to mock commands in tests.
 	re_v1_parse_line        = regexp.MustCompile(`^(?P<name>[^|]*)\|(?P<description>[^|]*)\|(?P<status_code>.*)`)
 	re_v2_parse_line        = regexp.MustCompile(`^(?P<name>[^|]*)\|[^|]+\|(?P<status_code>[^|]*)\|(?P<entity_id>[^|]*)\|(?:(?P<description>[^|]+))?`)
-	re_v2_parse_description = regexp.MustCompile(`^(?P<analogValue>[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`)
+	re_v2_parse_description = regexp.MustCompile(`^(?P<analogValue>-?[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`)
 	re_v2_parse_unit        = regexp.MustCompile(`^(?P<realAnalogUnit>[^,]+)(?:,\s*(?P<statusDesc>.*))?`)
 )
 
@@ -32,11 +32,17 @@ type Ipmi struct {
 	Servers       []string
 	Timeout       internal.Duration
 	MetricVersion int
+	UseSudo       bool
 }
 
 var sampleConfig = `
   ## optionally specify the path to the ipmitool executable
   # path = "/usr/bin/ipmitool"
+  ##
+  ## Setting 'use_sudo' to true will make use of sudo to run ipmitool.
+  ## Sudo must be configured to allow the telegraf user to run ipmitool
+  ## without a password.
+  # use_sudo = false
   ##
   ## optionally force session privilege level. Can be CALLBACK, USER, OPERATOR, ADMINISTRATOR
   # privilege = "ADMINISTRATOR"
@@ -112,7 +118,13 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 	if m.MetricVersion == 2 {
 		opts = append(opts, "elist")
 	}
-	cmd := execCommand(m.Path, opts...)
+	name := m.Path
+	if m.UseSudo {
+		// -n - avoid prompting the user for input of any kind
+		opts = append([]string{"-n", name}, opts...)
+		name = "sudo"
+	}
+	cmd := execCommand(name, opts...)
 	out, err := internal.CombinedOutputTimeout(cmd, m.Timeout.Duration)
 	timestamp := time.Now()
 	if err != nil {
@@ -150,9 +162,19 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_
 			fields["status"] = 0
 		}
 
-		if strings.Index(ipmiFields["description"], " ") > 0 {
+		description := ipmiFields["description"]
+
+		// handle hex description field
+		if strings.HasPrefix(description, "0x") {
+			descriptionInt, err := strconv.ParseInt(description, 0, 64)
+			if err != nil {
+				continue
+			}
+
+			fields["value"] = float64(descriptionInt)
+		} else if strings.Index(description, " ") > 0 {
 			// split middle column into value and unit
-			valunit := strings.SplitN(ipmiFields["description"], " ", 2)
+			valunit := strings.SplitN(description, " ", 2)
 			var err error
 			fields["value"], err = aToFloat(valunit[0])
 			if err != nil {

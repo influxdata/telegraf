@@ -4,6 +4,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 	"reflect"
 	"strings"
 	"testing"
@@ -21,6 +22,7 @@ func defaultWavefront() *Wavefront {
 		ConvertPaths:    true,
 		ConvertBool:     true,
 		UseRegex:        false,
+		Log:             testutil.Logger{},
 	}
 }
 
@@ -51,13 +53,60 @@ func TestBuildMetrics(t *testing.T) {
 			},
 		},
 		{
+			testutil.TestMetric(float64(1), "testing_just/another,metric:float", "metric2"),
+			[]MetricPoint{
+				{Metric: w.Prefix + "testing.just-another-metric-float", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag1": "value1"}},
+				{Metric: w.Prefix + "testing.metric2", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag1": "value1"}},
+			},
+		},
+		{
 			testMetric1,
 			[]MetricPoint{{Metric: w.Prefix + "test.simple.metric", Value: 123, Timestamp: timestamp, Source: "testHost", Tags: map[string]string{"tag1": "value1"}}},
 		},
 	}
 
 	for _, mt := range metricTests {
-		ml := buildMetrics(mt.metric, w)
+		ml := w.buildMetrics(mt.metric)
+		for i, line := range ml {
+			if mt.metricPoints[i].Metric != line.Metric || mt.metricPoints[i].Value != line.Value {
+				t.Errorf("\nexpected\t%+v %+v\nreceived\t%+v %+v\n", mt.metricPoints[i].Metric, mt.metricPoints[i].Value, line.Metric, line.Value)
+			}
+		}
+	}
+
+}
+
+func TestBuildMetricsStrict(t *testing.T) {
+	w := defaultWavefront()
+	w.Prefix = "testthis."
+	w.UseStrict = true
+
+	pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
+
+	var timestamp int64 = 1257894000
+
+	var metricTests = []struct {
+		metric       telegraf.Metric
+		metricPoints []MetricPoint
+	}{
+		{
+			testutil.TestMetric(float64(1), "testing_just*a%metric:float", "metric2"),
+			[]MetricPoint{
+				{Metric: w.Prefix + "testing.just-a-metric-float", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag1": "value1"}},
+				{Metric: w.Prefix + "testing.metric2", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag1": "value1"}},
+			},
+		},
+		{
+			testutil.TestMetric(float64(1), "testing_just/another,metric:float", "metric2"),
+			[]MetricPoint{
+				{Metric: w.Prefix + "testing.just/another,metric-float", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag/1": "value1", "tag,2": "value2"}},
+				{Metric: w.Prefix + "testing.metric2", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag/1": "value1", "tag,2": "value2"}},
+			},
+		},
+	}
+
+	for _, mt := range metricTests {
+		ml := w.buildMetrics(mt.metric)
 		for i, line := range ml {
 			if mt.metricPoints[i].Metric != line.Metric || mt.metricPoints[i].Value != line.Value {
 				t.Errorf("\nexpected\t%+v %+v\nreceived\t%+v %+v\n", mt.metricPoints[i].Metric, mt.metricPoints[i].Value, line.Metric, line.Value)
@@ -96,7 +145,7 @@ func TestBuildMetricsWithSimpleFields(t *testing.T) {
 	}
 
 	for _, mt := range metricTests {
-		ml := buildMetrics(mt.metric, w)
+		ml := w.buildMetrics(mt.metric)
 		for i, line := range ml {
 			if mt.metricLines[i].Metric != line.Metric || mt.metricLines[i].Value != line.Value {
 				t.Errorf("\nexpected\t%+v %+v\nreceived\t%+v %+v\n", mt.metricLines[i].Metric, mt.metricLines[i].Value, line.Metric, line.Value)
@@ -148,7 +197,7 @@ func TestBuildTags(t *testing.T) {
 	}
 
 	for _, tt := range tagtests {
-		source, tags := buildTags(tt.ptIn, w)
+		source, tags := w.buildTags(tt.ptIn)
 		if source != tt.outSource {
 			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", tt.outSource, source)
 		}
@@ -200,7 +249,7 @@ func TestBuildTagsWithSource(t *testing.T) {
 	}
 
 	for _, tt := range tagtests {
-		source, tags := buildTags(tt.ptIn, w)
+		source, tags := w.buildTags(tt.ptIn)
 		if source != tt.outSource {
 			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", tt.outSource, source)
 		}
@@ -267,6 +316,42 @@ func TestBuildValueString(t *testing.T) {
 		}
 	}
 
+}
+
+func TestTagLimits(t *testing.T) {
+	w := defaultWavefront()
+	w.TruncateTags = true
+
+	// Should fail (all tags skipped)
+	template := make(map[string]string)
+	template[strings.Repeat("x", 255)] = "whatever"
+	_, tags := w.buildTags(template)
+	require.Empty(t, tags, "All tags should have been skipped")
+
+	// Should truncate value
+	template = make(map[string]string)
+	longKey := strings.Repeat("x", 253)
+	template[longKey] = "whatever"
+	_, tags = w.buildTags(template)
+	require.Contains(t, tags, longKey, "Should contain truncated long key")
+	require.Equal(t, "w", tags[longKey])
+
+	// Should not truncate
+	template = make(map[string]string)
+	longKey = strings.Repeat("x", 251)
+	template[longKey] = "Hi!"
+	_, tags = w.buildTags(template)
+	require.Contains(t, tags, longKey, "Should contain non truncated long key")
+	require.Equal(t, "Hi!", tags[longKey])
+
+	// Turn off truncating and make sure it leaves the tags intact
+	w.TruncateTags = false
+	template = make(map[string]string)
+	longKey = strings.Repeat("x", 255)
+	template[longKey] = longKey
+	_, tags = w.buildTags(template)
+	require.Contains(t, tags, longKey, "Should contain non truncated long key")
+	require.Equal(t, longKey, tags[longKey])
 }
 
 // Benchmarks to test performance of string replacement via Regex and Replacer

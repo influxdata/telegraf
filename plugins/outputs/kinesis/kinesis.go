@@ -6,10 +6,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
-	"github.com/satori/go.uuid"
-
+	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/internal/config/aws"
+	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -71,7 +70,7 @@ var sampleConfig = `
   streamname = "StreamName"
   ## DEPRECATED: PartitionKey as used for sharding data.
   partitionkey = "PartitionKey"
-  ## DEPRECATED: If set the paritionKey will be a random UUID on every put.
+  ## DEPRECATED: If set the partitionKey will be a random UUID on every put.
   ## This allows for scaling across multiple shards in a stream.
   ## This will cause issues with ordering.
   use_random_partitionkey = false
@@ -118,7 +117,7 @@ func (k *KinesisOutput) Description() string {
 
 func (k *KinesisOutput) Connect() error {
 	if k.Partition == nil {
-		log.Print("E! kinesis : Deprecated paritionkey configuration in use, please consider using outputs.kinesis.partition")
+		log.Print("E! kinesis : Deprecated partitionkey configuration in use, please consider using outputs.kinesis.partition")
 	}
 
 	// We attempt first to create a session to Kinesis using an IAMS role, if that fails it will fall through to using
@@ -184,7 +183,10 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 		case "static":
 			return k.Partition.Key
 		case "random":
-			u := uuid.NewV4()
+			u, err := uuid.NewV4()
+			if err != nil {
+				return k.Partition.Default
+			}
 			return u.String()
 		case "measurement":
 			return metric.Name()
@@ -201,7 +203,10 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 		}
 	}
 	if k.RandomPartitionKey {
-		u := uuid.NewV4()
+		u, err := uuid.NewV4()
+		if err != nil {
+			return k.Partition.Default
+		}
 		return u.String()
 	}
 	return k.PartitionKey
@@ -221,7 +226,8 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 		values, err := k.serializer.Serialize(metric)
 		if err != nil {
-			return err
+			log.Printf("D! [outputs.kinesis] Could not serialize metric: %v", err)
+			continue
 		}
 
 		partitionKey := k.getPartitionKey(metric)

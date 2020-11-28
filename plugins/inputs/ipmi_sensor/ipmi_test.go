@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -608,5 +609,142 @@ Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
 		t.Logf("Checking v%d data...", i+1)
 		extractFieldsFromRegex(re_v1_parse_line, tests[i])
 		extractFieldsFromRegex(re_v2_parse_line, tests[i])
+	}
+}
+
+func Test_parseV1(t *testing.T) {
+	type args struct {
+		hostname   string
+		cmdOut     []byte
+		measuredAt time.Time
+	}
+	tests := []struct {
+		name       string
+		args       args
+		wantFields map[string]interface{}
+		wantErr    bool
+	}{
+		{
+			name: "Test correct V1 parsing with hex code",
+			args: args{
+				hostname:   "host",
+				measuredAt: time.Now(),
+				cmdOut:     []byte("PS1 Status       | 0x02              | ok"),
+			},
+			wantFields: map[string]interface{}{"value": float64(2), "status": 1},
+			wantErr:    false,
+		},
+		{
+			name: "Test correct V1 parsing with value with unit",
+			args: args{
+				hostname:   "host",
+				measuredAt: time.Now(),
+				cmdOut:     []byte("Avg Power        | 210 Watts         | ok"),
+			},
+			wantFields: map[string]interface{}{"value": float64(210), "status": 1},
+			wantErr:    false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+
+			if err := parseV1(&acc, tt.args.hostname, tt.args.cmdOut, tt.args.measuredAt); (err != nil) != tt.wantErr {
+				t.Errorf("parseV1() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			acc.AssertContainsFields(t, "ipmi_sensor", tt.wantFields)
+		})
+	}
+}
+
+func Test_parseV2(t *testing.T) {
+	type args struct {
+		hostname   string
+		cmdOut     []byte
+		measuredAt time.Time
+	}
+	tests := []struct {
+		name     string
+		args     args
+		expected []telegraf.Metric
+		wantErr  bool
+	}{
+		{
+			name: "Test correct V2 parsing with analog value with unit",
+			args: args{
+				hostname:   "host",
+				cmdOut:     []byte("Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected"),
+				measuredAt: time.Now(),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("ipmi_sensor",
+					map[string]string{
+						"name":        "power_supply_1",
+						"status_code": "ok",
+						"server":      "host",
+						"entity_id":   "10.1",
+						"unit":        "watts",
+						"status_desc": "presence_detected",
+					},
+					map[string]interface{}{"value": 110.0},
+					time.Unix(0, 0),
+				),
+			},
+			wantErr: false,
+		},
+		{
+			name: "Test correct V2 parsing without analog value",
+			args: args{
+				hostname:   "host",
+				cmdOut:     []byte("Intrusion        | 73h | ok  |  7.1 |"),
+				measuredAt: time.Now(),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("ipmi_sensor",
+					map[string]string{
+						"name":        "intrusion",
+						"status_code": "ok",
+						"server":      "host",
+						"entity_id":   "7.1",
+						"status_desc": "ok",
+					},
+					map[string]interface{}{"value": 0.0},
+					time.Unix(0, 0),
+				),
+			},
+			wantErr: false,
+		},
+		{
+			name: "parse negative value",
+			args: args{
+				hostname:   "host",
+				cmdOut:     []byte("DIMM Thrm Mrgn 1 | B0h | ok  |  8.1 | -55 degrees C"),
+				measuredAt: time.Now(),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("ipmi_sensor",
+					map[string]string{
+						"name":        "dimm_thrm_mrgn_1",
+						"status_code": "ok",
+						"server":      "host",
+						"entity_id":   "8.1",
+						"unit":        "degrees_c",
+					},
+					map[string]interface{}{"value": -55.0},
+					time.Unix(0, 0),
+				),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+			if err := parseV2(&acc, tt.args.hostname, tt.args.cmdOut, tt.args.measuredAt); (err != nil) != tt.wantErr {
+				t.Errorf("parseV2() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+		})
 	}
 }

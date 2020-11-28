@@ -50,6 +50,7 @@ You must capture at least one field per line.
   - ts-httpd         ("02/Jan/2006:15:04:05 -0700")
   - ts-epoch         (seconds since unix epoch, may contain decimal)
   - ts-epochnano     (nanoseconds since unix epoch)
+  - ts-epochmilli    (milliseconds since unix epoch)
   - ts-syslog        ("Jan 02 15:04:05", parsed time is set to the current year)
   - ts-"CUSTOM"
 
@@ -59,11 +60,15 @@ To match a comma decimal point you can use a period.  For example `%{TIMESTAMP:t
 To match a comma decimal point you can use a period in the pattern string.
 See https://golang.org/pkg/time/#Parse for more details.
 
-Telegraf has many of its own [built-in patterns](/plugins/parsers/grok/influx_patterns.go),
-as well as support for most of
-[logstash's builtin patterns](https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns).
-_Golang regular expressions do not support lookahead or lookbehind.
-logstash patterns that depend on these are not supported._
+Telegraf has many of its own [built-in patterns][] as well as support for most
+of the Logstash builtin patterns using [these Go compatible patterns][grok-patterns].
+
+**Note:** Golang regular expressions do not support lookahead or lookbehind.
+Logstash patterns that use these features may not be supported, or may use a Go
+friendly pattern that is not fully compatible with the Logstash pattern.
+
+[built-in patterns]: /plugins/parsers/grok/influx_patterns.go
+[grok-patterns]: https://github.com/vjeantet/grok/blob/master/patterns/grok-patterns
 
 If you need help building patterns to match your logs,
 you will find the https://grokdebug.herokuapp.com application quite useful!
@@ -152,6 +157,21 @@ Wed Apr 12 13:10:34 PST 2017 value=42
   grok_patterns = ["%{TS_UNIX:timestamp:ts-unix} value=%{NUMBER:value:int}"]
   grok_custom_patterns = '''
     TS_UNIX %{DAY} %{MONTH} %{MONTHDAY} %{HOUR}:%{MINUTE}:%{SECOND} %{TZ} %{YEAR}
+  '''
+```
+
+This example input and config parses a file using a custom timestamp conversion that doesn't match any specific standard:
+
+```
+21/02/2017 13:10:34 value=42
+```
+
+```toml
+[[inputs.file]]
+  grok_patterns = ['%{MY_TIMESTAMP:timestamp:ts-"02/01/2006 15:04:05"} value=%{NUMBER:value:int}']
+
+  grok_custom_patterns = '''
+    MY_TIMESTAMP (?:\d{2}.\d{2}.\d{4} \d{2}:\d{2}:\d{2})
   '''
 ```
 
