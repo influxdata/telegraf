@@ -63,11 +63,8 @@ This plugin gathers the statistic data from MySQL server
   ## gather metrics from INFORMATION_SCHEMA.INNODB_METRICS
   # gather_innodb_metrics = false
 
-  ## gather metrics from SHOW SLAVE STATUS command output
-  # gather_slave_status = true
-  #
   ## gather metrics from all channels from SHOW SLAVE STATUS command output
-  gather_all_slave_channels = false
+  # gather_all_slave_channels = false
   #
   # gather_slave_status = false
 
