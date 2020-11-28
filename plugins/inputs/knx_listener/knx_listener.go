@@ -76,6 +76,9 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 		log.Printf("D! [inputs.KNXListener] group-address mapping for measurement \"%s\"", m.Name)
 		for _, ga := range m.Addresses {
 			log.Printf("D! [inputs.KNXListener]     %v --> %s", ga, m.Dpt)
+			if _, ok := kl.gaTargetMap[ga]; ok {
+				return fmt.Errorf("duplicate specification of address %v", ga)
+			}
 			d, ok := dpt.Produce(m.Dpt)
 			if !ok {
 				return fmt.Errorf("cannot create datapoint-type %v for address %v", m.Dpt, ga)
