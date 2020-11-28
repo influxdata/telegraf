@@ -29,6 +29,7 @@ type Mysql struct {
 	GatherInnoDBMetrics                 bool     `toml:"gather_innodb_metrics"`
 	GatherSlaveStatus                   bool     `toml:"gather_slave_status"`
 	GatherAllSlaveChannels              bool     `toml:"gather_all_slave_channels"`
+	MariadbDialect                      bool     `toml:"mariadb_dialect"`
 	GatherBinaryLogs                    bool     `toml:"gather_binary_logs"`
 	GatherTableIOWaits                  bool     `toml:"gather_table_io_waits"`
 	GatherTableLockWaits                bool     `toml:"gather_table_lock_waits"`
@@ -95,6 +96,9 @@ const sampleConfig = `
 
   ## gather metrics from all channels from SHOW SLAVE STATUS command output
   # gather_all_slave_channels = false
+
+  ## use MariaDB dialect for all channels SHOW SLAVE STATUS
+  # mariadb_dialect = false
 
   ## gather metrics from SHOW BINARY LOGS command output
   # gather_binary_logs = false
@@ -289,6 +293,7 @@ const (
 	globalStatusQuery          = `SHOW GLOBAL STATUS`
 	globalVariablesQuery       = `SHOW GLOBAL VARIABLES`
 	slaveStatusQuery           = `SHOW SLAVE STATUS`
+	slaveStatusQueryMariadb    = `SHOW ALL SLAVES STATUS`
 	binaryLogsQuery            = `SHOW BINARY LOGS`
 	infoSchemaProcessListQuery = `
         SELECT COALESCE(command,''),COALESCE(state,''),count(*)
@@ -613,7 +618,13 @@ func (m *Mysql) parseGlobalVariables(key string, value sql.RawBytes) (interface{
 // This code does not work with multi-source replication.
 func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
 	// run query
-	rows, err := db.Query(slaveStatusQuery)
+	var rows *sql.Rows
+	var err error
+	if m.MariadbDialect {
+		rows, err = db.Query(slaveStatusQueryMariadb)
+	} else {
+		rows, err = db.Query(slaveStatusQuery)
+	}
 	if err != nil {
 		return err
 	}
@@ -648,7 +659,8 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 				col = strings.ToLower(col)
 			}
 
-			if m.GatherAllSlaveChannels && strings.ToLower(col) == "channel_name" {
+			if m.GatherAllSlaveChannels &&
+				(strings.ToLower(col) == "channel_name" || strings.ToLower(col) == "connection_name") {
 				// Since the default channel name is empty, we need this block
 				channelName := "default"
 				if len(*vals[i].(*sql.RawBytes)) > 0 {
