@@ -65,7 +65,8 @@ This plugin gathers the statistic data from MySQL server
 
   ## gather metrics from all channels from SHOW SLAVE STATUS command output
   # gather_all_slave_channels = false
-  #
+  
+  ## gather metrics from SHOW SLAVE STATUS command output
   # gather_slave_status = false
 
   ## use SHOW ALL SLAVES STATUS command output for MariaDB
