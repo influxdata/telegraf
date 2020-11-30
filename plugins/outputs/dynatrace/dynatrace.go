@@ -161,7 +161,6 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 			}
 		}
 		if len(metric.Fields()) > 0 {
-			fmt.Println(metric.Name())
 			for k, v := range metric.Fields() {
 				var value string
 				switch v := v.(type) {
@@ -235,10 +234,8 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				}
 
 				if metricCounter%1000 == 0 {
-					fmt.Println("Flushing Buffer after 1000 lines")
 					err = d.send(buf.Bytes())
 					if err != nil {
-						fmt.Println("Error Flushing Buffer")
 						return err
 					}
 					buf.Reset()
@@ -274,7 +271,6 @@ func (d *Dynatrace) send(msg []byte) error {
 	resp, err := d.client.Do(req)
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
-		fmt.Println(req)
 		return fmt.Errorf("Dynatrace error while sending HTTP request:, %s", err.Error())
 	}
 	defer resp.Body.Close()
