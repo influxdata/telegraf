@@ -94,6 +94,8 @@ These builds are generated from the master branch:
 - [telegraf-nightly_linux_s390x.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_s390x.tar.gz)
 - [telegraf_nightly_s390x.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_s390x.deb)
 - [telegraf-nightly.s390x.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.s390x.rpm)
+- [telegraf_nightly_ppc64el.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_ppc64el.deb)
+- [telegraf-nightly.ppc64le.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.ppc64le.rpm)
 - [telegraf-nightly_windows_amd64.zip](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_windows_amd64.zip)
 - [telegraf-nightly_windows_i386.zip](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_windows_i386.zip)
 - [telegraf-nightly.x86_64.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.x86_64.rpm)
