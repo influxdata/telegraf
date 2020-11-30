@@ -403,6 +403,30 @@ func TestNotification(t *testing.T) {
 	}
 }
 
+type MockLogger struct {
+	telegraf.Logger
+	lastFormat string
+	lastArgs   []interface{}
+}
+
+func (l *MockLogger) Errorf(format string, args ...interface{}) {
+	l.lastFormat = format
+	l.lastArgs = args
+}
+
+func TestSubscribeResponseError(t *testing.T) {
+	me := "mock error message"
+	var mc uint32 = 7
+	ml := &MockLogger{}
+	plugin := &GNMI{Log: ml}
+	errorResponse := &gnmi.SubscribeResponse_Error{
+		Error: &gnmi.Error{Message: me, Code: mc}}
+	plugin.handleSubscribeResponse(
+		"127.0.0.1:0", &gnmi.SubscribeResponse{Response: errorResponse})
+	require.NotEmpty(t, ml.lastFormat)
+	require.Equal(t, ml.lastArgs, []interface{}{mc, me})
+}
+
 func TestRedial(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
