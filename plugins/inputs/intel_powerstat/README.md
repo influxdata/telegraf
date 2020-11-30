@@ -1,0 +1,199 @@
+# Intel PowerStat Input Plugin
+
+Telemetry frameworks allow users to monitor critical platform level metrics. 
+Key source of platform telemetry is power domain that is beneficial for MANO/Monitoring&Analytics systems 
+to take preventive/corrective actions based on platform busyness, CPU temperature, actual CPU utilization 
+and power statistics. Main use cases are power saving and workload migration.
+
+Intel PowerStat plugin supports Intel based platforms and assumes presence of Linux based OS.
+
+### Configuration:
+```toml
+# Intel PowerStat plugin enables monitoring of platform metrics (power, TDP) and per-CPU metrics like temperature, power and utilization.
+[[inputs.intel_powerstat]]
+  ## All global metrics are always collected by Intel PowerStat plugin.
+  ## User can choose which per-CPU metrics are monitored by the plugin in cpu_metrics array.
+  ## Empty array means no per-CPU specific metrics will be collected by the plugin - in this case only platform level
+  ## telemetry will be exposed by Intel PowerStat plugin.
+  ## Supported options:
+  ## "cpu_frequency", "cpu_c1_state_residency", "cpu_c6_state_residency", "cpu_busy_cycles", "cpu_temperature", "cpu_busy_frequency"
+  # cpu_metrics = []
+```
+### Example: Configuration with no per-CPU telemetry
+This configuration allows getting global metrics (processor package specific), no per-CPU metrics are collected:
+```toml
+[[inputs.intel_powerstat]]
+  cpu_metrics = []
+```
+
+### Example: Configuration for CPU Temperature and Frequency only
+This configuration allows getting global metrics plus subset of per-CPU metrics (CPU Temperature and Current Frequency):
+```toml
+[[inputs.intel_powerstat]]
+  cpu_metrics = ["cpu_frequency", "cpu_temperature"]
+```
+
+### Example: Configuration with all available metrics
+This configuration allows getting global metrics and all per-CPU metrics:
+```toml
+[[inputs.intel_powerstat]]
+  cpu_metrics = ["cpu_frequency", "cpu_c1_state_residency", "cpu_c6_state_residency", "cpu_busy_cycles", "cpu_temperature", "cpu_busy_frequency"]
+```
+
+### SW Dependencies:
+Plugin is based on Linux Kernel modules that expose specific metrics over `sysfs` or `devfs`.
+The following dependencies are expected by plugin:
+- _intel-rapl_ module which exposes Intel Runtime Power Limiting metrics over `sysfs` (`/sys/devices/virtual/powercap/intel-rapl`)
+Minimum kernel version required is 3.13 (to make sure RAPL driver is included in current distro),
+- _msr_ kernel module that provides access to processor model specific registers from user space, 
+- _cpufreq_ kernel module - which exposes per-CPU Frequency over `sysfs`. Since kernel 3.4 the necessary modules are 
+loaded automatically and the recommended on demand governor is enabled by default.
+
+Please make sure that kernel modules are loaded and running. You might have to manually enable them by using `modprobe`.
+Plugin requires root access to read MSR files. 
+
+### HW Dependencies:
+Specific metrics require certain processor features to be present, otherwise Intel PowerStat plugin won't be able to 
+read them. When using Linux Kernel based OS, user can detect supported processor features reading `/proc/cpuinfo` file. 
+Plugin assumes crucial properties are the same for all CPU cores in the system.
+The following processor properties are examined in more detail in this section:
+processor _cpu family_, _model_ and _flags_.
+The following processor properties are required by the plugin:
+- Processor _cpu family_ must be Intel (0x6) - since data used by the plugin assumes Intel specific 
+model specific registers for all features
+- The following processor flags shall be present:
+    - "_msr_" shall be present for plugin to read platform data from processor model specific registers and collect 
+    the following metrics: _powerstat_core.cpu_temperature_, _powerstat_core.cpu_busy_frequency_, 
+    _powerstat_core.cpu_busy_cycles_, _powerstat_core.cpu_c1_state_residency_, _powerstat_core._cpu_c6_state_residency_
+    - "_aperfmperf_" shall be present to collect the following metrics: _powerstat_core.cpu_busy_frequency_, 
+    _powerstat_core.cpu_busy_cycles_, _powerstat_core.cpu_c1_state_residency_
+    - "_dts_" shall be present to collect _powerstat_core.cpu_temperature_
+- Processor _Model number_ must be one of the following values for plugin to read _powerstat_core.cpu_c1_state_residency_ 
+and _powerstat_core.cpu_c6_state_residency_ metrics:
+
+| Model number | Processor name |
+|-----|-------------|
+| 0x37 | Intel Atom® Bay Trail |
+| 0x4D | Intel Atom® Avaton |
+| 0x5C | Intel Atom® Apollo Lake |
+| 0x5F | Intel Atom® Denverton | 
+| 0x7A | Intel Atom® Goldmont |
+| 0x4C | Intel Atom® Airmont |
+| 0x86 | Intel Atom® Jacobsville |
+| 0x96 | Intel Atom® Elkhart Lake | 
+| 0x9C | Intel Atom® Jasper Lake | 
+| 0x1A | Intel Nehalem-EP |
+| 0x1E | Intel Nehalem |
+| 0x1F | Intel Nehalem-G |
+| 0x2E | Intel Nehalem-EX |
+| 0x25 | Intel Westmere |
+| 0x2C | Intel Westmere-EP |
+| 0x2F | Intel Westmere-EX |
+| 0x2A | Intel Sandybridge |
+| 0x2D | Intel Sandybridge-X |
+| 0x3A | Intel Ivybridge |
+| 0x3E | Intel Ivybridge-X |
+| 0x4E | Intel Atom® Silvermont-MID |
+| 0x5E | Intel Skylake |
+| 0x55 | Intel Skylake-X |
+| 0x8E | Intel Kabylake-L |
+| 0x9E | Intel Kabylake |
+| 0x6A | Intel Icelake-X |
+| 0x6C | Intel Icelake-D |
+| 0x7D | Intel Icelake |
+| 0x7E | Intel Icelake-L |
+| 0x9D | Intel Icelake-NNPI |
+| 0x3C | Intel Haswell |
+| 0x3F | Intel Haswell-X |
+| 0x45 | Intel Haswell-L |
+| 0x46 | Intel Haswell-G |
+| 0x3D | Intel Broadwell |
+| 0x47 | Intel Broadwell-G |
+| 0x4F | Intel Broadwell-X |
+| 0x56 | Intel Broadwell-D |
+| 0x66 | Intel Cannonlake-L |
+| 0x57 | Intel Xeon® PHI Knights Landing |
+| 0x85 | Intel Xeon® PHI Knights Mill |
+| 0xA5 | Intel CometLake |
+| 0xA6 | Intel CometLake-L |
+| 0x8F | Intel Sapphire Rapids X |
+| 0x8C | Intel TigerLake-L |
+| 0x8D | Intel TigerLake |
+ 
+### Metrics
+All metrics collected by Intel PowerStat plugin are collected in fixed intervals.
+Metrics that reports processor C-state residency or power are calculated over elapsed intervals.
+When starting to measure metrics, plugin skips first iteration of metrics if they are based on deltas with previous value.
+ 
+**The following measurements are supported by Intel PowerStat plugin:**
+- powerstat_core
+
+   - The following Tags are returned by plugin with powerstat_core measurements:
+
+        | Tag | Description |
+        |-----|-------------|
+        | `package_id` | ID of platform package/socket |
+        | `core_id` | ID of physical processor core | 
+        | `cpu_id` | ID of logical processor core  |
+   Measurement powerstat_core metrics are collected per-CPU (cpu_id is the key) 
+   while core_id and package_id tags are additional topology information.
+
+   - The following fields are used for powerstat_core measurements:
+
+        | Field | Description |
+        |-----|-------------|
+        | `name` | Name of the measurement |
+        | `unit` | Units used for the measurement | 
+        | `value` | Value of the measurement |
+
+    - Available metrics for powerstat_core measurement 
+
+        | Metric name | Description | Units |
+        |-----|-------------|-----|
+        | `cpu_frequency` | Current operational frequency of CPU Core | MHz |
+        | `cpu_temperature` | Current temperature of CPU Core | Celsius degrees |
+        | `cpu_busy_cycles` | CPU Core Busy cycles as a ratio of Cycles spent in C0 state residency to all cycles executed by CPU Core | % |
+        | `cpu_c6_state_residency` | Percentage of time that CPU Core spent in C6 Core residency state | % |
+        | `cpu_c1_state_residency` | Percentage of time that CPU Core spent in C1 Core residency state | % |
+        | `cpu_busy_frequency` | CPU Core Busy Frequency measured as frequency adjusted to CPU Core busy cycles | MHz |
+
+- powerstat_package
+
+   - The following Tags are returned by plugin with powerstat_package measurements:
+
+        | Tag | Description |
+        |-----|-------------|
+        | `package_id` | ID of platform package/socket |
+   Measurement powerstat_package metrics are collected per processor package - _package_id_ tag indicates which 
+   package metric refers to.
+
+   - The following fields are used for powerstat_package measurements:
+
+        | Field | Description |
+        |-----|-------------|
+        | `name` | Name of the measurement |
+        | `unit` | Units used for the measurement | 
+        | `value` | Value of the measurement |
+
+    - Available metrics for powerstat_package measurement 
+
+        | Metric name | Description | Units |
+        |-----|-------------|-----|
+        | `thermal_design_power` | 	Maximum Thermal Design Power (TDP) available for processor package | Watts |
+        | `current_power_consumption` | Current power consumption of processor package | Watts |
+        | `current_dram_power_consumption` | Current power consumption of processor package DRAM subsystem | Watts |
+
+
+### Example Output:
+
+```
+powerstat_package,host=ubuntu,package_id=0 name="thermal_design_power",unit="Watt",value=160 1606494744000000000
+powerstat_package,host=ubuntu,package_id=0 name="current_power_consumption",unit="Watt",value=35 1606494744000000000
+powerstat_package,host=ubuntu,package_id=0 name="current_dram_power_consumption",unit="Watt",value=13.94 1606494744000000000
+powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 name="cpu_frequency",unit="MHz",value=1200.29 1606494744000000000
+powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 name="cpu_temperature",unit="celsius_degrees",value=34i 1606494744000000000
+powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 name="cpu_c6_state_residency",unit="percentage",value=92.52 1606494744000000000
+powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 name="cpu_busy_cycles",unit="percentage",value=0.8 1606494744000000000
+powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 name="cpu_c1_state_residency",unit="percentage",value=6.68 1606494744000000000
+powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 name="cpu_busy_frequency",unit="Mhz",value=1213.24 1606494744000000000
+```

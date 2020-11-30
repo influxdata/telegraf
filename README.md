@@ -212,6 +212,7 @@ For documentation on the latest development code see the [documentation index][d
 * [influxdb](./plugins/inputs/influxdb)
 * [influxdb_listener](./plugins/inputs/influxdb_listener)
 * [influxdb_v2_listener](./plugins/inputs/influxdb_v2_listener)
+* [intel_powerstat](plugins/inputs/intel_powerstat)
 * [intel_rdt](./plugins/inputs/intel_rdt)
 * [internal](./plugins/inputs/internal)
 * [interrupts](./plugins/inputs/interrupts)
