@@ -115,7 +115,7 @@ type ClickHouse struct {
 	ClusterInclude []string          `toml:"cluster_include"`
 	ClusterExclude []string          `toml:"cluster_exclude"`
 	Timeout        internal.Duration `toml:"timeout"`
-	HTTPClient     http.Client
+	HTTPClient     http.Client       `toml:"-"`
 	tls.ClientConfig
 }
 
