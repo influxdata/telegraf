@@ -1,5 +1,3 @@
-// +build linux
-
 package data
 
 // MsrData holds data calculated from MSR.
