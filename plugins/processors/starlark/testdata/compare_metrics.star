@@ -7,11 +7,16 @@
 # Example Output:
 # cpu_diff value=2i 1465839830100400301
 
+state = {
+  "last": None
+}
+
 def apply(metric):
     # Load from the shared state the metric assigned to the key "last"
-    last = Load("last")
-    # Store the new metric into the shared state and assign it to the key "last"
-    Store("last", metric)
+    last = state["last"]
+    # Store the deepcopy of the new metric into the shared state and assign it to the key "last"
+    # NB: To store a metric into the shared state you have to deep copy it
+    state["last"] = deepcopy(metric)
     if last != None:
         # Create a new metric named "cpu_diff"
         result = Metric("cpu_diff")
