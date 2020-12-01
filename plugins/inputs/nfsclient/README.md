@@ -47,16 +47,13 @@ See References for more details.
 
 ### Additional metrics
 
-When `fullstat` is true, these additional metrics are collected:
+When `fullstat` is true, additional measurements are collected.  Tags are the same as above.
 
 #### NFS Operations
 
 Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)] and `nfs_iostat.h`.  Field order is the same as in `/proc/self/mountstats` and in the Kernel source.
 
 - nfs_bytes
-    - tags:
-        - mountpoint - The local mountpoint, for instance: "/var/www"
-        - serverexport - The full server export, for instance: "nfsserver.example.org:/export"
     - fields:
         - normalreadbytes - (int, bytes) - Bytes read from the server via `read()`
         - normalwritebytes - (int, bytes) - Bytes written to the server via `write()`
@@ -68,9 +65,6 @@ Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/b
         - writepages - (int, count) - Number of pages written
 
 - nfs_events - Per-event metrics
-    - tags:
-        - mountpoint - The local mountpoint, for instance: "/var/www"
-        - serverexport - The full server export, for instance: "nfsserver.example.org:/export"
     - fields:
         - inoderevalidates - (int, count) - How many times cached inode attributes have to be re-validated from the server.
         - dentryrevalidates - (int, count) - How many times cached dentry nodes have to be re-validated.
@@ -102,9 +96,6 @@ Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/b
         - pnfswrites - (int, count) - Count of NFS v4.1+ pNFS writes.
 
   - nfs_xprt_tcp
-    - tags:
-        - mountpoint - The local mountpoint, for instance: "/var/www"
-        - serverexport - The full server export, for instance: "nfsserver.example.org:/export"
     - fields:
         - bind_count - (int, count) - Number of _completely new_ mounts to this server (sometimes 0?)
         - connect_count - (int, count) - How many times the client has connected to the server in question
@@ -117,15 +108,10 @@ Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/b
         - backlogutil - (int, count) - Cumulative backlog count
 
 - nfs_xprt_udp
-    - tags:
-        - [same as nfs_xprt_tcp]
     - fields:
         - [same as nfs_xprt_tcp, except for connect_count, connect_time, and idle_time]
 
 - nfs_ops
-    - tags:
-        - mountpoint - The local mountpoint, for instance: "/var/www"
-        - serverexport - The full server export, for instance: "nfsserver.example.org:/export"
     -fields - in all cases, **"OP"** is replaced with the uppercase name of the NFS operation, (_e.g._ "READ", "FSINFO", etc)
         - OP_ops - (int, count) - Total operations of this type.
         - OP_trans - (int, count) - Total transmissions of this type, including retransmissions: OP_ops - OP_trans = total_retransmissions (lower is better).
