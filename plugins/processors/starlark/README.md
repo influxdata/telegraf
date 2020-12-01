@@ -102,6 +102,12 @@ If you would like to see support for something else here, please open an issue.
 
 ### Common Questions
 
+**What's the performance cost to using Starlark?**
+
+In local tests, it takes about 1µs (1 microsecond) to run a modest script to process one
+metric. This is going to vary with the size of your script, but the total impact is minimal.
+At this pace, it's likely not going to be the bottleneck in your Telegraf setup.
+
 **How can I drop/delete a metric?**
 
 If you don't return the metric it will be deleted.  Usually this means the
