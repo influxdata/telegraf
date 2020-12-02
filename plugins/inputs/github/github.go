@@ -20,6 +20,7 @@ import (
 type GitHub struct {
 	Repositories      []string          `toml:"repositories"`
 	AccessToken       string            `toml:"access_token"`
+	AdditionalFields  []string          `toml:"additional_fields"`
 	EnterpriseBaseURL string            `toml:"enterprise_base_url"`
 	HTTPTimeout       internal.Duration `toml:"http_timeout"`
 	githubClient      *github.Client
@@ -46,6 +47,14 @@ const sampleConfig = `
 
   ## Timeout for HTTP requests.
   # http_timeout = "5s"
+
+  ## List of additional fields to query.
+	## NOTE: Getting those fields might involve issuing additional API-calls, so please
+	##       make sure you do not exceed the rate-limit of GitHub.
+	##
+	## Available fields are:
+	## 	- pull-requests			-- number of open and closed pull requests (2 API-calls per repository)
+  # additional_fields = []
 `
 
 // SampleConfig returns sample configuration for this plugin.
@@ -97,7 +106,6 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 
 	if g.githubClient == nil {
 		githubClient, err := g.createGitHubClient(ctx)
-
 		if err != nil {
 			return err
 		}
@@ -144,6 +152,25 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 			tags := getTags(repositoryInfo)
 			fields := getFields(repositoryInfo)
 
+			for _, field := range g.AdditionalFields {
+				addFields := make(map[string]interface{})
+				switch field {
+				case "pull-requests":
+					// Pull request properties
+					addFields, err = g.getPullRequestFields(ctx, owner, repository)
+					if err != nil {
+						acc.AddError(err)
+						continue
+					}
+				default:
+					acc.AddError(fmt.Errorf("unknown additional field %q", field))
+					continue
+				}
+				for k, v := range addFields {
+					fields[k] = v
+				}
+			}
+
 			acc.AddFields("github_repository", fields, tags, now)
 		}(repository, acc)
 	}
@@ -189,6 +216,33 @@ func getFields(repositoryInfo *github.Repository) map[string]interface{} {
 		"open_issues": repositoryInfo.GetOpenIssuesCount(),
 		"size":        repositoryInfo.GetSize(),
 	}
+}
+
+func (g *GitHub) getPullRequestFields(ctx context.Context, owner, repo string) (map[string]interface{}, error) {
+	options := github.SearchOptions{
+		TextMatch: false,
+		ListOptions: github.ListOptions{
+			PerPage: 100,
+			Page:    1,
+		},
+	}
+
+	classes := []string{"open", "closed"}
+	fields := make(map[string]interface{})
+	for _, class := range classes {
+		q := fmt.Sprintf("repo:%s/%s is:pr is:%s", owner, repo, class)
+		searchResult, response, err := g.githubClient.Search.Issues(ctx, q, &options)
+		if err != nil {
+			return fields, err
+		}
+		g.RateLimit.Set(int64(response.Rate.Limit))
+		g.RateRemaining.Set(int64(response.Rate.Remaining))
+
+		f := fmt.Sprintf("%s_pull_requests", class)
+		fields[f] = searchResult.GetTotal()
+	}
+
+	return fields, nil
 }
 
 func init() {
