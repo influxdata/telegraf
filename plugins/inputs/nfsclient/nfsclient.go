@@ -156,6 +156,22 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 
 	var fields = make(map[string]interface{})
 
+	if first == "READ" {
+		fields["read_ops"] = nline[0]
+		fields["read_retrans"] = nline[1] - nline[0]
+		fields["read_bytes"] = nline[3] + nline[4]
+		fields["read_rtt"] = nline[6]
+		fields["read_exe"] = nline[7]
+		acc.AddFields("nfsstat_read", fields, tags)
+	} else if first == "WRITE" {
+		fields["write_ops"] = nline[0]
+		fields["write_retrans"] = nline[1] - nline[0]
+		fields["write_bytes"] = nline[3] + nline[4]
+		fields["write_rtt"] = nline[6]
+		fields["write_exe"] = nline[7]
+		acc.AddFields("nfsstat_write", fields, tags)
+	}
+
 	if fullstat {
 
 		if first == "events" && len(nline) >= len(eventsFields) {
@@ -207,22 +223,6 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 			}
 		}
 
-	} else {
-		if first == "READ" {
-			fields["read_ops"] = nline[0]
-			fields["read_retrans"] = nline[1] - nline[0]
-			fields["read_bytes"] = nline[3] + nline[4]
-			fields["read_rtt"] = nline[6]
-			fields["read_exe"] = nline[7]
-			acc.AddFields("nfsstat_read", fields, tags)
-		} else if first == "WRITE" {
-			fields["write_ops"] = nline[0]
-			fields["write_retrans"] = nline[1] - nline[0]
-			fields["write_bytes"] = nline[3] + nline[4]
-			fields["write_rtt"] = nline[6]
-			fields["write_exe"] = nline[7]
-			acc.AddFields("nfsstat_write", fields, tags)
-		}
 	}
 
 	return nil
@@ -393,6 +393,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 }
 
 func getMountStatsPath() string {
+
 	path := "/proc/self/mountstats"
 	if os.Getenv("MOUNT_PROC") != "" {
 		path = os.Getenv("MOUNT_PROC")
