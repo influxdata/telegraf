@@ -57,7 +57,7 @@ func (n *NFSClient) Description() string {
 	return "Read per-mount NFS metrics from /proc/self/mountstats"
 }
 
-func convert(line []string) []int64 {
+func convertToInt64(line []string) []int64 {
 	var nline []int64
 	for _, l := range line[1:] {
 		f, _ := strconv.ParseInt(l, 10, 64)
@@ -77,7 +77,7 @@ func in(list []string, val string) bool {
 
 func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, fullstat bool, nfs3Ops map[string]bool, nfs4Ops map[string]bool, acc telegraf.Accumulator) error {
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
-	nline := convert(line)
+	nline := convertToInt64(line)
 	first := strings.Replace(line[0], ":", "", 1)
 
 	var eventsFields = []string{
