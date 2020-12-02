@@ -247,6 +247,12 @@ func tagsSliceToMap(tags [][]string) (map[string]string, error) {
 		if len(tag) != 2 {
 			return nil, fmt.Errorf("tag %d needs 2 values, has %d: %v", i+1, len(tag), tag)
 		}
+		if tag[0] == "" {
+			return nil, fmt.Errorf("tag %d has empty name", i+1)
+		}
+		if tag[1] == "" {
+			return nil, fmt.Errorf("tag %d has empty value", i+1)
+		}
 		if _, ok := m[tag[0]]; ok {
 			return nil, fmt.Errorf("tag %d has duplicate key: %v", i+1, tag[0])
 		}
@@ -309,7 +315,7 @@ func (o *OpcUA) InitNodes() error {
 type metricParts struct {
 	metricName string
 	fieldName  string
-	tagNames   string // sorted and space delimited
+	tags       string // sorted by tag name and in format tag1=value1, tag2=value2
 }
 
 func newMP(n *Node) metricParts {
@@ -319,14 +325,18 @@ func newMP(n *Node) metricParts {
 	}
 	sort.Strings(keys)
 	var sb strings.Builder
-	for _, key := range keys {
+	for i, key := range keys {
+		if i != 0 {
+			sb.WriteString(", ")
+		}
 		sb.WriteString(key)
-		sb.WriteString(" ")
+		sb.WriteString("=")
+		sb.WriteString(n.metricTags[key])
 	}
 	x := metricParts{
 		metricName: n.metricName,
 		fieldName:  n.tag.FieldName,
-		tagNames:   sb.String(),
+		tags:       sb.String(),
 	}
 	return x
 }
@@ -342,7 +352,8 @@ func (o *OpcUA) validateOPCTags() error {
 		}
 		//search name duplicate
 		if _, ok := nameEncountered[mp]; ok {
-			return fmt.Errorf("name '%s' is duplicated", node.tag.FieldName)
+			return fmt.Errorf("name '%s' is duplicated (metric name '%s', tags '%s')",
+				mp.fieldName, mp.metricName, mp.tags)
 		} else {
 			//add it to the set
 			nameEncountered[mp] = struct{}{}

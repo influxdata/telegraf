@@ -151,6 +151,13 @@ func TestTagsSliceToMap_dupeKey(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestTagsSliceToMap_empty(t *testing.T) {
+	_, err := tagsSliceToMap([][]string{{"foo", ""}})
+	assert.Equal(t, fmt.Errorf("tag 1 has empty value"), err)
+	_, err = tagsSliceToMap([][]string{{"", "bar"}})
+	assert.Equal(t, fmt.Errorf("tag 1 has empty name"), err)
+}
+
 func TestValidateOPCTags(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -163,18 +170,18 @@ func TestValidateOPCTags(t *testing.T) {
 				{
 					metricName: "mn",
 					tag:        NodeSettings{FieldName: "fn", IdentifierType: "s"},
-					metricTags: map[string]string{"t1": "", "t2": ""},
+					metricTags: map[string]string{"t1": "v1", "t2": "v2"},
 				},
 				{
 					metricName: "mn",
 					tag:        NodeSettings{FieldName: "fn", IdentifierType: "s"},
-					metricTags: map[string]string{"t1": "", "t2": ""},
+					metricTags: map[string]string{"t1": "v1", "t2": "v2"},
 				},
 			},
-			fmt.Errorf("name 'fn' is duplicated"),
+			fmt.Errorf("name 'fn' is duplicated (metric name 'mn', tags 't1=v1, t2=v2')"),
 		},
 		{
-			"different metric tags",
+			"different metric tag names",
 			[]Node{
 				{
 					metricName: "mn",
@@ -185,6 +192,22 @@ func TestValidateOPCTags(t *testing.T) {
 					metricName: "mn",
 					tag:        NodeSettings{FieldName: "fn", IdentifierType: "s"},
 					metricTags: map[string]string{"t1": "", "t3": ""},
+				},
+			},
+			nil,
+		},
+		{
+			"different metric tag values",
+			[]Node{
+				{
+					metricName: "mn",
+					tag:        NodeSettings{FieldName: "fn", IdentifierType: "s"},
+					metricTags: map[string]string{"t1": "foo", "t2": ""},
+				},
+				{
+					metricName: "mn",
+					tag:        NodeSettings{FieldName: "fn", IdentifierType: "s"},
+					metricTags: map[string]string{"t1": "bar", "t2": ""},
 				},
 			},
 			nil,
