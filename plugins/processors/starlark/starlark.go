@@ -52,7 +52,9 @@ func (s *Starlark) Init() error {
 
 	s.thread = &starlark.Thread{
 		Print: func(_ *starlark.Thread, msg string) { s.Log.Debug(msg) },
-		Load:  loadFunc,
+		Load: func(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+			return loadFunc(thread, module, s.Log)
+		},
 	}
 
 	builtins := starlark.StringDict{}
@@ -70,6 +72,9 @@ func (s *Starlark) Init() error {
 	if err != nil {
 		return err
 	}
+
+	// Make available a shared state to the apply function
+	globals["state"] = starlark.NewDict(0)
 
 	// Freeze the global state.  This prevents modifications to the processor
 	// state and prevents scripts from containing errors storing tracking
@@ -217,11 +222,15 @@ func init() {
 	})
 }
 
-func loadFunc(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+func loadFunc(thread *starlark.Thread, module string, logger telegraf.Logger) (starlark.StringDict, error) {
 	switch module {
 	case "json.star":
 		return starlark.StringDict{
 			"json": starlarkjson.Module,
+		}, nil
+	case "logging.star":
+		return starlark.StringDict{
+			"log": LogModule(logger),
 		}, nil
 	default:
 		return nil, errors.New("module " + module + " is not available")

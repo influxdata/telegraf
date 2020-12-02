@@ -184,6 +184,10 @@ One [metric][] is created for each row of the SNMP table.
       ## path segments). Truncates the index after this point to remove non-fixed
       ## value or length index suffixes.
       # oid_index_length = 0
+
+      ## Specifies if the value of given field should be snmptranslated
+      ## by default no field values are translated
+      # translate = true
 ```
 
 ### Troubleshooting

@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/influxdata/go-syslog/v2/nontransparent"
 	"github.com/influxdata/go-syslog/v2/octetcounting"
 	"github.com/influxdata/go-syslog/v2/rfc5424"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	framing "github.com/influxdata/telegraf/internal/syslog"
@@ -195,7 +197,10 @@ func getAddressParts(a string) (string, string, error) {
 		return "", "", fmt.Errorf("missing protocol within address '%s'", a)
 	}
 
-	u, _ := url.Parse(a)
+	u, err := url.Parse(filepath.ToSlash(a)) //convert backslashes to slashes (to make Windows path a valid URL)
+	if err != nil {
+		return "", "", fmt.Errorf("could not parse address '%s': %v", a, err)
+	}
 	switch u.Scheme {
 	case "unix", "unixpacket", "unixgram":
 		return parts[0], parts[1], nil

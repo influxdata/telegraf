@@ -1,5 +1,3 @@
-// +build !windows
-
 package execd
 
 import (
@@ -11,17 +9,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers"
-
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestSettingConfigWorks(t *testing.T) {

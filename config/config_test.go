@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -201,7 +202,7 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 	// Tests telegraf size parsing.
 	assert.Equal(t, internal.Size{Size: 1024 * 1024}, inputHTTPListener.MaxBodySize)
 	// Tests toml multiline basic strings.
-	assert.Equal(t, "/path/to/my/cert\n", inputHTTPListener.TLSCert)
+	assert.Equal(t, "/path/to/my/cert", strings.TrimRight(inputHTTPListener.TLSCert, "\r\n"))
 }
 
 func TestConfig_FieldNotDefined(t *testing.T) {

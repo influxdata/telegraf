@@ -81,6 +81,7 @@ var tsc = &testSNMPConnection{
 		".1.0.0.1.3":         []byte("byte slice"),
 		".1.0.0.2.1.5.0.9.9": 11,
 		".1.0.0.2.1.5.1.9.9": 22,
+		".1.0.0.0.1.6.0":     ".1.0.0.0.1.7",
 	},
 }
 
@@ -493,6 +494,16 @@ func TestTableBuild_walk(t *testing.T) {
 				Oid:            ".1.0.0.2.1.5",
 				OidIndexLength: 1,
 			},
+			{
+				Name:      "myfield6",
+				Oid:       ".1.0.0.0.1.6",
+				Translate: true,
+			},
+			{
+				Name:      "myfield7",
+				Oid:       ".1.0.0.0.1.6",
+				Translate: false,
+			},
 		},
 	}
 
@@ -510,6 +521,8 @@ func TestTableBuild_walk(t *testing.T) {
 			"myfield3": float64(0.123),
 			"myfield4": 11,
 			"myfield5": 11,
+			"myfield6": "testTableEntry.7",
+			"myfield7": ".1.0.0.0.1.7",
 		},
 	}
 	rtr2 := RTableRow{
@@ -640,8 +653,8 @@ func TestGather(t *testing.T) {
 	assert.Len(t, m.Fields, 2)
 	assert.Equal(t, 234, m.Fields["myfield2"])
 	assert.Equal(t, "baz", m.Fields["myfield3"])
-	assert.True(t, tstart.Before(m.Time))
-	assert.True(t, tstop.After(m.Time))
+	assert.True(t, !tstart.After(m.Time))
+	assert.True(t, !tstop.Before(m.Time))
 
 	m2 := acc.Metrics[1]
 	assert.Equal(t, "myOtherTable", m2.Measurement)
