@@ -43,6 +43,7 @@ See References for more details.
 1. [nfsiostat](http://git.linux-nfs.org/?p=steved/nfs-utils.git;a=summary)
 2. [net/sunrpc/stats.c - Linux source code](https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/net/sunrpc/stats.c)
 3. [What is in /proc/self/mountstats for NFS mounts: an introduction](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)
+4. [The xprt: data for NFS mounts in /proc/self/mountstats](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsXprt)
 
 
 ### Additional metrics
@@ -104,7 +105,7 @@ Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/b
         - rpcsends - (int, count) - How many RPC requests this mount has sent to the server.
         - rpcreceives - (int, count) - How many RPC replies this mount has received from the server.
         - badxids - (int, count) - Count of XIDs sent by the server that the client doesn't know about.
-        - inflightsends - (int, count) - Number of outstanding requests; always >1.  ("Every time we send a request, we add the current difference between sends and receives to this number. Since we've just sent a request, this is always going to be at least one. This number is not as useful as you think it should be.")
+        - inflightsends - (int, count) - Number of outstanding requests; always >1. (See reference #4 for comment on this field)
         - backlogutil - (int, count) - Cumulative backlog count
 
 - nfs_xprt_udp
