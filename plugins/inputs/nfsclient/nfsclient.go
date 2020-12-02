@@ -401,7 +401,6 @@ func getMountStatsPath() string {
 }
 
 func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
-	var outerr error
 
 	file, err := os.Open(getMountStatsPath())
 	if err != nil {
@@ -418,7 +417,7 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	return outerr
+	return nil
 }
 
 func init() {
