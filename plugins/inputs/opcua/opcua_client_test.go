@@ -150,3 +150,85 @@ func TestTagsSliceToMap_dupeKey(t *testing.T) {
 	_, err := tagsSliceToMap([][]string{{"foo", "bar"}, {"foo", "bat"}})
 	assert.Error(t, err)
 }
+
+func TestValidateOPCTags(t *testing.T) {
+	tests := []struct {
+		name  string
+		nodes []Node
+		err   error
+	}{
+		{
+			"same",
+			[]Node{
+				{
+					metricName: "mn",
+					tag:        NodeSettings{FieldName: "fn", IdentifierType: "s"},
+					metricTags: map[string]string{"t1": "", "t2": ""},
+				},
+				{
+					metricName: "mn",
+					tag:        NodeSettings{FieldName: "fn", IdentifierType: "s"},
+					metricTags: map[string]string{"t1": "", "t2": ""},
+				},
+			},
+			fmt.Errorf("name 'fn' is duplicated"),
+		},
+		{
+			"different metric tags",
+			[]Node{
+				{
+					metricName: "mn",
+					tag:        NodeSettings{FieldName: "fn", IdentifierType: "s"},
+					metricTags: map[string]string{"t1": "", "t2": ""},
+				},
+				{
+					metricName: "mn",
+					tag:        NodeSettings{FieldName: "fn", IdentifierType: "s"},
+					metricTags: map[string]string{"t1": "", "t3": ""},
+				},
+			},
+			nil,
+		},
+		{
+			"different metric names",
+			[]Node{
+				{
+					metricName: "mn",
+					tag:        NodeSettings{FieldName: "fn", IdentifierType: "s"},
+					metricTags: map[string]string{"t1": "", "t2": ""},
+				},
+				{
+					metricName: "mn2",
+					tag:        NodeSettings{FieldName: "fn", IdentifierType: "s"},
+					metricTags: map[string]string{"t1": "", "t2": ""},
+				},
+			},
+			nil,
+		},
+		{
+			"different field names",
+			[]Node{
+				{
+					metricName: "mn",
+					tag:        NodeSettings{FieldName: "fn", IdentifierType: "s"},
+					metricTags: map[string]string{"t1": "", "t2": ""},
+				},
+				{
+					metricName: "mn",
+					tag:        NodeSettings{FieldName: "fn2", IdentifierType: "s"},
+					metricTags: map[string]string{"t1": "", "t2": ""},
+				},
+			},
+			nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := OpcUA{
+				nodes: tt.nodes,
+			}
+			require.Equal(t, tt.err, o.validateOPCTags())
+		})
+	}
+}

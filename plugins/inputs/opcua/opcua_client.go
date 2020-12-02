@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -305,19 +306,46 @@ func (o *OpcUA) InitNodes() error {
 	return nil
 }
 
+type metricParts struct {
+	metricName string
+	fieldName  string
+	tagNames   string // sorted and space delimited
+}
+
+func newMP(n *Node) metricParts {
+	var keys []string
+	for key := range n.metricTags {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	var sb strings.Builder
+	for _, key := range keys {
+		sb.WriteString(key)
+		sb.WriteString(" ")
+	}
+	x := metricParts{
+		metricName: n.metricName,
+		fieldName:  n.tag.FieldName,
+		tagNames:   sb.String(),
+	}
+	return x
+}
+
 func (o *OpcUA) validateOPCTags() error {
-	nameEncountered := map[string]bool{}
+	nameEncountered := map[metricParts]struct{}{}
 	for i := range o.nodes {
 		node := &o.nodes[i]
+		mp := newMP(node)
 		//check empty name
 		if node.tag.FieldName == "" {
 			return fmt.Errorf("empty name in '%s'", node.tag.FieldName)
 		}
 		//search name duplicate
-		if nameEncountered[node.tag.FieldName] {
+		if _, ok := nameEncountered[mp]; ok {
 			return fmt.Errorf("name '%s' is duplicated", node.tag.FieldName)
 		} else {
-			nameEncountered[node.tag.FieldName] = true
+			//add it to the set
+			nameEncountered[mp] = struct{}{}
 		}
 		//search identifier type
 		switch node.tag.IdentifierType {
