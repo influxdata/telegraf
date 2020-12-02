@@ -15,15 +15,14 @@ import (
 
 // SQLServer struct
 type SQLServer struct {
-	Servers             []string `toml:"servers"`
-	QueryVersion        int      `toml:"query_version"`
-	AzureDB             bool     `toml:"azuredb"`
-	DatabaseType        string   `toml:"database_type"`
-	IncludeQuery        []string `toml:"include_query"`
-	ExcludeQuery        []string `toml:"exclude_query"`
-	IgnoreDefaultServer bool     `toml:"ignore_default_server"`
-	queries             MapQuery
-	isInitialized       bool
+	Servers       []string `toml:"servers"`
+	QueryVersion  int      `toml:"query_version"`
+	AzureDB       bool     `toml:"azuredb"`
+	DatabaseType  string   `toml:"database_type"`
+	IncludeQuery  []string `toml:"include_query"`
+	ExcludeQuery  []string `toml:"exclude_query"`
+	queries       MapQuery
+	isInitialized bool
 }
 
 // Query struct
@@ -87,11 +86,6 @@ include_query = []
 
 ## SQLServerAvailabilityReplicaStates and SQLServerDatabaseReplicaStates are optional queries and hence excluded here as default
 exclude_query = ["SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"]
-
-## When no connection strings are specified in "servers" list, then the default 'local' instance is connected to.
-## You can set this flag to true only when you don't want to use the default server used for collecting SQL Server (database_type = "SQLServer") metrics.
-## This setting has not bearing on other database_type values - "AzureSQLDB" or "AzureSQLManagedInstance"
-# ignore_default_server = true
 
 ## Following are old config settings, you may use them only if you are using the earlier flavor of queries, however it is recommended to use 
 ## the new mechanism of identifying the database_type there by use it's corresponding queries
@@ -227,7 +221,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	if len(s.Servers) == 0 && s.DatabaseType == "SQLServer" && !s.IgnoreDefaultServer {
+	if len(s.Servers) == 0 {
 		s.Servers = append(s.Servers, defaultServer)
 	}
 
