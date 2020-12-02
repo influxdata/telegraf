@@ -1,4 +1,4 @@
-package prometheus_remote_write
+package prometheusremotewrite
 
 import (
 	"bytes"

@@ -2,7 +2,7 @@ package serializers
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf/plugins/serializers/prometheus_remote_write"
+	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -127,7 +127,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
 	case "prometheus":
 		serializer, err = NewPrometheusSerializer(config)
-	case "prometheus_remote_write":
+	case "prometheusremotewrite":
 		serializer, err = NewPrometheusRemoteWriteSerializer(config)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
@@ -136,17 +136,17 @@ func NewSerializer(config *Config) (Serializer, error) {
 }
 
 func NewPrometheusRemoteWriteSerializer(config *Config) (Serializer, error) {
-	sortMetrics := prometheus_remote_write.NoSortMetrics
+	sortMetrics := prometheusremotewrite.NoSortMetrics
 	if config.PrometheusExportTimestamp {
-		sortMetrics = prometheus_remote_write.SortMetrics
+		sortMetrics = prometheusremotewrite.SortMetrics
 	}
 
-	stringAsLabels := prometheus_remote_write.DiscardStrings
+	stringAsLabels := prometheusremotewrite.DiscardStrings
 	if config.PrometheusStringAsLabel {
-		stringAsLabels = prometheus_remote_write.StringAsLabel
+		stringAsLabels = prometheusremotewrite.StringAsLabel
 	}
 
-	return prometheus_remote_write.NewSerializer(prometheus_remote_write.FormatConfig{
+	return prometheusremotewrite.NewSerializer(prometheusremotewrite.FormatConfig{
 		MetricSortOrder: sortMetrics,
 		StringHandling:  stringAsLabels,
 	})
