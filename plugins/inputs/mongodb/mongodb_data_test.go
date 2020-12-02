@@ -485,3 +485,49 @@ func TestStateTag(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "mongodb", fields, stateTags)
 }
+
+func TestAddTopStats(t *testing.T) {
+	collections := []string{"collectionOne", "collectionTwo"}
+	var topStatLines []TopStatLine
+	for _, collection := range collections {
+		topStatLine := TopStatLine{
+			CollectionName: collection,
+			TotalTime:      0,
+			TotalCount:     0,
+			ReadLockTime:   0,
+			ReadLockCount:  0,
+			WriteLockTime:  0,
+			WriteLockCount: 0,
+			QueriesTime:    0,
+			QueriesCount:   0,
+			GetMoreTime:    0,
+			GetMoreCount:   0,
+			InsertTime:     0,
+			InsertCount:    0,
+			UpdateTime:     0,
+			UpdateCount:    0,
+			RemoveTime:     0,
+			RemoveCount:    0,
+			CommandsTime:   0,
+			CommandsCount:  0,
+		}
+		topStatLines = append(topStatLines, topStatLine)
+	}
+
+	d := NewMongodbData(
+		&StatLine{
+			TopStatLines: topStatLines,
+		},
+		tags,
+	)
+
+	var acc testutil.Accumulator
+	d.AddTopStats()
+	d.flush(&acc)
+
+	for range topStatLines {
+		for key := range TopDataStats {
+			assert.True(t, acc.HasInt64Field("mongodb_top_stats", key))
+		}
+	}
+}

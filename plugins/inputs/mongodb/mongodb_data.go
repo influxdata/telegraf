@@ -15,6 +15,7 @@ type MongodbData struct {
 	DbData        []DbData
 	ColData       []ColData
 	ShardHostData []DbData
+	TopStatsData  []DbData
 }
 
 type DbData struct {
@@ -264,6 +265,27 @@ var ColDataStats = map[string]string{
 	"ok":               "Ok",
 }
 
+var TopDataStats = map[string]string{
+	"total_time":       "TotalTime",
+	"total_count":      "TotalCount",
+	"read_lock_time":   "ReadLockTime",
+	"read_lock_count":  "ReadLockCount",
+	"write_lock_time":  "WriteLockTime",
+	"write_lock_count": "WriteLockCount",
+	"queries_time":     "QueriesTime",
+	"queries_count":    "QueriesCount",
+	"get_more_time":    "GetMoreTime",
+	"get_more_count":   "GetMoreCount",
+	"insert_time":      "InsertTime",
+	"insert_count":     "InsertCount",
+	"update_time":      "UpdateTime",
+	"update_count":     "UpdateCount",
+	"remove_time":      "RemoveTime",
+	"remove_count":     "RemoveCount",
+	"commands_time":    "CommandsTime",
+	"commands_count":   "CommandsCount",
+}
+
 func (d *MongodbData) AddDbStats() {
 	for _, dbstat := range d.StatLine.DbStatsLines {
 		dbStatLine := reflect.ValueOf(&dbstat).Elem()
@@ -310,6 +332,22 @@ func (d *MongodbData) AddShardHostStats() {
 			newDbData.Fields[k] = val
 		}
 		d.ShardHostData = append(d.ShardHostData, *newDbData)
+	}
+}
+
+func (d *MongodbData) AddTopStats() {
+	for _, topStat := range d.StatLine.TopStatLines {
+		topStatLine := reflect.ValueOf(&topStat).Elem()
+		newTopStatData := &DbData{
+			Name:   topStat.CollectionName,
+			Fields: make(map[string]interface{}),
+		}
+		newTopStatData.Fields["type"] = "top_stat"
+		for key, value := range TopDataStats {
+			val := topStatLine.FieldByName(value).Interface()
+			newTopStatData.Fields[key] = val
+		}
+		d.TopStatsData = append(d.TopStatsData, *newTopStatData)
 	}
 }
 
@@ -408,5 +446,15 @@ func (d *MongodbData) flush(acc telegraf.Accumulator) {
 			d.StatLine.Time,
 		)
 		host.Fields = make(map[string]interface{})
+	}
+	for _, col := range d.TopStatsData {
+		d.Tags["collection"] = col.Name
+		acc.AddFields(
+			"mongodb_top_stats",
+			col.Fields,
+			d.Tags,
+			d.StatLine.Time,
+		)
+		col.Fields = make(map[string]interface{})
 	}
 }
