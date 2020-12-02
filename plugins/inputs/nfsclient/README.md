@@ -85,7 +85,7 @@ Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/b
         - vfsfsync - (int, count) - Count of calls to `fsync()` on directories and files.
         - vfslock - (int, count) - Number of times a lock was attempted on a file (regardless of success or not).
         - vfsrelease - (int, count) - Number of calls to `close()`.
-        - congestionwait - (int, count) - Unused.
+        - congestionwait - (int, count) - Believe unused by the Linux kernel, but it is part of the NFS spec.
         - setattrtrunc - (int, count) - How many times files have had their size truncated.
         - extendwrite - (int, count) - How many times a file has been grown because you're writing beyond the existing end of the file.
         - sillyrenames - (int, count) - Number of times an in-use file was removed (thus creating a temporary ".nfsXXXXXX" file)
