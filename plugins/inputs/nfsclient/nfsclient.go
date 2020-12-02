@@ -375,7 +375,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 			}
 		}
 
-		if len(n.ExcludeMounts) > 0 {
+		if !skip && len(n.ExcludeMounts) > 0 {
 			for _, RE := range n.ExcludeMounts {
 				matched, _ := regexp.MatchString(RE, device)
 				if matched {
