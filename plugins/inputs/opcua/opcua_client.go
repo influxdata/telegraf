@@ -343,9 +343,8 @@ func newMP(n *Node) metricParts {
 
 func (o *OpcUA) validateOPCTags() error {
 	nameEncountered := map[metricParts]struct{}{}
-	for i := range o.nodes {
-		node := &o.nodes[i]
-		mp := newMP(node)
+	for _, node := range o.nodes {
+		mp := newMP(&node)
 		//check empty name
 		if node.tag.FieldName == "" {
 			return fmt.Errorf("empty name in '%s'", node.tag.FieldName)
