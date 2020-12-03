@@ -1,0 +1,41 @@
+[global_tags]
+  dc = "us-east-1"
+
+# Configuration for telegraf agent
+[agent]
+  ## Default data collection interval for all inputs
+  interval = "10s"
+
+  ## Logging configuration:
+  ## Run telegraf with debug log messages.
+  debug = false
+
+  ## Override default hostname, if empty use os.Hostname()
+  hostname = "host"
+[[outputs.influxdb_v2]]	
+  ## The URLs of the InfluxDB cluster nodes.
+  ##
+  ## Multiple URLs can be specified for a single cluster, only ONE of the
+  ## urls will be written to each interval.
+  ## urls exp: http://127.0.0.1:9999
+  urls = ["https://us-west-2-1.aws.cloud2.influxdata.com"]
+
+  ## Token for authentication.
+  token = "sample_token"
+
+  ## Organization is the name of the organization you wish to write to; must exist.
+  organization = "sample@berkeley.edu"
+
+  ## Destination bucket to write into.
+  bucket = "Sample Bucket"
+[[outputs.kafka]]
+  # no params
+[[inputs.cpu]]
+  ## Whether to report per-cpu stats or not
+  percpu = true
+  ## Whether to report total system cpu stats or not
+  totalcpu = true
+  ## If true, collect raw CPU time metrics.
+  collect_cpu_time = false
+  ## If true, compute and report the sum of all non-idle CPU states.
+  report_active = false

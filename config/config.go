@@ -49,6 +49,8 @@ var (
 		`"`, `\"`,
 		`\`, `\\`,
 	)
+
+	updatedConfigPath = "./updated_config.conf"
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -725,6 +727,8 @@ func (c *Config) LoadConfig(path string) error {
 		return fmt.Errorf("Error loading config file %s: %w", path, err)
 	}
 
+	c.serializeConfig(data, updatedConfigPath, map[string]interface{}{}, "", "", "")
+
 	if err = c.LoadConfigData(data); err != nil {
 		return fmt.Errorf("Error loading config file %s: %w", path, err)
 	}
@@ -877,6 +881,210 @@ func (c *Config) LoadConfigData(data []byte) error {
 
 	if len(c.Processors) > 1 {
 		sort.Sort(c.Processors)
+	}
+
+	return nil
+}
+
+// UpdateConfig pulls the config file, updates with the new values in newConfig and saves back to the file
+func (c *Config) UpdateConfig(newConfig map[string]interface{}, pluginName string, pluginType string, operationType string) {
+	data, err := loadConfig(updatedConfigPath)
+	if err != nil {
+		return
+	}
+	c.serializeConfig(data, updatedConfigPath, newConfig, pluginName, pluginType, operationType)
+}
+
+func serializeTable(t *ast.Table, config map[string]interface{}, f *os.File, parentTableName string, numTabs int, isDoubleBrackets bool) error {
+
+	// Serialize table header
+	tabChars := strings.Repeat("  ", numTabs)
+	tableHeader := ""
+	if isDoubleBrackets {
+		// put "[[ ... ]]"
+		tableHeader = tabChars + "[[" + parentTableName + t.Name + "]]\n"
+	} else {
+		// put "[...]"
+		tableHeader = tabChars + "[" + parentTableName + t.Name + "]\n"
+	}
+
+	_, err := f.WriteString(tableHeader)
+	if err != nil {
+		return fmt.Errorf("Couldn't serialize config")
+	}
+
+	// Serialize table contents
+	// Process any leafs at this level first, since order matters in TOML
+	for key := range t.Fields {
+		val := t.Fields[key]
+
+		overwrite := false
+		if _, ok := config[key]; ok {
+			overwrite = true
+		}
+
+		switch val.(type) {
+		case *ast.KeyValue:
+			// Serialize Leaf
+			if overwrite {
+				// Use config
+
+				strVal := fmt.Sprintf("%v", config[key])
+				_, err := f.WriteString(tabChars + "  " + key + "=" + strVal + "\n")
+				if err != nil {
+					return fmt.Errorf("Couldn't serialize config")
+				}
+
+			} else {
+				// Just serialize
+				kv := val.(*ast.KeyValue)
+
+				_, err := f.WriteString(tabChars + "  " + kv.Key + "=" + kv.Value.Source() + "\n")
+				if err != nil {
+					return fmt.Errorf("Couldn't serialize config")
+				}
+			}
+		}
+	}
+
+	// Process subtables next
+	for key := range t.Fields {
+		val := t.Fields[key]
+		switch val.(type) {
+		case *ast.Table:
+			// Recurse to handle indefinitely nested AST
+			tbl := val.(*ast.Table)
+			err := serializeTable(tbl, config, f, parentTableName+t.Name+".", numTabs+1, false)
+			if err != nil {
+				return fmt.Errorf("Couldn't serialize config")
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *Config) serializePlugin(pluginName string, pluginType string, f *os.File) error {
+	// Serialize table header
+	tableHeader := "[[" + pluginType + "." + pluginName + "]]"
+	creator := inputs.Inputs[pluginName]
+	input := creator()
+	config := input.SampleConfig()
+
+	_, err := f.WriteString(tableHeader)
+	if err != nil {
+		return fmt.Errorf("Couldn't serialize config")
+	}
+	_, err = f.WriteString(config + "\n")
+	if err != nil {
+		return fmt.Errorf("Couldn't serialize config")
+	}
+	return nil
+}
+
+func (c *Config) serializeConfig(data []byte, newConfigPath string, config map[string]interface{}, pluginName string, pluginType string, operationType string) error {
+	f, _ := os.OpenFile(newConfigPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	f.Truncate(0)
+	defer f.Close()
+
+	tbl, err := parseConfig(data)
+	if err != nil {
+		return fmt.Errorf("Error parsing data: %s", err)
+	}
+
+	configParam := map[string]interface{}{}
+
+	// Parse tags tables first:
+	for _, tableName := range []string{"tags", "global_tags"} {
+		if val, ok := tbl.Fields[tableName]; ok {
+			subTable, ok := val.(*ast.Table)
+			if !ok {
+				return fmt.Errorf("invalid configuration, bad table name %q", tableName)
+			}
+
+			err := serializeTable(subTable, configParam, f, "", 0, false)
+			if err != nil {
+				return fmt.Errorf("Couldn't serialize config")
+			}
+
+			_, err = f.WriteString("\n")
+			if err != nil {
+				return fmt.Errorf("Couldn't serialize config")
+			}
+		}
+	}
+
+	// Parse agent table:
+	if val, ok := tbl.Fields["agent"]; ok {
+		subTable, ok := val.(*ast.Table)
+		if !ok {
+			return fmt.Errorf("invalid configuration, error parsing agent table")
+		}
+
+		err := serializeTable(subTable, configParam, f, "", 0, false)
+		if err != nil {
+			return fmt.Errorf("Couldn't serialize config")
+		}
+
+		_, err = f.WriteString("\n")
+		if err != nil {
+			return fmt.Errorf("Couldn't serialize config")
+		}
+	}
+
+	// Parse all the rest of the plugins:
+	for pType, val := range tbl.Fields {
+		subTable, ok := val.(*ast.Table)
+		if !ok {
+			return fmt.Errorf("invalid configuration, error parsing field %q as table", pType)
+		}
+
+		switch pType {
+		case "outputs", "inputs", "plugins", "processors", "aggregators":
+			for pName, pluginVal := range subTable.Fields {
+				if pType == pluginType && pName == pluginName {
+					if operationType == "START_PLUGIN" || operationType == "STOP_PLUGIN" {
+						continue
+					}
+					configParam = config
+				}
+				switch pluginSubTable := pluginVal.(type) {
+				// legacy [outputs.influxdb] support
+				case *ast.Table:
+					err := serializeTable(pluginSubTable, configParam, f, pType+".", 0, true)
+					if err != nil {
+						return fmt.Errorf("Couldn't serialize config")
+					}
+
+					_, err = f.WriteString("\n")
+					if err != nil {
+						return fmt.Errorf("Couldn't serialize config")
+					}
+
+				case []*ast.Table:
+					for _, t := range pluginSubTable {
+						err := serializeTable(t, configParam, f, pType+".", 0, true)
+						if err != nil {
+							return fmt.Errorf("Couldn't serialize config")
+						}
+
+						_, err = f.WriteString("\n")
+						if err != nil {
+							return fmt.Errorf("Couldn't serialize config")
+						}
+					}
+				default:
+					return fmt.Errorf("Unsupported config format: %s",
+						pluginName)
+				}
+			}
+			if pType == pluginType && operationType == "START_PLUGIN" {
+				err := c.serializePlugin(pluginName, pluginType, f)
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	return nil

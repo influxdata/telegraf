@@ -119,7 +119,7 @@ type outputUnit struct {
 }
 
 // RunSingleInput runs a single input and can be called after an agent is created
-func (a *Agent) RunSingleInput(inputConfig *models.InputConfig, plugin telegraf.Input, ctx context.Context) error {
+func (a *Agent) RunSingleInput(inputConfig *models.InputConfig, plugin telegraf.Input, ctx context.Context, shouldUpdatePlugin bool) error {
 
 	// NOTE: we can't just use `defer a.statusMutex.Unlock()` since except for the input validation,
 	// this function only returns once the gatherLoop is done -- i.e. when the plugin is stopped.
@@ -133,6 +133,10 @@ func (a *Agent) RunSingleInput(inputConfig *models.InputConfig, plugin telegraf.
 	if ok {
 		log.Printf("E! [agent] You are trying to run an input that is already running: %s \n", inputConfig.Name)
 		return errors.New("you are trying to run an input that is already running")
+	}
+
+	if shouldUpdatePlugin {
+		a.Config.UpdateConfig(map[string]interface{}{}, inputConfig.Name, "inputs", "START_PLUGIN")
 	}
 
 	startTime := time.Now()
@@ -346,36 +350,47 @@ func (a *Agent) Run(ctx context.Context) error {
 }
 
 // updateStructValuesHelper updates the reflect config, returning the original plugin otherwise
-func updateStructValuesHelper(pluginPtr reflect.Value, newConfig map[string]interface{}) (reflect.Value, error) {
-
+func updateStructValuesHelper(pluginPtr reflect.Value, newConfig map[string]interface{}) (reflect.Value, map[string]interface{}, error) {
 	plugin := pluginPtr.Elem() // extract Value of type interface{} from Value pointer to interface
+	tomlMap := map[string]interface{}{}
+	pType := plugin.Type()
 
 	if plugin.Kind() == reflect.Struct {
 
-		// initial check for errors
+		// initial check for errors, loop through twice to ensure that
+                // all fields are valid before updating
 		for configKey, configValue := range newConfig {
 			pluginField := plugin.FieldByName(configKey) // cast new value as Value
 			reflectedNew := reflect.ValueOf(configValue)
+
 			// if any errors found, return original plugin
 			if !(pluginField.IsValid()) {
-				return pluginPtr.Elem(), fmt.Errorf("invalid field name %s", configKey)
+				return pluginPtr.Elem(), map[string]interface{}{}, fmt.Errorf("invalid field name %s", configKey)
 			} else if !(pluginField.CanSet()) {
-				return pluginPtr.Elem(), fmt.Errorf("unsettable field %s", configKey)
+				return pluginPtr.Elem(), map[string]interface{}{}, fmt.Errorf("unsettable field %s", configKey)
 			} else if !(pluginField.Type() == reflectedNew.Type()) {
-				return pluginPtr.Elem(), fmt.Errorf("value type mismatch for field %s", configKey)
+				return pluginPtr.Elem(), map[string]interface{}{}, fmt.Errorf("value type mismatch for field %s", configKey)
 			}
 		}
 
-		// if no error, update all
-		for configKey, configValue := range newConfig {
-			pluginField := plugin.FieldByName(configKey) // cast new value as Value
-			reflectedNew := reflect.ValueOf(configValue)
-			pluginField.Set(reflectedNew)
-		}
-		return plugin, nil
-	}
+                // if no error, update all
+                for configKey, configValue := range newConfig {
+                        pluginField := plugin.FieldByName(configKey) // cast new value as Value
+                        reflectedNew := reflect.ValueOf(configValue)
+                        pluginField.Set(reflectedNew)
+                        field, _ := pType.FieldByName(configKey)
 
-	return plugin, fmt.Errorf("could not update plugin")
+                        tomlTag := field.Tag.Get("toml")
+                        if tomlTag == "" {
+                                tomlTag = configKey
+                        }
+
+                        tomlMap[tomlTag] = configValue
+
+                }
+		return plugin, tomlMap, nil
+	}
+	return plugin, map[string]interface{}{}, fmt.Errorf("could not update plugin")
 }
 
 // StartInput adds an input plugin with default config
@@ -383,7 +398,7 @@ func (a *Agent) StartInput(pluginName string) error {
 	inputConfig := models.InputConfig{
 		Name: pluginName,
 	}
-	return a.RunSingleInput(&inputConfig, nil, a.Context)
+	return a.RunSingleInput(&inputConfig, nil, a.Context, true)
 }
 
 // Add Output adds an output plugin with default config
@@ -426,12 +441,13 @@ func (a *Agent) UpdateInputPlugin(name string, config map[string]interface{}) (t
 				a.wg.Add(1)
 			}
 
-			a.StopInputPlugin(name)
+			a.StopInputPlugin(name, false)
 
 			reflectedPlugin := reflect.ValueOf(plugin)
-			_, err := updateStructValuesHelper(reflectedPlugin, config)
+			_, tomlMap, err := updateStructValuesHelper(reflectedPlugin, config)
+			a.Config.UpdateConfig(tomlMap, name, "inputs", "UPDATE_PLUGIN")
 
-			a.RunSingleInput(input.Config, plugin, a.Context)
+			a.RunSingleInput(input.Config, plugin, a.Context, false)
 
 			if len(a.Config.Inputs) == 1 {
 				a.wg.Add(1)
@@ -575,7 +591,7 @@ func (a *Agent) runInputs(
 	a.Context = ctx
 
 	for _, input := range unit.inputs {
-		a.RunSingleInput(input.Config, nil, ctx)
+		a.RunSingleInput(input.Config, nil, ctx, false)
 	}
 	a.wg.Wait()
 
@@ -697,13 +713,15 @@ func stopServiceInputs(inputs []*models.RunningInput) {
 }
 
 // StopInputPlugin stops an input plugin
-func (a *Agent) StopInputPlugin(input string) error {
+func (a *Agent) StopInputPlugin(input string, shouldUpdatePlugin bool) error {
 
 	// NOTE: don't use `defer a.statusMux.Unlock()` here,
 	// since we write to a channel that gatherLoop() is waiting on,
 	// and we need to maintain our invariant for gatherLoop()
 	// that it is given an unlocked mutex and returns an unlocked mutex.
-
+	if shouldUpdatePlugin {
+		a.Config.UpdateConfig(map[string]interface{}{}, input, "inputs", "STOP_PLUGIN")
+	}
 	a.statusMux.Lock()
 	// will write "STOP" to the channel as a case for gatherLoop
 	statusChannel, ok := a.statusMap["input"][input]

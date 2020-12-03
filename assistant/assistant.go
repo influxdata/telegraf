@@ -301,7 +301,7 @@ func (assistant *Assistant) stopPlugin(req request) response {
 
 	switch req.Plugin.Type {
 	case "INPUT":
-		err = assistant.agent.StopInputPlugin(req.Plugin.Name)
+		err = assistant.agent.StopInputPlugin(req.Plugin.Name, true)
 	case "OUTPUT":
 		// TODO
 	default:

@@ -154,6 +154,7 @@ func runAgent(ctx context.Context,
 	}
 
 	ag, err := agent.NewAgent(c)
+
 	if err != nil {
 		return err
 	}
