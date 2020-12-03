@@ -229,9 +229,9 @@ subjects:
     - state_code
     - state_reason
     - terminated_reason (string, deprecated in 1.15: use `state_reason` instead)
-    - resource_requests_cpu_units
+    - resource_requests_millicpu_units
     - resource_requests_memory_bytes
-    - resource_limits_cpu_units
+    - resource_limits_millicpu_units
     - resource_limits_memory_bytes
 
 - kubernetes_service
