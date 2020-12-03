@@ -437,7 +437,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 			}
 
 			// Fill in datacenter names where available (no need to do it for Datacenters)
-			if res.name != "Datacenter" {
+			if res.name != "datacenter" {
 				for k, obj := range objects {
 					if obj.parentRef != nil {
 						obj.dcname, _ = e.getDatacenterName(ctx, client, dcNameCache, *obj.parentRef)
