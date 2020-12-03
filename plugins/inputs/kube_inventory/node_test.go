@@ -56,7 +56,7 @@ func TestNode(t *testing.T) {
 										"pods":                    {String_: toStrPtr("110")},
 									},
 									Allocatable: map[string]*resource.Quantity{
-										"cpu":                     {String_: toStrPtr("16")},
+										"cpu":                     {String_: toStrPtr("16000m")},
 										"ephemeral_storage_bytes": {String_: toStrPtr("44582761194")},
 										"hugepages_1Gi_bytes":     {String_: toStrPtr("0")},
 										"hugepages_2Mi_bytes":     {String_: toStrPtr("0")},
