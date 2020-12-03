@@ -230,27 +230,27 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	for _, serv := range s.Servers {
-		for _, query := range s.queries {
-			wg.Add(1)
-			go func(serv string, query Query) {
-				defer wg.Done()
-				acc.AddError(s.gatherServer(serv, query, acc))
-			}(serv, query)
-		}
+		wg.Add(1)
+		go func(serv string) {
+			conn, err := sql.Open("mssql", serv)
+			if err != nil {
+				acc.AddError(err)
+				return
+			}
+
+			defer conn.Close()
+			defer wg.Done()
+			for _, query := range s.queries {
+				acc.AddError(s.gatherServer(conn, serv, query, acc))
+			}
+		}(serv)
 	}
 
 	wg.Wait()
 	return nil
 }
 
-func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumulator) error {
-	// deferred opening
-	conn, err := sql.Open("mssql", server)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
+func (s *SQLServer) gatherServer(conn *sql.DB, server string, query Query, acc telegraf.Accumulator) error {	
 	// execute query
 	rows, err := conn.Query(query.Script)
 	if err != nil {
