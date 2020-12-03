@@ -42,7 +42,7 @@ func (ki *KubernetesInventory) gatherNode(n v1.Node, acc telegraf.Accumulator) e
 	for resourceName, val := range n.Status.Allocatable {
 		switch resourceName {
 		case "cpu":
-			fields["allocatable_cpu_cores"] = atoi(val.GetString_())
+			fields["allocatable_cpu_cores"] = convertQuantity(val.GetString_(), 1)
 		case "memory":
 			fields["allocatable_memory_bytes"] = convertQuantity(val.GetString_(), 1)
 		case "pods":
