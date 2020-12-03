@@ -206,6 +206,12 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return errors.Wrap(err, "build lte")
 			}
 			influx.Lte = append(influx.Lte, &m)
+		case "glog":
+			m := Glog{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build glog")
+			}
+			influx.Glog = append(influx.Glog, &m)
 		}
 	}
 

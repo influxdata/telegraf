@@ -1,5 +1,26 @@
 syntax = "proto3";
 
+message Glog {
+  message Fields {
+    string log_level = 1;
+    string logcode = 2;
+    string message = 3;
+    string timestamp = 4;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string host = 1;
+    string source = 2;
+    string path = 3;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
 message LTE {
   message Fields {
     string cell_id = 1;
@@ -597,6 +618,7 @@ message Influx {
   repeated DockerStats dockerStats = 16;
   repeated SMART smart = 17;
   repeated LTE lte = 18;
+  repeated Glog glog = 19;
 }
 
 
