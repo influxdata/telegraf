@@ -52,7 +52,11 @@ type HTTPResponse struct {
 	Log telegraf.Logger
 
 	compiledStringMatch *regexp.Regexp
-	client              *http.Client
+	client              httpClient
+}
+
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
 // Description returns the plugin Description
