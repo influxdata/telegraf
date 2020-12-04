@@ -586,6 +586,7 @@ SELECT
 	,s.[program_name]
 	,s.[host_name]
 	,s.[nt_user_name]
+	,s.[login_name]
 	,COALESCE(r.[open_transaction_count], s.[open_transaction_count]) AS [open_transaction]
 	,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
 		WHEN 0 THEN '0-Read Committed' 
@@ -1108,6 +1109,7 @@ SELECT
 	,s.[program_name]
 	,s.[host_name]
 	,s.[nt_user_name]
+	,s.[login_name]
 	,COALESCE(r.[open_transaction_count], s.[open_transaction_count]) AS [open_transaction]
 	,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
 		WHEN 0 THEN '0-Read Committed' 
