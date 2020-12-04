@@ -12,7 +12,7 @@ defaults:
       - image: 'quay.io/influxdb/telegraf-ci:1.15.5'
   mac: &mac
     macos:
-      xcode: 11.3.1
+      xcode: 12.1.0
     working_directory: '~/go/src/github.com/influxdata/telegraf'
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
