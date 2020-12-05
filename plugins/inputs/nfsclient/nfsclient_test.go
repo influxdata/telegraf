@@ -11,7 +11,7 @@ import (
 )
 
 func readMountstatsFile() string {
-	path := "./mountstats"
+	path := "./testdata/mountstats"
 	if os.Getenv("MOUNT_PROC") != "" {
 		path = os.Getenv("MOUNT_PROC")
 	}
