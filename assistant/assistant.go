@@ -113,7 +113,7 @@ func (assistant *Assistant) initWebsocketConnection(ctx context.Context) error {
 	log.Printf("D! [assistant] Attempting connection to [%s]", config.Host)
 	ws, _, err := websocket.DefaultDialer.Dial(u.String(), header)
 	for err != nil { // on error, retry connection again
-		// ? Do we really want this in here? Consider move outside
+		// TODO? Do we really want this in here? Consider move outside
 		log.Printf("E! [assistant] Failed to connect to [%s], retrying in %ds, "+
 			"error was '%s'", config.Host, config.RetryInterval, err)
 
@@ -177,7 +177,7 @@ func (assistant *Assistant) listenToServer(ctx context.Context) {
 				return
 			}
 		}
-		var res response
+    res := assistant.handleRequests(&req)
 		switch req.Operation {
 		case GET_PLUGIN:
 			res = assistant.getPlugin(req)
@@ -212,8 +212,32 @@ func (assistant *Assistant) listenToServer(ctx context.Context) {
 	}
 }
 
+func (assistant *Assistant) handleRequests(req *request) response {
+	var res response
+	switch req.Operation {
+	case GET_PLUGIN:
+		res = assistant.getPlugin(req)
+	case GET_PLUGIN_SCHEMA:
+		res = assistant.getSchema(req)
+	case START_PLUGIN:
+		res = assistant.startPlugin(req)
+	case STOP_PLUGIN:
+		res = assistant.stopPlugin(req)
+	case UPDATE_PLUGIN:
+		res = assistant.updatePlugin(req)
+	case GET_RUNNING_PLUGINS:
+		res = assistant.getRunningPlugins(req)
+	case GET_ALL_PLUGINS:
+		res = assistant.getAllPlugins(req)
+	default:
+		// return error response
+		res = response{FAILURE, req.UUID, "invalid operation request"}
+	}
+	return res
+}
+
 // getPlugin returns the struct response containing config for a single plugin
-func (assistant *Assistant) getPlugin(req request) response {
+func (assistant *Assistant) getPlugin(req *request) response {
 	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.Name, "\n")
 
 	var data interface{}
@@ -245,22 +269,16 @@ type schema struct {
 }
 
 // getSchema returns the struct response containing config schema for a single plugin
-func (assistant *Assistant) getSchema(req request) response {
+func (assistant *Assistant) getSchema(req *request) response {
 	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.Name, "\n")
 
 	var plugin interface{}
 	var err error
 	switch req.Plugin.Type {
 	case "INPUT":
-		// TODO implement error checking for types
 		plugin, err = assistant.agent.GetDefaultInputPlugin(req.Plugin.Name)
 	case "OUTPUT":
-		// TODO implement error checking for types
 		plugin, err = assistant.agent.GetDefaultOutputPlugin(req.Plugin.Name)
-	case "AGGREGATOR":
-		// TODO
-	case "PROCESSOR":
-		// TODO
 	default:
 		err = fmt.Errorf("did not provide a valid plugin type")
 	}
@@ -273,17 +291,11 @@ func (assistant *Assistant) getSchema(req request) response {
 	if err != nil {
 		return response{FAILURE, req.UUID, err.Error()}
 	}
-
-	// TODO convert plugin to map[string]interface{} ?
-	// pluginMap, ok := plugin.(map[string]interface{})
-	// if !ok {
-	// 	return response{FAILURE, req.UUID, fmt.Errorf("plugin format is not a map[string]interface{}")}
-	// }
 	return response{SUCCESS, req.UUID, schema{types, plugin}}
 }
 
 // startPlugin starts a single plugin
-func (assistant *Assistant) startPlugin(req request) (response, error) {
+func (assistant *Assistant) startPlugin(req *request) response {
 	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.Name, "\n")
 
 	var res response
@@ -293,7 +305,7 @@ func (assistant *Assistant) startPlugin(req request) (response, error) {
 	case "INPUT":
 		err = assistant.agent.StartInput(req.Plugin.Name)
 	case "OUTPUT":
-		// TODO
+		err = assistant.agent.StartOutput(req.Plugin.Name, req.Plugin.Config)
 	default:
 		err = fmt.Errorf("did not provide a valid plugin type")
 	}
@@ -304,11 +316,11 @@ func (assistant *Assistant) startPlugin(req request) (response, error) {
 		res = response{SUCCESS, req.UUID, fmt.Sprintf("%s plugin added.", req.Plugin.Name)}
 	}
 
-	return res, err
+	return res
 }
 
 // updatePlugin updates a plugin with the config specified in request
-func (assistant *Assistant) updatePlugin(req request) response {
+func (assistant *Assistant) updatePlugin(req *request) response {
 	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.Name, "\n")
 
 	var res response
@@ -324,7 +336,7 @@ func (assistant *Assistant) updatePlugin(req request) response {
 	case "INPUT":
 		data, err = assistant.agent.UpdateInputPlugin(req.Plugin.Name, req.Plugin.Config)
 	case "OUTPUT":
-		// TODO
+		data, err = assistant.agent.UpdateOutputPlugin(req.Plugin.Name, req.Plugin.Config)
 	default:
 		err = fmt.Errorf("did not provide a valid plugin type")
 	}
@@ -339,7 +351,7 @@ func (assistant *Assistant) updatePlugin(req request) response {
 }
 
 // stopPlugin stops a single plugin
-func (assistant *Assistant) stopPlugin(req request) response {
+func (assistant *Assistant) stopPlugin(req *request) response {
 	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.Name, "\n")
 
 	var res response
@@ -347,9 +359,9 @@ func (assistant *Assistant) stopPlugin(req request) response {
 
 	switch req.Plugin.Type {
 	case "INPUT":
-		err = assistant.agent.StopInputPlugin(req.Plugin.Name, true)
+		assistant.agent.StopInputPlugin(req.Plugin.Name, true)
 	case "OUTPUT":
-		// TODO
+    assistant.agent.StopOutputPlugin(req.Plugin.Name, true)
 	default:
 		err = fmt.Errorf("did not provide a valid plugin type")
 	}
@@ -369,7 +381,7 @@ type pluginsList struct {
 }
 
 // getRunningPlugins returns a JSON response obj with all running plugins
-func (assistant *Assistant) getRunningPlugins(req request) response {
+func (assistant *Assistant) getRunningPlugins(req *request) response {
 	inputs := assistant.agent.GetRunningInputPlugins()
 	outputs := assistant.agent.GetRunningOutputPlugins()
 	data := pluginsList{inputs, outputs}
@@ -379,7 +391,7 @@ func (assistant *Assistant) getRunningPlugins(req request) response {
 }
 
 // getAllPlugins returns a JSON response obj with names of all possible plugins
-func (assistant *Assistant) getAllPlugins(req request) response {
+func (assistant *Assistant) getAllPlugins(req *request) response {
 	inputs := agent.GetAllInputPlugins()
 	outputs := agent.GetAllOutputPlugins()
 	data := pluginsList{inputs, outputs}

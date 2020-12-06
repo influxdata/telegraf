@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -26,8 +27,9 @@ type Agent struct {
 	Config    *config.Config
 	Context   context.Context
 	iu        *inputUnit
+	ou        *outputUnit
 	wg        *sync.WaitGroup
-	statusMap map[string]map[string]pluginChannels // The 0-th Element is to stop
+	statusMap map[string]map[string]pluginChannels
 	statusMux *sync.Mutex
 }
 
@@ -209,6 +211,68 @@ func (a *Agent) RunSingleInput(inputConfig *models.InputConfig, plugin telegraf.
 	return nil
 }
 
+// RunSingleOutput runs a single output and can be called after an agent is created
+func (a *Agent) RunSingleOutput(output *models.RunningOutput, ctx context.Context) error {
+
+	// NOTE: we can't just use `defer a.statusMutex.Unlock()` since except for the output validation,
+	// this function only returns once the gatherLoop is done -- i.e. when the plugin is stopped.
+	// Be careful to manually unlock the statusMutex in this function.
+	name := output.Config.Name
+
+	// validating if an output plugin is already running, and therefore shouldn't be run again
+	a.statusMux.Lock()
+	_, ok := a.statusMap["output"][name]
+	a.statusMux.Unlock()
+
+	if ok {
+		log.Printf("E! [agent] You are trying to run an output that is already running: %s \n", name)
+		return errors.New("you are trying to run an output that is already running")
+	}
+
+	// Start flush loop
+	interval := a.Config.Agent.FlushInterval.Duration
+	jitter := a.Config.Agent.FlushJitter.Duration
+
+	a.statusMux.Lock()
+	pChannels := pluginChannels{make(chan struct{}), make(chan struct{})}
+	a.statusMap["output"][output.Config.Name] = pChannels
+	a.statusMux.Unlock()
+
+	// Overwrite agent flush_interval if this plugin has its own.
+	if output.Config.FlushInterval != 0 {
+		interval = output.Config.FlushInterval
+	}
+
+	// Overwrite agent flush_jitter if this plugin has its own.
+	if output.Config.FlushJitter != 0 {
+		jitter = output.Config.FlushJitter
+	}
+
+	a.wg.Add(1)
+	go func(output *models.RunningOutput) {
+		defer a.wg.Done()
+
+		ticker := NewRollingTicker(interval, jitter)
+		defer ticker.Stop()
+
+		a.flushLoop(ctx, output, ticker)
+	}(output)
+
+	alreadyInArray := false
+
+	for _, i := range a.Config.Outputs {
+		if i.Config.Name == output.Config.Name {
+			alreadyInArray = true
+		}
+	}
+
+	if !alreadyInArray {
+		a.Config.Outputs = append(a.Config.Outputs, output)
+	}
+
+	return nil
+}
+
 func GetAllInputPlugins() []string {
 	var res []string
 	for name := range inputs.Inputs {
@@ -294,6 +358,7 @@ func (a *Agent) getFieldSchema(data reflect.Type) interface{} {
 
 // Run starts and runs the Agent until the context is done.
 func (a *Agent) Run(ctx context.Context) error {
+	a.Context = ctx
 	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s",
 		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
@@ -312,6 +377,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	a.ou = ou
 
 	var apu []*processorUnit
 	var au *aggregatorUnit
@@ -400,6 +466,55 @@ func (a *Agent) Run(ctx context.Context) error {
 	return err
 }
 
+// StartInput adds an input plugin with default config
+func (a *Agent) StartInput(pluginName string) error {
+	inputConfig := models.InputConfig{
+		Name: pluginName,
+	}
+	return a.RunSingleInput(&inputConfig, nil, a.Context, false)
+}
+
+// StartOutput adds an output plugin with default config
+func (a *Agent) StartOutput(pluginName string, config map[string]interface{}) error {
+	outputConfig := models.OutputConfig{
+		Name: pluginName,
+	}
+
+	pluginCreator, ok := outputs.Outputs[pluginName]
+	if !ok {
+		log.Printf("E! [agent] output config's name is not valid: %s \n", pluginName)
+		return errors.New("output config's name is not valid")
+	}
+
+	output := pluginCreator()
+
+	if config != nil {
+		configJSON, err := validateStructConfig(reflect.ValueOf(output), config)
+		if err != nil {
+			return fmt.Errorf("could not update output plugin %s with error: %s", pluginName, err)
+		}
+
+		json.Unmarshal(configJSON, &output)
+	}
+
+	ro := models.NewRunningOutput(pluginName, output, &outputConfig,
+		a.Config.Agent.MetricBatchSize, a.Config.Agent.MetricBufferLimit)
+
+	ro.Init()
+
+	err := a.connectOutput(a.Context, ro)
+	if err != nil {
+		return nil
+	}
+
+	a.RunSingleOutput(ro, a.Context)
+
+	// add new output to outputunit
+	a.ou.outputs = append(a.ou.outputs, ro)
+
+	return nil
+}
+
 // updateStructValuesHelper updates the reflect config, returning the original plugin otherwise
 func updateStructValuesHelper(pluginPtr reflect.Value, newConfig map[string]interface{}) (reflect.Value, map[string]interface{}, error) {
 	plugin := pluginPtr.Elem() // extract Value of type interface{} from Value pointer to interface
@@ -444,25 +559,6 @@ func updateStructValuesHelper(pluginPtr reflect.Value, newConfig map[string]inte
 	return plugin, map[string]interface{}{}, fmt.Errorf("could not update plugin")
 }
 
-// StartInput adds an input plugin with default config
-func (a *Agent) StartInput(pluginName string) error {
-	inputConfig := models.InputConfig{
-		Name: pluginName,
-	}
-	return a.RunSingleInput(&inputConfig, nil, a.Context, true)
-}
-
-// Add Output adds an output plugin with default config
-func (a *Agent) AddOutput(pluginName string) {
-	plugin := outputs.Outputs[pluginName]
-	outputConfig := models.OutputConfig{
-		Name: pluginName,
-	}
-	// TODO Implement add output plugin
-	runningPlugin := models.NewRunningOutput(pluginName, plugin(), &outputConfig, 0, 0)
-	a.Config.Outputs = append(a.Config.Outputs, runningPlugin)
-}
-
 // GetRunningInputPlugin gets the InputConfig for a running plugin given its name
 func (a *Agent) GetRunningInputPlugin(name string) (telegraf.Input, error) {
 	for _, input := range a.Config.Inputs {
@@ -480,6 +576,34 @@ func (a *Agent) GetDefaultInputPlugin(name string) (telegraf.Input, error) {
 		return p(), nil
 	}
 	return nil, fmt.Errorf("could not find input plugin with name: %s", name)
+}
+
+// If the config is compatible with the struct, return the JSON vesion of the config.
+func validateStructConfig(structPtr reflect.Value, config map[string]interface{}) ([]byte, error) {
+	strct := structPtr.Elem() // extract Value of type interface{} from Value pointer to interface
+
+	if strct.Kind() == reflect.Struct {
+		// Check for if trying to modify unsettable fields and fields that don't exist.
+		for configKey := range config {
+			pluginField := strct.FieldByName(configKey) // cast new value as Value
+			if !(pluginField.IsValid()) {
+				return nil, fmt.Errorf("invalid field name %s", configKey)
+			} else if !(pluginField.CanSet()) {
+				return nil, fmt.Errorf("unsettable field %s", configKey)
+			}
+		}
+
+		// Creates a copy of the struct and see if JSON Unmarshal works without errors
+		empty := reflect.New(strct.Type())
+		cJSON, err := json.Marshal(config)
+		err = json.Unmarshal(cJSON, empty.Interface())
+		if err != nil {
+			return nil, err
+		}
+		return cJSON, nil
+	}
+
+	return nil, fmt.Errorf("pointer does not point to a struct")
 }
 
 // UpdateInputPlugin gets the InputConfig for a plugin given its name
@@ -530,10 +654,30 @@ func (a *Agent) GetDefaultOutputPlugin(name string) (telegraf.Output, error) {
 	return nil, fmt.Errorf("could not find output plugin with name: %s", name)
 }
 
-// UpdateOutputPlugin gets the InputConfig for a plugin given its name
+// UpdateOutputPlugin gets the config for an output plugin given its name
 func (a *Agent) UpdateOutputPlugin(name string, config map[string]interface{}) (telegraf.Output, error) {
-	// TODO Implement when can start output plugin
-	return nil, nil
+	for _, output := range a.Config.Outputs {
+		if name == output.Config.Name {
+			plugin := output.Output
+
+			// This code creates a copy of the struct and see if JSON Unmarshal works without errors
+			configJSON, err := validateStructConfig(reflect.ValueOf(plugin), config)
+			if err != nil {
+				return plugin, fmt.Errorf("could not update input plugin %s with error: %s", name, err)
+			}
+
+			a.wg.Add(1)
+			a.StopInputPlugin(name, true)
+			json.Unmarshal(configJSON, &plugin)
+			ro := models.NewRunningOutput(name, plugin, output.Config,
+				a.Config.Agent.MetricBatchSize, a.Config.Agent.MetricBufferLimit)
+			a.RunSingleOutput(ro, a.Context)
+			a.wg.Done()
+
+			return plugin, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot update %s because output plugin is not running", name)
 }
 
 // GetAggregatorPlugin gets the AggregatorConfig for a plugin given its name
@@ -806,6 +950,39 @@ func (a *Agent) StopInputPlugin(input string, shouldUpdatePlugin bool) error {
 	return fmt.Errorf("input was not found in running inputs list")
 }
 
+// StopOutputPlugin stops an output plugin
+func (a *Agent) StopOutputPlugin(output string) {
+
+	// NOTE: don't use `defer a.statusMux.Unlock()` here,
+	// since we write to a channel that gatherLoop() is waiting on,
+	// and we need to maintain our invariant for gatherLoop()
+	// that it is given an unlocked mutex and returns an unlocked mutex.
+
+	a.statusMux.Lock()
+	// will write "STOP" to the channel as a case for flushLoop
+	statusChannel, ok := a.statusMap["output"][output]
+	a.statusMux.Unlock()
+
+	if !ok {
+		log.Printf("E! [agent] You are trying to stop an output that is not running: %s \n", output)
+		return
+	}
+
+	statusChannel.stop <- struct{}{}
+	<-statusChannel.stopped
+
+	close(statusChannel.stop)
+	close(statusChannel.stopped)
+
+	for i, other := range a.Config.Outputs {
+		if other.Config.Name == output {
+			a.Config.Outputs = append(a.Config.Outputs[:i], a.Config.Outputs[i+1:]...)
+			break
+		}
+	}
+
+}
+
 // gather runs an input's gather function periodically until the context is
 // done.
 func (a *Agent) gatherLoop(
@@ -831,6 +1008,17 @@ func (a *Agent) gatherLoop(
 			a.statusMux.Lock()
 			delete(a.statusMap["input"], input.Config.Name)
 			a.statusMux.Unlock()
+			// delete input from input unit slice
+			for i, io := range a.iu.inputs {
+				if input == io {
+					// swap with last input and truncate slice
+					if len(a.iu.inputs) > 1 {
+						a.iu.inputs[i] = a.iu.inputs[len(a.iu.inputs)-1]
+					}
+					a.iu.inputs = a.iu.inputs[:len(a.iu.inputs)-1]
+					break
+				}
+			}
 			pluginChannel.stopped <- struct{}{}
 			return
 		case <-ticker.Elapsed():
@@ -1115,36 +1303,11 @@ func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput)
 func (a *Agent) runOutputs(
 	unit *outputUnit,
 ) error {
-	var wg sync.WaitGroup
-
-	// Start flush loop
-	interval := a.Config.Agent.FlushInterval.Duration
-	jitter := a.Config.Agent.FlushJitter.Duration
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	for _, output := range unit.outputs {
-		interval := interval
-		// Overwrite agent flush_interval if this plugin has its own.
-		if output.Config.FlushInterval != 0 {
-			interval = output.Config.FlushInterval
-		}
-
-		jitter := jitter
-		// Overwrite agent flush_jitter if this plugin has its own.
-		if output.Config.FlushJitter != 0 {
-			jitter = output.Config.FlushJitter
-		}
-
-		wg.Add(1)
-		go func(output *models.RunningOutput) {
-			defer wg.Done()
-
-			ticker := NewRollingTicker(interval, jitter)
-			defer ticker.Stop()
-
-			a.flushLoop(ctx, output, ticker)
-		}(output)
+		a.RunSingleOutput(output, ctx)
 	}
 
 	for metric := range unit.src {
@@ -1159,7 +1322,7 @@ func (a *Agent) runOutputs(
 
 	log.Println("I! [agent] Hang on, flushing any cached metrics before shutdown")
 	cancel()
-	wg.Wait()
+	a.wg.Wait()
 
 	return nil
 }
@@ -1182,6 +1345,10 @@ func (a *Agent) flushLoop(
 	watchForFlushSignal(flushRequested)
 	defer stopListeningForFlushSignal(flushRequested)
 
+	a.statusMux.Lock()
+	pluginChannel := a.statusMap["output"][output.Config.Name]
+	a.statusMux.Unlock()
+
 	for {
 		// Favor shutdown over other methods.
 		select {
@@ -1194,6 +1361,25 @@ func (a *Agent) flushLoop(
 		select {
 		case <-ctx.Done():
 			logError(a.flushOnce(output, ticker, output.Write))
+			return
+		case <-pluginChannel.stop:
+			log.Println("I! [agent] stopping output plugin", output.Config.Name)
+			a.statusMux.Lock()
+			delete(a.statusMap["output"], output.Config.Name)
+			a.statusMux.Unlock()
+			// delete output from output unit slice
+			for i, ro := range a.ou.outputs {
+				if output == ro {
+					// swap with last output and truncate slice
+					if len(a.ou.outputs) > 1 {
+						a.ou.outputs[i] = a.ou.outputs[len(a.ou.outputs)-1]
+					}
+					a.ou.outputs = a.ou.outputs[:len(a.ou.outputs)-1]
+					break
+				}
+			}
+			output.Close()
+			pluginChannel.stopped <- struct{}{}
 			return
 		case <-ticker.Elapsed():
 			logError(a.flushOnce(output, ticker, output.Write))

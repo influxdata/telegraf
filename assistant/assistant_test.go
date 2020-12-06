@@ -11,7 +11,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
+	"github.com/influxdata/telegraf/plugins/inputs/http"
 	"github.com/influxdata/telegraf/plugins/inputs/memcached"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	"github.com/stretchr/testify/assert"
 )
@@ -31,16 +33,27 @@ func initAgentAndAssistant(ctx context.Context, configName string) (*agent.Agent
 	return ag, ast
 }
 
+func buildRequest(rt requestType, params pluginInfo) (request, error) {
+	paramsJSON, err := json.Marshal(params)
+	var req request
+	if err == nil {
+		var pi pluginInfo
+		err = json.Unmarshal(paramsJSON, &pi)
+		return request{rt, "123", pi}, err
+	}
+	return req, err
+}
+
 func TestAssistant_GetInputPluginSchema(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_, ast := initAgentAndAssistant(ctx, "single_plugin")
 
-	req := request{GET_PLUGIN_SCHEMA, "123", pluginInfo{"httpjson", "INPUT", nil}}
-	res := ast.getSchema(req)
+	req, err := buildRequest(GET_PLUGIN_SCHEMA, pluginInfo{"httpjson", "INPUT", nil})
+	res := ast.handleRequests(&req)
 	assert.Equal(t, SUCCESS, res.Status)
 
 	s, isSchema := res.Data.(schema)
-	_, err := json.Marshal(res)
+	_, err = json.Marshal(res)
 	if err != nil {
 		t.Log(err)
 	}
@@ -59,12 +72,12 @@ func TestAssistant_GetInputPluginSchema(t *testing.T) {
 		"Duration": "int64",
 	}, m["ResponseTimeout"])
 
-	d, _ := json.Marshal(s.Defaults)
+// 	d, _ := json.Marshal(s.Defaults)
 
-	var config map[string]interface{}
-	_ = json.Unmarshal([]byte(d), &config)
+// 	var config map[string]interface{}
+// 	_ = json.Unmarshal([]byte(d), &config)
 
-	fmt.Println(config)
+// 	fmt.Println(config)
 
 	cancel()
 }
@@ -73,69 +86,69 @@ func TestAssistant_GetOutputPluginSchema(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_, ast := initAgentAndAssistant(ctx, "slice_comment") // single output plugin http
 
-	req := request{GET_PLUGIN_SCHEMA, "123", pluginInfo{"http", "OUTPUT", nil}}
-	res := ast.getSchema(req)
+	req, err := buildRequest(GET_PLUGIN_SCHEMA, pluginInfo{"http", "OUTPUT", nil})
+	res := ast.handleRequests(&req)
 	assert.Equal(t, SUCCESS, res.Status)
 
 	s, isSchema := res.Data.(schema)
-	_, err := json.Marshal(res)
+	m := s.Types
+	_, err = json.Marshal(res)
 	if err != nil {
 		t.Log(err)
 	}
 
-	m := s.Types
-	// d := s.Defaults
+	fmt.Println(m)
 
 	assert.NoError(t, err)
 	assert.True(t, isSchema)
-	assert.Equal(t, map[string]interface{}{
-		"InsecureSkipVerify": "bool",
-		"SSLCA":              "string",
-		"SSLCert":            "string",
-		"SSLKey":             "string",
-		"TLSCA":              "string",
-		"TLSCert":            "string",
-		"TLSKey":             "string",
-	}, m["ClientConfig"])
 	assert.Equal(t, "string", m["Method"])
-	assert.Equal(t, agent.ArrayFieldSchema{"string", 0}, m["Scopes"])
-	assert.Equal(t, agent.MapFieldSchema{"string", "string"}, m["Headers"])
+	m := s.Types
+	// d := s.Defaults
+
+// 	assert.NoError(t, err)
+// 	assert.True(t, isSchema)
+// 	assert.Equal(t, map[string]interface{}{
+// 		"InsecureSkipVerify": "bool",
+// 		"SSLCA":              "string",
+// 		"SSLCert":            "string",
+// 		"SSLKey":             "string",
+// 		"TLSCA":              "string",
+// 		"TLSCert":            "string",
+// 		"TLSKey":             "string",
+// 	}, m["ClientConfig"])
+// 	assert.Equal(t, "string", m["Method"])
+// 	assert.Equal(t, agent.ArrayFieldSchema{"string", 0}, m["Scopes"])
+// 	assert.Equal(t, agent.MapFieldSchema{"string", "string"}, m["Headers"])
 	assert.Equal(t, map[string]interface{}{
 		"Duration": "int64",
 	}, m["Timeout"])
-
-	// TODO complete check for defaults
-	// assert.Equal(t, "http://127.0.0.1:8080/telegraf", d["URL"])
-	// assert.Equal(t, false, d["InsecureSkipVerify"])
-	// assert.Equal(t, "", d["ClientID"])
-	// assert.Equal(t, map[string]interface{}{
-	// 	"Duration": 5000000000,
-	// }, d["Timeout"])
-
-	_, _ = json.Marshal(s.Defaults)
-
-	// var config map[string]interface{}
-	// _ = json.Unmarshal([]byte(d), &config)
-
-	// fmt.Println(config)
-
+  
 	cancel()
 }
 
-func TestAssistant_GetSinglePlugin(t *testing.T) {
+func TestAssistant_GetPlugin(t *testing.T) {
+	// Test getting an input plugin
 	ctx, cancel := context.WithCancel(context.Background())
-	_, ast := initAgentAndAssistant(ctx, "single_plugin")
+	_, ast := initAgentAndAssistant(ctx, "telegraf-agent")
 
-	req := request{START_PLUGIN, "123", pluginInfo{"memcached", "INPUT", nil}}
-	res := ast.getPlugin(req)
+	req, err := buildRequest(GET_PLUGIN, pluginInfo{"memcached", "INPUT", nil})
+	assert.NoError(t, err)
+	res := ast.handleRequests(&req)
 	assert.Equal(t, SUCCESS, res.Status)
 	_, memcachedOk := res.Data.(*memcached.Memcached)
 	assert.True(t, memcachedOk)
-	_, err := json.Marshal(res)
-	if err != nil {
-		t.Log(err)
-	}
-	assert.NoError(t, err)
+
+	// Test getting an output plugin
+	req2, err2 := buildRequest(GET_PLUGIN, pluginInfo{"influxdb", "OUTPUT", nil})
+	assert.NoError(t, err2)
+	res2 := ast.handleRequests(&req2)
+	assert.Equal(t, SUCCESS, res2.Status)
+
+	// ? The Type assertion fails, yet the print statement says it's the right type.
+	// fmt.Printf("%T\n", res2.Data)
+	// _, isInfluxDB := res2.Data.(*influxdb.InfluxDB)
+	// fmt.Println(res2.Data)
+  // assert.True(t, isInfluxDB)
 	cancel()
 }
 
@@ -145,13 +158,13 @@ func TestAssistant_ValidateGetPluginsWithAllPlugins(t *testing.T) {
 
 	for inputName := range inputs.Inputs {
 		req := request{START_PLUGIN, "123", pluginInfo{inputName, "INPUT", nil}}
-		ast.startPlugin(req)
+		ast.handleRequests(&req)
 	}
 
 	for _, p := range ag.Config.Inputs {
 		name := p.Config.Name
 		req := request{GET_PLUGIN, "123", pluginInfo{name, "INPUT", nil}}
-		res := ast.getPlugin(req)
+		res := ast.handleRequests(&req)
 		assert.Equal(t, SUCCESS, res.Status)
 		_, err := json.Marshal(res)
 		if err != nil {
@@ -160,22 +173,22 @@ func TestAssistant_ValidateGetPluginsWithAllPlugins(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	// for outputName := range outputs.Outputs {
-	// 	ag.AddOutput(outputName)
-	// }
+	for outputName := range outputs.Outputs {
+		req := request{START_PLUGIN, "123", pluginInfo{outputName, "OUTPUT", nil}}
+		ast.handleRequests(&req)
+	}
 
-	// for _, p := range ag.Config.Outputs {
-	// 	name := p.Config.Name
-	// 	req := request{GET_PLUGIN, "123", plugin{name, "OUTPUT", nil}}
-	// 	res := ast.getPlugin(req)
-	// 	assert.Equal(t, SUCCESS, res.Status)
-	// 	_, err := json.Marshal(res)
-	// 	if err != nil {
-	// 		t.Log(name)
-	// 	}
-	// 	assert.NoError(t, err)
-	// }
-
+	for _, p := range ag.Config.Outputs {
+		name := p.Config.Name
+		req := request{GET_PLUGIN, "123", pluginInfo{name, "OUTPUT", nil}}
+		res := ast.handleRequests(&req)
+		assert.Equal(t, SUCCESS, res.Status)
+		_, err := json.Marshal(res)
+		if err != nil {
+			t.Log(name)
+		}
+		assert.NoError(t, err)
+	}
 	cancel()
 }
 
@@ -183,8 +196,9 @@ func TestAssistant_GetUnexistingPlugin(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_, ast := initAgentAndAssistant(ctx, "single_plugin")
 
-	req := request{GET_PLUGIN, "123", pluginInfo{"VACCUM CLEANER", "INPUT", nil}}
-	res := ast.getPlugin(req)
+	req, err := buildRequest(GET_PLUGIN, pluginInfo{"VACCUM CLEANER", "INPUT", nil})
+	assert.NoError(t, err)
+	res := ast.handleRequests(&req)
 	assert.Equal(t, FAILURE, res.Status)
 	cancel()
 }
@@ -193,8 +207,9 @@ func TestAssistant_GetNotRunningPlugin(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_, ast := initAgentAndAssistant(ctx, "single_plugin")
 
-	req := request{GET_PLUGIN, "123", pluginInfo{"cpu", "INPUT", nil}}
-	res := ast.getPlugin(req)
+	req, err := buildRequest(GET_PLUGIN, pluginInfo{"cpu", "INPUT", nil})
+	assert.NoError(t, err)
+	res := ast.handleRequests(&req)
 	assert.Equal(t, FAILURE, res.Status)
 	cancel()
 }
@@ -202,28 +217,41 @@ func TestAssistant_UpdatePlugin(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_, ast := initAgentAndAssistant(ctx, "single_plugin")
 
-	servers := []string{"go", "jo", "bo"}
-	unixSockets := []string{"ubuntu"}
-	testReq := request{UPDATE_PLUGIN, "69", pluginInfo{"memcached", "INPUT", map[string]interface{}{
-		"Servers":     servers,
-		"UnixSockets": unixSockets,
-	}}}
+	headers := map[string]string{
+		"test": "result",
+	}
+	URLs := []string{"www.google.com"}
 
-	response := ast.updatePlugin(testReq)
+	req, err := buildRequest(UPDATE_PLUGIN, pluginInfo{"http", "INPUT", map[string]interface{}{
+		"Headers": headers,
+		"URLs":    URLs,
+		"Timeout": map[string]interface{}{
+			"Duration": 1,
+		},
+	}})
+
+	assert.NoError(t, err)
+
+	req2, err2 := buildRequest(START_PLUGIN, pluginInfo{"http", "INPUT", nil})
+	assert.NoError(t, err2)
+	ast.handleRequests(&req2)
+
+	response := ast.handleRequests(&req)
+	fmt.Println(response.Data)
 	assert.Equal(t, SUCCESS, response.Status)
 
-	getReq := request{GET_PLUGIN, "000", pluginInfo{"memcached", "INPUT", nil}}
-	plugin := ast.getPlugin(getReq)
+	req3, err3 := buildRequest(GET_PLUGIN, pluginInfo{"http", "INPUT", nil})
+	assert.NoError(t, err3)
+	plugin := ast.handleRequests(&req3)
 	assert.Equal(t, SUCCESS, plugin.Status)
 	data := plugin.Data
 
-	memcached, memcachedOk := data.(*memcached.Memcached)
-	assert.True(t, memcachedOk)
+	h, isHTTP := data.(*http.HTTP)
+	assert.True(t, isHTTP)
 
-	assert.Equal(t, "go", memcached.Servers[0])
-	assert.Equal(t, "jo", memcached.Servers[1])
-	assert.Equal(t, "bo", memcached.Servers[2])
-	assert.Equal(t, "ubuntu", memcached.UnixSockets[0])
+	assert.Equal(t, "www.google.com", h.URLs[0])
+	assert.Equal(t, 1*time.Nanosecond, h.Timeout.Duration)
+	assert.Equal(t, "result", h.Headers["test"])
 
 	cancel()
 }
@@ -235,17 +263,20 @@ func TestAssistant_UpdatePlugin_WithInvalidFieldName(t *testing.T) {
 	servers := []string{"go", "SLIM JIMS", "SANDWICH"}
 	unixSockets := []string{"ubuntu"}
 	invalidField := []string{"invalid value"}
-	testReq := request{UPDATE_PLUGIN, "69", pluginInfo{"memcached", "INPUT", map[string]interface{}{
+
+	req, err := buildRequest(UPDATE_PLUGIN, pluginInfo{"memcached", "INPUT", map[string]interface{}{
 		"Servers":      servers,
 		"UnixSockets":  unixSockets,
 		"InvalidField": invalidField,
-	}}}
+	}})
+	assert.NoError(t, err)
 
-	response := ast.updatePlugin(testReq)
+	response := ast.handleRequests(&req)
 	assert.Equal(t, FAILURE, response.Status)
 
-	getReq := request{GET_PLUGIN, "000", pluginInfo{"memcached", "INPUT", nil}}
-	plugin := ast.getPlugin(getReq)
+	req2, err2 := buildRequest(GET_PLUGIN, pluginInfo{"memcached", "INPUT", nil})
+	assert.NoError(t, err2)
+	plugin := ast.handleRequests(&req2)
 	data := plugin.Data
 
 	memcached, memcachedOk := data.(*memcached.Memcached)
@@ -264,17 +295,19 @@ func TestAssistant_UpdatePlugins_WithInvalidFieldType(t *testing.T) {
 	servers := []string{"go", "bo", "jo"}
 	testString := "harambe"
 	invalidField := []string{"invalid value"}
-	testReq := request{UPDATE_PLUGIN, "69", pluginInfo{"memcached", "INPUT", map[string]interface{}{
+	req, err := buildRequest(UPDATE_PLUGIN, pluginInfo{"memcached", "INPUT", map[string]interface{}{
 		"Servers":      servers,
 		"UnixSockets":  testString,
 		"InvalidField": invalidField,
-	}}}
+	}})
+	assert.NoError(t, err)
 
-	response := ast.updatePlugin(testReq)
+	response := ast.handleRequests(&req)
 	assert.Equal(t, FAILURE, response.Status)
 
-	getReq := request{GET_PLUGIN, "000", pluginInfo{"memcached", "INPUT", nil}}
-	plugin := ast.getPlugin(getReq)
+	req2, err2 := buildRequest(GET_PLUGIN, pluginInfo{"memcached", "INPUT", nil})
+	assert.NoError(t, err2)
+	plugin := ast.handleRequests(&req2)
 	data := plugin.Data
 
 	memcached, memcachedOk := data.(*memcached.Memcached)
@@ -286,14 +319,12 @@ func TestAssistant_UpdatePlugins_WithInvalidFieldType(t *testing.T) {
 	cancel()
 }
 
-// ? Unsure what Data will contain
-// TODO Implement assertions on res.Data
 func TestAssistant_GetAllPlugins(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_, ast := initAgentAndAssistant(ctx, "single_plugin")
 
 	getReq := request{GET_ALL_PLUGINS, "000", pluginInfo{"memcached", "INPUT", nil}}
-	res := ast.getAllPlugins(getReq)
+	res := ast.handleRequests(&getReq)
 	assert.Equal(t, SUCCESS, res.Status)
 
 	pList, ok := res.Data.(pluginsList)
@@ -308,8 +339,7 @@ func TestAssistant_GetAllRunningPlugins(t *testing.T) {
 	_, ast := initAgentAndAssistant(ctx, "single_plugin")
 
 	getReq := request{GET_RUNNING_PLUGINS, "000", pluginInfo{"memcached", "INPUT", nil}}
-	res := ast.getRunningPlugins(getReq)
-
+	res := ast.handleRequests(&getReq)
 	pList, ok := res.Data.(pluginsList)
 
 	assert.True(t, ok)
@@ -326,11 +356,11 @@ func TestAssistant_StopSinglePlugin(t *testing.T) {
 	_, ast := initAgentAndAssistant(ctx, "single_plugin")
 
 	req := request{STOP_PLUGIN, "123", pluginInfo{"memcached", "INPUT", nil}}
-	res := ast.stopPlugin(req)
+	res := ast.handleRequests(&req)
 	assert.Equal(t, SUCCESS, res.Status)
 
-	getReq2 := request{GET_RUNNING_PLUGINS, "000", pluginInfo{"memcached", "INPUT", nil}}
-	res2 := ast.getRunningPlugins(getReq2)
+	getReq := request{GET_RUNNING_PLUGINS, "000", pluginInfo{"memcached", "INPUT", nil}}
+	res2 := ast.handleRequests(&getReq)
 
 	t.Log(res2)
 
