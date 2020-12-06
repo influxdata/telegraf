@@ -177,31 +177,7 @@ func (assistant *Assistant) listenToServer(ctx context.Context) {
 				return
 			}
 		}
-    res := assistant.handleRequests(&req)
-		switch req.Operation {
-		case GET_PLUGIN:
-			res = assistant.getPlugin(req)
-		case GET_PLUGIN_SCHEMA:
-			res = assistant.getSchema(req)
-		case START_PLUGIN:
-			data, err := assistant.startPlugin(req)
-			if err != nil || req.Plugin.Config == nil {
-				res = data // either add plugin failed, or we init'd with default config only
-			} else {
-				res = assistant.updatePlugin(req) // update default config with specific config
-			}
-		case STOP_PLUGIN:
-			res = assistant.stopPlugin(req)
-		case UPDATE_PLUGIN:
-			res = assistant.updatePlugin(req)
-		case GET_RUNNING_PLUGINS:
-			res = assistant.getRunningPlugins(req)
-		case GET_ALL_PLUGINS:
-			res = assistant.getAllPlugins(req)
-		default:
-			// return error response
-			res = response{FAILURE, req.UUID, "invalid operation request"}
-		}
+		res := assistant.handleRequests(&req)
 		err = assistant.connection.WriteJSON(res)
 		if err != nil {
 			// log error and keep connection open
@@ -361,7 +337,7 @@ func (assistant *Assistant) stopPlugin(req *request) response {
 	case "INPUT":
 		assistant.agent.StopInputPlugin(req.Plugin.Name, true)
 	case "OUTPUT":
-    assistant.agent.StopOutputPlugin(req.Plugin.Name, true)
+		assistant.agent.StopOutputPlugin(req.Plugin.Name)
 	default:
 		err = fmt.Errorf("did not provide a valid plugin type")
 	}
