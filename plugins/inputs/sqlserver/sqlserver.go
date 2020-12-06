@@ -250,7 +250,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *SQLServer) gatherServer(conn *sql.DB, server string, query Query, acc telegraf.Accumulator) error {	
+func (s *SQLServer) gatherServer(conn *sql.DB, server string, query Query, acc telegraf.Accumulator) error {
 	// execute query
 	rows, err := conn.Query(query.Script)
 	if err != nil {
