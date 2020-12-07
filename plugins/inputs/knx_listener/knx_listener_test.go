@@ -41,9 +41,9 @@ func setValue(data dpt.DatapointValue, value interface{}) error {
 func TestRegularReceives_DPT(t *testing.T) {
 	// Define the test-cases
 	var testcases = []struct {
-		address  string
-		dpt      string
-		value    interface{}
+		address string
+		dpt     string
+		value   interface{}
 	}{
 		{"1/0/1", "1.001", true},
 		{"1/0/2", "1.002", false},
@@ -123,7 +123,7 @@ func TestRegularReceives_DPT(t *testing.T) {
 		assert.Equal(t, testcases[i].address, m.Tags["groupaddress"])
 		assert.Len(t, m.Fields, 1)
 		switch v := testcases[i].value.(type) {
-		case bool,int64,uint64:
+		case bool, int64, uint64:
 			assert.Equal(t, v, m.Fields["value"])
 		case float64:
 			assert.InDelta(t, v, m.Fields["value"], epsilon)
