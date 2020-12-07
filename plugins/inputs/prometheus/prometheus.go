@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"golang.org/x/net/proxy"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -43,6 +44,11 @@ type Prometheus struct {
 	// Basic authentication credentials
 	Username string `toml:"username"`
 	Password string `toml:"password"`
+
+	// SOCKS5 proxy credentials
+	SocksServer   string `toml:"socks_server"`
+	SocksUser     string `toml:"socks_user"`
+	SocksPassword string `toml:"socks_password"`
 
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
@@ -112,6 +118,13 @@ var sampleConfig = `
   ## 'bearer_token_string' take priority)
   # username = ""
   # password = ""
+
+  ## Optional SOCKS5 proxy server
+  # socks_server = "proxy.server:9050"
+
+  ## Optional SOCKS5 Auth Credentials
+  # socks_username = "username"
+  # socks_password = "pa$$word"
 
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
@@ -288,6 +301,23 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	} else {
 		if u.URL.Path == "" {
 			u.URL.Path = "/metrics"
+		}
+		if p.SocksServer != "" {
+			var auth proxy.Auth
+			if p.SocksUser != "" || p.SocksPassword != "" {
+				auth = proxy.Auth{
+					User:     p.SocksUser,
+					Password: p.SocksPassword,
+				}
+			}
+			dialer, err := proxy.SOCKS5("tcp", p.SocksServer, &auth, proxy.Direct)
+			if err != nil {
+				return fmt.Errorf("unable to set socks5 proxy:'%s'", err)
+			}
+			uClient = &http.Client{
+				Transport: &http.Transport{
+					Dial: dialer.Dial,
+				}}
 		}
 		req, err = http.NewRequest("GET", u.URL.String(), nil)
 		if err != nil {
