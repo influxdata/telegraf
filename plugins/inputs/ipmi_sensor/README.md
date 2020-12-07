@@ -15,12 +15,12 @@ ipmitool sdr elist
 
 When one or more servers are specified, the plugin will use the following command to collect remote host sensor stats:
 
-```v
+```
 ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
 ```
 
 Any of the following parameters will be added to the aformentioned query if they're configured:
-```v
+```
 -y hex_key -L privilege
 ```
 
