@@ -95,6 +95,10 @@ help:
 	@echo '   telegraf-$(tar_version)_arch.zip'
 
 
+.PHONY: allyesconfig
+allyesconfig:
+	go run buildconfig/bob.go --allyesconfig
+
 .PHONY: config
 config:
 	go run buildconfig/bob.go --fallback
@@ -135,7 +139,7 @@ fmtcheck:
 	fi
 
 .PHONY: vet
-vet:
+vet: allyesconfig
 	@echo 'go vet $$(go list ./... | grep -v ./plugins/parsers/influx)'
 	@go vet $$(go list ./... | grep -v ./plugins/parsers/influx) ; if [ $$? -ne 0 ]; then \
 		echo ""; \
@@ -178,7 +182,7 @@ lint-branch:
 	golangci-lint run --new-from-rev master
 
 .PHONY: tidy
-tidy:
+tidy: allyesconfig
 	go mod verify
 	go mod tidy
 	@if ! git diff --quiet go.mod go.sum; then \
