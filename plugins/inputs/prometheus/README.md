@@ -56,7 +56,7 @@ in Prometheus format.
   # socks_server = "proxy.server:9050"
 
   ## Optional SOCKS5 Auth Credentials
-  # socks_username = "username"
+  # socks_user = "username"
   # socks_password = "pa$$word"
 
   ## Specify timeout duration for slower prometheus clients (default is 3s)
