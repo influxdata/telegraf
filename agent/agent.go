@@ -319,7 +319,7 @@ type ArrayFieldSchema struct {
 func (a *Agent) GetPluginTypes(p interface{}) (map[string]interface{}, error) {
 
 	data := reflect.ValueOf(p).Elem() // extract Value of type interface{} from Value pointer to interface
-	schema := a.getFieldSchema(data.Type())
+	schema := getFieldType(data.Type())
 
 	s, ok := schema.(map[string]interface{})
 
@@ -330,29 +330,62 @@ func (a *Agent) GetPluginTypes(p interface{}) (map[string]interface{}, error) {
 	return nil, fmt.Errorf("returned schema is not a map")
 }
 
-func (a *Agent) getFieldSchema(data reflect.Type) interface{} {
+func getFieldType(data reflect.Type) interface{} {
 	switch data.Kind() {
 	case reflect.Struct:
 		dataFields := make(map[string]interface{})
 		for i := 0; i < data.NumField(); i++ {
 			field := data.Field(i)
 			if field.PkgPath == "" { // only take exported fields
-				dataFields[field.Name] = a.getFieldSchema(field.Type)
+				dataFields[field.Name] = getFieldType(field.Type)
 			}
 		}
 		return dataFields
 	case reflect.Array:
-		valueType := a.getFieldSchema(data.Elem())
+		valueType := getFieldType(data.Elem())
 		return ArrayFieldSchema{valueType, data.Len()}
 	case reflect.Slice:
-		valueType := a.getFieldSchema(data.Elem())
+		valueType := getFieldType(data.Elem())
 		return ArrayFieldSchema{valueType, 0}
 	case reflect.Map:
 		keyType := data.Key().Name()
-		valueType := a.getFieldSchema(data.Elem())
+		valueType := getFieldType(data.Elem())
 		return MapFieldSchema{valueType, keyType}
 	default:
 		return data.Kind().String()
+	}
+}
+
+func (a *Agent) GetPluginValues(p interface{}) (map[string]interface{}, error) {
+	data := reflect.ValueOf(p).Elem() // extract Value of type interface{} from Value pointer to interface
+	values := getFieldValue(data)
+	v, ok := values.(map[string]interface{})
+
+	if ok {
+		return v, nil
+	}
+
+	return nil, fmt.Errorf("returned schema is not a map")
+}
+
+func getFieldValue(data reflect.Value) interface{} {
+	switch data.Kind() {
+	case reflect.Struct:
+		dataFields := make(map[string]interface{})
+		dataType := data.Type()
+		for i := 0; i < data.NumField(); i++ {
+			field := data.Field(i)
+			tField := dataType.Field(i)
+			if tField.PkgPath == "" { // only take exported fields
+				v := getFieldValue(field)
+				if v != nil {
+					dataFields[tField.Name] = v
+				}
+			}
+		}
+		return dataFields
+	default:
+		return data.Interface()
 	}
 }
 
@@ -559,21 +592,30 @@ func updateStructValuesHelper(pluginPtr reflect.Value, newConfig map[string]inte
 	return plugin, map[string]interface{}{}, fmt.Errorf("could not update plugin")
 }
 
-// GetRunningInputPlugin gets the InputConfig for a running plugin given its name
-func (a *Agent) GetRunningInputPlugin(name string) (telegraf.Input, error) {
-	for _, input := range a.Config.Inputs {
-		if name == input.Config.Name {
-			return input.Input, nil
-		}
+// CreateInput creates a new input from the name of an input.
+func (a *Agent) CreateInput(name string) (telegraf.Input, error) {
+	p, exists := inputs.Inputs[name]
+	if exists {
+		return p(), nil
 	}
 	return nil, fmt.Errorf("could not find input plugin with name: %s", name)
 }
 
-// GetDefaultInputPlugin gets the default InputConfig for a default plugin given its name
-func (a *Agent) GetDefaultInputPlugin(name string) (telegraf.Input, error) {
-	p, exists := inputs.Inputs[name]
+// CreateOutput creates a new output from the name of an output.
+func (a *Agent) CreateOutput(name string) (telegraf.Output, error) {
+	p, exists := outputs.Outputs[name]
 	if exists {
 		return p(), nil
+	}
+	return nil, fmt.Errorf("could not find output plugin with name: %s", name)
+}
+
+// GetRunningInputPlugin gets the InputConfig for a running plugin given its name
+func (a *Agent) GetRunningInputPlugin(name string) (map[string]interface{}, error) {
+	for _, input := range a.Config.Inputs {
+		if name == input.Config.Name {
+			return a.GetPluginValues(input.Input)
+		}
 	}
 	return nil, fmt.Errorf("could not find input plugin with name: %s", name)
 }
@@ -636,20 +678,11 @@ func (a *Agent) UpdateInputPlugin(name string, config map[string]interface{}) (t
 }
 
 // GetRunningOutputPlugin gets the OutputConfig for a running plugin given its name
-func (a *Agent) GetRunningOutputPlugin(name string) (telegraf.Output, error) {
+func (a *Agent) GetRunningOutputPlugin(name string) (map[string]interface{}, error) {
 	for _, output := range a.Config.Outputs {
 		if name == output.Config.Name {
-			return output.Output, nil
+			return a.GetPluginValues(output.Output)
 		}
-	}
-	return nil, fmt.Errorf("could not find output plugin with name: %s", name)
-}
-
-// GetDefaultOutputPlugin gets the default InputConfig for a default plugin given its name
-func (a *Agent) GetDefaultOutputPlugin(name string) (telegraf.Output, error) {
-	p, exists := outputs.Outputs[name]
-	if exists {
-		return p(), nil
 	}
 	return nil, fmt.Errorf("could not find output plugin with name: %s", name)
 }
@@ -667,7 +700,7 @@ func (a *Agent) UpdateOutputPlugin(name string, config map[string]interface{}) (
 			}
 
 			a.wg.Add(1)
-			a.StopInputPlugin(name, true)
+			a.StopOutputPlugin(name)
 			json.Unmarshal(configJSON, &plugin)
 			ro := models.NewRunningOutput(name, plugin, output.Config,
 				a.Config.Agent.MetricBatchSize, a.Config.Agent.MetricBufferLimit)

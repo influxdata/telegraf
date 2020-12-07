@@ -72,13 +72,6 @@ func TestAssistant_GetInputPluginSchema(t *testing.T) {
 		"Duration": "int64",
 	}, m["ResponseTimeout"])
 
-// 	d, _ := json.Marshal(s.Defaults)
-
-// 	var config map[string]interface{}
-// 	_ = json.Unmarshal([]byte(d), &config)
-
-// 	fmt.Println(config)
-
 	cancel()
 }
 
@@ -86,46 +79,38 @@ func TestAssistant_GetOutputPluginSchema(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_, ast := initAgentAndAssistant(ctx, "slice_comment") // single output plugin http
 
-	req, err := buildRequest(GET_PLUGIN_SCHEMA, pluginInfo{"http", "OUTPUT", nil})
-	res := ast.handleRequests(&req)
+	req := request{GET_PLUGIN_SCHEMA, "123", pluginInfo{"http", "OUTPUT", nil}}
+	res := ast.getSchema(&req)
 	assert.Equal(t, SUCCESS, res.Status)
 
 	s, isSchema := res.Data.(schema)
-	m := s.Types
-	_, err = json.Marshal(res)
+	_, err := json.Marshal(res)
 	if err != nil {
 		t.Log(err)
 	}
 
-	fmt.Println(m)
-
 	assert.NoError(t, err)
 	assert.True(t, isSchema)
-	assert.Equal(t, "string", m["Method"])
-	m := s.Types
-	// d := s.Defaults
-
-// 	assert.NoError(t, err)
-// 	assert.True(t, isSchema)
-// 	assert.Equal(t, map[string]interface{}{
-// 		"InsecureSkipVerify": "bool",
-// 		"SSLCA":              "string",
-// 		"SSLCert":            "string",
-// 		"SSLKey":             "string",
-// 		"TLSCA":              "string",
-// 		"TLSCert":            "string",
-// 		"TLSKey":             "string",
-// 	}, m["ClientConfig"])
-// 	assert.Equal(t, "string", m["Method"])
-// 	assert.Equal(t, agent.ArrayFieldSchema{"string", 0}, m["Scopes"])
-// 	assert.Equal(t, agent.MapFieldSchema{"string", "string"}, m["Headers"])
+	assert.Equal(t, map[string]interface{}{
+		"InsecureSkipVerify": "bool",
+		"SSLCA":              "string",
+		"SSLCert":            "string",
+		"SSLKey":             "string",
+		"TLSCA":              "string",
+		"TLSCert":            "string",
+		"TLSKey":             "string",
+	}, s.Types["ClientConfig"])
+	assert.Equal(t, "string", s.Types["Method"])
+	assert.Equal(t, agent.ArrayFieldSchema{"string", 0}, s.Types["Scopes"])
+	assert.Equal(t, agent.MapFieldSchema{"string", "string"}, s.Types["Headers"])
 	assert.Equal(t, map[string]interface{}{
 		"Duration": "int64",
-	}, m["Timeout"])
-  
+	}, s.Types["Timeout"])
+
+	assert.Equal(t, "http://127.0.0.1:8080/telegraf", s.Defaults["URL"])
+	assert.Equal(t, "POST", s.Defaults["Method"])
 	cancel()
 }
-
 func TestAssistant_GetPlugin(t *testing.T) {
 	// Test getting an input plugin
 	ctx, cancel := context.WithCancel(context.Background())
@@ -135,60 +120,47 @@ func TestAssistant_GetPlugin(t *testing.T) {
 	assert.NoError(t, err)
 	res := ast.handleRequests(&req)
 	assert.Equal(t, SUCCESS, res.Status)
-	_, memcachedOk := res.Data.(*memcached.Memcached)
-	assert.True(t, memcachedOk)
+	memcachedMap, dataIsMap := res.Data.(map[string]interface{})
+	assert.True(t, dataIsMap)
+	assert.Equal(t, []string{"localhost"}, memcachedMap["Servers"])
 
 	// Test getting an output plugin
 	req2, err2 := buildRequest(GET_PLUGIN, pluginInfo{"influxdb", "OUTPUT", nil})
 	assert.NoError(t, err2)
 	res2 := ast.handleRequests(&req2)
 	assert.Equal(t, SUCCESS, res2.Status)
+	_, dataIsMap = res2.Data.(map[string]interface{})
+	assert.True(t, dataIsMap)
 
-	// ? The Type assertion fails, yet the print statement says it's the right type.
-	// fmt.Printf("%T\n", res2.Data)
-	// _, isInfluxDB := res2.Data.(*influxdb.InfluxDB)
-	// fmt.Println(res2.Data)
-  // assert.True(t, isInfluxDB)
 	cancel()
 }
 
-func TestAssistant_ValidateGetPluginsWithAllPlugins(t *testing.T) {
+func TestAssistant_ValidatePluginToMap(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	ag, ast := initAgentAndAssistant(ctx, "single_plugin")
+	_, ast := initAgentAndAssistant(ctx, "single_plugin")
 
 	for inputName := range inputs.Inputs {
-		req := request{START_PLUGIN, "123", pluginInfo{inputName, "INPUT", nil}}
-		ast.handleRequests(&req)
-	}
-
-	for _, p := range ag.Config.Inputs {
-		name := p.Config.Name
-		req := request{GET_PLUGIN, "123", pluginInfo{name, "INPUT", nil}}
+		req, _ := buildRequest(GET_PLUGIN_SCHEMA, pluginInfo{inputName, "INPUT", nil})
 		res := ast.handleRequests(&req)
 		assert.Equal(t, SUCCESS, res.Status)
-		_, err := json.Marshal(res)
-		if err != nil {
-			t.Log(name)
-		}
-		assert.NoError(t, err)
+
+		schema, resIsSchema := res.Data.(schema)
+		assert.True(t, resIsSchema)
+		assert.NotNil(t, schema.Types)
+		assert.NotNil(t, schema.Defaults)
 	}
 
 	for outputName := range outputs.Outputs {
-		req := request{START_PLUGIN, "123", pluginInfo{outputName, "OUTPUT", nil}}
-		ast.handleRequests(&req)
-	}
-
-	for _, p := range ag.Config.Outputs {
-		name := p.Config.Name
-		req := request{GET_PLUGIN, "123", pluginInfo{name, "OUTPUT", nil}}
+		req, _ := buildRequest(GET_PLUGIN_SCHEMA, pluginInfo{outputName, "OUTPUT", nil})
 		res := ast.handleRequests(&req)
 		assert.Equal(t, SUCCESS, res.Status)
-		_, err := json.Marshal(res)
-		if err != nil {
-			t.Log(name)
-		}
-		assert.NoError(t, err)
+
+		schema, resIsSchema := res.Data.(schema)
+		assert.True(t, resIsSchema)
+		assert.NotNil(t, schema.Types)
+		assert.NotNil(t, schema.Defaults)
 	}
+
 	cancel()
 }
 

@@ -241,7 +241,7 @@ func (assistant *Assistant) getPlugin(req *request) response {
 
 type schema struct {
 	Types    map[string]interface{}
-	Defaults interface{}
+	Defaults map[string]interface{}
 }
 
 // getSchema returns the struct response containing config schema for a single plugin
@@ -250,11 +250,12 @@ func (assistant *Assistant) getSchema(req *request) response {
 
 	var plugin interface{}
 	var err error
+
 	switch req.Plugin.Type {
 	case "INPUT":
-		plugin, err = assistant.agent.GetDefaultInputPlugin(req.Plugin.Name)
+		plugin, err = assistant.agent.CreateInput(req.Plugin.Name)
 	case "OUTPUT":
-		plugin, err = assistant.agent.GetDefaultOutputPlugin(req.Plugin.Name)
+		plugin, err = assistant.agent.CreateOutput(req.Plugin.Name)
 	default:
 		err = fmt.Errorf("did not provide a valid plugin type")
 	}
@@ -262,12 +263,17 @@ func (assistant *Assistant) getSchema(req *request) response {
 		return response{FAILURE, req.UUID, err.Error()}
 	}
 
-	var types map[string]interface{}
-	types, err = assistant.agent.GetPluginTypes(plugin)
-	if err != nil {
+	types, typesErr := assistant.agent.GetPluginTypes(plugin)
+	if typesErr != nil {
 		return response{FAILURE, req.UUID, err.Error()}
 	}
-	return response{SUCCESS, req.UUID, schema{types, plugin}}
+
+	defaultValues, dvErr := assistant.agent.GetPluginValues(plugin)
+	if dvErr != nil {
+		return response{FAILURE, req.UUID, err.Error()}
+	}
+
+	return response{SUCCESS, req.UUID, schema{types, defaultValues}}
 }
 
 // startPlugin starts a single plugin
