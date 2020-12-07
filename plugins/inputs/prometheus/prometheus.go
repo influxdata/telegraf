@@ -360,7 +360,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 
 	if p.MetricVersion == 2 {
-		parser := parser_v2.Parser{}
+		parser := parser_v2.Parser{Header: resp.Header}
 		metrics, err = parser.Parse(body)
 	} else {
 		metrics, err = Parse(body, resp.Header)
