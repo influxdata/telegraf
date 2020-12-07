@@ -63,6 +63,7 @@ pkgdir ?= build/dist
 
 .PHONY: all
 all:
+	@$(MAKE) config
 	@$(MAKE) deps
 	@$(MAKE) telegraf
 
@@ -92,6 +93,10 @@ help:
 	@echo '   telegraf-$(tar_version)_arch.tar.gz'
 	@echo '   telegraf-$(tar_version)_arch.zip'
 
+
+.PHONY: config
+config:
+	go run buildconfig/bob.go --fallback
 
 .PHONY: deps
 deps:
@@ -196,6 +201,10 @@ clean:
 	rm -f telegraf
 	rm -f telegraf.exe
 	rm -rf build
+	rm -f plugins/aggregators/all/all.go
+	rm -f plugins/inputs/all/all.go
+	rm -f plugins/outputs/all/all.go
+	rm -f plugins/processors/all/all.go
 
 .PHONY: docker-image
 docker-image:
