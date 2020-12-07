@@ -117,7 +117,7 @@ go-install:
 	go install -mod=mod -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: test
-test:
+test: allyesconfig
 	go test -short $(race_detector) ./...
 
 .PHONY: test-integration
