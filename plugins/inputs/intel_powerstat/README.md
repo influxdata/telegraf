@@ -16,7 +16,7 @@ Intel PowerStat plugin supports Intel based platforms and assumes presence of Li
   ## Empty array means no per-CPU specific metrics will be collected by the plugin - in this case only platform level
   ## telemetry will be exposed by Intel PowerStat plugin.
   ## Supported options:
-  ## "cpu_frequency", "cpu_c1_state_residency", "cpu_c6_state_residency", "cpu_busy_cycles", "cpu_temperature", "cpu_busy_frequency"
+  ## "cpu_frequency", "cpu_busy_frequency", "cpu_temperature", "cpu_c1_state_residency", "cpu_c6_state_residency", "cpu_busy_cycles"
   # cpu_metrics = []
 ```
 ### Example: Configuration with no per-CPU telemetry
@@ -24,6 +24,12 @@ This configuration allows getting global metrics (processor package specific), n
 ```toml
 [[inputs.intel_powerstat]]
   cpu_metrics = []
+```
+
+### Example: Configuration with no per-CPU telemetry - equivalent case
+This configuration allows getting global metrics (processor package specific), no per-CPU metrics are collected:
+```toml
+[[inputs.intel_powerstat]]
 ```
 
 ### Example: Configuration for CPU Temperature and Frequency only
@@ -37,20 +43,35 @@ This configuration allows getting global metrics plus subset of per-CPU metrics 
 This configuration allows getting global metrics and all per-CPU metrics:
 ```toml
 [[inputs.intel_powerstat]]
-  cpu_metrics = ["cpu_frequency", "cpu_c1_state_residency", "cpu_c6_state_residency", "cpu_busy_cycles", "cpu_temperature", "cpu_busy_frequency"]
+  cpu_metrics = ["cpu_frequency", "cpu_busy_frequency", "cpu_temperature", "cpu_c1_state_residency", "cpu_c6_state_residency", "cpu_busy_cycles"]
 ```
 
 ### SW Dependencies:
-Plugin is based on Linux Kernel modules that expose specific metrics over `sysfs` or `devfs`.
+Plugin is based on Linux Kernel modules that expose specific metrics over `sysfs` or `devfs` interfaces.
 The following dependencies are expected by plugin:
-- _intel-rapl_ module which exposes Intel Runtime Power Limiting metrics over `sysfs` (`/sys/devices/virtual/powercap/intel-rapl`)
-Minimum kernel version required is 3.13 (to make sure RAPL driver is included in current distro),
-- _msr_ kernel module that provides access to processor model specific registers from user space, 
-- _cpufreq_ kernel module - which exposes per-CPU Frequency over `sysfs`. Since kernel 3.4 the necessary modules are 
-loaded automatically and the recommended on demand governor is enabled by default.
+- _intel-rapl_ module which exposes Intel Runtime Power Limiting metrics over `sysfs` (`/sys/devices/virtual/powercap/intel-rapl`),
+- _msr_ kernel module that provides access to processor model specific registers over `devfs` (`/dev/cpu/cpu%d/msr`),
+- _cpufreq_ kernel module - which exposes per-CPU Frequency over `sysfs` (`/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq`). 
+
+Minimum kernel version required is 3.13 to satisfy all requirements.
 
 Please make sure that kernel modules are loaded and running. You might have to manually enable them by using `modprobe`.
-Plugin requires root access to read MSR files. 
+Exact commands to be executed are:
+```
+sudo modprobe cpufreq-stats
+sudo modprobe msr
+sudo modprobe intel_rapl
+```
+
+**Telegraf with Intel PowerStat plugin enabled requires root access to read model specific registers (MSRs)** 
+to retrieve data for calculation of most critical per-CPU specific metrics:
+- `cpu_busy_frequency_mhz`
+- `cpu_temperature_celsius`
+- `cpu_c1_state_residency_percent`
+- `cpu_c6_state_residency_percent`
+- `cpu_busy_cycles_percent`
+
+To expose other Intel PowerStat metrics root access may or may not be required (depending on OS type or configuration).
 
 ### HW Dependencies:
 Specific metrics require certain processor features to be present, otherwise Intel PowerStat plugin won't be able to 
@@ -138,24 +159,18 @@ When starting to measure metrics, plugin skips first iteration of metrics if the
    Measurement powerstat_core metrics are collected per-CPU (cpu_id is the key) 
    while core_id and package_id tags are additional topology information.
 
-   - The following fields are used for powerstat_core measurements:
-
-        | Field | Description |
-        |-----|-------------|
-        | `name` | Name of the measurement |
-        | `unit` | Units used for the measurement | 
-        | `value` | Value of the measurement |
-
     - Available metrics for powerstat_core measurement 
 
-        | Metric name | Description | Units |
+        | Metric name (field) | Description | Units |
         |-----|-------------|-----|
-        | `cpu_frequency` | Current operational frequency of CPU Core | MHz |
-        | `cpu_temperature` | Current temperature of CPU Core | Celsius degrees |
-        | `cpu_busy_cycles` | CPU Core Busy cycles as a ratio of Cycles spent in C0 state residency to all cycles executed by CPU Core | % |
-        | `cpu_c6_state_residency` | Percentage of time that CPU Core spent in C6 Core residency state | % |
-        | `cpu_c1_state_residency` | Percentage of time that CPU Core spent in C1 Core residency state | % |
-        | `cpu_busy_frequency` | CPU Core Busy Frequency measured as frequency adjusted to CPU Core busy cycles | MHz |
+        | `cpu_frequency_mhz` | Current operational frequency of CPU Core | MHz |
+        | `cpu_busy_frequency_mhz` | CPU Core Busy Frequency measured as frequency adjusted to CPU Core busy cycles | MHz |
+        | `cpu_temperature_celsius` | Current temperature of CPU Core | Celsius degrees |
+        | `cpu_c1_state_residency_percent` | Percentage of time that CPU Core spent in C1 Core residency state | % |
+        | `cpu_c6_state_residency_percent` | Percentage of time that CPU Core spent in C6 Core residency state | % |
+        | `cpu_busy_cycles_percent` | CPU Core Busy cycles as a ratio of Cycles spent in C0 state residency to all cycles executed by CPU Core | % |
+
+
 
 - powerstat_package
 
@@ -167,33 +182,25 @@ When starting to measure metrics, plugin skips first iteration of metrics if the
    Measurement powerstat_package metrics are collected per processor package - _package_id_ tag indicates which 
    package metric refers to.
 
-   - The following fields are used for powerstat_package measurements:
-
-        | Field | Description |
-        |-----|-------------|
-        | `name` | Name of the measurement |
-        | `unit` | Units used for the measurement | 
-        | `value` | Value of the measurement |
-
     - Available metrics for powerstat_package measurement 
 
-        | Metric name | Description | Units |
+        | Metric name (field) | Description | Units |
         |-----|-------------|-----|
-        | `thermal_design_power` | 	Maximum Thermal Design Power (TDP) available for processor package | Watts |
-        | `current_power_consumption` | Current power consumption of processor package | Watts |
-        | `current_dram_power_consumption` | Current power consumption of processor package DRAM subsystem | Watts |
+        | `thermal_design_power_watts` | 	Maximum Thermal Design Power (TDP) available for processor package | Watts |
+        | `current_power_consumption_watts` | Current power consumption of processor package | Watts |
+        | `current_dram_power_consumption_watts` | Current power consumption of processor package DRAM subsystem | Watts |
 
 
 ### Example Output:
 
 ```
-powerstat_package,host=ubuntu,package_id=0 name="thermal_design_power",unit="Watt",value=160 1606494744000000000
-powerstat_package,host=ubuntu,package_id=0 name="current_power_consumption",unit="Watt",value=35 1606494744000000000
-powerstat_package,host=ubuntu,package_id=0 name="current_dram_power_consumption",unit="Watt",value=13.94 1606494744000000000
-powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 name="cpu_frequency",unit="MHz",value=1200.29 1606494744000000000
-powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 name="cpu_temperature",unit="celsius_degrees",value=34i 1606494744000000000
-powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 name="cpu_c6_state_residency",unit="percentage",value=92.52 1606494744000000000
-powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 name="cpu_busy_cycles",unit="percentage",value=0.8 1606494744000000000
-powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 name="cpu_c1_state_residency",unit="percentage",value=6.68 1606494744000000000
-powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 name="cpu_busy_frequency",unit="Mhz",value=1213.24 1606494744000000000
+powerstat_package,host=ubuntu,package_id=0 thermal_design_power_watts=160 1606494744000000000
+powerstat_package,host=ubuntu,package_id=0 current_power_consumption_watts=35 1606494744000000000
+powerstat_package,host=ubuntu,package_id=0 current_dram_power_consumption_watts=13.94 1606494744000000000
+powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 cpu_frequency_mhz=1200.29 1606494744000000000
+powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 cpu_temperature_celsius=34i 1606494744000000000
+powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 cpu_c6_state_residency_percent=92.52 1606494744000000000
+powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 cpu_busy_cycles_percent=0.8 1606494744000000000
+powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 cpu_c1_state_residency_percent=6.68 1606494744000000000
+powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 cpu_busy_frequency_mhz=1213.24 1606494744000000000
 ```

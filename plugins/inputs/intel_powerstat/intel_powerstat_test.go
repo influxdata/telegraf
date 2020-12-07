@@ -8,53 +8,51 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/influxdata/telegraf/plugins/inputs/intel_powerstat/data"
-	"github.com/influxdata/telegraf/plugins/inputs/intel_powerstat/mocks"
-	"github.com/influxdata/telegraf/plugins/inputs/intel_powerstat/services"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestInitPlugin(t *testing.T) {
 	cores := []string{"cpu0", "cpu1", "cpu2", "cpu3"}
 	power, fsMock, _, _ := getPowerWithMockedServices()
 
-	fsMock.On("GetCPUInfoStats", mock.Anything).
+	fsMock.On("getCPUInfoStats", mock.Anything).
 		Return(nil, errors.New("error getting cpu stats")).Once()
 	require.Error(t, power.Init())
 
-	fsMock.On("GetCPUInfoStats", mock.Anything).
-		Return(make(map[string]*data.CPUInfo), nil).Once()
+	fsMock.On("getCPUInfoStats", mock.Anything).
+		Return(make(map[string]*cpuInfo), nil).Once()
 	require.Error(t, power.Init())
 
-	fsMock.On("GetCPUInfoStats", mock.Anything).
-		Return(map[string]*data.CPUInfo{"0": {
-			VendorID:  "GenuineIntel",
-			CPUFamily: "test",
+	fsMock.On("getCPUInfoStats", mock.Anything).
+		Return(map[string]*cpuInfo{"0": {
+			vendorID:  "GenuineIntel",
+			cpuFamily: "test",
 		}}, nil).Once()
 	require.Error(t, power.Init())
 
-	fsMock.On("GetStringsMatchingPatternOnPath", mock.Anything).
+	fsMock.On("getStringsMatchingPatternOnPath", mock.Anything).
 		Return(cores, nil).Once().
-		On("GetCPUInfoStats", mock.Anything).
-		Return(map[string]*data.CPUInfo{"0": {
-			VendorID:  "GenuineIntel",
-			CPUFamily: "6",
+		On("getCPUInfoStats", mock.Anything).
+		Return(map[string]*cpuInfo{"0": {
+			vendorID:  "GenuineIntel",
+			cpuFamily: "6",
 		}}, nil)
 	// Verify MSR service initialization.
-	power.coreCPUFrequency = true
+	power.cpuFrequency = true
 	require.NoError(t, power.Init())
-	fsMock.AssertCalled(t, "GetStringsMatchingPatternOnPath", mock.Anything)
-	require.Equal(t, len(cores), len(power.msr.GetCpuIDs()))
+	fsMock.AssertCalled(t, "getStringsMatchingPatternOnPath", mock.Anything)
+	require.Equal(t, len(cores), len(power.msr.getCPUCoresData()))
 
-	fsMock.On("GetStringsMatchingPatternOnPath", mock.Anything).
-		Return(nil, errors.New("error during GetStringsMatchingPatternOnPath")).Once()
+	fsMock.On("getStringsMatchingPatternOnPath", mock.Anything).
+		Return(nil, errors.New("error during getStringsMatchingPatternOnPath")).Once()
 
 	// In case of an error when fetching cpu cores plugin should proceed with execution.
 	require.NoError(t, power.Init())
-	fsMock.AssertCalled(t, "GetStringsMatchingPatternOnPath", mock.Anything)
-	require.Equal(t, 0, len(power.msr.GetCpuIDs()))
+	fsMock.AssertCalled(t, "getStringsMatchingPatternOnPath", mock.Anything)
+	require.Equal(t, 0, len(power.msr.getCPUCoresData()))
 }
 
 func TestParseCPUMetricsConfig(t *testing.T) {
@@ -65,66 +63,56 @@ func TestParseCPUMetricsConfig(t *testing.T) {
 		"cpu_frequency", "cpu_c1_state_residency", "cpu_c6_state_residency", "cpu_busy_cycles", "cpu_temperature",
 		"cpu_busy_frequency",
 	}
-	power.ParseCPUMetricsConfig()
+	power.parseCPUMetricsConfig()
 	verifyCoreMetrics(t, power, true)
 	disableCoreMetrics(power)
 	verifyCoreMetrics(t, power, false)
 
 	power.CPUMetrics = []string{}
-	power.ParseCPUMetricsConfig()
-	require.Equal(t, false, power.perCoreMetrics)
+	power.parseCPUMetricsConfig()
 
 	power.CPUMetrics = []string{"cpu_c6_state_residency", "#@$sdkjdfsdf3@", "1pu_c1_state_residency"}
-	power.ParseCPUMetricsConfig()
-	require.Equal(t, false, power.c1CoreStateResidency)
-	require.Equal(t, true, power.c6CoreStateResidency)
+	power.parseCPUMetricsConfig()
+	require.Equal(t, false, power.cpuC1StateResidency)
+	require.Equal(t, true, power.cpuC6StateResidency)
 	disableCoreMetrics(power)
 	verifyCoreMetrics(t, power, false)
 
 	power.CPUMetrics = []string{"#@$sdkjdfsdf3@", "1pu_c1_state_residency", "123"}
-	power.ParseCPUMetricsConfig()
+	power.parseCPUMetricsConfig()
 	verifyCoreMetrics(t, power, false)
 }
 
 func verifyCoreMetrics(t *testing.T, power *PowerStat, enabled bool) {
-	require.Equal(t, enabled, power.coreCPUFrequency)
-	require.Equal(t, enabled, power.c1CoreStateResidency)
-	require.Equal(t, enabled, power.c6CoreStateResidency)
-	require.Equal(t, enabled, power.processorBusyCycles)
-	require.Equal(t, enabled, power.processorBusyFrequency)
-	require.Equal(t, enabled, power.coreCPUTemperature)
+	require.Equal(t, enabled, power.cpuFrequency)
+	require.Equal(t, enabled, power.cpuC1StateResidency)
+	require.Equal(t, enabled, power.cpuC6StateResidency)
+	require.Equal(t, enabled, power.cpuBusyCycles)
+	require.Equal(t, enabled, power.cpuBusyFrequency)
+	require.Equal(t, enabled, power.cpuTemperature)
 }
 
 func TestGather(t *testing.T) {
 	var acc testutil.Accumulator
 	packageIDs := []string{"0", "1"}
 	coreIDs := []string{"0", "1", "2", "3"}
+	socketCurrentEnergy := 13213852.2
+	dramCurrentEnergy := 784552.0
+	preparedCPUData := getPreparedCPUData(coreIDs)
+	raplDataMap := prepareRaplDataMap(packageIDs, socketCurrentEnergy, dramCurrentEnergy)
+
 	power, _, raplMock, msrMock := getPowerWithMockedServices()
 	prepareCPUInfo(power, coreIDs, packageIDs)
 	enableCoreMetrics(power)
 	power.skipFirstIteration = false
 
-	raplMock.On("InitializeRaplData", mock.Anything).
-		On("GetSocketIDs").Return(packageIDs).
-		On("RetrieveAndCalculateData", mock.Anything).Return(nil).Times(len(packageIDs)).
-		On("GetConstraintMaxPower", mock.Anything).Return(546783852.3, nil).
-		On("GetCurrentPackagePowerConsumption", mock.Anything).Return(13213852.2).
-		On("GetCurrentDramPowerConsumption", mock.Anything).Return(784552.0)
-	msrMock.On("GetCpuIDs").Return(coreIDs).
-		On("OpenAndReadMsr", mock.Anything).Return(nil).
-		On("GetThrottleTemperature", mock.Anything).Return(uint64(434643)).
-		On("GetTemperature", mock.Anything).Return(uint64(1231541)).
-		On("GetTimestampDelta", mock.Anything).Return(uint64(7633345)).
-		On("GetC6Delta", mock.Anything).Return(uint64(12634345)).
-		On("GetC3Delta", mock.Anything).Return(uint64(978956)).
-		On("GetC7Delta", mock.Anything).Return(uint64(1235222)).
-		On("GetMperfDelta", mock.Anything).Return(uint64(98457123)).
-		On("GetAperfDelta", mock.Anything).Return(uint64(14313123)).
-		On("GetReadDate", mock.Anything).Return(int64(323221)).
-		On("SetReadDate", mock.Anything, mock.Anything).
-		On("RetrieveCPUFrequencyForCore", mock.Anything).Return(1200000.2, int64(0), nil)
-
-	power.perCoreMetrics = true
+	raplMock.On("initializeRaplData", mock.Anything).
+		On("getRaplData").Return(raplDataMap).
+		On("retrieveAndCalculateData", mock.Anything).Return(nil).Times(len(raplDataMap)).
+		On("getConstraintMaxPowerWatts", mock.Anything).Return(546783852.3, nil)
+	msrMock.On("getCPUCoresData").Return(preparedCPUData).
+		On("openAndReadMsr", mock.Anything).Return(nil).
+		On("retrieveCPUFrequencyForCore", mock.Anything).Return(1200000.2, nil)
 
 	require.NoError(t, power.Gather(&acc))
 	// Number of global metrics   : 3
@@ -134,31 +122,31 @@ func TestGather(t *testing.T) {
 
 func TestAddGlobalMetricsNegative(t *testing.T) {
 	var acc testutil.Accumulator
-	sockets := []string{"0", "1"}
+	socketCurrentEnergy := 13213852.2
+	dramCurrentEnergy := 784552.0
+	raplDataMap := prepareRaplDataMap([]string{"0", "1"}, socketCurrentEnergy, dramCurrentEnergy)
 	power, _, raplMock, _ := getPowerWithMockedServices()
 	power.skipFirstIteration = false
-	raplMock.On("InitializeRaplData", mock.Anything).Once().
-		On("GetSocketIDs").Return(sockets).Once().
-		On("RetrieveAndCalculateData", mock.Anything).Return(errors.New("error while calculating data")).Times(len(sockets))
+	raplMock.On("initializeRaplData", mock.Anything).Once().
+		On("getRaplData").Return(raplDataMap).Once().
+		On("retrieveAndCalculateData", mock.Anything).Return(errors.New("error while calculating data")).Times(len(raplDataMap))
 
 	power.addGlobalMetrics(&acc)
 	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
-	raplMock.AssertNumberOfCalls(t, "RetrieveAndCalculateData", len(sockets))
+	raplMock.AssertNumberOfCalls(t, "retrieveAndCalculateData", len(raplDataMap))
 
-	raplMock.On("InitializeRaplData", mock.Anything).Once().
-		On("GetSocketIDs").Return(make([]string, 0)).Once()
+	raplMock.On("initializeRaplData", mock.Anything).Once().
+		On("getRaplData").Return(make(map[string]*raplData)).Once()
 
 	power.addGlobalMetrics(&acc)
 	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
-	raplMock.AssertNotCalled(t, "RetrieveAndCalculateData")
+	raplMock.AssertNotCalled(t, "retrieveAndCalculateData")
 
-	raplMock.On("InitializeRaplData", mock.Anything).Once().
-		On("GetSocketIDs").Return(sockets).
-		On("RetrieveAndCalculateData", mock.Anything).Return(nil).Once().
-		On("RetrieveAndCalculateData", mock.Anything).Return(errors.New("error while calculating data")).Once().
-		On("GetConstraintMaxPower", mock.Anything).Return(12313851.5, nil).Twice().
-		On("GetCurrentPackagePowerConsumption", mock.Anything).Return(13213852.2).Once().
-		On("GetCurrentDramPowerConsumption", mock.Anything).Return(784552.0).Once()
+	raplMock.On("initializeRaplData", mock.Anything).Once().
+		On("getRaplData").Return(raplDataMap).
+		On("retrieveAndCalculateData", mock.Anything).Return(nil).Once().
+		On("retrieveAndCalculateData", mock.Anything).Return(errors.New("error while calculating data")).Once().
+		On("getConstraintMaxPowerWatts", mock.Anything).Return(12313851.5, nil).Twice()
 
 	power.addGlobalMetrics(&acc)
 	require.Equal(t, 3, len(acc.GetTelegrafMetrics()))
@@ -166,19 +154,18 @@ func TestAddGlobalMetricsNegative(t *testing.T) {
 
 func TestAddGlobalMetricsPositive(t *testing.T) {
 	var acc testutil.Accumulator
-	sockets := []string{"0", "1"}
-	maxPower := 546783852.9
 	socketCurrentEnergy := 3644574.4
 	dramCurrentEnergy := 124234872.5
+	raplDataMap := prepareRaplDataMap([]string{"0", "1"}, socketCurrentEnergy, dramCurrentEnergy)
+	maxPower := 546783852.9
 	power, _, raplMock, _ := getPowerWithMockedServices()
 	power.skipFirstIteration = false
 
-	raplMock.On("InitializeRaplData", mock.Anything).
-		On("GetSocketIDs").Return(sockets).
-		On("RetrieveAndCalculateData", mock.Anything).Return(nil).Times(len(sockets)).
-		On("GetConstraintMaxPower", mock.Anything).Return(maxPower, nil).Twice().
-		On("GetCurrentPackagePowerConsumption", mock.Anything).Return(socketCurrentEnergy).
-		On("GetCurrentDramPowerConsumption", mock.Anything).Return(dramCurrentEnergy)
+	raplMock.On("initializeRaplData", mock.Anything).
+		On("getRaplData").Return(raplDataMap).
+		On("retrieveAndCalculateData", mock.Anything).Return(nil).Times(len(raplDataMap)).
+		On("getConstraintMaxPowerWatts", mock.Anything).Return(maxPower, nil).Twice().
+		On("getCurrentDramPowerConsumption", mock.Anything).Return(dramCurrentEnergy)
 
 	power.addGlobalMetrics(&acc)
 	require.Equal(t, 6, len(acc.GetTelegrafMetrics()))
@@ -195,10 +182,10 @@ func TestAddMetricsForSingleCoreNegative(t *testing.T) {
 	core := "0"
 	power, _, _, msrMock := getPowerWithMockedServices()
 
-	msrMock.On("OpenAndReadMsr", core).Return(errors.New("error reading MSR file")).Once()
+	msrMock.On("openAndReadMsr", core).Return(errors.New("error reading MSR file")).Once()
 
 	// Skip generating metric for CPU frequency.
-	power.coreCPUFrequency = false
+	power.cpuFrequency = false
 
 	wg.Add(1)
 	power.addMetricsForSingleCore(core, &acc, &wg)
@@ -216,19 +203,19 @@ func TestAddCPUFrequencyMetric(t *testing.T) {
 	power, _, _, msrMock := getPowerWithMockedServices()
 	prepareCPUInfoForSingleCPU(power, cpuID, coreID, packageID)
 
-	msrMock.On("RetrieveCPUFrequencyForCore", mock.Anything).
-		Return(float64(0), int64(0), errors.New("error on reading file")).Once()
+	msrMock.On("retrieveCPUFrequencyForCore", mock.Anything).
+		Return(float64(0), errors.New("error on reading file")).Once()
 
 	power.addCPUFrequencyMetric(cpuID, &acc)
 	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
 
-	msrMock.On("RetrieveCPUFrequencyForCore", mock.Anything).Return(frequency, int64(0), nil).Once()
+	msrMock.On("retrieveCPUFrequencyForCore", mock.Anything).Return(frequency, nil).Once()
 
 	power.addCPUFrequencyMetric(cpuID, &acc)
 	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
 
-	expectedFrequency := services.RoundFloatToNearestTwoDecimalPlaces(services.ConvertKiloHertzToMegaHertz(frequency))
-	expectedMetric := getPowerCoreMetric("cpu_frequency", "MHz", expectedFrequency, coreID, packageID, cpuID)
+	expectedFrequency := roundFloatToNearestTwoDecimalPlaces(frequency)
+	expectedMetric := getPowerCoreMetric("cpu_frequency_mhz", expectedFrequency, coreID, packageID, cpuID)
 	acc.AssertContainsTaggedFields(t, "powerstat_core", expectedMetric.fields, expectedMetric.tags)
 }
 
@@ -238,17 +225,15 @@ func TestAddCoreCPUTemperatureMetric(t *testing.T) {
 	coreID := "2"
 	packageID := "1"
 	power, _, _, msrMock := getPowerWithMockedServices()
-	throttleTemp := uint64(343453434)
-	temp := uint64(312312)
-	expectedTemp := throttleTemp - temp
+	preparedData := getPreparedCPUData([]string{cpuID})
+	expectedTemp := preparedData[cpuID].throttleTemp - preparedData[cpuID].temp
 	prepareCPUInfoForSingleCPU(power, cpuID, coreID, packageID)
 
-	msrMock.On("GetThrottleTemperature", mock.Anything).Return(throttleTemp).Once().
-		On("GetTemperature", mock.Anything).Return(temp).Once()
-	power.addCoreCPUTemperatureMetric(cpuID, &acc)
+	msrMock.On("getCPUCoresData").Return(preparedData).Once()
+	power.addCPUTemperatureMetric(cpuID, &acc)
 	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
 
-	expectedMetric := getPowerCoreMetric("cpu_temperature", "celsius_degrees", expectedTemp, coreID, packageID, cpuID)
+	expectedMetric := getPowerCoreMetric("cpu_temperature_celsius", expectedTemp, coreID, packageID, cpuID)
 	acc.AssertContainsTaggedFields(t, "powerstat_core", expectedMetric.fields, expectedMetric.tags)
 }
 
@@ -259,23 +244,21 @@ func TestAddC6StateResidencyMetric(t *testing.T) {
 	packageID := "1"
 	power, _, _, msrMock := getPowerWithMockedServices()
 	prepareCPUInfoForSingleCPU(power, cpuID, coreID, packageID)
-	tscDelta := uint64(2342341123)
-	c6Delta := uint64(213233)
-	expectedC6 := services.RoundFloatToNearestTwoDecimalPlaces(percentageMultiplier *
-		float64(c6Delta) / float64(tscDelta))
+	preparedData := getPreparedCPUData([]string{cpuID})
+	expectedC6 := roundFloatToNearestTwoDecimalPlaces(percentageMultiplier *
+		float64(preparedData[cpuID].c6Delta) / float64(preparedData[cpuID].timeStampCounterDelta))
 
-	msrMock.On("GetTimestampDelta", mock.Anything).Return(tscDelta).Twice().
-		On("GetC6Delta", mock.Anything).Return(c6Delta).Once()
-	power.addC6StateResidencyMetric(cpuID, &acc)
+	msrMock.On("getCPUCoresData").Return(preparedData).Twice()
+	power.addCPUC6StateResidencyMetric(cpuID, &acc)
 	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
 
-	expectedMetric := getPowerCoreMetric("cpu_c6_state_residency", "percentage", expectedC6, coreID, packageID, cpuID)
+	expectedMetric := getPowerCoreMetric("cpu_c6_state_residency_percent", expectedC6, coreID, packageID, cpuID)
 	acc.AssertContainsTaggedFields(t, "powerstat_core", expectedMetric.fields, expectedMetric.tags)
 
 	acc.ClearMetrics()
-	msrMock.On("GetTimestampDelta", mock.Anything).Return(uint64(0)).Once().
-		On("GetC6Delta", mock.Anything).Return(c6Delta).Once()
-	power.addC6StateResidencyMetric(cpuID, &acc)
+	preparedData[cpuID].timeStampCounterDelta = 0
+
+	power.addCPUC6StateResidencyMetric(cpuID, &acc)
 	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
 }
 
@@ -285,24 +268,21 @@ func TestAddProcessorBusyCyclesMetric(t *testing.T) {
 	coreID := "2"
 	packageID := "1"
 	power, _, _, msrMock := getPowerWithMockedServices()
-	mperfDelta := uint64(1233234)
-	tscDelta := uint64(656434)
 	prepareCPUInfoForSingleCPU(power, cpuID, coreID, packageID)
-	expectedBusyCycles := services.RoundFloatToNearestTwoDecimalPlaces(percentageMultiplier * float64(mperfDelta) /
-		float64(tscDelta))
+	preparedData := getPreparedCPUData([]string{cpuID})
+	expectedBusyCycles := roundFloatToNearestTwoDecimalPlaces(percentageMultiplier * float64(preparedData[cpuID].mperfDelta) /
+		float64(preparedData[cpuID].timeStampCounterDelta))
 
-	msrMock.On("GetTimestampDelta", mock.Anything).Return(tscDelta).Twice().
-		On("GetMperfDelta", mock.Anything).Return(mperfDelta).Once()
-	power.addProcessorBusyCyclesMetric(cpuID, &acc)
+	msrMock.On("getCPUCoresData").Return(preparedData).Twice()
+	power.addCPUBusyCyclesMetric(cpuID, &acc)
 	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
 
-	expectedMetric := getPowerCoreMetric("cpu_busy_cycles", "percentage", expectedBusyCycles, coreID, packageID, cpuID)
+	expectedMetric := getPowerCoreMetric("cpu_busy_cycles_percent", expectedBusyCycles, coreID, packageID, cpuID)
 	acc.AssertContainsTaggedFields(t, "powerstat_core", expectedMetric.fields, expectedMetric.tags)
 
 	acc.ClearMetrics()
-	msrMock.On("GetTimestampDelta", mock.Anything).Return(uint64(0)).Once().
-		On("GetMperfDelta", mock.Anything).Return(mperfDelta).Once()
-	power.addProcessorBusyCyclesMetric(cpuID, &acc)
+	preparedData[cpuID].timeStampCounterDelta = 0
+	power.addCPUBusyCyclesMetric(cpuID, &acc)
 	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
 }
 
@@ -313,21 +293,16 @@ func TestAddProcessorBusyFrequencyMetric(t *testing.T) {
 	packageID := "1"
 	power, _, _, msrMock := getPowerWithMockedServices()
 	prepareCPUInfoForSingleCPU(power, cpuID, coreID, packageID)
+	preparedData := getPreparedCPUData([]string{cpuID})
 	power.skipFirstIteration = false
 
-	msrMock.
-		On("GetTimestampDelta", mock.Anything).Return(uint64(7633345)).
-		On("GetMperfDelta", mock.Anything).Return(uint64(98457123)).Twice().
-		On("GetAperfDelta", mock.Anything).Return(uint64(14313123)).
-		On("GetReadDate", mock.Anything).Return(int64(323221)).
-		On("SetReadDate", mock.Anything, mock.Anything)
-	power.addProcessorBusyFrequencyMetric(cpuID, &acc)
+	msrMock.On("getCPUCoresData").Return(preparedData).Twice()
+	power.addCPUBusyFrequencyMetric(cpuID, &acc)
 	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
 
 	acc.ClearMetrics()
-	msrMock.
-		On("GetMperfDelta", mock.Anything).Return(uint64(0))
-	power.addProcessorBusyFrequencyMetric(cpuID, &acc)
+	preparedData[cpuID].mperfDelta = 0
+	power.addCPUBusyFrequencyMetric(cpuID, &acc)
 	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
 }
 
@@ -337,31 +312,23 @@ func TestAddC1StateResidencyMetric(t *testing.T) {
 	coreID := "2"
 	packageID := "1"
 	power, _, _, msrMock := getPowerWithMockedServices()
-	tscDelta := uint64(43512313)
-	mperfDelta := uint64(112323)
-	c3Delta := uint64(23233)
-	c6Delta := uint64(2998043)
-	c7Delta := uint64(3434323)
 	prepareCPUInfoForSingleCPU(power, cpuID, coreID, packageID)
-	c1 := tscDelta - mperfDelta - c3Delta - c6Delta - c7Delta
-	expectedC1 := services.RoundFloatToNearestTwoDecimalPlaces(percentageMultiplier * float64(c1) / float64(tscDelta))
+	preparedData := getPreparedCPUData([]string{cpuID})
+	c1 := preparedData[cpuID].timeStampCounterDelta - preparedData[cpuID].mperfDelta - preparedData[cpuID].c3Delta -
+		preparedData[cpuID].c6Delta - preparedData[cpuID].c7Delta
+	expectedC1 := roundFloatToNearestTwoDecimalPlaces(percentageMultiplier * float64(c1) / float64(preparedData[cpuID].timeStampCounterDelta))
 
-	msrMock.
-		On("GetTimestampDelta", mock.Anything).Return(tscDelta).Once().
-		On("GetC6Delta", mock.Anything).Return(c6Delta).
-		On("GetC3Delta", mock.Anything).Return(c3Delta).
-		On("GetC7Delta", mock.Anything).Return(c7Delta).
-		On("GetMperfDelta", mock.Anything).Return(mperfDelta)
-	power.addC1StateResidencyMetric(cpuID, &acc)
+	msrMock.On("getCPUCoresData").Return(preparedData).Twice()
+
+	power.addCPUC1StateResidencyMetric(cpuID, &acc)
 	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
 
-	expectedMetric := getPowerCoreMetric("cpu_c1_state_residency", "percentage", expectedC1, coreID, packageID, cpuID)
+	expectedMetric := getPowerCoreMetric("cpu_c1_state_residency_percent", expectedC1, coreID, packageID, cpuID)
 	acc.AssertContainsTaggedFields(t, "powerstat_core", expectedMetric.fields, expectedMetric.tags)
 
 	acc.ClearMetrics()
-	msrMock.
-		On("GetTimestampDelta", mock.Anything).Return(uint64(0)).Once()
-	power.addC1StateResidencyMetric(cpuID, &acc)
+	preparedData[cpuID].timeStampCounterDelta = 0
+	power.addCPUC1StateResidencyMetric(cpuID, &acc)
 	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
 }
 
@@ -371,9 +338,9 @@ func TestAddThermalDesignPowerMetric(t *testing.T) {
 	maxPower := 195720672.1
 	power, _, raplMock, _ := getPowerWithMockedServices()
 
-	raplMock.On("GetConstraintMaxPower", mock.Anything).
-		Return(float64(0), errors.New("GetConstraintMaxPower error")).Once().
-		On("GetConstraintMaxPower", mock.Anything).Return(maxPower, nil).Once()
+	raplMock.On("getConstraintMaxPowerWatts", mock.Anything).
+		Return(float64(0), errors.New("getConstraintMaxPowerWatts error")).Once().
+		On("getConstraintMaxPowerWatts", mock.Anything).Return(maxPower, nil).Once()
 
 	power.addThermalDesignPowerMetric(sockets[0], &acc)
 	require.Equal(t, 0, len(acc.GetTelegrafMetrics()))
@@ -381,9 +348,34 @@ func TestAddThermalDesignPowerMetric(t *testing.T) {
 	power.addThermalDesignPowerMetric(sockets[0], &acc)
 	require.Equal(t, 1, len(acc.GetTelegrafMetrics()))
 
-	expectedTDP := services.RoundFloatToNearestTwoDecimalPlaces(services.ConvertMicroWattToWatt(maxPower))
-	expectedMetric := getPowerGlobalMetric("thermal_design_power", "Watt", expectedTDP, sockets[0])
+	expectedTDP := roundFloatToNearestTwoDecimalPlaces(maxPower)
+	expectedMetric := getPowerGlobalMetric("thermal_design_power_watts", expectedTDP, sockets[0])
 	acc.AssertContainsTaggedFields(t, "powerstat_package", expectedMetric.fields, expectedMetric.tags)
+}
+
+func getPreparedCPUData(cores []string) map[string]*msrData {
+	msrDataMap := make(map[string]*msrData)
+
+	for _, core := range cores {
+		msrDataMap[core] = &msrData{
+			mperf:                 43079,
+			aperf:                 82001,
+			timeStampCounter:      15514,
+			c3:                    52829,
+			c6:                    86930,
+			c7:                    25340,
+			throttleTemp:          88150,
+			temp:                  40827,
+			mperfDelta:            23515,
+			aperfDelta:            33866,
+			timeStampCounterDelta: 13686000,
+			c3Delta:               20003,
+			c6Delta:               44518,
+			c7Delta:               20979,
+		}
+	}
+
+	return msrDataMap
 }
 
 func getGlobalMetrics(maxPower float64, socketCurrentEnergy float64, dramCurrentEnergy float64) []struct {
@@ -394,30 +386,30 @@ func getGlobalMetrics(maxPower float64, socketCurrentEnergy float64, dramCurrent
 		fields map[string]interface{}
 		tags   map[string]string
 	}{
-		getPowerGlobalMetric("thermal_design_power", "Watt", services.RoundFloatToNearestTwoDecimalPlaces(services.ConvertMicroWattToWatt(maxPower)), "0"),
-		getPowerGlobalMetric("thermal_design_power", "Watt", services.RoundFloatToNearestTwoDecimalPlaces(services.ConvertMicroWattToWatt(maxPower)), "1"),
-		getPowerGlobalMetric("current_power_consumption", "Watt", services.RoundFloatToNearestTwoDecimalPlaces(socketCurrentEnergy), "0"),
-		getPowerGlobalMetric("current_power_consumption", "Watt", services.RoundFloatToNearestTwoDecimalPlaces(socketCurrentEnergy), "1"),
-		getPowerGlobalMetric("current_dram_power_consumption", "Watt", services.RoundFloatToNearestTwoDecimalPlaces(dramCurrentEnergy), "0"),
-		getPowerGlobalMetric("current_dram_power_consumption", "Watt", services.RoundFloatToNearestTwoDecimalPlaces(dramCurrentEnergy), "1"),
+		getPowerGlobalMetric("thermal_design_power_watts", roundFloatToNearestTwoDecimalPlaces(maxPower), "0"),
+		getPowerGlobalMetric("thermal_design_power_watts", roundFloatToNearestTwoDecimalPlaces(maxPower), "1"),
+		getPowerGlobalMetric("current_power_consumption_watts", roundFloatToNearestTwoDecimalPlaces(socketCurrentEnergy), "0"),
+		getPowerGlobalMetric("current_power_consumption_watts", roundFloatToNearestTwoDecimalPlaces(socketCurrentEnergy), "1"),
+		getPowerGlobalMetric("current_dram_power_consumption_watts", roundFloatToNearestTwoDecimalPlaces(dramCurrentEnergy), "0"),
+		getPowerGlobalMetric("current_dram_power_consumption_watts", roundFloatToNearestTwoDecimalPlaces(dramCurrentEnergy), "1"),
 	}
 }
 
-func getPowerCoreMetric(name string, unit string, value interface{}, coreID string, packageID string, cpuID string) struct {
+func getPowerCoreMetric(name string, value interface{}, coreID string, packageID string, cpuID string) struct {
 	fields map[string]interface{}
 	tags   map[string]string
 } {
-	return getPowerMetric(name, unit, value, map[string]string{"package_id": packageID, "core_id": coreID, "cpu_id": cpuID})
+	return getPowerMetric(name, value, map[string]string{"package_id": packageID, "core_id": coreID, "cpu_id": cpuID})
 }
 
-func getPowerGlobalMetric(name string, unit string, value interface{}, socketID string) struct {
+func getPowerGlobalMetric(name string, value interface{}, socketID string) struct {
 	fields map[string]interface{}
 	tags   map[string]string
 } {
-	return getPowerMetric(name, unit, value, map[string]string{"package_id": socketID})
+	return getPowerMetric(name, value, map[string]string{"package_id": socketID})
 }
 
-func getPowerMetric(name string, unit string, value interface{}, tags map[string]string) struct {
+func getPowerMetric(name string, value interface{}, tags map[string]string) struct {
 	fields map[string]interface{}
 	tags   map[string]string
 } {
@@ -426,33 +418,31 @@ func getPowerMetric(name string, unit string, value interface{}, tags map[string
 		tags   map[string]string
 	}{
 		map[string]interface{}{
-			"name":  name,
-			"unit":  unit,
-			"value": value,
+			name: value,
 		},
 		tags,
 	}
 }
 
 func prepareCPUInfoForSingleCPU(power *PowerStat, cpuID string, coreID string, packageID string) {
-	power.cpuInfo = make(map[string]*data.CPUInfo)
-	power.cpuInfo[cpuID] = &data.CPUInfo{
-		PhysicalID: packageID,
-		CoreID:     coreID,
-		CPUID:      cpuID,
+	power.cpuInfo = make(map[string]*cpuInfo)
+	power.cpuInfo[cpuID] = &cpuInfo{
+		physicalID: packageID,
+		coreID:     coreID,
+		cpuID:      cpuID,
 	}
 }
 
 func prepareCPUInfo(power *PowerStat, coreIDs []string, packageIDs []string) {
-	power.cpuInfo = make(map[string]*data.CPUInfo)
+	power.cpuInfo = make(map[string]*cpuInfo)
 	currentCPU := 0
 	for _, packageID := range packageIDs {
 		for _, coreID := range coreIDs {
 			cpuID := strconv.Itoa(currentCPU)
-			power.cpuInfo[cpuID] = &data.CPUInfo{
-				PhysicalID: packageID,
-				CPUID:      cpuID,
-				CoreID:     coreID,
+			power.cpuInfo[cpuID] = &cpuInfo{
+				physicalID: packageID,
+				cpuID:      cpuID,
+				coreID:     coreID,
 			}
 			currentCPU++
 		}
@@ -460,31 +450,41 @@ func prepareCPUInfo(power *PowerStat, coreIDs []string, packageIDs []string) {
 }
 
 func enableCoreMetrics(power *PowerStat) {
-	power.perCoreMetrics = true
-	power.c1CoreStateResidency = true
-	power.c6CoreStateResidency = true
-	power.coreCPUTemperature = true
-	power.processorBusyFrequency = true
-	power.coreCPUFrequency = true
-	power.processorBusyCycles = true
+	power.cpuC1StateResidency = true
+	power.cpuC6StateResidency = true
+	power.cpuTemperature = true
+	power.cpuBusyFrequency = true
+	power.cpuFrequency = true
+	power.cpuBusyCycles = true
 }
 
 func disableCoreMetrics(power *PowerStat) {
-	power.perCoreMetrics = false
-	power.c1CoreStateResidency = false
-	power.c6CoreStateResidency = false
-	power.coreCPUTemperature = false
-	power.processorBusyFrequency = false
-	power.coreCPUFrequency = false
-	power.processorBusyCycles = false
+	power.cpuC1StateResidency = false
+	power.cpuC6StateResidency = false
+	power.cpuTemperature = false
+	power.cpuBusyFrequency = false
+	power.cpuFrequency = false
+	power.cpuBusyCycles = false
 }
 
-func getPowerWithMockedServices() (*PowerStat, *mocks.FileService, *mocks.RaplService, *mocks.MsrService) {
-	fsMock := &mocks.FileService{}
-	msrMock := &mocks.MsrService{}
-	raplMock := &mocks.RaplService{}
+func prepareRaplDataMap(socketIDs []string, socketCurrentEnergy float64, dramCurrentEnergy float64) map[string]*raplData {
+	raplDataMap := make(map[string]*raplData, len(socketIDs))
+	for _, socketID := range socketIDs {
+		raplDataMap[socketID] = &raplData{
+			socketCurrentEnergy: socketCurrentEnergy,
+			dramCurrentEnergy:   dramCurrentEnergy,
+		}
+	}
+
+	return raplDataMap
+}
+
+func getPowerWithMockedServices() (*PowerStat, *mockFileService, *mockRaplService, *mockMsrService) {
+	fsMock := &mockFileService{}
+	msrMock := &mockMsrService{}
+	raplMock := &mockRaplService{}
 	logger := testutil.Logger{Name: "PowerPluginTest"}
-	p := NewPowerStat(fsMock)
+	p := newPowerStat(fsMock)
 	p.Log = logger
 	p.fs = fsMock
 	p.rapl = raplMock
