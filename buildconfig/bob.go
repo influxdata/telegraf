@@ -21,10 +21,12 @@ The flags are:
 
   --allyesconfig                 generate a configuration with all plugins enabled
   --allnoconfig                  generate a configuration with all plugins disabled
-  --list                         list all configurable plugins
+	--fallback										 generate and save an all-yes-config if loading the config file fails
+	--list                         list all configurable plugins
   --save                         save configuration to file
 
   config file                    file to read the configuration from (default: build.conf)
+
 
 Examples:
 
@@ -40,8 +42,9 @@ Examples:
   make
 `
 
-var fConfigYes = flag.Bool("allyesconfig", false, "generate a configuration with all plugins enabled and exit")
-var fConfigNo = flag.Bool("allnoconfig", false, "generate a configuration with all plugins disabled and exit")
+var fConfigYes = flag.Bool("allyesconfig", false, "generate a configuration with all plugins enabled")
+var fConfigNo = flag.Bool("allnoconfig", false, "generate a configuration with all plugins disabled")
+var fFallback = flag.Bool("fallback", false, "generate and save an all-yes-config if loading the config file fails")
 var fList = flag.Bool("list", false, "list all configurable plugins")
 var fSave = flag.Bool("save", false, "save configuration to file")
 
@@ -130,10 +133,10 @@ func getAllPlugins(categories []string) (map[string][]string, error) {
 func getConfiguredPlugins(cfg buildConfig, allPlugins map[string][]string) map[string][]string {
 	config := make(map[string][]string)
 
-	categories := map[string](map[string]bool) {
-		"inputs": cfg.Inputs,
-		"outputs": cfg.Outputs,
-		"processors": cfg.Processors,
+	categories := map[string](map[string]bool){
+		"inputs":      cfg.Inputs,
+		"outputs":     cfg.Outputs,
+		"processors":  cfg.Processors,
 		"aggregators": cfg.Aggregators,
 	}
 
@@ -241,6 +244,15 @@ func main() {
 	configFile := "build.conf"
 	if len(args) > 0 {
 		configFile = args[0]
+	}
+
+	// Trigger the fallback
+	if *fFallback {
+		if _, err := os.Stat(configFile); os.IsNotExist(err) {
+			*fConfigYes = true
+			*fConfigNo = false
+			*fSave = true
+		}
 	}
 
 	// Define the categories we can handle
