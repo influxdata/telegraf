@@ -37,8 +37,7 @@ type DirDefObject struct {
 	FileTagRegex   map[string]string
 	MetricTagRegex map[string]string
 	TempExtension  string
-	Timezone       string `toml:"vqtcsv_timezone"` //newly added
-
+	
 	histQueue      chan string
 	rtQueue        chan string
 	location       *time.Location
@@ -56,7 +55,6 @@ type DirMon struct {
 	currDir DirDefObject
 	parsers.Parser
 	acc telegraf.Accumulator
-	//vqtcsvTimeZone string `toml:"vqtcsv_timezone"` //newly added
 }
 
 const sampleConfig = `
@@ -153,7 +151,7 @@ func fileHandler(fileName string) ([]string, error) {
 	var f *os.File
 	var err error
 	var r io.Reader
-	log.Println("I am here 9: ", fileName)
+	
 	for i := 0; i < 10; i++ {
 		f, err = os.Open(fileName)
 
@@ -301,7 +299,7 @@ func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accum
 
 		//for s.Scan() {
 		fileLines, err := fileHandler(fileName)
-		log.Println("filelines: ", fileLines)
+		
 		if err != nil {
 			return err
 		}
@@ -314,6 +312,7 @@ func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accum
 			m, err := ddo.parser.ParseLine(line)
 			if err != nil {
 				log.Printf("ERROR [%s]: %s", fileName, err)
+				//log.Println("Error in: ", line)
 				continue
 			}
 
@@ -460,23 +459,36 @@ func (ddo *DirDefObject) OSReadDir(root string) (map[string][]string, error) {
 //FileProcessor method
 func (ddo DirDefObject) FileProcessor(id int) {
 	var filename string
-	log.Println("File Process i value ", id)
-	log.Println("File in rt queue : ", len(ddo.rtQueue))
-	log.Println("File in hist queue : ", len(ddo.histQueue))
-	//for true {
-	if len(ddo.rtQueue) <= 20 || len(ddo.histQueue) <= 20 {
-		for i := 0; i < 20; i++ {
-			select {
-			case filename = <-ddo.rtQueue:
-			case filename = <-ddo.histQueue:
+	//check which queue has files and process the files
+	//this logic prevents the application from halting after processing a huge backlog
+	//Once the backlog is processed, files are picked up from the real time queue and processed
+	for true {
+		if len(ddo.histQueue) == 0 {
+			for i := 0; i < 2; i++ {
+				select {
+				case filename = <-ddo.rtQueue:
+				}
+				//log.Println("In realtime : ", filename)
+				err := ddo.ProcessFile(id, filename, ddo.acc)
+				if err != nil {
+					log.Printf("E!: Error processing file [%i] [%s]", id, filename) 
+				}
 			}
+		} else {
+			for i := 0; i < 2; i++ {
+				select {
+				case filename = <-ddo.rtQueue:
+				case filename = <-ddo.histQueue:
+				}
 
-			log.Println("In file processor, filename is : ", filename)
-			err := ddo.ProcessFile(id, filename, ddo.acc)
-			if err != nil {
-				log.Printf("E!: Error processing file [%i] [%s]", id, filename) //this is correct
+				log.Println("In history : ", filename)
+				err := ddo.ProcessFile(id, filename, ddo.acc)
+				if err != nil {
+					log.Printf("E!: Error processing file [%i] [%s]", id, filename) 
+				}
 			}
 		}
+		time.Sleep(3 * time.Second)
 	}
 }
 
@@ -486,13 +498,15 @@ func (ddo DirDefObject) HistoryHandler(dir string, files []string) {
 
 	for _, file := range files {
 		ddo.histQueue <- file
+		//log.Println("Hist queue : ", len(ddo.histQueue))
 	}
 	log.Printf("Backlog completed [%s]", dir)
-	log.Println("Hist queue : ", len(ddo.histQueue))
+
 }
 
 //AddToRtQueue method
 func (ddo DirDefObject) AddToRtQueue(fileName string) {
+
 	time.Sleep(5 * time.Second)
 	log.Println("In AddtoRtQueue")
 	ddo.rtQueue <- fileName
@@ -501,8 +515,8 @@ func (ddo DirDefObject) AddToRtQueue(fileName string) {
 
 //RealtimeHandler method
 func (ddo DirDefObject) RealtimeHandler(dir string) {
-	var eventChan = make(chan notify.EventInfo, 10)
-	log.Println("I am in the Realtime handler : ", len(eventChan))
+	var eventChan = make(chan notify.EventInfo, 20)
+	//log.Println("I am in the Realtime handler : ", len(eventChan))
 
 	if err := notify.Watch(dir, eventChan, notify.Rename|notify.Create); err != nil {
 		log.Fatal(err)
@@ -516,7 +530,7 @@ func (ddo DirDefObject) RealtimeHandler(dir string) {
 		fileName := strings.Replace(eventName.Path(), "\\", "/", -1)
 
 		if ddo.IsFileMatch(fileName) {
-			log.Println("In file match: ", fileName)
+			//log.Println("In file match: ", fileName)
 			go ddo.AddToRtQueue(fileName)
 		}
 	}
@@ -524,21 +538,17 @@ func (ddo DirDefObject) RealtimeHandler(dir string) {
 
 //Start method
 func (ddo DirDefObject) Start(acc telegraf.Accumulator, parser parsers.Parser, gFieldReplace map[string]string) error {
+	
 	var err error
 
-	ddo.histQueue = make(chan string, ddo.NumProcessors)
-	ddo.rtQueue = make(chan string, ddo.NumProcessors)
+	ddo.histQueue = make(chan string, 20)
+	ddo.rtQueue = make(chan string, 20)
 	ddo.acc = acc
 
 	for key, value := range ddo.FieldReplace {
 		gFieldReplace[key] = value
 	}
 	ddo.FieldReplace = gFieldReplace
-
-	// ddo.location, err = time.LoadLocation(ddo.Timezone)
-	// if err != nil {
-	// 	log.Fatalln("FATAL [timezone]: ", err)
-	// }
 
 	ddo.parser = parser
 	ddo.fiParser, err = fileinfo.NewFileInfoParser(ddo.FileRegex, ddo.FileTagRegex)
@@ -551,7 +561,7 @@ func (ddo DirDefObject) Start(acc telegraf.Accumulator, parser parsers.Parser, g
 		ddo.metricTagMatch[key] = regexp.MustCompile(sRegex)
 	}
 	results, err := ddo.OSReadDir(ddo.Directory)
-	log.Println("results : ", len(results))
+	//log.Println("results : ", len(results))
 
 	if err != nil {
 		log.Fatalln("ERROR [receiver]: ", err)
@@ -563,18 +573,19 @@ func (ddo DirDefObject) Start(acc telegraf.Accumulator, parser parsers.Parser, g
 	var totalFiles = 0
 
 	for dir, files := range results {
+
 		go ddo.HistoryHandler(dir, files)
 		go ddo.RealtimeHandler(dir)
-		log.Println("The directory in results is : ", dir)
-		log.Println("The # of files is : ", len(files))
+		//log.Println("The directory in results is : ", dir)
+		//log.Println("The # of files is : ", len(files))
 		totalFiles += len(files)
 
 	}
-	log.Println("Total files : ", totalFiles)
-
+	//log.Println("Total files : ", totalFiles)
+	
 	// Main processing loop
+	
 	for i := 0; i < ddo.NumProcessors; i++ {
-		log.Println("value of i is : ", i)
 		go ddo.FileProcessor(i)
 	}
 
@@ -585,14 +596,13 @@ func (ddo DirDefObject) Start(acc telegraf.Accumulator, parser parsers.Parser, g
 func (dm *DirMon) Start(acc telegraf.Accumulator) error {
 	dm.acc = acc
 	// Create a monitor for each directory
+	
 	for _, d := range dm.Directory {
 		if err := d.Start(acc, dm.Parser, dm.FieldReplace); err != nil {
 			log.Println("Error starting", d.Directory)
 			return err
 		}
-
 	}
-
 	return nil
 }
 
