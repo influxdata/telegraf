@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -15,6 +16,9 @@ type Bind struct {
 	Urls                 []string
 	GatherMemoryContexts bool
 	GatherViews          bool
+	Timeout              config.Duration `toml:"timeout"`
+
+	client http.Client
 }
 
 var sampleConfig = `
@@ -23,11 +27,10 @@ var sampleConfig = `
   # urls = ["http://localhost:8053/xml/v3"]
   # gather_memory_contexts = false
   # gather_views = false
-`
 
-var client = &http.Client{
-	Timeout: time.Duration(4 * time.Second),
-}
+  ## Timeout for http requests made by bind nameserver
+  # timeout = "4s"
+`
 
 func (b *Bind) Description() string {
 	return "Read BIND nameserver XML statistics"
@@ -35,6 +38,14 @@ func (b *Bind) Description() string {
 
 func (b *Bind) SampleConfig() string {
 	return sampleConfig
+}
+
+func (b *Bind) Init() error {
+	b.client = http.Client{
+		Timeout: time.Duration(b.Timeout),
+	}
+
+	return nil
 }
 
 func (b *Bind) Gather(acc telegraf.Accumulator) error {

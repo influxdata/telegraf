@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -905,6 +906,17 @@ func TestBadRegex(t *testing.T) {
 	checkOutput(t, &acc, nil, nil, absentFields, absentTags)
 }
 
+type fakeClient struct {
+	statusCode int
+	err        error
+}
+
+func (f *fakeClient) Do(req *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: f.statusCode,
+	}, f.err
+}
+
 func TestNetworkErrors(t *testing.T) {
 	// DNS error
 	h := &HTTPResponse{
@@ -914,6 +926,7 @@ func TestNetworkErrors(t *testing.T) {
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
 		FollowRedirects: false,
+		client:          &fakeClient{err: &url.Error{Err: &net.OpError{Err: &net.DNSError{Err: "DNS error"}}}},
 	}
 
 	var acc testutil.Accumulator
