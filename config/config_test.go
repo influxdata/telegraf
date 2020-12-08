@@ -2,8 +2,8 @@ package config
 
 import (
 	"os"
-	"strings"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
