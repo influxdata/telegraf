@@ -317,7 +317,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 			uClient = &http.Client{
 				Transport: &http.Transport{
 					Dial: dialer.Dial,
-				}}
+				},
+				Timeout: p.ResponseTimeout.Duration,
+			}
 		}
 		req, err = http.NewRequest("GET", u.URL.String(), nil)
 		if err != nil {
