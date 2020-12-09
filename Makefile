@@ -63,6 +63,7 @@ pkgdir ?= build/dist
 
 .PHONY: all
 all:
+	@$(MAKE) config
 	@$(MAKE) deps
 	@$(MAKE) telegraf
 
@@ -77,16 +78,25 @@ help:
 	@echo '  tidy       - tidy go modules'
 	@echo '  check-deps - check docs/LICENSE_OF_DEPENDENCIES.md'
 	@echo '  clean      - delete build artifacts'
+	@echo '  distclean  - delete build artifacts and configuration file'
 	@echo ''
 	@echo 'Package Targets:'
 	@$(foreach dist,$(dists),echo "  $(dist)";)
+
+.PHONY: allyesconfig
+allyesconfig:
+	go run buildconfig/bob.go --allyesconfig
+
+.PHONY: config
+config:
+	go run buildconfig/bob.go --fallback
 
 .PHONY: deps
 deps:
 	go mod download
 
 .PHONY: telegraf
-telegraf:
+telegraf: config
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 # Used by dockerfile builds
@@ -95,7 +105,7 @@ go-install:
 	go install -mod=mod -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: test
-test:
+test: allyesconfig
 	go test -short $(race_detector) ./...
 
 .PHONY: fmt
@@ -117,7 +127,7 @@ test-windows:
 	go test -short ./...
 
 .PHONY: vet
-vet:
+vet: allyesconfig
 	@echo 'go vet $$(go list ./... | grep -v ./plugins/parsers/influx)'
 	@go vet $$(go list ./... | grep -v ./plugins/parsers/influx) ; if [ $$? -ne 0 ]; then \
 		echo ""; \
@@ -127,7 +137,7 @@ vet:
 	fi
 
 .PHONY: tidy
-tidy:
+tidy: allyesconfig
 	go mod verify
 	go mod tidy
 	@if ! git diff --quiet go.mod go.sum; then \
@@ -152,6 +162,14 @@ clean:
 	rm -f telegraf
 	rm -f telegraf.exe
 	rm -rf build
+	rm -f plugins/aggregators/all/all.go
+	rm -f plugins/inputs/all/all.go
+	rm -f plugins/outputs/all/all.go
+	rm -f plugins/processors/all/all.go
+
+.PHONY: distclean
+distclean: clean
+	rm -rf build.conf
 
 .PHONY: docker-image
 docker-image:
