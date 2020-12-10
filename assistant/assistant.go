@@ -66,9 +66,10 @@ func (assistant *Assistant) Stop() {
 }
 
 type pluginInfo struct {
-	Name   string
-	Type   string
-	Config map[string]interface{}
+	Name     string
+	Type     string
+	Config   map[string]interface{}
+	UniqueId string
 }
 
 type requestType string
@@ -219,19 +220,7 @@ func (assistant *Assistant) getPlugin(req *request) response {
 	var data interface{}
 	var err error
 
-	switch req.Plugin.Type {
-	case "INPUT":
-		data, err = assistant.agent.GetRunningInputPlugin(req.Plugin.Name)
-	case "OUTPUT":
-		data, err = assistant.agent.GetRunningOutputPlugin(req.Plugin.Name)
-	case "AGGREGATOR":
-		data, err = assistant.agent.GetAggregatorPlugin(req.Plugin.Name)
-	case "PROCESSOR":
-		data, err = assistant.agent.GetProcessorPlugin(req.Plugin.Name)
-	default:
-		err = fmt.Errorf("did not provide a valid plugin type")
-	}
-
+	data, err = assistant.agent.GetRunningPlugin(req.Plugin.UniqueId)
 	if err != nil {
 		return response{FAILURE, req.UUID, err.Error()}
 	}
@@ -281,13 +270,14 @@ func (assistant *Assistant) startPlugin(req *request) response {
 	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.Name, "\n")
 
 	var res response
+	var uid string
 	var err error
 
 	switch req.Plugin.Type {
 	case "INPUT":
-		err = assistant.agent.StartInput(req.Plugin.Name)
+		uid, err = assistant.agent.StartInput(req.Plugin.Name)
 	case "OUTPUT":
-		err = assistant.agent.StartOutput(req.Plugin.Name, req.Plugin.Config)
+		uid, err = assistant.agent.StartOutput(req.Plugin.Name)
 	default:
 		err = fmt.Errorf("did not provide a valid plugin type")
 	}
@@ -295,7 +285,7 @@ func (assistant *Assistant) startPlugin(req *request) response {
 	if err != nil {
 		res = response{FAILURE, req.UUID, err.Error()}
 	} else {
-		res = response{SUCCESS, req.UUID, fmt.Sprintf("%s plugin added.", req.Plugin.Name)}
+		res = response{SUCCESS, req.UUID, uid}
 	}
 
 	return res
@@ -303,7 +293,7 @@ func (assistant *Assistant) startPlugin(req *request) response {
 
 // updatePlugin updates a plugin with the config specified in request
 func (assistant *Assistant) updatePlugin(req *request) response {
-	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.Name, "\n")
+	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.UniqueId, "\n")
 
 	var res response
 	var data interface{}
@@ -316,9 +306,9 @@ func (assistant *Assistant) updatePlugin(req *request) response {
 
 	switch req.Plugin.Type {
 	case "INPUT":
-		data, err = assistant.agent.UpdateInputPlugin(req.Plugin.Name, req.Plugin.Config)
+		data, err = assistant.agent.UpdateInputPlugin(req.Plugin.UniqueId, req.Plugin.Config)
 	case "OUTPUT":
-		data, err = assistant.agent.UpdateOutputPlugin(req.Plugin.Name, req.Plugin.Config)
+		data, err = assistant.agent.UpdateOutputPlugin(req.Plugin.UniqueId, req.Plugin.Config)
 	default:
 		err = fmt.Errorf("did not provide a valid plugin type")
 	}
@@ -341,9 +331,9 @@ func (assistant *Assistant) stopPlugin(req *request) response {
 
 	switch req.Plugin.Type {
 	case "INPUT":
-		assistant.agent.StopInputPlugin(req.Plugin.Name, true)
+		assistant.agent.StopInputPlugin(req.Plugin.UniqueId, true)
 	case "OUTPUT":
-		assistant.agent.StopOutputPlugin(req.Plugin.Name)
+		assistant.agent.StopOutputPlugin(req.Plugin.UniqueId, true)
 	default:
 		err = fmt.Errorf("did not provide a valid plugin type")
 	}
@@ -357,19 +347,23 @@ func (assistant *Assistant) stopPlugin(req *request) response {
 	return res
 }
 
-type pluginsList struct {
-	Inputs  []string
-	Outputs []string
+type pluginsWithIdList struct {
+	Inputs  []map[string]string
+	Outputs []map[string]string
 }
 
 // getRunningPlugins returns a JSON response obj with all running plugins
 func (assistant *Assistant) getRunningPlugins(req *request) response {
 	inputs := assistant.agent.GetRunningInputPlugins()
 	outputs := assistant.agent.GetRunningOutputPlugins()
-	data := pluginsList{inputs, outputs}
+	data := pluginsWithIdList{inputs, outputs}
 
-	res := response{SUCCESS, req.UUID, data}
-	return res
+	return response{SUCCESS, req.UUID, data}
+}
+
+type pluginsList struct {
+	Inputs  []string
+	Outputs []string
 }
 
 // getAllPlugins returns a JSON response obj with names of all possible plugins

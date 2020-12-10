@@ -20,38 +20,31 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+
+	"github.com/google/uuid"
 )
 
 // Agent runs a set of plugins.
 type Agent struct {
-	Config    *config.Config
-	Context   context.Context
-	iu        *inputUnit
-	ou        *outputUnit
-	wg        *sync.WaitGroup
-	statusMap map[string]map[string]pluginChannels
-	statusMux *sync.Mutex
-}
+	Config         *config.Config
+	Context        context.Context
+	iu             *inputUnit
+	ou             *outputUnit
+	wg             *sync.WaitGroup
+	runningPlugins map[string]interface{}
 
-type pluginChannels struct {
-	stop    chan struct{}
-	stopped chan struct{}
+	pluginLock *sync.Mutex
 }
 
 // NewAgent returns an Agent for the given Config.
 func NewAgent(config *config.Config) (*Agent, error) {
-	inputStatusMap := make(map[string]pluginChannels)
-	outputStatusMap := make(map[string]pluginChannels)
-
-	statusMap := make(map[string]map[string]pluginChannels)
-	statusMap["input"] = inputStatusMap
-	statusMap["output"] = outputStatusMap
+	runningPlugins := make(map[string]interface{}) // map uuid:plugin
 
 	a := &Agent{
-		Config:    config,
-		statusMap: statusMap,
-		wg:        new(sync.WaitGroup),
-		statusMux: new(sync.Mutex),
+		Config:         config,
+		runningPlugins: runningPlugins,
+		wg:             new(sync.WaitGroup),
+		pluginLock:     new(sync.Mutex),
 	}
 	return a, nil
 }
@@ -66,7 +59,7 @@ func NewAgent(config *config.Config) (*Agent, error) {
 // └───────┘   │
 // ┌───────┐   │
 // │ Input │───┘
-// └───────┘
+//└───────┘
 type inputUnit struct {
 	dst    chan<- telegraf.Metric
 	inputs []*models.RunningInput
@@ -121,45 +114,35 @@ type outputUnit struct {
 }
 
 // RunSingleInput runs a single input and can be called after an agent is created
-func (a *Agent) RunSingleInput(inputConfig *models.InputConfig, plugin telegraf.Input, ctx context.Context, shouldUpdatePlugin bool) error {
+func (a *Agent) RunSingleInput(input *models.RunningInput, ctx context.Context) error {
 
 	// NOTE: we can't just use `defer a.statusMutex.Unlock()` since except for the input validation,
 	// this function only returns once the gatherLoop is done -- i.e. when the plugin is stopped.
 	// Be careful to manually unlock the statusMutex in this function.
 
 	// validating if an input plugin is already running, and therefore shouldn't be run again
-	a.statusMux.Lock()
-	_, ok := a.statusMap["input"][inputConfig.Name]
-	a.statusMux.Unlock()
+	a.pluginLock.Lock()
+	_, ok := a.runningPlugins[input.UniqueId]
+	a.pluginLock.Unlock()
 
 	if ok {
-		log.Printf("E! [agent] You are trying to run an input that is already running: %s \n", inputConfig.Name)
+		log.Printf("E! [agent] You are trying to run an input that is already running: %s \n", input.Config.Name)
 		return errors.New("you are trying to run an input that is already running")
-	}
-
-	if shouldUpdatePlugin {
-		a.Config.UpdateConfig(map[string]interface{}{}, inputConfig.Name, "inputs", "START_PLUGIN")
 	}
 
 	startTime := time.Now()
 
-	if plugin == nil {
-		// if not, look at global list of plugins and init default
-		pluginCreator, ok := inputs.Inputs[inputConfig.Name]
-		if !ok {
-			log.Printf("E! [agent] input config's name is not valid: %s \n", inputConfig.Name)
-			return errors.New("input config's name is not valid")
+	if input.UniqueId == "" {
+		uniqueID, err := uuid.NewUUID()
+		if err != nil {
+			return errors.New("errored while generating UUID for new INPUT")
 		}
-		plugin = pluginCreator()
+		input.UniqueId = uniqueID.String()
 	}
-	input := models.NewRunningInput(plugin, inputConfig)
 
-	a.statusMux.Lock()
-
-	pChannels := pluginChannels{make(chan struct{}), make(chan struct{})}
-	a.statusMap["input"][input.Config.Name] = pChannels
-
-	a.statusMux.Unlock()
+	a.pluginLock.Lock()
+	a.runningPlugins[input.UniqueId] = input
+	a.pluginLock.Unlock()
 
 	// Overwrite agent interval if this plugin has its own.
 	interval := a.Config.Agent.Interval.Duration
@@ -196,18 +179,13 @@ func (a *Agent) RunSingleInput(inputConfig *models.InputConfig, plugin telegraf.
 		a.gatherLoop(ctx, acc, input, ticker, interval)
 	}(input)
 
-	alreadyInArray := false
-
 	for _, i := range a.Config.Inputs {
-		if i.Config.Name == input.Config.Name {
-			alreadyInArray = true
+		if i.UniqueId == input.UniqueId {
+			return nil
 		}
 	}
 
-	if !alreadyInArray {
-		a.Config.Inputs = append(a.Config.Inputs, input)
-	}
-
+	a.Config.Inputs = append(a.Config.Inputs, input)
 	return nil
 }
 
@@ -217,15 +195,14 @@ func (a *Agent) RunSingleOutput(output *models.RunningOutput, ctx context.Contex
 	// NOTE: we can't just use `defer a.statusMutex.Unlock()` since except for the output validation,
 	// this function only returns once the gatherLoop is done -- i.e. when the plugin is stopped.
 	// Be careful to manually unlock the statusMutex in this function.
-	name := output.Config.Name
 
 	// validating if an output plugin is already running, and therefore shouldn't be run again
-	a.statusMux.Lock()
-	_, ok := a.statusMap["output"][name]
-	a.statusMux.Unlock()
+	a.pluginLock.Lock()
+	_, ok := a.runningPlugins[output.UniqueId]
+	a.pluginLock.Unlock()
 
 	if ok {
-		log.Printf("E! [agent] You are trying to run an output that is already running: %s \n", name)
+		log.Printf("E! [agent] You are trying to run an output that is already running: %s \n", output.Config.Name)
 		return errors.New("you are trying to run an output that is already running")
 	}
 
@@ -233,10 +210,17 @@ func (a *Agent) RunSingleOutput(output *models.RunningOutput, ctx context.Contex
 	interval := a.Config.Agent.FlushInterval.Duration
 	jitter := a.Config.Agent.FlushJitter.Duration
 
-	a.statusMux.Lock()
-	pChannels := pluginChannels{make(chan struct{}), make(chan struct{})}
-	a.statusMap["output"][output.Config.Name] = pChannels
-	a.statusMux.Unlock()
+	if output.UniqueId == "" {
+		uniqueID, err := uuid.NewUUID()
+		if err != nil {
+			return errors.New("errored while generating UUID for new INPUT")
+		}
+		output.UniqueId = uniqueID.String()
+	}
+
+	a.pluginLock.Lock()
+	a.runningPlugins[output.UniqueId] = output
+	a.pluginLock.Unlock()
 
 	// Overwrite agent flush_interval if this plugin has its own.
 	if output.Config.FlushInterval != 0 {
@@ -258,18 +242,13 @@ func (a *Agent) RunSingleOutput(output *models.RunningOutput, ctx context.Contex
 		a.flushLoop(ctx, output, ticker)
 	}(output)
 
-	alreadyInArray := false
-
 	for _, i := range a.Config.Outputs {
-		if i.Config.Name == output.Config.Name {
-			alreadyInArray = true
+		if i.UniqueId == output.UniqueId {
+			return nil
 		}
 	}
 
-	if !alreadyInArray {
-		a.Config.Outputs = append(a.Config.Outputs, output)
-	}
-
+	a.Config.Outputs = append(a.Config.Outputs, output)
 	return nil
 }
 
@@ -289,18 +268,18 @@ func GetAllOutputPlugins() []string {
 	return res
 }
 
-func (a *Agent) GetRunningInputPlugins() []string {
-	var res []string
+func (a *Agent) GetRunningInputPlugins() []map[string]string {
+	var res []map[string]string
 	for _, runningInput := range a.Config.Inputs {
-		res = append(res, runningInput.Config.Name)
+		res = append(res, map[string]string{"name": runningInput.Config.Name, "id": runningInput.UniqueId})
 	}
 	return res
 }
 
-func (a *Agent) GetRunningOutputPlugins() []string {
-	var res []string
+func (a *Agent) GetRunningOutputPlugins() []map[string]string {
+	var res []map[string]string
 	for _, runningOutput := range a.Config.Outputs {
-		res = append(res, runningOutput.Config.Name)
+		res = append(res, map[string]string{"name": runningOutput.Config.Name, "id": runningOutput.UniqueId})
 	}
 	return res
 }
@@ -359,6 +338,9 @@ func getFieldType(data reflect.Type) interface{} {
 func (a *Agent) GetPluginValues(p interface{}) (map[string]interface{}, error) {
 	data := reflect.ValueOf(p).Elem() // extract Value of type interface{} from Value pointer to interface
 	values := getFieldValue(data)
+	if values == nil {
+		values = make(map[string]interface{})
+	}
 	v, ok := values.(map[string]interface{})
 
 	if ok {
@@ -383,8 +365,20 @@ func getFieldValue(data reflect.Value) interface{} {
 				}
 			}
 		}
+		if len(dataFields) == 0 {
+			return nil
+		}
 		return dataFields
 	default:
+		// These data types, false or zero will make isZero true. Don't want to return nil!
+		if data.Kind() == reflect.Bool || data.Kind() == reflect.Int || data.Kind() == reflect.Float32 {
+			return data.Interface()
+		}
+
+		// For more complex data types, we will return nil if empty.
+		if data.IsZero() {
+			return nil
+		}
 		return data.Interface()
 	}
 }
@@ -404,14 +398,12 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 
 	startTime := time.Now()
-
 	log.Printf("D! [agent] Connecting outputs")
 	next, ou, err := a.startOutputs(ctx, a.Config.Outputs)
 	if err != nil {
 		return err
 	}
 	a.ou = ou
-
 	var apu []*processorUnit
 	var au *aggregatorUnit
 	if len(a.Config.Aggregators) != 0 {
@@ -436,7 +428,6 @@ func (a *Agent) Run(ctx context.Context) error {
 			return err
 		}
 	}
-
 	iu, err := a.startInputs(next, a.Config.Inputs)
 	a.iu = iu
 	if err != nil {
@@ -500,96 +491,107 @@ func (a *Agent) Run(ctx context.Context) error {
 }
 
 // StartInput adds an input plugin with default config
-func (a *Agent) StartInput(pluginName string) error {
+func (a *Agent) StartInput(pluginName string) (string, error) {
 	inputConfig := models.InputConfig{
 		Name: pluginName,
 	}
-	return a.RunSingleInput(&inputConfig, nil, a.Context, false)
+
+	input, err := a.CreateInput(pluginName)
+	if err != nil {
+		return "", err
+	}
+
+	uniqueId, err := uuid.NewUUID()
+	if err != nil {
+		return "", errors.New("errored while generating UUID for new INPUT")
+	}
+	ri := models.NewRunningInput(input, &inputConfig, uniqueId.String())
+
+	ri.Init()
+
+	err = a.RunSingleInput(ri, a.Context)
+	if err != nil {
+		return "", err
+	}
+
+	// add new input to inputunit
+	a.iu.inputs = append(a.iu.inputs, ri)
+
+	err = a.Config.UpdateConfig(
+		map[string]interface{}{
+			"unique_id": uniqueId.String(),
+			"name":      pluginName,
+		},
+		uniqueId.String(), "inputs", "START_PLUGIN")
+	if err != nil {
+		return "", err
+	}
+
+	return uniqueId.String(), nil
 }
 
 // StartOutput adds an output plugin with default config
-func (a *Agent) StartOutput(pluginName string, config map[string]interface{}) error {
+func (a *Agent) StartOutput(pluginName string) (string, error) {
 	outputConfig := models.OutputConfig{
 		Name: pluginName,
 	}
 
-	pluginCreator, ok := outputs.Outputs[pluginName]
-	if !ok {
-		log.Printf("E! [agent] output config's name is not valid: %s \n", pluginName)
-		return errors.New("output config's name is not valid")
+	output, err := a.CreateOutput(pluginName)
+	if err != nil {
+		return "", err
 	}
 
-	output := pluginCreator()
-
-	if config != nil {
-		configJSON, err := validateStructConfig(reflect.ValueOf(output), config)
-		if err != nil {
-			return fmt.Errorf("could not update output plugin %s with error: %s", pluginName, err)
-		}
-
-		json.Unmarshal(configJSON, &output)
+	uniqueId, err := uuid.NewUUID()
+	if err != nil {
+		return "", errors.New("errored while generating UUID for new INPUT")
 	}
 
 	ro := models.NewRunningOutput(pluginName, output, &outputConfig,
-		a.Config.Agent.MetricBatchSize, a.Config.Agent.MetricBufferLimit)
+		a.Config.Agent.MetricBatchSize, a.Config.Agent.MetricBufferLimit, uniqueId.String())
 
 	ro.Init()
 
-	err := a.connectOutput(a.Context, ro)
+	err = a.connectOutput(a.Context, ro)
 	if err != nil {
-		return nil
+		return "", err
 	}
 
-	a.RunSingleOutput(ro, a.Context)
+	err = a.RunSingleOutput(ro, a.Context)
+	if err != nil {
+		return "", err
+	}
 
 	// add new output to outputunit
 	a.ou.outputs = append(a.ou.outputs, ro)
 
-	return nil
+	a.Config.UpdateConfig(map[string]interface{}{"unique_id": uniqueId.String(), "name": pluginName}, uniqueId.String(), "outputs", "START_PLUGIN")
+
+	return uniqueId.String(), nil
 }
 
-// updateStructValuesHelper updates the reflect config, returning the original plugin otherwise
-func updateStructValuesHelper(pluginPtr reflect.Value, newConfig map[string]interface{}) (reflect.Value, map[string]interface{}, error) {
-	plugin := pluginPtr.Elem() // extract Value of type interface{} from Value pointer to interface
+// generateTomlKeysMap generates a map with the toml keys for a specific plugin
+func generateTomlKeysMap(structPtr reflect.Value, config map[string]interface{}) (map[string]interface{}, error) {
+	strct := structPtr.Elem()
 	tomlMap := map[string]interface{}{}
-	pType := plugin.Type()
+	pType := strct.Type()
 
-	if plugin.Kind() == reflect.Struct {
+	for configKey, configValue := range config {
+		field, found := pType.FieldByName(configKey)
 
-		// initial check for errors, loop through twice to ensure that
-		// all fields are valid before updating
-		for configKey, configValue := range newConfig {
-			pluginField := plugin.FieldByName(configKey) // cast new value as Value
-			reflectedNew := reflect.ValueOf(configValue)
-
-			// if any errors found, return original plugin
-			if !(pluginField.IsValid()) {
-				return pluginPtr.Elem(), map[string]interface{}{}, fmt.Errorf("invalid field name %s", configKey)
-			} else if !(pluginField.CanSet()) {
-				return pluginPtr.Elem(), map[string]interface{}{}, fmt.Errorf("unsettable field %s", configKey)
-			} else if !(pluginField.Type() == reflectedNew.Type()) {
-				return pluginPtr.Elem(), map[string]interface{}{}, fmt.Errorf("value type mismatch for field %s", configKey)
-			}
+		if !found {
+			return map[string]interface{}{}, fmt.Errorf("field %s did not exist on plugin", configKey)
 		}
 
-		// if no error, update all
-		for configKey, configValue := range newConfig {
-			pluginField := plugin.FieldByName(configKey) // cast new value as Value
-			reflectedNew := reflect.ValueOf(configValue)
-			pluginField.Set(reflectedNew)
-			field, _ := pType.FieldByName(configKey)
-
-			tomlTag := field.Tag.Get("toml")
-			if tomlTag == "" {
-				tomlTag = configKey
-			}
-
-			tomlMap[tomlTag] = configValue
-
+		tomlTag := field.Tag.Get("toml")
+		if tomlTag == "" {
+			tomlTag = configKey
 		}
-		return plugin, tomlMap, nil
+
+		tomlMap[tomlTag] = configValue
 	}
-	return plugin, map[string]interface{}{}, fmt.Errorf("could not update plugin")
+
+	return tomlMap, nil
+
 }
 
 // CreateInput creates a new input from the name of an input.
@@ -610,14 +612,21 @@ func (a *Agent) CreateOutput(name string) (telegraf.Output, error) {
 	return nil, fmt.Errorf("could not find output plugin with name: %s", name)
 }
 
-// GetRunningInputPlugin gets the InputConfig for a running plugin given its name
-func (a *Agent) GetRunningInputPlugin(name string) (map[string]interface{}, error) {
-	for _, input := range a.Config.Inputs {
-		if name == input.Config.Name {
-			return a.GetPluginValues(input.Input)
-		}
+// GetRunningPlugin gets the values of a running plugin's struct.
+func (a *Agent) GetRunningPlugin(uid string) (map[string]interface{}, error) {
+	obj, exists := a.runningPlugins[uid]
+	if !exists {
+		return nil, fmt.Errorf("specified plugin is not running")
 	}
-	return nil, fmt.Errorf("could not find input plugin with name: %s", name)
+	ri, isRi := obj.(*models.RunningInput)
+	if isRi {
+		return a.GetPluginValues(ri.Input)
+	}
+	ro, isRo := obj.(*models.RunningOutput)
+	if isRo {
+		return a.GetPluginValues(ro.Output)
+	}
+	return nil, fmt.Errorf("invalid running plugin")
 }
 
 // If the config is compatible with the struct, return the JSON vesion of the config.
@@ -648,90 +657,91 @@ func validateStructConfig(structPtr reflect.Value, config map[string]interface{}
 	return nil, fmt.Errorf("pointer does not point to a struct")
 }
 
-// UpdateInputPlugin gets the InputConfig for a plugin given its name
-func (a *Agent) UpdateInputPlugin(name string, config map[string]interface{}) (telegraf.Input, error) {
-	for _, input := range a.Config.Inputs {
-		if name == input.Config.Name {
-			plugin := input.Input
+// UpdateInputPlugin gets the config for an input plugin given its name
+func (a *Agent) UpdateInputPlugin(uid string, config map[string]interface{}) (telegraf.Input, error) {
+	a.pluginLock.Lock()
+	plugin, ok := a.runningPlugins[uid]
+	a.pluginLock.Unlock()
 
-			a.wg.Add(1)
+	input := plugin.(*models.RunningInput)
 
-			a.StopInputPlugin(name, false)
-
-			reflectedPlugin := reflect.ValueOf(plugin)
-			_, tomlMap, err := updateStructValuesHelper(reflectedPlugin, config)
-			a.Config.UpdateConfig(tomlMap, name, "inputs", "UPDATE_PLUGIN")
-
-			a.RunSingleInput(input.Config, plugin, a.Context, false)
-
-			if len(a.Config.Inputs) == 1 {
-				a.wg.Add(1)
-			}
-
-			if err != nil {
-				return plugin, fmt.Errorf("could not update input plugin %s with error: %s", name, err)
-			}
-			return plugin, nil
-		}
+	if !ok {
+		log.Printf("E! [agent] You are trying to update an input that does not exist: %s \n", uid)
+		return nil, errors.New("you are trying to update an input that does not exist")
 	}
-	return nil, fmt.Errorf("cannot update %s because input plugin is not running", name)
-}
 
-// GetRunningOutputPlugin gets the OutputConfig for a running plugin given its name
-func (a *Agent) GetRunningOutputPlugin(name string) (map[string]interface{}, error) {
-	for _, output := range a.Config.Outputs {
-		if name == output.Config.Name {
-			return a.GetPluginValues(output.Output)
-		}
+	// This code creates a copy of the struct and see if JSON Unmarshal works without errors
+	configJSON, err := validateStructConfig(reflect.ValueOf(input.Input), config)
+	if err != nil {
+		return nil, fmt.Errorf("could not update input plugin %s with error: %s", uid, err)
 	}
-	return nil, fmt.Errorf("could not find output plugin with name: %s", name)
+
+	tomlMap, err := generateTomlKeysMap(reflect.ValueOf(input.Input), config)
+	if err != nil {
+		return nil, fmt.Errorf("could not update input plugin %s with error: %s", uid, err)
+	}
+
+	if len(a.Config.Inputs) == 1 {
+		a.wg.Add(1)
+	}
+	a.StopInputPlugin(uid, false)
+	json.Unmarshal(configJSON, &input.Input)
+	ri := models.NewRunningInput(input.Input, input.Config, input.UniqueId)
+	a.RunSingleInput(ri, a.Context)
+	err = a.Config.UpdateConfig(tomlMap, input.UniqueId, "inputs", "UPDATE_PLUGIN")
+	if err != nil {
+		return nil, fmt.Errorf("could not update input plugin %s with error: %s", uid, err)
+	}
+
+	if len(a.Config.Inputs) == 1 {
+		a.wg.Done()
+	}
+
+	return input.Input, nil
 }
 
 // UpdateOutputPlugin gets the config for an output plugin given its name
-func (a *Agent) UpdateOutputPlugin(name string, config map[string]interface{}) (telegraf.Output, error) {
-	for _, output := range a.Config.Outputs {
-		if name == output.Config.Name {
-			plugin := output.Output
+func (a *Agent) UpdateOutputPlugin(uid string, config map[string]interface{}) (telegraf.Output, error) {
+	a.pluginLock.Lock()
+	plugin, ok := a.runningPlugins[uid]
+	a.pluginLock.Unlock()
 
-			// This code creates a copy of the struct and see if JSON Unmarshal works without errors
-			configJSON, err := validateStructConfig(reflect.ValueOf(plugin), config)
-			if err != nil {
-				return plugin, fmt.Errorf("could not update input plugin %s with error: %s", name, err)
-			}
+	output := plugin.(*models.RunningOutput)
 
-			a.wg.Add(1)
-			a.StopOutputPlugin(name)
-			json.Unmarshal(configJSON, &plugin)
-			ro := models.NewRunningOutput(name, plugin, output.Config,
-				a.Config.Agent.MetricBatchSize, a.Config.Agent.MetricBufferLimit)
-			a.RunSingleOutput(ro, a.Context)
-			a.wg.Done()
-
-			return plugin, nil
-		}
+	if !ok {
+		log.Printf("E! [agent] You are trying to update an output that does not exist: %s \n", uid)
+		return nil, errors.New("you are trying to update an output that does not exist")
 	}
-	return nil, fmt.Errorf("cannot update %s because output plugin is not running", name)
-}
 
-// GetAggregatorPlugin gets the AggregatorConfig for a plugin given its name
-func (a *Agent) GetAggregatorPlugin(name string) (telegraf.Aggregator, error) {
-	for _, aggregator := range a.Config.Aggregators {
-		if name == aggregator.Config.Name {
-			return aggregator.Aggregator, nil
-		}
+	// This code creates a copy of the struct and see if JSON Unmarshal works without errors
+	configJSON, err := validateStructConfig(reflect.ValueOf(output.Output), config)
+	if err != nil {
+		return nil, fmt.Errorf("could not update output plugin %s with error: %s", uid, err)
 	}
-	return nil, fmt.Errorf("could not find aggregator with name: %s", name)
-}
 
-// GetProcessorPlugin gets the ProcessorConfig for a plugin given its name
-func (a *Agent) GetProcessorPlugin(name string) (telegraf.StreamingProcessor, error) {
-	for _, processor := range a.Config.Processors {
-		if name == processor.Config.Name {
-			return processor.Processor, nil
-		}
+	tomlMap, err := generateTomlKeysMap(reflect.ValueOf(output.Output), config)
+	if err != nil {
+		return nil, fmt.Errorf("could not update output plugin %s with error: %s", uid, err)
 	}
-	return nil, fmt.Errorf("could not find processor with name: %s", name)
 
+	if len(a.Config.Outputs) == 1 {
+		a.wg.Add(1)
+	}
+	a.StopOutputPlugin(uid, false)
+	json.Unmarshal(configJSON, &output.Output)
+	ro := models.NewRunningOutput(output.Config.Name, output.Output, output.Config,
+		a.Config.Agent.MetricBatchSize, a.Config.Agent.MetricBufferLimit, output.UniqueId)
+	a.RunSingleOutput(ro, a.Context)
+	err = a.Config.UpdateConfig(tomlMap, output.UniqueId, "outputs", "UPDATE_PLUGIN")
+	if err != nil {
+		return nil, fmt.Errorf("could not update output plugin %s with error: %s", uid, err)
+	}
+
+	if len(a.Config.Outputs) == 1 {
+		a.wg.Done()
+	}
+
+	return output.Output, nil
 }
 
 // initPlugins runs the Init function on plugins.
@@ -826,7 +836,7 @@ func (a *Agent) runInputs(
 	a.Context = ctx
 
 	for _, input := range unit.inputs {
-		a.RunSingleInput(input.Config, nil, ctx, false)
+		a.RunSingleInput(input, ctx)
 	}
 	a.wg.Wait()
 
@@ -948,33 +958,30 @@ func stopServiceInputs(inputs []*models.RunningInput) {
 }
 
 // StopInputPlugin stops an input plugin
-func (a *Agent) StopInputPlugin(input string, shouldUpdatePlugin bool) error {
+func (a *Agent) StopInputPlugin(uuid string, shouldUpdateConfig bool) error {
 
-	// NOTE: don't use `defer a.statusMux.Unlock()` here,
+	// NOTE: don't use `defer a.pluginLock.Unlock()` here,
 	// since we write to a channel that gatherLoop() is waiting on,
 	// and we need to maintain our invariant for gatherLoop()
 	// that it is given an unlocked mutex and returns an unlocked mutex.
-	if shouldUpdatePlugin {
-		a.Config.UpdateConfig(map[string]interface{}{}, input, "inputs", "STOP_PLUGIN")
-	}
-	a.statusMux.Lock()
-	// will write "STOP" to the channel as a case for gatherLoop
-	statusChannel, ok := a.statusMap["input"][input]
-	a.statusMux.Unlock()
+
+	a.pluginLock.Lock()
+	plugin, ok := a.runningPlugins[uuid].(*models.RunningInput)
+	a.pluginLock.Unlock()
 
 	if !ok {
-		log.Printf("E! [agent] You are trying to stop an input that is not running: %s \n", input)
+		log.Printf("E! [agent] You are trying to stop an input that is not running: %s \n", uuid)
 		return fmt.Errorf("you are trying to stop an input that is not running")
 	}
 
-	statusChannel.stop <- struct{}{}
-	<-statusChannel.stopped
+	plugin.Stop()
 
-	close(statusChannel.stop)
-	close(statusChannel.stopped)
+	if shouldUpdateConfig {
+		a.Config.UpdateConfig(map[string]interface{}{}, uuid, "inputs", "STOP_PLUGIN")
+	}
 
 	for i, other := range a.Config.Inputs {
-		if other.Config.Name == input {
+		if other.UniqueId == uuid {
 			a.Config.Inputs = append(a.Config.Inputs[:i], a.Config.Inputs[i+1:]...)
 			return nil
 		}
@@ -984,31 +991,30 @@ func (a *Agent) StopInputPlugin(input string, shouldUpdatePlugin bool) error {
 }
 
 // StopOutputPlugin stops an output plugin
-func (a *Agent) StopOutputPlugin(output string) {
+func (a *Agent) StopOutputPlugin(uuid string, shouldUpdateConfig bool) {
 
-	// NOTE: don't use `defer a.statusMux.Unlock()` here,
+	// NOTE: don't use `defer a.pluginLock.Unlock()` here,
 	// since we write to a channel that gatherLoop() is waiting on,
 	// and we need to maintain our invariant for gatherLoop()
 	// that it is given an unlocked mutex and returns an unlocked mutex.
 
-	a.statusMux.Lock()
-	// will write "STOP" to the channel as a case for flushLoop
-	statusChannel, ok := a.statusMap["output"][output]
-	a.statusMux.Unlock()
+	a.pluginLock.Lock()
+	plugin, ok := a.runningPlugins[uuid].(*models.RunningOutput)
+	a.pluginLock.Unlock()
 
 	if !ok {
-		log.Printf("E! [agent] You are trying to stop an output that is not running: %s \n", output)
+		log.Printf("E! [agent] You are trying to stop an output that is not running: %s \n", uuid)
 		return
 	}
 
-	statusChannel.stop <- struct{}{}
-	<-statusChannel.stopped
+	plugin.Stop()
 
-	close(statusChannel.stop)
-	close(statusChannel.stopped)
+	if shouldUpdateConfig {
+		a.Config.UpdateConfig(map[string]interface{}{}, uuid, "outputs", "STOP_PLUGIN")
+	}
 
 	for i, other := range a.Config.Outputs {
-		if other.Config.Name == output {
+		if other.UniqueId == uuid {
 			a.Config.Outputs = append(a.Config.Outputs[:i], a.Config.Outputs[i+1:]...)
 			break
 		}
@@ -1027,20 +1033,16 @@ func (a *Agent) gatherLoop(
 ) {
 	defer panicRecover(input)
 
-	a.statusMux.Lock()
-	pluginChannel := a.statusMap["input"][input.Config.Name]
-	a.statusMux.Unlock()
-
 	for {
 		// INVARIANT: received unlocked mutex, return unlocked mutex
 		// NOTE: Again, don't just use defer to unlock because of the ticker.Elapsed() case
 		// Be careful of changing locks here -- could easily make it sequential
 		select {
-		case <-pluginChannel.stop:
+		case <-input.ShutdownChan:
 			log.Println("I! [agent] stopping input plugin", input.Config.Name)
-			a.statusMux.Lock()
-			delete(a.statusMap["input"], input.Config.Name)
-			a.statusMux.Unlock()
+			a.pluginLock.Lock()
+			delete(a.runningPlugins, input.UniqueId)
+			a.pluginLock.Unlock()
 			// delete input from input unit slice
 			for i, io := range a.iu.inputs {
 				if input == io {
@@ -1052,7 +1054,7 @@ func (a *Agent) gatherLoop(
 					break
 				}
 			}
-			pluginChannel.stopped <- struct{}{}
+			input.Wg.Done()
 			return
 		case <-ticker.Elapsed():
 			err := a.gatherOnce(acc, input, ticker, interval)
@@ -1301,7 +1303,6 @@ func (a *Agent) startOutputs(
 			}
 			return nil, nil, fmt.Errorf("connecting output %s: %w", output.LogName(), err)
 		}
-
 		unit.outputs = append(unit.outputs, output)
 	}
 
@@ -1378,10 +1379,6 @@ func (a *Agent) flushLoop(
 	watchForFlushSignal(flushRequested)
 	defer stopListeningForFlushSignal(flushRequested)
 
-	a.statusMux.Lock()
-	pluginChannel := a.statusMap["output"][output.Config.Name]
-	a.statusMux.Unlock()
-
 	for {
 		// Favor shutdown over other methods.
 		select {
@@ -1395,11 +1392,11 @@ func (a *Agent) flushLoop(
 		case <-ctx.Done():
 			logError(a.flushOnce(output, ticker, output.Write))
 			return
-		case <-pluginChannel.stop:
+		case <-output.ShutdownChan:
 			log.Println("I! [agent] stopping output plugin", output.Config.Name)
-			a.statusMux.Lock()
-			delete(a.statusMap["output"], output.Config.Name)
-			a.statusMux.Unlock()
+			a.pluginLock.Lock()
+			delete(a.runningPlugins, output.UniqueId)
+			a.pluginLock.Unlock()
 			// delete output from output unit slice
 			for i, ro := range a.ou.outputs {
 				if output == ro {
@@ -1412,7 +1409,6 @@ func (a *Agent) flushLoop(
 				}
 			}
 			output.Close()
-			pluginChannel.stopped <- struct{}{}
 			return
 		case <-ticker.Elapsed():
 			logError(a.flushOnce(output, ticker, output.Write))

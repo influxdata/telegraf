@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -28,6 +29,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -727,7 +730,15 @@ func (c *Config) LoadConfig(path string) error {
 		return fmt.Errorf("Error loading config file %s: %w", path, err)
 	}
 
-	c.serializeConfig(data, updatedConfigPath, map[string]interface{}{}, "", "", "")
+	err = c.serializeConfig(data, updatedConfigPath, map[string]interface{}{}, "", "", "")
+	if err != nil {
+		return fmt.Errorf("Error serializing config file %s: %w", updatedConfigPath, err)
+	}
+
+	data, err = loadConfig(updatedConfigPath)
+	if err != nil {
+		return fmt.Errorf("Error loading config file %s: %w", updatedConfigPath, err)
+	}
 
 	if err = c.LoadConfigData(data); err != nil {
 		return fmt.Errorf("Error loading config file %s: %w", path, err)
@@ -887,15 +898,15 @@ func (c *Config) LoadConfigData(data []byte) error {
 }
 
 // UpdateConfig pulls the config file, updates with the new values in newConfig and saves back to the file
-func (c *Config) UpdateConfig(newConfig map[string]interface{}, pluginName string, pluginType string, operationType string) {
+func (c *Config) UpdateConfig(newConfig map[string]interface{}, uniqueId string, pluginType string, operationType string) error {
 	data, err := loadConfig(updatedConfigPath)
 	if err != nil {
-		return
+		return err
 	}
-	c.serializeConfig(data, updatedConfigPath, newConfig, pluginName, pluginType, operationType)
+	return c.serializeConfig(data, updatedConfigPath, newConfig, uniqueId, pluginType, operationType)
 }
 
-func serializeTable(t *ast.Table, config map[string]interface{}, f *os.File, parentTableName string, numTabs int, isDoubleBrackets bool) error {
+func (c *Config) serializeTable(t *ast.Table, config map[string]interface{}, f *os.File, parentTableName string, numTabs int, isDoubleBrackets bool) error {
 
 	// Serialize table header
 	tabChars := strings.Repeat("  ", numTabs)
@@ -918,32 +929,47 @@ func serializeTable(t *ast.Table, config map[string]interface{}, f *os.File, par
 	for key := range t.Fields {
 		val := t.Fields[key]
 
-		overwrite := false
 		if _, ok := config[key]; ok {
-			overwrite = true
+			// continue to new key, write updated fields after
+			continue
 		}
 
 		switch val.(type) {
 		case *ast.KeyValue:
 			// Serialize Leaf
-			if overwrite {
-				// Use config
+			kv := val.(*ast.KeyValue)
 
-				strVal := fmt.Sprintf("%v", config[key])
-				_, err := f.WriteString(tabChars + "  " + key + "=" + strVal + "\n")
-				if err != nil {
-					return fmt.Errorf("Couldn't serialize config")
-				}
-
-			} else {
-				// Just serialize
-				kv := val.(*ast.KeyValue)
-
-				_, err := f.WriteString(tabChars + "  " + kv.Key + "=" + kv.Value.Source() + "\n")
-				if err != nil {
-					return fmt.Errorf("Couldn't serialize config")
-				}
+			_, err := f.WriteString(tabChars + "  " + kv.Key + "=" + kv.Value.Source() + "\n")
+			if err != nil {
+				return fmt.Errorf("Couldn't serialize config")
 			}
+		}
+	}
+	if numTabs == 0 && (parentTableName == "inputs." || parentTableName == "outputs.") {
+		var uniqueId string
+		c.getFieldString(t, "unique_id", &uniqueId)
+		if uniqueId == "" {
+			uniqueId, err := uuid.NewUUID()
+			if err != nil {
+				return fmt.Errorf("errored while generating UUID for config serialization")
+			}
+
+			_, err = f.WriteString(tabChars + "  unique_id=\"" + uniqueId.String() + "\"\n")
+			if err != nil {
+				return fmt.Errorf("Couldn't serialize config")
+			}
+		}
+	}
+
+	// Loop through new config and write all fields
+	for key := range config {
+		marshalledKey, err := json.Marshal(config[key])
+		if err != nil {
+			return fmt.Errorf("Couldn't serialize config")
+		}
+		_, err = f.WriteString(tabChars + "  " + key + "=" + string(marshalledKey) + "\n")
+		if err != nil {
+			return fmt.Errorf("Couldn't serialize config")
 		}
 	}
 
@@ -954,7 +980,7 @@ func serializeTable(t *ast.Table, config map[string]interface{}, f *os.File, par
 		case *ast.Table:
 			// Recurse to handle indefinitely nested AST
 			tbl := val.(*ast.Table)
-			err := serializeTable(tbl, config, f, parentTableName+t.Name+".", numTabs+1, false)
+			err := c.serializeTable(tbl, config, f, parentTableName+t.Name+".", numTabs+1, false)
 			if err != nil {
 				return fmt.Errorf("Couldn't serialize config")
 			}
@@ -964,17 +990,42 @@ func serializeTable(t *ast.Table, config map[string]interface{}, f *os.File, par
 	return nil
 }
 
-func (c *Config) serializePlugin(pluginName string, pluginType string, f *os.File) error {
+func (c *Config) serializePlugin(pluginType string, f *os.File, newConfig map[string]interface{}) error {
 	// Serialize table header
-	tableHeader := "[[" + pluginType + "." + pluginName + "]]"
-	creator := inputs.Inputs[pluginName]
-	input := creator()
-	config := input.SampleConfig()
+	pluginName := fmt.Sprintf("%v", newConfig["name"])
+	tableHeader := "[[" + pluginType + "." + pluginName + "]]\n"
+	var config string
+	if pluginType == "inputs" {
+		creator := inputs.Inputs[pluginName]
+		input := creator()
+		config = input.SampleConfig()
+	} else if pluginType == "outputs" {
+		creator := outputs.Outputs[pluginName]
+		output := creator()
+		config = output.SampleConfig()
+	} else {
+		return fmt.Errorf("Plugin type was not valid")
+	}
 
 	_, err := f.WriteString(tableHeader)
 	if err != nil {
 		return fmt.Errorf("Couldn't serialize config")
 	}
+
+	for key := range newConfig {
+		if key == "name" {
+			continue
+		}
+		marshalledKey, err := json.Marshal(newConfig[key])
+		if err != nil {
+			return fmt.Errorf("Couldn't serialize config")
+		}
+		_, err = f.WriteString("  " + key + "=" + string(marshalledKey) + "\n")
+		if err != nil {
+			return fmt.Errorf("Couldn't serialize config")
+		}
+	}
+
 	_, err = f.WriteString(config + "\n")
 	if err != nil {
 		return fmt.Errorf("Couldn't serialize config")
@@ -982,15 +1033,15 @@ func (c *Config) serializePlugin(pluginName string, pluginType string, f *os.Fil
 	return nil
 }
 
-func (c *Config) serializeConfig(data []byte, newConfigPath string, config map[string]interface{}, pluginName string, pluginType string, operationType string) error {
-	f, _ := os.OpenFile(newConfigPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-	f.Truncate(0)
-	defer f.Close()
-
+func (c *Config) serializeConfig(data []byte, newConfigPath string, config map[string]interface{}, uniqueId string, pluginType string, operationType string) error {
 	tbl, err := parseConfig(data)
 	if err != nil {
 		return fmt.Errorf("Error parsing data: %s", err)
 	}
+
+	f, _ := os.OpenFile(newConfigPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	f.Truncate(0)
+	defer f.Close()
 
 	configParam := map[string]interface{}{}
 
@@ -1002,7 +1053,7 @@ func (c *Config) serializeConfig(data []byte, newConfigPath string, config map[s
 				return fmt.Errorf("invalid configuration, bad table name %q", tableName)
 			}
 
-			err := serializeTable(subTable, configParam, f, "", 0, false)
+			err := c.serializeTable(subTable, configParam, f, "", 0, false)
 			if err != nil {
 				return fmt.Errorf("Couldn't serialize config")
 			}
@@ -1021,7 +1072,7 @@ func (c *Config) serializeConfig(data []byte, newConfigPath string, config map[s
 			return fmt.Errorf("invalid configuration, error parsing agent table")
 		}
 
-		err := serializeTable(subTable, configParam, f, "", 0, false)
+		err := c.serializeTable(subTable, configParam, f, "", 0, false)
 		if err != nil {
 			return fmt.Errorf("Couldn't serialize config")
 		}
@@ -1031,6 +1082,9 @@ func (c *Config) serializeConfig(data []byte, newConfigPath string, config map[s
 			return fmt.Errorf("Couldn't serialize config")
 		}
 	}
+
+	// check if we have addedPlugin, default to true if not "START_PLUGIN"
+	var addedPlugin = (operationType != "START_PLUGIN")
 
 	// Parse all the rest of the plugins:
 	for pType, val := range tbl.Fields {
@@ -1042,16 +1096,20 @@ func (c *Config) serializeConfig(data []byte, newConfigPath string, config map[s
 		switch pType {
 		case "outputs", "inputs", "plugins", "processors", "aggregators":
 			for pName, pluginVal := range subTable.Fields {
-				if pType == pluginType && pName == pluginName {
-					if operationType == "START_PLUGIN" || operationType == "STOP_PLUGIN" {
-						continue
-					}
-					configParam = config
-				}
+				configParam = map[string]interface{}{}
 				switch pluginSubTable := pluginVal.(type) {
 				// legacy [outputs.influxdb] support
 				case *ast.Table:
-					err := serializeTable(pluginSubTable, configParam, f, pType+".", 0, true)
+					var pluginId string
+					c.getFieldString(pluginSubTable, "unique_id", &pluginId)
+
+					if pluginId == uniqueId {
+						if operationType == "START_PLUGIN" || operationType == "STOP_PLUGIN" {
+							continue
+						}
+						configParam = config
+					}
+					err := c.serializeTable(pluginSubTable, configParam, f, pType+".", 0, true)
 					if err != nil {
 						return fmt.Errorf("Couldn't serialize config")
 					}
@@ -1063,7 +1121,16 @@ func (c *Config) serializeConfig(data []byte, newConfigPath string, config map[s
 
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						err := serializeTable(t, configParam, f, pType+".", 0, true)
+						var pluginId string
+						c.getFieldString(t, "unique_id", &pluginId)
+
+						if pluginId == uniqueId {
+							if operationType == "START_PLUGIN" || operationType == "STOP_PLUGIN" {
+								continue
+							}
+							configParam = config
+						}
+						err := c.serializeTable(t, configParam, f, pType+".", 0, true)
 						if err != nil {
 							return fmt.Errorf("Couldn't serialize config")
 						}
@@ -1075,15 +1142,22 @@ func (c *Config) serializeConfig(data []byte, newConfigPath string, config map[s
 					}
 				default:
 					return fmt.Errorf("Unsupported config format: %s",
-						pluginName)
+						pName)
 				}
 			}
 			if pType == pluginType && operationType == "START_PLUGIN" {
-				err := c.serializePlugin(pluginName, pluginType, f)
+				addedPlugin = true
+				err := c.serializePlugin(pluginType, f, config)
 				if err != nil {
 					return err
 				}
 			}
+		}
+	}
+	if !addedPlugin {
+		err := c.serializePlugin(pluginType, f, config)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -1272,8 +1346,13 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
+	var uniqueId string
+	c.getFieldString(table, "unique_id", &uniqueId)
+	if uniqueId == "" {
+		return fmt.Errorf("Output %s did not have a `unique_id` field defined", name)
+	}
 	ro := models.NewRunningOutput(name, output, outputConfig,
-		c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
+		c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit, uniqueId)
 	c.Outputs = append(c.Outputs, ro)
 	return nil
 }
@@ -1322,7 +1401,12 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return err
 	}
 
-	rp := models.NewRunningInput(input, pluginConfig)
+	var uniqueId string
+	c.getFieldString(table, "unique_id", &uniqueId)
+	if uniqueId == "" {
+		return fmt.Errorf("Input %s did not have a `unique_id` field defined", name)
+	}
+	rp := models.NewRunningInput(input, pluginConfig, uniqueId)
 	rp.SetDefaultTags(c.Tags)
 	c.Inputs = append(c.Inputs, rp)
 	return nil
@@ -1636,7 +1720,7 @@ func (c *Config) missingTomlField(typ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"wavefront_source_override", "wavefront_use_strict":
+		"wavefront_source_override", "wavefront_use_strict", "unique_id":
 
 		// ignore fields that are common to all plugins.
 	default:
