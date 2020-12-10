@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"io/ioutil"
 
@@ -76,6 +77,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	compareMetrics(t, overviewMetrics, acc, "rabbitmq_overview")
 
 	queuesMetrics := map[string]interface{}{
+		"now_timestamp":             time.Now().Unix(),
+		"head_message_timestamp":    1607602902,
 		"consumers":                 3,
 		"consumer_utilisation":      1.0,
 		"memory":                    143776,
