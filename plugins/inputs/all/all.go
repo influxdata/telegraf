@@ -63,6 +63,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/influxdb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/influxdb_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/influxdb_v2_listener"
+	_ "github.com/influxdata/telegraf/plugins/inputs/intel_powerstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/intel_rdt"
 	_ "github.com/influxdata/telegraf/plugins/inputs/internal"
 	_ "github.com/influxdata/telegraf/plugins/inputs/interrupts"
