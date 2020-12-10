@@ -191,9 +191,11 @@ subjects:
     - node_name
   - fields:
     - capacity_cpu_cores
+    - capacity_millicpu_cores
     - capacity_memory_bytes
     - capacity_pods
     - allocatable_cpu_cores
+    - allocatable_millicpu_cores
     - allocatable_memory_bytes
     - allocatable_pods
 
