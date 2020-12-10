@@ -132,6 +132,7 @@ type QueueTotals struct {
 type Queue struct {
 	QueueTotals            // just to not repeat the same code
 	MessageStats           `json:"message_stats"`
+	HeadMessageTimestamp   int64 `json:"head_message_timestamp"`
 	Memory                 int64
 	Consumers              int64
 	ConsumerUtilisation    float64 `json:"consumer_utilisation"`
@@ -684,6 +685,8 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 		acc.AddFields(
 			"rabbitmq_queue",
 			map[string]interface{}{
+				"now_timestamp":          time.Now().Unix(),
+				"head_message_timestamp": queue.HeadMessageTimestamp,
 				// common information
 				"consumers":                queue.Consumers,
 				"consumer_utilisation":     queue.ConsumerUtilisation,
