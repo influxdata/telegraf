@@ -63,7 +63,7 @@ sudo modprobe msr
 sudo modprobe intel_rapl
 ```
 
-**Telegraf with Intel PowerStat plugin enabled requires root access to read model specific registers (MSRs)** 
+**Telegraf with Intel PowerStat plugin enabled may require root access to read model specific registers (MSRs)** 
 to retrieve data for calculation of most critical per-CPU specific metrics:
 - `cpu_busy_frequency_mhz`
 - `cpu_temperature_celsius`
