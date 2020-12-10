@@ -130,6 +130,7 @@ require (
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
+	go.mongodb.org/mongo-driver v1.4.4
 	go.starlark.net v0.0.0-20200901195727-6e684ef5eeee
 	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
