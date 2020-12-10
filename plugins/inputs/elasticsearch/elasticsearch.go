@@ -115,6 +115,7 @@ const sampleConfig = `
   cluster_stats_only_from_master = true
 
   ## Indices to collect; can be one or more indices names or _all
+  ## Use of up to one wildcard (*) is allowed. Use the wildcard at the end to retrieve index names that end with a changing value, like a date.
   indices_include = ["_all"]
 
   ## One of "shards", "cluster", "indices"
@@ -135,6 +136,11 @@ const sampleConfig = `
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Sets the number of most recent indices to return for indices that are configured with a date-stamped suffix.
+  ## Each 'indices_include' entry with a wildcard (*) at the end will group together all indices that match it, and sort them
+  ## by the date or number after the wildcard. Metrics then are gathered for only the 'num_most_recent_indices' amount of most recent indices.
+  # num_most_recent_indices = 0
 `
 
 // Elasticsearch is a plugin to read stats from one or many Elasticsearch
@@ -152,6 +158,8 @@ type Elasticsearch struct {
 	NodeStats                  []string          `toml:"node_stats"`
 	Username                   string            `toml:"username"`
 	Password                   string            `toml:"password"`
+	NumMostRecentIndices       int               `toml:"num_most_recent_indices"`
+
 	tls.ClientConfig
 
 	client          *http.Client
@@ -527,66 +535,130 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 		acc.AddFields("elasticsearch_indices_stats_"+m, jsonParser.Fields, map[string]string{"index_name": "_all"}, now)
 	}
 
-	// Individual Indices stats
-	for id, index := range indicesStats.Indices {
-		indexTag := map[string]string{"index_name": id}
-		stats := map[string]interface{}{
-			"primaries": index.Primaries,
-			"total":     index.Total,
+	// Gather stats for each index.
+	err := e.gatherIndividualIndicesStats(indicesStats.Indices, now, acc)
+
+	return err
+}
+
+// gatherSortedIndicesStats gathers stats for all indices in no particular order.
+func (e *Elasticsearch) gatherIndividualIndicesStats(indices map[string]indexStat, now time.Time, acc telegraf.Accumulator) error {
+	// Sort indices into buckets based on their configured prefix, if any matches.
+	categorizedIndexNames := e.categorizeIndices(indices)
+
+	for _, matchingIndices := range categorizedIndexNames {
+		// Establish the number of each category of indices to use. User can configure to use only the latest 'X' amount.
+		indicesCount := len(matchingIndices)
+		indicesToTrackCount := indicesCount
+
+		// Sort the indices if configured to do so.
+		if e.NumMostRecentIndices > 0 {
+			if e.NumMostRecentIndices < indicesToTrackCount {
+				indicesToTrackCount = e.NumMostRecentIndices
+			}
+			sort.Strings(matchingIndices)
 		}
-		for m, s := range stats {
-			f := jsonparser.JSONFlattener{}
-			// parse Json, getting strings and bools
-			err := f.FullFlattenJSON("", s, true, true)
+
+		// Gather only the number of indexes that have been configured, in descending order (most recent, if date-stamped).
+		for i := indicesCount - 1; i >= indicesCount-indicesToTrackCount; i-- {
+			indexName := matchingIndices[i]
+
+			err := e.gatherSingleIndexStats(indexName, indices[indexName], now, acc)
 			if err != nil {
 				return err
 			}
-			acc.AddFields("elasticsearch_indices_stats_"+m, f.Fields, indexTag, now)
+		}
+	}
+
+	return nil
+}
+
+func (e *Elasticsearch) categorizeIndices(indices map[string]indexStat) map[string][]string {
+	categorizedIndexNames := map[string][]string{}
+
+	// If all indices are configured to be gathered, bucket them all together.
+	if len(e.IndicesInclude) == 0 || e.IndicesInclude[0] == "_all" {
+		for indexName := range indices {
+			categorizedIndexNames["_all"] = append(categorizedIndexNames["_all"], indexName)
 		}
 
-		if e.IndicesLevel == "shards" {
-			for shardNumber, shards := range index.Shards {
-				for _, shard := range shards {
+		return categorizedIndexNames
+	}
 
-					// Get Shard Stats
-					flattened := jsonparser.JSONFlattener{}
-					err := flattened.FullFlattenJSON("", shard, true, true)
-					if err != nil {
-						return err
-					}
+	// Bucket each returned index with its associated configured index wildcard (if any match).
+	for indexName := range indices {
+		matchingPrefix := indexName
+		for _, configuredIndex := range e.IndicesInclude {
+			// If an index name was configured with a wildcard, check if the index found matches the configured one.
+			if strings.HasSuffix(configuredIndex, "*") && strings.HasPrefix(indexName, strings.TrimSuffix(configuredIndex, "*")) {
+				matchingPrefix = configuredIndex
+			}
+		}
 
-					// determine shard tag and primary/replica designation
-					shardType := "replica"
-					if flattened.Fields["routing_primary"] == true {
-						shardType = "primary"
-					}
-					delete(flattened.Fields, "routing_primary")
+		categorizedIndexNames[matchingPrefix] = append(categorizedIndexNames[matchingPrefix], indexName)
+	}
 
-					routingState, ok := flattened.Fields["routing_state"].(string)
-					if ok {
-						flattened.Fields["routing_state"] = mapShardStatusToCode(routingState)
-					}
+	return categorizedIndexNames
+}
 
-					routingNode, _ := flattened.Fields["routing_node"].(string)
-					shardTags := map[string]string{
-						"index_name": id,
-						"node_id":    routingNode,
-						"shard_name": string(shardNumber),
-						"type":       shardType,
-					}
+func (e *Elasticsearch) gatherSingleIndexStats(name string, index indexStat, now time.Time, acc telegraf.Accumulator) error {
+	indexTag := map[string]string{"index_name": name}
+	stats := map[string]interface{}{
+		"primaries": index.Primaries,
+		"total":     index.Total,
+	}
+	for m, s := range stats {
+		f := jsonparser.JSONFlattener{}
+		// parse Json, getting strings and bools
+		err := f.FullFlattenJSON("", s, true, true)
+		if err != nil {
+			return err
+		}
+		acc.AddFields("elasticsearch_indices_stats_"+m, f.Fields, indexTag, now)
+	}
 
-					for key, field := range flattened.Fields {
-						switch field.(type) {
-						case string, bool:
-							delete(flattened.Fields, key)
-						}
-					}
+	if e.IndicesLevel == "shards" {
+		for shardNumber, shards := range index.Shards {
+			for _, shard := range shards {
 
-					acc.AddFields("elasticsearch_indices_stats_shards",
-						flattened.Fields,
-						shardTags,
-						now)
+				// Get Shard Stats
+				flattened := jsonparser.JSONFlattener{}
+				err := flattened.FullFlattenJSON("", shard, true, true)
+				if err != nil {
+					return err
 				}
+
+				// determine shard tag and primary/replica designation
+				shardType := "replica"
+				if flattened.Fields["routing_primary"] == true {
+					shardType = "primary"
+				}
+				delete(flattened.Fields, "routing_primary")
+
+				routingState, ok := flattened.Fields["routing_state"].(string)
+				if ok {
+					flattened.Fields["routing_state"] = mapShardStatusToCode(routingState)
+				}
+
+				routingNode, _ := flattened.Fields["routing_node"].(string)
+				shardTags := map[string]string{
+					"index_name": name,
+					"node_id":    routingNode,
+					"shard_name": string(shardNumber),
+					"type":       shardType,
+				}
+
+				for key, field := range flattened.Fields {
+					switch field.(type) {
+					case string, bool:
+						delete(flattened.Fields, key)
+					}
+				}
+
+				acc.AddFields("elasticsearch_indices_stats_shards",
+					flattened.Fields,
+					shardTags,
+					now)
 			}
 		}
 	}
