@@ -67,7 +67,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
   ##  |---BA, DCBA   - Little Endian
   ##  |---BADC       - Mid-Big Endian
   ##  |---CDAB       - Mid-Little Endian
-  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32-IEEE (the IEEE 754 binary representation)
+  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32-IEEE, FLOAT64-IEEE (the IEEE 754 binary representation)
   ##              FLOAT32 (deprecated), FIXED, UFIXED (fixed-point representation on input)
   ## scale      - the final numeric variable representation
   ## address    - variable address
@@ -105,10 +105,10 @@ and cannot be configured.
 
 These types are used for integer input values. Select the one that matches your modbus data source.
 
-#### Floating Point: `FLOAT32-IEEE`
+#### Floating Point: `FLOAT32-IEEE`, `FLOAT64-IEEE`
 
-Use this type if your modbus registers contain a value that is encoded in this format. This type
-always includes the sign and therefore there exists no variant.
+Use these types if your modbus registers contain a value that is encoded in this format. These types
+always include the sign and therefore there exists no variant.
 
 #### Fixed Point: `FIXED`, `UFIXED` (`FLOAT32`)
 
@@ -129,7 +129,7 @@ from unsigned values).
 
 ### Example Output
 
-```
+```sh
 $ ./telegraf -config telegraf.conf -input-filter modbus -test
 modbus.InputRegisters,host=orangepizero Current=0,Energy=0,Frecuency=60,Power=0,PowerFactor=0,Voltage=123.9000015258789 1554079521000000000
 ```

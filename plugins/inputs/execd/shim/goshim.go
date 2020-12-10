@@ -1,5 +1,7 @@
 package shim
 
+// this package is deprecated. use plugins/common/shim instead
+
 import (
 	"bufio"
 	"context"

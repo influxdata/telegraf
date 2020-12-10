@@ -25,6 +25,7 @@ type Wavefront struct {
 	UseRegex        bool
 	UseStrict       bool
 	TruncateTags    bool
+	ImmediateFlush  bool
 	SourceOverride  []string
 	StringToNumber  map[string][]map[string]float64
 
@@ -101,6 +102,12 @@ var sampleConfig = `
   ## data point exceeding this limit if not truncated. Defaults to 'false' to provide backwards compatibility.
   #truncate_tags = false
 
+  ## Flush the internal buffers after each batch. This effectively bypasses the background sending of metrics
+  ## normally done by the Wavefront SDK. This can be used if you are experiencing buffer overruns. The sending 
+  ## of metrics will block for a longer time, but this will be handled gracefully by the internal buffering in
+  ## Telegraf.
+  #immediate_flush = true
+
   ## Define a mapping, namespaced by metric prefix, from string values to numeric values
   ##   deprecated in 1.9; use the enum processor plugin
   #[[outputs.wavefront.string_to_number.elasticsearch]]
@@ -123,26 +130,30 @@ func (w *Wavefront) Connect() error {
 		w.Log.Warn("The string_to_number option is deprecated; please use the enum processor instead")
 	}
 
+	flushSeconds := 5
+	if w.ImmediateFlush {
+		flushSeconds = 86400 // Set a very long flush interval if we're flushing directly
+	}
 	if w.Url != "" {
 		w.Log.Debug("connecting over http/https using Url: %s", w.Url)
 		sender, err := wavefront.NewDirectSender(&wavefront.DirectConfiguration{
 			Server:               w.Url,
 			Token:                w.Token,
-			FlushIntervalSeconds: 5,
+			FlushIntervalSeconds: flushSeconds,
 		})
 		if err != nil {
 			return fmt.Errorf("Wavefront: Could not create Wavefront Sender for Url: %s", w.Url)
 		}
 		w.sender = sender
 	} else {
-		w.Log.Debug("connecting over tcp using Host: %s and Port: %d", w.Host, w.Port)
+		w.Log.Debugf("connecting over tcp using Host: %q and Port: %d", w.Host, w.Port)
 		sender, err := wavefront.NewProxySender(&wavefront.ProxyConfiguration{
 			Host:                 w.Host,
 			MetricsPort:          w.Port,
-			FlushIntervalSeconds: 5,
+			FlushIntervalSeconds: flushSeconds,
 		})
 		if err != nil {
-			return fmt.Errorf("Wavefront: Could not create Wavefront Sender for Host: %s and Port: %d", w.Host, w.Port)
+			return fmt.Errorf("Wavefront: Could not create Wavefront Sender for Host: %q and Port: %d", w.Host, w.Port)
 		}
 		w.sender = sender
 	}
@@ -162,9 +173,17 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 		for _, point := range w.buildMetrics(m) {
 			err := w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
 			if err != nil {
-				return fmt.Errorf("Wavefront sending error: %s", err.Error())
+				if isRetryable(err) {
+					return fmt.Errorf("Wavefront sending error: %v", err)
+				}
+				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
+				w.Log.Debugf("Non-retryable metric data: Name: %v, Value: %v, Timestamp: %v, Source: %v, PointTags: %v ", point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
 			}
 		}
+	}
+	if w.ImmediateFlush {
+		w.Log.Debugf("Flushing batch of %d points", len(metrics))
+		return w.sender.Flush()
 	}
 	return nil
 }
@@ -199,7 +218,7 @@ func (w *Wavefront) buildMetrics(m telegraf.Metric) []*MetricPoint {
 
 		metricValue, buildError := buildValue(value, metric.Metric, w)
 		if buildError != nil {
-			w.Log.Debug("Error building tags: %s\n", buildError.Error())
+			w.Log.Debugf("Error building tags: %s\n", buildError.Error())
 			continue
 		}
 		metric.Value = metricValue
@@ -336,6 +355,25 @@ func init() {
 			ConvertPaths:    true,
 			ConvertBool:     true,
 			TruncateTags:    false,
+			ImmediateFlush:  true,
 		}
 	})
+}
+
+// TODO: Currently there's no canonical way to exhaust all
+// retryable/non-retryable errors from wavefront, so this implementation just
+// handles known non-retryable errors in a case-by-case basis and assumes all
+// other errors are retryable.
+// A support ticket has been filed against wavefront to provide a canonical way
+// to distinguish between retryable and non-retryable errors (link is not
+// public).
+func isRetryable(err error) bool {
+	if err != nil {
+		// "empty metric name" errors are non-retryable as retry will just keep
+		// getting the same error again and again.
+		if strings.Contains(err.Error(), "empty metric name") {
+			return false
+		}
+	}
+	return true
 }

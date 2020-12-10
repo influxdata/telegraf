@@ -176,14 +176,6 @@
   # If no servers are specified, then 127.0.0.1 is used as the host and 4020 as the port.
   servers = ["127.0.0.1:4021"]
 
-# Read metrics from local Lustre service on OST, MDS
-[[inputs.lustre2]]
-  # An array of /proc globs to search for Lustre stats
-  # If not specified, the default will work on Lustre 2.5.x
-  #
-  # ost_procfiles = ["/proc/fs/lustre/obdfilter/*/stats", "/proc/fs/lustre/osd-ldiskfs/*/stats"]
-  # mds_procfiles = ["/proc/fs/lustre/mdt/*/md_stats"]
-
 # Read metrics about memory usage
 [[inputs.mem]]
   # no configuration

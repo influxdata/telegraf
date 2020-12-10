@@ -72,7 +72,7 @@ func NewRunningOutput(
 	logger.OnErr(func() {
 		writeErrorsRegister.Incr(1)
 	})
-	setLoggerOnPlugin(output, logger)
+	SetLoggerOnPlugin(output, logger)
 
 	if config.MetricBufferLimit > 0 {
 		bufferLimit = config.MetricBufferLimit

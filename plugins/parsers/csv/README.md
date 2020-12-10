@@ -100,7 +100,7 @@ columns and rows.
 ### Examples
 
 Config:
-```
+```toml
 [[inputs.file]]
   files = ["example"]
   data_format = "csv"
