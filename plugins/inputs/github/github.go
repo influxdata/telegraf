@@ -135,18 +135,11 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 			}
 
 			repositoryInfo, response, err := g.githubClient.Repositories.Get(ctx, owner, repository)
-
-			if _, ok := err.(*github.RateLimitError); ok {
-				g.RateLimitErrors.Incr(1)
-			}
-
+			g.handleRateLimit(response, err)
 			if err != nil {
 				acc.AddError(err)
 				return
 			}
-
-			g.RateLimit.Set(int64(response.Rate.Limit))
-			g.RateRemaining.Set(int64(response.Rate.Remaining))
 
 			now := time.Now()
 			tags := getTags(repositoryInfo)
@@ -177,6 +170,15 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 	return nil
+}
+
+func (g *GitHub) handleRateLimit(response *github.Response, err error) {
+	if err == nil {
+		g.RateLimit.Set(int64(response.Rate.Limit))
+		g.RateRemaining.Set(int64(response.Rate.Remaining))
+	} else if _, ok := err.(*github.RateLimitError); ok {
+		g.RateLimitErrors.Incr(1)
+	}
 }
 
 func splitRepositoryName(repositoryName string) (string, string, error) {
@@ -232,11 +234,10 @@ func (g *GitHub) getPullRequestFields(ctx context.Context, owner, repo string) (
 	for _, class := range classes {
 		q := fmt.Sprintf("repo:%s/%s is:pr is:%s", owner, repo, class)
 		searchResult, response, err := g.githubClient.Search.Issues(ctx, q, &options)
+		g.handleRateLimit(response, err)
 		if err != nil {
 			return fields, err
 		}
-		g.RateLimit.Set(int64(response.Rate.Limit))
-		g.RateRemaining.Set(int64(response.Rate.Remaining))
 
 		f := fmt.Sprintf("%s_pull_requests", class)
 		fields[f] = searchResult.GetTotal()
