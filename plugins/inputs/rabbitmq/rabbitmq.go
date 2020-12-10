@@ -607,19 +607,6 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				"running":                   boolToInt(node.Running),
 			}
 
-			var health HealthCheck
-			err := r.requestJSON("/api/healthchecks/node/"+node.Name, &health)
-			if err != nil {
-				acc.AddError(err)
-				return
-			}
-
-			if health.Status == "ok" {
-				fields["health_check_status"] = int64(1)
-			} else {
-				fields["health_check_status"] = int64(0)
-			}
-
 			var memory MemoryResponse
 			err = r.requestJSON("/api/nodes/"+node.Name+"/memory", &memory)
 			if err != nil {
