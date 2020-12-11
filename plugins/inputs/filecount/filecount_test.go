@@ -1,12 +1,19 @@
+// +build !windows
+
+// TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
+// https://github.com/influxdata/telegraf/issues/6248
+
 package filecount
 
 import (
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -100,7 +107,6 @@ func TestSizeFilter(t *testing.T) {
 }
 
 func TestMTimeFilter(t *testing.T) {
-
 	mtime := time.Date(2011, time.December, 14, 18, 25, 5, 0, time.UTC)
 	fileAge := time.Since(mtime) - (60 * time.Second)
 
@@ -117,8 +123,54 @@ func TestMTimeFilter(t *testing.T) {
 	fileCountEquals(t, fc, len(matches), 0)
 }
 
+// The library dependency karrick/godirwalk completely abstracts out the
+// behavior of the FollowSymlinks plugin input option. However, it should at
+// least behave identically when enabled on a filesystem with no symlinks.
+func TestFollowSymlinks(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.FollowSymlinks = true
+	matches := []string{"foo", "bar", "baz", "qux",
+		"subdir/", "subdir/quux", "subdir/quuz",
+		"subdir/nested2", "subdir/nested2/qux"}
+
+	fileCountEquals(t, fc, len(matches), 5096)
+}
+
+// Paths with a trailing slash will not exactly match paths produced during the
+// walk as these paths are cleaned before being returned from godirwalk. #6329
+func TestDirectoryWithTrailingSlash(t *testing.T) {
+	plugin := &FileCount{
+		Directories: []string{getTestdataDir() + string(filepath.Separator)},
+		Name:        "*",
+		Recursive:   true,
+		Fs:          getFakeFileSystem(getTestdataDir()),
+	}
+
+	var acc testutil.Accumulator
+	err := plugin.Gather(&acc)
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"filecount",
+			map[string]string{
+				"directory": getTestdataDir(),
+			},
+			map[string]interface{}{
+				"count":      9,
+				"size_bytes": 5096,
+			},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
 func getNoFilterFileCount() FileCount {
 	return FileCount{
+		Log:         testutil.Logger{},
 		Directories: []string{getTestdataDir()},
 		Name:        "*",
 		Recursive:   true,
@@ -156,7 +208,7 @@ func getFakeFileSystem(basePath string) fakeFileSystem {
 	mtime := time.Date(2015, time.December, 14, 18, 25, 5, 0, time.UTC)
 	olderMtime := time.Date(2010, time.December, 14, 18, 25, 5, 0, time.UTC)
 
-	// set file permisions
+	// set file permissions
 	var fmask uint32 = 0666
 	var dmask uint32 = 0666
 

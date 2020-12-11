@@ -5,11 +5,7 @@ package telegraf
 // Add, Push, and Reset can not be called concurrently, so locking is not
 // required when implementing an Aggregator plugin.
 type Aggregator interface {
-	// SampleConfig returns the default configuration of the Input.
-	SampleConfig() string
-
-	// Description returns a one-sentence description on the Input.
-	Description() string
+	PluginDescriber
 
 	// Add the metric to the aggregator.
 	Add(in Metric)

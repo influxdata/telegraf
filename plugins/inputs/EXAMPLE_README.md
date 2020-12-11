@@ -1,8 +1,11 @@
 # Example Input Plugin
 
-The example plugin gathers metrics about example things.  This description
+The `example` plugin gathers metrics about example things.  This description
 explains at a high level what the plugin does and provides links to where
 additional information can be found.
+
+Telegraf minimum version: Telegraf x.x
+Plugin minimum tested version: x.x
 
 ### Configuration
 
@@ -36,11 +39,15 @@ mapped to the output.
     - field1 (type, unit)
     - field2 (float, percent)
 
-- measurement2
++ measurement2
   - tags:
     - tag3
   - fields:
     - field3 (integer, bytes)
+    - field4 (integer, green=1 yellow=2 red=3)
+    - field5 (string)
+    - field6 (float)
+    - field7 (boolean)
 
 ### Sample Queries
 

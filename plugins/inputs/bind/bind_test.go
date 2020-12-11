@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -20,12 +21,15 @@ func TestBindJsonStats(t *testing.T) {
 		Urls:                 []string{ts.URL + "/json/v1"},
 		GatherMemoryContexts: true,
 		GatherViews:          true,
+		client: http.Client{
+			Timeout: 4 * time.Second,
+		},
 	}
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// Use subtests for counters, since they are similar structure
 	type fieldSet struct {
@@ -45,6 +49,36 @@ func TestBindJsonStats(t *testing.T) {
 				{"IQUERY", 0},
 				{"QUERY", 13},
 				{"STATUS", 0},
+			},
+		},
+		{
+			"rcode",
+			[]fieldSet{
+				{"NOERROR", 1732},
+				{"FORMERR", 0},
+				{"SERVFAIL", 6},
+				{"NXDOMAIN", 200},
+				{"NOTIMP", 0},
+				{"REFUSED", 6},
+				{"REFUSED", 0},
+				{"YXDOMAIN", 0},
+				{"YXRRSET", 0},
+				{"NXRRSET", 0},
+				{"NOTAUTH", 0},
+				{"NOTZONE", 0},
+				{"RESERVED11", 0},
+				{"RESERVED12", 0},
+				{"RESERVED13", 0},
+				{"RESERVED14", 0},
+				{"RESERVED15", 0},
+				{"BADVERS", 0},
+				{"17", 0},
+				{"18", 0},
+				{"19", 0},
+				{"20", 0},
+				{"21", 0},
+				{"22", 0},
+				{"BADCOOKIE", 0},
 			},
 		},
 		{
@@ -94,6 +128,14 @@ func TestBindJsonStats(t *testing.T) {
 				{"RawOpen", 1},
 				{"TCP4Accept", 6},
 				{"TCP6Open", 2},
+			},
+		},
+		{
+			"zonestat",
+			[]fieldSet{
+				{"NotifyOutv4", 8},
+				{"NotifyInv4", 5},
+				{"SOAOutv4", 5},
 			},
 		},
 	}
@@ -152,12 +194,15 @@ func TestBindXmlStatsV2(t *testing.T) {
 		Urls:                 []string{ts.URL + "/xml/v2"},
 		GatherMemoryContexts: true,
 		GatherViews:          true,
+		client: http.Client{
+			Timeout: 4 * time.Second,
+		},
 	}
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// Use subtests for counters, since they are similar structure
 	type fieldSet struct {
@@ -354,12 +399,15 @@ func TestBindXmlStatsV3(t *testing.T) {
 		Urls:                 []string{ts.URL + "/xml/v3"},
 		GatherMemoryContexts: true,
 		GatherViews:          true,
+		client: http.Client{
+			Timeout: 4 * time.Second,
+		},
 	}
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// Use subtests for counters, since they are similar structure
 	type fieldSet struct {

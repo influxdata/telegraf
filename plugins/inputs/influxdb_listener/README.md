@@ -30,13 +30,13 @@ submits data to InfluxDB determines the destination database.
   ## maximum duration before timing out write of the response
   write_timeout = "10s"
 
-  ## Maximum allowed http request body size in bytes.
-  ## 0 means to use the default of 536,870,912 bytes (500 mebibytes)
+  ## Maximum allowed HTTP request body size in bytes.
+  ## 0 means to use the default of 32MiB.
   max_body_size = 0
 
   ## Maximum line size allowed to be sent in bytes.
-  ## 0 means to use the default of 65536 bytes (64 kibibytes)
-  max_line_size = 0
+  ##   deprecated in 1.14; parser now handles lines of unlimited length and option is ignored
+  # max_line_size = 0
 
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
@@ -45,6 +45,18 @@ submits data to InfluxDB determines the destination database.
   ## Add service certificate and key
   tls_cert = "/etc/telegraf/cert.pem"
   tls_key = "/etc/telegraf/key.pem"
+
+  ## Optional tag name used to store the database name.
+  ## If the write has a database in the query string then it will be kept in this tag name.
+  ## This tag can be used in downstream outputs.
+  ## The default value of nothing means it will be off and the database will not be recorded.
+  ## If you have a tag that is the same as the one specified below, and supply a database,
+  ## the tag will be overwritten with the database supplied.
+  # database_tag = ""
+
+  ## If set the retention policy specified in the write query will be added as
+  ## the value of this tag name.
+  # retention_policy_tag = ""
 
   ## Optional username and password to accept for HTTP basic authentication.
   ## You probably want to make sure you have TLS configured above for this.

@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/ericchiang/k8s"
-	"github.com/ericchiang/k8s/apis/apps/v1beta1"
-	"github.com/ericchiang/k8s/apis/apps/v1beta2"
-	"github.com/ericchiang/k8s/apis/core/v1"
+	v1APPS "github.com/ericchiang/k8s/apis/apps/v1"
+	v1 "github.com/ericchiang/k8s/apis/core/v1"
+	v1beta1EXT "github.com/ericchiang/k8s/apis/extensions/v1beta1"
 
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
 type client struct {
@@ -47,15 +47,29 @@ func newClient(baseURL, namespace, bearerToken string, timeout time.Duration, tl
 	}, nil
 }
 
-func (c *client) getDaemonSets(ctx context.Context) (*v1beta2.DaemonSetList, error) {
-	list := new(v1beta2.DaemonSetList)
+func (c *client) getDaemonSets(ctx context.Context) (*v1APPS.DaemonSetList, error) {
+	list := new(v1APPS.DaemonSetList)
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	return list, c.List(ctx, c.namespace, list)
 }
 
-func (c *client) getDeployments(ctx context.Context) (*v1beta1.DeploymentList, error) {
-	list := &v1beta1.DeploymentList{}
+func (c *client) getDeployments(ctx context.Context) (*v1APPS.DeploymentList, error) {
+	list := &v1APPS.DeploymentList{}
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+	return list, c.List(ctx, c.namespace, list)
+}
+
+func (c *client) getEndpoints(ctx context.Context) (*v1.EndpointsList, error) {
+	list := new(v1.EndpointsList)
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+	return list, c.List(ctx, c.namespace, list)
+}
+
+func (c *client) getIngress(ctx context.Context) (*v1beta1EXT.IngressList, error) {
+	list := new(v1beta1EXT.IngressList)
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	return list, c.List(ctx, c.namespace, list)
@@ -89,8 +103,15 @@ func (c *client) getPods(ctx context.Context) (*v1.PodList, error) {
 	return list, c.List(ctx, c.namespace, list)
 }
 
-func (c *client) getStatefulSets(ctx context.Context) (*v1beta1.StatefulSetList, error) {
-	list := new(v1beta1.StatefulSetList)
+func (c *client) getServices(ctx context.Context) (*v1.ServiceList, error) {
+	list := new(v1.ServiceList)
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+	return list, c.List(ctx, c.namespace, list)
+}
+
+func (c *client) getStatefulSets(ctx context.Context) (*v1APPS.StatefulSetList, error) {
+	list := new(v1APPS.StatefulSetList)
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	return list, c.List(ctx, c.namespace, list)

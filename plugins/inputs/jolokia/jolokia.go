@@ -234,9 +234,11 @@ func (j *Jolokia) prepareRequest(server Server, metrics []Metric) (*http.Request
 	}
 
 	requestBody, err := json.Marshal(bulkBodyContent)
+	if err != nil {
+		return nil, err
+	}
 
 	req, err := http.NewRequest("POST", jolokiaUrl.String(), bytes.NewBuffer(requestBody))
-
 	if err != nil {
 		return nil, err
 	}

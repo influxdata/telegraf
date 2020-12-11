@@ -1,4 +1,4 @@
-# Cisco model-driven telemetry (MDT)
+# Cisco Model-Driven Telemetry (MDT) Input Plugin
 
 Cisco model-driven telemetry (MDT) is an input plugin that consumes
 telemetry data from Cisco IOS XR, IOS XE and NX-OS platforms. It supports TCP & GRPC dialout transports.
@@ -28,6 +28,9 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
  ## Enable TLS client authentication and define allowed CA certificates; grpc
  ##  transport only.
  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+
+ ## Define (for certain nested telemetry measurements with embedded tags) which fields are tags
+ # embedded_tags = ["Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/class-name"]
 
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]

@@ -68,7 +68,7 @@ func (p *Prometheus) start(ctx context.Context) error {
 			case <-time.After(time.Second):
 				err := p.watch(ctx, client)
 				if err != nil {
-					log.Printf("E! [inputs.prometheus] unable to watch resources: %v", err)
+					p.Log.Errorf("Unable to watch resources: %s", err.Error())
 				}
 			}
 		}
@@ -82,8 +82,11 @@ func (p *Prometheus) start(ctx context.Context) error {
 // pod, causing errors in the logs. This is only true if the pod going offline is not
 // directed to do so by K8s.
 func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
+
+	selectors := podSelector(p)
+
 	pod := &corev1.Pod{}
-	watcher, err := client.Watch(ctx, p.PodNamespace, &corev1.Pod{})
+	watcher, err := client.Watch(ctx, p.PodNamespace, &corev1.Pod{}, selectors...)
 	if err != nil {
 		return err
 	}
@@ -135,6 +138,21 @@ func podReady(statuss []*corev1.ContainerStatus) bool {
 	return true
 }
 
+func podSelector(p *Prometheus) []k8s.Option {
+	options := []k8s.Option{}
+
+	if len(p.KubernetesLabelSelector) > 0 {
+		options = append(options, k8s.QueryParam("labelSelector", p.KubernetesLabelSelector))
+	}
+
+	if len(p.KubernetesFieldSelector) > 0 {
+		options = append(options, k8s.QueryParam("fieldSelector", p.KubernetesFieldSelector))
+	}
+
+	return options
+
+}
+
 func registerPod(pod *corev1.Pod, p *Prometheus) {
 	if p.kubernetesPods == nil {
 		p.kubernetesPods = map[string]URLAndAddress{}
@@ -144,7 +162,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 		return
 	}
 
-	log.Printf("D! [inputs.prometheus] will scrape metrics from %s", *targetURL)
+	log.Printf("D! [inputs.prometheus] will scrape metrics from %q", *targetURL)
 	// add annotation as metrics tags
 	tags := pod.GetMetadata().GetAnnotations()
 	if tags == nil {
@@ -158,7 +176,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	}
 	URL, err := url.Parse(*targetURL)
 	if err != nil {
-		log.Printf("E! [inputs.prometheus] could not parse URL %s: %v", *targetURL, err)
+		log.Printf("E! [inputs.prometheus] could not parse URL %q: %s", *targetURL, err.Error())
 		return
 	}
 	podURL := p.AddressToURL(URL, URL.Hostname())
@@ -211,13 +229,13 @@ func unregisterPod(pod *corev1.Pod, p *Prometheus) {
 		return
 	}
 
-	log.Printf("D! [inputs.prometheus] registered a delete request for %s in namespace %s",
+	log.Printf("D! [inputs.prometheus] registered a delete request for %q in namespace %q",
 		pod.GetMetadata().GetName(), pod.GetMetadata().GetNamespace())
 
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	if _, ok := p.kubernetesPods[*url]; ok {
 		delete(p.kubernetesPods, *url)
-		log.Printf("D! [inputs.prometheus] will stop scraping for %s", *url)
+		log.Printf("D! [inputs.prometheus] will stop scraping for %q", *url)
 	}
 }

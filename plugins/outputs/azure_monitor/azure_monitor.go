@@ -155,10 +155,6 @@ func (a *AzureMonitor) Connect() error {
 		Timeout: a.Timeout.Duration,
 	}
 
-	if a.NamespacePrefix == "" {
-		a.NamespacePrefix = defaultNamespacePrefix
-	}
-
 	var err error
 	var region string
 	var resourceID string
@@ -392,7 +388,7 @@ func translate(m telegraf.Metric, prefix string) (*azureMonitorMetric, error) {
 	var dimensionValues []string
 	for _, tag := range m.TagList() {
 		// Azure custom metrics service supports up to 10 dimensions
-		if len(dimensionNames) > 10 {
+		if len(dimensionNames) >= 10 {
 			continue
 		}
 
@@ -646,7 +642,8 @@ func (a *AzureMonitor) Reset() {
 func init() {
 	outputs.Add("azure_monitor", func() telegraf.Output {
 		return &AzureMonitor{
-			timeFunc: time.Now,
+			timeFunc:        time.Now,
+			NamespacePrefix: defaultNamespacePrefix,
 		}
 	})
 }

@@ -277,6 +277,28 @@ func TestParsePatternsWithoutCustom(t *testing.T) {
 	assert.Equal(t, time.Unix(0, 1466004605359052000), metricA.Time())
 }
 
+func TestParseEpochMilli(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{MYAPP}"},
+		CustomPatterns: `
+			MYAPP %{POSINT:ts:ts-epochmilli} response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}
+		`,
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`1568540909963 response_time=20821 mymetric=10890.645`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"response_time": int64(20821),
+			"metric":        float64(10890.645),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
+	assert.Equal(t, time.Unix(0, 1568540909963000000), metricA.Time())
+}
+
 func TestParseEpochNano(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{MYAPP}"},
@@ -378,7 +400,7 @@ func TestParseEpochDecimal(t *testing.T) {
 
 			if tt.noMatch {
 				require.Nil(t, m)
-				require.Nil(t, err)
+				require.NoError(t, err)
 				return
 			}
 
@@ -647,6 +669,31 @@ func TestParseErrors_WrongTimeLayout(t *testing.T) {
 	testutil.RequireMetricEqual(t,
 		m,
 		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
+
+func TestParseInteger_Base16(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{TEST_LOG_C}"},
+		CustomPatterns: `
+			DURATION %{NUMBER}[nuµm]?s
+			BASE10OR16NUM (?:%{BASE10NUM}|%{BASE16NUM})
+			TEST_LOG_C %{NUMBER:myfloat} %{BASE10OR16NUM:response_code:int} %{IPORHOST:clientip} %{DURATION:rt}
+		`,
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`1.25 0xc8 192.168.1.1 5.432µs`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"clientip":      "192.168.1.1",
+			"response_code": int64(200),
+			"myfloat":       "1.25",
+			"rt":            "5.432µs",
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
 }
 
 func TestTsModder(t *testing.T) {
@@ -1067,4 +1114,24 @@ func TestTrimRegression(t *testing.T) {
 		actual.Time(),
 	)
 	require.Equal(t, expected, actual)
+}
+
+func TestAdvanceFieldName(t *testing.T) {
+	t.Skip("waiting for grok package fix")
+	p := &Parser{
+		Patterns: []string{`rts=%{NUMBER:response-time.s} local=%{IP:local-ip} remote=%{IP:remote.ip}`},
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`rts=1.283 local=127.0.0.1 remote=10.0.0.1`)
+	assert.NoError(t, err)
+	require.NotNil(t, metricA)
+	assert.Equal(t,
+		map[string]interface{}{
+			"response-time.s": "1.283",
+			"local-ip":        "127.0.0.1",
+			"remote.ip":       "10.0.0.1",
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
 }

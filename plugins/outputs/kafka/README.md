@@ -10,6 +10,13 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Kafka topic for producer messages
   topic = "telegraf"
 
+  ## The value of this tag will be used as the topic.  If not set the 'topic'
+  ## option is used.
+  # topic_tag = ""
+
+  ## If true, the 'topic_tag' will be removed from to the metric.
+  # exclude_topic_tag = false
+
   ## Optional Client id
   # client_id = "Telegraf"
 
@@ -46,24 +53,37 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   #   keys = ["foo", "bar"]
   #   separator = "_"
 
-  ## Telegraf tag to use as a routing key
-  ##  ie, if this tag exists, its value will be used as the routing key
+  ## The routing tag specifies a tagkey on the metric whose value is used as
+  ## the message key.  The message key is used to determine which partition to
+  ## send the message to.  This tag is prefered over the routing_key option.
   routing_tag = "host"
 
-  ## Static routing key.  Used when no routing_tag is set or as a fallback
-  ## when the tag specified in routing tag is not found.  If set to "random",
-  ## a random value will be generated for each message.
+  ## The routing key is set as the message key and used to determine which
+  ## partition to send the message to.  This value is only used when no
+  ## routing_tag is set or as a fallback when the tag specified in routing tag
+  ## is not found.
+  ##
+  ## If set to "random", a random value will be generated for each message.
+  ##
+  ## When unset, no message key is added and each message is routed to a random
+  ## partition.
+  ##
   ##   ex: routing_key = "random"
   ##       routing_key = "telegraf"
   # routing_key = ""
 
-  ## CompressionCodec represents the various compression codecs recognized by
+  ## Compression codec represents the various compression codecs recognized by
   ## Kafka in messages.
-  ##  0 : No compression
-  ##  1 : Gzip compression
-  ##  2 : Snappy compression
-  ##  3 : LZ4 compression
-  # compression_codec = 0
+  ##  0 : None
+  ##  1 : Gzip
+  ##  2 : Snappy
+  ##  3 : LZ4
+  ##  4 : ZSTD
+   # compression_codec = 0
+   
+  ## Idempotent Writes
+  ## If enabled, exactly one copy of each message is written.
+  # idempotent_writes = false
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
   ##  replica acknowledgements it must see before responding
@@ -95,6 +115,26 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Optional SASL Config
   # sasl_username = "kafka"
   # sasl_password = "secret"
+
+  ## Optional SASL:
+  ## one of: OAUTHBEARER, PLAIN, SCRAM-SHA-256, SCRAM-SHA-512, GSSAPI
+  ## (defaults to PLAIN)
+  # sasl_mechanism = ""
+
+  ## used if sasl_mechanism is GSSAPI (experimental)
+  # sasl_gssapi_service_name = ""
+  # ## One of: KRB5_USER_AUTH and KRB5_KEYTAB_AUTH
+  # sasl_gssapi_auth_type = "KRB5_USER_AUTH"
+  # sasl_gssapi_kerberos_config_path = "/"
+  # sasl_gssapi_realm = "realm"
+  # sasl_gssapi_key_tab_path = ""
+  # sasl_gssapi_disable_pafxfast = false
+
+  ## used if sasl_mechanism is OAUTHBEARER (experimental)
+  # sasl_access_token = ""
+
+  ## SASL protocol version.  When connecting to Azure EventHub set to 0.
+  # sasl_version = 1
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read

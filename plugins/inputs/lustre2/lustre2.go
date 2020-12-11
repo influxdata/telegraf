@@ -1,5 +1,9 @@
+// +build !windows
+
+// lustre2 doesn't aim for Windows
+
 /*
-Lustre 2.x telegraf plugin
+Lustre 2.x Telegraf plugin
 
 Lustre (http://lustre.org/) is an open-source, parallel file system
 for HPC environments. It stores statistics about its activity in
@@ -25,8 +29,8 @@ type tags struct {
 // Lustre proc files can change between versions, so we want to future-proof
 // by letting people choose what to look at.
 type Lustre2 struct {
-	Ost_procfiles []string `toml:"ost_jobstat"`
-	Mds_procfiles []string `toml:"mds_jobstat"`
+	Ost_procfiles []string `toml:"ost_procfiles"`
+	Mds_procfiles []string `toml:"mds_procfiles"`
 
 	// allFields maps and OST name to the metric fields associated with that OST
 	allFields map[tags]map[string]interface{}
@@ -366,7 +370,7 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping, a
 	for _, file := range files {
 		/* Turn /proc/fs/lustre/obdfilter/<ost_name>/stats and similar
 		 * into just the object store target name
-		 * Assumpion: the target name is always second to last,
+		 * Assumption: the target name is always second to last,
 		 * which is true in Lustre 2.1->2.8
 		 */
 		path := strings.Split(file, "/")
@@ -377,7 +381,7 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping, a
 		if err != nil {
 			return err
 		}
-		jobs := strings.Split(string(wholeFile), "-")
+		jobs := strings.Split(string(wholeFile), "- ")
 		for _, job := range jobs {
 			lines := strings.Split(string(job), "\n")
 			jobid := ""

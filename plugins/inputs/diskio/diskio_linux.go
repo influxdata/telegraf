@@ -11,6 +11,7 @@ import (
 )
 
 type diskInfoCache struct {
+	modifiedAt   int64 // Unix Nano timestamp of the last modification of the device. This value is used to invalidate the cache
 	udevDataPath string
 	values       map[string]string
 }
@@ -31,7 +32,8 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		s.infoCache = map[string]diskInfoCache{}
 	}
 	ic, ok := s.infoCache[devName]
-	if ok {
+
+	if ok && stat.Mtim.Nano() == ic.modifiedAt {
 		return ic.values, nil
 	}
 
@@ -42,6 +44,7 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	di := map[string]string{}
 
 	s.infoCache[devName] = diskInfoCache{
+		modifiedAt:   stat.Mtim.Nano(),
 		udevDataPath: udevDataPath,
 		values:       di,
 	}

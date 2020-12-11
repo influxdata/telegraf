@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"sync"
 
-	"cloud.google.com/go/pubsub"
 	"encoding/base64"
+	"time"
+
+	"cloud.google.com/go/pubsub"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
-	"log"
-	"time"
 )
 
 type empty struct{}
@@ -42,6 +42,8 @@ type PubSub struct {
 	RetryReceiveDelaySeconds int `toml:"retry_delay_seconds"`
 
 	Base64Data bool `toml:"base64_data"`
+
+	Log telegraf.Logger
 
 	sub     subscription
 	stubSub func() subscription
@@ -134,14 +136,14 @@ func (ps *PubSub) receiveWithRetry(parentCtx context.Context) {
 	err := ps.startReceiver(parentCtx)
 
 	for err != nil && parentCtx.Err() == nil {
-		log.Printf("E! [inputs.cloud_pubsub] Receiver for subscription %s exited with error: %v", ps.sub.ID(), err)
+		ps.Log.Errorf("Receiver for subscription %s exited with error: %v", ps.sub.ID(), err)
 
 		delay := defaultRetryDelaySeconds
 		if ps.RetryReceiveDelaySeconds > 0 {
 			delay = ps.RetryReceiveDelaySeconds
 		}
 
-		log.Printf("I! [inputs.cloud_pubsub] Waiting %d seconds before attempting to restart receiver...", delay)
+		ps.Log.Infof("Waiting %d seconds before attempting to restart receiver...", delay)
 		time.Sleep(time.Duration(delay) * time.Second)
 
 		err = ps.startReceiver(parentCtx)
@@ -149,7 +151,7 @@ func (ps *PubSub) receiveWithRetry(parentCtx context.Context) {
 }
 
 func (ps *PubSub) startReceiver(parentCtx context.Context) error {
-	log.Printf("I! [inputs.cloud_pubsub] Starting receiver for subscription %s...", ps.sub.ID())
+	ps.Log.Infof("Starting receiver for subscription %s...", ps.sub.ID())
 	cctx, ccancel := context.WithCancel(parentCtx)
 	err := ps.sub.Receive(cctx, func(ctx context.Context, msg message) {
 		if err := ps.onMessage(ctx, msg); err != nil {
@@ -159,7 +161,7 @@ func (ps *PubSub) startReceiver(parentCtx context.Context) error {
 	if err != nil {
 		ps.acc.AddError(fmt.Errorf("receiver for subscription %s exited: %v", ps.sub.ID(), err))
 	} else {
-		log.Printf("I! [inputs.cloud_pubsub] subscription pull ended (no error, most likely stopped)")
+		ps.Log.Info("Subscription pull ended (no error, most likely stopped)")
 	}
 	ccancel()
 	return err

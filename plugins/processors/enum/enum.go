@@ -63,7 +63,7 @@ func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric 
 	for _, mapping := range mapper.Mappings {
 		if mapping.Field != "" {
 			if originalValue, isPresent := metric.GetField(mapping.Field); isPresent {
-				if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString {
+				if adjustedValue, isString := adjustValue(originalValue).(string); isString {
 					if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent {
 						writeField(metric, mapping.getDestination(), mappedValue)
 					}
@@ -86,11 +86,17 @@ func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric 
 	return metric
 }
 
-func adjustBoolValue(in interface{}) interface{} {
-	if mappedBool, isBool := in.(bool); isBool == true {
-		return strconv.FormatBool(mappedBool)
+func adjustValue(in interface{}) interface{} {
+	switch val := in.(type) {
+	case bool:
+		return strconv.FormatBool(val)
+	case int64:
+		return strconv.FormatInt(val, 10)
+	case uint64:
+		return strconv.FormatUint(val, 10)
+	default:
+		return in
 	}
-	return in
 }
 
 func (mapping *Mapping) mapValue(original string) (interface{}, bool) {

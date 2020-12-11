@@ -11,10 +11,10 @@ services and hosts. You can read Icinga2's documentation for their remote API
 ```toml
 # Description
 [[inputs.icinga2]]
-  ## Required Icinga2 server address (default: "https://localhost:5665")
+  ## Required Icinga2 server address
   # server = "https://localhost:5665"
   
-  ## Required Icinga2 object type ("services" or "hosts, default "services")
+  ## Required Icinga2 object type ("services" or "hosts")
   # object_type = "services"
 
   ## Credentials for basic HTTP authentication
@@ -41,16 +41,17 @@ services and hosts. You can read Icinga2's documentation for their remote API
 ### Tags:
 
 - All measurements have the following tags:
-    - check_command
-    - display_name
-    - state
-    - source
-    - port
-    - scheme
+    - check_command - The short name of the check command
+    - display_name - The name of the service or host
+    - state - The state: UP/DOWN for hosts, OK/WARNING/CRITICAL/UNKNOWN for services
+    - source - The icinga2 host
+    - port - The icinga2 port
+    - scheme - The icinga2 protocol (http/https)
+    - server - The server the check_command is running for
 
 ### Sample Queries:
 
-```
+```sql
 SELECT * FROM "icinga2_services" WHERE state_code = 0 AND time > now() - 24h // Service with OK status
 SELECT * FROM "icinga2_services" WHERE state_code = 1 AND time > now() - 24h // Service with WARNING status
 SELECT * FROM "icinga2_services" WHERE state_code = 2 AND time > now() - 24h // Service with CRITICAL status

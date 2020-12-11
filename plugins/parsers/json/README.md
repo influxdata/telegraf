@@ -18,14 +18,19 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "json"
 
+  ## When strict is true and a JSON array is being parsed, all objects within the
+  ## array must be valid
+  json_strict = true
+
   ## Query is a GJSON path that specifies a specific chunk of JSON to be
   ## parsed, if not specified the whole document will be parsed.
   ##
   ## GJSON query paths are described here:
-  ##   https://github.com/tidwall/gjson#path-syntax
+  ##   https://github.com/tidwall/gjson/tree/v1.3.0#path-syntax
   json_query = ""
 
-  ## Tag keys is an array of keys that should be added as tags.
+  ## Tag keys is an array of keys that should be added as tags.  Matching keys
+  ## are no longer saved as fields.
   tag_keys = [
     "my_tag_1",
     "my_tag_2"
@@ -41,7 +46,7 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
   ## metric.
   json_time_key = ""
 
-  ## Time format is the time layout that should be used to interprete the json_time_key.
+  ## Time format is the time layout that should be used to interpret the json_time_key.
   ## The time must be `unix`, `unix_ms`, `unix_us`, `unix_ns`, or a time in the
   ## "reference time".  To define a different format, arrange the values from
   ## the "reference time" in the example to match the format you will be
@@ -68,11 +73,15 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
 
 #### json_query
 
-The `json_query` is a [GJSON][gjson] path that can be used to limit the
-portion of the overall JSON document that should be parsed.  The result of the
-query should contain a JSON object or an array of objects.
+The `json_query` is a [GJSON][gjson] path that can be used to transform the
+JSON document before being parsed.  The query is performed before any other
+options are applied and the new document produced will be parsed instead of the
+original document, as such, the result of the query should be a JSON object or
+an array of objects.
 
-Consult the GJSON [path syntax][gjson syntax] for details and examples.
+Consult the GJSON [path syntax][gjson syntax] for details and examples, and
+consider using the [GJSON playground][gjson playground] for developing and
+debugging your query.
 
 #### json_time_key, json_time_format, json_timezone
 
@@ -232,5 +241,6 @@ file,first=Jane last="Murphy",age=47
 
 [gjson]:        https://github.com/tidwall/gjson
 [gjson syntax]: https://github.com/tidwall/gjson#path-syntax
+[gjson playground]: https://gjson.dev/
 [json]:         https://www.json.org/
 [time parse]:   https://golang.org/pkg/time/#Parse

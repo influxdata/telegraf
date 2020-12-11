@@ -1,10 +1,10 @@
-# Elasticsearch Output Plugin for Telegraf
+# Elasticsearch Output Plugin
 
 This plugin writes to [Elasticsearch](https://www.elastic.co) via HTTP using Elastic (<http://olivere.github.io/elastic/).>
 
 It supports Elasticsearch releases from 5.x up to 7.x.
 
-## Elasticsearch indexes and templates
+### Elasticsearch indexes and templates
 
 ### Indexes per time-frame
 
@@ -144,10 +144,9 @@ This plugin will format the events in the following way:
 }
 ```
 
-### Configuration:
+### Configuration
 
 ```toml
-# Configuration for Elasticsearch to send metrics to.
 [[outputs.elasticsearch]]
   ## The full HTTP endpoint URL for your Elasticsearch instance
   ## Multiple urls can be specified as part of the same cluster,
@@ -161,7 +160,7 @@ This plugin will format the events in the following way:
   ## Set the interval to check if the Elasticsearch nodes are available
   ## Setting to "0s" will disable the health check (not recommended in production)
   health_check_interval = "10s"
-  ## HTTP basic authentication details
+  ## HTTP basic authentication details.
   # username = "telegraf"
   # password = "mypassword"
 
@@ -197,9 +196,21 @@ This plugin will format the events in the following way:
   template_name = "telegraf"
   ## Set to true if you want telegraf to overwrite an existing template
   overwrite_template = false
+  ## If set to true a unique ID hash will be sent as sha256(concat(timestamp,measurement,series-hash)) string
+  ## it will enable data resend and update metric points avoiding duplicated metrics with diferent id's
+  force_document_id = false
 ```
 
-### Required parameters:
+#### Permissions
+
+If you are using authentication within your Elasticsearch cluster, you need
+to create a account and create a role with at least the manage role in the
+Cluster Privileges category.  Overwise, your account will not be able to
+connect to your Elasticsearch cluster and send logs to your cluster.  After
+that, you need to add "create_indice" and "write" permission to your specific
+index pattern.
+
+#### Required parameters:
 
 * `urls`: A list containing the full HTTP URL of one or more nodes from your Elasticsearch instance.
 * `index_name`: The target index for metrics. You can use the date specifiers below to create indexes per time frame.
@@ -214,7 +225,7 @@ This plugin will format the events in the following way:
 
 Additionally, you can specify dynamic index names by using tags with the notation ```{{tag_name}}```. This will store the metrics with different tag values in different indices. If the tag does not exist in a particular metric, the `default_tag_value` will be used instead.
 
-### Optional parameters:
+#### Optional parameters:
 
 * `timeout`: Elasticsearch client timeout, defaults to "5s" if not set.
 * `enable_sniffer`: Set to true to ask Elasticsearch a list of all cluster nodes, thus it is not necessary to list all nodes in the urls config option.
@@ -224,8 +235,9 @@ Additionally, you can specify dynamic index names by using tags with the notatio
 * `manage_template`: Set to true if you want telegraf to manage its index template. If enabled it will create a recommended index template for telegraf indexes.
 * `template_name`: The template name used for telegraf indexes.
 * `overwrite_template`: Set to true if you want telegraf to overwrite an existing template.
+* `force_document_id`: Set to true will compute a unique hash from as sha256(concat(timestamp,measurement,series-hash)),enables resend or update data withoud ES duplicated documents.
 
-## Known issues
+### Known issues
 
 Integer values collected that are bigger than 2^63 and smaller than 1e21 (or in this exact same window of their negative counterparts) are encoded by golang JSON encoder in decimal format and that is not fully supported by Elasticsearch dynamic field mapping. This causes the metrics with such values to be dropped in case a field mapping has not been created yet on the telegraf index. If that's the case you will see an exception on Elasticsearch side like this:
 

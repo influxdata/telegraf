@@ -31,6 +31,7 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 func newTestUdpListener() (*UdpListener, chan []byte) {
 	in := make(chan []byte, 1500)
 	listener := &UdpListener{
+		Log:                    testutil.Logger{},
 		ServiceAddress:         ":8125",
 		AllowedPendingMessages: 10000,
 		in:                     in,
@@ -78,6 +79,7 @@ func newTestUdpListener() (*UdpListener, chan []byte) {
 
 func TestConnectUDP(t *testing.T) {
 	listener := UdpListener{
+		Log:                    testutil.Logger{},
 		ServiceAddress:         ":8127",
 		AllowedPendingMessages: 10000,
 	}

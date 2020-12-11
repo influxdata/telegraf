@@ -3,15 +3,15 @@ package datadog
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -248,4 +248,46 @@ func TestVerifyValue(t *testing.T) {
 			t.Errorf("%s: verification failed\n", tt.ptIn.Name())
 		}
 	}
+}
+
+func TestNaNIsSkipped(t *testing.T) {
+	plugin := &Datadog{
+		Apikey: "testing",
+		URL:    "", // No request will be sent because all fields are skipped
+	}
+
+	err := plugin.Connect()
+	require.NoError(t, err)
+
+	err = plugin.Write([]telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"time_idle": math.NaN(),
+			},
+			time.Now()),
+	})
+	require.NoError(t, err)
+}
+
+func TestInfIsSkipped(t *testing.T) {
+	plugin := &Datadog{
+		Apikey: "testing",
+		URL:    "", // No request will be sent because all fields are skipped
+	}
+
+	err := plugin.Connect()
+	require.NoError(t, err)
+
+	err = plugin.Write([]telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"time_idle": math.Inf(0),
+			},
+			time.Now()),
+	})
+	require.NoError(t, err)
 }

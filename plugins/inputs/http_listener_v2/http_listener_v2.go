@@ -5,7 +5,6 @@ import (
 	"crypto/subtle"
 	"crypto/tls"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -15,7 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -45,9 +44,11 @@ type HTTPListenerV2 struct {
 	Port           int               `toml:"port"`
 	BasicUsername  string            `toml:"basic_username"`
 	BasicPassword  string            `toml:"basic_password"`
+	HTTPHeaderTags map[string]string `toml:"http_header_tags"`
 	tlsint.ServerConfig
 
 	TimeFunc
+	Log telegraf.Logger
 
 	wg sync.WaitGroup
 
@@ -92,6 +93,11 @@ const sampleConfig = `
   ## You probably want to make sure you have TLS configured above for this.
   # basic_username = "foobar"
   # basic_password = "barfoo"
+
+  ## Optional setting to map http headers into tags
+  ## If the http header is not present on the request, no corresponding tag will be added
+  ## If multiple instances of the http header are present, only the first value will be used
+  # http_header_tags = {"HTTP_HEADER" = "TAG_NAME"}
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -162,7 +168,7 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 		server.Serve(h.listener)
 	}()
 
-	log.Printf("I! [inputs.http_listener_v2] Listening on %s", listener.Addr().String())
+	h.Log.Infof("Listening on %s", listener.Addr().String())
 
 	return nil
 }
@@ -219,12 +225,19 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 
 	metrics, err := h.Parse(bytes)
 	if err != nil {
-		log.Printf("D! [inputs.http_listener_v2] Parse error: %v", err)
+		h.Log.Debugf("Parse error: %s", err.Error())
 		badRequest(res)
 		return
 	}
 
 	for _, m := range metrics {
+		for headerName, measurementName := range h.HTTPHeaderTags {
+			headerValues := req.Header.Get(headerName)
+			if len(headerValues) > 0 {
+				m.AddTag(measurementName, headerValues)
+			}
+		}
+
 		h.acc.AddMetric(m)
 	}
 
@@ -239,7 +252,7 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 		var err error
 		body, err = gzip.NewReader(req.Body)
 		if err != nil {
-			log.Println("D! " + err.Error())
+			h.Log.Debug(err.Error())
 			badRequest(res)
 			return nil, false
 		}
@@ -261,7 +274,7 @@ func (h *HTTPListenerV2) collectQuery(res http.ResponseWriter, req *http.Request
 
 	query, err := url.QueryUnescape(rawQuery)
 	if err != nil {
-		log.Printf("D! [inputs.http_listener_v2] Error parsing query: %v", err)
+		h.Log.Debugf("Error parsing query: %s", err.Error())
 		badRequest(res)
 		return nil, false
 	}

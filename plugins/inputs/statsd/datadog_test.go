@@ -81,13 +81,13 @@ func TestEventGather(t *testing.T) {
 		t.Run(tests[i].name, func(t *testing.T) {
 			err := s.parseEventMessage(tests[i].now, tests[i].message, tests[i].hostname)
 			if tests[i].err {
-				require.NotNil(t, err)
+				require.Error(t, err)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 			require.Equal(t, uint64(i+1), acc.NMetrics())
 
-			require.Nil(t, err)
+			require.NoError(t, err)
 			require.Equal(t, tests[i].expected.title, acc.Metrics[i].Measurement)
 			require.Equal(t, tests[i].expected.tags, acc.Metrics[i].Tags)
 			require.Equal(t, tests[i].expected.fields, acc.Metrics[i].Fields)
@@ -388,7 +388,7 @@ func TestEvents(t *testing.T) {
 		t.Run(tests[i].name, func(t *testing.T) {
 			acc.ClearMetrics()
 			err := s.parseEventMessage(tests[i].args.now, tests[i].args.message, tests[i].args.hostname)
-			require.Nil(t, err)
+			require.NoError(t, err)
 			m := acc.Metrics[0]
 			require.Equal(t, tests[i].expected.title, m.Measurement)
 			require.Equal(t, tests[i].expected.text, m.Fields["text"])

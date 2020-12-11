@@ -69,9 +69,12 @@ var sampleConfig = `
   ## When true add the full cmdline as a tag.
   # cmdline_tag = false
 
-  ## Add PID as a tag instead of a field; useful to differentiate between
-  ## processes whose tags are otherwise the same.  Can create a large number
-  ## of series, use judiciously.
+  ## Add the PID as a tag instead of as a field.  When collecting multiple
+  ## processes with otherwise matching tags this setting should be enabled to
+  ## ensure each process has a unique identity.
+  ##
+  ## Enabling this option may result in a large number of series, especially
+  ## when processes have a short lifetime.
   # pid_tag = false
 
   ## Method to use when finding process IDs.  Can be one of 'pgrep', or
@@ -216,6 +219,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"write_bytes"] = io.WriteBytes
 	}
 
+	createdAt, err := proc.CreateTime() //Returns epoch in ms
+	if err == nil {
+		fields[prefix+"created_at"] = createdAt * 1000000 //Convert ms to ns
+	}
+
 	cpu_time, err := proc.Times()
 	if err == nil {
 		fields[prefix+"cpu_time_user"] = cpu_time.User
@@ -243,6 +251,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"memory_data"] = mem.Data
 		fields[prefix+"memory_stack"] = mem.Stack
 		fields[prefix+"memory_locked"] = mem.Locked
+	}
+
+	mem_perc, err := proc.MemoryPercent()
+	if err == nil {
+		fields[prefix+"memory_usage"] = mem_perc
 	}
 
 	rlims, err := proc.RlimitUsage(true)
@@ -400,7 +413,7 @@ func (p *Procstat) systemdUnitPIDs() ([]PID, error) {
 		if len(kv[1]) == 0 || bytes.Equal(kv[1], []byte("0")) {
 			return nil, nil
 		}
-		pid, err := strconv.Atoi(string(kv[1]))
+		pid, err := strconv.ParseInt(string(kv[1]), 10, 32)
 		if err != nil {
 			return nil, fmt.Errorf("invalid pid '%s'", kv[1])
 		}
@@ -425,7 +438,7 @@ func (p *Procstat) cgroupPIDs() ([]PID, error) {
 		if len(pidBS) == 0 {
 			continue
 		}
-		pid, err := strconv.Atoi(string(pidBS))
+		pid, err := strconv.ParseInt(string(pidBS), 10, 32)
 		if err != nil {
 			return nil, fmt.Errorf("invalid pid '%s'", pidBS)
 		}
