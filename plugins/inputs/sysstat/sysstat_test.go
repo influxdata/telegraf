@@ -13,6 +13,7 @@ import (
 )
 
 var s = Sysstat{
+	Log:        testutil.Logger{},
 	interval:   10,
 	Sadc:       "/usr/lib/sa/sadc",
 	Sadf:       "/usr/bin/sadf",

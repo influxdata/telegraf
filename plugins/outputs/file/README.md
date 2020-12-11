@@ -9,6 +9,11 @@ This plugin writes telegraf metrics to files
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
 
+  ## Use batch serialization format instead of line based delimiting.  The
+  ## batch format allows for the production of non line based output formats and
+  ## may more efficiently encode and write metrics.
+  # use_batch_format = false
+
   ## The file will be rotated after the time interval specified.  When set
   ## to 0 no time based rotation is performed.
   # rotation_interval = "0h"

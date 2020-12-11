@@ -53,6 +53,14 @@ func (r *Response) Close() error {
 	return nil
 }
 
+func MustParse(layout, value string) time.Time {
+	tm, err := time.Parse(layout, value)
+	if err != nil {
+		panic(err)
+	}
+	return tm
+}
+
 func Test(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -87,7 +95,7 @@ func Test(t *testing.T) {
 					}, nil
 				},
 				ContainerLogsF: func(ctx context.Context, containerID string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
-					return &Response{Reader: bytes.NewBuffer([]byte("hello\n"))}, nil
+					return &Response{Reader: bytes.NewBuffer([]byte("2020-04-28T18:43:16.432691200Z hello\n"))}, nil
 				},
 			},
 			expected: []telegraf.Metric{
@@ -98,12 +106,13 @@ func Test(t *testing.T) {
 						"container_image":   "influxdata/telegraf",
 						"container_version": "1.11.0",
 						"stream":            "tty",
+						"source":            "deadbeef",
 					},
 					map[string]interface{}{
 						"container_id": "deadbeef",
 						"message":      "hello",
 					},
-					time.Now(),
+					MustParse(time.RFC3339Nano, "2020-04-28T18:43:16.432691200Z"),
 				),
 			},
 		},
@@ -129,7 +138,7 @@ func Test(t *testing.T) {
 				ContainerLogsF: func(ctx context.Context, containerID string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
 					var buf bytes.Buffer
 					w := stdcopy.NewStdWriter(&buf, stdcopy.Stdout)
-					w.Write([]byte("hello from stdout"))
+					w.Write([]byte("2020-04-28T18:42:16.432691200Z hello from stdout"))
 					return &Response{Reader: &buf}, nil
 				},
 			},
@@ -141,12 +150,13 @@ func Test(t *testing.T) {
 						"container_image":   "influxdata/telegraf",
 						"container_version": "1.11.0",
 						"stream":            "stdout",
+						"source":            "deadbeef",
 					},
 					map[string]interface{}{
 						"container_id": "deadbeef",
 						"message":      "hello from stdout",
 					},
-					time.Now(),
+					MustParse(time.RFC3339Nano, "2020-04-28T18:42:16.432691200Z"),
 				),
 			},
 		},
@@ -155,9 +165,10 @@ func Test(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 			plugin := &DockerLogs{
-				Timeout:       internal.Duration{Duration: time.Second * 5},
-				newClient:     func(string, *tls.Config) (Client, error) { return tt.client, nil },
-				containerList: make(map[string]context.CancelFunc),
+				Timeout:          internal.Duration{Duration: time.Second * 5},
+				newClient:        func(string, *tls.Config) (Client, error) { return tt.client, nil },
+				containerList:    make(map[string]context.CancelFunc),
+				IncludeSourceTag: true,
 			}
 
 			err := plugin.Init()
@@ -169,7 +180,9 @@ func Test(t *testing.T) {
 			acc.Wait(len(tt.expected))
 			plugin.Stop()
 
-			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+			require.Nil(t, acc.Errors) // no errors during gathering
+
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
 }

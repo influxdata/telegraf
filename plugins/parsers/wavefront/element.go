@@ -28,7 +28,7 @@ type WhiteSpaceParser struct {
 type TagParser struct{}
 type LoopedParser struct {
 	wrappedParser ElementParser
-	wsPaser       *WhiteSpaceParser
+	wsParser      *WhiteSpaceParser
 }
 type LiteralParser struct {
 	literal string
@@ -37,7 +37,7 @@ type LiteralParser struct {
 func (ep *NameParser) parse(p *PointParser, pt *Point) error {
 	//Valid characters are: a-z, A-Z, 0-9, hyphen ("-"), underscore ("_"), dot (".").
 	// Forward slash ("/") and comma (",") are allowed if metricName is enclosed in double quotes.
-	// Delta (U+2206) is allowed as the first characeter of the
+	// Delta (U+2206) is allowed as the first character of the
 	// metricName
 	name, err := parseLiteral(p)
 
@@ -136,7 +136,7 @@ func (ep *LoopedParser) parse(p *PointParser, pt *Point) error {
 		if err != nil {
 			return err
 		}
-		err = ep.wsPaser.parse(p, pt)
+		err = ep.wsParser.parse(p, pt)
 		if err == ErrEOF {
 			break
 		}

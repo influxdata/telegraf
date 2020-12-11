@@ -1,12 +1,25 @@
 package github
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
 
-	gh "github.com/google/go-github/github"
+	gh "github.com/google/go-github/v32/github"
 	"github.com/stretchr/testify/require"
 )
+
+func TestNewGithubClient(t *testing.T) {
+	httpClient := &http.Client{}
+	g := &GitHub{}
+	client, err := g.newGithubClient(httpClient)
+	require.NoError(t, err)
+	require.Contains(t, client.BaseURL.String(), "api.github.com")
+	g.EnterpriseBaseURL = "api.example.com/"
+	enterpriseClient, err := g.newGithubClient(httpClient)
+	require.NoError(t, err)
+	require.Contains(t, enterpriseClient.BaseURL.String(), "api.example.com")
+}
 
 func TestSplitRepositoryNameWithWorkingExample(t *testing.T) {
 	var validRepositoryNames = []struct {
@@ -38,7 +51,7 @@ func TestSplitRepositoryNameWithNoSlash(t *testing.T) {
 		t.Run(tt, func(t *testing.T) {
 			_, _, err := splitRepositoryName(tt)
 
-			require.NotNil(t, err)
+			require.Error(t, err)
 		})
 	}
 }

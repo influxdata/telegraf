@@ -3,7 +3,6 @@ package file
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/influxdata/telegraf"
@@ -18,6 +17,8 @@ type File struct {
 	RotationInterval    internal.Duration `toml:"rotation_interval"`
 	RotationMaxSize     internal.Size     `toml:"rotation_max_size"`
 	RotationMaxArchives int               `toml:"rotation_max_archives"`
+	UseBatchFormat      bool              `toml:"use_batch_format"`
+	Log                 telegraf.Logger   `toml:"-"`
 
 	writer     io.Writer
 	closers    []io.Closer
@@ -27,6 +28,11 @@ type File struct {
 var sampleConfig = `
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
+
+  ## Use batch serialization format instead of line based delimiting.  The
+  ## batch format allows for the production of non line based output formats and
+  ## may more efficiently encode metric groups.
+  # use_batch_format = false
 
   ## The file will be rotated after the time interval specified.  When set
   ## to 0 no time based rotation is performed.
@@ -98,15 +104,27 @@ func (f *File) Description() string {
 func (f *File) Write(metrics []telegraf.Metric) error {
 	var writeErr error = nil
 
-	for _, metric := range metrics {
-		b, err := f.serializer.Serialize(metric)
+	if f.UseBatchFormat {
+		octets, err := f.serializer.SerializeBatch(metrics)
 		if err != nil {
-			log.Printf("D! [outputs.file] Could not serialize metric: %v", err)
+			f.Log.Errorf("Could not serialize metric: %v", err)
 		}
 
-		_, err = f.writer.Write(b)
+		_, err = f.writer.Write(octets)
 		if err != nil {
-			writeErr = fmt.Errorf("E! [outputs.file] failed to write message: %v", err)
+			f.Log.Errorf("Error writing to file: %v", err)
+		}
+	} else {
+		for _, metric := range metrics {
+			b, err := f.serializer.Serialize(metric)
+			if err != nil {
+				f.Log.Debugf("Could not serialize metric: %v", err)
+			}
+
+			_, err = f.writer.Write(b)
+			if err != nil {
+				writeErr = fmt.Errorf("E! [outputs.file] failed to write message: %v", err)
+			}
 		}
 	}
 

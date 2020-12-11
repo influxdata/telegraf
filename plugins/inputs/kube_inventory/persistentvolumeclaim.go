@@ -42,6 +42,11 @@ func (ki *KubernetesInventory) gatherPersistentVolumeClaim(pvc v1.PersistentVolu
 		"phase":        pvc.Status.GetPhase(),
 		"storageclass": pvc.Spec.GetStorageClassName(),
 	}
+	for key, val := range pvc.GetSpec().GetSelector().GetMatchLabels() {
+		if ki.selectorFilter.Match(key) {
+			tags["selector_"+key] = val
+		}
+	}
 
 	acc.AddFields(persistentVolumeClaimMeasurement, fields, tags)
 

@@ -4,17 +4,15 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"os"
 	"regexp"
-	"sort"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 	"unsafe"
 
 	"github.com/influxdata/telegraf/internal"
-	itls "github.com/influxdata/telegraf/internal/tls"
+	itls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
@@ -43,6 +41,7 @@ var configHeader = `
 
 func defaultVSphere() *VSphere {
 	return &VSphere{
+		Log: testutil.Logger{},
 		ClusterMetricInclude: []string{
 			"cpu.usage.*",
 			"cpu.usagemhz.*",
@@ -138,7 +137,7 @@ func defaultVSphere() *VSphere {
 		VMInclude:       []string{"/**"},
 		DatastoreMetricInclude: []string{
 			"disk.used.*",
-			"disk.provsioned.*"},
+			"disk.provisioned.*"},
 		DatastoreMetricExclude:  nil,
 		DatastoreInclude:        []string{"/**"},
 		DatacenterMetricInclude: nil,
@@ -153,11 +152,16 @@ func defaultVSphere() *VSphere {
 		ForceDiscoverOnInit:     true,
 		DiscoverConcurrency:     1,
 		CollectConcurrency:      1,
+		Separator:               ".",
 	}
 }
 
-func createSim() (*simulator.Model, *simulator.Server, error) {
+func createSim(folders int) (*simulator.Model, *simulator.Server, error) {
 	model := simulator.VPX()
+
+	model.Folder = folders
+	model.Datacenter = 2
+	//model.App = 1
 
 	err := model.Create()
 	if err != nil {
@@ -181,7 +185,8 @@ func testAlignUniform(t *testing.T, n int) {
 		}
 		values[i] = 1
 	}
-	newInfo, newValues := alignSamples(info, values, 60*time.Second)
+	e := Endpoint{log: testutil.Logger{}}
+	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
 	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
 	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
 	for _, v := range newValues {
@@ -206,7 +211,8 @@ func TestAlignMetrics(t *testing.T) {
 		}
 		values[i] = int64(i%3 + 1)
 	}
-	newInfo, newValues := alignSamples(info, values, 60*time.Second)
+	e := Endpoint{log: testutil.Logger{}}
+	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
 	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
 	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
 	for _, v := range newValues {
@@ -226,64 +232,6 @@ func TestParseConfig(t *testing.T) {
 	require.NotNil(t, tab)
 }
 
-func TestThrottledExecutor(t *testing.T) {
-	max := int64(0)
-	ngr := int64(0)
-	n := 10000
-	var mux sync.Mutex
-	results := make([]int, 0, n)
-	te := NewThrottledExecutor(5)
-	for i := 0; i < n; i++ {
-		func(i int) {
-			te.Run(context.Background(), func() {
-				atomic.AddInt64(&ngr, 1)
-				mux.Lock()
-				defer mux.Unlock()
-				results = append(results, i*2)
-				if ngr > max {
-					max = ngr
-				}
-				time.Sleep(100 * time.Microsecond)
-				atomic.AddInt64(&ngr, -1)
-			})
-		}(i)
-	}
-	te.Wait()
-	sort.Ints(results)
-	for i := 0; i < n; i++ {
-		require.Equal(t, results[i], i*2, "Some jobs didn't run")
-	}
-	require.Equal(t, int64(5), max, "Wrong number of goroutines spawned")
-}
-
-func TestTimeout(t *testing.T) {
-	// Don't run test on 32-bit machines due to bug in simulator.
-	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
-		return
-	}
-
-	m, s, err := createSim()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer m.Remove()
-	defer s.Close()
-
-	v := defaultVSphere()
-	var acc testutil.Accumulator
-	v.Vcenters = []string{s.URL.String()}
-	v.Timeout = internal.Duration{Duration: 1 * time.Nanosecond}
-	require.NoError(t, v.Start(nil)) // We're not using the Accumulator, so it can be nil.
-	defer v.Stop()
-	err = v.Gather(&acc)
-
-	// The accumulator must contain exactly one error and it must be a deadline exceeded.
-	require.Equal(t, 1, len(acc.Errors))
-	require.True(t, strings.Contains(acc.Errors[0].Error(), "context deadline exceeded"))
-}
-
 func TestMaxQuery(t *testing.T) {
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
@@ -291,7 +239,7 @@ func TestMaxQuery(t *testing.T) {
 	if unsafe.Sizeof(i) < 8 {
 		return
 	}
-	m, s, err := createSim()
+	m, s, err := createSim(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,6 +275,20 @@ func TestMaxQuery(t *testing.T) {
 	c2.close()
 }
 
+func testLookupVM(ctx context.Context, t *testing.T, f *Finder, path string, expected int, expectedName string) {
+	poweredOn := types.VirtualMachinePowerState("poweredOn")
+	var vm []mo.VirtualMachine
+	err := f.Find(ctx, "VirtualMachine", path, &vm)
+	require.NoError(t, err)
+	require.Equal(t, expected, len(vm))
+	if expectedName != "" {
+		require.Equal(t, expectedName, vm[0].Name)
+	}
+	for _, v := range vm {
+		require.Equal(t, poweredOn, v.Runtime.PowerState)
+	}
+}
+
 func TestFinder(t *testing.T) {
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
@@ -335,7 +297,7 @@ func TestFinder(t *testing.T) {
 		return
 	}
 
-	m, s, err := createSim()
+	m, s, err := createSim(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -349,13 +311,13 @@ func TestFinder(t *testing.T) {
 
 	f := Finder{c}
 
-	dc := []mo.Datacenter{}
+	var dc []mo.Datacenter
 	err = f.Find(ctx, "Datacenter", "/DC0", &dc)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(dc))
 	require.Equal(t, "DC0", dc[0].Name)
 
-	host := []mo.HostSystem{}
+	var host []mo.HostSystem
 	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_H0/DC0_H0", &host)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(host))
@@ -372,65 +334,77 @@ func TestFinder(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 3, len(host))
 
-	vm := []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/vm/DC0_H0_VM0", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(dc))
-	require.Equal(t, "DC0_H0_VM0", vm[0].Name)
+	var vm []mo.VirtualMachine
+	testLookupVM(ctx, t, &f, "/DC0/vm/DC0_H0_VM0", 1, "")
+	testLookupVM(ctx, t, &f, "/DC0/vm/DC0_C0*", 2, "")
+	testLookupVM(ctx, t, &f, "/DC0/*/DC0_H0_VM0", 1, "DC0_H0_VM0")
+	testLookupVM(ctx, t, &f, "/DC0/*/DC0_H0_*", 2, "")
+	testLookupVM(ctx, t, &f, "/DC0/**/DC0_H0_VM*", 2, "")
+	testLookupVM(ctx, t, &f, "/DC0/**", 4, "")
+	testLookupVM(ctx, t, &f, "/DC1/**", 4, "")
+	testLookupVM(ctx, t, &f, "/**", 8, "")
+	testLookupVM(ctx, t, &f, "/**/vm/**", 8, "")
+	testLookupVM(ctx, t, &f, "/*/host/**/*DC*", 8, "")
+	testLookupVM(ctx, t, &f, "/*/host/**/*DC*VM*", 8, "")
+	testLookupVM(ctx, t, &f, "/*/host/**/*DC*/*/*DC*", 4, "")
 
 	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/vm/DC0_C0*", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(dc))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/*/DC0_H0_VM0", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(dc))
-	require.Equal(t, "DC0_H0_VM0", vm[0].Name)
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/*/DC0_H0_*", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 2, len(vm))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/**/DC0_H0_VM*", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 2, len(vm))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/**", &vm)
+	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, []string{}, &vm)
 	require.NoError(t, err)
 	require.Equal(t, 4, len(vm))
 
+	rf := ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"},
+		excludePaths: []string{"/DC0/vm/DC0_H0_VM0"},
+		resType:      "VirtualMachine",
+	}
 	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/**", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 4, len(vm))
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 3, len(vm))
 
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"},
+		excludePaths: []string{"/**"},
+		resType:      "VirtualMachine",
+	}
 	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/**/DC0_H0_VM*", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 2, len(vm))
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 0, len(vm))
 
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/**"},
+		resType:      "VirtualMachine",
+	}
 	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/**/vm/**", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 4, len(vm))
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 0, len(vm))
 
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/this won't match anything"},
+		resType:      "VirtualMachine",
+	}
 	vm = []mo.VirtualMachine{}
-	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, &vm)
-	require.NoError(t, err)
-	require.Equal(t, 4, len(vm))
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 8, len(vm))
 
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/**/*VM0"},
+		resType:      "VirtualMachine",
+	}
 	vm = []mo.VirtualMachine{}
-	err = f.FindAll(ctx, "VirtualMachine", []string{"/**"}, &vm)
-	require.NoError(t, err)
+	require.NoError(t, rf.FindAll(ctx, &vm))
 	require.Equal(t, 4, len(vm))
 }
 
-func TestAll(t *testing.T) {
+func TestFolders(t *testing.T) {
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
 	var i int
@@ -438,19 +412,142 @@ func TestAll(t *testing.T) {
 		return
 	}
 
-	m, s, err := createSim()
+	m, s, err := createSim(1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer m.Remove()
 	defer s.Close()
 
-	var acc testutil.Accumulator
+	ctx := context.Background()
+
 	v := defaultVSphere()
-	v.Vcenters = []string{s.URL.String()}
-	v.Start(&acc)
+
+	c, err := NewClient(ctx, s.URL, v)
+
+	f := Finder{c}
+
+	var folder []mo.Folder
+	err = f.Find(ctx, "Folder", "/F0", &folder)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(folder))
+	require.Equal(t, "F0", folder[0].Name)
+
+	var dc []mo.Datacenter
+	err = f.Find(ctx, "Datacenter", "/F0/DC1", &dc)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(dc))
+	require.Equal(t, "DC1", dc[0].Name)
+
+	testLookupVM(ctx, t, &f, "/F0/DC0/vm/**/F*", 0, "")
+	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/*VM*", 4, "")
+	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/**", 4, "")
+}
+
+func TestCollection(t *testing.T) {
+	testCollection(t, false)
+}
+
+func TestCollectionNoClusterMetrics(t *testing.T) {
+	testCollection(t, true)
+}
+
+func testCollection(t *testing.T, excludeClusters bool) {
+	mustHaveMetrics := map[string]struct{}{
+		"vsphere.vm.cpu":         {},
+		"vsphere.vm.mem":         {},
+		"vsphere.vm.net":         {},
+		"vsphere.host.cpu":       {},
+		"vsphere.host.mem":       {},
+		"vsphere.host.net":       {},
+		"vsphere.datastore.disk": {},
+	}
+	vCenter := os.Getenv("VCENTER_URL")
+	username := os.Getenv("VCENTER_USER")
+	password := os.Getenv("VCENTER_PASSWORD")
+	v := defaultVSphere()
+	if vCenter != "" {
+		v.Vcenters = []string{vCenter}
+		v.Username = username
+		v.Password = password
+	} else {
+
+		// Don't run test on 32-bit machines due to bug in simulator.
+		// https://github.com/vmware/govmomi/issues/1330
+		var i int
+		if unsafe.Sizeof(i) < 8 {
+			return
+		}
+
+		m, s, err := createSim(0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer m.Remove()
+		defer s.Close()
+		v.Vcenters = []string{s.URL.String()}
+	}
+	if excludeClusters {
+		v.ClusterMetricExclude = []string{"*"}
+	}
+
+	var acc testutil.Accumulator
+
+	require.NoError(t, v.Start(&acc))
 	defer v.Stop()
 	require.NoError(t, v.Gather(&acc))
 	require.Equal(t, 0, len(acc.Errors), fmt.Sprintf("Errors found: %s", acc.Errors))
 	require.True(t, len(acc.Metrics) > 0, "No metrics were collected")
+	cache := make(map[string]string)
+	client, err := v.endpoints[0].clientFactory.GetClient(context.Background())
+	require.NoError(t, err)
+	hostCache := make(map[string]string)
+	for _, m := range acc.Metrics {
+		delete(mustHaveMetrics, m.Measurement)
+
+		if strings.HasPrefix(m.Measurement, "vsphere.vm.") {
+			mustContainAll(t, m.Tags, []string{"esxhostname", "moid", "vmname", "guest", "dcname", "uuid", "vmname"})
+			hostName := m.Tags["esxhostname"]
+			hostMoid, ok := hostCache[hostName]
+			if !ok {
+				// We have to follow the host parent path to locate a cluster. Look up the host!
+				finder := Finder{client}
+				var hosts []mo.HostSystem
+				finder.Find(context.Background(), "HostSystem", "/**/"+hostName, &hosts)
+				require.NotEmpty(t, hosts)
+				hostMoid = hosts[0].Reference().Value
+				hostCache[hostName] = hostMoid
+			}
+			if isInCluster(t, v, client, cache, "HostSystem", hostMoid) { // If the VM lives in a cluster
+				mustContainAll(t, m.Tags, []string{"clustername"})
+			}
+		} else if strings.HasPrefix(m.Measurement, "vsphere.host.") {
+			if isInCluster(t, v, client, cache, "HostSystem", m.Tags["moid"]) { // If the host lives in a cluster
+				mustContainAll(t, m.Tags, []string{"esxhostname", "clustername", "moid", "dcname"})
+			} else {
+				mustContainAll(t, m.Tags, []string{"esxhostname", "moid", "dcname"})
+			}
+		} else if strings.HasPrefix(m.Measurement, "vsphere.cluster.") {
+			mustContainAll(t, m.Tags, []string{"clustername", "moid", "dcname"})
+		} else {
+			mustContainAll(t, m.Tags, []string{"moid", "dcname"})
+		}
+	}
+	require.Empty(t, mustHaveMetrics, "Some metrics were not found")
+}
+
+func isInCluster(t *testing.T, v *VSphere, client *Client, cache map[string]string, resourceKind, moid string) bool {
+	ctx := context.Background()
+	ref := types.ManagedObjectReference{
+		Type:  resourceKind,
+		Value: moid,
+	}
+	_, ok := v.endpoints[0].getAncestorName(ctx, client, "ClusterComputeResource", cache, ref)
+	return ok
+}
+
+func mustContainAll(t *testing.T, tagMap map[string]string, mustHave []string) {
+	for _, tag := range mustHave {
+		require.Contains(t, tagMap, tag)
+	}
 }

@@ -24,7 +24,7 @@ To perform the reverse operation use the [unpivot] processor.
 - cpu,cpu=cpu0,name=time_idle value=42i
 - cpu,cpu=cpu0,name=time_user value=43i
 + cpu,cpu=cpu0 time_idle=42i
-+ cpu,cpu=cpu0 time_user=42i
++ cpu,cpu=cpu0 time_user=43i
 ```
 
 [unpivot]: /plugins/processors/unpivot/README.md

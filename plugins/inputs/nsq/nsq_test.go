@@ -151,7 +151,7 @@ func TestNSQStatsV1(t *testing.T) {
 	}
 }
 
-// v1 version of localhost/stats?format=json reesponse body
+// v1 version of localhost/stats?format=json response body
 var responseV1 = `
 {
     "version": "1.0.0-compat",

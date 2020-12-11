@@ -106,9 +106,9 @@ const groupWeatherResponse = `
 {
     "cnt": 1,
     "list": [{
-		"clouds": {
-			"all": 0
-		},
+        "clouds": {
+            "all": 0
+        },
         "coord": {
             "lat": 48.85,
             "lon": 2.35
@@ -146,6 +146,145 @@ const groupWeatherResponse = `
 }
 `
 
+const rainWeatherResponse = `
+{
+    "cnt": 2,
+    "list": [{
+        "dt": 1544194800,
+        "id": 111,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 9.25
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "rain": {
+            "1h": 1.000
+        },
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
+        }
+    },
+    {
+        "dt": 1544194800,
+        "id": 222,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 9.25
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "rain": {
+            "3h": 3.000
+        },
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
+        }
+    },
+    {
+        "dt": 1544194800,
+        "id": 333,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 9.25
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "rain": {
+            "1h": 1.300,
+            "3h": 999
+        },
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
+        }
+    },
+    {
+        "dt": 1544194800,
+        "id": 444,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 9.25
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
+        }
+    }]
+}
+`
 const batchWeatherResponse = `
 {
 	"cnt": 3,
@@ -283,6 +422,7 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 		Fetch:   []string{"weather", "forecast"},
 		Units:   "metric",
 	}
+	n.Init()
 
 	var acc testutil.Accumulator
 
@@ -293,38 +433,46 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 		testutil.MustMetric(
 			"weather",
 			map[string]string{
-				"city_id":  "2988507",
-				"forecast": "3h",
-				"city":     "Paris",
-				"country":  "FR",
+				"city_id":        "2988507",
+				"forecast":       "3h",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "500",
+				"condition_main": "Rain",
 			},
 			map[string]interface{}{
-				"cloudiness":   int64(88),
-				"humidity":     int64(91),
-				"pressure":     1018.65,
-				"temperature":  6.71,
-				"rain":         0.035,
-				"wind_degrees": 228.501,
-				"wind_speed":   3.76,
+				"cloudiness":            int64(88),
+				"humidity":              int64(91),
+				"pressure":              1018.65,
+				"temperature":           6.71,
+				"rain":                  0.035,
+				"wind_degrees":          228.501,
+				"wind_speed":            3.76,
+				"condition_description": "light rain",
+				"condition_icon":        "10n",
 			},
 			time.Unix(1543622400, 0),
 		),
 		testutil.MustMetric(
 			"weather",
 			map[string]string{
-				"city_id":  "2988507",
-				"forecast": "6h",
-				"city":     "Paris",
-				"country":  "FR",
+				"city_id":        "2988507",
+				"forecast":       "6h",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "500",
+				"condition_main": "Rain",
 			},
 			map[string]interface{}{
-				"cloudiness":   int64(92),
-				"humidity":     int64(98),
-				"pressure":     1032.18,
-				"temperature":  6.38,
-				"rain":         0.049999999999997,
-				"wind_degrees": 335.005,
-				"wind_speed":   2.66,
+				"cloudiness":            int64(92),
+				"humidity":              int64(98),
+				"pressure":              1032.18,
+				"temperature":           6.38,
+				"rain":                  0.049999999999997,
+				"wind_degrees":          335.005,
+				"wind_speed":            2.66,
+				"condition_description": "light rain",
+				"condition_icon":        "10n",
 			},
 			time.Unix(1544043600, 0),
 		),
@@ -358,6 +506,7 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 		Fetch:   []string{"weather"},
 		Units:   "metric",
 	}
+	n.Init()
 
 	var acc testutil.Accumulator
 
@@ -368,22 +517,168 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 		testutil.MustMetric(
 			"weather",
 			map[string]string{
-				"city_id":  "2988507",
-				"forecast": "*",
-				"city":     "Paris",
-				"country":  "FR",
+				"city_id":        "2988507",
+				"forecast":       "*",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "300",
+				"condition_main": "Drizzle",
 			},
 			map[string]interface{}{
-				"cloudiness":   int64(0),
-				"humidity":     int64(87),
-				"pressure":     1007.0,
-				"temperature":  9.25,
-				"rain":         0.0,
-				"sunrise":      int64(1544167818000000000),
-				"sunset":       int64(1544198047000000000),
-				"wind_degrees": 290.0,
-				"wind_speed":   8.7,
-				"visibility":   10000,
+				"cloudiness":            int64(0),
+				"humidity":              int64(87),
+				"pressure":              1007.0,
+				"temperature":           9.25,
+				"rain":                  0.0,
+				"sunrise":               int64(1544167818000000000),
+				"sunset":                int64(1544198047000000000),
+				"wind_degrees":          290.0,
+				"wind_speed":            8.7,
+				"visibility":            10000,
+				"condition_description": "light intensity drizzle",
+				"condition_icon":        "09d",
+			},
+			time.Unix(1544194800, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+}
+
+// Ensure that results containing "1h", "3h", both, or no rain values are parsed correctly
+func TestRainMetrics(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var rsp string
+		if r.URL.Path == "/data/2.5/group" {
+			rsp = rainWeatherResponse
+			w.Header()["Content-Type"] = []string{"application/json"}
+		} else {
+			panic("Cannot handle request")
+		}
+
+		fmt.Fprintln(w, rsp)
+	}))
+	defer ts.Close()
+
+	n := &OpenWeatherMap{
+		BaseUrl: ts.URL,
+		AppId:   "noappid",
+		CityId:  []string{"111", "222", "333", "444"},
+		Fetch:   []string{"weather"},
+		Units:   "metric",
+	}
+	n.Init()
+
+	var acc testutil.Accumulator
+
+	err := n.Gather(&acc)
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		// City with 1h rain value
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":        "111",
+				"forecast":       "*",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "300",
+				"condition_main": "Drizzle",
+			},
+			map[string]interface{}{
+				"cloudiness":            int64(0),
+				"humidity":              int64(87),
+				"pressure":              1007.0,
+				"temperature":           9.25,
+				"rain":                  1.0,
+				"sunrise":               int64(1544167818000000000),
+				"sunset":                int64(1544198047000000000),
+				"wind_degrees":          290.0,
+				"wind_speed":            8.7,
+				"visibility":            10000,
+				"condition_description": "light intensity drizzle",
+				"condition_icon":        "09d",
+			},
+			time.Unix(1544194800, 0),
+		),
+		// City with 3h rain value
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":        "222",
+				"forecast":       "*",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "300",
+				"condition_main": "Drizzle",
+			},
+			map[string]interface{}{
+				"cloudiness":            int64(0),
+				"humidity":              int64(87),
+				"pressure":              1007.0,
+				"temperature":           9.25,
+				"rain":                  3.0,
+				"sunrise":               int64(1544167818000000000),
+				"sunset":                int64(1544198047000000000),
+				"wind_degrees":          290.0,
+				"wind_speed":            8.7,
+				"visibility":            10000,
+				"condition_description": "light intensity drizzle",
+				"condition_icon":        "09d",
+			},
+			time.Unix(1544194800, 0),
+		),
+		// City with both 1h and 3h rain values, prefer the 1h value
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":        "333",
+				"forecast":       "*",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "300",
+				"condition_main": "Drizzle",
+			},
+			map[string]interface{}{
+				"cloudiness":            int64(0),
+				"humidity":              int64(87),
+				"pressure":              1007.0,
+				"temperature":           9.25,
+				"rain":                  1.3,
+				"sunrise":               int64(1544167818000000000),
+				"sunset":                int64(1544198047000000000),
+				"wind_degrees":          290.0,
+				"wind_speed":            8.7,
+				"visibility":            10000,
+				"condition_description": "light intensity drizzle",
+				"condition_icon":        "09d",
+			},
+			time.Unix(1544194800, 0),
+		),
+		// City with no rain values
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":        "444",
+				"forecast":       "*",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "300",
+				"condition_main": "Drizzle",
+			},
+			map[string]interface{}{
+				"cloudiness":            int64(0),
+				"humidity":              int64(87),
+				"pressure":              1007.0,
+				"temperature":           9.25,
+				"rain":                  0.0,
+				"sunrise":               int64(1544167818000000000),
+				"sunset":                int64(1544198047000000000),
+				"wind_degrees":          290.0,
+				"wind_speed":            8.7,
+				"visibility":            10000,
+				"condition_description": "light intensity drizzle",
+				"condition_icon":        "09d",
 			},
 			time.Unix(1544194800, 0),
 		),
@@ -414,6 +709,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 		Fetch:   []string{"weather"},
 		Units:   "metric",
 	}
+	n.Init()
 
 	var acc testutil.Accumulator
 
@@ -424,66 +720,78 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 		testutil.MustMetric(
 			"weather",
 			map[string]string{
-				"city_id":  "524901",
-				"forecast": "*",
-				"city":     "Moscow",
-				"country":  "RU",
+				"city_id":        "524901",
+				"forecast":       "*",
+				"city":           "Moscow",
+				"country":        "RU",
+				"condition_id":   "802",
+				"condition_main": "Clouds",
 			},
 			map[string]interface{}{
-				"cloudiness":   40,
-				"humidity":     int64(46),
-				"pressure":     1014.0,
-				"temperature":  9.57,
-				"wind_degrees": 60.0,
-				"wind_speed":   5.0,
-				"rain":         0.0,
-				"sunrise":      int64(1556416455000000000),
-				"sunset":       int64(1556470779000000000),
-				"visibility":   10000,
+				"cloudiness":            40,
+				"humidity":              int64(46),
+				"pressure":              1014.0,
+				"temperature":           9.57,
+				"wind_degrees":          60.0,
+				"wind_speed":            5.0,
+				"rain":                  0.0,
+				"sunrise":               int64(1556416455000000000),
+				"sunset":                int64(1556470779000000000),
+				"visibility":            10000,
+				"condition_description": "scattered clouds",
+				"condition_icon":        "03d",
 			},
 			time.Unix(1556444155, 0),
 		),
 		testutil.MustMetric(
 			"weather",
 			map[string]string{
-				"city_id":  "703448",
-				"forecast": "*",
-				"city":     "Kiev",
-				"country":  "UA",
+				"city_id":        "703448",
+				"forecast":       "*",
+				"city":           "Kiev",
+				"country":        "UA",
+				"condition_id":   "520",
+				"condition_main": "Rain",
 			},
 			map[string]interface{}{
-				"cloudiness":   0,
-				"humidity":     int64(63),
-				"pressure":     1009.0,
-				"temperature":  19.29,
-				"wind_degrees": 0.0,
-				"wind_speed":   1.0,
-				"rain":         0.0,
-				"sunrise":      int64(1556419155000000000),
-				"sunset":       int64(1556471486000000000),
-				"visibility":   10000,
+				"cloudiness":            0,
+				"humidity":              int64(63),
+				"pressure":              1009.0,
+				"temperature":           19.29,
+				"wind_degrees":          0.0,
+				"wind_speed":            1.0,
+				"rain":                  0.0,
+				"sunrise":               int64(1556419155000000000),
+				"sunset":                int64(1556471486000000000),
+				"visibility":            10000,
+				"condition_description": "light intensity shower rain",
+				"condition_icon":        "09d",
 			},
 			time.Unix(1556444155, 0),
 		),
 		testutil.MustMetric(
 			"weather",
 			map[string]string{
-				"city_id":  "2643743",
-				"forecast": "*",
-				"city":     "London",
-				"country":  "GB",
+				"city_id":        "2643743",
+				"forecast":       "*",
+				"city":           "London",
+				"country":        "GB",
+				"condition_id":   "803",
+				"condition_main": "Clouds",
 			},
 			map[string]interface{}{
-				"cloudiness":   75,
-				"humidity":     int64(66),
-				"pressure":     1019.0,
-				"temperature":  10.62,
-				"wind_degrees": 290.0,
-				"wind_speed":   6.2,
-				"rain":         0.072,
-				"sunrise":      int64(1556426319000000000),
-				"sunset":       int64(1556479032000000000),
-				"visibility":   10000,
+				"cloudiness":            75,
+				"humidity":              int64(66),
+				"pressure":              1019.0,
+				"temperature":           10.62,
+				"wind_degrees":          290.0,
+				"wind_speed":            6.2,
+				"rain":                  0.072,
+				"sunrise":               int64(1556426319000000000),
+				"sunset":                int64(1556479032000000000),
+				"visibility":            10000,
+				"condition_description": "broken clouds",
+				"condition_icon":        "04d",
 			},
 			time.Unix(1556444155, 0),
 		),
@@ -491,4 +799,32 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 	testutil.RequireMetricsEqual(t,
 		expected, acc.GetTelegrafMetrics(),
 		testutil.SortMetrics())
+}
+
+func TestFormatURL(t *testing.T) {
+	n := &OpenWeatherMap{
+		AppId:   "appid",
+		Units:   "units",
+		Lang:    "lang",
+		BaseUrl: "http://foo.com",
+	}
+	n.Init()
+
+	require.Equal(t,
+		"http://foo.com/data/2.5/forecast?APPID=appid&id=12345&lang=lang&units=units",
+		n.formatURL("/data/2.5/forecast", "12345"))
+}
+
+func TestDefaultUnits(t *testing.T) {
+	n := &OpenWeatherMap{}
+	n.Init()
+
+	require.Equal(t, "metric", n.Units)
+}
+
+func TestDefaultLang(t *testing.T) {
+	n := &OpenWeatherMap{}
+	n.Init()
+
+	require.Equal(t, "en", n.Lang)
 }

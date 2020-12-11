@@ -33,6 +33,7 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 func newTestTcpListener() (*TcpListener, chan []byte) {
 	in := make(chan []byte, 1500)
 	listener := &TcpListener{
+		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8194",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      250,
@@ -45,6 +46,7 @@ func newTestTcpListener() (*TcpListener, chan []byte) {
 // benchmark how long it takes to accept & process 100,000 metrics:
 func BenchmarkTCP(b *testing.B) {
 	listener := TcpListener{
+		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8198",
 		AllowedPendingMessages: 100000,
 		MaxTCPConnections:      250,
@@ -76,6 +78,7 @@ func BenchmarkTCP(b *testing.B) {
 
 func TestHighTrafficTCP(t *testing.T) {
 	listener := TcpListener{
+		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8199",
 		AllowedPendingMessages: 100000,
 		MaxTCPConnections:      250,
@@ -103,6 +106,7 @@ func TestHighTrafficTCP(t *testing.T) {
 
 func TestConnectTCP(t *testing.T) {
 	listener := TcpListener{
+		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8194",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      250,
@@ -137,9 +141,10 @@ func TestConnectTCP(t *testing.T) {
 	}
 }
 
-// Test that MaxTCPConections is respected
+// Test that MaxTCPConnections is respected
 func TestConcurrentConns(t *testing.T) {
 	listener := TcpListener{
+		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8195",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
@@ -172,9 +177,10 @@ func TestConcurrentConns(t *testing.T) {
 	assert.Equal(t, io.EOF, err)
 }
 
-// Test that MaxTCPConections is respected when max==1
+// Test that MaxTCPConnections is respected when max==1
 func TestConcurrentConns1(t *testing.T) {
 	listener := TcpListener{
+		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8196",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      1,
@@ -205,9 +211,10 @@ func TestConcurrentConns1(t *testing.T) {
 	assert.Equal(t, io.EOF, err)
 }
 
-// Test that MaxTCPConections is respected
+// Test that MaxTCPConnections is respected
 func TestCloseConcurrentConns(t *testing.T) {
 	listener := TcpListener{
+		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8195",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
@@ -257,16 +264,17 @@ func TestRunParserInvalidMsg(t *testing.T) {
 
 	listener.parser, _ = parsers.NewInfluxParser()
 	listener.wg.Add(1)
-	go listener.tcpParser()
 
 	buf := bytes.NewBuffer(nil)
 	log.SetOutput(buf)
 	defer log.SetOutput(os.Stderr)
+
+	go listener.tcpParser()
 	in <- testmsg
 
 	scnr := bufio.NewScanner(buf)
 	for scnr.Scan() {
-		if strings.Contains(scnr.Text(), fmt.Sprintf(malformedwarn, 1)) {
+		if strings.Contains(scnr.Text(), "tcp_listener has received 1 malformed packets thus far.") {
 			break
 		}
 	}

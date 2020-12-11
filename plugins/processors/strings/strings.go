@@ -1,22 +1,27 @@
 package strings
 
 import (
+	"encoding/base64"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 type Strings struct {
-	Lowercase  []converter `toml:"lowercase"`
-	Uppercase  []converter `toml:"uppercase"`
-	Trim       []converter `toml:"trim"`
-	TrimLeft   []converter `toml:"trim_left"`
-	TrimRight  []converter `toml:"trim_right"`
-	TrimPrefix []converter `toml:"trim_prefix"`
-	TrimSuffix []converter `toml:"trim_suffix"`
-	Replace    []converter `toml:"replace"`
+	Lowercase    []converter `toml:"lowercase"`
+	Uppercase    []converter `toml:"uppercase"`
+	Titlecase    []converter `toml:"titlecase"`
+	Trim         []converter `toml:"trim"`
+	TrimLeft     []converter `toml:"trim_left"`
+	TrimRight    []converter `toml:"trim_right"`
+	TrimPrefix   []converter `toml:"trim_prefix"`
+	TrimSuffix   []converter `toml:"trim_suffix"`
+	Replace      []converter `toml:"replace"`
+	Left         []converter `toml:"left"`
+	Base64Decode []converter `toml:"base64decode"`
 
 	converters []converter
 	init       bool
@@ -36,6 +41,7 @@ type converter struct {
 	Prefix      string
 	Old         string
 	New         string
+	Width       int
 
 	fn ConvertFunc
 }
@@ -49,6 +55,10 @@ const sampleConfig = `
   # [[processors.strings.lowercase]]
   #   field = "uri_stem"
   #   dest = "uri_stem_normalised"
+
+  ## Convert a field value to titlecase
+  # [[processors.strings.titlecase]]
+  #   field = "status"
 
   ## Trim leading and trailing whitespace using the default cutset
   # [[processors.strings.trim]]
@@ -79,6 +89,15 @@ const sampleConfig = `
   #   measurement = "*"
   #   old = ":"
   #   new = "_"
+
+  ## Trims strings based on width
+  # [[processors.strings.left]]
+  #   field = "message"
+  #   width = 10
+
+  ## Decode a base64 encoded utf-8 string
+  # [[processors.strings.base64decode]]
+  #   field = "message"
 `
 
 func (s *Strings) SampleConfig() string {
@@ -221,6 +240,10 @@ func (s *Strings) initOnce() {
 		c.fn = strings.ToUpper
 		s.converters = append(s.converters, c)
 	}
+	for _, c := range s.Titlecase {
+		c.fn = strings.Title
+		s.converters = append(s.converters, c)
+	}
 	for _, c := range s.Trim {
 		c := c
 		if c.Cutset != "" {
@@ -267,6 +290,31 @@ func (s *Strings) initOnce() {
 			} else {
 				return newString
 			}
+		}
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.Left {
+		c := c
+		c.fn = func(s string) string {
+			if len(s) < c.Width {
+				return s
+			} else {
+				return s[:c.Width]
+			}
+		}
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.Base64Decode {
+		c := c
+		c.fn = func(s string) string {
+			data, err := base64.StdEncoding.DecodeString(s)
+			if err != nil {
+				return s
+			}
+			if utf8.Valid(data) {
+				return string(data)
+			}
+			return s
 		}
 		s.converters = append(s.converters, c)
 	}

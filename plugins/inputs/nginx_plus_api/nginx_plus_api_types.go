@@ -17,6 +17,24 @@ type Ssl struct { // added in version 6
 	SessionReuses    int64 `json:"session_reuses"`
 }
 
+type ResolverZones map[string]struct {
+	Requests struct {
+		Name int64 `json:"name"`
+		Srv  int64 `json:"srv"`
+		Addr int64 `json:"addr"`
+	} `json:"requests"`
+	Responses struct {
+		Noerror  int64 `json:"noerror"`
+		Formerr  int64 `json:"formerr"`
+		Servfail int64 `json:"servfail"`
+		Nxdomain int64 `json:"nxdomain"`
+		Notimp   int64 `json:"notimp"`
+		Refused  int64 `json:"refused"`
+		Timedout int64 `json:"timedout"`
+		Unknown  int64 `json:"unknown"`
+	} `json:"responses"`
+}
+
 type HttpRequests struct {
 	Total   int64 `json:"total"`
 	Current int64 `json:"current"`
@@ -38,6 +56,14 @@ type HttpServerZones map[string]struct {
 	Discarded  *int64        `json:"discarded"` // added in version 6
 	Received   int64         `json:"received"`
 	Sent       int64         `json:"sent"`
+}
+
+type HttpLocationZones map[string]struct {
+	Requests  int64         `json:"requests"`
+	Responses ResponseStats `json:"responses"`
+	Discarded *int64        `json:"discarded"` // added in version 6
+	Received  int64         `json:"received"`
+	Sent      int64         `json:"sent"`
 }
 
 type HealthCheckStats struct {

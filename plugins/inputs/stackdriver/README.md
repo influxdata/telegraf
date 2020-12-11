@@ -1,6 +1,7 @@
-# Stackdriver Input Plugin
+# Stackdriver Google Cloud Monitoring Input Plugin
 
-Stackdriver gathers metrics from the [Stackdriver Monitoring API][stackdriver].
+Query data from Google Cloud Monitoring (formerly Stackdriver) using the
+[Cloud Monitoring API v3][stackdriver].
 
 This plugin accesses APIs which are [chargeable][pricing]; you might incur
 costs.
