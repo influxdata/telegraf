@@ -33,10 +33,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// Read raw data
 	buffer := bytes.NewBuffer(buf)
 	reader := bufio.NewReader(buffer)
-	mediatype, params, err := mime.ParseMediaType(p.Header.Get("Content-Type"))
 
 	// Prepare output
 	metricFamilies := make(map[string]*dto.MetricFamily)
+	mediatype, params, err := mime.ParseMediaType(p.Header.Get("Content-Type"))
 	if err == nil && mediatype == "application/vnd.google.protobuf" &&
 		params["encoding"] == "delimited" &&
 		params["proto"] == "io.prometheus.client.MetricFamily" {
