@@ -47,9 +47,6 @@ Processes can be selected for monitoring using one of several methods:
   ## Mode to use when calculating CPU usage. Can be one of 'solaris' or 'irix'.
   # mode = "irix"
 
-  ## Add PID as a tag instead of a field; useful to differentiate between
-  ## processes whose tags are otherwise the same.  Can create a large number
-  ## of series, use judiciously.
   ## Add the PID as a tag instead of as a field.  When collecting multiple
   ## processes with otherwise matching tags this setting should be enabled to
   ## ensure each process has a unique identity.
