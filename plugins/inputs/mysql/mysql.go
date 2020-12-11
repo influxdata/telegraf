@@ -116,9 +116,10 @@ var sampleConfig = `
   #
   ## Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
   interval_slow                   = "30m"
-
+  #
   ## gather metrics from PERFORMANCE_SCHEMA.EVENTS_STATEMENTS_SUMMARY_BY_ACCOUNT_BY_EVENT_NAME
   gather_perf_sum_per_acc_per_event         = false
+  #
   ## list of events to be gathered for gather_perf_sum_per_acc_per_event
   ## in case of empty list all events will be gathered
   perf_summary_events                       = []
@@ -1277,7 +1278,6 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumu
 // gatherPerfSummaryPerAccountPerEvent can be used to fetch enabled metrics from
 // performance_schema.events_statements_summary_by_account_by_event_name
 func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, serv string, acc telegraf.Accumulator) error {
-
 	sqlQuery := perfSummaryPerAccountPerEvent
 
 	var rows *sql.Rows
