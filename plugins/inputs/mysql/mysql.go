@@ -1349,6 +1349,7 @@ func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, serv string, acc
 	)
 
 	var events []interface{}
+	// if we have perf_summary_events set - select only listed events (adding filter criteria for rows)
 	if len(m.PerfSummaryEvents) > 0 {
 		sqlQuery += " WHERE EVENT_NAME IN ("
 		for i, eventName := range m.PerfSummaryEvents {
@@ -1362,6 +1363,7 @@ func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, serv string, acc
 
 		rows, err = db.Query(sqlQuery, events...)
 	} else {
+		// otherwise no filter, hence, select all rows
 		rows, err = db.Query(perfSummaryPerAccountPerEvent)
 	}
 
