@@ -1335,6 +1335,121 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 
 	c.getFieldStringSlice(tbl, "form_urlencoded_tag_keys", &pc.FormUrlencodedTagKeys)
 
+	//for XML parser
+	if node, ok := tbl.Fields["xml"]; ok {
+		if subtbls, ok := node.([]*ast.Table); ok {
+			pc.XMLConfig = make([]parsers.XMLConfig, len(subtbls))
+			for i, subtbl := range subtbls {
+				// Parse the measurment name
+				if val, ok := subtbl.Fields["metric_name"]; ok {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						if str, ok := kv.Value.(*ast.String); ok {
+							pc.XMLConfig[i].MetricQuery = str.Value
+						}
+					}
+				}
+
+				// Parse the root node selector
+				if val, ok := subtbl.Fields["metric_selection"]; ok {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						if str, ok := kv.Value.(*ast.String); ok {
+							pc.XMLConfig[i].Selection = str.Value
+						}
+					}
+				}
+
+				// Parse the timestamp query
+				if val, ok := subtbl.Fields["timestamp"]; ok {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						if str, ok := kv.Value.(*ast.String); ok {
+							pc.XMLConfig[i].Timestamp = str.Value
+						}
+					}
+				}
+
+				// Parse the timestamp query
+				if val, ok := subtbl.Fields["timestamp_format"]; ok {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						if str, ok := kv.Value.(*ast.String); ok {
+							pc.XMLConfig[i].TimestampFmt = str.Value
+						}
+					}
+				}
+
+				// Create the tags and fields and fill them
+				pc.XMLConfig[i].Tags = make(map[string]string)
+				if subsubtbl, ok := subtbl.Fields["tags"].(*ast.Table); ok {
+					for name, val := range subsubtbl.Fields {
+						if kv, ok := val.(*ast.KeyValue); ok {
+							if str, ok := kv.Value.(*ast.String); ok {
+								pc.XMLConfig[i].Tags[name] = str.Value
+							}
+						}
+					}
+				}
+
+				pc.XMLConfig[i].Fields = make(map[string]string)
+				if subsubtbl, ok := subtbl.Fields["fields"].(*ast.Table); ok {
+					for name, val := range subsubtbl.Fields {
+						if kv, ok := val.(*ast.KeyValue); ok {
+							if str, ok := kv.Value.(*ast.String); ok {
+								pc.XMLConfig[i].Fields[name] = str.Value
+							}
+						}
+					}
+				}
+
+				pc.XMLConfig[i].FieldsInt = make(map[string]string)
+				if subsubtbl, ok := subtbl.Fields["fields_int"].(*ast.Table); ok {
+					for name, val := range subsubtbl.Fields {
+						if kv, ok := val.(*ast.KeyValue); ok {
+							if str, ok := kv.Value.(*ast.String); ok {
+								pc.XMLConfig[i].FieldsInt[name] = str.Value
+							}
+						}
+					}
+				}
+
+				if val, ok := subtbl.Fields["field_selection"]; ok {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						if str, ok := kv.Value.(*ast.String); ok {
+							pc.XMLConfig[i].FieldSelection = str.Value
+						}
+					}
+				}
+
+				// Parse the flag for expand the field names relative to the selected nodes
+				if val, ok := subtbl.Fields["field_name_expansion"]; ok {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						if b, ok := kv.Value.(*ast.Boolean); ok {
+							flag, err := b.Boolean()
+							if err != nil {
+								return nil, err
+							}
+							pc.XMLConfig[i].FieldNameExpand = flag
+						}
+					}
+				}
+
+				if val, ok := subtbl.Fields["field_name"]; ok {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						if str, ok := kv.Value.(*ast.String); ok {
+							pc.XMLConfig[i].FieldNameQuery = str.Value
+						}
+					}
+				}
+
+				if val, ok := subtbl.Fields["field_value"]; ok {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						if str, ok := kv.Value.(*ast.String); ok {
+							pc.XMLConfig[i].FieldValueQuery = str.Value
+						}
+					}
+				}
+			}
+		}
+	}
+
 	pc.MetricName = name
 
 	if c.hasErrs() {
@@ -1439,7 +1554,7 @@ func (c *Config) missingTomlField(typ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"wavefront_source_override", "wavefront_use_strict":
+		"wavefront_source_override", "wavefront_use_strict", "xml":
 
 		// ignore fields that are common to all plugins.
 	default:
@@ -1542,6 +1657,7 @@ func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string, target *[
 		}
 	}
 }
+
 func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]models.TagFilter) {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
@@ -1560,168 +1676,6 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 			}
 		}
 	}
-
-	if node, ok := tbl.Fields["xml"]; ok {
-		if subtbls, ok := node.([]*ast.Table); ok {
-			c.XMLConfig = make([]parsers.XMLConfig, len(subtbls))
-			for i, subtbl := range subtbls {
-				// Parse the measurment name
-				if val, ok := subtbl.Fields["metric_name"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							c.XMLConfig[i].MetricQuery = str.Value
-						}
-					}
-				}
-
-				// Parse the root node selector
-				if val, ok := subtbl.Fields["metric_selection"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							c.XMLConfig[i].Selection = str.Value
-						}
-					}
-				}
-
-				// Parse the timestamp query
-				if val, ok := subtbl.Fields["timestamp"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							c.XMLConfig[i].Timestamp = str.Value
-						}
-					}
-				}
-
-				// Parse the timestamp query
-				if val, ok := subtbl.Fields["timestamp_format"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							c.XMLConfig[i].TimestampFmt = str.Value
-						}
-					}
-				}
-
-				// Create the tags and fields and fill them
-				c.XMLConfig[i].Tags = make(map[string]string)
-				if subsubtbl, ok := subtbl.Fields["tags"].(*ast.Table); ok {
-					for name, val := range subsubtbl.Fields {
-						if kv, ok := val.(*ast.KeyValue); ok {
-							if str, ok := kv.Value.(*ast.String); ok {
-								c.XMLConfig[i].Tags[name] = str.Value
-							}
-						}
-					}
-				}
-
-				c.XMLConfig[i].Fields = make(map[string]string)
-				if subsubtbl, ok := subtbl.Fields["fields"].(*ast.Table); ok {
-					for name, val := range subsubtbl.Fields {
-						if kv, ok := val.(*ast.KeyValue); ok {
-							if str, ok := kv.Value.(*ast.String); ok {
-								c.XMLConfig[i].Fields[name] = str.Value
-							}
-						}
-					}
-				}
-
-				c.XMLConfig[i].FieldsInt = make(map[string]string)
-				if subsubtbl, ok := subtbl.Fields["fields_int"].(*ast.Table); ok {
-					for name, val := range subsubtbl.Fields {
-						if kv, ok := val.(*ast.KeyValue); ok {
-							if str, ok := kv.Value.(*ast.String); ok {
-								c.XMLConfig[i].FieldsInt[name] = str.Value
-							}
-						}
-					}
-				}
-
-				if val, ok := subtbl.Fields["field_selection"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							c.XMLConfig[i].FieldSelection = str.Value
-						}
-					}
-				}
-
-				// Parse the flag for expand the field names relative to the selected nodes
-				if val, ok := subtbl.Fields["field_name_expansion"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if b, ok := kv.Value.(*ast.Boolean); ok {
-							flag, err := b.Boolean()
-							if err != nil {
-								return nil, err
-							}
-							c.XMLConfig[i].FieldNameExpand = flag
-						}
-					}
-				}
-
-				if val, ok := subtbl.Fields["field_name"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							c.XMLConfig[i].FieldNameQuery = str.Value
-						}
-					}
-				}
-
-				if val, ok := subtbl.Fields["field_value"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							c.XMLConfig[i].FieldValueQuery = str.Value
-						}
-					}
-				}
-			}
-		}
-	}
-
-	c.MetricName = name
-
-	delete(tbl.Fields, "data_format")
-	delete(tbl.Fields, "separator")
-	delete(tbl.Fields, "templates")
-	delete(tbl.Fields, "tag_keys")
-	delete(tbl.Fields, "json_name_key")
-	delete(tbl.Fields, "json_query")
-	delete(tbl.Fields, "json_string_fields")
-	delete(tbl.Fields, "json_time_format")
-	delete(tbl.Fields, "json_time_key")
-	delete(tbl.Fields, "json_timezone")
-	delete(tbl.Fields, "json_strict")
-	delete(tbl.Fields, "data_type")
-	delete(tbl.Fields, "collectd_auth_file")
-	delete(tbl.Fields, "collectd_security_level")
-	delete(tbl.Fields, "collectd_typesdb")
-	delete(tbl.Fields, "collectd_parse_multivalue")
-	delete(tbl.Fields, "dropwizard_metric_registry_path")
-	delete(tbl.Fields, "dropwizard_time_path")
-	delete(tbl.Fields, "dropwizard_time_format")
-	delete(tbl.Fields, "dropwizard_tags_path")
-	delete(tbl.Fields, "dropwizard_tag_paths")
-	delete(tbl.Fields, "grok_named_patterns")
-	delete(tbl.Fields, "grok_patterns")
-	delete(tbl.Fields, "grok_custom_patterns")
-	delete(tbl.Fields, "grok_custom_pattern_files")
-	delete(tbl.Fields, "grok_timezone")
-	delete(tbl.Fields, "grok_unique_timestamp")
-	delete(tbl.Fields, "csv_column_names")
-	delete(tbl.Fields, "csv_column_types")
-	delete(tbl.Fields, "csv_comment")
-	delete(tbl.Fields, "csv_delimiter")
-	delete(tbl.Fields, "csv_field_columns")
-	delete(tbl.Fields, "csv_header_row_count")
-	delete(tbl.Fields, "csv_measurement_column")
-	delete(tbl.Fields, "csv_skip_columns")
-	delete(tbl.Fields, "csv_skip_rows")
-	delete(tbl.Fields, "csv_tag_columns")
-	delete(tbl.Fields, "csv_timestamp_column")
-	delete(tbl.Fields, "csv_timestamp_format")
-	delete(tbl.Fields, "csv_timezone")
-	delete(tbl.Fields, "csv_trim_space")
-	delete(tbl.Fields, "form_urlencoded_tag_keys")
-	delete(tbl.Fields, "xml")
-
-	return c, nil
 }
 
 func (c *Config) getFieldStringMap(tbl *ast.Table, fieldName string, target *map[string]string) {
