@@ -1,6 +1,6 @@
 # MongoDB Output Plugin
 
-This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt Producer.
+This plugin writes to a MongoDB collection.
 
 ```toml
 [[outputs.mqtt]]
