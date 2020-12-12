@@ -1,4 +1,4 @@
-# MQTT Producer Output Plugin
+# MongoDB Output Plugin
 
 This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt Producer.
 
