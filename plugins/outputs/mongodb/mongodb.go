@@ -127,7 +127,8 @@ func (m *MongoDB) Close() error {
 }
 
 func (m *MongoDB) write(data []interface{}) error {
-	ctx, _ := context.WithTimeout(context.Background(), time.Duration(m.Timeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.Timeout)*time.Second)
+	defer cancel()
 	_, err := m.collection.InsertMany(ctx, data)
 	return err
 }
