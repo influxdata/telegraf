@@ -419,6 +419,7 @@ type jobBuild struct {
 type buildResponse struct {
 	Building  bool   `json:"building"`
 	Duration  int64  `json:"duration"`
+	Number    int64  `json:"number"`
 	Result    string `json:"result"`
 	Timestamp int64  `json:"timestamp"`
 }
@@ -436,6 +437,7 @@ type jobRequest struct {
 	name    string
 	parents []string
 	layer   int
+	number  int64
 }
 
 func (jr jobRequest) combined() []string {
@@ -473,6 +475,7 @@ func (j *Jenkins) gatherJobBuild(jr jobRequest, b *buildResponse, acc telegraf.A
 	fields := make(map[string]interface{})
 	fields["duration"] = b.Duration
 	fields["result_code"] = mapResultCode(b.Result)
+	fields["number"] = b.Number
 
 	acc.AddFields(measurementJob, fields, tags, b.GetTimestamp())
 }

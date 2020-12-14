@@ -8,9 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDellApis(t *testing.T) {
@@ -643,7 +645,6 @@ func checkAuth(r *http.Request, username, password string) bool {
 }
 
 func TestConnection(t *testing.T) {
-
 	r := &Redfish{
 		Address:          "http://127.0.0.1",
 		Username:         "test",
@@ -654,8 +655,10 @@ func TestConnection(t *testing.T) {
 	var acc testutil.Accumulator
 	r.Init()
 	err := r.Gather(&acc)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "connect: connection refused")
+	if assert.Error(t, err) {
+		_, ok := err.(*url.Error)
+		assert.True(t, ok)
+	}
 }
 
 func TestInvalidUsernameorPassword(t *testing.T) {

@@ -530,12 +530,14 @@ func TestGatherJobs(t *testing.T) {
 						Building:  false,
 						Result:    "SUCCESS",
 						Duration:  25558,
+						Number:    3,
 						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
 					},
 					"/job/job2/1/api/json": &buildResponse{
 						Building:  false,
 						Result:    "FAILURE",
 						Duration:  1558,
+						Number:    1,
 						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
 					},
 				},
@@ -549,6 +551,7 @@ func TestGatherJobs(t *testing.T) {
 						},
 						Fields: map[string]interface{}{
 							"duration":    int64(25558),
+							"number":      int64(3),
 							"result_code": 0,
 						},
 					},
@@ -559,6 +562,7 @@ func TestGatherJobs(t *testing.T) {
 						},
 						Fields: map[string]interface{}{
 							"duration":    int64(1558),
+							"number":      int64(1),
 							"result_code": 1,
 						},
 					},
@@ -583,6 +587,7 @@ func TestGatherJobs(t *testing.T) {
 						Building:  false,
 						Result:    "SUCCESS",
 						Duration:  25558,
+						Number:    3,
 						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
 					},
 				},
@@ -596,6 +601,7 @@ func TestGatherJobs(t *testing.T) {
 						},
 						Fields: map[string]interface{}{
 							"duration":    int64(25558),
+							"number":      int64(3),
 							"result_code": 0,
 						},
 					},
@@ -711,24 +717,28 @@ func TestGatherJobs(t *testing.T) {
 						Building:  false,
 						Result:    "FAILURE",
 						Duration:  1558,
+						Number:    1,
 						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
 					},
 					"/job/apps/job/k8s-cloud/job/PR-101/4/api/json": &buildResponse{
 						Building:  false,
 						Result:    "SUCCESS",
 						Duration:  76558,
+						Number:    4,
 						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
 					},
 					"/job/apps/job/k8s-cloud/job/PR-100/1/api/json": &buildResponse{
 						Building:  false,
 						Result:    "SUCCESS",
 						Duration:  91558,
+						Number:    1,
 						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
 					},
 					"/job/apps/job/k8s-cloud/job/PR%201/1/api/json": &buildResponse{
 						Building:  false,
 						Result:    "SUCCESS",
 						Duration:  87832,
+						Number:    1,
 						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
 					},
 				},
@@ -743,6 +753,7 @@ func TestGatherJobs(t *testing.T) {
 						},
 						Fields: map[string]interface{}{
 							"duration":    int64(87832),
+							"number":      int64(1),
 							"result_code": 0,
 						},
 					},
@@ -754,6 +765,7 @@ func TestGatherJobs(t *testing.T) {
 						},
 						Fields: map[string]interface{}{
 							"duration":    int64(91558),
+							"number":      int64(1),
 							"result_code": 0,
 						},
 					},
@@ -765,6 +777,7 @@ func TestGatherJobs(t *testing.T) {
 						},
 						Fields: map[string]interface{}{
 							"duration":    int64(76558),
+							"number":      int64(4),
 							"result_code": 0,
 						},
 					},
@@ -776,6 +789,7 @@ func TestGatherJobs(t *testing.T) {
 						},
 						Fields: map[string]interface{}{
 							"duration":    int64(1558),
+							"number":      int64(1),
 							"result_code": 1,
 						},
 					},
