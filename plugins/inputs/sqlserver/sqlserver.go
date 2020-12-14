@@ -229,8 +229,11 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 }
 
 // Start initialize a list of connection pools
-func (s *SQLServer) Start(ac telegraf.Accumulator) error {
-	initQueries(s)
+func (s *SQLServer) Start(acc telegraf.Accumulator) error {
+	if err := initQueries(s); err != nil {
+		acc.AddError(err)
+		return err
+	}
 
 	if len(s.Servers) == 0 {
 		s.Servers = append(s.Servers, defaultServer)
@@ -239,6 +242,7 @@ func (s *SQLServer) Start(ac telegraf.Accumulator) error {
 	for _, serv := range s.Servers {
 		pool, err := sql.Open("mssql", serv)
 		if err != nil {
+			acc.AddError(err)
 			return err
 		}
 
