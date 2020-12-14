@@ -102,9 +102,11 @@ func (a *api) ListPluginTypes() []PluginConfig {
 	return result
 }
 
-func (a *api) ListRunningPlugins() []Plugin {
-
-	return []Plugin{}
+func (a *api) ListRunningPlugins() (runningPlugins []Plugin) {
+	for _, v := range a.config.Inputs {
+		runningPlugins = append(runningPlugins, v)
+	}
+	return runningPlugins
 }
 
 func (a *api) CreatePlugin(config PluginConfig) PluginID {
