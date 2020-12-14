@@ -1,228 +1,26 @@
----
-defaults:
-  defaults: &defaults
-    working_directory: '/go/src/github.com/influxdata/telegraf'
-    environment:
-      GOFLAGS: -p=8
-  go-1_14: &go-1_14
-    docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.14.9'
-  go-1_15: &go-1_15
-    docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.15.5'
-  mac: &mac
-    macos:
-      xcode: 12.1.0
-    working_directory: '~/go/src/github.com/influxdata/telegraf'
-    environment:
-      HOMEBREW_NO_AUTO_UPDATE: 1
-      GOFLAGS: -p=8
-
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2
 jobs:
-  deps:
-    <<: [ *defaults, *go-1_15 ]
+  build:
+    docker:
+      # specify the version
+      - image: circleci/golang:1.9
+
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      # - image: circleci/postgres:9.4
+
+    #### TEMPLATE_NOTE: go expects specific checkout path representing url
+    #### expecting it in the form of
+    ####   /go/src/github.com/circleci/go-tool
+    ####   /go/src/bitbucket.org/circleci/go-tool
+    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
-      - restore_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
-      - run: 'make deps'
-      - run: 'make tidy'
-      - save_cache:
-          name: 'go module cache'
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - '/go/pkg/mod'
-      - persist_to_workspace:
-          root: '/go'
-          paths:
-            - '*'
-  macdeps:
-    <<: [ *mac ]
-    steps:
-      - checkout
-      - restore_cache:
-          key: mac-go-mod-v2-{{ checksum "go.sum" }}
-      - run: 'brew install go' # latest
-      - run: 'make deps'
-      - run: 'make tidy'
-      - save_cache:
-          name: 'go module cache'
-          key: mac-go-mod-v2-{{ checksum "go.sum" }}
-          paths:
-            - '~/go/pkg/mod'
-            - '/usr/local/Cellar/go'
-            - '/usr/local/bin/go'
-            - '/usr/local/bin/gofmt'
-      - persist_to_workspace:
-          root: '/'
-          paths:
-            - 'usr/local/bin/go'
-            - 'usr/local/Cellar/go'
-            - 'usr/local/bin/gofmt'
-            - 'Users/distiller/go'
 
-  test-go-1.14:
-    <<: [ *defaults, *go-1_14 ]
-    steps:
-      - attach_workspace:
-          at: '/go'
-      - run: 'make'
-      - run: 'make test'
-  test-go-1.14-386:
-    <<: [ *defaults, *go-1_14 ]
-    steps:
-      - attach_workspace:
-          at: '/go'
-      - run: 'GOARCH=386 make'
-      - run: 'GOARCH=386 make test'
-  test-go-1.15:
-    <<: [ *defaults, *go-1_15 ]
-    steps:
-      - attach_workspace:
-          at: '/go'
-      - run: 'make'
-      - run: 'make check'
-      - run: 'make check-deps'
-      - run: 'make test'
-  test-go-1.15-386:
-    <<: [ *defaults, *go-1_15 ]
-    steps:
-      - attach_workspace:
-          at: '/go'
-      - run: 'GOARCH=386 make'
-      - run: 'GOARCH=386 make check'
-      - run: 'GOARCH=386 make test'
-  test-go-darwin:
-    <<: [ *mac ]
-    steps:
-      - attach_workspace:
-          at: '/'
-      - run: 'make'
-      - run: 'make check'
-      - run: 'make test'
-
-  package:
-    <<: [ *defaults, *go-1_15 ]
-    steps:
-      - attach_workspace:
-          at: '/go'
-      - run: 'make package'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
-
-  release:
-    <<: [ *defaults, *go-1_15 ]
-    steps:
-      - attach_workspace:
-          at: '/go'
-      - run: 'make package'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
-  nightly:
-    <<: [ *defaults, *go-1_15 ]
-    steps:
-      - attach_workspace:
-          at: '/go'
-      - run: 'NIGHTLY=1 make package'
-      - run: 'make upload-nightly'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
-
-workflows:
-  version: 2
-  check:
-    jobs:
-      - 'macdeps':
-          filters:
-            tags:
-              only: /.*/
-      - 'deps':
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1.14':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1.14-386':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1.15':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1.15-386':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-darwin':
-          requires:
-            - 'macdeps'
-          filters:
-            tags: # only runs on tags if you specify this filter
-              only: /.*/
-      - 'package':
-          requires:
-            - 'test-go-darwin'
-            - 'test-go-1.14'
-            - 'test-go-1.14-386'
-            - 'test-go-1.15'
-            - 'test-go-1.15-386'
-      - 'release':
-          requires:
-            - 'test-go-darwin'
-            - 'test-go-1.14'
-            - 'test-go-1.14-386'
-            - 'test-go-1.15'
-            - 'test-go-1.15-386'
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
-  nightly:
-    jobs:
-      - 'deps'
-      - 'macdeps'
-      - 'test-go-1.14':
-          requires:
-            - 'deps'
-      - 'test-go-1.14-386':
-          requires:
-            - 'deps'
-      - 'test-go-1.15':
-          requires:
-            - 'deps'
-      - 'test-go-1.15-386':
-          requires:
-            - 'deps'
-      - 'test-go-darwin':
-          requires:
-            - 'macdeps'
-      - 'nightly':
-          requires:
-            - 'test-go-darwin'
-            - 'test-go-1.14'
-            - 'test-go-1.14-386'
-            - 'test-go-1.15'
-            - 'test-go-1.15-386'
-    triggers:
-      - schedule:
-          cron: "0 7 * * *"
-          filters:
-            branches:
-              only:
-                - master
+      # specify any bash command here prefixed with `run: `
+      - run: go get -v -t -d ./...
+      - run: go test -v ./...
