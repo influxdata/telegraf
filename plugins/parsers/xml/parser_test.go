@@ -1,12 +1,17 @@
 package xml
 
 import (
+	"io/ioutil"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/toml"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1016,4 +1021,82 @@ func TestParseMetricQuery(t *testing.T) {
 			testutil.RequireMetricEqual(t, tt.expected, actual)
 		})
 	}
+}
+
+func TestTestCases(t *testing.T) {
+	var tests = []struct {
+		name     string
+		filename string
+	}{
+		{
+			name:     "explicit basic",
+			filename: "testcases/multisensor_explicit_basic.conf",
+		},
+		{
+			name:     "explicit batch",
+			filename: "testcases/multisensor_explicit_batch.conf",
+		},
+		{
+			name:     "field selection batch",
+			filename: "testcases/multisensor_selection_batch.conf",
+		},
+		{
+			name:     "openweathermap forecast",
+			filename: "testcases/openweathermap.conf",
+		},
+	}
+
+	parser := influx.NewParser(influx.NewMetricHandler())
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, header, err := loadTestConfiguration(tt.filename)
+			require.NoError(t, err)
+			cfg.MetricName = "xml"
+
+			// Load the xml-content
+			input, err := testutil.ParseRawLinesFrom(header, "File:")
+			require.NoError(t, err)
+			assert.Len(t, input, 1)
+
+			content, err := ioutil.ReadFile(input[0])
+			require.NoError(t, err)
+
+			// Get the expectations
+			expectedOutputs, err := testutil.ParseMetricsFrom(header, "Expected Output:", parser)
+			require.NoError(t, err)
+
+			expectedErrors, _ := testutil.ParseRawLinesFrom(header, "Expected Error:")
+
+			// Setup the parser and run it.
+			parser := Parser{Configs: []Config{*cfg}}
+			outputs, err := parser.Parse(content)
+			if len(expectedErrors) == 0 {
+				require.NoError(t, err)
+			}
+			// If no timestamp is given we cannot test it. So use the one of the output
+			if cfg.Timestamp == "" {
+				testutil.RequireMetricsEqual(t, expectedOutputs, outputs, testutil.IgnoreTime())
+			} else {
+				testutil.RequireMetricsEqual(t, expectedOutputs, outputs)
+			}
+		})
+	}
+}
+
+func loadTestConfiguration(filename string) (*Config, []string, error) {
+	buf, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	header := make([]string, 0)
+	for _, line := range strings.Split(string(buf), "\n") {
+		if strings.HasPrefix(strings.TrimLeft(line, "\t "), "#") {
+			header = append(header, line)
+		}
+	}
+	cfg := Config{}
+	err = toml.Unmarshal(buf, &cfg)
+	return &cfg, header, err
 }
