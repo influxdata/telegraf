@@ -1340,112 +1340,18 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 		if subtbls, ok := node.([]*ast.Table); ok {
 			pc.XMLConfig = make([]parsers.XMLConfig, len(subtbls))
 			for i, subtbl := range subtbls {
-				// Parse the measurment name
-				if val, ok := subtbl.Fields["metric_name"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							pc.XMLConfig[i].MetricQuery = str.Value
-						}
-					}
-				}
-
-				// Parse the root node selector
-				if val, ok := subtbl.Fields["metric_selection"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							pc.XMLConfig[i].Selection = str.Value
-						}
-					}
-				}
-
-				// Parse the timestamp query
-				if val, ok := subtbl.Fields["timestamp"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							pc.XMLConfig[i].Timestamp = str.Value
-						}
-					}
-				}
-
-				// Parse the timestamp query
-				if val, ok := subtbl.Fields["timestamp_format"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							pc.XMLConfig[i].TimestampFmt = str.Value
-						}
-					}
-				}
-
-				// Create the tags and fields and fill them
-				pc.XMLConfig[i].Tags = make(map[string]string)
-				if subsubtbl, ok := subtbl.Fields["tags"].(*ast.Table); ok {
-					for name, val := range subsubtbl.Fields {
-						if kv, ok := val.(*ast.KeyValue); ok {
-							if str, ok := kv.Value.(*ast.String); ok {
-								pc.XMLConfig[i].Tags[name] = str.Value
-							}
-						}
-					}
-				}
-
-				pc.XMLConfig[i].Fields = make(map[string]string)
-				if subsubtbl, ok := subtbl.Fields["fields"].(*ast.Table); ok {
-					for name, val := range subsubtbl.Fields {
-						if kv, ok := val.(*ast.KeyValue); ok {
-							if str, ok := kv.Value.(*ast.String); ok {
-								pc.XMLConfig[i].Fields[name] = str.Value
-							}
-						}
-					}
-				}
-
-				pc.XMLConfig[i].FieldsInt = make(map[string]string)
-				if subsubtbl, ok := subtbl.Fields["fields_int"].(*ast.Table); ok {
-					for name, val := range subsubtbl.Fields {
-						if kv, ok := val.(*ast.KeyValue); ok {
-							if str, ok := kv.Value.(*ast.String); ok {
-								pc.XMLConfig[i].FieldsInt[name] = str.Value
-							}
-						}
-					}
-				}
-
-				if val, ok := subtbl.Fields["field_selection"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							pc.XMLConfig[i].FieldSelection = str.Value
-						}
-					}
-				}
-
-				// Parse the flag for expand the field names relative to the selected nodes
-				if val, ok := subtbl.Fields["field_name_expansion"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if b, ok := kv.Value.(*ast.Boolean); ok {
-							flag, err := b.Boolean()
-							if err != nil {
-								return nil, err
-							}
-							pc.XMLConfig[i].FieldNameExpand = flag
-						}
-					}
-				}
-
-				if val, ok := subtbl.Fields["field_name"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							pc.XMLConfig[i].FieldNameQuery = str.Value
-						}
-					}
-				}
-
-				if val, ok := subtbl.Fields["field_value"]; ok {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						if str, ok := kv.Value.(*ast.String); ok {
-							pc.XMLConfig[i].FieldValueQuery = str.Value
-						}
-					}
-				}
+				subcfg := pc.XMLConfig[i]
+				c.getFieldString(subtbl, "metric_name", &subcfg.MetricQuery)
+				c.getFieldString(subtbl, "metric_selection", &subcfg.Selection)
+				c.getFieldString(subtbl, "timestamp", &subcfg.Timestamp)
+				c.getFieldString(subtbl, "timestamp_format", &subcfg.TimestampFmt)
+				c.getFieldStringMap(subtbl, "tags", &subcfg.Tags)
+				c.getFieldStringMap(subtbl, "fields", &subcfg.Fields)
+				c.getFieldStringMap(subtbl, "fields_int", &subcfg.FieldsInt)
+				c.getFieldString(subtbl, "field_selection", &subcfg.FieldSelection)
+				c.getFieldBool(subtbl, "field_name_expansion", &subcfg.FieldNameExpand)
+				c.getFieldString(subtbl, "field_name", &subcfg.FieldNameQuery)
+				c.getFieldString(subtbl, "field_value", &subcfg.FieldValueQuery)
 			}
 		}
 	}
