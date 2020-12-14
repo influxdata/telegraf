@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -69,6 +70,7 @@ type MQTTConsumer struct {
 	state         ConnectionState
 	sem           semaphore
 	messages      map[telegraf.TrackingID]bool
+	messagesMutex sync.RWMutex
 	topicTag      string
 
 	ctx    context.Context
@@ -219,7 +221,9 @@ func (m *MQTTConsumer) connect() error {
 
 	m.Log.Infof("Connected %v", m.Servers)
 	m.state = Connected
+	m.messagesMutex.Lock()
 	m.messages = make(map[telegraf.TrackingID]bool)
+	m.messagesMutex.Unlock()
 
 	// Persistent sessions should skip subscription if a session is present, as
 	// the subscriptions are stored by the server.
@@ -258,13 +262,17 @@ func (m *MQTTConsumer) recvMessage(c mqtt.Client, msg mqtt.Message) {
 		select {
 		case track := <-m.acc.Delivered():
 			<-m.sem
+			m.messagesMutex.RLock()
 			_, ok := m.messages[track.ID()]
+			m.messagesMutex.RUnlock()
 			if !ok {
 				// Added by a previous connection
 				continue
 			}
 			// No ack, MQTT does not support durable handling
+			m.messagesMutex.Lock()
 			delete(m.messages, track.ID())
+			m.messagesMutex.Unlock()
 		case m.sem <- empty{}:
 			err := m.onMessage(m.acc, msg)
 			if err != nil {
@@ -290,7 +298,9 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 	}
 
 	id := acc.AddTrackingMetricGroup(metrics)
+	m.messagesMutex.Lock()
 	m.messages[id] = true
+	m.messagesMutex.Unlock()
 	return nil
 }
 
