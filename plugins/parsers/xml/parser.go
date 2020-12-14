@@ -20,18 +20,18 @@ type Parser struct {
 
 type Config struct {
 	MetricName   string
-	MetricQuery  string
-	Selection    string
-	Timestamp    string
-	TimestampFmt string
-	Tags         map[string]string
-	Fields       map[string]string
-	FieldsInt    map[string]string
+	MetricQuery  string            `toml:"metric_name"`
+	Selection    string            `toml:"metric_selection"`
+	Timestamp    string            `toml:"timestamp"`
+	TimestampFmt string            `toml:"timestamp_format"`
+	Tags         map[string]string `toml:"tags"`
+	Fields       map[string]string `toml:"fields"`
+	FieldsInt    map[string]string `toml:"fields_int"`
 
-	FieldSelection  string
-	FieldNameQuery  string
-	FieldValueQuery string
-	FieldNameExpand bool
+	FieldSelection  string `toml:"field_selection"`
+	FieldNameQuery  string `toml:"field_name"`
+	FieldValueQuery string `toml:"field_value"`
+	FieldNameExpand bool   `toml:"field_name_expansion"`
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
