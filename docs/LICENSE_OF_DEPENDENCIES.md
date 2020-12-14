@@ -61,6 +61,7 @@ following works:
 - github.com/gobwas/glob [MIT License](https://github.com/gobwas/glob/blob/master/LICENSE)
 - github.com/gofrs/uuid [MIT License](https://github.com/gofrs/uuid/blob/master/LICENSE)
 - github.com/gogo/protobuf [BSD 3-Clause Clear License](https://github.com/gogo/protobuf/blob/master/LICENSE)
+- github.com/golang-sql/civil [Apache License 2.0](https://github.com/golang-sql/civil/blob/master/LICENSE)
 - github.com/golang/geo [Apache License 2.0](https://github.com/golang/geo/blob/master/LICENSE)
 - github.com/golang/groupcache [Apache License 2.0](https://github.com/golang/groupcache/blob/master/LICENSE)
 - github.com/golang/protobuf [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/protobuf/blob/master/LICENSE)

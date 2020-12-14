@@ -38,7 +38,7 @@ require (
 	github.com/couchbase/go-couchbase v0.0.0-20180501122049-16db1f1fe037
 	github.com/couchbase/gomemcached v0.0.0-20180502221210-0da75df14530 // indirect
 	github.com/couchbase/goutils v0.0.0-20180530154633-e865a1461c8a // indirect
-	github.com/denisenkom/go-mssqldb v0.0.0-20190707035753-2be1aa521ff4
+	github.com/denisenkom/go-mssqldb v0.9.0
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/dimchansky/utfbom v1.1.0
 	github.com/docker/distribution v2.6.0-rc.1.0.20170726174610-edc3ab29cdff+incompatible // indirect
@@ -65,6 +65,7 @@ require (
 	github.com/google/go-cmp v0.5.2
 	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.1.12
+	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
@@ -134,6 +135,7 @@ require (
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
 	go.starlark.net v0.0.0-20200901195727-6e684ef5eeee
+	golang.org/x/crypto v0.0.0-20201208171446-5f87f3452ae9 // indirect
 	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73
