@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	defaultTimeout = 10
-	pluginName     = "oracledb"
+	defaultQueryTimeout = 10
+	pluginName          = "oracledb"
 )
 
 type OracleDB struct {
@@ -131,20 +131,22 @@ func (o *OracleDB) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if q.Timeout <= 0 {
-			q.Timeout = defaultTimeout
+			q.Timeout = defaultQueryTimeout
 		}
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Duration(q.Timeout)*time.Second)
+		ctx, ctxClose := context.WithTimeout(context.Background(), time.Duration(q.Timeout)*time.Second)
 
 		rows, err := o.DB.QueryContext(ctx, q.Sqlquery)
 		if err != nil {
 			o.Log.Errorf("db=%s skip query %s due to error: %s", o.ConnectionString, queryID, err)
+			ctxClose()
 			continue
 		}
 
 		columns, err := rows.ColumnTypes()
 		if err != nil {
 			o.Log.Errorf("db=%s skip query %s due to obtaining column data error: %s", o.ConnectionString, queryID, err)
+			ctxClose()
 			_ = rows.Close()
 			continue
 		}
@@ -156,6 +158,7 @@ func (o *OracleDB) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 
+		ctxClose()
 		_ = rows.Close()
 	}
 
@@ -235,7 +238,7 @@ func (o *OracleDB) getDBInfo() (*map[string]string, error) {
 		"SYS_CONTEXT('USERENV', 'DB_UNIQUE_NAME') " +
 		"FROM DUAL"
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultQueryTimeout*time.Second)
 	defer cancel()
 
 	if err := o.DB.QueryRowContext(ctx, query).Scan(

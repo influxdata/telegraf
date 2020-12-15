@@ -1,14 +1,14 @@
 package oracledb
 
 import (
-  "database/sql/driver"
-  "strings"
-  "testing"
+	"database/sql/driver"
+	"strings"
+	"testing"
 
-  "github.com/DATA-DOG/go-sqlmock"
-  "github.com/influxdata/telegraf/testutil"
-  "github.com/stretchr/testify/assert"
-  "github.com/stretchr/testify/require"
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func escapeExpectedQuery(q string) string {
