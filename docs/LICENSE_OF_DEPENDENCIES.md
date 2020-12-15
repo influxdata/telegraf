@@ -59,6 +59,7 @@ following works:
 - github.com/goburrow/modbus [BSD 3-Clause "New" or "Revised" License](https://github.com/goburrow/modbus/blob/master/LICENSE)
 - github.com/goburrow/serial [MIT License](https://github.com/goburrow/serial/LICENSE)
 - github.com/gobwas/glob [MIT License](https://github.com/gobwas/glob/blob/master/LICENSE)
+- github.com/godror/godror [Apache License 2.0](https://github.com/godror/godror/blob/master/LICENSE.md)
 - github.com/gofrs/uuid [MIT License](https://github.com/gofrs/uuid/blob/master/LICENSE)
 - github.com/gogo/protobuf [BSD 3-Clause Clear License](https://github.com/gogo/protobuf/blob/master/LICENSE)
 - github.com/golang/geo [Apache License 2.0](https://github.com/golang/geo/blob/master/LICENSE)
