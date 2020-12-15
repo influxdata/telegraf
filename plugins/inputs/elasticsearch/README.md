@@ -53,7 +53,7 @@ Note that specific statistics information can change between Elasticsearch versi
   cluster_stats_only_from_master = true
 
   ## Indices to collect; can be one or more indices names or _all
-  ## Use of up to one wildcard (*) is allowed. Use the wildcard at the end to retrieve index names that end with a changing value, like a  ## date.
+  ## Use of wildcards is allowed. Use a wildcard at the end to retrieve index names that end with a changing value, like a date.
   indices_include = ["_all"]
 
   ## One of "shards", "cluster", "indices"
@@ -77,9 +77,7 @@ Note that specific statistics information can change between Elasticsearch versi
   # insecure_skip_verify = false
 
   ## Sets the number of most recent indices to return for indices that are configured with a date-stamped suffix.
-  ## Each 'indices_include' entry with a wildcard (*) at the end will group together all indices that match it, and sort them
-  ## by the date or number after the wildcard. Metrics then are gathered for only the 'num_most_recent_indices' amount of most recent 
-  ## indices.
+  ## Each 'indices_include' entry ending with a wildcard (*) or glob matching pattern will group together all indices that match it, and ## sort them by the date or number after the wildcard. Metrics then are gathered for only the 'num_most_recent_indices' amount of most ## recent indices.
   # num_most_recent_indices = 0
 ```
 

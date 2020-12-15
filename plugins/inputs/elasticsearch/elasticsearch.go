@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -115,7 +116,7 @@ const sampleConfig = `
   cluster_stats_only_from_master = true
 
   ## Indices to collect; can be one or more indices names or _all
-  ## Use of up to one wildcard (*) is allowed. Use the wildcard at the end to retrieve index names that end with a changing value, like a date.
+  ## Use of wildcards is allowed. Use a wildcard at the end to retrieve index names that end with a changing value, like a date.
   indices_include = ["_all"]
 
   ## One of "shards", "cluster", "indices"
@@ -138,7 +139,7 @@ const sampleConfig = `
   # insecure_skip_verify = false
 
   ## Sets the number of most recent indices to return for indices that are configured with a date-stamped suffix.
-  ## Each 'indices_include' entry with a wildcard (*) at the end will group together all indices that match it, and sort them
+  ## Each 'indices_include' entry ending with a wildcard (*) or glob matching pattern will group together all indices that match it, and sort them
   ## by the date or number after the wildcard. Metrics then are gathered for only the 'num_most_recent_indices' amount of most recent indices.
   # num_most_recent_indices = 0
 `
@@ -544,7 +545,10 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 // gatherSortedIndicesStats gathers stats for all indices in no particular order.
 func (e *Elasticsearch) gatherIndividualIndicesStats(indices map[string]indexStat, now time.Time, acc telegraf.Accumulator) error {
 	// Sort indices into buckets based on their configured prefix, if any matches.
-	categorizedIndexNames := e.categorizeIndices(indices)
+	categorizedIndexNames, err := e.categorizeIndices(indices)
+	if err != nil {
+		return err
+	}
 
 	for _, matchingIndices := range categorizedIndexNames {
 		// Establish the number of each category of indices to use. User can configure to use only the latest 'X' amount.
@@ -573,7 +577,7 @@ func (e *Elasticsearch) gatherIndividualIndicesStats(indices map[string]indexSta
 	return nil
 }
 
-func (e *Elasticsearch) categorizeIndices(indices map[string]indexStat) map[string][]string {
+func (e *Elasticsearch) categorizeIndices(indices map[string]indexStat) (map[string][]string, error) {
 	categorizedIndexNames := map[string][]string{}
 
 	// If all indices are configured to be gathered, bucket them all together.
@@ -582,23 +586,31 @@ func (e *Elasticsearch) categorizeIndices(indices map[string]indexStat) map[stri
 			categorizedIndexNames["_all"] = append(categorizedIndexNames["_all"], indexName)
 		}
 
-		return categorizedIndexNames
+		return categorizedIndexNames, nil
 	}
 
-	// Bucket each returned index with its associated configured index wildcard (if any match).
+	// Compile the configured indexes to match.
+	indexMatchers, err := e.compileIndexMatchers()
+	if err != nil {
+		return nil, err
+	}
+
+	// Bucket each returned index with its associated configured index (if any match).
 	for indexName := range indices {
-		matchingPrefix := indexName
-		for _, configuredIndex := range e.IndicesInclude {
-			// If an index name was configured with a wildcard, check if the index found matches the configured one.
-			if strings.HasSuffix(configuredIndex, "*") && strings.HasPrefix(indexName, strings.TrimSuffix(configuredIndex, "*")) {
-				matchingPrefix = configuredIndex
+		match := indexName
+		for name, matcher := range indexMatchers {
+			// If a configured index matches one of the returned indexes, mark it as a match.
+			if matcher.Match(match) {
+				match = name
+				break
 			}
 		}
 
-		categorizedIndexNames[matchingPrefix] = append(categorizedIndexNames[matchingPrefix], indexName)
+		// Bucket all matching indices together for sorting.
+		categorizedIndexNames[match] = append(categorizedIndexNames[match], indexName)
 	}
 
-	return categorizedIndexNames
+	return categorizedIndexNames, nil
 }
 
 func (e *Elasticsearch) gatherSingleIndexStats(name string, index indexStat, now time.Time, acc telegraf.Accumulator) error {
@@ -726,6 +738,23 @@ func (e *Elasticsearch) gatherJSONData(url string, v interface{}) error {
 	}
 
 	return nil
+}
+
+func (e *Elasticsearch) compileIndexMatchers() (map[string]filter.Filter, error) {
+	indexMatchers := map[string]filter.Filter{}
+	var err error
+
+	// Compile each configured index into a glob matcher.
+	for _, configuredIndex := range e.IndicesInclude {
+		if _, exists := indexMatchers[configuredIndex]; !exists {
+			indexMatchers[configuredIndex], err = filter.Compile([]string{configuredIndex})
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return indexMatchers, nil
 }
 
 func init() {
