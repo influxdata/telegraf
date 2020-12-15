@@ -390,12 +390,12 @@ DECLARE @lastIntervalEndTimestamp BIGINT = 0;
 IF @QueryData != '' AND @QueryData IS NOT NULL
 	SET @lastIntervalEndTimestamp = CAST(@QueryData AS BIGINT);
 
-DECLARE @magicNumberDays BIGINT = 4294967296, @magicNumberSeconds BIGINT = 300, @secondsInDay INT = 86400;
+DECLARE @secondsInDay INT = 86400;
 
 DECLARE @timeGrain BIGINT = (SELECT interval_length_minutes * 60 FROM sys.database_query_store_options WITH (NOLOCK)); --use query store time grain
 
 DECLARE @currDate DATETIME = GETUTCDATE();
-DECLARE @currIntervalEndTimestamp BIGINT = CONVERT(BIGINT, DATEDIFF(day, 0, @currDate)) * @secondsInDay + DATEDIFF(second, DATEADD(day, DATEDIFF(day, 0, @currDate), 0), @currDate) / @timeGrain * @timeGrain;
+DECLARE @currIntervalEndTimestamp BIGINT = DATEDIFF_BIG(second, 0, @currDate) / @timeGrain * @timeGrain;
 IF @lastIntervalEndTimestamp = @currIntervalEndTimestamp
 	RETURN;
 
@@ -417,14 +417,11 @@ SELECT
 	CONVERT(varchar(36), NEWID()) AS [measurement_id],
 	REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance],
 	DB_NAME() AS [database_name],
-	CONVERT(datetime, rsi.start_time, 1) AS interval_start_time,
-	CONVERT(datetime, rsi.end_time, 1) AS interval_end_time,
-	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1)), CONVERT(datetime, rsi.start_time, 1))) * @magicNumberSeconds AS interval_start_time_d,
-	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1)), CONVERT(datetime, rsi.end_time, 1))) * @magicNumberSeconds AS interval_end_time_d,
+	CONVERT(nvarchar(max), rsi.start_time, 126) AS interval_start_time,
+	CONVERT(nvarchar(max), rsi.end_time, 126) AS interval_end_time,	
 	q.query_id,
 	CONVERT(nvarchar(max), q.query_hash, 1) as query_hash,
 	p.plan_id,
-	CONVERT(nvarchar(max), q.last_compile_batch_sql_handle, 1) as last_compile_batch_sql_handle,
 	CONVERT(nvarchar(max), p.query_plan_hash, 1) as query_plan_hash,
 	rs.max_logical_io_reads as max_logical_io_reads,
 	rs.avg_logical_io_reads as avg_logical_io_reads,
@@ -468,14 +465,11 @@ SELECT
 	CONVERT(varchar(36), NEWID()) AS [measurement_id],
 	REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance],
 	DB_NAME() AS [database_name],
-	CONVERT(datetime, rsi.start_time, 1) AS interval_start_time,
-	CONVERT(datetime, rsi.end_time, 1) AS interval_end_time,
-	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1)), CONVERT(datetime, rsi.start_time, 1))) * @magicNumberSeconds AS interval_start_time_d,
-	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1)), CONVERT(datetime, rsi.end_time, 1))) * @magicNumberSeconds AS interval_end_time_d,
+	CONVERT(nvarchar(max), rsi.start_time, 126) AS interval_start_time,
+	CONVERT(nvarchar(max), rsi.end_time, 126) AS interval_end_time,
 	q.query_id,
 	CONVERT(nvarchar(max), q.query_hash, 1) as query_hash,
 	p.plan_id,
-	CONVERT(nvarchar(max), q.last_compile_batch_sql_handle, 1) as last_compile_batch_sql_handle,
 	CONVERT(nvarchar(max), p.query_plan_hash, 1) as query_plan_hash,
 	ws.wait_category_desc AS wait_category_s,
 	ws.execution_type AS exec_type_d,
@@ -1349,12 +1343,12 @@ SELECT TOP 1 @lastIntervalEndTimestamp = [timestamp] FROM #CachedDbTimestamps WH
 
 INSERT INTO #DbTimestamps([id], [timestamp]) VALUES(DB_ID(), @lastIntervalEndTimestamp)
 
-DECLARE @magicNumberDays BIGINT = 4294967296, @magicNumberSeconds BIGINT = 300, @secondsInDay INT = 86400;
+DECLARE @secondsInDay INT = 86400;
 
 DECLARE @timeGrain BIGINT = (SELECT interval_length_minutes * 60 FROM sys.database_query_store_options WITH (NOLOCK)); --use query store time grain
 
 DECLARE @currDate DATETIME = GETUTCDATE();
-DECLARE @currIntervalEndTimestamp BIGINT = CONVERT(BIGINT, DATEDIFF(day, 0, @currDate)) * @secondsInDay + DATEDIFF(second, DATEADD(day, DATEDIFF(day, 0, @currDate), 0), @currDate) / @timeGrain * @timeGrain;
+DECLARE @currIntervalEndTimestamp BIGINT = DATEDIFF_BIG(second, 0, @currDate) / @timeGrain * @timeGrain;
 IF @lastIntervalEndTimestamp = @currIntervalEndTimestamp
 	RETURN;
 
@@ -1376,14 +1370,11 @@ CREATE TABLE #QueryStoreMetrics(
 	measurement_id varchar(36),
 	sql_instance nvarchar(256),
 	[database_name] nvarchar(128),
-	interval_start_time datetime,
-	interval_end_time datetime,
-	interval_start_time_d bigint,
-	interval_end_time_d bigint,
+	interval_start_time nvarchar(max),
+	interval_end_time nvarchar(max),
 	query_id bigint,
 	query_hash nvarchar(max),
 	plan_id bigint,
-	last_compile_batch_sql_handle nvarchar(max),
 	query_plan_hash nvarchar(max),
 	max_logical_io_reads bigint,
 	avg_logical_io_reads float,
@@ -1417,14 +1408,11 @@ SELECT
 	CONVERT(varchar(36), NEWID()) AS [measurement_id],
 	REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance],
 	DB_NAME() AS [database_name],
-	CONVERT(datetime, rsi.start_time, 1) AS interval_start_time,
-	CONVERT(datetime, rsi.end_time, 1) AS interval_end_time,
-	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1)), CONVERT(datetime, rsi.start_time, 1))) * @magicNumberSeconds AS interval_start_time_d,
-	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1)), CONVERT(datetime, rsi.end_time, 1))) * @magicNumberSeconds AS interval_end_time_d,
+	CONVERT(nvarchar(max), rsi.start_time, 126) AS interval_start_time,
+	CONVERT(nvarchar(max), rsi.end_time, 126) AS interval_end_time,
 	q.query_id,
 	CONVERT(nvarchar(max), q.query_hash, 1) as query_hash,
 	p.plan_id,
-	CONVERT(nvarchar(max), q.last_compile_batch_sql_handle, 1) as last_compile_batch_sql_handle,
 	CONVERT(nvarchar(max), p.query_plan_hash, 1) as query_plan_hash,
 	rs.max_logical_io_reads as max_logical_io_reads,
 	rs.avg_logical_io_reads as avg_logical_io_reads,
@@ -1470,14 +1458,11 @@ CREATE TABLE #QueryStoreWaitStat(
 	measurement_id varchar(36),
 	sql_instance nvarchar(256),
 	[database_name] nvarchar(128),
-	interval_start_time datetime,
-	interval_end_time datetime,
-	interval_start_time_d bigint,
-	interval_end_time_d bigint,
+	interval_start_time nvarchar(max),
+	interval_end_time nvarchar(max),
 	query_id bigint,
 	query_hash nvarchar(max),
 	plan_id bigint,
-	last_compile_batch_sql_handle nvarchar(max),
 	query_plan_hash nvarchar(max),
 	wait_category_s nvarchar(60),
 	exec_type_d tinyint,
@@ -1493,14 +1478,11 @@ SELECT
 	CONVERT(varchar(36), NEWID()) AS [measurement_id],
 	REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance],
 	DB_NAME() AS [database_name],
-	CONVERT(datetime, rsi.start_time, 1) AS interval_start_time,
-	CONVERT(datetime, rsi.end_time, 1) AS interval_end_time,
-	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.start_time, 1)), CONVERT(datetime, rsi.start_time, 1))) * @magicNumberSeconds AS interval_start_time_d,
-	CONVERT(BIGINT, DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1))) * @magicNumberDays + DATEDIFF(second, 0, DATEADD(day,-DATEDIFF(day, 0, CONVERT(datetime, rsi.end_time, 1)), CONVERT(datetime, rsi.end_time, 1))) * @magicNumberSeconds AS interval_end_time_d,
+	CONVERT(nvarchar(max), rsi.start_time, 126) AS interval_start_time,
+	CONVERT(nvarchar(max), rsi.end_time, 126) AS interval_end_time,
 	q.query_id,
 	CONVERT(nvarchar(max), q.query_hash, 1) as query_hash,
 	p.plan_id,
-	CONVERT(nvarchar(max), q.last_compile_batch_sql_handle, 1) as last_compile_batch_sql_handle,
 	CONVERT(nvarchar(max), p.query_plan_hash, 1) as query_plan_hash,
 	ws.wait_category_desc AS wait_category_s,
 	ws.execution_type AS exec_type_d,
