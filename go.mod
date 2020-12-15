@@ -14,6 +14,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.9.3
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
 	github.com/BurntSushi/toml v0.3.1
+	github.com/DATA-DOG/go-sqlmock v1.3.3
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
 	github.com/Microsoft/ApplicationInsights-Go v0.4.2
 	github.com/Microsoft/go-winio v0.4.9 // indirect
@@ -50,13 +51,14 @@ require (
 	github.com/ericchiang/k8s v1.2.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/glinton/ping v0.1.4-0.20200311211934-5ac87da8cd96
-	github.com/go-logfmt/logfmt v0.4.0
+	github.com/go-logfmt/logfmt v0.5.0
 	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/goburrow/modbus v0.1.0
 	github.com/goburrow/serial v0.1.0 // indirect
 	github.com/gobwas/glob v0.2.3
+	github.com/godror/godror v0.22.0
 	github.com/gofrs/uuid v2.1.0+incompatible
 	github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
