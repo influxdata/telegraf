@@ -19,9 +19,10 @@ type Connection struct {
 }
 
 func NewConnection(server, privilege, hexKey string) *Connection {
-	conn := &Connection{}
-	conn.Privilege = privilege
-	conn.HexKey = hexKey
+	conn := &Connection{
+		Privilege: privilege,
+		HexKey: hexKey,
+	}
 	inx1 := strings.LastIndex(server, "@")
 	inx2 := strings.Index(server, "(")
 
