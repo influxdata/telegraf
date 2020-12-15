@@ -190,6 +190,8 @@ func TestParseValue(t *testing.T) {
 		{sql.RawBytes("YES"), 1, true},
 		{sql.RawBytes("No"), 0, true},
 		{sql.RawBytes("Yes"), 1, true},
+		{sql.RawBytes("-794"), int64(-794), true},
+		{sql.RawBytes("18446744073709552333"), float64(18446744073709552000), true},
 		{sql.RawBytes(""), nil, false},
 	}
 	for _, cases := range testCases {

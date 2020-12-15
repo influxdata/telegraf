@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/BurntSushi/toml"
@@ -115,7 +116,11 @@ func createPluginsWithTomlConfig(md toml.MetaData, conf config) (loadedConfig, e
 		plugin := creator()
 		if len(primitives) > 0 {
 			primitive := primitives[0]
-			if err := md.PrimitiveDecode(primitive, plugin); err != nil {
+			var p telegraf.PluginDescriber = plugin
+			if processor, ok := plugin.(unwrappable); ok {
+				p = processor.Unwrap()
+			}
+			if err := md.PrimitiveDecode(primitive, p); err != nil {
 				return loadedConf, err
 			}
 		}
@@ -152,16 +157,23 @@ func DefaultImportedPlugins() (config, error) {
 		Outputs:    map[string][]toml.Primitive{},
 	}
 	for name := range inputs.Inputs {
+		log.Println("No config found. Loading default config for plugin", name)
 		conf.Inputs[name] = []toml.Primitive{}
 		return conf, nil
 	}
 	for name := range processors.Processors {
+		log.Println("No config found. Loading default config for plugin", name)
 		conf.Processors[name] = []toml.Primitive{}
 		return conf, nil
 	}
 	for name := range outputs.Outputs {
+		log.Println("No config found. Loading default config for plugin", name)
 		conf.Outputs[name] = []toml.Primitive{}
 		return conf, nil
 	}
 	return conf, nil
+}
+
+type unwrappable interface {
+	Unwrap() telegraf.Processor
 }

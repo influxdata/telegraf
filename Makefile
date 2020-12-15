@@ -1,13 +1,8 @@
-ifeq ($(OS), Windows_NT)
-	devnull := nul
-else
-	devnull := /dev/null
-endif
-
-next_version := 1.16.0
-tag := $(shell git describe --exact-match --tags 2>$(devnull))
+next_version :=  $(shell cat build_version.txt)
+tag := $(shell git describe --exact-match --tags 2>git_describe_error.tmp; rm -f git_describe_error.tmp)
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
+glibc_version := 2.17
 
 ifdef NIGHTLY
 	version := $(next_version)
@@ -46,7 +41,7 @@ GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 
-LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch)
+LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
 ifneq ($(tag),)
 	LDFLAGS += -X main.version=$(version)
 endif
@@ -94,6 +89,11 @@ deps:
 telegraf:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
+# Used by dockerfile builds
+.PHONY: go-install
+go-install:
+	go install -mod=mod -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
+
 .PHONY: test
 test:
 	go test -short $(race_detector) ./...
@@ -114,12 +114,7 @@ fmtcheck:
 
 .PHONY: test-windows
 test-windows:
-	go test -short $(race_detector) ./plugins/inputs/ping/...
-	go test -short $(race_detector) ./plugins/inputs/win_perf_counters/...
-	go test -short $(race_detector) ./plugins/inputs/win_services/...
-	go test -short $(race_detector) ./plugins/inputs/procstat/...
-	go test -short $(race_detector) ./plugins/inputs/ntpq/...
-	go test -short $(race_detector) ./plugins/processors/port_name/...
+	go test -short ./...
 
 .PHONY: vet
 vet:
@@ -160,7 +155,7 @@ clean:
 
 .PHONY: docker-image
 docker-image:
-	docker build -f scripts/stretch.docker -t "telegraf:$(COMMIT)" .
+	docker build -f scripts/buster.docker -t "telegraf:$(commit)" .
 
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
@@ -170,15 +165,15 @@ plugin-%:
 	@echo "Starting dev environment for $${$(@)} input plugin..."
 	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
 
+.PHONY: ci-1.15
+ci-1.15:
+	docker build -t quay.io/influxdb/telegraf-ci:1.15.5 - < scripts/ci-1.15.docker
+	docker push quay.io/influxdb/telegraf-ci:1.15.5
+
 .PHONY: ci-1.14
 ci-1.14:
-	docker build -t quay.io/influxdb/telegraf-ci:1.14.5 - < scripts/ci-1.14.docker
-	docker push quay.io/influxdb/telegraf-ci:1.14.5
-
-.PHONY: ci-1.13
-ci-1.13:
-	docker build -t quay.io/influxdb/telegraf-ci:1.13.13 - < scripts/ci-1.13.docker
-	docker push quay.io/influxdb/telegraf-ci:1.13.13
+	docker build -t quay.io/influxdb/telegraf-ci:1.14.9 - < scripts/ci-1.14.docker
+	docker push quay.io/influxdb/telegraf-ci:1.14.9
 
 .PHONY: install
 install: $(buildbin)
@@ -192,6 +187,7 @@ install: $(buildbin)
 	@if [ $(GOOS) != "windows" ]; then cp -fv etc/telegraf.conf $(DESTDIR)$(sysconfdir)/telegraf/telegraf.conf$(conf_suffix); fi
 	@if [ $(GOOS) != "windows" ]; then cp -fv etc/logrotate.d/telegraf $(DESTDIR)$(sysconfdir)/logrotate.d; fi
 	@if [ $(GOOS) = "windows" ]; then cp -fv etc/telegraf_windows.conf $(DESTDIR)/telegraf.conf; fi
+	@if [ $(GOOS) = "linux" ]; then scripts/check-dynamic-glibc-versions.sh $(buildbin) $(glibc_version); fi
 	@if [ $(GOOS) = "linux" ]; then mkdir -pv $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
 	@if [ $(GOOS) = "linux" ]; then cp -fv scripts/telegraf.service $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
 	@if [ $(GOOS) = "linux" ]; then cp -fv scripts/init.sh $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
@@ -211,12 +207,14 @@ debs += telegraf_$(deb_version)_i386.deb
 debs += telegraf_$(deb_version)_mips.deb
 debs += telegraf_$(deb_version)_mipsel.deb
 debs += telegraf_$(deb_version)_s390x.deb
+debs += telegraf_$(deb_version)_ppc64el.deb
 
 rpms += telegraf-$(rpm_version).aarch64.rpm
 rpms += telegraf-$(rpm_version).armel.rpm
 rpms += telegraf-$(rpm_version).armv6hl.rpm
 rpms += telegraf-$(rpm_version).i386.rpm
 rpms += telegraf-$(rpm_version).s390x.rpm
+rpms += telegraf-$(rpm_version).ppc64le.rpm
 rpms += telegraf-$(rpm_version).x86_64.rpm
 
 tars += telegraf-$(tar_version)_darwin_amd64.tar.gz
@@ -230,6 +228,7 @@ tars += telegraf-$(tar_version)_linux_i386.tar.gz
 tars += telegraf-$(tar_version)_linux_mips.tar.gz
 tars += telegraf-$(tar_version)_linux_mipsel.tar.gz
 tars += telegraf-$(tar_version)_linux_s390x.tar.gz
+tars += telegraf-$(tar_version)_linux_ppc64le.tar.gz
 tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
 
 zips += telegraf-$(tar_version)_windows_amd64.zip
@@ -243,10 +242,11 @@ package: $(dists)
 rpm_amd64 := amd64
 rpm_386 := i386
 rpm_s390x := s390x
+rpm_ppc64le := ppc64le
 rpm_arm5 := armel
 rpm_arm6 := armv6hl
 rpm_arm647 := aarch64
-rpm_arch := $(rpm_$(GOARCH)$(GOARM))
+rpm_arch = $(rpm_$(GOARCH)$(GOARM))
 
 .PHONY: $(rpms)
 $(rpms):
@@ -279,10 +279,13 @@ $(rpms):
 deb_amd64 := amd64
 deb_386 := i386
 deb_s390x := s390x
+deb_ppc64le := ppc64el
 deb_arm5 := armel
 deb_arm6 := armhf
 deb_arm647 := arm64
-deb_arch := $(deb_$(GOARCH)$(GOARM))
+deb_mips := mips
+deb_mipsle := mipsel
+deb_arch = $(deb_$(GOARCH)$(GOARM))
 
 .PHONY: $(debs)
 $(debs):
@@ -361,6 +364,9 @@ upload-nightly:
 
 %s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOOS := linux
 %s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOARCH := s390x
+
+%ppc64el.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOOS := linux
+%ppc64el.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOARCH := ppc64le
 
 %freebsd_amd64.tar.gz: export GOOS := freebsd
 %freebsd_amd64.tar.gz: export GOARCH := amd64

@@ -571,7 +571,7 @@ func TestContainerStatus(t *testing.T) {
 					map[string]string{
 						"container_name":    "etcd",
 						"container_image":   "quay.io/coreos/etcd",
-						"container_version": "v2.2.2",
+						"container_version": "v3.3.25",
 						"engine_host":       "absol",
 						"label1":            "test_value_1",
 						"label2":            "test_value_2",
@@ -607,7 +607,7 @@ func TestContainerStatus(t *testing.T) {
 					map[string]string{
 						"container_name":    "etcd",
 						"container_image":   "quay.io/coreos/etcd",
-						"container_version": "v2.2.2",
+						"container_version": "v3.3.25",
 						"engine_host":       "absol",
 						"label1":            "test_value_1",
 						"label2":            "test_value_2",
@@ -645,7 +645,7 @@ func TestContainerStatus(t *testing.T) {
 					map[string]string{
 						"container_name":    "etcd",
 						"container_image":   "quay.io/coreos/etcd",
-						"container_version": "v2.2.2",
+						"container_version": "v3.3.25",
 						"engine_host":       "absol",
 						"label1":            "test_value_1",
 						"label2":            "test_value_2",
@@ -681,7 +681,7 @@ func TestContainerStatus(t *testing.T) {
 					map[string]string{
 						"container_name":    "etcd",
 						"container_image":   "quay.io/coreos/etcd",
-						"container_version": "v2.2.2",
+						"container_version": "v3.3.25",
 						"engine_host":       "absol",
 						"label1":            "test_value_1",
 						"label2":            "test_value_2",
@@ -856,7 +856,7 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_name":    "etcd2",
 			"container_image":   "quay.io:4443/coreos/etcd",
 			"cpu":               "cpu3",
-			"container_version": "v2.2.2",
+			"container_version": "v3.3.25",
 			"engine_host":       "absol",
 			"ENVVAR1":           "loremipsum",
 			"ENVVAR2":           "dolorsitamet",
@@ -881,7 +881,7 @@ func TestDockerGatherInfo(t *testing.T) {
 			"engine_host":       "absol",
 			"container_name":    "etcd2",
 			"container_image":   "quay.io:4443/coreos/etcd",
-			"container_version": "v2.2.2",
+			"container_version": "v3.3.25",
 			"ENVVAR1":           "loremipsum",
 			"ENVVAR2":           "dolorsitamet",
 			"ENVVAR3":           "=ubuntu:10.04",

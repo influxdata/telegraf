@@ -29,8 +29,10 @@ func (c *CredentialConfig) Credentials() client.ConfigProvider {
 
 func (c *CredentialConfig) rootCredentials() client.ConfigProvider {
 	config := &aws.Config{
-		Region:   aws.String(c.Region),
-		Endpoint: &c.EndpointURL,
+		Region: aws.String(c.Region),
+	}
+	if c.EndpointURL != "" {
+		config.Endpoint = &c.EndpointURL
 	}
 	if c.AccessKey != "" || c.SecretKey != "" {
 		config.Credentials = credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, c.Token)

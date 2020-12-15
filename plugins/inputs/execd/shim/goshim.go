@@ -1,5 +1,7 @@
 package shim
 
+// this package is deprecated. use plugins/common/shim instead
+
 import (
 	"bufio"
 	"context"
@@ -49,8 +51,15 @@ type Shim struct {
 	stderr io.Writer
 }
 
+var (
+	oldpkg = "github.com/influxdata/telegraf/plugins/inputs/execd/shim"
+	newpkg = "github.com/influxdata/telegraf/plugins/common/shim"
+)
+
 // New creates a new shim interface
 func New() *Shim {
+	fmt.Fprintf(os.Stderr, "%s is deprecated; please change your import to %s\n",
+		oldpkg, newpkg)
 	return &Shim{
 		stdin:  os.Stdin,
 		stdout: os.Stdout,

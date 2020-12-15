@@ -357,6 +357,10 @@ func makeTrapHandler(s *SnmpTrap) handler {
 				// SNMP RFCs like 3411 and 5343 show engine ID as a hex string
 				tags["engine_id"] = fmt.Sprintf("%x", packet.ContextEngineID)
 			}
+		} else {
+			if packet.Community != "" {
+				tags["community"] = packet.Community
+			}
 		}
 
 		s.acc.AddFields("snmp_trap", fields, tags, tm)

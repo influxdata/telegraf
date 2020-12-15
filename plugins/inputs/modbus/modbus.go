@@ -132,17 +132,19 @@ const sampleConfig = `
   ##  |---BA, DCBA   - Little Endian
   ##  |---BADC       - Mid-Big Endian
   ##  |---CDAB       - Mid-Little Endian
-  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32, FLOAT32-IEEE (the IEEE 754 binary representation)
+  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64,
+  ##              FLOAT32-IEEE, FLOAT64-IEEE (the IEEE 754 binary representation)
+  ##              FLOAT32, FIXED, UFIXED (fixed-point representation on input)
   ## scale      - the final numeric variable representation
   ## address    - variable address
 
   holding_registers = [
-    { name = "power_factor", byte_order = "AB",   data_type = "FLOAT32", scale=0.01,  address = [8]},
-    { name = "voltage",      byte_order = "AB",   data_type = "FLOAT32", scale=0.1,   address = [0]},
-    { name = "energy",       byte_order = "ABCD", data_type = "FLOAT32", scale=0.001, address = [5,6]},
-    { name = "current",      byte_order = "ABCD", data_type = "FLOAT32", scale=0.001, address = [1,2]},
-    { name = "frequency",    byte_order = "AB",   data_type = "FLOAT32", scale=0.1,   address = [7]},
-    { name = "power",        byte_order = "ABCD", data_type = "FLOAT32", scale=0.1,   address = [3,4]},
+    { name = "power_factor", byte_order = "AB",   data_type = "FIXED", scale=0.01,  address = [8]},
+    { name = "voltage",      byte_order = "AB",   data_type = "FIXED", scale=0.1,   address = [0]},
+    { name = "energy",       byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [5,6]},
+    { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
+    { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
+    { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
   ]
   input_registers = [
     { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
@@ -354,7 +356,7 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 
 			// search data type
 			switch item.DataType {
-			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64", "FLOAT32-IEEE", "FLOAT32":
+			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
 				break
 			default:
 				return fmt.Errorf("invalid data type '%s' in '%s' - '%s'", item.DataType, n, item.Name)
@@ -511,16 +513,34 @@ func convertDataType(t fieldContainer, bytes []byte) interface{} {
 		e32 := convertEndianness32(t.ByteOrder, bytes)
 		f32 := math.Float32frombits(e32)
 		return scaleFloat32(t.Scale, f32)
-	case "FLOAT32":
+	case "FLOAT64-IEEE":
+		e64 := convertEndianness64(t.ByteOrder, bytes)
+		f64 := math.Float64frombits(e64)
+		return scaleFloat64(t.Scale, f64)
+	case "FIXED":
 		if len(bytes) == 2 {
 			e16 := convertEndianness16(t.ByteOrder, bytes)
-			return scale16toFloat32(t.Scale, e16)
+			f16 := int16(e16)
+			return scale16toFloat(t.Scale, f16)
 		} else if len(bytes) == 4 {
 			e32 := convertEndianness32(t.ByteOrder, bytes)
-			return scale32toFloat32(t.Scale, e32)
+			f32 := int32(e32)
+			return scale32toFloat(t.Scale, f32)
 		} else {
 			e64 := convertEndianness64(t.ByteOrder, bytes)
-			return scale64toFloat32(t.Scale, e64)
+			f64 := int64(e64)
+			return scale64toFloat(t.Scale, f64)
+		}
+	case "FLOAT32", "UFIXED":
+		if len(bytes) == 2 {
+			e16 := convertEndianness16(t.ByteOrder, bytes)
+			return scale16UtoFloat(t.Scale, e16)
+		} else if len(bytes) == 4 {
+			e32 := convertEndianness32(t.ByteOrder, bytes)
+			return scale32UtoFloat(t.Scale, e32)
+		} else {
+			e64 := convertEndianness64(t.ByteOrder, bytes)
+			return scale64UtoFloat(t.Scale, e64)
 		}
 	default:
 		return 0
@@ -603,15 +623,27 @@ func format64(f string, r uint64) interface{} {
 	}
 }
 
-func scale16toFloat32(s float64, v uint16) float64 {
+func scale16toFloat(s float64, v int16) float64 {
 	return float64(v) * s
 }
 
-func scale32toFloat32(s float64, v uint32) float64 {
+func scale32toFloat(s float64, v int32) float64 {
 	return float64(float64(v) * float64(s))
 }
 
-func scale64toFloat32(s float64, v uint64) float64 {
+func scale64toFloat(s float64, v int64) float64 {
+	return float64(float64(v) * float64(s))
+}
+
+func scale16UtoFloat(s float64, v uint16) float64 {
+	return float64(v) * s
+}
+
+func scale32UtoFloat(s float64, v uint32) float64 {
+	return float64(float64(v) * float64(s))
+}
+
+func scale64UtoFloat(s float64, v uint64) float64 {
 	return float64(float64(v) * float64(s))
 }
 
@@ -633,6 +665,10 @@ func scaleInt32(s float64, v int32) int32 {
 
 func scaleFloat32(s float64, v float32) float32 {
 	return float32(float64(v) * s)
+}
+
+func scaleFloat64(s float64, v float64) float64 {
+	return v * s
 }
 
 func scaleUint64(s float64, v uint64) uint64 {
