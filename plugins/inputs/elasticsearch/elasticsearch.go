@@ -166,6 +166,7 @@ type Elasticsearch struct {
 	client          *http.Client
 	serverInfo      map[string]serverInfo
 	serverInfoMutex sync.Mutex
+	indexMatchers   map[string]filter.Filter
 }
 type serverInfo struct {
 	nodeID   string
@@ -221,6 +222,19 @@ func (e *Elasticsearch) SampleConfig() string {
 // Description returns the plugin description.
 func (e *Elasticsearch) Description() string {
 	return "Read stats from one or more Elasticsearch servers or clusters"
+}
+
+// Init the plugin.
+func (e *Elasticsearch) Init() error {
+	// Compile the configured indexes to match for sorting.
+	indexMatchers, err := e.compileIndexMatchers()
+	if err != nil {
+		return err
+	}
+
+	e.indexMatchers = indexMatchers
+
+	return nil
 }
 
 // Gather reads the stats from Elasticsearch and writes it to the
@@ -589,16 +603,10 @@ func (e *Elasticsearch) categorizeIndices(indices map[string]indexStat) (map[str
 		return categorizedIndexNames, nil
 	}
 
-	// Compile the configured indexes to match.
-	indexMatchers, err := e.compileIndexMatchers()
-	if err != nil {
-		return nil, err
-	}
-
 	// Bucket each returned index with its associated configured index (if any match).
 	for indexName := range indices {
 		match := indexName
-		for name, matcher := range indexMatchers {
+		for name, matcher := range e.indexMatchers {
 			// If a configured index matches one of the returned indexes, mark it as a match.
 			if matcher.Match(match) {
 				match = name

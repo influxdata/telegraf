@@ -318,6 +318,7 @@ func TestGatherDateStampedIndicesStats(t *testing.T) {
 	es.client.Transport = newTransportMock(http.StatusOK, dateStampedIndicesResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
+	es.Init()
 
 	var acc testutil.Accumulator
 	if err := es.gatherIndicesStats(es.Servers[0]+"/"+strings.Join(es.IndicesInclude, ",")+"/_stats", &acc); err != nil {
