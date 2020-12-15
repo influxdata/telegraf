@@ -178,12 +178,14 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 	}
 
 	//If cmd_line tag is true and it is not already set add cmdline as a tag
-	if p.CmdLineTag {
-		if _, ok := proc.Tags()["cmdline"]; !ok {
-			Cmdline, err := proc.Cmdline()
-			if err == nil {
+	Cmdline, err := proc.Cmdline()
+	if err == nil {
+		if p.CmdLineTag {
+			if _, ok := proc.Tags()["cmdline"]; !ok {
 				proc.Tags()["cmdline"] = Cmdline
 			}
+		} else {
+			fields["cmdline"] = Cmdline
 		}
 	}
 

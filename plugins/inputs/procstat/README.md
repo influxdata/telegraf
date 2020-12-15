@@ -41,7 +41,7 @@ Processes can be selected for monitoring using one of several methods:
   ## Field name prefix
   # prefix = ""
 
-  ## When true add the full cmdline as a tag.
+  ## When true add the full cmdline as a tag else add it as a field.
   # cmdline_tag = false
 
   ## Add the PID as a tag instead of as a field.  When collecting multiple
@@ -79,6 +79,7 @@ the `win_perf_counters` input plugin as a more mature alternative.
     - cgroup (when defined)
     - win_service (when defined)
   - fields:
+    - cmdline (when 'cmdline_tag' is false)
     - child_major_faults (int)
     - child_minor_faults (int)
     - created_at (int) [epoch in nanoseconds]
