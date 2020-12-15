@@ -73,6 +73,9 @@ func (s *Starlark) Init() error {
 		return err
 	}
 
+	// Make available a shared state to the apply function
+	globals["state"] = starlark.NewDict(0)
+
 	// Freeze the global state.  This prevents modifications to the processor
 	// state and prevents scripts from containing errors storing tracking
 	// metrics.  Tasks that require global state will not be possible due to

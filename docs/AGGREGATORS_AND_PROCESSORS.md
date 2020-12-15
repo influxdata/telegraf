@@ -17,8 +17,8 @@ metrics as they pass through Telegraf:
 │  Memory   │───┤                                          ┌──▶│ InfluxDB  │
 │           │   │                                          │   │           │
 └───────────┘   │    ┌─────────────┐     ┌─────────────┐   │   └───────────┘
-                │    │             │     │Aggregate    │   │
-┌───────────┐   │    │Process      │     │ - mean      │   │   ┌───────────┐
+                │    │             │     │Aggregators  │   │
+┌───────────┐   │    │Processors   │     │ - mean      │   │   ┌───────────┐
 │           │   │    │ - transform │     │ - quantiles │   │   │           │
 │   MySQL   │───┼───▶│ - decorate  │────▶│ - min/max   │───┼──▶│   File    │
 │           │   │    │ - filter    │     │ - count     │   │   │           │
@@ -62,6 +62,6 @@ emit the aggregates and not the original metrics.
 
 Since aggregates are created for each measurement, field, and unique tag combination
 the plugin receives, you can make use of `taginclude` to group
-aggregates by specific tags only. 
+aggregates by specific tags only.
 
 **Note:** Aggregator plugins only aggregate metrics within their periods (`now() - period`). Data with a timestamp earlier than `now() - period` cannot be included.

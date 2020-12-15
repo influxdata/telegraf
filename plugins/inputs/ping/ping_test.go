@@ -413,11 +413,15 @@ func TestPingGatherNative(t *testing.T) {
 		Method:      "native",
 		Count:       5,
 		resolveHost: mockHostResolver,
+		Percentiles: []int{50, 95, 99},
 	}
 
 	assert.NoError(t, acc.GatherError(p.Gather))
 	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
 	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
+	assert.True(t, acc.HasField("ping", "percentile50_ms"))
+	assert.True(t, acc.HasField("ping", "percentile95_ms"))
+	assert.True(t, acc.HasField("ping", "percentile99_ms"))
 }
 
 func mockHostResolverError(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error) {
