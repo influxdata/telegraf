@@ -70,7 +70,7 @@ type MQTTConsumer struct {
 	state         ConnectionState
 	sem           semaphore
 	messages      map[telegraf.TrackingID]bool
-	messagesMutex sync.RWMutex
+	messagesMutex sync.Mutex
 	topicTag      string
 
 	ctx    context.Context
@@ -262,15 +262,13 @@ func (m *MQTTConsumer) recvMessage(c mqtt.Client, msg mqtt.Message) {
 		select {
 		case track := <-m.acc.Delivered():
 			<-m.sem
-			m.messagesMutex.RLock()
+			m.messagesMutex.Lock()
 			_, ok := m.messages[track.ID()]
-			m.messagesMutex.RUnlock()
 			if !ok {
 				// Added by a previous connection
 				continue
 			}
 			// No ack, MQTT does not support durable handling
-			m.messagesMutex.Lock()
 			delete(m.messages, track.ID())
 			m.messagesMutex.Unlock()
 		case m.sem <- empty{}:
