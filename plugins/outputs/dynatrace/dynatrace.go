@@ -63,9 +63,6 @@ const sampleConfig = `
   ## Optional prefix for metric names (e.g.: "telegraf.")
   prefix = "telegraf."
 
-  ## Metric Names which should be treated as gauges 
-  additional_counters = [ ]
-
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -77,6 +74,9 @@ const sampleConfig = `
 
   ## Connection timeout, defaults to "5s" if not set.
   timeout = "5s"
+
+  ## If you want to convert values represented as gauges to counters, add the metric names here
+  additional_counters = [ ]
 `
 
 // Connect Connects the Dynatrace output plugin to the Telegraf stream
@@ -156,8 +156,9 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				if err != nil {
 					continue
 				}
-				fmt.Fprintf(&tagb, ",%s=%s", strings.ToLower(tagKey), d.escape(metric.Tags()[k]))
-
+				if len(metric.Tags()[k]) > 0 {
+					fmt.Fprintf(&tagb, ",%s=%s", strings.ToLower(tagKey), d.escape(metric.Tags()[k]))
+				}
 			}
 		}
 		if len(metric.Fields()) > 0 {
@@ -286,7 +287,6 @@ func (d *Dynatrace) send(msg []byte) error {
 	} else {
 		return fmt.Errorf("Dynatrace request failed with response code:, %d", resp.StatusCode)
 	}
-
 	return nil
 }
 
