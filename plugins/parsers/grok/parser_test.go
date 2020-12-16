@@ -1117,15 +1117,14 @@ func TestTrimRegression(t *testing.T) {
 }
 
 func TestAdvanceFieldName(t *testing.T) {
-	t.Skip("waiting for grok package fix")
 	p := &Parser{
 		Patterns: []string{`rts=%{NUMBER:response-time.s} local=%{IP:local-ip} remote=%{IP:remote.ip}`},
 	}
 	assert.NoError(t, p.Compile())
 
 	metricA, err := p.ParseLine(`rts=1.283 local=127.0.0.1 remote=10.0.0.1`)
-	assert.NoError(t, err)
 	require.NotNil(t, metricA)
+	assert.NoError(t, err)
 	assert.Equal(t,
 		map[string]interface{}{
 			"response-time.s": "1.283",
