@@ -82,7 +82,8 @@ var sampleConfig = `
   ## Names of the services to monitor. Leave empty to monitor all the available services on the host. Globs accepted.
   service_names = [
     "LanmanServer",
-    "TermService",
+	"TermService",
+	"Win*",
   ]
 `
 
