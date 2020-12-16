@@ -52,6 +52,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/github"
 	_ "github.com/influxdata/telegraf/plugins/inputs/gnmi"
 	_ "github.com/influxdata/telegraf/plugins/inputs/graylog"
+	_ "github.com/influxdata/telegraf/plugins/inputs/gtfs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/haproxy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/hddtemp"
 	_ "github.com/influxdata/telegraf/plugins/inputs/http"

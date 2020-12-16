@@ -202,6 +202,7 @@ For documentation on the latest development code see the [documentation index][d
 * [github](./plugins/inputs/github)
 * [gnmi](./plugins/inputs/gnmi)
 * [graylog](./plugins/inputs/graylog)
+* [gtfs](./plugins/inputs/gtfs) (GTFS-realtime vehicle locations)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
 * [httpjson](./plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
