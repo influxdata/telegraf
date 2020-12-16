@@ -104,7 +104,10 @@ func (a *api) ListPluginTypes() []PluginConfig {
 
 func (a *api) ListRunningPlugins() (runningPlugins []Plugin) {
 	for _, v := range a.config.Inputs {
-		runningPlugins = append(runningPlugins, v)
+		runningPlugins = append(runningPlugins, Plugin{
+			ID:   fmt.Sprintf("%x", v.ID),
+			Name: v.Config.Name,
+		})
 	}
 	return runningPlugins
 }

@@ -13,6 +13,7 @@ var (
 )
 
 type RunningInput struct {
+	ID     int64
 	Input  telegraf.Input
 	Config *InputConfig
 
@@ -38,6 +39,7 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 	SetLoggerOnPlugin(input, logger)
 
 	return &RunningInput{
+		ID:     nextPluginID(),
 		Input:  input,
 		Config: config,
 		MetricsGathered: selfstat.Register(
