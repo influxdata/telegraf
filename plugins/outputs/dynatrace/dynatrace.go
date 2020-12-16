@@ -277,7 +277,7 @@ func (d *Dynatrace) send(msg []byte) error {
 	defer resp.Body.Close()
 
 	// print metric line results as info log
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusBadRequest {
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			d.Log.Errorf("Dynatrace error reading response")
