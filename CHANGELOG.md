@@ -10,7 +10,6 @@
   - [#8499](https://github.com/influxdata/telegraf/pull/8499) `processors.execd` Adding support for new lines in influx line protocol fields.
   - [#8254](https://github.com/influxdata/telegraf/pull/8254) `serializers.carbon2` Fix carbon2 tests
   - [#8498](https://github.com/influxdata/telegraf/pull/8498) `inputs.http_response` fixed network test
-  - [#8276](https://github.com/influxdata/telegraf/pull/8276) `parsers.grok` Update grok package to support for field names containing '-' and '.'
   - [#8414](https://github.com/influxdata/telegraf/pull/8414) `inputs.bcache` Fix tests for Windows - part 1
   - [#8577](https://github.com/influxdata/telegraf/pull/8577) `inputs.ping` fix potential issue with race condition
   - [#8562](https://github.com/influxdata/telegraf/pull/8562) `inputs.mqtt_consumer` fix issue with mqtt concurrent map write
