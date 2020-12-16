@@ -81,11 +81,12 @@ const sampleConfig = `
 
   ## Jobs to include or exclude from gathering
   ## When using both lists, job_exclude has priority.
-  # job_include = [ "jobA", "jobB/subjobA/subjobB", "jobC*"]
-  # job_exclude = [ "job1", "job2/subjob1/subjob2", "job3/*"]
+  ## Wildcards are supported: [ "jobA/*", "jobB/subjob1/*"]
+  # job_include = [ "*" ]
+  # job_exclude = [ ]
 
   ## Nodes to exclude from gathering
-  # node_exclude = [ "node1", "node2" ]
+  # node_exclude = [ ]
 
   ## Worker pool for jenkins plugin only
   ## Empty this field will use default value 5
