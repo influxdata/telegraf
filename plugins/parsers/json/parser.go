@@ -51,13 +51,13 @@ func New(config *Config) (*Parser, error) {
 	stringFilter, err := filter.Compile(config.StringFields)
 
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	tagKeyFilter, err := filter.Compile(config.TagKeys)
 
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	return &Parser{
