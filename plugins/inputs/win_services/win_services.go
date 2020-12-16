@@ -96,7 +96,6 @@ type WinServices struct {
 	ServiceNames []string `toml:"service_names"`
 	mgrProvider  ManagerProvider
 
-	filtersCreated bool
 	servicesFilter filter.Filter
 }
 
@@ -105,6 +104,16 @@ type ServiceInfo struct {
 	DisplayName string
 	State       int
 	StartUpMode int
+}
+
+func (m *WinServices) Init() error {
+	var err error
+	m.servicesFilter, err = filter.NewIncludeExcludeFilter(m.ServiceNames, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *WinServices) Description() string {
@@ -121,15 +130,6 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("Could not open service manager: %s", err)
 	}
 	defer scmgr.Disconnect()
-
-	// Create label filters if not already created
-	if !m.filtersCreated {
-		err := m.createServicesFilter()
-		if err != nil {
-			return err
-		}
-		m.filtersCreated = true
-	}
 
 	serviceNames, err := m.listServices(scmgr)
 	if err != nil {
@@ -162,15 +162,6 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 		acc.AddFields("win_services", fields, tags)
 	}
 
-	return nil
-}
-
-func (m *WinServices) createServicesFilter() error {
-	filter, err := filter.NewIncludeExcludeFilter(m.ServiceNames, nil)
-	if err != nil {
-		return err
-	}
-	m.servicesFilter = filter
 	return nil
 }
 
