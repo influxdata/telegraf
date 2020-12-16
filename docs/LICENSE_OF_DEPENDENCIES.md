@@ -56,6 +56,7 @@ following works:
 - github.com/go-ole/go-ole [MIT License](https://github.com/go-ole/go-ole/blob/master/LICENSE)
 - github.com/go-redis/redis [BSD 2-Clause "Simplified" License](https://github.com/go-redis/redis/blob/master/LICENSE)
 - github.com/go-sql-driver/mysql [Mozilla Public License 2.0](https://github.com/go-sql-driver/mysql/blob/master/LICENSE)
+- github.com/go-stack/stack [MIT License](https://github.com/go-stack/stack/blob/master/LICENSE.md)
 - github.com/goburrow/modbus [BSD 3-Clause "New" or "Revised" License](https://github.com/goburrow/modbus/blob/master/LICENSE)
 - github.com/goburrow/serial [MIT License](https://github.com/goburrow/serial/LICENSE)
 - github.com/gobwas/glob [MIT License](https://github.com/gobwas/glob/blob/master/LICENSE)
@@ -145,6 +146,7 @@ following works:
 - github.com/xdg/scram [Apache License 2.0](https://github.com/xdg-go/scram/blob/master/LICENSE)
 - github.com/xdg/stringprep [Apache License 2.0](https://github.com/xdg-go/stringprep/blob/master/LICENSE)
 - github.com/yuin/gopher-lua [MIT License](https://github.com/yuin/gopher-lua/blob/master/LICENSE)
+- go.mongodb.org/mongo-driver [Apache License 2.0](https://github.com/mongodb/mongo-go-driver/blob/master/LICENSE)
 - go.opencensus.io [Apache License 2.0](https://github.com/census-instrumentation/opencensus-go/blob/master/LICENSE)
 - go.starlark.net [BSD 3-Clause "New" or "Revised" License](https://github.com/google/starlark-go/blob/master/LICENSE)
 - golang.org/x/crypto [BSD 3-Clause Clear License](https://github.com/golang/crypto/blob/master/LICENSE)
@@ -179,6 +181,5 @@ following works:
 - modernc.org/libc [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/libc/-/blob/master/LICENSE)
 - modernc.org/memory [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/memory/-/blob/master/LICENSE)
 - modernc.org/sqlite [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/sqlite/-/blob/master/LICENSE)
-
 ## telegraf used and modified code from these projects
 - github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/LICENSE)
