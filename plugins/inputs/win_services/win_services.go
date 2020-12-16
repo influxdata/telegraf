@@ -5,6 +5,8 @@ package win_services
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -79,10 +81,14 @@ func (rmr *MgProvider) Connect() (WinServiceManager, error) {
 
 var sampleConfig = `
   ## Names of the services to monitor. Leave empty to monitor all the available services on the host
+  ## Wildcards (*) are supported 
   service_names = [
     "LanmanServer",
     "TermService",
   ]
+
+  ## set enable_regex to true to interpret service_names as regular expressions
+  # enable_regex = false
 `
 
 var description = "Input plugin to report Windows services info."
@@ -92,7 +98,10 @@ type WinServices struct {
 	Log telegraf.Logger
 
 	ServiceNames []string `toml:"service_names"`
+	EnableRegex  bool     `toml:"enable_regex"`
+
 	mgrProvider  ManagerProvider
+	regexedNames []*regexp.Regexp
 }
 
 type ServiceInfo struct {
@@ -110,6 +119,33 @@ func (m *WinServices) SampleConfig() string {
 	return sampleConfig
 }
 
+// Init the plugin by parsing the service names
+func (m *WinServices) Init() error {
+
+	for _, service := range m.ServiceNames {
+		if m.EnableRegex {
+			re, err := regexp.Compile(service)
+
+			if err != nil {
+				return err
+			}
+
+			m.regexedNames = append(m.regexedNames, re)
+		} else {
+			service = strings.Replace(service, "*", ".*", -1)
+			re, err := regexp.Compile("^" + service + "$") // exact match
+
+			if err != nil {
+				return err
+			}
+
+			m.regexedNames = append(m.regexedNames, re)
+		}
+	}
+
+	return nil
+}
+
 func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 	scmgr, err := m.mgrProvider.Connect()
 	if err != nil {
@@ -117,7 +153,7 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 	}
 	defer scmgr.Disconnect()
 
-	serviceNames, err := listServices(scmgr, m.ServiceNames)
+	serviceNames, err := listServices(scmgr, m.regexedNames)
 	if err != nil {
 		return err
 	}
@@ -152,16 +188,28 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 }
 
 // listServices returns a list of services to gather.
-func listServices(scmgr WinServiceManager, userServices []string) ([]string, error) {
-	if len(userServices) != 0 {
-		return userServices, nil
-	}
+func listServices(scmgr WinServiceManager, regexedNames []*regexp.Regexp) ([]string, error) {
 
 	names, err := scmgr.ListServices()
 	if err != nil {
 		return nil, fmt.Errorf("Could not list services: %s", err)
 	}
-	return names, nil
+
+	if len(regexedNames) == 0 { // nothing selected, return everything
+		return names, err
+	}
+
+	var serviceNames []string
+
+	for _, re := range regexedNames {
+		for _, name := range names {
+			if re.MatchString(name) {
+				serviceNames = append(serviceNames, name)
+			}
+		}
+	}
+
+	return serviceNames, nil
 }
 
 // collectServiceInfo gathers info about a service.

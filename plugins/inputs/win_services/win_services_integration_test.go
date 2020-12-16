@@ -4,6 +4,7 @@
 package win_services
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -11,7 +12,7 @@ import (
 )
 
 var InvalidServices = []string{"XYZ1@", "ZYZ@", "SDF_@#"}
-var KnownServices = []string{"LanmanServer", "TermService"}
+var KnownServices = []*regexp.Regexp{regexp.MustCompile("^LanmanServer$"), regexp.MustCompile("^TermService$")}
 
 func TestList(t *testing.T) {
 	if testing.Short() {
@@ -38,7 +39,7 @@ func TestEmptyList(t *testing.T) {
 	require.NoError(t, err)
 	defer scmgr.Disconnect()
 
-	services, err := listServices(scmgr, []string{})
+	services, err := listServices(scmgr, []*regexp.Regexp{})
 	require.NoError(t, err)
 	require.Condition(t, func() bool { return len(services) > 20 }, "Too few service")
 }
