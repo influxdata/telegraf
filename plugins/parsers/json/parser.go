@@ -49,13 +49,11 @@ type Parser struct {
 
 func New(config *Config) (*Parser, error) {
 	stringFilter, err := filter.Compile(config.StringFields)
-
 	if err != nil {
 		return nil, err
 	}
 
 	tagKeyFilter, err := filter.Compile(config.TagKeys)
-
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +160,7 @@ func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]inte
 		if p.tagKeys == nil {
 			continue
 		}
-		// skip switch statement if tagkey doesn't match fieldname
+		//skip switch statement if tagkey doesn't match fieldname
 		if !p.tagKeys.Match(name) {
 			continue
 		}

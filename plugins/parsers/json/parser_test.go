@@ -24,13 +24,13 @@ const validJSONTags = `
 {
     "a": 5,
     "b": {
-        "c": 6
+      "c": 6
     },
     "mytag": "foobar",
 	"othertag": "baz",
 	"tags_object": {
-		"mytag": "foobar",
-		"othertag": "baz"
+	  "mytag": "foobar",
+	  "othertag": "baz"
 	}
 }
 `
