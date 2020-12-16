@@ -451,3 +451,4 @@ For documentation on the latest development code see the [documentation index][d
 * [wavefront](./plugins/outputs/wavefront)
 * [sumologic](./plugins/outputs/sumologic)
 * [yandex_cloud_monitoring](./plugins/outputs/yandex_cloud_monitoring)
+* [mongodb](./plugins/outputs/mongodb)
