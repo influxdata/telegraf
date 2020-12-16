@@ -1,9 +1,8 @@
-## v1.17.0-rc0 [2020-12-10]
+## v1.17.0-rc1 [2020-12-16]
 
 #### Release Notes
 
 - Starlark plugins can now store state between runs using a global state variable
--
 
 #### Bugfixes
 
@@ -13,6 +12,14 @@
   - [#8498](https://github.com/influxdata/telegraf/pull/8498) `inputs.http_response` fixed network test
   - [#8276](https://github.com/influxdata/telegraf/pull/8276) `parsers.grok` Update grok package to support for field names containing '-' and '.'
   - [#8414](https://github.com/influxdata/telegraf/pull/8414) `inputs.bcache` Fix tests for Windows - part 1
+  - [#8577](https://github.com/influxdata/telegraf/pull/8577) `inputs.ping` fix potential issue with race condition
+  - [#8562](https://github.com/influxdata/telegraf/pull/8562) `inputs.mqtt_consumer` fix issue with mqtt concurrent map write
+  - [#8574](https://github.com/influxdata/telegraf/pull/8574) `inputs.ecs` Remove duplicated field "revision" from ecs_task because it's already defined as a tag there
+  - [#8551](https://github.com/influxdata/telegraf/pull/8551) `inputs.socket_listener` fix crash when socket_listener receiving invalid data
+  - [#8564](https://github.com/influxdata/telegraf/pull/8564) `parsers.graphite` Graphite tags parser
+  - [#8472](https://github.com/influxdata/telegraf/pull/8472) `inputs.kube_inventory` Fixing issue with missing metrics when pod has only pending containers
+  - [#8542](https://github.com/influxdata/telegraf/pull/8542) `inputs.aerospike` fix edge case in aerospike plugin where an expected hex string was converted to integer if all digits
+  - [#8512](https://github.com/influxdata/telegraf/pull/8512) `inputs.kube_inventory` Update string parsing of allocatable cpu cores in kube_inventory
 
 #### Features
 
@@ -39,19 +46,27 @@
   - [#8056](https://github.com/influxdata/telegraf/pull/8056) `inputs.monit` Add response_time to monit plugin
   - [#8446](https://github.com/influxdata/telegraf/pull/8446) update to go 1.15.5
   - [#8428](https://github.com/influxdata/telegraf/pull/8428) `aggregators.basicstats` Add rate and interval to the basicstats aggregator plugin
+  - [#8575](https://github.com/influxdata/telegraf/pull/8575) `inputs.win_services` Added Glob pattern matching for "Windows Services" plugin
+  - [#6132](https://github.com/influxdata/telegraf/pull/6132) `inputs.mysql` Add per user metrics to mysql input
+  - [#8500](https://github.com/influxdata/telegraf/pull/8500) `inputs.github` [inputs.github] Add query of pull-request statistics
 
 #### New Parser Plugins
 
   - [#7778](https://github.com/influxdata/telegraf/pull/7778) `parsers.prometheus` Add a parser plugin for prometheus
 
+#### New Serializer Plugins
+
+  - [#8360](https://github.com/influxdata/telegraf/pull/8360) `serializers.prometheusremotewrite` Add prometheus remote write serializer
+
 #### New Input Plugins
 
   - [#8163](https://github.com/influxdata/telegraf/pull/8163) `inputs.riemann` Support Riemann-Protobuff Listener
+  - [#8488](https://github.com/influxdata/telegraf/pull/8488) `inputs.intel_powerstat` New Intel PowerStat input plugin
 
 #### New Output Plugins
 
   - [#8296](https://github.com/influxdata/telegraf/pull/8296) `outputs.yandex_cloud_monitoring` #8295 Initial Yandex.Cloud monitoring
-  - [#8202](https://github.com/influxdata/telegraf/pull/8202) `outputs.all` A new Logz.io output plugin
+  - [#8202](https://github.com/influxdata/telegraf/pull/8202) `outputs.logzio` A new Logz.io output plugin
 
 
 ## v1.16.3 [2020-12-01]
