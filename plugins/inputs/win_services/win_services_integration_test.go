@@ -22,7 +22,10 @@ func TestList(t *testing.T) {
 	require.NoError(t, err)
 	defer scmgr.Disconnect()
 
-	services, err := listServices(scmgr, KnownServices)
+	winServices := &WinServices{
+		ServiceNames: KnownServices,
+	}
+	services, err := winServices.listServices(scmgr)
 	require.NoError(t, err)
 	require.Len(t, services, 2, "Different number of services")
 	require.Equal(t, services[0], KnownServices[0])
@@ -38,7 +41,10 @@ func TestEmptyList(t *testing.T) {
 	require.NoError(t, err)
 	defer scmgr.Disconnect()
 
-	services, err := listServices(scmgr, []string{})
+	winServices := &WinServices{
+		ServiceNames: []string{},
+	}
+	services, err := winServices.listServices(scmgr)
 	require.NoError(t, err)
 	require.Condition(t, func() bool { return len(services) > 20 }, "Too few service")
 }

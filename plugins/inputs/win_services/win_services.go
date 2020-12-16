@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
@@ -78,7 +79,7 @@ func (rmr *MgProvider) Connect() (WinServiceManager, error) {
 }
 
 var sampleConfig = `
-  ## Names of the services to monitor. Leave empty to monitor all the available services on the host
+  ## Names of the services to monitor. Leave empty to monitor all the available services on the host. Globs accepted.
   service_names = [
     "LanmanServer",
     "TermService",
@@ -93,6 +94,9 @@ type WinServices struct {
 
 	ServiceNames []string `toml:"service_names"`
 	mgrProvider  ManagerProvider
+
+	filtersCreated bool
+	servicesFilter filter.Filter
 }
 
 type ServiceInfo struct {
@@ -117,7 +121,16 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 	}
 	defer scmgr.Disconnect()
 
-	serviceNames, err := listServices(scmgr, m.ServiceNames)
+	// Create label filters if not already created
+	if !m.filtersCreated {
+		err := m.createServicesFilter()
+		if err != nil {
+			return err
+		}
+		m.filtersCreated = true
+	}
+
+	serviceNames, err := m.listServices(scmgr)
 	if err != nil {
 		return err
 	}
@@ -151,17 +164,30 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// listServices returns a list of services to gather.
-func listServices(scmgr WinServiceManager, userServices []string) ([]string, error) {
-	if len(userServices) != 0 {
-		return userServices, nil
+func (m *WinServices) createServicesFilter() error {
+	filter, err := filter.NewIncludeExcludeFilter(m.ServiceNames, nil)
+	if err != nil {
+		return err
 	}
+	m.servicesFilter = filter
+	return nil
+}
 
+// listServices returns a list of services to gather.
+func (m *WinServices) listServices(scmgr WinServiceManager) ([]string, error) {
 	names, err := scmgr.ListServices()
 	if err != nil {
 		return nil, fmt.Errorf("Could not list services: %s", err)
 	}
-	return names, nil
+
+	var services []string
+	for _, n := range names {
+		if m.servicesFilter.Match(n) {
+			services = append(services, n)
+		}
+	}
+
+	return services, nil
 }
 
 // collectServiceInfo gathers info about a service.
