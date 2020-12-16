@@ -27,7 +27,11 @@ const validJSONTags = `
         "c": 6
     },
     "mytag": "foobar",
-    "othertag": "baz"
+	"othertag": "baz",
+	"tags_object": {
+		"mytag": "foobar",
+		"othertag": "baz"
+	}
 }
 `
 
@@ -39,7 +43,16 @@ const validJSONArrayTags = `
         "c": 6
     },
     "mytag": "foo",
-    "othertag": "baz"
+	"othertag": "baz",
+	"tags_array": [
+		{
+		"mytag": "foo"
+		},
+		{
+		"othertag": "baz"
+		}
+	],
+	"anothert": "foo"
 },
 {
     "a": 7,
@@ -47,7 +60,16 @@ const validJSONArrayTags = `
         "c": 8
     },
     "mytag": "bar",
-    "othertag": "baz"
+	"othertag": "baz",
+	"tags_array": [
+		{
+		"mytag": "bar"
+		},
+		{
+		"othertag": "baz"
+		}
+	],
+	"anothert": "bar"
 }
 ]
 `
@@ -947,4 +969,305 @@ func TestParse(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
 		})
 	}
+}
+
+func TestParseWithWildcardTagKeys(t *testing.T) {
+	// Test that wildcard matching with tags nested within object works
+	parser, err := New(&Config{
+		MetricName: "json_test",
+		TagKeys:    []string{"tags_object_*"},
+	})
+	require.NoError(t, err)
+	metrics, err := parser.Parse([]byte(validJSONTags))
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics[0].Fields())
+	require.Equal(t, map[string]string{
+		"tags_object_mytag":    "foobar",
+		"tags_object_othertag": "baz",
+	}, metrics[0].Tags())
+
+	// Test that wildcard matching with keys containing tag works
+	parser, err = New(&Config{
+		MetricName: "json_test",
+		TagKeys:    []string{"*tag"},
+	})
+	require.NoError(t, err)
+	metrics, err = parser.Parse([]byte(validJSONTags))
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics[0].Fields())
+	require.Equal(t, map[string]string{
+		"mytag":                "foobar",
+		"othertag":             "baz",
+		"tags_object_mytag":    "foobar",
+		"tags_object_othertag": "baz",
+	}, metrics[0].Tags())
+
+	// Test that strings not matching tag keys are still also ignored
+	parser, err = New(&Config{
+		MetricName: "json_test",
+		TagKeys:    []string{"wrongtagkey", "tags_object_*"},
+	})
+	require.NoError(t, err)
+
+	metrics, err = parser.Parse([]byte(validJSONTags))
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics[0].Fields())
+	require.NotContains(t, map[string]string{"wrongtagkey": ""}, metrics[0].Tags())
+	require.Equal(t, map[string]string{
+		"tags_object_mytag":    "foobar",
+		"tags_object_othertag": "baz",
+	}, metrics[0].Tags())
+
+	// test that single tag key is also found and applied
+	parser, err = New(&Config{
+		MetricName: "json_test",
+		TagKeys:    []string{"mytag", "tags_object_*"},
+	})
+	require.NoError(t, err)
+
+	metrics, err = parser.Parse([]byte(validJSONTags))
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics[0].Fields())
+	require.Equal(t, map[string]string{
+		"mytag":                "foobar",
+		"tags_object_mytag":    "foobar",
+		"tags_object_othertag": "baz",
+	}, metrics[0].Tags())
+}
+
+func TestParseLineWithWildcardTagKeys(t *testing.T) {
+	// Test that wildcard matching with tags nested within object works
+	parser, err := New(&Config{
+		MetricName: "json_test",
+		TagKeys:    []string{"tags_object_*"},
+	})
+	require.NoError(t, err)
+	metrics, err := parser.ParseLine(validJSONTags)
+	require.NoError(t, err)
+	require.Equal(t, "json_test", metrics.Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics.Fields())
+	require.Equal(t, map[string]string{
+		"tags_object_mytag":    "foobar",
+		"tags_object_othertag": "baz",
+	}, metrics.Tags())
+
+	// Test that wildcard matching with keys containing tag works
+	parser, err = New(&Config{
+		MetricName: "json_test",
+		TagKeys:    []string{"*tag"},
+	})
+	require.NoError(t, err)
+	metrics, err = parser.ParseLine(validJSONTags)
+	require.NoError(t, err)
+	require.Equal(t, "json_test", metrics.Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics.Fields())
+	require.Equal(t, map[string]string{
+		"mytag":                "foobar",
+		"othertag":             "baz",
+		"tags_object_mytag":    "foobar",
+		"tags_object_othertag": "baz",
+	}, metrics.Tags())
+
+	// Test that strings not matching tag keys are still also ignored
+	parser, err = New(&Config{
+		MetricName: "json_test",
+		TagKeys:    []string{"wrongtagkey", "tags_object_*"},
+	})
+	require.NoError(t, err)
+
+	metrics, err = parser.ParseLine(validJSONTags)
+	require.NoError(t, err)
+	require.Equal(t, "json_test", metrics.Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics.Fields())
+	require.NotContains(t, map[string]string{"wrongtagkey": ""}, metrics.Tags())
+	require.Equal(t, map[string]string{
+		"tags_object_mytag":    "foobar",
+		"tags_object_othertag": "baz",
+	}, metrics.Tags())
+
+	// test that single tag key is also found and applied
+	parser, err = New(&Config{
+		MetricName: "json_test",
+		TagKeys:    []string{"mytag", "tags_object_*"},
+	})
+	require.NoError(t, err)
+
+	metrics, err = parser.ParseLine(validJSONTags)
+	require.NoError(t, err)
+	require.Equal(t, "json_test", metrics.Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics.Fields())
+	require.Equal(t, map[string]string{
+		"mytag":                "foobar",
+		"tags_object_mytag":    "foobar",
+		"tags_object_othertag": "baz",
+	}, metrics.Tags())
+
+}
+
+func TestParseArrayWithWildcardTagKeys(t *testing.T) {
+	// Test that wildcard matching with keys containing tag within array works
+	parser, err := New(&Config{
+		MetricName: "json_array_test",
+		TagKeys:    []string{"*tag"},
+	})
+	require.NoError(t, err)
+	metrics, err := parser.Parse([]byte(validJSONArrayTags))
+	require.NoError(t, err)
+	require.Len(t, metrics, 2)
+	require.Equal(t, "json_array_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics[0].Fields())
+	require.Equal(t, map[string]string{
+		"mytag":                 "foo",
+		"othertag":              "baz",
+		"tags_array_0_mytag":    "foo",
+		"tags_array_1_othertag": "baz",
+	}, metrics[0].Tags())
+
+	require.Equal(t, "json_array_test", metrics[1].Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(7),
+		"b_c": float64(8),
+	}, metrics[1].Fields())
+	require.Equal(t, map[string]string{
+		"mytag":                 "bar",
+		"othertag":              "baz",
+		"tags_array_0_mytag":    "bar",
+		"tags_array_1_othertag": "baz",
+	}, metrics[1].Tags())
+
+	// test that wildcard matching with tags nested array within object works
+	parser, err = New(&Config{
+		MetricName: "json_array_test",
+		TagKeys:    []string{"tags_array_*"},
+	})
+	require.NoError(t, err)
+	metrics, err = parser.Parse([]byte(validJSONArrayTags))
+	require.NoError(t, err)
+	require.Len(t, metrics, 2)
+	require.Equal(t, "json_array_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics[0].Fields())
+	require.Equal(t, map[string]string{
+		"tags_array_0_mytag":    "foo",
+		"tags_array_1_othertag": "baz",
+	}, metrics[0].Tags())
+
+	require.Equal(t, "json_array_test", metrics[1].Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(7),
+		"b_c": float64(8),
+	}, metrics[1].Fields())
+	require.Equal(t, map[string]string{
+		"tags_array_0_mytag":    "bar",
+		"tags_array_1_othertag": "baz",
+	}, metrics[1].Tags())
+
+	// Test that strings not matching tag keys are still also ignored
+	parser, err = New(&Config{
+		MetricName: "json_array_test",
+		TagKeys:    []string{"mytag", "*tag"},
+	})
+	require.NoError(t, err)
+	metrics, err = parser.Parse([]byte(validJSONArrayTags))
+	require.NoError(t, err)
+	require.Len(t, metrics, 2)
+	require.Equal(t, "json_array_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics[0].Fields())
+	require.NotContains(t, map[string]string{"notme": ""}, metrics[0].Tags())
+	require.Equal(t, map[string]string{
+		"mytag":                 "foo",
+		"othertag":              "baz",
+		"tags_array_0_mytag":    "foo",
+		"tags_array_1_othertag": "baz",
+	}, metrics[0].Tags())
+
+	require.Equal(t, "json_array_test", metrics[1].Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(7),
+		"b_c": float64(8),
+	}, metrics[1].Fields())
+	require.NotContains(t, map[string]string{"notme": ""}, metrics[1].Tags())
+	require.Equal(t, map[string]string{
+		"mytag":                 "bar",
+		"othertag":              "baz",
+		"tags_array_0_mytag":    "bar",
+		"tags_array_1_othertag": "baz",
+	}, metrics[1].Tags())
+
+	// test that single tag key is also found and applied
+	parser, err = New(&Config{
+		MetricName: "json_array_test",
+		TagKeys:    []string{"anothert", "*tag"},
+	})
+	require.NoError(t, err)
+
+	metrics, err = parser.Parse([]byte(validJSONArrayTags))
+	require.NoError(t, err)
+	require.Len(t, metrics, 2)
+	require.Equal(t, "json_array_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics[0].Fields())
+	require.Equal(t, map[string]string{
+		"anothert":              "foo",
+		"mytag":                 "foo",
+		"othertag":              "baz",
+		"tags_array_0_mytag":    "foo",
+		"tags_array_1_othertag": "baz",
+	}, metrics[0].Tags())
+
+	require.Equal(t, "json_array_test", metrics[1].Name())
+	require.Equal(t, map[string]interface{}{
+		"a":   float64(7),
+		"b_c": float64(8),
+	}, metrics[1].Fields())
+	require.Equal(t, map[string]string{
+		"anothert":              "bar",
+		"mytag":                 "bar",
+		"othertag":              "baz",
+		"tags_array_0_mytag":    "bar",
+		"tags_array_1_othertag": "baz",
+	}, metrics[1].Tags())
+
 }

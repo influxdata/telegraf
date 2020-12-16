@@ -30,10 +30,12 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
   json_query = ""
 
   ## Tag keys is an array of keys that should be added as tags.  Matching keys
-  ## are no longer saved as fields.
+  ## are no longer saved as fields. Now supports wildcard glob matching.
   tag_keys = [
     "my_tag_1",
-    "my_tag_2"
+    "my_tag_2",
+    "tags_*",
+    "tag*"
   ]
 
   ## Array of glob pattern strings keys that should be added as string fields.

@@ -36,7 +36,7 @@ type Config struct {
 
 type Parser struct {
 	metricName   string
-	tagKeys      []string
+	tagKeys      filter.Filter
 	stringFields filter.Filter
 	nameKey      string
 	query        string
@@ -49,13 +49,20 @@ type Parser struct {
 
 func New(config *Config) (*Parser, error) {
 	stringFilter, err := filter.Compile(config.StringFields)
+
 	if err != nil {
-		return nil, err
+		return nil, nil
+	}
+
+	tagKeyFilter, err := filter.Compile(config.TagKeys)
+
+	if err != nil {
+		return nil, nil
 	}
 
 	return &Parser{
 		metricName:   config.MetricName,
-		tagKeys:      config.TagKeys,
+		tagKeys:      tagKeyFilter,
 		nameKey:      config.NameKey,
 		stringFields: stringFilter,
 		query:        config.Query,
@@ -150,27 +157,32 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 //will delete any strings/bools that shouldn't be fields
 //assumes that any non-numeric values in TagKeys should be displayed as tags
 func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
-	for _, name := range p.tagKeys {
-		//switch any fields in tagkeys into tags
-		if fields[name] == nil {
+
+	for name, value := range fields {
+		if p.tagKeys == nil {
 			continue
 		}
-		switch value := fields[name].(type) {
+		// skip switch statement if tagkey doesn't match fieldname
+		if !p.tagKeys.Match(name) {
+			continue
+		}
+		//switch any fields in tagkeys into tags
+		switch t := value.(type) {
 		case string:
-			tags[name] = value
+			tags[name] = t
 			delete(fields, name)
 		case bool:
-			tags[name] = strconv.FormatBool(value)
+			tags[name] = strconv.FormatBool(t)
 			delete(fields, name)
 		case float64:
-			tags[name] = strconv.FormatFloat(value, 'f', -1, 64)
+			tags[name] = strconv.FormatFloat(t, 'f', -1, 64)
 			delete(fields, name)
 		default:
 			log.Printf("E! [parsers.json] Unrecognized type %T", value)
 		}
 	}
 
-	//remove any additional string/bool values from fields
+	// remove any additional string/bool values from fields
 	for fk := range fields {
 		switch fields[fk].(type) {
 		case string, bool:
