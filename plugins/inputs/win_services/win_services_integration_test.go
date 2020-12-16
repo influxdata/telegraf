@@ -25,6 +25,7 @@ func TestList(t *testing.T) {
 	winServices := &WinServices{
 		ServiceNames: KnownServices,
 	}
+	winServices.Init()
 	services, err := winServices.listServices(scmgr)
 	require.NoError(t, err)
 	require.Len(t, services, 2, "Different number of services")
@@ -44,6 +45,7 @@ func TestEmptyList(t *testing.T) {
 	winServices := &WinServices{
 		ServiceNames: []string{},
 	}
+	winServices.Init()
 	services, err := winServices.listServices(scmgr)
 	require.NoError(t, err)
 	require.Condition(t, func() bool { return len(services) > 20 }, "Too few service")
@@ -58,6 +60,7 @@ func TestGatherErrors(t *testing.T) {
 		ServiceNames: InvalidServices,
 		mgrProvider:  &MgProvider{},
 	}
+	ws.Init()
 	require.Len(t, ws.ServiceNames, 3, "Different number of services")
 	var acc testutil.Accumulator
 	require.NoError(t, ws.Gather(&acc))

@@ -134,6 +134,7 @@ func TestBasicInfo(t *testing.T) {
 		Log:         testutil.Logger{},
 		mgrProvider: &FakeMgProvider{testErrors[0]},
 	}
+	winServices.Init()
 	assert.NotEmpty(t, winServices.SampleConfig())
 	assert.NotEmpty(t, winServices.Description())
 }
@@ -165,6 +166,7 @@ func TestMgrErrors(t *testing.T) {
 		ServiceNames: []string{"Fake service 1"},
 		mgrProvider:  &FakeMgProvider{testErrors[3]},
 	}
+	winServices.Init()
 	var acc3 testutil.Accumulator
 
 	buf := &bytes.Buffer{}
@@ -179,6 +181,7 @@ func TestServiceErrors(t *testing.T) {
 		Log:         testutil.Logger{},
 		mgrProvider: &FakeMgProvider{testErrors[2]},
 	}
+	winServices.Init()
 	var acc1 testutil.Accumulator
 
 	buf := &bytes.Buffer{}
@@ -206,6 +209,7 @@ func TestGatherContainsTag(t *testing.T) {
 		ServiceNames: []string{"Service*"},
 		mgrProvider:  &FakeMgProvider{testSimpleData[0]},
 	}
+	winServices.Init()
 	var acc1 testutil.Accumulator
 	require.NoError(t, winServices.Gather(&acc1))
 	assert.Len(t, acc1.Errors, 0, "There should be no errors after gather")
