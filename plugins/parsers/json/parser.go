@@ -180,7 +180,7 @@ func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]inte
 		}
 	}
 
-	// remove any additional string/bool values from fields
+	//remove any additional string/bool values from fields
 	for fk := range fields {
 		switch fields[fk].(type) {
 		case string, bool:
