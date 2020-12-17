@@ -394,6 +394,8 @@ SELECT DISTINCT
 			,'Mirrored Write Transactions/sec'
 			,'Group Commit Time'
 			,'Group Commits/Sec'
+			,'Workfiles Created/sec'
+			,'Worktables Created/sec'
 		) OR (
 			spi.[object_name] LIKE '%User Settable%'
 			OR spi.[object_name] LIKE '%SQL Errors%'
