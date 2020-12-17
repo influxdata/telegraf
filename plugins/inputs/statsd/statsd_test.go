@@ -482,6 +482,33 @@ func TestParse_Distributions(t *testing.T) {
 	}
 }
 
+// Tests timings with histogram buckets options
+func TestParse_HistogramBuckets(t *testing.T) {
+	s := NewTestStatsd()
+	s.HistogramBuckets = []Number{0.1, 1, 10}
+	acc := &testutil.Accumulator{}
+
+	// Test that histogram bucket counters are created
+	validLines := []string{
+		"test.timing:1|ms",
+		"test.timing:11|ms",
+		"test.timing:0.5|ms",
+		"test.timing:0.1|ms",
+		"test.timing:2|ms",
+	}
+
+	for _, line := range validLines {
+		require.NoError(t, s.parseStatsdLine(line))
+	}
+
+	require.NoError(t, s.Gather(acc))
+
+	acc.AssertContainsFieldsWithLeTag(t, "test_timing_bucket", "0.1", map[string]interface{}{"value": int64(1)})
+	acc.AssertContainsFieldsWithLeTag(t, "test_timing_bucket", "1", map[string]interface{}{"value": int64(3)})
+	acc.AssertContainsFieldsWithLeTag(t, "test_timing_bucket", "10", map[string]interface{}{"value": int64(4)})
+	acc.AssertContainsFieldsWithLeTag(t, "test_timing_bucket", "+Inf", map[string]interface{}{"value": int64(5)})
+}
+
 func TestParseScientificNotation(t *testing.T) {
 	s := NewTestStatsd()
 	sciNotationLines := []string{

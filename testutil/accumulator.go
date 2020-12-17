@@ -410,6 +410,27 @@ func (a *Accumulator) AssertContainsFields(
 	assert.Fail(t, msg)
 }
 
+func (a *Accumulator) AssertContainsFieldsWithLeTag(
+	t *testing.T,
+	measurement string,
+	expectedLeTag string,
+	fields map[string]interface{},
+) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			leTag, ok := p.Tags["le"]
+			if ok && leTag == expectedLeTag {
+				assert.Equal(t, fields, p.Fields)
+				return
+			}
+		}
+	}
+	msg := fmt.Sprintf("le tag %s was not found", expectedLeTag)
+	assert.Fail(t, msg)
+}
+
 func (a *Accumulator) HasPoint(
 	measurement string,
 	tags map[string]string,
