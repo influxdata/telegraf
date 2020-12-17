@@ -31,25 +31,26 @@ type Client interface {
 
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
-	URL                       string            // url deprecated in 0.1.9; use urls
-	URLs                      []string          `toml:"urls"`
-	Username                  string            `toml:"username"`
-	Password                  string            `toml:"password"`
-	Database                  string            `toml:"database"`
-	DatabaseTag               string            `toml:"database_tag"`
-	ExcludeDatabaseTag        bool              `toml:"exclude_database_tag"`
-	RetentionPolicy           string            `toml:"retention_policy"`
-	RetentionPolicyTag        string            `toml:"retention_policy_tag"`
-	ExcludeRetentionPolicyTag bool              `toml:"exclude_retention_policy_tag"`
-	UserAgent                 string            `toml:"user_agent"`
-	WriteConsistency          string            `toml:"write_consistency"`
-	Timeout                   internal.Duration `toml:"timeout"`
-	UDPPayload                internal.Size     `toml:"udp_payload"`
-	HTTPProxy                 string            `toml:"http_proxy"`
-	HTTPHeaders               map[string]string `toml:"http_headers"`
-	ContentEncoding           string            `toml:"content_encoding"`
-	SkipDatabaseCreation      bool              `toml:"skip_database_creation"`
-	InfluxUintSupport         bool              `toml:"influx_uint_support"`
+	URL                          string            // url deprecated in 0.1.9; use urls
+	URLs                         []string          `toml:"urls"`
+	Username                     string            `toml:"username"`
+	Password                     string            `toml:"password"`
+	AllowOnlyHumanReadableValues bool              `toml:"allow_only_human_readable_values"`
+	Database                     string            `toml:"database"`
+	DatabaseTag                  string            `toml:"database_tag"`
+	ExcludeDatabaseTag           bool              `toml:"exclude_database_tag"`
+	RetentionPolicy              string            `toml:"retention_policy"`
+	RetentionPolicyTag           string            `toml:"retention_policy_tag"`
+	ExcludeRetentionPolicyTag    bool              `toml:"exclude_retention_policy_tag"`
+	UserAgent                    string            `toml:"user_agent"`
+	WriteConsistency             string            `toml:"write_consistency"`
+	Timeout                      internal.Duration `toml:"timeout"`
+	UDPPayload                   internal.Size     `toml:"udp_payload"`
+	HTTPProxy                    string            `toml:"http_proxy"`
+	HTTPHeaders                  map[string]string `toml:"http_headers"`
+	ContentEncoding              string            `toml:"content_encoding"`
+	SkipDatabaseCreation         bool              `toml:"skip_database_creation"`
+	InfluxUintSupport            bool              `toml:"influx_uint_support"`
 	tls.ClientConfig
 
 	Precision string // precision deprecated in 1.0; value is ignored
@@ -205,11 +206,20 @@ func (i *InfluxDB) SampleConfig() string {
 	return sampleConfig
 }
 
+func (i *InfluxDB) hasOnlyAscii(metrics []telegraf.Metric) bool {
+	return false
+}
+
 // Write sends metrics to one of the configured servers, logging each
 // unsuccessful. If all servers fail, return an error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
+
+	if i.AllowOnlyHumanReadableValues && i.hasOnlyAscii(metrics) {
+		i.Log.Errorf("OUTPUT-INFLUXDB - Allow human readable - %v", metrics)
+		return nil
+	}
+
 	ctx := context.Background()
-	i.Log.Errorf("OUTPUT-INFLUXDB - Allow human readable - %v", metrics)
 	var err error
 	p := rand.Perm(len(i.clients))
 	for _, n := range p {

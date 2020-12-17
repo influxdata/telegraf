@@ -43,8 +43,6 @@ type PubSub struct {
 
 	Base64Data bool `toml:"base64_data"`
 
-	AllowOnlyHumanReadableValues bool `toml:"allow_only_human_readable_values"`
-
 	Log telegraf.Logger
 
 	sub     subscription
@@ -213,11 +211,6 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		ps.undelivered = make(map[telegraf.TrackingID]message)
 	}
 	ps.undelivered[id] = msg
-
-	// check if the message has any non ascii values
-	if ps.AllowOnlyHumanReadableValues {
-		ps.Log.Errorf("Allow human readable - %v, msg %v", metrics, msg)
-	}
 
 	return nil
 }
