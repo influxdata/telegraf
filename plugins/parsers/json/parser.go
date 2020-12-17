@@ -109,7 +109,7 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 
 	name := p.metricName
 
-	//checks if json_name_key is set
+	// checks if json_name_key is set
 	if p.nameKey != "" {
 		switch field := f.Fields[p.nameKey].(type) {
 		case string:
@@ -117,7 +117,7 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 		}
 	}
 
-	//if time key is specified, set timestamp to it
+	// if time key is specified, set timestamp to it
 	if p.timeKey != "" {
 		if p.timeFormat == "" {
 			err := fmt.Errorf("use of 'json_time_key' requires 'json_time_format'")
@@ -136,7 +136,7 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 
 		delete(f.Fields, p.timeKey)
 
-		//if the year is 0, set to current year
+		// if the year is 0, set to current year
 		if timestamp.Year() == 0 {
 			timestamp = timestamp.AddDate(time.Now().Year(), 0, 0)
 		}
@@ -150,21 +150,21 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 	return []telegraf.Metric{metric}, nil
 }
 
-//will take in field map with strings and bools,
-//search for TagKeys that match fieldnames and add them to tags
-//will delete any strings/bools that shouldn't be fields
-//assumes that any non-numeric values in TagKeys should be displayed as tags
+// will take in field map with strings and bools,
+// search for TagKeys that match fieldnames and add them to tags
+// will delete any strings/bools that shouldn't be fields
+// assumes that any non-numeric values in TagKeys should be displayed as tags
 func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
 
 	for name, value := range fields {
 		if p.tagKeys == nil {
 			continue
 		}
-		//skip switch statement if tagkey doesn't match fieldname
+		// skip switch statement if tagkey doesn't match fieldname
 		if !p.tagKeys.Match(name) {
 			continue
 		}
-		//switch any fields in tagkeys into tags
+		// switch any fields in tagkeys into tags
 		switch t := value.(type) {
 		case string:
 			tags[name] = t
@@ -180,7 +180,7 @@ func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]inte
 		}
 	}
 
-	//remove any additional string/bool values from fields
+	// remove any additional string/bool values from fields
 	for fk := range fields {
 		switch fields[fk].(type) {
 		case string, bool:
