@@ -979,7 +979,7 @@ func TestParseWithWildcardTagKeys(t *testing.T) {
 		expected []telegraf.Metric
 	}{
 		{
-			name: "",
+			name: "wildcard matching with tags nested within object",
 			config: &Config{
 				MetricName: "json_test",
 				TagKeys:    []string{"tags_object_*"},
@@ -1001,7 +1001,7 @@ func TestParseWithWildcardTagKeys(t *testing.T) {
 			},
 		},
 		{
-			name: "",
+			name: "wildcard matching with keys containing tag",
 			config: &Config{
 				MetricName: "json_test",
 				TagKeys:    []string{"*tag"},
@@ -1025,7 +1025,7 @@ func TestParseWithWildcardTagKeys(t *testing.T) {
 			},
 		},
 		{
-			name: "",
+			name: "strings not matching tag keys are still also ignored",
 			config: &Config{
 				MetricName: "json_test",
 				TagKeys:    []string{"wrongtagkey", "tags_object_*"},
@@ -1047,7 +1047,7 @@ func TestParseWithWildcardTagKeys(t *testing.T) {
 			},
 		},
 		{
-			name: "",
+			name: "single tag key is also found and applied",
 			config: &Config{
 				MetricName: "json_test",
 				TagKeys:    []string{"mytag", "tags_object_*"},
@@ -1090,7 +1090,7 @@ func TestParseLineWithWildcardTagKeys(t *testing.T) {
 		expected telegraf.Metric
 	}{
 		{
-			name: "",
+			name: "wildcard matching with tags nested within object",
 			config: &Config{
 				MetricName: "json_test",
 				TagKeys:    []string{"tags_object_*"},
@@ -1110,7 +1110,7 @@ func TestParseLineWithWildcardTagKeys(t *testing.T) {
 			),
 		},
 		{
-			name: "",
+			name: "wildcard matching with keys containing tag",
 			config: &Config{
 				MetricName: "json_test",
 				TagKeys:    []string{"*tag"},
@@ -1132,7 +1132,7 @@ func TestParseLineWithWildcardTagKeys(t *testing.T) {
 			),
 		},
 		{
-			name: "",
+			name: "strings not matching tag keys are ignored",
 			config: &Config{
 				MetricName: "json_test",
 				TagKeys:    []string{"wrongtagkey", "tags_object_*"},
@@ -1152,7 +1152,7 @@ func TestParseLineWithWildcardTagKeys(t *testing.T) {
 			),
 		},
 		{
-			name: "",
+			name: "single tag key is also found and applied",
 			config: &Config{
 				MetricName: "json_test",
 				TagKeys:    []string{"mytag", "tags_object_*"},
@@ -1195,7 +1195,7 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 		expected []telegraf.Metric
 	}{
 		{
-			name: "",
+			name: "wildcard matching with keys containing tag within array works",
 			config: &Config{
 				MetricName: "json_array_test",
 				TagKeys:    []string{"*tag"},
@@ -1233,7 +1233,7 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 			},
 		},
 		{
-			name: "",
+			name: " wildcard matching with tags nested array within object works",
 			config: &Config{
 				MetricName: "json_array_test",
 				TagKeys:    []string{"tags_array_*"},
@@ -1267,7 +1267,7 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 			},
 		},
 		{
-			name: "",
+			name: "strings not matching tag keys are still also ignored",
 			config: &Config{
 				MetricName: "json_array_test",
 				TagKeys:    []string{"mytag", "*tag"},
@@ -1305,7 +1305,7 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 			},
 		},
 		{
-			name: "",
+			name: "single tag key is also found and applied",
 			config: &Config{
 				MetricName: "json_array_test",
 				TagKeys:    []string{"anothert", "*tag"},
