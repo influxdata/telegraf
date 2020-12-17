@@ -207,7 +207,7 @@ func (i *InfluxDB) SampleConfig() string {
 }
 
 func (i *InfluxDB) hasOnlyAscii(metrics []telegraf.Metric) bool {
-	return false
+	return true
 }
 
 // Write sends metrics to one of the configured servers, logging each
@@ -215,7 +215,10 @@ func (i *InfluxDB) hasOnlyAscii(metrics []telegraf.Metric) bool {
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 
 	if i.AllowOnlyHumanReadableValues && i.hasOnlyAscii(metrics) {
-		i.Log.Errorf("OUTPUT-INFLUXDB - Allow human readable - %v", metrics)
+
+		for _, value := range metrics {
+			i.Log.Errorf("OUTPUT-INFLUXDB - Allow human readable - %v", value)
+		}
 		return nil
 	}
 
