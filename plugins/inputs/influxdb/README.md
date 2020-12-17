@@ -86,7 +86,6 @@ InfluxDB-formatted endpoints. See below for more information.
 - influxdb_subscriber: The InfluxDB subscription that metrics are collected from.
 - influxdb_tsm1_cache: The TSM cache that metrics are collected from.
 - influxdb_tsm1_engine: The TSM storage engine that metrics are collected from.
-- influxdb_tsm1_engine: The TSM storage engine that metrics are collected from.
 - influxdb_tsm1_filestore: The TSM file store that metrics are collected from.
 - influxdb_tsm1_wal: The TSM Write Ahead Log (WAL) that metrics are collected from.
 - influxdb_write: The total writes to the specified database.
