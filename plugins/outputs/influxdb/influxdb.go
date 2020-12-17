@@ -209,7 +209,7 @@ func (i *InfluxDB) SampleConfig() string {
 // unsuccessful. If all servers fail, return an error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
-
+	i.Log.Errorf("OUTPUT-INFLUXDB - Allow human readable - %v", metrics)
 	var err error
 	p := rand.Perm(len(i.clients))
 	for _, n := range p {
