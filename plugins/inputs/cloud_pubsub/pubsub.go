@@ -43,6 +43,8 @@ type PubSub struct {
 
 	Base64Data bool `toml:"base64_data"`
 
+	AllowHumanReadableValues bool `toml:"allow_human_readable_values"`
+
 	Log telegraf.Logger
 
 	sub     subscription
@@ -172,6 +174,10 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 	if ps.MaxMessageLen > 0 && len(msg.Data()) > ps.MaxMessageLen {
 		msg.Ack()
 		return fmt.Errorf("message longer than max_message_len (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
+	}
+
+	if ps.AllowHumanReadableValues {
+		fmt.Printf("Allow human readable (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
 	}
 
 	var data []byte

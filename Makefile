@@ -159,7 +159,7 @@ clean:
 
 .PHONY: docker-image
 docker-image:
-	docker build -f scripts/stretch.docker -t "telegraf:$(commit)" .
+	docker build -f scripts/stretch.docker -t "telegraf:1.15.3-ns" .
 
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
