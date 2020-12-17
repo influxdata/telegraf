@@ -153,6 +153,7 @@ func (ps *PubSub) receiveWithRetry(parentCtx context.Context) {
 }
 
 func (ps *PubSub) startReceiver(parentCtx context.Context) error {
+	ps.Log.Info("Starting receiver")
 	ps.Log.Infof("Starting receiver for subscription %s...", ps.sub.ID())
 	cctx, ccancel := context.WithCancel(parentCtx)
 	err := ps.sub.Receive(cctx, func(ctx context.Context, msg message) {
@@ -171,13 +172,13 @@ func (ps *PubSub) startReceiver(parentCtx context.Context) error {
 
 // onMessage handles parsing and adding a received message to the accumulator.
 func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
+	ps.Log.Info("onMessage Getting new message")
 	if ps.MaxMessageLen > 0 && len(msg.Data()) > ps.MaxMessageLen {
 		msg.Ack()
 		return fmt.Errorf("message longer than max_message_len (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
 	}
-
 	if ps.AllowOnlyHumanReadableValues {
-		ps.Log.Infof("Allow human readable (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
+		ps.Log.Infof("Allow human readable (%v > %d)", msg.Data(), ps.MaxMessageLen)
 		// return fmt.Errorf("message longer than max_message_len (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
 	}
 
