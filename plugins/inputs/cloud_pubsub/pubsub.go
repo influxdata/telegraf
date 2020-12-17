@@ -175,9 +175,6 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		msg.Ack()
 		return fmt.Errorf("message longer than max_message_len (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
 	}
-	if ps.AllowOnlyHumanReadableValues {
-		ps.Log.Errorf("Allow human readable (%v > %d)", msg.Data(), ps.MaxMessageLen)
-	}
 
 	var data []byte
 	if ps.Base64Data {
@@ -194,6 +191,10 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 	if err != nil {
 		msg.Ack()
 		return err
+	}
+
+	if ps.AllowOnlyHumanReadableValues {
+		ps.Log.Errorf("Allow human readable - %v", data)
 	}
 
 	if len(metrics) == 0 {
