@@ -176,6 +176,7 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		return fmt.Errorf("message longer than max_message_len (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
 	}
 	ps.Log.Info("on Message")
+	ps.Log.Error("on Message")
 	if ps.AllowOnlyHumanReadableValues {
 		ps.Log.Infof("Allow human readable (%v > %d)", msg.Data(), ps.MaxMessageLen)
 	}
