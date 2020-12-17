@@ -217,7 +217,9 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	if i.AllowOnlyHumanReadableValues && i.hasOnlyAscii(metrics) {
 
 		for _, value := range metrics {
-			i.Log.Errorf("OUTPUT-INFLUXDB - Allow human readable - %v", value)
+			i.Log.Errorf("--------------OUTPUT-INFLUXDB - Allow human readable-------- \n", value)
+			i.Log.Errorf("........... %v\n", value)
+			i.Log.Errorf("-------------------------------------------------------------\n", value)
 		}
 		return nil
 	}
