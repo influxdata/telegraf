@@ -193,10 +193,6 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		return err
 	}
 
-	if ps.AllowOnlyHumanReadableValues {
-		ps.Log.Errorf("Allow human readable - %v", data)
-	}
-
 	if len(metrics) == 0 {
 		msg.Ack()
 		return nil
@@ -217,6 +213,11 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		ps.undelivered = make(map[telegraf.TrackingID]message)
 	}
 	ps.undelivered[id] = msg
+
+	// check if the message has any non ascii values
+	if ps.AllowOnlyHumanReadableValues {
+		ps.Log.Errorf("Allow human readable - %v, msg %v", metrics, msg)
+	}
 
 	return nil
 }
