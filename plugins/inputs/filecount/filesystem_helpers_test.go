@@ -1,3 +1,8 @@
+// +build !windows
+
+// TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
+// https://github.com/influxdata/telegraf/issues/6248
+
 package filecount
 
 import (
@@ -13,7 +18,7 @@ func TestMTime(t *testing.T) {
 
 	fs := getTestFileSystem()
 	fileInfo, err := fs.Stat("/testdata/foo")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, mtime, fileInfo.ModTime())
 }
 
@@ -22,7 +27,7 @@ func TestSize(t *testing.T) {
 	size := int64(4096)
 	fs := getTestFileSystem()
 	fileInfo, err := fs.Stat("/testdata")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, size, fileInfo.Size())
 }
 
@@ -31,7 +36,7 @@ func TestIsDir(t *testing.T) {
 	dir := true
 	fs := getTestFileSystem()
 	fileInfo, err := fs.Stat("/testdata")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, dir, fileInfo.IsDir())
 }
 
@@ -40,7 +45,7 @@ func TestRealFS(t *testing.T) {
 	var fs fileSystem = osFS{}
 	//the following file exists on disk - and not in our fake fs
 	fileInfo, err := fs.Stat(getTestdataDir() + "/qux")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, false, fileInfo.IsDir())
 	require.Equal(t, int64(446), fileInfo.Size())
 
@@ -52,7 +57,7 @@ func TestRealFS(t *testing.T) {
 	require.Equal(t, expectedError, err.Error())
 	// and verify that what we DO expect to find, we do
 	fileInfo, err = fs.Stat("/testdata/foo")
-	require.Nil(t, err)
+	require.NoError(t, err)
 }
 
 func getTestFileSystem() fakeFileSystem {
@@ -72,7 +77,7 @@ func getTestFileSystem() fakeFileSystem {
 
 	mtime := time.Date(2015, time.December, 14, 18, 25, 5, 0, time.UTC)
 
-	// set file permisions
+	// set file permissions
 	var fmask uint32 = 0666
 	var dmask uint32 = 0666
 

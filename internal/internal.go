@@ -5,17 +5,17 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
 	"math"
-	"math/big"
+	"math/rand"
 	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unicode"
@@ -48,6 +48,11 @@ type Size struct {
 
 type Number struct {
 	Value float64
+}
+
+type ReadWaitCloser struct {
+	pipeReader *io.PipeReader
+	wg         sync.WaitGroup
 }
 
 // SetVersion sets the telegraf agent version
@@ -205,12 +210,8 @@ func RandomSleep(max time.Duration, shutdown chan struct{}) {
 	if max == 0 {
 		return
 	}
-	maxSleep := big.NewInt(max.Nanoseconds())
 
-	var sleepns int64
-	if j, err := rand.Int(rand.Reader, maxSleep); err == nil {
-		sleepns = j.Int64()
-	}
+	sleepns := rand.Int63n(max.Nanoseconds())
 
 	t := time.NewTimer(time.Nanosecond * time.Duration(sleepns))
 	select {
@@ -228,11 +229,7 @@ func RandomDuration(max time.Duration) time.Duration {
 		return 0
 	}
 
-	var sleepns int64
-	maxSleep := big.NewInt(max.Nanoseconds())
-	if j, err := rand.Int(rand.Reader, maxSleep); err == nil {
-		sleepns = j.Int64()
-	}
+	sleepns := rand.Int63n(max.Nanoseconds())
 
 	return time.Duration(sleepns)
 }
@@ -281,14 +278,25 @@ func ExitStatus(err error) (int, bool) {
 	return 0, false
 }
 
+func (r *ReadWaitCloser) Close() error {
+	err := r.pipeReader.Close()
+	r.wg.Wait() // wait for the gzip goroutine finish
+	return err
+}
+
 // CompressWithGzip takes an io.Reader as input and pipes
 // it through a gzip.Writer returning an io.Reader containing
 // the gzipped data.
 // An error is returned if passing data to the gzip.Writer fails
-func CompressWithGzip(data io.Reader) (io.Reader, error) {
+func CompressWithGzip(data io.Reader) (io.ReadCloser, error) {
 	pipeReader, pipeWriter := io.Pipe()
 	gzipWriter := gzip.NewWriter(pipeWriter)
 
+	rc := &ReadWaitCloser{
+		pipeReader: pipeReader,
+	}
+
+	rc.wg.Add(1)
 	var err error
 	go func() {
 		_, err = io.Copy(gzipWriter, data)
@@ -296,6 +304,7 @@ func CompressWithGzip(data io.Reader) (io.Reader, error) {
 		// subsequent reads from the read half of the pipe will
 		// return no bytes and the error err, or EOF if err is nil.
 		pipeWriter.CloseWithError(err)
+		rc.wg.Done()
 	}()
 
 	return pipeReader, err

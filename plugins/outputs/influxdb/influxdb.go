@@ -10,7 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
@@ -31,23 +31,25 @@ type Client interface {
 
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
-	URL                  string   // url deprecated in 0.1.9; use urls
-	URLs                 []string `toml:"urls"`
-	Username             string
-	Password             string
-	Database             string
-	DatabaseTag          string `toml:"database_tag"`
-	ExcludeDatabaseTag   bool   `toml:"exclude_database_tag"`
-	UserAgent            string
-	RetentionPolicy      string
-	WriteConsistency     string
-	Timeout              internal.Duration
-	UDPPayload           internal.Size     `toml:"udp_payload"`
-	HTTPProxy            string            `toml:"http_proxy"`
-	HTTPHeaders          map[string]string `toml:"http_headers"`
-	ContentEncoding      string            `toml:"content_encoding"`
-	SkipDatabaseCreation bool              `toml:"skip_database_creation"`
-	InfluxUintSupport    bool              `toml:"influx_uint_support"`
+	URL                       string            // url deprecated in 0.1.9; use urls
+	URLs                      []string          `toml:"urls"`
+	Username                  string            `toml:"username"`
+	Password                  string            `toml:"password"`
+	Database                  string            `toml:"database"`
+	DatabaseTag               string            `toml:"database_tag"`
+	ExcludeDatabaseTag        bool              `toml:"exclude_database_tag"`
+	RetentionPolicy           string            `toml:"retention_policy"`
+	RetentionPolicyTag        string            `toml:"retention_policy_tag"`
+	ExcludeRetentionPolicyTag bool              `toml:"exclude_retention_policy_tag"`
+	UserAgent                 string            `toml:"user_agent"`
+	WriteConsistency          string            `toml:"write_consistency"`
+	Timeout                   internal.Duration `toml:"timeout"`
+	UDPPayload                internal.Size     `toml:"udp_payload"`
+	HTTPProxy                 string            `toml:"http_proxy"`
+	HTTPHeaders               map[string]string `toml:"http_headers"`
+	ContentEncoding           string            `toml:"content_encoding"`
+	SkipDatabaseCreation      bool              `toml:"skip_database_creation"`
+	InfluxUintSupport         bool              `toml:"influx_uint_support"`
 	tls.ClientConfig
 
 	Precision string // precision deprecated in 1.0; value is ignored
@@ -57,8 +59,7 @@ type InfluxDB struct {
 	CreateHTTPClientF func(config *HTTPConfig) (Client, error)
 	CreateUDPClientF  func(config *UDPConfig) (Client, error)
 
-	serializer *influx.Serializer
-	Log        telegraf.Logger
+	Log telegraf.Logger
 }
 
 var sampleConfig = `
@@ -78,7 +79,7 @@ var sampleConfig = `
   ## tag is not set the 'database' option is used as the default.
   # database_tag = ""
 
-  ## If true, the database tag will not be added to the metric.
+  ## If true, the 'database_tag' will not be included in the written metric.
   # exclude_database_tag = false
 
   ## If true, no CREATE DATABASE queries will be sent.  Set to true when using
@@ -89,6 +90,13 @@ var sampleConfig = `
   ## Name of existing retention policy to write to.  Empty string writes to
   ## the default retention policy.  Only takes effect when using HTTP.
   # retention_policy = ""
+
+  ## The value of this tag will be used to determine the retention policy.  If this
+  ## tag is not set the 'retention_policy' option is used as the default.
+  # retention_policy_tag = ""
+
+  ## If true, the 'retention_policy_tag' will not be included in the written metric.
+  # exclude_retention_policy_tag = false
 
   ## Write consistency (clusters only), can be: "any", "one", "quorum", "all".
   ## Only takes effect when using HTTP.
@@ -123,7 +131,7 @@ var sampleConfig = `
 
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
-  # content_encoding = "identity"
+  # content_encoding = "gzip"
 
   ## When true, Telegraf will output unsigned integers as unsigned values,
   ## i.e.: "42u".  You will need a version of InfluxDB supporting unsigned
@@ -143,11 +151,6 @@ func (i *InfluxDB) Connect() error {
 
 	if len(urls) == 0 {
 		urls = append(urls, defaultURL)
-	}
-
-	i.serializer = influx.NewSerializer()
-	if i.InfluxUintSupport {
-		i.serializer.SetFieldTypeSupport(influx.UintSupport)
 	}
 
 	for _, u := range urls {
@@ -237,7 +240,7 @@ func (i *InfluxDB) udpClient(url *url.URL) (Client, error) {
 	config := &UDPConfig{
 		URL:            url,
 		MaxPayloadSize: int(i.UDPPayload.Size),
-		Serializer:     i.serializer,
+		Serializer:     i.newSerializer(),
 		Log:            i.Log,
 	}
 
@@ -256,23 +259,25 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 	}
 
 	config := &HTTPConfig{
-		URL:                  url,
-		Timeout:              i.Timeout.Duration,
-		TLSConfig:            tlsConfig,
-		UserAgent:            i.UserAgent,
-		Username:             i.Username,
-		Password:             i.Password,
-		Proxy:                proxy,
-		ContentEncoding:      i.ContentEncoding,
-		Headers:              i.HTTPHeaders,
-		Database:             i.Database,
-		DatabaseTag:          i.DatabaseTag,
-		ExcludeDatabaseTag:   i.ExcludeDatabaseTag,
-		SkipDatabaseCreation: i.SkipDatabaseCreation,
-		RetentionPolicy:      i.RetentionPolicy,
-		Consistency:          i.WriteConsistency,
-		Serializer:           i.serializer,
-		Log:                  i.Log,
+		URL:                       url,
+		Timeout:                   i.Timeout.Duration,
+		TLSConfig:                 tlsConfig,
+		UserAgent:                 i.UserAgent,
+		Username:                  i.Username,
+		Password:                  i.Password,
+		Proxy:                     proxy,
+		ContentEncoding:           i.ContentEncoding,
+		Headers:                   i.HTTPHeaders,
+		Database:                  i.Database,
+		DatabaseTag:               i.DatabaseTag,
+		ExcludeDatabaseTag:        i.ExcludeDatabaseTag,
+		SkipDatabaseCreation:      i.SkipDatabaseCreation,
+		RetentionPolicy:           i.RetentionPolicy,
+		RetentionPolicyTag:        i.RetentionPolicyTag,
+		ExcludeRetentionPolicyTag: i.ExcludeRetentionPolicyTag,
+		Consistency:               i.WriteConsistency,
+		Serializer:                i.newSerializer(),
+		Log:                       i.Log,
 	}
 
 	c, err := i.CreateHTTPClientF(config)
@@ -284,11 +289,20 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 		err = c.CreateDatabase(ctx, c.Database())
 		if err != nil {
 			i.Log.Warnf("When writing to [%s]: database %q creation failed: %v",
-				c.URL(), i.Database, err)
+				c.URL(), c.Database(), err)
 		}
 	}
 
 	return c, nil
+}
+
+func (i *InfluxDB) newSerializer() *influx.Serializer {
+	serializer := influx.NewSerializer()
+	if i.InfluxUintSupport {
+		serializer.SetFieldTypeSupport(influx.UintSupport)
+	}
+
+	return serializer
 }
 
 func init() {
@@ -301,6 +315,7 @@ func init() {
 			CreateUDPClientF: func(config *UDPConfig) (Client, error) {
 				return NewUDPClient(*config)
 			},
+			ContentEncoding: "gzip",
 		}
 	})
 }

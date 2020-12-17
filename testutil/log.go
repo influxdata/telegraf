@@ -2,7 +2,11 @@ package testutil
 
 import (
 	"log"
+
+	"github.com/influxdata/telegraf"
 )
+
+var _ telegraf.Logger = &Logger{}
 
 // Logger defines a logging structure for plugins.
 type Logger struct {

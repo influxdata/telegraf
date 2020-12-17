@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -75,6 +76,21 @@ func TestFieldConversions(t *testing.T) {
 				fv, ok := actual.GetField("request")
 				require.True(t, ok)
 				require.Equal(t, "/MIXED/CASE/PATH/?FROM=-1D&TO=NOW", fv)
+			},
+		},
+		{
+			name: "Should change existing field to titlecase",
+			plugin: &Strings{
+				Titlecase: []converter{
+					{
+						Field: "request",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("request")
+				require.True(t, ok)
+				require.Equal(t, "/Mixed/CASE/PaTH/?From=-1D&To=Now", fv)
 			},
 		},
 		{
@@ -330,6 +346,7 @@ func TestFieldKeyConversions(t *testing.T) {
 				// Tag/field key multiple executions occur in the following order: (initOnce)
 				//   Lowercase
 				//   Uppercase
+				//   Titlecase
 				//   Trim
 				//   TrimLeft
 				//   TrimRight
@@ -594,6 +611,30 @@ func TestTagConversions(t *testing.T) {
 				require.Equal(t, "MIXEDCASE_HOSTNAME", tv)
 			},
 		},
+		{
+			name: "Should add new titlecase tag",
+			plugin: &Strings{
+				Titlecase: []converter{
+					{
+						Tag:  "s-computername",
+						Dest: "s-computername_titlecase",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				tv, ok := actual.GetTag("verb")
+				require.True(t, ok)
+				require.Equal(t, "GET", tv)
+
+				tv, ok = actual.GetTag("s-computername")
+				require.True(t, ok)
+				require.Equal(t, "MIXEDCASE_hostname", tv)
+
+				tv, ok = actual.GetTag("s-computername_titlecase")
+				require.True(t, ok)
+				require.Equal(t, "MIXEDCASE_hostname", tv)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -735,6 +776,11 @@ func TestMultipleConversions(t *testing.T) {
 				Tag: "verb",
 			},
 		},
+		Titlecase: []converter{
+			{
+				Field: "status",
+			},
+		},
 		Replace: []converter{
 			{
 				Tag: "foo",
@@ -762,6 +808,7 @@ func TestMultipleConversions(t *testing.T) {
 			"cs-host":       "AAAbbb",
 			"ignore_number": int64(200),
 			"ignore_bool":   true,
+			"status":        "green",
 		},
 		time.Now(),
 	)
@@ -774,6 +821,7 @@ func TestMultipleConversions(t *testing.T) {
 		"ignore_bool":       true,
 		"cs-host":           "AAAbbb",
 		"cs-host_lowercase": "aaabbb",
+		"status":            "Green",
 	}
 	expectedTags := map[string]string{
 		"verb":           "GET",
@@ -891,4 +939,111 @@ func TestMeasurementCharDeletion(t *testing.T) {
 	assert.Equal(t, ":bar:baz", results[0].Name(), "Should have deleted the initial `foo`")
 	assert.Equal(t, "foofoofoo", results[1].Name(), "Should have refused to delete the whole string")
 	assert.Equal(t, "barbarbar", results[2].Name(), "Should not have changed the input")
+}
+
+func TestBase64Decode(t *testing.T) {
+	tests := []struct {
+		name     string
+		plugin   *Strings
+		metric   []telegraf.Metric
+		expected []telegraf.Metric
+	}{
+		{
+			name: "base64decode success",
+			plugin: &Strings{
+				Base64Decode: []converter{
+					{
+						Field: "message",
+					},
+				},
+			},
+			metric: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "aG93ZHk=",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "howdy",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "base64decode not valid base64 returns original string",
+			plugin: &Strings{
+				Base64Decode: []converter{
+					{
+						Field: "message",
+					},
+				},
+			},
+			metric: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "_not_base64_",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "_not_base64_",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "base64decode not valid utf-8 returns original string",
+			plugin: &Strings{
+				Base64Decode: []converter{
+					{
+						Field: "message",
+					},
+				},
+			},
+			metric: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "//5oAG8AdwBkAHkA",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "//5oAG8AdwBkAHkA",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.plugin.Apply(tt.metric...)
+			testutil.RequireMetricsEqual(t, tt.expected, actual)
+		})
+	}
 }

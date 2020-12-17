@@ -7,7 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/vmware/govmomi/vim25/soap"
 )
@@ -22,22 +22,27 @@ type VSphere struct {
 	DatacenterMetricInclude []string
 	DatacenterMetricExclude []string
 	DatacenterInclude       []string
+	DatacenterExclude       []string
 	ClusterInstances        bool
 	ClusterMetricInclude    []string
 	ClusterMetricExclude    []string
 	ClusterInclude          []string
+	ClusterExclude          []string
 	HostInstances           bool
 	HostMetricInclude       []string
 	HostMetricExclude       []string
 	HostInclude             []string
+	HostExclude             []string
 	VMInstances             bool     `toml:"vm_instances"`
 	VMMetricInclude         []string `toml:"vm_metric_include"`
 	VMMetricExclude         []string `toml:"vm_metric_exclude"`
 	VMInclude               []string `toml:"vm_include"`
+	VMExclude               []string `toml:"vm_exclude"`
 	DatastoreInstances      bool
 	DatastoreMetricInclude  []string
 	DatastoreMetricExclude  []string
 	DatastoreInclude        []string
+	DatastoreExclude        []string
 	Separator               string
 	CustomAttributeInclude  []string
 	CustomAttributeExclude  []string
@@ -70,6 +75,8 @@ var sampleConfig = `
 
   ## VMs
   ## Typical VM metrics (if omitted or empty, all metrics are collected)
+  # vm_include = [ "/*/vm/**"] # Inventory path to VMs to collect (by default all are collected)
+  # vm_exclude = [] # Inventory paths to exclude
   vm_metric_include = [
     "cpu.demand.average",
     "cpu.idle.summation",
@@ -111,6 +118,8 @@ var sampleConfig = `
 
   ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
+  # host_include = [ "/*/host/**"] # Inventory path to hosts to collect (by default all are collected)
+  # host_exclude [] # Inventory paths to exclude
   host_metric_include = [
     "cpu.coreUtilization.average",
     "cpu.costop.summation",
@@ -159,46 +168,49 @@ var sampleConfig = `
     "storageAdapter.write.average",
     "sys.uptime.latest",
   ]
-  ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
+    ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
   # ip_addresses = ["ipv6", "ipv4" ]
+
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
+
   ## Clusters
+  # cluster_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
+  # cluster_exclude = [] # Inventory paths to exclude
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
   # cluster_instances = false ## false by default
 
   ## Datastores
+  # datastore_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
+  # datastore_exclude = [] # Inventory paths to exclude
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
-  # datastore_instances = false ## false by default for Datastores only
+  # datastore_instances = false ## false by default
 
   ## Datacenters
+  # datacenter_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
+  # datacenter_exclude = [] # Inventory paths to exclude
   datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
-  # datacenter_instances = false ## false by default for Datastores only
+  # datacenter_instances = false ## false by default
 
-  ## Plugin Settings  
+  ## Plugin Settings
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
 
-  ## number of objects to retreive per query for realtime resources (vms and hosts)
+  ## number of objects to retrieve per query for realtime resources (vms and hosts)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
   # max_query_objects = 256
 
-  ## number of metrics to retreive per query for non-realtime resources (clusters and datastores)
+  ## number of metrics to retrieve per query for non-realtime resources (clusters and datastores)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
   # max_query_metrics = 256
 
   ## number of go routines to use for collection and discovery of objects and metrics
   # collect_concurrency = 1
   # discover_concurrency = 1
-
-  ## whether or not to force discovery of new objects on initial gather call before collecting metrics
-  ## when true for large environments this may cause errors for time elapsed while collecting metrics
-  ## when false (default) the first collection cycle may result in no or limited metrics while objects are discovered
-  # force_discover_on_init = false
 
   ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
   # object_discovery_interval = "300s"
@@ -217,10 +229,13 @@ var sampleConfig = `
   ## Custom attributes from vCenter can be very useful for queries in order to slice the
   ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
   ## by default, since they can add a considerable amount of tags to the resulting metrics. To
-  ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  ## enable, simply set custom_attribute_exclude to [] (empty set) and use custom_attribute_include
+  ## to select the attributes you want to include.
+  ## By default, since they can add a considerable amount of tags to the resulting metrics. To
+  ## enable, simply set custom_attribute_exclude to [] (empty set) and use custom_attribute_include
   ## to select the attributes you want to include.
   # custom_attribute_include = []
-  # custom_attribute_exclude = ["*"] 
+  # custom_attribute_exclude = ["*"]
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
@@ -248,6 +263,11 @@ func (v *VSphere) Start(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	v.cancel = cancel
 
+	// Check for deprecated settings
+	if !v.ForceDiscoverOnInit {
+		v.Log.Warn("The 'force_discover_on_init' configuration parameter has been deprecated. Setting it to 'false' has no effect")
+	}
+
 	// Create endpoints, one for each vCenter we're monitoring
 	v.endpoints = make([]*Endpoint, len(v.Vcenters))
 	for i, rawURL := range v.Vcenters {
@@ -255,7 +275,7 @@ func (v *VSphere) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		ep, err := NewEndpoint(ctx, v, u)
+		ep, err := NewEndpoint(ctx, v, u, v.Log)
 		if err != nil {
 			return err
 		}
@@ -344,7 +364,7 @@ func init() {
 			MaxQueryMetrics:         256,
 			CollectConcurrency:      1,
 			DiscoverConcurrency:     1,
-			ForceDiscoverOnInit:     false,
+			ForceDiscoverOnInit:     true,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 			Timeout:                 internal.Duration{Duration: time.Second * 60},
 		}

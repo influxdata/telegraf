@@ -76,3 +76,62 @@ func TestGatherHealthCheckWithDelimitedTags(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
 }
+
+func TestGatherHealthCheckV2(t *testing.T) {
+	expectedFields := map[string]interface{}{
+		"passing":  1,
+		"critical": 0,
+		"warning":  0,
+	}
+
+	expectedTags := map[string]string{
+		"node":                    "localhost",
+		"check_id":                "foo.health123",
+		"check_name":              "foo.health",
+		"status":                  "passing",
+		"service_id":              "foo.123",
+		"service_name":            "foo",
+		"bar":                     "bar",
+		"env:sandbox":             "env:sandbox",
+		"tagkey:value:stillvalue": "tagkey:value:stillvalue",
+	}
+
+	var acc testutil.Accumulator
+
+	consul := &Consul{
+		MetricVersion: 2,
+	}
+	consul.GatherHealthCheck(&acc, sampleChecks)
+
+	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
+}
+
+func TestGatherHealthCheckWithDelimitedTagsV2(t *testing.T) {
+	expectedFields := map[string]interface{}{
+		"passing":  1,
+		"critical": 0,
+		"warning":  0,
+	}
+
+	expectedTags := map[string]string{
+		"node":         "localhost",
+		"check_id":     "foo.health123",
+		"check_name":   "foo.health",
+		"status":       "passing",
+		"service_id":   "foo.123",
+		"service_name": "foo",
+		"bar":          "bar",
+		"env":          "sandbox",
+		"tagkey":       "value:stillvalue",
+	}
+
+	var acc testutil.Accumulator
+
+	consul := &Consul{
+		MetricVersion: 2,
+		TagDelimiter:  ":",
+	}
+	consul.GatherHealthCheck(&acc, sampleChecks)
+
+	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
+}

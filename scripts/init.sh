@@ -122,11 +122,11 @@ case $1 in
         # Checked the PID file exists and check the actual status of process
         if [ -e "$pidfile" ]; then
             if pidofproc -p $pidfile $daemon > /dev/null; then
-				log_failure_msg "$name process is running"
-			else
-				log_failure_msg "$name pidfile has no corresponding process; ensure $name is stopped and remove $pidfile"
-			fi
-			exit 0
+                log_failure_msg "$name process is running"
+	    else
+                log_failure_msg "$name pidfile has no corresponding process; ensure $name is stopped and remove $pidfile"
+            fi
+            exit 0
         fi
 
         # Bump the file limits, before launching the daemon. These will carry over to

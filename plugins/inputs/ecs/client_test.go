@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 
@@ -107,7 +108,8 @@ func TestEcsClient_Task(t *testing.T) {
 			client: mockDo{
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
-						Body: ioutil.NopCloser(rc),
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(rc),
 					}, nil
 				},
 			},
@@ -123,11 +125,24 @@ func TestEcsClient_Task(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "malformed resp",
+			name: "malformed 500 resp",
 			client: mockDo{
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
-						Body: ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+						StatusCode: http.StatusInternalServerError,
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+					}, nil
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "malformed 200 resp",
+			client: mockDo{
+				do: func(req *http.Request) (*http.Response, error) {
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
 					}, nil
 				},
 			},
@@ -164,7 +179,8 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 			client: mockDo{
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
-						Body: ioutil.NopCloser(rc),
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(rc),
 					}, nil
 				},
 			},
@@ -181,15 +197,29 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "malformed resp",
+			name: "malformed 200 resp",
 			client: mockDo{
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
-						Body: ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
 					}, nil
 				},
 			},
 			want:    map[string]types.StatsJSON{},
+			wantErr: true,
+		},
+		{
+			name: "malformed 500 resp",
+			client: mockDo{
+				do: func(req *http.Request) (*http.Response, error) {
+					return &http.Response{
+						StatusCode: http.StatusInternalServerError,
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+					}, nil
+				},
+			},
+			want:    nil,
 			wantErr: true,
 		},
 	}
@@ -206,6 +236,80 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 				return
 			}
 			assert.Equal(t, tt.want, got, "EcsClient.ContainerStats() = %v, want %v", got, tt.want)
+		})
+	}
+}
+
+func TestResolveTaskURL(t *testing.T) {
+	tests := []struct {
+		name string
+		base string
+		ver  int
+		exp  string
+	}{
+		{
+			name: "default v2 endpoint",
+			base: v2Endpoint,
+			ver:  2,
+			exp:  "http://169.254.170.2/v2/metadata",
+		},
+		{
+			name: "custom v2 endpoint",
+			base: "http://192.168.0.1",
+			ver:  2,
+			exp:  "http://192.168.0.1/v2/metadata",
+		},
+		{
+			name: "theoretical v3 endpoint",
+			base: "http://169.254.170.2/v3/metadata",
+			ver:  3,
+			exp:  "http://169.254.170.2/v3/metadata/task",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			baseURL, err := url.Parse(tt.base)
+			assert.NoError(t, err)
+
+			act := resolveTaskURL(baseURL, tt.ver)
+			assert.Equal(t, tt.exp, act)
+		})
+	}
+}
+
+func TestResolveStatsURL(t *testing.T) {
+	tests := []struct {
+		name string
+		base string
+		ver  int
+		exp  string
+	}{
+		{
+			name: "default v2 endpoint",
+			base: v2Endpoint,
+			ver:  2,
+			exp:  "http://169.254.170.2/v2/stats",
+		},
+		{
+			name: "custom v2 endpoint",
+			base: "http://192.168.0.1",
+			ver:  2,
+			exp:  "http://192.168.0.1/v2/stats",
+		},
+		{
+			name: "theoretical v3 endpoint",
+			base: "http://169.254.170.2/v3/metadata",
+			ver:  3,
+			exp:  "http://169.254.170.2/v3/metadata/task/stats",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			baseURL, err := url.Parse(tt.base)
+			assert.NoError(t, err)
+
+			act := resolveStatsURL(baseURL, tt.ver)
+			assert.Equal(t, tt.exp, act)
 		})
 	}
 }

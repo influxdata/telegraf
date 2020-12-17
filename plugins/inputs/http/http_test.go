@@ -106,6 +106,30 @@ func TestInvalidStatusCode(t *testing.T) {
 	require.Error(t, acc.GatherError(plugin.Gather))
 }
 
+func TestSuccessStatusCodes(t *testing.T) {
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer fakeServer.Close()
+
+	url := fakeServer.URL + "/endpoint"
+	plugin := &plugin.HTTP{
+		URLs:               []string{url},
+		SuccessStatusCodes: []int{200, 202},
+	}
+
+	metricName := "metricName"
+	p, _ := parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: metricName,
+	})
+	plugin.SetParser(p)
+
+	var acc testutil.Accumulator
+	plugin.Init()
+	require.NoError(t, acc.GatherError(plugin.Gather))
+}
+
 func TestMethod(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {

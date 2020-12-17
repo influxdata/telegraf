@@ -1,14 +1,22 @@
-# Prometheus Client Service Output Plugin
+# Prometheus Output Plugin
 
-This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all metrics on `/metrics` (default) to be polled by a Prometheus server.
+This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes
+all metrics on `/metrics` (default) to be polled by a Prometheus server.
 
-## Configuration
+### Configuration
 
 ```toml
-# Publish all metrics to /metrics for Prometheus to scrape
 [[outputs.prometheus_client]]
   ## Address to listen on.
   listen = ":9273"
+
+  ## Metric version controls the mapping from Telegraf metrics into
+  ## Prometheus format.  When using the prometheus input, use the same value in
+  ## both plugins to ensure metrics are round-tripped without modification.
+  ##
+  ##   example: metric_version = 1; deprecated in 1.13
+  ##            metric_version = 2; recommended version
+  # metric_version = 1
 
   ## Use HTTP Basic Authentication.
   # basic_username = "Foo"
@@ -43,3 +51,9 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
   ## Export metric collection time.
   # export_timestamp = false
 ```
+
+### Metrics
+
+Prometheus metrics are produced in the same manner as the [prometheus serializer][].
+
+[prometheus serializer]: /plugins/serializers/prometheus/README.md#Metrics

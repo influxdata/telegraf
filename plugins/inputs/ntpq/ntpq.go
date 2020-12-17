@@ -21,30 +21,11 @@ var tagHeaders map[string]string = map[string]string{
 	"t":      "type",
 }
 
-// Mapping of the ntpq tag key to the index in the command output
-var tagI map[string]int = map[string]int{
-	"remote":  -1,
-	"refid":   -1,
-	"stratum": -1,
-	"type":    -1,
-}
-
-// Mapping of float metrics to their index in the command output
-var floatI map[string]int = map[string]int{
-	"delay":  -1,
-	"offset": -1,
-	"jitter": -1,
-}
-
-// Mapping of int metrics to their index in the command output
-var intI map[string]int = map[string]int{
-	"when":  -1,
-	"poll":  -1,
-	"reach": -1,
-}
-
 type NTPQ struct {
-	runQ func() ([]byte, error)
+	runQ   func() ([]byte, error)
+	tagI   map[string]int
+	floatI map[string]int
+	intI   map[string]int
 
 	DNSLookup bool `toml:"dns_lookup"`
 }
@@ -101,19 +82,19 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 			for i, field := range fields {
 				// Check if field is a tag:
 				if tagKey, ok := tagHeaders[field]; ok {
-					tagI[tagKey] = i
+					n.tagI[tagKey] = i
 					continue
 				}
 
 				// check if field is a float metric:
-				if _, ok := floatI[field]; ok {
-					floatI[field] = i
+				if _, ok := n.floatI[field]; ok {
+					n.floatI[field] = i
 					continue
 				}
 
 				// check if field is an int metric:
-				if _, ok := intI[field]; ok {
-					intI[field] = i
+				if _, ok := n.intI[field]; ok {
+					n.intI[field] = i
 					continue
 				}
 			}
@@ -125,7 +106,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 			mFields := make(map[string]interface{})
 
 			// Get tags from output
-			for key, index := range tagI {
+			for key, index := range n.tagI {
 				if index == -1 {
 					continue
 				}
@@ -133,7 +114,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Get integer metrics from output
-			for key, index := range intI {
+			for key, index := range n.intI {
 				if index == -1 || index >= len(fields) {
 					continue
 				}
@@ -183,7 +164,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// get float metrics from output
-			for key, index := range floatI {
+			for key, index := range n.floatI {
 				if index == -1 || index >= len(fields) {
 					continue
 				}
@@ -223,10 +204,40 @@ func (n *NTPQ) runq() ([]byte, error) {
 	return cmd.Output()
 }
 
+func newNTPQ() *NTPQ {
+	// Mapping of the ntpq tag key to the index in the command output
+	tagI := map[string]int{
+		"remote":  -1,
+		"refid":   -1,
+		"stratum": -1,
+		"type":    -1,
+	}
+
+	// Mapping of float metrics to their index in the command output
+	floatI := map[string]int{
+		"delay":  -1,
+		"offset": -1,
+		"jitter": -1,
+	}
+
+	// Mapping of int metrics to their index in the command output
+	intI := map[string]int{
+		"when":  -1,
+		"poll":  -1,
+		"reach": -1,
+	}
+
+	n := &NTPQ{
+		tagI:   tagI,
+		floatI: floatI,
+		intI:   intI,
+	}
+	n.runQ = n.runq
+	return n
+}
+
 func init() {
 	inputs.Add("ntpq", func() telegraf.Input {
-		n := &NTPQ{}
-		n.runQ = n.runq
-		return n
+		return newNTPQ()
 	})
 }

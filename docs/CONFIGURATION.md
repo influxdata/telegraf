@@ -45,11 +45,30 @@ in the `/etc/default/telegraf` file.
 **Example**:
 
 `/etc/default/telegraf`:
+
+For InfluxDB 1.x:
 ```
 USER="alice"
 INFLUX_URL="http://localhost:8086"
 INFLUX_SKIP_DATABASE_CREATION="true"
 INFLUX_PASSWORD="monkey123"
+```
+For InfluxDB OSS 2:
+```
+INFLUX_HOST="http://localhost:8086" # used to be 9999
+INFLUX_TOKEN="replace_with_your_token"
+INFLUX_ORG="your_username"
+INFLUX_BUCKET="replace_with_your_bucket_name"
+```
+
+For InfluxDB Cloud 2:
+```
+# For AWS West (Oregon)
+INFLUX_HOST="https://us-west-2-1.aws.cloud2.influxdata.com"
+# Other Cloud URLs at https://v2.docs.influxdata.com/v2.0/reference/urls/#influxdb-cloud-urls
+INFLUX_TOKEN=”replace_with_your_token”
+INFLUX_ORG="yourname@yourcompany.com"
+INFLUX_BUCKET="replace_with_your_bucket_name"
 ```
 
 `/etc/telegraf.conf`:
@@ -59,10 +78,25 @@ INFLUX_PASSWORD="monkey123"
 
 [[inputs.mem]]
 
+# For InfluxDB 1.x:
 [[outputs.influxdb]]
   urls = ["${INFLUX_URL}"]
   skip_database_creation = ${INFLUX_SKIP_DATABASE_CREATION}
   password = "${INFLUX_PASSWORD}"
+
+# For InfluxDB OSS 2:
+[[outputs.influxdb_v2]]
+  urls = ["${INFLUX_HOST}"]
+  token = ["${INFLUX_TOKEN}"]
+  org = ["${INFLUX_ORG}"]
+  bucket = ["${INFLUX_BUCKET}"]
+
+# For InfluxDB Cloud 2:
+[[outputs.influxdb_v2]]
+  urls = ["${INFLUX_HOST}"]
+  token = ["${INFLUX_TOKEN}"]
+  org = ["${INFLUX_ORG}"]
+  bucket = ["${INFLUX_BUCKET}"]
 ```
 
 The above files will produce the following effective configuration file to be
@@ -71,10 +105,29 @@ parsed:
 [global_tags]
   user = "alice"
 
+[[inputs.mem]]
+
+# For InfluxDB 1.x:
 [[outputs.influxdb]]
   urls = "http://localhost:8086"
   skip_database_creation = true
   password = "monkey123"
+
+# For InfluxDB OSS 2:
+[[outputs.influxdb_v2]]
+  urls = ["http://127.0.0.1:8086"] # double check the port. could be 9999 if using OSS Beta
+  token = "replace_with_your_token"
+  org = "your_username"
+  bucket = "replace_with_your_bucket_name"
+
+# For InfluxDB Cloud 2:
+[[outputs.influxdb_v2]]
+  # For AWS West (Oregon)
+  INFLUX_HOST="https://us-west-2-1.aws.cloud2.influxdata.com"
+  # Other Cloud URLs at https://v2.docs.influxdata.com/v2.0/reference/urls/#influxdb-cloud-urls
+  token = "replace_with_your_token"
+  org = "yourname@yourcompany.com"
+  bucket = "replace_with_your_bucket_name"
 ```
 
 ### Intervals
@@ -124,12 +177,13 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **flush_interval**:
   Default flushing [interval][] for all outputs. Maximum flush_interval will be
-  flush_interval + flush_jitter
+  flush_interval + flush_jitter.
 
 - **flush_jitter**:
-  Jitter the flush [interval][] by a random amount. This is primarily to avoid
-  large write spikes for users running a large number of telegraf instances.
-  ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
+  Default flush jitter for all outputs. This jitters the flush [interval][]
+  by a random amount. This is primarily to avoid large write spikes for users
+  running a large number of telegraf instances. ie, a jitter of 5s and interval
+  10s means flushes will happen every 10-15s.
 
 - **precision**:
   Collected metrics are rounded to the precision specified as an [interval][].
@@ -144,11 +198,14 @@ The agent table configures Telegraf and the defaults used across all plugins.
   Log only error level messages.
 
 - **logtarget**:
-  Log target - `file`, `stderr` or `eventlog` (Windows only). 
-  The empty string means to log to stderr.
+  Log target controls the destination for logs and can be one of "file",
+  "stderr" or, on Windows, "eventlog".  When set to "file", the output file is
+  determined by the "logfile" setting.
 
 - **logfile**:
-  Log file name.
+  Name of the file to be logged to when using the "file" logtarget.  If set to
+  the empty string then logs are written to stderr.
+
 
 - **logfile_rotation_interval**:
   The logfile will be rotated after the time interval specified.  When set to
@@ -173,7 +230,7 @@ Telegraf plugins are divided into 4 types: [inputs][], [outputs][],
 [processors][], and [aggregators][].
 
 Unlike the `global_tags` and `agent` tables, any plugin can be defined
-multiple times and each instance will run independantly.  This allows you to
+multiple times and each instance will run independently.  This allows you to
 have plugins defined with differing configurations as needed within a single
 Telegraf process.
 
@@ -189,13 +246,32 @@ driven operation.
 Parameters that can be used with any input plugin:
 
 - **alias**: Name an instance of a plugin.
-- **interval**: How often to gather this metric. Normal plugins use a single
-  global interval, but if one particular input should be run less or more
-  often, you can configure that here.
+
+- **interval**:
+  Overrides the `interval` setting of the [agent][Agent] for the plugin.  How
+  often to gather this metric. Normal plugins use a single global interval, but
+  if one particular input should be run less or more often, you can configure
+  that here.
+
+- **precision**:
+  Overrides the `precision` setting of the [agent][Agent] for the plugin.
+  Collected metrics are rounded to the precision specified as an [interval][].
+
+  When this value is set on a service input, multiple events occuring at the
+  same timestamp may be merged by the output database.
+
+- **collection_jitter**:
+  Overrides the `collection_jitter` setting of the [agent][Agent] for the
+  plugin.  Collection jitter is used to jitter the collection by a random
+  [interval][].
+
 - **name_override**: Override the base name of the measurement.  (Default is
   the name of the input).
+
 - **name_prefix**: Specifies a prefix to attach to the measurement name.
+
 - **name_suffix**: Specifies a suffix to attach to the measurement name.
+
 - **tags**: A map of tags to apply to a specific input's measurements.
 
 The [metric filtering][] parameters can be used to limit what metrics are
@@ -254,13 +330,19 @@ databases, network services, and messaging systems.
 
 Parameters that can be used with any output plugin:
 
+- **alias**: Name an instance of a plugin.
 - **flush_interval**: The maximum time between flushes.  Use this setting to
   override the agent `flush_interval` on a per plugin basis.
+- **flush_jitter**: The amount of time to jitter the flush interval.  Use this
+  setting to override the agent `flush_jitter` on a per plugin basis.
 - **metric_batch_size**: The maximum number of metrics to send at once.  Use
   this setting to override the agent `metric_batch_size` on a per plugin basis.
 - **metric_buffer_limit**: The maximum number of unsent metrics to buffer.
   Use this setting to override the agent `metric_buffer_limit` on a per plugin
   basis.
+- **name_override**: Override the original name of the measurement.
+- **name_prefix**: Specifies a prefix to attach to the measurement name.
+- **name_suffix**: Specifies a suffix to attach to the measurement name.
 
 The [metric filtering][] parameters can be used to limit what metrics are
 emitted from the output plugin.
@@ -271,6 +353,7 @@ Override flush parameters for a single output:
 ```toml
 [agent]
   flush_interval = "10s"
+  flush_jitter = "5s"
   metric_batch_size = 1000
 
 [[outputs.influxdb]]
@@ -280,6 +363,7 @@ Override flush parameters for a single output:
 [[outputs.file]]
   files = [ "stdout" ]
   flush_interval = "1s"
+  flush_jitter = "1s"
   metric_batch_size = 10
 ```
 
@@ -291,6 +375,7 @@ input plugins and before any aggregator plugins.
 
 Parameters that can be used with any processor plugin:
 
+- **alias**: Name an instance of a plugin.
 - **order**: The order in which the processor(s) are executed. If this is not
   specified then processor execution order will be random.
 
@@ -325,6 +410,7 @@ processors have been applied.
 
 Parameters that can be used with any aggregator plugin:
 
+- **alias**: Name an instance of a plugin.
 - **period**: The period on which to flush & clear each aggregator. All
   metrics that are sent with timestamps outside of this period will be ignored
   by the aggregator.
@@ -397,7 +483,7 @@ excluded from a Processor or Aggregator plugin, it is skips the plugin and is
 sent onwards to the next stage of processing.
 
 - **namepass**:
-An array of glob pattern strings.  Only metrics whose measurement name matches
+An array of [glob pattern][] strings.  Only metrics whose measurement name matches
 a pattern in this list are emitted.
 
 - **namedrop**:
@@ -405,7 +491,7 @@ The inverse of `namepass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `namepass` test.
 
 - **tagpass**:
-A table mapping tag keys to arrays of glob pattern strings.  Only metrics
+A table mapping tag keys to arrays of [glob pattern][] strings.  Only metrics
 that contain a tag key in the table and a tag value matching one of its
 patterns is emitted.
 
@@ -413,13 +499,17 @@ patterns is emitted.
 The inverse of `tagpass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `tagpass` test.
 
+> NOTE: Due to the way TOML is parsed, `tagpass` and `tagdrop` parameters must be
+defined at the *_end_* of the plugin definition, otherwise subsequent plugin config
+options will be interpreted as part of the tagpass/tagdrop tables.
+
 #### Modifiers
 
 Modifier filters remove tags and fields from a metric.  If all fields are
 removed the metric is removed.
 
 - **fieldpass**:
-An array of glob pattern strings.  Only fields whose field key matches a
+An array of [glob pattern][] strings.  Only fields whose field key matches a
 pattern in this list are emitted.
 
 - **fielddrop**:
@@ -428,7 +518,7 @@ patterns will be discarded from the metric.  This is tested on metrics after
 they have passed the `fieldpass` test.
 
 - **taginclude**:
-An array of glob pattern strings.  Only tags with a tag key matching one of
+An array of [glob pattern][] strings.  Only tags with a tag key matching one of
 the patterns are emitted.  In contrast to `tagpass`, which will pass an entire
 metric based on its tag, `taginclude` removes all non matching tags from the
 metric.  Any tag can be filtered including global tags and the agent `host`
@@ -439,9 +529,9 @@ The inverse of `taginclude`. Tags with a tag key matching one of the patterns
 will be discarded from the metric.  Any tag can be filtered including global
 tags and the agent `host` tag.
 
-##### Filtering Examples
+#### Filtering Examples
 
-Using tagpass and tagdrop:
+##### Using tagpass and tagdrop:
 ```toml
 [[inputs.cpu]]
   percpu = true
@@ -474,7 +564,7 @@ Using tagpass and tagdrop:
     instance = ["isatap*", "Local*"]
 ```
 
-Using fieldpass and fielddrop:
+##### Using fieldpass and fielddrop:
 ```toml
 # Drop all metrics for guest & steal CPU usage
 [[inputs.cpu]]
@@ -487,7 +577,7 @@ Using fieldpass and fielddrop:
   fieldpass = ["inodes*"]
 ```
 
-Using namepass and namedrop:
+##### Using namepass and namedrop:
 ```toml
 # Drop all metrics about containers for kubelet
 [[inputs.prometheus]]
@@ -500,7 +590,7 @@ Using namepass and namedrop:
   namepass = ["rest_client_*"]
 ```
 
-Using taginclude and tagexclude:
+##### Using taginclude and tagexclude:
 ```toml
 # Only include the "cpu" tag in the measurements for the cpu plugin.
 [[inputs.cpu]]
@@ -513,7 +603,7 @@ Using taginclude and tagexclude:
   tagexclude = ["fstype"]
 ```
 
-Metrics can be routed to different outputs using the metric name and tags:
+##### Metrics can be routed to different outputs using the metric name and tags:
 ```toml
 [[outputs.influxdb]]
   urls = [ "http://localhost:8086" ]
@@ -535,9 +625,11 @@ Metrics can be routed to different outputs using the metric name and tags:
     cpu = ["cpu0"]
 ```
 
-Routing metrics to different outputs based on the input.  Metrics are tagged
-with `influxdb_database` in the input, which is then used to select the
-output.  The tag is removed in the outputs before writing.
+##### Routing metrics to different outputs based on the input.
+
+Metrics are tagged with `influxdb_database` in the input, which is then used to
+select the output.  The tag is removed in the outputs before writing.
+
 ```toml
 [[outputs.influxdb]]
   urls = ["http://influxdb.example.com"]
@@ -573,3 +665,4 @@ Reference the detailed [TLS][] documentation.
 [metric filtering]: #metric-filtering
 [telegraf.conf]: /etc/telegraf.conf
 [TLS]: /docs/TLS.md
+[glob pattern]: https://github.com/gobwas/glob#syntax

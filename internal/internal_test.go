@@ -3,9 +3,12 @@ package internal
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/rand"
+	"io"
 	"io/ioutil"
 	"log"
 	"os/exec"
+	"regexp"
 	"testing"
 	"time"
 
@@ -232,13 +235,45 @@ func TestCompressWithGzip(t *testing.T) {
 	assert.Equal(t, testData, string(output))
 }
 
+type mockReader struct {
+	readN uint64 // record the number of calls to Read
+}
+
+func (r *mockReader) Read(p []byte) (n int, err error) {
+	r.readN++
+	return rand.Read(p)
+}
+
+func TestCompressWithGzipEarlyClose(t *testing.T) {
+	mr := &mockReader{}
+
+	rc, err := CompressWithGzip(mr)
+	assert.NoError(t, err)
+
+	n, err := io.CopyN(ioutil.Discard, rc, 10000)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(10000), n)
+
+	r1 := mr.readN
+	err = rc.Close()
+	assert.NoError(t, err)
+
+	n, err = io.CopyN(ioutil.Discard, rc, 10000)
+	assert.Error(t, io.EOF, err)
+	assert.Equal(t, int64(0), n)
+
+	r2 := mr.readN
+	// no more read to the source after closing
+	assert.Equal(t, r1, r2)
+}
+
 func TestVersionAlreadySet(t *testing.T) {
 	err := SetVersion("foo")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	err = SetVersion("bar")
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.IsType(t, VersionAlreadySetError, err)
 
 	assert.Equal(t, "foo", Version())
@@ -445,4 +480,12 @@ func TestParseTimestamp(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProductToken(t *testing.T) {
+	token := ProductToken()
+	// Telegraf version depends on the call to SetVersion, it cannot be set
+	// multiple times and is not thread-safe.
+	re := regexp.MustCompile(`^Telegraf/[^\s]+ Go/\d+.\d+(.\d+)?$`)
+	require.True(t, re.MatchString(token), token)
 }

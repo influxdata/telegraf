@@ -4,16 +4,15 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"os"
 	"regexp"
-	"sort"
-	"sync"
-	"sync/atomic"
+	"strings"
 	"testing"
 	"time"
 	"unsafe"
 
 	"github.com/influxdata/telegraf/internal"
-	itls "github.com/influxdata/telegraf/internal/tls"
+	itls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
@@ -138,7 +137,7 @@ func defaultVSphere() *VSphere {
 		VMInclude:       []string{"/**"},
 		DatastoreMetricInclude: []string{
 			"disk.used.*",
-			"disk.provsioned.*"},
+			"disk.provisioned.*"},
 		DatastoreMetricExclude:  nil,
 		DatastoreInclude:        []string{"/**"},
 		DatacenterMetricInclude: nil,
@@ -153,6 +152,7 @@ func defaultVSphere() *VSphere {
 		ForceDiscoverOnInit:     true,
 		DiscoverConcurrency:     1,
 		CollectConcurrency:      1,
+		Separator:               ".",
 	}
 }
 
@@ -185,7 +185,8 @@ func testAlignUniform(t *testing.T, n int) {
 		}
 		values[i] = 1
 	}
-	newInfo, newValues := alignSamples(info, values, 60*time.Second)
+	e := Endpoint{log: testutil.Logger{}}
+	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
 	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
 	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
 	for _, v := range newValues {
@@ -210,7 +211,8 @@ func TestAlignMetrics(t *testing.T) {
 		}
 		values[i] = int64(i%3 + 1)
 	}
-	newInfo, newValues := alignSamples(info, values, 60*time.Second)
+	e := Endpoint{log: testutil.Logger{}}
+	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
 	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
 	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
 	for _, v := range newValues {
@@ -228,36 +230,6 @@ func TestParseConfig(t *testing.T) {
 	tab, err := toml.Parse([]byte(c))
 	require.NoError(t, err)
 	require.NotNil(t, tab)
-}
-
-func TestThrottledExecutor(t *testing.T) {
-	max := int64(0)
-	ngr := int64(0)
-	n := 10000
-	var mux sync.Mutex
-	results := make([]int, 0, n)
-	te := NewThrottledExecutor(5)
-	for i := 0; i < n; i++ {
-		func(i int) {
-			te.Run(context.Background(), func() {
-				atomic.AddInt64(&ngr, 1)
-				mux.Lock()
-				defer mux.Unlock()
-				results = append(results, i*2)
-				if ngr > max {
-					max = ngr
-				}
-				time.Sleep(100 * time.Microsecond)
-				atomic.AddInt64(&ngr, -1)
-			})
-		}(i)
-	}
-	te.Wait()
-	sort.Ints(results)
-	for i := 0; i < n; i++ {
-		require.Equal(t, results[i], i*2, "Some jobs didn't run")
-	}
-	require.Equal(t, int64(5), max, "Wrong number of goroutines spawned")
 }
 
 func TestMaxQuery(t *testing.T) {
@@ -377,10 +349,59 @@ func TestFinder(t *testing.T) {
 	testLookupVM(ctx, t, &f, "/*/host/**/*DC*/*/*DC*", 4, "")
 
 	vm = []mo.VirtualMachine{}
-	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, &vm)
+	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, []string{}, &vm)
 	require.NoError(t, err)
 	require.Equal(t, 4, len(vm))
 
+	rf := ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"},
+		excludePaths: []string{"/DC0/vm/DC0_H0_VM0"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 3, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"},
+		excludePaths: []string{"/**"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 0, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/**"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 0, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/this won't match anything"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 8, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/**/*VM0"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 4, len(vm))
 }
 
 func TestFolders(t *testing.T) {
@@ -398,8 +419,9 @@ func TestFolders(t *testing.T) {
 	defer m.Remove()
 	defer s.Close()
 
-	v := defaultVSphere()
 	ctx := context.Background()
+
+	v := defaultVSphere()
 
 	c, err := NewClient(ctx, s.URL, v)
 
@@ -422,27 +444,110 @@ func TestFolders(t *testing.T) {
 	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/**", 4, "")
 }
 
-func TestAll(t *testing.T) {
-	// Don't run test on 32-bit machines due to bug in simulator.
-	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
-		return
-	}
+func TestCollection(t *testing.T) {
+	testCollection(t, false)
+}
 
-	m, s, err := createSim(0)
-	if err != nil {
-		t.Fatal(err)
+func TestCollectionNoClusterMetrics(t *testing.T) {
+	testCollection(t, true)
+}
+
+func testCollection(t *testing.T, excludeClusters bool) {
+	mustHaveMetrics := map[string]struct{}{
+		"vsphere.vm.cpu":         {},
+		"vsphere.vm.mem":         {},
+		"vsphere.vm.net":         {},
+		"vsphere.host.cpu":       {},
+		"vsphere.host.mem":       {},
+		"vsphere.host.net":       {},
+		"vsphere.datastore.disk": {},
 	}
-	defer m.Remove()
-	defer s.Close()
+	vCenter := os.Getenv("VCENTER_URL")
+	username := os.Getenv("VCENTER_USER")
+	password := os.Getenv("VCENTER_PASSWORD")
+	v := defaultVSphere()
+	if vCenter != "" {
+		v.Vcenters = []string{vCenter}
+		v.Username = username
+		v.Password = password
+	} else {
+
+		// Don't run test on 32-bit machines due to bug in simulator.
+		// https://github.com/vmware/govmomi/issues/1330
+		var i int
+		if unsafe.Sizeof(i) < 8 {
+			return
+		}
+
+		m, s, err := createSim(0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer m.Remove()
+		defer s.Close()
+		v.Vcenters = []string{s.URL.String()}
+	}
+	if excludeClusters {
+		v.ClusterMetricExclude = []string{"*"}
+	}
 
 	var acc testutil.Accumulator
-	v := defaultVSphere()
-	v.Vcenters = []string{s.URL.String()}
-	v.Start(&acc)
+
+	require.NoError(t, v.Start(&acc))
 	defer v.Stop()
 	require.NoError(t, v.Gather(&acc))
 	require.Equal(t, 0, len(acc.Errors), fmt.Sprintf("Errors found: %s", acc.Errors))
 	require.True(t, len(acc.Metrics) > 0, "No metrics were collected")
+	cache := make(map[string]string)
+	client, err := v.endpoints[0].clientFactory.GetClient(context.Background())
+	require.NoError(t, err)
+	hostCache := make(map[string]string)
+	for _, m := range acc.Metrics {
+		delete(mustHaveMetrics, m.Measurement)
+
+		if strings.HasPrefix(m.Measurement, "vsphere.vm.") {
+			mustContainAll(t, m.Tags, []string{"esxhostname", "moid", "vmname", "guest", "dcname", "uuid", "vmname"})
+			hostName := m.Tags["esxhostname"]
+			hostMoid, ok := hostCache[hostName]
+			if !ok {
+				// We have to follow the host parent path to locate a cluster. Look up the host!
+				finder := Finder{client}
+				var hosts []mo.HostSystem
+				finder.Find(context.Background(), "HostSystem", "/**/"+hostName, &hosts)
+				require.NotEmpty(t, hosts)
+				hostMoid = hosts[0].Reference().Value
+				hostCache[hostName] = hostMoid
+			}
+			if isInCluster(t, v, client, cache, "HostSystem", hostMoid) { // If the VM lives in a cluster
+				mustContainAll(t, m.Tags, []string{"clustername"})
+			}
+		} else if strings.HasPrefix(m.Measurement, "vsphere.host.") {
+			if isInCluster(t, v, client, cache, "HostSystem", m.Tags["moid"]) { // If the host lives in a cluster
+				mustContainAll(t, m.Tags, []string{"esxhostname", "clustername", "moid", "dcname"})
+			} else {
+				mustContainAll(t, m.Tags, []string{"esxhostname", "moid", "dcname"})
+			}
+		} else if strings.HasPrefix(m.Measurement, "vsphere.cluster.") {
+			mustContainAll(t, m.Tags, []string{"clustername", "moid", "dcname"})
+		} else {
+			mustContainAll(t, m.Tags, []string{"moid", "dcname"})
+		}
+	}
+	require.Empty(t, mustHaveMetrics, "Some metrics were not found")
+}
+
+func isInCluster(t *testing.T, v *VSphere, client *Client, cache map[string]string, resourceKind, moid string) bool {
+	ctx := context.Background()
+	ref := types.ManagedObjectReference{
+		Type:  resourceKind,
+		Value: moid,
+	}
+	_, ok := v.endpoints[0].getAncestorName(ctx, client, "ClusterComputeResource", cache, ref)
+	return ok
+}
+
+func mustContainAll(t *testing.T, tagMap map[string]string, mustHave []string) {
+	for _, tag := range mustHave {
+		require.Contains(t, tagMap, tag)
+	}
 }

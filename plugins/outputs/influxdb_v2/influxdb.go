@@ -11,13 +11,13 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
 var (
-	defaultURL = "http://localhost:9999"
+	defaultURL = "http://localhost:8086"
 
 	ErrMissingURL = errors.New("missing URL")
 )
@@ -28,7 +28,7 @@ var sampleConfig = `
   ## Multiple URLs can be specified for a single cluster, only ONE of the
   ## urls will be written to each interval.
   ##   ex: urls = ["https://us-west-2-1.aws.cloud2.influxdata.com"]
-  urls = ["http://127.0.0.1:9999"]
+  urls = ["http://127.0.0.1:8086"]
 
   ## Token for authentication.
   token = ""
@@ -96,8 +96,7 @@ type InfluxDB struct {
 	UintSupport      bool              `toml:"influx_uint_support"`
 	tls.ClientConfig
 
-	clients    []Client
-	serializer *influx.Serializer
+	clients []Client
 }
 
 func (i *InfluxDB) Connect() error {
@@ -105,11 +104,6 @@ func (i *InfluxDB) Connect() error {
 
 	if len(i.URLs) == 0 {
 		i.URLs = append(i.URLs, defaultURL)
-	}
-
-	i.serializer = influx.NewSerializer()
-	if i.UintSupport {
-		i.serializer.SetFieldTypeSupport(influx.UintSupport)
 	}
 
 	for _, u := range i.URLs {
@@ -196,7 +190,7 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.U
 		UserAgent:        i.UserAgent,
 		ContentEncoding:  i.ContentEncoding,
 		TLSConfig:        tlsConfig,
-		Serializer:       i.serializer,
+		Serializer:       i.newSerializer(),
 	}
 
 	c, err := NewHTTPClient(config)
@@ -205,6 +199,15 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.U
 	}
 
 	return c, nil
+}
+
+func (i *InfluxDB) newSerializer() *influx.Serializer {
+	serializer := influx.NewSerializer()
+	if i.UintSupport {
+		serializer.SetFieldTypeSupport(influx.UintSupport)
+	}
+
+	return serializer
 }
 
 func init() {

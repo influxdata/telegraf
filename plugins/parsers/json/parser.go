@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -32,6 +31,7 @@ type Config struct {
 	TimeFormat   string
 	Timezone     string
 	DefaultTags  map[string]string
+	Strict       bool
 }
 
 type Parser struct {
@@ -44,6 +44,7 @@ type Parser struct {
 	timeFormat   string
 	timezone     string
 	defaultTags  map[string]string
+	strict       bool
 }
 
 func New(config *Config) (*Parser, error) {
@@ -62,18 +63,22 @@ func New(config *Config) (*Parser, error) {
 		timeFormat:   config.TimeFormat,
 		timezone:     config.Timezone,
 		defaultTags:  config.DefaultTags,
+		strict:       config.Strict,
 	}, nil
 }
 
-func (p *Parser) parseArray(data []interface{}) ([]telegraf.Metric, error) {
+func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf.Metric, error) {
 	results := make([]telegraf.Metric, 0)
 
 	for _, item := range data {
 		switch v := item.(type) {
 		case map[string]interface{}:
-			metrics, err := p.parseObject(v)
+			metrics, err := p.parseObject(v, timestamp)
 			if err != nil {
-				return nil, err
+				if p.strict {
+					return nil, err
+				}
+				continue
 			}
 			results = append(results, metrics...)
 		default:
@@ -85,7 +90,7 @@ func (p *Parser) parseArray(data []interface{}) ([]telegraf.Metric, error) {
 	return results, nil
 }
 
-func (p *Parser) parseObject(data map[string]interface{}) ([]telegraf.Metric, error) {
+func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) ([]telegraf.Metric, error) {
 	tags := make(map[string]string)
 	for k, v := range p.defaultTags {
 		tags[k] = v
@@ -107,8 +112,7 @@ func (p *Parser) parseObject(data map[string]interface{}) ([]telegraf.Metric, er
 		}
 	}
 
-	//if time key is specified, set it to nTime
-	nTime := time.Now().UTC()
+	//if time key is specified, set timestamp to it
 	if p.timeKey != "" {
 		if p.timeFormat == "" {
 			err := fmt.Errorf("use of 'json_time_key' requires 'json_time_format'")
@@ -120,7 +124,7 @@ func (p *Parser) parseObject(data map[string]interface{}) ([]telegraf.Metric, er
 			return nil, err
 		}
 
-		nTime, err = internal.ParseTimestamp(p.timeFormat, f.Fields[p.timeKey], p.timezone)
+		timestamp, err = internal.ParseTimestamp(p.timeFormat, f.Fields[p.timeKey], p.timezone)
 		if err != nil {
 			return nil, err
 		}
@@ -128,13 +132,13 @@ func (p *Parser) parseObject(data map[string]interface{}) ([]telegraf.Metric, er
 		delete(f.Fields, p.timeKey)
 
 		//if the year is 0, set to current year
-		if nTime.Year() == 0 {
-			nTime = nTime.AddDate(time.Now().Year(), 0, 0)
+		if timestamp.Year() == 0 {
+			timestamp = timestamp.AddDate(time.Now().Year(), 0, 0)
 		}
 	}
 
 	tags, nFields := p.switchFieldToTag(tags, f.Fields)
-	metric, err := metric.New(name, tags, nFields, nTime)
+	metric, err := metric.New(name, tags, nFields, timestamp)
 	if err != nil {
 		return nil, err
 	}
@@ -201,11 +205,12 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
+	timestamp := time.Now().UTC()
 	switch v := data.(type) {
 	case map[string]interface{}:
-		return p.parseObject(v)
+		return p.parseObject(v, timestamp)
 	case []interface{}:
-		return p.parseArray(v)
+		return p.parseArray(v, timestamp)
 	default:
 		return nil, ErrWrongType
 	}
@@ -254,19 +259,27 @@ func (f *JSONFlattener) FullFlattenJSON(
 	if f.Fields == nil {
 		f.Fields = make(map[string]interface{})
 	}
-	fieldname = strings.Trim(fieldname, "_")
+
 	switch t := v.(type) {
 	case map[string]interface{}:
 		for k, v := range t {
-			err := f.FullFlattenJSON(fieldname+"_"+k+"_", v, convertString, convertBool)
+			fieldkey := k
+			if fieldname != "" {
+				fieldkey = fieldname + "_" + fieldkey
+			}
+
+			err := f.FullFlattenJSON(fieldkey, v, convertString, convertBool)
 			if err != nil {
 				return err
 			}
 		}
 	case []interface{}:
 		for i, v := range t {
-			k := strconv.Itoa(i)
-			err := f.FullFlattenJSON(fieldname+"_"+k+"_", v, convertString, convertBool)
+			fieldkey := strconv.Itoa(i)
+			if fieldname != "" {
+				fieldkey = fieldname + "_" + fieldkey
+			}
+			err := f.FullFlattenJSON(fieldkey, v, convertString, convertBool)
 			if err != nil {
 				return nil
 			}

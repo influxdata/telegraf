@@ -15,8 +15,12 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+)
+
+const (
+	defaultServiceAccountPath = "/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 // KubernetesInventory represents the config object for the plugin.
@@ -30,8 +34,13 @@ type KubernetesInventory struct {
 	ResourceInclude   []string          `toml:"resource_include"`
 	MaxConfigMapAge   internal.Duration `toml:"max_config_map_age"`
 
+	SelectorInclude []string `toml:"selector_include"`
+	SelectorExclude []string `toml:"selector_exclude"`
+
 	tls.ClientConfig
 	client *client
+
+	selectorFilter filter.Filter
 }
 
 var sampleConfig = `
@@ -42,6 +51,8 @@ var sampleConfig = `
   # namespace = "default"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
+  ## If both of these are empty, we'll use the default serviceaccount:
+  ## at: /run/secrets/kubernetes.io/serviceaccount/token
   # bearer_token = "/path/to/bearer/token"
   ## OR
   # bearer_token_string = "abc_123"
@@ -58,6 +69,12 @@ var sampleConfig = `
   ## Optional Resources to include when gathering
   ## Overrides resource_exclude if both set.
   # resource_include = [ "deployments", "nodes", "statefulsets" ]
+
+  ## selectors to include and exclude as tags.  Globs accepted.
+  ## Note that an empty array for both will include all selectors as tags
+  ## selector_exclude overrides selector_include if both set.
+  # selector_include = []
+  # selector_exclude = ["*"]
 
   ## Optional TLS Config
   # tls_ca = "/path/to/cafile"
@@ -77,15 +94,38 @@ func (ki *KubernetesInventory) Description() string {
 	return "Read metrics from the Kubernetes api"
 }
 
-// Gather collects kubernetes metrics from a given URL.
-func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
-	if ki.client == nil {
-		if ki.client, err = ki.initClient(); err != nil {
-			return err
-		}
+func (ki *KubernetesInventory) Init() error {
+	// If neither are provided, use the default service account.
+	if ki.BearerToken == "" && ki.BearerTokenString == "" {
+		ki.BearerToken = defaultServiceAccountPath
 	}
 
+	if ki.BearerToken != "" {
+		token, err := ioutil.ReadFile(ki.BearerToken)
+		if err != nil {
+			return err
+		}
+		ki.BearerTokenString = strings.TrimSpace(string(token))
+	}
+
+	var err error
+	ki.client, err = newClient(ki.URL, ki.Namespace, ki.BearerTokenString, ki.ResponseTimeout.Duration, ki.ClientConfig)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Gather collects kubernetes metrics from a given URL.
+func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
 	resourceFilter, err := filter.NewIncludeExcludeFilter(ki.ResourceInclude, ki.ResourceExclude)
+	if err != nil {
+		return err
+	}
+
+	ki.selectorFilter, err = filter.NewIncludeExcludeFilter(ki.SelectorInclude, ki.SelectorExclude)
 	if err != nil {
 		return err
 	}
@@ -121,18 +161,6 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 	"persistentvolumeclaims": collectPersistentVolumeClaims,
 }
 
-func (ki *KubernetesInventory) initClient() (*client, error) {
-	if ki.BearerToken != "" {
-		token, err := ioutil.ReadFile(ki.BearerToken)
-		if err != nil {
-			return nil, err
-		}
-		ki.BearerTokenString = strings.TrimSpace(string(token))
-	}
-
-	return newClient(ki.URL, ki.Namespace, ki.BearerTokenString, ki.ResponseTimeout.Duration, ki.ClientConfig)
-}
-
 func atoi(s string) int64 {
 	i, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
@@ -158,6 +186,15 @@ func convertQuantity(s string, m float64) int64 {
 	return int64(f * m)
 }
 
+func (ki *KubernetesInventory) createSelectorFilters() error {
+	filter, err := filter.NewIncludeExcludeFilter(ki.SelectorInclude, ki.SelectorExclude)
+	if err != nil {
+		return err
+	}
+	ki.selectorFilter = filter
+	return nil
+}
+
 var (
 	daemonSetMeasurement             = "kubernetes_daemonset"
 	deploymentMeasurement            = "kubernetes_deployment"
@@ -176,6 +213,8 @@ func init() {
 		return &KubernetesInventory{
 			ResponseTimeout: internal.Duration{Duration: time.Second * 5},
 			Namespace:       "default",
+			SelectorInclude: []string{},
+			SelectorExclude: []string{"*"},
 		}
 	})
 }

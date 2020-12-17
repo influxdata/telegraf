@@ -14,7 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -111,7 +111,13 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	defer ssl.removeConnection(c)
 	defer c.Close()
 
-	scnr := bufio.NewScanner(c)
+	decoder, err := internal.NewStreamContentDecoder(ssl.ContentEncoding, c)
+	if err != nil {
+		ssl.Log.Error("Read error: %v", err)
+		return
+	}
+
+	scnr := bufio.NewScanner(decoder)
 	for {
 		if ssl.ReadTimeout != nil && ssl.ReadTimeout.Duration > 0 {
 			c.SetReadDeadline(time.Now().Add(ssl.ReadTimeout.Duration))
@@ -119,7 +125,10 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 		if !scnr.Scan() {
 			break
 		}
-		metrics, err := ssl.Parse(scnr.Bytes())
+
+		body := scnr.Bytes()
+
+		metrics, err := ssl.Parse(body)
 		if err != nil {
 			ssl.Log.Errorf("Unable to parse incoming line: %s", err.Error())
 			// TODO rate limit
@@ -142,6 +151,7 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 type packetSocketListener struct {
 	net.PacketConn
 	*SocketListener
+	decoder internal.ContentDecoder
 }
 
 func (psl *packetSocketListener) listen() {
@@ -155,7 +165,12 @@ func (psl *packetSocketListener) listen() {
 			break
 		}
 
-		metrics, err := psl.Parse(buf[:n])
+		body, err := psl.decoder.Decode(buf[:n])
+		if err != nil {
+			psl.Log.Errorf("Unable to decode incoming packet: %s", err.Error())
+		}
+
+		metrics, err := psl.Parse(body)
 		if err != nil {
 			psl.Log.Errorf("Unable to parse incoming packet: %s", err.Error())
 			// TODO rate limit
@@ -174,6 +189,7 @@ type SocketListener struct {
 	ReadTimeout     *internal.Duration `toml:"read_timeout"`
 	KeepAlivePeriod *internal.Duration `toml:"keep_alive_period"`
 	SocketMode      string             `toml:"socket_mode"`
+	ContentEncoding string             `toml:"content_encoding"`
 	tlsint.ServerConfig
 
 	wg sync.WaitGroup
@@ -244,6 +260,10 @@ func (sl *SocketListener) SampleConfig() string {
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"
+
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
 `
 }
 
@@ -274,16 +294,12 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 
 	switch protocol {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
-		var (
-			err error
-			l   net.Listener
-		)
-
 		tlsCfg, err := sl.ServerConfig.TLSConfig()
 		if err != nil {
 			return err
 		}
 
+		var l net.Listener
 		if tlsCfg == nil {
 			l, err = net.Listen(protocol, addr)
 		} else {
@@ -320,6 +336,11 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			ssl.listen()
 		}()
 	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
+		decoder, err := internal.NewContentDecoder(sl.ContentEncoding)
+		if err != nil {
+			return err
+		}
+
 		pc, err := udpListen(protocol, addr)
 		if err != nil {
 			return err
@@ -349,6 +370,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		psl := &packetSocketListener{
 			PacketConn:     pc,
 			SocketListener: sl,
+			decoder:        decoder,
 		}
 
 		sl.Closer = psl

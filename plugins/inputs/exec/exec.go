@@ -10,13 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kballard/go-shellquote"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
+	"github.com/kballard/go-shellquote"
 )
 
 const sampleConfig = `
@@ -50,7 +49,7 @@ type Exec struct {
 	parser parsers.Parser
 
 	runner Runner
-	log    telegraf.Logger
+	Log    telegraf.Logger `toml:"-"`
 }
 
 func NewExec() *Exec {
@@ -161,7 +160,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	if isNagios {
 		metrics, err = nagios.TryAddState(runErr, metrics)
 		if err != nil {
-			e.log.Errorf("Failed to add nagios state: %s", err)
+			e.Log.Errorf("Failed to add nagios state: %s", err)
 		}
 	}
 

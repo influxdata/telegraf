@@ -2,7 +2,10 @@
 
 The postfix plugin reports metrics on the postfix queues.
 
-For each of the active, hold, incoming, maildrop, and deferred queues (http://www.postfix.org/QSHAPE_README.html#queues), it will report the queue length (number of items), size (bytes used by items), and age (age of oldest item in seconds).
+For each of the active, hold, incoming, maildrop, and deferred queues
+(http://www.postfix.org/QSHAPE_README.html#queues), it will report the queue
+length (number of items), size (bytes used by items), and age (age of oldest
+item in seconds).
 
 ### Configuration
 
@@ -13,11 +16,14 @@ For each of the active, hold, incoming, maildrop, and deferred queues (http://ww
   # queue_directory = "/var/spool/postfix"
 ```
 
-#### Permissions:
+#### Permissions
 
 Telegraf will need read access to the files in the queue directory.  You may
 need to alter the permissions of these directories to provide access to the
 telegraf user.
+
+This can be setup either using standard unix permissions or with Posix ACLs,
+you will only need to use one method:
 
 Unix permissions:
 ```sh
@@ -29,21 +35,20 @@ $ sudo chmod g+r /var/spool/postfix/maildrop
 
 Posix ACL:
 ```sh
-$ sudo setfacl -m g:telegraf:rX /var/spool/postfix/{,active,hold,incoming,deferred,maildrop}
-$ sudo setfacl -Rdm g:telegraf:rX /var/spool/postfix/{,active,hold,incoming,deferred,maildrop}
+$ sudo setfacl -Rm g:telegraf:rX /var/spool/postfix/
+$ sudo setfacl -dm g:telegraf:rX /var/spool/postfix/
 ```
 
-### Measurements & Fields:
+### Metrics
 
 - postfix_queue
+  - tags:
+    - queue
+  - fields:
     - length (integer)
     - size (integer, bytes)
     - age (integer, seconds)
 
-### Tags:
-
-- postfix_queue
-    - queue
 
 ### Example Output
 

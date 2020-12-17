@@ -74,7 +74,7 @@ func (m *PerformanceQueryImpl) Open() error {
 // Close closes the counterPath, releases associated counter handles and frees resources
 func (m *PerformanceQueryImpl) Close() error {
 	if m.query == 0 {
-		return errors.New("uninitialised query")
+		return errors.New("uninitialized query")
 	}
 
 	if ret := PdhCloseQuery(m.query); ret != ERROR_SUCCESS {
@@ -87,7 +87,7 @@ func (m *PerformanceQueryImpl) Close() error {
 func (m *PerformanceQueryImpl) AddCounterToQuery(counterPath string) (PDH_HCOUNTER, error) {
 	var counterHandle PDH_HCOUNTER
 	if m.query == 0 {
-		return 0, errors.New("uninitialised query")
+		return 0, errors.New("uninitialized query")
 	}
 
 	if ret := PdhAddCounter(m.query, counterPath, 0, &counterHandle); ret != ERROR_SUCCESS {
@@ -99,7 +99,7 @@ func (m *PerformanceQueryImpl) AddCounterToQuery(counterPath string) (PDH_HCOUNT
 func (m *PerformanceQueryImpl) AddEnglishCounterToQuery(counterPath string) (PDH_HCOUNTER, error) {
 	var counterHandle PDH_HCOUNTER
 	if m.query == 0 {
-		return 0, errors.New("uninitialised query")
+		return 0, errors.New("uninitialized query")
 	}
 	if ret := PdhAddEnglishCounter(m.query, counterPath, 0, &counterHandle); ret != ERROR_SUCCESS {
 		return 0, NewPdhError(ret)
@@ -184,7 +184,7 @@ func (m *PerformanceQueryImpl) GetFormattedCounterArrayDouble(hCounter PDH_HCOUN
 func (m *PerformanceQueryImpl) CollectData() error {
 	var ret uint32
 	if m.query == 0 {
-		return errors.New("uninitialised query")
+		return errors.New("uninitialized query")
 	}
 
 	if ret = PdhCollectQueryData(m.query); ret != ERROR_SUCCESS {
@@ -195,7 +195,7 @@ func (m *PerformanceQueryImpl) CollectData() error {
 
 func (m *PerformanceQueryImpl) CollectDataWithTime() (time.Time, error) {
 	if m.query == 0 {
-		return time.Now(), errors.New("uninitialised query")
+		return time.Now(), errors.New("uninitialized query")
 	}
 	ret, mtime := PdhCollectQueryDataWithTime(m.query)
 	if ret != ERROR_SUCCESS {

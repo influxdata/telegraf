@@ -1,4 +1,4 @@
-# X509 Cert Input Plugin
+# x509 Certificate Input Plugin
 
 This plugin provides information about X509 certificate accessible via local
 file or network connection.
@@ -14,6 +14,10 @@ file or network connection.
 
   ## Timeout for SSL connection
   # timeout = "5s"
+
+  ## Pass a different name into the TLS request (Server Name Indication)
+  ##   example: server_name = "myhost.example.org"
+  # server_name = "myhost.example.org"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -33,6 +37,12 @@ file or network connection.
     - province
     - locality
     - verification
+    - serial_number
+    - signature_algorithm
+    - public_key_algorithm
+    - issuer_common_name
+    - issuer_serial_number
+    - san
   - fields:
     - verification_code (int)
     - verification_error (string)

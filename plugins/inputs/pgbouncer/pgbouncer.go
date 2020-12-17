@@ -2,6 +2,7 @@ package pgbouncer
 
 import (
 	"bytes"
+	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -23,7 +24,7 @@ var sampleConfig = `
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
   ##       ?sslmode=[disable|verify-ca|verify-full]
   ## or a simple string:
-  ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
   ##
   ## All connection parameters are optional.
   ##
@@ -69,11 +70,30 @@ func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 		fields := make(map[string]interface{})
 		for col, val := range columnMap {
 			_, ignore := ignoredColumns[col]
-			if !ignore {
-				fields[col] = *val
+			if ignore {
+				continue
+			}
+
+			switch v := (*val).(type) {
+			case int64:
+				// Integer fields are returned in pgbouncer 1.5 through 1.9
+				fields[col] = v
+			case string:
+				// Integer fields are returned in pgbouncer 1.12
+				integer, err := strconv.ParseInt(v, 10, 64)
+				if err != nil {
+					return err
+				}
+
+				fields[col] = integer
 			}
 		}
 		acc.AddFields("pgbouncer", fields, tags)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return err
 	}
 
 	query = `SHOW POOLS`

@@ -192,7 +192,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 	return results, nil
 }
 
-func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gatherColStats bool, colStatsDbs []string) error {
+func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, gatherDbStats bool, gatherColStats bool, colStatsDbs []string) error {
 	s.Session.SetMode(mgo.Eventual, true)
 	s.Session.SetSocketTimeout(0)
 
@@ -214,13 +214,17 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 	if replSetStatus != nil {
 		oplogStats, err = s.gatherOplogStats()
 		if err != nil {
-			return err
+			s.authLog(fmt.Errorf("Unable to get oplog stats: %v", err))
 		}
 	}
 
-	clusterStatus, err := s.gatherClusterStatus()
-	if err != nil {
-		s.Log.Debugf("Unable to gather cluster status: %s", err.Error())
+	var clusterStatus *ClusterStatus
+	if gatherClusterStatus {
+		status, err := s.gatherClusterStatus()
+		if err != nil {
+			s.Log.Debugf("Unable to gather cluster status: %s", err.Error())
+		}
+		clusterStatus = status
 	}
 
 	shardStats, err := s.gatherShardConnPoolStats()

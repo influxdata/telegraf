@@ -15,10 +15,11 @@ import (
 )
 
 func TestProcesses(t *testing.T) {
+	tester := tester{}
 	processes := &Processes{
-		Log:          testutil.Logger{},
-		execPS:       execPS,
-		readProcFile: readProcFile,
+		Log: testutil.Logger{},
+		execPS: testExecPS("STAT\n		Ss  \n		S   \n		Z   \n		R   \n		S<  \n		SNs \n		Ss+ \n		\n		\n"),
+		readProcFile: tester.testProcFile,
 	}
 	var acc testutil.Accumulator
 
@@ -37,7 +38,7 @@ func TestProcesses(t *testing.T) {
 func TestFromPS(t *testing.T) {
 	processes := &Processes{
 		Log:     testutil.Logger{},
-		execPS:  testExecPS,
+		execPS:  testExecPS("\nSTAT\nD\nI\nL\nR\nR+\nS\nS+\nSNs\nSs\nU\nZ\n"),
 		forcePS: true,
 	}
 
@@ -46,12 +47,12 @@ func TestFromPS(t *testing.T) {
 	require.NoError(t, err)
 
 	fields := getEmptyFields()
-	fields["blocked"] = int64(4)
+	fields["blocked"] = int64(3)
 	fields["zombies"] = int64(1)
-	fields["running"] = int64(4)
-	fields["sleeping"] = int64(34)
-	fields["idle"] = int64(2)
-	fields["total"] = int64(45)
+	fields["running"] = int64(2)
+	fields["sleeping"] = int64(4)
+	fields["idle"] = int64(1)
+	fields["total"] = int64(11)
 
 	acc.AssertContainsTaggedFields(t, "processes", fields, map[string]string{})
 }
@@ -122,6 +123,9 @@ func TestFromProcFilesWithSpaceInCmd(t *testing.T) {
 // However, we have had reports of this process state on Ubuntu
 // Bionic w/ Linux 4.15 (#6270)
 func TestParkedProcess(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Parked process test only relevant on linux")
+	}
 	procstat := `88 (watchdog/13) P 2 0 0 0 -1 69238848 0 0 0 0 0 0 0 0 20 0 1 0 20 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 1 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 `
 	plugin := &Processes{
@@ -153,7 +157,7 @@ func TestParkedProcess(t *testing.T) {
 				"zombies":  0,
 			},
 			time.Unix(0, 0),
-			telegraf.Untyped,
+			telegraf.Gauge,
 		),
 	}
 	actual := acc.GetTelegrafMetrics()
@@ -165,8 +169,8 @@ func TestParkedProcess(t *testing.T) {
 		testutil.IgnoreTime())
 }
 
-func testExecPS() ([]byte, error) {
-	return []byte(testPSOut), nil
+func testExecPS(out string) func() ([]byte, error) {
+	return func() ([]byte, error) { return []byte(out), nil }
 }
 
 // struct for counting calls to testProcFile
@@ -185,57 +189,8 @@ func (t *tester) testProcFile2(_ string) ([]byte, error) {
 }
 
 func testExecPSError() ([]byte, error) {
-	return []byte(testPSOut), fmt.Errorf("ERROR!")
+	return []byte("\nSTAT\nD\nI\nL\nR\nR+\nS\nS+\nSNs\nSs\nU\nZ\n"), fmt.Errorf("ERROR!")
 }
-
-const testPSOut = `
-STAT
-S
-S
-S
-S
-R
-R
-S
-S
-Ss
-Ss
-S
-SNs
-Ss
-Ss
-S
-R+
-S
-U
-S
-S
-S
-S
-Ss
-S+
-Ss
-S
-S+
-S+
-Ss
-S+
-Ss
-S
-R+
-Ss
-S
-S+
-S+
-Ss
-L
-U
-Z
-D
-S+
-I
-I
-`
 
 const testProcStat = `10 (rcuob/0) %s 2 0 0 0 -1 2129984 0 0 0 0 0 0 0 0 20 0 %s 0 11 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 18446744073709551615 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 `

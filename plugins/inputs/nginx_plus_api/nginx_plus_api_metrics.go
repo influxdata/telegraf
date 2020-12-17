@@ -29,6 +29,11 @@ func (n *NginxPlusApi) gatherMetrics(addr *url.URL, acc telegraf.Accumulator) {
 	addError(acc, n.gatherHttpCachesMetrics(addr, acc))
 	addError(acc, n.gatherStreamServerZonesMetrics(addr, acc))
 	addError(acc, n.gatherStreamUpstreamsMetrics(addr, acc))
+
+	if n.ApiVersion >= 5 {
+		addError(acc, n.gatherHttpLocationZonesMetrics(addr, acc))
+		addError(acc, n.gatherResolverZonesMetrics(addr, acc))
+	}
 }
 
 func addError(acc telegraf.Accumulator, err error) {
@@ -221,6 +226,53 @@ func (n *NginxPlusApi) gatherHttpServerZonesMetrics(addr *url.URL, acc telegraf.
 	return nil
 }
 
+// Added in 5 API version
+func (n *NginxPlusApi) gatherHttpLocationZonesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherUrl(addr, httpLocationZonesPath)
+	if err != nil {
+		return err
+	}
+
+	var httpLocationZones HttpLocationZones
+
+	if err := json.Unmarshal(body, &httpLocationZones); err != nil {
+		return err
+	}
+
+	tags := getTags(addr)
+
+	for zoneName, zone := range httpLocationZones {
+		zoneTags := map[string]string{}
+		for k, v := range tags {
+			zoneTags[k] = v
+		}
+		zoneTags["zone"] = zoneName
+		acc.AddFields(
+			"nginx_plus_api_http_location_zones",
+			func() map[string]interface{} {
+				result := map[string]interface{}{
+					"requests":        zone.Requests,
+					"responses_1xx":   zone.Responses.Responses1xx,
+					"responses_2xx":   zone.Responses.Responses2xx,
+					"responses_3xx":   zone.Responses.Responses3xx,
+					"responses_4xx":   zone.Responses.Responses4xx,
+					"responses_5xx":   zone.Responses.Responses5xx,
+					"responses_total": zone.Responses.Total,
+					"received":        zone.Received,
+					"sent":            zone.Sent,
+				}
+				if zone.Discarded != nil {
+					result["discarded"] = *zone.Discarded
+				}
+				return result
+			}(),
+			zoneTags,
+		)
+	}
+
+	return nil
+}
+
 func (n *NginxPlusApi) gatherHttpUpstreamsMetrics(addr *url.URL, acc telegraf.Accumulator) error {
 	body, err := n.gatherUrl(addr, httpUpstreamsPath)
 	if err != nil {
@@ -386,6 +438,50 @@ func (n *NginxPlusApi) gatherStreamServerZonesMetrics(addr *url.URL, acc telegra
 				"connections": zone.Connections,
 				"received":    zone.Received,
 				"sent":        zone.Sent,
+			},
+			zoneTags,
+		)
+	}
+
+	return nil
+}
+
+// Added in 5 API version
+func (n *NginxPlusApi) gatherResolverZonesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherUrl(addr, resolverZonesPath)
+	if err != nil {
+		return err
+	}
+
+	var resolverZones ResolverZones
+
+	if err := json.Unmarshal(body, &resolverZones); err != nil {
+		return err
+	}
+
+	tags := getTags(addr)
+
+	for zoneName, resolver := range resolverZones {
+		zoneTags := map[string]string{}
+		for k, v := range tags {
+			zoneTags[k] = v
+		}
+		zoneTags["zone"] = zoneName
+		acc.AddFields(
+			"nginx_plus_api_resolver_zones",
+			map[string]interface{}{
+				"name": resolver.Requests.Name,
+				"srv":  resolver.Requests.Srv,
+				"addr": resolver.Requests.Addr,
+
+				"noerror":  resolver.Responses.Noerror,
+				"formerr":  resolver.Responses.Formerr,
+				"servfail": resolver.Responses.Servfail,
+				"nxdomain": resolver.Responses.Nxdomain,
+				"notimp":   resolver.Responses.Notimp,
+				"refused":  resolver.Responses.Refused,
+				"timedout": resolver.Responses.Timedout,
+				"unknown":  resolver.Responses.Unknown,
 			},
 			zoneTags,
 		)

@@ -12,31 +12,51 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+)
+
+const (
+	// defaultResponseBodyMaxSize is the default maximum response body size, in bytes.
+	// if the response body is over this size, we will raise a body_read_error.
+	defaultResponseBodyMaxSize = 32 * 1024 * 1024
 )
 
 // HTTPResponse struct
 type HTTPResponse struct {
-	Address             string   // deprecated in 1.12
-	URLs                []string `toml:"urls"`
-	HTTPProxy           string   `toml:"http_proxy"`
-	Body                string
-	Method              string
-	ResponseTimeout     internal.Duration
-	Headers             map[string]string
-	FollowRedirects     bool
+	Address         string   // deprecated in 1.12
+	URLs            []string `toml:"urls"`
+	HTTPProxy       string   `toml:"http_proxy"`
+	Body            string
+	Method          string
+	ResponseTimeout internal.Duration
+	HTTPHeaderTags  map[string]string `toml:"http_header_tags"`
+	Headers         map[string]string
+	FollowRedirects bool
+	// Absolute path to file with Bearer token
+	BearerToken         string        `toml:"bearer_token"`
+	ResponseBodyField   string        `toml:"response_body_field"`
+	ResponseBodyMaxSize internal.Size `toml:"response_body_max_size"`
 	ResponseStringMatch string
+	ResponseStatusCode  int
 	Interface           string
+	// HTTP Basic Auth Credentials
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 	tls.ClientConfig
 
 	Log telegraf.Logger
 
 	compiledStringMatch *regexp.Regexp
-	client              *http.Client
+	client              httpClient
+}
+
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
 // Description returns the plugin Description
@@ -64,15 +84,38 @@ var sampleConfig = `
   ## Whether to follow redirects from the server (defaults to false)
   # follow_redirects = false
 
+  ## Optional file with Bearer token
+  ## file content is added as an Authorization header
+  # bearer_token = "/path/to/file"
+
+  ## Optional HTTP Basic Auth Credentials
+  # username = "username"
+  # password = "pa$$word"
+
   ## Optional HTTP Request Body
   # body = '''
   # {'fake':'data'}
   # '''
 
-  ## Optional substring or regex match in body of the response
+  ## Optional name of the field that will contain the body of the response. 
+  ## By default it is set to an empty String indicating that the body's content won't be added 
+  # response_body_field = ''
+
+  ## Maximum allowed HTTP response body size in bytes.
+  ## 0 means to use the default of 32MiB.
+  ## If the response body size exceeds this limit a "body_read_error" will be raised
+  # response_body_max_size = "32MiB"
+
+  ## Optional substring or regex match in body of the response (case sensitive)
   # response_string_match = "\"service_status\": \"up\""
   # response_string_match = "ok"
   # response_string_match = "\".*_status\".?:.?\"up\""
+
+  ## Expected response status code.
+  ## The status code of the response is compared to this value. If they match, the field
+  ## "response_status_code_match" will be 1, otherwise it will be 0. If the
+  ## expected status code is 0, the check is disabled and the field won't be added.
+  # response_status_code = 0
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -84,6 +127,11 @@ var sampleConfig = `
   ## HTTP Request Headers (all values must be strings)
   # [inputs.http_response.headers]
   #   Host = "github.com"
+
+  ## Optional setting to map response http headers into tags
+  ## If the http header is not present on the request, no corresponding tag will be added
+  ## If multiple instances of the http header are present, only the first value will be used
+  # http_header_tags = {"HTTP_HEADER" = "TAG_NAME"}
 
   ## Interface to use when dialing an address
   # interface = "eth0"
@@ -171,12 +219,13 @@ func localAddress(interfaceName string) (net.Addr, error) {
 
 func setResult(result_string string, fields map[string]interface{}, tags map[string]string) {
 	result_codes := map[string]int{
-		"success":                  0,
-		"response_string_mismatch": 1,
-		"body_read_error":          2,
-		"connection_failed":        3,
-		"timeout":                  4,
-		"dns_error":                5,
+		"success":                       0,
+		"response_string_mismatch":      1,
+		"body_read_error":               2,
+		"connection_failed":             3,
+		"timeout":                       4,
+		"dns_error":                     5,
+		"response_status_code_mismatch": 6,
 	}
 
 	tags["result"] = result_string
@@ -227,11 +276,24 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 		return nil, nil, err
 	}
 
+	if h.BearerToken != "" {
+		token, err := ioutil.ReadFile(h.BearerToken)
+		if err != nil {
+			return nil, nil, err
+		}
+		bearer := "Bearer " + strings.Trim(string(token), "\n")
+		request.Header.Add("Authorization", bearer)
+	}
+
 	for key, val := range h.Headers {
 		request.Header.Add(key, val)
 		if key == "Host" {
 			request.Host = val
 		}
+	}
+
+	if h.Username != "" || h.Password != "" {
+		request.SetBasicAuth(h.Username, h.Password)
 	}
 
 	// Start Timer
@@ -248,7 +310,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 		// Get error details
 		netErr := setError(err, fields, tags)
 
-		// If recognize the returnded error, get out
+		// If recognize the returned error, get out
 		if netErr != nil {
 			return fields, tags, nil
 		}
@@ -266,37 +328,81 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	// required by the net/http library
 	defer resp.Body.Close()
 
+	// Add the response headers
+	for headerName, tag := range h.HTTPHeaderTags {
+		headerValues, foundHeader := resp.Header[headerName]
+		if foundHeader && len(headerValues) > 0 {
+			tags[tag] = headerValues[0]
+		}
+	}
+
 	// Set log the HTTP response code
 	tags["status_code"] = strconv.Itoa(resp.StatusCode)
 	fields["http_response_code"] = resp.StatusCode
 
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		h.Log.Debugf("Failed to read body of HTTP Response : %s", err.Error())
-		setResult("body_read_error", fields, tags)
-		fields["content_length"] = len(bodyBytes)
-		if h.ResponseStringMatch != "" {
-			fields["response_string_match"] = 0
-		}
+	if h.ResponseBodyMaxSize.Size == 0 {
+		h.ResponseBodyMaxSize.Size = defaultResponseBodyMaxSize
+	}
+	bodyBytes, err := ioutil.ReadAll(io.LimitReader(resp.Body, h.ResponseBodyMaxSize.Size+1))
+	// Check first if the response body size exceeds the limit.
+	if err == nil && int64(len(bodyBytes)) > h.ResponseBodyMaxSize.Size {
+		h.setBodyReadError("The body of the HTTP Response is too large", bodyBytes, fields, tags)
+		return fields, tags, nil
+	} else if err != nil {
+		h.setBodyReadError(fmt.Sprintf("Failed to read body of HTTP Response : %s", err.Error()), bodyBytes, fields, tags)
 		return fields, tags, nil
 	}
 
+	// Add the body of the response if expected
+	if len(h.ResponseBodyField) > 0 {
+		// Check that the content of response contains only valid utf-8 characters.
+		if !utf8.Valid(bodyBytes) {
+			h.setBodyReadError("The body of the HTTP Response is not a valid utf-8 string", bodyBytes, fields, tags)
+			return fields, tags, nil
+		}
+		fields[h.ResponseBodyField] = string(bodyBytes)
+	}
 	fields["content_length"] = len(bodyBytes)
 
-	// Check the response for a regex match.
+	var success = true
+
+	// Check the response for a regex
 	if h.ResponseStringMatch != "" {
 		if h.compiledStringMatch.Match(bodyBytes) {
-			setResult("success", fields, tags)
 			fields["response_string_match"] = 1
 		} else {
+			success = false
 			setResult("response_string_mismatch", fields, tags)
 			fields["response_string_match"] = 0
 		}
-	} else {
+	}
+
+	// Check the response status code
+	if h.ResponseStatusCode > 0 {
+		if resp.StatusCode == h.ResponseStatusCode {
+			fields["response_status_code_match"] = 1
+		} else {
+			success = false
+			setResult("response_status_code_mismatch", fields, tags)
+			fields["response_status_code_match"] = 0
+		}
+	}
+
+	if success {
 		setResult("success", fields, tags)
 	}
 
 	return fields, tags, nil
+}
+
+// Set result in case of a body read error
+func (h *HTTPResponse) setBodyReadError(error_msg string, bodyBytes []byte, fields map[string]interface{}, tags map[string]string) {
+	h.Log.Debugf(error_msg)
+	setResult("body_read_error", fields, tags)
+	fields["content_length"] = len(bodyBytes)
+	if h.ResponseStringMatch != "" {
+		fields["response_string_match"] = 0
+	}
 }
 
 // Gather gets all metric fields and tags and returns any errors it encounters

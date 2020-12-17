@@ -210,6 +210,7 @@ func TestPostgresqlSqlScript(t *testing.T) {
 		Tagvalue:   "",
 	}}
 	p := &Postgresql{
+		Log: testutil.Logger{},
 		Service: postgresql.Service{
 			Address: fmt.Sprintf(
 				"host=%s user=postgres sslmode=disable",

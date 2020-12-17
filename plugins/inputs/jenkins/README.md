@@ -1,4 +1,4 @@
-# Jenkins Plugin
+# Jenkins Input Plugin
 
 The jenkins plugin gathers information about the nodes and jobs running in a jenkins instance.
 
@@ -8,7 +8,7 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
 
 ```toml
 [[inputs.jenkins]]
-  ## The Jenkins URL
+  ## The Jenkins URL in the format "schema://host:port"
   url = "http://my-jenkins-instance:8080"
   # username = "admin"
   # password = "admin"
@@ -54,27 +54,41 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
 
 - jenkins_node
   - tags:
+    - source
+    - port
+  - fields:
+    - busy_executors
+    - total_executors
+
++ jenkins_node
+  - tags:
     - arch
     - disk_path
     - temp_path
     - node_name
     - status ("online", "offline")
+    - source
+    - port
   - fields:
-    - disk_available
-    - temp_available
-    - memory_available
-    - memory_total
-    - swap_available
-    - swap_total
-    - response_time
+    - disk_available (Bytes)
+    - temp_available (Bytes)
+    - memory_available (Bytes)
+    - memory_total (Bytes)
+    - swap_available (Bytes)
+    - swap_total (Bytes)
+    - response_time (ms)
+    - num_executors
 
 - jenkins_job
   - tags:
     - name
     - parents
     - result
+    - source
+    - port
   - fields:
-    - duration
+    - duration (ms)
+    - number
     - result_code (0 = SUCCESS, 1 = FAILURE, 2 = NOT_BUILD, 3 = UNSTABLE, 4 = ABORTED)
 
 ### Sample Queries:
@@ -91,7 +105,9 @@ SELECT mean("duration") AS "mean_duration" FROM "jenkins_job" WHERE time > now()
 
 ```
 $ ./telegraf --config telegraf.conf --input-filter jenkins --test
-jenkins_node,arch=Linux\ (amd64),disk_path=/var/jenkins_home,temp_path=/tmp,host=myhost,node_name=master swap_total=4294963200,memory_available=586711040,memory_total=6089498624,status=online,response_time=1000i,disk_available=152392036352,temp_available=152392036352,swap_available=3503263744 1516031535000000000
-jenkins_job,host=myhost,name=JOB1,parents=apps/br1,result=SUCCESS duration=2831i,result_code=0i 1516026630000000000
-jenkins_job,host=myhost,name=JOB2,parents=apps/br2,result=SUCCESS duration=2285i,result_code=0i 1516027230000000000
+jenkins,host=myhost,port=80,source=my-jenkins-instance busy_executors=4i,total_executors=8i 1580418261000000000
+jenkins_node,arch=Linux\ (amd64),disk_path=/var/jenkins_home,temp_path=/tmp,host=myhost,node_name=master,source=my-jenkins-instance,port=8080 swap_total=4294963200,memory_available=586711040,memory_total=6089498624,status=online,response_time=1000i,disk_available=152392036352,temp_available=152392036352,swap_available=3503263744,num_executors=2i 1516031535000000000
+jenkins_job,host=myhost,name=JOB1,parents=apps/br1,result=SUCCESS,source=my-jenkins-instance,port=8080 duration=2831i,result_code=0i 1516026630000000000
+jenkins_job,host=myhost,name=JOB2,parents=apps/br2,result=SUCCESS,source=my-jenkins-instance,port=8080 duration=2285i,result_code=0i 1516027230000000000
 ```
+

@@ -14,7 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -44,6 +44,7 @@ type HTTPListenerV2 struct {
 	Port           int               `toml:"port"`
 	BasicUsername  string            `toml:"basic_username"`
 	BasicPassword  string            `toml:"basic_password"`
+	HTTPHeaderTags map[string]string `toml:"http_header_tags"`
 	tlsint.ServerConfig
 
 	TimeFunc
@@ -92,6 +93,11 @@ const sampleConfig = `
   ## You probably want to make sure you have TLS configured above for this.
   # basic_username = "foobar"
   # basic_password = "barfoo"
+
+  ## Optional setting to map http headers into tags
+  ## If the http header is not present on the request, no corresponding tag will be added
+  ## If multiple instances of the http header are present, only the first value will be used
+  # http_header_tags = {"HTTP_HEADER" = "TAG_NAME"}
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -225,6 +231,13 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 	}
 
 	for _, m := range metrics {
+		for headerName, measurementName := range h.HTTPHeaderTags {
+			headerValues := req.Header.Get(headerName)
+			if len(headerValues) > 0 {
+				m.AddTag(measurementName, headerValues)
+			}
+		}
+
 		h.acc.AddMetric(m)
 	}
 

@@ -3,11 +3,16 @@ package ping
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"math"
 	"net"
 	"os/exec"
 	"runtime"
+	"sort"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/glinton/ping"
@@ -20,6 +25,10 @@ import (
 // passed arguments. This can be easily switched with a mocked ping function
 // for unit test purposes (see ping_test.go)
 type HostPinger func(binary string, timeout float64, args ...string) (string, error)
+
+type HostResolver func(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error)
+
+type IsCorrectNetwork func(ip net.IPAddr) bool
 
 type Ping struct {
 	wg sync.WaitGroup
@@ -58,8 +67,14 @@ type Ping struct {
 	// host ping function
 	pingHost HostPinger
 
+	// resolve host function
+	resolveHost HostResolver
+
 	// listenAddr is the address associated with the interface defined.
 	listenAddr string
+
+	// Calculate the given percentiles when using native method
+	Percentiles []int
 }
 
 func (*Ping) Description() string {
@@ -99,6 +114,9 @@ const sampleConfig = `
   ## option of the ping command.
   # interface = ""
 
+  ## Percentiles to calculate. This only works with the native method.
+  # percentiles = [50, 95, 99]
+
   ## Specify the ping executable binary.
   # binary = "ping"
 
@@ -116,31 +134,22 @@ func (*Ping) SampleConfig() string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
-	if p.Interface != "" && p.listenAddr != "" {
+	if p.Interface != "" && p.listenAddr == "" {
 		p.listenAddr = getAddr(p.Interface)
 	}
 
-	for _, ip := range p.Urls {
-		_, err := net.LookupHost(ip)
-		if err != nil {
-			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"ip": ip})
-			acc.AddError(err)
-			return nil
-		}
+	for _, host := range p.Urls {
+		p.wg.Add(1)
+		go func(host string) {
+			defer p.wg.Done()
 
-		if p.Method == "native" {
-			p.wg.Add(1)
-			go func(ip string) {
-				defer p.wg.Done()
-				p.pingToURLNative(ip, acc)
-			}(ip)
-		} else {
-			p.wg.Add(1)
-			go func(ip string) {
-				defer p.wg.Done()
-				p.pingToURL(ip, acc)
-			}(ip)
-		}
+			switch p.Method {
+			case "native":
+				p.pingToURLNative(host, acc)
+			default:
+				p.pingToURL(host, acc)
+			}
+		}(host)
 	}
 
 	p.wg.Wait()
@@ -194,21 +203,47 @@ func hostPinger(binary string, timeout float64, args ...string) (string, error) 
 	return string(out), err
 }
 
+func filterIPs(addrs []net.IPAddr, filterFunc IsCorrectNetwork) []net.IPAddr {
+	n := 0
+	for _, x := range addrs {
+		if filterFunc(x) {
+			addrs[n] = x
+			n++
+		}
+	}
+	return addrs[:n]
+}
+
+func hostResolver(ctx context.Context, ipv6 bool, destination string) (*net.IPAddr, error) {
+	resolver := &net.Resolver{}
+	ips, err := resolver.LookupIPAddr(ctx, destination)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if ipv6 {
+		ips = filterIPs(ips, isV6)
+	} else {
+		ips = filterIPs(ips, isV4)
+	}
+
+	if len(ips) == 0 {
+		return nil, errors.New("Cannot resolve ip address")
+	}
+	return &ips[0], err
+}
+
+func isV4(ip net.IPAddr) bool {
+	return ip.IP.To4() != nil
+}
+
+func isV6(ip net.IPAddr) bool {
+	return !isV4(ip)
+}
+
 func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	ctx := context.Background()
-
-	network := "ip4"
-	if p.IPv6 {
-		network = "ip6"
-	}
-
-	host, err := net.ResolveIPAddr(network, destination)
-	if err != nil {
-		acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"url": destination})
-		acc.AddError(err)
-		return
-	}
-
 	interval := p.PingInterval
 	if interval < 0.2 {
 		interval = 0.2
@@ -228,6 +263,17 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		defer cancel()
 	}
 
+	host, err := p.resolveHost(ctx, p.IPv6, destination)
+	if err != nil {
+		acc.AddFields(
+			"ping",
+			map[string]interface{}{"result_code": 1},
+			map[string]string{"url": destination},
+		)
+		acc.AddError(err)
+		return
+	}
+
 	resps := make(chan *ping.Response)
 	rsps := []*ping.Response{}
 
@@ -243,8 +289,29 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	wg := &sync.WaitGroup{}
 	c := ping.Client{}
 
-	var i int
-	for i = 0; i < p.Count; i++ {
+	var doErr error
+	var packetsSent int32
+
+	type sentReq struct {
+		err  error
+		sent bool
+	}
+	sents := make(chan sentReq)
+
+	r.Add(1)
+	go func() {
+		for sent := range sents {
+			if sent.err != nil {
+				doErr = sent.err
+			}
+			if sent.sent {
+				atomic.AddInt32(&packetsSent, 1)
+			}
+		}
+		r.Done()
+	}()
+
+	for i := 0; i < p.Count; i++ {
 		select {
 		case <-ctx.Done():
 			goto finish
@@ -260,13 +327,18 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 					Src: net.ParseIP(p.listenAddr),
 					Seq: seq,
 				})
+
+				sent := sentReq{err: err, sent: true}
 				if err != nil {
-					acc.AddFields("ping", map[string]interface{}{"result_code": 2}, map[string]string{"url": destination})
-					acc.AddError(err)
+					if strings.Contains(err.Error(), "not permitted") {
+						sent.sent = false
+					}
+					sents <- sent
 					return
 				}
 
 				resps <- resp
+				sents <- sent
 			}(i + 1)
 		}
 	}
@@ -274,13 +346,49 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 finish:
 	wg.Wait()
 	close(resps)
+	close(sents)
 
 	r.Wait()
-	tags, fields := onFin(i, rsps, destination)
+
+	if doErr != nil && strings.Contains(doErr.Error(), "not permitted") {
+		log.Printf("D! [inputs.ping] %s", doErr.Error())
+	}
+
+	tags, fields := onFin(packetsSent, rsps, doErr, destination, p.Percentiles)
 	acc.AddFields("ping", fields, tags)
 }
 
-func onFin(packetsSent int, resps []*ping.Response, destination string) (map[string]string, map[string]interface{}) {
+type durationSlice []time.Duration
+
+func (p durationSlice) Len() int           { return len(p) }
+func (p durationSlice) Less(i, j int) bool { return p[i] < p[j] }
+func (p durationSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+// R7 from Hyndman and Fan (1996), which matches Excel
+func percentile(values durationSlice, perc int) time.Duration {
+	if perc < 0 {
+		perc = 0
+	}
+	if perc > 100 {
+		perc = 100
+	}
+	var percFloat = float64(perc) / 100.0
+
+	var count = len(values)
+	var rank = percFloat * float64(count-1)
+	var rankInteger = int(rank)
+	var rankFraction = rank - math.Floor(rank)
+
+	if rankInteger >= count-1 {
+		return values[count-1]
+	} else {
+		upper := values[rankInteger+1]
+		lower := values[rankInteger]
+		return lower + time.Duration(rankFraction*float64(upper-lower))
+	}
+}
+
+func onFin(packetsSent int32, resps []*ping.Response, err error, destination string, percentiles []int) (map[string]string, map[string]interface{}) {
 	packetsRcvd := len(resps)
 
 	tags := map[string]string{"url": destination}
@@ -291,29 +399,53 @@ func onFin(packetsSent int, resps []*ping.Response, destination string) (map[str
 	}
 
 	if packetsSent == 0 {
+		if err != nil {
+			fields["result_code"] = 2
+		}
 		return tags, fields
 	}
 
 	if packetsRcvd == 0 {
+		if err != nil {
+			fields["result_code"] = 1
+		}
 		fields["percent_packet_loss"] = float64(100)
 		return tags, fields
 	}
 
-	fields["percent_packet_loss"] = float64(packetsSent-packetsRcvd) / float64(packetsSent) * 100
+	fields["percent_packet_loss"] = float64(int(packetsSent)-packetsRcvd) / float64(packetsSent) * 100
 	ttl := resps[0].TTL
 
 	var min, max, avg, total time.Duration
-	min = resps[0].RTT
-	max = resps[0].RTT
 
-	for _, res := range resps {
-		if res.RTT < min {
-			min = res.RTT
+	if len(percentiles) > 0 {
+		var rtt []time.Duration
+		for _, resp := range resps {
+			rtt = append(rtt, resp.RTT)
+			total += resp.RTT
 		}
-		if res.RTT > max {
-			max = res.RTT
+		sort.Sort(durationSlice(rtt))
+		min = rtt[0]
+		max = rtt[len(rtt)-1]
+
+		for _, perc := range percentiles {
+			var value = percentile(durationSlice(rtt), perc)
+			var field = fmt.Sprintf("percentile%v_ms", perc)
+			fields[field] = float64(value.Nanoseconds()) / float64(time.Millisecond)
 		}
-		total += res.RTT
+	} else {
+		min = resps[0].RTT
+		max = resps[0].RTT
+
+		for _, res := range resps {
+			if res.RTT < min {
+				min = res.RTT
+			}
+			if res.RTT > max {
+				max = res.RTT
+			}
+			total += res.RTT
+		}
 	}
 
 	avg = total / time.Duration(packetsRcvd)
@@ -350,6 +482,7 @@ func init() {
 	inputs.Add("ping", func() telegraf.Input {
 		return &Ping{
 			pingHost:     hostPinger,
+			resolveHost:  hostResolver,
 			PingInterval: 1.0,
 			Count:        1,
 			Timeout:      1.0,
@@ -357,6 +490,7 @@ func init() {
 			Method:       "exec",
 			Binary:       "ping",
 			Arguments:    []string{},
+			Percentiles:  []int{},
 		}
 	})
 }

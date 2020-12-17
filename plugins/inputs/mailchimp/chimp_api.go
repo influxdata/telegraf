@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -143,6 +144,12 @@ func runChimp(api *ChimpAPI, params ReportsParams) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
+		body, _ := ioutil.ReadAll(io.LimitReader(resp.Body, 200))
+		return nil, fmt.Errorf("%s returned HTTP status %s: %q", api.url.String(), resp.Status, body)
+	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -171,7 +178,7 @@ type Report struct {
 	Unsubscribed  int    `json:"unsubscribed"`
 	SendTime      string `json:"send_time"`
 
-	TimeSeries    []TimeSerie
+	TimeSeries    []TimeSeries
 	Bounces       Bounces       `json:"bounces"`
 	Forwards      Forwards      `json:"forwards"`
 	Opens         Opens         `json:"opens"`
@@ -230,7 +237,7 @@ type ListStats struct {
 	ClickRate float64 `json:"click_rate"`
 }
 
-type TimeSerie struct {
+type TimeSeries struct {
 	TimeStamp       string `json:"timestamp"`
 	EmailsSent      int    `json:"emails_sent"`
 	UniqueOpens     int    `json:"unique_opens"`

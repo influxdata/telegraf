@@ -7,8 +7,11 @@ and creates metrics using one of the supported [input data formats][].
 
 ```toml
 [[inputs.mqtt_consumer]]
-  ## MQTT broker URLs to be used. The format should be scheme://host:port,
-  ## schema can be tcp, ssl, or ws.
+  ## Broker URLs for the MQTT server or cluster.  To connect to multiple
+  ## clusters or standalone servers, use a seperate plugin instance.
+  ##   example: servers = ["tcp://localhost:1883"]
+  ##            servers = ["ssl://localhost:1883"]
+  ##            servers = ["ws://localhost:1883"]
   servers = ["tcp://127.0.0.1:1883"]
 
   ## Topics that will be subscribed to.
@@ -45,7 +48,7 @@ and creates metrics using one of the supported [input data formats][].
   # max_undelivered_messages = 1000
 
   ## Persistent session disables clearing of the client session on connection.
-  ## In order for this option to work you must also set client_id to identity
+  ## In order for this option to work you must also set client_id to identify
   ## the client.  To receive messages that arrived while the client is offline,
   ## also set the qos option to 1 or 2 and don't forget to also set the QoS when
   ## publishing.

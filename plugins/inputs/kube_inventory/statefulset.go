@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/apps/v1beta1"
+	"github.com/ericchiang/k8s/apis/apps/v1"
 
 	"github.com/influxdata/telegraf"
 )
@@ -23,7 +23,7 @@ func collectStatefulSets(ctx context.Context, acc telegraf.Accumulator, ki *Kube
 	}
 }
 
-func (ki *KubernetesInventory) gatherStatefulSet(s v1beta1.StatefulSet, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherStatefulSet(s v1.StatefulSet, acc telegraf.Accumulator) error {
 	status := s.Status
 	fields := map[string]interface{}{
 		"created":             time.Unix(s.Metadata.CreationTimestamp.GetSeconds(), int64(s.Metadata.CreationTimestamp.GetNanos())).UnixNano(),
@@ -38,6 +38,11 @@ func (ki *KubernetesInventory) gatherStatefulSet(s v1beta1.StatefulSet, acc tele
 	tags := map[string]string{
 		"statefulset_name": *s.Metadata.Name,
 		"namespace":        *s.Metadata.Namespace,
+	}
+	for key, val := range s.GetSpec().GetSelector().GetMatchLabels() {
+		if ki.selectorFilter.Match(key) {
+			tags["selector_"+key] = val
+		}
 	}
 
 	acc.AddFields(statefulSetMeasurement, fields, tags)

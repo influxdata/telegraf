@@ -197,7 +197,7 @@ func MustMetric(
 }
 
 func FromTestMetric(met *Metric) telegraf.Metric {
-	m, err := metric.New(met.Measurement, met.Tags, met.Fields, met.Time)
+	m, err := metric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
 	if err != nil {
 		panic("MustMetric")
 	}

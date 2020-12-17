@@ -4,6 +4,8 @@ and the set of available metrics may vary depending hardware, as well as what pl
 are installed. Therefore, providing a definitive list of available metrics is difficult. The metrics listed 
 below are the most commonly available as of vSphere 6.5.
 
+For a complete list of metrics available from vSphere and the units they measure in, please reference the [VMWare vCenter Converter API Reference](https://www.vmware.com/support/developer/converter-sdk/conv60_apireference/vim.PerformanceManager.html).
+
 To list the exact set in your environment, please use the govc tool available [here](https://github.com/vmware/govmomi/tree/master/govc)
 
 To obtain the set of metrics for e.g. a VM, you may use the following command:

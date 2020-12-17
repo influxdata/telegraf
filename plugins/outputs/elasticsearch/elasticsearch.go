@@ -11,9 +11,11 @@ import (
 	"text/template"
 	"time"
 
+	"crypto/sha256"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"gopkg.in/olivere/elastic.v5"
 )
@@ -31,6 +33,7 @@ type Elasticsearch struct {
 	ManageTemplate      bool
 	TemplateName        string
 	OverwriteTemplate   bool
+	ForceDocumentId     bool
 	MajorReleaseNumber  int
 	tls.ClientConfig
 
@@ -86,6 +89,9 @@ var sampleConfig = `
   template_name = "telegraf"
   ## Set to true if you want telegraf to overwrite an existing template
   overwrite_template = false
+  ## If set to true a unique ID hash will be sent as sha256(concat(timestamp,measurement,series-hash)) string
+  ## it will enable data resend and update metric points avoiding duplicated metrics with diferent id's
+  force_document_id = false
 `
 
 const telegrafTemplate = `
@@ -242,6 +248,19 @@ func (a *Elasticsearch) Connect() error {
 	return nil
 }
 
+// GetPointID generates a unique ID for a Metric Point
+func GetPointID(m telegraf.Metric) string {
+
+	var buffer bytes.Buffer
+	//Timestamp(ns),measurement name and Series Hash for compute the final SHA256 based hash ID
+
+	buffer.WriteString(strconv.FormatInt(m.Time().Local().UnixNano(), 10))
+	buffer.WriteString(m.Name())
+	buffer.WriteString(strconv.FormatUint(m.HashID(), 10))
+
+	return fmt.Sprintf("%x", sha256.Sum256(buffer.Bytes()))
+}
+
 func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
@@ -264,6 +283,11 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		m[name] = metric.Fields()
 
 		br := elastic.NewBulkIndexRequest().Index(indexName).Doc(m)
+
+		if a.ForceDocumentId {
+			id := GetPointID(metric)
+			br.Id(id)
+		}
 
 		if a.MajorReleaseNumber <= 6 {
 			br.Type("metrics")

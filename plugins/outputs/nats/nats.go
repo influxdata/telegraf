@@ -3,32 +3,44 @@ package nats
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	nats_client "github.com/nats-io/go-nats"
+	"github.com/nats-io/nats.go"
 )
 
 type NATS struct {
-	Servers  []string `toml:"servers"`
-	Secure   bool     `toml:"secure"`
-	Username string   `toml:"username"`
-	Password string   `toml:"password"`
-	Subject  string   `toml:"subject"`
+	Servers     []string `toml:"servers"`
+	Secure      bool     `toml:"secure"`
+	Name        string   `toml:"name"`
+	Username    string   `toml:"username"`
+	Password    string   `toml:"password"`
+	Credentials string   `toml:"credentials"`
+	Subject     string   `toml:"subject"`
+
 	tls.ClientConfig
 
-	conn       *nats_client.Conn
+	conn       *nats.Conn
 	serializer serializers.Serializer
 }
 
 var sampleConfig = `
   ## URLs of NATS servers
   servers = ["nats://localhost:4222"]
+
+  ## Optional client name
+  # name = ""
+
   ## Optional credentials
   # username = ""
   # password = ""
+
+  ## Optional NATS 2.0 and NATS NGS compatible user credentials
+  # credentials = "/etc/telegraf/nats.creds"
+
   ## NATS subject for producer messages
   subject = "telegraf"
 
@@ -56,19 +68,17 @@ func (n *NATS) SetSerializer(serializer serializers.Serializer) {
 func (n *NATS) Connect() error {
 	var err error
 
-	// set default NATS connection options
-	opts := nats_client.DefaultOptions
-
-	// override max reconnection tries
-	opts.MaxReconnect = -1
-
-	// override servers, if any were specified
-	opts.Servers = n.Servers
+	opts := []nats.Option{
+		nats.MaxReconnects(-1),
+	}
 
 	// override authentication, if any was specified
 	if n.Username != "" {
-		opts.User = n.Username
-		opts.Password = n.Password
+		opts = append(opts, nats.UserInfo(n.Username, n.Password))
+	}
+
+	if n.Name != "" {
+		opts = append(opts, nats.Name(n.Name))
 	}
 
 	if n.Secure {
@@ -77,12 +87,11 @@ func (n *NATS) Connect() error {
 			return err
 		}
 
-		opts.Secure = true
-		opts.TLSConfig = tlsConfig
+		opts = append(opts, nats.Secure(tlsConfig))
 	}
 
 	// try and connect
-	n.conn, err = opts.Connect()
+	n.conn, err = nats.Connect(strings.Join(n.Servers, ","), opts...)
 
 	return err
 }

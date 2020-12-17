@@ -6,10 +6,12 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -39,15 +41,48 @@ const sampleConfig = `
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Optional SASL Config
+  ## SASL authentication credentials.  These settings should typically be used
+  ## with TLS encryption enabled
   # sasl_username = "kafka"
   # sasl_password = "secret"
+
+  ## Optional SASL:
+  ## one of: OAUTHBEARER, PLAIN, SCRAM-SHA-256, SCRAM-SHA-512, GSSAPI
+  ## (defaults to PLAIN)
+  # sasl_mechanism = ""
+
+  ## used if sasl_mechanism is GSSAPI (experimental)
+  # sasl_gssapi_service_name = ""
+  # ## One of: KRB5_USER_AUTH and KRB5_KEYTAB_AUTH
+  # sasl_gssapi_auth_type = "KRB5_USER_AUTH"
+  # sasl_gssapi_kerberos_config_path = "/"
+  # sasl_gssapi_realm = "realm"
+  # sasl_gssapi_key_tab_path = ""
+  # sasl_gssapi_disable_pafxfast = false
+
+  ## used if sasl_mechanism is OAUTHBEARER (experimental)
+  # sasl_access_token = ""
+
+  ## SASL protocol version.  When connecting to Azure EventHub set to 0.
+  # sasl_version = 1
 
   ## Name of the consumer group.
   # consumer_group = "telegraf_metrics_consumers"
 
+  ## Compression codec represents the various compression codecs recognized by
+  ## Kafka in messages.
+  ##  0 : None
+  ##  1 : Gzip
+  ##  2 : Snappy
+  ##  3 : LZ4
+  ##  4 : ZSTD
+   # compression_codec = 0
+   
   ## Initial offset position; one of "oldest" or "newest".
   # offset = "oldest"
+
+  ## Consumer group partition assignment strategy; one of "range", "roundrobin" or "sticky".
+  # balance_strategy = "range"
 
   ## Maximum length of a message to consume, in bytes (default 0/unlimited);
   ## larger messages are dropped
@@ -74,6 +109,7 @@ const (
 	defaultMaxUndeliveredMessages = 1000
 	defaultMaxMessageLen          = 1000000
 	defaultConsumerGroup          = "telegraf_metrics_consumers"
+	reconnectDelay                = 5 * time.Second
 )
 
 type empty struct{}
@@ -81,18 +117,17 @@ type semaphore chan empty
 
 type KafkaConsumer struct {
 	Brokers                []string `toml:"brokers"`
-	ClientID               string   `toml:"client_id"`
 	ConsumerGroup          string   `toml:"consumer_group"`
 	MaxMessageLen          int      `toml:"max_message_len"`
 	MaxUndeliveredMessages int      `toml:"max_undelivered_messages"`
 	Offset                 string   `toml:"offset"`
+	BalanceStrategy        string   `toml:"balance_strategy"`
 	Topics                 []string `toml:"topics"`
 	TopicTag               string   `toml:"topic_tag"`
-	Version                string   `toml:"version"`
-	SASLPassword           string   `toml:"sasl_password"`
-	SASLUsername           string   `toml:"sasl_username"`
 
-	tls.ClientConfig
+	kafka.ReadConfig
+
+	Log telegraf.Logger `toml:"-"`
 
 	ConsumerCreator ConsumerGroupCreator `toml:"-"`
 	consumer        ConsumerGroup
@@ -140,40 +175,12 @@ func (k *KafkaConsumer) Init() error {
 	}
 
 	config := sarama.NewConfig()
-	config.Consumer.Return.Errors = true
 
 	// Kafka version 0.10.2.0 is required for consumer groups.
 	config.Version = sarama.V0_10_2_0
 
-	if k.Version != "" {
-		version, err := sarama.ParseKafkaVersion(k.Version)
-		if err != nil {
-			return err
-		}
-
-		config.Version = version
-	}
-
-	tlsConfig, err := k.ClientConfig.TLSConfig()
-	if err != nil {
+	if err := k.SetConfig(config); err != nil {
 		return err
-	}
-
-	if tlsConfig != nil {
-		config.Net.TLS.Config = tlsConfig
-		config.Net.TLS.Enable = true
-	}
-
-	if k.SASLUsername != "" && k.SASLPassword != "" {
-		config.Net.SASL.User = k.SASLUsername
-		config.Net.SASL.Password = k.SASLPassword
-		config.Net.SASL.Enable = true
-	}
-
-	if k.ClientID != "" {
-		config.ClientID = k.ClientID
-	} else {
-		config.ClientID = "Telegraf"
 	}
 
 	switch strings.ToLower(k.Offset) {
@@ -183,6 +190,17 @@ func (k *KafkaConsumer) Init() error {
 		config.Consumer.Offsets.Initial = sarama.OffsetNewest
 	default:
 		return fmt.Errorf("invalid offset %q", k.Offset)
+	}
+
+	switch strings.ToLower(k.BalanceStrategy) {
+	case "range", "":
+		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
+	case "roundrobin":
+		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
+	case "sticky":
+		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
+	default:
+		return fmt.Errorf("invalid balance strategy %q", k.BalanceStrategy)
 	}
 
 	if k.ConsumerCreator == nil {
@@ -218,6 +236,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			err := k.consumer.Consume(ctx, k.Topics, handler)
 			if err != nil {
 				acc.AddError(err)
+				internal.SleepContext(ctx, reconnectDelay)
 			}
 		}
 		err = k.consumer.Close()
