@@ -27,11 +27,11 @@ const validJSONTags = `
       "c": 6
     },
     "mytag": "foobar",
-	"othertag": "baz",
-	"tags_object": {
-	  "mytag": "foobar",
-	  "othertag": "baz"
-	}
+    "othertag": "baz",
+    "tags_object": {
+        "mytag": "foobar",
+        "othertag": "baz"
+    }
 }
 `
 
@@ -43,16 +43,16 @@ const validJSONArrayTags = `
         "c": 6
     },
     "mytag": "foo",
-	"othertag": "baz",
-	"tags_array": [
-		{
-		"mytag": "foo"
-		},
-		{
-		"othertag": "baz"
-		}
-	],
-	"anothert": "foo"
+    "othertag": "baz",
+    "tags_array": [
+        {
+        "mytag": "foo"
+        },
+        {
+        "othertag": "baz"
+        }
+    ],
+    "anothert": "foo"
 },
 {
     "a": 7,
@@ -60,17 +60,17 @@ const validJSONArrayTags = `
         "c": 8
     },
     "mytag": "bar",
-	"othertag": "baz",
-	"tags_array": [
-		{
-		"mytag": "bar"
-		},
-		{
-		"othertag": "baz"
-		}
-	],
-	"anothert": "bar"
-}
+    "othertag": "baz",
+    "tags_array": [
+    {
+    "mytag": "bar"
+    },
+    {
+    "othertag": "baz"
+    }
+    ],
+    "anothert": "bar"
+    }
 ]
 `
 
