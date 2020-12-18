@@ -519,6 +519,11 @@ WITH PerfCounters AS (
 			,'Mirrored Write Transactions/sec'
 			,'Group Commit Time'
 			,'Group Commits/Sec'
+			,'Workfiles Created/sec'
+			,'Worktables Created/sec'
+			,'Distributed Query'
+			,'DTC calls'
+			,'Query Store CPU usage'
 		) OR (
 			spi.[object_name] LIKE '%User Settable%'
 			OR spi.[object_name] LIKE '%SQL Errors%'
@@ -1051,6 +1056,11 @@ WITH PerfCounters AS (
 			,'Mirrored Write Transactions/sec'
 			,'Group Commit Time'
 			,'Group Commits/Sec'
+			,'Workfiles Created/sec'
+			,'Worktables Created/sec'
+			,'Distributed Query'
+			,'DTC calls'
+			,'Query Store CPU usage'
 		) OR (
 			spi.[object_name] LIKE '%User Settable%'
 			OR spi.[object_name] LIKE '%SQL Errors%'
