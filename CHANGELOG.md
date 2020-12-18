@@ -1,8 +1,12 @@
-## v1.17.0-rc1 [2020-12-16]
+## v1.17.0 [2020-12-18]
 
 #### Release Notes
 
-- Starlark plugins can now store state between runs using a global state variable
+  - Starlark plugins can now store state between runs using a global state variable. This lets you make custom aggregators as well as custom processors that are state-aware.
+  - New input plugins: Riemann-Protobuff Listener, Intel PowerStat
+  - New output plugins: Yandex.Cloud monitoring, Logz.io
+  - New parser plugin: Prometheus
+  - New serializer: Prometheus remote write
 
 #### Bugfixes
 
@@ -48,6 +52,10 @@
   - [#8575](https://github.com/influxdata/telegraf/pull/8575) `inputs.win_services` Added Glob pattern matching for "Windows Services" plugin
   - [#6132](https://github.com/influxdata/telegraf/pull/6132) `inputs.mysql` Add per user metrics to mysql input
   - [#8500](https://github.com/influxdata/telegraf/pull/8500) `inputs.github` [inputs.github] Add query of pull-request statistics
+  - [#8598](https://github.com/influxdata/telegraf/pull/8598) `processors.enum` Allow globs (wildcards) in config for tags/fields in enum processor
+  - [#8590](https://github.com/influxdata/telegraf/pull/8590) `inputs.ethtool` [ethtool] interface_up field added
+  - [#8579](https://github.com/influxdata/telegraf/pull/8579) `parsers.json` Add wildcard tags json parser support
+
 
 #### New Parser Plugins
 
