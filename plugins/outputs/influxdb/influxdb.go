@@ -223,7 +223,7 @@ func (i *InfluxDB) isAnyTagValueNull(metrics []telegraf.Metric) bool {
 		i.Log.Errorf(".... MMT name - %v TAG %v FIELDS %v \n", value.Name(), value.Tags(), value.Fields())
 		for k, v := range value.Tags() {
 			i.Log.Errorf("key[%s] value[%s]\n", k, v)
-			if v[len(v)-1] == '\x00' {
+			if len(v) > 0 && v[len(v)-1] == '\x00' {
 				i.Log.Errorf("Dropping metric. Null at the end in value %v", v)
 				return true
 			}
