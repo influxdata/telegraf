@@ -83,7 +83,7 @@ func init() {
 
 ### Typed Metrics
 
-In addition to the `AddFields` function, the accumulator also supports
+In addition the the `AddFields` function, the accumulator also supports
 functions to add typed metrics: `AddGauge`, `AddCounter`, etc.  Metric types
 are ignored by the InfluxDB output, but can be used for other outputs, such as
 [prometheus][prom metric types].

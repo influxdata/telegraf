@@ -34,19 +34,6 @@ func deepcopy(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple,
 	return &Metric{metric: dup}, nil
 }
 
-// catch(f) evaluates f() and returns its evaluation error message
-// if it failed or None if it succeeded.
-func catch(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var fn starlark.Callable
-	if err := starlark.UnpackArgs("catch", args, kwargs, "fn", &fn); err != nil {
-		return nil, err
-	}
-	if _, err := starlark.Call(thread, fn, nil, nil); err != nil {
-		return starlark.String(err.Error()), nil
-	}
-	return starlark.None, nil
-}
-
 type builtinMethod func(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error)
 
 func builtinAttr(recv starlark.Value, name string, methods map[string]builtinMethod) (starlark.Value, error) {

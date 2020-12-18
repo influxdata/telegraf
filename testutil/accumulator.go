@@ -54,8 +54,6 @@ func (a *Accumulator) NMetrics() uint64 {
 	return atomic.LoadUint64(&a.nMetrics)
 }
 
-// GetTelegrafMetrics returns all the metrics collected by the accumulator
-// If you are getting race conditions here then you are not waiting for all of your metrics to arrive: see Wait()
 func (a *Accumulator) GetTelegrafMetrics() []telegraf.Metric {
 	metrics := []telegraf.Metric{}
 	for _, m := range a.Metrics {

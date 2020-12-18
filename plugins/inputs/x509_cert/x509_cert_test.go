@@ -7,8 +7,6 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -53,7 +51,7 @@ func TestGatherRemote(t *testing.T) {
 		{name: "wrong port", server: ":99999", error: true},
 		{name: "no server", timeout: 5},
 		{name: "successful https", server: "https://example.org:443", timeout: 5},
-		{name: "successful file", server: "file://" + filepath.ToSlash(tmpfile.Name()), timeout: 5},
+		{name: "successful file", server: "file://" + tmpfile.Name(), timeout: 5},
 		{name: "unsupported scheme", server: "foo://", timeout: 5, error: true},
 		{name: "no certificate", timeout: 5, unset: true, error: true},
 		{name: "closed connection", close: true, error: true},
@@ -168,11 +166,9 @@ func TestGatherLocal(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if runtime.GOOS != "windows" {
-				err = f.Chmod(test.mode)
-				if err != nil {
-					t.Fatal(err)
-				}
+			err = f.Chmod(test.mode)
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			err = f.Close()

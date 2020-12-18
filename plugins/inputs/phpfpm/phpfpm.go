@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -300,18 +301,25 @@ func globUnixSocket(url string) ([]string, error) {
 	}
 	paths := glob.Match()
 	if len(paths) == 0 {
-		return nil, fmt.Errorf("socket doesn't exist %q: %v", pattern, err)
+		if _, err := os.Stat(paths[0]); err != nil {
+			if os.IsNotExist(err) {
+				return nil, fmt.Errorf("Socket doesn't exist  '%s': %s", pattern, err)
+			}
+			return nil, err
+		}
+		return nil, nil
 	}
 
-	addresses := make([]string, 0, len(paths))
+	addrs := make([]string, 0, len(paths))
+
 	for _, path := range paths {
 		if status != "" {
 			path = path + ":" + status
 		}
-		addresses = append(addresses, path)
+		addrs = append(addrs, path)
 	}
 
-	return addresses, nil
+	return addrs, nil
 }
 
 func unixSocketPaths(addr string) (string, string) {

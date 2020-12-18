@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"runtime"
 	"testing"
 )
 
@@ -134,25 +133,19 @@ func makeFakeSNMPSrc(code string) string {
 	return path
 }
 
-func buildFakeSNMPCmd(src string, executable string) {
-	err := exec.Command("go", "build", "-o", executable, src).Run()
+func buildFakeSNMPCmd(src string) {
+	err := exec.Command("go", "build", "-o", "snmpwalk", src).Run()
 	if err != nil {
 		log.Fatalln(err)
 	}
 }
 
 func testMain(t *testing.T, code string, endpoint string, serverType ServerType) {
-	executable := "snmpwalk"
-	if runtime.GOOS == "windows" {
-		executable = "snmpwalk.exe"
-	}
-
 	// Build the fake snmpwalk for test
 	src := makeFakeSNMPSrc(code)
 	defer os.Remove(src)
-	buildFakeSNMPCmd(src, executable)
-	defer os.Remove("./" + executable)
-
+	buildFakeSNMPCmd(src)
+	defer os.Remove("./snmpwalk")
 	envPathOrigin := os.Getenv("PATH")
 	// Refer to the fake snmpwalk
 	os.Setenv("PATH", ".")

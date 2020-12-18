@@ -1,15 +1,13 @@
 package reverse_dns
 
 import (
-	"runtime"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSimpleReverseLookup(t *testing.T) {
@@ -42,10 +40,7 @@ func TestSimpleReverseLookup(t *testing.T) {
 	processedMetric := acc.GetTelegrafMetrics()[0]
 	f, ok := processedMetric.GetField("source_name")
 	require.True(t, ok)
-	if runtime.GOOS != "windows" {
-		// lookupAddr on Windows works differently than on Linux so `source_name` won't be "localhost" on every environment
-		require.EqualValues(t, "localhost", f)
-	}
+	require.EqualValues(t, "localhost", f)
 
 	tag, ok := processedMetric.GetTag("dest_name")
 	require.True(t, ok)

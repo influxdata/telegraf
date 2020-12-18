@@ -19,7 +19,7 @@ var m1, _ = metric.New("m1",
 		"d": float64(2),
 		"g": int64(3),
 	},
-	time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+	time.Now(),
 )
 var m2, _ = metric.New("m1",
 	map[string]string{"foo": "bar"},
@@ -34,7 +34,7 @@ var m2, _ = metric.New("m1",
 		"andme":    true,
 		"g":        int64(1),
 	},
-	time.Date(2000, 1, 1, 0, 0, 0, 1e6, time.UTC),
+	time.Now(),
 )
 
 func BenchmarkApply(b *testing.B) {
@@ -491,81 +491,6 @@ func TestBasicStatsWithDiff(t *testing.T) {
 		"c_diff": float64(2),
 		"d_diff": float64(4),
 		"g_diff": float64(-2),
-	}
-	expectedTags := map[string]string{
-		"foo": "bar",
-	}
-	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
-}
-
-func TestBasicStatsWithRate(t *testing.T) {
-
-	aggregator := NewBasicStats()
-	aggregator.Stats = []string{"rate"}
-	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
-
-	aggregator.Add(m1)
-	aggregator.Add(m2)
-
-	acc := testutil.Accumulator{}
-	aggregator.Push(&acc)
-	expectedFields := map[string]interface{}{
-		"a_rate": float64(0),
-		"b_rate": float64(2000),
-		"c_rate": float64(2000),
-		"d_rate": float64(4000),
-		"g_rate": float64(-2000),
-	}
-	expectedTags := map[string]string{
-		"foo": "bar",
-	}
-	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
-}
-
-func TestBasicStatsWithNonNegativeRate(t *testing.T) {
-
-	aggregator := NewBasicStats()
-	aggregator.Stats = []string{"non_negative_rate"}
-	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
-
-	aggregator.Add(m1)
-	aggregator.Add(m2)
-
-	acc := testutil.Accumulator{}
-	aggregator.Push(&acc)
-
-	expectedFields := map[string]interface{}{
-		"a_non_negative_rate": float64(0),
-		"b_non_negative_rate": float64(2000),
-		"c_non_negative_rate": float64(2000),
-		"d_non_negative_rate": float64(4000),
-	}
-	expectedTags := map[string]string{
-		"foo": "bar",
-	}
-	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
-}
-func TestBasicStatsWithInterval(t *testing.T) {
-
-	aggregator := NewBasicStats()
-	aggregator.Stats = []string{"interval"}
-	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
-
-	aggregator.Add(m1)
-	aggregator.Add(m2)
-
-	acc := testutil.Accumulator{}
-	aggregator.Push(&acc)
-
-	expectedFields := map[string]interface{}{
-		"a_interval": int64(time.Millisecond),
-		"b_interval": int64(time.Millisecond),
-		"c_interval": int64(time.Millisecond),
-		"d_interval": int64(time.Millisecond),
-		"g_interval": int64(time.Millisecond),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",

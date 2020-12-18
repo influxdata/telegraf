@@ -14,7 +14,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
-	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 )
@@ -233,8 +232,6 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags,
 			config.FormUrlencodedTagKeys,
 		)
-	case "prometheus":
-		parser, err = NewPrometheusParser(config.DefaultTags)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -340,11 +337,5 @@ func NewFormUrlencodedParser(
 		MetricName:  metricName,
 		DefaultTags: defaultTags,
 		TagKeys:     tagKeys,
-	}, nil
-}
-
-func NewPrometheusParser(defaultTags map[string]string) (Parser, error) {
-	return &prometheus.Parser{
-		DefaultTags: defaultTags,
 	}, nil
 }

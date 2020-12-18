@@ -166,6 +166,7 @@ func resolveEndpoint(ecs *Ecs) {
 
 func (ecs *Ecs) accTask(task *Task, tags map[string]string, acc telegraf.Accumulator) {
 	taskFields := map[string]interface{}{
+		"revision":       task.Revision,
 		"desired_status": task.DesiredStatus,
 		"known_status":   task.KnownStatus,
 		"limit_cpu":      task.Limits["CPU"],

@@ -1,7 +1,6 @@
 package disk
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -75,13 +74,13 @@ func TestDiskUsage(t *testing.T) {
 	assert.Equal(t, expectedAllDiskMetrics, numDiskMetrics)
 
 	tags1 := map[string]string{
-		"path":   string(os.PathSeparator),
+		"path":   "/",
 		"fstype": "ext4",
 		"device": "sda",
 		"mode":   "ro",
 	}
 	tags2 := map[string]string{
-		"path":   fmt.Sprintf("%chome", os.PathSeparator),
+		"path":   "/home",
 		"fstype": "ext4",
 		"device": "sdb",
 		"mode":   "rw",
@@ -145,7 +144,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 				},
 			},
 			expectedTags: map[string]string{
-				"path":   string(os.PathSeparator),
+				"path":   "/",
 				"device": "sda",
 				"fstype": "ext4",
 				"mode":   "ro",
@@ -178,7 +177,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 			},
 			hostMountPrefix: "/hostfs",
 			expectedTags: map[string]string{
-				"path":   fmt.Sprintf("%cvar", os.PathSeparator),
+				"path":   "/var",
 				"device": "sda",
 				"fstype": "ext4",
 				"mode":   "ro",
@@ -211,7 +210,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 			},
 			hostMountPrefix: "/hostfs",
 			expectedTags: map[string]string{
-				"path":   string(os.PathSeparator),
+				"path":   "/",
 				"device": "sda",
 				"fstype": "ext4",
 				"mode":   "ro",

@@ -37,8 +37,6 @@ const maxSampleConst = 10 // Absolute maximum number of samples regardless of pe
 
 const maxMetadataSamples = 100 // Number of resources to sample for metric metadata
 
-const maxRealtimeMetrics = 50000 // Absolute maximum metrics per realtime query
-
 const hwMarkTTL = time.Duration(4 * time.Hour)
 
 type queryChunk []types.PerfQuerySpec
@@ -324,13 +322,13 @@ func (e *Endpoint) reloadMetricNameMap(ctx context.Context) error {
 		return err
 	}
 
-	mn, err := client.CounterInfoByKey(ctx)
+	mn, err := client.CounterInfoByName(ctx)
 	if err != nil {
 		return err
 	}
 	e.metricNameLookup = make(map[int32]string)
-	for key, m := range mn {
-		e.metricNameLookup[key] = m.Name()
+	for name, m := range mn {
+		e.metricNameLookup[m.Key] = name
 	}
 	return nil
 }
@@ -439,7 +437,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 			}
 
 			// Fill in datacenter names where available (no need to do it for Datacenters)
-			if res.name != "datacenter" {
+			if res.name != "Datacenter" {
 				for k, obj := range objects {
 					if obj.parentRef != nil {
 						obj.dcname, _ = e.getDatacenterName(ctx, client, dcNameCache, *obj.parentRef)
@@ -891,7 +889,6 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 	}
 
 	pqs := make(queryChunk, 0, e.Parent.MaxQueryObjects)
-	numQs := 0
 
 	for _, object := range res.objects {
 		timeBuckets := make(map[int64]*types.PerfQuerySpec, 0)
@@ -927,9 +924,9 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			// Add this metric to the bucket
 			bucket.MetricId = append(bucket.MetricId, metric)
 
-			// Bucket filled to capacity?
+			// Bucket filled to capacity? (Only applies to non real time)
 			// OR if we're past the absolute maximum limit
-			if (!res.realTime && len(bucket.MetricId) >= maxMetrics) || len(bucket.MetricId) > maxRealtimeMetrics {
+			if (!res.realTime && len(bucket.MetricId) >= maxMetrics) || len(bucket.MetricId) > 100000 {
 				e.log.Debugf("Submitting partial query: %d metrics (%d remaining) of type %s for %s. Total objects %d",
 					len(bucket.MetricId), len(res.metrics)-metricIdx, res.name, e.URL.Host, len(res.objects))
 
@@ -946,18 +943,16 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 		// Handle data in time bucket and submit job if we've reached the maximum number of object.
 		for _, bucket := range timeBuckets {
 			pqs = append(pqs, *bucket)
-			numQs += len(bucket.MetricId)
-			if (!res.realTime && numQs > e.Parent.MaxQueryObjects) || numQs > maxRealtimeMetrics {
-				e.log.Debugf("Submitting final bucket job for %s: %d metrics", res.name, numQs)
+			if (!res.realTime && len(pqs) > e.Parent.MaxQueryObjects) || len(pqs) > 100000 {
+				e.log.Debugf("Submitting final bucket job for %s: %d metrics", res.name, len(bucket.MetricId))
 				submitChunkJob(ctx, te, job, pqs)
 				pqs = make(queryChunk, 0, e.Parent.MaxQueryObjects)
-				numQs = 0
 			}
 		}
 	}
 	// Submit any jobs left in the queue
 	if len(pqs) > 0 {
-		e.log.Debugf("Submitting job for %s: %d objects, %d metrics", res.name, len(pqs), numQs)
+		e.log.Debugf("Submitting job for %s: %d objects", res.name, len(pqs))
 		submitChunkJob(ctx, te, job, pqs)
 	}
 

@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -21,9 +20,6 @@ func TestBindJsonStats(t *testing.T) {
 		Urls:                 []string{ts.URL + "/json/v1"},
 		GatherMemoryContexts: true,
 		GatherViews:          true,
-		client: http.Client{
-			Timeout: 4 * time.Second,
-		},
 	}
 
 	var acc testutil.Accumulator
@@ -194,9 +190,6 @@ func TestBindXmlStatsV2(t *testing.T) {
 		Urls:                 []string{ts.URL + "/xml/v2"},
 		GatherMemoryContexts: true,
 		GatherViews:          true,
-		client: http.Client{
-			Timeout: 4 * time.Second,
-		},
 	}
 
 	var acc testutil.Accumulator
@@ -399,9 +392,6 @@ func TestBindXmlStatsV3(t *testing.T) {
 		Urls:                 []string{ts.URL + "/xml/v3"},
 		GatherMemoryContexts: true,
 		GatherViews:          true,
-		client: http.Client{
-			Timeout: 4 * time.Second,
-		},
 	}
 
 	var acc testutil.Accumulator

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"sort"
 	"strings"
 	"time"
 
@@ -14,12 +13,11 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/selfstat"
 )
 
 // OpcUA type
 type OpcUA struct {
-	MetricName     string          `toml:"name"`
+	Name           string          `toml:"name"`
 	Endpoint       string          `toml:"endpoint"`
 	SecurityPolicy string          `toml:"security_policy"`
 	SecurityMode   string          `toml:"security_mode"`
@@ -30,18 +28,18 @@ type OpcUA struct {
 	AuthMethod     string          `toml:"auth_method"`
 	ConnectTimeout config.Duration `toml:"connect_timeout"`
 	RequestTimeout config.Duration `toml:"request_timeout"`
-	RootNodes      []NodeSettings  `toml:"nodes"`
-	Groups         []GroupSettings `toml:"group"`
+	NodeList       []OPCTag        `toml:"nodes"`
 
-	nodes       []Node
-	nodeData    []OPCData
-	nodeIDs     []*ua.NodeID
-	nodeIDerror []error
+	Nodes       []string     `toml:"-"`
+	NodeData    []OPCData    `toml:"-"`
+	NodeIDs     []*ua.NodeID `toml:"-"`
+	NodeIDerror []error      `toml:"-"`
 	state       ConnectionState
 
 	// status
-	ReadSuccess selfstat.Stat `toml:"-"`
-	ReadError   selfstat.Stat `toml:"-"`
+	ReadSuccess  int `toml:"-"`
+	ReadError    int `toml:"-"`
+	NumberOfTags int `toml:"-"`
 
 	// internal values
 	client *opcua.Client
@@ -50,29 +48,13 @@ type OpcUA struct {
 }
 
 // OPCTag type
-type NodeSettings struct {
-	FieldName      string     `toml:"name"`
-	Namespace      string     `toml:"namespace"`
-	IdentifierType string     `toml:"identifier_type"`
-	Identifier     string     `toml:"identifier"`
-	DataType       string     `toml:"data_type"`   // Kept for backward compatibility but was never used.
-	Description    string     `toml:"description"` // Kept for backward compatibility but was never used.
-	TagsSlice      [][]string `toml:"tags"`
-}
-
-type Node struct {
-	tag        NodeSettings
-	idStr      string
-	metricName string
-	metricTags map[string]string
-}
-
-type GroupSettings struct {
-	MetricName     string         `toml:"name"`            // Overrides plugin's setting
-	Namespace      string         `toml:"namespace"`       // Can be overridden by node setting
-	IdentifierType string         `toml:"identifier_type"` // Can be overridden by node setting
-	Nodes          []NodeSettings `toml:"nodes"`
-	TagsSlice      [][]string     `toml:"tags"`
+type OPCTag struct {
+	Name           string `toml:"name"`
+	Namespace      string `toml:"namespace"`
+	IdentifierType string `toml:"identifier_type"`
+	Identifier     string `toml:"identifier"`
+	DataType       string `toml:"data_type"`
+	Description    string `toml:"description"`
 }
 
 // OPCData type
@@ -99,8 +81,9 @@ const (
 
 const description = `Retrieve data from OPCUA devices`
 const sampleConfig = `
-  ## Metric name
-  # name = "opcua"
+[[inputs.opcua]]
+  ## Device name
+  # name = "localhost"
   #
   ## OPC UA Endpoint URL
   # endpoint = "opc.tcp://localhost:4840"
@@ -137,41 +120,18 @@ const sampleConfig = `
   # password = ""
   #
   ## Node ID configuration
-  ## name              - field name to use in the output
-  ## namespace         - OPC UA namespace of the node (integer value 0 thru 3)
-  ## identifier_type   - OPC UA ID type (s=string, i=numeric, g=guid, b=opaque)
-  ## identifier        - OPC UA ID (tag as shown in opcua browser)
+  ## name       			- the variable name
+  ## namespace  			- integer value 0 thru 3
+  ## identifier_type		- s=string, i=numeric, g=guid, b=opaque
+  ## identifier			- tag as shown in opcua browser
+  ## data_type  			- boolean, byte, short, int, uint, uint16, int16,
+  ##                        uint32, int32, float, double, string, datetime, number
   ## Example:
-  ## {name="ProductUri", namespace="0", identifier_type="i", identifier="2262"}
-  # nodes = [
-  #  {name="", namespace="", identifier_type="", identifier=""},
-  #  {name="", namespace="", identifier_type="", identifier=""},
-  #]
-  #
-  ## Node Group
-  ## Sets defaults for OPC UA namespace and ID type so they aren't required in
-  ## every node.  A group can also have a metric name that overrides the main
-  ## plugin metric name.
-  ##
-  ## Multiple node groups are allowed
-  #[[inputs.opcua.group]]
-  ## Group Metric name. Overrides the top level name.  If unset, the
-  ## top level name is used.
-  # name =
-  #
-  ## Group default namespace. If a node in the group doesn't set its
-  ## namespace, this is used.
-  # namespace =
-  #
-  ## Group default identifier type. If a node in the group doesn't set its
-  ## namespace, this is used.
-  # identifier_type =
-  #
-  ## Node ID Configuration.  Array of nodes with the same settings as above.
-  # nodes = [
-  #  {name="", namespace="", identifier_type="", identifier=""},
-  #  {name="", namespace="", identifier_type="", identifier=""},
-  #]
+  ## {name="ProductUri", namespace="0", identifier_type="i", identifier="2262", data_type="string", description="http://open62541.org"}
+  nodes = [
+    {name="", namespace="", identifier_type="", identifier="", data_type="", description=""},
+    {name="", namespace="", identifier_type="", identifier="", data_type="", description=""},
+  ]
 `
 
 // Description will appear directly above the plugin definition in the config file
@@ -197,21 +157,16 @@ func (o *OpcUA) Init() error {
 	if err != nil {
 		return err
 	}
+	o.NumberOfTags = len(o.NodeList)
 
 	o.setupOptions()
-
-	tags := map[string]string{
-		"endpoint": o.Endpoint,
-	}
-	o.ReadError = selfstat.Register("opcua", "read_error", tags)
-	o.ReadSuccess = selfstat.Register("opcua", "read_success", tags)
 
 	return nil
 
 }
 
 func (o *OpcUA) validateEndpoint() error {
-	if o.MetricName == "" {
+	if o.Name == "" {
 		return fmt.Errorf("device name is empty")
 	}
 
@@ -229,79 +184,22 @@ func (o *OpcUA) validateEndpoint() error {
 	case "None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "auto":
 		break
 	default:
-		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityPolicy, o.MetricName)
+		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityPolicy, o.Name)
 	}
 	//search security mode type
 	switch o.SecurityMode {
 	case "None", "Sign", "SignAndEncrypt", "auto":
 		break
 	default:
-		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityMode, o.MetricName)
+		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityMode, o.Name)
 	}
 	return nil
 }
 
-func tagsSliceToMap(tags [][]string) (map[string]string, error) {
-	m := make(map[string]string)
-	for i, tag := range tags {
-		if len(tag) != 2 {
-			return nil, fmt.Errorf("tag %d needs 2 values, has %d: %v", i+1, len(tag), tag)
-		}
-		if tag[0] == "" {
-			return nil, fmt.Errorf("tag %d has empty name", i+1)
-		}
-		if tag[1] == "" {
-			return nil, fmt.Errorf("tag %d has empty value", i+1)
-		}
-		if _, ok := m[tag[0]]; ok {
-			return nil, fmt.Errorf("tag %d has duplicate key: %v", i+1, tag[0])
-		}
-		m[tag[0]] = tag[1]
-	}
-	return m, nil
-}
-
 //InitNodes Method on OpcUA
 func (o *OpcUA) InitNodes() error {
-	for _, node := range o.RootNodes {
-		o.nodes = append(o.nodes, Node{
-			metricName: o.MetricName,
-			tag:        node,
-		})
-	}
-
-	for _, group := range o.Groups {
-		if group.MetricName == "" {
-			group.MetricName = o.MetricName
-		}
-		groupTags, err := tagsSliceToMap(group.TagsSlice)
-		if err != nil {
-			return err
-		}
-		for _, node := range group.Nodes {
-			if node.Namespace == "" {
-				node.Namespace = group.Namespace
-			}
-			if node.IdentifierType == "" {
-				node.IdentifierType = group.IdentifierType
-			}
-			nodeTags, err := tagsSliceToMap(node.TagsSlice)
-			if err != nil {
-				return err
-			}
-			mergedTags := make(map[string]string)
-			for k, v := range groupTags {
-				mergedTags[k] = v
-			}
-			for k, v := range nodeTags {
-				mergedTags[k] = v
-			}
-			o.nodes = append(o.nodes, Node{
-				metricName: group.MetricName,
-				tag:        node,
-				metricTags: mergedTags,
-			})
-		}
+	if len(o.NodeList) == 0 {
+		return nil
 	}
 
 	err := o.validateOPCTags()
@@ -312,74 +210,50 @@ func (o *OpcUA) InitNodes() error {
 	return nil
 }
 
-type metricParts struct {
-	metricName string
-	fieldName  string
-	tags       string // sorted by tag name and in format tag1=value1, tag2=value2
-}
-
-func newMP(n *Node) metricParts {
-	var keys []string
-	for key := range n.metricTags {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	var sb strings.Builder
-	for i, key := range keys {
-		if i != 0 {
-			sb.WriteString(", ")
-		}
-		sb.WriteString(key)
-		sb.WriteString("=")
-		sb.WriteString(n.metricTags[key])
-	}
-	x := metricParts{
-		metricName: n.metricName,
-		fieldName:  n.tag.FieldName,
-		tags:       sb.String(),
-	}
-	return x
-}
-
 func (o *OpcUA) validateOPCTags() error {
-	nameEncountered := map[metricParts]struct{}{}
-	for _, node := range o.nodes {
-		mp := newMP(&node)
+	nameEncountered := map[string]bool{}
+	for i, item := range o.NodeList {
 		//check empty name
-		if node.tag.FieldName == "" {
-			return fmt.Errorf("empty name in '%s'", node.tag.FieldName)
+		if item.Name == "" {
+			return fmt.Errorf("empty name in '%s'", item.Name)
 		}
 		//search name duplicate
-		if _, ok := nameEncountered[mp]; ok {
-			return fmt.Errorf("name '%s' is duplicated (metric name '%s', tags '%s')",
-				mp.fieldName, mp.metricName, mp.tags)
+		if nameEncountered[item.Name] {
+			return fmt.Errorf("name '%s' is duplicated in '%s'", item.Name, item.Name)
 		} else {
-			//add it to the set
-			nameEncountered[mp] = struct{}{}
+			nameEncountered[item.Name] = true
 		}
 		//search identifier type
-		switch node.tag.IdentifierType {
+		switch item.IdentifierType {
 		case "s", "i", "g", "b":
 			break
 		default:
-			return fmt.Errorf("invalid identifier type '%s' in '%s'", node.tag.IdentifierType, node.tag.FieldName)
+			return fmt.Errorf("invalid identifier type '%s' in '%s'", item.IdentifierType, item.Name)
+		}
+		// search data type
+		switch item.DataType {
+		case "boolean", "byte", "short", "int", "uint", "uint16", "int16", "uint32", "int32", "float", "double", "string", "datetime", "number":
+			break
+		default:
+			return fmt.Errorf("invalid data type '%s' in '%s'", item.DataType, item.Name)
 		}
 
-		node.idStr = BuildNodeID(node.tag)
+		// build nodeid
+		o.Nodes = append(o.Nodes, BuildNodeID(item))
 
 		//parse NodeIds and NodeIds errors
-		nid, niderr := ua.ParseNodeID(node.idStr)
+		nid, niderr := ua.ParseNodeID(o.Nodes[i])
 		// build NodeIds and Errors
-		o.nodeIDs = append(o.nodeIDs, nid)
-		o.nodeIDerror = append(o.nodeIDerror, niderr)
+		o.NodeIDs = append(o.NodeIDs, nid)
+		o.NodeIDerror = append(o.NodeIDerror, niderr)
 		// Grow NodeData for later input
-		o.nodeData = append(o.nodeData, OPCData{})
+		o.NodeData = append(o.NodeData, OPCData{})
 	}
 	return nil
 }
 
 // BuildNodeID build node ID from OPC tag
-func BuildNodeID(tag NodeSettings) string {
+func BuildNodeID(tag OPCTag) string {
 	return "ns=" + tag.Namespace + ";" + tag.IdentifierType + "=" + tag.Identifier
 }
 
@@ -406,7 +280,7 @@ func Connect(o *OpcUA) error {
 		}
 
 		regResp, err := o.client.RegisterNodes(&ua.RegisterNodesRequest{
-			NodesToRegister: o.nodeIDs,
+			NodesToRegister: o.NodeIDs,
 		})
 		if err != nil {
 			return fmt.Errorf("RegisterNodes failed: %v", err)
@@ -451,22 +325,22 @@ func (o *OpcUA) setupOptions() error {
 func (o *OpcUA) getData() error {
 	resp, err := o.client.Read(o.req)
 	if err != nil {
-		o.ReadError.Incr(1)
+		o.ReadError++
 		return fmt.Errorf("RegisterNodes Read failed: %v", err)
 	}
-	o.ReadSuccess.Incr(1)
+	o.ReadSuccess++
 	for i, d := range resp.Results {
 		if d.Status != ua.StatusOK {
 			return fmt.Errorf("Status not OK: %v", d.Status)
 		}
-		o.nodeData[i].TagName = o.nodes[i].tag.FieldName
+		o.NodeData[i].TagName = o.NodeList[i].Name
 		if d.Value != nil {
-			o.nodeData[i].Value = d.Value.Value()
-			o.nodeData[i].DataType = d.Value.Type()
+			o.NodeData[i].Value = d.Value.Value()
+			o.NodeData[i].DataType = d.Value.Type()
 		}
-		o.nodeData[i].Quality = d.Status
-		o.nodeData[i].TimeStamp = d.ServerTimestamp.String()
-		o.nodeData[i].Time = d.SourceTimestamp.String()
+		o.NodeData[i].Quality = d.Status
+		o.NodeData[i].TimeStamp = d.ServerTimestamp.String()
+		o.NodeData[i].Time = d.SourceTimestamp.String()
 	}
 	return nil
 }
@@ -484,6 +358,9 @@ func disconnect(o *OpcUA) error {
 	if err != nil {
 		return err
 	}
+
+	o.ReadError = 0
+	o.ReadSuccess = 0
 
 	switch u.Scheme {
 	case "opc.tcp":
@@ -515,18 +392,16 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	for i, n := range o.nodes {
+	for i, n := range o.NodeList {
 		fields := make(map[string]interface{})
 		tags := map[string]string{
-			"id": n.idStr,
-		}
-		for k, v := range n.metricTags {
-			tags[k] = v
+			"name": n.Name,
+			"id":   BuildNodeID(n),
 		}
 
-		fields[o.nodeData[i].TagName] = o.nodeData[i].Value
-		fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
-		acc.AddFields(n.metricName, fields, tags)
+		fields[o.NodeData[i].TagName] = o.NodeData[i].Value
+		fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.NodeData[i].Quality))
+		acc.AddFields(o.Name, fields, tags)
 	}
 	return nil
 }
@@ -535,7 +410,7 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("opcua", func() telegraf.Input {
 		return &OpcUA{
-			MetricName:     "opcua",
+			Name:           "localhost",
 			Endpoint:       "opc.tcp://localhost:4840",
 			SecurityPolicy: "auto",
 			SecurityMode:   "auto",

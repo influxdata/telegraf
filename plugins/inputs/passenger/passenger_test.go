@@ -4,37 +4,20 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
 	"testing"
 
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/influxdata/telegraf/testutil"
 )
 
-func fakePassengerStatus(stat string) string {
-	var fileExtension, content string
-	if runtime.GOOS == "windows" {
-		fileExtension = ".bat"
-		content = "@echo off\n"
-		for _, line := range strings.Split(strings.TrimSuffix(stat, "\n"), "\n") {
-			content += "for /f \"delims=\" %%A in (\"" + line + "\") do echo %%~A\n" //my eyes are bleeding
-		}
-	} else {
-		content = fmt.Sprintf("#!/bin/sh\ncat << EOF\n%s\nEOF", stat)
-	}
-
-	tempFilePath := filepath.Join(os.TempDir(), "passenger-status"+fileExtension)
-	ioutil.WriteFile(tempFilePath, []byte(content), 0700)
-
-	return tempFilePath
+func fakePassengerStatus(stat string) {
+	content := fmt.Sprintf("#!/bin/sh\ncat << EOF\n%s\nEOF", stat)
+	ioutil.WriteFile("/tmp/passenger-status", []byte(content), 0700)
 }
 
-func teardown(tempFilePath string) {
-	os.Remove(tempFilePath)
+func teardown() {
+	os.Remove("/tmp/passenger-status")
 }
 
 func Test_Invalid_Passenger_Status_Cli(t *testing.T) {
@@ -46,28 +29,28 @@ func Test_Invalid_Passenger_Status_Cli(t *testing.T) {
 
 	err := r.Gather(&acc)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), `exec: "an-invalid-command": executable file not found in `)
+	assert.Equal(t, err.Error(), `exec: "an-invalid-command": executable file not found in $PATH`)
 }
 
 func Test_Invalid_Xml(t *testing.T) {
-	tempFilePath := fakePassengerStatus("invalid xml")
-	defer teardown(tempFilePath)
+	fakePassengerStatus("invalid xml")
+	defer teardown()
 
 	r := &passenger{
-		Command: tempFilePath,
+		Command: "/tmp/passenger-status",
 	}
 
 	var acc testutil.Accumulator
 
 	err := r.Gather(&acc)
 	require.Error(t, err)
-	assert.Equal(t, "Cannot parse input with error: EOF\n", err.Error())
+	assert.Equal(t, err.Error(), "Cannot parse input with error: EOF\n")
 }
 
 // We test this by ensure that the error message match the path of default cli
 func Test_Default_Config_Load_Default_Command(t *testing.T) {
-	tempFilePath := fakePassengerStatus("invalid xml")
-	defer teardown(tempFilePath)
+	fakePassengerStatus("invalid xml")
+	defer teardown()
 
 	r := &passenger{}
 
@@ -75,16 +58,16 @@ func Test_Default_Config_Load_Default_Command(t *testing.T) {
 
 	err := r.Gather(&acc)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "exec: \"passenger-status\": executable file not found in ")
+	assert.Equal(t, err.Error(), "exec: \"passenger-status\": executable file not found in $PATH")
 }
 
 func TestPassengerGenerateMetric(t *testing.T) {
-	tempFilePath := fakePassengerStatus(sampleStat)
-	defer teardown(tempFilePath)
+	fakePassengerStatus(sampleStat)
+	defer teardown()
 
 	//Now we tested again above server, with our authentication data
 	r := &passenger{
-		Command: tempFilePath,
+		Command: "/tmp/passenger-status",
 	}
 
 	var acc testutil.Accumulator

@@ -79,56 +79,6 @@ func TestExternalProcessorWorks(t *testing.T) {
 	}
 }
 
-func TestParseLinesWithNewLines(t *testing.T) {
-	e := New()
-	e.Log = testutil.Logger{}
-
-	exe, err := os.Executable()
-	require.NoError(t, err)
-	t.Log(exe)
-	e.Command = []string{exe, "-countmultiplier"}
-	e.RestartDelay = config.Duration(5 * time.Second)
-
-	acc := &testutil.Accumulator{}
-
-	require.NoError(t, e.Start(acc))
-
-	now := time.Now()
-	orig := now
-
-	m, err := metric.New("test",
-		map[string]string{
-			"author": "Mr. Gopher",
-		},
-		map[string]interface{}{
-			"phrase": "Gophers are amazing creatures.\nAbsolutely amazing.",
-			"count":  3,
-		},
-		now)
-
-	require.NoError(t, err)
-
-	e.Add(m, acc)
-
-	acc.Wait(1)
-	require.NoError(t, e.Stop())
-
-	processedMetric := acc.GetTelegrafMetrics()[0]
-
-	expectedMetric := testutil.MustMetric("test",
-		map[string]string{
-			"author": "Mr. Gopher",
-		},
-		map[string]interface{}{
-			"phrase": "Gophers are amazing creatures.\nAbsolutely amazing.",
-			"count":  6,
-		},
-		orig,
-	)
-
-	testutil.RequireMetricEqual(t, expectedMetric, processedMetric)
-}
-
 var countmultiplier = flag.Bool("countmultiplier", false,
 	"if true, act like line input program instead of test")
 

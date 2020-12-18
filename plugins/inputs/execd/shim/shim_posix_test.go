@@ -7,6 +7,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"runtime"
 	"syscall"
 	"testing"
 	"time"
@@ -15,6 +16,10 @@ import (
 )
 
 func TestShimUSR1SignalingWorks(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip()
+		return
+	}
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
 

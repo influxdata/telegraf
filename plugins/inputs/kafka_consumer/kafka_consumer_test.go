@@ -7,7 +7,6 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/testutil"
@@ -69,12 +68,8 @@ func TestInit(t *testing.T) {
 		{
 			name: "parses valid version string",
 			plugin: &KafkaConsumer{
-				ReadConfig: kafka.ReadConfig{
-					Config: kafka.Config{
-						Version: "1.0.0",
-					},
-				},
-				Log: testutil.Logger{},
+				Version: "1.0.0",
+				Log:     testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.Equal(t, plugin.config.Version, sarama.V1_0_0_0)
@@ -83,24 +78,16 @@ func TestInit(t *testing.T) {
 		{
 			name: "invalid version string",
 			plugin: &KafkaConsumer{
-				ReadConfig: kafka.ReadConfig{
-					Config: kafka.Config{
-						Version: "100",
-					},
-				},
-				Log: testutil.Logger{},
+				Version: "100",
+				Log:     testutil.Logger{},
 			},
 			initError: true,
 		},
 		{
 			name: "custom client_id",
 			plugin: &KafkaConsumer{
-				ReadConfig: kafka.ReadConfig{
-					Config: kafka.Config{
-						ClientID: "custom",
-					},
-				},
-				Log: testutil.Logger{},
+				ClientID: "custom",
+				Log:      testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.Equal(t, plugin.config.ClientID, "custom")
@@ -136,12 +123,8 @@ func TestInit(t *testing.T) {
 		{
 			name: "default tls with a tls config",
 			plugin: &KafkaConsumer{
-				ReadConfig: kafka.ReadConfig{
-					Config: kafka.Config{
-						ClientConfig: tls.ClientConfig{
-							InsecureSkipVerify: true,
-						},
-					},
+				ClientConfig: tls.ClientConfig{
+					InsecureSkipVerify: true,
 				},
 				Log: testutil.Logger{},
 			},
@@ -150,16 +133,23 @@ func TestInit(t *testing.T) {
 			},
 		},
 		{
-			name: "Insecure tls",
+			name: "disable tls",
 			plugin: &KafkaConsumer{
-				ReadConfig: kafka.ReadConfig{
-					Config: kafka.Config{
-						ClientConfig: tls.ClientConfig{
-							InsecureSkipVerify: true,
-						},
-					},
+				EnableTLS: func() *bool { v := false; return &v }(),
+				ClientConfig: tls.ClientConfig{
+					InsecureSkipVerify: true,
 				},
 				Log: testutil.Logger{},
+			},
+			check: func(t *testing.T, plugin *KafkaConsumer) {
+				require.False(t, plugin.config.Net.TLS.Enable)
+			},
+		},
+		{
+			name: "enable tls",
+			plugin: &KafkaConsumer{
+				EnableTLS: func() *bool { v := true; return &v }(),
+				Log:       testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.True(t, plugin.config.Net.TLS.Enable)

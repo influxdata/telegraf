@@ -12,7 +12,7 @@ clone_folder: C:\gopath\src\github.com\influxdata\telegraf
 environment:
   GOPATH: C:\gopath
 
-stack: go 1.15
+stack: go 1.14
 
 platform: x64
 

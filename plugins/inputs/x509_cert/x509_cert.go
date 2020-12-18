@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"net"
 	"net/url"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -60,9 +59,6 @@ func (c *X509Cert) SampleConfig() string {
 func (c *X509Cert) locationToURL(location string) (*url.URL, error) {
 	if strings.HasPrefix(location, "/") {
 		location = "file://" + location
-	}
-	if strings.Index(location, ":\\") == 1 {
-		location = "file://" + filepath.ToSlash(location)
 	}
 
 	u, err := url.Parse(location)

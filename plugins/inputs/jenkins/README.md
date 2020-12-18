@@ -88,7 +88,6 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
     - port
   - fields:
     - duration (ms)
-    - number
     - result_code (0 = SUCCESS, 1 = FAILURE, 2 = NOT_BUILD, 3 = UNSTABLE, 4 = ABORTED)
 
 ### Sample Queries:

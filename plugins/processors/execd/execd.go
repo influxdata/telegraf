@@ -12,7 +12,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/process"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -118,12 +117,6 @@ func (e *Execd) Stop() error {
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
-	// Prefer using the StreamParser when parsing influx format.
-	if _, isInfluxParser := e.parser.(*influx.Parser); isInfluxParser {
-		e.cmdReadOutStream(out)
-		return
-	}
-
 	scanner := bufio.NewScanner(out)
 	scanBuf := make([]byte, 4096)
 	scanner.Buffer(scanBuf, 262144)
@@ -141,33 +134,6 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 
 	if err := scanner.Err(); err != nil {
 		e.Log.Errorf("Error reading stdout: %s", err)
-	}
-}
-
-func (e *Execd) cmdReadOutStream(out io.Reader) {
-	parser := influx.NewStreamParser(out)
-
-	for {
-		metric, err := parser.Next()
-
-		if err != nil {
-			// Stop parsing when we've reached the end.
-			if err == influx.EOF {
-				break
-			}
-
-			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
-				// Continue past parse errors.
-				e.acc.AddError(parseErr)
-				continue
-			}
-
-			// Stop reading on any non-recoverable error.
-			e.acc.AddError(err)
-			return
-		}
-
-		e.acc.AddMetric(metric)
 	}
 }
 

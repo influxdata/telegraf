@@ -1,5 +1,3 @@
-// +build !windows
-
 package lustre2
 
 import (

@@ -89,7 +89,7 @@ func addXMLv2Counter(acc telegraf.Accumulator, commonTags map[string]string, sta
 func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator) error {
 	var stats v2Root
 
-	resp, err := b.client.Get(addr.String())
+	resp, err := client.Get(addr.String())
 	if err != nil {
 		return err
 	}

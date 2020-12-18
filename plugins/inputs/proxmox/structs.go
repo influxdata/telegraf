@@ -2,12 +2,11 @@ package proxmox
 
 import (
 	"encoding/json"
-	"net/http"
-	"net/url"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
+	"net/http"
+	"net/url"
 )
 
 type Proxmox struct {
@@ -58,7 +57,6 @@ type VmConfig struct {
 	Data struct {
 		Searchdomain string `json:"searchdomain"`
 		Hostname     string `json:"hostname"`
-		Template     int    `json:"template"`
 	} `json:"data"`
 }
 

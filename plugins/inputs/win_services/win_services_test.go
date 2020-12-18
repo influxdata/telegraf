@@ -123,50 +123,35 @@ var testErrors = []testData{
 		{nil, errors.New("Fake srv query error"), nil, "Fake service 2", "", 0, 0},
 		{nil, nil, errors.New("Fake srv config error"), "Fake service 3", "", 0, 0},
 	}},
-	{[]string{"Fake service 1"}, nil, nil, []serviceTestInfo{
+	{nil, nil, nil, []serviceTestInfo{
 		{errors.New("Fake srv open error"), nil, nil, "Fake service 1", "", 0, 0},
 	}},
 }
 
 func TestBasicInfo(t *testing.T) {
 
-	winServices := &WinServices{
-		Log:         testutil.Logger{},
-		mgrProvider: &FakeMgProvider{testErrors[0]},
-	}
-	winServices.Init()
+	winServices := &WinServices{testutil.Logger{}, nil, &FakeMgProvider{testErrors[0]}}
 	assert.NotEmpty(t, winServices.SampleConfig())
 	assert.NotEmpty(t, winServices.Description())
 }
 
 func TestMgrErrors(t *testing.T) {
 	//mgr.connect error
-	winServices := &WinServices{
-		Log:         testutil.Logger{},
-		mgrProvider: &FakeMgProvider{testErrors[0]},
-	}
+	winServices := &WinServices{testutil.Logger{}, nil, &FakeMgProvider{testErrors[0]}}
 	var acc1 testutil.Accumulator
 	err := winServices.Gather(&acc1)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), testErrors[0].mgrConnectError.Error())
 
 	////mgr.listServices error
-	winServices = &WinServices{
-		Log:         testutil.Logger{},
-		mgrProvider: &FakeMgProvider{testErrors[1]},
-	}
+	winServices = &WinServices{testutil.Logger{}, nil, &FakeMgProvider{testErrors[1]}}
 	var acc2 testutil.Accumulator
 	err = winServices.Gather(&acc2)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), testErrors[1].mgrListServicesError.Error())
 
 	////mgr.listServices error 2
-	winServices = &WinServices{
-		Log:          testutil.Logger{},
-		ServiceNames: []string{"Fake service 1"},
-		mgrProvider:  &FakeMgProvider{testErrors[3]},
-	}
-	winServices.Init()
+	winServices = &WinServices{testutil.Logger{}, []string{"Fake service 1"}, &FakeMgProvider{testErrors[3]}}
 	var acc3 testutil.Accumulator
 
 	buf := &bytes.Buffer{}
@@ -177,11 +162,7 @@ func TestMgrErrors(t *testing.T) {
 }
 
 func TestServiceErrors(t *testing.T) {
-	winServices := &WinServices{
-		Log:         testutil.Logger{},
-		mgrProvider: &FakeMgProvider{testErrors[2]},
-	}
-	winServices.Init()
+	winServices := &WinServices{testutil.Logger{}, nil, &FakeMgProvider{testErrors[2]}}
 	var acc1 testutil.Accumulator
 
 	buf := &bytes.Buffer{}
@@ -203,13 +184,8 @@ var testSimpleData = []testData{
 	}},
 }
 
-func TestGatherContainsTag(t *testing.T) {
-	winServices := &WinServices{
-		Log:          testutil.Logger{},
-		ServiceNames: []string{"Service*"},
-		mgrProvider:  &FakeMgProvider{testSimpleData[0]},
-	}
-	winServices.Init()
+func TestGather2(t *testing.T) {
+	winServices := &WinServices{testutil.Logger{}, nil, &FakeMgProvider{testSimpleData[0]}}
 	var acc1 testutil.Accumulator
 	require.NoError(t, winServices.Gather(&acc1))
 	assert.Len(t, acc1.Errors, 0, "There should be no errors after gather")

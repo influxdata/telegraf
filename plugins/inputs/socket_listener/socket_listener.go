@@ -114,7 +114,6 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	decoder, err := internal.NewStreamContentDecoder(ssl.ContentEncoding, c)
 	if err != nil {
 		ssl.Log.Error("Read error: %v", err)
-		return
 	}
 
 	scnr := bufio.NewScanner(decoder)

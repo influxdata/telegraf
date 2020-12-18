@@ -49,12 +49,6 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
   ## Truncate metric tags to a total of 254 characters for the tag name value. Wavefront will reject any 
   ## data point exceeding this limit if not truncated. Defaults to 'false' to provide backwards compatibility.
   #truncate_tags = false
-
-  ## Flush the internal buffers after each batch. This effectively bypasses the background sending of metrics
-  ## normally done by the Wavefront SDK. This can be used if you are experiencing buffer overruns. The sending 
-  ## of metrics will block for a longer time, but this will be handled gracefully by the internal buffering in
-  ## Telegraf.
-  #immediate_flush = true
 ```
 
 

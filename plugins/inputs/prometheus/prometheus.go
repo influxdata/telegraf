@@ -15,7 +15,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	parser_v2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1`
@@ -330,8 +329,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 
 	if p.MetricVersion == 2 {
-		parser := parser_v2.Parser{}
-		metrics, err = parser.Parse(body)
+		metrics, err = ParseV2(body, resp.Header)
 	} else {
 		metrics, err = Parse(body, resp.Header)
 	}

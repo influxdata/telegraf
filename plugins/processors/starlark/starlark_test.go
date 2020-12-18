@@ -2378,46 +2378,6 @@ def apply(metric):
 				),
 			},
 		},
-		{
-			name: "support errors",
-			source: `
-load("json.star", "json")
-
-def apply(metric):
-    msg = catch(lambda: process(metric))
-    if msg != None:
-	    metric.fields["error"] = msg
-	    metric.fields["value"] = "default"
-    return metric
-
-def process(metric):
-    metric.fields["field1"] = "value1"
-    metric.tags["tags1"] = "value2"
-    # Throw an error
-    json.decode(metric.fields.get('value'))
-    # Should never be called
-    metric.fields["msg"] = "value4"
-`,
-			input: []telegraf.Metric{
-				testutil.MustMetric("cpu",
-					map[string]string{},
-					map[string]interface{}{"value": "non-json-content", "msg": "value3"},
-					time.Unix(0, 0),
-				),
-			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric("cpu",
-					map[string]string{"tags1": "value2"},
-					map[string]interface{}{
-						"value":  "default",
-						"field1": "value1",
-						"msg":    "value3",
-						"error":  "json.decode: at offset 0, unexpected character 'n'",
-					},
-					time.Unix(0, 0),
-				),
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -2487,71 +2447,6 @@ func TestScript(t *testing.T) {
 			},
 		},
 		{
-			name: "drop fields by type",
-			plugin: &Starlark{
-				Script: "testdata/drop_string_fields.star",
-				Log:    testutil.Logger{},
-			},
-			input: []telegraf.Metric{
-				testutil.MustMetric("device",
-					map[string]string{},
-					map[string]interface{}{
-						"a": 42,
-						"b": "42",
-						"c": 42.0,
-						"d": "42.0",
-						"e": true,
-					},
-					time.Unix(0, 0),
-				),
-			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric("device",
-					map[string]string{},
-					map[string]interface{}{
-						"a": 42,
-						"c": 42.0,
-						"e": true,
-					},
-					time.Unix(0, 0),
-				),
-			},
-		},
-		{
-			name: "drop fields with unexpected type",
-			plugin: &Starlark{
-				Script: "testdata/drop_fields_with_unexpected_type.star",
-				Log:    testutil.Logger{},
-			},
-			input: []telegraf.Metric{
-				testutil.MustMetric("device",
-					map[string]string{},
-					map[string]interface{}{
-						"a": 42,
-						"b": "42",
-						"c": 42.0,
-						"d": "42.0",
-						"e": true,
-						"f": 23.0,
-					},
-					time.Unix(0, 0),
-				),
-			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric("device",
-					map[string]string{},
-					map[string]interface{}{
-						"a": 42,
-						"c": 42.0,
-						"d": "42.0",
-						"e": true,
-						"f": 23.0,
-					},
-					time.Unix(0, 0),
-				),
-			},
-		},
-		{
 			name: "scale",
 			plugin: &Starlark{
 				Script: "testdata/scale.star",
@@ -2599,113 +2494,6 @@ func TestScript(t *testing.T) {
 					time.Unix(0, 0),
 				),
 			},
-		},
-		{
-			name: "logging",
-			plugin: &Starlark{
-				Script: "testdata/logging.star",
-				Log:    testutil.Logger{},
-			},
-			input: []telegraf.Metric{
-				testutil.MustMetric("log",
-					map[string]string{},
-					map[string]interface{}{
-						"debug": "a debug message",
-					},
-					time.Unix(0, 0),
-				),
-			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric("log",
-					map[string]string{},
-					map[string]interface{}{
-						"debug": "a debug message",
-					},
-					time.Unix(0, 0),
-				),
-			},
-		},
-		{
-			name: "multiple_metrics",
-			plugin: &Starlark{
-				Script: "testdata/multiple_metrics.star",
-				Log:    testutil.Logger{},
-			},
-			input: []telegraf.Metric{
-				testutil.MustMetric("mm",
-					map[string]string{},
-					map[string]interface{}{
-						"value": "a",
-					},
-					time.Unix(0, 0),
-				),
-			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric("mm2",
-					map[string]string{},
-					map[string]interface{}{
-						"value": "b",
-					},
-					time.Unix(0, 0),
-				),
-				testutil.MustMetric("mm1",
-					map[string]string{},
-					map[string]interface{}{
-						"value": "a",
-					},
-					time.Unix(0, 0),
-				),
-			},
-		},
-		{
-			name: "multiple_metrics_with_json",
-			plugin: &Starlark{
-				Script: "testdata/multiple_metrics_with_json.star",
-				Log:    testutil.Logger{},
-			},
-			input: []telegraf.Metric{
-				testutil.MustMetric("json",
-					map[string]string{},
-					map[string]interface{}{
-						"value": "[{\"label\": \"hello\"}, {\"label\": \"world\"}]",
-					},
-					time.Unix(0, 0),
-				),
-			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric("json",
-					map[string]string{},
-					map[string]interface{}{
-						"value": "hello",
-					},
-					time.Unix(0, 0),
-				),
-				testutil.MustMetric("json",
-					map[string]string{},
-					map[string]interface{}{
-						"value": "world",
-					},
-					time.Unix(0, 0),
-				),
-			},
-		},
-		{
-			name: "fail",
-			plugin: &Starlark{
-				Script: "testdata/fail.star",
-				Log:    testutil.Logger{},
-			},
-			input: []telegraf.Metric{
-				testutil.MustMetric("fail",
-					map[string]string{},
-					map[string]interface{}{
-						"value": 1,
-					},
-					time.Unix(0, 0),
-				),
-			},
-			expected:         []telegraf.Metric{},
-			expectedErrorStr: "fail: The field value should be greater than 1",
 		},
 	}
 
@@ -3020,11 +2808,7 @@ func TestAllScriptTestData(t *testing.T) {
 				require.NoError(t, err)
 				lines := strings.Split(string(b), "\n")
 				inputMetrics := parseMetricsFrom(t, lines, "Example Input:")
-				expectedErrorStr := parseErrorMessage(t, lines, "Example Output Error:")
-				outputMetrics := []telegraf.Metric{}
-				if expectedErrorStr == "" {
-					outputMetrics = parseMetricsFrom(t, lines, "Example Output:")
-				}
+				outputMetrics := parseMetricsFrom(t, lines, "Example Output:")
 				plugin := &Starlark{
 					Script: fn,
 					Log:    testutil.Logger{},
@@ -3038,11 +2822,7 @@ func TestAllScriptTestData(t *testing.T) {
 
 				for _, m := range inputMetrics {
 					err = plugin.Add(m, acc)
-					if expectedErrorStr != "" {
-						require.EqualError(t, err, expectedErrorStr)
-					} else {
-						require.NoError(t, err)
-					}
+					require.NoError(t, err)
 				}
 
 				err = plugin.Stop()
@@ -3082,21 +2862,4 @@ func parseMetricsFrom(t *testing.T, lines []string, header string) (metrics []te
 		metrics = append(metrics, m)
 	}
 	return metrics
-}
-
-// parses error message out of line protocol following a header
-func parseErrorMessage(t *testing.T, lines []string, header string) string {
-	require.NotZero(t, len(lines), "Expected some lines to parse from .star file, found none")
-	startIdx := -1
-	for i := range lines {
-		if strings.TrimLeft(lines[i], "# ") == header {
-			startIdx = i + 1
-			break
-		}
-	}
-	if startIdx == -1 {
-		return ""
-	}
-	require.True(t, startIdx < len(lines), fmt.Sprintf("Expected to find the error message after %q, but found none", header))
-	return strings.TrimLeft(lines[startIdx], "# ")
 }

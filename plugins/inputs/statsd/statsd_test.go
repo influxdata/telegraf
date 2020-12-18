@@ -2,16 +2,14 @@ package statsd
 
 import (
 	"fmt"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -1077,65 +1075,6 @@ func TestParse_MeasurementsWithSameName(t *testing.T) {
 	if len(s.counters) != 2 {
 		t.Errorf("Expected 2 separate measurements, found %d", len(s.counters))
 	}
-}
-
-// Test that the metric caches expire (clear) an entry after the entry hasn't been updated for the configurable MaxTTL duration.
-func TestCachesExpireAfterMaxTTL(t *testing.T) {
-	s := NewTestStatsd()
-	s.MaxTTL = config.Duration(100 * time.Microsecond)
-
-	acc := &testutil.Accumulator{}
-	s.parseStatsdLine("valid:45|c")
-	s.parseStatsdLine("valid:45|c")
-	require.NoError(t, s.Gather(acc))
-
-	// Max TTL goes by, our 'valid' entry is cleared.
-	time.Sleep(100 * time.Microsecond)
-	require.NoError(t, s.Gather(acc))
-
-	// Now when we gather, we should have a counter that is reset to zero.
-	s.parseStatsdLine("valid:45|c")
-	require.NoError(t, s.Gather(acc))
-
-	testutil.RequireMetricsEqual(t,
-		[]telegraf.Metric{
-			testutil.MustMetric(
-				"valid",
-				map[string]string{
-					"metric_type": "counter",
-				},
-				map[string]interface{}{
-					"value": 90,
-				},
-				time.Now(),
-				telegraf.Counter,
-			),
-			testutil.MustMetric(
-				"valid",
-				map[string]string{
-					"metric_type": "counter",
-				},
-				map[string]interface{}{
-					"value": 90,
-				},
-				time.Now(),
-				telegraf.Counter,
-			),
-			testutil.MustMetric(
-				"valid",
-				map[string]string{
-					"metric_type": "counter",
-				},
-				map[string]interface{}{
-					"value": 45,
-				},
-				time.Now(),
-				telegraf.Counter,
-			),
-		},
-		acc.GetTelegrafMetrics(),
-		testutil.IgnoreTime(),
-	)
 }
 
 // Test that measurements with multiple bits, are treated as different outputs

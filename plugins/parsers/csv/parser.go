@@ -32,8 +32,6 @@ type Config struct {
 	Timezone          string   `toml:"csv_timezone"`
 	TrimSpace         bool     `toml:"csv_trim_space"`
 
-	gotColumnNames bool
-
 	TimeFunc    func() time.Time
 	DefaultTags map[string]string
 }
@@ -65,8 +63,6 @@ func NewParser(c *Config) (*Parser, error) {
 	if len(c.ColumnNames) > 0 && len(c.ColumnTypes) > 0 && len(c.ColumnNames) != len(c.ColumnTypes) {
 		return nil, fmt.Errorf("csv_column_names field count doesn't match with csv_column_types")
 	}
-
-	c.gotColumnNames = len(c.ColumnNames) > 0
 
 	if c.TimeFunc == nil {
 		c.TimeFunc = time.Now
@@ -106,13 +102,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			return nil, err
 		}
 	}
-	// if there is a header and we did not get DataColumns
+	// if there is a header and nothing in DataColumns
 	// set DataColumns to names extracted from the header
-	// we always reread the header to avoid side effects
-	// in cases where multiple files with different
-	// headers are read
-	if !p.gotColumnNames {
-		headerNames := make([]string, 0)
+	headerNames := make([]string, 0)
+	if len(p.ColumnNames) == 0 {
 		for i := 0; i < p.HeaderRowCount; i++ {
 			header, err := csvReader.Read()
 			if err != nil {
@@ -202,12 +195,6 @@ outer:
 					tags[tagName] = value
 					continue outer
 				}
-			}
-
-			// If the field name is the timestamp column, then keep field name as is.
-			if fieldName == p.TimestampColumn {
-				recordFields[fieldName] = value
-				continue
 			}
 
 			// Try explicit conversion only when column types is defined.

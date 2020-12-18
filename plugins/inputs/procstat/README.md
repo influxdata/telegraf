@@ -64,6 +64,15 @@ Processes can be selected for monitoring using one of several methods:
 Preliminary support for Windows has been added, however you may prefer using
 the `win_perf_counters` input plugin as a more mature alternative.
 
+When using the `pid_finder = "native"` in Windows, the pattern lookup method is
+implemented as a WMI query.  The pattern allows fuzzy matching using only
+[WMI query patterns](https://msdn.microsoft.com/en-us/library/aa392263(v=vs.85).aspx):
+```toml
+[[inputs.procstat]]
+  pattern = "%influx%"
+  pid_finder = "native"
+```
+
 ### Metrics:
 
 - procstat

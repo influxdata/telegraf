@@ -5,12 +5,10 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -19,10 +17,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
-)
-
-var (
-	testdataDir = getTestdataDir()
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTailBadLine(t *testing.T) {
@@ -62,7 +58,7 @@ func TestTailBadLine(t *testing.T) {
 	assert.Contains(t, buf.String(), "Malformed log line")
 }
 
-func TestTailDosLineEndings(t *testing.T) {
+func TestTailDosLineendings(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
@@ -96,13 +92,14 @@ func TestTailDosLineEndings(t *testing.T) {
 }
 
 func TestGrokParseLogFilesWithMultiline(t *testing.T) {
+	thisdir := getCurrentDir()
 	//we make sure the timeout won't kick in
 	duration, _ := time.ParseDuration("100s")
 
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
-	tt.Files = []string{filepath.Join(testdataDir, "test_multiline.log")}
+	tt.Files = []string{thisdir + "testdata/test_multiline.log"}
 	tt.MultilineConfig = MultilineConfig{
 		Pattern:        `^[^\[]`,
 		MatchWhichLine: Previous,
@@ -120,7 +117,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 
 	acc.Wait(3)
 
-	expectedPath := filepath.Join(testdataDir, "test_multiline.log")
+	expectedPath := thisdir + "testdata/test_multiline.log"
 	acc.AssertContainsTaggedFields(t, "tail_grok",
 		map[string]interface{}{
 			"message": "HelloExample: This is debug",
@@ -154,7 +151,7 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
-	// This seems necessary in order to get the test to read the following lines.
+	// This seems neccessary in order to get the test to read the following lines.
 	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] INFO HelloExample: This is fluff\r\n")
 	require.NoError(t, err)
 	require.NoError(t, tmpfile.Sync())
@@ -212,13 +209,14 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 }
 
 func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *testing.T) {
+	thisdir := getCurrentDir()
 	//we make sure the timeout won't kick in
 	duration := 100 * time.Second
 
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
-	tt.Files = []string{filepath.Join(testdataDir, "test_multiline.log")}
+	tt.Files = []string{thisdir + "testdata/test_multiline.log"}
 	tt.MultilineConfig = MultilineConfig{
 		Pattern:        `^[^\[]`,
 		MatchWhichLine: Previous,
@@ -238,7 +236,7 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 	tt.Stop()
 	acc.Wait(4)
 
-	expectedPath := filepath.Join(testdataDir, "test_multiline.log")
+	expectedPath := thisdir + "testdata/test_multiline.log"
 	acc.AssertContainsTaggedFields(t, "tail_grok",
 		map[string]interface{}{
 			"message": "HelloExample: This is warn",
@@ -253,7 +251,7 @@ func createGrokParser() (parsers.Parser, error) {
 	grokConfig := &parsers.Config{
 		MetricName:             "tail_grok",
 		GrokPatterns:           []string{"%{TEST_LOG_MULTILINE}"},
-		GrokCustomPatternFiles: []string{filepath.Join(testdataDir, "test-patterns")},
+		GrokCustomPatternFiles: []string{getCurrentDir() + "testdata/test-patterns"},
 		DataFormat:             "grok",
 	}
 	parser, err := parsers.NewParser(grokConfig)
@@ -376,6 +374,11 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 		testutil.IgnoreTime())
 }
 
+func getCurrentDir() string {
+	_, filename, _, _ := runtime.Caller(1)
+	return strings.Replace(filename, "tail_test.go", "", 1)
+}
+
 func TestCharacterEncoding(t *testing.T) {
 	full := []telegraf.Metric{
 		testutil.MustMetric("cpu",
@@ -434,7 +437,7 @@ func TestCharacterEncoding(t *testing.T) {
 		{
 			name: "utf-8",
 			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-8.influx")},
+				Files:               []string{"testdata/cpu-utf-8.influx"},
 				FromBeginning:       true,
 				MaxUndeliveredLines: 1000,
 				Log:                 testutil.Logger{},
@@ -445,7 +448,7 @@ func TestCharacterEncoding(t *testing.T) {
 		{
 			name: "utf-8 seek",
 			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-8.influx")},
+				Files:               []string{"testdata/cpu-utf-8.influx"},
 				MaxUndeliveredLines: 1000,
 				Log:                 testutil.Logger{},
 				CharacterEncoding:   "utf-8",
@@ -456,7 +459,7 @@ func TestCharacterEncoding(t *testing.T) {
 		{
 			name: "utf-16le",
 			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-16le.influx")},
+				Files:               []string{"testdata/cpu-utf-16le.influx"},
 				FromBeginning:       true,
 				MaxUndeliveredLines: 1000,
 				Log:                 testutil.Logger{},
@@ -467,7 +470,7 @@ func TestCharacterEncoding(t *testing.T) {
 		{
 			name: "utf-16le seek",
 			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-16le.influx")},
+				Files:               []string{"testdata/cpu-utf-16le.influx"},
 				MaxUndeliveredLines: 1000,
 				Log:                 testutil.Logger{},
 				CharacterEncoding:   "utf-16le",
@@ -478,7 +481,7 @@ func TestCharacterEncoding(t *testing.T) {
 		{
 			name: "utf-16be",
 			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-16be.influx")},
+				Files:               []string{"testdata/cpu-utf-16be.influx"},
 				FromBeginning:       true,
 				MaxUndeliveredLines: 1000,
 				Log:                 testutil.Logger{},
@@ -561,14 +564,4 @@ func TestTailEOF(t *testing.T) {
 
 	err = tmpfile.Close()
 	require.NoError(t, err)
-}
-
-func getTestdataDir() string {
-	dir, err := os.Getwd()
-	if err != nil {
-		// if we cannot even establish the test directory, further progress is meaningless
-		panic(err)
-	}
-
-	return filepath.Join(dir, "testdata")
 }

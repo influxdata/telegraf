@@ -9,10 +9,10 @@ defaults:
       - image: 'quay.io/influxdb/telegraf-ci:1.14.9'
   go-1_15: &go-1_15
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.15.5'
+      - image: 'quay.io/influxdb/telegraf-ci:1.15.2'
   mac: &mac
     macos:
-      xcode: 12.1.0
+      xcode: 11.3.1
     working_directory: '~/go/src/github.com/influxdata/telegraf'
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
@@ -42,13 +42,13 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: mac-go-mod-v2-{{ checksum "go.sum" }}
+          key: mac-go-mod-v1-{{ checksum "go.sum" }}
       - run: 'brew install go' # latest
       - run: 'make deps'
       - run: 'make tidy'
       - save_cache:
           name: 'go module cache'
-          key: mac-go-mod-v2-{{ checksum "go.sum" }}
+          key: mac-go-mod-v1-{{ checksum "go.sum" }}
           paths:
             - '~/go/pkg/mod'
             - '/usr/local/Cellar/go'

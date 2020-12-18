@@ -9,7 +9,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -139,8 +138,7 @@ func TestSocketListener_unix(t *testing.T) {
 
 	defer testEmptyLog(t)()
 
-	f, _ := os.Create(sock)
-	f.Close()
+	os.Create(sock)
 	sl := newSocketListener()
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "unix://" + sock
@@ -158,10 +156,6 @@ func TestSocketListener_unix(t *testing.T) {
 }
 
 func TestSocketListener_unixgram(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
-	}
-
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
