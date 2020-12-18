@@ -216,7 +216,8 @@ func IsAsciiPrintable(s string) bool {
 	return true
 }
 
-func (i *InfluxDB) hasOnlyAscii(metrics []telegraf.Metric) bool {
+func (i *InfluxDB) isAnyTagValueNull(metrics []telegraf.Metric) bool {
+	// checks if any tag value is null.
 	for _, value := range metrics {
 		i.Log.Errorf("--------------OUTPUT-INFLUXDB - Allow human readable-------- \n", value)
 		i.Log.Errorf(".... MMT name - %v TAG %v FIELDS %v \n", value.Name(), value.Tags(), value.Fields())
@@ -224,18 +225,21 @@ func (i *InfluxDB) hasOnlyAscii(metrics []telegraf.Metric) bool {
 			i.Log.Errorf("key[%s] value[%s]\n", k, v)
 			if v[len(v)-1] == '\x00' {
 				i.Log.Errorf("null value spotted")
+				return true
 			}
 		}
 		i.Log.Errorf("-------------------------------------------------------------\n", value)
 	}
-	return true
+	return false
 }
 
 // Write sends metrics to one of the configured servers, logging each
 // unsuccessful. If all servers fail, return an error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 
-	if i.AllowOnlyHumanReadableValues && i.hasOnlyAscii(metrics) {
+	// if "allow_only_human_readable_values" is set to true in the output.influx
+	if i.AllowOnlyHumanReadableValues && i.isAnyTagValueNull(metrics) {
+		return nil
 	}
 
 	ctx := context.Background()
