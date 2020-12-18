@@ -22,7 +22,7 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
  service_address = ":57000"
 
  ## Grpc Maximum Message Size, default is 4MB, increase the size.
- # max_msg_size = 20000000
+ max_msg_size = 20000000
 
  ## Enable TLS; grpc transport only.
  # tls_cert = "/etc/telegraf/cert.pem"
@@ -50,6 +50,7 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
 #    Per Path configuration is better as it avoid property collision issue of types.
 #    dnpath = '{"Name": "show ip route summary","prop": [{"Key": "routes","Value": "string"}, {"Key": "best-paths","Value": "string"}]}'
 #    dnpath2 = '{"Name": "show processes cpu","prop": [{"Key": "kernel_percent","Value": "float"}, {"Key": "idle_percent","Value": "float"}, {"Key": "process","Value": "string"}, {"Key": "user_percent","Value": "float"}, {"Key": "onesec","Value": "float"}]}'
+#    dnpath3 = '{"Name": "show processes memory physical","prop": [{"Key": "processname","Value": "string"}]}'
 ```
 
 ### Example Output:
