@@ -3,6 +3,7 @@ package cisco_telemetry_mdt
 import (
 	"bytes"
 	"encoding/binary"
+        "encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -11,13 +12,15 @@ import (
 	"strings"
 	"sync"
 	"time"
+        "io/ioutil"
+        "os"
 
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/golang/protobuf/proto"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
+        internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials" // Register GRPC gzip decoder to support compressed telemetry
@@ -37,6 +40,7 @@ type CiscoTelemetryMDT struct {
 	ServiceAddress string            `toml:"service_address"`
 	MaxMsgSize     int               `toml:"max_msg_size"`
 	Aliases        map[string]string `toml:"aliases"`
+        Dmes           map[string]string `toml:"dmes"`
 	EmbeddedTags   []string          `toml:"embedded_tags"`
 
 	Log telegraf.Logger
@@ -50,11 +54,192 @@ type CiscoTelemetryMDT struct {
 
 	// Internal state
 	aliases   map[string]string
+        dmes      map[string]string
 	warned    map[string]struct{}
 	extraTags map[string]map[string]struct{}
+	nxpathMap map[string]map[string]string //per path map
+        propMap map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}
 	mutex     sync.Mutex
 	acc       telegraf.Accumulator
 	wg        sync.WaitGroup
+}
+
+type NxPayloadXfromStructure struct {
+	Name string `json:"Name"`
+	Prop []struct {
+		Key   string `json:"Key"`
+		Value string `json:"Value"`
+	} `json:"prop"`
+}
+
+//xform Field to string
+func xformValueString(field *telemetry.TelemetryField) string {
+	var str string
+        switch val := field.ValueByType.(type) {
+        case *telemetry.TelemetryField_StringValue:
+                if len(val.StringValue) > 0 {
+                        return val.StringValue
+                }
+        case *telemetry.TelemetryField_Uint32Value:
+		str = strconv.FormatUint(uint64(val.Uint32Value), 10)
+		return str
+        case *telemetry.TelemetryField_Uint64Value:
+		str = strconv.FormatUint(val.Uint64Value, 10)
+                return str
+        case *telemetry.TelemetryField_Sint32Value:
+		str = strconv.FormatInt(int64(val.Sint32Value), 10)
+		return str
+        case *telemetry.TelemetryField_Sint64Value:
+		str = strconv.FormatInt(val.Sint64Value, 10)
+		return str
+        }
+        return ""
+}
+
+//xform Uint64 to int64
+func (c *CiscoTelemetryMDT) nxosValueXformUint64Toint64(field *telemetry.TelemetryField, value interface{}) interface{} {
+    if field.GetUint64Value() != 0 {
+        return int64(value.(uint64))
+    }
+    return nil
+}
+
+//xform string to float
+func (c *CiscoTelemetryMDT) nxosValueXformStringTofloat(field *telemetry.TelemetryField, value interface{}) interface{} {
+     //convert property to float from string.
+     vals := field.GetStringValue()
+     if vals != "" {
+          if valf, err := strconv.ParseFloat(vals, 64); err == nil {
+               return valf
+          }
+     }
+     return nil
+}
+
+//xform string to uint64
+func (c *CiscoTelemetryMDT) nxosValueXformStringToUint64(field *telemetry.TelemetryField, value interface{}) interface{} {
+    //string to uint64
+    vals := field.GetStringValue()
+    if vals != "" {
+        if val64, err := strconv.ParseUint(vals, 10, 64); err == nil {
+             return val64
+        }
+    }
+    return nil
+}
+
+//xform string to int64
+func (c *CiscoTelemetryMDT) nxosValueXformStringToInt64(field *telemetry.TelemetryField, value interface{}) interface{} {
+    //string to int64
+    vals := field.GetStringValue()
+    if vals != "" {
+        if val64, err := strconv.ParseInt(vals, 10, 64); err == nil {
+            return val64
+        }
+    }
+    return nil
+}
+
+//auto-xform
+func (c *CiscoTelemetryMDT) nxosValueAutoXform(field *telemetry.TelemetryField, value interface{}) interface{} {
+    //check if we want auto xformation
+    vals := field.GetStringValue()
+    if vals != "" {
+        if val64, err := strconv.ParseUint(vals,10,64); err == nil {
+            return val64
+        }
+        if valf, err := strconv.ParseFloat(vals, 64); err == nil {
+            return valf
+        }
+        if val64, err := strconv.ParseInt(vals,10,64); err == nil {
+            return val64
+        }
+    } // switch
+    return nil;
+}
+
+//auto-xform float properties
+func (c *CiscoTelemetryMDT) nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, value interface{}) interface{} {
+    //check if we want auto xformation
+    vals := field.GetStringValue()
+    if vals != "" {
+        if valf, err := strconv.ParseFloat(vals, 64); err == nil {
+             return valf
+        }
+    } // switch
+    return nil;
+}
+
+//xform uint64 to string
+func (c *CiscoTelemetryMDT) nxosValueXformUint64ToString(field *telemetry.TelemetryField, value interface{}) interface{} {
+    switch val := field.ValueByType.(type) {
+    case *telemetry.TelemetryField_StringValue:
+            if len(val.StringValue) > 0 {
+               return val.StringValue
+            }
+    case *telemetry.TelemetryField_Uint64Value:
+            return (strconv.FormatUint(val.Uint64Value, 10))
+    }
+    return nil
+}
+
+//Xform value field.
+func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, value interface{}, path string) interface{} {
+     //if isNXOS
+     if (!strings.ContainsRune(path, ':')) {
+        if _, ok := c.propMap[field.Name]; ok {
+             return(c.propMap[field.Name](field, value))
+        } else {
+             //check if we want auto xformation
+             if _, ok := c.propMap["auto-prop-xfromi"]; ok {
+                v1 := c.propMap["auto-prop-xfrom"](field, value)
+                if v1 != nil {
+                    return v1;
+                }
+             } else {
+               //Now check path based conversion.
+               //If mapping is found then do the required transformation.
+               if c.nxpathMap[path] != nil {
+                   switch c.nxpathMap[path][field.Name] {
+                   //Xformation supported is only from String, Uint32 and Uint64			    
+                   case "integer":
+                        switch val := field.ValueByType.(type) {
+                        case *telemetry.TelemetryField_StringValue:
+                            if vali, err := strconv.ParseInt(val.StringValue,10,32); err == nil {
+                                return vali
+                            }
+                        case *telemetry.TelemetryField_Uint32Value:
+                            return int(value.(uint32))
+                        case *telemetry.TelemetryField_Uint64Value:
+                            return int64(value.(uint64))
+                        } //switch
+                        return nil
+                   //Xformation supported is only from String
+                   case "float":
+                        switch val := field.ValueByType.(type) {
+                        case *telemetry.TelemetryField_StringValue:
+                            if valf, err := strconv.ParseFloat(val.StringValue, 64); err == nil {
+                                return valf
+                            }
+                        } //switch
+                        return nil
+                   case "string":
+	       	    return (xformValueString(field))
+                   case "int64":
+                        switch val := field.ValueByType.(type) {
+                        case *telemetry.TelemetryField_StringValue:
+                            if vali, err := strconv.ParseInt(val.StringValue,10,64); err == nil {
+                                return vali
+                            }
+                        case *telemetry.TelemetryField_Uint64Value:
+                            return int64(value.(uint64))
+                        } //switch
+                   } //switch
+               } //if
+             } //else
+           } // else
+     } //Nxos
+     return nil
 }
 
 // Start the Cisco MDT service
@@ -66,12 +251,75 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
+        c.propMap = make(map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}, 100)
+        c.propMap["test"] = c.nxosValueXformUint64Toint64
+        c.propMap["asn"] = c.nxosValueXformUint64ToString //uint64 to string.
+        c.propMap["subscriptionId"] =  c.nxosValueXformUint64ToString //uint64 to string.
+        c.propMap["operState"] = c.nxosValueXformUint64ToString //uint64 to string.
+
 	// Invert aliases list
 	c.warned = make(map[string]struct{})
 	c.aliases = make(map[string]string, len(c.Aliases))
 	for alias, path := range c.Aliases {
 		c.aliases[path] = alias
 	}
+        //Load Init Json structure
+        // Open our jsonFile
+        jsonFile, err := os.Open("/Users/dekumar/go/src/github.com/dsx1123/telegraf/plugins/inputs/cisco_telemetry_mdt/parser.json")
+        // if we os.Open returns an error then handle it
+        if err != nil {
+            fmt.Println(err)
+            return err
+        }
+        // defer the closing of our jsonFile so that we can parse it later on
+        defer jsonFile.Close()
+
+        // read our opened jsonFile as a byte array.
+        jsonData, _ := ioutil.ReadAll(jsonFile)
+
+        var jdata []NxPayloadXfromStructure
+
+        c.dmes = make(map[string]string, len(c.Dmes))
+        c.nxpathMap = make(map[string]map[string]string, len(c.Dmes))
+        if err = json.Unmarshal(jsonData, &jdata); err == nil {
+            for _, jd := range jdata {
+                c.nxpathMap[jd.Name] = make(map[string]string, len(jd.Prop))
+                for _, prop := range jd.Prop {
+                    c.nxpathMap[jd.Name][prop.Key] = prop.Value
+                }
+            }
+        }
+
+        c.dmes = make(map[string]string, len(c.Dmes))
+        for dme, path := range c.Dmes {
+                c.dmes[path] = dme
+                if path == "uint64 to int" {
+                    c.propMap[dme] = c.nxosValueXformUint64Toint64
+                } else if path == "uint64 to string" {
+                    c.propMap[dme] = c.nxosValueXformUint64ToString
+                } else if path == "string to float64" {
+                    c.propMap[dme] = c.nxosValueXformStringTofloat
+                } else if path == "string to uint64" {
+                    c.propMap[dme] = c.nxosValueXformStringToUint64
+                } else if path == "string to int64" {
+                    c.propMap[dme] = c.nxosValueXformStringToInt64
+                } else if path == "auto-float-xfrom" {
+                    c.propMap[dme] = c.nxosValueAutoXformFloatProp
+                } else if dme[0:6] == "dnpath" { //path based property map
+                    js := []byte(path)
+                    var jsStruct NxPayloadXfromStructure
+
+                    err := json.Unmarshal(js, &jsStruct)
+                    if err == nil {
+                        //Build 2 level Hash nxpathMap Key = jsStruct.Name, Value = map of jsStruct.Prop
+                        //It will override the default of code if same path is provided in configuration.
+                        c.nxpathMap[jsStruct.Name] = make(map[string]string, len(jsStruct.Prop))
+                        for _, prop := range jsStruct.Prop {
+                            c.nxpathMap[jsStruct.Name][prop.Key] = prop.Value
+                        }
+                    }
+                }
+        }
 
 	// Fill extra tags
 	c.extraTags = make(map[string]map[string]struct{})
@@ -296,7 +544,9 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		// Parse keys
 		tags = make(map[string]string, len(keys.Fields)+3)
 		tags["source"] = msg.GetNodeIdStr()
-		tags["subscription"] = msg.GetSubscriptionIdStr()
+                if msg.GetSubscriptionIdStr() != "" {
+		    tags["subscription"] = msg.GetSubscriptionIdStr()
+                }
 		tags["path"] = msg.GetEncodingPath()
 
 		for _, subfield := range keys.Fields {
@@ -319,9 +569,9 @@ func decodeValue(field *telemetry.TelemetryField) interface{} {
 	case *telemetry.TelemetryField_BytesValue:
 		return val.BytesValue
 	case *telemetry.TelemetryField_StringValue:
-		if len(val.StringValue) > 0 {
-			return val.StringValue
-		}
+                if len(val.StringValue) > 0 {
+                        return val.StringValue
+                }
 	case *telemetry.TelemetryField_BoolValue:
 		return val.BoolValue
 	case *telemetry.TelemetryField_Uint32Value:
@@ -391,9 +641,73 @@ func (c *CiscoTelemetryMDT) parseKeyField(tags map[string]string, field *telemet
 	}
 }
 
+func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string, path string, tags map[string]string, timestamp time.Time) {
+        // RIB 
+        measurement := path
+        for _, subfield := range field.Fields {
+            //For Every table fill the keys which are vrfName, address and masklen
+            switch subfield.Name {
+            case "vrfName",  "address", "maskLen" :
+                tags[subfield.Name] = decodeTag(subfield)
+            }
+            if value := decodeValue(subfield); value != nil {
+                grouper.Add(measurement, tags, timestamp, subfield.Name, value)
+            }
+            if subfield.Name == "nextHop" {
+                //For next hop table fill the keys in the tag - which is address and vrfname
+                for _, subf := range subfield.Fields {
+                    for _, ff := range subf.Fields {
+                        switch ff.Name {
+                        case "address", "vrfName" :
+                            key := "nextHop/" + ff.Name
+                            tags[key] = decodeTag(ff)
+                        }
+                        if value := decodeValue(ff); value != nil {
+                            name := "nextHop/" + ff.Name
+                            grouper.Add(measurement, tags, timestamp, name, value)
+                        }
+                    }
+                }
+            }
+        }
+}
+ 
+
+func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string, path string, tags map[string]string, timestamp time.Time) {
+        // DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
+        var nxAttributes *telemetry.TelemetryField
+        nxAttributes = field
+        isDme := strings.Contains(path, "sys/")
+        if path == "rib" {
+           //handle native data path rib
+           c.parseRib(grouper, field, prefix, path, tags, timestamp)
+           return
+        }
+        if field == nil || !isDme {
+            return
+        }
+
+        if field.Fields[0] != nil && field.Fields[0].Fields != nil && field.Fields[0].Fields[0] != nil && field.Fields[0].Fields[0].Fields[0].Name != "attributes" {
+           return
+        }
+        nxAttributes = field.Fields[0].Fields[0].Fields[0].Fields[0]
+        
+        for _, subfield := range nxAttributes.Fields {
+                if subfield.Name == "dn" {
+                        tags["dn"] = decodeTag(subfield)
+                } else {
+                    c.parseContentField(grouper, subfield, "", path, tags, timestamp)
+                }
+        }
+}
+
 func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string,
 	path string, tags map[string]string, timestamp time.Time) {
 	name := strings.Replace(field.Name, "-", "_", -1)
+
+        if (name == "modTs" || name == "createTs") && decodeValue(field) == "never" {
+           return
+        }
 	if len(name) == 0 {
 		name = prefix
 	} else if len(prefix) > 0 {
@@ -416,7 +730,11 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 			c.mutex.Unlock()
 		}
 
-		grouper.Add(measurement, tags, timestamp, name, value)
+                if val := c.nxosValueXform(field, value, path); val != nil {
+                    grouper.Add(measurement, tags, timestamp, name, val)
+                } else {
+                    grouper.Add(measurement, tags, timestamp, name, value)
+                }
 		return
 	}
 
@@ -430,11 +748,26 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 
 	var nxAttributes, nxChildren, nxRows *telemetry.TelemetryField
 	isNXOS := !strings.ContainsRune(path, ':') // IOS-XR and IOS-XE have a colon in their encoding path, NX-OS does not
+        isEVENT := isNXOS && strings.Contains(path, "EVENT-LIST")
 	for _, subfield := range field.Fields {
 		if isNXOS && subfield.Name == "attributes" && len(subfield.Fields) > 0 {
 			nxAttributes = subfield.Fields[0]
 		} else if isNXOS && subfield.Name == "children" && len(subfield.Fields) > 0 {
-			nxChildren = subfield
+                        if !isEVENT {
+			    nxChildren = subfield
+                        } else {
+                            sub := subfield.Fields
+                            if sub[0] != nil && sub[0].Fields[0].Name == "subscriptionId" && len(sub[0].Fields) >= 2  {
+                                nxAttributes = sub[0].Fields[1].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0]
+                            }
+                        }
+                        //if nxAttributes == NULL then class based query.
+                        if nxAttributes == nil {
+                            //call function walking over walking list.
+                            for _, sub := range subfield.Fields {
+                                c.parseClassAttributeField(grouper, sub, name, path, tags, timestamp) 
+                            }
+                        }
 		} else if isNXOS && strings.HasPrefix(subfield.Name, "ROW_") {
 			nxRows = subfield
 		} else if _, isExtraTag := extraTags[subfield.Name]; !isExtraTag { // Regular telemetry decoding
@@ -450,9 +783,16 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 			for i, subfield := range row.Fields {
 				if i == 0 { // First subfield contains the index, promote it from value to tag
 					tags[prefix] = decodeTag(subfield)
+                                        //We can have subfield so recursively handle it.
+                                        if (len(row.Fields) == 1) {
+                                            tags["row_number"] = strconv.FormatInt(int64(i), 10)
+                                            c.parseContentField(grouper, subfield, "", path, tags, timestamp)
+                                        }
 				} else {
 					c.parseContentField(grouper, subfield, "", path, tags, timestamp)
 				}
+                                // Nxapi we can't identify keys always from prefix
+                                tags["row_number"] = strconv.FormatInt(int64(i), 10)
 			}
 			delete(tags, prefix)
 		}
@@ -516,21 +856,20 @@ const sampleConfig = `
 
  ## Address and port to host telemetry listener
  service_address = ":57000"
-
  ## Enable TLS; grpc transport only.
  # tls_cert = "/etc/telegraf/cert.pem"
  # tls_key = "/etc/telegraf/key.pem"
-
  ## Enable TLS client authentication and define allowed CA certificates; grpc
  ##  transport only.
  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
-
  ## Define (for certain nested telemetry measurements with embedded tags) which fields are tags
  # embedded_tags = ["Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/class-name"]
-
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
    ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
+ [inputs.cisco_telemetry_mdt.dmes]
+   ModTs = "ignore"
+   CreateTs = "ignore"
 `
 
 // SampleConfig of plugin
