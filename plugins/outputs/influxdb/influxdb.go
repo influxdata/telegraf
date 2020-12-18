@@ -221,10 +221,10 @@ func (i *InfluxDB) isAnyTagValueNull(metrics []telegraf.Metric) bool {
 	for _, value := range metrics {
 		// i.Log.Errorf("--------------OUTPUT-INFLUXDB - Allow human readable-------- \n", value)
 		// i.Log.Errorf(".... MMT name - %v TAG %v FIELDS %v \n", value.Name(), value.Tags(), value.Fields())
-		for _, v := range value.Tags() {
+		for k, v := range value.Tags() {
 			// i.Log.Errorf("key[%s] value[%s]\n", k, v)
 			if len(v) > 0 && v[len(v)-1] == '\x00' {
-				i.Log.Errorf("Dropping metric. Null at the end in value %v -- fields %v", v, value.Fields())
+				i.Log.Errorf("Dropping metric. Null. MMT- %v | tag-key- %v | tag-value- %v", value.Name(), k, v)
 				return true
 			}
 		}
