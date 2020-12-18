@@ -86,7 +86,7 @@ func (e *Ethtool) gatherEthtoolStats(iface net.Interface, acc telegraf.Accumulat
 }
 
 func (e *Ethtool) interfaceUp(iface net.Interface) bool {
-	return (iface.Flags&net.FlagUp) != 0
+	return (iface.Flags & net.FlagUp) != 0
 }
 
 func NewCommandEthtool() *CommandEthtool {
