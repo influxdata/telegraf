@@ -219,8 +219,8 @@ func IsAsciiPrintable(s string) bool {
 func (i *InfluxDB) isAnyTagValueNull(metrics []telegraf.Metric) bool {
 	// checks if any tag value is null.
 	for _, value := range metrics {
-		i.Log.Errorf("--------------OUTPUT-INFLUXDB - Allow human readable-------- \n", value)
-		i.Log.Errorf(".... MMT name - %v TAG %v FIELDS %v \n", value.Name(), value.Tags(), value.Fields())
+		// i.Log.Errorf("--------------OUTPUT-INFLUXDB - Allow human readable-------- \n", value)
+		// i.Log.Errorf(".... MMT name - %v TAG %v FIELDS %v \n", value.Name(), value.Tags(), value.Fields())
 		for k, v := range value.Tags() {
 			i.Log.Errorf("key[%s] value[%s]\n", k, v)
 			if len(v) > 0 && v[len(v)-1] == '\x00' {
@@ -228,7 +228,7 @@ func (i *InfluxDB) isAnyTagValueNull(metrics []telegraf.Metric) bool {
 				return true
 			}
 		}
-		i.Log.Errorf("-------------------------------------------------------------\n", value)
+		// i.Log.Errorf("-------------------------------------------------------------\n", value)
 	}
 	return false
 }
