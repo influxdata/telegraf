@@ -19,42 +19,37 @@ var (
 )
 
 func TestCompileAndMatch(t *testing.T) {
-	// test super asterisk
-	g1, err := Compile(filepath.Join(testdataDir, "**"))
-	require.NoError(t, err)
-	// test single asterisk
-	g2, err := Compile(filepath.Join(testdataDir, "*.log"))
-	require.NoError(t, err)
-	// test no meta characters (file exists)
-	g3, err := Compile(filepath.Join(testdataDir, "log1.log"))
-	require.NoError(t, err)
-	// test file that doesn't exist
-	g4, err := Compile(filepath.Join(testdataDir, "i_dont_exist.log"))
-	require.NoError(t, err)
-	// test super asterisk that doesn't exist
-	g5, err := Compile(filepath.Join(testdataDir, "dir_doesnt_exist", "**"))
-	require.NoError(t, err)
-	// test super asterisk that doesn't exist
-	g6, err := Compile(filepath.Join(testdataDir, "log[!1-2]*"))
-	require.NoError(t, err)
-	// test super asterisk that doesn't exist
-	g7, err := Compile(filepath.Join(testdataDir, "log[!2]*"))
-	require.NoError(t, err)
 
-	matches := g1.Match()
-	require.Len(t, matches, 6)
-	matches = g2.Match()
-	require.Len(t, matches, 2)
-	matches = g3.Match()
-	require.Len(t, matches, 1)
-	matches = g4.Match()
-	require.Len(t, matches, 1)
-	matches = g5.Match()
-	require.Len(t, matches, 0)
-	matches = g6.Match()
-	require.Len(t, matches, 0)
-	matches = g7.Match()
-	require.Len(t, matches, 1)
+	type test struct {
+		path    string
+		matches int
+	}
+
+	tests := []test{
+		// test super asterisk
+		{path: filepath.Join(testdataDir, "**"), matches: 6},
+		// test single asterisk
+		{path: filepath.Join(testdataDir, "*.log"), matches: 2},
+		// test no meta characters (file exists)
+		{path: filepath.Join(testdataDir, "log1.log"), matches: 1},
+		// test file that doesn't exist
+		{path: filepath.Join(testdataDir, "i_dont_exist.log"), matches: 1},
+		// test super asterisk that doesn't exist
+		{path: filepath.Join(testdataDir, "dir_doesnt_exist", "**"), matches: 0},
+		// test exclamation mark creates non-matching list with a range
+		{path: filepath.Join(testdataDir, "log[!1-2]*"), matches: 0},
+		// test caret creates non-matching list
+		{path: filepath.Join(testdataDir, "log[^1-2]*"), matches: 0},
+		// test exclamation mark creates non-matching list without a range
+		{path: filepath.Join(testdataDir, "log[!2]*"), matches: 1},
+	}
+
+	for _, tc := range tests {
+		g, err := Compile(tc.path)
+		require.Nil(t, err)
+		matches := g.Match()
+		require.Len(t, matches, tc.matches)
+	}
 }
 
 func TestRootGlob(t *testing.T) {
