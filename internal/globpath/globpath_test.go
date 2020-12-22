@@ -34,6 +34,12 @@ func TestCompileAndMatch(t *testing.T) {
 	// test super asterisk that doesn't exist
 	g5, err := Compile(filepath.Join(testdataDir, "dir_doesnt_exist", "**"))
 	require.NoError(t, err)
+	// test super asterisk that doesn't exist
+	g6, err := Compile(filepath.Join(testdataDir, "log[!1-2]*"))
+	require.NoError(t, err)
+	// test super asterisk that doesn't exist
+	g7, err := Compile(filepath.Join(testdataDir, "log[!2]*"))
+	require.NoError(t, err)
 
 	matches := g1.Match()
 	require.Len(t, matches, 6)
@@ -45,6 +51,10 @@ func TestCompileAndMatch(t *testing.T) {
 	require.Len(t, matches, 1)
 	matches = g5.Match()
 	require.Len(t, matches, 0)
+	matches = g6.Match()
+	require.Len(t, matches, 0)
+	matches = g7.Match()
+	require.Len(t, matches, 1)
 }
 
 func TestRootGlob(t *testing.T) {

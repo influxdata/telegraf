@@ -45,6 +45,7 @@ func Compile(path string) (*GlobPath, error) {
 // If it's a static path, returns path.
 // All returned path will have the host platform separator.
 func (g *GlobPath) Match() []string {
+	g.path = strings.Replace(g.path, "[!", "[^", -1)
 	if !g.hasMeta {
 		return []string{g.path}
 	}
