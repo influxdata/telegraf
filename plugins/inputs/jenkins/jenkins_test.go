@@ -368,6 +368,7 @@ func TestInitialize(t *testing.T) {
 				Log:             testutil.Logger{},
 				URL:             ts.URL,
 				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				JobInclude:      []string{"jobA", "jobB"},
 				JobExclude:      []string{"job1", "job2"},
 				NodeExclude:     []string{"node1", "node2"},
 			},
@@ -806,6 +807,9 @@ func TestGatherJobs(t *testing.T) {
 				URL:             ts.URL,
 				MaxBuildAge:     internal.Duration{Duration: time.Hour},
 				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				JobInclude: []string{
+					"*",
+				},
 				JobExclude: []string{
 					"ignore-1",
 					"apps/ignore-all/*",
