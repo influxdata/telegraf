@@ -56,6 +56,7 @@ func (e *eventLoggerCreator) CreateLogger(config LogConfig) (io.Writer, error) {
 func RegisterEventLogger(name string) error {
 	eventLog, err := eventlog.Open(name)
 	if err != nil {
+		log.Printf("E! An error occurred while initializing an event logger. %s", err)
 		return err
 	}
 
