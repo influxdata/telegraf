@@ -160,4 +160,5 @@ func init() {
 	registerLogger("", tlc)
 	registerLogger(LogTargetStderr, tlc)
 	registerLogger(LogTargetFile, tlc)
+	RegisterEventLogger("telegraf")
 }
