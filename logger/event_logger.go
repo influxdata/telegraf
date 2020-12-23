@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
-	"runtime"
 	"strings"
 
 	"github.com/influxdata/wlog"
@@ -47,11 +45,6 @@ type eventLoggerCreator struct {
 }
 
 func (e *eventLoggerCreator) CreateLogger(config LogConfig) (io.Writer, error) {
-	if runtime.GOOS != "windows" {
-		log.Printf("E! Unable to use event log as the log target. Event log is only supported on windows environments. Telegraf will use stderr.")
-		return newTelegrafWriter(os.Stderr), nil
-	}
-
 	return wlog.NewWriter(&eventLogger{logger: e.logger}), nil
 }
 

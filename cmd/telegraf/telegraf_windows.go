@@ -12,6 +12,9 @@ import (
 )
 
 func run(inputFilters, outputFilters, aggregatorFilters, processorFilters []string) {
+	// Register the eventlog logging target for windows.
+	logger.RegisterEventLogger(*fServiceName)
+
 	if runtime.GOOS == "windows" && windowsRunAsService() {
 		runAsWindowsService(
 			inputFilters,
@@ -97,8 +100,6 @@ func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, process
 		os.Exit(0)
 	} else {
 		if err == nil {
-			//When in service mode, register eventlog target andd setup default logging to eventlog
-			logger.RegisterEventLogger(*fServiceName)
 			logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
 		}
 		err = s.Run()
