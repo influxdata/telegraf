@@ -408,7 +408,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 	return nil
 }
 
-func getMountStatsPath() string {
+func (n *NFSClient) getMountStatsPath() string {
 
 	path := "/proc/self/mountstats"
 	if os.Getenv("MOUNT_PROC") != "" {
@@ -419,7 +419,7 @@ func getMountStatsPath() string {
 
 func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 
-	file, err := os.Open(getMountStatsPath())
+	file, err := os.Open(n.getMountStatsPath())
 	if err != nil {
 		log.Fatal("Failed opening the /proc/self/mountstats file:  ", err)
 		return err
