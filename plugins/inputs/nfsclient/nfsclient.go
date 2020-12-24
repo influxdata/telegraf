@@ -88,7 +88,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
 	nline := convertToInt64(line)
 
-	if !len(nline) {
+	if len(nline) == 0 {
 		n.Log.Errorf("Parsing Stat line didn't return enough fields(%d): %s\n", len(nline), line)
 		return nil
 	}
