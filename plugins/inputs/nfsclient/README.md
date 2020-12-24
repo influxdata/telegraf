@@ -10,7 +10,26 @@
 #### Description
 
 The NFSClient plugin collects data from /proc/self/mountstats. By default, only a limited number of general system-level metrics are collected, including `nfsstat_read` and `nfsstat_write`.
-If `fullstat` is set, a great deal of additional metrics are collected
+If `fullstat` is set, a great deal of additional metrics are collected, detailed below.
+
+Example output for basic metrics showing server-wise read and write data:
+
+```
+nfsstat_read,mountpoint=/home,serverexport=nfs01:/home read_ops=9797i,read_retrans=0i,read_bytes=124i,read_rtt=7953i,read_exe=8200i 1608784749000000000
+nfsstat_write,mountpoint=/home,serverexport=nfs01:/home write_exe=0i,write_ops=0i,w0rite_retrans=0i,write_bytes=0i,write_rtt=0i 1608784749000000000
+```
+
+Example output for `fullstat=true` metrics, which includes additional measurements for `nfs_bytes`, `nfs_events`, and `nfs_xprt_tcp` (and `nfs_xprt_udp` if present).  Additionally, per-OP metrics are collected, with examples for READ, LOOKUP, and NULL shown.  Please refer to /proc/self/mountstats for a list of valid operations in your kernel, as it changes as it changes periodically.
+
+```
+nfs_bytes,mountpoint=/home,serverexport=nfs01:/vol/home directreadbytes=0i,directwritebytes=0i,normalreadbytes=42648757667i,normalwritebytes=0i,readpages=10404603i,serverreadbytes=42617098139i,serverwritebytes=0i,writepages=0i 1608787697000000000
+nfs_events,mountpoint=/netmnt/gridengine,serverexport=napme02:/vol/uge attrinvalidates=116i,congestionwait=0i,datainvalidates=65i,delay=0i,dentryrevalidates=5911243i,extendwrite=0i,inoderevalidates=200378i,pnfsreads=0i,pnfswrites=0i,setattrtrunc=0i,shortreads=0i,shortwrites=0i,sillyrenames=0i,vfsaccess=7203852i,vfsflush=117405i,vfsfsync=0i,vfsgetdents=3368i,vfslock=0i,vfslookup=740i,vfsopen=157281i,vfsreadpage=16i,vfsreadpages=86874i,vfsrelease=155526i,vfssetattr=0i,vfsupdatepage=0i,vfswritepage=0i,vfswritepages=215514i 1608787697000000000
+nfs_xprt_tcp,mountpoint=/home,serverexport=nfs01:/vol/home backlogutil=0i,badxids=0i,bind_count=1i,connect_count=1i,connect_time=0i,idle_time=0i,inflightsends=15659826i,rpcreceives=2173896i,rpcsends=2173896i 1608787697000000000
+
+nfs_ops,mountpoint=/netmnt/gridengine,serverexport=napme02:/vol/uge READ_bytes_recv=42783584732i,READ_bytes_sent=189594804i,READ_ops=1300676i,READ_queue_time=102795i,READ_response_time=1337335i,READ_timeouts=0i,READ_total_time=1447060i,READ_trans=1300676i,read_bytes=42973179536i,read_exe=1447060i,read_ops=1300676i,read_retrans=0i,read_rtt=1337335i 1608787697000000000
+> nfs_ops,mountpoint=/home,serverexport=nfs01:/vol/home LOOKUP_bytes_recv=119608i,LOOKUP_bytes_sent=129824i,LOOKUP_ops=859i,LOOKUP_queue_time=5i,LOOKUP_response_time=130i,LOOKUP_timeouts=0i,LOOKUP_total_time=149i,LOOKUP_trans=859i 1608788310000000000
+nfs_ops,mountpoint=/home,serverexport=nfs01:/vol/home NULL_bytes_recv=24i,NULL_bytes_sent=44i,NULL_ops=1i,NULL_queue_time=0i,NULL_response_time=0i,NULL_timeouts=0i,NULL_total_time=0i,NULL_trans=2i 1608787697000000000
+```
 
 #### Measurements & Fields
 
