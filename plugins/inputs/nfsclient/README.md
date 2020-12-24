@@ -4,13 +4,18 @@
 - **fullstat** bool: Collect per-operation type metrics.  Defaults to false.
 - **include_mounts** list(string): gather metrics for only these mounts.  Default is to watch all mounts.
 - **exclude_mounts** list(string): gather metrics for all mounts, except those listed in this option. Excludes take precedence over includes.
-- **include_operations** list(string): List of specific NFS operations to track.  See /proc/self/mountstats (the "per-op statistics" section) for complete lists of valid options for NFSv3 and NFSV4.  The default is to gather all metrics, but this is almost certainly *not* what you want (there are 22 operations for NFSv3, and 59 for NFSv4).  A 'minimal' list for basic usage:  ['READ','WRITE','ACCESS','GETATTR','READDIR','LOOKUP','LOOKUP']
+- **include_operations** list(string): List of specific NFS operations to track.  See /proc/self/mountstats (the "per-op statistics" section) for complete lists of valid options for NFSv3 and NFSV4.  The default is to gather all metrics, but this is almost certainly *not* what you want (there are 22 operations for NFSv3, and well over 50 for NFSv4).  A suggested 'minimal' list of operations to collect for basic usage:  `['READ','WRITE','ACCESS','GETATTR','READDIR','LOOKUP','LOOKUP']`
 - **exclude_operations** list(string): Gather all metrics, except those listed.  Excludes take precedence over includes.
 
 #### Description
 
 The NFSClient plugin collects data from /proc/self/mountstats. By default, only a limited number of general system-level metrics are collected, including `nfsstat_read` and `nfsstat_write`.
 If `fullstat` is set, a great deal of additional metrics are collected, detailed below.
+
+**NOTE** Many of the metrics, even if tagged with a mount point, are really _per-server_.  Thus, if you mount these two shares:  `nfs01:/vol/foo/bar` and `nfs01:/vol/foo/baz`, there will be two near identical entries in /proc/self/mountstats.
+
+
+#### Examples
 
 Example output for basic metrics showing server-wise read and write data:
 
@@ -19,7 +24,9 @@ nfsstat_read,mountpoint=/home,serverexport=nfs01:/home read_ops=9797i,read_retra
 nfsstat_write,mountpoint=/home,serverexport=nfs01:/home write_exe=0i,write_ops=0i,w0rite_retrans=0i,write_bytes=0i,write_rtt=0i 1608784749000000000
 ```
 
-Example output for `fullstat=true` metrics, which includes additional measurements for `nfs_bytes`, `nfs_events`, and `nfs_xprt_tcp` (and `nfs_xprt_udp` if present).  Additionally, per-OP metrics are collected, with examples for READ, LOOKUP, and NULL shown.  Please refer to /proc/self/mountstats for a list of valid operations in your kernel, as it changes as it changes periodically.
+Example output for `fullstat=true` metrics, which includes additional measurements for `nfs_bytes`, `nfs_events`, and `nfs_xprt_tcp` (and `nfs_xprt_udp` if present).
+Additionally, per-OP metrics are collected, with examples for READ, LOOKUP, and NULL shown.
+Please refer to `/proc/self/mountstats` for a list of supported NFS operations, as it changes as it changes periodically.
 
 ```
 nfs_bytes,mountpoint=/home,serverexport=nfs01:/vol/home directreadbytes=0i,directwritebytes=0i,normalreadbytes=42648757667i,normalwritebytes=0i,readpages=10404603i,serverreadbytes=42617098139i,serverwritebytes=0i,writepages=0i 1608787697000000000
@@ -31,13 +38,21 @@ nfs_ops,mountpoint=/netmnt/gridengine,serverexport=napme02:/vol/uge READ_bytes_r
 nfs_ops,mountpoint=/home,serverexport=nfs01:/vol/home NULL_bytes_recv=24i,NULL_bytes_sent=44i,NULL_ops=1i,NULL_queue_time=0i,NULL_response_time=0i,NULL_timeouts=0i,NULL_total_time=0i,NULL_trans=2i 1608787697000000000
 ```
 
+#### References
+1. [nfsiostat](http://git.linux-nfs.org/?p=steved/nfs-utils.git;a=summary)
+2. [net/sunrpc/stats.c - Linux source code](https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/net/sunrpc/stats.c)
+3. [What is in /proc/self/mountstats for NFS mounts: an introduction](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)
+4. [The xprt: data for NFS mounts in /proc/self/mountstats](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsXprt)
+
+
+
 #### Measurements & Fields
 
 Always collected:
 
 - nfsstat_read
     - read_bytes (integer, bytes) - The number of bytes exchanged doing READ operations.  (sum bytes sent *and* received for WRITE Ops)
-    - read_ops (integer, count) - The number of RPC READ operations executed. 
+    - read_ops (integer, count) - The number of RPC READ operations executed.
     - read_retrans (integer, count) - The number of times an RPC READ operation had to be retried.
     - read_exe (integer, miliseconds) - The number of miliseconds it took to process the RPC READ operations.
     - read_rtt (integer, miliseconds) - The round-trip time for RPC READ operations.
@@ -49,8 +64,7 @@ Always collected:
     - write_exe (integer, miliseconds) - The number of miliseconds it took to process the RPC WRITE operations.
     - write_rtt (integer, miliseconds) - The rount-trip time for RPC WRITE operations.
 
-In addition enabling `fullstat` will make many more metrics available.  Please see the References for explanations of the the specific fields.
-See References for more details.
+In addition enabling `fullstat` will make many more metrics available.
 
 #### Tags
 
@@ -58,11 +72,6 @@ See References for more details.
     - mountpoint The local mountpoint, for instance: "/var/www"
     - serverexport The full server export, for instance: "nfsserver.example.org:/export"
 
-#### References
-1. [nfsiostat](http://git.linux-nfs.org/?p=steved/nfs-utils.git;a=summary)
-2. [net/sunrpc/stats.c - Linux source code](https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/net/sunrpc/stats.c)
-3. [What is in /proc/self/mountstats for NFS mounts: an introduction](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)
-4. [The xprt: data for NFS mounts in /proc/self/mountstats](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsXprt)
 
 
 ### Additional metrics
@@ -72,6 +81,8 @@ When `fullstat` is true, additional measurements are collected.  Tags are the sa
 #### NFS Operations
 
 Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)] and `nfs_iostat.h`.  Field order is the same as in `/proc/self/mountstats` and in the Kernel source.
+
+Please refer to `/proc/self/mountstats` for a list of supported NFS operations, as it changes as it changes periodically.
 
 - nfs_bytes
     - fields:
@@ -132,12 +143,14 @@ Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/b
         - [same as nfs_xprt_tcp, except for connect_count, connect_time, and idle_time]
 
 - nfs_ops
-    -fields - in all cases, **"OP"** is replaced with the uppercase name of the NFS operation, (_e.g._ "READ", "FSINFO", etc)
+    - fields (In all cases, **"OP"** is replaced with the uppercase name of the NFS operation, _e.g._ "READ", "FSINFO", _etc_.  See /proc/self/mountstats for a full list.):
         - OP_ops - (int, count) - Total operations of this type.
-        - OP_trans - (int, count) - Total transmissions of this type, including retransmissions: OP_ops - OP_trans = total_retransmissions (lower is better).
+        - OP_trans - (int, count) - Total transmissions of this type, including retransmissions: `OP_ops - OP_trans = total_retransmissions` (lower is better).
         - OP_timeouts - (int, count) - Number of major timeouts.
-        - OP_bytes_sent - (int, count) - Bytes received, including headers (should also be close to on-wire size).          - OP_bytes_recv - (int, count) - Bytes sent, including headers (should be close to on-wire size).
+        - OP_bytes_sent - (int, count) - Bytes received, including headers (should also be close to on-wire size).
+        - OP_bytes_recv - (int, count) - Bytes sent, including headers (should be close to on-wire size).
         - OP_queue_time - (int, milliseconds) - Cumulative time a request waited in the queue before sending this OP type.
         - OP_response_time - (int, milliseconds) - Cumulative time waiting for a response for this OP type.
         - OP_total_time - (int, milliseconds) - Cumulative time a request waited in the queue before sending.
         - OP_errors - (int, count) - Total number operations that complete with tk_status < 0 (usually errors).  This is a new field, present in kernel >=5.3, mountstats version 1.1
+
