@@ -84,8 +84,15 @@ func in(list []string, val string) bool {
 }
 
 func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, fullstat bool, nfs3Ops map[string]bool, nfs4Ops map[string]bool, acc telegraf.Accumulator) error {
+
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
 	nline := convertToInt64(line)
+
+	if len(nline) < 1 {
+		n.Log.Errorf("Parsing Stat line didn't return enough fields(%d): %s\n", len(nline), line)
+		return nil
+	}
+
 	first := strings.Replace(line[0], ":", "", 1)
 
 	var eventsFields = []string{
@@ -373,6 +380,10 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 	for scanner.Scan() {
 		line := strings.Fields(scanner.Text())
 
+		if len(line) == 0 {
+			break
+		}
+
 		if in(line, "fstype") && (in(line, "nfs") || in(line, "nfs4")) && len(line) > 4 {
 			device = line[4]
 			export = line[1]
@@ -402,7 +413,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 			}
 		}
 
-		if !skip && len(line) > 0 {
+		if !skip {
 			n.parseStat(device, export, version, line, n.Fullstat, nfs3Ops, nfs4Ops, acc)
 		}
 	}
@@ -432,7 +443,7 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 	n.processText(scanner, acc)
 
 	if err := scanner.Err(); err != nil {
-		n.Log.Errorf("%s",err)
+		n.Log.Errorf("%s", err)
 		return err
 	}
 
