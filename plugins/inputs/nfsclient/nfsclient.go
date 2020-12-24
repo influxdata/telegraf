@@ -60,15 +60,14 @@ func (n *NFSClient) Description() string {
 func convertToInt64(line []string) []int64 {
 	var nline []int64
 	for _, l := range line[1:] {
-		//val, _ := strconv.ParseInt(l, 10, 64)
 		val, err := strconv.ParseInt(l, 10, 64)
-                if err != nil {
-                    if numError, ok := err.(*strconv.NumError); ok {
-                        if numError.Err == strconv.ErrRange {
-                            fmt.Printf("ErrRange: %v [%v] -> [%v]\n", line, l, val)
-                        }
-                    }
-                }
+		if err != nil {
+			if numError, ok := err.(*strconv.NumError); ok {
+				if numError.Err == strconv.ErrRange {
+					fmt.Printf("ErrRange: %v [%v] -> [%v]\n", line, l, val)
+				}
+			}
+		}
 		nline = append(nline, val)
 	}
 	return nline
