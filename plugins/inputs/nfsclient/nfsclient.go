@@ -19,6 +19,7 @@ type NFSClient struct {
 	ExcludeMounts     []string
 	IncludeOperations []string
 	ExcludeOperations []string
+	Log               telegraf.Logger
 }
 
 var sampleConfig = `
@@ -64,7 +65,7 @@ func convertToInt64(line []string) []int64 {
 		if err != nil {
 			if numError, ok := err.(*strconv.NumError); ok {
 				if numError.Err == strconv.ErrRange {
-					fmt.Printf("ErrRange: %v [%v] -> [%v]\n", line, l, val)
+					log.Fatalf("ErrRange: %v [%v] -> [%v]\n", line, l, val)
 				}
 			}
 		}
@@ -414,6 +415,7 @@ func (n *NFSClient) getMountStatsPath() string {
 	if os.Getenv("MOUNT_PROC") != "" {
 		path = os.Getenv("MOUNT_PROC")
 	}
+	n.Log.Debugf("Opening [%s] for mountstats", path)
 	return path
 }
 
@@ -421,7 +423,7 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 
 	file, err := os.Open(n.getMountStatsPath())
 	if err != nil {
-		log.Fatal("Failed opening the /proc/self/mountstats file:  ", err)
+		n.Log.Errorf("Failed opening the /proc/self/mountstats file:  ", err)
 		return err
 	}
 	defer file.Close()
@@ -430,7 +432,7 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 	n.processText(scanner, acc)
 
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+		n.Log.Errorf("%s",err)
 		return err
 	}
 
