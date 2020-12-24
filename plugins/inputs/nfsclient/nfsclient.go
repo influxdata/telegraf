@@ -328,6 +328,15 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 		"DEALLOCATE",
 		"LAYOUTSTATS",
 		"CLONE",
+		"COPY",
+		"OFFLOAD_CANCEL",
+		"LOOKUPP",
+		"LAYOUTERROR",
+		"COPY_NOTIFY",
+		"GETXATTR",
+		"SETXATTR",
+		"LISTXATTRS",
+		"REMOVEXATTR",
 	}
 
 	nfs3Ops = make(map[string]bool)
