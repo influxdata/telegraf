@@ -393,28 +393,41 @@ END;
 
 DECLARE @lastIntervalEndTimestamp BIGINT = 0;
 
+/* Get the time when the query was previously called */
 IF @QueryData != '' AND @QueryData IS NOT NULL
 	SET @lastIntervalEndTimestamp = CAST(@QueryData AS BIGINT);
 
 DECLARE @secondsInDay INT = 86400;
 
-DECLARE @timeGrain BIGINT = (SELECT interval_length_minutes * 60 FROM sys.database_query_store_options WITH (NOLOCK)); --use query store time grain
+/* Get query aggregation interval from query store */
+DECLARE @timeGrain BIGINT = (SELECT interval_length_minutes * 60 FROM sys.database_query_store_options WITH (NOLOCK)); 
 
+/* Get current time and round it down to a multiple of @timeGrain */
 DECLARE @currDate DATETIME = GETUTCDATE();
 DECLARE @currIntervalEndTimestamp BIGINT = DATEDIFF_BIG(second, 0, @currDate) / @timeGrain * @timeGrain;
+
+/* If we are still in the same @timeGrain interval with when the query was previously called, quit and do not report any data */
 IF @lastIntervalEndTimestamp = @currIntervalEndTimestamp
 	RETURN;
 
+/* Calculate the start time for returning data from query store:
+If the query was never called before, start time is end time minus @timeGrain */
 DECLARE @currIntervalStartTimestamp BIGINT = @currIntervalEndTimestamp - @timeGrain;
+
+/* If the query was called before, start time is when the query was previously called, so that we return all the records since the previous call */
 IF @lastIntervalEndTimestamp != 0
 	SET @currIntervalStartTimestamp = @lastIntervalEndTimestamp;
 
+/* Convert start and end times to datetime */
 DECLARE @currIntervalEndDate datetime = DATEADD(second, @currIntervalEndTimestamp % @secondsInDay, DATEADD(day, @currIntervalEndTimestamp / @secondsInDay, 0));
 DECLARE @currIntervalStartDate datetime = DATEADD(second, @currIntervalStartTimestamp % @secondsInDay, DATEADD(day, @currIntervalStartTimestamp / @secondsInDay, 0));
 
 `
 
 const sqlAzureDBQueryStoreRuntimeStatistics = sqlAzureDBPartQueryPeriod + `
+/* Query the data from query store. Group by plan_id, execution_type, runtime_stats_interval_id, as specified here:
+https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-runtime-stats-transact-sql?view=sql-server-ver15
+*/
 SELECT
 	'sqlserver_azuredb_querystore_runtime_stats' AS [measurement],
 	REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance],
@@ -455,10 +468,14 @@ FROM sys.query_store_query q WITH (NOLOCK)
 WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate
 GROUP BY rs.plan_id, rs.execution_type, rs.runtime_stats_interval_id;
 
+/* Return the timestamp when the query was run, to be used in the next call */
 SELECT CAST(@currIntervalEndTimestamp AS nvarchar(20)) AS QueryData;
 `
 
 const sqlAzureDBQueryStoreWaitStatistics = sqlAzureDBPartQueryPeriod + `
+/* Query the data from query store. Group  by plan_id, runtime_stats_interval_id, execution_type and wait_category, and specified here:
+https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15
+*/
 SELECT
 	'sqlserver_azuredb_querystore_wait_stats' AS [measurement],
 	REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance],
@@ -483,6 +500,7 @@ FROM sys.query_store_query q WITH (NOLOCK)
 WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate
 GROUP BY ws.plan_id, ws.execution_type, ws.runtime_stats_interval_id, ws.wait_category_desc;
 
+/* Return the timestamp when the query was run, to be used in the next call */
 SELECT CAST(@currIntervalEndTimestamp AS nvarchar(20)) AS QueryData;
 `
 
@@ -1293,6 +1311,8 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 END;
 
 IF OBJECT_ID ('tempdb.dbo.#ExecForeachDb') IS NOT NULL DROP PROCEDURE #ExecForeachDb;
+
+/* Create a temporary procedure that iterates through all DBs that the user has access to in this managed instance, except system DBs, and execute the query specified with @queryText */
 EXEC('CREATE PROCEDURE #ExecForeachDb @queryText NVARCHAR(MAX)
 AS
 BEGIN
@@ -1320,6 +1340,7 @@ BEGIN
 	DEALLOCATE dbCursor;
 END');
 
+/* Obtain the previous times the query was called -- they are an array because we are working with a list of DBs in the Managed Instance -- and store them in a temporary table */
 IF OBJECT_ID ('tempdb.dbo.#CachedDbTimestamps') IS NOT NULL DROP TABLE #CachedDbTimestamps;
 CREATE TABLE #CachedDbTimestamps (
 	[id] INT,
@@ -1333,6 +1354,7 @@ SELECT
 	s.value('./timestamp[1]', 'bigint') AS [timestamp]
 FROM @XmlQueryData.nodes('/Timestamps/ts') t(s);
 
+/* Create a temp table for storing previous query call timestamps for next iteration. It will be returned at the end of this query. */
 IF OBJECT_ID ('tempdb.dbo.#DbTimestamps') IS NOT NULL DROP TABLE #DbTimestamps;
 CREATE TABLE #DbTimestamps (
 	[id] INT,
@@ -1344,29 +1366,41 @@ DECLARE @SqlText NVARCHAR(MAX) = N'
 DECLARE @lastIntervalEndTimestamp BIGINT = 0;
 SELECT TOP 1 @lastIntervalEndTimestamp = [timestamp] FROM #CachedDbTimestamps WHERE [id] = DB_ID();
 
+/* Update previous query call timestamp for this DB */
 INSERT INTO #DbTimestamps([id], [timestamp]) VALUES(DB_ID(), @lastIntervalEndTimestamp)
 
 DECLARE @secondsInDay INT = 86400;
 
-DECLARE @timeGrain BIGINT = (SELECT interval_length_minutes * 60 FROM sys.database_query_store_options WITH (NOLOCK)); --use query store time grain
+/* Get query aggregation interval from query store */
+DECLARE @timeGrain BIGINT = (SELECT interval_length_minutes * 60 FROM sys.database_query_store_options WITH (NOLOCK)); 
 
+/* Get current time and round it down to a multiple of @timeGrain */
 DECLARE @currDate DATETIME = GETUTCDATE();
+
+/* If we are still in the same @timeGrain interval with when the query was previously called, quit and do not report any data */
 DECLARE @currIntervalEndTimestamp BIGINT = DATEDIFF_BIG(second, 0, @currDate) / @timeGrain * @timeGrain;
 IF @lastIntervalEndTimestamp = @currIntervalEndTimestamp
 	RETURN;
 
+/* Calculate the start time for returning data from query store:
+If the query was never called before, start time is end time minus @timeGrain */
 DECLARE @currIntervalStartTimestamp BIGINT = @currIntervalEndTimestamp - @timeGrain;
+
+/* If the query was called before, start time is when the query was previously called, so that we return all the records since the previous call */
 IF @lastIntervalEndTimestamp != 0 AND @lastIntervalEndTimestamp IS NOT NULL
 	SET @currIntervalStartTimestamp = @lastIntervalEndTimestamp;
 
+/* Convert start and end times to datetime */
 DECLARE @currIntervalEndDate datetime = DATEADD(second, @currIntervalEndTimestamp % @secondsInDay, DATEADD(day, @currIntervalEndTimestamp / @secondsInDay, 0));
 DECLARE @currIntervalStartDate datetime = DATEADD(second, @currIntervalStartTimestamp % @secondsInDay, DATEADD(day, @currIntervalStartTimestamp / @secondsInDay, 0));
 
+/* Update previous query call timestamp for this DB */
 UPDATE #DbTimestamps SET [timestamp] = @currIntervalEndTimestamp WHERE [id] = DB_ID();
 ';
 `
 
 const sqlAzureMIQueryStoreRuntimeStatistics = sqlAzureMIPartQueryPeriod + `
+/* Create a temp table for accumulating the result for all DBs */
 IF OBJECT_ID ('tempdb.dbo.#QueryStoreMetrics') IS NOT NULL DROP TABLE #QueryStoreMetrics;
 CREATE TABLE #QueryStoreMetrics(
 	measurement varchar(42),
@@ -1403,6 +1437,9 @@ CREATE TABLE #QueryStoreMetrics(
 	avg_log_bytes_used float
 );
 
+/* Query the data from query store. Group by plan_id, execution_type, runtime_stats_interval_id, as specified here:
+https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-runtime-stats-transact-sql?view=sql-server-ver15
+*/
 SET @SqlText = @SqlText + N'
 INSERT INTO #QueryStoreMetrics
 SELECT
@@ -1446,13 +1483,17 @@ WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currInterval
 GROUP BY rs.plan_id, rs.execution_type, rs.runtime_stats_interval_id;
 ';
 
+/* Iterate through all DBs in the managed instance */
 EXEC #ExecForeachDb @SqlText;
 
+/* Return the table with the accumulated result for all DBs */
 SELECT * FROM #QueryStoreMetrics;
 
+/* Return previous query call timestamps for all DBs */
 SELECT CONVERT(NVARCHAR(MAX),(SELECT * FROM #DbTimestamps FOR XML PATH('ts'), ROOT('Timestamps'))) AS CachedData;
 `
 
+/* Create a temp table for accumulating the result for all DBs */
 const sqlAzureMIQueryStoreWaitStatistics = sqlAzureMIPartQueryPeriod + `
 IF OBJECT_ID ('tempdb.dbo.#QueryStoreWaitStat') IS NOT NULL DROP TABLE #QueryStoreWaitStat;
 CREATE TABLE #QueryStoreWaitStat(
@@ -1474,6 +1515,9 @@ CREATE TABLE #QueryStoreWaitStat(
 	query_param_type_d tinyint
 );
 
+/* Query the data from query store. Group  by plan_id, runtime_stats_interval_id, execution_type and wait_category, and specified here:
+https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15
+*/
 SET @SqlText = @SqlText + N'
 INSERT INTO #QueryStoreWaitStat
 SELECT
@@ -1501,9 +1545,12 @@ WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currInterval
 GROUP BY ws.plan_id, ws.execution_type, ws.runtime_stats_interval_id, ws.wait_category_desc;
 ';
 
+/* Iterate through all DBs in the managed instance */
 EXEC #ExecForeachDb @SqlText;
 
+/* Return the table with the accumulated result for all DBs */
 SELECT * FROM #QueryStoreWaitStat;
 
+/* Return previous query call timestamps for all DBs */
 SELECT CONVERT(NVARCHAR(MAX),(SELECT * FROM #DbTimestamps FOR XML PATH('ts'), ROOT('Timestamps'))) AS CachedData;
 `
