@@ -459,6 +459,8 @@ SELECT
 	SUM(rs.avg_duration * rs.count_executions) / SUM(rs.count_executions) as avg_duration,
 	MAX(rs.max_num_physical_io_reads) as max_num_physical_io_reads,
 	SUM(rs.avg_num_physical_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_num_physical_io_reads,
+	MAX(rs.max_page_server_io_reads) as max_page_server_io_reads,
+	SUM(rs.avg_page_server_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_page_server_io_reads,
 	MAX(rs.max_log_bytes_used) as [max_log_bytes_used],
 	SUM(rs.avg_log_bytes_used * rs.count_executions) / SUM(rs.count_executions) as avg_log_bytes_used
 FROM sys.query_store_query q WITH (NOLOCK)
@@ -1433,6 +1435,8 @@ CREATE TABLE #QueryStoreMetrics(
 	avg_duration float,
 	max_num_physical_io_reads bigint,
 	avg_num_physical_io_reads float,
+	max_page_server_io_reads bigint,
+	avg_page_server_io_reads float,
 	max_log_bytes_used bigint,
 	avg_log_bytes_used float
 );
@@ -1473,6 +1477,8 @@ SELECT
 	SUM(rs.avg_duration * rs.count_executions) / SUM(rs.count_executions) as avg_duration,
 	MAX(rs.max_num_physical_io_reads) as max_num_physical_io_reads,
 	SUM(rs.avg_num_physical_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_num_physical_io_reads,
+	MAX(rs.max_page_server_io_reads) as max_page_server_io_reads,
+	SUM(rs.avg_page_server_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_page_server_io_reads,
 	MAX(rs.max_log_bytes_used) as [max_log_bytes_used],
 	SUM(rs.avg_log_bytes_used * rs.count_executions) / SUM(rs.count_executions) as avg_log_bytes_used
 FROM sys.query_store_query q WITH (NOLOCK)
