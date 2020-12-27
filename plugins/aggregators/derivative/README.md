@@ -43,24 +43,33 @@ aggregator. The roll-over will take place at most `max_roll_over`times.
 ```toml
 [[aggregators.derivative]]
   ## Specific Derivative Aggregator Arguments:
+
   ## Configure a custom derivation variable. Timestamp is used if none is given.
   # variable = "fieldname_of_derivation_vaiable"
+
   ## Infix to separate field name from derivation variable.
-  infix = "_by_"  # default: _by_
-  ## Roll-Over last measurement to first measuremen of next period
-  max_roll_over = 10 # default: 10
+  # infix = "_by_"
+
+  ## Roll-Over last measurement to first measurement of next period
+  # max_roll_over = 10
 
   ## General Aggregator Arguments:
+
   ## calculate derivative every 30 seconds
   period = "30s"
-  ## fields for which the derivative should be calculated
+
+  ## Fields for which the derivative should be calculated
   ## Important: The derivation variable must be contained in that listed
   fieldpass = ["field1", "field2", "variable"]
+
+  ## If true, the original metric will be dropped by the
+  ## aggregator and will not get sent to the output plugins.
+  drop_original = false
 ```
 
 ### Tags:
 No tags are applied by this aggregator.
-
+Existing tags are passed throug the aggregator untouched.
 
 ### Example Output
 

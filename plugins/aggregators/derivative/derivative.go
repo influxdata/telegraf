@@ -9,9 +9,9 @@ import (
 )
 
 type Derivative struct {
-	Variable    string
-	Infix       string
-	MaxRollOver uint
+	Variable    string `toml:"variable"`
+	Infix       string `toml:"infix"`
+	MaxRollOver uint   `toml:"max_roll_over"`
 	cache       map[uint64]aggregate
 }
 
@@ -36,19 +36,19 @@ func NewDerivative() telegraf.Aggregator {
 }
 
 var sampleConfig = `
-  ## This Aggregator will estimate a derivative for each field, which is
+	## This Aggregator will estimate a derivative for each field, which is
 	## contained in both the first and last metric of the aggregation interval.
-  ## Without further configuration the derivative will be calculated with
+	## Without further configuration the derivative will be calculated with
 	## respect to the time difference between these two measurements in seconds.
 	## The formula applied is for every field:
 	##
 	##               value_last - value_first
 	## derivative = --------------------------
-  ##              time_difference_in_seconds
-  ##
+	##              time_difference_in_seconds
+	##
 	## The resulting derivative will be named *fieldname_by_seconds*. The infix
 	## "_by_" can be configured by the *infix* parameter.
-	# infix = "_wrt_"
+	# infix = "_by_"
 	##
 	## As an abstraction the derivative can be calculated not only by the time
 	## difference but by the difference of a field, which is contained in the
@@ -90,7 +90,7 @@ func (d *Derivative) Add(in telegraf.Metric) {
 			current.rollOver = 0
 		}
 		if current.first.time.Equal(in.Time()) {
-			current.first.fields = upsertConvertedFields(in.Fields(), current.first.fields)
+			upsertConvertedFields(in.Fields(), current.first.fields)
 			current.rollOver = 0
 		}
 		if current.last.time.Before(in.Time()) {
@@ -98,7 +98,7 @@ func (d *Derivative) Add(in telegraf.Metric) {
 			current.rollOver = 0
 		}
 		if current.last.time.Equal(in.Time()) {
-			current.last.fields = upsertConvertedFields(in.Fields(), current.last.fields)
+			upsertConvertedFields(in.Fields(), current.last.fields)
 			current.rollOver = 0
 		}
 
@@ -125,16 +125,16 @@ func newEvent(in telegraf.Metric) *event {
 
 func extractConvertedFields(in telegraf.Metric) map[string]float64 {
 	fields := make(map[string]float64, len(in.Fields()))
-	return upsertConvertedFields(in.Fields(), fields)
+	upsertConvertedFields(in.Fields(), fields)
+	return fields
 }
 
-func upsertConvertedFields(source map[string]interface{}, target map[string]float64) map[string]float64 {
+func upsertConvertedFields(source map[string]interface{}, target map[string]float64) {
 	for k, v := range source {
 		if value, ok := convert(v); ok {
 			target[k] = value
 		}
 	}
-	return target
 }
 
 func convert(in interface{}) (float64, bool) {
@@ -142,6 +142,8 @@ func convert(in interface{}) (float64, bool) {
 	case float64:
 		return v, true
 	case int64:
+		return float64(v), true
+	case uint64:
 		return float64(v), true
 	default:
 		return 0, false
@@ -181,13 +183,9 @@ func (d *Derivative) derivationVariableName() (string, bool) {
 
 func (d *Derivative) derivativeFieldName(field string) string {
 	if param := d.variableFieldName(); len(param) != 0 {
-		return field + d.trimmedInfix() + param
+		return field + d.Infix + param
 	}
-	return field + d.trimmedInfix() + "seconds"
-}
-
-func (d *Derivative) trimmedInfix() string {
-	return strings.TrimSpace(d.Infix)
+	return field + d.Infix + "seconds"
 }
 
 func (d *Derivative) Reset() {
@@ -200,6 +198,11 @@ func (d *Derivative) Reset() {
 			delete(d.cache, id)
 		}
 	}
+}
+
+func (d *Derivative) Init() error {
+	d.Infix = strings.TrimSpace(d.Infix)
+	return nil
 }
 
 func init() {
