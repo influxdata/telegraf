@@ -125,6 +125,14 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 			sp.PrivacyProtocol = gosnmp.DES
 		case "aes":
 			sp.PrivacyProtocol = gosnmp.AES
+		case "aes192":
+			sp.PrivacyProtocol = gosnmp.AES192
+		case "aes192c":
+			sp.PrivacyProtocol = gosnmp.AES192C
+		case "aes256":
+			sp.PrivacyProtocol = gosnmp.AES256
+		case "aes256c":
+			sp.PrivacyProtocol = gosnmp.AES256C
 		case "":
 			sp.PrivacyProtocol = gosnmp.NoPriv
 		default:

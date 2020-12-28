@@ -81,6 +81,7 @@ var tsc = &testSNMPConnection{
 		".1.0.0.1.3":         []byte("byte slice"),
 		".1.0.0.2.1.5.0.9.9": 11,
 		".1.0.0.2.1.5.1.9.9": 22,
+		".1.0.0.0.1.6.0":     ".1.0.0.0.1.7",
 	},
 }
 
@@ -344,6 +345,125 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 	assert.EqualValues(t, 2, sp.AuthoritativeEngineTime)
 }
 
+func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
+	testCases := []struct {
+		Name      string
+		Algorithm gosnmp.SnmpV3PrivProtocol
+		Config    *Snmp
+	}{
+		{
+			Name:      "AES192",
+			Algorithm: gosnmp.AES192,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: config.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES192",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+		{
+			Name:      "AES192C",
+			Algorithm: gosnmp.AES192C,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: config.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES192C",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+		{
+			Name:      "AES256",
+			Algorithm: gosnmp.AES256,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: config.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES256",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+		{
+			Name:      "AES256C",
+			Algorithm: gosnmp.AES256C,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: config.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES256C",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			s := tc.Config
+			err := s.init()
+			require.NoError(t, err)
+
+			gsc, err := s.getConnection(0)
+			require.NoError(t, err)
+			gs := gsc.(snmp.GosnmpWrapper)
+			assert.Equal(t, gs.Version, gosnmp.Version3)
+			sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
+			assert.Equal(t, "1.2.3.4", gsc.Host())
+			assert.EqualValues(t, 20, gs.MaxRepetitions)
+			assert.Equal(t, "mycontext", gs.ContextName)
+			assert.Equal(t, gosnmp.AuthPriv, gs.MsgFlags&gosnmp.AuthPriv)
+			assert.Equal(t, "myuser", sp.UserName)
+			assert.Equal(t, gosnmp.MD5, sp.AuthenticationProtocol)
+			assert.Equal(t, "password123", sp.AuthenticationPassphrase)
+			assert.Equal(t, tc.Algorithm, sp.PrivacyProtocol)
+			assert.Equal(t, "password123", sp.PrivacyPassphrase)
+			assert.Equal(t, "myengineid", sp.AuthoritativeEngineID)
+			assert.EqualValues(t, 1, sp.AuthoritativeEngineBoots)
+			assert.EqualValues(t, 2, sp.AuthoritativeEngineTime)
+		})
+	}
+}
+
 func TestGetSNMPConnection_caching(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4", "1.2.3.5", "1.2.3.5"},
@@ -493,6 +613,16 @@ func TestTableBuild_walk(t *testing.T) {
 				Oid:            ".1.0.0.2.1.5",
 				OidIndexLength: 1,
 			},
+			{
+				Name:      "myfield6",
+				Oid:       ".1.0.0.0.1.6",
+				Translate: true,
+			},
+			{
+				Name:      "myfield7",
+				Oid:       ".1.0.0.0.1.6",
+				Translate: false,
+			},
 		},
 	}
 
@@ -510,6 +640,8 @@ func TestTableBuild_walk(t *testing.T) {
 			"myfield3": float64(0.123),
 			"myfield4": 11,
 			"myfield5": 11,
+			"myfield6": "testTableEntry.7",
+			"myfield7": ".1.0.0.0.1.7",
 		},
 	}
 	rtr2 := RTableRow{
@@ -726,6 +858,12 @@ func TestFieldConvert(t *testing.T) {
 		{[]byte("abcd"), "ipaddr", "97.98.99.100"},
 		{"abcd", "ipaddr", "97.98.99.100"},
 		{[]byte("abcdefghijklmnop"), "ipaddr", "6162:6364:6566:6768:696a:6b6c:6d6e:6f70"},
+		{[]byte{0x00, 0x09, 0x3E, 0xE3, 0xF6, 0xD5, 0x3B, 0x60}, "hextoint:BigEndian:uint64", uint64(2602423610063712)},
+		{[]byte{0x00, 0x09, 0x3E, 0xE3}, "hextoint:BigEndian:uint32", uint32(605923)},
+		{[]byte{0x00, 0x09}, "hextoint:BigEndian:uint16", uint16(9)},
+		{[]byte{0x00, 0x09, 0x3E, 0xE3, 0xF6, 0xD5, 0x3B, 0x60}, "hextoint:LittleEndian:uint64", uint64(6934371307618175232)},
+		{[]byte{0x00, 0x09, 0x3E, 0xE3}, "hextoint:LittleEndian:uint32", uint32(3812493568)},
+		{[]byte{0x00, 0x09}, "hextoint:LittleEndian:uint16", uint16(2304)},
 	}
 
 	for _, tc := range testTable {

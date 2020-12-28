@@ -11,11 +11,13 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -905,6 +907,17 @@ func TestBadRegex(t *testing.T) {
 	checkOutput(t, &acc, nil, nil, absentFields, absentTags)
 }
 
+type fakeClient struct {
+	statusCode int
+	err        error
+}
+
+func (f *fakeClient) Do(req *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: f.statusCode,
+	}, f.err
+}
+
 func TestNetworkErrors(t *testing.T) {
 	// DNS error
 	h := &HTTPResponse{
@@ -914,6 +927,7 @@ func TestNetworkErrors(t *testing.T) {
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
 		FollowRedirects: false,
+		client:          &fakeClient{err: &url.Error{Err: &net.OpError{Err: &net.DNSError{Err: "DNS error"}}}},
 	}
 
 	var acc testutil.Accumulator
@@ -1252,4 +1266,41 @@ func TestStatusCodeAndStringMatchFail(t *testing.T) {
 		"result":      "response_status_code_mismatch",
 	}
 	checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
+}
+
+func TestSNI(t *testing.T) {
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "super-special-hostname.example.com", r.TLS.ServerName)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Log:             testutil.Logger{},
+		URLs:            []string{ts.URL + "/good"},
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ClientConfig: tls.ClientConfig{
+			InsecureSkipVerify: true,
+			ServerName:         "super-special-hostname.example.com",
+		},
+	}
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
+	require.NoError(t, err)
+	expectedFields := map[string]interface{}{
+		"http_response_code": http.StatusOK,
+		"result_type":        "success",
+		"result_code":        0,
+		"response_time":      nil,
+		"content_length":     nil,
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "200",
+		"result":      "success",
+	}
+	absentFields := []string{"response_string_match"}
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 }

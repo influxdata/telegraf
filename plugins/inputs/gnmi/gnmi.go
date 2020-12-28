@@ -240,14 +240,17 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Co
 	return nil
 }
 
-// HandleSubscribeResponse message from gNMI and parse contained telemetry data
 func (c *GNMI) handleSubscribeResponse(address string, reply *gnmi.SubscribeResponse) {
-	// Check if response is a gNMI Update and if we have a prefix to derive the measurement name
-	response, ok := reply.Response.(*gnmi.SubscribeResponse_Update)
-	if !ok {
-		return
+	switch response := reply.Response.(type) {
+	case *gnmi.SubscribeResponse_Update:
+		c.handleSubscribeResponseUpdate(address, response)
+	case *gnmi.SubscribeResponse_Error:
+		c.Log.Errorf("Subscribe error (%d), %q", response.Error.Code, response.Error.Message)
 	}
+}
 
+// Handle SubscribeResponse_Update message from gNMI and parse contained telemetry data
+func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.SubscribeResponse_Update) {
 	var prefix, prefixAliasPath string
 	grouper := metric.NewSeriesGrouper()
 	timestamp := time.Unix(0, response.Update.Timestamp)

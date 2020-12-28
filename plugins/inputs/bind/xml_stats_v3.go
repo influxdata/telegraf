@@ -140,7 +140,7 @@ func (b *Bind) readStatsXMLv3(addr *url.URL, acc telegraf.Accumulator) error {
 	for _, suffix := range [...]string{"/server", "/net", "/mem"} {
 		scrapeUrl := addr.String() + suffix
 
-		resp, err := client.Get(scrapeUrl)
+		resp, err := b.client.Get(scrapeUrl)
 		if err != nil {
 			return err
 		}
