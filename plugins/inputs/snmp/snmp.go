@@ -3,6 +3,7 @@ package snmp
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"math"
@@ -574,12 +575,6 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 }
 
 // fieldConvert converts from any type according to the conv specification
-//  "float"/"float(0)" will convert the value into a float.
-//  "float(X)" will convert the value into a float, and then move the decimal before Xth right-most digit.
-//  "int" will convert the value into an integer.
-//  "hwaddr" will convert the value into a MAC address.
-//  "ipaddr" will convert the value into into an IP address.
-//  "" will convert a byte slice into a string.
 func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	if conv == "" {
 		if bs, ok := v.([]byte); ok {
@@ -668,6 +663,46 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		default:
 			return nil, fmt.Errorf("invalid type (%T) for hwaddr conversion", v)
 		}
+		return v, nil
+	}
+
+	split := strings.Split(conv, ":")
+	if split[0] == "hextoint" && len(split) == 3 {
+
+		endian := split[1]
+		bit := split[2]
+
+		bv, ok := v.([]byte)
+		if !ok {
+			return v, nil
+		}
+
+		if endian == "LittleEndian" {
+			switch bit {
+			case "uint64":
+				v = binary.LittleEndian.Uint64(bv)
+			case "uint32":
+				v = binary.LittleEndian.Uint32(bv)
+			case "uint16":
+				v = binary.LittleEndian.Uint16(bv)
+			default:
+				return nil, fmt.Errorf("invalid bit value (%s) for hex to int conversion", bit)
+			}
+		} else if endian == "BigEndian" {
+			switch bit {
+			case "uint64":
+				v = binary.BigEndian.Uint64(bv)
+			case "uint32":
+				v = binary.BigEndian.Uint32(bv)
+			case "uint16":
+				v = binary.BigEndian.Uint16(bv)
+			default:
+				return nil, fmt.Errorf("invalid bit value (%s) for hex to int conversion", bit)
+			}
+		} else {
+			return nil, fmt.Errorf("invalid Endian value (%s) for hex to int conversion", endian)
+		}
+
 		return v, nil
 	}
 

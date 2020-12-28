@@ -454,19 +454,27 @@ func TestParseHistogramNamespace(t *testing.T) {
 }
 func TestAerospikeParseValue(t *testing.T) {
 	// uint64 with value bigger than int64 max
-	val := parseValue("18446744041841121751")
-	require.Equal(t, uint64(18446744041841121751), val)
+	val := parseAerospikeValue("", "18446744041841121751")
+	require.Equal(t, val, uint64(18446744041841121751))
 
-	val = parseValue("true")
-	require.Equal(t, true, val)
+	val = parseAerospikeValue("", "true")
+	require.Equal(t, val, true)
 
 	// int values
-	val = parseValue("42")
-	require.Equal(t, val, int64(42), "must be parsed as int")
+	val = parseAerospikeValue("", "42")
+	require.Equal(t, int64(42), val, "must be parsed as an int64")
 
 	// string values
-	val = parseValue("BB977942A2CA502")
-	require.Equal(t, val, `BB977942A2CA502`, "must be left as string")
+	val = parseAerospikeValue("", "BB977942A2CA502")
+	require.Equal(t, `BB977942A2CA502`, val, "must be left as a string")
+
+	// all digit hex values, unprotected
+	val = parseAerospikeValue("", "1992929191")
+	require.Equal(t, int64(1992929191), val, "must be parsed as an int64")
+
+	// all digit hex values, protected
+	val = parseAerospikeValue("node_name", "1992929191")
+	require.Equal(t, `1992929191`, val, "must be left as a string")
 }
 
 func FindTagValue(acc *testutil.Accumulator, measurement string, key string, value string) bool {

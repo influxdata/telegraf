@@ -228,34 +228,34 @@ func TestSerializeMetricBool(t *testing.T) {
 
 	testcases := []struct {
 		metric   telegraf.Metric
-		format   string
+		format   format
 		expected string
 	}{
 		{
 			metric:   requireMetric(t, now, false),
-			format:   string(Carbon2FormatFieldSeparate),
+			format:   Carbon2FormatFieldSeparate,
 			expected: fmt.Sprintf("metric=cpu field=java_lang_GarbageCollector_Valid tag_name=tag_value  0 %d\n", now.Unix()),
 		},
 		{
 			metric:   requireMetric(t, now, false),
-			format:   string(Carbon2FormatMetricIncludesField),
+			format:   Carbon2FormatMetricIncludesField,
 			expected: fmt.Sprintf("metric=cpu_java_lang_GarbageCollector_Valid tag_name=tag_value  0 %d\n", now.Unix()),
 		},
 		{
 			metric:   requireMetric(t, now, true),
-			format:   string(Carbon2FormatFieldSeparate),
+			format:   Carbon2FormatFieldSeparate,
 			expected: fmt.Sprintf("metric=cpu field=java_lang_GarbageCollector_Valid tag_name=tag_value  1 %d\n", now.Unix()),
 		},
 		{
 			metric:   requireMetric(t, now, true),
-			format:   string(Carbon2FormatMetricIncludesField),
+			format:   Carbon2FormatMetricIncludesField,
 			expected: fmt.Sprintf("metric=cpu_java_lang_GarbageCollector_Valid tag_name=tag_value  1 %d\n", now.Unix()),
 		},
 	}
 
 	for _, tc := range testcases {
-		t.Run(tc.format, func(t *testing.T) {
-			s, err := NewSerializer(tc.format)
+		t.Run(string(tc.format), func(t *testing.T) {
+			s, err := NewSerializer(string(tc.format))
 			require.NoError(t, err)
 
 			buf, err := s.Serialize(tc.metric)

@@ -6,7 +6,9 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -34,6 +36,9 @@ type Procstat struct {
 	CGroup      string `toml:"cgroup"`
 	PidTag      bool
 	WinService  string `toml:"win_service"`
+	Mode        string
+
+	solarisMode bool
 
 	finder PIDFinder
 
@@ -68,6 +73,9 @@ var sampleConfig = `
 
   ## When true add the full cmdline as a tag.
   # cmdline_tag = false
+
+  ## Mode to use when calculating CPU usage. Can be one of 'solaris' or 'irix'.
+  # mode = "irix"
 
   ## Add the PID as a tag instead of as a field.  When collecting multiple
   ## processes with otherwise matching tags this setting should be enabled to
@@ -240,7 +248,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 
 	cpu_perc, err := proc.Percent(time.Duration(0))
 	if err == nil {
-		fields[prefix+"cpu_usage"] = cpu_perc
+		if p.solarisMode {
+			fields[prefix+"cpu_usage"] = cpu_perc / float64(runtime.NumCPU())
+		} else {
+			fields[prefix+"cpu_usage"] = cpu_perc
+		}
 	}
 
 	mem, err := proc.MemoryInfo()
@@ -459,6 +471,14 @@ func (p *Procstat) winServicePIDs() ([]PID, error) {
 	pids = append(pids, PID(pid))
 
 	return pids, nil
+}
+
+func (p *Procstat) Init() error {
+	if strings.ToLower(p.Mode) == "solaris" {
+		p.solarisMode = true
+	}
+
+	return nil
 }
 
 func init() {
