@@ -152,18 +152,19 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 		}
 
 		return h.write(reqBody)
-	} else {
-		for _, metric := range metrics {
-			var err error
-			reqBody, err = h.serializer.Serialize(metric)
-			if err != nil {
-				return err
-			}
-
-			return h.write(reqBody)
-		}
 	}
 
+	for _, metric := range metrics {
+		var err error
+		reqBody, err = h.serializer.Serialize(metric)
+		if err != nil {
+			return err
+		}
+
+		if err := h.write(reqBody); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
