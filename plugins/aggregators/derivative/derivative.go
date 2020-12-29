@@ -9,9 +9,10 @@ import (
 )
 
 type Derivative struct {
-	Variable    string `toml:"variable"`
-	Infix       string `toml:"infix"`
-	MaxRollOver uint   `toml:"max_roll_over"`
+	Variable    string          `toml:"variable"`
+	Infix       string          `toml:"infix"`
+	MaxRollOver uint            `toml:"max_roll_over"`
+	Log         telegraf.Logger `toml:"-"`
 	cache       map[uint64]aggregate
 }
 
@@ -28,7 +29,7 @@ type event struct {
 	time   time.Time
 }
 
-func NewDerivative() telegraf.Aggregator {
+func NewDerivative() *Derivative {
 	derivative := &Derivative{Infix: "_by_", MaxRollOver: 10}
 	derivative.cache = make(map[uint64]aggregate)
 	derivative.Reset()
@@ -152,22 +153,27 @@ func convert(in interface{}) (float64, bool) {
 
 func (d *Derivative) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range d.cache {
-		if aggregate.first != aggregate.last {
-			if denominator := d.calculateDenominator(aggregate); denominator != 0 {
-				derivatives := make(map[string]interface{})
-				for key, start := range aggregate.first.fields {
-					if end, ok := aggregate.last.fields[key]; key != d.Variable && ok {
-						derivatives[d.derivativeFieldName(key)] = (end - start) / denominator
-					}
-				}
-				acc.AddFields(aggregate.name, derivatives, aggregate.tags)
+		if aggregate.first == aggregate.last {
+			d.Log.Debugf("Same first and last event for %q, skipping.", aggregate.name)
+			continue
+		}
+		denominator := d.calculateDenominator(aggregate)
+		if denominator == 0 {
+			d.Log.Infof("Got difference 0 in denominator for %q, skipping.", aggregate.name)
+			continue
+		}
+		derivatives := make(map[string]interface{})
+		for key, start := range aggregate.first.fields {
+			if end, ok := aggregate.last.fields[key]; key != d.Variable && ok {
+				derivatives[d.derivativeFieldName(key)] = (end - start) / denominator
 			}
 		}
+		acc.AddFields(aggregate.name, derivatives, aggregate.tags)
 	}
 }
 
 func (d *Derivative) calculateDenominator(aggregate aggregate) float64 {
-	if len(d.Variable) != 0  {
+	if len(d.Variable) != 0 {
 		return aggregate.last.fields[d.Variable] - aggregate.first.fields[d.Variable]
 	}
 	return aggregate.last.time.Sub(aggregate.first.time).Seconds()

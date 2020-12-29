@@ -41,6 +41,7 @@ func TestTwoFullEventsWithParameter(t *testing.T) {
 		cache:    make(map[uint64]aggregate),
 	}
 	derivative.Init()
+	derivative.Log = testutil.Logger{}
 
 	emitMetrics(&acc, derivative, start, finish)
 
@@ -71,6 +72,7 @@ func TestTwoFullEventsWithParameterReverseSequence(t *testing.T) {
 		cache:    make(map[uint64]aggregate),
 	}
 	derivative.Init()
+	derivative.Log = testutil.Logger{}
 
 	emitMetrics(&acc, derivative, finish, start)
 
@@ -88,6 +90,9 @@ func TestTwoFullEventsWithParameterReverseSequence(t *testing.T) {
 func TestTwoFullEventsWithoutParameter(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := NewDerivative()
+	derivative.Init()
+	derivative.Log = testutil.Logger{}
+
 	startTime := time.Now()
 	duration, _ := time.ParseDuration("2s")
 	endTime := startTime.Add(duration)
@@ -127,7 +132,8 @@ func TestTwoFullEventsInSeperatePushes(t *testing.T) {
 		cache:       make(map[uint64]aggregate),
 	}
 	derivative.Init()
-	
+	derivative.Log = testutil.Logger{}
+
 	emitMetrics(&acc, derivative, start)
 	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
 
@@ -154,6 +160,7 @@ func TestTwoFullEventsInSeperatePushesWithSeveralRollOvers(t *testing.T) {
 		cache:       make(map[uint64]aggregate),
 	}
 	derivative.Init()
+	derivative.Log = testutil.Logger{}
 
 	emitMetrics(&acc, derivative, start)
 	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
@@ -180,6 +187,7 @@ func TestTwoFullEventsInSeperatePushesWithOutRollOver(t *testing.T) {
 		cache:       make(map[uint64]aggregate),
 	}
 	derivative.Init()
+	derivative.Log = testutil.Logger{}
 
 	emitMetrics(&acc, derivative, start)
 	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
@@ -197,6 +205,7 @@ func TestIgnoresMissingVariable(t *testing.T) {
 		cache:    make(map[uint64]aggregate),
 	}
 	derivative.Init()
+	derivative.Log = testutil.Logger{}
 
 	noParameter, _ := metric.New("Test Metric",
 		map[string]string{"state": "no_parameter"},
@@ -227,6 +236,8 @@ func TestIgnoresMissingVariable(t *testing.T) {
 func TestMergesDifferenMetricsWithSameHash(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := NewDerivative()
+	derivative.Init()
+	derivative.Log = testutil.Logger{}
 
 	startTime := time.Now()
 	duration, _ := time.ParseDuration("2s")
@@ -272,6 +283,7 @@ func TestDropsAggregatesOnMaxRollOver(t *testing.T) {
 		cache:       make(map[uint64]aggregate),
 	}
 	derivative.Init()
+	derivative.Log = testutil.Logger{}
 
 	emitMetrics(&acc, derivative, start)
 	emitMetrics(&acc, derivative)
@@ -289,6 +301,7 @@ func TestAddMetricsResetsRollOver(t *testing.T) {
 		cache:       make(map[uint64]aggregate),
 	}
 	derivative.Init()
+	derivative.Log = testutil.Logger{}
 
 	emitMetrics(&acc, derivative, start)
 	emitMetrics(&acc, derivative, start)

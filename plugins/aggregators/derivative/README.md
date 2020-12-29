@@ -45,7 +45,7 @@ aggregator. The roll-over will take place at most `max_roll_over`times.
   ## Specific Derivative Aggregator Arguments:
 
   ## Configure a custom derivation variable. Timestamp is used if none is given.
-  # variable = "fieldname_of_derivation_vaiable"
+  # variable = ""
 
   ## Infix to separate field name from derivation variable.
   # infix = "_by_"
