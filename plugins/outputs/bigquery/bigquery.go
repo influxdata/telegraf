@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"cloud.google.com/go/bigquery"
+	bigqueryt "cloud.google.com/go/bigquery"
 	"github.com/influxdata/telegraf"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
@@ -21,15 +22,17 @@ type BigQuery struct {
 	Project         string `toml:"project"`
 	Dataset         string `toml:"dataset"`
 
-	client *bigquery.Client
+	client *bigqueryt.Client
 }
 
-type bigQueryMetric struct {
+type BigQueryMetric struct {
 	metric telegraf.Metric
 }
 
-func (bm *bigQueryMetric) Save() (map[string]bigquery.Value, string, error) {
+func (bm *BigQueryMetric) Save() (map[string]bigquery.Value, string, error) {
 	mapValue := make(map[string]bigquery.Value)
+
+	mapValue["timestamp"] = bm.metric.Time
 
 	for _, tag := range bm.metric.TagList() {
 		mapValue[tag.Key] = tag.Value
@@ -39,7 +42,7 @@ func (bm *bigQueryMetric) Save() (map[string]bigquery.Value, string, error) {
 		mapValue[field.Key] = field.Value
 	}
 
-	return mapValue, "", nil
+	return mapValue, "on-purpose", nil
 }
 
 var sampleConfig = `	
@@ -80,7 +83,7 @@ func (b *BigQuery) setUpTestClient(endpoint string) error {
 
 	ctx := context.Background()
 
-	if client, err := bigquery.NewClient(ctx, b.Project, noAuth, endpoints); err != nil {
+	if client, err := bigqueryt.NewClient(ctx, b.Project, noAuth, endpoints); err != nil {
 		return err
 	} else {
 		b.client = client
@@ -105,7 +108,7 @@ func (b *BigQuery) setUpDefaultClient() error {
 		credentialsOption = option.WithCredentials(creds)
 	}
 
-	client, err := bigquery.NewClient(ctx, b.Project, credentialsOption)
+	client, err := bigqueryt.NewClient(ctx, b.Project, credentialsOption)
 	b.client = client
 	return err
 }
@@ -123,18 +126,18 @@ func (b *BigQuery) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (b *BigQuery) groupByMetricName(metrics []telegraf.Metric) map[string][]bigQueryMetric {
-	groupedMetrics := make(map[string][]bigQueryMetric)
+func (b *BigQuery) groupByMetricName(metrics []telegraf.Metric) map[string][]BigQueryMetric {
+	groupedMetrics := make(map[string][]BigQueryMetric)
 
 	for _, m := range metrics {
-		bqm := bigQueryMetric{metric: m}
+		bqm := BigQueryMetric{metric: m}
 		groupedMetrics[m.Name()] = append(groupedMetrics[m.Name()], bqm)
 	}
 
 	return groupedMetrics
 }
 
-func (b *BigQuery) insertToTable(metricName string, metrics []bigQueryMetric) error {
+func (b *BigQuery) insertToTable(metricName string, metrics []BigQueryMetric) error {
 	ctx := context.Background()
 
 	table := b.client.DatasetInProject(b.Project, b.Dataset).Table(metricName)
