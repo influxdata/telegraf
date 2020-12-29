@@ -40,6 +40,7 @@ func TestTwoFullEventsWithParameter(t *testing.T) {
 		Infix:    "_by_",
 		cache:    make(map[uint64]aggregate),
 	}
+	derivative.Init()
 
 	emitMetrics(&acc, derivative, start, finish)
 
@@ -69,6 +70,7 @@ func TestTwoFullEventsWithParameterReverseSequence(t *testing.T) {
 		Infix:    "_by_",
 		cache:    make(map[uint64]aggregate),
 	}
+	derivative.Init()
 
 	emitMetrics(&acc, derivative, finish, start)
 
@@ -119,12 +121,13 @@ func TestTwoFullEventsWithoutParameter(t *testing.T) {
 func TestTwoFullEventsInSeperatePushes(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := &Derivative{
-		Variable:    "parameter",
+		Variable:    " parameter",
 		Infix:       "_wrt_",
 		MaxRollOver: 10,
 		cache:       make(map[uint64]aggregate),
 	}
-
+	derivative.Init()
+	
 	emitMetrics(&acc, derivative, start)
 	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
 
@@ -150,6 +153,7 @@ func TestTwoFullEventsInSeperatePushesWithSeveralRollOvers(t *testing.T) {
 		MaxRollOver: 10,
 		cache:       make(map[uint64]aggregate),
 	}
+	derivative.Init()
 
 	emitMetrics(&acc, derivative, start)
 	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
@@ -175,6 +179,7 @@ func TestTwoFullEventsInSeperatePushesWithOutRollOver(t *testing.T) {
 		MaxRollOver: 0,
 		cache:       make(map[uint64]aggregate),
 	}
+	derivative.Init()
 
 	emitMetrics(&acc, derivative, start)
 	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
@@ -191,6 +196,7 @@ func TestIgnoresMissingVariable(t *testing.T) {
 		Infix:    "_by_",
 		cache:    make(map[uint64]aggregate),
 	}
+	derivative.Init()
 
 	noParameter, _ := metric.New("Test Metric",
 		map[string]string{"state": "no_parameter"},
@@ -265,6 +271,7 @@ func TestDropsAggregatesOnMaxRollOver(t *testing.T) {
 		MaxRollOver: 1,
 		cache:       make(map[uint64]aggregate),
 	}
+	derivative.Init()
 
 	emitMetrics(&acc, derivative, start)
 	emitMetrics(&acc, derivative)
@@ -281,6 +288,7 @@ func TestAddMetricsResetsRollOver(t *testing.T) {
 		MaxRollOver: 1,
 		cache:       make(map[uint64]aggregate),
 	}
+	derivative.Init()
 
 	emitMetrics(&acc, derivative, start)
 	emitMetrics(&acc, derivative, start)

@@ -150,17 +150,13 @@ func convert(in interface{}) (float64, bool) {
 	}
 }
 
-func (d *Derivative) variableFieldName() string {
-	return strings.TrimSpace(d.Variable)
-}
-
 func (d *Derivative) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range d.cache {
 		if aggregate.first != aggregate.last {
 			if denominator := d.calculateDenominator(aggregate); denominator != 0 {
 				derivatives := make(map[string]interface{})
 				for key, start := range aggregate.first.fields {
-					if end, ok := aggregate.last.fields[key]; key != d.variableFieldName() && ok {
+					if end, ok := aggregate.last.fields[key]; key != d.Variable && ok {
 						derivatives[d.derivativeFieldName(key)] = (end - start) / denominator
 					}
 				}
@@ -171,19 +167,15 @@ func (d *Derivative) Push(acc telegraf.Accumulator) {
 }
 
 func (d *Derivative) calculateDenominator(aggregate aggregate) float64 {
-	if variable, present := d.derivationVariableName(); present {
-		return aggregate.last.fields[variable] - aggregate.first.fields[variable]
+	if len(d.Variable) != 0  {
+		return aggregate.last.fields[d.Variable] - aggregate.first.fields[d.Variable]
 	}
 	return aggregate.last.time.Sub(aggregate.first.time).Seconds()
 }
 
-func (d *Derivative) derivationVariableName() (string, bool) {
-	return d.variableFieldName(), len(d.variableFieldName()) != 0
-}
-
 func (d *Derivative) derivativeFieldName(field string) string {
-	if param := d.variableFieldName(); len(param) != 0 {
-		return field + d.Infix + param
+	if len(d.Variable) != 0 {
+		return field + d.Infix + d.Variable
 	}
 	return field + d.Infix + "seconds"
 }
@@ -202,6 +194,7 @@ func (d *Derivative) Reset() {
 
 func (d *Derivative) Init() error {
 	d.Infix = strings.TrimSpace(d.Infix)
+	d.Variable = strings.TrimSpace(d.Variable)
 	return nil
 }
 
