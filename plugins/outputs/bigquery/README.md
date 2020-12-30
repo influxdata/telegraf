@@ -29,7 +29,7 @@ The schema of the table on BigQuery:
 
 ### Restrictions
 
-Current sdk cannot handle inserts to Table with hyphens.
+Avoid hyphens on BigQuery tables, underlying sdk cannot handle straming inserts to Table with hyphens.
 
 Available data type options are:
 * integer
