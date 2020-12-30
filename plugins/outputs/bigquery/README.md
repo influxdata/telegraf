@@ -29,11 +29,15 @@ The schema of the table on BigQuery:
 
 ### Restrictions
 
+Current sdk cannot handle inserts to Table with hyphens.
+
 Available data type options are:
 * integer
 * float or long
 * string
 * boolean
+
+All field naming restrictions that apply to BigQuery sould apply to the measurements to be imported.
 
 Tables on BigQuery should be created before hand and they are not created during persistence
 
