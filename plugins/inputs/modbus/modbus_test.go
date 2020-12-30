@@ -1,6 +1,7 @@
 package modbus
 
 import (
+	"fmt"
 	"testing"
 
 	m "github.com/goburrow/modbus"
@@ -653,6 +654,65 @@ func TestHoldingRegisters(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestReadMultipleCoilLimit(t *testing.T) {
+	serv := mbserver.NewServer()
+	err := serv.ListenTCP("localhost:1502")
+	assert.NoError(t, err)
+	defer serv.Close()
+
+	fcs := []fieldContainer{}
+	for i := 0; i <= 2005; i++ {
+		fc := fieldContainer{}
+		fc.Name = fmt.Sprintf("coil-%v", i)
+		fc.Address = []uint16{uint16(i)}
+		fcs = append(fcs, fc)
+	}
+
+	modbus := Modbus{
+		Name:       "TestReadCoils",
+		Controller: "tcp://localhost:1502",
+		SlaveID:    1,
+		Coils:      fcs,
+	}
+
+	err = modbus.Init()
+	assert.NoError(t, err)
+	var acc testutil.Accumulator
+	err = modbus.Gather(&acc)
+	assert.NoError(t, err)
+}
+
+func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
+	serv := mbserver.NewServer()
+	err := serv.ListenTCP("localhost:1502")
+	assert.NoError(t, err)
+	defer serv.Close()
+
+	fcs := []fieldContainer{}
+	for i := 0; i <= 200; i++ {
+		fc := fieldContainer{}
+		fc.Name = fmt.Sprintf("HoldingRegister-%v", i)
+		fc.ByteOrder = "AB"
+		fc.DataType = "INT16"
+		fc.Scale = 1.0
+		fc.Address = []uint16{uint16(i)}
+		fcs = append(fcs, fc)
+	}
+
+	modbus := Modbus{
+		Name:             "TestHoldingRegister",
+		Controller:       "tcp://localhost:1502",
+		SlaveID:          1,
+		HoldingRegisters: fcs,
+	}
+
+	err = modbus.Init()
+	assert.NoError(t, err)
+	var acc testutil.Accumulator
+	err = modbus.Gather(&acc)
+	assert.NoError(t, err)
 }
 
 func TestRetrySuccessful(t *testing.T) {
