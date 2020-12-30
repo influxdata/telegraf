@@ -73,6 +73,10 @@ values.
   ## in case of there is no timezone information.
   ## It follows the  IANA Time Zone database.
   csv_timezone = ""
+
+  ## Indicates a value to skip such as an empty string value ""
+  ## The field will be skipped entirely where it matches the value inserted here
+  csv_skip_values = []
   ```
 #### csv_timestamp_column, csv_timestamp_format
 
