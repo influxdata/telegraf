@@ -284,7 +284,7 @@ func makeTrapHandler(s *SnmpTrap) handler {
 			if trapOid != "" {
 				e, err := s.lookup(trapOid)
 				if err != nil {
-					s.Log.Errorf("Error resolving V1 OID: %v", err)
+					s.Log.Errorf("Error resolving V1 OID, oid=%s, source=%s: %v", trapOid, tags["source"], err)
 					return
 				}
 				setTrapOid(tags, trapOid, e)
@@ -322,7 +322,7 @@ func makeTrapHandler(s *SnmpTrap) handler {
 				var err error
 				e, err = s.lookup(val)
 				if nil != err {
-					s.Log.Errorf("Error resolving value OID: %v", err)
+					s.Log.Errorf("Error resolving value OID, oid=%s, source=%s: %v", val, tags["source"], err)
 					return
 				}
 
@@ -340,7 +340,7 @@ func makeTrapHandler(s *SnmpTrap) handler {
 
 			e, err := s.lookup(v.Name)
 			if nil != err {
-				s.Log.Errorf("Error resolving OID: %v", err)
+				s.Log.Errorf("Error resolving OID oid=%s, source=%s: %v", v.Name, tags["source"], err)
 				return
 			}
 

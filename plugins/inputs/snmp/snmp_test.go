@@ -345,6 +345,125 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 	assert.EqualValues(t, 2, sp.AuthoritativeEngineTime)
 }
 
+func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
+	testCases := []struct {
+		Name      string
+		Algorithm gosnmp.SnmpV3PrivProtocol
+		Config    *Snmp
+	}{
+		{
+			Name:      "AES192",
+			Algorithm: gosnmp.AES192,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: config.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES192",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+		{
+			Name:      "AES192C",
+			Algorithm: gosnmp.AES192C,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: config.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES192C",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+		{
+			Name:      "AES256",
+			Algorithm: gosnmp.AES256,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: config.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES256",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+		{
+			Name:      "AES256C",
+			Algorithm: gosnmp.AES256C,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: config.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES256C",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			s := tc.Config
+			err := s.init()
+			require.NoError(t, err)
+
+			gsc, err := s.getConnection(0)
+			require.NoError(t, err)
+			gs := gsc.(snmp.GosnmpWrapper)
+			assert.Equal(t, gs.Version, gosnmp.Version3)
+			sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
+			assert.Equal(t, "1.2.3.4", gsc.Host())
+			assert.EqualValues(t, 20, gs.MaxRepetitions)
+			assert.Equal(t, "mycontext", gs.ContextName)
+			assert.Equal(t, gosnmp.AuthPriv, gs.MsgFlags&gosnmp.AuthPriv)
+			assert.Equal(t, "myuser", sp.UserName)
+			assert.Equal(t, gosnmp.MD5, sp.AuthenticationProtocol)
+			assert.Equal(t, "password123", sp.AuthenticationPassphrase)
+			assert.Equal(t, tc.Algorithm, sp.PrivacyProtocol)
+			assert.Equal(t, "password123", sp.PrivacyPassphrase)
+			assert.Equal(t, "myengineid", sp.AuthoritativeEngineID)
+			assert.EqualValues(t, 1, sp.AuthoritativeEngineBoots)
+			assert.EqualValues(t, 2, sp.AuthoritativeEngineTime)
+		})
+	}
+}
+
 func TestGetSNMPConnection_caching(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4", "1.2.3.5", "1.2.3.5"},
