@@ -199,11 +199,10 @@ outer:
 			}
 
 			// don't record fields where the value matches a skip value
-			if len(p.SkipValues) > 0 {
-				for _, s := range p.SkipValues {
-					if value == s {
-						continue outer
-					}
+			for _, s := range p.SkipValues {
+				fmt.Println("in here")
+				if value == s {
+					continue outer
 				}
 			}
 
