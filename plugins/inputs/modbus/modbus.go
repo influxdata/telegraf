@@ -217,19 +217,29 @@ func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
 	sort.Slice(addrs, func(i, j int) bool { return addrs[i] < addrs[j] })
 
 	ii := 0
+	maxQuantity := 1
 	var registersRange []registerRange
+	if name == cDiscreteInputs || name == cCoils {
+		maxQuantity = 2000
+	}
+
+	if name == cInputRegisters || name == cHoldingRegisters {
+		maxQuantity = 125
+	}
 
 	// Get range of consecutive integers
 	// [1, 2, 3, 5, 6, 10, 11, 12, 14]
 	// (1, 3) , (5, 2) , (10, 3), (14 , 1)
 	for range addrs {
+		quantity := 1
 		if ii < len(addrs) {
 			start := addrs[ii]
 			end := start
 
-			for ii < len(addrs)-1 && addrs[ii+1]-addrs[ii] == 1 {
+			for ii < len(addrs)-1 && addrs[ii+1]-addrs[ii] == 1 && quantity < maxQuantity {
 				end = addrs[ii+1]
 				ii++
+				quantity++
 			}
 			ii++
 			registersRange = append(registersRange, registerRange{start, end - start + 1})
