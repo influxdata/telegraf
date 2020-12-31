@@ -4,8 +4,8 @@ go 1.15
 
 require (
 	cloud.google.com/go v0.53.0
-	cloud.google.com/go/datastore v1.1.0 // indirect
-	cloud.google.com/go/pubsub v1.2.0
+	cloud.google.com/go/bigquery v1.3.0
+	cloud.google.com/go/pubsub v1.1.0
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.3.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
@@ -141,6 +141,7 @@ require (
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 	golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 	golang.org/x/text v0.3.3
+	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	golang.org/x/tools v0.0.0-20200317043434-63da46f3035e // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	gonum.org/v1/gonum v0.6.2 // indirect
