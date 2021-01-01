@@ -106,9 +106,9 @@ fmt:
 fmtcheck:
 	@set -e; \
 	GOFMT_OUTPUT=$$(gofmt -l -s $(GOFILES_FMT)); \
-	if [ ! -z "$(GOFMT_OUTPUT)" ]; then \
+	if [ ! -z "$${GOFMT_OUTPUT}" ]; then \
 		echo "[ERROR] gofmt has found errors in the following files:"  ; \
-		echo "$(GOFMT_OUTPUT)" ; \
+		echo "$${GOFMT_OUTPUT}" ; \
 		echo "" ;\
 		echo "Run make fmt to fix them." ; \
 		exit 1 ;\
