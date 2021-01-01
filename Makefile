@@ -53,7 +53,7 @@ endif
 
 
 GOFILES ?= $(shell git ls-files '*.go')
-GOFMT ?= $(shell gofmt -l -s $(filter-out plugins/parsers/influx/machine.go, $(GOFILES)))
+GOFILES_FMT ?= $(filter-out plugins/parsers/influx/machine.go, $(GOFILES))
 
 prefix ?= /usr/local
 bindir ?= $(prefix)/bin
@@ -100,13 +100,15 @@ test:
 
 .PHONY: fmt
 fmt:
-	@gofmt -s -w $(filter-out plugins/parsers/influx/machine.go, $(GOFILES))
+	@gofmt -s -w $(GOFILES_FMT)
 
 .PHONY: fmtcheck
 fmtcheck:
-	@if [ ! -z "$(GOFMT)" ]; then \
+	@set -eo pipefail; \
+	GOFMT_OUTPUT=$$(gofmt -l -s $(GOFILES_FMT)); \
+	if [ ! -z "$(GOFMT_OUTPUT)" ]; then \
 		echo "[ERROR] gofmt has found errors in the following files:"  ; \
-		echo "$(GOFMT)" ; \
+		echo "$(GOFMT_OUTPUT)" ; \
 		echo "" ;\
 		echo "Run make fmt to fix them." ; \
 		exit 1 ;\
