@@ -104,7 +104,7 @@ fmt:
 
 .PHONY: fmtcheck
 fmtcheck:
-	@set -eo pipefail; \
+	@set -e; \
 	GOFMT_OUTPUT=$$(gofmt -l -s $(GOFILES_FMT)); \
 	if [ ! -z "$(GOFMT_OUTPUT)" ]; then \
 		echo "[ERROR] gofmt has found errors in the following files:"  ; \
