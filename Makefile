@@ -100,10 +100,17 @@ test:
 
 .PHONY: fmt
 fmt:
+ifeq ($(OS),Windows_NT)
+	@echo "make fmt not supported on Windows, run 'go fmt' in the modified directories instead"
+else
 	@gofmt -s -w $(GOFILES_FMT)
+endif
 
 .PHONY: fmtcheck
 fmtcheck:
+ifeq ($(OS),Windows_NT)
+	@echo "make fmtcheck not supported on Windows, run 'go fmt' in the modified directories instead"
+else
 	@set -e; \
 	GOFMT_OUTPUT=$$(gofmt -l -s $(GOFILES_FMT)); \
 	if [ ! -z "$${GOFMT_OUTPUT}" ]; then \
@@ -113,6 +120,7 @@ fmtcheck:
 		echo "Run make fmt to fix them." ; \
 		exit 1 ;\
 	fi
+endif
 
 .PHONY: test-windows
 test-windows:
