@@ -37,7 +37,18 @@ func NewDerivative() *Derivative {
 }
 
 var sampleConfig = `
-	## This Aggregator will estimate a derivative for each field, which is
+	## The period in which to flush the aggregator.
+	period = "30s"
+	##
+	## If true, the original metric will be dropped by the
+	## aggregator and will not get sent to the output plugins.
+	drop_original = false
+	##
+	## Fields for which the derivative should be calculated.
+	## Important: The derivation variable must be contained in that list, if used.
+	fieldpass = ["field1, field2, variable"]
+    ##
+	## This aggregator will estimate a derivative for each field, which is
 	## contained in both the first and last metric of the aggregation interval.
 	## Without further configuration the derivative will be calculated with
 	## respect to the time difference between these two measurements in seconds.
@@ -55,14 +66,10 @@ var sampleConfig = `
 	## difference but by the difference of a field, which is contained in the
 	## measurement. This field is assumed to be monotonously increasing. This
 	## feature is used by specifying a *variable*.
-	# variable = "parameter"
+	# variable = ""
 	##
 	## When using a field as the derivation parameter the name of that field will
 	## be used for the resulting derivative, e.g. *fieldname_by_parameter*.
-	##
-	## As a genereal parameter the period needs to be given. It determines the
-	## period for which a derivative will be calculated
-	period = "30s"
 	##
 	## Note, that the calculation is based on the actual timestamp of the
 	## measurements. When there is only one measurement during that period, the
@@ -157,26 +164,40 @@ func (d *Derivative) Push(acc telegraf.Accumulator) {
 			d.Log.Debugf("Same first and last event for %q, skipping.", aggregate.name)
 			continue
 		}
-		denominator := d.calculateDenominator(aggregate)
+		var denominator float64
+		if len(d.Variable) == 0 {
+			// If no derivation variable is known default to timestamp
+			denominator = aggregate.last.time.Sub(aggregate.first.time).Seconds()
+		} else {
+			var first float64
+			var last float64
+			var found bool
+			if first, found = aggregate.first.fields[d.Variable]; !found {
+				d.Log.Infof("Did not find %q in first event for %q.", d.Variable, aggregate.name)
+				continue
+			}
+			if last, found = aggregate.last.fields[d.Variable]; !found {
+				d.Log.Infof("Did not find %q in last event for %q.", d.Variable, aggregate.name)
+				continue
+			}
+			denominator = last - first
+		}
 		if denominator == 0 {
 			d.Log.Infof("Got difference 0 in denominator for %q, skipping.", aggregate.name)
 			continue
 		}
 		derivatives := make(map[string]interface{})
 		for key, start := range aggregate.first.fields {
+			if key == d.Variable {
+				// Skip derivation variable
+				continue
+			}
 			if end, ok := aggregate.last.fields[key]; key != d.Variable && ok {
 				derivatives[d.derivativeFieldName(key)] = (end - start) / denominator
 			}
 		}
 		acc.AddFields(aggregate.name, derivatives, aggregate.tags)
 	}
-}
-
-func (d *Derivative) calculateDenominator(aggregate aggregate) float64 {
-	if len(d.Variable) != 0 {
-		return aggregate.last.fields[d.Variable] - aggregate.first.fields[d.Variable]
-	}
-	return aggregate.last.time.Sub(aggregate.first.time).Seconds()
 }
 
 func (d *Derivative) derivativeFieldName(field string) string {
@@ -192,8 +213,10 @@ func (d *Derivative) Reset() {
 			aggregate.first = aggregate.last
 			aggregate.rollOver = aggregate.rollOver + 1
 			d.cache[id] = aggregate
+			d.Log.Debugf("Roll-Over %q for the %d time.", aggregate.name, aggregate.rollOver)
 		} else {
 			delete(d.cache, id)
+			d.Log.Debugf("Removed %q from cache.", aggregate.name)
 		}
 	}
 }

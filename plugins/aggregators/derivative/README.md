@@ -59,7 +59,7 @@ aggregator. The roll-over will take place at most `max_roll_over`times.
   period = "30s"
 
   ## Fields for which the derivative should be calculated
-  ## Important: The derivation variable must be contained in that listed
+  ## Important: The derivation variable must be contained in that list, if used.
   fieldpass = ["field1", "field2", "variable"]
 
   ## If true, the original metric will be dropped by the

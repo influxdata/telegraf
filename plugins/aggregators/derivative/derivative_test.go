@@ -43,7 +43,9 @@ func TestTwoFullEventsWithParameter(t *testing.T) {
 	derivative.Init()
 	derivative.Log = testutil.Logger{}
 
-	emitMetrics(&acc, derivative, start, finish)
+	derivative.Add(start)
+	derivative.Add(finish)
+	derivative.Push(&acc)
 
 	expectedFields := map[string]interface{}{
 		"increasing_by_parameter": 100.0,
@@ -74,7 +76,9 @@ func TestTwoFullEventsWithParameterReverseSequence(t *testing.T) {
 	derivative.Init()
 	derivative.Log = testutil.Logger{}
 
-	emitMetrics(&acc, derivative, finish, start)
+	derivative.Add(finish)
+	derivative.Add(start)
+	derivative.Push(&acc)
 
 	expectedFields := map[string]interface{}{
 		"increasing_by_parameter": 100.0,
@@ -112,7 +116,9 @@ func TestTwoFullEventsWithoutParameter(t *testing.T) {
 		endTime,
 	)
 
-	emitMetrics(&acc, derivative, first, last)
+	derivative.Add(first)
+	derivative.Add(last)
+	derivative.Push(&acc)
 
 	acc.AssertContainsFields(t,
 		"One Field",
@@ -134,11 +140,14 @@ func TestTwoFullEventsInSeperatePushes(t *testing.T) {
 	derivative.Init()
 	derivative.Log = testutil.Logger{}
 
-	emitMetrics(&acc, derivative, start)
+	derivative.Add(start)
+	derivative.Push(&acc)
 	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
 
 	acc.ClearMetrics()
-	emitMetrics(&acc, derivative, finish)
+
+	derivative.Add(finish)
+	derivative.Push(&acc)
 
 	expectedFields := map[string]interface{}{
 		"increasing_wrt_parameter": 100.0,
@@ -162,13 +171,16 @@ func TestTwoFullEventsInSeperatePushesWithSeveralRollOvers(t *testing.T) {
 	derivative.Init()
 	derivative.Log = testutil.Logger{}
 
-	emitMetrics(&acc, derivative, start)
+	derivative.Add(start)
+	derivative.Push(&acc)
 	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
 
-	emitMetrics(&acc, derivative)
-	emitMetrics(&acc, derivative)
-	emitMetrics(&acc, derivative)
-	emitMetrics(&acc, derivative, finish)
+	derivative.Push(&acc)
+	derivative.Push(&acc)
+	derivative.Push(&acc)
+
+	derivative.Add(finish)
+	derivative.Push(&acc)
 
 	expectedFields := map[string]interface{}{
 		"increasing_wrt_parameter": 100.0,
@@ -189,11 +201,16 @@ func TestTwoFullEventsInSeperatePushesWithOutRollOver(t *testing.T) {
 	derivative.Init()
 	derivative.Log = testutil.Logger{}
 
-	emitMetrics(&acc, derivative, start)
+	derivative.Add(start)
+	// This test relies on RunningAggregator always callining Reset after Push
+	// to remove the first metric after max-rollover of 0 has been reached.
+	derivative.Push(&acc)
+	derivative.Reset()
 	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
 
 	acc.ClearMetrics()
-	emitMetrics(&acc, derivative, finish)
+	derivative.Add(finish)
+	derivative.Push(&acc)
 	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
 }
 
@@ -217,11 +234,17 @@ func TestIgnoresMissingVariable(t *testing.T) {
 		time.Now(),
 	)
 
-	emitMetrics(&acc, derivative, noParameter)
+	derivative.Add(noParameter)
+	derivative.Push(&acc)
 	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
 
 	acc.ClearMetrics()
-	emitMetrics(&acc, derivative, noParameter, start, noParameter, finish, noParameter)
+	derivative.Add(noParameter)
+	derivative.Add(start)
+	derivative.Add(noParameter)
+	derivative.Add(finish)
+	derivative.Add(noParameter)
+	derivative.Push(&acc)
 	expectedFields := map[string]interface{}{
 		"increasing_by_parameter": 100.0,
 		"decreasing_by_parameter": -10.0,
@@ -261,9 +284,12 @@ func TestMergesDifferenMetricsWithSameHash(t *testing.T) {
 		endTime,
 	)
 
-	emitMetrics(&acc, derivative, part1)
-	emitMetrics(&acc, derivative, part2)
-	emitMetrics(&acc, derivative, final)
+	derivative.Add(part1)
+	derivative.Push(&acc)
+	derivative.Add(part2)
+	derivative.Push(&acc)
+	derivative.Add(final)
+	derivative.Push(&acc)
 
 	expectedFields := map[string]interface{}{
 		"field1_by_seconds": 10.0,
@@ -285,9 +311,14 @@ func TestDropsAggregatesOnMaxRollOver(t *testing.T) {
 	derivative.Init()
 	derivative.Log = testutil.Logger{}
 
-	emitMetrics(&acc, derivative, start)
-	emitMetrics(&acc, derivative)
-	emitMetrics(&acc, derivative, finish)
+	derivative.Add(start)
+	derivative.Push(&acc)
+	derivative.Reset()
+	derivative.Push(&acc)
+	derivative.Reset()
+	derivative.Add(finish)
+	derivative.Push(&acc)
+	derivative.Reset()
 
 	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
 }
@@ -299,13 +330,17 @@ func TestAddMetricsResetsRollOver(t *testing.T) {
 		Infix:       "_by_",
 		MaxRollOver: 1,
 		cache:       make(map[uint64]aggregate),
+		Log:         testutil.Logger{},
 	}
 	derivative.Init()
-	derivative.Log = testutil.Logger{}
 
-	emitMetrics(&acc, derivative, start)
-	emitMetrics(&acc, derivative, start)
-	emitMetrics(&acc, derivative, finish)
+	derivative.Add(start)
+	derivative.Push(&acc)
+	derivative.Reset()
+	derivative.Add(start)
+	derivative.Reset()
+	derivative.Add(finish)
+	derivative.Push(&acc)
 
 	expectedFields := map[string]interface{}{
 		"increasing_by_parameter": 100.0,
@@ -313,4 +348,55 @@ func TestAddMetricsResetsRollOver(t *testing.T) {
 		"unchanged_by_parameter":  0.0,
 	}
 	acc.AssertContainsFields(t, "Test Metric", expectedFields)
+}
+
+func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
+	acc := testutil.Accumulator{}
+	period, _ := time.ParseDuration("10s")
+	derivative := NewDerivative()
+	derivative.Init()
+	derivative.Log = testutil.Logger{}
+
+	startTime := time.Now()
+	first, _ := metric.New("One Field",
+		map[string]string{},
+		map[string]interface{}{
+			"value": int64(10),
+		},
+		startTime,
+	)
+	derivative.Add(first)
+	derivative.Push(&acc)
+	derivative.Reset()
+
+	second, _ := metric.New("One Field",
+		map[string]string{},
+		map[string]interface{}{
+			"value": int64(20),
+		},
+		startTime.Add(period),
+	)
+	derivative.Add(second)
+	derivative.Push(&acc)
+	derivative.Reset()
+
+	acc.AssertContainsFields(t, "One Field", map[string]interface{}{
+		"value_by_seconds": 1.0,
+	})
+
+	acc.ClearMetrics()
+	third, _ := metric.New("One Field",
+		map[string]string{},
+		map[string]interface{}{
+			"value": int64(40),
+		},
+		startTime.Add(period).Add(period),
+	)
+	derivative.Add(third)
+	derivative.Push(&acc)
+	derivative.Reset()
+
+	acc.AssertContainsFields(t, "One Field", map[string]interface{}{
+		"value_by_seconds": 2.0,
+	})
 }
