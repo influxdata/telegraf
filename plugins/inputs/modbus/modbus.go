@@ -221,9 +221,7 @@ func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
 	var registersRange []registerRange
 	if name == cDiscreteInputs || name == cCoils {
 		maxQuantity = 2000
-	}
-
-	if name == cInputRegisters || name == cHoldingRegisters {
+	} else if name == cInputRegisters || name == cHoldingRegisters {
 		maxQuantity = 125
 	}
 
