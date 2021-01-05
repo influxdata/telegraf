@@ -7,12 +7,14 @@ Pull requests welcome.
 
 
 ## Inputs
-- [rand](https://github.com/ssoroka/rand) - Generate random numbers
-- [twitter](https://github.com/inabagumi/twitter-telegraf-plugin) - Gather account information from Twitter accounts
-- [youtube](https://github.com/inabagumi/youtube-telegraf-plugin) - Gather account information from YouTube channels
 - [awsalarms](https://github.com/vipinvkmenon/awsalarms) - Simple plugin to gather/monitor alarms generated  in AWS.
 - [octoprint](https://github.com/BattleBas/octoprint-telegraf-plugin) - Gather 3d print information from the octoprint API.
+- [open_hardware_monitor](https://github.com/marianob85/open_hardware_monitor-telegraf-plugin) - Gathers sensor data provided by 
+[Open Hardware Monitor](https://openhardwaremonitor.org/) application via Windows Management Instrumentation interface (WMI)
+- [rand](https://github.com/ssoroka/rand) - Generate random numbers
 - [systemd-timings](https://github.com/pdmorrow/telegraf-execd-systemd-timings) - Gather systemd boot and unit timestamp metrics.
+- [twitter](https://github.com/inabagumi/twitter-telegraf-plugin) - Gather account information from Twitter accounts
+- [youtube](https://github.com/inabagumi/youtube-telegraf-plugin) - Gather account information from YouTube channels
 
 ## Outputs
 - [kinesis](https://github.com/morfien101/telegraf-output-kinesis) - Aggregation and compression of metrics to send Amazon Kinesis.
