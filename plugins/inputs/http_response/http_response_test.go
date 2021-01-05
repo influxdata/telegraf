@@ -1,3 +1,7 @@
+// +build !windows
+
+// TODO: Windows - should be enabled for Windows when https://github.com/influxdata/telegraf/issues/8451 is fixed
+
 package http_response
 
 import (
@@ -7,11 +11,13 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -162,7 +168,7 @@ func TestHeaders(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL,
+		URLs:            []string{ts.URL},
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 2},
 		Headers: map[string]string{
@@ -198,7 +204,7 @@ func TestFields(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/good",
+		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -236,7 +242,7 @@ func TestResponseBodyField(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/good",
+		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -271,7 +277,7 @@ func TestResponseBodyField(t *testing.T) {
 	// Invalid UTF-8 String
 	h = &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/invalidUTF8",
+		URLs:            []string{ts.URL + "/invalidUTF8"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -305,7 +311,7 @@ func TestResponseBodyMaxSize(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/good",
+		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -339,7 +345,7 @@ func TestHTTPHeaderTags(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/good",
+		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -374,7 +380,7 @@ func TestHTTPHeaderTags(t *testing.T) {
 
 	h = &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/noheader",
+		URLs:            []string{ts.URL + "/noheader"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -400,7 +406,7 @@ func TestHTTPHeaderTags(t *testing.T) {
 	// Connection failed
 	h = &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         "https:/nonexistent.nonexistent", // Any non-routable IP works here
+		URLs:            []string{"https:/nonexistent.nonexistent"}, // Any non-routable IP works here
 		Body:            "",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 5},
@@ -456,7 +462,7 @@ func TestInterface(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/good",
+		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -495,7 +501,7 @@ func TestRedirects(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/redirect",
+		URLs:            []string{ts.URL + "/redirect"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -526,7 +532,7 @@ func TestRedirects(t *testing.T) {
 
 	h = &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/badredirect",
+		URLs:            []string{ts.URL + "/badredirect"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -563,7 +569,7 @@ func TestMethod(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/mustbepostmethod",
+		URLs:            []string{ts.URL + "/mustbepostmethod"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "POST",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -594,7 +600,7 @@ func TestMethod(t *testing.T) {
 
 	h = &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/mustbepostmethod",
+		URLs:            []string{ts.URL + "/mustbepostmethod"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -626,7 +632,7 @@ func TestMethod(t *testing.T) {
 	//check that lowercase methods work correctly
 	h = &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/mustbepostmethod",
+		URLs:            []string{ts.URL + "/mustbepostmethod"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "head",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -663,7 +669,7 @@ func TestBody(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/musthaveabody",
+		URLs:            []string{ts.URL + "/musthaveabody"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -694,7 +700,7 @@ func TestBody(t *testing.T) {
 
 	h = &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/musthaveabody",
+		URLs:            []string{ts.URL + "/musthaveabody"},
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
 		Headers: map[string]string{
@@ -728,7 +734,7 @@ func TestStringMatch(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:                 testutil.Logger{},
-		Address:             ts.URL + "/good",
+		URLs:                []string{ts.URL + "/good"},
 		Body:                "{ 'test': 'data'}",
 		Method:              "GET",
 		ResponseStringMatch: "hit the good page",
@@ -766,7 +772,7 @@ func TestStringMatchJson(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:                 testutil.Logger{},
-		Address:             ts.URL + "/jsonresponse",
+		URLs:                []string{ts.URL + "/jsonresponse"},
 		Body:                "{ 'test': 'data'}",
 		Method:              "GET",
 		ResponseStringMatch: "\"service_status\": \"up\"",
@@ -804,7 +810,7 @@ func TestStringMatchFail(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:                 testutil.Logger{},
-		Address:             ts.URL + "/good",
+		URLs:                []string{ts.URL + "/good"},
 		Body:                "{ 'test': 'data'}",
 		Method:              "GET",
 		ResponseStringMatch: "hit the bad page",
@@ -847,7 +853,7 @@ func TestTimeout(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/twosecondnap",
+		URLs:            []string{ts.URL + "/twosecondnap"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second},
@@ -881,7 +887,7 @@ func TestBadRegex(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:                 testutil.Logger{},
-		Address:             ts.URL + "/good",
+		URLs:                []string{ts.URL + "/good"},
 		Body:                "{ 'test': 'data'}",
 		Method:              "GET",
 		ResponseStringMatch: "bad regex:[[",
@@ -901,15 +907,27 @@ func TestBadRegex(t *testing.T) {
 	checkOutput(t, &acc, nil, nil, absentFields, absentTags)
 }
 
+type fakeClient struct {
+	statusCode int
+	err        error
+}
+
+func (f *fakeClient) Do(req *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: f.statusCode,
+	}, f.err
+}
+
 func TestNetworkErrors(t *testing.T) {
 	// DNS error
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         "https://nonexistent.nonexistent", // Any non-resolvable URL works here
+		URLs:            []string{"https://nonexistent.nonexistent"}, // Any non-resolvable URL works here
 		Body:            "",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
 		FollowRedirects: false,
+		client:          &fakeClient{err: &url.Error{Err: &net.OpError{Err: &net.DNSError{Err: "DNS error"}}}},
 	}
 
 	var acc testutil.Accumulator
@@ -932,7 +950,7 @@ func TestNetworkErrors(t *testing.T) {
 	// Connection failed
 	h = &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         "https:/nonexistent.nonexistent", // Any non-routable IP works here
+		URLs:            []string{"https:/nonexistent.nonexistent"}, // Any non-routable IP works here
 		Body:            "",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 5},
@@ -1082,7 +1100,7 @@ func TestBasicAuth(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
-		Address:         ts.URL + "/good",
+		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -1121,7 +1139,7 @@ func TestStatusCodeMatchFail(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:                testutil.Logger{},
-		Address:            ts.URL + "/nocontent",
+		URLs:               []string{ts.URL + "/nocontent"},
 		ResponseStatusCode: http.StatusOK,
 		ResponseTimeout:    internal.Duration{Duration: time.Second * 20},
 	}
@@ -1154,7 +1172,7 @@ func TestStatusCodeMatch(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:                testutil.Logger{},
-		Address:            ts.URL + "/nocontent",
+		URLs:               []string{ts.URL + "/nocontent"},
 		ResponseStatusCode: http.StatusNoContent,
 		ResponseTimeout:    internal.Duration{Duration: time.Second * 20},
 	}
@@ -1187,7 +1205,7 @@ func TestStatusCodeAndStringMatch(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:                 testutil.Logger{},
-		Address:             ts.URL + "/good",
+		URLs:                []string{ts.URL + "/good"},
 		ResponseStatusCode:  http.StatusOK,
 		ResponseStringMatch: "hit the good page",
 		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
@@ -1222,7 +1240,7 @@ func TestStatusCodeAndStringMatchFail(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:                 testutil.Logger{},
-		Address:             ts.URL + "/nocontent",
+		URLs:                []string{ts.URL + "/nocontent"},
 		ResponseStatusCode:  http.StatusOK,
 		ResponseStringMatch: "hit the good page",
 		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
@@ -1248,4 +1266,41 @@ func TestStatusCodeAndStringMatchFail(t *testing.T) {
 		"result":      "response_status_code_mismatch",
 	}
 	checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
+}
+
+func TestSNI(t *testing.T) {
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "super-special-hostname.example.com", r.TLS.ServerName)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Log:             testutil.Logger{},
+		URLs:            []string{ts.URL + "/good"},
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ClientConfig: tls.ClientConfig{
+			InsecureSkipVerify: true,
+			ServerName:         "super-special-hostname.example.com",
+		},
+	}
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
+	require.NoError(t, err)
+	expectedFields := map[string]interface{}{
+		"http_response_code": http.StatusOK,
+		"result_type":        "success",
+		"result_code":        0,
+		"response_time":      nil,
+		"content_length":     nil,
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "200",
+		"result":      "success",
+	}
+	absentFields := []string{"response_string_match"}
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 }

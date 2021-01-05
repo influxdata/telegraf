@@ -11,7 +11,6 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -25,20 +24,13 @@ var ValidTopicSuffixMethods = []string{
 var zeroTime = time.Unix(0, 0)
 
 type Kafka struct {
-	Brokers          []string    `toml:"brokers"`
-	Topic            string      `toml:"topic"`
-	TopicTag         string      `toml:"topic_tag"`
-	ExcludeTopicTag  bool        `toml:"exclude_topic_tag"`
-	ClientID         string      `toml:"client_id"`
-	TopicSuffix      TopicSuffix `toml:"topic_suffix"`
-	RoutingTag       string      `toml:"routing_tag"`
-	RoutingKey       string      `toml:"routing_key"`
-	CompressionCodec int         `toml:"compression_codec"`
-	RequiredAcks     int         `toml:"required_acks"`
-	MaxRetry         int         `toml:"max_retry"`
-	MaxMessageBytes  int         `toml:"max_message_bytes"`
-
-	Version string `toml:"version"`
+	Brokers         []string    `toml:"brokers"`
+	Topic           string      `toml:"topic"`
+	TopicTag        string      `toml:"topic_tag"`
+	ExcludeTopicTag bool        `toml:"exclude_topic_tag"`
+	TopicSuffix     TopicSuffix `toml:"topic_suffix"`
+	RoutingTag      string      `toml:"routing_tag"`
+	RoutingKey      string      `toml:"routing_key"`
 
 	// Legacy TLS config options
 	// TLS client certificate
@@ -48,10 +40,7 @@ type Kafka struct {
 	// TLS certificate authority
 	CA string
 
-	EnableTLS *bool `toml:"enable_tls"`
-	tlsint.ClientConfig
-
-	kafka.SASLAuth
+	kafka.WriteConfig
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -158,13 +147,18 @@ var sampleConfig = `
   ##       routing_key = "telegraf"
   # routing_key = ""
 
-  ## CompressionCodec represents the various compression codecs recognized by
+  ## Compression codec represents the various compression codecs recognized by
   ## Kafka in messages.
-  ##  0 : No compression
-  ##  1 : Gzip compression
-  ##  2 : Snappy compression
-  ##  3 : LZ4 compression
+  ##  0 : None
+  ##  1 : Gzip
+  ##  2 : Snappy
+  ##  3 : LZ4
+  ##  4 : ZSTD
   # compression_codec = 0
+
+  ## Idempotent Writes
+  ## If enabled, exactly one copy of each message is written.
+  # idempotent_writes = false
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
   ##  replica acknowledgements it must see before responding
@@ -191,7 +185,6 @@ var sampleConfig = `
   # max_message_bytes = 1000000
 
   ## Optional TLS Config
-  # enable_tls = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
@@ -278,34 +271,15 @@ func (k *Kafka) SetSerializer(serializer serializers.Serializer) {
 	k.serializer = serializer
 }
 
-func (k *Kafka) Connect() error {
+func (k *Kafka) Init() error {
 	err := ValidateTopicSuffixMethod(k.TopicSuffix.Method)
 	if err != nil {
 		return err
 	}
 	config := sarama.NewConfig()
 
-	if k.Version != "" {
-		version, err := sarama.ParseKafkaVersion(k.Version)
-		if err != nil {
-			return err
-		}
-		config.Version = version
-	}
-
-	if k.ClientID != "" {
-		config.ClientID = k.ClientID
-	} else {
-		config.ClientID = "Telegraf"
-	}
-
-	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
-	config.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
-	config.Producer.Retry.Max = k.MaxRetry
-	config.Producer.Return.Successes = true
-
-	if k.MaxMessageBytes > 0 {
-		config.Producer.MaxMessageBytes = k.MaxMessageBytes
+	if err := k.SetConfig(config); err != nil {
+		return err
 	}
 
 	// Legacy support ssl config
@@ -315,35 +289,15 @@ func (k *Kafka) Connect() error {
 		k.TLSKey = k.Key
 	}
 
-	if k.EnableTLS != nil && *k.EnableTLS {
-		config.Net.TLS.Enable = true
-	}
-
-	tlsConfig, err := k.ClientConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-
-	if tlsConfig != nil {
-		config.Net.TLS.Config = tlsConfig
-
-		// To maintain backwards compatibility, if the enable_tls option is not
-		// set TLS is enabled if a non-default TLS config is used.
-		if k.EnableTLS == nil {
-			k.Log.Warnf("Use of deprecated configuration: enable_tls should be set when using TLS")
-			config.Net.TLS.Enable = true
-		}
-	}
-
-	if err := k.SetSASLConfig(config); err != nil {
-		return err
-	}
-
 	producer, err := k.producerFunc(k.Brokers, config)
 	if err != nil {
 		return err
 	}
 	k.producer = producer
+	return nil
+}
+
+func (k *Kafka) Connect() error {
 	return nil
 }
 
@@ -436,8 +390,10 @@ func init() {
 	sarama.Logger = &DebugLogger{}
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
-			MaxRetry:     3,
-			RequiredAcks: -1,
+			WriteConfig: kafka.WriteConfig{
+				MaxRetry:     3,
+				RequiredAcks: -1,
+			},
 			producerFunc: sarama.NewSyncProducer,
 		}
 	})
