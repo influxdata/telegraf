@@ -495,3 +495,40 @@ func TestRedial(t *testing.T) {
 	grpcServer.Stop()
 	wg.Wait()
 }
+
+type MockAccumulator struct {
+	telegraf.Accumulator
+	metrics []telegraf.Metric
+}
+
+func (m *MockAccumulator) AddMetric(metric telegraf.Metric) {
+	m.metrics = append(m.metrics, metric)
+}
+
+func Test_handleSubscribeResponseUpdate(t *testing.T) {
+	a := "172.1.1.2:6702"
+	u := &gnmi.SubscribeResponse_Update{
+		Update: &gnmi.Notification{
+			Timestamp: time.Now().UnixNano(),
+			Prefix: &gnmi.Path{
+				Origin: "Monta",
+				Elem: []*gnmi.PathElem{
+					{Name: "oc-if:interfaces"},
+					{Name: "oc-if:interface"},
+					{Name: "oc-if:state"},
+					{Name: "oc-if:counters"},
+				},
+			},
+			Update: []*gnmi.Update{
+				{
+					Path: &gnmi.Path{Origin: "Monta", Elem: []*gnmi.PathElem{{Name: "in-1024-to-1518-octet-pkts"}}},
+					Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: uint64(324504)}},
+				}}}}
+	ma := &MockAccumulator{}
+	p := &GNMI{acc: ma, Log: testutil.Logger{}}
+
+	p.handleSubscribeResponseUpdate(a, u)
+
+	assert.Len(t, ma.metrics, 1)
+	assert.Equal(t, "Monta:/oc_if:interfaces/oc_if:interface/oc_if:state/oc_if:countersMonta:/in_1024_to_1518_octet_pkts", ma.metrics[0].FieldList()[0].Key)
+}
