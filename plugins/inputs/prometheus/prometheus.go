@@ -78,17 +78,17 @@ var sampleConfig = `
   ## modification.
   ##
   ##   example: metric_version = 1; deprecated in 1.13
-	##            metric_version = 2; recommended version
-	# metric_version = 1
+  ##            metric_version = 2; recommended version
+  # metric_version = 1
 
   ## Url tag name (tag containing scrapped url. optional, default is "url")
-	# url_tag = "scrapeUrl"
+  # url_tag = "scrapeUrl"
 
   ## An array of Kubernetes services to scrape metrics from.
-	# kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
+  # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
 
   ## Kubernetes config file to create client from.
-	# kube_config = "/path/to/kubernetes.config"
+  # kube_config = "/path/to/kubernetes.config"
 
   ## Scrape Kubernetes pods for the following prometheus annotations:
   ## - prometheus.io/scrape: Enable scraping for this pod
@@ -104,24 +104,24 @@ var sampleConfig = `
   # kubernetes_label_selector = "env=dev,app=nginx"
   # field selector to target pods
   # eg. To scrape pods on a specific node
-	# kubernetes_field_selector = "spec.nodeName=$HOSTNAME"
+  # kubernetes_field_selector = "spec.nodeName=$HOSTNAME"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   # bearer_token = "/path/to/bearer/token"
   ## OR
-	# bearer_token_string = "abc_123"
+  # bearer_token_string = "abc_123"
 
   ## HTTP Basic Authentication username and password. ('bearer_token' and
   ## 'bearer_token_string' take priority)
   # username = ""
-	# password = ""
+  # password = ""
 
   ## HTTP Headers (all values must be strings)
   # [inputs.prometheus.headers]
   #   X-Auth-Token = "my-xauth-token"
   #   apiVersion = "v1"
   ## Specify timeout duration for slower prometheus clients (default is 3s)
-	# response_timeout = "3s"
+  # response_timeout = "3s"
 
   ## Optional TLS Config
   # tls_ca = /path/to/cafile
