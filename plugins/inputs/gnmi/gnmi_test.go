@@ -495,3 +495,33 @@ func TestRedial(t *testing.T) {
 	grpcServer.Stop()
 	wg.Wait()
 }
+
+func Test_handleSubscribeResponseUpdate(t *testing.T) {
+	a := "172.1.1.2:6702"
+	u := &gnmi.SubscribeResponse_Update{
+		Update: &gnmi.Notification{
+			Timestamp: time.Now().UnixNano(),
+			Prefix: &gnmi.Path{
+				Origin: "Monta",
+				Elem: []*gnmi.PathElem{
+					{Name: "oc-if:interfaces"},
+					{Name: "oc-if:interface"},
+					{Name: "oc-if:state"},
+					{Name: "oc-if:counters"},
+				},
+			},
+			Update: []*gnmi.Update{
+				{
+					Path: &gnmi.Path{Origin: "Monta", Elem: []*gnmi.PathElem{{Name: "in-1024-to-1518-octet-pkts"}}},
+					Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: uint64(324504)}},
+				}}}}
+
+	acc := &testutil.Accumulator{}
+	p := &GNMI{acc: acc, Log: testutil.Logger{}}
+	p.handleSubscribeResponseUpdate(a, u)
+
+	assert.Len(t, acc.Metrics, 1)
+	for key, _ := range acc.Metrics[0].Fields {
+		assert.Equal(t, "Monta:/oc_if:interfaces/oc_if:interface/oc_if:state/oc_if:countersMonta:/in_1024_to_1518_octet_pkts", key)
+	}
+}
