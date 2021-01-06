@@ -327,7 +327,7 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testi
 
 	err = acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Equal(t, `dial unix /tmp/invalid.sock: connect: no such file or directory`, err.Error())
+	assert.Equal(t, `socket doesn't exist "/tmp/invalid.sock": <nil>`, err.Error())
 
 }
 

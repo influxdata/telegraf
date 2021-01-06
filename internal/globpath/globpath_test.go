@@ -26,22 +26,26 @@ func TestCompileAndMatch(t *testing.T) {
 	}
 
 	tests := []test{
-		// test super asterisk
-		{path: filepath.Join(testdataDir, "**"), matches: 6},
+		//test super asterisk
+		{path: filepath.Join(testdataDir, "**"), matches: 7},
 		// test single asterisk
-		{path: filepath.Join(testdataDir, "*.log"), matches: 2},
+		{path: filepath.Join(testdataDir, "*.log"), matches: 3},
 		// test no meta characters (file exists)
 		{path: filepath.Join(testdataDir, "log1.log"), matches: 1},
 		// test file that doesn't exist
-		{path: filepath.Join(testdataDir, "i_dont_exist.log"), matches: 1},
+		{path: filepath.Join(testdataDir, "i_dont_exist.log"), matches: 0},
 		// test super asterisk that doesn't exist
 		{path: filepath.Join(testdataDir, "dir_doesnt_exist", "**"), matches: 0},
 		// test exclamation mark creates non-matching list with a range
-		{path: filepath.Join(testdataDir, "log[!1-2]*"), matches: 0},
+		{path: filepath.Join(testdataDir, "log[!1-2]*"), matches: 1},
 		// test caret creates non-matching list
-		{path: filepath.Join(testdataDir, "log[^1-2]*"), matches: 0},
+		{path: filepath.Join(testdataDir, "log[^1-2]*"), matches: 1},
 		// test exclamation mark creates non-matching list without a range
-		{path: filepath.Join(testdataDir, "log[!2]*"), matches: 1},
+		{path: filepath.Join(testdataDir, "log[!2]*"), matches: 2},
+		// test exclamation mark creates non-matching list without a range
+		{path: filepath.Join(testdataDir, "log\\[!*"), matches: 1},
+		// test exclamation mark creates non-matching list without a range
+		{path: filepath.Join(testdataDir, "log\\[^*"), matches: 0},
 	}
 
 	for _, tc := range tests {
@@ -71,7 +75,7 @@ func TestRootGlob(t *testing.T) {
 
 func TestFindNestedTextFile(t *testing.T) {
 	// test super asterisk
-	g1, err := Compile(filepath.Join(testdataDir, "**.txt"))
+	g1, err := Compile(filepath.Join(testdataDir, "**/**.txt"))
 	require.NoError(t, err)
 
 	matches := g1.Match()
@@ -87,7 +91,7 @@ func TestMatch_ErrPermission(t *testing.T) {
 		input    string
 		expected []string
 	}{
-		{"/root/foo", []string{"/root/foo"}},
+		{"/root/foo", []string(nil)},
 		{"/root/f*", []string(nil)},
 	}
 
