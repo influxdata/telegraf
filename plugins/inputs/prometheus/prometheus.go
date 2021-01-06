@@ -70,7 +70,7 @@ type Prometheus struct {
 
 var sampleConfig = `
   ## An array of urls to scrape metrics from.
-	urls = ["http://localhost:9100/metrics"]
+  urls = ["http://localhost:9100/metrics"]
 
   ## Metric version controls the mapping from Prometheus metrics into
   ## Telegraf metrics.  When using the prometheus_client output, use the same
