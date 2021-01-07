@@ -507,14 +507,11 @@ func TestHandleSubscribeResponseUpdate(t *testing.T) {
 					{Name: "oc-if:interfaces"},
 					{Name: "oc-if:interface"},
 					{Name: "oc-if:state"},
-					{Name: "oc-if:counters"},
-				},
+					{Name: "oc-if:counters"}},
 			},
-			Update: []*gnmi.Update{
-				{
-					Path: &gnmi.Path{Origin: "Monta", Elem: []*gnmi.PathElem{{Name: "in-1024-to-1518-octet-pkts"}}},
-					Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: uint64(324504)}},
-				}}}}
+			Update: []*gnmi.Update{{
+				Path: &gnmi.Path{Origin: "Monta", Elem: []*gnmi.PathElem{{Name: "in-1024-to-1518-octet-pkts"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: uint64(324504)}}}}}}
 
 	acc := &testutil.Accumulator{}
 	p := &GNMI{acc: acc, Log: testutil.Logger{}}
