@@ -1,10 +1,9 @@
 package metric
 
 import (
-	"hash/fnv"
-	"io"
+	"encoding/binary"
+	"hash/maphash"
 	"sort"
-	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -23,14 +22,17 @@ import (
 // + cpu,host=localhost idle_time=42,usage_time=42
 func NewSeriesGrouper() *SeriesGrouper {
 	return &SeriesGrouper{
-		metrics: make(map[uint64]telegraf.Metric),
-		ordered: []telegraf.Metric{},
+		metrics:  make(map[uint64]telegraf.Metric),
+		ordered:  []telegraf.Metric{},
+		hashSeed: maphash.MakeSeed(),
 	}
 }
 
 type SeriesGrouper struct {
 	metrics map[uint64]telegraf.Metric
 	ordered []telegraf.Metric
+
+	hashSeed maphash.Seed
 }
 
 // Add adds a field key and value to the series.
@@ -41,8 +43,15 @@ func (g *SeriesGrouper) Add(
 	field string,
 	fieldValue interface{},
 ) error {
+	taglist := make([]*telegraf.Tag, 0, len(tags))
+	for k, v := range tags {
+		taglist = append(taglist,
+			&telegraf.Tag{Key: k, Value: v})
+	}
+	sort.Slice(taglist, func(i, j int) bool { return taglist[i].Key < taglist[j].Key })
+
 	var err error
-	id := groupID(measurement, tags, tm)
+	id := groupID(g.hashSeed, measurement, taglist, tm)
 	metric := g.metrics[id]
 	if metric == nil {
 		metric, err = New(measurement, tags, map[string]interface{}{field: fieldValue}, tm)
@@ -57,30 +66,46 @@ func (g *SeriesGrouper) Add(
 	return nil
 }
 
+// AddMetric adds a metric to the series, merging with any previous matching metrics.
+func (g *SeriesGrouper) AddMetric(
+	metric telegraf.Metric,
+) {
+	id := groupID(g.hashSeed, metric.Name(), metric.TagList(), metric.Time())
+	m := g.metrics[id]
+	if m == nil {
+		m = metric.Copy()
+		g.metrics[id] = m
+		g.ordered = append(g.ordered, m)
+	} else {
+		for _, f := range metric.FieldList() {
+			m.AddField(f.Key, f.Value)
+		}
+	}
+}
+
 // Metrics returns the metrics grouped by series and time.
 func (g *SeriesGrouper) Metrics() []telegraf.Metric {
 	return g.ordered
 }
 
-func groupID(measurement string, tags map[string]string, tm time.Time) uint64 {
-	h := fnv.New64a()
-	h.Write([]byte(measurement))
-	h.Write([]byte("\n"))
+func groupID(seed maphash.Seed, measurement string, taglist []*telegraf.Tag, tm time.Time) uint64 {
+	var mh maphash.Hash
+	mh.SetSeed(seed)
 
-	taglist := make([]*telegraf.Tag, 0, len(tags))
-	for k, v := range tags {
-		taglist = append(taglist,
-			&telegraf.Tag{Key: k, Value: v})
-	}
-	sort.Slice(taglist, func(i, j int) bool { return taglist[i].Key < taglist[j].Key })
+	mh.WriteString(measurement)
+	mh.WriteByte(0)
+
 	for _, tag := range taglist {
-		h.Write([]byte(tag.Key))
-		h.Write([]byte("\n"))
-		h.Write([]byte(tag.Value))
-		h.Write([]byte("\n"))
+		mh.WriteString(tag.Key)
+		mh.WriteByte(0)
+		mh.WriteString(tag.Value)
+		mh.WriteByte(0)
 	}
-	h.Write([]byte("\n"))
+	mh.WriteByte(0)
 
-	io.WriteString(h, strconv.FormatInt(tm.UnixNano(), 10))
-	return h.Sum64()
+	var tsBuf [8]byte
+	binary.BigEndian.PutUint64(tsBuf[:], uint64(tm.UnixNano()))
+	mh.Write(tsBuf[:])
+
+	return mh.Sum64()
 }
