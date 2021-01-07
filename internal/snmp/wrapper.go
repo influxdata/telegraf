@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/soniah/gosnmp"
+	"github.com/gosnmp/gosnmp"
 )
 
 // GosnmpWrapper wraps a *gosnmp.GoSNMP object so we can use it as a snmpConnection.
