@@ -496,7 +496,7 @@ func TestRedial(t *testing.T) {
 	wg.Wait()
 }
 
-func Test_handleSubscribeResponseUpdate(t *testing.T) {
+func TestHandleSubscribeResponseUpdate(t *testing.T) {
 	a := "172.1.1.2:6702"
 	u := &gnmi.SubscribeResponse_Update{
 		Update: &gnmi.Notification{
