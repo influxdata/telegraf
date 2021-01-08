@@ -12,20 +12,20 @@ This is a sample config for the plugin.
 ```toml
 # Listener capable of handling KNX bus messages provided trough a KNX-IP Interface.
 [[inputs.KNXListener]]
-  # Type of KNX-IP interface.
-  # Can be either "tunnel" or "router".
-  service_type = "tunnel"
+  ## Type of KNX-IP interface.
+  ## Can be either "tunnel" or "router".
+  # service_type = "tunnel"
 
-  # Address of the KNX-IP interface.
+  ## Address of the KNX-IP interface.
   service_address = "localhost:3671"
 
   ## Measurement definition(s)
   # [[inputs.KNXListener.measurement]]
-  #   # Name of the measurement
+  #   ## Name of the measurement
   #   name = "temperature"
-  #   # Datapoint-Type (DPT) of the KNX messages
+  #   ## Datapoint-Type (DPT) of the KNX messages
   #   dpt = "9.001"
-  #   # List of Group-Addresses (GAs) assigned to the measurement
+  #   ## List of Group-Addresses (GAs) assigned to the measurement
   #   addresses = ["5/5/1"]
 
   # [[inputs.KNXListener.measurement]]
