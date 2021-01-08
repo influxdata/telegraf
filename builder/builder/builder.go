@@ -17,7 +17,7 @@ type Build struct {
 // GOARCH="amd64"
 // GOOS="darwin"
 func (b *Build) Compile() error {
-	os.MkdirAll("tmp", os.ModeDir|0447)
+	_ = os.MkdirAll("tmp", os.ModeDir|0447)
 	f, err := os.Create("cmd/telegraf/customplugins.go")
 	if err != nil {
 		return err
