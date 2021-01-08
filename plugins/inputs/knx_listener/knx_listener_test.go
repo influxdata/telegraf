@@ -83,6 +83,7 @@ func TestRegularReceives_DPT(t *testing.T) {
 	listener := KNXListener{
 		ServiceType:  "dummy",
 		Measurements: measurements,
+		Log:          testutil.Logger{Name: "knx_listener"},
 	}
 
 	// Setup the listener to test

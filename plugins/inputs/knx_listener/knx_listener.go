@@ -2,7 +2,6 @@ package knx_listener
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 
 	"github.com/vapourismo/knx-go/knx"
@@ -29,9 +28,10 @@ type Measurement struct {
 }
 
 type KNXListener struct {
-	ServiceType    string        `toml:"service_type"`
-	ServiceAddress string        `toml:"service_address"`
-	Measurements   []Measurement `toml:"measurement"`
+	ServiceType    string          `toml:"service_type"`
+	ServiceAddress string          `toml:"service_address"`
+	Measurements   []Measurement   `toml:"measurement"`
+	Log            telegraf.Logger `toml:"-"`
 
 	client      KNXInterface
 	gaTargetMap map[string]addressTarget
@@ -80,9 +80,9 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 	// of the measurement
 	kl.gaTargetMap = make(map[string]addressTarget)
 	for _, m := range kl.Measurements {
-		log.Printf("D! [inputs.KNXListener] group-address mapping for measurement \"%s\"", m.Name)
+		kl.Log.Debugf("Group-address mapping for measurement %q:", m.Name)
 		for _, ga := range m.Addresses {
-			log.Printf("D! [inputs.KNXListener]     %v --> %s", ga, m.Dpt)
+			kl.Log.Debugf("  %v --> %s", ga, m.Dpt)
 			if _, ok := kl.gaTargetMap[ga]; ok {
 				return fmt.Errorf("duplicate specification of address %v", ga)
 			}
@@ -95,7 +95,7 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 	}
 
 	// Connect to the KNX-IP interface
-	log.Printf("I! [inputs.KNXListener] Trying to connect to \"%s\" at \"%s\"", kl.ServiceType, kl.ServiceAddress)
+	kl.Log.Infof("Trying to connect to %q at %q", kl.ServiceType, kl.ServiceAddress)
 	switch kl.ServiceType {
 	case "tunnel":
 		c, err := knx.NewGroupTunnel(kl.ServiceAddress, knx.DefaultTunnelConfig)
@@ -118,7 +118,7 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 	default:
 		return fmt.Errorf("invalid interface type: %s", kl.ServiceAddress)
 	}
-	log.Printf("I! [inputs.KNXListener] Connected!")
+	kl.Log.Infof("Connected!")
 
 	// Listen to the KNX bus
 	go kl.listen()
@@ -140,10 +140,10 @@ func (kl *KNXListener) listen() {
 		if ok {
 			err := target.datapoint.Unpack(msg.Data)
 			if err != nil {
-				log.Printf("E! [inputs.KNXListener] Unpacking data failed: %v", err)
+				kl.Log.Errorf("Unpacking data failed: %v", err)
 				continue
 			}
-			log.Printf("D! [inputs.KNXListener] Matched GA \"%v\" to measurement \"%v\" with value \"%v\"", ga, target.measurement, target.datapoint)
+			kl.Log.Debugf("Matched GA %q to measurement %q with value %v", ga, target.measurement, target.datapoint)
 
 			// Convert the DatapointValue interface back to its basic type again
 			// as otherwise telegraf will not push out the metrics and eat it
@@ -160,7 +160,7 @@ func (kl *KNXListener) listen() {
 			case reflect.Float32, reflect.Float64:
 				value = vi.Float()
 			default:
-				log.Printf("E! [inputs.KNXListener] Type conversion %v failed for address %v", ga, vi.Kind())
+				kl.Log.Errorf("Type conversion %v failed for address %v", ga, vi.Kind())
 				continue
 			}
 
@@ -173,7 +173,7 @@ func (kl *KNXListener) listen() {
 			}
 			kl.acc.AddFields(target.measurement, fields, tags)
 		} else {
-			log.Printf("I! [inputs.KNXListener] Ignoring message %+v for unknown GA \"%v\"", msg, ga)
+			kl.Log.Infof("Ignoring message %+v for unknown GA %q", msg, ga)
 		}
 	}
 }
