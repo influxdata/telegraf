@@ -12,6 +12,7 @@ require (
 	github.com/Azure/azure-storage-queue-go v0.0.0-20181215014128-6ed74e755687
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Azure/go-autorest/autorest v0.11.1
+	github.com/Azure/go-autorest/autorest/adal v0.8.1
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
@@ -46,7 +47,7 @@ require (
 	github.com/couchbase/go-couchbase v0.0.0-20180501122049-16db1f1fe037
 	github.com/couchbase/gomemcached v0.0.0-20180502221210-0da75df14530 // indirect
 	github.com/couchbase/goutils v0.0.0-20180530154633-e865a1461c8a // indirect
-	github.com/denisenkom/go-mssqldb v0.0.0-20190707035753-2be1aa521ff4
+	github.com/denisenkom/go-mssqldb v0.9.0
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/dimchansky/utfbom v1.1.0
 	github.com/docker/distribution v2.6.0-rc.1.0.20170726174610-edc3ab29cdff+incompatible // indirect
@@ -110,6 +111,8 @@ require (
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
+	github.com/opentracing/opentracing-go v1.0.2 // indirect
+	github.com/openzipkin/zipkin-go v0.1.6 // indirect
 	github.com/openzipkin/zipkin-go-opentracing v0.3.4
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.5.1
