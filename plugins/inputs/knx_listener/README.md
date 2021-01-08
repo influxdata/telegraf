@@ -36,7 +36,7 @@ This is a sample config for the plugin.
 
 #### Measurement configurations
 
-Each measurement only containx one datapoint-type (DPT) and assigns a list of
+Each measurement contains only one datapoint-type (DPT) and assigns a list of
 addresses to this measurement. You can, for example group all temperature sensor
 messages within a "temperature" measurement. However, you are free to split
 messages of one datapoint-type to multiple measurements.
