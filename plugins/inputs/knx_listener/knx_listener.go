@@ -35,6 +35,7 @@ type KNXListener struct {
 
 	client      KNXInterface
 	gaTargetMap map[string]addressTarget
+	gaLogbook   map[string]bool
 
 	acc telegraf.Accumulator
 }
@@ -75,6 +76,9 @@ func (kl *KNXListener) Gather(_ telegraf.Accumulator) error {
 func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 	// Store the accumulator for later use
 	kl.acc = acc
+
+	// Setup a logbook to track unknown GAs to avoid log-spamming
+	kl.gaLogbook = make(map[string]bool)
 
 	// Construct the mapping of Group-addresses (GAs) to DPTs and the name
 	// of the measurement
@@ -137,8 +141,9 @@ func (kl *KNXListener) listen() {
 		// Match GA to DataPointType and measurement name
 		ga := msg.Destination.String()
 		target, ok := kl.gaTargetMap[ga]
-		if !ok {
+		if !ok && !kl.gaLogbook[ga] {
 			kl.Log.Infof("Ignoring message %+v for unknown GA %q", msg, ga)
+			kl.gaLogbook[ga] = true
 			continue
 		}
 
