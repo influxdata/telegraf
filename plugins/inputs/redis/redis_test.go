@@ -310,3 +310,22 @@ db0:keys=2,expires=0,avg_ttl=0
 
 (error) ERR unknown command 'eof'
 `
+
+func TestRedis_ParseFloatOnInts(t *testing.T) {
+	var acc testutil.Accumulator
+	tags := map[string]string{"host": "redis.net"}
+	rdr := bufio.NewReader(strings.NewReader(strings.Replace(testOutput, "mem_fragmentation_ratio:0.81", "mem_fragmentation_ratio:1", 1)))
+	err := gatherInfoOutput(rdr, &acc, tags)
+	require.NoError(t, err)
+	var m *testutil.Metric
+	for i := range acc.Metrics {
+		if _, ok := acc.Metrics[i].Fields["mem_fragmentation_ratio"]; ok {
+			// m = acc.Metrics[i]
+			break
+		}
+	}
+	require.NotNil(t, m)
+	fragRatio, ok := m.Fields["mem_fragmentation_ratio"]
+	require.True(t, ok)
+	require.IsType(t, float64(0.0), fragRatio)
+}

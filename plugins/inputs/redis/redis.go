@@ -2,6 +2,7 @@ package redis
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
@@ -44,6 +45,65 @@ type Client interface {
 type RedisClient struct {
 	client *redis.Client
 	tags   map[string]string
+}
+
+type RedisOutputs struct {
+	Uptime                     int64   `json:"uptime"`
+	LruClock                   int64   `json:"lru_clock"`
+	Clients                    int64   `json:"clients"`
+	ClientLongestOutputList    int64   `json:"client_longest_output_list"`
+	ClientBiggestInputBuf      int64   `json:"client_biggest_input_buf"`
+	BlockedClients             int64   `json:"blocked_clients"`
+	UsedMemory                 int64   `json:"used_memory"`
+	UsedMemoryRss              int64   `json:"used_memory_rss"`
+	UsedMemoryPeak             int64   `json:"used_memory_peak"`
+	UsedMemoryLua              int64   `json:"used_memory_lua"`
+	UsedMemoryPeakPerc         float64 `json:"used_memory_peak_perc"`
+	UsedMemoryDatasetPerc      float64 `json:"used_memory_dataset_perc"`
+	MemFragmentationRatio      float64 `json:"mem_fragmentation_ratio"`
+	Loading                    int64   `json:"loading"`
+	RdbChangesSinceLastSave    int64   `json:"rdb_changes_since_last_save"`
+	RdbBgsaveInProgress        int64   `json:"rdb_bgsave_in_progress"`
+	RdbLastSaveTime            int64   `json:"rdb_last_save_time"`
+	RdbLastBgsaveStatus        string  `json:"rdb_last_bgsave_status"`
+	RdbLastBgsaveTimeSec       int64   `json:"rdb_last_bgsave_time_sec"`
+	RdbCurrentBgsaveTimeSec    int64   `json:"rdb_current_bgsave_time_sec"`
+	AofEnabled                 int64   `json:"aof_enabled"`
+	AofRewriteInProgress       int64   `json:"aof_rewrite_in_progress"`
+	AofRewriteScheduled        int64   `json:"aof_rewrite_scheduled"`
+	AofLastRewriteTimeSec      int64   `json:"aof_last_rewrite_time_sec"`
+	AofCurrentRewriteTimeSec   int64   `json:"aof_current_rewrite_time_sec"`
+	AofLastBgrewriteStatus     string  `json:"aof_last_bgrewrite_status"`
+	AofLastWriteStatus         string  `json:"aof_last_write_status"`
+	TotalConnectionsReceived   int64   `json:"total_connections_received"`
+	TotalCommandsProcessed     int64   `json:"total_commands_processed"`
+	InstantaneousOpsPerSec     int64   `json:"instantaneous_ops_per_sec"`
+	InstantaneousInputKbps     float64 `json:"instantaneous_input_kbps"`
+	InstantaneousOutputKbps    float64 `json:"instantaneous_output_kbps"`
+	RejectedConnections        int64   `json:"rejected_connections"`
+	SyncFull                   int64   `json:"sync_full"`
+	SyncPartialOk              int64   `json:"sync_partial_ok"`
+	SyncPartialErr             int64   `json:"sync_partial_err"`
+	ExpiredKeys                int64   `json:"expired_keys"`
+	EvictedKeys                int64   `json:"evicted_keys"`
+	KeyspaceHits               int64   `json:"keyspace_hits"`
+	KeyspaceMisses             int64   `json:"keyspace_misses"`
+	PubsubChannels             int64   `json:"pubsub_channels"`
+	PubsubPatterns             int64   `json:"pubsub_patterns"`
+	LatestForkUsec             int64   `json:"latest_fork_usec"`
+	ConnectedSlaves            int64   `json:"connected_slaves"`
+	MasterReplOffset           int64   `json:"master_repl_offset"`
+	ReplBacklogActive          int64   `json:"repl_backlog_active"`
+	ReplBacklogSize            int64   `json:"repl_backlog_size"`
+	ReplBacklogFirstByteOffset int64   `json:"repl_backlog_first_byte_offset"`
+	ReplBacklogHistlen         int64   `json:"repl_backlog_histlen"`
+	SecondReplOffset           int64   `json:"second_repl_offset"`
+	UsedCpuSys                 float64 `json:"used_cpu_sys"`
+	UsedCpuUser                float64 `json:"used_cpu_user"`
+	UsedCpuSysChildren         float64 `json:"used_cpu_sys_children"`
+	UsedCpuUserChildren        float64 `json:"used_cpu_user_children"`
+	KeyspaceHitrate            float64 `json:"keyspace_hitrate"`
+	RedisVersion               string  `json:"redis_version"`
 }
 
 func (r *RedisClient) Do(returnType string, args ...interface{}) (interface{}, error) {
@@ -352,6 +412,75 @@ func gatherInfoOutput(
 		keyspace_hitrate = float64(keyspace_hits) / float64(keyspace_hits+keyspace_misses)
 	}
 	fields["keyspace_hitrate"] = keyspace_hitrate
+
+	o := RedisOutputs{}
+
+	m, err := json.Marshal(fields)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(m, &o)
+	if err != nil {
+		return err
+	}
+
+	fields["uptime"] = o.Uptime
+	fields["lru_clock"] = o.LruClock
+	fields["clients"] = o.Clients
+	fields["client_longest_output_list"] = o.ClientLongestOutputList
+	fields["client_biggest_input_buf"] = o.ClientBiggestInputBuf
+	fields["blocked_clients"] = o.BlockedClients
+	fields["used_memory"] = o.UsedMemory
+	fields["used_memory_rss"] = o.UsedMemoryRss
+	fields["used_memory_peak"] = o.UsedMemoryPeak
+	fields["used_memory_lua"] = o.UsedMemoryLua
+	fields["used_memory_peak_perc"] = o.UsedMemoryPeakPerc
+	fields["used_memory_dataset_perc"] = o.UsedMemoryDatasetPerc
+	fields["mem_fragmentation_ratio"] = o.MemFragmentationRatio
+	fields["loading"] = o.Loading
+	fields["rdb_changes_since_last_save"] = o.RdbChangesSinceLastSave
+	fields["rdb_bgsave_in_progress"] = o.RdbBgsaveInProgress
+	fields["rdb_last_save_time"] = o.RdbLastSaveTime
+	fields["rdb_last_bgsave_status"] = o.RdbLastBgsaveStatus
+	fields["rdb_last_bgsave_time_sec"] = o.RdbLastBgsaveTimeSec
+	fields["rdb_current_bgsave_time_sec"] = o.RdbCurrentBgsaveTimeSec
+	fields["aof_enabled"] = o.AofEnabled
+	fields["aof_rewrite_in_progress"] = o.AofRewriteInProgress
+	fields["aof_rewrite_scheduled"] = o.AofRewriteScheduled
+	fields["aof_last_rewrite_time_sec"] = o.AofLastRewriteTimeSec
+	fields["aof_current_rewrite_time_sec"] = o.AofCurrentRewriteTimeSec
+	fields["aof_last_bgrewrite_status"] = o.AofLastBgrewriteStatus
+	fields["aof_last_write_status"] = o.AofLastWriteStatus
+	fields["total_connections_received"] = o.TotalConnectionsReceived
+	fields["total_commands_processed"] = o.TotalCommandsProcessed
+	fields["instantaneous_ops_per_sec"] = o.InstantaneousOpsPerSec
+	fields["instantaneous_input_kbps"] = o.InstantaneousInputKbps
+	fields["instantaneous_output_kbps"] = o.InstantaneousOutputKbps
+	fields["rejected_connections"] = o.RejectedConnections
+	fields["sync_full"] = o.SyncFull
+	fields["sync_partial_ok"] = o.SyncPartialOk
+	fields["sync_partial_err"] = o.SyncPartialErr
+	fields["expired_keys"] = o.ExpiredKeys
+	fields["evicted_keys"] = o.EvictedKeys
+	fields["keyspace_hits"] = o.KeyspaceHits
+	fields["keyspace_misses"] = o.KeyspaceMisses
+	fields["pubsub_channels"] = o.PubsubChannels
+	fields["pubsub_patterns"] = o.PubsubPatterns
+	fields["latest_fork_usec"] = o.LatestForkUsec
+	fields["connected_slaves"] = o.ConnectedSlaves
+	fields["master_repl_offset"] = o.MasterReplOffset
+	fields["repl_backlog_active"] = o.ReplBacklogActive
+	fields["repl_backlog_size"] = o.ReplBacklogSize
+	fields["repl_backlog_first_byte_offset"] = o.ReplBacklogFirstByteOffset
+	fields["repl_backlog_histlen"] = o.ReplBacklogHistlen
+	fields["second_repl_offset"] = o.SecondReplOffset
+	fields["used_cpu_sys"] = o.UsedCpuSys
+	fields["used_cpu_user"] = o.UsedCpuUser
+	fields["used_cpu_sys_children"] = o.UsedCpuSysChildren
+	fields["used_cpu_user_children"] = o.UsedCpuUserChildren
+	fields["keyspace_hitrate"] = o.KeyspaceHitrate
+	fields["redis_version"] = o.RedisVersion
+
 	acc.AddFields("redis", fields, tags)
 	return nil
 }
