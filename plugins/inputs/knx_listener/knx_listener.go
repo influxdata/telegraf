@@ -137,44 +137,46 @@ func (kl *KNXListener) listen() {
 		// Match GA to DataPointType and measurement name
 		ga := msg.Destination.String()
 		target, ok := kl.gaTargetMap[ga]
-		if ok {
-			err := target.datapoint.Unpack(msg.Data)
-			if err != nil {
-				kl.Log.Errorf("Unpacking data failed: %v", err)
-				continue
-			}
-			kl.Log.Debugf("Matched GA %q to measurement %q with value %v", ga, target.measurement, target.datapoint)
-
-			// Convert the DatapointValue interface back to its basic type again
-			// as otherwise telegraf will not push out the metrics and eat it
-			// silently.
-			var value interface{}
-			vi := reflect.Indirect(reflect.ValueOf(target.datapoint))
-			switch vi.Kind() {
-			case reflect.Bool:
-				value = vi.Bool()
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				value = vi.Int()
-			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				value = vi.Uint()
-			case reflect.Float32, reflect.Float64:
-				value = vi.Float()
-			default:
-				kl.Log.Errorf("Type conversion %v failed for address %q", vi.Kind(), ga)
-				continue
-			}
-
-			// Compose the actual data to be pushed out
-			fields := map[string]interface{}{"value": value}
-			tags := map[string]string{
-				"groupaddress": ga,
-				"unit":         target.datapoint.(dpt.DatapointMeta).Unit(),
-				"source":       msg.Source.String(),
-			}
-			kl.acc.AddFields(target.measurement, fields, tags)
-		} else {
+		if !ok {
 			kl.Log.Infof("Ignoring message %+v for unknown GA %q", msg, ga)
+			continue
 		}
+
+		// Extract the value from the data-frame
+		err := target.datapoint.Unpack(msg.Data)
+		if err != nil {
+			kl.Log.Errorf("Unpacking data failed: %v", err)
+			continue
+		}
+		kl.Log.Debugf("Matched GA %q to measurement %q with value %v", ga, target.measurement, target.datapoint)
+
+		// Convert the DatapointValue interface back to its basic type again
+		// as otherwise telegraf will not push out the metrics and eat it
+		// silently.
+		var value interface{}
+		vi := reflect.Indirect(reflect.ValueOf(target.datapoint))
+		switch vi.Kind() {
+		case reflect.Bool:
+			value = vi.Bool()
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			value = vi.Int()
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			value = vi.Uint()
+		case reflect.Float32, reflect.Float64:
+			value = vi.Float()
+		default:
+			kl.Log.Errorf("Type conversion %v failed for address %q", vi.Kind(), ga)
+			continue
+		}
+
+		// Compose the actual data to be pushed out
+		fields := map[string]interface{}{"value": value}
+		tags := map[string]string{
+			"groupaddress": ga,
+			"unit":         target.datapoint.(dpt.DatapointMeta).Unit(),
+			"source":       msg.Source.String(),
+		}
+		kl.acc.AddFields(target.measurement, fields, tags)
 	}
 }
 
