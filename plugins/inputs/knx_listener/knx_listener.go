@@ -68,7 +68,7 @@ func (kl *KNXListener) SampleConfig() string {
 `
 }
 
-func (kl *KNXListener) Gather(acc telegraf.Accumulator) error {
+func (kl *KNXListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
