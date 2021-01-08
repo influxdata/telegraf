@@ -82,13 +82,13 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 	for _, m := range kl.Measurements {
 		kl.Log.Debugf("Group-address mapping for measurement %q:", m.Name)
 		for _, ga := range m.Addresses {
-			kl.Log.Debugf("  %v --> %s", ga, m.Dpt)
+			kl.Log.Debugf("  %s --> %s", ga, m.Dpt)
 			if _, ok := kl.gaTargetMap[ga]; ok {
-				return fmt.Errorf("duplicate specification of address %v", ga)
+				return fmt.Errorf("duplicate specification of address %q", ga)
 			}
 			d, ok := dpt.Produce(m.Dpt)
 			if !ok {
-				return fmt.Errorf("cannot create datapoint-type %v for address %v", m.Dpt, ga)
+				return fmt.Errorf("cannot create datapoint-type %q for address %q", m.Dpt, ga)
 			}
 			kl.gaTargetMap[ga] = addressTarget{m.Name, d}
 		}
@@ -160,7 +160,7 @@ func (kl *KNXListener) listen() {
 			case reflect.Float32, reflect.Float64:
 				value = vi.Float()
 			default:
-				kl.Log.Errorf("Type conversion %v failed for address %v", ga, vi.Kind())
+				kl.Log.Errorf("Type conversion %v failed for address %q", vi.Kind(), ga)
 				continue
 			}
 
