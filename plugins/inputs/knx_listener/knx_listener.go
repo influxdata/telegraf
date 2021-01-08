@@ -134,7 +134,7 @@ func (kl *KNXListener) Stop() {
 
 func (kl *KNXListener) listen() {
 	for msg := range kl.client.Inbound() {
-		// Match GA to DataPointType and measurment name
+		// Match GA to DataPointType and measurement name
 		ga := msg.Destination.String()
 		target, ok := kl.gaTargetMap[ga]
 		if ok {
