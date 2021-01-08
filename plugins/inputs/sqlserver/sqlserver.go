@@ -4,10 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/adal"
 	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
+	mssql "github.com/denisenkom/go-mssqldb"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -277,10 +280,32 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 	}
 
 	for _, serv := range s.Servers {
-		pool, err := sql.Open("mssql", serv)
-		if err != nil {
-			acc.AddError(err)
-			return err
+		var pool *sql.DB
+
+		if strings.Contains(strings.ToLower(serv), strings.ToLower("password=")) {
+			// when password is provided in connection string, use SQL auth
+
+			var err error
+			pool, err = sql.Open("mssql", serv)
+
+			if err != nil {
+				acc.AddError(err)
+				return err
+			}
+		} else {
+			// when password is not provided in connection string, use AAD auth with an MSI token
+
+			msiToken := getMSIToken()
+
+			token, err := mssql.NewAccessTokenConnector(
+				serv,
+				func() (string, error) { return msiToken.AccessToken, nil })
+			if err != nil {
+				acc.AddError(err)
+				return err
+			}
+
+			pool = sql.OpenDB(token)
 		}
 
 		s.pools = append(s.pools, pool)
@@ -421,6 +446,33 @@ func (s *SQLServer) Init() error {
 	}
 
 	return nil
+}
+
+func getMSIToken() (result adal.Token) {
+	// spToken, err := adal.NewServicePrincipalTokenFromMSIWithIdentityResourceID(msiEndpoint, mc.Resource, mc.ClientID)
+	// return spt.AccessToken
+
+	const defaultSqlAuthResource = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://database.windows.net/"
+	msiEndpoint, _ := adal.GetMSIVMEndpoint()
+	var spt *adal.ServicePrincipalToken
+
+	callback := func(token adal.Token) error {
+		result = token
+		return nil
+	}
+	spt, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, defaultSqlAuthResource, callback)
+	if err != nil {
+		fmt.Println("Error in getting token", err)
+		return
+	}
+
+	if err := spt.Refresh(); err != nil {
+		fmt.Println("Error in refreshing token", err)
+		return
+	}
+
+	fmt.Println("found token: ", result)
+	return
 }
 
 func init() {
