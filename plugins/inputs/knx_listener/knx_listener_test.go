@@ -129,7 +129,7 @@ func TestRegularReceives_DPT(t *testing.T) {
 		case float64:
 			assert.InDelta(t, v, m.Fields["value"], epsilon)
 		}
-		assert.True(t, tstart.Before(m.Time))
-		assert.True(t, tstop.After(m.Time))
+		assert.True(t, !tstop.Before(m.Time))
+		assert.True(t, !tstart.After(m.Time))
 	}
 }
