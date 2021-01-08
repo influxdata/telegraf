@@ -3,7 +3,7 @@ package cisco_telemetry_mdt
 import (
 	"bytes"
 	"encoding/binary"
-        "encoding/json"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -18,7 +18,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-        internaltls "github.com/influxdata/telegraf/plugins/common/tls"
+	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials" // Register GRPC gzip decoder to support compressed telemetry
@@ -38,7 +38,7 @@ type CiscoTelemetryMDT struct {
 	ServiceAddress string            `toml:"service_address"`
 	MaxMsgSize     int               `toml:"max_msg_size"`
 	Aliases        map[string]string `toml:"aliases"`
-        Dmes           map[string]string `toml:"dmes"`
+	Dmes           map[string]string `toml:"dmes"`
 	EmbeddedTags   []string          `toml:"embedded_tags"`
 
 	Log telegraf.Logger
@@ -52,11 +52,11 @@ type CiscoTelemetryMDT struct {
 
 	// Internal state
 	aliases   map[string]string
-        dmes      map[string]string
+	dmes      map[string]string
 	warned    map[string]struct{}
 	extraTags map[string]map[string]struct{}
 	nxpathMap map[string]map[string]string //per path map
-        propMap map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}
+	propMap   map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}
 	mutex     sync.Mutex
 	acc       telegraf.Accumulator
 	wg        sync.WaitGroup
@@ -73,954 +73,952 @@ type NxPayloadXfromStructure struct {
 //xform Field to string
 func xformValueString(field *telemetry.TelemetryField) string {
 	var str string
-        switch val := field.ValueByType.(type) {
-        case *telemetry.TelemetryField_StringValue:
-                if len(val.StringValue) > 0 {
-                        return val.StringValue
-                }
-        case *telemetry.TelemetryField_Uint32Value:
+	switch val := field.ValueByType.(type) {
+	case *telemetry.TelemetryField_StringValue:
+		if len(val.StringValue) > 0 {
+			return val.StringValue
+		}
+	case *telemetry.TelemetryField_Uint32Value:
 		str = strconv.FormatUint(uint64(val.Uint32Value), 10)
 		return str
-        case *telemetry.TelemetryField_Uint64Value:
+	case *telemetry.TelemetryField_Uint64Value:
 		str = strconv.FormatUint(val.Uint64Value, 10)
-                return str
-        case *telemetry.TelemetryField_Sint32Value:
+		return str
+	case *telemetry.TelemetryField_Sint32Value:
 		str = strconv.FormatInt(int64(val.Sint32Value), 10)
 		return str
-        case *telemetry.TelemetryField_Sint64Value:
+	case *telemetry.TelemetryField_Sint64Value:
 		str = strconv.FormatInt(val.Sint64Value, 10)
 		return str
-        }
-        return ""
+	}
+	return ""
 }
 
 //xform Uint64 to int64
 func (c *CiscoTelemetryMDT) nxosValueXformUint64Toint64(field *telemetry.TelemetryField, value interface{}) interface{} {
-    if field.GetUint64Value() != 0 {
-        return int64(value.(uint64))
-    }
-    return nil
+	if field.GetUint64Value() != 0 {
+		return int64(value.(uint64))
+	}
+	return nil
 }
 
 //xform string to float
 func (c *CiscoTelemetryMDT) nxosValueXformStringTofloat(field *telemetry.TelemetryField, value interface{}) interface{} {
-     //convert property to float from string.
-     vals := field.GetStringValue()
-     if vals != "" {
-          if valf, err := strconv.ParseFloat(vals, 64); err == nil {
-               return valf
-          }
-     }
-     return nil
+	//convert property to float from string.
+	vals := field.GetStringValue()
+	if vals != "" {
+		if valf, err := strconv.ParseFloat(vals, 64); err == nil {
+			return valf
+		}
+	}
+	return nil
 }
 
 //xform string to uint64
 func (c *CiscoTelemetryMDT) nxosValueXformStringToUint64(field *telemetry.TelemetryField, value interface{}) interface{} {
-    //string to uint64
-    vals := field.GetStringValue()
-    if vals != "" {
-        if val64, err := strconv.ParseUint(vals, 10, 64); err == nil {
-             return val64
-        }
-    }
-    return nil
+	//string to uint64
+	vals := field.GetStringValue()
+	if vals != "" {
+		if val64, err := strconv.ParseUint(vals, 10, 64); err == nil {
+			return val64
+		}
+	}
+	return nil
 }
 
 //xform string to int64
 func (c *CiscoTelemetryMDT) nxosValueXformStringToInt64(field *telemetry.TelemetryField, value interface{}) interface{} {
-    //string to int64
-    vals := field.GetStringValue()
-    if vals != "" {
-        if val64, err := strconv.ParseInt(vals, 10, 64); err == nil {
-            return val64
-        }
-    }
-    return nil
+	//string to int64
+	vals := field.GetStringValue()
+	if vals != "" {
+		if val64, err := strconv.ParseInt(vals, 10, 64); err == nil {
+			return val64
+		}
+	}
+	return nil
 }
 
 //auto-xform
 func (c *CiscoTelemetryMDT) nxosValueAutoXform(field *telemetry.TelemetryField, value interface{}) interface{} {
-    //check if we want auto xformation
-    vals := field.GetStringValue()
-    if vals != "" {
-        if val64, err := strconv.ParseUint(vals,10,64); err == nil {
-            return val64
-        }
-        if valf, err := strconv.ParseFloat(vals, 64); err == nil {
-            return valf
-        }
-        if val64, err := strconv.ParseInt(vals,10,64); err == nil {
-            return val64
-        }
-    } // switch
-    return nil;
+	//check if we want auto xformation
+	vals := field.GetStringValue()
+	if vals != "" {
+		if val64, err := strconv.ParseUint(vals, 10, 64); err == nil {
+			return val64
+		}
+		if valf, err := strconv.ParseFloat(vals, 64); err == nil {
+			return valf
+		}
+		if val64, err := strconv.ParseInt(vals, 10, 64); err == nil {
+			return val64
+		}
+	} // switch
+	return nil
 }
 
 //auto-xform float properties
 func (c *CiscoTelemetryMDT) nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, value interface{}) interface{} {
-    //check if we want auto xformation
-    vals := field.GetStringValue()
-    if vals != "" {
-        if valf, err := strconv.ParseFloat(vals, 64); err == nil {
-             return valf
-        }
-    } // switch
-    return nil;
+	//check if we want auto xformation
+	vals := field.GetStringValue()
+	if vals != "" {
+		if valf, err := strconv.ParseFloat(vals, 64); err == nil {
+			return valf
+		}
+	} // switch
+	return nil
 }
 
 //xform uint64 to string
 func (c *CiscoTelemetryMDT) nxosValueXformUint64ToString(field *telemetry.TelemetryField, value interface{}) interface{} {
-    switch val := field.ValueByType.(type) {
-    case *telemetry.TelemetryField_StringValue:
-            if len(val.StringValue) > 0 {
-               return val.StringValue
-            }
-    case *telemetry.TelemetryField_Uint64Value:
-            return (strconv.FormatUint(val.Uint64Value, 10))
-    }
-    return nil
+	switch val := field.ValueByType.(type) {
+	case *telemetry.TelemetryField_StringValue:
+		if len(val.StringValue) > 0 {
+			return val.StringValue
+		}
+	case *telemetry.TelemetryField_Uint64Value:
+		return (strconv.FormatUint(val.Uint64Value, 10))
+	}
+	return nil
 }
 
 //Xform value field.
 func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, value interface{}, path string) interface{} {
-     //if isNXOS
-     if (!strings.ContainsRune(path, ':')) {
-        if _, ok := c.propMap[field.Name]; ok {
-             return(c.propMap[field.Name](field, value))
-        } else {
-             //check if we want auto xformation
-             if _, ok := c.propMap["auto-prop-xfromi"]; ok {
-                v1 := c.propMap["auto-prop-xfrom"](field, value)
-                if v1 != nil {
-                    return v1;
-                }
-             } else {
-               //Now check path based conversion.
-               //If mapping is found then do the required transformation.
-               if c.nxpathMap[path] != nil {
-                   switch c.nxpathMap[path][field.Name] {
-                   //Xformation supported is only from String, Uint32 and Uint64			    
-                   case "integer":
-                        switch val := field.ValueByType.(type) {
-                        case *telemetry.TelemetryField_StringValue:
-                            if vali, err := strconv.ParseInt(val.StringValue,10,32); err == nil {
-                                return vali
-                            }
-                        case *telemetry.TelemetryField_Uint32Value:
-                            return int(value.(uint32))
-                        case *telemetry.TelemetryField_Uint64Value:
-                            return int64(value.(uint64))
-                        } //switch
-                        return nil
-                   //Xformation supported is only from String
-                   case "float":
-                        switch val := field.ValueByType.(type) {
-                        case *telemetry.TelemetryField_StringValue:
-                            if valf, err := strconv.ParseFloat(val.StringValue, 64); err == nil {
-                                return valf
-                            }
-                        } //switch
-                        return nil
-                   case "string":
-	       	    return (xformValueString(field))
-                   case "int64":
-                        switch val := field.ValueByType.(type) {
-                        case *telemetry.TelemetryField_StringValue:
-                            if vali, err := strconv.ParseInt(val.StringValue,10,64); err == nil {
-                                return vali
-                            }
-                        case *telemetry.TelemetryField_Uint64Value:
-                            return int64(value.(uint64))
-                        } //switch
-                   } //switch
-               } //if
-             } //else
-           } // else
-     } //Nxos
-     return nil
+	//if isNXOS
+	if !strings.ContainsRune(path, ':') {
+		if _, ok := c.propMap[field.Name]; ok {
+			return (c.propMap[field.Name](field, value))
+		} else {
+			//check if we want auto xformation
+			if _, ok := c.propMap["auto-prop-xfromi"]; ok {
+				v1 := c.propMap["auto-prop-xfrom"](field, value)
+				if v1 != nil {
+					return v1
+				}
+			} else {
+				//Now check path based conversion.
+				//If mapping is found then do the required transformation.
+				if c.nxpathMap[path] != nil {
+					switch c.nxpathMap[path][field.Name] {
+					//Xformation supported is only from String, Uint32 and Uint64
+					case "integer":
+						switch val := field.ValueByType.(type) {
+						case *telemetry.TelemetryField_StringValue:
+							if vali, err := strconv.ParseInt(val.StringValue, 10, 32); err == nil {
+								return vali
+							}
+						case *telemetry.TelemetryField_Uint32Value:
+							return int(value.(uint32))
+						case *telemetry.TelemetryField_Uint64Value:
+							return int64(value.(uint64))
+						} //switch
+						return nil
+					//Xformation supported is only from String
+					case "float":
+						switch val := field.ValueByType.(type) {
+						case *telemetry.TelemetryField_StringValue:
+							if valf, err := strconv.ParseFloat(val.StringValue, 64); err == nil {
+								return valf
+							}
+						} //switch
+						return nil
+					case "string":
+						return (xformValueString(field))
+					case "int64":
+						switch val := field.ValueByType.(type) {
+						case *telemetry.TelemetryField_StringValue:
+							if vali, err := strconv.ParseInt(val.StringValue, 10, 64); err == nil {
+								return vali
+							}
+						case *telemetry.TelemetryField_Uint64Value:
+							return int64(value.(uint64))
+						} //switch
+					} //switch
+				} //if
+			} //else
+		} // else
+	} //Nxos
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitPower() error {
-    key := "show environment power"
-    c.nxpathMap[key] = make(map[string]string, 100)                              
-    c.nxpathMap[key]["reserve_sup"] = "string"
-    c.nxpathMap[key]["det_volt"] = "string"
-    c.nxpathMap[key]["heatsink_temp"] = "string"
-    c.nxpathMap[key]["det_pintot"] = "string"
-    c.nxpathMap[key]["det_iinb"] = "string"
-    c.nxpathMap[key]["ps_input_current"] = "string"
-    c.nxpathMap[key]["modnum"] = "string"
-    c.nxpathMap[key]["trayfannum"] = "string"
-    c.nxpathMap[key]["modstatus_3k"] = "string"
-    c.nxpathMap[key]["fan2rpm"] = "string"
-    c.nxpathMap[key]["amps_alloced"] = "string"
-    c.nxpathMap[key]["all_inlets_connected"] = "string"
-    c.nxpathMap[key]["tot_pow_out_actual_draw"] = "string"
-    c.nxpathMap[key]["ps_redun_op_mode"] = "string"
-    c.nxpathMap[key]["curtemp"] = "string"
-    c.nxpathMap[key]["mod_model"] = "string"
-    c.nxpathMap[key]["fanmodel"] = "string"
-    c.nxpathMap[key]["ps_output_current"] = "string"
-    c.nxpathMap[key]["majthres"] = "string"
-    c.nxpathMap[key]["input_type"] = "string"
-    c.nxpathMap[key]["allocated"] = "string"
-    c.nxpathMap[key]["fanhwver"] = "string"
-    c.nxpathMap[key]["clkhwver"] = "string"
-    c.nxpathMap[key]["fannum"] = "string"
-    c.nxpathMap[key]["watts_requested"] = "string"
-    c.nxpathMap[key]["cumulative_power"] = "string"
-    c.nxpathMap[key]["tot_gridB_capacity"] = "string"
-    c.nxpathMap[key]["pow_used_by_mods"] = "string"
-    c.nxpathMap[key]["tot_pow_alloc_budgeted"] = "string"
-    c.nxpathMap[key]["psumod"] = "string"
-    c.nxpathMap[key]["ps_status_3k"] = "string"
-    c.nxpathMap[key]["temptype"] = "string"
-    c.nxpathMap[key]["regval"] = "string"
-    c.nxpathMap[key]["inlet_temp"] = "string"
-    c.nxpathMap[key]["det_cord"] = "string"
-    c.nxpathMap[key]["reserve_fan"] = "string"
-    c.nxpathMap[key]["det_pina"] = "string"
-    c.nxpathMap[key]["minthres"] = "string"
-    c.nxpathMap[key]["actual_draw"] = "string"
-    c.nxpathMap[key]["sensor"] = "string"
-    c.nxpathMap[key]["zone"] = "string"
-    c.nxpathMap[key]["det_iin"] = "string"
-    c.nxpathMap[key]["det_iout"] = "string"
-    c.nxpathMap[key]["det_vin"] = "string"
-    c.nxpathMap[key]["fan1rpm"] = "string"
-    c.nxpathMap[key]["tot_gridA_capacity"] = "string"
-    c.nxpathMap[key]["fanperc"] = "string"
-    c.nxpathMap[key]["det_pout"] = "string"
-    c.nxpathMap[key]["alarm_str"] = "string"
-    c.nxpathMap[key]["zonespeed"] = "string"
-    c.nxpathMap[key]["det_total_cap"] = "string"
-    c.nxpathMap[key]["reserve_xbar"] = "string"
-    c.nxpathMap[key]["det_vout"] = "string"
-    c.nxpathMap[key]["watts_alloced"] = "string"
-    c.nxpathMap[key]["ps_in_power"] = "string"
-    c.nxpathMap[key]["tot_pow_input_actual_draw"] = "string"
-    c.nxpathMap[key]["ps_output_voltage"] = "string"
-    c.nxpathMap[key]["det_name"] = "string"
-    c.nxpathMap[key]["tempmod"] = "string"
-    c.nxpathMap[key]["clockname"] = "string"
-    c.nxpathMap[key]["fanname"] = "string"
-    c.nxpathMap[key]["regnumstr"] = "string"
-    c.nxpathMap[key]["bitnumstr"] = "string"
-    c.nxpathMap[key]["ps_slot"] = "string"
-    c.nxpathMap[key]["actual_out"] = "string"
-    c.nxpathMap[key]["ps_input_voltage"] = "string"
-    c.nxpathMap[key]["psmodel"] = "string"
-    c.nxpathMap[key]["speed"] = "string"
-    c.nxpathMap[key]["clkmodel"] = "string"
-    c.nxpathMap[key]["ps_redun_mode_3k"] = "string"
-    c.nxpathMap[key]["tot_pow_capacity"] = "string"
-    c.nxpathMap[key]["amps"] = "string"
-    c.nxpathMap[key]["available_pow"] = "string"
-    c.nxpathMap[key]["reserve_supxbarfan"] = "string"
-    c.nxpathMap[key]["watts"] = "string"
-    c.nxpathMap[key]["det_pinb"] = "string"
-    c.nxpathMap[key]["det_vinb"] = "string"
-    c.nxpathMap[key]["ps_state"] = "string"
-    c.nxpathMap[key]["det_sw_alarm"] = "string"
-    c.nxpathMap[key]["regnum"] = "string"
-    c.nxpathMap[key]["amps_requested"] = "string"
-    c.nxpathMap[key]["fanrpm"] = "string"
-    c.nxpathMap[key]["actual_input"] = "string"
-    c.nxpathMap[key]["outlet_temp"] = "string"
-    c.nxpathMap[key]["tot_capa"] = "string"
-    
-    return nil
+	key := "show environment power"
+	c.nxpathMap[key] = make(map[string]string, 100)
+	c.nxpathMap[key]["reserve_sup"] = "string"
+	c.nxpathMap[key]["det_volt"] = "string"
+	c.nxpathMap[key]["heatsink_temp"] = "string"
+	c.nxpathMap[key]["det_pintot"] = "string"
+	c.nxpathMap[key]["det_iinb"] = "string"
+	c.nxpathMap[key]["ps_input_current"] = "string"
+	c.nxpathMap[key]["modnum"] = "string"
+	c.nxpathMap[key]["trayfannum"] = "string"
+	c.nxpathMap[key]["modstatus_3k"] = "string"
+	c.nxpathMap[key]["fan2rpm"] = "string"
+	c.nxpathMap[key]["amps_alloced"] = "string"
+	c.nxpathMap[key]["all_inlets_connected"] = "string"
+	c.nxpathMap[key]["tot_pow_out_actual_draw"] = "string"
+	c.nxpathMap[key]["ps_redun_op_mode"] = "string"
+	c.nxpathMap[key]["curtemp"] = "string"
+	c.nxpathMap[key]["mod_model"] = "string"
+	c.nxpathMap[key]["fanmodel"] = "string"
+	c.nxpathMap[key]["ps_output_current"] = "string"
+	c.nxpathMap[key]["majthres"] = "string"
+	c.nxpathMap[key]["input_type"] = "string"
+	c.nxpathMap[key]["allocated"] = "string"
+	c.nxpathMap[key]["fanhwver"] = "string"
+	c.nxpathMap[key]["clkhwver"] = "string"
+	c.nxpathMap[key]["fannum"] = "string"
+	c.nxpathMap[key]["watts_requested"] = "string"
+	c.nxpathMap[key]["cumulative_power"] = "string"
+	c.nxpathMap[key]["tot_gridB_capacity"] = "string"
+	c.nxpathMap[key]["pow_used_by_mods"] = "string"
+	c.nxpathMap[key]["tot_pow_alloc_budgeted"] = "string"
+	c.nxpathMap[key]["psumod"] = "string"
+	c.nxpathMap[key]["ps_status_3k"] = "string"
+	c.nxpathMap[key]["temptype"] = "string"
+	c.nxpathMap[key]["regval"] = "string"
+	c.nxpathMap[key]["inlet_temp"] = "string"
+	c.nxpathMap[key]["det_cord"] = "string"
+	c.nxpathMap[key]["reserve_fan"] = "string"
+	c.nxpathMap[key]["det_pina"] = "string"
+	c.nxpathMap[key]["minthres"] = "string"
+	c.nxpathMap[key]["actual_draw"] = "string"
+	c.nxpathMap[key]["sensor"] = "string"
+	c.nxpathMap[key]["zone"] = "string"
+	c.nxpathMap[key]["det_iin"] = "string"
+	c.nxpathMap[key]["det_iout"] = "string"
+	c.nxpathMap[key]["det_vin"] = "string"
+	c.nxpathMap[key]["fan1rpm"] = "string"
+	c.nxpathMap[key]["tot_gridA_capacity"] = "string"
+	c.nxpathMap[key]["fanperc"] = "string"
+	c.nxpathMap[key]["det_pout"] = "string"
+	c.nxpathMap[key]["alarm_str"] = "string"
+	c.nxpathMap[key]["zonespeed"] = "string"
+	c.nxpathMap[key]["det_total_cap"] = "string"
+	c.nxpathMap[key]["reserve_xbar"] = "string"
+	c.nxpathMap[key]["det_vout"] = "string"
+	c.nxpathMap[key]["watts_alloced"] = "string"
+	c.nxpathMap[key]["ps_in_power"] = "string"
+	c.nxpathMap[key]["tot_pow_input_actual_draw"] = "string"
+	c.nxpathMap[key]["ps_output_voltage"] = "string"
+	c.nxpathMap[key]["det_name"] = "string"
+	c.nxpathMap[key]["tempmod"] = "string"
+	c.nxpathMap[key]["clockname"] = "string"
+	c.nxpathMap[key]["fanname"] = "string"
+	c.nxpathMap[key]["regnumstr"] = "string"
+	c.nxpathMap[key]["bitnumstr"] = "string"
+	c.nxpathMap[key]["ps_slot"] = "string"
+	c.nxpathMap[key]["actual_out"] = "string"
+	c.nxpathMap[key]["ps_input_voltage"] = "string"
+	c.nxpathMap[key]["psmodel"] = "string"
+	c.nxpathMap[key]["speed"] = "string"
+	c.nxpathMap[key]["clkmodel"] = "string"
+	c.nxpathMap[key]["ps_redun_mode_3k"] = "string"
+	c.nxpathMap[key]["tot_pow_capacity"] = "string"
+	c.nxpathMap[key]["amps"] = "string"
+	c.nxpathMap[key]["available_pow"] = "string"
+	c.nxpathMap[key]["reserve_supxbarfan"] = "string"
+	c.nxpathMap[key]["watts"] = "string"
+	c.nxpathMap[key]["det_pinb"] = "string"
+	c.nxpathMap[key]["det_vinb"] = "string"
+	c.nxpathMap[key]["ps_state"] = "string"
+	c.nxpathMap[key]["det_sw_alarm"] = "string"
+	c.nxpathMap[key]["regnum"] = "string"
+	c.nxpathMap[key]["amps_requested"] = "string"
+	c.nxpathMap[key]["fanrpm"] = "string"
+	c.nxpathMap[key]["actual_input"] = "string"
+	c.nxpathMap[key]["outlet_temp"] = "string"
+	c.nxpathMap[key]["tot_capa"] = "string"
+
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitMemPhys() error {
-    key := "show processes memory physical"
-    c.nxpathMap[key] = make(map[string]string, 1)
-    c.nxpathMap[key]["processname"] = "string"
+	key := "show processes memory physical"
+	c.nxpathMap[key] = make(map[string]string, 1)
+	c.nxpathMap[key]["processname"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitBgpV4() error {
-    key := "show bgp ipv4 unicast"
-    c.nxpathMap[key] = make(map[string]string, 1)
-    c.nxpathMap[key]["aspath"] = "string"
+	key := "show bgp ipv4 unicast"
+	c.nxpathMap[key] = make(map[string]string, 1)
+	c.nxpathMap[key]["aspath"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitCpu() error {
-    key := "show processes cpu"
-    c.nxpathMap[key] = make(map[string]string, 5)
-    c.nxpathMap[key]["kernel_percent"] = "float"
-    c.nxpathMap[key]["idle_percent"] = "float"
-    c.nxpathMap[key]["process"] = "string"
-    c.nxpathMap[key]["user_percent"] = "float"
-    c.nxpathMap[key]["onesec"] = "float"
+	key := "show processes cpu"
+	c.nxpathMap[key] = make(map[string]string, 5)
+	c.nxpathMap[key]["kernel_percent"] = "float"
+	c.nxpathMap[key]["idle_percent"] = "float"
+	c.nxpathMap[key]["process"] = "string"
+	c.nxpathMap[key]["user_percent"] = "float"
+	c.nxpathMap[key]["onesec"] = "float"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitResources() error {
-    key := "show system resources"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["cpu_state_user"] = "float"
-    c.nxpathMap[key]["kernel"] = "float"
-    c.nxpathMap[key]["current_memory_status"] = "string"
-    c.nxpathMap[key]["load_avg_15min"] = "float"
-    c.nxpathMap[key]["idle"] = "float"
-    c.nxpathMap[key]["load_avg_1min"] = "float"
-    c.nxpathMap[key]["user"] = "float"
-    c.nxpathMap[key]["cpu_state_idle"] = "float"
-    c.nxpathMap[key]["load_avg_5min"] = "float"
-    c.nxpathMap[key]["cpu_state_kernel"] = "float"
+	key := "show system resources"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["cpu_state_user"] = "float"
+	c.nxpathMap[key]["kernel"] = "float"
+	c.nxpathMap[key]["current_memory_status"] = "string"
+	c.nxpathMap[key]["load_avg_15min"] = "float"
+	c.nxpathMap[key]["idle"] = "float"
+	c.nxpathMap[key]["load_avg_1min"] = "float"
+	c.nxpathMap[key]["user"] = "float"
+	c.nxpathMap[key]["cpu_state_idle"] = "float"
+	c.nxpathMap[key]["load_avg_5min"] = "float"
+	c.nxpathMap[key]["cpu_state_kernel"] = "float"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitPtpCorrection() error {
-    key := "show ptp corrections"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["sup-time"] = "string"
-    c.nxpathMap[key]["correction-val"] = "int64"
-    c.nxpathMap[key]["ptp-header"] = "string"
-    c.nxpathMap[key]["intf-name"] = "string"
-    c.nxpathMap[key]["ptp-end"] = "string"
+	key := "show ptp corrections"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["sup-time"] = "string"
+	c.nxpathMap[key]["correction-val"] = "int64"
+	c.nxpathMap[key]["ptp-header"] = "string"
+	c.nxpathMap[key]["intf-name"] = "string"
+	c.nxpathMap[key]["ptp-end"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitTrans() error {
-    key := "show interface transceiver details"
-    c.nxpathMap[key] = make(map[string]string, 100)
-    c.nxpathMap[key]["uncorrect_ber_alrm_hi"] = "string"
-    c.nxpathMap[key]["uncorrect_ber_cur_warn_lo"] = "string"
-    c.nxpathMap[key]["current_warn_lo"] = "float"
-    c.nxpathMap[key]["pre_fec_ber_max_alrm_hi"] = "string"
-    c.nxpathMap[key]["serialnum"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_acc_warn_lo"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_max_warn_lo"] = "string"
-    c.nxpathMap[key]["laser_temp_warn_hi"] = "float"
-    c.nxpathMap[key]["type"] = "string"
-    c.nxpathMap[key]["rx_pwr_0"] = "float"
-    c.nxpathMap[key]["rx_pwr_warn_hi"] = "float"
-    c.nxpathMap[key]["uncorrect_ber_warn_hi"] = "string"
-    c.nxpathMap[key]["qsfp_or_cfp"] = "string"
-    c.nxpathMap[key]["protocol_type"] = "string"
-    c.nxpathMap[key]["uncorrect_ber"] = "string"
-    c.nxpathMap[key]["uncorrect_ber_cur_alrm_hi"] = "string"
-    c.nxpathMap[key]["tec_current"] = "float"
-    c.nxpathMap[key]["pre_fec_ber"] = "string"
-    c.nxpathMap[key]["uncorrect_ber_max_warn_lo"] = "string"
-    c.nxpathMap[key]["uncorrect_ber_min"] = "string"
-    c.nxpathMap[key]["current_alrm_lo"] = "float"
-    c.nxpathMap[key]["uncorrect_ber_acc_warn_lo"] = "string"
-    c.nxpathMap[key]["snr_warn_lo"] = "float"
-    c.nxpathMap[key]["rev"] = "string"
-    c.nxpathMap[key]["laser_temp_alrm_lo"] = "float"
-    c.nxpathMap[key]["current"] = "float"
-    c.nxpathMap[key]["rx_pwr_1"] = "float"
-    c.nxpathMap[key]["tec_current_warn_hi"] = "float"
-    c.nxpathMap[key]["pre_fec_ber_cur_warn_lo"] = "string"
-    c.nxpathMap[key]["cisco_part_number"] = "string"
-    c.nxpathMap[key]["uncorrect_ber_acc_warn_hi"] = "string"
-    c.nxpathMap[key]["temp_warn_hi"] = "float"
-    c.nxpathMap[key]["laser_freq_warn_lo"] = "float"
-    c.nxpathMap[key]["uncorrect_ber_max_alrm_lo"] = "string"
-    c.nxpathMap[key]["snr_alrm_hi"] = "float"
-    c.nxpathMap[key]["pre_fec_ber_cur_alrm_lo"] = "string"
-    c.nxpathMap[key]["tx_pwr_alrm_hi"] = "float"
-    c.nxpathMap[key]["pre_fec_ber_min_warn_lo"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_min_warn_hi"] = "string"
-    c.nxpathMap[key]["rx_pwr_alrm_hi"] = "float"
-    c.nxpathMap[key]["tec_current_warn_lo"] = "float"
-    c.nxpathMap[key]["uncorrect_ber_acc_alrm_hi"] = "string"
-    c.nxpathMap[key]["rx_pwr_4"] = "float"
-    c.nxpathMap[key]["uncorrect_ber_cur"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_alrm_hi"] = "string"
-    c.nxpathMap[key]["rx_pwr_warn_lo"] = "float"
-    c.nxpathMap[key]["bit_encoding"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_acc"] = "string"
-    c.nxpathMap[key]["sfp"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_acc_alrm_hi"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_min"] = "string"
-    c.nxpathMap[key]["current_warn_hi"] = "float"
-    c.nxpathMap[key]["pre_fec_ber_max_alrm_lo"] = "string"
-    c.nxpathMap[key]["uncorrect_ber_cur_warn_hi"] = "string"
-    c.nxpathMap[key]["current_alrm_hi"] = "float"
-    c.nxpathMap[key]["pre_fec_ber_acc_alrm_lo"] = "string"
-    c.nxpathMap[key]["snr_alrm_lo"] = "float"
-    c.nxpathMap[key]["uncorrect_ber_acc"] = "string"
-    c.nxpathMap[key]["tx_len"] = "string"
-    c.nxpathMap[key]["uncorrect_ber_alrm_lo"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_alrm_lo"] = "string"
-    c.nxpathMap[key]["txcvr_type"] = "string"
-    c.nxpathMap[key]["tec_current_alrm_lo"] = "float"
-    c.nxpathMap[key]["volt_alrm_lo"] = "float"
-    c.nxpathMap[key]["temp_alrm_hi"] = "float"
-    c.nxpathMap[key]["uncorrect_ber_min_warn_lo"] = "string"
-    c.nxpathMap[key]["laser_freq"] = "float"
-    c.nxpathMap[key]["uncorrect_ber_min_warn_hi"] = "string"
-    c.nxpathMap[key]["uncorrect_ber_cur_alrm_lo"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_max_warn_hi"] = "string"
-    c.nxpathMap[key]["name"] = "string"
-    c.nxpathMap[key]["fiber_type_byte0"] = "string"
-    c.nxpathMap[key]["laser_freq_alrm_lo"] = "float"
-    c.nxpathMap[key]["pre_fec_ber_cur_warn_hi"] = "string"
-    c.nxpathMap[key]["partnum"] = "string"
-    c.nxpathMap[key]["snr"] = "float"
-    c.nxpathMap[key]["volt_alrm_hi"] = "float"
-    c.nxpathMap[key]["connector_type"] = "string"
-    c.nxpathMap[key]["tx_medium"] = "string"
-    c.nxpathMap[key]["tx_pwr_warn_hi"] = "float"
-    c.nxpathMap[key]["cisco_vendor_id"] = "string"
-    c.nxpathMap[key]["cisco_ext_id"] = "string"
-    c.nxpathMap[key]["uncorrect_ber_max_warn_hi"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_max"] = "string"
-    c.nxpathMap[key]["uncorrect_ber_min_alrm_hi"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_warn_hi"] = "string"
-    c.nxpathMap[key]["tx_pwr_alrm_lo"] = "float"
-    c.nxpathMap[key]["uncorrect_ber_warn_lo"] = "string"
-    c.nxpathMap[key]["10gbe_code"] = "string"
-    c.nxpathMap[key]["cable_type"] = "string"
-    c.nxpathMap[key]["laser_freq_alrm_hi"] = "float"
-    c.nxpathMap[key]["rx_pwr_3"] = "float"
-    c.nxpathMap[key]["rx_pwr"] = "float"
-    c.nxpathMap[key]["volt_warn_hi"] = "float"
-    c.nxpathMap[key]["pre_fec_ber_cur_alrm_hi"] = "string"
-    c.nxpathMap[key]["temperature"] = "float"
-    c.nxpathMap[key]["voltage"] = "float"
-    c.nxpathMap[key]["tx_pwr"] = "float"
-    c.nxpathMap[key]["laser_temp_alrm_hi"] = "float"
-    c.nxpathMap[key]["tx_speeds"] = "string"
-    c.nxpathMap[key]["uncorrect_ber_min_alrm_lo"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_min_alrm_hi"] = "string"
-    c.nxpathMap[key]["ciscoid"] = "string"
-    c.nxpathMap[key]["tx_pwr_warn_lo"] = "float"
-    c.nxpathMap[key]["cisco_product_id"] = "string"
-    c.nxpathMap[key]["info_not_available"] = "string"
-    c.nxpathMap[key]["laser_temp"] = "float"
-    c.nxpathMap[key]["pre_fec_ber_cur"] = "string"
-    c.nxpathMap[key]["fiber_type_byte1"] = "string"
-    c.nxpathMap[key]["tx_type"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_min_alrm_lo"] = "string"
-    c.nxpathMap[key]["pre_fec_ber_warn_lo"] = "string"
-    c.nxpathMap[key]["temp_alrm_lo"] = "float"
-    c.nxpathMap[key]["volt_warn_lo"] = "float"
-    c.nxpathMap[key]["rx_pwr_alrm_lo"] = "float"
-    c.nxpathMap[key]["rx_pwr_2"] = "float"
-    c.nxpathMap[key]["tec_current_alrm_hi"] = "float"
-    c.nxpathMap[key]["uncorrect_ber_acc_alrm_lo"] = "string"
-    c.nxpathMap[key]["uncorrect_ber_max_alrm_hi"] = "string"
-    c.nxpathMap[key]["temp_warn_lo"] = "float"
-    c.nxpathMap[key]["snr_warn_hi"] = "float"
-    c.nxpathMap[key]["laser_temp_warn_lo"] = "float"
-    c.nxpathMap[key]["pre_fec_ber_acc_warn_hi"] = "string"
-    c.nxpathMap[key]["laser_freq_warn_hi"] = "float"
-    c.nxpathMap[key]["uncorrect_ber_max"] = "string"
+	key := "show interface transceiver details"
+	c.nxpathMap[key] = make(map[string]string, 100)
+	c.nxpathMap[key]["uncorrect_ber_alrm_hi"] = "string"
+	c.nxpathMap[key]["uncorrect_ber_cur_warn_lo"] = "string"
+	c.nxpathMap[key]["current_warn_lo"] = "float"
+	c.nxpathMap[key]["pre_fec_ber_max_alrm_hi"] = "string"
+	c.nxpathMap[key]["serialnum"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_acc_warn_lo"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_max_warn_lo"] = "string"
+	c.nxpathMap[key]["laser_temp_warn_hi"] = "float"
+	c.nxpathMap[key]["type"] = "string"
+	c.nxpathMap[key]["rx_pwr_0"] = "float"
+	c.nxpathMap[key]["rx_pwr_warn_hi"] = "float"
+	c.nxpathMap[key]["uncorrect_ber_warn_hi"] = "string"
+	c.nxpathMap[key]["qsfp_or_cfp"] = "string"
+	c.nxpathMap[key]["protocol_type"] = "string"
+	c.nxpathMap[key]["uncorrect_ber"] = "string"
+	c.nxpathMap[key]["uncorrect_ber_cur_alrm_hi"] = "string"
+	c.nxpathMap[key]["tec_current"] = "float"
+	c.nxpathMap[key]["pre_fec_ber"] = "string"
+	c.nxpathMap[key]["uncorrect_ber_max_warn_lo"] = "string"
+	c.nxpathMap[key]["uncorrect_ber_min"] = "string"
+	c.nxpathMap[key]["current_alrm_lo"] = "float"
+	c.nxpathMap[key]["uncorrect_ber_acc_warn_lo"] = "string"
+	c.nxpathMap[key]["snr_warn_lo"] = "float"
+	c.nxpathMap[key]["rev"] = "string"
+	c.nxpathMap[key]["laser_temp_alrm_lo"] = "float"
+	c.nxpathMap[key]["current"] = "float"
+	c.nxpathMap[key]["rx_pwr_1"] = "float"
+	c.nxpathMap[key]["tec_current_warn_hi"] = "float"
+	c.nxpathMap[key]["pre_fec_ber_cur_warn_lo"] = "string"
+	c.nxpathMap[key]["cisco_part_number"] = "string"
+	c.nxpathMap[key]["uncorrect_ber_acc_warn_hi"] = "string"
+	c.nxpathMap[key]["temp_warn_hi"] = "float"
+	c.nxpathMap[key]["laser_freq_warn_lo"] = "float"
+	c.nxpathMap[key]["uncorrect_ber_max_alrm_lo"] = "string"
+	c.nxpathMap[key]["snr_alrm_hi"] = "float"
+	c.nxpathMap[key]["pre_fec_ber_cur_alrm_lo"] = "string"
+	c.nxpathMap[key]["tx_pwr_alrm_hi"] = "float"
+	c.nxpathMap[key]["pre_fec_ber_min_warn_lo"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_min_warn_hi"] = "string"
+	c.nxpathMap[key]["rx_pwr_alrm_hi"] = "float"
+	c.nxpathMap[key]["tec_current_warn_lo"] = "float"
+	c.nxpathMap[key]["uncorrect_ber_acc_alrm_hi"] = "string"
+	c.nxpathMap[key]["rx_pwr_4"] = "float"
+	c.nxpathMap[key]["uncorrect_ber_cur"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_alrm_hi"] = "string"
+	c.nxpathMap[key]["rx_pwr_warn_lo"] = "float"
+	c.nxpathMap[key]["bit_encoding"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_acc"] = "string"
+	c.nxpathMap[key]["sfp"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_acc_alrm_hi"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_min"] = "string"
+	c.nxpathMap[key]["current_warn_hi"] = "float"
+	c.nxpathMap[key]["pre_fec_ber_max_alrm_lo"] = "string"
+	c.nxpathMap[key]["uncorrect_ber_cur_warn_hi"] = "string"
+	c.nxpathMap[key]["current_alrm_hi"] = "float"
+	c.nxpathMap[key]["pre_fec_ber_acc_alrm_lo"] = "string"
+	c.nxpathMap[key]["snr_alrm_lo"] = "float"
+	c.nxpathMap[key]["uncorrect_ber_acc"] = "string"
+	c.nxpathMap[key]["tx_len"] = "string"
+	c.nxpathMap[key]["uncorrect_ber_alrm_lo"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_alrm_lo"] = "string"
+	c.nxpathMap[key]["txcvr_type"] = "string"
+	c.nxpathMap[key]["tec_current_alrm_lo"] = "float"
+	c.nxpathMap[key]["volt_alrm_lo"] = "float"
+	c.nxpathMap[key]["temp_alrm_hi"] = "float"
+	c.nxpathMap[key]["uncorrect_ber_min_warn_lo"] = "string"
+	c.nxpathMap[key]["laser_freq"] = "float"
+	c.nxpathMap[key]["uncorrect_ber_min_warn_hi"] = "string"
+	c.nxpathMap[key]["uncorrect_ber_cur_alrm_lo"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_max_warn_hi"] = "string"
+	c.nxpathMap[key]["name"] = "string"
+	c.nxpathMap[key]["fiber_type_byte0"] = "string"
+	c.nxpathMap[key]["laser_freq_alrm_lo"] = "float"
+	c.nxpathMap[key]["pre_fec_ber_cur_warn_hi"] = "string"
+	c.nxpathMap[key]["partnum"] = "string"
+	c.nxpathMap[key]["snr"] = "float"
+	c.nxpathMap[key]["volt_alrm_hi"] = "float"
+	c.nxpathMap[key]["connector_type"] = "string"
+	c.nxpathMap[key]["tx_medium"] = "string"
+	c.nxpathMap[key]["tx_pwr_warn_hi"] = "float"
+	c.nxpathMap[key]["cisco_vendor_id"] = "string"
+	c.nxpathMap[key]["cisco_ext_id"] = "string"
+	c.nxpathMap[key]["uncorrect_ber_max_warn_hi"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_max"] = "string"
+	c.nxpathMap[key]["uncorrect_ber_min_alrm_hi"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_warn_hi"] = "string"
+	c.nxpathMap[key]["tx_pwr_alrm_lo"] = "float"
+	c.nxpathMap[key]["uncorrect_ber_warn_lo"] = "string"
+	c.nxpathMap[key]["10gbe_code"] = "string"
+	c.nxpathMap[key]["cable_type"] = "string"
+	c.nxpathMap[key]["laser_freq_alrm_hi"] = "float"
+	c.nxpathMap[key]["rx_pwr_3"] = "float"
+	c.nxpathMap[key]["rx_pwr"] = "float"
+	c.nxpathMap[key]["volt_warn_hi"] = "float"
+	c.nxpathMap[key]["pre_fec_ber_cur_alrm_hi"] = "string"
+	c.nxpathMap[key]["temperature"] = "float"
+	c.nxpathMap[key]["voltage"] = "float"
+	c.nxpathMap[key]["tx_pwr"] = "float"
+	c.nxpathMap[key]["laser_temp_alrm_hi"] = "float"
+	c.nxpathMap[key]["tx_speeds"] = "string"
+	c.nxpathMap[key]["uncorrect_ber_min_alrm_lo"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_min_alrm_hi"] = "string"
+	c.nxpathMap[key]["ciscoid"] = "string"
+	c.nxpathMap[key]["tx_pwr_warn_lo"] = "float"
+	c.nxpathMap[key]["cisco_product_id"] = "string"
+	c.nxpathMap[key]["info_not_available"] = "string"
+	c.nxpathMap[key]["laser_temp"] = "float"
+	c.nxpathMap[key]["pre_fec_ber_cur"] = "string"
+	c.nxpathMap[key]["fiber_type_byte1"] = "string"
+	c.nxpathMap[key]["tx_type"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_min_alrm_lo"] = "string"
+	c.nxpathMap[key]["pre_fec_ber_warn_lo"] = "string"
+	c.nxpathMap[key]["temp_alrm_lo"] = "float"
+	c.nxpathMap[key]["volt_warn_lo"] = "float"
+	c.nxpathMap[key]["rx_pwr_alrm_lo"] = "float"
+	c.nxpathMap[key]["rx_pwr_2"] = "float"
+	c.nxpathMap[key]["tec_current_alrm_hi"] = "float"
+	c.nxpathMap[key]["uncorrect_ber_acc_alrm_lo"] = "string"
+	c.nxpathMap[key]["uncorrect_ber_max_alrm_hi"] = "string"
+	c.nxpathMap[key]["temp_warn_lo"] = "float"
+	c.nxpathMap[key]["snr_warn_hi"] = "float"
+	c.nxpathMap[key]["laser_temp_warn_lo"] = "float"
+	c.nxpathMap[key]["pre_fec_ber_acc_warn_hi"] = "string"
+	c.nxpathMap[key]["laser_freq_warn_hi"] = "float"
+	c.nxpathMap[key]["uncorrect_ber_max"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitIgmp() error {
-    key := "show ip igmp groups vrf all"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["group-type"] = "string"
-    c.nxpathMap[key]["translate"] = "string"
-    c.nxpathMap[key]["sourceaddress"] = "string"
-    c.nxpathMap[key]["vrf-cntxt"] = "string"
-    c.nxpathMap[key]["expires"] = "string"
-    c.nxpathMap[key]["group-addr"] = "string"
-    c.nxpathMap[key]["uptime"] = "string"
+	key := "show ip igmp groups vrf all"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["group-type"] = "string"
+	c.nxpathMap[key]["translate"] = "string"
+	c.nxpathMap[key]["sourceaddress"] = "string"
+	c.nxpathMap[key]["vrf-cntxt"] = "string"
+	c.nxpathMap[key]["expires"] = "string"
+	c.nxpathMap[key]["group-addr"] = "string"
+	c.nxpathMap[key]["uptime"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitVrfAll() error {
-    key := "show ip igmp interface vrf all"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["if-name"] = "string"
-    c.nxpathMap[key]["static-group-map"] = "string"
-    c.nxpathMap[key]["rll"] = "string"
-    c.nxpathMap[key]["host-proxy"] = "string"
-    c.nxpathMap[key]["il"] = "string"
-    c.nxpathMap[key]["join-group-map"] = "string"
-    c.nxpathMap[key]["expires"] = "string"
-    c.nxpathMap[key]["host-proxy-group-map"] = "string"
-    c.nxpathMap[key]["next-query"] = "string"
-    c.nxpathMap[key]["q-ver"] = "string"
-    c.nxpathMap[key]["if-status"] = "string"
-    c.nxpathMap[key]["un-solicited"] = "string"
-    c.nxpathMap[key]["ip-sum"] = "string"
+	key := "show ip igmp interface vrf all"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["if-name"] = "string"
+	c.nxpathMap[key]["static-group-map"] = "string"
+	c.nxpathMap[key]["rll"] = "string"
+	c.nxpathMap[key]["host-proxy"] = "string"
+	c.nxpathMap[key]["il"] = "string"
+	c.nxpathMap[key]["join-group-map"] = "string"
+	c.nxpathMap[key]["expires"] = "string"
+	c.nxpathMap[key]["host-proxy-group-map"] = "string"
+	c.nxpathMap[key]["next-query"] = "string"
+	c.nxpathMap[key]["q-ver"] = "string"
+	c.nxpathMap[key]["if-status"] = "string"
+	c.nxpathMap[key]["un-solicited"] = "string"
+	c.nxpathMap[key]["ip-sum"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitIgmpSnoop() error {
-    key := "show ip igmp snooping"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["repsup"] = "string"
-    c.nxpathMap[key]["omf_enabled"] = "string"
-    c.nxpathMap[key]["v3repsup"] = "string"
-    c.nxpathMap[key]["grepsup"] = "string"
-    c.nxpathMap[key]["lkupmode"] = "string"
-    c.nxpathMap[key]["description"] = "string"
-    c.nxpathMap[key]["vlinklocalgrpsup"] = "string"
-    c.nxpathMap[key]["gv3repsup"] = "string"
-    c.nxpathMap[key]["reportfloodall"] = "string"
-    c.nxpathMap[key]["leavegroupaddress"] = "string"
-    c.nxpathMap[key]["enabled"] = "string"
-    c.nxpathMap[key]["omf"] = "string"
-    c.nxpathMap[key]["sq"] = "string"
-    c.nxpathMap[key]["sqr"] = "string"
-    c.nxpathMap[key]["eht"] = "string"
-    c.nxpathMap[key]["fl"] = "string"
-    c.nxpathMap[key]["reportfloodenable"] = "string"
-    c.nxpathMap[key]["snoop-on"] = "string"
-    c.nxpathMap[key]["glinklocalgrpsup"] = "string"
+	key := "show ip igmp snooping"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["repsup"] = "string"
+	c.nxpathMap[key]["omf_enabled"] = "string"
+	c.nxpathMap[key]["v3repsup"] = "string"
+	c.nxpathMap[key]["grepsup"] = "string"
+	c.nxpathMap[key]["lkupmode"] = "string"
+	c.nxpathMap[key]["description"] = "string"
+	c.nxpathMap[key]["vlinklocalgrpsup"] = "string"
+	c.nxpathMap[key]["gv3repsup"] = "string"
+	c.nxpathMap[key]["reportfloodall"] = "string"
+	c.nxpathMap[key]["leavegroupaddress"] = "string"
+	c.nxpathMap[key]["enabled"] = "string"
+	c.nxpathMap[key]["omf"] = "string"
+	c.nxpathMap[key]["sq"] = "string"
+	c.nxpathMap[key]["sqr"] = "string"
+	c.nxpathMap[key]["eht"] = "string"
+	c.nxpathMap[key]["fl"] = "string"
+	c.nxpathMap[key]["reportfloodenable"] = "string"
+	c.nxpathMap[key]["snoop-on"] = "string"
+	c.nxpathMap[key]["glinklocalgrpsup"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitIgmpSnoopGroups() error {
-    key := "show ip igmp snooping groups"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["src-uptime"] = "string"
-    c.nxpathMap[key]["source"] = "string"
-    c.nxpathMap[key]["dyn-if-name"] = "string"
-    c.nxpathMap[key]["raddr"] = "string"
-    c.nxpathMap[key]["old-host"] = "string"
-    c.nxpathMap[key]["snoop-enabled"] = "string"
-    c.nxpathMap[key]["expires"] = "string"
-    c.nxpathMap[key]["omf-enabled"] = "string"
-    c.nxpathMap[key]["uptime"] = "string"
-    c.nxpathMap[key]["src-expires"] = "string"
-    c.nxpathMap[key]["addr"] = "string"
+	key := "show ip igmp snooping groups"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["src-uptime"] = "string"
+	c.nxpathMap[key]["source"] = "string"
+	c.nxpathMap[key]["dyn-if-name"] = "string"
+	c.nxpathMap[key]["raddr"] = "string"
+	c.nxpathMap[key]["old-host"] = "string"
+	c.nxpathMap[key]["snoop-enabled"] = "string"
+	c.nxpathMap[key]["expires"] = "string"
+	c.nxpathMap[key]["omf-enabled"] = "string"
+	c.nxpathMap[key]["uptime"] = "string"
+	c.nxpathMap[key]["src-expires"] = "string"
+	c.nxpathMap[key]["addr"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitIgmpSnoopGroupDetails() error {
-    key := "show ip igmp snooping groups detail"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["src-uptime"] = "string"
-    c.nxpathMap[key]["source"] = "string"
-    c.nxpathMap[key]["dyn-if-name"] = "string"
-    c.nxpathMap[key]["raddr"] = "string"
-    c.nxpathMap[key]["old-host"] = "string"
-    c.nxpathMap[key]["snoop-enabled"] = "string"
-    c.nxpathMap[key]["expires"] = "string"
-    c.nxpathMap[key]["omf-enabled"] = "string"
-    c.nxpathMap[key]["uptime"] = "string"
-    c.nxpathMap[key]["src-expires"] = "string"
-    c.nxpathMap[key]["addr"] = "string"
+	key := "show ip igmp snooping groups detail"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["src-uptime"] = "string"
+	c.nxpathMap[key]["source"] = "string"
+	c.nxpathMap[key]["dyn-if-name"] = "string"
+	c.nxpathMap[key]["raddr"] = "string"
+	c.nxpathMap[key]["old-host"] = "string"
+	c.nxpathMap[key]["snoop-enabled"] = "string"
+	c.nxpathMap[key]["expires"] = "string"
+	c.nxpathMap[key]["omf-enabled"] = "string"
+	c.nxpathMap[key]["uptime"] = "string"
+	c.nxpathMap[key]["src-expires"] = "string"
+	c.nxpathMap[key]["addr"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitIgmpSnoopGroupsSumm() error {
-    key := "show ip igmp snooping groups summary"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["src-uptime"] = "string"
-    c.nxpathMap[key]["source"] = "string"
-    c.nxpathMap[key]["dyn-if-name"] = "string"
-    c.nxpathMap[key]["raddr"] = "string"
-    c.nxpathMap[key]["old-host"] = "string"
-    c.nxpathMap[key]["snoop-enabled"] = "string"
-    c.nxpathMap[key]["expires"] = "string"
-    c.nxpathMap[key]["omf-enabled"] = "string"
-    c.nxpathMap[key]["uptime"] = "string"
-    c.nxpathMap[key]["src-expires"] = "string"
-    c.nxpathMap[key]["addr"] = "string"
+	key := "show ip igmp snooping groups summary"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["src-uptime"] = "string"
+	c.nxpathMap[key]["source"] = "string"
+	c.nxpathMap[key]["dyn-if-name"] = "string"
+	c.nxpathMap[key]["raddr"] = "string"
+	c.nxpathMap[key]["old-host"] = "string"
+	c.nxpathMap[key]["snoop-enabled"] = "string"
+	c.nxpathMap[key]["expires"] = "string"
+	c.nxpathMap[key]["omf-enabled"] = "string"
+	c.nxpathMap[key]["uptime"] = "string"
+	c.nxpathMap[key]["src-expires"] = "string"
+	c.nxpathMap[key]["addr"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitMrouter() error {
-    key := "show ip igmp snooping mrouter"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["uptime"] = "string"
-    c.nxpathMap[key]["expires"] = "string"
+	key := "show ip igmp snooping mrouter"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["uptime"] = "string"
+	c.nxpathMap[key]["expires"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitSnoopStats() error {
-    key := "show ip igmp snooping statistics"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["ut"] = "string"
+	key := "show ip igmp snooping statistics"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["ut"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitPimInterface() error {
-    key := "show ip pim interface vrf all"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["if-is-border"] = "string"
-    c.nxpathMap[key]["cached_if_status"] = "string"
-    c.nxpathMap[key]["genid"] = "string"
-    c.nxpathMap[key]["if-name"] = "string"
-    c.nxpathMap[key]["last-cleared"] = "string"
-    c.nxpathMap[key]["is-pim-vpc-svi"] = "string"
-    c.nxpathMap[key]["if-addr"] = "string"
-    c.nxpathMap[key]["is-pim-enabled"] = "string"
-    c.nxpathMap[key]["pim-dr-address"] = "string"
-    c.nxpathMap[key]["hello-timer"] = "string"
-    c.nxpathMap[key]["pim-bfd-enabled"] = "string"
-    c.nxpathMap[key]["vpc-peer-nbr"] = "string"
-    c.nxpathMap[key]["nbr-policy-name"] = "string"
-    c.nxpathMap[key]["is-auto-enabled"] = "string"
-    c.nxpathMap[key]["if-status"] = "string"
-    c.nxpathMap[key]["jp-out-policy-name"] = "string"
-    c.nxpathMap[key]["if-addr-summary"] = "string"
-    c.nxpathMap[key]["if-dr"] = "string"
-    c.nxpathMap[key]["jp-in-policy-name"] = "string"
+	key := "show ip pim interface vrf all"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["if-is-border"] = "string"
+	c.nxpathMap[key]["cached_if_status"] = "string"
+	c.nxpathMap[key]["genid"] = "string"
+	c.nxpathMap[key]["if-name"] = "string"
+	c.nxpathMap[key]["last-cleared"] = "string"
+	c.nxpathMap[key]["is-pim-vpc-svi"] = "string"
+	c.nxpathMap[key]["if-addr"] = "string"
+	c.nxpathMap[key]["is-pim-enabled"] = "string"
+	c.nxpathMap[key]["pim-dr-address"] = "string"
+	c.nxpathMap[key]["hello-timer"] = "string"
+	c.nxpathMap[key]["pim-bfd-enabled"] = "string"
+	c.nxpathMap[key]["vpc-peer-nbr"] = "string"
+	c.nxpathMap[key]["nbr-policy-name"] = "string"
+	c.nxpathMap[key]["is-auto-enabled"] = "string"
+	c.nxpathMap[key]["if-status"] = "string"
+	c.nxpathMap[key]["jp-out-policy-name"] = "string"
+	c.nxpathMap[key]["if-addr-summary"] = "string"
+	c.nxpathMap[key]["if-dr"] = "string"
+	c.nxpathMap[key]["jp-in-policy-name"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitPimNeigh() error {
-    key := "show ip pim neighbor vrf all"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["longest-hello-intvl"] = "string"
-    c.nxpathMap[key]["if-name"] = "string"
-    c.nxpathMap[key]["uptime"] = "string"
-    c.nxpathMap[key]["expires"] = "string"
-    c.nxpathMap[key]["bfd-state"] = "string"
+	key := "show ip pim neighbor vrf all"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["longest-hello-intvl"] = "string"
+	c.nxpathMap[key]["if-name"] = "string"
+	c.nxpathMap[key]["uptime"] = "string"
+	c.nxpathMap[key]["expires"] = "string"
+	c.nxpathMap[key]["bfd-state"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitPimRoute() error {
-    key := "show ip pim route vrf all"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["rpf-nbr-1"] = "string"
-    c.nxpathMap[key]["rpf-nbr-addr"] = "string"
-    c.nxpathMap[key]["register"] = "string"
-    c.nxpathMap[key]["sgexpire"] = "string"
-    c.nxpathMap[key]["oif-bf-str"] = "string"
-    c.nxpathMap[key]["mcast-addrs"] = "string"
-    c.nxpathMap[key]["rp-addr"] = "string"
-    c.nxpathMap[key]["immediate-bf-str"] = "string"
-    c.nxpathMap[key]["sgr-prune-list-bf-str"] = "string"
-    c.nxpathMap[key]["context-name"] = "string"
-    c.nxpathMap[key]["intf-name"] = "string"
-    c.nxpathMap[key]["immediate-timeout-bf-str"] = "string"
-    c.nxpathMap[key]["rp-local"] = "string"
-    c.nxpathMap[key]["sgrexpire"] = "string"
-    c.nxpathMap[key]["timeout-bf-str"] = "string"
-    c.nxpathMap[key]["timeleft"] = "string"
+	key := "show ip pim route vrf all"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["rpf-nbr-1"] = "string"
+	c.nxpathMap[key]["rpf-nbr-addr"] = "string"
+	c.nxpathMap[key]["register"] = "string"
+	c.nxpathMap[key]["sgexpire"] = "string"
+	c.nxpathMap[key]["oif-bf-str"] = "string"
+	c.nxpathMap[key]["mcast-addrs"] = "string"
+	c.nxpathMap[key]["rp-addr"] = "string"
+	c.nxpathMap[key]["immediate-bf-str"] = "string"
+	c.nxpathMap[key]["sgr-prune-list-bf-str"] = "string"
+	c.nxpathMap[key]["context-name"] = "string"
+	c.nxpathMap[key]["intf-name"] = "string"
+	c.nxpathMap[key]["immediate-timeout-bf-str"] = "string"
+	c.nxpathMap[key]["rp-local"] = "string"
+	c.nxpathMap[key]["sgrexpire"] = "string"
+	c.nxpathMap[key]["timeout-bf-str"] = "string"
+	c.nxpathMap[key]["timeleft"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitPimRp() error {
-    key := "show ip pim rp vrf all"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["is-bsr-forward-only"] = "string"
-    c.nxpathMap[key]["is-rpaddr-local"] = "string"
-    c.nxpathMap[key]["bsr-expires"] = "string"
-    c.nxpathMap[key]["autorp-expire-time"] = "string"
-    c.nxpathMap[key]["rp-announce-policy-name"] = "string"
-    c.nxpathMap[key]["rp-cand-policy-name"] = "string"
-    c.nxpathMap[key]["is-autorp-forward-only"] = "string"
-    c.nxpathMap[key]["rp-uptime"] = "string"
-    c.nxpathMap[key]["rp-owner-flags"] = "string"
-    c.nxpathMap[key]["df-bits-recovered"] = "string"
-    c.nxpathMap[key]["bs-timer"] = "string"
-    c.nxpathMap[key]["rp-discovery-policy-name"] = "string"
-    c.nxpathMap[key]["arp-rp-addr"] = "string"
-    c.nxpathMap[key]["auto-rp-addr"] = "string"
-    c.nxpathMap[key]["autorp-expires"] = "string"
-    c.nxpathMap[key]["is-autorp-enabled"] = "string"
-    c.nxpathMap[key]["is-bsr-local"] = "string"
-    c.nxpathMap[key]["is-autorp-listen-only"] = "string"
-    c.nxpathMap[key]["autorp-dis-timer"] = "string"
-    c.nxpathMap[key]["bsr-rp-expires"] = "string"
-    c.nxpathMap[key]["static-rp-group-map"] = "string"
-    c.nxpathMap[key]["rp-source"] = "string"
-    c.nxpathMap[key]["autorp-cand-address"] = "string"
-    c.nxpathMap[key]["autorp-up-time"] = "string"
-    c.nxpathMap[key]["is-bsr-enabled"] = "string"
-    c.nxpathMap[key]["bsr-uptime"] = "string"
-    c.nxpathMap[key]["is-bsr-listen-only"] = "string"
-    c.nxpathMap[key]["rpf-nbr-address"] = "string"
-    c.nxpathMap[key]["is-rp-local"] = "string"
-    c.nxpathMap[key]["is-autorp-local"] = "string"
-    c.nxpathMap[key]["bsr-policy-name"] = "string"
-    c.nxpathMap[key]["grange-grp"] = "string"
-    c.nxpathMap[key]["rp-addr"] = "string"
-    c.nxpathMap[key]["anycast-rp-addr"] = "string"
+	key := "show ip pim rp vrf all"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["is-bsr-forward-only"] = "string"
+	c.nxpathMap[key]["is-rpaddr-local"] = "string"
+	c.nxpathMap[key]["bsr-expires"] = "string"
+	c.nxpathMap[key]["autorp-expire-time"] = "string"
+	c.nxpathMap[key]["rp-announce-policy-name"] = "string"
+	c.nxpathMap[key]["rp-cand-policy-name"] = "string"
+	c.nxpathMap[key]["is-autorp-forward-only"] = "string"
+	c.nxpathMap[key]["rp-uptime"] = "string"
+	c.nxpathMap[key]["rp-owner-flags"] = "string"
+	c.nxpathMap[key]["df-bits-recovered"] = "string"
+	c.nxpathMap[key]["bs-timer"] = "string"
+	c.nxpathMap[key]["rp-discovery-policy-name"] = "string"
+	c.nxpathMap[key]["arp-rp-addr"] = "string"
+	c.nxpathMap[key]["auto-rp-addr"] = "string"
+	c.nxpathMap[key]["autorp-expires"] = "string"
+	c.nxpathMap[key]["is-autorp-enabled"] = "string"
+	c.nxpathMap[key]["is-bsr-local"] = "string"
+	c.nxpathMap[key]["is-autorp-listen-only"] = "string"
+	c.nxpathMap[key]["autorp-dis-timer"] = "string"
+	c.nxpathMap[key]["bsr-rp-expires"] = "string"
+	c.nxpathMap[key]["static-rp-group-map"] = "string"
+	c.nxpathMap[key]["rp-source"] = "string"
+	c.nxpathMap[key]["autorp-cand-address"] = "string"
+	c.nxpathMap[key]["autorp-up-time"] = "string"
+	c.nxpathMap[key]["is-bsr-enabled"] = "string"
+	c.nxpathMap[key]["bsr-uptime"] = "string"
+	c.nxpathMap[key]["is-bsr-listen-only"] = "string"
+	c.nxpathMap[key]["rpf-nbr-address"] = "string"
+	c.nxpathMap[key]["is-rp-local"] = "string"
+	c.nxpathMap[key]["is-autorp-local"] = "string"
+	c.nxpathMap[key]["bsr-policy-name"] = "string"
+	c.nxpathMap[key]["grange-grp"] = "string"
+	c.nxpathMap[key]["rp-addr"] = "string"
+	c.nxpathMap[key]["anycast-rp-addr"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitPimStats() error {
-    key := "show ip pim statistics vrf all"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["vrf-name"] = "string"
+	key := "show ip pim statistics vrf all"
+	c.nxpathMap[key] = make(map[string]string, 1)
+	c.nxpathMap[key]["vrf-name"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitIntfBrief() error {
-    key := "show interface brief"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["speed"] = "string"
-    c.nxpathMap[key]["vlan"] = "string"
+	key := "show interface brief"
+	c.nxpathMap[key] = make(map[string]string, 2)
+	c.nxpathMap[key]["speed"] = "string"
+	c.nxpathMap[key]["vlan"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitPimVrf() error {
-    key := "show ip pim vrf all"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["table-id"] = "string"
+	key := "show ip pim vrf all"
+	c.nxpathMap[key] = make(map[string]string, 1)
+	c.nxpathMap[key]["table-id"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitIpMroute() error {
-    key := "show ip mroute summary vrf all"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["nat-mode"] = "string"
-    c.nxpathMap[key]["oif-name"] = "string"
-    c.nxpathMap[key]["nat-route-type"] = "string"
-    c.nxpathMap[key]["uptime"] = "string"
-    c.nxpathMap[key]["mofrr-nbr"] = "string"
-    c.nxpathMap[key]["extranet_addr"] = "string"
-    c.nxpathMap[key]["stale-route"] = "string"
-    c.nxpathMap[key]["pending"] = "string"
-    c.nxpathMap[key]["bidir"] = "string"
-    c.nxpathMap[key]["expry_timer"] = "string"
-    c.nxpathMap[key]["mofrr-iif"] = "string"
-    c.nxpathMap[key]["group_addrs"] = "string"
-    c.nxpathMap[key]["mpib-name"] = "string"
-    c.nxpathMap[key]["rpf"] = "string"
-    c.nxpathMap[key]["mcast-addrs"] = "string"
-    c.nxpathMap[key]["route-mdt-iod"] = "string"
-    c.nxpathMap[key]["sr-oif"] = "string"
-    c.nxpathMap[key]["stats-rate-buf"] = "string"
-    c.nxpathMap[key]["source_addr"] = "string"
-    c.nxpathMap[key]["route-iif"] = "string"
-    c.nxpathMap[key]["rpf-nbr"] = "string"
-    c.nxpathMap[key]["translated-route-src"] = "string"
-    c.nxpathMap[key]["group_addr"] = "string"
-    c.nxpathMap[key]["lisp-src-rloc"] = "string"
-    c.nxpathMap[key]["stats-pndg"] = "string"
-    c.nxpathMap[key]["rate_buf"] = "string"
-    c.nxpathMap[key]["extranet_vrf_name"] = "string"
-    c.nxpathMap[key]["fabric-interest"] = "string"
-    c.nxpathMap[key]["translated-route-grp"] = "string"
-    c.nxpathMap[key]["internal"] = "string"
-    c.nxpathMap[key]["oif-mpib-name"] = "string"
-    c.nxpathMap[key]["oif-uptime"] = "string"
-    c.nxpathMap[key]["omd-vpc-svi"] = "string"
-    c.nxpathMap[key]["source_addrs"] = "string"
-    c.nxpathMap[key]["stale-oif"] = "string"
-    c.nxpathMap[key]["core-interest"] = "string"
-    c.nxpathMap[key]["oif-list-bitfield"] = "string"
+	key := "show ip mroute summary vrf all"
+	c.nxpathMap[key] = make(map[string]string, 40)
+	c.nxpathMap[key]["nat-mode"] = "string"
+	c.nxpathMap[key]["oif-name"] = "string"
+	c.nxpathMap[key]["nat-route-type"] = "string"
+	c.nxpathMap[key]["uptime"] = "string"
+	c.nxpathMap[key]["mofrr-nbr"] = "string"
+	c.nxpathMap[key]["extranet_addr"] = "string"
+	c.nxpathMap[key]["stale-route"] = "string"
+	c.nxpathMap[key]["pending"] = "string"
+	c.nxpathMap[key]["bidir"] = "string"
+	c.nxpathMap[key]["expry_timer"] = "string"
+	c.nxpathMap[key]["mofrr-iif"] = "string"
+	c.nxpathMap[key]["group_addrs"] = "string"
+	c.nxpathMap[key]["mpib-name"] = "string"
+	c.nxpathMap[key]["rpf"] = "string"
+	c.nxpathMap[key]["mcast-addrs"] = "string"
+	c.nxpathMap[key]["route-mdt-iod"] = "string"
+	c.nxpathMap[key]["sr-oif"] = "string"
+	c.nxpathMap[key]["stats-rate-buf"] = "string"
+	c.nxpathMap[key]["source_addr"] = "string"
+	c.nxpathMap[key]["route-iif"] = "string"
+	c.nxpathMap[key]["rpf-nbr"] = "string"
+	c.nxpathMap[key]["translated-route-src"] = "string"
+	c.nxpathMap[key]["group_addr"] = "string"
+	c.nxpathMap[key]["lisp-src-rloc"] = "string"
+	c.nxpathMap[key]["stats-pndg"] = "string"
+	c.nxpathMap[key]["rate_buf"] = "string"
+	c.nxpathMap[key]["extranet_vrf_name"] = "string"
+	c.nxpathMap[key]["fabric-interest"] = "string"
+	c.nxpathMap[key]["translated-route-grp"] = "string"
+	c.nxpathMap[key]["internal"] = "string"
+	c.nxpathMap[key]["oif-mpib-name"] = "string"
+	c.nxpathMap[key]["oif-uptime"] = "string"
+	c.nxpathMap[key]["omd-vpc-svi"] = "string"
+	c.nxpathMap[key]["source_addrs"] = "string"
+	c.nxpathMap[key]["stale-oif"] = "string"
+	c.nxpathMap[key]["core-interest"] = "string"
+	c.nxpathMap[key]["oif-list-bitfield"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitIpv6Mroute() error {
-    key := "show ipv6 mroute summary vrf all"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["nat-mode"] = "string"
-    c.nxpathMap[key]["oif-name"] = "string"
-    c.nxpathMap[key]["nat-route-type"] = "string"
-    c.nxpathMap[key]["uptime"] = "string"
-    c.nxpathMap[key]["mofrr-nbr"] = "string"
-    c.nxpathMap[key]["extranet_addr"] = "string"
-    c.nxpathMap[key]["stale-route"] = "string"
-    c.nxpathMap[key]["pending"] = "string"
-    c.nxpathMap[key]["bidir"] = "string"
-    c.nxpathMap[key]["expry_timer"] = "string"
-    c.nxpathMap[key]["mofrr-iif"] = "string"
-    c.nxpathMap[key]["group_addrs"] = "string"
-    c.nxpathMap[key]["mpib-name"] = "string"
-    c.nxpathMap[key]["rpf"] = "string"
-    c.nxpathMap[key]["mcast-addrs"] = "string"
-    c.nxpathMap[key]["route-mdt-iod"] = "string"
-    c.nxpathMap[key]["sr-oif"] = "string"
-    c.nxpathMap[key]["stats-rate-buf"] = "string"
-    c.nxpathMap[key]["source_addr"] = "string"
-    c.nxpathMap[key]["route-iif"] = "string"
-    c.nxpathMap[key]["rpf-nbr"] = "string"
-    c.nxpathMap[key]["translated-route-src"] = "string"
-    c.nxpathMap[key]["group_addr"] = "string"
-    c.nxpathMap[key]["lisp-src-rloc"] = "string"
-    c.nxpathMap[key]["stats-pndg"] = "string"
-    c.nxpathMap[key]["rate_buf"] = "string"
-    c.nxpathMap[key]["extranet_vrf_name"] = "string"
-    c.nxpathMap[key]["fabric-interest"] = "string"
-    c.nxpathMap[key]["translated-route-grp"] = "string"
-    c.nxpathMap[key]["internal"] = "string"
-    c.nxpathMap[key]["oif-mpib-name"] = "string"
-    c.nxpathMap[key]["oif-uptime"] = "string"
-    c.nxpathMap[key]["omd-vpc-svi"] = "string"
-    c.nxpathMap[key]["source_addrs"] = "string"
-    c.nxpathMap[key]["stale-oif"] = "string"
-    c.nxpathMap[key]["core-interest"] = "string"
-    c.nxpathMap[key]["oif-list-bitfield"] = "string"
+	key := "show ipv6 mroute summary vrf all"
+	c.nxpathMap[key] = make(map[string]string, 40)
+	c.nxpathMap[key]["nat-mode"] = "string"
+	c.nxpathMap[key]["oif-name"] = "string"
+	c.nxpathMap[key]["nat-route-type"] = "string"
+	c.nxpathMap[key]["uptime"] = "string"
+	c.nxpathMap[key]["mofrr-nbr"] = "string"
+	c.nxpathMap[key]["extranet_addr"] = "string"
+	c.nxpathMap[key]["stale-route"] = "string"
+	c.nxpathMap[key]["pending"] = "string"
+	c.nxpathMap[key]["bidir"] = "string"
+	c.nxpathMap[key]["expry_timer"] = "string"
+	c.nxpathMap[key]["mofrr-iif"] = "string"
+	c.nxpathMap[key]["group_addrs"] = "string"
+	c.nxpathMap[key]["mpib-name"] = "string"
+	c.nxpathMap[key]["rpf"] = "string"
+	c.nxpathMap[key]["mcast-addrs"] = "string"
+	c.nxpathMap[key]["route-mdt-iod"] = "string"
+	c.nxpathMap[key]["sr-oif"] = "string"
+	c.nxpathMap[key]["stats-rate-buf"] = "string"
+	c.nxpathMap[key]["source_addr"] = "string"
+	c.nxpathMap[key]["route-iif"] = "string"
+	c.nxpathMap[key]["rpf-nbr"] = "string"
+	c.nxpathMap[key]["translated-route-src"] = "string"
+	c.nxpathMap[key]["group_addr"] = "string"
+	c.nxpathMap[key]["lisp-src-rloc"] = "string"
+	c.nxpathMap[key]["stats-pndg"] = "string"
+	c.nxpathMap[key]["rate_buf"] = "string"
+	c.nxpathMap[key]["extranet_vrf_name"] = "string"
+	c.nxpathMap[key]["fabric-interest"] = "string"
+	c.nxpathMap[key]["translated-route-grp"] = "string"
+	c.nxpathMap[key]["internal"] = "string"
+	c.nxpathMap[key]["oif-mpib-name"] = "string"
+	c.nxpathMap[key]["oif-uptime"] = "string"
+	c.nxpathMap[key]["omd-vpc-svi"] = "string"
+	c.nxpathMap[key]["source_addrs"] = "string"
+	c.nxpathMap[key]["stale-oif"] = "string"
+	c.nxpathMap[key]["core-interest"] = "string"
+	c.nxpathMap[key]["oif-list-bitfield"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitVpc() error {
-    key := "sys/vpc"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["type2CompatQualStr"] = "string"
-    c.nxpathMap[key]["compatQualStr"] = "string"
-    c.nxpathMap[key]["name"] = "string"
-    c.nxpathMap[key]["issuFromVer"] = "string"
-    c.nxpathMap[key]["issuToVer"] = "string"
+	key := "sys/vpc"
+	c.nxpathMap[key] = make(map[string]string, 5)
+	c.nxpathMap[key]["type2CompatQualStr"] = "string"
+	c.nxpathMap[key]["compatQualStr"] = "string"
+	c.nxpathMap[key]["name"] = "string"
+	c.nxpathMap[key]["issuFromVer"] = "string"
+	c.nxpathMap[key]["issuToVer"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitBgp() error {
-    key := "sys/bgp"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["dynRtMap"] = "string"
-    c.nxpathMap[key]["nhRtMap"] = "string"
-    c.nxpathMap[key]["epePeerSet"] = "string"
-    c.nxpathMap[key]["asn"] = "string"
-    c.nxpathMap[key]["peerImp"] = "string"
-    c.nxpathMap[key]["wght"] = "string"
-    c.nxpathMap[key]["assocDom"] = "string"
-    c.nxpathMap[key]["tblMap"] = "string"
-    c.nxpathMap[key]["unSupprMap"] = "string"
-    c.nxpathMap[key]["sessionContImp"] = "string"
-    c.nxpathMap[key]["allocLblRtMap"] = "string"
-    c.nxpathMap[key]["defMetric"] = "string"
-    c.nxpathMap[key]["password"] = "string"
-    c.nxpathMap[key]["retainRttRtMap"] = "string"
-    c.nxpathMap[key]["clusterId"] = "string"
-    c.nxpathMap[key]["localAsn"] = "string"
-    c.nxpathMap[key]["name"] = "string"
-    c.nxpathMap[key]["defOrgRtMap"] = "string"
+	key := "sys/bgp"
+	c.nxpathMap[key] = make(map[string]string, 18)
+	c.nxpathMap[key]["dynRtMap"] = "string"
+	c.nxpathMap[key]["nhRtMap"] = "string"
+	c.nxpathMap[key]["epePeerSet"] = "string"
+	c.nxpathMap[key]["asn"] = "string"
+	c.nxpathMap[key]["peerImp"] = "string"
+	c.nxpathMap[key]["wght"] = "string"
+	c.nxpathMap[key]["assocDom"] = "string"
+	c.nxpathMap[key]["tblMap"] = "string"
+	c.nxpathMap[key]["unSupprMap"] = "string"
+	c.nxpathMap[key]["sessionContImp"] = "string"
+	c.nxpathMap[key]["allocLblRtMap"] = "string"
+	c.nxpathMap[key]["defMetric"] = "string"
+	c.nxpathMap[key]["password"] = "string"
+	c.nxpathMap[key]["retainRttRtMap"] = "string"
+	c.nxpathMap[key]["clusterId"] = "string"
+	c.nxpathMap[key]["localAsn"] = "string"
+	c.nxpathMap[key]["name"] = "string"
+	c.nxpathMap[key]["defOrgRtMap"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitCh() error {
-    key := "sys/ch"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["fanName"] = "string"
-    c.nxpathMap[key]["typeCordConnected"] = "string"
-    c.nxpathMap[key]["vendor"] = "string"
-    c.nxpathMap[key]["model"] = "string"
-    c.nxpathMap[key]["rev"] = "string"
-    c.nxpathMap[key]["vdrId"] = "string"
-    c.nxpathMap[key]["hardwareAlarm"] = "string"
-    c.nxpathMap[key]["unit"] = "string"
-    c.nxpathMap[key]["hwVer"] = "string"
+	key := "sys/ch"
+	c.nxpathMap[key] = make(map[string]string, 10)
+	c.nxpathMap[key]["fanName"] = "string"
+	c.nxpathMap[key]["typeCordConnected"] = "string"
+	c.nxpathMap[key]["vendor"] = "string"
+	c.nxpathMap[key]["model"] = "string"
+	c.nxpathMap[key]["rev"] = "string"
+	c.nxpathMap[key]["vdrId"] = "string"
+	c.nxpathMap[key]["hardwareAlarm"] = "string"
+	c.nxpathMap[key]["unit"] = "string"
+	c.nxpathMap[key]["hwVer"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitIntf() error {
-    key := "sys/intf"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["descr"] = "string"
-    c.nxpathMap[key]["name"] = "string"
-    c.nxpathMap[key]["lastStCause"] = "string"
-    c.nxpathMap[key]["description"] = "string"
-    c.nxpathMap[key]["unit"] = "string"
-    c.nxpathMap[key]["operFECMode"] = "string"
-    c.nxpathMap[key]["operBitset"] = "string"
-    c.nxpathMap[key]["mdix"] = "string"
+	key := "sys/intf"
+	c.nxpathMap[key] = make(map[string]string, 10)
+	c.nxpathMap[key]["descr"] = "string"
+	c.nxpathMap[key]["name"] = "string"
+	c.nxpathMap[key]["lastStCause"] = "string"
+	c.nxpathMap[key]["description"] = "string"
+	c.nxpathMap[key]["unit"] = "string"
+	c.nxpathMap[key]["operFECMode"] = "string"
+	c.nxpathMap[key]["operBitset"] = "string"
+	c.nxpathMap[key]["mdix"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitProcsys() error {
-    key := "sys/procsys"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["name"] = "string"
-    c.nxpathMap[key]["id"] = "string"
-    c.nxpathMap[key]["upTs"] = "string"
-    c.nxpathMap[key]["interval"] = "string"
-    c.nxpathMap[key]["memstatus"] = "string"
+	key := "sys/procsys"
+	c.nxpathMap[key] = make(map[string]string, 10)
+	c.nxpathMap[key]["name"] = "string"
+	c.nxpathMap[key]["id"] = "string"
+	c.nxpathMap[key]["upTs"] = "string"
+	c.nxpathMap[key]["interval"] = "string"
+	c.nxpathMap[key]["memstatus"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitProc() error {
-    key := "sys/proc"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["processName"] = "string"
-    c.nxpathMap[key]["procArg"] = "string"
+	key := "sys/proc"
+	c.nxpathMap[key] = make(map[string]string, 2)
+	c.nxpathMap[key]["processName"] = "string"
+	c.nxpathMap[key]["procArg"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitBfd() error {
-    key := "sys/bfd/inst"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["descr"] = "string"
-    c.nxpathMap[key]["vrfName"] = "string"
-    c.nxpathMap[key]["name"] = "string"
-    c.nxpathMap[key]["name"] = "string"
+	key := "sys/bfd/inst"
+	c.nxpathMap[key] = make(map[string]string, 4)
+	c.nxpathMap[key]["descr"] = "string"
+	c.nxpathMap[key]["vrfName"] = "string"
+	c.nxpathMap[key]["name"] = "string"
+	c.nxpathMap[key]["name"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitLldp() error {
-    key := "sys/lldp"
-    c.nxpathMap[key] = make(map[string]string, 20)
-    c.nxpathMap[key]["sysDesc"] = "string"
-    c.nxpathMap[key]["portDesc"] = "string"
-    c.nxpathMap[key]["portIdV"] = "string"
-    c.nxpathMap[key]["chassisIdV"] = "string"
-    c.nxpathMap[key]["sysName"] = "string"
-    c.nxpathMap[key]["name"] = "string"
-    c.nxpathMap[key]["id"] = "string"
+	key := "sys/lldp"
+	c.nxpathMap[key] = make(map[string]string, 7)
+	c.nxpathMap[key]["sysDesc"] = "string"
+	c.nxpathMap[key]["portDesc"] = "string"
+	c.nxpathMap[key]["portIdV"] = "string"
+	c.nxpathMap[key]["chassisIdV"] = "string"
+	c.nxpathMap[key]["sysName"] = "string"
+	c.nxpathMap[key]["name"] = "string"
+	c.nxpathMap[key]["id"] = "string"
 
-    return nil
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) InitDb() error {
-    c.nxpathMap = make(map[string]map[string]string, 200)
+	c.nxpathMap = make(map[string]map[string]string, 200)
 
+	c.InitPower()
+	c.InitMemPhys()
+	c.InitBgpV4()
+	c.InitCpu()
+	c.InitResources()
+	c.InitPtpCorrection()
+	c.InitTrans()
+	c.InitIgmp()
+	c.InitVrfAll()
+	c.InitIgmpSnoop()
+	c.InitIgmpSnoopGroups()
+	c.InitIgmpSnoopGroupDetails()
+	c.InitIgmpSnoopGroupsSumm()
+	c.InitMrouter()
+	c.InitSnoopStats()
+	c.InitPimInterface()
+	c.InitPimNeigh()
+	c.InitPimRoute()
+	c.InitPimRp()
+	c.InitPimStats()
+	c.InitIntfBrief()
+	c.InitPimVrf()
+	c.InitIpMroute()
+	c.InitIpv6Mroute()
+	c.InitVpc()
+	c.InitBgp()
+	c.InitCh()
+	c.InitIntf()
+	c.InitProcsys()
+	c.InitProc()
+	c.InitBfd()
+	c.InitLldp()
 
-    c.InitPower()
-    c.InitMemPhys()
-    c.InitBgpV4()
-    c.InitCpu()
-    c.InitResources()
-    c.InitPtpCorrection()
-    c.InitTrans()
-    c.InitIgmp()
-    c.InitVrfAll()
-    c.InitIgmpSnoop()
-    c.InitIgmpSnoopGroups()
-    c.InitIgmpSnoopGroupDetails()
-    c.InitIgmpSnoopGroupsSumm()
-    c.InitMrouter()
-    c.InitSnoopStats()
-    c.InitPimInterface()
-    c.InitPimNeigh()
-    c.InitPimRoute()
-    c.InitPimRp()
-    c.InitPimStats()
-    c.InitIntfBrief()
-    c.InitPimVrf()
-    c.InitIpMroute()
-    c.InitIpv6Mroute()
-    c.InitVpc()
-    c.InitBgp()
-    c.InitCh()
-    c.InitIntf()
-    c.InitProcsys()
-    c.InitProc()
-    c.InitBfd()
-    c.InitLldp()
-   
-    return nil
+	return nil
 }
-
 
 // Start the Cisco MDT service
 func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
@@ -1031,11 +1029,11 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-        c.propMap = make(map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}, 100)
-        c.propMap["test"] = c.nxosValueXformUint64Toint64
-        c.propMap["asn"] = c.nxosValueXformUint64ToString //uint64 to string.
-        c.propMap["subscriptionId"] =  c.nxosValueXformUint64ToString //uint64 to string.
-        c.propMap["operState"] = c.nxosValueXformUint64ToString //uint64 to string.
+	c.propMap = make(map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}, 100)
+	c.propMap["test"] = c.nxosValueXformUint64Toint64
+	c.propMap["asn"] = c.nxosValueXformUint64ToString            //uint64 to string.
+	c.propMap["subscriptionId"] = c.nxosValueXformUint64ToString //uint64 to string.
+	c.propMap["operState"] = c.nxosValueXformUint64ToString      //uint64 to string.
 
 	// Invert aliases list
 	c.warned = make(map[string]struct{})
@@ -1043,38 +1041,38 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	for alias, path := range c.Aliases {
 		c.aliases[path] = alias
 	}
-        c.InitDb()
+	c.InitDb()
 
-        c.dmes = make(map[string]string, len(c.Dmes))
-        for dme, path := range c.Dmes {
-                c.dmes[path] = dme
-                if path == "uint64 to int" {
-                    c.propMap[dme] = c.nxosValueXformUint64Toint64
-                } else if path == "uint64 to string" {
-                    c.propMap[dme] = c.nxosValueXformUint64ToString
-                } else if path == "string to float64" {
-                    c.propMap[dme] = c.nxosValueXformStringTofloat
-                } else if path == "string to uint64" {
-                    c.propMap[dme] = c.nxosValueXformStringToUint64
-                } else if path == "string to int64" {
-                    c.propMap[dme] = c.nxosValueXformStringToInt64
-                } else if path == "auto-float-xfrom" {
-                    c.propMap[dme] = c.nxosValueAutoXformFloatProp
-                } else if dme[0:6] == "dnpath" { //path based property map
-                    js := []byte(path)
-                    var jsStruct NxPayloadXfromStructure
+	c.dmes = make(map[string]string, len(c.Dmes))
+	for dme, path := range c.Dmes {
+		c.dmes[path] = dme
+		if path == "uint64 to int" {
+			c.propMap[dme] = c.nxosValueXformUint64Toint64
+		} else if path == "uint64 to string" {
+			c.propMap[dme] = c.nxosValueXformUint64ToString
+		} else if path == "string to float64" {
+			c.propMap[dme] = c.nxosValueXformStringTofloat
+		} else if path == "string to uint64" {
+			c.propMap[dme] = c.nxosValueXformStringToUint64
+		} else if path == "string to int64" {
+			c.propMap[dme] = c.nxosValueXformStringToInt64
+		} else if path == "auto-float-xfrom" {
+			c.propMap[dme] = c.nxosValueAutoXformFloatProp
+		} else if dme[0:6] == "dnpath" { //path based property map
+			js := []byte(path)
+			var jsStruct NxPayloadXfromStructure
 
-                    err := json.Unmarshal(js, &jsStruct)
-                    if err == nil {
-                        //Build 2 level Hash nxpathMap Key = jsStruct.Name, Value = map of jsStruct.Prop
-                        //It will override the default of code if same path is provided in configuration.
-                        c.nxpathMap[jsStruct.Name] = make(map[string]string, len(jsStruct.Prop))
-                        for _, prop := range jsStruct.Prop {
-                            c.nxpathMap[jsStruct.Name][prop.Key] = prop.Value
-                        }
-                    }
-                }
-        }
+			err := json.Unmarshal(js, &jsStruct)
+			if err == nil {
+				//Build 2 level Hash nxpathMap Key = jsStruct.Name, Value = map of jsStruct.Prop
+				//It will override the default of code if same path is provided in configuration.
+				c.nxpathMap[jsStruct.Name] = make(map[string]string, len(jsStruct.Prop))
+				for _, prop := range jsStruct.Prop {
+					c.nxpathMap[jsStruct.Name][prop.Key] = prop.Value
+				}
+			}
+		}
+	}
 
 	// Fill extra tags
 	c.extraTags = make(map[string]map[string]struct{})
@@ -1299,9 +1297,9 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		// Parse keys
 		tags = make(map[string]string, len(keys.Fields)+3)
 		tags["source"] = msg.GetNodeIdStr()
-                if msg.GetSubscriptionIdStr() != "" {
-		    tags["subscription"] = msg.GetSubscriptionIdStr()
-                }
+		if msg.GetSubscriptionIdStr() != "" {
+			tags["subscription"] = msg.GetSubscriptionIdStr()
+		}
 		tags["path"] = msg.GetEncodingPath()
 
 		for _, subfield := range keys.Fields {
@@ -1324,9 +1322,9 @@ func decodeValue(field *telemetry.TelemetryField) interface{} {
 	case *telemetry.TelemetryField_BytesValue:
 		return val.BytesValue
 	case *telemetry.TelemetryField_StringValue:
-                if len(val.StringValue) > 0 {
-                        return val.StringValue
-                }
+		if len(val.StringValue) > 0 {
+			return val.StringValue
+		}
 	case *telemetry.TelemetryField_BoolValue:
 		return val.BoolValue
 	case *telemetry.TelemetryField_Uint32Value:
@@ -1397,72 +1395,71 @@ func (c *CiscoTelemetryMDT) parseKeyField(tags map[string]string, field *telemet
 }
 
 func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string, path string, tags map[string]string, timestamp time.Time) {
-        // RIB 
-        measurement := path
-        for _, subfield := range field.Fields {
-            //For Every table fill the keys which are vrfName, address and masklen
-            switch subfield.Name {
-            case "vrfName",  "address", "maskLen" :
-                tags[subfield.Name] = decodeTag(subfield)
-            }
-            if value := decodeValue(subfield); value != nil {
-                grouper.Add(measurement, tags, timestamp, subfield.Name, value)
-            }
-            if subfield.Name == "nextHop" {
-                //For next hop table fill the keys in the tag - which is address and vrfname
-                for _, subf := range subfield.Fields {
-                    for _, ff := range subf.Fields {
-                        switch ff.Name {
-                        case "address", "vrfName" :
-                            key := "nextHop/" + ff.Name
-                            tags[key] = decodeTag(ff)
-                        }
-                        if value := decodeValue(ff); value != nil {
-                            name := "nextHop/" + ff.Name
-                            grouper.Add(measurement, tags, timestamp, name, value)
-                        }
-                    }
-                }
-            }
-        }
+	// RIB
+	measurement := path
+	for _, subfield := range field.Fields {
+		//For Every table fill the keys which are vrfName, address and masklen
+		switch subfield.Name {
+		case "vrfName", "address", "maskLen":
+			tags[subfield.Name] = decodeTag(subfield)
+		}
+		if value := decodeValue(subfield); value != nil {
+			grouper.Add(measurement, tags, timestamp, subfield.Name, value)
+		}
+		if subfield.Name == "nextHop" {
+			//For next hop table fill the keys in the tag - which is address and vrfname
+			for _, subf := range subfield.Fields {
+				for _, ff := range subf.Fields {
+					switch ff.Name {
+					case "address", "vrfName":
+						key := "nextHop/" + ff.Name
+						tags[key] = decodeTag(ff)
+					}
+					if value := decodeValue(ff); value != nil {
+						name := "nextHop/" + ff.Name
+						grouper.Add(measurement, tags, timestamp, name, value)
+					}
+				}
+			}
+		}
+	}
 }
- 
 
 func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string, path string, tags map[string]string, timestamp time.Time) {
-        // DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
-        var nxAttributes *telemetry.TelemetryField
-        nxAttributes = field
-        isDme := strings.Contains(path, "sys/")
-        if path == "rib" {
-           //handle native data path rib
-           c.parseRib(grouper, field, prefix, path, tags, timestamp)
-           return
-        }
-        if field == nil || !isDme {
-            return
-        }
+	// DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
+	var nxAttributes *telemetry.TelemetryField
+	nxAttributes = field
+	isDme := strings.Contains(path, "sys/")
+	if path == "rib" {
+		//handle native data path rib
+		c.parseRib(grouper, field, prefix, path, tags, timestamp)
+		return
+	}
+	if field == nil || !isDme {
+		return
+	}
 
-        if field.Fields[0] != nil && field.Fields[0].Fields != nil && field.Fields[0].Fields[0] != nil && field.Fields[0].Fields[0].Fields[0].Name != "attributes" {
-           return
-        }
-        nxAttributes = field.Fields[0].Fields[0].Fields[0].Fields[0]
-        
-        for _, subfield := range nxAttributes.Fields {
-                if subfield.Name == "dn" {
-                        tags["dn"] = decodeTag(subfield)
-                } else {
-                    c.parseContentField(grouper, subfield, "", path, tags, timestamp)
-                }
-        }
+	if field.Fields[0] != nil && field.Fields[0].Fields != nil && field.Fields[0].Fields[0] != nil && field.Fields[0].Fields[0].Fields[0].Name != "attributes" {
+		return
+	}
+	nxAttributes = field.Fields[0].Fields[0].Fields[0].Fields[0]
+
+	for _, subfield := range nxAttributes.Fields {
+		if subfield.Name == "dn" {
+			tags["dn"] = decodeTag(subfield)
+		} else {
+			c.parseContentField(grouper, subfield, "", path, tags, timestamp)
+		}
+	}
 }
 
 func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string,
 	path string, tags map[string]string, timestamp time.Time) {
 	name := strings.Replace(field.Name, "-", "_", -1)
 
-        if (name == "modTs" || name == "createTs") && decodeValue(field) == "never" {
-           return
-        }
+	if (name == "modTs" || name == "createTs") && decodeValue(field) == "never" {
+		return
+	}
 	if len(name) == 0 {
 		name = prefix
 	} else if len(prefix) > 0 {
@@ -1485,11 +1482,11 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 			c.mutex.Unlock()
 		}
 
-                if val := c.nxosValueXform(field, value, path); val != nil {
-                    grouper.Add(measurement, tags, timestamp, name, val)
-                } else {
-                    grouper.Add(measurement, tags, timestamp, name, value)
-                }
+		if val := c.nxosValueXform(field, value, path); val != nil {
+			grouper.Add(measurement, tags, timestamp, name, val)
+		} else {
+			grouper.Add(measurement, tags, timestamp, name, value)
+		}
 		return
 	}
 
@@ -1503,26 +1500,26 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 
 	var nxAttributes, nxChildren, nxRows *telemetry.TelemetryField
 	isNXOS := !strings.ContainsRune(path, ':') // IOS-XR and IOS-XE have a colon in their encoding path, NX-OS does not
-        isEVENT := isNXOS && strings.Contains(path, "EVENT-LIST")
+	isEVENT := isNXOS && strings.Contains(path, "EVENT-LIST")
 	for _, subfield := range field.Fields {
 		if isNXOS && subfield.Name == "attributes" && len(subfield.Fields) > 0 {
 			nxAttributes = subfield.Fields[0]
 		} else if isNXOS && subfield.Name == "children" && len(subfield.Fields) > 0 {
-                        if !isEVENT {
-			    nxChildren = subfield
-                        } else {
-                            sub := subfield.Fields
-                            if sub[0] != nil && sub[0].Fields[0].Name == "subscriptionId" && len(sub[0].Fields) >= 2  {
-                                nxAttributes = sub[0].Fields[1].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0]
-                            }
-                        }
-                        //if nxAttributes == NULL then class based query.
-                        if nxAttributes == nil {
-                            //call function walking over walking list.
-                            for _, sub := range subfield.Fields {
-                                c.parseClassAttributeField(grouper, sub, name, path, tags, timestamp) 
-                            }
-                        }
+			if !isEVENT {
+				nxChildren = subfield
+			} else {
+				sub := subfield.Fields
+				if sub[0] != nil && sub[0].Fields[0].Name == "subscriptionId" && len(sub[0].Fields) >= 2 {
+					nxAttributes = sub[0].Fields[1].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0]
+				}
+			}
+			//if nxAttributes == NULL then class based query.
+			if nxAttributes == nil {
+				//call function walking over walking list.
+				for _, sub := range subfield.Fields {
+					c.parseClassAttributeField(grouper, sub, name, path, tags, timestamp)
+				}
+			}
 		} else if isNXOS && strings.HasPrefix(subfield.Name, "ROW_") {
 			nxRows = subfield
 		} else if _, isExtraTag := extraTags[subfield.Name]; !isExtraTag { // Regular telemetry decoding
@@ -1538,16 +1535,16 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 			for i, subfield := range row.Fields {
 				if i == 0 { // First subfield contains the index, promote it from value to tag
 					tags[prefix] = decodeTag(subfield)
-                                        //We can have subfield so recursively handle it.
-                                        if (len(row.Fields) == 1) {
-                                            tags["row_number"] = strconv.FormatInt(int64(i), 10)
-                                            c.parseContentField(grouper, subfield, "", path, tags, timestamp)
-                                        }
+					//We can have subfield so recursively handle it.
+					if len(row.Fields) == 1 {
+						tags["row_number"] = strconv.FormatInt(int64(i), 10)
+						c.parseContentField(grouper, subfield, "", path, tags, timestamp)
+					}
 				} else {
 					c.parseContentField(grouper, subfield, "", path, tags, timestamp)
 				}
-                                // Nxapi we can't identify keys always from prefix
-                                tags["row_number"] = strconv.FormatInt(int64(i), 10)
+				// Nxapi we can't identify keys always from prefix
+				tags["row_number"] = strconv.FormatInt(int64(i), 10)
 			}
 			delete(tags, prefix)
 		}
