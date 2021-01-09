@@ -33,7 +33,7 @@ func (*Chrony) SampleConfig() string {
   `
 }
 
-func (c *Chrony) Init() error {
+func (c *Chrony) init() error {
 	var err error
 	c.path, err = exec.LookPath("chronyc")
 	if err != nil {
@@ -43,6 +43,12 @@ func (c *Chrony) Init() error {
 }
 
 func (c *Chrony) Gather(acc telegraf.Accumulator) error {
+	//Manually execute chronyc lookup
+	err := c. init() 
+        if err != nil {
+		return err
+	}
+
 	flags := []string{}
 	if !c.DNSLookup {
 		flags = append(flags, "-n")
