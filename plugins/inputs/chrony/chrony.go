@@ -43,12 +43,11 @@ func (c *Chrony) init() error {
 }
 
 func (c *Chrony) Gather(acc telegraf.Accumulator) error {
-	// manually execute chronyc lookup
-	err := c.init() 
-        if err != nil {
+	var err error
+	err = c.init()
+	if err != nil {
 		return err
 	}
-
 	flags := []string{}
 	if !c.DNSLookup {
 		flags = append(flags, "-n")
