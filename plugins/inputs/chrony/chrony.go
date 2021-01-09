@@ -43,8 +43,8 @@ func (c *Chrony) init() error {
 }
 
 func (c *Chrony) Gather(acc telegraf.Accumulator) error {
-	//Manually execute chronyc lookup
-	err := c. init() 
+	// manually execute chronyc lookup
+	err := c.init() 
         if err != nil {
 		return err
 	}
