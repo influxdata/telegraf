@@ -4,12 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var start, _ = metric.New("Test Metric",
+var start, _ = metric.New("TestMetric",
 	map[string]string{"state": "full"},
 	map[string]interface{}{
 		"increasing": int64(0),
@@ -21,7 +20,7 @@ var start, _ = metric.New("Test Metric",
 	time.Now(),
 )
 
-var finish, _ = metric.New("Test Metric",
+var finish, _ = metric.New("TestMetric",
 	map[string]string{"state": "full"},
 	map[string]interface{}{
 		"increasing": int64(1000),
@@ -37,11 +36,11 @@ func TestTwoFullEventsWithParameter(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := &Derivative{
 		Variable: "parameter",
-		Infix:    "_by_",
+		Suffix:   "_by_parameter",
 		cache:    make(map[uint64]aggregate),
 	}
-	derivative.Init()
 	derivative.Log = testutil.Logger{}
+	derivative.Init()
 
 	derivative.Add(start)
 	derivative.Add(finish)
@@ -55,26 +54,18 @@ func TestTwoFullEventsWithParameter(t *testing.T) {
 	expectedTags := map[string]string{
 		"state": "full",
 	}
-	acc.AssertContainsTaggedFields(t, "Test Metric", expectedFields, expectedTags)
-}
-
-func emitMetrics(acc *testutil.Accumulator, aggregator telegraf.Aggregator, metrics ...telegraf.Metric) {
-	for _, metric := range metrics {
-		aggregator.Add(metric)
-	}
-	aggregator.Push(acc)
-	aggregator.Reset()
+	acc.AssertContainsTaggedFields(t, "TestMetric", expectedFields, expectedTags)
 }
 
 func TestTwoFullEventsWithParameterReverseSequence(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := &Derivative{
 		Variable: "parameter",
-		Infix:    "_by_",
+		Suffix:   "_by_parameter",
 		cache:    make(map[uint64]aggregate),
 	}
-	derivative.Init()
 	derivative.Log = testutil.Logger{}
+	derivative.Init()
 
 	derivative.Add(finish)
 	derivative.Add(start)
@@ -88,14 +79,14 @@ func TestTwoFullEventsWithParameterReverseSequence(t *testing.T) {
 	expectedTags := map[string]string{
 		"state": "full",
 	}
-	acc.AssertContainsTaggedFields(t, "Test Metric", expectedFields, expectedTags)
+	acc.AssertContainsTaggedFields(t, "TestMetric", expectedFields, expectedTags)
 }
 
 func TestTwoFullEventsWithoutParameter(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := NewDerivative()
-	derivative.Init()
 	derivative.Log = testutil.Logger{}
+	derivative.Init()
 
 	startTime := time.Now()
 	duration, _ := time.ParseDuration("2s")
@@ -123,7 +114,7 @@ func TestTwoFullEventsWithoutParameter(t *testing.T) {
 	acc.AssertContainsFields(t,
 		"One Field",
 		map[string]interface{}{
-			"value_by_seconds": float64(5),
+			"value_by_time": float64(5),
 		},
 	)
 
@@ -133,16 +124,16 @@ func TestTwoFullEventsInSeperatePushes(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := &Derivative{
 		Variable:    " parameter",
-		Infix:       "_wrt_",
+		Suffix:      "_wrt_parameter",
 		MaxRollOver: 10,
 		cache:       make(map[uint64]aggregate),
 	}
-	derivative.Init()
 	derivative.Log = testutil.Logger{}
+	derivative.Init()
 
 	derivative.Add(start)
 	derivative.Push(&acc)
-	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
+	acc.AssertDoesNotContainMeasurement(t, "TestMetric")
 
 	acc.ClearMetrics()
 
@@ -157,23 +148,23 @@ func TestTwoFullEventsInSeperatePushes(t *testing.T) {
 	expectedTags := map[string]string{
 		"state": "full",
 	}
-	acc.AssertContainsTaggedFields(t, "Test Metric", expectedFields, expectedTags)
+	acc.AssertContainsTaggedFields(t, "TestMetric", expectedFields, expectedTags)
 }
 
 func TestTwoFullEventsInSeperatePushesWithSeveralRollOvers(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := &Derivative{
 		Variable:    "parameter",
-		Infix:       "_wrt_",
+		Suffix:      "_wrt_parameter",
 		MaxRollOver: 10,
 		cache:       make(map[uint64]aggregate),
 	}
-	derivative.Init()
 	derivative.Log = testutil.Logger{}
+	derivative.Init()
 
 	derivative.Add(start)
 	derivative.Push(&acc)
-	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
+	acc.AssertDoesNotContainMeasurement(t, "TestMetric")
 
 	derivative.Push(&acc)
 	derivative.Push(&acc)
@@ -187,44 +178,44 @@ func TestTwoFullEventsInSeperatePushesWithSeveralRollOvers(t *testing.T) {
 		"decreasing_wrt_parameter": -10.0,
 		"unchanged_wrt_parameter":  0.0,
 	}
-	acc.AssertContainsFields(t, "Test Metric", expectedFields)
+	acc.AssertContainsFields(t, "TestMetric", expectedFields)
 }
 
 func TestTwoFullEventsInSeperatePushesWithOutRollOver(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := &Derivative{
 		Variable:    "parameter",
-		Infix:       "_by_",
+		Suffix:      "_by_parameter",
 		MaxRollOver: 0,
 		cache:       make(map[uint64]aggregate),
 	}
-	derivative.Init()
 	derivative.Log = testutil.Logger{}
+	derivative.Init()
 
 	derivative.Add(start)
 	// This test relies on RunningAggregator always callining Reset after Push
 	// to remove the first metric after max-rollover of 0 has been reached.
 	derivative.Push(&acc)
 	derivative.Reset()
-	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
+	acc.AssertDoesNotContainMeasurement(t, "TestMetric")
 
 	acc.ClearMetrics()
 	derivative.Add(finish)
 	derivative.Push(&acc)
-	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
+	acc.AssertDoesNotContainMeasurement(t, "TestMetric")
 }
 
 func TestIgnoresMissingVariable(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := &Derivative{
 		Variable: "parameter",
-		Infix:    "_by_",
+		Suffix:   "_by_parameter",
 		cache:    make(map[uint64]aggregate),
 	}
-	derivative.Init()
 	derivative.Log = testutil.Logger{}
+	derivative.Init()
 
-	noParameter, _ := metric.New("Test Metric",
+	noParameter, _ := metric.New("TestMetric",
 		map[string]string{"state": "no_parameter"},
 		map[string]interface{}{
 			"increasing": int64(100),
@@ -236,7 +227,7 @@ func TestIgnoresMissingVariable(t *testing.T) {
 
 	derivative.Add(noParameter)
 	derivative.Push(&acc)
-	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
+	acc.AssertDoesNotContainMeasurement(t, "TestMetric")
 
 	acc.ClearMetrics()
 	derivative.Add(noParameter)
@@ -253,29 +244,29 @@ func TestIgnoresMissingVariable(t *testing.T) {
 	expectedTags := map[string]string{
 		"state": "full",
 	}
-	acc.AssertContainsTaggedFields(t, "Test Metric", expectedFields, expectedTags)
+	acc.AssertContainsTaggedFields(t, "TestMetric", expectedFields, expectedTags)
 }
 
 func TestMergesDifferenMetricsWithSameHash(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := NewDerivative()
-	derivative.Init()
 	derivative.Log = testutil.Logger{}
+	derivative.Init()
 
 	startTime := time.Now()
 	duration, _ := time.ParseDuration("2s")
 	endTime := startTime.Add(duration)
-	part1, _ := metric.New("Test Metric",
+	part1, _ := metric.New("TestMetric",
 		map[string]string{"state": "full"},
 		map[string]interface{}{"field1": int64(10)},
 		startTime,
 	)
-	part2, _ := metric.New("Test Metric",
+	part2, _ := metric.New("TestMetric",
 		map[string]string{"state": "full"},
 		map[string]interface{}{"field2": int64(20)},
 		startTime,
 	)
-	final, _ := metric.New("Test Metric",
+	final, _ := metric.New("TestMetric",
 		map[string]string{"state": "full"},
 		map[string]interface{}{
 			"field1": int64(30),
@@ -292,24 +283,23 @@ func TestMergesDifferenMetricsWithSameHash(t *testing.T) {
 	derivative.Push(&acc)
 
 	expectedFields := map[string]interface{}{
-		"field1_by_seconds": 10.0,
-		"field2_by_seconds": 5.0,
+		"field1_by_time": 10.0,
+		"field2_by_time": 5.0,
 	}
 	expectedTags := map[string]string{
 		"state": "full",
 	}
-	acc.AssertContainsTaggedFields(t, "Test Metric", expectedFields, expectedTags)
+	acc.AssertContainsTaggedFields(t, "TestMetric", expectedFields, expectedTags)
 }
 
 func TestDropsAggregatesOnMaxRollOver(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := &Derivative{
-		Infix:       "_by_",
 		MaxRollOver: 1,
 		cache:       make(map[uint64]aggregate),
 	}
-	derivative.Init()
 	derivative.Log = testutil.Logger{}
+	derivative.Init()
 
 	derivative.Add(start)
 	derivative.Push(&acc)
@@ -320,14 +310,14 @@ func TestDropsAggregatesOnMaxRollOver(t *testing.T) {
 	derivative.Push(&acc)
 	derivative.Reset()
 
-	acc.AssertDoesNotContainMeasurement(t, "Test Metric")
+	acc.AssertDoesNotContainMeasurement(t, "TestMetric")
 }
 
 func TestAddMetricsResetsRollOver(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := &Derivative{
 		Variable:    "parameter",
-		Infix:       "_by_",
+		Suffix:      "_by_parameter",
 		MaxRollOver: 1,
 		cache:       make(map[uint64]aggregate),
 		Log:         testutil.Logger{},
@@ -347,15 +337,15 @@ func TestAddMetricsResetsRollOver(t *testing.T) {
 		"decreasing_by_parameter": -10.0,
 		"unchanged_by_parameter":  0.0,
 	}
-	acc.AssertContainsFields(t, "Test Metric", expectedFields)
+	acc.AssertContainsFields(t, "TestMetric", expectedFields)
 }
 
 func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
 	acc := testutil.Accumulator{}
 	period, _ := time.ParseDuration("10s")
 	derivative := NewDerivative()
-	derivative.Init()
 	derivative.Log = testutil.Logger{}
+	derivative.Init()
 
 	startTime := time.Now()
 	first, _ := metric.New("One Field",
@@ -381,7 +371,7 @@ func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
 	derivative.Reset()
 
 	acc.AssertContainsFields(t, "One Field", map[string]interface{}{
-		"value_by_seconds": 1.0,
+		"value_by_time": 1.0,
 	})
 
 	acc.ClearMetrics()
@@ -397,6 +387,6 @@ func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
 	derivative.Reset()
 
 	acc.AssertContainsFields(t, "One Field", map[string]interface{}{
-		"value_by_seconds": 2.0,
+		"value_by_time": 2.0,
 	})
 }

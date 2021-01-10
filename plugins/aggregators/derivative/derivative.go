@@ -10,7 +10,7 @@ import (
 
 type Derivative struct {
 	Variable    string          `toml:"variable"`
-	Infix       string          `toml:"infix"`
+	Suffix      string          `toml:"suffix"`
 	MaxRollOver uint            `toml:"max_roll_over"`
 	Log         telegraf.Logger `toml:"-"`
 	cache       map[uint64]aggregate
@@ -29,8 +29,10 @@ type event struct {
 	time   time.Time
 }
 
+const defaultSuffix = "_by_time"
+
 func NewDerivative() *Derivative {
-	derivative := &Derivative{Infix: "_by_", MaxRollOver: 10}
+	derivative := &Derivative{Suffix: defaultSuffix, MaxRollOver: 10}
 	derivative.cache = make(map[uint64]aggregate)
 	derivative.Reset()
 	return derivative
@@ -44,10 +46,6 @@ var sampleConfig = `
 	## aggregator and will not get sent to the output plugins.
 	drop_original = false
 	##
-	## Fields for which the derivative should be calculated.
-	## Important: The derivation variable must be contained in that list, if used.
-	fieldpass = ["field1, field2, variable"]
-    ##
 	## This aggregator will estimate a derivative for each field, which is
 	## contained in both the first and last metric of the aggregation interval.
 	## Without further configuration the derivative will be calculated with
@@ -58,14 +56,17 @@ var sampleConfig = `
 	## derivative = --------------------------
 	##              time_difference_in_seconds
 	##
-	## The resulting derivative will be named *fieldname_by_seconds*. The infix
-	## "_by_" can be configured by the *infix* parameter.
-	# infix = "_by_"
+	## The resulting derivative will be named *fieldname_by_time*. The suffix
+	## "_by_time" can be configured by the *suffix* parameter. When using a 
+	## derivation variable you can include its name for more clarity. 
+	# suffix = "_by_time"
 	##
 	## As an abstraction the derivative can be calculated not only by the time
 	## difference but by the difference of a field, which is contained in the
 	## measurement. This field is assumed to be monotonously increasing. This
 	## feature is used by specifying a *variable*.
+	## Make sure the specified variable is not filtered and exists in the metrics 
+	## passed to this aggregator!
 	# variable = ""
 	##
 	## When using a field as the derivation parameter the name of that field will
@@ -115,11 +116,12 @@ func (d *Derivative) Add(in telegraf.Metric) {
 }
 
 func newAggregate(in telegraf.Metric) aggregate {
+	event := newEvent(in)
 	return aggregate{
 		name:     in.Name(),
 		tags:     in.Tags(),
-		first:    newEvent(in),
-		last:     newEvent(in),
+		first:    event,
+		last:     event,
 		rollOver: 0,
 	}
 }
@@ -153,15 +155,14 @@ func convert(in interface{}) (float64, bool) {
 		return float64(v), true
 	case uint64:
 		return float64(v), true
-	default:
-		return 0, false
 	}
+	return 0, false
 }
 
 func (d *Derivative) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range d.cache {
 		if aggregate.first == aggregate.last {
-			d.Log.Debugf("Same first and last event for %q, skipping.", aggregate.name)
+			d.Log.Warnf("Same first and last event for %q, skipping.", aggregate.name)
 			continue
 		}
 		var denominator float64
@@ -173,17 +174,17 @@ func (d *Derivative) Push(acc telegraf.Accumulator) {
 			var last float64
 			var found bool
 			if first, found = aggregate.first.fields[d.Variable]; !found {
-				d.Log.Infof("Did not find %q in first event for %q.", d.Variable, aggregate.name)
+				d.Log.Warnf("Did not find %q in first event for %q.", d.Variable, aggregate.name)
 				continue
 			}
 			if last, found = aggregate.last.fields[d.Variable]; !found {
-				d.Log.Infof("Did not find %q in last event for %q.", d.Variable, aggregate.name)
+				d.Log.Warnf("Did not find %q in last event for %q.", d.Variable, aggregate.name)
 				continue
 			}
 			denominator = last - first
 		}
 		if denominator == 0 {
-			d.Log.Infof("Got difference 0 in denominator for %q, skipping.", aggregate.name)
+			d.Log.Warnf("Got difference 0 in denominator for %q, skipping.", aggregate.name)
 			continue
 		}
 		derivatives := make(map[string]interface{})
@@ -192,19 +193,12 @@ func (d *Derivative) Push(acc telegraf.Accumulator) {
 				// Skip derivation variable
 				continue
 			}
-			if end, ok := aggregate.last.fields[key]; key != d.Variable && ok {
-				derivatives[d.derivativeFieldName(key)] = (end - start) / denominator
+			if end, ok := aggregate.last.fields[key]; ok {
+				derivatives[key+d.Suffix] = (end - start) / denominator
 			}
 		}
 		acc.AddFields(aggregate.name, derivatives, aggregate.tags)
 	}
-}
-
-func (d *Derivative) derivativeFieldName(field string) string {
-	if len(d.Variable) != 0 {
-		return field + d.Infix + d.Variable
-	}
-	return field + d.Infix + "seconds"
 }
 
 func (d *Derivative) Reset() {
@@ -222,7 +216,7 @@ func (d *Derivative) Reset() {
 }
 
 func (d *Derivative) Init() error {
-	d.Infix = strings.TrimSpace(d.Infix)
+	d.Suffix = strings.TrimSpace(d.Suffix)
 	d.Variable = strings.TrimSpace(d.Variable)
 	return nil
 }
