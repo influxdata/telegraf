@@ -18,8 +18,6 @@ import (
 	parser_v2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
-const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1`
-
 type Prometheus struct {
 	// An array of urls to scrape metrics from.
 	URLs []string `toml:"urls"`
@@ -294,7 +292,12 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 			return fmt.Errorf("unable to create new request '%s': %s", u.URL.String(), err)
 		}
 	}
-
+	acceptHeader := ""
+	if p.MetricVersion == 2 {
+		acceptHeader = "proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1"
+	} else {
+		acceptHeader = "application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1"
+	}
 	req.Header.Add("Accept", acceptHeader)
 
 	if p.BearerToken != "" {
