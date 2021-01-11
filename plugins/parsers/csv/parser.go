@@ -200,7 +200,6 @@ outer:
 
 			// don't record fields where the value matches a skip value
 			for _, s := range p.SkipValues {
-				fmt.Println("in here")
 				if value == s {
 					continue outer
 				}
