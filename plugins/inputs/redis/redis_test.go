@@ -320,7 +320,7 @@ func TestRedis_ParseFloatOnInts(t *testing.T) {
 	var m *testutil.Metric
 	for i := range acc.Metrics {
 		if _, ok := acc.Metrics[i].Fields["mem_fragmentation_ratio"]; ok {
-			// m = acc.Metrics[i]
+			m = acc.Metrics[i]
 			break
 		}
 	}

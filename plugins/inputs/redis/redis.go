@@ -98,10 +98,10 @@ type RedisOutputs struct {
 	ReplBacklogFirstByteOffset int64   `json:"repl_backlog_first_byte_offset"`
 	ReplBacklogHistlen         int64   `json:"repl_backlog_histlen"`
 	SecondReplOffset           int64   `json:"second_repl_offset"`
-	UsedCpuSys                 float64 `json:"used_cpu_sys"`
-	UsedCpuUser                float64 `json:"used_cpu_user"`
-	UsedCpuSysChildren         float64 `json:"used_cpu_sys_children"`
-	UsedCpuUserChildren        float64 `json:"used_cpu_user_children"`
+	UsedCPUSys                 float64 `json:"used_cpu_sys"`
+	UsedCPUUser                float64 `json:"used_cpu_user"`
+	UsedCPUSysChildren         float64 `json:"used_cpu_sys_children"`
+	UsedCPUUserChildren        float64 `json:"used_cpu_user_children"`
 	KeyspaceHitrate            float64 `json:"keyspace_hitrate"`
 	RedisVersion               string  `json:"redis_version"`
 }
@@ -474,10 +474,10 @@ func gatherInfoOutput(
 	fields["repl_backlog_first_byte_offset"] = o.ReplBacklogFirstByteOffset
 	fields["repl_backlog_histlen"] = o.ReplBacklogHistlen
 	fields["second_repl_offset"] = o.SecondReplOffset
-	fields["used_cpu_sys"] = o.UsedCpuSys
-	fields["used_cpu_user"] = o.UsedCpuUser
-	fields["used_cpu_sys_children"] = o.UsedCpuSysChildren
-	fields["used_cpu_user_children"] = o.UsedCpuUserChildren
+	fields["used_cpu_sys"] = o.UsedCPUSys
+	fields["used_cpu_user"] = o.UsedCPUUser
+	fields["used_cpu_sys_children"] = o.UsedCPUSysChildren
+	fields["used_cpu_user_children"] = o.UsedCPUUserChildren
 	fields["keyspace_hitrate"] = o.KeyspaceHitrate
 	fields["redis_version"] = o.RedisVersion
 
