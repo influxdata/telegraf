@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 	"github.com/influxdata/telegraf/testutil"
@@ -126,6 +127,13 @@ func TestPostgresqlQueryOutputTests(t *testing.T) {
 			assert.True(t, found)
 			assert.Equal(t, true, v)
 		},
+		"SELECT timestamp'1980-07-23' as ts, true AS myvalue": func(acc *testutil.Accumulator) {
+			expectedTime := time.Date(1980, 7, 23, 0, 0, 0, 0, time.UTC)
+			v, found := acc.BoolField(measurement, "myvalue")
+			assert.True(t, found)
+			assert.Equal(t, true, v)
+			assert.True(t, acc.HasTimestamp(measurement, expectedTime))
+		},
 	}
 
 	for q, assertions := range examples {
@@ -134,6 +142,7 @@ func TestPostgresqlQueryOutputTests(t *testing.T) {
 			Version:    901,
 			Withdbname: false,
 			Tagvalue:   "",
+			Timestamp:  "ts",
 		}})
 		assertions(acc)
 	}
