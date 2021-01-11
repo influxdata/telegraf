@@ -1320,6 +1320,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	c.getFieldInt(tbl, "csv_skip_rows", &pc.CSVSkipRows)
 	c.getFieldInt(tbl, "csv_skip_columns", &pc.CSVSkipColumns)
 	c.getFieldBool(tbl, "csv_trim_space", &pc.CSVTrimSpace)
+	c.getFieldStringSlice(tbl, "csv_skip_values", &pc.CSVSkipValues)
 
 	c.getFieldStringSlice(tbl, "form_urlencoded_tag_keys", &pc.FormUrlencodedTagKeys)
 
@@ -1413,7 +1414,7 @@ func (c *Config) missingTomlField(typ reflect.Type, key string) error {
 		"collectd_security_level", "collectd_typesdb", "collection_jitter", "csv_column_names",
 		"csv_column_types", "csv_comment", "csv_delimiter", "csv_header_row_count",
 		"csv_measurement_column", "csv_skip_columns", "csv_skip_rows", "csv_tag_columns",
-		"csv_timestamp_column", "csv_timestamp_format", "csv_timezone", "csv_trim_space",
+		"csv_timestamp_column", "csv_timestamp_format", "csv_timezone", "csv_trim_space", "csv_skip_values",
 		"data_format", "data_type", "delay", "drop", "drop_original", "dropwizard_metric_registry_path",
 		"dropwizard_tag_paths", "dropwizard_tags_path", "dropwizard_time_format", "dropwizard_time_path",
 		"fielddrop", "fieldpass", "flush_interval", "flush_jitter", "form_urlencoded_tag_keys",
