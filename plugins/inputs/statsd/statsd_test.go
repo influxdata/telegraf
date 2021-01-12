@@ -31,7 +31,7 @@ func NewTestStatsd() *Statsd {
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
 	s.timings = make(map[string]cachedtimings)
-	s.distributions = []cacheddistributions{}
+	s.distributions = make([]cacheddistributions, 0)
 
 	s.MetricSeparator = "_"
 
