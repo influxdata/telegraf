@@ -29,7 +29,7 @@ var finish, _ = metric.New("TestMetric",
 		"ignored":    "strings are not supported",
 		"parameter":  float64(10.0),
 	},
-	time.Now(),
+	time.Now().Add(time.Second),
 )
 
 func TestTwoFullEventsWithParameter(t *testing.T) {
