@@ -276,7 +276,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	for _, m := range s.distributions {
 		acc.AddFields(m.name, m.fields, m.tags, now)
 	}
-	s.distributions = []cacheddistributions{}
+	s.distributions = make([]cacheddistributions, 0)
 
 	for _, m := range s.timings {
 		// Defining a template to parse field names for timers allows us to split
@@ -349,7 +349,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
 	s.timings = make(map[string]cachedtimings)
-	s.distributions = []cacheddistributions{}
+	s.distributions = make([]cacheddistributions, 0)
 
 	s.Lock()
 	defer s.Unlock()
