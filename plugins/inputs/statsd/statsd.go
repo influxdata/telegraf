@@ -770,9 +770,9 @@ func (s *Statsd) aggregate(m metric) {
 	switch m.mtype {
 	case "d":
 		cached := cacheddistributions{
-			name:   m.name,
+			name:  m.name,
 			value: m.floatvalue,
-			tags:   m.tags,
+			tags:  m.tags,
 		}
 		s.distributions = append(s.distributions, cached)
 	case "ms", "h":
