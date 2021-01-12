@@ -1,23 +1,15 @@
 package ping
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math"
-	"net"
-	"os/exec"
 	"runtime"
-	"sort"
-	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
-	"github.com/glinton/ping"
+	"github.com/go-ping/ping"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -26,12 +18,14 @@ import (
 // for unit test purposes (see ping_test.go)
 type HostPinger func(binary string, timeout float64, args ...string) (string, error)
 
-type HostResolver func(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error)
-
-type IsCorrectNetwork func(ip net.IPAddr) bool
-
 type Ping struct {
-	wg sync.WaitGroup
+	// wg is used to wait for ping with multiple URLs
+	wg sync.WaitGroup `toml:"-"`
+
+	// ttl stands for "Time to live" and is a gathered value on non-windows machines
+	ttl int `toml:"-"`
+
+	Log telegraf.Logger `toml:"-"`
 
 	// Interval at which to ping (ping -i <INTERVAL>)
 	PingInterval float64 `toml:"ping_interval"`
@@ -66,12 +60,6 @@ type Ping struct {
 
 	// host ping function
 	pingHost HostPinger
-
-	// resolve host function
-	resolveHost HostResolver
-
-	// listenAddr is the address associated with the interface defined.
-	listenAddr string
 
 	// Calculate the given percentiles when using native method
 	Percentiles []int
@@ -134,10 +122,6 @@ func (*Ping) SampleConfig() string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
-	if p.Interface != "" && p.listenAddr == "" {
-		p.listenAddr = getAddr(p.Interface)
-	}
-
 	for _, host := range p.Urls {
 		p.wg.Add(1)
 		go func(host string) {
@@ -157,204 +141,103 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func getAddr(iface string) string {
-	if addr := net.ParseIP(iface); addr != nil {
-		return addr.String()
-	}
-
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return ""
-	}
-
-	var ip net.IP
-	for i := range ifaces {
-		if ifaces[i].Name == iface {
-			addrs, err := ifaces[i].Addrs()
-			if err != nil {
-				return ""
-			}
-			if len(addrs) > 0 {
-				switch v := addrs[0].(type) {
-				case *net.IPNet:
-					ip = v.IP
-				case *net.IPAddr:
-					ip = v.IP
-				}
-				if len(ip) == 0 {
-					return ""
-				}
-				return ip.String()
-			}
-		}
-	}
-
-	return ""
-}
-
-func hostPinger(binary string, timeout float64, args ...string) (string, error) {
-	bin, err := exec.LookPath(binary)
-	if err != nil {
-		return "", err
-	}
-	c := exec.Command(bin, args...)
-	out, err := internal.CombinedOutputTimeout(c,
-		time.Second*time.Duration(timeout+5))
-	return string(out), err
-}
-
-func filterIPs(addrs []net.IPAddr, filterFunc IsCorrectNetwork) []net.IPAddr {
-	n := 0
-	for _, x := range addrs {
-		if filterFunc(x) {
-			addrs[n] = x
-			n++
-		}
-	}
-	return addrs[:n]
-}
-
-func hostResolver(ctx context.Context, ipv6 bool, destination string) (*net.IPAddr, error) {
-	resolver := &net.Resolver{}
-	ips, err := resolver.LookupIPAddr(ctx, destination)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if ipv6 {
-		ips = filterIPs(ips, isV6)
-	} else {
-		ips = filterIPs(ips, isV4)
-	}
-
-	if len(ips) == 0 {
-		return nil, errors.New("Cannot resolve ip address")
-	}
-	return &ips[0], err
-}
-
-func isV4(ip net.IPAddr) bool {
-	return ip.IP.To4() != nil
-}
-
-func isV6(ip net.IPAddr) bool {
-	return !isV4(ip)
-}
-
 func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
-	ctx := context.Background()
-	interval := p.PingInterval
-	if interval < 0.2 {
-		interval = 0.2
-	}
-
-	timeout := p.Timeout
-	if timeout == 0 {
-		timeout = 5
-	}
-
-	tick := time.NewTicker(time.Duration(interval * float64(time.Second)))
-	defer tick.Stop()
-
-	if p.Deadline > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(p.Deadline)*time.Second)
-		defer cancel()
-	}
-
-	host, err := p.resolveHost(ctx, p.IPv6, destination)
+	pinger, err := ping.NewPinger(destination)
 	if err != nil {
-		acc.AddFields(
-			"ping",
-			map[string]interface{}{"result_code": 1},
-			map[string]string{"url": destination},
-		)
+		p.Log.Errorf("Failed to ping: %v", err)
 		acc.AddError(err)
 		return
 	}
 
-	resps := make(chan *ping.Response)
-	rsps := []*ping.Response{}
+	// Required for windows. Despite the method name, this should work without the need to elevate privileges and has been tested on Windows 10
+	if runtime.GOOS == "windows" {
+		pinger.SetPrivileged(true)
+	}
 
-	r := &sync.WaitGroup{}
-	r.Add(1)
+	// The interval cannot be below 0.2 seconds, matching ping implementation: https://linux.die.net/man/8/ping
+	if p.PingInterval < 0.2 {
+		pinger.Interval = time.Duration(.2 * float64(time.Second))
+	} else {
+		pinger.Interval = time.Duration(p.PingInterval * float64(time.Second))
+	}
+
+	// If no timeout is given default to 5 seconds, matching original implementation
+	if p.Timeout == 0 {
+		pinger.Timeout = time.Duration(5) * time.Second
+	} else {
+		pinger.Timeout = time.Duration(p.Timeout) * time.Second
+	}
+
 	go func() {
-		for res := range resps {
-			rsps = append(rsps, res)
+		if p.Deadline <= 0 {
+			return
 		}
-		r.Done()
+		// If deadline is set ping exits regardless of how many packets have been sent or received
+		timer := time.AfterFunc(time.Duration(p.Deadline)*time.Second, func() {
+			pinger.Stop()
+		})
+		defer timer.Stop()
 	}()
 
-	wg := &sync.WaitGroup{}
-	c := ping.Client{}
-
-	var doErr error
-	var packetsSent int32
-
-	type sentReq struct {
-		err  error
-		sent bool
+	pinger.Count = p.Count
+	err = pinger.Run()
+	if err != nil {
+		p.Log.Errorf("Failed to ping: %v", err)
+		acc.AddError(err)
+		return
 	}
-	sents := make(chan sentReq)
 
-	r.Add(1)
-	go func() {
-		for sent := range sents {
-			if sent.err != nil {
-				doErr = sent.err
-			}
-			if sent.sent {
-				atomic.AddInt32(&packetsSent, 1)
-			}
-		}
-		r.Done()
-	}()
+	stats := pinger.Statistics()
 
-	for i := 0; i < p.Count; i++ {
-		select {
-		case <-ctx.Done():
-			goto finish
-		case <-tick.C:
-			ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout*float64(time.Second)))
-			defer cancel()
-
-			wg.Add(1)
-			go func(seq int) {
-				defer wg.Done()
-				resp, err := c.Do(ctx, &ping.Request{
-					Dst: net.ParseIP(host.String()),
-					Src: net.ParseIP(p.listenAddr),
-					Seq: seq,
-				})
-
-				sent := sentReq{err: err, sent: true}
-				if err != nil {
-					if strings.Contains(err.Error(), "not permitted") {
-						sent.sent = false
-					}
-					sents <- sent
-					return
-				}
-
-				resps <- resp
-				sents <- sent
-			}(i + 1)
+	// Get Time to live (TTL) of first response, matching original implementation
+	var firstTTL bool
+	pinger.OnRecv = func(pkt *ping.Packet) {
+		if !firstTTL {
+			p.ttl = pkt.Ttl
+			firstTTL = true
 		}
 	}
 
-finish:
-	wg.Wait()
-	close(resps)
-	close(sents)
-
-	r.Wait()
-
-	if doErr != nil && strings.Contains(doErr.Error(), "not permitted") {
-		log.Printf("D! [inputs.ping] %s", doErr.Error())
+	tags := map[string]string{"url": destination}
+	fields := map[string]interface{}{
+		"result_code":         0,
+		"packets_transmitted": stats.PacketsSent,
+		"packets_received":    stats.PacketsRecv,
 	}
 
-	tags, fields := onFin(packetsSent, rsps, doErr, destination, p.Percentiles)
+	if stats.PacketsSent == 0 {
+		if err != nil {
+			fields["result_code"] = 2
+		}
+		return
+	}
+
+	if stats.PacketsRecv == 0 {
+		if err != nil {
+			fields["result_code"] = 1
+		}
+		fields["percent_packet_loss"] = float64(100)
+		return
+	}
+
+	for _, perc := range p.Percentiles {
+		var value = percentile(durationSlice(stats.Rtts), perc)
+		var field = fmt.Sprintf("percentile%v_ms", perc)
+		fields[field] = float64(value.Nanoseconds()) / float64(time.Millisecond)
+	}
+
+	// Set TTL only on supported platform. See golang.org/x/net/ipv4/payload_cmsg.go
+	switch runtime.GOOS {
+	case "aix", "darwin", "dragonfly", "freebsd", "linux", "netbsd", "openbsd", "solaris":
+		fields["ttl"] = p.ttl
+	}
+
+	fields["percent_packet_loss"] = float64(stats.PacketLoss)
+	fields["minimum_response_ms"] = float64(stats.MinRtt) / float64(time.Millisecond)
+	fields["average_response_ms"] = float64(stats.AvgRtt) / float64(time.Millisecond)
+	fields["maximum_response_ms"] = float64(stats.MaxRtt) / float64(time.Millisecond)
+	fields["standard_deviation_ms"] = float64(stats.StdDevRtt) / float64(time.Millisecond)
+
 	acc.AddFields("ping", fields, tags)
 }
 
@@ -388,87 +271,6 @@ func percentile(values durationSlice, perc int) time.Duration {
 	}
 }
 
-func onFin(packetsSent int32, resps []*ping.Response, err error, destination string, percentiles []int) (map[string]string, map[string]interface{}) {
-	packetsRcvd := len(resps)
-
-	tags := map[string]string{"url": destination}
-	fields := map[string]interface{}{
-		"result_code":         0,
-		"packets_transmitted": packetsSent,
-		"packets_received":    packetsRcvd,
-	}
-
-	if packetsSent == 0 {
-		if err != nil {
-			fields["result_code"] = 2
-		}
-		return tags, fields
-	}
-
-	if packetsRcvd == 0 {
-		if err != nil {
-			fields["result_code"] = 1
-		}
-		fields["percent_packet_loss"] = float64(100)
-		return tags, fields
-	}
-
-	fields["percent_packet_loss"] = float64(int(packetsSent)-packetsRcvd) / float64(packetsSent) * 100
-	ttl := resps[0].TTL
-
-	var min, max, avg, total time.Duration
-
-	if len(percentiles) > 0 {
-		var rtt []time.Duration
-		for _, resp := range resps {
-			rtt = append(rtt, resp.RTT)
-			total += resp.RTT
-		}
-		sort.Sort(durationSlice(rtt))
-		min = rtt[0]
-		max = rtt[len(rtt)-1]
-
-		for _, perc := range percentiles {
-			var value = percentile(durationSlice(rtt), perc)
-			var field = fmt.Sprintf("percentile%v_ms", perc)
-			fields[field] = float64(value.Nanoseconds()) / float64(time.Millisecond)
-		}
-	} else {
-		min = resps[0].RTT
-		max = resps[0].RTT
-
-		for _, res := range resps {
-			if res.RTT < min {
-				min = res.RTT
-			}
-			if res.RTT > max {
-				max = res.RTT
-			}
-			total += res.RTT
-		}
-	}
-
-	avg = total / time.Duration(packetsRcvd)
-	var sumsquares time.Duration
-	for _, res := range resps {
-		sumsquares += (res.RTT - avg) * (res.RTT - avg)
-	}
-	stdDev := time.Duration(math.Sqrt(float64(sumsquares / time.Duration(packetsRcvd))))
-
-	// Set TTL only on supported platform. See golang.org/x/net/ipv4/payload_cmsg.go
-	switch runtime.GOOS {
-	case "aix", "darwin", "dragonfly", "freebsd", "linux", "netbsd", "openbsd", "solaris":
-		fields["ttl"] = ttl
-	}
-
-	fields["minimum_response_ms"] = float64(min.Nanoseconds()) / float64(time.Millisecond)
-	fields["average_response_ms"] = float64(avg.Nanoseconds()) / float64(time.Millisecond)
-	fields["maximum_response_ms"] = float64(max.Nanoseconds()) / float64(time.Millisecond)
-	fields["standard_deviation_ms"] = float64(stdDev.Nanoseconds()) / float64(time.Millisecond)
-
-	return tags, fields
-}
-
 // Init ensures the plugin is configured correctly.
 func (p *Ping) Init() error {
 	if p.Count < 1 {
@@ -481,8 +283,6 @@ func (p *Ping) Init() error {
 func init() {
 	inputs.Add("ping", func() telegraf.Input {
 		return &Ping{
-			pingHost:     hostPinger,
-			resolveHost:  hostResolver,
 			PingInterval: 1.0,
 			Count:        1,
 			Timeout:      1.0,

@@ -405,25 +405,46 @@ func mockHostResolver(ctx context.Context, ipv6 bool, host string) (*net.IPAddr,
 func TestPingGatherNative(t *testing.T) {
 	t.Skip("Skipping test due to permission requirements.")
 
-	var acc testutil.Accumulator
-	p := Ping{
-		Urls:        []string{"localhost", "127.0.0.2"},
-		Method:      "native",
-		Count:       5,
-		resolveHost: mockHostResolver,
-		Percentiles: []int{50, 95, 99},
+	type test struct {
+		P *Ping
 	}
 
-	assert.NoError(t, acc.GatherError(p.Gather))
-	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
-	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
-	assert.True(t, acc.HasField("ping", "percentile50_ms"))
-	assert.True(t, acc.HasField("ping", "percentile95_ms"))
-	assert.True(t, acc.HasField("ping", "percentile99_ms"))
-}
+	tests := []test{
+		{
+			P: &Ping{
+				Urls:        []string{"localhost", "127.0.0.2"},
+				Method:      "native",
+				Count:       5,
+				Percentiles: []int{50, 95, 99},
+			},
+		},
+		{
+			P: &Ping{
+				Urls:         []string{"localhost", "127.0.0.2"},
+				Method:       "native",
+				Count:        5,
+				PingInterval: 1,
+				Percentiles:  []int{50, 95, 99},
+			},
+		},
+	}
 
-func mockHostResolverError(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error) {
-	return nil, errors.New("myMock error")
+	for _, tc := range tests {
+		var acc testutil.Accumulator
+
+		require.NoError(t, acc.GatherError(tc.P.Gather))
+		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
+		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
+		assert.True(t, acc.HasField("ping", "percentile50_ms"))
+		assert.True(t, acc.HasField("ping", "percentile95_ms"))
+		assert.True(t, acc.HasField("ping", "percentile99_ms"))
+		assert.True(t, acc.HasField("ping", "percent_packet_loss"))
+		assert.True(t, acc.HasField("ping", "minimum_response_ms"))
+		assert.True(t, acc.HasField("ping", "average_response_ms"))
+		assert.True(t, acc.HasField("ping", "maximum_response_ms"))
+		assert.True(t, acc.HasField("ping", "standard_deviation_ms"))
+	}
+
 }
 
 // Test failed DNS resolutions
@@ -434,10 +455,9 @@ func TestDNSLookupError(t *testing.T) {
 
 	var acc testutil.Accumulator
 	p := Ping{
-		Urls:        []string{"localhost"},
-		Method:      "native",
-		IPv6:        false,
-		resolveHost: mockHostResolverError,
+		Urls:   []string{"localhost"},
+		Method: "native",
+		IPv6:   false,
 	}
 
 	acc.GatherError(p.Gather)
