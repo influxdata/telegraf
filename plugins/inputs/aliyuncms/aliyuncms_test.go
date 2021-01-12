@@ -204,7 +204,7 @@ func TestUpdateWindow(t *testing.T) {
 
 	// initial window just has a single period
 	require.EqualValues(t, plugin.windowEnd, now.Add(-plugin.Delay.Duration))
-	require.EqualValues(t, plugin.windowStart, now.Add(-plugin.Delay.Duration).Add(-plugin.Period.Duration-time.Millisecond))
+	require.EqualValues(t, plugin.windowStart, now.Add(-plugin.Delay.Duration).Add(-plugin.Period.Duration))
 
 	now = time.Now()
 	plugin.updateWindow(now)

@@ -29,8 +29,8 @@ const (
 	## 2) AccessKey STS token credential
 	## 3) AccessKey credential
 	## 4) Ecs Ram Role credential
-	## 5) RSA keypair cendential
-	## 6) Environment varialbes credential
+	## 5) RSA keypair credential
+	## 6) Environment variables credential
 	## 7) Instance metadata credential
 	
 	# access_key_id = ""
@@ -66,7 +66,7 @@ const (
 	## Maximum requests per second, default value is 200
 	ratelimit = 200
 	
-	## Discovery reqions set the scope for object discovery, the discovered info can be used to enrich
+	## Discovery regions set the scope for object discovery, the discovered info can be used to enrich
 	## the metrics with objects attributes/tags. Discovery is supported not for all projects (if not supported, then 
 	## it will be reported on the start - foo example for 'acs_cdn' project:
 	## 'E! [inputs.aliyuncms] Discovery tool is not activated: no discovery support for project "acs_cdn"' )
@@ -90,7 +90,7 @@ const (
 	  names = ["InstanceActiveConnection", "InstanceNewConnection"]
 	
 	  ## Dimension filters for Metric (these are optional).
-	  ## This allows to get additional metric dimension. If dimesnion is not specified it can be returned or
+	  ## This allows to get additional metric dimension. If dimension is not specified it can be returned or
 	  ## the data can be aggregated - it depends on particular metric, you can find details here: https://help.aliyun.com/document_detail/28619.html?spm=a2c4g.11186623.6.690.1938ad41wg8QSq
 	  ##
 	  ## Note, that by default dimension filter includes the list of discovered objects in scope (if discovery is enabled)
@@ -102,7 +102,7 @@ const (
 	  #dimensions = '[{"instanceId": "p-example"},{"instanceId": "q-example"}]'
 	
 	  ## Enrichment tags, can be added from discovery (if supported)
-	  ## Notation is <measurment_tag_name>:<JMES query path (https://jmespath.org/tutorial.html)>
+	  ## Notation is <measurement_tag_name>:<JMES query path (https://jmespath.org/tutorial.html)>
 	  ## To figure out which fields are available, consult the Describe<ObjectType> API per project.
 	  ## For example, for SLB: https://api.aliyun.com/#/?product=Slb&version=2014-05-15&api=DescribeLoadBalancers&params={}&tab=MOCK&lang=GO
 	  #tag_query_path = [
@@ -113,7 +113,7 @@ const (
 	  ## The following tags added by default: regionId (if discovery enabled), userId, instanceId.
 	
 	  ## Allow metrics without discovery data, if discovery is enabled. If set to true, then metric without discovery
-	  ## data would be emmited, otherwise dropped. This cane be of help, in case debugging dimesnion filters, or partial coverage 
+	  ## data would be emitted, otherwise dropped. This cane be of help, in case debugging dimension filters, or partial coverage 
 	  ## of discovery scope vs monitoring scope 
 	  #allow_dps_without_discovery = false
 `
@@ -350,8 +350,7 @@ func (s *AliyunCMS) updateWindow(relativeTo time.Time) {
 
 	if s.windowEnd.IsZero() {
 		// this is the first run, no window info, so just get a single period
-		// -time.Millisecond here is because of openning left
-		s.windowStart = windowEnd.Add(-s.Period.Duration - time.Millisecond)
+		s.windowStart = windowEnd.Add(-s.Period.Duration)
 	} else {
 		// subsequent window, start where last window left off
 		s.windowStart = s.windowEnd
