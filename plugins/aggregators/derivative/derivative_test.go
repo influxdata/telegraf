@@ -54,7 +54,7 @@ func TestTwoFullEventsWithParameter(t *testing.T) {
 	expectedTags := map[string]string{
 		"state": "full",
 	}
-	derivative.Log.Debugf("got: %q", &acc)
+
 	acc.AssertContainsTaggedFields(t, "TestMetric", expectedFields, expectedTags)
 }
 
@@ -80,7 +80,7 @@ func TestTwoFullEventsWithParameterReverseSequence(t *testing.T) {
 	expectedTags := map[string]string{
 		"state": "full",
 	}
-	derivative.Log.Debugf("got: %q", &acc)
+
 	acc.AssertContainsTaggedFields(t, "TestMetric", expectedFields, expectedTags)
 }
 
@@ -113,7 +113,6 @@ func TestTwoFullEventsWithoutParameter(t *testing.T) {
 	derivative.Add(last)
 	derivative.Push(&acc)
 
-	derivative.Log.Debugf("got: %q", &acc)
 	acc.AssertContainsFields(t,
 		"One Field",
 		map[string]interface{}{
@@ -136,7 +135,7 @@ func TestTwoFullEventsInSeperatePushes(t *testing.T) {
 
 	derivative.Add(start)
 	derivative.Push(&acc)
-	derivative.Log.Debugf("got: %q", &acc)
+
 	acc.AssertDoesNotContainMeasurement(t, "TestMetric")
 
 	acc.ClearMetrics()
@@ -152,7 +151,7 @@ func TestTwoFullEventsInSeperatePushes(t *testing.T) {
 	expectedTags := map[string]string{
 		"state": "full",
 	}
-	derivative.Log.Debugf("got: %q", &acc)
+
 	acc.AssertContainsTaggedFields(t, "TestMetric", expectedFields, expectedTags)
 }
 
@@ -169,7 +168,7 @@ func TestTwoFullEventsInSeperatePushesWithSeveralRollOvers(t *testing.T) {
 
 	derivative.Add(start)
 	derivative.Push(&acc)
-	derivative.Log.Debugf("got: %q", &acc)
+
 	acc.AssertDoesNotContainMeasurement(t, "TestMetric")
 
 	derivative.Push(&acc)
@@ -184,7 +183,7 @@ func TestTwoFullEventsInSeperatePushesWithSeveralRollOvers(t *testing.T) {
 		"decreasing_wrt_parameter": -10.0,
 		"unchanged_wrt_parameter":  0.0,
 	}
-	derivative.Log.Debugf("got: %q", &acc)
+
 	acc.AssertContainsFields(t, "TestMetric", expectedFields)
 }
 
@@ -204,13 +203,13 @@ func TestTwoFullEventsInSeperatePushesWithOutRollOver(t *testing.T) {
 	// to remove the first metric after max-rollover of 0 has been reached.
 	derivative.Push(&acc)
 	derivative.Reset()
-	derivative.Log.Debugf("got: %q", &acc)
+
 	acc.AssertDoesNotContainMeasurement(t, "TestMetric")
 
 	acc.ClearMetrics()
 	derivative.Add(finish)
 	derivative.Push(&acc)
-	derivative.Log.Debugf("got: %q", &acc)
+
 	acc.AssertDoesNotContainMeasurement(t, "TestMetric")
 }
 
@@ -236,7 +235,7 @@ func TestIgnoresMissingVariable(t *testing.T) {
 
 	derivative.Add(noParameter)
 	derivative.Push(&acc)
-	derivative.Log.Debugf("got: %q", &acc)
+
 	acc.AssertDoesNotContainMeasurement(t, "TestMetric")
 
 	acc.ClearMetrics()
@@ -254,7 +253,7 @@ func TestIgnoresMissingVariable(t *testing.T) {
 	expectedTags := map[string]string{
 		"state": "full",
 	}
-	derivative.Log.Debugf("got: %q", &acc)
+
 	acc.AssertContainsTaggedFields(t, "TestMetric", expectedFields, expectedTags)
 }
 
@@ -300,7 +299,7 @@ func TestMergesDifferenMetricsWithSameHash(t *testing.T) {
 	expectedTags := map[string]string{
 		"state": "full",
 	}
-	derivative.Log.Debugf("got: %q", &acc)
+
 	acc.AssertContainsTaggedFields(t, "TestMetric", expectedFields, expectedTags)
 }
 
@@ -322,7 +321,6 @@ func TestDropsAggregatesOnMaxRollOver(t *testing.T) {
 	derivative.Push(&acc)
 	derivative.Reset()
 
-	derivative.Log.Debugf("got: %q", &acc)
 	acc.AssertDoesNotContainMeasurement(t, "TestMetric")
 }
 
@@ -350,7 +348,7 @@ func TestAddMetricsResetsRollOver(t *testing.T) {
 		"decreasing_by_parameter": -10.0,
 		"unchanged_by_parameter":  0.0,
 	}
-	derivative.Log.Debugf("got: %q", &acc)
+
 	acc.AssertContainsFields(t, "TestMetric", expectedFields)
 }
 
@@ -384,7 +382,6 @@ func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
 	derivative.Push(&acc)
 	derivative.Reset()
 
-	derivative.Log.Debugf("got: %q", &acc)
 	acc.AssertContainsFields(t, "One Field", map[string]interface{}{
 		"value_by_time": 1.0,
 	})
@@ -401,7 +398,6 @@ func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
 	derivative.Push(&acc)
 	derivative.Reset()
 
-	derivative.Log.Debugf("got: %q", &acc)
 	acc.AssertContainsFields(t, "One Field", map[string]interface{}{
 		"value_by_time": 2.0,
 	})
