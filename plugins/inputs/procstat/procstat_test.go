@@ -402,3 +402,20 @@ func TestProcstatLookupMetric(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len(p.procs)+1, len(acc.Metrics))
 }
+
+func TestGather_SameTimestamps(t *testing.T) {
+	var acc testutil.Accumulator
+	pidfile := "/path/to/pidfile"
+
+	p := Procstat{
+		PidFile:         pidfile,
+		createPIDFinder: pidFinder([]PID{pid}, nil),
+		createProcess:   newTestProc,
+	}
+	require.NoError(t, acc.GatherError(p.Gather))
+
+	procstat, _ := acc.Get("procstat")
+	procstat_lookup, _ := acc.Get("procstat_lookup")
+
+	require.Equal(t, procstat.Time, procstat_lookup.Time)
+}
