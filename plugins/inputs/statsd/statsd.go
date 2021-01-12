@@ -193,9 +193,9 @@ type cachedtimings struct {
 }
 
 type cacheddistributions struct {
-	name   string
-	fields map[string]interface{}
-	tags   map[string]string
+	name  string
+	value float64
+	tags  map[string]string
 }
 
 func (_ *Statsd) Description() string {
@@ -274,7 +274,10 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	for _, m := range s.distributions {
-		acc.AddFields(m.name, m.fields, m.tags, now)
+		fields := map[string]interface{}{
+			defaultFieldName: m.value,
+		}
+		acc.AddFields(m.name, fields, m.tags, now)
 	}
 	s.distributions = make([]cacheddistributions, 0)
 
@@ -766,11 +769,9 @@ func (s *Statsd) aggregate(m metric) {
 
 	switch m.mtype {
 	case "d":
-		fields := make(map[string]interface{})
-		fields[m.field] = m.floatvalue
 		cached := cacheddistributions{
 			name:   m.name,
-			fields: fields,
+			value: m.floatvalue,
 			tags:   m.tags,
 		}
 		s.distributions = append(s.distributions, cached)
