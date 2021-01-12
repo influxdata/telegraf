@@ -194,6 +194,7 @@ func (d *Derivative) Push(acc telegraf.Accumulator) {
 				continue
 			}
 			if end, ok := aggregate.last.fields[key]; ok {
+				d.Log.Debugf("Adding derivative %q to %q.", key+d.Suffix, aggregate.name)
 				derivatives[key+d.Suffix] = (end - start) / denominator
 			}
 		}
