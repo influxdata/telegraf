@@ -94,9 +94,13 @@ var sampleConfig = `
   ##     set this to 'https' & most likely set the tls config.
   ## - prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
   ## - prometheus.io/port: If port is not 9102 use this annotation
-  # monitor_kubernetes_pods = true
+	# monitor_kubernetes_pods = true
+	## Get the list of pods to scrape either from
+	## - version 1 (default): the kubernetes watch api (cluster-wide)
+	## - version 2: the local cadvisor api (node-wide); for scaling
+	# monitor_kubernetes_pods_version = 1
   ## Restricts Kubernetes monitoring to a single namespace
-  ##   ex: monitor_kubernetes_pods_namespace = "default"
+	##   ex: monitor_kubernetes_pods_namespace = "default"
   # monitor_kubernetes_pods_namespace = ""
   # label selector to target pods which have the label
   # kubernetes_label_selector = "env=dev,app=nginx"
