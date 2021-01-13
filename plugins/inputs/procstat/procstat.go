@@ -118,6 +118,8 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	pids, tags, err := p.findPids(acc)
+	now := time.Now()
+
 	if err != nil {
 		fields := map[string]interface{}{
 			"pid_count":   0,
@@ -128,7 +130,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 			"pid_finder": p.PidFinder,
 			"result":     "lookup_error",
 		}
-		acc.AddFields("procstat_lookup", fields, tags)
+		acc.AddFields("procstat_lookup", fields, tags, now)
 		return err
 	}
 
@@ -140,7 +142,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	p.procs = procs
 
 	for _, proc := range p.procs {
-		p.addMetric(proc, acc)
+		p.addMetric(proc, acc, now)
 	}
 
 	fields := map[string]interface{}{
@@ -150,13 +152,13 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	}
 	tags["pid_finder"] = p.PidFinder
 	tags["result"] = "success"
-	acc.AddFields("procstat_lookup", fields, tags)
+	acc.AddFields("procstat_lookup", fields, tags, now)
 
 	return nil
 }
 
 // Add metrics a single Process
-func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
+func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time) {
 	var prefix string
 	if p.Prefix != "" {
 		prefix = p.Prefix + "_"
@@ -309,7 +311,7 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		}
 	}
 
-	acc.AddFields("procstat", fields, proc.Tags())
+	acc.AddFields("procstat", fields, proc.Tags(), t)
 }
 
 // Update monitored Processes

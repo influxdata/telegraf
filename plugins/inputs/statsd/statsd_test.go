@@ -1766,14 +1766,14 @@ func TestUdp(t *testing.T) {
 	statsd := Statsd{
 		Log:                    testutil.Logger{},
 		Protocol:               "udp",
-		ServiceAddress:         "localhost:8125",
+		ServiceAddress:         "localhost:14223",
 		AllowedPendingMessages: 250000,
 	}
 	var acc testutil.Accumulator
 	require.NoError(t, statsd.Start(&acc))
 	defer statsd.Stop()
 
-	conn, err := net.Dial("udp", "127.0.0.1:8125")
+	conn, err := net.Dial("udp", "127.0.0.1:14223")
 	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
 	require.NoError(t, err)
 	err = conn.Close()
