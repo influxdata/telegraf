@@ -290,11 +290,11 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 		// Group metrics
 		for k, v := range fields {
 			key := k
-			if len(aliasPath) < len(key) {
+			if len(aliasPath) < len(key) && len(aliasPath) != 0 {
 				// This may not be an exact prefix, due to naming style
 				// conversion on the key.
 				key = key[len(aliasPath)+1:]
-			} else {
+			} else if len(aliasPath) >= len(key) {
 				// Otherwise use the last path element as the field key.
 				key = path.Base(key)
 
