@@ -1,12 +1,12 @@
 package config
 
 import (
+	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
-	"io/ioutil"
 
 	// some imports are needed to ensure that configs can be properly serialized
 	"github.com/influxdata/telegraf/internal"
@@ -20,8 +20,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/procstat"
 	"github.com/influxdata/telegraf/plugins/outputs/azure_monitor"
 	httpOut "github.com/influxdata/telegraf/plugins/outputs/http"
-	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb_v2"
 	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb"
+	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb_v2"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kafka"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/stretchr/testify/assert"
@@ -388,7 +388,7 @@ func TestConfig_SerializeStartedPluginConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	uniqueId := "123"
-	c.serializeConfig(data, "./testdata/new-agent.toml", 
+	c.serializeConfig(data, "./testdata/new-agent.toml",
 		map[string]interface{}{
 			"unique_id": uniqueId,
 			"name":      "mem",

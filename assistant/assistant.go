@@ -2,7 +2,7 @@ package assistant
 
 import (
 	"context"
-	"flag"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,10 +19,10 @@ import (
 Assistant is a client to facilitate communications between Agent and Cloud.
 */
 type Assistant struct {
-	config     *AssistantConfig // Configuration for Assitant's connection to server
-	connection *websocket.Conn  // Active websocket connection
-	done       chan struct{}    // Channel used to stop server listener
-	agent      *agent.Agent     // Pointer to agent to issue commands
+	config *AssistantConfig // Configuration for Assitant's conn to server
+	conn   *websocket.Conn  // Active websocket conn
+	running bool
+	agent  *agent.Agent     // Pointer to agent to issue commands
 }
 
 /*
@@ -35,34 +35,20 @@ type AssistantConfig struct {
 	RetryInterval int
 }
 
-func (astConfig *AssistantConfig) fillDefaults() {
-	if astConfig.Host == "" {
-		astConfig.Host = "localhost:8080"
-	}
-	if astConfig.Path == "" {
-		astConfig.Path = "/echo"
-	}
-	if astConfig.RetryInterval == 0 {
-		astConfig.RetryInterval = 15
+func NewAssistantConfig() *AssistantConfig {
+	return &AssistantConfig{
+		Host: "localhost:8080",
+		Path: "/assistant",
+		RetryInterval: 15,
 	}
 }
 
 // NewAssistant returns an Assistant for the given Config.
-func NewAssistant(config *AssistantConfig, agent *agent.Agent) (*Assistant, error) {
-	config.fillDefaults()
-
-	a := &Assistant{
+func NewAssistant(config *AssistantConfig, agent *agent.Agent) *Assistant {
+	return &Assistant{
 		config: config,
-		done:   make(chan struct{}),
 		agent:  agent,
 	}
-
-	return a, nil
-}
-
-// Stop is used to clean up active connection and all channels
-func (assistant *Assistant) Stop() {
-	assistant.done <- struct{}{}
 }
 
 type pluginInfo struct {
@@ -99,142 +85,141 @@ type response struct {
 	Data   interface{}
 }
 
-func (assistant *Assistant) initWebsocketConnection(ctx context.Context) error {
-	var config = assistant.config
-	u := url.URL{Scheme: "ws", Host: config.Host, Path: config.Path}
-
-	header := http.Header{}
-
-	if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
-		header.Add("Authorization", "Token "+v)
-	} else {
+func (a *Assistant) init(ctx context.Context) error {
+	token, exists := os.LookupEnv("INFLUX_TOKEN")
+	if !exists {
 		return fmt.Errorf("influx authorization token not found, please set in env")
 	}
 
-	log.Printf("D! [assistant] Attempting connection to [%s]", config.Host)
-	ws, _, err := websocket.DefaultDialer.Dial(u.String(), header)
-	for err != nil { // on error, retry connection again
-		// TODO? Do we really want this in here? Consider move outside
-		log.Printf("E! [assistant] Failed to connect to [%s], retrying in %ds, "+
-			"error was '%s'", config.Host, config.RetryInterval, err)
+	header := http.Header{}
+	header.Add("Authorization", "Token " + token)
+	u := url.URL{Scheme: "ws", Host: a.config.Host, Path: a.config.Path}
 
-		sleepErr := internal.SleepContext(ctx, time.Duration(config.RetryInterval)*time.Second)
-		if sleepErr != nil {
-			return sleepErr
+	log.Printf("D! [assistant] Attempting conn to [%s]", a.config.Host)
+	ws, _, err := websocket.DefaultDialer.Dial(u.String(), header)
+	for err != nil { // on error, retry conn again
+		log.Printf("E! [assistant] Failed to connect to [%s] due to: '%s'. Retrying in %ds... ",
+			a.config.Host, err, a.config.RetryInterval)
+
+		err = internal.SleepContext(ctx, time.Duration(a.config.RetryInterval)*time.Second)
+		if err != nil {
+			// Return because context was closed
+			return err
 		}
 
 		ws, _, err = websocket.DefaultDialer.Dial(u.String(), header)
 	}
-	log.Printf("D! [assistant] Successfully connected to %s", config.Host)
-	assistant.connection = ws
+	a.conn = ws
 
+	log.Printf("D! [assistant] Successfully connected to %s", a.config.Host)
 	return nil
 }
 
 // Run starts the assistant listening to the server and handles and interrupts or closed connections
-func (assistant *Assistant) Run(ctx context.Context) error {
-	defer assistant.connection.Close()
-
-	var config = assistant.config
-	var addr = flag.String("addr", config.Host, "http service address")
-	config.Host = *addr
-
-	err := assistant.initWebsocketConnection(ctx)
+func (a *Assistant) Run(ctx context.Context) error {
+	err := a.init(ctx)
 	if err != nil {
-		log.Printf("E! [assistant] connection could not be established: %s", err)
+		log.Printf("E! [assistant] connection could not be established: %s", err.Error())
 		return err
 	}
+	a.running = true
 
-	go assistant.listenToServer(ctx)
+	go a.listen(ctx)
 
-	for {
-		select {
-		case <-assistant.done:
-			return nil
-		case <-ctx.Done():
-			log.Printf("I! [assistant] Hang on, closing connection to server before shutdown")
-			return nil
-		}
-	}
+	return nil
 }
 
 // listenToServer takes requests from the server and puts it in Requests.
-func (assistant *Assistant) listenToServer(ctx context.Context) {
-	defer close(assistant.done)
+func (a *Assistant) listen(ctx context.Context) {
+	defer a.conn.Close()
+
+	go a.shutdownOnContext(ctx)
+
 	for {
 		var req request
-		err := assistant.connection.ReadJSON(&req)
-		if err != nil {
+		if err := a.conn.ReadJSON(&req); err != nil {
+			if !a.running {
+				log.Printf("I! [assistant] listener shutting down...")
+				return
+			}
+
 			log.Printf("E! [assistant] error while reading from server: %s", err)
 			// retrying a new websocket connection
-			err := assistant.initWebsocketConnection(ctx)
+			err := a.init(ctx)
 			if err != nil {
 				log.Printf("E! [assistant] connection could not be re-established: %s", err)
 				return
 			}
-			err = assistant.connection.ReadJSON(&req)
+			err = a.conn.ReadJSON(&req)
 			if err != nil {
 				log.Printf("E! [assistant] re-established connection but could not read server request: %s", err)
 				return
 			}
 		}
-		res := assistant.handleRequests(&req)
-		err = assistant.connection.WriteJSON(res)
-		if err != nil {
-			// log error and keep connection open
-			// TODO retry write to server, something wrong with error response.
+		res := a.handleRequest(ctx, &req)
+
+		if err := a.conn.WriteJSON(res); err != nil {
 			log.Printf("E! [assistant] Error while writing to server: %s", err)
-			assistant.connection.WriteJSON(response{FAILURE, req.UUID, "error marshalling config"})
+			a.conn.WriteJSON(response{FAILURE, req.UUID, "error marshalling config"})
 		}
 	}
 }
 
-func (assistant *Assistant) handleRequests(req *request) response {
-	var res response
-	switch req.Operation {
-	case GET_PLUGIN:
-		res = assistant.getPlugin(req)
-	case GET_PLUGIN_SCHEMA:
-		res = assistant.getSchema(req)
-	case START_PLUGIN:
-		res = assistant.startPlugin(req)
-	case STOP_PLUGIN:
-		res = assistant.stopPlugin(req)
-	case UPDATE_PLUGIN:
-		res = assistant.updatePlugin(req)
-	case GET_RUNNING_PLUGINS:
-		res = assistant.getRunningPlugins(req)
-	case GET_ALL_PLUGINS:
-		res = assistant.getAllPlugins(req)
-	default:
-		// return error response
-		res = response{FAILURE, req.UUID, "invalid operation request"}
-	}
-	return res
+func (a *Assistant) shutdownOnContext(ctx context.Context) {
+	<-ctx.Done()
+	a.running = false
+	a.conn.Close()
 }
 
-// getPlugin returns the struct response containing config for a single plugin
-func (assistant *Assistant) getPlugin(req *request) response {
-	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.Name, "\n")
-
-	var data interface{}
+func (a *Assistant) handleRequest(ctx context.Context, req *request) response {
+	var resp interface{}
 	var err error
 
-	data, err = assistant.agent.GetRunningPlugin(req.Plugin.UniqueId)
+	switch req.Operation {
+	case GET_PLUGIN:
+		resp, err = a.getPlugin(req)
+	case GET_PLUGIN_SCHEMA:
+		resp, err = a.getSchema(req)
+	case START_PLUGIN:
+		resp, err = a.startPlugin(ctx, req)
+	case STOP_PLUGIN:
+		resp, err = a.stopPlugin(req)
+	case UPDATE_PLUGIN:
+		resp, err = a.updatePlugin(req)
+	case GET_RUNNING_PLUGINS:
+		resp, err = a.getRunningPlugins(req)
+	case GET_ALL_PLUGINS:
+		resp, err = a.getAllPlugins(req)
+	default:
+		err = errors.New("invalid operation")
+	}
+
 	if err != nil {
 		return response{FAILURE, req.UUID, err.Error()}
 	}
 
-	return response{SUCCESS, req.UUID, data}
+	return response{SUCCESS, req.UUID, resp}
 }
 
-type schema struct {
-	Types    map[string]interface{}
+// getPlugin returns the struct response containing config for a single plugin
+func (a *Assistant) getPlugin(req *request) (interface{}, error) {
+	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.Name, "\n")
+
+	resp, err := a.agent.GetRunningPlugin(req.Plugin.UniqueId)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+type pluginSchema struct {
+	Schema map[string]interface{}
 	Defaults map[string]interface{}
 }
 
 // getSchema returns the struct response containing config schema for a single plugin
-func (assistant *Assistant) getSchema(req *request) response {
+func (a *Assistant) getSchema(req *request) (interface{}, error) {
 	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.Name, "\n")
 
 	var plugin interface{}
@@ -242,135 +227,132 @@ func (assistant *Assistant) getSchema(req *request) response {
 
 	switch req.Plugin.Type {
 	case "INPUT":
-		plugin, err = assistant.agent.CreateInput(req.Plugin.Name)
+		plugin, err = a.agent.CreateInput(req.Plugin.Name)
 	case "OUTPUT":
-		plugin, err = assistant.agent.CreateOutput(req.Plugin.Name)
+		plugin, err = a.agent.CreateOutput(req.Plugin.Name)
 	default:
 		err = fmt.Errorf("did not provide a valid plugin type")
 	}
+
 	if err != nil {
-		return response{FAILURE, req.UUID, err.Error()}
+		return nil, err
 	}
 
-	types, typesErr := assistant.agent.GetPluginTypes(plugin)
-	if typesErr != nil {
-		return response{FAILURE, req.UUID, err.Error()}
+	schema, err := a.agent.GetPluginTypes(plugin)
+	if err != nil {
+		return nil, err
 	}
 
-	defaultValues, dvErr := assistant.agent.GetPluginValues(plugin)
-	if dvErr != nil {
-		return response{FAILURE, req.UUID, err.Error()}
+	defaults, err := a.agent.GetPluginValues(plugin)
+	if err != nil {
+		return nil, err
 	}
 
-	return response{SUCCESS, req.UUID, schema{types, defaultValues}}
+	resp := pluginSchema{
+		Schema: schema,
+		Defaults: defaults,
+	}
+
+	return resp, nil
 }
 
 // startPlugin starts a single plugin
-func (assistant *Assistant) startPlugin(req *request) response {
+func (a *Assistant) startPlugin(ctx context.Context, req *request) (interface{}, error) {
 	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.Name, "\n")
-
-	var res response
 	var uid string
 	var err error
 
 	switch req.Plugin.Type {
 	case "INPUT":
-		uid, err = assistant.agent.StartInput(req.Plugin.Name)
+		uid, err = a.agent.StartInput(ctx, req.Plugin.Name)
 	case "OUTPUT":
-		uid, err = assistant.agent.StartOutput(req.Plugin.Name)
+		uid, err = a.agent.StartOutput(ctx, req.Plugin.Name)
 	default:
-		err = fmt.Errorf("did not provide a valid plugin type")
+		err = fmt.Errorf("invalid plugin type")
 	}
 
 	if err != nil {
-		res = response{FAILURE, req.UUID, err.Error()}
-	} else {
-		res = response{SUCCESS, req.UUID, uid}
+		return nil, err
 	}
 
-	return res
+	resp := map[string]string{
+		"id": uid,
+	}
+	return resp, nil
 }
 
 // updatePlugin updates a plugin with the config specified in request
-func (assistant *Assistant) updatePlugin(req *request) response {
+func (a *Assistant) updatePlugin(req *request) (interface{}, error) {
 	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.UniqueId, "\n")
 
-	var res response
+	if req.Plugin.Config == nil {
+		return nil, errors.New("no configuration values provided")
+	}
+
 	var data interface{}
 	var err error
 
-	if req.Plugin.Config == nil {
-		res = response{FAILURE, req.UUID, "no config specified!"}
-		return res
-	}
-
 	switch req.Plugin.Type {
 	case "INPUT":
-		data, err = assistant.agent.UpdateInputPlugin(req.Plugin.UniqueId, req.Plugin.Config)
+		data, err = a.agent.UpdateInputPlugin(req.Plugin.UniqueId, req.Plugin.Config)
 	case "OUTPUT":
-		data, err = assistant.agent.UpdateOutputPlugin(req.Plugin.UniqueId, req.Plugin.Config)
+		data, err = a.agent.UpdateOutputPlugin(req.Plugin.UniqueId, req.Plugin.Config)
 	default:
 		err = fmt.Errorf("did not provide a valid plugin type")
 	}
 
 	if err != nil {
-		res = response{FAILURE, req.UUID, err.Error()}
-	} else {
-		res = response{SUCCESS, req.UUID, data}
+		return nil, err
 	}
 
-	return res
+	return data, nil
 }
 
-// stopPlugin stops a single plugin
-func (assistant *Assistant) stopPlugin(req *request) response {
+// stopPlugin stops a single plugin given a request
+func (a *Assistant) stopPlugin(req *request) (interface{}, error) {
 	fmt.Print("D! [assistant] Received request: ", req.Operation, " for plugin ", req.Plugin.Name, "\n")
 
-	var res response
 	var err error
-
 	switch req.Plugin.Type {
 	case "INPUT":
-		assistant.agent.StopInputPlugin(req.Plugin.UniqueId, true)
+		err = a.agent.StopInputPlugin(req.Plugin.UniqueId, true)
 	case "OUTPUT":
-		assistant.agent.StopOutputPlugin(req.Plugin.UniqueId, true)
+		err = a.agent.StopOutputPlugin(req.Plugin.UniqueId, true)
 	default:
 		err = fmt.Errorf("did not provide a valid plugin type")
 	}
 
 	if err != nil {
-		res = response{FAILURE, req.UUID, err.Error()}
-	} else {
-		res = response{SUCCESS, req.UUID, fmt.Sprintf("%s plugin deleted.", req.Plugin.Name)}
+		return nil, err
 	}
 
-	return res
+	return fmt.Sprintf("%s stopped", req.Plugin.UniqueId), nil
 }
 
-type pluginsWithIdList struct {
+type runningPlugins struct {
 	Inputs  []map[string]string
 	Outputs []map[string]string
 }
 
-// getRunningPlugins returns a JSON response obj with all running plugins
-func (assistant *Assistant) getRunningPlugins(req *request) response {
-	inputs := assistant.agent.GetRunningInputPlugins()
-	outputs := assistant.agent.GetRunningOutputPlugins()
-	data := pluginsWithIdList{inputs, outputs}
-
-	return response{SUCCESS, req.UUID, data}
+// getRunningPlugins returns an object with all running plugins
+func (assistant *Assistant) getRunningPlugins(req *request) (interface{}, error) {
+	runningPlugins := runningPlugins{
+		Inputs: assistant.agent.GetRunningInputPlugins(),
+		Outputs: assistant.agent.GetRunningOutputPlugins(),
+	}
+	return runningPlugins, nil
 }
 
-type pluginsList struct {
+type availablePlugins struct {
 	Inputs  []string
 	Outputs []string
 }
 
-// getAllPlugins returns a JSON response obj with names of all possible plugins
-func (assistant *Assistant) getAllPlugins(req *request) response {
-	inputs := agent.GetAllInputPlugins()
-	outputs := agent.GetAllOutputPlugins()
-	data := pluginsList{inputs, outputs}
-	res := response{SUCCESS, req.UUID, data}
-	return res
+// getAllPlugins returns an object with the names of all available plugins
+func (assistant *Assistant) getAllPlugins(req *request) (interface{}, error) {
+	availablePlugins := availablePlugins{
+		Inputs: agent.GetAllInputPlugins(),
+		Outputs: agent.GetAllOutputPlugins(),
+	}
+	return availablePlugins, nil
 }

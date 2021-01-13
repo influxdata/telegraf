@@ -14,9 +14,9 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
-	"sync"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -77,7 +77,7 @@ type Config struct {
 	Processors    models.RunningProcessors
 	AggProcessors models.RunningProcessors
 
-	InputsLock *sync.Mutex
+	InputsLock  *sync.Mutex
 	OutputsLock *sync.Mutex
 }
 
@@ -1049,8 +1049,7 @@ func (c *Config) serializeConfig(data []byte, newConfigPath string, config map[s
 		return fmt.Errorf("Error parsing data: %s", err)
 	}
 
-	f, _ := os.OpenFile(newConfigPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-	f.Truncate(0)
+	f, _ := os.OpenFile(newConfigPath, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0600)
 	defer f.Close()
 
 	configParam := map[string]interface{}{}

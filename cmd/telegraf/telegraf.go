@@ -206,22 +206,16 @@ func runAgent(ctx context.Context,
 		}
 	}
 
-	// init assistant
-	astConfig := &assistant.AssistantConfig{Host: "localhost:8080", Path: "/echo", RetryInterval: 15}
-	ast, err := assistant.NewAssistant(astConfig, ag)
-	if err != nil {
-		log.Printf("E! [assistant] Error initializing Assistant: %s", err)
-	}
-
-	// run assistant
-	go func() {
-		err := ast.Run(ctx)
-		if err != nil {
-			log.Printf("E! [assistant] Error running Assistant: %s", err)
-		}
-	}()
+	go startAssistant(ag, ctx)
 
 	return ag.Run(ctx)
+}
+
+func startAssistant(ag *agent.Agent, ctx context.Context) {
+	ast := assistant.NewAssistant(assistant.NewAssistantConfig(), ag)
+	if err := ast.Run(ctx); err != nil {
+		log.Printf("E! [assistant] Error running Assistant: %s", err)
+	}
 }
 
 func usageExit(rc int) {
