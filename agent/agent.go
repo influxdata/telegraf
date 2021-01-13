@@ -179,13 +179,16 @@ func (a *Agent) RunSingleInput(input *models.RunningInput, ctx context.Context) 
 		a.gatherLoop(ctx, acc, input, ticker, interval)
 	}(input)
 
+	a.Config.InputsLock.Lock()
 	for _, i := range a.Config.Inputs {
 		if i.UniqueId == input.UniqueId {
+			a.Config.InputsLock.Unlock()
 			return nil
 		}
 	}
 
 	a.Config.Inputs = append(a.Config.Inputs, input)
+	a.Config.InputsLock.Unlock()
 	return nil
 }
 
@@ -242,13 +245,16 @@ func (a *Agent) RunSingleOutput(output *models.RunningOutput, ctx context.Contex
 		a.flushLoop(ctx, output, ticker)
 	}(output)
 
+	a.Config.OutputsLock.Lock()
 	for _, i := range a.Config.Outputs {
 		if i.UniqueId == output.UniqueId {
+			a.Config.OutputsLock.Unlock()
 			return nil
 		}
 	}
 
 	a.Config.Outputs = append(a.Config.Outputs, output)
+	a.Config.OutputsLock.Unlock()
 	return nil
 }
 
@@ -270,17 +276,21 @@ func GetAllOutputPlugins() []string {
 
 func (a *Agent) GetRunningInputPlugins() []map[string]string {
 	var res []map[string]string
+	a.Config.InputsLock.Lock()
 	for _, runningInput := range a.Config.Inputs {
 		res = append(res, map[string]string{"name": runningInput.Config.Name, "id": runningInput.UniqueId})
 	}
+	a.Config.InputsLock.Unlock()
 	return res
 }
 
 func (a *Agent) GetRunningOutputPlugins() []map[string]string {
 	var res []map[string]string
+	a.Config.OutputsLock.Lock()
 	for _, runningOutput := range a.Config.Outputs {
 		res = append(res, map[string]string{"name": runningOutput.Config.Name, "id": runningOutput.UniqueId})
 	}
+	a.Config.OutputsLock.Unlock()
 	return res
 }
 
@@ -614,7 +624,9 @@ func (a *Agent) CreateOutput(name string) (telegraf.Output, error) {
 
 // GetRunningPlugin gets the values of a running plugin's struct.
 func (a *Agent) GetRunningPlugin(uid string) (map[string]interface{}, error) {
+	a.pluginLock.Lock()
 	obj, exists := a.runningPlugins[uid]
+	a.pluginLock.Unlock()
 	if !exists {
 		return nil, fmt.Errorf("specified plugin is not running")
 	}
@@ -833,8 +845,6 @@ func (a *Agent) runInputs(
 	unit *inputUnit,
 ) error {
 
-	a.Context = ctx
-
 	for _, input := range unit.inputs {
 		a.RunSingleInput(input, ctx)
 	}
@@ -980,12 +990,15 @@ func (a *Agent) StopInputPlugin(uuid string, shouldUpdateConfig bool) error {
 		a.Config.UpdateConfig(map[string]interface{}{}, uuid, "inputs", "STOP_PLUGIN")
 	}
 
+	a.Config.InputsLock.Lock()
 	for i, other := range a.Config.Inputs {
 		if other.UniqueId == uuid {
 			a.Config.Inputs = append(a.Config.Inputs[:i], a.Config.Inputs[i+1:]...)
+			a.Config.InputsLock.Unlock()
 			return nil
 		}
 	}
+	a.Config.InputsLock.Unlock()
 
 	return fmt.Errorf("input was not found in running inputs list")
 }
@@ -1013,12 +1026,14 @@ func (a *Agent) StopOutputPlugin(uuid string, shouldUpdateConfig bool) {
 		a.Config.UpdateConfig(map[string]interface{}{}, uuid, "outputs", "STOP_PLUGIN")
 	}
 
+	a.Config.OutputsLock.Lock()
 	for i, other := range a.Config.Outputs {
 		if other.UniqueId == uuid {
 			a.Config.Outputs = append(a.Config.Outputs[:i], a.Config.Outputs[i+1:]...)
 			break
 		}
 	}
+	a.Config.OutputsLock.Unlock()
 
 }
 

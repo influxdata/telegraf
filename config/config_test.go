@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"io/ioutil"
 
 	// some imports are needed to ensure that configs can be properly serialized
 	"github.com/influxdata/telegraf/internal"
@@ -20,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs/azure_monitor"
 	httpOut "github.com/influxdata/telegraf/plugins/outputs/http"
 	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb_v2"
+	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kafka"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/stretchr/testify/assert"
@@ -260,9 +262,11 @@ func TestConfig_BadOrdering(t *testing.T) {
 	// #3444: when not using inline tables, care has to be taken so subsequent configuration
 	// doesn't become part of the table. This is not a bug, but TOML syntax.
 	c := NewConfig()
-	err := c.LoadConfig("./testdata/non_slice_slice.toml")
+	data, err := ioutil.ReadFile("./testdata/non_slice_slice.toml")
+	require.NoError(t, err)
+	err = c.LoadConfigData(data)
 	require.Error(t, err, "bad ordering")
-	assert.Equal(t, "Error loading config file ./testdata/non_slice_slice.toml: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
+	assert.Equal(t, "error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
 }
 
 func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
@@ -323,7 +327,7 @@ func TestConfig_SerializeUpdatedConfig(t *testing.T) {
 	}
 
 	// serialize config with cpu input updated
-	c.serializeConfig(data, "./testdata/new-agent.toml", updatedConfig, "cpu", "inputs", "UPDATE_PLUGIN")
+	c.serializeConfig(data, "./testdata/new-agent.toml", updatedConfig, "cpu_id_1", "inputs", "UPDATE_PLUGIN")
 
 	// reload the updated config
 	c2 := NewConfig()
@@ -356,7 +360,7 @@ func TestConfig_SerializeStoppedPluginConfig(t *testing.T) {
 	data, err := loadConfig("./testdata/basic_config.toml")
 	assert.NoError(t, err)
 
-	c.serializeConfig(data, "./testdata/new-agent.toml", map[string]interface{}{}, "influxdb_v2", "outputs", "STOP_PLUGIN")
+	c.serializeConfig(data, "./testdata/new-agent.toml", map[string]interface{}{}, "influxdb_v2_id", "outputs", "STOP_PLUGIN")
 
 	c2 := NewConfig()
 	err = c2.LoadConfig("./testdata/new-agent.toml")
@@ -383,7 +387,12 @@ func TestConfig_SerializeStartedPluginConfig(t *testing.T) {
 	data, err := loadConfig("./testdata/basic_config.toml")
 	assert.NoError(t, err)
 
-	c.serializeConfig(data, "./testdata/new-agent.toml", map[string]interface{}{}, "mem", "inputs", "START_PLUGIN")
+	uniqueId := "123"
+	c.serializeConfig(data, "./testdata/new-agent.toml", 
+		map[string]interface{}{
+			"unique_id": uniqueId,
+			"name":      "mem",
+		}, uniqueId, "inputs", "START_PLUGIN")
 
 	c2 := NewConfig()
 	err = c2.LoadConfig("./testdata/new-agent.toml")

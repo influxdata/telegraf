@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"sync"
 	"strconv"
 	"strings"
 	"time"
@@ -75,6 +76,9 @@ type Config struct {
 	// Processors have a slice wrapper type because they need to be sorted
 	Processors    models.RunningProcessors
 	AggProcessors models.RunningProcessors
+
+	InputsLock *sync.Mutex
+	OutputsLock *sync.Mutex
 }
 
 // NewConfig creates a new struct to hold the Telegraf config.
@@ -100,6 +104,8 @@ func NewConfig() *Config {
 		AggProcessors: make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
+		InputsLock:    new(sync.Mutex),
+		OutputsLock:   new(sync.Mutex),
 	}
 
 	tomlCfg := &toml.Config{
@@ -199,9 +205,11 @@ type AgentConfig struct {
 // InputNames returns a list of strings of the configured inputs.
 func (c *Config) InputNames() []string {
 	var name []string
+	c.InputsLock.Lock()
 	for _, input := range c.Inputs {
 		name = append(name, input.Config.Name)
 	}
+	c.InputsLock.Unlock()
 	return PluginNameCounts(name)
 }
 
@@ -226,9 +234,11 @@ func (c *Config) ProcessorNames() []string {
 // OutputNames returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() []string {
 	var name []string
+	c.OutputsLock.Lock()
 	for _, output := range c.Outputs {
 		name = append(name, output.Config.Name)
 	}
+	c.OutputsLock.Unlock()
 	return PluginNameCounts(name)
 }
 
@@ -1348,12 +1358,11 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 
 	var uniqueId string
 	c.getFieldString(table, "unique_id", &uniqueId)
-	if uniqueId == "" {
-		return fmt.Errorf("Output %s did not have a `unique_id` field defined", name)
-	}
 	ro := models.NewRunningOutput(name, output, outputConfig,
 		c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit, uniqueId)
+	c.OutputsLock.Lock()
 	c.Outputs = append(c.Outputs, ro)
+	c.OutputsLock.Unlock()
 	return nil
 }
 
@@ -1403,12 +1412,11 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	var uniqueId string
 	c.getFieldString(table, "unique_id", &uniqueId)
-	if uniqueId == "" {
-		return fmt.Errorf("Input %s did not have a `unique_id` field defined", name)
-	}
 	rp := models.NewRunningInput(input, pluginConfig, uniqueId)
 	rp.SetDefaultTags(c.Tags)
+	c.InputsLock.Lock()
 	c.Inputs = append(c.Inputs, rp)
+	c.InputsLock.Unlock()
 	return nil
 }
 

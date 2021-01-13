@@ -28,6 +28,7 @@
 
   ## Destination bucket to write into.
   bucket = "Sample Bucket"
+  unique_id = "influxdb_v2_id"
 
 # Configuration for influxdb server to send metrics to
 [[outputs.influxdb]]
@@ -52,6 +53,7 @@
   collect_cpu_time = true
   ## If true, compute and report the sum of all non-idle CPU states.
   report_active = true
+  unique_id = "cpu_id_1"
 
 [[inputs.cpu]]
   ## Whether to report per-cpu stats or not
@@ -62,3 +64,4 @@
   collect_cpu_time = false
   ## If true, compute and report the sum of all non-idle CPU states.
   report_active = false
+  unique_id = "cpu_id_2"
