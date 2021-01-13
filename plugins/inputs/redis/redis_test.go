@@ -285,7 +285,7 @@ func TestRedis_ParseFloatOnInts(t *testing.T) {
 func TestRedis_ParseIntOnFloats(t *testing.T) {
 	var acc testutil.Accumulator
 	tags := map[string]string{"host": "redis.net"}
-	rdr := bufio.NewReader(strings.NewReader(strings.Replace(testOutput, "clients_in_timeout_table:0", "clients_in_timeout_table:0.0", 0.0)))
+	rdr := bufio.NewReader(strings.NewReader(strings.Replace(testOutput, "clients_in_timeout_table:0", "clients_in_timeout_table:0.0", 1)))
 	err := gatherInfoOutput(rdr, &acc, tags)
 	require.NoError(t, err)
 	var m *testutil.Metric
@@ -318,6 +318,25 @@ func TestRedis_ParseStringOnInts(t *testing.T) {
 	maxmemoryPolicy, ok := m.Fields["maxmemory_policy"]
 	require.True(t, ok)
 	require.IsType(t, string(""), maxmemoryPolicy)
+}
+
+func TestRedis_ParseIntOnString(t *testing.T) {
+	var acc testutil.Accumulator
+	tags := map[string]string{"host": "redis.net"}
+	rdr := bufio.NewReader(strings.NewReader(strings.Replace(testOutput, "clients_in_timeout_table:0", `clients_in_timeout_table:""`, 1)))
+	err := gatherInfoOutput(rdr, &acc, tags)
+	require.NoError(t, err)
+	var m *testutil.Metric
+	for i := range acc.Metrics {
+		if _, ok := acc.Metrics[i].Fields["clients_in_timeout_table"]; ok {
+			m = acc.Metrics[i]
+			break
+		}
+	}
+	require.NotNil(t, m)
+	clientsInTimeout, ok := m.Fields["clients_in_timeout_table"]
+	require.True(t, ok)
+	require.IsType(t, int64(0), clientsInTimeout)
 }
 
 const testOutput = `# Server

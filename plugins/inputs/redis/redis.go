@@ -2,10 +2,10 @@ package redis
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -47,7 +47,8 @@ type RedisClient struct {
 	tags   map[string]string
 }
 
-type RedisOutputs struct {
+// RedisFieldTypes defines the types expected for each of the fields redis reports on
+type RedisFieldTypes struct {
 	ActiveDefragHits            int64   `json:"active_defrag_hits"`
 	ActiveDefragKeyHits         int64   `json:"active_defrag_key_hits"`
 	ActiveDefragKeyMisses       int64   `json:"active_defrag_key_misses"`
@@ -55,7 +56,7 @@ type RedisOutputs struct {
 	ActiveDefragRunning         int64   `json:"active_defrag_running"`
 	AllocatorActive             int64   `json:"allocator_active"`
 	AllocatorAllocated          int64   `json:"allocator_allocated"`
-	AllocatorFragBytes          float64 `json:"allocator_frag_bytes"`
+	AllocatorFragBytes          float64 `json:"allocator_frag_bytes"` // for historical reasons this was left as float although redis reports it as an int
 	AllocatorFragRatio          float64 `json:"allocator_frag_ratio"`
 	AllocatorResident           int64   `json:"allocator_resident"`
 	AllocatorRssBytes           int64   `json:"allocator_rss_bytes"`
@@ -464,124 +465,10 @@ func gatherInfoOutput(
 	}
 	fields["keyspace_hitrate"] = keyspace_hitrate
 
-	o := RedisOutputs{}
+	o := RedisFieldTypes{}
 
-	m, err := json.Marshal(fields)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(m, &o)
-	if err != nil {
-		return err
-	}
-
-	fields["active_defrag_hits"] = o.ActiveDefragHits
-	fields["active_defrag_key_hits"] = o.ActiveDefragKeyHits
-	fields["active_defrag_key_misses"] = o.ActiveDefragKeyMisses
-	fields["active_defrag_misses"] = o.ActiveDefragMisses
-	fields["active_defrag_running"] = o.ActiveDefragRunning
-	fields["allocator_active"] = o.AllocatorActive
-	fields["allocator_allocated"] = o.AllocatorAllocated
-	fields["allocator_frag_bytes"] = o.AllocatorFragBytes
-	fields["allocator_frag_ratio"] = o.AllocatorFragRatio
-	fields["allocator_resident"] = o.AllocatorResident
-	fields["allocator_rss_bytes"] = o.AllocatorRssBytes
-	fields["allocator_rss_ratio"] = o.AllocatorRssRatio
-	fields["aof_current_rewrite_time_sec"] = o.AofCurrentRewriteTimeSec
-	fields["aof_enabled"] = o.AofEnabled
-	fields["aof_last_bgrewrite_status"] = o.AofLastBgrewriteStatus
-	fields["aof_last_cow_size"] = o.AofLastCowSize
-	fields["aof_last_rewrite_time_sec"] = o.AofLastRewriteTimeSec
-	fields["aof_last_write_status"] = o.AofLastWriteStatus
-	fields["aof_rewrite_in_progress"] = o.AofRewriteInProgress
-	fields["aof_rewrite_scheduled"] = o.AofRewriteScheduled
-	fields["blocked_clients"] = o.BlockedClients
-	fields["client_recent_max_input_buffer"] = o.ClientRecentMaxInputBuffer
-	fields["client_recent_max_output_buffer"] = o.ClientRecentMaxOutputBuffer
-	fields["clients"] = o.Clients
-	fields["clients_in_timeout_table"] = o.ClientsInTimeoutTable
-	fields["cluster_enabled"] = o.ClusterEnabled
-	fields["connected_slaves"] = o.ConnectedSlaves
-	fields["evicted_keys"] = o.EvictedKeys
-	fields["expire_cycle_cpu_milliseconds"] = o.ExpireCycleCPUMilliseconds
-	fields["expired_keys"] = o.ExpiredKeys
-	fields["expired_stale_perc"] = o.ExpiredStalePerc
-	fields["expired_time_cap_reached_count"] = o.ExpiredTimeCapReachedCount
-	fields["instantaneous_ops_per_sec"] = o.InstantaneousOpsPerSec
-	fields["instantaneous_input_kbps"] = o.InstantaneousInputKbps
-	fields["instantaneous_output_kbps"] = o.InstantaneousOutputKbps
-	fields["io_threaded_reads_processed"] = o.IoThreadedReadsProcessed
-	fields["io_threaded_writes_processed"] = o.IoThreadedWritesProcessed
-	fields["keyspace_hits"] = o.KeyspaceHits
-	fields["keyspace_misses"] = o.KeyspaceMisses
-	fields["latest_fork_usec"] = o.LatestForkUsec
-	fields["lazyfree_pending_objects"] = o.LazyfreePendingObjects
-	fields["loading"] = o.Loading
-	fields["lru_clock"] = o.LruClock
-	fields["master_repl_offset"] = o.MasterReplOffset
-	fields["maxmemory"] = o.MaxMemory
-	fields["maxmemory_policy"] = o.MaxMemoryPolicy
-	fields["mem_aof_buffer"] = o.MemAofBuffer
-	fields["mem_clients_normal"] = o.MemClientsNormal
-	fields["mem_clients_slaves"] = o.MemClientsSlaves
-	fields["mem_fragmentation_bytes"] = o.MemFragmentationBytes
-	fields["mem_fragmentation_ratio"] = o.MemFragmentationRatio
-	fields["mem_not_counted_for_evict"] = o.MemNotCountedForEvict
-	fields["mem_replication_backlog"] = o.MemReplicationBacklog
-	fields["migrate_cached_sockets"] = o.MigrateCachedSockets
-	fields["module_fork_in_progress"] = o.ModuleForkInProgress
-	fields["module_fork_last_cow_size"] = o.ModuleForkLastCowSize
-	fields["number_of_cached_scripts"] = o.NumberOfCachedScripts
-	fields["pubsub_channels"] = o.PubsubChannels
-	fields["pubsub_patterns"] = o.PubsubPatterns
-	fields["rdb_bgsave_in_progress"] = o.RdbBgsaveInProgress
-	fields["rdb_changes_since_last_save"] = o.RdbChangesSinceLastSave
-	fields["rdb_current_bgsave_time_sec"] = o.RdbCurrentBgsaveTimeSec
-	fields["rdb_last_bgsave_status"] = o.RdbLastBgsaveStatus
-	fields["rdb_last_bgsave_time_sec"] = o.RdbLastBgsaveTimeSec
-	fields["rdb_last_save_time"] = o.RdbLastSaveTime
-	fields["rdb_last_save_time_elapsed"] = o.RdbLastSaveTimeElapsed
-	fields["rdb_last_cow_size"] = o.RdbLastCowSize
-	fields["redis_version"] = o.RedisVersion
-	fields["rejected_connections"] = o.RejectedConnections
-	fields["repl_backlog_active"] = o.ReplBacklogActive
-	fields["repl_backlog_first_byte_offset"] = o.ReplBacklogFirstByteOffset
-	fields["repl_backlog_histlen"] = o.ReplBacklogHistlen
-	fields["repl_backlog_size"] = o.ReplBacklogSize
-	fields["rss_overhead_bytes"] = o.RssOverheadBytes
-	fields["rss_overhead_ratio"] = o.RssOverheadRatio
-	fields["second_repl_offset"] = o.SecondReplOffset
-	fields["slave_expires_tracked_keys"] = o.SlaveExpiresTrackedKeys
-	fields["sync_full"] = o.SyncFull
-	fields["sync_partial_err"] = o.SyncPartialErr
-	fields["sync_partial_ok"] = o.SyncPartialOk
-	fields["total_commands_processed"] = o.TotalCommandsProcessed
-	fields["total_connections_received"] = o.TotalConnectionsReceived
-	fields["total_net_input_bytes"] = o.TotalNetInputBytes
-	fields["total_net_output_bytes"] = o.TotalNetOutputBytes
-	fields["total_reads_processed"] = o.TotalReadsProcessed
-	fields["total_system_memory"] = o.TotalSystemMemory
-	fields["total_writes_processed"] = o.TotalWritesProcessed
-	fields["tracking_clients"] = o.TrackingClients
-	fields["tracking_total_items"] = o.TrackingTotalItems
-	fields["tracking_total_keys"] = o.TrackingTotalKeys
-	fields["tracking_total_prefixes"] = o.TrackingTotalPrefixes
-	fields["unexpected_error_replies"] = o.UnexpectedErrorReplies
-	fields["uptime"] = o.Uptime
-	fields["used_cpu_sys"] = o.UsedCPUSys
-	fields["used_cpu_sys_children"] = o.UsedCPUSysChildren
-	fields["used_cpu_user"] = o.UsedCPUUser
-	fields["used_cpu_user_children"] = o.UsedCPUUserChildren
-	fields["used_memory"] = o.UsedMemory
-	fields["used_memory_dataset"] = o.UsedMemoryDataset
-	fields["used_memory_dataset_perc"] = o.UsedMemoryDatasetPerc
-	fields["used_memory_lua"] = o.UsedMemoryLua
-	fields["used_memory_overhead"] = o.UsedMemoryOverhead
-	fields["used_memory_peak"] = o.UsedMemoryPeak
-	fields["used_memory_peak_perc"] = o.UsedMemoryPeakPerc
-	fields["used_memory_rss"] = o.UsedMemoryRss
-	fields["used_memory_scripts"] = o.UsedMemoryScripts
-	fields["used_memory_startup"] = o.UsedMemoryStartup
+	setStructFieldsFromObject(fields, &o)
+	setExistingFieldsFromStruct(fields, &o)
 
 	acc.AddFields("redis", fields, tags)
 	return nil
@@ -709,4 +596,116 @@ func init() {
 	inputs.Add("redis", func() telegraf.Input {
 		return &Redis{}
 	})
+}
+
+func setExistingFieldsFromStruct(fields map[string]interface{}, o *RedisFieldTypes) {
+	val := reflect.ValueOf(o).Elem()
+	typ := val.Type()
+
+	for key := range fields {
+		if _, exists := fields[key]; exists {
+			for i := 0; i < typ.NumField(); i++ {
+				f := typ.Field(i)
+				jsonFieldName := f.Tag.Get("json")
+				if jsonFieldName == key {
+					fields[key] = val.Field(i).Interface()
+					break
+				}
+			}
+		}
+	}
+}
+
+func setStructFieldsFromObject(fields map[string]interface{}, o *RedisFieldTypes) {
+	val := reflect.ValueOf(o).Elem()
+	typ := val.Type()
+
+	for key, value := range fields {
+		if _, exists := fields[key]; exists {
+			for i := 0; i < typ.NumField(); i++ {
+				f := typ.Field(i)
+				jsonFieldName := f.Tag.Get("json")
+				if jsonFieldName == key {
+					structFieldValue := val.Field(i)
+					structFieldValue.Set(coerceType(value, structFieldValue.Type()))
+					break
+				}
+			}
+		}
+	}
+}
+
+func coerceType(value interface{}, typ reflect.Type) reflect.Value {
+	switch sourceType := value.(type) {
+	case bool:
+		switch typ.Kind() {
+		case reflect.String:
+			if sourceType {
+				value = "true"
+			} else {
+				value = "false"
+			}
+		case reflect.Int64:
+			if sourceType {
+				value = int64(1)
+			} else {
+				value = int64(0)
+			}
+		case reflect.Float64:
+			if sourceType {
+				value = float64(1)
+			} else {
+				value = float64(0)
+			}
+		default:
+			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+		}
+	case int, int8, int16, int32, int64:
+		switch typ.Kind() {
+		case reflect.String:
+			value = fmt.Sprintf("%d", value)
+		case reflect.Int64:
+			// types match
+		case reflect.Float64:
+			value = float64(reflect.ValueOf(sourceType).Int())
+		default:
+			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+		}
+	case uint, uint8, uint16, uint32, uint64:
+		switch typ.Kind() {
+		case reflect.String:
+			value = fmt.Sprintf("%d", value)
+		case reflect.Int64:
+			// types match
+		case reflect.Float64:
+			value = float64(reflect.ValueOf(sourceType).Uint())
+		default:
+			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+		}
+	case float32, float64:
+		switch typ.Kind() {
+		case reflect.String:
+			value = fmt.Sprintf("%f", value)
+		case reflect.Int64:
+			value = int64(reflect.ValueOf(sourceType).Float())
+		case reflect.Float64:
+			// types match
+		default:
+			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+		}
+	case string:
+		switch typ.Kind() {
+		case reflect.String:
+			// types match
+		case reflect.Int64:
+			value, _ = strconv.ParseInt(value.(string), 10, 64)
+		case reflect.Float64:
+			value, _ = strconv.ParseFloat(value.(string), 64)
+		default:
+			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+		}
+	default:
+		panic(fmt.Sprintf("unhandled source type %T", sourceType))
+	}
+	return reflect.ValueOf(value)
 }
