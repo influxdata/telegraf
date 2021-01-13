@@ -178,8 +178,8 @@ func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 
 	// Parse label and field selectors - will be used to filter pods after cAdvisor call
-	labelSelectorMap = createSelectorMap(p.KubernetesLabelSelector)
-	fieldSelectorMap = createSelectorMap(p.KubernetesFieldSelector)
+	labelSelectorMap = createSelectorMap(p.KubernetesLabelSelector, p)
+	fieldSelectorMap = createSelectorMap(p.KubernetesFieldSelector, p)
 
 	// The request will be the same each time
 	nodeIP := os.Getenv("NODE_IP")
@@ -228,16 +228,17 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
 	p.lock.Lock()
 	p.kubernetesPods = nil
 	for _, pod := range pods {
-		if pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] != "true" ||
-			!podReady(pod.Status.GetContainerStatuses()) ||
-			(p.PodNamespace != "" && pod.GetMetadata().GetNamespace() != p.PodNamespace) ||
-			pod.Metadata.GetDeletionTimestamp() != nil ||
-			!podHasMatchingLabelSelector(pod) ||
-			!podHasMatchingFieldSelector(p, pod) {
-			continue
+
+		// Register pod only if it has an annotation to scrape, if it is ready,
+		// and if namespace/selectors are specified and match
+		if pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] == "true" &&
+			podReady(pod.Status.GetContainerStatuses()) &&
+			podHasMatchingNamespace(pod, p) &&
+			podHasMatchingLabelSelector(pod) &&
+			podHasMatchingFieldSelector(pod, p) {
+				registerPod(pod, p)
 		}
 
-		registerPod(pod, p)
 	}
 	p.lock.Unlock()
 
@@ -249,7 +250,7 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
  * https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
  * https://kubernetes.io/docs/concepts/overview/working-with-objects/field-selectors/
  */
-func createSelectorMap(selectors string) map[string]*selectorInfo {
+func createSelectorMap(selectors string, p *Prometheus) map[string]*selectorInfo {
 	selectorMap := make(map[string]*selectorInfo)
 	if selectors != "" {
 		selectors = strings.TrimSpace(selectors)
@@ -266,31 +267,37 @@ func createSelectorMap(selectors string) map[string]*selectorInfo {
 
 			// Equality-based label and field selectors
 			if strings.Contains(selectorKeyValue, NotEqualsOperator) {
-				addEqualityBasedSelector(NotEqualsOperator, selectorKeyValue, selectorMap)
+				addEqualityBasedSelector(NotEqualsOperator, selectorKeyValue, selectorMap, p)
 			} else if strings.Contains(selectorKeyValue, EqualEqualsOperator) {
-				addEqualityBasedSelector(EqualEqualsOperator, selectorKeyValue, selectorMap)
+				addEqualityBasedSelector(EqualEqualsOperator, selectorKeyValue, selectorMap, p)
 			} else if strings.Contains(selectorKeyValue, EqualsOperator) {
-				addEqualityBasedSelector(EqualsOperator, selectorKeyValue, selectorMap)
+				addEqualityBasedSelector(EqualsOperator, selectorKeyValue, selectorMap, p)
 
-				// Set-based label selectors
+			// Set-based label selectors
 			} else if strings.Contains(selectorKeyValue, fmt.Sprintf(" %s", NotInOperator)) {
-				parts := strings.Split(selectorKeyValue, fmt.Sprintf(" %s", NotInOperator))
-				if len(parts) > 0 && len(wantedSets) >= wantedSetsIndex {
-					selectorMap[strings.TrimSpace(parts[0])] = &selectorInfo{
+				labelName := strings.Split(selectorKeyValue, fmt.Sprintf(" %s", NotInOperator))
+				if len(labelName) > 0 && len(wantedSets) >= wantedSetsIndex {
+					selectorMap[strings.TrimSpace(labelName[0])] = &selectorInfo{
 						Operator: NotInOperator,
 						Value:    strings.TrimSpace(wantedSets[wantedSetsIndex]),
 					}
 					wantedSetsIndex++
+				} else {
+					p.Log.Errorf("Unable to parse label selector.")
 				}
 			} else if strings.Contains(selectorKeyValue, fmt.Sprintf(" %s", InOperator)) {
-				parts := strings.Split(selectorKeyValue, fmt.Sprintf(" %s", InOperator))
-				if len(parts) > 0 && len(wantedSets) >= wantedSetsIndex {
-					selectorMap[strings.TrimSpace(parts[0])] = &selectorInfo{
+				labelName := strings.Split(selectorKeyValue, fmt.Sprintf(" %s", InOperator))
+				if len(labelName) > 0 && len(wantedSets) >= wantedSetsIndex {
+					selectorMap[strings.TrimSpace(labelName[0])] = &selectorInfo{
 						Operator: InOperator,
 						Value:    strings.TrimSpace(wantedSets[wantedSetsIndex]),
 					}
 					wantedSetsIndex++
+				} else {
+					p.Log.Errorf("Unable to parse label selector.")
 				}
+
+			// Existence set-based label selectors
 			} else if strings.HasPrefix(selectorKeyValue, NotExistsOperator) {
 				selectorMap[strings.TrimSpace(selectorKeyValue[1:])] = &selectorInfo{
 					Operator: NotExistsOperator,
@@ -306,7 +313,7 @@ func createSelectorMap(selectors string) map[string]*selectorInfo {
 	return selectorMap
 }
 
-func addEqualityBasedSelector(operator string, selectorKeyValue string, selectorMap map[string]*selectorInfo) {
+func addEqualityBasedSelector(operator string, selectorKeyValue string, selectorMap map[string]*selectorInfo, p *Prometheus) {
 	strings.ReplaceAll(selectorKeyValue, " ", "")
 	keyValueParts := strings.Split(selectorKeyValue, operator)
 	if len(keyValueParts) > 1 {
@@ -314,6 +321,8 @@ func addEqualityBasedSelector(operator string, selectorKeyValue string, selector
 			Operator: operator,
 			Value:    keyValueParts[1],
 		}
+	} else {
+		p.Log.Errorf("Unable to parse selector %s", selectorKeyValue)
 	}
 }
 
@@ -329,13 +338,13 @@ func podHasMatchingLabelSelector(pod *corev1.Pod) bool {
 			wantedValue := selectorInfo.Value
 			actualValue := actualLabels[name]
 
-			if (operator == EqualsOperator && !strings.EqualFold(actualValue, wantedValue)) ||
-				(operator == NotEqualsOperator && strings.EqualFold(actualValue, wantedValue)) ||
+			if (operator == NotEqualsOperator && strings.EqualFold(actualValue, wantedValue)) ||
+				((operator == EqualsOperator || operator == EqualEqualsOperator) && !strings.EqualFold(actualValue, wantedValue)) ||
 				(operator == ExistsOperator && actualValue == "") ||
 				(operator == NotExistsOperator && actualValue != "") {
 				return false
 
-				// Wanted value is a set that actual value should or shouldn't be in
+			// Wanted value is a set that actual value should or shouldn't be in
 			} else if operator == InOperator || operator == NotInOperator {
 				charReplacer := strings.NewReplacer("(", "", ")", "", " ", "")
 				setValues := strings.Split(charReplacer.Replace(wantedValue), ",")
@@ -361,7 +370,7 @@ func podHasMatchingLabelSelector(pod *corev1.Pod) bool {
  * See docs on kubernetes field selectors:
  * https://kubernetes.io/docs/concepts/overview/working-with-objects/field-selectors/
  */
-func podHasMatchingFieldSelector(p *Prometheus, pod *corev1.Pod) bool {
+func podHasMatchingFieldSelector(pod *corev1.Pod, p *Prometheus) bool {
 	if len(fieldSelectorMap) > 0 {
 		for name, selectorInfo := range fieldSelectorMap {
 			getField := func() string { return "" }
@@ -400,6 +409,14 @@ func podHasMatchingFieldSelector(p *Prometheus, pod *corev1.Pod) bool {
 	}
 
 	return true
+}
+
+/*
+ * If a namespace is specified and the pod doesn't have that namespace, return false
+ * Else return true
+ */
+func podHasMatchingNamespace(pod *corev1.Pod, p *Prometheus) bool {
+	return !(p.PodNamespace != "" && pod.GetMetadata().GetNamespace() != p.PodNamespace)
 }
 
 func podReady(statuss []*corev1.ContainerStatus) bool {

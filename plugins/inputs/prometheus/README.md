@@ -34,8 +34,8 @@ in Prometheus format.
   ## - prometheus.io/port: If port is not 9102 use this annotation
   # monitor_kubernetes_pods = true
   ## Get the list of pods to scrape from either:
-	## - version 1 (default): the kubernetes watch api (cluster-wide)
-	## - version 2: the local cadvisor api (node-wide); for scalability
+	##    - version 1 (default): the kubernetes watch api (cluster-wide)
+	##    - version 2: the local cadvisor api (node-wide); for scalability
 	# monitor_kubernetes_pods_version = 1
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
