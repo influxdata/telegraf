@@ -154,6 +154,10 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		pinger.SetPrivileged(true)
 	}
 
+	if p.IPv6 == true {
+		pinger.SetNetwork("ip6")
+	}
+
 	// The interval cannot be below 0.2 seconds, matching ping implementation: https://linux.die.net/man/8/ping
 	if p.PingInterval < 0.2 {
 		pinger.Interval = time.Duration(.2 * float64(time.Second))
@@ -168,16 +172,13 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		pinger.Timeout = time.Duration(p.Timeout) * time.Second
 	}
 
-	go func() {
-		if p.Deadline <= 0 {
-			return
-		}
+	if p.Deadline > 0 {
 		// If deadline is set ping exits regardless of how many packets have been sent or received
 		timer := time.AfterFunc(time.Duration(p.Deadline)*time.Second, func() {
 			pinger.Stop()
 		})
 		defer timer.Stop()
-	}()
+	}
 
 	pinger.Count = p.Count
 	err = pinger.Run()

@@ -19,7 +19,7 @@ apt-get install iputils-ping
 
 When using `method = "native"` a ping is sent and the results are reported in
 native Go by the Telegraf process, eliminating the need to execute the system
-`ping` command. This is dependent on the [go-ping](https://github.com/go-ping/ping) package.
+`ping` command.
 
 ### Configuration:
 
