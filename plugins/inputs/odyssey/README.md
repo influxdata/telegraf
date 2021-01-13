@@ -11,6 +11,8 @@
   ## All connection parameters are optional.
   ##
   address = "host=localhost user=postgres sslmode=disable"
+
+  include_query = []
 ```
 
 #### `address`
@@ -30,7 +32,7 @@ This dbname is just for instantiating a connection with the server and doesn't r
 
 ### Metrics
 
-- odyssey
+- SHOW_STATS
   - tags:
     - db
     - server
@@ -48,7 +50,7 @@ This dbname is just for instantiating a connection with the server and doesn't r
     - total_xact_count
     - total_xact_time
 
-+ odyssey_pools
++ SHOW_POOLS
   - tags:
     - db
     - pool_mode

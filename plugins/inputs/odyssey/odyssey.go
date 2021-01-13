@@ -2,7 +2,6 @@ package odyssey
 
 import (
 	"bytes"
-	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -13,6 +12,7 @@ import (
 
 type Odyssey struct {
 	postgresql.Service
+	IncludeQuery []string `toml:"include_query"`
 }
 
 var ignoredColumns = map[string]bool{"user": true, "database": true, "pool_mode": true,
@@ -21,14 +21,18 @@ var ignoredColumns = map[string]bool{"user": true, "database": true, "pool_mode"
 
 var sampleConfig = `
   ## specify address via a url matching:
-  ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
+  ##   postgres://[console[:password]]@localhost[/dbname]\
   ##       ?sslmode=[disable|verify-ca|verify-full]
   ## or a simple string:
   ##   host=localhost user=console password=... sslmode=... dbname=app_production
   ##
+  ## include_query = []string - commands for psql
+  ##
   ## All connection parameters are optional.
   ##
-  address = "host=localhost user=postgres sslmode=disable"
+  address = "host=localhost user=postgresql sslmode=disable dbname=console port=6432"
+
+  include_query = ['SHOW STATS', 'SHOW POOLS']
 `
 
 func (p *Odyssey) SampleConfig() string {
@@ -46,97 +50,52 @@ func (p *Odyssey) Gather(acc telegraf.Accumulator) error {
 		columns []string
 	)
 
-	query = `SHOW STATS`
+	for _, value := range p.IncludeQuery {
+		query = value
 
-	rows, err := p.DB.Query(query)
-	if err != nil {
-		return err
-	}
-
-	defer rows.Close()
-
-	// grab the column information from the result
-	if columns, err = rows.Columns(); err != nil {
-		return err
-	}
-
-	for rows.Next() {
-		tags, columnMap, err := p.accRow(rows, acc, columns)
-
+		rows, err := p.DB.Query(query)
 		if err != nil {
 			return err
 		}
 
-		fields := make(map[string]interface{})
-		for col, val := range columnMap {
-			_, ignore := ignoredColumns[col]
-			if ignore {
-				continue
+		defer rows.Close()
+
+		// grab the column information from the result
+		if columns, err = rows.Columns(); err != nil {
+			return err
+		}
+
+		for rows.Next() {
+			tags, columnMap, err := p.accRow(rows, acc, columns)
+
+			if err != nil {
+				return err
 			}
 
-			switch v := (*val).(type) {
-			case int64:
-				fields[col] = v
-			case string:
-				integer, err := strconv.ParseInt(v, 10, 64)
-				if err != nil {
-					return err
+			if user, ok := columnMap["user"]; ok {
+				if s, ok := (*user).(string); ok && s != "" {
+					tags["user"] = s
 				}
-
-				fields[col] = integer
 			}
-		}
-		acc.AddFields("odyssey", fields, tags)
-	}
 
-	err = rows.Err()
-	if err != nil {
-		return err
-	}
-
-	query = `SHOW POOLS`
-
-	poolRows, err := p.DB.Query(query)
-	if err != nil {
-		return err
-	}
-
-	defer poolRows.Close()
-
-	// grab the column information from the result
-	if columns, err = poolRows.Columns(); err != nil {
-		return err
-	}
-
-	for poolRows.Next() {
-		tags, columnMap, err := p.accRow(poolRows, acc, columns)
-		if err != nil {
-			return err
-		}
-
-		if user, ok := columnMap["user"]; ok {
-			if s, ok := (*user).(string); ok && s != "" {
-				tags["user"] = s
+			if poolMode, ok := columnMap["pool_mode"]; ok {
+				if s, ok := (*poolMode).(string); ok && s != "" {
+					tags["pool_mode"] = s
+				}
 			}
-		}
 
-		if poolMode, ok := columnMap["pool_mode"]; ok {
-			if s, ok := (*poolMode).(string); ok && s != "" {
-				tags["pool_mode"] = s
+			fields := make(map[string]interface{})
+			for col, val := range columnMap {
+				_, ignore := ignoredColumns[col]
+				if !ignore {
+					fields[col] = *val
+				}
 			}
+			acc.AddFields(query, fields, tags)
 		}
-
-		fields := make(map[string]interface{})
-		for col, val := range columnMap {
-			_, ignore := ignoredColumns[col]
-			if !ignore {
-				fields[col] = *val
-			}
-		}
-		acc.AddFields("odyssey_pools", fields, tags)
 	}
 
-	return poolRows.Err()
+	return err
 }
 
 type scanner interface {
@@ -192,6 +151,7 @@ func init() {
 				MaxLifetime: internal.Duration{
 					Duration: 0,
 				},
+				IsPgBouncer: true,
 			},
 		}
 	})

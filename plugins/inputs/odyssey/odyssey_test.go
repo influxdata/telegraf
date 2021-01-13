@@ -21,6 +21,7 @@ func TestOdysseyGeneratesMetrics(t *testing.T) {
 				"host=%s user=postgres dbname=console port=6432 sslmode=disable",
 				testutil.GetLocalHost(),
 			),
+			IsPgBouncer: true,
 		},
 	}
 
