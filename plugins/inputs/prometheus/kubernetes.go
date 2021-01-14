@@ -2,13 +2,18 @@ package prometheus
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
+	"net/http"
 	"net/url"
+	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +26,39 @@ type payload struct {
 	eventype string
 	pod      *corev1.Pod
 }
+
+type podMetadata struct {
+	ResourceVersion string `json:"resourceVersion"`
+	SelfLink        string `json:"selfLink"`
+}
+
+type podResponse struct {
+	Kind       string        `json:"kind"`
+	ApiVersion string        `json:"apiVersion"`
+	Metadata   podMetadata   `json:"metadata"`
+	Items      []*corev1.Pod `json:"items,string,omitempty"`
+}
+
+type selectorInfo struct {
+	Operator string `json:"operator"`
+	Value    string `json:"value"`
+}
+
+// "Enum" for Operator of selectorInfo struct
+const (
+	Equals      = "="
+	EqualEquals = "=="
+	NotEquals   = "!="
+	Exists      = ""
+	NotExists   = "!"
+	In          = "in"
+	NotIn       = "notin"
+)
+
+const updatePodScrapeListInterval = 60
+
+var labelSelectorMap map[string]*selectorInfo
+var fieldSelectorMap map[string]*selectorInfo
 
 // loadClient parses a kubeconfig from a file and returns a Kubernetes
 // client. It does not support extensions or client auth providers.
@@ -56,6 +94,13 @@ func (p *Prometheus) start(ctx context.Context) error {
 		}
 	}
 
+	if p.MonitorPodsVersion == 2 {
+		p.Log.Infof("Using monitor pods version 2 to get pod list using cAdvisor.")
+		// Set InsecureSkipVerify for cAdvisor client: Node IP will not be a SAN for the CA cert
+		tlsConfig := client.Client.Transport.(*http.Transport).TLSClientConfig
+		tlsConfig.InsecureSkipVerify = true
+	}
+
 	p.wg = sync.WaitGroup{}
 
 	p.wg.Add(1)
@@ -66,7 +111,11 @@ func (p *Prometheus) start(ctx context.Context) error {
 			case <-ctx.Done():
 				return
 			case <-time.After(time.Second):
-				err := p.watch(ctx, client)
+				if p.MonitorPodsVersion == 2 {
+					err = p.cAdvisor(ctx, client)
+				} else {
+					err = p.watch(ctx, client)
+				}
 				if err != nil {
 					p.Log.Errorf("Unable to watch resources: %s", err.Error())
 				}
@@ -124,6 +173,240 @@ func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 			}
 		}
 	}
+}
+
+func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
+	log.Printf("Grace-log: in p.watch")
+	// HTTP request is the same each time
+	nodeIP := os.Getenv("NODE_IP")
+	podsUrl := fmt.Sprintf("https://%s:10250/pods", nodeIP)
+	req, err := http.NewRequest("GET", podsUrl, nil)
+	if err != nil {
+		return err
+	}
+	client.SetHeaders(req.Header)
+
+	// Parse label and field selectors
+	labelSelectorMap = createSelectorMap(p.KubernetesLabelSelector)
+	fieldSelectorMap = createSelectorMap(p.KubernetesFieldSelector)
+	log.Printf("label selector map: %v", labelSelectorMap)
+	log.Printf("field selector map: %v", fieldSelectorMap)
+
+	// Update at beginning of watch() so code is not waiting 60s initially
+	err = updatePodList(ctx, p, client, req)
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(updatePodScrapeListInterval * time.Second):
+			err := updatePodList(ctx, p, client, req)
+			if err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func updatePodList(ctx context.Context, p *Prometheus, client *k8s.Client, req *http.Request) error {
+	log.Printf("Grace-log: after 60s attempting to update url list")
+
+	resp, err := client.Client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	cadvisorPodsResponse := podResponse{}
+	json.Unmarshal([]byte(responseBody), &cadvisorPodsResponse)
+	pods := cadvisorPodsResponse.Items
+
+	p.lock.Lock()
+	log.Printf("Grace-log: In watch - locking to update the URLAndAddress map")
+
+	p.kubernetesPods = nil
+	for _, pod := range pods {
+		log.Printf("pod: %s", pod.GetMetadata().GetName())
+
+		if pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] != "true" ||
+			!podReady(pod.Status.GetContainerStatuses()) ||
+			(p.PodNamespace != "" && pod.GetMetadata().GetNamespace() != p.PodNamespace) ||
+			pod.Metadata.GetDeletionTimestamp() != nil ||
+			!podHasMatchingLabelSelector(pod) ||
+			!podHasMatchingFieldSelector(pod) {
+			continue
+		}
+
+		registerPod(pod, p)
+	}
+
+	log.Printf("Grace-log: In watch - Unlocking after updating the URLAndAddress map")
+	p.lock.Unlock()
+
+	return nil
+}
+
+/* See the docs on kubernetes label and field selectors:
+ * https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+ * https://kubernetes.io/docs/concepts/overview/working-with-objects/field-selectors/
+ */
+func createSelectorMap(selectors string) map[string]*selectorInfo {
+	selectorMap := make(map[string]*selectorInfo)
+	if selectors != "" {
+		selectors = strings.TrimSpace(selectors)
+
+		re := regexp.MustCompile("\\(.*?\\)|(,)")
+		wantedSelectors := re.Split(selectors, -1)
+
+		re = regexp.MustCompile("\\(.*?\\)")
+		wantedSets := re.FindAllString(selectors, -1)
+		wantedSetsIndex := 0
+
+		for _, selectorKeyValue := range wantedSelectors {
+			selectorKeyValue = strings.TrimSpace(selectorKeyValue)
+
+			// Equality-based label and field selectors
+			if strings.Contains(selectorKeyValue, NotEquals) {
+				strings.ReplaceAll(selectorKeyValue, " ", "")
+				parts := strings.Split(selectorKeyValue, NotEquals)
+				if len(parts) > 1 {
+					selectorMap[strings.TrimSpace(parts[0])] = &selectorInfo{
+						Operator: NotEquals,
+						Value:    strings.TrimSpace(parts[1]),
+					}
+				}
+			} else if strings.Contains(selectorKeyValue, EqualEquals) {
+				strings.ReplaceAll(selectorKeyValue, " ", "")
+				parts := strings.Split(selectorKeyValue, EqualEquals)
+				if len(parts) > 1 {
+					selectorMap[strings.TrimSpace(parts[0])] = &selectorInfo{
+						Operator: Equals,
+						Value:    strings.TrimSpace(parts[1]),
+					}
+				}
+			} else if strings.Contains(selectorKeyValue, Equals) {
+				strings.ReplaceAll(selectorKeyValue, " ", "")
+				parts := strings.Split(selectorKeyValue, Equals)
+				if len(parts) > 1 {
+					selectorMap[strings.TrimSpace(parts[0])] = &selectorInfo{
+						Operator: Equals,
+						Value:    strings.TrimSpace(parts[1]),
+					}
+				}
+
+				// Set-based label selectors
+			} else if strings.Contains(selectorKeyValue, fmt.Sprintf(" %s", NotIn)) {
+				parts := strings.Split(selectorKeyValue, fmt.Sprintf(" %s", NotIn))
+				if len(parts) > 0 && len(wantedSets) >= wantedSetsIndex {
+					selectorMap[strings.TrimSpace(parts[0])] = &selectorInfo{
+						Operator: NotIn,
+						Value:    strings.TrimSpace(wantedSets[wantedSetsIndex]),
+					}
+					wantedSetsIndex++
+				}
+			} else if strings.Contains(selectorKeyValue, fmt.Sprintf(" %s", In)) {
+				parts := strings.Split(selectorKeyValue, fmt.Sprintf(" %s", In))
+				if len(parts) > 0 && len(wantedSets) >= wantedSetsIndex {
+					selectorMap[strings.TrimSpace(parts[0])] = &selectorInfo{
+						Operator: In,
+						Value:    strings.TrimSpace(wantedSets[wantedSetsIndex]),
+					}
+					wantedSetsIndex++
+				}
+			} else if strings.HasPrefix(selectorKeyValue, NotExists) {
+				selectorMap[strings.TrimSpace(selectorKeyValue[1:])] = &selectorInfo{
+					Operator: NotExists,
+					Value:    "",
+				}
+			} else if selectorKeyValue != "" {
+				selectorMap[selectorKeyValue] = &selectorInfo{
+					Operator: Exists,
+					Value:    "",
+				}
+			}
+		}
+	}
+
+	return selectorMap
+}
+
+/* See the docs on kubernetes label selectors:
+ * https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+ */
+func podHasMatchingLabelSelector(pod *corev1.Pod) bool {
+	if len(labelSelectorMap) > 0 {
+		actualLabels := pod.GetMetadata().GetLabels()
+		log.Printf("actual Labels: %v", actualLabels)
+		for name, selectorInfo := range labelSelectorMap {
+			Operator := selectorInfo.Operator
+			value := selectorInfo.Value
+			actualValue := actualLabels[name]
+			if (Operator == Equals && !strings.EqualFold(actualValue, value)) ||
+				(Operator == NotEquals && strings.EqualFold(actualValue, value)) ||
+				(Operator == Exists && actualValue == "") ||
+				(Operator == NotExists && actualValue != "") {
+				return false
+			} else if Operator == In || Operator == NotIn {
+				setParts := strings.Split(strings.ReplaceAll(strings.ReplaceAll(value, "(", ""), ")", ""), ",")
+				set := make(map[string]bool)
+				for _, setPart := range setParts {
+					setPart := strings.TrimSpace(setPart)
+					set[setPart] = true
+				}
+				if (Operator == In && !set[actualValue]) ||
+					(Operator == NotIn && set[actualValue]) {
+					return false
+				}
+			}
+		}
+	}
+
+	return true
+}
+
+/* See PodToSelectableFields() for list of fields that are selectable:
+ * https://github.com/kubernetes/kubernetes/blob/v1.16.1/pkg/registry/core/pod/strategy.go
+ * See docs on kubernetes field selectors:
+ * https://kubernetes.io/docs/concepts/overview/working-with-objects/field-selectors/
+ */
+func podHasMatchingFieldSelector(pod *corev1.Pod) bool {
+	if len(fieldSelectorMap) > 0 {
+		for name, selectorInfo := range fieldSelectorMap {
+			getField := func() string { return "" }
+			switch strings.ToLower(name) {
+			case "spec.nodename":
+				getField = pod.GetSpec().GetNodeName
+			case "spec.restartpolicy":
+				getField = pod.GetSpec().GetRestartPolicy
+			case "spec.schedulername":
+				getField = pod.GetSpec().GetSchedulerName
+			case "spec.serviceaccountname":
+				getField = pod.GetSpec().GetServiceAccountName
+			case "status.phase":
+				getField = pod.GetStatus().GetPhase
+			case "status.podip":
+				getField = pod.GetStatus().GetPodIP
+			case "status.nominatednodename":
+				getField = pod.GetStatus().GetNominatedNodeName
+			}
+			Operator := selectorInfo.Operator
+			value := selectorInfo.Value
+			actualValue := string(getField())
+			if (Operator == Equals && !strings.EqualFold(actualValue, value)) ||
+				(Operator == NotEquals && strings.EqualFold(actualValue, value)) {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func podReady(statuss []*corev1.ContainerStatus) bool {

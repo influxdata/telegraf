@@ -57,12 +57,13 @@ type Prometheus struct {
 	client *http.Client
 
 	// Should we scrape Kubernetes services for prometheus annotations
-	MonitorPods    bool   `toml:"monitor_kubernetes_pods"`
-	PodNamespace   string `toml:"monitor_kubernetes_pods_namespace"`
-	lock           sync.Mutex
-	kubernetesPods map[string]URLAndAddress
-	cancel         context.CancelFunc
-	wg             sync.WaitGroup
+	MonitorPods        bool   `toml:"monitor_kubernetes_pods"`
+	MonitorPodsVersion int    `toml:"monitor_kubernetes_pods_version"`
+	PodNamespace       string `toml:"monitor_kubernetes_pods_namespace"`
+	lock               sync.Mutex
+	kubernetesPods     map[string]URLAndAddress
+	cancel             context.CancelFunc
+	wg                 sync.WaitGroup
 }
 
 var sampleConfig = `
