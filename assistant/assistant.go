@@ -19,10 +19,10 @@ import (
 Assistant is a client to facilitate communications between Agent and Cloud.
 */
 type Assistant struct {
-	config *AssistantConfig // Configuration for Assitant's conn to server
-	conn   *websocket.Conn  // Active websocket conn
+	config  *AssistantConfig // Configuration for Assitant's conn to server
+	conn    *websocket.Conn  // Active websocket conn
 	running bool
-	agent  *agent.Agent     // Pointer to agent to issue commands
+	agent   *agent.Agent // Pointer to agent to issue commands
 }
 
 /*
@@ -37,8 +37,8 @@ type AssistantConfig struct {
 
 func NewAssistantConfig() *AssistantConfig {
 	return &AssistantConfig{
-		Host: "localhost:8080",
-		Path: "/assistant",
+		Host:          "localhost:8080",
+		Path:          "/assistant",
 		RetryInterval: 15,
 	}
 }
@@ -92,7 +92,7 @@ func (a *Assistant) init(ctx context.Context) error {
 	}
 
 	header := http.Header{}
-	header.Add("Authorization", "Token " + token)
+	header.Add("Authorization", "Token "+token)
 	u := url.URL{Scheme: "ws", Host: a.config.Host, Path: a.config.Path}
 
 	log.Printf("D! [assistant] Attempting conn to [%s]", a.config.Host)
@@ -214,7 +214,7 @@ func (a *Assistant) getPlugin(req *request) (interface{}, error) {
 }
 
 type pluginSchema struct {
-	Schema map[string]interface{}
+	Schema   map[string]interface{}
 	Defaults map[string]interface{}
 }
 
@@ -249,7 +249,7 @@ func (a *Assistant) getSchema(req *request) (interface{}, error) {
 	}
 
 	resp := pluginSchema{
-		Schema: schema,
+		Schema:   schema,
 		Defaults: defaults,
 	}
 
@@ -337,7 +337,7 @@ type runningPlugins struct {
 // getRunningPlugins returns an object with all running plugins
 func (assistant *Assistant) getRunningPlugins(req *request) (interface{}, error) {
 	runningPlugins := runningPlugins{
-		Inputs: assistant.agent.GetRunningInputPlugins(),
+		Inputs:  assistant.agent.GetRunningInputPlugins(),
 		Outputs: assistant.agent.GetRunningOutputPlugins(),
 	}
 	return runningPlugins, nil
@@ -351,7 +351,7 @@ type availablePlugins struct {
 // getAllPlugins returns an object with the names of all available plugins
 func (assistant *Assistant) getAllPlugins(req *request) (interface{}, error) {
 	availablePlugins := availablePlugins{
-		Inputs: agent.GetAllInputPlugins(),
+		Inputs:  agent.GetAllInputPlugins(),
 		Outputs: agent.GetAllOutputPlugins(),
 	}
 	return availablePlugins, nil

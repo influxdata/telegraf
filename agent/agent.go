@@ -274,7 +274,6 @@ func (a *Agent) incrementOutputCount(by int) {
 	a.ocLock.Unlock()
 }
 
-
 func GetAllInputPlugins() []string {
 	var res []string
 	for name := range inputs.Inputs {
