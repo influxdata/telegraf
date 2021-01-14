@@ -160,6 +160,7 @@ following works:
 - gopkg.in/jcmturner/dnsutils.v1 [Apache License 2.0](https://github.com/jcmturner/dnsutils/blob/v1.0.1/LICENSE)
 - gopkg.in/jcmturner/gokrb5.v7 [Apache License 2.0](https://github.com/jcmturner/gokrb5/tree/v7.5.0/LICENSE)
 - gopkg.in/jcmturner/rpc.v1 [Apache License 2.0](https://github.com/jcmturner/rpc/blob/v1.1.0/LICENSE)
+- gopkg.in/ldap.v2 [MIT License](https://github.com/go-ldap/ldap/blob/v2.5.1/LICENSE)
 - gopkg.in/ldap.v3 [MIT License](https://github.com/go-ldap/ldap/blob/v3.1.7/LICENSE)
 - gopkg.in/mgo.v2 [BSD 2-Clause "Simplified" License](https://github.com/go-mgo/mgo/blob/v2/LICENSE)
 - gopkg.in/olivere/elastic.v5 [MIT License](https://github.com/olivere/elastic/blob/v5.0.76/LICENSE)
