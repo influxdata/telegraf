@@ -1402,8 +1402,8 @@ func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput)
 func (a *Agent) runOutputs(
 	unit *outputUnit,
 ) error {
-
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	for _, output := range unit.outputs {
 		err := a.RunSingleOutput(output, ctx)
@@ -1425,7 +1425,6 @@ func (a *Agent) runOutputs(
 	}
 
 	log.Println("I! [agent] Hang on, flushing any cached metrics before shutdown")
-	cancel()
 
 	for {
 		select {
