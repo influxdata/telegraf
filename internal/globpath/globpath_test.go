@@ -75,7 +75,7 @@ func TestRootGlob(t *testing.T) {
 
 func TestFindNestedTextFile(t *testing.T) {
 	// test super asterisk
-	g1, err := Compile(filepath.Join(testdataDir, "**/**.txt"))
+	g1, err := Compile(filepath.Join(testdataDir, "**/*.txt"))
 	require.NoError(t, err)
 
 	matches := g1.Match()

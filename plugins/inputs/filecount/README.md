@@ -13,9 +13,10 @@ Reports the number and total size of files in specified directories.
   ## Directories to gather stats about.
   ## This accept standard unit glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:
-  ##   /var/log/**    -> recursively find all directories in /var/log and count files in each directories
-  ##   /var/log/*/*   -> find all directories with a parent dir in /var/log and count files in each directories
-  ##   /var/log       -> count all files in /var/log and all of its subdirectories
+  ##   /var/log/**       -> recursively find all directories in /var/log and count files in each directories
+  ##   /var/log/**/*.txt -> Recursively search /var/log/ and subdirectories to count all files with .txt extension
+  ##   /var/log/*/*      -> find all directories with a parent dir in /var/log and count files in each directories
+  ##   /var/log          -> count all files in /var/log and all of its subdirectories
   directories = ["/var/cache/apt", "/tmp"]
 
   ## Only count files that match the name pattern. Defaults to "*".
