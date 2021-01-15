@@ -99,9 +99,7 @@ func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, process
 		}
 		os.Exit(0)
 	} else {
-		if err == nil {
-			logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
-		}
+		logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
 		err = s.Run()
 
 		if err != nil {
