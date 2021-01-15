@@ -3,7 +3,6 @@ package prometheusremotewrite
 import (
 	"fmt"
 	"math"
-	"net/http"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -16,7 +15,6 @@ import (
 
 type Parser struct {
 	DefaultTags map[string]string
-	Header      http.Header
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -46,8 +44,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		delete(tags, model.MetricNameLabel)
 
 		for _, s := range ts.Samples {
-			fields := make(map[string]interface{})
-			fields = getNameAndValue(&s, metricName)
+			fields := getNameAndValue(&s, metricName)
 
 			// converting to telegraf metric
 			if len(fields) > 0 {
