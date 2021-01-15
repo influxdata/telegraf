@@ -434,14 +434,17 @@ func (d *Docker) gatherContainer(
 	var cname string
 	for _, name := range container.Names {
 		trimmedName := strings.TrimPrefix(name, "/")
-		match := d.containerFilter.Match(trimmedName)
-		if match {
+		if len(strings.Split(trimmedName, "/")) == 1 {
 			cname = trimmedName
 			break
 		}
 	}
 
 	if cname == "" {
+		return nil
+	}
+
+	if !d.containerFilter.Match(cname) {
 		return nil
 	}
 
@@ -479,11 +482,6 @@ func (d *Docker) gatherContainer(
 		return fmt.Errorf("error decoding: %v", err)
 	}
 	daemonOSType := r.OSType
-
-	// use common (printed at `docker ps`) name for container
-	if v.Name != "" {
-		tags["container_name"] = strings.TrimPrefix(v.Name, "/")
-	}
 
 	// Add labels to tags
 	for k, label := range container.Labels {
