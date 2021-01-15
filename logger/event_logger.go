@@ -13,6 +13,9 @@ import (
 
 const (
 	LogTargetEventlog = "eventlog"
+	eidInfo           = 1
+	eidWarning        = 2
+	eidError          = 3
 )
 
 type eventLogger struct {
@@ -28,11 +31,11 @@ func (t *eventLogger) Write(b []byte) (n int, err error) {
 		line := strings.Trim(string(b[loc[1]:]), " \t\r\n")
 		switch rune(b[loc[0]]) {
 		case 'I':
-			err = t.logger.Info(1, line)
+			err = t.logger.Info(eidInfo, line)
 		case 'W':
-			err = t.logger.Warning(2, line)
+			err = t.logger.Warning(eidWarning, line)
 		case 'E':
-			err = t.logger.Error(3, line)
+			err = t.logger.Error(eidError, line)
 		}
 	}
 
