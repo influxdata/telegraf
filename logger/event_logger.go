@@ -24,7 +24,7 @@ func (t *eventLogger) Write(b []byte) (n int, err error) {
 	loc := prefixRegex.FindIndex(b)
 	n = len(b)
 	if loc == nil {
-		err = t.logger.Info(1, fmt.Sprint(b))
+		err = t.logger.Info(1, string(b))
 	} else if n > 2 { //skip empty log messages
 		line := strings.Trim(string(b[loc[1]:]), " \t\r\n")
 		switch rune(b[loc[0]]) {
