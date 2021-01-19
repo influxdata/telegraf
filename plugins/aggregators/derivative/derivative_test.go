@@ -37,7 +37,7 @@ func TestTwoFullEventsWithParameter(t *testing.T) {
 	derivative := &Derivative{
 		Variable: "parameter",
 		Suffix:   "_by_parameter",
-		cache:    make(map[uint64]aggregate),
+		cache:    make(map[uint64]*aggregate),
 	}
 	derivative.Log = testutil.Logger{}
 	derivative.Init()
@@ -63,7 +63,7 @@ func TestTwoFullEventsWithParameterReverseSequence(t *testing.T) {
 	derivative := &Derivative{
 		Variable: "parameter",
 		Suffix:   "_by_parameter",
-		cache:    make(map[uint64]aggregate),
+		cache:    make(map[uint64]*aggregate),
 	}
 	derivative.Log = testutil.Logger{}
 	derivative.Init()
@@ -128,7 +128,7 @@ func TestTwoFullEventsInSeperatePushes(t *testing.T) {
 		Variable:    " parameter",
 		Suffix:      "_wrt_parameter",
 		MaxRollOver: 10,
-		cache:       make(map[uint64]aggregate),
+		cache:       make(map[uint64]*aggregate),
 	}
 	derivative.Log = testutil.Logger{}
 	derivative.Init()
@@ -161,7 +161,7 @@ func TestTwoFullEventsInSeperatePushesWithSeveralRollOvers(t *testing.T) {
 		Variable:    "parameter",
 		Suffix:      "_wrt_parameter",
 		MaxRollOver: 10,
-		cache:       make(map[uint64]aggregate),
+		cache:       make(map[uint64]*aggregate),
 	}
 	derivative.Log = testutil.Logger{}
 	derivative.Init()
@@ -193,7 +193,7 @@ func TestTwoFullEventsInSeperatePushesWithOutRollOver(t *testing.T) {
 		Variable:    "parameter",
 		Suffix:      "_by_parameter",
 		MaxRollOver: 0,
-		cache:       make(map[uint64]aggregate),
+		cache:       make(map[uint64]*aggregate),
 	}
 	derivative.Log = testutil.Logger{}
 	derivative.Init()
@@ -218,7 +218,7 @@ func TestIgnoresMissingVariable(t *testing.T) {
 	derivative := &Derivative{
 		Variable: "parameter",
 		Suffix:   "_by_parameter",
-		cache:    make(map[uint64]aggregate),
+		cache:    make(map[uint64]*aggregate),
 	}
 	derivative.Log = testutil.Logger{}
 	derivative.Init()
@@ -307,7 +307,7 @@ func TestDropsAggregatesOnMaxRollOver(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := &Derivative{
 		MaxRollOver: 1,
-		cache:       make(map[uint64]aggregate),
+		cache:       make(map[uint64]*aggregate),
 	}
 	derivative.Log = testutil.Logger{}
 	derivative.Init()
@@ -330,7 +330,7 @@ func TestAddMetricsResetsRollOver(t *testing.T) {
 		Variable:    "parameter",
 		Suffix:      "_by_parameter",
 		MaxRollOver: 1,
-		cache:       make(map[uint64]aggregate),
+		cache:       make(map[uint64]*aggregate),
 		Log:         testutil.Logger{},
 	}
 	derivative.Init()

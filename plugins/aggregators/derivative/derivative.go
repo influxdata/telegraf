@@ -13,7 +13,7 @@ type Derivative struct {
 	Suffix      string          `toml:"suffix"`
 	MaxRollOver uint            `toml:"max_roll_over"`
 	Log         telegraf.Logger `toml:"-"`
-	cache       map[uint64]aggregate
+	cache       map[uint64]*aggregate
 }
 
 type aggregate struct {
@@ -33,7 +33,7 @@ const defaultSuffix = "_by_time"
 
 func NewDerivative() *Derivative {
 	derivative := &Derivative{Suffix: defaultSuffix, MaxRollOver: 10}
-	derivative.cache = make(map[uint64]aggregate)
+	derivative.cache = make(map[uint64]*aggregate)
 	derivative.Reset()
 	return derivative
 }
@@ -97,27 +97,23 @@ func (d *Derivative) Add(in telegraf.Metric) {
 		if current.first.time.After(in.Time()) {
 			current.first = newEvent(in)
 			current.rollOver = 0
-		}
-		if current.first.time.Equal(in.Time()) {
+		} else if current.first.time.Equal(in.Time()) {
 			upsertConvertedFields(in.Fields(), current.first.fields)
 			current.rollOver = 0
 		}
 		if current.last.time.Before(in.Time()) {
 			current.last = newEvent(in)
 			current.rollOver = 0
-		}
-		if current.last.time.Equal(in.Time()) {
+		} else if current.last.time.Equal(in.Time()) {
 			upsertConvertedFields(in.Fields(), current.last.fields)
 			current.rollOver = 0
 		}
-
-		d.cache[id] = current
 	}
 }
 
-func newAggregate(in telegraf.Metric) aggregate {
+func newAggregate(in telegraf.Metric) *aggregate {
 	event := newEvent(in)
-	return aggregate{
+	return &aggregate{
 		name:     in.Name(),
 		tags:     in.Tags(),
 		first:    event,
