@@ -149,14 +149,6 @@ Using `max_roll_over` with a value greater 0 may be important, if you need to de
 
   ## calculate derivative every 30 seconds
   period = "30s"
-
-  ## Fields for which the derivative should be calculated
-  ## Important: The derivation variable must be contained in that list, if used.
-  fieldpass = ["field1", "field2", "variable"]
-
-  ## If true, the original metric will be dropped by the
-  ## aggregator and will not get sent to the output plugins.
-  drop_original = false
 ```
 
 ### Tags:
@@ -169,5 +161,6 @@ Existing tags are passed throug the aggregator untouched.
 net bytes_recv=15409i,packets_recv=164i,bytes_sent=16649i,packets_sent=120i 1508843640000000000
 net bytes_recv=73987i,packets_recv=364i,bytes_sent=87328i,packets_sent=452i 1508843660000000000
 net bytes_recv_by_packets_recv=292.89 1508843660000000000
-net packets_sent_by_seconds=16.6,bytes_sent_by_seconds=3533.95 1508843660000000000
+net packets_sent_by_time=16.6,bytes_sent_by_time=3533.95 1508843660000000000
+net bytes_sent_by_packet=292.89 1508843660000000000
 ```
