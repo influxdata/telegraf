@@ -44,6 +44,10 @@ type selectorInfo struct {
 	Value    string `json:"value,omitempty"`
 }
 
+func (selectorInfo *selectorInfo) String() string {
+	return fmt.Sprintf("{ %s %s}", selectorInfo.Operator, selectorInfo.Value)
+}
+
 // "Enum" for Operator of selectorInfo struct
 const (
 	EqualsOperator      = "="
@@ -179,7 +183,9 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 
 	// Parse label and field selectors - will be used to filter pods after cAdvisor call
 	labelSelectorMap = createSelectorMap(p.KubernetesLabelSelector, p)
+	log.Printf("[cAdvisor Changes Log] labelSelectorMap: %v", labelSelectorMap)
 	fieldSelectorMap = createSelectorMap(p.KubernetesFieldSelector, p)
+	log.Printf("[cAdvisor Changes Log] fieldSelectorMap: %v", fieldSelectorMap)
 
 	// The request will be the same each time
 	nodeIP := os.Getenv("NODE_IP")
@@ -210,6 +216,7 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 }
 
 func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Client, req *http.Request) error {
+	log.Printf("[cAdvisor Changes Log] Making request for updated pod list")
 	resp, err := client.Client.Do(req)
 	if err != nil {
 		return err
@@ -226,9 +233,12 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
 
 	// Updating pod list to be cadvisor response
 	p.lock.Lock()
+	log.Printf("[cAdvisor Changes Log] locking for new kubernetes pods list")
 	p.kubernetesPods = nil
 	for _, pod := range pods {
-
+		if pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] == "true" {
+			log.Printf("[cAdvisor Changes Log] pod %s has scrape annotation. Checking namespace, field, and label selectors.", pod.GetMetadata().GetName())
+		}
 		// Register pod only if it has an annotation to scrape, if it is ready,
 		// and if namespace/selectors are specified and match
 		if pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] == "true" &&
@@ -240,6 +250,7 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
 		}
 
 	}
+	log.Printf("[cAdvisor Changes Log] unlocking for new kubernetes pods list")
 	p.lock.Unlock()
 
 	// No errors
@@ -342,6 +353,7 @@ func podHasMatchingLabelSelector(pod *corev1.Pod) bool {
 				((operator == EqualsOperator || operator == EqualEqualsOperator) && !strings.EqualFold(actualValue, wantedValue)) ||
 				(operator == ExistsOperator && actualValue == "") ||
 				(operator == NotExistsOperator && actualValue != "") {
+				log.Printf("[cAdvisor Changes Log] pod %s does not equality/existence label selector", pod.GetMetadata().GetName())
 				return false
 
 			// Wanted value is a set that actual value should or shouldn't be in
@@ -356,12 +368,14 @@ func podHasMatchingLabelSelector(pod *corev1.Pod) bool {
 
 				if (operator == InOperator && !set[actualValue]) ||
 					(operator == NotInOperator && set[actualValue]) {
+					log.Printf("[cAdvisor Changes Log] pod %s does not match set-based label selector", pod.GetMetadata().GetName())
 					return false
 				}
 			}
 		}
 	}
 
+	log.Printf("[cAdvisor Changes Log] pod %s matches label selectors", pod.GetMetadata().GetName())
 	return true
 }
 
@@ -402,12 +416,14 @@ func podHasMatchingFieldSelector(pod *corev1.Pod, p *Prometheus) bool {
 
 			if (operator == EqualsOperator && !strings.EqualFold(actualValue, wantedValue)) ||
 				(operator == NotEqualsOperator && strings.EqualFold(actualValue, wantedValue)) {
+				log.Printf("[cAdvisor Changes Log] pod %s does not match field selector %s", pod.GetMetadata().GetName(), name)
 				return false
 			}
 
 		}
 	}
 
+	log.Printf("[cAdvisor Changes Log] pod %s matches field selectors", pod.GetMetadata().GetName())
 	return true
 }
 
