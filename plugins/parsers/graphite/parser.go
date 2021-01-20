@@ -1,18 +1,16 @@
 package graphite
 
 import (
-	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
-	"io"
 	"math"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf/internal/templating"
-
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/templating"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -63,42 +61,36 @@ func NewGraphiteParser(
 
 func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// parse even if the buffer begins with a newline
-	buf = bytes.TrimPrefix(buf, []byte("\n"))
-	// add newline to end if not exists:
-	if len(buf) > 0 && !bytes.HasSuffix(buf, []byte("\n")) {
-		buf = append(buf, []byte("\n")...)
+	if len(buf) != 0 && buf[0] == '\n' {
+		buf = buf[1:]
 	}
 
-	metrics := make([]telegraf.Metric, 0)
+	var metrics []telegraf.Metric
+	var errs []string
 
-	var errStr string
-	buffer := bytes.NewBuffer(buf)
-	reader := bufio.NewReader(buffer)
 	for {
-		// Read up to the next newline.
-		buf, err := reader.ReadBytes('\n')
-		if err == io.EOF {
+		n := bytes.IndexByte(buf, '\n')
+		var line []byte
+		if n >= 0 {
+			line = bytes.TrimSpace(buf[:n:n])
+		} else {
+			line = bytes.TrimSpace(buf) // last line
+		}
+		if len(line) != 0 {
+			metric, err := p.ParseLine(string(line))
+			if err == nil {
+				metrics = append(metrics, metric)
+			} else {
+				errs = append(errs, err.Error())
+			}
+		}
+		if n < 0 {
 			break
 		}
-		if err != nil && err != io.EOF {
-			return metrics, err
-		}
-
-		// Trim the buffer, even though there should be no padding
-		line := strings.TrimSpace(string(buf))
-		if line == "" {
-			continue
-		}
-		metric, err := p.ParseLine(line)
-		if err == nil {
-			metrics = append(metrics, metric)
-		} else {
-			errStr += err.Error() + "\n"
-		}
+		buf = buf[n+1:]
 	}
-
-	if errStr != "" {
-		return metrics, fmt.Errorf(strings.TrimSpace(errStr))
+	if len(errs) != 0 {
+		return metrics, errors.New(strings.Join(errs, "\n"))
 	}
 	return metrics, nil
 }
@@ -111,25 +103,23 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, fmt.Errorf("received %q which doesn't have required fields", line)
 	}
 
+	parts := strings.Split(fields[0], ";")
+
 	// decode the name and tags
-	measurement, tags, field, err := p.templateEngine.Apply(fields[0])
+	measurement, tags, field, err := p.templateEngine.Apply(parts[0])
 	if err != nil {
 		return nil, err
 	}
 
 	// Could not extract measurement, use the raw value
 	if measurement == "" {
-		measurement = fields[0]
+		measurement = parts[0]
 	}
 
 	// Parse value.
 	v, err := strconv.ParseFloat(fields[1], 64)
 	if err != nil {
 		return nil, fmt.Errorf(`field "%s" value: %s`, fields[0], err)
-	}
-
-	if math.IsNaN(v) || math.IsInf(v, 0) {
-		return nil, &UnsupposedValueError{Field: fields[0], Value: v}
 	}
 
 	fieldValues := map[string]interface{}{}
@@ -159,6 +149,24 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 			}
 		}
 	}
+
+	// Split name and tags
+	if len(parts) >= 2 {
+		for _, tag := range parts[1:] {
+			tagValue := strings.Split(tag, "=")
+			if len(tagValue) != 2 || len(tagValue[0]) == 0 || len(tagValue[1]) == 0 {
+				continue
+			}
+			if strings.IndexAny(tagValue[0], "!^") != -1 {
+				continue
+			}
+			if strings.Index(tagValue[1], "~") == 0 {
+				continue
+			}
+			tags[tagValue[0]] = tagValue[1]
+		}
+	}
+
 	// Set the default tags on the point if they are not already set
 	for k, v := range p.DefaultTags {
 		if _, ok := tags[k]; !ok {

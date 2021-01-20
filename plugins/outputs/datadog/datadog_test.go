@@ -3,15 +3,15 @@ package datadog
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,6 +20,12 @@ var (
 	fakeUrl    = "http://test.datadog.com"
 	fakeApiKey = "123456"
 )
+
+func NewDatadog(url string) *Datadog {
+	return &Datadog{
+		URL: url,
+	}
+}
 
 func fakeDatadog() *Datadog {
 	d := NewDatadog(fakeUrl)
@@ -74,19 +80,33 @@ func TestAuthenticatedUrl(t *testing.T) {
 
 func TestBuildTags(t *testing.T) {
 	var tagtests = []struct {
-		ptIn    map[string]string
+		ptIn    []*telegraf.Tag
 		outTags []string
 	}{
 		{
-			map[string]string{"one": "two", "three": "four"},
+			[]*telegraf.Tag{
+				{
+					Key:   "one",
+					Value: "two",
+				},
+				{
+					Key:   "three",
+					Value: "four",
+				},
+			},
 			[]string{"one:two", "three:four"},
 		},
 		{
-			map[string]string{"aaa": "bbb"},
+			[]*telegraf.Tag{
+				{
+					Key:   "aaa",
+					Value: "bbb",
+				},
+			},
 			[]string{"aaa:bbb"},
 		},
 		{
-			map[string]string{},
+			[]*telegraf.Tag{},
 			[]string{},
 		},
 	}
@@ -228,4 +248,46 @@ func TestVerifyValue(t *testing.T) {
 			t.Errorf("%s: verification failed\n", tt.ptIn.Name())
 		}
 	}
+}
+
+func TestNaNIsSkipped(t *testing.T) {
+	plugin := &Datadog{
+		Apikey: "testing",
+		URL:    "", // No request will be sent because all fields are skipped
+	}
+
+	err := plugin.Connect()
+	require.NoError(t, err)
+
+	err = plugin.Write([]telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"time_idle": math.NaN(),
+			},
+			time.Now()),
+	})
+	require.NoError(t, err)
+}
+
+func TestInfIsSkipped(t *testing.T) {
+	plugin := &Datadog{
+		Apikey: "testing",
+		URL:    "", // No request will be sent because all fields are skipped
+	}
+
+	err := plugin.Connect()
+	require.NoError(t, err)
+
+	err = plugin.Write([]telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"time_idle": math.Inf(0),
+			},
+			time.Now()),
+	})
+	require.NoError(t, err)
 }

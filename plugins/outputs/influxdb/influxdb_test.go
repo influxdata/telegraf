@@ -8,33 +8,45 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
 type MockClient struct {
 	URLF            func() string
-	DatabaseF       func() string
 	WriteF          func(context.Context, []telegraf.Metric) error
-	CreateDatabaseF func(ctx context.Context) error
+	CreateDatabaseF func(ctx context.Context, database string) error
+	DatabaseF       func() string
+	CloseF          func()
+
+	log telegraf.Logger
 }
 
 func (c *MockClient) URL() string {
 	return c.URLF()
 }
 
-func (c *MockClient) Database() string {
-	return c.DatabaseF()
-}
-
 func (c *MockClient) Write(ctx context.Context, metrics []telegraf.Metric) error {
 	return c.WriteF(ctx, metrics)
 }
 
-func (c *MockClient) CreateDatabase(ctx context.Context) error {
-	return c.CreateDatabaseF(ctx)
+func (c *MockClient) CreateDatabase(ctx context.Context, database string) error {
+	return c.CreateDatabaseF(ctx, database)
+}
+
+func (c *MockClient) Database() string {
+	return c.DatabaseF()
+}
+
+func (c *MockClient) Close() {
+	c.CloseF()
+}
+
+func (c *MockClient) SetLogger(log telegraf.Logger) {
+	c.log = log
 }
 
 func TestDeprecatedURLSupport(t *testing.T) {
@@ -47,6 +59,9 @@ func TestDeprecatedURLSupport(t *testing.T) {
 			return &MockClient{}, nil
 		},
 	}
+
+	output.Log = testutil.Logger{}
+
 	err := output.Connect()
 	require.NoError(t, err)
 	require.Equal(t, "udp://localhost:8089", actual.URL.String())
@@ -58,12 +73,18 @@ func TestDefaultURL(t *testing.T) {
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			actual = config
 			return &MockClient{
-				CreateDatabaseF: func(ctx context.Context) error {
+				DatabaseF: func() string {
+					return "telegraf"
+				},
+				CreateDatabaseF: func(ctx context.Context, database string) error {
 					return nil
 				},
 			}, nil
 		},
 	}
+
+	output.Log = testutil.Logger{}
+
 	err := output.Connect()
 	require.NoError(t, err)
 	require.Equal(t, "http://localhost:8086", actual.URL.String())
@@ -74,13 +95,15 @@ func TestConnectUDPConfig(t *testing.T) {
 
 	output := influxdb.InfluxDB{
 		URLs:       []string{"udp://localhost:8089"},
-		UDPPayload: 42,
+		UDPPayload: internal.Size{Size: 42},
 
 		CreateUDPClientF: func(config *influxdb.UDPConfig) (influxdb.Client, error) {
 			actual = config
 			return &MockClient{}, nil
 		},
 	}
+	output.Log = testutil.Logger{}
+
 	err := output.Connect()
 	require.NoError(t, err)
 
@@ -113,12 +136,18 @@ func TestConnectHTTPConfig(t *testing.T) {
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			actual = config
 			return &MockClient{
-				CreateDatabaseF: func(ctx context.Context) error {
+				DatabaseF: func() string {
+					return "telegraf"
+				},
+				CreateDatabaseF: func(ctx context.Context, database string) error {
 					return nil
 				},
 			}, nil
 		},
 	}
+
+	output.Log = testutil.Logger{}
+
 	err := output.Connect()
 	require.NoError(t, err)
 
@@ -142,27 +171,31 @@ func TestConnectHTTPConfig(t *testing.T) {
 func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 	output := influxdb.InfluxDB{
 		URLs: []string{"http://localhost:8086"},
-
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return &MockClient{
-				CreateDatabaseF: func(ctx context.Context) error {
+				DatabaseF: func() string {
+					return "telegraf"
+				},
+				CreateDatabaseF: func(ctx context.Context, database string) error {
 					return nil
 				},
 				WriteF: func(ctx context.Context, metrics []telegraf.Metric) error {
-					return &influxdb.APIError{
-						StatusCode:  http.StatusNotFound,
-						Title:       "404 Not Found",
-						Description: `database not found "telegraf"`,
-						Type:        influxdb.DatabaseNotFound,
+					return &influxdb.DatabaseNotFoundError{
+						APIError: influxdb.APIError{
+							StatusCode:  http.StatusNotFound,
+							Title:       "404 Not Found",
+							Description: `database not found "telegraf"`,
+						},
 					}
 				},
 				URLF: func() string {
 					return "http://localhost:8086"
-
 				},
 			}, nil
 		},
 	}
+
+	output.Log = testutil.Logger{}
 
 	err := output.Connect()
 	require.NoError(t, err)

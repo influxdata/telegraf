@@ -40,6 +40,8 @@ func (s *PointScanner) Scan() (Token, string) {
 		return LETTER, string(ch)
 	} else if isNumber(ch) {
 		return NUMBER, string(ch)
+	} else if isDelta(ch) {
+		return DELTA, string(ch)
 	}
 
 	// Otherwise read the individual character.

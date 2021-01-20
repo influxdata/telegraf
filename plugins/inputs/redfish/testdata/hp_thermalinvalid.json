@@ -1,0 +1,117 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#Thermal.Thermal",
+  "@odata.etag": "W/\"14E8662D\"",
+  "@odata.id": "/redfish/v1/Chassis/1/Thermal",
+  "@odata.type": "#Thermal.v1_1_0.Thermal",
+  "Id": "Thermal",
+  "Fans": [
+    {
+      "@odata.id": "/redfish/v1/Chassis/1/Thermal#Fans/0",
+      "MemberId": "0",
+      "Name": "Fan 1",
+      "Oem": {
+        "Hpe": {
+          "@odata.context": "/redfish/v1/$metadata#HpeServerFan.HpeServerFan",
+          "@odata.type": "#HpeServerFan.v2_0_0.HpeServerFan",
+          "HotPluggable": true,
+          "Location": "System",
+          "Redundant": true
+        }
+      },
+      "Reading": 23,
+      "ReadingUnits": "Percent",
+      "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+      }
+    },
+    {
+      "@odata.id": "/redfish/v1/Chassis/1/Thermal#Fans/1",
+      "MemberId": "1",
+      "Name": "Fan 2",
+      "Oem": {
+        "Hpe": {
+          "@odata.context": "/redfish/v1/$metadata#HpeServerFan.HpeServerFan",
+          "@odata.type": "#HpeServerFan.v2_0_0.HpeServerFan",
+          "HotPluggable": true,
+          "Location": "System",
+          "Redundant": true
+        }
+      },
+      "Reading": 23,
+      "ReadingUnits": "Percent",
+      "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+      }
+    },
+    {
+      "@odata.id": "/redfish/v1/Chassis/1/Thermal#Fans/2",
+      "MemberId": "2",
+      "Name": "Fan 3",
+      "Oem": {
+        "Hpe": {
+          "@odata.context": "/redfish/v1/$metadata#HpeServerFan.HpeServerFan",
+          "@odata.type": "#HpeServerFan.v2_0_0.HpeServerFan",
+          "HotPluggable": true,
+          "Location": "System",
+          "Redundant": true
+        }
+      },
+      "Reading": 23,
+      "ReadingUnits": "Percent",
+      "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+      }
+    }
+  ],
+  "Name": "Thermal",
+  "Temperatures": [
+    {
+      "@odata.id": "/redfish/v1/Chassis/1/Thermal#Temperatures/0",
+      "MemberId": "0",
+      "Name": "01-Inlet Ambient",
+      "Oem": {
+        "Hpe": {
+          "@odata.context": "/redfish/v1/$metadata#HpeSeaOfSensors.HpeSeaOfSensors",
+          "@odata.type": "#HpeSeaOfSensors.v2_0_0.HpeSeaOfSensors",
+          "LocationXmm": 15,
+          "LocationYmm": 0
+        }
+      },
+      "PhysicalContext": "Intake",
+      "ReadingCelsius": 19,
+      "SensorNumber": 1,
+      "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+      },
+      "UpperThresholdCritical": 42,
+      "UpperThresholdFatal": 47
+    },
+    {
+      "@odata.id": "/redfish/v1/Chassis/1/Thermal#Temperatures/42",
+      "MemberId": "42",
+      "Name": "44-P/S 2 Zone",
+      "Oem": {
+        "Hpe": {
+          "@odata.context": "/redfish/v1/$metadata#HpeSeaOfSensors.HpeSeaOfSensors",
+          "@odata.type": "#HpeSeaOfSensors.v2_0_0.HpeSeaOfSensors",
+          "LocationXmm": 4,
+          "LocationYmm": 7
+        }
+      },
+      "PhysicalContext": "PowerSupply",
+      "ReadingCelsius": 34,
+      "SensorNumber": 43,
+      "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+      },
+      "UpperThresholdCritical": 75,
+      "UpperThresholdFatal": 80
+    }
+  ]
+}
+{

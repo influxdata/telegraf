@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/influxdata/telegraf"
@@ -23,6 +22,7 @@ const sampleConfig = `
   ## See https://github.com/gobwas/glob for more examples
   ##
   files = ["/var/log/**.log"]
+
   ## If true, read the entire file and calculate an md5 checksum.
   md5 = false
 `
@@ -30,6 +30,8 @@ const sampleConfig = `
 type FileStat struct {
 	Md5   bool
 	Files []string
+
+	Log telegraf.Logger
 
 	// maps full file paths to globmatch obj
 	globs map[string]*globpath.GlobPath
@@ -41,11 +43,11 @@ func NewFileStat() *FileStat {
 	}
 }
 
-func (_ *FileStat) Description() string {
+func (*FileStat) Description() string {
 	return "Read stats about given file(s)"
 }
 
-func (_ *FileStat) SampleConfig() string { return sampleConfig }
+func (*FileStat) SampleConfig() string { return sampleConfig }
 
 func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 	var err error
@@ -73,16 +75,20 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		for fileName, fileInfo := range files {
+		for _, fileName := range files {
 			tags := map[string]string{
 				"file": fileName,
 			}
 			fields := map[string]interface{}{
 				"exists": int64(1),
 			}
+			fileInfo, err := os.Stat(fileName)
+			if os.IsNotExist(err) {
+				fields["exists"] = int64(0)
+			}
 
 			if fileInfo == nil {
-				log.Printf("E! Unable to get info for file [%s], possible permissions issue",
+				f.Log.Errorf("Unable to get info for file %q, possible permissions issue",
 					fileName)
 			} else {
 				fields["size_bytes"] = fileInfo.Size()

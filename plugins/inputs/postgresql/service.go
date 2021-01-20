@@ -122,6 +122,13 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 						Name:  "int8OID",
 						OID:   pgtype.Int8OID,
 					})
+					// Newer versions of pgbouncer need this defined. See the discussion here:
+					// https://github.com/jackc/pgx/issues/649
+					info.RegisterDataType(pgtype.DataType{
+						Value: &pgtype.OIDValue{},
+						Name:  "numericOID",
+						OID:   pgtype.NumericOID,
+					})
 
 					return info, nil
 				},

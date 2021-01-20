@@ -3,10 +3,11 @@ package postgresql_extensible
 import (
 	"bytes"
 	"fmt"
-	"log"
+	"io/ioutil"
+	"os"
 	"strings"
+	"time"
 
-	// register in driver.
 	_ "github.com/jackc/pgx/stdlib"
 
 	"github.com/influxdata/telegraf"
@@ -19,22 +20,21 @@ type Postgresql struct {
 	postgresql.Service
 	Databases      []string
 	AdditionalTags []string
-	Query          []struct {
-		Sqlquery    string
-		Version     int
-		Withdbname  bool
-		Tagvalue    string
-		Measurement string
-	}
-	Debug bool
+	Timestamp      string
+	Query          query
+	Debug          bool
+
+	Log telegraf.Logger
 }
 
 type query []struct {
 	Sqlquery    string
+	Script      string
 	Version     int
 	Withdbname  bool
 	Tagvalue    string
 	Measurement string
+	Timestamp   string
 }
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
@@ -44,7 +44,7 @@ var sampleConfig = `
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
   ##       ?sslmode=[disable|verify-ca|verify-full]
   ## or a simple string:
-  ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
   #
   ## All connection parameters are optional.  #
   ## Without the dbname parameter, the driver will default to a database
@@ -81,7 +81,19 @@ var sampleConfig = `
   ## field is used to define custom tags (separated by commas)
   ## The optional "measurement" value can be used to override the default
   ## output measurement name ("postgresql").
-  #
+  ##
+  ## The script option can be used to specify the .sql file path.
+  ## If script and sqlquery options specified at same time, sqlquery will be used 
+  ##
+  ## the tagvalue field is used to define custom tags (separated by comas).
+  ## the query is expected to return columns which match the names of the
+  ## defined tags. The values in these columns must be of a string-type,
+  ## a number-type or a blob-type.
+  ## 
+  ## The timestamp field is used to override the data points timestamp value. By
+  ## default, all rows inserted with current time. By setting a timestamp column,
+  ## the row will be inserted with that column's value. 
+  ##
   ## Structure :
   ## [[inputs.postgresql_extensible.query]]
   ##   sqlquery string
@@ -89,6 +101,7 @@ var sampleConfig = `
   ##   withdbname boolean
   ##   tagvalue string (comma separated)
   ##   measurement string
+  ##   timestamp string
   [[inputs.postgresql_extensible.query]]
     sqlquery="SELECT * FROM pg_stat_database"
     version=901
@@ -102,6 +115,19 @@ var sampleConfig = `
     tagvalue="postgresql.stats"
 `
 
+func (p *Postgresql) Init() error {
+	var err error
+	for i := range p.Query {
+		if p.Query[i].Sqlquery == "" {
+			p.Query[i].Sqlquery, err = ReadQueryFromFile(p.Query[i].Script)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (p *Postgresql) SampleConfig() string {
 	return sampleConfig
 }
@@ -114,6 +140,20 @@ func (p *Postgresql) IgnoredColumns() map[string]bool {
 	return ignoredColumns
 }
 
+func ReadQueryFromFile(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	query, err := ioutil.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+	return string(query), err
+}
+
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	var (
 		err         error
@@ -123,22 +163,23 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		query       string
 		tag_value   string
 		meas_name   string
+		timestamp   string
 		columns     []string
 	)
 
-	// Retreiving the database version
-
-	query = `select substring(setting from 1 for 3) as version from pg_settings where name='server_version_num'`
+	// Retrieving the database version
+	query = `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
 	if err = p.DB.QueryRow(query).Scan(&db_version); err != nil {
 		db_version = 0
 	}
 
 	// We loop in order to process each query
 	// Query is not run if Database version does not match the query version.
-
 	for i := range p.Query {
 		sql_query = p.Query[i].Sqlquery
 		tag_value = p.Query[i].Tagvalue
+		timestamp = p.Query[i].Timestamp
+
 		if p.Query[i].Measurement != "" {
 			meas_name = p.Query[i].Measurement
 		} else {
@@ -160,7 +201,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		if p.Query[i].Version <= db_version {
 			rows, err := p.DB.Query(sql_query)
 			if err != nil {
-				acc.AddError(err)
+				p.Log.Error(err.Error())
 				continue
 			}
 
@@ -168,7 +209,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 
 			// grab the column information from the result
 			if columns, err = rows.Columns(); err != nil {
-				acc.AddError(err)
+				p.Log.Error(err.Error())
 				continue
 			}
 
@@ -180,10 +221,12 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 
+			p.Timestamp = timestamp
+
 			for rows.Next() {
 				err = p.accRow(meas_name, rows, acc, columns)
 				if err != nil {
-					acc.AddError(err)
+					p.Log.Error(err.Error())
 					break
 				}
 			}
@@ -202,6 +245,7 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 		columnVars []interface{}
 		dbname     bytes.Buffer
 		tagAddress string
+		timestamp  time.Time
 	)
 
 	// this is where we'll store the column name with its *interface{}
@@ -221,9 +265,14 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 		return err
 	}
 
-	if columnMap["datname"] != nil {
+	if c, ok := columnMap["datname"]; ok && *c != nil {
 		// extract the database name from the column map
-		dbname.WriteString((*columnMap["datname"]).(string))
+		switch datname := (*c).(type) {
+		case string:
+			dbname.WriteString(datname)
+		default:
+			dbname.WriteString("postgres")
+		}
 	} else {
 		dbname.WriteString("postgres")
 	}
@@ -238,12 +287,22 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 		"db":     dbname.String(),
 	}
 
+	// set default timestamp to Now
+	timestamp = time.Now()
+
 	fields := make(map[string]interface{})
 COLUMN:
 	for col, val := range columnMap {
-		log.Printf("D! postgresql_extensible: column: %s = %T: %v\n", col, *val, *val)
+		p.Log.Debugf("Column: %s = %T: %v\n", col, *val, *val)
 		_, ignore := ignoredColumns[col]
 		if ignore || *val == nil {
+			continue
+		}
+
+		if col == p.Timestamp {
+			if v, ok := (*val).(time.Time); ok {
+				timestamp = v
+			}
 			continue
 		}
 
@@ -259,7 +318,7 @@ COLUMN:
 			case int64, int32, int:
 				tags[col] = fmt.Sprintf("%d", v)
 			default:
-				log.Println("failed to add additional tag", col)
+				p.Log.Debugf("Failed to add %q as additional tag", col)
 			}
 			continue COLUMN
 		}
@@ -270,7 +329,7 @@ COLUMN:
 			fields[col] = *val
 		}
 	}
-	acc.AddFields(meas_name, fields, tags)
+	acc.AddFields(meas_name, fields, tags, timestamp)
 	return nil
 }
 

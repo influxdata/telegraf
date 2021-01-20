@@ -1,15 +1,18 @@
-# Telegraf Plugin: win_services
-Input plugin to report Windows services info.
+# Windows Services Input Plugin
 
-It requires that Telegraf must be running under the administrator privileges.
+Reports information about Windows service status.
+
+Monitoring some services may require running Telegraf with administrator privileges.
+
 ### Configuration:
 
 ```toml
 [[inputs.win_services]]
-  ## Names of the services to monitor. Leave empty to monitor all the available services on the host
+  ## Names of the services to monitor. Leave empty to monitor all the available services on the host. Globs accepted.
   service_names = [
     "LanmanServer",
     "TermService",
+    "Win*",
   ]
 ```
 
@@ -25,7 +28,7 @@ The `state` field can have the following values:
 - 3 - stop pending
 - 4 - running
 - 5 - continue pending
-- 6 - pause pending 
+- 6 - pause pending
 - 7 - paused
 
 The `startup_mode` field can have the following values:
@@ -33,7 +36,7 @@ The `startup_mode` field can have the following values:
 - 1 - system start
 - 2 - auto start
 - 3 - demand start
-- 4 - disabled   
+- 4 - disabled
 
 ### Tags:
 
@@ -43,14 +46,13 @@ The `startup_mode` field can have the following values:
 
 ### Example Output:
 ```
-* Plugin: inputs.win_services, Collection 1
-> win_services,host=WIN2008R2H401,display_name=Server,service_name=LanmanServer state=4i,startup_mode=2i 1500040669000000000
-> win_services,display_name=Remote\ Desktop\ Services,service_name=TermService,host=WIN2008R2H401 state=1i,startup_mode=3i 1500040669000000000
+win_services,host=WIN2008R2H401,display_name=Server,service_name=LanmanServer state=4i,startup_mode=2i 1500040669000000000
+win_services,display_name=Remote\ Desktop\ Services,service_name=TermService,host=WIN2008R2H401 state=1i,startup_mode=3i 1500040669000000000
 ```
 ### TICK Scripts
 
 A sample TICK script for a notification about a not running service.
-It sends a notification whenever any service changes its state to be not _running_ and when it changes that state back to _running_. 
+It sends a notification whenever any service changes its state to be not _running_ and when it changes that state back to _running_.
 The notification is sent via an HTTP POST call.
 
 ```

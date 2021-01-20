@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"testing"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go/v4"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -115,8 +115,8 @@ func TestGetSummary(t *testing.T) {
 			expectedValue: &Summary{
 				Cluster: "a",
 				Slaves: []Slave{
-					Slave{ID: "a"},
-					Slave{ID: "b"},
+					{ID: "a"},
+					{ID: "b"},
 				},
 			},
 			expectedError: nil,

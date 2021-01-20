@@ -37,6 +37,7 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 
 	// Start the Kafka Consumer
 	k := &Kafka{
+		Log:            testutil.Logger{},
 		ConsumerGroup:  "telegraf_test_consumers",
 		Topics:         []string{testTopic},
 		ZookeeperPeers: zkPeers,

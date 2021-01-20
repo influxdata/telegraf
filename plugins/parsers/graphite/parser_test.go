@@ -1,14 +1,14 @@
 package graphite
 
 import (
-	"reflect"
+	"math"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf/internal/templating"
 	"github.com/influxdata/telegraf/metric"
-
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -179,6 +179,67 @@ func TestParseLine(t *testing.T) {
 			time:  testTime,
 		},
 		{
+			test:        "normal case with tag",
+			input:       `cpu.foo.bar;tag1=value1 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo":  "foo",
+				"bar":  "bar",
+				"tag1": "value1",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "wrong tag names",
+			input:       `cpu.foo.bar;tag!1=value1;tag^2=value2 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "empty tag name",
+			input:       `cpu.foo.bar;=value1 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "wrong tag value",
+			input:       `cpu.foo.bar;tag1=~value1 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "empty tag value",
+			input:       `cpu.foo.bar;tag1= 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
 			test:        "metric only with float value",
 			input:       `cpu 50.554 ` + strTime,
 			measurement: "cpu",
@@ -241,7 +302,7 @@ func TestParseLine(t *testing.T) {
 				len(test.tags), len(metric.Tags()))
 		}
 		f := metric.Fields()["value"].(float64)
-		if metric.Fields()["value"] != f {
+		if f != test.value {
 			t.Fatalf("floatValue value mismatch.  expected %v, got %v",
 				test.value, f)
 		}
@@ -279,6 +340,20 @@ func TestParse(t *testing.T) {
 			value: 50,
 			time:  testTime,
 		},
+		{
+			test:        "normal case with tag",
+			input:       []byte(`cpu.foo.bar;tag1=value1 50 ` + strTime),
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo":  "foo",
+				"bar":  "bar",
+				"tag1": "value1",
+			},
+			value: 50,
+			time:  testTime,
+		},
+
 		{
 			test:        "metric only with float value",
 			input:       []byte(`cpu 50.554 ` + strTime),
@@ -355,14 +430,40 @@ func TestParse(t *testing.T) {
 
 func TestParseNaN(t *testing.T) {
 	p, err := NewGraphiteParser("", []string{"measurement*"}, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	_, err = p.ParseLine("servers.localhost.cpu_load NaN 1435077219")
-	assert.Error(t, err)
+	m, err := p.ParseLine("servers.localhost.cpu_load NaN 1435077219")
+	require.NoError(t, err)
 
-	if _, ok := err.(*UnsupposedValueError); !ok {
-		t.Fatalf("expected *ErrUnsupportedValue, got %v", reflect.TypeOf(err))
-	}
+	expected := testutil.MustMetric(
+		"servers.localhost.cpu_load",
+		map[string]string{},
+		map[string]interface{}{
+			"value": math.NaN(),
+		},
+		time.Unix(1435077219, 0),
+	)
+
+	testutil.RequireMetricEqual(t, expected, m)
+}
+
+func TestParseInf(t *testing.T) {
+	p, err := NewGraphiteParser("", []string{"measurement*"}, nil)
+	require.NoError(t, err)
+
+	m, err := p.ParseLine("servers.localhost.cpu_load +Inf 1435077219")
+	require.NoError(t, err)
+
+	expected := testutil.MustMetric(
+		"servers.localhost.cpu_load",
+		map[string]string{},
+		map[string]interface{}{
+			"value": math.Inf(1),
+		},
+		time.Unix(1435077219, 0),
+	)
+
+	testutil.RequireMetricEqual(t, expected, m)
 }
 
 func TestFilterMatchDefault(t *testing.T) {

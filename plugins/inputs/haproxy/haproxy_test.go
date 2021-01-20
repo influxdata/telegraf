@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -114,12 +116,13 @@ func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
 func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 	var randomNumber int64
 	var sockets [5]net.Listener
-	_globmask := "/tmp/test-haproxy*.sock"
-	_badmask := "/tmp/test-fail-haproxy*.sock"
+
+	_globmask := filepath.Join(os.TempDir(), "test-haproxy*.sock")
+	_badmask := filepath.Join(os.TempDir(), "test-fail-haproxy*.sock")
 
 	for i := 0; i < 5; i++ {
 		binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
-		sockname := fmt.Sprintf("/tmp/test-haproxy%d.sock", randomNumber)
+		sockname := filepath.Join(os.TempDir(), fmt.Sprintf("test-haproxy%d.sock", randomNumber))
 
 		sock, err := net.Listen("unix", sockname)
 		if err != nil {
@@ -146,7 +149,7 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 
 	for _, sock := range sockets {
 		tags := map[string]string{
-			"server": sock.Addr().String(),
+			"server": getSocketAddr(sock.Addr().String()),
 			"proxy":  "git",
 			"sv":     "www",
 			"type":   "server",
@@ -248,30 +251,30 @@ func HaproxyGetFieldValues() map[string]interface{} {
 		"http_response.4xx":   uint64(140),
 		"http_response.5xx":   uint64(0),
 		"http_response.other": uint64(0),
-		"iid":       uint64(4),
-		"last_chk":  "OK",
-		"lastchg":   uint64(1036557),
-		"lastsess":  int64(1342),
-		"lbtot":     uint64(9481),
-		"mode":      "http",
-		"pid":       uint64(1),
-		"qcur":      uint64(0),
-		"qmax":      uint64(0),
-		"qtime":     uint64(1268),
-		"rate":      uint64(0),
-		"rate_max":  uint64(2),
-		"rtime":     uint64(2908),
-		"sid":       uint64(1),
-		"scur":      uint64(0),
-		"slim":      uint64(2),
-		"smax":      uint64(2),
-		"srv_abort": uint64(0),
-		"status":    "UP",
-		"stot":      uint64(14539),
-		"ttime":     uint64(4500),
-		"weight":    uint64(1),
-		"wredis":    uint64(0),
-		"wretr":     uint64(0),
+		"iid":                 uint64(4),
+		"last_chk":            "OK",
+		"lastchg":             uint64(1036557),
+		"lastsess":            int64(1342),
+		"lbtot":               uint64(9481),
+		"mode":                "http",
+		"pid":                 uint64(1),
+		"qcur":                uint64(0),
+		"qmax":                uint64(0),
+		"qtime":               uint64(1268),
+		"rate":                uint64(0),
+		"rate_max":            uint64(2),
+		"rtime":               uint64(2908),
+		"sid":                 uint64(1),
+		"scur":                uint64(0),
+		"slim":                uint64(2),
+		"smax":                uint64(2),
+		"srv_abort":           uint64(0),
+		"status":              "UP",
+		"stot":                uint64(14539),
+		"ttime":               uint64(4500),
+		"weight":              uint64(1),
+		"wredis":              uint64(0),
+		"wretr":               uint64(0),
 	}
 	return fields
 }

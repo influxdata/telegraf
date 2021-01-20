@@ -26,7 +26,8 @@ func TestSelfPlugin(t *testing.T) {
 			"test": int64(3),
 		},
 		map[string]string{
-			"test": "foo",
+			"test":    "foo",
+			"version": "",
 		},
 	)
 	acc.ClearMetrics()
@@ -39,7 +40,8 @@ func TestSelfPlugin(t *testing.T) {
 			"test": int64(101),
 		},
 		map[string]string{
-			"test": "foo",
+			"test":    "foo",
+			"version": "",
 		},
 	)
 	acc.ClearMetrics()
@@ -56,7 +58,8 @@ func TestSelfPlugin(t *testing.T) {
 			"test_ns": int64(150),
 		},
 		map[string]string{
-			"test": "foo",
+			"test":    "foo",
+			"version": "",
 		},
 	)
 }

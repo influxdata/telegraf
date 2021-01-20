@@ -4,7 +4,7 @@ package docker
 
 import "github.com/docker/docker/api/types"
 
-func calculateCPUPercentUnix(previousCPU, previousSystem uint64, v *types.StatsJSON) float64 {
+func CalculateCPUPercentUnix(previousCPU, previousSystem uint64, v *types.StatsJSON) float64 {
 	var (
 		cpuPercent = 0.0
 		// calculate the change for the cpu usage of the container in between readings
@@ -39,13 +39,13 @@ func calculateCPUPercentWindows(v *types.StatsJSON) float64 {
 	return 0.00
 }
 
-// calculateMemUsageUnixNoCache calculate memory usage of the container.
+// CalculateMemUsageUnixNoCache calculate memory usage of the container.
 // Page cache is intentionally excluded to avoid misinterpretation of the output.
-func calculateMemUsageUnixNoCache(mem types.MemoryStats) float64 {
+func CalculateMemUsageUnixNoCache(mem types.MemoryStats) float64 {
 	return float64(mem.Usage - mem.Stats["cache"])
 }
 
-func calculateMemPercentUnixNoCache(limit float64, usedNoCache float64) float64 {
+func CalculateMemPercentUnixNoCache(limit float64, usedNoCache float64) float64 {
 	// MemoryStats.Limit will never be 0 unless the container is not running and we haven't
 	// got any data from cgroup
 	if limit != 0 {

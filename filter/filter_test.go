@@ -37,6 +37,24 @@ func TestCompile(t *testing.T) {
 	assert.True(t, f.Match("network"))
 }
 
+func TestIncludeExclude(t *testing.T) {
+	tags := []string{}
+	labels := []string{"best", "com_influxdata", "timeseries", "com_influxdata_telegraf", "ever"}
+
+	filter, err := NewIncludeExcludeFilter([]string{}, []string{"com_influx*"})
+	if err != nil {
+		t.Fatalf("Failed to create include/exclude filter - %v", err)
+	}
+
+	for i := range labels {
+		if filter.Match(labels[i]) {
+			tags = append(tags, labels[i])
+		}
+	}
+
+	assert.Equal(t, []string{"best", "timeseries", "ever"}, tags)
+}
+
 var benchbool bool
 
 func BenchmarkFilterSingleNoGlobFalse(b *testing.B) {

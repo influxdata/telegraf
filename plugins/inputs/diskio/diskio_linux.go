@@ -2,6 +2,7 @@ package diskio
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -10,6 +11,7 @@ import (
 )
 
 type diskInfoCache struct {
+	modifiedAt   int64 // Unix Nano timestamp of the last modification of the device. This value is used to invalidate the cache
 	udevDataPath string
 	values       map[string]string
 }
@@ -30,17 +32,19 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		s.infoCache = map[string]diskInfoCache{}
 	}
 	ic, ok := s.infoCache[devName]
-	if ok {
+
+	if ok && stat.Mtim.Nano() == ic.modifiedAt {
 		return ic.values, nil
 	}
 
-	major := stat.Rdev >> 8 & 0xff
-	minor := stat.Rdev & 0xff
+	major := unix.Major(uint64(stat.Rdev))
+	minor := unix.Minor(uint64(stat.Rdev))
 	udevDataPath := fmt.Sprintf("%s/b%d:%d", udevPath, major, minor)
 
 	di := map[string]string{}
 
 	s.infoCache[devName] = diskInfoCache{
+		modifiedAt:   stat.Mtim.Nano(),
 		udevDataPath: udevDataPath,
 		values:       di,
 	}
@@ -52,9 +56,21 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	defer f.Close()
 
 	scnr := bufio.NewScanner(f)
+	var devlinks bytes.Buffer
 	for scnr.Scan() {
 		l := scnr.Text()
-		if len(l) < 4 || l[:2] != "E:" {
+		if len(l) < 4 {
+			continue
+		}
+		if l[:2] == "S:" {
+			if devlinks.Len() > 0 {
+				devlinks.WriteString(" ")
+			}
+			devlinks.WriteString("/dev/")
+			devlinks.WriteString(l[2:])
+			continue
+		}
+		if l[:2] != "E:" {
 			continue
 		}
 		kv := strings.SplitN(l[2:], "=", 2)
@@ -62,6 +78,10 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 			continue
 		}
 		di[kv[0]] = kv[1]
+	}
+
+	if devlinks.Len() > 0 {
+		di["DEVLINKS"] = devlinks.String()
 	}
 
 	return di, nil

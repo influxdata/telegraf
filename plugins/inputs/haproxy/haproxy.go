@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -23,6 +23,8 @@ import (
 type haproxy struct {
 	Servers        []string
 	KeepFieldNames bool
+	Username       string
+	Password       string
 	tls.ClientConfig
 
 	client *http.Client
@@ -36,6 +38,10 @@ var sampleConfig = `
 
   ## If no servers are specified, then default to 127.0.0.1:1936/haproxy?stats
   servers = ["http://myhaproxy.com:1936/haproxy?stats"]
+
+  ## Credentials for basic HTTP authentication
+  # username = "admin"
+  # password = "admin"
 
   ## You can also use local socket with standard wildcard globbing.
   ## Server address not starting with 'http' will be treated as a possible
@@ -156,26 +162,36 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 
 	u, err := url.Parse(addr)
 	if err != nil {
-		return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
+		return fmt.Errorf("unable parse server address '%s': %s", addr, err)
 	}
 
 	req, err := http.NewRequest("GET", addr, nil)
+	if err != nil {
+		return fmt.Errorf("unable to create new request '%s': %s", addr, err)
+	}
 	if u.User != nil {
 		p, _ := u.User.Password()
 		req.SetBasicAuth(u.User.Username(), p)
+		u.User = &url.Userinfo{}
+		addr = u.String()
+	}
+
+	if g.Username != "" || g.Password != "" {
+		req.SetBasicAuth(g.Username, g.Password)
 	}
 
 	res, err := g.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("Unable to connect to haproxy server '%s': %s", addr, err)
+		return fmt.Errorf("unable to connect to haproxy server '%s': %s", addr, err)
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("Unable to get valid stat result from '%s', http response code : %d", addr, res.StatusCode)
+		return fmt.Errorf("unable to get valid stat result from '%s', http response code : %d", addr, res.StatusCode)
 	}
 
 	if err := g.importCsvResult(res.Body, acc, u.Host); err != nil {
-		return fmt.Errorf("Unable to parse stat result from '%s': %s", addr, err)
+		return fmt.Errorf("unable to parse stat result from '%s': %s", addr, err)
 	}
 
 	return nil
@@ -258,7 +274,7 @@ func (g *haproxy) importCsvResult(r io.Reader, acc telegraf.Accumulator, host st
 				if err != nil {
 					return fmt.Errorf("unable to parse type value '%s'", v)
 				}
-				if int(vi) >= len(typeNames) {
+				if vi >= int64(len(typeNames)) {
 					return fmt.Errorf("received unknown type value: %d", vi)
 				}
 				tags[fieldName] = typeNames[vi]

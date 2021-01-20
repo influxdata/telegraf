@@ -143,7 +143,12 @@ func TestJolokia2_ObjectValues(t *testing.T) {
 	[[jolokia2_agent.metric]]
 		name     = "object_with_key_pattern"
 		mbean    = "object_with_key_pattern:test=*"
-		tag_keys = ["test"]`
+		tag_keys = ["test"]
+
+	[[jolokia2_agent.metric]]
+		name  = "ColumnFamily"
+		mbean = "org.apache.cassandra.metrics:keyspace=*,name=EstimatedRowSizeHistogram,scope=schema_columns,type=ColumnFamily"
+		tag_keys = ["keyspace", "name", "scope"]`
 
 	response := `[{
 		"request": {
@@ -214,7 +219,20 @@ func TestJolokia2_ObjectValues(t *testing.T) {
 			}
 		},
 		"status": 200
-	}]`
+	}, {
+		"request": {
+		  "mbean": "org.apache.cassandra.metrics:keyspace=*,name=EstimatedRowSizeHistogram,scope=schema_columns,type=ColumnFamily",
+		  "type": "read"
+		},
+		"value": {
+		  "org.apache.cassandra.metrics:keyspace=system,name=EstimatedRowSizeHistogram,scope=schema_columns,type=ColumnFamily": {
+			"Value": [
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			]
+		  }
+		},
+		"status": 200
+	  }]`
 
 	server := setupServer(http.StatusOK, response)
 	defer server.Close()
@@ -730,6 +748,20 @@ func TestJolokia2_ProxyTargets(t *testing.T) {
 	})
 }
 
+func TestFillFields(t *testing.T) {
+	complex := map[string]interface{}{"Value": []interface{}{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
+	var scalar interface{}
+	scalar = []interface{}{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
+	results := map[string]interface{}{}
+	newPointBuilder(Metric{Name: "test", Mbean: "complex"}, []string{"this", "that"}, "/").fillFields("", complex, results)
+	assert.Equal(t, map[string]interface{}{}, results)
+
+	results = map[string]interface{}{}
+	newPointBuilder(Metric{Name: "test", Mbean: "scalar"}, []string{"this", "that"}, "/").fillFields("", scalar, results)
+	assert.Equal(t, map[string]interface{}{}, results)
+}
+
 func setupServer(status int, resp string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -748,7 +780,7 @@ func setupPlugin(t *testing.T, conf string) telegraf.Input {
 		t.Fatalf("Unable to parse config! %v", err)
 	}
 
-	for name, _ := range table.Fields {
+	for name := range table.Fields {
 		object := table.Fields[name]
 		switch name {
 		case "jolokia2_agent":

@@ -173,7 +173,7 @@ const valuePattern = "[\\d-]+"
 
 var fileFormats = [...]fileFormat{
 	// 	VAL\n
-	fileFormat{
+	{
 		name:    "Single value",
 		pattern: "^" + valuePattern + "\n$",
 		parser: func(measurement string, fields map[string]interface{}, b []byte) {
@@ -185,7 +185,7 @@ var fileFormats = [...]fileFormat{
 	// 	VAL0\n
 	// 	VAL1\n
 	// 	...
-	fileFormat{
+	{
 		name:    "New line separated values",
 		pattern: "^(" + valuePattern + "\n){2,}$",
 		parser: func(measurement string, fields map[string]interface{}, b []byte) {
@@ -197,7 +197,7 @@ var fileFormats = [...]fileFormat{
 		},
 	},
 	// 	VAL0 VAL1 ...\n
-	fileFormat{
+	{
 		name:    "Space separated values",
 		pattern: "^(" + valuePattern + " )+\n$",
 		parser: func(measurement string, fields map[string]interface{}, b []byte) {
@@ -211,7 +211,7 @@ var fileFormats = [...]fileFormat{
 	// 	KEY0 VAL0\n
 	// 	KEY1 VAL1\n
 	// 	...
-	fileFormat{
+	{
 		name:    "New line separated key-space-value's",
 		pattern: "^(" + keyPattern + " " + valuePattern + "\n)+$",
 		parser: func(measurement string, fields map[string]interface{}, b []byte) {

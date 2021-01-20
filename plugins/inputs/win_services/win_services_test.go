@@ -3,8 +3,10 @@
 package win_services
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -121,54 +123,77 @@ var testErrors = []testData{
 		{nil, errors.New("Fake srv query error"), nil, "Fake service 2", "", 0, 0},
 		{nil, nil, errors.New("Fake srv config error"), "Fake service 3", "", 0, 0},
 	}},
-	{nil, nil, nil, []serviceTestInfo{
+	{[]string{"Fake service 1"}, nil, nil, []serviceTestInfo{
 		{errors.New("Fake srv open error"), nil, nil, "Fake service 1", "", 0, 0},
 	}},
 }
 
 func TestBasicInfo(t *testing.T) {
 
-	winServices := &WinServices{nil, &FakeMgProvider{testErrors[0]}}
+	winServices := &WinServices{
+		Log:         testutil.Logger{},
+		mgrProvider: &FakeMgProvider{testErrors[0]},
+	}
+	winServices.Init()
 	assert.NotEmpty(t, winServices.SampleConfig())
 	assert.NotEmpty(t, winServices.Description())
 }
 
 func TestMgrErrors(t *testing.T) {
 	//mgr.connect error
-	winServices := &WinServices{nil, &FakeMgProvider{testErrors[0]}}
+	winServices := &WinServices{
+		Log:         testutil.Logger{},
+		mgrProvider: &FakeMgProvider{testErrors[0]},
+	}
 	var acc1 testutil.Accumulator
 	err := winServices.Gather(&acc1)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), testErrors[0].mgrConnectError.Error())
 
 	////mgr.listServices error
-	winServices = &WinServices{nil, &FakeMgProvider{testErrors[1]}}
+	winServices = &WinServices{
+		Log:         testutil.Logger{},
+		mgrProvider: &FakeMgProvider{testErrors[1]},
+	}
 	var acc2 testutil.Accumulator
 	err = winServices.Gather(&acc2)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), testErrors[1].mgrListServicesError.Error())
 
 	////mgr.listServices error 2
-	winServices = &WinServices{[]string{"Fake service 1"}, &FakeMgProvider{testErrors[3]}}
+	winServices = &WinServices{
+		Log:          testutil.Logger{},
+		ServiceNames: []string{"Fake service 1"},
+		mgrProvider:  &FakeMgProvider{testErrors[3]},
+	}
+	winServices.Init()
 	var acc3 testutil.Accumulator
-	err = winServices.Gather(&acc3)
-	require.NoError(t, err)
-	assert.Len(t, acc3.Errors, 1)
 
+	buf := &bytes.Buffer{}
+	log.SetOutput(buf)
+	require.NoError(t, winServices.Gather(&acc3))
+
+	require.Contains(t, buf.String(), testErrors[2].services[0].serviceOpenError.Error())
 }
 
 func TestServiceErrors(t *testing.T) {
-	winServices := &WinServices{nil, &FakeMgProvider{testErrors[2]}}
+	winServices := &WinServices{
+		Log:         testutil.Logger{},
+		mgrProvider: &FakeMgProvider{testErrors[2]},
+	}
+	winServices.Init()
 	var acc1 testutil.Accumulator
-	require.NoError(t, winServices.Gather(&acc1))
-	assert.Len(t, acc1.Errors, 3)
-	//open service error
-	assert.Contains(t, acc1.Errors[0].Error(), testErrors[2].services[0].serviceOpenError.Error())
-	//query service error
-	assert.Contains(t, acc1.Errors[1].Error(), testErrors[2].services[1].serviceQueryError.Error())
-	//config service error
-	assert.Contains(t, acc1.Errors[2].Error(), testErrors[2].services[2].serviceConfigError.Error())
 
+	buf := &bytes.Buffer{}
+	log.SetOutput(buf)
+	require.NoError(t, winServices.Gather(&acc1))
+
+	//open service error
+	require.Contains(t, buf.String(), testErrors[2].services[0].serviceOpenError.Error())
+	//query service error
+	require.Contains(t, buf.String(), testErrors[2].services[1].serviceQueryError.Error())
+	//config service error
+	require.Contains(t, buf.String(), testErrors[2].services[2].serviceConfigError.Error())
 }
 
 var testSimpleData = []testData{
@@ -178,8 +203,13 @@ var testSimpleData = []testData{
 	}},
 }
 
-func TestGather2(t *testing.T) {
-	winServices := &WinServices{nil, &FakeMgProvider{testSimpleData[0]}}
+func TestGatherContainsTag(t *testing.T) {
+	winServices := &WinServices{
+		Log:          testutil.Logger{},
+		ServiceNames: []string{"Service*"},
+		mgrProvider:  &FakeMgProvider{testSimpleData[0]},
+	}
+	winServices.Init()
 	var acc1 testutil.Accumulator
 	require.NoError(t, winServices.Gather(&acc1))
 	assert.Len(t, acc1.Errors, 0, "There should be no errors after gather")
@@ -193,5 +223,4 @@ func TestGather2(t *testing.T) {
 		tags["display_name"] = s.displayName
 		acc1.AssertContainsTaggedFields(t, "win_services", fields, tags)
 	}
-
 }

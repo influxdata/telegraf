@@ -127,7 +127,7 @@ func (r *Riak) gatherServer(s string, acc telegraf.Accumulator) error {
 
 	// Successful responses will always return status code 200
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("riak responded with unexepcted status code %d", resp.StatusCode)
+		return fmt.Errorf("riak responded with unexpected status code %d", resp.StatusCode)
 	}
 
 	// Decode the response JSON into a new stats struct

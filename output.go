@@ -1,37 +1,29 @@
 package telegraf
 
 type Output interface {
-	// Connect to the Output
+	PluginDescriber
+
+	// Connect to the Output; connect is only called once when the plugin starts
 	Connect() error
-	// Close any connections to the Output
+	// Close any connections to the Output. Close is called once when the output
+	// is shutting down. Close will not be called until all writes have finished,
+	// and Write() will not be called once Close() has been, so locking is not
+	// necessary.
 	Close() error
-	// Description returns a one-sentence description on the Output
-	Description() string
-	// SampleConfig returns the default configuration of the Output
-	SampleConfig() string
 	// Write takes in group of points to be written to the Output
 	Write(metrics []Metric) error
 }
 
+// AggregatingOutput adds aggregating functionality to an Output.  May be used
+// if the Output only accepts a fixed set of aggregations over a time period.
+// These functions may be called concurrently to the Write function.
 type AggregatingOutput interface {
-	Add(in Metric)
-	Push() []Metric
-	Reset()
-}
+	Output
 
-type ServiceOutput interface {
-	// Connect to the Output
-	Connect() error
-	// Close any connections to the Output
-	Close() error
-	// Description returns a one-sentence description on the Output
-	Description() string
-	// SampleConfig returns the default configuration of the Output
-	SampleConfig() string
-	// Write takes in group of points to be written to the Output
-	Write(metrics []Metric) error
-	// Start the "service" that will provide an Output
-	Start() error
-	// Stop the "service" that will provide an Output
-	Stop()
+	// Add the metric to the aggregator
+	Add(in Metric)
+	// Push returns the aggregated metrics and is called every flush interval.
+	Push() []Metric
+	// Reset signals the the aggregator period is completed.
+	Reset()
 }

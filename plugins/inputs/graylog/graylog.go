@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -47,7 +47,7 @@ type HTTPClient interface {
 	// req: HTTP request object
 	//
 	// Returns:
-	// http.Response:  HTTP respons object
+	// http.Response:  HTTP response object
 	// error        :  Any error that may have occurred
 	MakeRequest(req *http.Request) (*http.Response, error)
 
@@ -169,11 +169,12 @@ func (h *GrayLog) gatherServer(
 		return err
 	}
 	requestURL, err := url.Parse(serverURL)
+	if err != nil {
+		return fmt.Errorf("unable to parse address '%s': %s", serverURL, err)
+	}
+
 	host, port, _ := net.SplitHostPort(requestURL.Host)
 	var dat ResponseMetrics
-	if err != nil {
-		return err
-	}
 	if err := json.Unmarshal([]byte(resp), &dat); err != nil {
 		return err
 	}
@@ -235,6 +236,9 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 	if err != nil {
 		return "", -1, fmt.Errorf("Invalid server URL \"%s\"", serverURL)
 	}
+	// Add X-Requested-By header
+	headers["X-Requested-By"] = "Telegraf"
+
 	if strings.Contains(requestURL.String(), "multiple") {
 		m := &Messagebody{Metrics: h.Metrics}
 		http_body, err := json.Marshal(m)

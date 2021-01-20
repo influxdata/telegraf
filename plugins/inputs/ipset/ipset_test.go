@@ -50,8 +50,8 @@ func TestIpset(t *testing.T) {
 				add myset 3.4.5.6 packets 3 bytes 222
 				`,
 			tags: []map[string]string{
-				map[string]string{"set": "myset", "rule": "1.2.3.4"},
-				map[string]string{"set": "myset", "rule": "3.4.5.6"},
+				{"set": "myset", "rule": "1.2.3.4"},
+				{"set": "myset", "rule": "3.4.5.6"},
 			},
 			fields: [][]map[string]interface{}{
 				{map[string]interface{}{"packets_total": uint64(1328), "bytes_total": uint64(79680)}},
@@ -66,8 +66,8 @@ func TestIpset(t *testing.T) {
 				add myset 3.4.5.6 packets 3 bytes 222 "3rd IP"
 				`,
 			tags: []map[string]string{
-				map[string]string{"set": "myset", "rule": "1.2.3.4"},
-				map[string]string{"set": "myset", "rule": "3.4.5.6"},
+				{"set": "myset", "rule": "1.2.3.4"},
+				{"set": "myset", "rule": "3.4.5.6"},
 			},
 			fields: [][]map[string]interface{}{
 				{map[string]interface{}{"packets_total": uint64(1328), "bytes_total": uint64(79680)}},

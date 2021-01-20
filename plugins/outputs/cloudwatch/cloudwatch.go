@@ -9,10 +9,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
-	"github.com/aws/aws-sdk-go/service/sts"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/internal/config/aws"
+	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -26,8 +25,9 @@ type CloudWatch struct {
 	Token       string `toml:"token"`
 	EndpointURL string `toml:"endpoint_url"`
 
-	Namespace string `toml:"namespace"` // CloudWatch Metrics Namespace
-	svc       *cloudwatch.CloudWatch
+	Namespace             string `toml:"namespace"` // CloudWatch Metrics Namespace
+	HighResolutionMetrics bool   `toml:"high_resolution_metrics"`
+	svc                   *cloudwatch.CloudWatch
 
 	WriteStatistics bool `toml:"write_statistics"`
 }
@@ -48,11 +48,12 @@ type cloudwatchField interface {
 }
 
 type statisticField struct {
-	metricName string
-	fieldName  string
-	tags       map[string]string
-	values     map[statisticType]float64
-	timestamp  time.Time
+	metricName        string
+	fieldName         string
+	tags              map[string]string
+	values            map[statisticType]float64
+	timestamp         time.Time
+	storageResolution int64
 }
 
 func (f *statisticField) addValue(sType statisticType, value float64) {
@@ -82,6 +83,7 @@ func (f *statisticField) buildDatum() []*cloudwatch.MetricDatum {
 				Sum:         aws.Float64(sum),
 				SampleCount: aws.Float64(count),
 			},
+			StorageResolution: aws.Int64(f.storageResolution),
 		}
 
 		datums = append(datums, datum)
@@ -127,11 +129,12 @@ func (f *statisticField) hasAllFields() bool {
 }
 
 type valueField struct {
-	metricName string
-	fieldName  string
-	tags       map[string]string
-	value      float64
-	timestamp  time.Time
+	metricName        string
+	fieldName         string
+	tags              map[string]string
+	value             float64
+	timestamp         time.Time
+	storageResolution int64
 }
 
 func (f *valueField) addValue(sType statisticType, value float64) {
@@ -144,10 +147,11 @@ func (f *valueField) buildDatum() []*cloudwatch.MetricDatum {
 
 	return []*cloudwatch.MetricDatum{
 		{
-			MetricName: aws.String(strings.Join([]string{f.metricName, f.fieldName}, "_")),
-			Value:      aws.Float64(f.value),
-			Dimensions: BuildDimensions(f.tags),
-			Timestamp:  aws.Time(f.timestamp),
+			MetricName:        aws.String(strings.Join([]string{f.metricName, f.fieldName}, "_")),
+			Value:             aws.Float64(f.value),
+			Dimensions:        BuildDimensions(f.tags),
+			Timestamp:         aws.Time(f.timestamp),
+			StorageResolution: aws.Int64(f.storageResolution),
 		},
 	}
 }
@@ -187,6 +191,9 @@ var sampleConfig = `
   ## You could use basicstats aggregator to calculate those fields. If not all statistic 
   ## fields are available, all fields would still be sent as raw metrics. 
   # write_statistics = false
+
+  ## Enable high resolution metrics of 1 second (if not enabled, standard resolution are of 60 seconds precision)
+  # high_resolution_metrics = false
 `
 
 func (c *CloudWatch) SampleConfig() string {
@@ -209,20 +216,7 @@ func (c *CloudWatch) Connect() error {
 		EndpointURL: c.EndpointURL,
 	}
 	configProvider := credentialConfig.Credentials()
-
-	stsService := sts.New(configProvider)
-
-	params := &sts.GetCallerIdentityInput{}
-
-	_, err := stsService.GetCallerIdentity(params)
-
-	if err != nil {
-		log.Printf("E! cloudwatch: Cannot use credentials to connect to AWS : %+v \n", err.Error())
-		return err
-	}
-
 	c.svc = cloudwatch.New(configProvider)
-
 	return nil
 }
 
@@ -234,7 +228,7 @@ func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
 
 	var datums []*cloudwatch.MetricDatum
 	for _, m := range metrics {
-		d := BuildMetricDatum(c.WriteStatistics, m)
+		d := BuildMetricDatum(c.WriteStatistics, c.HighResolutionMetrics, m)
 		datums = append(datums, d...)
 	}
 
@@ -292,9 +286,14 @@ func PartitionDatums(size int, datums []*cloudwatch.MetricDatum) [][]*cloudwatch
 // Make a MetricDatum from telegraf.Metric. It would check if all required fields of
 // cloudwatch.StatisticSet are available. If so, it would build MetricDatum from statistic values.
 // Otherwise, fields would still been built independently.
-func BuildMetricDatum(buildStatistic bool, point telegraf.Metric) []*cloudwatch.MetricDatum {
+func BuildMetricDatum(buildStatistic bool, highResolutionMetrics bool, point telegraf.Metric) []*cloudwatch.MetricDatum {
 
 	fields := make(map[string]cloudwatchField)
+	tags := point.Tags()
+	storageResolution := int64(60)
+	if highResolutionMetrics {
+		storageResolution = 1
+	}
 
 	for k, v := range point.Fields() {
 
@@ -310,11 +309,12 @@ func BuildMetricDatum(buildStatistic bool, point telegraf.Metric) []*cloudwatch.
 		// If statistic metric is not enabled or non-statistic type, just take current field as a value field.
 		if !buildStatistic || sType == statisticTypeNone {
 			fields[k] = &valueField{
-				metricName: point.Name(),
-				fieldName:  k,
-				tags:       point.Tags(),
-				timestamp:  point.Time(),
-				value:      val,
+				metricName:        point.Name(),
+				fieldName:         k,
+				tags:              tags,
+				timestamp:         point.Time(),
+				value:             val,
+				storageResolution: storageResolution,
 			}
 			continue
 		}
@@ -325,11 +325,12 @@ func BuildMetricDatum(buildStatistic bool, point telegraf.Metric) []*cloudwatch.
 			fields[fieldName] = &statisticField{
 				metricName: point.Name(),
 				fieldName:  fieldName,
-				tags:       point.Tags(),
+				tags:       tags,
 				timestamp:  point.Time(),
 				values: map[statisticType]float64{
 					sType: val,
 				},
+				storageResolution: storageResolution,
 			}
 		} else {
 			// Add new statistic value to this field
@@ -350,19 +351,15 @@ func BuildMetricDatum(buildStatistic bool, point telegraf.Metric) []*cloudwatch.
 // 10 dimensions per metric so we only keep up to the first 10 alphabetically.
 // This always includes the "host" tag if it exists.
 func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
-
 	const MaxDimensions = 10
-	dimensions := make([]*cloudwatch.Dimension, int(math.Min(float64(len(mTags)), MaxDimensions)))
-
-	i := 0
+	dimensions := make([]*cloudwatch.Dimension, 0, MaxDimensions)
 
 	// This is pretty ugly but we always want to include the "host" tag if it exists.
 	if host, ok := mTags["host"]; ok {
-		dimensions[i] = &cloudwatch.Dimension{
+		dimensions = append(dimensions, &cloudwatch.Dimension{
 			Name:  aws.String("host"),
 			Value: aws.String(host),
-		}
-		i += 1
+		})
 	}
 
 	var keys []string
@@ -374,16 +371,19 @@ func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		if i >= MaxDimensions {
+		if len(dimensions) >= MaxDimensions {
 			break
 		}
 
-		dimensions[i] = &cloudwatch.Dimension{
-			Name:  aws.String(k),
-			Value: aws.String(mTags[k]),
+		value := mTags[k]
+		if value == "" {
+			continue
 		}
 
-		i += 1
+		dimensions = append(dimensions, &cloudwatch.Dimension{
+			Name:  aws.String(k),
+			Value: aws.String(mTags[k]),
+		})
 	}
 
 	return dimensions

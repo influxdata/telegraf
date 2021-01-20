@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -18,7 +18,7 @@ var (
 
 // testCleanup resets the global registry for test cleanup & unlocks the test lock
 func testCleanup() {
-	registry = &rgstry{
+	registry = &Registry{
 		stats: make(map[uint64]map[string]Stat),
 	}
 	testLock.Unlock()
@@ -109,32 +109,17 @@ func TestRegisterTimingAndIncrAndSet(t *testing.T) {
 }
 
 func TestStatKeyConsistency(t *testing.T) {
-	s := &stat{
-		measurement: "internal_stat",
-		field:       "myfield",
-		tags: map[string]string{
-			"foo":   "bar",
-			"bar":   "baz",
-			"whose": "first",
-		},
-	}
-	k := s.Key()
-	for i := 0; i < 5000; i++ {
-		// assert that the Key() func doesn't change anything.
-		assert.Equal(t, k, s.Key())
-
-		// assert that two identical measurements always produce the same key.
-		tmp := &stat{
-			measurement: "internal_stat",
-			field:       "myfield",
-			tags: map[string]string{
-				"foo":   "bar",
-				"bar":   "baz",
-				"whose": "first",
-			},
-		}
-		assert.Equal(t, k, tmp.Key())
-	}
+	lhs := key("internal_stats", map[string]string{
+		"foo":   "bar",
+		"bar":   "baz",
+		"whose": "first",
+	})
+	rhs := key("internal_stats", map[string]string{
+		"foo":   "bar",
+		"bar":   "baz",
+		"whose": "first",
+	})
+	require.Equal(t, lhs, rhs)
 }
 
 func TestRegisterMetricsAndVerify(t *testing.T) {
@@ -218,4 +203,11 @@ func TestRegisterMetricsAndVerify(t *testing.T) {
 			"test": "baz",
 		},
 	)
+}
+
+func TestRegisterCopy(t *testing.T) {
+	tags := map[string]string{"input": "mem", "alias": "mem1"}
+	stat := Register("gather", "metrics_gathered", tags)
+	tags["new"] = "value"
+	require.NotEqual(t, tags, stat.Tags())
 }

@@ -1,5 +1,8 @@
 # Azure Monitor
 
+__The Azure Monitor custom metrics service is currently in preview and not
+available in a subset of Azure regions.__
+
 This plugin will send custom metrics to Azure Monitor. Azure Monitor has a
 metric resolution of one minute. To handle this in Telegraf, the Azure Monitor
 output plugin will automatically aggregates metrics into one minute buckets,
@@ -10,12 +13,6 @@ namespace, prefixed with `Telegraf/` by default. The field name for each
 metric is written as the Azure Monitor metric name. All field values are
 written as a summarized set that includes: min, max, sum, count. Tags are
 written as a dimension on each Azure Monitor metric.
-
-Since Azure Monitor only accepts numeric values, string-typed fields are
-dropped by default. There is a configuration option (`strings_as_dimensions`)
-to retain fields that contain strings as extra dimensions. Azure Monitor
-allows a maximum of 10 dimensions per metric so any dimensions over that
-amount will be deterministically dropped.
 
 ### Configuration:
 
@@ -43,6 +40,11 @@ amount will be deterministically dropped.
   ## The Azure Resource ID against which metric will be logged, e.g.
   ##   ex: resource_id = "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
   # resource_id = ""
+  
+  ## Optionally, if in Azure US Government, China, or other sovereign
+  ## cloud environment, set the appropriate REST endpoint for receiving
+  ## metrics. (Note: region may be  unused in this context)
+  # endpoint_url = "https://monitoring.core.usgovcloudapi.net"
 ```
 
 ### Setup
@@ -88,7 +90,8 @@ authentication is checked. Here are the preferred authentication methods:
     - Primarily useful if Telegraf is writing metrics for other resources.
       [More information][principal].
     - A Service Principal or User Principal needs to be assigned the `Monitoring
-      Contributor` roles.
+      Metrics Publisher` role on the resource(s) metrics will be emitted
+      against.
 3. AAD User Tokens (User Principals)
     - Allows Telegraf to authenticate like a user. It is best to use this method
       for development.
@@ -100,13 +103,7 @@ following configurations:
 
 1. **Client Credentials**: Azure AD Application ID and Secret.
 
-    Set the following Telegraf configuration variables:
-
-    - `azure_tenant_id`: Specifies the Tenant to which to authenticate.
-    - `azure_client_id`: Specifies the app client ID to use.
-    - `azure_client_secret`: Specifies the app secret to use.
-
-    Or set the following environment variables:
+    Set the following environment variables:
 
     - `AZURE_TENANT_ID`: Specifies the Tenant to which to authenticate.
     - `AZURE_CLIENT_ID`: Specifies the app client ID to use.
@@ -137,3 +134,19 @@ following configurations:
 
 **Note: As shown above, the last option (#4) is the preferred way to
 authenticate when running Telegraf on Azure VMs.
+
+### Dimensions
+
+Azure Monitor only accepts values with a numeric type. The plugin will drop
+fields with a string type by default. The plugin can set all string type fields
+as extra dimensions in the Azure Monitor custom metric by setting the
+configuration option `strings_as_dimensions` to `true`. 
+
+Keep in mind, Azure Monitor allows a maximum of 10 dimensions per metric. The
+plugin will deterministically dropped any dimensions that exceed the 10
+dimension limit.
+
+To convert only a subset of string-typed fields as dimensions, enable
+`strings_as_dimensions` and use the [`fieldpass` or `fielddrop`
+processors](https://docs.influxdata.com/telegraf/v1.7/administration/configuration/#processor-configuration)
+to limit the string-typed fields that are sent to the plugin.

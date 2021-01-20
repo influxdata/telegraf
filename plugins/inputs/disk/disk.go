@@ -13,9 +13,9 @@ type DiskStats struct {
 	ps system.PS
 
 	// Legacy support
-	Mountpoints []string
+	Mountpoints []string `toml:"mountpoints"`
 
-	MountPoints []string
+	MountPoints []string `toml:"mount_points"`
 	IgnoreFS    []string `toml:"ignore_fs"`
 }
 
@@ -29,7 +29,7 @@ var diskSampleConfig = `
   # mount_points = ["/"]
 
   ## Ignore mount points by filesystem type.
-  ignore_fs = ["tmpfs", "devtmpfs", "devfs", "overlay", "aufs", "squashfs"]
+  ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
 `
 
 func (_ *DiskStats) SampleConfig() string {
