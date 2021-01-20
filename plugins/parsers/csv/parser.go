@@ -31,6 +31,7 @@ type Config struct {
 	TimestampFormat   string   `toml:"csv_timestamp_format"`
 	Timezone          string   `toml:"csv_timezone"`
 	TrimSpace         bool     `toml:"csv_trim_space"`
+	SkipValues        []string `toml:"csv_skip_values"`
 
 	gotColumnNames bool
 
@@ -195,6 +196,13 @@ outer:
 			value := record[i]
 			if p.TrimSpace {
 				value = strings.Trim(value, " ")
+			}
+
+			// don't record fields where the value matches a skip value
+			for _, s := range p.SkipValues {
+				if value == s {
+					continue outer
+				}
 			}
 
 			for _, tagName := range p.TagColumns {
