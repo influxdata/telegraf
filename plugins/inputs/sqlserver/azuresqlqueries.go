@@ -31,6 +31,7 @@ SELECT TOP(1)
 	,[end_time]
 	,cast([avg_instance_memory_percent] as float) as [avg_instance_memory_percent] 
 	,cast([avg_instance_cpu_percent] as float) as [avg_instance_cpu_percent]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM
 	sys.dm_db_resource_stats WITH (NOLOCK)
 ORDER BY
@@ -80,6 +81,7 @@ SELECT
 	,[volume_type_external_xstore_iops]
 	,[volume_pfs_iops]
 	,[volume_type_pfs_iops]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM 
 	sys.dm_user_db_resource_governance WITH (NOLOCK);
 `
@@ -96,13 +98,14 @@ END
 SELECT
 	 'sqlserver_azuredb_waitstats' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	,DB_NAME() as [database_name']
+	,DB_NAME() as [database_name]
 	,dbws.[wait_type]
 	,dbws.[wait_time_ms]
 	,dbws.[wait_time_ms] - [signal_wait_time_ms] AS [resource_wait_ms]
 	,dbws.[signal_wait_time_ms]
 	,dbws.[max_wait_time_ms]
 	,dbws.[waiting_tasks_count]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM
 	sys.dm_db_wait_stats AS dbws WITH (NOLOCK)
 WHERE
@@ -180,6 +183,7 @@ SELECT
 	END AS [file_type]
 	,ISNULL([size],0)/128 AS [current_size_mb]
 	,ISNULL(FILEPROPERTY(b.[logical_filename],'SpaceUsed')/128,0) as [space_used_mb]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM 
 	[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
 	-- needed to get Tempdb file names  on Azure SQL DB so you can join appropriately. Without this had a bug where join was only on file_id
@@ -237,6 +241,7 @@ SELECT
 		)
 	END AS [available_storage_mb]
 	,(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as [uptime]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 	FROM sys.[databases] AS d
 	-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
 	CROSS JOIN sys.[database_service_objectives] AS slo
@@ -320,6 +325,7 @@ SELECT
   			'PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC') THEN 'Full Text Search'
  		ELSE 'Other'
 	END as [wait_category]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.dm_os_wait_stats AS ws WITH (NOLOCK)
 WHERE
 	ws.[wait_type] NOT IN (
@@ -374,6 +380,7 @@ SELECT
 	,DB_NAME() AS [database_name]
 	,mc.[type] AS [clerk_type]
 	,SUM(mc.[pages_kb]) AS [size_kb]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.[dm_os_memory_clerks] AS mc WITH (NOLOCK)
 GROUP BY
 	mc.[type]
@@ -432,100 +439,101 @@ WITH PerfCounters AS (
 		END
 	WHERE
 		counter_name IN (
-			 ''SQL Compilations/sec''
-			,''SQL Re-Compilations/sec''
-			,''User Connections''
-			,''Batch Requests/sec''
-			,''Logouts/sec''
-			,''Logins/sec''
-			,''Processes blocked''
-			,''Latch Waits/sec''
-			,''Full Scans/sec''
-			,''Index Searches/sec''
-			,''Page Splits/sec''
-			,''Page lookups/sec''
-			,''Page reads/sec''
-			,''Page writes/sec''
-			,''Readahead pages/sec''
-			,''Lazy writes/sec''
-			,''Checkpoint pages/sec''
-			,''Page life expectancy''
-			,''Log File(s) Size (KB)''
-			,''Log File(s) Used Size (KB)''
-			,''Data File(s) Size (KB)''
-			,''Transactions/sec''
-			,''Write Transactions/sec''
-			,''Active Temp Tables''
-			,''Temp Tables Creation Rate''
-			,''Temp Tables For Destruction''
-			,''Free Space in tempdb (KB)''
-			,''Version Store Size (KB)''
-			,''Memory Grants Pending''
-			,''Memory Grants Outstanding''
-			,''Free list stalls/sec''
-			,''Buffer cache hit ratio''
-			,''Buffer cache hit ratio base''
-			,''Backup/Restore Throughput/sec''
-			,''Total Server Memory (KB)''
-			,''Target Server Memory (KB)''
-			,''Log Flushes/sec''
-			,''Log Flush Wait Time''
-			,''Memory broker clerk size''
-			,''Log Bytes Flushed/sec''
-			,''Bytes Sent to Replica/sec''
-			,''Log Send Queue''
-			,''Bytes Sent to Transport/sec''
-			,''Sends to Replica/sec''
-			,''Bytes Sent to Transport/sec''
-			,''Sends to Transport/sec''
-			,''Bytes Received from Replica/sec''
-			,''Receives from Replica/sec''
-			,''Flow Control Time (ms/sec)''
-			,''Flow Control/sec''
-			,''Resent Messages/sec''
-			,''Redone Bytes/sec''
-			,''XTP Memory Used (KB)''
-			,''Transaction Delay''
-			,''Log Bytes Received/sec''
-			,''Log Apply Pending Queue''
-			,''Redone Bytes/sec''
-			,''Recovery Queue''
-			,''Log Apply Ready Queue''
-			,''CPU usage %''
-			,''CPU usage % base''
-			,''Queued requests''
-			,''Requests completed/sec''
-			,''Blocked tasks''
-			,''Active memory grant amount (KB)''
-			,''Disk Read Bytes/sec''
-			,''Disk Read IO Throttled/sec''
-			,''Disk Read IO/sec''
-			,''Disk Write Bytes/sec''
-			,''Disk Write IO Throttled/sec''
-			,''Disk Write IO/sec''
-			,''Used memory (KB)''
-			,''Forwarded Records/sec''
-			,''Background Writer pages/sec''
-			,''Percent Log Used''
-			,''Log Send Queue KB''
-			,''Redo Queue KB''
-			,''Mirrored Write Transactions/sec''
-			,''Group Commit Time''
-			,''Group Commits/Sec''
+			 'SQL Compilations/sec'
+			,'SQL Re-Compilations/sec'
+			,'User Connections'
+			,'Batch Requests/sec'
+			,'Logouts/sec'
+			,'Logins/sec'
+			,'Processes blocked'
+			,'Latch Waits/sec'
+			,'Full Scans/sec'
+			,'Index Searches/sec'
+			,'Page Splits/sec'
+			,'Page lookups/sec'
+			,'Page reads/sec'
+			,'Page writes/sec'
+			,'Readahead pages/sec'
+			,'Lazy writes/sec'
+			,'Checkpoint pages/sec'
+			,'Page life expectancy'
+			,'Log File(s) Size (KB)'
+			,'Log File(s) Used Size (KB)'
+			,'Data File(s) Size (KB)'
+			,'Transactions/sec'
+			,'Write Transactions/sec'
+			,'Active Temp Tables'
+			,'Temp Tables Creation Rate'
+			,'Temp Tables For Destruction'
+			,'Free Space in tempdb (KB)'
+			,'Version Store Size (KB)'
+			,'Memory Grants Pending'
+			,'Memory Grants Outstanding'
+			,'Free list stalls/sec'
+			,'Buffer cache hit ratio'
+			,'Buffer cache hit ratio base'
+			,'Backup/Restore Throughput/sec'
+			,'Total Server Memory (KB)'
+			,'Target Server Memory (KB)'
+			,'Log Flushes/sec'
+			,'Log Flush Wait Time'
+			,'Memory broker clerk size'
+			,'Log Bytes Flushed/sec'
+			,'Bytes Sent to Replica/sec'
+			,'Log Send Queue'
+			,'Bytes Sent to Transport/sec'
+			,'Sends to Replica/sec'
+			,'Bytes Sent to Transport/sec'
+			,'Sends to Transport/sec'
+			,'Bytes Received from Replica/sec'
+			,'Receives from Replica/sec'
+			,'Flow Control Time (ms/sec)'
+			,'Flow Control/sec'
+			,'Resent Messages/sec'
+			,'Redone Bytes/sec'
+			,'XTP Memory Used (KB)'
+			,'Transaction Delay'
+			,'Log Bytes Received/sec'
+			,'Log Apply Pending Queue'
+			,'Redone Bytes/sec'
+			,'Recovery Queue'
+			,'Log Apply Ready Queue'
+			,'CPU usage %'
+			,'CPU usage % base'
+			,'Queued requests'
+			,'Requests completed/sec'
+			,'Blocked tasks'
+			,'Active memory grant amount (KB)'
+			,'Disk Read Bytes/sec'
+			,'Disk Read IO Throttled/sec'
+			,'Disk Read IO/sec'
+			,'Disk Write Bytes/sec'
+			,'Disk Write IO Throttled/sec'
+			,'Disk Write IO/sec'
+			,'Used memory (KB)'
+			,'Forwarded Records/sec'
+			,'Background Writer pages/sec'
+			,'Percent Log Used'
+			,'Log Send Queue KB'
+			,'Redo Queue KB'
+			,'Mirrored Write Transactions/sec'
+			,'Group Commit Time'
+			,'Group Commits/Sec'
 		) OR (
-			spi.[object_name] LIKE ''%User Settable%''
-			OR spi.[object_name] LIKE ''%SQL Errors%''
-			OR spi.[object_name] LIKE ''%Batch Resp Statistics%''
+			spi.[object_name] LIKE '%User Settable%'
+			OR spi.[object_name] LIKE '%SQL Errors%'
+			OR spi.[object_name] LIKE '%Batch Resp Statistics%'
 		) OR (
-			spi.[instance_name] IN (''_Total'')
+			spi.[instance_name] IN ('_Total')
 			AND spi.[counter_name] IN (
-				 ''Lock Timeouts/sec''
-				,''Lock Timeouts (timeout > 0)/sec''
-				,''Number of Deadlocks/sec''
-				,''Lock Waits/sec''
-				,''Latch Waits/sec''
+				 'Lock Timeouts/sec'
+				,'Lock Timeouts (timeout > 0)/sec'
+				,'Number of Deadlocks/sec'
+				,'Lock Waits/sec'
+				,'Latch Waits/sec'
 			)
 		)
+)
 
 INSERT INTO @PCounters select * from PerfCounters
 
@@ -539,8 +547,9 @@ SELECT
 		WHEN '_Total' THEN 'Total' 
 		ELSE ISNULL(pc.[instance_name],'') 
 	END AS [instance]
-	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value],
+	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value]
 	,cast(pc.[cntr_type] as varchar(25)) as [counter_type]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 from @PCounters pc
 LEFT OUTER JOIN @PCounters AS pc1
 	ON (
@@ -610,6 +619,7 @@ SELECT
 	,DB_NAME(qt.[dbid]) [stmt_db_name]
 	,CONVERT(varchar(20),[query_hash],1) as [query_hash]
 	,CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.dm_exec_sessions AS s
 LEFT OUTER JOIN sys.dm_exec_requests AS r 
 	ON s.[session_id] = r.[session_id]
@@ -652,6 +662,7 @@ SELECT
 	,s.[yield_count]
 	,s.[total_cpu_usage_ms]
 	,s.[total_scheduler_delay_ms]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.dm_os_schedulers AS s
 `
 
@@ -677,11 +688,13 @@ SELECT TOP 1
 	,cast(([reserved_storage_mb] - [storage_space_used_mb]) as bigint) AS [available_storage_mb]
 	,(SELECT DATEDIFF(MINUTE,[sqlserver_start_time],GETDATE()) from sys.dm_os_sys_info) as [uptime]
 	,SERVERPROPERTY('ProductVersion') AS [sql_version]
+	,LEFT(@@VERSION,CHARINDEX(' - ',@@VERSION)) AS [sql_version_desc]
 	,[db_online]
 	,[db_restoring]
 	,[db_recovering]
 	,[db_recoveryPending]
 	,[db_suspect]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.server_resource_stats
 CROSS APPLY	(
 	SELECT  
@@ -708,6 +721,7 @@ SELECT TOP(1)
 	 'sqlserver_azure_db_resource_stats' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,cast([avg_cpu_percent] as float) as [avg_cpu_percent]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM
     sys.server_resource_stats
 ORDER BY
@@ -735,6 +749,7 @@ SELECT
 	,[volume_type_managed_xstore_iops] as [voltype_man_xtore_iops]
 	,[volume_type_external_xstore_iops] as [voltype_ext_xtore_iops]
 	,[volume_external_xstore_iops] as [vol_ext_xtore_iops]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.dm_instance_resource_governance;
 `
 
@@ -760,6 +775,7 @@ SELECT
 	,vfs.[num_of_bytes_written] AS [write_bytes]
 	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] 
 	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
 LEFT OUTER JOIN sys.master_files AS mf WITH (NOLOCK)
 	ON vfs.[database_id] = mf.[database_id] 
@@ -780,6 +796,7 @@ SELECT
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
 	,mc.[type] AS [clerk_type]
 	,SUM(mc.[pages_kb]) AS [size_kb]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.[dm_os_memory_clerks] AS mc WITH (NOLOCK)
 GROUP BY
 	 mc.[type]
@@ -862,6 +879,7 @@ SELECT
   			'PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC') THEN 'Full Text Search'
  		ELSE 'Other'
 	END as [wait_category]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.dm_os_wait_stats AS ws WITH (NOLOCK)
 WHERE
 	ws.[wait_type] NOT IN (
@@ -953,100 +971,101 @@ WITH PerfCounters AS (
 		END
 	WHERE
 		counter_name IN (
-			 ''SQL Compilations/sec''
-			,''SQL Re-Compilations/sec''
-			,''User Connections''
-			,''Batch Requests/sec''
-			,''Logouts/sec''
-			,''Logins/sec''
-			,''Processes blocked''
-			,''Latch Waits/sec''
-			,''Full Scans/sec''
-			,''Index Searches/sec''
-			,''Page Splits/sec''
-			,''Page lookups/sec''
-			,''Page reads/sec''
-			,''Page writes/sec''
-			,''Readahead pages/sec''
-			,''Lazy writes/sec''
-			,''Checkpoint pages/sec''
-			,''Page life expectancy''
-			,''Log File(s) Size (KB)''
-			,''Log File(s) Used Size (KB)''
-			,''Data File(s) Size (KB)''
-			,''Transactions/sec''
-			,''Write Transactions/sec''
-			,''Active Temp Tables''
-			,''Temp Tables Creation Rate''
-			,''Temp Tables For Destruction''
-			,''Free Space in tempdb (KB)''
-			,''Version Store Size (KB)''
-			,''Memory Grants Pending''
-			,''Memory Grants Outstanding''
-			,''Free list stalls/sec''
-			,''Buffer cache hit ratio''
-			,''Buffer cache hit ratio base''
-			,''Backup/Restore Throughput/sec''
-			,''Total Server Memory (KB)''
-			,''Target Server Memory (KB)''
-			,''Log Flushes/sec''
-			,''Log Flush Wait Time''
-			,''Memory broker clerk size''
-			,''Log Bytes Flushed/sec''
-			,''Bytes Sent to Replica/sec''
-			,''Log Send Queue''
-			,''Bytes Sent to Transport/sec''
-			,''Sends to Replica/sec''
-			,''Bytes Sent to Transport/sec''
-			,''Sends to Transport/sec''
-			,''Bytes Received from Replica/sec''
-			,''Receives from Replica/sec''
-			,''Flow Control Time (ms/sec)''
-			,''Flow Control/sec''
-			,''Resent Messages/sec''
-			,''Redone Bytes/sec''
-			,''XTP Memory Used (KB)''
-			,''Transaction Delay''
-			,''Log Bytes Received/sec''
-			,''Log Apply Pending Queue''
-			,''Redone Bytes/sec''
-			,''Recovery Queue''
-			,''Log Apply Ready Queue''
-			,''CPU usage %''
-			,''CPU usage % base''
-			,''Queued requests''
-			,''Requests completed/sec''
-			,''Blocked tasks''
-			,''Active memory grant amount (KB)''
-			,''Disk Read Bytes/sec''
-			,''Disk Read IO Throttled/sec''
-			,''Disk Read IO/sec''
-			,''Disk Write Bytes/sec''
-			,''Disk Write IO Throttled/sec''
-			,''Disk Write IO/sec''
-			,''Used memory (KB)''
-			,''Forwarded Records/sec''
-			,''Background Writer pages/sec''
-			,''Percent Log Used''
-			,''Log Send Queue KB''
-			,''Redo Queue KB''
-			,''Mirrored Write Transactions/sec''
-			,''Group Commit Time''
-			,''Group Commits/Sec''
+			 'SQL Compilations/sec'
+			,'SQL Re-Compilations/sec'
+			,'User Connections'
+			,'Batch Requests/sec'
+			,'Logouts/sec'
+			,'Logins/sec'
+			,'Processes blocked'
+			,'Latch Waits/sec'
+			,'Full Scans/sec'
+			,'Index Searches/sec'
+			,'Page Splits/sec'
+			,'Page lookups/sec'
+			,'Page reads/sec'
+			,'Page writes/sec'
+			,'Readahead pages/sec'
+			,'Lazy writes/sec'
+			,'Checkpoint pages/sec'
+			,'Page life expectancy'
+			,'Log File(s) Size (KB)'
+			,'Log File(s) Used Size (KB)'
+			,'Data File(s) Size (KB)'
+			,'Transactions/sec'
+			,'Write Transactions/sec'
+			,'Active Temp Tables'
+			,'Temp Tables Creation Rate'
+			,'Temp Tables For Destruction'
+			,'Free Space in tempdb (KB)'
+			,'Version Store Size (KB)'
+			,'Memory Grants Pending'
+			,'Memory Grants Outstanding'
+			,'Free list stalls/sec'
+			,'Buffer cache hit ratio'
+			,'Buffer cache hit ratio base'
+			,'Backup/Restore Throughput/sec'
+			,'Total Server Memory (KB)'
+			,'Target Server Memory (KB)'
+			,'Log Flushes/sec'
+			,'Log Flush Wait Time'
+			,'Memory broker clerk size'
+			,'Log Bytes Flushed/sec'
+			,'Bytes Sent to Replica/sec'
+			,'Log Send Queue'
+			,'Bytes Sent to Transport/sec'
+			,'Sends to Replica/sec'
+			,'Bytes Sent to Transport/sec'
+			,'Sends to Transport/sec'
+			,'Bytes Received from Replica/sec'
+			,'Receives from Replica/sec'
+			,'Flow Control Time (ms/sec)'
+			,'Flow Control/sec'
+			,'Resent Messages/sec'
+			,'Redone Bytes/sec'
+			,'XTP Memory Used (KB)'
+			,'Transaction Delay'
+			,'Log Bytes Received/sec'
+			,'Log Apply Pending Queue'
+			,'Redone Bytes/sec'
+			,'Recovery Queue'
+			,'Log Apply Ready Queue'
+			,'CPU usage %'
+			,'CPU usage % base'
+			,'Queued requests'
+			,'Requests completed/sec'
+			,'Blocked tasks'
+			,'Active memory grant amount (KB)'
+			,'Disk Read Bytes/sec'
+			,'Disk Read IO Throttled/sec'
+			,'Disk Read IO/sec'
+			,'Disk Write Bytes/sec'
+			,'Disk Write IO Throttled/sec'
+			,'Disk Write IO/sec'
+			,'Used memory (KB)'
+			,'Forwarded Records/sec'
+			,'Background Writer pages/sec'
+			,'Percent Log Used'
+			,'Log Send Queue KB'
+			,'Redo Queue KB'
+			,'Mirrored Write Transactions/sec'
+			,'Group Commit Time'
+			,'Group Commits/Sec'
 		) OR (
-			spi.[object_name] LIKE ''%User Settable%''
-			OR spi.[object_name] LIKE ''%SQL Errors%''
-			OR spi.[object_name] LIKE ''%Batch Resp Statistics%''
+			spi.[object_name] LIKE '%User Settable%'
+			OR spi.[object_name] LIKE '%SQL Errors%'
+			OR spi.[object_name] LIKE '%Batch Resp Statistics%'
 		) OR (
-			spi.[instance_name] IN (''_Total'')
+			spi.[instance_name] IN ('_Total')
 			AND spi.[counter_name] IN (
-				 ''Lock Timeouts/sec''
-				,''Lock Timeouts (timeout > 0)/sec''
-				,''Number of Deadlocks/sec''
-				,''Lock Waits/sec''
-				,''Latch Waits/sec''
+				 'Lock Timeouts/sec'
+				,'Lock Timeouts (timeout > 0)/sec'
+				,'Number of Deadlocks/sec'
+				,'Lock Waits/sec'
+				,'Latch Waits/sec'
 			)
 		)
+)
 
 INSERT INTO @PCounters select * from PerfCounters
 
@@ -1059,8 +1078,9 @@ SELECT
 		WHEN '_Total' THEN 'Total' 
 		ELSE ISNULL(pc.[instance_name],'') 
 	END AS [instance]
-	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value],
+	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value]
 	,cast(pc.[cntr_type] as varchar(25)) as [counter_type]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 from @PCounters pc
 LEFT OUTER JOIN @PCounters AS pc1
 	ON (
@@ -1090,8 +1110,7 @@ SELECT
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,DB_NAME() as [database_name]
 	,s.[session_id]
-	,ISNULL(r.[request_id], 0) as [request_id]
-	,DB_NAME(s.[database_id]) as [session_db_name]
+	,ISNULL(r.[request_id], 0) as [request_id]	
 	,COALESCE(r.[status], s.[status]) AS [status]
 	,COALESCE(r.[cpu_time], s.[cpu_time]) AS [cpu_time_ms]
 	,COALESCE(r.[total_elapsed_time], s.[total_elapsed_time]) AS [total_elapsed_time_ms]
@@ -1131,6 +1150,7 @@ SELECT
 	,CONVERT(varchar(20),[query_hash],1) as [query_hash]
 	,CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
 	,DB_NAME(COALESCE(r.[database_id], s.[database_id])) AS [session_db_name]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.dm_exec_sessions AS s
 LEFT OUTER JOIN sys.dm_exec_requests AS r 
 	ON s.[session_id] = r.[session_id]
@@ -1173,5 +1193,6 @@ SELECT
 	,s.[yield_count]
 	,s.[total_cpu_usage_ms]
 	,s.[total_scheduler_delay_ms]
+	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.dm_os_schedulers AS s
 `

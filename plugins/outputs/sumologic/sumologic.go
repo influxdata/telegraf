@@ -75,7 +75,7 @@ const (
 
 	defaultClientTimeout      = 5 * time.Second
 	defaultMethod             = http.MethodPost
-	defaultMaxRequestBodySize = 1_000_000
+	defaultMaxRequestBodySize = 1000000
 
 	contentTypeHeader     = "Content-Type"
 	carbon2ContentType    = "application/vnd.sumologic.carbon2"

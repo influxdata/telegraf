@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
@@ -78,10 +79,11 @@ func (rmr *MgProvider) Connect() (WinServiceManager, error) {
 }
 
 var sampleConfig = `
-  ## Names of the services to monitor. Leave empty to monitor all the available services on the host
+  ## Names of the services to monitor. Leave empty to monitor all the available services on the host. Globs accepted.
   service_names = [
     "LanmanServer",
-    "TermService",
+	"TermService",
+	"Win*",
   ]
 `
 
@@ -93,6 +95,8 @@ type WinServices struct {
 
 	ServiceNames []string `toml:"service_names"`
 	mgrProvider  ManagerProvider
+
+	servicesFilter filter.Filter
 }
 
 type ServiceInfo struct {
@@ -100,6 +104,16 @@ type ServiceInfo struct {
 	DisplayName string
 	State       int
 	StartUpMode int
+}
+
+func (m *WinServices) Init() error {
+	var err error
+	m.servicesFilter, err = filter.NewIncludeExcludeFilter(m.ServiceNames, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *WinServices) Description() string {
@@ -117,7 +131,7 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 	}
 	defer scmgr.Disconnect()
 
-	serviceNames, err := listServices(scmgr, m.ServiceNames)
+	serviceNames, err := m.listServices(scmgr)
 	if err != nil {
 		return err
 	}
@@ -152,16 +166,20 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 }
 
 // listServices returns a list of services to gather.
-func listServices(scmgr WinServiceManager, userServices []string) ([]string, error) {
-	if len(userServices) != 0 {
-		return userServices, nil
-	}
-
+func (m *WinServices) listServices(scmgr WinServiceManager) ([]string, error) {
 	names, err := scmgr.ListServices()
 	if err != nil {
 		return nil, fmt.Errorf("Could not list services: %s", err)
 	}
-	return names, nil
+
+	var services []string
+	for _, n := range names {
+		if m.servicesFilter.Match(n) {
+			services = append(services, n)
+		}
+	}
+
+	return services, nil
 }
 
 // collectServiceInfo gathers info about a service.

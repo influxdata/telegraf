@@ -2,6 +2,7 @@ package basicstats
 
 import (
 	"math"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
@@ -25,6 +26,9 @@ type configuredStats struct {
 	sum               bool
 	diff              bool
 	non_negative_diff bool
+	rate              bool
+	non_negative_rate bool
+	interval          bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -40,14 +44,17 @@ type aggregate struct {
 }
 
 type basicstats struct {
-	count float64
-	min   float64
-	max   float64
-	sum   float64
-	mean  float64
-	diff  float64
-	M2    float64 //intermediate value for variance/stdev
-	LAST  float64 //intermediate value for diff
+	count    float64
+	min      float64
+	max      float64
+	sum      float64
+	mean     float64
+	diff     float64
+	rate     float64
+	interval time.Duration
+	M2       float64   //intermediate value for variance/stdev
+	LAST     float64   //intermediate value for diff
+	TIME     time.Time //intermediate value for rate
 }
 
 var sampleConfig = `
@@ -88,8 +95,10 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 					mean:  fv,
 					sum:   fv,
 					diff:  0.0,
+					rate:  0.0,
 					M2:    0.0,
 					LAST:  fv,
+					TIME:  in.Time(),
 				}
 			}
 		}
@@ -100,14 +109,17 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 				if _, ok := b.cache[id].fields[field.Key]; !ok {
 					// hit an uncached field of a cached metric
 					b.cache[id].fields[field.Key] = basicstats{
-						count: 1,
-						min:   fv,
-						max:   fv,
-						mean:  fv,
-						sum:   fv,
-						diff:  0.0,
-						M2:    0.0,
-						LAST:  fv,
+						count:    1,
+						min:      fv,
+						max:      fv,
+						mean:     fv,
+						sum:      fv,
+						diff:     0.0,
+						rate:     0.0,
+						interval: 0,
+						M2:       0.0,
+						LAST:     fv,
+						TIME:     in.Time(),
 					}
 					continue
 				}
@@ -138,6 +150,12 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 				tmp.sum += fv
 				//diff compute
 				tmp.diff = fv - tmp.LAST
+				//interval compute
+				tmp.interval = in.Time().Sub(tmp.TIME)
+				//rate compute
+				if !in.Time().Equal(tmp.TIME) {
+					tmp.rate = tmp.diff / tmp.interval.Seconds()
+				}
 				//store final data
 				b.cache[id].fields[field.Key] = tmp
 			}
@@ -182,7 +200,15 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 				if b.statsConfig.non_negative_diff && v.diff >= 0 {
 					fields[k+"_non_negative_diff"] = v.diff
 				}
-
+				if b.statsConfig.rate {
+					fields[k+"_rate"] = v.rate
+				}
+				if b.statsConfig.non_negative_rate && v.diff >= 0 {
+					fields[k+"_non_negative_rate"] = v.rate
+				}
+				if b.statsConfig.interval {
+					fields[k+"_interval"] = v.interval.Nanoseconds()
+				}
 			}
 			//if count == 1 StdDev = infinite => so I won't send data
 		}
@@ -217,7 +243,12 @@ func (b *BasicStats) parseStats() *configuredStats {
 			parsed.diff = true
 		case "non_negative_diff":
 			parsed.non_negative_diff = true
-
+		case "rate":
+			parsed.rate = true
+		case "non_negative_rate":
+			parsed.non_negative_rate = true
+		case "interval":
+			parsed.interval = true
 		default:
 			b.Log.Warnf("Unrecognized basic stat %q, ignoring", name)
 		}
@@ -237,6 +268,8 @@ func (b *BasicStats) getConfiguredStats() {
 			stdev:             true,
 			sum:               false,
 			non_negative_diff: false,
+			rate:              false,
+			non_negative_rate: false,
 		}
 	} else {
 		b.statsConfig = b.parseStats()

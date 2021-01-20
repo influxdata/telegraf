@@ -175,7 +175,9 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 
 // Stop cleans up all resources
 func (h *HTTPListenerV2) Stop() {
-	h.listener.Close()
+	if h.listener != nil {
+		h.listener.Close()
+	}
 	h.wg.Wait()
 }
 

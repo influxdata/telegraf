@@ -1,12 +1,13 @@
 package proxmox
 
 import (
-	"github.com/bmizerany/assert"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/bmizerany/assert"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 var nodeSearchDomainTestData = `{"data":{"search":"test.example.com","dns1":"1.0.0.1"}}`

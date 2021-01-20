@@ -316,7 +316,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []telegraf.Metric) error {
 	loc, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed making write url: %s", err.Error())
 	}
 
 	reader, err := c.requestBodyReader(metrics)
@@ -327,13 +327,13 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 
 	req, err := c.makeWriteRequest(loc, reader)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed making write req: %s", err.Error())
 	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
 		internal.OnClientError(c.client, err)
-		return err
+		return fmt.Errorf("failed doing req: %s", err.Error())
 	}
 	defer resp.Body.Close()
 
@@ -426,7 +426,7 @@ func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request
 
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed creating new request: %s", err.Error())
 	}
 
 	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
