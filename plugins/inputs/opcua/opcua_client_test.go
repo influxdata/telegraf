@@ -2,9 +2,7 @@ package opcua_client
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/stretchr/testify/assert"
@@ -19,52 +17,53 @@ type OPCTags struct {
 	Want           string
 }
 
-func TestClient1(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+// Test not working - dial tcp 195.254.227.245:4840: connect: connection refused
+// func TestClient1Integration(t *testing.T) {
+// 	if testing.Short() {
+// 		t.Skip("Skipping integration test in short mode")
+// 	}
 
-	var testopctags = []OPCTags{
-		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
-		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
-		{"ManufacturerName", "0", "i", "2263", "open62541"},
-	}
+// 	var testopctags = []OPCTags{
+// 		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
+// 		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
+// 		{"ManufacturerName", "0", "i", "2263", "open62541"},
+// 	}
 
-	var o OpcUA
-	var err error
+// 	var o OpcUA
+// 	var err error
 
-	o.MetricName = "testing"
-	o.Endpoint = "opc.tcp://opcua.rocks:4840"
-	o.AuthMethod = "Anonymous"
-	o.ConnectTimeout = config.Duration(10 * time.Second)
-	o.RequestTimeout = config.Duration(1 * time.Second)
-	o.SecurityPolicy = "None"
-	o.SecurityMode = "None"
-	for _, tags := range testopctags {
-		o.RootNodes = append(o.RootNodes, MapOPCTag(tags))
-	}
-	err = o.Init()
-	if err != nil {
-		t.Errorf("Initialize Error: %s", err)
-	}
-	err = Connect(&o)
-	if err != nil {
-		t.Fatalf("Connect Error: %s", err)
-	}
+// 	o.MetricName = "testing"
+// 	o.Endpoint = "opc.tcp://opcua.rocks:4840"
+// 	o.AuthMethod = "Anonymous"
+// 	o.ConnectTimeout = config.Duration(10 * time.Second)
+// 	o.RequestTimeout = config.Duration(1 * time.Second)
+// 	o.SecurityPolicy = "None"
+// 	o.SecurityMode = "None"
+// 	for _, tags := range testopctags {
+// 		o.RootNodes = append(o.RootNodes, MapOPCTag(tags))
+// 	}
+// 	err = o.Init()
+// 	if err != nil {
+// 		t.Errorf("Initialize Error: %s", err)
+// 	}
+// 	err = Connect(&o)
+// 	if err != nil {
+// 		t.Fatalf("Connect Error: %s", err)
+// 	}
 
-	for i, v := range o.nodeData {
-		if v.Value != nil {
-			types := reflect.TypeOf(v.Value)
-			value := reflect.ValueOf(v.Value)
-			compare := fmt.Sprintf("%v", value.Interface())
-			if compare != testopctags[i].Want {
-				t.Errorf("Tag %s: Values %v for type %s  does not match record", o.nodes[i].tag.FieldName, value.Interface(), types)
-			}
-		} else {
-			t.Errorf("Tag: %s has value: %v", o.nodes[i].tag.FieldName, v.Value)
-		}
-	}
-}
+// 	for i, v := range o.nodeData {
+// 		if v.Value != nil {
+// 			types := reflect.TypeOf(v.Value)
+// 			value := reflect.ValueOf(v.Value)
+// 			compare := fmt.Sprintf("%v", value.Interface())
+// 			if compare != testopctags[i].Want {
+// 				t.Errorf("Tag %s: Values %v for type %s  does not match record", o.nodes[i].tag.FieldName, value.Interface(), types)
+// 			}
+// 		} else {
+// 			t.Errorf("Tag: %s has value: %v", o.nodes[i].tag.FieldName, v.Value)
+// 		}
+// 	}
+// }
 
 func MapOPCTag(tags OPCTags) (out NodeSettings) {
 	out.FieldName = tags.Name

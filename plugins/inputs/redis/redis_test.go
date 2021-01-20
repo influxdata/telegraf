@@ -28,7 +28,7 @@ func (t *testClient) Do(returnType string, args ...interface{}) (interface{}, er
 	return 2, nil
 }
 
-func TestRedisConnect(t *testing.T) {
+func TestRedisConnectIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

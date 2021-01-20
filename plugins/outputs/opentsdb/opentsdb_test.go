@@ -165,7 +165,8 @@ func BenchmarkHttpSend(b *testing.B) {
 	}
 }
 
-// func TestWrite(t *testing.T) {
+// Error line 181: OpenTSDB Telnet connect fail: dial tcp 127.0.0.1:4242: connect: connection refused
+// func TestWriteIntegration(t *testing.T) {
 // 	if testing.Short() {
 // 		t.Skip("Skipping integration test in short mode")
 // 	}

@@ -44,7 +44,7 @@ func getEventLog(t *testing.T, since time.Time) []Event {
 	return events.Events
 }
 
-func TestEventLog(t *testing.T) {
+func TestEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -67,7 +67,7 @@ func TestEventLog(t *testing.T) {
 	assert.Contains(t, events, Event{Message: "Err message", Level: Error})
 }
 
-func TestRestrictedEventLog(t *testing.T) {
+func TestRestrictedEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in  short mode")
 	}
