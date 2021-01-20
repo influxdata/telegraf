@@ -1,0 +1,40 @@
+#version 3 doesn't have depends_on condition service_healthy
+version: '2.4'
+
+networks:
+  integration:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.0.0/8 # test expects netsnmp containter to be 10.0.0.3
+
+services:
+  telegraf_test:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.test
+    networks:
+      - integration
+    volumes:
+      - ../../../..:/go/src/github.com/influxdata/telegraf
+    healthcheck:
+#I haven't been able to get any shell command to work when provided as a string
+#      test: "ss -lun|grep :12399"
+#A list starting with CMD-SHELL is supposed to be equivalent but does work
+      test: ["CMD-SHELL", "ss -lun|grep :12399"]
+      interval: 1s
+      retries: 40
+      #enough to download and build module dependencies,
+      #build and run the test, then open the port
+  netsnmp:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.netsnmp
+    restart: on-failure
+    networks:
+      - integration
+    depends_on:
+      telegraf_test:
+        condition: service_healthy
+    volumes:
+      - .:/app #the image runs /app/send.sh

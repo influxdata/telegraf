@@ -1,0 +1,9 @@
+FROM golang:1.15-alpine
+
+RUN set -ex; \
+    apk update; \
+    apk add --no-cache git iproute2
+
+WORKDIR /go/src/github.com/influxdata/telegraf/plugins/inputs/snmp_trap
+
+CMD CGO_ENABLED=0 go test -run Integration
