@@ -18,6 +18,7 @@ This plugin gathers metrics about network interface and protocol usage (Linux on
   ## Setting ignore_protocol_stats to true will skip reporting of protocol metrics.
   ##
   # ignore_protocol_stats = false
+  ##
 ```
 
 ### Measurements & Fields:

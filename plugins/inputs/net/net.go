@@ -35,6 +35,7 @@ var netSampleConfig = `
   ## Setting ignore_protocol_stats to true will skip reporting of protocol metrics.
   ##
   # ignore_protocol_stats = false
+  ##
 `
 
 func (_ *NetIOStats) SampleConfig() string {
@@ -61,6 +62,7 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 	for _, iface := range interfaces {
 		interfacesByName[iface.Name] = iface
 	}
+
 	for _, io := range netio {
 		if len(s.Interfaces) != 0 {
 			var found bool
@@ -102,6 +104,7 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 			"drop_out":     io.Dropout,
 		}
 		acc.AddCounter("net", fields, tags)
+	}
 
 	// Get system wide stats for different network protocols
 	// (ignore these stats if the call fails)

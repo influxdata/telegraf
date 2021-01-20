@@ -25,9 +25,9 @@ type DiskIO struct {
 
 	Log telegraf.Logger
 
-	infoCache        map[string]diskInfoCache
-	deviceFilter     filter.Filter
-	initialized      bool
+	infoCache    map[string]diskInfoCache
+	deviceFilter filter.Filter
+	initialized  bool
 }
 
 func (_ *DiskIO) Description() string {

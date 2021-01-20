@@ -15,8 +15,8 @@ type DiskStats struct {
 	// Legacy support
 	Mountpoints []string `toml:"mountpoints"`
 
-	MountPoints     []string `toml:"mount_points"`
-	IgnoreFS        []string `toml:"ignore_fs"`
+	MountPoints []string `toml:"mount_points"`
+	IgnoreFS    []string `toml:"ignore_fs"`
 }
 
 func (_ *DiskStats) Description() string {
@@ -46,6 +46,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("error getting disk usage info: %s", err)
 	}
+
 	for i, du := range disks {
 		if du.Total == 0 {
 			// Skip dummy filesystem (procfs, cgroupfs, ...)
@@ -75,6 +76,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 		}
 		acc.AddGauge("disk", fields, tags)
 	}
+
 	return nil
 }
 
