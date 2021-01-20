@@ -241,7 +241,7 @@ func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
 			ii++
 			quantity++
 		}
-		ii++
+
 		registersRange = append(registersRange, registerRange{start, end - start + 1})
 	}
 
