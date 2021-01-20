@@ -292,11 +292,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 			return fmt.Errorf("unable to create new request '%s': %s", u.URL.String(), err)
 		}
 	}
-	acceptHeader := ""
+	acceptHeader := "application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1"
 	if p.MetricVersion == 2 {
 		acceptHeader = "proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1"
-	} else {
-		acceptHeader = "application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1"
 	}
 	req.Header.Add("Accept", acceptHeader)
 
