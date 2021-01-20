@@ -52,7 +52,7 @@ Current areas we have integration tests:
 | Outputs: MQTT                      | Is the only test                          |                          
 | Outputs: Nats                      | Is the only test                          |                          
 | Outputs: NSQ                       | Is the only test                          |                          
-| Outputs: Opentsb                   | Currently in a broken state               |                          
+| Outputs: Opentsdb                  | Currently in a broken state               |                          
 | Logger: Event logger               |                                           |                          
 
 Areas we would benefit most from new integration tests:
