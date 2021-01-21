@@ -8,7 +8,7 @@ The main focus for development of this plugin is Azure IoT hub:
 
 1. Create an Azure IoT Hub by following any of the guides provided here: https://docs.microsoft.com/en-us/azure/iot-hub/
 2. Create a device, for example a [simulated Raspberry Pi](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-raspberry-pi-web-simulator-get-started)
-3. The connection string needed for the plugin is located under *Shared access policies*, both the *iothubowner* and *service* policies should work
+3. The connection string needed for the plugin is located under _Shared access policies_, both the _iothubowner_ and _service_ policies should work
 
 ### Configuration
 
@@ -103,3 +103,62 @@ The main focus for development of this plugin is Azure IoT hub:
 [Full documentation of the available environment variables][envvar].
 
 [envvar]: https://github.com/Azure/azure-event-hubs-go#environment-variables
+
+### Example
+
+If we stream diagnostic setting 'AllMetrics' from one of Azure services to Eventhub,
+our EventHub data may look like this:
+
+```json
+{
+  "records": [
+    {
+      "count": 3,
+      "total": 6,
+      "average": 2,
+      "resourceId": "/SUBSCRIPTIONS/123-**-456/LONG-STRING-HERE",
+      "time": "2020-12-03T06:46:00.0000000Z",
+      "metricName": "someMetricNameHere",
+      "timeGrain": "PT1M"
+    }
+  ]
+}
+```
+
+If so, our plugin configuration (one of the options) should be:
+
+```toml
+  ## We will keep connection_string commented, as we want to use environment variables
+  # connection_string = ""
+
+  ## Options between connection_string and data_format will be default and are not specified here
+
+  ## Our data is in json, we should explicitly specify this.
+  ## More information on telegraf json parser can be found here:
+  ## https://github.com/influxdata/telegraf/tree/master/plugins/parsers/json
+  data_format = "json"
+
+  ## We need to parse a specific chunk of our data: records array
+  ## If we don't specify this, our data will be parsed as an object with one value.
+  ## What we want is to parse an array of objects
+  json_query = "records"
+
+  ## We need to explicitly specify in which field to find the name of our metric, as well as the time
+  json_name_key = "metricName"
+  json_time_key = "time"
+
+  ## Explicitly specify time format (in this case it's RCF3339Nano)
+  json_time_format = "2006-1-2T15:4:5.999999999Z07:00"
+  json_timezone = "UTC"
+
+  ## All string/boolean fields should be explicitly specified, otherwise they will be ignored.
+  ## In our example we have 2 string fields: resourceId and timeGrain.
+  ## Here we define resourceId as a tag and we omit timeGrain as we don't want this field
+  tag_keys = ["resourceId"]
+  ## If we wanted timeGrain to be present, but not as a tag, we could do it like this:
+  # json_string_fields = ["timeGrain"]
+
+  ## We want to add a custom tag to all the parsed metrics
+  [inputs.eventhub_consumer.tags]
+    azure_env = "development"
+```
