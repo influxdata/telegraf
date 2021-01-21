@@ -150,7 +150,6 @@ require (
 	google.golang.org/grpc v1.33.1
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
-	gopkg.in/jcmturner/gokrb5.v7 v7.3.0 // indirect
 	gopkg.in/ldap.v2 v2.5.1
 	gopkg.in/ldap.v3 v3.1.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
