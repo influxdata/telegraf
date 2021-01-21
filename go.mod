@@ -99,7 +99,7 @@ require (
 	github.com/nats-io/nats-server/v2 v2.1.4
 	github.com/nats-io/nats.go v1.9.1
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.5.1
-	github.com/nsqio/go-nsq v1.0.7
+	github.com/nsqio/go-nsq v1.0.8
 	github.com/openconfig/gnmi v0.0.0-20180912164834-33a1865c3029
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
