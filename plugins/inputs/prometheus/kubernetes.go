@@ -254,7 +254,8 @@ func podHasMatchingLabelSelector(pod *corev1.Pod, selector labels.Selector) bool
 func podHasMatchingFieldSelector(pod *corev1.Pod, p *Prometheus, fieldSelector fields.Selector) bool {
 	var fs fields.Set = make(map[string]string)
 	
-	for field := range fs {
+	for _, requirement := range fieldSelector.Requirements() {
+		field := requirement.Field
 
 		// Not all fields can be selected. See link above for the list
 		var value string
