@@ -6,9 +6,12 @@ import (
 	"strings"
 )
 
-const emptyServerName = "<empty-server-name>"
-const emptyDatabaseName = "<empty-database-name>"
 const odbcPrefix = "odbc:"
+
+const (
+	emptyServerName   = "<empty-server-name>"
+	emptyDatabaseName = "<empty-database-name>"
+)
 
 // getConnectionIdentifiers returns the sqlInstance and databaseName from the given connection string.
 // The name of the server is returned as-is in the connection string
@@ -58,12 +61,12 @@ func parseConnectionStringKeyValue(connectionString string) (sqlInstance string,
 		if isInstanceIdentifier(key) {
 			sqlInstance = value
 			if databaseName != emptyDatabaseName {
-				break
+				return
 			}
 		} else if isDatabaseIdentifier(key) {
 			databaseName = value
 			if sqlInstance != emptyServerName {
-				break
+				return
 			}
 		}
 	}

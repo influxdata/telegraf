@@ -46,16 +46,20 @@ type HealthMetric struct {
 
 const defaultServer = "Server=.;app name=telegraf;log=1;"
 
-const typeAzureSQLDB = "AzureSQLDB"
-const typeAzureSQLManagedInstance = "AzureSQLManagedInstance"
-const typeSQLServer = "SQLServer"
+const (
+	typeAzureSQLDB              = "AzureSQLDB"
+	typeAzureSQLManagedInstance = "AzureSQLManagedInstance"
+	typeSQLServer               = "SQLServer"
+)
 
-const healthMetricName = "sqlserver_telegraf_health"
-const healthMetricInstanceTag = "connection_sql_instance"
-const healthMetricDatabaseTag = "connection_database_name"
-const healthMetricAttemptedQueries = "AttemptedQueries"
-const healthMetricSuccessfulQueries = "SuccessfulQueries"
-const healthMetricDatabaseType = "DatabaseType"
+const (
+	healthMetricName              = "sqlserver_telegraf_health"
+	healthMetricInstanceTag       = "connection_sql_instance"
+	healthMetricDatabaseTag       = "connection_database_name"
+	healthMetricAttemptedQueries  = "AttemptedQueries"
+	healthMetricSuccessfulQueries = "SuccessfulQueries"
+	healthMetricDatabaseType      = "DatabaseType"
+)
 
 const sampleConfig = `
 ## Specify instances to monitor with a list of connection strings.
