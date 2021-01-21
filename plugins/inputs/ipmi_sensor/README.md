@@ -65,7 +65,7 @@ Any of the following parameters will be added to the aformentioned query if they
   ## If ipmitool should use a cache
   ## for me ipmitool runs about 2 to 10 times faster with cache enabled on HP G10 servers (when using ubuntu20.04)
   ## the cache file may not work well for you if some sensors come up late
-  # use_cache = true
+  # use_cache = false
 
   ## Path to the ipmitools cache file (defaults to OS temp dir)
   # cache_path = ""
