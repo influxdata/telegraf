@@ -81,6 +81,14 @@ var sampleConfig = `
   # num_histogram_buckets = 100 # default: 10
 `
 
+// On the random chance a hex value is all digits
+// these are fields that can contain hex and should always be strings
+var protectedHexFields = map[string]bool{
+	"node_name":       true,
+	"cluster_key":     true,
+	"paxos_principal": true,
+}
+
 func (a *Aerospike) SampleConfig() string {
 	return sampleConfig
 }
@@ -238,8 +246,9 @@ func (a *Aerospike) parseNodeInfo(stats map[string]string, hostPort string, node
 	fields := make(map[string]interface{})
 
 	for k, v := range stats {
-		val := parseValue(v)
-		fields[strings.Replace(k, "-", "_", -1)] = val
+		key := strings.Replace(k, "-", "_", -1)
+		fields[key] = parseAerospikeValue(key, v)
+
 	}
 	acc.AddFields("aerospike_node", fields, tags, time.Now())
 
@@ -284,8 +293,8 @@ func (a *Aerospike) parseNamespaceInfo(stats map[string]string, hostPort string,
 		if len(parts) < 2 {
 			continue
 		}
-		val := parseValue(parts[1])
-		nFields[strings.Replace(parts[0], "-", "_", -1)] = val
+		key := strings.Replace(parts[0], "-", "_", -1)
+		nFields[key] = parseAerospikeValue(key, parts[1])
 	}
 	acc.AddFields("aerospike_namespace", nFields, nTags, time.Now())
 
@@ -355,8 +364,8 @@ func (a *Aerospike) parseSetInfo(stats map[string]string, hostPort string, names
 			continue
 		}
 
-		val := parseValue(pieces[1])
-		nFields[strings.Replace(pieces[0], "-", "_", -1)] = val
+		key := strings.Replace(pieces[0], "-", "_", -1)
+		nFields[key] = parseAerospikeValue(key, pieces[1])
 	}
 	acc.AddFields("aerospike_set", nFields, nTags, time.Now())
 
@@ -436,7 +445,7 @@ func (a *Aerospike) parseHistogram(stats map[string]string, hostPort string, nam
 				for i, bucket := range buckets {
 					// Sum records and increment bucket collection counter
 					if bucketCount < numRecordsPerBucket {
-						bucketSum = bucketSum + parseValue(bucket).(int64)
+						bucketSum = bucketSum + parseAerospikeValue("", bucket).(int64)
 						bucketCount++
 					}
 
@@ -469,8 +478,10 @@ func splitNamespaceSet(namespaceSet string) (string, string) {
 	return split[0], split[1]
 }
 
-func parseValue(v string) interface{} {
-	if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
+func parseAerospikeValue(key string, v string) interface{} {
+	if protectedHexFields[key] {
+		return v
+	} else if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
 		return parsed
 	} else if parsed, err := strconv.ParseUint(v, 10, 64); err == nil {
 		return parsed

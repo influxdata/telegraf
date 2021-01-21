@@ -53,7 +53,7 @@ services:
       - "6432:6432"
   postgres:
     image: postgres:alpine
-    environment: 
+    environment:
       - POSTGRES_HOST_AUTH_METHOD=trust
     ports:
       - "5432:5432"

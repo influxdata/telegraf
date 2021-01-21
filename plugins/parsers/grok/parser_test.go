@@ -1115,22 +1115,3 @@ func TestTrimRegression(t *testing.T) {
 	)
 	require.Equal(t, expected, actual)
 }
-
-func TestAdvanceFieldName(t *testing.T) {
-	p := &Parser{
-		Patterns: []string{`rts=%{NUMBER:response-time.s} local=%{IP:local-ip} remote=%{IP:remote.ip}`},
-	}
-	assert.NoError(t, p.Compile())
-
-	metricA, err := p.ParseLine(`rts=1.283 local=127.0.0.1 remote=10.0.0.1`)
-	require.NotNil(t, metricA)
-	assert.NoError(t, err)
-	assert.Equal(t,
-		map[string]interface{}{
-			"response-time.s": "1.283",
-			"local-ip":        "127.0.0.1",
-			"remote.ip":       "10.0.0.1",
-		},
-		metricA.Fields())
-	assert.Equal(t, map[string]string{}, metricA.Tags())
-}

@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/glinton/ping"
@@ -289,7 +290,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	c := ping.Client{}
 
 	var doErr error
-	var packetsSent int
+	var packetsSent int32
 
 	type sentReq struct {
 		err  error
@@ -304,7 +305,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 				doErr = sent.err
 			}
 			if sent.sent {
-				packetsSent++
+				atomic.AddInt32(&packetsSent, 1)
 			}
 		}
 		r.Done()
@@ -387,7 +388,7 @@ func percentile(values durationSlice, perc int) time.Duration {
 	}
 }
 
-func onFin(packetsSent int, resps []*ping.Response, err error, destination string, percentiles []int) (map[string]string, map[string]interface{}) {
+func onFin(packetsSent int32, resps []*ping.Response, err error, destination string, percentiles []int) (map[string]string, map[string]interface{}) {
 	packetsRcvd := len(resps)
 
 	tags := map[string]string{"url": destination}
@@ -412,7 +413,7 @@ func onFin(packetsSent int, resps []*ping.Response, err error, destination strin
 		return tags, fields
 	}
 
-	fields["percent_packet_loss"] = float64(packetsSent-packetsRcvd) / float64(packetsSent) * 100
+	fields["percent_packet_loss"] = float64(int(packetsSent)-packetsRcvd) / float64(packetsSent) * 100
 	ttl := resps[0].TTL
 
 	var min, max, avg, total time.Duration

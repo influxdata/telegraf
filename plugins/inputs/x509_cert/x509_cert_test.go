@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -346,4 +348,40 @@ func TestGatherCert(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t, acc.HasMeasurement("x509_cert"))
+}
+
+func TestServerName(t *testing.T) {
+	tests := []struct {
+		name     string
+		fromTLS  string
+		fromCfg  string
+		url      string
+		expected string
+		err      bool
+	}{
+		{name: "in cfg", fromCfg: "example.com", url: "https://other.example.com", expected: "example.com"},
+		{name: "in tls", fromTLS: "example.com", url: "https://other.example.com", expected: "example.com"},
+		{name: "from URL", url: "https://other.example.com", expected: "other.example.com"},
+		{name: "errors", fromCfg: "otherex.com", fromTLS: "example.com", url: "https://other.example.com", err: true},
+	}
+
+	for _, elt := range tests {
+		test := elt
+		t.Run(test.name, func(t *testing.T) {
+			sc := &X509Cert{
+				ServerName:   test.fromCfg,
+				ClientConfig: _tls.ClientConfig{ServerName: test.fromTLS},
+			}
+			sc.Init()
+			u, err := url.Parse(test.url)
+			require.NoError(t, err)
+			actual, err := sc.serverName(u)
+			if test.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, test.expected, actual)
+		})
+	}
 }
