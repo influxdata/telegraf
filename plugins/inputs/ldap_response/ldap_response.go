@@ -1,6 +1,7 @@
 package ldap_response
 
 import (
+	ctls "crypto/tls"
 	"fmt"
 	"strconv"
 	"strings"
@@ -88,7 +89,8 @@ func (l *Ldap) Gather(acc telegraf.Accumulator) error {
 			TLSCA:              l.SslCa,
 			InsecureSkipVerify: l.InsecureSkipVerify,
 		}
-		tlsConfig, err := clientConfig.TLSConfig()
+		var tlsConfig *ctls.Config
+		tlsConfig, err = clientConfig.TLSConfig()
 		if err != nil {
 			acc.AddError(err)
 			return nil
