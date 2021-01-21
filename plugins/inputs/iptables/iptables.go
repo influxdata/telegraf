@@ -17,6 +17,7 @@ import (
 type Iptables struct {
 	UseSudo bool
 	UseLock bool
+	Binary  string
 	Table   string
 	Chains  []string
 	lister  chainLister
@@ -33,14 +34,18 @@ func (ipt *Iptables) SampleConfig() string {
   ## iptables require root access on most systems.
   ## Setting 'use_sudo' to true will make use of sudo to run iptables.
   ## Users must configure sudo to allow telegraf user to run iptables with no password.
-  ## iptables can be restricted to only list command "iptables -nvL"
+  ## iptables can be restricted to only list command "iptables -nvL".
   use_sudo = false
   ## Setting 'use_lock' to true runs iptables with the "-w" option.
-  ## Adjust your sudo settings appropriately if using this option ("iptables -wnvl")
+  ## Adjust your sudo settings appropriately if using this option ("iptables -w 5 -nvl")
   use_lock = false
+  ## Define an alternate executable, such as "ip6tables". Default is "iptables".
+  # binary = "ip6tables"
   ## defines the table to monitor:
   table = "filter"
-  ## defines the chains to monitor:
+  ## defines the chains to monitor.
+  ## NOTE: iptables rules without a comment will not be monitored.
+  ## Read the plugin documentation for more information.
   chains = [ "INPUT" ]
 `
 }
@@ -52,24 +57,29 @@ func (ipt *Iptables) Gather(acc telegraf.Accumulator) error {
 	}
 	// best effort : we continue through the chains even if an error is encountered,
 	// but we keep track of the last error.
-	var err error
 	for _, chain := range ipt.Chains {
 		data, e := ipt.lister(ipt.Table, chain)
 		if e != nil {
-			err = e
+			acc.AddError(e)
 			continue
 		}
 		e = ipt.parseAndGather(data, acc)
 		if e != nil {
-			err = e
+			acc.AddError(e)
 			continue
 		}
 	}
-	return err
+	return nil
 }
 
 func (ipt *Iptables) chainList(table, chain string) (string, error) {
-	iptablePath, err := exec.LookPath("iptables")
+	var binary string
+	if ipt.Binary != "" {
+		binary = ipt.Binary
+	} else {
+		binary = "iptables"
+	}
+	iptablePath, err := exec.LookPath(binary)
 	if err != nil {
 		return "", err
 	}
@@ -79,11 +89,10 @@ func (ipt *Iptables) chainList(table, chain string) (string, error) {
 		name = "sudo"
 		args = append(args, iptablePath)
 	}
-	iptablesBaseArgs := "-nvL"
 	if ipt.UseLock {
-		iptablesBaseArgs = "-wnvL"
+		args = append(args, "-w", "5")
 	}
-	args = append(args, iptablesBaseArgs, chain, "-t", table, "-x")
+	args = append(args, "-nvL", chain, "-t", table, "-x")
 	c := exec.Command(name, args...)
 	out, err := c.Output()
 	return string(out), err
@@ -93,8 +102,8 @@ const measurement = "iptables"
 
 var errParse = errors.New("Cannot parse iptables list information")
 var chainNameRe = regexp.MustCompile(`^Chain\s+(\S+)`)
-var fieldsHeaderRe = regexp.MustCompile(`^\s*pkts\s+bytes\s+`)
-var valuesRe = regexp.MustCompile(`^\s*([0-9]+)\s+([0-9]+)\s+.*?(/\*\s(.*)\s\*/)?$`)
+var fieldsHeaderRe = regexp.MustCompile(`^\s*pkts\s+bytes\s+target`)
+var valuesRe = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+(\w+).*?/\*\s*(.+?)\s*\*/\s*`)
 
 func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error {
 	lines := strings.Split(data, "\n")
@@ -109,17 +118,28 @@ func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error
 		return errParse
 	}
 	for _, line := range lines[2:] {
-		mv := valuesRe.FindAllStringSubmatch(line, -1)
-		// best effort : if line does not match or rule is not commented forget about it
-		if len(mv) == 0 || len(mv[0]) != 5 || mv[0][4] == "" {
+		matches := valuesRe.FindStringSubmatch(line)
+		if len(matches) != 5 {
 			continue
 		}
-		tags := map[string]string{"table": ipt.Table, "chain": mchain[1], "ruleid": mv[0][4]}
+
+		pkts := matches[1]
+		bytes := matches[2]
+		target := matches[3]
+		comment := matches[4]
+
+		tags := map[string]string{"table": ipt.Table, "chain": mchain[1], "target": target, "ruleid": comment}
 		fields := make(map[string]interface{})
-		// since parse error is already catched by the regexp,
-		// we never enter ther error case here => no error check (but still need a test to cover the case)
-		fields["pkts"], _ = strconv.ParseUint(mv[0][1], 10, 64)
-		fields["bytes"], _ = strconv.ParseUint(mv[0][2], 10, 64)
+
+		var err error
+		fields["pkts"], err = strconv.ParseUint(pkts, 10, 64)
+		if err != nil {
+			continue
+		}
+		fields["bytes"], err = strconv.ParseUint(bytes, 10, 64)
+		if err != nil {
+			continue
+		}
 		acc.AddFields(measurement, fields, tags)
 	}
 	return nil

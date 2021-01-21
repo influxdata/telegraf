@@ -1,6 +1,6 @@
 # mandrill webhook
 
-You should configure your Mandrill's Webhooks to point at the `webhooks` service. To do this go to `mandrillapp.com/` and click `Settings > Webhooks`. In the resulting page, click on `Add a Webhook`, select all events, and set the `URL` to `http://<my_ip>:1619/mandrill`, and click on `Create Webhook`.
+You should configure your Mandrill's Webhooks to point at the `webhooks` service. To do this go to [mandrillapp.com](https://mandrillapp.com) and click `Settings > Webhooks`. In the resulting page, click on `Add a Webhook`, select all events, and set the `URL` to `http://<my_ip>:1619/mandrill`, and click on `Create Webhook`.
 
 ## Events
 

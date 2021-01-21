@@ -1,21 +1,32 @@
 package dns_query
 
 import (
-	"errors"
 	"fmt"
-	"github.com/miekg/dns"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
+	"github.com/miekg/dns"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
+)
+
+type ResultType uint64
+
+const (
+	Success ResultType = 0
+	Timeout            = 1
+	Error              = 2
 )
 
 type DnsQuery struct {
 	// Domains or subdomains to query
 	Domains []string
+
+	// Network protocol name
+	Network string
 
 	// Server to query
 	Servers []string
@@ -32,20 +43,23 @@ type DnsQuery struct {
 
 var sampleConfig = `
   ## servers to query
-  servers = ["8.8.8.8"] # required
+  servers = ["8.8.8.8"]
 
-  ## Domains or subdomains to query. "."(root) is default
-  domains = ["."] # optional
+  ## Network is the network protocol name.
+  # network = "udp"
 
-  ## Query record type. Default is "A"
-  ## Posible values: A, AAAA, CNAME, MX, NS, PTR, TXT, SOA, SPF, SRV.
-  record_type = "A" # optional
+  ## Domains or subdomains to query.
+  # domains = ["."]
 
-  ## Dns server port. 53 is default
-  port = 53 # optional
+  ## Query record type.
+  ## Possible values: A, AAAA, CNAME, MX, NS, PTR, TXT, SOA, SPF, SRV.
+  # record_type = "A"
 
-  ## Query timeout in seconds. Default is 2 seconds
-  timeout = 2 # optional
+  ## Dns server port.
+  # port = 53
+
+  ## Query timeout in seconds.
+  # timeout = 2
 `
 
 func (d *DnsQuery) SampleConfig() string {
@@ -56,28 +70,51 @@ func (d *DnsQuery) Description() string {
 	return "Query given DNS server and gives statistics"
 }
 func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
 	d.setDefaultValues()
 
-	errChan := errchan.New(len(d.Domains) * len(d.Servers))
 	for _, domain := range d.Domains {
 		for _, server := range d.Servers {
-			dnsQueryTime, err := d.getDnsQueryTime(domain, server)
-			errChan.C <- err
-			tags := map[string]string{
-				"server":      server,
-				"domain":      domain,
-				"record_type": d.RecordType,
-			}
+			wg.Add(1)
+			go func(domain, server string) {
+				fields := make(map[string]interface{}, 2)
+				tags := map[string]string{
+					"server":      server,
+					"domain":      domain,
+					"record_type": d.RecordType,
+				}
 
-			fields := map[string]interface{}{"query_time_ms": dnsQueryTime}
-			acc.AddFields("dns_query", fields, tags)
+				dnsQueryTime, rcode, err := d.getDnsQueryTime(domain, server)
+				if rcode >= 0 {
+					tags["rcode"] = dns.RcodeToString[rcode]
+					fields["rcode_value"] = rcode
+				}
+				if err == nil {
+					setResult(Success, fields, tags)
+					fields["query_time_ms"] = dnsQueryTime
+				} else if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+					setResult(Timeout, fields, tags)
+				} else if err != nil {
+					setResult(Error, fields, tags)
+					acc.AddError(err)
+				}
+
+				acc.AddFields("dns_query", fields, tags)
+
+				wg.Done()
+			}(domain, server)
 		}
 	}
 
-	return errChan.Error()
+	wg.Wait()
+	return nil
 }
 
 func (d *DnsQuery) setDefaultValues() {
+	if d.Network == "" {
+		d.Network = "udp"
+	}
+
 	if len(d.RecordType) == 0 {
 		d.RecordType = "NS"
 	}
@@ -96,34 +133,35 @@ func (d *DnsQuery) setDefaultValues() {
 	}
 }
 
-func (d *DnsQuery) getDnsQueryTime(domain string, server string) (float64, error) {
+func (d *DnsQuery) getDnsQueryTime(domain string, server string) (float64, int, error) {
 	dnsQueryTime := float64(0)
 
 	c := new(dns.Client)
 	c.ReadTimeout = time.Duration(d.Timeout) * time.Second
+	c.Net = d.Network
 
 	m := new(dns.Msg)
 	recordType, err := d.parseRecordType()
 	if err != nil {
-		return dnsQueryTime, err
+		return dnsQueryTime, -1, err
 	}
 	m.SetQuestion(dns.Fqdn(domain), recordType)
 	m.RecursionDesired = true
 
 	r, rtt, err := c.Exchange(m, net.JoinHostPort(server, strconv.Itoa(d.Port)))
 	if err != nil {
-		return dnsQueryTime, err
+		return dnsQueryTime, -1, err
 	}
 	if r.Rcode != dns.RcodeSuccess {
-		return dnsQueryTime, errors.New(fmt.Sprintf("Invalid answer name %s after %s query for %s\n", domain, d.RecordType, domain))
+		return dnsQueryTime, r.Rcode, fmt.Errorf("Invalid answer (%s) from %s after %s query for %s", dns.RcodeToString[r.Rcode], server, d.RecordType, domain)
 	}
 	dnsQueryTime = float64(rtt.Nanoseconds()) / 1e6
-	return dnsQueryTime, nil
+	return dnsQueryTime, r.Rcode, nil
 }
 
 func (d *DnsQuery) parseRecordType() (uint16, error) {
 	var recordType uint16
-	var error error
+	var err error
 
 	switch d.RecordType {
 	case "A":
@@ -149,10 +187,25 @@ func (d *DnsQuery) parseRecordType() (uint16, error) {
 	case "TXT":
 		recordType = dns.TypeTXT
 	default:
-		error = errors.New(fmt.Sprintf("Record type %s not recognized", d.RecordType))
+		err = fmt.Errorf("Record type %s not recognized", d.RecordType)
 	}
 
-	return recordType, error
+	return recordType, err
+}
+
+func setResult(result ResultType, fields map[string]interface{}, tags map[string]string) {
+	var tag string
+	switch result {
+	case Success:
+		tag = "success"
+	case Timeout:
+		tag = "timeout"
+	case Error:
+		tag = "error"
+	}
+
+	tags["result"] = tag
+	fields["result_code"] = uint64(result)
 }
 
 func init() {

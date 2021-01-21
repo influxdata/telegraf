@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type JolokiaClient interface {
@@ -61,7 +62,8 @@ func newCassandraMetric(host string, metric string,
 func addValuesAsFields(values map[string]interface{}, fields map[string]interface{},
 	mname string) {
 	for k, v := range values {
-		if v != nil {
+		switch v.(type) {
+		case int64, float64, string, bool:
 			fields[mname+"_"+k] = v
 		}
 	}
@@ -118,13 +120,13 @@ func (j javaMetric) addTagsFields(out map[string]interface{}) {
 		switch t := values.(type) {
 		case map[string]interface{}:
 			addValuesAsFields(values.(map[string]interface{}), fields, attribute)
-		case interface{}:
+		case int64, float64, string, bool:
 			fields[attribute] = t
 		}
 		j.acc.AddFields(tokens["class"]+tokens["type"], fields, tags)
 	} else {
-		fmt.Printf("Missing key 'value' in '%s' output response\n%v\n",
-			j.metric, out)
+		j.acc.AddError(fmt.Errorf("Missing key 'value' in '%s' output response\n%v\n",
+			j.metric, out))
 	}
 }
 
@@ -155,8 +157,8 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 				addCassandraMetric(k, c, v.(map[string]interface{}))
 			}
 		} else {
-			fmt.Printf("Missing key 'value' in '%s' output response\n%v\n",
-				c.metric, out)
+			c.acc.AddError(fmt.Errorf("Missing key 'value' in '%s' output response\n%v\n",
+				c.metric, out))
 			return
 		}
 	} else {
@@ -164,8 +166,8 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 			addCassandraMetric(r.(map[string]interface{})["mbean"].(string),
 				c, values.(map[string]interface{}))
 		} else {
-			fmt.Printf("Missing key 'value' in '%s' output response\n%v\n",
-				c.metric, out)
+			c.acc.AddError(fmt.Errorf("Missing key 'value' in '%s' output response\n%v\n",
+				c.metric, out))
 			return
 		}
 	}
@@ -173,7 +175,11 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 
 func (j *Cassandra) SampleConfig() string {
 	return `
-  # This is the context root used to compose the jolokia url
+  ## DEPRECATED: The cassandra plugin has been deprecated.  Please use the
+  ## jolokia2 plugin instead.
+  ##
+  ## see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2
+
   context = "/jolokia/read"
   ## List of cassandra servers exposing jolokia read service
   servers = ["myuser:mypassword@10.10.10.1:8778","10.10.10.2:8778",":8778"]
@@ -257,6 +263,16 @@ func parseServerTokens(server string) map[string]string {
 	return serverTokens
 }
 
+func (c *Cassandra) Start(acc telegraf.Accumulator) error {
+	log.Println("W! DEPRECATED: The cassandra plugin has been deprecated. " +
+		"Please use the jolokia2 plugin instead. " +
+		"https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2")
+	return nil
+}
+
+func (c *Cassandra) Stop() {
+}
+
 func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 	context := c.Context
 	servers := c.Servers
@@ -274,8 +290,8 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 				m = newCassandraMetric(serverTokens["host"], metric, acc)
 			} else {
 				// unsupported metric type
-				log.Printf("I! Unsupported Cassandra metric [%s], skipping",
-					metric)
+				acc.AddError(fmt.Errorf("E! Unsupported Cassandra metric [%s], skipping",
+					metric))
 				continue
 			}
 
@@ -283,7 +299,8 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 			requestUrl, err := url.Parse("http://" + serverTokens["host"] + ":" +
 				serverTokens["port"] + context + metric)
 			if err != nil {
-				return err
+				acc.AddError(err)
+				continue
 			}
 			if serverTokens["user"] != "" && serverTokens["passwd"] != "" {
 				requestUrl.User = url.UserPassword(serverTokens["user"],
@@ -291,8 +308,12 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 			}
 
 			out, err := c.getAttr(requestUrl)
+			if err != nil {
+				acc.AddError(err)
+				continue
+			}
 			if out["status"] != 200.0 {
-				fmt.Printf("URL returned with status %v\n", out["status"])
+				acc.AddError(fmt.Errorf("URL returned with status %v - %s\n", out["status"], requestUrl))
 				continue
 			}
 			m.addTagsFields(out)

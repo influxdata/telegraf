@@ -1,6 +1,7 @@
 package udp_listener
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"sync"
@@ -52,17 +53,19 @@ type UdpListener struct {
 
 	PacketsRecv selfstat.Stat
 	BytesRecv   selfstat.Stat
+
+	Log telegraf.Logger
 }
 
 // UDP_MAX_PACKET_SIZE is packet limit, see
 // https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 const UDP_MAX_PACKET_SIZE int = 64 * 1024
 
-var dropwarn = "E! Error: udp_listener message queue full. " +
+var dropwarn = "udp_listener message queue full. " +
 	"We have dropped %d messages so far. " +
-	"You may want to increase allowed_pending_messages in the config\n"
+	"You may want to increase allowed_pending_messages in the config"
 
-var malformedwarn = "E! udp_listener has received %d malformed packets" +
+var malformedwarn = "udp_listener has received %d malformed packets" +
 	" thus far."
 
 const sampleConfig = `
@@ -107,11 +110,12 @@ func (u *UdpListener) Start(acc telegraf.Accumulator) error {
 	u.in = make(chan []byte, u.AllowedPendingMessages)
 	u.done = make(chan struct{})
 
-	u.wg.Add(2)
-	go u.udpListen()
+	u.udpListen()
+
+	u.wg.Add(1)
 	go u.udpParser()
 
-	log.Printf("I! Started UDP listener service on %s (ReadBuffer: %d)\n", u.ServiceAddress, u.UDPBufferSize)
+	u.Log.Infof("Started service on %q (ReadBuffer: %d)", u.ServiceAddress, u.UDPBufferSize)
 	return nil
 }
 
@@ -122,36 +126,41 @@ func (u *UdpListener) Stop() {
 	u.wg.Wait()
 	u.listener.Close()
 	close(u.in)
-	log.Println("I! Stopped UDP listener service on ", u.ServiceAddress)
+	u.Log.Infof("Stopped service on %q", u.ServiceAddress)
 }
 
 func (u *UdpListener) udpListen() error {
-	defer u.wg.Done()
 	var err error
 
 	address, _ := net.ResolveUDPAddr("udp", u.ServiceAddress)
 	u.listener, err = net.ListenUDP("udp", address)
 
 	if err != nil {
-		log.Fatalf("E! Error: ListenUDP - %s", err)
+		return err
 	}
 
-	log.Println("I! UDP server listening on: ", u.listener.LocalAddr().String())
-
-	buf := make([]byte, UDP_MAX_PACKET_SIZE)
+	u.Log.Infof("Server listening on %q", u.listener.LocalAddr().String())
 
 	if u.UDPBufferSize > 0 {
 		err = u.listener.SetReadBuffer(u.UDPBufferSize) // if we want to move away from OS default
 		if err != nil {
-			log.Printf("E! Failed to set UDP read buffer to %d: %s", u.UDPBufferSize, err)
-			return err
+			return fmt.Errorf("failed to set UDP read buffer to %d: %s", u.UDPBufferSize, err)
 		}
 	}
 
+	u.wg.Add(1)
+	go u.udpListenLoop()
+	return nil
+}
+
+func (u *UdpListener) udpListenLoop() {
+	defer u.wg.Done()
+
+	buf := make([]byte, UDP_MAX_PACKET_SIZE)
 	for {
 		select {
 		case <-u.done:
-			return nil
+			return
 		default:
 			u.listener.SetReadDeadline(time.Now().Add(time.Second))
 
@@ -159,7 +168,7 @@ func (u *UdpListener) udpListen() error {
 			if err != nil {
 				if err, ok := err.(net.Error); ok && err.Timeout() {
 				} else {
-					log.Printf("E! Error: %s\n", err.Error())
+					u.Log.Error(err.Error())
 				}
 				continue
 			}
@@ -173,7 +182,7 @@ func (u *UdpListener) udpListen() error {
 			default:
 				u.drops++
 				if u.drops == 1 || u.drops%u.AllowedPendingMessages == 0 {
-					log.Printf(dropwarn, u.drops)
+					u.Log.Errorf(dropwarn, u.drops)
 				}
 			}
 		}
@@ -201,7 +210,7 @@ func (u *UdpListener) udpParser() error {
 			} else {
 				u.malformed++
 				if u.malformed == 1 || u.malformed%1000 == 0 {
-					log.Printf(malformedwarn, u.malformed)
+					u.Log.Errorf(malformedwarn, u.malformed)
 				}
 			}
 		}

@@ -51,7 +51,7 @@ func TestDisqueGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err = r.Gather(&acc)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{
@@ -117,7 +117,7 @@ func TestDisqueCanPullStatsFromMultipleServers(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err = r.Gather(&acc)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{

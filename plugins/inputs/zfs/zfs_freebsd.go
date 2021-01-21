@@ -30,50 +30,102 @@ func (z *Zfs) gatherPoolStats(acc telegraf.Accumulator) (string, error) {
 	if z.PoolMetrics {
 		for _, line := range lines {
 			col := strings.Split(line, "\t")
-			tags := map[string]string{"pool": col[0], "health": col[8]}
+			if len(col) != 8 {
+				continue
+			}
+
+			tags := map[string]string{"pool": col[0], "health": col[1]}
 			fields := map[string]interface{}{}
 
-			size, err := strconv.ParseInt(col[1], 10, 64)
-			if err != nil {
-				return "", fmt.Errorf("Error parsing size: %s", err)
-			}
-			fields["size"] = size
+			if tags["health"] == "UNAVAIL" {
 
-			alloc, err := strconv.ParseInt(col[2], 10, 64)
-			if err != nil {
-				return "", fmt.Errorf("Error parsing allocation: %s", err)
-			}
-			fields["allocated"] = alloc
+				fields["size"] = int64(0)
 
-			free, err := strconv.ParseInt(col[3], 10, 64)
-			if err != nil {
-				return "", fmt.Errorf("Error parsing free: %s", err)
-			}
-			fields["free"] = free
+			} else {
 
-			frag, err := strconv.ParseInt(strings.TrimSuffix(col[5], "%"), 10, 0)
-			if err != nil { // This might be - for RO devs
-				frag = 0
-			}
-			fields["fragmentation"] = frag
+				size, err := strconv.ParseInt(col[2], 10, 64)
+				if err != nil {
+					return "", fmt.Errorf("Error parsing size: %s", err)
+				}
+				fields["size"] = size
 
-			capval, err := strconv.ParseInt(col[6], 10, 0)
-			if err != nil {
-				return "", fmt.Errorf("Error parsing capacity: %s", err)
-			}
-			fields["capacity"] = capval
+				alloc, err := strconv.ParseInt(col[3], 10, 64)
+				if err != nil {
+					return "", fmt.Errorf("Error parsing allocation: %s", err)
+				}
+				fields["allocated"] = alloc
 
-			dedup, err := strconv.ParseFloat(strings.TrimSuffix(col[7], "x"), 32)
-			if err != nil {
-				return "", fmt.Errorf("Error parsing dedupratio: %s", err)
+				free, err := strconv.ParseInt(col[4], 10, 64)
+				if err != nil {
+					return "", fmt.Errorf("Error parsing free: %s", err)
+				}
+				fields["free"] = free
+
+				frag, err := strconv.ParseInt(strings.TrimSuffix(col[5], "%"), 10, 0)
+				if err != nil { // This might be - for RO devs
+					frag = 0
+				}
+				fields["fragmentation"] = frag
+
+				capval, err := strconv.ParseInt(col[6], 10, 0)
+				if err != nil {
+					return "", fmt.Errorf("Error parsing capacity: %s", err)
+				}
+				fields["capacity"] = capval
+
+				dedup, err := strconv.ParseFloat(strings.TrimSuffix(col[7], "x"), 32)
+				if err != nil {
+					return "", fmt.Errorf("Error parsing dedupratio: %s", err)
+				}
+				fields["dedupratio"] = dedup
 			}
-			fields["dedupratio"] = dedup
 
 			acc.AddFields("zfs_pool", fields, tags)
 		}
 	}
 
 	return strings.Join(pools, "::"), nil
+}
+
+func (z *Zfs) gatherDatasetStats(acc telegraf.Accumulator) (string, error) {
+	properties := []string{"name", "avail", "used", "usedsnap", "usedds"}
+
+	lines, err := z.zdataset(properties)
+	if err != nil {
+		return "", err
+	}
+
+	datasets := []string{}
+	for _, line := range lines {
+		col := strings.Split(line, "\t")
+
+		datasets = append(datasets, col[0])
+	}
+
+	if z.DatasetMetrics {
+		for _, line := range lines {
+			col := strings.Split(line, "\t")
+			if len(col) != len(properties) {
+				z.Log.Warnf("Invalid number of columns for line: %s", line)
+				continue
+			}
+
+			tags := map[string]string{"dataset": col[0]}
+			fields := map[string]interface{}{}
+
+			for i, key := range properties[1:] {
+				value, err := strconv.ParseInt(col[i+1], 10, 64)
+				if err != nil {
+					return "", fmt.Errorf("Error parsing %s %q: %s", key, col[i+1], err)
+				}
+				fields[key] = value
+			}
+
+			acc.AddFields("zfs_dataset", fields, tags)
+		}
+	}
+
+	return strings.Join(datasets, "::"), nil
 }
 
 func (z *Zfs) Gather(acc telegraf.Accumulator) error {
@@ -88,6 +140,11 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 	tags["pools"] = poolNames
+	datasetNames, err := z.gatherDatasetStats(acc)
+	if err != nil {
+		return err
+	}
+	tags["datasets"] = datasetNames
 
 	fields := make(map[string]interface{})
 	for _, metric := range kstatMetrics {
@@ -123,7 +180,11 @@ func run(command string, args ...string) ([]string, error) {
 }
 
 func zpool() ([]string, error) {
-	return run("zpool", []string{"list", "-Hp"}...)
+	return run("zpool", []string{"list", "-Hp", "-o", "name,health,size,alloc,free,fragmentation,capacity,dedupratio"}...)
+}
+
+func zdataset(properties []string) ([]string, error) {
+	return run("zfs", []string{"list", "-Hp", "-o", strings.Join(properties, ",")}...)
 }
 
 func sysctl(metric string) ([]string, error) {
@@ -133,8 +194,9 @@ func sysctl(metric string) ([]string, error) {
 func init() {
 	inputs.Add("zfs", func() telegraf.Input {
 		return &Zfs{
-			sysctl: sysctl,
-			zpool:  zpool,
+			sysctl:   sysctl,
+			zpool:    zpool,
+			zdataset: zdataset,
 		}
 	})
 }

@@ -14,19 +14,23 @@ type Connection struct {
 	Password  string
 	Port      int
 	Interface string
+	Privilege string
+	HexKey    string
 }
 
-func NewConnection(server string) *Connection {
-	conn := &Connection{}
-	inx1 := strings.Index(server, "@")
+func NewConnection(server, privilege, hexKey string) *Connection {
+	conn := &Connection{
+		Privilege: privilege,
+		HexKey:    hexKey,
+	}
+	inx1 := strings.LastIndex(server, "@")
 	inx2 := strings.Index(server, "(")
-	inx3 := strings.Index(server, ")")
 
 	connstr := server
 
 	if inx1 > 0 {
 		security := server[0:inx1]
-		connstr = server[inx1+1 : len(server)]
+		connstr = server[inx1+1:]
 		up := strings.SplitN(security, ":", 2)
 		conn.Username = up[0]
 		conn.Password = up[1]
@@ -34,7 +38,7 @@ func NewConnection(server string) *Connection {
 
 	if inx2 > 0 {
 		inx2 = strings.Index(connstr, "(")
-		inx3 = strings.Index(connstr, ")")
+		inx3 := strings.Index(connstr, ")")
 
 		conn.Interface = connstr[0:inx2]
 		conn.Hostname = connstr[inx2+1 : inx3]
@@ -56,10 +60,15 @@ func (t *Connection) options() []string {
 		"-I", intf,
 	}
 
+	if t.HexKey != "" {
+		options = append(options, "-y", t.HexKey)
+	}
 	if t.Port != 0 {
 		options = append(options, "-p", strconv.Itoa(t.Port))
 	}
-
+	if t.Privilege != "" {
+		options = append(options, "-L", t.Privilege)
+	}
 	return options
 }
 

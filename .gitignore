@@ -1,7 +1,8 @@
-build
-tivan
-.vagrant
+/.idea
+/build
 /telegraf
-.idea
-*~
-*#
+/telegraf.exe
+/telegraf.gz
+/vendor
+.DS_Store
+process.yml

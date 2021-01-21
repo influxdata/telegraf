@@ -1,0 +1,17 @@
+version: '3'
+services:
+  zoo:
+    image: zookeeper
+
+  telegraf:
+    image: glinton/scratch
+    volumes:
+      - ./telegraf.conf:/telegraf.conf
+      - ../../../../telegraf:/telegraf
+    depends_on:
+      - zoo
+    entrypoint:
+      - /telegraf
+      - --config
+      - /telegraf.conf
+    network_mode: service:zoo

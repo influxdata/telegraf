@@ -163,7 +163,7 @@ func (c *mockHTTPClient) HTTPClient() *http.Client {
 //     *HttpJson: Pointer to an HttpJson object that uses the generated mock HTTP client
 func genMockHttpJson(response string, statusCode int) []*HttpJson {
 	return []*HttpJson{
-		&HttpJson{
+		{
 			client: &mockHTTPClient{responseBody: response, statusCode: statusCode},
 			Servers: []string{
 				"http://server1.example.com/metrics/",
@@ -180,7 +180,7 @@ func genMockHttpJson(response string, statusCode int) []*HttpJson {
 				"apiVersion":   "v1",
 			},
 		},
-		&HttpJson{
+		{
 			client: &mockHTTPClient{responseBody: response, statusCode: statusCode},
 			Servers: []string{
 				"http://server3.example.com/metrics/",
@@ -210,7 +210,7 @@ func TestHttpJson200(t *testing.T) {
 
 	for _, service := range httpjson {
 		var acc testutil.Accumulator
-		err := service.Gather(&acc)
+		err := acc.GatherError(service.Gather)
 		require.NoError(t, err)
 		assert.Equal(t, 12, acc.NFields())
 		// Set responsetime
@@ -245,7 +245,7 @@ func TestHttpJsonGET_URL(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := a.Gather(&acc)
+	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
 	// remove response_time from gathered fields because it's non-deterministic
@@ -318,7 +318,7 @@ func TestHttpJsonGET(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := a.Gather(&acc)
+	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
 	// remove response_time from gathered fields because it's non-deterministic
@@ -392,7 +392,7 @@ func TestHttpJsonPOST(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := a.Gather(&acc)
+	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
 	// remove response_time from gathered fields because it's non-deterministic
@@ -448,9 +448,9 @@ func TestHttpJson500(t *testing.T) {
 	httpjson := genMockHttpJson(validJSON, 500)
 
 	var acc testutil.Accumulator
-	err := httpjson[0].Gather(&acc)
+	err := acc.GatherError(httpjson[0].Gather)
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, 0, acc.NFields())
 }
 
@@ -460,9 +460,9 @@ func TestHttpJsonBadMethod(t *testing.T) {
 	httpjson[0].Method = "NOT_A_REAL_METHOD"
 
 	var acc testutil.Accumulator
-	err := httpjson[0].Gather(&acc)
+	err := acc.GatherError(httpjson[0].Gather)
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, 0, acc.NFields())
 }
 
@@ -471,21 +471,19 @@ func TestHttpJsonBadJson(t *testing.T) {
 	httpjson := genMockHttpJson(invalidJSON, 200)
 
 	var acc testutil.Accumulator
-	err := httpjson[0].Gather(&acc)
+	err := acc.GatherError(httpjson[0].Gather)
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, 0, acc.NFields())
 }
 
-// Test response to empty string as response objectgT
+// Test response to empty string as response object
 func TestHttpJsonEmptyResponse(t *testing.T) {
 	httpjson := genMockHttpJson(empty, 200)
 
 	var acc testutil.Accumulator
-	err := httpjson[0].Gather(&acc)
-
-	assert.NotNil(t, err)
-	assert.Equal(t, 0, acc.NFields())
+	err := acc.GatherError(httpjson[0].Gather)
+	assert.NoError(t, err)
 }
 
 // Test that the proper values are ignored or collected
@@ -495,7 +493,7 @@ func TestHttpJson200Tags(t *testing.T) {
 	for _, service := range httpjson {
 		if service.Name == "other_webapp" {
 			var acc testutil.Accumulator
-			err := service.Gather(&acc)
+			err := acc.GatherError(service.Gather)
 			// Set responsetime
 			for _, p := range acc.Metrics {
 				p.Fields["response_time"] = 1.0
@@ -533,7 +531,7 @@ func TestHttpJsonArray200Tags(t *testing.T) {
 	for _, service := range httpjson {
 		if service.Name == "other_webapp" {
 			var acc testutil.Accumulator
-			err := service.Gather(&acc)
+			err := acc.GatherError(service.Gather)
 			// Set responsetime
 			for _, p := range acc.Metrics {
 				p.Fields["response_time"] = 1.0
@@ -557,6 +555,21 @@ func TestHttpJsonArray200Tags(t *testing.T) {
 					assert.FailNow(t, "unknown metric")
 				}
 			}
+		}
+	}
+}
+
+var jsonBOM = []byte("\xef\xbb\xbf[{\"value\":17}]")
+
+// TestHttpJsonBOM tests that UTF-8 JSON with a BOM can be parsed
+func TestHttpJsonBOM(t *testing.T) {
+	httpjson := genMockHttpJson(string(jsonBOM), 200)
+
+	for _, service := range httpjson {
+		if service.Name == "other_webapp" {
+			var acc testutil.Accumulator
+			err := acc.GatherError(service.Gather)
+			require.NoError(t, err)
 		}
 	}
 }

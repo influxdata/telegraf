@@ -5,14 +5,17 @@ package varnish
 import (
 	"bytes"
 	"fmt"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 )
 
-func fakeVarnishStat(output string) func(string) (*bytes.Buffer, error) {
-	return func(string) (*bytes.Buffer, error) {
+func fakeVarnishStat(output string, useSudo bool, InstanceName string, Timeout internal.Duration) func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
+	return func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -20,7 +23,7 @@ func fakeVarnishStat(output string) func(string) (*bytes.Buffer, error) {
 func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(smOutput),
+		run:   fakeVarnishStat(smOutput, false, "", internal.Duration{Duration: time.Second}),
 		Stats: []string{"*"},
 	}
 	v.Gather(acc)
@@ -36,7 +39,7 @@ func TestGather(t *testing.T) {
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput),
+		run:   fakeVarnishStat(fullOutput, true, "", internal.Duration{Duration: time.Second}),
 		Stats: []string{"*"},
 	}
 	err := v.Gather(acc)
@@ -51,7 +54,7 @@ func TestParseFullOutput(t *testing.T) {
 func TestFilterSomeStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput),
+		run:   fakeVarnishStat(fullOutput, false, "", internal.Duration{Duration: time.Second}),
 		Stats: []string{"MGT.*", "VBE.*"},
 	}
 	err := v.Gather(acc)
@@ -74,7 +77,7 @@ func TestFieldConfig(t *testing.T) {
 	for fieldCfg, expected := range expect {
 		acc := &testutil.Accumulator{}
 		v := &Varnish{
-			run:   fakeVarnishStat(fullOutput),
+			run:   fakeVarnishStat(fullOutput, true, "", internal.Duration{Duration: time.Second}),
 			Stats: strings.Split(fieldCfg, ","),
 		}
 		err := v.Gather(acc)
@@ -112,16 +115,16 @@ MEMPOOL.vbc.sz_wanted              88          .   Size requested
 `
 
 var parsedSmOutput = map[string]map[string]interface{}{
-	"MAIN": map[string]interface{}{
+	"MAIN": {
 		"uptime":     uint64(895),
 		"cache_hit":  uint64(95),
 		"cache_miss": uint64(5),
 	},
-	"MGT": map[string]interface{}{
+	"MGT": {
 		"uptime":      uint64(896),
 		"child_start": uint64(1),
 	},
-	"MEMPOOL": map[string]interface{}{
+	"MEMPOOL": {
 		"vbc.live":      uint64(0),
 		"vbc.pool":      uint64(10),
 		"vbc.sz_wanted": uint64(88),
@@ -189,7 +192,7 @@ MAIN.s_req                         0         0.00 Total requests seen
 MAIN.s_pipe                        0         0.00 Total pipe sessions seen
 MAIN.s_pass                        0         0.00 Total pass-ed requests seen
 MAIN.s_fetch                       0         0.00 Total backend fetches initiated
-MAIN.s_synth                       0         0.00 Total synthethic responses made
+MAIN.s_synth                       0         0.00 Total synthetic responses made
 MAIN.s_req_hdrbytes                0         0.00 Request header bytes
 MAIN.s_req_bodybytes               0         0.00 Request body bytes
 MAIN.s_resp_hdrbytes               0         0.00 Response header bytes

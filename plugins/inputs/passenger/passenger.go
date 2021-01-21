@@ -102,7 +102,7 @@ func (p *process) getUptime() int64 {
 				uptime += value * (24 * 60 * 60)
 			}
 		case strings.HasSuffix(v, "h"):
-			iValue := strings.TrimSuffix(v, "y")
+			iValue := strings.TrimSuffix(v, "h")
 			value, err := strconv.ParseInt(iValue, 10, 64)
 			if err == nil {
 				uptime += value * (60 * 60)

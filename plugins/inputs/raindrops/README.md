@@ -36,7 +36,7 @@ specified raindops [middleware](http://raindrops.bogomips.org/Raindrops/Middlewa
 ### Example Output:
 
 ```
-$ ./telegraf -config telegraf.conf -input-filter raindrops -test
+$ ./telegraf --config telegraf.conf --input-filter raindrops --test
 * Plugin: raindrops, Collection 1
 > raindrops,port=8080,server=localhost calling=0i,writing=0i 1455479896806238204
 > raindrops_listen,ip=0.0.0.0,port=8080 active=0i,queued=0i 1455479896806561938

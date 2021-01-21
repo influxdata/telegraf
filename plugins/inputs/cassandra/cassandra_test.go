@@ -151,9 +151,9 @@ func TestHttpJsonJavaMultiValue(t *testing.T) {
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
-	err := cassandra.Gather(&acc)
+	err := acc.GatherError(cassandra.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 2, len(acc.Metrics))
 
 	fields := map[string]interface{}{
@@ -180,9 +180,9 @@ func TestHttpJsonJavaMultiType(t *testing.T) {
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
-	err := cassandra.Gather(&acc)
+	err := acc.GatherError(cassandra.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 2, len(acc.Metrics))
 
 	fields := map[string]interface{}{
@@ -197,16 +197,17 @@ func TestHttpJsonJavaMultiType(t *testing.T) {
 }
 
 // Test that the proper values are ignored or collected
-func TestHttpJsonOn404(t *testing.T) {
+func TestHttp404(t *testing.T) {
 
-	jolokia := genJolokiaClientStub(validJavaMultiValueJSON, 404, Servers,
+	jolokia := genJolokiaClientStub(invalidJSON, 404, Servers,
 		[]string{HeapMetric})
 
 	var acc testutil.Accumulator
-	err := jolokia.Gather(&acc)
+	err := acc.GatherError(jolokia.Gather)
 
-	assert.Nil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, 0, len(acc.Metrics))
+	assert.Contains(t, err.Error(), "has status code 404")
 }
 
 // Test that the proper values are ignored or collected for class=Cassandra
@@ -214,9 +215,9 @@ func TestHttpJsonCassandraMultiValue(t *testing.T) {
 	cassandra := genJolokiaClientStub(validCassandraMultiValueJSON, 200, Servers, []string{ReadLatencyMetric})
 
 	var acc testutil.Accumulator
-	err := cassandra.Gather(&acc)
+	err := acc.GatherError(cassandra.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
@@ -246,9 +247,9 @@ func TestHttpJsonCassandraNestedMultiValue(t *testing.T) {
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
-	err := cassandra.Gather(&acc)
+	err := acc.GatherError(cassandra.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 2, len(acc.Metrics))
 
 	fields1 := map[string]interface{}{

@@ -1,4 +1,4 @@
-# MySQL Input plugin
+# MySQL Input Plugin
 
 This plugin gathers the statistic data from MySQL server
 
@@ -18,13 +18,12 @@ This plugin gathers the statistic data from MySQL server
 * File events statistics
 * Table schema statistics
 
-## Configuration
+### Configuration
 
-```
-# Read metrics from one or many mysql servers
+```toml
 [[inputs.mysql]]
   ## specify servers via a url matching:
-  ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+  ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify|custom]]
   ##  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
   ##  e.g.
   ##    servers = ["user:passwd@tcp(127.0.0.1:3306)/?tls=false"]
@@ -32,58 +31,175 @@ This plugin gathers the statistic data from MySQL server
   #
   ## If no servers are specified, then localhost is used as the host.
   servers = ["tcp(127.0.0.1:3306)/"]
-  ## the limits for metrics form perf_events_statements
-  perf_events_statements_digest_text_limit  = 120
-  perf_events_statements_limit              = 250
-  perf_events_statements_time_limit         = 86400
-  #
+
+  ## Selects the metric output format.
+  ##
+  ## This option exists to maintain backwards compatibility, if you have
+  ## existing metrics do not set or change this value until you are ready to
+  ## migrate to the new format.
+  ##
+  ## If you do not have existing metrics from this plugin set to the latest
+  ## version.
+  ##
+  ## Telegraf >=1.6: metric_version = 2
+  ##           <1.6: metric_version = 1 (or unset)
+  metric_version = 2
+
   ## if the list is empty, then metrics are gathered from all database tables
-  table_schema_databases                    = []
-  #
+  # table_schema_databases = []
+
   ## gather metrics from INFORMATION_SCHEMA.TABLES for databases provided above list
-  gather_table_schema                       = false
-  #
+  # gather_table_schema = false
+
   ## gather thread state counts from INFORMATION_SCHEMA.PROCESSLIST
-  gather_process_list                       = true
-  #
-  ## gather thread state counts from INFORMATION_SCHEMA.USER_STATISTICS
-  gather_user_statistics                    = true
-  #
+  # gather_process_list = false
+
+  ## gather user statistics from INFORMATION_SCHEMA.USER_STATISTICS
+  # gather_user_statistics = false
+
   ## gather auto_increment columns and max values from information schema
-  gather_info_schema_auto_inc               = true
-  #
+  # gather_info_schema_auto_inc = false
+
   ## gather metrics from INFORMATION_SCHEMA.INNODB_METRICS
-  gather_innodb_metrics                     = true
-  #
+  # gather_innodb_metrics = false
+
   ## gather metrics from SHOW SLAVE STATUS command output
-  gather_slave_status                       = true
-  #
+  # gather_slave_status = false
+
   ## gather metrics from SHOW BINARY LOGS command output
-  gather_binary_logs                        = false
-  #
+  # gather_binary_logs = false
+
+  ## gather metrics from SHOW GLOBAL VARIABLES command output
+  # gather_global_variables = true
+
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_TABLE
-  gather_table_io_waits                     = false
-  #
+  # gather_table_io_waits = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_LOCK_WAITS
-  gather_table_lock_waits                   = false
-  #
+  # gather_table_lock_waits = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_INDEX_USAGE
-  gather_index_io_waits                     = false
-  #
+  # gather_index_io_waits = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.EVENT_WAITS
-  gather_event_waits                        = false
-  #
+  # gather_event_waits = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.FILE_SUMMARY_BY_EVENT_NAME
-  gather_file_events_stats                  = false
-  #
+  # gather_file_events_stats = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.EVENTS_STATEMENTS_SUMMARY_BY_DIGEST
-  gather_perf_events_statements             = false
+  # gather_perf_events_statements             = false
   #
+  ## gather metrics from PERFORMANCE_SCHEMA.EVENTS_STATEMENTS_SUMMARY_BY_ACCOUNT_BY_EVENT_NAME
+  # gather_perf_sum_per_acc_per_event         = false
+  #
+  ## list of events to be gathered for gather_perf_sum_per_acc_per_event
+  ## in case of empty list all events will be gathered
+  # perf_summary_events                       = []
+  #
+  # gather_perf_events_statements = false
+
+  ## the limits for metrics form perf_events_statements
+  # perf_events_statements_digest_text_limit = 120
+  # perf_events_statements_limit = 250
+  # perf_events_statements_time_limit = 86400
+
   ## Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
-  interval_slow                             = "30m"
+  ##   example: interval_slow = "30m"
+  # interval_slow = ""
+
+  ## Optional TLS Config (will be used if tls=custom parameter specified in server uri)
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
-## Measurements & Fields
+#### Metric Version
+
+When `metric_version = 2`, a variety of field type issues are corrected as well
+as naming inconsistencies.  If you have existing data on the original version
+enabling this feature will cause a `field type error` when inserted into
+InfluxDB due to the change of types.  For this reason, you should keep the
+`metric_version` unset until you are ready to migrate to the new format.
+
+If preserving your old data is not required you may wish to drop conflicting
+measurements:
+```sql
+DROP SERIES from mysql
+DROP SERIES from mysql_variables
+DROP SERIES from mysql_innodb
+```
+
+Otherwise, migration can be performed using the following steps:
+
+1. Duplicate your `mysql` plugin configuration and add a `name_suffix` and
+`metric_version = 2`, this will result in collection using both the old and new
+style concurrently:
+   ```toml
+   [[inputs.mysql]]
+     servers = ["tcp(127.0.0.1:3306)/"]
+
+   [[inputs.mysql]]
+     name_suffix = "_v2"
+     metric_version = 2
+
+     servers = ["tcp(127.0.0.1:3306)/"]
+   ```
+
+2. Upgrade all affected Telegraf clients to version >=1.6.
+
+   New measurements will be created with the `name_suffix`, for example::
+   - `mysql_v2`
+   - `mysql_variables_v2`
+
+3. Update charts, alerts, and other supporting code to the new format.
+4. You can now remove the old `mysql` plugin configuration and remove old
+   measurements.
+
+If you wish to remove the `name_suffix` you may use Kapacitor to copy the
+historical data to the default name.  Do this only after retiring the old
+measurement name.
+
+1. Use the technique described above to write to multiple locations:
+   ```toml
+   [[inputs.mysql]]
+     servers = ["tcp(127.0.0.1:3306)/"]
+     metric_version = 2
+
+   [[inputs.mysql]]
+     name_suffix = "_v2"
+     metric_version = 2
+
+     servers = ["tcp(127.0.0.1:3306)/"]
+   ```
+2. Create a TICKScript to copy the historical data:
+   ```
+   dbrp "telegraf"."autogen"
+
+   batch
+       |query('''
+           SELECT * FROM "telegraf"."autogen"."mysql_v2"
+       ''')
+           .period(5m)
+           .every(5m)
+           |influxDBOut()
+                   .database('telegraf')
+                   .retentionPolicy('autogen')
+                   .measurement('mysql')
+   ```
+3. Define a task for your script:
+   ```sh
+   kapacitor define copy-measurement -tick copy-measurement.task
+   ```
+4. Run the task over the data you would like to migrate:
+   ```sh
+   kapacitor replay-live batch -start 2018-03-30T20:00:00Z -stop 2018-04-01T12:00:00Z -rec-time -task copy-measurement
+   ```
+5. Verify copied data and repeat for other measurements.
+
+### Metrics:
 * Global statuses - all numeric and boolean values of `SHOW GLOBAL STATUSES`
 * Global variables - all numeric and boolean values of `SHOW GLOBAL VARIABLES`
 * Slave status - metrics from `SHOW SLAVE STATUS` the metrics are gathered when
@@ -176,7 +292,7 @@ The unit of fields varies by the tags.
     * events_statements_rows_examined_total(float, number)
     * events_statements_tmp_tables_total(float, number)
     * events_statements_tmp_disk_tables_total(float, number)
-    * events_statements_sort_merge_passes_totales(float, number)
+    * events_statements_sort_merge_passes_totals(float, number)
     * events_statements_sort_rows_total(float, number)
     * events_statements_no_index_used_total(float, number)
 * Table schema - gathers statistics of each schema. It has following measurements

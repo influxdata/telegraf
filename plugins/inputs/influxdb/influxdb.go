@@ -1,23 +1,43 @@
 package influxdb
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"io"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type InfluxDB struct {
-	URLs []string `toml:"urls"`
+const (
+	maxErrorResponseBodyLength = 1024
+)
 
-	Timeout internal.Duration
+type APIError struct {
+	StatusCode  int
+	Reason      string
+	Description string `json:"error"`
+}
+
+func (e *APIError) Error() string {
+	if e.Description != "" {
+		return e.Reason + ": " + e.Description
+	}
+	return e.Reason
+}
+
+type InfluxDB struct {
+	URLs     []string          `toml:"urls"`
+	Username string            `toml:"username"`
+	Password string            `toml:"password"`
+	Timeout  internal.Duration `toml:"timeout"`
+	tls.ClientConfig
 
 	client *http.Client
 }
@@ -38,6 +58,17 @@ func (*InfluxDB) SampleConfig() string {
     "http://localhost:8086/debug/vars"
   ]
 
+  ## Username and password to send using HTTP Basic Authentication.
+  # username = ""
+  # password = ""
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
+
   ## http request & header timeout
   timeout = "5s"
 `
@@ -49,15 +80,18 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if i.client == nil {
+		tlsCfg, err := i.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
 		i.client = &http.Client{
 			Transport: &http.Transport{
 				ResponseHeaderTimeout: i.Timeout.Duration,
+				TLSClientConfig:       tlsCfg,
 			},
 			Timeout: i.Timeout.Duration,
 		}
 	}
-
-	errorChannel := make(chan error, len(i.URLs))
 
 	var wg sync.WaitGroup
 	for _, u := range i.URLs {
@@ -65,26 +99,14 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 		go func(url string) {
 			defer wg.Done()
 			if err := i.gatherURL(acc, url); err != nil {
-				errorChannel <- fmt.Errorf("[url=%s]: %s", url, err)
+				acc.AddError(err)
 			}
 		}(u)
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// If there weren't any errors, we can return nil now.
-	if len(errorChannel) == 0 {
-		return nil
-	}
-
-	// There were errors, so join them all together as one big error.
-	errorStrings := make([]string, 0, len(errorChannel))
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 type point struct {
@@ -137,11 +159,26 @@ func (i *InfluxDB) gatherURL(
 	shardCounter := 0
 	now := time.Now()
 
-	resp, err := i.client.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	if i.Username != "" || i.Password != "" {
+		req.SetBasicAuth(i.Username, i.Password)
+	}
+
+	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
+
+	resp, err := i.client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return readResponseError(resp)
+	}
 
 	// It would be nice to be able to decode into a map[string]point, but
 	// we'll get a decoder error like:
@@ -205,7 +242,7 @@ func (i *InfluxDB) gatherURL(
 						"pause_total_ns":  m.PauseTotalNs,
 						"pause_ns":        m.PauseNs[(m.NumGC+255)%256],
 						"num_gc":          m.NumGC,
-						"gcc_pu_fraction": m.GCCPUFraction,
+						"gc_cpu_fraction": m.GCCPUFraction,
 					},
 					map[string]string{
 						"url": url,
@@ -255,6 +292,27 @@ func (i *InfluxDB) gatherURL(
 	)
 
 	return nil
+}
+
+func readResponseError(resp *http.Response) error {
+	apiError := &APIError{
+		StatusCode: resp.StatusCode,
+		Reason:     resp.Status,
+	}
+
+	var buf bytes.Buffer
+	r := io.LimitReader(resp.Body, maxErrorResponseBodyLength)
+	_, err := buf.ReadFrom(r)
+	if err != nil {
+		return apiError
+	}
+
+	err = json.Unmarshal(buf.Bytes(), apiError)
+	if err != nil {
+		return apiError
+	}
+
+	return apiError
 }
 
 func init() {

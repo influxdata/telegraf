@@ -41,7 +41,7 @@ func TestHTTPApache(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := a.Gather(&acc)
+	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{

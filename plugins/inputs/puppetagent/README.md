@@ -1,10 +1,10 @@
-## Telegraf Plugin: PuppetAgent
+# PuppetAgent Input Plugin
 
 #### Description
 
 The puppetagent plugin collects variables outputted from the 'last_run_summary.yaml' file
 usually located in `/var/lib/puppet/state/`
-[PuppetAgent Runs](https://puppetlabs.com/blog/puppet-monitoring-how-to-monitor-the-success-or-failure-of-puppet-runs).
+[PuppetAgent Runs](https://puppet.com/blog/puppet-monitoring-how-to-monitor-success-or-failure-of-puppet-runs/).
 
 ```
 cat /var/lib/puppet/state/last_run_summary.yaml
@@ -46,7 +46,7 @@ cat /var/lib/puppet/state/last_run_summary.yaml
 ```
 
 ```
-jcross@pit-devops-02 ~ >sudo ./telegraf_linux_amd64 -filter puppetagent -config tele.conf -test
+jcross@pit-devops-02 ~ >sudo ./telegraf_linux_amd64 --input-filter puppetagent --config tele.conf --test
 * Plugin: puppetagent, Collection 1
 > [] puppetagent_events_failure value=0
 > [] puppetagent_events_total value=0

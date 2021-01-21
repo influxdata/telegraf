@@ -48,6 +48,43 @@ func (ni *NewItem) Fields() map[string]interface{} {
 	}
 }
 
+type OccurrenceDataOccurrence struct {
+	Language string `json:"language"`
+	Level    string `json:"level"`
+}
+
+type OccurrenceDataItem struct {
+	Id          int    `json:"id"`
+	Environment string `json:"environment"`
+	ProjectId   int    `json:"project_id"`
+}
+
+type OccurrenceData struct {
+	Item       OccurrenceDataItem       `json:"item"`
+	Occurrence OccurrenceDataOccurrence `json:"occurrence"`
+}
+
+type Occurrence struct {
+	EventName string         `json:"event_name"`
+	Data      OccurrenceData `json:"data"`
+}
+
+func (o *Occurrence) Tags() map[string]string {
+	return map[string]string{
+		"event":       o.EventName,
+		"environment": o.Data.Item.Environment,
+		"project_id":  strconv.Itoa(o.Data.Item.ProjectId),
+		"language":    o.Data.Occurrence.Language,
+		"level":       o.Data.Occurrence.Level,
+	}
+}
+
+func (o *Occurrence) Fields() map[string]interface{} {
+	return map[string]interface{}{
+		"id": o.Data.Item.Id,
+	}
+}
+
 type DeployDataDeploy struct {
 	Id          int    `json:"id"`
 	Environment string `json:"environment"`

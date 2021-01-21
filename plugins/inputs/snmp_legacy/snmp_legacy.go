@@ -23,6 +23,8 @@ type Snmp struct {
 	Subtable          []Subtable
 	SnmptranslateFile string
 
+	Log telegraf.Logger
+
 	nameToOid   map[string]string
 	initNode    Node
 	subTableMap map[string]Subtable
@@ -296,7 +298,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 
 		data, err := ioutil.ReadFile(s.SnmptranslateFile)
 		if err != nil {
-			log.Printf("E! Reading SNMPtranslate file error: %s", err)
+			s.Log.Errorf("Reading SNMPtranslate file error: %s", err.Error())
 			return err
 		} else {
 			for _, line := range strings.Split(string(data), "\n") {
@@ -394,16 +396,16 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		// only if len(s.OidInstanceMapping) == 0
 		if len(host.OidInstanceMapping) >= 0 {
 			if err := host.SNMPMap(acc, s.nameToOid, s.subTableMap); err != nil {
-				log.Printf("E! SNMP Mapping error for host '%s': %s", host.Address, err)
+				s.Log.Errorf("Mapping error for host %q: %s", host.Address, err.Error())
 				continue
 			}
 		}
 		// Launch Get requests
 		if err := host.SNMPGet(acc, s.initNode); err != nil {
-			log.Printf("E! SNMP Error for host '%s': %s", host.Address, err)
+			s.Log.Errorf("Error for host %q: %s", host.Address, err.Error())
 		}
 		if err := host.SNMPBulk(acc, s.initNode); err != nil {
-			log.Printf("E! SNMP Error for host '%s': %s", host.Address, err)
+			s.Log.Errorf("Error for host %q: %s", host.Address, err.Error())
 		}
 	}
 	return nil
@@ -704,6 +706,9 @@ func (h *Host) GetSNMPClient() (*gosnmp.GoSNMP, error) {
 	}
 	// convert port_str to port in uint16
 	port_64, err := strconv.ParseUint(port_str, 10, 16)
+	if err != nil {
+		return nil, err
+	}
 	port := uint16(port_64)
 	// Get SNMP client
 	snmpClient := &gosnmp.GoSNMP{
@@ -800,7 +805,7 @@ func (h *Host) HandleResponse(
 					acc.AddFields(field_name, fields, tags)
 				case gosnmp.NoSuchObject, gosnmp.NoSuchInstance:
 					// Oid not found
-					log.Printf("E! [snmp input] Oid not found: %s", oid_key)
+					log.Printf("E! [inputs.snmp_legacy] oid %q not found", oid_key)
 				default:
 					// delete other data
 				}

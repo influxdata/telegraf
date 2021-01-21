@@ -1,0 +1,92 @@
+[
+    {
+        "trace_id": 2505404965370368069,
+        "name": "Child",
+        "id": 8090652509916334619,
+        "parent_id": 22964302721410078,
+        "annotations": [],
+        "binary_annotations": [
+            {
+                "key": "lc",
+                "value": "dHJpdmlhbA==",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": 0,
+                    "service_name": "trivial"
+                }
+            }
+        ],
+        "timestamp": 1498688360851331,
+        "duration": 53106
+    },
+    {
+        "trace_id": 2505404965370368069,
+        "name": "Child",
+        "id": 103618986556047333,
+        "parent_id": 22964302721410078,
+        "annotations": [],
+        "binary_annotations": [
+            {
+                "key": "lc",
+                "value": "dHJpdmlhbA==",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": 0,
+                    "service_name": "trivial"
+                }
+            }
+        ],
+        "timestamp": 1498688360904552,
+        "duration": 50410
+    },
+    {
+        "trace_id": 2505404965370368069,
+        "name": "Parent",
+        "id": 22964302721410078,
+        "annotations": [
+            {
+                "timestamp": 1498688360851325,
+                "value": "Starting child #0",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": 0,
+                    "service_name": "trivial"
+                }
+            },
+            {
+                "timestamp": 1498688360904545,
+                "value": "Starting child #1",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": 0,
+                    "service_name": "trivial"
+                }
+            },
+            {
+                "timestamp": 1498688360954992,
+                "value": "A Log",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": 0,
+                    "service_name": "trivial"
+                }
+            }
+        ],
+        "binary_annotations": [
+            {
+                "key": "lc",
+                "value": "dHJpdmlhbA==",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": 0,
+                    "service_name": "trivial"
+                }
+            }
+        ],
+        "timestamp": 1498688360851318,
+        "duration": 103680
+    }
+]

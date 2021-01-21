@@ -1,11 +1,12 @@
-# Example Input Plugin
+# Network Response Input Plugin
 
-The input plugin test UDP/TCP connections response time.
-It can also check response text.
+The input plugin test UDP/TCP connections response time and can optional
+verify text in the response.
 
 ### Configuration:
 
-```
+```toml
+# Collect response time of a TCP or UDP connection
 [[inputs.net_response]]
   ## Protocol, must be "tcp" or "udp"
   ## NOTE: because the "udp" protocol does not respond to requests, it requires
@@ -13,11 +14,12 @@ It can also check response text.
   protocol = "tcp"
   ## Server address (default localhost)
   address = "localhost:80"
+
   ## Set timeout
-  timeout = "1s"
+  # timeout = "1s"
 
   ## Set read timeout (only used if expecting a response)
-  read_timeout = "1s"
+  # read_timeout = "1s"
 
   ## The following options are required for UDP checks. For TCP, they are
   ## optional. The plugin will send the given string to the server and then
@@ -27,52 +29,28 @@ It can also check response text.
   ## expected string in answer
   # expect = "ssh"
 
-[[inputs.net_response]]
-  protocol = "tcp"
-  address = ":80"
-
-# TCP or UDP 'ping' given url and collect response time in seconds
-[[inputs.net_response]]
-  ## Protocol, must be "tcp" or "udp"
-  protocol = "tcp"
-  ## Server address (default localhost)
-  address = "github.com:80"
-  ## Set timeout
-  timeout = "1s"
-
-  ## Optional string sent to the server
-  send = "ssh"
-  ## Optional expected string in answer
-  expect = "ssh"
-  ## Set read timeout (only used if expecting a response)
-  read_timeout = "1s"
-
-[[inputs.net_response]]
-  protocol = "udp"
-  address = "localhost:161"
-  timeout = "2s"
-  send = "hello server"
-  expect = "hello client"
+  ## Uncomment to remove deprecated fields; recommended for new deploys
+  # fielddrop = ["result_type", "string_found"]
 ```
 
-### Measurements & Fields:
+### Metrics:
 
 - net_response
-    - response_time (float, seconds)
-    - string_found (bool) # Only if "expected: option is set
-
-### Tags:
-
-- All measurements have the following tags:
+  - tags:
     - server
     - port
     - protocol
+    - result
+  - fields:
+    - response_time (float, seconds)
+    - result_code (int, success = 0, timeout = 1, connection_failed = 2, read_failed = 3, string_mismatch = 4)
+    - result_type (string) **DEPRECATED in 1.7; use result tag**
+    - string_found (boolean) **DEPRECATED in 1.4; use result tag**
 
 ### Example Output:
 
 ```
-$ ./telegraf -config telegraf.conf -input-filter net_response -test
-net_response,server=192.168.2.2,port=22,protocol=tcp response_time=0.18070360500000002,string_found=true 1454785464182527094
-net_response,server=192.168.2.2,port=2222,protocol=tcp response_time=1.090124776,string_found=false 1454784433658942325
-
+net_response,port=8086,protocol=tcp,result=success,server=localhost response_time=0.000092948,result_code=0i,result_type="success" 1525820185000000000
+net_response,port=8080,protocol=tcp,result=connection_failed,server=localhost result_code=2i,result_type="connection_failed" 1525820088000000000
+net_response,port=8080,protocol=udp,result=read_failed,server=localhost result_code=3i,result_type="read_failed",string_found=false 1525820088000000000
 ```

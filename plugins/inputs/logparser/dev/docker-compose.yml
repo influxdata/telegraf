@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+    telegraf:
+        image: glinton/scratch
+        volumes:
+          - ./telegraf.conf:/telegraf.conf
+          - ../../../../telegraf:/telegraf
+          - ./test.log:/var/log/test.log
+        entrypoint:
+          - /telegraf
+          - --config
+          - /telegraf.conf

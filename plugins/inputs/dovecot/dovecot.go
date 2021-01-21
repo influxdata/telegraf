@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	//	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -33,8 +31,10 @@ var sampleConfig = `
   ##
   ## If no servers are specified, then localhost is used as the host.
   servers = ["localhost:24242"]
+
   ## Type is one of "user", "domain", "ip", or "global"
   type = "global"
+
   ## Wildcard matches like "*.com". An empty string "" is same as "*"
   ## If type = "ip" filters should be <IP/network>
   filters = [""]
@@ -66,30 +66,29 @@ func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
-	errChan := errchan.New(len(d.Servers) * len(d.Filters))
 	for _, server := range d.Servers {
 		for _, filter := range d.Filters {
 			wg.Add(1)
 			go func(s string, f string) {
 				defer wg.Done()
-				errChan.C <- d.gatherServer(s, acc, d.Type, f)
+				acc.AddError(d.gatherServer(s, acc, d.Type, f))
 			}(server, filter)
 		}
 	}
 
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype string, filter string) error {
 	_, _, err := net.SplitHostPort(addr)
 	if err != nil {
-		return fmt.Errorf("Error: %s on url %s\n", err, addr)
+		return fmt.Errorf("%q on url %s", err.Error(), addr)
 	}
 
 	c, err := net.DialTimeout("tcp", addr, defaultTimeout)
 	if err != nil {
-		return fmt.Errorf("Unable to connect to dovecot server '%s': %s", addr, err)
+		return fmt.Errorf("enable to connect to dovecot server '%s': %s", addr, err)
 	}
 	defer c.Close()
 

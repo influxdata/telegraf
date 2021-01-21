@@ -1,14 +1,16 @@
 package graphite
 
 import (
-	"reflect"
+	"math"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal/templating"
 	"github.com/influxdata/telegraf/metric"
-
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkParse(b *testing.B) {
@@ -118,7 +120,7 @@ func TestTemplateApply(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		tmpl, err := NewTemplate(test.template, nil, DefaultSeparator)
+		tmpl, err := templating.NewDefaultTemplateWithPattern(test.template)
 		if errstr(err) != test.err {
 			t.Fatalf("err does not match.  expected %v, got %v", test.err, err)
 		}
@@ -127,7 +129,7 @@ func TestTemplateApply(t *testing.T) {
 			continue
 		}
 
-		measurement, tags, _, _ := tmpl.Apply(test.input)
+		measurement, tags, _, _ := tmpl.Apply(test.input, DefaultSeparator)
 		if measurement != test.measurement {
 			t.Fatalf("name parse failer.  expected %v, got %v", test.measurement, measurement)
 		}
@@ -167,6 +169,67 @@ func TestParseLine(t *testing.T) {
 		{
 			test:        "normal case",
 			input:       `cpu.foo.bar 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "normal case with tag",
+			input:       `cpu.foo.bar;tag1=value1 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo":  "foo",
+				"bar":  "bar",
+				"tag1": "value1",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "wrong tag names",
+			input:       `cpu.foo.bar;tag!1=value1;tag^2=value2 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "empty tag name",
+			input:       `cpu.foo.bar;=value1 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "wrong tag value",
+			input:       `cpu.foo.bar;tag1=~value1 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "empty tag value",
+			input:       `cpu.foo.bar;tag1= 50 ` + strTime,
 			template:    "measurement.foo.bar",
 			measurement: "cpu",
 			tags: map[string]string{
@@ -239,7 +302,7 @@ func TestParseLine(t *testing.T) {
 				len(test.tags), len(metric.Tags()))
 		}
 		f := metric.Fields()["value"].(float64)
-		if metric.Fields()["value"] != f {
+		if f != test.value {
 			t.Fatalf("floatValue value mismatch.  expected %v, got %v",
 				test.value, f)
 		}
@@ -277,6 +340,20 @@ func TestParse(t *testing.T) {
 			value: 50,
 			time:  testTime,
 		},
+		{
+			test:        "normal case with tag",
+			input:       []byte(`cpu.foo.bar;tag1=value1 50 ` + strTime),
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo":  "foo",
+				"bar":  "bar",
+				"tag1": "value1",
+			},
+			value: 50,
+			time:  testTime,
+		},
+
 		{
 			test:        "metric only with float value",
 			input:       []byte(`cpu 50.554 ` + strTime),
@@ -353,14 +430,40 @@ func TestParse(t *testing.T) {
 
 func TestParseNaN(t *testing.T) {
 	p, err := NewGraphiteParser("", []string{"measurement*"}, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	_, err = p.ParseLine("servers.localhost.cpu_load NaN 1435077219")
-	assert.Error(t, err)
+	m, err := p.ParseLine("servers.localhost.cpu_load NaN 1435077219")
+	require.NoError(t, err)
 
-	if _, ok := err.(*UnsupposedValueError); !ok {
-		t.Fatalf("expected *ErrUnsupportedValue, got %v", reflect.TypeOf(err))
-	}
+	expected := testutil.MustMetric(
+		"servers.localhost.cpu_load",
+		map[string]string{},
+		map[string]interface{}{
+			"value": math.NaN(),
+		},
+		time.Unix(1435077219, 0),
+	)
+
+	testutil.RequireMetricEqual(t, expected, m)
+}
+
+func TestParseInf(t *testing.T) {
+	p, err := NewGraphiteParser("", []string{"measurement*"}, nil)
+	require.NoError(t, err)
+
+	m, err := p.ParseLine("servers.localhost.cpu_load +Inf 1435077219")
+	require.NoError(t, err)
+
+	expected := testutil.MustMetric(
+		"servers.localhost.cpu_load",
+		map[string]string{},
+		map[string]interface{}{
+			"value": math.Inf(1),
+		},
+		time.Unix(1435077219, 0),
+	)
+
+	testutil.RequireMetricEqual(t, expected, m)
 }
 
 func TestFilterMatchDefault(t *testing.T) {
@@ -378,7 +481,7 @@ func TestFilterMatchDefault(t *testing.T) {
 	m, err := p.ParseLine("miss.servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestFilterMatchMultipleMeasurement(t *testing.T) {
@@ -396,7 +499,7 @@ func TestFilterMatchMultipleMeasurement(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu.cpu_load.10 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestFilterMatchMultipleMeasurementSeparator(t *testing.T) {
@@ -415,7 +518,7 @@ func TestFilterMatchMultipleMeasurementSeparator(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu.cpu_load.10 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestFilterMatchSingle(t *testing.T) {
@@ -432,7 +535,7 @@ func TestFilterMatchSingle(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestParseNoMatch(t *testing.T) {
@@ -450,7 +553,7 @@ func TestParseNoMatch(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.memory.VmallocChunk 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestFilterMatchWildcard(t *testing.T) {
@@ -468,7 +571,7 @@ func TestFilterMatchWildcard(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestFilterMatchExactBeforeWildcard(t *testing.T) {
@@ -488,7 +591,7 @@ func TestFilterMatchExactBeforeWildcard(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestFilterMatchMostLongestFilter(t *testing.T) {
@@ -507,8 +610,13 @@ func TestFilterMatchMostLongestFilter(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Contains(t, m.String(), ",host=localhost")
-	assert.Contains(t, m.String(), ",resource=cpu")
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("resource")
+	require.True(t, ok)
+	require.Equal(t, "cpu", value)
 }
 
 func TestFilterMatchMultipleWildcards(t *testing.T) {
@@ -532,7 +640,7 @@ func TestFilterMatchMultipleWildcards(t *testing.T) {
 	m, err := p.ParseLine("servers.server01.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestParseDefaultTags(t *testing.T) {
@@ -548,9 +656,17 @@ func TestParseDefaultTags(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Contains(t, m.String(), ",host=localhost")
-	assert.Contains(t, m.String(), ",region=us-east")
-	assert.Contains(t, m.String(), ",zone=1c")
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("region")
+	require.True(t, ok)
+	require.Equal(t, "us-east", value)
+
+	value, ok = m.GetTag("zone")
+	require.True(t, ok)
+	require.Equal(t, "1c", value)
 }
 
 func TestParseDefaultTemplateTags(t *testing.T) {
@@ -565,9 +681,17 @@ func TestParseDefaultTemplateTags(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Contains(t, m.String(), ",host=localhost")
-	assert.Contains(t, m.String(), ",region=us-east")
-	assert.Contains(t, m.String(), ",zone=1c")
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("region")
+	require.True(t, ok)
+	require.Equal(t, "us-east", value)
+
+	value, ok = m.GetTag("zone")
+	require.True(t, ok)
+	require.Equal(t, "1c", value)
 }
 
 func TestParseDefaultTemplateTagsOverridGlobal(t *testing.T) {
@@ -580,11 +704,20 @@ func TestParseDefaultTemplateTagsOverridGlobal(t *testing.T) {
 	}
 
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
+	_ = m
 	assert.NoError(t, err)
 
-	assert.Contains(t, m.String(), ",host=localhost")
-	assert.Contains(t, m.String(), ",region=us-east")
-	assert.Contains(t, m.String(), ",zone=1c")
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("region")
+	require.True(t, ok)
+	require.Equal(t, "us-east", value)
+
+	value, ok = m.GetTag("zone")
+	require.True(t, ok)
+	require.Equal(t, "1c", value)
 }
 
 func TestParseTemplateWhitespace(t *testing.T) {
@@ -601,9 +734,17 @@ func TestParseTemplateWhitespace(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Contains(t, m.String(), ",host=localhost")
-	assert.Contains(t, m.String(), ",region=us-east")
-	assert.Contains(t, m.String(), ",zone=1c")
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("region")
+	require.True(t, ok)
+	require.Equal(t, "us-east", value)
+
+	value, ok = m.GetTag("zone")
+	require.True(t, ok)
+	require.Equal(t, "1c", value)
 }
 
 // Test basic functionality of ApplyTemplate

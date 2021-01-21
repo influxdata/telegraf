@@ -1,12 +1,11 @@
-// +build !windows
-
 package ntpq
 
 import (
 	"bufio"
 	"bytes"
-	"log"
+	"fmt"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -22,30 +21,11 @@ var tagHeaders map[string]string = map[string]string{
 	"t":      "type",
 }
 
-// Mapping of the ntpq tag key to the index in the command output
-var tagI map[string]int = map[string]int{
-	"remote":  -1,
-	"refid":   -1,
-	"stratum": -1,
-	"type":    -1,
-}
-
-// Mapping of float metrics to their index in the command output
-var floatI map[string]int = map[string]int{
-	"delay":  -1,
-	"offset": -1,
-	"jitter": -1,
-}
-
-// Mapping of int metrics to their index in the command output
-var intI map[string]int = map[string]int{
-	"when":  -1,
-	"poll":  -1,
-	"reach": -1,
-}
-
 type NTPQ struct {
-	runQ func() ([]byte, error)
+	runQ   func() ([]byte, error)
+	tagI   map[string]int
+	floatI map[string]int
+	intI   map[string]int
 
 	DNSLookup bool `toml:"dns_lookup"`
 }
@@ -67,7 +47,16 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	// Due to problems with a parsing, we have to use regexp expression in order
+	// to remove string that starts from '(' and ends with space
+	// see: https://github.com/influxdata/telegraf/issues/2386
+	reg, err := regexp.Compile("\\s+\\([\\S]*")
+	if err != nil {
+		return err
+	}
+
 	lineCounter := 0
+	numColumns := 0
 	scanner := bufio.NewScanner(bytes.NewReader(out))
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -80,6 +69,8 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 			line = strings.TrimLeft(line, "*#o+x.-")
 		}
 
+		line = reg.ReplaceAllString(line, "")
+
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -87,30 +78,35 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 
 		// If lineCounter == 0, then this is the header line
 		if lineCounter == 0 {
+			numColumns = len(fields)
 			for i, field := range fields {
 				// Check if field is a tag:
 				if tagKey, ok := tagHeaders[field]; ok {
-					tagI[tagKey] = i
+					n.tagI[tagKey] = i
 					continue
 				}
 
 				// check if field is a float metric:
-				if _, ok := floatI[field]; ok {
-					floatI[field] = i
+				if _, ok := n.floatI[field]; ok {
+					n.floatI[field] = i
 					continue
 				}
 
 				// check if field is an int metric:
-				if _, ok := intI[field]; ok {
-					intI[field] = i
+				if _, ok := n.intI[field]; ok {
+					n.intI[field] = i
 					continue
 				}
 			}
 		} else {
+			if len(fields) != numColumns {
+				continue
+			}
+
 			mFields := make(map[string]interface{})
 
 			// Get tags from output
-			for key, index := range tagI {
+			for key, index := range n.tagI {
 				if index == -1 {
 					continue
 				}
@@ -118,7 +114,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Get integer metrics from output
-			for key, index := range intI {
+			for key, index := range n.intI {
 				if index == -1 || index >= len(fields) {
 					continue
 				}
@@ -132,7 +128,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 					case strings.HasSuffix(when, "h"):
 						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "h"))
 						if err != nil {
-							log.Printf("E! Error ntpq: parsing int: %s", fields[index])
+							acc.AddError(fmt.Errorf("E! Error ntpq: parsing int: %s", fields[index]))
 							continue
 						}
 						// seconds in an hour
@@ -141,7 +137,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 					case strings.HasSuffix(when, "d"):
 						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "d"))
 						if err != nil {
-							log.Printf("E! Error ntpq: parsing int: %s", fields[index])
+							acc.AddError(fmt.Errorf("E! Error ntpq: parsing int: %s", fields[index]))
 							continue
 						}
 						// seconds in a day
@@ -150,7 +146,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 					case strings.HasSuffix(when, "m"):
 						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "m"))
 						if err != nil {
-							log.Printf("E! Error ntpq: parsing int: %s", fields[index])
+							acc.AddError(fmt.Errorf("E! Error ntpq: parsing int: %s", fields[index]))
 							continue
 						}
 						// seconds in a day
@@ -161,14 +157,14 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 
 				m, err := strconv.Atoi(fields[index])
 				if err != nil {
-					log.Printf("E! Error ntpq: parsing int: %s", fields[index])
+					acc.AddError(fmt.Errorf("E! Error ntpq: parsing int: %s", fields[index]))
 					continue
 				}
 				mFields[key] = int64(m)
 			}
 
 			// get float metrics from output
-			for key, index := range floatI {
+			for key, index := range n.floatI {
 				if index == -1 || index >= len(fields) {
 					continue
 				}
@@ -178,7 +174,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 
 				m, err := strconv.ParseFloat(fields[index], 64)
 				if err != nil {
-					log.Printf("E! Error ntpq: parsing float: %s", fields[index])
+					acc.AddError(fmt.Errorf("E! Error ntpq: parsing float: %s", fields[index]))
 					continue
 				}
 				mFields[key] = m
@@ -208,10 +204,40 @@ func (n *NTPQ) runq() ([]byte, error) {
 	return cmd.Output()
 }
 
+func newNTPQ() *NTPQ {
+	// Mapping of the ntpq tag key to the index in the command output
+	tagI := map[string]int{
+		"remote":  -1,
+		"refid":   -1,
+		"stratum": -1,
+		"type":    -1,
+	}
+
+	// Mapping of float metrics to their index in the command output
+	floatI := map[string]int{
+		"delay":  -1,
+		"offset": -1,
+		"jitter": -1,
+	}
+
+	// Mapping of int metrics to their index in the command output
+	intI := map[string]int{
+		"when":  -1,
+		"poll":  -1,
+		"reach": -1,
+	}
+
+	n := &NTPQ{
+		tagI:   tagI,
+		floatI: floatI,
+		intI:   intI,
+	}
+	n.runQ = n.runq
+	return n
+}
+
 func init() {
 	inputs.Add("ntpq", func() telegraf.Input {
-		n := &NTPQ{}
-		n.runQ = n.runq
-		return n
+		return newNTPQ()
 	})
 }

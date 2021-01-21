@@ -34,6 +34,9 @@ This plugin writes to [Riemann](http://riemann.io/) via TCP or UDP.
 
   ## Description for Riemann event
   # description_text = "metrics collected from telegraf"
+
+  ## Riemann client write timeout, defaults to "5s" if not set.
+  # timeout = "5s"
 ```
 
 ### Required parameters:

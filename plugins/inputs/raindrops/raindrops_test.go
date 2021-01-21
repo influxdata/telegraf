@@ -68,7 +68,7 @@ func TestRaindropsGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := n.Gather(&acc)
+	err := acc.GatherError(n.Gather)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{

@@ -10,16 +10,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// $ zpool list -Hp
+// $ zpool list -Hp -o name,health,size,alloc,free,fragmentation,capacity,dedupratio
 var zpool_output = []string{
-	"freenas-boot	30601641984	2022177280	28579464704	-	-	6	1.00x	ONLINE	-",
-	"red1	8933531975680	1126164848640	7807367127040	-	8%	12	1.83x	ONLINE	/mnt",
-	"temp1	2989297238016	1626309320704	1362987917312	-	38%	54	1.28x	ONLINE	/mnt",
-	"temp2	2989297238016	626958278656	2362338959360	-	12%	20	1.00x	ONLINE	/mnt",
+	"freenas-boot	ONLINE	30601641984	2022177280	28579464704	-	6	1.00x",
+	"red1	ONLINE	8933531975680	1126164848640	7807367127040	8%	12	1.83x",
+	"temp1	ONLINE	2989297238016	1626309320704	1362987917312	38%	54	1.28x",
+	"temp2	ONLINE	2989297238016	626958278656	2362338959360	12%	20	1.00x",
 }
 
 func mock_zpool() ([]string, error) {
 	return zpool_output, nil
+}
+
+// $ zpool list -Hp -o name,health,size,alloc,free,fragmentation,capacity,dedupratio
+var zpool_output_unavail = []string{
+	"temp2	UNAVAIL	-	-	-	-	-	-",
+}
+
+func mock_zpool_unavail() ([]string, error) {
+	return zpool_output_unavail, nil
+}
+
+// $ zfs list -Hp -o name,avail,used,usedsnap,usedds
+var zdataset_output = []string{
+	"zata    10741741326336  8564135526400   0       90112",
+	"zata/home       10741741326336  2498560 212992  2285568",
+	"zata/import     10741741326336  196608  81920   114688",
+	"zata/storage    10741741326336  8556084379648   3601138999296   4954945380352",
+}
+
+func mock_zdataset() ([]string, error) {
+	return zdataset_output, nil
 }
 
 // sysctl -q kstat.zfs.misc.arcstats
@@ -82,6 +103,74 @@ func TestZfsPoolMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
 }
 
+func TestZfsPoolMetrics_unavail(t *testing.T) {
+
+	var acc testutil.Accumulator
+
+	z := &Zfs{
+		KstatMetrics: []string{"vdev_cache_stats"},
+		sysctl:       mock_sysctl,
+		zpool:        mock_zpool_unavail,
+	}
+	err := z.Gather(&acc)
+	require.NoError(t, err)
+
+	require.False(t, acc.HasMeasurement("zfs_pool"))
+	acc.Metrics = nil
+
+	z = &Zfs{
+		KstatMetrics: []string{"vdev_cache_stats"},
+		PoolMetrics:  true,
+		sysctl:       mock_sysctl,
+		zpool:        mock_zpool_unavail,
+	}
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	//one pool, UNAVAIL
+	tags := map[string]string{
+		"pool":   "temp2",
+		"health": "UNAVAIL",
+	}
+
+	poolMetrics := getTemp2PoolMetrics()
+
+	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
+}
+
+func TestZfsDatasetMetrics(t *testing.T) {
+	var acc testutil.Accumulator
+
+	z := &Zfs{
+		KstatMetrics: []string{"vdev_cache_stats"},
+		sysctl:       mock_sysctl,
+		zdataset:     mock_zdataset,
+	}
+	err := z.Gather(&acc)
+	require.NoError(t, err)
+
+	require.False(t, acc.HasMeasurement("zfs_dataset"))
+	acc.Metrics = nil
+
+	z = &Zfs{
+		KstatMetrics:   []string{"vdev_cache_stats"},
+		DatasetMetrics: true,
+		sysctl:         mock_sysctl,
+		zdataset:       mock_zdataset,
+	}
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	//one pool, all metrics
+	tags := map[string]string{
+		"dataset": "zata",
+	}
+
+	datasetMetrics := getZataDatasetMetrics()
+
+	acc.AssertContainsTaggedFields(t, "zfs_dataset", datasetMetrics, tags)
+}
+
 func TestZfsGeneratesMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
@@ -111,7 +200,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
-	//four pool, vdev_cache_stats and zfetchstatus metrics
+	//four pool, vdev_cache_stats and zfetchstats metrics
 	intMetrics = getKstatMetricsVdevAndZfetch()
 
 	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
@@ -125,6 +214,21 @@ func getFreeNasBootPoolMetrics() map[string]interface{} {
 		"free":          int64(28579464704),
 		"size":          int64(30601641984),
 		"fragmentation": int64(0),
+	}
+}
+
+func getTemp2PoolMetrics() map[string]interface{} {
+	return map[string]interface{}{
+		"size": int64(0),
+	}
+}
+
+func getZataDatasetMetrics() map[string]interface{} {
+	return map[string]interface{}{
+		"avail":    int64(10741741326336),
+		"used":     int64(8564135526400),
+		"usedsnap": int64(0),
+		"usedds":   int64(90112),
 	}
 }
 

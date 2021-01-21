@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -15,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -36,15 +35,7 @@ type GrayLog struct {
 	Metrics  []string
 	Username string
 	Password string
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	client HTTPClient
 }
@@ -56,7 +47,7 @@ type HTTPClient interface {
 	// req: HTTP request object
 	//
 	// Returns:
-	// http.Response:  HTTP respons object
+	// http.Response:  HTTP response object
 	// error        :  Any error that may have occurred
 	MakeRequest(req *http.Request) (*http.Response, error)
 
@@ -112,11 +103,11 @@ var sampleConfig = `
   username = ""
   password = ""
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
 
@@ -133,8 +124,7 @@ func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	if h.client.HTTPClient() == nil {
-		tlsCfg, err := internal.GetTLSConfig(
-			h.SSLCert, h.SSLKey, h.SSLCA, h.InsecureSkipVerify)
+		tlsCfg, err := h.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}
@@ -149,31 +139,17 @@ func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 		h.client.SetHTTPClient(client)
 	}
 
-	errorChannel := make(chan error, len(h.Servers))
-
 	for _, server := range h.Servers {
 		wg.Add(1)
 		go func(server string) {
 			defer wg.Done()
-			if err := h.gatherServer(acc, server); err != nil {
-				errorChannel <- err
-			}
+			acc.AddError(h.gatherServer(acc, server))
 		}(server)
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// Get all errors and return them as one giant error
-	errorStrings := []string{}
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	if len(errorStrings) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 // Gathers data from a particular server
@@ -193,11 +169,12 @@ func (h *GrayLog) gatherServer(
 		return err
 	}
 	requestURL, err := url.Parse(serverURL)
+	if err != nil {
+		return fmt.Errorf("unable to parse address '%s': %s", serverURL, err)
+	}
+
 	host, port, _ := net.SplitHostPort(requestURL.Host)
 	var dat ResponseMetrics
-	if err != nil {
-		return err
-	}
 	if err := json.Unmarshal([]byte(resp), &dat); err != nil {
 		return err
 	}
@@ -259,6 +236,9 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 	if err != nil {
 		return "", -1, fmt.Errorf("Invalid server URL \"%s\"", serverURL)
 	}
+	// Add X-Requested-By header
+	headers["X-Requested-By"] = "Telegraf"
+
 	if strings.Contains(requestURL.String(), "multiple") {
 		m := &Messagebody{Metrics: h.Metrics}
 		http_body, err := json.Marshal(m)

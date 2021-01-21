@@ -1,0 +1,407 @@
+[
+    {
+        "trace_id": 243463817635710260,
+        "name": "Concat",
+        "id": 3383422996321511664,
+        "parent_id": 4574092882326506380,
+        "annotations": [
+            {
+                "timestamp": 1499817952283903,
+                "value": "cs",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            },
+            {
+                "timestamp": 1499817952286792,
+                "value": "cr",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            }
+        ],
+        "binary_annotations": [
+            {
+                "key": "http.path",
+                "value": "L2NvbmNhdC8=",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            },
+            {
+                "key": "http.url",
+                "value": "aHR0cDovL2xvY2FsaG9zdDo2MTAwMS9jb25jYXQv",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            },
+            {
+                "key": "peer.hostname",
+                "value": "bG9jYWxob3N0",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            },
+            {
+                "key": "span.kind",
+                "value": "Y2xpZW50",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            },
+            {
+                "key": "http.method",
+                "value": "R0VU",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            },
+            {
+                "key": "http.host",
+                "value": "bG9jYWxob3N0OjYxMDAx",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            }
+        ],
+        "timestamp": 1499817952283903,
+        "duration": 2888,
+        "trace_id_high": 8269862291023777619
+    },
+    {
+        "trace_id": 243463817635710260,
+        "name": "Sum",
+        "id": 6036416808826525494,
+        "parent_id": 4574092882326506380,
+        "annotations": [
+            {
+                "timestamp": 1499817952286828,
+                "value": "cs",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            },
+            {
+                "timestamp": 1499817952333847,
+                "value": "cr",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            }
+        ],
+        "binary_annotations": [
+            {
+                "key": "span.kind",
+                "value": "Y2xpZW50",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            },
+            {
+                "key": "http.method",
+                "value": "R0VU",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            },
+            {
+                "key": "http.host",
+                "value": "bG9jYWxob3N0OjYxMDAx",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            },
+            {
+                "key": "http.path",
+                "value": "L3N1bS8=",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            },
+            {
+                "key": "http.url",
+                "value": "aHR0cDovL2xvY2FsaG9zdDo2MTAwMS9zdW0v",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            },
+            {
+                "key": "peer.hostname",
+                "value": "bG9jYWxob3N0",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            }
+        ],
+        "timestamp": 1499817952286828,
+        "duration": 47019,
+        "trace_id_high": 8269862291023777619
+    },
+    {
+        "trace_id": 243463817635710260,
+        "name": "Run",
+        "id": 4574092882326506380,
+        "annotations": [
+            {
+                "timestamp": 1499817952283897,
+                "value": "Call Concat",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            },
+            {
+                "timestamp": 1499817952286824,
+                "value": "Call Sum",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            }
+        ],
+        "binary_annotations": [
+            {
+                "key": "lc",
+                "value": "Y2xp",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 0,
+                    "port": 0,
+                    "service_name": "cli"
+                }
+            }
+        ],
+        "timestamp": 1499817952283881,
+        "duration": 50014,
+        "trace_id_high": 8269862291023777619
+    }
+]
+
+[
+    {
+        "trace_id": 243463817635710260,
+        "name": "myComplexQuery",
+        "id": 4254041670140233539,
+        "parent_id": 8633460035494236932,
+        "annotations": [
+            {
+                "timestamp": 1499817952307418,
+                "value": "cs",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            },
+            {
+                "timestamp": 1499817952331909,
+                "value": "cr",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            }
+        ],
+        "binary_annotations": [
+            {
+                "key": "sa",
+                "value": "UG9zdGdyZVNRTA==",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": 5432,
+                    "service_name": "PostgreSQL",
+                    "ipv6": "AAAAAAAAAAAAAAAAAAAAAQ=="
+                }
+            },
+            {
+                "key": "query",
+                "value": "U0VMRUNUIHJlY2lwZXMgRlJPTSBjb29rYm9vayBXSEVSRSB0b3BpYyA9ICd3b3JsZCBkb21pbmF0aW9uJw==",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            },
+            {
+                "key": "span.kind",
+                "value": "cmVzb3VyY2U=",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            },
+            {
+                "key": "peer.service",
+                "value": "UG9zdGdyZVNRTA==",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            },
+            {
+                "key": "peer.hostname",
+                "value": "bG9jYWxob3N0",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            },
+            {
+                "key": "peer.port",
+                "value": "AAAVOA==",
+                "annotation_type": "I32",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            }
+        ],
+        "timestamp": 1499817952307418,
+        "duration": 24491,
+        "trace_id_high": 8269862291023777619
+    },
+    {
+        "trace_id": 243463817635710260,
+        "name": "Sum",
+        "id": 8633460035494236932,
+        "parent_id": 6036416808826525494,
+        "annotations": [
+            {
+                "timestamp": 1499817952287147,
+                "value": "sr",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            },
+            {
+                "timestamp": 1499817952333348,
+                "value": "ss",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            },
+            {
+                "timestamp": 1499817952296675,
+                "value": "MyEventAnnotation",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            }
+        ],
+        "binary_annotations": [
+            {
+                "key": "span.kind",
+                "value": "c2VydmVy",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            },
+            {
+                "key": "serverSide",
+                "value": "aGVyZQ==",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            },
+            {
+                "key": "service",
+                "value": "c3ZjMg==",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            },
+            {
+                "key": "key1",
+                "value": "dmFsdWUx",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            },
+            {
+                "key": "key2",
+                "value": "AAAAAgAAAAA=",
+                "annotation_type": "I32",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": -4534,
+                    "service_name": "svc2"
+                }
+            }
+        ],
+        "trace_id_high": 8269862291023777619
+    }
+]

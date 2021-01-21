@@ -5,15 +5,25 @@ This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
 ### Configuration:
 
 ```toml
- # A plugin to collect stats from Varnish HTTP Cache
- [[inputs.varnish]]
-   ## The default location of the varnishstat binary can be overridden with:
-   binary = "/usr/bin/varnishstat"
+[[inputs.varnish]]
+  ## If running as a restricted user you can prepend sudo for additional access:
+  #use_sudo = false
 
-   ## By default, telegraf gathers stats for 3 metric points.
-   ## Setting stats will override the defaults shown below.
-   ## stats may also be set to ["all"], which will collect all stats
-   stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
+  ## The default location of the varnishstat binary can be overridden with:
+  binary = "/usr/bin/varnishstat"
+
+  ## By default, telegraf gather stats for 3 metric points.
+  ## Setting stats will override the defaults shown below.
+  ## Glob matching can be used, ie, stats = ["MAIN.*"]
+  ## stats may also be set to ["*"], which will collect all stats
+  stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
+
+  ## Optional name for the varnish instance (or working directory) to query
+  ## Usually append after -n in varnish cli
+  # instance_name = instanceName
+
+  ## Timeout for varnishstat command
+  # timeout = "1s"
 ```
 
 ### Measurements & Fields:
@@ -82,7 +92,7 @@ MEMPOOL, etc). In the output, the prefix will be used as a tag, and removed from
     - MAIN.s_pipe                                    (uint64, count,  Total pipe sessions)
     - MAIN.s_pass                                    (uint64, count,  Total pass- ed requests)
     - MAIN.s_fetch                                   (uint64, count,  Total backend fetches)
-    - MAIN.s_synth                                   (uint64, count,  Total synthethic responses)
+    - MAIN.s_synth                                   (uint64, count,  Total synthetic responses)
     - MAIN.s_req_hdrbytes                            (uint64, count,  Request header bytes)
     - MAIN.s_req_bodybytes                           (uint64, count,  Request body bytes)
     - MAIN.s_resp_hdrbytes                           (uint64, count,  Response header bytes)
@@ -330,10 +340,68 @@ the following values:
   - LCK
   
   
+
+### Permissions:
+
+It's important to note that this plugin references varnishstat, which may require additional permissions to execute successfully.
+Depending on the user/group permissions of the telegraf user executing this plugin, you may need to alter the group membership, set facls, or use sudo.
+
+**Group membership (Recommended)**:
+```bash
+$ groups telegraf
+telegraf : telegraf
+
+$ usermod -a -G varnish telegraf
+
+$ groups telegraf
+telegraf : telegraf varnish
+```
+
+**Extended filesystem ACL's**:
+```bash
+$ getfacl /var/lib/varnish/<hostname>/_.vsm
+# file: var/lib/varnish/<hostname>/_.vsm
+# owner: root
+# group: root
+user::rw-
+group::r--
+other::---
+
+$ setfacl -m u:telegraf:r /var/lib/varnish/<hostname>/_.vsm
+
+$ getfacl /var/lib/varnish/<hostname>/_.vsm
+# file: var/lib/varnish/<hostname>/_.vsm
+# owner: root
+# group: root
+user::rw-
+user:telegraf:r--
+group::r--
+mask::r--
+other::---
+```
+
+**Sudo privileges**:
+If you use this method, you will need the following in your telegraf config:
+```toml
+[[inputs.varnish]]
+  use_sudo = true
+```
+
+You will also need to update your sudoers file:
+```bash
+$ visudo
+# Add the following line:
+Cmnd_Alias VARNISHSTAT = /usr/bin/varnishstat
+telegraf  ALL=(ALL) NOPASSWD: VARNISHSTAT
+Defaults!VARNISHSTAT !logfile, !syslog, !pam_session
+```
+
+Please use the solution you see as most appropriate.
+
 ### Example Output:
 
 ```
- telegraf -test -config etc/telegraf.conf  -input-filter varnish
+ telegraf --config etc/telegraf.conf --input-filter varnish --test
 * Plugin: varnish, Collection 1
 > varnish,host=rpercy-VirtualBox,section=MAIN cache_hit=0i,cache_miss=0i,uptime=8416i 1462765437090957980
 ```

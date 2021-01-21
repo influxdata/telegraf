@@ -1,0 +1,30 @@
+[{
+  "trace_id": 6802735349851856000,
+  "name": "main.dud",
+  "id": 6802735349851856000,
+  "parent_id": null,
+  "annotations": [
+    {
+      "timestamp": 1433330263415871,
+      "value": "cs",
+      "host": {
+        "ipv4": 0,
+        "port": 9410,
+        "service_name": "go-zipkin-testclient"
+      },
+      "duration": null
+    },
+    {
+      "timestamp": 1433330263415872,
+      "value": "cr",
+      "host": {
+        "ipv4": 0,
+        "port": 9410,
+        "service_name": "go-zipkin-testclient"
+      },
+      "duration": null
+    }
+  ],
+  "binary_annotations": [],
+  "debug": true
+}]

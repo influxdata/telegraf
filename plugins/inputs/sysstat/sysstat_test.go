@@ -13,6 +13,7 @@ import (
 )
 
 var s = Sysstat{
+	Log:        testutil.Logger{},
 	interval:   10,
 	Sadc:       "/usr/lib/sa/sadc",
 	Sadf:       "/usr/bin/sadf",
@@ -37,7 +38,7 @@ func TestGather(t *testing.T) {
 	defer func() { execCommand = exec.Command }()
 	var acc testutil.Accumulator
 
-	err := s.Gather(&acc)
+	err := acc.GatherError(s.Gather)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +161,7 @@ func TestGatherGrouped(t *testing.T) {
 	defer func() { execCommand = exec.Command }()
 	var acc testutil.Accumulator
 
-	err := s.Gather(&acc)
+	err := acc.GatherError(s.Gather)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,6 +224,10 @@ func TestEscape(t *testing.T) {
 	}{
 		{
 			"%util",
+			"pct_util",
+		},
+		{
+			"%%util",
 			"pct_util",
 		},
 		{

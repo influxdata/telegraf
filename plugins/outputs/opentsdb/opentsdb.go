@@ -3,8 +3,10 @@ package opentsdb
 import (
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -13,19 +15,31 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+var (
+	allowedChars = regexp.MustCompile(`[^a-zA-Z0-9-_./\p{L}]`)
+	hyphenChars  = strings.NewReplacer(
+		"@", "-",
+		"*", "-",
+		`%`, "-",
+		"#", "-",
+		"$", "-")
+	defaultHttpPath  = "/api/put"
+	defaultSeparator = "_"
+)
+
 type OpenTSDB struct {
 	Prefix string
 
 	Host string
 	Port int
 
-	HttpBatchSize int
+	HttpBatchSize int // deprecated httpBatchSize form in 1.8
+	HttpPath      string
 
 	Debug bool
-}
 
-var sanitizedChars = strings.NewReplacer("@", "-", "*", "-", " ", "_",
-	`%`, "-", "#", "-", "$", "-", ":", "_")
+	Separator string
+}
 
 var sampleConfig = `
   ## prefix for metrics keys
@@ -41,10 +55,17 @@ var sampleConfig = `
 
   ## Number of data points to send to OpenTSDB in Http requests.
   ## Not used with telnet API.
-  httpBatchSize = 50
+  http_batch_size = 50
+
+  ## URI Path for Http requests to OpenTSDB.
+  ## Used in cases where OpenTSDB is located behind a reverse proxy.
+  http_path = "/api/put"
 
   ## Debug true - Prints OpenTSDB communication
   debug = false
+
+  ## Separator separates measurement name from field
+  separator = "_"
 `
 
 func ToLineFormat(tags map[string]string) string {
@@ -107,26 +128,31 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 		Scheme:    u.Scheme,
 		User:      u.User,
 		BatchSize: o.HttpBatchSize,
+		Path:      o.HttpPath,
 		Debug:     o.Debug,
 	}
 
 	for _, m := range metrics {
-		now := m.UnixNano() / 1000000000
+		now := m.Time().UnixNano() / 1000000000
 		tags := cleanTags(m.Tags())
 
 		for fieldName, value := range m.Fields() {
-			switch value.(type) {
+			switch fv := value.(type) {
 			case int64:
 			case uint64:
 			case float64:
+				// JSON does not support these special values
+				if math.IsNaN(fv) || math.IsInf(fv, 0) {
+					continue
+				}
 			default:
 				log.Printf("D! OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
 				continue
 			}
 
 			metric := &HttpMetric{
-				Metric: sanitizedChars.Replace(fmt.Sprintf("%s%s_%s",
-					o.Prefix, m.Name(), fieldName)),
+				Metric: sanitize(fmt.Sprintf("%s%s%s%s",
+					o.Prefix, m.Name(), o.Separator, fieldName)),
 				Tags:      tags,
 				Timestamp: now,
 				Value:     value,
@@ -156,14 +182,18 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 	defer connection.Close()
 
 	for _, m := range metrics {
-		now := m.UnixNano() / 1000000000
+		now := m.Time().UnixNano() / 1000000000
 		tags := ToLineFormat(cleanTags(m.Tags()))
 
 		for fieldName, value := range m.Fields() {
-			switch value.(type) {
+			switch fv := value.(type) {
 			case int64:
 			case uint64:
 			case float64:
+				// JSON does not support these special values
+				if math.IsNaN(fv) || math.IsInf(fv, 0) {
+					continue
+				}
 			default:
 				log.Printf("D! OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
 				continue
@@ -176,7 +206,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 			}
 
 			messageLine := fmt.Sprintf("put %s %v %s %s\n",
-				sanitizedChars.Replace(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName)),
+				sanitize(fmt.Sprintf("%s%s%s%s", o.Prefix, m.Name(), o.Separator, fieldName)),
 				now, metricValue, tags)
 
 			_, err := connection.Write([]byte(messageLine))
@@ -192,7 +222,10 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 func cleanTags(tags map[string]string) map[string]string {
 	tagSet := make(map[string]string, len(tags))
 	for k, v := range tags {
-		tagSet[sanitizedChars.Replace(k)] = sanitizedChars.Replace(v)
+		val := sanitize(v)
+		if val != "" {
+			tagSet[sanitize(k)] = val
+		}
 	}
 	return tagSet
 }
@@ -236,8 +269,18 @@ func (o *OpenTSDB) Close() error {
 	return nil
 }
 
+func sanitize(value string) string {
+	// Apply special hyphenation rules to preserve backwards compatibility
+	value = hyphenChars.Replace(value)
+	// Replace any remaining illegal chars
+	return allowedChars.ReplaceAllLiteralString(value, "_")
+}
+
 func init() {
 	outputs.Add("opentsdb", func() telegraf.Output {
-		return &OpenTSDB{}
+		return &OpenTSDB{
+			HttpPath:  defaultHttpPath,
+			Separator: defaultSeparator,
+		}
 	})
 }

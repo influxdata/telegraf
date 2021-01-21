@@ -2,55 +2,60 @@ package nats
 
 import (
 	"fmt"
-
-	nats_client "github.com/nats-io/nats"
+	"log"
+	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/nats-io/nats.go"
 )
 
 type NATS struct {
-	// Servers is the NATS server pool to connect to
-	Servers []string
-	// Credentials
-	Username string
-	Password string
-	// NATS subject to publish metrics to
-	Subject string
+	Servers     []string `toml:"servers"`
+	Secure      bool     `toml:"secure"`
+	Name        string   `toml:"name"`
+	Username    string   `toml:"username"`
+	Password    string   `toml:"password"`
+	Credentials string   `toml:"credentials"`
+	Subject     string   `toml:"subject"`
 
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
-	conn       *nats_client.Conn
+	conn       *nats.Conn
 	serializer serializers.Serializer
 }
 
 var sampleConfig = `
   ## URLs of NATS servers
   servers = ["nats://localhost:4222"]
+
+  ## Optional client name
+  # name = ""
+
   ## Optional credentials
   # username = ""
   # password = ""
+
+  ## Optional NATS 2.0 and NATS NGS compatible user credentials
+  # credentials = "/etc/telegraf/nats.creds"
+
   ## NATS subject for producer messages
   subject = "telegraf"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Use Transport Layer Security
+  # secure = false
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Data format to output.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
@@ -63,35 +68,30 @@ func (n *NATS) SetSerializer(serializer serializers.Serializer) {
 func (n *NATS) Connect() error {
 	var err error
 
-	// set default NATS connection options
-	opts := nats_client.DefaultOptions
-
-	// override max reconnection tries
-	opts.MaxReconnect = -1
-
-	// override servers, if any were specified
-	opts.Servers = n.Servers
+	opts := []nats.Option{
+		nats.MaxReconnects(-1),
+	}
 
 	// override authentication, if any was specified
 	if n.Username != "" {
-		opts.User = n.Username
-		opts.Password = n.Password
+		opts = append(opts, nats.UserInfo(n.Username, n.Password))
 	}
 
-	// override TLS, if it was specified
-	tlsConfig, err := internal.GetTLSConfig(
-		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
-	if err != nil {
-		return err
+	if n.Name != "" {
+		opts = append(opts, nats.Name(n.Name))
 	}
-	if tlsConfig != nil {
-		// set NATS connection TLS options
-		opts.Secure = true
-		opts.TLSConfig = tlsConfig
+
+	if n.Secure {
+		tlsConfig, err := n.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+
+		opts = append(opts, nats.Secure(tlsConfig))
 	}
 
 	// try and connect
-	n.conn, err = opts.Connect()
+	n.conn, err = nats.Connect(strings.Join(n.Servers, ","), opts...)
 
 	return err
 }
@@ -117,7 +117,8 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
-			return err
+			log.Printf("D! [outputs.nats] Could not serialize metric: %v", err)
+			continue
 		}
 
 		err = n.conn.Publish(n.Subject, buf)

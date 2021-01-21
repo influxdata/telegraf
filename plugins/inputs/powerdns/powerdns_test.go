@@ -1,15 +1,16 @@
 package powerdns
 
 import (
-	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type statServer struct{}
@@ -70,13 +71,13 @@ func (s statServer) serverSocket(l net.Listener) {
 	}
 }
 
-func TestMemcachedGeneratesMetrics(t *testing.T) {
+func TestPowerdnsGeneratesMetrics(t *testing.T) {
 	// We create a fake server to return test data
-	var randomNumber int64
-	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
-	socket, err := net.Listen("unix", fmt.Sprintf("/tmp/pdns%d.controlsocket", randomNumber))
+	randomNumber := int64(5239846799706671610)
+	sockname := filepath.Join(os.TempDir(), fmt.Sprintf("pdns%d.controlsocket", randomNumber))
+	socket, err := net.Listen("unix", sockname)
 	if err != nil {
-		t.Fatal("Cannot initalize server on port ")
+		t.Fatal("Cannot initialize server on port ")
 	}
 
 	defer socket.Close()
@@ -85,12 +86,11 @@ func TestMemcachedGeneratesMetrics(t *testing.T) {
 	go s.serverSocket(socket)
 
 	p := &Powerdns{
-		UnixSockets: []string{fmt.Sprintf("/tmp/pdns%d.controlsocket", randomNumber)},
+		UnixSockets: []string{sockname},
 	}
 
 	var acc testutil.Accumulator
-
-	err = p.Gather(&acc)
+	err = acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
 	intMetrics := []string{"corrupt-packets", "deferred-cache-inserts",
@@ -105,7 +105,7 @@ func TestMemcachedGeneratesMetrics(t *testing.T) {
 		"meta-cache-size", "qsize-q", "signature-cache-size", "sys-msec", "uptime", "user-msec"}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("powerdns", metric), metric)
+		assert.True(t, acc.HasInt64Field("powerdns", metric), metric)
 	}
 }
 

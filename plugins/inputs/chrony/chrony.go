@@ -1,5 +1,3 @@
-// +build linux
-
 package chrony
 
 import (
@@ -35,11 +33,16 @@ func (*Chrony) SampleConfig() string {
   `
 }
 
-func (c *Chrony) Gather(acc telegraf.Accumulator) error {
-	if len(c.path) == 0 {
+func (c *Chrony) Init() error {
+	var err error
+	c.path, err = exec.LookPath("chronyc")
+	if err != nil {
 		return errors.New("chronyc not found: verify that chrony is installed and that chronyc is in your PATH")
 	}
+	return nil
+}
 
+func (c *Chrony) Gather(acc telegraf.Accumulator) error {
 	flags := []string{}
 	if !c.DNSLookup {
 		flags = append(flags, "-n")
@@ -92,7 +95,7 @@ func processChronycOutput(out string) (map[string]interface{}, map[string]string
 		}
 		name := strings.ToLower(strings.Replace(strings.TrimSpace(stats[0]), " ", "_", -1))
 		// ignore reference time
-		if strings.Contains(name, "time") {
+		if strings.Contains(name, "ref_time") {
 			continue
 		}
 		valueFields := strings.Fields(stats[1])
@@ -122,12 +125,7 @@ func processChronycOutput(out string) (map[string]interface{}, map[string]string
 }
 
 func init() {
-	c := Chrony{}
-	path, _ := exec.LookPath("chronyc")
-	if len(path) > 0 {
-		c.path = path
-	}
 	inputs.Add("chrony", func() telegraf.Input {
-		return &c
+		return &Chrony{}
 	})
 }

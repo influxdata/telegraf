@@ -104,9 +104,7 @@ func (r *Riak) Gather(acc telegraf.Accumulator) error {
 
 	// Range over all servers, gathering stats. Returns early in case of any error.
 	for _, s := range r.Servers {
-		if err := r.gatherServer(s, acc); err != nil {
-			return err
-		}
+		acc.AddError(r.gatherServer(s, acc))
 	}
 
 	return nil
@@ -129,7 +127,7 @@ func (r *Riak) gatherServer(s string, acc telegraf.Accumulator) error {
 
 	// Successful responses will always return status code 200
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("riak responded with unexepcted status code %d", resp.StatusCode)
+		return fmt.Errorf("riak responded with unexpected status code %d", resp.StatusCode)
 	}
 
 	// Decode the response JSON into a new stats struct

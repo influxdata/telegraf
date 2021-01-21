@@ -1,6 +1,7 @@
 package graphite
 
 import (
+	"crypto/tls"
 	"errors"
 	"io"
 	"log"
@@ -9,17 +10,22 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type Graphite struct {
-	// URL is only for backwards compatability
-	Servers  []string
-	Prefix   string
-	Template string
-	Timeout  int
-	conns    []net.Conn
+	GraphiteTagSupport bool
+	GraphiteSeparator  string
+	// URL is only for backwards compatibility
+	Servers   []string
+	Prefix    string
+	Template  string
+	Templates []string
+	Timeout   int
+	conns     []net.Conn
+	tlsint.ClientConfig
 }
 
 var sampleConfig = `
@@ -32,8 +38,32 @@ var sampleConfig = `
   ## Graphite output template
   ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   template = "host.tags.measurement.field"
+
+  ## Enable Graphite tags support
+  # graphite_tag_support = false
+
+  ## Character for separating metric name and field for Graphite tags
+  # graphite_separator = "."
+
+  ## Graphite templates patterns
+  ## 1. Template for cpu
+  ## 2. Template for disk*
+  ## 3. Default template
+  # templates = [
+  #  "cpu tags.measurement.host.field",
+  #  "disk* measurement.field",
+  #  "host.measurement.tags.field"
+  #]
+
   ## timeout in seconds for the write connection to graphite
   timeout = 2
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (g *Graphite) Connect() error {
@@ -44,10 +74,27 @@ func (g *Graphite) Connect() error {
 	if len(g.Servers) == 0 {
 		g.Servers = append(g.Servers, "localhost:2003")
 	}
+
+	// Set tls config
+	tlsConfig, err := g.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
 	// Get Connections
 	var conns []net.Conn
 	for _, server := range g.Servers {
-		conn, err := net.DialTimeout("tcp", server, time.Duration(g.Timeout)*time.Second)
+		// Dialer with timeout
+		d := net.Dialer{Timeout: time.Duration(g.Timeout) * time.Second}
+
+		// Get secure connection if tls config is set
+		var conn net.Conn
+		if tlsConfig != nil {
+			conn, err = tls.DialWithDialer(&d, "tcp", server, tlsConfig)
+		} else {
+			conn, err = d.Dial("tcp", server)
+		}
+
 		if err == nil {
 			conns = append(conns, conn)
 		}
@@ -102,7 +149,7 @@ func checkEOF(conn net.Conn) {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template)
+	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport, g.GraphiteSeparator, g.Templates)
 	if err != nil {
 		return err
 	}
@@ -115,8 +162,22 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 		batch = append(batch, buf...)
 	}
 
+	err = g.send(batch)
+
+	// try to reconnect and retry to send
+	if err != nil {
+		log.Println("E! Graphite: Reconnecting and retrying: ")
+		g.Connect()
+		err = g.send(batch)
+	}
+
+	return err
+}
+
+func (g *Graphite) send(batch []byte) error {
 	// This will get set to nil if a successful write occurs
-	err = errors.New("Could not write to any Graphite server in cluster\n")
+	err := errors.New("Could not write to any Graphite server in cluster\n")
+
 	// Send data to a random server
 	p := rand.Perm(len(g.conns))
 	for _, n := range p {
@@ -127,6 +188,8 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 		if _, e := g.conns[n].Write(batch); e != nil {
 			// Error
 			log.Println("E! Graphite Error: " + e.Error())
+			// Close explicitly
+			g.conns[n].Close()
 			// Let's try the next one
 		} else {
 			// Success
@@ -134,11 +197,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 			break
 		}
 	}
-	// try to reconnect
-	if err != nil {
-		log.Println("E! Reconnecting: ")
-		g.Connect()
-	}
+
 	return err
 }
 

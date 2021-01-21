@@ -80,7 +80,11 @@ func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 	kstatMetrics := z.KstatMetrics
 	if len(kstatMetrics) == 0 {
-		kstatMetrics = []string{"arcstats", "zfetchstats", "vdev_cache_stats"}
+		// vdev_cache_stats is deprecated
+		// xuio_stats are ignored because as of Sep-2016, no known
+		// consumers of xuio exist on Linux
+		kstatMetrics = []string{"abdstats", "arcstats", "dnodestats", "dbufcachestats",
+			"dmu_tx", "fm", "vdev_mirror_stats", "zfetchstats", "zil"}
 	}
 
 	kstatPath := z.KstatPath
@@ -104,7 +108,7 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 	for _, metric := range kstatMetrics {
 		lines, err := internal.ReadLines(kstatPath + "/" + metric)
 		if err != nil {
-			return err
+			continue
 		}
 		for i, line := range lines {
 			if i == 0 || i == 1 {
@@ -115,6 +119,9 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 			}
 			rawData := strings.Split(line, " ")
 			key := metric + "_" + rawData[0]
+			if metric == "zil" || metric == "dmu_tx" || metric == "dnodestats" {
+				key = rawData[0]
+			}
 			rawValue := rawData[len(rawData)-1]
 			value, _ := strconv.ParseInt(rawValue, 10, 64)
 			fields[key] = value

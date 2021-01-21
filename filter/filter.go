@@ -77,3 +77,40 @@ func compileFilterNoGlob(filters []string) Filter {
 	}
 	return &out
 }
+
+type IncludeExcludeFilter struct {
+	include Filter
+	exclude Filter
+}
+
+func NewIncludeExcludeFilter(
+	include []string,
+	exclude []string,
+) (Filter, error) {
+	in, err := Compile(include)
+	if err != nil {
+		return nil, err
+	}
+
+	ex, err := Compile(exclude)
+	if err != nil {
+		return nil, err
+	}
+
+	return &IncludeExcludeFilter{in, ex}, nil
+}
+
+func (f *IncludeExcludeFilter) Match(s string) bool {
+	if f.include != nil {
+		if !f.include.Match(s) {
+			return false
+		}
+	}
+
+	if f.exclude != nil {
+		if f.exclude.Match(s) {
+			return false
+		}
+	}
+	return true
+}

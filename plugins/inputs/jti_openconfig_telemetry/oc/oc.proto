@@ -1,0 +1,319 @@
+//
+// Copyrights (c) 2016, Juniper Networks, Inc.
+// All rights reserved.
+//
+
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+
+//
+// Nitin Kumar          04/07/2016
+// Abbas Sakarwala      04/07/2016
+//
+// This file defines the Openconfig Telemetry RPC APIs (for gRPC).
+//
+// https://github.com/openconfig/public/blob/master/release/models/rpc/openconfig-rpc-api.yang
+//
+// Version 1.0
+//
+
+syntax = "proto3";
+
+package telemetry;
+
+// Interface exported by Agent
+service OpenConfigTelemetry {
+    // Request an inline subscription for data at the specified path.
+    // The device should send telemetry data back on the same
+    // connection as the subscription request.
+    rpc telemetrySubscribe(SubscriptionRequest)                     returns (stream OpenConfigData) {}
+
+    // Terminates and removes an existing telemetry subscription
+    rpc cancelTelemetrySubscription(CancelSubscriptionRequest)      returns (CancelSubscriptionReply) {}
+
+    // Get the list of current telemetry subscriptions from the
+    // target. This command returns a list of existing subscriptions
+    // not including those that are established via configuration.
+    rpc getTelemetrySubscriptions(GetSubscriptionsRequest)          returns (GetSubscriptionsReply) {}
+
+    // Get Telemetry Agent Operational States
+    rpc getTelemetryOperationalState(GetOperationalStateRequest)    returns (GetOperationalStateReply) {}
+
+    // Return the set of data encodings supported by the device for
+    // telemetry data
+    rpc getDataEncodings(DataEncodingRequest)                       returns (DataEncodingReply) {}
+}
+
+// Message sent for a telemetry subscription request
+message SubscriptionRequest {
+    // Data associated with a telemetry subscription
+    SubscriptionInput input                                 = 1;
+
+    // List of data models paths and filters
+    // which are used in a telemetry operation.
+    repeated Path path_list                                 = 2;
+
+    // The below configuration is not defined in Openconfig RPC.
+    // It is a proposed extension to configure additional
+    // subscription request features.
+    SubscriptionAdditionalConfig additional_config          = 3;
+}
+
+// Data associated with a telemetry subscription
+message SubscriptionInput {
+    // List of optional collector endpoints to send data for
+    // this subscription.
+    // If no collector destinations are specified, the collector
+    // destination is assumed to be the requester on the rpc channel.
+    repeated Collector  collector_list                      = 1;
+}
+
+// Collector endpoints to send data specified as an ip+port combination.
+message Collector {
+    // IP address of collector endpoint
+    string address                                          = 1;
+
+    // Transport protocol port number for the collector destination.
+    uint32 port                                             = 2;
+}
+
+// Data model path
+message Path {
+    // Data model path of interest
+    // Path specification for elements of OpenConfig data models
+    string path                                             = 1;
+
+    // Regular expression to be used in filtering state leaves
+    string filter                                           = 2;
+
+    // If this is set to true, the target device will only send
+    // updates to the collector upon a change in data value
+    bool suppress_unchanged                                 = 3;
+
+    // Maximum time in ms the target device may go without sending
+    // a message to the collector. If this time expires with
+    // suppress-unchanged set, the target device must send an update
+    // message regardless if the data values have changed.
+    uint32 max_silent_interval                              = 4;
+
+    // Time in ms between collection and transmission of the
+    // specified data to the collector platform. The target device
+    // will sample the corresponding data (e.g,. a counter) and
+    // immediately send to the collector destination.
+    //
+    // If sample-frequency is set to 0, then the network device
+    // must emit an update upon every datum change.
+    uint32 sample_frequency                                 = 5;
+
+    // EOM needed for each walk cycle of this path?
+    //   For periodic sensor, applicable for each complete reap
+    //   For event sensor, applicable when initial dump is over 
+    //     (same as EOS)
+    // This feature is not implemented currently.
+    bool need_eom                                           = 6;
+}
+
+// Configure subscription request additional features.
+message SubscriptionAdditionalConfig {
+    // limit the number of records sent in the stream
+    int32 limit_records                                     = 1;
+
+    // limit the time the stream remains open
+    int32 limit_time_seconds                                = 2;
+
+    // EOS needed for this subscription?
+    bool need_eos                                           = 3;
+}
+
+// Reply to inline subscription for data at the specified path is done in
+// two-folds.
+// 1. Reply data message sent out using out-of-band channel.
+// 2. Telemetry data send back on the same connection as the
+//    subscription request.
+
+// 1. Reply data message sent out using out-of-band channel.
+message SubscriptionReply {
+    // Response message to a telemetry subscription creation or
+    // get request.
+    SubscriptionResponse response                           = 1;
+
+    // List of data models paths and filters
+    // which are used in a telemetry operation.
+    repeated Path path_list                                 = 2;
+}
+
+// Response message to a telemetry subscription creation or get request.
+message SubscriptionResponse {
+    // Unique id for the subscription on the device. This is
+    // generated by the device and returned in a subscription
+    // request or when listing existing subscriptions
+    uint32 subscription_id = 1;
+}
+
+// 2. Telemetry data send back on the same connection as the
+//    subscription request.
+message OpenConfigData {
+    // router name:export IP address
+    string system_id                                        = 1;
+
+    // line card / RE (slot number)
+    uint32 component_id                                     = 2;
+
+    // PFE (if applicable)
+    uint32 sub_component_id                                 = 3;
+
+    // Path specification for elements of OpenConfig data models
+    string path                                             = 4;
+
+    // Sequence number, monotonically increasing for each
+    // system_id, component_id, sub_component_id + path.
+    uint64 sequence_number                                  = 5;
+
+    // timestamp (milliseconds since epoch)
+    uint64 timestamp                                        = 6;
+
+    // List of key-value pairs
+    repeated KeyValue kv                                    = 7;
+
+    // For delete. If filled, it indicates delete
+    repeated Delete delete                                  = 8;
+
+    // If filled, it indicates end of marker for the
+    // respective path in the list.
+    repeated Eom eom                                        = 9; 
+
+    // If filled, it indicates end of sync for complete subscription
+    bool sync_response                                      = 10;
+}
+
+// Simple Key-value, where value could be one of scalar types
+message KeyValue {
+    // Key
+    string key                                              =  1;
+
+    // One of possible values
+    oneof value {
+        double double_value                                 =  5;
+        int64  int_value                                    =  6;
+        uint64 uint_value                                   =  7;
+        sint64 sint_value                                   =  8;
+        bool   bool_value                                   =  9;
+        string str_value                                    = 10;
+        bytes  bytes_value                                  = 11;
+    }
+}
+
+// Message indicating delete for a particular path
+message Delete {
+    string path                                             = 1;
+}
+
+// Message indicating EOM for a particular path
+message Eom {
+    string path                                             = 1; 
+}
+
+// Message sent for a telemetry subscription cancellation request
+message CancelSubscriptionRequest {
+    // Subscription identifier as returned by the device when
+    // subscription was requested
+    uint32 subscription_id                                  = 1;
+}
+
+// Reply to telemetry subscription cancellation request
+message CancelSubscriptionReply {
+    // Return code
+    ReturnCode code                                         = 1;
+
+    // Return code string
+    string     code_str                                     = 2;
+};
+
+// Result of the operation
+enum ReturnCode {
+    SUCCESS                                                 = 0;
+    NO_SUBSCRIPTION_ENTRY                                   = 1;
+    UNKNOWN_ERROR                                           = 2;
+}
+
+// Message sent for a telemetry get request
+message GetSubscriptionsRequest {
+    // Subscription identifier as returned by the device when
+    // subscription was requested
+    // --- or ---
+    // 0xFFFFFFFF for all subscription identifiers
+    uint32 subscription_id                                  = 1;
+}
+
+// Reply to telemetry subscription get request
+message GetSubscriptionsReply {
+    // List of current telemetry subscriptions
+    repeated SubscriptionReply subscription_list            = 1;
+}
+
+// Message sent for telemetry agent operational states request
+message GetOperationalStateRequest {
+    // Per-subscription_id level operational state can be requested.
+    //
+    // Subscription identifier as returned by the device when
+    // subscription was requested
+    // --- or ---
+    // 0xFFFFFFFF for all subscription identifiers including agent-level
+    // operational stats
+    // --- or ---
+    // If subscription_id is not present then sent only agent-level
+    // operational stats
+    uint32 subscription_id                                  = 1;
+
+    // Control verbosity of the output
+    VerbosityLevel verbosity                                = 2;
+}
+
+// Verbosity Level
+enum VerbosityLevel {
+    DETAIL                                                  = 0;
+    TERSE                                                   = 1;
+    BRIEF                                                   = 2;
+}
+
+// Reply to telemetry agent operational states request
+message GetOperationalStateReply {
+    // List of key-value pairs where
+    //     key      = operational state definition
+    //     value    = operational state value
+    repeated KeyValue kv                                    = 1;
+}
+
+// Message sent for a data encoding request
+message DataEncodingRequest {
+}
+
+// Reply to data encodings supported request
+message DataEncodingReply {
+    repeated EncodingType  encoding_list                    = 1;
+}
+
+// Encoding Type Supported
+enum EncodingType {
+    UNDEFINED                                               = 0;
+    XML                                                     = 1;
+    JSON_IETF                                               = 2;
+    PROTO3                                                  = 3;
+}
+

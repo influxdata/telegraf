@@ -1,0 +1,14 @@
+{
+	"parent": {
+		"child": 3.0,
+		"ignored_child": "hi"
+	},
+	"ignored_null": null,
+	"integer": 4,
+	"list": [3, 4],
+	"ignored_parent": {
+		"another_ignored_null": null,
+		"ignored_string": "hello, world!"
+	},
+	"another_list": [4]
+}

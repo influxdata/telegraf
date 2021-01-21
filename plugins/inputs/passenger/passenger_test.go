@@ -4,20 +4,37 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
-func fakePassengerStatus(stat string) {
-	content := fmt.Sprintf("#!/bin/sh\ncat << EOF\n%s\nEOF", stat)
-	ioutil.WriteFile("/tmp/passenger-status", []byte(content), 0700)
+func fakePassengerStatus(stat string) string {
+	var fileExtension, content string
+	if runtime.GOOS == "windows" {
+		fileExtension = ".bat"
+		content = "@echo off\n"
+		for _, line := range strings.Split(strings.TrimSuffix(stat, "\n"), "\n") {
+			content += "for /f \"delims=\" %%A in (\"" + line + "\") do echo %%~A\n" //my eyes are bleeding
+		}
+	} else {
+		content = fmt.Sprintf("#!/bin/sh\ncat << EOF\n%s\nEOF", stat)
+	}
+
+	tempFilePath := filepath.Join(os.TempDir(), "passenger-status"+fileExtension)
+	ioutil.WriteFile(tempFilePath, []byte(content), 0700)
+
+	return tempFilePath
 }
 
-func teardown() {
-	os.Remove("/tmp/passenger-status")
+func teardown(tempFilePath string) {
+	os.Remove(tempFilePath)
 }
 
 func Test_Invalid_Passenger_Status_Cli(t *testing.T) {
@@ -29,28 +46,28 @@ func Test_Invalid_Passenger_Status_Cli(t *testing.T) {
 
 	err := r.Gather(&acc)
 	require.Error(t, err)
-	assert.Equal(t, err.Error(), `exec: "an-invalid-command": executable file not found in $PATH`)
+	assert.Contains(t, err.Error(), `exec: "an-invalid-command": executable file not found in `)
 }
 
 func Test_Invalid_Xml(t *testing.T) {
-	fakePassengerStatus("invalid xml")
-	defer teardown()
+	tempFilePath := fakePassengerStatus("invalid xml")
+	defer teardown(tempFilePath)
 
 	r := &passenger{
-		Command: "/tmp/passenger-status",
+		Command: tempFilePath,
 	}
 
 	var acc testutil.Accumulator
 
 	err := r.Gather(&acc)
 	require.Error(t, err)
-	assert.Equal(t, err.Error(), "Cannot parse input with error: EOF\n")
+	assert.Equal(t, "Cannot parse input with error: EOF\n", err.Error())
 }
 
 // We test this by ensure that the error message match the path of default cli
 func Test_Default_Config_Load_Default_Command(t *testing.T) {
-	fakePassengerStatus("invalid xml")
-	defer teardown()
+	tempFilePath := fakePassengerStatus("invalid xml")
+	defer teardown(tempFilePath)
 
 	r := &passenger{}
 
@@ -58,16 +75,16 @@ func Test_Default_Config_Load_Default_Command(t *testing.T) {
 
 	err := r.Gather(&acc)
 	require.Error(t, err)
-	assert.Equal(t, err.Error(), "exec: \"passenger-status\": executable file not found in $PATH")
+	assert.Contains(t, err.Error(), "exec: \"passenger-status\": executable file not found in ")
 }
 
 func TestPassengerGenerateMetric(t *testing.T) {
-	fakePassengerStatus(sampleStat)
-	defer teardown()
+	tempFilePath := fakePassengerStatus(sampleStat)
+	defer teardown(tempFilePath)
 
 	//Now we tested again above server, with our authentication data
 	r := &passenger{
-		Command: "/tmp/passenger-status",
+		Command: tempFilePath,
 	}
 
 	var acc testutil.Accumulator
@@ -126,7 +143,7 @@ func TestPassengerGenerateMetric(t *testing.T) {
 		"spawn_start_time":      int64(1452746844946982),
 		"spawn_end_time":        int64(1452746845013365),
 		"last_used":             int64(1452747071764940),
-		"uptime":                int64(226), // in seconds of 3m 46s
+		"uptime":                int64(191026), // in seconds of 2d 5h 3m 46s
 		"cpu":                   int64(58),
 		"rss":                   int64(418548),
 		"pss":                   int64(319391),
@@ -219,7 +236,7 @@ var sampleStat = `
             <spawn_end_time>1452746845013365</spawn_end_time>
             <last_used>1452747071764940</last_used>
             <last_used_desc>0s ago</last_used_desc>
-            <uptime>3m 46s</uptime>
+            <uptime>2d 5h 3m 46s</uptime>
             <code_revision>899ac7f</code_revision>
             <life_status>ALIVE</life_status>
             <enabled>ENABLED</enabled>
@@ -263,7 +280,7 @@ var sampleStat = `
             <spawn_end_time>1452746845172460</spawn_end_time>
             <last_used>1452747071709179</last_used>
             <last_used_desc>0s ago</last_used_desc>
-            <uptime>3m 46s</uptime>
+            <uptime>2d 5h 3m 46s</uptime>
             <code_revision>899ac7f</code_revision>
             <life_status>ALIVE</life_status>
             <enabled>ENABLED</enabled>
