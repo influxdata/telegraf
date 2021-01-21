@@ -455,7 +455,8 @@ func TestDNSLookupError(t *testing.T) {
 
 	var acc testutil.Accumulator
 	p := Ping{
-		Urls:   []string{"localhost"},
+		Log:    testutil.Logger{},
+		Urls:   []string{"fakehost"},
 		Method: "native",
 		IPv6:   false,
 	}
