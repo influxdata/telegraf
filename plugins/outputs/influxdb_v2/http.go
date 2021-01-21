@@ -37,7 +37,7 @@ func (e APIError) Error() string {
 
 const (
 	defaultRequestTimeout = time.Second * 5
-	defaultMaxWait        = 30 // seconds
+	defaultMaxWait        = 60 // seconds
 	defaultDatabase       = "telegraf"
 )
 
