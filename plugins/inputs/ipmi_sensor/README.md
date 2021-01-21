@@ -1,7 +1,7 @@
 # IPMI Sensor Input Plugin
 
 Get bare metal metrics using the command line utility
-[`ipmitool`](https://sourceforge.net/projects/ipmitool/files/ipmitool/).
+[`ipmitool`](https://github.com/ipmitool/ipmitool).
 
 If no servers are specified, the plugin will query the local machine sensor stats via the following command:
 
@@ -17,6 +17,11 @@ When one or more servers are specified, the plugin will use the following comman
 
 ```
 ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
+```
+
+Any of the following parameters will be added to the aformentioned query if they're configured:
+```
+-y hex_key -L privilege
 ```
 
 ### Configuration
@@ -44,7 +49,7 @@ ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
   ##
   # servers = ["USERID:PASSW0RD@lan(192.168.1.1)"]
 
-  ## Recomended: use metric 'interval' that is a multiple of 'timeout' to avoid
+  ## Recommended: use metric 'interval' that is a multiple of 'timeout' to avoid
   ## gaps or overlap in pulled data
   interval = "30s"
 
@@ -53,6 +58,9 @@ ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
 
   ## Schema Version: (Optional, defaults to version 1)
   metric_version = 2
+
+  ## Optionally provide the hex key for the IMPI connection.
+  # hex_key = ""
 ```
 
 ### Measurements

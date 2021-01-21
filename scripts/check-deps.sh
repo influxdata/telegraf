@@ -48,8 +48,27 @@ for dep in $(LC_ALL=C sort -u "${tmpdir}/golist"); do
 	dep="${dep%%/v[0-9]}"
 	dep="${dep%%/v[0-9][0-9]}"
 
-	echo "${dep}" >> "${tmpdir}/actual"
+	echo "${dep}" >> "${tmpdir}/HEAD"
 done
 
-grep '^-' docs/LICENSE_OF_DEPENDENCIES.md | grep -v github.com/DataDog/datadog-agent | cut -f 2 -d' ' > "${tmpdir}/expected"
-diff -U0 "${tmpdir}/expected" "${tmpdir}/actual"
+# If there are two versions of a library that have the same base (like
+# github.com/foo/bar github.com/foo/bar/v3) there will be a duplicate
+# in the list.  Remove duplicates again.
+mv "${tmpdir}/HEAD" "${tmpdir}/HEAD-dup"
+uniq "${tmpdir}/HEAD-dup" > "${tmpdir}/HEAD"
+
+grep '^-' docs/LICENSE_OF_DEPENDENCIES.md | grep -v github.com/DataDog/datadog-agent | cut -f 2 -d' ' > "${tmpdir}/LICENSE_OF_DEPENDENCIES.md"
+
+diff -U0 "${tmpdir}/LICENSE_OF_DEPENDENCIES.md" "${tmpdir}/HEAD" || {
+cat - <<EOF
+
+
+The docs/LICENSE_OF_DEPENDENCIES.md file does not contain the expected entries.
+
+Lines prefixed with '+' should be added to LICENSE_OF_DEPENDENCIES.md and '-'
+lines should be removed.
+
+Include a link to the appropriate licenses for any additions.
+EOF
+exit 1
+}

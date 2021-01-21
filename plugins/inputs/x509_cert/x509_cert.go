@@ -10,12 +10,13 @@ import (
 	"io/ioutil"
 	"net"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	_tls "github.com/influxdata/telegraf/internal/tls"
+	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -60,6 +61,9 @@ func (c *X509Cert) locationToURL(location string) (*url.URL, error) {
 	if strings.HasPrefix(location, "/") {
 		location = "file://" + location
 	}
+	if strings.Index(location, ":\\") == 1 {
+		location = "file://" + filepath.ToSlash(location)
+	}
 
 	u, err := url.Parse(location)
 	if err != nil {
@@ -67,6 +71,19 @@ func (c *X509Cert) locationToURL(location string) (*url.URL, error) {
 	}
 
 	return u, nil
+}
+
+func (c *X509Cert) serverName(u *url.URL) (string, error) {
+	if c.tlsCfg.ServerName != "" {
+		if c.ServerName != "" {
+			return "", fmt.Errorf("both server_name (%q) and tls_server_name (%q) are set, but they are mutually exclusive", c.ServerName, c.tlsCfg.ServerName)
+		}
+		return c.tlsCfg.ServerName, nil
+	}
+	if c.ServerName != "" {
+		return c.ServerName, nil
+	}
+	return u.Hostname(), nil
 }
 
 func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, error) {
@@ -83,11 +100,11 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 		defer ipConn.Close()
 
-		if c.ServerName == "" {
-			c.tlsCfg.ServerName = u.Hostname()
-		} else {
-			c.tlsCfg.ServerName = c.ServerName
+		serverName, err := c.serverName(u)
+		if err != nil {
+			return nil, err
 		}
+		c.tlsCfg.ServerName = serverName
 
 		c.tlsCfg.InsecureSkipVerify = true
 		conn := tls.Client(ipConn, c.tlsCfg)
@@ -127,7 +144,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 		return certs, nil
 	default:
-		return nil, fmt.Errorf("unsuported scheme '%s' in location %s", u.Scheme, u.String())
+		return nil, fmt.Errorf("unsupported scheme '%s' in location %s", u.Scheme, u.String())
 	}
 }
 
@@ -211,12 +228,12 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			// name validation against the URL hostname.
 			opts := x509.VerifyOptions{
 				Intermediates: x509.NewCertPool(),
+				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 			}
 			if i == 0 {
-				if c.ServerName == "" {
-					opts.DNSName = u.Hostname()
-				} else {
-					opts.DNSName = c.ServerName
+				opts.DNSName, err = c.serverName(u)
+				if err != nil {
+					return err
 				}
 				for j, cert := range certs {
 					if j != 0 {

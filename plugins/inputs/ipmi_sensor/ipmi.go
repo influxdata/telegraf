@@ -21,7 +21,7 @@ var (
 	execCommand             = exec.Command // execCommand is used to mock commands in tests.
 	re_v1_parse_line        = regexp.MustCompile(`^(?P<name>[^|]*)\|(?P<description>[^|]*)\|(?P<status_code>.*)`)
 	re_v2_parse_line        = regexp.MustCompile(`^(?P<name>[^|]*)\|[^|]+\|(?P<status_code>[^|]*)\|(?P<entity_id>[^|]*)\|(?:(?P<description>[^|]+))?`)
-	re_v2_parse_description = regexp.MustCompile(`^(?P<analogValue>[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`)
+	re_v2_parse_description = regexp.MustCompile(`^(?P<analogValue>-?[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`)
 	re_v2_parse_unit        = regexp.MustCompile(`^(?P<realAnalogUnit>[^,]+)(?:,\s*(?P<statusDesc>.*))?`)
 )
 
@@ -29,6 +29,7 @@ var (
 type Ipmi struct {
 	Path          string
 	Privilege     string
+	HexKey        string `toml:"hex_key"`
 	Servers       []string
 	Timeout       internal.Duration
 	MetricVersion int
@@ -65,6 +66,9 @@ var sampleConfig = `
 
   ## Schema Version: (Optional, defaults to version 1)
   metric_version = 2
+
+  ## Optionally provide the hex key for the IMPI connection.
+  # hex_key = ""
 `
 
 // SampleConfig returns the documentation about the sample configuration
@@ -110,7 +114,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 	opts := make([]string, 0)
 	hostname := ""
 	if server != "" {
-		conn := NewConnection(server, m.Privilege)
+		conn := NewConnection(server, m.Privilege, m.HexKey)
 		hostname = conn.Hostname
 		opts = conn.options()
 	}

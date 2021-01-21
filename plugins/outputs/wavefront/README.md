@@ -33,7 +33,7 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
   #convert_paths = true
 
   ## Use Strict rules to sanitize metric and tag names from invalid characters
-  ## When enabled forward slash (/) and comma (,) will be accpeted
+  ## When enabled forward slash (/) and comma (,) will be accepted
   #use_strict = false
   
   ## Use Regex to sanitize metric and tag names from invalid characters
@@ -45,6 +45,16 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
 
   ## whether to convert boolean values to numeric values, with false -> 0.0 and true -> 1.0. default is true
   #convert_bool = true
+
+  ## Truncate metric tags to a total of 254 characters for the tag name value. Wavefront will reject any 
+  ## data point exceeding this limit if not truncated. Defaults to 'false' to provide backwards compatibility.
+  #truncate_tags = false
+
+  ## Flush the internal buffers after each batch. This effectively bypasses the background sending of metrics
+  ## normally done by the Wavefront SDK. This can be used if you are experiencing buffer overruns. The sending 
+  ## of metrics will block for a longer time, but this will be handled gracefully by the internal buffering in
+  ## Telegraf.
+  #immediate_flush = true
 ```
 
 
@@ -71,7 +81,7 @@ source of the metric.
 ### Wavefront Data format
 The expected input for Wavefront is specified in the following way:
 ```
-<metric> <value> [<timestamp>] <source|host>=<soureTagValue> [tagk1=tagv1 ...tagkN=tagvN]
+<metric> <value> [<timestamp>] <source|host>=<sourceTagValue> [tagk1=tagv1 ...tagkN=tagvN]
 ```
 More information about the Wavefront data format is available [here](https://community.wavefront.com/docs/DOC-1031)
 

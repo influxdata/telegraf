@@ -11,7 +11,6 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -36,7 +35,6 @@ const sampleConfig = `
   # version = ""
 
   ## Optional TLS Config
-  # enable_tls = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
@@ -44,9 +42,26 @@ const sampleConfig = `
   # insecure_skip_verify = false
 
   ## SASL authentication credentials.  These settings should typically be used
-  ## with TLS encryption enabled using the "enable_tls" option.
+  ## with TLS encryption enabled
   # sasl_username = "kafka"
   # sasl_password = "secret"
+
+  ## Optional SASL:
+  ## one of: OAUTHBEARER, PLAIN, SCRAM-SHA-256, SCRAM-SHA-512, GSSAPI
+  ## (defaults to PLAIN)
+  # sasl_mechanism = ""
+
+  ## used if sasl_mechanism is GSSAPI (experimental)
+  # sasl_gssapi_service_name = ""
+  # ## One of: KRB5_USER_AUTH and KRB5_KEYTAB_AUTH
+  # sasl_gssapi_auth_type = "KRB5_USER_AUTH"
+  # sasl_gssapi_kerberos_config_path = "/"
+  # sasl_gssapi_realm = "realm"
+  # sasl_gssapi_key_tab_path = ""
+  # sasl_gssapi_disable_pafxfast = false
+
+  ## used if sasl_mechanism is OAUTHBEARER (experimental)
+  # sasl_access_token = ""
 
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
@@ -54,6 +69,15 @@ const sampleConfig = `
   ## Name of the consumer group.
   # consumer_group = "telegraf_metrics_consumers"
 
+  ## Compression codec represents the various compression codecs recognized by
+  ## Kafka in messages.
+  ##  0 : None
+  ##  1 : Gzip
+  ##  2 : Snappy
+  ##  3 : LZ4
+  ##  4 : ZSTD
+   # compression_codec = 0
+   
   ## Initial offset position; one of "oldest" or "newest".
   # offset = "oldest"
 
@@ -93,7 +117,6 @@ type semaphore chan empty
 
 type KafkaConsumer struct {
 	Brokers                []string `toml:"brokers"`
-	ClientID               string   `toml:"client_id"`
 	ConsumerGroup          string   `toml:"consumer_group"`
 	MaxMessageLen          int      `toml:"max_message_len"`
 	MaxUndeliveredMessages int      `toml:"max_undelivered_messages"`
@@ -101,13 +124,8 @@ type KafkaConsumer struct {
 	BalanceStrategy        string   `toml:"balance_strategy"`
 	Topics                 []string `toml:"topics"`
 	TopicTag               string   `toml:"topic_tag"`
-	Version                string   `toml:"version"`
-	SASLPassword           string   `toml:"sasl_password"`
-	SASLUsername           string   `toml:"sasl_username"`
-	SASLVersion            *int     `toml:"sasl_version"`
 
-	EnableTLS *bool `toml:"enable_tls"`
-	tls.ClientConfig
+	kafka.ReadConfig
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -157,56 +175,12 @@ func (k *KafkaConsumer) Init() error {
 	}
 
 	config := sarama.NewConfig()
-	config.Consumer.Return.Errors = true
 
 	// Kafka version 0.10.2.0 is required for consumer groups.
 	config.Version = sarama.V0_10_2_0
 
-	if k.Version != "" {
-		version, err := sarama.ParseKafkaVersion(k.Version)
-		if err != nil {
-			return err
-		}
-
-		config.Version = version
-	}
-
-	if k.EnableTLS != nil && *k.EnableTLS {
-		config.Net.TLS.Enable = true
-	}
-
-	tlsConfig, err := k.ClientConfig.TLSConfig()
-	if err != nil {
+	if err := k.SetConfig(config); err != nil {
 		return err
-	}
-
-	if tlsConfig != nil {
-		config.Net.TLS.Config = tlsConfig
-
-		// To maintain backwards compatibility, if the enable_tls option is not
-		// set TLS is enabled if a non-default TLS config is used.
-		if k.EnableTLS == nil {
-			k.Log.Warnf("Use of deprecated configuration: enable_tls should be set when using TLS")
-			config.Net.TLS.Enable = true
-		}
-	}
-
-	if k.SASLUsername != "" && k.SASLPassword != "" {
-		config.Net.SASL.User = k.SASLUsername
-		config.Net.SASL.Password = k.SASLPassword
-		config.Net.SASL.Enable = true
-
-		version, err := kafka.SASLVersion(config.Version, k.SASLVersion)
-		if err != nil {
-			return err
-		}
-		config.Net.SASL.Version = version
-	}
-
-	if k.ClientID != "" {
-		config.ClientID = k.ClientID
-	} else {
-		config.ClientID = "Telegraf"
 	}
 
 	switch strings.ToLower(k.Offset) {

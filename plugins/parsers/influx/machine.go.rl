@@ -5,6 +5,14 @@ import (
 	"io"
 )
 
+type readErr struct {
+	Err error
+}
+
+func (e *readErr) Error() string {
+	return e.Err.Error()
+}
+
 var (
 	ErrNameParse = errors.New("expected measurement name")
 	ErrFieldParse = errors.New("expected field")
@@ -196,7 +204,7 @@ timestamp =
 	('-'? digit{1,19}) >begin %timestamp;
 
 fieldkeychar =
-	[^\t\n\f\r ,=\\] | ( '\\' [^\t\n\f\r] );
+	[^\t\n\v\f\r ,=\\] | ( '\\' [^\t\n\v\f\r] );
 
 fieldkey =
 	fieldkeychar+ >begin %fieldkey;
@@ -220,7 +228,7 @@ fieldbool =
 	(true | false) >begin %bool;
 
 fieldstringchar =
-	[^\f\r\n\\"] | '\\' [\\"] | newline;
+	[^\n\\"] | '\\' [\\"] | newline;
 
 fieldstring =
 	fieldstringchar* >begin %string;
@@ -237,7 +245,7 @@ fieldset =
 	field ( ',' field )*;
 
 tagchar =
-	[^\t\n\f\r ,=\\] | ( '\\' [^\t\n\f\r\\] ) | '\\\\' %to{ fhold; };
+	[^\t\n\v\f\r ,=\\] | ( '\\' [^\t\n\v\f\r\\] ) | '\\\\' %to{ fhold; };
 
 tagkey =
 	tagchar+ >begin %tagkey;
@@ -249,7 +257,7 @@ tagset =
 	((',' tagkey '=' tagvalue) $err(tagset_error))*;
 
 measurement_chars =
-	[^\t\n\f\r ,\\] | ( '\\' [^\t\n\f\r] );
+	[^\t\n\v\f\r ,\\] | ( '\\' [^\t\n\v\f\r] );
 
 measurement_start =
 	measurement_chars - '#';
@@ -498,16 +506,7 @@ func (m *streamMachine) Next() error {
 			m.machine.data = expanded
 		}
 
-		n, err := m.reader.Read(m.machine.data[m.machine.pe:])
-		if n == 0 && err == io.EOF {
-			m.machine.eof = m.machine.pe
-		} else if err != nil && err != io.EOF {
-			return err
-		}
-
-		m.machine.pe += n
-
-		err = m.machine.exec()
+		err := m.machine.exec()
 		if err != nil {
 			return err
 		}
@@ -516,6 +515,20 @@ func (m *streamMachine) Next() error {
 		if m.machine.finishMetric {
 			break
 		}
+
+		n, err := m.reader.Read(m.machine.data[m.machine.pe:])
+		if n == 0 && err == io.EOF {
+			m.machine.eof = m.machine.pe
+		} else if err != nil && err != io.EOF {
+			// After the reader returns an error this function shouldn't be
+			// called again.  This will cause the machine to return EOF this
+			// is done.
+			m.machine.p = m.machine.pe
+			m.machine.eof = m.machine.pe
+			return &readErr{Err: err}
+		}
+
+		m.machine.pe += n
 
 	}
 

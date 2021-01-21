@@ -109,6 +109,8 @@ func (s *SMI) genTagsFields() []metric {
 		setTagIfUsed(tags, "uuid", gpu.UUID)
 		setTagIfUsed(tags, "compute_mode", gpu.ComputeMode)
 
+		setIfUsed("str", fields, "driver_version", s.DriverVersion)
+		setIfUsed("str", fields, "cuda_version", s.CUDAVersion)
 		setIfUsed("int", fields, "fan_speed", gpu.FanSpeed)
 		setIfUsed("int", fields, "memory_total", gpu.Memory.Total)
 		setIfUsed("int", fields, "memory_used", gpu.Memory.Used)
@@ -116,11 +118,16 @@ func (s *SMI) genTagsFields() []metric {
 		setIfUsed("int", fields, "temperature_gpu", gpu.Temp.GPUTemp)
 		setIfUsed("int", fields, "utilization_gpu", gpu.Utilization.GPU)
 		setIfUsed("int", fields, "utilization_memory", gpu.Utilization.Memory)
+		setIfUsed("int", fields, "utilization_encoder", gpu.Utilization.Encoder)
+		setIfUsed("int", fields, "utilization_decoder", gpu.Utilization.Decoder)
 		setIfUsed("int", fields, "pcie_link_gen_current", gpu.PCI.LinkInfo.PCIEGen.CurrentLinkGen)
 		setIfUsed("int", fields, "pcie_link_width_current", gpu.PCI.LinkInfo.LinkWidth.CurrentLinkWidth)
 		setIfUsed("int", fields, "encoder_stats_session_count", gpu.Encoder.SessionCount)
 		setIfUsed("int", fields, "encoder_stats_average_fps", gpu.Encoder.AverageFPS)
 		setIfUsed("int", fields, "encoder_stats_average_latency", gpu.Encoder.AverageLatency)
+		setIfUsed("int", fields, "fbc_stats_session_count", gpu.FBC.SessionCount)
+		setIfUsed("int", fields, "fbc_stats_average_fps", gpu.FBC.AverageFPS)
+		setIfUsed("int", fields, "fbc_stats_average_latency", gpu.FBC.AverageLatency)
 		setIfUsed("int", fields, "clocks_current_graphics", gpu.Clocks.Graphics)
 		setIfUsed("int", fields, "clocks_current_sm", gpu.Clocks.SM)
 		setIfUsed("int", fields, "clocks_current_memory", gpu.Clocks.Memory)
@@ -164,12 +171,18 @@ func setIfUsed(t string, m map[string]interface{}, k, v string) {
 				m[k] = i
 			}
 		}
+	case "str":
+		if val != "" {
+			m[k] = val
+		}
 	}
 }
 
 // SMI defines the structure for the output of _nvidia-smi -q -x_.
 type SMI struct {
-	GPU GPU `xml:"gpu"`
+	GPU           GPU    `xml:"gpu"`
+	DriverVersion string `xml:"driver_version"`
+	CUDAVersion   string `xml:"cuda_version"`
 }
 
 // GPU defines the structure of the GPU portion of the smi output.
@@ -185,6 +198,7 @@ type GPU []struct {
 	Power       PowerReadings    `xml:"power_readings"`
 	PCI         PCI              `xml:"pci"`
 	Encoder     EncoderStats     `xml:"encoder_stats"`
+	FBC         FBCStats         `xml:"fbc_stats"`
 	Clocks      ClockStats       `xml:"clocks"`
 }
 
@@ -202,8 +216,10 @@ type TempStats struct {
 
 // UtilizationStats defines the structure of the utilization portion of the smi output.
 type UtilizationStats struct {
-	GPU    string `xml:"gpu_util"`    // int
-	Memory string `xml:"memory_util"` // int
+	GPU     string `xml:"gpu_util"`     // int
+	Memory  string `xml:"memory_util"`  // int
+	Encoder string `xml:"encoder_util"` // int
+	Decoder string `xml:"decoder_util"` // int
 }
 
 // PowerReadings defines the structure of the power_readings portion of the smi output.
@@ -225,6 +241,13 @@ type PCI struct {
 
 // EncoderStats defines the structure of the encoder_stats portion of the smi output.
 type EncoderStats struct {
+	SessionCount   string `xml:"session_count"`   // int
+	AverageFPS     string `xml:"average_fps"`     // int
+	AverageLatency string `xml:"average_latency"` // int
+}
+
+// FBCStats defines the structure of the fbc_stats portion of the smi output.
+type FBCStats struct {
 	SessionCount   string `xml:"session_count"`   // int
 	AverageFPS     string `xml:"average_fps"`     // int
 	AverageLatency string `xml:"average_latency"` // int

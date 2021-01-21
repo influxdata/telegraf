@@ -1,12 +1,12 @@
-#!/bin/bash
+#!/bin/sh
 
 ## Example in bash using STDIN signaling
 
 counter=0
 
-while read; do
+while read LINE; do
     echo "counter_bash count=${counter}"
-    let counter=counter+1
+    counter=$((counter+1))
 done
 
-(>&2 echo "terminate")
+trap "echo terminate 1>&2" EXIT

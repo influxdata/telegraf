@@ -10,7 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
@@ -79,7 +79,7 @@ var sampleConfig = `
   ## tag is not set the 'database' option is used as the default.
   # database_tag = ""
 
-  ## If true, the database tag will not be added to the metric.
+  ## If true, the 'database_tag' will not be included in the written metric.
   # exclude_database_tag = false
 
   ## If true, no CREATE DATABASE queries will be sent.  Set to true when using
@@ -95,7 +95,7 @@ var sampleConfig = `
   ## tag is not set the 'retention_policy' option is used as the default.
   # retention_policy_tag = ""
 
-  ## If true, the 'retention_policy_tag' will not be removed from the metric.
+  ## If true, the 'retention_policy_tag' will not be included in the written metric.
   # exclude_retention_policy_tag = false
 
   ## Write consistency (clusters only), can be: "any", "one", "quorum", "all".
@@ -131,7 +131,7 @@ var sampleConfig = `
 
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
-  # content_encoding = "identity"
+  # content_encoding = "gzip"
 
   ## When true, Telegraf will output unsigned integers as unsigned values,
   ## i.e.: "42u".  You will need a version of InfluxDB supporting unsigned
@@ -315,6 +315,7 @@ func init() {
 			CreateUDPClientF: func(config *UDPConfig) (Client, error) {
 				return NewUDPClient(*config)
 			},
+			ContentEncoding: "gzip",
 		}
 	})
 }

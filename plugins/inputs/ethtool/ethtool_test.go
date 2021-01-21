@@ -15,10 +15,11 @@ var command *Ethtool
 var interfaceMap map[string]*InterfaceMock
 
 type InterfaceMock struct {
-	Name       string
-	DriverName string
-	Stat       map[string]uint64
-	LoopBack   bool
+	Name        string
+	DriverName  string
+	Stat        map[string]uint64
+	LoopBack    bool
+	InterfaceUp bool
 }
 
 type CommandEthtoolMock struct {
@@ -42,11 +43,14 @@ func (c *CommandEthtoolMock) DriverName(intf string) (driverName string, err err
 func (c *CommandEthtoolMock) Interfaces() ([]net.Interface, error) {
 	interfaceNames := make([]net.Interface, 0)
 	for k, v := range c.InterfaceMap {
-
-		// Whether to set the flag to loopback
-		flag := net.FlagUp
+		var flag net.Flags
+		// When interface is up
+		if v.InterfaceUp {
+			flag |= net.FlagUp
+		}
+		// For loopback interface
 		if v.LoopBack {
-			flag = net.FlagLoopback
+			flag |= net.FlagLoopback
 		}
 
 		// Create a dummy interface
@@ -72,10 +76,10 @@ func (c *CommandEthtoolMock) Stats(intf string) (stat map[string]uint64, err err
 }
 
 func setup() {
-
 	interfaceMap = make(map[string]*InterfaceMock)
 
 	eth1Stat := map[string]uint64{
+		"interface_up":                   1,
 		"port_rx_1024_to_15xx":           25167245,
 		"port_rx_128_to_255":             1573526387,
 		"port_rx_15xx_to_jumbo":          137819058,
@@ -173,10 +177,11 @@ func setup() {
 		"tx_tso_fallbacks":               0,
 		"tx_tso_long_headers":            0,
 	}
-	eth1 := &InterfaceMock{"eth1", "driver1", eth1Stat, false}
+	eth1 := &InterfaceMock{"eth1", "driver1", eth1Stat, false, true}
 	interfaceMap[eth1.Name] = eth1
 
 	eth2Stat := map[string]uint64{
+		"interface_up":                   0,
 		"port_rx_1024_to_15xx":           11529312,
 		"port_rx_128_to_255":             1868952037,
 		"port_rx_15xx_to_jumbo":          130339387,
@@ -274,14 +279,14 @@ func setup() {
 		"tx_tso_fallbacks":               0,
 		"tx_tso_long_headers":            0,
 	}
-	eth2 := &InterfaceMock{"eth2", "driver1", eth2Stat, false}
+	eth2 := &InterfaceMock{"eth2", "driver1", eth2Stat, false, false}
 	interfaceMap[eth2.Name] = eth2
 
 	// dummy loopback including dummy stat to ensure that the ignore feature is working
 	lo0Stat := map[string]uint64{
 		"dummy": 0,
 	}
-	lo0 := &InterfaceMock{"lo0", "", lo0Stat, true}
+	lo0 := &InterfaceMock{"lo0", "", lo0Stat, true, true}
 	interfaceMap[lo0.Name] = lo0
 
 	c := &CommandEthtoolMock{interfaceMap}
@@ -301,7 +306,6 @@ func toStringMapInterface(in map[string]uint64) map[string]interface{} {
 }
 
 func TestGather(t *testing.T) {
-
 	setup()
 	var acc testutil.Accumulator
 
@@ -324,7 +328,6 @@ func TestGather(t *testing.T) {
 }
 
 func TestGatherIncludeInterfaces(t *testing.T) {
-
 	setup()
 	var acc testutil.Accumulator
 
@@ -352,7 +355,6 @@ func TestGatherIncludeInterfaces(t *testing.T) {
 }
 
 func TestGatherIgnoreInterfaces(t *testing.T) {
-
 	setup()
 	var acc testutil.Accumulator
 
@@ -377,5 +379,4 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 		"driver":    "driver1",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth2, expectedTagsEth2)
-
 }

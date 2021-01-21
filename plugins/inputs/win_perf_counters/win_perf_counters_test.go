@@ -50,7 +50,7 @@ func (m *FakePerformanceQuery) Open() error {
 
 func (m *FakePerformanceQuery) Close() error {
 	if !m.openCalled {
-		return errors.New("CloSe: uninitialised query")
+		return errors.New("CloSe: uninitialized query")
 	}
 	m.openCalled = false
 	return nil
@@ -58,7 +58,7 @@ func (m *FakePerformanceQuery) Close() error {
 
 func (m *FakePerformanceQuery) AddCounterToQuery(counterPath string) (PDH_HCOUNTER, error) {
 	if !m.openCalled {
-		return 0, errors.New("AddCounterToQuery: uninitialised query")
+		return 0, errors.New("AddCounterToQuery: uninitialized query")
 	}
 	if c, ok := m.counters[counterPath]; ok {
 		return c.handle, nil
@@ -69,7 +69,7 @@ func (m *FakePerformanceQuery) AddCounterToQuery(counterPath string) (PDH_HCOUNT
 
 func (m *FakePerformanceQuery) AddEnglishCounterToQuery(counterPath string) (PDH_HCOUNTER, error) {
 	if !m.openCalled {
-		return 0, errors.New("AddEnglishCounterToQuery: uninitialised query")
+		return 0, errors.New("AddEnglishCounterToQuery: uninitialized query")
 	}
 	if c, ok := m.counters[counterPath]; ok {
 		return c.handle, nil
@@ -97,7 +97,7 @@ func (m *FakePerformanceQuery) ExpandWildCardPath(counterPath string) ([]string,
 
 func (m *FakePerformanceQuery) GetFormattedCounterValueDouble(counterHandle PDH_HCOUNTER) (float64, error) {
 	if !m.openCalled {
-		return 0, errors.New("GetFormattedCounterValueDouble: uninitialised query")
+		return 0, errors.New("GetFormattedCounterValueDouble: uninitialized query")
 	}
 	for _, counter := range m.counters {
 		if counter.handle == counterHandle {
@@ -129,7 +129,7 @@ func (m *FakePerformanceQuery) findCounterByHandle(counterHandle PDH_HCOUNTER) *
 
 func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER) ([]CounterValue, error) {
 	if !m.openCalled {
-		return nil, errors.New("GetFormattedCounterArrayDouble: uninitialised query")
+		return nil, errors.New("GetFormattedCounterArrayDouble: uninitialized query")
 	}
 	for _, c := range m.counters {
 		if c.handle == hCounter {
@@ -157,14 +157,14 @@ func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter PDH_HCOUN
 
 func (m *FakePerformanceQuery) CollectData() error {
 	if !m.openCalled {
-		return errors.New("CollectData: uninitialised query")
+		return errors.New("CollectData: uninitialized query")
 	}
 	return nil
 }
 
 func (m *FakePerformanceQuery) CollectDataWithTime() (time.Time, error) {
 	if !m.openCalled {
-		return time.Now(), errors.New("CollectData: uninitialised query")
+		return time.Now(), errors.New("CollectData: uninitialized query")
 	}
 	return MetricTime, nil
 }

@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,7 +19,9 @@ func TestGather(t *testing.T) {
 		Path:      "ipmitool",
 		Privilege: "USER",
 		Timeout:   internal.Duration{Duration: time.Second * 5},
+		HexKey:    "1234567F",
 	}
+
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
 	var acc testutil.Accumulator
@@ -28,11 +30,12 @@ func TestGather(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, acc.NFields(), 262, "non-numeric measurements should be ignored")
+	require.EqualValues(t, acc.NFields(), 262, "non-numeric measurements should be ignored")
 
-	conn := NewConnection(i.Servers[0], i.Privilege)
-	assert.Equal(t, "USERID", conn.Username)
-	assert.Equal(t, "lan", conn.Interface)
+	conn := NewConnection(i.Servers[0], i.Privilege, i.HexKey)
+	require.EqualValues(t, "USERID", conn.Username)
+	require.EqualValues(t, "lan", conn.Interface)
+	require.EqualValues(t, "1234567F", conn.HexKey)
 
 	var testsWithServer = []struct {
 		fields map[string]interface{}
@@ -387,6 +390,7 @@ func TestGatherV2(t *testing.T) {
 		Privilege:     "USER",
 		Timeout:       internal.Duration{Duration: time.Second * 5},
 		MetricVersion: 2,
+		HexKey:        "0000000F",
 	}
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommandV2
@@ -396,9 +400,10 @@ func TestGatherV2(t *testing.T) {
 
 	require.NoError(t, err)
 
-	conn := NewConnection(i.Servers[0], i.Privilege)
-	assert.Equal(t, "USERID", conn.Username)
-	assert.Equal(t, "lan", conn.Interface)
+	conn := NewConnection(i.Servers[0], i.Privilege, i.HexKey)
+	require.EqualValues(t, "USERID", conn.Username)
+	require.EqualValues(t, "lan", conn.Interface)
+	require.EqualValues(t, "0000000F", conn.HexKey)
 
 	var testsWithServer = []struct {
 		fields map[string]interface{}
@@ -664,11 +669,10 @@ func Test_parseV2(t *testing.T) {
 		measuredAt time.Time
 	}
 	tests := []struct {
-		name       string
-		args       args
-		wantFields map[string]interface{}
-		wantTags   map[string]string
-		wantErr    bool
+		name     string
+		args     args
+		expected []telegraf.Metric
+		wantErr  bool
 	}{
 		{
 			name: "Test correct V2 parsing with analog value with unit",
@@ -677,14 +681,19 @@ func Test_parseV2(t *testing.T) {
 				cmdOut:     []byte("Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected"),
 				measuredAt: time.Now(),
 			},
-			wantFields: map[string]interface{}{"value": float64(110)},
-			wantTags: map[string]string{
-				"name":        "power_supply_1",
-				"status_code": "ok",
-				"server":      "host",
-				"entity_id":   "10.1",
-				"unit":        "watts",
-				"status_desc": "presence_detected",
+			expected: []telegraf.Metric{
+				testutil.MustMetric("ipmi_sensor",
+					map[string]string{
+						"name":        "power_supply_1",
+						"status_code": "ok",
+						"server":      "host",
+						"entity_id":   "10.1",
+						"unit":        "watts",
+						"status_desc": "presence_detected",
+					},
+					map[string]interface{}{"value": 110.0},
+					time.Unix(0, 0),
+				),
 			},
 			wantErr: false,
 		},
@@ -695,26 +704,51 @@ func Test_parseV2(t *testing.T) {
 				cmdOut:     []byte("Intrusion        | 73h | ok  |  7.1 |"),
 				measuredAt: time.Now(),
 			},
-			wantFields: map[string]interface{}{"value": float64(0)},
-			wantTags: map[string]string{
-				"name":        "intrusion",
-				"status_code": "ok",
-				"server":      "host",
-				"entity_id":   "7.1",
-				"status_desc": "ok",
+			expected: []telegraf.Metric{
+				testutil.MustMetric("ipmi_sensor",
+					map[string]string{
+						"name":        "intrusion",
+						"status_code": "ok",
+						"server":      "host",
+						"entity_id":   "7.1",
+						"status_desc": "ok",
+					},
+					map[string]interface{}{"value": 0.0},
+					time.Unix(0, 0),
+				),
+			},
+			wantErr: false,
+		},
+		{
+			name: "parse negative value",
+			args: args{
+				hostname:   "host",
+				cmdOut:     []byte("DIMM Thrm Mrgn 1 | B0h | ok  |  8.1 | -55 degrees C"),
+				measuredAt: time.Now(),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("ipmi_sensor",
+					map[string]string{
+						"name":        "dimm_thrm_mrgn_1",
+						"status_code": "ok",
+						"server":      "host",
+						"entity_id":   "8.1",
+						"unit":        "degrees_c",
+					},
+					map[string]interface{}{"value": -55.0},
+					time.Unix(0, 0),
+				),
 			},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
-		var acc testutil.Accumulator
-
 		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
 			if err := parseV2(&acc, tt.args.hostname, tt.args.cmdOut, tt.args.measuredAt); (err != nil) != tt.wantErr {
 				t.Errorf("parseV2() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
-
-		acc.AssertContainsTaggedFields(t, "ipmi_sensor", tt.wantFields, tt.wantTags)
 	}
 }

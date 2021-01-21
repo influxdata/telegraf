@@ -54,6 +54,8 @@ func (a *Accumulator) NMetrics() uint64 {
 	return atomic.LoadUint64(&a.nMetrics)
 }
 
+// GetTelegrafMetrics returns all the metrics collected by the accumulator
+// If you are getting race conditions here then you are not waiting for all of your metrics to arrive: see Wait()
 func (a *Accumulator) GetTelegrafMetrics() []telegraf.Metric {
 	metrics := []telegraf.Metric{}
 	for _, m := range a.Metrics {
@@ -212,9 +214,11 @@ func (a *Accumulator) AddTrackingMetricGroup(group []telegraf.Metric) telegraf.T
 }
 
 func (a *Accumulator) Delivered() <-chan telegraf.DeliveryInfo {
+	a.Lock()
 	if a.delivered == nil {
 		a.delivered = make(chan telegraf.DeliveryInfo)
 	}
+	a.Unlock()
 	return a.delivered
 }
 
@@ -323,13 +327,13 @@ func (a *Accumulator) NFields() int {
 // Wait waits for the given number of metrics to be added to the accumulator.
 func (a *Accumulator) Wait(n int) {
 	a.Lock()
+	defer a.Unlock()
 	if a.Cond == nil {
 		a.Cond = sync.NewCond(&a.Mutex)
 	}
 	for int(a.NMetrics()) < n {
 		a.Cond.Wait()
 	}
-	a.Unlock()
 }
 
 // WaitError waits for the given number of errors to be added to the accumulator.
@@ -361,7 +365,13 @@ func (a *Accumulator) AssertContainsTaggedFields(
 			return
 		}
 	}
-	msg := fmt.Sprintf("unknown measurement %s with tags %v", measurement, tags)
+	// We've failed. spit out some debug logging
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			t.Log("measurement", p.Measurement, "tags", p.Tags, "fields", p.Fields)
+		}
+	}
+	msg := fmt.Sprintf("unknown measurement %q with tags %v", measurement, tags)
 	assert.Fail(t, msg)
 }
 
@@ -401,7 +411,7 @@ func (a *Accumulator) AssertContainsFields(
 			return
 		}
 	}
-	msg := fmt.Sprintf("unknown measurement %s", measurement)
+	msg := fmt.Sprintf("unknown measurement %q", measurement)
 	assert.Fail(t, msg)
 }
 
@@ -717,7 +727,7 @@ func (a *Accumulator) BoolField(measurement string, field string) (bool, bool) {
 }
 
 // NopAccumulator is used for benchmarking to isolate the plugin from the internal
-// telegraf accumulator machinary.
+// telegraf accumulator machinery.
 type NopAccumulator struct{}
 
 func (n *NopAccumulator) AddFields(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {

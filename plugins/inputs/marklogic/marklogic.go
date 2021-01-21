@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -84,7 +84,7 @@ type MlHost struct {
 
 // Description of plugin returned
 func (c *Marklogic) Description() string {
-	return "Retrives information on a specific host in a MarkLogic Cluster"
+	return "Retrieves information on a specific host in a MarkLogic Cluster"
 }
 
 var sampleConfig = `

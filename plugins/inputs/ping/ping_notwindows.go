@@ -21,9 +21,10 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 
 	out, err := p.pingHost(p.Binary, 60.0, p.args(u, runtime.GOOS)...)
 	if err != nil {
-		// Some implementations of ping return a 1 exit code on
+		// Some implementations of ping return a non-zero exit code on
 		// timeout, if this occurs we will not exit and try to parse
 		// the output.
+		// Linux iputils-ping returns 1, BSD-derived ping returns 2.
 		status := -1
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
@@ -32,7 +33,17 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 			}
 		}
 
-		if status != 1 {
+		var timeoutExitCode int
+		switch runtime.GOOS {
+		case "freebsd", "netbsd", "openbsd", "darwin":
+			timeoutExitCode = 2
+		case "linux":
+			timeoutExitCode = 1
+		default:
+			timeoutExitCode = 1
+		}
+
+		if status != timeoutExitCode {
 			// Combine go err + stderr output
 			out = strings.TrimSpace(out)
 			if len(out) > 0 {
@@ -93,7 +104,13 @@ func (p *Ping) args(url string, system string) []string {
 		switch system {
 		case "darwin":
 			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
-		case "freebsd", "netbsd", "openbsd":
+		case "freebsd":
+			if strings.Contains(p.Binary, "ping6") {
+				args = append(args, "-x", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
+			} else {
+				args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
+			}
+		case "netbsd", "openbsd":
 			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
 		case "linux":
 			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
@@ -104,7 +121,13 @@ func (p *Ping) args(url string, system string) []string {
 	}
 	if p.Deadline > 0 {
 		switch system {
-		case "darwin", "freebsd", "netbsd", "openbsd":
+		case "freebsd":
+			if strings.Contains(p.Binary, "ping6") {
+				args = append(args, "-X", strconv.Itoa(p.Deadline))
+			} else {
+				args = append(args, "-t", strconv.Itoa(p.Deadline))
+			}
+		case "darwin", "netbsd", "openbsd":
 			args = append(args, "-t", strconv.Itoa(p.Deadline))
 		case "linux":
 			args = append(args, "-w", strconv.Itoa(p.Deadline))
@@ -149,7 +172,7 @@ func processPingOutput(out string) (int, int, int, float64, float64, float64, fl
 	lines := strings.Split(out, "\n")
 	for _, line := range lines {
 		// Reading only first TTL, ignoring other TTL messages
-		if ttl == -1 && strings.Contains(line, "ttl=") {
+		if ttl == -1 && (strings.Contains(line, "ttl=") || strings.Contains(line, "hlim=")) {
 			ttl, err = getTTL(line)
 		} else if strings.Contains(line, "transmitted") &&
 			strings.Contains(line, "received") {
@@ -180,9 +203,9 @@ func getPacketStats(line string, trans, recv int) (int, int, error) {
 }
 
 func getTTL(line string) (int, error) {
-	ttlLine := regexp.MustCompile(`ttl=(\d+)`)
+	ttlLine := regexp.MustCompile(`(ttl|hlim)=(\d+)`)
 	ttlMatch := ttlLine.FindStringSubmatch(line)
-	return strconv.Atoi(ttlMatch[1])
+	return strconv.Atoi(ttlMatch[2])
 }
 
 func checkRoundTripTimeStats(line string, min, avg, max,

@@ -33,12 +33,25 @@ type ParseError struct {
 
 func (e *ParseError) Error() string {
 	buffer := e.buf[e.LineOffset:]
-	eol := strings.IndexAny(buffer, "\r\n")
+	eol := strings.IndexAny(buffer, "\n")
 	if eol >= 0 {
-		buffer = buffer[:eol]
+		buffer = strings.TrimSuffix(buffer[:eol], "\r")
 	}
 	if len(buffer) > maxErrorBufferSize {
-		buffer = buffer[:maxErrorBufferSize] + "..."
+		startEllipsis := true
+		offset := e.Offset - e.LineOffset
+		start := offset - maxErrorBufferSize
+		if start < 0 {
+			startEllipsis = false
+			start = 0
+		}
+		// if we trimmed it the column won't line up. it'll always be the last character,
+		// because the parser doesn't continue past it, but point it out anyway so
+		// it's obvious where the issue is.
+		buffer = buffer[start:offset] + "<-- here"
+		if startEllipsis {
+			buffer = "..." + buffer
+		}
 	}
 	return fmt.Sprintf("metric parse error: %s at %d:%d: %q", e.msg, e.LineNumber, e.Column, buffer)
 }
@@ -174,11 +187,15 @@ func (h *StreamParser) SetTimePrecision(u time.Duration) {
 }
 
 // Next parses the next item from the stream.  You can repeat calls to this
-// function until it returns EOF.
+// function if it returns ParseError to get the next metric or error.
 func (p *StreamParser) Next() (telegraf.Metric, error) {
 	err := p.machine.Next()
 	if err == EOF {
-		return nil, EOF
+		return nil, err
+	}
+
+	if e, ok := err.(*readErr); ok {
+		return nil, e.Err
 	}
 
 	if err != nil {

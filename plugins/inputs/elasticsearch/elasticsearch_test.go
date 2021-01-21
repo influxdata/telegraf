@@ -310,6 +310,49 @@ func TestGatherClusterIndicesStats(t *testing.T) {
 		map[string]string{"index_name": "twitter"})
 }
 
+func TestGatherDateStampedIndicesStats(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.IndicesInclude = []string{"twitter*", "influx*", "penguins"}
+	es.NumMostRecentIndices = 2
+	es.Servers = []string{"http://example.com:9200"}
+	es.client.Transport = newTransportMock(http.StatusOK, dateStampedIndicesResponse)
+	es.serverInfo = make(map[string]serverInfo)
+	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
+	es.Init()
+
+	var acc testutil.Accumulator
+	if err := es.gatherIndicesStats(es.Servers[0]+"/"+strings.Join(es.IndicesInclude, ",")+"/_stats", &acc); err != nil {
+		t.Fatal(err)
+	}
+
+	// includes 2 most recent indices for "twitter", only expect the most recent two.
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "twitter_2020_08_02"})
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "twitter_2020_08_01"})
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "twitter_2020_07_31"})
+
+	// includes 2 most recent indices for "influx", only expect the most recent two.
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "influx2021.01.02"})
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "influx2021.01.01"})
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "influx2020.12.31"})
+
+	// not configured to sort the 'penguins' index, but ensure it is also included.
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "penguins"})
+}
+
 func TestGatherClusterIndiceShardsStats(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.IndicesLevel = "shards"
@@ -327,17 +370,26 @@ func TestGatherClusterIndiceShardsStats(t *testing.T) {
 		clusterIndicesExpected,
 		map[string]string{"index_name": "twitter"})
 
-	tags := map[string]string{
+	primaryTags := map[string]string{
+		"index_name": "twitter",
+		"node_id":    "oqvR8I1dTpONvwRM30etww",
+		"shard_name": "0",
+		"type":       "primary",
+	}
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_shards",
+		clusterIndicesPrimaryShardsExpected,
+		primaryTags)
+
+	replicaTags := map[string]string{
 		"index_name": "twitter",
 		"node_id":    "oqvR8I1dTpONvwRM30etww",
 		"shard_name": "1",
 		"type":       "replica",
 	}
-
 	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_shards",
-		clusterIndicesShardsExpected,
-		tags)
-
+		clusterIndicesReplicaShardsExpected,
+		replicaTags)
 }
 
 func newElasticsearchWithClient() *Elasticsearch {

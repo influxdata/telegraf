@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os/exec"
+	"regexp"
 	"testing"
 	"time"
 
@@ -268,11 +269,11 @@ func TestCompressWithGzipEarlyClose(t *testing.T) {
 
 func TestVersionAlreadySet(t *testing.T) {
 	err := SetVersion("foo")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	err = SetVersion("bar")
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.IsType(t, VersionAlreadySetError, err)
 
 	assert.Equal(t, "foo", Version())
@@ -479,4 +480,12 @@ func TestParseTimestamp(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProductToken(t *testing.T) {
+	token := ProductToken()
+	// Telegraf version depends on the call to SetVersion, it cannot be set
+	// multiple times and is not thread-safe.
+	re := regexp.MustCompile(`^Telegraf/[^\s]+ Go/\d+.\d+(.\d+)?$`)
+	require.True(t, re.MatchString(token), token)
 }

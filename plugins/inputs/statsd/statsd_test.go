@@ -2,14 +2,16 @@ package statsd
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -35,7 +37,7 @@ func NewTestStatsd() *Statsd {
 	return &s
 }
 
-// Test that MaxTCPConections is respected
+// Test that MaxTCPConnections is respected
 func TestConcurrentConns(t *testing.T) {
 	listener := Statsd{
 		Log:                    testutil.Logger{},
@@ -66,7 +68,7 @@ func TestConcurrentConns(t *testing.T) {
 	assert.Zero(t, acc.NFields())
 }
 
-// Test that MaxTCPConections is respected when max==1
+// Test that MaxTCPConnections is respected when max==1
 func TestConcurrentConns1(t *testing.T) {
 	listener := Statsd{
 		Log:                    testutil.Logger{},
@@ -95,7 +97,7 @@ func TestConcurrentConns1(t *testing.T) {
 	assert.Zero(t, acc.NFields())
 }
 
-// Test that MaxTCPConections is respected
+// Test that MaxTCPConnections is respected
 func TestCloseConcurrentConns(t *testing.T) {
 	listener := Statsd{
 		Log:                    testutil.Logger{},
@@ -1077,6 +1079,65 @@ func TestParse_MeasurementsWithSameName(t *testing.T) {
 	}
 }
 
+// Test that the metric caches expire (clear) an entry after the entry hasn't been updated for the configurable MaxTTL duration.
+func TestCachesExpireAfterMaxTTL(t *testing.T) {
+	s := NewTestStatsd()
+	s.MaxTTL = config.Duration(100 * time.Microsecond)
+
+	acc := &testutil.Accumulator{}
+	s.parseStatsdLine("valid:45|c")
+	s.parseStatsdLine("valid:45|c")
+	require.NoError(t, s.Gather(acc))
+
+	// Max TTL goes by, our 'valid' entry is cleared.
+	time.Sleep(100 * time.Microsecond)
+	require.NoError(t, s.Gather(acc))
+
+	// Now when we gather, we should have a counter that is reset to zero.
+	s.parseStatsdLine("valid:45|c")
+	require.NoError(t, s.Gather(acc))
+
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"valid",
+				map[string]string{
+					"metric_type": "counter",
+				},
+				map[string]interface{}{
+					"value": 90,
+				},
+				time.Now(),
+				telegraf.Counter,
+			),
+			testutil.MustMetric(
+				"valid",
+				map[string]string{
+					"metric_type": "counter",
+				},
+				map[string]interface{}{
+					"value": 90,
+				},
+				time.Now(),
+				telegraf.Counter,
+			),
+			testutil.MustMetric(
+				"valid",
+				map[string]string{
+					"metric_type": "counter",
+				},
+				map[string]interface{}{
+					"value": 45,
+				},
+				time.Now(),
+				telegraf.Counter,
+			),
+		},
+		acc.GetTelegrafMetrics(),
+		testutil.IgnoreTime(),
+	)
+}
+
 // Test that measurements with multiple bits, are treated as different outputs
 // but are equal to their single-measurement representation
 func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
@@ -1705,14 +1766,14 @@ func TestUdp(t *testing.T) {
 	statsd := Statsd{
 		Log:                    testutil.Logger{},
 		Protocol:               "udp",
-		ServiceAddress:         "localhost:8125",
+		ServiceAddress:         "localhost:14223",
 		AllowedPendingMessages: 250000,
 	}
 	var acc testutil.Accumulator
 	require.NoError(t, statsd.Start(&acc))
 	defer statsd.Stop()
 
-	conn, err := net.Dial("udp", "127.0.0.1:8125")
+	conn, err := net.Dial("udp", "127.0.0.1:14223")
 	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
 	require.NoError(t, err)
 	err = conn.Close()
