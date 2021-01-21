@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-var zookeeperFormatRE = regexp.MustCompile(`^zk_([\w\.\-]+)\s+([\w\.\-]+)`)
+var zookeeperFormatRE = regexp.MustCompile(`^zk_(\w[\w\.\-]*)\s+([\w\.\-]+)`)
 
 // Zookeeper is a zookeeper plugin
 type Zookeeper struct {
