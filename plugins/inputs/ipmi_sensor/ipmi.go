@@ -80,6 +80,7 @@ var sampleConfig = `
   # use_cache = false
 
   ## Path to the ipmitools cache file (defaults to OS temp dir)
+  ## The provided path must exist and must be writable
   # cache_path = ""
 `
 

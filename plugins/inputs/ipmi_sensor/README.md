@@ -68,6 +68,7 @@ Any of the following parameters will be added to the aformentioned query if they
   # use_cache = false
 
   ## Path to the ipmitools cache file (defaults to OS temp dir)
+  ## The provided path must exist and must be writable
   # cache_path = ""
 ```
 
