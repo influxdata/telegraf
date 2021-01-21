@@ -60,9 +60,10 @@ func TestExponentialBackoffCalculation(t *testing.T) {
 		{retryCount: 5, expected: 0},
 		{retryCount: 10, expected: 2 * time.Second},
 		{retryCount: 30, expected: 22 * time.Second},
-		{retryCount: 50, expected: 30 * time.Second},
-		{retryCount: 100, expected: 30 * time.Second},
-		{retryCount: 1000, expected: 30 * time.Second},
+		{retryCount: 40, expected: 40 * time.Second},
+		{retryCount: 50, expected: 60 * time.Second},
+		{retryCount: 100, expected: 60 * time.Second},
+		{retryCount: 1000, expected: 60 * time.Second},
 	}
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%d_retries", test.retryCount), func(t *testing.T) {
