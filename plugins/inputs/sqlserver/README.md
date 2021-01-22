@@ -5,8 +5,7 @@ lightweight and use Dynamic Management Views supplied by SQL Server.
 
 ### The SQL Server plugin supports the following editions/versions of SQL Server
 - SQL Server
-  - 2008 SP3 (with CU3)
-  - SQL Server 2008 R2 SP3 and newer versions
+  - SQL Server 2012 and newer versions
 - Azure SQL Database (Single)
 - Azure SQL Managed Instance
 
@@ -24,7 +23,7 @@ GRANT VIEW ANY DEFINITION TO [telegraf];
 GO
 ```
 
-For Azure SQL Database, you require the View Database State permission and can create a user with a password directly in the database.
+For Azure SQL Database(with S2 and above service level objectives), you require the View Database State permission and can create a user with a password directly in the database.
 ```sql
 CREATE USER [telegraf] WITH PASSWORD = N'mystrongpassword';
 GO
