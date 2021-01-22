@@ -62,7 +62,7 @@ func TestStream_insertLog(t *testing.T) {
 	s.insertLog(tags1, log1)
 
 	require.Len(t, s.Streams, 1)
-	require.Equal(t, "key1value1key2value2key3value3", s.Streams[0].key)
+	require.Equal(t, "key1value1-key2value2-key3value3-", s.Streams[0].key)
 	require.Len(t, s.Streams[0].Logs, 1)
 	require.Equal(t, labels1, s.Streams[0].Labels)
 	require.Equal(t, "123", s.Streams[0].Logs[0][0])
@@ -78,7 +78,7 @@ func TestStream_insertLog(t *testing.T) {
 	s.insertLog(tags2, log3)
 
 	require.Len(t, s.Streams, 2)
-	require.Equal(t, "key2value2", s.Streams[1].key)
+	require.Equal(t, "key2value2-", s.Streams[1].key)
 	require.Len(t, s.Streams[1].Logs, 1)
 	require.Equal(t, labels2, s.Streams[1].Labels)
 	require.Equal(t, "122", s.Streams[1].Logs[0][0])
@@ -96,7 +96,7 @@ func TestUniqKeyFromTagList(t *testing.T) {
 				{Key: "key2", Value: "value2"},
 				{Key: "key3", Value: "value3"},
 			},
-			out: "key1value1key2value2key3value3",
+			out: "key1value1-key2value2-key3value3-",
 		},
 		{
 			in: []*telegraf.Tag{
@@ -104,7 +104,22 @@ func TestUniqKeyFromTagList(t *testing.T) {
 				{Key: "key3", Value: "value3"},
 				{Key: "key4", Value: "value4"},
 			},
-			out: "key1value1key3value3key4value4",
+			out: "key1value1-key3value3-key4value4-",
+		},
+		{
+			in: []*telegraf.Tag{
+				{Key: "target", Value: "local"},
+				{Key: "host", Value: "host"},
+				{Key: "service", Value: "dns"},
+			},
+			out: "targetlocal-hosthost-servicedns-",
+		},
+		{
+			in: []*telegraf.Tag{
+				{Key: "target", Value: "localhost"},
+				{Key: "hostservice", Value: "dns"},
+			},
+			out: "targetlocalhost-hostservicedns-",
 		},
 	}
 

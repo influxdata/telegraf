@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"github.com/influxdata/telegraf/testutil"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -13,25 +14,21 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/require"
 )
 
 func getMetric() telegraf.Metric {
-	m, err := metric.New(
+	return testutil.MustMetric(
 		"log",
 		map[string]string{
 			"key1": "value1",
 		},
 		map[string]interface{}{
-			"line": "my log",
+			"line":  "my log",
+			"field": 3.14,
 		},
 		time.Unix(123, 0),
 	)
-	if err != nil {
-		panic(err)
-	}
-	return m
 }
 
 func TestStatusCode(t *testing.T) {
@@ -126,7 +123,7 @@ func TestContentType(t *testing.T) {
 		{
 			name: "overwrite content_type",
 			plugin: &Loki{
-				Domain:     u.String(),
+				Domain:  u.String(),
 				Headers: map[string]string{"Content-Type": "plain/text"},
 			},
 			// plugin force content-type
@@ -172,7 +169,7 @@ func TestContentEncodingGzip(t *testing.T) {
 		{
 			name: "overwrite content_encoding",
 			plugin: &Loki{
-				Domain:         u.String(),
+				Domain:      u.String(),
 				GZipRequest: true,
 			},
 			expected: "gzip",
@@ -202,7 +199,8 @@ func TestContentEncodingGzip(t *testing.T) {
 				require.Len(t, s.Streams[0].Logs[0], 2)
 				require.Equal(t, map[string]string{"key1": "value1"}, s.Streams[0].Labels)
 				require.Equal(t, "123000000000", s.Streams[0].Logs[0][0])
-				require.Equal(t, "line=\"my log\"", s.Streams[0].Logs[0][1])
+				require.Contains(t, s.Streams[0].Logs[0][1], "line=\"my log\"")
+				require.Contains(t, s.Streams[0].Logs[0][1], "field=\"3.14\"")
 
 				w.WriteHeader(http.StatusNoContent)
 			})
@@ -236,21 +234,21 @@ func TestBasicAuth(t *testing.T) {
 		{
 			name: "username only",
 			plugin: &Loki{
-				Domain:      u.String(),
+				Domain:   u.String(),
 				Username: "username",
 			},
 		},
 		{
 			name: "password only",
 			plugin: &Loki{
-				Domain:      u.String(),
+				Domain:   u.String(),
 				Password: "pa$$word",
 			},
 		},
 		{
 			name: "username and password",
 			plugin: &Loki{
-				Domain:      u.String(),
+				Domain:   u.String(),
 				Username: "username",
 				Password: "pa$$word",
 			},
@@ -305,7 +303,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 		{
 			name: "success",
 			plugin: &Loki{
-				Domain:          u.String(),
+				Domain:       u.String(),
 				ClientID:     "howdy",
 				ClientSecret: "secret",
 				TokenURL:     u.String() + "/token",

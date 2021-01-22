@@ -45,7 +45,7 @@ func (s *Streams) insertLog(ts []*telegraf.Tag, l Log) {
 
 func uniqKeyFromTagList(ts []*telegraf.Tag) (k string) {
 	for _, t := range ts {
-		k += fmt.Sprintf("%s%s", t.Key, t.Value)
+		k += fmt.Sprintf("%s%s-", t.Key, t.Value)
 	}
 
 	return
