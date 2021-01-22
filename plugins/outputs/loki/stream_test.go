@@ -44,45 +44,47 @@ func TestGenerateLabelsAndTag(t *testing.T) {
 }
 
 func TestStream_insertLog(t *testing.T) {
-	s := Streams{Streams: make([]Stream, 0)}
+	s := Streams{}
 	log1 := Log{"123", "this log isn't useful"}
 	log2 := Log{"124", "this log isn't useful neither"}
 	log3 := Log{"122", "again"}
 
+	key1 := "key1value1-key2value2-key3value3-"
 	labels1, tags1 := generateLabelsAndTag(
 		tuple{key: "key1", value: "value1"},
 		tuple{key: "key2", value: "value2"},
 		tuple{key: "key3", value: "value3"},
 	)
 
+	key2 := "key2value2-"
 	labels2, tags2 := generateLabelsAndTag(
 		tuple{key: "key2", value: "value2"},
 	)
 
 	s.insertLog(tags1, log1)
 
-	require.Len(t, s.Streams, 1)
-	require.Equal(t, "key1value1-key2value2-key3value3-", s.Streams[0].key)
-	require.Len(t, s.Streams[0].Logs, 1)
-	require.Equal(t, labels1, s.Streams[0].Labels)
-	require.Equal(t, "123", s.Streams[0].Logs[0][0])
-	require.Equal(t, "this log isn't useful", s.Streams[0].Logs[0][1])
+	require.Len(t, s, 1)
+	require.Contains(t, s, key1)
+	require.Len(t, s[key1].Logs, 1)
+	require.Equal(t, labels1, s[key1].Labels)
+	require.Equal(t, "123", s[key1].Logs[0][0])
+	require.Equal(t, "this log isn't useful", s[key1].Logs[0][1])
 
 	s.insertLog(tags1, log2)
 
-	require.Len(t, s.Streams, 1)
-	require.Len(t, s.Streams[0].Logs, 2)
-	require.Equal(t, "124", s.Streams[0].Logs[1][0])
-	require.Equal(t, "this log isn't useful neither", s.Streams[0].Logs[1][1])
+	require.Len(t, s, 1)
+	require.Len(t, s[key1].Logs, 2)
+	require.Equal(t, "124", s[key1].Logs[1][0])
+	require.Equal(t, "this log isn't useful neither", s[key1].Logs[1][1])
 
 	s.insertLog(tags2, log3)
 
-	require.Len(t, s.Streams, 2)
-	require.Equal(t, "key2value2-", s.Streams[1].key)
-	require.Len(t, s.Streams[1].Logs, 1)
-	require.Equal(t, labels2, s.Streams[1].Labels)
-	require.Equal(t, "122", s.Streams[1].Logs[0][0])
-	require.Equal(t, "again", s.Streams[1].Logs[0][1])
+	require.Len(t, s, 2)
+	require.Contains(t, s, key2)
+	require.Len(t, s[key2].Logs, 1)
+	require.Equal(t, labels2, s[key2].Labels)
+	require.Equal(t, "122", s[key2].Logs[0][0])
+	require.Equal(t, "again", s[key2].Logs[0][1])
 }
 
 func TestUniqKeyFromTagList(t *testing.T) {
@@ -135,17 +137,15 @@ func Test_newStream(t *testing.T) {
 		tuple{key: "key3", value: "value3"},
 	)
 
-	s := newStream("uniqKey", tags)
+	s := newStream(tags)
 
-	require.Equal(t, s.key, "uniqKey")
 	require.Empty(t, s.Logs)
 	require.Equal(t, s.Labels, labels)
 }
 
 func Test_newStream_noTag(t *testing.T) {
-	s := newStream("uniqKey-empty", nil)
+	s := newStream(nil)
 
-	require.Equal(t, s.key, "uniqKey-empty")
 	require.Empty(t, s.Logs)
 	require.Empty(t, s.Labels)
 }

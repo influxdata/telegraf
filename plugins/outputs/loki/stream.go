@@ -1,6 +1,7 @@
 package loki
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
@@ -9,38 +10,39 @@ import (
 type (
 	Log []string
 
-	Streams struct {
-		Streams []Stream `json:"streams"`
-	}
+	Streams map[string]*Stream
 
 	Stream struct {
-		key string
-
 		Labels map[string]string `json:"stream"`
 		Logs   []Log             `json:"values"`
 	}
+
+	Request struct {
+		Streams []Stream `json:"streams"`
+	}
 )
 
-func (s *Streams) insertLog(ts []*telegraf.Tag, l Log) {
-	var (
-		key   = uniqKeyFromTagList(ts)
-		index int
-		found bool
-	)
+func (s Streams) insertLog(ts []*telegraf.Tag, l Log) {
+	key := uniqKeyFromTagList(ts)
+	_, ok := s[key]
 
-	for i, s := range s.Streams {
-		if s.key == key {
-			index, found = i, true
-			break
-		}
+	if !ok {
+		s[key] = newStream(ts)
 	}
 
-	if !found {
-		s.Streams = append(s.Streams, newStream(key, ts))
-		index = len(s.Streams) - 1
+	s[key].Logs = append(s[key].Logs, l)
+}
+
+func (s Streams) MarshalJSON() ([]byte, error) {
+	r := Request{
+		Streams: make([]Stream, 0, len(s)),
 	}
 
-	s.Streams[index].Logs = append(s.Streams[index].Logs, l)
+	for _, stream := range s {
+		r.Streams = append(r.Streams, *stream)
+	}
+
+	return json.Marshal(r)
 }
 
 func uniqKeyFromTagList(ts []*telegraf.Tag) (k string) {
@@ -51,9 +53,8 @@ func uniqKeyFromTagList(ts []*telegraf.Tag) (k string) {
 	return
 }
 
-func newStream(uniqKey string, ts []*telegraf.Tag) Stream {
-	s := Stream{
-		key:    uniqKey,
+func newStream(ts []*telegraf.Tag) *Stream {
+	s := &Stream{
 		Logs:   make([]Log, 0),
 		Labels: map[string]string{},
 	}

@@ -191,7 +191,7 @@ func TestContentEncodingGzip(t *testing.T) {
 				payload, err := ioutil.ReadAll(body)
 				require.NoError(t, err)
 
-				var s Streams
+				var s Request
 				err = json.Unmarshal(payload, &s)
 				require.NoError(t, err)
 				require.Len(t, s.Streams, 1)

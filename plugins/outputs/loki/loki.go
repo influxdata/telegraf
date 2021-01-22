@@ -135,9 +135,7 @@ func (l *Loki) Close() error {
 }
 
 func (l *Loki) Write(metrics []telegraf.Metric) error {
-	s := Streams{
-		Streams: make([]Stream, 0, len(metrics)),
-	}
+	s := Streams{}
 
 	for _, m := range metrics {
 		tags := m.TagList()
