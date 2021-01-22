@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -40,7 +39,7 @@ type podResponse struct {
 	Items      []*corev1.Pod `json:"items,string,omitempty"`
 }
 
-const updatePodScrapeListInterval = 60
+const cAdvisorCallInterval = 60
 
 // loadClient parses a kubeconfig from a file and returns a Kubernetes
 // client. It does not support extensions or client auth providers.
@@ -151,14 +150,20 @@ func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 }
 
 func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
+	p.Log.Infof("Using monitor pods version 2 to get pod list using cAdvisor.")
+
 	// Parse label and field selectors - will be used to filter pods after cAdvisor call
 	labelSelector, err := labels.Parse(p.KubernetesLabelSelector)
+	if err != nil {
+		p.Log.Errorf("Error parsing the specified label selector(s): %s", err.Error())
+	}
 	fieldSelector, err := fields.ParseSelector(p.KubernetesFieldSelector)
-	log.Printf("[cAdvisor Changes Log] labelSelector: %v", labelSelector)
-	log.Printf("[cAdvisor Changes Log] fieldSelector: %v", fieldSelector)
+	if err != nil {
+		p.Log.Errorf("Error parsing the specified field selector(s): %s", err.Error())
+	}
+	p.Log.Infof("Using the label selector: %v and field selector: %v", labelSelector, fieldSelector)
 
 	// Set InsecureSkipVerify for cAdvisor client since Node IP will not be a SAN for the CA cert
-	p.Log.Infof("Using monitor pods version 2 to get pod list using cAdvisor.")
 	tlsConfig := client.Client.Transport.(*http.Transport).TLSClientConfig
 	tlsConfig.InsecureSkipVerify = true
 
@@ -181,7 +186,7 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(updatePodScrapeListInterval * time.Second):
+		case <-time.After(cAdvisorCallInterval * time.Second):
 			err := updateCadvisorPodList(ctx, p, client, req, labelSelector, fieldSelector)
 			if err != nil {
 				return err
@@ -190,8 +195,9 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 	}
 }
 
-func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Client, req *http.Request, labelSelector labels.Selector, fieldSelector fields.Selector) error {
-	log.Printf("[cAdvisor Changes Log] Making request for updated pod list")
+func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Client, req *http.Request,
+		labelSelector labels.Selector, fieldSelector fields.Selector) error {
+
 	resp, err := client.Client.Do(req)
 	if err != nil {
 		return err
@@ -205,29 +211,23 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
 	cadvisorPodsResponse := podResponse{}
 	json.Unmarshal([]byte(responseBody), &cadvisorPodsResponse)
 	pods := cadvisorPodsResponse.Items
-	log.Printf("[cAdvisor Changes Log] len of pod list: %d", len(pods))
 
-	// Updating pod list to be cadvisor response
+	// Updating pod list to be latest cadvisor response
 	p.lock.Lock()
-	log.Printf("[cAdvisor Changes Log] locking for new kubernetes pods list")
 	p.kubernetesPods = nil
+
+	// Register pod only if it has an annotation to scrape, if it is ready,
+  // and if namespace and selectors are specified and match
 	for _, pod := range pods {
-		log.Printf("[cAdvisor Changes Log] pod %s", pod.GetMetadata().GetName())
-		if pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] == "true" {
-			log.Printf("[cAdvisor Changes Log] pod %s has scrape annotation. Checking namespace, field, and label selectors.", pod.GetMetadata().GetName())
-		}
-		// Register pod only if it has an annotation to scrape, if it is ready,
-		// and if namespace/selectors are specified and match
 		if pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] == "true" &&
 			podReady(pod.Status.GetContainerStatuses()) &&
 			podHasMatchingNamespace(pod, p) &&
 			podHasMatchingLabelSelector(pod, labelSelector) &&
-			podHasMatchingFieldSelector(pod, p, fieldSelector) {
+			podHasMatchingFieldSelector(pod, fieldSelector) {
 				registerPod(pod, p)
 		}
 
 	}
-	log.Printf("[cAdvisor Changes Log] unlocking for new kubernetes pods list")
 	p.lock.Unlock()
 
 	// No errors
@@ -237,56 +237,44 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
 /* See the docs on kubernetes label selectors:
  * https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
  */
-func podHasMatchingLabelSelector(pod *corev1.Pod, selector labels.Selector) bool {
-	var ls labels.Set = pod.GetMetadata().GetLabels()
-	matches := selector.Matches(ls)
-	if matches {
-		log.Printf("[cAdvisor Changes Log] pod %s matches label selectors", pod.GetMetadata().GetName())
+func podHasMatchingLabelSelector(pod *corev1.Pod, labelSelector labels.Selector) bool {
+	if labelSelector == nil {
+		return true
 	}
-	return matches
+
+	var labelsSet labels.Set = pod.GetMetadata().GetLabels()
+	return labelSelector.Matches(labelsSet)
 }
 
-/* See PodToSelectableFields() for list of fields that are selectable:
- * https://github.com/kubernetes/kubernetes/blob/v1.16.1/pkg/registry/core/pod/strategy.go
+/* See ToSelectableFields() for list of fields that are selectable:
+ * https://github.com/kubernetes/kubernetes/release-1.20/pkg/registry/core/pod/strategy.go
  * See docs on kubernetes field selectors:
  * https://kubernetes.io/docs/concepts/overview/working-with-objects/field-selectors/
  */
-func podHasMatchingFieldSelector(pod *corev1.Pod, p *Prometheus, fieldSelector fields.Selector) bool {
-	var fs fields.Set = make(map[string]string)
-	
-	for _, requirement := range fieldSelector.Requirements() {
-		field := requirement.Field
-
-		// Not all fields can be selected. See link above for the list
-		var value string
-		switch strings.ToLower(field) {
-		case "spec.nodename":
-			value = pod.GetSpec().GetNodeName()
-		case "spec.restartpolicy":
-			value = pod.GetSpec().GetRestartPolicy()
-		case "spec.schedulername":
-			value = pod.GetSpec().GetSchedulerName()
-		case "spec.serviceaccountname":
-			value = pod.GetSpec().GetServiceAccountName()
-		case "status.phase":
-			value = pod.GetStatus().GetPhase()
-		case "status.podip":
-			value = pod.GetStatus().GetPodIP()
-		case "status.nominatednodename":
-			value = pod.GetStatus().GetNominatedNodeName()
-		default:
-			p.Log.Errorf("Unrecognized field selector specified for field name %s.", field)
-			return false
-		}
-
-		fs[field] = value
+func podHasMatchingFieldSelector(pod *corev1.Pod, fieldSelector fields.Selector) bool {
+	if fieldSelector == nil {
+		return true
 	}
 
-	matches := fieldSelector.Matches(fs)
-	if matches {
-		log.Printf("[cAdvisor Changes Log] pod %s matches field selectors", pod.GetMetadata().GetName())
+	podSpec := pod.GetSpec()
+	podStatus := pod.GetStatus()
+
+	// Spec and Status shouldn't be nil.
+	// Error handling just in case something goes wrong but won't crash telegraf
+	if (podSpec == nil || podStatus == nil) {
+		return false
 	}
-	return matches
+
+	fieldsSet := make(fields.Set)
+	fieldsSet["spec.nodeName"] = podSpec.GetNodeName()
+	fieldsSet["spec.restartPolicy"] = podSpec.GetRestartPolicy()
+	fieldsSet["spec.schedulerName"] = podSpec.GetSchedulerName()
+	fieldsSet["spec.serviceAccountName"] = podSpec.GetServiceAccountName()
+	fieldsSet["status.phase"] = podStatus.GetPhase()
+	fieldsSet["status.podIP"] = podStatus.GetPodIP()
+	fieldsSet["status.nominatedNodeName"] = podStatus.GetNominatedNodeName()
+
+	return fieldSelector.Matches(fieldsSet)
 }
 
 /*
