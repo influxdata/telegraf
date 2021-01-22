@@ -449,3 +449,33 @@ func TestParserProtobufHeader(t *testing.T) {
 	}
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
+
+func TestDefautName(t *testing.T) {
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"expected",
+			map[string]string{
+				"osVersion":        "CentOS Linux 7 (Core)",
+				"cadvisorRevision": "",
+				"cadvisorVersion":  "",
+				"dockerVersion":    "1.8.2",
+				"kernelVersion":    "3.10.0-229.20.1.el7.x86_64",
+			},
+			map[string]interface{}{
+				"cadvisor_version_info": float64(1),
+			},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
+	}
+
+	parser := Parser{
+		ChangeDefaultName: true,
+		DefaultName:       "expected",
+	}
+	metrics, err := parser.Parse([]byte(validUniqueGauge))
+
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+}
