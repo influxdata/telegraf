@@ -116,7 +116,7 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
 	// Invoke Gather() from two separate configurations and
 	//  confirm they don't interfere with each other
-	t.Skip("Skipping as sqlserver not running")
+	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
 
 	testServer := "Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
 	s := &SQLServer{

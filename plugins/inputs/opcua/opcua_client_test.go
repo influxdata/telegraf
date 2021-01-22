@@ -20,7 +20,7 @@ type OPCTags struct {
 }
 
 func TestClient1Integration(t *testing.T) {
-	t.Skip("Fails with a connect: connection refused")
+	t.Skip("Skipping due to dial tcp 195.254.227.245:4840: connect: connection refused")
 
 	var testopctags = []OPCTags{
 		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
