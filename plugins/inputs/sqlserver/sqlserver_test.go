@@ -113,41 +113,39 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 	}
 }
 
-// DatabaseStats failed: Unable to open tcp connection with host '127.0.0.1:1433
-// func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
-// 	// Invoke Gather() from two separate configurations and
-// 	//  confirm they don't interfere with each other
-// 	if testing.Short() {
-// 		t.Skip("Skipping integration test in short mode")
-// 	}
-// 	testServer := "Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
-// 	s := &SQLServer{
-// 		Servers:      []string{testServer},
-// 		ExcludeQuery: []string{"MemoryClerk"},
-// 	}
-// 	s2 := &SQLServer{
-// 		Servers:      []string{testServer},
-// 		ExcludeQuery: []string{"DatabaseSize"},
-// 	}
+func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
+	// Invoke Gather() from two separate configurations and
+	//  confirm they don't interfere with each other
+	t.Skip("Skipping as sqlserver not running")
 
-// 	var acc, acc2 testutil.Accumulator
-// 	err := s.Gather(&acc)
-// 	require.NoError(t, err)
-// 	assert.Equal(t, s.isInitialized, true)
-// 	assert.Equal(t, s2.isInitialized, false)
+	testServer := "Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+	s := &SQLServer{
+		Servers:      []string{testServer},
+		ExcludeQuery: []string{"MemoryClerk"},
+	}
+	s2 := &SQLServer{
+		Servers:      []string{testServer},
+		ExcludeQuery: []string{"DatabaseSize"},
+	}
 
-// 	err = s2.Gather(&acc2)
-// 	require.NoError(t, err)
-// 	assert.Equal(t, s.isInitialized, true)
-// 	assert.Equal(t, s2.isInitialized, true)
-// 	// acc includes size metrics, and excludes memory metrics
-// 	assert.False(t, acc.HasMeasurement("Memory breakdown (%)"))
-// 	assert.True(t, acc.HasMeasurement("Log size (bytes)"))
+	var acc, acc2 testutil.Accumulator
+	err := s.Gather(&acc)
+	require.NoError(t, err)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, false)
 
-// 	// acc2 includes memory metrics, and excludes size metrics
-// 	assert.True(t, acc2.HasMeasurement("Memory breakdown (%)"))
-// 	assert.False(t, acc2.HasMeasurement("Log size (bytes)"))
-// }
+	err = s2.Gather(&acc2)
+	require.NoError(t, err)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, true)
+	// acc includes size metrics, and excludes memory metrics
+	assert.False(t, acc.HasMeasurement("Memory breakdown (%)"))
+	assert.True(t, acc.HasMeasurement("Log size (bytes)"))
+
+	// acc2 includes memory metrics, and excludes size metrics
+	assert.True(t, acc2.HasMeasurement("Memory breakdown (%)"))
+	assert.False(t, acc2.HasMeasurement("Log size (bytes)"))
+}
 
 func TestSqlServer_MultipleInit(t *testing.T) {
 

@@ -4,65 +4,67 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
-// Race condition only when ran as part of a test-all
-// func TestExec(t *testing.T) {
-// 	if testing.Short() {
-// 		t.Skip("Skipping test due to OS/executable dependencies")
-// 	}
+func TestExec(t *testing.T) {
+	t.Skip("Skipping test due to OS/executable dependencies and race condition when ran as part of a test-all")
 
-// 	tests := []struct {
-// 		name    string
-// 		command []string
-// 		err     bool
-// 		metrics []telegraf.Metric
-// 	}{
-// 		{
-// 			name:    "test success",
-// 			command: []string{"tee"},
-// 			err:     false,
-// 			metrics: testutil.MockMetrics(),
-// 		},
-// 		{
-// 			name:    "test doesn't accept stdin",
-// 			command: []string{"sleep", "5s"},
-// 			err:     true,
-// 			metrics: testutil.MockMetrics(),
-// 		},
-// 		{
-// 			name:    "test command not found",
-// 			command: []string{"/no/exist", "-h"},
-// 			err:     true,
-// 			metrics: testutil.MockMetrics(),
-// 		},
-// 		{
-// 			name:    "test no metrics output",
-// 			command: []string{"tee"},
-// 			err:     false,
-// 			metrics: []telegraf.Metric{},
-// 		},
-// 	}
+	tests := []struct {
+		name    string
+		command []string
+		err     bool
+		metrics []telegraf.Metric
+	}{
+		{
+			name:    "test success",
+			command: []string{"tee"},
+			err:     false,
+			metrics: testutil.MockMetrics(),
+		},
+		{
+			name:    "test doesn't accept stdin",
+			command: []string{"sleep", "5s"},
+			err:     true,
+			metrics: testutil.MockMetrics(),
+		},
+		{
+			name:    "test command not found",
+			command: []string{"/no/exist", "-h"},
+			err:     true,
+			metrics: testutil.MockMetrics(),
+		},
+		{
+			name:    "test no metrics output",
+			command: []string{"tee"},
+			err:     false,
+			metrics: []telegraf.Metric{},
+		},
+	}
 
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			e := &Exec{
-// 				Command: tt.command,
-// 				Timeout: internal.Duration{Duration: time.Second},
-// 				runner:  &CommandRunner{},
-// 			}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := &Exec{
+				Command: tt.command,
+				Timeout: internal.Duration{Duration: time.Second},
+				runner:  &CommandRunner{},
+			}
 
-// 			s, _ := serializers.NewInfluxSerializer()
-// 			e.SetSerializer(s)
+			s, _ := serializers.NewInfluxSerializer()
+			e.SetSerializer(s)
 
-// 			e.Connect()
+			e.Connect()
 
-// 			require.Equal(t, tt.err, e.Write(tt.metrics) != nil)
-// 		})
-// 	}
-// }
+			require.Equal(t, tt.err, e.Write(tt.metrics) != nil)
+		})
+	}
+}
 
 func TestTruncate(t *testing.T) {
 	tests := []struct {

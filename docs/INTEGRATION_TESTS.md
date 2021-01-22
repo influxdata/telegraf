@@ -25,34 +25,34 @@ Contributing integration tests:
 
 Current areas we have integration tests: 
 
-| Area                               | Info                                      |
+| Area                               | What it does                              |
 |------------------------------------|-------------------------------------------|
 | Inputs: Aerospike                  |                                           |
 | Inputs: Disque                     |                                           |
 | Inputs: Dovecot                    |                                           |                         
 | Inputs: Mcrouter                   |                                           |                         
 | Inputs: Memcached                  |                                           |                         
-| Inputs: Mysql                      | Limited scope                             |                         
-| Inputs: Opcua                      | Currently in a broken state               |                         
-| Inputs: Openldap                   | Some are currently broken                 |                          
-| Inputs: Pgbouncer                  | Currently in a broken state / only test   |                         
+| Inputs: Mysql                      |                                           |                         
+| Inputs: Opcua                      |                                           |                         
+| Inputs: Openldap                   |                                           |                          
+| Inputs: Pgbouncer                  |                                           |                         
 | Inputs: Postgresql                 |                                           |                         
 | Inputs: Postgresql extensible      |                                           |                          
 | Inputs: Procstat / Native windows  |                                           |                           
 | Inputs: Prometheus                 |                                           |                          
 | Inputs: Redis                      |                                           |                          
-| Inputs: Sqlserver                  | Currently in a broken state               |                         
+| Inputs: Sqlserver                  |                                           |                         
 | Inputs: Win perf counters          |                                           |                          
 | Inputs: Win services               |                                           |                          
 | Inputs: Zookeeper                  |                                           |                          
-| Processors: Ifname / SNMP          | Currently in a broken state               |                          
-| Outputs: Cratedb / Postgres        | Currently in a broken state               |                          
+| Processors: Ifname / SNMP          |                                           |                          
+| Outputs: Cratedb / Postgres        |                                           |                          
 | Outputs: Elasticsearch             |                                           |                          
 | Outputs: Kafka                     |                                           |                          
-| Outputs: MQTT                      | Is the only test                          |                          
-| Outputs: Nats                      | Is the only test                          |                          
-| Outputs: NSQ                       | Is the only test                          |                          
-| Outputs: Opentsdb                  | Currently in a broken state               |                          
+| Outputs: MQTT                      |                                           |                          
+| Outputs: Nats                      |                                           |                          
+| Outputs: NSQ                       |                                           |                          
+| Outputs: Opentsdb                  |                                           |                          
 | Logger: Event logger               |                                           |                          
 
 Areas we would benefit most from new integration tests:

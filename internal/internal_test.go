@@ -51,23 +51,21 @@ var (
 	shell, _    = exec.LookPath("sh")
 )
 
-// Fails with a data race when running test-all
-// func TestRunTimeout(t *testing.T) {
-// 	if testing.Short() {
-// 		t.Skip("Skipping test due to random failures.")
-// 	}
-// 	if sleepbin == "" {
-// 		t.Skip("'sleep' binary not available on OS, skipping.")
-// 	}
-// 	cmd := exec.Command(sleepbin, "10")
-// 	start := time.Now()
-// 	err := RunTimeout(cmd, time.Millisecond*20)
-// 	elapsed := time.Since(start)
+func TestRunTimeout(t *testing.T) {
+	t.Skip("Skipping test due to random failures & a data race when running test-all.")
 
-// 	assert.Equal(t, TimeoutErr, err)
-// 	// Verify that command gets killed in 20ms, with some breathing room
-// 	assert.True(t, elapsed < time.Millisecond*75)
-// }
+	if sleepbin == "" {
+		t.Skip("'sleep' binary not available on OS, skipping.")
+	}
+	cmd := exec.Command(sleepbin, "10")
+	start := time.Now()
+	err := RunTimeout(cmd, time.Millisecond*20)
+	elapsed := time.Since(start)
+
+	assert.Equal(t, TimeoutErr, err)
+	// Verify that command gets killed in 20ms, with some breathing room
+	assert.True(t, elapsed < time.Millisecond*75)
+}
 
 // Verifies behavior of a command that doesn't get killed.
 func TestRunTimeoutFastExit(t *testing.T) {

@@ -1,19 +1,23 @@
 package x509_cert
 
 import (
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net/url"
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -23,112 +27,109 @@ var pki = testutil.NewPKI("../../../testutil/pki")
 // Make sure X509Cert implements telegraf.Input
 var _ telegraf.Input = &X509Cert{}
 
-// Race condition when ran as part of a test-all
-// func TestGatherRemoteIntegration(t *testing.T) {
-// 	if testing.Short() {
-// 		t.Skip("Skipping network-dependent test in short mode.")
-// 	}
+func TestGatherRemoteIntegration(t *testing.T) {
+	t.Skip("Skipping network-dependent test due to race condition when test-all")
 
-// 	tmpfile, err := ioutil.TempFile("", "example")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	tmpfile, err := ioutil.TempFile("", "example")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	defer os.Remove(tmpfile.Name())
+	defer os.Remove(tmpfile.Name())
 
-// 	if _, err := tmpfile.Write([]byte(pki.ReadServerCert())); err != nil {
-// 		t.Fatal(err)
-// 	}
+	if _, err := tmpfile.Write([]byte(pki.ReadServerCert())); err != nil {
+		t.Fatal(err)
+	}
 
-// 	tests := []struct {
-// 		name    string
-// 		server  string
-// 		timeout time.Duration
-// 		close   bool
-// 		unset   bool
-// 		noshake bool
-// 		error   bool
-// 	}{
-// 		{name: "wrong port", server: ":99999", error: true},
-// 		{name: "no server", timeout: 5},
-// 		{name: "successful https", server: "https://example.org:443", timeout: 5},
-// 		{name: "successful file", server: "file://" + filepath.ToSlash(tmpfile.Name()), timeout: 5},
-// 		{name: "unsupported scheme", server: "foo://", timeout: 5, error: true},
-// 		{name: "no certificate", timeout: 5, unset: true, error: true},
-// 		{name: "closed connection", close: true, error: true},
-// 		{name: "no handshake", timeout: 5, noshake: true, error: true},
-// 	}
+	tests := []struct {
+		name    string
+		server  string
+		timeout time.Duration
+		close   bool
+		unset   bool
+		noshake bool
+		error   bool
+	}{
+		{name: "wrong port", server: ":99999", error: true},
+		{name: "no server", timeout: 5},
+		{name: "successful https", server: "https://example.org:443", timeout: 5},
+		{name: "successful file", server: "file://" + filepath.ToSlash(tmpfile.Name()), timeout: 5},
+		{name: "unsupported scheme", server: "foo://", timeout: 5, error: true},
+		{name: "no certificate", timeout: 5, unset: true, error: true},
+		{name: "closed connection", close: true, error: true},
+		{name: "no handshake", timeout: 5, noshake: true, error: true},
+	}
 
-// 	pair, err := tls.X509KeyPair([]byte(pki.ReadServerCert()), []byte(pki.ReadServerKey()))
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	pair, err := tls.X509KeyPair([]byte(pki.ReadServerCert()), []byte(pki.ReadServerKey()))
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	config := &tls.Config{
-// 		InsecureSkipVerify: true,
-// 		Certificates:       []tls.Certificate{pair},
-// 	}
+	config := &tls.Config{
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{pair},
+	}
 
-// 	for _, test := range tests {
-// 		t.Run(test.name, func(t *testing.T) {
-// 			if test.unset {
-// 				config.Certificates = nil
-// 				config.GetCertificate = func(i *tls.ClientHelloInfo) (*tls.Certificate, error) {
-// 					return nil, nil
-// 				}
-// 			}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if test.unset {
+				config.Certificates = nil
+				config.GetCertificate = func(i *tls.ClientHelloInfo) (*tls.Certificate, error) {
+					return nil, nil
+				}
+			}
 
-// 			ln, err := tls.Listen("tcp", ":0", config)
-// 			if err != nil {
-// 				t.Fatal(err)
-// 			}
-// 			defer ln.Close()
+			ln, err := tls.Listen("tcp", ":0", config)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer ln.Close()
 
-// 			go func() {
-// 				sconn, err := ln.Accept()
-// 				if err != nil {
-// 					return
-// 				}
-// 				if test.close {
-// 					sconn.Close()
-// 				}
+			go func() {
+				sconn, err := ln.Accept()
+				if err != nil {
+					return
+				}
+				if test.close {
+					sconn.Close()
+				}
 
-// 				serverConfig := config.Clone()
+				serverConfig := config.Clone()
 
-// 				srv := tls.Server(sconn, serverConfig)
-// 				if test.noshake {
-// 					srv.Close()
-// 				}
-// 				if err := srv.Handshake(); err != nil {
-// 					return
-// 				}
-// 			}()
+				srv := tls.Server(sconn, serverConfig)
+				if test.noshake {
+					srv.Close()
+				}
+				if err := srv.Handshake(); err != nil {
+					return
+				}
+			}()
 
-// 			if test.server == "" {
-// 				test.server = "tcp://" + ln.Addr().String()
-// 			}
+			if test.server == "" {
+				test.server = "tcp://" + ln.Addr().String()
+			}
 
-// 			sc := X509Cert{
-// 				Sources: []string{test.server},
-// 				Timeout: internal.Duration{Duration: test.timeout},
-// 			}
-// 			sc.Init()
+			sc := X509Cert{
+				Sources: []string{test.server},
+				Timeout: internal.Duration{Duration: test.timeout},
+			}
+			sc.Init()
 
-// 			sc.InsecureSkipVerify = true
-// 			testErr := false
+			sc.InsecureSkipVerify = true
+			testErr := false
 
-// 			acc := testutil.Accumulator{}
-// 			err = sc.Gather(&acc)
-// 			if len(acc.Errors) > 0 {
-// 				testErr = true
-// 			}
+			acc := testutil.Accumulator{}
+			err = sc.Gather(&acc)
+			if len(acc.Errors) > 0 {
+				testErr = true
+			}
 
-// 			if testErr != test.error {
-// 				t.Errorf("%s", err)
-// 			}
-// 		})
-// 	}
-// }
+			if testErr != test.error {
+				t.Errorf("%s", err)
+			}
+		})
+	}
+}
 
 func TestGatherLocal(t *testing.T) {
 	wrongCert := fmt.Sprintf("-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n", base64.StdEncoding.EncodeToString([]byte("test")))

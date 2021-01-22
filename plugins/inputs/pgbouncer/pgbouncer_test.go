@@ -1,59 +1,65 @@
 package pgbouncer
 
-// fails to login - in docker-container can see closing because: not allowed (age=0) after login attempt
-// test ERROR: not allowed (SQLSTATE 08P01)
-// func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
-// 	if testing.Short() {
-// 		t.Skip("Skipping integration test in short mode")
-// 	}
+import (
+	"fmt"
+	"testing"
 
-// 	p := &PgBouncer{
-// 		Service: postgresql.Service{
-// 			Address: fmt.Sprintf(
-// 				"host=%s user=pgbouncer password=pgbouncer dbname=pgbouncer port=6432 sslmode=disable",
-// 				testutil.GetLocalHost(),
-// 			),
-// 			IsPgBouncer: true,
-// 		},
-// 	}
+	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
 
-// 	var acc testutil.Accumulator
-// 	require.NoError(t, p.Start(&acc))
-// 	require.NoError(t, p.Gather(&acc))
+func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
+	t.Skip("Skipping due to not allowed (SQLSTATE 08P01)")
 
-// 	intMetrics := []string{
-// 		"total_requests",
-// 		"total_received",
-// 		"total_sent",
-// 		"total_query_time",
-// 		"avg_req",
-// 		"avg_recv",
-// 		"avg_sent",
-// 		"avg_query",
-// 		"cl_active",
-// 		"cl_waiting",
-// 		"sv_active",
-// 		"sv_idle",
-// 		"sv_used",
-// 		"sv_tested",
-// 		"sv_login",
-// 		"maxwait",
-// 	}
+	p := &PgBouncer{
+		Service: postgresql.Service{
+			Address: fmt.Sprintf(
+				"host=%s user=pgbouncer password=pgbouncer dbname=pgbouncer port=6432 sslmode=disable",
+				testutil.GetLocalHost(),
+			),
+			IsPgBouncer: true,
+		},
+	}
 
-// 	int32Metrics := []string{}
+	var acc testutil.Accumulator
+	require.NoError(t, p.Start(&acc))
+	require.NoError(t, p.Gather(&acc))
 
-// 	metricsCounted := 0
+	intMetrics := []string{
+		"total_requests",
+		"total_received",
+		"total_sent",
+		"total_query_time",
+		"avg_req",
+		"avg_recv",
+		"avg_sent",
+		"avg_query",
+		"cl_active",
+		"cl_waiting",
+		"sv_active",
+		"sv_idle",
+		"sv_used",
+		"sv_tested",
+		"sv_login",
+		"maxwait",
+	}
 
-// 	for _, metric := range intMetrics {
-// 		assert.True(t, acc.HasInt64Field("pgbouncer", metric))
-// 		metricsCounted++
-// 	}
+	int32Metrics := []string{}
 
-// 	for _, metric := range int32Metrics {
-// 		assert.True(t, acc.HasInt32Field("pgbouncer", metric))
-// 		metricsCounted++
-// 	}
+	metricsCounted := 0
 
-// 	assert.True(t, metricsCounted > 0)
-// 	assert.Equal(t, len(intMetrics)+len(int32Metrics), metricsCounted)
-// }
+	for _, metric := range intMetrics {
+		assert.True(t, acc.HasInt64Field("pgbouncer", metric))
+		metricsCounted++
+	}
+
+	for _, metric := range int32Metrics {
+		assert.True(t, acc.HasInt32Field("pgbouncer", metric))
+		metricsCounted++
+	}
+
+	assert.True(t, metricsCounted > 0)
+	assert.Equal(t, len(intMetrics)+len(int32Metrics), metricsCounted)
+}
