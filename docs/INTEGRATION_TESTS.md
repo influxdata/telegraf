@@ -44,16 +44,13 @@ Current areas we have integration tests:
 | Inputs: Sqlserver                  |                                           |                         
 | Inputs: Win perf counters          |                                           |                          
 | Inputs: Win services               |                                           |                          
-| Inputs: Zookeeper                  |                                           |                          
-| Processors: Ifname / SNMP          |                                           |                          
+| Inputs: Zookeeper                  |                                           |                            
 | Outputs: Cratedb / Postgres        |                                           |                          
 | Outputs: Elasticsearch             |                                           |                          
 | Outputs: Kafka                     |                                           |                          
 | Outputs: MQTT                      |                                           |                          
 | Outputs: Nats                      |                                           |                          
-| Outputs: NSQ                       |                                           |                          
-| Outputs: Opentsdb                  |                                           |                          
-| Logger: Event logger               |                                           |                          
+| Outputs: NSQ                       |                                           |                        
 
 Areas we would benefit most from new integration tests:
 
