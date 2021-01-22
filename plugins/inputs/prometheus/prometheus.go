@@ -63,6 +63,10 @@ type Prometheus struct {
 	kubernetesPods map[string]URLAndAddress
 	cancel         context.CancelFunc
 	wg             sync.WaitGroup
+
+	// Allow change default metric name, `prometheus` if not change
+	ChangeDefaultName bool   `toml:"change_default_name"`
+	DefaultName       string `toml:"default_name"`
 }
 
 var sampleConfig = `
@@ -122,6 +126,10 @@ var sampleConfig = `
   # tls_key = /path/to/keyfile
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Optional change default metric name
+  # change_default_name = true
+  # default_name = "prometheus"
 `
 
 func (p *Prometheus) SampleConfig() string {
@@ -330,7 +338,11 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 
 	if p.MetricVersion == 2 {
-		parser := parser_v2.Parser{Header: resp.Header}
+		parser := parser_v2.Parser{
+			Header:            resp.Header,
+			ChangeDefaultName: p.ChangeDefaultName,
+			DefaultName:       p.DefaultName,
+		}
 		metrics, err = parser.Parse(body)
 	} else {
 		metrics, err = Parse(body, resp.Header)

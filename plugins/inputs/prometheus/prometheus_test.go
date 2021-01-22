@@ -234,3 +234,27 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 	assert.True(t, acc.TagValue("prometheus", "url") == ts.URL+"/metrics")
 	assert.True(t, acc.HasTimestamp("prometheus", time.Unix(1490802350, 0)))
 }
+
+func TestPrometheusChangeDefaultName(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, sampleGaugeTextFormat)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		URLs:              []string{ts.URL},
+		URLTag:            "url",
+		MetricVersion:     2,
+		ChangeDefaultName: true,
+		DefaultName:       "changed",
+	}
+
+	var acc testutil.Accumulator
+
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
+	assert.True(t, acc.HasFloatField("changed", "go_goroutines"))
+	assert.True(t, acc.TagValue("changed", "url") == ts.URL+"/metrics")
+	assert.True(t, acc.HasTimestamp("changed", time.Unix(1490802350, 0)))
+}
