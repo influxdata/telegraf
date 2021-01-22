@@ -404,7 +404,7 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	}
 
 	// Set the connection limits
-	s.db.SetConnMaxIdleTime(s.MaxIdleTime.Duration)
+	// s.db.SetConnMaxIdleTime(s.MaxIdleTime.Duration) // Requires go >= 1.15
 	s.db.SetConnMaxLifetime(s.MaxLifetime.Duration)
 	s.db.SetMaxOpenConns(s.MaxOpenConnections)
 	s.db.SetMaxIdleConns(s.MaxIdleConnections)
