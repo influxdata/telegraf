@@ -143,8 +143,8 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 		tags := m.TagList()
 		var line string
 
-		for k, v := range m.Fields() {
-			line += fmt.Sprintf("%s=\"%v\" ", k, v)
+		for _, f := range m.FieldList() {
+			line += fmt.Sprintf("%s=\"%v\" ", f.Key, f.Value)
 		}
 
 		s.insertLog(tags, Log{fmt.Sprintf("%d", m.Time().UnixNano()), line})
@@ -198,6 +198,9 @@ func (l *Loki) write(s Streams) error {
 	}
 	defer resp.Body.Close()
 	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("when writing to [%s] received status code: %d", l.url, resp.StatusCode)
