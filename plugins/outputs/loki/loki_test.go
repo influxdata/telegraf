@@ -50,7 +50,7 @@ func TestStatusCode(t *testing.T) {
 		{
 			name: "success",
 			plugin: &Loki{
-				URL: u.String(),
+				Domain: u.String(),
 			},
 			statusCode: http.StatusNoContent,
 			errFunc: func(t *testing.T, err error) {
@@ -60,7 +60,7 @@ func TestStatusCode(t *testing.T) {
 		{
 			name: "1xx status is an error",
 			plugin: &Loki{
-				URL: u.String(),
+				Domain: u.String(),
 			},
 			statusCode: 103,
 			errFunc: func(t *testing.T, err error) {
@@ -70,7 +70,7 @@ func TestStatusCode(t *testing.T) {
 		{
 			name: "3xx status is an error",
 			plugin: &Loki{
-				URL: u.String(),
+				Domain: u.String(),
 			},
 			statusCode: http.StatusMultipleChoices,
 			errFunc: func(t *testing.T, err error) {
@@ -80,7 +80,7 @@ func TestStatusCode(t *testing.T) {
 		{
 			name: "4xx status is an error",
 			plugin: &Loki{
-				URL: u.String(),
+				Domain: u.String(),
 			},
 			statusCode: http.StatusMultipleChoices,
 			errFunc: func(t *testing.T, err error) {
@@ -119,14 +119,14 @@ func TestContentType(t *testing.T) {
 		{
 			name: "default is text plain",
 			plugin: &Loki{
-				URL: u.String(),
+				Domain: u.String(),
 			},
 			expected: "application/json",
 		},
 		{
 			name: "overwrite content_type",
 			plugin: &Loki{
-				URL:     u.String(),
+				Domain:     u.String(),
 				Headers: map[string]string{"Content-Type": "plain/text"},
 			},
 			// plugin force content-type
@@ -165,14 +165,14 @@ func TestContentEncodingGzip(t *testing.T) {
 		{
 			name: "default is no content encoding",
 			plugin: &Loki{
-				URL: u.String(),
+				Domain: u.String(),
 			},
 			expected: "",
 		},
 		{
 			name: "overwrite content_encoding",
 			plugin: &Loki{
-				URL:         u.String(),
+				Domain:         u.String(),
 				GZipRequest: true,
 			},
 			expected: "gzip",
@@ -202,7 +202,7 @@ func TestContentEncodingGzip(t *testing.T) {
 				require.Len(t, s.Streams[0].Logs[0], 2)
 				require.Equal(t, map[string]string{"key1": "value1"}, s.Streams[0].Labels)
 				require.Equal(t, "123000000000", s.Streams[0].Logs[0][0])
-				require.Equal(t, "my log", s.Streams[0].Logs[0][1])
+				require.Equal(t, "line=\"my log\"", s.Streams[0].Logs[0][1])
 
 				w.WriteHeader(http.StatusNoContent)
 			})
@@ -230,27 +230,27 @@ func TestBasicAuth(t *testing.T) {
 		{
 			name: "default",
 			plugin: &Loki{
-				URL: u.String(),
+				Domain: u.String(),
 			},
 		},
 		{
 			name: "username only",
 			plugin: &Loki{
-				URL:      u.String(),
+				Domain:      u.String(),
 				Username: "username",
 			},
 		},
 		{
 			name: "password only",
 			plugin: &Loki{
-				URL:      u.String(),
+				Domain:      u.String(),
 				Password: "pa$$word",
 			},
 		},
 		{
 			name: "username and password",
 			plugin: &Loki{
-				URL:      u.String(),
+				Domain:      u.String(),
 				Username: "username",
 				Password: "pa$$word",
 			},
@@ -295,7 +295,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 		{
 			name: "no credentials",
 			plugin: &Loki{
-				URL: u.String(),
+				Domain: u.String(),
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Len(t, r.Header["Authorization"], 0)
@@ -305,7 +305,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 		{
 			name: "success",
 			plugin: &Loki{
-				URL:          u.String(),
+				Domain:          u.String(),
 				ClientID:     "howdy",
 				ClientSecret: "secret",
 				TokenURL:     u.String() + "/token",
@@ -360,7 +360,7 @@ func TestDefaultUserAgent(t *testing.T) {
 		})
 
 		client := &Loki{
-			URL: u.String(),
+			Domain: u.String(),
 		}
 
 		err = client.Connect()

@@ -22,15 +22,17 @@ import (
 const (
 	defaultEndpoint      = "/loki/api/v1/push"
 	defaultClientTimeout = 5 * time.Second
-	defaultFieldLine     = "line"
 )
 
 var sampleConfig = `
-  ## Connection timeout, defaults to "5s" if not set.
-  timeout = "5s"
+  ## The domain of Loki
+  domain = "https://loki.domain.tld"
 
-  ## The URL of Loki
-  # url = "https://loki.domain.tld"
+  ## Endpoint to write api
+  # endpoint = "/loki/api/v1/push"
+
+  ## Connection timeout, defaults to "5s" if not set.
+  # timeout = "5s"
 
   ## Basic auth credential
   # username = "loki"
@@ -38,9 +40,6 @@ var sampleConfig = `
 
   ## Additional HTTP headers
   # http_headers = {"X-Scope-OrgID" = "1"}
-
-  ## The field containing the log
-  # field_line = "log"
 
   ## If the request must be gzip encoded
   # gzip_request = false
@@ -52,7 +51,7 @@ var sampleConfig = `
 `
 
 type Loki struct {
-	URL          string            `toml:"url"`
+	Domain       string            `toml:"domain"`
 	Endpoint     string            `toml:"endpoint"`
 	Timeout      internal.Duration `toml:"timeout"`
 	Username     string            `toml:"username"`
@@ -62,9 +61,9 @@ type Loki struct {
 	ClientSecret string            `toml:"client_secret"`
 	TokenURL     string            `toml:"token_url"`
 	Scopes       []string          `toml:"scopes"`
-	FieldLine    string            `toml:"field_line"`
 	GZipRequest  bool              `toml:"gzip_request"`
 
+	url    string
 	client *http.Client
 	tls.ClientConfig
 }
@@ -106,20 +105,18 @@ func (l *Loki) createClient(ctx context.Context) (*http.Client, error) {
 }
 
 func (l *Loki) Connect() (err error) {
-	if l.URL == "" {
-		return fmt.Errorf("url is required")
+	if l.Domain == "" {
+		return fmt.Errorf("domain is required")
 	}
 
 	if l.Endpoint == "" {
 		l.Endpoint = defaultEndpoint
 	}
 
+	l.url = fmt.Sprintf("%s%s", l.Domain, l.Endpoint)
+
 	if l.Timeout.Duration == 0 {
 		l.Timeout.Duration = defaultClientTimeout
-	}
-
-	if l.FieldLine == "" {
-		l.FieldLine = defaultFieldLine
 	}
 
 	ctx := context.Background()
@@ -132,6 +129,8 @@ func (l *Loki) Connect() (err error) {
 }
 
 func (l *Loki) Close() error {
+	l.client.CloseIdleConnections()
+
 	return nil
 }
 
@@ -142,13 +141,13 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 
 	for _, m := range metrics {
 		tags := m.TagList()
-		line, ok := m.GetField(l.FieldLine)
+		var line string
 
-		if !ok {
-			continue
+		for k, v := range m.Fields() {
+			line = fmt.Sprintf("%s %s=\"%v\"", line, k, v)
 		}
 
-		s.insertLog(tags, Log{fmt.Sprintf("%d", m.Time().UnixNano()), line.(string)})
+		s.insertLog(tags, Log{fmt.Sprintf("%d", m.Time().UnixNano()), strings.TrimLeft(line, " ")})
 	}
 
 	return l.write(s)
@@ -171,8 +170,7 @@ func (l *Loki) write(s Streams) error {
 		reqBodyBuffer = rc
 	}
 
-	url := fmt.Sprintf("%s%s", l.URL, l.Endpoint)
-	req, err := http.NewRequest(http.MethodPost, url, reqBodyBuffer)
+	req, err := http.NewRequest(http.MethodPost, l.url, reqBodyBuffer)
 	if err != nil {
 		return err
 	}
@@ -202,7 +200,7 @@ func (l *Loki) write(s Streams) error {
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("when writing to [%s] received status code: %d", url, resp.StatusCode)
+		return fmt.Errorf("when writing to [%s] received status code: %d", l.url, resp.StatusCode)
 	}
 
 	return nil
@@ -210,8 +208,6 @@ func (l *Loki) write(s Streams) error {
 
 func init() {
 	outputs.Add("loki", func() telegraf.Output {
-		return &Loki{
-			Timeout: internal.Duration{Duration: defaultClientTimeout},
-		}
+		return &Loki{}
 	})
 }
