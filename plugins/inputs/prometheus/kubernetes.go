@@ -176,7 +176,7 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 	}
 	client.SetHeaders(req.Header)
 
-	// Update right away so code is not waiting 60s initially
+	// Update right away so code is not waiting the length of the cAdvisorCallInterval initially
 	err = updateCadvisorPodList(ctx, p, client, req, labelSelector, fieldSelector)
 	if err != nil {
 		return err
@@ -217,7 +217,7 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
 	p.kubernetesPods = nil
 
 	// Register pod only if it has an annotation to scrape, if it is ready,
-  // and if namespace and selectors are specified and match
+	// and if namespace and selectors are specified and match
 	for _, pod := range pods {
 		if pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] == "true" &&
 			podReady(pod.Status.GetContainerStatuses()) &&

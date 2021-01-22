@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -185,7 +184,6 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 		allURLs[URL.String()] = URLAndAddress{URL: URL, OriginalURL: URL}
 	}
 
-	log.Printf("[cAdvisor Changes Log] locking in p.GetAllURLs()")
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	// loop through all pods scraped via the prometheus annotation on the pods
@@ -213,7 +211,6 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 			}
 		}
 	}
-	log.Printf("[cAdvisor Changes Log] unlocking in p.GetAllURLs()")
 	return allURLs, nil
 }
 
