@@ -3,6 +3,7 @@ package loki
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 )
@@ -47,7 +48,10 @@ func (s Streams) MarshalJSON() ([]byte, error) {
 
 func uniqKeyFromTagList(ts []*telegraf.Tag) (k string) {
 	for _, t := range ts {
-		k += fmt.Sprintf("%s%s-", t.Key, t.Value)
+		k += fmt.Sprintf("%s-%s-",
+			strings.ReplaceAll(t.Key, "-", "--"),
+			strings.ReplaceAll(t.Value, "-", "--"),
+		)
 	}
 
 	return

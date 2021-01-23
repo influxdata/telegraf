@@ -49,14 +49,14 @@ func TestStream_insertLog(t *testing.T) {
 	log2 := Log{"124", "this log isn't useful neither"}
 	log3 := Log{"122", "again"}
 
-	key1 := "key1value1-key2value2-key3value3-"
+	key1 := "key1-value1-key2-value2-key3-value3-"
 	labels1, tags1 := generateLabelsAndTag(
 		tuple{key: "key1", value: "value1"},
 		tuple{key: "key2", value: "value2"},
 		tuple{key: "key3", value: "value3"},
 	)
 
-	key2 := "key2value2-"
+	key2 := "key2-value2-"
 	labels2, tags2 := generateLabelsAndTag(
 		tuple{key: "key2", value: "value2"},
 	)
@@ -98,7 +98,7 @@ func TestUniqKeyFromTagList(t *testing.T) {
 				{Key: "key2", Value: "value2"},
 				{Key: "key3", Value: "value3"},
 			},
-			out: "key1value1-key2value2-key3value3-",
+			out: "key1-value1-key2-value2-key3-value3-",
 		},
 		{
 			in: []*telegraf.Tag{
@@ -106,7 +106,7 @@ func TestUniqKeyFromTagList(t *testing.T) {
 				{Key: "key3", Value: "value3"},
 				{Key: "key4", Value: "value4"},
 			},
-			out: "key1value1-key3value3-key4value4-",
+			out: "key1-value1-key3-value3-key4-value4-",
 		},
 		{
 			in: []*telegraf.Tag{
@@ -114,14 +114,20 @@ func TestUniqKeyFromTagList(t *testing.T) {
 				{Key: "host", Value: "host"},
 				{Key: "service", Value: "dns"},
 			},
-			out: "targetlocal-hosthost-servicedns-",
+			out: "target-local-host-host-service-dns-",
 		},
 		{
 			in: []*telegraf.Tag{
 				{Key: "target", Value: "localhost"},
 				{Key: "hostservice", Value: "dns"},
 			},
-			out: "targetlocalhost-hostservicedns-",
+			out: "target-localhost-hostservice-dns-",
+		},
+		{
+			in: []*telegraf.Tag{
+				{Key: "target-local", Value: "host-"},
+			},
+			out: "target--local-host---",
 		},
 	}
 
