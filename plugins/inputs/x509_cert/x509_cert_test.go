@@ -3,7 +3,6 @@ package x509_cert
 import (
 	"crypto/tls"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -351,7 +350,7 @@ func TestGatherCert(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("x509_cert"))
 }
 
-func TestGatherCertMustTimeout(t *testing.T) {
+func TestGatherCertMustNotTimeout(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -365,8 +364,8 @@ func TestGatherCertMustTimeout(t *testing.T) {
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
-	require.Contains(t, acc.Errors, errors.New("cannot get SSL cert 'https://www.influxdata.com:443': dial tcp: i/o timeout"))
-	assert.False(t, acc.HasMeasurement("x509_cert"))
+	require.Empty(t, acc.Errors)
+	assert.True(t, acc.HasMeasurement("x509_cert"))
 }
 
 func TestServerName(t *testing.T) {
