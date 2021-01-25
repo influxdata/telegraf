@@ -161,6 +161,9 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 	if err != nil {
 		p.Log.Errorf("Error parsing the specified field selector(s): %s", err.Error())
 	}
+	if fieldSelectorIsSupported(fieldSelector) {
+		p.Log.Errorf("A specified field selector is not supported as a field selector for pods")
+	}
 	p.Log.Infof("Using the label selector: %v and field selector: %v", labelSelector, fieldSelector)
 
 	// Set InsecureSkipVerify for cAdvisor client since Node IP will not be a SAN for the CA cert
@@ -232,6 +235,26 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
 
 	// No errors
 	return nil
+}
+
+func fieldSelectorIsSupported(fieldSelector fields.Selector) bool {
+	supportedFieldsToSelect := map[string]bool {
+			"spec.nodeName" : true,
+			"spec.restartPolicy" : true,
+			"spec.schedulerName" : true,
+			"spec.serviceAccountName" : true,
+			"status.phase" : true,
+			"status.podIP" : true,
+			"status.nominatedNodeName" : true,
+	}
+
+	for _, requirement := range fieldSelector.Requirements() {
+		if !supportedFieldsToSelect[requirement.Field] {
+			return false
+		}
+	}
+
+	return true
 }
 
 /* See the docs on kubernetes label selectors:
