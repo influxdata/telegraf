@@ -25,19 +25,19 @@ generate it using `telegraf --usage <plugin-name>`.
   # timeout = "5s"
 
   ## Connection time limits
-	## By default the maximum idle time and maximum lifetime of a connection is unlimited, i.e. the connections
-	## will not be closed automatically. If you specify a positive time, the connections will be closed after
-	## idleing or existing for at least that amount of time, respectively.
-	# connection_max_idle_time = "0s"
-	# connection_max_life_time = "0s"
+  ## By default the maximum idle time and maximum lifetime of a connection is unlimited, i.e. the connections
+  ## will not be closed automatically. If you specify a positive time, the connections will be closed after
+  ## idleing or existing for at least that amount of time, respectively.
+  # connection_max_idle_time = "0s"
+  # connection_max_life_time = "0s"
 
-	## Connection count limits
-	## By default the number of open connections is not limited and the number of maximum idle connections
-	## will be inferred from the number of queries specified. If you specify a positive number for any of the
-	## two options, connections will be closed when reaching the specified limit. The number of idle connections
-	## will be clipped to the maximum number of connections limit if any.
-	# connection_max_open = 0
-	# connection_max_idle = auto
+  ## Connection count limits
+  ## By default the number of open connections is not limited and the number of maximum idle connections
+  ## will be inferred from the number of queries specified. If you specify a positive number for any of the
+  ## two options, connections will be closed when reaching the specified limit. The number of idle connections
+  ## will be clipped to the maximum number of connections limit if any.
+  # connection_max_open = 0
+  # connection_max_idle = auto
 
   [[inputs.sql.query]]
     ## Query to perform on the server

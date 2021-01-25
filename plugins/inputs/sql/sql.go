@@ -21,7 +21,7 @@ import (
 
 const sampleConfig = `
   ## Database Driver
-	## See https://github.com/influxdata/telegraf/blob/master/docs/SQL_DRIVERS_INPUT.md for
+  ## See https://github.com/influxdata/telegraf/blob/master/docs/SQL_DRIVERS_INPUT.md for
   ## a list of supported drivers.
   driver = "mysql"
 
@@ -29,23 +29,23 @@ const sampleConfig = `
   ## The syntax and supported options depends on selected driver.
   dsn = "username:password@mysqlserver:3307/dbname?param=value"
 
-	## Timeout for any operation
+  ## Timeout for any operation
   # timeout = "5s"
 
-	## Connection time limits
-	## By default the maximum idle time and maximum lifetime of a connection is unlimited, i.e. the connections
-	## will not be closed automatically. If you specify a positive time, the connections will be closed after
-	## idleing or existing for at least that amount of time, respectively.
-	# connection_max_idle_time = "0s"
-	# connection_max_life_time = "0s"
+  ## Connection time limits
+  ## By default the maximum idle time and maximum lifetime of a connection is unlimited, i.e. the connections
+  ## will not be closed automatically. If you specify a positive time, the connections will be closed after
+  ## idleing or existing for at least that amount of time, respectively.
+  # connection_max_idle_time = "0s"
+  # connection_max_life_time = "0s"
 
-	## Connection count limits
-	## By default the number of open connections is not limited and the number of maximum idle connections
-	## will be inferred from the number of queries specified. If you specify a positive number for any of the
-	## two options, connections will be closed when reaching the specified limit. The number of idle connections
-	## will be clipped to the maximum number of connections limit if any.
-	# connection_max_open = 0
-	# connection_max_idle = auto
+  ## Connection count limits
+  ## By default the number of open connections is not limited and the number of maximum idle connections
+  ## will be inferred from the number of queries specified. If you specify a positive number for any of the
+  ## two options, connections will be closed when reaching the specified limit. The number of idle connections
+  ## will be clipped to the maximum number of connections limit if any.
+  # connection_max_open = 0
+  # connection_max_idle = auto
 
   [[inputs.sql.query]]
     ## Query to perform on the server
@@ -60,30 +60,30 @@ const sampleConfig = `
 
     ## Column name containing the name of the measurement
     ## If given, this will take precedence over the 'measurement' setting. In case a query result
-		## does not contain the specified column, we fall-back to the 'measurement' setting.
+    ## does not contain the specified column, we fall-back to the 'measurement' setting.
     # measurement_col = ""
 
-		## Column name containing the time of the measurement
+    ## Column name containing the time of the measurement
     ## If ommited, the time of the query will be used.
     # time_col = ""
 
-		## Format of the time contained in 'time_col'
-		## The time must be 'unix', 'unix_ms', 'unix_us', 'unix_ns', or a golang time format.
-  	## See https://golang.org/pkg/time/#Time.Format for details.
-		# time_format = "unix"
+    ## Format of the time contained in 'time_col'
+    ## The time must be 'unix', 'unix_ms', 'unix_us', 'unix_ns', or a golang time format.
+    ## See https://golang.org/pkg/time/#Time.Format for details.
+    # time_format = "unix"
 
     ## Column names containing tags
-		## An empty include list will reject all columns and an empty exclude list will not exclude any column.
-		## I.e. by default no columns will be returned as tag and the tags are empty.
+    ## An empty include list will reject all columns and an empty exclude list will not exclude any column.
+    ## I.e. by default no columns will be returned as tag and the tags are empty.
     # tag_cols_include = []
-		# tag_cols_exclude = []
+    # tag_cols_exclude = []
 
     ## Column names containing fields
-		## An empty include list is equivalent to '[*]' and all returned columns will be accepted. An empty
-		## exclude list will not exclude any column. I.e. by default all columns will be returned as fields.
-		## NOTE: We rely on the database driver to perform automatic datatype conversion.
+    ## An empty include list is equivalent to '[*]' and all returned columns will be accepted. An empty
+    ## exclude list will not exclude any column. I.e. by default all columns will be returned as fields.
+    ## NOTE: We rely on the database driver to perform automatic datatype conversion.
     # field_cols_include = []
-		# field_cols_exclude = []
+    # field_cols_exclude = []
 `
 
 const magicIdleCount int = (-int(^uint(0) >> 1))
