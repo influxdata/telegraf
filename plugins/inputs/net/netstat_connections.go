@@ -53,7 +53,7 @@ func (_ *NetStatsConnections) Description() string {
 var tcpstatProcessSampleConfig = `
   ## By default, telegraf don't collect process detail of listen connections
   ## to enable collect this metric to telegraf agent will be enable following OS capabilitiess: CAP_SYS_PTRACE, CAP_DAC_READ_SEARCH
-  ## example: setcap cap_sys_ptrace,cap_dac_read_search+ep /usr/sbin/telegraf
+  ## example: setcap cap_sys_ptrace,cap_dac_read_search+ep /usr/bin/telegraf
   ##
   # listen_process_detail = true
   ##
@@ -246,11 +246,12 @@ func (s *NetStatsConnections) Gather(acc telegraf.Accumulator) error {
 			},
 			map[string]string{
 				//"pid": strconv.Itoa(int(value.Pid)),
-				//"local_addr": value.Local_addr,
-				"port":                   strconv.Itoa(int(value.Local_port)),
-				"process_name":           value.ProcessName,
-				"username":               value.Username,
-				"command_line_arguments": value.CommandLineArguments,
+				"local_addr":                value.Local_addr,
+				"port":                      strconv.Itoa(int(value.Local_port)),
+				"process_name":              value.ProcessName,
+				"username":                  value.Username,
+				"current_working_directory": value.CurrentWorkingDirectory,
+				"command_line_arguments":    value.CommandLineArguments,
 				//"remote_addr": value.Remote_addr,
 				//"remote_port": strconv.Itoa(int(value.Remote_port)),
 				//"status": value.Status,
@@ -276,11 +277,12 @@ func (s *NetStatsConnections) Gather(acc telegraf.Accumulator) error {
 				//"pid": strconv.Itoa(int(value.Pid)),
 				//"local_addr": value.Local_addr,
 				//"local_port": strconv.Itoa(int(value.Local_port)),
-				"addr":                   value.Remote_addr,
-				"port":                   strconv.Itoa(int(value.Remote_port)),
-				"process_name":           value.ProcessName,
-				"username":               value.Username,
-				"command_line_arguments": value.CommandLineArguments,
+				"addr":                      value.Remote_addr,
+				"port":                      strconv.Itoa(int(value.Remote_port)),
+				"process_name":              value.ProcessName,
+				"username":                  value.Username,
+				"current_working_directory": value.CurrentWorkingDirectory,
+				"command_line_arguments":    value.CommandLineArguments,
 				//"status": value.Status,
 			})
 	}
