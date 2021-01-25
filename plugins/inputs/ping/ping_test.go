@@ -431,7 +431,8 @@ func TestPingGatherNative(t *testing.T) {
 
 	for _, tc := range tests {
 		var acc testutil.Accumulator
-
+		err := tc.P.Init()
+		require.NoError(t, err)
 		require.NoError(t, acc.GatherError(tc.P.Gather))
 		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
 		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
@@ -445,22 +446,4 @@ func TestPingGatherNative(t *testing.T) {
 		assert.True(t, acc.HasField("ping", "standard_deviation_ms"))
 	}
 
-}
-
-// Test failed DNS resolutions
-func TestDNSLookupError(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping test due to permission requirements.")
-	}
-
-	var acc testutil.Accumulator
-	p := Ping{
-		Log:    testutil.Logger{},
-		Urls:   []string{"fakehost"},
-		Method: "native",
-		IPv6:   false,
-	}
-
-	acc.GatherError(p.Gather)
-	assert.True(t, len(acc.Errors) > 0)
 }

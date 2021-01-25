@@ -20,10 +20,14 @@ type HostPinger func(binary string, timeout float64, args ...string) (string, er
 
 type Ping struct {
 	// wg is used to wait for ping with multiple URLs
-	wg sync.WaitGroup `toml:"-"`
+	wg sync.WaitGroup
 
 	// ttl stands for "Time to live" and is a gathered value on non-windows machines
-	ttl int `toml:"-"`
+	ttl int
+
+	interval time.Duration
+
+	timeout time.Duration
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -154,23 +158,12 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		pinger.SetPrivileged(true)
 	}
 
-	if p.IPv6 == true {
+	if p.IPv6 {
 		pinger.SetNetwork("ip6")
 	}
 
-	// The interval cannot be below 0.2 seconds, matching ping implementation: https://linux.die.net/man/8/ping
-	if p.PingInterval < 0.2 {
-		pinger.Interval = time.Duration(.2 * float64(time.Second))
-	} else {
-		pinger.Interval = time.Duration(p.PingInterval * float64(time.Second))
-	}
-
-	// If no timeout is given default to 5 seconds, matching original implementation
-	if p.Timeout == 0 {
-		pinger.Timeout = time.Duration(5) * time.Second
-	} else {
-		pinger.Timeout = time.Duration(p.Timeout) * time.Second
-	}
+	pinger.Interval = p.interval
+	pinger.Timeout = p.timeout
 
 	if p.Deadline > 0 {
 		// If deadline is set ping exits regardless of how many packets have been sent or received
@@ -276,6 +269,20 @@ func percentile(values durationSlice, perc int) time.Duration {
 func (p *Ping) Init() error {
 	if p.Count < 1 {
 		return errors.New("bad number of packets to transmit")
+	}
+
+	// The interval cannot be below 0.2 seconds, matching ping implementation: https://linux.die.net/man/8/ping
+	if p.PingInterval < 0.2 {
+		p.interval = time.Duration(.2 * float64(time.Second))
+	} else {
+		p.interval = time.Duration(p.PingInterval * float64(time.Second))
+	}
+
+	// If no timeout is given default to 5 seconds, matching original implementation
+	if p.Timeout == 0 {
+		p.timeout = time.Duration(5) * time.Second
+	} else {
+		p.timeout = time.Duration(p.Timeout) * time.Second
 	}
 
 	return nil
