@@ -25,9 +25,9 @@ type Ping struct {
 	// ttl stands for "Time to live" and is a gathered value on non-windows machines
 	ttl int
 
-	interval time.Duration
-
-	timeout time.Duration
+	// Pre-calculated interval and timeout
+	calcInterval time.Duration
+	calcTimeout  time.Duration
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -162,8 +162,8 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		pinger.SetNetwork("ip6")
 	}
 
-	pinger.Interval = p.interval
-	pinger.Timeout = p.timeout
+	pinger.Interval = p.calcInterval
+	pinger.Timeout = p.calcTimeout
 
 	if p.Deadline > 0 {
 		// If deadline is set ping exits regardless of how many packets have been sent or received
@@ -273,16 +273,16 @@ func (p *Ping) Init() error {
 
 	// The interval cannot be below 0.2 seconds, matching ping implementation: https://linux.die.net/man/8/ping
 	if p.PingInterval < 0.2 {
-		p.interval = time.Duration(.2 * float64(time.Second))
+		p.calcInterval = time.Duration(.2 * float64(time.Second))
 	} else {
-		p.interval = time.Duration(p.PingInterval * float64(time.Second))
+		p.calcInterval = time.Duration(p.PingInterval * float64(time.Second))
 	}
 
 	// If no timeout is given default to 5 seconds, matching original implementation
 	if p.Timeout == 0 {
-		p.timeout = time.Duration(5) * time.Second
+		p.calcTimeout = time.Duration(5) * time.Second
 	} else {
-		p.timeout = time.Duration(p.Timeout) * time.Second
+		p.calcTimeout = time.Duration(p.Timeout) * time.Second
 	}
 
 	return nil
