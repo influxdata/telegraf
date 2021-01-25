@@ -1,4 +1,5 @@
-// +build !windows,!darwin
+// +build linux,freebsd
+// +build !mips !mips64
 
 package sql
 
