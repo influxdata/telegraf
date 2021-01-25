@@ -34,9 +34,9 @@ in Prometheus format.
   ## - prometheus.io/port: If port is not 9102 use this annotation
   # monitor_kubernetes_pods = true
   ## Get the list of pods to scrape from either:
-	##    - version 1 (default): the kubernetes watch api (cluster-wide)
-	##    - version 2: the local cadvisor api (node-wide); for scalability
-	# monitor_kubernetes_pods_version = 1
+  ##    - version 1 (default): the kubernetes watch api (cluster-wide)
+  ##    - version 2: the local cadvisor api (node-wide); for scalability
+  # monitor_kubernetes_pods_version = 1
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
   # monitor_kubernetes_pods_namespace = ""
@@ -91,6 +91,8 @@ Currently the following annotation are supported:
 * `prometheus.io/port` Used to override the port. (default 9102)
 
 Using the `monitor_kubernetes_pods_namespace` option allows you to limit which pods you are scraping.
+
+Using `monitor_kubernetes_pods_version = 2` allows more scalable scraping for pods which will scrape pods only in the node that telegraf is running. It will fetch the pod list locally from the node's kubelet. This will require running Telegraf as a daemonset in the cluster.
 
 #### Bearer Token
 
