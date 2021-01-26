@@ -25,9 +25,8 @@ type (
 
 func (s Streams) insertLog(ts []*telegraf.Tag, l Log) {
 	key := uniqKeyFromTagList(ts)
-	_, ok := s[key]
 
-	if !ok {
+	if _, ok := s[key]; !ok {
 		s[key] = newStream(ts)
 	}
 
@@ -54,7 +53,7 @@ func uniqKeyFromTagList(ts []*telegraf.Tag) (k string) {
 		)
 	}
 
-	return
+	return k
 }
 
 func newStream(ts []*telegraf.Tag) *Stream {

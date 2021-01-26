@@ -114,7 +114,7 @@ func TestContentType(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "default is text plain",
+			name: "default is application/json",
 			plugin: &Loki{
 				Domain: u.String(),
 			},
@@ -229,20 +229,6 @@ func TestBasicAuth(t *testing.T) {
 			name: "default",
 			plugin: &Loki{
 				Domain: u.String(),
-			},
-		},
-		{
-			name: "username only",
-			plugin: &Loki{
-				Domain:   u.String(),
-				Username: "username",
-			},
-		},
-		{
-			name: "password only",
-			plugin: &Loki{
-				Domain:   u.String(),
-				Password: "pa$$word",
 			},
 		},
 		{
