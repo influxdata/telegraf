@@ -263,7 +263,7 @@ func (p durationSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 // R7 from Hyndman and Fan (1996), which matches Excel
 func percentile(values durationSlice, perc int) time.Duration {
-	if len(values) < 0 {
+	if len(values) == 0 {
 		return 0
 	}
 	if perc < 0 {
