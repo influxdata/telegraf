@@ -173,7 +173,7 @@ func (l *Loki) write(s Streams) error {
 		return err
 	}
 
-	if l.Username != "" && l.Password != "" {
+	if l.Username != "" {
 		req.SetBasicAuth(l.Username, l.Password)
 	}
 
