@@ -3,4 +3,12 @@
 # Fail if these vars are not present (e.g. from direct wrapper runs)
 : ${SNAP?} ${SNAP_DATA?}
 
+# Create the needed user and group if needed
+if ! getent group telegraf &>/dev/null; then
+    groupadd -r telegraf
+fi
+if ! id telegraf &>/dev/null; then
+    useradd -r -M telegraf -s /bin/false -d $SNAP_DATA -g telegraf
+fi
+
 exec sudo -u telegraf $SNAP/bin/telegraf --config $SNAP_DATA/telegraf.conf --config-directory $SNAP_DATA/telegraf.d
