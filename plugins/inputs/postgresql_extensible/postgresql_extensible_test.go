@@ -32,7 +32,7 @@ func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 	return &acc
 }
 
-func TestPostgresqlGeneratesMetrics(t *testing.T) {
+func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -99,7 +99,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	assert.Equal(t, len(floatMetrics)+len(intMetrics)+len(int32Metrics)+len(stringMetrics), metricsCounted)
 }
 
-func TestPostgresqlQueryOutputTests(t *testing.T) {
+func TestPostgresqlQueryOutputTestsIntegration(t *testing.T) {
 	const measurement = "postgresql"
 
 	if testing.Short() {
@@ -148,7 +148,7 @@ func TestPostgresqlQueryOutputTests(t *testing.T) {
 	}
 }
 
-func TestPostgresqlFieldOutput(t *testing.T) {
+func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 	const measurement = "postgresql"
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -237,7 +237,7 @@ func TestPostgresqlSqlScript(t *testing.T) {
 	require.NoError(t, acc.GatherError(p.Gather))
 }
 
-func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
+func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

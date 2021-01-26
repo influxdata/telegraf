@@ -67,8 +67,13 @@ func TestGatheringRootDomain(t *testing.T) {
 		"server":      "8.8.8.8",
 		"domain":      ".",
 		"record_type": "MX",
+		"rcode":       "NOERROR",
+		"result":      "success",
 	}
-	fields := map[string]interface{}{}
+	fields := map[string]interface{}{
+		"rcode_value": int(0),
+		"result_code": uint64(0),
+	}
 
 	err := acc.GatherError(dnsConfig.Gather)
 	assert.NoError(t, err)
@@ -93,8 +98,13 @@ func TestMetricContainsServerAndDomainAndRecordTypeTags(t *testing.T) {
 		"server":      "8.8.8.8",
 		"domain":      "google.com",
 		"record_type": "NS",
+		"rcode":       "NOERROR",
+		"result":      "success",
 	}
-	fields := map[string]interface{}{}
+	fields := map[string]interface{}{
+		"rcode_value": int(0),
+		"result_code": uint64(0),
+	}
 
 	err := acc.GatherError(dnsConfig.Gather)
 	assert.NoError(t, err)

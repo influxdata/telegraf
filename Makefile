@@ -98,6 +98,10 @@ go-install:
 test:
 	go test -short $(race_detector) ./...
 
+.PHONY: test-integration
+test-integration:
+	go test -run Integration $(race_detector) ./...
+
 .PHONY: fmt
 fmt:
 	@gofmt -s -w $(filter-out plugins/parsers/influx/machine.go, $(GOFILES))

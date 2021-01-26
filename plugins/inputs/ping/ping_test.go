@@ -403,9 +403,7 @@ func mockHostResolver(ctx context.Context, ipv6 bool, host string) (*net.IPAddr,
 
 // Test that Gather function works using native ping
 func TestPingGatherNative(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping test due to permission requirements.")
-	}
+	t.Skip("Skipping test due to permission requirements.")
 
 	var acc testutil.Accumulator
 	p := Ping{
