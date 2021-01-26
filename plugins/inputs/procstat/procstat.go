@@ -2,8 +2,10 @@ package procstat
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -21,26 +23,39 @@ var (
 	defaultProcess   = NewProc
 )
 
+const (
+	// MetricsConnectionsStats tag to enable connections_stats metrics
+	MetricsConnectionsStats = "connections_stats"
+	// MetricsConnectionsEndpoints tag to enable connections_endpoints metrics
+	MetricsConnectionsEndpoints = "connections_endpoints"
+	// MetricNameTCPConnections is the measurement name for TCP connections metrics
+	MetricNameTCPConnections = "procstat_tcp"
+	// TCPConnectionKey is the metric value to put all the listen endpoints
+	TCPConnectionKey = "conn"
+	// TCPListenKey is the metric value to put all the connection endpoints
+	TCPListenKey = "listen"
+)
+
 type PID int32
 
 type Procstat struct {
-	PidFinder   string `toml:"pid_finder"`
-	PidFile     string `toml:"pid_file"`
-	Exe         string
-	Pattern     string
-	Prefix      string
-	CmdLineTag  bool `toml:"cmdline_tag"`
-	ProcessName string
-	User        string
-	SystemdUnit string
-	CGroup      string `toml:"cgroup"`
-	PidTag      bool
-	WinService  string `toml:"win_service"`
-	Mode        string
+	PidFinder      string `toml:"pid_finder"`
+	PidFile        string `toml:"pid_file"`
+	Exe            string
+	Pattern        string
+	Prefix         string
+	CmdLineTag     bool `toml:"cmdline_tag"`
+	ProcessName    string
+	User           string
+	SystemdUnit    string
+	CGroup         string `toml:"cgroup"`
+	PidTag         bool
+	WinService     string `toml:"win_service"`
+	Mode           string
+	MetricsInclude []string `toml:"metrics_include"`
 
 	solarisMode bool
-
-	finder PIDFinder
+	finder      PIDFinder
 
 	createPIDFinder func() (PIDFinder, error)
 	procs           map[PID]Process
@@ -90,6 +105,12 @@ var sampleConfig = `
   ## the native finder performs the search directly in a manor dependent on the
   ## platform.  Default is 'pgrep'
   # pid_finder = "pgrep"
+
+  ## Select wich extra metrics should be added:
+  ##   - "connections_stats": tcp_* and upd_socket metrics
+  ##   - "connections_endpoints": new metric procstat_tcp with connections and listeners endpoints
+  ## Default is empty list.
+  # metrics_include = ["connections_stats", "connections_endpoints"]
 `
 
 func (_ *Procstat) SampleConfig() string {
@@ -141,8 +162,16 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	}
 	p.procs = procs
 
+	// Initialize the conn object. Gather info about all TCP connections organized per PID
+	// Avoid repeating this task for each proc
+	netInfo := NetworkInfo{}
+	err = netInfo.Fetch()
+	if err != nil {
+		acc.AddError(fmt.Errorf("E! [inputs.procstat] getting TCP network info: %v", err))
+	}
+
 	for _, proc := range p.procs {
-		p.addMetric(proc, acc, now)
+		p.addMetric(proc, acc, now, netInfo)
 	}
 
 	fields := map[string]interface{}{
@@ -158,7 +187,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 }
 
 // Add metrics a single Process
-func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time) {
+func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time, netInfo NetworkInfo) {
 	var prefix string
 	if p.Prefix != "" {
 		prefix = p.Prefix + "_"
@@ -311,7 +340,40 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		}
 	}
 
+	if p.metricEnabled(MetricsConnectionsStats) {
+		// Add values with the number of connections in each TCP state
+		pidConnections, err := netInfo.GetConnectionsByPid(uint32(proc.PID()))
+		if err == nil {
+			addConnectionStats(pidConnections, fields, prefix)
+		} else {
+			// Ignore errors because pid was not found. It is normal to have procs without connections
+			if !errors.Is(err, ErrorPIDNotFound) {
+				acc.AddError(fmt.Errorf("D! [inputs.procstat] not able to get connections for pid=%v: %v", proc.PID(), err))
+			}
+		}
+	}
+
 	acc.AddFields("procstat", fields, proc.Tags(), t)
+
+	if p.metricEnabled(MetricsConnectionsEndpoints) {
+		// add measurement procstat_tcp with tcp listeners and connections for each proccess
+		err = addConnectionEnpoints(acc, proc, netInfo)
+		if err != nil {
+			acc.AddError(fmt.Errorf("D! [inputs.procstat] not able to generate network metrics for pid=%v: %v", proc.PID(), err))
+		}
+	}
+}
+
+// appendIPs extract and return IPs from addresses
+func extractIPs(addreses []net.Addr) (ret []net.IP, err error) {
+	for _, a := range addreses {
+		ip, _, err := net.ParseCIDR(a.String())
+		if err != nil {
+			return nil, fmt.Errorf("parsing interface address: %v", err)
+		}
+		ret = append(ret, ip)
+	}
+	return ret, nil
 }
 
 // Update monitored Processes
@@ -481,6 +543,41 @@ func (p *Procstat) Init() error {
 	}
 
 	return nil
+}
+
+func containsIP(a []net.IP, x net.IP) bool {
+	for _, n := range a {
+		if x.Equal(n) {
+			return true
+		}
+	}
+	return false
+}
+
+func isIPV4(ip net.IP) bool {
+	return ip.To4() != nil
+}
+
+func isIPV6(ip net.IP) bool {
+	return ip.To4() == nil
+}
+
+// endpointString return the correct representation of ip and port for IPv4 and IPv6
+func endpointString(ip net.IP, port uint32) string {
+	if isIPV6(ip) {
+		return fmt.Sprintf("[%s]:%d", ip, port)
+	}
+	return fmt.Sprintf("%s:%d", ip, port)
+}
+
+// metricEnabled check is some group of metrics are enabled in the config file
+func (p *Procstat) metricEnabled(m string) bool {
+	for _, n := range p.MetricsInclude {
+		if m == n {
+			return true
+		}
+	}
+	return false
 }
 
 func init() {

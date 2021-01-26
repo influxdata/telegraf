@@ -60,6 +60,12 @@ Processes can be selected for monitoring using one of several methods:
   ## the native finder performs the search directly in a manor dependent on the
   ## platform.  Default is 'pgrep'
   # pid_finder = "pgrep"
+
+  ## Select wich extra metrics should be added:
+  ##   - "connections_stats": tcp_* and upd_socket metrics
+  ##   - "connections_endpoints": new metric procstat_tcp with connections and listeners endpoints
+  ## Default is empty list.
+  # metrics_include = ["connections_stats", "connections_endpoints"]
 ```
 
 #### Windows support
@@ -157,6 +163,42 @@ the `win_perf_counters` input plugin as a more mature alternative.
     - running (int)
     - result_code (int, success = 0, lookup_error = 1)
 
+If ``connections_stats`` enabled, added fields:
+- procstat
+  - fields:
+    - tcp_close (int)
+    - tcp_close_wait (int)
+    - tcp_closing (int)
+    - tcp_established (int)
+    - tcp_fin_wait1 (int)
+    - tcp_fin_wait2 (int)
+    - tcp_last_ack (int)
+    - tcp_listen (int)
+    - tcp_none (int)
+    - tcp_syn_recv (int)
+    - tcp_syn_sent (int)
+
+If ``connections_endpoints`` enabled, added fields:
+- procstat_tcp
+  - tags:
+    - pid (when `pid_tag` is true)
+    - cmdline (when 'cmdline_tag' is true)
+    - process_name
+    - pidfile (when defined)
+    - exe (when defined)
+    - pattern (when defined)
+    - user (when selected)
+    - systemd_unit (when defined)
+    - cgroup (when defined)
+  - fields:
+    - conn (string)
+    - listen (string)
+
+To gather connection info, if Telegraf is not run as root, it needs the following capabilities
+```
+sudo setcap "CAP_DAC_READ_SEARCH,CAP_SYS_PTRACE+ep" telegraf
+```
+
 *NOTE: Resource limit > 2147483647 will be reported as 2147483647.*
 
 ### Example Output:
@@ -164,4 +206,6 @@ the `win_perf_counters` input plugin as a more mature alternative.
 ```
 procstat_lookup,host=prash-laptop,pattern=influxd,pid_finder=pgrep,result=success pid_count=1i,running=1i,result_code=0i 1582089700000000000
 procstat,host=prash-laptop,pattern=influxd,process_name=influxd,user=root involuntary_context_switches=151496i,child_minor_faults=1061i,child_major_faults=8i,cpu_time_user=2564.81,cpu_time_idle=0,cpu_time_irq=0,cpu_time_guest=0,pid=32025i,major_faults=8609i,created_at=1580107536000000000i,voluntary_context_switches=1058996i,cpu_time_system=616.98,cpu_time_steal=0,cpu_time_guest_nice=0,memory_swap=0i,memory_locked=0i,memory_usage=1.7797634601593018,num_threads=18i,cpu_time_nice=0,cpu_time_iowait=0,cpu_time_soft_irq=0,memory_rss=148643840i,memory_vms=1435688960i,memory_data=0i,memory_stack=0i,minor_faults=1856550i 1582089700000000000
+procstat,host=laptop,pattern=httpd,process_name=httpd,user=root child_major_faults=0i,child_minor_faults=70i,cpu_time=0i,cpu_time_guest=0,cpu_time_guest_nice=0,cpu_time_idle=0,cpu_time_iowait=0,cpu_time_irq=0,cpu_time_nice=0,cpu_time_soft_irq=0,cpu_time_steal=0,cpu_time_system=0.01,cpu_time_user=0.02,cpu_usage=0,created_at=1611738400000000000i,involuntary_context_switches=15i,listen=1i,major_faults=0i,memory_data=999424i,memory_locked=0i,memory_rss=4677632i,memory_stack=135168i,memory_swap=0i,memory_usage=0.013990458101034164,memory_vms=6078464i,minor_faults=1636i,nice_priority=20i,num_fds=8i,num_threads=1i,pid=1738811i,read_bytes=0i,read_count=4397i,realtime_priority=0i,rlimit_cpu_time_hard=2147483647i,rlimit_cpu_time_soft=2147483647i,rlimit_file_locks_hard=2147483647i,rlimit_file_locks_soft=2147483647i,rlimit_memory_data_hard=2147483647i,rlimit_memory_data_soft=2147483647i,rlimit_memory_locked_hard=65536i,rlimit_memory_locked_soft=65536i,rlimit_memory_rss_hard=2147483647i,rlimit_memory_rss_soft=2147483647i,rlimit_memory_stack_hard=2147483647i,rlimit_memory_stack_soft=8388608i,rlimit_memory_vms_hard=2147483647i,rlimit_memory_vms_soft=2147483647i,rlimit_nice_priority_hard=0i,rlimit_nice_priority_soft=0i,rlimit_num_fds_hard=1048576i,rlimit_num_fds_soft=1048576i,rlimit_realtime_priority_hard=0i,rlimit_realtime_priority_soft=0i,rlimit_signals_pending_hard=127473i,rlimit_signals_pending_soft=127473i,signals_pending=0i,tcp_close=0i,tcp_close_wait=0i,tcp_closing=0i,tcp_established=0i,tcp_fin_wait1=0i,tcp_fin_wait2=0i,tcp_last_ack=0i,tcp_listen=1i,tcp_syn_recv=0i,tcp_syn_sent=0i,voluntary_context_switches=169i,write_bytes=53248i,write_count=10i 1611738522000000000
+procstat_tcp,host=laptop,pattern=httpd,process_name=httpd,user=root conn="",listen="192.168.1.35:80,192.168.1.48:80,[da01:beef:234:3830:aeda:f001:a00c:0091]:80,[aa01:beef:234:3830:e8e:0000:000a:6b0f]:80" 1611738522000000000
 ```

@@ -49,6 +49,7 @@ following works:
 - github.com/eapache/go-xerial-snappy [MIT License](https://github.com/eapache/go-xerial-snappy/blob/master/LICENSE)
 - github.com/eapache/queue [MIT License](https://github.com/eapache/queue/blob/master/LICENSE)
 - github.com/eclipse/paho.mqtt.golang [Eclipse Public License - v 1.0](https://github.com/eclipse/paho.mqtt.golang/blob/master/LICENSE)
+- github.com/elastic/gosigar [Apache License 2.0](https://github.com/elastic/gosigar/blob/master/LICENSE)
 - github.com/ericchiang/k8s [Apache License 2.0](https://github.com/ericchiang/k8s/blob/master/LICENSE)
 - github.com/ghodss/yaml [MIT License](https://github.com/ghodss/yaml/blob/master/LICENSE)
 - github.com/go-logfmt/logfmt [MIT License](https://github.com/go-logfmt/logfmt/blob/master/LICENSE)

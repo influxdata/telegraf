@@ -84,6 +84,7 @@ func (pg *testPgrep) Pattern(pattern string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 
+// nolint
 func (pg *testPgrep) Uid(user string) ([]PID, error) {
 	return pg.pids, pg.err
 }
@@ -94,6 +95,7 @@ func (pg *testPgrep) FullPattern(pattern string) ([]PID, error) {
 
 type testProc struct {
 	pid  PID
+	ppid PID
 	tags map[string]string
 }
 
@@ -102,6 +104,10 @@ func newTestProc(pid PID) (Process, error) {
 		tags: make(map[string]string),
 	}
 	return proc, nil
+}
+
+func (p *testProc) Ppid() (PID, error) {
+	return p.ppid, nil
 }
 
 func (p *testProc) PID() PID {

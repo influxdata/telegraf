@@ -47,6 +47,7 @@ require (
 	github.com/docker/go-units v0.3.3 // indirect
 	github.com/docker/libnetwork v0.8.0-dev.2.0.20181012153825-d7b61745d166
 	github.com/eclipse/paho.mqtt.golang v1.2.0
+	github.com/elastic/gosigar v0.13.0
 	github.com/ericchiang/k8s v1.2.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logfmt/logfmt v0.4.0
