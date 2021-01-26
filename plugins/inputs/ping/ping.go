@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,9 +22,6 @@ type HostPinger func(binary string, timeout float64, args ...string) (string, er
 type Ping struct {
 	// wg is used to wait for ping with multiple URLs
 	wg sync.WaitGroup
-
-	// ttl stands for "Time to live" and is a gathered value on non-windows machines
-	ttl int
 
 	// Pre-calculated interval and timeout
 	calcInterval time.Duration
@@ -64,6 +62,8 @@ type Ping struct {
 
 	// host ping function
 	pingHost HostPinger
+
+	nativePingFunc NativePingFunc
 
 	// Calculate the given percentiles when using native method
 	Percentiles []int
@@ -145,12 +145,19 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
+type pingStats struct {
+	ping.Statistics
+	ttl int
+}
+
+type NativePingFunc func(destination string) (*pingStats, error)
+
+func (p *Ping) nativePing(destination string) (*pingStats, error) {
+	ps := &pingStats{}
+
 	pinger, err := ping.NewPinger(destination)
 	if err != nil {
-		p.Log.Errorf("Failed to ping: %v", err)
-		acc.AddError(err)
-		return
+		return nil, fmt.Errorf("Failed to create new pinger: %w", err)
 	}
 
 	// Required for windows. Despite the method name, this should work without the need to elevate privileges and has been tested on Windows 10
@@ -173,44 +180,57 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		defer timer.Stop()
 	}
 
+	// Get Time to live (TTL) of first response, matching original implementation
+	once := &sync.Once{}
+	pinger.OnRecv = func(pkt *ping.Packet) {
+		once.Do(func() {
+			ps.ttl = pkt.Ttl
+		})
+	}
+
 	pinger.Count = p.Count
 	err = pinger.Run()
 	if err != nil {
-		p.Log.Errorf("Failed to ping: %v", err)
-		acc.AddError(err)
+		return nil, fmt.Errorf("Failed to run pinger: %w", err)
+	}
+
+	ps.Statistics = *pinger.Statistics()
+
+	return ps, nil
+}
+
+func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
+
+	tags := map[string]string{"url": destination}
+	fields := map[string]interface{}{}
+
+	stats, err := p.nativePingFunc(destination)
+	if err != nil {
+		if strings.Contains(err.Error(), "unknown") {
+			fields["result_code"] = 1
+		} else {
+			fields["result_code"] = 2
+		}
+		acc.AddFields("ping", fields, tags)
 		return
 	}
 
-	stats := pinger.Statistics()
-
-	// Get Time to live (TTL) of first response, matching original implementation
-	var firstTTL bool
-	pinger.OnRecv = func(pkt *ping.Packet) {
-		if !firstTTL {
-			p.ttl = pkt.Ttl
-			firstTTL = true
-		}
-	}
-
-	tags := map[string]string{"url": destination}
-	fields := map[string]interface{}{
+	fields = map[string]interface{}{
 		"result_code":         0,
 		"packets_transmitted": stats.PacketsSent,
 		"packets_received":    stats.PacketsRecv,
 	}
 
 	if stats.PacketsSent == 0 {
-		if err != nil {
-			fields["result_code"] = 2
-		}
+		fields["result_code"] = 2
+		acc.AddFields("ping", fields, tags)
 		return
 	}
 
 	if stats.PacketsRecv == 0 {
-		if err != nil {
-			fields["result_code"] = 1
-		}
+		fields["result_code"] = 1
 		fields["percent_packet_loss"] = float64(100)
+		acc.AddFields("ping", fields, tags)
 		return
 	}
 
@@ -223,7 +243,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	// Set TTL only on supported platform. See golang.org/x/net/ipv4/payload_cmsg.go
 	switch runtime.GOOS {
 	case "aix", "darwin", "dragonfly", "freebsd", "linux", "netbsd", "openbsd", "solaris":
-		fields["ttl"] = p.ttl
+		fields["ttl"] = stats.ttl
 	}
 
 	fields["percent_packet_loss"] = float64(stats.PacketLoss)
@@ -243,6 +263,9 @@ func (p durationSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 // R7 from Hyndman and Fan (1996), which matches Excel
 func percentile(values durationSlice, perc int) time.Duration {
+	if len(values) < 0 {
+		return 0
+	}
 	if perc < 0 {
 		perc = 0
 	}
@@ -290,7 +313,7 @@ func (p *Ping) Init() error {
 
 func init() {
 	inputs.Add("ping", func() telegraf.Input {
-		return &Ping{
+		p := &Ping{
 			PingInterval: 1.0,
 			Count:        1,
 			Timeout:      1.0,
@@ -300,5 +323,7 @@ func init() {
 			Arguments:    []string{},
 			Percentiles:  []int{},
 		}
+		p.nativePingFunc = p.nativePing
+		return p
 	})
 }
