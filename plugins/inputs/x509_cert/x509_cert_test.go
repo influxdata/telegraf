@@ -350,6 +350,24 @@ func TestGatherCert(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("x509_cert"))
 }
 
+func TestGatherCertMustNotTimeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	duration := time.Duration(15) * time.Second
+	m := &X509Cert{
+		Sources: []string{"https://www.influxdata.com:443"},
+		Timeout: internal.Duration{Duration: duration},
+	}
+	m.Init()
+
+	var acc testutil.Accumulator
+	err := m.Gather(&acc)
+	require.NoError(t, err)
+	require.Empty(t, acc.Errors)
+	assert.True(t, acc.HasMeasurement("x509_cert"))
+}
+
 func TestServerName(t *testing.T) {
 	tests := []struct {
 		name     string
