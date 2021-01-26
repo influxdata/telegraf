@@ -4,12 +4,13 @@ package newrelic
 import (
 	"context"
 	"fmt"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/cumulative"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
 )
@@ -19,12 +20,13 @@ type NewRelic struct {
 	InsightsKey  string            `toml:"insights_key"`
 	MetricPrefix string            `toml:"metric_prefix"`
 	Timeout      internal.Duration `toml:"timeout"`
+	HttpProxy    string            `toml:"http_proxy"`
 
 	harvestor   *telemetry.Harvester
 	dc          *cumulative.DeltaCalculator
 	savedErrors map[int]interface{}
 	errorCount  int
-	Client      http.Client `toml:"-"`
+	client      http.Client `toml:"-"`
 }
 
 // Description returns a one-sentence description on the Output
@@ -43,6 +45,10 @@ func (nr *NewRelic) SampleConfig() string {
 
   ## Timeout for writes to the New Relic API.
   # timeout = "15s"
+
+  ## HTTP Proxy override. If unset use values from the standard
+  ## proxy environment variables to determine proxy, if any.
+  # http_proxy = "http://corporate.proxy:3128"
 `
 }
 
@@ -51,6 +57,8 @@ func (nr *NewRelic) Connect() error {
 	if nr.InsightsKey == "" {
 		return fmt.Errorf("InsightKey is a required for newrelic")
 	}
+	//TODO init nr.client here
+	nr.getHTTPClient()
 	var err error
 	nr.harvestor, err = telemetry.NewHarvester(telemetry.ConfigAPIKey(nr.InsightsKey),
 		telemetry.ConfigHarvestPeriod(0),
@@ -58,7 +66,7 @@ func (nr *NewRelic) Connect() error {
 			cfg.Product = "NewRelic-Telegraf-Plugin"
 			cfg.ProductVersion = "1.0"
 			cfg.HarvestTimeout = nr.Timeout.Duration
-			cfg.Client = &nr.Client
+			cfg.Client = &nr.client
 			cfg.ErrorLogger = func(e map[string]interface{}) {
 				var errorString string
 				for k, v := range e {
@@ -79,7 +87,7 @@ func (nr *NewRelic) Connect() error {
 // Close any connections to the Output
 func (nr *NewRelic) Close() error {
 	nr.errorCount = 0
-	nr.Client.CloseIdleConnections()
+	nr.client.CloseIdleConnections()
 	return nil
 }
 
@@ -115,9 +123,7 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 					mvalue = float64(1)
 				}
 			case string:
-				// Do not log everytime we encounter string
-				// we just skip
-				continue
+				tags[mname] = n
 			default:
 				return fmt.Errorf("Undefined field type: %T", field.Value)
 			}
@@ -152,7 +158,29 @@ func init() {
 	outputs.Add("newrelic", func() telegraf.Output {
 		return &NewRelic{
 			Timeout: internal.Duration{Duration: time.Second * 15},
-			Client:  http.Client{},
+			// TODO Don't set the client here, wait
+			// client: http.Client{},
 		}
 	})
+}
+
+func (nr *NewRelic) getHTTPClient() error {
+	if nr.HttpProxy == "" {
+		nr.client = http.Client{}
+		return nil
+	}
+
+	proxyURL, err := url.Parse(nr.HttpProxy)
+	if err != nil {
+		return err
+	}
+
+	transport := &http.Transport{
+		Proxy: http.ProxyURL(proxyURL),
+	}
+
+	nr.client = http.Client{
+		Transport: transport,
+	}
+	return nil
 }
