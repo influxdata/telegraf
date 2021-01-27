@@ -152,7 +152,7 @@ func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 
 func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 	p.Log.Infof("Using monitor pods version 2 to get pod list using cAdvisor.")
-	
+
 	nodeIP := os.Getenv("NODE_IP")
 	if nodeIP == "" {
 		return errors.New("The environment variable NODE_IP is not set. Cannot get pod list for monitor_kubernetes_pods using version 2.")
@@ -204,7 +204,7 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 }
 
 func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Client, req *http.Request,
-		labelSelector labels.Selector, fieldSelector fields.Selector) error {
+	labelSelector labels.Selector, fieldSelector fields.Selector) error {
 
 	resp, err := client.Client.Do(req)
 	if err != nil {
@@ -232,7 +232,7 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
 			podHasMatchingNamespace(pod, p) &&
 			podHasMatchingLabelSelector(pod, labelSelector) &&
 			podHasMatchingFieldSelector(pod, fieldSelector) {
-				registerPod(pod, p)
+			registerPod(pod, p)
 		}
 
 	}
@@ -243,14 +243,14 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
 }
 
 func fieldSelectorIsSupported(fieldSelector fields.Selector) bool {
-	supportedFieldsToSelect := map[string]bool {
-			"spec.nodeName" : true,
-			"spec.restartPolicy" : true,
-			"spec.schedulerName" : true,
-			"spec.serviceAccountName" : true,
-			"status.phase" : true,
-			"status.podIP" : true,
-			"status.nominatedNodeName" : true,
+	supportedFieldsToSelect := map[string]bool{
+		"spec.nodeName":            true,
+		"spec.restartPolicy":       true,
+		"spec.schedulerName":       true,
+		"spec.serviceAccountName":  true,
+		"status.phase":             true,
+		"status.podIP":             true,
+		"status.nominatedNodeName": true,
 	}
 
 	for _, requirement := range fieldSelector.Requirements() {
@@ -289,7 +289,7 @@ func podHasMatchingFieldSelector(pod *corev1.Pod, fieldSelector fields.Selector)
 
 	// Spec and Status shouldn't be nil.
 	// Error handling just in case something goes wrong but won't crash telegraf
-	if (podSpec == nil || podStatus == nil) {
+	if podSpec == nil || podStatus == nil {
 		return false
 	}
 
