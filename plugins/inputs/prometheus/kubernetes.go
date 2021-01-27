@@ -19,8 +19,8 @@ import (
 	"github.com/ericchiang/k8s"
 	corev1 "github.com/ericchiang/k8s/apis/core/v1"
 	"github.com/ghodss/yaml"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
+	"github.com/kubernetes/apimachinery/pkg/fields"
+	"github.com/kubernetes/apimachinery/pkg/labels"
 )
 
 type payload struct {

@@ -10,8 +10,8 @@ import (
 	v1 "github.com/ericchiang/k8s/apis/core/v1"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
+	"github.com/kubernetes/apimachinery/pkg/fields"
+	"github.com/kubernetes/apimachinery/pkg/labels"
 )
 
 func TestScrapeURLNoAnnotations(t *testing.T) {
@@ -179,7 +179,7 @@ func TestPodHasMatchingLabelSelector(t *testing.T) {
 }
 
 func TestPodHasMatchingFieldSelector(t *testing.T) {
-	fieldSelectorString := "status.podIP=127.0.0.1,spec.restartPolicy=Always,spec.NodeName!=nodeName,status"
+	fieldSelectorString := "status.podIP=127.0.0.1,spec.restartPolicy=Always,spec.NodeName!=nodeName"
 	prom := &Prometheus{Log: testutil.Logger{}, KubernetesFieldSelector: fieldSelectorString}
 	pod := pod()
 	pod.Spec.RestartPolicy = str("Always")
