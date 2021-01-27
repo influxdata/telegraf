@@ -20,16 +20,20 @@ func TestBasicStartup(t *testing.T) {
 	require.Len(t, acc.Errors, 0)
 }
 
-func TestBasicStartupInvalidTags(t *testing.T) {
+func TestBasicInitNoTagsReturnAnError(t *testing.T) {
+	p := newAwsEc2Processor()
+	p.Log = &testutil.Logger{}
+	p.Tags = []string{}
+	err := p.Init()
+	require.Error(t, err)
+}
+
+func TestBasicInitInvalidTagsReturnAnError(t *testing.T) {
 	p := newAwsEc2Processor()
 	p.Log = &testutil.Logger{}
 	p.Tags = []string{"dummy", "qwerty"}
-	acc := &testutil.Accumulator{}
-	require.Error(t, p.Start(acc))
-	require.Error(t, p.Stop())
-
-	require.Len(t, acc.GetTelegrafMetrics(), 0)
-	require.Len(t, acc.Errors, 0)
+	err := p.Init()
+	require.Error(t, err)
 }
 
 func TestLoadingConfig(t *testing.T) {

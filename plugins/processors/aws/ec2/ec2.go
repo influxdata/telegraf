@@ -57,8 +57,9 @@ const sampleConfig = `
 `
 
 const (
-	DefaultTimeout             = 10 * time.Second
 	DefaultMaxOrderedQueueSize = 10_000
+	DefaultMaxParallelCalls    = 10_000
+	DefaultTimeout             = 10 * time.Second
 )
 
 var allowedTags = map[string]struct{}{
@@ -90,17 +91,9 @@ func (r *AwsEc2Processor) Add(metric telegraf.Metric, acc telegraf.Accumulator) 
 	return nil
 }
 
-func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
+func (r *AwsEc2Processor) Init() error {
 	r.Log.Debug("Initializing AWS EC2 Processor")
 
-	if r.Timeout == 0 {
-		r.Timeout = config.Duration(DefaultTimeout)
-	}
-	if r.MaxParallelCalls == 0 {
-		r.MaxParallelCalls = 10_000
-	}
-
-	r.tags = make(map[string]struct{})
 	for _, tag := range r.Tags {
 		if len(tag) > 0 && isTagAllowed(tag) {
 			r.tags[tag] = struct{}{}
@@ -110,23 +103,25 @@ func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 			)
 		}
 	}
-
 	if len(r.tags) == 0 {
 		return errors.New("No allowed metadata tags specified in configuration")
-	}
-
-	if r.Ordered {
-		r.parallel = parallel.NewOrdered(acc, r.asyncAdd, DefaultMaxOrderedQueueSize, r.MaxParallelCalls)
-	} else {
-		r.parallel = parallel.NewUnordered(acc, r.asyncAdd, r.MaxParallelCalls)
 	}
 
 	cfg, err := awsconfig.LoadDefaultConfig(context.Background())
 	if err != nil {
 		return err
 	}
-
 	r.imdsClient = imds.NewFromConfig(cfg)
+
+	return nil
+}
+
+func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
+	if r.Ordered {
+		r.parallel = parallel.NewOrdered(acc, r.asyncAdd, DefaultMaxOrderedQueueSize, r.MaxParallelCalls)
+	} else {
+		r.parallel = parallel.NewUnordered(acc, r.asyncAdd, r.MaxParallelCalls)
+	}
 
 	return nil
 }
@@ -140,8 +135,6 @@ func (r *AwsEc2Processor) Stop() error {
 }
 
 func (r *AwsEc2Processor) asyncAdd(metric telegraf.Metric) []telegraf.Metric {
-	r.Log.Debugf("Applying AWS EC2 Processor for metric: %s", metric.Name())
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.Timeout))
 	defer cancel()
 
@@ -168,7 +161,11 @@ func init() {
 }
 
 func newAwsEc2Processor() *AwsEc2Processor {
-	return &AwsEc2Processor{}
+	return &AwsEc2Processor{
+		MaxParallelCalls: DefaultMaxParallelCalls,
+		Timeout:          config.Duration(DefaultTimeout),
+		tags:             make(map[string]struct{}),
+	}
 }
 
 func getTag(o *imds.GetInstanceIdentityDocumentOutput, tag string) string {
