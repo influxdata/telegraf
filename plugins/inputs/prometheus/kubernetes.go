@@ -3,6 +3,7 @@ package prometheus
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -151,6 +152,11 @@ func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 
 func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 	p.Log.Infof("Using monitor pods version 2 to get pod list using cAdvisor.")
+	
+	nodeIP := os.Getenv("NODE_IP")
+	if nodeIP == "" {
+		return errors.New("The environment variable NODE_IP is not set. Cannot get pod list for monitor_kubernetes_pods using version 2.")
+	}
 
 	// Parse label and field selectors - will be used to filter pods after cAdvisor call
 	labelSelector, err := labels.Parse(p.KubernetesLabelSelector)
