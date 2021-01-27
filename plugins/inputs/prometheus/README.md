@@ -35,7 +35,7 @@ in Prometheus format.
   # monitor_kubernetes_pods = true
   ## Get the list of pods to scrape from either:
   ##    - version 1 (default): the kubernetes watch api (cluster-wide)
-  ##    - version 2: the local cadvisor api (node-wide); for scalability
+  ##    - version 2: the local cadvisor api (node-wide); for scalability. Note that the environment variable NODE_IP must be set to the host IP.
   # monitor_kubernetes_pods_version = 1
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
@@ -92,7 +92,14 @@ Currently the following annotation are supported:
 
 Using the `monitor_kubernetes_pods_namespace` option allows you to limit which pods you are scraping.
 
-Using `monitor_kubernetes_pods_version = 2` allows more scalable scraping for pods which will scrape pods only in the node that telegraf is running. It will fetch the pod list locally from the node's kubelet. This will require running Telegraf as a daemonset in the cluster.
+Using `monitor_kubernetes_pods_version = 2` allows more scalable scraping for pods which will scrape pods only in the node that telegraf is running. It will fetch the pod list locally from the node's kubelet. This will require running Telegraf as a daemonset in the cluster. Note that the environment variable NODE_IP must be set to the host IP. This can be done in the yaml of the pod running telegraf: 
+```
+env:
+  - name: NODE_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.hostIP
+ ```
 
 #### Bearer Token
 
