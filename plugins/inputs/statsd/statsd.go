@@ -70,6 +70,11 @@ type Statsd struct {
 	// http://docs.datadoghq.com/guides/dogstatsd/
 	DataDogExtensions bool `toml:"datadog_extensions"`
 
+	// Parses distribution metrics in the datadog statsd format.
+	// Requires the DataDogExtension flag to be enabled.
+	// https://docs.datadoghq.com/developers/metrics/types/?tab=distribution#definition
+	DataDogDistributions bool `toml:"datadog_distributions"`
+
 	// UDPPacketSize is deprecated, it's only here for legacy support
 	// we now always create 1 max size buffer and then copy only what we need
 	// into the in channel
@@ -244,6 +249,10 @@ const sampleConfig = `
 
   ## Parses datadog extensions to the statsd format
   datadog_extensions = false
+
+  ## Parses distributions metric as specified in the datadog statsd format
+  ## https://docs.datadoghq.com/developers/metrics/types/?tab=distribution#definition
+  datadog_distributions = false
 
   ## Statsd data translation templates, more info can be read here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/TEMPLATE_PATTERN.md
@@ -769,12 +778,14 @@ func (s *Statsd) aggregate(m metric) {
 
 	switch m.mtype {
 	case "d":
-		cached := cacheddistributions{
-			name:  m.name,
-			value: m.floatvalue,
-			tags:  m.tags,
+		if s.DataDogExtensions && s.DataDogDistributions {
+			cached := cacheddistributions{
+				name:  m.name,
+				value: m.floatvalue,
+				tags:  m.tags,
+			}
+			s.distributions = append(s.distributions, cached)
 		}
-		s.distributions = append(s.distributions, cached)
 	case "ms", "h":
 		// Check if the measurement exists
 		cached, ok := s.timings[m.hash]
