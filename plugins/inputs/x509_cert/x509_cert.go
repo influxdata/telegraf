@@ -215,7 +215,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			return nil
 		}
 
-		certs, err := c.getCert(u, c.Timeout.Duration*time.Second)
+		certs, err := c.getCert(u, c.Timeout.Duration)
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
 		}
