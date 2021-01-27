@@ -177,7 +177,6 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 	tlsConfig.InsecureSkipVerify = true
 
 	// The request will be the same each time
-	nodeIP := os.Getenv("NODE_IP")
 	podsUrl := fmt.Sprintf("https://%s:10250/pods", nodeIP)
 	req, err := http.NewRequest("GET", podsUrl, nil)
 	if err != nil {
