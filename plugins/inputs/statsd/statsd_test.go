@@ -467,23 +467,25 @@ func TestParse_Distributions(t *testing.T) {
 	s := NewTestStatsd()
 	acc := &testutil.Accumulator{}
 
-	// Test that distributions work
-	validLines := []string{
-		"test.distribution:1|d",
-		"test.distribution2:2|d",
-		"test.distribution3:3|d",
-		"test.distribution4:1|d",
-		"test.distribution5:1|d",
-	}
-
-	for _, line := range validLines {
-		err := s.parseStatsdLine(line)
-		if err != nil {
-			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+	parseMetrics := func() {
+		// Test that distributions work
+		validLines := []string{
+			"test.distribution:1|d",
+			"test.distribution2:2|d",
+			"test.distribution3:3|d",
+			"test.distribution4:1|d",
+			"test.distribution5:1|d",
 		}
-	}
 
-	s.Gather(acc)
+		for _, line := range validLines {
+			err := s.parseStatsdLine(line)
+			if err != nil {
+				t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+			}
+		}
+
+		s.Gather(acc)
+	}
 
 	validMeasurementMap := map[string]float64{
 		"test_distribution":  1,
@@ -492,11 +494,28 @@ func TestParse_Distributions(t *testing.T) {
 		"test_distribution4": 1,
 		"test_distribution5": 1,
 	}
+
+	// Test parsing when DataDogExtensions and DataDogDistributions aren't enabled
+	parseMetrics()
+	for key := range validMeasurementMap {
+		acc.AssertDoesNotContainMeasurement(t, key)
+	}
+
+	// Test parsing when DataDogDistributions is enabled but not DataDogExtensions
+	s.DataDogDistributions = true
+	parseMetrics()
+	for key := range validMeasurementMap {
+		acc.AssertDoesNotContainMeasurement(t, key)
+	}
+
+	// Test parsing when DataDogExtensions and DataDogDistributions are enabled
+	s.DataDogExtensions = true
+	parseMetrics()
 	for key, value := range validMeasurementMap {
-		valid := map[string]interface{}{
+		field := map[string]interface{}{
 			"value": float64(value),
 		}
-		acc.AssertContainsFields(t, key, valid)
+		acc.AssertContainsFields(t, key, field)
 	}
 }
 
