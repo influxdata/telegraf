@@ -97,7 +97,7 @@ var sampleConfig = `
   # monitor_kubernetes_pods = true
   ## Get the list of pods to scrape either from
   ## - version 1 (default): the kubernetes watch api (cluster-wide)
-  ## - version 2: the local cadvisor api (node-wide); for scaling
+  ## - version 2: the local cadvisor api (node-wide); for scalability. Note that the environment variable NODE_IP must be set to the host IP.
   # monitor_kubernetes_pods_version = 1
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
