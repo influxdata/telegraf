@@ -156,7 +156,7 @@ require (
 	gopkg.in/yaml.v2 v2.2.8
 	gotest.tools v2.2.0+incompatible
 	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
-	k8s.io/apimachinery v0.17.1 // indirect
+	k8s.io/apimachinery v0.17.1
 	modernc.org/sqlite v1.7.4
 )
 
