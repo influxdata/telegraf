@@ -294,6 +294,7 @@ For documentation on the latest development code see the [documentation index][d
 * [rabbitmq](./plugins/inputs/rabbitmq)
 * [raindrops](./plugins/inputs/raindrops)
 * [ras](./plugins/inputs/ras)
+* [ravendb](./plugins/inputs/ravendb)
 * [redfish](./plugins/inputs/redfish)
 * [redis](./plugins/inputs/redis)
 * [rethinkdb](./plugins/inputs/rethinkdb)
