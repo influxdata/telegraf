@@ -600,8 +600,8 @@ github.com/vishvananda/netlink v0.0.0-20171020171820-b2de5d10e38e h1:f1yevOHP+Su
 github.com/vishvananda/netlink v0.0.0-20171020171820-b2de5d10e38e/go.mod h1:+SR5DhBJrl6ZM7CoCKvpw5BKroDKQ+PJqOg65H/2ktk=
 github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc h1:R83G5ikgLMxrBvLh22JhdfI8K6YXEPHx5P03Uu3DRs4=
 github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc/go.mod h1:ZjcWmFBXmLKZu9Nxj3WKYEafiSqer2rnvPr0en9UNpI=
-github.com/vjeantet/grok v1.0.0 h1:uxMqatJP6MOFXsj6C1tZBnqqAThQEeqnizUZ48gSJQQ=
-github.com/vjeantet/grok v1.0.0/go.mod h1:/FWYEVYekkm+2VjcFmO9PufDU5FgXHUz9oy2EGqmQBo=
+github.com/vjeantet/grok v1.0.1 h1:2rhIR7J4gThTgcZ1m2JY4TrJZNgjn985U28kT2wQrJ4=
+github.com/vjeantet/grok v1.0.1/go.mod h1:ax1aAchzC6/QMXMcyzHQGZWaW1l195+uMYIkCWPCNIo=
 github.com/vmware/govmomi v0.19.0 h1:CR6tEByWCPOnRoRyhLzuHaU+6o2ybF3qufNRWS/MGrY=
 github.com/vmware/govmomi v0.19.0/go.mod h1:URlwyTFZX72RmxtxuaFL2Uj3fD1JTvZdx59bHWk6aFU=
 github.com/wavefronthq/wavefront-sdk-go v0.9.2 h1:/LvWgZYNjHFUg+ZUX+qv+7e+M8sEMi0lM15zPp681Gk=
