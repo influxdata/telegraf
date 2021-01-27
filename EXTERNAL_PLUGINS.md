@@ -16,3 +16,7 @@ Pull requests welcome.
 
 ## Outputs
 - [kinesis](https://github.com/morfien101/telegraf-output-kinesis) - Aggregation and compression of metrics to send Amazon Kinesis.
+
+## Processors
+ - [geoip](https://github.com/a-bali/telegraf-geoip) - Add GeoIP information to IP addresses.
+ 
