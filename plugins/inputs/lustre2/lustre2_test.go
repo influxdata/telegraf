@@ -47,7 +47,7 @@ const obdfilterJobStatsContents = `job_stats:
 - job_id:          cluster-testjob1
   snapshot_time:   1461772761
   read_bytes:      { samples:           1, unit: bytes, min:    4096, max:    4096, sum:            4096 }
-  write_bytes:     { samples:          25, unit: bytes, min: 1048576, max: 1048576, sum:        26214400 }
+  write_bytes:     { samples:          25, unit: bytes, min: 1048576, max:16777216, sum:        26214400 }
   getattr:         { samples:           0, unit:  reqs }
   setattr:         { samples:           0, unit:  reqs }
   punch:           { samples:           1, unit:  reqs }
@@ -259,7 +259,7 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 		"jobstats_read_bytes":      uint64(4096),
 		"jobstats_write_calls":     uint64(25),
 		"jobstats_write_min_size":  uint64(1048576),
-		"jobstats_write_max_size":  uint64(1048576),
+		"jobstats_write_max_size":  uint64(16777216),
 		"jobstats_write_bytes":     uint64(26214400),
 		"jobstats_ost_getattr":     uint64(0),
 		"jobstats_ost_setattr":     uint64(0),
