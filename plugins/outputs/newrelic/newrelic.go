@@ -4,13 +4,13 @@ package newrelic
 import (
 	"context"
 	"fmt"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/cumulative"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
 )
@@ -57,9 +57,11 @@ func (nr *NewRelic) Connect() error {
 	if nr.InsightsKey == "" {
 		return fmt.Errorf("InsightKey is a required for newrelic")
 	}
-	//TODO init nr.client here
-	nr.getHTTPClient()
-	var err error
+	err := nr.initClient()
+	if err != nil {
+		return err
+	}
+
 	nr.harvestor, err = telemetry.NewHarvester(telemetry.ConfigAPIKey(nr.InsightsKey),
 		telemetry.ConfigHarvestPeriod(0),
 		func(cfg *telemetry.Config) {
@@ -116,16 +118,21 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 			case uint64:
 				mvalue = float64(n)
 			case float64:
-				mvalue = float64(n)
+				mvalue = n
 			case bool:
 				mvalue = float64(0)
 				if n {
 					mvalue = float64(1)
 				}
 			case string:
-				tags[mname] = n
+				// If we see a string send it as a tag so it can be parsed as an attribute, max 255 chars
+				tagLength := len(n)
+				if tagLength > 255 {
+					tagLength = 255
+				}
+				tags[mname] = n[:tagLength]
 			default:
-				return fmt.Errorf("Undefined field type: %T", field.Value)
+				return fmt.Errorf("undefined field type: %T", field.Value)
 			}
 
 			switch metric.Type() {
@@ -158,13 +165,11 @@ func init() {
 	outputs.Add("newrelic", func() telegraf.Output {
 		return &NewRelic{
 			Timeout: internal.Duration{Duration: time.Second * 15},
-			// TODO Don't set the client here, wait
-			// client: http.Client{},
 		}
 	})
 }
 
-func (nr *NewRelic) getHTTPClient() error {
+func (nr *NewRelic) initClient() error {
 	if nr.HttpProxy == "" {
 		nr.client = http.Client{}
 		return nil
