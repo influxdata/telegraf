@@ -17,7 +17,7 @@ type topicSuffixTestpair struct {
 	expectedTopic string
 }
 
-func TestConnectAndWrite(t *testing.T) {
+func TestConnectAndWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -43,7 +43,7 @@ func TestConnectAndWrite(t *testing.T) {
 	k.Close()
 }
 
-func TestTopicSuffixes(t *testing.T) {
+func TestTopicSuffixesIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -90,7 +90,7 @@ func TestTopicSuffixes(t *testing.T) {
 	}
 }
 
-func TestValidateTopicSuffixMethod(t *testing.T) {
+func TestValidateTopicSuffixMethodIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

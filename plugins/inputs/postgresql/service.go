@@ -3,14 +3,15 @@ package postgresql
 import (
 	"database/sql"
 	"fmt"
-	"github.com/jackc/pgx"
-	"github.com/jackc/pgx/pgtype"
-	"github.com/jackc/pgx/stdlib"
 	"net"
 	"net/url"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/pgtype"
+	"github.com/jackc/pgx/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
