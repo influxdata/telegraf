@@ -125,12 +125,9 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 					mvalue = float64(1)
 				}
 			case string:
-				// If we see a string send it as a tag so it can be parsed as an attribute, max 255 chars
-				tagLength := len(n)
-				if tagLength > 255 {
-					tagLength = 255
-				}
-				tags[mname] = n[:tagLength]
+				// Do not log everytime we encounter string
+				// we just skip
+				continue
 			default:
 				return fmt.Errorf("undefined field type: %T", field.Value)
 			}
