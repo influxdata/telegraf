@@ -27,6 +27,13 @@ def apply(metric):
 
   ## File containing a Starlark script.
   # script = "/usr/local/bin/myscript.star"
+
+  ## The constants of the Starlark script.
+  # [processors.starlark.constants]
+  #   max_size = 10
+  #   threshold = 0.75
+  #   default_name = "Julia"
+  #   debug_mode = true
 `
 )
 
@@ -40,6 +47,7 @@ type Starlark struct {
 	applyFunc *starlark.Function
 	args      starlark.Tuple
 	results   []telegraf.Metric
+	constants map[string]interface{} `toml:"constants"`
 }
 
 func (s *Starlark) Init() error {
@@ -61,6 +69,7 @@ func (s *Starlark) Init() error {
 	builtins["Metric"] = starlark.NewBuiltin("Metric", newMetric)
 	builtins["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
 	builtins["catch"] = starlark.NewBuiltin("catch", catch)
+	s.addConstants(&builtins)
 
 	program, err := s.sourceProgram(builtins)
 	if err != nil {
@@ -195,6 +204,43 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 
 func (s *Starlark) Stop() error {
 	return nil
+}
+
+// Add all the constants defined in the plugin as constants of the script
+func (s *Starlark) addConstants(builtins *starlark.StringDict) {
+	for key, val := range s.constants {
+		(*builtins)[key] = s.toValue(val)
+	}
+}
+
+// Convert the given value into a Starlark value
+func (s *Starlark) toValue(original interface{}) starlark.Value {
+	switch v := original.(type) {
+	case []interface{}:
+		length := len(v)
+		array := make([]starlark.Value, length)
+		for i := 0; i < length; i++ {
+			array[i] = s.toValue(v[i])
+		}
+		return starlark.NewList(array)
+	case map[interface{}]interface{}:
+		dict := starlark.NewDict(len(v))
+		for key, val := range v {
+			dict.SetKey(s.toValue(key), s.toValue(val))
+		}
+		return dict
+	case string:
+		return starlark.String(v)
+	case bool:
+		return starlark.Bool(v)
+	case int:
+		return starlark.MakeInt(v)
+	case float64:
+		return starlark.Float(v)
+	default:
+		s.Log.Errorf("Unsupported type: %T", v)
+		return starlark.None
+	}
 }
 
 func containsMetric(metrics []telegraf.Metric, metric telegraf.Metric) bool {

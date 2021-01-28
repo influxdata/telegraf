@@ -250,6 +250,7 @@ func TestMetric(t *testing.T) {
 	var tests = []struct {
 		name             string
 		source           string
+		constants        map[string]interface{}
 		input            []telegraf.Metric
 		expected         []telegraf.Metric
 		expectedErrorStr string
@@ -2418,13 +2419,64 @@ def process(metric):
 				),
 			},
 		},
+		{
+			name: "support constants",
+			source: `
+def apply(metric):
+    metric.fields["p1"] = max_size
+    metric.fields["p2"] = threshold
+    metric.fields["p3"] = default_name
+    metric.fields["p4"] = debug_mode
+    metric.fields["p5"] = supported_values[0]
+    metric.fields["p6"] = supported_values[1]
+    metric.fields["p7"] = supported_entries[2]
+    metric.fields["p8"] = supported_entries["3"]
+    return metric
+           `,
+			constants: map[string]interface{}{
+				"max_size":         10,
+				"threshold":        0.75,
+				"default_name":     "Julia",
+				"debug_mode":       true,
+				"supported_values": []interface{}{2, "3"},
+				"supported_entries": map[interface{}]interface{}{
+					2:   "two",
+					"3": "three",
+				},
+				"unsupported_type": time.Now(),
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"p1": 10,
+						"p2": 0.75,
+						"p3": "Julia",
+						"p4": true,
+						"p5": 2,
+						"p6": "3",
+						"p7": "two",
+						"p8": "three",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &Starlark{
-				Source: tt.source,
-				Log:    testutil.Logger{},
+				Source:    tt.source,
+				Log:       testutil.Logger{},
+				constants: tt.constants,
 			}
 			err := plugin.Init()
 			require.NoError(t, err)

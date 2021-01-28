@@ -30,6 +30,13 @@ def apply(metric):
 
   ## File containing a Starlark script.
   # script = "/usr/local/bin/myscript.star"
+
+  ## The constants of the Starlark script.
+  # [processors.starlark.constants]
+  #   max_size = 10
+  #   threshold = 0.75
+  #   default_name = "Julia"
+  #   debug_mode = true
 ```
 
 ### Usage
@@ -181,6 +188,29 @@ def apply(metric):
 
 def failing(metric):
     json.decode("non-json-content")
+```
+**How to reuse the same script but with different parameters?**
+
+In case you have a generic script that you would like to reuse for different instances of the plugin, you can use constants as input parameters of your script.
+
+So for example, assuming that you have the next configuration:
+
+```toml
+[[processors.starlark]]
+  script = "/usr/local/bin/myscript.star"
+
+  [processors.starlark.constants]
+    somecustomnum = 10
+    somecustomstr = "mycustomfield"
+```
+
+Your script could then use the constants defined in the configuration as next:
+
+```python
+def apply(metric):
+    if metric.fields[somecustomstr] >= somecustomnum:
+        metric.fields.clear()
+    return metric
 ```
 
 ### Examples
