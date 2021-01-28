@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/go-ping/ping"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -259,6 +260,21 @@ func TestPingGather(t *testing.T) {
 
 	tags = map[string]string{"url": "influxdata.com"}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
+}
+
+func TestPingGatherIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode, retrieves systems ping utility")
+	}
+
+	var acc testutil.Accumulator
+	p, ok := inputs.Inputs["ping"]().(*Ping)
+	require.True(t, ok)
+	p.Urls = []string{"localhost", "influxdata.com"}
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+	require.Equal(t, 0, acc.Metrics[0].Fields["result_code"])
+	require.Equal(t, 0, acc.Metrics[1].Fields["result_code"])
 }
 
 var lossyPingOutput = `
