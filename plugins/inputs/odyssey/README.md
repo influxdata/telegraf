@@ -1,3 +1,10 @@
+# Odyssey Input Plugin
+
+The `odyssey` plugin provides metrics for your Odyssey connection pooler.
+
+More information about the meaning of these metrics can be found in the
+[Odyssey Documentation](https://github.com/yandex/odyssey).
+
 ### Configuration example
 
 ```toml
@@ -12,6 +19,8 @@
   ##
   address = "host=localhost user=postgres sslmode=disable"
 
+  ## Default queries - ['SHOW_POOLS', 'SHOW_ERRORS', 'SHOW_CLIENTS', 'SHOW_STATS']
+  ## A list of queries to include. If not specified, all the above listed queries are used.
   include_query = []
 ```
 

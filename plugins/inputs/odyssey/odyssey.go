@@ -26,13 +26,13 @@ var sampleConfig = `
   ## or a simple string:
   ##   host=localhost user=console password=... sslmode=... dbname=app_production
   ##
-  ## include_query = []string - commands for psql
-  ##
   ## All connection parameters are optional.
   ##
   address = "host=localhost user=postgresql sslmode=disable dbname=console port=6432"
 
-  include_query = ['SHOW STATS', 'SHOW POOLS']
+  ## Default queries - ['SHOW_POOLS', 'SHOW_ERRORS', 'SHOW_CLIENTS', 'SHOW_STATS']
+  ## A list of queries to include. If not specified, all the above listed queries are used.
+  include_query = []
 `
 
 func (p *Odyssey) SampleConfig() string {
@@ -47,10 +47,17 @@ func (p *Odyssey) Gather(acc telegraf.Accumulator) error {
 	var (
 		err     error
 		query   string
+		queries []string
 		columns []string
 	)
 
-	for _, value := range p.IncludeQuery {
+	queries = []string{`SHOW POOLS`, `SHOW CLIENTS`, `SHOW ERRORS`, `SHOW STATS`}
+	
+	if len(p.IncludeQuery) > 0 {
+		queries = p.IncludeQuery
+	}
+
+	for _, value := range queries {
 		query = value
 
 		rows, err := p.DB.Query(query)
