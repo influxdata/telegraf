@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os/exec"
 	"runtime"
 	"strings"
 	"sync"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/go-ping/ping"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -311,9 +313,21 @@ func (p *Ping) Init() error {
 	return nil
 }
 
+func hostPinger(binary string, timeout float64, args ...string) (string, error) {
+	bin, err := exec.LookPath(binary)
+	if err != nil {
+		return "", err
+	}
+	c := exec.Command(bin, args...)
+	out, err := internal.CombinedOutputTimeout(c,
+		time.Second*time.Duration(timeout+5))
+	return string(out), err
+}
+
 func init() {
 	inputs.Add("ping", func() telegraf.Input {
 		p := &Ping{
+			pingHost:     hostPinger,
 			PingInterval: 1.0,
 			Count:        1,
 			Timeout:      1.0,
