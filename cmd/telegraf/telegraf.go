@@ -76,6 +76,7 @@ var (
 )
 
 var stop chan struct{}
+var ag *agent.Agent
 
 func reloadLoop(
 	inputFilters []string,
@@ -106,8 +107,16 @@ func reloadLoop(
 				cancel()
 			}
 		}()
-
-		err := runAgent(ctx, inputFilters, outputFilters)
+		if ag != nil {
+			if ag.Config != nil {
+				for idx := range ag.Config.Outputs {
+					log.Printf("I! Closing running input: %s", ag.Config.Outputs[idx].LogName())
+					ag.Config.Outputs[idx].Close()
+				}
+			}
+		}
+		var err error
+		ag, err = runAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
@@ -117,44 +126,46 @@ func reloadLoop(
 func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
-) error {
+) (*agent.Agent, error) {
+	var ag *agent.Agent
+	var err error
 	log.Printf("I! Starting Telegraf %s", version)
 
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-	err := c.LoadConfig(*fConfig)
+	err = c.LoadConfig(*fConfig)
 	if err != nil {
-		return err
+		return ag, err
 	}
 
 	if *fConfigDirectory != "" {
 		err = c.LoadDirectory(*fConfigDirectory)
 		if err != nil {
-			return err
+			return ag, err
 		}
 	}
 	if !*fTest && len(c.Outputs) == 0 {
-		return errors.New("Error: no outputs found, did you provide a valid config file?")
+		return ag, errors.New("Error: no outputs found, did you provide a valid config file?")
 	}
 	if *fPlugins == "" && len(c.Inputs) == 0 {
-		return errors.New("Error: no inputs found, did you provide a valid config file?")
+		return ag, errors.New("Error: no inputs found, did you provide a valid config file?")
 	}
 
 	if int64(c.Agent.Interval.Duration) <= 0 {
-		return fmt.Errorf("Agent interval must be positive, found %s",
+		return ag, fmt.Errorf("Agent interval must be positive, found %s",
 			c.Agent.Interval.Duration)
 	}
 
 	if int64(c.Agent.FlushInterval.Duration) <= 0 {
-		return fmt.Errorf("Agent flush_interval must be positive; found %s",
+		return ag, fmt.Errorf("Agent flush_interval must be positive; found %s",
 			c.Agent.Interval.Duration)
 	}
 
-	ag, err := agent.NewAgent(c)
+	ag, err = agent.NewAgent(c)
 	if err != nil {
-		return err
+		return ag, err
 	}
 
 	// Setup logging as configured.
@@ -172,12 +183,12 @@ func runAgent(ctx context.Context,
 
 	if *fRunOnce {
 		wait := time.Duration(*fTestWait) * time.Second
-		return ag.Once(ctx, wait)
+		return ag, ag.Once(ctx, wait)
 	}
 
 	if *fTest || *fTestWait != 0 {
 		wait := time.Duration(*fTestWait) * time.Second
-		return ag.Test(ctx, wait)
+		return ag, ag.Test(ctx, wait)
 	}
 
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
@@ -204,7 +215,7 @@ func runAgent(ctx context.Context,
 		}
 	}
 
-	return ag.Run(ctx)
+	return ag, ag.Run(ctx)
 }
 
 func usageExit(rc int) {
