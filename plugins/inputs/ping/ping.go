@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -28,6 +29,8 @@ type Ping struct {
 	// Pre-calculated interval and timeout
 	calcInterval time.Duration
 	calcTimeout  time.Duration
+
+	sourceAddress string
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -171,6 +174,7 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 		pinger.SetNetwork("ip6")
 	}
 
+	pinger.Source = p.sourceAddress
 	pinger.Interval = p.calcInterval
 	pinger.Timeout = p.calcTimeout
 
@@ -308,6 +312,23 @@ func (p *Ping) Init() error {
 		p.calcTimeout = time.Duration(5) * time.Second
 	} else {
 		p.calcTimeout = time.Duration(p.Timeout) * time.Second
+	}
+
+	// Support either an IP address or interface name
+	if p.Interface != "" {
+		if addr := net.ParseIP(p.Interface); addr != nil {
+			p.sourceAddress = p.Interface
+		} else {
+			i, err := net.InterfaceByName(p.Interface)
+			if err != nil {
+				return fmt.Errorf("Failed to get interface: %w", err)
+			}
+			addrs, err := i.Addrs()
+			if err != nil {
+				return fmt.Errorf("Failed to get the address of interface: %w", err)
+			}
+			p.sourceAddress = addrs[0].(*net.IPNet).IP.String()
+		}
 	}
 
 	return nil
