@@ -21,13 +21,50 @@ import (
 var (
 	defaultPIDFinder = NewPgrep
 	defaultProcess   = NewProc
+	// defaultCollection is the default group of metrics to gather
+	defaultCollection = []string{
+		MetricsThreads,
+		MetricsFDs,
+		MetricsContextSwitches,
+		MetricsPageFaults,
+		MetricsIO,
+		MetricsCreateTime,
+		MetricsCPU,
+		MetricsCPUPercent,
+		MetricsMemory,
+		MetricsMemoryPercent,
+		MetricsLimits,
+	}
 )
 
 const (
-	// MetricsConnectionsStats tag to enable connections_stats metrics
-	MetricsConnectionsStats = "connections_stats"
-	// MetricsConnectionsEndpoints tag to enable connections_endpoints metrics
+	// MetricsThreads to enable collection of number of threads
+	MetricsThreads = "threads"
+	// MetricsFDs to enable collection of number of file descriptors
+	MetricsFDs = "fds"
+	// MetricsContextSwitches to enable collection of context switches
+	MetricsContextSwitches = "ctx_switches"
+	// MetricsPageFaults to enable collection of page faults
+	MetricsPageFaults = "page_faults"
+	// MetricsIO to enable collection of IO
+	MetricsIO = "io"
+	// MetricsCreateTime to enable collection of proc creation time
+	MetricsCreateTime = "create_time"
+	// MetricsCPU to enable collection of CPU time used
+	MetricsCPU = "cpu"
+	// MetricsCPUPercent to enable collection of percentage of CPU used
+	MetricsCPUPercent = "cpu_percent"
+	// MetricsMemory to enable collection of memory used
+	MetricsMemory = "mem"
+	// MetricsMemoryPercent to enable collection of memory percentage used
+	MetricsMemoryPercent = "mem_percent"
+	// MetricsLimits to enable collection of procs' limits
+	MetricsLimits = "limits"
+	// MetricsTCPStats to enable collection of procs' TCP stats
+	MetricsTCPStats = "tcp_stats"
+	// MetricsConnectionsEndpoints to enable collection of metric procstat_tcp
 	MetricsConnectionsEndpoints = "connections_endpoints"
+
 	// MetricNameTCPConnections is the measurement name for TCP connections metrics
 	MetricNameTCPConnections = "procstat_tcp"
 	// TCPConnectionKey is the metric value to put all the listen endpoints
@@ -107,10 +144,33 @@ var sampleConfig = `
   # pid_finder = "pgrep"
 
   ## Select wich extra metrics should be added:
-  ##   - "connections_stats": tcp_* and upd_socket metrics
-  ##   - "connections_endpoints": new metric procstat_tcp with connections and listeners endpoints
-  ## Default is empty list.
-  # metrics_include = ["connections_stats", "connections_endpoints"]
+  ##  - "threads": to enable collection of number of file descriptors
+  ##  - "fds": to enable collection of context switches
+  ##  - "ctx_switches": to enable collection of page faults
+  ##  - "page_faults": to enable collection of IO
+  ##  - "io": to enable collection of proc creation time
+  ##  - "create_time": to enable collection of CPU time used
+  ##  - "cpu": to enable collection of percentage of CPU used
+  ##  - "cpu_percent": to enable collection of memory used
+  ##  - "mem": to enable collection of memory percentage used
+  ##  - "mem_percent": to enable collection of procs' limits
+  ##  - "limits": to enable collection of procs' limits
+  ##  - "tcp_stats": tcp_* and upd_socket metrics
+  ##  - "connections_endpoints": new metric procstat_tcp with connections and listeners endpoints
+  ## Default value:
+  # metrics_include = [
+  #  "threads",
+  #  "fds",
+  #  "ctx_switches",
+  #  "page_faults",
+  #  "io",
+  #  "create_time",
+  #  "cpu",
+  #  "cpu_percent",
+  #  "mem",
+  #  "mem_percent",
+  #  "limits",
+  # ]
 `
 
 func (_ *Procstat) SampleConfig() string {
@@ -226,121 +286,143 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		}
 	}
 
-	numThreads, err := proc.NumThreads()
-	if err == nil {
-		fields[prefix+"num_threads"] = numThreads
-	}
-
-	fds, err := proc.NumFDs()
-	if err == nil {
-		fields[prefix+"num_fds"] = fds
-	}
-
-	ctx, err := proc.NumCtxSwitches()
-	if err == nil {
-		fields[prefix+"voluntary_context_switches"] = ctx.Voluntary
-		fields[prefix+"involuntary_context_switches"] = ctx.Involuntary
-	}
-
-	faults, err := proc.PageFaults()
-	if err == nil {
-		fields[prefix+"minor_faults"] = faults.MinorFaults
-		fields[prefix+"major_faults"] = faults.MajorFaults
-		fields[prefix+"child_minor_faults"] = faults.ChildMinorFaults
-		fields[prefix+"child_major_faults"] = faults.ChildMajorFaults
-	}
-
-	io, err := proc.IOCounters()
-	if err == nil {
-		fields[prefix+"read_count"] = io.ReadCount
-		fields[prefix+"write_count"] = io.WriteCount
-		fields[prefix+"read_bytes"] = io.ReadBytes
-		fields[prefix+"write_bytes"] = io.WriteBytes
-	}
-
-	createdAt, err := proc.CreateTime() //Returns epoch in ms
-	if err == nil {
-		fields[prefix+"created_at"] = createdAt * 1000000 //Convert ms to ns
-	}
-
-	cpu_time, err := proc.Times()
-	if err == nil {
-		fields[prefix+"cpu_time_user"] = cpu_time.User
-		fields[prefix+"cpu_time_system"] = cpu_time.System
-		fields[prefix+"cpu_time_idle"] = cpu_time.Idle
-		fields[prefix+"cpu_time_nice"] = cpu_time.Nice
-		fields[prefix+"cpu_time_iowait"] = cpu_time.Iowait
-		fields[prefix+"cpu_time_irq"] = cpu_time.Irq
-		fields[prefix+"cpu_time_soft_irq"] = cpu_time.Softirq
-		fields[prefix+"cpu_time_steal"] = cpu_time.Steal
-		fields[prefix+"cpu_time_guest"] = cpu_time.Guest
-		fields[prefix+"cpu_time_guest_nice"] = cpu_time.GuestNice
-	}
-
-	cpu_perc, err := proc.Percent(time.Duration(0))
-	if err == nil {
-		if p.solarisMode {
-			fields[prefix+"cpu_usage"] = cpu_perc / float64(runtime.NumCPU())
-		} else {
-			fields[prefix+"cpu_usage"] = cpu_perc
+	if p.metricEnabled(MetricsThreads) {
+		numThreads, err := proc.NumThreads()
+		if err == nil {
+			fields[prefix+"num_threads"] = numThreads
 		}
 	}
 
-	mem, err := proc.MemoryInfo()
-	if err == nil {
-		fields[prefix+"memory_rss"] = mem.RSS
-		fields[prefix+"memory_vms"] = mem.VMS
-		fields[prefix+"memory_swap"] = mem.Swap
-		fields[prefix+"memory_data"] = mem.Data
-		fields[prefix+"memory_stack"] = mem.Stack
-		fields[prefix+"memory_locked"] = mem.Locked
+	if p.metricEnabled(MetricsFDs) {
+		fds, err := proc.NumFDs()
+		if err == nil {
+			fields[prefix+"num_fds"] = fds
+		}
 	}
 
-	mem_perc, err := proc.MemoryPercent()
-	if err == nil {
-		fields[prefix+"memory_usage"] = mem_perc
+	if p.metricEnabled(MetricsContextSwitches) {
+		ctx, err := proc.NumCtxSwitches()
+		if err == nil {
+			fields[prefix+"voluntary_context_switches"] = ctx.Voluntary
+			fields[prefix+"involuntary_context_switches"] = ctx.Involuntary
+		}
 	}
 
-	rlims, err := proc.RlimitUsage(true)
-	if err == nil {
-		for _, rlim := range rlims {
-			var name string
-			switch rlim.Resource {
-			case process.RLIMIT_CPU:
-				name = "cpu_time"
-			case process.RLIMIT_DATA:
-				name = "memory_data"
-			case process.RLIMIT_STACK:
-				name = "memory_stack"
-			case process.RLIMIT_RSS:
-				name = "memory_rss"
-			case process.RLIMIT_NOFILE:
-				name = "num_fds"
-			case process.RLIMIT_MEMLOCK:
-				name = "memory_locked"
-			case process.RLIMIT_AS:
-				name = "memory_vms"
-			case process.RLIMIT_LOCKS:
-				name = "file_locks"
-			case process.RLIMIT_SIGPENDING:
-				name = "signals_pending"
-			case process.RLIMIT_NICE:
-				name = "nice_priority"
-			case process.RLIMIT_RTPRIO:
-				name = "realtime_priority"
-			default:
-				continue
-			}
+	if p.metricEnabled(MetricsPageFaults) {
+		faults, err := proc.PageFaults()
+		if err == nil {
+			fields[prefix+"minor_faults"] = faults.MinorFaults
+			fields[prefix+"major_faults"] = faults.MajorFaults
+			fields[prefix+"child_minor_faults"] = faults.ChildMinorFaults
+			fields[prefix+"child_major_faults"] = faults.ChildMajorFaults
+		}
+	}
 
-			fields[prefix+"rlimit_"+name+"_soft"] = rlim.Soft
-			fields[prefix+"rlimit_"+name+"_hard"] = rlim.Hard
-			if name != "file_locks" { // gopsutil doesn't currently track the used file locks count
-				fields[prefix+name] = rlim.Used
+	if p.metricEnabled(MetricsIO) {
+		io, err := proc.IOCounters()
+		if err == nil {
+			fields[prefix+"read_count"] = io.ReadCount
+			fields[prefix+"write_count"] = io.WriteCount
+			fields[prefix+"read_bytes"] = io.ReadBytes
+			fields[prefix+"write_bytes"] = io.WriteBytes
+		}
+	}
+
+	if p.metricEnabled(MetricsCreateTime) {
+		createdAt, err := proc.CreateTime() //Returns epoch in ms
+		if err == nil {
+			fields[prefix+"created_at"] = createdAt * 1000000 //Convert ms to ns
+		}
+	}
+
+	if p.metricEnabled(MetricsCPU) {
+		cpu_time, err := proc.Times()
+		if err == nil {
+			fields[prefix+"cpu_time_user"] = cpu_time.User
+			fields[prefix+"cpu_time_system"] = cpu_time.System
+			fields[prefix+"cpu_time_idle"] = cpu_time.Idle
+			fields[prefix+"cpu_time_nice"] = cpu_time.Nice
+			fields[prefix+"cpu_time_iowait"] = cpu_time.Iowait
+			fields[prefix+"cpu_time_irq"] = cpu_time.Irq
+			fields[prefix+"cpu_time_soft_irq"] = cpu_time.Softirq
+			fields[prefix+"cpu_time_steal"] = cpu_time.Steal
+			fields[prefix+"cpu_time_guest"] = cpu_time.Guest
+			fields[prefix+"cpu_time_guest_nice"] = cpu_time.GuestNice
+		}
+	}
+
+	if p.metricEnabled(MetricsCPUPercent) {
+		cpu_perc, err := proc.Percent(time.Duration(0))
+		if err == nil {
+			if p.solarisMode {
+				fields[prefix+"cpu_usage"] = cpu_perc / float64(runtime.NumCPU())
+			} else {
+				fields[prefix+"cpu_usage"] = cpu_perc
 			}
 		}
 	}
 
-	if p.metricEnabled(MetricsConnectionsStats) {
+	if p.metricEnabled(MetricsMemory) {
+		mem, err := proc.MemoryInfo()
+		if err == nil {
+			fields[prefix+"memory_rss"] = mem.RSS
+			fields[prefix+"memory_vms"] = mem.VMS
+			fields[prefix+"memory_swap"] = mem.Swap
+			fields[prefix+"memory_data"] = mem.Data
+			fields[prefix+"memory_stack"] = mem.Stack
+			fields[prefix+"memory_locked"] = mem.Locked
+		}
+	}
+
+	if p.metricEnabled(MetricsMemoryPercent) {
+		mem_perc, err := proc.MemoryPercent()
+		if err == nil {
+			fields[prefix+"memory_usage"] = mem_perc
+		}
+	}
+
+	if p.metricEnabled(MetricsLimits) {
+		rlims, err := proc.RlimitUsage(true)
+		if err == nil {
+			for _, rlim := range rlims {
+				var name string
+				switch rlim.Resource {
+				case process.RLIMIT_CPU:
+					name = "cpu_time"
+				case process.RLIMIT_DATA:
+					name = "memory_data"
+				case process.RLIMIT_STACK:
+					name = "memory_stack"
+				case process.RLIMIT_RSS:
+					name = "memory_rss"
+				case process.RLIMIT_NOFILE:
+					name = "num_fds"
+				case process.RLIMIT_MEMLOCK:
+					name = "memory_locked"
+				case process.RLIMIT_AS:
+					name = "memory_vms"
+				case process.RLIMIT_LOCKS:
+					name = "file_locks"
+				case process.RLIMIT_SIGPENDING:
+					name = "signals_pending"
+				case process.RLIMIT_NICE:
+					name = "nice_priority"
+				case process.RLIMIT_RTPRIO:
+					name = "realtime_priority"
+				default:
+					continue
+				}
+
+				fields[prefix+"rlimit_"+name+"_soft"] = rlim.Soft
+				fields[prefix+"rlimit_"+name+"_hard"] = rlim.Hard
+				if name != "file_locks" { // gopsutil doesn't currently track the used file locks count
+					fields[prefix+name] = rlim.Used
+				}
+			}
+		}
+	}
+
+	if p.metricEnabled(MetricsTCPStats) {
 		// Add values with the number of connections in each TCP state
 		pidConnections, err := netInfo.GetConnectionsByPid(uint32(proc.PID()))
 		if err == nil {
@@ -357,7 +439,7 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 
 	if p.metricEnabled(MetricsConnectionsEndpoints) {
 		// add measurement procstat_tcp with tcp listeners and connections for each proccess
-		err = addConnectionEnpoints(acc, proc, netInfo)
+		err := addConnectionEnpoints(acc, proc, netInfo)
 		if err != nil {
 			acc.AddError(fmt.Errorf("D! [inputs.procstat] not able to generate network metrics for pid=%v: %v", proc.PID(), err))
 		}
@@ -582,6 +664,9 @@ func (p *Procstat) metricEnabled(m string) bool {
 
 func init() {
 	inputs.Add("procstat", func() telegraf.Input {
-		return &Procstat{}
+		return &Procstat{
+			// Default metrics to gather
+			MetricsInclude: defaultCollection,
+		}
 	})
 }

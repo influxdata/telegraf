@@ -62,10 +62,33 @@ Processes can be selected for monitoring using one of several methods:
   # pid_finder = "pgrep"
 
   ## Select wich extra metrics should be added:
-  ##   - "connections_stats": tcp_* and upd_socket metrics
-  ##   - "connections_endpoints": new metric procstat_tcp with connections and listeners endpoints
-  ## Default is empty list.
-  # metrics_include = ["connections_stats", "connections_endpoints"]
+  ##  - "threads": to enable collection of number of file descriptors
+  ##  - "fds": to enable collection of context switches
+  ##  - "ctx_switches": to enable collection of page faults
+  ##  - "page_faults": to enable collection of IO
+  ##  - "io": to enable collection of proc creation time
+  ##  - "create_time": to enable collection of CPU time used
+  ##  - "cpu": to enable collection of percentage of CPU used
+  ##  - "cpu_percent": to enable collection of memory used
+  ##  - "mem": to enable collection of memory percentage used
+  ##  - "mem_percent": to enable collection of procs' limits
+  ##  - "limits": to enable collection of procs' limits
+  ##  - "tcp_stats": tcp_* and upd_socket metrics
+  ##  - "connections_endpoints": new metric procstat_tcp with connections and listeners endpoints
+  ## Default value:
+  # metrics_include = [
+  #  "threads",
+  #  "fds",
+  #  "ctx_switches",
+  #  "page_faults",
+  #  "io",
+  #  "create_time",
+  #  "cpu",
+  #  "cpu_percent",
+  #  "mem",
+  #  "mem_percent",
+  #  "limits",
+  # ]
 ```
 
 #### Windows support
