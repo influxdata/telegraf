@@ -52,7 +52,7 @@ func (p *Odyssey) Gather(acc telegraf.Accumulator) error {
 	)
 
 	queries = []string{`SHOW POOLS`, `SHOW CLIENTS`, `SHOW ERRORS`, `SHOW STATS`}
-	
+
 	if len(p.IncludeQuery) > 0 {
 		queries = p.IncludeQuery
 	}
