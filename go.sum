@@ -223,8 +223,6 @@ github.com/go-openapi/jsonpointer v0.0.0-20160704185906-46af16f9f7b1/go.mod h1:+
 github.com/go-openapi/jsonreference v0.0.0-20160704190145-13c6e3589ad9/go.mod h1:W3Z9FmVs9qj+KR4zFKmDPGiLdk1D9Rlm7cyMvf57TTg=
 github.com/go-openapi/spec v0.0.0-20160808142527-6aced65f8501/go.mod h1:J8+jY1nAiCcj+friV/PDoE1/3eeccG9LYBs0tYvLOWc=
 github.com/go-openapi/swag v0.0.0-20160704191624-1d0bd113de87/go.mod h1:DXUve3Dpr1UfpPtxFw+EFuQ41HhCWZfha5jSVRG7C7I=
-github.com/go-ping/ping v0.0.0-20201115131931-3300c582a663 h1:jI2GiiRh+pPbey52EVmbU6kuLiXqwy4CXZ4gwUBj8Y0=
-github.com/go-ping/ping v0.0.0-20201115131931-3300c582a663/go.mod h1:35JbSyV/BYqHwwRA6Zr1uVDm1637YlNOU61wI797NPI=
 github.com/go-redis/redis v6.15.9+incompatible h1:K0pv1D7EQUjfyoMql+r/jZqCLizCGKFlFgcHWWmHQjg=
 github.com/go-redis/redis v6.15.9+incompatible/go.mod h1:NAIEuMOZ/fxfXJIrKDQDz8wamY7mA7PouImQ2Jvg6kA=
 github.com/go-sql-driver/mysql v1.5.0 h1:ozyZYNQW3x3HtqT1jira07DN2PArx2v7/mN66gGcHOs=
@@ -573,6 +571,8 @@ github.com/soniah/gosnmp v1.25.0 h1:0y8vpjD07NPmnT+wojnUrKkYLX9Fxw1jI4cGTumWugQ=
 github.com/soniah/gosnmp v1.25.0/go.mod h1:8YvfZxH388NIIw2A+X5z2Oh97VcNhtmxDLt5QeUzVuQ=
 github.com/spf13/pflag v0.0.0-20170130214245-9ff6c6923cff/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
 github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
+github.com/ssoroka/ping-1 v0.0.0-20210128214333-29bd0ce6d962 h1:/Fy1678nerZfXbHRmdqibeIcIDfll+B8kqVb2uShLFg=
+github.com/ssoroka/ping-1 v0.0.0-20210128214333-29bd0ce6d962/go.mod h1:35JbSyV/BYqHwwRA6Zr1uVDm1637YlNOU61wI797NPI=
 github.com/streadway/amqp v0.0.0-20180528204448-e5adc2ada8b8 h1:l6epF6yBwuejBfhGkM5m8VSNM/QAm7ApGyH35ehA7eQ=
 github.com/streadway/amqp v0.0.0-20180528204448-e5adc2ada8b8/go.mod h1:1WNBiOZtZQLpVAyu0iTduoJL9hEsMloAK5XWrtW0xdY=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

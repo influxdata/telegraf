@@ -162,3 +162,5 @@ require (
 
 // replaced due to https://github.com/satori/go.uuid/issues/73
 replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
+
+replace github.com/go-ping/ping => github.com/ssoroka/ping-1 v0.0.0-20210128214333-29bd0ce6d962
