@@ -84,5 +84,18 @@ elif [[ -f /etc/os-release ]]; then
     elif [[ "$NAME" = "Solus" ]]; then
         # Solus logic
         install_systemd /usr/lib/systemd/system/telegraf.service
+    elif [[ "$NAME" = "SLES" ]]; then
+        if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
+            install_systemd /usr/lib/systemd/system/telegraf.service
+        else
+            # Assuming SysVinit
+            install_init
+            # Run update-rc.d or fallback to chkconfig if not available
+            if which update-rc.d &>/dev/null; then
+                install_update_rcd
+            else
+                install_chkconfig
+            fi
+        fi
     fi
 fi

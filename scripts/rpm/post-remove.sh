@@ -44,5 +44,16 @@ elif [[ -f /etc/os-release ]]; then
     elif [[ "$NAME" = "Solus" ]]; then
         rm -f /etc/default/telegraf
         disable_systemd /usr/lib/systemd/system/telegraf.service
+    elif [[ "$NAME" = "SLES" ]]; then
+        if [[ "$1" = "0" ]]; then
+            rm -f /etc/default/telegraf
+
+            if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
+                disable_systemd /usr/lib/systemd/system/telegraf.service
+            else
+                # Assuming sysv
+                disable_chkconfig
+            fi
+        fi
     fi
 fi
