@@ -1,3 +1,11 @@
+## v1.17.2 [2021-01-28]
+
+#### Bugfixes
+
+  - [#8770](https://github.com/influxdata/telegraf/pull/8770) `inputs.ping` Set interface for native
+  - [#8764](https://github.com/influxdata/telegraf/pull/8764) `inputs.ping` Resolve regression, re-add missing function
+
+
 ## v1.17.1 [2021-01-27]
 
 #### Release Notes
