@@ -18,14 +18,14 @@ per metric it sees and emits the quantiles every `period`.
   ## Quantiles to output in the range [0,1]
   # quantiles = [0.25, 0.5, 0.75]
 
-  ## Type of approximation
+  ## Type of aggregation algorithm
   ## Supported are:
   ##  "t-digest" -- approximation using centroids, can cope with large number of samples
-  ##  "exact R7" -- exact approximation also used by Excel or NumPy (Hyndman & Fan 1996 R7)
-  ##  "exact R8" -- exact approximation (Hyndman & Fan 1996 R8)
-  ## NOTE: Do not use "exact" approximations with large number of samples
+  ##  "exact R7" -- exact computation also used by Excel or NumPy (Hyndman & Fan 1996 R7)
+  ##  "exact R8" -- exact computation (Hyndman & Fan 1996 R8)
+  ## NOTE: Do not use "exact" algorithms with large number of samples
   ##       to not impair performance or memory consumption!
-  # approximator = "t-digest"
+  # algorithm = "t-digest"
 
   ## Compression for approximation (t-digest). The value needs to be
   ## greater or equal to 1.0. Smaller values will result in more
@@ -33,7 +33,7 @@ per metric it sees and emits the quantiles every `period`.
   # compression = 100.0
 ```
 
-#### Approximator types
+#### Algorithm types
 ##### t-digest
 Proposed by [Dunning & Ertl (2019)][tdigest_paper] this type uses a
 special data-structure to cluster data. These clusters are later used
@@ -41,7 +41,7 @@ to approximate the requested quantiles. The bounds of the approximation
 can be controlled by the `compression` setting where smaller values
 result in higher performance but less accuracy.
 
-Due to its incremental nature, this approximator can handle large
+Due to its incremental nature, this algorithm can handle large
 numbers of samples efficiently.  It is recommended for applications
 where exact quantile calculation isn't required.
 
@@ -51,20 +51,20 @@ For implementation details see the underlying [golang library][tdigest_lib].
 This type "exactly" computes the quantiles according to [Hyndman & Fan (1996) R7][hyndman_fan]
 algorithm. This variant is also used in Excel and NumPy.
 
-This approximator needs to store all seen data in the aggregation `period` and
+This algorithm needs to store all seen data in the aggregation `period` and
 might consume a lot of memory when used with a large number of series or a
 large number of samples. Furthermore, it is very *slow* compared to the `t-digest`
-approximator and therefore **should only be used with small number of samples**.
+algorithm and therefore **should only be used with small number of samples**.
 
 ##### exact R8
 This type "exactly" computes the quantiles according to [Hyndman & Fan (1996) R8][hyndman_fan]
 algorithm. This variant is recommended by Hyndman & Fan in their paper due to
 its independence of the underlying sample distribution.
 
-This approximator needs to store all seen data in the aggregation `period` and
+This algorithm needs to store all seen data in the aggregation `period` and
 might consume a lot of memory when used with a large number of series or a
 large number of samples. Furthermore, it is very *slow* compared to the `t-digest`
-approximator and therefore **should only be used with small number of samples**.
+algorithm and therefore **should only be used with small number of samples**.
 
 
 #### Benchmark (linux/amd64)
@@ -72,7 +72,7 @@ The benchmark was performed by adding 100 metrics with six numeric
 (and two non-numeric) fields to the aggregator and the derive the aggregation
 result.
 
-| approximator  | # quantiles   | avg. runtime  |
+| algorithm  | # quantiles   | avg. runtime  |
 | :------------ | -------------:| -------------:|
 | t-digest      |            3  |  376372 ns/op |
 | exact R7      |            3  | 9782946 ns/op |

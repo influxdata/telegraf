@@ -10,7 +10,7 @@ import (
 type Quantile struct {
 	Quantiles        []float64 `toml:"quantiles"`
 	Compression      float64   `toml:"compression"`
-	ApproximatorType string    `toml:"approximator"`
+	ApproximatorType string    `toml:"algorithm"`
 
 	newApproximator newApproximatorFunc
 
@@ -35,22 +35,22 @@ var sampleConfig = `
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
 
-	## Quantiles to output in the range [0,1]
-	# quantiles = [0.25, 0.5, 0.75]
+  ## Quantiles to output in the range [0,1]
+  # quantiles = [0.25, 0.5, 0.75]
 
-	## Type of approximation
-	## Supported are:
-	##	"t-digest" -- approximation using centroids, can cope with large number of samples
-	##  "exact R7" -- exact approximation also used by Excel or NumPy (Hyndman & Fan 1996 R7)
-	##  "exact R8" -- exact approximation (Hyndman & Fan 1996 R8)
-	## NOTE: Do not use "exact" approximations with large number of samples
-	##       to not impair performance or memory consumption!
-	# approximator = "t-digest"
+  ## Type of aggregation algorithm
+  ## Supported are:
+  ##  "t-digest" -- approximation using centroids, can cope with large number of samples
+  ##  "exact R7" -- exact computation also used by Excel or NumPy (Hyndman & Fan 1996 R7)
+  ##  "exact R8" -- exact computation (Hyndman & Fan 1996 R8)
+  ## NOTE: Do not use "exact" algorithms with large number of samples
+  ##       to not impair performance or memory consumption!
+  # algorithm = "t-digest"
 
-	## Compression for approximation (t-digest). The value needs to be
-	## greater or equal to 1.0. Smaller values will result in more
-	## performance but less accuracy.
-	# compression = 100.0
+  ## Compression for approximation (t-digest). The value needs to be
+  ## greater or equal to 1.0. Smaller values will result in more
+  ## performance but less accuracy.
+  # compression = 100.0
 `
 
 func (q *Quantile) SampleConfig() string {
