@@ -24,7 +24,7 @@ type NewRelic struct {
 	dc          *cumulative.DeltaCalculator
 	savedErrors map[int]interface{}
 	errorCount  int
-	Client      http.Client `toml:"-"`
+	Client      http.Client `toml:"-" json:"-"`
 }
 
 // Description returns a one-sentence description on the Output

@@ -1,0 +1,6 @@
+# Configuration for influxdb server to send metrics to
+[[outputs.influxdb]]
+  # The full HTTP endpoint URL for your InfluxDB instance
+  # Multiple urls can be specified for InfluxDB cluster support. Server to
+  # write to will be randomly chosen each interval.
+  urls = ["http://localhost:8086"] # required.

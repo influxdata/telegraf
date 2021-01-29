@@ -2,9 +2,12 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 	"runtime"
 	"sort"
 	"sync"
@@ -14,18 +17,40 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+
+	"github.com/google/uuid"
 )
 
 // Agent runs a set of plugins.
 type Agent struct {
-	Config *config.Config
+	Config         *config.Config
+	Context        context.Context
+	iu             *inputUnit
+	ou             *outputUnit
+	ic             int
+	oc             int
+	runningPlugins map[string]interface{}
+
+	pluginLock *sync.Mutex
+	icLock     *sync.Mutex
+	ocLock     *sync.Mutex
 }
 
 // NewAgent returns an Agent for the given Config.
 func NewAgent(config *config.Config) (*Agent, error) {
+	runningPlugins := make(map[string]interface{}) // map uuid:plugin
+
 	a := &Agent{
-		Config: config,
+		Config:         config,
+		runningPlugins: runningPlugins,
+		ic:             0,
+		oc:             0,
+		pluginLock:     new(sync.Mutex),
+		icLock:         new(sync.Mutex),
+		ocLock:         new(sync.Mutex),
 	}
 	return a, nil
 }
@@ -40,7 +65,7 @@ func NewAgent(config *config.Config) (*Agent, error) {
 // └───────┘   │
 // ┌───────┐   │
 // │ Input │───┘
-// └───────┘
+//└───────┘
 type inputUnit struct {
 	dst    chan<- telegraf.Metric
 	inputs []*models.RunningInput
@@ -94,8 +119,299 @@ type outputUnit struct {
 	outputs []*models.RunningOutput
 }
 
+// RunSingleInput runs a single input and can be called after an agent is created
+func (a *Agent) RunSingleInput(input *models.RunningInput, ctx context.Context) error {
+
+	// NOTE: we can't just use `defer a.statusMutex.Unlock()` since except for the input validation,
+	// this function only returns once the gatherLoop is done -- i.e. when the plugin is stopped.
+	// Be careful to manually unlock the statusMutex in this function.
+
+	// validating if an input plugin is already running, and therefore shouldn't be run again
+	a.pluginLock.Lock()
+	_, ok := a.runningPlugins[input.UniqueId]
+	a.pluginLock.Unlock()
+
+	if ok {
+		log.Printf("E! [agent] You are trying to run an input that is already running: %s \n", input.Config.Name)
+		return errors.New("you are trying to run an input that is already running")
+	}
+
+	startTime := time.Now()
+
+	if input.UniqueId == "" {
+		uniqueID, err := uuid.NewUUID()
+		if err != nil {
+			return errors.New("errored while generating UUID for new INPUT")
+		}
+		input.UniqueId = uniqueID.String()
+	}
+
+	a.pluginLock.Lock()
+	a.runningPlugins[input.UniqueId] = input
+	a.pluginLock.Unlock()
+
+	// Overwrite agent interval if this plugin has its own.
+	interval := a.Config.Agent.Interval.Duration
+	if input.Config.Interval != 0 {
+		interval = input.Config.Interval
+	}
+
+	// Overwrite agent precision if this plugin has its own.
+	precision := a.Config.Agent.Precision.Duration
+	if input.Config.Precision != 0 {
+		precision = input.Config.Precision
+	}
+
+	// Overwrite agent collection_jitter if this plugin has its own.
+	jitter := a.Config.Agent.CollectionJitter.Duration
+	if input.Config.CollectionJitter != 0 {
+		jitter = input.Config.CollectionJitter
+	}
+
+	var ticker Ticker
+	if a.Config.Agent.RoundInterval {
+		ticker = NewAlignedTicker(startTime, interval, jitter)
+	} else {
+		ticker = NewUnalignedTicker(interval, jitter)
+	}
+
+	acc := NewAccumulator(input, a.iu.dst)
+	acc.SetPrecision(getPrecision(precision, interval))
+
+	a.incrementInputCount(1)
+	go func(input *models.RunningInput) {
+		defer ticker.Stop()
+		a.gatherLoop(ctx, acc, input, ticker, interval)
+		a.incrementInputCount(-1)
+	}(input)
+
+	a.Config.InputsLock.Lock()
+	for _, i := range a.Config.Inputs {
+		if i.UniqueId == input.UniqueId {
+			a.Config.InputsLock.Unlock()
+			return nil
+		}
+	}
+
+	a.Config.Inputs = append(a.Config.Inputs, input)
+	a.Config.InputsLock.Unlock()
+	return nil
+}
+
+// RunSingleOutput runs a single output and can be called after an agent is created
+func (a *Agent) RunSingleOutput(output *models.RunningOutput, ctx context.Context) error {
+	// NOTE: we can't just use `defer a.statusMutex.Unlock()` since except for the output validation,
+	// this function only returns once the gatherLoop is done -- i.e. when the plugin is stopped.
+	// Be careful to manually unlock the statusMutex in this function.
+
+	// validating if an output plugin is already running, and therefore shouldn't be run again
+	a.pluginLock.Lock()
+	_, ok := a.runningPlugins[output.UniqueId]
+	a.pluginLock.Unlock()
+
+	if ok {
+		log.Printf("E! [agent] You are trying to run an output that is already running: %s \n", output.Config.Name)
+		return errors.New("you are trying to run an output that is already running")
+	}
+
+	// Start flush loop
+	interval := a.Config.Agent.FlushInterval.Duration
+	jitter := a.Config.Agent.FlushJitter.Duration
+
+	if output.UniqueId == "" {
+		uniqueID, err := uuid.NewUUID()
+		if err != nil {
+			return errors.New("errored while generating UUID for new INPUT")
+		}
+		output.UniqueId = uniqueID.String()
+	}
+
+	a.pluginLock.Lock()
+	a.runningPlugins[output.UniqueId] = output
+	a.pluginLock.Unlock()
+
+	// Overwrite agent flush_interval if this plugin has its own.
+	if output.Config.FlushInterval != 0 {
+		interval = output.Config.FlushInterval
+	}
+
+	// Overwrite agent flush_jitter if this plugin has its own.
+	if output.Config.FlushJitter != 0 {
+		jitter = output.Config.FlushJitter
+	}
+
+	a.incrementOutputCount(1)
+	go func(output *models.RunningOutput) {
+		ticker := NewRollingTicker(interval, jitter)
+		defer ticker.Stop()
+
+		a.flushLoop(ctx, output, ticker)
+		a.incrementOutputCount(-1)
+	}(output)
+
+	a.Config.OutputsLock.Lock()
+	for _, i := range a.Config.Outputs {
+		if i.UniqueId == output.UniqueId {
+			a.Config.OutputsLock.Unlock()
+			return nil
+		}
+	}
+
+	a.Config.Outputs = append(a.Config.Outputs, output)
+	a.Config.OutputsLock.Unlock()
+	return nil
+}
+
+func (a *Agent) incrementInputCount(by int) {
+	a.icLock.Lock()
+	a.ic += by
+	a.icLock.Unlock()
+}
+
+func (a *Agent) incrementOutputCount(by int) {
+	a.ocLock.Lock()
+	a.oc += by
+	a.ocLock.Unlock()
+}
+
+func GetAllInputPlugins() []string {
+	var res []string
+	for name := range inputs.Inputs {
+		res = append(res, name)
+	}
+	return res
+}
+
+func GetAllOutputPlugins() []string {
+	var res []string
+	for name := range outputs.Outputs {
+		res = append(res, name)
+	}
+	return res
+}
+
+func (a *Agent) GetRunningInputPlugins() []map[string]string {
+	var res []map[string]string
+	a.Config.InputsLock.Lock()
+	for _, runningInput := range a.Config.Inputs {
+		res = append(res, map[string]string{"name": runningInput.Config.Name, "id": runningInput.UniqueId})
+	}
+	a.Config.InputsLock.Unlock()
+	return res
+}
+
+func (a *Agent) GetRunningOutputPlugins() []map[string]string {
+	var res []map[string]string
+	a.Config.OutputsLock.Lock()
+	for _, runningOutput := range a.Config.Outputs {
+		res = append(res, map[string]string{"name": runningOutput.Config.Name, "id": runningOutput.UniqueId})
+	}
+	a.Config.OutputsLock.Unlock()
+	return res
+}
+
+type MapFieldSchema struct {
+	Value interface{}
+	Key   string
+}
+
+type ArrayFieldSchema struct {
+	Value  interface{}
+	Length int // Will be 0 if slice and array length if array
+}
+
+// GetPluginTypes returns a map of a plugin's field names to field value types
+func (a *Agent) GetPluginTypes(p interface{}) (map[string]interface{}, error) {
+
+	data := reflect.ValueOf(p).Elem() // extract Value of type interface{} from Value pointer to interface
+	schema := getFieldType(data.Type())
+
+	s, ok := schema.(map[string]interface{})
+
+	if ok {
+		return s, nil
+	}
+
+	return nil, fmt.Errorf("returned schema is not a map")
+}
+
+func getFieldType(data reflect.Type) interface{} {
+	switch data.Kind() {
+	case reflect.Struct:
+		dataFields := make(map[string]interface{})
+		for i := 0; i < data.NumField(); i++ {
+			field := data.Field(i)
+			if field.PkgPath == "" { // only take exported fields
+				dataFields[field.Name] = getFieldType(field.Type)
+			}
+		}
+		return dataFields
+	case reflect.Array:
+		valueType := getFieldType(data.Elem())
+		return ArrayFieldSchema{valueType, data.Len()}
+	case reflect.Slice:
+		valueType := getFieldType(data.Elem())
+		return ArrayFieldSchema{valueType, 0}
+	case reflect.Map:
+		keyType := data.Key().Name()
+		valueType := getFieldType(data.Elem())
+		return MapFieldSchema{valueType, keyType}
+	default:
+		return data.Kind().String()
+	}
+}
+
+func (a *Agent) GetPluginValues(p interface{}) (map[string]interface{}, error) {
+	data := reflect.ValueOf(p).Elem() // extract Value of type interface{} from Value pointer to interface
+	values := getFieldValue(data)
+	if values == nil {
+		values = make(map[string]interface{})
+	}
+	v, ok := values.(map[string]interface{})
+
+	if ok {
+		return v, nil
+	}
+
+	return nil, fmt.Errorf("returned schema is not a map")
+}
+
+func getFieldValue(data reflect.Value) interface{} {
+	switch data.Kind() {
+	case reflect.Struct:
+		dataFields := make(map[string]interface{})
+		dataType := data.Type()
+		for i := 0; i < data.NumField(); i++ {
+			field := data.Field(i)
+			tField := dataType.Field(i)
+			if tField.PkgPath == "" { // only take exported fields
+				v := getFieldValue(field)
+				if v != nil {
+					dataFields[tField.Name] = v
+				}
+			}
+		}
+		if len(dataFields) == 0 {
+			return nil
+		}
+		return dataFields
+	default:
+		// These data types, false or zero will make isZero true. Don't want to return nil!
+		if data.Kind() == reflect.Bool || data.Kind() == reflect.Int || data.Kind() == reflect.Float32 {
+			return data.Interface()
+		}
+
+		// For more complex data types, we will return nil if empty.
+		if data.IsZero() {
+			return nil
+		}
+		return data.Interface()
+	}
+}
+
 // Run starts and runs the Agent until the context is done.
 func (a *Agent) Run(ctx context.Context) error {
+	a.Context = ctx
 	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s",
 		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
@@ -108,13 +424,12 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 
 	startTime := time.Now()
-
 	log.Printf("D! [agent] Connecting outputs")
 	next, ou, err := a.startOutputs(ctx, a.Config.Outputs)
 	if err != nil {
 		return err
 	}
-
+	a.ou = ou
 	var apu []*processorUnit
 	var au *aggregatorUnit
 	if len(a.Config.Aggregators) != 0 {
@@ -139,8 +454,8 @@ func (a *Agent) Run(ctx context.Context) error {
 			return err
 		}
 	}
-
 	iu, err := a.startInputs(next, a.Config.Inputs)
+	a.iu = iu
 	if err != nil {
 		return err
 	}
@@ -199,6 +514,298 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	log.Printf("D! [agent] Stopped Successfully")
 	return err
+}
+
+// StartInput adds an input plugin with default config
+func (a *Agent) StartInput(ctx context.Context, pluginName string) (string, error) {
+	inputConfig := models.InputConfig{
+		Name: pluginName,
+	}
+
+	input, err := a.CreateInput(pluginName)
+	if err != nil {
+		return "", err
+	}
+
+	uniqueId, err := uuid.NewUUID()
+	if err != nil {
+		return "", errors.New("errored while generating UUID for new INPUT")
+	}
+	ri := models.NewRunningInput(input, &inputConfig, uniqueId.String())
+
+	err = ri.Init()
+	if err != nil {
+		return "", err
+	}
+
+	err = a.RunSingleInput(ri, ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// add new input to inputunit
+	a.iu.inputs = append(a.iu.inputs, ri)
+
+	err = a.Config.UpdateConfig(
+		map[string]interface{}{
+			"unique_id": uniqueId.String(),
+			"name":      pluginName,
+		},
+		uniqueId.String(), "inputs", "START_PLUGIN")
+
+	if err != nil {
+		log.Printf("W! [agent] Unable to save configuration for input %s", uniqueId.String())
+	}
+
+	return uniqueId.String(), nil
+}
+
+// StartOutput adds an output plugin with default config
+func (a *Agent) StartOutput(ctx context.Context, pluginName string) (string, error) {
+	outputConfig := models.OutputConfig{
+		Name: pluginName,
+	}
+
+	output, err := a.CreateOutput(pluginName)
+	if err != nil {
+		return "", err
+	}
+
+	uniqueId, err := uuid.NewUUID()
+	if err != nil {
+		return "", errors.New("errored while generating UUID for new INPUT")
+	}
+
+	ro := models.NewRunningOutput(pluginName, output, &outputConfig,
+		a.Config.Agent.MetricBatchSize, a.Config.Agent.MetricBufferLimit, uniqueId.String())
+
+	err = ro.Init()
+	if err != nil {
+		return "", err
+	}
+
+	err = a.connectOutput(ctx, ro)
+	if err != nil {
+		return "", err
+	}
+
+	err = a.RunSingleOutput(ro, ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// add new output to outputunit
+	a.ou.outputs = append(a.ou.outputs, ro)
+
+	err = a.Config.UpdateConfig(map[string]interface{}{"unique_id": uniqueId.String(), "name": pluginName}, uniqueId.String(), "outputs", "START_PLUGIN")
+	if err != nil {
+		log.Printf("W! [agent] Unable to save configuration for output %s", uniqueId.String())
+	}
+	return uniqueId.String(), nil
+}
+
+// generateTomlKeysMap generates a map with the toml keys for a specific plugin
+func generateTomlKeysMap(structPtr reflect.Value, config map[string]interface{}) (map[string]interface{}, error) {
+	strct := structPtr.Elem()
+	tomlMap := map[string]interface{}{}
+	pType := strct.Type()
+
+	for configKey, configValue := range config {
+		field, found := pType.FieldByName(configKey)
+
+		if !found {
+			return map[string]interface{}{}, fmt.Errorf("field %s did not exist on plugin", configKey)
+		}
+
+		tomlTag := field.Tag.Get("toml")
+		if tomlTag == "" {
+			tomlTag = configKey
+		}
+
+		tomlMap[tomlTag] = configValue
+	}
+
+	return tomlMap, nil
+
+}
+
+// CreateInput creates a new input from the name of an input.
+func (a *Agent) CreateInput(name string) (telegraf.Input, error) {
+	p, exists := inputs.Inputs[name]
+	if exists {
+		return p(), nil
+	}
+	return nil, fmt.Errorf("could not find input plugin with name: %s", name)
+}
+
+// CreateOutput creates a new output from the name of an output.
+func (a *Agent) CreateOutput(name string) (telegraf.Output, error) {
+	p, exists := outputs.Outputs[name]
+	if exists {
+		return p(), nil
+	}
+	return nil, fmt.Errorf("could not find output plugin with name: %s", name)
+}
+
+// GetRunningPlugin gets the values of a running plugin's struct.
+func (a *Agent) GetRunningPlugin(uid string) (map[string]interface{}, error) {
+	a.pluginLock.Lock()
+	obj, exists := a.runningPlugins[uid]
+	a.pluginLock.Unlock()
+	if !exists {
+		return nil, fmt.Errorf("specified plugin is not running")
+	}
+	ri, isRi := obj.(*models.RunningInput)
+	if isRi {
+		return a.GetPluginValues(ri.Input)
+	}
+	ro, isRo := obj.(*models.RunningOutput)
+	if isRo {
+		return a.GetPluginValues(ro.Output)
+	}
+	return nil, fmt.Errorf("invalid running plugin")
+}
+
+// If the config is compatible with the struct, return the JSON vesion of the config.
+func validateStructConfig(structPtr reflect.Value, config map[string]interface{}) ([]byte, error) {
+	strct := structPtr.Elem() // extract Value of type interface{} from Value pointer to interface
+
+	if strct.Kind() == reflect.Struct {
+		// Check for if trying to modify unsettable fields and fields that don't exist.
+		for configKey := range config {
+			pluginField := strct.FieldByName(configKey) // cast new value as Value
+			if !(pluginField.IsValid()) {
+				return nil, fmt.Errorf("invalid field name %s", configKey)
+			} else if !(pluginField.CanSet()) {
+				return nil, fmt.Errorf("unsettable field %s", configKey)
+			}
+		}
+
+		// Creates a copy of the struct and see if JSON Unmarshal works without errors
+		empty := reflect.New(strct.Type())
+		cJSON, err := json.Marshal(config)
+		err = json.Unmarshal(cJSON, empty.Interface())
+		if err != nil {
+			return nil, err
+		}
+		return cJSON, nil
+	}
+
+	return nil, fmt.Errorf("pointer does not point to a struct")
+}
+
+// UpdateInputPlugin gets the config for an input plugin given its name
+func (a *Agent) UpdateInputPlugin(uid string, config map[string]interface{}) (telegraf.Input, error) {
+	a.pluginLock.Lock()
+	plugin, ok := a.runningPlugins[uid]
+	a.pluginLock.Unlock()
+
+	if !ok {
+		log.Printf("E! [agent] You are trying to update an input that does not exist: %s \n", uid)
+		return nil, errors.New("you are trying to update an input that does not exist")
+	}
+
+	input := plugin.(*models.RunningInput)
+
+	// This code creates a copy of the struct and see if JSON Unmarshal works without errors
+	configJSON, err := validateStructConfig(reflect.ValueOf(input.Input), config)
+	if err != nil {
+		return nil, fmt.Errorf("could not update input plugin %s with error: %s", uid, err)
+	}
+
+	tomlMap, err := generateTomlKeysMap(reflect.ValueOf(input.Input), config)
+	if err != nil {
+		return nil, fmt.Errorf("could not update input plugin %s with error: %s", uid, err)
+	}
+
+	if len(a.Config.Inputs) == 1 {
+		a.incrementInputCount(1)
+	}
+
+	err = a.StopInputPlugin(uid, false)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(configJSON, &input.Input)
+	if err != nil {
+		return nil, err
+	}
+
+	ri := models.NewRunningInput(input.Input, input.Config, input.UniqueId)
+	err = a.RunSingleInput(ri, a.Context)
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.Config.UpdateConfig(tomlMap, input.UniqueId, "inputs", "UPDATE_PLUGIN")
+	if err != nil {
+		return nil, fmt.Errorf("could not update input plugin %s with error: %s", uid, err)
+	}
+
+	if len(a.Config.Inputs) == 1 {
+		a.incrementInputCount(-1)
+	}
+
+	return input.Input, nil
+}
+
+// UpdateOutputPlugin gets the config for an output plugin given its name
+func (a *Agent) UpdateOutputPlugin(uid string, config map[string]interface{}) (telegraf.Output, error) {
+	a.pluginLock.Lock()
+	plugin, ok := a.runningPlugins[uid]
+	a.pluginLock.Unlock()
+
+	if !ok {
+		log.Printf("E! [agent] You are trying to update an output that does not exist: %s \n", uid)
+		return nil, errors.New("you are trying to update an output that does not exist")
+	}
+
+	output := plugin.(*models.RunningOutput)
+
+	// This code creates a copy of the struct and see if JSON Unmarshal works without errors
+	configJSON, err := validateStructConfig(reflect.ValueOf(output.Output), config)
+	if err != nil {
+		return nil, fmt.Errorf("could not update output plugin %s with error: %s", uid, err)
+	}
+
+	tomlMap, err := generateTomlKeysMap(reflect.ValueOf(output.Output), config)
+	if err != nil {
+		return nil, fmt.Errorf("could not update output plugin %s with error: %s", uid, err)
+	}
+
+	if len(a.Config.Outputs) == 1 {
+		a.incrementOutputCount(1)
+	}
+
+	err = a.StopOutputPlugin(uid, false)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(configJSON, &output.Output)
+	if err != nil {
+		return nil, err
+	}
+
+	ro := models.NewRunningOutput(output.Config.Name, output.Output, output.Config,
+		a.Config.Agent.MetricBatchSize, a.Config.Agent.MetricBufferLimit, output.UniqueId)
+
+	err = a.RunSingleOutput(ro, a.Context)
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.Config.UpdateConfig(tomlMap, output.UniqueId, "outputs", "UPDATE_PLUGIN")
+	if err != nil {
+		return nil, fmt.Errorf("could not update output plugin %s with error: %s", uid, err)
+	}
+
+	if len(a.Config.Outputs) == 1 {
+		a.incrementOutputCount(-1)
+	}
+
+	return output.Output, nil
 }
 
 // initPlugins runs the Init function on plugins.
@@ -289,53 +896,25 @@ func (a *Agent) runInputs(
 	startTime time.Time,
 	unit *inputUnit,
 ) error {
-	var wg sync.WaitGroup
+
 	for _, input := range unit.inputs {
-		// Overwrite agent interval if this plugin has its own.
-		interval := a.Config.Agent.Interval.Duration
-		if input.Config.Interval != 0 {
-			interval = input.Config.Interval
+		err := a.RunSingleInput(input, ctx)
+		if err != nil {
+			return err
 		}
-
-		// Overwrite agent precision if this plugin has its own.
-		precision := a.Config.Agent.Precision.Duration
-		if input.Config.Precision != 0 {
-			precision = input.Config.Precision
-		}
-
-		// Overwrite agent collection_jitter if this plugin has its own.
-		jitter := a.Config.Agent.CollectionJitter.Duration
-		if input.Config.CollectionJitter != 0 {
-			jitter = input.Config.CollectionJitter
-		}
-
-		var ticker Ticker
-		if a.Config.Agent.RoundInterval {
-			ticker = NewAlignedTicker(startTime, interval, jitter)
-		} else {
-			ticker = NewUnalignedTicker(interval, jitter)
-		}
-		defer ticker.Stop()
-
-		acc := NewAccumulator(input, unit.dst)
-		acc.SetPrecision(getPrecision(precision, interval))
-
-		wg.Add(1)
-		go func(input *models.RunningInput) {
-			defer wg.Done()
-			a.gatherLoop(ctx, acc, input, ticker, interval)
-		}(input)
 	}
 
-	wg.Wait()
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("D! [agent] Stopping service inputs")
+			stopServiceInputs(a.Config.Inputs)
 
-	log.Printf("D! [agent] Stopping service inputs")
-	stopServiceInputs(unit.inputs)
-
-	close(unit.dst)
-	log.Printf("D! [agent] Input channel closed")
-
-	return nil
+			close(unit.dst)
+			log.Printf("D! [agent] Input channel closed")
+			return nil
+		}
+	}
 }
 
 // testStartInputs is a variation of startInputs for use in --test and --once
@@ -414,7 +993,6 @@ func (a *Agent) testRunInputs(
 				if err := input.Input.Gather(nulAcc); err != nil {
 					nulAcc.AddError(err)
 				}
-
 				time.Sleep(500 * time.Millisecond)
 			}
 
@@ -447,6 +1025,71 @@ func stopServiceInputs(inputs []*models.RunningInput) {
 	}
 }
 
+// StopInputPlugin stops an input plugin
+func (a *Agent) StopInputPlugin(uuid string, shouldUpdateConfig bool) error {
+	a.pluginLock.Lock()
+	plugin, ok := a.runningPlugins[uuid].(*models.RunningInput)
+	a.pluginLock.Unlock()
+
+	if !ok {
+		log.Printf("E! [agent] Input %s is not runnning.\n", uuid)
+		return fmt.Errorf("input %s is not runnning", uuid)
+	}
+
+	plugin.Stop()
+
+	if shouldUpdateConfig {
+		err := a.Config.UpdateConfig(map[string]interface{}{}, uuid, "inputs", "STOP_PLUGIN")
+		if err != nil {
+			log.Printf("W! [agent] Unable to update configuration for input plugin %s\n", uuid)
+		}
+	}
+
+	a.Config.InputsLock.Lock()
+	for i, other := range a.Config.Inputs {
+		if other.UniqueId == uuid {
+			a.Config.Inputs = append(a.Config.Inputs[:i], a.Config.Inputs[i+1:]...)
+			a.Config.InputsLock.Unlock()
+			return nil
+		}
+	}
+	a.Config.InputsLock.Unlock()
+
+	return fmt.Errorf("input was not found in running inputs list")
+}
+
+// StopOutputPlugin stops an output plugin
+func (a *Agent) StopOutputPlugin(uuid string, shouldUpdateConfig bool) error {
+	a.pluginLock.Lock()
+	plugin, ok := a.runningPlugins[uuid].(*models.RunningOutput)
+	a.pluginLock.Unlock()
+
+	if !ok {
+		log.Printf("E! [agent] Output %s is not runnning.\n", uuid)
+		return fmt.Errorf("output %s is not runnning", uuid)
+	}
+
+	plugin.Stop()
+
+	if shouldUpdateConfig {
+		err := a.Config.UpdateConfig(map[string]interface{}{}, uuid, "outputs", "STOP_PLUGIN")
+		if err != nil {
+			log.Printf("W! [agent] Unable to update configuration for output plugin %s\n", uuid)
+		}
+	}
+
+	a.Config.OutputsLock.Lock()
+	for i, other := range a.Config.Outputs {
+		if other.UniqueId == uuid {
+			a.Config.Outputs = append(a.Config.Outputs[:i], a.Config.Outputs[i+1:]...)
+			break
+		}
+	}
+	a.Config.OutputsLock.Unlock()
+
+	return nil
+}
+
 // gather runs an input's gather function periodically until the context is
 // done.
 func (a *Agent) gatherLoop(
@@ -460,8 +1103,29 @@ func (a *Agent) gatherLoop(
 
 	for {
 		select {
+		case <-input.ShutdownChan:
+			log.Println("I! [agent] stopping input plugin", input.Config.Name)
+			a.pluginLock.Lock()
+			delete(a.runningPlugins, input.UniqueId)
+			a.pluginLock.Unlock()
+			// delete input from input unit slice
+			for i, io := range a.iu.inputs {
+				if input == io {
+					// swap with last input and truncate slice
+					if len(a.iu.inputs) > 1 {
+						a.iu.inputs[i] = a.iu.inputs[len(a.iu.inputs)-1]
+					}
+					a.iu.inputs = a.iu.inputs[:len(a.iu.inputs)-1]
+					break
+				}
+			}
+			input.Wg.Done()
+			return
 		case <-ticker.Elapsed():
 			err := a.gatherOnce(acc, input, ticker, interval)
+			if err != nil {
+				acc.AddError(err)
+			}
 			if err != nil {
 				acc.AddError(err)
 			}
@@ -704,7 +1368,6 @@ func (a *Agent) startOutputs(
 			}
 			return nil, nil, fmt.Errorf("connecting output %s: %w", output.LogName(), err)
 		}
-
 		unit.outputs = append(unit.outputs, output)
 	}
 
@@ -739,53 +1402,36 @@ func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput)
 func (a *Agent) runOutputs(
 	unit *outputUnit,
 ) error {
-	var wg sync.WaitGroup
-
-	// Start flush loop
-	interval := a.Config.Agent.FlushInterval.Duration
-	jitter := a.Config.Agent.FlushJitter.Duration
-
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	for _, output := range unit.outputs {
-		interval := interval
-		// Overwrite agent flush_interval if this plugin has its own.
-		if output.Config.FlushInterval != 0 {
-			interval = output.Config.FlushInterval
+		err := a.RunSingleOutput(output, ctx)
+		if err != nil {
+			return err
 		}
-
-		jitter := jitter
-		// Overwrite agent flush_jitter if this plugin has its own.
-		if output.Config.FlushJitter != 0 {
-			jitter = output.Config.FlushJitter
-		}
-
-		wg.Add(1)
-		go func(output *models.RunningOutput) {
-			defer wg.Done()
-
-			ticker := NewRollingTicker(interval, jitter)
-			defer ticker.Stop()
-
-			a.flushLoop(ctx, output, ticker)
-		}(output)
 	}
 
 	for metric := range unit.src {
 		for i, output := range unit.outputs {
+			a.Config.OutputsLock.Lock()
 			if i == len(a.Config.Outputs)-1 {
 				output.AddMetric(metric)
 			} else {
 				output.AddMetric(metric.Copy())
 			}
+			a.Config.OutputsLock.Unlock()
 		}
 	}
 
 	log.Println("I! [agent] Hang on, flushing any cached metrics before shutdown")
-	cancel()
-	wg.Wait()
 
-	return nil
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
 // flushLoop runs an output's flush function periodically until the context is
@@ -818,6 +1464,24 @@ func (a *Agent) flushLoop(
 		select {
 		case <-ctx.Done():
 			logError(a.flushOnce(output, ticker, output.Write))
+			return
+		case <-output.ShutdownChan:
+			log.Println("I! [agent] stopping output plugin", output.Config.Name)
+			a.pluginLock.Lock()
+			delete(a.runningPlugins, output.UniqueId)
+			a.pluginLock.Unlock()
+			// delete output from output unit slice
+			for i, ro := range a.ou.outputs {
+				if output == ro {
+					// swap with last output and truncate slice
+					if len(a.ou.outputs) > 1 {
+						a.ou.outputs[i] = a.ou.outputs[len(a.ou.outputs)-1]
+					}
+					a.ou.outputs = a.ou.outputs[:len(a.ou.outputs)-1]
+					break
+				}
+			}
+			output.Close()
 			return
 		case <-ticker.Elapsed():
 			logError(a.flushOnce(output, ticker, output.Write))

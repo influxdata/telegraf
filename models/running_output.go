@@ -49,10 +49,19 @@ type RunningOutput struct {
 
 	BatchReady chan time.Time
 
+	UniqueId     string
+	ShutdownChan chan struct{}
+	Wg           *sync.WaitGroup
+
 	buffer *Buffer
 	log    telegraf.Logger
 
 	aggMutex sync.Mutex
+}
+
+func (ro *RunningOutput) Stop() {
+	ro.ShutdownChan <- struct{}{}
+	ro.Wg.Wait()
 }
 
 func NewRunningOutput(
@@ -61,6 +70,7 @@ func NewRunningOutput(
 	config *OutputConfig,
 	batchSize int,
 	bufferLimit int,
+	uniqueId string,
 ) *RunningOutput {
 	tags := map[string]string{"output": config.Name}
 	if config.Alias != "" {
@@ -87,6 +97,8 @@ func NewRunningOutput(
 		batchSize = DEFAULT_METRIC_BATCH_SIZE
 	}
 
+	runningWg := &sync.WaitGroup{}
+	runningWg.Add(1)
 	ro := &RunningOutput{
 		buffer:            NewBuffer(config.Name, config.Alias, bufferLimit),
 		BatchReady:        make(chan time.Time, 1),
@@ -104,7 +116,10 @@ func NewRunningOutput(
 			"write_time_ns",
 			tags,
 		),
-		log: logger,
+		UniqueId:     uniqueId,
+		ShutdownChan: make(chan struct{}),
+		Wg:           runningWg,
+		log:          logger,
 	}
 
 	return ro
@@ -233,6 +248,7 @@ func (r *RunningOutput) Close() {
 	if err != nil {
 		r.log.Errorf("Error closing output: %v", err)
 	}
+	r.Wg.Done()
 }
 
 func (r *RunningOutput) write(metrics []telegraf.Metric) error {

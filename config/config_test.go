@@ -1,20 +1,28 @@
 package config
 
 import (
+	"io/ioutil"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	// some imports are needed to ensure that configs can be properly serialized
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/cpu"
 	"github.com/influxdata/telegraf/plugins/inputs/exec"
 	"github.com/influxdata/telegraf/plugins/inputs/http_listener_v2"
+	_ "github.com/influxdata/telegraf/plugins/inputs/mem"
 	"github.com/influxdata/telegraf/plugins/inputs/memcached"
 	"github.com/influxdata/telegraf/plugins/inputs/procstat"
 	"github.com/influxdata/telegraf/plugins/outputs/azure_monitor"
 	httpOut "github.com/influxdata/telegraf/plugins/outputs/http"
+	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb"
+	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb_v2"
+	_ "github.com/influxdata/telegraf/plugins/outputs/kafka"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -254,9 +262,11 @@ func TestConfig_BadOrdering(t *testing.T) {
 	// #3444: when not using inline tables, care has to be taken so subsequent configuration
 	// doesn't become part of the table. This is not a bug, but TOML syntax.
 	c := NewConfig()
-	err := c.LoadConfig("./testdata/non_slice_slice.toml")
+	data, err := ioutil.ReadFile("./testdata/non_slice_slice.toml")
+	require.NoError(t, err)
+	err = c.LoadConfigData(data)
 	require.Error(t, err, "bad ordering")
-	assert.Equal(t, "Error loading config file ./testdata/non_slice_slice.toml: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
+	assert.Equal(t, "error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
 }
 
 func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
@@ -277,4 +287,126 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 	azureMonitor, ok = c.Outputs[0].Output.(*azure_monitor.AzureMonitor)
 	assert.Equal(t, "", azureMonitor.NamespacePrefix)
 	assert.Equal(t, true, ok)
+}
+
+func TestConfig_SerializeSameConfig(t *testing.T) {
+	c := NewConfig()
+	err := c.LoadConfig("./testdata/basic_config.toml")
+	assert.NoError(t, err)
+
+	data, err := loadConfig("./testdata/basic_config.toml")
+	assert.NoError(t, err)
+
+	c.serializeConfig(data, "./testdata/new-agent.toml", map[string]interface{}{}, "", "", "")
+
+	c2 := NewConfig()
+	err = c2.LoadConfig("./testdata/new-agent.toml")
+
+	assert.Equal(t, true, reflect.DeepEqual(c.Tags, c2.Tags))
+	assert.Equal(t, len(c.Inputs), len(c2.Inputs))
+	assert.Equal(t, len(c.Outputs), len(c2.Outputs))
+	assert.Equal(t, c.Agent.Interval, c2.Agent.Interval)
+	assert.Equal(t, c.Agent.Debug, c2.Agent.Debug)
+	assert.Equal(t, c.Agent.Hostname, c2.Agent.Hostname)
+
+	os.Remove("./testdata/new-agent.toml")
+	os.Remove("./updated_config.conf")
+}
+
+func TestConfig_SerializeUpdatedConfig(t *testing.T) {
+	c := NewConfig()
+	err := c.LoadConfig("./testdata/basic_config.toml")
+	assert.NoError(t, err)
+
+	data, err := loadConfig("./testdata/basic_config.toml")
+	assert.NoError(t, err)
+
+	updatedConfig := map[string]interface{}{
+		"percpu":   false,
+		"totalcpu": false,
+	}
+
+	// serialize config with cpu input updated
+	c.serializeConfig(data, "./testdata/new-agent.toml", updatedConfig, "cpu_id_1", "inputs", "UPDATE_PLUGIN")
+
+	// reload the updated config
+	c2 := NewConfig()
+	err = c2.LoadConfig("./testdata/new-agent.toml")
+
+	// input was updated, so all counts and other fields should still be same
+	assert.Equal(t, true, reflect.DeepEqual(c.Tags, c2.Tags))
+	assert.Equal(t, len(c.Inputs), len(c2.Inputs))
+	assert.Equal(t, len(c.Outputs), len(c2.Outputs))
+	assert.Equal(t, c.Agent.Interval, c2.Agent.Interval)
+	assert.Equal(t, c.Agent.Debug, c2.Agent.Debug)
+	assert.Equal(t, c.Agent.Hostname, c2.Agent.Hostname)
+
+	oldCPUPlugin := c.Inputs[0].Input.(*cpu.CPUStats)
+	newCPUPlugin := c2.Inputs[0].Input.(*cpu.CPUStats)
+
+	// values should be different after being updated
+	assert.NotEqual(t, oldCPUPlugin.PerCPU, newCPUPlugin.PerCPU)
+	assert.NotEqual(t, oldCPUPlugin.TotalCPU, newCPUPlugin.TotalCPU)
+
+	os.Remove("./testdata/new-agent.toml")
+	os.Remove("./updated_config.conf")
+}
+
+func TestConfig_SerializeStoppedPluginConfig(t *testing.T) {
+	c := NewConfig()
+	err := c.LoadConfig("./testdata/basic_config.toml")
+	assert.NoError(t, err)
+
+	data, err := loadConfig("./testdata/basic_config.toml")
+	assert.NoError(t, err)
+
+	c.serializeConfig(data, "./testdata/new-agent.toml", map[string]interface{}{}, "influxdb_v2_id", "outputs", "STOP_PLUGIN")
+
+	c2 := NewConfig()
+	err = c2.LoadConfig("./testdata/new-agent.toml")
+
+	// new config should have one less output since it was stopped
+	assert.Equal(t, len(c.Outputs), len(c2.Outputs)+1)
+
+	// all other fields should still be the same
+	assert.Equal(t, true, reflect.DeepEqual(c.Tags, c2.Tags))
+	assert.Equal(t, len(c.Inputs), len(c2.Inputs))
+	assert.Equal(t, c.Agent.Interval, c2.Agent.Interval)
+	assert.Equal(t, c.Agent.Debug, c2.Agent.Debug)
+	assert.Equal(t, c.Agent.Hostname, c2.Agent.Hostname)
+
+	os.Remove("./testdata/new-agent.toml")
+	os.Remove("./updated_config.conf")
+}
+
+func TestConfig_SerializeStartedPluginConfig(t *testing.T) {
+	c := NewConfig()
+	err := c.LoadConfig("./testdata/basic_config.toml")
+	assert.NoError(t, err)
+
+	data, err := loadConfig("./testdata/basic_config.toml")
+	assert.NoError(t, err)
+
+	uniqueId := "123"
+	c.serializeConfig(data, "./testdata/new-agent.toml",
+		map[string]interface{}{
+			"unique_id": uniqueId,
+			"name":      "mem",
+		}, uniqueId, "inputs", "START_PLUGIN")
+
+	c2 := NewConfig()
+	err = c2.LoadConfig("./testdata/new-agent.toml")
+
+	// new config should have one more input since mem was started
+	assert.Equal(t, len(c.Inputs)+1, len(c2.Inputs))
+
+	// all other fields should still be the same
+	assert.Equal(t, true, reflect.DeepEqual(c.Tags, c2.Tags))
+	assert.Equal(t, len(c.Outputs), len(c2.Outputs))
+	assert.Equal(t, c.Agent.Interval, c2.Agent.Interval)
+	assert.Equal(t, c.Agent.Debug, c2.Agent.Debug)
+	assert.Equal(t, c.Agent.Hostname, c2.Agent.Hostname)
+
+	os.Remove("./testdata/new-agent.toml")
+	os.Remove("./updated_config.conf")
 }

@@ -47,8 +47,8 @@ type HTTPListenerV2 struct {
 	HTTPHeaderTags map[string]string `toml:"http_header_tags"`
 	tlsint.ServerConfig
 
-	TimeFunc
-	Log telegraf.Logger
+	TimeFunc `json:"-"`
+	Log      telegraf.Logger
 
 	wg sync.WaitGroup
 

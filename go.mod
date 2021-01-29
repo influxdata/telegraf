@@ -64,8 +64,10 @@ require (
 	github.com/golang/snappy v0.0.1
 	github.com/google/go-cmp v0.5.2
 	github.com/google/go-github/v32 v32.1.0
+	github.com/google/uuid v1.1.2
 	github.com/gopcua/opcua v0.1.12
 	github.com/gorilla/mux v1.6.2
+	github.com/gorilla/websocket v1.4.2
 	github.com/gosnmp/gosnmp v1.29.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect

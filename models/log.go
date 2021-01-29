@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"log"
 	"reflect"
 
@@ -11,6 +12,10 @@ import (
 type Logger struct {
 	OnErrs []func()
 	Name   string // Name is the plugin name, will be printed in the `[]`.
+}
+
+func (logger Logger) MarshalJSON() ([]byte, error) {
+	return json.Marshal(nil)
 }
 
 // NewLogger creates a new logger instance

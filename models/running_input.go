@@ -1,6 +1,7 @@
 package models
 
 import (
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -21,9 +22,18 @@ type RunningInput struct {
 
 	MetricsGathered selfstat.Stat
 	GatherTime      selfstat.Stat
+
+	UniqueId     string
+	ShutdownChan chan struct{}
+	Wg           *sync.WaitGroup
 }
 
-func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
+func (ri *RunningInput) Stop() {
+	ri.ShutdownChan <- struct{}{}
+	ri.Wg.Wait()
+}
+
+func NewRunningInput(input telegraf.Input, config *InputConfig, uniqueId string) *RunningInput {
 	tags := map[string]string{"input": config.Name}
 	if config.Alias != "" {
 		tags["alias"] = config.Alias
@@ -37,6 +47,8 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 	})
 	SetLoggerOnPlugin(input, logger)
 
+	runningWg := &sync.WaitGroup{}
+	runningWg.Add(1)
 	return &RunningInput{
 		Input:  input,
 		Config: config,
@@ -50,7 +62,10 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 			"gather_time_ns",
 			tags,
 		),
-		log: logger,
+		UniqueId:     uniqueId,
+		ShutdownChan: make(chan struct{}),
+		Wg:           runningWg,
+		log:          logger,
 	}
 }
 

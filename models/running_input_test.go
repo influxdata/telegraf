@@ -19,7 +19,7 @@ func TestMakeMetricFilterAfterApplyingGlobalTags(t *testing.T) {
 		Filter: Filter{
 			TagInclude: []string{"b"},
 		},
-	})
+	}, "123")
 	require.NoError(t, ri.Config.Filter.Compile())
 	ri.SetDefaultTags(map[string]string{"a": "x", "b": "y"})
 
@@ -50,7 +50,7 @@ func TestMakeMetricNoFields(t *testing.T) {
 	now := time.Now()
 	ri := NewRunningInput(&testInput{}, &InputConfig{
 		Name: "TestRunningInput",
-	})
+	}, "123")
 
 	m, err := metric.New("RITest",
 		map[string]string{},
@@ -67,7 +67,7 @@ func TestMakeMetricNilFields(t *testing.T) {
 	now := time.Now()
 	ri := NewRunningInput(&testInput{}, &InputConfig{
 		Name: "TestRunningInput",
-	})
+	}, "123")
 
 	m, err := metric.New("RITest",
 		map[string]string{},
@@ -99,7 +99,7 @@ func TestMakeMetricWithPluginTags(t *testing.T) {
 		Tags: map[string]string{
 			"foo": "bar",
 		},
-	})
+	}, "123")
 
 	m := testutil.MustMetric("RITest",
 		map[string]string{},
@@ -131,7 +131,7 @@ func TestMakeMetricFilteredOut(t *testing.T) {
 			"foo": "bar",
 		},
 		Filter: Filter{NamePass: []string{"foobar"}},
-	})
+	}, "123")
 
 	assert.NoError(t, ri.Config.Filter.Compile())
 
@@ -151,7 +151,7 @@ func TestMakeMetricWithDaemonTags(t *testing.T) {
 	now := time.Now()
 	ri := NewRunningInput(&testInput{}, &InputConfig{
 		Name: "TestRunningInput",
-	})
+	}, "123")
 	ri.SetDefaultTags(map[string]string{
 		"foo": "bar",
 	})
@@ -182,7 +182,7 @@ func TestMakeMetricNameOverride(t *testing.T) {
 	ri := NewRunningInput(&testInput{}, &InputConfig{
 		Name:         "TestRunningInput",
 		NameOverride: "foobar",
-	})
+	}, "123")
 
 	m, err := metric.New("RITest",
 		map[string]string{},
@@ -209,7 +209,7 @@ func TestMakeMetricNamePrefix(t *testing.T) {
 	ri := NewRunningInput(&testInput{}, &InputConfig{
 		Name:              "TestRunningInput",
 		MeasurementPrefix: "foobar_",
-	})
+	}, "123")
 
 	m, err := metric.New("RITest",
 		map[string]string{},
@@ -236,7 +236,7 @@ func TestMakeMetricNameSuffix(t *testing.T) {
 	ri := NewRunningInput(&testInput{}, &InputConfig{
 		Name:              "TestRunningInput",
 		MeasurementSuffix: "_foobar",
-	})
+	}, "123")
 
 	m, err := metric.New("RITest",
 		map[string]string{},
@@ -261,7 +261,7 @@ func TestMakeMetricNameSuffix(t *testing.T) {
 func TestMetricErrorCounters(t *testing.T) {
 	ri := NewRunningInput(&testInput{}, &InputConfig{
 		Name: "TestMetricErrorCounters",
-	})
+	}, "123")
 
 	getGatherErrors := func() int64 {
 		for _, r := range selfstat.Metrics() {
