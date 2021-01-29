@@ -20,9 +20,6 @@ This plugin sends logs to Loki, using tags as labels and one field as log line
   ## Additional HTTP headers
   # http_headers = {"X-Scope-OrgID" = "1"}
 
-  ## The field containing the log
-  # field_line = "log"
-
   ## If the request must be gzip encoded
   # gzip_request = false
 
