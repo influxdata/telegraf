@@ -41,8 +41,9 @@ to approximate the requested quantiles. The bounds of the approximation
 can be controlled by the `compression` setting where smaller values
 result in higher performance but less accuracy.
 
-Due to its incremental nature, this approximatore can cope with large
-numbers of samples and is therefor **recommended**.
+Due to its incremental nature, this approximator can handle large
+numbers of samples efficiently.  It is recommended for applications
+where exact quantile calculation isn't required.
 
 For implementation details see the underlying [a golang library][tdigest_lib].
 
