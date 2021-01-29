@@ -110,8 +110,8 @@ and the default setting for `quantiles ` you get the following *output*
   - maximum_response_ms_050 (float64)
   - maximum_response_ms_075 (float64)
 
-As you can see `status` and `ok` are dropped due to their type. Furthermore,
-the number of resulting fields scales with the number of `quantiles` specified.
+The `status` and `ok` fields are dropped because they are not numeric.  Note that the
+number of resulting fields scales with the number of `quantiles` specified.
 
 ### Tags
 
