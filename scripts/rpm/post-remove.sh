@@ -15,7 +15,7 @@ function disable_chkconfig {
     rm -f /etc/init.d/telegraf
 }
 
-function disable_systemd_or_chkonfig {
+function disable_systemd_or_chkconfig {
     # RHEL-variant logic
     if [[ "$1" = "0" ]]; then
         # InfluxDB is no longer installed, remove from init system
@@ -31,7 +31,7 @@ function disable_systemd_or_chkonfig {
 }
 
 if [[ -f /etc/redhat-release ]] || [[ -f /etc/SuSE-release ]]; then
-    disable_systemd_or_chkonfig
+    disable_systemd_or_chkconfig
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
     if [[ "$ID" = "amzn" ]] && [[ "$1" = "0" ]]; then
@@ -49,6 +49,6 @@ elif [[ -f /etc/os-release ]]; then
         rm -f /etc/default/telegraf
         disable_systemd /usr/lib/systemd/system/telegraf.service
     elif [[ "$NAME" = "SLES" ]]; then
-        disable_systemd_or_chkonfig
+        disable_systemd_or_chkconfig
     fi
 fi
