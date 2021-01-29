@@ -45,7 +45,7 @@ Due to its incremental nature, this approximator can handle large
 numbers of samples efficiently.  It is recommended for applications
 where exact quantile calculation isn't required.
 
-For implementation details see the underlying [a golang library][tdigest_lib].
+For implementation details see the underlying [golang library][tdigest_lib].
 
 ##### exact R7
 This type "exactly" computes the quantiles according to [Hyndman & Fan (1996) R7][hyndman_fan]
