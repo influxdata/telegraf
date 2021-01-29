@@ -14,7 +14,7 @@ type event struct {
 	Data        data   `json:"data"`
 	TTL         int    `json:"ttl"`
 	PublishedAt string `json:"published_at"`
-	Database    string `json:"measurement"`
+	Measurement string `json:"measurement"`
 }
 
 type data struct {
@@ -59,6 +59,12 @@ func (rb *ParticleWebhook) eventHandler(w http.ResponseWriter, r *http.Request) 
 		pTime = time.Now()
 	}
 
-	rb.acc.AddFields(e.Name, e.Data.Fields, e.Data.Tags, pTime)
+	// Use 'measurement' event field as the measurement, or default to the event name.
+	measurementName := e.Measurement
+	if measurementName == "" {
+		measurementName = e.Name
+	}
+
+	rb.acc.AddFields(measurementName, e.Data.Fields, e.Data.Tags, pTime)
 	w.WriteHeader(http.StatusOK)
 }
