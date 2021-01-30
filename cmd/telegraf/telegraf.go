@@ -107,12 +107,10 @@ func reloadLoop(
 				cancel()
 			}
 		}()
-		if ag != nil {
-			if ag.Config != nil {
-				for idx := range ag.Config.Outputs {
-					log.Printf("I! Closing running input: %s", ag.Config.Outputs[idx].LogName())
-					ag.Config.Outputs[idx].Close()
-				}
+		if ag != nil && ag.Config != nil {
+			for idx := range ag.Config.Outputs {
+				log.Printf("I! Closing running output: %s", ag.Config.Outputs[idx].LogName())
+				ag.Config.Outputs[idx].Close()
 			}
 		}
 		var err error
