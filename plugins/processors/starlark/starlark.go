@@ -38,8 +38,9 @@ def apply(metric):
 )
 
 type Starlark struct {
-	Source string `toml:"source"`
-	Script string `toml:"script"`
+	Source    string                 `toml:"source"`
+	Script    string                 `toml:"script"`
+	Constants map[string]interface{} `toml:"constants"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -47,7 +48,6 @@ type Starlark struct {
 	applyFunc *starlark.Function
 	args      starlark.Tuple
 	results   []telegraf.Metric
-	constants map[string]interface{} `toml:"constants"`
 }
 
 func (s *Starlark) Init() error {
@@ -208,38 +208,12 @@ func (s *Starlark) Stop() error {
 
 // Add all the constants defined in the plugin as constants of the script
 func (s *Starlark) addConstants(builtins *starlark.StringDict) {
-	for key, val := range s.constants {
-		(*builtins)[key] = s.toValue(val)
-	}
-}
-
-// Convert the given value into a Starlark value
-func (s *Starlark) toValue(original interface{}) starlark.Value {
-	switch v := original.(type) {
-	case []interface{}:
-		length := len(v)
-		array := make([]starlark.Value, length)
-		for i := 0; i < length; i++ {
-			array[i] = s.toValue(v[i])
+	for key, val := range s.Constants {
+		sVal, err := asStarlarkValue(val)
+		if err != nil {
+			s.Log.Errorf("Unsupported type: %T", val)
 		}
-		return starlark.NewList(array)
-	case map[interface{}]interface{}:
-		dict := starlark.NewDict(len(v))
-		for key, val := range v {
-			dict.SetKey(s.toValue(key), s.toValue(val))
-		}
-		return dict
-	case string:
-		return starlark.String(v)
-	case bool:
-		return starlark.Bool(v)
-	case int:
-		return starlark.MakeInt(v)
-	case float64:
-		return starlark.Float(v)
-	default:
-		s.Log.Errorf("Unsupported type: %T", v)
-		return starlark.None
+		(*builtins)[key] = sVal
 	}
 }
 

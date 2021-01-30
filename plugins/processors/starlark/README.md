@@ -204,7 +204,7 @@ So for example, assuming that you have the next configuration:
     somecustomstr = "mycustomfield"
 ```
 
-Your script could then use the constants defined in the configuration as next:
+Your script could then use the constants defined in the configuration as follows:
 
 ```python
 def apply(metric):
