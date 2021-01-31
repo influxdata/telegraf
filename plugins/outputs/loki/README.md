@@ -1,17 +1,21 @@
 # Loki Output Plugin
 
-This plugin sends logs to Loki, using tags as labels and one field as log line 
+This plugin sends logs to Loki, using tags as labels, 
+log line will content all fields in `key="value"` format which is easily parsable with `logfmt` parser in Loki.
 
 ### Configuration:
 
 ```toml
 # A plugin that can transmit logs to Loki
 [[outputs.loki]]
-  ## Connection timeout, defaults to "5s" if not set.
-  timeout = "5s"
+  ## The domain of Loki
+  domain = "https://loki.domain.tld"
 
-  ## The URL of Loki
-  # url = "https://loki.domain.tld"
+  ## Endpoint to write api
+  # endpoint = "/loki/api/v1/push"
+
+  ## Connection timeout, defaults to "5s" if not set.
+  # timeout = "5s"
 
   ## Basic auth credential
   # username = "loki"
@@ -26,5 +30,5 @@ This plugin sends logs to Loki, using tags as labels and one field as log line
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"  
+  # tls_key = "/etc/telegraf/key.pem"
 ```
