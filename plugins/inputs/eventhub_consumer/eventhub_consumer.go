@@ -146,7 +146,7 @@ func (*EventHub) SampleConfig() string {
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "json"
+  data_format = "influx"
   `
 }
 
