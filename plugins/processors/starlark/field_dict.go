@@ -241,9 +241,9 @@ func asStarlarkValue(value interface{}) (starlark.Value, error) {
 		return dict, nil
 	case reflect.Float32, reflect.Float64:
 		return starlark.Float(v.Float()), nil
-	case reflect.Int, reflect.Int8, reflect.Int32, reflect.Int64:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return starlark.MakeInt64(v.Int()), nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return starlark.MakeUint64(v.Uint()), nil
 	case reflect.String:
 		return starlark.String(v.String()), nil
