@@ -1268,7 +1268,14 @@ func (c *Config) buildParser(name string, tbl *ast.Table) (parsers.Parser, error
 	if err != nil {
 		return nil, err
 	}
-	return parsers.NewParser(config)
+	parser, err := parsers.NewParser(config)
+	if err != nil {
+		return nil, err
+	}
+	logger := models.NewLogger("parsers", config.DataFormat, name)
+	models.SetLoggerOnPlugin(parser, logger)
+
+	return parser, nil
 }
 
 func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
