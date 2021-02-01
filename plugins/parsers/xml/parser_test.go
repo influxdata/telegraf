@@ -1079,9 +1079,11 @@ func TestEmptySelection(t *testing.T) {
 		},
 	}
 
+	logger := testutil.Logger{Name: "parsers.xml"}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: map[string]string{}}
+			parser := &Parser{Configs: tt.configs, DefaultTags: map[string]string{}, Log: logger}
 
 			_, err := parser.Parse([]byte(tt.input))
 			require.Error(t, err)
