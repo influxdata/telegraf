@@ -1352,6 +1352,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 				c.getFieldBool(subtbl, "field_name_expansion", &subcfg.FieldNameExpand)
 				c.getFieldString(subtbl, "field_name", &subcfg.FieldNameQuery)
 				c.getFieldString(subtbl, "field_value", &subcfg.FieldValueQuery)
+				pc.XMLConfig[i] = subcfg
 			}
 		}
 	}
