@@ -16,6 +16,7 @@ import (
 type Parser struct {
 	Configs     []Config
 	DefaultTags map[string]string
+	Log         telegraf.Logger
 }
 
 type Config struct {
@@ -54,6 +55,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			return nil, err
 		}
 		if len(selectedNodes) < 1 || selectedNodes[0] == nil {
+			p.debugEmptyQuery("metric selection", doc, config.Selection)
 			return nil, fmt.Errorf("cannot parse with empty selection node")
 		}
 
@@ -91,6 +93,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				return nil, err
 			}
 			if len(selectedNodes) < 1 || selectedNodes[0] == nil {
+				p.debugEmptyQuery("metric selection", doc, config.Selection)
 				return nil, fmt.Errorf("cannot parse line with empty selection")
 			} else if len(selectedNodes) != 1 {
 				return nil, fmt.Errorf("cannot parse line with multiple selected nodes (%d)", len(selectedNodes))
@@ -276,6 +279,8 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 
 				fields[path] = v
 			}
+		} else {
+			p.debugEmptyQuery("field selection", selected, config.FieldSelection)
 		}
 	}
 
@@ -333,4 +338,85 @@ func executeQuery(doc, selected *xmlquery.Node, query string) (r interface{}, er
 	}
 
 	return r, nil
+}
+
+func splitLastPathElement(query string) []string {
+	// This is a rudimentary xpath-parser that splits the path
+	// into the last path element and the remaining path-part.
+	// The last path element is then further splitted into
+	// parts such as attributes or selectors. Each returned
+	// element is a full path!
+
+	// Nothing left
+	if query == "" || query == "/" || query == "//" || query == "." {
+		return []string{}
+	}
+
+	seperatorIdx := strings.LastIndex(query, "/")
+	if seperatorIdx < 0 {
+		query = "./" + query
+		seperatorIdx = 1
+	}
+
+	// For double slash we want to split at the first slash
+	if seperatorIdx > 0 && query[seperatorIdx-1] == byte('/') {
+		seperatorIdx--
+	}
+
+	base := query[:seperatorIdx]
+	if base == "" {
+		base = "/"
+	}
+
+	elements := make([]string, 1)
+	elements[0] = base
+
+	offset := seperatorIdx
+	if i := strings.Index(query[offset:], "::"); i >= 0 {
+		// Check for axis operator
+		offset += i
+		elements = append(elements, query[:offset]+"::*")
+	}
+
+	if i := strings.Index(query[offset:], "["); i >= 0 {
+		// Check for predicates
+		offset += i
+		elements = append(elements, query[:offset])
+	} else if i := strings.Index(query[offset:], "@"); i >= 0 {
+		// Check for attributes
+		offset += i
+		elements = append(elements, query[:offset])
+	}
+
+	return elements
+}
+
+func (p *Parser) debugEmptyQuery(operation string, root *xmlquery.Node, initialquery string) {
+	if p.Log == nil {
+		return
+	}
+
+	query := initialquery
+
+	// We already know that the
+	p.Log.Debugf("got 0 nodes for query %q in %s", query, operation)
+	for {
+		parts := splitLastPathElement(query)
+		if len(parts) < 1 {
+			return
+		}
+		for i := len(parts) - 1; i >= 0; i-- {
+			q := parts[i]
+			nodes, err := xmlquery.QueryAll(root, q)
+			if err != nil {
+				p.Log.Debugf("executing query %q in %s failed: %v", q, operation, err)
+				return
+			}
+			p.Log.Debugf("got %d nodes for query %q in %s", len(nodes), q, operation)
+			if len(nodes) > 0 && nodes[0] != nil {
+				return
+			}
+			query = parts[0]
+		}
+	}
 }

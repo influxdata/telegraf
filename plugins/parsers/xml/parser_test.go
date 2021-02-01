@@ -125,7 +125,7 @@ func TestParseInvalidXML(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{tt.configs, tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
 
 			_, err := parser.ParseLine(tt.input)
 			require.Error(t, err)
@@ -161,7 +161,7 @@ func TestInvalidTypeQueriesFail(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{tt.configs, tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
 
 			_, err := parser.ParseLine(tt.input)
 			require.Error(t, err)
@@ -226,7 +226,7 @@ func TestInvalidTypeQueries(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{tt.configs, tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -355,7 +355,7 @@ func TestParseTimestamps(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{tt.configs, tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -559,7 +559,7 @@ func TestParseSingleValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{tt.configs, tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -770,7 +770,7 @@ func TestParseSingleAttributes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{tt.configs, tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -856,7 +856,7 @@ func TestParseMultiValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{tt.configs, tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -968,7 +968,7 @@ func TestParseMultiNodes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{tt.configs, tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
 
 			actual, err := parser.Parse([]byte(tt.input))
 			require.NoError(t, err)
@@ -1013,12 +1013,79 @@ func TestParseMetricQuery(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{tt.configs, tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
 
 			testutil.RequireMetricEqual(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestEmptySelection(t *testing.T) {
+	var tests = []struct {
+		name    string
+		input   string
+		configs []Config
+	}{
+		{
+			name:  "empty path",
+			input: multipleNodesXML,
+			configs: []Config{
+				{
+					Selection: "/Device/NonExisting",
+					Fields:    map[string]string{"value": "number(Value)"},
+					FieldsInt: map[string]string{"mode": "Value/@mode"},
+					Tags:      map[string]string{},
+				},
+			},
+		},
+		{
+			name:  "empty pattern",
+			input: multipleNodesXML,
+			configs: []Config{
+				{
+					Selection: "//NonExisting",
+					Fields:    map[string]string{"value": "number(Value)"},
+					FieldsInt: map[string]string{"mode": "Value/@mode"},
+					Tags:      map[string]string{},
+				},
+			},
+		},
+		{
+			name:  "empty axis",
+			input: multipleNodesXML,
+			configs: []Config{
+				{
+					Selection: "/Device/child::NonExisting",
+					Fields:    map[string]string{"value": "number(Value)"},
+					FieldsInt: map[string]string{"mode": "Value/@mode"},
+					Tags:      map[string]string{},
+				},
+			},
+		},
+		{
+			name:  "empty predicate",
+			input: multipleNodesXML,
+			configs: []Config{
+				{
+					Selection: "/Device[@NonExisting=true]",
+					Fields:    map[string]string{"value": "number(Value)"},
+					FieldsInt: map[string]string{"mode": "Value/@mode"},
+					Tags:      map[string]string{},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := &Parser{Configs: tt.configs, DefaultTags: map[string]string{}}
+
+			_, err := parser.Parse([]byte(tt.input))
+			require.Error(t, err)
+			require.Equal(t, err.Error(), "cannot parse with empty selection node")
 		})
 	}
 }
