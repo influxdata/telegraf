@@ -1196,6 +1196,17 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		name = "diskio"
 	}
 
+	// For inputs with parsers we need to compute the set of
+	// options that is not covered by both, the parser and the input.
+	// We achieve this by keeping a local book of missing entries
+	// that counts the number of misses. In case we have a parser
+	// for the input both need to miss the entry. We count the
+	// missing entries at the end.
+	missThreshold := 0
+	missCount := make(map[string]int, 0)
+	c.setLocalMissingTomlFieldTracker(missCount)
+	defer c.resetMissingTomlFieldTracker()
+
 	creator, ok := inputs.Inputs[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -1211,14 +1222,22 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// If the input has a SetParser function, then this means it can accept
 	// arbitrary types of input, so build the parser and set it.
 	if t, ok := input.(parsers.ParserInput); ok {
-		parser, err := c.buildParserOld(name, table)
+		missThreshold = 1
+		parser, err := c.addParser(name, table)
 		if err != nil {
-			return err
+			missThreshold = 0
+			// Fallback to the old way of instantiating the parsers.
+			parser, err = c.buildParserOld(name, table)
+			if err != nil {
+				return err
+			}
 		}
 		t.SetParser(parser)
 	}
 
 	if t, ok := input.(parsers.ParserFuncInput); ok {
+		// TODO: Implement new way of instating parsers
+		missThreshold = 0
 		config, err := c.getParserConfig(name, table)
 		if err != nil {
 			return err
@@ -1255,6 +1274,17 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	rp := models.NewRunningInput(input, pluginConfig)
 	rp.SetDefaultTags(c.Tags)
 	c.Inputs = append(c.Inputs, rp)
+
+	// Check the number of misses against the threshold
+	for key, count := range missCount {
+		if count <= missThreshold {
+			continue
+		}
+		if err := c.missingTomlField(nil, key); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
