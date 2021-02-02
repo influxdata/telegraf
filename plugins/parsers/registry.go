@@ -22,6 +22,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/xpath"
 )
 
+type Creator func(defaultMetricName string) telegraf.Parser
+
+var Parsers = map[string]Creator{}
+
+func Add(name string, creator Creator) {
+	fmt.Printf("[parser registry] adding %v\n", name)
+	Parsers[name] = creator
+}
+
+type Parser telegraf.Parser
+
 type ParserFunc func() (Parser, error)
 
 // ParserInput is an interface for input plugins that are able to parse
@@ -36,30 +47,6 @@ type ParserInput interface {
 type ParserFuncInput interface {
 	// SetParserFunc returns a new parser.
 	SetParserFunc(fn ParserFunc)
-}
-
-// Parser is an interface defining functions that a parser plugin must satisfy.
-type Parser interface {
-	// Parse takes a byte buffer separated by newlines
-	// ie, `cpu.usage.idle 90\ncpu.usage.busy 10`
-	// and parses it into telegraf metrics
-	//
-	// Must be thread-safe.
-	Parse(buf []byte) ([]telegraf.Metric, error)
-
-	// ParseLine takes a single string metric
-	// ie, "cpu.usage.idle 90"
-	// and parses it into a telegraf metric.
-	//
-	// Must be thread-safe.
-	// This function is only called by plugins that expect line based protocols
-	// Doesn't need to be implemented by non-linebased parsers (e.g. json, xml)
-	ParseLine(line string) (telegraf.Metric, error)
-
-	// SetDefaultTags tells the parser to add all of the given tags
-	// to each parsed metric.
-	// NOTE: do _not_ modify the map after you've passed it here!!
-	SetDefaultTags(tags map[string]string)
 }
 
 // Config is a struct that covers the data types needed for all parser types,
