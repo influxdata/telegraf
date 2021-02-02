@@ -8,12 +8,12 @@ import (
 )
 
 type RunningParser struct {
-	Parser      telegraf.Parser
-	Config      *ParserConfig
-	log         telegraf.Logger
+	Parser telegraf.Parser
+	Config *ParserConfig
+	log    telegraf.Logger
 
-	MetricsParsed   selfstat.Stat
-	ParseTime       selfstat.Stat
+	MetricsParsed selfstat.Stat
+	ParseTime     selfstat.Stat
 }
 
 func NewRunningParser(parser telegraf.Parser, config *ParserConfig) *RunningParser {
@@ -48,10 +48,10 @@ func NewRunningParser(parser telegraf.Parser, config *ParserConfig) *RunningPars
 
 // ParserConfig is the common config for all parsers.
 type ParserConfig struct {
-	Parent       string
-	Alias        string
-	DataFormat   string
-	DefaultTags  map[string]string
+	Parent      string
+	Alias       string
+	DataFormat  string
+	DefaultTags map[string]string
 }
 
 func (r *RunningParser) LogName() string {
