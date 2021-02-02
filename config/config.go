@@ -1059,6 +1059,29 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 	return nil
 }
 
+func (c *Config) addParser(parentname string, table *ast.Table) (telegraf.Parser, error) {
+	var dataformat string
+	c.getFieldString(table, "data_format", &dataformat)
+
+	creator, ok := parsers.Parsers[dataformat]
+	if !ok {
+		return nil, fmt.Errorf("Undefined but requested parser: %s", dataformat)
+	}
+	parser := creator(parentname)
+
+	conf, err := c.buildParser(parentname, table)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.toml.UnmarshalTable(table, parser); err != nil {
+		return nil, err
+	}
+
+	c.Parsers = append(c.Parsers, models.NewRunningParser(parser, conf))
+	return parser, nil
+}
+
 func (c *Config) addProcessor(name string, table *ast.Table) error {
 	creator, ok := processors.Processors[name]
 	if !ok {
@@ -1188,7 +1211,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// If the input has a SetParser function, then this means it can accept
 	// arbitrary types of input, so build the parser and set it.
 	if t, ok := input.(parsers.ParserInput); ok {
-		parser, err := c.buildParser(name, table)
+		parser, err := c.buildParserOld(name, table)
 		if err != nil {
 			return err
 		}
@@ -1273,6 +1296,21 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 	if err != nil {
 		return conf, err
 	}
+	return conf, nil
+}
+
+// buildParser parses Parser specific items from the ast.Table,
+// builds the filter and returns a
+// models.ParserConfig to be inserted into models.RunningParser
+func (c *Config) buildParser(name string, tbl *ast.Table) (*models.ParserConfig, error) {
+	var dataformat string
+	c.getFieldString(tbl, "data_format", &dataformat)
+
+	conf := &models.ParserConfig{
+		Parent: name,
+		DataFormat: dataformat,
+	}
+
 	return conf, nil
 }
 
@@ -1364,10 +1402,10 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	return cp, nil
 }
 
-// buildParser grabs the necessary entries from the ast.Table for creating
+// buildParserOld grabs the necessary entries from the ast.Table for creating
 // a parsers.Parser object, and creates it, which can then be added onto
 // an Input object.
-func (c *Config) buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
+func (c *Config) buildParserOld(name string, tbl *ast.Table) (parsers.Parser, error) {
 	config, err := c.getParserConfig(name, tbl)
 	if err != nil {
 		return nil, err
