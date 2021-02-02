@@ -1728,6 +1728,22 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	return nil
 }
 
+func (c *Config) setLocalMissingTomlFieldTracker(counter map[string]int) {
+	f := func(_ reflect.Type, key string) error {
+		if c, ok := counter[key]; ok {
+			counter[key] = c + 1
+		} else {
+			counter[key] = 1
+		}
+		return nil
+	}
+	c.toml.MissingField = f
+}
+
+func (c *Config) resetMissingTomlFieldTracker() {
+	c.toml.MissingField = c.missingTomlField
+}
+
 func (c *Config) getFieldString(tbl *ast.Table, fieldName string, target *string) {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
