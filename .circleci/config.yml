@@ -1,8 +1,7 @@
 version: 2.1
-
 orbs:
   win: circleci/windows@2.2.0
-
+  
 executors:
   go-1_14:
     working_directory: '/go/src/github.com/influxdata/telegraf'
