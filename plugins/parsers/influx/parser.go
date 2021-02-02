@@ -57,7 +57,7 @@ func (e *ParseError) Error() string {
 }
 
 // Parser is an InfluxDB Line Protocol parser that implements the
-// parsers.Parser interface.
+// telegraf.Parser interface.
 type Parser struct {
 	DefaultTags map[string]string
 

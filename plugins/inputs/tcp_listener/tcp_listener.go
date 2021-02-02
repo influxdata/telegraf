@@ -9,7 +9,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -39,7 +38,7 @@ type TCPListener struct {
 	// track current connections so we can close them in Stop()
 	conns map[string]*net.TCPConn
 
-	parser parsers.Parser
+	parser telegraf.Parser
 	acc    telegraf.Accumulator
 
 	MaxConnections     selfstat.Stat
@@ -78,7 +77,7 @@ func (t *TCPListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (t *TCPListener) SetParser(parser parsers.Parser) {
+func (t *TcpListener) SetParser(parser telegraf.Parser) {
 	t.parser = parser
 }
 

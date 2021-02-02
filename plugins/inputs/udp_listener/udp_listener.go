@@ -8,7 +8,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -43,7 +42,7 @@ type UDPListener struct {
 	// malformed tracks the number of malformed packets
 	malformed int
 
-	parser parsers.Parser
+	parser telegraf.Parser
 
 	// Keep the accumulator in this struct
 	acc telegraf.Accumulator
@@ -87,7 +86,7 @@ func (u *UDPListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (u *UDPListener) SetParser(parser parsers.Parser) {
+func (u *UdpListener) SetParser(parser telegraf.Parser) {
 	u.parser = parser
 }
 

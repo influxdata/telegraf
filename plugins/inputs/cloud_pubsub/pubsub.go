@@ -13,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 )
@@ -51,7 +50,7 @@ type PubSub struct {
 
 	cancel context.CancelFunc
 
-	parser parsers.Parser
+	parser telegraf.Parser
 	wg     *sync.WaitGroup
 	acc    telegraf.TrackingAccumulator
 
@@ -73,7 +72,7 @@ func (ps *PubSub) Gather(_ telegraf.Accumulator) error {
 }
 
 // SetParser implements ParserInput interface.
-func (ps *PubSub) SetParser(parser parsers.Parser) {
+func (ps *PubSub) SetParser(parser telegraf.Parser) {
 	ps.parser = parser
 }
 

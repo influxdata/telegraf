@@ -21,3 +21,19 @@ type Parser interface {
 	// NOTE: do _not_ modify the map after you've passed it here!!
 	SetDefaultTags(tags map[string]string)
 }
+
+type ParserFunc func() (Parser, error)
+
+// ParserInput is an interface for input plugins that are able to parse
+// arbitrary data formats.
+type ParserInput interface {
+	// SetParser sets the parser function for the interface
+	SetParser(parser Parser)
+}
+
+// ParserFuncInput is an interface for input plugins that are able to parse
+// arbitrary data formats.
+type ParserFuncInput interface {
+	// GetParser returns a new parser.
+	SetParserFunc(fn ParserFunc)
+}

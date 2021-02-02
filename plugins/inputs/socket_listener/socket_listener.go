@@ -207,7 +207,7 @@ type SocketListener struct {
 
 	Log telegraf.Logger
 
-	parsers.Parser
+	telegraf.Parser
 	telegraf.Accumulator
 	io.Closer
 }
@@ -282,7 +282,7 @@ func (sl *SocketListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (sl *SocketListener) SetParser(parser parsers.Parser) {
+func (sl *SocketListener) SetParser(parser telegraf.Parser) {
 	sl.Parser = parser
 }
 

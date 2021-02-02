@@ -47,8 +47,8 @@ func (c *FakeClient) Disconnect(quiesce uint) {
 type FakeParser struct {
 }
 
-// FakeParser satisfies parsers.Parser
-var _ parsers.Parser = &FakeParser{}
+// FakeParser satisfies telegraf.Parser
+var _ telegraf.Parser = &FakeParser{}
 
 func (p *FakeParser) Parse(_ []byte) ([]telegraf.Metric, error) {
 	panic("not implemented")

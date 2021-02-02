@@ -271,7 +271,7 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 		})
 }
 
-func createGrokParser() (parsers.Parser, error) {
+func createGrokParser() (telegraf.Parser, error) {
 	grokConfig := &parsers.Config{
 		MetricName:             "tail_grok",
 		GrokPatterns:           []string{"%{TEST_LOG_MULTILINE}"},
@@ -300,12 +300,14 @@ cpu,42
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
-	plugin.SetParserFunc(func() (parsers.Parser, error) {
-		return csv.NewParser(&csv.Config{
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		p := &csv.Parser{
 			MeasurementColumn: "measurement",
 			HeaderRowCount:    1,
 			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
-		})
+		}
+		err := p.Init()
+		return p, err
 	})
 
 	err = plugin.Init()
@@ -419,7 +421,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.PathTag = "customPathTagMyFile"
-	plugin.SetParserFunc(func() (parsers.Parser, error) {
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
 		return json.New(
 			&json.Config{
 				MetricName: "cpu",
@@ -569,7 +571,7 @@ func TestCharacterEncoding(t *testing.T) {
 				WatchMethod:         watchMethod,
 			}
 
-			plugin.SetParserFunc(func() (parsers.Parser, error) {
+			plugin.SetParserFunc(func() (telegraf.Parser, error) {
 				handler := influx.NewMetricHandler()
 				return influx.NewParser(handler), nil
 			})

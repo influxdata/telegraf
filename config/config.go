@@ -1221,7 +1221,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// If the input has a SetParser function, then this means it can accept
 	// arbitrary types of input, so build the parser and set it.
-	if t, ok := input.(parsers.ParserInput); ok {
+	if t, ok := input.(telegraf.ParserInput); ok {
 		missThreshold = 1
 		parser, err := c.addParser(name, table)
 		if err != nil {
@@ -1235,14 +1235,14 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		t.SetParser(parser)
 	}
 
-	if t, ok := input.(parsers.ParserFuncInput); ok {
+	if t, ok := input.(telegraf.ParserFuncInput); ok {
 		// TODO: Implement new way of instating parsers
 		missThreshold = 0
 		config, err := c.getParserConfig(name, table)
 		if err != nil {
 			return err
 		}
-		t.SetParserFunc(func() (parsers.Parser, error) {
+		t.SetParserFunc(func() (telegraf.Parser, error) {
 			parser, err := parsers.NewParser(config)
 			if err != nil {
 				return nil, err
@@ -1337,7 +1337,7 @@ func (c *Config) buildParser(name string, tbl *ast.Table) (*models.ParserConfig,
 	c.getFieldString(tbl, "data_format", &dataformat)
 
 	conf := &models.ParserConfig{
-		Parent: name,
+		Parent:     name,
 		DataFormat: dataformat,
 	}
 
@@ -1435,7 +1435,7 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 // buildParserOld grabs the necessary entries from the ast.Table for creating
 // a parsers.Parser object, and creates it, which can then be added onto
 // an Input object.
-func (c *Config) buildParserOld(name string, tbl *ast.Table) (parsers.Parser, error) {
+func (c *Config) buildParserOld(name string, tbl *ast.Table) (telegraf.Parser, error) {
 	config, err := c.getParserConfig(name, tbl)
 	if err != nil {
 		return nil, err
