@@ -86,6 +86,14 @@ func TestClientConfig(t *testing.T) {
 				SSLKey:  pki.ClientKeyPath(),
 			},
 		},
+		{
+			name: "set SNI server name",
+			client: tls.ClientConfig{
+				ServerName: "foo.example.com",
+			},
+			expNil: false,
+			expErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -61,7 +61,13 @@ running.  You can start the containers with:
 docker-compose up
 ```
 
-And run the full test suite with:
+To run only the integration tests use:
+
+```
+make test-integration
+```
+
+To run the full test suite use:
 ```
 make test-all
 ```

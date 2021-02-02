@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDisqueGeneratesMetrics(t *testing.T) {
+func TestDisqueGeneratesMetricsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -76,7 +76,7 @@ func TestDisqueGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsFields(t, "disque", fields)
 }
 
-func TestDisqueCanPullStatsFromMultipleServers(t *testing.T) {
+func TestDisqueCanPullStatsFromMultipleServersIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
