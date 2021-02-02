@@ -127,12 +127,9 @@ setting capabilities.
 
 [man 7 capabilities]: http://man7.org/linux/man-pages/man7/capabilities.7.html
 
-When Telegraf cannot listen on a privileged ICMP socket it will attempt to use
-ICMP echo sockets.  If you wish to use this method you must ensure Telegraf's
-group, usually `telegraf`, is allowed to use ICMP echo sockets:
-
+When Telegraf cannot listen on a privileged ICMP socket it will attempt to send an "unprivileged" ping via UDP. On Linux, this must be enabled with the following sysctl command:
 ```sh
-$ sysctl -w net.ipv4.ping_group_range="GROUP_ID_LOW   GROUP_ID_HIGH"
+$ sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
 ```
 
 Reference [`man 7 icmp`][man 7 icmp] for more information about ICMP echo
