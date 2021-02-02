@@ -76,6 +76,7 @@ type Config struct {
 	Inputs      []*models.RunningInput
 	Outputs     []*models.RunningOutput
 	Aggregators []*models.RunningAggregator
+	Parsers     []*models.RunningParser
 	// Processors have a slice wrapper type because they need to be sorted
 	Processors    models.RunningProcessors
 	AggProcessors models.RunningProcessors
@@ -103,6 +104,7 @@ func NewConfig() *Config {
 		Tags:          make(map[string]string),
 		Inputs:        make([]*models.RunningInput, 0),
 		Outputs:       make([]*models.RunningOutput, 0),
+		Parsers:       make([]*models.RunningParser, 0),
 		Processors:    make([]*models.RunningProcessor, 0),
 		AggProcessors: make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
@@ -229,6 +231,15 @@ func (c *Config) AggregatorNames() []string {
 	var name []string
 	for _, aggregator := range c.Aggregators {
 		name = append(name, aggregator.Config.Name)
+	}
+	return PluginNameCounts(name)
+}
+
+// ParserNames returns a list of strings of the configured parsers.
+func (c *Config) ParserNames() []string {
+	var name []string
+	for _, parser := range c.Parsers {
+		name = append(name, parser.Config.DataFormat)
 	}
 	return PluginNameCounts(name)
 }
