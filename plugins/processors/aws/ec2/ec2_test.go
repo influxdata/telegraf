@@ -11,7 +11,20 @@ import (
 func TestBasicStartup(t *testing.T) {
 	p := newAwsEc2Processor()
 	p.Log = &testutil.Logger{}
-	p.Tags = []string{"accountId", "instanceId"}
+	p.ImdsTags = []string{"accountId", "instanceId"}
+	acc := &testutil.Accumulator{}
+	require.NoError(t, p.Start(acc))
+	require.NoError(t, p.Stop())
+
+	require.Len(t, acc.GetTelegrafMetrics(), 0)
+	require.Len(t, acc.Errors, 0)
+}
+
+func TestBasicStartupWithEC2Tags(t *testing.T) {
+	p := newAwsEc2Processor()
+	p.Log = &testutil.Logger{}
+	p.ImdsTags = []string{"accountId", "instanceId"}
+	p.EC2Tags = []string{"Name"}
 	acc := &testutil.Accumulator{}
 	require.NoError(t, p.Start(acc))
 	require.NoError(t, p.Stop())
@@ -23,7 +36,7 @@ func TestBasicStartup(t *testing.T) {
 func TestBasicInitNoTagsReturnAnError(t *testing.T) {
 	p := newAwsEc2Processor()
 	p.Log = &testutil.Logger{}
-	p.Tags = []string{}
+	p.ImdsTags = []string{}
 	err := p.Init()
 	require.Error(t, err)
 }
@@ -31,16 +44,15 @@ func TestBasicInitNoTagsReturnAnError(t *testing.T) {
 func TestBasicInitInvalidTagsReturnAnError(t *testing.T) {
 	p := newAwsEc2Processor()
 	p.Log = &testutil.Logger{}
-	p.Tags = []string{"dummy", "qwerty"}
+	p.ImdsTags = []string{"dummy", "qwerty"}
 	err := p.Init()
 	require.Error(t, err)
 }
 
 func TestLoadingConfig(t *testing.T) {
-	const conf = `[[processors.aws_ec2]]`
-
+	confFile := []byte("[[processors.aws_ec2]]" + "\n" + sampleConfig)
 	c := config.NewConfig()
-	err := c.LoadConfigData([]byte("[[processors.aws_ec2]]" + "\n" + sampleConfig))
+	err := c.LoadConfigData(confFile)
 	require.NoError(t, err)
 
 	require.Len(t, c.Processors, 1)

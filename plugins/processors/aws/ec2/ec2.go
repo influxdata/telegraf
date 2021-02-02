@@ -7,8 +7,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/smithy-go"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -16,19 +21,26 @@ import (
 )
 
 type AwsEc2Processor struct {
-	Tags             []string        `toml:"tags"`
+	ImdsTags         []string        `toml:"imds_tags"`
+	EC2Tags          []string        `toml:"ec2_tags"`
 	Timeout          config.Duration `toml:"timeout"`
 	Ordered          bool            `toml:"ordered"`
 	MaxParallelCalls int             `toml:"max_parallel_calls"`
 
 	Log        telegraf.Logger     `toml:"-"`
-	tags       map[string]struct{} `toml:"-"`
-	imdsClient *imds.Client
-	parallel   parallel.Parallel
+	imdsClient *imds.Client        `toml:"-"`
+	imdsTags   map[string]struct{} `toml:"-"`
+	ec2Client  *ec2.Client         `toml:"-"`
+	parallel   parallel.Parallel   `toml:"-"`
+	instanceID string              `toml:"-"`
 }
 
 const sampleConfig = `
-  ## Tags to attach to metrics. Available tags:
+  ## Instance identity document tags to attach to metrics.
+  ## For more information see:
+  ## https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
+  ##
+  ## Available tags:
   ## * accountId
   ## * architecture
   ## * availabilityZone
@@ -42,7 +54,17 @@ const sampleConfig = `
   ## * ramdiskId
   ## * region
   ## * version
-  tags = []
+  imds_tags = []
+
+  ## EC2 instance tags retrieved with DescribeTags action.
+  ## In case tag is empty upon retrieval it's omitted when tagging metrics.
+  ## Note that in order for this to work, role attached to EC2 instance or AWS
+  ## credentials available from the environment must have a policy attached, that
+  ## allows ec2:DescribeTags.
+  ##
+  ## For more information see:
+  ## https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeTags.html
+  ec2_tags = []
 
   ## Timeout for http requests made by against aws ec2 metadata endpoint.
   timeout = "10s"
@@ -54,15 +76,20 @@ const sampleConfig = `
   ## depending on the order of metrics staying the same. If so, set this to true.
   ## Keeping the metrics ordered may be slightly slower.
   ordered = false
+
+  ## max_parallel_calls is the maximum number of AWS API calls to be in flight
+  ## at the same time.
+  ## It's probably best to keep this number fairly low.
+  max_parallel_calls = 10
 `
 
 const (
 	DefaultMaxOrderedQueueSize = 10_000
-	DefaultMaxParallelCalls    = 10_000
+	DefaultMaxParallelCalls    = 10
 	DefaultTimeout             = 10 * time.Second
 )
 
-var allowedTags = map[string]struct{}{
+var allowedImdsTags = map[string]struct{}{
 	"accountId":        {},
 	"architecture":     {},
 	"availabilityZone": {},
@@ -93,25 +120,54 @@ func (r *AwsEc2Processor) Add(metric telegraf.Metric, acc telegraf.Accumulator) 
 
 func (r *AwsEc2Processor) Init() error {
 	r.Log.Debug("Initializing AWS EC2 Processor")
-
-	for _, tag := range r.Tags {
-		if len(tag) > 0 && isTagAllowed(tag) {
-			r.tags[tag] = struct{}{}
-		} else {
-			return fmt.Errorf(
-				"Not allowed metadata tag specified in configuration: %s", tag,
-			)
-		}
-	}
-	if len(r.tags) == 0 {
-		return errors.New("No allowed metadata tags specified in configuration")
+	if len(r.EC2Tags) == 0 && len(r.ImdsTags) == 0 {
+		return errors.New("no tags specified in configuration")
 	}
 
-	cfg, err := awsconfig.LoadDefaultConfig(context.Background())
+	ctx := context.Background()
+	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed loading default AWS config: %w", err)
 	}
 	r.imdsClient = imds.NewFromConfig(cfg)
+
+	if len(r.EC2Tags) > 0 {
+		r.ec2Client = ec2.NewFromConfig(cfg)
+
+		// Chceck if instance is allowed to call DescribeTags.
+		_, err = r.ec2Client.DescribeTags(ctx, &ec2.DescribeTagsInput{
+			DryRun: true,
+		})
+		var ae smithy.APIError
+		if errors.As(err, &ae) {
+			if ae.ErrorCode() != "DryRunOperation" {
+				return fmt.Errorf("instance doesn't have permissions to call DescribeTags: %w", err)
+			}
+		} else if err != nil {
+			return fmt.Errorf("error calling DescribeTags: %w", err)
+		}
+	}
+
+	for _, tag := range r.ImdsTags {
+		if len(tag) > 0 && isImdsTagAllowed(tag) {
+			r.imdsTags[tag] = struct{}{}
+		} else {
+			return fmt.Errorf("not allowed metadata tag specified in configuration: %s", tag)
+		}
+	}
+	if len(r.imdsTags) == 0 && len(r.EC2Tags) == 0 {
+		return errors.New("no allowed metadata tags specified in configuration")
+	}
+
+	iido, err := r.imdsClient.GetInstanceIdentityDocument(
+		ctx,
+		&imds.GetInstanceIdentityDocumentInput{},
+	)
+	if err != nil {
+		return fmt.Errorf("failed getting instance identity document: %w", err)
+	}
+
+	r.instanceID = iido.InstanceID
 
 	return nil
 }
@@ -138,17 +194,39 @@ func (r *AwsEc2Processor) asyncAdd(metric telegraf.Metric) []telegraf.Metric {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.Timeout))
 	defer cancel()
 
-	o, err := r.imdsClient.GetInstanceIdentityDocument(
-		ctx,
-		&imds.GetInstanceIdentityDocumentInput{},
-	)
-	if err != nil {
-		r.Log.Errorf("Error in AWS EC2 Processor: %v", err)
-		return []telegraf.Metric{metric}
+	// Add IMDS Instance Identity Document tags.
+	if len(r.imdsTags) > 0 {
+		iido, err := r.imdsClient.GetInstanceIdentityDocument(
+			ctx,
+			&imds.GetInstanceIdentityDocumentInput{},
+		)
+		if err != nil {
+			r.Log.Errorf("Error when calling GetInstanceIdentityDocument: %v", err)
+			return []telegraf.Metric{metric}
+		}
+
+		for tag := range r.imdsTags {
+			if v := getTagFromInstanceIdentityDocument(iido, tag); v != "" {
+				metric.AddTag(tag, v)
+			}
+		}
 	}
 
-	for tag := range r.tags {
-		metric.AddTag(tag, getTag(o, tag))
+	// Add EC2 instance tags.
+	if len(r.EC2Tags) > 0 {
+		dto, err := r.ec2Client.DescribeTags(ctx, &ec2.DescribeTagsInput{
+			Filters: createFilterFromTags(r.instanceID, r.EC2Tags),
+		})
+		if err != nil {
+			r.Log.Errorf("Error during EC2 DescribeTags: %v", err)
+			return []telegraf.Metric{metric}
+		}
+
+		for _, tag := range r.EC2Tags {
+			if v := getTagFromDescribeTags(dto, tag); v != "" {
+				metric.AddTag(tag, v)
+			}
+		}
 	}
 
 	return []telegraf.Metric{metric}
@@ -164,11 +242,33 @@ func newAwsEc2Processor() *AwsEc2Processor {
 	return &AwsEc2Processor{
 		MaxParallelCalls: DefaultMaxParallelCalls,
 		Timeout:          config.Duration(DefaultTimeout),
-		tags:             make(map[string]struct{}),
+		imdsTags:         make(map[string]struct{}),
 	}
 }
 
-func getTag(o *imds.GetInstanceIdentityDocumentOutput, tag string) string {
+func createFilterFromTags(instanceID string, tagNames []string) []types.Filter {
+	return []types.Filter{
+		{
+			Name:   aws.String("resource-id"),
+			Values: []string{instanceID},
+		},
+		{
+			Name:   aws.String("key"),
+			Values: tagNames,
+		},
+	}
+}
+
+func getTagFromDescribeTags(o *ec2.DescribeTagsOutput, tag string) string {
+	for _, t := range o.Tags {
+		if *t.Key == tag {
+			return *t.Value
+		}
+	}
+	return ""
+}
+
+func getTagFromInstanceIdentityDocument(o *imds.GetInstanceIdentityDocumentOutput, tag string) string {
 	switch tag {
 	case "accountId":
 		return o.AccountID
@@ -201,7 +301,7 @@ func getTag(o *imds.GetInstanceIdentityDocumentOutput, tag string) string {
 	}
 }
 
-func isTagAllowed(tag string) bool {
-	_, ok := allowedTags[tag]
+func isImdsTagAllowed(tag string) bool {
+	_, ok := allowedImdsTags[tag]
 	return ok
 }
