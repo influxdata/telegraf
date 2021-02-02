@@ -1078,8 +1078,9 @@ func (c *Config) addParser(parentname string, table *ast.Table) (telegraf.Parser
 		return nil, err
 	}
 
-	c.Parsers = append(c.Parsers, models.NewRunningParser(parser, conf))
-	return parser, nil
+	running := models.NewRunningParser(parser, conf)
+	c.Parsers = append(c.Parsers, running)
+	return running, nil
 }
 
 func (c *Config) addProcessor(name string, table *ast.Table) error {
