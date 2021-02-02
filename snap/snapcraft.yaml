@@ -31,7 +31,8 @@ parts:
     build-attributes: [no-patchelf]
     plugin: nil
     build-snaps: [go]
-    build-packages: [make, gcc, git, util-linux]
+    build-packages: [make, gcc, git]
+    stage-packages: [util-linux]
     override-build: |
       git clone https://github.com/influxdata/telegraf.git
       cd telegraf
@@ -39,10 +40,6 @@ parts:
       version="$(echo $tag | cut -d 'v' -f 2)"
       snapcraftctl set-version "$version"
       git checkout tags/$tag
-      make
+      LDFLAGS='' make
       mkdir -p $SNAPCRAFT_PART_INSTALL/bin
       cp -p telegraf $SNAPCRAFT_PART_INSTALL/bin/
-      ## setpriv comes with the util-linux package. No need to stage the whole
-      ## package, we only need setpriv
-      find $SNAPCRAFT_PART_BUILD | grep setpriv
-      cp -p $SNAPCRAFT_PART_BUILD/usr/bin/setpriv $SNAPCRAFT_PART_INSTALL/bin/
