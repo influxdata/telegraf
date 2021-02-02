@@ -1,10 +1,14 @@
 name: telegraf
+base: core20
 adopt-info: telegraf
 summary: Telegraf agent
 description: |
   Telegraf is an agent written in Go for collecting, processing, aggregating, and writing metrics
 confinement: classic
 grade: stable
+passthrough:
+  system-usernames:
+    snap_daemon: shared
 
 apps:
   telegraf:
@@ -12,9 +16,8 @@ apps:
     daemon: simple
 
 parts:
-
-  ## This wrapper will be called to start telegraf. It will import the default
-  ## config file if none exists, and start telegraf
+  ## This wrapper will be called to start telegraf. It will use setpriv to run
+  ## as the snap_daemon user https://snapcraft.io/docs/system-usernames
   snap-wrappers:
     plugin: dump
     source: .
@@ -28,7 +31,7 @@ parts:
     build-attributes: [no-patchelf]
     plugin: nil
     build-snaps: [go]
-    build-packages: [make, gcc]
+    build-packages: [make, gcc, git, util-linux]
     override-build: |
       git clone https://github.com/influxdata/telegraf.git
       cd telegraf
@@ -39,3 +42,7 @@ parts:
       make
       mkdir -p $SNAPCRAFT_PART_INSTALL/bin
       cp -p telegraf $SNAPCRAFT_PART_INSTALL/bin/
+      ## setpriv comes with the util-linux package. No need to stage the whole
+      ## package, we only need setpriv
+      find $SNAPCRAFT_PART_BUILD | grep setpriv
+      cp -p $SNAPCRAFT_PART_BUILD/usr/bin/setpriv $SNAPCRAFT_PART_INSTALL/bin/
