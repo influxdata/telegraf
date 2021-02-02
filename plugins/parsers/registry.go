@@ -5,7 +5,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
-	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
 	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
@@ -27,7 +26,6 @@ type Creator func(defaultMetricName string) telegraf.Parser
 var Parsers = map[string]Creator{}
 
 func Add(name string, creator Creator) {
-	fmt.Printf("[parser registry] adding %v\n", name)
 	Parsers[name] = creator
 }
 
@@ -220,28 +218,6 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokCustomPatternFiles,
 			config.GrokTimezone,
 			config.GrokUniqueTimestamp)
-	case "csv":
-		config := &csv.Config{
-			MetricName:        config.MetricName,
-			HeaderRowCount:    config.CSVHeaderRowCount,
-			SkipRows:          config.CSVSkipRows,
-			SkipColumns:       config.CSVSkipColumns,
-			Delimiter:         config.CSVDelimiter,
-			Comment:           config.CSVComment,
-			TrimSpace:         config.CSVTrimSpace,
-			ColumnNames:       config.CSVColumnNames,
-			ColumnTypes:       config.CSVColumnTypes,
-			TagColumns:        config.CSVTagColumns,
-			MeasurementColumn: config.CSVMeasurementColumn,
-			TimestampColumn:   config.CSVTimestampColumn,
-			TimestampFormat:   config.CSVTimestampFormat,
-			Timezone:          config.CSVTimezone,
-			DefaultTags:       config.DefaultTags,
-			SkipValues:        config.CSVSkipValues,
-			SkipErrors:        config.CSVSkipErrors,
-		}
-
-		return csv.NewParser(config)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
 	case "form_urlencoded":
