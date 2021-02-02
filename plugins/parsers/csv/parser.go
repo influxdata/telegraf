@@ -319,6 +319,49 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
+func (p *Parser) GetSkipLineCount() int {
+	return p.SkipRows
+}
+
+func (p *Parser) GetHeaderLineCount() int {
+	return p.HeaderRowCount
+}
+
+func (p *Parser) ParseHeaderLine(line string) error {
+	if p.gotColumnNames {
+		return nil
+	}
+
+	if len(p.ColumnNames) == 0 {
+		p.ColumnNames = make([]string, 0)
+	}
+
+	r := bytes.NewReader([]byte(line))
+	csvReader, err := p.compile(r)
+	if err != nil {
+		return err
+	}
+	header, err := csvReader.Read()
+	if err != nil {
+		return err
+	}
+	//concatenate header names
+	for i := range header {
+		name := header[i]
+		if p.TrimSpace {
+			name = strings.Trim(name, " ")
+		}
+		if len(p.ColumnNames) <= i {
+			p.ColumnNames = append(p.ColumnNames, name)
+		} else {
+			p.ColumnNames[i] = p.ColumnNames[i] + name
+		}
+	}
+	p.ColumnNames = p.ColumnNames[p.SkipColumns:]
+
+	return nil
+}
+
 func init() {
 	parsers.Add("csv",
 		func(defaultMetricName string) telegraf.Parser {

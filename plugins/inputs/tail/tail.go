@@ -18,7 +18,6 @@ import (
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers/csv"
 )
 
 const (
@@ -301,6 +300,8 @@ func parseLine(parser telegraf.Parser, line string) ([]telegraf.Metric, error) {
 	default:
 		return parser.Parse([]byte(line))
 	}
+
+	return parser.Parse([]byte(line))
 }
 
 // Receiver is launched as a goroutine to continuously watch a tailed logfile
