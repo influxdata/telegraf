@@ -283,7 +283,6 @@ func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumu
 
 	if strings.Contains(strings.ToLower(server), strings.ToLower("password=")) {
 		// when password is provided in connection string, use SQL auth
-		fmt.Println("Auth Medthod = SqlAuth")
 
 		var err error
 		conn, err = sql.Open("mssql", server)
@@ -291,23 +290,22 @@ func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumu
 		if err != nil {
 			return err
 		}
-		fmt.Println("Connection opened using SQL Auth and credentials provided")
 	} else {
 		// when password is not provided in connection string, use AAD auth with an MSI token
-		fmt.Println("Auth Medthod = AadAuth")
 
-		msiToken := getMSIToken()
-		fmt.Println("Printing token object: ", msiToken)
-
-		token, err := mssql.NewAccessTokenConnector(
-			server,
-			func() (string, error) { return msiToken.AccessToken, nil })
+		tokenProvider, err := getMSITokenProvider()
 		if err != nil {
+			fmt.Println("Error creating token provider for system assigned Azure Managed Identity: ", err.Error())
 			return err
 		}
 
-		conn = sql.OpenDB(token)
-		fmt.Println("Connection opened using AAD Auth and MSI token")
+		connector, err := mssql.NewAccessTokenConnector(server, tokenProvider)
+		if err != nil {
+			fmt.Println("Error creating the connector: ", err.Error())
+			return err
+		}
+
+		conn = sql.OpenDB(connector)
 	}
 
 	defer conn.Close()
@@ -438,31 +436,28 @@ func (s *SQLServer) Init() error {
 	return nil
 }
 
-func getMSIToken() (result adal.Token) {
-	// spToken, err := adal.NewServicePrincipalTokenFromMSIWithIdentityResourceID(msiEndpoint, mc.Resource, mc.ClientID)
-	// return spt.AccessToken
+func getMSITokenProvider() (func() (string, error), error) {
+	const sqlAzureResourceID = "https://database.windows.net/"
 
-	const defaultSqlAuthResource = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://database.windows.net/"
-	msiEndpoint, _ := adal.GetMSIVMEndpoint()
-	var spt *adal.ServicePrincipalToken
-
-	callback := func(token adal.Token) error {
-		result = token
-		return nil
-	}
-	spt, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, defaultSqlAuthResource, callback)
+	msiEndpoint, err := adal.GetMSIVMEndpoint()
 	if err != nil {
-		fmt.Println("Error in getting token", err)
-		return
+		return nil, err
 	}
 
-	if err := spt.Refresh(); err != nil {
-		fmt.Println("Error in refreshing token", err)
-		return
+	msi, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, sqlAzureResourceID)
+	if err != nil {
+		return nil, err
 	}
 
-	fmt.Println("found token: ", result)
-	return
+	return func() (string, error) {
+		err = msi.EnsureFresh()
+		if err != nil {
+			return "", err
+		}
+
+		token := msi.OAuthToken()
+		return token, nil
+	}, nil
 }
 
 func init() {
