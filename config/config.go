@@ -1059,7 +1059,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 	return nil
 }
 
-func (c *Config) addParser(parentname string, table *ast.Table) (telegraf.Parser, error) {
+func (c *Config) addParser(parentname string, table *ast.Table, track bool) (*models.RunningParser, error) {
 	var dataformat string
 	c.getFieldString(table, "data_format", &dataformat)
 
@@ -1079,7 +1079,12 @@ func (c *Config) addParser(parentname string, table *ast.Table) (telegraf.Parser
 	}
 
 	running := models.NewRunningParser(parser, conf)
-	c.Parsers = append(c.Parsers, running)
+	if track {
+		// We want to track the parser in case we directly assign it to the input
+		// plugin. Otherwise we skip it and add later.
+		c.Parsers = append(c.Parsers, running)
+	}
+
 	return running, nil
 }
 
@@ -1224,39 +1229,34 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// arbitrary types of input, so build the parser and set it.
 	if t, ok := input.(telegraf.ParserInput); ok {
 		missThreshold = 1
-		parser, err := c.addParser(name, table)
-		if err != nil {
+		if parser, err := c.addParser(name, table, true); err == nil {
+			t.SetParser(parser)
+		} else {
 			missThreshold = 0
 			// Fallback to the old way of instantiating the parsers.
-			parser, err = c.buildParserOld(name, table)
+			parser, err := c.buildParserOld(name, table)
 			if err != nil {
 				return err
 			}
+			t.SetParser(parser)
 		}
-		t.SetParser(parser)
 	}
 
 	if t, ok := input.(telegraf.ParserFuncInput); ok {
-		// TODO: Implement new way of instating parsers
-		missThreshold = 0
-		config, err := c.getParserConfig(name, table)
-		if err != nil {
-			return err
-		}
-		t.SetParserFunc(func() (telegraf.Parser, error) {
-			parser, err := parsers.NewParser(config)
+		missThreshold = 1
+		if parser, err := c.addParser(name, table, true); err == nil {
+			t.SetParserFunc(parser.GetParserFunc())
+		} else {
+			missThreshold = 0
+			// Fallback to the old way
+			config, err := c.getParserConfig(name, table)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			logger := models.NewLogger("parsers", config.DataFormat, name)
-			models.SetLoggerOnPlugin(parser, logger)
-			if initializer, ok := parser.(telegraf.Initializer); ok {
-				if err := initializer.Init(); err != nil {
-					return nil, err
-				}
-			}
-			return parser, nil
-		})
+			t.SetParserFunc(func() (telegraf.Parser, error) {
+				return parsers.NewParser(config)
+			})
+		}
 	}
 
 	pluginConfig, err := c.buildInput(name, table)

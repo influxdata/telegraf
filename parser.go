@@ -44,6 +44,15 @@ type HeaderParser interface {
 
 type ParserFunc func() (Parser, error)
 
+// StatefulParser is an optional interface for parsers
+// requiring special handling to generate a new instance.
+// By default the same instance is returned.
+type StatefulParser interface {
+	// Return a new instance of the parser avoiding side-effect
+	// due to multiple calls to the parser within the same plugin.
+	NewInstance() (Parser, error)
+}
+
 // ParserInput is an interface for input plugins that are able to parse
 // arbitrary data formats.
 type ParserInput interface {

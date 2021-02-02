@@ -113,6 +113,13 @@ func (r *RunningParser) ParseHeaderLine(line string) error {
 	return nil
 }
 
+func (r *RunningParser) GetParserFunc() telegraf.ParserFunc {
+	if p, ok := r.Parser.(telegraf.StatefulParser); ok {
+		return p.NewInstance
+	}
+	return func()(telegraf.Parser, error) { return r.Parser, nil }
+}
+
 func (r *RunningParser) Log() telegraf.Logger {
 	return r.log
 }
