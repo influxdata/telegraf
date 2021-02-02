@@ -248,6 +248,13 @@ workflows:
               only: /.*/
             branches:
               ignore: /.*/
+      - 'release-sign-windows':
+          requires:
+            - 'test-go-darwin'
+            - 'test-go-1_14'
+            - 'test-go-1_14-386'
+            - 'test-go-1_15'
+            - 'test-go-1_15-386'
   nightly:
     jobs:
       - 'deps'
