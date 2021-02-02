@@ -183,7 +183,6 @@ func TestCharacterEncoding(t *testing.T) {
 	tests := []struct {
 		name   string
 		plugin *File
-		csv    *csv.Config
 		file   string
 	}{
 		{
@@ -192,24 +191,12 @@ func TestCharacterEncoding(t *testing.T) {
 				Files:             []string{"testdata/mtr-utf-8.csv"},
 				CharacterEncoding: "",
 			},
-			csv: &csv.Config{
-				MetricName:  "file",
-				SkipRows:    1,
-				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
-				TagColumns:  []string{"dest", "hop", "ip"},
-			},
 		},
 		{
 			name: "utf-8 character_encoding with utf-8",
 			plugin: &File{
 				Files:             []string{"testdata/mtr-utf-8.csv"},
 				CharacterEncoding: "utf-8",
-			},
-			csv: &csv.Config{
-				MetricName:  "file",
-				SkipRows:    1,
-				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
-				TagColumns:  []string{"dest", "hop", "ip"},
 			},
 		},
 		{
@@ -218,24 +205,12 @@ func TestCharacterEncoding(t *testing.T) {
 				Files:             []string{"testdata/mtr-utf-16le.csv"},
 				CharacterEncoding: "utf-16le",
 			},
-			csv: &csv.Config{
-				MetricName:  "file",
-				SkipRows:    1,
-				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
-				TagColumns:  []string{"dest", "hop", "ip"},
-			},
 		},
 		{
 			name: "utf-16be character_encoding with utf-16be",
 			plugin: &File{
 				Files:             []string{"testdata/mtr-utf-16be.csv"},
 				CharacterEncoding: "utf-16be",
-			},
-			csv: &csv.Config{
-				MetricName:  "file",
-				SkipRows:    1,
-				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
-				TagColumns:  []string{"dest", "hop", "ip"},
 			},
 		},
 	}
@@ -244,7 +219,13 @@ func TestCharacterEncoding(t *testing.T) {
 			err := tt.plugin.Init()
 			require.NoError(t, err)
 
-			parser, err := csv.NewParser(tt.csv)
+			parser := &csv.Parser{
+				MetricName:  "file",
+				SkipRows:    1,
+				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
+				TagColumns:  []string{"dest", "hop", "ip"},
+			}
+			err = parser.Init()
 			require.NoError(t, err)
 			tt.plugin.SetParser(parser)
 
