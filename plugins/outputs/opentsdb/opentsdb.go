@@ -86,7 +86,7 @@ func (o *OpenTSDB) Connect() error {
 	// Test Connection to OpenTSDB Server
 	u, err := url.Parse(o.Host)
 	if err != nil {
-		return fmt.Errorf("Error in parsing host url: %s", err.Error())
+		return fmt.Errorf("error in parsing host url: %s", err.Error())
 	}
 
 	uri := fmt.Sprintf("%s:%d", u.Host, o.Port)
@@ -109,7 +109,7 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 
 	u, err := url.Parse(o.Host)
 	if err != nil {
-		return fmt.Errorf("Error in parsing host url: %s", err.Error())
+		return fmt.Errorf("error in parsing host url: %s", err.Error())
 	}
 
 	if u.Scheme == "" || u.Scheme == "tcp" {
@@ -117,7 +117,7 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 	} else if u.Scheme == "http" || u.Scheme == "https" {
 		return o.WriteHttp(metrics, u)
 	} else {
-		return fmt.Errorf("Unknown scheme in host parameter.")
+		return fmt.Errorf("unknown scheme in host parameter")
 	}
 }
 

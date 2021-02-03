@@ -341,9 +341,8 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 		canonical_name := item.Measurement + "." + item.Name
 		if nameEncountered[canonical_name] {
 			return fmt.Errorf("name '%s' is duplicated in measurement '%s' '%s' - '%s'", item.Name, item.Measurement, n, item.Name)
-		} else {
-			nameEncountered[canonical_name] = true
 		}
+		nameEncountered[canonical_name] = true
 
 		if n == cInputRegisters || n == cHoldingRegisters {
 			// search byte order

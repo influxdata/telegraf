@@ -268,9 +268,8 @@ func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err err
 		d.rwLock.RUnlock()
 		if ok {
 			return m, age, nil
-		} else {
-			return nil, 0, fmt.Errorf("getting remote table from cache")
 		}
+		return nil, 0, fmt.Errorf("getting remote table from cache")
 	}
 
 	// The cache missed and this is the first request for this

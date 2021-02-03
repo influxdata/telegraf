@@ -82,7 +82,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	if i.conn == nil {
 		err := i.Connect()
 		if err != nil {
-			return fmt.Errorf("FAILED to (re)connect to Instrumental. Error: %s\n", err)
+			return fmt.Errorf("failed to (re)connect to Instrumental. Error: %s", err)
 		}
 	}
 
@@ -187,7 +187,7 @@ func (i *Instrumental) authenticate(conn net.Conn) error {
 	}
 
 	if string(responses)[:6] != "ok\nok\n" {
-		return fmt.Errorf("Authentication failed: %s", responses)
+		return fmt.Errorf("authentication failed: %s", responses)
 	}
 
 	i.conn = conn

@@ -36,7 +36,7 @@ func TestGraphiteError(t *testing.T) {
 	require.NoError(t, err1)
 	err2 := g.Write(metrics)
 	require.Error(t, err2)
-	assert.Equal(t, "Could not write to any Graphite server in cluster\n", err2.Error())
+	assert.Equal(t, "could not write to any Graphite server in cluster", err2.Error())
 }
 
 func TestGraphiteOK(t *testing.T) {

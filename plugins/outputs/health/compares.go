@@ -68,9 +68,8 @@ func asFloat(fv interface{}) (float64, bool) {
 	case bool:
 		if v {
 			return 1.0, true
-		} else {
-			return 0.0, true
 		}
+		return 0.0, true
 	default:
 		return 0.0, false
 	}

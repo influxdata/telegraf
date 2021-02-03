@@ -298,16 +298,15 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 						acc.AddError(fmt.Errorf("could not subscribe to %s: %v", grpcServer,
 							err))
 						return
+					}
+
+					// Retry with delay. If delay is not provided, use default
+					if m.RetryDelay.Duration > 0 {
+						m.Log.Debugf("Retrying %s with timeout %v", grpcServer, m.RetryDelay.Duration)
+						time.Sleep(m.RetryDelay.Duration)
+						continue
 					} else {
-						// Retry with delay. If delay is not provided, use default
-						if m.RetryDelay.Duration > 0 {
-							m.Log.Debugf("Retrying %s with timeout %v", grpcServer,
-								m.RetryDelay.Duration)
-							time.Sleep(m.RetryDelay.Duration)
-							continue
-						} else {
-							return
-						}
+						return
 					}
 				}
 				for {

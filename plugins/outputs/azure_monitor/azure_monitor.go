@@ -62,14 +62,14 @@ func (m *virtualMachineMetadata) ResourceID() string {
 			m.Compute.ResourceGroupName,
 			m.Compute.VMScaleSetName,
 		)
-	} else {
-		return fmt.Sprintf(
-			resourceIDTemplate,
-			m.Compute.SubscriptionID,
-			m.Compute.ResourceGroupName,
-			m.Compute.Name,
-		)
 	}
+
+	return fmt.Sprintf(
+		resourceIDTemplate,
+		m.Compute.SubscriptionID,
+		m.Compute.ResourceGroupName,
+		m.Compute.Name,
+	)
 }
 
 type dimension struct {

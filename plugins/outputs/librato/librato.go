@@ -129,7 +129,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		copy(lmetrics.Gauges, tempGauges[start:end])
 		metricsBytes, err := json.Marshal(lmetrics)
 		if err != nil {
-			return fmt.Errorf("unable to marshal Metrics, %s\n", err.Error())
+			return fmt.Errorf("unable to marshal Metrics, %s", err.Error())
 		}
 
 		log.Printf("D! Librato request: %v\n", string(metricsBytes))
@@ -139,9 +139,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 			l.APIUrl,
 			bytes.NewBuffer(metricsBytes))
 		if err != nil {
-			return fmt.Errorf(
-				"unable to create http.Request, %s\n",
-				err.Error())
+			return fmt.Errorf("unable to create http.Request, %s", err.Error())
 		}
 		req.Header.Add("Content-Type", "application/json")
 		req.SetBasicAuth(l.APIUser, l.APIToken)
@@ -149,7 +147,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		resp, err := l.client.Do(req)
 		if err != nil {
 			log.Printf("D! Error POSTing metrics: %v\n", err.Error())
-			return fmt.Errorf("error POSTing metrics, %s\n", err.Error())
+			return fmt.Errorf("error POSTing metrics, %s", err.Error())
 		}
 		defer resp.Body.Close()
 
@@ -193,8 +191,7 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 		"value")
 	if metricSource == "" {
 		return gauges,
-			fmt.Errorf("undeterminable Source type from Field, %s\n",
-				l.Template)
+			fmt.Errorf("undeterminable Source type from Field, %s", l.Template)
 	}
 	for fieldName, value := range m.Fields() {
 
@@ -212,9 +209,7 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 			continue
 		}
 		if err := gauge.setValue(value); err != nil {
-			return gauges, fmt.Errorf(
-				"unable to extract value from Fields, %s\n",
-				err.Error())
+			return gauges, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
 		}
 		gauges = append(gauges, gauge)
 	}

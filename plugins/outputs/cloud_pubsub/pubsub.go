@@ -111,9 +111,8 @@ func (ps *PubSub) Connect() error {
 
 	if ps.stubTopic == nil {
 		return ps.initPubSubClient()
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (ps *PubSub) Close() error {

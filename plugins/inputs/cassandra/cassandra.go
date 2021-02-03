@@ -125,8 +125,7 @@ func (j javaMetric) addTagsFields(out map[string]interface{}) {
 		}
 		j.acc.AddFields(tokens["class"]+tokens["type"], fields, tags)
 	} else {
-		j.acc.AddError(fmt.Errorf("Missing key 'value' in '%s' output response\n%v\n",
-			j.metric, out))
+		j.acc.AddError(fmt.Errorf("missing key 'value' in '%s' output response: %v", j.metric, out))
 	}
 }
 
@@ -157,8 +156,7 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 				addCassandraMetric(k, c, v.(map[string]interface{}))
 			}
 		} else {
-			c.acc.AddError(fmt.Errorf("Missing key 'value' in '%s' output response\n%v\n",
-				c.metric, out))
+			c.acc.AddError(fmt.Errorf("missing key 'value' in '%s' output response: %v", c.metric, out))
 			return
 		}
 	} else {
@@ -166,8 +164,7 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 			addCassandraMetric(r.(map[string]interface{})["mbean"].(string),
 				c, values.(map[string]interface{}))
 		} else {
-			c.acc.AddError(fmt.Errorf("Missing key 'value' in '%s' output response\n%v\n",
-				c.metric, out))
+			c.acc.AddError(fmt.Errorf("missing key 'value' in '%s' output response: %v", c.metric, out))
 			return
 		}
 	}
@@ -215,7 +212,7 @@ func (j *Cassandra) getAttr(requestUrl *url.URL) (map[string]interface{}, error)
 
 	// Process response
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+		err = fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
 			requestUrl,
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
@@ -233,7 +230,7 @@ func (j *Cassandra) getAttr(requestUrl *url.URL) (map[string]interface{}, error)
 	// Unmarshal json
 	var jsonOut map[string]interface{}
 	if err = json.Unmarshal([]byte(body), &jsonOut); err != nil {
-		return nil, errors.New("Error decoding JSON response")
+		return nil, errors.New("error decoding JSON response")
 	}
 
 	return jsonOut, nil
@@ -290,8 +287,7 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 				m = newCassandraMetric(serverTokens["host"], metric, acc)
 			} else {
 				// unsupported metric type
-				acc.AddError(fmt.Errorf("E! Unsupported Cassandra metric [%s], skipping",
-					metric))
+				acc.AddError(fmt.Errorf("unsupported Cassandra metric [%s], skipping", metric))
 				continue
 			}
 
@@ -313,7 +309,7 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 				continue
 			}
 			if out["status"] != 200.0 {
-				acc.AddError(fmt.Errorf("URL returned with status %v - %s\n", out["status"], requestUrl))
+				acc.AddError(fmt.Errorf("provided URL returned with status %v - %s", out["status"], requestUrl))
 				continue
 			}
 			m.addTagsFields(out)

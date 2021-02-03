@@ -176,7 +176,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 
 func (g *Graphite) send(batch []byte) error {
 	// This will get set to nil if a successful write occurs
-	err := errors.New("Could not write to any Graphite server in cluster\n")
+	err := errors.New("could not write to any Graphite server in cluster")
 
 	// Send data to a random server
 	p := rand.Perm(len(g.conns))

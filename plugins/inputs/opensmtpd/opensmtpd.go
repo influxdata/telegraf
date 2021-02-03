@@ -112,8 +112,7 @@ func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 
 		fields[field], err = strconv.ParseFloat(value, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Expected a numerical value for %s = %v\n",
-				stat, value))
+			acc.AddError(fmt.Errorf("expected a numerical value for %s = %v", stat, value))
 		}
 	}
 

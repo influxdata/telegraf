@@ -112,9 +112,8 @@ func sortMetrics(metrics []MetricAggregation, field string, reverse bool) {
 		jv := metrics[j].values[field]
 		if iv < jv {
 			return true
-		} else {
-			return false
 		}
+		return false
 	}
 
 	if reverse {
@@ -434,7 +433,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 		}, nil
 
 	default:
-		return nil, fmt.Errorf("Unknown aggregation function '%s'. No metrics will be processed", t.Aggregation)
+		return nil, fmt.Errorf("unknown aggregation function '%s', no metrics will be processed", t.Aggregation)
 	}
 }
 

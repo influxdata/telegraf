@@ -296,22 +296,22 @@ func (q *AMQP) publish(key string, body []byte) error {
 func (q *AMQP) serialize(metrics []telegraf.Metric) ([]byte, error) {
 	if q.UseBatchFormat {
 		return q.serializer.SerializeBatch(metrics)
-	} else {
-		var buf bytes.Buffer
-		for _, metric := range metrics {
-			octets, err := q.serializer.Serialize(metric)
-			if err != nil {
-				log.Printf("D! [outputs.amqp] Could not serialize metric: %v", err)
-				continue
-			}
-			_, err = buf.Write(octets)
-			if err != nil {
-				return nil, err
-			}
-		}
-		body := buf.Bytes()
-		return body, nil
 	}
+
+	var buf bytes.Buffer
+	for _, metric := range metrics {
+		octets, err := q.serializer.Serialize(metric)
+		if err != nil {
+			log.Printf("D! [outputs.amqp] Could not serialize metric: %v", err)
+			continue
+		}
+		_, err = buf.Write(octets)
+		if err != nil {
+			return nil, err
+		}
+	}
+	body := buf.Bytes()
+	return body, nil
 }
 
 func (q *AMQP) makeClientConfig() (*ClientConfig, error) {

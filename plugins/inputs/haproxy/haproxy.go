@@ -123,13 +123,13 @@ func (g *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) erro
 	c, err := net.Dial("unix", socketPath)
 
 	if err != nil {
-		return fmt.Errorf("Could not connect to socket '%s': %s", addr, err)
+		return fmt.Errorf("could not connect to socket '%s': %s", addr, err)
 	}
 
 	_, errw := c.Write([]byte("show stat\n"))
 
 	if errw != nil {
-		return fmt.Errorf("Could not write to socket '%s': %s", addr, errw)
+		return fmt.Errorf("could not write to socket '%s': %s", addr, errw)
 	}
 
 	return g.importCsvResult(c, acc, socketPath)
@@ -202,9 +202,8 @@ func getSocketAddr(sock string) string {
 
 	if len(socketAddr) >= 2 {
 		return socketAddr[1]
-	} else {
-		return socketAddr[0]
 	}
+	return socketAddr[0]
 }
 
 var typeNames = []string{"frontend", "backend", "server", "listener"}
