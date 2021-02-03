@@ -171,7 +171,7 @@ jobs:
             $Cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($CertPath, $CertPass)
 
             # Replace with circleCI artifact path.
-            $artifactDirectory = "./go/src/github.com/influxdata/telegraf/build/dist"
+            $artifactDirectory = "/go/src/github.com/influxdata/telegraf/build/dist"
             $extractDirectory = $artifactDirectory + "\" + "extracted"
 
             foreach ($file in get-ChildItem $artifactDirectory -recurse | where {$_.name -like "*windows*"} | select name) 
