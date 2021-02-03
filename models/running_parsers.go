@@ -1,6 +1,7 @@
 package models
 
 import (
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -11,6 +12,7 @@ type RunningParser struct {
 	Parser telegraf.Parser
 	Config *ParserConfig
 	log    telegraf.Logger
+	once   sync.Once
 
 	MetricsParsed selfstat.Stat
 	ParseTime     selfstat.Stat
@@ -116,6 +118,14 @@ func (r *RunningParser) ParseHeaderLine(line string) error {
 func (r *RunningParser) GetParserFunc() telegraf.ParserFunc {
 	if p, ok := r.Parser.(telegraf.StatefulParser); ok {
 		return p.NewInstance
+	}
+	if p, ok := r.Parser.(telegraf.Initializer); ok {
+		defaultNewInstance := func() (telegraf.Parser, error) {
+			var err error
+			r.once.Do(func() { err = p.Init() })
+			return r.Parser, err
+		}
+		return defaultNewInstance
 	}
 	return func() (telegraf.Parser, error) { return r.Parser, nil }
 }

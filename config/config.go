@@ -1244,7 +1244,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	if t, ok := input.(telegraf.ParserFuncInput); ok {
 		missThreshold = 1
-		if parser, err := c.addParser(name, table, true); err == nil {
+		if parser, err := c.addParser(name, table, false); err == nil {
 			t.SetParserFunc(parser.GetParserFunc())
 		} else {
 			missThreshold = 0
