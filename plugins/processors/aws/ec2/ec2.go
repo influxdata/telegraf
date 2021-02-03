@@ -131,7 +131,20 @@ func (r *AwsEc2Processor) Init() error {
 	}
 	r.imdsClient = imds.NewFromConfig(cfg)
 
+	iido, err := r.imdsClient.GetInstanceIdentityDocument(
+		ctx,
+		&imds.GetInstanceIdentityDocumentInput{},
+	)
+	if err != nil {
+		return fmt.Errorf("failed getting instance identity document: %w", err)
+	}
+
+	r.instanceID = iido.InstanceID
+
 	if len(r.EC2Tags) > 0 {
+		// Add region to AWS config when creating EC2 service client since it's required.
+		cfg.Region = iido.Region
+
 		r.ec2Client = ec2.NewFromConfig(cfg)
 
 		// Chceck if instance is allowed to call DescribeTags.
@@ -158,16 +171,6 @@ func (r *AwsEc2Processor) Init() error {
 	if len(r.imdsTags) == 0 && len(r.EC2Tags) == 0 {
 		return errors.New("no allowed metadata tags specified in configuration")
 	}
-
-	iido, err := r.imdsClient.GetInstanceIdentityDocument(
-		ctx,
-		&imds.GetInstanceIdentityDocumentInput{},
-	)
-	if err != nil {
-		return fmt.Errorf("failed getting instance identity document: %w", err)
-	}
-
-	r.instanceID = iido.InstanceID
 
 	return nil
 }
