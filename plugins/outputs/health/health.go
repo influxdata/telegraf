@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -75,8 +74,9 @@ type Health struct {
 	BasicPassword  string            `toml:"basic_password"`
 	tlsint.ServerConfig
 
-	Compares []*Compares `toml:"compares"`
-	Contains []*Contains `toml:"contains"`
+	Compares []*Compares     `toml:"compares"`
+	Contains []*Contains     `toml:"contains"`
+	Log      telegraf.Logger `toml:"-"`
 	checkers []Checker
 
 	wg      sync.WaitGroup
@@ -153,14 +153,14 @@ func (h *Health) Connect() error {
 
 	h.origin = h.getOrigin(listener)
 
-	log.Printf("I! [outputs.health] Listening on %s", h.origin)
+	h.Log.Infof("Listening on %s", h.origin)
 
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
 		err := h.server.Serve(listener)
 		if err != http.ErrServerClosed {
-			log.Printf("E! [outputs.health] Serve error on %s: %v", h.origin, err)
+			h.Log.Errorf("Serve error on %s: %v", h.origin, err)
 		}
 		h.origin = ""
 	}()

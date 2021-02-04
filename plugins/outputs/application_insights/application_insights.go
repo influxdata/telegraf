@@ -2,7 +2,6 @@ package application_insights
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"time"
 	"unsafe"
@@ -23,22 +22,17 @@ type DiagnosticsMessageSubscriber interface {
 }
 
 type ApplicationInsights struct {
-	InstrumentationKey      string
-	EndpointURL             string
-	Timeout                 internal.Duration
-	EnableDiagnosticLogging bool
-	ContextTagSources       map[string]string
-	diagMsgSubscriber       DiagnosticsMessageSubscriber
-	transmitter             TelemetryTransmitter
-	diagMsgListener         appinsights.DiagnosticsMessageListener
-}
+	InstrumentationKey      string            `toml:"instrumentation_key"`
+	EndpointURL             string            `toml:"endpoint_url"`
+	Timeout                 internal.Duration `toml:"timeout"`
+	EnableDiagnosticLogging bool              `toml:"enable_diagnostic_logging"`
+	ContextTagSources       map[string]string `toml:"context_tag_sources"`
+	Log                     telegraf.Logger   `toml:"-"`
 
-const (
-	Error   = "E! "
-	Warning = "W! "
-	Info    = "I! "
-	Debug   = "D! "
-)
+	diagMsgSubscriber DiagnosticsMessageSubscriber
+	transmitter       TelemetryTransmitter
+	diagMsgListener   appinsights.DiagnosticsMessageListener
+}
 
 var (
 	sampleConfig = `
@@ -85,7 +79,7 @@ func (a *ApplicationInsights) Connect() error {
 
 	if a.EnableDiagnosticLogging && a.diagMsgSubscriber != nil {
 		a.diagMsgListener = a.diagMsgSubscriber.Subscribe(func(msg string) error {
-			logOutputMsg(Info, "%s", msg)
+			a.Log.Info(msg)
 			return nil
 		})
 	}
@@ -117,9 +111,9 @@ func (a *ApplicationInsights) Close() error {
 
 	select {
 	case <-a.transmitter.Close():
-		logOutputMsg(Info, "Closed")
+		a.Log.Info("Closed")
 	case <-time.After(a.Timeout.Duration):
-		logOutputMsg(Warning, "Close operation timed out after %v", a.Timeout.Duration)
+		a.Log.Warnf("Close operation timed out after %v", a.Timeout.Duration)
 	}
 
 	return nil
@@ -338,10 +332,6 @@ func toInt(value interface{}) (int, error) {
 	}
 
 	return 0.0, fmt.Errorf("[%s] cannot be converted to an int value", value)
-}
-
-func logOutputMsg(level string, format string, v ...interface{}) {
-	log.Printf(level+"[outputs.application_insights] "+format, v...)
 }
 
 func init() {

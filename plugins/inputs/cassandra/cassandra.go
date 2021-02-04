@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -28,9 +27,10 @@ func (c JolokiaClientImpl) MakeRequest(req *http.Request) (*http.Response, error
 
 type Cassandra struct {
 	jClient JolokiaClient
-	Context string
-	Servers []string
-	Metrics []string
+	Context string          `toml:"context"`
+	Servers []string        `toml:"servers"`
+	Metrics []string        `toml:"metrics"`
+	Log     telegraf.Logger `toml:"-"`
 }
 
 type javaMetric struct {
@@ -229,7 +229,7 @@ func (j *Cassandra) getAttr(requestUrl *url.URL) (map[string]interface{}, error)
 
 	// Unmarshal json
 	var jsonOut map[string]interface{}
-	if err = json.Unmarshal([]byte(body), &jsonOut); err != nil {
+	if err = json.Unmarshal(body, &jsonOut); err != nil {
 		return nil, errors.New("error decoding JSON response")
 	}
 
@@ -260,8 +260,8 @@ func parseServerTokens(server string) map[string]string {
 	return serverTokens
 }
 
-func (c *Cassandra) Start(acc telegraf.Accumulator) error {
-	log.Println("W! DEPRECATED: The cassandra plugin has been deprecated. " +
+func (c *Cassandra) Start(_ telegraf.Accumulator) error {
+	c.Log.Warn("DEPRECATED: The cassandra plugin has been deprecated. " +
 		"Please use the jolokia2 plugin instead. " +
 		"https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2")
 	return nil

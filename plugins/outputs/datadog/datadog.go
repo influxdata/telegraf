@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -16,10 +15,11 @@ import (
 )
 
 type Datadog struct {
-	Apikey  string
-	Timeout internal.Duration
+	Apikey  string            `toml:"apikey"`
+	Timeout internal.Duration `toml:"timeout"`
+	URL     string            `toml:"url"`
+	Log     telegraf.Logger   `toml:"-"`
 
-	URL    string `toml:"url"`
 	client *http.Client
 }
 
@@ -96,7 +96,7 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 				metricCounter++
 			}
 		} else {
-			log.Printf("I! unable to build Metric for %s due to error '%v', skipping\n", m.Name(), err)
+			d.Log.Infof("Unable to build Metric for %s due to error '%v', skipping", m.Name(), err)
 		}
 	}
 

@@ -3,7 +3,6 @@ package amqp
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -55,6 +54,7 @@ type AMQP struct {
 	Timeout            internal.Duration `toml:"timeout"`
 	UseBatchFormat     bool              `toml:"use_batch_format"`
 	ContentEncoding    string            `toml:"content_encoding"`
+	Log                telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
 
 	serializer   serializers.Serializer
@@ -267,7 +267,7 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 	}
 
 	if q.sentMessages >= q.MaxMessages && q.MaxMessages > 0 {
-		log.Printf("D! Output [amqp] sent MaxMessages; closing connection")
+		q.Log.Debug("Sent MaxMessages; closing connection")
 		q.client.Close()
 		q.client = nil
 	}
@@ -302,7 +302,7 @@ func (q *AMQP) serialize(metrics []telegraf.Metric) ([]byte, error) {
 	for _, metric := range metrics {
 		octets, err := q.serializer.Serialize(metric)
 		if err != nil {
-			log.Printf("D! [outputs.amqp] Could not serialize metric: %v", err)
+			q.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 		_, err = buf.Write(octets)

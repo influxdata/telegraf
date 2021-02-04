@@ -3,7 +3,6 @@ package modbus
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"net/url"
@@ -34,6 +33,7 @@ type Modbus struct {
 	Coils            []fieldContainer  `toml:"coils"`
 	HoldingRegisters []fieldContainer  `toml:"holding_registers"`
 	InputRegisters   []fieldContainer  `toml:"input_registers"`
+	Log              telegraf.Logger   `toml:"-"`
 	registers        []register
 	isConnected      bool
 	tcpHandler       *mb.TCPClientHandler
@@ -695,7 +695,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			mberr, ok := err.(*mb.ModbusError)
 			if ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
-				log.Printf("I! [inputs.modbus] device busy! Retrying %d more time(s)...", m.Retries-retry)
+				m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
 				time.Sleep(m.RetriesWaitTime.Duration)
 				continue
 			}

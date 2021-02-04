@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -57,6 +56,7 @@ type Jolokia struct {
 
 	ResponseHeaderTimeout internal.Duration `toml:"response_header_timeout"`
 	ClientTimeout         internal.Duration `toml:"client_timeout"`
+	Log                   telegraf.Logger   `toml:"-"`
 }
 
 const sampleConfig = `
@@ -259,9 +259,8 @@ func (j *Jolokia) extractValues(measurement string, value interface{}, fields ma
 }
 
 func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
-
 	if j.jClient == nil {
-		log.Println("W! DEPRECATED: the jolokia plugin has been deprecated " +
+		j.Log.Warn("DEPRECATED: the jolokia plugin has been deprecated " +
 			"in favor of the jolokia2 plugin " +
 			"(https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2)")
 

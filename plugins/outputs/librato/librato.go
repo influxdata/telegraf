@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/influxdata/telegraf/testutil"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"regexp"
 
@@ -17,12 +17,13 @@ import (
 
 // Librato structure for configuration and client
 type Librato struct {
-	APIUser   string `toml:"api_user"`
-	APIToken  string `toml:"api_token"`
-	Debug     bool
-	SourceTag string // Deprecated, keeping for backward-compatibility
-	Timeout   internal.Duration
-	Template  string
+	APIUser   string            `toml:"api_user"`
+	APIToken  string            `toml:"api_token"`
+	Debug     bool              `toml:"debug"`
+	SourceTag string            `toml:"source_tag"` // Deprecated, keeping for backward-compatibility
+	Timeout   internal.Duration `toml:"timeout"`
+	Template  string            `toml:"template"`
+	Log       telegraf.Logger   `toml:"-"`
 
 	APIUrl string
 	client *http.Client
@@ -69,6 +70,7 @@ func NewLibrato(apiURL string) *Librato {
 	return &Librato{
 		APIUrl:   apiURL,
 		Template: "host",
+		Log:      testutil.Logger{},
 	}
 }
 
@@ -89,7 +91,6 @@ func (l *Librato) Connect() error {
 }
 
 func (l *Librato) Write(metrics []telegraf.Metric) error {
-
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -106,11 +107,11 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		if gauges, err := l.buildGauges(m); err == nil {
 			for _, gauge := range gauges {
 				tempGauges = append(tempGauges, gauge)
-				log.Printf("D! Got a gauge: %v\n", gauge)
+				l.Log.Debugf("Got a gauge: %v", gauge)
 			}
 		} else {
-			log.Printf("I! unable to build Gauge for %s, skipping\n", m.Name())
-			log.Printf("D! Couldn't build gauge: %v\n", err)
+			l.Log.Infof("Unable to build Gauge for %s, skipping", m.Name())
+			l.Log.Debugf("Couldn't build gauge: %v", err)
 
 		}
 	}
@@ -132,7 +133,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 			return fmt.Errorf("unable to marshal Metrics, %s", err.Error())
 		}
 
-		log.Printf("D! Librato request: %v\n", string(metricsBytes))
+		l.Log.Debugf("Librato request: %v", string(metricsBytes))
 
 		req, err := http.NewRequest(
 			"POST",
@@ -146,7 +147,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 
 		resp, err := l.client.Do(req)
 		if err != nil {
-			log.Printf("D! Error POSTing metrics: %v\n", err.Error())
+			l.Log.Debugf("Error POSTing metrics: %v", err.Error())
 			return fmt.Errorf("error POSTing metrics, %s", err.Error())
 		}
 		defer resp.Body.Close()
@@ -154,7 +155,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		if resp.StatusCode != 200 || l.Debug {
 			htmlData, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				log.Printf("D! Couldn't get response! (%v)\n", err)
+				l.Log.Debugf("Couldn't get response! (%v)", err)
 			}
 			if resp.StatusCode != 200 {
 				return fmt.Errorf(
@@ -162,7 +163,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 					resp.StatusCode,
 					string(htmlData))
 			}
-			log.Printf("D! Librato response: %v\n", string(htmlData))
+			l.Log.Debugf("Librato response: %v", string(htmlData))
 		}
 	}
 
@@ -181,7 +182,6 @@ func (l *Librato) Description() string {
 }
 
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
-
 	gauges := []*Gauge{}
 	if m.Time().Unix() == 0 {
 		return gauges, fmt.Errorf("time was zero %s", m.Name())
@@ -214,7 +214,7 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 		gauges = append(gauges, gauge)
 	}
 
-	log.Printf("D! Built gauges: %v\n", gauges)
+	l.Log.Debugf("Built gauges: %v", gauges)
 	return gauges, nil
 }
 

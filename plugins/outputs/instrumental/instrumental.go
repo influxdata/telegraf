@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"regexp"
 	"strings"
@@ -30,6 +29,8 @@ type Instrumental struct {
 	Templates  []string
 	Timeout    internal.Duration
 	Debug      bool
+
+	Log telegraf.Logger `toml:"-"`
 
 	conn net.Conn
 }
@@ -111,7 +112,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 
 		buf, err := s.Serialize(m)
 		if err != nil {
-			log.Printf("D! [outputs.instrumental] Could not serialize metric: %v", err)
+			i.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 

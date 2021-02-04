@@ -3,7 +3,6 @@ package opcua_client
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/url"
 	"sort"
 	"strings"
@@ -198,7 +197,10 @@ func (o *OpcUA) Init() error {
 		return err
 	}
 
-	o.setupOptions()
+	err = o.setupOptions()
+	if err != nil {
+		return err
+	}
 
 	tags := map[string]string{
 		"endpoint": o.Endpoint,
@@ -207,7 +209,6 @@ func (o *OpcUA) Init() error {
 	o.ReadSuccess = selfstat.Register("opcua", "read_success", tags)
 
 	return nil
-
 }
 
 func (o *OpcUA) validateEndpoint() error {
@@ -431,11 +432,10 @@ func Connect(o *OpcUA) error {
 }
 
 func (o *OpcUA) setupOptions() error {
-
 	// Get a list of the endpoints for our target server
 	endpoints, err := opcua.GetEndpoints(o.Endpoint)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if o.Certificate == "" && o.PrivateKey == "" {

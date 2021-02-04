@@ -2,7 +2,6 @@ package topk
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"sort"
 	"time"
@@ -15,15 +14,16 @@ import (
 )
 
 type TopK struct {
-	Period             internal.Duration
-	K                  int
-	GroupBy            []string `toml:"group_by"`
-	Fields             []string
-	Aggregation        string
-	Bottomk            bool
-	AddGroupByTag      string   `toml:"add_groupby_tag"`
-	AddRankFields      []string `toml:"add_rank_fields"`
-	AddAggregateFields []string `toml:"add_aggregate_fields"`
+	Period             internal.Duration `toml:"period"`
+	K                  int               `toml:"k"`
+	GroupBy            []string          `toml:"group_by"`
+	Fields             []string          `toml:"fields"`
+	Aggregation        string            `toml:"aggregation"`
+	Bottomk            bool              `toml:"bottomk"`
+	AddGroupByTag      string            `toml:"add_groupby_tag"`
+	AddRankFields      []string          `toml:"add_rank_fields"`
+	AddAggregateFields []string          `toml:"add_aggregate_fields"`
+	Log                telegraf.Logger   `toml:"-"`
 
 	cache           map[string][]telegraf.Metric
 	tagsGlobs       filter.Filter
@@ -173,7 +173,7 @@ func (t *TopK) groupBy(m telegraf.Metric) {
 	if err != nil {
 		// If we could not generate the groupkey, fail hard
 		// by dropping this and all subsequent metrics
-		log.Printf("E! [processors.topk]: could not generate group key: %v", err)
+		t.Log.Errorf("Could not generate group key: %v", err)
 		return
 	}
 
@@ -268,7 +268,7 @@ func (t *TopK) push() []telegraf.Metric {
 	if err != nil {
 		// If we could not generate the aggregation
 		// function, fail hard by dropping all metrics
-		log.Printf("E! [processors.topk]: %v", err)
+		t.Log.Errorf("%v", err)
 		return []telegraf.Metric{}
 	}
 	for k, ms := range t.cache {
@@ -341,7 +341,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 				}
 				val, ok := convert(fieldVal)
 				if !ok {
-					log.Printf("Cannot convert value '%s' from metric '%s' with tags '%s'",
+					t.Log.Infof("Cannot convert value '%s' from metric '%s' with tags '%s'",
 						m.Fields()[field], m.Name(), m.Tags())
 					continue
 				}
@@ -407,7 +407,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 					}
 					val, ok := convert(fieldVal)
 					if !ok {
-						log.Printf("Cannot convert value '%s' from metric '%s' with tags '%s'",
+						t.Log.Infof("Cannot convert value '%s' from metric '%s' with tags '%s'",
 							m.Fields()[field], m.Name(), m.Tags())
 						continue
 					}

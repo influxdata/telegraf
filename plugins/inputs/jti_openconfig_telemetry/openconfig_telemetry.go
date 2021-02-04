@@ -305,9 +305,8 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 						m.Log.Debugf("Retrying %s with timeout %v", grpcServer, m.RetryDelay.Duration)
 						time.Sleep(m.RetryDelay.Duration)
 						continue
-					} else {
-						return
 					}
+					return
 				}
 				for {
 					r, err := stream.Recv()

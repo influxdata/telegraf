@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -14,9 +13,10 @@ import (
 )
 
 type Amon struct {
-	ServerKey    string
-	AmonInstance string
-	Timeout      internal.Duration
+	ServerKey    string            `toml:"server_key"`
+	AmonInstance string            `toml:"amon_instance"`
+	Timeout      internal.Duration `toml:"timeout"`
+	Log          telegraf.Logger   `toml:"-"`
 
 	client *http.Client
 }
@@ -76,7 +76,7 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 				metricCounter++
 			}
 		} else {
-			log.Printf("I! unable to build Metric for %s, skipping\n", m.Name())
+			a.Log.Infof("Unable to build Metric for %s, skipping", m.Name())
 		}
 	}
 

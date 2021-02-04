@@ -2,7 +2,6 @@ package opentsdb
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"net/url"
@@ -28,17 +27,19 @@ var (
 )
 
 type OpenTSDB struct {
-	Prefix string
+	Prefix string `toml:"prefix"`
 
-	Host string
-	Port int
+	Host string `toml:"host"`
+	Port int    `toml:"port"`
 
-	HttpBatchSize int // deprecated httpBatchSize form in 1.8
-	HttpPath      string
+	HttpBatchSize int    `toml:"http_batch_size"` // deprecated httpBatchSize form in 1.8
+	HttpPath      string `toml:"http_path"`
 
-	Debug bool
+	Debug bool `toml:"debug"`
 
-	Separator string
+	Separator string `toml:"separator"`
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 var sampleConfig = `
@@ -146,7 +147,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 					continue
 				}
 			default:
-				log.Printf("D! OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
+				o.Log.Debugf("OpenTSDB does not support metric value: [%s] of type [%T].", value, value)
 				continue
 			}
 
@@ -195,13 +196,13 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 					continue
 				}
 			default:
-				log.Printf("D! OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
+				o.Log.Debugf("OpenTSDB does not support metric value: [%s] of type [%T].", value, value)
 				continue
 			}
 
 			metricValue, buildError := buildValue(value)
 			if buildError != nil {
-				log.Printf("E! OpenTSDB: %s\n", buildError.Error())
+				o.Log.Errorf("OpenTSDB: %s", buildError.Error())
 				continue
 			}
 
