@@ -225,7 +225,7 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 		return &APIError{
 			StatusCode:  resp.StatusCode,
 			Title:       resp.Status,
-			Description: "An unexpected response was received while attempting to create the following database: " + database + ". Error: " + err.Error(),
+			Description: "An error response was received while attempting to create the following database: " + database + ". Error: " + err.Error(),
 		}
 	}
 
@@ -361,7 +361,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 		return &APIError{
 			StatusCode:  resp.StatusCode,
 			Title:       resp.Status,
-			Description: "An unexpected response was received while attempting to write metrics. Error: " + err.Error(),
+			Description: "An error response was received while attempting to write metrics. Error: " + err.Error(),
 		}
 	}
 
@@ -490,11 +490,13 @@ func (c *httpClient) addHeaders(req *http.Request) {
 	}
 }
 
-func (c *httpClient) validateResponse(response io.Reader) (io.Reader, error) {
+func (c *httpClient) validateResponse(response io.ReadCloser) (io.ReadCloser, error) {
 	bodyBytes, err := ioutil.ReadAll(response)
 	if err != nil {
 		return nil, err
 	}
+	defer response.Close()
+
 	originalResponse := ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	// Empty response is valid.
@@ -503,7 +505,7 @@ func (c *httpClient) validateResponse(response io.Reader) (io.Reader, error) {
 	}
 
 	if valid := json.Valid(bodyBytes); !valid {
-		err = errors.New("Unknown response - invalid json formatting. Raw response: '" + string(bodyBytes) + "'.")
+		err = errors.New(string(bodyBytes))
 	}
 
 	return originalResponse, err

@@ -226,7 +226,7 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 				expected := &influxdb.APIError{
 					StatusCode:  400,
 					Title:       "400 Bad Request",
-					Description: "An unexpected response was received while attempting to create the following database: database. Error: Unknown response - invalid json formatting. Raw response: 'invalid response'.",
+					Description: "An error response was received while attempting to create the following database: database. Error: invalid response",
 				}
 
 				require.Equal(t, expected, err)
