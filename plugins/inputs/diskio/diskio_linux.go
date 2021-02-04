@@ -49,6 +49,12 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		defer f.Close()
 		if err != nil {
 			udevDataPath = fmt.Sprintf("/dev/.udev/db/block:%s", devName)
+
+			f2, err2 := os.Open(udevDataPath)
+			defer f2.Close()
+			if err2 != nil {
+				return nil, err2
+			}
 		}
 	}
 
@@ -59,12 +65,6 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		udevDataPath: udevDataPath,
 		values:       di,
 	}
-
-	f, err := os.Open(udevDataPath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
 
 	scnr := bufio.NewScanner(f)
 	var devlinks bytes.Buffer
