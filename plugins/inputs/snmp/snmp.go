@@ -25,8 +25,11 @@ import (
 const description = `Retrieves SNMP values from remote agents`
 const sampleConfig = `
   ## Agent addresses to retrieve values from.
+  ##   format:  agents = ["<scheme>://<hostname>:<port>"]
+  ##   scheme:  either udp, udp4, udp6, tcp, tcp4, tcp6.
+  ##            default is udp
   ##   example: agents = ["udp://127.0.0.1:161"]
-  ##            agents = ["tcp://127.0.0.1:161"]
+  ##            agents = ["udp4://v4only-snmp-agent"]
   agents = ["udp://127.0.0.1:161"]
 
   ## Timeout for each request.

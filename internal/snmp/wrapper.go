@@ -167,6 +167,14 @@ func (gs *GosnmpWrapper) SetAgent(agent string) error {
 	switch u.Scheme {
 	case "tcp":
 		gs.Transport = "tcp"
+	case "tcp4":
+		gs.Transport = "tcp4"
+	case "tcp6":
+		gs.Transport = "tcp6"
+	case "udp4":
+		gs.Transport = "udp4"
+	case "udp6":
+		gs.Transport = "udp6"
 	case "", "udp":
 		gs.Transport = "udp"
 	default:
