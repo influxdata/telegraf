@@ -257,14 +257,24 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 			go func(serv string, query Query) {
 				defer wg.Done()
 				queryError := s.gatherServer(serv, query, acc)
-				s.gatherHealth(healthMetrics, serv, queryError, &mutex)
+
+				if s.HealthMetric {
+					mutex.Lock()
+					s.gatherHealth(healthMetrics, serv, queryError)
+					mutex.Unlock()
+				}
+
 				acc.AddError(queryError)
 			}(serv, query)
 		}
 	}
 
 	wg.Wait()
-	s.accHealth(healthMetrics, acc)
+
+	if s.HealthMetric {
+		s.accHealth(healthMetrics, acc)
+	}
+
 	return nil
 }
 
@@ -355,13 +365,7 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 }
 
 // gatherHealth stores info about any query errors in the healthMetrics map
-func (s *SQLServer) gatherHealth(healthMetrics map[string]*HealthMetric, serv string, queryError error, mutex *sync.Mutex) {
-	if !s.HealthMetric {
-		return
-	}
-
-	mutex.Lock()
-
+func (s *SQLServer) gatherHealth(healthMetrics map[string]*HealthMetric, serv string, queryError error) {
 	if healthMetrics[serv] == nil {
 		healthMetrics[serv] = &HealthMetric{}
 	}
@@ -370,16 +374,10 @@ func (s *SQLServer) gatherHealth(healthMetrics map[string]*HealthMetric, serv st
 	if queryError == nil {
 		healthMetrics[serv].SuccessfulQueries++
 	}
-
-	mutex.Unlock()
 }
 
 // accHealth accumulates the query health data contained within the healthMetrics map
 func (s *SQLServer) accHealth(healthMetrics map[string]*HealthMetric, acc telegraf.Accumulator) {
-	if !s.HealthMetric {
-		return
-	}
-
 	for connectionString, connectionStats := range healthMetrics {
 		sqlInstance, databaseName := getConnectionIdentifiers(connectionString)
 		tags := map[string]string{healthMetricInstanceTag: sqlInstance, healthMetricDatabaseTag: databaseName}
