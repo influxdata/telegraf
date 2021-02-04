@@ -334,15 +334,15 @@ All collection versions (version 1, version 2, and database_type) support an opt
 
 In the configuration file, toggling `health_metric` to `true` will enable collection of this metric. By default, this value is set to `false` and the metric is not collected. The health metric emits one record for each connection specified by `servers` in the configuration file.
 
-The health metric emits different tags than the standard sqlserver plugin metrics. This difference allows the emission of a consistent value, even when connection to the SQL Server fails. The health metric emits the following tags:
-- `connection_sql_instance` - Name of the server specified in the connection string. This value is emitted as-is in the connection string. If the server could not be parsed from the connection string, a constant placeholder value is emitted
-- `connection_database_name` -  Name of the database or (initial catalog) specified in the connection string. This value is emitted as-is in the connection string. If the database could not be parsed from the connection string, a constant placeholder value is emitted
+The health metric emits the following tags:
+- `sql_instance` - Name of the server specified in the connection string. This value is emitted as-is in the connection string. If the server could not be parsed from the connection string, a constant placeholder value is emitted
+- `database_name` -  Name of the database or (initial catalog) specified in the connection string. This value is emitted as-is in the connection string. If the database could not be parsed from the connection string, a constant placeholder value is emitted
 
 The health metric emits the following fields:
-- `AttemptedQueries` - Number of queries that were attempted for this connection
-- `SuccessfulQueries` - Number of queries that completed successfully for this connection
-- `DatabaseType` - Type of database as specified by `database_type`. If `database_type` is empty, the `QueryVersion` and `AzureDB` fields are concatenated instead
+- `attempted_queries` - Number of queries that were attempted for this connection
+- `successful_queries` - Number of queries that completed successfully for this connection
+- `database_type` - Type of database as specified by `database_type`. If `database_type` is empty, the `QueryVersion` and `AzureDB` fields are concatenated instead
 
-If `AttemptedQueries` and `SuccessfulQueries` are not equal for a given connection, some metrics were not successfully gathered for that connection. If `SuccessfulQueries` is 0, no metrics were successfully gathered.
+If `attempted_queries` and `successful_queries` are not equal for a given connection, some metrics were not successfully gathered for that connection. If `successful_queries` is 0, no metrics were successfully gathered.
 
 [cardinality]: /docs/FAQ.md#user-content-q-how-can-i-manage-series-cardinality

@@ -126,6 +126,43 @@ func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
 	s2 := &SQLServer{
 		Servers:      []string{testServer},
 		ExcludeQuery: []string{"DatabaseSize"},
+	}
+
+	var acc, acc2 testutil.Accumulator
+	err := s.Gather(&acc)
+	require.NoError(t, err)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, false)
+
+	err = s2.Gather(&acc2)
+	require.NoError(t, err)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, true)
+
+	// acc includes size metrics, and excludes memory metrics
+	assert.False(t, acc.HasMeasurement("Memory breakdown (%)"))
+	assert.True(t, acc.HasMeasurement("Log size (bytes)"))
+
+	// acc2 includes memory metrics, and excludes size metrics
+	assert.True(t, acc2.HasMeasurement("Memory breakdown (%)"))
+	assert.False(t, acc2.HasMeasurement("Log size (bytes)"))
+}
+
+func TestSqlServer_MultipleInstanceWithHealthMetricIntegration(t *testing.T) {
+	// Invoke Gather() from two separate configurations and
+	// confirm they don't interfere with each other.
+	// This test is intentionally similar to TestSqlServer_MultipleInstanceIntegration.
+	// It is separated to ensure that the health metric code does not affect other metrics
+	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
+
+	testServer := "Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+	s := &SQLServer{
+		Servers:      []string{testServer},
+		ExcludeQuery: []string{"MemoryClerk"},
+	}
+	s2 := &SQLServer{
+		Servers:      []string{testServer},
+		ExcludeQuery: []string{"DatabaseSize"},
 		HealthMetric: true,
 	}
 
@@ -153,7 +190,7 @@ func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
 	sqlInstance, database := getConnectionIdentifiers(testServer)
 	tags := map[string]string{healthMetricInstanceTag: sqlInstance, healthMetricDatabaseTag: database}
 	assert.True(t, acc2.HasPoint(healthMetricName, tags, healthMetricAttemptedQueries, 9))
-	assert.True(t, acc2.HasPoint(healthMetricName, tags, healthMetricSuccessfulQueries, 0))
+	assert.True(t, acc2.HasPoint(healthMetricName, tags, healthMetricSuccessfulQueries, 9))
 }
 
 func TestSqlServer_HealthMetric(t *testing.T) {

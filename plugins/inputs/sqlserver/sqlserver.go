@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"strings"
 	"sync"
 	"time"
 
@@ -54,11 +53,11 @@ const (
 
 const (
 	healthMetricName              = "sqlserver_telegraf_health"
-	healthMetricInstanceTag       = "connection_sql_instance"
-	healthMetricDatabaseTag       = "connection_database_name"
-	healthMetricAttemptedQueries  = "AttemptedQueries"
-	healthMetricSuccessfulQueries = "SuccessfulQueries"
-	healthMetricDatabaseType      = "DatabaseType"
+	healthMetricInstanceTag       = "sql_instance"
+	healthMetricDatabaseTag       = "database_name"
+	healthMetricAttemptedQueries  = "attempted_queries"
+	healthMetricSuccessfulQueries = "successful_queries"
+	healthMetricDatabaseType      = "database_type"
 )
 
 const sampleConfig = `
@@ -400,15 +399,11 @@ func (s *SQLServer) getDatabaseTypeToLog() string {
 		return s.DatabaseType
 	}
 
-	var b strings.Builder
-	b.WriteString("QueryVersion-")
-	fmt.Fprintf(&b, "%d", s.QueryVersion)
-
+	logname := fmt.Sprintf("QueryVersion-%d", s.QueryVersion)
 	if s.AzureDB {
-		b.WriteString("-AzureDB")
+		logname += "-AzureDB"
 	}
-
-	return b.String()
+	return logname
 }
 
 func init() {
