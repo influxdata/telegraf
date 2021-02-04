@@ -19,16 +19,17 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 			// this is the case when we get a counter with a tag that doesn't exist on our XML file
 			// or when we get a "special" counter like 260/271/272 for which we don't collect counter values
 			// or we get a sample type that we're not interested in (like "flow")
-			d.debug(fmt.Sprintf("  nil sampleCounterData or SampleCounterData.CounterRecords: %#v", sample.SampleCounterData))
+			d.debug(fmt.Sprintf("  nil sampleCounterData or SampleCounterData.CounterRecords for sampleType %v: %#v", sample.SampleType, sample.SampleCounterData))
 			continue
 		}
 
-		if _, exists := d.DimensionsPerSourceIDMap[sample.SampleCounterData.SourceID]; !exists {
-			d.debug(fmt.Sprintf("  sourceID %x does not exist in DimensionsPerSourceIDMap", sample.SampleCounterData.SourceID))
+		key := createMapKey(sample.SampleCounterData.SourceID, p.AgentAddress.String())
+		if _, exists := d.DimensionsPerSourceIDMap[key]; !exists {
+			d.debug(fmt.Sprintf("  sourceID %x and key %v does not exist in DimensionsPerSourceIDMap", sample.SampleCounterData.SourceID, key))
 			continue
 		}
-		if err := d.DimensionsPerSourceIDMap[sample.SampleCounterData.SourceID].Validate(); err != nil {
-			d.debug(fmt.Sprintf("  error in DimensionsPerSourceIDMap.Validate, error is %s, map value is %v whereas counter source ID is %x", err, d.DimensionsPerSourceIDMap[sample.SampleCounterData.SourceID], sample.SampleCounterData.SourceID))
+		if err := d.DimensionsPerSourceIDMap[key].Validate(); err != nil {
+			d.debug(fmt.Sprintf("  error in DimensionsPerSourceIDMap.Validate, error is %s, map value is %v whereas counter source ID is %x and key is %v", err, d.DimensionsPerSourceIDMap[key], sample.SampleCounterData.SourceID, key))
 			continue
 		}
 
@@ -42,7 +43,7 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 
 			counterFields := counterRecord.CounterData.GetFields()
 
-			dimensions := d.DimensionsPerSourceIDMap[sample.SampleCounterData.SourceID]
+			dimensions := d.DimensionsPerSourceIDMap[key]
 			counterTags := counterRecord.CounterData.GetTags(dimensions)
 
 			err := appendCommonTags(p, counterTags)
@@ -56,6 +57,7 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 					d.debug(fmt.Sprintf("  error sending new metric to telegraf %s", err))
 					return nil, err
 				}
+
 				metrics = append(metrics, m)
 			}
 		}

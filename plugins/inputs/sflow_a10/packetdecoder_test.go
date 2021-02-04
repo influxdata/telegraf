@@ -2,6 +2,7 @@ package sflow_a10
 
 import (
 	"bytes"
+	"net"
 	"testing"
 
 	tu "github.com/influxdata/telegraf/testutil"
@@ -104,7 +105,7 @@ func TestDecodeCounterSample(t *testing.T) {
 		},
 	}
 
-	actual, err := dc.decodeSample(octets)
+	actual, err := dc.decodeSample(octets, "10.0.1.2")
 	require.NoError(t, err)
 	require.Equal(t, expected, actual)
 
@@ -118,7 +119,7 @@ func TestCounterSampleSimple(t *testing.T) {
 	})
 
 	dc := NewDecoder()
-	actual, err := dc.decodeCounterSample(octets)
+	actual, err := dc.decodeCounterSample(octets, "10.1.2.3")
 	require.NoError(t, err)
 
 	expected := &CounterSample{
@@ -191,6 +192,8 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 	}
 
 	const sourceID = 10
+	agent_ip := "10.0.9.1"
+	key := createMapKey(sourceID, agent_ip)
 
 	// start by reading the XML file with the metric definitions
 	c, err := sflow.readA10XMLData([]byte(testXMLStringEndToEnd))
@@ -294,16 +297,16 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 		0x3E, 0xFB, // port range end uint16
 	})
 
-	_, err = dc.decodeSample(octets)
+	_, err = dc.decodeSample(octets, agent_ip)
 	require.NoError(t, err)
 
 	// make sure port information has been added into the map for the correct sourceID
-	require.Equal(t, "DST", dc.DimensionsPerSourceIDMap[sourceID].PortDimensions.TableType)
-	require.Equal(t, "TCP", dc.DimensionsPerSourceIDMap[sourceID].PortDimensions.PortType)
-	require.Equal(t, 15478, dc.DimensionsPerSourceIDMap[sourceID].PortDimensions.PortNumber)
-	require.Equal(t, 16123, dc.DimensionsPerSourceIDMap[sourceID].PortDimensions.PortRangeEnd)
-	require.Equal(t, 16123, dc.DimensionsPerSourceIDMap[sourceID].PortDimensions.PortRangeEnd)
-	require.Equal(t, 0, len(dc.DimensionsPerSourceIDMap[sourceID].IPDimensions))
+	require.Equal(t, "DST", dc.DimensionsPerSourceIDMap[key].PortDimensions.TableType)
+	require.Equal(t, "TCP", dc.DimensionsPerSourceIDMap[key].PortDimensions.PortType)
+	require.Equal(t, 15478, dc.DimensionsPerSourceIDMap[key].PortDimensions.PortNumber)
+	require.Equal(t, 16123, dc.DimensionsPerSourceIDMap[key].PortDimensions.PortRangeEnd)
+	require.Equal(t, 16123, dc.DimensionsPerSourceIDMap[key].PortDimensions.PortRangeEnd)
+	require.Equal(t, 0, len(dc.DimensionsPerSourceIDMap[key].IPDimensions))
 
 	// let's proceed in reading a 271 sample (contains IP information)
 	octets = bytes.NewBuffer([]byte{
@@ -329,7 +332,7 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 		0x0F, // subnet 1
 	})
 
-	_, err = dc.decodeSample(octets)
+	_, err = dc.decodeSample(octets, agent_ip)
 	require.NoError(t, err)
 
 	expectedIPAddresses := []IPDimension{
@@ -343,16 +346,16 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, 2, len(dc.DimensionsPerSourceIDMap[sourceID].IPDimensions))
+	require.Equal(t, 2, len(dc.DimensionsPerSourceIDMap[key].IPDimensions))
 	for i := 0; i < 2; i++ {
-		require.Equal(t, expectedIPAddresses[0], dc.DimensionsPerSourceIDMap[sourceID].IPDimensions[0])
+		require.Equal(t, expectedIPAddresses[0], dc.DimensionsPerSourceIDMap[key].IPDimensions[0])
 	}
 	// also make sure port information is still there
-	require.Equal(t, "DST", dc.DimensionsPerSourceIDMap[sourceID].PortDimensions.TableType)
-	require.Equal(t, "TCP", dc.DimensionsPerSourceIDMap[sourceID].PortDimensions.PortType)
-	require.Equal(t, 15478, dc.DimensionsPerSourceIDMap[sourceID].PortDimensions.PortNumber)
-	require.Equal(t, 16123, dc.DimensionsPerSourceIDMap[sourceID].PortDimensions.PortRangeEnd)
-	require.Equal(t, 16123, dc.DimensionsPerSourceIDMap[sourceID].PortDimensions.PortRangeEnd)
+	require.Equal(t, "DST", dc.DimensionsPerSourceIDMap[key].PortDimensions.TableType)
+	require.Equal(t, "TCP", dc.DimensionsPerSourceIDMap[key].PortDimensions.PortType)
+	require.Equal(t, 15478, dc.DimensionsPerSourceIDMap[key].PortDimensions.PortNumber)
+	require.Equal(t, 16123, dc.DimensionsPerSourceIDMap[key].PortDimensions.PortRangeEnd)
+	require.Equal(t, 16123, dc.DimensionsPerSourceIDMap[key].PortDimensions.PortRangeEnd)
 
 	// now let's read one 217 which contains the actual metrics
 	octets = bytes.NewBuffer([]byte{
@@ -403,7 +406,7 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA1, // counter metric 1 uint64
 	})
 
-	s, err := dc.decodeSample(octets)
+	s, err := dc.decodeSample(octets, agent_ip)
 	require.NoError(t, err)
 
 	require.Equal(t, 2, len(s.SampleCounterData.CounterRecords))
@@ -422,10 +425,14 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 	require.Equal(t, metricsSet1, s.SampleCounterData.CounterRecords[1].CounterData.CounterFields)
 
 	p := &V5Format{
+		AgentAddress: net.IPAddr{
+			IP: make([]byte, 4),
+		},
 		Samples: []Sample{
 			*s,
 		},
 	}
+	p.AgentAddress.IP = []byte{10, 0, 9, 1}
 	// now let's try to get the actual metrics
 	metrics, err := makeMetricsForCounters(p, dc)
 	require.NoError(t, err)

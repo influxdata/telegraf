@@ -155,7 +155,6 @@ func (s *SFlow_A10) read(acc telegraf.Accumulator, conn net.PacketConn) {
 }
 
 func (s *SFlow_A10) process(acc telegraf.Accumulator, buf []byte) {
-
 	if err := s.decoder.Decode(bytes.NewBuffer(buf)); err != nil {
 		acc.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
 	}
