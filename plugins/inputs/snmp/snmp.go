@@ -799,7 +799,7 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 	}
 
 	// this won't actually try to run a query. The `-Ch` will just cause it to dump headers.
-	out, err := execCmd("snmptable", "-Ch", "-Cl", "-c", "public", "127.0.0.1", oidFullName)
+	out, err := execCmd("snmptable", "-Ch", "127.0.0.1", oidFullName)
 	if err != nil {
 		return "", "", "", nil, fmt.Errorf("getting table columns: %w", err)
 	}
