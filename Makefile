@@ -133,8 +133,8 @@ vet:
 .PHONY: lint
 lint:
 ifeq (, $(shell which revive))
-	$(shell go install github.com/mgechev/revive)
-	$(info revive installed)
+	$(info revive can't be found, please install it: https://github.com/mgechev/revive#installation)
+	exit 1
 endif
 
 	revive -config revivelint_config.toml -formatter friendly ./...
