@@ -130,6 +130,15 @@ vet:
 		exit 1; \
 	fi
 
+.PHONY: lint
+lint:
+ifeq (, $(shell which revive))
+	$(shell go install github.com/mgechev/revive)
+	$(info revive installed)
+endif
+
+	revive -config revivelint_config.toml -formatter friendly ./...
+
 .PHONY: tidy
 tidy:
 	go mod verify
