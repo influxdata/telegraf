@@ -104,12 +104,6 @@ query_version = 2
 exclude_query = [ 'Schedulers' , 'SqlRequests']
 `
 
-// returns a new SQLServer instance
-func NewSQLServer() *SQLServer {
-	return &SQLServer{
-		Servers: []string{defaultServer}}
-}
-
 // SampleConfig return the sample configuration
 func (s *SQLServer) SampleConfig() string {
 	return sampleConfig
@@ -329,6 +323,6 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
-		return NewSQLServer()
+		return &SQLServer{Servers: []string{defaultServer}}
 	})
 }
