@@ -24,7 +24,6 @@ import (
 
 const description = `Retrieves SNMP values from remote agents`
 const sampleConfig = `
-  [[inputs.snmp]]
   ## Agent addresses to retrieve values from.
   ##   format:  agents = ["<scheme://><hostname>:<port>"]
   ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.            
