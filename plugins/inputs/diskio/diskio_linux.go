@@ -46,17 +46,20 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		udevDataPath = fmt.Sprintf("/run/udev/data/b%d:%d", major, minor)
 
 		f, err := os.Open(udevDataPath)
-		defer f.Close()
+		defer f.Close() // Closing this when it goes out of scope.
 		if err != nil {
+			// This path failed, try the fallback .udev style (non-systemd)
 			udevDataPath = fmt.Sprintf("/dev/.udev/db/block:%s", devName)
-
-			f2, err2 := os.Open(udevDataPath)
-			defer f2.Close()
+			f, err2 := os.Open(udevDataPath)
+			defer f.Close() // Closing this when it goes out of scope.
 			if err2 != nil {
 				return nil, err2
 			}
 		}
 	}
+	// Final open of the confirmed (or the previously detected/used) udev file
+	f, err := os.Open(udevDataPath)
+	defer f.Close()
 
 	di := map[string]string{}
 
