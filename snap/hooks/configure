@@ -3,6 +3,6 @@
 # Copy the config file if needed, update permissions, and create telegraf.d
 cp -pn $SNAP/etc/telegraf.conf $SNAP_DATA/telegraf.conf
 mkdir -p $SNAP_DATA/telegraf.d
-chown root:snap_daemon $SNAP_DATA/telegraf.conf $SNAP_DATA/telegraf.d
+chown --quiet snap_daemon: $SNAP_DATA/telegraf.conf $SNAP_DATA/telegraf.d $SNAP_DATA/telegraf.d/*.conf
 chmod --quiet 640 $SNAP_DATA/telegraf.conf $SNAP_DATA/telegraf.d/*.conf
 chmod 755 $SNAP_DATA/telegraf.d
