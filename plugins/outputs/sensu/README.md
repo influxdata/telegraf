@@ -1,15 +1,11 @@
 # HTTP Output Plugin
 
-This plugin is based off of the HTTP output plugin to send metrics
-to the Sensu Events API.
+This plugin writes metrics events to [Sensu Go](https://sensu.io)  via its 
+HTTP events API.
 
 ### Configuration:
 
 ```toml
-  ## Configure check configurations
-  [outputs.sensu-go.check]
-    name = "telegraf"
-
   ## BACKEND API URL is the Sensu Backend API root URL to send metrics to 
   ## (protocol, host, and port only). The output plugin will automatically 
   ## append the corresponding backend or agent API path (e.g. /events or 
@@ -52,7 +48,24 @@ to the Sensu Events API.
   # content_encoding = "identity"
 
   ## Sensu Event details 
+  ##
+  ## Below are the event details to be sent to Sensu.  The main portions of the
+  ## event are the check, entity, and metrics specifications. For more information
+  ## on Sensu events and its components, please visit:
+  ## - Events - https://docs.sensu.io/sensu-go/latest/reference/events
+  ## - Checks -  https://docs.sensu.io/sensu-go/latest/reference/checks
+  ## - Entities - https://docs.sensu.io/sensu-go/latest/reference/entities
+  ## - Metrics - https://docs.sensu.io/sensu-go/latest/reference/events#metrics
   ## 
+  ## Check specification
+  ## The check name is the name to give the Sensu check associated with the event
+  ## created.
+  [outputs.sensu-go.check]
+    name = "telegraf"
+
+  ## Entity specification
+  ## Configure the entity name and namepsace, if necessary.
+  ##
   ## NOTE: if the output plugin is configured to send events to a 
   ## backend_api_url and entity_name is not set, the value returned by 
   ## os.Hostname() will be used; if the output plugin is configured to send
@@ -61,9 +74,12 @@ to the Sensu Events API.
   #   name = "server-01"
   #   namespace = "default"
 
+  ## Metrics specification
+  ## Configure the tags for the metrics that are sent as part of the Sensu event
   # [outputs.sensu-go.tags]
   #   source = "telegraf"
 
+  ## Configure the handler(s) for processing the provided metrics
   # [outputs.sensu-go.metrics]
-  #   handlers = ["elasticsearch","timescaledb"]
+  #   handlers = ["influxdb","elasticsearch"]
 ```
