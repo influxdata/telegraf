@@ -24,7 +24,7 @@ func setupNullDisk(t *testing.T, s *DiskIO, devName string) func() error {
 	require.NoError(t, err)
 
 	if s.infoCache == nil {
-		s.infoCache = map[string]diskInfoCache{}
+		s.infoCache = make(map[string]diskInfoCache, 0)
 	}
 	ic, ok := s.infoCache[devName]
 	if !ok {
