@@ -127,7 +127,8 @@ setting capabilities.
 
 [man 7 capabilities]: http://man7.org/linux/man-pages/man7/capabilities.7.html
 
-When Telegraf cannot listen on a privileged ICMP socket it will attempt to send an "unprivileged" ping via UDP. On Linux, this must be enabled with the following sysctl command:
+On Linux the default behaviour is to restrict creation of ping sockets for everybody. Execute the below command to enable creation of ping sockets for all possible user groups. The integers provided to ping_group_range defines the range of user groups that are permited to create ping sockets, were 2147483647 (the max of a signed int 2^31) is the max group identifier (GID). To learn more about the ping_group_range you can go [here](https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt#ping_group_range).
+
 ```sh
 $ sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
 ```
