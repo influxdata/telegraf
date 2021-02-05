@@ -190,48 +190,5 @@ workflows:
   version: 2
   check:
     jobs:
-      - 'test-go-1_15':
-          filters:
-            tags:
-              only: /.*/
-      - 'package':
-          requires:
-            - 'test-go-1_15'
-      - 'windows-signing':
-          requires:
-            - 'test-go-1_15'
-            
-
-  nightly:
-    jobs:
-      - 'deps'
-      - 'macdeps'
-      - 'test-go-1_14':
-          requires:
-            - 'deps'
-      - 'test-go-1_14-386':
-          requires:
-            - 'deps'
-      - 'test-go-1_15':
-          requires:
-            - 'deps'
-      - 'test-go-1_15-386':
-          requires:
-            - 'deps'
-      - 'test-go-darwin':
-          requires:
-            - 'macdeps'
-      - 'nightly':
-          requires:
-            - 'test-go-darwin'
-            - 'test-go-1_14'
-            - 'test-go-1_14-386'
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
-    triggers:
-      - schedule:
-          cron: "0 7 * * *"
-          filters:
-            branches:
-              only:
-                - master
+      - 'package'
+      - 'windows-signing'
