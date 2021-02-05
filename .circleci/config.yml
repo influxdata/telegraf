@@ -176,7 +176,7 @@ jobs:
             $extractDirectory = $artifactDirectory + "\" + "extracted"
             foreach ($file in get-ChildItem $artifactDirectory -recurse | where {$_.name -like "*windows*"} | select name) 
             {
-                $artifact = $artifactPath + "\" + $file.Name
+                $artifact = $artifactDirectory + "\" + $file.Name
                 Expand-Archive -LiteralPath $artifact -DestinationPath $extractDirectory -Force
                 
                 $subDirectoryPath = $extractDirectory + "\" + (Get-ChildItem -Path $extractDirectory | Select-Object -First 1).Name
