@@ -2,11 +2,9 @@ package sensu
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -20,7 +18,6 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 const (
@@ -97,17 +94,27 @@ type Sensu struct {
 	EndpointUrl string
 	OutEntity   *OutputEntity
 
+	Log telegraf.Logger `toml:"-"`
+
 	tls.ClientConfig
 	client *http.Client
-
-	serializer serializers.Serializer
 }
 
 var sampleConfig = `
-## BACKEND API URL is the Sensu Backend API root URL to send metrics to 
-## (protocol, host, and port only). The output plugin will automatically 
-## append the corresponding backend or agent API path (e.g. /events or 
+## BACKEND API URL is the Sensu Backend API root URL to send metrics to
+## (protocol, host, and port only). The output plugin will automatically
+## append the corresponding backend API path
 ## /api/core/v2/namespaces/:entity_namespace/events/:entity_name/:check_name).
+##
+## Backend Events API reference:
+## https://docs.sensu.io/sensu-go/latest/api/events/
+##
+## AGENT API URL is the Sensu Agent API root URL to send metrics to
+## (protocol, host, and port only). The output plugin will automatically
+## append the correspeonding agent API path (/events).
+##
+## Agent API Events API reference:
+## https://docs.sensu.io/sensu-go/latest/api/events/
 ## 
 ## NOTE: if backend_api_url and agent_api_url and api_key are set, the output 
 ## plugin will use backend_api_url. If backend_api_url and agent_api_url are 
@@ -157,12 +164,13 @@ var sampleConfig = `
 ##
 ## Check specification
 ## The check name is the name to give the Sensu check associated with the event
-## created.
+## created. This maps to check.metatadata.name in the event.
 [outputs.sensu-go.check]
   name = "telegraf"
 
 ## Entity specification
-## Configure the entity name and namepsace, if necessary.
+## Configure the entity name and namespace, if necessary. This will be part of
+## the entity.metadata in the event.
 ##
 ## NOTE: if the output plugin is configured to send events to a
 ## backend_api_url and entity_name is not set, the value returned by
@@ -192,7 +200,7 @@ func (s *Sensu) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *Sensu) createClient(ctx context.Context) (*http.Client, error) {
+func (s *Sensu) createClient() (*http.Client, error) {
 	tlsCfg, err := s.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -209,10 +217,6 @@ func (s *Sensu) createClient(ctx context.Context) (*http.Client, error) {
 }
 
 func (s *Sensu) Connect() error {
-	if s.Timeout.Duration == 0 {
-		s.Timeout.Duration = defaultClientTimeout
-	}
-
 	if len(s.ContentEncoding) != 0 {
 		validEncoding := []string{"identity", "gzip"}
 		if !choice.Contains(s.ContentEncoding, validEncoding) {
@@ -236,10 +240,7 @@ func (s *Sensu) Connect() error {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), s.Timeout.Duration)
-	defer cancel()
-
-	client, err := s.createClient(ctx)
+	client, err := s.createClient()
 	if err != nil {
 		return err
 	}
@@ -258,7 +259,7 @@ func (s *Sensu) Write(metrics []telegraf.Metric) error {
 	var points []*OutputMetric
 	for _, metric := range metrics {
 		// Add tags from config to each metric point
-		var tagList []*OutputTag
+		tagList := make([]*OutputTag, 0, len(s.Tags)+len(metric.TagList()))
 		for name, value := range s.Tags {
 			tag := &OutputTag{
 				Name:  name,
@@ -280,15 +281,15 @@ func (s *Sensu) Write(metrics []telegraf.Metric) error {
 			value := getFloat(fieldSet.Value)
 			// JSON does not support these special values
 			if math.IsInf(value, 1) {
-				log.Printf("D! [outputs.sensu-go] metric %s returned positive infity, setting value to %f", key, math.MaxFloat64)
+				s.Log.Debugf("metric %s returned positive infity, setting value to %f", key, math.MaxFloat64)
 				value = math.MaxFloat64
 			}
 			if math.IsInf(value, -1) {
-				log.Printf("D! [outputs.sensu-go] metric %s returned negative infity, setting value to %f", key, -math.MaxFloat64)
+				s.Log.Debugf("metric %s returned negative infity, setting value to %f", key, -math.MaxFloat64)
 				value = -math.MaxFloat64
 			}
 			if math.IsNaN(value) {
-				log.Printf("D! [outputs.sensu-go] metric %s returned as non a number, skipping", key)
+				s.Log.Debugf("metric %s returned as non a number, skipping", key)
 				continue
 			}
 
@@ -354,17 +355,27 @@ func (s *Sensu) write(reqBody []byte) error {
 
 // Resolves the event write endpoint
 func (s *Sensu) setEndpointUrl() error {
-	var endpointUrl string
+	var (
+		endpointUrl string
+		path_suffix string
+	)
 
 	if s.BackendApiUrl != nil {
 		endpointUrl = *s.BackendApiUrl
+		namespace := "default"
+		if s.Entity != nil && s.Entity.Namespace != nil {
+			namespace = *s.Entity.Namespace
+		}
+		path_suffix = "/api/core/v2/namespaces/" + namespace + "/events"
 	} else if s.AgentApiUrl != nil {
 		endpointUrl = *s.AgentApiUrl
+		path_suffix = "/events"
 	}
 
 	if len(endpointUrl) == 0 {
-		log.Printf("D! [outputs.sensu-go] no backend or agent API URL provided, falling back to default agent API URL %s", defaultUrl)
+		s.Log.Debugf("no backend or agent API URL provided, falling back to default agent API URL %s", defaultUrl)
 		endpointUrl = defaultUrl
+		path_suffix = "/events"
 	}
 
 	u, err := url.Parse(endpointUrl)
@@ -372,16 +383,6 @@ func (s *Sensu) setEndpointUrl() error {
 		return err
 	}
 
-	var path_suffix string
-	if s.BackendApiUrl != nil {
-		namespace := "default"
-		if s.Entity != nil && s.Entity.Namespace != nil {
-			namespace = *s.Entity.Namespace
-		}
-		path_suffix = "/api/core/v2/namespaces/" + namespace + "/events"
-	} else {
-		path_suffix = "/events"
-	}
 	u.Path = path.Join(u.Path, path_suffix)
 	s.EndpointUrl = u.String()
 

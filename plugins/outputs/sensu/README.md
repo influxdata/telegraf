@@ -8,8 +8,18 @@ HTTP events API.
 ```toml
   ## BACKEND API URL is the Sensu Backend API root URL to send metrics to 
   ## (protocol, host, and port only). The output plugin will automatically 
-  ## append the corresponding backend or agent API path (e.g. /events or 
+  ## append the corresponding backend API path
   ## /api/core/v2/namespaces/:entity_namespace/events/:entity_name/:check_name).
+  ##
+  ## Backend Events API reference:
+  ## https://docs.sensu.io/sensu-go/latest/api/events/
+  ##
+  ## AGENT API URL is the Sensu Agent API root URL to send metrics to
+  ## (protocol, host, and port only). The output plugin will automatically 
+  ## append the correspeonding agent API path (/events).
+  ##
+  ## Agent API Events API reference:
+  ## https://docs.sensu.io/sensu-go/latest/api/events/
   ## 
   ## NOTE: if backend_api_url and agent_api_url and api_key are set, the output 
   ## plugin will use backend_api_url. If backend_api_url and agent_api_url are 
@@ -59,12 +69,13 @@ HTTP events API.
   ## 
   ## Check specification
   ## The check name is the name to give the Sensu check associated with the event
-  ## created.
+  ## created. This maps to check.metatadata.name in the event.
   [outputs.sensu-go.check]
     name = "telegraf"
 
   ## Entity specification
-  ## Configure the entity name and namepsace, if necessary.
+  ## Configure the entity name and namespace, if necessary. This will be part of
+  ## the entity.metadata in the event.
   ##
   ## NOTE: if the output plugin is configured to send events to a 
   ## backend_api_url and entity_name is not set, the value returned by 
