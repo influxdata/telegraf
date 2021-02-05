@@ -565,8 +565,8 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 	if err != nil {
 		return nil, err
 	}
-	
-  err = gs.SetAgent(agent)
+
+	err = gs.SetAgent(agent)
 	if err != nil {
 		return nil, err
 	}
