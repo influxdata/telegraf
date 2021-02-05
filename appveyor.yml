@@ -1,5 +1,7 @@
 version: "{build}"
 
+skip_branch_with_pr: true
+
 image: Visual Studio 2019
 
 cache:
