@@ -191,4 +191,6 @@ workflows:
   check:
     jobs:
       - 'package'
-      - 'windows-signing'
+      - 'windows-signing':
+          requires:
+              - 'package'
