@@ -123,7 +123,7 @@ func TestWriteKinesis_WhenSuccess(t *testing.T) {
 	k.mockKinesisService(svc)
 
 	elapsed := k.writeKinesis(records)
-	assert.Greater(elapsed.Nanoseconds(), zero)
+	assert.GreaterOrEqual(elapsed.Nanoseconds(), zero)
 
 	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
 		{
@@ -166,7 +166,7 @@ func TestWriteKinesis_WhenRecordErrors(t *testing.T) {
 	k.mockKinesisService(svc)
 
 	elapsed := k.writeKinesis(records)
-	assert.Greater(elapsed.Nanoseconds(), zero)
+	assert.GreaterOrEqual(elapsed.Nanoseconds(), zero)
 
 	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
 		{
@@ -199,7 +199,7 @@ func TestWriteKinesis_WhenServiceError(t *testing.T) {
 	k.mockKinesisService(svc)
 
 	elapsed := k.writeKinesis(records)
-	assert.Greater(elapsed.Nanoseconds(), zero)
+	assert.GreaterOrEqual(elapsed.Nanoseconds(), zero)
 
 	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
 		{
