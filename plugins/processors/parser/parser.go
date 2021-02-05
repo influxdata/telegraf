@@ -13,7 +13,7 @@ type Parser struct {
 	DropOriginal bool     `toml:"drop_original"`
 	Merge        string   `toml:"merge"`
 	ParseFields  []string `toml:"parse_fields"`
-	Parser       parsers.Parser
+	Parser       telegraf.Parser
 }
 
 var SampleConfig = `

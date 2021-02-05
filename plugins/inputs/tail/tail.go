@@ -17,8 +17,6 @@ import (
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/csv"
 )
 
 const (
@@ -45,7 +43,7 @@ type Tail struct {
 	Log        telegraf.Logger `toml:"-"`
 	tailers    map[string]*tail.Tail
 	offsets    map[string]int64
-	parserFunc parsers.ParserFunc
+	parserFunc telegraf.ParserFunc
 	wg         sync.WaitGroup
 
 	acc telegraf.TrackingAccumulator
@@ -282,34 +280,39 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 }
 
 // ParseLine parses a line of text.
-func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.Metric, error) {
-	switch parser.(type) {
-	case *csv.Parser:
-		// The csv parser parses headers in Parse and skips them in ParseLine.
-		// As a temporary solution call Parse only when getting the first
-		// line from the file.
-		if firstLine {
-			return parser.Parse([]byte(line))
-		} else {
-			m, err := parser.ParseLine(line)
-			if err != nil {
-				return nil, err
-			}
+func parseLine(parser telegraf.Parser, line string, lineno int) ([]telegraf.Metric, error) {
+	// Some parsers require special handling of header information (e.g. CSV)
+	if p, ok := parser.(telegraf.HeaderParser); ok {
+		// Skip garbage lines completely
+		nSkip := p.GetSkipLineCount()
+		if lineno < nSkip {
+			return nil, nil
+		}
 
-			if m != nil {
-				return []telegraf.Metric{m}, nil
-			}
+		// Parse the header information. No metric to return though.
+		nHeader := p.GetHeaderLineCount()
+		if lineno < nSkip+nHeader {
+			err := p.ParseHeaderLine(line)
+			return nil, err
+		}
+
+		m, err := parser.ParseLine(line)
+		if err != nil {
+			return nil, err
+		}
+		if m == nil {
 			return []telegraf.Metric{}, nil
 		}
-	default:
-		return parser.Parse([]byte(line))
+		return []telegraf.Metric{m}, nil
 	}
+
+	return parser.Parse([]byte(line))
 }
 
 // Receiver is launched as a goroutine to continuously watch a tailed logfile
 // for changes, parse any incoming msgs, and add to the accumulator.
-func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
-	var firstLine = true
+func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
+	var lineno int = 0
 
 	// holds the individual lines of multi-line log entries.
 	var buffer bytes.Buffer
@@ -372,13 +375,13 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 			continue
 		}
 
-		metrics, err := parseLine(parser, text, firstLine)
+		metrics, err := parseLine(parser, text, lineno)
 		if err != nil {
 			t.Log.Errorf("Malformed log line in %q: [%q]: %s",
 				tailer.Filename, text, err.Error())
 			continue
 		}
-		firstLine = false
+		lineno++
 
 		for _, metric := range metrics {
 			metric.AddTag("path", tailer.Filename)
@@ -434,7 +437,7 @@ func (t *Tail) Stop() {
 	offsetsMutex.Unlock()
 }
 
-func (t *Tail) SetParserFunc(fn parsers.ParserFunc) {
+func (t *Tail) SetParserFunc(fn telegraf.ParserFunc) {
 	t.parserFunc = fn
 }
 

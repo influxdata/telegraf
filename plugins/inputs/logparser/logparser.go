@@ -56,7 +56,7 @@ type LogParserPlugin struct {
 
 	sync.Mutex
 
-	GrokParser parsers.Parser
+	GrokParser telegraf.Parser
 	GrokConfig GrokConfig `toml:"grok"`
 }
 

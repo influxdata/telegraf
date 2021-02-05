@@ -12,7 +12,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 )
@@ -50,7 +49,7 @@ type PubSub struct {
 
 	cancel context.CancelFunc
 
-	parser parsers.Parser
+	parser telegraf.Parser
 	wg     *sync.WaitGroup
 	acc    telegraf.TrackingAccumulator
 
@@ -72,7 +71,7 @@ func (ps *PubSub) Gather(acc telegraf.Accumulator) error {
 }
 
 // SetParser implements ParserInput interface.
-func (ps *PubSub) SetParser(parser parsers.Parser) {
+func (ps *PubSub) SetParser(parser telegraf.Parser) {
 	ps.parser = parser
 }
 
@@ -312,8 +311,8 @@ const sampleConfig = `
   ## Application Default Credentials, which is preferred.
   # credentials_file = "path/to/my/creds.json"
 
-  ## Optional. Number of seconds to wait before attempting to restart the 
-  ## PubSub subscription receiver after an unexpected error. 
+  ## Optional. Number of seconds to wait before attempting to restart the
+  ## PubSub subscription receiver after an unexpected error.
   ## If the streaming pull for a PubSub Subscription fails (receiver),
   ## the agent attempts to restart receiving messages after this many seconds.
   # retry_delay_seconds = 5
@@ -362,7 +361,7 @@ const sampleConfig = `
   ## processed concurrently (use "max_outstanding_messages" instead).
   # max_receiver_go_routines = 0
 
-  ## Optional. If true, Telegraf will attempt to base64 decode the 
+  ## Optional. If true, Telegraf will attempt to base64 decode the
   ## PubSub message data before parsing
   # base64_data = false
 `

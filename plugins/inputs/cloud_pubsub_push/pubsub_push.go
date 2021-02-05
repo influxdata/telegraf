@@ -15,7 +15,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 // defaultMaxBodySize is the default maximum request body size, in bytes.
@@ -37,7 +36,7 @@ type PubSubPush struct {
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
 	tlsint.ServerConfig
-	parsers.Parser
+	telegraf.Parser
 
 	listener net.Listener
 	server   *http.Server
@@ -125,7 +124,7 @@ func (p *PubSubPush) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *PubSubPush) SetParser(parser parsers.Parser) {
+func (p *PubSubPush) SetParser(parser telegraf.Parser) {
 	p.Parser = parser
 }
 

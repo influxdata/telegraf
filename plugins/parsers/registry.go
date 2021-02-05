@@ -5,7 +5,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
-	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
 	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
@@ -19,42 +18,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 )
 
-type ParserFunc func() (Parser, error)
+type Creator func(defaultMetricName string) telegraf.Parser
 
-// ParserInput is an interface for input plugins that are able to parse
-// arbitrary data formats.
-type ParserInput interface {
-	// SetParser sets the parser function for the interface
-	SetParser(parser Parser)
-}
+var Parsers = map[string]Creator{}
 
-// ParserFuncInput is an interface for input plugins that are able to parse
-// arbitrary data formats.
-type ParserFuncInput interface {
-	// GetParser returns a new parser.
-	SetParserFunc(fn ParserFunc)
-}
-
-// Parser is an interface defining functions that a parser plugin must satisfy.
-type Parser interface {
-	// Parse takes a byte buffer separated by newlines
-	// ie, `cpu.usage.idle 90\ncpu.usage.busy 10`
-	// and parses it into telegraf metrics
-	//
-	// Must be thread-safe.
-	Parse(buf []byte) ([]telegraf.Metric, error)
-
-	// ParseLine takes a single string metric
-	// ie, "cpu.usage.idle 90"
-	// and parses it into a telegraf metric.
-	//
-	// Must be thread-safe.
-	ParseLine(line string) (telegraf.Metric, error)
-
-	// SetDefaultTags tells the parser to add all of the given tags
-	// to each parsed metric.
-	// NOTE: do _not_ modify the map after you've passed it here!!
-	SetDefaultTags(tags map[string]string)
+func Add(name string, creator Creator) {
+	Parsers[name] = creator
 }
 
 // Config is a struct that covers the data types needed for all parser types,
@@ -132,30 +101,14 @@ type Config struct {
 	GrokTimezone           string   `toml:"grok_timezone"`
 	GrokUniqueTimestamp    string   `toml:"grok_unique_timestamp"`
 
-	//csv configuration
-	CSVColumnNames       []string `toml:"csv_column_names"`
-	CSVColumnTypes       []string `toml:"csv_column_types"`
-	CSVComment           string   `toml:"csv_comment"`
-	CSVDelimiter         string   `toml:"csv_delimiter"`
-	CSVHeaderRowCount    int      `toml:"csv_header_row_count"`
-	CSVMeasurementColumn string   `toml:"csv_measurement_column"`
-	CSVSkipColumns       int      `toml:"csv_skip_columns"`
-	CSVSkipRows          int      `toml:"csv_skip_rows"`
-	CSVTagColumns        []string `toml:"csv_tag_columns"`
-	CSVTimestampColumn   string   `toml:"csv_timestamp_column"`
-	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
-	CSVTimezone          string   `toml:"csv_timezone"`
-	CSVTrimSpace         bool     `toml:"csv_trim_space"`
-	CSVSkipValues        []string `toml:"csv_skip_values"`
-
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 }
 
 // NewParser returns a Parser interface based on the given config.
-func NewParser(config *Config) (Parser, error) {
+func NewParser(config *Config) (telegraf.Parser, error) {
 	var err error
-	var parser Parser
+	var parser telegraf.Parser
 	switch config.DataFormat {
 	case "json":
 		parser, err = json.New(
@@ -206,27 +159,6 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokCustomPatternFiles,
 			config.GrokTimezone,
 			config.GrokUniqueTimestamp)
-	case "csv":
-		config := &csv.Config{
-			MetricName:        config.MetricName,
-			HeaderRowCount:    config.CSVHeaderRowCount,
-			SkipRows:          config.CSVSkipRows,
-			SkipColumns:       config.CSVSkipColumns,
-			Delimiter:         config.CSVDelimiter,
-			Comment:           config.CSVComment,
-			TrimSpace:         config.CSVTrimSpace,
-			ColumnNames:       config.CSVColumnNames,
-			ColumnTypes:       config.CSVColumnTypes,
-			TagColumns:        config.CSVTagColumns,
-			MeasurementColumn: config.CSVMeasurementColumn,
-			TimestampColumn:   config.CSVTimestampColumn,
-			TimestampFormat:   config.CSVTimestampFormat,
-			Timezone:          config.CSVTimezone,
-			DefaultTags:       config.DefaultTags,
-			SkipValues:        config.CSVSkipValues,
-		}
-
-		return csv.NewParser(config)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
 	case "form_urlencoded":
@@ -246,7 +178,7 @@ func NewParser(config *Config) (Parser, error) {
 func newGrokParser(metricName string,
 	patterns []string, nPatterns []string,
 	cPatterns string, cPatternFiles []string,
-	tZone string, uniqueTimestamp string) (Parser, error) {
+	tZone string, uniqueTimestamp string) (telegraf.Parser, error) {
 	parser := grok.Parser{
 		Measurement:        metricName,
 		Patterns:           patterns,
@@ -261,11 +193,11 @@ func newGrokParser(metricName string,
 	return &parser, err
 }
 
-func NewNagiosParser() (Parser, error) {
+func NewNagiosParser() (telegraf.Parser, error) {
 	return &nagios.NagiosParser{}, nil
 }
 
-func NewInfluxParser() (Parser, error) {
+func NewInfluxParser() (telegraf.Parser, error) {
 	handler := influx.NewMetricHandler()
 	return influx.NewParser(handler), nil
 }
@@ -274,7 +206,7 @@ func NewGraphiteParser(
 	separator string,
 	templates []string,
 	defaultTags map[string]string,
-) (Parser, error) {
+) (telegraf.Parser, error) {
 	return graphite.NewGraphiteParser(separator, templates, defaultTags)
 }
 
@@ -282,7 +214,7 @@ func NewValueParser(
 	metricName string,
 	dataType string,
 	defaultTags map[string]string,
-) (Parser, error) {
+) (telegraf.Parser, error) {
 	return &value.ValueParser{
 		MetricName:  metricName,
 		DataType:    dataType,
@@ -295,7 +227,7 @@ func NewCollectdParser(
 	securityLevel string,
 	typesDB []string,
 	split string,
-) (Parser, error) {
+) (telegraf.Parser, error) {
 	return collectd.NewCollectdParser(authFile, securityLevel, typesDB, split)
 }
 
@@ -309,7 +241,7 @@ func NewDropwizardParser(
 	separator string,
 	templates []string,
 
-) (Parser, error) {
+) (telegraf.Parser, error) {
 	parser := dropwizard.NewParser()
 	parser.MetricRegistryPath = metricRegistryPath
 	parser.TimePath = timePath
@@ -325,11 +257,11 @@ func NewDropwizardParser(
 }
 
 // NewLogFmtParser returns a logfmt parser with the default options.
-func NewLogFmtParser(metricName string, defaultTags map[string]string) (Parser, error) {
+func NewLogFmtParser(metricName string, defaultTags map[string]string) (telegraf.Parser, error) {
 	return logfmt.NewParser(metricName, defaultTags), nil
 }
 
-func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
+func NewWavefrontParser(defaultTags map[string]string) (telegraf.Parser, error) {
 	return wavefront.NewWavefrontParser(defaultTags), nil
 }
 
@@ -337,7 +269,7 @@ func NewFormUrlencodedParser(
 	metricName string,
 	defaultTags map[string]string,
 	tagKeys []string,
-) (Parser, error) {
+) (telegraf.Parser, error) {
 	return &form_urlencoded.Parser{
 		MetricName:  metricName,
 		DefaultTags: defaultTags,
@@ -345,7 +277,7 @@ func NewFormUrlencodedParser(
 	}, nil
 }
 
-func NewPrometheusParser(defaultTags map[string]string) (Parser, error) {
+func NewPrometheusParser(defaultTags map[string]string) (telegraf.Parser, error) {
 	return &prometheus.Parser{
 		DefaultTags: defaultTags,
 	}, nil

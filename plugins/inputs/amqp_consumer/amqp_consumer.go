@@ -13,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/streadway/amqp"
 )
 
@@ -58,7 +57,7 @@ type AMQPConsumer struct {
 
 	deliveries map[telegraf.TrackingID]amqp.Delivery
 
-	parser  parsers.Parser
+	parser  telegraf.Parser
 	conn    *amqp.Connection
 	wg      *sync.WaitGroup
 	cancel  context.CancelFunc
@@ -172,7 +171,7 @@ func (a *AMQPConsumer) Description() string {
 	return "AMQP consumer plugin"
 }
 
-func (a *AMQPConsumer) SetParser(parser parsers.Parser) {
+func (a *AMQPConsumer) SetParser(parser telegraf.Parser) {
 	a.parser = parser
 }
 

@@ -13,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/kballard/go-shellquote"
 )
@@ -46,7 +45,7 @@ type Exec struct {
 	Command  string
 	Timeout  internal.Duration
 
-	parser parsers.Parser
+	parser telegraf.Parser
 
 	runner Runner
 	Log    telegraf.Logger `toml:"-"`
@@ -177,7 +176,7 @@ func (e *Exec) Description() string {
 	return "Read metrics from one or more commands that can output to stdout"
 }
 
-func (e *Exec) SetParser(parser parsers.Parser) {
+func (e *Exec) SetParser(parser telegraf.Parser) {
 	e.parser = parser
 }
 

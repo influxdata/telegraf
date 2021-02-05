@@ -16,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 // defaultMaxBodySize is the default maximum request body size, in bytes.
@@ -54,7 +53,7 @@ type HTTPListenerV2 struct {
 
 	listener net.Listener
 
-	parsers.Parser
+	telegraf.Parser
 	acc telegraf.Accumulator
 }
 
@@ -118,7 +117,7 @@ func (h *HTTPListenerV2) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *HTTPListenerV2) SetParser(parser parsers.Parser) {
+func (h *HTTPListenerV2) SetParser(parser telegraf.Parser) {
 	h.Parser = parser
 }
 

@@ -9,7 +9,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/nats-io/nats.go"
 )
 
@@ -56,7 +55,7 @@ type natsConsumer struct {
 	conn *nats.Conn
 	subs []*nats.Subscription
 
-	parser parsers.Parser
+	parser telegraf.Parser
 	// channel for all incoming NATS messages
 	in chan *nats.Msg
 	// channel for all NATS read errors
@@ -123,7 +122,7 @@ func (n *natsConsumer) Description() string {
 	return "Read metrics from NATS subject(s)"
 }
 
-func (n *natsConsumer) SetParser(parser parsers.Parser) {
+func (n *natsConsumer) SetParser(parser telegraf.Parser) {
 	n.parser = parser
 }
 

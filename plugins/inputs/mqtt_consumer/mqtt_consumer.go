@@ -13,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 var (
@@ -52,7 +51,7 @@ type MQTTConsumer struct {
 	ConnectionTimeout      internal.Duration `toml:"connection_timeout"`
 	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
 
-	parser parsers.Parser
+	parser telegraf.Parser
 
 	// Legacy metric buffer support; deprecated in v0.10.3
 	MetricBuffer int
@@ -154,7 +153,7 @@ func (m *MQTTConsumer) Description() string {
 	return "Read metrics from MQTT topic(s)"
 }
 
-func (m *MQTTConsumer) SetParser(parser parsers.Parser) {
+func (m *MQTTConsumer) SetParser(parser telegraf.Parser) {
 	m.parser = parser
 }
 
