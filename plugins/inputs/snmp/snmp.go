@@ -565,8 +565,10 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := gs.SetAgent(agent); err != nil {
-		return nil, fmt.Errorf("setting gosnmpwrapper agent: %w", err)
+	
+  err = gs.SetAgent(agent)
+	if err != nil {
+		return nil, err
 	}
 
 	s.connectionCache[idx] = gs
