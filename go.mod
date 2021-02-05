@@ -27,6 +27,11 @@ require (
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-metrics v0.3.0 // indirect
 	github.com/aws/aws-sdk-go v1.34.34
+	github.com/aws/aws-sdk-go-v2 v1.1.0
+	github.com/aws/aws-sdk-go-v2/config v1.1.0
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.0.1
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.1.0
+	github.com/aws/smithy-go v1.0.0
 	github.com/benbjohnson/clock v1.0.3
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
@@ -62,7 +67,7 @@ require (
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/protobuf v1.3.5
 	github.com/golang/snappy v0.0.1
-	github.com/google/go-cmp v0.5.2
+	github.com/google/go-cmp v0.5.4
 	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.1.12
 	github.com/gorilla/mux v1.6.2
