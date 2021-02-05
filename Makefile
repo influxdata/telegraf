@@ -83,7 +83,7 @@ help:
 
 .PHONY: deps
 deps:
-	go mod download
+	go mod download -x
 
 .PHONY: telegraf
 telegraf:
