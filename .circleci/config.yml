@@ -191,37 +191,15 @@ workflows:
   check:
     jobs:
       - 'test-go-1_15':
-          requires:
-            - 'deps'
           filters:
             tags:
               only: /.*/
       - 'package':
           requires:
-            - 'test-go-darwin'
-            - 'test-go-1_14'
-            - 'test-go-1_14-386'
             - 'test-go-1_15'
-            - 'test-go-1_15-386'
-      - 'release':
-          requires:
-            - 'test-go-darwin'
-            - 'test-go-1_14'
-            - 'test-go-1_14-386'
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
       - 'windows-signing':
           requires:
-            - 'test-go-darwin'
-            - 'test-go-1_14'
-            - 'test-go-1_14-386'
             - 'test-go-1_15'
-            - 'test-go-1_15-386'
             
 
   nightly:
