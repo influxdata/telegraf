@@ -142,7 +142,7 @@ func (w *Wavefront) Connect() error {
 			FlushIntervalSeconds: flushSeconds,
 		})
 		if err != nil {
-			return fmt.Errorf("wavefront: Could not create Wavefront Sender for Url: %s", w.Url)
+			return fmt.Errorf("could not create Wavefront Sender for Url: %s", w.Url)
 		}
 		w.sender = sender
 	} else {
@@ -153,7 +153,7 @@ func (w *Wavefront) Connect() error {
 			FlushIntervalSeconds: flushSeconds,
 		})
 		if err != nil {
-			return fmt.Errorf("wavefront: Could not create Wavefront Sender for Host: %q and Port: %d", w.Host, w.Port)
+			return fmt.Errorf("could not create Wavefront Sender for Host: %q and Port: %d", w.Host, w.Port)
 		}
 		w.sender = sender
 	}

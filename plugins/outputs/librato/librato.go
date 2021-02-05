@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf/testutil"
 	"io/ioutil"
 	"net/http"
 	"regexp"
@@ -70,7 +69,6 @@ func NewLibrato(apiURL string) *Librato {
 	return &Librato{
 		APIUrl:   apiURL,
 		Template: "host",
-		Log:      testutil.Logger{},
 	}
 }
 
