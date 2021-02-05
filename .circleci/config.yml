@@ -186,6 +186,10 @@ jobs:
                 Remove-Item $extractDirectory -Force -Recurse
             }
             Remove-Item $finalFileName -Force
+      - persist_to_workspace:
+          root: './build/dist'
+          paths:
+            - '*'
 workflows:
   version: 2
   check:
