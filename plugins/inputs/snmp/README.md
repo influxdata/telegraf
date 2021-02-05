@@ -232,7 +232,7 @@ interface,agent_host=127.0.0.1,ifDescr=eth0,ifIndex=2,source=example.org ifAdmin
 interface,agent_host=127.0.0.1,ifDescr=lo,ifIndex=1,source=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=0i,ifInOctets=51555569i,ifInUcastPkts=339097i,ifInUnknownProtos=0i,ifLastChange=0i,ifMtu=65536i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=51555569i,ifOutQLen=0i,ifOutUcastPkts=339097i,ifSpecific=".0.0",ifSpeed=10000000i,ifType=24i 1575509815000000000
 ```
 ### Real-world Configuration Examples
-- [Single device](https://github.com/influxdata/telegraf/blob/snmp-examples/plugins/inputs/snmp/testdata/single-device.conf)
+- [Single device](testdata/single-device.conf)
 
 [net-snmp]: http://www.net-snmp.org/
 [man snmpcmd]: http://net-snmp.sourceforge.net/docs/man/snmpcmd.html#lbAK
