@@ -190,6 +190,9 @@ jobs:
           root: './build/dist'
           paths:
             - '*'
+      - store_artifacts:
+          path: './build/dist'
+          destination: 'build/dist'
 workflows:
   version: 2
   check:
