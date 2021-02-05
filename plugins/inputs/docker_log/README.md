@@ -45,6 +45,17 @@ The docker plugin uses the [Official Docker Client][] to gather logs from the
 
   ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
   source_tag = false
+  
+## Offset flush interval. How often the offset pointer (see below) in the
+  ## container log stream is flashed to file. Offset pointer represents the unix time stamp
+  ## in nano seconds for the last message read from log stream (default - 3 sec)
+  # offset_flush = "3s"
+
+  ## Offset storage path, make sure the user on behalf 
+  ## of which the telegraf is running has enough rights to read and write to chosen path.
+  ## default value is (cross-platform): "$HOME/telegraf" with fallback to 
+  ## "$OS_TEMP/telegraf", if user can't be detected.
+  # offset_storage_path = "/var/run/telegraf"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
