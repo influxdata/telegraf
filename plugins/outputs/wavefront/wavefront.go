@@ -174,6 +174,8 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 			err := w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
 			if err != nil {
 				if isRetryable(err) {
+					// resetting wavefront proxy connection when proxy IP is changed
+					w.sender.Close()
 					return fmt.Errorf("Wavefront sending error: %v", err)
 				}
 				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
