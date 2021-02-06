@@ -6,9 +6,10 @@ import (
 	"reflect"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/influxdata/telegraf"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
+
+	"github.com/influxdata/telegraf"
 )
 
 const (
