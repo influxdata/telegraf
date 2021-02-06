@@ -23,6 +23,8 @@ type BigQuery struct {
 	Project         string `toml:"project"`
 	Dataset         string `toml:"dataset"`
 
+	Log telegraf.Logger
+
 	client *bigquery.Client
 }
 
@@ -103,7 +105,8 @@ func (b *BigQuery) Write(metrics []telegraf.Metric) error {
 
 	for k, v := range groupedMetrics {
 		if err := b.insertToTable(k, v); err != nil {
-			return err
+			b.Log.Errorf("inserting metric %q failed: %v", k, err)
+			continue
 		}
 	}
 
