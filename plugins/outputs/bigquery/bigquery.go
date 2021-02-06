@@ -10,6 +10,7 @@ import (
 	"google.golang.org/api/option"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 const (
@@ -194,4 +195,10 @@ func (b *BigQuery) tableForMetric(metricName string) *bigquery.Table {
 // Close will terminate the session to the backend, returning error if an issue arises.
 func (b *BigQuery) Close() error {
 	return b.client.Close()
+}
+
+func init() {
+	outputs.Add("bigquery", func() telegraf.Output {
+		return &BigQuery{}
+	})
 }
