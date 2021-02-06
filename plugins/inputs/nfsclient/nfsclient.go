@@ -64,7 +64,7 @@ func convertToInt64(line []string) []int64 {
 	if len(line) < 2 {
 		return nline
 	}
-	
+
 	for _, l := range line[1:] {
 		val, err := strconv.ParseInt(l, 10, 64)
 		if err != nil {
@@ -167,24 +167,17 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 
 	var fields = make(map[string]interface{})
 
-	if first == "READ" {
-		fields["read_ops"] = nline[0]
-		fields["read_retrans"] = nline[1] - nline[0]
-		fields["read_bytes"] = nline[3] + nline[4]
-		fields["read_rtt"] = nline[6]
-		fields["read_exe"] = nline[7]
-		acc.AddFields("nfsstat_read", fields, tags)
-	} else if first == "WRITE" {
-		fields["write_ops"] = nline[0]
-		fields["write_retrans"] = nline[1] - nline[0]
-		fields["write_bytes"] = nline[3] + nline[4]
-		fields["write_rtt"] = nline[6]
-		fields["write_exe"] = nline[7]
-		acc.AddFields("nfsstat_write", fields, tags)
+	if first == "READ" || first == "WRITE" {
+		fields["ops"] = nline[0]
+		fields["retrans"] = nline[1] - nline[0]
+		fields["bytes"] = nline[3] + nline[4]
+		fields["rtt"] = nline[6]
+		fields["exe"] = nline[7]
+		tags["operation"] = strings.ToLower(first)
+		acc.AddFields("nfsstat", fields, tags)
 	}
 
 	if fullstat {
-
 		if first == "events" && len(nline) >= len(eventsFields) {
 			for i, t := range eventsFields {
 				fields[t] = nline[i]
