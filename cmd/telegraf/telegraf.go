@@ -76,7 +76,7 @@ var (
 )
 
 var stop chan struct{}
-var ag *agent.Agent
+var runningAgent *agent.Agent
 
 func reloadLoop(
 	inputFilters []string,
@@ -107,14 +107,7 @@ func reloadLoop(
 				cancel()
 			}
 		}()
-		if ag != nil && ag.Config != nil {
-			for idx := range ag.Config.Outputs {
-				log.Printf("I! Closing running output: %s", ag.Config.Outputs[idx].LogName())
-				ag.Config.Outputs[idx].Close()
-			}
-		}
-		var err error
-		ag, err = runAgent(ctx, inputFilters, outputFilters)
+		err := runAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
@@ -124,69 +117,74 @@ func reloadLoop(
 func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
-) (*agent.Agent, error) {
-	var ag *agent.Agent
-	var err error
+) error {
 	log.Printf("I! Starting Telegraf %s", version)
 
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-	err = c.LoadConfig(*fConfig)
+	err := c.LoadConfig(*fConfig)
 	if err != nil {
-		return ag, err
+		return err
 	}
 
 	if *fConfigDirectory != "" {
 		err = c.LoadDirectory(*fConfigDirectory)
 		if err != nil {
-			return ag, err
+			return err
 		}
 	}
 	if !*fTest && len(c.Outputs) == 0 {
-		return ag, errors.New("Error: no outputs found, did you provide a valid config file?")
+		return errors.New("Error: no outputs found, did you provide a valid config file?")
 	}
 	if *fPlugins == "" && len(c.Inputs) == 0 {
-		return ag, errors.New("Error: no inputs found, did you provide a valid config file?")
+		return errors.New("Error: no inputs found, did you provide a valid config file?")
 	}
 
 	if int64(c.Agent.Interval.Duration) <= 0 {
-		return ag, fmt.Errorf("Agent interval must be positive, found %s",
+		return fmt.Errorf("Agent interval must be positive, found %s",
 			c.Agent.Interval.Duration)
 	}
 
 	if int64(c.Agent.FlushInterval.Duration) <= 0 {
-		return ag, fmt.Errorf("Agent flush_interval must be positive; found %s",
+		return fmt.Errorf("Agent flush_interval must be positive; found %s",
 			c.Agent.Interval.Duration)
 	}
 
-	ag, err = agent.NewAgent(c)
+	if runningAgent != nil && runningAgent.Config != nil {
+		for idx := range runningAgent.Config.Outputs {
+			log.Printf("I! Closing running output: %s", runningAgent.Config.Outputs[idx].LogName())
+			runningAgent.Config.Outputs[idx].Close()
+		}
+	}
+
+	runningAgent, err = agent.NewAgent(c)
 	if err != nil {
-		return ag, err
+		return err
 	}
 
 	// Setup logging as configured.
 	logConfig := logger.LogConfig{
-		Debug:               ag.Config.Agent.Debug || *fDebug,
-		Quiet:               ag.Config.Agent.Quiet || *fQuiet,
-		LogTarget:           ag.Config.Agent.LogTarget,
-		Logfile:             ag.Config.Agent.Logfile,
-		RotationInterval:    ag.Config.Agent.LogfileRotationInterval,
-		RotationMaxSize:     ag.Config.Agent.LogfileRotationMaxSize,
-		RotationMaxArchives: ag.Config.Agent.LogfileRotationMaxArchives,
+		Debug:               runningAgent.Config.Agent.Debug || *fDebug,
+		Quiet:               runningAgent.Config.Agent.Quiet || *fQuiet,
+		LogTarget:           runningAgent.Config.Agent.LogTarget,
+		Logfile:             runningAgent.Config.Agent.Logfile,
+		RotationInterval:    runningAgent.Config.Agent.LogfileRotationInterval,
+		RotationMaxSize:     runningAgent.Config.Agent.LogfileRotationMaxSize,
+		RotationMaxArchives: runningAgent.Config.Agent.LogfileRotationMaxArchives,
 	}
 
 	logger.SetupLogging(logConfig)
 
 	if *fRunOnce {
 		wait := time.Duration(*fTestWait) * time.Second
-		return ag, ag.Once(ctx, wait)
+		return runningAgent.Once(ctx, wait)
 	}
 
 	if *fTest || *fTestWait != 0 {
 		wait := time.Duration(*fTestWait) * time.Second
-		return ag, ag.Test(ctx, wait)
+		return runningAgent.Test(ctx, wait)
 	}
 
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
@@ -213,7 +211,7 @@ func runAgent(ctx context.Context,
 		}
 	}
 
-	return ag, ag.Run(ctx)
+	return runningAgent.Run(ctx)
 }
 
 func usageExit(rc int) {
