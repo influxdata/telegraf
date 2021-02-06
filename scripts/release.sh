@@ -71,6 +71,8 @@ arch() {
 			echo mipsel;;
 		*mips.*)
 			echo mips;;
+		*mips64el.*)
+			echo mips64el;;
 		*)
 			echo unknown
 	esac

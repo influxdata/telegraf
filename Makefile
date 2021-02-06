@@ -210,6 +210,7 @@ debs += telegraf_$(deb_version)_armhf.deb
 debs += telegraf_$(deb_version)_i386.deb
 debs += telegraf_$(deb_version)_mips.deb
 debs += telegraf_$(deb_version)_mipsel.deb
+debs += telegraf_$(deb_version)_mips64el.deb
 debs += telegraf_$(deb_version)_s390x.deb
 debs += telegraf_$(deb_version)_ppc64el.deb
 
@@ -231,6 +232,7 @@ tars += telegraf-$(tar_version)_linux_armhf.tar.gz
 tars += telegraf-$(tar_version)_linux_i386.tar.gz
 tars += telegraf-$(tar_version)_linux_mips.tar.gz
 tars += telegraf-$(tar_version)_linux_mipsel.tar.gz
+tars += telegraf-$(tar_version)_linux_mips64el.tar.gz
 tars += telegraf-$(tar_version)_linux_s390x.tar.gz
 tars += telegraf-$(tar_version)_linux_ppc64le.tar.gz
 tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
@@ -289,6 +291,7 @@ deb_arm6 := armhf
 deb_arm647 := arm64
 deb_mips := mips
 deb_mipsle := mipsel
+deb_mips64le := mips64el
 deb_arch = $(deb_$(GOARCH)$(GOARM))
 
 .PHONY: $(debs)
@@ -365,6 +368,9 @@ upload-nightly:
 
 %mipsel.deb %linux_mipsel.tar.gz: export GOOS := linux
 %mipsel.deb %linux_mipsel.tar.gz: export GOARCH := mipsle
+
+%mips64el.deb %linux_mips64el.tar.gz: export GOOS := linux
+%mips64el.deb %linux_mips64el.tar.gz: export GOARCH := mips64le
 
 %s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOOS := linux
 %s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOARCH := s390x
