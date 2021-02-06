@@ -22,7 +22,7 @@ type NFSClient struct {
 	Log               telegraf.Logger
 }
 
-var sampleConfig = `
+const sampleConfig = `
   # Read more low-level metrics (optional, defaults to false)
   fullstat = false
 
