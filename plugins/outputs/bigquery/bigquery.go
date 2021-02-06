@@ -64,12 +64,15 @@ func (b *BigQuery) setUpTestClient(endpoint string) error {
 
 	ctx := context.Background()
 
-	if c, err := bigquery.NewClient(ctx, b.Project, noAuth, endpoints); err != nil {
+	c, err := bigquery.NewClient(ctx, b.Project, noAuth, endpoints)
+
+	if err != nil {
 		return err
-	} else {
-		b.client = c
-		return nil
 	}
+
+	b.client = c
+
+	return nil
 }
 
 func (b *BigQuery) setUpDefaultClient() error {
