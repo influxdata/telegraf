@@ -1,6 +1,7 @@
 package bigquery
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -9,17 +10,22 @@ import (
 	"strings"
 	"testing"
 
+	"cloud.google.com/go/bigquery"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/option"
 )
 
 const (
 	successfulResponse = "{\"kind\": \"bigquery#tableDataInsertAllResponse\"}"
 )
 
+var testingHost string
+
 func TestMain(t *testing.M) {
 	srv := localBigQueryServer(t)
-	os.Setenv("BIGQUERY_TESTING_HOST", strings.ReplaceAll(srv.URL, "http://", ""))
+
+	testingHost = strings.ReplaceAll(srv.URL, "http://", "")
 
 	defer srv.Close()
 
@@ -32,6 +38,7 @@ func TestConnect(t *testing.T) {
 		Dataset: "test-dataset",
 	}
 
+	b.setUpTestClient()
 	err := b.Connect()
 	require.NoError(t, err)
 
@@ -44,9 +51,27 @@ func TestWrite(t *testing.T) {
 	}
 
 	mockMetrics := testutil.MockMetrics()
+	b.setUpTestClient()
 	b.Connect()
 	err := b.Write(mockMetrics)
 	require.NoError(t, err)
+}
+
+func (b *BigQuery) setUpTestClient() error {
+	noAuth := option.WithoutAuthentication()
+	endpoints := option.WithEndpoint("http://" + testingHost)
+
+	ctx := context.Background()
+
+	c, err := bigquery.NewClient(ctx, b.Project, noAuth, endpoints)
+
+	if err != nil {
+		return err
+	}
+
+	b.client = c
+
+	return nil
 }
 
 func localBigQueryServer(t *testing.M) *httptest.Server {

@@ -3,7 +3,6 @@ package bigquery
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 
 	"cloud.google.com/go/bigquery"
@@ -13,7 +12,6 @@ import (
 )
 
 const (
-	testingHostEnv     = "BIGQUERY_TESTING_HOST"
 	defaultOffSetKey   = "offset-key.json"
 	timeStampFieldName = "timestamp"
 )
@@ -47,32 +45,9 @@ func (b *BigQuery) Connect() error {
 		return fmt.Errorf("Dataset is a required field for BigQuery output")
 	}
 
-	b.setUpClient()
-
-	return nil
-}
-
-func (b *BigQuery) setUpClient() error {
-	if endpoint, present := os.LookupEnv(testingHostEnv); present {
-		return b.setUpTestClient(endpoint)
+	if b.client == nil {
+		return b.setUpDefaultClient()
 	}
-
-	return b.setUpDefaultClient()
-}
-
-func (b *BigQuery) setUpTestClient(endpoint string) error {
-	noAuth := option.WithoutAuthentication()
-	endpoints := option.WithEndpoint("http://" + endpoint)
-
-	ctx := context.Background()
-
-	c, err := bigquery.NewClient(ctx, b.Project, noAuth, endpoints)
-
-	if err != nil {
-		return err
-	}
-
-	b.client = c
 
 	return nil
 }
