@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -76,15 +77,6 @@ func convertToInt64(line []string) []int64 {
 		nline = append(nline, val)
 	}
 	return nline
-}
-
-func in(list []string, val string) bool {
-	for _, v := range list {
-		if v == val {
-			return true
-		}
-	}
-	return false
 }
 
 func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, fullstat bool, nfs3Ops map[string]bool, nfs4Ops map[string]bool, acc telegraf.Accumulator) error {
@@ -388,11 +380,11 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 			break
 		}
 
-		if in(line, "fstype") && (in(line, "nfs") || in(line, "nfs4")) && len(line) > 4 {
+		if choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) && len(line) > 4 {
 			device = line[4]
 			export = line[1]
 			skip = false
-		} else if (in(line, "(nfs)") || in(line, "(nfs4)")) && len(line) > 5 {
+		} else if (choice.Contains("(nfs)", line) || choice.Contains("(nfs4)", line)) && len(line) > 5 {
 			version = strings.Split(line[5], "/")[1]
 		}
 
