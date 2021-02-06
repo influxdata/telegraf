@@ -17,6 +17,16 @@ const (
 	timeStampFieldName = "timestamp"
 )
 
+const sampleConfig = `	
+  ## Credentials File
+  credentials_file = "/path/to/service/account/key.json"
+  ## GCP Project
+  project = "my-gcp-project"
+
+  ## The namespace for the metric descriptor
+  dataset = "telegraf"
+`
+
 type BigQuery struct {
 	CredentialsFile string `toml:"credentials_file"`
 	Project         string `toml:"project"`
@@ -27,15 +37,15 @@ type BigQuery struct {
 	client *bigquery.Client
 }
 
-var sampleConfig = `	
-  ## Credentials File
-  credentials_file = "/path/to/service/account/key.json"
-  ## GCP Project
-  project = "my-gcp-project"
+// SampleConfig returns the formatted sample configuration for the plugin.
+func (s *BigQuery) SampleConfig() string {
+	return sampleConfig
+}
 
-  ## The namespace for the metric descriptor
-  dataset = "telegraf"
-`
+// Description returns the human-readable function definition of the plugin.
+func (s *BigQuery) Description() string {
+	return "Configuration for Google Cloud BigQuery to send entries"
+}
 
 func (b *BigQuery) Connect() error {
 	if b.Project == "" {
@@ -184,14 +194,4 @@ func (b *BigQuery) tableForMetric(metricName string) *bigquery.Table {
 // Close will terminate the session to the backend, returning error if an issue arises.
 func (b *BigQuery) Close() error {
 	return b.client.Close()
-}
-
-// SampleConfig returns the formatted sample configuration for the plugin.
-func (s *BigQuery) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns the human-readable function definition of the plugin.
-func (s *BigQuery) Description() string {
-	return "Configuration for Google Cloud BigQuery to send entries"
 }
