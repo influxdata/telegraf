@@ -60,6 +60,10 @@ func (n *NFSClient) Description() string {
 
 func convertToInt64(line []string) []int64 {
 	var nline []int64
+	if len(line) < 2 {
+		return nline
+	}
+	
 	for _, l := range line[1:] {
 		val, err := strconv.ParseInt(l, 10, 64)
 		if err != nil {
