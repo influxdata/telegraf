@@ -1,5 +1,9 @@
+// +build !windows
+
+// lustre2 doesn't aim for Windows
+
 /*
-Lustre 2.x telegraf plugin
+Lustre 2.x Telegraf plugin
 
 Lustre (http://lustre.org/) is an open-source, parallel file system
 for HPC environments. It stores statistics about its activity in
@@ -11,6 +15,7 @@ package lustre2
 import (
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -363,6 +368,8 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping, a
 		return err
 	}
 
+	fieldSplitter := regexp.MustCompile(`[ :]+`)
+
 	for _, file := range files {
 		/* Turn /proc/fs/lustre/obdfilter/<ost_name>/stats and similar
 		 * into just the object store target name
@@ -393,7 +400,11 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping, a
 				if len(line) < 1 {
 					continue
 				}
-				parts := strings.Fields(line)
+
+				parts := fieldSplitter.Split(line, -1)
+				if len(parts[0]) == 0 {
+					parts = parts[1:]
+				}
 
 				var fields map[string]interface{}
 				fields, ok := l.allFields[tags{name, jobid}]
@@ -404,7 +415,7 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping, a
 
 				for _, wanted := range wantedFields {
 					var data uint64
-					if strings.TrimSuffix(parts[0], ":") == wanted.inProc {
+					if parts[0] == wanted.inProc {
 						wantedField := wanted.field
 						// if not set, assume field[1]. Shouldn't be field[0], as
 						// that's a string

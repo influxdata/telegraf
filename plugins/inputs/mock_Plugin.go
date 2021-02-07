@@ -9,6 +9,8 @@ import (
 // MockPlugin struct should be named the same as the Plugin
 type MockPlugin struct {
 	mock.Mock
+
+	constructedVariable string
 }
 
 // Description will appear directly above the plugin definition in the config file
@@ -19,6 +21,12 @@ func (m *MockPlugin) Description() string {
 // SampleConfig will populate the sample configuration portion of the plugin's configuration
 func (m *MockPlugin) SampleConfig() string {
 	return `  sampleVar = 'foo'`
+}
+
+// Init can be implemented to do one-time processing stuff like initializing variables
+func (m *MockPlugin) Init() error {
+	m.constructedVariable = "I'm initialized now."
+	return nil
 }
 
 // Gather defines what data the plugin will gather.

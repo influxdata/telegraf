@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -29,10 +31,13 @@ var (
 type Ipmi struct {
 	Path          string
 	Privilege     string
+	HexKey        string `toml:"hex_key"`
 	Servers       []string
 	Timeout       internal.Duration
 	MetricVersion int
 	UseSudo       bool
+	UseCache      bool
+	CachePath     string
 }
 
 var sampleConfig = `
@@ -65,6 +70,18 @@ var sampleConfig = `
 
   ## Schema Version: (Optional, defaults to version 1)
   metric_version = 2
+
+  ## Optionally provide the hex key for the IMPI connection.
+  # hex_key = ""
+
+  ## If ipmitool should use a cache
+  ## for me ipmitool runs about 2 to 10 times faster with cache enabled on HP G10 servers (when using ubuntu20.04)
+  ## the cache file may not work well for you if some sensors come up late
+  # use_cache = false
+
+  ## Path to the ipmitools cache file (defaults to OS temp dir)
+  ## The provided path must exist and must be writable
+  # cache_path = ""
 `
 
 // SampleConfig returns the documentation about the sample configuration
@@ -110,11 +127,34 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 	opts := make([]string, 0)
 	hostname := ""
 	if server != "" {
-		conn := NewConnection(server, m.Privilege)
+		conn := NewConnection(server, m.Privilege, m.HexKey)
 		hostname = conn.Hostname
 		opts = conn.options()
 	}
 	opts = append(opts, "sdr")
+	if m.UseCache {
+		cacheFile := filepath.Join(m.CachePath, server+"_ipmi_cache")
+		_, err := os.Stat(cacheFile)
+		if os.IsNotExist(err) {
+			dumpOpts := opts
+			// init cache file
+			dumpOpts = append(dumpOpts, "dump")
+			dumpOpts = append(dumpOpts, cacheFile)
+			name := m.Path
+			if m.UseSudo {
+				// -n - avoid prompting the user for input of any kind
+				dumpOpts = append([]string{"-n", name}, dumpOpts...)
+				name = "sudo"
+			}
+			cmd := execCommand(name, dumpOpts...)
+			out, err := internal.CombinedOutputTimeout(cmd, m.Timeout.Duration)
+			if err != nil {
+				return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+			}
+		}
+		opts = append(opts, "-S")
+		opts = append(opts, cacheFile)
+	}
 	if m.MetricVersion == 2 {
 		opts = append(opts, "elist")
 	}
@@ -290,6 +330,8 @@ func init() {
 		m.Path = path
 	}
 	m.Timeout = internal.Duration{Duration: time.Second * 20}
+	m.UseCache = false
+	m.CachePath = os.TempDir()
 	inputs.Add("ipmi_sensor", func() telegraf.Input {
 		m := m
 		return &m

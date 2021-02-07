@@ -72,13 +72,18 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##       routing_key = "telegraf"
   # routing_key = ""
 
-  ## CompressionCodec represents the various compression codecs recognized by
+  ## Compression codec represents the various compression codecs recognized by
   ## Kafka in messages.
-  ##  0 : No compression
-  ##  1 : Gzip compression
-  ##  2 : Snappy compression
-  ##  3 : LZ4 compression
-  # compression_codec = 0
+  ##  0 : None
+  ##  1 : Gzip
+  ##  2 : Snappy
+  ##  3 : LZ4
+  ##  4 : ZSTD
+   # compression_codec = 0
+   
+  ## Idempotent Writes
+  ## If enabled, exactly one copy of each message is written.
+  # idempotent_writes = false
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
   ##  replica acknowledgements it must see before responding

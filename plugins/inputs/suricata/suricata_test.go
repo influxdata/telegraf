@@ -119,7 +119,7 @@ func TestThreadStats(t *testing.T) {
 	c.Write([]byte(ex3))
 	c.Write([]byte("\n"))
 	c.Close()
-	acc.Wait(1)
+	acc.Wait(2)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(

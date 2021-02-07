@@ -6,18 +6,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTable(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+	t.Skip("Skipping test due to connect failures")
 
 	d := IfName{}
 	d.Init()
@@ -42,10 +41,9 @@ func TestTable(t *testing.T) {
 	require.NotEmpty(t, m)
 }
 
-func TestIfName(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+func TestIfNameIntegration(t *testing.T) {
+	t.Skip("Skipping test due to connect failures")
+
 	d := IfName{
 		SourceTag: "ifIndex",
 		DestTag:   "ifName",

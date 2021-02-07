@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -19,12 +20,13 @@ type NewRelic struct {
 	InsightsKey  string            `toml:"insights_key"`
 	MetricPrefix string            `toml:"metric_prefix"`
 	Timeout      internal.Duration `toml:"timeout"`
+	HttpProxy    string            `toml:"http_proxy"`
 
 	harvestor   *telemetry.Harvester
 	dc          *cumulative.DeltaCalculator
 	savedErrors map[int]interface{}
 	errorCount  int
-	Client      http.Client `toml:"-"`
+	client      http.Client `toml:"-"`
 }
 
 // Description returns a one-sentence description on the Output
@@ -43,6 +45,10 @@ func (nr *NewRelic) SampleConfig() string {
 
   ## Timeout for writes to the New Relic API.
   # timeout = "15s"
+
+  ## HTTP Proxy override. If unset use values from the standard
+  ## proxy environment variables to determine proxy, if any.
+  # http_proxy = "http://corporate.proxy:3128"
 `
 }
 
@@ -51,14 +57,18 @@ func (nr *NewRelic) Connect() error {
 	if nr.InsightsKey == "" {
 		return fmt.Errorf("InsightKey is a required for newrelic")
 	}
-	var err error
+	err := nr.initClient()
+	if err != nil {
+		return err
+	}
+
 	nr.harvestor, err = telemetry.NewHarvester(telemetry.ConfigAPIKey(nr.InsightsKey),
 		telemetry.ConfigHarvestPeriod(0),
 		func(cfg *telemetry.Config) {
 			cfg.Product = "NewRelic-Telegraf-Plugin"
 			cfg.ProductVersion = "1.0"
 			cfg.HarvestTimeout = nr.Timeout.Duration
-			cfg.Client = &nr.Client
+			cfg.Client = &nr.client
 			cfg.ErrorLogger = func(e map[string]interface{}) {
 				var errorString string
 				for k, v := range e {
@@ -79,7 +89,7 @@ func (nr *NewRelic) Connect() error {
 // Close any connections to the Output
 func (nr *NewRelic) Close() error {
 	nr.errorCount = 0
-	nr.Client.CloseIdleConnections()
+	nr.client.CloseIdleConnections()
 	return nil
 }
 
@@ -108,7 +118,7 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 			case uint64:
 				mvalue = float64(n)
 			case float64:
-				mvalue = float64(n)
+				mvalue = n
 			case bool:
 				mvalue = float64(0)
 				if n {
@@ -119,7 +129,7 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 				// we just skip
 				continue
 			default:
-				return fmt.Errorf("Undefined field type: %T", field.Value)
+				return fmt.Errorf("undefined field type: %T", field.Value)
 			}
 
 			switch metric.Type() {
@@ -152,7 +162,27 @@ func init() {
 	outputs.Add("newrelic", func() telegraf.Output {
 		return &NewRelic{
 			Timeout: internal.Duration{Duration: time.Second * 15},
-			Client:  http.Client{},
 		}
 	})
+}
+
+func (nr *NewRelic) initClient() error {
+	if nr.HttpProxy == "" {
+		nr.client = http.Client{}
+		return nil
+	}
+
+	proxyURL, err := url.Parse(nr.HttpProxy)
+	if err != nil {
+		return err
+	}
+
+	transport := &http.Transport{
+		Proxy: http.ProxyURL(proxyURL),
+	}
+
+	nr.client = http.Client{
+		Transport: transport,
+	}
+	return nil
 }

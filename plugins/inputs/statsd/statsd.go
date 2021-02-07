@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
@@ -117,6 +118,9 @@ type Statsd struct {
 	TCPKeepAlive       bool               `toml:"tcp_keep_alive"`
 	TCPKeepAlivePeriod *internal.Duration `toml:"tcp_keep_alive_period"`
 
+	// Max duration for each metric to stay cached without being updated.
+	MaxTTL config.Duration `toml:"max_ttl"`
+
 	graphiteParser *graphite.GraphiteParser
 
 	acc telegraf.Accumulator
@@ -131,7 +135,7 @@ type Statsd struct {
 	UDPBytesRecv       selfstat.Stat
 	ParseTimeNS        selfstat.Stat
 
-	Log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 
 	// A pool of byte slices to handle parsing
 	bufPool sync.Pool
@@ -159,27 +163,31 @@ type metric struct {
 }
 
 type cachedset struct {
-	name   string
-	fields map[string]map[string]bool
-	tags   map[string]string
+	name      string
+	fields    map[string]map[string]bool
+	tags      map[string]string
+	expiresAt time.Time
 }
 
 type cachedgauge struct {
-	name   string
-	fields map[string]interface{}
-	tags   map[string]string
+	name      string
+	fields    map[string]interface{}
+	tags      map[string]string
+	expiresAt time.Time
 }
 
 type cachedcounter struct {
-	name   string
-	fields map[string]interface{}
-	tags   map[string]string
+	name      string
+	fields    map[string]interface{}
+	tags      map[string]string
+	expiresAt time.Time
 }
 
 type cachedtimings struct {
-	name   string
-	fields map[string]RunningStats
-	tags   map[string]string
+	name      string
+	fields    map[string]RunningStats
+	tags      map[string]string
+	expiresAt time.Time
 }
 
 func (_ *Statsd) Description() string {
@@ -243,6 +251,9 @@ const sampleConfig = `
   ## calculation of percentiles. Raising this limit increases the accuracy
   ## of percentiles but also increases the memory usage and cpu time.
   percentile_limit = 1000
+
+  ## Max duration (TTL) for each metric to stay cached/reported without being updated.
+  #max_ttl = "1000h"
 `
 
 func (_ *Statsd) SampleConfig() string {
@@ -306,6 +317,9 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	if s.DeleteSets {
 		s.sets = make(map[string]cachedset)
 	}
+
+	s.expireCachedMetrics()
+
 	return nil
 }
 
@@ -527,9 +541,6 @@ func (s *Statsd) parser() error {
 // parseStatsdLine will parse the given statsd line, validating it as it goes.
 // If the line is valid, it will be cached for the next call to Gather()
 func (s *Statsd) parseStatsdLine(line string) error {
-	s.Lock()
-	defer s.Unlock()
-
 	lineTags := make(map[string]string)
 	if s.DataDogExtensions {
 		recombinedSegments := make([]string, 0)
@@ -734,6 +745,9 @@ func parseKeyValue(keyvalue string) (string, string) {
 // aggregates and caches the current value(s). It does not deal with the
 // Delete* options, because those are dealt with in the Gather function.
 func (s *Statsd) aggregate(m metric) {
+	s.Lock()
+	defer s.Unlock()
+
 	switch m.mtype {
 	case "ms", "h":
 		// Check if the measurement exists
@@ -761,61 +775,67 @@ func (s *Statsd) aggregate(m metric) {
 			field.AddValue(m.floatvalue)
 		}
 		cached.fields[m.field] = field
+		cached.expiresAt = time.Now().Add(time.Duration(s.MaxTTL))
 		s.timings[m.hash] = cached
 	case "c":
 		// check if the measurement exists
-		_, ok := s.counters[m.hash]
+		cached, ok := s.counters[m.hash]
 		if !ok {
-			s.counters[m.hash] = cachedcounter{
+			cached = cachedcounter{
 				name:   m.name,
 				fields: make(map[string]interface{}),
 				tags:   m.tags,
 			}
 		}
 		// check if the field exists
-		_, ok = s.counters[m.hash].fields[m.field]
+		_, ok = cached.fields[m.field]
 		if !ok {
-			s.counters[m.hash].fields[m.field] = int64(0)
+			cached.fields[m.field] = int64(0)
 		}
-		s.counters[m.hash].fields[m.field] =
-			s.counters[m.hash].fields[m.field].(int64) + m.intvalue
+		cached.fields[m.field] = cached.fields[m.field].(int64) + m.intvalue
+		cached.expiresAt = time.Now().Add(time.Duration(s.MaxTTL))
+		s.counters[m.hash] = cached
 	case "g":
 		// check if the measurement exists
-		_, ok := s.gauges[m.hash]
+		cached, ok := s.gauges[m.hash]
 		if !ok {
-			s.gauges[m.hash] = cachedgauge{
+			cached = cachedgauge{
 				name:   m.name,
 				fields: make(map[string]interface{}),
 				tags:   m.tags,
 			}
 		}
 		// check if the field exists
-		_, ok = s.gauges[m.hash].fields[m.field]
+		_, ok = cached.fields[m.field]
 		if !ok {
-			s.gauges[m.hash].fields[m.field] = float64(0)
+			cached.fields[m.field] = float64(0)
 		}
 		if m.additive {
-			s.gauges[m.hash].fields[m.field] =
-				s.gauges[m.hash].fields[m.field].(float64) + m.floatvalue
+			cached.fields[m.field] = cached.fields[m.field].(float64) + m.floatvalue
 		} else {
-			s.gauges[m.hash].fields[m.field] = m.floatvalue
+			cached.fields[m.field] = m.floatvalue
 		}
+
+		cached.expiresAt = time.Now().Add(time.Duration(s.MaxTTL))
+		s.gauges[m.hash] = cached
 	case "s":
 		// check if the measurement exists
-		_, ok := s.sets[m.hash]
+		cached, ok := s.sets[m.hash]
 		if !ok {
-			s.sets[m.hash] = cachedset{
+			cached = cachedset{
 				name:   m.name,
 				fields: make(map[string]map[string]bool),
 				tags:   m.tags,
 			}
 		}
 		// check if the field exists
-		_, ok = s.sets[m.hash].fields[m.field]
+		_, ok = cached.fields[m.field]
 		if !ok {
-			s.sets[m.hash].fields[m.field] = make(map[string]bool)
+			cached.fields[m.field] = make(map[string]bool)
 		}
-		s.sets[m.hash].fields[m.field][m.strvalue] = true
+		cached.fields[m.field][m.strvalue] = true
+		cached.expiresAt = time.Now().Add(time.Duration(s.MaxTTL))
+		s.sets[m.hash] = cached
 	}
 }
 
@@ -930,6 +950,39 @@ func (s *Statsd) Stop() {
 // IsUDP returns true if the protocol is UDP, false otherwise.
 func (s *Statsd) isUDP() bool {
 	return strings.HasPrefix(s.Protocol, "udp")
+}
+
+func (s *Statsd) expireCachedMetrics() {
+	// If Max TTL wasn't configured, skip expiration.
+	if s.MaxTTL == 0 {
+		return
+	}
+
+	now := time.Now()
+
+	for key, cached := range s.gauges {
+		if now.After(cached.expiresAt) {
+			delete(s.gauges, key)
+		}
+	}
+
+	for key, cached := range s.sets {
+		if now.After(cached.expiresAt) {
+			delete(s.sets, key)
+		}
+	}
+
+	for key, cached := range s.timings {
+		if now.After(cached.expiresAt) {
+			delete(s.timings, key)
+		}
+	}
+
+	for key, cached := range s.counters {
+		if now.After(cached.expiresAt) {
+			delete(s.counters, key)
+		}
+	}
 }
 
 func init() {
