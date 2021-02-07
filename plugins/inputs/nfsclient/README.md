@@ -20,8 +20,9 @@ If `fullstat` is set, a great deal of additional metrics are collected, detailed
 Example output for basic metrics showing server-wise read and write data:
 
 ```
-nfsstat_read,mountpoint=/home,serverexport=nfs01:/home read_ops=9797i,read_retrans=0i,read_bytes=124i,read_rtt=7953i,read_exe=8200i 1608784749000000000
-nfsstat_write,mountpoint=/home,serverexport=nfs01:/home write_exe=0i,write_ops=0i,w0rite_retrans=0i,write_bytes=0i,write_rtt=0i 1608784749000000000
+nfsstat,mountpoint=/NFS,operation=READ,serverexport=1.2.3.4:/storage/NFS ops=600i,retrans=1i,bytes=1207i,rtt=606i,exe=607i 1612651512000000000
+nfsstat,mountpoint=/NFS,operation=WRITE,serverexport=1.2.3.4:/storage/NFS bytes=1407i,rtt=706i,exe=707i,ops=700i,retrans=1i 1612651512000000000
+
 ```
 
 Example output for `fullstat=true` metrics, which includes additional measurements for `nfs_bytes`, `nfs_events`, and `nfs_xprt_tcp` (and `nfs_xprt_udp` if present).
@@ -33,9 +34,9 @@ nfs_bytes,mountpoint=/home,serverexport=nfs01:/vol/home directreadbytes=0i,direc
 nfs_events,mountpoint=/home,serverexport=nfs01:/vol/home attrinvalidates=116i,congestionwait=0i,datainvalidates=65i,delay=0i,dentryrevalidates=5911243i,extendwrite=0i,inoderevalidates=200378i,pnfsreads=0i,pnfswrites=0i,setattrtrunc=0i,shortreads=0i,shortwrites=0i,sillyrenames=0i,vfsaccess=7203852i,vfsflush=117405i,vfsfsync=0i,vfsgetdents=3368i,vfslock=0i,vfslookup=740i,vfsopen=157281i,vfsreadpage=16i,vfsreadpages=86874i,vfsrelease=155526i,vfssetattr=0i,vfsupdatepage=0i,vfswritepage=0i,vfswritepages=215514i 1608787697000000000
 nfs_xprt_tcp,mountpoint=/home,serverexport=nfs01:/vol/home backlogutil=0i,badxids=0i,bind_count=1i,connect_count=1i,connect_time=0i,idle_time=0i,inflightsends=15659826i,rpcreceives=2173896i,rpcsends=2173896i 1608787697000000000
 
-nfs_ops,mountpoint=/home,serverexport=nfs01:/vol/home READ_bytes_recv=42783584732i,READ_bytes_sent=189594804i,READ_ops=1300676i,READ_queue_time=102795i,READ_response_time=1337335i,READ_timeouts=0i,READ_total_time=1447060i,READ_trans=1300676i,read_bytes=42973179536i,read_exe=1447060i,read_ops=1300676i,read_retrans=0i,read_rtt=1337335i 1608787697000000000
-> nfs_ops,mountpoint=/home,serverexport=nfs01:/vol/home LOOKUP_bytes_recv=119608i,LOOKUP_bytes_sent=129824i,LOOKUP_ops=859i,LOOKUP_queue_time=5i,LOOKUP_response_time=130i,LOOKUP_timeouts=0i,LOOKUP_total_time=149i,LOOKUP_trans=859i 1608788310000000000
-nfs_ops,mountpoint=/home,serverexport=nfs01:/vol/home NULL_bytes_recv=24i,NULL_bytes_sent=44i,NULL_ops=1i,NULL_queue_time=0i,NULL_response_time=0i,NULL_timeouts=0i,NULL_total_time=0i,NULL_trans=2i 1608787697000000000
+nfs_ops,mountpoint=/NFS,operation=NULL,serverexport=1.2.3.4:/storage/NFS trans=0i,timeouts=0i,bytes_sent=0i,bytes_recv=0i,queue_time=0i,response_time=0i,total_time=0i,ops=0i 1612651512000000000
+nfs_ops,mountpoint=/NFS,operation=READ,serverexport=1.2.3.4:/storage/NFS bytes=1207i,timeouts=602i,total_time=607i,exe=607i,trans=601i,bytes_sent=603i,bytes_recv=604i,queue_time=605i,ops=600i,retrans=1i,rtt=606i,response_time=606i 1612651512000000000
+nfs_ops,mountpoint=/NFS,operation=WRITE,serverexport=1.2.3.4:/storage/NFS ops=700i,bytes=1407i,exe=707i,trans=701i,timeouts=702i,response_time=706i,total_time=707i,retrans=1i,rtt=706i,bytes_sent=703i,bytes_recv=704i,queue_time=705i 1612651512000000000
 ```
 
 #### References
@@ -50,27 +51,23 @@ nfs_ops,mountpoint=/home,serverexport=nfs01:/vol/home NULL_bytes_recv=24i,NULL_b
 
 Always collected:
 
-- nfsstat_read
-    - read_bytes (integer, bytes) - The number of bytes exchanged doing READ operations.  (sum bytes sent *and* received for WRITE Ops)
-    - read_ops (integer, count) - The number of RPC READ operations executed.
-    - read_retrans (integer, count) - The number of times an RPC READ operation had to be retried.
-    - read_exe (integer, miliseconds) - The number of miliseconds it took to process the RPC READ operations.
-    - read_rtt (integer, miliseconds) - The round-trip time for RPC READ operations.
-
-- nfsstat_write
-    - write_bytes (integer, bytes) - The number of bytes exchanged doing WRITE operations.  (sum bytes sent *and* received for WRITE Ops)
-    - write_ops (integer, count) - The number of RPC WRITE operations executed.
-    - write_retrans (integer, count) - The number of times an RPC WRITE operation had to be retried.
-    - write_exe (integer, miliseconds) - The number of miliseconds it took to process the RPC WRITE operations.
-    - write_rtt (integer, miliseconds) - The rount-trip time for RPC WRITE operations.
+- nfsstat
+    - bytes (integer, bytes) - The total number of bytes exchanged doing this operation. This is bytes sent *and* received, including overhead *and* payload.  (bytes = OP_bytes_sent + OP_bytes_recv.  See nfs_ops below)
+    - ops (integer, count) - The number of operations of this type executed.
+    - retrans (integer, count) - The number of times an operation had to be retried (retrans = OP_trans - OP_ops.  See nfs_ops below)
+    - exe (integer, miliseconds) - The number of miliseconds it took to process the operations.
+    - rtt (integer, miliseconds) - The round-trip time for operations.
 
 In addition enabling `fullstat` will make many more metrics available.
 
 #### Tags
 
 - All measurements have the following tags:
-    - mountpoint The local mountpoint, for instance: "/var/www"
-    - serverexport The full server export, for instance: "nfsserver.example.org:/export"
+    - mountpoint - The local mountpoint, for instance: "/var/www"
+    - serverexport - The full server export, for instance: "nfsserver.example.org:/export"
+
+- Measurements nfsstat and nfs_ops will also include:
+    - operation - the NFS operation in question.  `READ` or `WRITE` for nfsstat, but potentially one of ~20 or ~50, depending on NFS version.  A complete list of operations supported is visible in `/proc/self/mountstats`.
 
 
 
@@ -80,9 +77,9 @@ When `fullstat` is true, additional measurements are collected.  Tags are the sa
 
 #### NFS Operations
 
-Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)] and `nfs_iostat.h`.  Field order is the same as in `/proc/self/mountstats` and in the Kernel source.
+Most descriptions come from Reference [[3](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)] and `nfs_iostat.h`.  Field order and names are the same as in `/proc/self/mountstats` and the Kernel source.
 
-Please refer to `/proc/self/mountstats` for a list of supported NFS operations, as it changes as it changes periodically.
+Please refer to `/proc/self/mountstats` for a list of supported NFS operations, as it changes occasionally.
 
 - nfs_bytes
     - fields:
@@ -143,14 +140,14 @@ Please refer to `/proc/self/mountstats` for a list of supported NFS operations, 
         - [same as nfs_xprt_tcp, except for connect_count, connect_time, and idle_time]
 
 - nfs_ops
-    - fields (In all cases, **"OP"** is replaced with the uppercase name of the NFS operation, _e.g._ "READ", "FSINFO", _etc_.  See /proc/self/mountstats for a full list.):
-        - OP_ops - (int, count) - Total operations of this type.
-        - OP_trans - (int, count) - Total transmissions of this type, including retransmissions: `OP_ops - OP_trans = total_retransmissions` (lower is better).
-        - OP_timeouts - (int, count) - Number of major timeouts.
-        - OP_bytes_sent - (int, count) - Bytes received, including headers (should also be close to on-wire size).
-        - OP_bytes_recv - (int, count) - Bytes sent, including headers (should be close to on-wire size).
-        - OP_queue_time - (int, milliseconds) - Cumulative time a request waited in the queue before sending this OP type.
-        - OP_response_time - (int, milliseconds) - Cumulative time waiting for a response for this OP type.
-        - OP_total_time - (int, milliseconds) - Cumulative time a request waited in the queue before sending.
-        - OP_errors - (int, count) - Total number operations that complete with tk_status < 0 (usually errors).  This is a new field, present in kernel >=5.3, mountstats version 1.1
+    - fields (In all cases, the `operations` tag is set to the uppercase name of the NFS operation, _e.g._ "READ", "FSINFO", _etc_.  See /proc/self/mountstats for a full list):
+        - ops - (int, count) - Total operations of this type.
+        - trans - (int, count) - Total transmissions of this type, including retransmissions: `OP_ops - OP_trans = total_retransmissions` (lower is better).
+        - timeouts - (int, count) - Number of major timeouts.
+        - bytes_sent - (int, count) - Bytes received, including headers (should also be close to on-wire size).
+        - bytes_recv - (int, count) - Bytes sent, including headers (should be close to on-wire size).
+        - queue_time - (int, milliseconds) - Cumulative time a request waited in the queue before sending this OP type.
+        - response_time - (int, milliseconds) - Cumulative time waiting for a response for this OP type.
+        - total_time - (int, milliseconds) - Cumulative time a request waited in the queue before sending.
+        - errors - (int, count) - Total number operations that complete with tk_status < 0 (usually errors).  This is a new field, present in kernel >=5.3, mountstats version 1.1
 

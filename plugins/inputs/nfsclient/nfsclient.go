@@ -2,7 +2,6 @@ package nfsclient
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"os"
 	"regexp"
@@ -56,11 +55,12 @@ func (n *NFSClient) SampleConfig() string {
 }
 
 func (n *NFSClient) Description() string {
-	return "Read per-mount NFS metrics from /proc/self/mountstats"
+	return "Read per-mount NFS client metrics from /proc/self/mountstats"
 }
 
 func convertToInt64(line []string) []int64 {
 	var nline []int64
+
 	if len(line) < 2 {
 		return nline
 	}
@@ -173,7 +173,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 		fields["bytes"] = nline[3] + nline[4]
 		fields["rtt"] = nline[6]
 		fields["exe"] = nline[7]
-		tags["operation"] = strings.ToLower(first)
+		tags["operation"] = first
 		acc.AddFields("nfsstat", fields, tags)
 	}
 
@@ -210,18 +210,18 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 		}
 
 		if version == "3" {
+			tags["operation"] = first
 			if nfs3Ops[first] && (len(nline) <= len(nfsopFields)) {
 				for i, t := range nline {
-					item := fmt.Sprintf("%s_%s", first, nfsopFields[i])
-					fields[item] = t
+					fields[nfsopFields[i]] = t
 				}
 				acc.AddFields("nfs_ops", fields, tags)
 			}
 		} else if version == "4" {
+			tags["operation"] = first
 			if nfs4Ops[first] && (len(nline) <= len(nfsopFields)) {
 				for i, t := range nline {
-					item := fmt.Sprintf("%s_%s", first, nfsopFields[i])
-					fields[item] = t
+					fields[nfsopFields[i]] = t
 				}
 				acc.AddFields("nfs_ops", fields, tags)
 			}
