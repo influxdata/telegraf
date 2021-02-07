@@ -20,31 +20,46 @@ The fields from this plugin are gathered in the *memcached* measurement.
 
 Fields:
 
-* get_hits - Number of keys that have been requested and found present
-* get_misses - Number of items that have been requested and not found
-* evictions - Number of valid items removed from cache to free memory for new items
-* limit_maxbytes - Number of bytes this server is allowed to use for storage
+* accepting_conns - Whether or not server is accepting conns
+* auth_cmds - Number of authentication commands handled, success or failure
+* auth_errors - Number of failed authentications
 * bytes - Current number of bytes used to store items
-* uptime - Number of secs since the server started
-* curr_items - Current number of items stored
-* total_items - Total number of items stored since the server started
-* curr_connections - Number of open connections
-* total_connections - Total number of connections opened since the server started running
-* connection_structures - Number of connection structures allocated by the server
-* cmd_get - Cumulative number of retrieval reqs
-* cmd_set - Cumulative number of storage reqs
-* delete_hits - Number of deletion reqs resulting in an item being removed
-* delete_misses - umber of deletions reqs for missing keys
-* incr_hits - Number of successful incr reqs
-* incr_misses - Number of incr reqs against missing keys
-* decr_hits - Number of successful decr reqs
-* decr_misses - Number of decr reqs against missing keys
-* cas_hits - Number of successful CAS reqs
-* cas_misses - Number of CAS reqs against missing keys
 * bytes_read - Total number of bytes read by this server from network
 * bytes_written - Total number of bytes sent by this server to network
-* threads - Number of worker threads requested
+* cas_badval - Number of CAS reqs for which a key was found, but the CAS value did not match
+* cas_hits - Number of successful CAS reqs
+* cas_misses - Number of CAS reqs against missing keys
+* cmd_flush - Cumulative number of flush reqs
+* cmd_get - Cumulative number of retrieval reqs
+* cmd_set - Cumulative number of storage reqs
+* cmd_touch - Cumulative number of touch reqs
 * conn_yields - Number of times any connection yielded to another due to hitting the -R limit
+* connection_structures - Number of connection structures allocated by the server
+* curr_connections - Number of open connections
+* curr_items - Current number of items stored
+* decr_hits - Number of successful decr reqs
+* decr_misses - Number of decr reqs against missing keys
+* delete_hits - Number of deletion reqs resulting in an item being removed
+* delete_misses - umber of deletions reqs for missing keys
+* evicted_unfetched - Items evicted from LRU that were never touched by get/incr/append/etc
+* evictions - Number of valid items removed from cache to free memory for new items
+* expired_unfetched - Items pulled from LRU that were never touched by get/incr/append/etc before expiring
+* get_hits - Number of keys that have been requested and found present
+* get_misses - Number of items that have been requested and not found
+* hash_bytes - Bytes currently used by hash tables
+* hash_is_expanding - Indicates if the hash table is being grown to a new size
+* hash_power_level - Current size multiplier for hash table
+* incr_hits - Number of successful incr reqs
+* incr_misses - Number of incr reqs against missing keys
+* limit_maxbytes - Number of bytes this server is allowed to use for storage
+* listen_disabled_num - Number of times server has stopped accepting new connections (maxconns)
+* reclaimed - Number of times an entry was stored using memory from an expired entry
+* threads - Number of worker threads requested
+* total_connections - Total number of connections opened since the server started running
+* total_items - Total number of items stored since the server started
+* touch_hits - Number of keys that have been touched with a new expiration time
+* touch_misses - Number of items that have been touched and not found
+* uptime - Number of secs since the server started
 
 Description of gathered fields taken from [here](https://github.com/memcached/memcached/blob/master/doc/protocol.txt).
 

@@ -3,14 +3,15 @@ package postgresql
 import (
 	"database/sql"
 	"fmt"
-	"github.com/jackc/pgx"
-	"github.com/jackc/pgx/pgtype"
-	"github.com/jackc/pgx/stdlib"
 	"net"
 	"net/url"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/pgtype"
+	"github.com/jackc/pgx/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -121,6 +122,13 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 						Value: &pgtype.OIDValue{},
 						Name:  "int8OID",
 						OID:   pgtype.Int8OID,
+					})
+					// Newer versions of pgbouncer need this defined. See the discussion here:
+					// https://github.com/jackc/pgx/issues/649
+					info.RegisterDataType(pgtype.DataType{
+						Value: &pgtype.OIDValue{},
+						Name:  "numericOID",
+						OID:   pgtype.NumericOID,
 					})
 
 					return info, nil

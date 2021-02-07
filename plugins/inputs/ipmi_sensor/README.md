@@ -1,7 +1,7 @@
 # IPMI Sensor Input Plugin
 
 Get bare metal metrics using the command line utility
-[`ipmitool`](https://sourceforge.net/projects/ipmitool/files/ipmitool/).
+[`ipmitool`](https://github.com/ipmitool/ipmitool).
 
 If no servers are specified, the plugin will query the local machine sensor stats via the following command:
 
@@ -19,6 +19,11 @@ When one or more servers are specified, the plugin will use the following comman
 ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
 ```
 
+Any of the following parameters will be added to the aformentioned query if they're configured:
+```
+-y hex_key -L privilege
+```
+
 ### Configuration
 
 ```toml
@@ -26,6 +31,11 @@ ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
 [[inputs.ipmi_sensor]]
   ## optionally specify the path to the ipmitool executable
   # path = "/usr/bin/ipmitool"
+  ##
+  ## Setting 'use_sudo' to true will make use of sudo to run ipmitool.
+  ## Sudo must be configured to allow the telegraf user to run ipmitool
+  ## without a password.
+  # use_sudo = false
   ##
   ## optionally force session privilege level. Can be CALLBACK, USER, OPERATOR, ADMINISTRATOR
   # privilege = "ADMINISTRATOR"
@@ -39,7 +49,7 @@ ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
   ##
   # servers = ["USERID:PASSW0RD@lan(192.168.1.1)"]
 
-  ## Recomended: use metric 'interval' that is a multiple of 'timeout' to avoid
+  ## Recommended: use metric 'interval' that is a multiple of 'timeout' to avoid
   ## gaps or overlap in pulled data
   interval = "30s"
 
@@ -48,6 +58,18 @@ ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
 
   ## Schema Version: (Optional, defaults to version 1)
   metric_version = 2
+
+  ## Optionally provide the hex key for the IMPI connection.
+  # hex_key = ""
+
+  ## If ipmitool should use a cache
+  ## for me ipmitool runs about 2 to 10 times faster with cache enabled on HP G10 servers (when using ubuntu20.04)
+  ## the cache file may not work well for you if some sensors come up late
+  # use_cache = false
+
+  ## Path to the ipmitools cache file (defaults to OS temp dir)
+  ## The provided path must exist and must be writable
+  # cache_path = ""
 ```
 
 ### Measurements
@@ -85,6 +107,21 @@ ipmi device node.  When using udev you can create the device node giving
 
 ```
 KERNEL=="ipmi*", MODE="660", GROUP="telegraf"
+```
+Alternatively, it is possible to use sudo. You will need the following in your telegraf config:
+```toml
+[[inputs.ipmi_sensor]]
+  use_sudo = true
+```
+
+You will also need to update your sudoers file:
+
+```bash
+$ visudo
+# Add the following line:
+Cmnd_Alias IPMITOOL = /usr/bin/ipmitool *
+telegraf  ALL=(root) NOPASSWD: IPMITOOL
+Defaults!IPMITOOL !logfile, !syslog, !pam_session
 ```
 
 ### Example Output

@@ -12,7 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -42,7 +42,7 @@ type HTTPClient interface {
 	// req: HTTP request object
 	//
 	// Returns:
-	// http.Response:  HTTP respons object
+	// http.Response:  HTTP response object
 	// error        :  Any error that may have occurred
 	MakeRequest(req *http.Request) (*http.Response, error)
 
@@ -181,7 +181,12 @@ func (h *HttpJson) gatherServer(
 		"server": serverURL,
 	}
 
-	parser, err := parsers.NewJSONParser(msrmnt_name, h.TagKeys, tags)
+	parser, err := parsers.NewParser(&parsers.Config{
+		DataFormat:  "json",
+		MetricName:  msrmnt_name,
+		TagKeys:     h.TagKeys,
+		DefaultTags: tags,
+	})
 	if err != nil {
 		return err
 	}

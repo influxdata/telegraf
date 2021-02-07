@@ -4,10 +4,12 @@ package ping
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Windows ping format ( should support multilanguage ?)
@@ -59,7 +61,7 @@ func TestHost(t *testing.T) {
 	assert.Equal(t, 52, max, "Max 52")
 }
 
-func mockHostPinger(timeout float64, args ...string) (string, error) {
+func mockHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return winENPingOutput, nil
 }
 
@@ -102,7 +104,7 @@ Statystyka badania ping dla 195.187.242.157:
              (100% straty),
 `
 
-func mockErrorHostPinger(timeout float64, args ...string) (string, error) {
+func mockErrorHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return errorPingOutput, errors.New("No packets received")
 }
 
@@ -128,6 +130,18 @@ func TestBadPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
+func TestArguments(t *testing.T) {
+	arguments := []string{"-c", "3"}
+	p := Ping{
+		Count:     2,
+		Timeout:   12.0,
+		Arguments: arguments,
+	}
+
+	actual := p.args("www.google.com")
+	require.True(t, reflect.DeepEqual(actual, arguments), "Expected : %s Actual: %s", arguments, actual)
+}
+
 var lossyPingOutput = `
 Badanie thecodinglove.com [66.6.44.4] z 9800 bajtami danych:
 Upłynął limit czasu żądania.
@@ -147,7 +161,7 @@ Szacunkowy czas błądzenia pakietów w millisekundach:
     Minimum = 114 ms, Maksimum = 119 ms, Czas średni = 115 ms
 `
 
-func mockLossyHostPinger(timeout float64, args ...string) (string, error) {
+func mockLossyHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -207,7 +221,7 @@ Options:
 
 `
 
-func mockFatalHostPinger(timeout float64, args ...string) (string, error) {
+func mockFatalHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return fatalPingOutput, errors.New("So very bad")
 }
 
@@ -249,7 +263,7 @@ Ping statistics for 8.8.8.8:
     Packets: Sent = 4, Received = 1, Lost = 3 (75% loss),
 `
 
-func mockUnreachableHostPinger(timeout float64, args ...string) (string, error) {
+func mockUnreachableHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return UnreachablePingOutput, errors.New("So very bad")
 }
 
@@ -298,7 +312,7 @@ Ping statistics for 8.8.8.8:
     Packets: Sent = 4, Received = 1, Lost = 3 (75% loss),
 `
 
-func mockTTLExpiredPinger(timeout float64, args ...string) (string, error) {
+func mockTTLExpiredPinger(binary string, timeout float64, args ...string) (string, error) {
 	return TTLExpiredPingOutput, errors.New("So very bad")
 }
 
@@ -332,4 +346,17 @@ func TestTTLExpiredPingGather(t *testing.T) {
 		"Fatal ping should not have packet measurements")
 	assert.False(t, acc.HasInt64Field("ping", "minimum_response_ms"),
 		"Fatal ping should not have packet measurements")
+}
+
+func TestPingBinary(t *testing.T) {
+	var acc testutil.Accumulator
+	p := Ping{
+		Urls:   []string{"www.google.com"},
+		Binary: "ping6",
+		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
+			assert.True(t, binary == "ping6")
+			return "", nil
+		},
+	}
+	acc.GatherError(p.Gather)
 }

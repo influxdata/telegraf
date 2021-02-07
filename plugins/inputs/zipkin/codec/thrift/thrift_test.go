@@ -113,7 +113,7 @@ func TestUnmarshalThrift(t *testing.T) {
 					Duration:    addr(53106),
 					Annotations: []*zipkincore.Annotation{},
 					BinaryAnnotations: []*zipkincore.BinaryAnnotation{
-						&zipkincore.BinaryAnnotation{
+						{
 							Key:            "lc",
 							AnnotationType: zipkincore.AnnotationType_STRING,
 							Value:          []byte("trivial"),
@@ -133,7 +133,7 @@ func TestUnmarshalThrift(t *testing.T) {
 					Duration:    addr(50410),
 					Annotations: []*zipkincore.Annotation{},
 					BinaryAnnotations: []*zipkincore.BinaryAnnotation{
-						&zipkincore.BinaryAnnotation{
+						{
 							Key:            "lc",
 							AnnotationType: zipkincore.AnnotationType_STRING,
 							Value:          []byte("trivial"),
@@ -151,7 +151,7 @@ func TestUnmarshalThrift(t *testing.T) {
 					Timestamp: addr(1498688360851318),
 					Duration:  addr(103680),
 					Annotations: []*zipkincore.Annotation{
-						&zipkincore.Annotation{
+						{
 							Timestamp: 1498688360851325,
 							Value:     "Starting child #0",
 							Host: &zipkincore.Endpoint{
@@ -159,7 +159,7 @@ func TestUnmarshalThrift(t *testing.T) {
 								ServiceName: "trivial",
 							},
 						},
-						&zipkincore.Annotation{
+						{
 							Timestamp: 1498688360904545,
 							Value:     "Starting child #1",
 							Host: &zipkincore.Endpoint{
@@ -167,7 +167,7 @@ func TestUnmarshalThrift(t *testing.T) {
 								ServiceName: "trivial",
 							},
 						},
-						&zipkincore.Annotation{
+						{
 							Timestamp: 1498688360954992,
 							Value:     "A Log",
 							Host: &zipkincore.Endpoint{
@@ -177,7 +177,7 @@ func TestUnmarshalThrift(t *testing.T) {
 						},
 					},
 					BinaryAnnotations: []*zipkincore.BinaryAnnotation{
-						&zipkincore.BinaryAnnotation{
+						{
 							Key:            "lc",
 							AnnotationType: zipkincore.AnnotationType_STRING,
 							Value:          []byte("trivial"),

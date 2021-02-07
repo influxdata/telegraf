@@ -28,7 +28,7 @@ type WhiteSpaceParser struct {
 type TagParser struct{}
 type LoopedParser struct {
 	wrappedParser ElementParser
-	wsPaser       *WhiteSpaceParser
+	wsParser      *WhiteSpaceParser
 }
 type LiteralParser struct {
 	literal string
@@ -37,7 +37,10 @@ type LiteralParser struct {
 func (ep *NameParser) parse(p *PointParser, pt *Point) error {
 	//Valid characters are: a-z, A-Z, 0-9, hyphen ("-"), underscore ("_"), dot (".").
 	// Forward slash ("/") and comma (",") are allowed if metricName is enclosed in double quotes.
+	// Delta (U+2206) is allowed as the first character of the
+	// metricName
 	name, err := parseLiteral(p)
+
 	if err != nil {
 		return err
 	}
@@ -57,7 +60,7 @@ func (ep *ValueParser) parse(p *PointParser, pt *Point) error {
 		tok, lit = p.scan()
 	}
 
-	for tok != EOF && (tok == LETTER || tok == NUMBER || tok == DOT) {
+	for tok != EOF && (tok == LETTER || tok == NUMBER || tok == DOT || tok == MINUS_SIGN) {
 		p.writeBuf.WriteString(lit)
 		tok, lit = p.scan()
 	}
@@ -133,7 +136,7 @@ func (ep *LoopedParser) parse(p *PointParser, pt *Point) error {
 		if err != nil {
 			return err
 		}
-		err = ep.wsPaser.parse(p, pt)
+		err = ep.wsParser.parse(p, pt)
 		if err == ErrEOF {
 			break
 		}
@@ -225,6 +228,9 @@ func parseLiteral(p *PointParser) (string, error) {
 	for tok != EOF && tok > literal_beg && tok < literal_end {
 		p.writeBuf.WriteString(lit)
 		tok, lit = p.scan()
+		if tok == DELTA {
+			return "", errors.New("found delta inside metric name")
+		}
 	}
 	if tok == QUOTES {
 		return "", errors.New("found quote inside unquoted literal")

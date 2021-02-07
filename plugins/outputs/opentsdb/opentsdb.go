@@ -3,6 +3,7 @@ package opentsdb
 import (
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"net/url"
 	"regexp"
@@ -16,14 +17,14 @@ import (
 
 var (
 	allowedChars = regexp.MustCompile(`[^a-zA-Z0-9-_./\p{L}]`)
-	hypenChars   = strings.NewReplacer(
+	hyphenChars  = strings.NewReplacer(
 		"@", "-",
 		"*", "-",
 		`%`, "-",
 		"#", "-",
 		"$", "-")
 	defaultHttpPath  = "/api/put"
-	defaultSeperator = "_"
+	defaultSeparator = "_"
 )
 
 type OpenTSDB struct {
@@ -136,10 +137,14 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 		tags := cleanTags(m.Tags())
 
 		for fieldName, value := range m.Fields() {
-			switch value.(type) {
+			switch fv := value.(type) {
 			case int64:
 			case uint64:
 			case float64:
+				// JSON does not support these special values
+				if math.IsNaN(fv) || math.IsInf(fv, 0) {
+					continue
+				}
 			default:
 				log.Printf("D! OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
 				continue
@@ -181,10 +186,14 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 		tags := ToLineFormat(cleanTags(m.Tags()))
 
 		for fieldName, value := range m.Fields() {
-			switch value.(type) {
+			switch fv := value.(type) {
 			case int64:
 			case uint64:
 			case float64:
+				// JSON does not support these special values
+				if math.IsNaN(fv) || math.IsInf(fv, 0) {
+					continue
+				}
 			default:
 				log.Printf("D! OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
 				continue
@@ -213,7 +222,10 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 func cleanTags(tags map[string]string) map[string]string {
 	tagSet := make(map[string]string, len(tags))
 	for k, v := range tags {
-		tagSet[sanitize(k)] = sanitize(v)
+		val := sanitize(v)
+		if val != "" {
+			tagSet[sanitize(k)] = val
+		}
 	}
 	return tagSet
 }
@@ -258,8 +270,8 @@ func (o *OpenTSDB) Close() error {
 }
 
 func sanitize(value string) string {
-	// Apply special hypenation rules to preserve backwards compatibility
-	value = hypenChars.Replace(value)
+	// Apply special hyphenation rules to preserve backwards compatibility
+	value = hyphenChars.Replace(value)
 	// Replace any remaining illegal chars
 	return allowedChars.ReplaceAllLiteralString(value, "_")
 }
@@ -268,7 +280,7 @@ func init() {
 	outputs.Add("opentsdb", func() telegraf.Output {
 		return &OpenTSDB{
 			HttpPath:  defaultHttpPath,
-			Separator: defaultSeperator,
+			Separator: defaultSeparator,
 		}
 	})
 }

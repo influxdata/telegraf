@@ -2,7 +2,7 @@ package kubernetes
 
 import "time"
 
-// SummaryMetrics represents all the summary data about a paritcular node retrieved from a kubelet
+// SummaryMetrics represents all the summary data about a particular node retrieved from a kubelet
 type SummaryMetrics struct {
 	Node NodeMetrics  `json:"node"`
 	Pods []PodMetrics `json:"pods"`

@@ -1,9 +1,11 @@
 package grok
 
 import (
+	"log"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -275,6 +277,28 @@ func TestParsePatternsWithoutCustom(t *testing.T) {
 	assert.Equal(t, time.Unix(0, 1466004605359052000), metricA.Time())
 }
 
+func TestParseEpochMilli(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{MYAPP}"},
+		CustomPatterns: `
+			MYAPP %{POSINT:ts:ts-epochmilli} response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}
+		`,
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`1568540909963 response_time=20821 mymetric=10890.645`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"response_time": int64(20821),
+			"metric":        float64(10890.645),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
+	assert.Equal(t, time.Unix(0, 1568540909963000000), metricA.Time())
+}
+
 func TestParseEpochNano(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{MYAPP}"},
@@ -376,7 +400,7 @@ func TestParseEpochDecimal(t *testing.T) {
 
 			if tt.noMatch {
 				require.Nil(t, m)
-				require.Nil(t, err)
+				require.NoError(t, err)
 				return
 			}
 
@@ -486,7 +510,7 @@ func TestCompileFileAndParse(t *testing.T) {
 		time.Date(2016, time.June, 4, 12, 41, 45, 0, time.FixedZone("foo", 60*60)).Nanosecond(),
 		metricA.Time().Nanosecond())
 
-	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:46] 1.25 mystring dropme nomodifier`)
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -498,7 +522,7 @@ func TestCompileFileAndParse(t *testing.T) {
 		metricB.Fields())
 	assert.Equal(t, map[string]string{}, metricB.Tags())
 	assert.Equal(t,
-		time.Date(2016, time.June, 4, 12, 41, 45, 0, time.FixedZone("foo", 60*60)).Nanosecond(),
+		time.Date(2016, time.June, 4, 12, 41, 46, 0, time.FixedZone("foo", 60*60)).Nanosecond(),
 		metricB.Time().Nanosecond())
 }
 
@@ -570,61 +594,106 @@ func TestCompileErrors(t *testing.T) {
 	assert.Error(t, p.Compile())
 }
 
-func TestParseErrors(t *testing.T) {
-	// Parse fails because the pattern doesn't exist
+func TestParseErrors_MissingPattern(t *testing.T) {
 	p := &Parser{
-		Patterns: []string{"%{TEST_LOG_B}"},
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_B}"},
 		CustomPatterns: `
 			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:int} %{}
 		`,
 	}
-	assert.Error(t, p.Compile())
+	require.Error(t, p.Compile())
 	_, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] notnumber 200 192.168.1.1 5.432µs 101`)
-	assert.Error(t, err)
+	require.Error(t, err)
+}
 
-	// Parse fails because myword is not an int
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
+func TestParseErrors_WrongIntegerType(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
 		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:int}
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:int}
+		`,
+	}
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
+
+func TestParseErrors_WrongFloatType(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
+		CustomPatterns: `
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:float}
+		`,
+	}
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
+
+func TestParseErrors_WrongDurationType(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
+		CustomPatterns: `
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:duration}
+		`,
+	}
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
+
+func TestParseErrors_WrongTimeLayout(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
+		CustomPatterns: `
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:duration}
+		`,
+	}
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
+
+func TestParseInteger_Base16(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{TEST_LOG_C}"},
+		CustomPatterns: `
+			DURATION %{NUMBER}[nuµm]?s
+			BASE10OR16NUM (?:%{BASE10NUM}|%{BASE16NUM})
+			TEST_LOG_C %{NUMBER:myfloat} %{BASE10OR16NUM:response_code:int} %{IPORHOST:clientip} %{DURATION:rt}
 		`,
 	}
 	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
 
-	// Parse fails because myword is not a float
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
-		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:float}
-		`,
-	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
-
-	// Parse fails because myword is not a duration
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
-		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:duration}
-		`,
-	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
-
-	// Parse fails because the time layout is wrong.
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
-		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-unix} %{WORD:myword:duration}
-		`,
-	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
+	metricA, err := p.ParseLine(`1.25 0xc8 192.168.1.1 5.432µs`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"clientip":      "192.168.1.1",
+			"response_code": int64(200),
+			"myfloat":       "1.25",
+			"rt":            "5.432µs",
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
 }
 
 func TestTsModder(t *testing.T) {
@@ -735,7 +804,7 @@ func TestTimezoneEmptyCompileFileAndParse(t *testing.T) {
 	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
 	assert.Equal(t, int64(1465040505000000000), metricA.Time().UnixNano())
 
-	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:46] 1.25 mystring dropme nomodifier`)
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -746,7 +815,7 @@ func TestTimezoneEmptyCompileFileAndParse(t *testing.T) {
 		},
 		metricB.Fields())
 	assert.Equal(t, map[string]string{}, metricB.Tags())
-	assert.Equal(t, int64(1465044105000000000), metricB.Time().UnixNano())
+	assert.Equal(t, int64(1465044106000000000), metricB.Time().UnixNano())
 }
 
 func TestTimezoneMalformedCompileFileAndParse(t *testing.T) {
@@ -771,7 +840,7 @@ func TestTimezoneMalformedCompileFileAndParse(t *testing.T) {
 	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
 	assert.Equal(t, int64(1465040505000000000), metricA.Time().UnixNano())
 
-	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:46] 1.25 mystring dropme nomodifier`)
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -782,7 +851,7 @@ func TestTimezoneMalformedCompileFileAndParse(t *testing.T) {
 		},
 		metricB.Fields())
 	assert.Equal(t, map[string]string{}, metricB.Tags())
-	assert.Equal(t, int64(1465044105000000000), metricB.Time().UnixNano())
+	assert.Equal(t, int64(1465044106000000000), metricB.Time().UnixNano())
 }
 
 func TestTimezoneEuropeCompileFileAndParse(t *testing.T) {
@@ -807,7 +876,7 @@ func TestTimezoneEuropeCompileFileAndParse(t *testing.T) {
 	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
 	assert.Equal(t, int64(1465040505000000000), metricA.Time().UnixNano())
 
-	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:46] 1.25 mystring dropme nomodifier`)
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -818,7 +887,7 @@ func TestTimezoneEuropeCompileFileAndParse(t *testing.T) {
 		},
 		metricB.Fields())
 	assert.Equal(t, map[string]string{}, metricB.Tags())
-	assert.Equal(t, int64(1465036905000000000), metricB.Time().UnixNano())
+	assert.Equal(t, int64(1465036906000000000), metricB.Time().UnixNano())
 }
 
 func TestTimezoneAmericasCompileFileAndParse(t *testing.T) {
@@ -843,7 +912,7 @@ func TestTimezoneAmericasCompileFileAndParse(t *testing.T) {
 	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
 	assert.Equal(t, int64(1465040505000000000), metricA.Time().UnixNano())
 
-	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:46] 1.25 mystring dropme nomodifier`)
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -854,7 +923,7 @@ func TestTimezoneAmericasCompileFileAndParse(t *testing.T) {
 		},
 		metricB.Fields())
 	assert.Equal(t, map[string]string{}, metricB.Tags())
-	assert.Equal(t, int64(1465058505000000000), metricB.Time().UnixNano())
+	assert.Equal(t, int64(1465058506000000000), metricB.Time().UnixNano())
 }
 
 func TestTimezoneLocalCompileFileAndParse(t *testing.T) {
@@ -879,7 +948,7 @@ func TestTimezoneLocalCompileFileAndParse(t *testing.T) {
 	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
 	assert.Equal(t, int64(1465040505000000000), metricA.Time().UnixNano())
 
-	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:46] 1.25 mystring dropme nomodifier`)
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -890,7 +959,7 @@ func TestTimezoneLocalCompileFileAndParse(t *testing.T) {
 		},
 		metricB.Fields())
 	assert.Equal(t, map[string]string{}, metricB.Tags())
-	assert.Equal(t, time.Date(2016, time.June, 4, 12, 41, 45, 0, time.Local).UnixNano(), metricB.Time().UnixNano())
+	assert.Equal(t, time.Date(2016, time.June, 4, 12, 41, 46, 0, time.Local).UnixNano(), metricB.Time().UnixNano())
 }
 
 func TestNewlineInPatterns(t *testing.T) {
@@ -906,6 +975,7 @@ func TestNewlineInPatterns(t *testing.T) {
 }
 
 func TestSyslogTimestamp(t *testing.T) {
+	currentYear := time.Now().Year()
 	tests := []struct {
 		name     string
 		line     string
@@ -914,17 +984,17 @@ func TestSyslogTimestamp(t *testing.T) {
 		{
 			name:     "two digit day of month",
 			line:     "Sep 25 09:01:55 value=42",
-			expected: time.Date(2018, time.September, 25, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(currentYear, time.September, 25, 9, 1, 55, 0, time.UTC),
 		},
 		{
 			name:     "one digit day of month single space",
 			line:     "Sep 2 09:01:55 value=42",
-			expected: time.Date(2018, time.September, 2, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(currentYear, time.September, 2, 9, 1, 55, 0, time.UTC),
 		},
 		{
 			name:     "one digit day of month double space",
 			line:     "Sep  2 09:01:55 value=42",
-			expected: time.Date(2018, time.September, 2, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(currentYear, time.September, 2, 9, 1, 55, 0, time.UTC),
 		},
 	}
 	for _, tt := range tests {
@@ -956,6 +1026,92 @@ func TestReplaceTimestampComma(t *testing.T) {
 	require.Equal(t, 2018, m.Time().Year())
 	require.Equal(t, 13, m.Time().Hour())
 	require.Equal(t, 34, m.Time().Second())
-	//Convert Nanosecond to milisecond for compare
+	// Convert nanosecond to millisecond for compare
 	require.Equal(t, 555, m.Time().Nanosecond()/1000000)
+}
+
+func TestDynamicMeasurementModifier(t *testing.T) {
+	p := &Parser{
+		Patterns:       []string{"%{TEST}"},
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:test:measurement}",
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("4 5 hello")
+	require.NoError(t, err)
+	require.Equal(t, m.Name(), "hello")
+}
+
+func TestStaticMeasurementModifier(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{WORD:hi:measurement} %{NUMBER:num:string}"},
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("test_name 42")
+	log.Printf("%v", m)
+	require.NoError(t, err)
+	require.Equal(t, "test_name", m.Name())
+}
+
+// tests that the top level measurement name is used
+func TestTwoMeasurementModifier(t *testing.T) {
+	p := &Parser{
+		Patterns:       []string{"%{TEST:test_name:measurement}"},
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:measurement} %{WORD:var3:measurement}",
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("4 5 hello")
+	require.NoError(t, err)
+	require.Equal(t, m.Name(), "4 5 hello")
+}
+
+func TestMeasurementModifierNoName(t *testing.T) {
+	p := &Parser{
+		Patterns:       []string{"%{TEST}"},
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:hi:measurement}",
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("4 5 hello")
+	require.NoError(t, err)
+	require.Equal(t, m.Name(), "hello")
+}
+
+func TestEmptyYearInTimestamp(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{`%{APPLE_SYSLOG_TIME_SHORT:timestamp:ts-"Jan 2 15:04:05"} %{HOSTNAME} %{APP_NAME:app_name}\[%{NUMBER:pid:int}\]%{GREEDYDATA:message}`},
+		CustomPatterns: `
+		APPLE_SYSLOG_TIME_SHORT %{MONTH} +%{MONTHDAY} %{TIME}
+		APP_NAME [a-zA-Z0-9\.]+
+		`,
+	}
+	require.NoError(t, p.Compile())
+	p.ParseLine("Nov  6 13:57:03 generic iTunes[6504]: info> Scale factor of main display = 2.0")
+	m, err := p.ParseLine("Nov  6 13:57:03 generic iTunes[6504]: objc[6504]: Object descriptor was null.")
+	require.NoError(t, err)
+	require.NotNil(t, m)
+	require.Equal(t, time.Now().Year(), m.Time().Year())
+}
+
+func TestTrimRegression(t *testing.T) {
+	// https://github.com/influxdata/telegraf/issues/4998
+	p := &Parser{
+		Patterns: []string{`%{GREEDYDATA:message:string}`},
+	}
+	require.NoError(t, p.Compile())
+
+	actual, err := p.ParseLine(`level=info msg="ok"`)
+	require.NoError(t, err)
+
+	expected := testutil.MustMetric(
+		"",
+		map[string]string{},
+		map[string]interface{}{
+			"message": `level=info msg="ok"`,
+		},
+		actual.Time(),
+	)
+	require.Equal(t, expected, actual)
 }

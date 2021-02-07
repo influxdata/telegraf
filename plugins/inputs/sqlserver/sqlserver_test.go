@@ -6,25 +6,57 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
+
+func TestSqlServer_QueriesInclusionExclusion(t *testing.T) {
+	cases := []map[string]interface{}{
+		{
+			"IncludeQuery": []string{},
+			"ExcludeQuery": []string{"WaitStatsCategorized", "DatabaseIO", "ServerProperties", "MemoryClerk", "Schedulers", "VolumeSpace", "Cpu"},
+			"queries":      []string{"PerformanceCounters", "SqlRequests"},
+			"queriesTotal": 2,
+		},
+		{
+			"IncludeQuery": []string{"PerformanceCounters", "SqlRequests"},
+			"ExcludeQuery": []string{"SqlRequests", "WaitStatsCategorized", "DatabaseIO", "VolumeSpace", "Cpu"},
+			"queries":      []string{"PerformanceCounters"},
+			"queriesTotal": 1,
+		},
+	}
+
+	for _, test := range cases {
+		s := SQLServer{
+			QueryVersion: 2,
+			IncludeQuery: test["IncludeQuery"].([]string),
+			ExcludeQuery: test["ExcludeQuery"].([]string),
+		}
+		initQueries(&s)
+		assert.Equal(t, len(s.queries), test["queriesTotal"].(int))
+		for _, query := range test["queries"].([]string) {
+			assert.Contains(t, s.queries, query)
+		}
+	}
+}
 
 func TestSqlServer_ParseMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	queries = make(MapQuery)
-	queries["PerformanceCounters"] = Query{Script: mockPerformanceCounters, ResultByRow: true}
-	queries["WaitStatsCategorized"] = Query{Script: mockWaitStatsCategorized, ResultByRow: false}
-	queries["CPUHistory"] = Query{Script: mockCPUHistory, ResultByRow: false}
-	queries["DatabaseIO"] = Query{Script: mockDatabaseIO, ResultByRow: false}
-	queries["DatabaseSize"] = Query{Script: mockDatabaseSize, ResultByRow: false}
-	queries["DatabaseStats"] = Query{Script: mockDatabaseStats, ResultByRow: false}
-	queries["DatabaseProperties"] = Query{Script: mockDatabaseProperties, ResultByRow: false}
-	queries["VolumeSpace"] = Query{Script: mockVolumeSpace, ResultByRow: false}
-	queries["MemoryClerk"] = Query{Script: mockMemoryClerk, ResultByRow: false}
-	queries["PerformanceMetrics"] = Query{Script: mockPerformanceMetrics, ResultByRow: false}
+	queries := make(MapQuery)
+	queries["PerformanceCounters"] = Query{ScriptName: "PerformanceCounters", Script: mockPerformanceCounters, ResultByRow: true}
+	queries["WaitStatsCategorized"] = Query{ScriptName: "WaitStatsCategorized", Script: mockWaitStatsCategorized, ResultByRow: false}
+	queries["CPUHistory"] = Query{ScriptName: "CPUHistory", Script: mockCPUHistory, ResultByRow: false}
+	queries["DatabaseIO"] = Query{ScriptName: "DatabaseIO", Script: mockDatabaseIO, ResultByRow: false}
+	queries["DatabaseSize"] = Query{ScriptName: "DatabaseSize", Script: mockDatabaseSize, ResultByRow: false}
+	queries["DatabaseStats"] = Query{ScriptName: "DatabaseStats", Script: mockDatabaseStats, ResultByRow: false}
+	queries["DatabaseProperties"] = Query{ScriptName: "DatabaseProperties", Script: mockDatabaseProperties, ResultByRow: false}
+	queries["VolumeSpace"] = Query{ScriptName: "VolumeSpace", Script: mockVolumeSpace, ResultByRow: false}
+	queries["MemoryClerk"] = Query{ScriptName: "MemoryClerk", Script: mockMemoryClerk, ResultByRow: false}
+	queries["PerformanceMetrics"] = Query{ScriptName: "PerformanceMetrics", Script: mockPerformanceMetrics, ResultByRow: false}
 
 	var headers, mock, row []string
 	var tags = make(map[string]string)
@@ -79,6 +111,62 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 			idx++
 		}
 	}
+}
+
+func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
+	// Invoke Gather() from two separate configurations and
+	//  confirm they don't interfere with each other
+	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
+
+	testServer := "Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+	s := &SQLServer{
+		Servers:      []string{testServer},
+		ExcludeQuery: []string{"MemoryClerk"},
+	}
+	s2 := &SQLServer{
+		Servers:      []string{testServer},
+		ExcludeQuery: []string{"DatabaseSize"},
+	}
+
+	var acc, acc2 testutil.Accumulator
+	err := s.Gather(&acc)
+	require.NoError(t, err)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, false)
+
+	err = s2.Gather(&acc2)
+	require.NoError(t, err)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, true)
+	// acc includes size metrics, and excludes memory metrics
+	assert.False(t, acc.HasMeasurement("Memory breakdown (%)"))
+	assert.True(t, acc.HasMeasurement("Log size (bytes)"))
+
+	// acc2 includes memory metrics, and excludes size metrics
+	assert.True(t, acc2.HasMeasurement("Memory breakdown (%)"))
+	assert.False(t, acc2.HasMeasurement("Log size (bytes)"))
+}
+
+func TestSqlServer_MultipleInit(t *testing.T) {
+
+	s := &SQLServer{}
+	s2 := &SQLServer{
+		ExcludeQuery: []string{"DatabaseSize"},
+	}
+
+	initQueries(s)
+	_, ok := s.queries["DatabaseSize"]
+	// acc includes size metrics
+	assert.True(t, ok)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, false)
+
+	initQueries(s2)
+	_, ok = s2.queries["DatabaseSize"]
+	// acc2 excludes size metrics
+	assert.False(t, ok)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, true)
 }
 
 const mockPerformanceMetrics = `measurement;servername;type;Point In Time Recovery;Available physical memory (bytes);Average pending disk IO;Average runnable tasks;Average tasks;Buffer pool rate (bytes/sec);Connection memory per connection (bytes);Memory grant pending;Page File Usage (%);Page lookup per batch request;Page split per batch request;Readahead per page read;Signal wait (%);Sql compilation per batch request;Sql recompilation per batch request;Total target memory ratio

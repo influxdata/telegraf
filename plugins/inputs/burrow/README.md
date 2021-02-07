@@ -1,4 +1,4 @@
-# Telegraf Plugin: Burrow
+# Burrow Kafka Consumer Lag Checking Input Plugin
 
 Collect Kafka topic, consumer and partition status
 via [Burrow](https://github.com/linkedin/Burrow) HTTP [API](https://github.com/linkedin/Burrow/wiki/HTTP-Endpoint).
@@ -7,7 +7,7 @@ Supported Burrow version: `1.x`
 
 ### Configuration
 
-```
+```toml
 [[inputs.burrow]]
   ## Burrow API endpoints in format "schema://host:port".
   ## Default is "http://localhost:8000".
@@ -50,7 +50,7 @@ Supported Burrow version: `1.x`
   # insecure_skip_verify = false
 ```
 
-### Partition Status mappings
+### Group/Partition Status mappings
 
 * `OK` = 1
 * `NOT_FOUND` = 2
@@ -66,9 +66,11 @@ Supported Burrow version: `1.x`
 * `burrow_group` (one event per each consumer group)
   - status (string, see Partition Status mappings)
   - status_code (int, `1..6`, see Partition status mappings)
-  - parition_count (int, `number of partitions`)
+  - partition_count (int, `number of partitions`)
+  - offset (int64, `total offset of all partitions`)
   - total_lag (int64, `totallag`)
   - lag (int64, `maxlag.current_lag || 0`)
+  - timestamp (int64, `end.timestamp`)
 
 * `burrow_partition` (one event per each topic partition)
   - status (string, see Partition Status mappings)

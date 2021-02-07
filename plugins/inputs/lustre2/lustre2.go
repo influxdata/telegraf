@@ -1,5 +1,9 @@
+// +build !windows
+
+// lustre2 doesn't aim for Windows
+
 /*
-Lustre 2.x telegraf plugin
+Lustre 2.x Telegraf plugin
 
 Lustre (http://lustre.org/) is an open-source, parallel file system
 for HPC environments. It stores statistics about its activity in
@@ -9,23 +13,28 @@ for HPC environments. It stores statistics about its activity in
 package lustre2
 
 import (
+	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+type tags struct {
+	name, job string
+}
 
 // Lustre proc files can change between versions, so we want to future-proof
 // by letting people choose what to look at.
 type Lustre2 struct {
-	Ost_procfiles []string
-	Mds_procfiles []string
+	Ost_procfiles []string `toml:"ost_procfiles"`
+	Mds_procfiles []string `toml:"mds_procfiles"`
 
 	// allFields maps and OST name to the metric fields associated with that OST
-	allFields map[string]map[string]interface{}
+	allFields map[tags]map[string]interface{}
 }
 
 var sampleConfig = `
@@ -353,57 +362,76 @@ var wanted_mdt_jobstats_fields = []*mapping{
 	},
 }
 
-func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, acc telegraf.Accumulator) error {
+func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping, acc telegraf.Accumulator) error {
 	files, err := filepath.Glob(fileglob)
 	if err != nil {
 		return err
 	}
 
+	fieldSplitter := regexp.MustCompile(`[ :]+`)
+
 	for _, file := range files {
 		/* Turn /proc/fs/lustre/obdfilter/<ost_name>/stats and similar
 		 * into just the object store target name
-		 * Assumpion: the target name is always second to last,
+		 * Assumption: the target name is always second to last,
 		 * which is true in Lustre 2.1->2.8
 		 */
 		path := strings.Split(file, "/")
 		name := path[len(path)-2]
-		var fields map[string]interface{}
-		fields, ok := l.allFields[name]
-		if !ok {
-			fields = make(map[string]interface{})
-			l.allFields[name] = fields
-		}
 
-		lines, err := internal.ReadLines(file)
+		//lines, err := internal.ReadLines(file)
+		wholeFile, err := ioutil.ReadFile(file)
 		if err != nil {
 			return err
 		}
+		jobs := strings.Split(string(wholeFile), "- ")
+		for _, job := range jobs {
+			lines := strings.Split(string(job), "\n")
+			jobid := ""
 
-		for _, line := range lines {
-			parts := strings.Fields(line)
-			if strings.HasPrefix(line, "- job_id:") {
-				// Set the job_id explicitly if present
-				fields["jobid"] = parts[2]
+			// figure out if the data should be tagged with job_id here
+			parts := strings.Fields(lines[0])
+			if strings.TrimSuffix(parts[0], ":") == "job_id" {
+				jobid = parts[1]
 			}
 
-			for _, wanted := range wanted_fields {
-				var data uint64
-				if strings.TrimSuffix(parts[0], ":") == wanted.inProc {
-					wanted_field := wanted.field
-					// if not set, assume field[1]. Shouldn't be field[0], as
-					// that's a string
-					if wanted_field == 0 {
-						wanted_field = 1
+			for _, line := range lines {
+				// skip any empty lines
+				if len(line) < 1 {
+					continue
+				}
+
+				parts := fieldSplitter.Split(line, -1)
+				if len(parts[0]) == 0 {
+					parts = parts[1:]
+				}
+
+				var fields map[string]interface{}
+				fields, ok := l.allFields[tags{name, jobid}]
+				if !ok {
+					fields = make(map[string]interface{})
+					l.allFields[tags{name, jobid}] = fields
+				}
+
+				for _, wanted := range wantedFields {
+					var data uint64
+					if parts[0] == wanted.inProc {
+						wantedField := wanted.field
+						// if not set, assume field[1]. Shouldn't be field[0], as
+						// that's a string
+						if wantedField == 0 {
+							wantedField = 1
+						}
+						data, err = strconv.ParseUint(strings.TrimSuffix((parts[wantedField]), ","), 10, 64)
+						if err != nil {
+							return err
+						}
+						reportName := wanted.inProc
+						if wanted.reportAs != "" {
+							reportName = wanted.reportAs
+						}
+						fields[reportName] = data
 					}
-					data, err = strconv.ParseUint(strings.TrimSuffix((parts[wanted_field]), ","), 10, 64)
-					if err != nil {
-						return err
-					}
-					report_name := wanted.inProc
-					if wanted.reportAs != "" {
-						report_name = wanted.reportAs
-					}
-					fields[report_name] = data
 				}
 			}
 		}
@@ -423,7 +451,8 @@ func (l *Lustre2) Description() string {
 
 // Gather reads stats from all lustre targets
 func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
-	l.allFields = make(map[string]map[string]interface{})
+	//l.allFields = make(map[string]map[string]interface{})
+	l.allFields = make(map[tags]map[string]interface{})
 
 	if len(l.Ost_procfiles) == 0 {
 		// read/write bytes are in obdfilter/<ost_name>/stats
@@ -483,15 +512,13 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	for name, fields := range l.allFields {
+	for tgs, fields := range l.allFields {
+
 		tags := map[string]string{
-			"name": name,
+			"name": tgs.name,
 		}
-		if _, ok := fields["jobid"]; ok {
-			if jobid, ok := fields["jobid"].(string); ok {
-				tags["jobid"] = jobid
-			}
-			delete(fields, "jobid")
+		if len(tgs.job) > 0 {
+			tags["jobid"] = tgs.job
 		}
 		acc.AddFields("lustre2", fields, tags)
 	}

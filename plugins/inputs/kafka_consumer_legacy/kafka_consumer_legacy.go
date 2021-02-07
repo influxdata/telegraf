@@ -2,7 +2,6 @@ package kafka_consumer_legacy
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 
@@ -30,6 +29,8 @@ type Kafka struct {
 	Offset string
 	parser parsers.Parser
 
+	Log telegraf.Logger
+
 	sync.Mutex
 
 	// channel for all incoming kafka messages
@@ -49,12 +50,16 @@ type Kafka struct {
 var sampleConfig = `
   ## topic(s) to consume
   topics = ["telegraf"]
+
   ## an array of Zookeeper connection strings
   zookeeper_peers = ["localhost:2181"]
+
   ## Zookeeper Chroot
   zookeeper_chroot = ""
+
   ## the name of the consumer group
   consumer_group = "telegraf_metrics_consumers"
+
   ## Offset (must be either "oldest" or "newest")
   offset = "oldest"
 
@@ -96,7 +101,7 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 	case "newest":
 		config.Offsets.Initial = sarama.OffsetNewest
 	default:
-		log.Printf("I! WARNING: Kafka consumer invalid offset '%s', using 'oldest'\n",
+		k.Log.Infof("WARNING: Kafka consumer invalid offset '%s', using 'oldest'\n",
 			k.Offset)
 		config.Offsets.Initial = sarama.OffsetOldest
 	}
@@ -121,7 +126,7 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 
 	// Start the kafka message reader
 	go k.receiver()
-	log.Printf("I! Started the kafka consumer service, peers: %v, topics: %v\n",
+	k.Log.Infof("Started the kafka consumer service, peers: %v, topics: %v\n",
 		k.ZookeeperPeers, k.Topics)
 	return nil
 }

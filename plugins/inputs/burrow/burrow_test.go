@@ -160,7 +160,7 @@ func TestBurrowGroup(t *testing.T) {
 			"partition_count": 3,
 			"total_lag":       int64(0),
 			"lag":             int64(0),
-			"offset":          int64(431323195),
+			"offset":          int64(431323195 + 431322962 + 428636563),
 			"timestamp":       int64(1515609490008),
 		},
 	}
@@ -262,7 +262,7 @@ func TestFilterGroups(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	plugin.Gather(acc)
 
-	require.Exactly(t, 4, len(acc.Metrics))
+	require.Exactly(t, 1, len(acc.Metrics))
 	require.Empty(t, acc.Errors)
 }
 

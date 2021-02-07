@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConnectAndWrite(t *testing.T) {
+func TestConnectAndWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -17,6 +17,7 @@ func TestConnectAndWrite(t *testing.T) {
 	s, _ := serializers.NewInfluxSerializer()
 	n := &NATS{
 		Servers:    server,
+		Name:       "telegraf",
 		Subject:    "telegraf",
 		serializer: s,
 	}

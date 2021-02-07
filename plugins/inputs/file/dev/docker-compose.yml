@@ -6,7 +6,7 @@ services:
       volumes:
         - ./telegraf.conf:/telegraf.conf
         - ../../../../telegraf:/telegraf
-        - ./json_a.log:/var/log/test.log
+        - ./dev/json_a.log:/var/log/test.log
       entrypoint:
         - /telegraf
         - --config

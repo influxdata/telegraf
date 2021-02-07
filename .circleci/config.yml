@@ -1,119 +1,205 @@
----
-defaults:
-  defaults: &defaults
-    working_directory: '/go/src/github.com/influxdata/telegraf'
-  go-1_9: &go-1_9
-    docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.9.7'
-  go-1_10: &go-1_10
-    docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.10.3'
+version: 2.1
 
-version: 2
+executors:
+  go-1_14:
+    working_directory: '/go/src/github.com/influxdata/telegraf'
+    docker:
+      - image: 'quay.io/influxdb/telegraf-ci:1.14.9'
+    environment:
+      GOFLAGS: -p=8
+  go-1_15:
+    working_directory: '/go/src/github.com/influxdata/telegraf'
+    docker:
+      - image: 'quay.io/influxdb/telegraf-ci:1.15.5'
+    environment:
+      GOFLAGS: -p=8
+  mac:
+    macos:
+      xcode: 12.1.0
+    working_directory: '~/go/src/github.com/influxdata/telegraf'
+    environment:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      GOFLAGS: -p=8
+
+commands:
+  test-go:
+    parameters:
+      goarch:
+        type: string
+        default: "amd64"
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '/go'
+      - run: 'GOARCH=<< parameters.goarch >> make'
+      - run: 'GOARCH=<< parameters.goarch >> make check'
+      - run: 'GOARCH=<< parameters.goarch >> make check-deps'
+      - run: 'GOARCH=<< parameters.goarch >> make test'
+  test-go-mac:
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '/'
+      - run: 'make'
+      - run: 'make check'
+      - run: 'make test'
+  package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '/go'
+      - when:
+          condition: << parameters.nightly >>
+          steps: 
+            - run: 'NIGHTLY=1 make package'
+            - run: 'make upload-nightly'
+      - unless:
+          condition: << parameters.nightly >>
+          steps:
+            - run: 'make package'
+      - store_artifacts:
+          path: './build/dist'
+          destination: 'build/dist'
 jobs:
   deps:
-    <<: [ *defaults, *go-1_10 ]
+    executor: go-1_15
     steps:
       - checkout
       - restore_cache:
-          key: vendor-{{ checksum "Gopkg.lock" }}
+          key: go-mod-v1-{{ checksum "go.sum" }}
       - run: 'make deps'
+      - run: 'make tidy'
       - save_cache:
-          name: 'vendored deps'
-          key: vendor-{{ checksum "Gopkg.lock" }}
+          name: 'go module cache'
+          key: go-mod-v1-{{ checksum "go.sum" }}
           paths:
-            - './vendor'
+            - '/go/pkg/mod'
       - persist_to_workspace:
-          root: '/go/src'
+          root: '/go'
           paths:
             - '*'
+  macdeps:
+    executor: mac
+    steps:
+      - checkout
+      - restore_cache:
+          key: mac-go-mod-v2-{{ checksum "go.sum" }}
+      - run: 'brew install go' # latest
+      - run: 'make deps'
+      - run: 'make tidy'
+      - save_cache:
+          name: 'go module cache'
+          key: mac-go-mod-v2-{{ checksum "go.sum" }}
+          paths:
+            - '~/go/pkg/mod'
+            - '/usr/local/Cellar/go'
+            - '/usr/local/bin/go'
+            - '/usr/local/bin/gofmt'
+      - persist_to_workspace:
+          root: '/'
+          paths:
+            - 'usr/local/bin/go'
+            - 'usr/local/Cellar/go'
+            - 'usr/local/bin/gofmt'
+            - 'Users/distiller/go'
 
-  test-go-1.9:
-    <<: [ *defaults, *go-1_9 ]
+  test-go-1_14:
+    executor: go-1_14
     steps:
-      - attach_workspace:
-          at: '/go/src'
-      - run: 'make check'
-      - run: 'make test'
-  test-go-1.10:
-    <<: [ *defaults, *go-1_10 ]
+      - test-go
+  test-go-1_14-386:
+    executor: go-1_14
     steps:
-      - attach_workspace:
-          at: '/go/src'
-      - run: 'make check'
-      - run: 'make test'
-  test-go-1.10-386:
-    <<: [ *defaults, *go-1_10 ]
+      - test-go:
+          goarch: "386"
+  test-go-1_15:
+    executor: go-1_15
     steps:
-      - attach_workspace:
-          at: '/go/src'
-      - run: 'GOARCH=386 make check'
-      - run: 'GOARCH=386 make test'
+      - test-go
+  test-go-1_15-386:
+    executor: go-1_15
+    steps:
+      - test-go:
+          goarch: "386"
+  test-go-darwin:
+    executor: mac
+    steps:
+      - test-go-mac
 
   package:
-    <<: [ *defaults, *go-1_10 ]
+    executor: go-1_15
     steps:
-      - attach_workspace:
-          at: '/go/src'
-      - run: 'make package'
-      - store_artifacts:
-          path: './build'
-          destination: 'build'
+      - package
   release:
-    <<: [ *defaults, *go-1_10 ]
+    executor: go-1_15
     steps:
-      - attach_workspace:
-          at: '/go/src'
-      - run: 'make package-release'
-      - store_artifacts:
-          path: './build'
-          destination: 'build'
+      - package
   nightly:
-    <<: [ *defaults, *go-1_10 ]
+    executor: go-1_15
     steps:
-      - attach_workspace:
-          at: '/go/src'
-      - run: 'make package-nightly'
-      - store_artifacts:
-          path: './build'
-          destination: 'build'
+      - package:
+          nightly: true
 
 workflows:
   version: 2
   check:
     jobs:
+      - 'macdeps':
+          filters:
+            tags:
+              only: /.*/
       - 'deps':
           filters:
             tags:
               only: /.*/
-      - 'test-go-1.9':
+      - 'test-go-1_14':
           requires:
             - 'deps'
           filters:
             tags:
               only: /.*/
-      - 'test-go-1.10':
+      - 'test-go-1_14-386':
           requires:
             - 'deps'
           filters:
             tags:
               only: /.*/
-      - 'test-go-1.10-386':
+      - 'test-go-1_15':
           requires:
             - 'deps'
           filters:
             tags:
+              only: /.*/
+      - 'test-go-1_15-386':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-darwin':
+          requires:
+            - 'macdeps'
+          filters:
+            tags: # only runs on tags if you specify this filter
               only: /.*/
       - 'package':
           requires:
-            - 'test-go-1.9'
-            - 'test-go-1.10'
-            - 'test-go-1.10-386'
+            - 'test-go-darwin'
+            - 'test-go-1_14'
+            - 'test-go-1_14-386'
+            - 'test-go-1_15'
+            - 'test-go-1_15-386'
       - 'release':
           requires:
-            - 'test-go-1.9'
-            - 'test-go-1.10'
-            - 'test-go-1.10-386'
+            - 'test-go-darwin'
+            - 'test-go-1_14'
+            - 'test-go-1_14-386'
+            - 'test-go-1_15'
+            - 'test-go-1_15-386'
           filters:
             tags:
               only: /.*/
@@ -122,20 +208,29 @@ workflows:
   nightly:
     jobs:
       - 'deps'
-      - 'test-go-1.9':
+      - 'macdeps'
+      - 'test-go-1_14':
           requires:
             - 'deps'
-      - 'test-go-1.10':
+      - 'test-go-1_14-386':
           requires:
             - 'deps'
-      - 'test-go-1.10-386':
+      - 'test-go-1_15':
           requires:
             - 'deps'
+      - 'test-go-1_15-386':
+          requires:
+            - 'deps'
+      - 'test-go-darwin':
+          requires:
+            - 'macdeps'
       - 'nightly':
           requires:
-            - 'test-go-1.9'
-            - 'test-go-1.10'
-            - 'test-go-1.10-386'
+            - 'test-go-darwin'
+            - 'test-go-1_14'
+            - 'test-go-1_14-386'
+            - 'test-go-1_15'
+            - 'test-go-1_15-386'
     triggers:
       - schedule:
           cron: "0 7 * * *"

@@ -4,7 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,7 +23,7 @@ var (
 	execCommand             = exec.Command // execCommand is used to mock commands in tests.
 	re_v1_parse_line        = regexp.MustCompile(`^(?P<name>[^|]*)\|(?P<description>[^|]*)\|(?P<status_code>.*)`)
 	re_v2_parse_line        = regexp.MustCompile(`^(?P<name>[^|]*)\|[^|]+\|(?P<status_code>[^|]*)\|(?P<entity_id>[^|]*)\|(?:(?P<description>[^|]+))?`)
-	re_v2_parse_description = regexp.MustCompile(`^(?P<analogValue>[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`)
+	re_v2_parse_description = regexp.MustCompile(`^(?P<analogValue>-?[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`)
 	re_v2_parse_unit        = regexp.MustCompile(`^(?P<realAnalogUnit>[^,]+)(?:,\s*(?P<statusDesc>.*))?`)
 )
 
@@ -28,14 +31,23 @@ var (
 type Ipmi struct {
 	Path          string
 	Privilege     string
+	HexKey        string `toml:"hex_key"`
 	Servers       []string
 	Timeout       internal.Duration
 	MetricVersion int
+	UseSudo       bool
+	UseCache      bool
+	CachePath     string
 }
 
 var sampleConfig = `
   ## optionally specify the path to the ipmitool executable
   # path = "/usr/bin/ipmitool"
+  ##
+  ## Setting 'use_sudo' to true will make use of sudo to run ipmitool.
+  ## Sudo must be configured to allow the telegraf user to run ipmitool
+  ## without a password.
+  # use_sudo = false
   ##
   ## optionally force session privilege level. Can be CALLBACK, USER, OPERATOR, ADMINISTRATOR
   # privilege = "ADMINISTRATOR"
@@ -58,6 +70,18 @@ var sampleConfig = `
 
   ## Schema Version: (Optional, defaults to version 1)
   metric_version = 2
+
+  ## Optionally provide the hex key for the IMPI connection.
+  # hex_key = ""
+
+  ## If ipmitool should use a cache
+  ## for me ipmitool runs about 2 to 10 times faster with cache enabled on HP G10 servers (when using ubuntu20.04)
+  ## the cache file may not work well for you if some sensors come up late
+  # use_cache = false
+
+  ## Path to the ipmitools cache file (defaults to OS temp dir)
+  ## The provided path must exist and must be writable
+  # cache_path = ""
 `
 
 // SampleConfig returns the documentation about the sample configuration
@@ -103,15 +127,44 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 	opts := make([]string, 0)
 	hostname := ""
 	if server != "" {
-		conn := NewConnection(server, m.Privilege)
+		conn := NewConnection(server, m.Privilege, m.HexKey)
 		hostname = conn.Hostname
 		opts = conn.options()
 	}
 	opts = append(opts, "sdr")
+	if m.UseCache {
+		cacheFile := filepath.Join(m.CachePath, server+"_ipmi_cache")
+		_, err := os.Stat(cacheFile)
+		if os.IsNotExist(err) {
+			dumpOpts := opts
+			// init cache file
+			dumpOpts = append(dumpOpts, "dump")
+			dumpOpts = append(dumpOpts, cacheFile)
+			name := m.Path
+			if m.UseSudo {
+				// -n - avoid prompting the user for input of any kind
+				dumpOpts = append([]string{"-n", name}, dumpOpts...)
+				name = "sudo"
+			}
+			cmd := execCommand(name, dumpOpts...)
+			out, err := internal.CombinedOutputTimeout(cmd, m.Timeout.Duration)
+			if err != nil {
+				return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+			}
+		}
+		opts = append(opts, "-S")
+		opts = append(opts, cacheFile)
+	}
 	if m.MetricVersion == 2 {
 		opts = append(opts, "elist")
 	}
-	cmd := execCommand(m.Path, opts...)
+	name := m.Path
+	if m.UseSudo {
+		// -n - avoid prompting the user for input of any kind
+		opts = append([]string{"-n", name}, opts...)
+		name = "sudo"
+	}
+	cmd := execCommand(name, opts...)
 	out, err := internal.CombinedOutputTimeout(cmd, m.Timeout.Duration)
 	timestamp := time.Now()
 	if err != nil {
@@ -149,9 +202,19 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_
 			fields["status"] = 0
 		}
 
-		if strings.Index(ipmiFields["description"], " ") > 0 {
+		description := ipmiFields["description"]
+
+		// handle hex description field
+		if strings.HasPrefix(description, "0x") {
+			descriptionInt, err := strconv.ParseInt(description, 0, 64)
+			if err != nil {
+				continue
+			}
+
+			fields["value"] = float64(descriptionInt)
+		} else if strings.Index(description, " ") > 0 {
 			// split middle column into value and unit
-			valunit := strings.SplitN(ipmiFields["description"], " ", 2)
+			valunit := strings.SplitN(description, " ", 2)
 			var err error
 			fields["value"], err = aToFloat(valunit[0])
 			if err != nil {
@@ -228,7 +291,12 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_
 func extractFieldsFromRegex(re *regexp.Regexp, input string) map[string]string {
 	submatches := re.FindStringSubmatch(input)
 	results := make(map[string]string)
-	for i, name := range re.SubexpNames() {
+	subexpNames := re.SubexpNames()
+	if len(subexpNames) > len(submatches) {
+		log.Printf("D! No matches found in '%s'", input)
+		return results
+	}
+	for i, name := range subexpNames {
 		if name != input && name != "" && input != "" {
 			results[name] = trim(submatches[i])
 		}
@@ -262,6 +330,8 @@ func init() {
 		m.Path = path
 	}
 	m.Timeout = internal.Duration{Duration: time.Second * 20}
+	m.UseCache = false
+	m.CachePath = os.TempDir()
 	inputs.Add("ipmi_sensor", func() telegraf.Input {
 		m := m
 		return &m

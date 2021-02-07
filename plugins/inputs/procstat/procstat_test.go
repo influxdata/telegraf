@@ -76,6 +76,10 @@ func (pg *testPgrep) PidFile(path string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 
+func (p *testProc) Cmdline() (string, error) {
+	return "test_proc", nil
+}
+
 func (pg *testPgrep) Pattern(pattern string) ([]PID, error) {
 	return pg.pids, pg.err
 }
@@ -112,6 +116,10 @@ func (p *testProc) Tags() map[string]string {
 	return p.tags
 }
 
+func (p *testProc) PageFaults() (*process.PageFaultsStat, error) {
+	return &process.PageFaultsStat{}, nil
+}
+
 func (p *testProc) IOCounters() (*process.IOCountersStat, error) {
 	return &process.IOCountersStat{}, nil
 }
@@ -137,6 +145,14 @@ func (p *testProc) NumThreads() (int32, error) {
 }
 
 func (p *testProc) Percent(interval time.Duration) (float64, error) {
+	return 0, nil
+}
+
+func (p *testProc) MemoryPercent() (float32, error) {
+	return 0, nil
+}
+
+func (p *testProc) CreateTime() (int64, error) {
 	return 0, nil
 }
 
@@ -385,4 +401,21 @@ func TestProcstatLookupMetric(t *testing.T) {
 	err := acc.GatherError(p.Gather)
 	require.NoError(t, err)
 	require.Equal(t, len(p.procs)+1, len(acc.Metrics))
+}
+
+func TestGather_SameTimestamps(t *testing.T) {
+	var acc testutil.Accumulator
+	pidfile := "/path/to/pidfile"
+
+	p := Procstat{
+		PidFile:         pidfile,
+		createPIDFinder: pidFinder([]PID{pid}, nil),
+		createProcess:   newTestProc,
+	}
+	require.NoError(t, acc.GatherError(p.Gather))
+
+	procstat, _ := acc.Get("procstat")
+	procstat_lookup, _ := acc.Get("procstat_lookup")
+
+	require.Equal(t, procstat.Time, procstat_lookup.Time)
 }

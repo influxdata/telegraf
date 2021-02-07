@@ -1,12 +1,12 @@
 # Fluentd Input Plugin
 
-The fluentd plugin gathers metrics from plugin endpoint provided by [in_monitor plugin](http://docs.fluentd.org/v0.12/articles/monitoring).
+The fluentd plugin gathers metrics from plugin endpoint provided by [in_monitor plugin](https://docs.fluentd.org/input/monitor_agent).
 This plugin understands data provided by /api/plugin.json resource (/api/config.json is not covered).
 
-You might need to adjust your fluentd configuration, in order to reduce series cardinality in case whene your fluentd restarts frequently. Every time when fluentd starts, `plugin_id` value is given a new random value.
-According to [fluentd documentation](http://docs.fluentd.org/v0.12/articles/config-file), you are able to add `@id`  parameter for each plugin to avoid this behaviour and define custom `plugin_id`.
+You might need to adjust your fluentd configuration, in order to reduce series cardinality in case your fluentd restarts frequently. Every time fluentd starts, `plugin_id` value is given a new random value.
+According to [fluentd documentation](https://docs.fluentd.org/configuration/config-file#common-plugin-parameter), you are able to add `@id`  parameter for each plugin to avoid this behaviour and define custom `plugin_id`.
 
-example configuratio with `@id` parameter for http plugin:
+example configuration with `@id` parameter for http plugin:
 ```
 <source>
   @type http
@@ -36,7 +36,7 @@ example configuratio with `@id` parameter for http plugin:
 
 ### Measurements & Fields:
 
-Fields may vary depends on type of the plugin
+Fields may vary depending on the plugin type
 
 - fluentd
     - retry_count            (float, unit)

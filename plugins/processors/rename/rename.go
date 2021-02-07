@@ -6,38 +6,17 @@ import (
 )
 
 const sampleConfig = `
-  ## Measurement, tag, and field renamings are stored in separate sub-tables.
-  ## Specify one sub-table per rename operation.
-  # [[processors.rename.measurement]]
-  #   ## measurement to change
-  #   from = "kilobytes_per_second"
-  #   to = "kbps"
-
-  # [[processors.rename.tag]]
-  #   ## tag to change
-  #   from = "host"
-  #   to = "hostname"
-
-  # [[processors.rename.field]]
-  #   ## field to change
-  #   from = "lower"
-  #   to = "min"
-
-  # [[processors.rename.field]]
-  #   ## field to change
-  #   from = "upper"
-  #   to = "max"
 `
 
-type renamer struct {
-	From string
-	To   string
+type Replace struct {
+	Measurement string `toml:"measurement"`
+	Tag         string `toml:"tag"`
+	Field       string `toml:"field"`
+	Dest        string `toml:"dest"`
 }
 
 type Rename struct {
-	Measurement []renamer
-	Tag         []renamer
-	Field       []renamer
+	Replaces []Replace `toml:"replace"`
 }
 
 func (r *Rename) SampleConfig() string {
@@ -50,24 +29,32 @@ func (r *Rename) Description() string {
 
 func (r *Rename) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, point := range in {
-		for _, measurementRenamer := range r.Measurement {
-			if point.Name() == measurementRenamer.From {
-				point.SetName(measurementRenamer.To)
-				break
+		for _, replace := range r.Replaces {
+			if replace.Dest == "" {
+				continue
 			}
-		}
 
-		for _, tagRenamer := range r.Tag {
-			if value, ok := point.GetTag(tagRenamer.From); ok {
-				point.RemoveTag(tagRenamer.From)
-				point.AddTag(tagRenamer.To, value)
+			if replace.Measurement != "" {
+				if value := point.Name(); value == replace.Measurement {
+					point.SetName(replace.Dest)
+				}
+				continue
 			}
-		}
 
-		for _, fieldRenamer := range r.Field {
-			if value, ok := point.GetField(fieldRenamer.From); ok {
-				point.RemoveField(fieldRenamer.From)
-				point.AddField(fieldRenamer.To, value)
+			if replace.Tag != "" {
+				if value, ok := point.GetTag(replace.Tag); ok {
+					point.RemoveTag(replace.Tag)
+					point.AddTag(replace.Dest, value)
+				}
+				continue
+			}
+
+			if replace.Field != "" {
+				if value, ok := point.GetField(replace.Field); ok {
+					point.RemoveField(replace.Field)
+					point.AddField(replace.Dest, value)
+				}
+				continue
 			}
 		}
 	}

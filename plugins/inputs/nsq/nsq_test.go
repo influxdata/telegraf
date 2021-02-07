@@ -19,9 +19,8 @@ func TestNSQStatsV1(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	n := &NSQ{
-		Endpoints: []string{ts.URL},
-	}
+	n := New()
+	n.Endpoints = []string{ts.URL}
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(n.Gather)
@@ -152,7 +151,7 @@ func TestNSQStatsV1(t *testing.T) {
 	}
 }
 
-// v1 version of localhost/stats?format=json reesponse body
+// v1 version of localhost/stats?format=json response body
 var responseV1 = `
 {
     "version": "1.0.0-compat",
@@ -276,9 +275,8 @@ func TestNSQStatsPreV1(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	n := &NSQ{
-		Endpoints: []string{ts.URL},
-	}
+	n := New()
+	n.Endpoints = []string{ts.URL}
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(n.Gather)

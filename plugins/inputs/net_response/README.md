@@ -30,7 +30,7 @@ verify text in the response.
   # expect = "ssh"
 
   ## Uncomment to remove deprecated fields; recommended for new deploys
-  # fieldexclude = ["result_type", "string_found"]
+  # fielddrop = ["result_type", "string_found"]
 ```
 
 ### Metrics:
@@ -43,7 +43,6 @@ verify text in the response.
     - result
   - fields:
     - response_time (float, seconds)
-    - success (int) # success 0, failure 1
     - result_code (int, success = 0, timeout = 1, connection_failed = 2, read_failed = 3, string_mismatch = 4)
     - result_type (string) **DEPRECATED in 1.7; use result tag**
     - string_found (boolean) **DEPRECATED in 1.4; use result tag**

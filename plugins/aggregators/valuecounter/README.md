@@ -11,8 +11,9 @@ configuration directive. When no `fields` is provided the plugin will not count
 any fields. The results are emitted in fields in the format:
 `originalfieldname_fieldvalue = count`.
 
-Valuecounter only works on fields of the type int, bool or string. Float fields
-are being dropped to prevent the creating of too many fields.
+Counting fields with a high number of potential values may produce significant
+amounts of new fields and memory usage, take care to only count fields with a
+limited set of values.
 
 ### Configuration:
 

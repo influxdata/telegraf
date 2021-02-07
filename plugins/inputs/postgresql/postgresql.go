@@ -26,7 +26,7 @@ var sampleConfig = `
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
   ##       ?sslmode=[disable|verify-ca|verify-full]
   ## or a simple string:
-  ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
   ##
   ## All connection parameters are optional.
   ##
@@ -155,7 +155,12 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator, columns []str
 	}
 	if columnMap["datname"] != nil {
 		// extract the database name from the column map
-		dbname.WriteString((*columnMap["datname"]).(string))
+		if dbNameStr, ok := (*columnMap["datname"]).(string); ok {
+			dbname.WriteString(dbNameStr)
+		} else {
+			// PG 12 adds tracking of global objects to pg_stat_database
+			dbname.WriteString("postgres_global")
+		}
 	} else {
 		dbname.WriteString("postgres")
 	}

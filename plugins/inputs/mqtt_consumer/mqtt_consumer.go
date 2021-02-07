@@ -1,78 +1,134 @@
 package mqtt_consumer
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
 
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-
-	"github.com/eclipse/paho.mqtt.golang"
 )
 
-// 30 Seconds is the default used by paho.mqtt.golang
-var defaultConnectionTimeout = internal.Duration{Duration: 30 * time.Second}
+var (
+	// 30 Seconds is the default used by paho.mqtt.golang
+	defaultConnectionTimeout = internal.Duration{Duration: 30 * time.Second}
+
+	defaultMaxUndeliveredMessages = 1000
+)
+
+type ConnectionState int
+type empty struct{}
+type semaphore chan empty
+
+const (
+	Disconnected ConnectionState = iota
+	Connecting
+	Connected
+)
+
+type Client interface {
+	Connect() mqtt.Token
+	SubscribeMultiple(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token
+	AddRoute(topic string, callback mqtt.MessageHandler)
+	Disconnect(quiesce uint)
+}
+
+type ClientFactory func(o *mqtt.ClientOptions) Client
 
 type MQTTConsumer struct {
-	Servers           []string
-	Topics            []string
-	Username          string
-	Password          string
-	QoS               int               `toml:"qos"`
-	ConnectionTimeout internal.Duration `toml:"connection_timeout"`
+	Servers                []string          `toml:"servers"`
+	Topics                 []string          `toml:"topics"`
+	TopicTag               *string           `toml:"topic_tag"`
+	Username               string            `toml:"username"`
+	Password               string            `toml:"password"`
+	QoS                    int               `toml:"qos"`
+	ConnectionTimeout      internal.Duration `toml:"connection_timeout"`
+	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
 
 	parser parsers.Parser
 
-	// Legacy metric buffer support
+	// Legacy metric buffer support; deprecated in v0.10.3
 	MetricBuffer int
 
 	PersistentSession bool
 	ClientID          string `toml:"client_id"`
 	tls.ClientConfig
 
-	sync.Mutex
-	client mqtt.Client
-	// channel of all incoming raw mqtt messages
-	in   chan mqtt.Message
-	done chan struct{}
+	Log telegraf.Logger
 
-	// keep the accumulator internally:
-	acc telegraf.Accumulator
+	clientFactory ClientFactory
+	client        Client
+	opts          *mqtt.ClientOptions
+	acc           telegraf.TrackingAccumulator
+	state         ConnectionState
+	sem           semaphore
+	messages      map[telegraf.TrackingID]bool
+	messagesMutex sync.Mutex
+	topicTag      string
 
-	connected bool
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 var sampleConfig = `
-  ## MQTT broker URLs to be used. The format should be scheme://host:port,
-  ## schema can be tcp, ssl, or ws.
-  servers = ["tcp://localhost:1883"]
+  ## Broker URLs for the MQTT server or cluster.  To connect to multiple
+  ## clusters or standalone servers, use a seperate plugin instance.
+  ##   example: servers = ["tcp://localhost:1883"]
+  ##            servers = ["ssl://localhost:1883"]
+  ##            servers = ["ws://localhost:1883"]
+  servers = ["tcp://127.0.0.1:1883"]
 
-  ## MQTT QoS, must be 0, 1, or 2
-  qos = 0
-  ## Connection timeout for initial connection in seconds
-  connection_timeout = "30s"
-
-  ## Topics to subscribe to
+  ## Topics that will be subscribed to.
   topics = [
     "telegraf/host01/cpu",
     "telegraf/+/mem",
     "sensors/#",
   ]
 
-  # if true, messages that can't be delivered while the subscriber is offline
-  # will be delivered when it comes back (such as on service restart).
-  # NOTE: if true, client_id MUST be set
-  persistent_session = false
-  # If empty, a random client ID will be generated.
-  client_id = ""
+  ## The message topic will be stored in a tag specified by this value.  If set
+  ## to the empty string no topic tag will be created.
+  # topic_tag = "topic"
 
-  ## username and password to connect MQTT server.
+  ## QoS policy for messages
+  ##   0 = at most once
+  ##   1 = at least once
+  ##   2 = exactly once
+  ##
+  ## When using a QoS of 1 or 2, you should enable persistent_session to allow
+  ## resuming unacknowledged messages.
+  # qos = 0
+
+  ## Connection timeout for initial connection in seconds
+  # connection_timeout = "30s"
+
+  ## Maximum messages to read from the broker that have not been written by an
+  ## output.  For best throughput set based on the number of metrics within
+  ## each message and the size of the output's metric_batch_size.
+  ##
+  ## For example, if each message from the queue contains 10 metrics and the
+  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
+  ## full batch is collected and the write is triggered immediately without
+  ## waiting until the next flush_interval.
+  # max_undelivered_messages = 1000
+
+  ## Persistent session disables clearing of the client session on connection.
+  ## In order for this option to work you must also set client_id to identify
+  ## the client.  To receive messages that arrived while the client is offline,
+  ## also set the qos option to 1 or 2 and don't forget to also set the QoS when
+  ## publishing.
+  # persistent_session = false
+
+  ## If unset, a random client ID will be generated.
+  # client_id = ""
+
+  ## Username and password to connect MQTT server.
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
 
@@ -102,23 +158,24 @@ func (m *MQTTConsumer) SetParser(parser parsers.Parser) {
 	m.parser = parser
 }
 
-func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
-	m.Lock()
-	defer m.Unlock()
-	m.connected = false
+func (m *MQTTConsumer) Init() error {
+	m.state = Disconnected
 
 	if m.PersistentSession && m.ClientID == "" {
-		return fmt.Errorf("ERROR MQTT Consumer: When using persistent_session" +
-			" = true, you MUST also set client_id")
+		return errors.New("persistent_session requires client_id")
 	}
 
-	m.acc = acc
 	if m.QoS > 2 || m.QoS < 0 {
-		return fmt.Errorf("MQTT Consumer, invalid QoS value: %d", m.QoS)
+		return fmt.Errorf("qos value must be 0, 1, or 2: %d", m.QoS)
 	}
 
 	if m.ConnectionTimeout.Duration < 1*time.Second {
-		return fmt.Errorf("MQTT Consumer, invalid connection_timeout value: %s", m.ConnectionTimeout.Duration)
+		return fmt.Errorf("connection_timeout must be greater than 1s: %s", m.ConnectionTimeout.Duration)
+	}
+
+	m.topicTag = "topic"
+	if m.TopicTag != nil {
+		m.topicTag = *m.TopicTag
 	}
 
 	opts, err := m.createOpts()
@@ -126,92 +183,139 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	m.client = mqtt.NewClient(opts)
-	m.in = make(chan mqtt.Message, 1000)
-	m.done = make(chan struct{})
+	m.opts = opts
 
+	return nil
+}
+
+func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
+	m.state = Disconnected
+
+	m.acc = acc.WithTracking(m.MaxUndeliveredMessages)
+	m.sem = make(semaphore, m.MaxUndeliveredMessages)
+	m.ctx, m.cancel = context.WithCancel(context.Background())
+
+	m.client = m.clientFactory(m.opts)
+
+	// AddRoute sets up the function for handling messages.  These need to be
+	// added in case we find a persistent session containing subscriptions so we
+	// know where to dispatch persisted and new messages to.  In the alternate
+	// case that we need to create the subscriptions these will be replaced.
+	for _, topic := range m.Topics {
+		m.client.AddRoute(topic, m.recvMessage)
+	}
+
+	m.state = Connecting
 	m.connect()
 
 	return nil
 }
 
 func (m *MQTTConsumer) connect() error {
-	if token := m.client.Connect(); token.Wait() && token.Error() != nil {
+	token := m.client.Connect()
+	if token.Wait() && token.Error() != nil {
 		err := token.Error()
-		log.Printf("D! MQTT Consumer, connection error - %v", err)
-
+		m.state = Disconnected
 		return err
 	}
 
-	go m.receiver()
+	m.Log.Infof("Connected %v", m.Servers)
+	m.state = Connected
+	m.messagesMutex.Lock()
+	m.messages = make(map[telegraf.TrackingID]bool)
+	m.messagesMutex.Unlock()
+
+	// Persistent sessions should skip subscription if a session is present, as
+	// the subscriptions are stored by the server.
+	type sessionPresent interface {
+		SessionPresent() bool
+	}
+	if t, ok := token.(sessionPresent); ok && t.SessionPresent() {
+		m.Log.Debugf("Session found %v", m.Servers)
+		return nil
+	}
+
+	topics := make(map[string]byte)
+	for _, topic := range m.Topics {
+		topics[topic] = byte(m.QoS)
+	}
+
+	subscribeToken := m.client.SubscribeMultiple(topics, m.recvMessage)
+	subscribeToken.Wait()
+	if subscribeToken.Error() != nil {
+		m.acc.AddError(fmt.Errorf("subscription error: topics: %s: %v",
+			strings.Join(m.Topics[:], ","), subscribeToken.Error()))
+	}
 
 	return nil
 }
 
-func (m *MQTTConsumer) onConnect(c mqtt.Client) {
-	log.Printf("I! MQTT Client Connected")
-	if !m.PersistentSession || !m.connected {
-		topics := make(map[string]byte)
-		for _, topic := range m.Topics {
-			topics[topic] = byte(m.QoS)
-		}
-		subscribeToken := c.SubscribeMultiple(topics, m.recvMessage)
-		subscribeToken.Wait()
-		if subscribeToken.Error() != nil {
-			m.acc.AddError(fmt.Errorf("E! MQTT Subscribe Error\ntopics: %s\nerror: %s",
-				strings.Join(m.Topics[:], ","), subscribeToken.Error()))
-		}
-		m.connected = true
-	}
-	return
-}
-
 func (m *MQTTConsumer) onConnectionLost(c mqtt.Client, err error) {
-	m.acc.AddError(fmt.Errorf("E! MQTT Connection lost\nerror: %s\nMQTT Client will try to reconnect", err.Error()))
+	m.acc.AddError(fmt.Errorf("connection lost: %v", err))
+	m.Log.Debugf("Disconnected %v", m.Servers)
+	m.state = Disconnected
 	return
 }
 
-// receiver() reads all incoming messages from the consumer, and parses them into
-// influxdb metric points.
-func (m *MQTTConsumer) receiver() {
+func (m *MQTTConsumer) recvMessage(c mqtt.Client, msg mqtt.Message) {
 	for {
 		select {
-		case <-m.done:
-			return
-		case msg := <-m.in:
-			topic := msg.Topic()
-			metrics, err := m.parser.Parse(msg.Payload())
+		case track := <-m.acc.Delivered():
+			<-m.sem
+			m.messagesMutex.Lock()
+			_, ok := m.messages[track.ID()]
+			if !ok {
+				// Added by a previous connection
+				continue
+			}
+			// No ack, MQTT does not support durable handling
+			delete(m.messages, track.ID())
+			m.messagesMutex.Unlock()
+		case m.sem <- empty{}:
+			err := m.onMessage(m.acc, msg)
 			if err != nil {
-				m.acc.AddError(fmt.Errorf("E! MQTT Parse Error\nmessage: %s\nerror: %s",
-					string(msg.Payload()), err.Error()))
+				m.acc.AddError(err)
+				<-m.sem
 			}
-
-			for _, metric := range metrics {
-				tags := metric.Tags()
-				tags["topic"] = topic
-				m.acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
-			}
+			return
 		}
 	}
 }
 
-func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {
-	m.in <- msg
+func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
+	metrics, err := m.parser.Parse(msg.Payload())
+	if err != nil {
+		return err
+	}
+
+	if m.topicTag != "" {
+		topic := msg.Topic()
+		for _, metric := range metrics {
+			metric.AddTag(m.topicTag, topic)
+		}
+	}
+
+	id := acc.AddTrackingMetricGroup(metrics)
+	m.messagesMutex.Lock()
+	m.messages[id] = true
+	m.messagesMutex.Unlock()
+	return nil
 }
 
 func (m *MQTTConsumer) Stop() {
-	m.Lock()
-	defer m.Unlock()
-
-	if m.connected {
-		close(m.done)
+	if m.state == Connected {
+		m.Log.Debugf("Disconnecting %v", m.Servers)
 		m.client.Disconnect(200)
-		m.connected = false
+		m.Log.Debugf("Disconnected %v", m.Servers)
+		m.state = Disconnected
 	}
+	m.cancel()
 }
 
 func (m *MQTTConsumer) Gather(acc telegraf.Accumulator) error {
-	if !m.connected {
+	if m.state == Disconnected {
+		m.state = Connecting
+		m.Log.Debugf("Connecting %v", m.Servers)
 		m.connect()
 	}
 
@@ -248,13 +352,13 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	}
 
 	if len(m.Servers) == 0 {
-		return opts, fmt.Errorf("could not get host infomations")
+		return opts, fmt.Errorf("could not get host informations")
 	}
 
 	for _, server := range m.Servers {
 		// Preserve support for host:port style servers; deprecated in Telegraf 1.4.4
 		if !strings.Contains(server, "://") {
-			log.Printf("W! mqtt_consumer server %q should be updated to use `scheme://host:port` format", server)
+			m.Log.Warnf("Server %q should be updated to use `scheme://host:port` format", server)
 			if tlsCfg == nil {
 				server = "tcp://" + server
 			} else {
@@ -264,19 +368,28 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 
 		opts.AddBroker(server)
 	}
-	opts.SetAutoReconnect(true)
+	opts.SetAutoReconnect(false)
 	opts.SetKeepAlive(time.Second * 60)
 	opts.SetCleanSession(!m.PersistentSession)
-	opts.SetOnConnectHandler(m.onConnect)
 	opts.SetConnectionLostHandler(m.onConnectionLost)
 
 	return opts, nil
 }
 
+func New(factory ClientFactory) *MQTTConsumer {
+	return &MQTTConsumer{
+		Servers:                []string{"tcp://127.0.0.1:1883"},
+		ConnectionTimeout:      defaultConnectionTimeout,
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		clientFactory:          factory,
+		state:                  Disconnected,
+	}
+}
+
 func init() {
 	inputs.Add("mqtt_consumer", func() telegraf.Input {
-		return &MQTTConsumer{
-			ConnectionTimeout: defaultConnectionTimeout,
-		}
+		return New(func(o *mqtt.ClientOptions) Client {
+			return mqtt.NewClient(o)
+		})
 	})
 }

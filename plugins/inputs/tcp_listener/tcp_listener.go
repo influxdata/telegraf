@@ -48,13 +48,15 @@ type TcpListener struct {
 	TotalConnections   selfstat.Stat
 	PacketsRecv        selfstat.Stat
 	BytesRecv          selfstat.Stat
+
+	Log telegraf.Logger
 }
 
-var dropwarn = "E! Error: tcp_listener message queue full. " +
+var dropwarn = "tcp_listener message queue full. " +
 	"We have dropped %d messages so far. " +
-	"You may want to increase allowed_pending_messages in the config\n"
+	"You may want to increase allowed_pending_messages in the config"
 
-var malformedwarn = "E! tcp_listener has received %d malformed packets" +
+var malformedwarn = "tcp_listener has received %d malformed packets" +
 	" thus far."
 
 const sampleConfig = `
@@ -114,16 +116,15 @@ func (t *TcpListener) Start(acc telegraf.Accumulator) error {
 	address, _ := net.ResolveTCPAddr("tcp", t.ServiceAddress)
 	t.listener, err = net.ListenTCP("tcp", address)
 	if err != nil {
-		log.Fatalf("ERROR: ListenUDP - %s", err)
+		t.Log.Errorf("Failed to listen: %s", err.Error())
 		return err
 	}
-	log.Println("I! TCP server listening on: ", t.listener.Addr().String())
 
 	t.wg.Add(2)
 	go t.tcpListen()
 	go t.tcpParser()
 
-	log.Printf("I! Started TCP listener service on %s\n", t.ServiceAddress)
+	t.Log.Infof("Started TCP listener service on %q", t.ServiceAddress)
 	return nil
 }
 
@@ -150,7 +151,7 @@ func (t *TcpListener) Stop() {
 
 	t.wg.Wait()
 	close(t.in)
-	log.Println("I! Stopped TCP listener service on ", t.ServiceAddress)
+	t.Log.Infof("Stopped TCP listener service on %q", t.ServiceAddress)
 }
 
 // tcpListen listens for incoming TCP connections.
@@ -191,9 +192,8 @@ func (t *TcpListener) refuser(conn *net.TCPConn) {
 		" reached, closing.\nYou may want to increase max_tcp_connections in"+
 		" the Telegraf tcp listener configuration.\n", t.MaxTCPConnections)
 	conn.Close()
-	log.Printf("I! Refused TCP Connection from %s", conn.RemoteAddr())
-	log.Printf("I! WARNING: Maximum TCP Connections reached, you may want to" +
-		" adjust max_tcp_connections")
+	t.Log.Infof("Refused TCP Connection from %s", conn.RemoteAddr())
+	t.Log.Warn("Maximum TCP Connections reached, you may want to adjust max_tcp_connections")
 }
 
 // handler handles a single TCP Connection
@@ -235,7 +235,7 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 			default:
 				t.drops++
 				if t.drops == 1 || t.drops%t.AllowedPendingMessages == 0 {
-					log.Printf(dropwarn, t.drops)
+					t.Log.Errorf(dropwarn, t.drops)
 				}
 			}
 		}
@@ -268,7 +268,7 @@ func (t *TcpListener) tcpParser() error {
 			} else {
 				t.malformed++
 				if t.malformed == 1 || t.malformed%1000 == 0 {
-					log.Printf(malformedwarn, t.malformed)
+					t.Log.Errorf(malformedwarn, t.malformed)
 				}
 			}
 		}

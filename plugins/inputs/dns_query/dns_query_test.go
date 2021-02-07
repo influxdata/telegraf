@@ -67,8 +67,13 @@ func TestGatheringRootDomain(t *testing.T) {
 		"server":      "8.8.8.8",
 		"domain":      ".",
 		"record_type": "MX",
+		"rcode":       "NOERROR",
+		"result":      "success",
 	}
-	fields := map[string]interface{}{}
+	fields := map[string]interface{}{
+		"rcode_value": int(0),
+		"result_code": uint64(0),
+	}
 
 	err := acc.GatherError(dnsConfig.Gather)
 	assert.NoError(t, err)
@@ -93,8 +98,13 @@ func TestMetricContainsServerAndDomainAndRecordTypeTags(t *testing.T) {
 		"server":      "8.8.8.8",
 		"domain":      "google.com",
 		"record_type": "NS",
+		"rcode":       "NOERROR",
+		"result":      "success",
 	}
-	fields := map[string]interface{}{}
+	fields := map[string]interface{}{
+		"rcode_value": int(0),
+		"result_code": uint64(0),
+	}
 
 	err := acc.GatherError(dnsConfig.Gather)
 	assert.NoError(t, err)
@@ -117,21 +127,17 @@ func TestGatheringTimeout(t *testing.T) {
 	var acc testutil.Accumulator
 	dnsConfig.Port = 60054
 	dnsConfig.Timeout = 1
-	var err error
 
 	channel := make(chan error, 1)
 	go func() {
 		channel <- acc.GatherError(dnsConfig.Gather)
 	}()
 	select {
-	case res := <-channel:
-		err = res
+	case err := <-channel:
+		assert.NoError(t, err)
 	case <-time.After(time.Second * 2):
-		err = nil
+		assert.Fail(t, "DNS query did not timeout")
 	}
-
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "i/o timeout")
 }
 
 func TestSettingDefaultValues(t *testing.T) {

@@ -1,8 +1,0 @@
-FROM debian:stretch
-ARG package
-ADD ${package} ${package}
-RUN dpkg -i ${package}
-
-EXPOSE 8125/udp 8092/udp 8094
-
-CMD ["telegraf"]

@@ -1,4 +1,4 @@
-# win_perf_counters readme
+# Windows Performance Counters Input Plugin
 
 This document presents the input plugin to read Performance Counters on Windows operating systems.
 
@@ -65,7 +65,7 @@ Example:
 
 _Deprecated. Necessary features on Windows Vista and newer are checked dynamically_
 
-Bool, if set to `true`, the plugin will use the localized PerfCounter interface that has been present since before Vista for backwards compatability.
+Bool, if set to `true`, the plugin will use the localized PerfCounter interface that has been present since before Vista for backwards compatibility.
 
 It is recommended NOT to use this on OSes starting with Vista and newer because it requires more configuration to use this than the newer interface present since Vista.
 
@@ -173,8 +173,8 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ## Examples
 
 ### Generic Queries
-```
-
+```toml
+[[inputs.win_perf_counters]]
   [[inputs.win_perf_counters.object]]
     # Processor usage, alternative to native, reports on a per core.
     ObjectName = "Processor"
@@ -217,7 +217,10 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ```
 
 ### Active Directory Domain Controller
-```
+```toml
+[[inputs.win_perf_counters]]
+  [inputs.win_perf_counters.tags]
+    monitorgroup = "ActiveDirectory"
   [[inputs.win_perf_counters.object]]
     ObjectName = "DirectoryServices"
     Instances = ["*"]
@@ -242,7 +245,8 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ```
 
 ### DFS Namespace + Domain Controllers
-```
+```toml
+[[inputs.win_perf_counters]]
   [[inputs.win_perf_counters.object]]
     # AD, DFS N, Useful if the server hosts a DFS Namespace or is a Domain Controller
     ObjectName = "DFS Namespace Service Referrals"
@@ -253,9 +257,9 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
     #WarnOnMissing = false # Print out when the performance counter is missing, either of object, counter or instance.
 ```
 
-
 ### DFS Replication + Domain Controllers
-```
+```toml
+[[inputs.win_perf_counters]]
   [[inputs.win_perf_counters.object]]
     # AD, DFS R, Useful if the server hosts a DFS Replication folder or is a Domain Controller
     ObjectName = "DFS Replication Service Volumes"
@@ -266,9 +270,9 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
     #WarnOnMissing = false # Print out when the performance counter is missing, either of object, counter or instance.
 ```
 
-
 ### DNS Server + Domain Controllers
-```
+```toml
+[[inputs.win_perf_counters]]
   [[inputs.win_perf_counters.object]]
     ObjectName = "DNS"
     Counters = ["Dynamic Update Received","Dynamic Update Rejected","Recursive Queries","Recursive Queries Failure","Secure Update Failure","Secure Update Received","TCP Query Received","TCP Response Sent","UDP Query Received","UDP Response Sent","Total Query Received","Total Response Sent"]
@@ -278,7 +282,8 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ```
 
 ### IIS / ASP.NET
-```
+```toml
+[[inputs.win_perf_counters]]
   [[inputs.win_perf_counters.object]]
     # HTTP Service request queues in the Kernel before being handed over to User Mode.
     ObjectName = "HTTP Service Request Queues"
@@ -320,9 +325,9 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
     #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
 ```
 
-
 ### Process
-```
+```toml
+[[inputs.win_perf_counters]]
   [[inputs.win_perf_counters.object]]
     # Process metrics, in this case for IIS only
     ObjectName = "Process"
@@ -332,9 +337,9 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
     #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
 ```
 
-
 ### .NET Monitoring
-```
+```toml
+[[inputs.win_perf_counters]]
   [[inputs.win_perf_counters.object]]
     # .NET CLR Exceptions, in this case for IIS only
     ObjectName = ".NET CLR Exceptions"

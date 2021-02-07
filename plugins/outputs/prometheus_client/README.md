@@ -1,33 +1,59 @@
-# Prometheus Client Service Output Plugin
+# Prometheus Output Plugin
 
-This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all metrics on `/metrics` (default) to be polled by a Prometheus server.
+This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes
+all metrics on `/metrics` (default) to be polled by a Prometheus server.
 
-## Configuration
+### Configuration
 
-```
-# Publish all metrics to /metrics for Prometheus to scrape
+```toml
 [[outputs.prometheus_client]]
-  # Address to listen on
+  ## Address to listen on.
   listen = ":9273"
 
-  # Use TLS
-  tls_cert = "/etc/ssl/telegraf.crt"
-  tls_key = "/etc/ssl/telegraf.key"
+  ## Metric version controls the mapping from Telegraf metrics into
+  ## Prometheus format.  When using the prometheus input, use the same value in
+  ## both plugins to ensure metrics are round-tripped without modification.
+  ##
+  ##   example: metric_version = 1; deprecated in 1.13
+  ##            metric_version = 2; recommended version
+  # metric_version = 1
 
-  # Use http basic authentication
-  basic_username = "Foo"
-  basic_password = "Bar"
+  ## Use HTTP Basic Authentication.
+  # basic_username = "Foo"
+  # basic_password = "Bar"
 
-  # IP Ranges which are allowed to access metrics
-  ip_range = ["192.168.0.0/24", "192.168.1.0/30"]
+  ## If set, the IP Ranges which are allowed to access metrics.
+  ##   ex: ip_range = ["192.168.0.0/24", "192.168.1.0/30"]
+  # ip_range = []
 
-  # Path to publish the metrics on, defaults to /metrics
-  path = "/metrics"   
+  ## Path to publish the metrics on.
+  # path = "/metrics"
 
-  # Expiration interval for each metric. 0 == no expiration
-  expiration_interval = "60s"
+  ## Expiration interval for each metric. 0 == no expiration
+  # expiration_interval = "60s"
 
-  # Send string metrics as Prometheus labels.
-  # Unless set to false all string metrics will be sent as labels.
-  string_as_label = true
+  ## Collectors to enable, valid entries are "gocollector" and "process".
+  ## If unset, both are enabled.
+  # collectors_exclude = ["gocollector", "process"]
+
+  ## Send string metrics as Prometheus labels.
+  ## Unless set to false all string metrics will be sent as labels.
+  # string_as_label = true
+
+  ## If set, enable TLS with the given certificate.
+  # tls_cert = "/etc/ssl/telegraf.crt"
+  # tls_key = "/etc/ssl/telegraf.key"
+
+  ## Set one or more allowed client CA certificate file names to
+  ## enable mutually authenticated TLS connections
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+
+  ## Export metric collection time.
+  # export_timestamp = false
 ```
+
+### Metrics
+
+Prometheus metrics are produced in the same manner as the [prometheus serializer][].
+
+[prometheus serializer]: /plugins/serializers/prometheus/README.md#Metrics
