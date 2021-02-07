@@ -370,7 +370,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 		line := strings.Fields(scanner.Text())
 
 		if len(line) == 0 {
-			break
+			continue
 		}
 
 		if choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) && len(line) > 4 {
