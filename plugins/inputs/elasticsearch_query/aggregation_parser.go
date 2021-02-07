@@ -7,15 +7,13 @@ func (e *ElasticsearchQuery) parseAggregationResult(aggregationQueryList *[]aggr
 	var measurements = make(map[string][]*aggKey)
 
 	for _, aggregationQuery := range *aggregationQueryList {
-		m := measurements[aggregationQuery.measurement]
 		a := aggKey{function: aggregationQuery.function, field: aggregationQuery.field, name: aggregationQuery.name}
 
-		if m == nil {
-			m = []*aggKey{&a}
+		if m := measurements[aggregationQuery.measurement]; m != nil {
+			measurements[aggregationQuery.measurement] = append(m, &a)
 		} else {
-			m = append(m, &a)
+			measurements[aggregationQuery.measurement] = []*aggKey{&a}
 		}
-		measurements[aggregationQuery.measurement] = m
 	}
 
 	// recurse over aggregation results
