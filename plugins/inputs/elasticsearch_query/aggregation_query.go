@@ -12,7 +12,7 @@ import (
 func (e *ElasticsearchQuery) runAggregationQuery(ctx context.Context, aggregation Aggregation, aggregationQueryList []aggregationQueryData) (*elastic.SearchResult, error) {
 
 	now := time.Now().UTC()
-	from := now.Add(aggregation.QueryPeriod.Duration * -1)
+	from := now.Sub(aggregation.QueryPeriod.Duration)
 	filterQuery := aggregation.FilterQuery
 
 	if filterQuery == "" {
