@@ -124,8 +124,7 @@ func (e *ElasticsearchQuery) init() error {
 		return fmt.Errorf("Elasticsearch urls is not defined")
 	}
 
-	err := e.connectToES()
-	return err
+	return e.connectToES()
 }
 
 func (e *ElasticsearchQuery) connectToES() error {
