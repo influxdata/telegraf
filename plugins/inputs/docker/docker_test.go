@@ -3,7 +3,6 @@ package docker
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"io/ioutil"
 	"reflect"
 	"sort"
@@ -1136,10 +1135,82 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 		totalInclude     []string
 		daemonOSType     string
 	}
+
+	var (
+		testDate       = time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
+		metricCpuTotal = testutil.MustMetric(
+			"docker_container_cpu",
+			map[string]string{
+				"cpu": "cpu-total",
+			},
+			map[string]interface{}{},
+			testDate)
+
+		metricCpu0 = testutil.MustMetric(
+			"docker_container_cpu",
+			map[string]string{
+				"cpu": "cpu0",
+			},
+			map[string]interface{}{},
+			testDate)
+		metricCpu1 = testutil.MustMetric(
+			"docker_container_cpu",
+			map[string]string{
+				"cpu": "cpu1",
+			},
+			map[string]interface{}{},
+			testDate)
+
+		metricNetworkTotal = testutil.MustMetric(
+			"docker_container_net",
+			map[string]string{
+				"network": "total",
+			},
+			map[string]interface{}{},
+			testDate)
+
+		metricNetworkEth0 = testutil.MustMetric(
+			"docker_container_net",
+			map[string]string{
+				"network": "eth0",
+			},
+			map[string]interface{}{},
+			testDate)
+
+		metricNetworkEth1 = testutil.MustMetric(
+			"docker_container_net",
+			map[string]string{
+				"network": "eth0",
+			},
+			map[string]interface{}{},
+			testDate)
+		metricBlkioTotal = testutil.MustMetric(
+			"docker_container_blkio",
+			map[string]string{
+				"device": "total",
+			},
+			map[string]interface{}{},
+			testDate)
+		metricBlkio6_0 = testutil.MustMetric(
+			"docker_container_blkio",
+			map[string]string{
+				"device": "6:0",
+			},
+			map[string]interface{}{},
+			testDate)
+		metricBlkio6_1 = testutil.MustMetric(
+			"docker_container_blkio",
+			map[string]string{
+				"device": "6:1",
+			},
+			map[string]interface{}{},
+			testDate)
+	)
 	stats := testStats()
 	tests := []struct {
-		name string
-		args args
+		name     string
+		args     args
+		expected []telegraf.Metric
 	}{
 		{
 			name: "Per device and total metrics enabled",
@@ -1148,22 +1219,33 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 				perDeviceInclude: containerMetricClasses,
 				totalInclude:     containerMetricClasses,
 			},
+			expected: []telegraf.Metric{
+				metricCpuTotal, metricCpu0, metricCpu1,
+				metricNetworkTotal, metricNetworkEth0, metricNetworkEth1,
+				metricBlkioTotal, metricBlkio6_0, metricBlkio6_1,
+			},
 		},
 		{
-			"Per device metrics enabled",
-			args{
+			name: "Per device metrics enabled",
+			args: args{
 				stat:             stats,
 				perDeviceInclude: containerMetricClasses,
 				totalInclude:     []string{},
 			},
+			expected: []telegraf.Metric{
+				metricCpu0, metricCpu1,
+				metricNetworkEth0, metricNetworkEth1,
+				metricBlkio6_0, metricBlkio6_1,
+			},
 		},
 		{
-			"Total metrics enabled",
-			args{
+			name: "Total metrics enabled",
+			args: args{
 				stat:             stats,
 				perDeviceInclude: []string{},
 				totalInclude:     containerMetricClasses,
 			},
+			expected: []telegraf.Metric{metricCpuTotal, metricNetworkTotal, metricBlkioTotal},
 		},
 		{
 			name: "Per device and total metrics disabled",
@@ -1172,6 +1254,7 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 				perDeviceInclude: []string{},
 				totalInclude:     []string{},
 			},
+			expected: []telegraf.Metric{},
 		},
 	}
 
@@ -1181,135 +1264,103 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 			parseContainerStats(tt.args.stat, &acc, tt.args.tags, tt.args.id, tt.args.perDeviceInclude,
 				tt.args.totalInclude, tt.args.daemonOSType)
 
-			var numCpus int
-			if stats.CPUStats.OnlineCPUs > 0 {
-				numCpus = len(stats.CPUStats.CPUUsage.PercpuUsage[:stats.CPUStats.OnlineCPUs])
-			} else {
-				numCpus = len(stats.CPUStats.CPUUsage.PercpuUsage)
-			}
-
-			numNetworks := len(stats.Networks)
-
-			deviceStatMap := getDeviceStatMap(stats.BlkioStats)
-
-			// per device
-			for i := 0; i < numCpus; i++ {
-				if choice.Contains("cpu", tt.args.perDeviceInclude) {
-					acc.AssertTagValuesInMeasurement(t, "docker_container_cpu",
-						map[string]string{"cpu": fmt.Sprintf("cpu%d", i)})
-				} else {
-					acc.AssertTagValuesNotInMeasurement(t, "docker_container_cpu",
-						map[string]string{"cpu": fmt.Sprintf("cpu%d", i)})
-				}
-			}
-
-			for i := 0; i < numNetworks; i++ {
-				if choice.Contains("network", tt.args.perDeviceInclude) {
-					acc.AssertTagValuesInMeasurement(t, "docker_container_net",
-						map[string]string{"network": fmt.Sprintf("eth%d", i)})
-				} else {
-					acc.AssertTagValuesNotInMeasurement(t, "docker_container_net",
-						map[string]string{"network": fmt.Sprintf("eth%d", i)})
-				}
-			}
-
-			for device := range deviceStatMap {
-				if choice.Contains("blkio", tt.args.perDeviceInclude) {
-					acc.AssertTagValuesInMeasurement(t, "docker_container_blkio",
-						map[string]string{"device": device})
-				} else {
-					acc.AssertTagValuesNotInMeasurement(t, "docker_container_blkio",
-						map[string]string{"device": device})
-				}
-			}
-
-			// total
-			if choice.Contains("cpu", tt.args.totalInclude) {
-				acc.AssertTagValuesInMeasurement(t, "docker_container_cpu",
-					map[string]string{"cpu": "cpu-total"})
-			} else {
-				acc.AssertTagValuesNotInMeasurement(t, "docker_container_cpu",
-					map[string]string{"cpu": "cpu-total"})
-			}
+			actual := FilterMetrics(acc.GetTelegrafMetrics(), func(m telegraf.Metric) bool {
+				return choice.Contains(m.Name(),
+					[]string{"docker_container_cpu", "docker_container_net", "docker_container_blkio"})
+			})
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.OnlyTags(), testutil.SortMetrics())
 
 		})
 	}
 }
 
-func Test_getEffectivePerDeviceInclude(t *testing.T) {
-	type args struct {
-		perDevice        bool
-		perDeviceInclude []string
-		log              telegraf.Logger
+func TestDocker_Init(t *testing.T) {
+	type fields struct {
+		PerDevice        bool
+		PerDeviceInclude []string
+		Total            bool
+		TotalInclude     []string
 	}
 	tests := []struct {
-		name                          string
-		args                          args
-		wantEffectivePerDeviceInclude []string
+		name                 string
+		fields               fields
+		wantErr              bool
+		wantPerDeviceInclude []string
+		wantTotalInclude     []string
 	}{
 		{
-			name: "perDevice_false_honors_perDeviceInclude",
-			args: args{
-				perDevice:        false,
-				perDeviceInclude: []string{"cpu", "network"},
-				log:              testutil.Logger{},
+			"Unsupported perdevice_include setting",
+			fields{
+				PerDevice:        false,
+				PerDeviceInclude: []string{"nonExistentClass"},
+				Total:            false,
+				TotalInclude:     []string{"cpu"},
 			},
-			wantEffectivePerDeviceInclude: []string{"cpu", "network"},
+			true,
+			[]string{},
+			[]string{},
 		},
 		{
-			name: "perDevice_true_adds_network_blkio",
-			args: args{
-				perDevice:        true,
-				perDeviceInclude: []string{"cpu"},
-				log:              testutil.Logger{},
+			"Unsupported total_include setting",
+			fields{
+				PerDevice:        false,
+				PerDeviceInclude: []string{"cpu"},
+				Total:            false,
+				TotalInclude:     []string{"nonExistentClass"},
 			},
-			wantEffectivePerDeviceInclude: []string{"cpu", "network", "blkio"},
+			true,
+			[]string{},
+			[]string{},
+		},
+		{
+			"PerDevice true adds network and blkio",
+			fields{
+				PerDevice:        true,
+				PerDeviceInclude: []string{"cpu"},
+				Total:            true,
+				TotalInclude:     []string{"cpu"},
+			},
+			false,
+			[]string{"cpu", "network", "blkio"},
+			[]string{"cpu"},
+		},
+		{
+			"Total false removes network and blkio",
+			fields{
+				PerDevice:        false,
+				PerDeviceInclude: []string{"cpu"},
+				Total:            false,
+				TotalInclude:     []string{"cpu", "network", "blkio"},
+			},
+			false,
+			[]string{"cpu"},
+			[]string{"cpu"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if gotEffectivePerDeviceInclude := getEffectivePerDeviceInclude(tt.args.perDevice, tt.args.perDeviceInclude, tt.args.log); !reflect.DeepEqual(gotEffectivePerDeviceInclude, tt.wantEffectivePerDeviceInclude) {
-				t.Errorf("getEffectivePerDeviceInclude() = %v, want %v", gotEffectivePerDeviceInclude, tt.wantEffectivePerDeviceInclude)
+			d := &Docker{
+				Log:              testutil.Logger{},
+				PerDevice:        tt.fields.PerDevice,
+				PerDeviceInclude: tt.fields.PerDeviceInclude,
+				Total:            tt.fields.Total,
+				TotalInclude:     tt.fields.TotalInclude,
 			}
-		})
-	}
-}
+			err := d.Init()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Init() error = %v, wantErr %v", err, tt.wantErr)
+			}
 
-func Test_getEffectiveTotalInclude(t *testing.T) {
-	type args struct {
-		total        bool
-		totalInclude []string
-		log          telegraf.Logger
-	}
-	tests := []struct {
-		name                      string
-		args                      args
-		wantEffectiveTotalInclude []string
-	}{
-		{
-			name: "total_true_honors_totalInclude",
-			args: args{
-				total:        true,
-				totalInclude: []string{"cpu", "network"},
-				log:          testutil.Logger{},
-			},
-			wantEffectiveTotalInclude: []string{"cpu", "network"},
-		},
-		{
-			name: "total_false_removes_network_blkio",
-			args: args{
-				total:        false,
-				totalInclude: []string{"cpu", "network", "blkio"},
-				log:          testutil.Logger{},
-			},
-			wantEffectiveTotalInclude: []string{"cpu"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if gotEffectiveTotalInclude := getEffectiveTotalInclude(tt.args.total, tt.args.totalInclude, tt.args.log); !reflect.DeepEqual(gotEffectiveTotalInclude, tt.wantEffectiveTotalInclude) {
-				t.Errorf("getEffectiveTotalInclude() = %v, want %v", gotEffectiveTotalInclude, tt.wantEffectiveTotalInclude)
+			if err == nil {
+				if !reflect.DeepEqual(d.PerDeviceInclude, tt.wantPerDeviceInclude) {
+					t.Errorf("Perdevice include: got  '%v', want '%v'", d.PerDeviceInclude, tt.wantPerDeviceInclude)
+				}
+
+				if !reflect.DeepEqual(d.TotalInclude, tt.wantTotalInclude) {
+					t.Errorf("Total include: got  '%v', want '%v'", d.TotalInclude, tt.wantTotalInclude)
+				}
 			}
+
 		})
 	}
 }

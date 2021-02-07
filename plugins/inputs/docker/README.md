@@ -52,6 +52,7 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.24/)
   
   ## Specifies for which classes a per-device metric should be issued
   ## Possible values are 'cpu' (cpu0, cpu1, ...), 'blkio' (8:0, 8:1, ...) and 'network' (eth0, eth1, ...)
+  ## Please note that this setting has no effect if 'perdevice' is set to 'true'
   perdevice_include = ["cpu"]
   
   ## Whether to report for each container total blkio and network stats or not.
@@ -63,6 +64,7 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.24/)
   ## Specifies for which classes a total metric should be issued. Total is an aggregated of the 'perdevice' values.
   ## Possible values are 'cpu', 'blkio' and 'network'  
   ## Total 'cpu' is reported directly by Docker daemon, and 'network' and 'blkio' totals are aggregated by this plugin.
+  ## Please note that this setting has no effect if 'total' is set to 'false'
   total_include = ["cpu", "blkio", "network"]
 
   ## docker labels to include and exclude as tags.  Globs accepted.

@@ -75,6 +75,14 @@ const (
 	PB = 1000 * TB
 
 	defaultEndpoint = "unix:///var/run/docker.sock"
+
+	perDeviceIncludeDeprecationWarning = "'perdevice' setting is set to 'true' so 'blkio' and 'network' metrics will" +
+		"be collected. Please set it to 'false' and use 'perdevice_include' instead to control this behaviour as " +
+		"'perdevice' will be deprecated"
+
+	totalIncludeDeprecationWarning = "'total' setting is set to 'false' so 'blkio' and 'network' metrics will not be " +
+		"collected. Please set it to 'true' and use 'total_include' instead to control this behaviour as 'total' " +
+		"will be deprecated"
 )
 
 var (
@@ -123,6 +131,7 @@ var sampleConfig = `
 
   ## Specifies for which classes a per-device metric should be issued
   ## Possible values are 'cpu' (cpu0, cpu1, ...), 'blkio' (8:0, 8:1, ...) and 'network' (eth0, eth1, ...)
+  ## Please note that this setting has no effect if 'perdevice' is set to 'true'
   perdevice_include = ["cpu"]
 
   ## Whether to report for each container total blkio and network stats or not.
@@ -134,6 +143,7 @@ var sampleConfig = `
   ## Specifies for which classes a total metric should be issued. Total is an aggregated of the 'perdevice' values.
   ## Possible values are 'cpu', 'blkio' and 'network'  
   ## Total 'cpu' is reported directly by Docker daemon, and 'network' and 'blkio' totals are aggregated by this plugin.
+  ## Please note that this setting has no effect if 'total' is set to 'false'
   total_include = ["cpu", "blkio", "network"]
 
   ## Which environment variables should we use as a tag
@@ -160,7 +170,6 @@ func (d *Docker) Description() string {
 	return "Read metrics about docker containers"
 }
 
-// Config Validation
 func (d *Docker) Init() error {
 	err := choice.CheckSlice(d.PerDeviceInclude, containerMetricClasses)
 	if err != nil {
@@ -170,6 +179,27 @@ func (d *Docker) Init() error {
 	err = choice.CheckSlice(d.TotalInclude, containerMetricClasses)
 	if err != nil {
 		return fmt.Errorf("error validating 'total_include' setting : %v", err)
+	}
+
+	// Temporary logic needed for backwards compatibility until 'perdevice' setting is removed.
+	if d.PerDevice {
+		d.Log.Warn(perDeviceIncludeDeprecationWarning)
+		if !choice.Contains("network", d.PerDeviceInclude) {
+			d.PerDeviceInclude = append(d.PerDeviceInclude, "network")
+		}
+		if !choice.Contains("blkio", d.PerDeviceInclude) {
+			d.PerDeviceInclude = append(d.PerDeviceInclude, "blkio")
+		}
+	}
+
+	// Temporary logic needed for backwards compatibility until 'total' setting is removed.
+	if !d.Total {
+		d.Log.Warn(totalIncludeDeprecationWarning)
+		if choice.Contains("cpu", d.TotalInclude) {
+			d.TotalInclude = []string{"cpu"}
+		} else {
+			d.TotalInclude = []string{}
+		}
 	}
 
 	return nil
@@ -599,51 +629,9 @@ func (d *Docker) gatherContainerInspect(
 		}
 	}
 
-	// Temporary logic needed for backwards compatibility until 'perdevice' setting is removed.
-	perDeviceInclude := getEffectivePerDeviceInclude(d.PerDevice, d.PerDeviceInclude, d.Log)
-	// Temporary logic needed for backwards compatibility until 'total' setting is removed.
-	totalInclude := getEffectiveTotalInclude(d.Total, d.TotalInclude, d.Log)
-
-	parseContainerStats(v, acc, tags, container.ID, perDeviceInclude, totalInclude, daemonOSType)
+	parseContainerStats(v, acc, tags, container.ID, d.PerDeviceInclude, d.TotalInclude, daemonOSType)
 
 	return nil
-}
-
-// getEffectivePerdeviceInclude returns the effective 'perdevice_include' setting to be applied.
-// This is a temporary logic to keep backwards compatibility and should be removed once 'perdevice' is deprecated.
-// If 'perdevice' is 'true', 'network' and 'blkio' are unconditionally added.
-func getEffectivePerDeviceInclude(perDevice bool, perDeviceInclude []string,
-	log telegraf.Logger) (effectivePerDeviceInclude []string) {
-	if !perDevice {
-		effectivePerDeviceInclude = perDeviceInclude
-	} else {
-		log.Warn("'perdevice' setting is set to 'true' so 'blkio' and 'network' metrics will be collected. " +
-			"Please set it to 'false' and use 'perdevice_include' instead to control this behaviour as 'perdevice' " +
-			"will be deprecated")
-		if choice.Contains("cpu", perDeviceInclude) {
-			effectivePerDeviceInclude = append(effectivePerDeviceInclude, "cpu")
-		}
-
-		effectivePerDeviceInclude = append(effectivePerDeviceInclude, "network", "blkio")
-	}
-	return
-}
-
-// getEffectiveTotalInclude returns the effective 'total_include' setting to be applied.
-// This is a temporary logic to keep backwards compatibility and should be removed once 'total' is deprecated.
-// If 'total' is false, 'network' and 'blkio' are unconditionally removed.
-func getEffectiveTotalInclude(total bool, totalInclude []string, log telegraf.Logger) (effectiveTotalInclude []string) {
-	if total {
-		effectiveTotalInclude = totalInclude
-	} else {
-		log.Warn("'total' setting is set to 'false' so 'blkio' and 'network' metrics will not be collected. " +
-			"Please set it to 'true' and use 'total_include' instead to control this behaviour as 'total' will be " +
-			"deprecated")
-		if choice.Contains("cpu", totalInclude) {
-			effectiveTotalInclude = append(effectiveTotalInclude, "cpu")
-		}
-	}
-	return
 }
 
 func parseContainerStats(

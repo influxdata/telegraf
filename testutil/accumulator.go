@@ -387,66 +387,6 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 	}
 	return
 }
-
-// Asserts that at least one of the metrics contains all the required tags
-func (a *Accumulator) AssertTagValuesInMeasurement(
-	t *testing.T,
-	measurement string,
-	tags map[string]string,
-) {
-	a.Lock()
-	defer a.Unlock()
-	if !a.ContainsTagValues(measurement, tags) {
-		msg := fmt.Sprintf("Tag(s) %v should be present for measurement '%s'", tags, measurement)
-		assert.Fail(t, msg)
-	}
-}
-
-// Asserts that no metric contains all the required tags
-func (a *Accumulator) AssertTagValuesNotInMeasurement(
-	t *testing.T,
-	measurement string,
-	tags map[string]string,
-) {
-	a.Lock()
-	defer a.Unlock()
-
-	if a.ContainsTagValues(measurement, tags) {
-		msg := fmt.Sprintf("Tags '%v' should not be present for measurement '%s'", tags, measurement)
-		assert.Fail(t, msg)
-	}
-}
-
-// Checks if any of the metrics contains all the required tags along with their values
-func (a *Accumulator) ContainsTagValues(measurement string, tags map[string]string) bool {
-	foundMetricWithTagValues := false
-
-	for _, p := range a.Metrics {
-		if p.Measurement != measurement {
-			continue
-		}
-
-		var discardMetric bool
-
-		for wantKey, wantValue := range tags {
-			gotValue, ok := p.Tags[wantKey]
-			// If any expected tag is not present, discard the metric
-			if !ok || gotValue != wantValue {
-				discardMetric = true
-				break
-			}
-		}
-
-		if !discardMetric {
-			// All the required tags are present for this metric
-			foundMetricWithTagValues = true
-			break
-		}
-	}
-
-	return foundMetricWithTagValues
-}
-
 func (a *Accumulator) AssertContainsFields(
 	t *testing.T,
 	measurement string,
