@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 
 	"cloud.google.com/go/bigquery"
 	"golang.org/x/oauth2/google"
@@ -90,12 +91,14 @@ func (b *BigQuery) setUpDefaultClient() error {
 func (b *BigQuery) Write(metrics []telegraf.Metric) error {
 	groupedMetrics := b.groupByMetricName(metrics)
 
+	var wg sync.WaitGroup
+
 	for k, v := range groupedMetrics {
-		if err := b.insertToTable(k, v); err != nil {
-			b.Log.Errorf("inserting metric %q failed: %v", k, err)
-			continue
-		}
+		wg.Add(1)
+		go b.insertToTable(k, v, &wg)
 	}
+
+	wg.Wait()
 
 	return nil
 }
@@ -179,13 +182,19 @@ func valueToBqType(v interface{}) bigquery.FieldType {
 	}
 }
 
-func (b *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSaver) error {
+func (b *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSaver, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+
 	ctx := context.Background()
 
 	table := b.client.DatasetInProject(b.Project, b.Dataset).Table(metricName)
 	inserter := table.Inserter()
 
-	return inserter.Put(ctx, metrics)
+	if err := inserter.Put(ctx, metrics); err != nil {
+		b.Log.Errorf("inserting metric %q failed: %v", metricName, err)
+	}
+
 }
 
 func (b *BigQuery) tableForMetric(metricName string) *bigquery.Table {
