@@ -146,7 +146,7 @@ func (e *ElasticsearchQuery) connectToES() error {
 		elastic.SetHealthcheckInterval(e.HealthCheckInterval.Duration),
 	)
 
-	if e.Username != "" && e.Password != "" {
+	if e.Username != "" {
 		clientOptions = append(clientOptions,
 			elastic.SetBasicAuth(e.Username, e.Password),
 		)
