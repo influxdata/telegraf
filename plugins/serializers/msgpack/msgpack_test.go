@@ -12,8 +12,8 @@ import (
 func isIdentical(t *testing.T, m1 telegraf.Metric, m2 *Metric) bool {
 	// Max precision in msgpack is nanoseconds
 	// https://github.com/msgpack/msgpack/blob/master/spec.md
-	if m1.Time().Truncate(time.Nanosecond) != m2.Time {
-		t.Logf("expected: %v, actual: %v", m1.Time().Truncate(time.Nanosecond), m2.Time)
+	if m1.Time().Truncate(time.Nanosecond) != m2.Time.time {
+		t.Logf("expected: %v, actual: %v", m1.Time().Truncate(time.Nanosecond), m2.Time.time)
 		return false
 	}
 

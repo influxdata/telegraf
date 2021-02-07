@@ -16,7 +16,7 @@ func NewSerializer() *Serializer {
 func marshalMetric(buf []byte, metric telegraf.Metric) ([]byte, error) {
 	return (&Metric{
 		Name:   metric.Name(),
-		Time:   metric.Time(),
+		Time:   MessagePackTime{time: metric.Time()},
 		Tags:   metric.Tags(),
 		Fields: metric.Fields(),
 	}).MarshalMsg(buf)
