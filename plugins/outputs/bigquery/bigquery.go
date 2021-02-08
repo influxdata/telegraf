@@ -32,7 +32,7 @@ const sampleConfig = `
   ## The namespace for the metric descriptor
   dataset = "telegraf"
 
-  ## Timeout for BigQuery operations.  Minimum timeout is "1s".
+  ## Timeout for BigQuery operations.
   # timeout = "5s"
 `
 
