@@ -110,10 +110,10 @@ func (b *BigQuery) Write(metrics []telegraf.Metric) error {
 
 	for k, v := range groupedMetrics {
 		wg.Add(1)
-		go func(k string, v []bigquery.ValueSaver) {
+		go func() {
 			defer wg.Done()
 			b.insertToTable(k, v)
-		}(k, v)
+		}()
 	}
 
 	wg.Wait()
