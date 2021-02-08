@@ -67,7 +67,7 @@ commands:
           path: './build/dist'
           destination: 'build/dist/artifacts'
       - persist_to_workspace:
-          root: './build/dist/artifacts'
+          root: 'build/dist/artifacts'
           paths:
             - '*'
 jobs:
