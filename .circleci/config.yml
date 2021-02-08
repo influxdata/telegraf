@@ -252,7 +252,7 @@ workflows:
               ignore: /.*/
       - 'package-sign-windows':
           requires:
-            - 'release'
+            - 'package'
   nightly:
     jobs:
       - 'deps'
