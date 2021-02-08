@@ -110,9 +110,9 @@ func buildEvents(p telegraf.Metric, s string) []*raidman.Event {
 			Service: serviceName(s, p.Name(), p.Tags(), fieldName),
 		}
 
-		switch value.(type) {
+		switch value := value.(type) {
 		case string:
-			event.State = value.(string)
+			event.State = value
 		default:
 			event.Metric = value
 		}

@@ -293,9 +293,9 @@ func (f fakeRow) Scan(dest ...interface{}) error {
 	}
 
 	for i, d := range dest {
-		switch d.(type) {
+		switch d := d.(type) {
 		case (*interface{}):
-			*d.(*interface{}) = f.fields[i]
+			*d = f.fields[i]
 		default:
 			return fmt.Errorf("Bad type %T", d)
 		}
