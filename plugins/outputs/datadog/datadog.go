@@ -47,7 +47,7 @@ type Metric struct {
 
 type Point [2]float64
 
-const datadog_api = "https://app.datadoghq.com/api/v1/series"
+const datadogApi = "https://app.datadoghq.com/api/v1/series"
 
 func (d *Datadog) Connect() error {
 	if d.Apikey == "" {
@@ -65,7 +65,7 @@ func (d *Datadog) Connect() error {
 
 func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	ts := TimeSeries{}
-	tempSeries := []*Metric{}
+	var tempSeries []*Metric
 	metricCounter := 0
 
 	for _, m := range metrics {
@@ -166,7 +166,7 @@ func buildTags(tagList []*telegraf.Tag) []string {
 	index := 0
 	for _, tag := range tagList {
 		tags[index] = fmt.Sprintf("%s:%s", tag.Key, tag.Value)
-		index += 1
+		index++
 	}
 	return tags
 }
@@ -208,7 +208,7 @@ func (d *Datadog) Close() error {
 func init() {
 	outputs.Add("datadog", func() telegraf.Output {
 		return &Datadog{
-			URL: datadog_api,
+			URL: datadogApi,
 		}
 	})
 }

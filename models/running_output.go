@@ -11,10 +11,10 @@ import (
 
 const (
 	// Default size of metrics batch size.
-	DEFAULT_METRIC_BATCH_SIZE = 1000
+	DefaultMetricBatchSize = 1000
 
 	// Default number of metrics kept. It should be a multiple of batch size.
-	DEFAULT_METRIC_BUFFER_LIMIT = 10000
+	DefaultMetricBufferLimit = 10000
 )
 
 // OutputConfig containing name and filter
@@ -78,13 +78,13 @@ func NewRunningOutput(
 		bufferLimit = config.MetricBufferLimit
 	}
 	if bufferLimit == 0 {
-		bufferLimit = DEFAULT_METRIC_BUFFER_LIMIT
+		bufferLimit = DefaultMetricBufferLimit
 	}
 	if config.MetricBatchSize > 0 {
 		batchSize = config.MetricBatchSize
 	}
 	if batchSize == 0 {
-		batchSize = DEFAULT_METRIC_BATCH_SIZE
+		batchSize = DefaultMetricBatchSize
 	}
 
 	ro := &RunningOutput{
@@ -110,8 +110,8 @@ func NewRunningOutput(
 	return ro
 }
 
-func (r *RunningOutput) LogName() string {
-	return logName("outputs", r.Config.Name, r.Config.Alias)
+func (ro *RunningOutput) LogName() string {
+	return logName("outputs", ro.Config.Name, ro.Config.Alias)
 }
 
 func (ro *RunningOutput) metricFiltered(metric telegraf.Metric) {
@@ -119,8 +119,8 @@ func (ro *RunningOutput) metricFiltered(metric telegraf.Metric) {
 	metric.Drop()
 }
 
-func (r *RunningOutput) Init() error {
-	if p, ok := r.Output.(telegraf.Initializer); ok {
+func (ro *RunningOutput) Init() error {
+	if p, ok := ro.Output.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {
 			return err
@@ -228,40 +228,40 @@ func (ro *RunningOutput) WriteBatch() error {
 }
 
 // Close closes the output
-func (r *RunningOutput) Close() {
-	err := r.Output.Close()
+func (ro *RunningOutput) Close() {
+	err := ro.Output.Close()
 	if err != nil {
-		r.log.Errorf("Error closing output: %v", err)
+		ro.log.Errorf("Error closing output: %v", err)
 	}
 }
 
-func (r *RunningOutput) write(metrics []telegraf.Metric) error {
-	dropped := atomic.LoadInt64(&r.droppedMetrics)
+func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
+	dropped := atomic.LoadInt64(&ro.droppedMetrics)
 	if dropped > 0 {
-		r.log.Warnf("Metric buffer overflow; %d metrics have been dropped", dropped)
-		atomic.StoreInt64(&r.droppedMetrics, 0)
+		ro.log.Warnf("Metric buffer overflow; %d metrics have been dropped", dropped)
+		atomic.StoreInt64(&ro.droppedMetrics, 0)
 	}
 
 	start := time.Now()
-	err := r.Output.Write(metrics)
+	err := ro.Output.Write(metrics)
 	elapsed := time.Since(start)
-	r.WriteTime.Incr(elapsed.Nanoseconds())
+	ro.WriteTime.Incr(elapsed.Nanoseconds())
 
 	if err == nil {
-		r.log.Debugf("Wrote batch of %d metrics in %s", len(metrics), elapsed)
+		ro.log.Debugf("Wrote batch of %d metrics in %s", len(metrics), elapsed)
 	}
 	return err
 }
 
-func (r *RunningOutput) LogBufferStatus() {
-	nBuffer := r.buffer.Len()
-	r.log.Debugf("Buffer fullness: %d / %d metrics", nBuffer, r.MetricBufferLimit)
+func (ro *RunningOutput) LogBufferStatus() {
+	nBuffer := ro.buffer.Len()
+	ro.log.Debugf("Buffer fullness: %d / %d metrics", nBuffer, ro.MetricBufferLimit)
 }
 
-func (r *RunningOutput) Log() telegraf.Logger {
-	return r.log
+func (ro *RunningOutput) Log() telegraf.Logger {
+	return ro.log
 }
 
-func (r *RunningOutput) BufferLength() int {
-	return r.buffer.Len()
+func (ro *RunningOutput) BufferLength() int {
+	return ro.buffer.Len()
 }

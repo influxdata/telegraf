@@ -20,7 +20,7 @@ type Fetcher interface {
 	Fetch(address string) ([]gohddtemp.Disk, error)
 }
 
-func (_ *HDDTemp) Description() string {
+func (h *HDDTemp) Description() string {
 	return "Monitor disks' temperatures using hddtemp"
 }
 
@@ -36,7 +36,7 @@ var hddtempSampleConfig = `
   # devices = ["sda", "*"]
 `
 
-func (_ *HDDTemp) SampleConfig() string {
+func (h *HDDTemp) SampleConfig() string {
 	return hddtempSampleConfig
 }
 

@@ -58,7 +58,7 @@ func (f *File) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (f *File) Connect() error {
-	writers := []io.Writer{}
+	var writers []io.Writer
 
 	if len(f.Files) == 0 {
 		f.Files = []string{"stdout"}
@@ -102,7 +102,7 @@ func (f *File) Description() string {
 }
 
 func (f *File) Write(metrics []telegraf.Metric) error {
-	var writeErr error = nil
+	var writeErr error
 
 	if f.UseBatchFormat {
 		octets, err := f.serializer.SerializeBatch(metrics)
@@ -123,7 +123,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 
 			_, err = f.writer.Write(b)
 			if err != nil {
-				writeErr = fmt.Errorf("E! [outputs.file] failed to write message: %v", err)
+				writeErr = fmt.Errorf("failed to write message: %v", err)
 			}
 		}
 	}

@@ -46,8 +46,8 @@ func (ipset *Ipset) SampleConfig() string {
 `
 }
 
-func (ips *Ipset) Gather(acc telegraf.Accumulator) error {
-	out, e := ips.lister(ips.Timeout, ips.UseSudo)
+func (ipset *Ipset) Gather(acc telegraf.Accumulator) error {
+	out, e := ipset.lister(ipset.Timeout, ipset.UseSudo)
 	if e != nil {
 		acc.AddError(e)
 	}
@@ -64,25 +64,25 @@ func (ips *Ipset) Gather(acc telegraf.Accumulator) error {
 
 		data := strings.Fields(line)
 		if len(data) < 7 {
-			acc.AddError(fmt.Errorf("Error parsing line (expected at least 7 fields): %s", line))
+			acc.AddError(fmt.Errorf("error parsing line (expected at least 7 fields): %s", line))
 			continue
 		}
-		if data[0] == "add" && (data[4] != "0" || ips.IncludeUnmatchedSets) {
+		if data[0] == "add" && (data[4] != "0" || ipset.IncludeUnmatchedSets) {
 			tags := map[string]string{
 				"set":  data[1],
 				"rule": data[2],
 			}
-			packets_total, err := strconv.ParseUint(data[4], 10, 64)
+			packetsTotal, err := strconv.ParseUint(data[4], 10, 64)
 			if err != nil {
 				acc.AddError(err)
 			}
-			bytes_total, err := strconv.ParseUint(data[6], 10, 64)
+			bytesTotal, err := strconv.ParseUint(data[6], 10, 64)
 			if err != nil {
 				acc.AddError(err)
 			}
 			fields := map[string]interface{}{
-				"packets_total": packets_total,
-				"bytes_total":   bytes_total,
+				"packets_total": packetsTotal,
+				"bytes_total":   bytesTotal,
 			}
 			acc.AddCounter(measurement, fields, tags)
 		}

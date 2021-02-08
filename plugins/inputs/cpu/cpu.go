@@ -28,7 +28,7 @@ func NewCPUStats(ps system.PS) *CPUStats {
 	}
 }
 
-func (_ *CPUStats) Description() string {
+func (c *CPUStats) Description() string {
 	return "Read metrics about cpu usage"
 }
 
@@ -43,12 +43,12 @@ var sampleConfig = `
   report_active = false
 `
 
-func (_ *CPUStats) SampleConfig() string {
+func (c *CPUStats) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
-	times, err := s.ps.CPUTimes(s.PerCPU, s.TotalCPU)
+func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
+	times, err := c.ps.CPUTimes(c.PerCPU, c.TotalCPU)
 	if err != nil {
 		return fmt.Errorf("error getting CPU info: %s", err)
 	}
@@ -62,7 +62,7 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 		total := totalCpuTime(cts)
 		active := activeCpuTime(cts)
 
-		if s.CollectCPUTime {
+		if c.CollectCPUTime {
 			// Add cpu time metrics
 			fieldsC := map[string]interface{}{
 				"time_user":       cts.User,
@@ -76,19 +76,19 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 				"time_guest":      cts.Guest,
 				"time_guest_nice": cts.GuestNice,
 			}
-			if s.ReportActive {
+			if c.ReportActive {
 				fieldsC["time_active"] = activeCpuTime(cts)
 			}
 			acc.AddCounter("cpu", fieldsC, tags, now)
 		}
 
 		// Add in percentage
-		if len(s.lastStats) == 0 {
+		if len(c.lastStats) == 0 {
 			// If it's the 1st gather, can't get CPU Usage stats yet
 			continue
 		}
 
-		lastCts, ok := s.lastStats[cts.CPU]
+		lastCts, ok := c.lastStats[cts.CPU]
 		if !ok {
 			continue
 		}
@@ -97,7 +97,7 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 		totalDelta := total - lastTotal
 
 		if totalDelta < 0 {
-			err = fmt.Errorf("Error: current total CPU time is less than previous total CPU time")
+			err = fmt.Errorf("error: current total CPU time is less than previous total CPU time")
 			break
 		}
 
@@ -117,15 +117,15 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 			"usage_guest":      100 * (cts.Guest - lastCts.Guest) / totalDelta,
 			"usage_guest_nice": 100 * (cts.GuestNice - lastCts.GuestNice) / totalDelta,
 		}
-		if s.ReportActive {
+		if c.ReportActive {
 			fieldsG["usage_active"] = 100 * (active - lastActive) / totalDelta
 		}
 		acc.AddGauge("cpu", fieldsG, tags, now)
 	}
 
-	s.lastStats = make(map[string]cpu.TimesStat)
+	c.lastStats = make(map[string]cpu.TimesStat)
 	for _, cts := range times {
-		s.lastStats[cts.CPU] = cts
+		c.lastStats[cts.CPU] = cts
 	}
 
 	return err

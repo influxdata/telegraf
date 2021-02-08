@@ -33,25 +33,25 @@ func newFcgiClient(h string, args ...interface{}) (*conn, error) {
 	return fcgi, err
 }
 
-func (client *conn) Request(
+func (c *conn) Request(
 	env map[string]string,
 	requestData string,
 ) (retout []byte, reterr []byte, err error) {
-	defer client.rwc.Close()
+	defer c.rwc.Close()
 	var reqId uint16 = 1
 
-	err = client.writeBeginRequest(reqId, uint16(roleResponder), 0)
+	err = c.writeBeginRequest(reqId, uint16(roleResponder), 0)
 	if err != nil {
 		return
 	}
 
-	err = client.writePairs(typeParams, reqId, env)
+	err = c.writePairs(typeParams, reqId, env)
 	if err != nil {
 		return
 	}
 
 	if len(requestData) > 0 {
-		if err = client.writeRecord(typeStdin, reqId, []byte(requestData)); err != nil {
+		if err = c.writeRecord(typeStdin, reqId, []byte(requestData)); err != nil {
 			return
 		}
 	}
@@ -62,7 +62,7 @@ func (client *conn) Request(
 	// receive until EOF or FCGI_END_REQUEST
 READ_LOOP:
 	for {
-		err1 = rec.read(client.rwc)
+		err1 = rec.read(c.rwc)
 		if err1 != nil && strings.Contains(err1.Error(), "use of closed network connection") {
 			if err1 != io.EOF {
 				err = err1

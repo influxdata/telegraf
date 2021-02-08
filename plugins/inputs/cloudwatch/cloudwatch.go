@@ -216,7 +216,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	wg := sync.WaitGroup{}
 	rLock := sync.Mutex{}
 
-	results := []*cloudwatch.MetricDataResult{}
+	var results []*cloudwatch.MetricDataResult
 
 	// 500 is the maximum number of metric data queries a `GetMetricData` request can contain.
 	batchSize := 500
@@ -296,12 +296,12 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 		return c.metricCache.metrics, nil
 	}
 
-	fMetrics := []filteredMetric{}
+	var fMetrics []filteredMetric
 
 	// check for provided metric filter
 	if c.Metrics != nil {
 		for _, m := range c.Metrics {
-			metrics := []*cloudwatch.Metric{}
+			var metrics []*cloudwatch.Metric
 			if !hasWildcard(m.Dimensions) {
 				dimensions := make([]*cloudwatch.Dimension, len(m.Dimensions))
 				for k, d := range m.Dimensions {
@@ -374,11 +374,10 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 
 // fetchNamespaceMetrics retrieves available metrics for a given CloudWatch namespace.
 func (c *CloudWatch) fetchNamespaceMetrics() ([]*cloudwatch.Metric, error) {
-	metrics := []*cloudwatch.Metric{}
-
+	var metrics []*cloudwatch.Metric
 	var token *string
 	var params *cloudwatch.ListMetricsInput
-	var recentlyActive *string = nil
+	var recentlyActive *string
 
 	switch c.RecentlyActive {
 	case "PT3H":
@@ -432,7 +431,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 
 	c.queryDimensions = map[string]*map[string]string{}
 
-	dataQueries := []*cloudwatch.MetricDataQuery{}
+	var dataQueries []*cloudwatch.MetricDataQuery
 	for i, filtered := range filteredMetrics {
 		for j, metric := range filtered.metrics {
 			id := strconv.Itoa(j) + "_" + strconv.Itoa(i)
@@ -522,7 +521,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 func (c *CloudWatch) gatherMetrics(
 	params *cloudwatch.GetMetricDataInput,
 ) ([]*cloudwatch.MetricDataResult, error) {
-	results := []*cloudwatch.MetricDataResult{}
+	var results []*cloudwatch.MetricDataResult
 
 	for {
 		resp, err := c.client.GetMetricData(params)
@@ -595,11 +594,6 @@ func snakeCase(s string) string {
 	s = strings.Replace(s, " ", "_", -1)
 	s = strings.Replace(s, "__", "_", -1)
 	return s
-}
-
-type dimension struct {
-	name  string
-	value string
 }
 
 // ctod converts cloudwatch dimensions to regular dimensions.

@@ -165,11 +165,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 		}
 	}
 
-	if err := http.flush(); err != nil {
-		return err
-	}
-
-	return nil
+	return http.flush()
 }
 
 func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
@@ -235,9 +231,9 @@ func buildValue(v interface{}) (string, error) {
 	var retv string
 	switch p := v.(type) {
 	case int64:
-		retv = IntToString(int64(p))
+		retv = IntToString(p)
 	case uint64:
-		retv = UIntToString(uint64(p))
+		retv = UIntToString(p)
 	case float64:
 		retv = FloatToString(float64(p))
 	default:
@@ -246,16 +242,16 @@ func buildValue(v interface{}) (string, error) {
 	return retv, nil
 }
 
-func IntToString(input_num int64) string {
-	return strconv.FormatInt(input_num, 10)
+func IntToString(inputNum int64) string {
+	return strconv.FormatInt(inputNum, 10)
 }
 
-func UIntToString(input_num uint64) string {
-	return strconv.FormatUint(input_num, 10)
+func UIntToString(inputNum uint64) string {
+	return strconv.FormatUint(inputNum, 10)
 }
 
-func FloatToString(input_num float64) string {
-	return strconv.FormatFloat(input_num, 'f', 6, 64)
+func FloatToString(inputNum float64) string {
+	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
 
 func (o *OpenTSDB) SampleConfig() string {

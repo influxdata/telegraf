@@ -28,28 +28,28 @@ type loadedConfig struct {
 
 // LoadConfig Adds plugins to the shim
 func (s *Shim) LoadConfig(filePath *string) error {
-	conf, err := LoadConfig(filePath)
+	conf, err := loadConfig(filePath)
 	if err != nil {
 		return err
 	}
 	if conf.Input != nil {
 		if err = s.AddInput(conf.Input); err != nil {
-			return fmt.Errorf("Failed to add Input: %w", err)
+			return fmt.Errorf("failed to add Input: %w", err)
 		}
 	} else if conf.Processor != nil {
 		if err = s.AddStreamingProcessor(conf.Processor); err != nil {
-			return fmt.Errorf("Failed to add Processor: %w", err)
+			return fmt.Errorf("failed to add Processor: %w", err)
 		}
 	} else if conf.Output != nil {
 		if err = s.AddOutput(conf.Output); err != nil {
-			return fmt.Errorf("Failed to add Output: %w", err)
+			return fmt.Errorf("failed to add Output: %w", err)
 		}
 	}
 	return nil
 }
 
-// LoadConfig loads the config and returns inputs that later need to be loaded.
-func LoadConfig(filePath *string) (loaded loadedConfig, err error) {
+// loadConfig loads the config and returns inputs that later need to be loaded.
+func loadConfig(filePath *string) (loaded loadedConfig, err error) {
 	var data string
 	conf := config{}
 	if filePath != nil && *filePath != "" {
@@ -62,7 +62,7 @@ func LoadConfig(filePath *string) (loaded loadedConfig, err error) {
 		data = expandEnvVars(b)
 
 	} else {
-		conf, err = DefaultImportedPlugins()
+		conf, err = defaultImportedPlugins()
 		if err != nil {
 			return loadedConfig{}, err
 		}
@@ -147,10 +147,10 @@ func createPluginsWithTomlConfig(md toml.MetaData, conf config) (loadedConfig, e
 	return loadedConf, nil
 }
 
-// DefaultImportedPlugins defaults to whatever plugins happen to be loaded and
+// defaultImportedPlugins defaults to whatever plugins happen to be loaded and
 // have registered themselves with the registry. This makes loading plugins
 // without having to define a config dead easy.
-func DefaultImportedPlugins() (config, error) {
+func defaultImportedPlugins() (config, error) {
 	conf := config{
 		Inputs:     map[string][]toml.Primitive{},
 		Processors: map[string][]toml.Primitive{},

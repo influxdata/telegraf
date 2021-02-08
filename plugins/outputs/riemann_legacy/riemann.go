@@ -2,7 +2,6 @@ package riemann_legacy
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strings"
@@ -12,12 +11,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-const deprecationMsg = "E! Error: this Riemann output plugin will be deprecated in a future release, see https://github.com/influxdata/telegraf/issues/1878 for more details & discussion."
+const deprecationMsg = "Error: this Riemann output plugin will be deprecated in a future release, see https://github.com/influxdata/telegraf/issues/1878 for more details & discussion."
 
 type Riemann struct {
-	URL       string
-	Transport string
-	Separator string
+	URL       string          `toml:"url"`
+	Transport string          `toml:"transport"`
+	Separator string          `toml:"separator"`
+	Log       telegraf.Logger `toml:"-"`
 
 	client *raidman.Client
 }
@@ -32,7 +32,7 @@ var sampleConfig = `
 `
 
 func (r *Riemann) Connect() error {
-	log.Printf(deprecationMsg)
+	r.Log.Error(deprecationMsg)
 	c, err := raidman.Dial(r.Transport, r.URL)
 
 	if err != nil {
@@ -62,7 +62,7 @@ func (r *Riemann) Description() string {
 }
 
 func (r *Riemann) Write(metrics []telegraf.Metric) error {
-	log.Printf(deprecationMsg)
+	r.Log.Error(deprecationMsg)
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -92,7 +92,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 }
 
 func buildEvents(p telegraf.Metric, s string) []*raidman.Event {
-	events := []*raidman.Event{}
+	var events []*raidman.Event
 	for fieldName, value := range p.Fields() {
 		host, ok := p.Tags()["host"]
 		if !ok {
@@ -123,12 +123,12 @@ func buildEvents(p telegraf.Metric, s string) []*raidman.Event {
 }
 
 func serviceName(s string, n string, t map[string]string, f string) string {
-	serviceStrings := []string{}
+	var serviceStrings []string
 	serviceStrings = append(serviceStrings, n)
 
 	// we'll skip the 'host' tag
-	tagStrings := []string{}
-	tagNames := []string{}
+	var tagStrings []string
+	var tagNames []string
 
 	for tagName := range t {
 		tagNames = append(tagNames, tagName)
@@ -140,7 +140,7 @@ func serviceName(s string, n string, t map[string]string, f string) string {
 			tagStrings = append(tagStrings, t[tagName])
 		}
 	}
-	var tagString string = strings.Join(tagStrings, s)
+	var tagString = strings.Join(tagStrings, s)
 	if tagString != "" {
 		serviceStrings = append(serviceStrings, tagString)
 	}

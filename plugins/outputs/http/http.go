@@ -171,11 +171,7 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	if err := h.write(reqBody); err != nil {
-		return err
-	}
-
-	return nil
+	return h.write(reqBody)
 }
 
 func (h *HTTP) write(reqBody []byte) error {

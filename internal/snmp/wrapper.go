@@ -15,27 +15,27 @@ type GosnmpWrapper struct {
 }
 
 // Host returns the value of GoSNMP.Target.
-func (gsw GosnmpWrapper) Host() string {
-	return gsw.Target
+func (gs GosnmpWrapper) Host() string {
+	return gs.Target
 }
 
 // Walk wraps GoSNMP.Walk() or GoSNMP.BulkWalk(), depending on whether the
 // connection is using SNMPv1 or newer.
 // Also, if any error is encountered, it will just once reconnect and try again.
-func (gsw GosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
+func (gs GosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
 	var err error
 	// On error, retry once.
 	// Unfortunately we can't distinguish between an error returned by gosnmp, and one returned by the walk function.
 	for i := 0; i < 2; i++ {
-		if gsw.Version == gosnmp.Version1 {
-			err = gsw.GoSNMP.Walk(oid, fn)
+		if gs.Version == gosnmp.Version1 {
+			err = gs.GoSNMP.Walk(oid, fn)
 		} else {
-			err = gsw.GoSNMP.BulkWalk(oid, fn)
+			err = gs.GoSNMP.BulkWalk(oid, fn)
 		}
 		if err == nil {
 			return nil
 		}
-		if err := gsw.GoSNMP.Connect(); err != nil {
+		if err := gs.GoSNMP.Connect(); err != nil {
 			return fmt.Errorf("reconnecting: %w", err)
 		}
 	}
@@ -44,15 +44,15 @@ func (gsw GosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
 
 // Get wraps GoSNMP.GET().
 // If any error is encountered, it will just once reconnect and try again.
-func (gsw GosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
+func (gs GosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
 	var err error
 	var pkt *gosnmp.SnmpPacket
 	for i := 0; i < 2; i++ {
-		pkt, err = gsw.GoSNMP.Get(oids)
+		pkt, err = gs.GoSNMP.Get(oids)
 		if err == nil {
 			return pkt, nil
 		}
-		if err := gsw.GoSNMP.Connect(); err != nil {
+		if err := gs.GoSNMP.Connect(); err != nil {
 			return nil, fmt.Errorf("reconnecting: %w", err)
 		}
 	}

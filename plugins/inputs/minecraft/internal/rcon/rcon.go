@@ -62,7 +62,7 @@ type Packet struct {
 // Write method fails to write the header bytes in their little
 // endian byte order.
 func (p Packet) Compile() (payload []byte, err error) {
-	var size int32 = p.Header.Size
+	var size = p.Header.Size
 	var buffer bytes.Buffer
 	var padding [PacketPaddingSize]byte
 

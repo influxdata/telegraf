@@ -18,10 +18,6 @@ import (
 const mbeansPath = "/admin/mbeans?stats=true&wt=json&cat=CORE&cat=QUERYHANDLER&cat=UPDATEHANDLER&cat=CACHE"
 const adminCoresPath = "/solr/admin/cores?action=STATUS&wt=json"
 
-type node struct {
-	Host string `json:"host"`
-}
-
 const sampleConfig = `
   ## specify a list of one or more Solr servers
   servers = ["http://localhost:8983"]
@@ -196,7 +192,7 @@ func (s *Solr) filterCores(serverCores []string) []string {
 
 // Return list of cores from solr server
 func getCoresFromStatus(adminCoresStatus *AdminCoresStatus) []string {
-	serverCores := []string{}
+	var serverCores []string
 	for coreName := range adminCoresStatus.Status {
 		serverCores = append(serverCores, coreName)
 	}
@@ -497,10 +493,8 @@ func (s *Solr) gatherData(url string, v interface{}) error {
 		return fmt.Errorf("solr: API responded with status-code %d, expected %d, url %s",
 			r.StatusCode, http.StatusOK, url)
 	}
-	if err = json.NewDecoder(r.Body).Decode(v); err != nil {
-		return err
-	}
-	return nil
+
+	return json.NewDecoder(r.Body).Decode(v)
 }
 
 func init() {
