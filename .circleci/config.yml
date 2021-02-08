@@ -1,6 +1,8 @@
 version: 2.1
+
 orbs:
   win: circleci/windows@2.2.0  
+
 executors:
   go-1_14:
     working_directory: '/go/src/github.com/influxdata/telegraf'
@@ -69,7 +71,6 @@ commands:
           root: './build/dist'
           paths:
             - '*'
-
 jobs:
   deps:
     executor: go-1_15
@@ -159,9 +160,33 @@ jobs:
       - run:
           name: "Sign Windows Executables"
           shell: powershell.exe
-          command: | 
-              ./sign-windows.ps1
+          command: |
+            $tempCertFile = New-TemporaryFile
+            
+            # Replace with method of retrieving cert and password.
+            $certText = $env:fakeWindowsCert
+            $CertPass = $env:fakeWindowsCertPass
+            $finalFileName = $tempCertFile.FullName
+            $certBytes = [Convert]::FromBase64String($certText)
+            [System.IO.File]::WriteAllBytes($finalFileName, $certBytes)
+            $CertPath = $finalFileName
+            $Cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($CertPath, $CertPass)
 
+            # Replace with circleCI artifact path.
+            $artifactDirectory = "./build/dist"
+            $extractDirectory = $artifactDirectory + "\" + "extracted"
+            foreach ($file in get-ChildItem $artifactDirectory -recurse | where {$_.name -like "*windows*"} | select name) 
+            {
+                $artifact = $artifactDirectory + "\" + $file.Name
+                Expand-Archive -LiteralPath $artifact -DestinationPath $extractDirectory -Force
+                
+                $subDirectoryPath = $extractDirectory + "\" + (Get-ChildItem -Path $extractDirectory | Select-Object -First 1).Name
+                $telegrafExePath = $subDirectoryPath + "\" + "telegraf.exe"
+                Set-AuthenticodeSignature -Certificate $Cert -FilePath  $telegrafExePath -TimestampServer http://timestamp.digicert.com
+                Compress-Archive -Path $subDirectoryPath -DestinationPath $artifact -Force
+                Remove-Item $extractDirectory -Force -Recurse
+            }
+            Remove-Item $finalFileName -Force
       - persist_to_workspace:
           root: './build/dist'
           paths:
@@ -173,4 +198,96 @@ workflows:
   version: 2
   check:
     jobs:
-      - 'windows-signing'
+      - 'macdeps':
+          filters:
+            tags:
+              only: /.*/
+      - 'deps':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_14':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_14-386':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_15':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_15-386':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-darwin':
+          requires:
+            - 'macdeps'
+          filters:
+            tags: # only runs on tags if you specify this filter
+              only: /.*/
+      - 'package':
+          requires:
+            - 'test-go-darwin'
+            - 'test-go-1_14'
+            - 'test-go-1_14-386'
+            - 'test-go-1_15'
+            - 'test-go-1_15-386'
+      - 'release':
+          requires:
+            - 'test-go-darwin'
+            - 'test-go-1_14'
+            - 'test-go-1_14-386'
+            - 'test-go-1_15'
+            - 'test-go-1_15-386'
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
+      - 'windows-signing':
+          requires:
+            - 'release'
+  nightly:
+    jobs:
+      - 'deps'
+      - 'macdeps'
+      - 'test-go-1_14':
+          requires:
+            - 'deps'
+      - 'test-go-1_14-386':
+          requires:
+            - 'deps'
+      - 'test-go-1_15':
+          requires:
+            - 'deps'
+      - 'test-go-1_15-386':
+          requires:
+            - 'deps'
+      - 'test-go-darwin':
+          requires:
+            - 'macdeps'
+      - 'nightly':
+          requires:
+            - 'test-go-darwin'
+            - 'test-go-1_14'
+            - 'test-go-1_14-386'
+            - 'test-go-1_15'
+            - 'test-go-1_15-386'
+    triggers:
+      - schedule:
+          cron: "0 7 * * *"
+          filters:
+            branches:
+              only:
+                - master
