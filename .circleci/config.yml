@@ -67,9 +67,9 @@ commands:
           path: './build/dist'
           destination: 'build/dist/artifacts'
       - persist_to_workspace:
-          root: './build/dist'
+          root: './build/dist/artifacts'
           paths:
-            - 'artifacts'
+            - '*'
 jobs:
   deps:
     executor: go-1_15
