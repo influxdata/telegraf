@@ -4,6 +4,7 @@ When distributed in a binary form, Telegraf may contain portions of the
 following works:
 
 - cloud.google.com/go [Apache License 2.0](https://github.com/googleapis/google-cloud-go/blob/master/LICENSE)
+- cloud.google.com/go/bigquery [Apache License 2.0](https://github.com/googleapis/google-cloud-go/blob/master/LICENSE)
 - code.cloudfoundry.org/clock [Apache License 2.0](https://github.com/cloudfoundry/clock/blob/master/LICENSE)
 - collectd.org [MIT License](https://git.octo.it/?p=collectd.git;a=blob;f=COPYING;hb=HEAD)
 - github.com/Azure/azure-amqp-common-go [MIT License](https://github.com/Azure/azure-amqp-common-go/blob/master/LICENSE)
