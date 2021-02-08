@@ -65,11 +65,11 @@ commands:
             - run: 'make package'
       - store_artifacts:
           path: './build/dist'
-          destination: 'build/dist'
+          destination: 'build/dist/artifacts'
       - persist_to_workspace:
           root: './build/dist'
           paths:
-            - '*'
+            - 'artifacts'
 jobs:
   deps:
     executor: go-1_15
@@ -172,7 +172,7 @@ jobs:
             $Cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($CertPath, $CertPass)
 
             # Replace with circleCI artifact path.
-            $artifactDirectory = "./build/dist"
+            $artifactDirectory = "./build/dist/artifacts"
             $extractDirectory = $artifactDirectory + "\" + "extracted"
             foreach ($file in get-ChildItem $artifactDirectory -recurse | where {$_.name -like "*windows*"} | select name) 
             {
@@ -187,61 +187,17 @@ jobs:
             }
             Remove-Item $finalFileName -Force
       - persist_to_workspace:
-          root: './build/dist'
+          root: './build/dist/artifacts'
           paths:
-            - '*'
+            - 'artifacts'
       - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
+          path: './build/dist/artifacts'
+          destination: 'build/dist/artifacts'
 workflows:
   version: 2
   check:
     jobs:
-      - 'macdeps':
-          filters:
-            tags:
-              only: /.*/
-      - 'deps':
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_14':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_14-386':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_15':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_15-386':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-darwin':
-          requires:
-            - 'macdeps'
-          filters:
-            tags: # only runs on tags if you specify this filter
-              only: /.*/
-      - 'release':
-          requires:
-            - 'test-go-darwin'
-            - 'test-go-1_14'
-            - 'test-go-1_14-386'
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
+      - 'release'
       - 'package-sign-windows':
           requires:
             - 'release'
