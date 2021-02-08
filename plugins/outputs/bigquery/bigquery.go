@@ -21,7 +21,7 @@ const (
 	timeStampFieldName = "timestamp"
 )
 
-var defaultTimeout = 5 * time.Second
+var defaultTimeout = internal.Duration{Duration: time.Duration(time.Second * 5)}
 
 const sampleConfig = `	
   ## Credentials File
@@ -65,10 +65,6 @@ func (b *BigQuery) Connect() error {
 
 	if b.Dataset == "" {
 		return fmt.Errorf("Dataset is a required field for BigQuery output")
-	}
-
-	if b.Timeout.Duration < 1*time.Second {
-		b.Timeout.Duration = defaultTimeout
 	}
 
 	if b.client == nil {
@@ -224,6 +220,8 @@ func (b *BigQuery) Close() error {
 
 func init() {
 	outputs.Add("bigquery", func() telegraf.Output {
-		return &BigQuery{}
+		return &BigQuery{
+			Timeout: defaultTimeout,
+		}
 	})
 }
