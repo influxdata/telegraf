@@ -59,8 +59,6 @@ func (s *BigQuery) Description() string {
 }
 
 func (b *BigQuery) Connect() error {
-	b.setUpTimeout()
-
 	if b.Project == "" {
 		return fmt.Errorf("Project is a required field for BigQuery output")
 	}
@@ -69,17 +67,15 @@ func (b *BigQuery) Connect() error {
 		return fmt.Errorf("Dataset is a required field for BigQuery output")
 	}
 
+	if b.Timeout.Duration < 1*time.Second {
+		b.Timeout.Duration = defaultTimeout
+	}
+
 	if b.client == nil {
 		return b.setUpDefaultClient()
 	}
 
 	return nil
-}
-
-func (b *BigQuery) setUpTimeout() {
-	if b.Timeout.Duration < 1*time.Second {
-		b.Timeout.Duration = defaultTimeout
-	}
 }
 
 func (b *BigQuery) setUpDefaultClient() error {
