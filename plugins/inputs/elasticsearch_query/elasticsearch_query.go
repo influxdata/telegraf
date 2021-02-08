@@ -252,18 +252,9 @@ func (e *ElasticsearchQuery) esAggregationQuery(aggregation Aggregation) error {
 	}
 
 	if searchResult.Aggregations != nil {
-		err = e.parseAggregationResult(&aggregationQueryList, searchResult)
-		if err != nil {
-			return err
-		}
-	} else {
-		err = e.parseSimpleResult(aggregation.MeasurementName, searchResult)
-		if err != nil {
-			return err
-		}
+		return e.parseAggregationResult(&aggregationQueryList, searchResult)
 	}
-
-	return nil
+	return e.parseSimpleResult(aggregation.MeasurementName, searchResult)
 }
 
 func init() {
