@@ -91,7 +91,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: influx:cluster:viewer
   labels:
-    rbac.authorization.k8s.io/aggregate-view-telegraf: "true"
+    rbac.authorization.k8s.io/aggregate-view-telegraf-stats: "true"
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes", "nodes"]
