@@ -163,8 +163,8 @@ jobs:
             $tempCertFile = New-TemporaryFile
             
             # Replace with method of retrieving cert and password.
-            $certText = $env:fakeWindowsCert
-            $CertPass = $env:fakeWindowsCertPass
+            $certText = $env:windowsCert
+            $CertPass = $env:windowsCertPassword
             $finalFileName = $tempCertFile.FullName
             $certBytes = [Convert]::FromBase64String($certText)
             [System.IO.File]::WriteAllBytes($finalFileName, $certBytes)
@@ -249,11 +249,6 @@ workflows:
             - 'test-go-1_14-386'
             - 'test-go-1_15'
             - 'test-go-1_15-386'
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
       - 'package-sign-windows':
           requires:
             - 'release'
