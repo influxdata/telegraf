@@ -97,7 +97,7 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 		totalDelta := total - lastTotal
 
 		if totalDelta < 0 {
-			err = fmt.Errorf("error: current total CPU time is less than previous total CPU time")
+			err = fmt.Errorf("current total CPU time is less than previous total CPU time")
 			break
 		}
 

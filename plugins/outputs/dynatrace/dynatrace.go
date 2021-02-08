@@ -236,7 +236,7 @@ func (d *Dynatrace) send(msg []byte) error {
 	req, err := http.NewRequest("POST", d.URL, bytes.NewBuffer(msg))
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
-		return fmt.Errorf("dynatrace error while creating HTTP request:, %s", err.Error())
+		return fmt.Errorf("error while creating HTTP request:, %s", err.Error())
 	}
 	req.Header.Add("Content-Type", "text/plain; charset=UTF-8")
 
@@ -250,7 +250,7 @@ func (d *Dynatrace) send(msg []byte) error {
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
 		fmt.Println(req)
-		return fmt.Errorf("dynatrace error while sending HTTP request:, %s", err.Error())
+		return fmt.Errorf("error while sending HTTP request:, %s", err.Error())
 	}
 	defer resp.Body.Close()
 
@@ -263,7 +263,7 @@ func (d *Dynatrace) send(msg []byte) error {
 		bodyString := string(bodyBytes)
 		d.Log.Debugf("Dynatrace returned: %s", bodyString)
 	} else {
-		return fmt.Errorf("dynatrace request failed with response code:, %d", resp.StatusCode)
+		return fmt.Errorf("request failed with response code:, %d", resp.StatusCode)
 	}
 
 	return nil
