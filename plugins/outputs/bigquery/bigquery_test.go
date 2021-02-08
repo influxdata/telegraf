@@ -9,8 +9,10 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"cloud.google.com/go/bigquery"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
@@ -21,6 +23,7 @@ const (
 )
 
 var testingHost string
+var testDuration = internal.Duration{Duration: time.Duration(time.Second * 5)}
 
 func TestMain(t *testing.M) {
 	srv := localBigQueryServer(t)
@@ -36,6 +39,7 @@ func TestConnect(t *testing.T) {
 	b := &BigQuery{
 		Project: "test-project",
 		Dataset: "test-dataset",
+		Timeout: testDuration,
 	}
 
 	b.setUpTestClient()
@@ -48,6 +52,7 @@ func TestWrite(t *testing.T) {
 	b := &BigQuery{
 		Project: "test-project",
 		Dataset: "test-dataset",
+		Timeout: testDuration,
 	}
 
 	mockMetrics := testutil.MockMetrics()
