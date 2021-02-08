@@ -8,12 +8,12 @@ plugins.
 1. [Carbon2](/plugins/serializers/carbon2)
 1. [Graphite](/plugins/serializers/graphite)
 1. [JSON](/plugins/serializers/json)
+1. [MessagePack](/plugins/serializers/msgpack)
 1. [Prometheus](/plugins/serializers/prometheus)
 1. [Prometheus Remote Write](/plugins/serializers/prometheusremotewrite)
 1. [ServiceNow Metrics](/plugins/serializers/nowmetric)
 1. [SplunkMetric](/plugins/serializers/splunkmetric)
 1. [Wavefront](/plugins/serializers/wavefront)
-1. [MessagePack](/plugins/serializers/msgpack)
 
 You will be able to identify the plugins with support by the presence of a
 `data_format` config option, for example, in the `file` output plugin:

@@ -2,6 +2,7 @@ package msgpack
 
 import (
 	"encoding/binary"
+	"fmt"
 	"time"
 
 	"github.com/tinylib/msgp/msgp"
@@ -21,7 +22,7 @@ type Metric struct {
 // MessagePackTime implements the official timestamp extension type
 // https://github.com/msgpack/msgpack/blob/master/spec.md#timestamp-extension-type
 //
-// tinylib/msgp has been used their own custom extenstion type and the offcial extension
+// tinylib/msgp has been using their own custom extension type and the official extension
 // is not available. (https://github.com/tinylib/msgp/issues/214)
 type MessagePackTime struct {
 	time time.Time
@@ -46,7 +47,11 @@ func (t *MessagePackTime) MarshalBinaryTo(buf []byte) error {
 	sec := uint64(t.time.Unix())
 	nsec := uint64(t.time.Nanosecond())
 
-	data := nsec<<34 | sec
+	if sec&0xFFFF_FFFC_0000_0000 != 0 {
+		return fmt.Errorf("Time is out of supported range: %s", t.time.Format(time.RFC3339))
+	}
+
+	data := nsec<<34 | (sec & 0x03_FFFF_FFFF)
 
 	binary.BigEndian.PutUint64(buf, data)
 

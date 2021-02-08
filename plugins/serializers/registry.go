@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
@@ -14,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/msgpack"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
+	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )

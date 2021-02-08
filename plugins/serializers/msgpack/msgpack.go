@@ -25,13 +25,7 @@ func marshalMetric(buf []byte, metric telegraf.Metric) ([]byte, error) {
 // Serialize implements serializers.Serializer.Serialize
 // github.com/influxdata/telegraf/plugins/serializers/Serializer
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	buf, err := marshalMetric(nil, metric)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return buf, nil
+	return marshalMetric(nil, metric)
 }
 
 // SerializeBatch implements serializers.Serializer.SerializeBatch

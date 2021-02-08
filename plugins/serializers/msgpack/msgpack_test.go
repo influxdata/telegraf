@@ -2,92 +2,25 @@ package msgpack
 
 import (
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
-func isIdentical(t *testing.T, m1 telegraf.Metric, m2 *Metric) bool {
-	// Max precision in msgpack is nanoseconds
-	// https://github.com/msgpack/msgpack/blob/master/spec.md
-	if m1.Time().Truncate(time.Nanosecond) != m2.Time.time {
-		t.Logf("expected: %v, actual: %v", m1.Time().Truncate(time.Nanosecond), m2.Time.time)
-		return false
-	}
+func toTelegrafMetric(m Metric) telegraf.Metric {
+	tm, _ := metric.New(m.Name, m.Tags, m.Fields, m.Time.time)
 
-	if m1.Name() != m2.Name {
-		t.Logf("expected: %v, actual: %v", m1.Name(), m2.Name)
-		return false
-	}
-
-	if len(m1.Tags()) != len(m2.Tags) {
-		t.Logf("expected: %v, actual: %v", m1.Tags(), m2.Tags)
-		return false
-	}
-
-	for k, v := range m1.Tags() {
-		if m2.Tags[k] != v {
-			t.Logf("expected: %v, actual: %v", m1.Tags(), m2.Tags)
-			return false
-		}
-	}
-
-	if len(m1.Fields()) != len(m2.Fields) {
-		t.Logf("expected: %v, actual: %v", m1.Fields(), m2.Fields)
-		return false
-	}
-
-	for k, v := range m1.Fields() {
-		if m2.Fields[k] != v {
-			t.Logf("expected: %v, actual: %v", m1.Fields(), m2.Fields)
-			return false
-		}
-	}
-
-	return true
-}
-
-func TestSerializeMetricFloat(t *testing.T) {
-	now := time.Now()
-	tags := map[string]string{
-		"cpu": "cpu0",
-	}
-	fields := map[string]interface{}{
-		"usage_idle": float64(91.5),
-	}
-	m, err := metric.New("cpu", tags, fields, now)
-	assert.NoError(t, err)
-
-	s := Serializer{}
-	var buf []byte
-	buf, err = s.Serialize(m)
-	assert.NoError(t, err)
-
-	m2 := &Metric{}
-	left, err := m2.UnmarshalMsg(buf)
-	assert.NoError(t, err)
-
-	assert.Equal(t, len(left), 0)
-
-	assert.Equal(t, true, isIdentical(t, m, m2))
+	return tm
 }
 
 func TestSerializeMetricInt(t *testing.T) {
-	now := time.Now()
-	tags := map[string]string{
-		"cpu": "cpu0",
-	}
-	fields := map[string]interface{}{
-		"usage_idle": int64(90),
-	}
-	m, err := metric.New("cpu", tags, fields, now)
-	assert.NoError(t, err)
+	m := testutil.TestMetric(int64(90))
 
 	s := Serializer{}
 	var buf []byte
-	buf, err = s.Serialize(m)
+	buf, err := s.Serialize(m)
 	assert.NoError(t, err)
 
 	m2 := &Metric{}
@@ -96,23 +29,15 @@ func TestSerializeMetricInt(t *testing.T) {
 
 	assert.Equal(t, len(left), 0)
 
-	assert.Equal(t, true, isIdentical(t, m, m2))
+	testutil.RequireMetricEqual(t, m, toTelegrafMetric(*m2))
 }
 
 func TestSerializeMetricString(t *testing.T) {
-	now := time.Now()
-	tags := map[string]string{
-		"cpu": "cpu0",
-	}
-	fields := map[string]interface{}{
-		"usage_idle": "foobar",
-	}
-	m, err := metric.New("cpu", tags, fields, now)
-	assert.NoError(t, err)
+	m := testutil.TestMetric("foobar")
 
 	s := Serializer{}
 	var buf []byte
-	buf, err = s.Serialize(m)
+	buf, err := s.Serialize(m)
 	assert.NoError(t, err)
 
 	m2 := &Metric{}
@@ -121,24 +46,16 @@ func TestSerializeMetricString(t *testing.T) {
 
 	assert.Equal(t, len(left), 0)
 
-	assert.Equal(t, true, isIdentical(t, m, m2))
+	testutil.RequireMetricEqual(t, m, toTelegrafMetric(*m2))
 }
 
 func TestSerializeMultiFields(t *testing.T) {
-	now := time.Now()
-	tags := map[string]string{
-		"cpu": "cpu0",
-	}
-	fields := map[string]interface{}{
-		"usage_idle":  int64(90),
-		"usage_total": 8559615,
-	}
-	m, err := metric.New("cpu", tags, fields, now)
-	assert.NoError(t, err)
+	m := testutil.TestMetric(int(90))
+	m.AddField("value2", 8559615)
 
 	s := Serializer{}
 	var buf []byte
-	buf, err = s.Serialize(m)
+	buf, err := s.Serialize(m)
 	assert.NoError(t, err)
 
 	m2 := &Metric{}
@@ -147,23 +64,17 @@ func TestSerializeMultiFields(t *testing.T) {
 
 	assert.Equal(t, len(left), 0)
 
-	assert.Equal(t, true, isIdentical(t, m, m2))
+	testutil.RequireMetricEqual(t, m, toTelegrafMetric(*m2))
 }
 
 func TestSerializeMetricWithEscapes(t *testing.T) {
-	now := time.Now()
-	tags := map[string]string{
-		"cpu tag": "cpu0",
-	}
-	fields := map[string]interface{}{
-		"U,age=Idle": int64(90),
-	}
-	m, err := metric.New("My CPU", tags, fields, now)
-	assert.NoError(t, err)
+	m := testutil.TestMetric(int(90))
+	m.AddField("U,age=Idle", int64(90))
+	m.AddTag("cpu tag", "cpu0")
 
 	s := Serializer{}
 	var buf []byte
-	buf, err = s.Serialize(m)
+	buf, err := s.Serialize(m)
 	assert.NoError(t, err)
 
 	m2 := &Metric{}
@@ -172,19 +83,11 @@ func TestSerializeMetricWithEscapes(t *testing.T) {
 
 	assert.Equal(t, len(left), 0)
 
-	assert.Equal(t, true, isIdentical(t, m, m2))
+	testutil.RequireMetricEqual(t, m, toTelegrafMetric(*m2))
 }
 
 func TestSerializeMultipleMetric(t *testing.T) {
-	now := time.Now()
-	tags := map[string]string{
-		"cpu tag": "cpu0",
-	}
-	fields := map[string]interface{}{
-		"U,age=Idle": int64(90),
-	}
-	m, err := metric.New("My CPU", tags, fields, now)
-	assert.NoError(t, err)
+	m := testutil.TestMetric(int(90))
 
 	s := Serializer{}
 
@@ -204,20 +107,12 @@ func TestSerializeMultipleMetric(t *testing.T) {
 		left, err = decodeM.UnmarshalMsg(left)
 
 		assert.NoError(t, err)
-		assert.Equal(t, true, isIdentical(t, m, decodeM))
+		testutil.RequireMetricEqual(t, m, toTelegrafMetric(*decodeM))
 	}
 }
 
 func TestSerializeBatch(t *testing.T) {
-	now := time.Now()
-	tags := map[string]string{
-		"cpu tag": "cpu0",
-	}
-	fields := map[string]interface{}{
-		"U,age=Idle": int64(90),
-	}
-	m, err := metric.New("My CPU", tags, fields, now)
-	assert.NoError(t, err)
+	m := testutil.TestMetric(int(90))
 
 	metrics := []telegraf.Metric{m, m, m, m}
 
@@ -232,6 +127,6 @@ func TestSerializeBatch(t *testing.T) {
 		left, err = decodeM.UnmarshalMsg(left)
 
 		assert.NoError(t, err)
-		assert.Equal(t, true, isIdentical(t, m, decodeM))
+		testutil.RequireMetricEqual(t, m, toTelegrafMetric(*decodeM))
 	}
 }
