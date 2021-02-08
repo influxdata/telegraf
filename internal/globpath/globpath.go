@@ -113,10 +113,10 @@ func (g *GlobPath) GetRoots() []string {
 
 // hasMeta reports whether path contains any magic glob characters.
 func hasMeta(path string) bool {
-	return strings.IndexAny(path, "*?[") >= 0
+	return strings.ContainsAny(path, "*?[")
 }
 
 // hasSuperMeta reports whether path contains any super magic glob characters (**).
 func hasSuperMeta(path string) bool {
-	return strings.Index(path, "**") >= 0
+	return strings.Contains(path, "**")
 }

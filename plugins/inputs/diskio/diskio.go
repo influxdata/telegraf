@@ -68,7 +68,7 @@ func (_ *DiskIO) SampleConfig() string {
 
 // hasMeta reports whether s contains any special glob characters.
 func hasMeta(s string) bool {
-	return strings.IndexAny(s, "*?[") >= 0
+	return strings.ContainsAny(s, "*?[")
 }
 
 func (s *DiskIO) init() error {
