@@ -70,7 +70,7 @@ func convertToInt64(line []string) []int64 {
 		if err != nil {
 			if numError, ok := err.(*strconv.NumError); ok {
 				if numError.Err == strconv.ErrRange {
-					log.Fatalf("ErrRange: %v [%v] -> [%v]\n", line, l, val)
+					log.Fatalf("ErrRange: line:[%v] raw:[%v] -> parsed:[%v]\n", line, l, val)
 				}
 			}
 		}
