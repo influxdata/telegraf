@@ -115,7 +115,5 @@ func convert(in interface{}) (float64, bool) {
 }
 
 func init() {
-	aggregators.Add("minmax", func() telegraf.Aggregator {
-		return NewMinMax()
-	})
+	aggregators.Add("minmax", NewMinMax)
 }

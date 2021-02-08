@@ -93,7 +93,5 @@ func (vc *ValueCounter) Reset() {
 }
 
 func init() {
-	aggregators.Add("valuecounter", func() telegraf.Aggregator {
-		return NewValueCounter()
-	})
+	aggregators.Add("valuecounter", NewValueCounter)
 }
