@@ -373,11 +373,11 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 			continue
 		}
 
-		if choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) && len(line) > 4 {
+		if len(line) > 4 && choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) {
 			device = line[4]
 			export = line[1]
 			skip = false
-		} else if (choice.Contains("(nfs)", line) || choice.Contains("(nfs4)", line)) && len(line) > 5 {
+		} else if len(line) > 5 && (choice.Contains("(nfs)", line) || choice.Contains("(nfs4)", line)) {
 			version = strings.Split(line[5], "/")[1]
 		}
 
