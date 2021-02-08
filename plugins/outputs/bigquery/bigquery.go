@@ -113,7 +113,6 @@ func (b *BigQuery) Write(metrics []telegraf.Metric) error {
 		go func(k string, v []bigquery.ValueSaver) {
 			defer wg.Done()
 			b.insertToTable(k, v)
-			wg.Done()
 		}(k, v)
 	}
 
