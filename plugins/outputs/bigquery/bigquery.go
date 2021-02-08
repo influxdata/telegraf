@@ -110,7 +110,10 @@ func (b *BigQuery) Write(metrics []telegraf.Metric) error {
 
 	for k, v := range groupedMetrics {
 		wg.Add(1)
-		go b.insertToTable(k, v, &wg)
+		go func(k string, v []bigquery.ValueSaver) {
+			b.insertToTable(k, v)
+			wg.Done()
+		}(k, v)
 	}
 
 	wg.Wait()
@@ -197,10 +200,7 @@ func valueToBqType(v interface{}) bigquery.FieldType {
 	}
 }
 
-func (b *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSaver, wg *sync.WaitGroup) {
-
-	defer wg.Done()
-
+func (b *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSaver) {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, b.Timeout.Duration)
 	defer cancel()
