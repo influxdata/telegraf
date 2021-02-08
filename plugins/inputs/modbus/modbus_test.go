@@ -102,6 +102,7 @@ func TestCoils(t *testing.T) {
 						Address: []uint16{ct.address},
 					},
 				},
+				Log: testutil.Logger{},
 			}
 
 			err = modbus.Init()
@@ -640,6 +641,7 @@ func TestHoldingRegisters(t *testing.T) {
 						Address:   hrt.address,
 					},
 				},
+				Log: testutil.Logger{},
 			}
 
 			err = modbus.Init()
@@ -694,6 +696,7 @@ func TestRetrySuccessful(t *testing.T) {
 					Address: []uint16{0},
 				},
 			},
+			Log: testutil.Logger{},
 		}
 
 		err = modbus.Init()
@@ -739,6 +742,7 @@ func TestRetryFail(t *testing.T) {
 					Address: []uint16{0},
 				},
 			},
+			Log: testutil.Logger{},
 		}
 
 		err = modbus.Init()
@@ -772,6 +776,7 @@ func TestRetryFail(t *testing.T) {
 					Address: []uint16{0},
 				},
 			},
+			Log: testutil.Logger{},
 		}
 
 		err = modbus.Init()

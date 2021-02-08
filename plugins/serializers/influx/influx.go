@@ -302,13 +302,11 @@ func (s *Serializer) appendFieldValue(buf []byte, value interface{}) ([]byte, er
 	case uint64:
 		if s.fieldTypeSupport&UintSupport != 0 {
 			return appendUintField(buf, v), nil
-		} else {
-			if v <= uint64(MaxInt64) {
-				return appendIntField(buf, int64(v)), nil
-			} else {
-				return appendIntField(buf, int64(MaxInt64)), nil
-			}
 		}
+		if v <= uint64(MaxInt64) {
+			return appendIntField(buf, int64(v)), nil
+		}
+		return appendIntField(buf, MaxInt64), nil
 	case int64:
 		return appendIntField(buf, v), nil
 	case float64:

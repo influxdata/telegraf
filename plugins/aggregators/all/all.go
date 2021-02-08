@@ -1,6 +1,7 @@
 package all
 
 import (
+	//Blank imports for plugins to register themselves
 	_ "github.com/influxdata/telegraf/plugins/aggregators/basicstats"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/final"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/histogram"

@@ -72,9 +72,8 @@ func (z *Zookeeper) dial(ctx context.Context, addr string) (net.Conn, error) {
 			dialer.Deadline = deadline
 		}
 		return tls.DialWithDialer(&dialer, "tcp", addr, z.tlsConfig)
-	} else {
-		return dialer.DialContext(ctx, "tcp", addr)
 	}
+	return dialer.DialContext(ctx, "tcp", addr)
 }
 
 // Gather reads stats from all configured servers accumulates stats
@@ -132,7 +131,7 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 
 	service := strings.Split(address, ":")
 	if len(service) != 2 {
-		return fmt.Errorf("Invalid service address: %s", address)
+		return fmt.Errorf("invalid service address: %s", address)
 	}
 
 	fields := make(map[string]interface{})

@@ -646,9 +646,8 @@ func (m *Mysql) parseGlobalVariables(key string, value sql.RawBytes) (interface{
 			return v, nil
 		}
 		return v, fmt.Errorf("could not parse value: %q", string(value))
-	} else {
-		return v2.ConvertGlobalVariables(key, value)
 	}
+	return v2.ConvertGlobalVariables(key, value)
 }
 
 // gatherSlaveStatuses can be used to get replication analytics
@@ -782,42 +781,42 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			case "Queries":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
 				} else {
 					fields["queries"] = i
 				}
 			case "Questions":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
 				} else {
 					fields["questions"] = i
 				}
 			case "Slow_queries":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
 				} else {
 					fields["slow_queries"] = i
 				}
 			case "Connections":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
 				} else {
 					fields["connections"] = i
 				}
 			case "Syncs":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
 				} else {
 					fields["syncs"] = i
 				}
 			case "Uptime":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
 				} else {
 					fields["uptime"] = i
 				}
@@ -965,7 +964,7 @@ func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegr
 			case *string:
 				fields[cols[i]] = *v
 			default:
-				return fmt.Errorf("Unknown column type - %T", v)
+				return fmt.Errorf("unknown column type - %T", v)
 			}
 		}
 		acc.AddFields("mysql_user_stats", fields, tags)
@@ -1129,7 +1128,7 @@ func getColSlice(l int) ([]interface{}, error) {
 		}, nil
 	}
 
-	return nil, fmt.Errorf("Not Supported - %d columns", l)
+	return nil, fmt.Errorf("not Supported - %d columns", l)
 }
 
 // gatherPerfTableIOWaits can be used to get total count and time
@@ -1855,9 +1854,8 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, bool) {
 	if m.MetricVersion < 2 {
 		return v1.ParseValue(value)
-	} else {
-		return parseValue(value)
 	}
+	return parseValue(value)
 }
 
 // parseValue can be used to convert values such as "ON","OFF","Yes","No" to 0,1

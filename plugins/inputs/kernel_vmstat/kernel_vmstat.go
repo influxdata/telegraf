@@ -56,7 +56,7 @@ func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {
 
 func (k *KernelVmstat) getProcVmstat() ([]byte, error) {
 	if _, err := os.Stat(k.statFile); os.IsNotExist(err) {
-		return nil, fmt.Errorf("kernel_vmstat: %s does not exist!", k.statFile)
+		return nil, fmt.Errorf("kernel_vmstat: %s does not exist", k.statFile)
 	} else if err != nil {
 		return nil, err
 	}
