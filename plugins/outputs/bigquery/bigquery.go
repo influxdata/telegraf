@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"time"
 
 	"cloud.google.com/go/bigquery"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -18,6 +20,8 @@ const (
 	defaultOffSetKey   = "offset-key.json"
 	timeStampFieldName = "timestamp"
 )
+
+var defaultTimeout = 5 * time.Second
 
 const sampleConfig = `	
   ## Credentials File
@@ -27,12 +31,17 @@ const sampleConfig = `
 
   ## The namespace for the metric descriptor
   dataset = "telegraf"
+
+  ## Timeout for BigQuery operations.  Minimum timeout is "1s".
+  # timeout = "5s"
 `
 
 type BigQuery struct {
 	CredentialsFile string `toml:"credentials_file"`
 	Project         string `toml:"project"`
 	Dataset         string `toml:"dataset"`
+
+	Timeout internal.Duration `toml:"timeout"`
 
 	Log telegraf.Logger
 
@@ -50,6 +59,8 @@ func (s *BigQuery) Description() string {
 }
 
 func (b *BigQuery) Connect() error {
+	b.setUpTimeout()
+
 	if b.Project == "" {
 		return fmt.Errorf("Project is a required field for BigQuery output")
 	}
@@ -65,10 +76,18 @@ func (b *BigQuery) Connect() error {
 	return nil
 }
 
+func (b *BigQuery) setUpTimeout() {
+	if b.Timeout.Duration < 1*time.Second {
+		b.Timeout.Duration = defaultTimeout
+	}
+}
+
 func (b *BigQuery) setUpDefaultClient() error {
 	var credentialsOption option.ClientOption
 
 	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, b.Timeout.Duration)
+	defer cancel()
 
 	if b.CredentialsFile != "" {
 		credentialsOption = option.WithCredentialsFile(b.CredentialsFile)
@@ -187,6 +206,8 @@ func (b *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSave
 	defer wg.Done()
 
 	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, b.Timeout.Duration)
+	defer cancel()
 
 	table := b.client.DatasetInProject(b.Project, b.Dataset).Table(metricName)
 	inserter := table.Inserter()
@@ -194,7 +215,6 @@ func (b *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSave
 	if err := inserter.Put(ctx, metrics); err != nil {
 		b.Log.Errorf("inserting metric %q failed: %v", metricName, err)
 	}
-
 }
 
 func (b *BigQuery) tableForMetric(metricName string) *bigquery.Table {
