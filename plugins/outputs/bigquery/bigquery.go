@@ -26,7 +26,7 @@ var defaultTimeout = 5 * time.Second
 const sampleConfig = `	
   ## Credentials File
   credentials_file = "/path/to/service/account/key.json"
-  ## GCP Project
+  ## Google Cloud Platform Project
   project = "my-gcp-project"
 
   ## The namespace for the metric descriptor
@@ -95,7 +95,7 @@ func (b *BigQuery) setUpDefaultClient() error {
 		creds, err := google.FindDefaultCredentials(ctx)
 		if err != nil {
 			return fmt.Errorf(
-				"unable to find GCP Application Default Credentials: %v."+
+				"unable to find Google Cloud Platform Application Default Credentials: %v."+
 					"Either set ADC or provide CredentialsFile config", err)
 		}
 		credentialsOption = option.WithCredentials(creds)
