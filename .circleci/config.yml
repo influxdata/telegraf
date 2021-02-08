@@ -150,7 +150,7 @@ jobs:
     steps:
       - package:
           nightly: true
-  windows-signing:
+  package-sign-windows:
     executor:
         name: win/default
         shell: powershell.exe
@@ -255,7 +255,7 @@ workflows:
               only: /.*/
             branches:
               ignore: /.*/
-      - 'windows-signing':
+      - 'package-sign-windows':
           requires:
             - 'release'
   nightly:
