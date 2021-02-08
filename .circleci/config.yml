@@ -160,7 +160,7 @@ jobs:
           name: "Sign Windows Executables"
           shell: powershell.exe
           command: | 
-              sign-windows.ps1
+              ./sign-windows.ps1
 
       - persist_to_workspace:
           root: './build/dist'
