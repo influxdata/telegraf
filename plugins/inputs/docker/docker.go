@@ -132,7 +132,7 @@ var sampleConfig = `
   ## Specifies for which classes a per-device metric should be issued
   ## Possible values are 'cpu' (cpu0, cpu1, ...), 'blkio' (8:0, 8:1, ...) and 'network' (eth0, eth1, ...)
   ## Please note that this setting has no effect if 'perdevice' is set to 'true'
-  perdevice_include = ["cpu"]
+  # perdevice_include = ["cpu"]
 
   ## Whether to report for each container total blkio and network stats or not.
   ## Usage of this setting is discouraged since it will be deprecated in favor of 'total_include'.
@@ -144,7 +144,7 @@ var sampleConfig = `
   ## Possible values are 'cpu', 'blkio' and 'network'  
   ## Total 'cpu' is reported directly by Docker daemon, and 'network' and 'blkio' totals are aggregated by this plugin.
   ## Please note that this setting has no effect if 'total' is set to 'false'
-  total_include = ["cpu", "blkio", "network"]
+  # total_include = ["cpu", "blkio", "network"]
 
   ## Which environment variables should we use as a tag
   ##tag_env = ["JAVA_HOME", "HEAP_SIZE"]
@@ -1020,12 +1020,14 @@ func (d *Docker) getNewClient() (Client, error) {
 func init() {
 	inputs.Add("docker", func() telegraf.Input {
 		return &Docker{
-			PerDevice:      true,
-			Timeout:        internal.Duration{Duration: time.Second * 5},
-			Endpoint:       defaultEndpoint,
-			newEnvClient:   NewEnvClient,
-			newClient:      NewClient,
-			filtersCreated: false,
+			PerDevice:        true,
+			PerDeviceInclude: []string{"cpu"},
+			TotalInclude:     []string{"cpu", "blkio", "network"},
+			Timeout:          internal.Duration{Duration: time.Second * 5},
+			Endpoint:         defaultEndpoint,
+			newEnvClient:     NewEnvClient,
+			newClient:        NewClient,
+			filtersCreated:   false,
 		}
 	})
 }
