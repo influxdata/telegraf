@@ -67,9 +67,9 @@ commands:
           path: './build/dist'
           destination: 'build/dist'
       - persist_to_workspace:
-          root: './build/dist'
+          root: './build'
           paths:
-            - '*'
+            - 'dist'
 jobs:
   deps:
     executor: go-1_15
@@ -84,6 +84,10 @@ jobs:
           key: go-mod-v1-{{ checksum "go.sum" }}
           paths:
             - '/go/pkg/mod'
+      - persist_to_workspace:
+          root: '/go'
+          paths:
+            - '*'
   macdeps:
     executor: mac
     steps:
@@ -101,7 +105,13 @@ jobs:
             - '/usr/local/Cellar/go'
             - '/usr/local/bin/go'
             - '/usr/local/bin/gofmt'
-
+      - persist_to_workspace:
+          root: '/'
+          paths:
+            - 'usr/local/bin/go'
+            - 'usr/local/Cellar/go'
+            - 'usr/local/bin/gofmt'
+            - 'Users/distiller/go'
   test-go-1_14:
     executor: go-1_14
     steps:
@@ -145,7 +155,7 @@ jobs:
     steps:
       - checkout
       - attach_workspace:
-          at: '/build/dist'
+          at: '/build'
       - run:
           name: "Sign Windows Executables"
           shell: powershell.exe
@@ -164,7 +174,7 @@ jobs:
             # Replace with circleCI artifact path.
             $artifactDirectory = "./build/dist"
             $extractDirectory = $artifactDirectory + "\" + "extracted"
-            foreach ($file in get-ChildItem $artifactDirectory -recurse | where {$_.name -like "*windows*"} | select name) 
+            foreach ($file in get-ChildItem $artifactDirectory | where {$_.name -like "*windows*"} | select name) 
             {
                 $artifact = $artifactDirectory + "\" + $file.Name
                 Expand-Archive -LiteralPath $artifact -DestinationPath $extractDirectory -Force
@@ -176,10 +186,6 @@ jobs:
                 Remove-Item $extractDirectory -Force -Recurse
             }
             Remove-Item $finalFileName -Force
-      - persist_to_workspace:
-          root: './build/dist'
-          paths:
-            - '*'
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
