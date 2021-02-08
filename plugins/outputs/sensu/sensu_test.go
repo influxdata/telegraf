@@ -30,7 +30,7 @@ func TestResolveEventEndpointUrl(t *testing.T) {
 			name: "agent event endpoint",
 			plugin: &Sensu{
 				AgentApiUrl: &agentApiUrl,
-				Log: testutil.Logger{},
+				Log:         testutil.Logger{},
 			},
 			expectedEndpointUrl: "http://127.0.0.1:3031/events",
 		},
@@ -39,7 +39,7 @@ func TestResolveEventEndpointUrl(t *testing.T) {
 			plugin: &Sensu{
 				AgentApiUrl:   &agentApiUrl,
 				BackendApiUrl: &backendApiUrl,
-				Log: testutil.Logger{},
+				Log:           testutil.Logger{},
 			},
 			expectedEndpointUrl: "http://127.0.0.1:8080/api/core/v2/namespaces/default/events",
 		},
@@ -59,7 +59,7 @@ func TestResolveEventEndpointUrl(t *testing.T) {
 			name: "agent event endpoint due to empty AgentApiUrl",
 			plugin: &Sensu{
 				AgentApiUrl: &emptyString,
-				Log: testutil.Logger{},
+				Log:         testutil.Logger{},
 			},
 			expectedEndpointUrl: "http://127.0.0.1:3031/events",
 		},
@@ -105,7 +105,7 @@ func TestConnectAndWrite(t *testing.T) {
 			Handlers: []string{testHandler},
 		},
 		Tags: map[string]string{testTagName: testTagValue},
-		Log: testutil.Logger{},
+		Log:  testutil.Logger{},
 	}
 
 	t.Run("connect", func(t *testing.T) {
