@@ -8,11 +8,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
-	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	corev2 "github.com/sensu/sensu-go/api/core/v2"
 	"github.com/stretchr/testify/require"
 )
@@ -31,6 +30,7 @@ func TestResolveEventEndpointUrl(t *testing.T) {
 			name: "agent event endpoint",
 			plugin: &Sensu{
 				AgentApiUrl: &agentApiUrl,
+				Log: testutil.Logger{},
 			},
 			expectedEndpointUrl: "http://127.0.0.1:3031/events",
 		},
@@ -39,6 +39,7 @@ func TestResolveEventEndpointUrl(t *testing.T) {
 			plugin: &Sensu{
 				AgentApiUrl:   &agentApiUrl,
 				BackendApiUrl: &backendApiUrl,
+				Log: testutil.Logger{},
 			},
 			expectedEndpointUrl: "http://127.0.0.1:8080/api/core/v2/namespaces/default/events",
 		},
@@ -50,6 +51,7 @@ func TestResolveEventEndpointUrl(t *testing.T) {
 				Entity: &SensuEntity{
 					Namespace: &entityNamespace,
 				},
+				Log: testutil.Logger{},
 			},
 			expectedEndpointUrl: "http://127.0.0.1:8080/api/core/v2/namespaces/test-namespace/events",
 		},
@@ -57,6 +59,7 @@ func TestResolveEventEndpointUrl(t *testing.T) {
 			name: "agent event endpoint due to empty AgentApiUrl",
 			plugin: &Sensu{
 				AgentApiUrl: &emptyString,
+				Log: testutil.Logger{},
 			},
 			expectedEndpointUrl: "http://127.0.0.1:3031/events",
 		},
@@ -68,22 +71,6 @@ func TestResolveEventEndpointUrl(t *testing.T) {
 			require.Equal(t, tt.expectedEndpointUrl, tt.plugin.EndpointUrl)
 		})
 	}
-}
-
-// Used to generate a test metric for the TestConnectAndWrite function
-func getTestMetric() telegraf.Metric {
-	m, err := metric.New(
-		"cpu",
-		map[string]string{},
-		map[string]interface{}{
-			"value": 42.0,
-		},
-		time.Unix(0, 0),
-	)
-	if err != nil {
-		panic(err)
-	}
-	return m
 }
 
 func TestConnectAndWrite(t *testing.T) {
@@ -100,7 +87,7 @@ func TestConnectAndWrite(t *testing.T) {
 	testTagValue := "myTagValue"
 	expectedAuthHeader := fmt.Sprintf("Key %s", testApiKey)
 	expectedUrl := fmt.Sprintf("/api/core/v2/namespaces/%s/events", testNamespace)
-	expectedPointName := "cpu.value"
+	expectedPointName := "cpu"
 	expectedPointValue := float64(42)
 
 	plugin := &Sensu{
@@ -118,6 +105,7 @@ func TestConnectAndWrite(t *testing.T) {
 			Handlers: []string{testHandler},
 		},
 		Tags: map[string]string{testTagName: testTagValue},
+		Log: testutil.Logger{},
 	}
 
 	t.Run("connect", func(t *testing.T) {
@@ -143,7 +131,7 @@ func TestConnectAndWrite(t *testing.T) {
 			pointFound := false
 			tagFound := false
 			for _, p := range receivedEvent.Metrics.Points {
-				if p.Name == expectedPointName && p.Value == expectedPointValue {
+				if p.Name == expectedPointName+".value" && p.Value == expectedPointValue {
 					pointFound = true
 					require.NotEmpty(t, p.Tags)
 					for _, t := range p.Tags {
@@ -157,7 +145,7 @@ func TestConnectAndWrite(t *testing.T) {
 			require.Equal(t, true, tagFound)
 			w.WriteHeader(http.StatusCreated)
 		})
-		err := plugin.Write([]telegraf.Metric{getTestMetric()})
+		err := plugin.Write([]telegraf.Metric{testutil.TestMetric(expectedPointValue, expectedPointName)})
 		require.NoError(t, err)
 	})
 }
