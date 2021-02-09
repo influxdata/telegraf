@@ -1392,7 +1392,7 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 	// TODO: support FieldPass/FieldDrop on outputs
 
 	c.getFieldDuration(tbl, "flush_interval", &oc.FlushInterval)
-	c.getFieldDuration(tbl, "flush_jitter", oc.FlushJitter)
+	c.getFieldDuration(tbl, "flush_jitter", &oc.FlushJitter)
 
 	c.getFieldInt(tbl, "metric_buffer_limit", &oc.MetricBufferLimit)
 	c.getFieldInt(tbl, "metric_batch_size", &oc.MetricBatchSize)
