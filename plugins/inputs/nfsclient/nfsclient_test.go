@@ -2,26 +2,20 @@ package nfsclient
 
 import (
 	"bufio"
-	"fmt"
 	"github.com/influxdata/telegraf/testutil"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 )
 
-func readMountstatsFile() string {
+func getMountStatsPath() string {
+
 	path := "./testdata/mountstats"
 	if os.Getenv("MOUNT_PROC") != "" {
 		path = os.Getenv("MOUNT_PROC")
 	}
 
-	bytes, err := ioutil.ReadFile(path)
-
-	if err != nil {
-		fmt.Print(err)
-	}
-	return string(bytes)
+	return path
 }
 
 func TestNFSClientParsev3(t *testing.T) {
@@ -34,14 +28,14 @@ func TestNFSClientParsev3(t *testing.T) {
 	nfsclient.parseStat("1.2.3.4:/storage/NFS", "/NFS", "3", data, true, nfs3Ops, nfs4Ops, &acc)
 
 	fields_ops := map[string]interface{}{
-		"READLINK_ops":           int64(500),
-		"READLINK_trans":         int64(501),
-		"READLINK_timeouts":      int64(502),
-		"READLINK_bytes_sent":    int64(503),
-		"READLINK_bytes_recv":    int64(504),
-		"READLINK_queue_time":    int64(505),
-		"READLINK_response_time": int64(506),
-		"READLINK_total_time":    int64(507),
+		"ops":           int64(500),
+		"trans":         int64(501),
+		"timeouts":      int64(502),
+		"bytes_sent":    int64(503),
+		"bytes_recv":    int64(504),
+		"queue_time":    int64(505),
+		"response_time": int64(506),
+		"total_time":    int64(507),
 	}
 	acc.AssertContainsFields(t, "nfs_ops", fields_ops)
 }
@@ -56,14 +50,14 @@ func TestNFSClientParsev4(t *testing.T) {
 	nfsclient.parseStat("2.2.2.2:/nfsdata/", "/mnt", "4", data, true, nfs3Ops, nfs4Ops, &acc)
 
 	fields_ops := map[string]interface{}{
-		"DESTROY_SESSION_ops":           int64(500),
-		"DESTROY_SESSION_trans":         int64(501),
-		"DESTROY_SESSION_timeouts":      int64(502),
-		"DESTROY_SESSION_bytes_sent":    int64(503),
-		"DESTROY_SESSION_bytes_recv":    int64(504),
-		"DESTROY_SESSION_queue_time":    int64(505),
-		"DESTROY_SESSION_response_time": int64(506),
-		"DESTROY_SESSION_total_time":    int64(507),
+		"ops":           int64(500),
+		"trans":         int64(501),
+		"timeouts":      int64(502),
+		"bytes_sent":    int64(503),
+		"bytes_recv":    int64(504),
+		"queue_time":    int64(505),
+		"response_time": int64(506),
+		"total_time":    int64(507),
 	}
 	acc.AssertContainsFields(t, "nfs_ops", fields_ops)
 }
@@ -72,32 +66,45 @@ func TestNFSClientProcessStat(t *testing.T) {
 	var acc testutil.Accumulator
 
 	nfsclient := NFSClient{}
-	mountstatstext := readMountstatsFile()
+	nfsclient.Fullstat = false
 
-	scanner := bufio.NewScanner(strings.NewReader(mountstatstext))
+	file, _ := os.Open(getMountStatsPath())
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
 
 	nfsclient.processText(scanner, &acc)
 
 	fields_readstat := map[string]interface{}{
-		"read_ops":     int64(600),
-		"read_retrans": int64(1),
-		"read_bytes":   int64(1207),
-		"read_rtt":     int64(606),
-		"read_exe":     int64(607),
+		"ops":     int64(600),
+		"retrans": int64(1),
+		"bytes":   int64(1207),
+		"rtt":     int64(606),
+		"exe":     int64(607),
 	}
-	fields_writestat := map[string]interface{}{
-		"write_ops":     int64(700),
-		"write_retrans": int64(1),
-		"write_bytes":   int64(1407),
-		"write_rtt":     int64(706),
-		"write_exe":     int64(707),
-	}
-	tags := map[string]string{
+
+	read_tags := map[string]string{
 		"serverexport": "1.2.3.4:/storage/NFS",
 		"mountpoint":   "/NFS",
+		"operation":    "READ",
 	}
-	acc.AssertContainsTaggedFields(t, "nfsstat_read", fields_readstat, tags)
-	acc.AssertContainsTaggedFields(t, "nfsstat_write", fields_writestat, tags)
+
+	acc.AssertContainsTaggedFields(t, "nfsstat", fields_readstat, read_tags)
+
+	fields_writestat := map[string]interface{}{
+		"ops":     int64(700),
+		"retrans": int64(1),
+		"bytes":   int64(1407),
+		"rtt":     int64(706),
+		"exe":     int64(707),
+	}
+
+	write_tags := map[string]string{
+		"serverexport": "1.2.3.4:/storage/NFS",
+		"mountpoint":   "/NFS",
+		"operation":    "WRITE",
+	}
+	acc.AssertContainsTaggedFields(t, "nfsstat", fields_writestat, write_tags)
 }
 
 func TestNFSClientProcessFull(t *testing.T) {
@@ -105,8 +112,11 @@ func TestNFSClientProcessFull(t *testing.T) {
 
 	nfsclient := NFSClient{}
 	nfsclient.Fullstat = true
-	mountstatstext := readMountstatsFile()
-	scanner := bufio.NewScanner(strings.NewReader(mountstatstext))
+
+	file, _ := os.Open(getMountStatsPath())
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
 
 	nfsclient.processText(scanner, &acc)
 
