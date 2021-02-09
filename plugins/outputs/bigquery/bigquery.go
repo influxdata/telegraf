@@ -21,7 +21,7 @@ const (
 	timeStampFieldName = "timestamp"
 )
 
-var defaultTimeout = internal.Duration{Duration: time.Duration(time.Second * 5)}
+var defaultTimeout = internal.Duration{Duration: 5 * time.Second}
 
 const sampleConfig = `	
   ## Credentials File
