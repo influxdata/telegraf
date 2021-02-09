@@ -7,6 +7,7 @@ import (
 	"net"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -176,14 +177,9 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 
 	pinger.Source = p.sourceAddress
 	pinger.Interval = p.calcInterval
-	pinger.Timeout = p.calcTimeout
 
 	if p.Deadline > 0 {
-		// If deadline is set ping exits regardless of how many packets have been sent or received
-		timer := time.AfterFunc(time.Duration(p.Deadline)*time.Second, func() {
-			pinger.Stop()
-		})
-		defer timer.Stop()
+		pinger.Timeout = time.Duration(p.Deadline) * time.Second
 	}
 
 	// Get Time to live (TTL) of first response, matching original implementation
@@ -240,6 +236,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		return
 	}
 
+	sort.Sort(durationSlice(stats.Rtts))
 	for _, perc := range p.Percentiles {
 		var value = percentile(durationSlice(stats.Rtts), perc)
 		var field = fmt.Sprintf("percentile%v_ms", perc)
