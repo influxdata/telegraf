@@ -91,7 +91,6 @@ func convertToInt64(line []string) []int64 {
 }
 
 func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, fullstat bool, nfs3Ops map[string]bool, nfs4Ops map[string]bool, acc telegraf.Accumulator) error {
-
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
 	nline := convertToInt64(line)
 
