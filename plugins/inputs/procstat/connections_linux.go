@@ -184,44 +184,51 @@ func mapInodesToPid() (ret map[uint32][]InodeInfo) {
 	}
 
 	for _, pidStr := range dirContents {
-		pid, err := strconv.ParseUint(pidStr, 10, 32)
-		if err != nil {
-			// exclude files with a not numeric name. We only want to access pid directories
-			continue
-		}
-
-		pidDir, err := os.Open("/proc/" + pidStr + "/fd/")
-		if err != nil {
-			// ignore errors:
-			//   - missing directory, pid has already finished
-			//   - permission denied
-			continue
-		}
-
-		fds, err := pidDir.Readdirnames(0)
-		if err != nil {
-			continue
-		}
-
-		for _, fd := range fds {
-			link, err := os.Readlink("/proc/" + pidStr + "/fd/" + fd)
-			if err != nil {
-				continue
-			}
-
-			var inode uint32
-
-			_, err = fmt.Sscanf(link, "socket:[%d]", &inode)
-			if err != nil {
-				// this inode is not a socket
-				continue
-			}
-
-			ret[inode] = append(ret[inode], InodeInfo{
-				pid: uint32(pid),
-			})
-		}
+		readPidFDs(pidStr, ret)
 	}
 
 	return ret
+}
+
+// readPidFDs given a PID, add to the ret map info about its inodes
+func readPidFDs(pidStr string, ret map[uint32][]InodeInfo) {
+	pid, err := strconv.ParseUint(pidStr, 10, 32)
+	if err != nil {
+		// exclude files with a not numeric name. We only want to access pid directories
+		return
+	}
+
+	pidDir, err := os.Open("/proc/" + pidStr + "/fd/")
+	if err != nil {
+		// ignore errors:
+		//   - missing directory, pid has already finished
+		//   - permission denied
+		return
+	}
+	defer pidDir.Close()
+
+	fds, err := pidDir.Readdirnames(0)
+	if err != nil {
+		return
+	}
+
+	for _, fd := range fds {
+		link, err := os.Readlink("/proc/" + pidStr + "/fd/" + fd)
+		if err != nil {
+			continue
+		}
+
+		var inode uint32
+
+		_, err = fmt.Sscanf(link, "socket:[%d]", &inode)
+		if err != nil {
+			// this inode is not a socket
+			continue
+		}
+
+		ret[inode] = append(ret[inode], InodeInfo{
+			pid: uint32(pid),
+		})
+	}
+
 }
