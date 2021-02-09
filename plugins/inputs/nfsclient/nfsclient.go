@@ -59,12 +59,23 @@ func (n *NFSClient) Description() string {
 }
 
 func convertToInt64(line []string) []int64 {
+	/* A "line" of input data (a pre-split array of strings) is
+	   processed one field at a time.  Each field is converted to
+	   an int64 value, and appened to an array of return values.
+	   On an error, check for ErrRange, and throw a fatal error
+	   if found.  This situation indicates a pretty major issue in
+	   the /proc/self/mountstats file, and returning faulty data
+	   is worse than no data.  Other errors are ignored, and append
+	   whatever we got in the first place (probably 0).
+	   Yes, this is ugly. */
+
 	var nline []int64
 
 	if len(line) < 2 {
 		return nline
 	}
 
+	// Skip the first field; it's handled specially as the "first" variable"
 	for _, l := range line[1:] {
 		val, err := strconv.ParseInt(l, 10, 64)
 		if err != nil {
