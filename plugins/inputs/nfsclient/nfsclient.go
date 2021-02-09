@@ -228,18 +228,9 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 			}
 		}
 
-		switch version {
-		case "3":
+		if (version == "3" && nfs3Ops[first]) || (version == "4" && nfs4Ops[first]) {
 			tags["operation"] = first
-			if nfs3Ops[first] && (len(nline) <= len(nfsopFields)) {
-				for i, t := range nline {
-					fields[nfsopFields[i]] = t
-				}
-				acc.AddFields("nfs_ops", fields, tags)
-			}
-		case "4":
-			tags["operation"] = first
-			if nfs4Ops[first] && (len(nline) <= len(nfsopFields)) {
+			if len(nline) <= len(nfsopFields) {
 				for i, t := range nline {
 					fields[nfsopFields[i]] = t
 				}
