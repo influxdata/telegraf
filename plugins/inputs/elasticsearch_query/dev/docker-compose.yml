@@ -1,0 +1,11 @@
+version: "3"
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.0.0
+    environment:
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+      # - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
