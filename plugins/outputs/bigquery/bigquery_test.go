@@ -23,7 +23,7 @@ const (
 )
 
 var testingHost string
-var testDuration = internal.Duration{Duration: time.Duration(time.Second * 5)}
+var testDuration = internal.Duration{Duration: 5 * time.Second}
 
 func TestMain(t *testing.M) {
 	srv := localBigQueryServer(t)
