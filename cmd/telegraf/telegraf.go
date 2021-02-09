@@ -161,6 +161,7 @@ func runAgent(ctx context.Context,
 
 	runningAgent, err = agent.NewAgent(c)
 	if err != nil {
+		runningAgent = nil
 		return err
 	}
 
