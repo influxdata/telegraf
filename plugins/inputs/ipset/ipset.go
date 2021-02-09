@@ -29,12 +29,12 @@ const measurement = "ipset"
 var defaultTimeout = internal.Duration{Duration: time.Second}
 
 // Description returns a short description of the plugin
-func (ipset *Ipset) Description() string {
+func (i *Ipset) Description() string {
 	return "Gather packets and bytes counters from Linux ipsets"
 }
 
 // SampleConfig returns sample configuration options.
-func (ipset *Ipset) SampleConfig() string {
+func (i *Ipset) SampleConfig() string {
 	return `
   ## By default, we only show sets which have already matched at least 1 packet.
   ## set include_unmatched_sets = true to gather them all.
@@ -46,8 +46,8 @@ func (ipset *Ipset) SampleConfig() string {
 `
 }
 
-func (ipset *Ipset) Gather(acc telegraf.Accumulator) error {
-	out, e := ipset.lister(ipset.Timeout, ipset.UseSudo)
+func (i *Ipset) Gather(acc telegraf.Accumulator) error {
+	out, e := i.lister(i.Timeout, i.UseSudo)
 	if e != nil {
 		acc.AddError(e)
 	}
@@ -67,7 +67,7 @@ func (ipset *Ipset) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("error parsing line (expected at least 7 fields): %s", line))
 			continue
 		}
-		if data[0] == "add" && (data[4] != "0" || ipset.IncludeUnmatchedSets) {
+		if data[0] == "add" && (data[4] != "0" || i.IncludeUnmatchedSets) {
 			tags := map[string]string{
 				"set":  data[1],
 				"rule": data[2],

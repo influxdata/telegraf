@@ -110,17 +110,17 @@ func NewRunningOutput(
 	return ro
 }
 
-func (ro *RunningOutput) LogName() string {
-	return logName("outputs", ro.Config.Name, ro.Config.Alias)
+func (r *RunningOutput) LogName() string {
+	return logName("outputs", r.Config.Name, r.Config.Alias)
 }
 
-func (ro *RunningOutput) metricFiltered(metric telegraf.Metric) {
-	ro.MetricsFiltered.Incr(1)
+func (r *RunningOutput) metricFiltered(metric telegraf.Metric) {
+	r.MetricsFiltered.Incr(1)
 	metric.Drop()
 }
 
-func (ro *RunningOutput) Init() error {
-	if p, ok := ro.Output.(telegraf.Initializer); ok {
+func (r *RunningOutput) Init() error {
+	if p, ok := r.Output.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {
 			return err
@@ -133,45 +133,45 @@ func (ro *RunningOutput) Init() error {
 // AddMetric adds a metric to the output.
 //
 // Takes ownership of metric
-func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
-	if ok := ro.Config.Filter.Select(metric); !ok {
-		ro.metricFiltered(metric)
+func (r *RunningOutput) AddMetric(metric telegraf.Metric) {
+	if ok := r.Config.Filter.Select(metric); !ok {
+		r.metricFiltered(metric)
 		return
 	}
 
-	ro.Config.Filter.Modify(metric)
+	r.Config.Filter.Modify(metric)
 	if len(metric.FieldList()) == 0 {
-		ro.metricFiltered(metric)
+		r.metricFiltered(metric)
 		return
 	}
 
-	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
-		ro.aggMutex.Lock()
+	if output, ok := r.Output.(telegraf.AggregatingOutput); ok {
+		r.aggMutex.Lock()
 		output.Add(metric)
-		ro.aggMutex.Unlock()
+		r.aggMutex.Unlock()
 		return
 	}
 
-	if len(ro.Config.NameOverride) > 0 {
-		metric.SetName(ro.Config.NameOverride)
+	if len(r.Config.NameOverride) > 0 {
+		metric.SetName(r.Config.NameOverride)
 	}
 
-	if len(ro.Config.NamePrefix) > 0 {
-		metric.AddPrefix(ro.Config.NamePrefix)
+	if len(r.Config.NamePrefix) > 0 {
+		metric.AddPrefix(r.Config.NamePrefix)
 	}
 
-	if len(ro.Config.NameSuffix) > 0 {
-		metric.AddSuffix(ro.Config.NameSuffix)
+	if len(r.Config.NameSuffix) > 0 {
+		metric.AddSuffix(r.Config.NameSuffix)
 	}
 
-	dropped := ro.buffer.Add(metric)
-	atomic.AddInt64(&ro.droppedMetrics, int64(dropped))
+	dropped := r.buffer.Add(metric)
+	atomic.AddInt64(&r.droppedMetrics, int64(dropped))
 
-	count := atomic.AddInt64(&ro.newMetricsCount, 1)
-	if count == int64(ro.MetricBatchSize) {
-		atomic.StoreInt64(&ro.newMetricsCount, 0)
+	count := atomic.AddInt64(&r.newMetricsCount, 1)
+	if count == int64(r.MetricBatchSize) {
+		atomic.StoreInt64(&r.newMetricsCount, 0)
 		select {
-		case ro.BatchReady <- time.Now():
+		case r.BatchReady <- time.Now():
 		default:
 		}
 	}
@@ -179,89 +179,89 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 
 // Write writes all metrics to the output, stopping when all have been sent on
 // or error.
-func (ro *RunningOutput) Write() error {
-	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
-		ro.aggMutex.Lock()
+func (r *RunningOutput) Write() error {
+	if output, ok := r.Output.(telegraf.AggregatingOutput); ok {
+		r.aggMutex.Lock()
 		metrics := output.Push()
-		ro.buffer.Add(metrics...)
+		r.buffer.Add(metrics...)
 		output.Reset()
-		ro.aggMutex.Unlock()
+		r.aggMutex.Unlock()
 	}
 
-	atomic.StoreInt64(&ro.newMetricsCount, 0)
+	atomic.StoreInt64(&r.newMetricsCount, 0)
 
 	// Only process the metrics in the buffer now.  Metrics added while we are
 	// writing will be sent on the next call.
-	nBuffer := ro.buffer.Len()
-	nBatches := nBuffer/ro.MetricBatchSize + 1
+	nBuffer := r.buffer.Len()
+	nBatches := nBuffer/r.MetricBatchSize + 1
 	for i := 0; i < nBatches; i++ {
-		batch := ro.buffer.Batch(ro.MetricBatchSize)
+		batch := r.buffer.Batch(r.MetricBatchSize)
 		if len(batch) == 0 {
 			break
 		}
 
-		err := ro.write(batch)
+		err := r.write(batch)
 		if err != nil {
-			ro.buffer.Reject(batch)
+			r.buffer.Reject(batch)
 			return err
 		}
-		ro.buffer.Accept(batch)
+		r.buffer.Accept(batch)
 	}
 	return nil
 }
 
 // WriteBatch writes a single batch of metrics to the output.
-func (ro *RunningOutput) WriteBatch() error {
-	batch := ro.buffer.Batch(ro.MetricBatchSize)
+func (r *RunningOutput) WriteBatch() error {
+	batch := r.buffer.Batch(r.MetricBatchSize)
 	if len(batch) == 0 {
 		return nil
 	}
 
-	err := ro.write(batch)
+	err := r.write(batch)
 	if err != nil {
-		ro.buffer.Reject(batch)
+		r.buffer.Reject(batch)
 		return err
 	}
-	ro.buffer.Accept(batch)
+	r.buffer.Accept(batch)
 
 	return nil
 }
 
 // Close closes the output
-func (ro *RunningOutput) Close() {
-	err := ro.Output.Close()
+func (r *RunningOutput) Close() {
+	err := r.Output.Close()
 	if err != nil {
-		ro.log.Errorf("Error closing output: %v", err)
+		r.log.Errorf("Error closing output: %v", err)
 	}
 }
 
-func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
-	dropped := atomic.LoadInt64(&ro.droppedMetrics)
+func (r *RunningOutput) write(metrics []telegraf.Metric) error {
+	dropped := atomic.LoadInt64(&r.droppedMetrics)
 	if dropped > 0 {
-		ro.log.Warnf("Metric buffer overflow; %d metrics have been dropped", dropped)
-		atomic.StoreInt64(&ro.droppedMetrics, 0)
+		r.log.Warnf("Metric buffer overflow; %d metrics have been dropped", dropped)
+		atomic.StoreInt64(&r.droppedMetrics, 0)
 	}
 
 	start := time.Now()
-	err := ro.Output.Write(metrics)
+	err := r.Output.Write(metrics)
 	elapsed := time.Since(start)
-	ro.WriteTime.Incr(elapsed.Nanoseconds())
+	r.WriteTime.Incr(elapsed.Nanoseconds())
 
 	if err == nil {
-		ro.log.Debugf("Wrote batch of %d metrics in %s", len(metrics), elapsed)
+		r.log.Debugf("Wrote batch of %d metrics in %s", len(metrics), elapsed)
 	}
 	return err
 }
 
-func (ro *RunningOutput) LogBufferStatus() {
-	nBuffer := ro.buffer.Len()
-	ro.log.Debugf("Buffer fullness: %d / %d metrics", nBuffer, ro.MetricBufferLimit)
+func (r *RunningOutput) LogBufferStatus() {
+	nBuffer := r.buffer.Len()
+	r.log.Debugf("Buffer fullness: %d / %d metrics", nBuffer, r.MetricBufferLimit)
 }
 
-func (ro *RunningOutput) Log() telegraf.Logger {
-	return ro.log
+func (r *RunningOutput) Log() telegraf.Logger {
+	return r.log
 }
 
-func (ro *RunningOutput) BufferLength() int {
-	return ro.buffer.Len()
+func (r *RunningOutput) BufferLength() int {
+	return r.buffer.Len()
 }
