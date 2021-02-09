@@ -291,17 +291,17 @@ func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.M
 		// line from the file.
 		if firstLine {
 			return parser.Parse([]byte(line))
-		}
+		} else {
+			m, err := parser.ParseLine(line)
+			if err != nil {
+				return nil, err
+			}
 
-		m, err := parser.ParseLine(line)
-		if err != nil {
-			return nil, err
+			if m != nil {
+				return []telegraf.Metric{m}, nil
+			}
+			return []telegraf.Metric{}, nil
 		}
-
-		if m != nil {
-			return []telegraf.Metric{m}, nil
-		}
-		return []telegraf.Metric{}, nil
 	default:
 		return parser.Parse([]byte(line))
 	}
