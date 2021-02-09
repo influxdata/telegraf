@@ -58,9 +58,7 @@ device 1.2.3.4:/storage/NFS mounted on /NFS with fstype nfs statvers=1.1
           COMMIT: 2100 2101 2102 2103 2104 2105 2106 2107 
 
 device 2.2.2.2:/nfsdata/ mounted on /mnt with fstype nfs4 statvers=1.1
-    opts:    rw,vers=4,rsize=1048576,wsize=1048576,namlen=255,acregmin=3,acregmax=60,
-            acdirmin=30,acdirmax=60,hard,proto=tcp,port=0,timeo=600,retrans=2,sec=sys,
-            clientaddr=3.3.3.3,minorversion=0,local_lock=none
+    opts:    rw,vers=4,rsize=1048576,wsize=1048576,namlen=255,acregmin=3,acregmax=60, acdirmin=30,acdirmax=60,hard,proto=tcp,port=0,timeo=600,retrans=2,sec=sys, clientaddr=3.3.3.3,minorversion=0,local_lock=none
     age:    19
     caps:    caps=0xfff7,wtmult=512,dtsize=32768,bsize=0,namlen=255
     nfsv4:    bm0=0xfdffafff,bm1=0xf9be3e,acl=0x0
