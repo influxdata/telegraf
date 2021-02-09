@@ -9,7 +9,7 @@
 
 #### Description
 
-The NFSClient plugin collects data from /proc/self/mountstats. By default, only a limited number of general system-level metrics are collected, including `nfsstat_read` and `nfsstat_write`.
+The NFSClient plugin collects data from /proc/self/mountstats. By default, only a limited number of general system-level metrics are collected, including basic read/write counts.
 If `fullstat` is set, a great deal of additional metrics are collected, detailed below.
 
 **NOTE** Many of the metrics, even if tagged with a mount point, are really _per-server_.  Thus, if you mount these two shares:  `nfs01:/vol/foo/bar` and `nfs01:/vol/foo/baz`, there will be two near identical entries in /proc/self/mountstats.

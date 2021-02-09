@@ -85,7 +85,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 	nline := convertToInt64(line)
 
 	if len(nline) == 0 {
-		n.Log.Errorf("Parsing Stat line didn't return enough fields(%d): %s\n", len(nline), line)
+		n.Log.Warnf("Parsing Stat line with one field: %s\n", line)
 		return nil
 	}
 
@@ -167,7 +167,8 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 
 	var fields = make(map[string]interface{})
 
-	if first == "READ" || first == "WRITE" {
+	switch first {
+	case "READ", "WRITE":
 		fields["ops"] = nline[0]
 		fields["retrans"] = nline[1] - nline[0]
 		fields["bytes"] = nline[3] + nline[4]
@@ -178,38 +179,46 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 	}
 
 	if fullstat {
-		if first == "events" && len(nline) >= len(eventsFields) {
-			for i, t := range eventsFields {
-				fields[t] = nline[i]
-			}
-			acc.AddFields("nfs_events", fields, tags)
-
-		} else if first == "bytes" && len(nline) >= len(bytesFields) {
-			for i, t := range bytesFields {
-				fields[t] = nline[i]
-			}
-			acc.AddFields("nfs_bytes", fields, tags)
-
-		} else if first == "xprt" && len(line) > 1 {
-			switch line[1] {
-			case "tcp":
-				if len(nline)+2 >= len(xprttcpFields) {
-					for i, t := range xprttcpFields {
-						fields[t] = nline[i+2]
-					}
-					acc.AddFields("nfs_xprt_tcp", fields, tags)
+		switch first {
+		case "events":
+			if len(nline) >= len(eventsFields) {
+				for i, t := range eventsFields {
+					fields[t] = nline[i]
 				}
-			case "udp":
-				if len(nline)+2 >= len(xprtudpFields) {
-					for i, t := range xprtudpFields {
-						fields[t] = nline[i+2]
+				acc.AddFields("nfs_events", fields, tags)
+			}
+
+		case "bytes":
+			if len(nline) >= len(bytesFields) {
+				for i, t := range bytesFields {
+					fields[t] = nline[i]
+				}
+				acc.AddFields("nfs_bytes", fields, tags)
+			}
+
+		case "xprt":
+			if len(line) > 1 {
+				switch line[1] {
+				case "tcp":
+					if len(nline)+2 >= len(xprttcpFields) {
+						for i, t := range xprttcpFields {
+							fields[t] = nline[i+2]
+						}
+						acc.AddFields("nfs_xprt_tcp", fields, tags)
 					}
-					acc.AddFields("nfs_xprt_udp", fields, tags)
+				case "udp":
+					if len(nline)+2 >= len(xprtudpFields) {
+						for i, t := range xprtudpFields {
+							fields[t] = nline[i+2]
+						}
+						acc.AddFields("nfs_xprt_udp", fields, tags)
+					}
 				}
 			}
 		}
 
-		if version == "3" {
+		switch version {
+		case "3":
 			tags["operation"] = first
 			if nfs3Ops[first] && (len(nline) <= len(nfsopFields)) {
 				for i, t := range nline {
@@ -217,7 +226,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 				}
 				acc.AddFields("nfs_ops", fields, tags)
 			}
-		} else if version == "4" {
+		case "4":
 			tags["operation"] = first
 			if nfs4Ops[first] && (len(nline) <= len(nfsopFields)) {
 				for i, t := range nline {
@@ -233,7 +242,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 }
 
 func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator) error {
-	var device string
+	var mount string
 	var version string
 	var export string
 	var skip bool
@@ -369,22 +378,24 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 	for scanner.Scan() {
 		line := strings.Fields(scanner.Text())
 
-		if len(line) == 0 {
+		line_len := len(line)
+
+		if line_len == 0 {
 			continue
 		}
 
-		if len(line) > 4 && choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) {
-			device = line[4]
+		if line_len > 4 && choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) {
+			mount = line[4]
 			export = line[1]
 			skip = false
-		} else if len(line) > 5 && (choice.Contains("(nfs)", line) || choice.Contains("(nfs4)", line)) {
+		} else if line_len > 5 && (choice.Contains("(nfs)", line) || choice.Contains("(nfs4)", line)) {
 			version = strings.Split(line[5], "/")[1]
 		}
 
 		if len(n.IncludeMounts) > 0 {
 			skip = true
 			for _, RE := range n.IncludeMounts {
-				matched, _ := regexp.MatchString(RE, device)
+				matched, _ := regexp.MatchString(RE, mount)
 				if matched {
 					skip = false
 					break
@@ -394,7 +405,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 
 		if !skip && len(n.ExcludeMounts) > 0 {
 			for _, RE := range n.ExcludeMounts {
-				matched, _ := regexp.MatchString(RE, device)
+				matched, _ := regexp.MatchString(RE, mount)
 				if matched {
 					skip = true
 					break
@@ -403,7 +414,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 		}
 
 		if !skip {
-			n.parseStat(device, export, version, line, n.Fullstat, nfs3Ops, nfs4Ops, acc)
+			n.parseStat(mount, export, version, line, n.Fullstat, nfs3Ops, nfs4Ops, acc)
 		}
 	}
 	return nil
