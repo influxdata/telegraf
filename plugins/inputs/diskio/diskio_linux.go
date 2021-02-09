@@ -59,6 +59,9 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	// Final open of the confirmed (or the previously detected/used) udev file
 	f, err := os.Open(udevDataPath)
 	defer f.Close()
+	if err != nil {
+		return nil, err
+	}
 
 	di := map[string]string{}
 
