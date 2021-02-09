@@ -1,27 +1,55 @@
 package elasticsearch_query
 
-import elastic "gopkg.in/olivere/elastic.v5"
+import (
+	"fmt"
 
-func (e *ElasticsearchQuery) parseAggregationResult(aggregationQueryList *[]aggregationQueryData, searchResult *elastic.SearchResult) error {
+	"github.com/influxdata/telegraf"
+	elastic "gopkg.in/olivere/elastic.v5"
+)
 
-	var measurements = make(map[string][]*aggKey)
+type resultMetric struct {
+	name   string
+	fields map[string]interface{}
+	tags   map[string]string
+}
 
-	for _, aggregationQuery := range *aggregationQueryList {
-		a := aggKey{function: aggregationQuery.function, field: aggregationQuery.field, name: aggregationQuery.name}
+func (e *ElasticsearchQuery) parseSimpleResult(measurement string, searchResult *elastic.SearchResult, acc telegraf.Accumulator) error {
 
-		if m := measurements[aggregationQuery.measurement]; m != nil {
-			measurements[aggregationQuery.measurement] = append(m, &a)
+	fields := make(map[string]interface{})
+	tags := make(map[string]string)
+
+	fields["doc_count"] = searchResult.Hits.TotalHits
+
+	acc.AddFields(measurement, fields, tags)
+	return nil
+}
+
+func (e *ElasticsearchQuery) parseAggregationResult(aggregationQueryList []aggregationQueryData, searchResult *elastic.SearchResult, acc telegraf.Accumulator) error {
+	var measurements = map[string]map[string]string{}
+
+	// organize the aggregation query data by measurement
+	for _, aggregationQuery := range aggregationQueryList {
+
+		if measurements[aggregationQuery.measurement] == nil {
+			measurements[aggregationQuery.measurement] = map[string]string{
+				aggregationQuery.name: aggregationQuery.function,
+			}
 		} else {
-			measurements[aggregationQuery.measurement] = []*aggKey{&a}
+			t := measurements[aggregationQuery.measurement]
+			t[aggregationQuery.name] = aggregationQuery.function
+			measurements[aggregationQuery.measurement] = t
 		}
 	}
 
-	// recurse over aggregation results
-	for measurementName, aggKey := range measurements {
-		fields := make(map[string]interface{})
-		tags := make(map[string]string)
+	// recurse over aggregation results per measurement
+	for measurement, aggNameFunction := range measurements {
+		var m resultMetric
 
-		err := e.recurseResponse(aggKey, searchResult.Aggregations, measurementName, fields, tags)
+		m.fields = make(map[string]interface{})
+		m.tags = make(map[string]string)
+		m.name = measurement
+
+		m, err := e.recurseResponse(aggNameFunction, searchResult.Aggregations, m, acc)
 		if err != nil {
 			return err
 		}
@@ -30,61 +58,65 @@ func (e *ElasticsearchQuery) parseAggregationResult(aggregationQueryList *[]aggr
 	return nil
 }
 
-func (e *ElasticsearchQuery) parseSimpleResult(measurement string, searchResult *elastic.SearchResult) error {
+func (e *ElasticsearchQuery) recurseResponse(aggKeys map[string]string, bucketResult elastic.Aggregations, m resultMetric, acc telegraf.Accumulator) (resultMetric, error) {
+	var err error
 
-	fields := make(map[string]interface{})
-	tags := make(map[string]string)
+	aggName, found := getAggName(bucketResult)
+	if !found {
+		// we've reached a single bucket without aggregation, nothing here
+		return m, nil
+	}
 
-	fields["doc_count"] = searchResult.Hits.TotalHits
+	aggFunction, found := aggKeys[aggName]
+	if !found {
+		return m, fmt.Errorf("child aggregation function '%s' not found %v", aggName, aggKeys)
+	}
 
-	e.acc.AddFields(measurement, fields, tags)
-	return nil
-}
+	resp := e.getResponseAggregation(aggFunction, aggName, bucketResult)
+	if resp == nil {
+		return m, fmt.Errorf("child aggregation '%s' not found", aggName)
+	}
 
-func (e *ElasticsearchQuery) recurseResponse(aggKeys []*aggKey, aggs elastic.Aggregations, measurementName string, fields map[string]interface{}, tags map[string]string) error {
-
-	for _, aggKey := range aggKeys {
-		resp := e.getResponseAggregation(aggKey.function, aggKey.name, aggs)
-
-		if resp != nil {
-
-			switch resp := resp.(type) {
-			case *elastic.AggregationValueMetric:
-
-				// we've found a metric aggregation, add to field map
-				fields[aggKey.name] = float64(0)
-
-				if resp.Value != nil {
-					fields[aggKey.name] = *resp.Value
-				}
-
-			case *elastic.AggregationBucketKeyItems:
-				// we've found a terms aggregation, iterate over the buckets and try to retrieve the inner aggregation values
-				for item := range resp.Buckets {
-					bucket := resp.Buckets[item]
-
-					fields["doc_count"] = bucket.DocCount
-					tags[aggKey.name] = bucket.Key.(string)
-
-					err := e.recurseResponse(aggKeys, bucket.Aggregations, measurementName, fields, tags)
-					if err != nil {
-						return err
-					}
-				}
-				return nil
-
-			case *elastic.AggregationPercentilesMetric:
-				// TODO
-				return nil
+	switch resp := resp.(type) {
+	case *elastic.AggregationBucketKeyItems:
+		// we've found a terms aggregation, iterate over the buckets and try to retrieve the inner aggregation values
+		for _, bucket := range resp.Buckets {
+			m.fields["doc_count"] = bucket.DocCount
+			if s, ok := bucket.Key.(string); ok {
+				m.tags[aggName] = s
+			} else {
+				return m, fmt.Errorf("bucket key is not a string")
 			}
+
+			// we need to recurse down through the buckets, as it may contain another terms aggregation
+			m, err = e.recurseResponse(aggKeys, bucket.Aggregations, m, acc)
+			if err != nil {
+				return m, err
+			}
+
+			// if there are fields present after finishing the bucket, it is a complete metric
+			// store it and clean the fields to start a new metric
+			if len(m.fields) > 0 {
+				acc.AddFields(m.name, m.fields, m.tags)
+				m.fields = make(map[string]interface{})
+			}
+
+			// after finishing the bucket, remove its tag from the tags map
+			delete(m.tags, aggName)
 		}
+
+	case *elastic.AggregationValueMetric:
+		if resp.Value != nil {
+			m.fields[aggName] = *resp.Value
+		} else {
+			m.fields[aggName] = float64(0)
+		}
+
+	default:
+		return m, fmt.Errorf("aggregation type returned not supported")
 	}
 
-	if len(fields) > 0 {
-		e.acc.AddFields(measurementName, fields, tags)
-	}
-
-	return nil
+	return m, nil
 }
 
 func (e *ElasticsearchQuery) getResponseAggregation(function string, aggName string, aggs elastic.Aggregations) interface{} {
@@ -102,9 +134,6 @@ func (e *ElasticsearchQuery) getResponseAggregation(function string, aggName str
 		agg, found = aggs.Max(aggName)
 	case "terms":
 		agg, found = aggs.Terms(aggName)
-		// TODO:
-		// case "percentile":
-		// 	agg, found = aggs.Percentiles(aggName)
 	}
 
 	if found {
@@ -112,4 +141,14 @@ func (e *ElasticsearchQuery) getResponseAggregation(function string, aggName str
 	}
 
 	return nil
+}
+
+func getAggName(agg elastic.Aggregations) (string, bool) {
+	for k := range agg {
+		if (k != "key") && (k != "doc_count") {
+			return k, true
+		}
+	}
+
+	return "", false
 }

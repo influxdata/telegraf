@@ -1,29 +1,38 @@
 # Elasticsearch query input plugin
 
-This [elasticsearch](https://www.elastic.co/) query plugin queries endpoints to obtain metrics from data stored in an Elasticsearch 5.x cluster.
+This [elasticsearch](https://www.elastic.co/) query plugin queries endpoints to obtain metrics from data stored in an Elasticsearch cluster.
 
 The following is supported:
 
-* return number of hits for a search query
-* calculate the avg/max/min/sum for a numeric field, filtered by a query, aggregated per tag
-* count number of terms for a particular field
+- return number of hits for a search query
+- calculate the avg/max/min/sum for a numeric field, filtered by a query, aggregated per tag
+- count number of terms for a particular field
+
+## Elasticsearch support
+
+This plugins is tested against Elasticsearch 5.x and 6.x releases.
+Currently it is known to break on 7.x or greater versions.
 
 ## Configuration
 
 ```toml
 [[inputs.elasticsearch_query]]
- ## The full HTTP endpoint URL for your Elasticsearch instance
+  ## The full HTTP endpoint URL for your Elasticsearch instance
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
   urls = [ "http://node1.es.example.com:9200" ] # required.
-  ## Elasticsearch client timeout, defaults to "5s" if not set.
-  timeout = "5s"
+
+  ## Elasticsearch client timeout, defaults to "5s".
+  # timeout = "5s"
+
   ## Set to true to ask Elasticsearch a list of all cluster nodes,
   ## thus it is not necessary to list all nodes in the urls config option
-  enable_sniffer = false
+  # enable_sniffer = false
+
   ## Set the interval to check if the Elasticsearch nodes are available
-  ## Setting to "0s" will disable the health check (not recommended in production)
-  health_check_interval = "10s"
+  ## This option is only used if enable_sniffer is also set (0s to disable it)
+  # health_check_interval = "10s"
+
   ## HTTP basic authentication details (eg. when using x-pack)
   # username = "telegraf"
   # password = "mypassword"
@@ -36,29 +45,39 @@ The following is supported:
   # insecure_skip_verify = false
 
 [[inputs.elasticsearch_query.aggregation]]
+  ## measurement name for the results of the aggregation query
   measurement_name = "measurement"
+
+  ## Elasticsearch indexes to query (accept wildcards).
   index = "index-*"
+
+  ## The date/time field in the Elasticsearch index (mandatory).
   date_field = "@timestamp"
+
   ## Time window to query (eg. "1m" to query documents from last minute).
   ## Normally should be set to same as collection interval
   query_period = "1m"
 
-  ## Optional parameters:
   ## Lucene query to filter results
   filter_query = "*"
+
   ## Fields to aggregate values (must be numeric fields)
   metric_fields = ["metric"]
+
   ## Aggregation function to use on the metric fields
   ## Valid values are: avg, sum, min, max, sum
   metric_function = "avg"
+
   ## Fields to be used as tags
   ## Must be non-analyzed fields, aggregations are performed per tag
   tags = ["field.keyword", "field2.keyword"]
+
   ## Set to true to not ignore documents when the tag(s) above are missing
-  include_missing_tag = true
+  # include_missing_tag = false
+
   ## String value of the tag when the tag does not exist
   ## Used when include_missing_tag is true
-  missing_tag_value = "null"
+  # missing_tag_value = "null"
 
 ```
 
@@ -122,16 +141,16 @@ The following is supported:
 
 ### Required parameters
 
-* `measurement_name`: The target measurement to be stored the results of the aggregation query.
-* `index`: The index name to query on Elasticsearch
-* `query_period`: The time window to query (eg. "1m" to query documents from last minute). Normally should be set to same as collection
-* `date_field`: The date/time field in the Elasticsearch index
+- `measurement_name`: The target measurement to be stored the results of the aggregation query.
+- `index`: The index name to query on Elasticsearch
+- `query_period`: The time window to query (eg. "1m" to query documents from last minute). Normally should be set to same as collection
+- `date_field`: The date/time field in the Elasticsearch index
 
 ### Optional parameters
 
-* `filter_query`: Lucene query to filter the results (default: "*")
-* `metric_fields`: The list of fields to perform metric aggregation (these must be indexed as numeric fields)
-* `metric_funcion`: The single-value metric aggregation function to be performed on the `metric_fields` defined. Currently supported aggregations are "avg", "min", "max", "sum". (see [https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html)
-* `tags`: The list of fields to be used as tags (these must be indexed as non-analyzed fields). A "terms aggregation" will be done per tag defined
-* `include_missing_tag`: Set to true to not ignore documents where the tag(s) specified above does not exist. (If false, documents without the specified tag field will be ignored in `doc_count` and in the metric aggregation)
-* `missing_tag_value`: The value of the tag that will be set for documents in which the tag field does not exist. Only used when `include_missing_tag` is set to `true`.
+- `filter_query`: Lucene query to filter the results (default: "\*")
+- `metric_fields`: The list of fields to perform metric aggregation (these must be indexed as numeric fields)
+- `metric_funcion`: The single-value metric aggregation function to be performed on the `metric_fields` defined. Currently supported aggregations are "avg", "min", "max", "sum". (see [https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html)
+- `tags`: The list of fields to be used as tags (these must be indexed as non-analyzed fields). A "terms aggregation" will be done per tag defined
+- `include_missing_tag`: Set to true to not ignore documents where the tag(s) specified above does not exist. (If false, documents without the specified tag field will be ignored in `doc_count` and in the metric aggregation)
+- `missing_tag_value`: The value of the tag that will be set for documents in which the tag field does not exist. Only used when `include_missing_tag` is set to `true`.

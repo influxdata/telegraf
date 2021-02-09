@@ -9,7 +9,20 @@ import (
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
-func (e *ElasticsearchQuery) runAggregationQuery(ctx context.Context, aggregation Aggregation, aggregationQueryList []aggregationQueryData) (*elastic.SearchResult, error) {
+type aggKey struct {
+	measurement string
+	name        string
+	function    string
+	field       string
+}
+
+type aggregationQueryData struct {
+	aggKey
+	isParent    bool
+	aggregation elastic.Aggregation
+}
+
+func (e *ElasticsearchQuery) runAggregationQuery(ctx context.Context, aggregation esAggregation) (*elastic.SearchResult, error) {
 
 	now := time.Now().UTC()
 	from := now.Add(aggregation.QueryPeriod.Duration * -1)
@@ -23,23 +36,18 @@ func (e *ElasticsearchQuery) runAggregationQuery(ctx context.Context, aggregatio
 	query = query.Filter(elastic.NewQueryStringQuery(filterQuery))
 	query = query.Filter(elastic.NewRangeQuery(aggregation.DateField).From(from).To(now))
 
-	search := e.ESClient.Search().
-		Index(aggregation.Index).
-		Query(query).
-		Size(0)
+	search := e.esClient.Search().Index(aggregation.Index).Query(query).Size(0)
 
 	// add only parent elastic.Aggregations to the search request, all the rest are subaggregations of these
-	for _, v := range aggregationQueryList {
+	for _, v := range aggregation.aggregationQueryList {
 		if v.isParent && v.aggregation != nil {
 			search.Aggregation(v.aggKey.name, v.aggregation)
 		}
 	}
 	searchResult, err := search.Do(ctx)
 
-	if err != nil {
-		if searchResult != nil {
-			return searchResult, fmt.Errorf("%s - %s", searchResult.Error.Type, searchResult.Error.Reason)
-		}
+	if err != nil && searchResult != nil {
+		return searchResult, fmt.Errorf("%s - %s", searchResult.Error.Type, searchResult.Error.Reason)
 	}
 
 	return searchResult, err
@@ -47,34 +55,48 @@ func (e *ElasticsearchQuery) runAggregationQuery(ctx context.Context, aggregatio
 }
 
 // GetMetricFields function returns a map of fields and field types on Elasticsearch that matches field.MetricFields
-func (e *ElasticsearchQuery) getMetricFields(ctx context.Context, aggregation Aggregation) (map[string]string, error) {
-	var ftype string
+func (e *ElasticsearchQuery) getMetricFields(ctx context.Context, aggregation esAggregation) (map[string]string, error) {
 	mapMetricFields := make(map[string]string)
 
-	if e.ESClient == nil {
+	if e.esClient == nil {
 		err := e.connectToES()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	// TODO: check if it is possible to improve this
 	for _, metricField := range aggregation.MetricFields {
 
-		resp, err := e.ESClient.GetFieldMapping().Index(aggregation.Index).Field(metricField).Do(ctx)
+		resp, err := e.esClient.GetFieldMapping().Index(aggregation.Index).Field(metricField).Do(ctx)
 
 		if err != nil {
-			return mapMetricFields, err
+			return mapMetricFields, fmt.Errorf("error retrieving field mappings for %s: %s", aggregation.Index, err.Error())
 		}
 
 		for _, index := range resp {
-			for _, _type := range index.(map[string]interface{})["mappings"].(map[string]interface{}) {
-				for _, field := range _type.(map[string]interface{}) {
-					fname := field.(map[string]interface{})["full_name"].(string)
-					for _, fieldType := range field.(map[string]interface{})["mapping"].(map[string]interface{}) {
-						ftype = fieldType.(map[string]interface{})["type"].(string)
+			if mappings, ok := index.(map[string]interface{})["mappings"]; ok {
+				if types, ok := mappings.(map[string]interface{}); ok {
+					for _, _type := range types {
+						if field, ok := _type.(map[string]interface{}); ok {
+							for _, _field := range field {
+								if fullname, ok := _field.(map[string]interface{})["full_name"]; ok {
+									if fname, ok := fullname.(string); ok {
+										if mapping, ok := _field.(map[string]interface{})["mapping"]; ok {
+											if fieldType, ok := mapping.(map[string]interface{}); ok {
+												for _, fieldType := range fieldType {
+													if t, ok := fieldType.(map[string]interface{})["type"]; ok {
+														if ftype, ok := t.(string); ok {
+															mapMetricFields[fname] = ftype
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
 					}
-					mapMetricFields[fname] = ftype
 				}
 			}
 		}
@@ -83,9 +105,9 @@ func (e *ElasticsearchQuery) getMetricFields(ctx context.Context, aggregation Ag
 	return mapMetricFields, nil
 }
 
-func (e *ElasticsearchQuery) buildAggregationQuery(mapMetricFields map[string]string, aggregation Aggregation) ([]aggregationQueryData, error) {
+func (e *ElasticsearchQuery) buildAggregationQuery(mapMetricFields map[string]string, aggregation esAggregation) ([]aggregationQueryData, error) {
 
-	aggregationQueryList := make([]aggregationQueryData, (len(aggregation.Tags) + len(aggregation.MetricFields)))
+	var aggregationQueryList []aggregationQueryData
 
 	// create one aggregation per metric field found & function defined for numeric fields
 	for k, v := range mapMetricFields {
@@ -139,11 +161,8 @@ func (e *ElasticsearchQuery) getFunctionAggregation(function string, aggfield st
 		agg = elastic.NewMinAggregation().Field(aggfield)
 	case "max":
 		agg = elastic.NewMaxAggregation().Field(aggfield)
-	// TODO:
-	// case "percentile":
-	// 	agg = elastic.NewPercentilesAggregation().Field(aggfield)
 	default:
-		return agg, fmt.Errorf("Aggregation function %s not supported", function)
+		return agg, fmt.Errorf("aggregation function %s not supported", function)
 	}
 
 	return agg, nil
@@ -157,14 +176,14 @@ func (e *ElasticsearchQuery) getTermsAggregation(aggMeasurementName string, aggT
 		agg.Missing(missingTagValue)
 	}
 
+	agg.Field(aggTerm).Size(1000)
+
 	// add each previous parent aggregations as subaggregations of this terms aggregation
 	for key, aggMap := range subAggList {
 		if aggMap.isParent {
 			agg.Field(aggTerm).SubAggregation(aggMap.name, aggMap.aggregation).Size(1000)
 			// update subaggregation map with parent information
 			subAggList[key].isParent = false
-		} else {
-			agg.Field(aggTerm).Size(1000)
 		}
 	}
 

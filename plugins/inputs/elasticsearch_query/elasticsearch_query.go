@@ -3,9 +3,7 @@ package elasticsearch_query
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,24 +13,28 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const description = `Queries Elasticseach`
+const description = `Derive metrics from aggregating Elasticsearch query results`
 const sampleConfig = `
   ## The full HTTP endpoint URL for your Elasticsearch instance
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
   urls = [ "http://node1.es.example.com:9200" ] # required.
-  ## Elasticsearch client timeout, defaults to "5s" if not set.
-  timeout = "5s"
+
+  ## Elasticsearch client timeout, defaults to "5s".
+  # timeout = "5s"
+
   ## Set to true to ask Elasticsearch a list of all cluster nodes,
   ## thus it is not necessary to list all nodes in the urls config option
-  enable_sniffer = false
+  # enable_sniffer = false
+
   ## Set the interval to check if the Elasticsearch nodes are available
-  ## Setting to "0s" will disable the health check (not recommended in production)
-  health_check_interval = "10s"
+  ## This option is only used if enable_sniffer is also set (0s to disable it)
+  # health_check_interval = "10s"
+
   ## HTTP basic authentication details (eg. when using x-pack)
   # username = "telegraf"
   # password = "mypassword"
@@ -45,86 +47,118 @@ const sampleConfig = `
   # insecure_skip_verify = false
 
 [[inputs.elasticsearch_query.aggregation]]
+  ## measurement name for the results of the aggregation query
   measurement_name = "measurement"
+
+  ## Elasticsearch indexes to query (accept wildcards).
   index = "index-*"
+
+  ## The date/time field in the Elasticsearch index (mandatory).
   date_field = "@timestamp"
+
   ## Time window to query (eg. "1m" to query documents from last minute).
   ## Normally should be set to same as collection interval
   query_period = "1m"
 
-  ## Optional parameters:
   ## Lucene query to filter results
   filter_query = "*"
+
   ## Fields to aggregate values (must be numeric fields)
   metric_fields = ["metric"]
+
   ## Aggregation function to use on the metric fields
   ## Valid values are: avg, sum, min, max, sum
   metric_function = "avg"
+
   ## Fields to be used as tags
   ## Must be non-analyzed fields, aggregations are performed per tag
   tags = ["field.keyword", "field2.keyword"]
+
   ## Set to true to not ignore documents when the tag(s) above are missing
-  include_missing_tag = true
+  # include_missing_tag = false
+
   ## String value of the tag when the tag does not exist
   ## Used when include_missing_tag is true
-  missing_tag_value = "null"
+  # missing_tag_value = "null"
 `
 
+// ElasticsearchQuery struct
 type ElasticsearchQuery struct {
-	URLs                []string `toml:"urls"`
-	Username            string
-	Password            string
-	EnableSniffer       bool
-	Tracelog            bool
-	Timeout             internal.Duration
-	HealthCheckInterval internal.Duration
-	Aggregations        []Aggregation `toml:"aggregation"`
+	URLs                []string          `toml:"urls"`
+	Username            string            `toml:"username"`
+	Password            string            `toml:"password"`
+	EnableSniffer       bool              `toml:"enable_sniffer"`
+	Timeout             internal.Duration `toml:"timeout"`
+	HealthCheckInterval internal.Duration `toml:"health_check_interval"`
+	Aggregations        []esAggregation   `toml:"aggregation"`
 	tls.ClientConfig
 	httpclient *http.Client
-	ESClient   *elastic.Client
-	acc        telegraf.Accumulator
+	esClient   *elastic.Client
 }
 
-type Aggregation struct {
-	Index             string
-	MeasurementName   string
-	FilterQuery       string
-	QueryPeriod       internal.Duration
-	MetricFields      []string `toml:"metric_fields"`
-	DateField         string
-	Tags              []string `toml:"tags"`
-	IncludeMissingTag bool
-	MissingTagValue   string
-	MetricFunction    string
+// esAggregation struct
+type esAggregation struct {
+	Index                string            `toml:"index"`
+	MeasurementName      string            `toml:"measurement_name"`
+	DateField            string            `toml:"date_field"`
+	QueryPeriod          internal.Duration `toml:"query_period"`
+	FilterQuery          string            `toml:"filter_query"`
+	MetricFields         []string          `toml:"metric_fields"`
+	MetricFunction       string            `toml:"metric_function"`
+	Tags                 []string          `toml:"tags"`
+	IncludeMissingTag    bool              `toml:"include_missing_tag"`
+	MissingTagValue      string            `toml:"missing_tag_value"`
+	mapMetricFields      map[string]string
+	aggregationQueryList []aggregationQueryData
 }
 
-type aggKey struct {
-	measurement string
-	name        string
-	function    string
-	field       string
-}
-
-type aggregationQueryData struct {
-	aggKey
-	isParent    bool
-	aggregation elastic.Aggregation
-}
-
+// SampleConfig returns sample configuration for this plugin.
 func (e *ElasticsearchQuery) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description returns the plugin description.
 func (e *ElasticsearchQuery) Description() string {
 	return description
 }
 
-func (e *ElasticsearchQuery) init() error {
+// Init the plugin.
+func (e *ElasticsearchQuery) Init() error {
 	if e.URLs == nil {
-		return fmt.Errorf("Elasticsearch urls is not defined")
+		return fmt.Errorf("elasticsearch urls is not defined")
 	}
 
 	err := e.connectToES()
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), e.Timeout.Duration)
+	defer cancel()
+
+	for i, agg := range e.Aggregations {
+
+		if agg.MeasurementName == "" {
+			return fmt.Errorf("field 'measurement_name' is not set")
+		}
+		if agg.DateField == "" {
+			return fmt.Errorf("field 'date_field' is not set")
+		}
+
+		// retrieve field mapping and build queries only once
+		mapMetricFields, err := e.getMetricFields(ctx, agg)
+		if err != nil {
+			return err
+		}
+
+		aggregationQueryList, err := e.buildAggregationQuery(mapMetricFields, agg)
+		if err != nil {
+			return err
+		}
+		agg.mapMetricFields = mapMetricFields
+		agg.aggregationQueryList = aggregationQueryList
+		e.Aggregations[i] = agg
+	}
 	return err
 }
 
@@ -133,7 +167,7 @@ func (e *ElasticsearchQuery) connectToES() error {
 	var clientOptions []elastic.ClientOptionFunc
 
 	if e.httpclient == nil {
-		httpclient, err := e.createHttpClient()
+		httpclient, err := e.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -147,22 +181,12 @@ func (e *ElasticsearchQuery) connectToES() error {
 		elastic.SetHealthcheckInterval(e.HealthCheckInterval.Duration),
 	)
 
-	if e.Username != "" && e.Password != "" {
-		clientOptions = append(clientOptions,
-			elastic.SetBasicAuth(e.Username, e.Password),
-		)
+	if e.Username != "" {
+		clientOptions = append(clientOptions, elastic.SetBasicAuth(e.Username, e.Password))
 	}
 
 	if e.HealthCheckInterval.Duration == 0 {
-		clientOptions = append(clientOptions,
-			elastic.SetHealthcheck(false),
-		)
-	}
-
-	if e.Tracelog {
-		clientOptions = append(clientOptions,
-			elastic.SetTraceLog(log.New(os.Stdout, "", log.LstdFlags)),
-		)
+		clientOptions = append(clientOptions, elastic.SetHealthcheck(false))
 	}
 
 	client, err := elastic.NewClient(clientOptions...)
@@ -172,37 +196,37 @@ func (e *ElasticsearchQuery) connectToES() error {
 
 	// check for ES version on first node
 	esVersion, err := client.ElasticsearchVersion(e.URLs[0])
-
 	if err != nil {
-		return fmt.Errorf("Elasticsearch query version check failed: %s", err)
+		return fmt.Errorf("elasticsearch version check failed: %s", err)
 	}
+
+	esVersionSplit := strings.Split(esVersion, ".")
 
 	// quit if ES version is not supported
-	i, err := strconv.Atoi(strings.Split(esVersion, ".")[0])
-	if err != nil || i < 5 {
-		return fmt.Errorf("Elasticsearch query: ES version not supported: %s", esVersion)
+	if len(esVersionSplit) == 0 {
+		return fmt.Errorf("elasticsearch version check failed")
 	}
 
-	e.ESClient = client
+	i, err := strconv.Atoi(esVersionSplit[0])
+	if err != nil || i < 5 {
+		return fmt.Errorf("elasticsearch version %s not supported (currently supported versions are 5.x and 6.x)", esVersion)
+	}
+
+	e.esClient = client
 	return nil
 }
 
+// Gather writes the results of the queries from Elasticsearch to the Accumulator.
 func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
-	if err := e.init(); err != nil {
-		return err
-	}
-
-	e.acc = acc
-
 	var wg sync.WaitGroup
 
 	for _, agg := range e.Aggregations {
 		wg.Add(1)
-		go func(agg Aggregation) {
+		go func(agg esAggregation) {
 			defer wg.Done()
-			err := e.esAggregationQuery(agg)
+			err := e.esAggregationQuery(agg, acc)
 			if err != nil {
-				acc.AddError(fmt.Errorf("Elasticsearch query aggregation %s: %s ", agg.MeasurementName, err.Error()))
+				acc.AddError(fmt.Errorf("elasticsearch query aggregation %s: %s ", agg.MeasurementName, err.Error()))
 			}
 		}(agg)
 	}
@@ -211,7 +235,7 @@ func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *ElasticsearchQuery) createHttpClient() (*http.Client, error) {
+func (e *ElasticsearchQuery) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := e.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -228,43 +252,22 @@ func (e *ElasticsearchQuery) createHttpClient() (*http.Client, error) {
 	return httpclient, nil
 }
 
-func (e *ElasticsearchQuery) esAggregationQuery(aggregation Aggregation) error {
+func (e *ElasticsearchQuery) esAggregationQuery(aggregation esAggregation, acc telegraf.Accumulator) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), e.Timeout.Duration)
 	defer cancel()
 
-	if aggregation.DateField == "" {
-		return fmt.Errorf("Field 'date_field' not set")
-	}
-
-	mapMetricFields, err := e.getMetricFields(ctx, aggregation)
-	if err != nil {
-		return err
-	}
-
-	aggregationQueryList, err := e.buildAggregationQuery(mapMetricFields, aggregation)
-	if err != nil {
-		return err
-	}
-
-	searchResult, err := e.runAggregationQuery(ctx, aggregation, aggregationQueryList)
+	searchResult, err := e.runAggregationQuery(ctx, aggregation)
 	if err != nil {
 		return err
 	}
 
 	if searchResult.Aggregations != nil {
-		err = e.parseAggregationResult(&aggregationQueryList, searchResult)
-		if err != nil {
-			return err
-		}
-	} else {
-		err = e.parseSimpleResult(aggregation.MeasurementName, searchResult)
-		if err != nil {
-			return err
-		}
+		return e.parseAggregationResult(aggregation.aggregationQueryList, searchResult, acc)
 	}
 
-	return nil
+	return e.parseSimpleResult(aggregation.MeasurementName, searchResult, acc)
+
 }
 
 func init() {
