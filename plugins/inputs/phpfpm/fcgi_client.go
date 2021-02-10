@@ -24,7 +24,7 @@ func newFcgiClient(h string, args ...interface{}) (*conn, error) {
 		laddr := net.UnixAddr{Name: args[0].(string), Net: h}
 		con, err = net.DialUnix(h, nil, &laddr)
 	default:
-		err = errors.New("fcgi: we only accept int (port) or string (socket) params.")
+		err = errors.New("fcgi: we only accept int (port) or string (socket) params")
 	}
 	fcgi := &conn{
 		rwc: con,

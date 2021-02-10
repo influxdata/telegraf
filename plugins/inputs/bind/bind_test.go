@@ -623,5 +623,5 @@ func TestBindUnparseableURL(t *testing.T) {
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
-	assert.Contains(t, err.Error(), "Unable to parse address")
+	assert.Contains(t, err.Error(), "unable to parse address")
 }

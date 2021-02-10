@@ -101,7 +101,7 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, buffer io.R
 	s := stderr
 
 	if err != nil {
-		if err == internal.TimeoutErr {
+		if err == internal.ErrTimeout {
 			return fmt.Errorf("%q timed out and was killed", command)
 		}
 

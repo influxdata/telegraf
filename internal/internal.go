@@ -26,11 +26,9 @@ import (
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 var (
-	TimeoutErr = errors.New("Command timed out.")
-
-	NotImplementedError = errors.New("not implemented yet")
-
-	VersionAlreadySetError = errors.New("version has already been set")
+	ErrTimeout             = errors.New("command timed out")
+	ErrorNotImplemented    = errors.New("not implemented yet")
+	ErrorVersionAlreadySet = errors.New("version has already been set")
 )
 
 // Set via the main module
@@ -58,7 +56,7 @@ type ReadWaitCloser struct {
 // SetVersion sets the telegraf agent version
 func SetVersion(v string) error {
 	if version != "" {
-		return VersionAlreadySetError
+		return ErrorVersionAlreadySet
 	}
 	version = v
 	return nil

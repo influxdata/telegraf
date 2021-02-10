@@ -164,11 +164,14 @@ func (gs *GosnmpWrapper) SetAgent(agent string) error {
 		return err
 	}
 
+	// Only allow udp{4,6} and tcp{4,6}.
+	// Allowing ip{4,6} does not make sense as specifying a port
+	// requires the specification of a protocol.
+	// gosnmp does not handle these errors well, which is why
+	// they can result in cryptic errors by net.Dial.
 	switch u.Scheme {
-	case "tcp":
-		gs.Transport = "tcp"
-	case "", "udp":
-		gs.Transport = "udp"
+	case "tcp", "tcp4", "tcp6", "udp", "udp4", "udp6":
+		gs.Transport = u.Scheme
 	default:
 		return fmt.Errorf("unsupported scheme: %v", u.Scheme)
 	}

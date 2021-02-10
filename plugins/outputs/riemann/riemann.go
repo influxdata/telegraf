@@ -2,7 +2,6 @@ package riemann
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"sort"
@@ -16,15 +15,16 @@ import (
 )
 
 type Riemann struct {
-	URL                    string
-	TTL                    float32
-	Separator              string
-	MeasurementAsAttribute bool
-	StringAsState          bool
-	TagKeys                []string
-	Tags                   []string
-	DescriptionText        string
-	Timeout                internal.Duration
+	URL                    string            `toml:"url"`
+	TTL                    float32           `toml:"ttl"`
+	Separator              string            `toml:"separator"`
+	MeasurementAsAttribute bool              `toml:"measurement_as_attribute"`
+	StringAsState          bool              `toml:"string_as_state"`
+	TagKeys                []string          `toml:"tag_keys"`
+	Tags                   []string          `toml:"tags"`
+	DescriptionText        string            `toml:"description_text"`
+	Timeout                internal.Duration `toml:"timeout"`
+	Log                    telegraf.Logger   `toml:"-"`
 
 	client *raidman.Client
 }
@@ -149,14 +149,14 @@ func (r *Riemann) buildRiemannEvents(m telegraf.Metric) []*raidman.Event {
 		case string:
 			// only send string metrics if explicitly enabled, skip otherwise
 			if !r.StringAsState {
-				log.Printf("D! Riemann event states disabled, skipping metric value [%s]\n", value)
+				r.Log.Debugf("Riemann event states disabled, skipping metric value [%s]", value)
 				continue
 			}
 			event.State = value.(string)
 		case int, int64, uint64, float32, float64:
 			event.Metric = value
 		default:
-			log.Printf("D! Riemann does not support metric value [%s]\n", value)
+			r.Log.Debugf("Riemann does not support metric value [%s]", value)
 			continue
 		}
 

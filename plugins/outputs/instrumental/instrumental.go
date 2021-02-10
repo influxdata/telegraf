@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"regexp"
 	"strings"
@@ -30,6 +29,8 @@ type Instrumental struct {
 	Templates  []string
 	Timeout    internal.Duration
 	Debug      bool
+
+	Log telegraf.Logger `toml:"-"`
 
 	conn net.Conn
 }
@@ -82,7 +83,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	if i.conn == nil {
 		err := i.Connect()
 		if err != nil {
-			return fmt.Errorf("FAILED to (re)connect to Instrumental. Error: %s\n", err)
+			return fmt.Errorf("failed to (re)connect to Instrumental. Error: %s", err)
 		}
 	}
 
@@ -111,7 +112,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 
 		buf, err := s.Serialize(m)
 		if err != nil {
-			log.Printf("D! [outputs.instrumental] Could not serialize metric: %v", err)
+			i.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 
@@ -187,7 +188,7 @@ func (i *Instrumental) authenticate(conn net.Conn) error {
 	}
 
 	if string(responses)[:6] != "ok\nok\n" {
-		return fmt.Errorf("Authentication failed: %s", responses)
+		return fmt.Errorf("authentication failed: %s", responses)
 	}
 
 	i.conn = conn

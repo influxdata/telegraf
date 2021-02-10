@@ -112,18 +112,18 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 
 		serialized, err := json.Marshal(m)
 		if err != nil {
-			return fmt.Errorf("unable to marshal metric, %s\n", err.Error())
+			return fmt.Errorf("unable to marshal metric, %s", err.Error())
 		}
 
 		_, err = gz.Write(append(serialized, '\n'))
 		if err != nil {
-			return fmt.Errorf("unable to write gzip meric, %s\n", err.Error())
+			return fmt.Errorf("unable to write gzip meric, %s", err.Error())
 		}
 	}
 
 	err := gz.Close()
 	if err != nil {
-		return fmt.Errorf("unable to close gzip, %s\n", err.Error())
+		return fmt.Errorf("unable to close gzip, %s", err.Error())
 	}
 
 	return l.send(buff.Bytes())
@@ -132,19 +132,19 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 func (l *Logzio) send(metrics []byte) error {
 	req, err := http.NewRequest("POST", l.authUrl(), bytes.NewBuffer(metrics))
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s\n", err.Error())
+		return fmt.Errorf("unable to create http.Request, %s", err.Error())
 	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 
 	resp, err := l.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error POSTing metrics, %s\n", err.Error())
+		return fmt.Errorf("error POSTing metrics, %s", err.Error())
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 209 {
-		return fmt.Errorf("received bad status code, %d\n", resp.StatusCode)
+		return fmt.Errorf("received bad status code, %d", resp.StatusCode)
 	}
 
 	return nil
