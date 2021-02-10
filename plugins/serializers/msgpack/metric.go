@@ -46,9 +46,9 @@ func (t *MessagePackTime) Len() int {
 	sec := t.time.Unix()
 	nsec := t.time.Nanosecond()
 
-	if sec < 0 || sec >= 0x400000000 { // 96 bits encoding
+	if sec < 0 || sec >= (1<<34) { // 96 bits encoding
 		return 12
-	} else if sec > 0xffffffff || nsec != 0 {
+	} else if sec >= (1<<32) || nsec != 0 {
 		return 8
 	} else {
 		return 4
