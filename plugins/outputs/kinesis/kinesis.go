@@ -173,7 +173,7 @@ func (k *KinesisOutput) writeKinesis(r []*kinesis.PutRecordsRequestEntry) time.D
 		log.Printf("I! Wrote: '%+v'", resp)
 	}
 
-	var failed = *resp.FailedRecordCount
+	failed := *resp.FailedRecordCount
 	if failed > 0 {
 		log.Printf("E! kinesis: Unable to write %+v of %+v record(s) to Kinesis", failed, len(r))
 	}
