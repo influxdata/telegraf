@@ -119,8 +119,10 @@ func TestWriteKinesis_WhenSuccess(t *testing.T) {
 		},
 	)
 
-	k := KinesisOutput{StreamName: streamName}
-	k.svc = svc
+	k := KinesisOutput{
+		StreamName: streamName,
+		svc:        svc,
+	}
 
 	elapsed := k.writeKinesis(records)
 	assert.GreaterOrEqual(elapsed.Nanoseconds(), zero)
@@ -162,8 +164,10 @@ func TestWriteKinesis_WhenRecordErrors(t *testing.T) {
 		},
 	)
 
-	k := KinesisOutput{StreamName: streamName}
-	k.svc = svc
+	k := KinesisOutput{
+		StreamName: streamName,
+		svc:        svc,
+	}
 
 	elapsed := k.writeKinesis(records)
 	assert.GreaterOrEqual(elapsed.Nanoseconds(), zero)
@@ -195,8 +199,10 @@ func TestWriteKinesis_WhenServiceError(t *testing.T) {
 		awserr.New("InvalidArgumentException", "Invalid record", nil),
 	)
 
-	k := KinesisOutput{StreamName: streamName}
-	k.svc = svc
+	k := KinesisOutput{
+		StreamName: streamName,
+		svc:        svc,
+	}
 
 	elapsed := k.writeKinesis(records)
 	assert.GreaterOrEqual(elapsed.Nanoseconds(), zero)
