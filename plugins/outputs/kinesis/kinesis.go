@@ -155,10 +155,6 @@ func (k *KinesisOutput) SetSerializer(serializer serializers.Serializer) {
 	k.serializer = serializer
 }
 
-func (k *KinesisOutput) mockKinesisService(svc kinesisiface.KinesisAPI) {
-	k.svc = svc
-}
-
 func (k *KinesisOutput) writeKinesis(r []*kinesis.PutRecordsRequestEntry) time.Duration {
 
 	start := time.Now()

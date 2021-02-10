@@ -120,7 +120,7 @@ func TestWriteKinesis_WhenSuccess(t *testing.T) {
 	)
 
 	k := KinesisOutput{StreamName: streamName}
-	k.mockKinesisService(svc)
+	k.svc = svc
 
 	elapsed := k.writeKinesis(records)
 	assert.GreaterOrEqual(elapsed.Nanoseconds(), zero)
@@ -163,7 +163,7 @@ func TestWriteKinesis_WhenRecordErrors(t *testing.T) {
 	)
 
 	k := KinesisOutput{StreamName: streamName}
-	k.mockKinesisService(svc)
+	k.svc = svc
 
 	elapsed := k.writeKinesis(records)
 	assert.GreaterOrEqual(elapsed.Nanoseconds(), zero)
@@ -196,7 +196,7 @@ func TestWriteKinesis_WhenServiceError(t *testing.T) {
 	)
 
 	k := KinesisOutput{StreamName: streamName}
-	k.mockKinesisService(svc)
+	k.svc = svc
 
 	elapsed := k.writeKinesis(records)
 	assert.GreaterOrEqual(elapsed.Nanoseconds(), zero)
