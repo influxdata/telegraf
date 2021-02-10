@@ -28,7 +28,7 @@ information.
   ##   port:    optional
   ##   example: agents = ["udp://127.0.0.1:161"]
   ##            agents = ["tcp://127.0.0.1:161"]
-  ##            agents = ["udpv4://v4only-snmp-agent"]
+  ##            agents = ["udp4://v4only-snmp-agent"]
   agents = ["udp://127.0.0.1:161"]
 
   ## Timeout for each request.
