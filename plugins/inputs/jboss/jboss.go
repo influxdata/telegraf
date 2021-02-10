@@ -31,7 +31,6 @@ const (
 	GetWebStat
 	GetJMSQueueStat
 	GetJMSTopicStat
-	GetTransactionStat 
 )
 
 // KeyVal key / value struct
@@ -40,10 +39,41 @@ type KeyVal struct {
 	Val interface{}
 }
 
-// ExecTypeResponse expected GetExecStat response type
+// OrderedMap Define an ordered map
+type OrderedMap []KeyVal
+
+// MarshalJSON Implement the json.Marshaler interface
+func (omap OrderedMap) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+
+	buf.WriteString("{")
+	for i, kv := range omap {
+		if i != 0 {
+			buf.WriteString(",")
+		}
+		// marshal key
+		key, err := json.Marshal(kv.Key)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(key)
+		buf.WriteString(":")
+		// marshal value
+		val, err := json.Marshal(kv.Val)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(val)
+	}
+
+	buf.WriteString("}")
+	return buf.Bytes(), nil
+}
+
+// HostResponse expected GetHost response type
 type ExecTypeResponse struct {
 	Outcome string `json:"outcome"`
-	Result  map[string]interface{} `json:"result"`
+	Result  string `json:"result"`
 }
 
 // HostResponse expected GetHost response type
@@ -144,8 +174,6 @@ type JBoss struct {
 	Username string
 	Password string
 
-	ExecAsDomain bool `toml:"exec_as_domain"`
-
 	Authorization string
 
 	ResponseTimeout internal.Duration
@@ -153,8 +181,6 @@ type JBoss struct {
 	tls.ClientConfig
 
 	client HTTPClient
-
-	EAP7 bool
 }
 
 // HTTPClient HTTP client struct
@@ -215,11 +241,9 @@ var sampleConfig = `
   ## Metric selection
   metrics =[
 	"jvm",
-	"web_con", 		#only for EAP <=6.X/AS <=7.X
-	"web_listener", #only for EAP >=7.X/Widlfly > 8
+	"web", 		# Handles both EAP <=6.X/AS <=7.X and EAP >=7.X/Widlfly > 8
 	"deployment",
 	"database",
-	"transaction",
 	"jms",
   ]
 `
@@ -276,17 +300,16 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 		exec := ExecTypeResponse{}
 		if err = json.Unmarshal(out, &exec); err != nil {
 			acc.AddError(fmt.Errorf("Error decoding JSON response (ExecTypeResponse) %s,%s", out, err))
-			continue
 		}
-		if exec.Result["launch-type"] == "DOMAIN" {
-			h.ExecAsDomain = true
+		var execAsDomain bool
+		var isEAP7 bool
+		if exec.Result == "DOMAIN" {
+			execAsDomain = true
 		} else {
-			h.ExecAsDomain = false
+			execAsDomain = false
 		}
-
-		h.EAP7 = isEAP7Version(exec.Result["product-name"].(string), exec.Result["product-version"].(string))
-
-		log.Printf("D! JBoss Plugin Working as Domain : %t ( %s )  for server %s \n", h.ExecAsDomain, exec.Result, server)
+		isEAP7 = isEAP7Version(exec.Result["product-name"].(string), exec.Result["product-version"].(string))
+		log.Printf("D! JBoss Plugin Working as Domain : %t ( %s )  for server %s \n", execAsDomain, exec.Result, server)
 
 		wg.Add(1)
 		go func(server string, execAsDomain bool) {
@@ -319,9 +342,9 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 				log.Printf("D! JBoss HOSTS %s", hosts)
 			}
 
-			h.getServersOnHost(acc, server, execAsDomain, hosts.Result)
+			h.getServersOnHost(acc, server, execAsDomain, isEAP7, hosts.Result)
 
-		}(server, h.ExecAsDomain)
+		}(server, execAsDomain)
 	}
 
 	wg.Wait()
@@ -346,7 +369,6 @@ func isEAP7Version(productName string, productVersion string) bool {
 	}
 }
 
-
 // Gathers data from a particular host
 // Parameters:
 //     acc      : The telegraf Accumulator to use
@@ -360,6 +382,7 @@ func (h *JBoss) getServersOnHost(
 	acc telegraf.Accumulator,
 	serverURL string,
 	execAsDomain bool,
+	isEAP7 bool,
 	hosts []string,
 ) error {
 	var wg sync.WaitGroup
@@ -374,8 +397,8 @@ func (h *JBoss) getServersOnHost(
 
 			if execAsDomain {
 				//get servers
-				adr := []string{
-					"host", host,
+				adr := OrderedMap{
+					{"host", host},
 				}
 				bodyContent, err := h.createRequestBody(GetServers, adr)
 				if err != nil {
@@ -405,12 +428,12 @@ func (h *JBoss) getServersOnHost(
 					switch v {
 					case "jvm":
 						h.getJVMStatistics(acc, serverURL, execAsDomain, host, server)
-					case "web_con":
-						if h.EAP7 {
+					case "web":
+						if isEAP7 {
 							h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "ajp-listener", "default")
-	                                                h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "http-listener", "default")
-        	                                        h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "https-listener", "https")
-						} else {
+							h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "http-listener", "default")
+							h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "https-listener", "https")
+						} else  {
 							h.getWebStatistics(acc, serverURL, execAsDomain, host, server, "ajp")
 							h.getWebStatistics(acc, serverURL, execAsDomain, host, server, "http")
 						}
@@ -419,13 +442,12 @@ func (h *JBoss) getServersOnHost(
 					case "database":
 						h.getDatasourceStatistics(acc, serverURL, execAsDomain, host, server)
 					case "jms":
-
 						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging", GetJMSQueueStat)
 						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging", GetJMSTopicStat)
 						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging-activemq", GetJMSQueueStat)
 						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging-activemq", GetJMSTopicStat)
 					case "transaction":	
-						h.getTransactionStatistics(acc, serverURL, execAsDomain, host, server)
+						h.getTransactionStatistics(acc, serverURL, execAsDomain, host, server)	
 					default:
 						log.Printf("E! Jboss doesn't exist the metric set %s\n", v)
 					}
@@ -457,18 +479,18 @@ func (h *JBoss) getWebStatistics(
 	serverName string,
 	connector string,
 ) error {
-	adr := []string{}
+	adr := OrderedMap{}
 	if execAsDomain {
-		adr = []string{
-			"host", host,
-			"server", serverName,
-			"subsystem", "web",
-			"connector", connector,
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
+			{"subsystem", "web"},
+			{"connector", connector},
 		}
 	} else {
-		adr = []string{
-			"subsystem", "web",
-			"connector", connector,
+		adr = OrderedMap{
+			{"subsystem", "web"},
+			{"connector", connector},
 		}
 	}
 
@@ -516,7 +538,7 @@ func (h *JBoss) getWebStatistics(
 		"jboss_server": serverName,
 		"type":         connector,
 	}
-	acc.AddFields("jboss_web_con", fields, tags)
+	acc.AddFields("jboss_web", fields, tags)
 
 	return nil
 }
@@ -530,20 +552,20 @@ func (h *JBoss) getUndertowStatistics(
 	listType string,
 	listener string,
 ) error {
-	adr := []string{}
+	adr := OrderedMap{}
 	if execAsDomain {
-		adr = []string{
-			"host", host,
-			"server", serverName,
-			"subsystem", "undertow",
-			"server", "default-server",
-			listType, listener,
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
+			{"subsystem", "undertow"},
+			{"server", "default-server"},
+			{listType, listener},
 		}
 	} else {
-		adr = []string{
-			"subsystem", "undertow",
-			"server", "default-server",
-			listType, listener,
+		adr = OrderedMap{
+			{"subsystem", "undertow"},
+			{"server", "default-server"},
+			{listType, listener},
 		}
 	}
 
@@ -567,7 +589,7 @@ func (h *JBoss) getUndertowStatistics(
 
 	fields := make(map[string]interface{})
 	for key, value := range server.Result {
-		log.Printf("D! LISTENER %s : %s \n", key, value)
+		log.Printf("D! LISTERNER %s : %s \n", key, value)
 		switch key {
 		case "bytes-received", "bytes-sent", "request-count", "error-count", "max-processing-time", "processing-time":
 			if value != nil {
@@ -593,14 +615,14 @@ func (h *JBoss) getUndertowStatistics(
 		"type":         listType,
 		"instance":     listener,
 	}
-	acc.AddFields("jboss_web_lstnr", fields, tags)
+	acc.AddFields("jboss_web", fields, tags)
 
 	return nil
 }
 
 func GetPoolFields(pool DBPoolStatistics) map[string]interface{} {
 	retmap := make(map[string]interface{})
-	//Jboss EAP 6/AS 7.X returns "strings", wilrfly 12 returns integuers
+	//Jboss EAP 6/AS 7.X returns "strings", wildfly 12 returns integers
 	switch pool.ActiveCount.(type) {
 	case string:
 		retmap["in-use-count"], _ = strconv.ParseInt(pool.InUseCount.(string), 10, 64)
@@ -631,17 +653,17 @@ func (h *JBoss) getDatasourceStatistics(
 	host string,
 	serverName string,
 ) error {
-	adr := []string{}
+	adr := OrderedMap{}
 	if execAsDomain {
-		adr = []string{
-			"host", host,
-			"server", serverName,
-			"subsystem", "datasources",
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
+			{"subsystem", "datasources"},
 		}
 
 	} else {
-		adr = []string{
-			"subsystem", "datasources",
+		adr = OrderedMap{
+			{"subsystem", "datasources"},
 		}
 	}
 
@@ -685,72 +707,6 @@ func (h *JBoss) getDatasourceStatistics(
 	return nil
 }
 
-// Gathers Transaction data from a particular host
-// Parameters:
-//     acc      : The telegraf Accumulator to use
-//     serverURL: endpoint to send request to
-//     host     : the host being queried
-//     server   : the server being queried
-//
-// Returns:
-//     error: Any error that may have occurred
-
-func (h *JBoss) getTransactionStatistics(
-	acc telegraf.Accumulator,
-	serverURL string,
-	execAsDomain bool,
-	host string,
-	serverName string,
-) error {
-	adr := []string{}
-	
-	if execAsDomain {
-		adr = []string{
-			"host", host,
-			"server", serverName,
-			"subsystem", "transactions",
-		}
-	} else {
-		adr = []string{
-			"subsystem", "transactions",
-		}
-	}
-
-	bodyContent, err := h.createRequestBody(GetTransactionStat, adr)
-	if err != nil {
-		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
-	}
-
-	out, err := h.doRequest(serverURL, bodyContent)
-
-	log.Printf("D! JBoss API Req err: %s", err)
-	log.Printf("D! JBoss API Req out: %s", out)
-	
-	if err != nil {
-		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
-	} else {
-		server := TransactionResponse{}
-		if err = json.Unmarshal(out, &server); err != nil {
-			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
-		}
-
-		fields := make(map[string]interface{})
-		for key, value := range server.Result {
-			if strings.Contains(key, "number-of") {
-				fields[key], _ = strconv.ParseInt(value.(string), 10, 64)
-			}
-		}
-		tags := map[string]string{
-			"jboss_host":   host,
-			"jboss_server": serverName,
-		}
-		
-		acc.AddFields("jboss_transaction", fields, tags)
-	}
-
-	return nil
-}
-
 // Gathers JMS data from a particular host
 // Parameters:
 //     acc      : The telegraf Accumulator to use
@@ -771,7 +727,8 @@ func (h *JBoss) getJMSStatistics(
 	opType int,
 ) error {
 
-        adr := []string{}
+	adr := OrderedMap{}
+
 	var serverID string
 
 	if subsystem == "messaging-activemq" {
@@ -781,17 +738,16 @@ func (h *JBoss) getJMSStatistics(
 	}
 
 	if execAsDomain {
-		adr = []string{
-			"host", host,
-			"server", serverName,
-			"subsystem", subsystem,
-			serverID, "default",
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
+			{"subsystem", subsystem},
+			{serverID, "default"},
 		}
-                
 	} else {
-		adr = []string{
-			"subsystem", subsystem,
-			serverID, "default",
+		adr = OrderedMap{
+			{"subsystem", subsystem},
+			{serverID, "default"},
 		}
 	}
 
@@ -852,16 +808,16 @@ func (h *JBoss) getJVMStatistics(
 	host string,
 	serverName string,
 ) error {
-	adr := []string{}
+	adr := OrderedMap{}
 	if execAsDomain {
-		adr = []string{
-			"host", host,
-			"server", serverName,
-			"core-service", "platform-mbean",
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
+			{"core-service", "platform-mbean"},
 		}
 	} else {
-		adr = []string{
-			"core-service", "platform-mbean",
+		adr = OrderedMap{
+			{"core-service", "platform-mbean"},
 		}
 	}
 
@@ -900,14 +856,6 @@ func (h *JBoss) getJVMStatistics(
 			nonHeap := mem["non-heap-memory-usage"].(map[string]interface{})
 			h.flatten(heap, fields, "heap")
 			h.flatten(nonHeap, fields, "nonheap")
-		case "memory-pool":
-			data := value.(map[string]interface{})
-			name := data["name"].(map[string]interface{})
-			for poolName, poolArea := range name {
-			    poolData := poolArea.(map[string]interface{})
-			    usage := poolData["usage"].(map[string]interface{})
-			    h.flatten(usage, fields, poolName)
-			}
 		case "garbage-collector":
 			gc := value.(map[string]interface{})
 			gcName := gc["name"].(map[string]interface{})
@@ -989,12 +937,12 @@ func (h *JBoss) getServerDeploymentStatistics(
 	serverName string,
 ) error {
 	var wg sync.WaitGroup
-	adr := []string{}
+	adr := OrderedMap{}
 
 	if execAsDomain {
-		adr = []string{
-			"host", host,
-			"server", serverName,
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
 		}
 	}
 
@@ -1021,16 +969,16 @@ func (h *JBoss) getServerDeploymentStatistics(
 		wg.Add(1)
 		go func(deployment string) {
 			defer wg.Done()
-			adr2 := []string{}
+			adr2 := OrderedMap{}
 			if execAsDomain {
-				adr2 = []string{
-					"host", host,
-					"server", serverName,
-					"deployment", deployment,
+				adr2 = OrderedMap{
+					{"host", host},
+					{"server", serverName},
+					{"deployment", deployment},
 				}
 			} else {
-				adr2 = []string{
-					"deployment", deployment,
+				adr2 = OrderedMap{
+					{"deployment", deployment},
 				}
 			}
 
@@ -1153,18 +1101,17 @@ func (h *JBoss) flatten(item map[string]interface{}, fields map[string]interface
 	}
 }
 
-func (h *JBoss) createRequestBody(optype int, address []string) (map[string]interface{}, error) {
+func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]interface{}, error) {
 	bodyContent := make(map[string]interface{})
 
 	// Create bodyContent
 	switch optype {
 	case GetExecStat:
 		bodyContent = map[string]interface{}{
-			"operation":       "read-resource",
-			"include-runtime": "true",
-			"attributes-only": "true",
-			"address":         []string{},
-			"json.pretty":     1,
+			"operation":   "read-attribute",
+			"name":        "launch-type",
+			"address":     []string{},
+			"json.pretty": 1,
 		}
 	case GetHosts:
 		bodyContent = map[string]interface{}{
@@ -1240,17 +1187,19 @@ func (h *JBoss) createRequestBody(optype int, address []string) (map[string]inte
 		}
 	case GetTransactionStat:
 		bodyContent = map[string]interface{}{
-                        "operation":       "read-resources",
-                        "include-runtime": "true",
-                        "recursive-depth": 0,
-                        "address":         address,
-                        "json.pretty":     1,
-                }
+			"operation":       "read-resources",
+			"include-runtime": "true",
+			"recursive-depth": 0,
+			"address":         address,
+			"json.pretty":     1,
+		}
 	}
+
 	return bodyContent, nil
 }
 
 func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) ([]byte, error) {
+
 	serverURL, err := url.Parse(domainURL)
 	if err != nil {
 		return nil, err
@@ -1262,6 +1211,9 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 	log.Printf("D! Req: %s\n", requestBody)
 
 	req := dac.NewRequest(h.Username, h.Password, method, serverURL.String(), string(requestBody[:]))
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := req.Execute()
@@ -1271,13 +1223,9 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 		return nil, err
 	}
 
-        //uncomment to do a superdebug
-        //log.Printf("D! JBoss API Req HTTP REQ:%#+v", req)
-        //log.Printf("D! JBoss API Req HTTP RESP:%#+v", resp)
-
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
-			serverURL,
+			req.RequestURI,
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
 			http.StatusOK,
@@ -1302,4 +1250,3 @@ func init() {
 		}
 	})
 }
-
