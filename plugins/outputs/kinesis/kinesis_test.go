@@ -251,14 +251,14 @@ func (m *mockKinesisPutRecords) SetupErrorResponse(err error) {
 
 func (m *mockKinesisPutRecords) PutRecords(input *kinesis.PutRecordsInput) (*kinesis.PutRecordsOutput, error) {
 
-	var reqNum = len(m.requests)
+	reqNum := len(m.requests)
 	if reqNum > len(m.responses) {
 		return nil, fmt.Errorf("Response for request %+v not setup", reqNum)
 	}
 
 	m.requests = append(m.requests, input)
 
-	var resp = m.responses[reqNum]
+	resp := m.responses[reqNum]
 	return resp.Output, resp.Err
 }
 
