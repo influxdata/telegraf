@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  win: circleci/windows@2.2.0  
+  win: circleci/windows@2.4.0  
 
 executors:
   go-1_14:
@@ -227,7 +227,7 @@ workflows:
               ignore: /.*/
       - 'package-sign-windows':
           requires:
-            - 'release'
+            - 'package'
   nightly:
     jobs:
       - 'deps'
