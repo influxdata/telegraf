@@ -37,13 +37,18 @@ func (*MessagePackTime) ExtensionType() int8 {
 }
 
 // Len implements the Extension interface
+// The timestamp extension uses variable length encoding depending the input
+//
+// 32bits: [1970-01-01 00:00:00 UTC, 2106-02-07 06:28:16 UTC) range. If the nanoseconds part is 0
+// 64bits: [1970-01-01 00:00:00.000000000 UTC, 2514-05-30 01:53:04.000000000 UTC) range.
+// 96bits: [-584554047284-02-23 16:59:44 UTC, 584554051223-11-09 07:00:16.000000000 UTC) range.
 func (t *MessagePackTime) Len() int {
 	sec := t.time.Unix()
 	nsec := t.time.Nanosecond()
 
-	if sec < 0 || sec > 0x400000000 { // 96 bits encoding
+	if sec < 0 || sec >= 0x400000000 { // 96 bits encoding
 		return 12
-	} else if sec > 0xFFFFFFFF || nsec != 0 {
+	} else if sec > 0xffffffff || nsec != 0 {
 		return 8
 	} else {
 		return 4
@@ -62,7 +67,7 @@ func (t *MessagePackTime) MarshalBinaryTo(buf []byte) error {
 		sec := t.time.Unix()
 		nsec := t.time.Nanosecond()
 
-		data := uint64(nsec)<<34 | (uint64(sec) & 0x03_FFFF_FFFF)
+		data := uint64(nsec)<<34 | (uint64(sec) & 0x03_ffff_ffff)
 		binary.BigEndian.PutUint64(buf, data)
 
 	} else if len == 12 {
