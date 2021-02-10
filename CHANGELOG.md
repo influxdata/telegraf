@@ -2,7 +2,6 @@
 
 #### Bugfixes
 
-  - [#8817](https://github.com/influxdata/telegraf/pull/8817) `outputs.kinesis` Log when PutRecords unsuccessfully processes records
   - [#8770](https://github.com/influxdata/telegraf/pull/8770) `inputs.ping` Set interface for native
   - [#8764](https://github.com/influxdata/telegraf/pull/8764) `inputs.ping` Resolve regression, re-add missing function
 
