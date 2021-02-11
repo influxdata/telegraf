@@ -48,7 +48,8 @@ func (t *MessagePackTime) Len() int {
 
 	if sec < 0 || sec >= (1<<34) { // 96 bits encoding
 		return 12
-	} else if sec >= (1<<32) || nsec != 0 {
+	}
+	if sec >= (1<<32) || nsec != 0 {
 		return 8
 	}
 	return 4
