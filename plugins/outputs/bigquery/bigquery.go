@@ -37,7 +37,6 @@ type BigQuery struct {
 	CredentialsFile string `toml:"credentials_file"`
 	Project         string `toml:"project"`
 	Dataset         string `toml:"dataset"`
-
 	Timeout internal.Duration `toml:"timeout"`
 	Log telegraf.Logger `toml: "-"`
 
