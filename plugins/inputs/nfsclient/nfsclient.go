@@ -22,6 +22,7 @@ type NFSClient struct {
 	Log               telegraf.Logger `toml:"-"`
 	nfs3Ops           map[string]bool
 	nfs4Ops           map[string]bool
+	mountstatsPath    string
 }
 
 const sampleConfig = `
@@ -301,13 +302,13 @@ func (n *NFSClient) getMountStatsPath() string {
 	if os.Getenv("MOUNT_PROC") != "" {
 		path = os.Getenv("MOUNT_PROC")
 	}
-	n.Log.Debugf("Opening [%s] for mountstats", path)
+	n.Log.Debugf("using [%s] for mountstats", path)
 	return path
 }
 
 func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 
-	file, err := os.Open(n.getMountStatsPath())
+	file, err := os.Open(n.mountstatsPath)
 	if err != nil {
 		n.Log.Errorf("Failed opening the [%s] file: %s ", file, err)
 		return err
@@ -425,6 +426,8 @@ func (n *NFSClient) Init() error {
 
 	nfs3Ops := make(map[string]bool)
 	nfs4Ops := make(map[string]bool)
+
+	n.mountstatsPath = n.getMountStatsPath()
 
 	if len(n.IncludeOperations) == 0 {
 		for _, Op := range nfs3Fields {
