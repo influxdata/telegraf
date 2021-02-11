@@ -82,7 +82,9 @@ Currently it is known to break on 7.x or greater versions.
 ```
 
 ## Examples
+
 Please note that the `[[inputs.elasticsearch_query]]` is still required for all of the examples below.
+
 ### Search the average response time, per URI and per response status code
 
 ```toml
