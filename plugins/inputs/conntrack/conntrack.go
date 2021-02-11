@@ -6,18 +6,23 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
+	"path/filepath"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"path/filepath"
 )
 
 type Conntrack struct {
-	Path  string
-	Dirs  []string
-	Files []string
+	Path       string
+	Dirs       []string
+	Files      []string
+	Conntrack  bool
+	ConnTable  []string
+	ConnStates []string
 }
 
 const (
@@ -36,6 +41,8 @@ var dfltFiles = []string{
 	"nf_conntrack_max",
 }
 
+var dfltConnTable = []string{"/usr/sbin/conntrack", "-L", "-o", "extended"}
+
 func (c *Conntrack) setDefaults() {
 	if len(c.Dirs) == 0 {
 		c.Dirs = dfltDirs
@@ -43,6 +50,10 @@ func (c *Conntrack) setDefaults() {
 
 	if len(c.Files) == 0 {
 		c.Files = dfltFiles
+	}
+
+	if len(c.ConnTable) == 0 {
+		c.ConnTable = dfltConnTable
 	}
 }
 
@@ -63,6 +74,15 @@ var sampleConfig = `
    ## Directories to search within for the conntrack files above.
    ## Missing directories will be ignored.
    dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
+
+   ## Connections tracking table from Linux kernel
+   ## This metrics are only for servers with the nf_conntrack kerne module
+   ## and the conntrack command installed.
+
+   ## Use conntrack to enable the nf_conntrack metrics
+   conntrack = false
+   ## Change the location path as needed
+   conntable = ["/usr/sbin/conntrack", "-L", "-o", "extended"]
 `
 
 func (c *Conntrack) SampleConfig() string {
@@ -71,7 +91,13 @@ func (c *Conntrack) SampleConfig() string {
 
 func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 	c.setDefaults()
+	if err := c.gatherCounters(acc); err != nil {
+		return err
+	}
+	return c.gatherConnStates(acc)
+}
 
+func (c *Conntrack) gatherCounters(acc telegraf.Accumulator) error {
 	var metricKey string
 	fields := make(map[string]interface{})
 
@@ -111,6 +137,34 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 	}
 
 	acc.AddFields(inputName, fields, nil)
+	return nil
+}
+
+func (c *Conntrack) gatherConnStates(acc telegraf.Accumulator) error {
+	if !c.Conntrack {
+		return nil
+	}
+
+	fields := make(map[string]interface{})
+
+	nf := newNfConntrack()
+
+	cmd := exec.Command(c.ConnTable[0], c.ConnTable[1:]...)
+	cmd.Stdout = nf
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return err
+	}
+
+	for k, v := range nf.counters {
+		fields[k] = v
+	}
+
+	acc.AddFields(inputName, fields, nil)
+
 	return nil
 }
 
