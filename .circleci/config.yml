@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  win: circleci/windows@2.4.0  
 
 executors:
   go-1_14:
@@ -129,6 +131,16 @@ jobs:
     executor: mac
     steps:
       - test-go-mac
+  test-go-windows:
+    executor:
+        name: win/default
+        shell: powershell.exe
+    steps:
+      - checkout
+      - run: choco upgrade golang --version=1.15.5
+      - run: choco install make
+      - run: git config --system core.longpaths true
+      - run: make test-windows
 
   package:
     executor: go-1_15
@@ -186,8 +198,13 @@ workflows:
           filters:
             tags: # only runs on tags if you specify this filter
               only: /.*/
+      - 'test-go-windows':
+          filters:
+            tags:
+              only: /.*/
       - 'package':
           requires:
+            - 'test-go-windows'
             - 'test-go-darwin'
             - 'test-go-1_14'
             - 'test-go-1_14-386'
@@ -195,6 +212,7 @@ workflows:
             - 'test-go-1_15-386'
       - 'release':
           requires:
+            - 'test-go-windows'
             - 'test-go-darwin'
             - 'test-go-1_14'
             - 'test-go-1_14-386'
@@ -224,8 +242,10 @@ workflows:
       - 'test-go-darwin':
           requires:
             - 'macdeps'
+      - 'test-go-windows'
       - 'nightly':
           requires:
+            - 'test-go-windows'
             - 'test-go-darwin'
             - 'test-go-1_14'
             - 'test-go-1_14-386'
