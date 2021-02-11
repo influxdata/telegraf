@@ -47,24 +47,15 @@ where exact quantile calculation isn't required.
 
 For implementation details see the underlying [golang library][tdigest_lib].
 
-##### exact R7
-This type "exactly" computes the quantiles according to [Hyndman & Fan (1996) R7][hyndman_fan]
-algorithm. This variant is also used in Excel and NumPy.
+##### exact R7 and R8
+These algorithms compute quantiles as described in [Hyndman & Fan (1996)][hyndman_fan].
+The R7 variant is used in Excel and NumPy.  The R8 variant is recommended
+by Hyndman & Fan due to its independence of the underlying sample distribution.
 
-This algorithm needs to store all seen data in the aggregation `period` and
-might consume a lot of memory when used with a large number of series or a
-large number of samples. Furthermore, it is very *slow* compared to the `t-digest`
-algorithm and therefore **should only be used with small number of samples**.
-
-##### exact R8
-This type "exactly" computes the quantiles according to [Hyndman & Fan (1996) R8][hyndman_fan]
-algorithm. This variant is recommended by Hyndman & Fan in their paper due to
-its independence of the underlying sample distribution.
-
-This algorithm needs to store all seen data in the aggregation `period` and
-might consume a lot of memory when used with a large number of series or a
-large number of samples. Furthermore, it is very *slow* compared to the `t-digest`
-algorithm and therefore **should only be used with small number of samples**.
+These algorithms save all data for the aggregation `period`.  They require
+a lot of memory when used with a large number of series or a
+large number of samples. They are slower than the `t-digest`
+algorithm and are recommended only to be used with a small number of samples and series.
 
 
 #### Benchmark (linux/amd64)
