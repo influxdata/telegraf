@@ -5,8 +5,7 @@ import (
 )
 
 // Serializer encodes metrics in MessagePack format
-type Serializer struct {
-}
+type Serializer struct{}
 
 // NewSerializer creates a msgpack.Serializer
 func NewSerializer() *Serializer {

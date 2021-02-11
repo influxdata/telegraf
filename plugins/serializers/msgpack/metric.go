@@ -50,9 +50,8 @@ func (t *MessagePackTime) Len() int {
 		return 12
 	} else if sec >= (1<<32) || nsec != 0 {
 		return 8
-	} else {
-		return 4
 	}
+	return 4
 }
 
 // MarshalBinaryTo implements the Extension interface
@@ -62,14 +61,12 @@ func (t *MessagePackTime) MarshalBinaryTo(buf []byte) error {
 	if len == 4 {
 		sec := t.time.Unix()
 		binary.BigEndian.PutUint32(buf, uint32(sec))
-
 	} else if len == 8 {
 		sec := t.time.Unix()
 		nsec := t.time.Nanosecond()
 
 		data := uint64(nsec)<<34 | (uint64(sec) & 0x03_ffff_ffff)
 		binary.BigEndian.PutUint64(buf, data)
-
 	} else if len == 12 {
 		sec := t.time.Unix()
 		nsec := t.time.Nanosecond()
