@@ -14,27 +14,27 @@ import (
 )
 
 type NFSClient struct {
-	Fullstat          bool     `toml:"fullstat"`
-	IncludeMounts     []string `toml:"include_mounts"`
-	ExcludeMounts     []string `toml:"exclude_mounts"`
-	IncludeOperations []string `toml:"include_operations"`
-	ExcludeOperations []string `toml:"exclude_operations"`
+	Fullstat          bool            `toml:"fullstat"`
+	IncludeMounts     []string        `toml:"include_mounts"`
+	ExcludeMounts     []string        `toml:"exclude_mounts"`
+	IncludeOperations []string        `toml:"include_operations"`
+	ExcludeOperations []string        `toml:"exclude_operations"`
+	Log               telegraf.Logger `toml:"-"`
 	nfs3Ops           map[string]bool
 	nfs4Ops           map[string]bool
-	Log               telegraf.Logger `toml:"-"`
 }
 
 const sampleConfig = `
   ## Read more low-level metrics (optional, defaults to false)
-  #fullstat = false
+  # fullstat = false
 
   ## List of mounts to explictly include or exclude (optional)
   ## The pattern (Go regexp) is matched against the mount point (not the
   ## device being mounted).  If include_mounts is set, all mounts are ignored
   ## unless present in the list. If a mount is listed in both include_mounts
   ## and exclude_mounts, it is excluded.  Go regexp patterns can be used.
-  #include_mounts = []
-  #exclude_mounts = []
+  # include_mounts = []
+  # exclude_mounts = []
 
   ## List of operations to include or exclude from collecting.  This applies
   ## only when fullstat=true.  Symantics are similar to {include,exclude}_mounts:
@@ -48,8 +48,8 @@ const sampleConfig = `
   ## for different mountpoints:  use mulitple [[input.nfsclient]] stanzas,
   ## with their own lists.  See "include_mounts" above, and be careful of
   ## duplicate metrics.
-  #include_operations = []
-  #exclude_operations = []
+  # include_operations = []
+  # exclude_operations = []
 `
 
 func (n *NFSClient) SampleConfig() string {
