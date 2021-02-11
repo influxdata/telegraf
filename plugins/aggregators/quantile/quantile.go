@@ -65,10 +65,10 @@ func (q *Quantile) Add(in telegraf.Metric) {
 	id := in.HashID()
 	if cached, ok := q.cache[id]; ok {
 		fields := in.Fields()
-		for k, algorithm := range cached.fields {
+		for k, algo := range cached.fields {
 			if field, ok := fields[k]; ok {
 				if v, isconvertible := convert(field); isconvertible {
-					algorithm.Add(v)
+					algo.Add(v)
 				}
 			}
 		}
@@ -84,9 +84,9 @@ func (q *Quantile) Add(in telegraf.Metric) {
 	for k, field := range in.Fields() {
 		if v, isconvertible := convert(field); isconvertible {
 			// This should never error out as we tested it in Init()
-			algorithm, _ := q.newAlgorithm(q.Compression)
-			algorithm.Add(v)
-			a.fields[k] = algorithm
+			algo, _ := q.newAlgorithm(q.Compression)
+			algo.Add(v)
+			a.fields[k] = algo
 		}
 	}
 	q.cache[id] = a
@@ -95,9 +95,9 @@ func (q *Quantile) Add(in telegraf.Metric) {
 func (q *Quantile) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range q.cache {
 		fields := map[string]interface{}{}
-		for k, algorithm := range aggregate.fields {
+		for k, algo := range aggregate.fields {
 			for i, qtl := range q.Quantiles {
-				fields[k+q.suffixes[i]] = algorithm.Quantile(qtl)
+				fields[k+q.suffixes[i]] = algo.Quantile(qtl)
 			}
 		}
 		acc.AddFields(aggregate.name, fields, aggregate.tags)
