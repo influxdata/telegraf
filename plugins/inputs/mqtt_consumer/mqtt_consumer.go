@@ -184,7 +184,7 @@ func (m *MQTTConsumer) Init() error {
 	}
 
 	m.opts = opts
-	m.messages = make(map[telegraf.TrackingID]bool)
+	m.messages = map[telegraf.TrackingID]bool{}
 
 	return nil
 }
