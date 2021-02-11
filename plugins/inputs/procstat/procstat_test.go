@@ -84,6 +84,7 @@ func (pg *testPgrep) Pattern(pattern string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 
+// nolint
 func (pg *testPgrep) Uid(user string) ([]PID, error) {
 	return pg.pids, pg.err
 }
@@ -94,6 +95,7 @@ func (pg *testPgrep) FullPattern(pattern string) ([]PID, error) {
 
 type testProc struct {
 	pid  PID
+	ppid PID
 	tags map[string]string
 }
 
@@ -102,6 +104,10 @@ func newTestProc(pid PID) (Process, error) {
 		tags: make(map[string]string),
 	}
 	return proc, nil
+}
+
+func (p *testProc) Ppid() (PID, error) {
+	return p.ppid, nil
 }
 
 func (p *testProc) PID() PID {
@@ -239,6 +245,7 @@ func TestGather_PidTag(t *testing.T) {
 	p := Procstat{
 		Exe:             exe,
 		PidTag:          true,
+		MetricsInclude:  []string{MetricsThreads},
 		createPIDFinder: pidFinder([]PID{pid}, nil),
 		createProcess:   newTestProc,
 	}
@@ -253,6 +260,7 @@ func TestGather_Prefix(t *testing.T) {
 	p := Procstat{
 		Exe:             exe,
 		Prefix:          "custom_prefix",
+		MetricsInclude:  []string{MetricsFDs},
 		createPIDFinder: pidFinder([]PID{pid}, nil),
 		createProcess:   newTestProc,
 	}
@@ -332,6 +340,7 @@ func TestGather_PercentFirstPass(t *testing.T) {
 	p := Procstat{
 		Pattern:         "foo",
 		PidTag:          true,
+		MetricsInclude:  []string{MetricsCPU, MetricsCPUPercent},
 		createPIDFinder: pidFinder([]PID{pid}, nil),
 		createProcess:   NewProc,
 	}
@@ -348,6 +357,7 @@ func TestGather_PercentSecondPass(t *testing.T) {
 	p := Procstat{
 		Pattern:         "foo",
 		PidTag:          true,
+		MetricsInclude:  []string{MetricsCPU, MetricsCPUPercent},
 		createPIDFinder: pidFinder([]PID{pid}, nil),
 		createProcess:   NewProc,
 	}
@@ -418,4 +428,34 @@ func TestGather_SameTimestamps(t *testing.T) {
 	procstat_lookup, _ := acc.Get("procstat_lookup")
 
 	require.Equal(t, procstat.Time, procstat_lookup.Time)
+}
+
+func BenchmarkDefaultCollectionPlusEndpoints(b *testing.B) {
+	var acc testutil.Accumulator
+	pattern := "."
+
+	p := Procstat{
+		Pattern:        pattern,
+		CmdLineTag:     true,
+		MetricsInclude: append(defaultCollection, MetricsConnectionsEndpoints),
+	}
+
+	for i := 0; i < b.N; i++ {
+		acc.GatherError(p.Gather)
+	}
+}
+
+func BenchmarkConnEndpointsOnly(b *testing.B) {
+	var acc testutil.Accumulator
+	pattern := "."
+
+	p := Procstat{
+		Pattern:        pattern,
+		CmdLineTag:     true,
+		MetricsInclude: []string{MetricsConnectionsEndpoints},
+	}
+
+	for i := 0; i < b.N; i++ {
+		acc.GatherError(p.Gather)
+	}
 }
