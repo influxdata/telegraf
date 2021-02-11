@@ -66,6 +66,10 @@ commands:
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
+      - persist_to_workspace:
+          root: './build'
+          paths:
+            - 'dist'
 jobs:
   deps:
     executor: go-1_15
@@ -108,7 +112,6 @@ jobs:
             - 'usr/local/Cellar/go'
             - 'usr/local/bin/gofmt'
             - 'Users/distiller/go'
-
   test-go-1_14:
     executor: go-1_14
     steps:
@@ -155,7 +158,22 @@ jobs:
     steps:
       - package:
           nightly: true
-
+  package-sign-windows:
+    executor:
+        name: win/default
+        shell: powershell.exe
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '/build'
+      - run:
+          name: "Sign Windows Executables"
+          shell: powershell.exe
+          command: |
+            ./scripts/windows-signing.ps1
+      - store_artifacts:
+          path: './build/dist'
+          destination: 'build/dist'
 workflows:
   version: 2
   check:
@@ -223,6 +241,9 @@ workflows:
               only: /.*/
             branches:
               ignore: /.*/
+      - 'package-sign-windows':
+          requires:
+            - 'release'
   nightly:
     jobs:
       - 'deps'
