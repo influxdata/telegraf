@@ -283,7 +283,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 				matched, _ := regexp.MatchString(RE, mount)
 				if matched {
 					skip = true
-					break
+					return nil // last test, and we're skipping anyway
 				}
 			}
 		}
