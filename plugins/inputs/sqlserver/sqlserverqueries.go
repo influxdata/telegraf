@@ -9,11 +9,11 @@ import (
 // Variable @MajorMinorVersion:
 //   - 1000 --> SQL Server 2008
 //   - 1050 --> SQL Server 2008 R2
-//   - 1011 --> SQL Server 2012
-//   - 1012 --> SQL Server 2014
-//   - 1013 --> SQL Server 2016
-//   - 1014 --> SQL Server 2017
-//   - 1015 --> SQL Server 2019
+//   - 1100 --> SQL Server 2012
+//   - 1200 --> SQL Server 2014
+//   - 1300 --> SQL Server 2016
+//   - 1400 --> SQL Server 2017
+//   - 1500 --> SQL Server 2019
 
 // Thanks Bob Ward (http://aka.ms/bobwardms)
 // and the folks at Stack Overflow (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
@@ -1151,6 +1151,8 @@ FROM (
 ) AS z
 `
 
+// Collects availability replica state information from `sys.dm_hadr_availability_replica_states` for a High Availability / Disaster Recovery (HADR) setup
+// Certain fields are only supported on SQL Server 2016 and newer version, identified by check MajorMinorVersion >= 1300
 const sqlServerAvailabilityReplicaStates string = `
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@ServerName + ',Database:' + DB_NAME() +' is not a SQL Server Standard,Enterprise or Express. Check the database_type parameter in the telegraf configuration.';
@@ -1215,6 +1217,8 @@ END'
 EXEC sp_executesql @SqlStatement
 `
 
+// Collects database replica state information from `sys.dm_hadr_database_replica_states` for a High Availability / Disaster Recovery (HADR) setup
+// Certain fields are only supported on SQL Server 2016 and newer version, or SQL Server 2014 and newer, identified by check MajorMinorVersion >= 1300 or MajorMinorVersion >= 1200
 const sqlServerDatabaseReplicaStates string = `
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@ServerName + ',Database:' + DB_NAME() +' is not a SQL Server Standard,Enterprise or Express. Check the database_type parameter in the telegraf configuration.';
