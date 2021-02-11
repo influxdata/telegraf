@@ -23,6 +23,7 @@ var defaultTimeout = internal.Duration{Duration: 5 * time.Second}
 const sampleConfig = `	
   ## Credentials File
   credentials_file = "/path/to/service/account/key.json"
+
   ## Google Cloud Platform Project
   project = "my-gcp-project"
 
