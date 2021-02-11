@@ -39,7 +39,7 @@ Available data type options are:
 
 All field naming restrictions that apply to BigQuery should apply to the measurements to be imported.
 
-Tables on BigQuery should be created before hand and they are not created during persistence
+Tables on BigQuery should be created beforehand and they are not created during persistence
 
 Pay attention to the column `timestamp` since it is reserved upfront and cannot change. 
 If partitioning is required make sure it is applied beforehand.
