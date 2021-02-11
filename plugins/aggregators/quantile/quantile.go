@@ -10,9 +10,9 @@ import (
 type Quantile struct {
 	Quantiles        []float64 `toml:"quantiles"`
 	Compression      float64   `toml:"compression"`
-	ApproximatorType string    `toml:"algorithm"`
+	AlgorithmType string    `toml:"algorithm"`
 
-	newApproximator newApproximatorFunc
+	newAlgorithm newAlgorithmFunc
 
 	cache    map[uint64]aggregate
 	suffixes []string
@@ -20,11 +20,11 @@ type Quantile struct {
 
 type aggregate struct {
 	name   string
-	fields map[string]approximator
+	fields map[string]algorithm
 	tags   map[string]string
 }
 
-type newApproximatorFunc func(compression float64) (approximator, error)
+type newAlgorithmFunc func(compression float64) (algorithm, error)
 
 var sampleConfig = `
   ## General Aggregator Arguments:
@@ -65,28 +65,28 @@ func (q *Quantile) Add(in telegraf.Metric) {
 	id := in.HashID()
 	if cached, ok := q.cache[id]; ok {
 		fields := in.Fields()
-		for k, approx := range cached.fields {
+		for k, algorithm := range cached.fields {
 			if field, ok := fields[k]; ok {
 				if v, isconvertible := convert(field); isconvertible {
-					approx.Add(v)
+					algorithm.Add(v)
 				}
 			}
 		}
 		return
 	}
 
-	// New metric, setup cache and init approximator
+	// New metric, setup cache and init algorithm
 	a := aggregate{
 		name:   in.Name(),
 		tags:   in.Tags(),
-		fields: make(map[string]approximator),
+		fields: make(map[string]algorithm),
 	}
 	for k, field := range in.Fields() {
 		if v, isconvertible := convert(field); isconvertible {
 			// This should never error out as we tested it in Init()
-			approx, _ := q.newApproximator(q.Compression)
-			approx.Add(v)
-			a.fields[k] = approx
+			algorithm, _ := q.newAlgorithm(q.Compression)
+			algorithm.Add(v)
+			a.fields[k] = algorithm
 		}
 	}
 	q.cache[id] = a
@@ -95,9 +95,9 @@ func (q *Quantile) Add(in telegraf.Metric) {
 func (q *Quantile) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range q.cache {
 		fields := map[string]interface{}{}
-		for k, approx := range aggregate.fields {
+		for k, algorithm := range aggregate.fields {
 			for i, qtl := range q.Quantiles {
-				fields[k+q.suffixes[i]] = approx.Quantile(qtl)
+				fields[k+q.suffixes[i]] = algorithm.Quantile(qtl)
 			}
 		}
 		acc.AddFields(aggregate.name, fields, aggregate.tags)
@@ -122,18 +122,18 @@ func convert(in interface{}) (float64, bool) {
 }
 
 func (q *Quantile) Init() error {
-	switch q.ApproximatorType {
+	switch q.AlgorithmType {
 	case "t-digest", "":
-		q.newApproximator = newTDigest
+		q.newAlgorithm = newTDigest
 	case "exact R7":
-		q.newApproximator = newExactR7
+		q.newAlgorithm = newExactR7
 	case "exact R8":
-		q.newApproximator = newExactR8
+		q.newAlgorithm = newExactR8
 	default:
-		return fmt.Errorf("unknown approximator type %q", q.ApproximatorType)
+		return fmt.Errorf("unknown algorithm type %q", q.AlgorithmType)
 	}
-	if _, err := q.newApproximator(q.Compression); err != nil {
-		return fmt.Errorf("cannot create %q approximator: %v", q.ApproximatorType, err)
+	if _, err := q.newAlgorithm(q.Compression); err != nil {
+		return fmt.Errorf("cannot create %q algorithm: %v", q.AlgorithmType, err)
 	}
 
 	if len(q.Quantiles) == 0 {

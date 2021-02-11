@@ -7,32 +7,32 @@ import (
 	"github.com/caio/go-tdigest"
 )
 
-type approximator interface {
+type algorithm interface {
 	Add(value float64) error
 	Quantile(q float64) float64
 }
 
-func newTDigest(compression float64) (approximator, error) {
+func newTDigest(compression float64) (algorithm, error) {
 	return tdigest.New(tdigest.Compression(compression))
 }
 
-type exactApproximatorR7 struct {
+type exactAlgorithmR7 struct {
 	xs     []float64
 	sorted bool
 }
 
-func newExactR7(compression float64) (approximator, error) {
-	return &exactApproximatorR7{xs: make([]float64, 0, 100), sorted: false}, nil
+func newExactR7(compression float64) (algorithm, error) {
+	return &exactAlgorithmR7{xs: make([]float64, 0, 100), sorted: false}, nil
 }
 
-func (e *exactApproximatorR7) Add(value float64) error {
+func (e *exactAlgorithmR7) Add(value float64) error {
 	e.xs = append(e.xs, value)
 	e.sorted = false
 
 	return nil
 }
 
-func (e *exactApproximatorR7) Quantile(q float64) float64 {
+func (e *exactAlgorithmR7) Quantile(q float64) float64 {
 	size := len(e.xs)
 
 	// No information
@@ -63,23 +63,23 @@ func (e *exactApproximatorR7) Quantile(q float64) float64 {
 	return e.xs[j] + gamma*(e.xs[j+1]-e.xs[j])
 }
 
-type exactApproximatorR8 struct {
+type exactAlgorithmR8 struct {
 	xs     []float64
 	sorted bool
 }
 
-func newExactR8(compression float64) (approximator, error) {
-	return &exactApproximatorR8{xs: make([]float64, 0, 100), sorted: false}, nil
+func newExactR8(compression float64) (algorithm, error) {
+	return &exactAlgorithmR8{xs: make([]float64, 0, 100), sorted: false}, nil
 }
 
-func (e *exactApproximatorR8) Add(value float64) error {
+func (e *exactAlgorithmR8) Add(value float64) error {
 	e.xs = append(e.xs, value)
 	e.sorted = false
 
 	return nil
 }
 
-func (e *exactApproximatorR8) Quantile(q float64) float64 {
+func (e *exactAlgorithmR8) Quantile(q float64) float64 {
 	size := len(e.xs)
 
 	// No information
