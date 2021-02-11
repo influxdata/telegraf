@@ -2,10 +2,9 @@ package bigquery
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"net/http/httputil"
 	"strings"
 	"testing"
 	"time"
@@ -23,6 +22,13 @@ const (
 
 var testingHost string
 var testDuration = internal.Duration{Duration: 5 * time.Second}
+var receivedBody map[string]json.RawMessage
+
+type Row struct {
+	Tag1      string  `json:"tag1"`
+	Timestamp string  `json:"timestamp"`
+	Value     float64 `json:"value"`
+}
 
 func TestConnect(t *testing.T) {
 	srv := localBigQueryServer(t)
@@ -56,6 +62,17 @@ func TestWrite(t *testing.T) {
 	b.Connect()
 	err := b.Write(mockMetrics)
 	require.NoError(t, err)
+
+	var rows []map[string]json.RawMessage
+	json.Unmarshal(receivedBody["rows"], &rows)
+
+	var row Row
+	json.Unmarshal(rows[0]["json"], &row)
+
+	pt, _ := time.Parse(time.RFC3339, row.Timestamp)
+	require.Equal(t, mockMetrics[0].Tags()["tag1"], row.Tag1)
+	require.Equal(t, mockMetrics[0].Time(), pt)
+	require.Equal(t, mockMetrics[0].Fields()["value"], row.Value)
 }
 
 func (b *BigQuery) setUpTestClient() error {
@@ -81,11 +98,9 @@ func localBigQueryServer(t *testing.T) *httptest.Server {
 	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/projects/test-project/datasets/test-dataset/tables/test1/insertAll":
-			requestDump, err := httputil.DumpRequest(r, true)
-			if err != nil {
-				fmt.Println(err)
-			}
-			fmt.Println(string(requestDump))
+			decoder := json.NewDecoder(r.Body)
+			decoder.Decode(&receivedBody)
+
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(successfulResponse))
 		default:
