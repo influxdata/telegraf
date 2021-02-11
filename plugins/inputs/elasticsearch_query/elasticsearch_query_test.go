@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
-	elastic "gopkg.in/olivere/elastic.v5"
+	elastic5 "gopkg.in/olivere/elastic.v5"
 )
 
 var testindex = "test-elasticsearch_query-" + strconv.Itoa(int(time.Now().Unix()))
@@ -123,7 +123,7 @@ func TestElasticsearchQuery(t *testing.T) {
 		},
 	}
 
-	var elasticSearchQueryResults = []expectedResult{
+	elasticSearchQueryResults := []expectedResult{
 		{
 			measurement: "measurement1",
 			fields: map[string]interface{}{
@@ -334,7 +334,6 @@ func TestElasticsearchQuery(t *testing.T) {
 	// populate elasticsearch with nginx_logs test data file
 	file, err := os.Open("testdata/nginx_logs")
 	require.NoError(t, err)
-
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
@@ -353,11 +352,10 @@ func TestElasticsearchQuery(t *testing.T) {
 			Size:        float64(size),
 		}
 
-		bulkRequest.Add(elastic.NewBulkIndexRequest().
+		bulkRequest.Add(elastic5.NewBulkIndexRequest().
 			Index(testindex).
 			Type("testquery_data").
 			Doc(logline))
-
 	}
 
 	if err = scanner.Err(); err != nil {
@@ -382,7 +380,6 @@ func TestElasticsearchQuery(t *testing.T) {
 	for _, r := range elasticSearchQueryResults {
 		acc.AssertContainsTaggedFields(t, r.measurement, r.fields, r.tags)
 	}
-
 }
 
 func TestElasticsearchQuery_getMetricFields(t *testing.T) {
@@ -400,6 +397,9 @@ func TestElasticsearchQuery_getMetricFields(t *testing.T) {
 		Timeout:             internal.Duration{Duration: time.Second * 5},
 		HealthCheckInterval: internal.Duration{Duration: time.Second * 10},
 	}
+
+	err := e.connectToES()
+	require.NoError(t, err)
 
 	tests := []struct {
 		name    string
@@ -423,7 +423,8 @@ func TestElasticsearchQuery_getMetricFields(t *testing.T) {
 				"http_version": "text",
 				"method":       "text",
 				"response":     "text",
-				"size":         "long"},
+				"size":         "long",
+			},
 			false,
 		},
 	}

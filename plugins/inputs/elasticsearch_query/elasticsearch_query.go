@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	elastic "gopkg.in/olivere/elastic.v5"
+	elastic5 "gopkg.in/olivere/elastic.v5"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const description = `Derive metrics from aggregating Elasticsearch query results`
 const sampleConfig = `
   ## The full HTTP endpoint URL for your Elasticsearch instance
   ## Multiple urls can be specified as part of the same cluster,
@@ -93,7 +92,7 @@ type ElasticsearchQuery struct {
 	Aggregations        []esAggregation   `toml:"aggregation"`
 	tls.ClientConfig
 	httpclient *http.Client
-	esClient   *elastic.Client
+	esClient   *elastic5.Client
 }
 
 // esAggregation struct
@@ -119,7 +118,7 @@ func (e *ElasticsearchQuery) SampleConfig() string {
 
 // Description returns the plugin description.
 func (e *ElasticsearchQuery) Description() string {
-	return description
+	return `Derive metrics from aggregating Elasticsearch query results`
 }
 
 // Init the plugin.
@@ -163,8 +162,7 @@ func (e *ElasticsearchQuery) Init() error {
 }
 
 func (e *ElasticsearchQuery) connectToES() error {
-
-	var clientOptions []elastic.ClientOptionFunc
+	var clientOptions []elastic5.ClientOptionFunc
 
 	if e.httpclient == nil {
 		httpclient, err := e.createHTTPClient()
@@ -175,21 +173,21 @@ func (e *ElasticsearchQuery) connectToES() error {
 	}
 
 	clientOptions = append(clientOptions,
-		elastic.SetHttpClient(e.httpclient),
-		elastic.SetSniff(e.EnableSniffer),
-		elastic.SetURL(e.URLs...),
-		elastic.SetHealthcheckInterval(e.HealthCheckInterval.Duration),
+		elastic5.SetHttpClient(e.httpclient),
+		elastic5.SetSniff(e.EnableSniffer),
+		elastic5.SetURL(e.URLs...),
+		elastic5.SetHealthcheckInterval(e.HealthCheckInterval.Duration),
 	)
 
 	if e.Username != "" {
-		clientOptions = append(clientOptions, elastic.SetBasicAuth(e.Username, e.Password))
+		clientOptions = append(clientOptions, elastic5.SetBasicAuth(e.Username, e.Password))
 	}
 
 	if e.HealthCheckInterval.Duration == 0 {
-		clientOptions = append(clientOptions, elastic.SetHealthcheck(false))
+		clientOptions = append(clientOptions, elastic5.SetHealthcheck(false))
 	}
 
-	client, err := elastic.NewClient(clientOptions...)
+	client, err := elastic5.NewClient(clientOptions...)
 	if err != nil {
 		return err
 	}
@@ -253,7 +251,6 @@ func (e *ElasticsearchQuery) createHTTPClient() (*http.Client, error) {
 }
 
 func (e *ElasticsearchQuery) esAggregationQuery(aggregation esAggregation, acc telegraf.Accumulator) error {
-
 	ctx, cancel := context.WithTimeout(context.Background(), e.Timeout.Duration)
 	defer cancel()
 
@@ -262,12 +259,12 @@ func (e *ElasticsearchQuery) esAggregationQuery(aggregation esAggregation, acc t
 		return err
 	}
 
-	if searchResult.Aggregations != nil {
-		return e.parseAggregationResult(aggregation.aggregationQueryList, searchResult, acc)
+	if searchResult.Aggregations == nil {
+		e.parseSimpleResult(acc, aggregation.MeasurementName, searchResult)
+		return nil
 	}
 
-	return e.parseSimpleResult(aggregation.MeasurementName, searchResult, acc)
-
+	return e.parseAggregationResult(acc, aggregation.aggregationQueryList, searchResult)
 }
 
 func init() {
