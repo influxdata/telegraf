@@ -8,8 +8,8 @@ import (
 )
 
 type Quantile struct {
-	Quantiles        []float64 `toml:"quantiles"`
-	Compression      float64   `toml:"compression"`
+	Quantiles     []float64 `toml:"quantiles"`
+	Compression   float64   `toml:"compression"`
 	AlgorithmType string    `toml:"algorithm"`
 
 	newAlgorithm newAlgorithmFunc
