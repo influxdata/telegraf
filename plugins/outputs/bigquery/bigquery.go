@@ -16,10 +16,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-const (
-	defaultOffSetKey   = "offset-key.json"
-	timeStampFieldName = "timestamp"
-)
+const timeStampFieldName = "timestamp"
 
 var defaultTimeout = internal.Duration{Duration: 5 * time.Second}
 
