@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -25,17 +24,11 @@ const (
 var testingHost string
 var testDuration = internal.Duration{Duration: 5 * time.Second}
 
-func TestMain(t *testing.M) {
+func TestConnect(t *testing.T) {
 	srv := localBigQueryServer(t)
-
 	testingHost = strings.ReplaceAll(srv.URL, "http://", "")
-
 	defer srv.Close()
 
-	os.Exit(t.Run())
-}
-
-func TestConnect(t *testing.T) {
 	b := &BigQuery{
 		Project: "test-project",
 		Dataset: "test-dataset",
@@ -45,10 +38,13 @@ func TestConnect(t *testing.T) {
 	b.setUpTestClient()
 	err := b.Connect()
 	require.NoError(t, err)
-
 }
 
 func TestWrite(t *testing.T) {
+	srv := localBigQueryServer(t)
+	testingHost = strings.ReplaceAll(srv.URL, "http://", "")
+	defer srv.Close()
+
 	b := &BigQuery{
 		Project: "test-project",
 		Dataset: "test-dataset",
@@ -79,7 +75,7 @@ func (b *BigQuery) setUpTestClient() error {
 	return nil
 }
 
-func localBigQueryServer(t *testing.M) *httptest.Server {
+func localBigQueryServer(t *testing.T) *httptest.Server {
 	srv := httptest.NewServer(http.NotFoundHandler())
 
 	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
