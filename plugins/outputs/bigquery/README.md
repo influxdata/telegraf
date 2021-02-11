@@ -41,5 +41,5 @@ All field naming restrictions that apply to BigQuery should apply to the measure
 
 Tables on BigQuery should be created before hand and they are not created during persistence
 
-Pay attention to the columnd `timestamp` since it is reserved upfront and cannot change. 
+Pay attention to the column `timestamp` since it is reserved upfront and cannot change. 
 If partitioning is required make sure it is applied beforehand.
