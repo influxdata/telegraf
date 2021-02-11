@@ -149,7 +149,12 @@ func (c *Conntrack) gatherConnStates(acc telegraf.Accumulator) error {
 
 	nf := newNfConntrack()
 
-	cmd := exec.Command(c.ConnTable[0], c.ConnTable[1:]...)
+	var cmd *exec.Cmd
+	if len(c.ConnTable) == 1 {
+		cmd = exec.Command(c.ConnTable[0])
+	} else {
+		cmd = exec.Command(c.ConnTable[0], c.ConnTable[1:]...)
+	}
 	cmd.Stdout = nf
 	if err := cmd.Start(); err != nil {
 		return err
