@@ -29,7 +29,7 @@ The schema of the table on BigQuery:
 
 ### Restrictions
 
-Avoid hyphens on BigQuery tables, underlying sdk cannot handle straming inserts to Table with hyphens.
+Avoid hyphens on BigQuery tables, underlying SDK cannot handle streaming inserts to Table with hyphens.
 
 Available data type options are:
 * integer
@@ -43,4 +43,3 @@ Tables on BigQuery should be created before hand and they are not created during
 
 Pay attention to the columnd `timestamp` since it is reserved upfront and cannot change. 
 If partitioning is required make sure it is applied beforehand.
-
