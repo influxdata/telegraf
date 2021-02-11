@@ -14,11 +14,13 @@ import (
 )
 
 type NFSClient struct {
-	Fullstat          bool            `toml:"fullstat"`
-	IncludeMounts     []string        `toml:"include_mounts"`
-	ExcludeMounts     []string        `toml:"exclude_mounts"`
-	IncludeOperations []string        `toml:"include_operations"`
-	ExcludeOperations []string        `toml:"exclude_operations"`
+	Fullstat          bool     `toml:"fullstat"`
+	IncludeMounts     []string `toml:"include_mounts"`
+	ExcludeMounts     []string `toml:"exclude_mounts"`
+	IncludeOperations []string `toml:"include_operations"`
+	ExcludeOperations []string `toml:"exclude_operations"`
+	nfs3Ops           map[string]bool
+	nfs4Ops           map[string]bool
 	Log               telegraf.Logger `toml:"-"`
 }
 
@@ -75,7 +77,7 @@ func convertToInt64(line []string) []int64 {
 		return nline
 	}
 
-	// Skip the first field; it's handled specially as the "first" variable"
+	// Skip the first field; it's handled specially as the "first" variable
 	for _, l := range line[1:] {
 		val, err := strconv.ParseInt(l, 10, 64)
 		if err != nil {
@@ -90,7 +92,7 @@ func convertToInt64(line []string) []int64 {
 	return nline
 }
 
-func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, fullstat bool, nfs3Ops map[string]bool, nfs4Ops map[string]bool, acc telegraf.Accumulator) error {
+func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, fullstat bool, acc telegraf.Accumulator) error {
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
 	nline := convertToInt64(line)
 
@@ -227,7 +229,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 			}
 		}
 
-		if (version == "3" && nfs3Ops[first]) || (version == "4" && nfs4Ops[first]) {
+		if (version == "3" && n.nfs3Ops[first]) || (version == "4" && n.nfs4Ops[first]) {
 			tags["operation"] = first
 			if len(nline) <= len(nfsopFields) {
 				for i, t := range nline {
@@ -247,8 +249,83 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 	var version string
 	var export string
 	var skip bool
-	var nfs3Ops map[string]bool
-	var nfs4Ops map[string]bool
+
+	for scanner.Scan() {
+		line := strings.Fields(scanner.Text())
+
+		line_len := len(line)
+
+		if line_len == 0 {
+			continue
+		}
+
+		if line_len > 4 && choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) {
+			mount = line[4]
+			export = line[1]
+			skip = false
+		} else if line_len > 5 && (choice.Contains("(nfs)", line) || choice.Contains("(nfs4)", line)) {
+			version = strings.Split(line[5], "/")[1]
+		}
+
+		if len(n.IncludeMounts) > 0 {
+			skip = true
+			for _, RE := range n.IncludeMounts {
+				matched, _ := regexp.MatchString(RE, mount)
+				if matched {
+					skip = false
+					break
+				}
+			}
+		}
+
+		if !skip && len(n.ExcludeMounts) > 0 {
+			for _, RE := range n.ExcludeMounts {
+				matched, _ := regexp.MatchString(RE, mount)
+				if matched {
+					skip = true
+					break
+				}
+			}
+		}
+
+		if !skip {
+			n.parseStat(mount, export, version, line, n.Fullstat, acc)
+		}
+	}
+	return nil
+}
+
+func (n *NFSClient) getMountStatsPath() string {
+
+	path := "/proc/self/mountstats"
+	if os.Getenv("MOUNT_PROC") != "" {
+		path = os.Getenv("MOUNT_PROC")
+	}
+	n.Log.Debugf("Opening [%s] for mountstats", path)
+	return path
+}
+
+func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
+
+	file, err := os.Open(n.getMountStatsPath())
+	if err != nil {
+		n.Log.Errorf("Failed opening the [%s] file: %s ", file, err)
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	n.processText(scanner, acc)
+
+	if err := scanner.Err(); err != nil {
+		n.Log.Errorf("%s", err)
+		return err
+	}
+
+	return nil
+}
+
+func (n *NFSClient) Init() error {
 
 	var nfs3Fields = []string{
 		"NULL",
@@ -346,8 +423,8 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 		"REMOVEXATTR",
 	}
 
-	nfs3Ops = make(map[string]bool)
-	nfs4Ops = make(map[string]bool)
+	nfs3Ops := make(map[string]bool)
+	nfs4Ops := make(map[string]bool)
 
 	if len(n.IncludeOperations) == 0 {
 		for _, Op := range nfs3Fields {
@@ -374,78 +451,6 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 				delete(nfs4Ops, Op)
 			}
 		}
-	}
-
-	for scanner.Scan() {
-		line := strings.Fields(scanner.Text())
-
-		line_len := len(line)
-
-		if line_len == 0 {
-			continue
-		}
-
-		if line_len > 4 && choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) {
-			mount = line[4]
-			export = line[1]
-			skip = false
-		} else if line_len > 5 && (choice.Contains("(nfs)", line) || choice.Contains("(nfs4)", line)) {
-			version = strings.Split(line[5], "/")[1]
-		}
-
-		if len(n.IncludeMounts) > 0 {
-			skip = true
-			for _, RE := range n.IncludeMounts {
-				matched, _ := regexp.MatchString(RE, mount)
-				if matched {
-					skip = false
-					break
-				}
-			}
-		}
-
-		if !skip && len(n.ExcludeMounts) > 0 {
-			for _, RE := range n.ExcludeMounts {
-				matched, _ := regexp.MatchString(RE, mount)
-				if matched {
-					skip = true
-					break
-				}
-			}
-		}
-
-		if !skip {
-			n.parseStat(mount, export, version, line, n.Fullstat, nfs3Ops, nfs4Ops, acc)
-		}
-	}
-	return nil
-}
-
-func (n *NFSClient) getMountStatsPath() string {
-
-	path := "/proc/self/mountstats"
-	if os.Getenv("MOUNT_PROC") != "" {
-		path = os.Getenv("MOUNT_PROC")
-	}
-	n.Log.Debugf("Opening [%s] for mountstats", path)
-	return path
-}
-
-func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
-
-	file, err := os.Open(n.getMountStatsPath())
-	if err != nil {
-		n.Log.Errorf("Failed opening the [%s] file: %s ", file, err)
-		return err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	n.processText(scanner, acc)
-
-	if err := scanner.Err(); err != nil {
-		n.Log.Errorf("%s", err)
-		return err
 	}
 
 	return nil
