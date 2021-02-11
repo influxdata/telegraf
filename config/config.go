@@ -924,14 +924,9 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 	req.Header.Set("User-Agent", internal.ProductToken())
 
 	retries := 3
-	for i := 1; i <= retries; i++ {
+	for i := 0; i <= retries; i++ {
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			if i < retries {
-				log.Printf("Unable to connect to HTTP config server.  Retry %d of %d in %s. %s", i, retries, httpLoadConfigRetryInterval, err)
-				time.Sleep(httpLoadConfigRetryInterval)
-				continue
-			}
 			return nil, fmt.Errorf("Retry %d of %d failed connecting to HTTP config server %s", i, retries, err)
 		}
 

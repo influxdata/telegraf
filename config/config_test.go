@@ -293,14 +293,14 @@ func TestConfig_URLRetries3Fails(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig(ts.URL)
 	require.Error(t, err)
-	require.Equal(t, 3, responseCounter)
+	require.Equal(t, 4, responseCounter)
 }
 
-func TestConfig_URLRetries2FailsThenPasses(t *testing.T) {
+func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
 	httpLoadConfigRetryInterval = 0 * time.Second
 	responseCounter := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if responseCounter <= 1 {
+		if responseCounter <= 2 {
 			w.WriteHeader(http.StatusNotFound)
 		} else {
 			w.WriteHeader(http.StatusOK)
@@ -312,5 +312,5 @@ func TestConfig_URLRetries2FailsThenPasses(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig(ts.URL)
 	require.NoError(t, err)
-	require.Equal(t, 3, responseCounter)
+	require.Equal(t, 4, responseCounter)
 }
