@@ -17,15 +17,12 @@ The following is an example config for RavenDB. **Note:** The client certificate
   tls_cert = "/etc/telegraf/raven.crt"
   tls_key = "/etc/telegraf/raven.key"
 
-  ## Optional request timeouts
+  ## Optional request timeout
   ##
-  ## ResponseHeaderTimeout, if non-zero, specifies the amount of time to wait
-  ## for a server's response headers after fully writing the request.
-  # header_timeout = "3s"
-  ##
-  ## client_timeout specifies a time limit for requests made by this client.
-  ## Includes connection time, any redirects, and reading the response body.
-  # client_timeout = "4s"
+  ## Timeout, specifies the amount of time to wait
+  ## for a server's response headers after fully writing the request and 
+  ## time limit for requests made by this client.
+  # timeout = "5s"
 
   ## When true, collect server stats
   # gather_server_stats = true

@@ -4,18 +4,22 @@
   "Results": [
     {
       "DatabaseName": "db1",
-      "IndexName": "Product/Rating",
-      "Priority": "Normal",
-      "State": "Normal",
-      "Errors": 0,
-      "TimeSinceLastQueryInSec": null,
-      "TimeSinceLastIndexingInSec": null,
-      "LockMode": "Unlock",
-      "IsInvalid": false,
-      "Status": "Running",
-      "MappedPerSec": 102.34,
-      "ReducedPerSec": 593.23,
-      "Type": "MapReduce"
+      "Indexes": [
+        {
+          "IndexName": "Product/Rating",
+          "Priority": "Normal",
+          "State": "Normal",
+          "Errors": 0,
+          "TimeSinceLastQueryInSec": null,
+          "TimeSinceLastIndexingInSec": null,
+          "LockMode": "Unlock",
+          "IsInvalid": false,
+          "Status": "Running",
+          "MappedPerSec": 102.34,
+          "ReducedPerSec": 593.23,
+          "Type": "MapReduce"
+        }
+      ]
     }
   ]
 }

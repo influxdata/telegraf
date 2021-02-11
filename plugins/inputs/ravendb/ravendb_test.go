@@ -50,6 +50,8 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 		Log:                   testutil.Logger{},
 	}
 
+	r.Init()
+
 	acc := &testutil.Accumulator{}
 
 	err := acc.GatherError(r.Gather)
@@ -75,7 +77,7 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 		"memory_allocated_in_mb":                                        235,
 		"memory_installed_in_mb":                                        16384,
 		"memory_physical_in_mb":                                         16250,
-		"memory_low_memory_severity":                                    0,
+		"memory_low_memory_severity":                                    "None",
 		"memory_total_swap_size_in_mb":                                  1024,
 		"memory_total_swap_usage_in_mb":                                 456,
 		"memory_working_set_swap_usage_in_mb":                           89,
@@ -96,7 +98,7 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 		"network_last_authorized_non_cluster_admin_request_time_in_sec": 0.04,
 		"certificate_server_certificate_expiration_left_in_sec":         float64(104),
 		"certificate_well_known_admin_certificates":                     "a909502dd82ae41433e6f83886b00d4277a32a7b;4444444444444444444444444444444444444444",
-		"cluster_node_state":                                            4,
+		"cluster_node_state":                                            "Leader",
 		"cluster_current_term":                                          28,
 		"cluster_index":                                                 104,
 		"databases_total_count":                                         25,
@@ -248,6 +250,8 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 		Log:                   testutil.Logger{},
 	}
 
+	r.Init()
+
 	acc := &testutil.Accumulator{}
 
 	err := acc.GatherError(r.Gather)
@@ -270,7 +274,7 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 		"memory_allocated_in_mb":                            235,
 		"memory_installed_in_mb":                            16384,
 		"memory_physical_in_mb":                             16250,
-		"memory_low_memory_severity":                        1,
+		"memory_low_memory_severity":                        "Low",
 		"memory_total_swap_size_in_mb":                      1024,
 		"memory_total_swap_usage_in_mb":                     456,
 		"memory_working_set_swap_usage_in_mb":               89,
@@ -286,7 +290,7 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 		"network_concurrent_requests_count":                 1,
 		"network_total_requests":                            3,
 		"network_requests_per_sec":                          0.03322,
-		"cluster_node_state":                                4,
+		"cluster_node_state":                                "Leader",
 		"cluster_current_term":                              28,
 		"cluster_index":                                     104,
 		"databases_total_count":                             25,

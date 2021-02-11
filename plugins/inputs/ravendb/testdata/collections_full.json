@@ -4,12 +4,16 @@
   "Results": [
     {
       "DatabaseName": "db1",
-      "CollectionName": "Orders",
-      "DocumentsCount": 830,
-      "TotalSizeInBytes": 2744320,
-      "DocumentsSizeInBytes": 868352,
-      "TombstonesSizeInBytes": 122880,
-      "RevisionsSizeInBytes": 1753088
+      "Collections": [
+        {
+          "CollectionName": "Orders",
+          "DocumentsCount": 830,
+          "TotalSizeInBytes": 2744320,
+          "DocumentsSizeInBytes": 868352,
+          "TombstonesSizeInBytes": 122880,
+          "RevisionsSizeInBytes": 1753088
+        }
+      ]
     }
   ]
 }
