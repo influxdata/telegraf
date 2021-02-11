@@ -27,7 +27,7 @@ type RavenDB struct {
 	URL  string `toml:"url"`
 	Name string `toml:"name"`
 
-	Timeout         internal.Duration `toml:"timeout"`
+	Timeout internal.Duration `toml:"timeout"`
 
 	GatherServerStats     bool     `toml:"gather_server_stats"`
 	GatherDbStats         bool     `toml:"gather_db_stats"`
@@ -41,10 +41,10 @@ type RavenDB struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	client *http.Client
-	requestUrlServer string
-	requestUrlDatabases string
-	requestUrlIndexes string
+	client               *http.Client
+	requestUrlServer     string
+	requestUrlDatabases  string
+	requestUrlIndexes    string
 	requestUrlCollection string
 }
 
@@ -111,7 +111,7 @@ func (r *RavenDB) Gather(acc telegraf.Accumulator) error {
 	if r.GatherServerStats {
 		wg.Add(1)
 
-		go func () {
+		go func() {
 			defer wg.Done()
 			r.gatherServer(acc)
 		}()
@@ -120,7 +120,7 @@ func (r *RavenDB) Gather(acc telegraf.Accumulator) error {
 	if r.GatherDbStats {
 		wg.Add(1)
 
-		go func () {
+		go func() {
 			defer wg.Done()
 			r.gatherDatabases(acc)
 		}()
@@ -129,7 +129,7 @@ func (r *RavenDB) Gather(acc telegraf.Accumulator) error {
 	if r.GatherIndexStats {
 		wg.Add(1)
 
-		go func () {
+		go func() {
 			defer wg.Done()
 			r.gatherIndexes(acc)
 		}()
@@ -138,7 +138,7 @@ func (r *RavenDB) Gather(acc telegraf.Accumulator) error {
 	if r.GatherCollectionStats {
 		wg.Add(1)
 
-		go func () {
+		go func() {
 			defer wg.Done()
 			r.gatherCollections(acc)
 		}()
@@ -433,7 +433,7 @@ func (r *RavenDB) Init() error {
 func init() {
 	inputs.Add("ravendb", func() telegraf.Input {
 		return &RavenDB{
-			Timeout:         internal.Duration{Duration: defaultTimeout * time.Second},
+			Timeout:               internal.Duration{Duration: defaultTimeout * time.Second},
 			GatherServerStats:     true,
 			GatherDbStats:         true,
 			GatherIndexStats:      true,
