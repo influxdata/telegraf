@@ -16,8 +16,8 @@
     "MaxNumberOfConcurrentBackups": 4
   },
   "Cpu": {
-    "ProcessUsage": 6.284429893259093,
-    "MachineUsage": 41.07794577685089,
+    "ProcessUsage": 6.28,
+    "MachineUsage": 41.07,
     "MachineIoWait": null,
     "ProcessorCount": 8,
     "AssignedProcessorCount": 7,
@@ -50,7 +50,7 @@
     "TcpActiveConnections": 84,
     "ConcurrentRequestsCount": 1,
     "TotalRequests": 3,
-    "RequestsPerSec": 0.033229381858066745,
+    "RequestsPerSec": 0.03322,
     "LastRequestTimeInSec": null,
     "LastAuthorizedNonClusterAdminRequestTimeInSec": null
   },

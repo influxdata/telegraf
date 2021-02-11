@@ -17,8 +17,8 @@
     "MaxNumberOfConcurrentBackups": 4
   },
   "Cpu": {
-    "ProcessUsage": 6.284429893259093,
-    "MachineUsage": 41.07794577685089,
+    "ProcessUsage": 6.28,
+    "MachineUsage": 41.05,
     "MachineIoWait": 2.55,
     "ProcessorCount": 8,
     "AssignedProcessorCount": 7,
@@ -43,7 +43,7 @@
   },
   "License": {
     "Type": "Enterprise",
-    "ExpirationLeftInSec": 25466947.9400147,
+    "ExpirationLeftInSec": 25466947.5,
     "UtilizedCpuCores": 8,
     "MaxCores": 256
   },
@@ -51,7 +51,7 @@
     "TcpActiveConnections": 84,
     "ConcurrentRequestsCount": 1,
     "TotalRequests": 3,
-    "RequestsPerSec": 0.033229381858066745,
+    "RequestsPerSec": 0.03322,
     "LastRequestTimeInSec": 0.0264977,
     "LastAuthorizedNonClusterAdminRequestTimeInSec": 0.04
   },

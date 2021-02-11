@@ -5,11 +5,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,6 +47,7 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 		GatherIndexStats:      true,
 		GatherServerStats:     true,
 		GatherCollectionStats: true,
+		Log:                   testutil.Logger{},
 	}
 
 	acc := &testutil.Accumulator{}
@@ -58,15 +58,15 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 	serverFields := map[string]interface{}{
 		"server_version":                                                "5.1",
 		"server_full_version":                                           "5.1.1-custom-51",
-		"uptime_in_sec":                                                 30,
+		"uptime_in_sec":                                                 int64(30),
 		"server_process_id":                                             26360,
 		"config_server_urls":                                            "http://127.0.0.1:8080;http://192.168.0.1:8080",
 		"config_tcp_server_urls":                                        "tcp://127.0.0.1:3888;tcp://192.168.0.1:3888",
 		"config_public_tcp_server_urls":                                 "tcp://2.3.4.5:3888;tcp://6.7.8.9:3888",
 		"backup_max_number_of_concurrent_backups":                       4,
 		"backup_current_number_of_running_backups":                      2,
-		"cpu_process_usage":                                             6.28442,
-		"cpu_machine_usage":                                             41.0779,
+		"cpu_process_usage":                                             6.28,
+		"cpu_machine_usage":                                             41.05,
 		"cpu_machine_io_wait":                                           2.55,
 		"cpu_processor_count":                                           8,
 		"cpu_assigned_processor_count":                                  7,
@@ -85,16 +85,16 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 		"disk_total_free_space_in_mb":                                   52078,
 		"disk_remaining_storage_space_percentage":                       22,
 		"license_type":                                                  "Enterprise",
-		"license_expiration_left_in_sec":                                25466947.94,
+		"license_expiration_left_in_sec":                                25466947.5,
 		"license_utilized_cpu_cores":                                    8,
 		"license_max_cores":                                             256,
 		"network_tcp_active_connections":                                84,
 		"network_concurrent_requests_count":                             1,
 		"network_total_requests":                                        3,
 		"network_requests_per_sec":                                      0.03322,
-		"network_last_request_time_in_sec":                              0.0265,
+		"network_last_request_time_in_sec":                              0.0264977,
 		"network_last_authorized_non_cluster_admin_request_time_in_sec": 0.04,
-		"certificate_server_certificate_expiration_left_in_sec":         104,
+		"certificate_server_certificate_expiration_left_in_sec":         float64(104),
 		"certificate_well_known_admin_certificates":                     "a909502dd82ae41433e6f83886b00d4277a32a7b;4444444444444444444444444444444444444444",
 		"cluster_node_state":                                            4,
 		"cluster_current_term":                                          28,
@@ -110,11 +110,10 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 		"public_server_url": "http://raven1:8080",
 	}
 
-	compareFields(t, serverFields, acc, "ravendb_server")
-	compareTags(t, serverTags, acc, "ravendb_server")
+	defaultTime := time.Unix(0, 0)
 
 	dbFields := map[string]interface{}{
-		"uptime_in_sec":                               1396,
+		"uptime_in_sec":                               float64(1396),
 		"time_since_last_backup_in_sec":               104.3,
 		"counts_documents":                            425189,
 		"counts_revisions":                            429605,
@@ -130,7 +129,7 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 		"statistics_map_reduce_index_reduced_per_sec": 85.2,
 		"statistics_requests_per_sec":                 22.5,
 		"statistics_requests_count":                   809,
-		"statistics_request_average_duration":         0.55,
+		"statistics_request_average_duration_in_ms":   0.55,
 		"indexes_count":                               7,
 		"indexes_stale_count":                         1,
 		"indexes_errors_count":                        2,
@@ -155,9 +154,6 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 		"public_server_url": "http://myhost:8080",
 	}
 
-	compareFields(t, dbFields, acc, "ravendb_databases")
-	compareTags(t, dbTags, acc, "ravendb_databases")
-
 	indexFields := map[string]interface{}{
 		"priority":                        "Normal",
 		"state":                           "Normal",
@@ -165,7 +161,7 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 		"time_since_last_query_in_sec":    3.4712567,
 		"time_since_last_indexing_in_sec": 3.4642612,
 		"lock_mode":                       "Unlock",
-		"is_invalid":                      1,
+		"is_invalid":                      true,
 		"status":                          "Running",
 		"mapped_per_sec":                  102.34,
 		"reduced_per_sec":                 593.23,
@@ -179,9 +175,6 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 		"database_name":     "db1",
 		"index_name":        "Product/Rating",
 	}
-
-	compareFields(t, indexFields, acc, "ravendb_indexes")
-	compareTags(t, indexTags, acc, "ravendb_indexes")
 
 	collectionFields := map[string]interface{}{
 		"documents_count":          830,
@@ -199,8 +192,23 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 		"public_server_url": "http://localhost:8080",
 	}
 
-	compareFields(t, collectionFields, acc, "ravendb_collections")
-	compareTags(t, collectionTags, acc, "ravendb_collections")
+	serverExpected := testutil.MustMetric("ravendb_server", serverTags, serverFields, defaultTime)
+	dbExpected := testutil.MustMetric("ravendb_databases", dbTags, dbFields, defaultTime)
+	indexExpected := testutil.MustMetric("ravendb_indexes", indexTags, indexFields, defaultTime)
+	collectionsExpected := testutil.MustMetric("ravendb_collections", collectionTags, collectionFields, defaultTime)
+
+	for _, metric := range acc.GetTelegrafMetrics() {
+		switch metric.Name() {
+		case "ravendb_server":
+			testutil.RequireMetricEqual(t, serverExpected, metric, testutil.IgnoreTime())
+		case "ravendb_databases":
+			testutil.RequireMetricEqual(t, dbExpected, metric, testutil.IgnoreTime())
+		case "ravendb_indexes":
+			testutil.RequireMetricEqual(t, indexExpected, metric, testutil.IgnoreTime())
+		case "ravendb_collections":
+			testutil.RequireMetricEqual(t, collectionsExpected, metric, testutil.IgnoreTime())
+		}
+	}
 }
 
 // Test against minimum filled data
@@ -237,6 +245,7 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 		GatherDbStats:         true,
 		GatherIndexStats:      true,
 		GatherCollectionStats: true,
+		Log:                   testutil.Logger{},
 	}
 
 	acc := &testutil.Accumulator{}
@@ -252,8 +261,8 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 		"config_server_urls":                                "http://127.0.0.1:8080",
 		"backup_max_number_of_concurrent_backups":           4,
 		"backup_current_number_of_running_backups":          2,
-		"cpu_process_usage":                                 6.28442,
-		"cpu_machine_usage":                                 41.0779,
+		"cpu_process_usage":                                 6.28,
+		"cpu_machine_usage":                                 41.07,
 		"cpu_processor_count":                               8,
 		"cpu_assigned_processor_count":                      7,
 		"cpu_thread_pool_available_worker_threads":          32766,
@@ -261,7 +270,7 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 		"memory_allocated_in_mb":                            235,
 		"memory_installed_in_mb":                            16384,
 		"memory_physical_in_mb":                             16250,
-		"memory_low_memory_severity":                        2,
+		"memory_low_memory_severity":                        1,
 		"memory_total_swap_size_in_mb":                      1024,
 		"memory_total_swap_usage_in_mb":                     456,
 		"memory_working_set_swap_usage_in_mb":               89,
@@ -290,11 +299,8 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 		"cluster_id": "6b535a18-558f-4e53-a479-a514efc16aab",
 	}
 
-	compareFields(t, serverFields, acc, "ravendb_server")
-	compareTags(t, serverTags, acc, "ravendb_server")
-
 	dbFields := map[string]interface{}{
-		"uptime_in_sec":                               1396,
+		"uptime_in_sec":                               float64(1396),
 		"counts_documents":                            425189,
 		"counts_revisions":                            429605,
 		"counts_attachments":                          17,
@@ -309,7 +315,7 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 		"statistics_map_reduce_index_reduced_per_sec": 85.2,
 		"statistics_requests_per_sec":                 22.5,
 		"statistics_requests_count":                   809,
-		"statistics_request_average_duration":         0.55,
+		"statistics_request_average_duration_in_ms":   0.55,
 		"indexes_count":                               7,
 		"indexes_stale_count":                         1,
 		"indexes_errors_count":                        2,
@@ -333,15 +339,12 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 		"database_id":   "06eefe8b-d720-4a8d-a809-2c5af9a4abb5",
 	}
 
-	compareFields(t, dbFields, acc, "ravendb_databases")
-	compareTags(t, dbTags, acc, "ravendb_databases")
-
 	indexFields := map[string]interface{}{
 		"priority":        "Normal",
 		"state":           "Normal",
 		"errors":          0,
 		"lock_mode":       "Unlock",
-		"is_invalid":      0,
+		"is_invalid":      false,
 		"status":          "Running",
 		"mapped_per_sec":  102.34,
 		"reduced_per_sec": 593.23,
@@ -354,9 +357,6 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 		"database_name": "db1",
 		"index_name":    "Product/Rating",
 	}
-
-	compareFields(t, indexFields, acc, "ravendb_indexes")
-	compareTags(t, indexTags, acc, "ravendb_indexes")
 
 	collectionFields := map[string]interface{}{
 		"documents_count":          830,
@@ -373,63 +373,23 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 		"collection_name": "Orders",
 	}
 
-	compareFields(t, collectionFields, acc, "ravendb_collections")
-	compareTags(t, collectionTags, acc, "ravendb_collections")
-}
+	defaultTime := time.Unix(0, 0)
 
-func compareFields(t *testing.T, expectedFields map[string]interface{},
-	accumulator *testutil.Accumulator, measurementKey string) {
+	serverExpected := testutil.MustMetric("ravendb_server", serverTags, serverFields, defaultTime)
+	dbExpected := testutil.MustMetric("ravendb_databases", dbTags, dbFields, defaultTime)
+	indexExpected := testutil.MustMetric("ravendb_indexes", indexTags, indexFields, defaultTime)
+	collectionsExpected := testutil.MustMetric("ravendb_collections", collectionTags, collectionFields, defaultTime)
 
-	measurement, exist := accumulator.Get(measurementKey)
-
-	assert.True(t, exist, "There is measurement %s", measurementKey)
-	assert.Equal(t, len(expectedFields), len(measurement.Fields))
-
-	for metricName, metricValue := range expectedFields {
-		actualMetricValue := measurement.Fields[metricName]
-
-		if accumulator.HasStringField(measurementKey, metricName) {
-			assert.Equal(t, metricValue, actualMetricValue,
-				"Metric name: %s", metricName)
-		} else {
-			floatValue, err := getFloat(actualMetricValue)
-			if err != nil {
-				assert.Error(t, err)
-			}
-			assert.InDelta(t, metricValue, floatValue, 2,
-				"Metric name: %s", metricName)
+	for _, metric := range acc.GetTelegrafMetrics() {
+		switch metric.Name() {
+		case "ravendb_server":
+			testutil.RequireMetricEqual(t, serverExpected, metric, testutil.IgnoreTime())
+		case "ravendb_databases":
+			testutil.RequireMetricEqual(t, dbExpected, metric, testutil.IgnoreTime())
+		case "ravendb_indexes":
+			testutil.RequireMetricEqual(t, indexExpected, metric, testutil.IgnoreTime())
+		case "ravendb_collections":
+			testutil.RequireMetricEqual(t, collectionsExpected, metric, testutil.IgnoreTime())
 		}
 	}
-}
-
-func compareTags(t *testing.T, expectedTags map[string]string,
-	accumulator *testutil.Accumulator, measurementKey string) {
-
-	measurement, exist := accumulator.Get(measurementKey)
-
-	assert.True(t, exist, "There is measurement %s", measurementKey)
-	assert.Equal(t, len(expectedTags), len(measurement.Tags))
-
-	for tagName, tagValue := range expectedTags {
-		actualTagValue := measurement.Tags[tagName]
-
-		if accumulator.HasTag(measurementKey, tagName) {
-			assert.Equal(t, tagValue, actualTagValue,
-				"Tag name: %s", tagName)
-		} else {
-			assert.Fail(t, "Missing tag: %s", tagName)
-		}
-	}
-}
-
-var floatType = reflect.TypeOf(float64(0))
-
-func getFloat(unk interface{}) (float64, error) {
-	v := reflect.ValueOf(unk)
-	v = reflect.Indirect(v)
-	if !v.Type().ConvertibleTo(floatType) {
-		return 0, fmt.Errorf("cannot convert %v to float64", v.Type())
-	}
-	fv := v.Convert(floatType)
-	return fv.Float(), nil
 }

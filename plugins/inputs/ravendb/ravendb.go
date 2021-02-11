@@ -3,7 +3,6 @@ package ravendb
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"net/http"
 	"net/url"
 	"strings"
@@ -12,16 +11,17 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // defaultURL will set a default value that corresponds to the default value
 // used by RavenDB
-const DefaultURL = "http://localhost:8080"
+const defaultURL = "http://localhost:8080"
 
 // Default http timeouts
-const DefaultResponseHeaderTimeout = 3
-const DefaultClientTimeout = 4
+const defaultResponseHeaderTimeout = 3
+const defaultClientTimeout = 4
 
 type gatherFunc func(r *RavenDB, acc telegraf.Accumulator)
 
@@ -32,9 +32,6 @@ var gatherFunctions = []gatherFunc{gatherServer, gatherDatabases, gatherIndexes,
 type RavenDB struct {
 	URL  string `toml:"url"`
 	Name string `toml:"name"`
-	tls.ClientConfig
-
-	Log telegraf.Logger
 
 	ResponseHeaderTimeout internal.Duration `toml:"header_timeout"`
 	ClientTimeout         internal.Duration `toml:"client_timeout"`
@@ -47,7 +44,11 @@ type RavenDB struct {
 	IndexStatsDbs         []string `toml:"index_stats_dbs"`
 	CollectionStatsDbs    []string `toml:"collection_stats_dbs"`
 
-	Client *http.Client `toml:"-"`
+	tls.ClientConfig
+
+	Log telegraf.Logger `toml:"-"`
+
+	client *http.Client
 }
 
 type serverMetricsResponse struct {
@@ -74,7 +75,7 @@ type backupMetrics struct {
 
 type configurationMetrics struct {
 	ServerUrls          []string `json:"ServerUrls"`
-	PublicServerUrl     string   `json:"PublicServerUrl"`
+	PublicServerUrl     *string  `json:"PublicServerUrl"`
 	TcpServerUrls       []string `json:"TcpServerUrls"`
 	PublicTcpServerUrls []string `json:"PublicTcpServerUrls"`
 }
@@ -143,7 +144,7 @@ type allDatabasesMetrics struct {
 
 type databasesMetricResponse struct {
 	Results         []*databaseMetrics `json:"Results"`
-	PublicServerUrl string             `json:"PublicServerUrl"`
+	PublicServerUrl *string            `json:"PublicServerUrl"`
 	NodeTag         string             `json:"NodeTag"`
 }
 
@@ -178,7 +179,7 @@ type databaseStatistics struct {
 	MapReduceIndexReducedPerSec float64 `json:"MapReduceIndexReducedPerSec"`
 	RequestsPerSec              float64 `json:"RequestsPerSec"`
 	RequestsCount               int32   `json:"RequestsCount"`
-	RequestAverageDuration      float64 `json:"RequestAverageDuration"`
+	RequestAverageDurationInMs  float64 `json:"RequestAverageDurationInMs"`
 }
 
 type databaseIndexesMetrics struct {
@@ -203,7 +204,7 @@ type databaseStorageMetrics struct {
 
 type indexesMetricResponse struct {
 	Results         []*indexMetrics `json:"Results"`
-	PublicServerUrl string          `json:"PublicServerUrl"`
+	PublicServerUrl *string         `json:"PublicServerUrl"`
 	NodeTag         string          `json:"NodeTag"`
 }
 
@@ -226,7 +227,7 @@ type indexMetrics struct {
 
 type collectionsMetricResponse struct {
 	Results         []*collectionMetrics `json:"Results"`
-	PublicServerUrl string               `json:"PublicServerUrl"`
+	PublicServerUrl *string              `json:"PublicServerUrl"`
 	NodeTag         string               `json:"NodeTag"`
 }
 
@@ -245,8 +246,8 @@ var sampleConfig = `
   url = "https://localhost:8080"
 
   ## RavenDB X509 client certificate setup
-  tls_cert = "/etc/telegraf/raven.crt"
-  tls_key = "/etc/telegraf/raven.key"
+  # tls_cert = "/etc/telegraf/raven.crt"
+  # tls_key = "/etc/telegraf/raven.key"
 
   ## Optional request timeouts
   ##
@@ -297,15 +298,13 @@ func (r *RavenDB) Description() string {
 func (r *RavenDB) Gather(acc telegraf.Accumulator) error {
 	err := r.ensureClient()
 	if nil != err {
-		if nil != r.Log {
-			r.Log.Errorf("Error with Client %s", err)
-		}
+		r.Log.Errorf("Error with Client %s", err)
 		return err
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(len(gatherFunctions))
 	for _, f := range gatherFunctions {
+		wg.Add(1)
 		go func(gf gatherFunc) {
 			defer wg.Done()
 			gf(r, acc)
@@ -317,27 +316,29 @@ func (r *RavenDB) Gather(acc telegraf.Accumulator) error {
 }
 
 func (r *RavenDB) ensureClient() error {
-	if r.Client == nil {
-
-		tlsCfg, err := r.ClientConfig.TLSConfig()
-		if err != nil {
-			return err
-		}
-		tr := &http.Transport{
-			ResponseHeaderTimeout: r.ResponseHeaderTimeout.Duration,
-			TLSClientConfig:       tlsCfg,
-		}
-		r.Client = &http.Client{
-			Transport: tr,
-			Timeout:   r.ClientTimeout.Duration,
-		}
+	if r.client != nil {
+		return nil
 	}
+
+	tlsCfg, err := r.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+	tr := &http.Transport{
+		ResponseHeaderTimeout: r.ResponseHeaderTimeout.Duration,
+		TLSClientConfig:       tlsCfg,
+	}
+	r.client = &http.Client{
+		Transport: tr,
+		Timeout:   r.ClientTimeout.Duration,
+	}
+
 	return nil
 }
 
 func (r *RavenDB) requestJSON(u string, target interface{}) error {
 	if r.URL == "" {
-		r.URL = DefaultURL
+		r.URL = defaultURL
 	}
 	u = fmt.Sprintf("%s%s", r.URL, u)
 
@@ -346,23 +347,19 @@ func (r *RavenDB) requestJSON(u string, target interface{}) error {
 		return err
 	}
 
-	resp, err := r.Client.Do(req)
+	resp, err := r.client.Do(req)
 	if err != nil {
 		return err
 	}
 
 	defer resp.Body.Close()
 
-	if nil != r.Log {
-		r.Log.Debugf("%s: %s", u, resp.Status)
-	}
+	r.Log.Debugf("%s: %s", u, resp.Status)
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("invalid response code to request '%s': %d - %s", r.URL, resp.StatusCode, resp.Status)
 	}
 
-	json.NewDecoder(resp.Body).Decode(target)
-
-	return nil
+	return json.NewDecoder(resp.Body).Decode(target)
 }
 
 func gatherServer(r *RavenDB, acc telegraf.Accumulator) {
@@ -378,52 +375,59 @@ func gatherServer(r *RavenDB, acc telegraf.Accumulator) {
 		return
 	}
 
-	tags := map[string]string{"url": r.URL}
-	tags["node_tag"] = serverResponse.Cluster.NodeTag
-	tags["cluster_id"] = serverResponse.Cluster.Id
+	tags := map[string]string{
+		"url":        r.URL,
+		"node_tag":   serverResponse.Cluster.NodeTag,
+		"cluster_id": serverResponse.Cluster.Id,
+	}
 
-	if serverResponse.Config.PublicServerUrl != "" {
-		tags["public_server_url"] = serverResponse.Config.PublicServerUrl
+	if serverResponse.Config.PublicServerUrl != nil {
+		tags["public_server_url"] = *serverResponse.Config.PublicServerUrl
 	}
 
 	fields := map[string]interface{}{
-		"server_version":                                    serverResponse.ServerVersion,
-		"server_full_version":                               serverResponse.ServerFullVersion,
-		"uptime_in_sec":                                     serverResponse.UpTimeInSec,
-		"server_process_id":                                 serverResponse.ServerProcessId,
-		"config_server_urls":                                strings.Join(serverResponse.Config.ServerUrls, ";"),
-		"backup_max_number_of_concurrent_backups":           serverResponse.Backup.MaxNumberOfConcurrentBackups,
-		"backup_current_number_of_running_backups":          serverResponse.Backup.CurrentNumberOfRunningBackups,
-		"cpu_process_usage":                                 serverResponse.Cpu.ProcessUsage,
-		"cpu_machine_usage":                                 serverResponse.Cpu.MachineUsage,
-		"cpu_processor_count":                               serverResponse.Cpu.ProcessorCount,
-		"cpu_assigned_processor_count":                      serverResponse.Cpu.AssignedProcessorCount,
-		"cpu_thread_pool_available_worker_threads":          serverResponse.Cpu.ThreadPoolAvailableWorkerThreads,
-		"cpu_thread_pool_available_completion_port_threads": serverResponse.Cpu.ThreadPoolAvailableCompletionPortThreads,
-		"memory_allocated_in_mb":                            serverResponse.Memory.AllocatedMemoryInMb,
-		"memory_installed_in_mb":                            serverResponse.Memory.InstalledMemoryInMb,
-		"memory_physical_in_mb":                             serverResponse.Memory.PhysicalMemoryInMb,
-		"memory_low_memory_severity":                        mapMemorySeverity(serverResponse.Memory.LowMemorySeverity),
-		"memory_total_swap_size_in_mb":                      serverResponse.Memory.TotalSwapSizeInMb,
-		"memory_total_swap_usage_in_mb":                     serverResponse.Memory.TotalSwapUsageInMb,
-		"memory_working_set_swap_usage_in_mb":               serverResponse.Memory.WorkingSetSwapUsageInMb,
-		"memory_total_dirty_in_mb":                          serverResponse.Memory.TotalDirtyInMb,
-		"disk_system_store_used_data_file_size_in_mb":       serverResponse.Disk.SystemStoreUsedDataFileSizeInMb,
-		"disk_system_store_total_data_file_size_in_mb":      serverResponse.Disk.SystemStoreTotalDataFileSizeInMb,
-		"disk_total_free_space_in_mb":                       serverResponse.Disk.TotalFreeSpaceInMb,
-		"disk_remaining_storage_space_percentage":           serverResponse.Disk.RemainingStorageSpacePercentage,
-		"license_type":                                      serverResponse.License.Type,
-		"license_utilized_cpu_cores":                        serverResponse.License.UtilizedCpuCores,
-		"license_max_cores":                                 serverResponse.License.MaxCores,
-		"network_tcp_active_connections":                    serverResponse.Network.TcpActiveConnections,
-		"network_concurrent_requests_count":                 serverResponse.Network.ConcurrentRequestsCount,
-		"network_total_requests":                            serverResponse.Network.TotalRequests,
-		"network_requests_per_sec":                          serverResponse.Network.RequestsPerSec,
-		"cluster_node_state":                                mapNodeState(serverResponse.Cluster.NodeState),
-		"cluster_current_term":                              serverResponse.Cluster.CurrentTerm,
-		"cluster_index":                                     serverResponse.Cluster.Index,
-		"databases_total_count":                             serverResponse.Databases.TotalCount,
-		"databases_loaded_count":                            serverResponse.Databases.LoadedCount,
+		"server_version":                                                serverResponse.ServerVersion,
+		"server_full_version":                                           serverResponse.ServerFullVersion,
+		"uptime_in_sec":                                                 serverResponse.UpTimeInSec,
+		"server_process_id":                                             serverResponse.ServerProcessId,
+		"config_server_urls":                                            strings.Join(serverResponse.Config.ServerUrls, ";"),
+		"backup_max_number_of_concurrent_backups":                       serverResponse.Backup.MaxNumberOfConcurrentBackups,
+		"backup_current_number_of_running_backups":                      serverResponse.Backup.CurrentNumberOfRunningBackups,
+		"cpu_process_usage":                                             serverResponse.Cpu.ProcessUsage,
+		"cpu_machine_usage":                                             serverResponse.Cpu.MachineUsage,
+		"cpu_processor_count":                                           serverResponse.Cpu.ProcessorCount,
+		"cpu_assigned_processor_count":                                  serverResponse.Cpu.AssignedProcessorCount,
+		"cpu_thread_pool_available_worker_threads":                      serverResponse.Cpu.ThreadPoolAvailableWorkerThreads,
+		"cpu_thread_pool_available_completion_port_threads":             serverResponse.Cpu.ThreadPoolAvailableCompletionPortThreads,
+		"memory_allocated_in_mb":                                        serverResponse.Memory.AllocatedMemoryInMb,
+		"memory_installed_in_mb":                                        serverResponse.Memory.InstalledMemoryInMb,
+		"memory_physical_in_mb":                                         serverResponse.Memory.PhysicalMemoryInMb,
+		"memory_low_memory_severity":                                    mapMemorySeverity(serverResponse.Memory.LowMemorySeverity),
+		"memory_total_swap_size_in_mb":                                  serverResponse.Memory.TotalSwapSizeInMb,
+		"memory_total_swap_usage_in_mb":                                 serverResponse.Memory.TotalSwapUsageInMb,
+		"memory_working_set_swap_usage_in_mb":                           serverResponse.Memory.WorkingSetSwapUsageInMb,
+		"memory_total_dirty_in_mb":                                      serverResponse.Memory.TotalDirtyInMb,
+		"disk_system_store_used_data_file_size_in_mb":                   serverResponse.Disk.SystemStoreUsedDataFileSizeInMb,
+		"disk_system_store_total_data_file_size_in_mb":                  serverResponse.Disk.SystemStoreTotalDataFileSizeInMb,
+		"disk_total_free_space_in_mb":                                   serverResponse.Disk.TotalFreeSpaceInMb,
+		"disk_remaining_storage_space_percentage":                       serverResponse.Disk.RemainingStorageSpacePercentage,
+		"license_type":                                                  serverResponse.License.Type,
+		"license_utilized_cpu_cores":                                    serverResponse.License.UtilizedCpuCores,
+		"license_max_cores":                                             serverResponse.License.MaxCores,
+		"network_tcp_active_connections":                                serverResponse.Network.TcpActiveConnections,
+		"network_concurrent_requests_count":                             serverResponse.Network.ConcurrentRequestsCount,
+		"network_total_requests":                                        serverResponse.Network.TotalRequests,
+		"network_requests_per_sec":                                      serverResponse.Network.RequestsPerSec,
+		"cluster_node_state":                                            mapNodeState(serverResponse.Cluster.NodeState),
+		"cluster_current_term":                                          serverResponse.Cluster.CurrentTerm,
+		"cluster_index":                                                 serverResponse.Cluster.Index,
+		"databases_total_count":                                         serverResponse.Databases.TotalCount,
+		"databases_loaded_count":                                        serverResponse.Databases.LoadedCount,
+		"cpu_machine_io_wait":                                           serverResponse.Cpu.MachineIoWait,
+		"license_expiration_left_in_sec":                                serverResponse.License.ExpirationLeftInSec,
+		"network_last_request_time_in_sec":                              serverResponse.Network.LastRequestTimeInSec,
+		"network_last_authorized_non_cluster_admin_request_time_in_sec": serverResponse.Network.LastAuthorizedNonClusterAdminRequestTimeInSec,
+		"certificate_server_certificate_expiration_left_in_sec":         serverResponse.Certificate.ServerCertificateExpirationLeftInSec,
 	}
 
 	if serverResponse.Config.TcpServerUrls != nil {
@@ -434,28 +438,8 @@ func gatherServer(r *RavenDB, acc telegraf.Accumulator) {
 		fields["config_public_tcp_server_urls"] = strings.Join(serverResponse.Config.PublicTcpServerUrls, ";")
 	}
 
-	if serverResponse.Cpu.MachineIoWait != nil {
-		fields["cpu_machine_io_wait"] = serverResponse.Cpu.MachineIoWait
-	}
-
-	if serverResponse.License.ExpirationLeftInSec != nil {
-		fields["license_expiration_left_in_sec"] = serverResponse.License.ExpirationLeftInSec
-	}
-
-	if serverResponse.Network.LastRequestTimeInSec != nil {
-		fields["network_last_request_time_in_sec"] = serverResponse.Network.LastRequestTimeInSec
-	}
-
-	if serverResponse.Network.LastAuthorizedNonClusterAdminRequestTimeInSec != nil {
-		fields["network_last_authorized_non_cluster_admin_request_time_in_sec"] = serverResponse.Network.LastAuthorizedNonClusterAdminRequestTimeInSec
-	}
-
 	if serverResponse.Certificate.WellKnownAdminCertificates != nil {
 		fields["certificate_well_known_admin_certificates"] = strings.Join(serverResponse.Certificate.WellKnownAdminCertificates, ";")
-	}
-
-	if serverResponse.Certificate.ServerCertificateExpirationLeftInSec != nil {
-		fields["certificate_server_certificate_expiration_left_in_sec"] = serverResponse.Certificate.ServerCertificateExpirationLeftInSec
 	}
 
 	acc.AddFields("ravendb_server", fields, tags)
@@ -505,12 +489,15 @@ func gatherDatabases(r *RavenDB, acc telegraf.Accumulator) {
 	}
 
 	for _, dbResponse := range databasesResponse.Results {
-		tags := map[string]string{"url": r.URL}
-		tags["database_name"] = dbResponse.DatabaseName
-		tags["database_id"] = dbResponse.DatabaseId
-		tags["node_tag"] = databasesResponse.NodeTag
-		if databasesResponse.PublicServerUrl != "" {
-			tags["public_server_url"] = databasesResponse.PublicServerUrl
+		tags := map[string]string{
+			"url":           r.URL,
+			"database_name": dbResponse.DatabaseName,
+			"database_id":   dbResponse.DatabaseId,
+			"node_tag":      databasesResponse.NodeTag,
+		}
+
+		if databasesResponse.PublicServerUrl != nil {
+			tags["public_server_url"] = *databasesResponse.PublicServerUrl
 		}
 
 		fields := map[string]interface{}{
@@ -529,7 +516,7 @@ func gatherDatabases(r *RavenDB, acc telegraf.Accumulator) {
 			"statistics_map_reduce_index_reduced_per_sec": dbResponse.Statistics.MapReduceIndexReducedPerSec,
 			"statistics_requests_per_sec":                 dbResponse.Statistics.RequestsPerSec,
 			"statistics_requests_count":                   dbResponse.Statistics.RequestsCount,
-			"statistics_request_average_duration":         dbResponse.Statistics.RequestAverageDuration,
+			"statistics_request_average_duration_in_ms":   dbResponse.Statistics.RequestAverageDurationInMs,
 			"indexes_count":                               dbResponse.Indexes.Count,
 			"indexes_stale_count":                         dbResponse.Indexes.StaleCount,
 			"indexes_errors_count":                        dbResponse.Indexes.ErrorsCount,
@@ -544,10 +531,7 @@ func gatherDatabases(r *RavenDB, acc telegraf.Accumulator) {
 			"storage_indexes_used_data_file_in_mb":        dbResponse.Storage.IndexesUsedDataFileInMb,
 			"storage_total_allocated_storage_file_in_mb":  dbResponse.Storage.TotalAllocatedStorageFileInMb,
 			"storage_total_free_space_in_mb":              dbResponse.Storage.TotalFreeSpaceInMb,
-		}
-
-		if dbResponse.TimeSinceLastBackupInSec != nil {
-			fields["time_since_last_backup_in_sec"] = dbResponse.TimeSinceLastBackupInSec
+			"time_since_last_backup_in_sec":               dbResponse.TimeSinceLastBackupInSec,
 		}
 
 		acc.AddFields("ravendb_databases", fields, tags)
@@ -568,33 +552,29 @@ func gatherIndexes(r *RavenDB, acc telegraf.Accumulator) {
 	}
 
 	for _, indexResponse := range indexesResponse.Results {
-		tags := map[string]string{"url": r.URL}
-		tags["database_name"] = indexResponse.DatabaseName
-		tags["index_name"] = indexResponse.IndexName
-		tags["node_tag"] = indexesResponse.NodeTag
+		tags := map[string]string{
+			"url":           r.URL,
+			"database_name": indexResponse.DatabaseName,
+			"index_name":    indexResponse.IndexName,
+			"node_tag":      indexesResponse.NodeTag,
+		}
 
-		if indexesResponse.PublicServerUrl != "" {
-			tags["public_server_url"] = indexesResponse.PublicServerUrl
+		if indexesResponse.PublicServerUrl != nil {
+			tags["public_server_url"] = *indexesResponse.PublicServerUrl
 		}
 
 		fields := map[string]interface{}{
-			"priority":        indexResponse.Priority,
-			"state":           indexResponse.State,
-			"errors":          indexResponse.Errors,
-			"lock_mode":       indexResponse.LockMode,
-			"is_invalid":      boolToInt(indexResponse.IsInvalid),
-			"status":          indexResponse.Status,
-			"mapped_per_sec":  indexResponse.MappedPerSec,
-			"reduced_per_sec": indexResponse.ReducedPerSec,
-			"type":            indexResponse.Type,
-		}
-
-		if indexResponse.TimeSinceLastQueryInSec != nil {
-			fields["time_since_last_query_in_sec"] = indexResponse.TimeSinceLastQueryInSec
-		}
-
-		if indexResponse.TimeSinceLastIndexingInSec != nil {
-			fields["time_since_last_indexing_in_sec"] = indexResponse.TimeSinceLastIndexingInSec
+			"priority":                        indexResponse.Priority,
+			"state":                           indexResponse.State,
+			"errors":                          indexResponse.Errors,
+			"lock_mode":                       indexResponse.LockMode,
+			"is_invalid":                      indexResponse.IsInvalid,
+			"status":                          indexResponse.Status,
+			"mapped_per_sec":                  indexResponse.MappedPerSec,
+			"reduced_per_sec":                 indexResponse.ReducedPerSec,
+			"type":                            indexResponse.Type,
+			"time_since_last_query_in_sec":    indexResponse.TimeSinceLastQueryInSec,
+			"time_since_last_indexing_in_sec": indexResponse.TimeSinceLastIndexingInSec,
 		}
 
 		acc.AddFields("ravendb_indexes", fields, tags)
@@ -615,13 +595,15 @@ func gatherCollections(r *RavenDB, acc telegraf.Accumulator) {
 	}
 
 	for _, collectionMetrics := range collectionsResponse.Results {
-		tags := map[string]string{"url": r.URL}
-		tags["node_tag"] = collectionsResponse.NodeTag
-		tags["database_name"] = collectionMetrics.DatabaseName
-		tags["collection_name"] = collectionMetrics.CollectionName
+		tags := map[string]string{
+			"url":             r.URL,
+			"node_tag":        collectionsResponse.NodeTag,
+			"database_name":   collectionMetrics.DatabaseName,
+			"collection_name": collectionMetrics.CollectionName,
+		}
 
-		if collectionsResponse.PublicServerUrl != "" {
-			tags["public_server_url"] = collectionsResponse.PublicServerUrl
+		if collectionsResponse.PublicServerUrl != nil {
+			tags["public_server_url"] = *collectionsResponse.PublicServerUrl
 		}
 
 		fields := map[string]interface{}{
@@ -640,41 +622,23 @@ func prepareDbNamesUrlPart(dbNames []string) string {
 	if len(dbNames) == 0 {
 		return ""
 	}
-
-	result := ""
-	first := true
-
-	for _, db := range dbNames {
-		if first {
-			result += "?"
-			first = false
-		} else {
-			result += "&"
-		}
-		result += "name=" + url.QueryEscape(db)
+	result := "?" + dbNames[0]
+	for _, db := range dbNames[1:] {
+		result += "&name=" + url.QueryEscape(db)
 	}
+
 	return result
-}
-
-func boolToInt(b bool) int64 {
-	if b {
-		return 1
-	}
-	return 0
 }
 
 func init() {
 	inputs.Add("ravendb", func() telegraf.Input {
 		return &RavenDB{
-			ResponseHeaderTimeout: internal.Duration{Duration: DefaultResponseHeaderTimeout * time.Second},
-			ClientTimeout:         internal.Duration{Duration: DefaultClientTimeout * time.Second},
+			ResponseHeaderTimeout: internal.Duration{Duration: defaultResponseHeaderTimeout * time.Second},
+			ClientTimeout:         internal.Duration{Duration: defaultClientTimeout * time.Second},
 			GatherServerStats:     true,
 			GatherDbStats:         true,
 			GatherIndexStats:      true,
 			GatherCollectionStats: true,
-			DbStatsDbs:            []string{},
-			IndexStatsDbs:         []string{},
-			CollectionStatsDbs:    []string{},
 		}
 	})
 }

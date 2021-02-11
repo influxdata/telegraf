@@ -24,7 +24,7 @@
         "MapReduceIndexReducedPerSec": 85.2,
         "RequestsPerSec": 22.5,
         "RequestsCount": 809,
-        "RequestAverageDuration": 0.55
+        "RequestAverageDurationInMs": 0.55
       },
       "Indexes": {
         "Count": 7,
