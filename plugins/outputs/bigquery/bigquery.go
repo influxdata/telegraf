@@ -39,8 +39,7 @@ type BigQuery struct {
 	Dataset         string `toml:"dataset"`
 
 	Timeout internal.Duration `toml:"timeout"`
-
-	Log telegraf.Logger
+	Log telegraf.Logger `toml: "-"`
 
 	client *bigquery.Client
 }
