@@ -62,15 +62,13 @@ func (t *MessagePackTime) MarshalBinaryTo(buf []byte) error {
 	if len == 4 {
 		sec := t.time.Unix()
 		binary.BigEndian.PutUint32(buf, uint32(sec))
-	}
-	if len == 8 {
+	} else if len == 8 {
 		sec := t.time.Unix()
 		nsec := t.time.Nanosecond()
 
 		data := uint64(nsec)<<34 | (uint64(sec) & 0x03_ffff_ffff)
 		binary.BigEndian.PutUint64(buf, data)
-	}
-	if len == 12 {
+	} else if len == 12 {
 		sec := t.time.Unix()
 		nsec := t.time.Nanosecond()
 
@@ -88,16 +86,14 @@ func (t *MessagePackTime) UnmarshalBinary(buf []byte) error {
 	if len == 4 {
 		sec := binary.BigEndian.Uint32(buf)
 		t.time = time.Unix(int64(sec), 0)
-	}
-	if len == 8 {
+	} else if len == 8 {
 		data := binary.BigEndian.Uint64(buf)
 
 		nsec := (data & 0xfffffffc_00000000) >> 34
 		sec := (data & 0x00000003_ffffffff)
 
 		t.time = time.Unix(int64(sec), int64(nsec))
-	}
-	if len == 12 {
+	} else if len == 12 {
 		nsec := binary.BigEndian.Uint32(buf)
 		sec := binary.BigEndian.Uint64(buf[4:])
 
