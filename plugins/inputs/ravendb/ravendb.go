@@ -29,13 +29,10 @@ type RavenDB struct {
 
 	Timeout internal.Duration `toml:"timeout"`
 
-	GatherServerStats     bool     `toml:"gather_server_stats"`
-	GatherDbStats         bool     `toml:"gather_db_stats"`
-	GatherIndexStats      bool     `toml:"gather_index_stats"`
-	GatherCollectionStats bool     `toml:"gather_collection_stats"`
-	DbStatsDbs            []string `toml:"db_stats_dbs"`
-	IndexStatsDbs         []string `toml:"index_stats_dbs"`
-	CollectionStatsDbs    []string `toml:"collection_stats_dbs"`
+	StatsInclude       []string `toml:"stats_include"`
+	DbStatsDbs         []string `toml:"db_stats_dbs"`
+	IndexStatsDbs      []string `toml:"index_stats_dbs"`
+	CollectionStatsDbs []string `toml:"collection_stats_dbs"`
 
 	tls.ClientConfig
 
@@ -63,17 +60,9 @@ var sampleConfig = `
   ## time limit for requests made by this client.
   # timeout = "5s"
 
-  ## When true, collect server stats
-  # gather_server_stats = true
-
-  ## When true, collect per database stats
-  # gather_db_stats = true
-
-  ## When true, collect per index stats
-  # gather_index_stats = true
-
-  ## When true, collect per collection stats
-  # gather_collection_stats = true
+  ## List of statistics which are collected
+  # At least one is required
+  # stats_include = ["server", "databases", "indexes", "collections"]
 
   ## List of db where database stats are collected
   ## If empty, all db are concerned
@@ -108,40 +97,39 @@ func (r *RavenDB) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 
-	if r.GatherServerStats {
-		wg.Add(1)
+	for _, statToCollect := range r.StatsInclude {
+		switch statToCollect {
+		case "server":
+			wg.Add(1)
 
-		go func() {
-			defer wg.Done()
-			r.gatherServer(acc)
-		}()
-	}
+			go func() {
+				defer wg.Done()
+				r.gatherServer(acc)
+			}()
+		case "databases":
+			wg.Add(1)
 
-	if r.GatherDbStats {
-		wg.Add(1)
+			go func() {
+				defer wg.Done()
+				r.gatherDatabases(acc)
+			}()
+		case "indexes":
+			wg.Add(1)
 
-		go func() {
-			defer wg.Done()
-			r.gatherDatabases(acc)
-		}()
-	}
+			go func() {
+				defer wg.Done()
+				r.gatherDatabases(acc)
+			}()
+		case "collections":
+			wg.Add(1)
 
-	if r.GatherIndexStats {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-			r.gatherIndexes(acc)
-		}()
-	}
-
-	if r.GatherCollectionStats {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-			r.gatherCollections(acc)
-		}()
+			go func() {
+				defer wg.Done()
+				r.gatherCollections(acc)
+			}()
+		default:
+			panic(fmt.Sprintf("unhandled statistics type %s", statToCollect))
+		}
 	}
 
 	wg.Wait()
@@ -422,10 +410,10 @@ func (r *RavenDB) Init() error {
 		r.URL = defaultURL
 	}
 
-	r.requestUrlServer = fmt.Sprintf("%s%s", r.URL, "/admin/monitoring/v1/server")
-	r.requestUrlDatabases = fmt.Sprintf("%s%s", r.URL, "/admin/monitoring/v1/databases"+prepareDbNamesUrlPart(r.DbStatsDbs))
-	r.requestUrlIndexes = fmt.Sprintf("%s%s", r.URL, "/admin/monitoring/v1/indexes"+prepareDbNamesUrlPart(r.IndexStatsDbs))
-	r.requestUrlCollection = fmt.Sprintf("%s%s", r.URL, "/admin/monitoring/v1/collections"+prepareDbNamesUrlPart(r.IndexStatsDbs))
+	r.requestUrlServer = r.URL + "/admin/monitoring/v1/server"
+	r.requestUrlDatabases = r.URL + "/admin/monitoring/v1/databases" + prepareDbNamesUrlPart(r.DbStatsDbs)
+	r.requestUrlIndexes = r.URL + "/admin/monitoring/v1/indexes" + prepareDbNamesUrlPart(r.IndexStatsDbs)
+	r.requestUrlCollection = r.URL + "/admin/monitoring/v1/collections" + prepareDbNamesUrlPart(r.IndexStatsDbs)
 
 	return nil
 }
@@ -433,11 +421,8 @@ func (r *RavenDB) Init() error {
 func init() {
 	inputs.Add("ravendb", func() telegraf.Input {
 		return &RavenDB{
-			Timeout:               internal.Duration{Duration: defaultTimeout * time.Second},
-			GatherServerStats:     true,
-			GatherDbStats:         true,
-			GatherIndexStats:      true,
-			GatherCollectionStats: true,
+			Timeout:      internal.Duration{Duration: defaultTimeout * time.Second},
+			StatsInclude: []string{"server", "databases", "indexes", "collections"},
 		}
 	})
 }

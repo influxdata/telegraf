@@ -42,12 +42,9 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 	defer ts.Close()
 
 	r := &RavenDB{
-		URL:                   ts.URL,
-		GatherDbStats:         true,
-		GatherIndexStats:      true,
-		GatherServerStats:     true,
-		GatherCollectionStats: true,
-		Log:                   testutil.Logger{},
+		URL:          ts.URL,
+		StatsInclude: []string{"server", "databases", "indexes", "collections"},
+		Log:          testutil.Logger{},
 	}
 
 	r.Init()
@@ -242,12 +239,9 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 	defer ts.Close()
 
 	r := &RavenDB{
-		URL:                   ts.URL,
-		GatherServerStats:     true,
-		GatherDbStats:         true,
-		GatherIndexStats:      true,
-		GatherCollectionStats: true,
-		Log:                   testutil.Logger{},
+		URL:          ts.URL,
+		StatsInclude: []string{"server", "databases", "indexes", "collections"},
+		Log:          testutil.Logger{},
 	}
 
 	r.Init()

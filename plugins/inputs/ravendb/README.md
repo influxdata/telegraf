@@ -24,17 +24,9 @@ The following is an example config for RavenDB. **Note:** The client certificate
   ## time limit for requests made by this client.
   # timeout = "5s"
 
-  ## When true, collect server stats
-  # gather_server_stats = true
-
-  ## When true, collect per database stats
-  # gather_db_stats = true
-
-  ## When true, collect per index stats
-  # gather_index_stats = true
-  
-  ## When true, collect per collection stats
-  # gather_collection_stats = true
+  ## List of statistics which are collected
+  # At least one is required
+  # stats_include = ["server", "databases", "indexes", "collections"]
 
   ## List of db where database stats are collected
   ## If empty, all db are concerned
