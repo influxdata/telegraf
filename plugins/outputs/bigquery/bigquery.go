@@ -35,14 +35,14 @@ const sampleConfig = `
 `
 
 type BigQuery struct {
-	CredentialsFile string            `toml:"credentials_file"`
-	Project         string            `toml:"project"`
-	Dataset         string            `toml:"dataset"`
+	CredentialsFile string `toml:"credentials_file"`
+	Project         string `toml:"project"`
+	Dataset         string `toml:"dataset"`
 
-	TableMap        map[string]string `toml:"table_map"`
+	TableMap map[string]string `toml:"table_map"`
 
 	Timeout internal.Duration `toml:"timeout"`
-	Log telegraf.Logger `toml: "-"`
+	Log     telegraf.Logger   `toml: "-"`
 
 	client *bigquery.Client
 }
