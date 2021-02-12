@@ -198,7 +198,6 @@ jobs:
             cd $(find . -name "*telegraf-*" -type d)
             cd usr/bin
             codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" telegraf
-            codesign —verify —verbose telegraf
           
 workflows:
   version: 2
