@@ -1,6 +1,6 @@
-base64 -D -o MacCertificate.p12 \<<< $MacCertificate
+base64 -D -o MacCertificate.p12 <<< $MacCertificate
 sudo security import MacCertificate.p12 -k /Library/Keychains/System.keychain -P $MacCertificatePassword -A
-base64 -D -o AppleSigningAuthorityCertificate.cer \<<< $AppleSigningAuthorityCertificate
+base64 -D -o AppleSigningAuthorityCertificate.cer <<< $AppleSigningAuthorityCertificate
 sudo security import AppleSigningAuthorityCertificate.cer -k '/Library/Keychains/System.keychain' -A
 
 cd dist
