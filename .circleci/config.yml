@@ -202,7 +202,7 @@ jobs:
             codesign -v telegraf
 
             cd
-            cd dist
+            cd project/dist
             tar -czvf $(find . -name "*telegraf-*" -type d)_darwin_amd64.tar.gz $(find . -name "*telegraf-*" -type d)
             ls
           
