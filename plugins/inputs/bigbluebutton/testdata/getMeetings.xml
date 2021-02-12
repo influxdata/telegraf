@@ -1,0 +1,213 @@
+<response>
+    <returncode>SUCCESS</returncode>
+    <meetings>
+        <meeting>
+            <meetingName>Meeting 2</meetingName>
+            <meetingID>b0a78452-2266-4a0a-abae-8a016db8fccd</meetingID>
+            <internalMeetingID>6e2f5787a62c9c3e13ee557c847decded4a53d59-1613138647914</internalMeetingID>
+            <createTime>1613138647914</createTime>
+            <createDate>Fri Feb 12 15:04:07 CET 2021</createDate>
+            <voiceBridge>75042</voiceBridge>
+            <dialNumber>613-555-1234</dialNumber>
+            <attendeePW>e313fc20-2247-48dd-884a-b1cb48c7919c</attendeePW>
+            <moderatorPW>be89c431-00d9-4e38-a2f9-c9a54c9873a3</moderatorPW>
+            <running>true</running>
+            <duration>0</duration>
+            <hasUserJoined>true</hasUserJoined>
+            <recording>false</recording>
+            <hasBeenForciblyEnded>false</hasBeenForciblyEnded>
+            <startTime>1613138647937</startTime>
+            <endTime>0</endTime>
+            <participantCount>5</participantCount>
+            <listenerCount>3</listenerCount>
+            <voiceParticipantCount>3</voiceParticipantCount>
+            <videoCount>1</videoCount>
+            <maxUsers>0</maxUsers>
+            <moderatorCount>1</moderatorCount>
+            <attendees>
+                <attendee>
+                    <userID>w_bicpmrt6koyy</userID>
+                    <fullName>DOE John</fullName>
+                    <role>VIEWER</role>
+                    <isPresenter>false</isPresenter>
+                    <isListeningOnly>false</isListeningOnly>
+                    <hasJoinedVoice>true</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+                <attendee>
+                    <userID>w_rg0r3vr5uem5</userID>
+                    <fullName>DOE John</fullName>
+                    <role>MODERATOR</role>
+                    <isPresenter>true</isPresenter>
+                    <isListeningOnly>false</isListeningOnly>
+                    <hasJoinedVoice>true</hasJoinedVoice>
+                    <hasVideo>true</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+                <attendee>
+                    <userID>w_nrypfyqnlz56</userID>
+                    <fullName>DOE John</fullName>
+                    <role>VIEWER</role>
+                    <isPresenter>false</isPresenter>
+                    <isListeningOnly>true</isListeningOnly>
+                    <hasJoinedVoice>true</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+                <attendee>
+                    <userID>w_1bjp6n9ipydu</userID>
+                    <fullName>DOE John</fullName>
+                    <role>VIEWER</role>
+                    <isPresenter>false</isPresenter>
+                    <isListeningOnly>true</isListeningOnly>
+                    <hasJoinedVoice>false</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+                <attendee>
+                    <userID>w_hwrzbqttrrye</userID>
+                    <fullName>DOE John</fullName>
+                    <role>VIEWER</role>
+                    <isPresenter>false</isPresenter>
+                    <isListeningOnly>true</isListeningOnly>
+                    <hasJoinedVoice>false</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+            </attendees>
+            <metadata>
+            </metadata>
+            <isBreakout>false</isBreakout>
+        </meeting>
+        <meeting>
+            <meetingName>Meeting 2</meetingName>
+            <meetingID>2432dac2-ded4-4f77-9f58-ba6610df1890</meetingID>
+            <internalMeetingID>c8efd27a023c8f3ae25e9f835997fba36b3e8991-1613138946434</internalMeetingID>
+            <createTime>1613138946434</createTime>
+            <createDate>Fri Feb 12 15:09:06 CET 2021</createDate>
+            <voiceBridge>71011</voiceBridge>
+            <dialNumber>613-555-1234</dialNumber>
+            <attendeePW>54a771fc-8488-4377-b1c9-b04cd5030613</attendeePW>
+            <moderatorPW>90d6f133-24da-4aa1-a94e-cbe5b11646ef</moderatorPW>
+            <running>true</running>
+            <duration>0</duration>
+            <hasUserJoined>true</hasUserJoined>
+            <recording>false</recording>
+            <hasBeenForciblyEnded>false</hasBeenForciblyEnded>
+            <startTime>1613138946454</startTime>
+            <endTime>0</endTime>
+            <participantCount>10</participantCount>
+            <listenerCount>9</listenerCount>
+            <voiceParticipantCount>1</voiceParticipantCount>
+            <videoCount>0</videoCount>
+            <maxUsers>0</maxUsers>
+            <moderatorCount>1</moderatorCount>
+            <attendees>
+                <attendee>
+                    <userID>w_xudgxijjh9sh</userID>
+                    <fullName>DOE John</fullName>
+                    <role>MODERATOR</role>
+                    <isPresenter>true</isPresenter>
+                    <isListeningOnly>false</isListeningOnly>
+                    <hasJoinedVoice>true</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+                <attendee>
+                    <userID>w_pp6xhj8x92xt</userID>
+                    <fullName>DOE John</fullName>
+                    <role>VIEWER</role>
+                    <isPresenter>false</isPresenter>
+                    <isListeningOnly>true</isListeningOnly>
+                    <hasJoinedVoice>false</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+                <attendee>
+                    <userID>w_mdg6hacmzgr9</userID>
+                    <fullName>DOE John</fullName>
+                    <role>VIEWER</role>
+                    <isPresenter>false</isPresenter>
+                    <isListeningOnly>true</isListeningOnly>
+                    <hasJoinedVoice>false</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+                <attendee>
+                    <userID>w_gm9jgzmoilb3</userID>
+                    <fullName>DOE John</fullName>
+                    <role>VIEWER</role>
+                    <isPresenter>false</isPresenter>
+                    <isListeningOnly>true</isListeningOnly>
+                    <hasJoinedVoice>false</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+                <attendee>
+                    <userID>w_1kgxzogtqfj8</userID>
+                    <fullName>DOE John</fullName>
+                    <role>VIEWER</role>
+                    <isPresenter>false</isPresenter>
+                    <isListeningOnly>true</isListeningOnly>
+                    <hasJoinedVoice>false</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+                <attendee>
+                    <userID>w_v5gwdxau6hnt</userID>
+                    <fullName>DOE John</fullName>
+                    <role>VIEWER</role>
+                    <isPresenter>false</isPresenter>
+                    <isListeningOnly>true</isListeningOnly>
+                    <hasJoinedVoice>false</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+                <attendee>
+                    <userID>w_upyfkzs2hdgy</userID>
+                    <fullName>DOE John</fullName>
+                    <role>VIEWER</role>
+                    <isPresenter>false</isPresenter>
+                    <isListeningOnly>true</isListeningOnly>
+                    <hasJoinedVoice>false</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+                <attendee>
+                    <userID>w_nhp7kd70isfu</userID>
+                    <fullName>DOE John</fullName>
+                    <role>VIEWER</role>
+                    <isPresenter>false</isPresenter>
+                    <isListeningOnly>true</isListeningOnly>
+                    <hasJoinedVoice>false</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+                <attendee>
+                    <userID>w_mxjmwdhnoo2x</userID>
+                    <fullName>DOE John</fullName>
+                    <role>VIEWER</role>
+                    <isPresenter>false</isPresenter>
+                    <isListeningOnly>true</isListeningOnly>
+                    <hasJoinedVoice>false</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+                <attendee>
+                    <userID>w_tatousn62hn3</userID>
+                    <fullName>DOE John</fullName>
+                    <role>VIEWER</role>
+                    <isPresenter>false</isPresenter>
+                    <isListeningOnly>true</isListeningOnly>
+                    <hasJoinedVoice>false</hasJoinedVoice>
+                    <hasVideo>false</hasVideo>
+                    <clientType>HTML5</clientType>
+                </attendee>
+            </attendees>
+            <metadata>
+            </metadata>
+            <isBreakout>false</isBreakout>
+        </meeting>
+    </meetings>
+</response>

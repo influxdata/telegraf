@@ -1,0 +1,6 @@
+<response>
+  <returncode>SUCCESS</returncode>
+  <recordings></recordings>
+  <messageKey>noRecordings</messageKey>
+  <message>There are no recordings for the meeting(s).</message>
+</response>

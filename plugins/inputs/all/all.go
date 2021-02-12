@@ -12,6 +12,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/bcache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/beanstalkd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/beat"
+	_ "github.com/influxdata/telegraf/plugins/inputs/bigbluebutton"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bind"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bond"
 	_ "github.com/influxdata/telegraf/plugins/inputs/burrow"
