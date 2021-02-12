@@ -15,5 +15,5 @@ cd
 cd project/dist
 extractedFolder=$(find . -name "*telegraf-*" -type d)
 tar -czvf "$extractedFolder"_darwin_amd64.tar.gz $extractedFolder
-rm $extractedFolder
+rm -rf $extractedFolder
 ls
