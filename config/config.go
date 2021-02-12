@@ -1163,7 +1163,9 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 func (c *Config) buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{Name: name}
 
-	c.getFieldInt64(tbl, "order", &conf.Order)
+	if !c.getFieldInt64(tbl, "order", &conf.Order) {
+		conf.Order = -10000000 + int64(tbl.Position.Begin)
+	}
 	c.getFieldString(tbl, "alias", &conf.Alias)
 
 	if c.hasErrs() {

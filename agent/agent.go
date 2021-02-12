@@ -73,6 +73,63 @@ type outputUnit struct {
 	outputs []*models.RunningOutput
 }
 
+type processorGroupUnit struct {
+	sync.Mutex
+	accumulator    telegraf.Accumulator
+	processorUnits []*processorUnit
+}
+
+func (pg *processorGroupUnit) Find(pr models.ProcessorRunner) *processorUnit {
+	for _, unit := range pg.processorUnits {
+		if unit.processor.GetID() == pr.GetID() {
+			return unit
+		}
+	}
+
+	return nil
+}
+
+// inputGroupUnit is a group of input plugins and the shared channel they write to.
+//
+// ┌───────┐
+// │ Input │───┐
+// └───────┘   │
+// ┌───────┐   │     ______
+// │ Input │───┼──▶ ()_____)
+// └───────┘   │
+// ┌───────┐   │
+// │ Input │───┘
+// └───────┘
+type inputGroupUnit struct {
+	sync.Mutex
+	dst        chan<- telegraf.Metric
+	inputUnits []inputUnit
+}
+
+// RunWithAPI runs Telegraf in API mode where all the plugins are controlled by
+// the user through the config API. When running in this mode plugins are not
+// loaded from the toml file.
+func (a *Agent) RunWithAPI(ctx context.Context, outputCancel context.CancelFunc) {
+	a.ctx = ctx
+	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
+		"Flush Interval:%s",
+		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
+		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
+
+	// a.loadState()
+	a.outputUnit.src = make(chan telegraf.Metric)
+	go func() {
+		a.runOutputFanout()
+		outputCancel()
+	}()
+	<-ctx.Done()
+	a.stopInputs()
+	// a.saveState()
+
+	// wait for all plugins to stop
+	log.Printf("D! [agent] Stopped Successfully")
+}
+
 // Run starts and runs the Agent until the context is done.
 func (a *Agent) Run(ctx context.Context) error {
 	a.ctx = ctx
