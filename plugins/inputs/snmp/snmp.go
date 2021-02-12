@@ -56,7 +56,7 @@ const sampleConfig = `
   ##
   ## Security Name.
   # sec_name = "myuser"
-  ## Authentication protocol; one of "MD5", "SHA", or "".
+  ## Authentication protocol; one of "MD5", "SHA", "SHA224", "SHA256", "SHA384", "SHA512" or "".
   # auth_protocol = "MD5"
   ## Authentication password.
   # auth_password = "pass"
