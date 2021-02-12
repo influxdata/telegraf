@@ -23,6 +23,7 @@ var defaultTimeout = internal.Duration{Duration: 5 * time.Second}
 const sampleConfig = `	
   ## Credentials File
   credentials_file = "/path/to/service/account/key.json"
+
   ## Google Cloud Platform Project
   project = "my-gcp-project"
 
@@ -37,11 +38,11 @@ type BigQuery struct {
 	CredentialsFile string            `toml:"credentials_file"`
 	Project         string            `toml:"project"`
 	Dataset         string            `toml:"dataset"`
+
 	TableMap        map[string]string `toml:"table_map"`
 
 	Timeout internal.Duration `toml:"timeout"`
-
-	Log telegraf.Logger
+	Log telegraf.Logger `toml: "-"`
 
 	client *bigquery.Client
 }
