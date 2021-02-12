@@ -45,11 +45,11 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		minor := unix.Minor(uint64(stat.Rdev))
 		udevDataPath = fmt.Sprintf("/run/udev/data/b%d:%d", major, minor)
 
-		f, err := os.Stat(udevDataPath)
+		_, err := os.Stat(udevDataPath)
 		if err != nil {
 			// This path failed, try the fallback .udev style (non-systemd)
 			udevDataPath = fmt.Sprintf("/dev/.udev/db/block:%s", devName)
-			f, err := os.Stat(udevDataPath)
+			_, err := os.Stat(udevDataPath)
 			if err != nil {
 				// Giving up, cannot retrieve disk info
 				return nil, err
