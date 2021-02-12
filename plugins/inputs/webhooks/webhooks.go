@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/filestack"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/github"
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/kubernetes_audit"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/mandrill"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/papertrail"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/particle"
@@ -30,12 +31,13 @@ func init() {
 type Webhooks struct {
 	ServiceAddress string
 
-	Github     *github.GithubWebhook
-	Filestack  *filestack.FilestackWebhook
-	Mandrill   *mandrill.MandrillWebhook
-	Rollbar    *rollbar.RollbarWebhook
-	Papertrail *papertrail.PapertrailWebhook
-	Particle   *particle.ParticleWebhook
+	Github          *github.GithubWebhook
+	Filestack       *filestack.FilestackWebhook
+	Mandrill        *mandrill.MandrillWebhook
+	Rollbar         *rollbar.RollbarWebhook
+	Papertrail      *papertrail.PapertrailWebhook
+	KubernetesAudit *kubernetes_audit.KubeAuditWebhook
+	Particle        *particle.ParticleWebhook
 
 	srv *http.Server
 }
@@ -51,6 +53,9 @@ func (wb *Webhooks) SampleConfig() string {
 
   [inputs.webhooks.filestack]
     path = "/filestack"
+
+  [inputs.webhooks.kubernetes_audit]
+    path = "/kubernetes-audit"
 
   [inputs.webhooks.github]
     path = "/github"

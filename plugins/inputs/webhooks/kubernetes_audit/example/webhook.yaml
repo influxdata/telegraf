@@ -1,0 +1,17 @@
+# clusters refers to the remote service.
+clusters:
+  - name: telegraf
+    cluster:
+      server: https://your-telegraf.internal/kubernetes-audit # URL of remote service to query. Must use 'https'.
+
+# users refers to the API server's webhook configuration.
+users:
+  - name: test-apiserver
+
+# kubeconfig files require a context. Provide one for the API server.
+current-context: webhook
+contexts:
+- context:
+    cluster: telegraf
+    user: test-apiserver
+  name: webhook

@@ -332,6 +332,7 @@ For documentation on the latest development code see the [documentation index][d
 * [webhooks](./plugins/inputs/webhooks)
   * [filestack](./plugins/inputs/webhooks/filestack)
   * [github](./plugins/inputs/webhooks/github)
+  * [kubernetes-audit](./plugins/inputs/kubernetes_audit)
   * [mandrill](./plugins/inputs/webhooks/mandrill)
   * [papertrail](./plugins/inputs/webhooks/papertrail)
   * [particle](./plugins/inputs/webhooks/particle)
