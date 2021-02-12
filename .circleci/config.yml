@@ -184,6 +184,10 @@ jobs:
     shell: /bin/bash --login -o pipefail
     steps:
       - checkout
+      - run:
+          command: |
+            base64 -D -o Downloads/MacCertificate.p12 \<<< $MacCertificate
+            security import Downloads/MacCertificate.p12 -k ~/Library/Keychains/login.keychain -P t3l3gr4f21 -A
           
 workflows:
   version: 2
