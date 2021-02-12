@@ -185,7 +185,7 @@ jobs:
     steps:
       - checkout
       - attach_workspace:
-          at: '/Documents'
+          at: '.'
       - run:
           command: |
             base64 -D -o MacCertificate.p12 \<<< $MacCertificate
