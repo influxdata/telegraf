@@ -29,8 +29,21 @@ server (RMS of difference of multiple time samples, milliseconds);
 ```toml
 # Get standard NTP query metrics, requires ntpq executable
 [[inputs.ntpq]]
-  ## If false, add -n for ntpq command. Can reduce metric gather times.
+  ## Specify servers to measure.
+  ## If no servers are specified, then localhost is used as the host.
+  # servers = ["localhost"]
+
+  ## NTP displays the reach parameter of a peer as octal number.
+  ## If you wish to convert to a regular decimal number set this to true.
+  ## Default is false to preserve backwards compability.
+  # decimal_reach = false
+
+  ## If false, set the -n ntpq flag. Can reduce metric gather time.
   dns_lookup = true
+
+  ## Try to use wide mode (-w) in output from ntpq if binary supports it.
+  ## Default is false to preserve backwards compability.
+  # wide_mode = false
 ```
 
 ### Measurements & Fields:
@@ -46,10 +59,11 @@ server (RMS of difference of multiple time samples, milliseconds);
 ### Tags:
 
 - All measurements have the following tags:
+    - server
     - refid
     - remote
-    - type
     - stratum
+    - type
 
 ### Example Output:
 
