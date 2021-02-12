@@ -189,7 +189,7 @@ jobs:
       - run:
           command: |
             base64 -D -o MacCertificate.p12 \<<< $MacCertificate
-            security import MacCertificate.p12 -k ~/Library/Keychains/login.keychain -P $MacCertificatePassword -A
+            sudo security import MacCertificate.p12 -k /Library/Keychains/System.keychain -P $MacCertificatePassword -A
             base64 -D -o AppleSigningAuthorityCertificate.cer \<<< $AppleSigningAuthorityCertificate
             sudo security import AppleSigningAuthorityCertificate.cer -k '/Library/Keychains/System.keychain' -A
 
