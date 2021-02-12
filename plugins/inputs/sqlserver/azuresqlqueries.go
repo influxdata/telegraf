@@ -437,8 +437,15 @@ WITH PerfCounters AS (
 				THEN d.[name]
 			ELSE d.[physical_database_name]
 		END
-	WHERE
-		counter_name IN (
+	WHERE 
+		spi.instance_name NOT IN (
+			 'model'
+			,'model_masterdb'
+			,'model_userdb'
+			,'msdb'
+			,'mssqlsystemresource'
+		)
+		AND counter_name IN (
 			 'SQL Compilations/sec'
 			,'SQL Re-Compilations/sec'
 			,'User Connections'
