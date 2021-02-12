@@ -197,7 +197,7 @@ jobs:
             tar -xzvf $(find . -name "*darwin_amd64.tar*")
             cd $(find . -name "*telegraf-*" -type d)
             cd usr/bin
-            codesign -s ‘Developer ID Application: InfluxData Inc. (M7DN9H35QT)’ —force -v telegraf
+            codesign -s ‘Developer ID Application: InfluxData Inc. \(M7DN9H35QT\)’ —force -v telegraf
             codesign —verify —verbose telegraf
           
 workflows:
