@@ -280,7 +280,7 @@ func init() {
 	inputs.Add("x509_cert", func() telegraf.Input {
 		return &X509Cert{
 			Sources: []string{},
-			Timeout: internal.Duration{Duration: 5 * time.Second},
+			Timeout: internal.Duration{Duration: 5 * time.Second}, // set default timeout to 5s
 		}
 	})
 }
