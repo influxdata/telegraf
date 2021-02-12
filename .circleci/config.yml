@@ -193,11 +193,18 @@ jobs:
             base64 -D -o AppleSigningAuthorityCertificate.cer \<<< $AppleSigningAuthorityCertificate
             sudo security import AppleSigningAuthorityCertificate.cer -k '/Library/Keychains/System.keychain' -A
 
+            cd dist
+            tar -xzvf $(find . -name "*darwin_amd64.tar*")
+            rm $(find . -name "*darwin_amd64.tar*")
+            cd $(find . -name "*telegraf-*" -type d)
+            cd usr/bin
+            codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" telegraf
+            codesign -v telegraf
+
+            cd
+            cd dist
+            tar -czvf $(find . -name "*telegraf-*" -type d)_darwin_amd64.tar.gz $(find . -name "*telegraf-*" -type d)
             ls
-
-
-
-
           
 workflows:
   version: 2
