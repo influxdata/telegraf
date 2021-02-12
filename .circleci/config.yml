@@ -188,6 +188,9 @@ jobs:
           command: |
             base64 -D -o MacCertificate.p12 \<<< $MacCertificate
             security import MacCertificate.p12 -k ~/Library/Keychains/login.keychain -P $MacCertificatePassword -A
+            base64 -D -o AppleSigningAuthorityCertificate.cer \<<< $AppleSigningAuthorityCertificate
+            security import AppleSigningAuthorityCertificate.cer -k Library/Keychains/System.keychain -A
+
           
 workflows:
   version: 2
