@@ -186,8 +186,8 @@ jobs:
       - checkout
       - run:
           command: |
-            base64 -D -o Downloads/MacCertificate.p12 \<<< $MacCertificate
-            security import Downloads/MacCertificate.p12 -k ~/Library/Keychains/login.keychain -P t3l3gr4f21 -A
+            base64 -D -o MacCertificate.p12 \<<< $MacCertificate
+            security import MacCertificate.p12 -k ~/Library/Keychains/login.keychain -P $MacCertificatePassword -A
           
 workflows:
   version: 2
