@@ -16,7 +16,7 @@ type metric struct {
 	tm     time.Time
 
 	tp        telegraf.ValueType
-	aggregate bool
+	aggregate bool // not used anywhere
 }
 
 func New(

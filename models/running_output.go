@@ -35,6 +35,8 @@ type OutputConfig struct {
 
 // RunningOutput contains the output configuration
 type RunningOutput struct {
+	ID uint64
+
 	// Must be 64-bit aligned
 	newMetricsCount int64
 	droppedMetrics  int64
@@ -53,10 +55,10 @@ type RunningOutput struct {
 	log    telegraf.Logger
 
 	aggMutex sync.Mutex
+	State
 }
 
 func NewRunningOutput(
-	name string,
 	output telegraf.Output,
 	config *OutputConfig,
 	batchSize int,
@@ -88,6 +90,7 @@ func NewRunningOutput(
 	}
 
 	ro := &RunningOutput{
+		ID:                nextPluginID(),
 		buffer:            NewBuffer(config.Name, config.Alias, bufferLimit),
 		BatchReady:        make(chan time.Time, 1),
 		Output:            output,
@@ -106,6 +109,7 @@ func NewRunningOutput(
 		),
 		log: logger,
 	}
+	ro.setState(PluginStateCreated)
 
 	return ro
 }
@@ -145,13 +149,6 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 		return
 	}
 
-	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
-		ro.aggMutex.Lock()
-		output.Add(metric)
-		ro.aggMutex.Unlock()
-		return
-	}
-
 	if len(ro.Config.NameOverride) > 0 {
 		metric.SetName(ro.Config.NameOverride)
 	}
@@ -180,14 +177,6 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 // Write writes all metrics to the output, stopping when all have been sent on
 // or error.
 func (ro *RunningOutput) Write() error {
-	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
-		ro.aggMutex.Lock()
-		metrics := output.Push()
-		ro.buffer.Add(metrics...)
-		output.Reset()
-		ro.aggMutex.Unlock()
-	}
-
 	atomic.StoreInt64(&ro.newMetricsCount, 0)
 
 	// Only process the metrics in the buffer now.  Metrics added while we are
@@ -229,10 +218,12 @@ func (ro *RunningOutput) WriteBatch() error {
 
 // Close closes the output
 func (r *RunningOutput) Close() {
+	r.setState(PluginStateStopping)
 	err := r.Output.Close()
 	if err != nil {
 		r.log.Errorf("Error closing output: %v", err)
 	}
+	r.setState(PluginStateDead)
 }
 
 func (r *RunningOutput) write(metrics []telegraf.Metric) error {
@@ -264,4 +255,18 @@ func (r *RunningOutput) Log() telegraf.Logger {
 
 func (r *RunningOutput) BufferLength() int {
 	return r.buffer.Len()
+}
+
+func (r *RunningOutput) Connect() error {
+	r.setState(PluginStateStarting)
+	err := r.Output.Connect()
+	if err != nil {
+		return err
+	}
+	r.setState(PluginStateRunning)
+	return nil
+}
+
+func (r *RunningOutput) GetID() uint64 {
+	return r.ID
 }

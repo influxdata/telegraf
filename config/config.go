@@ -63,13 +63,11 @@ type Config struct {
 	InputFilters  []string
 	OutputFilters []string
 
-	Agent       *AgentConfig
-	Inputs      []*models.RunningInput
-	Outputs     []*models.RunningOutput
-	Aggregators []*models.RunningAggregator
+	Agent   *AgentConfig
+	Inputs  []*models.RunningInput
+	Outputs []*models.RunningOutput
 	// Processors have a slice wrapper type because they need to be sorted
-	Processors    models.RunningProcessors
-	AggProcessors models.RunningProcessors
+	Processors models.ProcessorRunners
 }
 
 // NewConfig creates a new struct to hold the Telegraf config.
@@ -91,8 +89,7 @@ func NewConfig() *Config {
 		Tags:          make(map[string]string),
 		Inputs:        make([]*models.RunningInput, 0),
 		Outputs:       make([]*models.RunningOutput, 0),
-		Processors:    make([]*models.RunningProcessor, 0),
-		AggProcessors: make([]*models.RunningProcessor, 0),
+		Processors:    make(models.ProcessorRunners, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
 	}
@@ -103,7 +100,6 @@ func NewConfig() *Config {
 		MissingField:  c.missingTomlField,
 	}
 	c.toml = tomlCfg
-
 	return c
 }
 
@@ -203,8 +199,10 @@ func (c *Config) InputNames() []string {
 // AggregatorNames returns a list of strings of the configured aggregators.
 func (c *Config) AggregatorNames() []string {
 	var name []string
-	for _, aggregator := range c.Aggregators {
-		name = append(name, aggregator.Config.Name)
+	for _, processor := range c.Processors {
+		if p, ok := processor.(*models.RunningAggregator); ok {
+			name = append(name, p.Config.Name)
+		}
 	}
 	return PluginNameCounts(name)
 }
@@ -213,7 +211,9 @@ func (c *Config) AggregatorNames() []string {
 func (c *Config) ProcessorNames() []string {
 	var name []string
 	for _, processor := range c.Processors {
-		name = append(name, processor.Config.Name)
+		if p, ok := processor.(*models.RunningProcessor); ok {
+			name = append(name, p.Config.Name)
+		}
 	}
 	return PluginNameCounts(name)
 }
@@ -981,7 +981,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 		return err
 	}
 
-	c.Aggregators = append(c.Aggregators, models.NewRunningAggregator(aggregator, conf))
+	c.Processors = append(c.Processors, models.NewRunningAggregator(aggregator, conf))
 	return nil
 }
 
@@ -1001,13 +1001,6 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		return err
 	}
 	c.Processors = append(c.Processors, rf)
-
-	// save a copy for the aggregator
-	rf, err = c.newRunningProcessor(creator, processorConfig, name, table)
-	if err != nil {
-		return err
-	}
-	c.AggProcessors = append(c.AggProcessors, rf)
 
 	return nil
 }
@@ -1064,7 +1057,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	ro := models.NewRunningOutput(name, output, outputConfig,
+	ro := models.NewRunningOutput(output, outputConfig,
 		c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
 	return nil
@@ -1139,6 +1132,9 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 	c.getFieldString(tbl, "name_suffix", &conf.MeasurementSuffix)
 	c.getFieldString(tbl, "name_override", &conf.NameOverride)
 	c.getFieldString(tbl, "alias", &conf.Alias)
+	if !c.getFieldInt64(tbl, "order", &conf.Order) {
+		conf.Order = -10000000 + int64(tbl.Position.Begin)
+	}
 
 	conf.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
@@ -1502,19 +1498,29 @@ func (c *Config) getFieldInt(tbl *ast.Table, fieldName string, target *int) {
 	}
 }
 
-func (c *Config) getFieldInt64(tbl *ast.Table, fieldName string, target *int64) {
-	if node, ok := tbl.Fields[fieldName]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if iAst, ok := kv.Value.(*ast.Integer); ok {
-				i, err := iAst.Int()
-				if err != nil {
-					c.addError(tbl, fmt.Errorf("unexpected int type %q, expecting int", iAst.Value))
-					return
-				}
-				*target = i
-			}
-		}
+// getFieldInt64 returns true if the value was defined in config
+func (c *Config) getFieldInt64(tbl *ast.Table, fieldName string, target *int64) bool {
+	node, ok := tbl.Fields[fieldName]
+	if !ok {
+		return false
 	}
+	kv, ok := node.(*ast.KeyValue)
+	if !ok {
+		c.addError(tbl, fmt.Errorf("expected key/value pair for node %q, but got %t", fieldName, node))
+		return false
+	}
+	iAst, ok := kv.Value.(*ast.Integer)
+	if !ok {
+		c.addError(tbl, fmt.Errorf("expected int variable type for %q, but got %t", fieldName, kv.Value))
+		return false
+	}
+	i, err := iAst.Int()
+	if err != nil {
+		c.addError(tbl, fmt.Errorf("unexpected int type %q, expecting int", iAst.Value))
+		return false
+	}
+	*target = i
+	return true
 }
 
 func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string, target *[]string) {

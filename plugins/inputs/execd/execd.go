@@ -95,12 +95,12 @@ func (e *Execd) Stop() {
 
 func (e *Execd) cmdReadOut(out io.Reader) {
 	if _, isInfluxParser := e.parser.(*influx.Parser); isInfluxParser {
-		// work around the lack of built-in streaming parser. :(
 		e.cmdReadOutStream(out)
 		return
 	}
 
-	scanner := bufio.NewScanner(out)
+	// work around the lack of built-in streaming parser. :(
+	scanner := bufio.NewScanner(out) // '\n' delimited
 
 	for scanner.Scan() {
 		metrics, err := e.parser.Parse(scanner.Bytes())

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -14,6 +15,8 @@ type MetricMaker interface {
 }
 
 type accumulator struct {
+	sync.Mutex
+	sync.Cond
 	maker     MetricMaker
 	metrics   chan<- telegraf.Metric
 	precision time.Duration
@@ -28,6 +31,8 @@ func NewAccumulator(
 		metrics:   metrics,
 		precision: time.Nanosecond,
 	}
+	acc.Cond.L = &acc.Mutex
+
 	return &acc
 }
 
@@ -77,8 +82,13 @@ func (ac *accumulator) AddHistogram(
 }
 
 func (ac *accumulator) AddMetric(m telegraf.Metric) {
+	ac.Lock()
+	defer ac.Unlock()
 	m.SetTime(m.Time().Round(ac.precision))
 	if m := ac.maker.MakeMetric(m); m != nil {
+		if ac.metrics == nil {
+			ac.Cond.Wait() // unlock and wait for metrics to be set.
+		}
 		ac.metrics <- m
 	}
 }
@@ -94,9 +104,22 @@ func (ac *accumulator) addFields(
 	if err != nil {
 		return
 	}
+	ac.Lock()
+	defer ac.Unlock()
 	if m := ac.maker.MakeMetric(m); m != nil {
+		if ac.metrics == nil {
+			ac.Cond.Wait() // unlock and wait for metrics to be set.
+		}
 		ac.metrics <- m
 	}
+}
+
+// setOutput changes the destination of the accumulator
+func (ac *accumulator) setOutput(outCh chan<- telegraf.Metric) {
+	ac.Lock()
+	defer ac.Unlock()
+	ac.metrics = outCh
+	ac.Cond.Broadcast()
 }
 
 // AddError passes a runtime error to the accumulator.
@@ -127,6 +150,32 @@ func (ac *accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator
 		Accumulator: ac,
 		delivered:   make(chan telegraf.DeliveryInfo, maxTracked),
 	}
+}
+
+func (ac *accumulator) WithNewMetricMaker(logName string, logger telegraf.Logger, f func(metric telegraf.Metric) telegraf.Metric) telegraf.Accumulator {
+	return &metricMakerAccumulator{
+		Accumulator: ac,
+		makerFunc:   f,
+		logName:     logName,
+		logger:      logger,
+	}
+}
+
+type metricMakerAccumulator struct {
+	telegraf.Accumulator
+	logName   string
+	logger    telegraf.Logger
+	makerFunc func(m telegraf.Metric) telegraf.Metric
+}
+
+func (ma *metricMakerAccumulator) LogName() string {
+	return ma.logName
+}
+func (ma *metricMakerAccumulator) Log() telegraf.Logger {
+	return ma.logger
+}
+func (ma *metricMakerAccumulator) MakeMetric(m telegraf.Metric) telegraf.Metric {
+	return ma.makerFunc(m)
 }
 
 type trackingAccumulator struct {

@@ -1,4 +1,4 @@
-package config
+package config_test
 
 import (
 	"os"
@@ -6,22 +6,27 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
+	_ "github.com/influxdata/telegraf/plugins/aggregators/minmax"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/exec"
+	_ "github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/plugins/inputs/http_listener_v2"
 	"github.com/influxdata/telegraf/plugins/inputs/memcached"
 	"github.com/influxdata/telegraf/plugins/inputs/procstat"
 	"github.com/influxdata/telegraf/plugins/outputs/azure_monitor"
+	_ "github.com/influxdata/telegraf/plugins/outputs/file"
 	httpOut "github.com/influxdata/telegraf/plugins/outputs/http"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	_ "github.com/influxdata/telegraf/plugins/processors/rename"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	err := os.Setenv("MY_TEST_SERVER", "192.168.1.1")
 	assert.NoError(t, err)
 	err = os.Setenv("TEST_INTERVAL", "10s")
@@ -64,7 +69,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 }
 
 func TestConfig_LoadSingleInput(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	c.LoadConfig("./testdata/single_plugin.toml")
 
 	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
@@ -103,7 +108,7 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 }
 
 func TestConfig_LoadDirectory(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	err := c.LoadConfig("./testdata/single_plugin.toml")
 	if err != nil {
 		t.Error(err)
@@ -190,7 +195,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 }
 
 func TestConfig_LoadSpecialTypes(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	err := c.LoadConfig("./testdata/special_types.toml")
 	assert.NoError(t, err)
 	require.Equal(t, 1, len(c.Inputs))
@@ -206,19 +211,19 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 }
 
 func TestConfig_FieldNotDefined(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	err := c.LoadConfig("./testdata/invalid_field.toml")
 	require.Error(t, err, "invalid field name")
 	assert.Equal(t, "Error loading config file ./testdata/invalid_field.toml: plugin inputs.http_listener_v2: line 1: configuration specified the fields [\"not_a_field\"], but they weren't used", err.Error())
 }
 
 func TestConfig_WrongFieldType(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	err := c.LoadConfig("./testdata/wrong_field_type.toml")
 	require.Error(t, err, "invalid field type")
 	assert.Equal(t, "Error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: (http_listener_v2.HTTPListenerV2.Port) cannot unmarshal TOML string into int", err.Error())
 
-	c = NewConfig()
+	c = config.NewConfig()
 	err = c.LoadConfig("./testdata/wrong_field_type2.toml")
 	require.Error(t, err, "invalid field type2")
 	assert.Equal(t, "Error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (http_listener_v2.HTTPListenerV2.Methods) cannot unmarshal TOML string into []string", err.Error())
@@ -226,7 +231,7 @@ func TestConfig_WrongFieldType(t *testing.T) {
 
 func TestConfig_InlineTables(t *testing.T) {
 	// #4098
-	c := NewConfig()
+	c := config.NewConfig()
 	err := c.LoadConfig("./testdata/inline_table.toml")
 	assert.NoError(t, err)
 	require.Equal(t, 2, len(c.Outputs))
@@ -240,7 +245,7 @@ func TestConfig_InlineTables(t *testing.T) {
 func TestConfig_SliceComment(t *testing.T) {
 	t.Skipf("Skipping until #3642 is resolved")
 
-	c := NewConfig()
+	c := config.NewConfig()
 	err := c.LoadConfig("./testdata/slice_comment.toml")
 	assert.NoError(t, err)
 	require.Equal(t, 1, len(c.Outputs))
@@ -253,7 +258,7 @@ func TestConfig_SliceComment(t *testing.T) {
 func TestConfig_BadOrdering(t *testing.T) {
 	// #3444: when not using inline tables, care has to be taken so subsequent configuration
 	// doesn't become part of the table. This is not a bug, but TOML syntax.
-	c := NewConfig()
+	c := config.NewConfig()
 	err := c.LoadConfig("./testdata/non_slice_slice.toml")
 	require.Error(t, err, "bad ordering")
 	assert.Equal(t, "Error loading config file ./testdata/non_slice_slice.toml: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
@@ -261,7 +266,7 @@ func TestConfig_BadOrdering(t *testing.T) {
 
 func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 	// #8256 Cannot use empty string as the namespace prefix
-	c := NewConfig()
+	c := config.NewConfig()
 	defaultPrefixConfig := `[[outputs.azure_monitor]]`
 	err := c.LoadConfigData([]byte(defaultPrefixConfig))
 	assert.NoError(t, err)
@@ -269,7 +274,7 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 	assert.Equal(t, "Telegraf/", azureMonitor.NamespacePrefix)
 	assert.Equal(t, true, ok)
 
-	c = NewConfig()
+	c = config.NewConfig()
 	customPrefixConfig := `[[outputs.azure_monitor]]
 	namespace_prefix = ""`
 	err = c.LoadConfigData([]byte(customPrefixConfig))
@@ -277,4 +282,47 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 	azureMonitor, ok = c.Outputs[0].Output.(*azure_monitor.AzureMonitor)
 	assert.Equal(t, "", azureMonitor.NamespacePrefix)
 	assert.Equal(t, true, ok)
+}
+
+func TestConfig_OrderingProcessorsWithAggregators(t *testing.T) {
+	c := config.NewConfig()
+	err := c.LoadConfig("./testdata/processor_and_aggregator_order.toml")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(c.Inputs))
+	require.Equal(t, 4, len(c.Processors))
+	require.Equal(t, 1, len(c.Outputs))
+
+	actual := map[string]int64{}
+	expected := map[string]int64{
+		"aggregators.minmax::one":   1,
+		"processors.rename::two":    2,
+		"aggregators.minmax::three": 3,
+		"processors.rename::four":   4,
+	}
+	for _, p := range c.Processors {
+		actual[p.LogName()] = p.Order()
+	}
+	require.EqualValues(t, expected, actual)
+}
+
+func TestConfig_DefaultOrderingProcessorsWithAggregators(t *testing.T) {
+	c := config.NewConfig()
+	err := c.LoadConfig("./testdata/processor_and_aggregator_unordered.toml")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(c.Inputs))
+	require.Equal(t, 4, len(c.Processors))
+	require.Equal(t, 1, len(c.Outputs))
+
+	actual := map[string]int64{}
+	// negative orders are defaults based on file position order + -10,000,000
+	expected := map[string]int64{
+		"aggregators.minmax::one":   -9999984,
+		"processors.rename::two":    -9999945,
+		"aggregators.minmax::three": -9999907,
+		"processors.rename::four":   4,
+	}
+	for _, p := range c.Processors {
+		actual[p.LogName()] = p.Order()
+	}
+	require.EqualValues(t, expected, actual)
 }

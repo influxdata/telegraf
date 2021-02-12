@@ -49,11 +49,12 @@ type Salesforce struct {
 	SecurityToken  string
 	Environment    string
 	SessionID      string
-	ServerURL      *url.URL
 	OrganizationID string
 	Version        string
 
-	client *http.Client
+	// should be unexported
+	ServerURL *url.URL
+	client    *http.Client
 }
 
 const defaultVersion = "39.0"

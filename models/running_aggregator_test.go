@@ -16,13 +16,14 @@ func TestAdd(t *testing.T) {
 		Filter: Filter{
 			NamePass: []string{"*"},
 		},
-		Period: time.Millisecond * 500,
+		DropOriginal: true,
+		Period:       time.Millisecond * 500,
 	})
 	require.NoError(t, ra.Config.Filter.Compile())
-	acc := testutil.Accumulator{}
+	acc := &testutil.Accumulator{}
 
 	now := time.Now()
-	ra.UpdateWindow(now, now.Add(ra.Config.Period))
+	ra.updateWindow(now, now.Add(ra.Config.Period))
 
 	m := testutil.MustMetric("RITest",
 		map[string]string{},
@@ -31,11 +32,47 @@ func TestAdd(t *testing.T) {
 		},
 		time.Now().Add(time.Millisecond*150),
 		telegraf.Untyped)
-	require.False(t, ra.Add(m))
-	ra.Push(&acc)
+	require.NoError(t, ra.Add(m, acc))
+	require.Len(t, m.FieldList(), 1)
+	ra.Push(acc)
 
 	require.Equal(t, 1, len(acc.Metrics))
 	require.Equal(t, int64(101), acc.Metrics[0].Fields["sum"])
+}
+
+func TestAddWithoutDrop(t *testing.T) {
+	a := &TestAggregator{}
+	ra := NewRunningAggregator(a, &AggregatorConfig{
+		Name: "TestRunningAggregator",
+		Filter: Filter{
+			NamePass: []string{"*"},
+		},
+		DropOriginal: false,
+		Period:       time.Millisecond * 500,
+	})
+	require.NoError(t, ra.Config.Filter.Compile())
+	acc := &testutil.Accumulator{}
+
+	now := time.Now()
+	ra.updateWindow(now, now.Add(ra.Config.Period))
+
+	m := testutil.MustMetric("RITest",
+		map[string]string{},
+		map[string]interface{}{
+			"value": int64(101),
+		},
+		time.Now().Add(time.Millisecond*150),
+		telegraf.Untyped)
+	require.NoError(t, ra.Add(m, acc))
+	require.Len(t, m.FieldList(), 1)
+	ra.Push(acc)
+
+	require.Equal(t, 2, len(acc.Metrics))
+	metric := acc.Metrics[0]
+	if _, ok := metric.Fields["sum"]; !ok {
+		metric = acc.Metrics[1]
+	}
+	require.Equal(t, int64(101), metric.Fields["sum"])
 }
 
 func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
@@ -45,12 +82,13 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 		Filter: Filter{
 			NamePass: []string{"*"},
 		},
-		Period: time.Millisecond * 500,
+		DropOriginal: true,
+		Period:       time.Millisecond * 500,
 	})
 	require.NoError(t, ra.Config.Filter.Compile())
-	acc := testutil.Accumulator{}
+	acc := &testutil.Accumulator{}
 	now := time.Now()
-	ra.UpdateWindow(now, now.Add(ra.Config.Period))
+	ra.updateWindow(now, now.Add(ra.Config.Period))
 
 	m := testutil.MustMetric("RITest",
 		map[string]string{},
@@ -60,7 +98,8 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 		now.Add(-time.Hour),
 		telegraf.Untyped,
 	)
-	require.False(t, ra.Add(m))
+	require.NoError(t, ra.Add(m, acc))
+	require.Len(t, m.FieldList(), 1)
 
 	// metric after current period
 	m = testutil.MustMetric("RITest",
@@ -71,7 +110,8 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 		now.Add(time.Hour),
 		telegraf.Untyped,
 	)
-	require.False(t, ra.Add(m))
+	require.NoError(t, ra.Add(m, acc))
+	require.Len(t, m.FieldList(), 1)
 
 	// "now" metric
 	m = testutil.MustMetric("RITest",
@@ -81,9 +121,10 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 		},
 		time.Now().Add(time.Millisecond*50),
 		telegraf.Untyped)
-	require.False(t, ra.Add(m))
+	require.NoError(t, ra.Add(m, acc))
+	require.Len(t, m.FieldList(), 1)
 
-	ra.Push(&acc)
+	ra.Push(acc)
 	require.Equal(t, 1, len(acc.Metrics))
 	require.Equal(t, int64(101), acc.Metrics[0].Fields["sum"])
 }
@@ -95,13 +136,14 @@ func TestAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) {
 		Filter: Filter{
 			NamePass: []string{"*"},
 		},
-		Period: time.Millisecond * 1500,
-		Grace:  time.Millisecond * 500,
+		Period:       time.Millisecond * 1500,
+		Grace:        time.Millisecond * 500,
+		DropOriginal: true,
 	})
 	require.NoError(t, ra.Config.Filter.Compile())
-	acc := testutil.Accumulator{}
+	acc := &testutil.Accumulator{}
 	now := time.Now()
-	ra.UpdateWindow(now, now.Add(ra.Config.Period))
+	ra.updateWindow(now, now.Add(ra.Config.Period))
 
 	m := testutil.MustMetric("RITest",
 		map[string]string{},
@@ -111,7 +153,8 @@ func TestAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) {
 		now.Add(-time.Hour),
 		telegraf.Untyped,
 	)
-	require.False(t, ra.Add(m))
+	require.NoError(t, ra.Add(m, acc))
+	require.Len(t, m.FieldList(), 1)
 
 	// metric before current period (late)
 	m = testutil.MustMetric("RITest",
@@ -122,7 +165,8 @@ func TestAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) {
 		now.Add(-time.Millisecond*1000),
 		telegraf.Untyped,
 	)
-	require.False(t, ra.Add(m))
+	require.NoError(t, ra.Add(m, acc))
+	require.Len(t, m.FieldList(), 1)
 
 	// metric before current period, but within grace period (late)
 	m = testutil.MustMetric("RITest",
@@ -133,7 +177,8 @@ func TestAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) {
 		now.Add(-time.Millisecond*200),
 		telegraf.Untyped,
 	)
-	require.False(t, ra.Add(m))
+	require.NoError(t, ra.Add(m, acc))
+	require.Len(t, m.FieldList(), 1)
 
 	// "now" metric
 	m = testutil.MustMetric("RITest",
@@ -143,9 +188,10 @@ func TestAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) {
 		},
 		time.Now().Add(time.Millisecond*50),
 		telegraf.Untyped)
-	require.False(t, ra.Add(m))
+	require.NoError(t, ra.Add(m, acc))
+	require.Len(t, m.FieldList(), 1)
 
-	ra.Push(&acc)
+	ra.Push(acc)
 	require.Equal(t, 1, len(acc.Metrics))
 	require.Equal(t, int64(203), acc.Metrics[0].Fields["sum"])
 }
@@ -160,10 +206,10 @@ func TestAddAndPushOnePeriod(t *testing.T) {
 		Period: time.Millisecond * 500,
 	})
 	require.NoError(t, ra.Config.Filter.Compile())
-	acc := testutil.Accumulator{}
+	acc := &testutil.Accumulator{}
 
 	now := time.Now()
-	ra.UpdateWindow(now, now.Add(ra.Config.Period))
+	ra.updateWindow(now, now.Add(ra.Config.Period))
 
 	m := testutil.MustMetric("RITest",
 		map[string]string{},
@@ -172,9 +218,10 @@ func TestAddAndPushOnePeriod(t *testing.T) {
 		},
 		time.Now().Add(time.Millisecond*100),
 		telegraf.Untyped)
-	require.False(t, ra.Add(m))
+	require.NoError(t, ra.Add(m, acc))
+	require.Len(t, m.FieldList(), 1)
 
-	ra.Push(&acc)
+	ra.Push(acc)
 
 	acc.AssertContainsFields(t, "TestMetric", map[string]interface{}{"sum": int64(101)})
 }
@@ -190,7 +237,7 @@ func TestAddDropOriginal(t *testing.T) {
 	require.NoError(t, ra.Config.Filter.Compile())
 
 	now := time.Now()
-	ra.UpdateWindow(now, now.Add(ra.Config.Period))
+	ra.updateWindow(now, now.Add(ra.Config.Period))
 
 	m := testutil.MustMetric("RITest",
 		map[string]string{},
@@ -199,7 +246,8 @@ func TestAddDropOriginal(t *testing.T) {
 		},
 		now,
 		telegraf.Untyped)
-	require.True(t, ra.Add(m))
+	require.NoError(t, ra.Add(m, &testutil.Accumulator{}))
+	require.Len(t, m.FieldList(), 1)
 
 	// this metric name doesn't match the filter, so Add will return false
 	m2 := testutil.MustMetric("foobar",
@@ -209,7 +257,8 @@ func TestAddDropOriginal(t *testing.T) {
 		},
 		now,
 		telegraf.Untyped)
-	require.False(t, ra.Add(m2))
+	require.NoError(t, ra.Add(m2, &testutil.Accumulator{}))
+	require.Len(t, m.FieldList(), 1)
 }
 
 func TestAddDoesNotModifyMetric(t *testing.T) {
@@ -233,7 +282,7 @@ func TestAddDoesNotModifyMetric(t *testing.T) {
 		},
 		now)
 	expected := m.Copy()
-	ra.Add(m)
+	ra.Add(m, &testutil.Accumulator{})
 
 	testutil.RequireMetricEqual(t, expected, m)
 }

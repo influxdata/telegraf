@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/processors/reverse_dns"
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +24,7 @@ func TestConfigDuration(t *testing.T) {
 `))
 	require.NoError(t, err)
 	require.Len(t, c.Processors, 1)
-	p := c.Processors[0].Processor.(*reverse_dns.ReverseDNS)
+	p := c.Processors[0].(*models.RunningProcessor).Processor.(*reverse_dns.ReverseDNS)
 	require.EqualValues(t, p.CacheTTL, 3*time.Hour)
 	require.EqualValues(t, p.LookupTimeout, 17*time.Second)
 	require.Equal(t, p.MaxParallelLookups, 13)

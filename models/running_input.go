@@ -13,7 +13,7 @@ var (
 )
 
 type RunningInput struct {
-	ID     int64
+	ID     uint64
 	Input  telegraf.Input
 	Config *InputConfig
 
@@ -22,6 +22,7 @@ type RunningInput struct {
 
 	MetricsGathered selfstat.Stat
 	GatherTime      selfstat.Stat
+	State
 }
 
 func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
@@ -58,17 +59,17 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 
 // InputConfig is the common config for all inputs.
 type InputConfig struct {
-	Name             string
-	Alias            string
-	Interval         time.Duration
-	CollectionJitter time.Duration
-	Precision        time.Duration
+	Name             string        `toml:"name" json:"name"`
+	Alias            string        `toml:"alias" json:"alias"`
+	Interval         time.Duration `toml:"interval" json:"interval"`
+	CollectionJitter time.Duration `toml:"collection_jitter" json:"collection_jitter"`
+	Precision        time.Duration `toml:"precision" json:"precision"`
 
-	NameOverride      string
-	MeasurementPrefix string
-	MeasurementSuffix string
-	Tags              map[string]string
-	Filter            Filter
+	NameOverride      string            `toml:"name_override" json:"name_override"`
+	MeasurementPrefix string            `toml:"measurement_prefix" json:"measurement_prefix"`
+	MeasurementSuffix string            `toml:"measurement_suffix" json:"measurement_suffix"`
+	Tags              map[string]string `toml:"tags" json:"tags"`
+	Filter            Filter            `toml:"filter" json:"filter"`
 }
 
 func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
@@ -128,4 +129,27 @@ func (r *RunningInput) SetDefaultTags(tags map[string]string) {
 
 func (r *RunningInput) Log() telegraf.Logger {
 	return r.log
+}
+
+func (r *RunningInput) Start(acc telegraf.Accumulator) error {
+	r.setState(PluginStateStarting)
+	if si, ok := r.Input.(telegraf.ServiceInput); ok {
+		if err := si.Start(acc); err != nil {
+			return err
+		}
+	}
+	r.setState(PluginStateRunning)
+	return nil
+}
+
+func (r *RunningInput) Stop() {
+	r.setState(PluginStateStopping)
+	if si, ok := r.Input.(telegraf.ServiceInput); ok {
+		si.Stop()
+	}
+	r.setState(PluginStateDead)
+}
+
+func (r *RunningInput) GetID() uint64 {
+	return r.ID
 }

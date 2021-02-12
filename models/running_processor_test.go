@@ -221,9 +221,9 @@ func TestRunningProcessor_Order(t *testing.T) {
 		},
 	}
 
-	procs := models.RunningProcessors{rp2, rp3, rp1}
+	procs := models.ProcessorRunners{rp2, rp3, rp1}
 	sort.Sort(procs)
-	require.Equal(t,
-		models.RunningProcessors{rp1, rp2, rp3},
+	require.EqualValues(t,
+		models.ProcessorRunners{rp1, rp2, rp3},
 		procs)
 }

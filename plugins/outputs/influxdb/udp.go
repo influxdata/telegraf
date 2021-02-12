@@ -30,7 +30,7 @@ type UDPConfig struct {
 	MaxPayloadSize int
 	URL            *url.URL
 	Serializer     *influx.Serializer
-	Dialer         Dialer
+	Dialer         Dialer // Shouldn't be exported
 	Log            telegraf.Logger
 }
 

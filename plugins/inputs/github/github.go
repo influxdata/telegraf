@@ -27,7 +27,7 @@ type GitHub struct {
 
 	obfuscatedToken string
 
-	RateLimit       selfstat.Stat
+	RateLimit       selfstat.Stat // Shouldn't be exported
 	RateLimitErrors selfstat.Stat
 	RateRemaining   selfstat.Stat
 }

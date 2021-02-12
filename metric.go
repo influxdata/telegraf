@@ -121,7 +121,7 @@ type Metric interface {
 
 	// Drop marks the metric as processed successfully without being written
 	// to any output.
-	Drop()
+	Drop() // TODO: Rename to Ack() ?
 
 	// SetAggregate indicates the metric is an aggregated value.
 	//

@@ -201,6 +201,10 @@ func (a *Accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator 
 	return a
 }
 
+func (a *Accumulator) WithNewMetricMaker(logName string, logger telegraf.Logger, f func(metric telegraf.Metric) telegraf.Metric) telegraf.Accumulator {
+	return a
+}
+
 func (a *Accumulator) AddTrackingMetric(m telegraf.Metric) telegraf.TrackingID {
 	a.AddMetric(m)
 	return newTrackingID()
@@ -744,3 +748,6 @@ func (n *NopAccumulator) AddMetric(telegraf.Metric)                             
 func (n *NopAccumulator) SetPrecision(precision time.Duration)                     {}
 func (n *NopAccumulator) AddError(err error)                                       {}
 func (n *NopAccumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator { return nil }
+func (n *NopAccumulator) WithNewMetricMaker(logName string, logger telegraf.Logger, f func(metric telegraf.Metric) telegraf.Metric) telegraf.Accumulator {
+	return nil
+}
