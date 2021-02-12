@@ -188,7 +188,7 @@ jobs:
           at: '.'
       - run:
           command: |
-            ./scripts/mac-signing.sh
+            sh ./scripts/mac-signing.sh
           
 workflows:
   version: 2
