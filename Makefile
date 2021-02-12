@@ -4,38 +4,6 @@ branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
 glibc_version := 2.17
 
-ifdef NIGHTLY
-	version := $(next_version)
-	rpm_version := nightly
-	rpm_iteration := 0
-	deb_version := nightly
-	deb_iteration := 0
-	tar_version := nightly
-else ifeq ($(tag),)
-	version := $(next_version)
-	rpm_version := $(version)~$(commit)-0
-	rpm_iteration := 0
-	deb_version := $(version)~$(commit)-0
-	deb_iteration := 0
-	tar_version := $(version)~$(commit)
-else ifneq ($(findstring -rc,$(tag)),)
-	version := $(word 1,$(subst -, ,$(tag)))
-	version := $(version:v%=%)
-	rc := $(word 2,$(subst -, ,$(tag)))
-	rpm_version := $(version)-0.$(rc)
-	rpm_iteration := 0.$(subst rc,,$(rc))
-	deb_version := $(version)~$(rc)-1
-	deb_iteration := 0
-	tar_version := $(version)~$(rc)
-else
-	version := $(tag:v%=%)
-	rpm_version := $(version)-1
-	rpm_iteration := 1
-	deb_version := $(version)-1
-	deb_iteration := 1
-	tar_version := $(version)
-endif
-
 MAKEFLAGS += --no-print-directory
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
@@ -203,42 +171,9 @@ $(buildbin):
 	@mkdir -pv $(dir $@)
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
-debs := telegraf_$(deb_version)_amd64.deb
-debs += telegraf_$(deb_version)_arm64.deb
-debs += telegraf_$(deb_version)_armel.deb
-debs += telegraf_$(deb_version)_armhf.deb
-debs += telegraf_$(deb_version)_i386.deb
-debs += telegraf_$(deb_version)_mips.deb
-debs += telegraf_$(deb_version)_mipsel.deb
-debs += telegraf_$(deb_version)_s390x.deb
-debs += telegraf_$(deb_version)_ppc64el.deb
+tars := telegraf-$(tar_version)_darwin_amd64.tar.gz
 
-rpms += telegraf-$(rpm_version).aarch64.rpm
-rpms += telegraf-$(rpm_version).armel.rpm
-rpms += telegraf-$(rpm_version).armv6hl.rpm
-rpms += telegraf-$(rpm_version).i386.rpm
-rpms += telegraf-$(rpm_version).s390x.rpm
-rpms += telegraf-$(rpm_version).ppc64le.rpm
-rpms += telegraf-$(rpm_version).x86_64.rpm
-
-tars += telegraf-$(tar_version)_darwin_amd64.tar.gz
-tars += telegraf-$(tar_version)_freebsd_amd64.tar.gz
-tars += telegraf-$(tar_version)_freebsd_i386.tar.gz
-tars += telegraf-$(tar_version)_linux_amd64.tar.gz
-tars += telegraf-$(tar_version)_linux_arm64.tar.gz
-tars += telegraf-$(tar_version)_linux_armel.tar.gz
-tars += telegraf-$(tar_version)_linux_armhf.tar.gz
-tars += telegraf-$(tar_version)_linux_i386.tar.gz
-tars += telegraf-$(tar_version)_linux_mips.tar.gz
-tars += telegraf-$(tar_version)_linux_mipsel.tar.gz
-tars += telegraf-$(tar_version)_linux_s390x.tar.gz
-tars += telegraf-$(tar_version)_linux_ppc64le.tar.gz
-tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
-
-zips += telegraf-$(tar_version)_windows_amd64.zip
-zips += telegraf-$(tar_version)_windows_i386.zip
-
-dists := $(debs) $(rpms) $(tars) $(zips)
+dists := $(tars)
 
 .PHONY: package
 package: $(dists)
@@ -317,97 +252,19 @@ $(debs):
 		--chdir $(DESTDIR) \
 		--package $(pkgdir)/$@
 
-.PHONY: $(zips)
-$(zips):
-	@$(MAKE) install
-	@mkdir -p $(pkgdir)
-	(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/$@
-
 .PHONY: $(tars)
 $(tars):
 	@$(MAKE) install
 	@mkdir -p $(pkgdir)
 	tar --owner 0 --group 0 -czvf $(pkgdir)/$@ -C $(dir $(DESTDIR)) .
 
-.PHONY: upload-nightly
-upload-nightly:
-	aws s3 sync $(pkgdir) s3://dl.influxdata.com/telegraf/nightlies/ \
-		--exclude "*" \
-		--include "*.tar.gz" \
-		--include "*.deb" \
-		--include "*.rpm" \
-		--include "*.zip" \
-		--acl public-read
-
-%amd64.deb %x86_64.rpm %linux_amd64.tar.gz: export GOOS := linux
-%amd64.deb %x86_64.rpm %linux_amd64.tar.gz: export GOARCH := amd64
-
-%static_linux_amd64.tar.gz: export cgo := -nocgo
-%static_linux_amd64.tar.gz: export CGO_ENABLED := 0
-
-%i386.deb %i386.rpm %linux_i386.tar.gz: export GOOS := linux
-%i386.deb %i386.rpm %linux_i386.tar.gz: export GOARCH := 386
-
-%armel.deb %armel.rpm %linux_armel.tar.gz: export GOOS := linux
-%armel.deb %armel.rpm %linux_armel.tar.gz: export GOARCH := arm
-%armel.deb %armel.rpm %linux_armel.tar.gz: export GOARM := 5
-
-%armhf.deb %armv6hl.rpm %linux_armhf.tar.gz: export GOOS := linux
-%armhf.deb %armv6hl.rpm %linux_armhf.tar.gz: export GOARCH := arm
-%armhf.deb %armv6hl.rpm %linux_armhf.tar.gz: export GOARM := 6
-
-%arm64.deb %aarch64.rpm %linux_arm64.tar.gz: export GOOS := linux
-%arm64.deb %aarch64.rpm %linux_arm64.tar.gz: export GOARCH := arm64
-%arm64.deb %aarch64.rpm %linux_arm64.tar.gz: export GOARM := 7
-
-%mips.deb %linux_mips.tar.gz: export GOOS := linux
-%mips.deb %linux_mips.tar.gz: export GOARCH := mips
-
-%mipsel.deb %linux_mipsel.tar.gz: export GOOS := linux
-%mipsel.deb %linux_mipsel.tar.gz: export GOARCH := mipsle
-
-%s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOOS := linux
-%s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOARCH := s390x
-
-%ppc64el.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOOS := linux
-%ppc64el.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOARCH := ppc64le
-
-%freebsd_amd64.tar.gz: export GOOS := freebsd
-%freebsd_amd64.tar.gz: export GOARCH := amd64
-
-%freebsd_i386.tar.gz: export GOOS := freebsd
-%freebsd_i386.tar.gz: export GOARCH := 386
-
-%windows_amd64.zip: export GOOS := windows
-%windows_amd64.zip: export GOARCH := amd64
-
 %darwin_amd64.tar.gz: export GOOS := darwin
 %darwin_amd64.tar.gz: export GOARCH := amd64
 
-%windows_i386.zip: export GOOS := windows
-%windows_i386.zip: export GOARCH := 386
-
-%windows_i386.zip %windows_amd64.zip: export prefix =
-%windows_i386.zip %windows_amd64.zip: export bindir = $(prefix)
-%windows_i386.zip %windows_amd64.zip: export sysconfdir = $(prefix)
-%windows_i386.zip %windows_amd64.zip: export localstatedir = $(prefix)
-%windows_i386.zip %windows_amd64.zip: export EXEEXT := .exe
-
-%.deb: export pkg := deb
-%.deb: export prefix := /usr
-%.deb: export conf_suffix := .sample
-%.deb: export sysconfdir := /etc
-%.deb: export localstatedir := /var
-%.rpm: export pkg := rpm
-%.rpm: export prefix := /usr
-%.rpm: export sysconfdir := /etc
-%.rpm: export localstatedir := /var
 %.tar.gz: export pkg := tar
 %.tar.gz: export prefix := /usr
 %.tar.gz: export sysconfdir := /etc
 %.tar.gz: export localstatedir := /var
-%.zip: export pkg := zip
-%.zip: export prefix := /
 
 %.deb %.rpm %.tar.gz %.zip: export DESTDIR = build/$(GOOS)-$(GOARCH)$(GOARM)$(cgo)-$(pkg)/telegraf-$(version)
 %.deb %.rpm %.tar.gz %.zip: export buildbin = build/$(GOOS)-$(GOARCH)$(GOARM)$(cgo)/telegraf$(EXEEXT)
