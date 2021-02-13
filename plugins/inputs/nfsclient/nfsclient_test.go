@@ -85,7 +85,7 @@ func TestNFSClientProcessStat(t *testing.T) {
 
 	read_tags := map[string]string{
 		"serverexport": "1.2.3.4:/storage/NFS",
-		"mountpoint":   "/AA",
+		"mountpoint":   "/A",
 		"operation":    "READ",
 	}
 
