@@ -260,6 +260,10 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 			continue
 		}
 
+		skip = false
+
+		// This denotes a new mount has been found, so set
+		// mount and export, and stop skipping (for now)
 		if line_len > 4 && choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) {
 			mount = line[4]
 			export = line[1]
@@ -268,23 +272,31 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 			version = strings.Split(line[5], "/")[1]
 		}
 
+		if mount == "" {
+			continue
+		}
+
 		if len(n.IncludeMounts) > 0 {
 			skip = true
+
+		IncludeMounts:
 			for _, RE := range n.IncludeMounts {
 				matched, _ := regexp.MatchString(RE, mount)
 				if matched {
 					skip = false
-					break
+					break IncludeMounts
 				}
 			}
 		}
 
 		if !skip && len(n.ExcludeMounts) > 0 {
+
+		ExcludeMounts:
 			for _, RE := range n.ExcludeMounts {
 				matched, _ := regexp.MatchString(RE, mount)
 				if matched {
 					skip = true
-					return nil // last test, and we're skipping anyway
+					break ExcludeMounts // last test, and we're skipping anyway
 				}
 			}
 		}
