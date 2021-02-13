@@ -456,6 +456,30 @@ func (n *NFSClient) Init() error {
 		}
 	}
 
+	if len(n.IncludeMounts) > 0 {
+		n.Log.Debugf("Including these mount patterns: %v", n.IncludeMounts)
+	} else {
+		n.Log.Debugf("Including all mounts.")
+	}
+
+	if len(n.ExcludeMounts) > 0 {
+		n.Log.Debugf("Excluding these mount patterns: %v", n.ExcludeMounts)
+	} else {
+		n.Log.Debugf("Not excluding any mounts.")
+	}
+
+	if len(n.IncludeOperations) > 0 {
+		n.Log.Debugf("Including these operations: %v", n.IncludeOperations)
+	} else {
+		n.Log.Debugf("Including all operations.")
+	}
+
+	if len(n.ExcludeOperations) > 0 {
+		n.Log.Debugf("Excluding these mount patterns: %v", n.ExcludeOperations)
+	} else {
+		n.Log.Debugf("Not excluding any operations.")
+	}
+
 	return nil
 }
 
