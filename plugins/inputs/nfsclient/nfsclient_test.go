@@ -25,7 +25,7 @@ func TestNFSClientParsev3(t *testing.T) {
 	nfsclient.nfs3Ops = map[string]bool{"READLINK": true, "GETATTR": false}
 	nfsclient.nfs4Ops = map[string]bool{"READLINK": true, "GETATTR": false}
 	data := strings.Fields("         READLINK: 500 501 502 503 504 505 506 507")
-	nfsclient.parseStat("1.2.3.4:/storage/NFS", "/NFS", "3", data, true, &acc)
+	nfsclient.parseStat("1.2.3.4:/storage/NFS", "/A", "3", data, true, &acc)
 
 	fields_ops := map[string]interface{}{
 		"ops":           int64(500),
@@ -47,7 +47,7 @@ func TestNFSClientParsev4(t *testing.T) {
 	nfsclient.nfs3Ops = map[string]bool{"DESTROY_SESSION": true, "GETATTR": false}
 	nfsclient.nfs4Ops = map[string]bool{"DESTROY_SESSION": true, "GETATTR": false}
 	data := strings.Fields("    DESTROY_SESSION: 500 501 502 503 504 505 506 507")
-	nfsclient.parseStat("2.2.2.2:/nfsdata/", "/mnt", "4", data, true, &acc)
+	nfsclient.parseStat("2.2.2.2:/nfsdata/", "/B", "4", data, true, &acc)
 
 	fields_ops := map[string]interface{}{
 		"ops":           int64(500),
@@ -85,7 +85,7 @@ func TestNFSClientProcessStat(t *testing.T) {
 
 	read_tags := map[string]string{
 		"serverexport": "1.2.3.4:/storage/NFS",
-		"mountpoint":   "/NFS",
+		"mountpoint":   "/AA",
 		"operation":    "READ",
 	}
 
@@ -101,7 +101,7 @@ func TestNFSClientProcessStat(t *testing.T) {
 
 	write_tags := map[string]string{
 		"serverexport": "1.2.3.4:/storage/NFS",
-		"mountpoint":   "/NFS",
+		"mountpoint":   "/A",
 		"operation":    "WRITE",
 	}
 	acc.AssertContainsTaggedFields(t, "nfsstat", fields_writestat, write_tags)
