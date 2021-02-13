@@ -30,7 +30,7 @@ func TestAlignedTicker(t *testing.T) {
 		time.Unix(60, 0).UTC(),
 	}
 
-	var actual []time.Time
+	actual := []time.Time{}
 
 	clock.Add(10 * time.Second)
 	for !clock.Now().After(until) {

@@ -28,7 +28,7 @@ type loadedConfig struct {
 
 // LoadConfig Adds plugins to the shim
 func (s *Shim) LoadConfig(filePath *string) error {
-	conf, err := loadConfig(filePath)
+	conf, err := LoadConfig(filePath)
 	if err != nil {
 		return err
 	}
@@ -48,8 +48,8 @@ func (s *Shim) LoadConfig(filePath *string) error {
 	return nil
 }
 
-// loadConfig loads the config and returns inputs that later need to be loaded.
-func loadConfig(filePath *string) (loaded loadedConfig, err error) {
+// LoadConfig loads the config and returns inputs that later need to be loaded.
+func LoadConfig(filePath *string) (loaded loadedConfig, err error) {
 	var data string
 	conf := config{}
 	if filePath != nil && *filePath != "" {
@@ -62,7 +62,7 @@ func loadConfig(filePath *string) (loaded loadedConfig, err error) {
 		data = expandEnvVars(b)
 
 	} else {
-		conf, err = defaultImportedPlugins()
+		conf, err = DefaultImportedPlugins()
 		if err != nil {
 			return loadedConfig{}, err
 		}
@@ -147,10 +147,10 @@ func createPluginsWithTomlConfig(md toml.MetaData, conf config) (loadedConfig, e
 	return loadedConf, nil
 }
 
-// defaultImportedPlugins defaults to whatever plugins happen to be loaded and
+// DefaultImportedPlugins defaults to whatever plugins happen to be loaded and
 // have registered themselves with the registry. This makes loading plugins
 // without having to define a config dead easy.
-func defaultImportedPlugins() (config, error) {
+func DefaultImportedPlugins() (config, error) {
 	conf := config{
 		Inputs:     map[string][]toml.Primitive{},
 		Processors: map[string][]toml.Primitive{},

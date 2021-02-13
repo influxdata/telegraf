@@ -17,13 +17,13 @@ type passenger struct {
 	Command string
 }
 
-func (pssngr *passenger) parseCommand() (string, []string) {
+func (p *passenger) parseCommand() (string, []string) {
 	var arguments []string
-	if !strings.Contains(pssngr.Command, " ") {
-		return pssngr.Command, arguments
+	if !strings.Contains(p.Command, " ") {
+		return p.Command, arguments
 	}
 
-	arguments = strings.Split(pssngr.Command, " ")
+	arguments = strings.Split(p.Command, " ")
 	if len(arguments) == 1 {
 		return arguments[0], arguments[1:]
 	}
@@ -137,20 +137,20 @@ var sampleConfig = `
   command = "passenger-status -v --show=xml"
 `
 
-func (pssngr *passenger) SampleConfig() string {
+func (p *passenger) SampleConfig() string {
 	return sampleConfig
 }
 
-func (pssngr *passenger) Description() string {
+func (p *passenger) Description() string {
 	return "Read metrics of passenger using passenger-status"
 }
 
-func (pssngr *passenger) Gather(acc telegraf.Accumulator) error {
-	if pssngr.Command == "" {
-		pssngr.Command = "passenger-status -v --show=xml"
+func (p *passenger) Gather(acc telegraf.Accumulator) error {
+	if p.Command == "" {
+		p.Command = "passenger-status -v --show=xml"
 	}
 
-	cmd, args := pssngr.parseCommand()
+	cmd, args := p.parseCommand()
 	out, err := exec.Command(cmd, args...).Output()
 
 	if err != nil {

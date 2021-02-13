@@ -21,7 +21,7 @@ func TestLoadConfig(t *testing.T) {
 	})
 
 	c := "./testdata/plugin.conf"
-	conf, err := loadConfig(&c)
+	conf, err := LoadConfig(&c)
 	require.NoError(t, err)
 
 	inp := conf.Input.(*serviceInput)
@@ -36,7 +36,7 @@ func TestDefaultImportedPluginsSelfRegisters(t *testing.T) {
 		return &testInput{}
 	})
 
-	cfg, err := loadConfig(nil)
+	cfg, err := LoadConfig(nil)
 	require.NoError(t, err)
 	require.Equal(t, "test", cfg.Input.Description())
 }
@@ -47,7 +47,7 @@ func TestLoadingSpecialTypes(t *testing.T) {
 	})
 
 	c := "./testdata/special.conf"
-	conf, err := loadConfig(&c)
+	conf, err := LoadConfig(&c)
 	require.NoError(t, err)
 
 	inp := conf.Input.(*testDurationInput)
@@ -63,7 +63,7 @@ func TestLoadingProcessorWithConfig(t *testing.T) {
 	})
 
 	c := "./testdata/processor.conf"
-	_, err := loadConfig(&c)
+	_, err := LoadConfig(&c)
 	require.NoError(t, err)
 
 	require.EqualValues(t, "yep", proc.Loaded)
@@ -81,7 +81,7 @@ func (i *testDurationInput) SampleConfig() string {
 func (i *testDurationInput) Description() string {
 	return ""
 }
-func (i *testDurationInput) Gather(_ telegraf.Accumulator) error {
+func (i *testDurationInput) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
