@@ -1,8 +1,6 @@
 package bigbluebutton
 
-import (
-	"encoding/xml"
-)
+import "encoding/xml"
 
 // MeetingsResponse is BigBlueButton XML global getMeetings api reponse type
 type MeetingsResponse struct {
