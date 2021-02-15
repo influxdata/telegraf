@@ -38,18 +38,11 @@ func (b *BigBlueButton) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("BigBlueButton secret key is required")
 	}
 
-	meetingsErr := b.gatherMeetings(acc)
-	recordingsErr := b.gatherRecordings(acc)
-
-	if meetingsErr != nil {
-		return meetingsErr
+	if err := b.gatherMeetings(acc); err != nil {
+		return err
 	}
 
-	if recordingsErr != nil {
-		return recordingsErr
-	}
-
-	return nil
+	return b.gatherRecordings(acc)
 }
 
 func (b *BigBlueButton) gatherMeetings(acc telegraf.Accumulator) error {
