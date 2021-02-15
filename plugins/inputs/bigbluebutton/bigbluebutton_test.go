@@ -78,9 +78,7 @@ func TestBigBlueButton(t *testing.T) {
 		"published_recordings_count": 1,
 	}
 
-	tags := map[string]string{
-		"server_name": s.URL,
-	}
+	tags := make(map[string]string)
 
 	require.Equal(t, true, acc.HasMeasurement("bigbluebutton_meetings"))
 	acc.AssertContainsTaggedFields(t, "bigbluebutton_meetings", meetingsRecord, tags)
@@ -113,9 +111,7 @@ func TestBigBlueButtonEmptyState(t *testing.T) {
 		"published_recordings_count": 0,
 	}
 
-	tags := map[string]string{
-		"server_name": s.URL,
-	}
+	tags := make(map[string]string)
 
 	require.Equal(t, true, acc.HasMeasurement("bigbluebutton_meetings"))
 	acc.AssertContainsTaggedFields(t, "bigbluebutton_meetings", meetingsRecord, tags)

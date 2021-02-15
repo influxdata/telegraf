@@ -12,7 +12,6 @@ type BigBlueButton struct {
 	URL         string `toml:"url"`
 	APIEndpoint string `toml:"api_endpoint"`
 	SecretKey   string `toml:"secret_key"`
-	ServerName  string `toml:"server_name"`
 }
 
 var bbbConfig = `
@@ -24,9 +23,6 @@ var bbbConfig = `
 
 	## Required BigBlueButton secret key
 	# secret_key =
-
-	## Server name. Used as "server" tag if not empty. Otherwise use url
-	# server_name = 
 `
 
 func (b *BigBlueButton) SampleConfig() string {
@@ -40,10 +36,6 @@ func (b *BigBlueButton) Description() string {
 func (b *BigBlueButton) Gather(acc telegraf.Accumulator) error {
 	if b.SecretKey == "" {
 		return fmt.Errorf("BigBlueButton secret key is required")
-	}
-
-	if b.ServerName == "" {
-		b.ServerName = b.URL
 	}
 
 	meetingsErr := b.gatherMeetings(acc)
@@ -150,14 +142,8 @@ func (b *BigBlueButton) gatherRecordings(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (b *BigBlueButton) tags() map[string]string {
-	tags := make(map[string]string)
-	tags["server_name"] = b.ServerName
-	return tags
-}
-
 func (b *BigBlueButton) sendRecord(acc telegraf.Accumulator, name string, record map[string]interface{}) {
-	acc.AddFields(name, record, b.tags())
+	acc.AddFields(name, record, make(map[string]string))
 }
 
 func init() {
