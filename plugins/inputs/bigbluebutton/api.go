@@ -9,8 +9,6 @@ import (
 
 const getMeetingCallName = "getMeetings"
 const getRecordingsCallName = "getRecordings"
-const NoRecordingMessageKey = "noRecordings"
-const NoMeetingsMessageKey = "noMeetings"
 
 // BigBlueButton uses an authentication based on a SHA1 checksum processed from api call name and server secret key
 func (b *BigBlueButton) checksum(apiCallName string) []byte {

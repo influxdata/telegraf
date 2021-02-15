@@ -75,7 +75,7 @@ func (b *BigBlueButton) gatherMeetings(acc telegraf.Accumulator) error {
 	videoCount := 0
 	activeRecording := 0
 
-	if response.MessageKey == NoMeetingsMessageKey {
+	if response.MessageKey == "noMeetings" {
 		b.sendMeetingsRecord(acc, b.meetingsRecord(0, 0, 0, 0, 0))
 		return nil
 	}
@@ -129,7 +129,7 @@ func (b *BigBlueButton) gatherRecordings(acc telegraf.Accumulator) error {
 	var response RecordingsResponse
 	xml.Unmarshal(body, &response)
 
-	if response.MessageKey == NoRecordingMessageKey {
+	if response.MessageKey == "noRecordings" {
 		b.sendRecordingsRecord(acc, b.recordingsRecord(0, 0))
 		return nil
 	}
