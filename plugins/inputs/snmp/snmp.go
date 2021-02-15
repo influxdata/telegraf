@@ -416,7 +416,8 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 			if pkt, err := gs.Get([]string{oid}); err != nil {
 				return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
 			} else if pkt != nil && pkt.PDUType == gosnmp.Report {
-				return nil, fmt.Errorf("received SNMP report instead of response for field %s: check authentication?", f.Name)
+				_, _, oidText, _, _ := SnmpTranslate(pkt.Variables[0].Name)
+				return nil, fmt.Errorf("recieved %s report", strings.TrimSuffix(oidText, ".0"))
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
 				fv, err := fieldConvert(f.Conversion, ent.Value)
