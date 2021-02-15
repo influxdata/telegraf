@@ -40,9 +40,9 @@ type Meetings struct {
 // Meeting is a meeting response containing information like name, id, created time, created date, ...
 type Meeting struct {
 	XMLName               xml.Name `xml:"meeting"`
-	ParticipantCount      int      `xml:"participantCount"`
-	ListenerCount         int      `xml:"listenerCount"`
-	VoiceParticipantCount int      `xml:"voiceParticipantCount"`
-	VideoCount            int      `xml:"videoCount"`
-	Recording             string   `xml:"recording"`
+	ParticipantCount      uint64   `xml:"participantCount"`
+	ListenerCount         uint64   `xml:"listenerCount"`
+	VoiceParticipantCount uint64   `xml:"voiceParticipantCount"`
+	VideoCount            uint64   `xml:"videoCount"`
+	Recording             bool     `xml:"recording"`
 }

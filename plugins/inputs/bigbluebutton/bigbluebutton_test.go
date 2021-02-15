@@ -65,7 +65,7 @@ func TestBigBlueButton(t *testing.T) {
 
 	require.Empty(t, acc.Errors)
 
-	meetingsRecord := map[string]interface{}{
+	meetingsRecord := map[string]uint64{
 		"participant_count":       15,
 		"listener_count":          12,
 		"voice_participant_count": 4,
@@ -73,7 +73,7 @@ func TestBigBlueButton(t *testing.T) {
 		"active_recording":        0,
 	}
 
-	recordingsRecord := map[string]interface{}{
+	recordingsRecord := map[string]uint64{
 		"recordings_count":           2,
 		"published_recordings_count": 1,
 	}
@@ -81,10 +81,10 @@ func TestBigBlueButton(t *testing.T) {
 	tags := make(map[string]string)
 
 	require.Equal(t, true, acc.HasMeasurement("bigbluebutton_meetings"))
-	acc.AssertContainsTaggedFields(t, "bigbluebutton_meetings", meetingsRecord, tags)
+	acc.AssertContainsTaggedFields(t, "bigbluebutton_meetings", toStringMapInterface(meetingsRecord), tags)
 
 	require.Equal(t, true, acc.HasMeasurement("bigbluebutton_recordings"))
-	acc.AssertContainsTaggedFields(t, "bigbluebutton_recordings", recordingsRecord, tags)
+	acc.AssertContainsTaggedFields(t, "bigbluebutton_recordings", toStringMapInterface(recordingsRecord), tags)
 }
 
 func TestBigBlueButtonEmptyState(t *testing.T) {
@@ -98,7 +98,7 @@ func TestBigBlueButtonEmptyState(t *testing.T) {
 
 	require.Empty(t, acc.Errors)
 
-	meetingsRecord := map[string]interface{}{
+	meetingsRecord := map[string]uint64{
 		"participant_count":       0,
 		"listener_count":          0,
 		"voice_participant_count": 0,
@@ -106,7 +106,7 @@ func TestBigBlueButtonEmptyState(t *testing.T) {
 		"active_recording":        0,
 	}
 
-	recordingsRecord := map[string]interface{}{
+	recordingsRecord := map[string]uint64{
 		"recordings_count":           0,
 		"published_recordings_count": 0,
 	}
@@ -114,8 +114,8 @@ func TestBigBlueButtonEmptyState(t *testing.T) {
 	tags := make(map[string]string)
 
 	require.Equal(t, true, acc.HasMeasurement("bigbluebutton_meetings"))
-	acc.AssertContainsTaggedFields(t, "bigbluebutton_meetings", meetingsRecord, tags)
+	acc.AssertContainsTaggedFields(t, "bigbluebutton_meetings", toStringMapInterface(meetingsRecord), tags)
 
 	require.Equal(t, true, acc.HasMeasurement("bigbluebutton_recordings"))
-	acc.AssertContainsTaggedFields(t, "bigbluebutton_recordings", recordingsRecord, tags)
+	acc.AssertContainsTaggedFields(t, "bigbluebutton_recordings", toStringMapInterface(recordingsRecord), tags)
 }

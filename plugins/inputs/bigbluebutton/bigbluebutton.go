@@ -52,57 +52,37 @@ func (b *BigBlueButton) gatherMeetings(acc telegraf.Accumulator) error {
 	}
 
 	var response MeetingsResponse
-	xml.Unmarshal(body, &response)
+	marshalErr := xml.Unmarshal(body, &response)
+	if marshalErr != nil {
+		return marshalErr
+	}
 
-	participantCount := 0
-	listenerCount := 0
-	voiceParticipantCount := 0
-	videoCount := 0
-	activeRecording := 0
+	record := map[string]uint64{
+		"active_recording":        0,
+		"listener_count":          0,
+		"participant_count":       0,
+		"video_count":             0,
+		"voice_participant_count": 0,
+	}
 
 	if response.MessageKey == "noMeetings" {
-		b.sendMeetingsRecord(acc, b.meetingsRecord(0, 0, 0, 0, 0))
+		acc.AddFields("bigbluebutton_meetings", toStringMapInterface(record), make(map[string]string))
 		return nil
 	}
 
 	for i := 0; i < len(response.Meetings.Values); i++ {
 		meeting := response.Meetings.Values[i]
-		participantCount += meeting.ParticipantCount
-		listenerCount += meeting.ListenerCount
-		voiceParticipantCount += meeting.VoiceParticipantCount
-		videoCount += meeting.VideoCount
-		if meeting.Recording == "true" {
-			activeRecording++
+		record["participant_count"] += meeting.ParticipantCount
+		record["listener_count"] += meeting.ListenerCount
+		record["voice_participant_count"] += meeting.VoiceParticipantCount
+		record["video_count"] += meeting.VideoCount
+		if meeting.Recording == true {
+			record["active_recording"]++
 		}
 	}
 
-	b.sendMeetingsRecord(acc, b.meetingsRecord(participantCount, listenerCount, voiceParticipantCount, videoCount, activeRecording))
+	acc.AddFields("bigbluebutton_meetings", toStringMapInterface(record), make(map[string]string))
 	return nil
-}
-
-func (b *BigBlueButton) meetingsRecord(participantCount int, listenerCount int, voiceParticipantCount int, videoCount int, activeRecording int) map[string]interface{} {
-	record := make(map[string]interface{})
-	record["participant_count"] = participantCount
-	record["listener_count"] = listenerCount
-	record["voice_participant_count"] = voiceParticipantCount
-	record["video_count"] = videoCount
-	record["active_recording"] = activeRecording
-	return record
-}
-
-func (b *BigBlueButton) recordingsRecord(recordingsCount int, publishedCount int) map[string]interface{} {
-	record := make(map[string]interface{})
-	record["recordings_count"] = recordingsCount
-	record["published_recordings_count"] = publishedCount
-	return record
-}
-
-func (b *BigBlueButton) sendMeetingsRecord(acc telegraf.Accumulator, record map[string]interface{}) {
-	b.sendRecord(acc, "bigbluebutton_meetings", record)
-}
-
-func (b *BigBlueButton) sendRecordingsRecord(acc telegraf.Accumulator, record map[string]interface{}) {
-	b.sendRecord(acc, "bigbluebutton_recordings", record)
 }
 
 func (b *BigBlueButton) gatherRecordings(acc telegraf.Accumulator) error {
@@ -112,31 +92,39 @@ func (b *BigBlueButton) gatherRecordings(acc telegraf.Accumulator) error {
 	}
 
 	var response RecordingsResponse
-	xml.Unmarshal(body, &response)
+	marshalErr := xml.Unmarshal(body, &response)
+	if marshalErr != nil {
+		return marshalErr
+	}
+
+	record := map[string]uint64{
+		"recordings_count":           0,
+		"published_recordings_count": 0,
+	}
 
 	if response.MessageKey == "noRecordings" {
-		b.sendRecordingsRecord(acc, b.recordingsRecord(0, 0))
+		acc.AddFields("bigbluebutton_recordings", toStringMapInterface(record), make(map[string]string))
 		return nil
 	}
 
-	recordingsCount := 0
-	publishedCount := 0
-
 	for i := 0; i < len(response.Recordings.Values); i++ {
 		recording := response.Recordings.Values[i]
-		recordingsCount++
+		record["recordings_count"]++
 		if recording.Published {
-			publishedCount++
+			record["published_recordings_count"]++
 		}
 	}
 
-	b.sendRecordingsRecord(acc, b.recordingsRecord(recordingsCount, publishedCount))
-
+	acc.AddFields("bigbluebutton_recordings", toStringMapInterface(record), make(map[string]string))
 	return nil
 }
 
-func (b *BigBlueButton) sendRecord(acc telegraf.Accumulator, name string, record map[string]interface{}) {
-	acc.AddFields(name, record, make(map[string]string))
+func toStringMapInterface(in map[string]uint64) map[string]interface{} {
+	var m = map[string]interface{}{}
+	for k, v := range in {
+		m[k] = v
+	}
+	return m
 }
 
 func init() {
