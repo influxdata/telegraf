@@ -19,7 +19,7 @@ For each field the derivative is emitted with a naming pattern
 ### Custom Derivation Variable
 
 The plugin supports to use a field of the aggregated measurements as derivation
-variable in the denominator. This variable is assumed to be a monotonously
+variable in the denominator. This variable is assumed to be a monotonically
 increasing value. In this feature the following formula is used:
 ```
                  field_last - field_first
