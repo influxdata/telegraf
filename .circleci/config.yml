@@ -190,7 +190,7 @@ jobs:
           command: |
             sh ./scripts/mac-signing.sh
       - store_artifacts:
-          path: './build/dist'
+          path: './dist'
           destination: 'build/dist'
 workflows:
   version: 2
