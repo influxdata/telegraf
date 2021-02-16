@@ -70,7 +70,7 @@ require (
 	github.com/golang/snappy v0.0.1
 	github.com/google/go-cmp v0.5.4
 	github.com/google/go-github/v32 v32.1.0
-	github.com/gopcua/opcua v0.1.12
+	github.com/gopcua/opcua v0.1.13
 	github.com/gorilla/mux v1.6.2
 	github.com/gosnmp/gosnmp v1.29.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
