@@ -31,6 +31,7 @@ const (
 	GetWebStat
 	GetJMSQueueStat
 	GetJMSTopicStat
+	GetTransactionStat
 )
 
 // KeyVal key / value struct
@@ -73,7 +74,7 @@ func (omap OrderedMap) MarshalJSON() ([]byte, error) {
 // HostResponse expected GetHost response type
 type ExecTypeResponse struct {
 	Outcome string `json:"outcome"`
-	Result  string `json:"result"`
+	Result  map[string]interface{} `json:"result"`
 }
 
 // HostResponse expected GetHost response type
@@ -244,6 +245,7 @@ var sampleConfig = `
 	"web", 		# Handles both EAP <=6.X/AS <=7.X and EAP >=7.X/Widlfly > 8
 	"deployment",
 	"database",
+	"transaction",
 	"jms",
   ]
 `
@@ -303,7 +305,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 		}
 		var execAsDomain bool
 		var isEAP7 bool
-		if exec.Result == "DOMAIN" {
+		if exec.Result["launch-type"] == "DOMAIN" {
 			execAsDomain = true
 		} else {
 			execAsDomain = false
@@ -461,10 +463,77 @@ func (h *JBoss) getServersOnHost(
 	return nil
 }
 
+// Gathers Transaction data from a particular host
+// Parameters:
+//     acc      : The telegraf Accumulator to use
+//     serverURL: endpoint to send request to
+//     host     : the host being queried
+//     server   : the server being queried
+//
+// Returns:
+//     error: Any error that may have occurred
+
+func (h *JBoss) getTransactionStatistics(
+	acc telegraf.Accumulator,
+	serverURL string,
+	execAsDomain bool,
+	host string,
+	serverName string,
+) error {
+	adr := OrderedMap{}
+
+	if execAsDomain {
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
+			{"subsystem", "transactions"},
+		}
+	} else {
+		adr = OrderedMap{
+			{"subsystem", "transactions"},
+		}
+	}
+
+	bodyContent, err := h.createRequestBody(GetTransactionStat, adr)
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	}
+
+	out, err := h.doRequest(serverURL, bodyContent)
+
+	log.Printf("D! JBoss API Req err: %s", err)
+	log.Printf("D! JBoss API Req out: %s", out)
+
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	} else {
+		server := TransactionResponse{}
+		if err = json.Unmarshal(out, &server); err != nil {
+			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
+		}
+
+		fields := make(map[string]interface{})
+		for key, value := range server.Result {
+			if strings.Contains(key, "number-of") {
+				fields[key], _ = strconv.ParseInt(value.(string), 10, 64)
+			}
+		}
+		tags := map[string]string{
+			"jboss_host":   host,
+			"jboss_server": serverName,
+		}
+
+		acc.AddFields("jboss_transaction", fields, tags)
+	}
+
+	return nil
+}
+
 // Gathers web data from a particular host
 // Parameters:
 //     acc      : The telegraf Accumulator to use
 //     serverURL: endpoint to send request to
+//     execAsDomain: JBoss runs in domain
 //     host     : the host being queried
 //     server   : the server being queried
 //
@@ -742,12 +811,12 @@ func (h *JBoss) getJMSStatistics(
 			{"host", host},
 			{"server", serverName},
 			{"subsystem", subsystem},
-			{serverID, "default"},
+			{serverID, serverID},
 		}
 	} else {
 		adr = OrderedMap{
 			{"subsystem", subsystem},
-			{serverID, "default"},
+			{serverID, serverID},
 		}
 	}
 
@@ -1225,7 +1294,7 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
-			req.RequestURI,
+			serverURL,
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
 			http.StatusOK,
