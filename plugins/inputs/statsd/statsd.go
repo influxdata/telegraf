@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	// UDP_MAX_PACKET_SIZE is the UDP packet limit, see
+	// UdpMaxPacketSize is the UDP packet limit, see
 	// https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
-	UDP_MAX_PACKET_SIZE int = 64 * 1024
+	UdpMaxPacketSize int = 64 * 1024
 
 	defaultFieldName = "value"
 
@@ -31,7 +31,6 @@ const (
 
 	defaultSeparator           = "_"
 	defaultAllowPendingMessage = 10000
-	MaxTCPConnections          = 250
 
 	parserGoRoutines = 5
 )
@@ -203,7 +202,7 @@ type cacheddistributions struct {
 	tags  map[string]string
 }
 
-func (_ *Statsd) Description() string {
+func (s *Statsd) Description() string {
 	return "Statsd UDP/TCP Server"
 }
 
@@ -273,7 +272,7 @@ const sampleConfig = `
   #max_ttl = "1000h"
 `
 
-func (_ *Statsd) SampleConfig() string {
+func (s *Statsd) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -499,7 +498,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 		s.UDPlistener.SetReadBuffer(s.ReadBufferSize)
 	}
 
-	buf := make([]byte, UDP_MAX_PACKET_SIZE)
+	buf := make([]byte, UdpMaxPacketSize)
 	for {
 		select {
 		case <-s.done:

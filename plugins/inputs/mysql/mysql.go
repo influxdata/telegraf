@@ -143,7 +143,6 @@ const sampleConfig = `
 `
 
 const (
-	defaultTimeout                             = 5 * time.Second
 	defaultPerfEventsStatementsDigestTextLimit = 120
 	defaultPerfEventsStatementsLimit           = 250
 	defaultPerfEventsStatementsTimeLimit       = 86400
@@ -712,8 +711,8 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	var (
-		size     uint64 = 0
-		count    uint64 = 0
+		size     uint64
+		count    uint64
 		fileSize uint64
 		fileName string
 	)
@@ -893,16 +892,16 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 	}
 
 	// get count of connections from each user
-	conn_rows, err := db.Query("SELECT user, sum(1) AS connections FROM INFORMATION_SCHEMA.PROCESSLIST GROUP BY user")
+	connRows, err := db.Query("SELECT user, sum(1) AS connections FROM INFORMATION_SCHEMA.PROCESSLIST GROUP BY user")
 	if err != nil {
 		return err
 	}
 
-	for conn_rows.Next() {
+	for connRows.Next() {
 		var user string
 		var connections int64
 
-		err = conn_rows.Scan(&user, &connections)
+		err = connRows.Scan(&user, &connections)
 		if err != nil {
 			return err
 		}
@@ -989,142 +988,142 @@ func columnsToLower(s []string, e error) ([]string, error) {
 func getColSlice(l int) ([]interface{}, error) {
 	// list of all possible column names
 	var (
-		user                        string
-		total_connections           int64
-		concurrent_connections      int64
-		connected_time              int64
-		busy_time                   int64
-		cpu_time                    int64
-		bytes_received              int64
-		bytes_sent                  int64
-		binlog_bytes_written        int64
-		rows_read                   int64
-		rows_sent                   int64
-		rows_deleted                int64
-		rows_inserted               int64
-		rows_updated                int64
-		select_commands             int64
-		update_commands             int64
-		other_commands              int64
-		commit_transactions         int64
-		rollback_transactions       int64
-		denied_connections          int64
-		lost_connections            int64
-		access_denied               int64
-		empty_queries               int64
-		total_ssl_connections       int64
-		max_statement_time_exceeded int64
+		user                     string
+		totalConnections         int64
+		concurrentConnections    int64
+		connectedTime            int64
+		busyTime                 int64
+		cpuTime                  int64
+		bytesReceived            int64
+		bytesSent                int64
+		binlogBytesWritten       int64
+		rowsRead                 int64
+		rowsSent                 int64
+		rowsDeleted              int64
+		rowsInserted             int64
+		rowsUpdated              int64
+		selectCommands           int64
+		updateCommands           int64
+		otherCommands            int64
+		commitTransactions       int64
+		rollbackTransactions     int64
+		deniedConnections        int64
+		lostConnections          int64
+		accessDenied             int64
+		emptyQueries             int64
+		totalSslConnections      int64
+		maxStatementTimeExceeded int64
 		// maria specific
-		fbusy_time float64
-		fcpu_time  float64
+		fbusyTime float64
+		fcpuTime  float64
 		// percona specific
-		rows_fetched    int64
-		table_rows_read int64
+		rowsFetched   int64
+		tableRowsRead int64
 	)
 
 	switch l {
 	case 23: // maria5
 		return []interface{}{
 			&user,
-			&total_connections,
-			&concurrent_connections,
-			&connected_time,
-			&fbusy_time,
-			&fcpu_time,
-			&bytes_received,
-			&bytes_sent,
-			&binlog_bytes_written,
-			&rows_read,
-			&rows_sent,
-			&rows_deleted,
-			&rows_inserted,
-			&rows_updated,
-			&select_commands,
-			&update_commands,
-			&other_commands,
-			&commit_transactions,
-			&rollback_transactions,
-			&denied_connections,
-			&lost_connections,
-			&access_denied,
-			&empty_queries,
+			&totalConnections,
+			&concurrentConnections,
+			&connectedTime,
+			&fbusyTime,
+			&fcpuTime,
+			&bytesReceived,
+			&bytesSent,
+			&binlogBytesWritten,
+			&rowsRead,
+			&rowsSent,
+			&rowsDeleted,
+			&rowsInserted,
+			&rowsUpdated,
+			&selectCommands,
+			&updateCommands,
+			&otherCommands,
+			&commitTransactions,
+			&rollbackTransactions,
+			&deniedConnections,
+			&lostConnections,
+			&accessDenied,
+			&emptyQueries,
 		}, nil
 	case 25: // maria10
 		return []interface{}{
 			&user,
-			&total_connections,
-			&concurrent_connections,
-			&connected_time,
-			&fbusy_time,
-			&fcpu_time,
-			&bytes_received,
-			&bytes_sent,
-			&binlog_bytes_written,
-			&rows_read,
-			&rows_sent,
-			&rows_deleted,
-			&rows_inserted,
-			&rows_updated,
-			&select_commands,
-			&update_commands,
-			&other_commands,
-			&commit_transactions,
-			&rollback_transactions,
-			&denied_connections,
-			&lost_connections,
-			&access_denied,
-			&empty_queries,
-			&total_ssl_connections,
-			&max_statement_time_exceeded,
+			&totalConnections,
+			&concurrentConnections,
+			&connectedTime,
+			&fbusyTime,
+			&fcpuTime,
+			&bytesReceived,
+			&bytesSent,
+			&binlogBytesWritten,
+			&rowsRead,
+			&rowsSent,
+			&rowsDeleted,
+			&rowsInserted,
+			&rowsUpdated,
+			&selectCommands,
+			&updateCommands,
+			&otherCommands,
+			&commitTransactions,
+			&rollbackTransactions,
+			&deniedConnections,
+			&lostConnections,
+			&accessDenied,
+			&emptyQueries,
+			&totalSslConnections,
+			&maxStatementTimeExceeded,
 		}, nil
 	case 21: // mysql 5.5
 		return []interface{}{
 			&user,
-			&total_connections,
-			&concurrent_connections,
-			&connected_time,
-			&busy_time,
-			&cpu_time,
-			&bytes_received,
-			&bytes_sent,
-			&binlog_bytes_written,
-			&rows_fetched,
-			&rows_updated,
-			&table_rows_read,
-			&select_commands,
-			&update_commands,
-			&other_commands,
-			&commit_transactions,
-			&rollback_transactions,
-			&denied_connections,
-			&lost_connections,
-			&access_denied,
-			&empty_queries,
+			&totalConnections,
+			&concurrentConnections,
+			&connectedTime,
+			&busyTime,
+			&cpuTime,
+			&bytesReceived,
+			&bytesSent,
+			&binlogBytesWritten,
+			&rowsFetched,
+			&rowsUpdated,
+			&tableRowsRead,
+			&selectCommands,
+			&updateCommands,
+			&otherCommands,
+			&commitTransactions,
+			&rollbackTransactions,
+			&deniedConnections,
+			&lostConnections,
+			&accessDenied,
+			&emptyQueries,
 		}, nil
 	case 22: // percona
 		return []interface{}{
 			&user,
-			&total_connections,
-			&concurrent_connections,
-			&connected_time,
-			&busy_time,
-			&cpu_time,
-			&bytes_received,
-			&bytes_sent,
-			&binlog_bytes_written,
-			&rows_fetched,
-			&rows_updated,
-			&table_rows_read,
-			&select_commands,
-			&update_commands,
-			&other_commands,
-			&commit_transactions,
-			&rollback_transactions,
-			&denied_connections,
-			&lost_connections,
-			&access_denied,
-			&empty_queries,
-			&total_ssl_connections,
+			&totalConnections,
+			&concurrentConnections,
+			&connectedTime,
+			&busyTime,
+			&cpuTime,
+			&bytesReceived,
+			&bytesSent,
+			&binlogBytesWritten,
+			&rowsFetched,
+			&rowsUpdated,
+			&tableRowsRead,
+			&selectCommands,
+			&updateCommands,
+			&otherCommands,
+			&commitTransactions,
+			&rollbackTransactions,
+			&deniedConnections,
+			&lostConnections,
+			&accessDenied,
+			&emptyQueries,
+			&totalSslConnections,
 		}, nil
 	}
 
@@ -1685,7 +1684,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 	defer rows.Close()
 
 	var (
-		schemaName, digest, digest_text      string
+		schemaName, digest, digestText       string
 		count, queryTime, errors, warnings   float64
 		rowsAffected, rowsSent, rowsExamined float64
 		tmpTables, tmpDiskTables             float64
@@ -1700,7 +1699,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 
 	for rows.Next() {
 		err = rows.Scan(
-			&schemaName, &digest, &digest_text,
+			&schemaName, &digest, &digestText,
 			&count, &queryTime, &errors, &warnings,
 			&rowsAffected, &rowsSent, &rowsExamined,
 			&tmpTables, &tmpDiskTables,
@@ -1713,7 +1712,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 		}
 		tags["schema"] = schemaName
 		tags["digest"] = digest
-		tags["digest_text"] = digest_text
+		tags["digest_text"] = digestText
 
 		fields := map[string]interface{}{
 			"events_statements_total":                   count,

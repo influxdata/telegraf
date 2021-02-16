@@ -38,7 +38,6 @@ func (e APIError) Error() string {
 const (
 	defaultRequestTimeout = time.Second * 5
 	defaultMaxWait        = 60 // seconds
-	defaultDatabase       = "telegraf"
 )
 
 type HTTPConfig struct {
@@ -171,7 +170,7 @@ func (g genericRespError) Error() string {
 
 func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error {
 	if c.retryTime.After(time.Now()) {
-		return errors.New("Retry time has not elapsed")
+		return errors.New("retry time has not elapsed")
 	}
 
 	batches := make(map[string][]telegraf.Metric)
