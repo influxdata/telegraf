@@ -1,6 +1,7 @@
 package riemann
 
 import (
+	"github.com/influxdata/telegraf/testutil"
 	"testing"
 	"time"
 
@@ -12,7 +13,9 @@ import (
 func TestAttributes(t *testing.T) {
 	tags := map[string]string{"tag1": "value1", "tag2": "value2"}
 
-	r := &Riemann{}
+	r := &Riemann{
+		Log: testutil.Logger{},
+	}
 	require.Equal(t,
 		map[string]string{"tag1": "value1", "tag2": "value2"},
 		r.attributes("test", tags))
@@ -27,6 +30,7 @@ func TestAttributes(t *testing.T) {
 func TestService(t *testing.T) {
 	r := &Riemann{
 		Separator: "/",
+		Log:       testutil.Logger{},
 	}
 	require.Equal(t, "test/value", r.service("test", "value"))
 
@@ -41,6 +45,7 @@ func TestTags(t *testing.T) {
 	// all tag values plus additional tag should be present
 	r := &Riemann{
 		Tags: []string{"test"},
+		Log:  testutil.Logger{},
 	}
 	require.Equal(t,
 		[]string{"test", "value1", "value2"},
@@ -67,6 +72,7 @@ func TestMetricEvents(t *testing.T) {
 		MeasurementAsAttribute: false,
 		DescriptionText:        "metrics from telegraf",
 		Tags:                   []string{"telegraf"},
+		Log:                    testutil.Logger{},
 	}
 
 	// build a single event
@@ -126,6 +132,7 @@ func TestMetricEvents(t *testing.T) {
 func TestStateEvents(t *testing.T) {
 	r := &Riemann{
 		MeasurementAsAttribute: true,
+		Log:                    testutil.Logger{},
 	}
 
 	// string metrics will be skipped unless explicitly enabled

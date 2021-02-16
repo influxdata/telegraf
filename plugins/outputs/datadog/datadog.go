@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -16,10 +15,11 @@ import (
 )
 
 type Datadog struct {
-	Apikey  string
-	Timeout internal.Duration
+	Apikey  string            `toml:"apikey"`
+	Timeout internal.Duration `toml:"timeout"`
+	URL     string            `toml:"url"`
+	Log     telegraf.Logger   `toml:"-"`
 
-	URL    string `toml:"url"`
 	client *http.Client
 }
 
@@ -96,7 +96,7 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 				metricCounter++
 			}
 		} else {
-			log.Printf("I! unable to build Metric for %s due to error '%v', skipping\n", m.Name(), err)
+			d.Log.Infof("Unable to build Metric for %s due to error '%v', skipping", m.Name(), err)
 		}
 	}
 
@@ -109,22 +109,22 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {
-		return fmt.Errorf("unable to marshal TimeSeries, %s\n", err.Error())
+		return fmt.Errorf("unable to marshal TimeSeries, %s", err.Error())
 	}
 	req, err := http.NewRequest("POST", d.authenticatedUrl(), bytes.NewBuffer(tsBytes))
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s\n", strings.Replace(err.Error(), d.Apikey, redactedApiKey, -1))
+		return fmt.Errorf("unable to create http.Request, %s", strings.Replace(err.Error(), d.Apikey, redactedApiKey, -1))
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := d.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error POSTing metrics, %s\n", strings.Replace(err.Error(), d.Apikey, redactedApiKey, -1))
+		return fmt.Errorf("error POSTing metrics, %s", strings.Replace(err.Error(), d.Apikey, redactedApiKey, -1))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 209 {
-		return fmt.Errorf("received bad status code, %d\n", resp.StatusCode)
+		return fmt.Errorf("received bad status code, %d", resp.StatusCode)
 	}
 
 	return nil

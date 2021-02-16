@@ -2,7 +2,6 @@ package multifile
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -130,7 +129,7 @@ func (m *MultiFile) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if value == nil {
-			return errors.New(fmt.Sprintf("invalid conversion %v", file.Conversion))
+			return fmt.Errorf("invalid conversion %v", file.Conversion)
 		}
 
 		fields[file.Dest] = value

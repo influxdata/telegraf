@@ -15,11 +15,14 @@ type Connection struct {
 	Port      int
 	Interface string
 	Privilege string
+	HexKey    string
 }
 
-func NewConnection(server string, privilege string) *Connection {
-	conn := &Connection{}
-	conn.Privilege = privilege
+func NewConnection(server, privilege, hexKey string) *Connection {
+	conn := &Connection{
+		Privilege: privilege,
+		HexKey:    hexKey,
+	}
 	inx1 := strings.LastIndex(server, "@")
 	inx2 := strings.Index(server, "(")
 
@@ -57,6 +60,9 @@ func (t *Connection) options() []string {
 		"-I", intf,
 	}
 
+	if t.HexKey != "" {
+		options = append(options, "-y", t.HexKey)
+	}
 	if t.Port != 0 {
 		options = append(options, "-p", strconv.Itoa(t.Port))
 	}

@@ -83,7 +83,7 @@ help:
 
 .PHONY: deps
 deps:
-	go mod download
+	go mod download -x
 
 .PHONY: telegraf
 telegraf:
@@ -97,6 +97,10 @@ go-install:
 .PHONY: test
 test:
 	go test -short $(race_detector) ./...
+
+.PHONY: test-integration
+test-integration:
+	go test -run Integration $(race_detector) ./...
 
 .PHONY: fmt
 fmt:

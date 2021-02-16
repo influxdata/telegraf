@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/soniah/gosnmp"
+	"github.com/gosnmp/gosnmp"
 )
 
 // GosnmpWrapper wraps a *gosnmp.GoSNMP object so we can use it as a snmpConnection.
@@ -125,6 +125,14 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 			sp.PrivacyProtocol = gosnmp.DES
 		case "aes":
 			sp.PrivacyProtocol = gosnmp.AES
+		case "aes192":
+			sp.PrivacyProtocol = gosnmp.AES192
+		case "aes192c":
+			sp.PrivacyProtocol = gosnmp.AES192C
+		case "aes256":
+			sp.PrivacyProtocol = gosnmp.AES256
+		case "aes256c":
+			sp.PrivacyProtocol = gosnmp.AES256C
 		case "":
 			sp.PrivacyProtocol = gosnmp.NoPriv
 		default:
@@ -156,11 +164,14 @@ func (gs *GosnmpWrapper) SetAgent(agent string) error {
 		return err
 	}
 
+	// Only allow udp{4,6} and tcp{4,6}.
+	// Allowing ip{4,6} does not make sense as specifying a port
+	// requires the specification of a protocol.
+	// gosnmp does not handle these errors well, which is why
+	// they can result in cryptic errors by net.Dial.
 	switch u.Scheme {
-	case "tcp":
-		gs.Transport = "tcp"
-	case "", "udp":
-		gs.Transport = "udp"
+	case "tcp", "tcp4", "tcp6", "udp", "udp4", "udp6":
+		gs.Transport = u.Scheme
 	default:
 		return fmt.Errorf("unsupported scheme: %v", u.Scheme)
 	}

@@ -4,12 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"github.com/matttproud/golang_protobuf_extensions/pbutil"
+	"io"
 	"math"
+	"mime"
+	"net/http"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	. "github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -17,6 +21,7 @@ import (
 
 type Parser struct {
 	DefaultTags map[string]string
+	Header      http.Header
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -31,9 +36,25 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	// Prepare output
 	metricFamilies := make(map[string]*dto.MetricFamily)
-	metricFamilies, err = parser.TextToMetricFamilies(reader)
-	if err != nil {
-		return nil, fmt.Errorf("reading text format failed: %s", err)
+	mediatype, params, err := mime.ParseMediaType(p.Header.Get("Content-Type"))
+	if err == nil && mediatype == "application/vnd.google.protobuf" &&
+		params["encoding"] == "delimited" &&
+		params["proto"] == "io.prometheus.client.MetricFamily" {
+		for {
+			mf := &dto.MetricFamily{}
+			if _, ierr := pbutil.ReadDelimited(reader, mf); ierr != nil {
+				if ierr == io.EOF {
+					break
+				}
+				return nil, fmt.Errorf("reading metric family protocol buffer failed: %s", ierr)
+			}
+			metricFamilies[mf.GetName()] = mf
+		}
+	} else {
+		metricFamilies, err = parser.TextToMetricFamilies(reader)
+		if err != nil {
+			return nil, fmt.Errorf("reading text format failed: %s", err)
+		}
 	}
 
 	now := time.Now()
@@ -42,7 +63,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	for metricName, mf := range metricFamilies {
 		for _, m := range mf.Metric {
 			// reading tags
-			tags := MakeLabels(m, p.DefaultTags)
+			tags := common.MakeLabels(m, p.DefaultTags)
 
 			if mf.GetType() == dto.MetricType_SUMMARY {
 				// summary metric
@@ -60,7 +81,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				// converting to telegraf metric
 				if len(fields) > 0 {
 					t := getTimestamp(m, now)
-					metric, err := metric.New("prometheus", tags, fields, t, ValueType(mf.GetType()))
+					metric, err := metric.New("prometheus", tags, fields, t, common.ValueType(mf.GetType()))
 					if err == nil {
 						metrics = append(metrics, metric)
 					}
@@ -79,11 +100,11 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(metrics) < 1 {
-		return nil, fmt.Errorf("No metrics in line")
+		return nil, fmt.Errorf("no metrics in line")
 	}
 
 	if len(metrics) > 1 {
-		return nil, fmt.Errorf("More than one metric in line")
+		return nil, fmt.Errorf("more than one metric in line")
 	}
 
 	return metrics[0], nil
@@ -101,7 +122,7 @@ func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, met
 
 	fields[metricName+"_count"] = float64(m.GetSummary().GetSampleCount())
 	fields[metricName+"_sum"] = float64(m.GetSummary().GetSampleSum())
-	met, err := metric.New("prometheus", tags, fields, t, ValueType(metricType))
+	met, err := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
 	if err == nil {
 		metrics = append(metrics, met)
 	}
@@ -113,7 +134,7 @@ func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, met
 		newTags["quantile"] = fmt.Sprint(q.GetQuantile())
 		fields[metricName] = float64(q.GetValue())
 
-		quantileMetric, err := metric.New("prometheus", newTags, fields, t, ValueType(metricType))
+		quantileMetric, err := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
 		if err == nil {
 			metrics = append(metrics, quantileMetric)
 		}
@@ -130,7 +151,7 @@ func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metri
 	fields[metricName+"_count"] = float64(m.GetHistogram().GetSampleCount())
 	fields[metricName+"_sum"] = float64(m.GetHistogram().GetSampleSum())
 
-	met, err := metric.New("prometheus", tags, fields, t, ValueType(metricType))
+	met, err := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
 	if err == nil {
 		metrics = append(metrics, met)
 	}
@@ -141,7 +162,7 @@ func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metri
 		newTags["le"] = fmt.Sprint(b.GetUpperBound())
 		fields[metricName+"_bucket"] = float64(b.GetCumulativeCount())
 
-		histogramMetric, err := metric.New("prometheus", newTags, fields, t, ValueType(metricType))
+		histogramMetric, err := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
 		if err == nil {
 			metrics = append(metrics, histogramMetric)
 		}

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -27,11 +26,12 @@ import (
 // service
 type AzureMonitor struct {
 	Timeout             internal.Duration
-	NamespacePrefix     string `toml:"namespace_prefix"`
-	StringsAsDimensions bool   `toml:"strings_as_dimensions"`
-	Region              string
-	ResourceID          string `toml:"resource_id"`
-	EndpointUrl         string `toml:"endpoint_url"`
+	NamespacePrefix     string          `toml:"namespace_prefix"`
+	StringsAsDimensions bool            `toml:"strings_as_dimensions"`
+	Region              string          `toml:"region"`
+	ResourceID          string          `toml:"resource_id"`
+	EndpointUrl         string          `toml:"endpoint_url"`
+	Log                 telegraf.Logger `toml:"-"`
 
 	url    string
 	auth   autorest.Authorizer
@@ -62,14 +62,14 @@ func (m *virtualMachineMetadata) ResourceID() string {
 			m.Compute.ResourceGroupName,
 			m.Compute.VMScaleSetName,
 		)
-	} else {
-		return fmt.Sprintf(
-			resourceIDTemplate,
-			m.Compute.SubscriptionID,
-			m.Compute.ResourceGroupName,
-			m.Compute.Name,
-		)
 	}
+
+	return fmt.Sprintf(
+		resourceIDTemplate,
+		m.Compute.SubscriptionID,
+		m.Compute.ResourceGroupName,
+		m.Compute.Name,
+	)
 }
 
 type dimension struct {
@@ -189,7 +189,7 @@ func (a *AzureMonitor) Connect() error {
 		a.url = fmt.Sprintf(urlOverrideTemplate, endpointUrl, resourceID)
 	}
 
-	log.Printf("D! Writing to Azure Monitor URL: %s", a.url)
+	a.Log.Debugf("Writing to Azure Monitor URL: %s", a.url)
 
 	a.auth, err = auth.NewAuthorizerFromEnvironmentWithResource(defaultAuthResource)
 	if err != nil {
@@ -279,14 +279,14 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		if azm, ok := azmetrics[id]; !ok {
 			amm, err := translate(m, a.NamespacePrefix)
 			if err != nil {
-				log.Printf("E! [outputs.azure_monitor]: could not create azure metric for %q; discarding point", m.Name())
+				a.Log.Errorf("Could not create azure metric for %q; discarding point", m.Name())
 				continue
 			}
 			azmetrics[id] = amm
 		} else {
 			amm, err := translate(m, a.NamespacePrefix)
 			if err != nil {
-				log.Printf("E! [outputs.azure_monitor]: could not create azure metric for %q; discarding point", m.Name())
+				a.Log.Errorf("Could not create azure metric for %q; discarding point", m.Name())
 				continue
 			}
 
@@ -611,7 +611,7 @@ func (a *AzureMonitor) Push() []telegraf.Metric {
 			)
 
 			if err != nil {
-				log.Printf("E! [outputs.azure_monitor]: could not create metric for aggregation %q; discarding point", agg.name)
+				a.Log.Errorf("Could not create metric for aggregation %q; discarding point", agg.name)
 			}
 
 			metrics = append(metrics, m)

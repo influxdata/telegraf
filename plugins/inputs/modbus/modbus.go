@@ -3,7 +3,6 @@ package modbus
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"net/url"
@@ -34,6 +33,7 @@ type Modbus struct {
 	Coils            []fieldContainer  `toml:"coils"`
 	HoldingRegisters []fieldContainer  `toml:"holding_registers"`
 	InputRegisters   []fieldContainer  `toml:"input_registers"`
+	Log              telegraf.Logger   `toml:"-"`
 	registers        []register
 	isConnected      bool
 	tcpHandler       *mb.TCPClientHandler
@@ -341,9 +341,8 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 		canonical_name := item.Measurement + "." + item.Name
 		if nameEncountered[canonical_name] {
 			return fmt.Errorf("name '%s' is duplicated in measurement '%s' '%s' - '%s'", item.Name, item.Measurement, n, item.Name)
-		} else {
-			nameEncountered[canonical_name] = true
 		}
+		nameEncountered[canonical_name] = true
 
 		if n == cInputRegisters || n == cHoldingRegisters {
 			// search byte order
@@ -696,7 +695,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			mberr, ok := err.(*mb.ModbusError)
 			if ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
-				log.Printf("I! [inputs.modbus] device busy! Retrying %d more time(s)...", m.Retries-retry)
+				m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
 				time.Sleep(m.RetriesWaitTime.Duration)
 				continue
 			}
