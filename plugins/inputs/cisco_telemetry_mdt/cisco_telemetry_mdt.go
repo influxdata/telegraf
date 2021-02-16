@@ -95,7 +95,7 @@ func xformValueString(field *telemetry.TelemetryField) string {
 }
 
 //xform Uint64 to int64
-func (c *CiscoTelemetryMDT) nxosValueXformUint64Toint64(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueXformUint64Toint64(field *telemetry.TelemetryField, value interface{}) interface{} {
 	if field.GetUint64Value() != 0 {
 		return int64(value.(uint64))
 	}
@@ -103,7 +103,7 @@ func (c *CiscoTelemetryMDT) nxosValueXformUint64Toint64(field *telemetry.Telemet
 }
 
 //xform string to float
-func (c *CiscoTelemetryMDT) nxosValueXformStringTofloat(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueXformStringTofloat(field *telemetry.TelemetryField, value interface{}) interface{} {
 	//convert property to float from string.
 	vals := field.GetStringValue()
 	if vals != "" {
@@ -115,7 +115,7 @@ func (c *CiscoTelemetryMDT) nxosValueXformStringTofloat(field *telemetry.Telemet
 }
 
 //xform string to uint64
-func (c *CiscoTelemetryMDT) nxosValueXformStringToUint64(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueXformStringToUint64(field *telemetry.TelemetryField, value interface{}) interface{} {
 	//string to uint64
 	vals := field.GetStringValue()
 	if vals != "" {
@@ -127,7 +127,7 @@ func (c *CiscoTelemetryMDT) nxosValueXformStringToUint64(field *telemetry.Teleme
 }
 
 //xform string to int64
-func (c *CiscoTelemetryMDT) nxosValueXformStringToInt64(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueXformStringToInt64(field *telemetry.TelemetryField, value interface{}) interface{} {
 	//string to int64
 	vals := field.GetStringValue()
 	if vals != "" {
@@ -139,7 +139,7 @@ func (c *CiscoTelemetryMDT) nxosValueXformStringToInt64(field *telemetry.Telemet
 }
 
 //auto-xform
-func (c *CiscoTelemetryMDT) nxosValueAutoXform(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueAutoXform(field *telemetry.TelemetryField, value interface{}) interface{} {
 	//check if we want auto xformation
 	vals := field.GetStringValue()
 	if vals != "" {
@@ -157,7 +157,7 @@ func (c *CiscoTelemetryMDT) nxosValueAutoXform(field *telemetry.TelemetryField, 
 }
 
 //auto-xform float properties
-func (c *CiscoTelemetryMDT) nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, value interface{}) interface{} {
 	//check if we want auto xformation
 	vals := field.GetStringValue()
 	if vals != "" {
@@ -169,7 +169,7 @@ func (c *CiscoTelemetryMDT) nxosValueAutoXformFloatProp(field *telemetry.Telemet
 }
 
 //xform uint64 to string
-func (c *CiscoTelemetryMDT) nxosValueXformUint64ToString(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueXformUint64ToString(field *telemetry.TelemetryField, value interface{}) interface{} {
 	switch val := field.ValueByType.(type) {
 	case *telemetry.TelemetryField_StringValue:
 		if len(val.StringValue) > 0 {
@@ -964,10 +964,10 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	}
 
 	c.propMap = make(map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}, 100)
-	c.propMap["test"] = c.nxosValueXformUint64Toint64
-	c.propMap["asn"] = c.nxosValueXformUint64ToString            //uint64 to string.
-	c.propMap["subscriptionId"] = c.nxosValueXformUint64ToString //uint64 to string.
-	c.propMap["operState"] = c.nxosValueXformUint64ToString      //uint64 to string.
+	c.propMap["test"] = nxosValueXformUint64Toint64
+	c.propMap["asn"] = nxosValueXformUint64ToString            //uint64 to string.
+	c.propMap["subscriptionId"] = nxosValueXformUint64ToString //uint64 to string.
+	c.propMap["operState"] = nxosValueXformUint64ToString      //uint64 to string.
 
 	// Invert aliases list
 	c.warned = make(map[string]struct{})
@@ -981,17 +981,17 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	for dme, path := range c.Dmes {
 		c.dmes[path] = dme
 		if path == "uint64 to int" {
-			c.propMap[dme] = c.nxosValueXformUint64Toint64
+			c.propMap[dme] = nxosValueXformUint64Toint64
 		} else if path == "uint64 to string" {
-			c.propMap[dme] = c.nxosValueXformUint64ToString
+			c.propMap[dme] = nxosValueXformUint64ToString
 		} else if path == "string to float64" {
-			c.propMap[dme] = c.nxosValueXformStringTofloat
+			c.propMap[dme] = nxosValueXformStringTofloat
 		} else if path == "string to uint64" {
-			c.propMap[dme] = c.nxosValueXformStringToUint64
+			c.propMap[dme] = nxosValueXformStringToUint64
 		} else if path == "string to int64" {
-			c.propMap[dme] = c.nxosValueXformStringToInt64
+			c.propMap[dme] = nxosValueXformStringToInt64
 		} else if path == "auto-float-xfrom" {
-			c.propMap[dme] = c.nxosValueAutoXformFloatProp
+			c.propMap[dme] = nxosValueAutoXformFloatProp
 		} else if dme[0:6] == "dnpath" { //path based property map
 			js := []byte(path)
 			var jsStruct NxPayloadXfromStructure
