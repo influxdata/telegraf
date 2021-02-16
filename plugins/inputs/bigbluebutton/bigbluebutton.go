@@ -27,7 +27,7 @@ type BigBlueButton struct {
 
 var defaultPathPrefix = "/bigbluebutton"
 
-var bbbConfig = `
+var sampleConfig = `
 	## Required BigBlueButton server url
 	url = "http://localhost:8090"
 
@@ -83,7 +83,7 @@ func (b *BigBlueButton) Init() error {
 }
 
 func (b *BigBlueButton) SampleConfig() string {
-	return bbbConfig
+	return sampleConfig
 }
 
 func (b *BigBlueButton) Description() string {

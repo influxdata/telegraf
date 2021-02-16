@@ -9,14 +9,21 @@ The BigBlueButton Input Plugin gathers metrics from [BigBlueButton](https://bigb
 	## Required BigBlueButton server url
 	url = "http://localhost:8090"
 
-	## Required BigBlueButton api endpoint
-	api_endpoint = "/bigbluebutton/api/"
+	## BigBlueButton path prefix. Default is "/bigbluebutton"
+	# path_prefix = "/bigbluebutton"
 
 	## Required BigBlueButton secret key
 	# secret_key =
 
-	## Server name. Used as "server" tag if not empty. Otherwise use url
-	# server_name = 
+	## Optional HTTP Proxy support
+	# http_proxy_url = ""
+
+	## Optional TLS Config
+	# tls_ca = "/etc/telegraf/ca.pem"
+	# tls_cert = "/etc/telegraf/cert.pem"
+	# tls_key = "/etc/telegraf/key.pem"
+	## Use TLS but skip chain & host verification
+	# insecure_skip_verify = false
 ```
 
 ## Metrics
