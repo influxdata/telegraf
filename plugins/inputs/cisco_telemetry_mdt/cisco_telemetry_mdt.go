@@ -192,13 +192,13 @@ func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, valu
 	} else {
 		//check if we want auto xformation
 		if _, ok := c.propMap["auto-prop-xfromi"]; ok {
-                        return c.propMap["auto-prop-xfrom"](field, value)
+			return c.propMap["auto-prop-xfrom"](field, value)
 		}
 		//Now check path based conversion.
 		//If mapping is found then do the required transformation.
-                if c.nxpathMap[path] == nil {
-		        return nil
-	        }
+		if c.nxpathMap[path] == nil {
+			return nil
+		}
 		switch c.nxpathMap[path][field.Name] {
 		//Xformation supported is only from String, Uint32 and Uint64
 		case "integer":
@@ -208,15 +208,15 @@ func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, valu
 					return vali
 				}
 			case *telemetry.TelemetryField_Uint32Value:
-                                vali, ok := value.(uint32)
-                                if ok == true {
-                                    return vali
-                                }
+				vali, ok := value.(uint32)
+				if ok == true {
+					return vali
+				}
 			case *telemetry.TelemetryField_Uint64Value:
-                                vali, ok := value.(uint64)
-                                if ok == true {
-                                    return vali
-                                }
+				vali, ok := value.(uint64)
+				if ok == true {
+					return vali
+				}
 			} //switch
 			return nil
 		//Xformation supported is only from String
@@ -335,7 +335,7 @@ func (c *CiscoTelemetryMDT) initPower() {
 }
 
 func (c *CiscoTelemetryMDT) initMemPhys() {
-        c.nxpathMap["show processes memory physical"] = map[string]string{"processname": "string"}
+	c.nxpathMap["show processes memory physical"] = map[string]string{"processname": "string"}
 }
 
 func (c *CiscoTelemetryMDT) initBgpV4() {
@@ -1437,8 +1437,8 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 	var nxAttributes, nxChildren, nxRows *telemetry.TelemetryField
 	isNXOS := !strings.ContainsRune(path, ':') // IOS-XR and IOS-XE have a colon in their encoding path, NX-OS does not
 	isEVENT := isNXOS && strings.Contains(path, "EVENT-LIST")
-        nxChildren = nil
-        nxAttributes = nil
+	nxChildren = nil
+	nxAttributes = nil
 	for _, subfield := range field.Fields {
 		if isNXOS && subfield.Name == "attributes" && len(subfield.Fields) > 0 {
 			nxAttributes = subfield.Fields[0]
