@@ -21,6 +21,7 @@ func TestHandleTelemetryTwoSimple(t *testing.T) {
 	err := c.Start(acc)
 	// error is expected since we are passing in dummy transport
 	require.Error(t, err)
+
 	telemetry := &telemetry.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "type:model/some/path",
@@ -237,7 +238,6 @@ func TestHandleNXAPI(t *testing.T) {
 	// error is expected since we are passing in dummy transport
 	require.Error(t, err)
 
-
 	telemetry := &telemetry.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "show nxapi",
@@ -325,7 +325,6 @@ func TestHandleNXAPIXformNXAPI(t *testing.T) {
 	err := c.Start(acc)
 	// error is expected since we are passing in dummy transport
 	require.Error(t, err)
-
 
 	telemetry := &telemetry.Telemetry{
 		MsgTimestamp: 1543236572000,
