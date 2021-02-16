@@ -17,6 +17,8 @@ type BigBlueButton struct {
 	URL              string `toml:"url"`
 	PathPrefix       string `toml:"path_prefix"`
 	SecretKey        string `toml:"secret_key"`
+	Username         string `toml:"username"`
+	Password         string `toml:"password"`
 	getMeetingsURL   string
 	getRecordingsURL string
 
@@ -36,6 +38,10 @@ var sampleConfig = `
 
 	## Required BigBlueButton secret key
 	# secret_key =
+
+	## Optional HTTP Basic Auth Credentials
+	# username = "username"
+	# password = "pa$$word
 
 	## Optional HTTP Proxy support
 	# http_proxy_url = ""
@@ -112,7 +118,16 @@ func (b *BigBlueButton) getURL(apiCallName string) string {
 
 // Call BBB server api
 func (b *BigBlueButton) api(url string) ([]byte, error) {
-	resp, err := b.client.Get(url)
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if b.Username != "" || b.Password != "" {
+		request.SetBasicAuth(b.Username, b.Password)
+	}
+
+	resp, err := b.client.Do(request)
 
 	if err != nil || resp.StatusCode != 200 {
 		return nil, fmt.Errorf("error getting bbb metrics: %s status %d", err, resp.StatusCode)

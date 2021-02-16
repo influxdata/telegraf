@@ -15,6 +15,10 @@ The BigBlueButton Input Plugin gathers metrics from [BigBlueButton](https://bigb
 	## Required BigBlueButton secret key
 	# secret_key =
 
+	## Optional HTTP Basic Auth Credentials
+	# username = "username"
+	# password = "pa$$word
+
 	## Optional HTTP Proxy support
 	# http_proxy_url = ""
 
