@@ -8,7 +8,7 @@ tar -xzvf $(find . -name "*darwin_amd64.tar*")
 rm $(find . -name "*darwin_amd64.tar*")
 cd $(find . -name "*telegraf-*" -type d)
 cd usr/bin
-codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --options=runtime telegraf
+codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime telegraf
 codesign -v telegraf
 
 cd
