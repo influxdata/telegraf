@@ -70,6 +70,11 @@ type Statsd struct {
 	// http://docs.datadoghq.com/guides/dogstatsd/
 	DataDogExtensions bool `toml:"datadog_extensions"`
 
+	// Parses distribution metrics in the datadog statsd format.
+	// Requires the DataDogExtension flag to be enabled.
+	// https://docs.datadoghq.com/developers/metrics/types/?tab=distribution#definition
+	DataDogDistributions bool `toml:"datadog_distributions"`
+
 	// UDPPacketSize is deprecated, it's only here for legacy support
 	// we now always create 1 max size buffer and then copy only what we need
 	// into the in channel
@@ -98,10 +103,12 @@ type Statsd struct {
 	// Cache gauges, counters & sets so they can be aggregated as they arrive
 	// gauges and counters map measurement/tags hash -> field name -> metrics
 	// sets and timings map measurement/tags hash -> metrics
-	gauges   map[string]cachedgauge
-	counters map[string]cachedcounter
-	sets     map[string]cachedset
-	timings  map[string]cachedtimings
+	// distributions aggregate measurement/tags and are published directly
+	gauges        map[string]cachedgauge
+	counters      map[string]cachedcounter
+	sets          map[string]cachedset
+	timings       map[string]cachedtimings
+	distributions []cacheddistributions
 
 	// bucket -> influx templates
 	Templates []string
@@ -190,6 +197,12 @@ type cachedtimings struct {
 	expiresAt time.Time
 }
 
+type cacheddistributions struct {
+	name  string
+	value float64
+	tags  map[string]string
+}
+
 func (_ *Statsd) Description() string {
 	return "Statsd UDP/TCP Server"
 }
@@ -237,6 +250,10 @@ const sampleConfig = `
   ## Parses datadog extensions to the statsd format
   datadog_extensions = false
 
+  ## Parses distributions metric as specified in the datadog statsd format
+  ## https://docs.datadoghq.com/developers/metrics/types/?tab=distribution#definition
+  datadog_distributions = false
+
   ## Statsd data translation templates, more info can be read here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/TEMPLATE_PATTERN.md
   # templates = [
@@ -264,6 +281,14 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	s.Lock()
 	defer s.Unlock()
 	now := time.Now()
+
+	for _, m := range s.distributions {
+		fields := map[string]interface{}{
+			defaultFieldName: m.value,
+		}
+		acc.AddFields(m.name, fields, m.tags, now)
+	}
+	s.distributions = make([]cacheddistributions, 0)
 
 	for _, m := range s.timings {
 		// Defining a template to parse field names for timers allows us to split
@@ -336,6 +361,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
 	s.timings = make(map[string]cachedtimings)
+	s.distributions = make([]cacheddistributions, 0)
 
 	s.Lock()
 	defer s.Unlock()
@@ -601,7 +627,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 		// Validate metric type
 		switch pipesplit[1] {
-		case "g", "c", "s", "ms", "h":
+		case "g", "c", "s", "ms", "h", "d":
 			m.mtype = pipesplit[1]
 		default:
 			s.Log.Errorf("Metric type %q unsupported", pipesplit[1])
@@ -618,7 +644,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		}
 
 		switch m.mtype {
-		case "g", "ms", "h":
+		case "g", "ms", "h", "d":
 			v, err := strconv.ParseFloat(pipesplit[0], 64)
 			if err != nil {
 				s.Log.Errorf("Parsing value to float64, unable to parse metric: %s", line)
@@ -658,6 +684,8 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			m.tags["metric_type"] = "timing"
 		case "h":
 			m.tags["metric_type"] = "histogram"
+		case "d":
+			m.tags["metric_type"] = "distribution"
 		}
 		if len(lineTags) > 0 {
 			for k, v := range lineTags {
@@ -749,6 +777,15 @@ func (s *Statsd) aggregate(m metric) {
 	defer s.Unlock()
 
 	switch m.mtype {
+	case "d":
+		if s.DataDogExtensions && s.DataDogDistributions {
+			cached := cacheddistributions{
+				name:  m.name,
+				value: m.floatvalue,
+				tags:  m.tags,
+			}
+			s.distributions = append(s.distributions, cached)
+		}
 	case "ms", "h":
 		// Check if the measurement exists
 		cached, ok := s.timings[m.hash]
