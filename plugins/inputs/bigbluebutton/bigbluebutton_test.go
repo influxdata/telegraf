@@ -81,6 +81,8 @@ func TestBigBlueButton(t *testing.T) {
 
 	tags := make(map[string]string)
 
+	acc.Wait(2)
+
 	require.Equal(t, true, acc.HasMeasurement("bigbluebutton_meetings"))
 	acc.AssertContainsTaggedFields(t, "bigbluebutton_meetings", toStringMapInterface(meetingsRecord), tags)
 
@@ -114,6 +116,8 @@ func TestBigBlueButtonEmptyState(t *testing.T) {
 	}
 
 	tags := make(map[string]string)
+
+	acc.Wait(2)
 
 	m, mOk := acc.Get("bigbluebutton_meetings")
 	require.True(t, mOk)
