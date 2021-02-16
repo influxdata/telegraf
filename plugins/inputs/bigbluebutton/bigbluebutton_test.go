@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -81,13 +82,20 @@ func TestBigBlueButton(t *testing.T) {
 
 	tags := make(map[string]string)
 
-	acc.Wait(2)
+	_, mOk := acc.Get("bigbluebutton_meetings")
+	require.True(t, mOk)
 
-	require.Equal(t, true, acc.HasMeasurement("bigbluebutton_meetings"))
-	acc.AssertContainsTaggedFields(t, "bigbluebutton_meetings", toStringMapInterface(meetingsRecord), tags)
+	_, rOk := acc.Get("bigbluebutton_recordings")
+	require.True(t, rOk)
 
-	require.Equal(t, true, acc.HasMeasurement("bigbluebutton_recordings"))
-	acc.AssertContainsTaggedFields(t, "bigbluebutton_recordings", toStringMapInterface(recordingsRecord), tags)
+	expected := []telegraf.Metric{
+		testutil.MustMetric("bigbluebutton_meetings", tags, toStringMapInterface(meetingsRecord), time.Unix(0, 0)),
+		testutil.MustMetric("bigbluebutton_recordings", tags, toStringMapInterface(recordingsRecord), time.Unix(0, 0)),
+	}
+
+	acc.Wait(len(expected))
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestBigBlueButtonEmptyState(t *testing.T) {
@@ -117,15 +125,18 @@ func TestBigBlueButtonEmptyState(t *testing.T) {
 
 	tags := make(map[string]string)
 
-	acc.Wait(2)
-
-	m, mOk := acc.Get("bigbluebutton_meetings")
+	_, mOk := acc.Get("bigbluebutton_meetings")
 	require.True(t, mOk)
-	mExpected := testutil.MustMetric("bigbluebutton_meetings", tags, toStringMapInterface(meetingsRecord), time.Unix(0, 0))
-	testutil.RequireMetricEqual(t, mExpected, testutil.FromTestMetric(m), testutil.IgnoreTime())
 
-	r, rOk := acc.Get("bigbluebutton_recordings")
+	_, rOk := acc.Get("bigbluebutton_recordings")
 	require.True(t, rOk)
-	rExpected := testutil.MustMetric("bigbluebutton_recordings", tags, toStringMapInterface(recordingsRecord), time.Unix(0, 0))
-	testutil.RequireMetricEqual(t, rExpected, testutil.FromTestMetric(r), testutil.IgnoreTime())
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("bigbluebutton_meetings", tags, toStringMapInterface(meetingsRecord), time.Unix(0, 0)),
+		testutil.MustMetric("bigbluebutton_recordings", tags, toStringMapInterface(recordingsRecord), time.Unix(0, 0)),
+	}
+
+	acc.Wait(len(expected))
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
