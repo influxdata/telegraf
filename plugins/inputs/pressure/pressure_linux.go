@@ -149,7 +149,10 @@ func parsePressureData(line []byte) *pressureFields {
 			parsingErrors++
 		}
 	}
-	tot, _ := strconv.ParseUint(strings.Split(fields[4], "=")[1], 10, 64)
+	tot, err := strconv.ParseUint(strings.Split(fields[4], "=")[1], 10, 64)
+	if err != nil {
+		parsingErrors++
+	}
 	return &pressureFields{
 		avg10:  avgs[0],
 		avg60:  avgs[1],
