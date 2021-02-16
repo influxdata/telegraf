@@ -1,29 +1,50 @@
 package bigbluebutton
 
 import (
+	"crypto/sha1"
 	"encoding/xml"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type BigBlueButton struct {
-	URL         string `toml:"url"`
-	APIEndpoint string `toml:"api_endpoint"`
-	SecretKey   string `toml:"secret_key"`
+	URL              string `toml:"url"`
+	PathPrefix       string `toml:"path_prefix"`
+	SecretKey        string `toml:"secret_key"`
+	GetMeetingsURL   string
+	GetRecordingsURL string
 }
+
+var defaultPathPrefix = "/bigbluebutton"
 
 var bbbConfig = `
 	## Required BigBlueButton server url
 	url = "http://localhost:8090"
 
-	## Required BigBlueButton api endpoint
-	api_endpoint = "/bigbluebutton/api/"
+	## BigBlueButton path prefix. Default is "/bigbluebutton"
+	# path_prefix = "/bigbluebutton"
 
 	## Required BigBlueButton secret key
 	# secret_key =
 `
+
+func (b *BigBlueButton) Init() error {
+	if b.SecretKey == "" {
+		return fmt.Errorf("BigBlueButton secret key is required")
+	}
+
+	if b.PathPrefix == "" {
+		b.PathPrefix = defaultPathPrefix
+	}
+
+	b.GetMeetingsURL = b.getURL("getMeetings")
+	b.GetRecordingsURL = b.getURL("getRecordings")
+	return nil
+}
 
 func (b *BigBlueButton) SampleConfig() string {
 	return bbbConfig
@@ -34,10 +55,6 @@ func (b *BigBlueButton) Description() string {
 }
 
 func (b *BigBlueButton) Gather(acc telegraf.Accumulator) error {
-	if b.SecretKey == "" {
-		return fmt.Errorf("BigBlueButton secret key is required")
-	}
-
 	if err := b.gatherMeetings(acc); err != nil {
 		return err
 	}
@@ -45,8 +62,38 @@ func (b *BigBlueButton) Gather(acc telegraf.Accumulator) error {
 	return b.gatherRecordings(acc)
 }
 
+// BigBlueButton uses an authentication based on a SHA1 checksum processed from api call name and server secret key
+func (b *BigBlueButton) checksum(apiCallName string) []byte {
+	hash := sha1.New()
+	hash.Write([]byte(fmt.Sprintf("%s%s", apiCallName, b.SecretKey)))
+	return hash.Sum(nil)
+}
+
+func (b *BigBlueButton) getURL(apiCallName string) string {
+	endpoint := fmt.Sprintf("%s/api/%s", b.PathPrefix, apiCallName)
+	return fmt.Sprintf("%s%s?checksum=%x", b.URL, endpoint, b.checksum(apiCallName))
+}
+
+// Call BBB server api
+func (b *BigBlueButton) api(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+
+	if err != nil || resp.StatusCode != 200 {
+		return nil, fmt.Errorf("error getting bbb metrics: %s status %d", err, resp.StatusCode)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
+
 func (b *BigBlueButton) gatherMeetings(acc telegraf.Accumulator) error {
-	body, err := b.GetMeetings()
+	body, err := b.api(b.GetMeetingsURL)
 	if err != nil {
 		return err
 	}
@@ -86,7 +133,7 @@ func (b *BigBlueButton) gatherMeetings(acc telegraf.Accumulator) error {
 }
 
 func (b *BigBlueButton) gatherRecordings(acc telegraf.Accumulator) error {
-	body, err := b.GetRecordings()
+	body, err := b.api(b.GetRecordingsURL)
 	if err != nil {
 		return err
 	}
