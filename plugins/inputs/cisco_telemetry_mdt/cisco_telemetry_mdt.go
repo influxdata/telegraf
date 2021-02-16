@@ -240,7 +240,7 @@ func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, valu
 	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitPower() error {
+func (c *CiscoTelemetryMDT) initPower() {
 	key := "show environment power"
 	c.nxpathMap[key] = make(map[string]string, 100)
 	c.nxpathMap[key]["reserve_sup"] = "string"
@@ -328,27 +328,21 @@ func (c *CiscoTelemetryMDT) InitPower() error {
 	c.nxpathMap[key]["actual_input"] = "string"
 	c.nxpathMap[key]["outlet_temp"] = "string"
 	c.nxpathMap[key]["tot_capa"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitMemPhys() error {
+func (c *CiscoTelemetryMDT) initMemPhys() {
 	key := "show processes memory physical"
 	c.nxpathMap[key] = make(map[string]string, 1)
 	c.nxpathMap[key]["processname"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitBgpV4() error {
+func (c *CiscoTelemetryMDT) initBgpV4() {
 	key := "show bgp ipv4 unicast"
 	c.nxpathMap[key] = make(map[string]string, 1)
 	c.nxpathMap[key]["aspath"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitCpu() error {
+func (c *CiscoTelemetryMDT) initCpu() {
 	key := "show processes cpu"
 	c.nxpathMap[key] = make(map[string]string, 5)
 	c.nxpathMap[key]["kernel_percent"] = "float"
@@ -356,11 +350,9 @@ func (c *CiscoTelemetryMDT) InitCpu() error {
 	c.nxpathMap[key]["process"] = "string"
 	c.nxpathMap[key]["user_percent"] = "float"
 	c.nxpathMap[key]["onesec"] = "float"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitResources() error {
+func (c *CiscoTelemetryMDT) initResources() {
 	key := "show system resources"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["cpu_state_user"] = "float"
@@ -373,11 +365,9 @@ func (c *CiscoTelemetryMDT) InitResources() error {
 	c.nxpathMap[key]["cpu_state_idle"] = "float"
 	c.nxpathMap[key]["load_avg_5min"] = "float"
 	c.nxpathMap[key]["cpu_state_kernel"] = "float"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitPtpCorrection() error {
+func (c *CiscoTelemetryMDT) initPtpCorrection() {
 	key := "show ptp corrections"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["sup-time"] = "string"
@@ -385,11 +375,9 @@ func (c *CiscoTelemetryMDT) InitPtpCorrection() error {
 	c.nxpathMap[key]["ptp-header"] = "string"
 	c.nxpathMap[key]["intf-name"] = "string"
 	c.nxpathMap[key]["ptp-end"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitTrans() error {
+func (c *CiscoTelemetryMDT) initTrans() {
 	key := "show interface transceiver details"
 	c.nxpathMap[key] = make(map[string]string, 100)
 	c.nxpathMap[key]["uncorrect_ber_alrm_hi"] = "string"
@@ -517,11 +505,9 @@ func (c *CiscoTelemetryMDT) InitTrans() error {
 	c.nxpathMap[key]["pre_fec_ber_acc_warn_hi"] = "string"
 	c.nxpathMap[key]["laser_freq_warn_hi"] = "float"
 	c.nxpathMap[key]["uncorrect_ber_max"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitIgmp() error {
+func (c *CiscoTelemetryMDT) initIgmp() {
 	key := "show ip igmp groups vrf all"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["group-type"] = "string"
@@ -531,11 +517,9 @@ func (c *CiscoTelemetryMDT) InitIgmp() error {
 	c.nxpathMap[key]["expires"] = "string"
 	c.nxpathMap[key]["group-addr"] = "string"
 	c.nxpathMap[key]["uptime"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitVrfAll() error {
+func (c *CiscoTelemetryMDT) initVrfAll() {
 	key := "show ip igmp interface vrf all"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["if-name"] = "string"
@@ -551,11 +535,9 @@ func (c *CiscoTelemetryMDT) InitVrfAll() error {
 	c.nxpathMap[key]["if-status"] = "string"
 	c.nxpathMap[key]["un-solicited"] = "string"
 	c.nxpathMap[key]["ip-sum"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitIgmpSnoop() error {
+func (c *CiscoTelemetryMDT) initIgmpSnoop() {
 	key := "show ip igmp snooping"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["repsup"] = "string"
@@ -577,11 +559,9 @@ func (c *CiscoTelemetryMDT) InitIgmpSnoop() error {
 	c.nxpathMap[key]["reportfloodenable"] = "string"
 	c.nxpathMap[key]["snoop-on"] = "string"
 	c.nxpathMap[key]["glinklocalgrpsup"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitIgmpSnoopGroups() error {
+func (c *CiscoTelemetryMDT) initIgmpSnoopGroups() {
 	key := "show ip igmp snooping groups"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["src-uptime"] = "string"
@@ -595,11 +575,9 @@ func (c *CiscoTelemetryMDT) InitIgmpSnoopGroups() error {
 	c.nxpathMap[key]["uptime"] = "string"
 	c.nxpathMap[key]["src-expires"] = "string"
 	c.nxpathMap[key]["addr"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitIgmpSnoopGroupDetails() error {
+func (c *CiscoTelemetryMDT) initIgmpSnoopGroupDetails() {
 	key := "show ip igmp snooping groups detail"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["src-uptime"] = "string"
@@ -613,11 +591,9 @@ func (c *CiscoTelemetryMDT) InitIgmpSnoopGroupDetails() error {
 	c.nxpathMap[key]["uptime"] = "string"
 	c.nxpathMap[key]["src-expires"] = "string"
 	c.nxpathMap[key]["addr"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitIgmpSnoopGroupsSumm() error {
+func (c *CiscoTelemetryMDT) initIgmpSnoopGroupsSumm() {
 	key := "show ip igmp snooping groups summary"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["src-uptime"] = "string"
@@ -631,28 +607,22 @@ func (c *CiscoTelemetryMDT) InitIgmpSnoopGroupsSumm() error {
 	c.nxpathMap[key]["uptime"] = "string"
 	c.nxpathMap[key]["src-expires"] = "string"
 	c.nxpathMap[key]["addr"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitMrouter() error {
+func (c *CiscoTelemetryMDT) initMrouter() {
 	key := "show ip igmp snooping mrouter"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["uptime"] = "string"
 	c.nxpathMap[key]["expires"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitSnoopStats() error {
+func (c *CiscoTelemetryMDT) initSnoopStats() {
 	key := "show ip igmp snooping statistics"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["ut"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitPimInterface() error {
+func (c *CiscoTelemetryMDT) initPimInterface() {
 	key := "show ip pim interface vrf all"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["if-is-border"] = "string"
@@ -674,11 +644,9 @@ func (c *CiscoTelemetryMDT) InitPimInterface() error {
 	c.nxpathMap[key]["if-addr-summary"] = "string"
 	c.nxpathMap[key]["if-dr"] = "string"
 	c.nxpathMap[key]["jp-in-policy-name"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitPimNeigh() error {
+func (c *CiscoTelemetryMDT) initPimNeigh() {
 	key := "show ip pim neighbor vrf all"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["longest-hello-intvl"] = "string"
@@ -686,11 +654,9 @@ func (c *CiscoTelemetryMDT) InitPimNeigh() error {
 	c.nxpathMap[key]["uptime"] = "string"
 	c.nxpathMap[key]["expires"] = "string"
 	c.nxpathMap[key]["bfd-state"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitPimRoute() error {
+func (c *CiscoTelemetryMDT) initPimRoute() {
 	key := "show ip pim route vrf all"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["rpf-nbr-1"] = "string"
@@ -709,11 +675,9 @@ func (c *CiscoTelemetryMDT) InitPimRoute() error {
 	c.nxpathMap[key]["sgrexpire"] = "string"
 	c.nxpathMap[key]["timeout-bf-str"] = "string"
 	c.nxpathMap[key]["timeleft"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitPimRp() error {
+func (c *CiscoTelemetryMDT) initPimRp() {
 	key := "show ip pim rp vrf all"
 	c.nxpathMap[key] = make(map[string]string, 20)
 	c.nxpathMap[key]["is-bsr-forward-only"] = "string"
@@ -750,36 +714,28 @@ func (c *CiscoTelemetryMDT) InitPimRp() error {
 	c.nxpathMap[key]["grange-grp"] = "string"
 	c.nxpathMap[key]["rp-addr"] = "string"
 	c.nxpathMap[key]["anycast-rp-addr"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitPimStats() error {
+func (c *CiscoTelemetryMDT) initPimStats() {
 	key := "show ip pim statistics vrf all"
 	c.nxpathMap[key] = make(map[string]string, 1)
 	c.nxpathMap[key]["vrf-name"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitIntfBrief() error {
+func (c *CiscoTelemetryMDT) initIntfBrief() {
 	key := "show interface brief"
 	c.nxpathMap[key] = make(map[string]string, 2)
 	c.nxpathMap[key]["speed"] = "string"
 	c.nxpathMap[key]["vlan"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitPimVrf() error {
+func (c *CiscoTelemetryMDT) initPimVrf() {
 	key := "show ip pim vrf all"
 	c.nxpathMap[key] = make(map[string]string, 1)
 	c.nxpathMap[key]["table-id"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitIpMroute() error {
+func (c *CiscoTelemetryMDT) initIpMroute() {
 	key := "show ip mroute summary vrf all"
 	c.nxpathMap[key] = make(map[string]string, 40)
 	c.nxpathMap[key]["nat-mode"] = "string"
@@ -819,11 +775,9 @@ func (c *CiscoTelemetryMDT) InitIpMroute() error {
 	c.nxpathMap[key]["stale-oif"] = "string"
 	c.nxpathMap[key]["core-interest"] = "string"
 	c.nxpathMap[key]["oif-list-bitfield"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitIpv6Mroute() error {
+func (c *CiscoTelemetryMDT) initIpv6Mroute() {
 	key := "show ipv6 mroute summary vrf all"
 	c.nxpathMap[key] = make(map[string]string, 40)
 	c.nxpathMap[key]["nat-mode"] = "string"
@@ -863,11 +817,9 @@ func (c *CiscoTelemetryMDT) InitIpv6Mroute() error {
 	c.nxpathMap[key]["stale-oif"] = "string"
 	c.nxpathMap[key]["core-interest"] = "string"
 	c.nxpathMap[key]["oif-list-bitfield"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitVpc() error {
+func (c *CiscoTelemetryMDT) initVpc() {
 	key := "sys/vpc"
 	c.nxpathMap[key] = make(map[string]string, 5)
 	c.nxpathMap[key]["type2CompatQualStr"] = "string"
@@ -875,11 +827,9 @@ func (c *CiscoTelemetryMDT) InitVpc() error {
 	c.nxpathMap[key]["name"] = "string"
 	c.nxpathMap[key]["issuFromVer"] = "string"
 	c.nxpathMap[key]["issuToVer"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitBgp() error {
+func (c *CiscoTelemetryMDT) initBgp() {
 	key := "sys/bgp"
 	c.nxpathMap[key] = make(map[string]string, 18)
 	c.nxpathMap[key]["dynRtMap"] = "string"
@@ -900,11 +850,9 @@ func (c *CiscoTelemetryMDT) InitBgp() error {
 	c.nxpathMap[key]["localAsn"] = "string"
 	c.nxpathMap[key]["name"] = "string"
 	c.nxpathMap[key]["defOrgRtMap"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitCh() error {
+func (c *CiscoTelemetryMDT) initCh() {
 	key := "sys/ch"
 	c.nxpathMap[key] = make(map[string]string, 10)
 	c.nxpathMap[key]["fanName"] = "string"
@@ -916,11 +864,9 @@ func (c *CiscoTelemetryMDT) InitCh() error {
 	c.nxpathMap[key]["hardwareAlarm"] = "string"
 	c.nxpathMap[key]["unit"] = "string"
 	c.nxpathMap[key]["hwVer"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitIntf() error {
+func (c *CiscoTelemetryMDT) initIntf() {
 	key := "sys/intf"
 	c.nxpathMap[key] = make(map[string]string, 10)
 	c.nxpathMap[key]["descr"] = "string"
@@ -931,11 +877,9 @@ func (c *CiscoTelemetryMDT) InitIntf() error {
 	c.nxpathMap[key]["operFECMode"] = "string"
 	c.nxpathMap[key]["operBitset"] = "string"
 	c.nxpathMap[key]["mdix"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitProcsys() error {
+func (c *CiscoTelemetryMDT) initProcsys() {
 	key := "sys/procsys"
 	c.nxpathMap[key] = make(map[string]string, 10)
 	c.nxpathMap[key]["name"] = "string"
@@ -943,31 +887,25 @@ func (c *CiscoTelemetryMDT) InitProcsys() error {
 	c.nxpathMap[key]["upTs"] = "string"
 	c.nxpathMap[key]["interval"] = "string"
 	c.nxpathMap[key]["memstatus"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitProc() error {
+func (c *CiscoTelemetryMDT) initProc() {
 	key := "sys/proc"
 	c.nxpathMap[key] = make(map[string]string, 2)
 	c.nxpathMap[key]["processName"] = "string"
 	c.nxpathMap[key]["procArg"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitBfd() error {
+func (c *CiscoTelemetryMDT) initBfd() {
 	key := "sys/bfd/inst"
 	c.nxpathMap[key] = make(map[string]string, 4)
 	c.nxpathMap[key]["descr"] = "string"
 	c.nxpathMap[key]["vrfName"] = "string"
 	c.nxpathMap[key]["name"] = "string"
 	c.nxpathMap[key]["name"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitLldp() error {
+func (c *CiscoTelemetryMDT) initLldp() {
 	key := "sys/lldp"
 	c.nxpathMap[key] = make(map[string]string, 7)
 	c.nxpathMap[key]["sysDesc"] = "string"
@@ -977,47 +915,43 @@ func (c *CiscoTelemetryMDT) InitLldp() error {
 	c.nxpathMap[key]["sysName"] = "string"
 	c.nxpathMap[key]["name"] = "string"
 	c.nxpathMap[key]["id"] = "string"
-
-	return nil
 }
 
-func (c *CiscoTelemetryMDT) InitDb() error {
+func (c *CiscoTelemetryMDT) initDb() {
 	c.nxpathMap = make(map[string]map[string]string, 200)
 
-	c.InitPower()
-	c.InitMemPhys()
-	c.InitBgpV4()
-	c.InitCpu()
-	c.InitResources()
-	c.InitPtpCorrection()
-	c.InitTrans()
-	c.InitIgmp()
-	c.InitVrfAll()
-	c.InitIgmpSnoop()
-	c.InitIgmpSnoopGroups()
-	c.InitIgmpSnoopGroupDetails()
-	c.InitIgmpSnoopGroupsSumm()
-	c.InitMrouter()
-	c.InitSnoopStats()
-	c.InitPimInterface()
-	c.InitPimNeigh()
-	c.InitPimRoute()
-	c.InitPimRp()
-	c.InitPimStats()
-	c.InitIntfBrief()
-	c.InitPimVrf()
-	c.InitIpMroute()
-	c.InitIpv6Mroute()
-	c.InitVpc()
-	c.InitBgp()
-	c.InitCh()
-	c.InitIntf()
-	c.InitProcsys()
-	c.InitProc()
-	c.InitBfd()
-	c.InitLldp()
-
-	return nil
+	c.initPower()
+	c.initMemPhys()
+	c.initBgpV4()
+	c.initCpu()
+	c.initResources()
+	c.initPtpCorrection()
+	c.initTrans()
+	c.initIgmp()
+	c.initVrfAll()
+	c.initIgmpSnoop()
+	c.initIgmpSnoopGroups()
+	c.initIgmpSnoopGroupDetails()
+	c.initIgmpSnoopGroupsSumm()
+	c.initMrouter()
+	c.initSnoopStats()
+	c.initPimInterface()
+	c.initPimNeigh()
+	c.initPimRoute()
+	c.initPimRp()
+	c.initPimStats()
+	c.initIntfBrief()
+	c.initPimVrf()
+	c.initIpMroute()
+	c.initIpv6Mroute()
+	c.initVpc()
+	c.initBgp()
+	c.initCh()
+	c.initIntf()
+	c.initProcsys()
+	c.initProc()
+	c.initBfd()
+	c.initLldp()
 }
 
 // Start the Cisco MDT service
@@ -1041,7 +975,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	for alias, path := range c.Aliases {
 		c.aliases[path] = alias
 	}
-	c.InitDb()
+	c.initDb()
 
 	c.dmes = make(map[string]string, len(c.Dmes))
 	for dme, path := range c.Dmes {
