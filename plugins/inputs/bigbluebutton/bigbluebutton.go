@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -21,6 +22,8 @@ type BigBlueButton struct {
 	Password         string `toml:"password"`
 	getMeetingsURL   string
 	getRecordingsURL string
+
+	Timeout internal.Duration `toml:"timeout"`
 
 	tls.ClientConfig
 	proxy.HTTPProxy
@@ -52,6 +55,9 @@ var sampleConfig = `
 	# tls_key = "/etc/telegraf/key.pem"
 	## Use TLS but skip chain & host verification
 	# insecure_skip_verify = false
+
+	## Amount of time allowed to complete the HTTP request
+	# timeout = "5s"
 `
 
 func (b *BigBlueButton) Init() error {
@@ -83,6 +89,7 @@ func (b *BigBlueButton) Init() error {
 
 	b.client = &http.Client{
 		Transport: transport,
+		Timeout:   b.Timeout.Duration,
 	}
 
 	return nil
@@ -150,9 +157,9 @@ func (b *BigBlueButton) gatherMeetings(acc telegraf.Accumulator) error {
 	}
 
 	var response MeetingsResponse
-	marshalErr := xml.Unmarshal(body, &response)
-	if marshalErr != nil {
-		return marshalErr
+	err = xml.Unmarshal(body, &response)
+	if err != nil {
+		return err
 	}
 
 	record := map[string]uint64{
@@ -190,9 +197,9 @@ func (b *BigBlueButton) gatherRecordings(acc telegraf.Accumulator) error {
 	}
 
 	var response RecordingsResponse
-	marshalErr := xml.Unmarshal(body, &response)
-	if marshalErr != nil {
-		return marshalErr
+	err = xml.Unmarshal(body, &response)
+	if err != nil {
+		return err
 	}
 
 	record := map[string]uint64{

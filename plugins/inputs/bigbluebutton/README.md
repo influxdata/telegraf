@@ -28,6 +28,9 @@ The BigBlueButton Input Plugin gathers metrics from [BigBlueButton](https://bigb
 	# tls_key = "/etc/telegraf/key.pem"
 	## Use TLS but skip chain & host verification
 	# insecure_skip_verify = false
+
+	## Amount of time allowed to complete the HTTP request
+	# timeout = "5s"
 ```
 
 ## Metrics
