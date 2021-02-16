@@ -109,6 +109,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/neptune_apex"
 	_ "github.com/influxdata/telegraf/plugins/inputs/net"
 	_ "github.com/influxdata/telegraf/plugins/inputs/net_response"
+	_ "github.com/influxdata/telegraf/plugins/inputs/nfsstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nginx"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nginx_plus"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nginx_plus_api"
