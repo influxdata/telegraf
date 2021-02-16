@@ -158,7 +158,7 @@ func TestPartitionDatums(t *testing.T) {
 		Value:      aws.Float64(1),
 	}
 
-	var zeroDatum []*cloudwatch.MetricDatum
+	zeroDatum := []*cloudwatch.MetricDatum{}
 	oneDatum := []*cloudwatch.MetricDatum{&testDatum}
 	twoDatum := []*cloudwatch.MetricDatum{&testDatum, &testDatum}
 	threeDatum := []*cloudwatch.MetricDatum{&testDatum, &testDatum, &testDatum}

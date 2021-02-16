@@ -65,7 +65,7 @@ func (d *Datadog) Connect() error {
 
 func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	ts := TimeSeries{}
-	var tempSeries []*Metric
+	tempSeries := []*Metric{}
 	metricCounter := 0
 
 	for _, m := range metrics {

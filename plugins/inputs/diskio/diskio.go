@@ -93,7 +93,7 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	var devices []string
+	devices := []string{}
 	if d.deviceFilter == nil {
 		devices = d.Devices
 	}

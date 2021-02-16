@@ -192,7 +192,7 @@ func (s *Solr) filterCores(serverCores []string) []string {
 
 // Return list of cores from solr server
 func getCoresFromStatus(adminCoresStatus *AdminCoresStatus) []string {
-	var serverCores []string
+	serverCores := []string{}
 	for coreName := range adminCoresStatus.Status {
 		serverCores = append(serverCores, coreName)
 	}

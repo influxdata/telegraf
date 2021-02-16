@@ -92,7 +92,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 }
 
 func buildEvents(p telegraf.Metric, s string) []*raidman.Event {
-	var events []*raidman.Event
+	events := []*raidman.Event{}
 	for fieldName, value := range p.Fields() {
 		host, ok := p.Tags()["host"]
 		if !ok {
@@ -123,12 +123,12 @@ func buildEvents(p telegraf.Metric, s string) []*raidman.Event {
 }
 
 func serviceName(s string, n string, t map[string]string, f string) string {
-	var serviceStrings []string
+	serviceStrings := []string{}
 	serviceStrings = append(serviceStrings, n)
 
 	// we'll skip the 'host' tag
-	var tagStrings []string
-	var tagNames []string
+	tagStrings := []string{}
+	tagNames := []string{}
 
 	for tagName := range t {
 		tagNames = append(tagNames, tagName)

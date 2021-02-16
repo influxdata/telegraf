@@ -531,7 +531,7 @@ func (s *Stackdriver) generatetimeSeriesConfs(
 		return s.timeSeriesConfCache.TimeSeriesConfs, nil
 	}
 
-	var ret []*timeSeriesConf
+	ret := []*timeSeriesConf{}
 	req := &monitoringpb.ListMetricDescriptorsRequest{
 		Name: monitoring.MetricProjectPath(s.Project),
 	}

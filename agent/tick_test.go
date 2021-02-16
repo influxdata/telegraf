@@ -110,7 +110,7 @@ func TestUnalignedTicker(t *testing.T) {
 		time.Unix(61, 0).UTC(),
 	}
 
-	var actual []time.Time
+	actual := []time.Time{}
 	for !clock.Now().After(until) {
 		select {
 		case tm := <-ticker.Elapsed():
@@ -145,7 +145,7 @@ func TestRollingTicker(t *testing.T) {
 		time.Unix(61, 0).UTC(),
 	}
 
-	var actual []time.Time
+	actual := []time.Time{}
 	for !clock.Now().After(until) {
 		select {
 		case tm := <-ticker.Elapsed():

@@ -206,7 +206,7 @@ func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
 		return err
 	}
 
-	var addrs []uint16
+	addrs := []uint16{}
 	for _, field := range fields {
 		for _, a := range field.Address {
 			addrs = append(addrs, a)
@@ -390,7 +390,7 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 
 func removeDuplicates(elements []uint16) []uint16 {
 	encountered := map[uint16]bool{}
-	var result []uint16
+	result := []uint16{}
 
 	for v := range elements {
 		if encountered[elements[v]] {

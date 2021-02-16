@@ -216,7 +216,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	wg := sync.WaitGroup{}
 	rLock := sync.Mutex{}
 
-	var results []*cloudwatch.MetricDataResult
+	results := []*cloudwatch.MetricDataResult{}
 
 	// 500 is the maximum number of metric data queries a `GetMetricData` request can contain.
 	batchSize := 500
@@ -296,12 +296,12 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 		return c.metricCache.metrics, nil
 	}
 
-	var fMetrics []filteredMetric
+	fMetrics := []filteredMetric{}
 
 	// check for provided metric filter
 	if c.Metrics != nil {
 		for _, m := range c.Metrics {
-			var metrics []*cloudwatch.Metric
+			metrics := []*cloudwatch.Metric{}
 			if !hasWildcard(m.Dimensions) {
 				dimensions := make([]*cloudwatch.Dimension, len(m.Dimensions))
 				for k, d := range m.Dimensions {
@@ -374,7 +374,8 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 
 // fetchNamespaceMetrics retrieves available metrics for a given CloudWatch namespace.
 func (c *CloudWatch) fetchNamespaceMetrics() ([]*cloudwatch.Metric, error) {
-	var metrics []*cloudwatch.Metric
+	metrics := []*cloudwatch.Metric{}
+
 	var token *string
 	var params *cloudwatch.ListMetricsInput
 	var recentlyActive *string
@@ -431,7 +432,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 
 	c.queryDimensions = map[string]*map[string]string{}
 
-	var dataQueries []*cloudwatch.MetricDataQuery
+	dataQueries := []*cloudwatch.MetricDataQuery{}
 	for i, filtered := range filteredMetrics {
 		for j, metric := range filtered.metrics {
 			id := strconv.Itoa(j) + "_" + strconv.Itoa(i)
@@ -521,7 +522,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 func (c *CloudWatch) gatherMetrics(
 	params *cloudwatch.GetMetricDataInput,
 ) ([]*cloudwatch.MetricDataResult, error) {
-	var results []*cloudwatch.MetricDataResult
+	results := []*cloudwatch.MetricDataResult{}
 
 	for {
 		resp, err := c.client.GetMetricData(params)

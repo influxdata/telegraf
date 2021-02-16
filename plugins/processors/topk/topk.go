@@ -276,7 +276,7 @@ func (t *TopK) push() []telegraf.Metric {
 	}
 
 	// The return value that will hold the returned metrics
-	var ret []telegraf.Metric
+	var ret = make([]telegraf.Metric, 0, 0)
 	// Get the top K metrics for each field and add them to the return value
 	addedKeys := make(map[string]bool)
 	for _, field := range t.Fields {
