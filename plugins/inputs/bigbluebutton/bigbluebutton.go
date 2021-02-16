@@ -8,6 +8,8 @@ import (
 	"net/http"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -17,6 +19,10 @@ type BigBlueButton struct {
 	SecretKey        string `toml:"secret_key"`
 	getMeetingsURL   string
 	getRecordingsURL string
+
+	tls.ClientConfig
+	proxy.HTTPProxy
+	client *http.Client
 }
 
 var defaultPathPrefix = "/bigbluebutton"
@@ -30,6 +36,16 @@ var bbbConfig = `
 
 	## Required BigBlueButton secret key
 	# secret_key =
+
+	## Optional HTTP Proxy support
+	# http_proxy_url = ""
+
+	## Optional TLS Config
+	# tls_ca = "/etc/telegraf/ca.pem"
+	# tls_cert = "/etc/telegraf/cert.pem"
+	# tls_key = "/etc/telegraf/key.pem"
+	## Use TLS but skip chain & host verification
+	# insecure_skip_verify = false
 `
 
 func (b *BigBlueButton) Init() error {
@@ -43,6 +59,26 @@ func (b *BigBlueButton) Init() error {
 
 	b.getMeetingsURL = b.getURL("getMeetings")
 	b.getRecordingsURL = b.getURL("getRecordings")
+
+	tlsCfg, err := b.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	proxy, err := b.HTTPProxy.Proxy()
+	if err != nil {
+		return err
+	}
+
+	transport := &http.Transport{
+		TLSClientConfig: tlsCfg,
+		Proxy:           proxy,
+	}
+
+	b.client = &http.Client{
+		Transport: transport,
+	}
+
 	return nil
 }
 
@@ -76,7 +112,7 @@ func (b *BigBlueButton) getURL(apiCallName string) string {
 
 // Call BBB server api
 func (b *BigBlueButton) api(url string) ([]byte, error) {
-	resp, err := http.Get(url)
+	resp, err := b.client.Get(url)
 
 	if err != nil || resp.StatusCode != 200 {
 		return nil, fmt.Errorf("error getting bbb metrics: %s status %d", err, resp.StatusCode)
