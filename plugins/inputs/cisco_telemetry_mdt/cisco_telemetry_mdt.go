@@ -1365,7 +1365,6 @@ func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telem
 func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string, path string, tags map[string]string, timestamp time.Time) {
 	// DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
 	var nxAttributes *telemetry.TelemetryField
-	nxAttributes = field
 	isDme := strings.Contains(path, "sys/")
 	if path == "rib" {
 		//handle native data path rib
