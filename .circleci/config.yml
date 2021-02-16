@@ -71,7 +71,7 @@ jobs:
       - checkout
       - restore_cache:
           key: go-mod-v1-{{ checksum "go.sum" }}
-      - run: go install github.com/mgechev/revive
+      - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint
       - run: make lint
   deps:
     executor: go-1_15

@@ -75,6 +75,7 @@ help:
 	@echo '  test       - run short unit tests'
 	@echo '  fmt        - format source files'
 	@echo '  tidy       - tidy go modules'
+	@echo '  lint       - run linter'
 	@echo '  check-deps - check docs/LICENSE_OF_DEPENDENCIES.md'
 	@echo '  clean      - delete build artifacts'
 	@echo ''
@@ -132,12 +133,12 @@ vet:
 
 .PHONY: lint
 lint:
-ifeq (, $(shell which revive))
-	$(info revive can't be found, please install it: https://github.com/mgechev/revive#installation)
+ifeq (, $(shell which golangci-lint))
+	$(info golangci-lint can't be found, please install it: https://golangci-lint.run/usage/install/)
 	exit 1
 endif
 
-	revive -config revivelint_config.toml -formatter friendly ./...
+	golangci-lint run --issues-exit-code 0
 
 .PHONY: tidy
 tidy:

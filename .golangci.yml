@@ -1,0 +1,9 @@
+linters:
+  enable:
+    - revive
+
+run:
+  skip-dirs:
+    - scripts
+    - docs
+    - etc
