@@ -90,24 +90,25 @@ func (d *Derivative) Description() string {
 
 func (d *Derivative) Add(in telegraf.Metric) {
 	id := in.HashID()
-	if current, ok := d.cache[id]; !ok {
+	current, ok := d.cache[id]
+	if !ok {
 		// hit an uncached metric, create caches for first time:
 		d.cache[id] = newAggregate(in)
-	} else {
-		if current.first.time.After(in.Time()) {
-			current.first = newEvent(in)
-			current.rollOver = 0
-		} else if current.first.time.Equal(in.Time()) {
-			upsertConvertedFields(in.Fields(), current.first.fields)
-			current.rollOver = 0
-		}
-		if current.last.time.Before(in.Time()) {
-			current.last = newEvent(in)
-			current.rollOver = 0
-		} else if current.last.time.Equal(in.Time()) {
-			upsertConvertedFields(in.Fields(), current.last.fields)
-			current.rollOver = 0
-		}
+		return
+	}
+	if current.first.time.After(in.Time()) {
+		current.first = newEvent(in)
+		current.rollOver = 0
+	} else if current.first.time.Equal(in.Time()) {
+		upsertConvertedFields(in.Fields(), current.first.fields)
+		current.rollOver = 0
+	}
+	if current.last.time.Before(in.Time()) {
+		current.last = newEvent(in)
+		current.rollOver = 0
+	} else if current.last.time.Equal(in.Time()) {
+		upsertConvertedFields(in.Fields(), current.last.fields)
+		current.rollOver = 0
 	}
 }
 
