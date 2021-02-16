@@ -3,11 +3,10 @@ package globpath
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
+	"github.com/bmatcuk/doublestar/v3"
 	"github.com/gobwas/glob"
-	"github.com/karrick/godirwalk"
 )
 
 type GlobPath struct {
@@ -46,45 +45,13 @@ func Compile(path string) (*GlobPath, error) {
 // If it's a static path, returns path.
 // All returned path will have the host platform separator.
 func (g *GlobPath) Match() []string {
+	// This string replacement is for backwards compatibility support
+	// The original implemention allowed **.txt but the double star package requires **/**.txt
+	g.path = strings.ReplaceAll(g.path, "**/**", "**")
+	g.path = strings.ReplaceAll(g.path, "**", "**/**")
 
-	re := regexp.MustCompile(`([^\\]?)(\[!)`)
-	g.path = re.ReplaceAllString(g.path, "$1[^")
-	if !g.hasMeta {
-		return []string{g.path}
-	}
-	if !g.HasSuperMeta {
-		files, _ := filepath.Glob(g.path)
-		return files
-	}
-	roots, err := filepath.Glob(g.rootGlob)
-	if err != nil {
-		return []string{}
-	}
-	out := []string{}
-	walkfn := func(path string, _ *godirwalk.Dirent) error {
-		if g.g.Match(path) {
-			out = append(out, path)
-		}
-		return nil
-
-	}
-	for _, root := range roots {
-		fileinfo, err := os.Stat(root)
-		if err != nil {
-			continue
-		}
-		if !fileinfo.IsDir() {
-			if g.MatchString(root) {
-				out = append(out, root)
-			}
-			continue
-		}
-		godirwalk.Walk(root, &godirwalk.Options{
-			Callback: walkfn,
-			Unsorted: true,
-		})
-	}
-	return out
+	files, _ := doublestar.Glob(g.path)
+	return files
 }
 
 // MatchString tests the path string against the glob.  The path should contain
