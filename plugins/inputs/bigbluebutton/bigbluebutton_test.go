@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -49,9 +50,8 @@ func getHTTPServer() *httptest.Server {
 
 func getPlugin(url string) BigBlueButton {
 	return BigBlueButton{
-		URL:         url,
-		APIEndpoint: "/bigbluebutton/api/",
-		SecretKey:   "OxShRR1sT8FrJZq",
+		URL:       url,
+		SecretKey: "OxShRR1sT8FrJZq",
 	}
 }
 
@@ -60,6 +60,7 @@ func TestBigBlueButton(t *testing.T) {
 	defer s.Close()
 
 	plugin := getPlugin(s.URL)
+	plugin.Init()
 	acc := &testutil.Accumulator{}
 	plugin.Gather(acc)
 
@@ -93,6 +94,7 @@ func TestBigBlueButtonEmptyState(t *testing.T) {
 	defer s.Close()
 
 	plugin := getPlugin(s.URL)
+	plugin.Init()
 	acc := &testutil.Accumulator{}
 	plugin.Gather(acc)
 
@@ -113,9 +115,13 @@ func TestBigBlueButtonEmptyState(t *testing.T) {
 
 	tags := make(map[string]string)
 
-	require.Equal(t, true, acc.HasMeasurement("bigbluebutton_meetings"))
-	acc.AssertContainsTaggedFields(t, "bigbluebutton_meetings", toStringMapInterface(meetingsRecord), tags)
+	m, mOk := acc.Get("bigbluebutton_meetings")
+	require.True(t, mOk)
+	mExpected := testutil.MustMetric("bigbluebutton_meetings", tags, toStringMapInterface(meetingsRecord), time.Unix(0, 0))
+	testutil.RequireMetricEqual(t, mExpected, testutil.FromTestMetric(m), testutil.IgnoreTime())
 
-	require.Equal(t, true, acc.HasMeasurement("bigbluebutton_recordings"))
-	acc.AssertContainsTaggedFields(t, "bigbluebutton_recordings", toStringMapInterface(recordingsRecord), tags)
+	r, rOk := acc.Get("bigbluebutton_recordings")
+	require.True(t, rOk)
+	rExpected := testutil.MustMetric("bigbluebutton_recordings", tags, toStringMapInterface(recordingsRecord), time.Unix(0, 0))
+	testutil.RequireMetricEqual(t, rExpected, testutil.FromTestMetric(r), testutil.IgnoreTime())
 }
