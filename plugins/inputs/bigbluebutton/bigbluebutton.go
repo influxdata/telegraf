@@ -15,8 +15,8 @@ type BigBlueButton struct {
 	URL              string `toml:"url"`
 	PathPrefix       string `toml:"path_prefix"`
 	SecretKey        string `toml:"secret_key"`
-	GetMeetingsURL   string
-	GetRecordingsURL string
+	getMeetingsURL   string
+	getRecordingsURL string
 }
 
 var defaultPathPrefix = "/bigbluebutton"
@@ -41,8 +41,8 @@ func (b *BigBlueButton) Init() error {
 		b.PathPrefix = defaultPathPrefix
 	}
 
-	b.GetMeetingsURL = b.getURL("getMeetings")
-	b.GetRecordingsURL = b.getURL("getRecordings")
+	b.getMeetingsURL = b.getURL("getMeetings")
+	b.getRecordingsURL = b.getURL("getRecordings")
 	return nil
 }
 
@@ -93,7 +93,7 @@ func (b *BigBlueButton) api(url string) ([]byte, error) {
 }
 
 func (b *BigBlueButton) gatherMeetings(acc telegraf.Accumulator) error {
-	body, err := b.api(b.GetMeetingsURL)
+	body, err := b.api(b.getMeetingsURL)
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func (b *BigBlueButton) gatherMeetings(acc telegraf.Accumulator) error {
 }
 
 func (b *BigBlueButton) gatherRecordings(acc telegraf.Accumulator) error {
-	body, err := b.api(b.GetRecordingsURL)
+	body, err := b.api(b.getRecordingsURL)
 	if err != nil {
 		return err
 	}
