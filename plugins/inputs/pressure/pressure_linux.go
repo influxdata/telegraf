@@ -157,4 +157,3 @@ func parsePressureData(line []byte) *pressureFields {
 		total:  tot,
 	}
 }
-
