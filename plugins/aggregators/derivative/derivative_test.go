@@ -116,7 +116,7 @@ func TestTwoFullEventsWithoutParameter(t *testing.T) {
 	acc.AssertContainsFields(t,
 		"One Field",
 		map[string]interface{}{
-			"value_by_time": float64(5),
+			"value_rate": float64(5),
 		},
 	)
 
@@ -293,8 +293,8 @@ func TestMergesDifferenMetricsWithSameHash(t *testing.T) {
 	derivative.Push(&acc)
 
 	expectedFields := map[string]interface{}{
-		"field1_by_time": 10.0,
-		"field2_by_time": 5.0,
+		"field1_rate": 10.0,
+		"field2_rate": 5.0,
 	}
 	expectedTags := map[string]string{
 		"state": "full",
@@ -383,7 +383,7 @@ func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
 	derivative.Reset()
 
 	acc.AssertContainsFields(t, "One Field", map[string]interface{}{
-		"value_by_time": 1.0,
+		"value_rate": 1.0,
 	})
 
 	acc.ClearMetrics()
@@ -399,6 +399,6 @@ func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
 	derivative.Reset()
 
 	acc.AssertContainsFields(t, "One Field", map[string]interface{}{
-		"value_by_time": 2.0,
+		"value_rate": 2.0,
 	})
 }

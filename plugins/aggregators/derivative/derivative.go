@@ -29,7 +29,7 @@ type event struct {
 	time   time.Time
 }
 
-const defaultSuffix = "_by_time"
+const defaultSuffix = "_rate"
 
 func NewDerivative() *Derivative {
 	derivative := &Derivative{Suffix: defaultSuffix, MaxRollOver: 10}
@@ -56,10 +56,10 @@ var sampleConfig = `
 	## derivative = --------------------------
 	##              time_difference_in_seconds
 	##
-	## The resulting derivative will be named *fieldname_by_time*. The suffix
-	## "_by_time" can be configured by the *suffix* parameter. When using a 
+	## The resulting derivative will be named *fieldname_rate*. The suffix
+	## "_rate" can be configured by the *suffix* parameter. When using a 
 	## derivation variable you can include its name for more clarity. 
-	# suffix = "_by_time"
+	# suffix = "_rate"
 	##
 	## As an abstraction the derivative can be calculated not only by the time
 	## difference but by the difference of a field, which is contained in the
