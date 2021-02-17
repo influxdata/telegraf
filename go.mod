@@ -102,7 +102,6 @@ require (
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
 	github.com/opentracing/opentracing-go v1.0.2 // indirect
-	github.com/openzipkin/zipkin-go v0.1.6 // indirect
 	github.com/openzipkin/zipkin-go-opentracing v0.3.4
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
