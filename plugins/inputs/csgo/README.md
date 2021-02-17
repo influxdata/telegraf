@@ -21,13 +21,13 @@ If no servers are specified, no data will be collected
     - tags:
         - host
     - fields:
-        - csgo_cpu (float)
-        - csgo_net_in (float)
-        - csgo_net_out (float)
-        - csgo_uptime_minutes (float)
-        - csgo_maps (float)
-        - csgo_fps (float)
-        - csgo_players (float)
-        - csgo_svms (float)
-        - csgo_ms_var (float)
-        - csgo_tick (float)
+        - cpu (float)
+        - net_in (float)
+        - net_out (float)
+        - uptime_minutes (float)
+        - maps (float)
+        - fps (float)
+        - players (float)
+        - sv_ms (float)
+        - variance_ms (float)
+        - tick_ms (float)
