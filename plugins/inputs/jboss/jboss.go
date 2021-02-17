@@ -1,6 +1,7 @@
 package jboss
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -43,9 +44,37 @@ type KeyVal struct {
 // OrderedMap Define an ordered map
 type OrderedMap []KeyVal
 
+// MarshalJSON Implement the json.Marshaler interface
+func (omap OrderedMap) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+
+	buf.WriteString("{")
+	for i, kv := range omap {
+		if i != 0 {
+			buf.WriteString(",")
+		}
+		// marshal key
+		key, err := json.Marshal(kv.Key)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(key)
+		buf.WriteString(":")
+		// marshal value
+		val, err := json.Marshal(kv.Val)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(val)
+	}
+
+	buf.WriteString("}")
+	return buf.Bytes(), nil
+}
+
 // HostResponse expected GetHost response type
 type ExecTypeResponse struct {
-	Outcome string `json:"outcome"`
+	Outcome string                 `json:"outcome"`
 	Result  map[string]interface{} `json:"result"`
 }
 
@@ -283,7 +312,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 			execAsDomain = false
 		}
 		isEAP7 = isEAP7Version(exec.Result["product-name"].(string), exec.Result["product-version"].(string))
-		log.Printf("D! JBoss Plugin Working as Domain : %t ( %s )  for server %s \n", execAsDomain, exec.Result, server)
+		log.Printf("D! JBoss Plugin Working as Domain: %t EAP7: %t  for server %s \n", execAsDomain, isEAP7, server)
 
 		wg.Add(1)
 		go func(server string, execAsDomain bool) {
@@ -404,9 +433,9 @@ func (h *JBoss) getServersOnHost(
 						h.getJVMStatistics(acc, serverURL, execAsDomain, host, server)
 					case "web":
 						if isEAP7 {
-							h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "ajp-listener", "default")
-							h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "http-listener", "default")
-							h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "https-listener", "https")
+							h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "ajp")
+							h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "http")
+							h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "https")
 						} else  {
 							h.getWebStatistics(acc, serverURL, execAsDomain, host, server, "ajp")
 							h.getWebStatistics(acc, serverURL, execAsDomain, host, server, "http")
@@ -416,11 +445,14 @@ func (h *JBoss) getServersOnHost(
 					case "database":
 						h.getDatasourceStatistics(acc, serverURL, execAsDomain, host, server)
 					case "jms":
-						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging", GetJMSQueueStat)
-						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging", GetJMSTopicStat)
-						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging-activemq", GetJMSQueueStat)
-						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging-activemq", GetJMSTopicStat)
-					case "transaction":	
+						if isEAP7 {
+							h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging-activemq", GetJMSQueueStat)
+							h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging-activemq", GetJMSTopicStat)
+						} else {
+							h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging", GetJMSQueueStat)
+							h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging", GetJMSTopicStat)
+						}
+					case "transaction":
 						h.getTransactionStatistics(acc, serverURL, execAsDomain, host, server)	
 					default:
 						log.Printf("E! Jboss doesn't exist the metric set %s\n", v)
@@ -590,23 +622,27 @@ func (h *JBoss) getUndertowStatistics(
 	execAsDomain bool,
 	host string,
 	serverName string,
-	listType string,
 	listener string,
 ) error {
 	adr := OrderedMap{}
+	var listenerName = "default"
+	if listener == "ajp" ||  listener == "https" {
+		listenerName = listener
+	}
+	listener = listener + "-listener"
 	if execAsDomain {
 		adr = OrderedMap{
 			{"host", host},
 			{"server", serverName},
 			{"subsystem", "undertow"},
 			{"server", "default-server"},
-			{listType, listener},
+			{listener, listenerName},
 		}
 	} else {
 		adr = OrderedMap{
 			{"subsystem", "undertow"},
 			{"server", "default-server"},
-			{listType, listener},
+			{listener, listenerName},
 		}
 	}
 
@@ -653,8 +689,7 @@ func (h *JBoss) getUndertowStatistics(
 	tags := map[string]string{
 		"jboss_host":   host,
 		"jboss_server": serverName,
-		"type":         listType,
-		"instance":     listener,
+		"type":         listener,
 	}
 	acc.AddFields("jboss_web", fields, tags)
 
@@ -1149,16 +1184,17 @@ func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]in
 	switch optype {
 	case GetExecStat:
 		bodyContent = map[string]interface{}{
-			"operation":   "read-attribute",
-			"name":        "launch-type",
-			"address":     []string{},
+			"operation":   "read-resource",
+			"attributes-only": "true",
+			"include-runtime": "true",
+			"address":     address,
 			"json.pretty": 1,
 		}
 	case GetHosts:
 		bodyContent = map[string]interface{}{
 			"operation":   "read-children-names",
 			"child-type":  "host",
-			"address":     []string{},
+			"address":     address,
 			"json.pretty": 1,
 		}
 	case GetServers:
