@@ -40,7 +40,7 @@ var sampleConfig = `
 	# path_prefix = "/bigbluebutton"
 
 	## Required BigBlueButton secret key
-	# secret_key =
+	secret_key = ""
 
 	## Optional HTTP Basic Auth Credentials
 	# username = "username"

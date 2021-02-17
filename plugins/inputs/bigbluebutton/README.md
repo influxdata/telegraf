@@ -13,7 +13,7 @@ The BigBlueButton Input Plugin gathers metrics from [BigBlueButton](https://bigb
 	# path_prefix = "/bigbluebutton"
 
 	## Required BigBlueButton secret key
-	# secret_key =
+	secret_key = ""
 
 	## Optional HTTP Basic Auth Credentials
 	# username = "username"
