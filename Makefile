@@ -138,7 +138,7 @@ ifeq (, $(shell which golangci-lint))
 	exit 1
 endif
 
-	golangci-lint run --timeout 2m0s --issues-exit-code 0
+	golangci-lint run --timeout 5m0s --issues-exit-code 0
 
 .PHONY: tidy
 tidy:
