@@ -160,6 +160,7 @@ For documentation on the latest development code see the [documentation index][d
 * [azure_storage_queue](./plugins/inputs/azure_storage_queue)
 * [bcache](./plugins/inputs/bcache)
 * [beanstalkd](./plugins/inputs/beanstalkd)
+* [bigbluebutton](./plugins/inputs/bigbluebutton)
 * [bind](./plugins/inputs/bind)
 * [bond](./plugins/inputs/bond)
 * [burrow](./plugins/inputs/burrow)
