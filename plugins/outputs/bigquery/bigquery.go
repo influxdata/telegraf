@@ -33,6 +33,9 @@ const sampleConfig = `
 
   ## Timeout for BigQuery operations.
   # timeout = "5s"
+
+  ## Character to replace hyphens on Metric name
+  # replace_hyphen_to = "_"
 `
 
 type BigQuery struct {
@@ -40,10 +43,10 @@ type BigQuery struct {
 	Project         string `toml:"project"`
 	Dataset         string `toml:"dataset"`
 
-	Timeout internal.Duration `toml:"timeout"`
-	Log     telegraf.Logger   `toml:"-"`
+	Timeout         internal.Duration `toml:"timeout"`
+	ReplaceHyphenTo string            `toml:"replace_hyphen_to"`
 
-	ReplaceHyphenTo string `toml:"replace_hyphen_to"`
+	Log telegraf.Logger `toml:"-"`
 
 	client *bigquery.Client
 
