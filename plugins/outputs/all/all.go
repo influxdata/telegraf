@@ -1,6 +1,7 @@
 package all
 
 import (
+	//Blank imports for plugins to register themselves
 	_ "github.com/influxdata/telegraf/plugins/outputs/amon"
 	_ "github.com/influxdata/telegraf/plugins/outputs/amqp"
 	_ "github.com/influxdata/telegraf/plugins/outputs/application_insights"
@@ -41,4 +42,5 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/timestream"
 	_ "github.com/influxdata/telegraf/plugins/outputs/warp10"
 	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
+	_ "github.com/influxdata/telegraf/plugins/outputs/yandex_cloud_monitoring"
 )

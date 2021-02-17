@@ -10,9 +10,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
+	"github.com/influxdata/telegraf/plugins/common/parallel"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"github.com/influxdata/telegraf/plugins/processors/reverse_dns/parallel"
 )
 
 var sampleConfig = `
@@ -268,9 +268,8 @@ func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err err
 		d.rwLock.RUnlock()
 		if ok {
 			return m, age, nil
-		} else {
-			return nil, 0, fmt.Errorf("getting remote table from cache")
 		}
+		return nil, 0, fmt.Errorf("getting remote table from cache")
 	}
 
 	// The cache missed and this is the first request for this

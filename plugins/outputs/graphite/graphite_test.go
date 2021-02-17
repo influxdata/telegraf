@@ -2,6 +2,7 @@ package graphite
 
 import (
 	"bufio"
+	"github.com/influxdata/telegraf/testutil"
 	"net"
 	"net/textproto"
 	"sync"
@@ -18,8 +19,9 @@ import (
 func TestGraphiteError(t *testing.T) {
 	// Init plugin
 	g := Graphite{
-		Servers: []string{"127.0.0.1:2003", "127.0.0.1:12003"},
+		Servers: []string{"127.0.0.1:12004", "127.0.0.1:12003"},
 		Prefix:  "my.prefix",
+		Log:     testutil.Logger{},
 	}
 	// Init metrics
 	m1, _ := metric.New(
@@ -36,7 +38,7 @@ func TestGraphiteError(t *testing.T) {
 	require.NoError(t, err1)
 	err2 := g.Write(metrics)
 	require.Error(t, err2)
-	assert.Equal(t, "Could not write to any Graphite server in cluster\n", err2.Error())
+	assert.Equal(t, "could not write to any Graphite server in cluster", err2.Error())
 }
 
 func TestGraphiteOK(t *testing.T) {
@@ -48,7 +50,9 @@ func TestGraphiteOK(t *testing.T) {
 
 	// Init plugin
 	g := Graphite{
-		Prefix: "my.prefix",
+		Prefix:  "my.prefix",
+		Servers: []string{"localhost:12003"},
+		Log:     testutil.Logger{},
 	}
 
 	// Init metrics
@@ -109,6 +113,8 @@ func TestGraphiteOkWithSeparatorDot(t *testing.T) {
 	g := Graphite{
 		Prefix:            "my.prefix",
 		GraphiteSeparator: ".",
+		Servers:           []string{"localhost:12003"},
+		Log:               testutil.Logger{},
 	}
 
 	// Init metrics
@@ -169,6 +175,8 @@ func TestGraphiteOkWithSeparatorUnderscore(t *testing.T) {
 	g := Graphite{
 		Prefix:            "my.prefix",
 		GraphiteSeparator: "_",
+		Servers:           []string{"localhost:12003"},
+		Log:               testutil.Logger{},
 	}
 
 	// Init metrics
@@ -233,6 +241,8 @@ func TestGraphiteOKWithMultipleTemplates(t *testing.T) {
 			"my_* host.measurement.tags.field",
 			"measurement.tags.host.field",
 		},
+		Servers: []string{"localhost:12003"},
+		Log:     testutil.Logger{},
 	}
 
 	// Init metrics
@@ -293,6 +303,8 @@ func TestGraphiteOkWithTags(t *testing.T) {
 	g := Graphite{
 		Prefix:             "my.prefix",
 		GraphiteTagSupport: true,
+		Servers:            []string{"localhost:12003"},
+		Log:                testutil.Logger{},
 	}
 
 	// Init metrics
@@ -354,6 +366,8 @@ func TestGraphiteOkWithTagsAndSeparatorDot(t *testing.T) {
 		Prefix:             "my.prefix",
 		GraphiteTagSupport: true,
 		GraphiteSeparator:  ".",
+		Servers:            []string{"localhost:12003"},
+		Log:                testutil.Logger{},
 	}
 
 	// Init metrics
@@ -415,6 +429,8 @@ func TestGraphiteOkWithTagsAndSeparatorUnderscore(t *testing.T) {
 		Prefix:             "my_prefix",
 		GraphiteTagSupport: true,
 		GraphiteSeparator:  "_",
+		Servers:            []string{"localhost:12003"},
+		Log:                testutil.Logger{},
 	}
 
 	// Init metrics
@@ -465,7 +481,8 @@ func TestGraphiteOkWithTagsAndSeparatorUnderscore(t *testing.T) {
 }
 
 func TCPServer1(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:2003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn, _ := (tcpServer).Accept()
@@ -479,7 +496,7 @@ func TCPServer1(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer2(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:2003")
+	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
 	go func() {
 		defer wg.Done()
 		conn2, _ := (tcpServer).Accept()
@@ -495,7 +512,7 @@ func TCPServer2(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer1WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:2003")
+	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
 	go func() {
 		defer wg.Done()
 		conn, _ := (tcpServer).Accept()
@@ -509,7 +526,7 @@ func TCPServer1WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer2WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:2003")
+	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
 	go func() {
 		defer wg.Done()
 		conn2, _ := (tcpServer).Accept()
@@ -525,7 +542,7 @@ func TCPServer2WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer1WithTags(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:2003")
+	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
 	go func() {
 		defer wg.Done()
 		conn, _ := (tcpServer).Accept()
@@ -539,7 +556,7 @@ func TCPServer1WithTags(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer2WithTags(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:2003")
+	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
 	go func() {
 		defer wg.Done()
 		conn2, _ := (tcpServer).Accept()
@@ -555,7 +572,7 @@ func TCPServer2WithTags(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer1WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:2003")
+	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
 	go func() {
 		defer wg.Done()
 		conn, _ := (tcpServer).Accept()
@@ -569,7 +586,7 @@ func TCPServer1WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer2WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:2003")
+	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
 	go func() {
 		defer wg.Done()
 		conn2, _ := (tcpServer).Accept()

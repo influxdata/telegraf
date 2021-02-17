@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs/wavefront"
+	"github.com/influxdata/telegraf/plugins/outputs/wavefront" // TODO: this dependency is going the wrong way: Move MetricPoint into the serializer.
 )
 
 // WavefrontSerializer : WavefrontSerializer struct

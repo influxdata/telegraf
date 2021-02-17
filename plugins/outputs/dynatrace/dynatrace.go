@@ -28,16 +28,15 @@ var (
 	maxMetricKeyLen       = 250
 )
 
-var counts map[string]string
-var sent = 0
-
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL      string            `toml:"url"`
-	APIToken string            `toml:"api_token"`
-	Prefix   string            `toml:"prefix"`
-	Log      telegraf.Logger   `toml:"-"`
-	Timeout  internal.Duration `toml:"timeout"`
+	URL         string            `toml:"url"`
+	APIToken    string            `toml:"api_token"`
+	Prefix      string            `toml:"prefix"`
+	Log         telegraf.Logger   `toml:"-"`
+	Timeout     internal.Duration `toml:"timeout"`
+	State       map[string]string
+	SendCounter int
 
 	tls.ClientConfig
 
@@ -117,6 +116,8 @@ func (d *Dynatrace) normalize(s string, max int) (string, error) {
 		normalizedString = normalizedString[:len(normalizedString)-1]
 	}
 
+	normalizedString = strings.ReplaceAll(normalizedString, "..", "_")
+
 	if len(normalizedString) == 0 {
 		return "", fmt.Errorf("error normalizing the string: %s", s)
 	}
@@ -195,10 +196,10 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				// write metric id,tags and value
 				switch metric.Type() {
 				case telegraf.Counter:
-					var delta float64 = 0
+					var delta float64
 
 					// Check if LastValue exists
-					if lastvalue, ok := counts[metricID+tagb.String()]; ok {
+					if lastvalue, ok := d.State[metricID+tagb.String()]; ok {
 						// Convert Strings to Floats
 						floatLastValue, err := strconv.ParseFloat(lastvalue, 32)
 						if err != nil {
@@ -213,7 +214,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 							fmt.Fprintf(&buf, "%s%s count,delta=%f\n", metricID, tagb.String(), delta)
 						}
 					}
-					counts[metricID+tagb.String()] = value
+					d.State[metricID+tagb.String()] = value
 
 				default:
 					fmt.Fprintf(&buf, "%s%s %v\n", metricID, tagb.String(), value)
@@ -221,11 +222,11 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 			}
 		}
 	}
-	sent++
+	d.SendCounter++
 	// in typical interval of 10s, we will clean the counter state once in 24h which is 8640 iterations
 
-	if sent%8640 == 0 {
-		counts = make(map[string]string)
+	if d.SendCounter%8640 == 0 {
+		d.State = make(map[string]string)
 	}
 	return d.send(buf.Bytes())
 }
@@ -235,7 +236,7 @@ func (d *Dynatrace) send(msg []byte) error {
 	req, err := http.NewRequest("POST", d.URL, bytes.NewBuffer(msg))
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
-		return fmt.Errorf("Dynatrace error while creating HTTP request:, %s", err.Error())
+		return fmt.Errorf("error while creating HTTP request:, %s", err.Error())
 	}
 	req.Header.Add("Content-Type", "text/plain; charset=UTF-8")
 
@@ -249,7 +250,7 @@ func (d *Dynatrace) send(msg []byte) error {
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
 		fmt.Println(req)
-		return fmt.Errorf("Dynatrace error while sending HTTP request:, %s", err.Error())
+		return fmt.Errorf("error while sending HTTP request:, %s", err.Error())
 	}
 	defer resp.Body.Close()
 
@@ -262,14 +263,14 @@ func (d *Dynatrace) send(msg []byte) error {
 		bodyString := string(bodyBytes)
 		d.Log.Debugf("Dynatrace returned: %s", bodyString)
 	} else {
-		return fmt.Errorf("Dynatrace request failed with response code:, %d", resp.StatusCode)
+		return fmt.Errorf("request failed with response code:, %d", resp.StatusCode)
 	}
 
 	return nil
 }
 
 func (d *Dynatrace) Init() error {
-	counts = make(map[string]string)
+	d.State = make(map[string]string)
 	if len(d.URL) == 0 {
 		d.Log.Infof("Dynatrace URL is empty, defaulting to OneAgent metrics interface")
 		d.URL = oneAgentMetricsUrl
@@ -297,7 +298,8 @@ func (d *Dynatrace) Init() error {
 func init() {
 	outputs.Add("dynatrace", func() telegraf.Output {
 		return &Dynatrace{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout:     internal.Duration{Duration: time.Second * 5},
+			SendCounter: 0,
 		}
 	})
 }
