@@ -82,12 +82,6 @@ func TestBigBlueButton(t *testing.T) {
 
 	tags := make(map[string]string)
 
-	_, mOk := acc.Get("bigbluebutton_meetings")
-	require.True(t, mOk)
-
-	_, rOk := acc.Get("bigbluebutton_recordings")
-	require.True(t, rOk)
-
 	expected := []telegraf.Metric{
 		testutil.MustMetric("bigbluebutton_meetings", tags, toStringMapInterface(meetingsRecord), time.Unix(0, 0)),
 		testutil.MustMetric("bigbluebutton_recordings", tags, toStringMapInterface(recordingsRecord), time.Unix(0, 0)),
@@ -124,12 +118,6 @@ func TestBigBlueButtonEmptyState(t *testing.T) {
 	}
 
 	tags := make(map[string]string)
-
-	_, mOk := acc.Get("bigbluebutton_meetings")
-	require.True(t, mOk)
-
-	_, rOk := acc.Get("bigbluebutton_recordings")
-	require.True(t, rOk)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric("bigbluebutton_meetings", tags, toStringMapInterface(meetingsRecord), time.Unix(0, 0)),
