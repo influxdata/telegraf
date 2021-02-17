@@ -41,9 +41,9 @@ type BigQuery struct {
 	Dataset         string `toml:"dataset"`
 
 	Timeout internal.Duration `toml:"timeout"`
-	Log     telegraf.Logger   `toml: "-"`
+	Log     telegraf.Logger   `toml:"-"`
 
-	ReplaceHyphenTo string `toml:replace_hyphen_to`
+	ReplaceHyphenTo string `toml:"replace_hyphen_to"`
 
 	client *bigquery.Client
 
