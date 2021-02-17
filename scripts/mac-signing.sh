@@ -17,11 +17,11 @@ cd
 cd project/dist
 extractedFolder=$(find . -name "*telegraf-*" -type d)
 extractedPath=project/dist/"$extractedFolder"
-cp project/scripts/telegraf_entry $extractedPath
+cp project/scripts/telegraf_entry_mac $extractedPath
 codesign -s $signingIdentity --timestamp --options=runtime "$extractedPath"/telegraf_entry
 codesign -v "$extractedPath"/telegraf_entry
 
-go run project/scripts/appmaker.go -bin telegraf_entry -identifier com.influxdata.telegraf -name "Telegraf" -o project/dist -assets $extractedPath -icon /project/assets/icon.png
+go run project/scripts/appmaker.go -bin telegraf_entry_mac -identifier com.influxdata.telegraf -name "Telegraf" -o project/dist -assets $extractedPath -icon /project/assets/icon.png
 
 codesign -s $signingIdentity --timestamp --options=runtime --deep Telegraf.app
 hdiutil create -size 500m -volname Telegraf -srcfolder Telegraf.app telegraf.dmg
