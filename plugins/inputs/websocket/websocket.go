@@ -34,10 +34,6 @@ var sampleConfig = `
 	## Amount of time allowed to complete a request
   # timeout = "5s"
 
-	## Interval to ping the server
-	## This interval has to be at least one second.
-  # ping_interval = "1s"
-
   ## HTTP Proxy support
   # http_proxy_url = ""
 
@@ -59,7 +55,6 @@ type Websocket struct {
 	URL           string            `toml:"url"`
 	HandshakeBody string            `toml:"handshake_body"`
 	TriggerBody   string            `toml:"trigger_body"`
-	PingInterval  internal.Duration `toml:"ping_interval"`
 	Timeout       internal.Duration `toml:"timeout"`
 	Log           telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
@@ -67,11 +62,11 @@ type Websocket struct {
 
 	client            *http.Client
 	connection        *websocket.Conn
+	connected         bool
 	listenCancel      context.CancelFunc
 	watchdogReconnect chan bool
-	connected         bool
-	acc               telegraf.Accumulator
 
+	acc    telegraf.Accumulator
 	parser parsers.Parser
 }
 
@@ -113,17 +108,15 @@ func (w *Websocket) Init() error {
 func (w *Websocket) Start(acc telegraf.Accumulator) error {
 	w.acc = acc
 
-	if w.PingInterval.Duration < 1*time.Second {
-		w.PingInterval = internal.Duration{Duration: 1 * time.Second}
-	}
-
 	if err := w.connect(); err != nil {
 		return err
 	}
 
-	// Start the watchdog
-	w.watchdogReconnect = make(chan bool)
-	go w.watchdog()
+	if w.TriggerBody == "" {
+		// Start the watchdog in case of event-based consumption
+		w.watchdogReconnect = make(chan bool)
+		go w.watchdog()
+	}
 
 	return nil
 }
@@ -191,13 +184,14 @@ func (w *Websocket) connect() error {
 		return err
 	}
 	w.connection = conn
+	w.connected = true
+	w.Log.Infof("Connected to %q", w.URL)
 
 	if w.TriggerBody == "" {
 		w.Log.Debugf("Listening for events...")
 		var listenctx context.Context
 		listenctx, w.listenCancel = context.WithCancel(context.Background())
 
-		go w.ping(listenctx)
 		go w.listen(listenctx, w.acc)
 	} else {
 		w.Log.Debugf("Actively gathering metrics...")
@@ -215,8 +209,6 @@ func (w *Websocket) connect() error {
 			return err
 		}
 	}
-	w.connected = true
-	w.Log.Infof("Connected to %q", w.URL)
 
 	return nil
 }
@@ -252,28 +244,6 @@ func (w *Websocket) watchdog() {
 	}
 }
 
-func (w *Websocket) ping(ctx context.Context) {
-	ticker := time.NewTicker(w.PingInterval.Duration)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		if err := w.connection.Ping(ctx); err != nil {
-			if errors.Is(err, context.Canceled) {
-				// We are requested to stop reading
-				w.Log.Debug("Stop pinging, got cancel request.")
-				return
-			}
-			if status := websocket.CloseStatus(err); status != -1 {
-				w.Log.Infof("Connection closed by peer with status %q", status.String())
-			} else {
-				w.Log.Errorf("ping failed: %v", err)
-			}
-			w.watchdogReconnect <- true
-			return
-		}
-	}
-}
-
 func (w *Websocket) handshake(ctx context.Context) error {
 	return w.connection.Write(ctx, websocket.MessageText, []byte(w.HandshakeBody))
 }
@@ -287,7 +257,8 @@ func (w *Websocket) listen(ctx context.Context, acc telegraf.Accumulator) {
 				return
 			}
 			if websocket.CloseStatus(err) != -1 {
-				// The error is related to the connection
+				// The error is related to the connection trying to reconnect
+				w.watchdogReconnect <- true
 				return
 			}
 			acc.AddError(err)

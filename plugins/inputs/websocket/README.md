@@ -29,10 +29,6 @@ data-format.
   ## Amount of time allowed to complete a request
   # timeout = "5s"
 
-  ## Interval to ping the server
-  ## This interval has to be at least one second.
-  # ping_interval = "1s"
-
   ## HTTP Proxy support
   # http_proxy_url = ""
 
