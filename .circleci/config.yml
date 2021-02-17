@@ -10,7 +10,7 @@ executors:
   go-1_15:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.15.5'
+      - image: 'quay.io/influxdb/telegraf-ci:1.15.8'
     environment:
       GOFLAGS: -p=8
   mac:
@@ -54,7 +54,7 @@ commands:
           at: '/go'
       - when:
           condition: << parameters.nightly >>
-          steps: 
+          steps:
             - run: 'NIGHTLY=1 make package'
             - run: 'make upload-nightly'
       - unless:
