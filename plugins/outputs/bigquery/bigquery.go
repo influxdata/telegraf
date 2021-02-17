@@ -76,6 +76,8 @@ func (b *BigQuery) Connect() error {
 		return b.setUpDefaultClient()
 	}
 
+	b.warnedOnHyphens = make(map[string]bool)
+
 	return nil
 }
 
@@ -240,11 +242,9 @@ func (b *BigQuery) Close() error {
 }
 
 func init() {
-	hm := make(map[string]bool)
 	outputs.Add("bigquery", func() telegraf.Output {
 		return &BigQuery{
 			Timeout:         defaultTimeout,
-			warnedOnHyphens: hm,
 			ReplaceHyphenTo: "_",
 		}
 	})
