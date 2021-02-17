@@ -47,7 +47,7 @@ type VSphere struct {
 	CustomAttributeInclude  []string
 	CustomAttributeExclude  []string
 	UseIntSamples           bool
-	IpAddresses             []string
+	IPAddresses             []string
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
@@ -358,7 +358,7 @@ func init() {
 			CustomAttributeInclude:  []string{},
 			CustomAttributeExclude:  []string{"*"},
 			UseIntSamples:           true,
-			IpAddresses:             []string{},
+			IPAddresses:             []string{},
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,

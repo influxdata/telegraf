@@ -44,7 +44,7 @@ func TestDellApis(t *testing.T) {
 	address, _, err := net.SplitHostPort(u.Host)
 	require.NoError(t, err)
 
-	expected_metrics := []telegraf.Metric{
+	expectedMetrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"redfish_thermal_temperatures",
 			map[string]string{
@@ -468,7 +468,7 @@ func TestDellApis(t *testing.T) {
 		Address:          ts.URL,
 		Username:         "test",
 		Password:         "test",
-		ComputerSystemId: "System.Embedded.1",
+		ComputerSystemID: "System.Embedded.1",
 	}
 	plugin.Init()
 	var acc testutil.Accumulator
@@ -476,7 +476,7 @@ func TestDellApis(t *testing.T) {
 	err = plugin.Gather(&acc)
 	require.NoError(t, err)
 	require.True(t, acc.HasMeasurement("redfish_thermal_temperatures"))
-	testutil.RequireMetricsEqual(t, expected_metrics, acc.GetTelegrafMetrics(),
+	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
 }
 
@@ -510,7 +510,7 @@ func TestHPApis(t *testing.T) {
 	address, _, err := net.SplitHostPort(u.Host)
 	require.NoError(t, err)
 
-	expected_metrics_hp := []telegraf.Metric{
+	expectedMetricsHp := []telegraf.Metric{
 		testutil.MustMetric(
 			"redfish_thermal_temperatures",
 			map[string]string{
@@ -619,19 +619,19 @@ func TestHPApis(t *testing.T) {
 		),
 	}
 
-	hp_plugin := &Redfish{
+	hpPlugin := &Redfish{
 		Address:          ts.URL,
 		Username:         "test",
 		Password:         "test",
-		ComputerSystemId: "1",
+		ComputerSystemID: "1",
 	}
-	hp_plugin.Init()
-	var hp_acc testutil.Accumulator
+	hpPlugin.Init()
+	var hpAcc testutil.Accumulator
 
-	err = hp_plugin.Gather(&hp_acc)
+	err = hpPlugin.Gather(&hpAcc)
 	require.NoError(t, err)
-	require.True(t, hp_acc.HasMeasurement("redfish_thermal_temperatures"))
-	testutil.RequireMetricsEqual(t, expected_metrics_hp, hp_acc.GetTelegrafMetrics(),
+	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
+	testutil.RequireMetricsEqual(t, expectedMetricsHp, hpAcc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
 }
 
@@ -665,7 +665,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 		Address:          ts.URL,
 		Username:         "test",
 		Password:         "test",
-		ComputerSystemId: "System.Embedded.1",
+		ComputerSystemID: "System.Embedded.1",
 	}
 
 	var acc testutil.Accumulator
@@ -694,7 +694,7 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 
 	r := &Redfish{
 		Address:          ts.URL,
-		ComputerSystemId: "System.Embedded.1",
+		ComputerSystemID: "System.Embedded.1",
 	}
 
 	err := r.Init()
@@ -767,7 +767,7 @@ func TestInvalidDellJSON(t *testing.T) {
 			Address:          ts.URL,
 			Username:         "test",
 			Password:         "test",
-			ComputerSystemId: "System.Embedded.1",
+			ComputerSystemID: "System.Embedded.1",
 		}
 
 		plugin.Init()
@@ -838,7 +838,7 @@ func TestInvalidHPJSON(t *testing.T) {
 				Address:          ts.URL,
 				Username:         "test",
 				Password:         "test",
-				ComputerSystemId: "System.Embedded.2",
+				ComputerSystemID: "System.Embedded.2",
 			}
 
 			plugin.Init()

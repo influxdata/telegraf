@@ -13,7 +13,7 @@ import (
 const maxTagLength = 254
 
 type Wavefront struct {
-	Url             string
+	URL             string
 	Token           string
 	Host            string
 	Port            int
@@ -134,15 +134,15 @@ func (w *Wavefront) Connect() error {
 	if w.ImmediateFlush {
 		flushSeconds = 86400 // Set a very long flush interval if we're flushing directly
 	}
-	if w.Url != "" {
-		w.Log.Debug("connecting over http/https using Url: %s", w.Url)
+	if w.URL != "" {
+		w.Log.Debug("connecting over http/https using Url: %s", w.URL)
 		sender, err := wavefront.NewDirectSender(&wavefront.DirectConfiguration{
-			Server:               w.Url,
+			Server:               w.URL,
 			Token:                w.Token,
 			FlushIntervalSeconds: flushSeconds,
 		})
 		if err != nil {
-			return fmt.Errorf("could not create Wavefront Sender for Url: %s", w.Url)
+			return fmt.Errorf("could not create Wavefront Sender for Url: %s", w.URL)
 		}
 		w.sender = sender
 	} else {

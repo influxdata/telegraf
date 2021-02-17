@@ -20,11 +20,11 @@ import (
 )
 
 var (
-	execCommand             = exec.Command // execCommand is used to mock commands in tests.
-	re_v1_parse_line        = regexp.MustCompile(`^(?P<name>[^|]*)\|(?P<description>[^|]*)\|(?P<status_code>.*)`)
-	re_v2_parse_line        = regexp.MustCompile(`^(?P<name>[^|]*)\|[^|]+\|(?P<status_code>[^|]*)\|(?P<entity_id>[^|]*)\|(?:(?P<description>[^|]+))?`)
-	re_v2_parse_description = regexp.MustCompile(`^(?P<analogValue>-?[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`)
-	re_v2_parse_unit        = regexp.MustCompile(`^(?P<realAnalogUnit>[^,]+)(?:,\s*(?P<statusDesc>.*))?`)
+	execCommand          = exec.Command // execCommand is used to mock commands in tests.
+	reV1ParseLine        = regexp.MustCompile(`^(?P<name>[^|]*)\|(?P<description>[^|]*)\|(?P<status_code>.*)`)
+	reV2ParseLine        = regexp.MustCompile(`^(?P<name>[^|]*)\|[^|]+\|(?P<status_code>[^|]*)\|(?P<entity_id>[^|]*)\|(?:(?P<description>[^|]+))?`)
+	reV2ParseDescription = regexp.MustCompile(`^(?P<analogValue>-?[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`)
+	reV2ParseUnit        = regexp.MustCompile(`^(?P<realAnalogUnit>[^,]+)(?:,\s*(?P<statusDesc>.*))?`)
 )
 
 // Ipmi stores the configuration values for the ipmi_sensor input plugin
@@ -176,12 +176,12 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 	return parseV1(acc, hostname, out, timestamp)
 }
 
-func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_at time.Time) error {
+func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredAt time.Time) error {
 	// each line will look something like
 	// Planar VBAT      | 3.05 Volts        | ok
 	scanner := bufio.NewScanner(bytes.NewReader(cmdOut))
 	for scanner.Scan() {
-		ipmiFields := extractFieldsFromRegex(re_v1_parse_line, scanner.Text())
+		ipmiFields := extractFieldsFromRegex(reV1ParseLine, scanner.Text())
 		if len(ipmiFields) != 3 {
 			continue
 		}
@@ -227,20 +227,20 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_
 			fields["value"] = 0.0
 		}
 
-		acc.AddFields("ipmi_sensor", fields, tags, measured_at)
+		acc.AddFields("ipmi_sensor", fields, tags, measuredAt)
 	}
 
 	return scanner.Err()
 }
 
-func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_at time.Time) error {
+func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredAt time.Time) error {
 	// each line will look something like
 	// CMOS Battery     | 65h | ok  |  7.1 |
 	// Temp             | 0Eh | ok  |  3.1 | 55 degrees C
 	// Drive 0          | A0h | ok  |  7.1 | Drive Present
 	scanner := bufio.NewScanner(bytes.NewReader(cmdOut))
 	for scanner.Scan() {
-		ipmiFields := extractFieldsFromRegex(re_v2_parse_line, scanner.Text())
+		ipmiFields := extractFieldsFromRegex(reV2ParseLine, scanner.Text())
 		if len(ipmiFields) < 3 || len(ipmiFields) > 4 {
 			continue
 		}
@@ -256,7 +256,7 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_
 		tags["entity_id"] = transform(ipmiFields["entity_id"])
 		tags["status_code"] = trim(ipmiFields["status_code"])
 		fields := make(map[string]interface{})
-		descriptionResults := extractFieldsFromRegex(re_v2_parse_description, trim(ipmiFields["description"]))
+		descriptionResults := extractFieldsFromRegex(reV2ParseDescription, trim(ipmiFields["description"]))
 		// This is an analog value with a unit
 		if descriptionResults["analogValue"] != "" && len(descriptionResults["analogUnit"]) >= 1 {
 			var err error
@@ -265,7 +265,7 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_
 				continue
 			}
 			// Some implementations add an extra status to their analog units
-			unitResults := extractFieldsFromRegex(re_v2_parse_unit, descriptionResults["analogUnit"])
+			unitResults := extractFieldsFromRegex(reV2ParseUnit, descriptionResults["analogUnit"])
 			tags["unit"] = transform(unitResults["realAnalogUnit"])
 			if unitResults["statusDesc"] != "" {
 				tags["status_desc"] = transform(unitResults["statusDesc"])
@@ -281,7 +281,7 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_
 			}
 		}
 
-		acc.AddFields("ipmi_sensor", fields, tags, measured_at)
+		acc.AddFields("ipmi_sensor", fields, tags, measuredAt)
 	}
 
 	return scanner.Err()

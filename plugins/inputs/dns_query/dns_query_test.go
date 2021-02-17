@@ -18,7 +18,7 @@ func TestGathering(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping network-dependent test in short mode.")
 	}
-	var dnsConfig = DnsQuery{
+	var dnsConfig = DNSQuery{
 		Servers: servers,
 		Domains: domains,
 	}
@@ -37,7 +37,7 @@ func TestGatheringMxRecord(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping network-dependent test in short mode.")
 	}
-	var dnsConfig = DnsQuery{
+	var dnsConfig = DNSQuery{
 		Servers: servers,
 		Domains: domains,
 	}
@@ -57,7 +57,7 @@ func TestGatheringRootDomain(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping network-dependent test in short mode.")
 	}
-	var dnsConfig = DnsQuery{
+	var dnsConfig = DNSQuery{
 		Servers:    servers,
 		Domains:    []string{"."},
 		RecordType: "MX",
@@ -89,7 +89,7 @@ func TestMetricContainsServerAndDomainAndRecordTypeTags(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping network-dependent test in short mode.")
 	}
-	var dnsConfig = DnsQuery{
+	var dnsConfig = DNSQuery{
 		Servers: servers,
 		Domains: domains,
 	}
@@ -120,7 +120,7 @@ func TestGatheringTimeout(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping network-dependent test in short mode.")
 	}
-	var dnsConfig = DnsQuery{
+	var dnsConfig = DNSQuery{
 		Servers: servers,
 		Domains: domains,
 	}
@@ -141,7 +141,7 @@ func TestGatheringTimeout(t *testing.T) {
 }
 
 func TestSettingDefaultValues(t *testing.T) {
-	dnsConfig := DnsQuery{}
+	dnsConfig := DNSQuery{}
 
 	dnsConfig.setDefaultValues()
 
@@ -150,7 +150,7 @@ func TestSettingDefaultValues(t *testing.T) {
 	assert.Equal(t, 53, dnsConfig.Port, "Default port number not equal 53")
 	assert.Equal(t, 2, dnsConfig.Timeout, "Default timeout not equal 2")
 
-	dnsConfig = DnsQuery{Domains: []string{"."}}
+	dnsConfig = DNSQuery{Domains: []string{"."}}
 
 	dnsConfig.setDefaultValues()
 
@@ -158,7 +158,7 @@ func TestSettingDefaultValues(t *testing.T) {
 }
 
 func TestRecordTypeParser(t *testing.T) {
-	var dnsConfig = DnsQuery{}
+	var dnsConfig = DNSQuery{}
 	var recordType uint16
 
 	dnsConfig.RecordType = "A"
@@ -207,7 +207,7 @@ func TestRecordTypeParser(t *testing.T) {
 }
 
 func TestRecordTypeParserError(t *testing.T) {
-	var dnsConfig = DnsQuery{}
+	var dnsConfig = DNSQuery{}
 	var err error
 
 	dnsConfig.RecordType = "nil"

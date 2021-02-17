@@ -1113,7 +1113,7 @@ IF @MajorMinorVersion >= 1050 BEGIN
 END
 `
 
-const sqlServerRingBufferCpu string = `
+const sqlServerRingBufferCPU string = `
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@ServerName + ',Database:' + DB_NAME() +' is not a SQL Server Standard,Enterprise or Express. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)

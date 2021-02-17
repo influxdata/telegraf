@@ -43,7 +43,7 @@ type Redfish struct {
 	Address          string          `toml:"address"`
 	Username         string          `toml:"username"`
 	Password         string          `toml:"password"`
-	ComputerSystemId string          `toml:"computer_system_id"`
+	ComputerSystemID string          `toml:"computer_system_id"`
 	Timeout          config.Duration `toml:"timeout"`
 
 	client http.Client
@@ -146,7 +146,7 @@ func (r *Redfish) Init() error {
 		return fmt.Errorf("did not provide username and password")
 	}
 
-	if r.ComputerSystemId == "" {
+	if r.ComputerSystemID == "" {
 		return fmt.Errorf("did not provide the computer system ID of the resource")
 	}
 
@@ -253,7 +253,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		address = r.baseURL.Host
 	}
 
-	system, err := r.getComputerSystem(r.ComputerSystemId)
+	system, err := r.getComputerSystem(r.ComputerSystemID)
 	if err != nil {
 		return err
 	}

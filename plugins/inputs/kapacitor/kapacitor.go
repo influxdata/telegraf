@@ -51,7 +51,7 @@ func (*Kapacitor) SampleConfig() string {
 
 func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 	if k.client == nil {
-		client, err := k.createHttpClient()
+		client, err := k.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (k *Kapacitor) createHttpClient() (*http.Client, error) {
+func (k *Kapacitor) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err

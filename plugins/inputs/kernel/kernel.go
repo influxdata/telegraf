@@ -16,11 +16,11 @@ import (
 
 // /proc/stat file line prefixes to gather stats on:
 var (
-	interrupts       = []byte("intr")
-	context_switches = []byte("ctxt")
-	processes_forked = []byte("processes")
-	disk_pages       = []byte("page")
-	boot_time        = []byte("btime")
+	interrupts      = []byte("intr")
+	contextSwitches = []byte("ctxt")
+	processesForked = []byte("processes")
+	diskPages       = []byte("page")
+	bootTime        = []byte("btime")
 )
 
 type Kernel struct {
@@ -65,25 +65,25 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 				return err
 			}
 			fields["interrupts"] = int64(m)
-		case bytes.Equal(field, context_switches):
+		case bytes.Equal(field, contextSwitches):
 			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
 			fields["context_switches"] = int64(m)
-		case bytes.Equal(field, processes_forked):
+		case bytes.Equal(field, processesForked):
 			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
 			fields["processes_forked"] = int64(m)
-		case bytes.Equal(field, boot_time):
+		case bytes.Equal(field, bootTime):
 			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
 			fields["boot_time"] = int64(m)
-		case bytes.Equal(field, disk_pages):
+		case bytes.Equal(field, diskPages):
 			in, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
