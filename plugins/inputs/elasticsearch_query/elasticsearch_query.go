@@ -158,7 +158,7 @@ func (e *ElasticsearchQuery) Init() error {
 		agg.aggregationQueryList = aggregationQueryList
 		e.Aggregations[i] = agg
 	}
-	return err
+	return nil
 }
 
 func (e *ElasticsearchQuery) connectToES() error {
