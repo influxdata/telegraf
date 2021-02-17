@@ -31,6 +31,11 @@ The schema of the table on BigQuery:
 
 Avoid hyphens on BigQuery tables, underlying SDK cannot handle streaming inserts to Table with hyphens.
 
+In cases of metrics with hyphens please use the [Rename Processor Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/processors/rename).
+
+In case of a metric with hyphen by default hyphens shall be replaced with underscores (_).
+This can be altered using the `replace_hyphen_to` configuration property.
+
 Available data type options are:
 * integer
 * float or long
