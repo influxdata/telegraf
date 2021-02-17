@@ -216,19 +216,18 @@ func (b *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSave
 }
 
 func (b *BigQuery) metricToTable(metricName string) string {
-	if strings.Contains(metricName, "-") {
-
-		dhm := strings.ReplaceAll(metricName, "-", b.ReplaceHyphenTo)
-
-		if warned, _ := b.warnedOnHyphens[metricName]; !warned {
-			b.Log.Warn("Metric %q contains hyphens please consider using the rename processor plugin, falling back to %q", dhm)
-			b.warnedOnHyphens[metricName] = true
-		}
-
-		return dhm
+	if !strings.Contains(metricName, "-") {
+		return metricName
 	}
 
-	return metricName
+	dhm := strings.ReplaceAll(metricName, "-", b.ReplaceHyphenTo)
+
+	if warned, _ := b.warnedOnHyphens[metricName]; !warned {
+		b.Log.Warnf("Metric %q contains hyphens please consider using the rename processor plugin, falling back to %q", metricName, dhm)
+		b.warnedOnHyphens[metricName] = true
+	}
+
+	return dhm
 }
 
 func (b *BigQuery) tableForMetric(metricName string) *bigquery.Table {
