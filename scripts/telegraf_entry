@@ -1,4 +1,0 @@
-#!/bin/bash
-currentDir="$( cd "$(dirname "$0")" ; pwd -P )"
-cd $currentDir
-open -a Terminal ../Resources/usr/bin/telegraf
