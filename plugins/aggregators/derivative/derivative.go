@@ -163,10 +163,8 @@ func (d *Derivative) Push(acc telegraf.Accumulator) {
 			continue
 		}
 		var denominator float64
-		if len(d.Variable) == 0 {
-			// If no derivation variable is known default to timestamp
-			denominator = aggregate.last.time.Sub(aggregate.first.time).Seconds()
-		} else {
+		denominator = aggregate.last.time.Sub(aggregate.first.time).Seconds()
+		if len(d.Variable) > 0 {
 			var first float64
 			var last float64
 			var found bool
