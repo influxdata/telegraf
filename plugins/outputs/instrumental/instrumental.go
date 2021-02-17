@@ -21,14 +21,14 @@ var (
 )
 
 type Instrumental struct {
-	Host       string
-	APIToken   string
-	Prefix     string
-	DataFormat string
-	Template   string
-	Templates  []string
-	Timeout    internal.Duration
-	Debug      bool
+	Host       string            `toml:"host"`
+	APIToken   string            `toml:"api_token"`
+	Prefix     string            `toml:"prefix"`
+	DataFormat string            `toml:"data_format"`
+	Template   string            `toml:"template"`
+	Templates  []string          `toml:"templates"`
+	Timeout    internal.Duration `toml:"timeout"`
+	Debug      bool              `toml:"debug"`
 
 	Log telegraf.Logger `toml:"-"`
 
