@@ -11,9 +11,9 @@ import (
 type MailChimp struct {
 	api *ChimpAPI
 
-	APIKey     string
-	DaysOld    int
-	CampaignID string
+	APIKey     string `toml:"api_key"`
+	DaysOld    int    `toml:"days_old"`
+	CampaignID string `toml:"campaign_id"`
 }
 
 var sampleConfig = `
