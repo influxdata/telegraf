@@ -53,8 +53,9 @@ func TestReadingJSON(t *testing.T) {
 		defer cancel()
 
 		for _, msg := range input {
-			err := connection.Write(ctx, websocket.MessageText, []byte(msg))
-			require.NoError(t, err)
+			if err := connection.Write(ctx, websocket.MessageText, []byte(msg)); err != nil {
+				return
+			}
 		}
 	}))
 	defer fakeServer.Close()
@@ -144,8 +145,9 @@ func TestReadingJSONWithCompression(t *testing.T) {
 		defer cancel()
 
 		for _, msg := range input {
-			err := connection.Write(ctx, websocket.MessageText, []byte(msg))
-			require.NoError(t, err)
+			if err := connection.Write(ctx, websocket.MessageText, []byte(msg)); err != nil {
+				return
+			}
 		}
 	}))
 	defer fakeServer.Close()
@@ -230,8 +232,9 @@ func TestReadingWSAddress(t *testing.T) {
 		defer cancel()
 
 		for _, msg := range input {
-			err := connection.Write(ctx, websocket.MessageText, []byte(msg))
-			require.NoError(t, err)
+			if err := connection.Write(ctx, websocket.MessageText, []byte(msg)); err != nil {
+				return
+			}
 		}
 	}))
 	defer fakeServer.Close()
@@ -311,15 +314,13 @@ func TestHandshake(t *testing.T) {
 	options := websocket.AcceptOptions{}
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		connection, err := websocket.Accept(w, r, &options)
+		require.NoError(t, err)
 		defer connection.Close(websocket.StatusInternalError, "abnormal exit")
-		if err != nil {
-			return
-		}
-
-		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
-		defer cancel()
 
 		for {
+			ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+			defer cancel()
+
 			_, buf, err := connection.Read(ctx)
 			if err != nil {
 				return
@@ -331,8 +332,9 @@ func TestHandshake(t *testing.T) {
 		}
 
 		for _, msg := range input {
-			err := connection.Write(r.Context(), websocket.MessageText, []byte(msg))
-			require.NoError(t, err)
+			if err := connection.Write(r.Context(), websocket.MessageText, []byte(msg)); err != nil {
+				return
+			}
 		}
 		connection.Close(websocket.StatusNormalClosure, "server shutdown")
 	}))
@@ -425,15 +427,13 @@ func TestGather(t *testing.T) {
 	options := websocket.AcceptOptions{}
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		connection, err := websocket.Accept(w, r, &options)
+		require.NoError(t, err)
 		defer connection.Close(websocket.StatusInternalError, "abnormal exit")
-		if err != nil {
-			return
-		}
-
-		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
-		defer cancel()
 
 		for i := 0; ; i++ {
+			ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+			defer cancel()
+
 			_, buf, err := connection.Read(ctx)
 			if err != nil {
 				return
@@ -441,8 +441,7 @@ func TestGather(t *testing.T) {
 
 			if string(buf) == triggerMessage {
 				msg := fmt.Sprintf(message, timestamp.AddDate(0, 0, i).Unix(), i)
-				err := connection.Write(r.Context(), websocket.MessageText, []byte(msg))
-				if err != nil {
+				if err := connection.Write(ctx, websocket.MessageText, []byte(msg)); err != nil {
 					return
 				}
 			}
@@ -543,10 +542,8 @@ func TestServerDropout(t *testing.T) {
 	options := websocket.AcceptOptions{}
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		connection, err := websocket.Accept(w, r, &options)
+		require.NoError(t, err)
 		defer connection.Close(websocket.StatusInternalError, "abnormal exit")
-		if err != nil {
-			return
-		}
 
 		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 		defer cancel()
@@ -555,8 +552,6 @@ func TestServerDropout(t *testing.T) {
 		if err := connection.Write(ctx, websocket.MessageText, []byte(msg)); err != nil {
 			return
 		}
-
-		connection.Close(websocket.StatusNormalClosure, "server shutdown")
 		request++
 	}))
 	defer fakeServer.Close()
@@ -665,13 +660,12 @@ func TestServerDropoutGather(t *testing.T) {
 
 		if string(buf) == triggerMessage {
 			msg := fmt.Sprintf(message, timestamp.AddDate(0, 0, request).Unix(), request)
-			err := connection.Write(r.Context(), websocket.MessageText, []byte(msg))
-			if err != nil {
+			if err := connection.Write(ctx, websocket.MessageText, []byte(msg)); err != nil {
 				return
 			}
+			request++
 		}
 		connection.Close(websocket.StatusNormalClosure, "server shutdown")
-		request++
 	}))
 	defer fakeServer.Close()
 
