@@ -26,10 +26,10 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		return nil, err
 	}
 
-	if s.infoCache == nil {
-		s.infoCache = map[string]diskInfoCache{}
+	if d.infoCache == nil {
+		d.infoCache = map[string]diskInfoCache{}
 	}
-	ic, ok := s.infoCache[devName]
+	ic, ok := d.infoCache[devName]
 
 	if ok && stat.Mtim.Nano() == ic.modifiedAt {
 		return ic.values, nil
@@ -65,7 +65,7 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 
 	di := map[string]string{}
 
-	s.infoCache[devName] = diskInfoCache{
+	d.infoCache[devName] = diskInfoCache{
 		modifiedAt:   stat.Mtim.Nano(),
 		udevDataPath: udevDataPath,
 		values:       di,

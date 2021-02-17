@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/jackc/pgx/stdlib"
+	_ "github.com/jackc/pgx/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
