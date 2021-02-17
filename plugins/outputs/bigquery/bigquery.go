@@ -240,10 +240,11 @@ func (b *BigQuery) Close() error {
 }
 
 func init() {
+	hm := make(map[string]bool)
 	outputs.Add("bigquery", func() telegraf.Output {
 		return &BigQuery{
 			Timeout:         defaultTimeout,
-			warnedOnHyphens: make(map[string]bool),
+			warnedOnHyphens: hm,
 			ReplaceHyphenTo: "_",
 		}
 	})
