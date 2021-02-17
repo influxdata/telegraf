@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,7 +43,11 @@ type BigQuery struct {
 	Timeout internal.Duration `toml:"timeout"`
 	Log     telegraf.Logger   `toml: "-"`
 
+	ReplaceHyphenTo string `toml:replace_hyphen_to`
+
 	client *bigquery.Client
+
+	warnedOnHyphens map[string]bool
 }
 
 // SampleConfig returns the formatted sample configuration for the plugin.
@@ -198,12 +203,29 @@ func (b *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSave
 	ctx, cancel := context.WithTimeout(ctx, b.Timeout.Duration)
 	defer cancel()
 
-	table := b.client.DatasetInProject(b.Project, b.Dataset).Table(metricName)
+	tableName := b.metricToTable(metricName)
+	table := b.client.DatasetInProject(b.Project, b.Dataset).Table(tableName)
 	inserter := table.Inserter()
 
 	if err := inserter.Put(ctx, metrics); err != nil {
 		b.Log.Errorf("inserting metric %q failed: %v", metricName, err)
 	}
+}
+
+func (b *BigQuery) metricToTable(metricName string) string {
+	if strings.Contains(metricName, "-") {
+
+		dhm := strings.ReplaceAll(metricName, "-", b.ReplaceHyphenTo)
+
+		if warned, _ := b.warnedOnHyphens[metricName]; !warned {
+			b.Log.Warn("Metric %q contains hyphens please consider using the rename processor plugin, falling back to %q", dhm)
+			b.warnedOnHyphens[metricName] = true
+		}
+
+		return dhm
+	}
+
+	return metricName
 }
 
 func (b *BigQuery) tableForMetric(metricName string) *bigquery.Table {
@@ -218,7 +240,9 @@ func (b *BigQuery) Close() error {
 func init() {
 	outputs.Add("bigquery", func() telegraf.Output {
 		return &BigQuery{
-			Timeout: defaultTimeout,
+			Timeout:         defaultTimeout,
+			warnedOnHyphens: make(map[string]bool),
+			ReplaceHyphenTo: "_",
 		}
 	})
 }
