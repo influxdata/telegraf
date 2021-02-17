@@ -225,7 +225,7 @@ func (b *BigBlueButton) gatherRecordings(acc telegraf.Accumulator) error {
 }
 
 func toStringMapInterface(in map[string]uint64) map[string]interface{} {
-	var m = map[string]interface{}{}
+	m := make(map[string]interface{}, len(in))
 	for k, v := range in {
 		m[k] = v
 	}
