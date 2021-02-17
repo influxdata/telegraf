@@ -10,8 +10,8 @@ def apply(metric):
     new_metric = Metric("sizing")
     num_tags = len(metric.tags.items())
     new_metric.fields["tag_count"] = float(num_tags)
-    new_metric.fields["tag_key_avg_length"] = _sum(map(len, metric.tags.keys())) / num_tags
-    new_metric.fields["tag_value_avg_length"] = _sum(map(len, metric.tags.values())) / num_tags
+    new_metric.fields["tag_key_avg_length"] = sum(map(len, metric.tags.keys())) / num_tags
+    new_metric.fields["tag_value_avg_length"] = sum(map(len, metric.tags.values())) / num_tags
 
     new_metric.tags["measurement"] =  metric.name
 
@@ -47,7 +47,7 @@ def apply(metric):
 def produce_pairs(metric, li, field_type):
     lens = elem_lengths(li)
     counts = count_lengths(lens)
-    max_value = max(counts)
+
     metric.fields["{}_avg_length".format(field_type)]  = float(mean(lens))
     metric.fields["{}_count".format(field_type)]       = float(len(li))
 
@@ -56,13 +56,6 @@ def elem_lengths(li):
         return [len(str(elem)) for elem in li]
     else:
         return [len(elem) for elem in li]
-
-def get_key(di, value):
-    keys = []
-    for k,v in di.items():
-        if v == value:
-            keys.append(k)
-    return keys
 
 def count_lengths(li):
     # Returns dict of counts of each occurrence of length in a list of lengths
@@ -80,11 +73,11 @@ def count_lengths(li):
 def map(f, li):
     return [f(x) for x in li]
 
-def _sum(li):
+def sum(li):
     sum = 0
     for i in li:
         sum += i
     return sum
 
 def mean(li):
-    return _sum(li)/len(li)
+    return sum(li)/len(li)
