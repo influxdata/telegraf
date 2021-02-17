@@ -26,6 +26,8 @@ The following is an example config for RavenDB. **Note:** The client certificate
 
   ## List of statistics which are collected
   # At least one is required
+  # Allowed values: server, databases, indexes, collections
+  #  
   # stats_include = ["server", "databases", "indexes", "collections"]
 
   ## List of db where database stats are collected

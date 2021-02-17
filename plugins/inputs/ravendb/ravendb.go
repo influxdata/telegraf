@@ -62,6 +62,8 @@ var sampleConfig = `
 
   ## List of statistics which are collected
   # At least one is required
+  # Allowed values: server, databases, indexes, collections
+  #
   # stats_include = ["server", "databases", "indexes", "collections"]
 
   ## List of db where database stats are collected
@@ -128,7 +130,7 @@ func (r *RavenDB) Gather(acc telegraf.Accumulator) error {
 				r.gatherCollections(acc)
 			}()
 		default:
-			panic(fmt.Sprintf("unhandled statistics type %s", statToCollect))
+			acc.AddError(fmt.Errorf("unhandled statistics type %s", statToCollect))
 		}
 	}
 
