@@ -6,8 +6,6 @@
 # Example Output:
 # sizing,measurement=logstash,environment_id=EN456,property_id=PR789,request_type=ingress,stack_id=engd tag_count=5,tag_key_avg_length=10.2,tag_value_avg_length=10.6,int_avg_length=4.9,int_count=10,bool_avg_length=5,bool_count=1,str_avg_length=25.4,str_count=10 1611085496208
 
-load("logging.star", "log")
-
 def apply(metric):
     new_metric = Metric("sizing")
     num_tags = len(metric.tags.items())
