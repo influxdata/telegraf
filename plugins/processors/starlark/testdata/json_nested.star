@@ -34,12 +34,9 @@ load("json.star", "json")
 load("logging.star", "log")
 
 def apply(metric):
-  log.debug("metric: {}".format(metric))
   j_list = json.decode(metric.fields.get('value')) # input JSON may be an arrow of objects
   metrics = []
-  # log.debug("j_list: {}".format(j_list))
   for obj in j_list:
-    log.debug("obj type: {}".format(obj))
     new_metric = Metric("partition") # We want a new InfluxDB/Telegraf metric each iteration
     for tag in obj["tags"].items(): # 4 Tags to iterate through
       new_metric.tags[str(tag[0])] = tag[1]
