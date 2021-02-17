@@ -3,14 +3,12 @@ sudo security import MacCertificate.p12 -k /Library/Keychains/System.keychain -P
 base64 -D -o AppleSigningAuthorityCertificate.cer <<< $AppleSigningAuthorityCertificate
 sudo security import AppleSigningAuthorityCertificate.cer -k '/Library/Keychains/System.keychain' -A
 
-signingIdentity="Developer ID Application: InfluxData Inc. (M7DN9H35QT)"
-
 cd dist
 tar -xzvf $(find . -name "*darwin_amd64.tar*")
 rm $(find . -name "*darwin_amd64.tar*")
 cd $(find . -name "*telegraf-*" -type d)
 cd usr/bin
-codesign -s $signingIdentity --timestamp --options=runtime telegraf
+codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime telegraf
 codesign -v telegraf
 
 cd
@@ -19,15 +17,15 @@ extractedFolder=$(find . -name "*telegraf-*" -type d)
 cp ../scripts/telegraf_entry_mac $extractedFolder
 
 echo "now attempting to sign the entry"
-codesign -s $signingIdentity --timestamp --options=runtime "$extractedFolder"/telegraf_entry
+codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime "$extractedFolder"/telegraf_entry
 codesign -v "$extractedFolder"/telegraf_entry
 
 echo "now calling appmaker"
 ../scripts/mac_app_bundler -bin telegraf_entry_mac -identifier com.influxdata.telegraf -name "Telegraf" -o ../dist -assets $extractedFolder -icon ../assets/icon.png
 
-codesign -s $signingIdentity --timestamp --options=runtime --deep Telegraf.app
+codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime --deep Telegraf.app
 hdiutil create -size 500m -volname Telegraf -srcfolder Telegraf.app telegraf.dmg
-codesign -s $signingIdentity --timestamp --options=runtime telegraf.dmg
+codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime telegraf.dmg
 
 uuid=$(xcrun altool --notarize-app --primary-bundle-id "com.influxdata.telegraf" --username $appleDevUsername --password $appleDevPassword --file telegraf.dmg | awk '/RequestUUID/ { print $NF; }')
 
