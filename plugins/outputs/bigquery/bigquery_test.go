@@ -89,7 +89,7 @@ func TestMetricToTableDefault(t *testing.T) {
 	ntn := b.metricToTable(otn)
 
 	require.Equal(t, "table_with_hyphens", ntn)
-
+	require.True(t, b.warnedOnHyphens[otn])
 }
 
 func TestMetricToTableCustom(t *testing.T) {
@@ -108,6 +108,7 @@ func TestMetricToTableCustom(t *testing.T) {
 	ntn := b.metricToTable(otn)
 
 	require.Equal(t, "table*with*hyphens", ntn)
+	require.True(t, b.warnedOnHyphens[otn])
 }
 
 func (b *BigQuery) setUpTestClient() error {
