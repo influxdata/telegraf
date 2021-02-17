@@ -39,8 +39,6 @@ type BigQuery struct {
 	Project         string `toml:"project"`
 	Dataset         string `toml:"dataset"`
 
-	TableMap map[string]string `toml:"table_map"`
-
 	Timeout internal.Duration `toml:"timeout"`
 	Log     telegraf.Logger   `toml: "-"`
 
@@ -200,21 +198,11 @@ func (b *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSave
 	ctx, cancel := context.WithTimeout(ctx, b.Timeout.Duration)
 	defer cancel()
 
-	tableName := b.metricToTable(metricName)
-
-	table := b.client.DatasetInProject(b.Project, b.Dataset).Table(tableName)
+	table := b.client.DatasetInProject(b.Project, b.Dataset).Table(metricName)
 	inserter := table.Inserter()
 
 	if err := inserter.Put(ctx, metrics); err != nil {
 		b.Log.Errorf("inserting metric %q failed: %v", metricName, err)
-	}
-}
-
-func (b *BigQuery) metricToTable(metricName string) string {
-	if tableName, exists := b.TableMap[metricName]; exists {
-		return tableName
-	} else {
-		return metricName
 	}
 }
 
@@ -230,8 +218,7 @@ func (b *BigQuery) Close() error {
 func init() {
 	outputs.Add("bigquery", func() telegraf.Output {
 		return &BigQuery{
-			Timeout:  defaultTimeout,
-			TableMap: make(map[string]string),
+			Timeout: defaultTimeout,
 		}
 	})
 }
