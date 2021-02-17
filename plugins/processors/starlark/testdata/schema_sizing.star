@@ -52,9 +52,6 @@ def produce_pairs(metric, li, field_type):
     max_value = max(counts)
     metric.fields["{}_avg_length".format(field_type)]  = float(mean(lens))
     metric.fields["{}_count".format(field_type)]       = float(len(li))
-    # metric.fields["{}_variance".format(field_type)]    = float(variance(lens))
-    # log.debug("get_key: {}".format(get_key(counts, max_value)))
-    # metric.fields["{}_mode".format(field_type)]        = float(get_key(counts, max_value))
 
 def elem_lengths(li):
     if type(li[0]) in ("int", "float", "bool"):
@@ -93,10 +90,3 @@ def _sum(li):
 
 def mean(li):
     return _sum(li)/len(li)
-
-# def variance(li):
-#     avg = mean(li)
-#     log.debug("avg: {}".format(avg))
-#     squrd_diffs = [(i-avg)*(i-avg) for i in li]
-#     log.debug("sum of squares: {}".format(_sum(squrd_diffs)))
-#     return _sum(squrd_diffs) / len(li)
