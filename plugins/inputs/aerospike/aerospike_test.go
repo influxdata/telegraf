@@ -83,7 +83,7 @@ func TestSelectNamepsacesIntegration(t *testing.T) {
 	count := 0
 	for _, p := range acc.Metrics {
 		if p.Measurement == "aerospike_namespace" {
-			count += 1
+			count++
 		}
 	}
 	assert.Equal(t, count, 1)

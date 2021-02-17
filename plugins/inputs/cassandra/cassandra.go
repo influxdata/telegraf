@@ -170,7 +170,7 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 	}
 }
 
-func (j *Cassandra) SampleConfig() string {
+func (c *Cassandra) SampleConfig() string {
 	return `
   ## DEPRECATED: The cassandra plugin has been deprecated.  Please use the
   ## jolokia2 plugin instead.
@@ -193,18 +193,18 @@ func (j *Cassandra) SampleConfig() string {
 `
 }
 
-func (j *Cassandra) Description() string {
+func (c *Cassandra) Description() string {
 	return "Read Cassandra metrics through Jolokia"
 }
 
-func (j *Cassandra) getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
+func (c *Cassandra) getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
 	// Create + send request
 	req, err := http.NewRequest("GET", requestUrl.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := j.jClient.MakeRequest(req)
+	resp, err := c.jClient.MakeRequest(req)
 	if err != nil {
 		return nil, err
 	}

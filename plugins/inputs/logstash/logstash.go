@@ -149,8 +149,8 @@ const processStats = "/_node/stats/process"
 const pipelinesStats = "/_node/stats/pipelines"
 const pipelineStats = "/_node/stats/pipeline"
 
-func (i *Logstash) Init() error {
-	err := choice.CheckSlice(i.Collect, []string{"pipelines", "process", "jvm"})
+func (logstash *Logstash) Init() error {
+	err := choice.CheckSlice(logstash.Collect, []string{"pipelines", "process", "jvm"})
 	if err != nil {
 		return fmt.Errorf(`cannot verify "collect" setting: %v`, err)
 	}

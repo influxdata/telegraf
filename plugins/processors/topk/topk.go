@@ -276,8 +276,7 @@ func (t *TopK) push() []telegraf.Metric {
 	}
 
 	// The return value that will hold the returned metrics
-	var ret []telegraf.Metric = make([]telegraf.Metric, 0, 0)
-
+	var ret = make([]telegraf.Metric, 0, 0)
 	// Get the top K metrics for each field and add them to the return value
 	addedKeys := make(map[string]bool)
 	for _, field := range t.Fields {
@@ -317,11 +316,11 @@ func (t *TopK) push() []telegraf.Metric {
 
 	result := make([]telegraf.Metric, 0, len(ret))
 	for _, m := range ret {
-		copy, err := metric.New(m.Name(), m.Tags(), m.Fields(), m.Time(), m.Type())
+		newMetric, err := metric.New(m.Name(), m.Tags(), m.Fields(), m.Time(), m.Type())
 		if err != nil {
 			continue
 		}
-		result = append(result, copy)
+		result = append(result, newMetric)
 	}
 
 	return result
@@ -412,7 +411,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 						continue
 					}
 					mean[field] += val
-					meanCounters[field] += 1
+					meanCounters[field]++
 				}
 			}
 			// Divide by the number of recorded measurements collected for every field
@@ -423,7 +422,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 					continue
 				}
 				mean[k] = mean[k] / meanCounters[k]
-				noMeasurementsFound = noMeasurementsFound && false
+				noMeasurementsFound = false
 			}
 
 			if noMeasurementsFound {

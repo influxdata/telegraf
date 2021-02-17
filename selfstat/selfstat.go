@@ -1,4 +1,4 @@
-// selfstat is a package for tracking and collecting internal statistics
+// Package selfstat is a package for tracking and collecting internal statistics
 // about telegraf. Metrics can be registered using this package, and then
 // incremented or set within your code. If the inputs.internal plugin is enabled,
 // then all registered stats will be collected as they would by any other input
