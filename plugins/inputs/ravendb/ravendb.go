@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -129,8 +130,6 @@ func (r *RavenDB) Gather(acc telegraf.Accumulator) error {
 				defer wg.Done()
 				r.gatherCollections(acc)
 			}()
-		default:
-			acc.AddError(fmt.Errorf("unhandled statistics type %s", statToCollect))
 		}
 	}
 
@@ -416,6 +415,11 @@ func (r *RavenDB) Init() error {
 	r.requestUrlDatabases = r.URL + "/admin/monitoring/v1/databases" + prepareDbNamesUrlPart(r.DbStatsDbs)
 	r.requestUrlIndexes = r.URL + "/admin/monitoring/v1/indexes" + prepareDbNamesUrlPart(r.IndexStatsDbs)
 	r.requestUrlCollection = r.URL + "/admin/monitoring/v1/collections" + prepareDbNamesUrlPart(r.IndexStatsDbs)
+
+	err := choice.CheckSlice(r.StatsInclude, []string{"server", "databases", "indexes", "collections"})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
