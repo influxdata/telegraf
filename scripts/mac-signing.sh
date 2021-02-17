@@ -17,11 +17,11 @@ extractedFolder=$(find . -name "*telegraf-*" -type d)
 cp ../scripts/telegraf_entry_mac $extractedFolder
 
 echo "now attempting to sign the entry"
-codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime "$extractedFolder"/telegraf_entry
-codesign -v "$extractedFolder"/telegraf_entry
+codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime "$extractedFolder"/telegraf_entry_mac
+codesign -v "$extractedFolder"/telegraf_entry_mac
 
 echo "now calling appmaker"
-../scripts/mac_app_bundler -bin telegraf_entry_mac -identifier com.influxdata.telegraf -name "Telegraf" -o ../dist -assets $extractedFolder -icon ../assets/icon.png
+sudo ../scripts/mac_app_bundler -bin telegraf_entry_mac -identifier com.influxdata.telegraf -name "Telegraf" -o ../dist -assets $extractedFolder -icon ../assets/icon.png
 
 codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime --deep Telegraf.app
 hdiutil create -size 500m -volname Telegraf -srcfolder Telegraf.app telegraf.dmg
