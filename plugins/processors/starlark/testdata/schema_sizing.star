@@ -1,4 +1,5 @@
 # Produces a new Line of statistics about the Fields
+# Drops the original metric
 #
 # Example Input:
 # logstash,environment_id=EN456,property_id=PR789,request_type=ingress,stack_id=engd asn=1313i,cache_response_code=202i,colo_code="LAX",colo_id=12i,compute_time=28736i,edge_end_timestamp=1611085500320i,edge_start_timestamp=1611085496208i,id="1b5c67ed-dfd0-4d30-99bd-84f0a9c5297b_76af1809-29d1-4b35-a0cf-39797458275c",parent_ray_id="00",processing_details="ok",rate_limit_id=0i,ray_id="76af1809-29d1-4b35-a0cf-39797458275c",request_bytes=7777i,request_host="engd-08364a825824e04f0a494115.reactorstream.dev",request_id="1b5c67ed-dfd0-4d30-99bd-84f0a9c5297b",request_result="succeeded",request_uri="/ENafcb2798a9be4bb7bfddbf35c374db15",response_code=200i,subrequest=false,subrequest_count=1i,user_agent="curl/7.64.1" 1611085496208
