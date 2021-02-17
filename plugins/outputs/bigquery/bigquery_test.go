@@ -75,6 +75,22 @@ func TestWrite(t *testing.T) {
 	require.Equal(t, mockMetrics[0].Fields()["value"], row.Value)
 }
 
+func TestMetricToTableDefault(t *testing.T) {
+	b := &BigQuery{
+		Project:         "test-project",
+		Dataset:         "test-dataset",
+		Timeout:         testDuration,
+		warnedOnHyphens: make(map[string]bool),
+		ReplaceHyphenTo: "_",
+		Log:             testutil.Logger{},
+	}
+
+	otn := "table-with-hyphens"
+	ntn := b.metricToTable(otn)
+
+	require.Equal(t, "table_with_hyphens", ntn)
+}
+
 func (b *BigQuery) setUpTestClient() error {
 	noAuth := option.WithoutAuthentication()
 	endpoints := option.WithEndpoint("http://" + testingHost)
