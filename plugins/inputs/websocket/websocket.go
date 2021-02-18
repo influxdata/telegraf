@@ -225,8 +225,12 @@ func (w *Websocket) disconnect() {
 		w.listenCancel()
 	}
 
-	w.connection.Close(websocket.StatusNormalClosure, "shutdown")
-	w.client.CloseIdleConnections()
+	if w.connection != nil {
+		w.connection.Close(websocket.StatusNormalClosure, "shutdown")
+	}
+	if w.client != nil {
+		w.client.CloseIdleConnections()
+	}
 }
 
 func (w *Websocket) watchdog() {
