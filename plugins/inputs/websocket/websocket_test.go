@@ -308,7 +308,7 @@ func TestHandshake(t *testing.T) {
 	`
 	input := []string{fmt.Sprintf(message, timestamp.Unix())}
 
-	handshakeMessage := "Hello Captain!"
+	handshakeMessages := []string{"Hello Captain!"}
 
 	// Setup the test server
 	options := websocket.AcceptOptions{}
@@ -326,7 +326,7 @@ func TestHandshake(t *testing.T) {
 				return
 			}
 
-			if string(buf) == handshakeMessage {
+			if string(buf) == handshakeMessages[0] {
 				break
 			}
 		}
@@ -362,10 +362,126 @@ func TestHandshake(t *testing.T) {
 
 	// Setup and start the plugin
 	plugin := &Websocket{
-		URL:           fakeServer.URL,
-		Timeout:       internal.Duration{Duration: 1 * time.Second},
-		HandshakeBody: handshakeMessage,
-		Log:           testutil.Logger{Name: "websocket"},
+		URL:             fakeServer.URL,
+		Timeout:         internal.Duration{Duration: 1 * time.Second},
+		HandshakeBodies: handshakeMessages,
+		Log:             testutil.Logger{Name: "websocket"},
+	}
+
+	p, _ := parsers.NewParser(&parsers.Config{
+		DataFormat:       "json",
+		MetricName:       "websocket",
+		TagKeys:          []string{"server", "user"},
+		JSONStringFields: []string{"field4", "field2"},
+		JSONTimeKey:      "time",
+		JSONTimeFormat:   "unix",
+	})
+	plugin.SetParser(p)
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(acc))
+
+	timeout := time.After(3 * time.Second)
+	done := make(chan bool)
+	go func() {
+		acc.Wait(1)
+		done <- true
+	}()
+
+	select {
+	case <-timeout:
+		t.Fatal("timeout while waiting for handshake")
+	case <-done:
+	}
+
+	plugin.Stop()
+
+	require.Len(t, acc.Metrics, 1)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+}
+
+func TestHandshakeMultiple(t *testing.T) {
+	timestamp, err := time.Parse(time.RFC3339, "2021-02-16T12:48:35Z")
+	require.NoError(t, err)
+
+	// Construct the input
+	message := `
+		{
+			"time": %d,
+			"field1": 1.345677,
+			"field2": true,
+			"field3": 42,
+			"field4": "websockets",
+			"seqno": 0,
+			"server": "test",
+			"user": "ender"
+		}
+	`
+	input := []string{fmt.Sprintf(message, timestamp.Unix())}
+
+	handshakeMessages := []string{"Hello Captain!", "", "What's up"}
+
+	// Setup the test server
+	options := websocket.AcceptOptions{}
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		connection, err := websocket.Accept(w, r, &options)
+		require.NoError(t, err)
+		defer connection.Close(websocket.StatusInternalError, "abnormal exit")
+
+		matches := 0
+		for {
+			ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+			defer cancel()
+
+			_, buf, err := connection.Read(ctx)
+			if err != nil {
+				return
+			}
+
+			if string(buf) == handshakeMessages[matches] {
+				matches++
+				if matches >= len(handshakeMessages) {
+					break
+				}
+			}
+		}
+
+		for _, msg := range input {
+			if err := connection.Write(r.Context(), websocket.MessageText, []byte(msg)); err != nil {
+				return
+			}
+		}
+		connection.Close(websocket.StatusNormalClosure, "server shutdown")
+	}))
+	defer fakeServer.Close()
+
+	// Construct the expected metrics
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"websocket",
+			map[string]string{
+				"server": "test",
+				"user":   "ender",
+				"url":    fakeServer.URL,
+			},
+			map[string]interface{}{
+				"field1": float64(1.345677),
+				"field2": true,
+				"field3": float64(42),
+				"field4": "websockets",
+				"seqno":  float64(0),
+			},
+			timestamp,
+		),
+	}
+
+	// Setup and start the plugin
+	plugin := &Websocket{
+		URL:             fakeServer.URL,
+		Timeout:         internal.Duration{Duration: 1 * time.Second},
+		HandshakeBodies: handshakeMessages,
+		Log:             testutil.Logger{Name: "websocket"},
 	}
 
 	p, _ := parsers.NewParser(&parsers.Config{

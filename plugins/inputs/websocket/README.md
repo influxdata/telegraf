@@ -16,9 +16,12 @@ data-format.
   ## URL to read the metrics from (mandatory)
   url = "ws://localhost:8080"
 
-  ## Message to send to the websocket in order to initialize the connection
+  ## Messages to send to the websocket in order to initialize the connection.
+  ## If an empty message is found, the sending is paused for "handshake_pause"
+  ## long before sending the next message.
   ## If set to empty (default), nothing will be sent.
-  # handshake_body = ""
+  # handshake_bodies = []
+  # handshake_pause = "100ms"
 
   ## Message to send to the websocket in order to trigger sending of a metric
   ## If set to empty (default), this plugin will wait for the server to send

@@ -21,9 +21,12 @@ var sampleConfig = `
   ## URL to read the metrics from (mandatory)
   url = "ws://localhost:8080"
 
-  ## Message to send to the websocket in order to initialize the connection
-	## If set to empty (default), nothing will be sent.
-  # handshake_body = ""
+  ## Messages to send to the websocket in order to initialize the connection.
+  ## If an empty message is found, the sending is paused for "handshake_pause"
+  ## long before sending the next message.
+  ## If set to empty (default), nothing will be sent.
+  # handshake_bodies = []
+  # handshake_pause = "100ms"
 
 	## Message to send to the websocket in order to trigger sending of a metric
 	## If set to empty (default), this plugin will wait for the server to send
@@ -52,11 +55,12 @@ var sampleConfig = `
 `
 
 type Websocket struct {
-	URL           string            `toml:"url"`
-	HandshakeBody string            `toml:"handshake_body"`
-	TriggerBody   string            `toml:"trigger_body"`
-	Timeout       internal.Duration `toml:"timeout"`
-	Log           telegraf.Logger   `toml:"-"`
+	URL             string            `toml:"url"`
+	HandshakeBodies []string          `toml:"handshake_bodies"`
+	HandshakePause  internal.Duration `toml:"handshake_pause"`
+	TriggerBody     string            `toml:"trigger_body"`
+	Timeout         internal.Duration `toml:"timeout"`
+	Log             telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
 	proxy.HTTPProxy
 
@@ -198,7 +202,7 @@ func (w *Websocket) connect() error {
 		w.listenCancel = nil
 	}
 
-	if w.HandshakeBody != "" {
+	if len(w.HandshakeBodies) > 0 {
 		handshakectx := context.Background()
 		if w.Timeout.Duration > 0 {
 			c, cancel := context.WithTimeout(handshakectx, w.Timeout.Duration)
@@ -245,7 +249,18 @@ func (w *Websocket) watchdog() {
 }
 
 func (w *Websocket) handshake(ctx context.Context) error {
-	return w.connection.Write(ctx, websocket.MessageText, []byte(w.HandshakeBody))
+	for _, msg := range w.HandshakeBodies {
+		if msg == "" && w.HandshakePause.Duration > 0 {
+			time.Sleep(w.HandshakePause.Duration)
+			continue
+		}
+		err := w.connection.Write(ctx, websocket.MessageText, []byte(msg))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (w *Websocket) listen(ctx context.Context, acc telegraf.Accumulator) {
@@ -290,7 +305,8 @@ func (w *Websocket) read(ctx context.Context, acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("websocket", func() telegraf.Input {
 		return &Websocket{
-			Timeout: internal.Duration{Duration: 5 * time.Second},
+			Timeout:        internal.Duration{Duration: 5 * time.Second},
+			HandshakePause: internal.Duration{Duration: 100 * time.Millisecond},
 		}
 	})
 }
