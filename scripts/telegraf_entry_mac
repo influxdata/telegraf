@@ -5,5 +5,9 @@ if [[ $currentDir == *"AppTranslocation"* || $currentDir == *"Volumes"* ]]; then
   osascript -e "display alert \"Please copy Telegraf to somewhere on your machine. It can't be run from the image.\" as critical"
 else
   cd $currentDir
-  open -a Terminal ../Resources/usr/bin/telegraf
+  osascript<<EOF
+  tell application "Terminal"
+      do script "../Resources/usr/bin/telegraf $@"
+  end tell
+EOF
 fi
