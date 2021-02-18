@@ -30,7 +30,7 @@ cd Contents
 mkdir MacOS
 mkdir Resources
 cd ../..
-cp ../scripts/info.plist Telegraf/Contents
+cp ../info.plist Telegraf/Contents
 cp -R "$extractedFolder"/ Telegraf/Contents/Resources
 cp ../scripts/telegraf_entry_mac Telegraf/Contents/MacOS
 cp ../assets/icon.icns Telegraf/Contents/Resources
