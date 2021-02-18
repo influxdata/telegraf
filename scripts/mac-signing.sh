@@ -36,7 +36,7 @@ hdiutil create -size 500m -volname Telegraf -srcfolder Telegraf.app telegraf.dmg
 codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime telegraf.dmg
 
 uuid=$(xcrun altool --notarize-app --primary-bundle-id "com.influxdata.telegraf" --username $appleDevUsername --password $appleDevPassword --file telegraf.dmg | awk '/RequestUUID/ { print $NF; }')
-
+echo $uuid
 if [[ $uuid == "" ]]; then 
   echo "Could not upload for notarization."
   exit 1
@@ -47,6 +47,9 @@ request_status="in progress"
 while [[ "$request_status" == "in progress" ]]; do
   sleep 10
   request_status=$(xcrun altool --notarization-info $requestUUID --username $appleDevUsername --password $appleDevPassword 2>&1 | awk -F ': ' '/Status:/ { print $2; }' )
+  echo request_status
+  echo "now echoing actual response"
+  echo $(xcrun altool --notarization-info $requestUUID --username $appleDevUsername --password $appleDevPassword)
 done
 
 if [[ $request_status != "success" ]]; then
