@@ -102,6 +102,7 @@ func TestCoils(t *testing.T) {
 						Address: []uint16{ct.address},
 					},
 				},
+				Log: testutil.Logger{},
 			}
 
 			err = modbus.Init()
@@ -640,6 +641,7 @@ func TestHoldingRegisters(t *testing.T) {
 						Address:   hrt.address,
 					},
 				},
+				Log: testutil.Logger{},
 			}
 
 			err = modbus.Init()
@@ -677,7 +679,7 @@ func TestRetrySuccessful(t *testing.T) {
 			if retries >= maxretries {
 				except = &mbserver.Success
 			}
-			retries += 1
+			retries++
 
 			return data, except
 		})
@@ -694,6 +696,7 @@ func TestRetrySuccessful(t *testing.T) {
 					Address: []uint16{0},
 				},
 			},
+			Log: testutil.Logger{},
 		}
 
 		err = modbus.Init()
@@ -739,6 +742,7 @@ func TestRetryFail(t *testing.T) {
 					Address: []uint16{0},
 				},
 			},
+			Log: testutil.Logger{},
 		}
 
 		err = modbus.Init()
@@ -752,7 +756,7 @@ func TestRetryFail(t *testing.T) {
 	counter := 0
 	serv.RegisterFunctionHandler(1,
 		func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
-			counter += 1
+			counter++
 			data := make([]byte, 2)
 			data[0] = byte(1)
 			data[1] = byte(0)
@@ -772,6 +776,7 @@ func TestRetryFail(t *testing.T) {
 					Address: []uint16{0},
 				},
 			},
+			Log: testutil.Logger{},
 		}
 
 		err = modbus.Init()

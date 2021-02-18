@@ -2,7 +2,6 @@ package mesos
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -19,17 +18,10 @@ var masterMetrics map[string]interface{}
 var masterTestServer *httptest.Server
 var slaveMetrics map[string]interface{}
 
-// var slaveTaskMetrics map[string]interface{}
 var slaveTestServer *httptest.Server
 
-func randUUID() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
-}
-
 // master metrics that will be returned by generateMetrics()
-var masterMetricNames []string = []string{
+var masterMetricNames = []string{
 	// resources
 	"master/cpus_percent",
 	"master/cpus_used",
@@ -214,7 +206,7 @@ var masterMetricNames []string = []string{
 }
 
 // slave metrics that will be returned by generateMetrics()
-var slaveMetricNames []string = []string{
+var slaveMetricNames = []string{
 	// resources
 	"slave/cpus_percent",
 	"slave/cpus_used",
