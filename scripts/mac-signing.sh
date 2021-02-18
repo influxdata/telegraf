@@ -46,8 +46,8 @@ fi
 request_status="in progress"
 while [[ "$request_status" == "in progress" ]]; do
   sleep 10
-  request_status=$(xcrun altool --notarization-info $requestUUID --username "$AppleUsername" --password "$ApplePassword" 2>&1 | awk -F ': ' '/Status:/ { print $2; }' )
-  echo $(xcrun altool --notarization-info $requestUUID --username "$AppleUsername" --password "$ApplePassword")
+  request_status=$(xcrun altool --notarization-info $uuid --username "$AppleUsername" --password "$ApplePassword" 2>&1 | awk -F ': ' '/Status:/ { print $2; }' )
+  echo $(xcrun altool --notarization-info $uuid --username "$AppleUsername" --password "$ApplePassword")
 done
 
 if [[ $request_status != "success" ]]; then
