@@ -1166,7 +1166,8 @@ func loadTestConfiguration(filename string) (*Config, []string, error) {
 
 	header := make([]string, 0)
 	for _, line := range strings.Split(string(buf), "\n") {
-		if strings.HasPrefix(strings.TrimLeft(line, "\t "), "#") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "#") {
 			header = append(header, line)
 		}
 	}
