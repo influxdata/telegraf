@@ -288,7 +288,7 @@ func (w *Websocket) read(ctx context.Context, acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("http", func() telegraf.Input {
+	inputs.Add("websocket", func() telegraf.Input {
 		return &Websocket{
 			Timeout: internal.Duration{Duration: 5 * time.Second},
 		}
