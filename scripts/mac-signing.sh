@@ -42,12 +42,14 @@ if [[ $uuid == "" ]]; then
   exit 1
 fi
 
+echo $appleDevUsername
+
 # wait for status to be not "in progress" any more
 request_status="in progress"
 while [[ "$request_status" == "in progress" ]]; do
   sleep 10
   request_status=$(xcrun altool --notarization-info $requestUUID --username $appleDevUsername --password $appleDevPassword 2>&1 | awk -F ': ' '/Status:/ { print $2; }' )
-  echo request_status
+  echo $request_status
   echo "now echoing actual response"
   echo $(xcrun altool --notarization-info $requestUUID --username $appleDevUsername --password $appleDevPassword)
 done
