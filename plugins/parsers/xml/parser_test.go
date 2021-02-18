@@ -2,6 +2,7 @@ package xml
 
 import (
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -1119,7 +1120,8 @@ func TestTestCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, header, err := loadTestConfiguration(tt.filename)
+			filename := filepath.FromSlash(tt.filename)
+			cfg, header, err := loadTestConfiguration(filename)
 			require.NoError(t, err)
 			cfg.MetricName = "xml"
 
@@ -1128,7 +1130,8 @@ func TestTestCases(t *testing.T) {
 			require.NoError(t, err)
 			assert.Len(t, input, 1)
 
-			content, err := ioutil.ReadFile(input[0])
+			datafile := filepath.FromSlash(input[0])
+			content, err := ioutil.ReadFile(datafile)
 			require.NoError(t, err)
 
 			// Get the expectations
