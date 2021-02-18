@@ -1121,9 +1121,7 @@ func TestTestCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			filename := filepath.FromSlash(tt.filename)
-			t.Logf("Testing file %q...", filename)
 			cfg, header, err := loadTestConfiguration(filename)
-			t.Logf("    go header %q", header)
 			require.NoError(t, err)
 			cfg.MetricName = "xml"
 
