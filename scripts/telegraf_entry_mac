@@ -1,6 +1,8 @@
 #!/bin/bash
 currentDir="$( cd "$(dirname "$0")" ; pwd -P )"
 
+osascript -e "display alert \"$currentDir\" as critical"
+
 if [[ $currentDir == *"AppTranslocation"* ]]; then
   osascript -e "display alert \"Please copy Telegraf to somewhere on your machine. It can't be run from the image.\" as critical"
 else
