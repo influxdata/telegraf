@@ -1,193 +1,193 @@
 package cisco_telemetry_mdt
-  
+
 import (
-       "strconv"
-       "strings"
-       telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
+	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
+	"strconv"
+	"strings"
 )
 
 //xform Uint64 to int64
 func nxosValueXformUint64Toint64(field *telemetry.TelemetryField, value interface{}) interface{} {
-        if field.GetUint64Value() != 0 {
-                return int64(value.(uint64))
-        }
-        return nil
+	if field.GetUint64Value() != 0 {
+		return int64(value.(uint64))
+	}
+	return nil
 }
 
 //xform string to float
 func nxosValueXformStringTofloat(field *telemetry.TelemetryField, value interface{}) interface{} {
-        //convert property to float from string.
-        vals := field.GetStringValue()
-        if vals != "" {
-                if valf, err := strconv.ParseFloat(vals, 64); err == nil {
-                        return valf
-                }
-        }
-        return nil
+	//convert property to float from string.
+	vals := field.GetStringValue()
+	if vals != "" {
+		if valf, err := strconv.ParseFloat(vals, 64); err == nil {
+			return valf
+		}
+	}
+	return nil
 }
 
 //xform string to uint64
 func nxosValueXformStringToUint64(field *telemetry.TelemetryField, value interface{}) interface{} {
-        //string to uint64
-        vals := field.GetStringValue()
-        if vals != "" {
-                if val64, err := strconv.ParseUint(vals, 10, 64); err == nil {
-                        return val64
-                }
-        }
-        return nil
+	//string to uint64
+	vals := field.GetStringValue()
+	if vals != "" {
+		if val64, err := strconv.ParseUint(vals, 10, 64); err == nil {
+			return val64
+		}
+	}
+	return nil
 }
 
 //xform string to int64
 func nxosValueXformStringToInt64(field *telemetry.TelemetryField, value interface{}) interface{} {
-        //string to int64
-        vals := field.GetStringValue()
-        if vals != "" {
-                if val64, err := strconv.ParseInt(vals, 10, 64); err == nil {
-                        return val64
-                }
-        }
-        return nil
+	//string to int64
+	vals := field.GetStringValue()
+	if vals != "" {
+		if val64, err := strconv.ParseInt(vals, 10, 64); err == nil {
+			return val64
+		}
+	}
+	return nil
 }
 
 //auto-xform
 func nxosValueAutoXform(field *telemetry.TelemetryField, value interface{}) interface{} {
-        //check if we want auto xformation
-        vals := field.GetStringValue()
-        if vals != "" {
-                if val64, err := strconv.ParseUint(vals, 10, 64); err == nil {
-                        return val64
-                }
-                if valf, err := strconv.ParseFloat(vals, 64); err == nil {
-                        return valf
-                }
-                if val64, err := strconv.ParseInt(vals, 10, 64); err == nil {
-                        return val64
-                }
-        } // switch
-        return nil
+	//check if we want auto xformation
+	vals := field.GetStringValue()
+	if vals != "" {
+		if val64, err := strconv.ParseUint(vals, 10, 64); err == nil {
+			return val64
+		}
+		if valf, err := strconv.ParseFloat(vals, 64); err == nil {
+			return valf
+		}
+		if val64, err := strconv.ParseInt(vals, 10, 64); err == nil {
+			return val64
+		}
+	} // switch
+	return nil
 }
 
 //auto-xform float properties
 func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, value interface{}) interface{} {
-        //check if we want auto xformation
-        vals := field.GetStringValue()
-        if vals != "" {
-                if valf, err := strconv.ParseFloat(vals, 64); err == nil {
-                        return valf
-                }
-        } // switch
-        return nil
+	//check if we want auto xformation
+	vals := field.GetStringValue()
+	if vals != "" {
+		if valf, err := strconv.ParseFloat(vals, 64); err == nil {
+			return valf
+		}
+	} // switch
+	return nil
 }
 
 //xform uint64 to string
 func nxosValueXformUint64ToString(field *telemetry.TelemetryField, value interface{}) interface{} {
-        switch val := field.ValueByType.(type) {
-        case *telemetry.TelemetryField_StringValue:
-                if len(val.StringValue) > 0 {
-                        return val.StringValue
-                }
-        case *telemetry.TelemetryField_Uint64Value:
-                return strconv.FormatUint(val.Uint64Value, 10)
-        }
-        return nil
+	switch val := field.ValueByType.(type) {
+	case *telemetry.TelemetryField_StringValue:
+		if len(val.StringValue) > 0 {
+			return val.StringValue
+		}
+	case *telemetry.TelemetryField_Uint64Value:
+		return strconv.FormatUint(val.Uint64Value, 10)
+	}
+	return nil
 }
 
 //Xform value field.
 func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, value interface{}, path string) interface{} {
-        if strings.ContainsRune(path, ':') {
-                // not NXOS
-                return nil
-        }
-        if _, ok := c.propMap[field.Name]; ok {
-                return c.propMap[field.Name](field, value)
-        }
-        //check if we want auto xformation
-        if _, ok := c.propMap["auto-prop-xfromi"]; ok {
-                return c.propMap["auto-prop-xfrom"](field, value)
-        }
-        //Now check path based conversion.
-        //If mapping is found then do the required transformation.
-        if c.nxpathMap[path] == nil {
-                return nil
-        }
-        switch c.nxpathMap[path][field.Name] {
-        //Xformation supported is only from String, Uint32 and Uint64
-        case "integer":
-                switch val := field.ValueByType.(type) {
-                case *telemetry.TelemetryField_StringValue:
-                        if vali, err := strconv.ParseInt(val.StringValue, 10, 32); err == nil {
-                                return vali
-                        }
-                case *telemetry.TelemetryField_Uint32Value:
-                        vali, ok := value.(uint32)
-                        if ok == true {
-                            return vali
-                        }
-                case *telemetry.TelemetryField_Uint64Value:
-                        vali, ok := value.(uint64)
-                        if ok == true {
-                            return vali
-                        }
-                } //switch
-                return nil
-        //Xformation supported is only from String
-        case "float":
-                switch val := field.ValueByType.(type) {
-                case *telemetry.TelemetryField_StringValue:
-                        if valf, err := strconv.ParseFloat(val.StringValue, 64); err == nil {
-                                return valf
-                        }
-                } //switch
-                return nil
-        case "string":
-                return xformValueString(field)
-        case "int64":
-                switch val := field.ValueByType.(type) {
-                case *telemetry.TelemetryField_StringValue:
-                        if vali, err := strconv.ParseInt(val.StringValue, 10, 64); err == nil {
-                                return vali
-                        }
-                case *telemetry.TelemetryField_Uint64Value:
-                        return int64(value.(uint64))
-                } //switch
-        } //switch
-        return nil
+	if strings.ContainsRune(path, ':') {
+		// not NXOS
+		return nil
+	}
+	if _, ok := c.propMap[field.Name]; ok {
+		return c.propMap[field.Name](field, value)
+	}
+	//check if we want auto xformation
+	if _, ok := c.propMap["auto-prop-xfromi"]; ok {
+		return c.propMap["auto-prop-xfrom"](field, value)
+	}
+	//Now check path based conversion.
+	//If mapping is found then do the required transformation.
+	if c.nxpathMap[path] == nil {
+		return nil
+	}
+	switch c.nxpathMap[path][field.Name] {
+	//Xformation supported is only from String, Uint32 and Uint64
+	case "integer":
+		switch val := field.ValueByType.(type) {
+		case *telemetry.TelemetryField_StringValue:
+			if vali, err := strconv.ParseInt(val.StringValue, 10, 32); err == nil {
+				return vali
+			}
+		case *telemetry.TelemetryField_Uint32Value:
+			vali, ok := value.(uint32)
+			if ok == true {
+				return vali
+			}
+		case *telemetry.TelemetryField_Uint64Value:
+			vali, ok := value.(uint64)
+			if ok == true {
+				return vali
+			}
+		} //switch
+		return nil
+	//Xformation supported is only from String
+	case "float":
+		switch val := field.ValueByType.(type) {
+		case *telemetry.TelemetryField_StringValue:
+			if valf, err := strconv.ParseFloat(val.StringValue, 64); err == nil {
+				return valf
+			}
+		} //switch
+		return nil
+	case "string":
+		return xformValueString(field)
+	case "int64":
+		switch val := field.ValueByType.(type) {
+		case *telemetry.TelemetryField_StringValue:
+			if vali, err := strconv.ParseInt(val.StringValue, 10, 64); err == nil {
+				return vali
+			}
+		case *telemetry.TelemetryField_Uint64Value:
+			return int64(value.(uint64))
+		} //switch
+	} //switch
+	return nil
 }
 
 func (c *CiscoTelemetryMDT) initMemPhys() {
-        c.nxpathMap["show processes memory physical"] = map[string]string{"processname": "string"}
+	c.nxpathMap["show processes memory physical"] = map[string]string{"processname": "string"}
 }
 
 func (c *CiscoTelemetryMDT) initBgpV4() {
-        key := "show bgp ipv4 unicast"
-        c.nxpathMap[key] = make(map[string]string, 1)
-        c.nxpathMap[key]["aspath"] = "string"
+	key := "show bgp ipv4 unicast"
+	c.nxpathMap[key] = make(map[string]string, 1)
+	c.nxpathMap[key]["aspath"] = "string"
 }
 
 func (c *CiscoTelemetryMDT) initCpu() {
-        key := "show processes cpu"
-        c.nxpathMap[key] = make(map[string]string, 5)
-        c.nxpathMap[key]["kernel_percent"] = "float"
-        c.nxpathMap[key]["idle_percent"] = "float"
-        c.nxpathMap[key]["process"] = "string"
-        c.nxpathMap[key]["user_percent"] = "float"
-        c.nxpathMap[key]["onesec"] = "float"
+	key := "show processes cpu"
+	c.nxpathMap[key] = make(map[string]string, 5)
+	c.nxpathMap[key]["kernel_percent"] = "float"
+	c.nxpathMap[key]["idle_percent"] = "float"
+	c.nxpathMap[key]["process"] = "string"
+	c.nxpathMap[key]["user_percent"] = "float"
+	c.nxpathMap[key]["onesec"] = "float"
 }
 
 func (c *CiscoTelemetryMDT) initResources() {
-        key := "show system resources"
-        c.nxpathMap[key] = make(map[string]string, 20)
-        c.nxpathMap[key]["cpu_state_user"] = "float"
-        c.nxpathMap[key]["kernel"] = "float"
-        c.nxpathMap[key]["current_memory_status"] = "string"
-        c.nxpathMap[key]["load_avg_15min"] = "float"
-        c.nxpathMap[key]["idle"] = "float"
-        c.nxpathMap[key]["load_avg_1min"] = "float"
-        c.nxpathMap[key]["user"] = "float"
-        c.nxpathMap[key]["cpu_state_idle"] = "float"
-        c.nxpathMap[key]["load_avg_5min"] = "float"
-        c.nxpathMap[key]["cpu_state_kernel"] = "float"
+	key := "show system resources"
+	c.nxpathMap[key] = make(map[string]string, 20)
+	c.nxpathMap[key]["cpu_state_user"] = "float"
+	c.nxpathMap[key]["kernel"] = "float"
+	c.nxpathMap[key]["current_memory_status"] = "string"
+	c.nxpathMap[key]["load_avg_15min"] = "float"
+	c.nxpathMap[key]["idle"] = "float"
+	c.nxpathMap[key]["load_avg_1min"] = "float"
+	c.nxpathMap[key]["user"] = "float"
+	c.nxpathMap[key]["cpu_state_idle"] = "float"
+	c.nxpathMap[key]["load_avg_5min"] = "float"
+	c.nxpathMap[key]["cpu_state_kernel"] = "float"
 }
 
 func (c *CiscoTelemetryMDT) initPower() {
