@@ -255,9 +255,11 @@ func (w *Websocket) watchdog() {
 func (w *Websocket) handshake(ctx context.Context) error {
 	for _, msg := range w.HandshakeBodies {
 		if msg == "" && w.HandshakePause.Duration > 0 {
+			w.Log.Debugf("Pausing handshake for %v...", w.HandshakePause.Duration)
 			time.Sleep(w.HandshakePause.Duration)
 			continue
 		}
+		w.Log.Debugf("Sending handshake message %q...", msg)
 		err := w.connection.Write(ctx, websocket.MessageText, []byte(msg))
 		if err != nil {
 			return err
