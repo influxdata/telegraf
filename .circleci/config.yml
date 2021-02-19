@@ -275,9 +275,15 @@ workflows:
       - 'package-sign-windows':
           requires:
             - 'package'
+          filters:
+              tags:
+                only: /.*/
       - 'package-sign-mac':
            requires:
              - 'package-sign-windows' 
+           filters:
+              tags:
+                only: /.*/
   nightly:
     jobs:
       - 'linter'
