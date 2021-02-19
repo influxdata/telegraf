@@ -1314,14 +1314,14 @@ type BodyContent struct {
 	ChildType      string                 `json:"child-type"`
 	RecursiveDepth int                    `json:"recursive-depth"`
 	Recursive      string                 `json:"recursive"`
-	Address        map[string]interface{} `json:"address"`
+	Address        []map[string]interface{} `json:"address"`
 	JsonPretty     int                    `json:"json.pretty"`
 }
 
 func testJBossServer(t *testing.T, eap7 bool) *httptest.Server {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("--------------------INIT REQUEST------------------------------------------")
+//		fmt.Println("--------------------INIT REQUEST------------------------------------------")
 		w.WriteHeader(http.StatusOK)
 		decoder := json.NewDecoder(r.Body)
 		var b BodyContent
@@ -1329,11 +1329,10 @@ func testJBossServer(t *testing.T, eap7 bool) *httptest.Server {
 		if err != nil {
 			fmt.Printf("ERROR DECODE: %s\n", err)
 		}
-		fmt.Printf("REQUEST:%+v\n", r.Body)
+
+//		fmt.Printf("REQUEST:%+v\n", r.Body)
 		fmt.Printf("BODYCONTENT:%+v\n", b)
 		if b.Operation == "read-resource" {
-			fmt.Printf("DEBUG: %#+v\n", b.Address)
-
 			if b.AttributesOnly == "true" {
 				if eap7 {
 					fmt.Fprintln(w, jboss_exec_mode_out)
@@ -1342,14 +1341,14 @@ func testJBossServer(t *testing.T, eap7 bool) *httptest.Server {
 				}
 				return
 			}
-			if v, ok := b.Address["core-service"]; ok {
+			if v, ok := b.Address[0]["core-service"]; ok {
 				if v == "platform-mbean" {
 					fmt.Fprintln(w, jboss_jvm_out)
 					return
 				}
 			}
-			if v, ok := b.Address["subsystem"]; ok {
-				if v == "web" && b.Address["connector"] == "http" {
+			if v, ok := b.Address[0]["subsystem"]; ok {
+				if v == "web" && b.Address[1]["connector"] == "http" {
 					fmt.Fprintln(w, jboss_webcon_http)
 					return
 				}
@@ -1358,7 +1357,7 @@ func testJBossServer(t *testing.T, eap7 bool) *httptest.Server {
 					return
 				}
 			}
-			if v, ok := b.Address["deployment"]; ok {
+			if v, ok := b.Address[0]["deployment"]; ok {
 				switch v {
 				case "sample.war":
 					fmt.Fprintln(w, jboss_web_app_war)
@@ -1546,7 +1545,6 @@ func TestHTTPJbossEAP6Domain(t *testing.T) {
 		Servers:       []string{ts.URL},
 		Username:      "",
 		Password:      "",
-		Authorization: "digest",
 		Metrics: []string{
 			"jvm",
 			"web",
@@ -1561,3 +1559,4 @@ func TestHTTPJbossEAP6Domain(t *testing.T) {
 	err := acc.GatherError(j.Gather)
 	require.NoError(t, err)
 }
+

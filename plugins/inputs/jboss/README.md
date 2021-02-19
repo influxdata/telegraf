@@ -8,8 +8,6 @@ Plugin currently support JBoss Application server in domain modes:-
 
 Currently tested on JBoss EAP 6.X , JBoss AS 7.X
 
-Please refer to JBoss management API for full documentation, https://docs.jboss.org/author/display/AS71/The+HTTP+management+API
-
 ### Configuration:
 
 ```toml
@@ -43,7 +41,8 @@ Please refer to JBoss management API for full documentation, https://docs.jboss.
   ]
 ```
 
-Please refer to JBoss management API for full documentation, https://docs.jboss.org/author/display/AS71/The+HTTP+management+API
+Some examples from JBoss:
+https://docs.jboss.org/author/display/WFLY10/The%20HTTP%20management%20API.html
 
 
 ### Metrics:

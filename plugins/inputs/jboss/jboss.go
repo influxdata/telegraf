@@ -48,7 +48,7 @@ type OrderedMap []KeyVal
 func (omap OrderedMap) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 
-	buf.WriteString("{")
+	buf.WriteString("[")
 	for i, kv := range omap {
 		if i != 0 {
 			buf.WriteString(",")
@@ -58,6 +58,7 @@ func (omap OrderedMap) MarshalJSON() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+		buf.WriteString("{")
 		buf.Write(key)
 		buf.WriteString(":")
 		// marshal value
@@ -66,9 +67,10 @@ func (omap OrderedMap) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 		buf.Write(val)
+		buf.WriteString("}")
 	}
 
-	buf.WriteString("}")
+	buf.WriteString("]")
 	return buf.Bytes(), nil
 }
 
@@ -303,6 +305,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 		exec := ExecTypeResponse{}
 		if err = json.Unmarshal(out, &exec); err != nil {
 			acc.AddError(fmt.Errorf("Error decoding JSON response (ExecTypeResponse) %s,%s", out, err))
+			return nil	
 		}
 		var execAsDomain bool
 		var isEAP7 bool
@@ -327,9 +330,6 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 				}
 
 				out, err := h.doRequest(server, bodyContent)
-
-				log.Printf("D! JBoss API Req err: %s", err)
-				log.Printf("D! JBoss API Req out: %s", out)
 
 				if err != nil {
 					log.Printf("E! JBoss Error handling response 1: %s\n", err)
@@ -409,9 +409,6 @@ func (h *JBoss) getServersOnHost(
 				}
 
 				out, err := h.doRequest(serverURL, bodyContent)
-
-				log.Printf("D! JBoss API Req err: %s", err)
-				log.Printf("D! JBoss API Req out: %s", out)
 
 				if err != nil {
 					log.Printf("E! JBoss Error handling response 2: ERR:%s : OUTPUT:%s\n", err, out)
@@ -505,9 +502,6 @@ func (h *JBoss) getTransactionStatistics(
 
 	out, err := h.doRequest(serverURL, bodyContent)
 
-	log.Printf("D! JBoss API Req err: %s", err)
-	log.Printf("D! JBoss API Req out: %s", out)
-
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	} else {
@@ -573,9 +567,6 @@ func (h *JBoss) getWebStatistics(
 	}
 
 	out, err := h.doRequest(serverURL, bodyContent)
-
-	log.Printf("D! JBoss API Req err: %s", err)
-	log.Printf("D! JBoss API Req out: %s", out)
 
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
@@ -653,9 +644,6 @@ func (h *JBoss) getUndertowStatistics(
 
 	out, err := h.doRequest(serverURL, bodyContent)
 
-	log.Printf("D! JBoss API Req err: %s", err)
-	log.Printf("D! JBoss API Req out: %s", out)
-
 	if err != nil {
 		return fmt.Errorf("error on request to %s OUT: %s  ERR: %s\n", serverURL, out, err)
 	}
@@ -704,6 +692,10 @@ func GetPoolFields(pool DBPoolStatistics) map[string]interface{} {
 		retmap["in-use-count"], _ = strconv.ParseInt(pool.InUseCount.(string), 10, 64)
 		retmap["active-count"], _ = strconv.ParseInt(pool.ActiveCount.(string), 10, 64)
 		retmap["available-count"], _ = strconv.ParseInt(pool.AvailableCount.(string), 10, 64)
+	case float64:
+                retmap["in-use-count"] = int(pool.InUseCount.(float64))
+                retmap["active-count"] = int(pool.ActiveCount.(float64))
+                retmap["available-count"] = int(pool.AvailableCount.(float64))
 	default:
 		retmap["in-use-count"] = pool.InUseCount
 		retmap["active-count"] = pool.ActiveCount
@@ -749,9 +741,6 @@ func (h *JBoss) getDatasourceStatistics(
 	}
 
 	out, err := h.doRequest(serverURL, bodyContent)
-
-	log.Printf("D! JBoss API Req err: %s", err)
-	log.Printf("D! JBoss API Req out: %s", out)
 
 	if err != nil {
 		return fmt.Errorf("error on request to %s : OUT: %s ERR: %s\n", serverURL, out, err)
@@ -818,12 +807,12 @@ func (h *JBoss) getJMSStatistics(
 			{"host", host},
 			{"server", serverName},
 			{"subsystem", subsystem},
-			{serverID, serverID},
+			{serverID, "default"},
 		}
 	} else {
 		adr = OrderedMap{
 			{"subsystem", subsystem},
-			{serverID, serverID},
+			{serverID, "default"},
 		}
 	}
 
@@ -833,9 +822,6 @@ func (h *JBoss) getJMSStatistics(
 	}
 
 	out, err := h.doRequest(serverURL, bodyContent)
-
-	log.Printf("D! JBoss API Req err: %s", err)
-	log.Printf("D! JBoss API Req out: %s", out)
 
 	if err != nil {
 		return fmt.Errorf("error on request to %s : OUT: %s ERR: %s\n", serverURL, out, err)
@@ -903,9 +889,6 @@ func (h *JBoss) getJVMStatistics(
 	}
 
 	out, err := h.doRequest(serverURL, bodyContent)
-
-	log.Printf("D! JBoss API Req err: %s", err)
-	log.Printf("D! JBoss API Req out: %s", out)
 
 	if err != nil {
 		return fmt.Errorf("error on request to %s : OUT: %s ERR: %s\n", serverURL, out, err)
@@ -1028,9 +1011,6 @@ func (h *JBoss) getServerDeploymentStatistics(
 	}
 
 	out, err := h.doRequest(serverURL, bodyContent)
-
-	log.Printf("D! JBoss API Req err: %s", err)
-	log.Printf("D! JBoss API Req out: %s", out)
 
 	if err != nil {
 		return fmt.Errorf("error on request to  %s OUT: %s  ERR : %s\n", serverURL, out, err)
@@ -1286,29 +1266,29 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 
 	// Debug JSON request
 	log.Printf("D! Req: %s\n", requestBody)
+		
+	dr := dac.NewRequest(h.Username, h.Password, method, serverURL.String(), string(requestBody[:]))
+	dr.Header.Add("Content-Type", "application/json")
 
-	req := dac.NewRequest(h.Username, h.Password, method, serverURL.String(), string(requestBody[:]))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("Content-Type", "application/json")
+	resp, err := dr.Execute()
 
-	resp, err := req.Execute()
 	if err != nil {
-		log.Printf("E! HTTP REQ:%#+v", req)
+		log.Printf("E! HTTP REQ:%#+v", dr)
 		log.Printf("E! HTTP RESP:%#+v", resp)
 		return nil, err
 	}
+	defer resp.Body.Close()
+
 
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
-			serverURL,
-			resp.StatusCode,
-			http.StatusText(resp.StatusCode),
-			http.StatusOK,
-			http.StatusText(http.StatusOK))
-		return nil, err
-	}
+        	err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+                	serverURL,
+                        resp.StatusCode,
+                        http.StatusText(resp.StatusCode),
+                        http.StatusOK,
+                        http.StatusText(http.StatusOK))
+                return nil, err
+        }
 
 	// read body
 	body, err := ioutil.ReadAll(resp.Body)
