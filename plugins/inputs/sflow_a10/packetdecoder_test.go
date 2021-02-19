@@ -63,7 +63,7 @@ func TestDecodeCounterSample(t *testing.T) {
 		0x00, 0x00, 0x03, 0x60, // sample data length
 
 		0x00, 0x00, 0x00, 0x05, // sequenceNumber uint32
-		0x00, 0x00, 0x00, 0x0A, // sourceID type
+		0x00, 0x04, 0x41, 0x18, // sourceID type
 
 		0x00, 0x00, 0x00, 0x01, // counter record count
 
@@ -89,7 +89,7 @@ func TestDecodeCounterSample(t *testing.T) {
 		SampleType: SampleType(2),
 		SampleCounterData: &CounterSample{
 			SequenceNumber: uint32(5),
-			SourceID:       uint32(10),
+			SourceID:       uint32(278808),
 			CounterRecords: []CounterRecord{
 				CounterRecord{
 					CounterFormat: CounterFormatType(217),
@@ -191,7 +191,7 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 		Log: tu.Logger{},
 	}
 
-	const sourceID = 10
+	const sourceID = 269839
 	agent_ip := "10.0.9.1"
 	key := createMapKey(sourceID, agent_ip)
 
@@ -280,7 +280,7 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 		0x00, 0x00, 0x03, 0x60, // sample data length
 
 		0x00, 0x00, 0x00, 0x05, // sequenceNumber uint32
-		0x00, 0x00, 0x00, byte(sourceID), // sourceID type : 10
+		0x00, 0x04, 0x1e, 0x0f, // sourceID type : 269839
 
 		0x00, 0x00, 0x00, 0x01, // counter record count
 
@@ -300,13 +300,15 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 	_, err = dc.decodeSample(octets, agent_ip)
 	require.NoError(t, err)
 
+	portDimensions, portExists := dc.PortMap[key]
+	require.True(t, portExists)
+
 	// make sure port information has been added into the map for the correct sourceID
-	require.Equal(t, "DST", dc.DimensionsPerSourceIDMap[key].PortDimensions.TableType)
-	require.Equal(t, "TCP", dc.DimensionsPerSourceIDMap[key].PortDimensions.PortType)
-	require.Equal(t, 15478, dc.DimensionsPerSourceIDMap[key].PortDimensions.PortNumber)
-	require.Equal(t, 16123, dc.DimensionsPerSourceIDMap[key].PortDimensions.PortRangeEnd)
-	require.Equal(t, 16123, dc.DimensionsPerSourceIDMap[key].PortDimensions.PortRangeEnd)
-	require.Equal(t, 0, len(dc.DimensionsPerSourceIDMap[key].IPDimensions))
+	require.Equal(t, "DST", portDimensions.TableType)
+	require.Equal(t, "TCP", portDimensions.PortType)
+	require.Equal(t, 15478, portDimensions.PortNumber)
+	require.Equal(t, 16123, portDimensions.PortRangeEnd)
+	require.Equal(t, 16123, portDimensions.PortRangeEnd)
 
 	// let's proceed in reading a 271 sample (contains IP information)
 	octets = bytes.NewBuffer([]byte{
@@ -314,7 +316,7 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 		0x00, 0x00, 0x03, 0x60, // sample data length
 
 		0x00, 0x00, 0x00, 0x05, // sequenceNumber uint32
-		0x00, 0x00, 0x00, byte(sourceID), // sourceID type
+		0x00, 0x04, 0x1e, 0x0f, // sourceID type : 269839
 
 		0x00, 0x00, 0x00, 0x01, // counter record count
 
@@ -346,16 +348,21 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, 2, len(dc.DimensionsPerSourceIDMap[key].IPDimensions))
+	ipDimensions, ipExists := dc.IPMap[key]
+	portDimensions, portExists = dc.PortMap[key]
+	require.True(t, ipExists)
+	require.True(t, portExists)
+
+	require.Equal(t, 2, len(ipDimensions))
 	for i := 0; i < 2; i++ {
-		require.Equal(t, expectedIPAddresses[0], dc.DimensionsPerSourceIDMap[key].IPDimensions[0])
+		require.Equal(t, expectedIPAddresses[0], ipDimensions[0])
 	}
 	// also make sure port information is still there
-	require.Equal(t, "DST", dc.DimensionsPerSourceIDMap[key].PortDimensions.TableType)
-	require.Equal(t, "TCP", dc.DimensionsPerSourceIDMap[key].PortDimensions.PortType)
-	require.Equal(t, 15478, dc.DimensionsPerSourceIDMap[key].PortDimensions.PortNumber)
-	require.Equal(t, 16123, dc.DimensionsPerSourceIDMap[key].PortDimensions.PortRangeEnd)
-	require.Equal(t, 16123, dc.DimensionsPerSourceIDMap[key].PortDimensions.PortRangeEnd)
+	require.Equal(t, "DST", portDimensions.TableType)
+	require.Equal(t, "TCP", portDimensions.PortType)
+	require.Equal(t, 15478, portDimensions.PortNumber)
+	require.Equal(t, 16123, portDimensions.PortRangeEnd)
+	require.Equal(t, 16123, portDimensions.PortRangeEnd)
 
 	// now let's read one 217 which contains the actual metrics
 	octets = bytes.NewBuffer([]byte{
@@ -363,7 +370,7 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 		0x00, 0x00, 0x03, 0x60, // sample data length
 
 		0x00, 0x00, 0x00, 0x05, // sequenceNumber uint32
-		0x00, 0x00, 0x00, byte(sourceID), // sourceID type
+		0x00, 0x04, 0x1e, 0x0f, // sourceID type : 269839
 
 		0x00, 0x00, 0x00, 0x02, // counter record count
 

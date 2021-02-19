@@ -24,12 +24,21 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 		}
 
 		key := createMapKey(sample.SampleCounterData.SourceID, p.AgentAddress.String())
-		if _, exists := d.DimensionsPerSourceIDMap[key]; !exists {
+
+		d.IPMapLock.RLock()
+		ipDimensions, ipExists := d.IPMap[key]
+		d.IPMapLock.RUnlock()
+		d.PortMapLock.RLock()
+		portDimensions, portExists := d.PortMap[key]
+		d.PortMapLock.RUnlock()
+
+		if !ipExists || !portExists {
 			d.debug(fmt.Sprintf("  sourceID %x and key %v does not exist in DimensionsPerSourceIDMap", sample.SampleCounterData.SourceID, key))
 			continue
 		}
-		if err := d.DimensionsPerSourceIDMap[key].Validate(); err != nil {
-			d.debug(fmt.Sprintf("  error in DimensionsPerSourceIDMap.Validate, error is %s, map value is %v whereas counter source ID is %x and key is %v", err, d.DimensionsPerSourceIDMap[key], sample.SampleCounterData.SourceID, key))
+
+		if err := validate(ipDimensions, portDimensions); err != nil {
+			//d.debug(fmt.Sprintf("  error in DimensionsPerSourceIDMap.Validate, error is %s, map value is %v whereas counter source ID is %x and key is %v", err, dimensions, sample.SampleCounterData.SourceID, key))
 			continue
 		}
 
@@ -43,8 +52,7 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 
 			counterFields := counterRecord.CounterData.GetFields()
 
-			dimensions := d.DimensionsPerSourceIDMap[key]
-			counterTags := counterRecord.CounterData.GetTags(dimensions)
+			counterTags := counterRecord.CounterData.GetTags(ipDimensions, portDimensions)
 
 			err := appendCommonTags(p, counterTags)
 			if err != nil {
@@ -75,6 +83,18 @@ func appendCommonTags(p *V5Format, counterDefinedTags map[string]string) error {
 			return fmt.Errorf("tag %s exists on counterTags with value %s", k, counterDefinedTags[k])
 		}
 		counterDefinedTags[k] = v
+	}
+	return nil
+}
+
+// validate returns true if all fields of the DimensionsPerSourceID struct are valid
+func validate(ipDimensions []IPDimension, portDimensions *PortDimension) error {
+	if portDimensions == nil {
+		return fmt.Errorf("PortDimension is nil")
+	} else if ipDimensions == nil {
+		return fmt.Errorf("IPDimensions is nil")
+	} else if len(ipDimensions) == 0 {
+		return fmt.Errorf("IPDimensions has zero length")
 	}
 	return nil
 }

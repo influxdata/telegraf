@@ -57,14 +57,14 @@ func (c *CounterData) GetFields() map[string]interface{} {
 	return c.CounterFields
 }
 
-func (c *CounterData) GetTags(dimensions *DimensionsPerSourceID) map[string]string {
+func (c *CounterData) GetTags(ipDimensions []IPDimension, portDimensions *PortDimension) map[string]string {
 	tags := make(map[string]string)
 
-	tags["table_type"] = dimensions.PortDimensions.TableType
-	tags["port_number"] = fmt.Sprint(dimensions.PortDimensions.PortNumber)
-	tags["port_type"] = dimensions.PortDimensions.PortType
-	tags["port_range_end"] = fmt.Sprint(dimensions.PortDimensions.PortRangeEnd)
-	tags["ip_address"] = dimensions.GetAllIPs()
+	tags["table_type"] = portDimensions.TableType
+	tags["port_number"] = fmt.Sprint(portDimensions.PortNumber)
+	tags["port_type"] = portDimensions.PortType
+	tags["port_range_end"] = fmt.Sprint(portDimensions.PortRangeEnd)
+	tags["ip_address"] = GetAllIPs(ipDimensions)
 	//TODO: do we want subnet mask as tag?
 	//tags["subnet_mask"] = fmt.Sprint(dimensions.IPDimensions[0].SubnetMask)
 
@@ -150,9 +150,9 @@ type DimensionsPerSourceID struct {
 }
 
 // GetAllIPs concatenates all IPs in the DimensionsPerSourceID and returns them
-func (d *DimensionsPerSourceID) GetAllIPs() string {
+func GetAllIPs(ipDimensions []IPDimension) string {
 	var ips []string
-	for _, ip := range d.IPDimensions {
+	for _, ip := range ipDimensions {
 		ips = append(ips, ip.IPAddress)
 	}
 	return strings.Join(ips, "_")

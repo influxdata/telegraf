@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"strconv"
+	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs/sflow/binaryio"
@@ -15,16 +15,18 @@ type PacketDecoder struct {
 	onPacket      func(p *V5Format)
 	Log           telegraf.Logger
 	CounterBlocks map[uint32]CounterBlock
-	// DimensionsPerSourceIDMap is a map that contains port/ip information for every sourceID
-	// port/ip information is obtained by counter records tagged with 260 and 271/272 respectively
-	// using pointer here because https://stackoverflow.com/questions/32751537/why-do-i-get-a-cannot-assign-error-when-setting-value-to-a-struct-as-a-value-i
-	DimensionsPerSourceIDMap map[string]*DimensionsPerSourceID
+
+	IPMap       map[string]([]IPDimension)
+	IPMapLock   sync.RWMutex
+	PortMap     map[string](*PortDimension)
+	PortMapLock sync.RWMutex
 }
 
 func NewDecoder() *PacketDecoder {
 	return &PacketDecoder{
-		DimensionsPerSourceIDMap: make(map[string]*DimensionsPerSourceID),
-		CounterBlocks:            make(map[uint32]CounterBlock),
+		IPMap:         make(map[string][]IPDimension),
+		PortMap:       make(map[string]*PortDimension),
+		CounterBlocks: make(map[uint32]CounterBlock),
 	}
 }
 
@@ -189,36 +191,48 @@ func (d *PacketDecoder) decodeCounterRecords(r io.Reader, sourceID uint32, agent
 			if err != nil {
 				return recs, err
 			}
-			if _, exists := d.DimensionsPerSourceIDMap[key]; !exists {
-				d.DimensionsPerSourceIDMap[key] = &DimensionsPerSourceID{}
-			}
-			d.debug(fmt.Sprintf("  got 260 - before assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, d.DimensionsPerSourceIDMap[key]))
-			d.DimensionsPerSourceIDMap[key].PortDimensions = portDimensions
-			d.debug(fmt.Sprintf("  got 260 - assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, d.DimensionsPerSourceIDMap[key]))
+
+			d.PortMapLock.Lock()
+			d.PortMap[key] = portDimensions
+			d.PortMapLock.Unlock()
+
+			// d.debug(fmt.Sprintf("  got 260 - before assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
+			// if val.PortDimensions == nil {
+			// 	val.PortDimensions = portDimensions
+			// }
+			// d.debug(fmt.Sprintf("  got 260 - assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
 			continue
 		} else if uint32(tag) == 271 { // hex 10F - contains IPv4 information
 			ipDimensions, err := d.decode271(r)
 			if err != nil {
 				return recs, err
 			}
-			if _, exists := d.DimensionsPerSourceIDMap[key]; !exists {
-				d.DimensionsPerSourceIDMap[key] = &DimensionsPerSourceID{}
-			}
-			d.debug(fmt.Sprintf("  got 271 - before assigning ipdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, d.DimensionsPerSourceIDMap[key]))
-			d.DimensionsPerSourceIDMap[key].IPDimensions = ipDimensions // TODO: append in a set instead of overwriting
-			d.debug(fmt.Sprintf("  got 271 - assigning ipdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, d.DimensionsPerSourceIDMap[key]))
+
+			d.IPMapLock.Lock()
+			d.IPMap[key] = ipDimensions
+			d.IPMapLock.Unlock()
+
+			// d.debug(fmt.Sprintf("  got 271 - before assigning ipdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
+			// if val.IPDimensions == nil {
+			// 	val.IPDimensions = ipDimensions // TODO: append in a set instead of overwriting
+			// }
+			// d.debug(fmt.Sprintf("  got 271 - assigning ipdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
 			continue
 		} else if uint32(tag) == 272 { // hex 110 - contains IPv6 information
 			ipDimensions, err := d.decode272(r)
 			if err != nil {
 				return recs, err
 			}
-			if _, exists := d.DimensionsPerSourceIDMap[key]; !exists {
-				d.DimensionsPerSourceIDMap[key] = &DimensionsPerSourceID{}
-			}
-			d.debug(fmt.Sprintf("  got 272 - before assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, d.DimensionsPerSourceIDMap[key]))
-			d.DimensionsPerSourceIDMap[key].IPDimensions = ipDimensions
-			d.debug(fmt.Sprintf("  got 272 - assigning portdimensions fo2r sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, d.DimensionsPerSourceIDMap[key]))
+
+			d.IPMapLock.Lock()
+			d.IPMap[key] = ipDimensions
+			d.IPMapLock.Unlock()
+
+			// d.debug(fmt.Sprintf("  got 272 - before assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
+			// if val.IPDimensions == nil {
+			// 	val.IPDimensions = ipDimensions
+			// }
+			// d.debug(fmt.Sprintf("  got 272 - assigning portdimensions fo2r sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
 			continue
 		}
 
@@ -275,7 +289,7 @@ func (d *PacketDecoder) decodeCounterRecord(r io.Reader, cr *CounterRecord, tag 
 		CounterFields: make(map[string]interface{}),
 	}
 
-	d.debug(fmt.Sprintf("offsetInfo %d, len %d, total %d, sourceID %d", counterOffset, len(counterBlock.Counters), totalCounterNum, sourceID))
+	//d.debug(fmt.Sprintf("offsetInfo %d, len %d, total %d, sourceID %d", counterOffset, len(counterBlock.Counters), totalCounterNum, sourceID))
 
 	// reading all counters
 	for i := int(counterOffset); i < len(counterBlock.Counters); i++ {
@@ -288,7 +302,7 @@ func (d *PacketDecoder) decodeCounterRecord(r io.Reader, cr *CounterRecord, tag 
 			continue
 		}
 
-		d.debug(fmt.Sprintf("    getting counter %s with value hex %x for sourceID %x", counter.FieldName, counterValue, sourceID))
+		//d.debug(fmt.Sprintf("    getting counter %s with value hex %x for sourceID %x", counter.FieldName, counterValue, sourceID))
 		if counterValue != 0 { // no point in returning 0 value for metric
 			cr.CounterData.CounterFields[counter.FieldName] = counterValue
 		}
@@ -330,7 +344,7 @@ func readBinary(r io.Reader, bitsNum string, name string) (uint64, error) {
 		// TODO: skipping for the time being
 		return 0, nil
 	} else {
-		return 0, fmt.Errorf("Uknown bitsNum")
+		return 0, fmt.Errorf("uknown bitsNum")
 	}
 }
 
@@ -485,5 +499,5 @@ func (d *PacketDecoder) skip(r io.Reader, recordsToSkip uint16) {
 }
 
 func createMapKey(sourceID uint32, addr string) string {
-	return strconv.Itoa(int(sourceID)) + addr
+	return fmt.Sprintf("%s_%x", addr, sourceID)
 }
