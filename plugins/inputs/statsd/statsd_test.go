@@ -1819,3 +1819,48 @@ func TestTCP(t *testing.T) {
 		testutil.IgnoreTime(),
 	)
 }
+
+func TestUdp(t *testing.T) {
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "udp",
+		ServiceAddress:         "localhost:14223",
+		AllowedPendingMessages: 250000,
+	}
+	var acc testutil.Accumulator
+	require.NoError(t, statsd.Start(&acc))
+	defer statsd.Stop()
+
+	conn, err := net.Dial("udp", "127.0.0.1:14223")
+	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
+	require.NoError(t, err)
+	err = conn.Close()
+	require.NoError(t, err)
+
+	for {
+		err = statsd.Gather(&acc)
+		require.NoError(t, err)
+
+		if len(acc.Metrics) > 0 {
+			break
+		}
+	}
+
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"cpu_time_idle",
+				map[string]string{
+					"metric_type": "counter",
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Counter,
+			),
+		},
+		acc.GetTelegrafMetrics(),
+		testutil.IgnoreTime(),
+	)
+}
