@@ -1,6 +1,7 @@
 package all
 
 import (
+	//Blank imports for plugins to register themselves
 	_ "github.com/influxdata/telegraf/plugins/outputs/amon"
 	_ "github.com/influxdata/telegraf/plugins/outputs/amqp"
 	_ "github.com/influxdata/telegraf/plugins/outputs/application_insights"

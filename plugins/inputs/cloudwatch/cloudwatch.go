@@ -378,7 +378,7 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]*cloudwatch.Metric, error) {
 
 	var token *string
 	var params *cloudwatch.ListMetricsInput
-	var recentlyActive *string = nil
+	var recentlyActive *string
 
 	switch c.RecentlyActive {
 	case "PT3H":
@@ -595,11 +595,6 @@ func snakeCase(s string) string {
 	s = strings.Replace(s, " ", "_", -1)
 	s = strings.Replace(s, "__", "_", -1)
 	return s
-}
-
-type dimension struct {
-	name  string
-	value string
 }
 
 // ctod converts cloudwatch dimensions to regular dimensions.

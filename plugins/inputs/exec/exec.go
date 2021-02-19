@@ -69,12 +69,12 @@ func (c CommandRunner) Run(
 	command string,
 	timeout time.Duration,
 ) ([]byte, []byte, error) {
-	split_cmd, err := shellquote.Split(command)
-	if err != nil || len(split_cmd) == 0 {
+	splitCmd, err := shellquote.Split(command)
+	if err != nil || len(splitCmd) == 0 {
 		return nil, nil, fmt.Errorf("exec: unable to parse command, %s", err)
 	}
 
-	cmd := exec.Command(split_cmd[0], split_cmd[1:]...)
+	cmd := exec.Command(splitCmd[0], splitCmd[1:]...)
 
 	var (
 		out    bytes.Buffer
@@ -123,7 +123,7 @@ func removeCarriageReturns(b bytes.Buffer) bytes.Buffer {
 			byt, er := b.ReadBytes(0x0D)
 			end := len(byt)
 			if nil == er {
-				end -= 1
+				end--
 			}
 			if nil != byt {
 				buf.Write(byt[:end])

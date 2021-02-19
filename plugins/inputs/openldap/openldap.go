@@ -128,7 +128,7 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 				return nil
 			}
 		} else {
-			acc.AddError(fmt.Errorf("Invalid setting for ssl: %s", o.TLS))
+			acc.AddError(fmt.Errorf("invalid setting for ssl: %s", o.TLS))
 			return nil
 		}
 	} else {
@@ -208,15 +208,15 @@ func dnToMetric(dn string, o *Openldap) string {
 			metricParts[i], metricParts[j] = metricParts[j], metricParts[i]
 		}
 		return strings.Join(metricParts[1:], "_")
-	} else {
-		metricName := strings.Trim(dn, " ")
-		metricName = strings.Replace(metricName, " ", "_", -1)
-		metricName = strings.ToLower(metricName)
-		metricName = strings.TrimPrefix(metricName, "cn=")
-		metricName = strings.Replace(metricName, strings.ToLower("cn=Monitor"), "", -1)
-		metricName = strings.Replace(metricName, "cn=", "_", -1)
-		return strings.Replace(metricName, ",", "", -1)
 	}
+
+	metricName := strings.Trim(dn, " ")
+	metricName = strings.Replace(metricName, " ", "_", -1)
+	metricName = strings.ToLower(metricName)
+	metricName = strings.TrimPrefix(metricName, "cn=")
+	metricName = strings.Replace(metricName, strings.ToLower("cn=Monitor"), "", -1)
+	metricName = strings.Replace(metricName, "cn=", "_", -1)
+	return strings.Replace(metricName, ",", "", -1)
 }
 
 func init() {

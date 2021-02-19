@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package fcgi implements the FastCGI protocol.
+// Package phpfpm implements the FastCGI protocol.
 // Currently only the responder role is supported.
 // The protocol is defined at http://www.fastcgi.com/drupal/node/6?q=node/22
 package phpfpm
@@ -135,8 +135,8 @@ func (rec *record) read(r io.Reader) (err error) {
 	return nil
 }
 
-func (r *record) content() []byte {
-	return r.buf[:r.h.ContentLength]
+func (rec *record) content() []byte {
+	return rec.buf[:rec.h.ContentLength]
 }
 
 // writeRecord writes and sends a single record.

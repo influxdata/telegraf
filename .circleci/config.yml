@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  win: circleci/windows@2.4.0  
 
 orbs:
   win: circleci/windows@2.2.0  
@@ -13,7 +15,7 @@ executors:
   go-1_15:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.15.5'
+      - image: 'quay.io/influxdb/telegraf-ci:1.15.8'
     environment:
       GOFLAGS: -p=8
   mac:
@@ -67,11 +69,19 @@ commands:
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
-	  - persist_to_workspace:
-          root: './build/dist'
+      - persist_to_workspace:
+          root: './build'
           paths:
-            - '*'
+            - 'dist'
 jobs:
+  linter:
+    executor: go-1_15
+    steps:
+      - checkout
+      - restore_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+      - run: wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.37.0
+      - run: make lint
   deps:
     executor: go-1_15
     steps:
@@ -113,7 +123,6 @@ jobs:
             - 'usr/local/Cellar/go'
             - 'usr/local/bin/gofmt'
             - 'Users/distiller/go'
-
   test-go-1_14:
     executor: go-1_14
     steps:
@@ -136,6 +145,16 @@ jobs:
     executor: mac
     steps:
       - test-go-mac
+  test-go-windows:
+    executor:
+        name: win/default
+        shell: powershell.exe
+    steps:
+      - checkout
+      - run: choco upgrade golang --version=1.15.8
+      - run: choco install make
+      - run: git config --system core.longpaths true
+      - run: make test-windows
 
   package:
     executor: go-1_15
@@ -150,55 +169,27 @@ jobs:
     steps:
       - package:
           nightly: true
-  windows-signing:
+  package-sign-windows:
     executor:
         name: win/default
         shell: powershell.exe
     steps:
+      - checkout
       - attach_workspace:
-          at: '/build/dist'
+          at: '/build'
       - run:
           name: "Sign Windows Executables"
           shell: powershell.exe
           command: |
-            $tempCertFile = New-TemporaryFile
-            
-            # Replace with method of retrieving cert and password.
-            $certText = $env:fakeWindowsCert
-            $CertPass = $env:fakeWindowsCertPass
-            $finalFileName = $tempCertFile.FullName
-            $certBytes = [Convert]::FromBase64String($certText)
-            [System.IO.File]::WriteAllBytes($finalFileName, $certBytes)
-            $CertPath = $finalFileName
-            $Cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($CertPath, $CertPass)
-
-            # Replace with circleCI artifact path.
-            $artifactDirectory = "./build/dist"
-            $extractDirectory = $artifactDirectory + "\" + "extracted"
-            foreach ($file in get-ChildItem $artifactDirectory -recurse | where {$_.name -like "*windows*"} | select name) 
-            {
-                $artifact = $artifactDirectory + "\" + $file.Name
-                Expand-Archive -LiteralPath $artifact -DestinationPath $extractDirectory -Force
-                
-                $subDirectoryPath = $extractDirectory + "\" + (Get-ChildItem -Path $extractDirectory | Select-Object -First 1).Name
-                $telegrafExePath = $subDirectoryPath + "\" + "telegraf.exe"
-                Set-AuthenticodeSignature -Certificate $Cert -FilePath  $telegrafExePath -TimestampServer http://timestamp.digicert.com
-                Compress-Archive -Path $subDirectoryPath -DestinationPath $artifact -Force
-                Remove-Item $extractDirectory -Force -Recurse
-            }
-            Remove-Item $finalFileName -Force
-      - persist_to_workspace:
-          root: './build/dist'
-          paths:
-            - '*'
+            ./scripts/windows-signing.ps1
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
-		  
 workflows:
   version: 2
   check:
     jobs:
+      - 'linter'
       - 'macdeps':
           filters:
             tags:
@@ -237,8 +228,13 @@ workflows:
           filters:
             tags: # only runs on tags if you specify this filter
               only: /.*/
+      - 'test-go-windows':
+          filters:
+            tags:
+              only: /.*/
       - 'package':
           requires:
+            - 'test-go-windows'
             - 'test-go-darwin'
             - 'test-go-1_14'
             - 'test-go-1_14-386'
@@ -246,6 +242,7 @@ workflows:
             - 'test-go-1_15-386'
       - 'release':
           requires:
+            - 'test-go-windows'
             - 'test-go-darwin'
             - 'test-go-1_14'
             - 'test-go-1_14-386'
@@ -256,11 +253,12 @@ workflows:
               only: /.*/
             branches:
               ignore: /.*/
-      - 'windows-signing':
+      - 'package-sign-windows':
           requires:
             - 'release'
   nightly:
     jobs:
+      - 'linter'
       - 'deps'
       - 'macdeps'
       - 'test-go-1_14':
@@ -278,8 +276,10 @@ workflows:
       - 'test-go-darwin':
           requires:
             - 'macdeps'
+      - 'test-go-windows'
       - 'nightly':
           requires:
+            - 'test-go-windows'
             - 'test-go-darwin'
             - 'test-go-1_14'
             - 'test-go-1_14-386'

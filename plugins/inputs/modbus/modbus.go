@@ -3,7 +3,6 @@ package modbus
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"net/url"
@@ -34,6 +33,7 @@ type Modbus struct {
 	Coils            []fieldContainer  `toml:"coils"`
 	HoldingRegisters []fieldContainer  `toml:"holding_registers"`
 	InputRegisters   []fieldContainer  `toml:"input_registers"`
+	Log              telegraf.Logger   `toml:"-"`
 	registers        []register
 	isConnected      bool
 	tcpHandler       *mb.TCPClientHandler
@@ -338,12 +338,11 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 		}
 
 		//search name duplicate
-		canonical_name := item.Measurement + "." + item.Name
-		if nameEncountered[canonical_name] {
+		canonicalName := item.Measurement + "." + item.Name
+		if nameEncountered[canonicalName] {
 			return fmt.Errorf("name '%s' is duplicated in measurement '%s' '%s' - '%s'", item.Name, item.Measurement, n, item.Name)
-		} else {
-			nameEncountered[canonical_name] = true
 		}
+		nameEncountered[canonicalName] = true
 
 		if n == cInputRegisters || n == cHoldingRegisters {
 			// search byte order
@@ -406,13 +405,13 @@ func removeDuplicates(elements []uint16) []uint16 {
 
 func readRegisterValues(m *Modbus, rt string, rr registerRange) ([]byte, error) {
 	if rt == cDiscreteInputs {
-		return m.client.ReadDiscreteInputs(uint16(rr.address), uint16(rr.length))
+		return m.client.ReadDiscreteInputs(rr.address, rr.length)
 	} else if rt == cCoils {
-		return m.client.ReadCoils(uint16(rr.address), uint16(rr.length))
+		return m.client.ReadCoils(rr.address, rr.length)
 	} else if rt == cInputRegisters {
-		return m.client.ReadInputRegisters(uint16(rr.address), uint16(rr.length))
+		return m.client.ReadInputRegisters(rr.address, rr.length)
 	} else if rt == cHoldingRegisters {
-		return m.client.ReadHoldingRegisters(uint16(rr.address), uint16(rr.length))
+		return m.client.ReadHoldingRegisters(rr.address, rr.length)
 	} else {
 		return []byte{}, fmt.Errorf("not Valid function")
 	}
@@ -463,16 +462,16 @@ func (m *Modbus) getFields() error {
 
 		if register.Type == cInputRegisters || register.Type == cHoldingRegisters {
 			for i := 0; i < len(register.Fields); i++ {
-				var values_t []byte
+				var valuesT []byte
 
 				for j := 0; j < len(register.Fields[i].Address); j++ {
 					tempArray := rawValues[register.Fields[i].Address[j]]
 					for x := 0; x < len(tempArray); x++ {
-						values_t = append(values_t, tempArray[x])
+						valuesT = append(valuesT, tempArray[x])
 					}
 				}
 
-				register.Fields[i].value = convertDataType(register.Fields[i], values_t)
+				register.Fields[i].value = convertDataType(register.Fields[i], valuesT)
 			}
 
 		}
@@ -588,30 +587,6 @@ func convertEndianness64(o string, b []byte) uint64 {
 	}
 }
 
-func format16(f string, r uint16) interface{} {
-	switch f {
-	case "UINT16":
-		return r
-	case "INT16":
-		return int16(r)
-	default:
-		return r
-	}
-}
-
-func format32(f string, r uint32) interface{} {
-	switch f {
-	case "UINT32":
-		return r
-	case "INT32":
-		return int32(r)
-	case "FLOAT32-IEEE":
-		return math.Float32frombits(r)
-	default:
-		return r
-	}
-}
-
 func format64(f string, r uint64) interface{} {
 	switch f {
 	case "UINT64":
@@ -690,13 +665,13 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	}
 
 	timestamp := time.Now()
-	for retry := 0; retry <= m.Retries; retry += 1 {
+	for retry := 0; retry <= m.Retries; retry++ {
 		timestamp = time.Now()
 		err := m.getFields()
 		if err != nil {
 			mberr, ok := err.(*mb.ModbusError)
 			if ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
-				log.Printf("I! [inputs.modbus] device busy! Retrying %d more time(s)...", m.Retries-retry)
+				m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
 				time.Sleep(m.RetriesWaitTime.Duration)
 				continue
 			}

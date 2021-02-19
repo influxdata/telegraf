@@ -226,9 +226,8 @@ func (b *Buffer) Reject(batch []telegraf.Metric) {
 func (b *Buffer) dist(begin, end int) int {
 	if begin <= end {
 		return end - begin
-	} else {
-		return b.cap - begin + end
 	}
+	return b.cap - begin + end
 }
 
 // next returns the next index with wrapping.
