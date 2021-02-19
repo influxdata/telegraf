@@ -186,6 +186,7 @@ For documentation on the latest development code see the [documentation index][d
 * [docker](./plugins/inputs/docker)
 * [docker_log](./plugins/inputs/docker_log)
 * [dovecot](./plugins/inputs/dovecot)
+* [dpdk](./plugins/inputs/dpdk)
 * [aws ecs](./plugins/inputs/ecs) (Amazon Elastic Container Service, Fargate)
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [ethtool](./plugins/inputs/ethtool)
