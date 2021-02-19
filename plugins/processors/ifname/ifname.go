@@ -100,8 +100,8 @@ type IfName struct {
 	ifTable  *si.Table `toml:"-"`
 	ifXTable *si.Table `toml:"-"`
 
-	rwLock sync.RWMutex `toml:"-"`
-	cache  *TTLCache    `toml:"-"`
+	lock  sync.Mutex `toml:"-"`
+	cache *TTLCache  `toml:"-"`
 
 	parallel parallel.Parallel    `toml:"-"`
 	acc      telegraf.Accumulator `toml:"-"`
@@ -187,9 +187,9 @@ func (d *IfName) addTag(metric telegraf.Metric) error {
 }
 
 func (d *IfName) invalidate(agent string) {
-	d.rwLock.RLock()
+	d.lock.Lock()
 	d.cache.Delete(agent)
-	d.rwLock.RUnlock()
+	d.lock.Unlock()
 }
 
 func (d *IfName) Start(acc telegraf.Accumulator) error {
@@ -241,31 +241,34 @@ func (d *IfName) Stop() error {
 func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err error) {
 	var sig chan struct{}
 
+	d.lock.Lock()
+
 	// Check cache
-	d.rwLock.RLock()
 	m, ok, age := d.cache.Get(agent)
-	d.rwLock.RUnlock()
 	if ok {
+		d.lock.Unlock()
 		return m, age, nil
 	}
 
-	// Is this the first request for this agent?
-	d.rwLock.Lock()
+	// cache miss.  Is this the first request for this agent?
 	sig, found := d.sigs[agent]
 	if !found {
+		// This is the first request.  Make signal for subsequent requests to wait on
 		s := make(chan struct{})
 		d.sigs[agent] = s
 		sig = s
 	}
-	d.rwLock.Unlock()
+
+	d.lock.Unlock()
 
 	if found {
 		// This is not the first request.  Wait for first to finish.
 		<-sig
+
 		// Check cache again
-		d.rwLock.RLock()
+		d.lock.Lock()
 		m, ok, age := d.cache.Get(agent)
-		d.rwLock.RUnlock()
+		d.lock.Unlock()
 		if ok {
 			return m, age, nil
 		}
@@ -273,28 +276,26 @@ func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err err
 	}
 
 	// The cache missed and this is the first request for this
-	// agent.
-
-	// Make the SNMP request
+	// agent. Make the SNMP request
 	m, err = d.getMapRemote(agent)
+
+	d.lock.Lock()
 	if err != nil {
-		//failure.  signal without saving to cache
-		d.rwLock.Lock()
+		//snmp failure.  signal without saving to cache
 		close(sig)
 		delete(d.sigs, agent)
-		d.rwLock.Unlock()
 
+		d.lock.Unlock()
 		return nil, 0, fmt.Errorf("getting remote table: %w", err)
 	}
 
-	// Cache it, then signal any other waiting requests for this agent
-	// and clean up
-	d.rwLock.Lock()
+	// snmp success.  Cache response, then signal any other waiting
+	// requests for this agent and clean up
 	d.cache.Put(agent, m)
 	close(sig)
 	delete(d.sigs, agent)
-	d.rwLock.Unlock()
 
+	d.lock.Unlock()
 	return m, 0, nil
 }
 
