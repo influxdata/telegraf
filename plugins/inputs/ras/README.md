@@ -1,4 +1,6 @@
-# RAS Input Plugin
+# RAS Daemon Input Plugin
+
+This plugin is only available on Linux (only for `386`, `amd64`, `arm` and `arm64` architectures).
 
 The `RAS` plugin gathers and counts errors provided by [RASDaemon](https://github.com/mchehab/rasdaemon).
 

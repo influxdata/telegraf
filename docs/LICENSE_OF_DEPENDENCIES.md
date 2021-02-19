@@ -94,7 +94,7 @@ following works:
 - github.com/kubernetes/apimachinery [Apache License 2.0](https://github.com/kubernetes/apimachinery/blob/master/LICENSE)
 - github.com/leodido/ragel-machinery [MIT License](https://github.com/leodido/ragel-machinery/blob/develop/LICENSE)
 - github.com/mailru/easyjson [MIT License](https://github.com/mailru/easyjson/blob/master/LICENSE)
-- github.com/mattn/go-sqlite3 [MIT License](https://github.com/mattn/go-sqlite3/blob/master/LICENSE)
+- github.com/mattn/go-isatty [MIT License](https://github.com/mattn/go-isatty/blob/master/LICENSE)
 - github.com/matttproud/golang_protobuf_extensions [Apache License 2.0](https://github.com/matttproud/golang_protobuf_extensions/blob/master/LICENSE)
 - github.com/mdlayher/apcupsd [MIT License](https://github.com/mdlayher/apcupsd/blob/master/LICENSE.md)
 - github.com/mdlayher/genetlink [MIT License](https://github.com/mdlayher/genetlink/blob/master/LICENSE.md)
@@ -141,6 +141,8 @@ following works:
 - github.com/wavefronthq/wavefront-sdk-go [Apache License 2.0](https://github.com/wavefrontHQ/wavefront-sdk-go/blob/master/LICENSE)
 - github.com/wvanbergen/kafka [MIT License](https://github.com/wvanbergen/kafka/blob/master/LICENSE)
 - github.com/wvanbergen/kazoo-go [MIT License](https://github.com/wvanbergen/kazoo-go/blob/master/MIT-LICENSE)
+- github.com/xdg/scram [Apache License 2.0](https://github.com/xdg-go/scram/blob/master/LICENSE)
+- github.com/xdg/stringprep [Apache License 2.0](https://github.com/xdg-go/stringprep/blob/master/LICENSE)
 - github.com/yuin/gopher-lua [MIT License](https://github.com/yuin/gopher-lua/blob/master/LICENSE)
 - go.opencensus.io [Apache License 2.0](https://github.com/census-instrumentation/opencensus-go/blob/master/LICENSE)
 - go.starlark.net [BSD 3-Clause "New" or "Revised" License](https://github.com/google/starlark-go/blob/master/LICENSE)
@@ -171,6 +173,10 @@ following works:
 - gopkg.in/olivere/elastic.v5 [MIT License](https://github.com/olivere/elastic/blob/v5.0.76/LICENSE)
 - gopkg.in/tomb.v1 [BSD 3-Clause Clear License](https://github.com/go-tomb/tomb/blob/v1/LICENSE)
 - gopkg.in/yaml.v2 [Apache License 2.0](https://github.com/go-yaml/yaml/blob/v2.2.2/LICENSE)
+- gopkg.in/yaml.v3 [Apache License 2.0](https://github.com/go-yaml/yaml/blob/v3/LICENSE)
+- modernc.org/libc [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/libc/-/blob/master/LICENSE)
+- modernc.org/memory [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/memory/-/blob/master/LICENSE)
+- modernc.org/sqlite [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/sqlite/-/blob/master/LICENSE)
 
 ## telegraf used and modified code from these projects
 - github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/LICENSE)
