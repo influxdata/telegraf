@@ -6,8 +6,10 @@ sudo security import AppleSigningAuthorityCertificate.cer -k '/Library/Keychains
 
 # Extract the built mac binary and sign it.
 cd dist
-tar -xzvf $(find . -name "*darwin_amd64.tar*")
-rm $(find . -name "*darwin_amd64.tar*")
+tarFile=$(find . -name "*darwin_amd64.tar*")
+tar -xzvf $tarFile
+rm $tarFile
+baseName=$(basename $tarFile .tar.gz)
 cd $(find . -name "*telegraf-*" -type d)
 cd usr/bin
 codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime telegraf
@@ -39,11 +41,11 @@ mv Telegraf Telegraf.app
 
 # Sign the entire .app bundle, and wrap it in a DMG.
 codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime --deep --force Telegraf.app
-hdiutil create -size 500m -volname Telegraf -srcfolder Telegraf.app telegraf.dmg
-codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime telegraf.dmg
+hdiutil create -size 500m -volname Telegraf -srcfolder Telegraf.app "$baseName".dmg
+codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime "$baseName".dmg
 
 # Send the DMG to be notarized.
-uuid=$(xcrun altool --notarize-app --primary-bundle-id "com.influxdata.telegraf" --username "$AppleUsername" --password "$ApplePassword" --file telegraf.dmg | awk '/RequestUUID/ { print $NF; }')
+uuid=$(xcrun altool --notarize-app --primary-bundle-id "com.influxdata.telegraf" --username "$AppleUsername" --password "$ApplePassword" --file "$baseName".dmg | awk '/RequestUUID/ { print $NF; }')
 echo $uuid
 if [[ $uuid == "" ]]; then 
   echo "Could not upload for notarization."
@@ -63,7 +65,7 @@ if [[ $request_status != "success" ]]; then
 fi
 
 # Attach the notarization to the DMG.
-xcrun stapler staple telegraf.dmg
+xcrun stapler staple "$baseName".dmg
 rm -rf Telegraf.app
 rm -rf $extractedFolder
 ls
