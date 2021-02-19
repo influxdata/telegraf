@@ -1864,3 +1864,53 @@ func TestUdp(t *testing.T) {
 		testutil.IgnoreTime(),
 	)
 }
+
+func TestConcurrentReads(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "udp",
+		ServiceAddress:         "localhost:14223",
+		AllowedPendingMessages: 250000,
+		Templates:              []string{"example.* measurement.host"},
+	}
+
+	require.NoError(t, statsd.Start(acc))
+	defer statsd.Stop()
+
+	conn, err := net.Dial("udp", "127.0.0.1:14223")
+
+	for i := 0; i < 200; i++ {
+		_, err = conn.Write([]byte("test,a=b:1|c\n"))
+		require.NoError(t, err)
+		_, err = conn.Write([]byte("foobar,foo=bar:1|c\n"))
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, err)
+	err = conn.Close()
+	require.NoError(t, err)
+
+	// wait for all metrics to get added to accumulator
+	for len(statsd.in) > 0 {
+		time.Sleep(time.Millisecond)
+	}
+
+	for {
+		err = statsd.Gather(acc)
+		require.NoError(t, err)
+
+		if len(acc.Metrics) > 0 {
+			break
+		}
+	}
+
+	require.Equal(t, len(acc.Metrics), 2)
+
+	for _, metric := range acc.GetTelegrafMetrics() {
+		value, _ := metric.GetField("value")
+
+		// Each metric should have summed to exactly 200.
+		require.Equal(t, int64(200), value.(int64))
+	}
+}
