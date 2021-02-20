@@ -267,7 +267,6 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 		if line_len > 4 && choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) {
 			mount = line[4]
 			export = line[1]
-			skip = false
 		} else if line_len > 5 && (choice.Contains("(nfs)", line) || choice.Contains("(nfs4)", line)) {
 			version = strings.Split(line[5], "/")[1]
 		}
@@ -278,25 +277,21 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 
 		if len(n.IncludeMounts) > 0 {
 			skip = true
-
-		IncludeMounts:
 			for _, RE := range n.IncludeMounts {
 				matched, _ := regexp.MatchString(RE, mount)
 				if matched {
 					skip = false
-					break IncludeMounts
+					break
 				}
 			}
 		}
 
 		if !skip && len(n.ExcludeMounts) > 0 {
-
-		ExcludeMounts:
 			for _, RE := range n.ExcludeMounts {
 				matched, _ := regexp.MatchString(RE, mount)
 				if matched {
 					skip = true
-					break ExcludeMounts // last test, and we're skipping anyway
+					break
 				}
 			}
 		}
