@@ -134,9 +134,9 @@ var sampleConfig = `
   ## Optional
   ## Configuration for a dynamodb checkpoint
   [inputs.kinesis_consumer.checkpoint_dynamodb]
-   ## unique name for this consumer
-   app_name = "default"
-   table_name = "default"
+	## unique name for this consumer
+	app_name = "default"
+	table_name = "default"
 `
 
 func (k *KinesisConsumer) SampleConfig() string {
