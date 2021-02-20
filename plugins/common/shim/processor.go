@@ -7,8 +7,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
-	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 // AddProcessor adds the processor to the shim. Later calls to Run() will run this.
@@ -47,7 +47,6 @@ func (s *Shim) RunProcessor() error {
 		s.writeProcessedMetrics()
 		wg.Done()
 	}()
-
 
 	parser := influx.NewStreamParser(s.stdin)
 	for {

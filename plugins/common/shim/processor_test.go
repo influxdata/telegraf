@@ -22,7 +22,7 @@ func TestProcessorShim(t *testing.T) {
 
 func TestProcessorShimWithLargerThanDefaultScannerBufferSize(t *testing.T) {
 	letters := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	b := make([]rune, bufio.MaxScanTokenSize * 2)
+	b := make([]rune, bufio.MaxScanTokenSize*2)
 	for i := range b {
 		b[i] = letters[rand.Intn(len(letters))]
 	}
@@ -60,7 +60,7 @@ func testSendAndRecieve(t *testing.T, fieldKey string, fieldValue string) {
 			"a": "b",
 		},
 		map[string]interface{}{
-			"v": 1,
+			"v":      1,
 			fieldKey: fieldValue,
 		},
 		time.Now(),
@@ -88,9 +88,8 @@ func testSendAndRecieve(t *testing.T, fieldKey string, fieldValue string) {
 	wg.Wait()
 }
 
-
-type testProcessor struct{
-	tagName string
+type testProcessor struct {
+	tagName  string
 	tagValue string
 }
 
