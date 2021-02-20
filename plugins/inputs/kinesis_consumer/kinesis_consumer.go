@@ -1,8 +1,11 @@
 package kinesis_consumer
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"strings"
 	"sync"
@@ -38,6 +41,7 @@ type (
 		ShardIteratorType      string    `toml:"shard_iterator_type"`
 		DynamoDB               *DynamoDB `toml:"checkpoint_dynamodb"`
 		MaxUndeliveredMessages int       `toml:"max_undelivered_messages"`
+		Decompress             bool      `toml:"decompress"`
 
 		Log telegraf.Logger
 
@@ -118,12 +122,21 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 
+  ##
+  ## Whether or not to uncompress the data from kinesis
+  ## If you are processing a cloudwatch logs kinesis stream then set this to true
+  ## as AWS compresses cloudwatch log data before it is sent to kinesis (aws
+  ## also base64 encodes the zip byte data before pushing to the stream.  The base64 decoding
+  ## is done automatically by the golang sdk, as data is read from kinesis)
+  ##
+  # decompress = false
+
   ## Optional
   ## Configuration for a dynamodb checkpoint
   [inputs.kinesis_consumer.checkpoint_dynamodb]
-	## unique name for this consumer
-	app_name = "default"
-	table_name = "default"
+   ## unique name for this consumer
+   app_name = "default"
+   table_name = "default"
 `
 
 func (k *KinesisConsumer) SampleConfig() string {
@@ -238,8 +251,30 @@ func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
 	return nil
 }
 
+func (k *KinesisConsumer) decompress(data []byte) ([]byte, error) {
+	zipData, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	defer zipData.Close()
+	return ioutil.ReadAll(zipData)
+}
+
+func (k *KinesisConsumer) getRecordData(r *consumer.Record) ([]byte, error) {
+	var err error
+	dataToParse := r.Data
+	if k.Decompress {
+		dataToParse, err = k.decompress(dataToParse)
+	}
+	return dataToParse, err
+}
+
 func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consumer.Record) error {
-	metrics, err := k.parser.Parse(r.Data)
+	data, err := k.getRecordData(r)
+	if err != nil {
+		return err
+	}
+	metrics, err := k.parser.Parse(data)
 	if err != nil {
 		return err
 	}
@@ -347,6 +382,7 @@ func init() {
 			ShardIteratorType:      "TRIM_HORIZON",
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 			lastSeqNum:             maxSeq,
+			Decompress:             false,
 		}
 	})
 }
