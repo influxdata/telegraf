@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"strings"
+	"regexp"
 	"sync"
 	"time"
 
@@ -278,7 +278,9 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 	for _, serv := range s.Servers {
 		var pool *sql.DB
 
-		if strings.Contains(strings.ToLower(serv), strings.ToLower("password=")) {
+		// setup connection based on authentication
+		rx := regexp.MustCompile("(?i)\\b(?:;(Password=\\w+))\\b")
+		if rx.MatchString(server) {
 			// when password is provided in connection string, use SQL auth
 
 			var err error
@@ -290,6 +292,11 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			}
 		} else {
 			// when password is not provided in connection string, use AAD auth with an MSI token
+
+			// return error if AAD Auth is used for DatabaseType SQLServer since AAD Auth is only supported for Azure SQL Database or Azure SQL Managed Instance
+			if s.DatabaseType == "SQLServer" {
+				return fmt.Errorf("Database connection failed : AAD auth is not supported for SQL VM i.e. DatabaseType=SQLServer")
+			}
 
 			tokenProvider, err := getMSITokenProvider()
 			if err != nil {
