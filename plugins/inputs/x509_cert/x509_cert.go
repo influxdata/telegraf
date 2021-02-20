@@ -16,15 +16,15 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/internal/globpath"
+	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const sampleConfig = `
   ## List certificate sources
   sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443",
-            "/etc/mycerts/*.mydomain.org.pem"]
+            "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem"]
 
   ## Timeout for SSL connection
   # timeout = "5s"
@@ -60,17 +60,21 @@ func (c *X509Cert) SampleConfig() string {
 	return sampleConfig
 }
 
-func (c *X509Cert) locationToURL(location string) (*url.URL, error) {
-	if strings.HasPrefix(location, "/") {
-		location = "file://" + location
-	}
-	if strings.Index(location, ":\\") == 1 {
-		location = "file://" + filepath.ToSlash(location)
-	}
+func (c *X509Cert) sourcesToURLs() error {
+	for _, source := range c.Sources {
+		if strings.HasPrefix(source, "/") {
+			source = "file://" + source
+		}
+		if strings.Index(source, ":\\") == 1 {
+			source = "file://" + filepath.ToSlash(source)
+		}
 
-	u, err := url.Parse(location)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse cert location - %s", err.Error())
+		u, err := url.Parse(source)
+		if err != nil {
+			return fmt.Errorf("failed to parse cert location - %s", err.Error())
+		}
+
+		c.urls = append(c.urls, u)
 	}
 
 	return nil
@@ -207,12 +211,16 @@ func getTags(cert *x509.Certificate, location string) map[string]string {
 	return tags
 }
 
-// copied from plugins/inputs/file/file.go
-func (c *X509Cert) refreshFilePaths() error {
+// copied from refreshFilePaths() in plugins/inputs/file/file.go
+func (c *X509Cert) expandFilePaths() error {
 	var allFiles []string
 
 	for _, source := range c.Sources {
-		if strings.HasPrefix(source, "/") {
+		if strings.HasPrefix(source, "file://") ||
+			strings.HasPrefix(source, "/") {
+			if strings.HasPrefix(source, "file://") {
+				source = strings.TrimPrefix(source, "file://")
+			}
 			g, err := globpath.Compile(source)
 			if err != nil {
 				return fmt.Errorf("could not compile glob %v: %v", source, err)
@@ -235,14 +243,8 @@ func (c *X509Cert) refreshFilePaths() error {
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
-	for _, location := range c.Sources {
-		u, err := c.locationToURL(location)
-		if err != nil {
-			acc.AddError(err)
-			return nil
-		}
-
-		certs, err := c.getCert(u, c.Timeout.Duration*time.Second)
+	for _, url := range c.urls {
+		certs, err := c.getCert(url, c.Timeout.Duration*time.Second)
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", url, err.Error()))
 		}
@@ -258,7 +260,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 			}
 			if i == 0 {
-				opts.DNSName, err = c.serverName(u)
+				opts.DNSName, err = c.serverName(url)
 				if err != nil {
 					return err
 				}
@@ -290,12 +292,12 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 }
 
 func (c *X509Cert) Init() error {
-	err := c.refreshFilePaths()
+	err := c.expandFilePaths()
 	if err != nil {
 		return err
 	}
 
-	err = c.locationToURL()
+	err = c.sourcesToURLs()
 	if err != nil {
 		return err
 	}
