@@ -164,6 +164,10 @@ func (p *testProc) RlimitUsage(_ bool) ([]process.RlimitStat, error) {
 	return []process.RlimitStat{}, nil
 }
 
+func (p *testProc) Ppid() (int32, error) {
+	return 0, nil
+}
+
 var pid = PID(42)
 var exe = "foo"
 
