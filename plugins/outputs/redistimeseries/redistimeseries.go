@@ -82,7 +82,7 @@ func (i *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("RedisTimeSeries", func() telegraf.Output {
+	outputs.Add("redistimeseries", func() telegraf.Output {
 		return &RedisTimeSeries{}
 	})
 }
