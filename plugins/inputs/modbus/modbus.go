@@ -241,6 +241,7 @@ func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
 			ii++
 			quantity++
 		}
+		ii++
 
 		registersRange = append(registersRange, registerRange{start, end - start + 1})
 	}
@@ -444,7 +445,7 @@ func (m *Modbus) getFields() error {
 					for bitPosition := 0; bitPosition < 8; bitPosition++ {
 						bitRawValues[address] = getBitValue(readValue, bitPosition)
 						address = address + 1
-						if address+1 > rr.length {
+						if address > rr.address+rr.length {
 							break
 						}
 					}
