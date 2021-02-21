@@ -8,23 +8,27 @@ import (
 
 var sampleConfig = `
   ## The address of the RedisTimeSeries server.
-  addr = "127.0.0.1:6379"
+  address = "127.0.0.1:6379"
 
+  # Redis ACL username
+  # username = ""
   ## password to login Redis
   # password = ""
 `
 
 type RedisTimeSeries struct {
-	addr     string
-	password string
+	Address  string `toml:"address"`
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 	client   *redis.Client
 }
 
 func (i *RedisTimeSeries) Connect() error {
 
 	client := redis.NewClient(&redis.Options{
-		Addr:     i.addr,
-		Password: i.password,
+		Addr:     i.Address,
+		Password: i.Password,
+		Username: i.Username,
 		DB:       0, // use default DB
 	})
 
