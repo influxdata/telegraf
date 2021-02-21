@@ -33,28 +33,28 @@ type RedisTimeSeries struct {
 	client   *redis.Client
 }
 
-func (i *RedisTimeSeries) Connect() error {
-	i.client = redis.NewClient(&redis.Options{
-		Addr:	i.Address,
-		Password: i.Password,
-		Username: i.Username,
-		DB:	i.Database,
+func (r *RedisTimeSeries) Connect() error {
+	r.client = redis.NewClient(&redis.Options{
+		Addr:	  r.Address,
+		Password: r.Password,
+		Username: r.Username,
+		DB:	  r.Database,
 	})
-	return i.client.Ping().Err()
+	return r.client.Ping().Err()
 }
 
-func (i *RedisTimeSeries) Close() error {
-	return i.client.Close()
+func (r *RedisTimeSeries) Close() error {
+	return r.client.Close()
 }
 
-func (i *RedisTimeSeries) Description() string {
+func (r *RedisTimeSeries) Description() string {
 	return "Configuration for sending metrics to RedisTimeSeries"
 }
 
-func (i *RedisTimeSeries) SampleConfig() string {
+func (r *RedisTimeSeries) SampleConfig() string {
 	return sampleConfig
 }
-func (i *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
+func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -64,14 +64,14 @@ func (i *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 		name := m.Name()
 		for fieldName, value := range m.Fields() {
 			key := name + "_" + fieldName
-			err := i.client.Do("TS.ADD", key, now, value).Err()
+			err := r.client.Do("TS.ADD", key, now, value).Err()
 			if err != nil {
 				// TODO add tags
-				err2 := i.client.Do("TS.CREATE", key).Err()
+				err2 := r.client.Do("TS.CREATE", key).Err()
 				if err2 != nil {
 					return err
 				}
-				err3 := i.client.Do("TS.ADD", key, now, value).Err()
+				err3 := r.client.Do("TS.ADD", key, now, value).Err()
 				if err3 != nil {
 					return err
 				}
