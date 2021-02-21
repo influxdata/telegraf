@@ -34,16 +34,13 @@ type RedisTimeSeries struct {
 }
 
 func (i *RedisTimeSeries) Connect() error {
-	client := redis.NewClient(&redis.Options{
-		Addr:     i.Address,
+	i.client = redis.NewClient(&redis.Options{
+		Addr:	i.Address,
 		Password: i.Password,
 		Username: i.Username,
-		DB:       i.Database,
+		DB:	i.Database,
 	})
-
-	err := client.Ping().Err()
-	i.client = client
-	return err
+	return i.client.Ping().Err()
 }
 
 func (i *RedisTimeSeries) Close() error {
