@@ -3,6 +3,7 @@ package redistimeseries
 import (
 	"github.com/go-redis/redis/v7"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -14,12 +15,21 @@ var sampleConfig = `
   # username = ""
   ## password to login Redis
   # password = ""
+  database = 0
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 type RedisTimeSeries struct {
 	Address  string `toml:"address"`
 	Username string `toml:"username"`
 	Password string `toml:"password"`
+	Database int    `toml:"database"`
+	tls.ClientConfig
 	client   *redis.Client
 }
 
@@ -28,7 +38,7 @@ func (i *RedisTimeSeries) Connect() error {
 		Addr:     i.Address,
 		Password: i.Password,
 		Username: i.Username,
-		DB:       0, // use default DB
+		DB:       i.Database,
 	})
 
 	err := client.Ping().Err()
