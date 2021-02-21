@@ -24,7 +24,6 @@ type RedisTimeSeries struct {
 }
 
 func (i *RedisTimeSeries) Connect() error {
-
 	client := redis.NewClient(&redis.Options{
 		Addr:     i.Address,
 		Password: i.Password,
@@ -49,16 +48,13 @@ func (i *RedisTimeSeries) SampleConfig() string {
 	return sampleConfig
 }
 func (i *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
-
 	if len(metrics) == 0 {
 		return nil
 	}
-
 	for _, m := range metrics {
 		now := m.Time().UnixNano() / 1000000000
 		//		tags := m.Tags() TODO add support for tags
 		name := m.Name()
-
 		for fieldName, value := range m.Fields() {
 			key := name + "_" + fieldName
 			err := i.client.Do("TS.ADD", key, now, value).Err()
@@ -74,7 +70,6 @@ func (i *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 				}
 			}
 		}
-
 	}
 	return nil
 }
