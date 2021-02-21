@@ -16,7 +16,7 @@ type diskInfoCache struct {
 	values       map[string]string
 }
 
-func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
+func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	var err error
 	var stat unix.Stat_t
 
