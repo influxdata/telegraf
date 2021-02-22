@@ -566,9 +566,6 @@ func (s *Statsd) parser() error {
 // parseStatsdLine will parse the given statsd line, validating it as it goes.
 // If the line is valid, it will be cached for the next call to Gather()
 func (s *Statsd) parseStatsdLine(line string) error {
-	s.Lock()
-	defer s.Unlock()
-
 	lineTags := make(map[string]string)
 	if s.DataDogExtensions {
 		recombinedSegments := make([]string, 0)
@@ -715,6 +712,9 @@ func (s *Statsd) parseStatsdLine(line string) error {
 // map of tags.
 // Return values are (<name>, <field>, <tags>)
 func (s *Statsd) parseName(bucket string) (string, string, map[string]string) {
+	s.Lock()
+	defer s.Unlock()
+
 	tags := make(map[string]string)
 
 	bucketparts := strings.Split(bucket, ",")
@@ -775,6 +775,9 @@ func parseKeyValue(keyvalue string) (string, string) {
 // aggregates and caches the current value(s). It does not deal with the
 // Delete* options, because those are dealt with in the Gather function.
 func (s *Statsd) aggregate(m metric) {
+	s.Lock()
+	defer s.Unlock()
+
 	switch m.mtype {
 	case "d":
 		if s.DataDogExtensions && s.DataDogDistributions {
