@@ -1,6 +1,7 @@
 package elasticsearch
 
 import (
+	"os"
 	"bytes"
 	"context"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"net"
 
 	"crypto/sha256"
 
@@ -17,12 +19,14 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"gopkg.in/olivere/elastic.v5"
+	"github.com/elastic/go-sysinfo"
+	"github.com/olivere/elastic/v7"
 )
 
 type Elasticsearch struct {
 	URLs                []string `toml:"urls"`
 	IndexName           string
+	IsDataStream        bool `toml:"datastream"`
 	DefaultTagValue     string
 	TagKeys             []string
 	Username            string
@@ -35,6 +39,7 @@ type Elasticsearch struct {
 	OverwriteTemplate   bool
 	ForceDocumentId     bool
 	MajorReleaseNumber  int
+	ElasticCommonSchema bool `toml:"use_ecs"`
 	tls.ClientConfig
 
 	Client *elastic.Client
@@ -92,6 +97,14 @@ var sampleConfig = `
   ## If set to true a unique ID hash will be sent as sha256(concat(timestamp,measurement,series-hash)) string
   ## it will enable data resend and update metric points avoiding duplicated metrics with diferent id's
   force_document_id = false
+
+  ## Enable Elastic Common Schema format
+  ## Set to true if you want to format output document with ECS standard
+  use_ecs = false
+  
+  ## Use datastream
+  ## Enable to save documents as datastream
+  datastream = false
 `
 
 const telegrafTemplate = `
@@ -262,27 +275,53 @@ func GetPointID(m telegraf.Metric) string {
 }
 
 func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
+	var ecs_agent, ecs_host, ecs_event map[string]interface{}
 	if len(metrics) == 0 {
 		return nil
 	}
 
 	bulkRequest := a.Client.Bulk()
 
+	if a.ElasticCommonSchema {
+		ecs_host = getEcsHostInfo() 
+		ecs_agent = getEcsAgentInfo()
+	}
+
 	for _, metric := range metrics {
 		var name = metric.Name()
 
+		if a.ElasticCommonSchema {
+			ecs_event = getEcsEventInfo(name)
+		}
+
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.TagKeys, metric.Tags())
+		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.TagKeys, metric.Tags(), metric.Name())
 
 		m := make(map[string]interface{})
 
 		m["@timestamp"] = metric.Time()
-		m["measurement_name"] = name
-		m["tag"] = metric.Tags()
-		m[name] = metric.Fields()
+		if !a.ElasticCommonSchema {
+			m["measurement_name"] = name
+			m["tag"] = metric.Tags()
+			m[name] = metric.Fields()
+		} else {
+			t := make(map[string]interface{})
+			t["tags"] = metric.Tags()
+			t["metrics"] = map[string]interface{}{name: metric.Fields()}
+			m["telegraf"] = t
+			m["metricset"] = map[string]interface{}{"name": name}
+			m["event"] = ecs_event
+			m["host"] = ecs_host
+			m["agent"] = ecs_agent
+			m["ecs"] = map[string]interface{}{"version": "1.7.0"}
+		}
 
 		br := elastic.NewBulkIndexRequest().Index(indexName).Doc(m)
+
+		if a.IsDataStream {
+			br.OpType("create")
+		}		
 
 		if a.ForceDocumentId {
 			id := GetPointID(metric)
@@ -397,7 +436,7 @@ func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
 	return indexName, tagKeys
 }
 
-func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
+func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string, metricName string) string {
 	if strings.Contains(indexName, "%") {
 		var dateReplacer = strings.NewReplacer(
 			"%Y", eventTime.UTC().Format("2006"),
@@ -409,6 +448,13 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 		)
 
 		indexName = dateReplacer.Replace(indexName)
+	}
+
+	if strings.Contains(indexName, "metric_name") {
+		var metricNameReplacer = strings.NewReplacer(
+			"metric_name", metricName,
+		)
+		indexName = metricNameReplacer.Replace(indexName)
 	}
 
 	tagValues := []interface{}{}
@@ -429,6 +475,86 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 func getISOWeek(eventTime time.Time) string {
 	_, week := eventTime.ISOWeek()
 	return strconv.Itoa(week)
+}
+
+func getEcsEventInfo(metric_name string) map[string]interface{} {
+	i := make(map[string]interface{})
+	i["dataset"] = metric_name + ".metrics"
+	i["module"] = metric_name
+
+	return i
+}
+
+func getEcsHostInfo() map[string]interface{} {
+	var ipList []string
+	var hwList []string
+
+	h, _ := sysinfo.Host()
+	info := h.Info()
+	os := make(map[string]interface{})
+	i := make(map[string]interface{})
+	os["platform"] = info.OS.Platform
+	os["version"] = info.OS.Version
+	os["family"] = info.OS.Family
+	os["name"] = info.OS.Name
+	os["kernel"] = info.KernelVersion
+
+	if info.OS.Codename != "" {
+		os["codename"] = info.OS.Codename
+	}
+	if info.OS.Build != "" {
+		os["build"] = info.OS.Build
+	}
+	i["name"] = info.Hostname
+	i["architecture"] = info.Architecture
+	i["os"] = os
+	if info.UniqueID != "" {
+		i["id"] = info.UniqueID
+	}	
+	if info.Containerized != nil {
+		i["containerized"] = *info.Containerized
+	}	
+
+	ifaces, _ := net.Interfaces()
+	for _, in := range ifaces {
+		if in.Flags&net.FlagLoopback == net.FlagLoopback {
+			continue
+		}
+		if in.HardwareAddr != nil {
+			hwList = append(hwList, in.HardwareAddr.String())
+		}
+		addrs, err := in.Addrs()
+		if err !=nil {
+			continue
+		}
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			default:
+				continue
+			}
+			ipList = append(ipList, ip.String())
+		}
+	}
+	i["ip"] = ipList
+	i["mac"] = hwList
+
+	return i
+}
+
+func getEcsAgentInfo() map[string]interface{} {
+	hostname, _ := os.Hostname()
+	i := make(map[string]interface{})
+	i["type"] = "telegraf"
+	i["version"] = internal.Version()
+	i["host"] = hostname
+	i["name"] = hostname
+	i["build"] = map[string]interface{}{"original": internal.ProductToken()}
+	return i
 }
 
 func (a *Elasticsearch) SampleConfig() string {
