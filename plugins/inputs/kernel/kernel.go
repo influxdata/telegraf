@@ -104,7 +104,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 
 func (k *Kernel) getProcStat() ([]byte, error) {
 	if _, err := os.Stat(k.statFile); os.IsNotExist(err) {
-		return nil, fmt.Errorf("kernel: %s does not exist!", k.statFile)
+		return nil, fmt.Errorf("kernel: %s does not exist", k.statFile)
 	} else if err != nil {
 		return nil, err
 	}

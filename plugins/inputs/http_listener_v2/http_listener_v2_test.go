@@ -103,6 +103,27 @@ func createURL(listener *HTTPListenerV2, scheme string, path string, rawquery st
 	return u.String()
 }
 
+func TestInvalidListenerConfig(t *testing.T) {
+	parser, _ := parsers.NewInfluxParser()
+
+	listener := &HTTPListenerV2{
+		Log:            testutil.Logger{},
+		ServiceAddress: "address_without_port",
+		Path:           "/write",
+		Methods:        []string{"POST"},
+		Parser:         parser,
+		TimeFunc:       time.Now,
+		MaxBodySize:    internal.Size{Size: 70000},
+		DataSource:     "body",
+	}
+
+	acc := &testutil.Accumulator{}
+	require.Error(t, listener.Start(acc))
+
+	// Stop is called when any ServiceInput fails to start; it must succeed regardless of state
+	listener.Stop()
+}
+
 func TestWriteHTTPSNoClientAuth(t *testing.T) {
 	listener := newTestHTTPSListenerV2()
 	listener.TLSAllowedCACerts = nil

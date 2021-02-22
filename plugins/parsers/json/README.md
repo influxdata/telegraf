@@ -3,8 +3,8 @@
 The JSON data format parses a [JSON][json] object or an array of objects into
 metric fields.
 
-**NOTE:** All JSON numbers are converted to float fields.  JSON String are
-ignored unless specified in the `tag_key` or `json_string_fields` options.
+**NOTE:** All JSON numbers are converted to float fields.  JSON strings and booleans are
+ignored unless specified in the `tag_key` or `json_string_fields` options. 
 
 ### Configuration
 
@@ -30,13 +30,15 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
   json_query = ""
 
   ## Tag keys is an array of keys that should be added as tags.  Matching keys
-  ## are no longer saved as fields.
+  ## are no longer saved as fields. Supports wildcard glob matching.
   tag_keys = [
     "my_tag_1",
-    "my_tag_2"
+    "my_tag_2",
+    "tags_*",
+    "tag*"
   ]
 
-  ## Array of glob pattern strings keys that should be added as string fields.
+  ## Array of glob pattern strings or booleans keys that should be added as string fields.
   json_string_fields = []
 
   ## Name key is the key to use as the measurement name.

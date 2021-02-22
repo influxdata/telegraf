@@ -119,9 +119,8 @@ func formatValue(value interface{}) string {
 	case bool:
 		if v {
 			return "1"
-		} else {
-			return "0"
 		}
+		return "0"
 	case uint64:
 		return strconv.FormatUint(v, 10)
 	case int64:
@@ -214,11 +213,11 @@ func InitGraphiteTemplates(templates []string) ([]*GraphiteTemplate, string, err
 		if len(parts) == 1 {
 			if parts[0] == "" {
 				return nil, "", fmt.Errorf("missing template at position: %d", i)
-			} else {
-				// Override default template
-				defaultTemplate = t
-				continue
 			}
+
+			// Override default template
+			defaultTemplate = t
+			continue
 		}
 
 		if len(parts) > 2 {

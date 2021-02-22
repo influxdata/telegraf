@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDovecot(t *testing.T) {
+func TestDovecotIntegration(t *testing.T) {
 
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

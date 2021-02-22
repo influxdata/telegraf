@@ -52,7 +52,11 @@ type HTTPResponse struct {
 	Log telegraf.Logger
 
 	compiledStringMatch *regexp.Regexp
-	client              *http.Client
+	client              httpClient
+}
+
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
 // Description returns the plugin Description
@@ -93,8 +97,8 @@ var sampleConfig = `
   # {'fake':'data'}
   # '''
 
-  ## Optional name of the field that will contain the body of the response. 
-  ## By default it is set to an empty String indicating that the body's content won't be added 
+  ## Optional name of the field that will contain the body of the response.
+  ## By default it is set to an empty String indicating that the body's content won't be added
   # response_body_field = ''
 
   ## Maximum allowed HTTP response body size in bytes.
