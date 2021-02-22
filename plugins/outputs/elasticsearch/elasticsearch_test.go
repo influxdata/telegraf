@@ -176,6 +176,7 @@ func TestGetIndexName(t *testing.T) {
 		EventTime time.Time
 		Tags      map[string]string
 		TagKeys   []string
+		MetricName string
 		IndexName string
 		Expected  string
 	}{
@@ -183,6 +184,7 @@ func TestGetIndexName(t *testing.T) {
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{},
+			"cpu",
 			"indexname",
 			"indexname",
 		},
@@ -190,6 +192,7 @@ func TestGetIndexName(t *testing.T) {
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{},
+			"cpu",
 			"indexname-%Y",
 			"indexname-2014",
 		},
@@ -197,6 +200,7 @@ func TestGetIndexName(t *testing.T) {
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{},
+			"system",
 			"indexname-%Y-%m",
 			"indexname-2014-12",
 		},
@@ -204,6 +208,7 @@ func TestGetIndexName(t *testing.T) {
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{},
+			"json",
 			"indexname-%Y-%m-%d",
 			"indexname-2014-12-01",
 		},
@@ -211,6 +216,7 @@ func TestGetIndexName(t *testing.T) {
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{},
+			"cpu",
 			"indexname-%Y-%m-%d-%H",
 			"indexname-2014-12-01-23",
 		},
@@ -218,6 +224,7 @@ func TestGetIndexName(t *testing.T) {
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{},
+			"test",
 			"indexname-%y-%m",
 			"indexname-14-12",
 		},
@@ -225,6 +232,7 @@ func TestGetIndexName(t *testing.T) {
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{},
+			"cpu",
 			"indexname-%Y-%V",
 			"indexname-2014-49",
 		},
@@ -232,6 +240,7 @@ func TestGetIndexName(t *testing.T) {
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{"tag1"},
+			"cpu",
 			"indexname-%s-%y-%m",
 			"indexname-value1-14-12",
 		},
@@ -239,6 +248,7 @@ func TestGetIndexName(t *testing.T) {
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{"tag1", "tag2"},
+			"cpu",
 			"indexname-%s-%s-%y-%m",
 			"indexname-value1-value2-14-12",
 		},
@@ -246,12 +256,21 @@ func TestGetIndexName(t *testing.T) {
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{"tag1", "tag2", "tag3"},
+			"cpu",
 			"indexname-%s-%s-%s-%y-%m",
 			"indexname-value1-value2-none-14-12",
 		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
+			[]string{"tag1", "tag2"},
+			"cpu",
+			"indexname-%s-%s-metric_name-%y-%m",
+			"indexname-value1-value2-cpu-14-12",
+		},
 	}
 	for _, test := range tests {
-		indexName := e.GetIndexName(test.IndexName, test.EventTime, test.TagKeys, test.Tags)
+		indexName := e.GetIndexName(test.IndexName, test.EventTime, test.TagKeys, test.Tags, test.MetricName)
 		if indexName != test.Expected {
 			t.Errorf("Expected indexname %s, got %s\n", test.Expected, indexName)
 		}
