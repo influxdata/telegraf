@@ -51,7 +51,7 @@ func (e *ElasticsearchQuery) runAggregationQuery(ctx context.Context, aggregatio
 	return searchResult, err
 }
 
-// GetMetricFields function returns a map of fields and field types on Elasticsearch that matches field.MetricFields
+// getMetricFields function returns a map of fields and field types on Elasticsearch that matches field.MetricFields
 func (e *ElasticsearchQuery) getMetricFields(ctx context.Context, aggregation esAggregation) (map[string]string, error) {
 	mapMetricFields := make(map[string]string)
 
