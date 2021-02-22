@@ -3,6 +3,7 @@ package elasticsearch_query
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -129,36 +130,48 @@ func (e *ElasticsearchQuery) Init() error {
 
 	err := e.connectToES()
 	if err != nil {
-		return err
+		log.Printf("E! error connecting to elasticsearch: %s", err)
+		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), e.Timeout.Duration)
 	defer cancel()
 
 	for i, agg := range e.Aggregations {
-
 		if agg.MeasurementName == "" {
 			return fmt.Errorf("field 'measurement_name' is not set")
 		}
 		if agg.DateField == "" {
 			return fmt.Errorf("field 'date_field' is not set")
 		}
-
-		// retrieve field mapping and build queries only once
-		mapMetricFields, err := e.getMetricFields(ctx, agg)
-		if err != nil {
-			return err
-		}
-
-		aggregationQueryList, err := e.buildAggregationQuery(mapMetricFields, agg)
-		if err != nil {
-			return err
-		}
-		agg.mapMetricFields = mapMetricFields
-		agg.aggregationQueryList = aggregationQueryList
-		e.Aggregations[i] = agg
+		e.initAggregation(ctx, agg, i)
 	}
 	return nil
+}
+
+func (e *ElasticsearchQuery) initAggregation(ctx context.Context, agg esAggregation, i int) {
+	// retrieve field mapping and build queries only once
+	mapMetricFields, err := e.getMetricFields(ctx, agg)
+	if err != nil {
+		log.Printf("E! %s", err.Error())
+		return
+	}
+
+	for _, metricField := range agg.MetricFields {
+		if _, ok := mapMetricFields[metricField]; !ok {
+			log.Printf("E! metric field %s not found on index %s", metricField, agg.Index)
+			return
+		}
+	}
+
+	aggregationQueryList, err := e.buildAggregationQuery(mapMetricFields, agg)
+	if err != nil {
+		log.Printf("E! %s", err.Error())
+		return
+	}
+	agg.mapMetricFields = mapMetricFields
+	agg.aggregationQueryList = aggregationQueryList
+	e.Aggregations[i] = agg
 }
 
 func (e *ElasticsearchQuery) connectToES() error {
@@ -218,15 +231,22 @@ func (e *ElasticsearchQuery) connectToES() error {
 func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
-	for _, agg := range e.Aggregations {
+	if !e.esClient.IsRunning() {
+		err := e.connectToES()
+		if err != nil {
+			return err
+		}
+	}
+
+	for i, agg := range e.Aggregations {
 		wg.Add(1)
-		go func(agg esAggregation) {
+		go func(agg esAggregation, i int) {
 			defer wg.Done()
-			err := e.esAggregationQuery(agg, acc)
+			err := e.esAggregationQuery(acc, agg, i)
 			if err != nil {
 				acc.AddError(fmt.Errorf("elasticsearch query aggregation %s: %s ", agg.MeasurementName, err.Error()))
 			}
-		}(agg)
+		}(agg, i)
 	}
 
 	wg.Wait()
@@ -250,9 +270,15 @@ func (e *ElasticsearchQuery) createHTTPClient() (*http.Client, error) {
 	return httpclient, nil
 }
 
-func (e *ElasticsearchQuery) esAggregationQuery(aggregation esAggregation, acc telegraf.Accumulator) error {
+func (e *ElasticsearchQuery) esAggregationQuery(acc telegraf.Accumulator, aggregation esAggregation, i int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), e.Timeout.Duration)
 	defer cancel()
+
+	// try to init the aggregation query if it is not done already
+	if aggregation.aggregationQueryList == nil {
+		e.initAggregation(ctx, aggregation, i)
+		aggregation = e.Aggregations[i]
+	}
 
 	searchResult, err := e.runAggregationQuery(ctx, aggregation)
 	if err != nil {
