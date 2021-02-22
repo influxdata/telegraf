@@ -22,24 +22,24 @@ type Server struct {
 
 func (s *Server) gatherData(acc telegraf.Accumulator) error {
 	if err := s.getServerStatus(); err != nil {
-		return fmt.Errorf("Failed to get server_status, %s\n", err)
+		return fmt.Errorf("failed to get server_status, %s", err)
 	}
 
 	if err := s.validateVersion(); err != nil {
-		return fmt.Errorf("Failed version validation, %s\n", err.Error())
+		return fmt.Errorf("failed version validation, %s", err.Error())
 	}
 
 	if err := s.addClusterStats(acc); err != nil {
 		fmt.Printf("error adding cluster stats, %s\n", err.Error())
-		return fmt.Errorf("Error adding cluster stats, %s\n", err.Error())
+		return fmt.Errorf("error adding cluster stats, %s", err.Error())
 	}
 
 	if err := s.addMemberStats(acc); err != nil {
-		return fmt.Errorf("Error adding member stats, %s\n", err.Error())
+		return fmt.Errorf("error adding member stats, %s", err.Error())
 	}
 
 	if err := s.addTableStats(acc); err != nil {
-		return fmt.Errorf("Error adding table stats, %s\n", err.Error())
+		return fmt.Errorf("error adding table stats, %s", err.Error())
 	}
 
 	return nil
@@ -58,7 +58,7 @@ func (s *Server) validateVersion() error {
 
 	majorVersion, err := strconv.Atoi(strings.Split(versionString, "")[0])
 	if err != nil || majorVersion < 2 {
-		return fmt.Errorf("unsupported major version %s\n", versionString)
+		return fmt.Errorf("unsupported major version %s", versionString)
 	}
 	return nil
 }
@@ -80,7 +80,7 @@ func (s *Server) getServerStatus() error {
 	}
 	host, port, err := net.SplitHostPort(s.Url.Host)
 	if err != nil {
-		return fmt.Errorf("unable to determine provided hostname from %s\n", s.Url.Host)
+		return fmt.Errorf("unable to determine provided hostname from %s", s.Url.Host)
 	}
 	driverPort, _ := strconv.Atoi(port)
 	for _, ss := range serverStatuses {
@@ -113,12 +113,12 @@ var ClusterTracking = []string{
 func (s *Server) addClusterStats(acc telegraf.Accumulator) error {
 	cursor, err := gorethink.DB("rethinkdb").Table("stats").Get([]string{"cluster"}).Run(s.session)
 	if err != nil {
-		return fmt.Errorf("cluster stats query error, %s\n", err.Error())
+		return fmt.Errorf("cluster stats query error, %s", err.Error())
 	}
 	defer cursor.Close()
 	var clusterStats stats
 	if err := cursor.One(&clusterStats); err != nil {
-		return fmt.Errorf("failure to parse cluster stats, %s\n", err.Error())
+		return fmt.Errorf("failure to parse cluster stats, %s", err.Error())
 	}
 
 	tags := s.getDefaultTags()
@@ -141,12 +141,12 @@ var MemberTracking = []string{
 func (s *Server) addMemberStats(acc telegraf.Accumulator) error {
 	cursor, err := gorethink.DB("rethinkdb").Table("stats").Get([]string{"server", s.serverStatus.Id}).Run(s.session)
 	if err != nil {
-		return fmt.Errorf("member stats query error, %s\n", err.Error())
+		return fmt.Errorf("member stats query error, %s", err.Error())
 	}
 	defer cursor.Close()
 	var memberStats stats
 	if err := cursor.One(&memberStats); err != nil {
-		return fmt.Errorf("failure to parse member stats, %s\n", err.Error())
+		return fmt.Errorf("failure to parse member stats, %s", err.Error())
 	}
 
 	tags := s.getDefaultTags()
@@ -165,7 +165,7 @@ var TableTracking = []string{
 func (s *Server) addTableStats(acc telegraf.Accumulator) error {
 	tablesCursor, err := gorethink.DB("rethinkdb").Table("table_status").Run(s.session)
 	if err != nil {
-		return fmt.Errorf("table stats query error, %s\n", err.Error())
+		return fmt.Errorf("table stats query error, %s", err.Error())
 	}
 
 	defer tablesCursor.Close()
@@ -179,12 +179,12 @@ func (s *Server) addTableStats(acc telegraf.Accumulator) error {
 			Get([]string{"table_server", table.Id, s.serverStatus.Id}).
 			Run(s.session)
 		if err != nil {
-			return fmt.Errorf("table stats query error, %s\n", err.Error())
+			return fmt.Errorf("table stats query error, %s", err.Error())
 		}
 		defer cursor.Close()
 		var ts tableStats
 		if err := cursor.One(&ts); err != nil {
-			return fmt.Errorf("failure to parse table stats, %s\n", err.Error())
+			return fmt.Errorf("failure to parse table stats, %s", err.Error())
 		}
 
 		tags := s.getDefaultTags()

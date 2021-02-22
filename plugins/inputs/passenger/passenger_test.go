@@ -61,7 +61,7 @@ func Test_Invalid_Xml(t *testing.T) {
 
 	err := r.Gather(&acc)
 	require.Error(t, err)
-	assert.Equal(t, "Cannot parse input with error: EOF\n", err.Error())
+	assert.Equal(t, "cannot parse input with error: EOF", err.Error())
 }
 
 // We test this by ensure that the error message match the path of default cli

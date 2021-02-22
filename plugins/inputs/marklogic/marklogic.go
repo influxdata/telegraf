@@ -220,7 +220,7 @@ func (c *Marklogic) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: time.Duration(5 * time.Second),
+		Timeout: 5 * time.Second,
 	}
 
 	return client, nil
@@ -246,11 +246,7 @@ func (c *Marklogic) gatherJSONData(url string, v interface{}) error {
 			response.StatusCode, http.StatusOK)
 	}
 
-	if err = json.NewDecoder(response.Body).Decode(v); err != nil {
-		return err
-	}
-
-	return nil
+	return json.NewDecoder(response.Body).Decode(v)
 }
 
 func init() {
