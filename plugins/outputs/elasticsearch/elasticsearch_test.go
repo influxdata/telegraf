@@ -173,12 +173,12 @@ func TestGetIndexName(t *testing.T) {
 	}
 
 	var tests = []struct {
-		EventTime time.Time
-		Tags      map[string]string
-		TagKeys   []string
+		EventTime  time.Time
+		Tags       map[string]string
+		TagKeys    []string
 		MetricName string
-		IndexName string
-		Expected  string
+		IndexName  string
+		Expected   string
 	}{
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),

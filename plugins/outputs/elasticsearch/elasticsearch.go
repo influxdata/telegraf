@@ -1,25 +1,25 @@
 package elasticsearch
 
 import (
-	"os"
 	"bytes"
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
-	"net"
 
 	"crypto/sha256"
 
+	"github.com/elastic/go-sysinfo"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/elastic/go-sysinfo"
 	"github.com/olivere/elastic/v7"
 )
 
@@ -283,7 +283,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	bulkRequest := a.Client.Bulk()
 
 	if a.ElasticCommonSchema {
-		ecs_host = getEcsHostInfo() 
+		ecs_host = getEcsHostInfo()
 		ecs_agent = getEcsAgentInfo()
 	}
 
@@ -321,7 +321,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 		if a.IsDataStream {
 			br.OpType("create")
-		}		
+		}
 
 		if a.ForceDocumentId {
 			id := GetPointID(metric)
@@ -510,10 +510,10 @@ func getEcsHostInfo() map[string]interface{} {
 	i["os"] = os
 	if info.UniqueID != "" {
 		i["id"] = info.UniqueID
-	}	
+	}
 	if info.Containerized != nil {
 		i["containerized"] = *info.Containerized
-	}	
+	}
 
 	ifaces, _ := net.Interfaces()
 	for _, in := range ifaces {
@@ -524,7 +524,7 @@ func getEcsHostInfo() map[string]interface{} {
 			hwList = append(hwList, in.HardwareAddr.String())
 		}
 		addrs, err := in.Addrs()
-		if err !=nil {
+		if err != nil {
 			continue
 		}
 		for _, addr := range addrs {

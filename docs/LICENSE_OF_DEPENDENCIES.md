@@ -185,7 +185,7 @@ following works:
 - gopkg.in/jcmturner/rpc.v1 [Apache License 2.0](https://github.com/jcmturner/rpc/blob/v1.1.0/LICENSE)
 - gopkg.in/ldap.v3 [MIT License](https://github.com/go-ldap/ldap/blob/v3.1.7/LICENSE)
 - gopkg.in/mgo.v2 [BSD 2-Clause "Simplified" License](https://github.com/go-mgo/mgo/blob/v2/LICENSE)
-- gopkg.in/olivere/elastic.v5 [MIT License](https://github.com/olivere/elastic/blob/v5.0.76/LICENSE)
+- github.com/olivere/elastic [MIT License](https://github.com/olivere/elastic/blob/release-branch.v7/LICENSE)
 - gopkg.in/tomb.v1 [BSD 3-Clause Clear License](https://github.com/go-tomb/tomb/blob/v1/LICENSE)
 - gopkg.in/tomb.v2 [BSD 3-Clause Clear License](https://github.com/go-tomb/tomb/blob/v2/LICENSE)
 - gopkg.in/yaml.v2 [Apache License 2.0](https://github.com/go-yaml/yaml/blob/v2.2.2/LICENSE)
@@ -193,6 +193,10 @@ following works:
 - modernc.org/libc [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/libc/-/blob/master/LICENSE)
 - modernc.org/memory [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/memory/-/blob/master/LICENSE)
 - modernc.org/sqlite [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/sqlite/-/blob/master/LICENSE)
-
+- github.com/elastic/go-sysinfo [Apache License 2.0](https://github.com/elastic/go-sysinfo/blob/master/LICENSE.txt)
+- github.com/elastic/go-windows [Apache License 2.0](https://github.com/elastic/go-windows/blob/master/LICENSE.txt)
+- github.com/joeshaw/multierror [MIT License](https://github.com/joeshaw/multierror/blob/master/LICENSE)
+- github.com/josharian/intern [MIT License](https://github.com/josharian/intern/blob/master/license.md)
+- howett.net/plist [BSD 2-Clause "Simplified" License](https://github.com/DHowett/go-plist/blob/master/LICENSE)
 ## telegraf used and modified code from these projects
 - github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/LICENSE)
