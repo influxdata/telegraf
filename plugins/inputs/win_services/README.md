@@ -8,12 +8,13 @@ Monitoring some services may require running Telegraf with administrator privile
 
 ```toml
 [[inputs.win_services]]
-  ## Names of the services to monitor. Leave empty to monitor all the available services on the host. Globs accepted.
+  ## Names of the services to monitor. Leave empty to monitor all the available services on the host. Globs accepted. Case sensitive.
   service_names = [
     "LanmanServer",
     "TermService",
     "Win*",
   ]
+  ignored_names = ['WinRM'] # Names of service to exclude - usefull when using globs.
 ```
 
 ### Measurements & Fields:
