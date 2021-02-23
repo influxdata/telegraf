@@ -43,7 +43,7 @@ type (
 		ShardIteratorType      string    `toml:"shard_iterator_type"`
 		DynamoDB               *DynamoDB `toml:"checkpoint_dynamodb"`
 		MaxUndeliveredMessages int       `toml:"max_undelivered_messages"`
-		DecompressWith         string    `toml:"decompress_with"`
+		DecompressionType      string    `toml:"decompress"`
 
 		Log telegraf.Logger
 
@@ -61,6 +61,8 @@ type (
 		recordsTex    sync.Mutex
 		wg            sync.WaitGroup
 
+		decompressionFunc decompress
+
 		lastSeqNum *big.Int
 	}
 
@@ -72,12 +74,7 @@ type (
 
 const (
 	defaultMaxUndeliveredMessages = 1000
-	gzipDecompression             = "gzip"
-	noDecompression               = "none"
-	zlibDecompression             = "zlib"
 )
-
-var supportedDecompressionAlgorithms = []string{gzipDecompression, noDecompression, zlibDecompression}
 
 type decompress func([]byte) ([]byte, error)
 
@@ -138,7 +135,7 @@ var sampleConfig = `
   ## also base64 encodes the zip byte data before pushing to the stream.  The base64 decoding
   ## is done automatically by the golang sdk, as data is read from kinesis)
   ##
-  # decompress_with = "none"
+  # decompress = "none"
 
   ## Optional
   ## Configuration for a dynamodb checkpoint
@@ -260,43 +257,8 @@ func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
 	return nil
 }
 
-func gzipDecompress(data []byte) ([]byte, error) {
-	zipData, err := gzip.NewReader(bytes.NewReader(data))
-	if err != nil {
-		return nil, err
-	}
-	defer zipData.Close()
-	return ioutil.ReadAll(zipData)
-}
-
-func zlibDecompress(data []byte) ([]byte, error) {
-	zlibData, err := zlib.NewReader(bytes.NewReader(data))
-	if err != nil {
-		return nil, err
-	}
-	defer zlibData.Close()
-	return ioutil.ReadAll(zlibData)
-}
-
-func (k *KinesisConsumer) getDecompressionFunc(algo string) decompress {
-	switch algo {
-	case gzipDecompression:
-		return gzipDecompress
-	case zlibDecompression:
-		return zlibDecompress
-	default:
-		return func(data []byte) ([]byte, error) {
-			return data, nil
-		}
-	}
-}
-
-func (k *KinesisConsumer) getRecordData(r *consumer.Record) ([]byte, error) {
-	return k.getDecompressionFunc(k.DecompressWith)(r.Data)
-}
-
 func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consumer.Record) error {
-	data, err := k.getRecordData(r)
+	data, err := k.decompressionFunc(r.Data)
 	if err != nil {
 		return err
 	}
@@ -395,12 +357,48 @@ func (k *KinesisConsumer) Set(streamName, shardID, sequenceNumber string) error 
 	return nil
 }
 
-func (k *KinesisConsumer) Init() error {
-	err := choice.Check(k.DecompressWith, supportedDecompressionAlgorithms)
+func decompressGzip(data []byte) ([]byte, error) {
+	zipData, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
-		return fmt.Errorf(`cannot verify "decompress_with" setting: %v`, err)
+		return nil, err
+	}
+	defer zipData.Close()
+	return ioutil.ReadAll(zipData)
+}
+
+func decompressZlib(data []byte) ([]byte, error) {
+	zlibData, err := zlib.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	defer zlibData.Close()
+	return ioutil.ReadAll(zlibData)
+}
+
+func decompressNoOp(data []byte) ([]byte, error) {
+	return data, nil
+}
+
+func (k *KinesisConsumer) configureDecompressionFunc() error {
+	gzipDecompression, noDecompression, zlibDecompression := "gzip", "none", "zlib"
+	err := choice.Check(k.DecompressionType, []string{gzipDecompression, noDecompression, zlibDecompression})
+	if err != nil {
+		return fmt.Errorf(`cannot verify "decompress" setting: %v`, err)
+	}
+
+	switch k.DecompressionType {
+	case gzipDecompression:
+		k.decompressionFunc = decompressGzip
+	case zlibDecompression:
+		k.decompressionFunc = decompressZlib
+	default:
+		k.decompressionFunc = decompressNoOp
 	}
 	return nil
+}
+
+func (k *KinesisConsumer) Init() error {
+	return k.configureDecompressionFunc()
 }
 
 type noopCheckpoint struct{}
@@ -416,7 +414,7 @@ func init() {
 			ShardIteratorType:      "TRIM_HORIZON",
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 			lastSeqNum:             maxSeq,
-			DecompressWith:         noDecompression,
+			DecompressionType:      "none",
 		}
 	})
 }

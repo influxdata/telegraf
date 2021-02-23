@@ -33,8 +33,8 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 	{"id":"","timestamp":1510254469274,"message":"{\"bob\":\"CWL CONTROL MESSAGE: Checking health of destination Firehose.\", \"timestamp\":\"2021-02-22T22:15:26.794854Z\"}"}
 ]}`)
 	parser, _ := json.New(&json.Config{
-		MetricName: "json_test",
-		Query: "logEvents",
+		MetricName:   "json_test",
+		Query:        "logEvents",
 		StringFields: []string{"message"},
 	})
 
@@ -51,7 +51,7 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 		ShardIteratorType      string
 		DynamoDB               *DynamoDB
 		MaxUndeliveredMessages int
-		DecompressWith         string
+		DecompressionType      string
 		Log                    telegraf.Logger
 		cons                   *consumer.Consumer
 		parser                 parsers.Parser
@@ -68,25 +68,25 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 		lastSeqNum             *big.Int
 	}
 	type args struct {
-		r   *consumer.Record
+		r *consumer.Record
 	}
 	type expected struct {
 		numberOfMetrics int
 		messageContains string
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
+		name     string
+		fields   fields
+		args     args
+		wantErr  bool
 		expected expected
 	}{
 		{
 			name: "test no compression",
 			fields: fields{
-				DecompressWith: noDecompression,
-				parser: parser,
-				records: make(map[telegraf.TrackingID]string),
+				DecompressionType: "none",
+				parser:            parser,
+				records:           make(map[telegraf.TrackingID]string),
 			},
 			args: args{
 				r: &consumer.Record{Data: notZippedBytes, SequenceNumber: aws.String("anything")},
@@ -100,9 +100,9 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 		{
 			name: "test gzip compression",
 			fields: fields{
-				DecompressWith: gzipDecompression,
-				parser: parser,
-				records: make(map[telegraf.TrackingID]string),
+				DecompressionType: "gzip",
+				parser:            parser,
+				records:           make(map[telegraf.TrackingID]string),
 			},
 			args: args{
 				r: &consumer.Record{Data: gzippedBytes, SequenceNumber: aws.String("anything")},
@@ -116,9 +116,9 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 		{
 			name: "test zlib compression",
 			fields: fields{
-				DecompressWith: zlibDecompression,
-				parser: parser,
-				records: make(map[telegraf.TrackingID]string),
+				DecompressionType: "zlib",
+				parser:            parser,
+				records:           make(map[telegraf.TrackingID]string),
 			},
 			args: args{
 				r: &consumer.Record{Data: zlibBytpes, SequenceNumber: aws.String("anything")},
@@ -129,15 +129,23 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				numberOfMetrics: 1,
 			},
 		},
-
 	}
+
+	k := &KinesisConsumer{
+		DecompressionType: "notsupported",
+	}
+	err := k.Init()
+	assert.NotNil(t, err)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			k := &KinesisConsumer{
-				DecompressWith:  tt.fields.DecompressWith,
-				parser: tt.fields.parser,
-				records: tt.fields.records,
+				DecompressionType: tt.fields.DecompressionType,
+				parser:            tt.fields.parser,
+				records:           tt.fields.records,
 			}
+			err := k.Init()
+			assert.Nil(t, err)
 
 			var metrics []telegraf.Metric
 			if err := k.onMessage(TestTrackingAccumulator{Metrics: &metrics}, tt.args.r); (err != nil) != tt.wantErr {
@@ -148,11 +156,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 
 			for _, metric := range metrics {
 				if logEventMessage, ok := metric.Fields()["message"]; ok {
-					assert.Contains(t, logEventMessage.(string), tt.expected.messageContains, )
+					assert.Contains(t, logEventMessage.(string), tt.expected.messageContains)
 				} else {
 					t.Errorf("Expect logEvents to be present")
 				}
 			}
 		})
 	}
+
 }
