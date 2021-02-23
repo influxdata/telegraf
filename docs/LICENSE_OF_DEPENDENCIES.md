@@ -82,6 +82,7 @@ following works:
 - github.com/influxdata/tail [MIT License](https://github.com/influxdata/tail/blob/master/LICENSE.txt)
 - github.com/influxdata/toml [MIT License](https://github.com/influxdata/toml/blob/master/LICENSE)
 - github.com/influxdata/wlog [MIT License](https://github.com/influxdata/wlog/blob/master/LICENSE)
+- github.com/james4k/rcon [MIT License](https://github.com/james4k/rcon/blob/master/LICENSE)
 - github.com/jackc/pgx [MIT License](https://github.com/jackc/pgx/blob/master/LICENSE)
 - github.com/jcmturner/gofork [BSD 3-Clause "New" or "Revised" License](https://github.com/jcmturner/gofork/blob/master/LICENSE)
 - github.com/jmespath/go-jmespath [Apache License 2.0](https://github.com/jmespath/go-jmespath/blob/master/LICENSE)
