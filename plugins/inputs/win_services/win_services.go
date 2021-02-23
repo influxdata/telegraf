@@ -85,6 +85,7 @@ var sampleConfig = `
 	"TermService",
 	"Win*",
   ]
+  #ignored_names = [] ## optional, list of service names to exclude
 `
 
 var description = "Input plugin to report Windows services info."
@@ -94,6 +95,7 @@ type WinServices struct {
 	Log telegraf.Logger
 
 	ServiceNames []string `toml:"service_names"`
+	IgnoredNames []string `toml:"ignored_names"`
 	mgrProvider  ManagerProvider
 
 	servicesFilter filter.Filter
@@ -108,7 +110,7 @@ type ServiceInfo struct {
 
 func (m *WinServices) Init() error {
 	var err error
-	m.servicesFilter, err = filter.NewIncludeExcludeFilter(m.ServiceNames, nil)
+	m.servicesFilter, err = filter.NewIncludeExcludeFilter(m.ServiceNames, m.IgnoredNames)
 	if err != nil {
 		return err
 	}
