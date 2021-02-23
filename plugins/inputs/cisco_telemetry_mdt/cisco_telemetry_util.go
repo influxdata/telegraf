@@ -6,6 +6,30 @@ import (
 	"strings"
 )
 
+//xform Field to string
+func xformValueString(field *telemetry.TelemetryField) string {
+	var str string
+	switch val := field.ValueByType.(type) {
+	case *telemetry.TelemetryField_StringValue:
+		if len(val.StringValue) > 0 {
+			return val.StringValue
+		}
+	case *telemetry.TelemetryField_Uint32Value:
+		str = strconv.FormatUint(uint64(val.Uint32Value), 10)
+		return str
+	case *telemetry.TelemetryField_Uint64Value:
+		str = strconv.FormatUint(val.Uint64Value, 10)
+		return str
+	case *telemetry.TelemetryField_Sint32Value:
+		str = strconv.FormatInt(int64(val.Sint32Value), 10)
+		return str
+	case *telemetry.TelemetryField_Sint64Value:
+		str = strconv.FormatInt(val.Sint64Value, 10)
+		return str
+	}
+	return ""
+}
+
 //xform Uint64 to int64
 func nxosValueXformUint64Toint64(field *telemetry.TelemetryField, value interface{}) interface{} {
 	if field.GetUint64Value() != 0 {

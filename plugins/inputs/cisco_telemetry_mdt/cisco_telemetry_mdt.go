@@ -52,7 +52,7 @@ type CiscoTelemetryMDT struct {
 
 	// Internal state
 	aliases   map[string]string
-	dmes      map[string]string
+	dmesFuncs map[string]string
 	warned    map[string]struct{}
 	extraTags map[string]map[string]struct{}
 	nxpathMap map[string]map[string]string //per path map
@@ -68,30 +68,6 @@ type NxPayloadXfromStructure struct {
 		Key   string `json:"Key"`
 		Value string `json:"Value"`
 	} `json:"prop"`
-}
-
-//xform Field to string
-func xformValueString(field *telemetry.TelemetryField) string {
-	var str string
-	switch val := field.ValueByType.(type) {
-	case *telemetry.TelemetryField_StringValue:
-		if len(val.StringValue) > 0 {
-			return val.StringValue
-		}
-	case *telemetry.TelemetryField_Uint32Value:
-		str = strconv.FormatUint(uint64(val.Uint32Value), 10)
-		return str
-	case *telemetry.TelemetryField_Uint64Value:
-		str = strconv.FormatUint(val.Uint64Value, 10)
-		return str
-	case *telemetry.TelemetryField_Sint32Value:
-		str = strconv.FormatInt(int64(val.Sint32Value), 10)
-		return str
-	case *telemetry.TelemetryField_Sint64Value:
-		str = strconv.FormatInt(val.Sint64Value, 10)
-		return str
-	}
-	return ""
 }
 
 // Start the Cisco MDT service
@@ -117,33 +93,38 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	}
 	c.initDb()
 
-	c.dmes = make(map[string]string, len(c.Dmes))
+	c.dmesFuncs = make(map[string]string, len(c.Dmes))
 	for dme, path := range c.Dmes {
-		c.dmes[path] = dme
-		if path == "uint64 to int" {
+		c.dmesFuncs[path] = dme
+		switch path {
+		case "uint64 to int":
 			c.propMap[dme] = nxosValueXformUint64Toint64
-		} else if path == "uint64 to string" {
+		case "uint64 to string":
 			c.propMap[dme] = nxosValueXformUint64ToString
-		} else if path == "string to float64" {
+		case "string to float64":
 			c.propMap[dme] = nxosValueXformStringTofloat
-		} else if path == "string to uint64" {
+		case "string to uint64":
 			c.propMap[dme] = nxosValueXformStringToUint64
-		} else if path == "string to int64" {
+		case "string to int64":
 			c.propMap[dme] = nxosValueXformStringToInt64
-		} else if path == "auto-float-xfrom" {
+		case "auto-float-xfrom":
 			c.propMap[dme] = nxosValueAutoXformFloatProp
-		} else if dme[0:6] == "dnpath" { //path based property map
-			js := []byte(path)
-			var jsStruct NxPayloadXfromStructure
+		default:
+			if !strings.HasPrefix(dme, "dnpath") { // not path based property map
+				continue
+			}
 
-			err := json.Unmarshal(js, &jsStruct)
-			if err == nil {
-				//Build 2 level Hash nxpathMap Key = jsStruct.Name, Value = map of jsStruct.Prop
-				//It will override the default of code if same path is provided in configuration.
-				c.nxpathMap[jsStruct.Name] = make(map[string]string, len(jsStruct.Prop))
-				for _, prop := range jsStruct.Prop {
-					c.nxpathMap[jsStruct.Name][prop.Key] = prop.Value
-				}
+			var jsStruct NxPayloadXfromStructure
+			err := json.Unmarshal([]byte(path), &jsStruct)
+			if err != nil {
+				continue
+			}
+
+			// Build 2 level Hash nxpathMap Key = jsStruct.Name, Value = map of jsStruct.Prop
+			// It will override the default of code if same path is provided in configuration.
+			c.nxpathMap[jsStruct.Name] = make(map[string]string, len(jsStruct.Prop))
+			for _, prop := range jsStruct.Prop {
+				c.nxpathMap[jsStruct.Name][prop.Key] = prop.Value
 			}
 		}
 	}
@@ -371,8 +352,8 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		// Parse keys
 		tags = make(map[string]string, len(keys.Fields)+3)
 		tags["source"] = msg.GetNodeIdStr()
-		if msg.GetSubscriptionIdStr() != "" {
-			tags["subscription"] = msg.GetSubscriptionIdStr()
+		if msgID := msg.GetSubscriptionIdStr(); msgID != "" {
+			tags["subscription"] = msgID
 		}
 		tags["path"] = msg.GetEncodingPath()
 
