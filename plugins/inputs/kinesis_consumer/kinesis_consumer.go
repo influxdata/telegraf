@@ -3,6 +3,7 @@ package kinesis_consumer
 import (
 	"bytes"
 	"compress/gzip"
+	"compress/zlib"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -41,7 +43,7 @@ type (
 		ShardIteratorType      string    `toml:"shard_iterator_type"`
 		DynamoDB               *DynamoDB `toml:"checkpoint_dynamodb"`
 		MaxUndeliveredMessages int       `toml:"max_undelivered_messages"`
-		Decompress             bool      `toml:"decompress"`
+		DecompressWith         string    `toml:"decompress_with"`
 
 		Log telegraf.Logger
 
@@ -70,7 +72,14 @@ type (
 
 const (
 	defaultMaxUndeliveredMessages = 1000
+	gzipDecompression             = "gzip"
+	noDecompression               = "none"
+	zlibDecompression             = "zlib"
 )
+
+var supportedDecompressionAlgorithms = []string{gzipDecompression, noDecompression, zlibDecompression}
+
+type decompress func([]byte) ([]byte, error)
 
 // this is the largest sequence number allowed - https://docs.aws.amazon.com/kinesis/latest/APIReference/API_SequenceNumberRange.html
 var maxSeq = strToBint(strings.Repeat("9", 129))
@@ -124,12 +133,12 @@ var sampleConfig = `
 
   ##
   ## Whether or not to uncompress the data from kinesis
-  ## If you are processing a cloudwatch logs kinesis stream then set this to true
+  ## If you are processing a cloudwatch logs kinesis stream then set this to "gzip"
   ## as AWS compresses cloudwatch log data before it is sent to kinesis (aws
   ## also base64 encodes the zip byte data before pushing to the stream.  The base64 decoding
   ## is done automatically by the golang sdk, as data is read from kinesis)
   ##
-  # decompress = false
+  # decompress_with = "none"
 
   ## Optional
   ## Configuration for a dynamodb checkpoint
@@ -251,7 +260,7 @@ func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
 	return nil
 }
 
-func (k *KinesisConsumer) decompress(data []byte) ([]byte, error) {
+func gzipDecompress(data []byte) ([]byte, error) {
 	zipData, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, err
@@ -260,13 +269,30 @@ func (k *KinesisConsumer) decompress(data []byte) ([]byte, error) {
 	return ioutil.ReadAll(zipData)
 }
 
-func (k *KinesisConsumer) getRecordData(r *consumer.Record) ([]byte, error) {
-	var err error
-	dataToParse := r.Data
-	if k.Decompress {
-		dataToParse, err = k.decompress(dataToParse)
+func zlibDecompress(data []byte) ([]byte, error) {
+	zlibData, err := zlib.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
 	}
-	return dataToParse, err
+	defer zlibData.Close()
+	return ioutil.ReadAll(zlibData)
+}
+
+func (k *KinesisConsumer) getDecompressionFunc(algo string) decompress {
+	switch algo {
+	case gzipDecompression:
+		return gzipDecompress
+	case zlibDecompression:
+		return zlibDecompress
+	default:
+		return func(data []byte) ([]byte, error) {
+			return data, nil
+		}
+	}
+}
+
+func (k *KinesisConsumer) getRecordData(r *consumer.Record) ([]byte, error) {
+	return k.getDecompressionFunc(k.DecompressWith)(r.Data)
 }
 
 func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consumer.Record) error {
@@ -369,6 +395,14 @@ func (k *KinesisConsumer) Set(streamName, shardID, sequenceNumber string) error 
 	return nil
 }
 
+func (k *KinesisConsumer) Init() error {
+	err := choice.Check(k.DecompressWith, supportedDecompressionAlgorithms)
+	if err != nil {
+		return fmt.Errorf(`cannot verify "decompress_with" setting: %v`, err)
+	}
+	return nil
+}
+
 type noopCheckpoint struct{}
 
 func (n noopCheckpoint) Set(string, string, string) error   { return nil }
@@ -382,7 +416,7 @@ func init() {
 			ShardIteratorType:      "TRIM_HORIZON",
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 			lastSeqNum:             maxSeq,
-			Decompress:             false,
+			DecompressWith:         noDecompression,
 		}
 	})
 }
