@@ -6,18 +6,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExec(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping test due to OS/executable dependencies")
-	}
+	t.Skip("Skipping test due to OS/executable dependencies and race condition when ran as part of a test-all")
 
 	tests := []struct {
 		name    string

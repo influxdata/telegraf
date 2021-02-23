@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -174,7 +175,9 @@ func buildTags(tags []*telegraf.Tag) []string {
 	tagsString := make([]string, len(tags)+1)
 	indexSource := 0
 	for index, tag := range tags {
-		tagsString[index] = fmt.Sprintf("%s=%s", tag.Key, tag.Value)
+		key := url.QueryEscape(tag.Key)
+		value := url.QueryEscape(tag.Value)
+		tagsString[index] = fmt.Sprintf("%s=%s", key, value)
 		indexSource = index
 	}
 	indexSource++

@@ -3,19 +3,22 @@ package proxmox
 import (
 	"encoding/json"
 	"errors"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 var sampleConfig = `
   ## API connection configuration. The API token was introduced in Proxmox v6.2. Required permissions for user and token: PVEAuditor role on /.
   base_url = "https://localhost:8006/api2/json"
   api_token = "USER@REALM!TOKENID=UUID"
+  ## Node name, defaults to OS hostname
+  # node_name = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -49,9 +52,10 @@ func (px *Proxmox) Gather(acc telegraf.Accumulator) error {
 }
 
 func (px *Proxmox) Init() error {
-
+	// Set hostname as default node name for backwards compatibility
 	if px.NodeName == "" {
-		return errors.New("node_name must be configured")
+		hostname, _ := os.Hostname()
+		px.NodeName = hostname
 	}
 
 	tlsCfg, err := px.ClientConfig.TLSConfig()
@@ -69,15 +73,11 @@ func (px *Proxmox) Init() error {
 }
 
 func init() {
-	px := Proxmox{
-		requestFunction: performRequest,
-	}
-
-	// Set hostname as default node name for backwards compatibility
-	hostname, _ := os.Hostname()
-	px.NodeName = hostname
-
-	inputs.Add("proxmox", func() telegraf.Input { return &px })
+	inputs.Add("proxmox", func() telegraf.Input {
+		return &Proxmox{
+			requestFunction: performRequest,
+		}
+	})
 }
 
 func getNodeSearchDomain(px *Proxmox) error {
@@ -94,7 +94,7 @@ func getNodeSearchDomain(px *Proxmox) error {
 	}
 
 	if nodeDns.Data.Searchdomain == "" {
-		return errors.New("node_name not found")
+		return errors.New("search domain is not set")
 	}
 	px.nodeSearchDomain = nodeDns.Data.Searchdomain
 
@@ -141,20 +141,28 @@ func gatherVmData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
 	for _, vmStat := range vmStats.Data {
 		vmConfig, err := getVmConfig(px, vmStat.ID, rt)
 		if err != nil {
-			px.Log.Error("Error getting VM config: %v", err)
+			px.Log.Errorf("Error getting VM config: %v", err)
 			return
 		}
+
+		if vmConfig.Data.Template == 1 {
+			px.Log.Debugf("Ignoring template VM %s (%s)", vmStat.ID, vmStat.Name)
+			continue
+		}
+
 		tags := getTags(px, vmStat.Name, vmConfig, rt)
 		currentVMStatus, err := getCurrentVMStatus(px, rt, vmStat.ID)
 		if err != nil {
-			px.Log.Error("Error getting VM curent VM status: %v", err)
+			px.Log.Errorf("Error getting VM curent VM status: %v", err)
 			return
 		}
+
 		fields, err := getFields(currentVMStatus)
 		if err != nil {
-			px.Log.Error("Error getting VM measurements: %v", err)
+			px.Log.Errorf("Error getting VM measurements: %v", err)
 			return
 		}
+
 		acc.AddFields("proxmox", fields, tags)
 	}
 }

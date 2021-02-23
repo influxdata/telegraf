@@ -102,6 +102,7 @@ func TestCoils(t *testing.T) {
 						Address: []uint16{ct.address},
 					},
 				},
+				Log: testutil.Logger{},
 			}
 
 			err = modbus.Init()
@@ -549,6 +550,66 @@ func TestHoldingRegisters(t *testing.T) {
 			write:     []byte{0xF6, 0x84, 0xF9, 0x45, 0xFE, 0xBC, 0xFF, 0xFF},
 			read:      uint64(18446742686322259968),
 		},
+		{
+			name:      "register214_to_register217_abcdefgh_float64_ieee",
+			address:   []uint16{214, 215, 216, 217},
+			quantity:  4,
+			byteOrder: "ABCDEFGH",
+			dataType:  "FLOAT64-IEEE",
+			scale:     1,
+			write:     []byte{0xBF, 0x9C, 0x6A, 0x40, 0xC3, 0x47, 0x8F, 0x55},
+			read:      float64(-0.02774907295123737),
+		},
+		{
+			name:      "register214_to_register217_abcdefgh_float64_ieee_scaled",
+			address:   []uint16{214, 215, 216, 217},
+			quantity:  4,
+			byteOrder: "ABCDEFGH",
+			dataType:  "FLOAT64-IEEE",
+			scale:     0.1,
+			write:     []byte{0xBF, 0x9C, 0x6A, 0x40, 0xC3, 0x47, 0x8F, 0x55},
+			read:      float64(-0.002774907295123737),
+		},
+		{
+			name:      "register218_to_register221_abcdefgh_float64_ieee_pos",
+			address:   []uint16{218, 219, 220, 221},
+			quantity:  4,
+			byteOrder: "ABCDEFGH",
+			dataType:  "FLOAT64-IEEE",
+			scale:     1,
+			write:     []byte{0x3F, 0x9C, 0x6A, 0x40, 0xC3, 0x47, 0x8F, 0x55},
+			read:      float64(0.02774907295123737),
+		},
+		{
+			name:      "register222_to_register225_hgfecdba_float64_ieee",
+			address:   []uint16{222, 223, 224, 225},
+			quantity:  4,
+			byteOrder: "HGFEDCBA",
+			dataType:  "FLOAT64-IEEE",
+			scale:     1,
+			write:     []byte{0x55, 0x8F, 0x47, 0xC3, 0x40, 0x6A, 0x9C, 0xBF},
+			read:      float64(-0.02774907295123737),
+		},
+		{
+			name:      "register226_to_register229_badcfehg_float64_ieee",
+			address:   []uint16{226, 227, 228, 229},
+			quantity:  4,
+			byteOrder: "BADCFEHG",
+			dataType:  "FLOAT64-IEEE",
+			scale:     1,
+			write:     []byte{0x9C, 0xBF, 0x40, 0x6A, 0x47, 0xC3, 0x55, 0x8F},
+			read:      float64(-0.02774907295123737),
+		},
+		{
+			name:      "register230_to_register233_ghefcdab_float64_ieee",
+			address:   []uint16{230, 231, 232, 233},
+			quantity:  4,
+			byteOrder: "GHEFCDAB",
+			dataType:  "FLOAT64-IEEE",
+			scale:     1,
+			write:     []byte{0x8F, 0x55, 0xC3, 0x47, 0x6A, 0x40, 0xBF, 0x9C},
+			read:      float64(-0.02774907295123737),
+		},
 	}
 
 	serv := mbserver.NewServer()
@@ -580,6 +641,7 @@ func TestHoldingRegisters(t *testing.T) {
 						Address:   hrt.address,
 					},
 				},
+				Log: testutil.Logger{},
 			}
 
 			err = modbus.Init()
@@ -617,7 +679,7 @@ func TestRetrySuccessful(t *testing.T) {
 			if retries >= maxretries {
 				except = &mbserver.Success
 			}
-			retries += 1
+			retries++
 
 			return data, except
 		})
@@ -634,6 +696,7 @@ func TestRetrySuccessful(t *testing.T) {
 					Address: []uint16{0},
 				},
 			},
+			Log: testutil.Logger{},
 		}
 
 		err = modbus.Init()
@@ -679,6 +742,7 @@ func TestRetryFail(t *testing.T) {
 					Address: []uint16{0},
 				},
 			},
+			Log: testutil.Logger{},
 		}
 
 		err = modbus.Init()
@@ -692,7 +756,7 @@ func TestRetryFail(t *testing.T) {
 	counter := 0
 	serv.RegisterFunctionHandler(1,
 		func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
-			counter += 1
+			counter++
 			data := make([]byte, 2)
 			data[0] = byte(1)
 			data[1] = byte(0)
@@ -712,6 +776,7 @@ func TestRetryFail(t *testing.T) {
 					Address: []uint16{0},
 				},
 			},
+			Log: testutil.Logger{},
 		}
 
 		err = modbus.Init()

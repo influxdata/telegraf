@@ -81,7 +81,8 @@ const sampleConfig = `
   ##   "/var/log/**.log"  -> recursively find all .log files in /var/log
   ##   "/var/log/*/*.log" -> find all .log files with a parent dir in /var/log
   ##   "/var/log/apache.log" -> just tail the apache log file
-  ##
+  ##   "/var/log/log[!1-2]*  -> tail files without 1-2
+  ##   "/var/log/log[^1-2]*  -> identical behavior as above
   ## See https://github.com/gobwas/glob for more examples
   ##
   files = ["/var/mymetrics.out"]
@@ -290,17 +291,17 @@ func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.M
 		// line from the file.
 		if firstLine {
 			return parser.Parse([]byte(line))
-		} else {
-			m, err := parser.ParseLine(line)
-			if err != nil {
-				return nil, err
-			}
-
-			if m != nil {
-				return []telegraf.Metric{m}, nil
-			}
-			return []telegraf.Metric{}, nil
 		}
+
+		m, err := parser.ParseLine(line)
+		if err != nil {
+			return nil, err
+		}
+
+		if m != nil {
+			return []telegraf.Metric{m}, nil
+		}
+		return []telegraf.Metric{}, nil
 	default:
 		return parser.Parse([]byte(line))
 	}

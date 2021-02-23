@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"net/url"
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -15,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -23,10 +27,8 @@ var pki = testutil.NewPKI("../../../testutil/pki")
 // Make sure X509Cert implements telegraf.Input
 var _ telegraf.Input = &X509Cert{}
 
-func TestGatherRemote(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping network-dependent test in short mode.")
-	}
+func TestGatherRemoteIntegration(t *testing.T) {
+	t.Skip("Skipping network-dependent test due to race condition when test-all")
 
 	tmpfile, err := ioutil.TempFile("", "example")
 	if err != nil {
@@ -51,7 +53,7 @@ func TestGatherRemote(t *testing.T) {
 		{name: "wrong port", server: ":99999", error: true},
 		{name: "no server", timeout: 5},
 		{name: "successful https", server: "https://example.org:443", timeout: 5},
-		{name: "successful file", server: "file://" + tmpfile.Name(), timeout: 5},
+		{name: "successful file", server: "file://" + filepath.ToSlash(tmpfile.Name()), timeout: 5},
 		{name: "unsupported scheme", server: "foo://", timeout: 5, error: true},
 		{name: "no certificate", timeout: 5, unset: true, error: true},
 		{name: "closed connection", close: true, error: true},
@@ -166,9 +168,11 @@ func TestGatherLocal(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = f.Chmod(test.mode)
-			if err != nil {
-				t.Fatal(err)
+			if runtime.GOOS != "windows" {
+				err = f.Chmod(test.mode)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 
 			err = f.Close()
@@ -327,7 +331,7 @@ func TestStrings(t *testing.T) {
 	}
 }
 
-func TestGatherCert(t *testing.T) {
+func TestGatherCertIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -342,4 +346,58 @@ func TestGatherCert(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t, acc.HasMeasurement("x509_cert"))
+}
+
+func TestGatherCertMustNotTimeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	duration := time.Duration(15) * time.Second
+	m := &X509Cert{
+		Sources: []string{"https://www.influxdata.com:443"},
+		Timeout: internal.Duration{Duration: duration},
+	}
+	m.Init()
+
+	var acc testutil.Accumulator
+	err := m.Gather(&acc)
+	require.NoError(t, err)
+	require.Empty(t, acc.Errors)
+	assert.True(t, acc.HasMeasurement("x509_cert"))
+}
+
+func TestServerName(t *testing.T) {
+	tests := []struct {
+		name     string
+		fromTLS  string
+		fromCfg  string
+		url      string
+		expected string
+		err      bool
+	}{
+		{name: "in cfg", fromCfg: "example.com", url: "https://other.example.com", expected: "example.com"},
+		{name: "in tls", fromTLS: "example.com", url: "https://other.example.com", expected: "example.com"},
+		{name: "from URL", url: "https://other.example.com", expected: "other.example.com"},
+		{name: "errors", fromCfg: "otherex.com", fromTLS: "example.com", url: "https://other.example.com", err: true},
+	}
+
+	for _, elt := range tests {
+		test := elt
+		t.Run(test.name, func(t *testing.T) {
+			sc := &X509Cert{
+				ServerName:   test.fromCfg,
+				ClientConfig: _tls.ClientConfig{ServerName: test.fromTLS},
+			}
+			sc.Init()
+			u, err := url.Parse(test.url)
+			require.NoError(t, err)
+			actual, err := sc.serverName(u)
+			if test.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, test.expected, actual)
+		})
+	}
 }

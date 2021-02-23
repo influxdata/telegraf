@@ -65,6 +65,8 @@ arch() {
 			echo amd64;;
 		*s390x.*)
 			echo s390x;;
+		*ppc64le.*)
+			echo ppc64le;;
 		*mipsel.*)
 			echo mipsel;;
 		*mips.*)

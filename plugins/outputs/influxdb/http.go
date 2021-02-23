@@ -1,9 +1,11 @@
 package influxdb
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -216,8 +218,19 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 	}
 	defer resp.Body.Close()
 
+	body, err := c.validateResponse(resp.Body)
+
+	// Check for poorly formatted response (can't be decoded)
+	if err != nil {
+		return &APIError{
+			StatusCode:  resp.StatusCode,
+			Title:       resp.Status,
+			Description: "An error response was received while attempting to create the following database: " + database + ". Error: " + err.Error(),
+		}
+	}
+
 	queryResp := &QueryResponse{}
-	dec := json.NewDecoder(resp.Body)
+	dec := json.NewDecoder(body)
 	err = dec.Decode(queryResp)
 
 	if err != nil {
@@ -316,7 +329,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []telegraf.Metric) error {
 	loc, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed making write url: %s", err.Error())
 	}
 
 	reader, err := c.requestBodyReader(metrics)
@@ -327,13 +340,13 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 
 	req, err := c.makeWriteRequest(loc, reader)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed making write req: %s", err.Error())
 	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
 		internal.OnClientError(c.client, err)
-		return err
+		return fmt.Errorf("failed doing req: %s", err.Error())
 	}
 	defer resp.Body.Close()
 
@@ -341,8 +354,19 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 		return nil
 	}
 
+	body, err := c.validateResponse(resp.Body)
+
+	// Check for poorly formatted response (can't be decoded)
+	if err != nil {
+		return &APIError{
+			StatusCode:  resp.StatusCode,
+			Title:       resp.Status,
+			Description: "An error response was received while attempting to write metrics. Error: " + err.Error(),
+		}
+	}
+
 	writeResp := &WriteResponse{}
-	dec := json.NewDecoder(resp.Body)
+	dec := json.NewDecoder(body)
 
 	var desc string
 	err = dec.Decode(writeResp)
@@ -426,7 +450,7 @@ func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request
 
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed creating new request: %s", err.Error())
 	}
 
 	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
@@ -464,6 +488,27 @@ func (c *httpClient) addHeaders(req *http.Request) {
 	for header, value := range c.config.Headers {
 		req.Header.Set(header, value)
 	}
+}
+
+func (c *httpClient) validateResponse(response io.ReadCloser) (io.ReadCloser, error) {
+	bodyBytes, err := ioutil.ReadAll(response)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Close()
+
+	originalResponse := ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	// Empty response is valid.
+	if response == http.NoBody || len(bodyBytes) == 0 || bodyBytes == nil {
+		return originalResponse, nil
+	}
+
+	if valid := json.Valid(bodyBytes); !valid {
+		err = errors.New(string(bodyBytes))
+	}
+
+	return originalResponse, err
 }
 
 func makeWriteURL(loc *url.URL, db, rp, consistency string) (string, error) {

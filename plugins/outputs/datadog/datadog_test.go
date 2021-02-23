@@ -67,7 +67,7 @@ func TestBadStatusCode(t *testing.T) {
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
-		require.EqualError(t, fmt.Errorf("received bad status code, 500\n"), err.Error())
+		require.EqualError(t, fmt.Errorf("received bad status code, 500"), err.Error())
 	}
 }
 

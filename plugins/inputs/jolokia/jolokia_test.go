@@ -264,5 +264,5 @@ func TestHttpInvalidJson(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Equal(t, 0, len(acc.Metrics))
-	assert.Contains(t, err.Error(), "Error decoding JSON response")
+	assert.Contains(t, err.Error(), "error decoding JSON response")
 }

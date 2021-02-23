@@ -1,6 +1,7 @@
 package all
 
 import (
+	//Blank imports for plugins to register themselves
 	_ "github.com/influxdata/telegraf/plugins/inputs/activemq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/aerospike"
 	_ "github.com/influxdata/telegraf/plugins/inputs/amqp_consumer"
@@ -10,6 +11,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/azure_storage_queue"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bcache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/beanstalkd"
+	_ "github.com/influxdata/telegraf/plugins/inputs/beat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bind"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bond"
 	_ "github.com/influxdata/telegraf/plugins/inputs/burrow"
@@ -64,6 +66,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/influxdb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/influxdb_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/influxdb_v2_listener"
+	_ "github.com/influxdata/telegraf/plugins/inputs/intel_powerstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/intel_rdt"
 	_ "github.com/influxdata/telegraf/plugins/inputs/internal"
 	_ "github.com/influxdata/telegraf/plugins/inputs/interrupts"
@@ -147,6 +150,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/redis"
 	_ "github.com/influxdata/telegraf/plugins/inputs/rethinkdb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/riak"
+	_ "github.com/influxdata/telegraf/plugins/inputs/riemann_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/salesforce"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sensors"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sflow"

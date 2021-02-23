@@ -300,15 +300,15 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			s.Log.Errorf("Reading SNMPtranslate file error: %s", err.Error())
 			return err
-		} else {
-			for _, line := range strings.Split(string(data), "\n") {
-				oids := strings.Fields(string(line))
-				if len(oids) == 2 && oids[1] != "" {
-					oid_name := oids[0]
-					oid := oids[1]
-					fillnode(s.initNode, oid_name, strings.Split(string(oid), "."))
-					s.nameToOid[oid_name] = oid
-				}
+		}
+
+		for _, line := range strings.Split(string(data), "\n") {
+			oids := strings.Fields(line)
+			if len(oids) == 2 && oids[1] != "" {
+				oid_name := oids[0]
+				oid := oids[1]
+				fillnode(s.initNode, oid_name, strings.Split(oid, "."))
+				s.nameToOid[oid_name] = oid
 			}
 		}
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 )
@@ -145,6 +146,7 @@ type Config struct {
 	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
 	CSVTimezone          string   `toml:"csv_timezone"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
+	CSVSkipValues        []string `toml:"csv_skip_values"`
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
@@ -221,6 +223,7 @@ func NewParser(config *Config) (Parser, error) {
 			TimestampFormat:   config.CSVTimestampFormat,
 			Timezone:          config.CSVTimezone,
 			DefaultTags:       config.DefaultTags,
+			SkipValues:        config.CSVSkipValues,
 		}
 
 		return csv.NewParser(config)
@@ -232,6 +235,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags,
 			config.FormUrlencodedTagKeys,
 		)
+	case "prometheus":
+		parser, err = NewPrometheusParser(config.DefaultTags)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -337,5 +342,11 @@ func NewFormUrlencodedParser(
 		MetricName:  metricName,
 		DefaultTags: defaultTags,
 		TagKeys:     tagKeys,
+	}, nil
+}
+
+func NewPrometheusParser(defaultTags map[string]string) (Parser, error) {
+	return &prometheus.Parser{
+		DefaultTags: defaultTags,
 	}, nil
 }
