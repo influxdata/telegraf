@@ -172,6 +172,10 @@ func request_server(url string, rconPw string) (string, error) {
 	defer remoteConsole.Close()
 
 	reqId, err := remoteConsole.Write("stats")
+	if err != nil {
+		return "", err
+	}
+
 	resp, respReqId, err := remoteConsole.Read()
 	if err != nil {
 		return "", err
