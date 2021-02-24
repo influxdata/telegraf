@@ -2,6 +2,7 @@ package valuecounter
 
 import (
 	"fmt"
+	"github.com/influxdata/telegraf/internal/choice"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
@@ -13,10 +14,19 @@ type aggregate struct {
 	fieldCount map[string]int
 }
 
+type predicate func(int) bool
+
+type Predicate struct {
+	Type string
+	value int
+	predicateFunc predicate
+}
+
 // ValueCounter an aggregation plugin
 type ValueCounter struct {
 	cache  map[uint64]aggregate
 	Fields []string
+	Predicates []*Predicate `toml:predicate`
 }
 
 // NewValueCounter create a new aggregation plugin which counts the occurrences
@@ -36,6 +46,11 @@ var sampleConfig = `
   drop_original = false
   ## The fields for which the values will be counted
   fields = []
+  ## Only include fields for which the predicate is true
+  [aggregators.valuecounter.predicate]
+	type = "greater_than"
+	value = 10
+ 
 `
 
 // SampleConfig generates a sample config for the ValueCounter plugin
@@ -80,7 +95,16 @@ func (vc *ValueCounter) Push(acc telegraf.Accumulator) {
 		fields := map[string]interface{}{}
 
 		for field, count := range agg.fieldCount {
-			fields[field] = count
+			var matched = 0
+			for _, predicate := range vc.Predicates {
+				if predicate.predicateFunc(count) {
+					matched++
+				}
+			}
+
+			if matched == len(vc.Predicates) {
+				fields[field] = count
+			}
 		}
 
 		acc.AddFields(agg.name, fields, agg.tags)
@@ -90,6 +114,32 @@ func (vc *ValueCounter) Push(acc telegraf.Accumulator) {
 // Reset the cache, executed after each push
 func (vc *ValueCounter) Reset() {
 	vc.cache = make(map[uint64]aggregate)
+}
+
+func (vc *ValueCounter) configurePredicates() error {
+	greaterThan, lessThan := "greater_than", "less_than"
+	var predicate_types []string
+	for _, t := range vc.Predicates {
+		predicate_types = append(predicate_types, t.Type)
+	}
+	err := choice.CheckSlice(predicate_types, []string{greaterThan, lessThan})
+	if err != nil {
+		return fmt.Errorf(`cannot verify "predicate" settings: %v`, err)
+	}
+
+	for _, predicate := range vc.Predicates {
+		switch predicate.Type {
+		case greaterThan:
+			predicate.predicateFunc = func(count int) bool { return count > predicate.value }
+		case lessThan:
+			predicate.predicateFunc = func(count int) bool { return count < predicate.value }
+		}
+	}
+	return nil
+}
+
+func (vc *ValueCounter) Init() error {
+	return vc.configurePredicates()
 }
 
 func init() {
