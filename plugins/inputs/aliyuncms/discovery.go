@@ -2,6 +2,7 @@ package aliyuncms
 
 import (
 	"encoding/json"
+	"github.com/influxdata/telegraf"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -65,6 +66,7 @@ type discoveryTool struct {
 	interval time.Duration               //Discovery interval
 	done     chan bool                   //Done channel to stop primary discovery goroutine
 	dataChan chan map[string]interface{} //Discovery data
+	lg       telegraf.Logger             //Telegraf logger (should be provided)
 }
 
 //getRpcReqFromDiscoveryRequest - utility function to map between aliyun request primitives
@@ -103,7 +105,7 @@ func getRpcReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, 
 //Discovery is supported for a limited set of object types (defined by project) and can be extended in future.
 //Discovery can be limited by region if not set, then all regions is queried.
 //Request against API can inquire additional costs, consult with aliyun API documentation.
-func NewDiscoveryTool(regions []string, project string, credential auth.Credential, rateLimit int, discoveryInterval time.Duration) (*discoveryTool, error) {
+func NewDiscoveryTool(regions []string, project string, lg telegraf.Logger, credential auth.Credential, rateLimit int, discoveryInterval time.Duration) (*discoveryTool, error) {
 	var (
 		dscReq                = map[string]discoveryRequest{}
 		cli                   = map[string]aliyunSdkClient{}
@@ -116,7 +118,7 @@ func NewDiscoveryTool(regions []string, project string, credential auth.Credenti
 
 	if len(regions) == 0 {
 		regions = aliyunRegionList
-		lg.logW("Discovery regions are not provided! Data will be queried across %d regions!", len(aliyunRegionList))
+		lg.Warnf("Discovery regions are not provided! Data will be queried across %d regions!", len(aliyunRegionList))
 	}
 
 	if rateLimit == 0 { //Can be a rounding case
@@ -288,6 +290,7 @@ func NewDiscoveryTool(regions []string, project string, credential auth.Credenti
 		interval:           discoveryInterval,
 		reqDefaultPageSize: 20,
 		dataChan:           make(chan map[string]interface{}, 1),
+		lg:                 lg,
 	}, nil
 }
 
@@ -468,7 +471,7 @@ func (dt *discoveryTool) Start() {
 
 				data, err = dt.getDiscoveryDataAllRegions(lmtr.C)
 				if err != nil {
-					lg.logE("Can't get discovery data: %v", err)
+					dt.lg.Errorf("Can't get discovery data: %v", err)
 					continue
 				}
 

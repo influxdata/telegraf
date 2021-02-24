@@ -20,6 +20,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const inputTitle = "inputs.aliyuncms"
+
 type mockGatherAliyunCMSClient struct{}
 
 func (m *mockGatherAliyunCMSClient) DescribeMetricList(request *cms.DescribeMetricListRequest) (*cms.DescribeMetricListResponse, error) {
@@ -94,7 +96,8 @@ func getDiscoveryTool(project string, discoverRegions []string) (*discoveryTool,
 		return nil, errors.Errorf("failed to retrieve credential: %v", err)
 	}
 
-	dt, err := NewDiscoveryTool(discoverRegions, project, credential, 1, time.Minute*2)
+	dt, err := NewDiscoveryTool(discoverRegions, project, testutil.Logger{Name: inputTitle}, credential, 1, time.Minute*2)
+
 	if err != nil {
 		return nil, errors.Errorf("Can't create discovery tool object: %v", err)
 	}
@@ -125,6 +128,8 @@ func TestPluginInitialize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't create discovery tool object: %v", err)
 	}
+
+	plugin.Log = testutil.Logger{Name: inputTitle}
 
 	httpResp := &http.Response{
 		StatusCode: 200,
@@ -191,6 +196,7 @@ func TestUpdateWindow(t *testing.T) {
 		Project: "acs_slb_dashboard",
 		Period:  internalDuration,
 		Delay:   internalDuration,
+		Log:     testutil.Logger{Name: inputTitle},
 	}
 
 	now := time.Now()
@@ -220,6 +226,7 @@ func TestGatherMetric(t *testing.T) {
 		Project:     "acs_slb_dashboard",
 		client:      new(mockGatherAliyunCMSClient),
 		measurement: formatMeasurement("acs_slb_dashboard"),
+		Log:         testutil.Logger{Name: inputTitle},
 	}
 
 	metric := &Metric{
@@ -232,11 +239,6 @@ func TestGatherMetric(t *testing.T) {
 		metricName          string
 		expectedErrorString string
 	}{
-		{
-			name:                "404 error from CMS endpoint",
-			metricName:          "ErrorCode",
-			expectedErrorString: "failed to query metricName list: ErrorCode",
-		},
 		{
 			name:                "Datapoint with corrupted JSON",
 			metricName:          "ErrorDatapoint",
@@ -273,6 +275,7 @@ func TestGather(t *testing.T) {
 		measurement:      formatMeasurement("acs_slb_dashboard"),
 		DiscoveryRegions: []string{"cn-shanghai"},
 		client:           new(mockGatherAliyunCMSClient),
+		Log:              testutil.Logger{Name: inputTitle},
 	}
 
 	//test table:
@@ -327,84 +330,6 @@ func TestGather(t *testing.T) {
 		})
 	}
 }
-
-//func TestParseDiscoveryResponse(t *testing.T) {
-//
-//	//test table:
-//	tests := []struct {
-//		name                string
-//		project             string
-//		httpResp            *http.Response
-//		discData            []interface{}
-//		totalCount          int
-//		pageSize            int
-//		pageNumber          int
-//		expectedErrorString string
-//	}{
-//		{
-//			name:    "No root key in discovery response",
-//			project: "acs_slb_dashboard",
-//			httpResp: &http.Response{
-//				StatusCode: 200,
-//				Body:       ioutil.NopCloser(bytes.NewBufferString(`{}`)),
-//			},
-//			totalCount:          0,
-//			pageSize:            0,
-//			pageNumber:          0,
-//			expectedErrorString: `Didn't find root key "LoadBalancers" in discovery response`,
-//		},
-//		{
-//			name:    "1 object discovered",
-//			project: "acs_slb_dashboard",
-//
-//			httpResp: &http.Response{
-//				StatusCode: 200,
-//				Body: ioutil.NopCloser(bytes.NewBufferString(
-//					`{
-//						"LoadBalancers":
-//						 {
-//						  "LoadBalancer": [
-// 							 {"LoadBalancerId":"bla"}
-//                           ]
-//                         },
-//						"TotalCount": 1,
-//						"PageSize": 1,
-//						"PageNumber": 1
-//						}`)),
-//			},
-//			discData:            []interface{}{map[string]interface{}{"LoadBalancerId": "bla"}},
-//			totalCount:          1,
-//			pageSize:            1,
-//			pageNumber:          1,
-//			expectedErrorString: "",
-//		},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			dt, err := getDiscoveryTool(tt.project,nil)
-//
-//			if err != nil {
-//				t.Fatalf("Can't create discovery tool object: %v", err)
-//			}
-//
-//			resp := responses.NewCommonResponse()
-//			if err := responses.Unmarshal(resp, tt.httpResp, "JSON"); err != nil {
-//				t.Fatalf("Can't parse response: %v", err)
-//			}
-//
-//			data, totalCount, pageSize, pageNumber, err := dt.parseDiscoveryResponse(resp)
-//			require.Equal(t, tt.discData, data)
-//			require.Equal(t, tt.totalCount, totalCount)
-//			require.Equal(t, tt.pageSize, pageSize)
-//			require.Equal(t, tt.pageNumber, pageNumber)
-//			if err != nil {
-//				require.EqualError(t, err, tt.expectedErrorString)
-//			}
-//
-//		})
-//	}
-//}
 
 func TestGetDiscoveryDataAllRegions(t *testing.T) {
 

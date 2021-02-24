@@ -3,7 +3,6 @@ package aliyuncms
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -117,41 +116,7 @@ const (
 	  ## of discovery scope vs monitoring scope 
 	  #allow_dps_without_discovery = false
 `
-	inputTitle = "inputs.aliyuncms"
-	inputName  = "aliyuncms"
 )
-
-type logger struct {
-	errHeader    string
-	warnHeader   string
-	infoHeader   string
-	debugHeader  string
-	headerFormat string
-}
-
-var lg = newLogger(inputTitle)
-
-func newLogger(header string) *logger {
-	return &logger{
-		headerFormat: "%s %s",
-		errHeader:    fmt.Sprintf("E! [%s]", header),
-		warnHeader:   fmt.Sprintf("W! [%s]", header),
-		infoHeader:   fmt.Sprintf("I! [%s]", header),
-		debugHeader:  fmt.Sprintf("D! [%s]", header)}
-}
-func (l logger) logE(format string, v ...interface{}) {
-	log.Printf(l.headerFormat, l.errHeader, fmt.Sprintf(format, v...))
-}
-func (l logger) logW(format string, v ...interface{}) {
-	log.Printf(l.headerFormat, l.warnHeader, fmt.Sprintf(format, v...))
-}
-func (l logger) logI(format string, v ...interface{}) {
-
-	log.Printf(l.headerFormat, l.infoHeader, fmt.Sprintf(format, v...))
-}
-func (l logger) logD(format string, v ...interface{}) {
-	log.Printf(l.headerFormat, l.debugHeader, fmt.Sprintf(format, v...))
-}
 
 type (
 	// AliyunCMS is aliyun cms config info.
@@ -172,6 +137,8 @@ type (
 		Project           string            `toml:"project"`
 		Metrics           []*Metric         `toml:"metrics"`
 		RateLimit         int               `toml:"ratelimit"`
+
+		Log telegraf.Logger `toml:"-"`
 
 		client        aliyuncmsClient
 		windowStart   time.Time
@@ -272,9 +239,9 @@ func (s *AliyunCMS) Init() error {
 
 	//Init discovery...
 	if s.dt == nil { //Support for tests
-		s.dt, err = NewDiscoveryTool(s.DiscoveryRegions, s.Project, credential, int(float32(s.RateLimit)*0.2), s.DiscoveryInterval.Duration)
+		s.dt, err = NewDiscoveryTool(s.DiscoveryRegions, s.Project, s.Log, credential, int(float32(s.RateLimit)*0.2), s.DiscoveryInterval.Duration)
 		if err != nil {
-			lg.logE("Discovery tool is not activated: %v", err)
+			s.Log.Errorf("Discovery tool is not activated: %v", err)
 			s.dt = nil
 			return nil
 		}
@@ -282,14 +249,12 @@ func (s *AliyunCMS) Init() error {
 
 	s.discoveryData, err = s.dt.getDiscoveryDataAllRegions(nil)
 	if err != nil {
-		lg.logE("Discovery tool is not activated: %v", err)
+		s.Log.Errorf("Discovery tool is not activated: %v", err)
 		s.dt = nil
 		return nil
 	}
 
-	lg.logI("%d object(s) discovered...", len(s.discoveryData))
-	//Start periodic discovery process
-	s.dt.Start()
+	s.Log.Infof("%d object(s) discovered...", len(s.discoveryData))
 
 	//Special setting for acs_oss project since the API differs
 	if s.Project == "acs_oss" {
@@ -299,9 +264,12 @@ func (s *AliyunCMS) Init() error {
 	return nil
 }
 
-// Start is a noop which is required for a *DockerLogs to implement
-// the telegraf.ServiceInput interface
 func (s *AliyunCMS) Start(telegraf.Accumulator) error {
+	//Start periodic discovery process
+	if s.dt != nil {
+		s.dt.Start()
+	}
+
 	return nil
 }
 
@@ -376,7 +344,8 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 		if err != nil {
 			return errors.Errorf("failed to query metricName list: %v", err)
 		} else if resp.Code != "200" {
-			return errors.Errorf("failed to query metricName list: %v", resp.Message)
+			s.Log.Errorf("failed to query metricName list: %v", resp.Message)
+			break
 		}
 
 		var datapoints []map[string]interface{}
@@ -385,7 +354,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 		}
 
 		if len(datapoints) == 0 {
-			lg.logW("No metrics returned from CMS, response msg: %s", resp.Message)
+			s.Log.Debugf("No metrics returned from CMS, response msg: %s", resp.Message)
 			break
 		}
 
@@ -403,7 +372,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 						//Skipping data point if discovery data not exist
 						if _, ok := metric.discoveryTags[value.(string)]; !ok &&
 							!metric.AllowDataPointWODiscoveryData {
-							lg.logW("Instance %q is not found in discovery, skipping monitoring datapoint...", value.(string))
+							s.Log.Warnf("Instance %q is not found in discovery, skipping monitoring datapoint...", value.(string))
 							continue NextDataPoint
 						}
 
@@ -419,7 +388,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 					fields[formatField(metricName, key)] = value
 				}
 			}
-			//lg.logW("Datapoint time: %s, now: %s", time.Unix(datapointTime, 0).Format(time.RFC3339), time.Now().Format(time.RFC3339))
+			//Log.logW("Datapoint time: %s, now: %s", time.Unix(datapointTime, 0).Format(time.RFC3339), time.Now().Format(time.RFC3339))
 			acc.AddFields(s.measurement, fields, tags, time.Unix(datapointTime, 0))
 		}
 
@@ -508,11 +477,11 @@ L:
 
 				tagKey, tagValue, err := parseTag(tagQueryPath, elem)
 				if err != nil {
-					lg.logE("%v", err)
+					s.Log.Errorf("%v", err)
 					continue
 				}
 				if err == nil && tagValue == "" { //Nothing found
-					lg.logD("Data by query path %q: is not found, for instance %q", tagQueryPath, instanceId)
+					s.Log.Debugf("Data by query path %q: is not found, for instance %q", tagQueryPath, instanceId)
 					continue
 				}
 
@@ -524,12 +493,12 @@ L:
 				tagKey, tagValue, err := parseTag(defaultTagQP, elem)
 
 				if err != nil {
-					lg.logE("%v", err)
+					s.Log.Errorf("%v", err)
 					continue
 				}
 
 				if err == nil && tagValue == "" { //Nothing found
-					lg.logD("Data by query path %q: is not found, for instance %q",
+					s.Log.Debugf("Data by query path %q: is not found, for instance %q",
 						defaultTagQP, instanceId)
 					continue
 				}
@@ -556,7 +525,7 @@ L:
 		//Unmarshalling to string
 		reqDim, err := json.Marshal(metric.requestDimensions)
 		if err != nil {
-			lg.logE("Can't marshal metric request dimensions %v :%v",
+			s.Log.Errorf("Can't marshal metric request dimensions %v :%v",
 				metric.requestDimensions, err)
 			metric.requestDimensionsStr = ""
 		} else {
@@ -587,7 +556,7 @@ func snakeCase(s string) string {
 }
 
 func init() {
-	inputs.Add(inputName, func() telegraf.Input {
+	inputs.Add("aliyuncms", func() telegraf.Input {
 		return &AliyunCMS{
 			RateLimit:         200,
 			DiscoveryInterval: internal.Duration{Duration: time.Minute},
