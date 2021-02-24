@@ -72,7 +72,7 @@ require (
 	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.1.13
 	github.com/gorilla/mux v1.6.2
-	github.com/gosnmp/gosnmp v1.29.0
+	github.com/gosnmp/gosnmp v1.30.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/harlow/kinesis-consumer v0.3.1-0.20181230152818-2f58b136fee0
@@ -126,7 +126,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/soniah/gosnmp v1.25.0
 	github.com/streadway/amqp v0.0.0-20180528204448-e5adc2ada8b8
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00 // indirect
 	github.com/tidwall/gjson v1.6.0
