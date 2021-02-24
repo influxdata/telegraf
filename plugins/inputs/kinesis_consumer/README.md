@@ -61,7 +61,7 @@ and creates metrics using one of the supported [input data formats][].
   ## also base64 encodes the zip byte data before pushing to the stream.  The base64 decoding
   ## is done automatically by the golang sdk, as data is read from kinesis)
   ##
-  # decompression = "none"
+  # decompress = "none"
 
   ## Optional
   ## Configuration for a dynamodb checkpoint
