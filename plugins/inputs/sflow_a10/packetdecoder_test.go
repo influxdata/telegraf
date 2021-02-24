@@ -300,8 +300,9 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 	_, err = dc.decodeSample(octets, agent_ip)
 	require.NoError(t, err)
 
-	portDimensions, portExists := dc.PortMap[key]
+	portValue, portExists := dc.PortMap.Get(key)
 	require.True(t, portExists)
+	portDimensions := portValue.(*PortDimension)
 
 	// make sure port information has been added into the map for the correct sourceID
 	require.Equal(t, "DST", portDimensions.TableType)
@@ -348,10 +349,13 @@ func TestDecodeA10EndToEnd(t *testing.T) {
 		},
 	}
 
-	ipDimensions, ipExists := dc.IPMap[key]
-	portDimensions, portExists = dc.PortMap[key]
+	ipValue, ipExists := dc.IPMap.Get(key)
+	portValue, portExists = dc.PortMap.Get(key)
 	require.True(t, ipExists)
 	require.True(t, portExists)
+
+	ipDimensions := ipValue.([]IPDimension)
+	portDimensions = portValue.(*PortDimension)
 
 	require.Equal(t, 2, len(ipDimensions))
 	for i := 0; i < 2; i++ {

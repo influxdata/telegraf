@@ -25,17 +25,16 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 
 		key := createMapKey(sample.SampleCounterData.SourceID, p.AgentAddress.String())
 
-		d.IPMapLock.RLock()
-		ipDimensions, ipExists := d.IPMap[key]
-		d.IPMapLock.RUnlock()
-		d.PortMapLock.RLock()
-		portDimensions, portExists := d.PortMap[key]
-		d.PortMapLock.RUnlock()
+		ipValue, ipExists := d.IPMap.Get(key)
+		portValue, portExists := d.PortMap.Get(key)
 
 		if !ipExists || !portExists {
 			d.debug(fmt.Sprintf("  sourceID %x and key %v does not exist in DimensionsPerSourceIDMap", sample.SampleCounterData.SourceID, key))
 			continue
 		}
+
+		ipDimensions := ipValue.([]IPDimension)
+		portDimensions := portValue.(*PortDimension)
 
 		if err := validate(ipDimensions, portDimensions); err != nil {
 			//d.debug(fmt.Sprintf("  error in DimensionsPerSourceIDMap.Validate, error is %s, map value is %v whereas counter source ID is %x and key is %v", err, dimensions, sample.SampleCounterData.SourceID, key))

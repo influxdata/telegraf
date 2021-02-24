@@ -4,11 +4,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs/sflow/binaryio"
 	"github.com/pkg/errors"
+
+	hm "github.com/cornelk/hashmap"
 )
 
 type PacketDecoder struct {
@@ -16,16 +17,14 @@ type PacketDecoder struct {
 	Log           telegraf.Logger
 	CounterBlocks map[uint32]CounterBlock
 
-	IPMap       map[string]([]IPDimension)
-	IPMapLock   sync.RWMutex
-	PortMap     map[string](*PortDimension)
-	PortMapLock sync.RWMutex
+	IPMap   *hm.HashMap
+	PortMap *hm.HashMap
 }
 
 func NewDecoder() *PacketDecoder {
 	return &PacketDecoder{
-		IPMap:         make(map[string][]IPDimension),
-		PortMap:       make(map[string]*PortDimension),
+		IPMap:         &hm.HashMap{},
+		PortMap:       &hm.HashMap{},
 		CounterBlocks: make(map[uint32]CounterBlock),
 	}
 }
@@ -192,9 +191,11 @@ func (d *PacketDecoder) decodeCounterRecords(r io.Reader, sourceID uint32, agent
 				return recs, err
 			}
 
-			d.PortMapLock.Lock()
-			d.PortMap[key] = portDimensions
-			d.PortMapLock.Unlock()
+			_, ok := d.PortMap.Get(key)
+
+			if !ok {
+				d.PortMap.Set(key, portDimensions)
+			}
 
 			// d.debug(fmt.Sprintf("  got 260 - before assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
 			// if val.PortDimensions == nil {
@@ -208,9 +209,10 @@ func (d *PacketDecoder) decodeCounterRecords(r io.Reader, sourceID uint32, agent
 				return recs, err
 			}
 
-			d.IPMapLock.Lock()
-			d.IPMap[key] = ipDimensions
-			d.IPMapLock.Unlock()
+			_, ok := d.IPMap.Get(key)
+			if !ok {
+				d.IPMap.Set(key, ipDimensions)
+			}
 
 			// d.debug(fmt.Sprintf("  got 271 - before assigning ipdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
 			// if val.IPDimensions == nil {
@@ -224,9 +226,10 @@ func (d *PacketDecoder) decodeCounterRecords(r io.Reader, sourceID uint32, agent
 				return recs, err
 			}
 
-			d.IPMapLock.Lock()
-			d.IPMap[key] = ipDimensions
-			d.IPMapLock.Unlock()
+			_, ok := d.IPMap.Get(key)
+			if !ok {
+				d.IPMap.Set(key, ipDimensions)
+			}
 
 			// d.debug(fmt.Sprintf("  got 272 - before assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
 			// if val.IPDimensions == nil {
@@ -302,8 +305,8 @@ func (d *PacketDecoder) decodeCounterRecord(r io.Reader, cr *CounterRecord, tag 
 			continue
 		}
 
-		//d.debug(fmt.Sprintf("    getting counter %s with value hex %x for sourceID %x", counter.FieldName, counterValue, sourceID))
-		if counterValue != 0 { // no point in returning 0 value for metric
+		if counterValue != uint64(0) { // no point in retugotrning 0 value for metric
+			//d.debug(fmt.Sprintf("    getting non-zero counter %s with value hex %x %#v %T for sourceID %x", counter.FieldName, counterValue, counterValue, counterValue, sourceID))
 			cr.CounterData.CounterFields[counter.FieldName] = counterValue
 		}
 	}
