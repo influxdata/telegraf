@@ -416,7 +416,7 @@ For documentation on the latest development code see the [documentation index][d
 * [application_insights](./plugins/outputs/application_insights)
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
-* [azure_loganalytics](./plugins/outputs/azure_loganalytics)
+* [azure_monitor_logs](./plugins/outputs/azure_monitor_logs)
 * [azure_monitor](./plugins/outputs/azure_monitor)
 * [cloud_pubsub](./plugins/outputs/cloud_pubsub) Google Cloud Pub/Sub
 * [cratedb](./plugins/outputs/cratedb)

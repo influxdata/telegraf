@@ -6,7 +6,7 @@ This plugin sends metrics in a Azure Log Analytics.
 
 ```toml
 # A plugin that can transmit metrics over HTTP
-[[outputs.azure_loganalytics]]
+[[outputs.azure_monitor_logs]]
   ## Customer ID (Workstation ID) and Key for Azure Log Analytics resource.
   # customer_id = "<Workstation ID>"
   # shared_key = "<Secret>"

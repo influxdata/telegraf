@@ -1,4 +1,4 @@
-package azure_loganalytics
+package azure_monitor_logs
 
 import (
 	"encoding/json"

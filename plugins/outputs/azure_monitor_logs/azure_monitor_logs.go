@@ -1,4 +1,4 @@
-package azure_loganalytics
+package azure_monitor_logs
 
 import (
 	"bytes"
@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -58,9 +57,8 @@ type AzLogAnalytics struct {
 	client     *http.Client
 }
 
-// Connect initializes the plugin and validates connectivity
-func (a *AzLogAnalytics) Connect() error {
-
+// Initializes the plugin
+func (a *AzLogAnalytics) Init() error {
 	if a.CustomerID == "" {
 		return fmt.Errorf("customer_id not configured")
 	}
@@ -84,8 +82,18 @@ func (a *AzLogAnalytics) Connect() error {
 		return fmt.Errorf("namespace_prefix contains invalid characters")
 	}
 
-	ctx := context.Background()
-	client, err := a.createClient(ctx)
+	return nil
+}
+
+// Connect validates connectivity
+func (a *AzLogAnalytics) Connect() error {
+
+	err := a.Init()
+	if err != nil {
+		return err
+	}
+
+	client, err := a.createClient(context.Background())
 	if err != nil {
 		return err
 	}
@@ -98,6 +106,8 @@ func (a *AzLogAnalytics) Connect() error {
 
 // Close shuts down an any active connections
 func (a *AzLogAnalytics) Close() error {
+	a.client.CloseIdleConnections()
+
 	return nil
 }
 
@@ -139,10 +149,13 @@ func (a *AzLogAnalytics) write(logType string, reqBody []byte) error {
 	dateString := time.Now().UTC().Format(time.RFC1123)
 	dateString = strings.Replace(dateString, "UTC", "GMT", -1)
 
-	stringToHash := httpMethod + "\n" + strconv.Itoa(utf8.RuneCount(reqBody)) + "\n" + contentType + "\n" + "x-ms-date:" + dateString + "\n/api/logs"
+	stringToHash := httpMethod + "\n" + 
+					strconv.Itoa(utf8.RuneCount(reqBody)) + "\n" +
+					contentType + "\n" + "x-ms-date:" +
+					dateString + "\n/api/logs"
+
 	signature, err := a.buildSignature(stringToHash)
 	if err != nil {
-		log.Println(err.Error())
 		return err
 	}
 
@@ -153,7 +166,7 @@ func (a *AzLogAnalytics) write(logType string, reqBody []byte) error {
 
 	tableName := a.NamespacePrefix + underscoreToCaml(logType)
 
-	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
+	req.Header.Set("User-Agent", "Telegraf/" + internal.ProductToken())
 	req.Header.Add("Log-Type", tableName)
 	req.Header.Add("Authorization", signature)
 	req.Header.Add("Content-Type", contentType)
@@ -168,7 +181,10 @@ func (a *AzLogAnalytics) write(logType string, reqBody []byte) error {
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("when writing to [%s] received status code: %d", a.serviceURL, resp.StatusCode)
+		return fmt.Errorf(
+			"when writing to [%s] received status code: %d",
+			a.serviceURL,
+			resp.StatusCode)
 	}
 
 	return nil
@@ -207,31 +223,31 @@ func (a *AzLogAnalytics) buildSignature(message string) (string, error) {
 	mac := hmac.New(sha256.New, keyBytes)
 	mac.Write([]byte(message))
 	hashedString := base64.StdEncoding.EncodeToString(mac.Sum(nil))
-	signiture := fmt.Sprintf("SharedKey %s:%s", a.CustomerID, hashedString)
+	signature := fmt.Sprintf("SharedKey %s:%s", a.CustomerID, hashedString)
 
-	return signiture, nil
+	return signature, nil
 }
 
 func (a *AzLogAnalytics) createObject(metric telegraf.Metric) (map[string]interface{}, string) {
 	m := make(map[string]interface{}, len(metric.Fields())+len(metric.Tags())+2)
 	m["MetricName"] = metric.Name()
 	m[timeGeneratedFieldName] = metric.Time().UTC().Format(time.RFC3339)
-	for k, v := range metric.Tags() {
-		if k == "host" {
-			m["Computer"] = v
+	for _, tag := range metric.TagList() {
+		if tag.Key == "host" {
+			m["Computer"] = tag.Value
 		} else {
-			m[underscoreToCaml(k)] = v
+			m[underscoreToCaml(tag.Key)] = tag.Value
 		}
 	}
-	for k, v := range metric.Fields() {
-		m[underscoreToCaml(k)] = v
+	for _, field := range metric.FieldList() {
+		m[underscoreToCaml(field.Key)] = field.Value
 	}
 
 	return m, metric.Name()
 }
 
 func init() {
-	outputs.Add("azure_loganalytics", func() telegraf.Output {
+	outputs.Add("azure_monitor_logs", func() telegraf.Output {
 		return &AzLogAnalytics{}
 	})
 }
