@@ -1,7 +1,6 @@
 package kinesis_consumer
 
 import (
-	"context"
 	"encoding/base64"
 	"github.com/aws/aws-sdk-go/aws"
 	consumer "github.com/harlow/kinesis-consumer"
@@ -9,8 +8,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"sync"
 	"testing"
 )
 
@@ -39,33 +36,9 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 	})
 
 	type fields struct {
-		Region                 string
-		AccessKey              string
-		SecretKey              string
-		RoleARN                string
-		Profile                string
-		Filename               string
-		Token                  string
-		EndpointURL            string
-		StreamName             string
-		ShardIteratorType      string
-		DynamoDB               *DynamoDB
-		MaxUndeliveredMessages int
-		DecompressionType      string
-		Log                    telegraf.Logger
-		cons                   *consumer.Consumer
-		parser                 parsers.Parser
-		cancel                 context.CancelFunc
-		ctx                    context.Context
-		acc                    telegraf.TrackingAccumulator
-		sem                    chan struct{}
-		checkpoint             consumer.Checkpoint
-		checkpoints            map[string]checkpoint
-		records                map[telegraf.TrackingID]string
-		checkpointTex          sync.Mutex
-		recordsTex             sync.Mutex
-		wg                     sync.WaitGroup
-		lastSeqNum             *big.Int
+		DecompressionType string
+		parser            parsers.Parser
+		records           map[telegraf.TrackingID]string
 	}
 	type args struct {
 		r *consumer.Record
