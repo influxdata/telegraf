@@ -321,6 +321,14 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 	return nil
 }
 
+func (s *SQLServer) Init() error {
+	if len(s.Servers) == 0 {
+		log.Println("W! Warning: Server list is empty.")
+	}
+
+	return nil
+}
+
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
 		return &SQLServer{Servers: []string{defaultServer}}
