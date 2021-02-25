@@ -1539,7 +1539,7 @@ func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string, target *[
 					}
 				}
 			} else {
-				c.addError(tbl, fmt.Errorf("unexpected format while parsing %q, expecting string array/slice format", fieldName))
+				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format", fieldName))
 				return
 			}
 		}
@@ -1558,7 +1558,7 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 							}
 						}
 					} else {
-						c.addError(tbl, fmt.Errorf("unexpected format while parsing %q, expecting string array/slice format on each entry", fieldName))
+						c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format on each entry", fieldName))
 						return
 					}
 					*target = append(*target, tagfilter)
