@@ -14,19 +14,19 @@ type aggregate struct {
 	fieldCount map[string]int
 }
 
-type predicate func(int) bool
+type predicate func(int, int) bool
 
 type Predicate struct {
-	Type string
-	value int
+	Type          string `toml:"type"`
+	Value         int    `toml:"value"`
 	predicateFunc predicate
 }
 
 // ValueCounter an aggregation plugin
 type ValueCounter struct {
-	cache  map[uint64]aggregate
-	Fields []string
-	Predicates []*Predicate `toml:predicate`
+	cache      map[uint64]aggregate
+	Fields     []string
+	Predicates []*Predicate `toml:"predicate"`
 }
 
 // NewValueCounter create a new aggregation plugin which counts the occurrences
@@ -47,9 +47,9 @@ var sampleConfig = `
   ## The fields for which the values will be counted
   fields = []
   ## Only include fields for which the predicate is true
-  [aggregators.valuecounter.predicate]
+  [[aggregators.valuecounter.predicate]]
 	type = "greater_than"
-	value = 10
+	value = 0
  
 `
 
@@ -97,7 +97,7 @@ func (vc *ValueCounter) Push(acc telegraf.Accumulator) {
 		for field, count := range agg.fieldCount {
 			var matched = 0
 			for _, predicate := range vc.Predicates {
-				if predicate.predicateFunc(count) {
+				if predicate.predicateFunc(count, predicate.Value) {
 					matched++
 				}
 			}
@@ -130,9 +130,9 @@ func (vc *ValueCounter) configurePredicates() error {
 	for _, predicate := range vc.Predicates {
 		switch predicate.Type {
 		case greaterThan:
-			predicate.predicateFunc = func(count int) bool { return count > predicate.value }
+			predicate.predicateFunc = func(count int, compareAgainst int) bool { return count > compareAgainst }
 		case lessThan:
-			predicate.predicateFunc = func(count int) bool { return count < predicate.value }
+			predicate.predicateFunc = func(count int, compareAgainst int) bool { return count < compareAgainst }
 		}
 	}
 	return nil
