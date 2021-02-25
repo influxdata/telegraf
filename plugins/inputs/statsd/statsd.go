@@ -714,7 +714,6 @@ func (s *Statsd) parseStatsdLine(line string) error {
 func (s *Statsd) parseName(bucket string) (string, string, map[string]string) {
 	s.Lock()
 	defer s.Unlock()
-
 	tags := make(map[string]string)
 
 	bucketparts := strings.Split(bucket, ",")
