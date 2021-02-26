@@ -59,7 +59,7 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 	for _, m := range metrics {
-		now := m.Time().Unix()
+		now := m.Time().UnixNano() / 1000000
 		//		tags := m.Tags() TODO add support for tags
 		name := m.Name()
 		for fieldName, value := range m.Fields() {
