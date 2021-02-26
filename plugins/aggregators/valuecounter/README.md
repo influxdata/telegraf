@@ -15,6 +15,10 @@ Counting fields with a high number of potential values may produce significant
 amounts of new fields and memory usage, take care to only count fields with a
 limited set of values.
 
+To only emit fields values that have a final aggregated count you can specify
+one or more predicates via the config `aggregators.valuecounter.predicate`.  The
+supported predicates are: `greater_than`, `less_than`, `equal_to` and `not_equal_to`.
+
 ### Configuration:
 
 ```toml
@@ -27,6 +31,10 @@ limited set of values.
   drop_original = false
   ## The fields for which the values will be counted
   fields = ["status"]
+  ## Only emit fields whose aggregation is greater than 10
+  [[aggregators.valuecounter.predicate]]
+    type = "greater_than"
+    value = 10
 ```
 
 ### Measurements & Fields:
@@ -54,6 +62,14 @@ telegraf.conf:
 [[aggregators.valuecounter]]
   namepass = ["access"]
   fields = ["response"]
+  # Only emit fields that have an aggregation of 1 to 99
+  [[aggregators.valuecounter.predicate]]
+    type = "less_than"
+    value = 100
+    
+  [[aggregators.valuecounter.predicate]]
+    type = "greater_than"
+    value = 0  
 ```
 
 /tmp/tst.log

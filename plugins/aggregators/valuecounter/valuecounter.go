@@ -46,7 +46,7 @@ var sampleConfig = `
   drop_original = false
   ## The fields for which the values will be counted
   fields = []
-  ## Only include fields for which the predicate is true
+  ## Only emit fields whose aggregated value matches the predicate
   [[aggregators.valuecounter.predicate]]
 	type = "greater_than"
 	value = 0
@@ -116,23 +116,37 @@ func (vc *ValueCounter) Reset() {
 	vc.cache = make(map[uint64]aggregate)
 }
 
-func (vc *ValueCounter) configurePredicates() error {
-	greaterThan, lessThan := "greater_than", "less_than"
-	var predicate_types []string
-	for _, t := range vc.Predicates {
-		predicate_types = append(predicate_types, t.Type)
+func knownPredicateFunctions() (map[string]predicate, []string) {
+	predicates := map[string]predicate{
+		"greater_than": func(count int, compareAgainst int) bool { return count > compareAgainst },
+		"less_than":    func(count int, compareAgainst int) bool { return count < compareAgainst },
+		"equal_to":     func(count int, compareAgainst int) bool { return count == compareAgainst },
+		"not_equal_to": func(count int, compareAgainst int) bool { return count != compareAgainst },
 	}
-	err := choice.CheckSlice(predicate_types, []string{greaterThan, lessThan})
+
+	keys := make([]string, 0, len(predicates))
+	for k := range predicates {
+		keys = append(keys, k)
+	}
+
+	return predicates, keys
+}
+
+func (vc *ValueCounter) configurePredicates() error {
+
+	predicateFunctions, knownPredicates := knownPredicateFunctions()
+	var requestedPredicateTypes []string
+	for _, t := range vc.Predicates {
+		requestedPredicateTypes = append(requestedPredicateTypes, t.Type)
+	}
+	err := choice.CheckSlice(requestedPredicateTypes, knownPredicates)
 	if err != nil {
 		return fmt.Errorf(`cannot verify "predicate" settings: %v`, err)
 	}
 
 	for _, predicate := range vc.Predicates {
-		switch predicate.Type {
-		case greaterThan:
-			predicate.predicateFunc = func(count int, compareAgainst int) bool { return count > compareAgainst }
-		case lessThan:
-			predicate.predicateFunc = func(count int, compareAgainst int) bool { return count < compareAgainst }
+		if predicateFunction, ok := predicateFunctions[predicate.Type]; ok {
+			predicate.predicateFunc = predicateFunction
 		}
 	}
 	return nil

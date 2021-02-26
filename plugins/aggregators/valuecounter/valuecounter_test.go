@@ -1,7 +1,6 @@
 package valuecounter
 
 import (
-	"fmt"
 	"github.com/influxdata/telegraf/config"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -146,9 +145,31 @@ func (t TestTrackingAccumulator) AddFields(name string, fields map[string]interf
 	*t.Metrics = append(*t.Metrics, fields)
 }
 
-func TestGreaterThanPredicate(t *testing.T) {
+func _predicateTest(t *testing.T, configToml []byte, expectedNumberOfPredicates int, metrics []telegraf.Metric) []map[string]interface{} {
 	c := config.NewConfig()
-	err := c.LoadConfigData([]byte(`
+	err := c.LoadConfigData(configToml)
+	assert.Nil(t, err)
+	assert.Len(t, c.Aggregators, 1)
+	assert.IsType(t, &ValueCounter{}, c.Aggregators[0].Aggregator)
+
+	valueCounter := c.Aggregators[0].Aggregator.(*ValueCounter)
+	assert.Len(t, valueCounter.Predicates, expectedNumberOfPredicates)
+
+	err = valueCounter.Init()
+	assert.Nil(t, err)
+
+	for _, metric := range metrics {
+		valueCounter.Add(metric)
+	}
+
+	var aggregatedMetrics []map[string]interface{}
+	valueCounter.Push(TestTrackingAccumulator{Metrics: &aggregatedMetrics})
+	assert.Len(t, aggregatedMetrics, 1)
+	return aggregatedMetrics
+}
+
+func TestGreaterThanPredicate(t *testing.T) {
+	toml := `
 [[aggregators.valuecounter]]
   ## The period on which to flush & clear the aggregator.
   period = "30s"
@@ -161,30 +182,15 @@ func TestGreaterThanPredicate(t *testing.T) {
   [[aggregators.valuecounter.predicate]]
     type = "greater_than"
     value = 2
-`))
-	assert.Nil(t, err)
-	fmt.Print(c.Aggregators[0].Aggregator.Description())
+`
+	metrics := []telegraf.Metric{}
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("path", "/"))
+	metrics = append(metrics, newMetric("path", "/"))
 
-	assert.Len(t, c.Aggregators, 1)
-	assert.IsType(t, &ValueCounter{}, c.Aggregators[0].Aggregator)
-
-	valueCounter := c.Aggregators[0].Aggregator.(*ValueCounter)
-	assert.Len(t, valueCounter.Predicates, 1)
-
-	err = valueCounter.Init()
-	assert.Nil(t, err)
-
-	valueCounter.Add(newMetric("app", "trafik"))
-	valueCounter.Add(newMetric("app", "trafik"))
-	valueCounter.Add(newMetric("app", "trafik"))
-	valueCounter.Add(newMetric("path", "/"))
-	valueCounter.Add(newMetric("path", "/"))
-
-	var aggregatedMetrics []map[string]interface{}
-
-	valueCounter.Push(TestTrackingAccumulator{Metrics: &aggregatedMetrics})
-
-	assert.Len(t, aggregatedMetrics, 1)
+	aggregatedMetrics := _predicateTest(t, []byte(toml), 1, metrics)
 
 	assert.Contains(t, aggregatedMetrics[0], "app_trafik")
 	assert.Equal(t, 3, aggregatedMetrics[0]["app_trafik"].(int))
@@ -193,8 +199,7 @@ func TestGreaterThanPredicate(t *testing.T) {
 }
 
 func TestLessThanPredicate(t *testing.T) {
-	c := config.NewConfig()
-	err := c.LoadConfigData([]byte(`
+	toml := `
 [[aggregators.valuecounter]]
   ## The period on which to flush & clear the aggregator.
   period = "30s"
@@ -207,28 +212,15 @@ func TestLessThanPredicate(t *testing.T) {
   [[aggregators.valuecounter.predicate]]
     type = "less_than"
     value = 3
-`))
-	assert.Nil(t, err)
-	fmt.Print(c.Aggregators[0].Aggregator.Description())
+`
+	metrics := []telegraf.Metric{}
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("path", "/"))
+	metrics = append(metrics, newMetric("path", "/"))
 
-	assert.Len(t, c.Aggregators, 1)
-	assert.IsType(t, &ValueCounter{}, c.Aggregators[0].Aggregator)
-
-	valueCounter := c.Aggregators[0].Aggregator.(*ValueCounter)
-	assert.Len(t, valueCounter.Predicates, 1)
-
-	err = valueCounter.Init()
-	assert.Nil(t, err)
-
-	valueCounter.Add(newMetric("app", "trafik"))
-	valueCounter.Add(newMetric("app", "trafik"))
-	valueCounter.Add(newMetric("app", "trafik"))
-	valueCounter.Add(newMetric("path", "/"))
-	valueCounter.Add(newMetric("path", "/"))
-
-	var aggregatedMetrics []map[string]interface{}
-
-	valueCounter.Push(TestTrackingAccumulator{Metrics: &aggregatedMetrics})
+	aggregatedMetrics := _predicateTest(t, []byte(toml), 1, metrics)
 
 	assert.Len(t, aggregatedMetrics, 1)
 
@@ -238,9 +230,81 @@ func TestLessThanPredicate(t *testing.T) {
 	assert.NotContains(t, aggregatedMetrics[0], "app_trafik")
 }
 
+func TestEqualToPredicate(t *testing.T) {
+	toml := `
+[[aggregators.valuecounter]]
+  ## The period on which to flush & clear the aggregator.
+  period = "30s"
+  ## If true, the original metric will be dropped by the
+  ## aggregator and will not get sent to the output plugins.
+  drop_original = false
+  ## The fields for which the values will be counted
+  fields = ["app", "path"]
+  ## Only include fields for which the predicate is true
+  [[aggregators.valuecounter.predicate]]
+    type = "equal_to"
+    value = 3
+`
+	metrics := []telegraf.Metric{}
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("path", "/"))
+	metrics = append(metrics, newMetric("path", "/"))
+	metrics = append(metrics, newMetric("path", "/robots.txt"))
+	metrics = append(metrics, newMetric("path", "/robots.txt"))
+	metrics = append(metrics, newMetric("path", "/robots.txt"))
+
+	aggregatedMetrics := _predicateTest(t, []byte(toml), 1, metrics)
+
+	assert.Len(t, aggregatedMetrics, 1)
+
+	assert.Contains(t, aggregatedMetrics[0], "app_trafik")
+	assert.Equal(t, 3, aggregatedMetrics[0]["app_trafik"].(int))
+	assert.Contains(t, aggregatedMetrics[0], "path_/robots.txt")
+	assert.Equal(t, 3, aggregatedMetrics[0]["path_/robots.txt"].(int))
+
+	assert.NotContains(t, aggregatedMetrics[0], "path_/")
+}
+
+func TestNotEqualToPredicate(t *testing.T) {
+	toml := `
+[[aggregators.valuecounter]]
+  ## The period on which to flush & clear the aggregator.
+  period = "30s"
+  ## If true, the original metric will be dropped by the
+  ## aggregator and will not get sent to the output plugins.
+  drop_original = false
+  ## The fields for which the values will be counted
+  fields = ["app", "path"]
+  ## Only include fields for which the predicate is true
+  [[aggregators.valuecounter.predicate]]
+    type = "not_equal_to"
+    value = 3
+`
+	metrics := []telegraf.Metric{}
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("path", "/"))
+	metrics = append(metrics, newMetric("path", "/"))
+	metrics = append(metrics, newMetric("path", "/robots.txt"))
+	metrics = append(metrics, newMetric("path", "/robots.txt"))
+	metrics = append(metrics, newMetric("path", "/robots.txt"))
+
+	aggregatedMetrics := _predicateTest(t, []byte(toml), 1, metrics)
+
+	assert.Len(t, aggregatedMetrics, 1)
+
+	assert.Contains(t, aggregatedMetrics[0], "path_/")
+	assert.Equal(t, 2, aggregatedMetrics[0]["path_/"].(int))
+
+	assert.NotContains(t, aggregatedMetrics[0], "path_/robots.txt")
+	assert.NotContains(t, aggregatedMetrics[0], "app_trafik")
+}
+
 func TestMultiplePredicates(t *testing.T) {
-	c := config.NewConfig()
-	err := c.LoadConfigData([]byte(`
+	toml := `
 [[aggregators.valuecounter]]
   ## The period on which to flush & clear the aggregator.
   period = "30s"
@@ -252,36 +316,29 @@ func TestMultiplePredicates(t *testing.T) {
   ## Only include fields for which the predicate is true
   [[aggregators.valuecounter.predicate]]
     type = "less_than"
-    value = 3
+    value = 10
 
   [[aggregators.valuecounter.predicate]]
     type = "greater_than"
     value = 1
-`))
-	assert.Nil(t, err)
-	fmt.Print(c.Aggregators[0].Aggregator.Description())
 
-	assert.Len(t, c.Aggregators, 1)
-	assert.IsType(t, &ValueCounter{}, c.Aggregators[0].Aggregator)
+  [[aggregators.valuecounter.predicate]]
+    type = "not_equal_to"
+    value = 3
 
-	valueCounter := c.Aggregators[0].Aggregator.(*ValueCounter)
-	assert.Len(t, valueCounter.Predicates, 2)
+  [[aggregators.valuecounter.predicate]]
+    type = "equal_to"
+    value = 2`
 
-	err = valueCounter.Init()
-	assert.Nil(t, err)
+	metrics := []telegraf.Metric{}
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("app", "trafik"))
+	metrics = append(metrics, newMetric("path", "/"))
+	metrics = append(metrics, newMetric("path", "/"))
+	metrics = append(metrics, newMetric("host", "google"))
 
-	valueCounter.Add(newMetric("app", "trafik"))
-	valueCounter.Add(newMetric("app", "trafik"))
-	valueCounter.Add(newMetric("app", "trafik"))
-	valueCounter.Add(newMetric("path", "/"))
-	valueCounter.Add(newMetric("path", "/"))
-	valueCounter.Add(newMetric("host", "google"))
-
-	var aggregatedMetrics []map[string]interface{}
-
-	valueCounter.Push(TestTrackingAccumulator{Metrics: &aggregatedMetrics})
-
-	assert.Len(t, aggregatedMetrics, 1)
+	aggregatedMetrics := _predicateTest(t, []byte(toml), 4, metrics)
 
 	assert.Contains(t, aggregatedMetrics[0], "path_/")
 	assert.Equal(t, 2, aggregatedMetrics[0]["path_/"].(int))
