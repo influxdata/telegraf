@@ -1,6 +1,7 @@
 package modbus
 
 import (
+	"fmt"
 	"testing"
 
 	m "github.com/goburrow/modbus"
@@ -654,6 +655,102 @@ func TestHoldingRegisters(t *testing.T) {
 				assert.Equal(t, hrt.read, coil.Fields[0].value)
 			}
 		})
+	}
+}
+
+func TestReadMultipleCoilLimit(t *testing.T) {
+	serv := mbserver.NewServer()
+	err := serv.ListenTCP("localhost:1502")
+	assert.NoError(t, err)
+	defer serv.Close()
+
+	handler := m.NewTCPClientHandler("localhost:1502")
+	err = handler.Connect()
+	assert.NoError(t, err)
+	defer handler.Close()
+	client := m.NewClient(handler)
+
+	fcs := []fieldContainer{}
+	writeValue := uint16(0)
+	for i := 0; i <= 4000; i++ {
+		fc := fieldContainer{}
+		fc.Name = fmt.Sprintf("coil-%v", i)
+		fc.Address = []uint16{uint16(i)}
+		fcs = append(fcs, fc)
+
+		t.Run(fc.Name, func(t *testing.T) {
+			_, err = client.WriteSingleCoil(fc.Address[0], writeValue)
+			assert.NoError(t, err)
+		})
+
+		writeValue = 65280 - writeValue
+	}
+
+	modbus := Modbus{
+		Name:       "TestReadCoils",
+		Controller: "tcp://localhost:1502",
+		SlaveID:    1,
+		Coils:      fcs,
+	}
+
+	err = modbus.Init()
+	assert.NoError(t, err)
+	var acc testutil.Accumulator
+	err = modbus.Gather(&acc)
+	assert.NoError(t, err)
+
+	writeValue = 0
+	for i := 0; i <= 4000; i++ {
+		t.Run(modbus.registers[0].Fields[i].Name, func(t *testing.T) {
+			assert.Equal(t, writeValue, modbus.registers[0].Fields[i].value)
+			writeValue = 1 - writeValue
+		})
+	}
+}
+
+func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
+	serv := mbserver.NewServer()
+	err := serv.ListenTCP("localhost:1502")
+	assert.NoError(t, err)
+	defer serv.Close()
+
+	handler := m.NewTCPClientHandler("localhost:1502")
+	err = handler.Connect()
+	assert.NoError(t, err)
+	defer handler.Close()
+	client := m.NewClient(handler)
+
+	fcs := []fieldContainer{}
+	for i := 0; i <= 400; i++ {
+		fc := fieldContainer{}
+		fc.Name = fmt.Sprintf("HoldingRegister-%v", i)
+		fc.ByteOrder = "AB"
+		fc.DataType = "INT16"
+		fc.Scale = 1.0
+		fc.Address = []uint16{uint16(i)}
+		fcs = append(fcs, fc)
+
+		t.Run(fc.Name, func(t *testing.T) {
+			_, err = client.WriteSingleRegister(fc.Address[0], uint16(i))
+			assert.NoError(t, err)
+		})
+	}
+
+	modbus := Modbus{
+		Name:             "TestHoldingRegister",
+		Controller:       "tcp://localhost:1502",
+		SlaveID:          1,
+		HoldingRegisters: fcs,
+	}
+
+	err = modbus.Init()
+	assert.NoError(t, err)
+	var acc testutil.Accumulator
+	err = modbus.Gather(&acc)
+	assert.NoError(t, err)
+
+	for i := 0; i <= 400; i++ {
+		assert.Equal(t, int16(i), modbus.registers[0].Fields[i].value)
 	}
 }
 
