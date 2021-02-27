@@ -35,7 +35,7 @@ func (_ *CSGO) Description() string {
 }
 
 var sampleConfig = `
-  ## specify servers using the following format:
+  ## Specify servers using the following format:
   ##    servers = [
   ##      ["ip1:port1", "rcon_password1"],
   ##      ["ip2:port2", "rcon_password2"],
@@ -57,7 +57,7 @@ func (s *CSGO) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(ss []string) {
 			defer wg.Done()
-			acc.AddError(s.gatherServer(ss, request_server, acc))
+			acc.AddError(s.gatherServer(ss, requestServer, acc))
 		}(server)
 	}
 
@@ -75,8 +75,9 @@ func (s *CSGO) gatherServer(
 	server []string,
 	request func(string, string) (string, error),
 	acc telegraf.Accumulator) error {
+
 	if len(server) != 2 {
-		return errors.New("wrong argument length")
+		return errors.New("incorrect server config")
 	}
 
 	url, rconPw := server[0], server[1]
@@ -91,6 +92,10 @@ func (s *CSGO) gatherServer(
 	}
 
 	fields := strings.Fields(rows[1])
+	if len(fields) != 10 {
+		return errors.New("bad response")
+	}
+
 	cpu, err := strconv.ParseFloat(fields[0], 32)
 	if err != nil {
 		return err
@@ -164,7 +169,7 @@ func (s *CSGO) gatherServer(
 	return nil
 }
 
-func request_server(url string, rconPw string) (string, error) {
+func requestServer(url string, rconPw string) (string, error) {
 	remoteConsole, err := rcon.Dial(url, rconPw)
 	if err != nil {
 		return "", err

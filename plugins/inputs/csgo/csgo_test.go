@@ -19,7 +19,7 @@ var (
 func TestCPUStats(t *testing.T) {
 	c := NewCSGOStats()
 	var acc testutil.Accumulator
-	err := c.gatherServer(c.Servers[0], request_mock, &acc)
+	err := c.gatherServer(c.Servers[0], requestMock, &acc)
 	if err != nil {
 		t.Error(err)
 	}
@@ -41,7 +41,7 @@ func TestCPUStats(t *testing.T) {
 	assert.Equal(t, expectedOutput.Tick, acc.Metrics[0].Fields["tick_ms"])
 }
 
-func request_mock(_ string, _ string) (string, error) {
+func requestMock(_ string, _ string) (string, error) {
 	return testInput, nil
 }
 
