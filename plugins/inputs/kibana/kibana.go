@@ -238,8 +238,10 @@ func (k *Kibana) gatherKibanaStatus(baseUrl string, acc telegraf.Accumulator) er
 }
 
 func (k *Kibana) gatherJsonData(url string, v interface{}) (host string, err error) {
-
 	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("unable to create new request '%s': %v", url, err)
+	}
 
 	if (k.Username != "") || (k.Password != "") {
 		request.SetBasicAuth(k.Username, k.Password)

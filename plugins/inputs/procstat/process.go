@@ -71,7 +71,7 @@ func (p *Proc) Percent(interval time.Duration) (float64, error) {
 	cpu_perc, err := p.Process.Percent(time.Duration(0))
 	if !p.hasCPUTimes && err == nil {
 		p.hasCPUTimes = true
-		return 0, fmt.Errorf("Must call Percent twice to compute percent cpu.")
+		return 0, fmt.Errorf("must call Percent twice to compute percent cpu")
 	}
 	return cpu_perc, err
 }

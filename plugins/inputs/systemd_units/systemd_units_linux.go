@@ -198,13 +198,13 @@ func setSystemctl(Timeout internal.Duration, UnitType string) (*bytes.Buffer, er
 		return nil, err
 	}
 
-	cmd := exec.Command(systemctlPath, "list-units", "--all", fmt.Sprintf("--type=%s", UnitType), "--no-legend")
+	cmd := exec.Command(systemctlPath, "list-units", "--all", "--plain", fmt.Sprintf("--type=%s", UnitType), "--no-legend")
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err = internal.RunTimeout(cmd, Timeout.Duration)
 	if err != nil {
-		return &out, fmt.Errorf("error running systemctl list-units --all --type=%s --no-legend: %s", UnitType, err)
+		return &out, fmt.Errorf("error running systemctl list-units --all --plain --type=%s --no-legend: %s", UnitType, err)
 	}
 
 	return &out, nil

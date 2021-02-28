@@ -1,3 +1,8 @@
+// +build !windows
+
+// TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
+// https://github.com/influxdata/telegraf/issues/6248
+
 package phpfpm
 
 import (
@@ -25,12 +30,17 @@ func (s statServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
-	sv := statServer{}
-	ts := httptest.NewServer(sv)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "ok", r.URL.Query().Get("test"))
+		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Content-Length", fmt.Sprint(len(outputSample)))
+		fmt.Fprint(w, outputSample)
+	}))
 	defer ts.Close()
 
+	url := ts.URL + "?test=ok"
 	r := &phpfpm{
-		Urls: []string{ts.URL},
+		Urls: []string{url},
 	}
 
 	err := r.Init()
@@ -43,7 +53,7 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 
 	tags := map[string]string{
 		"pool": "www",
-		"url":  ts.URL,
+		"url":  url,
 	}
 
 	fields := map[string]interface{}{
@@ -301,7 +311,7 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t 
 
 	err = acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), `Unable to connect to phpfpm status page 'http://aninvalidone'`)
+	assert.Contains(t, err.Error(), `unable to connect to phpfpm status page 'http://aninvalidone'`)
 	assert.Contains(t, err.Error(), `lookup aninvalidone`)
 }
 
@@ -317,7 +327,7 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testi
 
 	err = acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Equal(t, `dial unix /tmp/invalid.sock: connect: no such file or directory`, err.Error())
+	assert.Equal(t, `socket doesn't exist "/tmp/invalid.sock"`, err.Error())
 
 }
 

@@ -103,6 +103,27 @@ func createURL(listener *HTTPListenerV2, scheme string, path string, rawquery st
 	return u.String()
 }
 
+func TestInvalidListenerConfig(t *testing.T) {
+	parser, _ := parsers.NewInfluxParser()
+
+	listener := &HTTPListenerV2{
+		Log:            testutil.Logger{},
+		ServiceAddress: "address_without_port",
+		Path:           "/write",
+		Methods:        []string{"POST"},
+		Parser:         parser,
+		TimeFunc:       time.Now,
+		MaxBodySize:    internal.Size{Size: 70000},
+		DataSource:     "body",
+	}
+
+	acc := &testutil.Accumulator{}
+	require.Error(t, listener.Start(acc))
+
+	// Stop is called when any ServiceInput fails to start; it must succeed regardless of state
+	listener.Stop()
+}
+
 func TestWriteHTTPSNoClientAuth(t *testing.T) {
 	listener := newTestHTTPSListenerV2()
 	listener.TLSAllowedCACerts = nil
@@ -383,7 +404,7 @@ func TestWriteHTTPEmpty(t *testing.T) {
 
 func TestWriteHTTPTransformHeaderValuesToTagsSingleWrite(t *testing.T) {
 	listener := newTestHTTPListenerV2()
-	listener.HTTPHeaderTags = map[string]string{"Present_http_header_1": "presentMeasurementKey1", "Present_http_header_2": "presentMeasurementKey2", "NOT_PRESENT_HEADER": "notPresentMeasurementKey"}
+	listener.HTTPHeaderTags = map[string]string{"Present_http_header_1": "presentMeasurementKey1", "present_http_header_2": "presentMeasurementKey2", "NOT_PRESENT_HEADER": "notPresentMeasurementKey"}
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))

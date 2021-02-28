@@ -3,6 +3,7 @@ package starlark
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -210,17 +211,44 @@ func (i *FieldIterator) Done() {
 
 // AsStarlarkValue converts a field value to a starlark.Value.
 func asStarlarkValue(value interface{}) (starlark.Value, error) {
-	switch v := value.(type) {
-	case float64:
-		return starlark.Float(v), nil
-	case int64:
-		return starlark.MakeInt64(v), nil
-	case uint64:
-		return starlark.MakeUint64(v), nil
-	case string:
-		return starlark.String(v), nil
-	case bool:
-		return starlark.Bool(v), nil
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.Slice:
+		length := v.Len()
+		array := make([]starlark.Value, length)
+		for i := 0; i < length; i++ {
+			sVal, err := asStarlarkValue(v.Index(i).Interface())
+			if err != nil {
+				return starlark.None, err
+			}
+			array[i] = sVal
+		}
+		return starlark.NewList(array), nil
+	case reflect.Map:
+		dict := starlark.NewDict(v.Len())
+		iter := v.MapRange()
+		for iter.Next() {
+			sKey, err := asStarlarkValue(iter.Key().Interface())
+			if err != nil {
+				return starlark.None, err
+			}
+			sValue, err := asStarlarkValue(iter.Value().Interface())
+			if err != nil {
+				return starlark.None, err
+			}
+			dict.SetKey(sKey, sValue)
+		}
+		return dict, nil
+	case reflect.Float32, reflect.Float64:
+		return starlark.Float(v.Float()), nil
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return starlark.MakeInt64(v.Int()), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return starlark.MakeUint64(v.Uint()), nil
+	case reflect.String:
+		return starlark.String(v.String()), nil
+	case reflect.Bool:
+		return starlark.Bool(v.Bool()), nil
 	}
 
 	return starlark.None, errors.New("invalid type")

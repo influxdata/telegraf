@@ -33,9 +33,9 @@ type ParseError struct {
 
 func (e *ParseError) Error() string {
 	buffer := e.buf[e.LineOffset:]
-	eol := strings.IndexAny(buffer, "\r\n")
+	eol := strings.IndexAny(buffer, "\n")
 	if eol >= 0 {
-		buffer = buffer[:eol]
+		buffer = strings.TrimSuffix(buffer[:eol], "\r")
 	}
 	if len(buffer) > maxErrorBufferSize {
 		startEllipsis := true
@@ -82,8 +82,8 @@ func NewSeriesParser(handler *MetricHandler) *Parser {
 	}
 }
 
-func (h *Parser) SetTimeFunc(f TimeFunc) {
-	h.handler.SetTimeFunc(f)
+func (p *Parser) SetTimeFunc(f TimeFunc) {
+	p.handler.SetTimeFunc(f)
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
@@ -178,18 +178,18 @@ func NewStreamParser(r io.Reader) *StreamParser {
 // SetTimeFunc changes the function used to determine the time of metrics
 // without a timestamp.  The default TimeFunc is time.Now.  Useful mostly for
 // testing, or perhaps if you want all metrics to have the same timestamp.
-func (h *StreamParser) SetTimeFunc(f TimeFunc) {
-	h.handler.SetTimeFunc(f)
+func (sp *StreamParser) SetTimeFunc(f TimeFunc) {
+	sp.handler.SetTimeFunc(f)
 }
 
-func (h *StreamParser) SetTimePrecision(u time.Duration) {
-	h.handler.SetTimePrecision(u)
+func (sp *StreamParser) SetTimePrecision(u time.Duration) {
+	sp.handler.SetTimePrecision(u)
 }
 
 // Next parses the next item from the stream.  You can repeat calls to this
 // function if it returns ParseError to get the next metric or error.
-func (p *StreamParser) Next() (telegraf.Metric, error) {
-	err := p.machine.Next()
+func (sp *StreamParser) Next() (telegraf.Metric, error) {
+	err := sp.machine.Next()
 	if err == EOF {
 		return nil, err
 	}
@@ -200,16 +200,16 @@ func (p *StreamParser) Next() (telegraf.Metric, error) {
 
 	if err != nil {
 		return nil, &ParseError{
-			Offset:     p.machine.Position(),
-			LineOffset: p.machine.LineOffset(),
-			LineNumber: p.machine.LineNumber(),
-			Column:     p.machine.Column(),
+			Offset:     sp.machine.Position(),
+			LineOffset: sp.machine.LineOffset(),
+			LineNumber: sp.machine.LineNumber(),
+			Column:     sp.machine.Column(),
 			msg:        err.Error(),
-			buf:        p.machine.LineText(),
+			buf:        sp.machine.LineText(),
 		}
 	}
 
-	metric, err := p.handler.Metric()
+	metric, err := sp.handler.Metric()
 	if err != nil {
 		return nil, err
 	}
@@ -218,27 +218,27 @@ func (p *StreamParser) Next() (telegraf.Metric, error) {
 }
 
 // Position returns the current byte offset into the data.
-func (p *StreamParser) Position() int {
-	return p.machine.Position()
+func (sp *StreamParser) Position() int {
+	return sp.machine.Position()
 }
 
 // LineOffset returns the byte offset of the current line.
-func (p *StreamParser) LineOffset() int {
-	return p.machine.LineOffset()
+func (sp *StreamParser) LineOffset() int {
+	return sp.machine.LineOffset()
 }
 
 // LineNumber returns the current line number.  Lines are counted based on the
 // regular expression `\r?\n`.
-func (p *StreamParser) LineNumber() int {
-	return p.machine.LineNumber()
+func (sp *StreamParser) LineNumber() int {
+	return sp.machine.LineNumber()
 }
 
 // Column returns the current column.
-func (p *StreamParser) Column() int {
-	return p.machine.Column()
+func (sp *StreamParser) Column() int {
+	return sp.machine.Column()
 }
 
 // LineText returns the text of the current line that has been parsed so far.
-func (p *StreamParser) LineText() string {
-	return p.machine.LineText()
+func (sp *StreamParser) LineText() string {
+	return sp.machine.LineText()
 }

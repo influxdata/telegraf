@@ -37,7 +37,9 @@ type Jenkins struct {
 	MaxSubJobDepth    int               `toml:"max_subjob_depth"`
 	MaxSubJobPerLayer int               `toml:"max_subjob_per_layer"`
 	JobExclude        []string          `toml:"job_exclude"`
-	jobFilter         filter.Filter
+	JobInclude        []string          `toml:"job_include"`
+	jobFilterExclude  filter.Filter
+	jobFilterInclude  filter.Filter
 
 	NodeExclude []string `toml:"node_exclude"`
 	nodeFilter  filter.Filter
@@ -77,11 +79,14 @@ const sampleConfig = `
   ## empty will use default value 10
   # max_subjob_per_layer = 10
 
-  ## Jobs to exclude from gathering
-  # job_exclude = [ "job1", "job2/subjob1/subjob2", "job3/*"]
+  ## Jobs to include or exclude from gathering
+  ## When using both lists, job_exclude has priority.
+  ## Wildcards are supported: [ "jobA/*", "jobB/subjob1/*"]
+  # job_include = [ "*" ]
+  # job_exclude = [ ]
 
   ## Nodes to exclude from gathering
-  # node_exclude = [ "node1", "node2" ]
+  # node_exclude = [ ]
 
   ## Worker pool for jenkins plugin only
   ## Empty this field will use default value 5
@@ -157,8 +162,13 @@ func (j *Jenkins) initialize(client *http.Client) error {
 	}
 	j.Source = u.Hostname()
 
-	// init job filter
-	j.jobFilter, err = filter.Compile(j.JobExclude)
+	// init job filters
+	j.jobFilterExclude, err = filter.Compile(j.JobExclude)
+	if err != nil {
+		return fmt.Errorf("error compile job filters[%s]: %v", j.URL, err)
+	}
+
+	j.jobFilterInclude, err = filter.Compile(j.JobInclude)
 	if err != nil {
 		return fmt.Errorf("error compile job filters[%s]: %v", j.URL, err)
 	}
@@ -303,8 +313,14 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 	if j.MaxSubJobDepth > 0 && jr.layer == j.MaxSubJobDepth {
 		return nil
 	}
+
+	// filter out not included job.
+	if j.jobFilterInclude != nil && j.jobFilterInclude.Match(jr.hierarchyName()) == false {
+		return nil
+	}
+
 	// filter out excluded job.
-	if j.jobFilter != nil && j.jobFilter.Match(jr.hierarchyName()) {
+	if j.jobFilterExclude != nil && j.jobFilterExclude.Match(jr.hierarchyName()) {
 		return nil
 	}
 
@@ -419,6 +435,7 @@ type jobBuild struct {
 type buildResponse struct {
 	Building  bool   `json:"building"`
 	Duration  int64  `json:"duration"`
+	Number    int64  `json:"number"`
 	Result    string `json:"result"`
 	Timestamp int64  `json:"timestamp"`
 }
@@ -436,10 +453,13 @@ type jobRequest struct {
 	name    string
 	parents []string
 	layer   int
+	number  int64
 }
 
 func (jr jobRequest) combined() []string {
-	return append(jr.parents, jr.name)
+	path := make([]string, len(jr.parents))
+	copy(path, jr.parents)
+	return append(path, jr.name)
 }
 
 func (jr jobRequest) combinedEscaped() []string {
@@ -471,6 +491,7 @@ func (j *Jenkins) gatherJobBuild(jr jobRequest, b *buildResponse, acc telegraf.A
 	fields := make(map[string]interface{})
 	fields["duration"] = b.Duration
 	fields["result_code"] = mapResultCode(b.Result)
+	fields["number"] = b.Number
 
 	acc.AddFields(measurementJob, fields, tags, b.GetTimestamp())
 }

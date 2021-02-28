@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -57,6 +56,7 @@ type Jolokia struct {
 
 	ResponseHeaderTimeout internal.Duration `toml:"response_header_timeout"`
 	ClientTimeout         internal.Duration `toml:"client_timeout"`
+	Log                   telegraf.Logger   `toml:"-"`
 }
 
 const sampleConfig = `
@@ -143,7 +143,7 @@ func (j *Jolokia) doRequest(req *http.Request) ([]map[string]interface{}, error)
 
 	// Process response
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+		err = fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
 			req.RequestURI,
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
@@ -161,7 +161,7 @@ func (j *Jolokia) doRequest(req *http.Request) ([]map[string]interface{}, error)
 	// Unmarshal json
 	var jsonOut []map[string]interface{}
 	if err = json.Unmarshal([]byte(body), &jsonOut); err != nil {
-		return nil, fmt.Errorf("Error decoding JSON response: %s: %s", err, body)
+		return nil, fmt.Errorf("error decoding JSON response: %s: %s", err, body)
 	}
 
 	return jsonOut, nil
@@ -234,9 +234,11 @@ func (j *Jolokia) prepareRequest(server Server, metrics []Metric) (*http.Request
 	}
 
 	requestBody, err := json.Marshal(bulkBodyContent)
+	if err != nil {
+		return nil, err
+	}
 
 	req, err := http.NewRequest("POST", jolokiaUrl.String(), bytes.NewBuffer(requestBody))
-
 	if err != nil {
 		return nil, err
 	}
@@ -257,9 +259,8 @@ func (j *Jolokia) extractValues(measurement string, value interface{}, fields ma
 }
 
 func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
-
 	if j.jClient == nil {
-		log.Println("W! DEPRECATED: the jolokia plugin has been deprecated " +
+		j.Log.Warn("DEPRECATED: the jolokia plugin has been deprecated " +
 			"in favor of the jolokia2 plugin " +
 			"(https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2)")
 
@@ -297,18 +298,18 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 		}
 		for i, resp := range out {
 			if status, ok := resp["status"]; ok && status != float64(200) {
-				acc.AddError(fmt.Errorf("Not expected status value in response body (%s:%s mbean=\"%s\" attribute=\"%s\"): %3.f",
+				acc.AddError(fmt.Errorf("not expected status value in response body (%s:%s mbean=\"%s\" attribute=\"%s\"): %3.f",
 					server.Host, server.Port, metrics[i].Mbean, metrics[i].Attribute, status))
 				continue
 			} else if !ok {
-				acc.AddError(fmt.Errorf("Missing status in response body"))
+				acc.AddError(fmt.Errorf("missing status in response body"))
 				continue
 			}
 
 			if values, ok := resp["value"]; ok {
 				j.extractValues(metrics[i].Name, values, fields)
 			} else {
-				acc.AddError(fmt.Errorf("Missing key 'value' in output response\n"))
+				acc.AddError(fmt.Errorf("missing key 'value' in output response"))
 			}
 		}
 

@@ -42,6 +42,7 @@ type HTTPResponse struct {
 	ResponseBodyField   string        `toml:"response_body_field"`
 	ResponseBodyMaxSize internal.Size `toml:"response_body_max_size"`
 	ResponseStringMatch string
+	ResponseStatusCode  int
 	Interface           string
 	// HTTP Basic Auth Credentials
 	Username string `toml:"username"`
@@ -51,7 +52,11 @@ type HTTPResponse struct {
 	Log telegraf.Logger
 
 	compiledStringMatch *regexp.Regexp
-	client              *http.Client
+	client              httpClient
+}
+
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
 // Description returns the plugin Description
@@ -92,8 +97,8 @@ var sampleConfig = `
   # {'fake':'data'}
   # '''
 
-  ## Optional name of the field that will contain the body of the response. 
-  ## By default it is set to an empty String indicating that the body's content won't be added 
+  ## Optional name of the field that will contain the body of the response.
+  ## By default it is set to an empty String indicating that the body's content won't be added
   # response_body_field = ''
 
   ## Maximum allowed HTTP response body size in bytes.
@@ -101,10 +106,16 @@ var sampleConfig = `
   ## If the response body size exceeds this limit a "body_read_error" will be raised
   # response_body_max_size = "32MiB"
 
-  ## Optional substring or regex match in body of the response
+  ## Optional substring or regex match in body of the response (case sensitive)
   # response_string_match = "\"service_status\": \"up\""
   # response_string_match = "ok"
   # response_string_match = "\".*_status\".?:.?\"up\""
+
+  ## Expected response status code.
+  ## The status code of the response is compared to this value. If they match, the field
+  ## "response_status_code_match" will be 1, otherwise it will be 0. If the
+  ## expected status code is 0, the check is disabled and the field won't be added.
+  # response_status_code = 0
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -208,12 +219,13 @@ func localAddress(interfaceName string) (net.Addr, error) {
 
 func setResult(result_string string, fields map[string]interface{}, tags map[string]string) {
 	result_codes := map[string]int{
-		"success":                  0,
-		"response_string_mismatch": 1,
-		"body_read_error":          2,
-		"connection_failed":        3,
-		"timeout":                  4,
-		"dns_error":                5,
+		"success":                       0,
+		"response_string_mismatch":      1,
+		"body_read_error":               2,
+		"connection_failed":             3,
+		"timeout":                       4,
+		"dns_error":                     5,
+		"response_status_code_mismatch": 6,
 	}
 
 	tags["result"] = result_string
@@ -352,16 +364,31 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	}
 	fields["content_length"] = len(bodyBytes)
 
-	// Check the response for a regex match.
+	var success = true
+
+	// Check the response for a regex
 	if h.ResponseStringMatch != "" {
 		if h.compiledStringMatch.Match(bodyBytes) {
-			setResult("success", fields, tags)
 			fields["response_string_match"] = 1
 		} else {
+			success = false
 			setResult("response_string_mismatch", fields, tags)
 			fields["response_string_match"] = 0
 		}
-	} else {
+	}
+
+	// Check the response status code
+	if h.ResponseStatusCode > 0 {
+		if resp.StatusCode == h.ResponseStatusCode {
+			fields["response_status_code_match"] = 1
+		} else {
+			success = false
+			setResult("response_status_code_mismatch", fields, tags)
+			fields["response_status_code_match"] = 0
+		}
+	}
+
+	if success {
 		setResult("success", fields, tags)
 	}
 

@@ -1,4 +1,4 @@
-# Amazon CloudWatch Statistics Input
+# Amazon CloudWatch Statistics Input Plugin
 
 This plugin will pull Metric Statistics from Amazon CloudWatch.
 
@@ -41,6 +41,9 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ##   ex: endpoint_url = "http://localhost:8000"
   # endpoint_url = ""
 
+  ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
+  # http_proxy_url = "http://localhost:8888"
+
   # The minimum period for Cloudwatch metrics is 1 minute (60s). However not all
   # metrics are made available to the 1 minute period. Some are collected at
   # 3 minute, 5 minute, or larger intervals. See https://aws.amazon.com/cloudwatch/faqs/#monitoring.
@@ -57,6 +60,13 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## Recommended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
   interval = "5m"
+
+  ## Recommended if "delay" and "period" are both within 3 hours of request time. Invalid values will be ignored.
+  ## Recently Active feature will only poll for CloudWatch ListMetrics values that occurred within the last 3 Hours.
+  ## If enabled, it will reduce total API usage of the CloudWatch ListMetrics API and require less memory to retain.
+  ## Do not enable if "period" or "delay" is longer than 3 hours, as it will not return data more than 3 hours old.
+  ## See https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_ListMetrics.html
+  #recently_active = "PT3H"
 
   ## Configure the TTL for the internal cache of metrics.
   # cache_ttl = "1h"
@@ -150,7 +160,7 @@ To maximize efficiency and savings, consider making fewer requests by increasing
 
 ### Measurements & Fields:
 
-Each CloudWatch Namespace monitored records a measurement with fields for each available Metric Statistic
+Each CloudWatch Namespace monitored records a measurement with fields for each available Metric Statistic.
 Namespace and Metrics are represented in [snake case](https://en.wikipedia.org/wiki/Snake_case)
 
 - cloudwatch_{namespace}

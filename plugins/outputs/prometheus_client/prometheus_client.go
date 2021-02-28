@@ -183,9 +183,8 @@ func (p *PrometheusClient) Init() error {
 func (p *PrometheusClient) listen() (net.Listener, error) {
 	if p.server.TLSConfig != nil {
 		return tls.Listen("tcp", p.Listen, p.server.TLSConfig)
-	} else {
-		return net.Listen("tcp", p.Listen)
 	}
+	return net.Listen("tcp", p.Listen)
 }
 
 func (p *PrometheusClient) Connect() error {

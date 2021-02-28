@@ -27,8 +27,16 @@ func (ki *KubernetesInventory) gatherPod(p v1.Pod, acc telegraf.Accumulator) err
 		return nil
 	}
 
-	for i, cs := range p.Status.ContainerStatuses {
-		c := p.Spec.Containers[i]
+	containerList := map[string]*v1.ContainerStatus{}
+	for _, v := range p.Status.ContainerStatuses {
+		containerList[*v.Name] = v
+	}
+
+	for _, c := range p.Spec.Containers {
+		cs, ok := containerList[*c.Name]
+		if !ok {
+			cs = &v1.ContainerStatus{}
+		}
 		gatherPodContainer(*p.Spec.NodeName, ki, p, *cs, *c, acc)
 	}
 
@@ -39,34 +47,45 @@ func gatherPodContainer(nodeName string, ki *KubernetesInventory, p v1.Pod, cs v
 	stateCode := 3
 	stateReason := ""
 	state := "unknown"
+	readiness := "unready"
 
-	switch {
-	case cs.State.Running != nil:
-		stateCode = 0
-		state = "running"
-	case cs.State.Terminated != nil:
-		stateCode = 1
-		state = "terminated"
-		stateReason = cs.State.Terminated.GetReason()
-	case cs.State.Waiting != nil:
-		stateCode = 2
-		state = "waiting"
-		stateReason = cs.State.Waiting.GetReason()
+	if cs.State != nil {
+		switch {
+		case cs.State.Running != nil:
+			stateCode = 0
+			state = "running"
+		case cs.State.Terminated != nil:
+			stateCode = 1
+			state = "terminated"
+			stateReason = cs.State.Terminated.GetReason()
+		case cs.State.Waiting != nil:
+			stateCode = 2
+			state = "waiting"
+			stateReason = cs.State.Waiting.GetReason()
+		}
 	}
 
-	readiness := "unready"
 	if cs.GetReady() {
 		readiness = "ready"
 	}
 
 	fields := map[string]interface{}{
-		"restarts_total":    cs.GetRestartCount(),
-		"state_code":        stateCode,
-		"terminated_reason": cs.State.Terminated.GetReason(),
+		"restarts_total": cs.GetRestartCount(),
+		"state_code":     stateCode,
+	}
+
+	// deprecated in 1.15: use `state_reason` instead
+	if state == "terminated" {
+		fields["terminated_reason"] = stateReason
 	}
 
 	if stateReason != "" {
 		fields["state_reason"] = stateReason
+	}
+
+	phaseReason := p.Status.GetReason()
+	if phaseReason != "" {
+		fields["phase_reason"] = phaseReason
 	}
 
 	tags := map[string]string{
@@ -74,6 +93,7 @@ func gatherPodContainer(nodeName string, ki *KubernetesInventory, p v1.Pod, cs v
 		"namespace":      *p.Metadata.Namespace,
 		"node_name":      *p.Spec.NodeName,
 		"pod_name":       *p.Metadata.Name,
+		"phase":          *p.Status.Phase,
 		"state":          state,
 		"readiness":      readiness,
 	}

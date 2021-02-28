@@ -175,7 +175,9 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 
 // Stop cleans up all resources
 func (h *HTTPListenerV2) Stop() {
-	h.listener.Close()
+	if h.listener != nil {
+		h.listener.Close()
+	}
 	h.wg.Wait()
 }
 
@@ -232,9 +234,9 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 
 	for _, m := range metrics {
 		for headerName, measurementName := range h.HTTPHeaderTags {
-			headerValues, foundHeader := req.Header[headerName]
-			if foundHeader && len(headerValues) > 0 {
-				m.AddTag(measurementName, headerValues[0])
+			headerValues := req.Header.Get(headerName)
+			if len(headerValues) > 0 {
+				m.AddTag(measurementName, headerValues)
 			}
 		}
 

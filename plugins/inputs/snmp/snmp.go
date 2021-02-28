@@ -3,6 +3,7 @@ package snmp
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"math"
@@ -13,19 +14,24 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/wlog"
-	"github.com/soniah/gosnmp"
 )
 
 const description = `Retrieves SNMP values from remote agents`
 const sampleConfig = `
   ## Agent addresses to retrieve values from.
+  ##   format:  agents = ["<scheme://><hostname>:<port>"]
+  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.            
+  ##            default is udp
+  ##   port:    optional
   ##   example: agents = ["udp://127.0.0.1:161"]
   ##            agents = ["tcp://127.0.0.1:161"]
+  ##            agents = ["udp4://v4only-snmp-agent"]
   agents = ["udp://127.0.0.1:161"]
 
   ## Timeout for each request.
@@ -33,6 +39,9 @@ const sampleConfig = `
 
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
+
+  ## Agent host tag; the tag used to reference the source host
+  # agent_host_tag = "agent_host"
 
   ## SNMP community string.
   # community = "public"
@@ -47,7 +56,7 @@ const sampleConfig = `
   ##
   ## Security Name.
   # sec_name = "myuser"
-  ## Authentication protocol; one of "MD5", "SHA", or "".
+  ## Authentication protocol; one of "MD5", "SHA", "SHA224", "SHA256", "SHA384", "SHA512" or "".
   # auth_protocol = "MD5"
   ## Authentication password.
   # auth_password = "pass"
@@ -95,6 +104,9 @@ type Snmp struct {
 	// udp://1.2.3.4:161).  If the scheme is not specified then "udp" is used.
 	Agents []string `toml:"agents"`
 
+	// The tag used to name the agent host
+	AgentHostTag string `toml:"agent_host_tag"`
+
 	snmp.ClientConfig
 
 	Tables []Table `toml:"table"`
@@ -126,6 +138,10 @@ func (s *Snmp) init() error {
 		if err := s.Fields[i].init(); err != nil {
 			return fmt.Errorf("initializing field %s: %w", s.Fields[i].Name, err)
 		}
+	}
+
+	if len(s.AgentHostTag) == 0 {
+		s.AgentHostTag = "agent_host"
 	}
 
 	s.initialized = true
@@ -227,6 +243,8 @@ type Field struct {
 	//  "hwaddr" will convert a 6-byte string to a MAC address.
 	//  "ipaddr" will convert the value to an IPv4 or IPv6 address.
 	Conversion string
+	// Translate tells if the value of the field should be snmptranslated
+	Translate bool
 
 	initialized bool
 }
@@ -374,8 +392,8 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 				}
 			}
 		}
-		if _, ok := tr.Tags["agent_host"]; !ok {
-			tr.Tags["agent_host"] = gs.Host()
+		if _, ok := tr.Tags[s.AgentHostTag]; !ok {
+			tr.Tags[s.AgentHostTag] = gs.Host()
 		}
 		acc.AddFields(rt.Name, tr.Fields, tr.Tags, rt.Time)
 	}
@@ -441,13 +459,24 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 					i := f.OidIndexLength + 1 // leading separator
 					idx = strings.Map(func(r rune) rune {
 						if r == '.' {
-							i -= 1
+							i--
 						}
 						if i < 1 {
 							return -1
 						}
 						return r
 					}, idx)
+				}
+
+				// snmptranslate table field value here
+				if f.Translate {
+					if entOid, ok := ent.Value.(string); ok {
+						_, _, oidText, _, err := SnmpTranslate(entOid)
+						if err == nil {
+							// If no error translating, the original value for ent.Value should be replaced
+							ent.Value = oidText
+						}
+					}
 				}
 
 				fv, err := fieldConvert(f.Conversion, ent.Value)
@@ -536,7 +565,8 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 	if err != nil {
 		return nil, err
 	}
-	gs.SetAgent(agent)
+
+	err = gs.SetAgent(agent)
 	if err != nil {
 		return nil, err
 	}
@@ -551,12 +581,6 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 }
 
 // fieldConvert converts from any type according to the conv specification
-//  "float"/"float(0)" will convert the value into a float.
-//  "float(X)" will convert the value into a float, and then move the decimal before Xth right-most digit.
-//  "int" will convert the value into an integer.
-//  "hwaddr" will convert the value into a MAC address.
-//  "ipaddr" will convert the value into into an IP address.
-//  "" will convert a byte slice into a string.
 func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	if conv == "" {
 		if bs, ok := v.([]byte); ok {
@@ -617,7 +641,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		case int32:
 			v = int64(vt)
 		case int64:
-			v = int64(vt)
+			v = vt
 		case uint:
 			v = int64(vt)
 		case uint8:
@@ -645,6 +669,46 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		default:
 			return nil, fmt.Errorf("invalid type (%T) for hwaddr conversion", v)
 		}
+		return v, nil
+	}
+
+	split := strings.Split(conv, ":")
+	if split[0] == "hextoint" && len(split) == 3 {
+
+		endian := split[1]
+		bit := split[2]
+
+		bv, ok := v.([]byte)
+		if !ok {
+			return v, nil
+		}
+
+		if endian == "LittleEndian" {
+			switch bit {
+			case "uint64":
+				v = binary.LittleEndian.Uint64(bv)
+			case "uint32":
+				v = binary.LittleEndian.Uint32(bv)
+			case "uint16":
+				v = binary.LittleEndian.Uint16(bv)
+			default:
+				return nil, fmt.Errorf("invalid bit value (%s) for hex to int conversion", bit)
+			}
+		} else if endian == "BigEndian" {
+			switch bit {
+			case "uint64":
+				v = binary.BigEndian.Uint64(bv)
+			case "uint32":
+				v = binary.BigEndian.Uint32(bv)
+			case "uint16":
+				v = binary.BigEndian.Uint16(bv)
+			default:
+				return nil, fmt.Errorf("invalid bit value (%s) for hex to int conversion", bit)
+			}
+		} else {
+			return nil, fmt.Errorf("invalid Endian value (%s) for hex to int conversion", endian)
+		}
+
 		return v, nil
 	}
 
@@ -798,28 +862,6 @@ func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 	snmpTranslateCachesLock.Unlock()
 
 	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err
-}
-
-func SnmpTranslateForce(oid string, mibName string, oidNum string, oidText string, conversion string) {
-	snmpTranslateCachesLock.Lock()
-	defer snmpTranslateCachesLock.Unlock()
-	if snmpTranslateCaches == nil {
-		snmpTranslateCaches = map[string]snmpTranslateCache{}
-	}
-
-	var stc snmpTranslateCache
-	stc.mibName = mibName
-	stc.oidNum = oidNum
-	stc.oidText = oidText
-	stc.conversion = conversion
-	stc.err = nil
-	snmpTranslateCaches[oid] = stc
-}
-
-func SnmpTranslateClear() {
-	snmpTranslateCachesLock.Lock()
-	defer snmpTranslateCachesLock.Unlock()
-	snmpTranslateCaches = map[string]snmpTranslateCache{}
 }
 
 func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {

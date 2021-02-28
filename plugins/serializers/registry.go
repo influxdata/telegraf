@@ -2,6 +2,7 @@ package serializers
 
 import (
 	"fmt"
+	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -47,6 +48,9 @@ type Serializer interface {
 type Config struct {
 	// Dataformat can be one of the serializer types listed in NewSerializer.
 	DataFormat string `toml:"data_format"`
+
+	// Carbon2 metric format.
+	Carbon2Format string `toml:"carbon2_format"`
 
 	// Support tags in graphite protocol
 	GraphiteTagSupport bool `toml:"graphite_tag_support"`
@@ -118,15 +122,34 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "nowmetric":
 		serializer, err = NewNowSerializer()
 	case "carbon2":
-		serializer, err = NewCarbon2Serializer()
+		serializer, err = NewCarbon2Serializer(config.Carbon2Format)
 	case "wavefront":
 		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
 	case "prometheus":
 		serializer, err = NewPrometheusSerializer(config)
+	case "prometheusremotewrite":
+		serializer, err = NewPrometheusRemoteWriteSerializer(config)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
 	return serializer, err
+}
+
+func NewPrometheusRemoteWriteSerializer(config *Config) (Serializer, error) {
+	sortMetrics := prometheusremotewrite.NoSortMetrics
+	if config.PrometheusExportTimestamp {
+		sortMetrics = prometheusremotewrite.SortMetrics
+	}
+
+	stringAsLabels := prometheusremotewrite.DiscardStrings
+	if config.PrometheusStringAsLabel {
+		stringAsLabels = prometheusremotewrite.StringAsLabel
+	}
+
+	return prometheusremotewrite.NewSerializer(prometheusremotewrite.FormatConfig{
+		MetricSortOrder: sortMetrics,
+		StringHandling:  stringAsLabels,
+	})
 }
 
 func NewPrometheusSerializer(config *Config) (Serializer, error) {
@@ -160,8 +183,8 @@ func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return json.NewSerializer(timestampUnits)
 }
 
-func NewCarbon2Serializer() (Serializer, error) {
-	return carbon2.NewSerializer()
+func NewCarbon2Serializer(carbon2format string) (Serializer, error) {
+	return carbon2.NewSerializer(carbon2format)
 }
 
 func NewSplunkmetricSerializer(splunkmetric_hec_routing bool, splunkmetric_multimetric bool) (Serializer, error) {

@@ -2,7 +2,7 @@ package opentsdb
 
 import (
 	"fmt"
-	"log"
+	"math"
 	"net"
 	"net/url"
 	"regexp"
@@ -27,17 +27,19 @@ var (
 )
 
 type OpenTSDB struct {
-	Prefix string
+	Prefix string `toml:"prefix"`
 
-	Host string
-	Port int
+	Host string `toml:"host"`
+	Port int    `toml:"port"`
 
-	HttpBatchSize int // deprecated httpBatchSize form in 1.8
-	HttpPath      string
+	HttpBatchSize int    `toml:"http_batch_size"` // deprecated httpBatchSize form in 1.8
+	HttpPath      string `toml:"http_path"`
 
-	Debug bool
+	Debug bool `toml:"debug"`
 
-	Separator string
+	Separator string `toml:"separator"`
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 var sampleConfig = `
@@ -85,7 +87,7 @@ func (o *OpenTSDB) Connect() error {
 	// Test Connection to OpenTSDB Server
 	u, err := url.Parse(o.Host)
 	if err != nil {
-		return fmt.Errorf("Error in parsing host url: %s", err.Error())
+		return fmt.Errorf("error in parsing host url: %s", err.Error())
 	}
 
 	uri := fmt.Sprintf("%s:%d", u.Host, o.Port)
@@ -108,7 +110,7 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 
 	u, err := url.Parse(o.Host)
 	if err != nil {
-		return fmt.Errorf("Error in parsing host url: %s", err.Error())
+		return fmt.Errorf("error in parsing host url: %s", err.Error())
 	}
 
 	if u.Scheme == "" || u.Scheme == "tcp" {
@@ -116,7 +118,7 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 	} else if u.Scheme == "http" || u.Scheme == "https" {
 		return o.WriteHttp(metrics, u)
 	} else {
-		return fmt.Errorf("Unknown scheme in host parameter.")
+		return fmt.Errorf("unknown scheme in host parameter")
 	}
 }
 
@@ -136,12 +138,16 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 		tags := cleanTags(m.Tags())
 
 		for fieldName, value := range m.Fields() {
-			switch value.(type) {
+			switch fv := value.(type) {
 			case int64:
 			case uint64:
 			case float64:
+				// JSON does not support these special values
+				if math.IsNaN(fv) || math.IsInf(fv, 0) {
+					continue
+				}
 			default:
-				log.Printf("D! OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
+				o.Log.Debugf("OpenTSDB does not support metric value: [%s] of type [%T].", value, value)
 				continue
 			}
 
@@ -159,11 +165,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 		}
 	}
 
-	if err := http.flush(); err != nil {
-		return err
-	}
-
-	return nil
+	return http.flush()
 }
 
 func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
@@ -181,18 +183,22 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 		tags := ToLineFormat(cleanTags(m.Tags()))
 
 		for fieldName, value := range m.Fields() {
-			switch value.(type) {
+			switch fv := value.(type) {
 			case int64:
 			case uint64:
 			case float64:
+				// JSON does not support these special values
+				if math.IsNaN(fv) || math.IsInf(fv, 0) {
+					continue
+				}
 			default:
-				log.Printf("D! OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
+				o.Log.Debugf("OpenTSDB does not support metric value: [%s] of type [%T].", value, value)
 				continue
 			}
 
 			metricValue, buildError := buildValue(value)
 			if buildError != nil {
-				log.Printf("E! OpenTSDB: %s\n", buildError.Error())
+				o.Log.Errorf("OpenTSDB: %s", buildError.Error())
 				continue
 			}
 
@@ -225,9 +231,9 @@ func buildValue(v interface{}) (string, error) {
 	var retv string
 	switch p := v.(type) {
 	case int64:
-		retv = IntToString(int64(p))
+		retv = IntToString(p)
 	case uint64:
-		retv = UIntToString(uint64(p))
+		retv = UIntToString(p)
 	case float64:
 		retv = FloatToString(float64(p))
 	default:
@@ -236,16 +242,16 @@ func buildValue(v interface{}) (string, error) {
 	return retv, nil
 }
 
-func IntToString(input_num int64) string {
-	return strconv.FormatInt(input_num, 10)
+func IntToString(inputNum int64) string {
+	return strconv.FormatInt(inputNum, 10)
 }
 
-func UIntToString(input_num uint64) string {
-	return strconv.FormatUint(input_num, 10)
+func UIntToString(inputNum uint64) string {
+	return strconv.FormatUint(inputNum, 10)
 }
 
-func FloatToString(input_num float64) string {
-	return strconv.FormatFloat(input_num, 'f', 6, 64)
+func FloatToString(inputNum float64) string {
+	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
 
 func (o *OpenTSDB) SampleConfig() string {

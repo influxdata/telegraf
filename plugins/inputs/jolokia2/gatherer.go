@@ -88,8 +88,8 @@ func (g *Gatherer) generatePoints(metric Metric, responses []ReadResponse) ([]po
 		case 404:
 			continue
 		default:
-			errors = append(errors, fmt.Errorf("Unexpected status in response from target %s: %d",
-				response.RequestTarget, response.Status))
+			errors = append(errors, fmt.Errorf("Unexpected status in response from target %s (%q): %d",
+				response.RequestTarget, response.RequestMbean, response.Status))
 			continue
 		}
 
