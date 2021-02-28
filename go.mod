@@ -67,11 +67,9 @@ require (
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/protobuf v1.3.5
 	github.com/golang/snappy v0.0.1
-	github.com/google/btree v1.0.0 // indirect
 	github.com/google/go-cmp v0.5.4
 	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.1.13
-	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2
 	github.com/gosnmp/gosnmp v1.29.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
