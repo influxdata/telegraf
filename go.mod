@@ -57,7 +57,7 @@ require (
 	github.com/go-logfmt/logfmt v0.4.0
 	github.com/go-ping/ping v0.0.0-20210201095549-52eed920f98c
 	github.com/go-redis/redis v6.15.9+incompatible
-        github.com/go-redis/redis/v7 v7.4.0
+	github.com/go-redis/redis/v7 v7.4.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/goburrow/modbus v0.1.0
 	github.com/goburrow/serial v0.1.0 // indirect
@@ -67,9 +67,11 @@ require (
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/protobuf v1.3.5
 	github.com/golang/snappy v0.0.1
+	github.com/google/btree v1.0.0 // indirect
 	github.com/google/go-cmp v0.5.4
 	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.1.13
+	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2
 	github.com/gosnmp/gosnmp v1.29.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
