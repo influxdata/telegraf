@@ -93,10 +93,10 @@ func getNodeSearchDomain(px *Proxmox) error {
 		return err
 	}
 
-	if nodeDns.Data.Searchdomain == "" {
+	if nodeDns.Data.Search == "" {
 		return errors.New("search domain is not set")
 	}
-	px.nodeSearchDomain = nodeDns.Data.Searchdomain
+	px.nodeSearchDomain = nodeDns.Data.Search
 
 	return nil
 }
