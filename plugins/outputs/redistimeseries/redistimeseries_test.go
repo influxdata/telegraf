@@ -13,7 +13,7 @@ func TestConnectAndWrite(t *testing.T) {
 
 	address := testutil.GetLocalHost() + ":6379"
 	redis := &RedisTimeSeries{
-		addr: address,
+		Address: address,
 	}
 
 	// Verify that we can connect to the RedisTimeSeries server

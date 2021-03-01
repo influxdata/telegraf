@@ -165,11 +165,11 @@ func (r *RedisClient) Do(returnType string, args ...interface{}) (interface{}, e
 	case "integer":
 		return rawVal.Int64()
 	case "string":
-		return rawVal.String()
+		return rawVal.Text()
 	case "float":
 		return rawVal.Float64()
 	default:
-		return rawVal.String()
+		return rawVal.Text()
 	}
 }
 
