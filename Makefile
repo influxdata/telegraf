@@ -151,7 +151,6 @@ tidy:
 
 .PHONY: check
 check: fmtcheck vet
-	@$(MAKE) --no-print-directory tidy
 
 .PHONY: test-all
 test-all: fmtcheck vet
