@@ -19,7 +19,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -380,19 +379,15 @@ func decompressNoOp(data []byte) ([]byte, error) {
 }
 
 func (k *KinesisConsumer) configureDecompressionFunc() error {
-	gzipDecompression, noDecompression, zlibDecompression := "gzip", "none", "zlib"
-	err := choice.Check(k.DecompressionType, []string{gzipDecompression, noDecompression, zlibDecompression})
-	if err != nil {
-		return fmt.Errorf(`cannot verify "decompress" setting: %v`, err)
-	}
-
 	switch k.DecompressionType {
-	case gzipDecompression:
+	case "gzip":
 		k.decompressionFunc = decompressGzip
-	case zlibDecompression:
+	case "zlib":
 		k.decompressionFunc = decompressZlib
-	default:
+	case "none", "":
 		k.decompressionFunc = decompressNoOp
+	default:
+		return fmt.Errorf("unknown decompression %q", k.DecompressionType)
 	}
 	return nil
 }
