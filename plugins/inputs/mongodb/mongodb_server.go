@@ -12,7 +12,7 @@ import (
 )
 
 type Server struct {
-	Url        *url.URL
+	URL        *url.URL
 	Session    *mgo.Session
 	lastResult *MongoStatus
 
@@ -21,7 +21,7 @@ type Server struct {
 
 func (s *Server) getDefaultTags() map[string]string {
 	tags := make(map[string]string)
-	tags["hostname"] = s.Url.Host
+	tags["hostname"] = s.URL.Host
 	return tags
 }
 
@@ -275,7 +275,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, 
 			durationInSeconds = 1
 		}
 		data := NewMongodbData(
-			NewStatLine(*s.lastResult, *result, s.Url.Host, true, durationInSeconds),
+			NewStatLine(*s.lastResult, *result, s.URL.Host, true, durationInSeconds),
 			s.getDefaultTags(),
 		)
 		data.AddDefaultStats()

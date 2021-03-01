@@ -143,13 +143,13 @@ func (d *IfName) addTag(metric telegraf.Metric) error {
 		return nil
 	}
 
-	num_s, ok := metric.GetTag(d.SourceTag)
+	numS, ok := metric.GetTag(d.SourceTag)
 	if !ok {
 		d.Log.Warn("Source tag missing.")
 		return nil
 	}
 
-	num, err := strconv.ParseUint(num_s, 10, 64)
+	num, err := strconv.ParseUint(numS, 10, 64)
 	if err != nil {
 		return fmt.Errorf("couldn't parse source tag as uint")
 	}
@@ -378,21 +378,21 @@ func buildMap(gs snmp.GosnmpWrapper, tab *si.Table, column string) (nameMap, err
 
 	t := make(nameMap)
 	for _, v := range rtab.Rows {
-		i_str, ok := v.Tags["index"]
+		iStr, ok := v.Tags["index"]
 		if !ok {
 			//should always have an index tag because the table should
 			//always have IndexAsTag true
 			return nil, fmt.Errorf("no index tag")
 		}
-		i, err := strconv.ParseUint(i_str, 10, 64)
+		i, err := strconv.ParseUint(iStr, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("index tag isn't a uint")
 		}
-		name_if, ok := v.Fields[column]
+		nameIf, ok := v.Fields[column]
 		if !ok {
 			return nil, fmt.Errorf("field %s is missing", column)
 		}
-		name, ok := name_if.(string)
+		name, ok := nameIf.(string)
 		if !ok {
 			return nil, fmt.Errorf("field %s isn't a string", column)
 		}

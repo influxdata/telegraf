@@ -104,8 +104,8 @@ type NginxUpstreamCheckServer struct {
 	Port     uint16 `json:"port"`
 }
 
-// createHttpClient create a clients to access API
-func (check *NginxUpstreamCheck) createHttpClient() (*http.Client, error) {
+// createHTTPClient create a clients to access API
+func (check *NginxUpstreamCheck) createHTTPClient() (*http.Client, error) {
 	tlsConfig, err := check.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -121,8 +121,8 @@ func (check *NginxUpstreamCheck) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-// gatherJsonData query the data source and parse the response JSON
-func (check *NginxUpstreamCheck) gatherJsonData(url string, value interface{}) error {
+// gatherJSONData query the data source and parse the response JSON
+func (check *NginxUpstreamCheck) gatherJSONData(url string, value interface{}) error {
 
 	var method string
 	if check.Method != "" {
@@ -168,7 +168,7 @@ func (check *NginxUpstreamCheck) gatherJsonData(url string, value interface{}) e
 
 func (check *NginxUpstreamCheck) Gather(accumulator telegraf.Accumulator) error {
 	if check.client == nil {
-		client, err := check.createHttpClient()
+		client, err := check.createHTTPClient()
 
 		if err != nil {
 			return err
@@ -193,7 +193,7 @@ func (check *NginxUpstreamCheck) Gather(accumulator telegraf.Accumulator) error 
 func (check *NginxUpstreamCheck) gatherStatusData(url string, accumulator telegraf.Accumulator) error {
 	checkData := &NginxUpstreamCheckData{}
 
-	err := check.gatherJsonData(url, checkData)
+	err := check.gatherJSONData(url, checkData)
 	if err != nil {
 		return err
 	}

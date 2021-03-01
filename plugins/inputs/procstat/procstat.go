@@ -388,7 +388,7 @@ func (p *Procstat) findPids() ([]PID, map[string]string, error) {
 		pids, err = f.FullPattern(p.Pattern)
 		tags = map[string]string{"pattern": p.Pattern}
 	} else if p.User != "" {
-		pids, err = f.Uid(p.User)
+		pids, err = f.UID(p.User)
 		tags = map[string]string{"user": p.User}
 	} else if p.SystemdUnit != "" {
 		pids, err = p.systemdUnitPIDs()

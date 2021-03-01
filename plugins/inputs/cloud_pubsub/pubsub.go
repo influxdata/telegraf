@@ -269,12 +269,12 @@ func (ps *PubSub) getPubSubClient() (*pubsub.Client, error) {
 	return client, nil
 }
 
-func (ps *PubSub) getGCPSubscription(subId string) (subscription, error) {
+func (ps *PubSub) getGCPSubscription(subID string) (subscription, error) {
 	client, err := ps.getPubSubClient()
 	if err != nil {
 		return nil, err
 	}
-	s := client.Subscription(subId)
+	s := client.Subscription(subID)
 	s.ReceiveSettings = pubsub.ReceiveSettings{
 		NumGoroutines:          ps.MaxReceiverGoRoutines,
 		MaxExtension:           ps.MaxExtension.Duration,

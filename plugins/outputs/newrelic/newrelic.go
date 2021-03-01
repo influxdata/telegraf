@@ -20,7 +20,7 @@ type NewRelic struct {
 	InsightsKey  string            `toml:"insights_key"`
 	MetricPrefix string            `toml:"metric_prefix"`
 	Timeout      internal.Duration `toml:"timeout"`
-	HttpProxy    string            `toml:"http_proxy"`
+	HTTPProxy    string            `toml:"http_proxy"`
 
 	harvestor   *telemetry.Harvester
 	dc          *cumulative.DeltaCalculator
@@ -167,12 +167,12 @@ func init() {
 }
 
 func (nr *NewRelic) initClient() error {
-	if nr.HttpProxy == "" {
+	if nr.HTTPProxy == "" {
 		nr.client = http.Client{}
 		return nil
 	}
 
-	proxyURL, err := url.Parse(nr.HttpProxy)
+	proxyURL, err := url.Parse(nr.HTTPProxy)
 	if err != nil {
 		return err
 	}

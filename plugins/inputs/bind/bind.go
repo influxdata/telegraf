@@ -65,7 +65,7 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(b.gatherUrl(addr, acc))
+			acc.AddError(b.gatherURL(addr, acc))
 		}(addr)
 	}
 
@@ -73,7 +73,7 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (b *Bind) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+func (b *Bind) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	switch addr.Path {
 	case "":
 		// BIND 9.6 - 9.8
