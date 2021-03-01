@@ -93,18 +93,15 @@ func (vc *ValueCounter) Add(in telegraf.Metric) {
 func (vc *ValueCounter) Push(acc telegraf.Accumulator) {
 	for _, agg := range vc.cache {
 		fields := map[string]interface{}{}
-
+	FieldCount:
 		for field, count := range agg.fieldCount {
-			var matched = 0
 			for _, predicate := range vc.Predicates {
-				if predicate.predicateFunc(count, predicate.Value) {
-					matched++
+				if !predicate.predicateFunc(count, predicate.Value) {
+					continue FieldCount
 				}
 			}
 
-			if matched == len(vc.Predicates) {
-				fields[field] = count
-			}
+			fields[field] = count
 		}
 
 		acc.AddFields(agg.name, fields, agg.tags)
@@ -133,7 +130,6 @@ func knownPredicateFunctions() (map[string]predicate, []string) {
 }
 
 func (vc *ValueCounter) configurePredicates() error {
-
 	predicateFunctions, knownPredicates := knownPredicateFunctions()
 	var requestedPredicateTypes []string
 	for _, t := range vc.Predicates {
