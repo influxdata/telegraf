@@ -130,7 +130,7 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 }
 
 func (l *Logzio) send(metrics []byte) error {
-	req, err := http.NewRequest("POST", l.authUrl(), bytes.NewBuffer(metrics))
+	req, err := http.NewRequest("POST", l.authURL(), bytes.NewBuffer(metrics))
 	if err != nil {
 		return fmt.Errorf("unable to create http.Request, %s", err.Error())
 	}
@@ -150,7 +150,7 @@ func (l *Logzio) send(metrics []byte) error {
 	return nil
 }
 
-func (l *Logzio) authUrl() string {
+func (l *Logzio) authURL() string {
 	return fmt.Sprintf("%s/?token=%s", l.URL, l.Token)
 }
 

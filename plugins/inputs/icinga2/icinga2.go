@@ -115,7 +115,7 @@ func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 	}
 }
 
-func (i *Icinga2) createHttpClient() (*http.Client, error) {
+func (i *Icinga2) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := i.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -137,22 +137,22 @@ func (i *Icinga2) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if i.client == nil {
-		client, err := i.createHttpClient()
+		client, err := i.createHTTPClient()
 		if err != nil {
 			return err
 		}
 		i.client = client
 	}
 
-	requestUrl := "%s/v1/objects/%s?attrs=name&attrs=display_name&attrs=state&attrs=check_command"
+	requestURL := "%s/v1/objects/%s?attrs=name&attrs=display_name&attrs=state&attrs=check_command"
 
 	// Note: attrs=host_name is only valid for 'services' requests, using check.Attrs.HostName for the host
 	//       'hosts' requests will need to use attrs=name only, using check.Attrs.Name for the host
 	if i.ObjectType == "services" {
-		requestUrl += "&attrs=host_name"
+		requestURL += "&attrs=host_name"
 	}
 
-	url := fmt.Sprintf(requestUrl, i.Server, i.ObjectType)
+	url := fmt.Sprintf(requestURL, i.Server, i.ObjectType)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

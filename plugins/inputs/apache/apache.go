@@ -67,7 +67,7 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if n.client == nil {
-		client, err := n.createHttpClient()
+		client, err := n.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(n.gatherUrl(addr, acc))
+			acc.AddError(n.gatherURL(addr, acc))
 		}(addr)
 	}
 
@@ -92,7 +92,7 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *Apache) createHttpClient() (*http.Client, error) {
+func (n *Apache) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := n.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ func (n *Apache) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+func (n *Apache) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	req, err := http.NewRequest("GET", addr.String(), nil)
 	if err != nil {
 		return fmt.Errorf("error on new request to %s : %s", addr.String(), err)

@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -34,6 +35,8 @@ type CloudWatch struct {
 	StatisticExclude []string        `toml:"statistic_exclude"`
 	StatisticInclude []string        `toml:"statistic_include"`
 	Timeout          config.Duration `toml:"timeout"`
+
+	proxy.HTTPProxy
 
 	Period         config.Duration `toml:"period"`
 	Delay          config.Duration `toml:"delay"`
@@ -106,6 +109,9 @@ func (c *CloudWatch) SampleConfig() string {
   ## default.
   ##   ex: endpoint_url = "http://localhost:8000"
   # endpoint_url = ""
+
+  ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
+  # http_proxy_url = "http://localhost:8888"
 
   # The minimum period for Cloudwatch metrics is 1 minute (60s). However not all
   # metrics are made available to the 1 minute period. Some are collected at
@@ -188,7 +194,10 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if c.client == nil {
-		c.initializeCloudWatch()
+		err := c.initializeCloudWatch()
+		if err != nil {
+			return err
+		}
 	}
 
 	filteredMetrics, err := getFilteredMetrics(c)
@@ -249,7 +258,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	return c.aggregateMetrics(acc, results)
 }
 
-func (c *CloudWatch) initializeCloudWatch() {
+func (c *CloudWatch) initializeCloudWatch() error {
 	credentialConfig := &internalaws.CredentialConfig{
 		Region:      c.Region,
 		AccessKey:   c.AccessKey,
@@ -262,11 +271,16 @@ func (c *CloudWatch) initializeCloudWatch() {
 	}
 	configProvider := credentialConfig.Credentials()
 
+	proxy, err := c.HTTPProxy.Proxy()
+	if err != nil {
+		return err
+	}
+
 	cfg := &aws.Config{
 		HTTPClient: &http.Client{
 			// use values from DefaultTransport
 			Transport: &http.Transport{
-				Proxy: http.ProxyFromEnvironment,
+				Proxy: proxy,
 				DialContext: (&net.Dialer{
 					Timeout:   30 * time.Second,
 					KeepAlive: 30 * time.Second,
@@ -283,6 +297,8 @@ func (c *CloudWatch) initializeCloudWatch() {
 
 	loglevel := aws.LogOff
 	c.client = cloudwatch.New(configProvider, cfg.WithLogLevel(loglevel))
+
+	return nil
 }
 
 type filteredMetric struct {

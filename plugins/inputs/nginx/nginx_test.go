@@ -61,16 +61,16 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 		Urls: []string{fmt.Sprintf("%s/tengine_status", ts.URL)},
 	}
 
-	var acc_nginx testutil.Accumulator
-	var acc_tengine testutil.Accumulator
+	var accNginx testutil.Accumulator
+	var accTengine testutil.Accumulator
 
-	err_nginx := acc_nginx.GatherError(n.Gather)
-	err_tengine := acc_tengine.GatherError(nt.Gather)
+	errNginx := accNginx.GatherError(n.Gather)
+	errTengine := accTengine.GatherError(nt.Gather)
 
-	require.NoError(t, err_nginx)
-	require.NoError(t, err_tengine)
+	require.NoError(t, errNginx)
+	require.NoError(t, errTengine)
 
-	fields_nginx := map[string]interface{}{
+	fieldsNginx := map[string]interface{}{
 		"active":   uint64(585),
 		"accepts":  uint64(85340),
 		"handled":  uint64(85340),
@@ -80,7 +80,7 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 		"waiting":  uint64(446),
 	}
 
-	fields_tengine := map[string]interface{}{
+	fieldsTengine := map[string]interface{}{
 		"active":   uint64(403),
 		"accepts":  uint64(853),
 		"handled":  uint64(8533),
@@ -108,6 +108,6 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 	}
 
 	tags := map[string]string{"server": host, "port": port}
-	acc_nginx.AssertContainsTaggedFields(t, "nginx", fields_nginx, tags)
-	acc_tengine.AssertContainsTaggedFields(t, "nginx", fields_tengine, tags)
+	accNginx.AssertContainsTaggedFields(t, "nginx", fieldsNginx, tags)
+	accTengine.AssertContainsTaggedFields(t, "nginx", fieldsTengine, tags)
 }

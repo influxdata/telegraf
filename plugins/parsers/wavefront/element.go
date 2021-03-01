@@ -55,12 +55,12 @@ func (ep *ValueParser) parse(p *PointParser, pt *Point) error {
 	}
 
 	p.writeBuf.Reset()
-	if tok == MINUS_SIGN {
+	if tok == MinusSign {
 		p.writeBuf.WriteString(lit)
 		tok, lit = p.scan()
 	}
 
-	for tok != EOF && (tok == LETTER || tok == NUMBER || tok == DOT || tok == MINUS_SIGN) {
+	for tok != EOF && (tok == Letter || tok == Number || tok == Dot || tok == MinusSign) {
 		p.writeBuf.WriteString(lit)
 		tok, lit = p.scan()
 	}
@@ -84,7 +84,7 @@ func (ep *TimestampParser) parse(p *PointParser, pt *Point) error {
 		return fmt.Errorf("found %q, expected number", lit)
 	}
 
-	if tok != NUMBER {
+	if tok != Number {
 		if ep.optional {
 			p.unscanTokens(2)
 			return setTimestamp(pt, 0, 1)
@@ -93,7 +93,7 @@ func (ep *TimestampParser) parse(p *PointParser, pt *Point) error {
 	}
 
 	p.writeBuf.Reset()
-	for tok != EOF && tok == NUMBER {
+	for tok != EOF && tok == Number {
 		p.writeBuf.WriteString(lit)
 		tok, lit = p.scan()
 	}
@@ -154,7 +154,7 @@ func (ep *TagParser) parse(p *PointParser, pt *Point) error {
 	}
 
 	next, lit := p.scan()
-	if next != EQUALS {
+	if next != Equals {
 		return fmt.Errorf("found %q, expected equals", lit)
 	}
 
@@ -170,8 +170,8 @@ func (ep *TagParser) parse(p *PointParser, pt *Point) error {
 }
 
 func (ep *WhiteSpaceParser) parse(p *PointParser, pt *Point) error {
-	tok := WS
-	for tok != EOF && tok == WS {
+	tok := Ws
+	for tok != EOF && tok == Ws {
 		tok, _ = p.scan()
 	}
 
@@ -202,9 +202,9 @@ func parseQuotedLiteral(p *PointParser) (string, error) {
 
 	escaped := false
 	tok, lit := p.scan()
-	for tok != EOF && (tok != QUOTES || (tok == QUOTES && escaped)) {
+	for tok != EOF && (tok != Quotes || (tok == Quotes && escaped)) {
 		// let everything through
-		escaped = tok == BACKSLASH
+		escaped = tok == Backslash
 		p.writeBuf.WriteString(lit)
 		tok, lit = p.scan()
 	}
@@ -220,19 +220,19 @@ func parseLiteral(p *PointParser) (string, error) {
 		return "", fmt.Errorf("found %q, expected literal", lit)
 	}
 
-	if tok == QUOTES {
+	if tok == Quotes {
 		return parseQuotedLiteral(p)
 	}
 
 	p.writeBuf.Reset()
-	for tok != EOF && tok > literal_beg && tok < literal_end {
+	for tok != EOF && tok > literalBeg && tok < literalEnd {
 		p.writeBuf.WriteString(lit)
 		tok, lit = p.scan()
-		if tok == DELTA {
+		if tok == Delta {
 			return "", errors.New("found delta inside metric name")
 		}
 	}
-	if tok == QUOTES {
+	if tok == Quotes {
 		return "", errors.New("found quote inside unquoted literal")
 	}
 	p.unscan()

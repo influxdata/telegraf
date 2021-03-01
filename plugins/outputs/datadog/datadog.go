@@ -47,7 +47,7 @@ type Metric struct {
 
 type Point [2]float64
 
-const datadogApi = "https://app.datadoghq.com/api/v1/series"
+const datadogAPI = "https://app.datadoghq.com/api/v1/series"
 
 func (d *Datadog) Connect() error {
 	if d.Apikey == "" {
@@ -104,22 +104,22 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	redactedApiKey := "****************"
+	redactedAPIKey := "****************"
 	ts.Series = make([]*Metric, metricCounter)
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {
 		return fmt.Errorf("unable to marshal TimeSeries, %s", err.Error())
 	}
-	req, err := http.NewRequest("POST", d.authenticatedUrl(), bytes.NewBuffer(tsBytes))
+	req, err := http.NewRequest("POST", d.authenticatedURL(), bytes.NewBuffer(tsBytes))
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s", strings.Replace(err.Error(), d.Apikey, redactedApiKey, -1))
+		return fmt.Errorf("unable to create http.Request, %s", strings.Replace(err.Error(), d.Apikey, redactedAPIKey, -1))
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := d.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error POSTing metrics, %s", strings.Replace(err.Error(), d.Apikey, redactedApiKey, -1))
+		return fmt.Errorf("error POSTing metrics, %s", strings.Replace(err.Error(), d.Apikey, redactedAPIKey, -1))
 	}
 	defer resp.Body.Close()
 
@@ -138,7 +138,7 @@ func (d *Datadog) Description() string {
 	return "Configuration for DataDog API to send metrics to."
 }
 
-func (d *Datadog) authenticatedUrl() string {
+func (d *Datadog) authenticatedURL() string {
 	q := url.Values{
 		"api_key": []string{d.Apikey},
 	}
@@ -208,7 +208,7 @@ func (d *Datadog) Close() error {
 func init() {
 	outputs.Add("datadog", func() telegraf.Output {
 		return &Datadog{
-			URL: datadogApi,
+			URL: datadogAPI,
 		}
 	})
 }

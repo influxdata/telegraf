@@ -30,7 +30,7 @@ type AzureMonitor struct {
 	StringsAsDimensions bool            `toml:"strings_as_dimensions"`
 	Region              string          `toml:"region"`
 	ResourceID          string          `toml:"resource_id"`
-	EndpointUrl         string          `toml:"endpoint_url"`
+	EndpointURL         string          `toml:"endpoint_url"`
 	Log                 telegraf.Logger `toml:"-"`
 
 	url    string
@@ -158,7 +158,7 @@ func (a *AzureMonitor) Connect() error {
 	var err error
 	var region string
 	var resourceID string
-	var endpointUrl string
+	var endpointURL string
 
 	if a.Region == "" || a.ResourceID == "" {
 		// Pull region and resource identifier
@@ -173,8 +173,8 @@ func (a *AzureMonitor) Connect() error {
 	if a.ResourceID != "" {
 		resourceID = a.ResourceID
 	}
-	if a.EndpointUrl != "" {
-		endpointUrl = a.EndpointUrl
+	if a.EndpointURL != "" {
+		endpointURL = a.EndpointURL
 	}
 
 	if resourceID == "" {
@@ -183,10 +183,10 @@ func (a *AzureMonitor) Connect() error {
 		return fmt.Errorf("no region configured or available via VM instance metadata")
 	}
 
-	if endpointUrl == "" {
+	if endpointURL == "" {
 		a.url = fmt.Sprintf(urlTemplate, region, resourceID)
 	} else {
-		a.url = fmt.Sprintf(urlOverrideTemplate, endpointUrl, resourceID)
+		a.url = fmt.Sprintf(urlOverrideTemplate, endpointURL, resourceID)
 	}
 
 	a.Log.Debugf("Writing to Azure Monitor URL: %s", a.url)

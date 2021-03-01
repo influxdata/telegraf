@@ -157,8 +157,8 @@ type Node struct {
 	Uptime                   int64   `json:"uptime"`
 	MnesiaDiskTxCount        int64   `json:"mnesia_disk_tx_count"`
 	MnesiaDiskTxCountDetails Details `json:"mnesia_disk_tx_count_details"`
-	MnesiaRamTxCount         int64   `json:"mnesia_ram_tx_count"`
-	MnesiaRamTxCountDetails  Details `json:"mnesia_ram_tx_count_details"`
+	MnesiaRAMTxCount         int64   `json:"mnesia_ram_tx_count"`
+	MnesiaRAMTxCountDetails  Details `json:"mnesia_ram_tx_count_details"`
 	GcNum                    int64   `json:"gc_num"`
 	GcNumDetails             Details `json:"gc_num_details"`
 	GcBytesReclaimed         int64   `json:"gc_bytes_reclaimed"`
@@ -491,8 +491,8 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				"uptime":                    node.Uptime,
 				"mnesia_disk_tx_count":      node.MnesiaDiskTxCount,
 				"mnesia_disk_tx_count_rate": node.MnesiaDiskTxCountDetails.Rate,
-				"mnesia_ram_tx_count":       node.MnesiaRamTxCount,
-				"mnesia_ram_tx_count_rate":  node.MnesiaRamTxCountDetails.Rate,
+				"mnesia_ram_tx_count":       node.MnesiaRAMTxCount,
+				"mnesia_ram_tx_count_rate":  node.MnesiaRAMTxCountDetails.Rate,
 				"gc_num":                    node.GcNum,
 				"gc_num_rate":               node.GcNumDetails.Rate,
 				"gc_bytes_reclaimed":        node.GcBytesReclaimed,

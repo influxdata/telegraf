@@ -217,23 +217,33 @@ func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
 	sort.Slice(addrs, func(i, j int) bool { return addrs[i] < addrs[j] })
 
 	ii := 0
+	maxQuantity := 1
 	var registersRange []registerRange
+	if name == cDiscreteInputs || name == cCoils {
+		maxQuantity = 2000
+	} else if name == cInputRegisters || name == cHoldingRegisters {
+		maxQuantity = 125
+	}
 
 	// Get range of consecutive integers
 	// [1, 2, 3, 5, 6, 10, 11, 12, 14]
 	// (1, 3) , (5, 2) , (10, 3), (14 , 1)
 	for range addrs {
-		if ii < len(addrs) {
-			start := addrs[ii]
-			end := start
-
-			for ii < len(addrs)-1 && addrs[ii+1]-addrs[ii] == 1 {
-				end = addrs[ii+1]
-				ii++
-			}
-			ii++
-			registersRange = append(registersRange, registerRange{start, end - start + 1})
+		if ii >= len(addrs) {
+			break
 		}
+		quantity := 1
+		start := addrs[ii]
+		end := start
+
+		for ii < len(addrs)-1 && addrs[ii+1]-addrs[ii] == 1 && quantity < maxQuantity {
+			end = addrs[ii+1]
+			ii++
+			quantity++
+		}
+		ii++
+
+		registersRange = append(registersRange, registerRange{start, end - start + 1})
 	}
 
 	m.registers = append(m.registers, register{name, registersRange, fields})
@@ -434,7 +444,7 @@ func (m *Modbus) getFields() error {
 					for bitPosition := 0; bitPosition < 8; bitPosition++ {
 						bitRawValues[address] = getBitValue(readValue, bitPosition)
 						address = address + 1
-						if address+1 > rr.length {
+						if address > rr.address+rr.length {
 							break
 						}
 					}

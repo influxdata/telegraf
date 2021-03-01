@@ -169,6 +169,96 @@ func TestSqlServer_MultipleInit(t *testing.T) {
 	assert.Equal(t, s2.isInitialized, true)
 }
 
+func TestSqlServer_AGQueriesApplicableForDatabaseTypeSQLServer(t *testing.T) {
+	// This test case checks where Availability Group (AG / HADR) queries return an output when included for processing for DatabaseType = SQLServer
+	// And they should not be processed when DatabaseType = AzureSQLDB
+
+	// Please change the connection string to connect to relevant database when executing the test case
+
+	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
+
+	testServer := "Server=127.0.0.1;Port=1433;Database=testdb1;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+
+	s := &SQLServer{
+		Servers:      []string{testServer},
+		DatabaseType: "SQLServer",
+		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
+	}
+	s2 := &SQLServer{
+		Servers:      []string{testServer},
+		DatabaseType: "AzureSQLDB",
+		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
+	}
+
+	var acc, acc2 testutil.Accumulator
+	err := s.Gather(&acc)
+	require.NoError(t, err)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, false)
+
+	err = s2.Gather(&acc2)
+	require.NoError(t, err)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, true)
+
+	// acc includes size metrics, and excludes memory metrics
+	assert.True(t, acc.HasMeasurement("sqlserver_hadr_replica_states"))
+	assert.True(t, acc.HasMeasurement("sqlserver_hadr_dbreplica_states"))
+
+	// acc2 includes memory metrics, and excludes size metrics
+	assert.False(t, acc2.HasMeasurement("sqlserver_hadr_replica_states"))
+	assert.False(t, acc2.HasMeasurement("sqlserver_hadr_dbreplica_states"))
+}
+
+func TestSqlServer_AGQueryFieldsOutputBasedOnSQLServerVersion(t *testing.T) {
+	// This test case checks where Availability Group (AG / HADR) queries return specific fields supported by corresponding SQL Server version database being connected to.
+
+	// Please change the connection strings to connect to relevant database when executing the test case
+
+	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
+
+	testServer2019 := "Server=127.0.0.10;Port=1433;Database=testdb2019;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+	testServer2012 := "Server=127.0.0.20;Port=1433;Database=testdb2012;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+
+	s2019 := &SQLServer{
+		Servers:      []string{testServer2019},
+		DatabaseType: "SQLServer",
+		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
+	}
+	s2012 := &SQLServer{
+		Servers:      []string{testServer2012},
+		DatabaseType: "SQLServer",
+		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
+	}
+
+	var acc2019, acc2012 testutil.Accumulator
+	err := s2019.Gather(&acc2019)
+	require.NoError(t, err)
+	assert.Equal(t, s2019.isInitialized, true)
+	assert.Equal(t, s2012.isInitialized, false)
+
+	err = s2012.Gather(&acc2012)
+	require.NoError(t, err)
+	assert.Equal(t, s2019.isInitialized, true)
+	assert.Equal(t, s2012.isInitialized, true)
+
+	// acc2019 includes new HADR query fields
+	assert.True(t, acc2019.HasField("sqlserver_hadr_replica_states", "basic_features"))
+	assert.True(t, acc2019.HasField("sqlserver_hadr_replica_states", "is_distributed"))
+	assert.True(t, acc2019.HasField("sqlserver_hadr_replica_states", "seeding_mode"))
+	assert.True(t, acc2019.HasTag("sqlserver_hadr_replica_states", "seeding_mode_desc"))
+	assert.True(t, acc2019.HasField("sqlserver_hadr_dbreplica_states", "is_primary_replica"))
+	assert.True(t, acc2019.HasField("sqlserver_hadr_dbreplica_states", "secondary_lag_seconds"))
+
+	// acc2012 does not include new HADR query fields
+	assert.False(t, acc2012.HasField("sqlserver_hadr_replica_states", "basic_features"))
+	assert.False(t, acc2012.HasField("sqlserver_hadr_replica_states", "is_distributed"))
+	assert.False(t, acc2012.HasField("sqlserver_hadr_replica_states", "seeding_mode"))
+	assert.False(t, acc2012.HasTag("sqlserver_hadr_replica_states", "seeding_mode_desc"))
+	assert.False(t, acc2012.HasField("sqlserver_hadr_dbreplica_states", "is_primary_replica"))
+	assert.False(t, acc2012.HasField("sqlserver_hadr_dbreplica_states", "secondary_lag_seconds"))
+}
+
 const mockPerformanceMetrics = `measurement;servername;type;Point In Time Recovery;Available physical memory (bytes);Average pending disk IO;Average runnable tasks;Average tasks;Buffer pool rate (bytes/sec);Connection memory per connection (bytes);Memory grant pending;Page File Usage (%);Page lookup per batch request;Page split per batch request;Readahead per page read;Signal wait (%);Sql compilation per batch request;Sql recompilation per batch request;Total target memory ratio
 Performance metrics;WIN8-DEV;Performance metrics;0;6353158144;0;0;7;2773;415061;0;25;229371;130;10;18;188;52;14`
 

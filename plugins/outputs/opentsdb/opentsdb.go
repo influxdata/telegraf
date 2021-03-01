@@ -22,7 +22,7 @@ var (
 		`%`, "-",
 		"#", "-",
 		"$", "-")
-	defaultHttpPath  = "/api/put"
+	defaultHTTPPath  = "/api/put"
 	defaultSeparator = "_"
 )
 
@@ -32,8 +32,8 @@ type OpenTSDB struct {
 	Host string `toml:"host"`
 	Port int    `toml:"port"`
 
-	HttpBatchSize int    `toml:"http_batch_size"` // deprecated httpBatchSize form in 1.8
-	HttpPath      string `toml:"http_path"`
+	HTTPBatchSize int    `toml:"http_batch_size"` // deprecated httpBatchSize form in 1.8
+	HTTPPath      string `toml:"http_path"`
 
 	Debug bool `toml:"debug"`
 
@@ -116,20 +116,20 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 	if u.Scheme == "" || u.Scheme == "tcp" {
 		return o.WriteTelnet(metrics, u)
 	} else if u.Scheme == "http" || u.Scheme == "https" {
-		return o.WriteHttp(metrics, u)
+		return o.WriteHTTP(metrics, u)
 	} else {
 		return fmt.Errorf("unknown scheme in host parameter")
 	}
 }
 
-func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
+func (o *OpenTSDB) WriteHTTP(metrics []telegraf.Metric, u *url.URL) error {
 	http := openTSDBHttp{
 		Host:      u.Host,
 		Port:      o.Port,
 		Scheme:    u.Scheme,
 		User:      u.User,
-		BatchSize: o.HttpBatchSize,
-		Path:      o.HttpPath,
+		BatchSize: o.HTTPBatchSize,
+		Path:      o.HTTPPath,
 		Debug:     o.Debug,
 	}
 
@@ -151,7 +151,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 				continue
 			}
 
-			metric := &HttpMetric{
+			metric := &HTTPMetric{
 				Metric: sanitize(fmt.Sprintf("%s%s%s%s",
 					o.Prefix, m.Name(), o.Separator, fieldName)),
 				Tags:      tags,
@@ -276,7 +276,7 @@ func sanitize(value string) string {
 func init() {
 	outputs.Add("opentsdb", func() telegraf.Output {
 		return &OpenTSDB{
-			HttpPath:  defaultHttpPath,
+			HTTPPath:  defaultHTTPPath,
 			Separator: defaultSeparator,
 		}
 	})

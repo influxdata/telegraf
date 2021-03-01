@@ -33,7 +33,7 @@ type Elasticsearch struct {
 	ManageTemplate      bool
 	TemplateName        string
 	OverwriteTemplate   bool
-	ForceDocumentId     bool
+	ForceDocumentID     bool `toml:"force_document_id"`
 	MajorReleaseNumber  int
 	tls.ClientConfig
 
@@ -284,7 +284,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 		br := elastic.NewBulkIndexRequest().Index(indexName).Doc(m)
 
-		if a.ForceDocumentId {
+		if a.ForceDocumentID {
 			id := GetPointID(metric)
 			br.Id(id)
 		}

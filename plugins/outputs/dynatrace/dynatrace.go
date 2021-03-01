@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	oneAgentMetricsUrl   = "http://127.0.0.1:14499/metrics/ingest"
+	oneAgentMetricsURL   = "http://127.0.0.1:14499/metrics/ingest"
 	dtIngestApiLineLimit = 1000
 )
 
@@ -295,9 +295,9 @@ func (d *Dynatrace) Init() error {
 	d.State = make(map[string]string)
 	if len(d.URL) == 0 {
 		d.Log.Infof("Dynatrace URL is empty, defaulting to OneAgent metrics interface")
-		d.URL = oneAgentMetricsUrl
+		d.URL = oneAgentMetricsURL
 	}
-	if d.URL != oneAgentMetricsUrl && len(d.APIToken) == 0 {
+	if d.URL != oneAgentMetricsURL && len(d.APIToken) == 0 {
 		d.Log.Errorf("Dynatrace api_token is a required field for Dynatrace output")
 		return fmt.Errorf("api_token is a required field for Dynatrace output")
 	}

@@ -38,20 +38,20 @@ func (c *conn) Request(
 	requestData string,
 ) (retout []byte, reterr []byte, err error) {
 	defer c.rwc.Close()
-	var reqId uint16 = 1
+	var reqID uint16 = 1
 
-	err = c.writeBeginRequest(reqId, uint16(roleResponder), 0)
+	err = c.writeBeginRequest(reqID, uint16(roleResponder), 0)
 	if err != nil {
 		return
 	}
 
-	err = c.writePairs(typeParams, reqId, env)
+	err = c.writePairs(typeParams, reqID, env)
 	if err != nil {
 		return
 	}
 
 	if len(requestData) > 0 {
-		if err = c.writeRecord(typeStdin, reqId, []byte(requestData)); err != nil {
+		if err = c.writeRecord(typeStdin, reqID, []byte(requestData)); err != nil {
 			return
 		}
 	}

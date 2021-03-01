@@ -1,6 +1,7 @@
 package cloudwatch
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -332,4 +334,17 @@ func TestUpdateWindow(t *testing.T) {
 	// subsequent window uses previous end time as start time
 	assert.EqualValues(t, c.windowEnd, now.Add(-time.Duration(c.Delay)))
 	assert.EqualValues(t, c.windowStart, newStartTime)
+}
+
+func TestProxyFunction(t *testing.T) {
+	c := &CloudWatch{
+		HTTPProxy: proxy.HTTPProxy{HTTPProxyURL: "http://www.penguins.com"},
+	}
+
+	proxyFunction, err := c.HTTPProxy.Proxy()
+	require.NoError(t, err)
+
+	proxyResult, err := proxyFunction(&http.Request{})
+	require.NoError(t, err)
+	require.Equal(t, "www.penguins.com", proxyResult.Host)
 }

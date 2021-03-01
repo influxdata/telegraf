@@ -115,7 +115,7 @@ streams_resets                  4    20989756
 streams_noresets                4    503182328
 bogus_streams                   4    0
 `
-const pool_ioContents = `11 3 0x00 1 80 2225326830828 32953476980628
+const poolIoContents = `11 3 0x00 1 80 2225326830828 32953476980628
 nread    nwritten reads    writes   wtime    wlentime wupdate  rtime    rlentime rupdate  wcnt     rcnt
 1884160  6450688  22       978      272187126 2850519036 2263669418655 424226814 2850519036 2263669871823 0        0
 `
@@ -142,7 +142,7 @@ erpt-set-failed                 4    202
 fmri-set-failed                 4    303
 payload-set-failed              4    404
 `
-const dmu_txContents = `5 1 0x01 11 528 34103260832 437683925071438
+const dmuTxContents = `5 1 0x01 11 528 34103260832 437683925071438
 name                            type data
 dmu_tx_assigned                 4    39321636
 dmu_tx_delay                    4    111
@@ -252,7 +252,7 @@ func TestZfsPoolMetrics(t *testing.T) {
 	err = os.MkdirAll(testKstatPath+"/HOME", 0755)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/HOME/io", []byte(pool_ioContents), 0644)
+	err = ioutil.WriteFile(testKstatPath+"/HOME/io", []byte(poolIoContents), 0644)
 	require.NoError(t, err)
 
 	err = ioutil.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0644)
@@ -306,7 +306,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	err = ioutil.WriteFile(testKstatPath+"/fm", []byte(fmContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/dmu_tx", []byte(dmu_txContents), 0644)
+	err = ioutil.WriteFile(testKstatPath+"/dmu_tx", []byte(dmuTxContents), 0644)
 	require.NoError(t, err)
 
 	err = ioutil.WriteFile(testKstatPath+"/abdstats", []byte(abdstatsContents), 0644)

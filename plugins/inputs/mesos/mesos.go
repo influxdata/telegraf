@@ -159,7 +159,7 @@ func (m *Mesos) initialize() error {
 		m.slaveURLs = append(m.slaveURLs, u)
 	}
 
-	client, err := m.createHttpClient()
+	client, err := m.createHTTPClient()
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (m *Mesos) createHttpClient() (*http.Client, error) {
+func (m *Mesos) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := m.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err

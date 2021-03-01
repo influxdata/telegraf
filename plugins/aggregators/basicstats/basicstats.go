@@ -17,18 +17,18 @@ type BasicStats struct {
 }
 
 type configuredStats struct {
-	count             bool
-	min               bool
-	max               bool
-	mean              bool
-	variance          bool
-	stdev             bool
-	sum               bool
-	diff              bool
-	non_negative_diff bool
-	rate              bool
-	non_negative_rate bool
-	interval          bool
+	count           bool
+	min             bool
+	max             bool
+	mean            bool
+	variance        bool
+	stdev           bool
+	sum             bool
+	diff            bool
+	nonNegativeDiff bool
+	rate            bool
+	nonNegativeRate bool
+	interval        bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -197,13 +197,13 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 				if b.statsConfig.diff {
 					fields[k+"_diff"] = v.diff
 				}
-				if b.statsConfig.non_negative_diff && v.diff >= 0 {
+				if b.statsConfig.nonNegativeDiff && v.diff >= 0 {
 					fields[k+"_non_negative_diff"] = v.diff
 				}
 				if b.statsConfig.rate {
 					fields[k+"_rate"] = v.rate
 				}
-				if b.statsConfig.non_negative_rate && v.diff >= 0 {
+				if b.statsConfig.nonNegativeRate && v.diff >= 0 {
 					fields[k+"_non_negative_rate"] = v.rate
 				}
 				if b.statsConfig.interval {
@@ -242,11 +242,11 @@ func (b *BasicStats) parseStats() *configuredStats {
 		case "diff":
 			parsed.diff = true
 		case "non_negative_diff":
-			parsed.non_negative_diff = true
+			parsed.nonNegativeDiff = true
 		case "rate":
 			parsed.rate = true
 		case "non_negative_rate":
-			parsed.non_negative_rate = true
+			parsed.nonNegativeRate = true
 		case "interval":
 			parsed.interval = true
 		default:
@@ -260,16 +260,16 @@ func (b *BasicStats) parseStats() *configuredStats {
 func (b *BasicStats) getConfiguredStats() {
 	if b.Stats == nil {
 		b.statsConfig = &configuredStats{
-			count:             true,
-			min:               true,
-			max:               true,
-			mean:              true,
-			variance:          true,
-			stdev:             true,
-			sum:               false,
-			non_negative_diff: false,
-			rate:              false,
-			non_negative_rate: false,
+			count:           true,
+			min:             true,
+			max:             true,
+			mean:            true,
+			variance:        true,
+			stdev:           true,
+			sum:             false,
+			nonNegativeDiff: false,
+			rate:            false,
+			nonNegativeRate: false,
 		}
 	} else {
 		b.statsConfig = b.parseStats()
