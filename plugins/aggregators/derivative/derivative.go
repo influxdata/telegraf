@@ -159,7 +159,7 @@ func convert(in interface{}) (float64, bool) {
 func (d *Derivative) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range d.cache {
 		if aggregate.first == aggregate.last {
-			d.Log.Warnf("Same first and last event for %q, skipping.", aggregate.name)
+			d.Log.Debugf("Same first and last event for %q, skipping.", aggregate.name)
 			continue
 		}
 		var denominator float64
@@ -169,17 +169,17 @@ func (d *Derivative) Push(acc telegraf.Accumulator) {
 			var last float64
 			var found bool
 			if first, found = aggregate.first.fields[d.Variable]; !found {
-				d.Log.Warnf("Did not find %q in first event for %q.", d.Variable, aggregate.name)
+				d.Log.Debugf("Did not find %q in first event for %q.", d.Variable, aggregate.name)
 				continue
 			}
 			if last, found = aggregate.last.fields[d.Variable]; !found {
-				d.Log.Warnf("Did not find %q in last event for %q.", d.Variable, aggregate.name)
+				d.Log.Debugf("Did not find %q in last event for %q.", d.Variable, aggregate.name)
 				continue
 			}
 			denominator = last - first
 		}
 		if denominator == 0 {
-			d.Log.Warnf("Got difference 0 in denominator for %q, skipping.", aggregate.name)
+			d.Log.Debugf("Got difference 0 in denominator for %q, skipping.", aggregate.name)
 			continue
 		}
 		derivatives := make(map[string]interface{})
