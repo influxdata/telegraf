@@ -102,7 +102,8 @@ jobs:
       - checkout
       - restore_cache:
           key: mac-go-mod-v2-{{ checksum "go.sum" }}
-      - run: 'brew install go'
+      - run: 'curl https://raw.githubusercontent.com/Homebrew/homebrew-core/a8c62d0d1e88104a47f51ef911ceb8abf3c7f071/Formula/go.rb --output go.rb'
+      - run: 'brew install go.rb'
       - run: 'make deps'
       - run: 'make tidy'
       - save_cache:
