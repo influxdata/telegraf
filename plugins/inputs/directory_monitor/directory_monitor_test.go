@@ -32,7 +32,6 @@ func TestCSVGZImport(t *testing.T) {
 		FinishedDirectory:  finishedDirectory,
 		MaxBufferedMetrics: 1000,
 		FileQueueSize:      100000,
-		ParallelReaders:    6,
 	}
 	err = r.Init()
 	require.NoError(t, err)
@@ -103,7 +102,6 @@ func TestMultipleJSONFileImports(t *testing.T) {
 		FinishedDirectory:  finishedDirectory,
 		MaxBufferedMetrics: 1000,
 		FileQueueSize:      1000,
-		ParallelReaders:    6,
 	}
 	err = r.Init()
 	require.NoError(t, err)
