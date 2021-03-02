@@ -71,6 +71,14 @@ commands:
           paths:
             - 'dist'
 jobs:
+  linter:
+    executor: go-1_15
+    steps:
+      - checkout
+      - restore_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+      - run: wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.37.0
+      - run: make lint
   deps:
     executor: go-1_15
     steps:
@@ -178,6 +186,7 @@ workflows:
   version: 2
   check:
     jobs:
+      - 'linter'
       - 'macdeps':
           filters:
             tags:
@@ -246,6 +255,7 @@ workflows:
             - 'release'
   nightly:
     jobs:
+      - 'linter'
       - 'deps'
       - 'macdeps'
       - 'test-go-1_14':

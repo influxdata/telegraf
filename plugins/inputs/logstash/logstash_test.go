@@ -36,10 +36,10 @@ func Test_Logstash5GatherProcessStats(test *testing.T) {
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
-		client, err := logstashTest.createHttpClient()
+		client, err := logstashTest.createHTTPClient()
 
 		if err != nil {
-			test.Logf("Can't createHttpClient")
+			test.Logf("Can't createHTTPClient")
 		}
 		logstashTest.client = client
 	}
@@ -85,10 +85,10 @@ func Test_Logstash6GatherProcessStats(test *testing.T) {
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
-		client, err := logstashTest.createHttpClient()
+		client, err := logstashTest.createHTTPClient()
 
 		if err != nil {
-			test.Logf("Can't createHttpClient")
+			test.Logf("Can't createHTTPClient")
 		}
 		logstashTest.client = client
 	}
@@ -135,10 +135,10 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
-		client, err := logstashTest.createHttpClient()
+		client, err := logstashTest.createHTTPClient()
 
 		if err != nil {
-			test.Logf("Can't createHttpClient")
+			test.Logf("Can't createHTTPClient")
 		}
 		logstashTest.client = client
 	}
@@ -237,10 +237,10 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
-		client, err := logstashTest.createHttpClient()
+		client, err := logstashTest.createHTTPClient()
 
 		if err != nil {
-			test.Logf("Can't createHttpClient")
+			test.Logf("Can't createHTTPClient")
 		}
 		logstashTest.client = client
 	}
@@ -566,10 +566,10 @@ func Test_Logstash5GatherJVMStats(test *testing.T) {
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
-		client, err := logstashTest.createHttpClient()
+		client, err := logstashTest.createHTTPClient()
 
 		if err != nil {
-			test.Logf("Can't createHttpClient")
+			test.Logf("Can't createHTTPClient")
 		}
 		logstashTest.client = client
 	}
@@ -635,10 +635,10 @@ func Test_Logstash6GatherJVMStats(test *testing.T) {
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
-		client, err := logstashTest.createHttpClient()
+		client, err := logstashTest.createHTTPClient()
 
 		if err != nil {
-			test.Logf("Can't createHttpClient")
+			test.Logf("Can't createHTTPClient")
 		}
 		logstashTest.client = client
 	}

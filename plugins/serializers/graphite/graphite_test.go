@@ -809,11 +809,11 @@ func TestTemplate6(t *testing.T) {
 func TestClean(t *testing.T) {
 	now := time.Unix(1234567890, 0)
 	tests := []struct {
-		name        string
-		metric_name string
-		tags        map[string]string
-		fields      map[string]interface{}
-		expected    string
+		name       string
+		metricName string
+		tags       map[string]string
+		fields     map[string]interface{}
+		expected   string
 	}{
 		{
 			"Base metric",
@@ -890,7 +890,7 @@ func TestClean(t *testing.T) {
 	s := GraphiteSerializer{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := metric.New(tt.metric_name, tt.tags, tt.fields, now)
+			m, err := metric.New(tt.metricName, tt.tags, tt.fields, now)
 			assert.NoError(t, err)
 			actual, _ := s.Serialize(m)
 			require.Equal(t, tt.expected, string(actual))
@@ -901,11 +901,11 @@ func TestClean(t *testing.T) {
 func TestCleanWithTagsSupport(t *testing.T) {
 	now := time.Unix(1234567890, 0)
 	tests := []struct {
-		name        string
-		metric_name string
-		tags        map[string]string
-		fields      map[string]interface{}
-		expected    string
+		name       string
+		metricName string
+		tags       map[string]string
+		fields     map[string]interface{}
+		expected   string
 	}{
 		{
 			"Base metric",
@@ -985,7 +985,7 @@ func TestCleanWithTagsSupport(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := metric.New(tt.metric_name, tt.tags, tt.fields, now)
+			m, err := metric.New(tt.metricName, tt.tags, tt.fields, now)
 			assert.NoError(t, err)
 			actual, _ := s.Serialize(m)
 			require.Equal(t, tt.expected, string(actual))
@@ -996,11 +996,11 @@ func TestCleanWithTagsSupport(t *testing.T) {
 func TestSerializeBatch(t *testing.T) {
 	now := time.Unix(1234567890, 0)
 	tests := []struct {
-		name        string
-		metric_name string
-		tags        map[string]string
-		fields      map[string]interface{}
-		expected    string
+		name       string
+		metricName string
+		tags       map[string]string
+		fields     map[string]interface{}
+		expected   string
 	}{
 		{
 			"Base metric",
@@ -1014,7 +1014,7 @@ func TestSerializeBatch(t *testing.T) {
 	s := GraphiteSerializer{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := metric.New(tt.metric_name, tt.tags, tt.fields, now)
+			m, err := metric.New(tt.metricName, tt.tags, tt.fields, now)
 			assert.NoError(t, err)
 			actual, _ := s.SerializeBatch([]telegraf.Metric{m, m})
 			require.Equal(t, tt.expected, string(actual))
@@ -1025,11 +1025,11 @@ func TestSerializeBatch(t *testing.T) {
 func TestSerializeBatchWithTagsSupport(t *testing.T) {
 	now := time.Unix(1234567890, 0)
 	tests := []struct {
-		name        string
-		metric_name string
-		tags        map[string]string
-		fields      map[string]interface{}
-		expected    string
+		name       string
+		metricName string
+		tags       map[string]string
+		fields     map[string]interface{}
+		expected   string
 	}{
 		{
 			"Base metric",
@@ -1046,7 +1046,7 @@ func TestSerializeBatchWithTagsSupport(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := metric.New(tt.metric_name, tt.tags, tt.fields, now)
+			m, err := metric.New(tt.metricName, tt.tags, tt.fields, now)
 			assert.NoError(t, err)
 			actual, _ := s.SerializeBatch([]telegraf.Metric{m, m})
 			require.Equal(t, tt.expected, string(actual))

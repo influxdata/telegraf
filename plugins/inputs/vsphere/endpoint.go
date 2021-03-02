@@ -310,7 +310,7 @@ func (e *Endpoint) init(ctx context.Context) error {
 	return nil
 }
 
-func (e *Endpoint) getMetricNameForId(id int32) string {
+func (e *Endpoint) getMetricNameForID(id int32) string {
 	e.metricNameMux.RLock()
 	defer e.metricNameMux.RUnlock()
 	return e.metricNameLookup[id]
@@ -470,8 +470,8 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	dss := newObjects["datastore"]
 	l2d := make(map[string]string)
 	for _, ds := range dss {
-		lunId := ds.altID
-		m := isolateLUN.FindStringSubmatch(lunId)
+		lunID := ds.altID
+		m := isolateLUN.FindStringSubmatch(lunID)
 		if m != nil {
 			l2d[m[1]] = ds.name
 		}
@@ -567,7 +567,7 @@ func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 					} else {
 						m.Instance = ""
 					}
-					if res.filters.Match(e.getMetricNameForId(m.CounterId)) {
+					if res.filters.Match(e.getMetricNameForID(m.CounterId)) {
 						mMap[strconv.Itoa(int(m.CounterId))+"|"+m.Instance] = m
 					}
 				}
@@ -712,7 +712,7 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 			ips := make(map[string][]string)
 			for _, ip := range net.IpConfig.IpAddress {
 				addr := ip.IpAddress
-				for _, ipType := range e.Parent.IpAddresses {
+				for _, ipType := range e.Parent.IPAddresses {
 					if !(ipType == "ipv4" && isIPv4.MatchString(addr) ||
 						ipType == "ipv6" && isIPv6.MatchString(addr)) {
 						continue
@@ -779,18 +779,18 @@ func getDatastores(ctx context.Context, e *Endpoint, filter *ResourceFilter) (ob
 	}
 	m := make(objectMap)
 	for _, r := range resources {
-		lunId := ""
+		lunID := ""
 		if r.Info != nil {
 			info := r.Info.GetDatastoreInfo()
 			if info != nil {
-				lunId = info.Url
+				lunID = info.Url
 			}
 		}
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
 			name:         r.Name,
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Parent,
-			altID:        lunId,
+			altID:        lunID,
 			customValues: e.loadCustomAttributes(&r.ManagedEntity),
 		}
 	}
@@ -898,7 +898,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 		for metricIdx, metric := range res.metrics {
 
 			// Determine time of last successful collection
-			metricName := e.getMetricNameForId(metric.CounterId)
+			metricName := e.getMetricNameForID(metric.CounterId)
 			if metricName == "" {
 				e.log.Infof("Unable to find metric name for id %d. Skipping!", metric.CounterId)
 				continue

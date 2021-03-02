@@ -170,16 +170,16 @@ func (beat *Beat) Gather(accumulator telegraf.Accumulator) error {
 	beatStats := &BeatStats{}
 	beatInfo := &BeatInfo{}
 
-	infoUrl, err := url.Parse(beat.URL + suffixInfo)
+	infoURL, err := url.Parse(beat.URL + suffixInfo)
 	if err != nil {
 		return err
 	}
-	statsUrl, err := url.Parse(beat.URL + suffixStats)
+	statsURL, err := url.Parse(beat.URL + suffixStats)
 	if err != nil {
 		return err
 	}
 
-	err = beat.gatherJSONData(infoUrl.String(), beatInfo)
+	err = beat.gatherJSONData(infoURL.String(), beatInfo)
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func (beat *Beat) Gather(accumulator telegraf.Accumulator) error {
 		"beat_version": beatInfo.Version,
 	}
 
-	err = beat.gatherJSONData(statsUrl.String(), beatStats)
+	err = beat.gatherJSONData(statsURL.String(), beatStats)
 	if err != nil {
 		return err
 	}

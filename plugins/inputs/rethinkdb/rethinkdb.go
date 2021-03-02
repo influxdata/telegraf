@@ -40,7 +40,7 @@ func (r *RethinkDB) Description() string {
 	return "Read metrics from one or many RethinkDB servers"
 }
 
-var localhost = &Server{Url: &url.URL{Host: "127.0.0.1:28015"}}
+var localhost = &Server{URL: &url.URL{Host: "127.0.0.1:28015"}}
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
@@ -64,7 +64,7 @@ func (r *RethinkDB) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			acc.AddError(r.gatherServer(&Server{Url: u}, acc))
+			acc.AddError(r.gatherServer(&Server{URL: u}, acc))
 		}(serv)
 	}
 
@@ -76,20 +76,20 @@ func (r *RethinkDB) Gather(acc telegraf.Accumulator) error {
 func (r *RethinkDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 	var err error
 	connectOpts := gorethink.ConnectOpts{
-		Address:       server.Url.Host,
+		Address:       server.URL.Host,
 		DiscoverHosts: false,
 	}
-	if server.Url.User != nil {
-		pwd, set := server.Url.User.Password()
+	if server.URL.User != nil {
+		pwd, set := server.URL.User.Password()
 		if set && pwd != "" {
 			connectOpts.AuthKey = pwd
 			connectOpts.HandshakeVersion = gorethink.HandshakeV0_4
 		}
 	}
-	if server.Url.Scheme == "rethinkdb2" && server.Url.User != nil {
-		pwd, set := server.Url.User.Password()
+	if server.URL.Scheme == "rethinkdb2" && server.URL.User != nil {
+		pwd, set := server.URL.User.Password()
 		if set && pwd != "" {
-			connectOpts.Username = server.Url.User.Username()
+			connectOpts.Username = server.URL.User.Username()
 			connectOpts.Password = pwd
 			connectOpts.HandshakeVersion = gorethink.HandshakeV1_0
 		}

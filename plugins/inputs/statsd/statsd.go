@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	// UdpMaxPacketSize is the UDP packet limit, see
+	// UDPMaxPacketSize is the UDP packet limit, see
 	// https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
-	UdpMaxPacketSize int = 64 * 1024
+	UDPMaxPacketSize int = 64 * 1024
 
 	defaultFieldName = "value"
 
@@ -498,7 +498,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 		s.UDPlistener.SetReadBuffer(s.ReadBufferSize)
 	}
 
-	buf := make([]byte, UdpMaxPacketSize)
+	buf := make([]byte, UDPMaxPacketSize)
 	for {
 		select {
 		case <-s.done:
@@ -712,6 +712,8 @@ func (s *Statsd) parseStatsdLine(line string) error {
 // map of tags.
 // Return values are (<name>, <field>, <tags>)
 func (s *Statsd) parseName(bucket string) (string, string, map[string]string) {
+	s.Lock()
+	defer s.Unlock()
 	tags := make(map[string]string)
 
 	bucketparts := strings.Split(bucket, ",")

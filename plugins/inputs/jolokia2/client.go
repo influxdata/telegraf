@@ -125,14 +125,14 @@ func (c *Client) read(requests []ReadRequest) ([]ReadResponse, error) {
 		return nil, err
 	}
 
-	requestUrl, err := formatReadUrl(c.URL, c.config.Username, c.config.Password)
+	requestURL, err := formatReadURL(c.URL, c.config.Username, c.config.Password)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", requestUrl, bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(requestBody))
 	if err != nil {
-		return nil, fmt.Errorf("unable to create new request '%s': %s", requestUrl, err)
+		return nil, fmt.Errorf("unable to create new request '%s': %s", requestURL, err)
 	}
 
 	req.Header.Add("Content-type", "application/json")
@@ -249,22 +249,22 @@ func makeReadResponses(jresponses []jolokiaResponse) []ReadResponse {
 	return rresponses
 }
 
-func formatReadUrl(configUrl, username, password string) (string, error) {
-	parsedUrl, err := url.Parse(configUrl)
+func formatReadURL(configURL, username, password string) (string, error) {
+	parsedURL, err := url.Parse(configURL)
 	if err != nil {
 		return "", err
 	}
 
-	readUrl := url.URL{
-		Host:   parsedUrl.Host,
-		Scheme: parsedUrl.Scheme,
+	readURL := url.URL{
+		Host:   parsedURL.Host,
+		Scheme: parsedURL.Scheme,
 	}
 
 	if username != "" || password != "" {
-		readUrl.User = url.UserPassword(username, password)
+		readURL.User = url.UserPassword(username, password)
 	}
 
-	readUrl.Path = path.Join(parsedUrl.Path, "read")
-	readUrl.Query().Add("ignoreErrors", "true")
-	return readUrl.String(), nil
+	readURL.Path = path.Join(parsedURL.Path, "read")
+	readURL.Query().Add("ignoreErrors", "true")
+	return readURL.String(), nil
 }

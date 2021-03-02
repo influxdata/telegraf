@@ -116,13 +116,13 @@ func TestMappings(t *testing.T) {
 	}
 
 	for _, mapping := range mappings {
-		field_name := mapping["field_name"][0].(string)
+		fieldName := mapping["field_name"][0].(string)
 		for index := range mapping["target_value"] {
-			mapper := EnumMapper{Mappings: []Mapping{{Field: field_name, ValueMappings: map[string]interface{}{mapping["target_value"][index].(string): mapping["mapped_value"][index]}}}}
+			mapper := EnumMapper{Mappings: []Mapping{{Field: fieldName, ValueMappings: map[string]interface{}{mapping["target_value"][index].(string): mapping["mapped_value"][index]}}}}
 			err := mapper.Init()
 			assert.Nil(t, err)
 			fields := calculateProcessedValues(mapper, createTestMetric())
-			assertFieldValue(t, mapping["expected_value"][index], field_name, fields)
+			assertFieldValue(t, mapping["expected_value"][index], fieldName, fields)
 		}
 	}
 }
