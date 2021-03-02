@@ -434,7 +434,7 @@ func (d *Docker) gatherContainer(
 	var cname string
 	for _, name := range container.Names {
 		trimmedName := strings.TrimPrefix(name, "/")
-		if len(strings.Split(trimmedName, "/")) == 1 {
+		if !strings.Contains(trimmedName, "/") {
 			cname = trimmedName
 			break
 		}
