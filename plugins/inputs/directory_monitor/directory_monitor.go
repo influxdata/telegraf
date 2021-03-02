@@ -42,18 +42,15 @@ const sampleConfig = `
   # directory_duration_threshold = "50ms" 
   #
   ## A list of the only file names to monitor, if necessary. Supports regex. If left blank, all files are ingested.
-  # files_to_monitor = [".*.csv"]
+  # files_to_monitor = ["^.*\.csv"]
   #
   ## A list of files to ignore, if necessary. Supports regex.
   # files_to_ignore = [".DS_Store"]
   #
   ## Maximum lines of the file to process that have not yet be written by the
-  ## output. For best throughput set based on the number of metrics and the size of the output's metric_batch_size.
-  ## Warning: setting this number too high can lead to a high number of dropped metrics.
-  # max_buffered_metrics = 1000
-  #
-  ## The maximum amount of parallelism (files to read at once, essentially).
-  # parallel_readers = 1
+  ## output. For best throughput set to the size of the output's metric_buffer_limit.
+  ## Warning: setting this number higher than the output's metric_buffer_limit can cause dropped metrics.
+  # max_buffered_metrics = 10000
   #
   ## The maximum amount of file paths to queue up for processing at once, before waiting until files are processed to find more files.
   ## Lowering this value will result in *slightly* less memory use, with a potential sacrifice in speed efficiency, if absolutely necessary.
@@ -70,10 +67,9 @@ const sampleConfig = `
 var (
 	defaultFilesToMonitor             = []string{}
 	defaultFilesToIgnore              = []string{}
-	defaultMaxBufferedMetrics         = 1000
+	defaultMaxBufferedMetrics         = 10000
 	defaultDirectoryDurationThreshold = config.Duration(0 * time.Millisecond)
 	defaultFileQueueSize              = 100000
-	defaultParallelReaders            = 1
 )
 
 type DirectoryMonitor struct {
@@ -81,7 +77,6 @@ type DirectoryMonitor struct {
 	FinishedDirectory string `toml:"finished_directory"`
 	ErrorDirectory    string `toml:"error_directory"`
 
-	ParallelReaders            int             `toml:"parallel_readers"`
 	FilesToMonitor             []string        `toml:"files_to_monitor"`
 	FilesToIgnore              []string        `toml:"files_to_ignore"`
 	MaxBufferedMetrics         int             `toml:"max_buffered_metrics"`
@@ -151,14 +146,12 @@ func (monitor *DirectoryMonitor) Start(acc telegraf.Accumulator) error {
 		}
 	}()
 
-	for i := 0; i < monitor.ParallelReaders; i++ {
-		// Spawn 'monitors' to monitor the files channel and read what they get.
-		monitor.waitGroup.Add(1)
-		go func() {
-			monitor.Monitor(acc)
-			monitor.waitGroup.Done()
-		}()
-	}
+	// Monitor the files channel and read what they receive.
+	monitor.waitGroup.Add(1)
+	go func() {
+		monitor.Monitor(acc)
+		monitor.waitGroup.Done()
+	}()
 
 	return nil
 }
@@ -358,10 +351,6 @@ func (monitor *DirectoryMonitor) Init() error {
 		return errors.New("file queue size needs to be more than 0")
 	}
 
-	if monitor.ParallelReaders <= 0 {
-		return errors.New("parallel readers needs to be more than 0")
-	}
-
 	// Finished directory can be created if not exists for convenience.
 	if _, err := os.Stat(monitor.FinishedDirectory); os.IsNotExist(err) {
 		err = os.Mkdir(monitor.FinishedDirectory, 0777)
@@ -415,7 +404,6 @@ func init() {
 			FilesToIgnore:              defaultFilesToIgnore,
 			MaxBufferedMetrics:         defaultMaxBufferedMetrics,
 			DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
-			ParallelReaders:            defaultParallelReaders,
 			FileQueueSize:              defaultFileQueueSize,
 		}
 	})
