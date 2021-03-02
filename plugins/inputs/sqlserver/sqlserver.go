@@ -243,10 +243,6 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	if len(s.Servers) == 0 {
-		s.Servers = append(s.Servers, defaultServer)
-	}
-
 	var wg sync.WaitGroup
 	var mutex sync.Mutex
 	var healthMetrics = make(map[string]*HealthMetric)
@@ -404,8 +400,16 @@ func (s *SQLServer) getDatabaseTypeToLog() string {
 	return logname
 }
 
+func (s *SQLServer) Init() error {
+	if len(s.Servers) == 0 {
+		log.Println("W! Warning: Server list is empty.")
+	}
+
+	return nil
+}
+
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
-		return &SQLServer{}
+		return &SQLServer{Servers: []string{defaultServer}}
 	})
 }
