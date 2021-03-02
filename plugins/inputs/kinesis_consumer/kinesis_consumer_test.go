@@ -7,19 +7,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
-
-type TestTrackingAccumulator struct {
-	telegraf.TrackingAccumulator
-	Metrics *[]telegraf.Metric
-}
-
-func (t TestTrackingAccumulator) AddTrackingMetricGroup(group []telegraf.Metric) telegraf.TrackingID {
-	*t.Metrics = append(*t.Metrics, group...)
-	return 1
-}
 
 func TestKinesisConsumer_onMessage(t *testing.T) {
 	zlibBytpes, _ := base64.StdEncoding.DecodeString("eF5FjlFrgzAUhf9KuM+2aNB2zdsQ2xe3whQGW8qIeqdhaiSJK0P874u1Y4+Hc/jON0GHxoga858BgUF8fs5fzunHU5Jlj6cEPFDXHvXStGqsrsKWTapq44pW1SetxsF1a8qsRtGt0YyFKbUcrFT9UbYWtQH2frntkm/s7RInkNU6t9JpWNE5WBAFPo3CcHeg+9D703OziUOhCg6MQ/yakrspuZsyEjdYfsm+Jg2K1jZEfZLKQWUvFglylBobZXDLwSP8//EGpD4NNj7dUJpT6hQY3W33h/AhCt84zDBf5l/MDl08")
@@ -120,15 +111,15 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 			err := k.Init()
 			assert.Nil(t, err)
 
-			var metrics []telegraf.Metric
-			if err := k.onMessage(TestTrackingAccumulator{Metrics: &metrics}, tt.args.r); (err != nil) != tt.wantErr {
+			acc := testutil.Accumulator{}
+			if err := k.onMessage(acc.WithTracking(tt.expected.numberOfMetrics), tt.args.r); (err != nil) != tt.wantErr {
 				t.Errorf("onMessage() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			assert.Equal(t, tt.expected.numberOfMetrics, len(metrics))
+			assert.Equal(t, tt.expected.numberOfMetrics, len(acc.Metrics))
 
-			for _, metric := range metrics {
-				if logEventMessage, ok := metric.Fields()["message"]; ok {
+			for _, metric := range acc.Metrics {
+				if logEventMessage, ok := metric.Fields["message"]; ok {
 					assert.Contains(t, logEventMessage.(string), tt.expected.messageContains)
 				} else {
 					t.Errorf("Expect logEvents to be present")
