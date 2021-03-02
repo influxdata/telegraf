@@ -119,8 +119,8 @@ func NewClient(url string, config *ClientConfig) (*Client, error) {
 }
 
 func (c *Client) read(requests []ReadRequest) ([]ReadResponse, error) {
-	jrequests := makeJolokiaRequests(requests, c.config.ProxyConfig)
-	requestBody, err := json.Marshal(jrequests)
+	jRequests := makeJolokiaRequests(requests, c.config.ProxyConfig)
+	requestBody, err := json.Marshal(jRequests)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,8 @@ func (c *Client) read(requests []ReadRequest) ([]ReadResponse, error) {
 
 	req, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(requestBody))
 	if err != nil {
-		return nil, fmt.Errorf("unable to create new request '%s': %s", requestURL, err)
+		//err is not contained in returned error - it may contain sensitive data (password) which should not be logged
+		return nil, fmt.Errorf("unable to create new request for: '%s'", c.URL)
 	}
 
 	req.Header.Add("Content-type", "application/json")
@@ -144,7 +145,7 @@ func (c *Client) read(requests []ReadRequest) ([]ReadResponse, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+		return nil, fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
 			c.URL, resp.StatusCode, http.StatusText(resp.StatusCode), http.StatusOK, http.StatusText(http.StatusOK))
 	}
 
@@ -153,12 +154,12 @@ func (c *Client) read(requests []ReadRequest) ([]ReadResponse, error) {
 		return nil, err
 	}
 
-	var jresponses []jolokiaResponse
-	if err = json.Unmarshal([]byte(responseBody), &jresponses); err != nil {
-		return nil, fmt.Errorf("Error decoding JSON response: %s: %s", err, responseBody)
+	var jResponses []jolokiaResponse
+	if err = json.Unmarshal(responseBody, &jResponses); err != nil {
+		return nil, fmt.Errorf("error decoding JSON response: %s: %s", err, responseBody)
 	}
 
-	return makeReadResponses(jresponses), nil
+	return makeReadResponses(jResponses), nil
 }
 
 func makeJolokiaRequests(rrequests []ReadRequest, proxyConfig *ProxyConfig) []jolokiaRequest {

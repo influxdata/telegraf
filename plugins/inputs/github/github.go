@@ -146,21 +146,21 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 			fields := getFields(repositoryInfo)
 
 			for _, field := range g.AdditionalFields {
-				addFields := make(map[string]interface{})
 				switch field {
 				case "pull-requests":
 					// Pull request properties
-					addFields, err = g.getPullRequestFields(ctx, owner, repository)
+					addFields, err := g.getPullRequestFields(ctx, owner, repository)
 					if err != nil {
 						acc.AddError(err)
 						continue
 					}
+
+					for k, v := range addFields {
+						fields[k] = v
+					}
 				default:
 					acc.AddError(fmt.Errorf("unknown additional field %q", field))
 					continue
-				}
-				for k, v := range addFields {
-					fields[k] = v
 				}
 			}
 

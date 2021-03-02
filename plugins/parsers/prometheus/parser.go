@@ -76,8 +76,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			} else {
 				// standard metric
 				// reading fields
-				fields := make(map[string]interface{})
-				fields = getNameAndValue(m, metricName)
+				fields := getNameAndValue(m, metricName)
 				// converting to telegraf metric
 				if len(fields) > 0 {
 					t := getTimestamp(m, now)
