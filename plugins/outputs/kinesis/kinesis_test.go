@@ -20,6 +20,7 @@ func TestPartitionKey(t *testing.T) {
 	testPoint := testutil.TestMetric(1)
 
 	k := KinesisOutput{
+		Log: testutil.Logger{},
 		Partition: &Partition{
 			Method: "static",
 			Key:    "-",
@@ -28,6 +29,7 @@ func TestPartitionKey(t *testing.T) {
 	assert.Equal("-", k.getPartitionKey(testPoint), "PartitionKey should be '-'")
 
 	k = KinesisOutput{
+		Log: testutil.Logger{},
 		Partition: &Partition{
 			Method: "tag",
 			Key:    "tag1",
@@ -36,6 +38,7 @@ func TestPartitionKey(t *testing.T) {
 	assert.Equal(testPoint.Tags()["tag1"], k.getPartitionKey(testPoint), "PartitionKey should be value of 'tag1'")
 
 	k = KinesisOutput{
+		Log: testutil.Logger{},
 		Partition: &Partition{
 			Method:  "tag",
 			Key:     "doesnotexist",
@@ -45,6 +48,7 @@ func TestPartitionKey(t *testing.T) {
 	assert.Equal("somedefault", k.getPartitionKey(testPoint), "PartitionKey should use default")
 
 	k = KinesisOutput{
+		Log: testutil.Logger{},
 		Partition: &Partition{
 			Method: "tag",
 			Key:    "doesnotexist",
@@ -53,6 +57,7 @@ func TestPartitionKey(t *testing.T) {
 	assert.Equal("telegraf", k.getPartitionKey(testPoint), "PartitionKey should be telegraf")
 
 	k = KinesisOutput{
+		Log: testutil.Logger{},
 		Partition: &Partition{
 			Method: "not supported",
 		},
@@ -60,6 +65,7 @@ func TestPartitionKey(t *testing.T) {
 	assert.Equal("", k.getPartitionKey(testPoint), "PartitionKey should be value of ''")
 
 	k = KinesisOutput{
+		Log: testutil.Logger{},
 		Partition: &Partition{
 			Method: "measurement",
 		},
@@ -67,6 +73,7 @@ func TestPartitionKey(t *testing.T) {
 	assert.Equal(testPoint.Name(), k.getPartitionKey(testPoint), "PartitionKey should be value of measurement name")
 
 	k = KinesisOutput{
+		Log: testutil.Logger{},
 		Partition: &Partition{
 			Method: "random",
 		},
@@ -77,11 +84,13 @@ func TestPartitionKey(t *testing.T) {
 	assert.Equal(byte(4), u.Version(), "PartitionKey should be UUIDv4")
 
 	k = KinesisOutput{
+		Log:          testutil.Logger{},
 		PartitionKey: "-",
 	}
 	assert.Equal("-", k.getPartitionKey(testPoint), "PartitionKey should be '-'")
 
 	k = KinesisOutput{
+		Log:                testutil.Logger{},
 		RandomPartitionKey: true,
 	}
 	partitionKey = k.getPartitionKey(testPoint)
@@ -120,6 +129,7 @@ func TestWriteKinesis_WhenSuccess(t *testing.T) {
 	)
 
 	k := KinesisOutput{
+		Log:        testutil.Logger{},
 		StreamName: streamName,
 		svc:        svc,
 	}
@@ -165,6 +175,7 @@ func TestWriteKinesis_WhenRecordErrors(t *testing.T) {
 	)
 
 	k := KinesisOutput{
+		Log:        testutil.Logger{},
 		StreamName: streamName,
 		svc:        svc,
 	}
@@ -200,6 +211,7 @@ func TestWriteKinesis_WhenServiceError(t *testing.T) {
 	)
 
 	k := KinesisOutput{
+		Log:        testutil.Logger{},
 		StreamName: streamName,
 		svc:        svc,
 	}

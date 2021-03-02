@@ -1,7 +1,6 @@
 package kinesis
 
 import (
-	"log"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -30,9 +29,10 @@ type (
 		RandomPartitionKey bool       `toml:"use_random_partitionkey"`
 		Partition          *Partition `toml:"partition"`
 		Debug              bool       `toml:"debug"`
-		svc                kinesisiface.KinesisAPI
 
+		Log        telegraf.Logger `toml:"-"`
 		serializer serializers.Serializer
+		svc        kinesisiface.KinesisAPI
 	}
 
 	Partition struct {
@@ -118,13 +118,13 @@ func (k *KinesisOutput) Description() string {
 
 func (k *KinesisOutput) Connect() error {
 	if k.Partition == nil {
-		log.Print("E! kinesis : Deprecated partitionkey configuration in use, please consider using outputs.kinesis.partition")
+		k.Log.Error("Deprecated partitionkey configuration in use, please consider using outputs.kinesis.partition")
 	}
 
 	// We attempt first to create a session to Kinesis using an IAMS role, if that fails it will fall through to using
 	// environment variables, and then Shared Credentials.
 	if k.Debug {
-		log.Printf("I! kinesis: Establishing a connection to Kinesis in %s", k.Region)
+		k.Log.Infof("Establishing a connection to Kinesis in %s", k.Region)
 	}
 
 	credentialConfig := &internalaws.CredentialConfig{
@@ -165,17 +165,17 @@ func (k *KinesisOutput) writeKinesis(r []*kinesis.PutRecordsRequestEntry) time.D
 
 	resp, err := k.svc.PutRecords(payload)
 	if err != nil {
-		log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
+		k.Log.Errorf("Unable to write to Kinesis : %s", err.Error())
 		return time.Since(start)
 	}
 
 	if k.Debug {
-		log.Printf("I! Wrote: '%+v'", resp)
+		k.Log.Infof("Wrote: '%+v'", resp)
 	}
 
 	failed := *resp.FailedRecordCount
 	if failed > 0 {
-		log.Printf("E! kinesis: Unable to write %+v of %+v record(s) to Kinesis", failed, len(r))
+		k.Log.Errorf("Unable to write %+v of %+v record(s) to Kinesis", failed, len(r))
 	}
 
 	return time.Since(start)
@@ -203,7 +203,7 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 			// Default partition name if default is not set
 			return "telegraf"
 		default:
-			log.Printf("E! kinesis : You have configured a Partition method of '%s' which is not supported", k.Partition.Method)
+			k.Log.Errorf("You have configured a Partition method of '%s' which is not supported", k.Partition.Method)
 		}
 	}
 	if k.RandomPartitionKey {
@@ -230,7 +230,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 		values, err := k.serializer.Serialize(metric)
 		if err != nil {
-			log.Printf("D! [outputs.kinesis] Could not serialize metric: %v", err)
+			k.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 
@@ -246,7 +246,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		if sz == 500 {
 			// Max Messages Per PutRecordRequest is 500
 			elapsed := k.writeKinesis(r)
-			log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
+			k.Log.Debugf("Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 			sz = 0
 			r = nil
 		}
@@ -254,7 +254,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 	}
 	if sz > 0 {
 		elapsed := k.writeKinesis(r)
-		log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
+		k.Log.Debugf("Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 	}
 
 	return nil
