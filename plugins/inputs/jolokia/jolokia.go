@@ -168,7 +168,7 @@ func (j *Jolokia) doRequest(req *http.Request) ([]map[string]interface{}, error)
 }
 
 func (j *Jolokia) prepareRequest(server Server, metrics []Metric) (*http.Request, error) {
-	var jolokiaUrl *url.URL
+	var jolokiaURL *url.URL
 	context := j.Context // Usually "/jolokia/"
 
 	var bulkBodyContent []map[string]interface{}
@@ -188,11 +188,11 @@ func (j *Jolokia) prepareRequest(server Server, metrics []Metric) (*http.Request
 
 		// Add target, only in proxy mode
 		if j.Mode == "proxy" {
-			serviceUrl := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi",
+			serviceURL := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi",
 				server.Host, server.Port)
 
 			target := map[string]string{
-				"url": serviceUrl,
+				"url": serviceURL,
 			}
 
 			if server.Username != "" {
@@ -208,26 +208,26 @@ func (j *Jolokia) prepareRequest(server Server, metrics []Metric) (*http.Request
 			proxy := j.Proxy
 
 			// Prepare ProxyURL
-			proxyUrl, err := url.Parse("http://" + proxy.Host + ":" + proxy.Port + context)
+			proxyURL, err := url.Parse("http://" + proxy.Host + ":" + proxy.Port + context)
 			if err != nil {
 				return nil, err
 			}
 			if proxy.Username != "" || proxy.Password != "" {
-				proxyUrl.User = url.UserPassword(proxy.Username, proxy.Password)
+				proxyURL.User = url.UserPassword(proxy.Username, proxy.Password)
 			}
 
-			jolokiaUrl = proxyUrl
+			jolokiaURL = proxyURL
 
 		} else {
-			serverUrl, err := url.Parse("http://" + server.Host + ":" + server.Port + context)
+			serverURL, err := url.Parse("http://" + server.Host + ":" + server.Port + context)
 			if err != nil {
 				return nil, err
 			}
 			if server.Username != "" || server.Password != "" {
-				serverUrl.User = url.UserPassword(server.Username, server.Password)
+				serverURL.User = url.UserPassword(server.Username, server.Password)
 			}
 
-			jolokiaUrl = serverUrl
+			jolokiaURL = serverURL
 		}
 
 		bulkBodyContent = append(bulkBodyContent, bodyContent)
@@ -238,7 +238,7 @@ func (j *Jolokia) prepareRequest(server Server, metrics []Metric) (*http.Request
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", jolokiaUrl.String(), bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest("POST", jolokiaURL.String(), bytes.NewBuffer(requestBody))
 	if err != nil {
 		return nil, err
 	}

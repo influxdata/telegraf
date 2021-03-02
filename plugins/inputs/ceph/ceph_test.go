@@ -24,7 +24,7 @@ type expectedResult struct {
 }
 
 func TestParseSockId(t *testing.T) {
-	s := parseSockId(sockFile(osdPrefix, 1), osdPrefix, sockSuffix)
+	s := parseSockID(sockFile(osdPrefix, 1), osdPrefix, sockSuffix)
 	assert.Equal(t, s, "1")
 }
 
@@ -170,7 +170,7 @@ func assertFoundSocket(t *testing.T, dir, sockType string, i int, sockets []*soc
 		if s.socket == expected {
 			found = true
 			assert.Equal(t, s.sockType, sockType, "Unexpected socket type for '%s'", s)
-			assert.Equal(t, s.sockId, strconv.Itoa(i))
+			assert.Equal(t, s.sockID, strconv.Itoa(i))
 		}
 	}
 	assert.True(t, found, "Did not find socket: %s", expected)

@@ -1348,7 +1348,7 @@ IF @EngineEdition IN (2,3,4) AND @MajorMinorVersion >= 1050
 	END
 `
 
-const sqlServerCpuV2 string = `
+const sqlServerCPUV2 string = `
 /*The ring buffer has a new value every minute*/
 IF SERVERPROPERTY('EngineEdition') IN (2,3,4) /*Standard,Enterpris,Express*/
 BEGIN

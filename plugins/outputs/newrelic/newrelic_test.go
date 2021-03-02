@@ -172,7 +172,7 @@ func TestNewRelic_Connect(t *testing.T) {
 			name: "Test: HTTP Proxy",
 			newrelic: &NewRelic{
 				InsightsKey: "12121212",
-				HttpProxy:   "https://my.proxy",
+				HTTPProxy:   "https://my.proxy",
 			},
 			wantErr: false,
 		},

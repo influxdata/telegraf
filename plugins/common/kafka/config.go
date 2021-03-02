@@ -86,9 +86,5 @@ func (k *Config) SetConfig(config *sarama.Config) error {
 		config.Net.TLS.Enable = true
 	}
 
-	if err := k.SetSASLConfig(config); err != nil {
-		return err
-	}
-
-	return nil
+	return k.SetSASLConfig(config)
 }

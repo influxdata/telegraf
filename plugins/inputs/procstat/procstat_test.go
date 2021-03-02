@@ -30,14 +30,14 @@ func mockExecCommand(arg0 string, args ...string) *exec.Cmd {
 func TestMockExecCommand(t *testing.T) {
 	var cmd []string
 	for _, arg := range os.Args {
-		if string(arg) == "--" {
+		if arg == "--" {
 			cmd = []string{}
 			continue
 		}
 		if cmd == nil {
 			continue
 		}
-		cmd = append(cmd, string(arg))
+		cmd = append(cmd, arg)
 	}
 	if cmd == nil {
 		return
@@ -72,7 +72,7 @@ func pidFinder(pids []PID, err error) func() (PIDFinder, error) {
 	}
 }
 
-func (pg *testPgrep) PidFile(path string) ([]PID, error) {
+func (pg *testPgrep) PidFile(_ string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 
@@ -80,15 +80,15 @@ func (p *testProc) Cmdline() (string, error) {
 	return "test_proc", nil
 }
 
-func (pg *testPgrep) Pattern(pattern string) ([]PID, error) {
+func (pg *testPgrep) Pattern(_ string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 
-func (pg *testPgrep) Uid(user string) ([]PID, error) {
+func (pg *testPgrep) UID(_ string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 
-func (pg *testPgrep) FullPattern(pattern string) ([]PID, error) {
+func (pg *testPgrep) FullPattern(_ string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 
@@ -97,7 +97,7 @@ type testProc struct {
 	tags map[string]string
 }
 
-func newTestProc(pid PID) (Process, error) {
+func newTestProc(_ PID) (Process, error) {
 	proc := &testProc{
 		tags: make(map[string]string),
 	}
@@ -144,7 +144,7 @@ func (p *testProc) NumThreads() (int32, error) {
 	return 0, nil
 }
 
-func (p *testProc) Percent(interval time.Duration) (float64, error) {
+func (p *testProc) Percent(_ time.Duration) (float64, error) {
 	return 0, nil
 }
 
@@ -160,12 +160,12 @@ func (p *testProc) Times() (*cpu.TimesStat, error) {
 	return &cpu.TimesStat{}, nil
 }
 
-func (p *testProc) RlimitUsage(gatherUsage bool) ([]process.RlimitStat, error) {
+func (p *testProc) RlimitUsage(_ bool) ([]process.RlimitStat, error) {
 	return []process.RlimitStat{}, nil
 }
 
-var pid PID = PID(42)
-var exe string = "foo"
+var pid = PID(42)
+var exe = "foo"
 
 func TestGather_CreateProcessErrorOk(t *testing.T) {
 	var acc testutil.Accumulator
@@ -363,8 +363,7 @@ func TestGather_systemdUnitPIDs(t *testing.T) {
 		createPIDFinder: pidFinder([]PID{}, nil),
 		SystemdUnit:     "TestGather_systemdUnitPIDs",
 	}
-	var acc testutil.Accumulator
-	pids, tags, err := p.findPids(&acc)
+	pids, tags, err := p.findPids()
 	require.NoError(t, err)
 	assert.Equal(t, []PID{11408}, pids)
 	assert.Equal(t, "TestGather_systemdUnitPIDs", tags["systemd_unit"])
@@ -385,8 +384,7 @@ func TestGather_cgroupPIDs(t *testing.T) {
 		createPIDFinder: pidFinder([]PID{}, nil),
 		CGroup:          td,
 	}
-	var acc testutil.Accumulator
-	pids, tags, err := p.findPids(&acc)
+	pids, tags, err := p.findPids()
 	require.NoError(t, err)
 	assert.Equal(t, []PID{1234, 5678}, pids)
 	assert.Equal(t, td, tags["cgroup"])
@@ -415,7 +413,7 @@ func TestGather_SameTimestamps(t *testing.T) {
 	require.NoError(t, acc.GatherError(p.Gather))
 
 	procstat, _ := acc.Get("procstat")
-	procstat_lookup, _ := acc.Get("procstat_lookup")
+	procstatLookup, _ := acc.Get("procstat_lookup")
 
-	require.Equal(t, procstat.Time, procstat_lookup.Time)
+	require.Equal(t, procstat.Time, procstatLookup.Time)
 }

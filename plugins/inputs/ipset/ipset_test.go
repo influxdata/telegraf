@@ -40,7 +40,7 @@ func TestIpset(t *testing.T) {
 			value: `create hash:net family inet hashsize 1024 maxelem 65536 counters
 				add myset 4.5.6.7 packets 123 bytes
 				`,
-			err: fmt.Errorf("Error parsing line (expected at least 7 fields): \t\t\t\tadd myset 4.5.6.7 packets 123 bytes"),
+			err: fmt.Errorf("error parsing line (expected at least 7 fields): \t\t\t\tadd myset 4.5.6.7 packets 123 bytes"),
 		},
 		{
 			name: "Non-empty sets, counters, no comment",
