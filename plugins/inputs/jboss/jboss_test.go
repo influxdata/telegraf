@@ -1307,21 +1307,21 @@ var jboss_jms_out = `
 `
 
 type BodyContent struct {
-	Operation      string                 `json:"operation"`
-	Name           string                 `json:"name"`
-	IncludeRuntime string                 `json:"include-runtime"`
-	AttributesOnly string                 `json:"attributes-only"`
-	ChildType      string                 `json:"child-type"`
-	RecursiveDepth int                    `json:"recursive-depth"`
-	Recursive      string                 `json:"recursive"`
+	Operation      string                   `json:"operation"`
+	Name           string                   `json:"name"`
+	IncludeRuntime string                   `json:"include-runtime"`
+	AttributesOnly string                   `json:"attributes-only"`
+	ChildType      string                   `json:"child-type"`
+	RecursiveDepth int                      `json:"recursive-depth"`
+	Recursive      string                   `json:"recursive"`
 	Address        []map[string]interface{} `json:"address"`
-	JsonPretty     int                    `json:"json.pretty"`
+	JsonPretty     int                      `json:"json.pretty"`
 }
 
 func testJBossServer(t *testing.T, eap7 bool) *httptest.Server {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//		fmt.Println("--------------------INIT REQUEST------------------------------------------")
+		//		fmt.Println("--------------------INIT REQUEST------------------------------------------")
 		w.WriteHeader(http.StatusOK)
 		decoder := json.NewDecoder(r.Body)
 		var b BodyContent
@@ -1330,7 +1330,7 @@ func testJBossServer(t *testing.T, eap7 bool) *httptest.Server {
 			fmt.Printf("ERROR DECODE: %s\n", err)
 		}
 
-//		fmt.Printf("REQUEST:%+v\n", r.Body)
+		//		fmt.Printf("REQUEST:%+v\n", r.Body)
 		fmt.Printf("BODYCONTENT:%+v\n", b)
 		if b.Operation == "read-resource" {
 			if b.AttributesOnly == "true" {
@@ -1542,9 +1542,9 @@ func TestHTTPJbossEAP6Domain(t *testing.T) {
 	ts := testJBossServer(t, false)
 	defer ts.Close()
 	j := JBoss{
-		Servers:       []string{ts.URL},
-		Username:      "",
-		Password:      "",
+		Servers:  []string{ts.URL},
+		Username: "",
+		Password: "",
 		Metrics: []string{
 			"jvm",
 			"web",
@@ -1559,4 +1559,3 @@ func TestHTTPJbossEAP6Domain(t *testing.T) {
 	err := acc.GatherError(j.Gather)
 	require.NoError(t, err)
 }
-

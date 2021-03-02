@@ -101,7 +101,7 @@ type JMSResponse struct {
 // TransactionResponse transaction related metrics
 type TransactionResponse struct {
 	Outcome string                 `json:"outcome"`
-    Result  map[string]interface{} `json:"result"`
+	Result  map[string]interface{} `json:"result"`
 }
 
 // DatabaseMetrics database related metrics
@@ -305,7 +305,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 		exec := ExecTypeResponse{}
 		if err = json.Unmarshal(out, &exec); err != nil {
 			acc.AddError(fmt.Errorf("Error decoding JSON response (ExecTypeResponse) %s,%s", out, err))
-			return nil	
+			return nil
 		}
 		var execAsDomain bool
 		var isEAP7 bool
@@ -433,7 +433,7 @@ func (h *JBoss) getServersOnHost(
 							h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "ajp")
 							h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "http")
 							h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "https")
-						} else  {
+						} else {
 							h.getWebStatistics(acc, serverURL, execAsDomain, host, server, "ajp")
 							h.getWebStatistics(acc, serverURL, execAsDomain, host, server, "http")
 						}
@@ -450,7 +450,7 @@ func (h *JBoss) getServersOnHost(
 							h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging", GetJMSTopicStat)
 						}
 					case "transaction":
-						h.getTransactionStatistics(acc, serverURL, execAsDomain, host, server)	
+						h.getTransactionStatistics(acc, serverURL, execAsDomain, host, server)
 					default:
 						log.Printf("E! Jboss doesn't exist the metric set %s\n", v)
 					}
@@ -617,7 +617,7 @@ func (h *JBoss) getUndertowStatistics(
 ) error {
 	adr := OrderedMap{}
 	var listenerName = "default"
-	if listener == "ajp" ||  listener == "https" {
+	if listener == "ajp" || listener == "https" {
 		listenerName = listener
 	}
 	listener = listener + "-listener"
@@ -693,9 +693,9 @@ func GetPoolFields(pool DBPoolStatistics) map[string]interface{} {
 		retmap["active-count"], _ = strconv.ParseInt(pool.ActiveCount.(string), 10, 64)
 		retmap["available-count"], _ = strconv.ParseInt(pool.AvailableCount.(string), 10, 64)
 	case float64:
-                retmap["in-use-count"] = int(pool.InUseCount.(float64))
-                retmap["active-count"] = int(pool.ActiveCount.(float64))
-                retmap["available-count"] = int(pool.AvailableCount.(float64))
+		retmap["in-use-count"] = int(pool.InUseCount.(float64))
+		retmap["active-count"] = int(pool.ActiveCount.(float64))
+		retmap["available-count"] = int(pool.AvailableCount.(float64))
 	default:
 		retmap["in-use-count"] = pool.InUseCount
 		retmap["active-count"] = pool.ActiveCount
@@ -1164,11 +1164,11 @@ func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]in
 	switch optype {
 	case GetExecStat:
 		bodyContent = map[string]interface{}{
-			"operation":   "read-resource",
+			"operation":       "read-resource",
 			"attributes-only": "true",
 			"include-runtime": "true",
-			"address":     address,
-			"json.pretty": 1,
+			"address":         address,
+			"json.pretty":     1,
 		}
 	case GetHosts:
 		bodyContent = map[string]interface{}{
@@ -1266,7 +1266,7 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 
 	// Debug JSON request
 	log.Printf("D! Req: %s\n", requestBody)
-		
+
 	dr := dac.NewRequest(h.Username, h.Password, method, serverURL.String(), string(requestBody[:]))
 	dr.Header.Add("Content-Type", "application/json")
 
@@ -1279,16 +1279,15 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 	}
 	defer resp.Body.Close()
 
-
 	if resp.StatusCode != http.StatusOK {
-        	err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
-                	serverURL,
-                        resp.StatusCode,
-                        http.StatusText(resp.StatusCode),
-                        http.StatusOK,
-                        http.StatusText(http.StatusOK))
-                return nil, err
-        }
+		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+			serverURL,
+			resp.StatusCode,
+			http.StatusText(resp.StatusCode),
+			http.StatusOK,
+			http.StatusText(http.StatusOK))
+		return nil, err
+	}
 
 	// read body
 	body, err := ioutil.ReadAll(resp.Body)
