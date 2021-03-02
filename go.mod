@@ -120,6 +120,7 @@ require (
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/soniah/gosnmp v1.25.0
+	github.com/stefa975/go-http-digest-auth-client v0.5.0
 	github.com/streadway/amqp v0.0.0-20180528204448-e5adc2ada8b8
 	github.com/stretchr/testify v1.6.1
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
