@@ -1,6 +1,7 @@
 package all
 
 import (
+	//Blank imports for plugins to register themselves
 	_ "github.com/influxdata/telegraf/plugins/outputs/amon"
 	_ "github.com/influxdata/telegraf/plugins/outputs/amqp"
 	_ "github.com/influxdata/telegraf/plugins/outputs/application_insights"
@@ -34,6 +35,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann_legacy"
+	_ "github.com/influxdata/telegraf/plugins/outputs/signalfx"
 	_ "github.com/influxdata/telegraf/plugins/outputs/socket_writer"
 	_ "github.com/influxdata/telegraf/plugins/outputs/stackdriver"
 	_ "github.com/influxdata/telegraf/plugins/outputs/sumologic"

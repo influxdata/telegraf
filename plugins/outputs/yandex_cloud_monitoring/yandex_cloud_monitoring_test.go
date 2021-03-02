@@ -22,7 +22,7 @@ func TestWrite(t *testing.T) {
 		return message, nil
 	}
 
-	testMetadataHttpServer := httptest.NewServer(
+	testMetadataHTTPServer := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasSuffix(r.URL.Path, "/token") {
 				token := MetadataIamToken{
@@ -39,9 +39,9 @@ func TestWrite(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		}),
 	)
-	defer testMetadataHttpServer.Close()
-	metadataTokenUrl := "http://" + testMetadataHttpServer.Listener.Addr().String() + "/token"
-	metadataFolderUrl := "http://" + testMetadataHttpServer.Listener.Addr().String() + "/folder"
+	defer testMetadataHTTPServer.Close()
+	metadataTokenURL := "http://" + testMetadataHTTPServer.Listener.Addr().String() + "/token"
+	metadataFolderURL := "http://" + testMetadataHTTPServer.Listener.Addr().String() + "/folder"
 
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
@@ -82,9 +82,9 @@ func TestWrite(t *testing.T) {
 				tt.handler(t, w, r)
 			})
 			tt.plugin.Log = testutil.Logger{}
-			tt.plugin.EndpointUrl = url
-			tt.plugin.MetadataTokenURL = metadataTokenUrl
-			tt.plugin.MetadataFolderURL = metadataFolderUrl
+			tt.plugin.EndpointURL = url
+			tt.plugin.MetadataTokenURL = metadataTokenURL
+			tt.plugin.MetadataFolderURL = metadataFolderURL
 			err := tt.plugin.Connect()
 			require.NoError(t, err)
 

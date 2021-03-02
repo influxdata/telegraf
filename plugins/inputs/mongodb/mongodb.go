@@ -121,7 +121,7 @@ func (m *MongoDB) getMongoServer(url *url.URL) *Server {
 	if _, ok := m.mongos[url.Host]; !ok {
 		m.mongos[url.Host] = &Server{
 			Log: m.Log,
-			Url: url,
+			URL: url,
 		}
 	}
 	return m.mongos[url.Host]
@@ -130,10 +130,10 @@ func (m *MongoDB) getMongoServer(url *url.URL) *Server {
 func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 	if server.Session == nil {
 		var dialAddrs []string
-		if server.Url.User != nil {
-			dialAddrs = []string{server.Url.String()}
+		if server.URL.User != nil {
+			dialAddrs = []string{server.URL.String()}
 		} else {
-			dialAddrs = []string{server.Url.Host}
+			dialAddrs = []string{server.URL.Host}
 		}
 		dialInfo, err := mgo.ParseURL(dialAddrs[0])
 		if err != nil {

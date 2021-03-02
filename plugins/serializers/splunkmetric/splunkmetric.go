@@ -30,11 +30,11 @@ type HECTimeSeries struct {
 }
 
 // NewSerializer Setup our new serializer
-func NewSerializer(splunkmetric_hec_routing bool, splunkmetric_multimetric bool) (*serializer, error) {
+func NewSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool) (*serializer, error) {
 	/*	Define output params */
 	s := &serializer{
-		HecRouting:              splunkmetric_hec_routing,
-		SplunkmetricMultiMetric: splunkmetric_multimetric,
+		HecRouting:              splunkmetricHecRouting,
+		SplunkmetricMultiMetric: splunkmetricMultimetric,
 	}
 	return s, nil
 }

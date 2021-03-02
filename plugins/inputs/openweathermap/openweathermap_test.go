@@ -416,9 +416,9 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		BaseUrl: ts.URL,
-		AppId:   "noappid",
-		CityId:  []string{"2988507"},
+		BaseURL: ts.URL,
+		AppID:   "noappid",
+		CityID:  []string{"2988507"},
 		Fetch:   []string{"weather", "forecast"},
 		Units:   "metric",
 	}
@@ -500,9 +500,9 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		BaseUrl: ts.URL,
-		AppId:   "noappid",
-		CityId:  []string{"2988507"},
+		BaseURL: ts.URL,
+		AppID:   "noappid",
+		CityID:  []string{"2988507"},
 		Fetch:   []string{"weather"},
 		Units:   "metric",
 	}
@@ -560,9 +560,9 @@ func TestRainMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		BaseUrl: ts.URL,
-		AppId:   "noappid",
-		CityId:  []string{"111", "222", "333", "444"},
+		BaseURL: ts.URL,
+		AppID:   "noappid",
+		CityID:  []string{"111", "222", "333", "444"},
 		Fetch:   []string{"weather"},
 		Units:   "metric",
 	}
@@ -703,9 +703,9 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		BaseUrl: ts.URL,
-		AppId:   "noappid",
-		CityId:  []string{"524901", "703448", "2643743"},
+		BaseURL: ts.URL,
+		AppID:   "noappid",
+		CityID:  []string{"524901", "703448", "2643743"},
 		Fetch:   []string{"weather"},
 		Units:   "metric",
 	}
@@ -803,10 +803,10 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 
 func TestFormatURL(t *testing.T) {
 	n := &OpenWeatherMap{
-		AppId:   "appid",
+		AppID:   "appid",
 		Units:   "units",
 		Lang:    "lang",
-		BaseUrl: "http://foo.com",
+		BaseURL: "http://foo.com",
 	}
 	n.Init()
 

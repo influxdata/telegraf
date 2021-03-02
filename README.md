@@ -52,9 +52,9 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf requires Go version 1.13 or newer, the Makefile requires GNU make.
+Telegraf requires Go version 1.14 or newer, the Makefile requires GNU make.
 
-1. [Install Go](https://golang.org/doc/install) >=1.13 (1.15 recommended)
+1. [Install Go](https://golang.org/doc/install) >=1.14 (1.15 recommended)
 2. Clone the Telegraf repository:
    ```
    cd ~/src
@@ -442,6 +442,7 @@ For documentation on the latest development code see the [documentation index][d
 * [prometheus](./plugins/outputs/prometheus_client)
 * [riemann](./plugins/outputs/riemann)
 * [riemann_legacy](./plugins/outputs/riemann_legacy)
+* [signalfx](./plugins/outputs/signalfx)
 * [socket_writer](./plugins/outputs/socket_writer)
 * [stackdriver](./plugins/outputs/stackdriver) (Google Cloud Monitoring)
 * [syslog](./plugins/outputs/syslog)

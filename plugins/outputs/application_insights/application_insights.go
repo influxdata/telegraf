@@ -2,7 +2,6 @@ package application_insights
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"time"
 	"unsafe"
@@ -23,22 +22,17 @@ type DiagnosticsMessageSubscriber interface {
 }
 
 type ApplicationInsights struct {
-	InstrumentationKey      string
-	EndpointURL             string
-	Timeout                 internal.Duration
-	EnableDiagnosticLogging bool
-	ContextTagSources       map[string]string
-	diagMsgSubscriber       DiagnosticsMessageSubscriber
-	transmitter             TelemetryTransmitter
-	diagMsgListener         appinsights.DiagnosticsMessageListener
-}
+	InstrumentationKey      string            `toml:"instrumentation_key"`
+	EndpointURL             string            `toml:"endpoint_url"`
+	Timeout                 internal.Duration `toml:"timeout"`
+	EnableDiagnosticLogging bool              `toml:"enable_diagnostic_logging"`
+	ContextTagSources       map[string]string `toml:"context_tag_sources"`
+	Log                     telegraf.Logger   `toml:"-"`
 
-const (
-	Error   = "E! "
-	Warning = "W! "
-	Info    = "I! "
-	Debug   = "D! "
-)
+	diagMsgSubscriber DiagnosticsMessageSubscriber
+	transmitter       TelemetryTransmitter
+	diagMsgListener   appinsights.DiagnosticsMessageListener
+}
 
 var (
 	sampleConfig = `
@@ -76,7 +70,7 @@ func (a *ApplicationInsights) Description() string {
 
 func (a *ApplicationInsights) Connect() error {
 	if a.InstrumentationKey == "" {
-		return fmt.Errorf("Instrumentation key is required")
+		return fmt.Errorf("instrumentation key is required")
 	}
 
 	if a.transmitter == nil {
@@ -85,7 +79,7 @@ func (a *ApplicationInsights) Connect() error {
 
 	if a.EnableDiagnosticLogging && a.diagMsgSubscriber != nil {
 		a.diagMsgListener = a.diagMsgSubscriber.Subscribe(func(msg string) error {
-			logOutputMsg(Info, "%s", msg)
+			a.Log.Info(msg)
 			return nil
 		})
 	}
@@ -117,9 +111,9 @@ func (a *ApplicationInsights) Close() error {
 
 	select {
 	case <-a.transmitter.Close():
-		logOutputMsg(Info, "Closed")
+		a.Log.Info("Closed")
 	case <-time.After(a.Timeout.Duration):
-		logOutputMsg(Warning, "Close operation timed out after %v", a.Timeout.Duration)
+		a.Log.Warnf("Close operation timed out after %v", a.Timeout.Duration)
 	}
 
 	return nil
@@ -139,15 +133,12 @@ func (a *ApplicationInsights) createTelemetry(metric telegraf.Metric) []appinsig
 		telemetry := a.createSimpleMetricTelemetry(metric, "value", false)
 		if telemetry != nil {
 			return []appinsights.Telemetry{telemetry}
-		} else {
-			return nil
 		}
-	} else {
-		// AppInsights does not support multi-dimensional metrics at the moment, so we need to disambiguate resulting telemetry
-		// by adding field name as the telemetry name suffix
-		retval := a.createTelemetryForUnusedFields(metric, nil)
-		return retval
+		return nil
 	}
+	// AppInsights does not support multi-dimensional metrics at the moment, so we need to disambiguate resulting telemetry
+	// by adding field name as the telemetry name suffix
+	return a.createTelemetryForUnusedFields(metric, nil)
 }
 
 func (a *ApplicationInsights) createSimpleMetricTelemetry(metric telegraf.Metric, fieldName string, useFieldNameInTelemetryName bool) *appinsights.MetricTelemetry {
@@ -251,7 +242,7 @@ func getFloat64TelemetryPropertyValue(
 		return metricValue, nil
 	}
 
-	return 0.0, fmt.Errorf("No field from the candidate list was found in the metric")
+	return 0.0, fmt.Errorf("no field from the candidate list was found in the metric")
 }
 
 func getIntTelemetryPropertyValue(
@@ -277,7 +268,7 @@ func getIntTelemetryPropertyValue(
 		return metricValue, nil
 	}
 
-	return 0, fmt.Errorf("No field from the candidate list was found in the metric")
+	return 0, fmt.Errorf("no field from the candidate list was found in the metric")
 }
 
 func contains(set []string, val string) bool {
@@ -320,11 +311,11 @@ func toInt(value interface{}) (int, error) {
 	case uint64:
 		if is32Bit {
 			if v > math.MaxInt32 {
-				return 0, fmt.Errorf("Value [%d] out of range of 32-bit integers", v)
+				return 0, fmt.Errorf("value [%d] out of range of 32-bit integers", v)
 			}
 		} else {
 			if v > math.MaxInt64 {
-				return 0, fmt.Errorf("Value [%d] out of range of 64-bit integers", v)
+				return 0, fmt.Errorf("value [%d] out of range of 64-bit integers", v)
 			}
 		}
 
@@ -333,7 +324,7 @@ func toInt(value interface{}) (int, error) {
 	case int64:
 		if is32Bit {
 			if v > math.MaxInt32 || v < math.MinInt32 {
-				return 0, fmt.Errorf("Value [%d] out of range of 32-bit integers", v)
+				return 0, fmt.Errorf("value [%d] out of range of 32-bit integers", v)
 			}
 		}
 
@@ -341,10 +332,6 @@ func toInt(value interface{}) (int, error) {
 	}
 
 	return 0.0, fmt.Errorf("[%s] cannot be converted to an int value", value)
-}
-
-func logOutputMsg(level string, format string, v ...interface{}) {
-	log.Printf(level+"[outputs.application_insights] "+format, v...)
 }
 
 func init() {

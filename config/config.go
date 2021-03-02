@@ -49,6 +49,7 @@ var (
 		`"`, `\"`,
 		`\`, `\\`,
 	)
+	httpLoadConfigRetryInterval = 10 * time.Second
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -921,17 +922,27 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 	}
 	req.Header.Add("Accept", "application/toml")
 	req.Header.Set("User-Agent", internal.ProductToken())
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
+
+	retries := 3
+	for i := 0; i <= retries; i++ {
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("Retry %d of %d failed connecting to HTTP config server %s", i, retries, err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			if i < retries {
+				log.Printf("Error getting HTTP config.  Retry %d of %d in %s.  Status=%d", i, retries, httpLoadConfigRetryInterval, resp.StatusCode)
+				time.Sleep(httpLoadConfigRetryInterval)
+				continue
+			}
+			return nil, fmt.Errorf("Retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status)
+		}
+		defer resp.Body.Close()
+		return ioutil.ReadAll(resp.Body)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to retrieve remote config: %s", resp.Status)
-	}
-
-	defer resp.Body.Close()
-	return ioutil.ReadAll(resp.Body)
+	return nil, nil
 }
 
 // parseConfig loads a TOML configuration from a provided path and
@@ -1392,7 +1403,7 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 	// TODO: support FieldPass/FieldDrop on outputs
 
 	c.getFieldDuration(tbl, "flush_interval", &oc.FlushInterval)
-	c.getFieldDuration(tbl, "flush_jitter", oc.FlushJitter)
+	c.getFieldDuration(tbl, "flush_jitter", &oc.FlushJitter)
 
 	c.getFieldInt(tbl, "metric_buffer_limit", &oc.MetricBufferLimit)
 	c.getFieldInt(tbl, "metric_batch_size", &oc.MetricBatchSize)
@@ -1527,6 +1538,9 @@ func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string, target *[
 						*target = append(*target, str.Value)
 					}
 				}
+			} else {
+				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format", fieldName))
+				return
 			}
 		}
 	}
@@ -1543,6 +1557,9 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 								tagfilter.Filter = append(tagfilter.Filter, str.Value)
 							}
 						}
+					} else {
+						c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format on each entry", fieldName))
+						return
 					}
 					*target = append(*target, tagfilter)
 				}

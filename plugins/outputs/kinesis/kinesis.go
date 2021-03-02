@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/aws/aws-sdk-go/service/kinesis/kinesisiface"
 	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
@@ -29,7 +30,7 @@ type (
 		RandomPartitionKey bool       `toml:"use_random_partitionkey"`
 		Partition          *Partition `toml:"partition"`
 		Debug              bool       `toml:"debug"`
-		svc                *kinesis.Kinesis
+		svc                kinesisiface.KinesisAPI
 
 		serializer serializers.Serializer
 	}
@@ -154,26 +155,29 @@ func (k *KinesisOutput) SetSerializer(serializer serializers.Serializer) {
 	k.serializer = serializer
 }
 
-func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Duration {
+func (k *KinesisOutput) writeKinesis(r []*kinesis.PutRecordsRequestEntry) time.Duration {
+
 	start := time.Now()
 	payload := &kinesis.PutRecordsInput{
 		Records:    r,
 		StreamName: aws.String(k.StreamName),
 	}
 
-	if k.Debug {
-		resp, err := k.svc.PutRecords(payload)
-		if err != nil {
-			log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
-		}
-		log.Printf("I! Wrote: '%+v'", resp)
-
-	} else {
-		_, err := k.svc.PutRecords(payload)
-		if err != nil {
-			log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
-		}
+	resp, err := k.svc.PutRecords(payload)
+	if err != nil {
+		log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
+		return time.Since(start)
 	}
+
+	if k.Debug {
+		log.Printf("I! Wrote: '%+v'", resp)
+	}
+
+	failed := *resp.FailedRecordCount
+	if failed > 0 {
+		log.Printf("E! kinesis: Unable to write %+v of %+v record(s) to Kinesis", failed, len(r))
+	}
+
 	return time.Since(start)
 }
 
@@ -241,7 +245,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 		if sz == 500 {
 			// Max Messages Per PutRecordRequest is 500
-			elapsed := writekinesis(k, r)
+			elapsed := k.writeKinesis(r)
 			log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 			sz = 0
 			r = nil
@@ -249,7 +253,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 	}
 	if sz > 0 {
-		elapsed := writekinesis(k, r)
+		elapsed := k.writeKinesis(r)
 		log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 	}
 

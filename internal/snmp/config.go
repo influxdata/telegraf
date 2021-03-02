@@ -15,7 +15,7 @@ type ClientConfig struct {
 	Community string `toml:"community"`
 
 	// Parameters for Version 2 & 3
-	MaxRepetitions uint8 `toml:"max_repetitions"`
+	MaxRepetitions uint32 `toml:"max_repetitions"`
 
 	// Parameters for Version 3
 	ContextName string `toml:"context_name"`

@@ -31,7 +31,7 @@ func TestBuildDimensions(t *testing.T) {
 	i := 0
 	for k := range testPoint.Tags() {
 		tagKeys[i] = k
-		i += 1
+		i++
 	}
 
 	sort.Strings(tagKeys)
@@ -151,7 +151,6 @@ func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
 }
 
 func TestPartitionDatums(t *testing.T) {
-
 	assert := assert.New(t)
 
 	testDatum := cloudwatch.MetricDatum{

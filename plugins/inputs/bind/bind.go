@@ -58,14 +58,14 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 	for _, u := range b.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			acc.AddError(fmt.Errorf("unable to parse address '%s': %s", u, err))
 			continue
 		}
 
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(b.gatherUrl(addr, acc))
+			acc.AddError(b.gatherURL(addr, acc))
 		}(addr)
 	}
 
@@ -73,7 +73,7 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (b *Bind) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+func (b *Bind) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	switch addr.Path {
 	case "":
 		// BIND 9.6 - 9.8
@@ -88,7 +88,7 @@ func (b *Bind) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 		// BIND 9.9+
 		return b.readStatsXMLv3(addr, acc)
 	default:
-		return fmt.Errorf("URL %s is ambiguous. Please check plugin documentation for supported URL formats.",
+		return fmt.Errorf("provided URL %s is ambiguous, please check plugin documentation for supported URL formats",
 			addr)
 	}
 }

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/go-ping/ping"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -261,6 +262,21 @@ func TestPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
+func TestPingGatherIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode, retrieves systems ping utility")
+	}
+
+	var acc testutil.Accumulator
+	p, ok := inputs.Inputs["ping"]().(*Ping)
+	require.True(t, ok)
+	p.Urls = []string{"localhost", "influxdata.com"}
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+	require.Equal(t, 0, acc.Metrics[0].Fields["result_code"])
+	require.Equal(t, 0, acc.Metrics[1].Fields["result_code"])
+}
+
 var lossyPingOutput = `
 PING www.google.com (216.58.218.164) 56(84) bytes of data.
 64 bytes from host.net (216.58.218.164): icmp_seq=1 ttl=63 time=35.2 ms
@@ -416,11 +432,11 @@ func TestPingGatherNative(t *testing.T) {
 				PacketsSent: 5,
 				PacketsRecv: 5,
 				Rtts: []time.Duration{
-					1 * time.Millisecond,
-					2 * time.Millisecond,
 					3 * time.Millisecond,
 					4 * time.Millisecond,
+					1 * time.Millisecond,
 					5 * time.Millisecond,
+					2 * time.Millisecond,
 				},
 			},
 			ttl: 1,
@@ -459,8 +475,11 @@ func TestPingGatherNative(t *testing.T) {
 		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
 		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
 		assert.True(t, acc.HasField("ping", "percentile50_ms"))
+		assert.Equal(t, float64(3), acc.Metrics[0].Fields["percentile50_ms"])
 		assert.True(t, acc.HasField("ping", "percentile95_ms"))
+		assert.Equal(t, float64(4.799999), acc.Metrics[0].Fields["percentile95_ms"])
 		assert.True(t, acc.HasField("ping", "percentile99_ms"))
+		assert.Equal(t, float64(4.96), acc.Metrics[0].Fields["percentile99_ms"])
 		assert.True(t, acc.HasField("ping", "percent_packet_loss"))
 		assert.True(t, acc.HasField("ping", "minimum_response_ms"))
 		assert.True(t, acc.HasField("ping", "average_response_ms"))
