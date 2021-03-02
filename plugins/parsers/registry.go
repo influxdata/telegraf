@@ -152,7 +152,7 @@ type Config struct {
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 
 	// Custom Value name for Value field
-	ValueValueName string `toml:"value_value_name"`
+	ValueFieldname string `toml:"value_fieldname"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -177,7 +177,7 @@ func NewParser(config *Config) (Parser, error) {
 		)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
-			config.DataType, config.DefaultTags, config.ValueValueName)
+			config.DataType, config.DefaultTags, config.ValueFieldname)
 	case "influx":
 		parser, err = NewInfluxParser()
 	case "nagios":

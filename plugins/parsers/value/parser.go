@@ -47,7 +47,11 @@ func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
-	fields := map[string]interface{}{v.ValueField: value}
+	fieldname := "value"
+	if v.ValueField != "" {
+		fieldname = v.ValueField
+	}
+	fields := map[string]interface{}{fieldname: value}
 	metric, err := metric.New(v.MetricName, v.DefaultTags,
 		fields, time.Now().UTC())
 	if err != nil {

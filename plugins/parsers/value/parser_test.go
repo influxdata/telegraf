@@ -254,6 +254,20 @@ func TestSettingValueField(t *testing.T) {
 
 }
 
+func TestValueFieldNotSet(t *testing.T) {
+	parser := ValueParser{
+		MetricName: "value_test",
+		DataType:   "string",
+	}
+	metrics, err := parser.Parse([]byte("Thanks"))
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	expected := testutil.MustMetric("value_test", nil, map[string]interface{}{
+		"value": "Thanks",
+	}, metrics[0].Time())
+	testutil.RequireMetricEqual(t, expected, metrics[0])
+}
+
 func TestParseValuesWithNullCharacter(t *testing.T) {
 	parser := ValueParser{
 		MetricName: "value_test",
