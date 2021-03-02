@@ -208,7 +208,7 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 		IncludeQuery: []string{"DatabaseSize"},
 	}
 
-	// acc1 should have the health metric because it's specified in the config
+	// acc1 should have the health metric because it is specified in the config
 	var acc1 testutil.Accumulator
 	s1.Gather(&acc1)
 	assert.True(t, acc1.HasMeasurement(healthMetricName))
@@ -225,7 +225,7 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 	assert.True(t, acc1.HasPoint(healthMetricName, tags2, healthMetricAttemptedQueries, 2))
 	assert.True(t, acc1.HasPoint(healthMetricName, tags2, healthMetricSuccessfulQueries, 0))
 
-	// acc2 should not have the health metric because it's not specified in the config
+	// acc2 should not have the health metric because it is not specified in the config
 	var acc2 testutil.Accumulator
 	s2.Gather(&acc2)
 	assert.False(t, acc2.HasMeasurement(healthMetricName))
