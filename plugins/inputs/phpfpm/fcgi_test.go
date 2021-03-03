@@ -44,7 +44,7 @@ func TestSize(t *testing.T) {
 var streamTests = []struct {
 	desc    string
 	recType recType
-	reqId   uint16
+	reqID   uint16
 	content []byte
 	raw     []byte
 }{
@@ -90,8 +90,8 @@ outer:
 			t.Errorf("%s: got type %d expected %d", test.desc, rec.h.Type, test.recType)
 			continue
 		}
-		if rec.h.Id != test.reqId {
-			t.Errorf("%s: got request ID %d expected %d", test.desc, rec.h.Id, test.reqId)
+		if rec.h.ID != test.reqID {
+			t.Errorf("%s: got request ID %d expected %d", test.desc, rec.h.ID, test.reqID)
 			continue
 		}
 		if !bytes.Equal(content, test.content) {
@@ -100,7 +100,7 @@ outer:
 		}
 		buf.Reset()
 		c := newConn(&nilCloser{buf})
-		w := newWriter(c, test.recType, test.reqId)
+		w := newWriter(c, test.recType, test.reqID)
 		if _, err := w.Write(test.content); err != nil {
 			t.Errorf("%s: error writing record: %v", test.desc, err)
 			continue
@@ -164,17 +164,17 @@ func nameValuePair11(nameData, valueData string) []byte {
 
 func makeRecord(
 	recordType recType,
-	requestId uint16,
+	requestID uint16,
 	contentData []byte,
 ) []byte {
-	requestIdB1 := byte(requestId >> 8)
-	requestIdB0 := byte(requestId)
+	requestIDB1 := byte(requestID >> 8)
+	requestIDB0 := byte(requestID)
 
 	contentLength := len(contentData)
 	contentLengthB1 := byte(contentLength >> 8)
 	contentLengthB0 := byte(contentLength)
 	return bytes.Join([][]byte{
-		{1, byte(recordType), requestIdB1, requestIdB0, contentLengthB1,
+		{1, byte(recordType), requestIDB1, requestIDB0, contentLengthB1,
 			contentLengthB0, 0, 0},
 		contentData,
 	},

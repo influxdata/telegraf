@@ -178,16 +178,16 @@ func (h *GrayLog) gatherServer(
 	if err := json.Unmarshal([]byte(resp), &dat); err != nil {
 		return err
 	}
-	for _, m_item := range dat.Metrics {
+	for _, mItem := range dat.Metrics {
 		fields := make(map[string]interface{})
 		tags := map[string]string{
 			"server": host,
 			"port":   port,
-			"name":   m_item.Name,
-			"type":   m_item.Type,
+			"name":   mItem.Name,
+			"type":   mItem.Type,
 		}
-		h.flatten(m_item.Fields, fields, "")
-		acc.AddFields(m_item.FullName, fields, tags)
+		h.flatten(mItem.Fields, fields, "")
+		acc.AddFields(mItem.FullName, fields, tags)
 	}
 	return nil
 }
@@ -241,12 +241,12 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 
 	if strings.Contains(requestURL.String(), "multiple") {
 		m := &Messagebody{Metrics: h.Metrics}
-		http_body, err := json.Marshal(m)
+		httpBody, err := json.Marshal(m)
 		if err != nil {
 			return "", -1, fmt.Errorf("Invalid list of Metrics %s", h.Metrics)
 		}
 		method = "POST"
-		content = bytes.NewBuffer(http_body)
+		content = bytes.NewBuffer(httpBody)
 	}
 	req, err := http.NewRequest(method, requestURL.String(), content)
 	if err != nil {

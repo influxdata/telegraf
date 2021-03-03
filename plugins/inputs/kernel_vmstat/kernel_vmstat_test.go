@@ -13,7 +13,7 @@ import (
 )
 
 func TestFullVmStatProcFile(t *testing.T) {
-	tmpfile := makeFakeVmStatFile([]byte(vmStatFile_Full))
+	tmpfile := makeFakeVMStatFile([]byte(vmStatFileFull))
 	defer os.Remove(tmpfile)
 
 	k := KernelVmstat{
@@ -121,7 +121,7 @@ func TestFullVmStatProcFile(t *testing.T) {
 }
 
 func TestPartialVmStatProcFile(t *testing.T) {
-	tmpfile := makeFakeVmStatFile([]byte(vmStatFile_Partial))
+	tmpfile := makeFakeVMStatFile([]byte(vmStatFilePartial))
 	defer os.Remove(tmpfile)
 
 	k := KernelVmstat{
@@ -151,7 +151,7 @@ func TestPartialVmStatProcFile(t *testing.T) {
 }
 
 func TestInvalidVmStatProcFile1(t *testing.T) {
-	tmpfile := makeFakeVmStatFile([]byte(vmStatFile_Invalid))
+	tmpfile := makeFakeVMStatFile([]byte(vmStatFileInvalid))
 	defer os.Remove(tmpfile)
 
 	k := KernelVmstat{
@@ -164,7 +164,7 @@ func TestInvalidVmStatProcFile1(t *testing.T) {
 }
 
 func TestNoVmStatProcFile(t *testing.T) {
-	tmpfile := makeFakeVmStatFile([]byte(vmStatFile_Invalid))
+	tmpfile := makeFakeVMStatFile([]byte(vmStatFileInvalid))
 	os.Remove(tmpfile)
 
 	k := KernelVmstat{
@@ -177,7 +177,7 @@ func TestNoVmStatProcFile(t *testing.T) {
 	assert.Contains(t, err.Error(), "does not exist")
 }
 
-const vmStatFile_Full = `nr_free_pages 78730
+const vmStatFileFull = `nr_free_pages 78730
 nr_inactive_anon 426259
 nr_active_anon 2515657
 nr_inactive_file 2366791
@@ -269,7 +269,7 @@ thp_collapse_alloc 24857
 thp_collapse_alloc_failed 102214
 thp_split 9817`
 
-const vmStatFile_Partial = `unevictable_pgs_culled 1531
+const vmStatFilePartial = `unevictable_pgs_culled 1531
 unevictable_pgs_scanned 0
 unevictable_pgs_rescued 5426
 unevictable_pgs_mlocked 6988
@@ -284,7 +284,7 @@ thp_collapse_alloc_failed 102214
 thp_split 9817`
 
 // invalid thp_split measurement
-const vmStatFile_Invalid = `unevictable_pgs_culled 1531
+const vmStatFileInvalid = `unevictable_pgs_culled 1531
 unevictable_pgs_scanned 0
 unevictable_pgs_rescued 5426
 unevictable_pgs_mlocked 6988
@@ -298,7 +298,7 @@ thp_collapse_alloc 24857
 thp_collapse_alloc_failed 102214
 thp_split abcd`
 
-func makeFakeVmStatFile(content []byte) string {
+func makeFakeVMStatFile(content []byte) string {
 	tmpfile, err := ioutil.TempFile("", "kernel_vmstat_test")
 	if err != nil {
 		panic(err)

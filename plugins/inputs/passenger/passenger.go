@@ -75,14 +75,14 @@ type process struct {
 	LifeStatus          string `xml:"life_status"`
 	Enabled             string `xml:"enabled"`
 	HasMetrics          bool   `xml:"has_metrics"`
-	Cpu                 int64  `xml:"cpu"`
+	CPU                 int64  `xml:"cpu"`
 	Rss                 int64  `xml:"rss"`
 	Pss                 int64  `xml:"pss"`
 	PrivateDirty        int64  `xml:"private_dirty"`
 	Swap                int64  `xml:"swap"`
 	RealMemory          int64  `xml:"real_memory"`
 	Vmsize              int64  `xml:"vmsize"`
-	ProcessGroupId      string `xml:"process_group_id"`
+	ProcessGroupID      string `xml:"process_group_id"`
 }
 
 func (p *process) getUptime() int64 {
@@ -211,7 +211,7 @@ func importMetric(stat []byte, acc telegraf.Accumulator) error {
 					"pid":              fmt.Sprintf("%d", process.Pid),
 					"code_revision":    process.CodeRevision,
 					"life_status":      process.LifeStatus,
-					"process_group_id": process.ProcessGroupId,
+					"process_group_id": process.ProcessGroupID,
 				}
 				fields := map[string]interface{}{
 					"concurrency":           process.Concurrency,
@@ -223,7 +223,7 @@ func importMetric(stat []byte, acc telegraf.Accumulator) error {
 					"spawn_end_time":        process.SpawnEndTime,
 					"last_used":             process.LastUsed,
 					"uptime":                process.getUptime(),
-					"cpu":                   process.Cpu,
+					"cpu":                   process.CPU,
 					"rss":                   process.Rss,
 					"pss":                   process.Pss,
 					"private_dirty":         process.PrivateDirty,

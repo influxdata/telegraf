@@ -86,7 +86,7 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return fmt.Errorf("unable to marshal TimeSeries, %s", err.Error())
 	}
-	req, err := http.NewRequest("POST", a.authenticatedUrl(), bytes.NewBuffer(tsBytes))
+	req, err := http.NewRequest("POST", a.authenticatedURL(), bytes.NewBuffer(tsBytes))
 	if err != nil {
 		return fmt.Errorf("unable to create http.Request, %s", err.Error())
 	}
@@ -113,8 +113,7 @@ func (a *Amon) Description() string {
 	return "Configuration for Amon Server to send metrics to."
 }
 
-func (a *Amon) authenticatedUrl() string {
-
+func (a *Amon) authenticatedURL() string {
 	return fmt.Sprintf("%s/api/system/%s", a.AmonInstance, a.ServerKey)
 }
 
