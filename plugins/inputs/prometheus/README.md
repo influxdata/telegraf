@@ -39,7 +39,6 @@ in Prometheus format.
   # pod_scrape_scope = "cluster"
   ## Only for node scrape scope: interval in seconds for how often to get updated pod list for scraping
   # pod_scrape_interval = 60
-  # monitor_kubernetes_pods_version = 1
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
   # monitor_kubernetes_pods_namespace = ""
