@@ -147,6 +147,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/rabbitmq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/raindrops"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ras"
+	_ "github.com/influxdata/telegraf/plugins/inputs/ravendb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/redfish"
 	_ "github.com/influxdata/telegraf/plugins/inputs/redis"
 	_ "github.com/influxdata/telegraf/plugins/inputs/rethinkdb"
