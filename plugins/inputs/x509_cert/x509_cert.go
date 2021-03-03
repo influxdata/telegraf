@@ -23,6 +23,7 @@ import (
 
 const sampleConfig = `
   ## List certificate sources
+  ## Prefix your entry with 'file://' if you intend to use relative paths
   sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443",
             "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem"]
 
@@ -50,6 +51,7 @@ type X509Cert struct {
 	urls                []*url.URL
 	globFilePathsToUrls []*url.URL
 	globpaths           []*globpath.GlobPath
+	Log                 telegraf.Logger
 }
 
 // Description returns description of the plugin.
@@ -64,16 +66,17 @@ func (c *X509Cert) SampleConfig() string {
 
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
-		if strings.HasPrefix(source, "/") {
+		if strings.HasPrefix(source, "file://") ||
+			strings.HasPrefix(source, "/") ||
+			strings.Index(source, ":\\") == 1 {
+
+			source = filepath.ToSlash(strings.TrimPrefix(source, "file://"))
 			g, err := globpath.Compile(source)
 			if err != nil {
 				return fmt.Errorf("could not compile glob %v: %v", source, err)
 			}
 			c.globpaths = append(c.globpaths, g)
 		} else {
-			if strings.Index(source, ":\\") == 1 {
-				source = "file://" + filepath.ToSlash(source)
-			}
 
 			u, err := url.Parse(source)
 			if err != nil {
@@ -225,7 +228,8 @@ func (c *X509Cert) expandFilePathsToUrls() error {
 	for _, globpath := range c.globpaths {
 		files := globpath.Match()
 		if len(files) <= 0 {
-			return fmt.Errorf("could not find file: %v", globpath)
+			c.Log.Errorf("could not find file: %v", globpath)
+			continue
 		}
 		for _, file := range files {
 			file = "file://" + file
