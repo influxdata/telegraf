@@ -240,9 +240,9 @@ func TestParseValidValuesDefaultTags(t *testing.T) {
 
 func TestSettingValueField(t *testing.T) {
 	parser := ValueParser{
-		MetricName: "value_test",
-		DataType:   "string",
-		ValueField: "new_field_name",
+		MetricName:     "value_test",
+		DataType:       "string",
+		ValueFieldname: "new_field_name",
 	}
 	metrics, err := parser.Parse([]byte("Thanks"))
 	require.NoError(t, err)

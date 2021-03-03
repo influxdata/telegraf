@@ -285,13 +285,13 @@ func NewValueParser(
 	metricName string,
 	dataType string,
 	defaultTags map[string]string,
-	valueField string,
+	valueFieldname string,
 ) (Parser, error) {
 	return &value.ValueParser{
-		MetricName:  metricName,
-		DataType:    dataType,
-		DefaultTags: defaultTags,
-		ValueField:  valueField,
+		MetricName:     metricName,
+		DataType:       dataType,
+		DefaultTags:    defaultTags,
+		ValueFieldname: valueFieldname,
 	}, nil
 }
 

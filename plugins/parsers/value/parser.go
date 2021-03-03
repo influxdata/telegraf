@@ -12,10 +12,10 @@ import (
 )
 
 type ValueParser struct {
-	MetricName  string
-	DataType    string
-	DefaultTags map[string]string
-	ValueField  string
+	MetricName     string
+	DataType       string
+	DefaultTags    map[string]string
+	ValueFieldname string
 }
 
 func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -48,8 +48,8 @@ func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	fieldname := "value"
-	if v.ValueField != "" {
-		fieldname = v.ValueField
+	if v.ValueFieldname != "" {
+		fieldname = v.ValueFieldname
 	}
 	fields := map[string]interface{}{fieldname: value}
 	metric, err := metric.New(v.MetricName, v.DefaultTags,
