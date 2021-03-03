@@ -341,7 +341,9 @@ func (s *Sensu) write(reqBody []byte) error {
 			s.Log.Debugf("Couldn't read response body: %v", err)
 		}
 		s.Log.Debugf("Failed to write, response: %v", string(bodyData))
-		return fmt.Errorf("when writing to [%s] received status code: %d", s.EndpointUrl, resp.StatusCode)
+		if resp.StatusCode < 400 || resp.StatusCode > 499 {
+			return fmt.Errorf("when writing to [%s] received status code: %d", s.EndpointUrl, resp.StatusCode)
+		}
 	}
 
 	return nil
