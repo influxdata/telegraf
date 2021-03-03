@@ -1,4 +1,9 @@
-# Telegraf plugin: NFSClient
+#### Description
+
+The NFSClient plugin collects data from /proc/self/mountstats. By default, only a limited number of general system-level metrics are collected, including basic read/write counts.
+If `fullstat` is set, a great deal of additional metrics are collected, detailed below.
+
+**NOTE** Many of the metrics, even if tagged with a mount point, are really _per-server_.  Thus, if you mount these two shares:  `nfs01:/vol/foo/bar` and `nfs01:/vol/foo/baz`, there will be two near identical entries in /proc/self/mountstats.  This is a limitation of the metrics exposed by the kernel, not the telegraf plugin.
 
 #### Plugin arguments:
 - **fullstat** bool: Collect per-operation type metrics.  Defaults to false.
@@ -9,15 +14,36 @@
 
 *N.B.* the `include_mounts` and `exclude_mounts` arguments are both applied to the local mount location (e.g. /mnt/NFS), not the server export (e.g. nfsserver:/vol/NFS).  Go regexp patterns can be used in either.
 
-#### Description
-
-The NFSClient plugin collects data from /proc/self/mountstats. By default, only a limited number of general system-level metrics are collected, including basic read/write counts.
-If `fullstat` is set, a great deal of additional metrics are collected, detailed below.
-
-**NOTE** Many of the metrics, even if tagged with a mount point, are really _per-server_.  Thus, if you mount these two shares:  `nfs01:/vol/foo/bar` and `nfs01:/vol/foo/baz`, there will be two near identical entries in /proc/self/mountstats.  This is a limitation of the metrics exposed by the kernel, not the telegraf plugin.
-
-
 #### Examples
+
+```toml
+[[inputs.nfsclient]]
+  ## Read more low-level metrics (optional, defaults to false)
+  # fullstat = false
+
+  ## List of mounts to explictly include or exclude (optional)
+  ## The pattern (Go regexp) is matched against the mount point (not the
+  ## device being mounted).  If include_mounts is set, all mounts are ignored
+  ## unless present in the list. If a mount is listed in both include_mounts
+  ## and exclude_mounts, it is excluded.  Go regexp patterns can be used.
+  # include_mounts = []
+  # exclude_mounts = []
+
+  ## List of operations to include or exclude from collecting.  This applies
+  ## only when fullstat=true.  Symantics are similar to {include,exclude}_mounts:
+  ## the default is to collect everything; when include_operations is set, only
+  ## those OPs are collected; when exclude_operations is set, all are collected
+  ## except those listed.  If include and exclude are set, the OP is excluded.
+  ## See /proc/self/mountstats for a list of valid operations; note that
+  ## NFSv3 and NFSv4 have different lists.  While it is not possible to
+  ## have different include/exclude lists for NFSv3/4, unused elements
+  ## in the list should be okay.  It is possible to have different lists
+  ## for different mountpoints:  use mulitple [[input.nfsclient]] stanzas,
+  ## with their own lists.  See "include_mounts" above, and be careful of
+  ## duplicate metrics.
+  # include_operations = []
+  # exclude_operations = []
+```
 
 Example output for basic metrics showing server-wise read and write data:
 
