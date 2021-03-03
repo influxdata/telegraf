@@ -37,11 +37,11 @@ func (s *MDSTAT_PLUGIN) Gather(acc telegraf.Accumulator) error {
   result := parseFile(MDSTAT_FILE)
 
   for _, device := range result.devices {
-      tags := map[string]string{
+      devTags := map[string]string{
         "device": device.name,
       }
 
-      fields := map[string]interface{} {
+      devFields := map[string]interface{} {
         "status": device.status,
         "raidType": device.raidType,
         "minDisks": device.minDisks,
@@ -50,7 +50,24 @@ func (s *MDSTAT_PLUGIN) Gather(acc telegraf.Accumulator) error {
         "failedDisks": device.failedDisks,
       }
 
-      acc.AddGauge("mdstat_device", fields, tags, time.Now())
+      // Add raid array stats per raid device
+      acc.AddGauge("mdstat_device", devFields, devTags, time.Now())
+
+      //Now add status for each disk in the array
+      for _, disk := range device.diskList {
+        diskTags := map[string]string {
+          "device": device.name,
+          "disk": disk.name,
+        }
+
+        diskFields := map[string]interface{} {
+          "role": disk.role,
+          "failed": disk.failed,
+        }
+
+        acc.AddGauge("mdstat_disk", diskFields, diskTags, time.Now())
+      }
+
   }
 
   return nil
@@ -67,7 +84,7 @@ type Personalities []string
 
 type Disk struct {
   name string
-  role string
+  role int
   failed bool
 }
 
@@ -169,7 +186,7 @@ func parseDeviceEntry(deviceEntry []string) Device {
     var parsedDisk Disk
     // Capture groups start at 1 because index 0 is the full string
     parsedDisk.name = captures[1]
-    parsedDisk.role = captures[2]
+    parsedDisk.role,_ = strconv.Atoi(captures[2])
 
     if(captures[3] == "F") {
       parsedDevice.failedDisks++
