@@ -10,7 +10,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
 
 ```toml
 [[inputs.ravendb]]
-  ## Node URL and port that RavenDB is listening on.
+  ## Node URL and port that RavenDB is listening on
   url = "https://localhost:8080"
 
   ## RavenDB X509 client certificate setup
@@ -21,7 +21,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
   ##
   ## Timeout, specifies the amount of time to wait
   ## for a server's response headers after fully writing the request and 
-  ## time limit for requests made by this client.
+  ## time limit for requests made by this client
   # timeout = "5s"
 
   ## List of statistics which are collected

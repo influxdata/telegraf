@@ -47,7 +47,7 @@ type RavenDB struct {
 }
 
 var sampleConfig = `
-  ## Node URL and port that RavenDB is listening on.
+  ## Node URL and port that RavenDB is listening on
   url = "https://localhost:8080"
 
   ## RavenDB X509 client certificate setup
@@ -58,7 +58,7 @@ var sampleConfig = `
   ##
   ## Timeout, specifies the amount of time to wait
   ## for a server's response headers after fully writing the request and 
-  ## time limit for requests made by this client.
+  ## time limit for requests made by this client
   # timeout = "5s"
 
   ## List of statistics which are collected
@@ -80,52 +80,37 @@ var sampleConfig = `
   # collection_stats_dbs = []
 `
 
-// SampleConfig ...
 func (r *RavenDB) SampleConfig() string {
 	return sampleConfig
 }
 
-// Description ...
 func (r *RavenDB) Description() string {
 	return "Reads metrics from RavenDB servers via the Monitoring Endpoints"
 }
 
-// Gather ...
 func (r *RavenDB) Gather(acc telegraf.Accumulator) error {
-	err := r.ensureClient()
-	if nil != err {
-		r.Log.Errorf("Error with Client %s", err)
-		return err
-	}
-
 	var wg sync.WaitGroup
 
 	for _, statToCollect := range r.StatsInclude {
+		wg.Add(1)
+
 		switch statToCollect {
 		case "server":
-			wg.Add(1)
-
 			go func() {
 				defer wg.Done()
 				r.gatherServer(acc)
 			}()
 		case "databases":
-			wg.Add(1)
-
 			go func() {
 				defer wg.Done()
 				r.gatherDatabases(acc)
 			}()
 		case "indexes":
-			wg.Add(1)
-
 			go func() {
 				defer wg.Done()
-				r.gatherDatabases(acc)
+				r.gatherIndexes(acc)
 			}()
 		case "collections":
-			wg.Add(1)
-
 			go func() {
 				defer wg.Done()
 				r.gatherCollections(acc)
@@ -418,6 +403,12 @@ func (r *RavenDB) Init() error {
 
 	err := choice.CheckSlice(r.StatsInclude, []string{"server", "databases", "indexes", "collections"})
 	if err != nil {
+		return err
+	}
+
+	err = r.ensureClient()
+	if nil != err {
+		r.Log.Errorf("Error with Client %s", err)
 		return err
 	}
 
