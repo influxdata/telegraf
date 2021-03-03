@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
 	"net/http"
 	"net/url"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -88,7 +90,7 @@ type Sensu struct {
 	Metrics       *SensuMetrics     `toml:"metrics"`
 	Check         *SensuCheck       `toml:"check"`
 
-	Timeout         internal.Duration `toml:"timeout"`
+	Timeout         config.Duration `toml:"timeout"`
 	ContentEncoding string            `toml:"content_encoding"`
 
 	EndpointUrl string
@@ -101,93 +103,93 @@ type Sensu struct {
 }
 
 var sampleConfig = `
-## BACKEND API URL is the Sensu Backend API root URL to send metrics to
-## (protocol, host, and port only). The output plugin will automatically
-## append the corresponding backend API path
-## /api/core/v2/namespaces/:entity_namespace/events/:entity_name/:check_name).
-##
-## Backend Events API reference:
-## https://docs.sensu.io/sensu-go/latest/api/events/
-##
-## AGENT API URL is the Sensu Agent API root URL to send metrics to
-## (protocol, host, and port only). The output plugin will automatically
-## append the correspeonding agent API path (/events).
-##
-## Agent API Events API reference:
-## https://docs.sensu.io/sensu-go/latest/api/events/
-## 
-## NOTE: if backend_api_url and agent_api_url and api_key are set, the output 
-## plugin will use backend_api_url. If backend_api_url and agent_api_url are 
-## not provided, the output plugin will default to use an agent_api_url of 
-## http://127.0.0.1:3031
-## 
-# backend_api_url = "http://127.0.0.1:8080"
-# agent_api_url = "http://127.0.0.1:3031"
+  ## BACKEND API URL is the Sensu Backend API root URL to send metrics to
+  ## (protocol, host, and port only). The output plugin will automatically
+  ## append the corresponding backend API path
+  ## /api/core/v2/namespaces/:entity_namespace/events/:entity_name/:check_name).
+  ##
+  ## Backend Events API reference:
+  ## https://docs.sensu.io/sensu-go/latest/api/events/
+  ##
+  ## AGENT API URL is the Sensu Agent API root URL to send metrics to
+  ## (protocol, host, and port only). The output plugin will automatically
+  ## append the correspeonding agent API path (/events).
+  ##
+  ## Agent API Events API reference:
+  ## https://docs.sensu.io/sensu-go/latest/api/events/
+  ## 
+  ## NOTE: if backend_api_url and agent_api_url and api_key are set, the output 
+  ## plugin will use backend_api_url. If backend_api_url and agent_api_url are 
+  ## not provided, the output plugin will default to use an agent_api_url of 
+  ## http://127.0.0.1:3031
+  ## 
+  # backend_api_url = "http://127.0.0.1:8080"
+  # agent_api_url = "http://127.0.0.1:3031"
 
-## API KEY is the Sensu Backend API token 
-## Generate a new API token via: 
-## 
-## $ sensuctl cluster-role create telegraf --verb create --resource events,entities
-## $ sensuctl cluster-role-binding create telegraf --cluster-role telegraf --group telegraf
-## $ sensuctl user create telegraf --group telegraf --password REDACTED 
-## $ sensuctl api-key grant telegraf
-##
-## For more information on Sensu RBAC profiles & API tokens, please visit: 
-## - https://docs.sensu.io/sensu-go/latest/reference/rbac/
-## - https://docs.sensu.io/sensu-go/latest/reference/apikeys/ 
-## 
-# api_key = "${SENSU_API_KEY}"
+  ## API KEY is the Sensu Backend API token 
+  ## Generate a new API token via: 
+  ## 
+  ## $ sensuctl cluster-role create telegraf --verb create --resource events,entities
+  ## $ sensuctl cluster-role-binding create telegraf --cluster-role telegraf --group telegraf
+  ## $ sensuctl user create telegraf --group telegraf --password REDACTED 
+  ## $ sensuctl api-key grant telegraf
+  ##
+  ## For more information on Sensu RBAC profiles & API tokens, please visit: 
+  ## - https://docs.sensu.io/sensu-go/latest/reference/rbac/
+  ## - https://docs.sensu.io/sensu-go/latest/reference/apikeys/ 
+  ## 
+  # api_key = "${SENSU_API_KEY}"
 
-## Optional TLS Config
-# tls_ca = "/etc/telegraf/ca.pem"
-# tls_cert = "/etc/telegraf/cert.pem"
-# tls_key = "/etc/telegraf/key.pem"
-## Use TLS but skip chain & host verification
-# insecure_skip_verify = false
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 
-## Timeout for HTTP message
-# timeout = "5s"
+  ## Timeout for HTTP message
+  # timeout = "5s"
 
-## HTTP Content-Encoding for write request body, can be set to "gzip" to
-## compress body or "identity" to apply no encoding.
-# content_encoding = "identity"
+  ## HTTP Content-Encoding for write request body, can be set to "gzip" to
+  ## compress body or "identity" to apply no encoding.
+  # content_encoding = "identity"
 
-## Sensu Event details
-##
-## Below are the event details to be sent to Sensu.  The main portions of the
-## event are the check, entity, and metrics specifications. For more information
-## on Sensu events and its components, please visit:
-## - Events - https://docs.sensu.io/sensu-go/latest/reference/events
-## - Checks -  https://docs.sensu.io/sensu-go/latest/reference/checks
-## - Entities - https://docs.sensu.io/sensu-go/latest/reference/entities
-## - Metrics - https://docs.sensu.io/sensu-go/latest/reference/events#metrics
-##
-## Check specification
-## The check name is the name to give the Sensu check associated with the event
-## created. This maps to check.metatadata.name in the event.
-[outputs.sensu-go.check]
+  ## Sensu Event details
+  ##
+  ## Below are the event details to be sent to Sensu.  The main portions of the
+  ## event are the check, entity, and metrics specifications. For more information
+  ## on Sensu events and its components, please visit:
+  ## - Events - https://docs.sensu.io/sensu-go/latest/reference/events
+  ## - Checks -  https://docs.sensu.io/sensu-go/latest/reference/checks
+  ## - Entities - https://docs.sensu.io/sensu-go/latest/reference/entities
+  ## - Metrics - https://docs.sensu.io/sensu-go/latest/reference/events#metrics
+  ##
+  ## Check specification
+  ## The check name is the name to give the Sensu check associated with the event
+  ## created. This maps to check.metatadata.name in the event.
+  [outputs.sensu-go.check]
   name = "telegraf"
 
-## Entity specification
-## Configure the entity name and namespace, if necessary. This will be part of
-## the entity.metadata in the event.
-##
-## NOTE: if the output plugin is configured to send events to a
-## backend_api_url and entity_name is not set, the value returned by
-## os.Hostname() will be used; if the output plugin is configured to send
-## events to an agent_api_url, entity_name and entity_namespace are not used.
-# [outputs.sensu-go.entity]
-#   name = "server-01"
-#   namespace = "default"
+  ## Entity specification
+  ## Configure the entity name and namespace, if necessary. This will be part of
+  ## the entity.metadata in the event.
+  ##
+  ## NOTE: if the output plugin is configured to send events to a
+  ## backend_api_url and entity_name is not set, the value returned by
+  ## os.Hostname() will be used; if the output plugin is configured to send
+  ## events to an agent_api_url, entity_name and entity_namespace are not used.
+  # [outputs.sensu-go.entity]
+  #   name = "server-01"
+  #   namespace = "default"
 
-## Metrics specification
-## Configure the tags for the metrics that are sent as part of the Sensu event
-# [outputs.sensu-go.tags]
-#   source = "telegraf"
+  ## Metrics specification
+  ## Configure the tags for the metrics that are sent as part of the Sensu event
+  # [outputs.sensu-go.tags]
+  #   source = "telegraf"
 
-## Configure the handler(s) for processing the provided metrics
-# [outputs.sensu-go.metrics]
-#   handlers = ["influxdb","elasticsearch"]
+  ## Configure the handler(s) for processing the provided metrics
+  # [outputs.sensu-go.metrics]
+  #   handlers = ["influxdb","elasticsearch"]
 `
 
 // Description provides a description of the plugin
@@ -210,26 +212,13 @@ func (s *Sensu) createClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: s.Timeout.Duration,
+		Timeout: time.Duration(s.Timeout),
 	}
 
 	return client, nil
 }
 
 func (s *Sensu) Connect() error {
-	if len(s.ContentEncoding) != 0 {
-		validEncoding := []string{"identity", "gzip"}
-		if !choice.Contains(s.ContentEncoding, validEncoding) {
-			return fmt.Errorf("Unsupported content_encoding [%q] specified", s.ContentEncoding)
-		}
-	} else {
-		s.ContentEncoding = "identity"
-	}
-
-	if s.BackendApiUrl != nil && s.ApiKey == nil {
-		return fmt.Errorf("backend_api_url [%q] specified, but no API Key provided", *s.BackendApiUrl)
-	}
-
 	err := s.setEndpointUrl()
 	if err != nil {
 		return err
@@ -281,11 +270,11 @@ func (s *Sensu) Write(metrics []telegraf.Metric) error {
 			value := getFloat(fieldSet.Value)
 			// JSON does not support these special values
 			if math.IsInf(value, 1) {
-				s.Log.Debugf("metric %s returned positive infity, setting value to %f", key, math.MaxFloat64)
+				s.Log.Debugf("metric %s returned positive infinity, setting value to %f", key, math.MaxFloat64)
 				value = math.MaxFloat64
 			}
 			if math.IsInf(value, -1) {
-				s.Log.Debugf("metric %s returned negative infity, setting value to %f", key, -math.MaxFloat64)
+				s.Log.Debugf("metric %s returned negative infinity, setting value to %f", key, -math.MaxFloat64)
 				value = -math.MaxFloat64
 			}
 			if math.IsNaN(value) {
@@ -346,7 +335,12 @@ func (s *Sensu) write(reqBody []byte) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+	if resp.StatusCode != http.StatusCreated {
+		bodyData, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			s.Log.Debugf("Couldn't read response body: %v", err)
+		}
+		s.Log.Debugf("Failed to write, response: %v", string(bodyData))
 		return fmt.Errorf("when writing to [%s] received status code: %d", s.EndpointUrl, resp.StatusCode)
 	}
 
@@ -389,6 +383,21 @@ func (s *Sensu) setEndpointUrl() error {
 	return nil
 }
 
+func (s *Sensu) Init() error {
+	if len(s.ContentEncoding) != 0 {
+		validEncoding := []string{"identity", "gzip"}
+		if !choice.Contains(s.ContentEncoding, validEncoding) {
+			return fmt.Errorf("Unsupported content_encoding [%q] specified", s.ContentEncoding)
+		}
+	}
+
+	if s.BackendApiUrl != nil && s.ApiKey == nil {
+		return fmt.Errorf("backend_api_url [%q] specified, but no API Key provided", *s.BackendApiUrl)
+	}
+
+	return nil
+}
+
 func init() {
 	outputs.Add("sensu-go", func() telegraf.Output {
 		// Default configuration values
@@ -398,7 +407,8 @@ func init() {
 
 		return &Sensu{
 			AgentApiUrl: &agentApiUrl,
-			Timeout:     internal.Duration{Duration: defaultClientTimeout},
+			Timeout:     config.Duration(defaultClientTimeout),
+			ContentEncoding: "identity",
 		}
 	})
 }
