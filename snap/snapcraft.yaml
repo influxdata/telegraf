@@ -32,7 +32,7 @@ parts:
     plugin: nil
     build-snaps: [go]
     build-packages: [make, gcc, git]
-    stage-packages: [util-linux]
+    stage-packages: [setpriv]
     override-build: |
       git clone https://github.com/influxdata/telegraf.git
       cd telegraf
