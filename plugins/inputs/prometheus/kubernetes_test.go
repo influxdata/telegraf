@@ -201,14 +201,6 @@ func TestInvalidFieldSelector(t *testing.T) {
 	assert.NotEqual(t, err, nil)
 }
 
-func TestUnsupportedFieldSelector(t *testing.T) {
-	fieldSelectorString := "spec.containerName=container"
-	prom := &Prometheus{Log: testutil.Logger{}, KubernetesFieldSelector: fieldSelectorString}
-
-	fieldSelector, _ := fields.ParseSelector(prom.KubernetesFieldSelector)
-	assert.Equal(t, false, fieldSelectorIsSupported(fieldSelector))
-}
-
 func pod() *v1.Pod {
 	p := &v1.Pod{Metadata: &metav1.ObjectMeta{}, Status: &v1.PodStatus{}, Spec: &v1.PodSpec{}}
 	p.Status.PodIP = str("127.0.0.1")

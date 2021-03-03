@@ -3,14 +3,12 @@ package prometheus
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"os/user"
 	"path/filepath"
 	"sync"
@@ -40,7 +38,7 @@ type podResponse struct {
 	Items      []*corev1.Pod `json:"items,string,omitempty"`
 }
 
-const cAdvisorCallInterval = 60
+const cAdvisorPodListDefaultInterval = 60
 
 // loadClient parses a kubeconfig from a file and returns a Kubernetes
 // client. It does not support extensions or client auth providers.
@@ -86,13 +84,16 @@ func (p *Prometheus) start(ctx context.Context) error {
 			case <-ctx.Done():
 				return
 			case <-time.After(time.Second):
-				if p.MonitorPodsVersion == 2 {
+				if p.isNodeScrapeScope {
 					err = p.cAdvisor(ctx, client)
+					if err != nil {
+						p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
+					}
 				} else {
 					err = p.watch(ctx, client)
-				}
-				if err != nil {
-					p.Log.Errorf("Unable to watch resources: %s", err.Error())
+					if err != nil {
+						p.Log.Errorf("Unable to watch resources: %s", err.Error())
+					}
 				}
 			}
 		}
@@ -151,87 +152,76 @@ func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 }
 
 func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
-	p.Log.Infof("Using monitor pods version 2 to get pod list using cAdvisor.")
-
-	nodeIP := os.Getenv("NODE_IP")
-	if nodeIP == "" {
-		return errors.New("The environment variable NODE_IP is not set. Cannot get pod list for monitor_kubernetes_pods using version 2.")
-	}
-
-	// Parse label and field selectors - will be used to filter pods after cAdvisor call
-	labelSelector, err := labels.Parse(p.KubernetesLabelSelector)
-	if err != nil {
-		p.Log.Errorf("Error parsing the specified label selector(s): %s", err.Error())
-	}
-	fieldSelector, err := fields.ParseSelector(p.KubernetesFieldSelector)
-	if err != nil {
-		p.Log.Errorf("Error parsing the specified field selector(s): %s", err.Error())
-	}
-	if fieldSelectorIsSupported(fieldSelector) {
-		p.Log.Errorf("A specified field selector is not supported as a field selector for pods")
-	}
-	p.Log.Infof("Using the label selector: %v and field selector: %v", labelSelector, fieldSelector)
-
 	// Set InsecureSkipVerify for cAdvisor client since Node IP will not be a SAN for the CA cert
 	tlsConfig := client.Client.Transport.(*http.Transport).TLSClientConfig
 	tlsConfig.InsecureSkipVerify = true
 
 	// The request will be the same each time
-	podsUrl := fmt.Sprintf("https://%s:10250/pods", nodeIP)
+	podsUrl := fmt.Sprintf("https://%s:10250/pods", p.nodeIP)
 	req, err := http.NewRequest("GET", podsUrl, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error when creating request to %s to get pod list: %w", podsUrl, err)
 	}
 	client.SetHeaders(req.Header)
 
-	// Update right away so code is not waiting the length of the cAdvisorCallInterval initially
-	err = updateCadvisorPodList(ctx, p, client, req, labelSelector, fieldSelector)
+	// Update right away so code is not waiting the length of the specified scrape interval initially
+	err = updateCadvisorPodList(ctx, p, client, req)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error initially updating pod list: %w", err)
+	}
+
+	scrapeInterval := cAdvisorPodListDefaultInterval
+	if p.PodScrapeInterval != 0 {
+		scrapeInterval = p.PodScrapeInterval
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(cAdvisorCallInterval * time.Second):
-			err := updateCadvisorPodList(ctx, p, client, req, labelSelector, fieldSelector)
+		case <-time.After(time.Duration(scrapeInterval) * time.Second):
+			err := updateCadvisorPodList(ctx, p, client, req)
 			if err != nil {
-				return err
+				return fmt.Errorf("Error updating pod list: %w", err)
 			}
 		}
 	}
 }
 
-func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Client, req *http.Request,
-	labelSelector labels.Selector, fieldSelector fields.Selector) error {
+func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Client, req *http.Request) error {
 
 	resp, err := client.Client.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error when making request for pod list: %w", err)
 	}
+
+	// If err is nil, still check response code
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("Error when making request for pod list with status %s", resp.Status)
+	}
+
 	defer resp.Body.Close()
 
-	responseBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
 	cadvisorPodsResponse := podResponse{}
-	json.Unmarshal([]byte(responseBody), &cadvisorPodsResponse)
+
+	// Will have expected type errors for some parts of corev1.Pod struct for some unused fields
+	// Instead have nil checks for every used field in case of incorrect decoding
+	json.NewDecoder(resp.Body).Decode(&cadvisorPodsResponse)
 	pods := cadvisorPodsResponse.Items
 
 	// Updating pod list to be latest cadvisor response
 	p.lock.Lock()
-	p.kubernetesPods = nil
+	p.kubernetesPods = make(map[string]URLAndAddress)
 
 	// Register pod only if it has an annotation to scrape, if it is ready,
 	// and if namespace and selectors are specified and match
 	for _, pod := range pods {
-		if pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] == "true" &&
-			podReady(pod.Status.GetContainerStatuses()) &&
+		if necessaryPodFieldsArePresent(pod) &&
+			pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] == "true" &&
+			podReady(pod.GetStatus().GetContainerStatuses()) &&
 			podHasMatchingNamespace(pod, p) &&
-			podHasMatchingLabelSelector(pod, labelSelector) &&
-			podHasMatchingFieldSelector(pod, fieldSelector) {
+			podHasMatchingLabelSelector(pod, p.podLabelSelector) &&
+			podHasMatchingFieldSelector(pod, p.podFieldSelector) {
 			registerPod(pod, p)
 		}
 
@@ -242,24 +232,13 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
 	return nil
 }
 
-func fieldSelectorIsSupported(fieldSelector fields.Selector) bool {
-	supportedFieldsToSelect := map[string]bool{
-		"spec.nodeName":            true,
-		"spec.restartPolicy":       true,
-		"spec.schedulerName":       true,
-		"spec.serviceAccountName":  true,
-		"status.phase":             true,
-		"status.podIP":             true,
-		"status.nominatedNodeName": true,
-	}
-
-	for _, requirement := range fieldSelector.Requirements() {
-		if !supportedFieldsToSelect[requirement.Field] {
-			return false
-		}
-	}
-
-	return true
+func necessaryPodFieldsArePresent(pod *corev1.Pod) bool {
+	return pod.GetMetadata() != nil &&
+		pod.GetMetadata().GetAnnotations() != nil &&
+		pod.GetMetadata().GetLabels() != nil &&
+		pod.GetSpec() != nil &&
+		pod.GetStatus() != nil &&
+		pod.GetStatus().GetContainerStatuses() != nil
 }
 
 /* See the docs on kubernetes label selectors:
@@ -370,17 +349,15 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 
 	// Locks earlier if using cAdvisor calls - makes a new list each time
 	// rather than updating and removing from the same list
-	if p.MonitorPodsVersion != 2 {
+	if !p.isNodeScrapeScope {
 		p.lock.Lock()
+		defer p.lock.Unlock()
 	}
 	p.kubernetesPods[podURL.String()] = URLAndAddress{
 		URL:         podURL,
 		Address:     URL.Hostname(),
 		OriginalURL: URL,
 		Tags:        tags,
-	}
-	if p.MonitorPodsVersion != 2 {
-		p.lock.Unlock()
 	}
 }
 

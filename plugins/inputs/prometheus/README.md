@@ -33,9 +33,12 @@ in Prometheus format.
   ## - prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
   ## - prometheus.io/port: If port is not 9102 use this annotation
   # monitor_kubernetes_pods = true
-  ## Get the list of pods to scrape from either:
-  ##    - version 1 (default): the kubernetes watch api (cluster-wide)
-  ##    - version 2: the local cadvisor api (node-wide); for scalability. Note that the environment variable NODE_IP must be set to the host IP.
+  ## Get the list of pods to scrape with either the scope of
+  ## - cluster: the kubernetes watch api (default), no need to specify
+  ## - node: the local cadvisor api; for scalability. Note that the environment variable NODE_IP must be set to the host IP.
+  # pod_scrape_scope = "cluster"
+  ## Only for node scrape scope: interval in seconds for how often to get updated pod list for scraping
+  # pod_scrape_interval = 60
   # monitor_kubernetes_pods_version = 1
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
@@ -92,7 +95,7 @@ Currently the following annotation are supported:
 
 Using the `monitor_kubernetes_pods_namespace` option allows you to limit which pods you are scraping.
 
-Using `monitor_kubernetes_pods_version = 2` allows more scalable scraping for pods which will scrape pods only in the node that telegraf is running. It will fetch the pod list locally from the node's kubelet. This will require running Telegraf as a daemonset in the cluster. Note that the environment variable NODE_IP must be set to the host IP. This can be done in the yaml of the pod running telegraf: 
+Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which will scrape pods only in the node that telegraf is running. It will fetch the pod list locally from the node's kubelet. This will require running Telegraf in every node of the cluster. Note that the environment variable NODE_IP must be set to the host IP. This can be done in the yaml of the pod running telegraf:
 ```
 env:
   - name: NODE_IP
@@ -100,6 +103,8 @@ env:
       fieldRef:
         fieldPath: status.hostIP
  ```
+
+If using node level scrape scope, `pod_scrape_interval` specifies how often (in seconds) the pod list for scraping should updated.
 
 #### Bearer Token
 
