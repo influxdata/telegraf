@@ -6,6 +6,7 @@ HTTP events API.
 ### Configuration:
 
 ```toml
+[[outputs.sensu-go]]
   ## BACKEND API URL is the Sensu Backend API root URL to send metrics to 
   ## (protocol, host, and port only). The output plugin will automatically 
   ## append the corresponding backend API path
