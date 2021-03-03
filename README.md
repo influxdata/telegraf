@@ -441,6 +441,7 @@ For documentation on the latest development code see the [documentation index][d
 * [nsq](./plugins/outputs/nsq)
 * [opentsdb](./plugins/outputs/opentsdb)
 * [prometheus](./plugins/outputs/prometheus_client)
+* [redistimeseries](./plugins/outputs/redistimeseries)
 * [riemann](./plugins/outputs/riemann)
 * [riemann_legacy](./plugins/outputs/riemann_legacy)
 * [signalfx](./plugins/outputs/signalfx)
