@@ -1262,6 +1262,10 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 		return nil, err
 	}
 	requestBody, err := json.Marshal(bodyContent)
+	if err != nil {
+		log.Printf("E! JBoss Marshal error: %s", err)
+		return nil, err
+	}
 	method := "POST"
 
 	// Debug JSON request
