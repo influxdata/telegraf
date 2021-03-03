@@ -47,7 +47,9 @@ type X509Cert struct {
 	ServerName string            `toml:"server_name"`
 	tlsCfg     *tls.Config
 	_tls.ClientConfig
-	urls []*url.URL
+	urls                []*url.URL
+	globFilePathsToUrls []*url.URL
+	globpaths           []*globpath.GlobPath
 }
 
 // Description returns description of the plugin.
@@ -63,18 +65,23 @@ func (c *X509Cert) SampleConfig() string {
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
 		if strings.HasPrefix(source, "/") {
-			source = "file://" + source
-		}
-		if strings.Index(source, ":\\") == 1 {
-			source = "file://" + filepath.ToSlash(source)
-		}
+			g, err := globpath.Compile(source)
+			if err != nil {
+				return fmt.Errorf("could not compile glob %v: %v", source, err)
+			}
+			c.globpaths = append(c.globpaths, g)
+		} else {
+			if strings.Index(source, ":\\") == 1 {
+				source = "file://" + filepath.ToSlash(source)
+			}
 
-		u, err := url.Parse(source)
-		if err != nil {
-			return fmt.Errorf("failed to parse cert location - %s", err.Error())
-		}
+			u, err := url.Parse(source)
+			if err != nil {
+				return fmt.Errorf("failed to parse cert location - %s", err.Error())
+			}
 
-		c.urls = append(c.urls, u)
+			c.urls = append(c.urls, u)
+		}
 	}
 
 	return nil
@@ -212,38 +219,38 @@ func getTags(cert *x509.Certificate, location string) map[string]string {
 }
 
 // copied from refreshFilePaths() in plugins/inputs/file/file.go
-func (c *X509Cert) expandFilePaths() error {
-	var allFiles []string
+func (c *X509Cert) expandFilePathsToUrls() error {
+	var urls []*url.URL
 
-	for _, source := range c.Sources {
-		if strings.HasPrefix(source, "file://") ||
-			strings.HasPrefix(source, "/") {
-			if strings.HasPrefix(source, "file://") {
-				source = strings.TrimPrefix(source, "file://")
-			}
-			g, err := globpath.Compile(source)
+	for _, globpath := range c.globpaths {
+		files := globpath.Match()
+		if len(files) <= 0 {
+			return fmt.Errorf("could not find file: %v", globpath)
+		}
+		for _, file := range files {
+			file = "file://" + file
+			u, err := url.Parse(file)
 			if err != nil {
-				return fmt.Errorf("could not compile glob %v: %v", source, err)
+				return fmt.Errorf("failed to parse cert location - %s", err.Error())
 			}
-			files := g.Match()
-			if len(files) <= 0 {
-				return fmt.Errorf("could not find file: %v", source)
-			}
-			allFiles = append(allFiles, files...)
-		} else {
-			allFiles = append(allFiles, source)
+			urls = append(urls, u)
 		}
 	}
 
-	c.Sources = allFiles
+	c.globFilePathsToUrls = urls
+
 	return nil
 }
 
 // Gather adds metrics into the accumulator.
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
+	err := c.expandFilePathsToUrls()
+	if err != nil {
+		acc.AddError(fmt.Errorf("cannot get file: %s", err.Error()))
+	}
 
-	for _, url := range c.urls {
+	for _, url := range append(c.urls, c.globFilePathsToUrls...) {
 		certs, err := c.getCert(url, c.Timeout.Duration*time.Second)
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", url, err.Error()))
@@ -292,12 +299,8 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 }
 
 func (c *X509Cert) Init() error {
-	err := c.expandFilePaths()
-	if err != nil {
-		return err
-	}
 
-	err = c.sourcesToURLs()
+	err := c.sourcesToURLs()
 	if err != nil {
 		return err
 	}
