@@ -8,7 +8,6 @@ sudo security import AppleSigningAuthorityCertificate.cer -k '/Library/Keychains
 cd dist
 tarFile=$(find . -name "*darwin_amd64.tar*")
 tar -xzvf $tarFile
-rm $tarFile
 baseName=$(basename $tarFile .tar.gz)
 cd $(find . -name "*telegraf-*" -type d)
 cd usr/bin
