@@ -280,7 +280,7 @@ workflows:
                 only: /.*/
       - 'package-sign-mac':
            requires:
-             - 'package-sign-windows' 
+             - 'package' 
            filters:
               tags:
                 only: /.*/
