@@ -443,6 +443,7 @@ For documentation on the latest development code see the [documentation index][d
 * [prometheus](./plugins/outputs/prometheus_client)
 * [riemann](./plugins/outputs/riemann)
 * [riemann_legacy](./plugins/outputs/riemann_legacy)
+* [sensu-go](./plugins/outputs/sensu)
 * [signalfx](./plugins/outputs/signalfx)
 * [socket_writer](./plugins/outputs/socket_writer)
 * [stackdriver](./plugins/outputs/stackdriver) (Google Cloud Monitoring)

@@ -116,10 +116,11 @@ require (
 	github.com/riemann/riemann-go-client v0.5.0
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
+	github.com/sensu/sensu-go/api/core/v2 v2.6.0
 	github.com/shirou/gopsutil v2.20.9+incompatible
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
 	github.com/signalfx/golib/v3 v3.3.0
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.6.0
 	github.com/soniah/gosnmp v1.25.0
 	github.com/streadway/amqp v0.0.0-20180528204448-e5adc2ada8b8
 	github.com/stretchr/testify v1.7.0
