@@ -132,6 +132,7 @@ following works:
 - github.com/shirou/gopsutil [BSD 3-Clause Clear License](https://github.com/shirou/gopsutil/blob/master/LICENSE)
 - github.com/sirupsen/logrus [MIT License](https://github.com/sirupsen/logrus/blob/master/LICENSE)
 - github.com/soniah/gosnmp [BSD 2-Clause "Simplified" License](https://github.com/soniah/gosnmp/blob/master/LICENSE)
+- github.com/stefa975/go-http-digest-auth-client [BSD 2-Clause "Simplified" License](https://github.com/stefa975/go-http-digest-auth-client/blob/master/LICENSE.md)
 - github.com/streadway/amqp [BSD 2-Clause "Simplified" License](https://github.com/streadway/amqp/blob/master/LICENSE)
 - github.com/stretchr/objx [MIT License](https://github.com/stretchr/objx/blob/master/LICENSE)
 - github.com/stretchr/testify [custom -- permissive](https://github.com/stretchr/testify/blob/master/LICENSE)
