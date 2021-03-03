@@ -91,7 +91,7 @@ type Sensu struct {
 	Check         *SensuCheck       `toml:"check"`
 
 	Timeout         config.Duration `toml:"timeout"`
-	ContentEncoding string            `toml:"content_encoding"`
+	ContentEncoding string          `toml:"content_encoding"`
 
 	EndpointUrl string
 	OutEntity   *OutputEntity
@@ -406,8 +406,8 @@ func init() {
 		agentApiUrl := defaultUrl
 
 		return &Sensu{
-			AgentApiUrl: &agentApiUrl,
-			Timeout:     config.Duration(defaultClientTimeout),
+			AgentApiUrl:     &agentApiUrl,
+			Timeout:         config.Duration(defaultClientTimeout),
 			ContentEncoding: "identity",
 		}
 	})
