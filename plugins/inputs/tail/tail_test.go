@@ -33,7 +33,6 @@ func NewTestTail() *Tail {
 		offsetsCopy[k] = v
 	}
 	offsetsMutex.Unlock()
-
 	watchMethod := defaultWatchMethod
 
 	if runtime.GOOS == "windows" {
