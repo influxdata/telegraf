@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -25,6 +26,27 @@ var (
 	testdataDir = getTestdataDir()
 )
 
+func NewTestTail() *Tail {
+	offsetsMutex.Lock()
+	offsetsCopy := make(map[string]int64, len(offsets))
+	for k, v := range offsets {
+		offsetsCopy[k] = v
+	}
+	offsetsMutex.Unlock()
+	watchMethod := defaultWatchMethod
+
+	if runtime.GOOS == "windows" {
+		watchMethod = "poll"
+	}
+
+	return &Tail{
+		FromBeginning:       false,
+		MaxUndeliveredLines: 1000,
+		offsets:             offsetsCopy,
+		WatchMethod:         watchMethod,
+	}
+}
+
 func TestTailBadLine(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
@@ -42,7 +64,7 @@ func TestTailBadLine(t *testing.T) {
 	buf := &bytes.Buffer{}
 	log.SetOutput(buf)
 
-	tt := NewTail()
+	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
@@ -70,7 +92,7 @@ func TestTailDosLineEndings(t *testing.T) {
 	require.NoError(t, err)
 	tmpfile.Close()
 
-	tt := NewTail()
+	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
@@ -99,7 +121,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	//we make sure the timeout won't kick in
 	duration, _ := time.ParseDuration("100s")
 
-	tt := NewTail()
+	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{filepath.Join(testdataDir, "test_multiline.log")}
@@ -162,7 +184,7 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 	// set tight timeout for tests
 	duration := 10 * time.Millisecond
 
-	tt := NewTail()
+	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
@@ -215,7 +237,7 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 	//we make sure the timeout won't kick in
 	duration := 100 * time.Second
 
-	tt := NewTail()
+	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{filepath.Join(testdataDir, "test_multiline.log")}
@@ -274,7 +296,7 @@ cpu,42
 	require.NoError(t, err)
 	tmpfile.Close()
 
-	plugin := NewTail()
+	plugin := NewTestTail()
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
@@ -331,7 +353,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	require.NoError(t, err)
 	tmpfile.Close()
 
-	plugin := NewTail()
+	plugin := NewTestTail()
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
@@ -528,7 +550,7 @@ func TestTailEOF(t *testing.T) {
 	err = tmpfile.Sync()
 	require.NoError(t, err)
 
-	tt := NewTail()
+	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
