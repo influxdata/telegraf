@@ -48,10 +48,9 @@ type X509Cert struct {
 	ServerName string            `toml:"server_name"`
 	tlsCfg     *tls.Config
 	_tls.ClientConfig
-	urls                []*url.URL
-	globFilePathsToUrls []*url.URL
-	globpaths           []*globpath.GlobPath
-	Log                 telegraf.Logger
+	urls      []*url.URL
+	globpaths []*globpath.GlobPath
+	Log       telegraf.Logger
 }
 
 // Description returns description of the plugin.
@@ -221,8 +220,7 @@ func getTags(cert *x509.Certificate, location string) map[string]string {
 	return tags
 }
 
-// copied from refreshFilePaths() in plugins/inputs/file/file.go
-func (c *X509Cert) expandFilePathsToUrls() error {
+func (c *X509Cert) collectCertURLs() ([]*url.URL, error) {
 	var urls []*url.URL
 
 	for _, globpath := range c.globpaths {
@@ -235,26 +233,24 @@ func (c *X509Cert) expandFilePathsToUrls() error {
 			file = "file://" + file
 			u, err := url.Parse(file)
 			if err != nil {
-				return fmt.Errorf("failed to parse cert location - %s", err.Error())
+				return urls, fmt.Errorf("failed to parse cert location - %s", err.Error())
 			}
 			urls = append(urls, u)
 		}
 	}
 
-	c.globFilePathsToUrls = urls
-
-	return nil
+	return urls, nil
 }
 
 // Gather adds metrics into the accumulator.
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
-	err := c.expandFilePathsToUrls()
+	collectedUrls, err := c.collectCertURLs()
 	if err != nil {
 		acc.AddError(fmt.Errorf("cannot get file: %s", err.Error()))
 	}
 
-	for _, url := range append(c.urls, c.globFilePathsToUrls...) {
+	for _, url := range append(c.urls, collectedUrls...) {
 		certs, err := c.getCert(url, c.Timeout.Duration*time.Second)
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", url, err.Error()))
