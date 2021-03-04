@@ -1,4 +1,4 @@
-# uWSGI
+# uWSGI Input Plugin
 
 The uWSGI input plugin gathers metrics about uWSGI using its [Stats Server](https://uwsgi-docs.readthedocs.io/en/latest/StatsServer.html).
 
@@ -13,7 +13,7 @@ The uWSGI input plugin gathers metrics about uWSGI using its [Stats Server](http
   ## servers = ["tcp://localhost:5050", "http://localhost:1717", "unix:///tmp/statsock"]
   servers = ["tcp://127.0.0.1:1717"]
 
-  ## General connection timout
+  ## General connection timeout
   # timeout = "5s"
 ```
 

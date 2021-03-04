@@ -1,3 +1,7 @@
+// +build !windows
+
+// bcache doesn't aim for Windows
+
 package bcache
 
 import (
@@ -22,7 +26,7 @@ var sampleConfig = `
   ## If not specified, then default is:
   bcachePath = "/sys/fs/bcache"
 
-  ## By default, telegraf gather stats for all bcache devices
+  ## By default, Telegraf gather stats for all bcache devices
   ## Setting devices will restrict the stats to the specified
   ## bcache devices.
   bcacheDevs = ["bcache0"]
@@ -73,8 +77,11 @@ func prettyToBytes(v string) uint64 {
 func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 	tags := getTags(bdev)
 	metrics, err := filepath.Glob(bdev + "/stats_total/*")
-	if len(metrics) < 0 {
-		return errors.New("Can't read any stats file")
+	if err != nil {
+		return err
+	}
+	if len(metrics) == 0 {
+		return errors.New("can't read any stats file")
 	}
 	file, err := ioutil.ReadFile(bdev + "/dirty_data")
 	if err != nil {

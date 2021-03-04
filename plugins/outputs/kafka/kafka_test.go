@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -16,7 +17,7 @@ type topicSuffixTestpair struct {
 	expectedTopic string
 }
 
-func TestConnectAndWrite(t *testing.T) {
+func TestConnectAndWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -24,13 +25,16 @@ func TestConnectAndWrite(t *testing.T) {
 	brokers := []string{testutil.GetLocalHost() + ":9092"}
 	s, _ := serializers.NewInfluxSerializer()
 	k := &Kafka{
-		Brokers:    brokers,
-		Topic:      "Test",
-		serializer: s,
+		Brokers:      brokers,
+		Topic:        "Test",
+		serializer:   s,
+		producerFunc: sarama.NewSyncProducer,
 	}
 
 	// Verify that we can connect to the Kafka broker
-	err := k.Connect()
+	err := k.Init()
+	require.NoError(t, err)
+	err = k.Connect()
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the kafka broker
@@ -39,7 +43,7 @@ func TestConnectAndWrite(t *testing.T) {
 	k.Close()
 }
 
-func TestTopicSuffixes(t *testing.T) {
+func TestTopicSuffixesIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -81,12 +85,12 @@ func TestTopicSuffixes(t *testing.T) {
 			TopicSuffix: topicSuffix,
 		}
 
-		topic := k.GetTopicName(metric)
+		_, topic := k.GetTopicName(metric)
 		require.Equal(t, expectedTopic, topic)
 	}
 }
 
-func TestValidateTopicSuffixMethod(t *testing.T) {
+func TestValidateTopicSuffixMethodIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -153,6 +157,149 @@ func TestRoutingKey(t *testing.T) {
 			key, err := tt.kafka.routingKey(tt.metric)
 			require.NoError(t, err)
 			tt.check(t, key)
+		})
+	}
+}
+
+type MockProducer struct {
+	sent []*sarama.ProducerMessage
+}
+
+func (p *MockProducer) SendMessage(msg *sarama.ProducerMessage) (partition int32, offset int64, err error) {
+	p.sent = append(p.sent, msg)
+	return 0, 0, nil
+}
+
+func (p *MockProducer) SendMessages(msgs []*sarama.ProducerMessage) error {
+	p.sent = append(p.sent, msgs...)
+	return nil
+}
+
+func (p *MockProducer) Close() error {
+	return nil
+}
+
+func NewMockProducer(addrs []string, config *sarama.Config) (sarama.SyncProducer, error) {
+	return &MockProducer{}, nil
+}
+
+func TestTopicTag(t *testing.T) {
+	tests := []struct {
+		name   string
+		plugin *Kafka
+		input  []telegraf.Metric
+		topic  string
+		value  string
+	}{
+		{
+			name: "static topic",
+			plugin: &Kafka{
+				Brokers:      []string{"127.0.0.1"},
+				Topic:        "telegraf",
+				producerFunc: NewMockProducer,
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			topic: "telegraf",
+			value: "cpu time_idle=42 0\n",
+		},
+		{
+			name: "topic tag overrides static topic",
+			plugin: &Kafka{
+				Brokers:      []string{"127.0.0.1"},
+				Topic:        "telegraf",
+				TopicTag:     "topic",
+				producerFunc: NewMockProducer,
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"topic": "xyzzy",
+					},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			topic: "xyzzy",
+			value: "cpu,topic=xyzzy time_idle=42 0\n",
+		},
+		{
+			name: "missing topic tag falls back to  static topic",
+			plugin: &Kafka{
+				Brokers:      []string{"127.0.0.1"},
+				Topic:        "telegraf",
+				TopicTag:     "topic",
+				producerFunc: NewMockProducer,
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			topic: "telegraf",
+			value: "cpu time_idle=42 0\n",
+		},
+		{
+			name: "exclude topic tag removes tag",
+			plugin: &Kafka{
+				Brokers:         []string{"127.0.0.1"},
+				Topic:           "telegraf",
+				TopicTag:        "topic",
+				ExcludeTopicTag: true,
+				producerFunc:    NewMockProducer,
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"topic": "xyzzy",
+					},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			topic: "xyzzy",
+			value: "cpu time_idle=42 0\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := serializers.NewInfluxSerializer()
+			require.NoError(t, err)
+			tt.plugin.SetSerializer(s)
+
+			err = tt.plugin.Connect()
+			require.NoError(t, err)
+
+			producer := &MockProducer{}
+			tt.plugin.producer = producer
+
+			err = tt.plugin.Write(tt.input)
+			require.NoError(t, err)
+
+			require.Equal(t, tt.topic, producer.sent[0].Topic)
+
+			encoded, err := producer.sent[0].Value.Encode()
+			require.NoError(t, err)
+			require.Equal(t, tt.value, string(encoded))
 		})
 	}
 }

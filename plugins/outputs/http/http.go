@@ -12,7 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"golang.org/x/oauth2"
@@ -64,6 +64,11 @@ var sampleConfig = `
   # [outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format
   #   Content-Type = "text/plain; charset=utf-8"
+
+  ## Idle (keep-alive) connection timeout.
+  ## Maximum amount of time before idle connection is closed.
+  ## Zero means no limit.
+  # idle_conn_timeout = 0
 `
 
 const (
@@ -84,6 +89,7 @@ type HTTP struct {
 	TokenURL        string            `toml:"token_url"`
 	Scopes          []string          `toml:"scopes"`
 	ContentEncoding string            `toml:"content_encoding"`
+	IdleConnTimeout internal.Duration `toml:"idle_conn_timeout"`
 	tls.ClientConfig
 
 	client     *http.Client
@@ -104,6 +110,7 @@ func (h *HTTP) createClient(ctx context.Context) (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 			Proxy:           http.ProxyFromEnvironment,
+			IdleConnTimeout: h.IdleConnTimeout.Duration,
 		},
 		Timeout: h.Timeout.Duration,
 	}
@@ -164,11 +171,7 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	if err := h.write(reqBody); err != nil {
-		return err
-	}
-
-	return nil
+	return h.write(reqBody)
 }
 
 func (h *HTTP) write(reqBody []byte) error {
@@ -193,7 +196,7 @@ func (h *HTTP) write(reqBody []byte) error {
 		req.SetBasicAuth(h.Username, h.Password)
 	}
 
-	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
+	req.Header.Set("User-Agent", internal.ProductToken())
 	req.Header.Set("Content-Type", defaultContentType)
 	if h.ContentEncoding == "gzip" {
 		req.Header.Set("Content-Encoding", "gzip")
@@ -214,6 +217,9 @@ func (h *HTTP) write(reqBody []byte) error {
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("when writing to [%s] received status code: %d", h.URL, resp.StatusCode)
+	}
+	if err != nil {
+		return fmt.Errorf("when writing to [%s] received error: %v", h.URL, err)
 	}
 
 	return nil

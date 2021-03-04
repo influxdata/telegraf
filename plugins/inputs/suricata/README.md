@@ -8,7 +8,7 @@ stats output to, and processes the incoming data to fit Telegraf's format.
 ### Configuration
 
 ```toml
-[[input.suricata]]
+[[inputs.suricata]]
   ## Data sink for Suricata stats log.
   # This is expected to be a filename of a
   # unix socket to be created for listening.
@@ -110,6 +110,19 @@ output in the Suricata configuration file:
       - stats:
          threads: yes
 ```
+
+#### FreeBSD tuning
+
+
+Under FreeBSD it is necessary to increase the localhost buffer space to at least 16384, default is 8192 
+otherwise messages from Suricata are truncated as they exceed the default available buffer space, 
+consequently no statistics are processed by the plugin.
+
+```text
+sysctl -w net.local.stream.recvspace=16384
+sysctl -w net.local.stream.sendspace=16384
+```
+
 
 ### Example Output
 

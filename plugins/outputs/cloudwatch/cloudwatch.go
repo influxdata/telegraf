@@ -1,7 +1,6 @@
 package cloudwatch
 
 import (
-	"log"
 	"math"
 	"sort"
 	"strings"
@@ -11,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/internal/config/aws"
+	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -30,6 +29,8 @@ type CloudWatch struct {
 	svc                   *cloudwatch.CloudWatch
 
 	WriteStatistics bool `toml:"write_statistics"`
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 type statisticType int
@@ -253,7 +254,7 @@ func (c *CloudWatch) WriteToCloudWatch(datums []*cloudwatch.MetricDatum) error {
 	_, err := c.svc.PutMetricData(params)
 
 	if err != nil {
-		log.Printf("E! CloudWatch: Unable to write to CloudWatch : %+v \n", err.Error())
+		c.Log.Errorf("Unable to write to CloudWatch : %+v", err.Error())
 	}
 
 	return err
@@ -265,7 +266,7 @@ func PartitionDatums(size int, datums []*cloudwatch.MetricDatum) [][]*cloudwatch
 
 	numberOfPartitions := len(datums) / size
 	if len(datums)%size != 0 {
-		numberOfPartitions += 1
+		numberOfPartitions++
 	}
 
 	partitions := make([][]*cloudwatch.MetricDatum, numberOfPartitions)

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -20,12 +21,15 @@ func TestBindJsonStats(t *testing.T) {
 		Urls:                 []string{ts.URL + "/json/v1"},
 		GatherMemoryContexts: true,
 		GatherViews:          true,
+		client: http.Client{
+			Timeout: 4 * time.Second,
+		},
 	}
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// Use subtests for counters, since they are similar structure
 	type fieldSet struct {
@@ -190,12 +194,15 @@ func TestBindXmlStatsV2(t *testing.T) {
 		Urls:                 []string{ts.URL + "/xml/v2"},
 		GatherMemoryContexts: true,
 		GatherViews:          true,
+		client: http.Client{
+			Timeout: 4 * time.Second,
+		},
 	}
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// Use subtests for counters, since they are similar structure
 	type fieldSet struct {
@@ -392,12 +399,15 @@ func TestBindXmlStatsV3(t *testing.T) {
 		Urls:                 []string{ts.URL + "/xml/v3"},
 		GatherMemoryContexts: true,
 		GatherViews:          true,
+		client: http.Client{
+			Timeout: 4 * time.Second,
+		},
 	}
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// Use subtests for counters, since they are similar structure
 	type fieldSet struct {
@@ -613,5 +623,5 @@ func TestBindUnparseableURL(t *testing.T) {
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
-	assert.Contains(t, err.Error(), "Unable to parse address")
+	assert.Contains(t, err.Error(), "unable to parse address")
 }

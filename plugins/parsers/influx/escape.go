@@ -36,25 +36,22 @@ var (
 func unescape(b []byte) string {
 	if bytes.ContainsAny(b, escapes) {
 		return unescaper.Replace(unsafeBytesToString(b))
-	} else {
-		return string(b)
 	}
+	return string(b)
 }
 
 func nameUnescape(b []byte) string {
 	if bytes.ContainsAny(b, nameEscapes) {
 		return nameUnescaper.Replace(unsafeBytesToString(b))
-	} else {
-		return string(b)
 	}
+	return string(b)
 }
 
 func stringFieldUnescape(b []byte) string {
 	if bytes.ContainsAny(b, stringFieldEscapes) {
 		return stringFieldUnescaper.Replace(unsafeBytesToString(b))
-	} else {
-		return string(b)
 	}
+	return string(b)
 }
 
 // parseIntBytes is a zero-alloc wrapper around strconv.ParseInt.

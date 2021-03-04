@@ -33,7 +33,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -82,7 +82,7 @@ func (n *NSQ) Gather(acc telegraf.Accumulator) error {
 	var err error
 
 	if n.httpClient == nil {
-		n.httpClient, err = n.getHttpClient()
+		n.httpClient, err = n.getHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -101,7 +101,7 @@ func (n *NSQ) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *NSQ) getHttpClient() (*http.Client, error) {
+func (n *NSQ) getHTTPClient() (*http.Client, error) {
 	tlsConfig, err := n.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"regexp"
 	"strings"
@@ -22,13 +21,16 @@ var (
 )
 
 type Instrumental struct {
-	Host       string
-	ApiToken   string
-	Prefix     string
-	DataFormat string
-	Template   string
-	Timeout    internal.Duration
-	Debug      bool
+	Host       string            `toml:"host"`
+	APIToken   string            `toml:"api_token"`
+	Prefix     string            `toml:"prefix"`
+	DataFormat string            `toml:"data_format"`
+	Template   string            `toml:"template"`
+	Templates  []string          `toml:"templates"`
+	Timeout    internal.Duration `toml:"timeout"`
+	Debug      bool              `toml:"debug"`
+
+	Log telegraf.Logger `toml:"-"`
 
 	conn net.Conn
 }
@@ -50,7 +52,7 @@ var sampleConfig = `
   template = "host.tags.measurement.field"
   ## Timeout in seconds to connect
   timeout = "2s"
-  ## Display Communcation to Instrumental
+  ## Display Communication to Instrumental
   debug = false
 `
 
@@ -81,11 +83,11 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	if i.conn == nil {
 		err := i.Connect()
 		if err != nil {
-			return fmt.Errorf("FAILED to (re)connect to Instrumental. Error: %s\n", err)
+			return fmt.Errorf("failed to (re)connect to Instrumental. Error: %s", err)
 		}
 	}
 
-	s, err := serializers.NewGraphiteSerializer(i.Prefix, i.Template, false)
+	s, err := serializers.NewGraphiteSerializer(i.Prefix, i.Template, false, ".", i.Templates)
 	if err != nil {
 		return err
 	}
@@ -110,7 +112,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 
 		buf, err := s.Serialize(m)
 		if err != nil {
-			log.Printf("D! [outputs.instrumental] Could not serialize metric: %v", err)
+			i.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 
@@ -138,10 +140,10 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 			time := splitStat[2]
 
 			// replace invalid components of metric name with underscore
-			clean_metric := MetricNameReplacer.ReplaceAllString(name, "_")
+			cleanMetric := MetricNameReplacer.ReplaceAllString(name, "_")
 
 			if !ValueIncludesBadChar.MatchString(value) {
-				points = append(points, fmt.Sprintf("%s %s %s %s", metricType, clean_metric, value, time))
+				points = append(points, fmt.Sprintf("%s %s %s %s", metricType, cleanMetric, value, time))
 			}
 		}
 	}
@@ -174,7 +176,7 @@ func (i *Instrumental) SampleConfig() string {
 }
 
 func (i *Instrumental) authenticate(conn net.Conn) error {
-	_, err := fmt.Fprintf(conn, HandshakeFormat, i.ApiToken)
+	_, err := fmt.Fprintf(conn, HandshakeFormat, i.APIToken)
 	if err != nil {
 		return err
 	}
@@ -186,7 +188,7 @@ func (i *Instrumental) authenticate(conn net.Conn) error {
 	}
 
 	if string(responses)[:6] != "ok\nok\n" {
-		return fmt.Errorf("Authentication failed: %s", responses)
+		return fmt.Errorf("authentication failed: %s", responses)
 	}
 
 	i.conn = conn
@@ -197,7 +199,7 @@ func init() {
 	outputs.Add("instrumental", func() telegraf.Output {
 		return &Instrumental{
 			Host:     DefaultHost,
-			Template: graphite.DEFAULT_TEMPLATE,
+			Template: graphite.DefaultTemplate,
 		}
 	})
 }

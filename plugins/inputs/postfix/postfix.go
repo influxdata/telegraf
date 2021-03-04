@@ -1,3 +1,7 @@
+// +build !windows
+
+// postfix doesn't aim for Windows
+
 package postfix
 
 import (

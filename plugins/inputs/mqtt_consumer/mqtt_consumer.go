@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -69,6 +70,7 @@ type MQTTConsumer struct {
 	state         ConnectionState
 	sem           semaphore
 	messages      map[telegraf.TrackingID]bool
+	messagesMutex sync.Mutex
 	topicTag      string
 
 	ctx    context.Context
@@ -76,8 +78,11 @@ type MQTTConsumer struct {
 }
 
 var sampleConfig = `
-  ## MQTT broker URLs to be used. The format should be scheme://host:port,
-  ## schema can be tcp, ssl, or ws.
+  ## Broker URLs for the MQTT server or cluster.  To connect to multiple
+  ## clusters or standalone servers, use a seperate plugin instance.
+  ##   example: servers = ["tcp://localhost:1883"]
+  ##            servers = ["ssl://localhost:1883"]
+  ##            servers = ["ws://localhost:1883"]
   servers = ["tcp://127.0.0.1:1883"]
 
   ## Topics that will be subscribed to.
@@ -179,6 +184,7 @@ func (m *MQTTConsumer) Init() error {
 	}
 
 	m.opts = opts
+	m.messages = map[telegraf.TrackingID]bool{}
 
 	return nil
 }
@@ -194,7 +200,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 
 	// AddRoute sets up the function for handling messages.  These need to be
 	// added in case we find a persistent session containing subscriptions so we
-	// know where to dispatch presisted and new messages to.  In the alternate
+	// know where to dispatch persisted and new messages to.  In the alternate
 	// case that we need to create the subscriptions these will be replaced.
 	for _, topic := range m.Topics {
 		m.client.AddRoute(topic, m.recvMessage)
@@ -216,9 +222,8 @@ func (m *MQTTConsumer) connect() error {
 
 	m.Log.Infof("Connected %v", m.Servers)
 	m.state = Connected
-	m.messages = make(map[telegraf.TrackingID]bool)
 
-	// Presistent sessions should skip subscription if a session is present, as
+	// Persistent sessions should skip subscription if a session is present, as
 	// the subscriptions are stored by the server.
 	type sessionPresent interface {
 		SessionPresent() bool
@@ -255,6 +260,7 @@ func (m *MQTTConsumer) recvMessage(c mqtt.Client, msg mqtt.Message) {
 		select {
 		case track := <-m.acc.Delivered():
 			<-m.sem
+			m.messagesMutex.Lock()
 			_, ok := m.messages[track.ID()]
 			if !ok {
 				// Added by a previous connection
@@ -262,6 +268,7 @@ func (m *MQTTConsumer) recvMessage(c mqtt.Client, msg mqtt.Message) {
 			}
 			// No ack, MQTT does not support durable handling
 			delete(m.messages, track.ID())
+			m.messagesMutex.Unlock()
 		case m.sem <- empty{}:
 			err := m.onMessage(m.acc, msg)
 			if err != nil {
@@ -287,7 +294,9 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 	}
 
 	id := acc.AddTrackingMetricGroup(metrics)
+	m.messagesMutex.Lock()
 	m.messages[id] = true
+	m.messagesMutex.Unlock()
 	return nil
 }
 
@@ -341,7 +350,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	}
 
 	if len(m.Servers) == 0 {
-		return opts, fmt.Errorf("could not get host infomations")
+		return opts, fmt.Errorf("could not get host informations")
 	}
 
 	for _, server := range m.Servers {

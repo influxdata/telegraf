@@ -11,18 +11,19 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"gopkg.in/mgo.v2"
 )
 
 type MongoDB struct {
-	Servers          []string
-	Ssl              Ssl
-	mongos           map[string]*Server
-	GatherPerdbStats bool
-	GatherColStats   bool
-	ColStatsDbs      []string
+	Servers             []string
+	Ssl                 Ssl
+	mongos              map[string]*Server
+	GatherClusterStatus bool
+	GatherPerdbStats    bool
+	GatherColStats      bool
+	ColStatsDbs         []string
 	tlsint.ClientConfig
 
 	Log telegraf.Logger
@@ -40,6 +41,11 @@ var sampleConfig = `
   ##   mongodb://user:auth_key@10.10.3.30:27017,
   ##   mongodb://10.10.3.33:18832,
   servers = ["mongodb://127.0.0.1:27017"]
+
+  ## When true, collect cluster status
+  ## Note that the query that counts jumbo chunks triggers a COLLSCAN, which
+  ## may have an impact on performance.
+  # gather_cluster_status = true
 
   ## When true, collect per database stats
   # gather_perdb_stats = false
@@ -115,7 +121,7 @@ func (m *MongoDB) getMongoServer(url *url.URL) *Server {
 	if _, ok := m.mongos[url.Host]; !ok {
 		m.mongos[url.Host] = &Server{
 			Log: m.Log,
-			Url: url,
+			URL: url,
 		}
 	}
 	return m.mongos[url.Host]
@@ -124,10 +130,10 @@ func (m *MongoDB) getMongoServer(url *url.URL) *Server {
 func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 	if server.Session == nil {
 		var dialAddrs []string
-		if server.Url.User != nil {
-			dialAddrs = []string{server.Url.String()}
+		if server.URL.User != nil {
+			dialAddrs = []string{server.URL.String()}
 		} else {
-			dialAddrs = []string{server.Url.Host}
+			dialAddrs = []string{server.URL.Host}
 		}
 		dialInfo, err := mgo.ParseURL(dialAddrs[0])
 		if err != nil {
@@ -177,14 +183,17 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		}
 		server.Session = sess
 	}
-	return server.gatherData(acc, m.GatherPerdbStats, m.GatherColStats, m.ColStatsDbs)
+	return server.gatherData(acc, m.GatherClusterStatus, m.GatherPerdbStats, m.GatherColStats, m.ColStatsDbs)
 }
 
 func init() {
 	inputs.Add("mongodb", func() telegraf.Input {
 		return &MongoDB{
-			ColStatsDbs: []string{"local"},
-			mongos:      make(map[string]*Server),
+			mongos:              make(map[string]*Server),
+			GatherClusterStatus: true,
+			GatherPerdbStats:    false,
+			GatherColStats:      false,
+			ColStatsDbs:         []string{"local"},
 		}
 	})
 }

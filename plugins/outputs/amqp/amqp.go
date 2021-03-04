@@ -3,13 +3,12 @@ package amqp
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/streadway/amqp"
@@ -55,6 +54,7 @@ type AMQP struct {
 	Timeout            internal.Duration `toml:"timeout"`
 	UseBatchFormat     bool              `toml:"use_batch_format"`
 	ContentEncoding    string            `toml:"content_encoding"`
+	Log                telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
 
 	serializer   serializers.Serializer
@@ -99,7 +99,7 @@ var sampleConfig = `
 
   ## Additional exchange arguments.
   # exchange_arguments = { }
-  # exchange_arguments = {"hash_propery" = "timestamp"}
+  # exchange_arguments = {"hash_property" = "timestamp"}
 
   ## Authentication credentials for the PLAIN auth_method.
   # username = ""
@@ -267,7 +267,7 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 	}
 
 	if q.sentMessages >= q.MaxMessages && q.MaxMessages > 0 {
-		log.Printf("D! Output [amqp] sent MaxMessages; closing connection")
+		q.Log.Debug("Sent MaxMessages; closing connection")
 		q.client.Close()
 		q.client = nil
 	}
@@ -296,22 +296,22 @@ func (q *AMQP) publish(key string, body []byte) error {
 func (q *AMQP) serialize(metrics []telegraf.Metric) ([]byte, error) {
 	if q.UseBatchFormat {
 		return q.serializer.SerializeBatch(metrics)
-	} else {
-		var buf bytes.Buffer
-		for _, metric := range metrics {
-			octets, err := q.serializer.Serialize(metric)
-			if err != nil {
-				log.Printf("D! [outputs.amqp] Could not serialize metric: %v", err)
-				continue
-			}
-			_, err = buf.Write(octets)
-			if err != nil {
-				return nil, err
-			}
-		}
-		body := buf.Bytes()
-		return body, nil
 	}
+
+	var buf bytes.Buffer
+	for _, metric := range metrics {
+		octets, err := q.serializer.Serialize(metric)
+		if err != nil {
+			q.Log.Debugf("Could not serialize metric: %v", err)
+			continue
+		}
+		_, err = buf.Write(octets)
+		if err != nil {
+			return nil, err
+		}
+	}
+	body := buf.Bytes()
+	return body, nil
 }
 
 func (q *AMQP) makeClientConfig() (*ClientConfig, error) {

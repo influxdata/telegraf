@@ -160,6 +160,21 @@ Wed Apr 12 13:10:34 PST 2017 value=42
   '''
 ```
 
+This example input and config parses a file using a custom timestamp conversion that doesn't match any specific standard:
+
+```
+21/02/2017 13:10:34 value=42
+```
+
+```toml
+[[inputs.file]]
+  grok_patterns = ['%{MY_TIMESTAMP:timestamp:ts-"02/01/2006 15:04:05"} value=%{NUMBER:value:int}']
+
+  grok_custom_patterns = '''
+    MY_TIMESTAMP (?:\d{2}.\d{2}.\d{4} \d{2}:\d{2}:\d{2})
+  '''
+```
+
 For cases where the timestamp itself is without offset, the `timezone` config var is available
 to denote an offset. By default (with `timezone` either omit, blank or set to `"UTC"`), the times
 are processed as if in the UTC timezone. If specified as `timezone = "Local"`, the timestamp

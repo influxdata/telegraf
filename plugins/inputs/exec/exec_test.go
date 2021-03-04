@@ -1,3 +1,8 @@
+// +build !windows
+
+// TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
+// https://github.com/influxdata/telegraf/issues/6248
+
 package exec
 
 import (
@@ -16,7 +21,7 @@ import (
 // Midnight 9/22/2015
 const baseTimeSeconds = 1442905200
 
-const validJson = `
+const validJSON = `
 {
     "status": "green",
     "num_processes": 82,
@@ -30,7 +35,7 @@ const validJson = `
     "users": [0, 1, 2, 3]
 }`
 
-const malformedJson = `
+const malformedJSON = `
 {
     "status": "green",
 `
@@ -97,7 +102,7 @@ func TestExec(t *testing.T) {
 	})
 	e := &Exec{
 		Log:      testutil.Logger{},
-		runner:   newRunnerMock([]byte(validJson), nil, nil),
+		runner:   newRunnerMock([]byte(validJSON), nil, nil),
 		Commands: []string{"testcommand arg1"},
 		parser:   parser,
 	}
@@ -127,7 +132,7 @@ func TestExecMalformed(t *testing.T) {
 	})
 	e := &Exec{
 		Log:      testutil.Logger{},
-		runner:   newRunnerMock([]byte(malformedJson), nil, nil),
+		runner:   newRunnerMock([]byte(malformedJSON), nil, nil),
 		Commands: []string{"badcommand arg1"},
 		parser:   parser,
 	}

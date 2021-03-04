@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -179,6 +180,7 @@ func TestServiceType(t *testing.T) {
 						"request":                "",
 						"protocol":               "DEFAULT",
 						"type":                   "TCP",
+						"response_time":          0.000145,
 					},
 					time.Unix(0, 0),
 				),
@@ -572,25 +574,23 @@ func TestAllowHosts(t *testing.T) {
 }
 
 func TestConnection(t *testing.T) {
-
 	r := &Monit{
 		Address:  "http://127.0.0.1:2812",
 		Username: "test",
 		Password: "test",
 	}
 
-	var acc testutil.Accumulator
-
 	r.Init()
 
+	var acc testutil.Accumulator
 	err := r.Gather(&acc)
-
 	if assert.Error(t, err) {
-		assert.Contains(t, err.Error(), "connect: connection refused")
+		_, ok := err.(*url.Error)
+		assert.True(t, ok)
 	}
 }
 
-func TestInvalidUsernameorPassword(t *testing.T) {
+func TestInvalidUsernameOrPassword(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -624,7 +624,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 	assert.EqualError(t, err, "received status code 401 (Unauthorized), expected 200")
 }
 
-func TestNoUsernameorPasswordConfiguration(t *testing.T) {
+func TestNoUsernameOrPasswordConfiguration(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 

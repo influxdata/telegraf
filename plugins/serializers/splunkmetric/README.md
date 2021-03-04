@@ -38,8 +38,6 @@ you can send all of your CPU stats in one JSON struct, an example event looks li
   "event": "metric",
   "host": "mono.local",
   "fields": {
-    "_config_hecRouting": false,
-    "_config_multiMetric": true,
     "class": "osx",
     "cpu": "cpu0",
     "metric_name:telegraf.cpu.usage_guest": 0,
@@ -91,7 +89,7 @@ to manage the HEC authorization, here's a sample config for an HTTP output:
    data_format = "splunkmetric"
     ## Provides time, index, source overrides for the HEC
    splunkmetric_hec_routing = true
-   # splunkmentric_multimetric = true
+   # splunkmetric_multimetric = true
 
    ## Additional HTTP headers
     [outputs.http.headers]
@@ -104,7 +102,7 @@ to manage the HEC authorization, here's a sample config for an HTTP output:
 ## Overrides
 You can override the default values for the HEC token you are using by adding additional tags to the config file.
 
-The following aspects of the token can be overriden with tags:
+The following aspects of the token can be overridden with tags:
 * index
 * source
 
@@ -167,3 +165,22 @@ An example configuration of a file based output is:
    splunkmetric_hec_routing = false
    splunkmetric_multimetric = true
 ```
+
+## Non-numeric metric values
+
+Splunk supports only numeric field values, so serializer would silently drop metrics with the string values. For some cases it is possible to workaround using ENUM processor. Example, provided below doing this for the `docker_container_health.health_status` metric:
+
+```toml
+# splunkmetric does not support sting values
+[[processors.enum]]
+  namepass = ["docker_container_health"]
+  [[processors.enum.mapping]]
+    ## Name of the field to map
+    field = "health_status"
+    [processors.enum.mapping.value_mappings]
+    starting = 0
+    healthy = 1
+    unhealthy = 2
+    none = 3
+```
+

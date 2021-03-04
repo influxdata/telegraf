@@ -1,8 +1,8 @@
 # Amazon ECS Input Plugin
 
-Amazon ECS, Fargate compatible, input plugin which uses the [Amazon ECS v2 metadata and
-stats API][task-metadata-endpoint-v2] endpoints to gather stats on running
-containers in a Task.
+Amazon ECS, Fargate compatible, input plugin which uses the Amazon ECS metadata and
+stats [v2][task-metadata-endpoint-v2] or [v3][task-metadata-endpoint-v3] API endpoints
+to gather stats on running containers in a Task.
 
 The telegraf container must be run in the same Task as the workload it is
 inspecting.
@@ -19,8 +19,41 @@ present in the metadata/stats endpoints.
 ```toml
 # Read metrics about ECS containers
 [[inputs.ecs]]
-  ## ECS metadata url
-  # endpoint_url = "http://169.254.170.2"
+  ## ECS metadata url.
+  ## Metadata v2 API is used if set explicitly. Otherwise,
+  ## v3 metadata endpoint API is used if available.
+  # endpoint_url = ""
+
+  ## Containers to include and exclude. Globs accepted.
+  ## Note that an empty array for both will include all containers
+  # container_name_include = []
+  # container_name_exclude = []
+
+  ## Container states to include and exclude. Globs accepted.
+  ## When empty only containers in the "RUNNING" state will be captured.
+  ## Possible values are "NONE", "PULLED", "CREATED", "RUNNING",
+  ## "RESOURCES_PROVISIONED", "STOPPED".
+  # container_status_include = []
+  # container_status_exclude = []
+
+  ## ecs labels to include and exclude as tags.  Globs accepted.
+  ## Note that an empty array for both will include all labels as tags
+  ecs_label_include = [ "com.amazonaws.ecs.*" ]
+  ecs_label_exclude = []
+
+  ## Timeout for queries.
+  # timeout = "5s"
+```
+
+### Configuration (enforce v2 metadata)
+
+```toml
+# Read metrics about ECS containers
+[[inputs.ecs]]
+  ## ECS metadata url.
+  ## Metadata v2 API is used if set explicitly. Otherwise,
+  ## v3 metadata endpoint API is used if available.
+  endpoint_url = "http://169.254.170.2"
 
   ## Containers to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all containers
@@ -54,7 +87,6 @@ present in the metadata/stats endpoints.
     - id
     - name
   - fields:
-    - revision (string)
     - desired_status (string)
     - known_status (string)
     - limit_cpu (float)
@@ -193,7 +225,7 @@ present in the metadata/stats endpoints.
 ### Example Output
 
 ```
-ecs_task,cluster=test,family=nginx,host=c4b301d4a123,revision=2,task_arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a revision="2",desired_status="RUNNING",known_status="RUNNING",limit_cpu=0.5,limit_mem=512 1542641488000000000
+ecs_task,cluster=test,family=nginx,host=c4b301d4a123,revision=2,task_arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a desired_status="RUNNING",known_status="RUNNING",limit_cpu=0.5,limit_mem=512 1542641488000000000
 ecs_container_mem,cluster=test,com.amazonaws.ecs.cluster=test,com.amazonaws.ecs.container-name=~internal~ecs~pause,com.amazonaws.ecs.task-arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a,com.amazonaws.ecs.task-definition-family=nginx,com.amazonaws.ecs.task-definition-version=2,family=nginx,host=c4b301d4a123,id=e6af031b91deb3136a2b7c42f262ed2ab554e2fe2736998c7d8edf4afe708dba,name=~internal~ecs~pause,revision=2,task_arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a active_anon=40960i,active_file=8192i,cache=790528i,pgpgin=1243i,total_pgfault=1298i,total_rss=40960i,limit=1033658368i,max_usage=4825088i,hierarchical_memory_limit=536870912i,rss=40960i,total_active_file=8192i,total_mapped_file=618496i,usage_percent=0.05349543109392212,container_id="e6af031b91deb3136a2b7c42f262ed2ab554e2fe2736998c7d8edf4afe708dba",pgfault=1298i,pgmajfault=6i,pgpgout=1040i,total_active_anon=40960i,total_inactive_file=782336i,total_pgpgin=1243i,usage=552960i,inactive_file=782336i,mapped_file=618496i,total_cache=790528i,total_pgpgout=1040i 1542642001000000000
 ecs_container_cpu,cluster=test,com.amazonaws.ecs.cluster=test,com.amazonaws.ecs.container-name=~internal~ecs~pause,com.amazonaws.ecs.task-arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a,com.amazonaws.ecs.task-definition-family=nginx,com.amazonaws.ecs.task-definition-version=2,cpu=cpu-total,family=nginx,host=c4b301d4a123,id=e6af031b91deb3136a2b7c42f262ed2ab554e2fe2736998c7d8edf4afe708dba,name=~internal~ecs~pause,revision=2,task_arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a usage_in_kernelmode=0i,throttling_throttled_periods=0i,throttling_periods=0i,throttling_throttled_time=0i,container_id="e6af031b91deb3136a2b7c42f262ed2ab554e2fe2736998c7d8edf4afe708dba",usage_percent=0,usage_total=26426156i,usage_in_usermode=20000000i,usage_system=2336100000000i 1542642001000000000
 ecs_container_cpu,cluster=test,com.amazonaws.ecs.cluster=test,com.amazonaws.ecs.container-name=~internal~ecs~pause,com.amazonaws.ecs.task-arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a,com.amazonaws.ecs.task-definition-family=nginx,com.amazonaws.ecs.task-definition-version=2,cpu=cpu0,family=nginx,host=c4b301d4a123,id=e6af031b91deb3136a2b7c42f262ed2ab554e2fe2736998c7d8edf4afe708dba,name=~internal~ecs~pause,revision=2,task_arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a container_id="e6af031b91deb3136a2b7c42f262ed2ab554e2fe2736998c7d8edf4afe708dba",usage_total=26426156i 1542642001000000000
@@ -210,3 +242,4 @@ ecs_container_meta,cluster=test,com.amazonaws.ecs.cluster=test,com.amazonaws.ecs
 
 [docker-input]: /plugins/inputs/docker/README.md
 [task-metadata-endpoint-v2]: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v2.html
+[task-metadata-endpoint-v3] https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v3.html

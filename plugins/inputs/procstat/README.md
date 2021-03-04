@@ -1,7 +1,7 @@
 # Procstat Input Plugin
 
 The procstat plugin can be used to monitor the system resource usage of one or more processes.
-The procstat_lookup metric displays the query information, 
+The procstat_lookup metric displays the query information,
 specifically the number of PIDs returned on a search
 
 Processes can be selected for monitoring using one of several methods:
@@ -44,9 +44,15 @@ Processes can be selected for monitoring using one of several methods:
   ## When true add the full cmdline as a tag.
   # cmdline_tag = false
 
-  ## Add PID as a tag instead of a field; useful to differentiate between
-  ## processes whose tags are otherwise the same.  Can create a large number
-  ## of series, use judiciously.
+  ## Mode to use when calculating CPU usage. Can be one of 'solaris' or 'irix'.
+  # mode = "irix"
+
+  ## Add the PID as a tag instead of as a field.  When collecting multiple
+  ## processes with otherwise matching tags this setting should be enabled to
+  ## ensure each process has a unique identity.
+  ##
+  ## Enabling this option may result in a large number of series, especially
+  ## when processes have a short lifetime.
   # pid_tag = false
 
   ## Method to use when finding process IDs.  Can be one of 'pgrep', or
@@ -60,15 +66,6 @@ Processes can be selected for monitoring using one of several methods:
 
 Preliminary support for Windows has been added, however you may prefer using
 the `win_perf_counters` input plugin as a more mature alternative.
-
-When using the `pid_finder = "native"` in Windows, the pattern lookup method is
-implemented as a WMI query.  The pattern allows fuzzy matching using only
-[WMI query patterns](https://msdn.microsoft.com/en-us/library/aa392263(v=vs.85).aspx):
-```toml
-[[inputs.procstat]]
-  pattern = "%influx%"
-  pid_finder = "native"
-```
 
 ### Metrics:
 

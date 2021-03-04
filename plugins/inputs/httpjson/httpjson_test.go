@@ -154,15 +154,15 @@ func (c *mockHTTPClient) HTTPClient() *http.Client {
 	return nil
 }
 
-// Generates a pointer to an HttpJson object that uses a mock HTTP client.
+// Generates a pointer to an HTTPJSON object that uses a mock HTTP client.
 // Parameters:
 //     response  : Body of the response that the mock HTTP client should return
 //     statusCode: HTTP status code the mock HTTP client should return
 //
 // Returns:
-//     *HttpJson: Pointer to an HttpJson object that uses the generated mock HTTP client
-func genMockHttpJson(response string, statusCode int) []*HttpJson {
-	return []*HttpJson{
+//     *HTTPJSON: Pointer to an HTTPJSON object that uses the generated mock HTTP client
+func genMockHTTPJSON(response string, statusCode int) []*HTTPJSON {
+	return []*HTTPJSON{
 		{
 			client: &mockHTTPClient{responseBody: response, statusCode: statusCode},
 			Servers: []string{
@@ -206,7 +206,7 @@ func genMockHttpJson(response string, statusCode int) []*HttpJson {
 
 // Test that the proper values are ignored or collected
 func TestHttpJson200(t *testing.T) {
-	httpjson := genMockHttpJson(validJSON, 200)
+	httpjson := genMockHTTPJSON(validJSON, 200)
 
 	for _, service := range httpjson {
 		var acc testutil.Accumulator
@@ -237,7 +237,7 @@ func TestHttpJsonGET_URL(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	a := HttpJson{
+	a := HTTPJSON{
 		Servers: []string{ts.URL + "?api_key=mykey"},
 		Name:    "",
 		Method:  "GET",
@@ -309,7 +309,7 @@ func TestHttpJsonGET(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	a := HttpJson{
+	a := HTTPJSON{
 		Servers:    []string{ts.URL},
 		Name:       "",
 		Method:     "GET",
@@ -383,7 +383,7 @@ func TestHttpJsonPOST(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	a := HttpJson{
+	a := HTTPJSON{
 		Servers:    []string{ts.URL},
 		Name:       "",
 		Method:     "POST",
@@ -445,7 +445,7 @@ func TestHttpJsonPOST(t *testing.T) {
 
 // Test response to HTTP 500
 func TestHttpJson500(t *testing.T) {
-	httpjson := genMockHttpJson(validJSON, 500)
+	httpjson := genMockHTTPJSON(validJSON, 500)
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(httpjson[0].Gather)
@@ -456,7 +456,7 @@ func TestHttpJson500(t *testing.T) {
 
 // Test response to HTTP 405
 func TestHttpJsonBadMethod(t *testing.T) {
-	httpjson := genMockHttpJson(validJSON, 200)
+	httpjson := genMockHTTPJSON(validJSON, 200)
 	httpjson[0].Method = "NOT_A_REAL_METHOD"
 
 	var acc testutil.Accumulator
@@ -468,7 +468,7 @@ func TestHttpJsonBadMethod(t *testing.T) {
 
 // Test response to malformed JSON
 func TestHttpJsonBadJson(t *testing.T) {
-	httpjson := genMockHttpJson(invalidJSON, 200)
+	httpjson := genMockHTTPJSON(invalidJSON, 200)
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(httpjson[0].Gather)
@@ -479,7 +479,7 @@ func TestHttpJsonBadJson(t *testing.T) {
 
 // Test response to empty string as response object
 func TestHttpJsonEmptyResponse(t *testing.T) {
-	httpjson := genMockHttpJson(empty, 200)
+	httpjson := genMockHTTPJSON(empty, 200)
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(httpjson[0].Gather)
@@ -488,7 +488,7 @@ func TestHttpJsonEmptyResponse(t *testing.T) {
 
 // Test that the proper values are ignored or collected
 func TestHttpJson200Tags(t *testing.T) {
-	httpjson := genMockHttpJson(validJSONTags, 200)
+	httpjson := genMockHTTPJSON(validJSONTags, 200)
 
 	for _, service := range httpjson {
 		if service.Name == "other_webapp" {
@@ -526,7 +526,7 @@ const validJSONArrayTags = `
 
 // Test that array data is collected correctly
 func TestHttpJsonArray200Tags(t *testing.T) {
-	httpjson := genMockHttpJson(validJSONArrayTags, 200)
+	httpjson := genMockHTTPJSON(validJSONArrayTags, 200)
 
 	for _, service := range httpjson {
 		if service.Name == "other_webapp" {
@@ -563,7 +563,7 @@ var jsonBOM = []byte("\xef\xbb\xbf[{\"value\":17}]")
 
 // TestHttpJsonBOM tests that UTF-8 JSON with a BOM can be parsed
 func TestHttpJsonBOM(t *testing.T) {
-	httpjson := genMockHttpJson(string(jsonBOM), 200)
+	httpjson := genMockHTTPJSON(string(jsonBOM), 200)
 
 	for _, service := range httpjson {
 		if service.Name == "other_webapp" {

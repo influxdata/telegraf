@@ -26,8 +26,6 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 			jsonFilePath = "testdata/queues.json"
 		case "/api/exchanges":
 			jsonFilePath = "testdata/exchanges.json"
-		case "/api/healthchecks/node/rabbit@vagrant-ubuntu-trusty-64":
-			jsonFilePath = "testdata/healthchecks.json"
 		case "/api/federation-links":
 			jsonFilePath = "testdata/federation-links.json"
 		case "/api/nodes/rabbit@vagrant-ubuntu-trusty-64/memory":
@@ -119,7 +117,6 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"sockets_used":              45,
 		"uptime":                    7464827,
 		"running":                   1,
-		"health_check_status":       1,
 		"mnesia_disk_tx_count":      16,
 		"mnesia_ram_tx_count":       296,
 		"mnesia_disk_tx_count_rate": 1.1,

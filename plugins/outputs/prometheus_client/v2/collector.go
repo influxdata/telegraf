@@ -43,11 +43,16 @@ type Collector struct {
 	coll           *serializer.Collection
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel bool) *Collector {
+func NewCollector(expire time.Duration, stringsAsLabel bool, exportTimestamp bool) *Collector {
 	config := serializer.FormatConfig{}
 	if stringsAsLabel {
 		config.StringHandling = serializer.StringAsLabel
 	}
+
+	if exportTimestamp {
+		config.TimestampExport = serializer.ExportTimestamp
+	}
+
 	return &Collector{
 		expireDuration: expire,
 		coll:           serializer.NewCollection(config),

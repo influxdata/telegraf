@@ -4,25 +4,28 @@ import (
 	"crypto/tls"
 	"errors"
 	"io"
-	"log"
 	"math/rand"
 	"net"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type Graphite struct {
-	GraphiteTagSupport bool
+	GraphiteTagSupport bool   `toml:"graphite_tag_support"`
+	GraphiteSeparator  string `toml:"graphite_separator"`
 	// URL is only for backwards compatibility
-	Servers  []string
-	Prefix   string
-	Template string
-	Timeout  int
-	conns    []net.Conn
+	Servers   []string        `toml:"servers"`
+	Prefix    string          `toml:"prefix"`
+	Template  string          `toml:"template"`
+	Templates []string        `toml:"templates"`
+	Timeout   int             `toml:"timeout"`
+	Log       telegraf.Logger `toml:"-"`
+
+	conns []net.Conn
 	tlsint.ClientConfig
 }
 
@@ -39,6 +42,19 @@ var sampleConfig = `
 
   ## Enable Graphite tags support
   # graphite_tag_support = false
+
+  ## Character for separating metric name and field for Graphite tags
+  # graphite_separator = "."
+
+  ## Graphite templates patterns
+  ## 1. Template for cpu
+  ## 2. Template for disk*
+  ## 3. Default template
+  # templates = [
+  #  "cpu tags.measurement.host.field",
+  #  "disk* measurement.field",
+  #  "host.measurement.tags.field"
+  #]
 
   ## timeout in seconds for the write connection to graphite
   timeout = 2
@@ -109,22 +125,22 @@ func (g *Graphite) Description() string {
 // We can detect that by finding an eof
 // if not for this, we can happily write and flush without getting errors (in Go) but getting RST tcp packets back (!)
 // props to Tv via the authors of carbon-relay-ng` for this trick.
-func checkEOF(conn net.Conn) {
+func (g *Graphite) checkEOF(conn net.Conn) {
 	b := make([]byte, 1024)
 	conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
 	num, err := conn.Read(b)
 	if err == io.EOF {
-		log.Printf("E! Conn %s is closed. closing conn explicitly", conn)
+		g.Log.Errorf("Conn %s is closed. closing conn explicitly", conn)
 		conn.Close()
 		return
 	}
 	// just in case i misunderstand something or the remote behaves badly
 	if num != 0 {
-		log.Printf("I! conn %s .conn.Read data? did not expect that.  data: %s\n", conn, b[:num])
+		g.Log.Infof("conn %s .conn.Read data? did not expect that. data: %s", conn, b[:num])
 	}
 	// Log non-timeout errors or close.
 	if e, ok := err.(net.Error); !(ok && e.Timeout()) {
-		log.Printf("E! conn %s checkEOF .conn.Read returned err != EOF, which is unexpected.  closing conn. error: %s\n", conn, err)
+		g.Log.Errorf("conn %s checkEOF .conn.Read returned err != EOF, which is unexpected.  closing conn. error: %s", conn, err)
 		conn.Close()
 	}
 }
@@ -134,7 +150,7 @@ func checkEOF(conn net.Conn) {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport)
+	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport, g.GraphiteSeparator, g.Templates)
 	if err != nil {
 		return err
 	}
@@ -142,7 +158,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := s.Serialize(metric)
 		if err != nil {
-			log.Printf("E! Error serializing some metrics to graphite: %s", err.Error())
+			g.Log.Errorf("Error serializing some metrics to graphite: %s", err.Error())
 		}
 		batch = append(batch, buf...)
 	}
@@ -151,7 +167,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 
 	// try to reconnect and retry to send
 	if err != nil {
-		log.Println("E! Graphite: Reconnecting and retrying: ")
+		g.Log.Error("Graphite: Reconnecting and retrying...")
 		g.Connect()
 		err = g.send(batch)
 	}
@@ -161,7 +177,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 
 func (g *Graphite) send(batch []byte) error {
 	// This will get set to nil if a successful write occurs
-	err := errors.New("Could not write to any Graphite server in cluster\n")
+	err := errors.New("could not write to any Graphite server in cluster")
 
 	// Send data to a random server
 	p := rand.Perm(len(g.conns))
@@ -169,10 +185,10 @@ func (g *Graphite) send(batch []byte) error {
 		if g.Timeout > 0 {
 			g.conns[n].SetWriteDeadline(time.Now().Add(time.Duration(g.Timeout) * time.Second))
 		}
-		checkEOF(g.conns[n])
+		g.checkEOF(g.conns[n])
 		if _, e := g.conns[n].Write(batch); e != nil {
 			// Error
-			log.Println("E! Graphite Error: " + e.Error())
+			g.Log.Errorf("Graphite Error: " + e.Error())
 			// Close explicitly
 			g.conns[n].Close()
 			// Let's try the next one

@@ -9,11 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/snmp"
+	config "github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
-	"github.com/soniah/gosnmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -79,6 +81,7 @@ var tsc = &testSNMPConnection{
 		".1.0.0.1.3":         []byte("byte slice"),
 		".1.0.0.2.1.5.0.9.9": 11,
 		".1.0.0.2.1.5.1.9.9": 22,
+		".1.0.0.0.1.6.0":     ".1.0.0.0.1.7",
 	},
 }
 
@@ -88,13 +91,16 @@ func TestSampleConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := &Snmp{
-		Agents:         []string{"udp://127.0.0.1:161"},
-		Timeout:        internal.Duration{Duration: 5 * time.Second},
-		Version:        2,
-		Community:      "public",
-		MaxRepetitions: 10,
-		Retries:        3,
-		Name:           "snmp",
+		Agents:       []string{"udp://127.0.0.1:161"},
+		AgentHostTag: "",
+		ClientConfig: config.ClientConfig{
+			Timeout:        internal.Duration{Duration: 5 * time.Second},
+			Version:        2,
+			Community:      "public",
+			MaxRepetitions: 10,
+			Retries:        3,
+		},
+		Name: "snmp",
 	}
 	require.Equal(t, expected, conf)
 }
@@ -141,7 +147,7 @@ func TestTableInit(t *testing.T) {
 			{Oid: "TEST::description", Name: "description", IsTag: true},
 		},
 	}
-	err := tbl.init()
+	err := tbl.Init()
 	require.NoError(t, err)
 
 	assert.Equal(t, "testTable", tbl.Name)
@@ -232,18 +238,20 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 
 func TestGetSNMPConnection_v2(t *testing.T) {
 	s := &Snmp{
-		Agents:    []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
-		Timeout:   internal.Duration{Duration: 3 * time.Second},
-		Retries:   4,
-		Version:   2,
-		Community: "foo",
+		Agents: []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
+		ClientConfig: config.ClientConfig{
+			Timeout:   internal.Duration{Duration: 3 * time.Second},
+			Retries:   4,
+			Version:   2,
+			Community: "foo",
+		},
 	}
 	err := s.init()
 	require.NoError(t, err)
 
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs := gsc.(gosnmpWrapper)
+	gs := gsc.(snmp.GosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
 	assert.EqualValues(t, 567, gs.Port)
 	assert.Equal(t, gosnmp.Version2c, gs.Version)
@@ -252,14 +260,14 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 
 	gsc, err = s.getConnection(1)
 	require.NoError(t, err)
-	gs = gsc.(gosnmpWrapper)
+	gs = gsc.(snmp.GosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
 	assert.EqualValues(t, 161, gs.Port)
 	assert.Equal(t, "udp", gs.Transport)
 
 	gsc, err = s.getConnection(2)
 	require.NoError(t, err)
-	gs = gsc.(gosnmpWrapper)
+	gs = gsc.(snmp.GosnmpWrapper)
 	assert.Equal(t, "127.0.0.1", gs.Target)
 	assert.EqualValues(t, 161, gs.Port)
 	assert.Equal(t, "udp", gs.Transport)
@@ -280,7 +288,7 @@ func TestGetSNMPConnectionTCP(t *testing.T) {
 	wg.Add(1)
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs := gsc.(gosnmpWrapper)
+	gs := gsc.(snmp.GosnmpWrapper)
 	assert.Equal(t, "127.0.0.1", gs.Target)
 	assert.EqualValues(t, 56789, gs.Port)
 	assert.Equal(t, "tcp", gs.Transport)
@@ -299,26 +307,28 @@ func stubTCPServer(wg *sync.WaitGroup) {
 
 func TestGetSNMPConnection_v3(t *testing.T) {
 	s := &Snmp{
-		Agents:         []string{"1.2.3.4"},
-		Version:        3,
-		MaxRepetitions: 20,
-		ContextName:    "mycontext",
-		SecLevel:       "authPriv",
-		SecName:        "myuser",
-		AuthProtocol:   "md5",
-		AuthPassword:   "password123",
-		PrivProtocol:   "des",
-		PrivPassword:   "321drowssap",
-		EngineID:       "myengineid",
-		EngineBoots:    1,
-		EngineTime:     2,
+		Agents: []string{"1.2.3.4"},
+		ClientConfig: config.ClientConfig{
+			Version:        3,
+			MaxRepetitions: 20,
+			ContextName:    "mycontext",
+			SecLevel:       "authPriv",
+			SecName:        "myuser",
+			AuthProtocol:   "md5",
+			AuthPassword:   "password123",
+			PrivProtocol:   "des",
+			PrivPassword:   "321drowssap",
+			EngineID:       "myengineid",
+			EngineBoots:    1,
+			EngineTime:     2,
+		},
 	}
 	err := s.init()
 	require.NoError(t, err)
 
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs := gsc.(gosnmpWrapper)
+	gs := gsc.(snmp.GosnmpWrapper)
 	assert.Equal(t, gs.Version, gosnmp.Version3)
 	sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
 	assert.Equal(t, "1.2.3.4", gsc.Host())
@@ -333,6 +343,125 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 	assert.Equal(t, "myengineid", sp.AuthoritativeEngineID)
 	assert.EqualValues(t, 1, sp.AuthoritativeEngineBoots)
 	assert.EqualValues(t, 2, sp.AuthoritativeEngineTime)
+}
+
+func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
+	testCases := []struct {
+		Name      string
+		Algorithm gosnmp.SnmpV3PrivProtocol
+		Config    *Snmp
+	}{
+		{
+			Name:      "AES192",
+			Algorithm: gosnmp.AES192,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: config.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES192",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+		{
+			Name:      "AES192C",
+			Algorithm: gosnmp.AES192C,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: config.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES192C",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+		{
+			Name:      "AES256",
+			Algorithm: gosnmp.AES256,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: config.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES256",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+		{
+			Name:      "AES256C",
+			Algorithm: gosnmp.AES256C,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: config.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES256C",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			s := tc.Config
+			err := s.init()
+			require.NoError(t, err)
+
+			gsc, err := s.getConnection(0)
+			require.NoError(t, err)
+			gs := gsc.(snmp.GosnmpWrapper)
+			assert.Equal(t, gs.Version, gosnmp.Version3)
+			sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
+			assert.Equal(t, "1.2.3.4", gsc.Host())
+			assert.EqualValues(t, 20, gs.MaxRepetitions)
+			assert.Equal(t, "mycontext", gs.ContextName)
+			assert.Equal(t, gosnmp.AuthPriv, gs.MsgFlags&gosnmp.AuthPriv)
+			assert.Equal(t, "myuser", sp.UserName)
+			assert.Equal(t, gosnmp.MD5, sp.AuthenticationProtocol)
+			assert.Equal(t, "password123", sp.AuthenticationPassphrase)
+			assert.Equal(t, tc.Algorithm, sp.PrivacyProtocol)
+			assert.Equal(t, "password123", sp.PrivacyPassphrase)
+			assert.Equal(t, "myengineid", sp.AuthoritativeEngineID)
+			assert.EqualValues(t, 1, sp.AuthoritativeEngineBoots)
+			assert.EqualValues(t, 2, sp.AuthoritativeEngineTime)
+		})
+	}
 }
 
 func TestGetSNMPConnection_caching(t *testing.T) {
@@ -394,7 +523,9 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 	require.NoError(t, err)
 	conn := gs.Conn
 
-	gsw := gosnmpWrapper{gs}
+	gsw := snmp.GosnmpWrapper{
+		GoSNMP: gs,
+	}
 	err = gsw.Walk(".1.0.0", func(_ gosnmp.SnmpPDU) error { return nil })
 	srvr.Close()
 	wg.Wait()
@@ -442,7 +573,9 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	require.NoError(t, err)
 	conn := gs.Conn
 
-	gsw := gosnmpWrapper{gs}
+	gsw := snmp.GosnmpWrapper{
+		GoSNMP: gs,
+	}
 	_, err = gsw.Get([]string{".1.0.0"})
 	srvr.Close()
 	wg.Wait()
@@ -480,6 +613,16 @@ func TestTableBuild_walk(t *testing.T) {
 				Oid:            ".1.0.0.2.1.5",
 				OidIndexLength: 1,
 			},
+			{
+				Name:      "myfield6",
+				Oid:       ".1.0.0.0.1.6",
+				Translate: true,
+			},
+			{
+				Name:      "myfield7",
+				Oid:       ".1.0.0.0.1.6",
+				Translate: false,
+			},
 		},
 	}
 
@@ -497,6 +640,8 @@ func TestTableBuild_walk(t *testing.T) {
 			"myfield3": float64(0.123),
 			"myfield4": 11,
 			"myfield5": 11,
+			"myfield6": "testTableEntry.7",
+			"myfield7": ".1.0.0.0.1.7",
 		},
 	}
 	rtr2 := RTableRow{
@@ -622,17 +767,17 @@ func TestGather(t *testing.T) {
 
 	m := acc.Metrics[0]
 	assert.Equal(t, "mytable", m.Measurement)
-	assert.Equal(t, "tsc", m.Tags["agent_host"])
+	assert.Equal(t, "tsc", m.Tags[s.AgentHostTag])
 	assert.Equal(t, "baz", m.Tags["myfield1"])
 	assert.Len(t, m.Fields, 2)
 	assert.Equal(t, 234, m.Fields["myfield2"])
 	assert.Equal(t, "baz", m.Fields["myfield3"])
-	assert.True(t, tstart.Before(m.Time))
-	assert.True(t, tstop.After(m.Time))
+	assert.True(t, !tstart.After(m.Time))
+	assert.True(t, !tstop.Before(m.Time))
 
 	m2 := acc.Metrics[1]
 	assert.Equal(t, "myOtherTable", m2.Measurement)
-	assert.Equal(t, "tsc", m2.Tags["agent_host"])
+	assert.Equal(t, "tsc", m2.Tags[s.AgentHostTag])
 	assert.Equal(t, "baz", m2.Tags["myfield1"])
 	assert.Len(t, m2.Fields, 1)
 	assert.Equal(t, 123456, m2.Fields["myOtherField"])
@@ -694,6 +839,8 @@ func TestFieldConvert(t *testing.T) {
 		{uint64(123), "float(3)", float64(0.123)},
 		{"123", "int", int64(123)},
 		{[]byte("123"), "int", int64(123)},
+		{"123123123123", "int", int64(123123123123)},
+		{[]byte("123123123123"), "int", int64(123123123123)},
 		{float32(12.3), "int", int64(12)},
 		{float64(12.3), "int", int64(12)},
 		{int(123), "int", int64(123)},
@@ -711,6 +858,12 @@ func TestFieldConvert(t *testing.T) {
 		{[]byte("abcd"), "ipaddr", "97.98.99.100"},
 		{"abcd", "ipaddr", "97.98.99.100"},
 		{[]byte("abcdefghijklmnop"), "ipaddr", "6162:6364:6566:6768:696a:6b6c:6d6e:6f70"},
+		{[]byte{0x00, 0x09, 0x3E, 0xE3, 0xF6, 0xD5, 0x3B, 0x60}, "hextoint:BigEndian:uint64", uint64(2602423610063712)},
+		{[]byte{0x00, 0x09, 0x3E, 0xE3}, "hextoint:BigEndian:uint32", uint32(605923)},
+		{[]byte{0x00, 0x09}, "hextoint:BigEndian:uint16", uint16(9)},
+		{[]byte{0x00, 0x09, 0x3E, 0xE3, 0xF6, 0xD5, 0x3B, 0x60}, "hextoint:LittleEndian:uint64", uint64(6934371307618175232)},
+		{[]byte{0x00, 0x09, 0x3E, 0xE3}, "hextoint:LittleEndian:uint32", uint32(3812493568)},
+		{[]byte{0x00, 0x09}, "hextoint:LittleEndian:uint16", uint16(2304)},
 	}
 
 	for _, tc := range testTable {
@@ -785,17 +938,4 @@ func TestSnmpTableCache_hit(t *testing.T) {
 	assert.Equal(t, "c", oidText)
 	assert.Equal(t, []Field{{Name: "d"}}, fields)
 	assert.Equal(t, fmt.Errorf("e"), err)
-}
-
-func TestError(t *testing.T) {
-	e := fmt.Errorf("nested error")
-	err := Errorf(e, "top error %d", 123)
-	require.Error(t, err)
-
-	ne, ok := err.(NestedError)
-	require.True(t, ok)
-	assert.Equal(t, e, ne.NestedErr)
-
-	assert.Contains(t, err.Error(), "top error 123")
-	assert.Contains(t, err.Error(), "nested error")
 }

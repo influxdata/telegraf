@@ -47,7 +47,7 @@ Syslog messages should be formatted according to
   ## Must be one of "octect-counting", "non-transparent".
   # framing = "octet-counting"
 
-  ## The trailer to be expected in case of non-trasparent framing (default = "LF").
+  ## The trailer to be expected in case of non-transparent framing (default = "LF").
   ## Must be one of "LF", or "NUL".
   # trailer = "LF"
 

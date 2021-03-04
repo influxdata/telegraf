@@ -94,7 +94,7 @@ func TestMailChimpGatherReport(t *testing.T) {
 	}
 	m := MailChimp{
 		api:        api,
-		CampaignId: "test",
+		CampaignID: "test",
 	}
 
 	var acc testutil.Accumulator
@@ -140,7 +140,7 @@ func TestMailChimpGatherReport(t *testing.T) {
 
 }
 
-func TestMailChimpGatherErroror(t *testing.T) {
+func TestMailChimpGatherError(t *testing.T) {
 	ts := httptest.NewServer(
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
@@ -159,7 +159,7 @@ func TestMailChimpGatherErroror(t *testing.T) {
 	}
 	m := MailChimp{
 		api:        api,
-		CampaignId: "test",
+		CampaignID: "test",
 	}
 
 	var acc testutil.Accumulator

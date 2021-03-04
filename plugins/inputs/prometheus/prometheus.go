@@ -13,10 +13,9 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
+	parser_v2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1`
@@ -136,20 +135,6 @@ func (p *Prometheus) Description() string {
 func (p *Prometheus) Init() error {
 	if p.MetricVersion != 2 {
 		p.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
-	}
-
-	if len(p.KubernetesLabelSelector) > 0 {
-		_, err := labels.Parse(p.KubernetesLabelSelector)
-		if err != nil {
-			return fmt.Errorf("label selector validation failed %q: %v", p.KubernetesLabelSelector, err)
-		}
-	}
-
-	if len(p.KubernetesFieldSelector) > 0 {
-		_, err := fields.ParseSelector(p.KubernetesFieldSelector)
-		if err != nil {
-			return fmt.Errorf("field selector validation failed %s: %v", p.KubernetesFieldSelector, err)
-		}
 	}
 
 	return nil
@@ -281,7 +266,11 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		if path == "" {
 			path = "/metrics"
 		}
-		req, err = http.NewRequest("GET", "http://localhost"+path, nil)
+		addr := "http://localhost" + path
+		req, err = http.NewRequest("GET", addr, nil)
+		if err != nil {
+			return fmt.Errorf("unable to create new request '%s': %s", addr, err)
+		}
 
 		// ignore error because it's been handled before getting here
 		tlsCfg, _ := p.ClientConfig.TLSConfig()
@@ -301,6 +290,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 			u.URL.Path = "/metrics"
 		}
 		req, err = http.NewRequest("GET", u.URL.String(), nil)
+		if err != nil {
+			return fmt.Errorf("unable to create new request '%s': %s", u.URL.String(), err)
+		}
 	}
 
 	req.Header.Add("Accept", acceptHeader)
@@ -338,7 +330,8 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 
 	if p.MetricVersion == 2 {
-		metrics, err = ParseV2(body, resp.Header)
+		parser := parser_v2.Parser{Header: resp.Header}
+		metrics, err = parser.Parse(body)
 	} else {
 		metrics, err = Parse(body, resp.Header)
 	}

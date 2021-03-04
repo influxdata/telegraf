@@ -12,7 +12,7 @@ import (
 )
 
 type Server struct {
-	Url        *url.URL
+	URL        *url.URL
 	Session    *mgo.Session
 	lastResult *MongoStatus
 
@@ -21,7 +21,7 @@ type Server struct {
 
 func (s *Server) getDefaultTags() map[string]string {
 	tags := make(map[string]string)
-	tags["hostname"] = s.Url.Host
+	tags["hostname"] = s.URL.Host
 	return tags
 }
 
@@ -192,7 +192,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 	return results, nil
 }
 
-func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gatherColStats bool, colStatsDbs []string) error {
+func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, gatherDbStats bool, gatherColStats bool, colStatsDbs []string) error {
 	s.Session.SetMode(mgo.Eventual, true)
 	s.Session.SetSocketTimeout(0)
 
@@ -218,9 +218,13 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 		}
 	}
 
-	clusterStatus, err := s.gatherClusterStatus()
-	if err != nil {
-		s.Log.Debugf("Unable to gather cluster status: %s", err.Error())
+	var clusterStatus *ClusterStatus
+	if gatherClusterStatus {
+		status, err := s.gatherClusterStatus()
+		if err != nil {
+			s.Log.Debugf("Unable to gather cluster status: %s", err.Error())
+		}
+		clusterStatus = status
 	}
 
 	shardStats, err := s.gatherShardConnPoolStats()
@@ -271,7 +275,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 			durationInSeconds = 1
 		}
 		data := NewMongodbData(
-			NewStatLine(*s.lastResult, *result, s.Url.Host, true, durationInSeconds),
+			NewStatLine(*s.lastResult, *result, s.URL.Host, true, durationInSeconds),
 			s.getDefaultTags(),
 		)
 		data.AddDefaultStats()

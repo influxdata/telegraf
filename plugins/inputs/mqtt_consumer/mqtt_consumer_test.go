@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -63,6 +63,7 @@ func (p *FakeParser) SetDefaultTags(tags map[string]string) {
 
 type FakeToken struct {
 	sessionPresent bool
+	complete       chan struct{}
 }
 
 // FakeToken satisfies mqtt.Token
@@ -82,6 +83,10 @@ func (t *FakeToken) Error() error {
 
 func (t *FakeToken) SessionPresent() bool {
 	return t.sessionPresent
+}
+
+func (t *FakeToken) Done() <-chan struct{} {
+	return t.complete
 }
 
 // Test the basic lifecycle transitions of the plugin.
