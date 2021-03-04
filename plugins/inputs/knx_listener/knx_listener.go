@@ -3,6 +3,7 @@ package knx_listener
 import (
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/vapourismo/knx-go/knx"
 	"github.com/vapourismo/knx-go/knx/dpt"
@@ -38,6 +39,7 @@ type KNXListener struct {
 	gaLogbook   map[string]bool
 
 	acc telegraf.Accumulator
+	wg  sync.WaitGroup
 }
 
 func (kl *KNXListener) Description() string {
@@ -125,7 +127,11 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 	kl.Log.Infof("Connected!")
 
 	// Listen to the KNX bus
-	go kl.listen()
+	kl.wg.Add(1)
+	go func() {
+		kl.wg.Done()
+		kl.listen()
+	}()
 
 	return nil
 }
@@ -133,6 +139,7 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 func (kl *KNXListener) Stop() {
 	if kl.client != nil {
 		kl.client.Close()
+		kl.wg.Wait()
 	}
 }
 
