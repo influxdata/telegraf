@@ -276,6 +276,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, 
 		topStats, err := s.gatherTopStatData()
 		if err != nil {
 			s.Log.Debugf("Unable to gather top stat data: %s", err.Error())
+			return err
 		}
 		topStatData = topStats
 	}

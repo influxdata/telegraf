@@ -54,7 +54,8 @@ var sampleConfig = `
   ## When true, collect per collection stats
   # gather_col_stats = false
 
-  ## When true, collect stats per collection
+  ## When true, collect usage statistics for each collection
+  ## (insert, update, queries, remove, getmore, commands etc...).
   # gather_top_stat = false
 
   ## List of db where collections stats are collected
