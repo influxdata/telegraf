@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -120,7 +121,7 @@ func TestConnectHTTPConfig(t *testing.T) {
 		Database:         "telegraf",
 		RetentionPolicy:  "default",
 		WriteConsistency: "any",
-		Timeout:          internal.Duration{Duration: 5 * time.Second},
+		Timeout:          config.Duration(5 * time.Second),
 		Username:         "guy",
 		Password:         "smiley",
 		UserAgent:        "telegraf",
@@ -153,7 +154,7 @@ func TestConnectHTTPConfig(t *testing.T) {
 
 	require.Equal(t, output.URLs[0], actual.URL.String())
 	require.Equal(t, output.UserAgent, actual.UserAgent)
-	require.Equal(t, output.Timeout.Duration, actual.Timeout)
+	require.Equal(t, time.Duration(output.Timeout), actual.Timeout)
 	require.Equal(t, output.Username, actual.Username)
 	require.Equal(t, output.Password, actual.Password)
 	require.Equal(t, output.HTTPProxy, actual.Proxy.String())

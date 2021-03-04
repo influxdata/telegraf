@@ -16,7 +16,7 @@ import (
 
 	"github.com/gosnmp/gosnmp"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/wlog"
@@ -26,7 +26,7 @@ const description = `Retrieves SNMP values from remote agents`
 const sampleConfig = `
   ## Agent addresses to retrieve values from.
   ##   format:  agents = ["<scheme://><hostname>:<port>"]
-  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.            
+  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.
   ##            default is udp
   ##   port:    optional
   ##   example: agents = ["udp://127.0.0.1:161"]
@@ -314,7 +314,7 @@ func init() {
 			ClientConfig: snmp.ClientConfig{
 				Retries:        3,
 				MaxRepetitions: 10,
-				Timeout:        internal.Duration{Duration: 5 * time.Second},
+				Timeout:        config.Duration(5 * time.Second),
 				Version:        2,
 				Community:      "public",
 			},

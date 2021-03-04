@@ -12,12 +12,13 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, UseSudo bool, InstanceName string, Timeout internal.Duration) (*bytes.Buffer, error)
+type runner func(cmdName string, UseSudo bool, InstanceName string, Timeout config.Duration) (*bytes.Buffer, error)
 
 // Varnish is used to store configuration values
 type Varnish struct {
@@ -25,7 +26,7 @@ type Varnish struct {
 	Binary       string
 	UseSudo      bool
 	InstanceName string
-	Timeout      internal.Duration
+	Timeout      config.Duration
 
 	filter filter.Filter
 	run    runner
@@ -33,7 +34,7 @@ type Varnish struct {
 
 var defaultStats = []string{"MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"}
 var defaultBinary = "/usr/bin/varnishstat"
-var defaultTimeout = internal.Duration{Duration: time.Second}
+var defaultTimeout = config.Duration(time.Second)
 
 var sampleConfig = `
   ## If running as a restricted user you can prepend sudo for additional access:
@@ -66,7 +67,7 @@ func (s *Varnish) SampleConfig() string {
 }
 
 // Shell out to varnish_stat and return the output
-func varnishRunner(cmdName string, UseSudo bool, InstanceName string, Timeout internal.Duration) (*bytes.Buffer, error) {
+func varnishRunner(cmdName string, UseSudo bool, InstanceName string, Timeout config.Duration) (*bytes.Buffer, error) {
 	cmdArgs := []string{"-1"}
 
 	if InstanceName != "" {
@@ -84,7 +85,7 @@ func varnishRunner(cmdName string, UseSudo bool, InstanceName string, Timeout in
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
-	err := internal.RunTimeout(cmd, Timeout.Duration)
+	err := internal.RunTimeout(cmd, time.Duration(Timeout))
 	if err != nil {
 		return &out, fmt.Errorf("error running varnishstat: %s", err)
 	}

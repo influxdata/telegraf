@@ -13,7 +13,7 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"google.golang.org/api/support/bundler"
@@ -84,7 +84,7 @@ func getTestResources(tT *testing.T, settings pubsub.PublishSettings, testM []te
 		PublishCountThreshold: settings.CountThreshold,
 		PublishByteThreshold:  settings.ByteThreshold,
 		PublishNumGoroutines:  settings.NumGoroutines,
-		PublishTimeout:        internal.Duration{Duration: settings.Timeout},
+		PublishTimeout:        config.Duration(settings.Timeout),
 	}
 	ps.SetSerializer(s)
 

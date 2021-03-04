@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -29,7 +29,7 @@ type Kubernetes struct {
 	labelFilter filter.Filter
 
 	// HTTP Timeout specified as a string - 3s, 1m, 1h
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 
 	tls.ClientConfig
 
@@ -204,13 +204,13 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 		return err
 	}
 	if k.RoundTripper == nil {
-		if k.ResponseTimeout.Duration < time.Second {
-			k.ResponseTimeout.Duration = time.Second * 5
+		if k.ResponseTimeout < config.Duration(time.Second) {
+			k.ResponseTimeout = config.Duration(time.Second * 5)
 		}
 		k.RoundTripper = &http.Transport{
 			TLSHandshakeTimeout:   5 * time.Second,
 			TLSClientConfig:       tlsCfg,
-			ResponseHeaderTimeout: k.ResponseTimeout.Duration,
+			ResponseHeaderTimeout: time.Duration(k.ResponseTimeout),
 		}
 	}
 	req.Header.Set("Authorization", "Bearer "+k.BearerTokenString)

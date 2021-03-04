@@ -11,29 +11,29 @@ import (
 
 	mb "github.com/goburrow/modbus"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Modbus holds all data relevant to the plugin
 type Modbus struct {
-	Name             string            `toml:"name"`
-	Controller       string            `toml:"controller"`
-	TransmissionMode string            `toml:"transmission_mode"`
-	BaudRate         int               `toml:"baud_rate"`
-	DataBits         int               `toml:"data_bits"`
-	Parity           string            `toml:"parity"`
-	StopBits         int               `toml:"stop_bits"`
-	SlaveID          int               `toml:"slave_id"`
-	Timeout          internal.Duration `toml:"timeout"`
-	Retries          int               `toml:"busy_retries"`
-	RetriesWaitTime  internal.Duration `toml:"busy_retries_wait"`
-	DiscreteInputs   []fieldContainer  `toml:"discrete_inputs"`
-	Coils            []fieldContainer  `toml:"coils"`
-	HoldingRegisters []fieldContainer  `toml:"holding_registers"`
-	InputRegisters   []fieldContainer  `toml:"input_registers"`
-	Log              telegraf.Logger   `toml:"-"`
+	Name             string           `toml:"name"`
+	Controller       string           `toml:"controller"`
+	TransmissionMode string           `toml:"transmission_mode"`
+	BaudRate         int              `toml:"baud_rate"`
+	DataBits         int              `toml:"data_bits"`
+	Parity           string           `toml:"parity"`
+	StopBits         int              `toml:"stop_bits"`
+	SlaveID          int              `toml:"slave_id"`
+	Timeout          config.Duration  `toml:"timeout"`
+	Retries          int              `toml:"busy_retries"`
+	RetriesWaitTime  config.Duration  `toml:"busy_retries_wait"`
+	DiscreteInputs   []fieldContainer `toml:"discrete_inputs"`
+	Coils            []fieldContainer `toml:"coils"`
+	HoldingRegisters []fieldContainer `toml:"holding_registers"`
+	InputRegisters   []fieldContainer `toml:"input_registers"`
+	Log              telegraf.Logger  `toml:"-"`
 	registers        []register
 	isConnected      bool
 	tcpHandler       *mb.TCPClientHandler
@@ -264,7 +264,7 @@ func connect(m *Modbus) error {
 			return err
 		}
 		m.tcpHandler = mb.NewTCPClientHandler(host + ":" + port)
-		m.tcpHandler.Timeout = m.Timeout.Duration
+		m.tcpHandler.Timeout = time.Duration(m.Timeout)
 		m.tcpHandler.SlaveId = byte(m.SlaveID)
 		m.client = mb.NewClient(m.tcpHandler)
 		err := m.tcpHandler.Connect()
@@ -276,7 +276,7 @@ func connect(m *Modbus) error {
 	case "file":
 		if m.TransmissionMode == "RTU" {
 			m.rtuHandler = mb.NewRTUClientHandler(u.Path)
-			m.rtuHandler.Timeout = m.Timeout.Duration
+			m.rtuHandler.Timeout = time.Duration(m.Timeout)
 			m.rtuHandler.SlaveId = byte(m.SlaveID)
 			m.rtuHandler.BaudRate = m.BaudRate
 			m.rtuHandler.DataBits = m.DataBits
@@ -291,7 +291,7 @@ func connect(m *Modbus) error {
 			return nil
 		} else if m.TransmissionMode == "ASCII" {
 			m.asciiHandler = mb.NewASCIIClientHandler(u.Path)
-			m.asciiHandler.Timeout = m.Timeout.Duration
+			m.asciiHandler.Timeout = time.Duration(m.Timeout)
 			m.asciiHandler.SlaveId = byte(m.SlaveID)
 			m.asciiHandler.BaudRate = m.BaudRate
 			m.asciiHandler.DataBits = m.DataBits
@@ -679,7 +679,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 			mberr, ok := err.(*mb.ModbusError)
 			if ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
 				m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
-				time.Sleep(m.RetriesWaitTime.Duration)
+				time.Sleep(time.Duration(m.RetriesWaitTime))
 				continue
 			}
 			// Ignore return error to not shadow the initial error

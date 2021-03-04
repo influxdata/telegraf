@@ -734,7 +734,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 		Object:                  perfObjects,
 		UseWildcardsExpansion:   true,
 		query:                   fpm,
-		CountersRefreshInterval: internal.Duration{Duration: time.Second * 10},
+		CountersRefreshInterval: config.Duration{Duration: time.Second * 10},
 	}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
@@ -827,7 +827,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		Object:                  perfObjects,
 		UseWildcardsExpansion:   false,
 		query:                   fpm,
-		CountersRefreshInterval: internal.Duration{Duration: time.Second * 10}}
+		CountersRefreshInterval: config.Duration{Duration: time.Second * 10}}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	assert.Len(t, m.counters, 2)

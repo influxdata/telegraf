@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -111,14 +112,14 @@ func TestMTimeFilter(t *testing.T) {
 	fileAge := time.Since(mtime) - (60 * time.Second)
 
 	fc := getNoFilterFileCount()
-	fc.MTime = internal.Duration{Duration: -fileAge}
+	fc.MTime = config.Duration(-fileAge)
 	matches := []string{"foo", "bar", "qux",
 		"subdir/", "subdir/quux", "subdir/quuz",
 		"subdir/nested2", "subdir/nested2/qux"}
 
 	fileCountEquals(t, fc, len(matches), 5096)
 
-	fc.MTime = internal.Duration{Duration: fileAge}
+	fc.MTime = config.Duration(fileAge)
 	matches = []string{"baz"}
 	fileCountEquals(t, fc, len(matches), 0)
 }
@@ -176,7 +177,7 @@ func getNoFilterFileCount() FileCount {
 		Recursive:   true,
 		RegularOnly: false,
 		Size:        internal.Size{Size: 0},
-		MTime:       internal.Duration{Duration: 0},
+		MTime:       config.Duration(0),
 		fileFilters: nil,
 		Fs:          getFakeFileSystem(getTestdataDir()),
 	}

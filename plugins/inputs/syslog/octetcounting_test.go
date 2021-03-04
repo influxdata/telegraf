@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	framing "github.com/influxdata/telegraf/internal/syslog"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -336,7 +336,7 @@ func getTestCasesForOctetCounting() []testCaseStream {
 	return testCases
 }
 
-func testStrictOctetCounting(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+func testStrictOctetCounting(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *config.Duration) {
 	for _, tc := range getTestCasesForOctetCounting() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
@@ -395,7 +395,7 @@ func testStrictOctetCounting(t *testing.T, protocol string, address string, want
 }
 
 func testBestEffortOctetCounting(t *testing.T, protocol string, address string, wantTLS bool) {
-	keepAlive := (*internal.Duration)(nil)
+	keepAlive := (*config.Duration)(nil)
 	for _, tc := range getTestCasesForOctetCounting() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
@@ -460,11 +460,13 @@ func TestOctetCountingBestEffort_tcp_tls(t *testing.T) {
 }
 
 func TestOctetCountingStrictWithKeepAlive_tcp_tls(t *testing.T) {
-	testStrictOctetCounting(t, "tcp", address, true, &internal.Duration{Duration: time.Minute})
+	d := config.Duration(time.Minute)
+	testStrictOctetCounting(t, "tcp", address, true, &d)
 }
 
 func TestOctetCountingStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
-	testStrictOctetCounting(t, "tcp", address, true, &internal.Duration{Duration: 0})
+	d := config.Duration(0)
+	testStrictOctetCounting(t, "tcp", address, true, &d)
 }
 
 func TestOctetCountingStrict_unix(t *testing.T) {

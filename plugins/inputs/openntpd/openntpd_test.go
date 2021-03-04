@@ -3,15 +3,18 @@ package openntpd
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func OpenntpdCTL(output string) func(string, internal.Duration, bool) (*bytes.Buffer, error) {
-	return func(string, internal.Duration, bool) (*bytes.Buffer, error) {
+var TestTimeout = config.Duration(time.Second)
+
+func OpenntpdCTL(output string) func(string, config.Duration, bool) (*bytes.Buffer, error) {
+	return func(string, config.Duration, bool) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }

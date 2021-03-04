@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/cumulative"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
@@ -17,10 +17,10 @@ import (
 
 // NewRelic nr structure
 type NewRelic struct {
-	InsightsKey  string            `toml:"insights_key"`
-	MetricPrefix string            `toml:"metric_prefix"`
-	Timeout      internal.Duration `toml:"timeout"`
-	HTTPProxy    string            `toml:"http_proxy"`
+	InsightsKey  string          `toml:"insights_key"`
+	MetricPrefix string          `toml:"metric_prefix"`
+	Timeout      config.Duration `toml:"timeout"`
+	HTTPProxy    string          `toml:"http_proxy"`
 
 	harvestor   *telemetry.Harvester
 	dc          *cumulative.DeltaCalculator
@@ -67,7 +67,7 @@ func (nr *NewRelic) Connect() error {
 		func(cfg *telemetry.Config) {
 			cfg.Product = "NewRelic-Telegraf-Plugin"
 			cfg.ProductVersion = "1.0"
-			cfg.HarvestTimeout = nr.Timeout.Duration
+			cfg.HarvestTimeout = time.Duration(nr.Timeout)
 			cfg.Client = &nr.client
 			cfg.ErrorLogger = func(e map[string]interface{}) {
 				var errorString string
@@ -161,7 +161,7 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("newrelic", func() telegraf.Output {
 		return &NewRelic{
-			Timeout: internal.Duration{Duration: time.Second * 15},
+			Timeout: config.Duration(time.Second * 15),
 		}
 	})
 }

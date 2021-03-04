@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -27,8 +28,8 @@ type PubSubPush struct {
 	ServiceAddress string
 	Token          string
 	Path           string
-	ReadTimeout    internal.Duration
-	WriteTimeout   internal.Duration
+	ReadTimeout    config.Duration
+	WriteTimeout   config.Duration
 	MaxBodySize    internal.Size
 	AddMeta        bool
 	Log            telegraf.Logger
@@ -133,11 +134,11 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 		p.MaxBodySize.Size = defaultMaxBodySize
 	}
 
-	if p.ReadTimeout.Duration < time.Second {
-		p.ReadTimeout.Duration = time.Second * 10
+	if p.ReadTimeout < config.Duration(time.Second) {
+		p.ReadTimeout = config.Duration(time.Second * 10)
 	}
-	if p.WriteTimeout.Duration < time.Second {
-		p.WriteTimeout.Duration = time.Second * 10
+	if p.WriteTimeout < config.Duration(time.Second) {
+		p.WriteTimeout = config.Duration(time.Second * 10)
 	}
 
 	tlsConf, err := p.ServerConfig.TLSConfig()
@@ -147,8 +148,8 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 
 	p.server = &http.Server{
 		Addr:        p.ServiceAddress,
-		Handler:     http.TimeoutHandler(p, p.WriteTimeout.Duration, "timed out processing metric"),
-		ReadTimeout: p.ReadTimeout.Duration,
+		Handler:     http.TimeoutHandler(p, time.Duration(p.WriteTimeout), "timed out processing metric"),
+		ReadTimeout: time.Duration(p.ReadTimeout),
 		TLSConfig:   tlsConf,
 	}
 

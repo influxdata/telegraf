@@ -11,7 +11,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	itls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
@@ -147,8 +147,8 @@ func defaultVSphere() *VSphere {
 
 		MaxQueryObjects:         256,
 		MaxQueryMetrics:         256,
-		ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
-		Timeout:                 internal.Duration{Duration: time.Second * 20},
+		ObjectDiscoveryInterval: config.Duration(time.Second * 300),
+		Timeout:                 config.Duration(time.Second * 20),
 		ForceDiscoverOnInit:     true,
 		DiscoverConcurrency:     1,
 		CollectConcurrency:      1,

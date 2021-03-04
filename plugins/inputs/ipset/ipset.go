@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -18,15 +19,15 @@ import (
 type Ipset struct {
 	IncludeUnmatchedSets bool
 	UseSudo              bool
-	Timeout              internal.Duration
+	Timeout              config.Duration
 	lister               setLister
 }
 
-type setLister func(Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error)
+type setLister func(Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error)
 
 const measurement = "ipset"
 
-var defaultTimeout = internal.Duration{Duration: time.Second}
+var defaultTimeout = config.Duration(time.Second)
 
 // Description returns a short description of the plugin
 func (i *Ipset) Description() string {
@@ -90,7 +91,7 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func setList(Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error) {
+func setList(Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error) {
 	// Is ipset installed ?
 	ipsetPath, err := exec.LookPath("ipset")
 	if err != nil {
@@ -108,7 +109,7 @@ func setList(Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error) {
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err = internal.RunTimeout(cmd, Timeout.Duration)
+	err = internal.RunTimeout(cmd, time.Duration(Timeout))
 	if err != nil {
 		return &out, fmt.Errorf("error running ipset save: %s", err)
 	}

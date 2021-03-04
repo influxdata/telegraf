@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -74,7 +74,7 @@ func TestSystemdUnits(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			systemdUnits := &SystemdUnits{
-				systemctl: func(Timeout internal.Duration, UnitType string) (*bytes.Buffer, error) {
+				systemctl: func(Timeout config.Duration, UnitType string) (*bytes.Buffer, error) {
 					return bytes.NewBufferString(tt.line), nil
 				},
 			}

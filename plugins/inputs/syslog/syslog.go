@@ -19,7 +19,7 @@ import (
 	"github.com/influxdata/go-syslog/v2/rfc5424"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	framing "github.com/influxdata/telegraf/internal/syslog"
 	tlsConfig "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -32,9 +32,9 @@ const ipMaxPacketSize = 64 * 1024
 type Syslog struct {
 	tlsConfig.ServerConfig
 	Address         string `toml:"server"`
-	KeepAlivePeriod *internal.Duration
+	KeepAlivePeriod *config.Duration
 	MaxConnections  int
-	ReadTimeout     *internal.Duration
+	ReadTimeout     *config.Duration
 	Framing         framing.Framing
 	Trailer         nontransparent.TrailerType
 	BestEffort      bool
@@ -315,8 +315,8 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 
 	emit := func(r *syslog.Result) {
 		s.store(*r, acc)
-		if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
-			if err := conn.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration)); err != nil {
+		if s.ReadTimeout != nil && time.Duration(*s.ReadTimeout) > 0 {
+			if err := conn.SetReadDeadline(time.Now().Add(time.Duration(*s.ReadTimeout))); err != nil {
 				acc.AddError(fmt.Errorf("setting read deadline failed: %v", err))
 			}
 		}
@@ -342,8 +342,8 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 
 	p.Parse(conn)
 
-	if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
-		if err := conn.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration)); err != nil {
+	if s.ReadTimeout != nil && time.Duration(*s.ReadTimeout) > 0 {
+		if err := conn.SetReadDeadline(time.Now().Add(time.Duration(*s.ReadTimeout))); err != nil {
 			acc.AddError(fmt.Errorf("setting read deadline failed: %v", err))
 		}
 	}
@@ -354,13 +354,13 @@ func (s *Syslog) setKeepAlive(c *net.TCPConn) error {
 		return nil
 	}
 
-	if s.KeepAlivePeriod.Duration == 0 {
+	if *s.KeepAlivePeriod == 0 {
 		return c.SetKeepAlive(false)
 	}
 	if err := c.SetKeepAlive(true); err != nil {
 		return err
 	}
-	return c.SetKeepAlivePeriod(s.KeepAlivePeriod.Duration)
+	return c.SetKeepAlivePeriod(time.Duration(*s.KeepAlivePeriod))
 }
 
 func (s *Syslog) store(res syslog.Result, acc telegraf.Accumulator) {
@@ -460,16 +460,15 @@ func getNanoNow() time.Time {
 }
 
 func init() {
+	defaultTimeout := config.Duration(defaultReadTimeout)
 	inputs.Add("syslog", func() telegraf.Input {
 		return &Syslog{
-			Address: ":6514",
-			now:     getNanoNow,
-			ReadTimeout: &internal.Duration{
-				Duration: defaultReadTimeout,
-			},
-			Framing:   framing.OctetCounting,
-			Trailer:   nontransparent.LF,
-			Separator: "_",
+			Address:     ":6514",
+			now:         getNanoNow,
+			ReadTimeout: &defaultTimeout,
+			Framing:     framing.OctetCounting,
+			Trailer:     nontransparent.LF,
+			Separator:   "_",
 		}
 	})
 }

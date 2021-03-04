@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	parser_v2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
@@ -48,7 +48,7 @@ type Prometheus struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
 
 	MetricVersion int `toml:"metric_version"`
 
@@ -308,7 +308,7 @@ func (p *Prometheus) createHTTPClient() (*http.Client, error) {
 			TLSClientConfig:   tlsCfg,
 			DisableKeepAlives: true,
 		},
-		Timeout: p.ResponseTimeout.Duration,
+		Timeout: time.Duration(p.ResponseTimeout),
 	}
 
 	return client, nil
@@ -341,7 +341,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 					return c, err
 				},
 			},
-			Timeout: p.ResponseTimeout.Duration,
+			Timeout: time.Duration(p.ResponseTimeout),
 		}
 	} else {
 		if u.URL.Path == "" {
@@ -474,7 +474,7 @@ func (p *Prometheus) Stop() {
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
 		return &Prometheus{
-			ResponseTimeout: internal.Duration{Duration: time.Second * 3},
+			ResponseTimeout: config.Duration(time.Second * 3),
 			kubernetesPods:  map[string]URLAndAddress{},
 			URLTag:          "url",
 		}

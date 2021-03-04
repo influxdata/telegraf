@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -99,13 +100,13 @@ func (ssl *streamSocketListener) setKeepAlive(c net.Conn) error {
 	if !ok {
 		return fmt.Errorf("cannot set keep alive on a %s socket", strings.SplitN(ssl.ServiceAddress, "://", 2)[0])
 	}
-	if ssl.KeepAlivePeriod.Duration == 0 {
+	if *ssl.KeepAlivePeriod == 0 {
 		return tcpc.SetKeepAlive(false)
 	}
 	if err := tcpc.SetKeepAlive(true); err != nil {
 		return err
 	}
-	return tcpc.SetKeepAlivePeriod(ssl.KeepAlivePeriod.Duration)
+	return tcpc.SetKeepAlivePeriod(time.Duration(*ssl.KeepAlivePeriod))
 }
 
 func (ssl *streamSocketListener) removeConnection(c net.Conn) {
@@ -126,8 +127,8 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 
 	scnr := bufio.NewScanner(decoder)
 	for {
-		if ssl.ReadTimeout != nil && ssl.ReadTimeout.Duration > 0 {
-			if err := c.SetReadDeadline(time.Now().Add(ssl.ReadTimeout.Duration)); err != nil {
+		if ssl.ReadTimeout != nil && *ssl.ReadTimeout > 0 {
+			if err := c.SetReadDeadline(time.Now().Add(time.Duration(*ssl.ReadTimeout))); err != nil {
 				ssl.Log.Error("setting read deadline failed: %v", err)
 				return
 			}
@@ -193,13 +194,13 @@ func (psl *packetSocketListener) listen() {
 }
 
 type SocketListener struct {
-	ServiceAddress  string             `toml:"service_address"`
-	MaxConnections  int                `toml:"max_connections"`
-	ReadBufferSize  internal.Size      `toml:"read_buffer_size"`
-	ReadTimeout     *internal.Duration `toml:"read_timeout"`
-	KeepAlivePeriod *internal.Duration `toml:"keep_alive_period"`
-	SocketMode      string             `toml:"socket_mode"`
-	ContentEncoding string             `toml:"content_encoding"`
+	ServiceAddress  string           `toml:"service_address"`
+	MaxConnections  int              `toml:"max_connections"`
+	ReadBufferSize  internal.Size    `toml:"read_buffer_size"`
+	ReadTimeout     *config.Duration `toml:"read_timeout"`
+	KeepAlivePeriod *config.Duration `toml:"keep_alive_period"`
+	SocketMode      string           `toml:"socket_mode"`
+	ContentEncoding string           `toml:"content_encoding"`
 	tlsint.ServerConfig
 
 	wg sync.WaitGroup

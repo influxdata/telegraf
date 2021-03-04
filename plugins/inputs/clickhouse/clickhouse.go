@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -101,20 +102,20 @@ func init() {
 			ClientConfig: tls.ClientConfig{
 				InsecureSkipVerify: false,
 			},
-			Timeout: internal.Duration{Duration: defaultTimeout},
+			Timeout: config.Duration(defaultTimeout),
 		}
 	})
 }
 
 // ClickHouse Telegraf Input Plugin
 type ClickHouse struct {
-	Username       string            `toml:"username"`
-	Password       string            `toml:"password"`
-	Servers        []string          `toml:"servers"`
-	AutoDiscovery  bool              `toml:"auto_discovery"`
-	ClusterInclude []string          `toml:"cluster_include"`
-	ClusterExclude []string          `toml:"cluster_exclude"`
-	Timeout        internal.Duration `toml:"timeout"`
+	Username       string          `toml:"username"`
+	Password       string          `toml:"password"`
+	Servers        []string        `toml:"servers"`
+	AutoDiscovery  bool            `toml:"auto_discovery"`
+	ClusterInclude []string        `toml:"cluster_include"`
+	ClusterExclude []string        `toml:"cluster_exclude"`
+	Timeout        config.Duration `toml:"timeout"`
 	HTTPClient     http.Client
 	tls.ClientConfig
 }
@@ -132,8 +133,8 @@ func (*ClickHouse) Description() string {
 // Start ClickHouse input service
 func (ch *ClickHouse) Start(telegraf.Accumulator) error {
 	timeout := defaultTimeout
-	if ch.Timeout.Duration != 0 {
-		timeout = ch.Timeout.Duration
+	if time.Duration(ch.Timeout) != 0 {
+		timeout = time.Duration(ch.Timeout)
 	}
 	tlsCfg, err := ch.ClientConfig.TLSConfig()
 	if err != nil {

@@ -14,6 +14,7 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -39,8 +40,8 @@ type HTTPListenerV2 struct {
 	Path           string            `toml:"path"`
 	Methods        []string          `toml:"methods"`
 	DataSource     string            `toml:"data_source"`
-	ReadTimeout    internal.Duration `toml:"read_timeout"`
-	WriteTimeout   internal.Duration `toml:"write_timeout"`
+	ReadTimeout    config.Duration   `toml:"read_timeout"`
+	WriteTimeout   config.Duration   `toml:"write_timeout"`
 	MaxBodySize    internal.Size     `toml:"max_body_size"`
 	Port           int               `toml:"port"`
 	BasicUsername  string            `toml:"basic_username"`
@@ -129,11 +130,11 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 		h.MaxBodySize.Size = defaultMaxBodySize
 	}
 
-	if h.ReadTimeout.Duration < time.Second {
-		h.ReadTimeout.Duration = time.Second * 10
+	if h.ReadTimeout < config.Duration(time.Second) {
+		h.ReadTimeout = config.Duration(time.Second * 10)
 	}
-	if h.WriteTimeout.Duration < time.Second {
-		h.WriteTimeout.Duration = time.Second * 10
+	if h.WriteTimeout < config.Duration(time.Second) {
+		h.WriteTimeout = config.Duration(time.Second * 10)
 	}
 
 	h.acc = acc
@@ -146,8 +147,8 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 	server := &http.Server{
 		Addr:         h.ServiceAddress,
 		Handler:      h,
-		ReadTimeout:  h.ReadTimeout.Duration,
-		WriteTimeout: h.WriteTimeout.Duration,
+		ReadTimeout:  time.Duration(h.ReadTimeout),
+		WriteTimeout: time.Duration(h.WriteTimeout),
 		TLSConfig:    tlsConf,
 	}
 

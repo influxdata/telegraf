@@ -200,7 +200,7 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 	inputHTTPListener, ok := c.Inputs[0].Input.(*http_listener_v2.HTTPListenerV2)
 	assert.Equal(t, true, ok)
 	// Tests telegraf duration parsing.
-	assert.Equal(t, internal.Duration{Duration: time.Second}, inputHTTPListener.WriteTimeout)
+	assert.Equal(t, config.Duration{Duration: time.Second}, inputHTTPListener.WriteTimeout)
 	// Tests telegraf size parsing.
 	assert.Equal(t, internal.Size{Size: 1024 * 1024}, inputHTTPListener.MaxBodySize)
 	// Tests toml multiline basic strings.

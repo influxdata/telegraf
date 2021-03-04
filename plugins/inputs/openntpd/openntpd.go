@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -34,19 +35,19 @@ var intI = map[string]int{
 	"poll": 4,
 }
 
-type runner func(cmdName string, Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error)
+type runner func(cmdName string, Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error)
 
 // Openntpd is used to store configuration values
 type Openntpd struct {
 	Binary  string
-	Timeout internal.Duration
+	Timeout config.Duration
 	UseSudo bool
 
 	run runner
 }
 
 var defaultBinary = "/usr/sbin/ntpctl"
-var defaultTimeout = internal.Duration{Duration: 5 * time.Second}
+var defaultTimeout = config.Duration(5 * time.Second)
 
 func (n *Openntpd) Description() string {
 	return "Get standard NTP query metrics from OpenNTPD."
@@ -66,7 +67,7 @@ func (n *Openntpd) SampleConfig() string {
 }
 
 // Shell out to ntpctl and return the output
-func openntpdRunner(cmdName string, Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error) {
+func openntpdRunner(cmdName string, Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error) {
 	cmdArgs := []string{"-s", "peers"}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
@@ -78,7 +79,7 @@ func openntpdRunner(cmdName string, Timeout internal.Duration, UseSudo bool) (*b
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, Timeout.Duration)
+	err := internal.RunTimeout(cmd, time.Duration(Timeout))
 	if err != nil {
 		return &out, fmt.Errorf("error running ntpctl: %s", err)
 	}

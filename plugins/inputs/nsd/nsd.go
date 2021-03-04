@@ -11,16 +11,17 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ConfigFile string) (*bytes.Buffer, error)
+type runner func(cmdName string, Timeout config.Duration, UseSudo bool, Server string, ConfigFile string) (*bytes.Buffer, error)
 
 // NSD is used to store configuration values
 type NSD struct {
 	Binary     string
-	Timeout    internal.Duration
+	Timeout    config.Duration
 	UseSudo    bool
 	Server     string
 	ConfigFile string
@@ -29,7 +30,7 @@ type NSD struct {
 }
 
 var defaultBinary = "/usr/sbin/nsd-control"
-var defaultTimeout = internal.Duration{Duration: time.Second}
+var defaultTimeout = config.Duration(time.Second)
 
 var sampleConfig = `
   ## Address of server to connect to, optionally ':port'. Defaults to the
@@ -60,7 +61,7 @@ func (s *NSD) SampleConfig() string {
 }
 
 // Shell out to nsd_stat and return the output
-func nsdRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ConfigFile string) (*bytes.Buffer, error) {
+func nsdRunner(cmdName string, Timeout config.Duration, UseSudo bool, Server string, ConfigFile string) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
 	if Server != "" {
@@ -85,7 +86,7 @@ func nsdRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server s
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, Timeout.Duration)
+	err := internal.RunTimeout(cmd, time.Duration(Timeout))
 	if err != nil {
 		return &out, fmt.Errorf("error running nsd-control: %s (%s %v)", err, cmdName, cmdArgs)
 	}

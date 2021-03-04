@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -165,7 +165,7 @@ func TestDateOffset(t *testing.T) {
 	plugin := &Date{
 		TagKey:     "hour",
 		DateFormat: "15",
-		DateOffset: internal.Duration{Duration: 2 * time.Hour},
+		DateOffset: config.Duration(2 * time.Hour),
 	}
 
 	err := plugin.Init()

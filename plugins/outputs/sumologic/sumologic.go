@@ -27,7 +27,7 @@ const (
 
   ## Data format to be used for sending metrics.
   ## This will set the "Content-Type" header accordingly.
-  ## Currently supported formats: 
+  ## Currently supported formats:
   ## * graphite - for Content-Type of application/vnd.sumologic.graphite
   ## * carbon2 - for Content-Type of application/vnd.sumologic.carbon2
   ## * prometheus - for Content-Type of application/vnd.sumologic.prometheus
@@ -42,7 +42,7 @@ const (
 
   ## Timeout used for HTTP request
   # timeout = "5s"
-  
+
   ## Max HTTP request body size in bytes before compression (if applied).
   ## By default 1MB is recommended.
   ## NOTE:
@@ -92,9 +92,9 @@ const (
 )
 
 type SumoLogic struct {
-	URL               string            `toml:"url"`
-	Timeout           internal.Duration `toml:"timeout"`
-	MaxRequstBodySize config.Size       `toml:"max_request_body_size"`
+	URL               string          `toml:"url"`
+	Timeout           config.Duration `toml:"timeout"`
+	MaxRequstBodySize config.Size     `toml:"max_request_body_size"`
 
 	SourceName     string `toml:"source_name"`
 	SourceHost     string `toml:"source_host"`
@@ -143,7 +143,7 @@ func (s *SumoLogic) createClient() *http.Client {
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: s.Timeout.Duration,
+		Timeout: time.Duration(s.Timeout),
 	}
 }
 
@@ -152,8 +152,8 @@ func (s *SumoLogic) Connect() error {
 		return errors.Wrap(s.err, "sumologic: incorrect configuration")
 	}
 
-	if s.Timeout.Duration == 0 {
-		s.Timeout.Duration = defaultClientTimeout
+	if s.Timeout == 0 {
+		s.Timeout = config.Duration(defaultClientTimeout)
 	}
 
 	s.client = s.createClient()
@@ -329,9 +329,7 @@ func setHeaderIfSetInConfig(r *http.Request, h header, value string) {
 
 func Default() *SumoLogic {
 	return &SumoLogic{
-		Timeout: internal.Duration{
-			Duration: defaultClientTimeout,
-		},
+		Timeout:           config.Duration(defaultClientTimeout),
 		MaxRequstBodySize: defaultMaxRequestBodySize,
 		headers:           make(map[string]string),
 	}

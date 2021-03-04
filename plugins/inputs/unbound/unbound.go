@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -21,18 +22,18 @@ type runner func(unbound Unbound) (*bytes.Buffer, error)
 
 // Unbound is used to store configuration values
 type Unbound struct {
-	Binary      string            `toml:"binary"`
-	Timeout     internal.Duration `toml:"timeout"`
-	UseSudo     bool              `toml:"use_sudo"`
-	Server      string            `toml:"server"`
-	ThreadAsTag bool              `toml:"thread_as_tag"`
-	ConfigFile  string            `toml:"config_file"`
+	Binary      string          `toml:"binary"`
+	Timeout     config.Duration `toml:"timeout"`
+	UseSudo     bool            `toml:"use_sudo"`
+	Server      string          `toml:"server"`
+	ThreadAsTag bool            `toml:"thread_as_tag"`
+	ConfigFile  string          `toml:"config_file"`
 
 	run runner
 }
 
 var defaultBinary = "/usr/sbin/unbound-control"
-var defaultTimeout = internal.Duration{Duration: time.Second}
+var defaultTimeout = config.Duration(time.Second)
 
 var sampleConfig = `
   ## Address of server to connect to, read from unbound conf default, optionally ':port'
@@ -82,7 +83,7 @@ func unboundRunner(unbound Unbound) (*bytes.Buffer, error) {
 
 		// Unbound control requires an IP address, and we want to be nice to the user
 		resolver := net.Resolver{}
-		ctx, lookUpCancel := context.WithTimeout(context.Background(), unbound.Timeout.Duration)
+		ctx, lookUpCancel := context.WithTimeout(context.Background(), time.Duration(unbound.Timeout))
 		defer lookUpCancel()
 		serverIps, err := resolver.LookupIPAddr(ctx, host)
 		if err != nil {
@@ -112,7 +113,7 @@ func unboundRunner(unbound Unbound) (*bytes.Buffer, error) {
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, unbound.Timeout.Duration)
+	err := internal.RunTimeout(cmd, time.Duration(unbound.Timeout))
 	if err != nil {
 		return &out, fmt.Errorf("error running unbound-control: %s (%s %v)", err, unbound.Binary, cmdArgs)
 	}

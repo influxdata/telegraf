@@ -143,7 +143,7 @@ type Win_PerfCounters struct {
 	PreVistaSupport         bool
 	UsePerfCounterTime      bool
 	Object                  []perfobject
-	CountersRefreshInterval internal.Duration
+	CountersRefreshInterval config.Duration
 	UseWildcardsExpansion   bool
 
 	Log telegraf.Logger
@@ -477,6 +477,6 @@ func isKnownCounterDataError(err error) bool {
 
 func init() {
 	inputs.Add("win_perf_counters", func() telegraf.Input {
-		return &Win_PerfCounters{query: &PerformanceQueryImpl{}, CountersRefreshInterval: internal.Duration{Duration: time.Second * 60}}
+		return &Win_PerfCounters{query: &PerformanceQueryImpl{}, CountersRefreshInterval: config.Duration{Duration: time.Second * 60}}
 	})
 }

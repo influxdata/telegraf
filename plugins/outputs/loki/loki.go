@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -52,7 +53,7 @@ var sampleConfig = `
 type Loki struct {
 	Domain       string            `toml:"domain"`
 	Endpoint     string            `toml:"endpoint"`
-	Timeout      internal.Duration `toml:"timeout"`
+	Timeout      config.Duration   `toml:"timeout"`
 	Username     string            `toml:"username"`
 	Password     string            `toml:"password"`
 	Headers      map[string]string `toml:"headers"`
@@ -86,7 +87,7 @@ func (l *Loki) createClient(ctx context.Context) (*http.Client, error) {
 			TLSClientConfig: tlsCfg,
 			Proxy:           http.ProxyFromEnvironment,
 		},
-		Timeout: l.Timeout.Duration,
+		Timeout: time.Duration(l.Timeout),
 	}
 
 	if l.ClientID != "" && l.ClientSecret != "" && l.TokenURL != "" {
@@ -114,8 +115,8 @@ func (l *Loki) Connect() (err error) {
 
 	l.url = fmt.Sprintf("%s%s", l.Domain, l.Endpoint)
 
-	if l.Timeout.Duration == 0 {
-		l.Timeout.Duration = defaultClientTimeout
+	if l.Timeout == 0 {
+		l.Timeout = config.Duration(defaultClientTimeout)
 	}
 
 	ctx := context.Background()

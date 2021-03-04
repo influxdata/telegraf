@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -43,7 +44,7 @@ type InfluxDB struct {
 	ExcludeRetentionPolicyTag bool              `toml:"exclude_retention_policy_tag"`
 	UserAgent                 string            `toml:"user_agent"`
 	WriteConsistency          string            `toml:"write_consistency"`
-	Timeout                   internal.Duration `toml:"timeout"`
+	Timeout                   config.Duration   `toml:"timeout"`
 	UDPPayload                internal.Size     `toml:"udp_payload"`
 	HTTPProxy                 string            `toml:"http_proxy"`
 	HTTPHeaders               map[string]string `toml:"http_headers"`
@@ -260,7 +261,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 
 	config := &HTTPConfig{
 		URL:                       url,
-		Timeout:                   i.Timeout.Duration,
+		Timeout:                   time.Duration(i.Timeout),
 		TLSConfig:                 tlsConfig,
 		UserAgent:                 i.UserAgent,
 		Username:                  i.Username,
@@ -308,7 +309,7 @@ func (i *InfluxDB) newSerializer() *influx.Serializer {
 func init() {
 	outputs.Add("influxdb", func() telegraf.Output {
 		return &InfluxDB{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 			CreateHTTPClientF: func(config *HTTPConfig) (Client, error) {
 				return NewHTTPClient(*config)
 			},

@@ -3,7 +3,7 @@ package dynatrace
 import (
 	"encoding/json"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -22,7 +22,7 @@ func TestNilMetrics(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{
-		Timeout: internal.Duration{Duration: time.Second * 5},
+		Timeout: config.Duration(time.Second * 5),
 	}
 
 	d.URL = ts.URL

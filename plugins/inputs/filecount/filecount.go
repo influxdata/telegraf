@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -58,7 +59,7 @@ type FileCount struct {
 	RegularOnly    bool
 	FollowSymlinks bool
 	Size           internal.Size
-	MTime          internal.Duration `toml:"mtime"`
+	MTime          config.Duration `toml:"mtime"`
 	fileFilters    []fileFilterFunc
 	globPaths      []globpath.GlobPath
 	Fs             fileSystem
@@ -124,14 +125,14 @@ func (fc *FileCount) sizeFilter() fileFilterFunc {
 }
 
 func (fc *FileCount) mtimeFilter() fileFilterFunc {
-	if fc.MTime.Duration == 0 {
+	if time.Duration(fc.MTime) == 0 {
 		return nil
 	}
 
 	return func(f os.FileInfo) (bool, error) {
-		age := absDuration(fc.MTime.Duration)
+		age := absDuration(time.Duration(fc.MTime))
 		mtime := time.Now().Add(-age)
-		if fc.MTime.Duration < 0 {
+		if time.Duration(fc.MTime) < 0 {
 			return f.ModTime().After(mtime), nil
 		}
 		return f.ModTime().Before(mtime), nil
@@ -303,7 +304,7 @@ func NewFileCount() *FileCount {
 		RegularOnly:    true,
 		FollowSymlinks: false,
 		Size:           internal.Size{Size: 0},
-		MTime:          internal.Duration{Duration: 0},
+		MTime:          config.Duration(0),
 		fileFilters:    nil,
 		Fs:             osFS{},
 	}

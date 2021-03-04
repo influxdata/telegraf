@@ -12,16 +12,17 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/soniah/gosnmp"
 )
 
-var defaultTimeout = internal.Duration{Duration: time.Second * 5}
+var defaultTimeout = config.Duration(time.Second * 5)
 
 type handler func(*gosnmp.SnmpPacket, *net.UDPAddr)
-type execer func(internal.Duration, string, ...string) ([]byte, error)
+type execer func(config.Duration, string, ...string) ([]byte, error)
 
 type mibEntry struct {
 	mibName string
@@ -29,9 +30,9 @@ type mibEntry struct {
 }
 
 type SnmpTrap struct {
-	ServiceAddress string            `toml:"service_address"`
-	Timeout        internal.Duration `toml:"timeout"`
-	Version        string            `toml:"version"`
+	ServiceAddress string          `toml:"service_address"`
+	Timeout        config.Duration `toml:"timeout"`
+	Version        string          `toml:"version"`
 
 	// Settings for version 3
 	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
@@ -111,11 +112,11 @@ func init() {
 	})
 }
 
-func realExecCmd(timeout internal.Duration, arg0 string, args ...string) ([]byte, error) {
+func realExecCmd(Timeout config.Duration, arg0 string, args ...string) ([]byte, error) {
 	cmd := exec.Command(arg0, args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, timeout.Duration)
+	err := internal.RunTimeout(cmd, time.Duration(Timeout))
 	if err != nil {
 		return nil, err
 	}
