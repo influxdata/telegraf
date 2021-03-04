@@ -7,15 +7,22 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func createTestMetric() telegraf.Metric {
 	metric, _ := metric.New("m1",
-		map[string]string{"tag": "tag_value"},
+		map[string]string{
+			"tag":           "tag_value",
+			"duplicate_tag": "tag_value",
+		},
 		map[string]interface{}{
-			"string_value": "test",
-			"int_value":    int(13),
-			"true_value":   true,
+			"string_value":           "test",
+			"duplicate_string_value": "test",
+			"int_value":              int(200),
+			"uint_value":             uint(500),
+			"float_value":            float64(3.14),
+			"true_value":             true,
 		},
 		time.Now(),
 	)
@@ -46,54 +53,84 @@ func assertTagValue(t *testing.T, expected interface{}, tag string, tags map[str
 
 func TestRetainsMetric(t *testing.T) {
 	mapper := EnumMapper{}
+	err := mapper.Init()
+	require.Nil(t, err)
 	source := createTestMetric()
 
 	target := mapper.Apply(source)[0]
 	fields := target.Fields()
 
 	assertFieldValue(t, "test", "string_value", fields)
-	assertFieldValue(t, 13, "int_value", fields)
+	assertFieldValue(t, 200, "int_value", fields)
+	assertFieldValue(t, 500, "uint_value", fields)
 	assertFieldValue(t, true, "true_value", fields)
 	assert.Equal(t, "m1", target.Name())
 	assert.Equal(t, source.Tags(), target.Tags())
 	assert.Equal(t, source.Time(), target.Time())
 }
 
-func TestMapsSingleStringValue(t *testing.T) {
-	mapper := EnumMapper{Mappings: []Mapping{{Field: "string_value", ValueMappings: map[string]interface{}{"test": int64(1)}}}}
-
-	fields := calculateProcessedValues(mapper, createTestMetric())
-
-	assertFieldValue(t, 1, "string_value", fields)
-}
-
 func TestMapsSingleStringValueTag(t *testing.T) {
 	mapper := EnumMapper{Mappings: []Mapping{{Tag: "tag", ValueMappings: map[string]interface{}{"tag_value": "valuable"}}}}
-
+	err := mapper.Init()
+	require.Nil(t, err)
 	tags := calculateProcessedTags(mapper, createTestMetric())
 
 	assertTagValue(t, "valuable", "tag", tags)
 }
 
-func TestNoFailureOnMappingsOnNonStringValuedFields(t *testing.T) {
-	mapper := EnumMapper{Mappings: []Mapping{{Field: "int_value", ValueMappings: map[string]interface{}{"13i": int64(7)}}}}
-
+func TestNoFailureOnMappingsOnNonSupportedValuedFields(t *testing.T) {
+	mapper := EnumMapper{Mappings: []Mapping{{Field: "float_value", ValueMappings: map[string]interface{}{"3.14": "pi"}}}}
+	err := mapper.Init()
+	require.Nil(t, err)
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
-	assertFieldValue(t, 13, "int_value", fields)
+	assertFieldValue(t, float64(3.14), "float_value", fields)
 }
 
-func TestMapSingleBoolValue(t *testing.T) {
-	mapper := EnumMapper{Mappings: []Mapping{{Field: "true_value", ValueMappings: map[string]interface{}{"true": int64(1)}}}}
+func TestMappings(t *testing.T) {
+	mappings := []map[string][]interface{}{
+		{
+			"field_name":      []interface{}{"string_value"},
+			"target_values":   []interface{}{"test", "test", "test", "not_test", "50", "true"},
+			"mapped_values":   []interface{}{"test_1", 5, true, "test_1", 10, false},
+			"expected_values": []interface{}{"test_1", 5, true, "test", "test", "test"},
+		},
+		{
+			"field_name":     []interface{}{"true_value"},
+			"target_value":   []interface{}{"true", "true", "true", "false", "test", "5"},
+			"mapped_value":   []interface{}{false, 1, "false", false, false, false},
+			"expected_value": []interface{}{false, 1, "false", true, true, true},
+		},
+		{
+			"field_name":     []interface{}{"int_value"},
+			"target_value":   []interface{}{"200", "200", "200", "200", "test", "5"},
+			"mapped_value":   []interface{}{"http_ok", true, 1, float64(200.001), false, false},
+			"expected_value": []interface{}{"http_ok", true, 1, float64(200.001), 200, 200},
+		},
+		{
+			"field_name":     []interface{}{"uint_value"},
+			"target_value":   []interface{}{"500", "500", "500", "test", "false", "5"},
+			"mapped_value":   []interface{}{"internal_error", 1, false, false, false, false},
+			"expected_value": []interface{}{"internal_error", 1, false, 500, 500, 500},
+		},
+	}
 
-	fields := calculateProcessedValues(mapper, createTestMetric())
-
-	assertFieldValue(t, 1, "true_value", fields)
+	for _, mapping := range mappings {
+		fieldName := mapping["field_name"][0].(string)
+		for index := range mapping["target_value"] {
+			mapper := EnumMapper{Mappings: []Mapping{{Field: fieldName, ValueMappings: map[string]interface{}{mapping["target_value"][index].(string): mapping["mapped_value"][index]}}}}
+			err := mapper.Init()
+			assert.Nil(t, err)
+			fields := calculateProcessedValues(mapper, createTestMetric())
+			assertFieldValue(t, mapping["expected_value"][index], fieldName, fields)
+		}
+	}
 }
 
 func TestMapsToDefaultValueOnUnknownSourceValue(t *testing.T) {
 	mapper := EnumMapper{Mappings: []Mapping{{Field: "string_value", Default: int64(42), ValueMappings: map[string]interface{}{"other": int64(1)}}}}
-
+	err := mapper.Init()
+	require.Nil(t, err)
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
 	assertFieldValue(t, 42, "string_value", fields)
@@ -101,7 +138,8 @@ func TestMapsToDefaultValueOnUnknownSourceValue(t *testing.T) {
 
 func TestDoNotMapToDefaultValueKnownSourceValue(t *testing.T) {
 	mapper := EnumMapper{Mappings: []Mapping{{Field: "string_value", Default: int64(42), ValueMappings: map[string]interface{}{"test": int64(1)}}}}
-
+	err := mapper.Init()
+	require.Nil(t, err)
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
 	assertFieldValue(t, 1, "string_value", fields)
@@ -109,7 +147,8 @@ func TestDoNotMapToDefaultValueKnownSourceValue(t *testing.T) {
 
 func TestNoMappingWithoutDefaultOrDefinedMappingValue(t *testing.T) {
 	mapper := EnumMapper{Mappings: []Mapping{{Field: "string_value", ValueMappings: map[string]interface{}{"other": int64(1)}}}}
-
+	err := mapper.Init()
+	require.Nil(t, err)
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
 	assertFieldValue(t, "test", "string_value", fields)
@@ -117,7 +156,8 @@ func TestNoMappingWithoutDefaultOrDefinedMappingValue(t *testing.T) {
 
 func TestWritesToDestination(t *testing.T) {
 	mapper := EnumMapper{Mappings: []Mapping{{Field: "string_value", Dest: "string_code", ValueMappings: map[string]interface{}{"test": int64(1)}}}}
-
+	err := mapper.Init()
+	require.Nil(t, err)
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
 	assertFieldValue(t, "test", "string_value", fields)
@@ -127,10 +167,30 @@ func TestWritesToDestination(t *testing.T) {
 func TestDoNotWriteToDestinationWithoutDefaultOrDefinedMapping(t *testing.T) {
 	field := "string_code"
 	mapper := EnumMapper{Mappings: []Mapping{{Field: "string_value", Dest: field, ValueMappings: map[string]interface{}{"other": int64(1)}}}}
-
+	err := mapper.Init()
+	require.Nil(t, err)
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
 	assertFieldValue(t, "test", "string_value", fields)
 	_, present := fields[field]
 	assert.False(t, present, "value of field '"+field+"' was present")
+}
+
+func TestFieldGlobMatching(t *testing.T) {
+	mapper := EnumMapper{Mappings: []Mapping{{Field: "*", ValueMappings: map[string]interface{}{"test": "glob"}}}}
+	err := mapper.Init()
+	require.Nil(t, err)
+	fields := calculateProcessedValues(mapper, createTestMetric())
+
+	assertFieldValue(t, "glob", "string_value", fields)
+	assertFieldValue(t, "glob", "duplicate_string_value", fields)
+}
+
+func TestTagGlobMatching(t *testing.T) {
+	mapper := EnumMapper{Mappings: []Mapping{{Tag: "*", ValueMappings: map[string]interface{}{"tag_value": "glob"}}}}
+	err := mapper.Init()
+	require.Nil(t, err)
+	tags := calculateProcessedTags(mapper, createTestMetric())
+
+	assertTagValue(t, "glob", "tag", tags)
 }

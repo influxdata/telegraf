@@ -11,19 +11,19 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DefaultUsername will set a default value that corrasponds to the default
+// DefaultUsername will set a default value that corresponds to the default
 // value used by Rabbitmq
 const DefaultUsername = "guest"
 
-// DefaultPassword will set a default value that corrasponds to the default
+// DefaultPassword will set a default value that corresponds to the default
 // value used by Rabbitmq
 const DefaultPassword = "guest"
 
-// DefaultURL will set a default value that corrasponds to the default value
+// DefaultURL will set a default value that corresponds to the default value
 // used by Rabbitmq
 const DefaultURL = "http://localhost:15672"
 
@@ -157,8 +157,8 @@ type Node struct {
 	Uptime                   int64   `json:"uptime"`
 	MnesiaDiskTxCount        int64   `json:"mnesia_disk_tx_count"`
 	MnesiaDiskTxCountDetails Details `json:"mnesia_disk_tx_count_details"`
-	MnesiaRamTxCount         int64   `json:"mnesia_ram_tx_count"`
-	MnesiaRamTxCountDetails  Details `json:"mnesia_ram_tx_count_details"`
+	MnesiaRAMTxCount         int64   `json:"mnesia_ram_tx_count"`
+	MnesiaRAMTxCountDetails  Details `json:"mnesia_ram_tx_count_details"`
 	GcNum                    int64   `json:"gc_num"`
 	GcNumDetails             Details `json:"gc_num_details"`
 	GcBytesReclaimed         int64   `json:"gc_bytes_reclaimed"`
@@ -491,8 +491,8 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				"uptime":                    node.Uptime,
 				"mnesia_disk_tx_count":      node.MnesiaDiskTxCount,
 				"mnesia_disk_tx_count_rate": node.MnesiaDiskTxCountDetails.Rate,
-				"mnesia_ram_tx_count":       node.MnesiaRamTxCount,
-				"mnesia_ram_tx_count_rate":  node.MnesiaRamTxCountDetails.Rate,
+				"mnesia_ram_tx_count":       node.MnesiaRAMTxCount,
+				"mnesia_ram_tx_count_rate":  node.MnesiaRAMTxCountDetails.Rate,
 				"gc_num":                    node.GcNum,
 				"gc_num_rate":               node.GcNumDetails.Rate,
 				"gc_bytes_reclaimed":        node.GcBytesReclaimed,
@@ -506,19 +506,6 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				"io_write_bytes":            node.IoWriteBytes,
 				"io_write_bytes_rate":       node.IoWriteBytesDetails.Rate,
 				"running":                   boolToInt(node.Running),
-			}
-
-			var health HealthCheck
-			err := r.requestJSON("/api/healthchecks/node/"+node.Name, &health)
-			if err != nil {
-				acc.AddError(err)
-				return
-			}
-
-			if health.Status == "ok" {
-				fields["health_check_status"] = int64(1)
-			} else {
-				fields["health_check_status"] = int64(0)
 			}
 
 			var memory MemoryResponse

@@ -17,9 +17,9 @@ type NewItemDataItemLastOccurence struct {
 }
 
 type NewItemDataItem struct {
-	Id            int                          `json:"id"`
+	ID            int                          `json:"id"`
 	Environment   string                       `json:"environment"`
-	ProjectId     int                          `json:"project_id"`
+	ProjectID     int                          `json:"project_id"`
 	LastOccurence NewItemDataItemLastOccurence `json:"last_occurrence"`
 }
 
@@ -36,7 +36,7 @@ func (ni *NewItem) Tags() map[string]string {
 	return map[string]string{
 		"event":       ni.EventName,
 		"environment": ni.Data.Item.Environment,
-		"project_id":  strconv.Itoa(ni.Data.Item.ProjectId),
+		"project_id":  strconv.Itoa(ni.Data.Item.ProjectID),
 		"language":    ni.Data.Item.LastOccurence.Language,
 		"level":       ni.Data.Item.LastOccurence.Level,
 	}
@@ -44,7 +44,7 @@ func (ni *NewItem) Tags() map[string]string {
 
 func (ni *NewItem) Fields() map[string]interface{} {
 	return map[string]interface{}{
-		"id": ni.Data.Item.Id,
+		"id": ni.Data.Item.ID,
 	}
 }
 
@@ -54,9 +54,9 @@ type OccurrenceDataOccurrence struct {
 }
 
 type OccurrenceDataItem struct {
-	Id          int    `json:"id"`
+	ID          int    `json:"id"`
 	Environment string `json:"environment"`
-	ProjectId   int    `json:"project_id"`
+	ProjectID   int    `json:"project_id"`
 }
 
 type OccurrenceData struct {
@@ -73,7 +73,7 @@ func (o *Occurrence) Tags() map[string]string {
 	return map[string]string{
 		"event":       o.EventName,
 		"environment": o.Data.Item.Environment,
-		"project_id":  strconv.Itoa(o.Data.Item.ProjectId),
+		"project_id":  strconv.Itoa(o.Data.Item.ProjectID),
 		"language":    o.Data.Occurrence.Language,
 		"level":       o.Data.Occurrence.Level,
 	}
@@ -81,14 +81,14 @@ func (o *Occurrence) Tags() map[string]string {
 
 func (o *Occurrence) Fields() map[string]interface{} {
 	return map[string]interface{}{
-		"id": o.Data.Item.Id,
+		"id": o.Data.Item.ID,
 	}
 }
 
 type DeployDataDeploy struct {
-	Id          int    `json:"id"`
+	ID          int    `json:"id"`
 	Environment string `json:"environment"`
-	ProjectId   int    `json:"project_id"`
+	ProjectID   int    `json:"project_id"`
 }
 
 type DeployData struct {
@@ -104,12 +104,12 @@ func (ni *Deploy) Tags() map[string]string {
 	return map[string]string{
 		"event":       ni.EventName,
 		"environment": ni.Data.Deploy.Environment,
-		"project_id":  strconv.Itoa(ni.Data.Deploy.ProjectId),
+		"project_id":  strconv.Itoa(ni.Data.Deploy.ProjectID),
 	}
 }
 
 func (ni *Deploy) Fields() map[string]interface{} {
 	return map[string]interface{}{
-		"id": ni.Data.Deploy.Id,
+		"id": ni.Data.Deploy.ID,
 	}
 }

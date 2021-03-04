@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"sync"
 
 	"cloud.google.com/go/pubsub"
@@ -62,7 +61,7 @@ const sampleConfig = `
   # base64_data = false
 
   ## Optional. PubSub attributes to add to metrics.
-  # [[inputs.pubsub.attributes]]
+  # [outputs.cloud_pubsub.attributes]
   #   my_attr = "tag_value"
 `
 
@@ -78,6 +77,8 @@ type PubSub struct {
 	PublishNumGoroutines  int               `toml:"publish_num_go_routines"`
 	PublishTimeout        internal.Duration `toml:"publish_timeout"`
 	Base64Data            bool              `toml:"base64_data"`
+
+	Log telegraf.Logger `toml:"-"`
 
 	t topic
 	c *pubsub.Client
@@ -111,9 +112,8 @@ func (ps *PubSub) Connect() error {
 
 	if ps.stubTopic == nil {
 		return ps.initPubSubClient()
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (ps *PubSub) Close() error {
@@ -230,7 +230,7 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 	for i, m := range metrics {
 		b, err := ps.serializer.Serialize(m)
 		if err != nil {
-			log.Printf("D! [outputs.cloud_pubsub] Could not serialize metric: %v", err)
+			ps.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 

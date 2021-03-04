@@ -201,24 +201,24 @@ func (g *lockedSeriesGrouper) Add(
 }
 
 // ListMetricDescriptors implements metricClient interface
-func (c *stackdriverMetricClient) ListMetricDescriptors(
+func (smc *stackdriverMetricClient) ListMetricDescriptors(
 	ctx context.Context,
 	req *monitoringpb.ListMetricDescriptorsRequest,
 ) (<-chan *metricpb.MetricDescriptor, error) {
 	mdChan := make(chan *metricpb.MetricDescriptor, 1000)
 
 	go func() {
-		c.log.Debugf("List metric descriptor request filter: %s", req.Filter)
+		smc.log.Debugf("List metric descriptor request filter: %s", req.Filter)
 		defer close(mdChan)
 
 		// Iterate over metric descriptors and send them to buffered channel
-		mdResp := c.conn.ListMetricDescriptors(ctx, req)
-		c.listMetricDescriptorsCalls.Incr(1)
+		mdResp := smc.conn.ListMetricDescriptors(ctx, req)
+		smc.listMetricDescriptorsCalls.Incr(1)
 		for {
 			mdDesc, mdErr := mdResp.Next()
 			if mdErr != nil {
 				if mdErr != iterator.Done {
-					c.log.Errorf("Failed iterating metric desciptor responses: %q: %v", req.String(), mdErr)
+					smc.log.Errorf("Failed iterating metric descriptor responses: %q: %v", req.String(), mdErr)
 				}
 				break
 			}
@@ -230,24 +230,24 @@ func (c *stackdriverMetricClient) ListMetricDescriptors(
 }
 
 // ListTimeSeries implements metricClient interface
-func (c *stackdriverMetricClient) ListTimeSeries(
+func (smc *stackdriverMetricClient) ListTimeSeries(
 	ctx context.Context,
 	req *monitoringpb.ListTimeSeriesRequest,
 ) (<-chan *monitoringpb.TimeSeries, error) {
 	tsChan := make(chan *monitoringpb.TimeSeries, 1000)
 
 	go func() {
-		c.log.Debugf("List time series request filter: %s", req.Filter)
+		smc.log.Debugf("List time series request filter: %s", req.Filter)
 		defer close(tsChan)
 
 		// Iterate over timeseries and send them to buffered channel
-		tsResp := c.conn.ListTimeSeries(ctx, req)
-		c.listTimeSeriesCalls.Incr(1)
+		tsResp := smc.conn.ListTimeSeries(ctx, req)
+		smc.listTimeSeriesCalls.Incr(1)
 		for {
 			tsDesc, tsErr := tsResp.Next()
 			if tsErr != nil {
 				if tsErr != iterator.Done {
-					c.log.Errorf("Failed iterating time series responses: %q: %v", req.String(), tsErr)
+					smc.log.Errorf("Failed iterating time series responses: %q: %v", req.String(), tsErr)
 				}
 				break
 			}
@@ -259,8 +259,8 @@ func (c *stackdriverMetricClient) ListTimeSeries(
 }
 
 // Close implements metricClient interface
-func (s *stackdriverMetricClient) Close() error {
-	return s.conn.Close()
+func (smc *stackdriverMetricClient) Close() error {
+	return smc.conn.Close()
 }
 
 // Description implements telegraf.Input interface
@@ -544,7 +544,7 @@ func (s *Stackdriver) generatetimeSeriesConfs(
 	for _, filter := range filters {
 		// Add filter for list metric descriptors if
 		// includeMetricTypePrefixes is specified,
-		// this is more effecient than iterating over
+		// this is more efficient than iterating over
 		// all metric descriptors
 		req.Filter = filter
 		mdRespChan, err := s.client.ListMetricDescriptors(ctx, req)

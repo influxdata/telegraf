@@ -13,7 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -49,9 +49,9 @@ type Subscribers struct {
 
 type Subscriber struct {
 	XMLName          xml.Name `xml:"subscriber"`
-	ClientId         string   `xml:"clientId,attr"`
+	ClientID         string   `xml:"clientId,attr"`
 	SubscriptionName string   `xml:"subscriptionName,attr"`
-	ConnectionId     string   `xml:"connectionId,attr"`
+	ConnectionID     string   `xml:"connectionId,attr"`
 	DestinationName  string   `xml:"destinationName,attr"`
 	Selector         string   `xml:"selector,attr"`
 	Active           string   `xml:"active,attr"`
@@ -117,7 +117,7 @@ func (a *ActiveMQ) SampleConfig() string {
 	return sampleConfig
 }
 
-func (a *ActiveMQ) createHttpClient() (*http.Client, error) {
+func (a *ActiveMQ) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := a.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (a *ActiveMQ) Init() error {
 
 	a.baseURL = u
 
-	a.client, err = a.createHttpClient()
+	a.client, err = a.createHTTPClient()
 	if err != nil {
 		return err
 	}
@@ -228,9 +228,9 @@ func (a *ActiveMQ) GatherSubscribersMetrics(acc telegraf.Accumulator, subscriber
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
-		tags["client_id"] = subscriber.ClientId
+		tags["client_id"] = subscriber.ClientID
 		tags["subscription_name"] = subscriber.SubscriptionName
-		tags["connection_id"] = subscriber.ConnectionId
+		tags["connection_id"] = subscriber.ConnectionID
 		tags["destination_name"] = subscriber.DestinationName
 		tags["selector"] = subscriber.Selector
 		tags["active"] = subscriber.Active

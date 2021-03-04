@@ -92,7 +92,7 @@ func TestInfluxDB(t *testing.T) {
 		"heap_sys":        int64(33849344),
 		"mcache_sys":      int64(16384),
 		"next_gc":         int64(20843042),
-		"gcc_pu_fraction": float64(4.287178819113636e-05),
+		"gc_cpu_fraction": float64(4.287178819113636e-05),
 		"other_sys":       int64(1229737),
 		"alloc":           int64(17034016),
 		"stack_inuse":     int64(753664),

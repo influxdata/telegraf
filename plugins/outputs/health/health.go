@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,7 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -75,8 +74,9 @@ type Health struct {
 	BasicPassword  string            `toml:"basic_password"`
 	tlsint.ServerConfig
 
-	Compares []*Compares `toml:"compares"`
-	Contains []*Contains `toml:"contains"`
+	Compares []*Compares     `toml:"compares"`
+	Contains []*Contains     `toml:"contains"`
+	Log      telegraf.Logger `toml:"-"`
 	checkers []Checker
 
 	wg      sync.WaitGroup
@@ -136,7 +136,7 @@ func (h *Health) Init() error {
 
 // Connect starts the HTTP server.
 func (h *Health) Connect() error {
-	authHandler := internal.AuthHandler(h.BasicUsername, h.BasicPassword, onAuthError)
+	authHandler := internal.AuthHandler(h.BasicUsername, h.BasicPassword, "health", onAuthError)
 
 	h.server = &http.Server{
 		Addr:         h.ServiceAddress,
@@ -153,14 +153,14 @@ func (h *Health) Connect() error {
 
 	h.origin = h.getOrigin(listener)
 
-	log.Printf("I! [outputs.health] Listening on %s", h.origin)
+	h.Log.Infof("Listening on %s", h.origin)
 
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
 		err := h.server.Serve(listener)
 		if err != http.ErrServerClosed {
-			log.Printf("E! [outputs.health] Serve error on %s: %v", h.origin, err)
+			h.Log.Errorf("Serve error on %s: %v", h.origin, err)
 		}
 		h.origin = ""
 	}()
@@ -168,16 +168,14 @@ func (h *Health) Connect() error {
 	return nil
 }
 
-func onAuthError(rw http.ResponseWriter, code int) {
-	http.Error(rw, http.StatusText(code), code)
+func onAuthError(_ http.ResponseWriter) {
 }
 
 func (h *Health) listen() (net.Listener, error) {
 	if h.tlsConf != nil {
 		return tls.Listen(h.network, h.address, h.tlsConf)
-	} else {
-		return net.Listen(h.network, h.address)
 	}
+	return net.Listen(h.network, h.address)
 }
 
 func (h *Health) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

@@ -44,12 +44,12 @@ func (e *Exec) SetSerializer(serializer serializers.Serializer) {
 	e.serializer = serializer
 }
 
-// Connect satisfies the Ouput interface.
+// Connect satisfies the Output interface.
 func (e *Exec) Connect() error {
 	return nil
 }
 
-// Close satisfies the Ouput interface.
+// Close satisfies the Output interface.
 func (e *Exec) Close() error {
 	return nil
 }
@@ -101,7 +101,7 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, buffer io.R
 	s := stderr
 
 	if err != nil {
-		if err == internal.TimeoutErr {
+		if err == internal.ErrTimeout {
 			return fmt.Errorf("%q timed out and was killed", command)
 		}
 

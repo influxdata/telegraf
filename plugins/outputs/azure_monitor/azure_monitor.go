@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -27,11 +26,12 @@ import (
 // service
 type AzureMonitor struct {
 	Timeout             internal.Duration
-	NamespacePrefix     string `toml:"namespace_prefix"`
-	StringsAsDimensions bool   `toml:"strings_as_dimensions"`
-	Region              string
-	ResourceID          string `toml:"resource_id"`
-	EndpointUrl         string `toml:"endpoint_url"`
+	NamespacePrefix     string          `toml:"namespace_prefix"`
+	StringsAsDimensions bool            `toml:"strings_as_dimensions"`
+	Region              string          `toml:"region"`
+	ResourceID          string          `toml:"resource_id"`
+	EndpointURL         string          `toml:"endpoint_url"`
+	Log                 telegraf.Logger `toml:"-"`
 
 	url    string
 	auth   autorest.Authorizer
@@ -62,14 +62,14 @@ func (m *virtualMachineMetadata) ResourceID() string {
 			m.Compute.ResourceGroupName,
 			m.Compute.VMScaleSetName,
 		)
-	} else {
-		return fmt.Sprintf(
-			resourceIDTemplate,
-			m.Compute.SubscriptionID,
-			m.Compute.ResourceGroupName,
-			m.Compute.Name,
-		)
 	}
+
+	return fmt.Sprintf(
+		resourceIDTemplate,
+		m.Compute.SubscriptionID,
+		m.Compute.ResourceGroupName,
+		m.Compute.Name,
+	)
 }
 
 type dimension struct {
@@ -155,14 +155,10 @@ func (a *AzureMonitor) Connect() error {
 		Timeout: a.Timeout.Duration,
 	}
 
-	if a.NamespacePrefix == "" {
-		a.NamespacePrefix = defaultNamespacePrefix
-	}
-
 	var err error
 	var region string
 	var resourceID string
-	var endpointUrl string
+	var endpointURL string
 
 	if a.Region == "" || a.ResourceID == "" {
 		// Pull region and resource identifier
@@ -177,8 +173,8 @@ func (a *AzureMonitor) Connect() error {
 	if a.ResourceID != "" {
 		resourceID = a.ResourceID
 	}
-	if a.EndpointUrl != "" {
-		endpointUrl = a.EndpointUrl
+	if a.EndpointURL != "" {
+		endpointURL = a.EndpointURL
 	}
 
 	if resourceID == "" {
@@ -187,13 +183,13 @@ func (a *AzureMonitor) Connect() error {
 		return fmt.Errorf("no region configured or available via VM instance metadata")
 	}
 
-	if endpointUrl == "" {
+	if endpointURL == "" {
 		a.url = fmt.Sprintf(urlTemplate, region, resourceID)
 	} else {
-		a.url = fmt.Sprintf(urlOverrideTemplate, endpointUrl, resourceID)
+		a.url = fmt.Sprintf(urlOverrideTemplate, endpointURL, resourceID)
 	}
 
-	log.Printf("D! Writing to Azure Monitor URL: %s", a.url)
+	a.Log.Debugf("Writing to Azure Monitor URL: %s", a.url)
 
 	a.auth, err = auth.NewAuthorizerFromEnvironmentWithResource(defaultAuthResource)
 	if err != nil {
@@ -283,14 +279,14 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		if azm, ok := azmetrics[id]; !ok {
 			amm, err := translate(m, a.NamespacePrefix)
 			if err != nil {
-				log.Printf("E! [outputs.azure_monitor]: could not create azure metric for %q; discarding point", m.Name())
+				a.Log.Errorf("Could not create azure metric for %q; discarding point", m.Name())
 				continue
 			}
 			azmetrics[id] = amm
 		} else {
 			amm, err := translate(m, a.NamespacePrefix)
 			if err != nil {
-				log.Printf("E! [outputs.azure_monitor]: could not create azure metric for %q; discarding point", m.Name())
+				a.Log.Errorf("Could not create azure metric for %q; discarding point", m.Name())
 				continue
 			}
 
@@ -392,7 +388,7 @@ func translate(m telegraf.Metric, prefix string) (*azureMonitorMetric, error) {
 	var dimensionValues []string
 	for _, tag := range m.TagList() {
 		// Azure custom metrics service supports up to 10 dimensions
-		if len(dimensionNames) > 10 {
+		if len(dimensionNames) >= 10 {
 			continue
 		}
 
@@ -615,7 +611,7 @@ func (a *AzureMonitor) Push() []telegraf.Metric {
 			)
 
 			if err != nil {
-				log.Printf("E! [outputs.azure_monitor]: could not create metric for aggregation %q; discarding point", agg.name)
+				a.Log.Errorf("Could not create metric for aggregation %q; discarding point", agg.name)
 			}
 
 			metrics = append(metrics, m)
@@ -646,7 +642,8 @@ func (a *AzureMonitor) Reset() {
 func init() {
 	outputs.Add("azure_monitor", func() telegraf.Output {
 		return &AzureMonitor{
-			timeFunc: time.Now,
+			timeFunc:        time.Now,
+			NamespacePrefix: defaultNamespacePrefix,
 		}
 	})
 }

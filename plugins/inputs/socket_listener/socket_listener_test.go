@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -138,7 +139,8 @@ func TestSocketListener_unix(t *testing.T) {
 
 	defer testEmptyLog(t)()
 
-	os.Create(sock)
+	f, _ := os.Create(sock)
+	f.Close()
 	sl := newSocketListener()
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "unix://" + sock
@@ -156,6 +158,10 @@ func TestSocketListener_unix(t *testing.T) {
 }
 
 func TestSocketListener_unixgram(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
+	}
+
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
@@ -222,7 +228,7 @@ func TestSocketListenerDecode_udp(t *testing.T) {
 
 func testSocketListener(t *testing.T, sl *SocketListener, client net.Conn) {
 	mstr12 := []byte("test,foo=bar v=1i 123456789\ntest,foo=baz v=2i 123456790\n")
-	mstr3 := []byte("test,foo=zab v=3i 123456791")
+	mstr3 := []byte("test,foo=zab v=3i 123456791\n")
 
 	if sl.ContentEncoding == "gzip" {
 		encoder, err := internal.NewContentEncoder(sl.ContentEncoding)
@@ -238,10 +244,6 @@ func testSocketListener(t *testing.T, sl *SocketListener, client net.Conn) {
 
 	client.Write(mstr12)
 	client.Write(mstr3)
-	if client.LocalAddr().Network() != "udp" {
-		// stream connection. needs trailing newline to terminate mstr3
-		client.Write([]byte{'\n'})
-	}
 
 	acc := sl.Accumulator.(*testutil.Accumulator)
 

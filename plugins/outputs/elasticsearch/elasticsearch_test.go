@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConnectAndWrite(t *testing.T) {
+func TestConnectAndWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -38,7 +38,7 @@ func TestConnectAndWrite(t *testing.T) {
 
 }
 
-func TestTemplateManagementEmptyTemplate(t *testing.T) {
+func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -61,7 +61,7 @@ func TestTemplateManagementEmptyTemplate(t *testing.T) {
 
 }
 
-func TestTemplateManagement(t *testing.T) {
+func TestTemplateManagementIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -87,7 +87,7 @@ func TestTemplateManagement(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestTemplateInvalidIndexPattern(t *testing.T) {
+func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

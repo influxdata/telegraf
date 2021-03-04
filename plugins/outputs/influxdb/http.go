@@ -1,9 +1,11 @@
 package influxdb
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -83,21 +85,23 @@ func (r WriteResponse) Error() string {
 }
 
 type HTTPConfig struct {
-	URL                  *url.URL
-	UserAgent            string
-	Timeout              time.Duration
-	Username             string
-	Password             string
-	TLSConfig            *tls.Config
-	Proxy                *url.URL
-	Headers              map[string]string
-	ContentEncoding      string
-	Database             string
-	DatabaseTag          string
-	ExcludeDatabaseTag   bool
-	RetentionPolicy      string
-	Consistency          string
-	SkipDatabaseCreation bool
+	URL                       *url.URL
+	UserAgent                 string
+	Timeout                   time.Duration
+	Username                  string
+	Password                  string
+	TLSConfig                 *tls.Config
+	Proxy                     *url.URL
+	Headers                   map[string]string
+	ContentEncoding           string
+	Database                  string
+	DatabaseTag               string
+	ExcludeDatabaseTag        bool
+	RetentionPolicy           string
+	RetentionPolicyTag        string
+	ExcludeRetentionPolicyTag bool
+	Consistency               string
+	SkipDatabaseCreation      bool
 
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 	Serializer        *influx.Serializer
@@ -105,9 +109,13 @@ type HTTPConfig struct {
 }
 
 type httpClient struct {
-	client           *http.Client
-	config           HTTPConfig
-	createdDatabases map[string]bool
+	client *http.Client
+	config HTTPConfig
+	// Tracks that the 'create database` statement was executed for the
+	// database.  An attempt to create the database is made each time a new
+	// database is encountered in the database_tag and after a "database not
+	// found" error occurs.
+	createDatabaseExecuted map[string]bool
 
 	log telegraf.Logger
 }
@@ -127,7 +135,7 @@ func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
 
 	userAgent := config.UserAgent
 	if userAgent == "" {
-		userAgent = "Telegraf/" + internal.Version()
+		userAgent = internal.ProductToken()
 	}
 
 	if config.Headers == nil {
@@ -175,9 +183,9 @@ func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
 			Timeout:   config.Timeout,
 			Transport: transport,
 		},
-		createdDatabases: make(map[string]bool),
-		config:           config,
-		log:              config.Log,
+		createDatabaseExecuted: make(map[string]bool),
+		config:                 config,
+		log:                    config.Log,
 	}
 	return client, nil
 }
@@ -196,24 +204,37 @@ func (c *httpClient) Database() string {
 // Note that some names are not allowed by the server, notably those with
 // non-printable characters or slashes.
 func (c *httpClient) CreateDatabase(ctx context.Context, database string) error {
-	query := fmt.Sprintf(`CREATE DATABASE "%s"`,
-		escapeIdentifier.Replace(database))
+	query := fmt.Sprintf(`CREATE DATABASE "%s"`, escapeIdentifier.Replace(database))
 
 	req, err := c.makeQueryRequest(query)
+	if err != nil {
+		return err
+	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
 
+	body, err := c.validateResponse(resp.Body)
+
+	// Check for poorly formatted response (can't be decoded)
+	if err != nil {
+		return &APIError{
+			StatusCode:  resp.StatusCode,
+			Title:       resp.Status,
+			Description: "An error response was received while attempting to create the following database: " + database + ". Error: " + err.Error(),
+		}
+	}
+
 	queryResp := &QueryResponse{}
-	dec := json.NewDecoder(resp.Body)
+	dec := json.NewDecoder(body)
 	err = dec.Decode(queryResp)
 
 	if err != nil {
 		if resp.StatusCode == 200 {
-			c.createdDatabases[database] = true
 			return nil
 		}
 
@@ -223,10 +244,17 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 		}
 	}
 
-	// Even with a 200 response there can be an error
+	// Even with a 200 status code there can be an error in the response body.
+	// If there is also no error string then the operation was successful.
 	if resp.StatusCode == http.StatusOK && queryResp.Error() == "" {
-		c.createdDatabases[database] = true
+		c.createDatabaseExecuted[database] = true
 		return nil
+	}
+
+	// Don't attempt to recreate the database after a 403 Forbidden error.
+	// This behavior exists only to maintain backwards compatibility.
+	if resp.StatusCode == http.StatusForbidden {
+		c.createDatabaseExecuted[database] = true
 	}
 
 	return &APIError{
@@ -236,57 +264,72 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 	}
 }
 
+type dbrp struct {
+	Database        string
+	RetentionPolicy string
+}
+
 // Write sends the metrics to InfluxDB
 func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error {
-	batches := make(map[string][]telegraf.Metric)
-	if c.config.DatabaseTag == "" {
-		err := c.writeBatch(ctx, c.config.Database, metrics)
-		if err != nil {
-			return err
+	// If these options are not used, we can skip in plugin batching and send
+	// the full batch in a single request.
+	if c.config.DatabaseTag == "" && c.config.RetentionPolicyTag == "" {
+		return c.writeBatch(ctx, c.config.Database, c.config.RetentionPolicy, metrics)
+	}
+
+	batches := make(map[dbrp][]telegraf.Metric)
+	for _, metric := range metrics {
+		db, ok := metric.GetTag(c.config.DatabaseTag)
+		if !ok {
+			db = c.config.Database
 		}
-	} else {
-		for _, metric := range metrics {
-			db, ok := metric.GetTag(c.config.DatabaseTag)
-			if !ok {
-				db = c.config.Database
-			}
 
-			if _, ok := batches[db]; !ok {
-				batches[db] = make([]telegraf.Metric, 0)
-			}
+		rp, ok := metric.GetTag(c.config.RetentionPolicyTag)
+		if !ok {
+			rp = c.config.RetentionPolicy
+		}
 
+		dbrp := dbrp{
+			Database:        db,
+			RetentionPolicy: rp,
+		}
+
+		if c.config.ExcludeDatabaseTag || c.config.ExcludeRetentionPolicyTag {
+			// Avoid modifying the metric in case we need to retry the request.
+			metric = metric.Copy()
+			metric.Accept()
 			if c.config.ExcludeDatabaseTag {
-				// Avoid modifying the metric in case we need to retry the request.
-				metric = metric.Copy()
-				metric.Accept()
 				metric.RemoveTag(c.config.DatabaseTag)
 			}
-
-			batches[db] = append(batches[db], metric)
+			if c.config.ExcludeRetentionPolicyTag {
+				metric.RemoveTag(c.config.RetentionPolicyTag)
+			}
 		}
 
-		for db, batch := range batches {
-			if !c.config.SkipDatabaseCreation && !c.createdDatabases[db] {
-				err := c.CreateDatabase(ctx, db)
-				if err != nil {
-					c.log.Warnf("When writing to [%s]: database %q creation failed: %v",
-						c.config.URL, db, err)
-				}
-			}
+		batches[dbrp] = append(batches[dbrp], metric)
+	}
 
-			err := c.writeBatch(ctx, db, batch)
+	for dbrp, batch := range batches {
+		if !c.config.SkipDatabaseCreation && !c.createDatabaseExecuted[dbrp.Database] {
+			err := c.CreateDatabase(ctx, dbrp.Database)
 			if err != nil {
-				return err
+				c.log.Warnf("When writing to [%s]: database %q creation failed: %v",
+					c.config.URL, dbrp.Database, err)
 			}
+		}
+
+		err := c.writeBatch(ctx, dbrp.Database, dbrp.RetentionPolicy, batch)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegraf.Metric) error {
-	url, err := makeWriteURL(c.config.URL, db, c.config.RetentionPolicy, c.config.Consistency)
+func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []telegraf.Metric) error {
+	loc, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed making write url: %s", err.Error())
 	}
 
 	reader, err := c.requestBodyReader(metrics)
@@ -295,14 +338,15 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 	}
 	defer reader.Close()
 
-	req, err := c.makeWriteRequest(url, reader)
+	req, err := c.makeWriteRequest(loc, reader)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed making write req: %s", err.Error())
 	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
-		return err
+		internal.OnClientError(c.client, err)
+		return fmt.Errorf("failed doing req: %s", err.Error())
 	}
 	defer resp.Body.Close()
 
@@ -310,8 +354,19 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 		return nil
 	}
 
+	body, err := c.validateResponse(resp.Body)
+
+	// Check for poorly formatted response (can't be decoded)
+	if err != nil {
+		return &APIError{
+			StatusCode:  resp.StatusCode,
+			Title:       resp.Status,
+			Description: "An error response was received while attempting to write metrics. Error: " + err.Error(),
+		}
+	}
+
 	writeResp := &WriteResponse{}
-	dec := json.NewDecoder(resp.Body)
+	dec := json.NewDecoder(body)
 
 	var desc string
 	err = dec.Decode(writeResp)
@@ -395,7 +450,7 @@ func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request
 
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed creating new request: %s", err.Error())
 	}
 
 	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
@@ -433,6 +488,27 @@ func (c *httpClient) addHeaders(req *http.Request) {
 	for header, value := range c.config.Headers {
 		req.Header.Set(header, value)
 	}
+}
+
+func (c *httpClient) validateResponse(response io.ReadCloser) (io.ReadCloser, error) {
+	bodyBytes, err := ioutil.ReadAll(response)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Close()
+
+	originalResponse := ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	// Empty response is valid.
+	if response == http.NoBody || len(bodyBytes) == 0 || bodyBytes == nil {
+		return originalResponse, nil
+	}
+
+	if valid := json.Valid(bodyBytes); !valid {
+		err = errors.New(string(bodyBytes))
+	}
+
+	return originalResponse, err
 }
 
 func makeWriteURL(loc *url.URL, db, rp, consistency string) (string, error) {
@@ -478,5 +554,5 @@ func makeQueryURL(loc *url.URL) (string, error) {
 }
 
 func (c *httpClient) Close() {
-	internal.CloseIdleConnections(c.client)
+	c.client.CloseIdleConnections()
 }

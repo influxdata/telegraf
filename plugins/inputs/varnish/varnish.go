@@ -49,7 +49,7 @@ var sampleConfig = `
   stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
 
   ## Optional name for the varnish instance (or working directory) to query
-  ## Usually appened after -n in varnish cli
+  ## Usually append after -n in varnish cli
   # instance_name = instanceName
 
   ## Timeout for varnishstat command
@@ -149,8 +149,7 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 
 		sectionMap[section][field], err = strconv.ParseUint(value, 10, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Expected a numeric value for %s = %v\n",
-				stat, value))
+			acc.AddError(fmt.Errorf("expected a numeric value for %s = %v", stat, value))
 		}
 	}
 

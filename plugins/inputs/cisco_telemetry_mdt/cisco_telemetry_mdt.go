@@ -16,12 +16,12 @@ import (
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/golang/protobuf/proto"
 	"github.com/influxdata/telegraf"
-	internaltls "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/metric"
+	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials" // Register GRPC gzip decoder to support compressed telemetry
-	_ "google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/credentials"
+	_ "google.golang.org/grpc/encoding/gzip" // Register GRPC gzip decoder to support compressed telemetry
 	"google.golang.org/grpc/peer"
 )
 
@@ -261,7 +261,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 	msg := &telemetry.Telemetry{}
 	err := proto.Unmarshal(data, msg)
 	if err != nil {
-		c.acc.AddError(fmt.Errorf("Cisco MDT failed to decode: %v", err))
+		c.acc.AddError(fmt.Errorf("failed to decode: %v", err))
 		return
 	}
 

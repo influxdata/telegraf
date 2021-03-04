@@ -10,7 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -99,7 +99,7 @@ func (s *Tomcat) SampleConfig() string {
 
 func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	if s.client == nil {
-		client, err := s.createHttpClient()
+		client, err := s.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -187,7 +187,7 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Tomcat) createHttpClient() (*http.Client, error) {
+func (s *Tomcat) createHTTPClient() (*http.Client, error) {
 	tlsConfig, err := s.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err

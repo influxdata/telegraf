@@ -198,9 +198,11 @@ func (m *Mcrouter) gatherServer(ctx context.Context, address string, acc telegra
 	var dialer net.Dialer
 
 	address, protocol, err = m.ParseAddress(address)
+	if err != nil {
+		return err
+	}
 
 	conn, err = dialer.DialContext(ctx, protocol, address)
-
 	if err != nil {
 		return err
 	}

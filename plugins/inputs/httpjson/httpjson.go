@@ -12,7 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -21,8 +21,8 @@ var (
 	utf8BOM = []byte("\xef\xbb\xbf")
 )
 
-// HttpJson struct
-type HttpJson struct {
+// HTTPJSON struct
+type HTTPJSON struct {
 	Name            string
 	Servers         []string
 	Method          string
@@ -42,7 +42,7 @@ type HTTPClient interface {
 	// req: HTTP request object
 	//
 	// Returns:
-	// http.Response:  HTTP respons object
+	// http.Response:  HTTP response object
 	// error        :  Any error that may have occurred
 	MakeRequest(req *http.Request) (*http.Response, error)
 
@@ -113,16 +113,16 @@ var sampleConfig = `
   #   apiVersion = "v1"
 `
 
-func (h *HttpJson) SampleConfig() string {
+func (h *HTTPJSON) SampleConfig() string {
 	return sampleConfig
 }
 
-func (h *HttpJson) Description() string {
+func (h *HTTPJSON) Description() string {
 	return "Read flattened metrics from one or more JSON HTTP endpoints"
 }
 
 // Gathers data for all servers.
-func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
+func (h *HTTPJSON) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	if h.client.HTTPClient() == nil {
@@ -162,7 +162,7 @@ func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
 //
 // Returns:
 //     error: Any error that may have occurred
-func (h *HttpJson) gatherServer(
+func (h *HTTPJSON) gatherServer(
 	acc telegraf.Accumulator,
 	serverURL string,
 ) error {
@@ -171,11 +171,11 @@ func (h *HttpJson) gatherServer(
 		return err
 	}
 
-	var msrmnt_name string
+	var msrmntName string
 	if h.Name == "" {
-		msrmnt_name = "httpjson"
+		msrmntName = "httpjson"
 	} else {
-		msrmnt_name = "httpjson_" + h.Name
+		msrmntName = "httpjson_" + h.Name
 	}
 	tags := map[string]string{
 		"server": serverURL,
@@ -183,7 +183,7 @@ func (h *HttpJson) gatherServer(
 
 	parser, err := parsers.NewParser(&parsers.Config{
 		DataFormat:  "json",
-		MetricName:  msrmnt_name,
+		MetricName:  msrmntName,
 		TagKeys:     h.TagKeys,
 		DefaultTags: tags,
 	})
@@ -207,7 +207,7 @@ func (h *HttpJson) gatherServer(
 	return nil
 }
 
-// Sends an HTTP request to the server using the HttpJson object's HTTPClient.
+// Sends an HTTP request to the server using the HTTPJSON object's HTTPClient.
 // This request can be either a GET or a POST.
 // Parameters:
 //     serverURL: endpoint to send request to
@@ -215,7 +215,7 @@ func (h *HttpJson) gatherServer(
 // Returns:
 //     string: body of the response
 //     error : Any error that may have occurred
-func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
+func (h *HTTPJSON) sendRequest(serverURL string) (string, float64, error) {
 	// Prepare URL
 	requestURL, err := url.Parse(serverURL)
 	if err != nil {
@@ -285,7 +285,7 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 
 func init() {
 	inputs.Add("httpjson", func() telegraf.Input {
-		return &HttpJson{
+		return &HTTPJSON{
 			client: &RealHTTPClient{},
 			ResponseTimeout: internal.Duration{
 				Duration: 5 * time.Second,

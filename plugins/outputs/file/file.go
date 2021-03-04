@@ -31,7 +31,7 @@ var sampleConfig = `
 
   ## Use batch serialization format instead of line based delimiting.  The
   ## batch format allows for the production of non line based output formats and
-  ## may more effiently encode metric groups.
+  ## may more efficiently encode metric groups.
   # use_batch_format = false
 
   ## The file will be rotated after the time interval specified.  When set
@@ -102,7 +102,7 @@ func (f *File) Description() string {
 }
 
 func (f *File) Write(metrics []telegraf.Metric) error {
-	var writeErr error = nil
+	var writeErr error
 
 	if f.UseBatchFormat {
 		octets, err := f.serializer.SerializeBatch(metrics)
@@ -123,7 +123,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 
 			_, err = f.writer.Write(b)
 			if err != nil {
-				writeErr = fmt.Errorf("E! [outputs.file] failed to write message: %v", err)
+				writeErr = fmt.Errorf("failed to write message: %v", err)
 			}
 		}
 	}

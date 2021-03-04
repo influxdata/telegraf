@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -84,7 +84,7 @@ type MlHost struct {
 
 // Description of plugin returned
 func (c *Marklogic) Description() string {
-	return "Retrives information on a specific host in a MarkLogic Cluster"
+	return "Retrieves information on a specific host in a MarkLogic Cluster"
 }
 
 var sampleConfig = `
@@ -220,7 +220,7 @@ func (c *Marklogic) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: time.Duration(5 * time.Second),
+		Timeout: 5 * time.Second,
 	}
 
 	return client, nil
@@ -246,11 +246,7 @@ func (c *Marklogic) gatherJSONData(url string, v interface{}) error {
 			response.StatusCode, http.StatusOK)
 	}
 
-	if err = json.NewDecoder(response.Body).Decode(v); err != nil {
-		return err
-	}
-
-	return nil
+	return json.NewDecoder(response.Body).Decode(v)
 }
 
 func init() {

@@ -12,7 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
 	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
@@ -139,7 +139,7 @@ func (p *PrometheusClient) Init() error {
 			return err
 		}
 	case 2:
-		p.collector = v2.NewCollector(p.ExpirationInterval.Duration, p.StringAsLabel)
+		p.collector = v2.NewCollector(p.ExpirationInterval.Duration, p.StringAsLabel, p.ExportTimestamp)
 		err := registry.Register(p.collector)
 		if err != nil {
 			return err
@@ -156,7 +156,7 @@ func (p *PrometheusClient) Init() error {
 		ipRange = append(ipRange, ipNet)
 	}
 
-	authHandler := internal.AuthHandler(p.BasicUsername, p.BasicPassword, onAuthError)
+	authHandler := internal.AuthHandler(p.BasicUsername, p.BasicPassword, "prometheus", onAuthError)
 	rangeHandler := internal.IPRangeHandler(ipRange, onError)
 	promHandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
 
@@ -183,9 +183,8 @@ func (p *PrometheusClient) Init() error {
 func (p *PrometheusClient) listen() (net.Listener, error) {
 	if p.server.TLSConfig != nil {
 		return tls.Listen("tcp", p.Listen, p.server.TLSConfig)
-	} else {
-		return net.Listen("tcp", p.Listen)
 	}
+	return net.Listen("tcp", p.Listen)
 }
 
 func (p *PrometheusClient) Connect() error {
@@ -219,9 +218,7 @@ func (p *PrometheusClient) Connect() error {
 	return nil
 }
 
-func onAuthError(rw http.ResponseWriter, code int) {
-	rw.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-	http.Error(rw, http.StatusText(code), code)
+func onAuthError(_ http.ResponseWriter) {
 }
 
 func onError(rw http.ResponseWriter, code int) {

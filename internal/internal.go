@@ -5,12 +5,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
 	"math"
-	"math/big"
+	"math/rand"
 	"os"
 	"os/exec"
 	"runtime"
@@ -27,11 +26,9 @@ import (
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 var (
-	TimeoutErr = errors.New("Command timed out.")
-
-	NotImplementedError = errors.New("not implemented yet")
-
-	VersionAlreadySetError = errors.New("version has already been set")
+	ErrTimeout             = errors.New("command timed out")
+	ErrorNotImplemented    = errors.New("not implemented yet")
+	ErrorVersionAlreadySet = errors.New("version has already been set")
 )
 
 // Set via the main module
@@ -59,7 +56,7 @@ type ReadWaitCloser struct {
 // SetVersion sets the telegraf agent version
 func SetVersion(v string) error {
 	if version != "" {
-		return VersionAlreadySetError
+		return ErrorVersionAlreadySet
 	}
 	version = v
 	return nil
@@ -211,12 +208,8 @@ func RandomSleep(max time.Duration, shutdown chan struct{}) {
 	if max == 0 {
 		return
 	}
-	maxSleep := big.NewInt(max.Nanoseconds())
 
-	var sleepns int64
-	if j, err := rand.Int(rand.Reader, maxSleep); err == nil {
-		sleepns = j.Int64()
-	}
+	sleepns := rand.Int63n(max.Nanoseconds())
 
 	t := time.NewTimer(time.Nanosecond * time.Duration(sleepns))
 	select {
@@ -234,11 +227,7 @@ func RandomDuration(max time.Duration) time.Duration {
 		return 0
 	}
 
-	var sleepns int64
-	maxSleep := big.NewInt(max.Nanoseconds())
-	if j, err := rand.Int(rand.Reader, maxSleep); err == nil {
-		sleepns = j.Int64()
-	}
+	sleepns := rand.Int63n(max.Nanoseconds())
 
 	return time.Duration(sleepns)
 }

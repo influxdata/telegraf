@@ -4,16 +4,18 @@ package win_perf_counters
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
+
+	"strings"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"strings"
 )
 
-func TestWinPerformanceQueryImpl(t *testing.T) {
+func TestWinPerformanceQueryImplIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -27,15 +29,15 @@ func TestWinPerformanceQueryImpl(t *testing.T) {
 
 	_, err = query.AddCounterToQuery("")
 	require.Error(t, err, "uninitialized query must return errors")
-	assert.True(t, strings.Contains(err.Error(), "uninitialised"))
+	assert.True(t, strings.Contains(err.Error(), "uninitialized"))
 
 	_, err = query.AddEnglishCounterToQuery("")
 	require.Error(t, err, "uninitialized query must return errors")
-	assert.True(t, strings.Contains(err.Error(), "uninitialised"))
+	assert.True(t, strings.Contains(err.Error(), "uninitialized"))
 
 	err = query.CollectData()
 	require.Error(t, err, "uninitialized query must return errors")
-	assert.True(t, strings.Contains(err.Error(), "uninitialised"))
+	assert.True(t, strings.Contains(err.Error(), "uninitialized"))
 
 	err = query.Open()
 	require.NoError(t, err)
@@ -115,7 +117,7 @@ func TestWinPerformanceQueryImpl(t *testing.T) {
 
 }
 
-func TestWinPerfcountersConfigGet1(t *testing.T) {
+func TestWinPerfcountersConfigGet1Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -149,7 +151,7 @@ func TestWinPerfcountersConfigGet1(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestWinPerfcountersConfigGet2(t *testing.T) {
+func TestWinPerfcountersConfigGet2Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -185,17 +187,17 @@ func TestWinPerfcountersConfigGet2(t *testing.T) {
 	if len(m.counters) == 1 {
 		require.NoError(t, nil)
 	} else if len(m.counters) == 0 {
-		var errorstring1 = "No results returned from the counterPath: " + string(len(m.counters))
+		var errorstring1 = "No results returned from the counterPath"
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(m.counters) > 1 {
-		var errorstring1 = "Too many results returned from the counterPath: " + string(len(m.counters))
+		var errorstring1 = fmt.Sprintf("Too many results returned from the counterPath: %v", len(m.counters))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
 }
 
-func TestWinPerfcountersConfigGet3(t *testing.T) {
+func TestWinPerfcountersConfigGet3Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -233,18 +235,18 @@ func TestWinPerfcountersConfigGet3(t *testing.T) {
 		require.NoError(t, nil)
 	} else if len(m.counters) < 2 {
 
-		var errorstring1 = "Too few results returned from the counterPath. " + string(len(m.counters))
+		var errorstring1 = fmt.Sprintf("Too few results returned from the counterPath: %v", len(m.counters))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(m.counters) > 2 {
 
-		var errorstring1 = "Too many results returned from the counterPath: " + string(len(m.counters))
+		var errorstring1 = fmt.Sprintf("Too many results returned from the counterPath: %v", len(m.counters))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
 }
 
-func TestWinPerfcountersConfigGet4(t *testing.T) {
+func TestWinPerfcountersConfigGet4Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -282,18 +284,18 @@ func TestWinPerfcountersConfigGet4(t *testing.T) {
 		require.NoError(t, nil)
 	} else if len(m.counters) < 2 {
 
-		var errorstring1 = "Too few results returned from the counterPath: " + string(len(m.counters))
+		var errorstring1 = fmt.Sprintf("Too few results returned from the counterPath: %v", len(m.counters))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(m.counters) > 2 {
 
-		var errorstring1 = "Too many results returned from the counterPath: " + string(len(m.counters))
+		var errorstring1 = fmt.Sprintf("Too many results returned from the counterPath: %v", len(m.counters))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
 }
 
-func TestWinPerfcountersConfigGet5(t *testing.T) {
+func TestWinPerfcountersConfigGet5Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -331,19 +333,17 @@ func TestWinPerfcountersConfigGet5(t *testing.T) {
 	if len(m.counters) == 4 {
 		require.NoError(t, nil)
 	} else if len(m.counters) < 4 {
-		var errorstring1 = "Too few results returned from the counterPath: " +
-			string(len(m.counters))
+		var errorstring1 = fmt.Sprintf("Too few results returned from the counterPath: %v", len(m.counters))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(m.counters) > 4 {
-		var errorstring1 = "Too many results returned from the counterPath: " +
-			string(len(m.counters))
+		var errorstring1 = fmt.Sprintf("Too many results returned from the counterPath: %v", len(m.counters))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
 }
 
-func TestWinPerfcountersConfigGet6(t *testing.T) {
+func TestWinPerfcountersConfigGet6Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -377,7 +377,7 @@ func TestWinPerfcountersConfigGet6(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestWinPerfcountersConfigGet7(t *testing.T) {
+func TestWinPerfcountersConfigGet7Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -415,19 +415,17 @@ func TestWinPerfcountersConfigGet7(t *testing.T) {
 	if len(m.counters) == 2 {
 		require.NoError(t, nil)
 	} else if len(m.counters) < 2 {
-		var errorstring1 = "Too few results returned from the counterPath: " +
-			string(len(m.counters))
+		var errorstring1 = fmt.Sprintf("Too few results returned from the counterPath: %v", len(m.counters))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(m.counters) > 2 {
-		var errorstring1 = "Too many results returned from the counterPath: " +
-			string(len(m.counters))
+		var errorstring1 = fmt.Sprintf("Too many results returned from the counterPath: %v", len(m.counters))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
 }
 
-func TestWinPerfcountersConfigError1(t *testing.T) {
+func TestWinPerfcountersConfigError1Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -461,7 +459,7 @@ func TestWinPerfcountersConfigError1(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestWinPerfcountersConfigError2(t *testing.T) {
+func TestWinPerfcountersConfigError2Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -497,7 +495,7 @@ func TestWinPerfcountersConfigError2(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestWinPerfcountersConfigError3(t *testing.T) {
+func TestWinPerfcountersConfigError3Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -531,7 +529,7 @@ func TestWinPerfcountersConfigError3(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestWinPerfcountersCollect1(t *testing.T) {
+func TestWinPerfcountersCollect1Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -575,7 +573,7 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 	}
 
 }
-func TestWinPerfcountersCollect2(t *testing.T) {
+func TestWinPerfcountersCollect2Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

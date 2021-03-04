@@ -160,7 +160,7 @@ func TestHttpJsonMultiValue(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(jolokia.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
@@ -184,7 +184,7 @@ func TestHttpJsonBulkResponse(t *testing.T) {
 	var acc testutil.Accumulator
 	err := jolokia.Gather(&acc)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
@@ -212,7 +212,7 @@ func TestHttpJsonThreeLevelMultiValue(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(jolokia.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
@@ -264,5 +264,5 @@ func TestHttpInvalidJson(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Equal(t, 0, len(acc.Metrics))
-	assert.Contains(t, err.Error(), "Error decoding JSON response")
+	assert.Contains(t, err.Error(), "error decoding JSON response")
 }

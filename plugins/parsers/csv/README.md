@@ -40,7 +40,7 @@ values.
   ## These columns will be skipped in the header as well.
   csv_skip_columns = 0
 
-  ## The seperator between csv fields
+  ## The separator between csv fields
   ## By default, the parser assumes a comma (",")
   csv_delimiter = ","
 
@@ -56,16 +56,27 @@ values.
   ## will be added as fields.
   csv_tag_columns = []
 
-  ## The column to extract the name of the metric from
+  ## The column to extract the name of the metric from. Will not be
+  ## included as field in metric.
   csv_measurement_column = ""
 
   ## The column to extract time information for the metric
-  ## `csv_timestamp_format` must be specified if this is used
+  ## `csv_timestamp_format` must be specified if this is used.
+  ## Will not be included as field in metric.
   csv_timestamp_column = ""
 
   ## The format of time data extracted from `csv_timestamp_column`
   ## this must be specified if `csv_timestamp_column` is specified
   csv_timestamp_format = ""
+
+  ## The timezone of time data extracted from `csv_timestamp_column`
+  ## in case of there is no timezone information.
+  ## It follows the  IANA Time Zone database.
+  csv_timezone = ""
+
+  ## Indicates values to skip, such as an empty string value "".
+  ## The field will be skipped entirely where it matches any values inserted here.
+  csv_skip_values = []
   ```
 #### csv_timestamp_column, csv_timestamp_format
 
@@ -87,10 +98,13 @@ on how to set the time format.
 One metric is created for each row with the columns added as fields.  The type
 of the field is automatically determined based on the contents of the value.
 
+In addition to the options above, you can use [metric filtering][] to skip over
+columns and rows.
+
 ### Examples
 
 Config:
-```
+```toml
 [[inputs.file]]
   files = ["example"]
   data_format = "csv"
@@ -109,3 +123,5 @@ Output:
 ```
 cpu cpu=cpu0,time_user=42,time_system=42,time_idle=42 1536869008000000000
 ```
+
+[metric filtering]: /docs/CONFIGURATION.md#metric-filtering

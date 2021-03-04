@@ -8,6 +8,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 )
@@ -154,8 +155,16 @@ func (s *Serializer) buildHeader(m telegraf.Metric) error {
 		key := escape(tag.Key)
 		value := escape(tag.Value)
 
-		// Some keys and values are not encodeable as line protocol, such as
-		// those with a trailing '\' or empty strings.
+		// Tag keys and values that end with a backslash cannot be encoded by
+		// line protocol.
+		if strings.HasSuffix(key, `\`) {
+			key = strings.TrimRight(key, `\`)
+		}
+		if strings.HasSuffix(value, `\`) {
+			value = strings.TrimRight(value, `\`)
+		}
+
+		// Tag keys and values must not be the empty string.
 		if key == "" || value == "" {
 			continue
 		}
@@ -228,7 +237,7 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 
 		// Additional length needed for field separator `,`
 		if !firstField {
-			bytesNeeded += 1
+			bytesNeeded++
 		}
 
 		if s.maxLineBytes > 0 && bytesNeeded > s.maxLineBytes {
@@ -293,13 +302,11 @@ func (s *Serializer) appendFieldValue(buf []byte, value interface{}) ([]byte, er
 	case uint64:
 		if s.fieldTypeSupport&UintSupport != 0 {
 			return appendUintField(buf, v), nil
-		} else {
-			if v <= uint64(MaxInt64) {
-				return appendIntField(buf, int64(v)), nil
-			} else {
-				return appendIntField(buf, int64(MaxInt64)), nil
-			}
 		}
+		if v <= uint64(MaxInt64) {
+			return appendIntField(buf, int64(v)), nil
+		}
+		return appendIntField(buf, MaxInt64), nil
 	case int64:
 		return appendIntField(buf, v), nil
 	case float64:

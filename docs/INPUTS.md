@@ -38,7 +38,8 @@ import (
 )
 
 type Simple struct {
-    Ok bool `toml:"ok"`
+    Ok  bool            `toml:"ok"`
+    Log telegraf.Logger `toml:"-"`
 }
 
 func (s *Simple) Description() string {
@@ -52,6 +53,7 @@ func (s *Simple) SampleConfig() string {
 `
 }
 
+// Init is for setup, and validating config.
 func (s *Simple) Init() error {
 	return nil
 }
@@ -81,7 +83,7 @@ func init() {
 
 ### Typed Metrics
 
-In addition the the `AddFields` function, the accumulator also supports
+In addition to the `AddFields` function, the accumulator also supports
 functions to add typed metrics: `AddGauge`, `AddCounter`, etc.  Metric types
 are ignored by the InfluxDB output, but can be used for other outputs, such as
 [prometheus][prom metric types].

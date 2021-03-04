@@ -7,7 +7,7 @@ import (
 
 const (
 	// DefaultSeparator is the default join character to use when joining multiple
-	// measurment parts in a template.
+	// measurement parts in a template.
 	DefaultSeparator = "."
 )
 
@@ -19,11 +19,7 @@ type Config struct {
 
 // Validate validates the config's templates and tags.
 func (c *Config) Validate() error {
-	if err := c.validateTemplates(); err != nil {
-		return err
-	}
-
-	return nil
+	return c.validateTemplates()
 }
 
 func (c *Config) validateTemplates() error {

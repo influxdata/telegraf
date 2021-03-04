@@ -1,4 +1,4 @@
-# PostgreSQL plugin
+# PostgreSQL Extensible Input Plugin
 
 This postgresql plugin provides metrics for your postgres database. It has been
 designed to parse SQL queries in the plugin section of your `telegraf.conf`.
@@ -11,14 +11,14 @@ The example below has two queries are specified, with the following parameters:
 * The name of the measurement
 * A list of the columns to be defined as tags
 
-```
+```toml
 [[inputs.postgresql_extensible]]
   # specify address via a url matching:
-  # postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=...
+  # postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=...
   # or a simple string:
-  #   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  #   host=localhost port=5432 user=pqgotest password=... sslmode=... dbname=app_production
   #
-  # All connection parameters are optional.  
+  # All connection parameters are optional.
   # Without the dbname parameter, the driver will default to a database
   # with the same name as the user. This dbname is just for instantiating a
   # connection with the server and doesn't restrict the databases we are trying
@@ -45,12 +45,16 @@ The example below has two queries are specified, with the following parameters:
   # the where clause (aka with the dbname)
   #
   # The script option can be used to specify the .sql file path.
-  # If script and sqlquery options specified at same time, sqlquery will be used 
+  # If script and sqlquery options specified at same time, sqlquery will be used
   #
   # the tagvalue field is used to define custom tags (separated by comas).
   # the query is expected to return columns which match the names of the
   # defined tags. The values in these columns must be of a string-type,
   # a number-type or a blob-type.
+  #
+  # The timestamp field is used to override the data points timestamp value. By
+  # default, all rows inserted with current time. By setting a timestamp column,
+  # the row will be inserted with that column's value. 
   #
   # Structure :
   # [[inputs.postgresql_extensible.query]]
@@ -58,6 +62,7 @@ The example below has two queries are specified, with the following parameters:
   #   version string
   #   withdbname boolean
   #   tagvalue string (coma separated)
+  #   timestamp string
   [[inputs.postgresql_extensible.query]]
     sqlquery="SELECT * FROM pg_stat_database where datname"
     version=901
@@ -71,12 +76,12 @@ The example below has two queries are specified, with the following parameters:
 ```
 
 The system can be easily extended using homemade metrics collection tools or
-using postgreql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab) or [powa](http://dalibo.github.io/powa/))
+using postgresql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab) or [powa](http://dalibo.github.io/powa/))
 
 # Sample Queries :
 - telegraf.conf postgresql_extensible queries (assuming that you have configured
  correctly your connection)
-```
+```toml
 [[inputs.postgresql_extensible.query]]
   sqlquery="SELECT * FROM pg_stat_database"
   version=901

@@ -1,5 +1,3 @@
-// +build go1.11
-
 package apcupsd
 
 import (
@@ -142,7 +140,7 @@ func TestApcupsdGather(t *testing.T) {
 					"nominal_battery_voltage": float64(12),
 					"nominal_power":           int(865),
 					"firmware":                string("857.L3 .I USB FW:L3"),
-					"battery_date":            time.Date(2016, time.September, 06, 0, 0, 0, 0, time.UTC),
+					"battery_date":            string("2016-09-06"),
 				},
 				out: genOutput,
 			},

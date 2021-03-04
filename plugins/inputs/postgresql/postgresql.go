@@ -26,7 +26,7 @@ var sampleConfig = `
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
   ##       ?sslmode=[disable|verify-ca|verify-full]
   ## or a simple string:
-  ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
   ##
   ## All connection parameters are optional.
   ##
@@ -105,26 +105,26 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 
 	query = `SELECT * FROM pg_stat_bgwriter`
 
-	bg_writer_row, err := p.DB.Query(query)
+	bgWriterRow, err := p.DB.Query(query)
 	if err != nil {
 		return err
 	}
 
-	defer bg_writer_row.Close()
+	defer bgWriterRow.Close()
 
 	// grab the column information from the result
-	if columns, err = bg_writer_row.Columns(); err != nil {
+	if columns, err = bgWriterRow.Columns(); err != nil {
 		return err
 	}
 
-	for bg_writer_row.Next() {
-		err = p.accRow(bg_writer_row, acc, columns)
+	for bgWriterRow.Next() {
+		err = p.accRow(bgWriterRow, acc, columns)
 		if err != nil {
 			return err
 		}
 	}
 
-	return bg_writer_row.Err()
+	return bgWriterRow.Err()
 }
 
 type scanner interface {
@@ -155,7 +155,12 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator, columns []str
 	}
 	if columnMap["datname"] != nil {
 		// extract the database name from the column map
-		dbname.WriteString((*columnMap["datname"]).(string))
+		if dbNameStr, ok := (*columnMap["datname"]).(string); ok {
+			dbname.WriteString(dbNameStr)
+		} else {
+			// PG 12 adds tracking of global objects to pg_stat_database
+			dbname.WriteString("postgres_global")
+		}
 	} else {
 		dbname.WriteString("postgres")
 	}

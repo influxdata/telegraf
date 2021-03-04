@@ -1,5 +1,6 @@
 ---
 name: Bug report
+labels: bug
 about: Create a report to help us improve
 
 ---
@@ -20,6 +21,10 @@ section if available.
 ### System info:
 
 <!-- Include Telegraf version, operating system, and other relevant details -->
+
+### Docker
+
+<!-- If your bug involves third party dependencies or services, it can be very helpful to provide a Dockerfile or docker-compose.yml that reproduces the environment you're testing against -->
 
 ### Steps to reproduce:
 

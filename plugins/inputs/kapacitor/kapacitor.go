@@ -9,7 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -51,7 +51,7 @@ func (*Kapacitor) SampleConfig() string {
 
 func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 	if k.client == nil {
-		client, err := k.createHttpClient()
+		client, err := k.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (k *Kapacitor) createHttpClient() (*http.Client, error) {
+func (k *Kapacitor) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -171,7 +171,7 @@ func (k *Kapacitor) gatherURL(
 				"alloc_bytes":         s.MemStats.Alloc,
 				"buck_hash_sys_bytes": s.MemStats.BuckHashSys,
 				"frees":               s.MemStats.Frees,
-				"gcc_pu_fraction":     s.MemStats.GCCPUFraction,
+				"gc_cpu_fraction":     s.MemStats.GCCPUFraction,
 				"gc_sys_bytes":        s.MemStats.GCSys,
 				"heap_alloc_bytes":    s.MemStats.HeapAlloc,
 				"heap_idle_bytes":     s.MemStats.HeapIdle,

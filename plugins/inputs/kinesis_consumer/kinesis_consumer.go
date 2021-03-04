@@ -14,7 +14,7 @@ import (
 	"github.com/harlow/kinesis-consumer/checkpoint/ddb"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/internal/config/aws"
+	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -221,7 +221,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		})
 		if err != nil {
 			k.cancel()
-			k.Log.Errorf("Scan encounterred an error: %s", err.Error())
+			k.Log.Errorf("Scan encountered an error: %s", err.Error())
 			k.cons = nil
 		}
 	}()

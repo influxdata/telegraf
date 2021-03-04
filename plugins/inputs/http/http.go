@@ -11,7 +11,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -28,6 +29,11 @@ type HTTP struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 	tls.ClientConfig
+
+	proxy.HTTPProxy
+
+	// Absolute path to file with Bearer token
+	BearerToken string `toml:"bearer_token"`
 
 	SuccessStatusCodes []int `toml:"success_status_codes"`
 
@@ -52,6 +58,10 @@ var sampleConfig = `
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
 
+  ## Optional file with Bearer token
+  ## file content is added as an Authorization header
+  # bearer_token = "/path/to/file"
+
   ## Optional HTTP Basic Auth Credentials
   # username = "username"
   # password = "pa$$word"
@@ -62,6 +72,9 @@ var sampleConfig = `
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
+
+  ## HTTP Proxy support
+  # http_proxy_url = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -99,12 +112,19 @@ func (h *HTTP) Init() error {
 		return err
 	}
 
+	proxy, err := h.HTTPProxy.Proxy()
+	if err != nil {
+		return err
+	}
+
+	transport := &http.Transport{
+		TLSClientConfig: tlsCfg,
+		Proxy:           proxy,
+	}
+
 	h.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
-			Proxy:           http.ProxyFromEnvironment,
-		},
-		Timeout: h.Timeout.Duration,
+		Transport: transport,
+		Timeout:   h.Timeout.Duration,
 	}
 
 	// Set default as [200]
@@ -158,6 +178,15 @@ func (h *HTTP) gatherURL(
 	request, err := http.NewRequest(h.Method, url, body)
 	if err != nil {
 		return err
+	}
+
+	if h.BearerToken != "" {
+		token, err := ioutil.ReadFile(h.BearerToken)
+		if err != nil {
+			return err
+		}
+		bearer := "Bearer " + strings.Trim(string(token), "\n")
+		request.Header.Set("Authorization", bearer)
 	}
 
 	if h.ContentEncoding == "gzip" {
