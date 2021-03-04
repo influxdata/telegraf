@@ -2,19 +2,22 @@ package huawei_routers_telemetry
 
 import (
 	"fmt"
-	"github.com/DamRCorba/huawei_telemetry_sensors"
-	"github.com/DamRCorba/huawei_telemetry_sensors/sensors/huawei-telemetry"
-	"github.com/golang/protobuf/proto"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io"
 	"net"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/DamRCorba/huawei_telemetry_sensors"
+	"github.com/DamRCorba/huawei_telemetry_sensors/sensors/huawei-telemetry"
+
+	"github.com/golang/protobuf/proto"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type setReadBufferer interface {
@@ -40,12 +43,13 @@ type packetSocketListener struct {
   Telemetry Decoder.
 
 */
-func HuaweiTelemetryDecoder(body []byte) *metric.SeriesGrouper {
+func HuaweiTelemetryDecoder(body []byte) (*metric.SeriesGrouper, error) {
 	msg := &telemetry.Telemetry{}
 	err := proto.Unmarshal(body[12:], msg)
 	if err != nil {
-		fmt.Println("Error", err)
-		panic(err)
+		h.Log.Errorf("Unable to decode incoming packet: %s", err.Error())
+		return nil, err
+		//panic(err)
 	}
 	grouper := metric.NewSeriesGrouper()
 	for _, gpbkv := range msg.GetDataGpb().GetRow() {
@@ -57,54 +61,55 @@ func HuaweiTelemetryDecoder(body []byte) *metric.SeriesGrouper {
 		sensorMsg := huawei_sensorPath.GetMessageType(msg.GetSensorPath())
 		err = proto.Unmarshal(gpbkv.Content, sensorMsg)
 		if err != nil {
-			fmt.Println("Sensor Error", err)
-		} else {
-			fields, vals := huawei_sensorPath.SearchKey(gpbkv, msg.GetSensorPath())
-			tags := make(map[string]string, len(fields)+3)
-			tags["source"] = msg.GetNodeIdStr()
-			tags["subscription"] = msg.GetSubscriptionIdStr()
-			tags["path"] = msg.GetSensorPath()
-			// Search for Tags
-			for i := 0; i < len(fields); i++ {
-				tags = huawei_sensorPath.AppendTags(fields[i], vals[i], tags, msg.GetSensorPath())
-			}
-			// Create Metrics
-			for i := 0; i < len(fields); i++ {
-				huawei_sensorPath.CreateMetrics(grouper, tags, timestamp, msg.GetSensorPath(), fields[i], vals[i])
-			}
+			h.Log.Errorf("Sensor Error: %s", err.Error())	
+			return nil, err		
+		} 
+		fields, vals := huawei_sensorPath.SearchKey(gpbkv, msg.GetSensorPath())
+		tags := make(map[string]string, len(fields)+3)
+		tags["source"] = msg.GetNodeIdStr()
+		tags["subscription"] = msg.GetSubscriptionIdStr()
+		tags["path"] = msg.GetSensorPath()
+		// Search for Tags
+		for i := 0; i < len(fields); i++ {
+			tags = huawei_sensorPath.AppendTags(fields[i], vals[i], tags, msg.GetSensorPath())
+		}
+		// Create Metrics
+		for i := 0; i < len(fields); i++ {
+			huawei_sensorPath.CreateMetrics(grouper, tags, timestamp, msg.GetSensorPath(), fields[i], vals[i])
 		}
 	}
-	return grouper
+	return grouper, nil
 }
 
 /*
   Listen UDP packets and call the telemetryDecoder.
 */
-func (psl *packetSocketListener) listen() {
+func (h *packetSocketListener) listen() {
 	buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
 	for {
-		n, _, err := psl.ReadFrom(buf)
-		if err != nil {
-			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				psl.Log.Error(err.Error())
-			}
+		n, _, err := h.ReadFrom(buf)
+		if err != nil {			
+			h.Log.Error("Unable to read buffer: %s", err.Error())
 			break
 		}
 
-		body, err := psl.decoder.Decode(buf[:n])
+		body, err := h.decoder.Decode(buf[:n])
 		if err != nil {
-			psl.Log.Errorf("Unable to decode incoming packet: %s", err.Error())
-		}
-		// Inicia el manejo de la telemetria
-		grouper := HuaweiTelemetryDecoder(body)
-		for _, metric := range grouper.Metrics() {
-			psl.AddMetric(metric)
-		}
-
-		if err != nil {
-			psl.Log.Errorf("Unable to parse incoming packet: %s", err.Error())
-
+			h.Log.Errorf("Unable to decode incoming packet: %s", err.Error())
 			continue
+		}
+		// Telemetry parsing over packet payload
+		grouper, err := HuaweiTelemetryDecoder(body)
+		if err != nil {
+			h.Log.Errorf("Unable to decode telemetry information: %s", err.Error())
+			break
+		}
+		for _, metric := range grouper.Metrics() {
+			h.AddMetric(metric)
+		}
+
+		if err != nil {
+			h.Log.Errorf("Unable to parse incoming packet: %s", err.Error())
 		}
 	}
 }
@@ -115,63 +120,63 @@ type HuaweiRoutersTelemetry struct {
 	ContentEncoding string        `toml:"content_encoding"`
 	wg              sync.WaitGroup
 
-	Log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 
 	telegraf.Accumulator
 	io.Closer
 	decoder internal.ContentDecoder
 }
 
-func (sl *HuaweiRoutersTelemetry) Description() string {
+func (h *HuaweiRoutersTelemetry) Description() string {
 	return "Huawei Telemetry UDP model input Plugin"
 }
 
-func (sl *HuaweiRoutersTelemetry) SampleConfig() string {
+func (h *HuaweiRoutersTelemetry) SampleConfig() string {
 	return `
   ## UDP Service Port to capture Telemetry
-  service_port = "8080"
+  # service_port = "8080"
 
 `
 }
 
-func (sl *HuaweiRoutersTelemetry) Gather(_ telegraf.Accumulator) error {
+func (h *HuaweiRoutersTelemetry) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (hrt *HuaweiRoutersTelemetry) Start(acc telegraf.Accumulator) error {
-	hrt.Accumulator = acc
+func (h *HuaweiRoutersTelemetry) Start(acc telegraf.Accumulator) error {
+	h.Accumulator = acc
 
 	var err error
-	hrt.decoder, err = internal.NewContentDecoder(hrt.ContentEncoding)
+	h.decoder, err = internal.NewContentDecoder(h.ContentEncoding)
 	if err != nil {
 		return err
 	}
 
-	pc, err := udpListen("udp", ":"+hrt.ServicePort)
+	pc, err := udpListen("udp", ":"+h.ServicePort)
 	if err != nil {
 		return err
 	}
 
-	if hrt.ReadBufferSize.Size > 0 {
+	if h.ReadBufferSize.Size > 0 {
 		if srb, ok := pc.(setReadBufferer); ok {
-			srb.SetReadBuffer(int(hrt.ReadBufferSize.Size))
+			srb.SetReadBuffer(int(h.ReadBufferSize.Size))
 		} else {
-			hrt.Log.Warnf("Unable to set read buffer on a %s socket", "udp")
+			h.Log.Warnf("Unable to set read buffer on a %s socket", "udp")
 		}
 	}
 
-	hrt.Log.Infof("Listening on %s://%s", "udp", pc.LocalAddr())
+	h.Log.Infof("Listening on %s://%s", "udp", pc.LocalAddr())
 
 	psl := &packetSocketListener{
 		PacketConn:             pc,
-		HuaweiRoutersTelemetry: hrt,
+		HuaweiRoutersTelemetry: h,
 	}
 
-	hrt.Closer = psl
-	hrt.wg = sync.WaitGroup{}
-	hrt.wg.Add(1)
+	h.Closer = psl
+	h.wg = sync.WaitGroup{}
+	h.wg.Add(1)
 	go func() {
-		defer hrt.wg.Done()
+		defer h.wg.Done()
 		psl.listen()
 	}()
 	return nil
@@ -202,29 +207,15 @@ func udpListen(network string, address string) (net.PacketConn, error) {
 	return net.ListenPacket(network, address)
 }
 
-func (hrt *HuaweiRoutersTelemetry) Stop() {
-	if hrt.Closer != nil {
-		hrt.Close()
-		hrt.Closer = nil
+func (h *HuaweiRoutersTelemetry) Stop() {
+	if h.Closer != nil {
+		h.Close()
+		h.Closer = nil
 	}
-	hrt.wg.Wait()
+	h.wg.Wait()
 }
 
-func newHuaweiRoutersTelemetry() *HuaweiRoutersTelemetry {
-	return &HuaweiRoutersTelemetry{}
-}
-
-type unixCloser struct {
-	path   string
-	closer io.Closer
-}
-
-func (uc unixCloser) Close() error {
-	err := uc.closer.Close()
-	os.Remove(uc.path) // ignore error
-	return err
-}
 
 func init() {
-	inputs.Add("huawei_routers_telemetry", func() telegraf.Input { return newHuaweiRoutersTelemetry() })
+	inputs.Add("huawei_routers_telemetry", func() telegraf.Input { return &HuaweiRoutersTelemetry{} })
 }
