@@ -4,6 +4,7 @@ import (
   "fmt"
   "bufio"
   "os"
+  "io"
   "strings"
   "regexp"
   "strconv"
@@ -34,7 +35,22 @@ func (s *MDSTAT_PLUGIN) Description() string {
 
 func (s *MDSTAT_PLUGIN) Gather(acc telegraf.Accumulator) error {
   MDSTAT_FILE := "/proc/mdstat"
-  result := parseFile(MDSTAT_FILE)
+
+  // Lets open the file.
+  f,err := os.Open(MDSTAT_FILE)
+  if err != nil {
+    fmt.Println(err)
+  }
+
+  // Make sure we schedule the clean up.
+  closingFunc := func() {
+    if err = f.Close(); err != nil {
+      fmt.Println(err)
+    }
+  }
+  defer closingFunc()
+
+  result := parseFile(f)
 
   for _, device := range result.devices {
       devTags := map[string]string{
@@ -104,28 +120,14 @@ type MDSTAT struct {
   devices []Device
 }
 
-const PERSONALITY_PREFIX = "Personalities"
+const PERSONALITY_PREFIX = "Personalities : "
 const UNUSED_PREFIX = "unused"
 
-func parseFile(filename string) MDSTAT {
-
-  // Lets open the file.
-  f,err := os.Open(filename)
-  if err != nil {
-    fmt.Println(err)
-  }
-
-  // Make sure we schedule the clean up.
-  closingFunc := func() {
-    if err = f.Close(); err != nil {
-      fmt.Println(err)
-    }
-  }
-  defer closingFunc()
+func parseFile(r io.Reader) MDSTAT {
 
   // This is a text file, so we can scan it line by line.
   // We will break the file up into it's parts so each can be parsed individually
-  s := bufio.NewScanner(f)
+  s := bufio.NewScanner(r)
   var parsedMap MDSTAT
   var deviceEntry []string
   for s.Scan() {
@@ -155,7 +157,7 @@ func parseFile(filename string) MDSTAT {
 
     deviceEntry = append(deviceEntry, line)
   }
-  err = s.Err()
+  err := s.Err()
   if err != nil {
     fmt.Println(err)
   }
