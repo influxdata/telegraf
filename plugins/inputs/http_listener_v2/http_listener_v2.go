@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/snappy"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
@@ -248,7 +249,6 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 
 func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
 	body := req.Body
-
 	// Handle gzip request bodies
 	if req.Header.Get("Content-Encoding") == "gzip" {
 		var err error
@@ -266,6 +266,17 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 	if err != nil {
 		tooLarge(res)
 		return nil, false
+	}
+
+	// Handle snappy request bodies
+	if req.Header.Get("Content-Encoding") == "snappy" {
+		bytes, err = snappy.Decode(nil, bytes)
+		if err != nil {
+			res.Header().Set("Content-Type", "application/json")
+			res.WriteHeader(http.StatusBadRequest)
+			res.Write([]byte(`{"error":"http: snappy decode error"}`))
+			return nil, false
+		}
 	}
 
 	return bytes, true
