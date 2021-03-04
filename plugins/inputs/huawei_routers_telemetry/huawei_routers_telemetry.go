@@ -47,7 +47,7 @@ func HuaweiTelemetryDecoder(body []byte) (*metric.SeriesGrouper, error) {
 	msg := &telemetry.Telemetry{}
 	err := proto.Unmarshal(body[12:], msg)
 	if err != nil {
-		h.Log.Errorf("Unable to decode incoming packet: %s", err.Error())
+		fmt.Println("Unable to decode incoming packet: ", err.Error())
 		return nil, err
 		//panic(err)
 	}
@@ -61,7 +61,7 @@ func HuaweiTelemetryDecoder(body []byte) (*metric.SeriesGrouper, error) {
 		sensorMsg := huawei_sensorPath.GetMessageType(msg.GetSensorPath())
 		err = proto.Unmarshal(gpbkv.Content, sensorMsg)
 		if err != nil {
-			h.Log.Errorf("Sensor Error: %s", err.Error())	
+			fmt.Println("Sensor Error: %s", err.Error())	
 			return nil, err		
 		} 
 		fields, vals := huawei_sensorPath.SearchKey(gpbkv, msg.GetSensorPath())
