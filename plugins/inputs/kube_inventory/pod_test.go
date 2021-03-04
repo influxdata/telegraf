@@ -126,22 +126,22 @@ func TestPod(t *testing.T) {
 									Phase:     "Running",
 									HostIP:    "180.12.10.18",
 									PodIP:     "10.244.2.15",
-									StartTime: &metav1.Time{started},
+									StartTime: &metav1.Time{Time: started},
 									Conditions: []corev1.PodCondition{
 										{
 											Type:               "Initialized",
 											Status:             "True",
-											LastTransitionTime: metav1.Time{cond1},
+											LastTransitionTime: metav1.Time{Time: cond1},
 										},
 										{
 											Type:               "Ready",
 											Status:             "True",
-											LastTransitionTime: metav1.Time{cond2},
+											LastTransitionTime: metav1.Time{Time: cond2},
 										},
 										{
 											Type:               "Scheduled",
 											Status:             "True",
-											LastTransitionTime: metav1.Time{cond1},
+											LastTransitionTime: metav1.Time{Time: cond1},
 										},
 									},
 									ContainerStatuses: []corev1.ContainerStatus{
@@ -149,7 +149,7 @@ func TestPod(t *testing.T) {
 											Name: "running",
 											State: corev1.ContainerState{
 												Running: &v1.ContainerStateRunning{
-													StartedAt: metav1.Time{started},
+													StartedAt: metav1.Time{Time: started},
 												},
 											},
 											Ready:        true,
@@ -162,7 +162,7 @@ func TestPod(t *testing.T) {
 											Name: "completed",
 											State: v1.ContainerState{
 												Terminated: &v1.ContainerStateTerminated{
-													StartedAt: metav1.Time{time.Now()},
+													StartedAt: metav1.Time{Time: now},
 													ExitCode:  0,
 													Reason:    "Completed",
 												},
@@ -204,7 +204,7 @@ func TestPod(t *testing.T) {
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: metav1.Time{created},
+									CreationTimestamp: metav1.Time{Time: created},
 								},
 							},
 						},
@@ -373,22 +373,22 @@ func TestPodSelectorFilter(t *testing.T) {
 						Phase:     "Running",
 						HostIP:    "180.12.10.18",
 						PodIP:     "10.244.2.15",
-						StartTime: &metav1.Time{started},
+						StartTime: &metav1.Time{Time: started},
 						Conditions: []v1.PodCondition{
 							{
 								Type:               "Initialized",
 								Status:             "True",
-								LastTransitionTime: metav1.Time{cond1},
+								LastTransitionTime: metav1.Time{Time: cond1},
 							},
 							{
 								Type:               "Ready",
 								Status:             "True",
-								LastTransitionTime: metav1.Time{cond2},
+								LastTransitionTime: metav1.Time{Time: cond2},
 							},
 							{
 								Type:               "Scheduled",
 								Status:             "True",
-								LastTransitionTime: metav1.Time{cond1},
+								LastTransitionTime: metav1.Time{Time: cond1},
 							},
 						},
 						ContainerStatuses: []v1.ContainerStatus{
@@ -396,7 +396,7 @@ func TestPodSelectorFilter(t *testing.T) {
 								Name: "forwarder",
 								State: v1.ContainerState{
 									Running: &v1.ContainerStateRunning{
-										StartedAt: metav1.Time{time.Now()},
+										StartedAt: metav1.Time{Time: now},
 									},
 								},
 								Ready:        true,
@@ -423,7 +423,7 @@ func TestPodSelectorFilter(t *testing.T) {
 							"lab1": "v1",
 							"lab2": "v2",
 						},
-						CreationTimestamp: metav1.Time{created},
+						CreationTimestamp: metav1.Time{Time: created},
 					},
 				},
 			},
@@ -643,22 +643,22 @@ func TestPodPendingContainers(t *testing.T) {
 									Reason:    "NetworkNotReady",
 									HostIP:    "180.12.10.18",
 									PodIP:     "10.244.2.15",
-									StartTime: &metav1.Time{started},
+									StartTime: &metav1.Time{Time: started},
 									Conditions: []v1.PodCondition{
 										{
 											Type:               "Initialized",
 											Status:             "True",
-											LastTransitionTime: metav1.Time{cond1},
+											LastTransitionTime: metav1.Time{Time: cond1},
 										},
 										{
 											Type:               "Ready",
 											Status:             "True",
-											LastTransitionTime: metav1.Time{cond2},
+											LastTransitionTime: metav1.Time{Time: cond2},
 										},
 										{
 											Type:               "Scheduled",
 											Status:             "True",
-											LastTransitionTime: metav1.Time{cond1},
+											LastTransitionTime: metav1.Time{Time: cond1},
 										},
 									},
 									ContainerStatuses: []v1.ContainerStatus{},
@@ -679,7 +679,7 @@ func TestPodPendingContainers(t *testing.T) {
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: metav1.Time{created},
+									CreationTimestamp: metav1.Time{Time: created},
 								},
 							},
 						},

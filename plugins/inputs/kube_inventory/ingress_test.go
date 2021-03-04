@@ -76,7 +76,7 @@ func TestIngress(t *testing.T) {
 									Generation:        12,
 									Namespace:         "ns1",
 									Name:              "ui-lb",
-									CreationTimestamp: metav1.Time{time.Now()},
+									CreationTimestamp: metav1.Time{Time: now},
 								},
 							},
 						},
@@ -90,7 +90,7 @@ func TestIngress(t *testing.T) {
 							"tls":                  false,
 							"backend_service_port": int32(8080),
 							"generation":           int64(12),
-							"created":              now.UnixNano(),
+							"created":              time.Unix(int64(now.Second()), int64(now.Nanosecond())).UnixNano(),
 						},
 						Tags: map[string]string{
 							"ingress_name":         "ui-lb",

@@ -28,8 +28,8 @@ func (ki *KubernetesInventory) gatherPod(p corev1.Pod, acc telegraf.Accumulator)
 	}
 
 	containerList := map[string]*corev1.ContainerStatus{}
-	for _, v := range p.Status.ContainerStatuses {
-		containerList[v.Name] = &v
+	for i := range p.Status.ContainerStatuses {
+		containerList[p.Status.ContainerStatuses[i].Name] = &p.Status.ContainerStatuses[i]
 	}
 
 	for _, c := range p.Spec.Containers {
@@ -107,17 +107,17 @@ func gatherPodContainer(nodeName string, ki *KubernetesInventory, p corev1.Pod, 
 	for resourceName, val := range req {
 		switch resourceName {
 		case "cpu":
-			fields["resource_requests_millicpu_units"] = convertQuantity(val.String(), 1000)
+			fields["resource_requests_millicpu_units"] = convertQuantity(string(val.Format), 1000)
 		case "memory":
-			fields["resource_requests_memory_bytes"] = convertQuantity(val.String(), 1)
+			fields["resource_requests_memory_bytes"] = convertQuantity(string(val.Format), 1)
 		}
 	}
 	for resourceName, val := range lim {
 		switch resourceName {
 		case "cpu":
-			fields["resource_limits_millicpu_units"] = convertQuantity(val.String(), 1000)
+			fields["resource_limits_millicpu_units"] = convertQuantity(string(val.Format), 1000)
 		case "memory":
-			fields["resource_limits_memory_bytes"] = convertQuantity(val.String(), 1)
+			fields["resource_limits_memory_bytes"] = convertQuantity(string(val.Format), 1)
 		}
 	}
 

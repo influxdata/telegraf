@@ -57,7 +57,7 @@ func TestDaemonSet(t *testing.T) {
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: metav1.Time{time.Now()},
+									CreationTimestamp: metav1.Time{Time: now},
 								},
 								Spec: v1.DaemonSetSpec{
 									Selector: &metav1.LabelSelector{
@@ -84,7 +84,7 @@ func TestDaemonSet(t *testing.T) {
 							"number_ready":             int32(1),
 							"number_unavailable":       int32(1),
 							"updated_number_scheduled": int32(2),
-							"created":                  now.UnixNano(),
+							"created":                  time.Unix(int64(now.Second()), int64(now.Nanosecond())).UnixNano(),
 						},
 						Tags: map[string]string{
 							"daemonset_name":   "daemon1",
@@ -165,7 +165,7 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 							"lab1": "v1",
 							"lab2": "v2",
 						},
-						CreationTimestamp: metav1.Time{time.Now()},
+						CreationTimestamp: metav1.Time{Time: time.Now()},
 					},
 					Spec: v1.DaemonSetSpec{
 						Selector: &metav1.LabelSelector{

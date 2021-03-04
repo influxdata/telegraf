@@ -1,58 +1,55 @@
 package prometheus
 
 import (
-	"github.com/ericchiang/k8s"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 
-	v1 "github.com/ericchiang/k8s/apis/core/v1"
-	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
-
-	"github.com/kubernetes/apimachinery/pkg/fields"
-	"github.com/kubernetes/apimachinery/pkg/labels"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestScrapeURLNoAnnotations(t *testing.T) {
-	p := &v1.Pod{Metadata: &metav1.ObjectMeta{}}
-	p.GetMetadata().Annotations = map[string]string{}
+	p := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{}}
+	p.Annotations = map[string]string{}
 	url := getScrapeURL(p)
 	assert.Nil(t, url)
 }
 
 func TestScrapeURLAnnotationsNoScrape(t *testing.T) {
-	p := &v1.Pod{Metadata: &metav1.ObjectMeta{}}
-	p.Metadata.Name = str("myPod")
-	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "false"}
+	p := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{}}
+	p.Name = "myPod"
+	p.Annotations = map[string]string{"prometheus.io/scrape": "false"}
 	url := getScrapeURL(p)
 	assert.Nil(t, url)
 }
 
 func TestScrapeURLAnnotations(t *testing.T) {
 	p := pod()
-	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	url := getScrapeURL(p)
 	assert.Equal(t, "http://127.0.0.1:9102/metrics", *url)
 }
 
 func TestScrapeURLAnnotationsCustomPort(t *testing.T) {
 	p := pod()
-	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/port": "9000"}
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/port": "9000"}
 	url := getScrapeURL(p)
 	assert.Equal(t, "http://127.0.0.1:9000/metrics", *url)
 }
 
 func TestScrapeURLAnnotationsCustomPath(t *testing.T) {
 	p := pod()
-	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "mymetrics"}
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "mymetrics"}
 	url := getScrapeURL(p)
 	assert.Equal(t, "http://127.0.0.1:9102/mymetrics", *url)
 }
 
 func TestScrapeURLAnnotationsCustomPathWithSep(t *testing.T) {
 	p := pod()
-	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/mymetrics"}
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/mymetrics"}
 	url := getScrapeURL(p)
 	assert.Equal(t, "http://127.0.0.1:9102/mymetrics", *url)
 }
@@ -61,7 +58,7 @@ func TestAddPod(t *testing.T) {
 	prom := &Prometheus{Log: testutil.Logger{}}
 
 	p := pod()
-	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
 	assert.Equal(t, 1, len(prom.kubernetesPods))
 }
@@ -70,9 +67,9 @@ func TestAddMultipleDuplicatePods(t *testing.T) {
 	prom := &Prometheus{Log: testutil.Logger{}}
 
 	p := pod()
-	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
-	p.Metadata.Name = str("Pod2")
+	p.Name = "Pod2"
 	registerPod(p, prom)
 	assert.Equal(t, 1, len(prom.kubernetesPods))
 }
@@ -81,10 +78,10 @@ func TestAddMultiplePods(t *testing.T) {
 	prom := &Prometheus{Log: testutil.Logger{}}
 
 	p := pod()
-	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
-	p.Metadata.Name = str("Pod2")
-	p.Status.PodIP = str("127.0.0.2")
+	p.Name = "Pod2"
+	p.Status.PodIP = "127.0.0.2"
 	registerPod(p, prom)
 	assert.Equal(t, 2, len(prom.kubernetesPods))
 }
@@ -93,7 +90,7 @@ func TestDeletePods(t *testing.T) {
 	prom := &Prometheus{Log: testutil.Logger{}}
 
 	p := pod()
-	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
 	unregisterPod(p, prom)
 	assert.Equal(t, 0, len(prom.kubernetesPods))

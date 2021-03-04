@@ -62,7 +62,6 @@ following works:
 - github.com/eapache/go-xerial-snappy [MIT License](https://github.com/eapache/go-xerial-snappy/blob/master/LICENSE)
 - github.com/eapache/queue [MIT License](https://github.com/eapache/queue/blob/master/LICENSE)
 - github.com/eclipse/paho.mqtt.golang [Eclipse Public License - v 1.0](https://github.com/eclipse/paho.mqtt.golang/blob/master/LICENSE)
-- github.com/ericchiang/k8s [Apache License 2.0](https://github.com/ericchiang/k8s/blob/master/LICENSE)
 - github.com/ghodss/yaml [MIT License](https://github.com/ghodss/yaml/blob/master/LICENSE)
 - github.com/go-logfmt/logfmt [MIT License](https://github.com/go-logfmt/logfmt/blob/master/LICENSE)
 - github.com/go-ole/go-ole [MIT License](https://github.com/go-ole/go-ole/blob/master/LICENSE)
@@ -213,7 +212,11 @@ following works:
 - k8s.io/klog [Apache License 2.0](https://github.com/kubernetes/klog/blob/master/LICENSE)
 - modernc.org/libc [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/libc/-/blob/master/LICENSE)
 - modernc.org/memory [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/memory/-/blob/master/LICENSE)
+- k8s.io/api [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
+- k8s.io/apimachinery [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
+- k8s.io/client-go [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - modernc.org/sqlite [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/sqlite/-/blob/master/LICENSE)
-
+- sigs.k8s.io/structured-merge-diff [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
+- sigs.k8s.io/yaml [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 ## telegraf used and modified code from these projects
 - github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/LICENSE)

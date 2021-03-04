@@ -25,7 +25,7 @@ func TestPersistentVolume(t *testing.T) {
 			name: "no pv",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumes/": corev1.PersistentVolumeList{},
+					"/persistentvolumes/": &corev1.PersistentVolumeList{},
 				},
 			},
 			hasError: false,
@@ -34,7 +34,7 @@ func TestPersistentVolume(t *testing.T) {
 			name: "collect pvs",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumes/": corev1.PersistentVolumeList{
+					"/persistentvolumes/": &corev1.PersistentVolumeList{
 						Items: []corev1.PersistentVolume{
 							{
 								Status: corev1.PersistentVolumeStatus{
@@ -49,7 +49,7 @@ func TestPersistentVolume(t *testing.T) {
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: metav1.Time{time.Now()},
+									CreationTimestamp: metav1.Time{Time: now},
 								},
 							},
 						},

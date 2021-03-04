@@ -64,8 +64,8 @@ func TestNode(t *testing.T) {
 										"pods":                    resource.Quantity{Format: "110"},
 									},
 									Conditions: []corev1.NodeCondition{
-										{Type: "Ready", Status: "true", LastTransitionTime: metav1.Time{time.Now()}},
-										{Type: "OutOfDisk", Status: "false", LastTransitionTime: metav1.Time{created}},
+										{Type: "Ready", Status: "true", LastTransitionTime: metav1.Time{Time: now}},
+										{Type: "OutOfDisk", Status: "false", LastTransitionTime: metav1.Time{Time: created}},
 									},
 								},
 								Spec: corev1.NodeSpec{
@@ -91,7 +91,7 @@ func TestNode(t *testing.T) {
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: metav1.Time{time.Now()},
+									CreationTimestamp: metav1.Time{Time: now},
 								},
 							},
 						},

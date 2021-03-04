@@ -14,11 +14,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ericchiang/k8s"
-	corev1 "github.com/ericchiang/k8s/apis/core/v1"
 	"github.com/ghodss/yaml"
-	"github.com/kubernetes/apimachinery/pkg/fields"
-	"github.com/kubernetes/apimachinery/pkg/labels"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 type payload struct {
@@ -42,22 +43,26 @@ const cAdvisorPodListDefaultInterval = 60
 
 // loadClient parses a kubeconfig from a file and returns a Kubernetes
 // client. It does not support extensions or client auth providers.
-func loadClient(kubeconfigPath string) (*k8s.Client, error) {
+func loadClient(kubeconfigPath string) (*kubernetes.Clientset, error) {
 	data, err := ioutil.ReadFile(kubeconfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed reading '%s': %v", kubeconfigPath, err)
 	}
 
 	// Unmarshal YAML into a Kubernetes config object.
-	var config k8s.Config
+	var config rest.Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, err
 	}
-	return k8s.NewClient(&config)
+	return kubernetes.NewForConfig(&config)
 }
 
 func (p *Prometheus) start(ctx context.Context) error {
-	client, err := k8s.NewInClusterClient()
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return fmt.Errorf("Failed to get InClusterConfig - %v", err)
+	}
+	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		u, err := user.Current()
 		if err != nil {
@@ -110,44 +115,36 @@ func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 	selectors := podSelector(p)
 
 	pod := &corev1.Pod{}
-	watcher, err := client.Watch(ctx, p.PodNamespace, &corev1.Pod{}, selectors...)
+	watcher, err := client.CoreV1().Pods(p.PodNamespace).Watch(ctx, metav1.ListOptions{
+		LabelSelector: p.KubernetesLabelSelector,
+		FieldSelector: p.KubernetesFieldSelector,
+	})
 	if err != nil {
 		return err
 	}
-	defer watcher.Close()
+	for event := range watcher.ResultChan() {
+		pod = &corev1.Pod{}
+		// If the pod is not "ready", there will be no ip associated with it.
+		if pod.Annotations["prometheus.io/scrape"] != "true" ||
+			!podReady(pod.Status.ContainerStatuses) {
+			continue
+		}
 
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-			pod = &corev1.Pod{}
-			// An error here means we need to reconnect the watcher.
-			eventType, err := watcher.Next(pod)
-			if err != nil {
-				return err
-			}
-
-			// If the pod is not "ready", there will be no ip associated with it.
-			if pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] != "true" ||
-				!podReady(pod.Status.GetContainerStatuses()) {
-				continue
-			}
-
-			switch eventType {
-			case k8s.EventAdded:
+		switch event.Type {
+		case watch.Added:
+			registerPod(pod, p)
+		case watch.Modified:
+			// To avoid multiple actions for each event, unregister on the first event
+			// in the delete sequence, when the containers are still "ready".
+			if pod.GetDeletionTimestamp() != nil {
+				unregisterPod(pod, p)
+			} else {
 				registerPod(pod, p)
-			case k8s.EventModified:
-				// To avoid multiple actions for each event, unregister on the first event
-				// in the delete sequence, when the containers are still "ready".
-				if pod.Metadata.GetDeletionTimestamp() != nil {
-					unregisterPod(pod, p)
-				} else {
-					registerPod(pod, p)
-				}
 			}
 		}
 	}
+
+	return nil
 }
 
 func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
@@ -294,7 +291,7 @@ func podReady(statuss []*corev1.ContainerStatus) bool {
 		return false
 	}
 	for _, cs := range statuss {
-		if !cs.GetReady() {
+		if !cs.Ready {
 			return false
 		}
 	}
@@ -326,14 +323,14 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 
 	log.Printf("D! [inputs.prometheus] will scrape metrics from %q", *targetURL)
 	// add annotation as metrics tags
-	tags := pod.GetMetadata().GetAnnotations()
+	tags := pod.Annotations
 	if tags == nil {
 		tags = map[string]string{}
 	}
-	tags["pod_name"] = pod.GetMetadata().GetName()
-	tags["namespace"] = pod.GetMetadata().GetNamespace()
+	tags["pod_name"] = pod.Name
+	tags["namespace"] = pod.Namespace
 	// add labels as metrics tags
-	for k, v := range pod.GetMetadata().GetLabels() {
+	for k, v := range pod.Labels {
 		tags[k] = v
 	}
 	URL, err := url.Parse(*targetURL)
@@ -358,16 +355,16 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 }
 
 func getScrapeURL(pod *corev1.Pod) *string {
-	ip := pod.Status.GetPodIP()
+	ip := pod.Status.PodIP
 	if ip == "" {
 		// return as if scrape was disabled, we will be notified again once the pod
 		// has an IP
 		return nil
 	}
 
-	scheme := pod.GetMetadata().GetAnnotations()["prometheus.io/scheme"]
-	path := pod.GetMetadata().GetAnnotations()["prometheus.io/path"]
-	port := pod.GetMetadata().GetAnnotations()["prometheus.io/port"]
+	scheme := pod.Annotations["prometheus.io/scheme"]
+	path := pod.Annotations["prometheus.io/path"]
+	port := pod.Annotations["prometheus.io/port"]
 
 	if scheme == "" {
 		scheme = "http"
@@ -397,7 +394,7 @@ func unregisterPod(pod *corev1.Pod, p *Prometheus) {
 	}
 
 	log.Printf("D! [inputs.prometheus] registered a delete request for %q in namespace %q",
-		pod.GetMetadata().GetName(), pod.GetMetadata().GetNamespace())
+		pod.Name, pod.Namespace)
 
 	p.lock.Lock()
 	defer p.lock.Unlock()
