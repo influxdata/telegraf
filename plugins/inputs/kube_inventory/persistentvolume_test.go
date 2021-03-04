@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/core/v1"
-	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -25,7 +25,7 @@ func TestPersistentVolume(t *testing.T) {
 			name: "no pv",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumes/": &v1.PersistentVolumeList{},
+					"/persistentvolumes/": corev1.PersistentVolumeList{},
 				},
 			},
 			hasError: false,
@@ -34,22 +34,22 @@ func TestPersistentVolume(t *testing.T) {
 			name: "collect pvs",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumes/": &v1.PersistentVolumeList{
-						Items: []*v1.PersistentVolume{
+					"/persistentvolumes/": corev1.PersistentVolumeList{
+						Items: []corev1.PersistentVolume{
 							{
-								Status: &v1.PersistentVolumeStatus{
-									Phase: toStrPtr("pending"),
+								Status: corev1.PersistentVolumeStatus{
+									Phase: "pending",
 								},
-								Spec: &v1.PersistentVolumeSpec{
-									StorageClassName: toStrPtr("ebs-1"),
+								Spec: corev1.PersistentVolumeSpec{
+									StorageClassName: "ebs-1",
 								},
-								Metadata: &metav1.ObjectMeta{
-									Name: toStrPtr("pv1"),
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "pv1",
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+									CreationTimestamp: metav1.Time{time.Now()},
 								},
 							},
 						},
@@ -79,8 +79,8 @@ func TestPersistentVolume(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, pv := range ((v.handler.responseMap["/persistentvolumes/"]).(*v1.PersistentVolumeList)).Items {
-			err := ks.gatherPersistentVolume(*pv, acc)
+		for _, pv := range ((v.handler.responseMap["/persistentvolumes/"]).(*corev1.PersistentVolumeList)).Items {
+			err := ks.gatherPersistentVolume(pv, acc)
 			if err != nil {
 				t.Errorf("Failed to gather pv - %s", err.Error())
 			}

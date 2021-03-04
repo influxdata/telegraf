@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
-	v1 "github.com/ericchiang/k8s/apis/core/v1"
-	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
-	"github.com/ericchiang/k8s/apis/resource"
 	"github.com/influxdata/telegraf/testutil"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestPod(t *testing.T) {
@@ -41,79 +42,79 @@ func TestPod(t *testing.T) {
 			name: "collect pods",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/pods/": &v1.PodList{
-						Items: []*v1.Pod{
+					"/pods/": &corev1.PodList{
+						Items: []corev1.Pod{
 							{
-								Spec: &v1.PodSpec{
-									NodeName: toStrPtr("node1"),
-									Containers: []*v1.Container{
+								Spec: corev1.PodSpec{
+									NodeName: "node1",
+									Containers: []corev1.Container{
 										{
-											Name:  toStrPtr("running"),
-											Image: toStrPtr("image1"),
-											Ports: []*v1.ContainerPort{
+											Name:  "running",
+											Image: "image1",
+											Ports: []corev1.ContainerPort{
 												{
-													ContainerPort: toInt32Ptr(8080),
-													Protocol:      toStrPtr("TCP"),
+													ContainerPort: 8080,
+													Protocol:      "TCP",
 												},
 											},
-											Resources: &v1.ResourceRequirements{
-												Limits: map[string]*resource.Quantity{
-													"cpu": {String_: toStrPtr("100m")},
+											Resources: corev1.ResourceRequirements{
+												Limits: corev1.ResourceList{
+													"cpu": resource.Quantity{Format: "100m"},
 												},
-												Requests: map[string]*resource.Quantity{
-													"cpu": {String_: toStrPtr("100m")},
+												Requests: corev1.ResourceList{
+													"cpu": resource.Quantity{Format: "100m"},
 												},
 											},
 										},
 										{
-											Name:  toStrPtr("completed"),
-											Image: toStrPtr("image1"),
-											Ports: []*v1.ContainerPort{
+											Name:  "completed",
+											Image: "image1",
+											Ports: []corev1.ContainerPort{
 												{
-													ContainerPort: toInt32Ptr(8080),
-													Protocol:      toStrPtr("TCP"),
+													ContainerPort: 8080,
+													Protocol:      "TCP",
 												},
 											},
-											Resources: &v1.ResourceRequirements{
-												Limits: map[string]*resource.Quantity{
-													"cpu": {String_: toStrPtr("100m")},
+											Resources: corev1.ResourceRequirements{
+												Limits: corev1.ResourceList{
+													"cpu": resource.Quantity{Format: "100m"},
 												},
-												Requests: map[string]*resource.Quantity{
-													"cpu": {String_: toStrPtr("100m")},
+												Requests: corev1.ResourceList{
+													"cpu": resource.Quantity{Format: "100m"},
 												},
 											},
 										},
 										{
-											Name:  toStrPtr("waiting"),
-											Image: toStrPtr("image1"),
-											Ports: []*v1.ContainerPort{
+											Name:  "waiting",
+											Image: "image1",
+											Ports: []corev1.ContainerPort{
 												{
-													ContainerPort: toInt32Ptr(8080),
-													Protocol:      toStrPtr("TCP"),
+													ContainerPort: 8080,
+													Protocol:      "TCP",
 												},
 											},
-											Resources: &v1.ResourceRequirements{
-												Limits: map[string]*resource.Quantity{
-													"cpu": {String_: toStrPtr("100m")},
+											Resources: corev1.ResourceRequirements{
+												Limits: corev1.ResourceList{
+													"cpu": resource.Quantity{Format: "100m"},
 												},
-												Requests: map[string]*resource.Quantity{
-													"cpu": {String_: toStrPtr("100m")},
+												Requests: corev1.ResourceList{
+													"cpu": resource.Quantity{Format: "100m"},
 												},
 											},
 										},
 									},
-									Volumes: []*v1.Volume{
+									Volumes: []corev1.Volume{
 										{
-											Name: toStrPtr("vol1"),
-											VolumeSource: &v1.VolumeSource{
-												PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
-													ClaimName: toStrPtr("pc1"),
-													ReadOnly:  toBoolPtr(true),
+											Name: "vol1",
+											VolumeSource: corev1.VolumeSource{
+												PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+													ClaimName: "pc1",
+													ReadOnly:  true,
 												},
 											},
 										},
 										{
-											Name: toStrPtr("vol2"),
+											Name: "vol2",
 										},
 									},
 									NodeSelector: map[string]string{
@@ -121,89 +122,89 @@ func TestPod(t *testing.T) {
 										"select2": "s2",
 									},
 								},
-								Status: &v1.PodStatus{
-									Phase:     toStrPtr("Running"),
-									HostIP:    toStrPtr("180.12.10.18"),
-									PodIP:     toStrPtr("10.244.2.15"),
-									StartTime: &metav1.Time{Seconds: toInt64Ptr(started.Unix())},
-									Conditions: []*v1.PodCondition{
+								Status: corev1.PodStatus{
+									Phase:     "Running",
+									HostIP:    "180.12.10.18",
+									PodIP:     "10.244.2.15",
+									StartTime: &metav1.Time{started},
+									Conditions: []corev1.PodCondition{
 										{
-											Type:               toStrPtr("Initialized"),
-											Status:             toStrPtr("True"),
-											LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(cond1.Unix())},
+											Type:               "Initialized",
+											Status:             "True",
+											LastTransitionTime: metav1.Time{cond1},
 										},
 										{
-											Type:               toStrPtr("Ready"),
-											Status:             toStrPtr("True"),
-											LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(cond2.Unix())},
+											Type:               "Ready",
+											Status:             "True",
+											LastTransitionTime: metav1.Time{cond2},
 										},
 										{
-											Type:               toStrPtr("Scheduled"),
-											Status:             toStrPtr("True"),
-											LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(cond1.Unix())},
+											Type:               "Scheduled",
+											Status:             "True",
+											LastTransitionTime: metav1.Time{cond1},
 										},
 									},
-									ContainerStatuses: []*v1.ContainerStatus{
+									ContainerStatuses: []corev1.ContainerStatus{
 										{
-											Name: toStrPtr("running"),
-											State: &v1.ContainerState{
+											Name: "running",
+											State: corev1.ContainerState{
 												Running: &v1.ContainerStateRunning{
-													StartedAt: &metav1.Time{Seconds: toInt64Ptr(cond2.Unix())},
+													StartedAt: metav1.Time{started},
 												},
 											},
-											Ready:        toBoolPtr(true),
-											RestartCount: toInt32Ptr(3),
-											Image:        toStrPtr("image1"),
-											ImageID:      toStrPtr("image_id1"),
-											ContainerID:  toStrPtr("docker://54abe32d0094479d3d"),
+											Ready:        true,
+											RestartCount: 3,
+											Image:        "image1",
+											ImageID:      "image_id1",
+											ContainerID:  "docker://54abe32d0094479d3d",
 										},
 										{
-											Name: toStrPtr("completed"),
-											State: &v1.ContainerState{
+											Name: "completed",
+											State: v1.ContainerState{
 												Terminated: &v1.ContainerStateTerminated{
-													StartedAt: &metav1.Time{Seconds: toInt64Ptr(cond2.Unix())},
-													ExitCode:  toInt32Ptr(0),
-													Reason:    toStrPtr("Completed"),
+													StartedAt: metav1.Time{time.Now()},
+													ExitCode:  0,
+													Reason:    "Completed",
 												},
 											},
-											Ready:        toBoolPtr(false),
-											RestartCount: toInt32Ptr(3),
-											Image:        toStrPtr("image1"),
-											ImageID:      toStrPtr("image_id1"),
-											ContainerID:  toStrPtr("docker://54abe32d0094479d3d"),
+											Ready:        false,
+											RestartCount: 3,
+											Image:        "image1",
+											ImageID:      "image_id1",
+											ContainerID:  "docker://54abe32d0094479d3d",
 										},
 										{
-											Name: toStrPtr("waiting"),
-											State: &v1.ContainerState{
+											Name: "waiting",
+											State: v1.ContainerState{
 												Waiting: &v1.ContainerStateWaiting{
-													Reason: toStrPtr("PodUninitialized"),
+													Reason: "PodUninitialized",
 												},
 											},
-											Ready:        toBoolPtr(false),
-											RestartCount: toInt32Ptr(3),
-											Image:        toStrPtr("image1"),
-											ImageID:      toStrPtr("image_id1"),
-											ContainerID:  toStrPtr("docker://54abe32d0094479d3d"),
+											Ready:        false,
+											RestartCount: 3,
+											Image:        "image1",
+											ImageID:      "image_id1",
+											ContainerID:  "docker://54abe32d0094479d3d",
 										},
 									},
 								},
-								Metadata: &metav1.ObjectMeta{
-									OwnerReferences: []*metav1.OwnerReference{
+								ObjectMeta: metav1.ObjectMeta{
+									OwnerReferences: []metav1.OwnerReference{
 										{
-											ApiVersion: toStrPtr("apps/v1"),
-											Kind:       toStrPtr("DaemonSet"),
-											Name:       toStrPtr("forwarder"),
+											APIVersion: "apps/v1",
+											Kind:       "DaemonSet",
+											Name:       "forwarder",
 											Controller: toBoolPtr(true),
 										},
 									},
-									Generation: toInt64Ptr(11232),
-									Namespace:  toStrPtr("ns1"),
-									Name:       toStrPtr("pod1"),
+									Generation: 11232,
+									Namespace:  "ns1",
+									Name:       "pod1",
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(created.Unix())},
+									CreationTimestamp: metav1.Time{created},
 								},
 							},
 						},
@@ -284,7 +285,7 @@ func TestPod(t *testing.T) {
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
 		for _, pod := range ((v.handler.responseMap["/pods/"]).(*v1.PodList)).Items {
-			err := ks.gatherPod(*pod, acc)
+			err := ks.gatherPod(pod, acc)
 			if err != nil {
 				t.Errorf("Failed to gather pod - %s", err.Error())
 			}
@@ -325,42 +326,42 @@ func TestPodSelectorFilter(t *testing.T) {
 
 	responseMap := map[string]interface{}{
 		"/pods/": &v1.PodList{
-			Items: []*v1.Pod{
+			Items: []corev1.Pod{
 				{
-					Spec: &v1.PodSpec{
-						NodeName: toStrPtr("node1"),
-						Containers: []*v1.Container{
+					Spec: corev1.PodSpec{
+						NodeName: "node1",
+						Containers: []corev1.Container{
 							{
-								Name:  toStrPtr("forwarder"),
-								Image: toStrPtr("image1"),
-								Ports: []*v1.ContainerPort{
+								Name:  "forwarder",
+								Image: "image1",
+								Ports: []corev1.ContainerPort{
 									{
-										ContainerPort: toInt32Ptr(8080),
-										Protocol:      toStrPtr("TCP"),
+										ContainerPort: 8080,
+										Protocol:      "TCP",
 									},
 								},
-								Resources: &v1.ResourceRequirements{
-									Limits: map[string]*resource.Quantity{
-										"cpu": {String_: toStrPtr("100m")},
+								Resources: corev1.ResourceRequirements{
+									Limits: v1.ResourceList{
+										"cpu": resource.Quantity{Format: "100m"},
 									},
-									Requests: map[string]*resource.Quantity{
-										"cpu": {String_: toStrPtr("100m")},
+									Requests: v1.ResourceList{
+										"cpu": resource.Quantity{Format: "100m"},
 									},
 								},
 							},
 						},
-						Volumes: []*v1.Volume{
+						Volumes: []corev1.Volume{
 							{
-								Name: toStrPtr("vol1"),
-								VolumeSource: &v1.VolumeSource{
+								Name: "vol1",
+								VolumeSource: corev1.VolumeSource{
 									PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
-										ClaimName: toStrPtr("pc1"),
-										ReadOnly:  toBoolPtr(true),
+										ClaimName: "pc1",
+										ReadOnly:  true,
 									},
 								},
 							},
 							{
-								Name: toStrPtr("vol2"),
+								Name: "vol2",
 							},
 						},
 						NodeSelector: map[string]string{
@@ -368,61 +369,61 @@ func TestPodSelectorFilter(t *testing.T) {
 							"select2": "s2",
 						},
 					},
-					Status: &v1.PodStatus{
-						Phase:     toStrPtr("Running"),
-						HostIP:    toStrPtr("180.12.10.18"),
-						PodIP:     toStrPtr("10.244.2.15"),
-						StartTime: &metav1.Time{Seconds: toInt64Ptr(started.Unix())},
-						Conditions: []*v1.PodCondition{
+					Status: v1.PodStatus{
+						Phase:     "Running",
+						HostIP:    "180.12.10.18",
+						PodIP:     "10.244.2.15",
+						StartTime: &metav1.Time{started},
+						Conditions: []v1.PodCondition{
 							{
-								Type:               toStrPtr("Initialized"),
-								Status:             toStrPtr("True"),
-								LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(cond1.Unix())},
+								Type:               "Initialized",
+								Status:             "True",
+								LastTransitionTime: metav1.Time{cond1},
 							},
 							{
-								Type:               toStrPtr("Ready"),
-								Status:             toStrPtr("True"),
-								LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(cond2.Unix())},
+								Type:               "Ready",
+								Status:             "True",
+								LastTransitionTime: metav1.Time{cond2},
 							},
 							{
-								Type:               toStrPtr("Scheduled"),
-								Status:             toStrPtr("True"),
-								LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(cond1.Unix())},
+								Type:               "Scheduled",
+								Status:             "True",
+								LastTransitionTime: metav1.Time{cond1},
 							},
 						},
-						ContainerStatuses: []*v1.ContainerStatus{
+						ContainerStatuses: []v1.ContainerStatus{
 							{
-								Name: toStrPtr("forwarder"),
-								State: &v1.ContainerState{
+								Name: "forwarder",
+								State: v1.ContainerState{
 									Running: &v1.ContainerStateRunning{
-										StartedAt: &metav1.Time{Seconds: toInt64Ptr(cond2.Unix())},
+										StartedAt: metav1.Time{time.Now()},
 									},
 								},
-								Ready:        toBoolPtr(true),
-								RestartCount: toInt32Ptr(3),
-								Image:        toStrPtr("image1"),
-								ImageID:      toStrPtr("image_id1"),
-								ContainerID:  toStrPtr("docker://54abe32d0094479d3d"),
+								Ready:        true,
+								RestartCount: 3,
+								Image:        "image1",
+								ImageID:      "image_id1",
+								ContainerID:  "docker://54abe32d0094479d3d",
 							},
 						},
 					},
-					Metadata: &metav1.ObjectMeta{
-						OwnerReferences: []*metav1.OwnerReference{
+					ObjectMeta: metav1.ObjectMeta{
+						OwnerReferences: []metav1.OwnerReference{
 							{
-								ApiVersion: toStrPtr("apps/v1"),
-								Kind:       toStrPtr("DaemonSet"),
-								Name:       toStrPtr("forwarder"),
+								APIVersion: "apps/v1",
+								Kind:       "DaemonSet",
+								Name:       "forwarder",
 								Controller: toBoolPtr(true),
 							},
 						},
-						Generation: toInt64Ptr(11232),
-						Namespace:  toStrPtr("ns1"),
-						Name:       toStrPtr("pod1"),
+						Generation: 11232,
+						Namespace:  "ns1",
+						Name:       "pod1",
 						Labels: map[string]string{
 							"lab1": "v1",
 							"lab2": "v2",
 						},
-						CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(created.Unix())},
+						CreationTimestamp: metav1.Time{created},
 					},
 				},
 			},
@@ -533,7 +534,7 @@ func TestPodSelectorFilter(t *testing.T) {
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
 		for _, pod := range ((v.handler.responseMap["/pods/"]).(*v1.PodList)).Items {
-			err := ks.gatherPod(*pod, acc)
+			err := ks.gatherPod(pod, acc)
 			if err != nil {
 				t.Errorf("Failed to gather pod - %s", err.Error())
 			}
@@ -575,61 +576,61 @@ func TestPodPendingContainers(t *testing.T) {
 			name: "collect pods",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/pods/": &v1.PodList{
-						Items: []*v1.Pod{
+					"/pods/": &corev1.PodList{
+						Items: []v1.Pod{
 							{
-								Spec: &v1.PodSpec{
-									NodeName: toStrPtr("node1"),
-									Containers: []*v1.Container{
+								Spec: v1.PodSpec{
+									NodeName: "node1",
+									Containers: []v1.Container{
 										{
-											Name:  toStrPtr("waiting"),
-											Image: toStrPtr("image1"),
-											Ports: []*v1.ContainerPort{
+											Name:  "waiting",
+											Image: "image1",
+											Ports: []v1.ContainerPort{
 												{
-													ContainerPort: toInt32Ptr(8080),
-													Protocol:      toStrPtr("TCP"),
+													ContainerPort: 8080,
+													Protocol:      "TCP",
 												},
 											},
-											Resources: &v1.ResourceRequirements{
-												Limits: map[string]*resource.Quantity{
-													"cpu": {String_: toStrPtr("100m")},
+											Resources: v1.ResourceRequirements{
+												Limits: v1.ResourceList{
+													"cpu": resource.Quantity{Format: "100m"},
 												},
-												Requests: map[string]*resource.Quantity{
-													"cpu": {String_: toStrPtr("100m")},
+												Requests: v1.ResourceList{
+													"cpu": resource.Quantity{Format: "100m"},
 												},
 											},
 										},
 										{
-											Name:  toStrPtr("terminated"),
-											Image: toStrPtr("image1"),
-											Ports: []*v1.ContainerPort{
+											Name:  "terminated",
+											Image: "image1",
+											Ports: []v1.ContainerPort{
 												{
-													ContainerPort: toInt32Ptr(8080),
-													Protocol:      toStrPtr("TCP"),
+													ContainerPort: 8080,
+													Protocol:      "TCP",
 												},
 											},
-											Resources: &v1.ResourceRequirements{
-												Limits: map[string]*resource.Quantity{
-													"cpu": {String_: toStrPtr("100m")},
+											Resources: v1.ResourceRequirements{
+												Limits: v1.ResourceList{
+													"cpu": resource.Quantity{Format: "100m"},
 												},
-												Requests: map[string]*resource.Quantity{
-													"cpu": {String_: toStrPtr("100m")},
+												Requests: v1.ResourceList{
+													"cpu": resource.Quantity{Format: "100m"},
 												},
 											},
 										},
 									},
-									Volumes: []*v1.Volume{
+									Volumes: []v1.Volume{
 										{
-											Name: toStrPtr("vol1"),
-											VolumeSource: &v1.VolumeSource{
+											Name: "vol1",
+											VolumeSource: v1.VolumeSource{
 												PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
-													ClaimName: toStrPtr("pc1"),
-													ReadOnly:  toBoolPtr(true),
+													ClaimName: "pc1",
+													ReadOnly:  true,
 												},
 											},
 										},
 										{
-											Name: toStrPtr("vol2"),
+											Name: "vol2",
 										},
 									},
 									NodeSelector: map[string]string{
@@ -637,48 +638,48 @@ func TestPodPendingContainers(t *testing.T) {
 										"select2": "s2",
 									},
 								},
-								Status: &v1.PodStatus{
-									Phase:     toStrPtr("Pending"),
-									Reason:    toStrPtr("NetworkNotReady"),
-									HostIP:    toStrPtr("180.12.10.18"),
-									PodIP:     toStrPtr("10.244.2.15"),
-									StartTime: &metav1.Time{Seconds: toInt64Ptr(started.Unix())},
-									Conditions: []*v1.PodCondition{
+								Status: v1.PodStatus{
+									Phase:     "Pending",
+									Reason:    "NetworkNotReady",
+									HostIP:    "180.12.10.18",
+									PodIP:     "10.244.2.15",
+									StartTime: &metav1.Time{started},
+									Conditions: []v1.PodCondition{
 										{
-											Type:               toStrPtr("Initialized"),
-											Status:             toStrPtr("True"),
-											LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(cond1.Unix())},
+											Type:               "Initialized",
+											Status:             "True",
+											LastTransitionTime: metav1.Time{cond1},
 										},
 										{
-											Type:               toStrPtr("Ready"),
-											Status:             toStrPtr("True"),
-											LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(cond2.Unix())},
+											Type:               "Ready",
+											Status:             "True",
+											LastTransitionTime: metav1.Time{cond2},
 										},
 										{
-											Type:               toStrPtr("Scheduled"),
-											Status:             toStrPtr("True"),
-											LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(cond1.Unix())},
+											Type:               "Scheduled",
+											Status:             "True",
+											LastTransitionTime: metav1.Time{cond1},
 										},
 									},
-									ContainerStatuses: []*v1.ContainerStatus{},
+									ContainerStatuses: []v1.ContainerStatus{},
 								},
-								Metadata: &metav1.ObjectMeta{
-									OwnerReferences: []*metav1.OwnerReference{
+								ObjectMeta: metav1.ObjectMeta{
+									OwnerReferences: []metav1.OwnerReference{
 										{
-											ApiVersion: toStrPtr("apps/v1"),
-											Kind:       toStrPtr("DaemonSet"),
-											Name:       toStrPtr("forwarder"),
+											APIVersion: "apps/v1",
+											Kind:       "DaemonSet",
+											Name:       "forwarder",
 											Controller: toBoolPtr(true),
 										},
 									},
-									Generation: toInt64Ptr(11232),
-									Namespace:  toStrPtr("ns1"),
-									Name:       toStrPtr("pod1"),
+									Generation: 11232,
+									Namespace:  "ns1",
+									Name:       "pod1",
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(created.Unix())},
+									CreationTimestamp: metav1.Time{created},
 								},
 							},
 						},
@@ -741,7 +742,7 @@ func TestPodPendingContainers(t *testing.T) {
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
 		for _, pod := range ((v.handler.responseMap["/pods/"]).(*v1.PodList)).Items {
-			err := ks.gatherPod(*pod, acc)
+			err := ks.gatherPod(pod, acc)
 			if err != nil {
 				t.Errorf("Failed to gather pod - %s", err.Error())
 			}

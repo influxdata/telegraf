@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/apps/v1"
-	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
+	v1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -38,16 +38,16 @@ func TestStatefulSet(t *testing.T) {
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
 					"/statefulsets/": &v1.StatefulSetList{
-						Items: []*v1.StatefulSet{
+						Items: []v1.StatefulSet{
 							{
-								Status: &v1.StatefulSetStatus{
-									Replicas:           toInt32Ptr(2),
-									CurrentReplicas:    toInt32Ptr(4),
-									ReadyReplicas:      toInt32Ptr(1),
-									UpdatedReplicas:    toInt32Ptr(3),
-									ObservedGeneration: toInt64Ptr(119),
+								Status: v1.StatefulSetStatus{
+									Replicas:           2,
+									CurrentReplicas:    4,
+									ReadyReplicas:      1,
+									UpdatedReplicas:    3,
+									ObservedGeneration: 119,
 								},
-								Spec: &v1.StatefulSetSpec{
+								Spec: v1.StatefulSetSpec{
 									Replicas: toInt32Ptr(3),
 									Selector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
@@ -56,15 +56,11 @@ func TestStatefulSet(t *testing.T) {
 										},
 									},
 								},
-								Metadata: &metav1.ObjectMeta{
-									Generation: toInt64Ptr(332),
-									Namespace:  toStrPtr("ns1"),
-									Name:       toStrPtr("sts1"),
-									Labels: map[string]string{
-										"lab1": "v1",
-										"lab2": "v2",
-									},
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation:        332,
+									Namespace:         "ns1",
+									Name:              "sts1",
+									CreationTimestamp: metav1.Time{time.Now()},
 								},
 							},
 						},
@@ -106,7 +102,7 @@ func TestStatefulSet(t *testing.T) {
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
 		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1.StatefulSetList)).Items {
-			err := ks.gatherStatefulSet(*ss, acc)
+			err := ks.gatherStatefulSet(ss, acc)
 			if err != nil {
 				t.Errorf("Failed to gather ss - %s", err.Error())
 			}
@@ -144,16 +140,16 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 
 	responseMap := map[string]interface{}{
 		"/statefulsets/": &v1.StatefulSetList{
-			Items: []*v1.StatefulSet{
+			Items: []v1.StatefulSet{
 				{
-					Status: &v1.StatefulSetStatus{
-						Replicas:           toInt32Ptr(2),
-						CurrentReplicas:    toInt32Ptr(4),
-						ReadyReplicas:      toInt32Ptr(1),
-						UpdatedReplicas:    toInt32Ptr(3),
-						ObservedGeneration: toInt64Ptr(119),
+					Status: v1.StatefulSetStatus{
+						Replicas:           2,
+						CurrentReplicas:    4,
+						ReadyReplicas:      1,
+						UpdatedReplicas:    3,
+						ObservedGeneration: 119,
 					},
-					Spec: &v1.StatefulSetSpec{
+					Spec: v1.StatefulSetSpec{
 						Replicas: toInt32Ptr(3),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
@@ -162,15 +158,11 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 							},
 						},
 					},
-					Metadata: &metav1.ObjectMeta{
-						Generation: toInt64Ptr(332),
-						Namespace:  toStrPtr("ns1"),
-						Name:       toStrPtr("sts1"),
-						Labels: map[string]string{
-							"lab1": "v1",
-							"lab2": "v2",
-						},
-						CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+					ObjectMeta: metav1.ObjectMeta{
+						Generation:        332,
+						Namespace:         "ns1",
+						Name:              "sts1",
+						CreationTimestamp: metav1.Time{time.Now()},
 					},
 				},
 			},
@@ -281,7 +273,7 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
 		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1.StatefulSetList)).Items {
-			err := ks.gatherStatefulSet(*ss, acc)
+			err := ks.gatherStatefulSet(ss, acc)
 			if err != nil {
 				t.Errorf("Failed to gather ss - %s", err.Error())
 			}

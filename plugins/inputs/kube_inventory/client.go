@@ -4,10 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/ericchiang/k8s"
-	v1APPS "github.com/ericchiang/k8s/apis/apps/v1"
-	v1 "github.com/ericchiang/k8s/apis/core/v1"
-	v1beta1EXT "github.com/ericchiang/k8s/apis/extensions/v1beta1"
+	v1apps "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
@@ -15,104 +17,73 @@ import (
 type client struct {
 	namespace string
 	timeout   time.Duration
-	*k8s.Client
+	*kubernetes.Clientset
 }
 
 func newClient(baseURL, namespace, bearerToken string, timeout time.Duration, tlsConfig tls.ClientConfig) (*client, error) {
-	c, err := k8s.NewClient(&k8s.Config{
-		Clusters: []k8s.NamedCluster{{Name: "cluster", Cluster: k8s.Cluster{
-			Server:                baseURL,
-			InsecureSkipTLSVerify: tlsConfig.InsecureSkipVerify,
-			CertificateAuthority:  tlsConfig.TLSCA,
-		}}},
-		Contexts: []k8s.NamedContext{{Name: "context", Context: k8s.Context{
-			Cluster:   "cluster",
-			AuthInfo:  "auth",
-			Namespace: namespace,
-		}}},
-		AuthInfos: []k8s.NamedAuthInfo{{Name: "auth", AuthInfo: k8s.AuthInfo{
-			Token:             bearerToken,
-			ClientCertificate: tlsConfig.TLSCert,
-			ClientKey:         tlsConfig.TLSKey,
-		}}},
+
+	c, err := kubernetes.NewForConfig(&rest.Config{
+		TLSClientConfig: rest.TLSClientConfig{
+			ServerName: baseURL,
+			Insecure:   tlsConfig.InsecureSkipVerify,
+			CAFile:     tlsConfig.TLSCA,
+			CertFile:   tlsConfig.TLSCert,
+			KeyFile:    tlsConfig.TLSKey,
+		},
+		BearerToken:   bearerToken,
+		ContentConfig: rest.ContentConfig{},
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	if err != nil {
+		return nil, err
+	}
+
 	return &client{
-		Client:    c,
+		Clientset: c,
 		timeout:   timeout,
 		namespace: namespace,
 	}, nil
 }
 
-func (c *client) getDaemonSets(ctx context.Context) (*v1APPS.DaemonSetList, error) {
-	list := new(v1APPS.DaemonSetList)
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	return list, c.List(ctx, c.namespace, list)
+func (c *client) getDaemonSets(ctx context.Context) (*v1apps.DaemonSetList, error) {
+	return c.AppsV1().DaemonSets(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getDeployments(ctx context.Context) (*v1APPS.DeploymentList, error) {
-	list := &v1APPS.DeploymentList{}
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	return list, c.List(ctx, c.namespace, list)
+func (c *client) getDeployments(ctx context.Context) (*v1apps.DeploymentList, error) {
+	return c.AppsV1().Deployments(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getEndpoints(ctx context.Context) (*v1.EndpointsList, error) {
-	list := new(v1.EndpointsList)
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	return list, c.List(ctx, c.namespace, list)
+func (c *client) getEndpoints(ctx context.Context) (*corev1.EndpointsList, error) {
+	return c.CoreV1().Endpoints(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getIngress(ctx context.Context) (*v1beta1EXT.IngressList, error) {
-	list := new(v1beta1EXT.IngressList)
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	return list, c.List(ctx, c.namespace, list)
+func (c *client) getIngress(ctx context.Context) (*netv1.IngressList, error) {
+	return c.NetworkingV1().Ingresses(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getNodes(ctx context.Context) (*v1.NodeList, error) {
-	list := new(v1.NodeList)
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	return list, c.List(ctx, "", list)
+func (c *client) getNodes(ctx context.Context) (*corev1.NodeList, error) {
+	return c.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getPersistentVolumes(ctx context.Context) (*v1.PersistentVolumeList, error) {
-	list := new(v1.PersistentVolumeList)
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	return list, c.List(ctx, "", list)
+func (c *client) getPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error) {
+	return c.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getPersistentVolumeClaims(ctx context.Context) (*v1.PersistentVolumeClaimList, error) {
-	list := new(v1.PersistentVolumeClaimList)
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	return list, c.List(ctx, c.namespace, list)
+func (c *client) getPersistentVolumeClaims(ctx context.Context) (*corev1.PersistentVolumeClaimList, error) {
+	return c.CoreV1().PersistentVolumeClaims(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getPods(ctx context.Context) (*v1.PodList, error) {
-	list := new(v1.PodList)
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	return list, c.List(ctx, c.namespace, list)
+func (c *client) getPods(ctx context.Context) (*corev1.PodList, error) {
+	return c.CoreV1().Pods(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getServices(ctx context.Context) (*v1.ServiceList, error) {
-	list := new(v1.ServiceList)
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	return list, c.List(ctx, c.namespace, list)
+func (c *client) getServices(ctx context.Context) (*corev1.ServiceList, error) {
+	return c.CoreV1().Services(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getStatefulSets(ctx context.Context) (*v1APPS.StatefulSetList, error) {
-	list := new(v1APPS.StatefulSetList)
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	return list, c.List(ctx, c.namespace, list)
+func (c *client) getStatefulSets(ctx context.Context) (*v1apps.StatefulSetList, error) {
+	return c.AppsV1().StatefulSets(c.namespace).List(ctx, metav1.ListOptions{})
 }
