@@ -99,7 +99,7 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	assert.True(t, acc.TagValue("test_metric", "url") == ts.URL)
 }
 
-func TestPrometheusGeneratesMetricsAlthoughFirstDNSFails(t *testing.T) {
+func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

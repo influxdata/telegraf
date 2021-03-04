@@ -10,9 +10,14 @@ Pull requests welcome.
 - [octoprint](https://github.com/BattleBas/octoprint-telegraf-plugin) - Gather 3d print information from the octoprint API.
 - [open-hardware-monitor](https://github.com/marianob85/open_hardware_monitor-telegraf-plugin) - Gather sensors data provided by [Open Hardware Monitor](http://openhardwaremonitor.org)
 - [rand](https://github.com/ssoroka/rand) - Generate random numbers
+- [SMCIPMITool](https://github.com/jhpope/smc_ipmi) - Python script to parse the output of [SMCIPMITool](https://www.supermicro.com/en/solutions/management-software/ipmi-utilities) into [InfluxDB line protocol](https://docs.influxdata.com/influxdb/latest/reference/syntax/line-protocol/). 
 - [systemd-timings](https://github.com/pdmorrow/telegraf-execd-systemd-timings) - Gather systemd boot and unit timestamp metrics.
 - [twitter](https://github.com/inabagumi/twitter-telegraf-plugin) - Gather account information from Twitter accounts
 - [youtube](https://github.com/inabagumi/youtube-telegraf-plugin) - Gather account information from YouTube channels
 
 ## Outputs
 - [kinesis](https://github.com/morfien101/telegraf-output-kinesis) - Aggregation and compression of metrics to send Amazon Kinesis.
+
+## Processors
+ - [geoip](https://github.com/a-bali/telegraf-geoip) - Add GeoIP information to IP addresses.
+ 

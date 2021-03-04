@@ -129,7 +129,7 @@ func buildURL(endpoint string, base string) (*url.URL, error) {
 
 func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) error {
 	summaryMetrics := &SummaryMetrics{}
-	err := k.LoadJson(fmt.Sprintf("%s/stats/summary", baseURL), summaryMetrics)
+	err := k.LoadJSON(fmt.Sprintf("%s/stats/summary", baseURL), summaryMetrics)
 	if err != nil {
 		return err
 	}
@@ -193,19 +193,19 @@ func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) 
 }
 
 func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Metadata, error) {
-	var podApi Pods
-	err := k.LoadJson(fmt.Sprintf("%s/pods", baseURL), &podApi)
+	var podAPI Pods
+	err := k.LoadJSON(fmt.Sprintf("%s/pods", baseURL), &podAPI)
 	if err != nil {
 		return nil, err
 	}
 	var podInfos []Metadata
-	for _, podMetadata := range podApi.Items {
+	for _, podMetadata := range podAPI.Items {
 		podInfos = append(podInfos, podMetadata.Metadata)
 	}
 	return podInfos, nil
 }
 
-func (k *Kubernetes) LoadJson(url string, v interface{}) error {
+func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 	var req, err = http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err

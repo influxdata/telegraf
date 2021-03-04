@@ -613,3 +613,57 @@ func TestStaticMeasurementName(t *testing.T) {
 	}
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime())
 }
+
+func TestSkipEmptyStringValue(t *testing.T) {
+	p, err := NewParser(
+		&Config{
+			MetricName:     "csv",
+			HeaderRowCount: 1,
+			ColumnNames:    []string{"a", "b"},
+			SkipValues:     []string{""},
+		},
+	)
+	require.NoError(t, err)
+	testCSV := `a,b
+1,""`
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("csv",
+			map[string]string{},
+			map[string]interface{}{
+				"a": 1,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime())
+}
+
+func TestSkipSpecifiedStringValue(t *testing.T) {
+	p, err := NewParser(
+		&Config{
+			MetricName:     "csv",
+			HeaderRowCount: 1,
+			ColumnNames:    []string{"a", "b"},
+			SkipValues:     []string{"MM"},
+		},
+	)
+	require.NoError(t, err)
+	testCSV := `a,b
+1,MM`
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("csv",
+			map[string]string{},
+			map[string]interface{}{
+				"a": 1,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime())
+}

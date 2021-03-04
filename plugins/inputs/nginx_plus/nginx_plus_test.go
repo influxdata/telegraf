@@ -270,9 +270,9 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err_nginx := n.Gather(&acc)
+	errNginx := n.Gather(&acc)
 
-	require.NoError(t, err_nginx)
+	require.NoError(t, errNginx)
 
 	addr, err := url.Parse(ts.URL)
 	if err != nil {

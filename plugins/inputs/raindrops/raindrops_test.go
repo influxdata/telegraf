@@ -61,7 +61,7 @@ func TestRaindropsGeneratesMetrics(t *testing.T) {
 
 	n := &Raindrops{
 		Urls: []string{fmt.Sprintf("%s/_raindrops", ts.URL)},
-		http_client: &http.Client{Transport: &http.Transport{
+		httpClient: &http.Client{Transport: &http.Transport{
 			ResponseHeaderTimeout: time.Duration(3 * time.Second),
 		}},
 	}

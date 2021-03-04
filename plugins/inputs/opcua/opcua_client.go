@@ -3,7 +3,6 @@ package opcua_client
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/url"
 	"sort"
 	"strings"
@@ -198,7 +197,10 @@ func (o *OpcUA) Init() error {
 		return err
 	}
 
-	o.setupOptions()
+	err = o.setupOptions()
+	if err != nil {
+		return err
+	}
 
 	tags := map[string]string{
 		"endpoint": o.Endpoint,
@@ -207,7 +209,6 @@ func (o *OpcUA) Init() error {
 	o.ReadSuccess = selfstat.Register("opcua", "read_success", tags)
 
 	return nil
-
 }
 
 func (o *OpcUA) validateEndpoint() error {
@@ -353,10 +354,11 @@ func (o *OpcUA) validateOPCTags() error {
 		if _, ok := nameEncountered[mp]; ok {
 			return fmt.Errorf("name '%s' is duplicated (metric name '%s', tags '%s')",
 				mp.fieldName, mp.metricName, mp.tags)
-		} else {
-			//add it to the set
-			nameEncountered[mp] = struct{}{}
 		}
+
+		//add it to the set
+		nameEncountered[mp] = struct{}{}
+
 		//search identifier type
 		switch node.tag.IdentifierType {
 		case "s", "i", "g", "b":
@@ -402,14 +404,14 @@ func Connect(o *OpcUA) error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.ConnectTimeout))
 		defer cancel()
 		if err := o.client.Connect(ctx); err != nil {
-			return fmt.Errorf("Error in Client Connection: %s", err)
+			return fmt.Errorf("error in Client Connection: %s", err)
 		}
 
 		regResp, err := o.client.RegisterNodes(&ua.RegisterNodesRequest{
 			NodesToRegister: o.nodeIDs,
 		})
 		if err != nil {
-			return fmt.Errorf("RegisterNodes failed: %v", err)
+			return fmt.Errorf("registerNodes failed: %v", err)
 		}
 
 		o.req = &ua.ReadRequest{
@@ -420,7 +422,7 @@ func Connect(o *OpcUA) error {
 
 		err = o.getData()
 		if err != nil {
-			return fmt.Errorf("Get Data Failed: %v", err)
+			return fmt.Errorf("get Data Failed: %v", err)
 		}
 
 	default:
@@ -430,11 +432,10 @@ func Connect(o *OpcUA) error {
 }
 
 func (o *OpcUA) setupOptions() error {
-
 	// Get a list of the endpoints for our target server
 	endpoints, err := opcua.GetEndpoints(o.Endpoint)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if o.Certificate == "" && o.PrivateKey == "" {
@@ -457,7 +458,7 @@ func (o *OpcUA) getData() error {
 	o.ReadSuccess.Incr(1)
 	for i, d := range resp.Results {
 		if d.Status != ua.StatusOK {
-			return fmt.Errorf("Status not OK: %v", d.Status)
+			return fmt.Errorf("status not OK: %v", d.Status)
 		}
 		o.nodeData[i].TagName = o.nodes[i].tag.FieldName
 		if d.Value != nil {

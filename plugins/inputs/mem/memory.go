@@ -14,19 +14,19 @@ type MemStats struct {
 	platform string
 }
 
-func (_ *MemStats) Description() string {
+func (ms *MemStats) Description() string {
 	return "Read metrics about memory usage"
 }
 
-func (_ *MemStats) SampleConfig() string { return "" }
+func (ms *MemStats) SampleConfig() string { return "" }
 
-func (m *MemStats) Init() error {
-	m.platform = runtime.GOOS
+func (ms *MemStats) Init() error {
+	ms.platform = runtime.GOOS
 	return nil
 }
 
-func (s *MemStats) Gather(acc telegraf.Accumulator) error {
-	vm, err := s.ps.VMStat()
+func (ms *MemStats) Gather(acc telegraf.Accumulator) error {
+	vm, err := ms.ps.VMStat()
 	if err != nil {
 		return fmt.Errorf("error getting virtual memory info: %s", err)
 	}
@@ -39,7 +39,7 @@ func (s *MemStats) Gather(acc telegraf.Accumulator) error {
 		"available_percent": 100 * float64(vm.Available) / float64(vm.Total),
 	}
 
-	switch s.platform {
+	switch ms.platform {
 	case "darwin":
 		fields["active"] = vm.Active
 		fields["free"] = vm.Free

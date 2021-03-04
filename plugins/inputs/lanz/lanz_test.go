@@ -58,16 +58,16 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 
 	l.Servers = append(l.Servers, "tcp://switch01.int.example.com:50001")
 	l.Servers = append(l.Servers, "tcp://switch02.int.example.com:50001")
-	deviceUrl1, err := url.Parse(l.Servers[0])
+	deviceURL1, err := url.Parse(l.Servers[0])
 	if err != nil {
 		t.Fail()
 	}
-	deviceUrl2, err := url.Parse(l.Servers[1])
+	deviceURL2, err := url.Parse(l.Servers[1])
 	if err != nil {
 		t.Fail()
 	}
 
-	msgToAccumulator(&acc, testProtoBufCongestionRecord1, deviceUrl1)
+	msgToAccumulator(&acc, testProtoBufCongestionRecord1, deviceURL1)
 	acc.Wait(1)
 
 	vals1 := map[string]interface{}{
@@ -92,7 +92,7 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "lanz_congestion_record", vals1, tags1)
 
 	acc.ClearMetrics()
-	msgToAccumulator(&acc, testProtoBufCongestionRecord2, deviceUrl2)
+	msgToAccumulator(&acc, testProtoBufCongestionRecord2, deviceURL2)
 	acc.Wait(1)
 
 	vals2 := map[string]interface{}{
@@ -117,7 +117,7 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "lanz_congestion_record", vals2, tags2)
 
 	acc.ClearMetrics()
-	msgToAccumulator(&acc, testProtoBufGlobalBufferUsageRecord, deviceUrl1)
+	msgToAccumulator(&acc, testProtoBufGlobalBufferUsageRecord, deviceURL1)
 	acc.Wait(1)
 
 	gburVals1 := map[string]interface{}{

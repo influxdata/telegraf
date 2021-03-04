@@ -13,7 +13,7 @@ import (
 )
 
 type Interrupts struct {
-	CpuAsTag bool `toml:"cpu_as_tag"`
+	CPUAsTag bool `toml:"cpu_as_tag"`
 }
 
 type IRQ struct {
@@ -121,7 +121,7 @@ func (s *Interrupts) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("Parsing %s: %s", file, err))
 			continue
 		}
-		reportMetrics(measurement, irqs, acc, s.CpuAsTag)
+		reportMetrics(measurement, irqs, acc, s.CPUAsTag)
 	}
 	return nil
 }

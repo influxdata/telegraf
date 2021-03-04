@@ -10,8 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var format = "2006-01-02T15:04:05.999Z07:00"
-
 func TestAlignedTicker(t *testing.T) {
 	interval := 10 * time.Second
 	jitter := 0 * time.Second
@@ -249,7 +247,7 @@ func simulatedDist(ticker Ticker, clock *clock.Mock) Distribution {
 	for !clock.Now().After(until) {
 		select {
 		case tm := <-ticker.Elapsed():
-			dist.Buckets[tm.Second()] += 1
+			dist.Buckets[tm.Second()]++
 			dist.Count++
 			dist.Waittime += tm.Sub(last).Seconds()
 			last = tm

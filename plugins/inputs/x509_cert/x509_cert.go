@@ -215,7 +215,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			return nil
 		}
 
-		certs, err := c.getCert(u, c.Timeout.Duration*time.Second)
+		certs, err := c.getCert(u, c.Timeout.Duration)
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
 		}
@@ -280,7 +280,7 @@ func init() {
 	inputs.Add("x509_cert", func() telegraf.Input {
 		return &X509Cert{
 			Sources: []string{},
-			Timeout: internal.Duration{Duration: 5},
+			Timeout: internal.Duration{Duration: 5 * time.Second}, // set default timeout to 5s
 		}
 	})
 }

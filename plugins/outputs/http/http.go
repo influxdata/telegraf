@@ -171,11 +171,7 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	if err := h.write(reqBody); err != nil {
-		return err
-	}
-
-	return nil
+	return h.write(reqBody)
 }
 
 func (h *HTTP) write(reqBody []byte) error {
@@ -221,6 +217,9 @@ func (h *HTTP) write(reqBody []byte) error {
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("when writing to [%s] received status code: %d", h.URL, resp.StatusCode)
+	}
+	if err != nil {
+		return fmt.Errorf("when writing to [%s] received error: %v", h.URL, err)
 	}
 
 	return nil

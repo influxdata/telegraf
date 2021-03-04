@@ -27,10 +27,8 @@ var pki = testutil.NewPKI("../../../testutil/pki")
 // Make sure X509Cert implements telegraf.Input
 var _ telegraf.Input = &X509Cert{}
 
-func TestGatherRemote(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping network-dependent test in short mode.")
-	}
+func TestGatherRemoteIntegration(t *testing.T) {
+	t.Skip("Skipping network-dependent test due to race condition when test-all")
 
 	tmpfile, err := ioutil.TempFile("", "example")
 	if err != nil {
@@ -333,7 +331,7 @@ func TestStrings(t *testing.T) {
 	}
 }
 
-func TestGatherCert(t *testing.T) {
+func TestGatherCertIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -347,6 +345,24 @@ func TestGatherCert(t *testing.T) {
 	err := m.Gather(&acc)
 	require.NoError(t, err)
 
+	assert.True(t, acc.HasMeasurement("x509_cert"))
+}
+
+func TestGatherCertMustNotTimeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	duration := time.Duration(15) * time.Second
+	m := &X509Cert{
+		Sources: []string{"https://www.influxdata.com:443"},
+		Timeout: internal.Duration{Duration: duration},
+	}
+	m.Init()
+
+	var acc testutil.Accumulator
+	err := m.Gather(&acc)
+	require.NoError(t, err)
+	require.Empty(t, acc.Errors)
 	assert.True(t, acc.HasMeasurement("x509_cert"))
 }
 
