@@ -1,3 +1,66 @@
+## v1.18.0-rc0 [2021-03-03]
+
+#### Bugfixes
+
+  - [#7312](https://github.com/influxdata/telegraf/pull/7312) `inputs.docker` [plugins/input/docker] Make perdevice affect also cpu and add class granularity through perdevice_include/total_include
+  - [#8397](https://github.com/influxdata/telegraf/pull/8397) `outputs.dynatrace` Dynatrace Plugin: Make conversion to counters possible / Changed large bulk handling
+  - [#8655](https://github.com/influxdata/telegraf/pull/8655) `inputs.sqlserver` SqlServer - fix for default server list
+  - [#8703](https://github.com/influxdata/telegraf/pull/8703) `inputs.docker` Use consistent container name in docker input plugin
+  - [#8902](https://github.com/influxdata/telegraf/pull/8902) `inputs.snmp` Fix max_repetitions signedness issues
+  - [#8817](https://github.com/influxdata/telegraf/pull/8817) `outputs.kinesis` outputs.kinesis - log record error count
+  - [#8833](https://github.com/influxdata/telegraf/pull/8833) `inputs.sqlserver` Bug Fix - SQL Server HADR queries for SQL Versions
+  - [#8628](https://github.com/influxdata/telegraf/pull/8628) `inputs.modbus` fix: reading multiple holding registers in modbus input plugin
+  - [#8885](https://github.com/influxdata/telegraf/pull/8885) `inputs.statsd` Fix statsd concurrency bug
+  - [#8393](https://github.com/influxdata/telegraf/pull/8393) `inputs.sqlserver` SQL Perfmon counters - synced queries from v2 to all db types
+  - [#8873](https://github.com/influxdata/telegraf/pull/8873) `processors.ifname` Fix mutex locking around ifname cache
+  - [#8720](https://github.com/influxdata/telegraf/pull/8720) `parsers.influx` fix: remove ambiguity on '\v' from line-protocol parser
+  - [#8678](https://github.com/influxdata/telegraf/pull/8678) `inputs.redis` Fix Redis output field type inconsistencies
+
+#### Features
+
+  - [#8887](https://github.com/influxdata/telegraf/pull/8887) `inputs.procstat` Add PPID field to procstat input plugin
+  - [#8852](https://github.com/influxdata/telegraf/pull/8852) `processors.starlark` Add Starlark script for estimating Line Protocol cardinality
+  - [#8828](https://github.com/influxdata/telegraf/pull/8828) `serializers.msgpack` Add MessagePack output data format
+  - [#8915](https://github.com/influxdata/telegraf/pull/8915) `inputs.cloudwatch` add proxy
+  - [#8910](https://github.com/influxdata/telegraf/pull/8910) Display error message on badly formatted config string array (eg. namepass)
+  - [#8785](https://github.com/influxdata/telegraf/pull/8785) `inputs.diskio` Non systemd support with unittest
+  - [#8850](https://github.com/influxdata/telegraf/pull/8850) `inputs.snmp` Support more snmpv3 authentication protocols
+  - [#8813](https://github.com/influxdata/telegraf/pull/8813) `inputs.redfish` added member_id as tag(as it is a unique value) for redfish plugin and added address of the server when the status is other than 200 for better debugging
+  - [#8613](https://github.com/influxdata/telegraf/pull/8613) `inputs.phpfpm` Support exclamation mark to create non-matching list in tail plugin
+  - [#8179](https://github.com/influxdata/telegraf/pull/8179) `inputs.statsd` Add support for datadog distributions metric
+  - [#8803](https://github.com/influxdata/telegraf/pull/8803) Add default retry for load config via url
+  - [#8816](https://github.com/influxdata/telegraf/pull/8816) Code Signing for Windows
+  - [#8772](https://github.com/influxdata/telegraf/pull/8772) `processors.starlark` Allow to provide constants to a starlark script
+  - [#8749](https://github.com/influxdata/telegraf/pull/8749) `outputs.newrelic` Add HTTP proxy setting to New Relic output plugin
+  - [#8543](https://github.com/influxdata/telegraf/pull/8543) `inputs.elasticsearch` Add configurable number of 'most recent' date-stamped indices to gather in Elasticsearch input
+
+#### New Input Plugins
+
+  - [#8834](https://github.com/influxdata/telegraf/pull/8834) Input plugin for RavenDB
+  - [#8525](https://github.com/influxdata/telegraf/pull/8525) Add CSGO SRCDS input plugin
+  - [#8751](https://github.com/influxdata/telegraf/pull/8751) Adding a new directory monitor input plugin.
+  - [#6653](https://github.com/influxdata/telegraf/pull/6653) Add Beat input plugin
+
+#### New Output Plugins
+
+  - [#8398](https://github.com/influxdata/telegraf/pull/8398) Sensu Go Output Plugin for Telegraf
+  - [#8450](https://github.com/influxdata/telegraf/pull/8450) plugin: output loki
+  - [#6714](https://github.com/influxdata/telegraf/pull/6714) SignalFx Output
+
+#### New Aggregator Plugins
+
+  - [#3762](https://github.com/influxdata/telegraf/pull/3762) Add Derivative Aggregator Plugin
+  - [#8594](https://github.com/influxdata/telegraf/pull/8594) Add quantile aggregator plugin
+
+#### New Processor Plugins
+
+  - [#8707](https://github.com/influxdata/telegraf/pull/8707) AWS EC2 metadata processor Using StreamingProcessor
+
+#### New External Plugins
+
+  - [#8897](https://github.com/influxdata/telegraf/pull/8897) add SMCIPMITool input to external plugin list
+
+
 ## v1.17.3 [2021-02-17]
 
 #### Bugfixes

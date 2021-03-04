@@ -84,7 +84,7 @@ func (pg *testPgrep) Pattern(_ string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 
-func (pg *testPgrep) Uid(_ string) ([]PID, error) {
+func (pg *testPgrep) UID(_ string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 
@@ -162,6 +162,10 @@ func (p *testProc) Times() (*cpu.TimesStat, error) {
 
 func (p *testProc) RlimitUsage(_ bool) ([]process.RlimitStat, error) {
 	return []process.RlimitStat{}, nil
+}
+
+func (p *testProc) Ppid() (int32, error) {
+	return 0, nil
 }
 
 var pid = PID(42)

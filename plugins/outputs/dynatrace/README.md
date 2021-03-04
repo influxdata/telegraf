@@ -35,6 +35,8 @@ You will also need to configure an API token for secure access. Find out how to 
   prefix = "telegraf."
   ## Flag for skipping the tls certificate check, just for testing purposes, should be false by default
   insecure_skip_verify = false
+  ## If you want to convert values represented as gauges to counters, add the metric names here
+  additional_counters = [ ]
 
 ```
 

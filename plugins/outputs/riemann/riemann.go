@@ -63,12 +63,12 @@ var sampleConfig = `
 `
 
 func (r *Riemann) Connect() error {
-	parsed_url, err := url.Parse(r.URL)
+	parsedURL, err := url.Parse(r.URL)
 	if err != nil {
 		return err
 	}
 
-	client, err := raidman.DialWithTimeout(parsed_url.Scheme, parsed_url.Host, r.Timeout.Duration)
+	client, err := raidman.DialWithTimeout(parsedURL.Scheme, parsedURL.Host, r.Timeout.Duration)
 	if err != nil {
 		r.client = nil
 		return err

@@ -20,7 +20,7 @@ func NewNativeFinder() (PIDFinder, error) {
 }
 
 //Uid will return all pids for the given user
-func (pg *NativeFinder) Uid(user string) ([]PID, error) {
+func (pg *NativeFinder) UID(user string) ([]PID, error) {
 	var dst []PID
 	procs, err := process.Processes()
 	if err != nil {

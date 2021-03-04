@@ -397,7 +397,6 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 	}
 	return
 }
-
 func (a *Accumulator) AssertContainsFields(
 	t *testing.T,
 	measurement string,
