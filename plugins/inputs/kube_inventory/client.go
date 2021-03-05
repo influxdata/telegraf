@@ -49,41 +49,61 @@ func newClient(baseURL, namespace, bearerToken string, timeout time.Duration, tl
 }
 
 func (c *client) getDaemonSets(ctx context.Context) (*v1apps.DaemonSetList, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	return c.AppsV1().DaemonSets(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
 func (c *client) getDeployments(ctx context.Context) (*v1apps.DeploymentList, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	return c.AppsV1().Deployments(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
 func (c *client) getEndpoints(ctx context.Context) (*corev1.EndpointsList, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	return c.CoreV1().Endpoints(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
 func (c *client) getIngress(ctx context.Context) (*netv1.IngressList, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	return c.NetworkingV1().Ingresses(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
 func (c *client) getNodes(ctx context.Context) (*corev1.NodeList, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	return c.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 }
 
 func (c *client) getPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	return c.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 }
 
 func (c *client) getPersistentVolumeClaims(ctx context.Context) (*corev1.PersistentVolumeClaimList, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	return c.CoreV1().PersistentVolumeClaims(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
 func (c *client) getPods(ctx context.Context) (*corev1.PodList, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	return c.CoreV1().Pods(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
 func (c *client) getServices(ctx context.Context) (*corev1.ServiceList, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	return c.CoreV1().Services(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
 func (c *client) getStatefulSets(ctx context.Context) (*v1apps.StatefulSetList, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	return c.AppsV1().StatefulSets(c.namespace).List(ctx, metav1.ListOptions{})
 }
