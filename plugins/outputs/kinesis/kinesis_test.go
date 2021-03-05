@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const zero int64 = 0
@@ -231,10 +232,8 @@ func TestWriteKinesis_WhenServiceError(t *testing.T) {
 }
 
 func TestWrite_NoMetrics(t *testing.T) {
-
 	assert := assert.New(t)
 	serializer := influx.NewSerializer()
-
 	svc := &mockKinesisPutRecords{}
 
 	k := KinesisOutput{
@@ -256,12 +255,10 @@ func TestWrite_NoMetrics(t *testing.T) {
 }
 
 func TestWrite_SingleMetric(t *testing.T) {
-
-	partitionKey := "partitionKey"
-	streamName := "stream"
-
 	assert := assert.New(t)
 	serializer := influx.NewSerializer()
+	partitionKey := "partitionKey"
+	streamName := "stream"
 
 	svc := &mockKinesisPutRecords{}
 	svc.SetupGenericResponse(1, 0)
@@ -278,8 +275,7 @@ func TestWrite_SingleMetric(t *testing.T) {
 		svc:        svc,
 	}
 
-	metric := testutil.TestMetric(1)
-	metricData := serializeMetric(t, serializer, metric)
+	metric, metricData := createTestMetric(t, "metric1", serializer)
 
 	err := k.Write([]telegraf.Metric{
 		metric,
@@ -300,12 +296,10 @@ func TestWrite_SingleMetric(t *testing.T) {
 }
 
 func TestWrite_MultipleMetrics_SinglePartialRequest(t *testing.T) {
-
-	partitionKey := "partitionKey"
-	streamName := "stream"
-
 	assert := assert.New(t)
 	serializer := influx.NewSerializer()
+	partitionKey := "partitionKey"
+	streamName := "stream"
 
 	svc := &mockKinesisPutRecords{}
 	svc.SetupGenericResponse(3, 0)
@@ -322,14 +316,9 @@ func TestWrite_MultipleMetrics_SinglePartialRequest(t *testing.T) {
 		svc:        svc,
 	}
 
-	metric1 := testutil.TestMetric(1, "metric1")
-	metric1Data := serializeMetric(t, serializer, metric1)
-
-	metric2 := testutil.TestMetric(2, "metric2")
-	metric2Data := serializeMetric(t, serializer, metric2)
-
-	metric3 := testutil.TestMetric(3, "metric3")
-	metric3Data := serializeMetric(t, serializer, metric3)
+	metric1, metric1Data := createTestMetric(t, "metric1", serializer)
+	metric2, metric2Data := createTestMetric(t, "metric2", serializer)
+	metric3, metric3Data := createTestMetric(t, "metric3", serializer)
 
 	err := k.Write([]telegraf.Metric{
 		metric1,
@@ -360,12 +349,10 @@ func TestWrite_MultipleMetrics_SinglePartialRequest(t *testing.T) {
 }
 
 func TestWrite_MultipleMetrics_SingleFullRequest(t *testing.T) {
-
-	partitionKey := "partitionKey"
-	streamName := "stream"
-
 	assert := assert.New(t)
 	serializer := influx.NewSerializer()
+	partitionKey := "partitionKey"
+	streamName := "stream"
 
 	svc := &mockKinesisPutRecords{}
 	svc.SetupGenericResponse(3, 0)
@@ -382,14 +369,9 @@ func TestWrite_MultipleMetrics_SingleFullRequest(t *testing.T) {
 		svc:        svc,
 	}
 
-	metric1 := testutil.TestMetric(1, "metric1")
-	metric1Data := serializeMetric(t, serializer, metric1)
-
-	metric2 := testutil.TestMetric(2, "metric2")
-	metric2Data := serializeMetric(t, serializer, metric2)
-
-	metric3 := testutil.TestMetric(3, "metric3")
-	metric3Data := serializeMetric(t, serializer, metric3)
+	metric1, metric1Data := createTestMetric(t, "metric1", serializer)
+	metric2, metric2Data := createTestMetric(t, "metric2", serializer)
+	metric3, metric3Data := createTestMetric(t, "metric3", serializer)
 
 	err := k.Write([]telegraf.Metric{
 		metric1,
@@ -420,12 +402,10 @@ func TestWrite_MultipleMetrics_SingleFullRequest(t *testing.T) {
 }
 
 func TestWrite_MultipleMetrics_MultipleRequests(t *testing.T) {
-
-	partitionKey := "partitionKey"
-	streamName := "stream"
-
 	assert := assert.New(t)
 	serializer := influx.NewSerializer()
+	partitionKey := "partitionKey"
+	streamName := "stream"
 
 	svc := &mockKinesisPutRecords{}
 	svc.SetupGenericResponse(2, 0)
@@ -443,14 +423,9 @@ func TestWrite_MultipleMetrics_MultipleRequests(t *testing.T) {
 		svc:        svc,
 	}
 
-	metric1 := testutil.TestMetric(1, "metric1")
-	metric1Data := serializeMetric(t, serializer, metric1)
-
-	metric2 := testutil.TestMetric(2, "metric2")
-	metric2Data := serializeMetric(t, serializer, metric2)
-
-	metric3 := testutil.TestMetric(3, "metric3")
-	metric3Data := serializeMetric(t, serializer, metric3)
+	metric1, metric1Data := createTestMetric(t, "metric1", serializer)
+	metric2, metric2Data := createTestMetric(t, "metric2", serializer)
+	metric3, metric3Data := createTestMetric(t, "metric3", serializer)
 
 	err := k.Write([]telegraf.Metric{
 		metric1,
@@ -486,12 +461,10 @@ func TestWrite_MultipleMetrics_MultipleRequests(t *testing.T) {
 }
 
 func TestWrite_SerializerError(t *testing.T) {
-
-	partitionKey := "partitionKey"
-	streamName := "stream"
-
 	assert := assert.New(t)
 	serializer := influx.NewSerializer()
+	partitionKey := "partitionKey"
+	streamName := "stream"
 
 	svc := &mockKinesisPutRecords{}
 	svc.SetupGenericResponse(2, 0)
@@ -508,11 +481,8 @@ func TestWrite_SerializerError(t *testing.T) {
 		svc:        svc,
 	}
 
-	metric1 := testutil.TestMetric(1, "metric1")
-	metric1Data := serializeMetric(t, serializer, metric1)
-
-	metric2 := testutil.TestMetric(2, "metric2")
-	metric2Data := serializeMetric(t, serializer, metric2)
+	metric1, metric1Data := createTestMetric(t, "metric1", serializer)
+	metric2, metric2Data := createTestMetric(t, "metric2", serializer)
 
 	// metric is invalid because of empty name
 	invalidMetric := testutil.TestMetric(3, "")
@@ -671,13 +641,16 @@ func (m *mockKinesisPutRecords) AssertRequests(
 	}
 }
 
-func serializeMetric(
+func createTestMetric(
 	t *testing.T,
+	name string,
 	serializer serializers.Serializer,
-	metric telegraf.Metric,
-) []byte {
+) (telegraf.Metric, []byte) {
+
+	metric := testutil.TestMetric(1, name)
 
 	data, err := serializer.Serialize(metric)
 	require.NoError(t, err)
-	return data
+
+	return metric, data
 }
