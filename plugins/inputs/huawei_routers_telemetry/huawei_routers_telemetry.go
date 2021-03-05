@@ -60,9 +60,9 @@ func HuaweiTelemetryDecoder(body []byte) (*metric.SeriesGrouper, error) {
 		sensorMsg := huawei_sensorPath.GetMessageType(msg.GetSensorPath())
 		err = proto.Unmarshal(gpbkv.Content, sensorMsg)
 		if err != nil {
-			fmt.Println("Sensor Error: %s", err.Error())	
-			return nil, err		
-		} 
+			fmt.Println("Sensor Error: %s", err.Error())
+			return nil, err
+		}
 		fields, vals := huawei_sensorPath.SearchKey(gpbkv, msg.GetSensorPath())
 		tags := make(map[string]string, len(fields)+3)
 		tags["source"] = msg.GetNodeIdStr()
@@ -87,7 +87,7 @@ func (h *packetSocketListener) listen() {
 	buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
 	for {
 		n, _, err := h.ReadFrom(buf)
-		if err != nil {			
+		if err != nil {
 			h.Log.Error("Unable to read buffer: %s", err.Error())
 			break
 		}
@@ -213,7 +213,6 @@ func (h *HuaweiRoutersTelemetry) Stop() {
 	}
 	h.wg.Wait()
 }
-
 
 func init() {
 	inputs.Add("huawei_routers_telemetry", func() telegraf.Input { return &HuaweiRoutersTelemetry{} })
