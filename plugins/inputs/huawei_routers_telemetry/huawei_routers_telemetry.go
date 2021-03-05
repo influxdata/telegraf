@@ -60,7 +60,7 @@ func HuaweiTelemetryDecoder(body []byte) (*metric.SeriesGrouper, error) {
 		sensorMsg := huawei_sensorPath.GetMessageType(msg.GetSensorPath())
 		err = proto.Unmarshal(gpbkv.Content, sensorMsg)
 		if err != nil {
-			fmt.Println("Sensor Error: %s", err.Error())
+			fmt.Println("Sensor Error: ", err.Error())
 			return nil, err
 		}
 		fields, vals := huawei_sensorPath.SearchKey(gpbkv, msg.GetSensorPath())
