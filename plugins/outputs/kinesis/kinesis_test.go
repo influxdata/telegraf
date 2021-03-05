@@ -678,8 +678,6 @@ func serializeMetric(
 ) []byte {
 
 	data, err := serializer.Serialize(metric)
-	if err != nil {
-		t.Errorf("Should have serialized test metric: %s", err.Error())
-	}
+	require.NoError(t, err)
 	return data
 }
