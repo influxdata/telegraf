@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"strings"
 	"sync"
 	"time"
