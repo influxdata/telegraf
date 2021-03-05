@@ -35,9 +35,13 @@ in Prometheus format.
   # monitor_kubernetes_pods = true
   ## Get the list of pods to scrape with either the scope of
   ## - cluster: the kubernetes watch api (default), no need to specify
-  ## - node: the local cadvisor api; for scalability. Note that the environment variable NODE_IP must be set to the host IP.
+  ## - node: the local cadvisor api; for scalability. Note that the config node_ip or the environment variable NODE_IP must be set to the host IP.
   # pod_scrape_scope = "cluster"
+  ## Only for node scrape scope: node IP of the node that telegraf is running on.
+  ## Either this config or the environment variable NODE_IP must be set.
+  # node_ip = "10.180.1.1"
   ## Only for node scrape scope: interval in seconds for how often to get updated pod list for scraping
+  ## Default is 60 seconds.
   # pod_scrape_interval = 60
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
@@ -94,7 +98,7 @@ Currently the following annotation are supported:
 
 Using the `monitor_kubernetes_pods_namespace` option allows you to limit which pods you are scraping.
 
-Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which will scrape pods only in the node that telegraf is running. It will fetch the pod list locally from the node's kubelet. This will require running Telegraf in every node of the cluster. Note that the environment variable NODE_IP must be set to the host IP. This can be done in the yaml of the pod running telegraf:
+Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which will scrape pods only in the node that telegraf is running. It will fetch the pod list locally from the node's kubelet. This will require running Telegraf in every node of the cluster. Note that either `node_ip` must be specified in the config or the environment variable `NODE_IP` must be set to the host IP. The latter can be done in the yaml of the pod running telegraf:
 ```
 env:
   - name: NODE_IP
@@ -103,7 +107,7 @@ env:
         fieldPath: status.hostIP
  ```
 
-If using node level scrape scope, `pod_scrape_interval` specifies how often (in seconds) the pod list for scraping should updated.
+If using node level scrape scope, `pod_scrape_interval` specifies how often (in seconds) the pod list for scraping should updated. If not specified, the default is 60 seconds.
 
 #### Bearer Token
 

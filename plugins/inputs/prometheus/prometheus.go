@@ -63,6 +63,7 @@ type Prometheus struct {
 	// Should we scrape Kubernetes services for prometheus annotations
 	MonitorPods       bool   `toml:"monitor_kubernetes_pods"`
 	PodScrapeScope    string `toml:"pod_scrape_scope"`
+	NodeIP						string `toml:"node_ip"`
 	PodScrapeInterval int    `toml:"pod_scrape_interval"`
 	PodNamespace      string `toml:"monitor_kubernetes_pods_namespace"`
 	lock              sync.Mutex
@@ -108,10 +109,14 @@ var sampleConfig = `
   # monitor_kubernetes_pods = true
   ## Get the list of pods to scrape with either the scope of
   ## - cluster: the kubernetes watch api (default, no need to specify)
-  ## - node: the local cadvisor api; for scalability. Note that the environment variable NODE_IP must be set to the host IP.
-	# pod_scrape_scope = "cluster"
-	## Only for node scrape scope: interval in seconds for how often to get updated pod list for scraping
-	pod_scrape_interval = 60
+  ## - node: the local cadvisor api; for scalability. Note that the config node_ip or the environment variable NODE_IP must be set to the host IP.
+  # pod_scrape_scope = "cluster"
+  ## Only for node scrape scope: node IP of the node that telegraf is running on.
+  ## Either this config or the environment variable NODE_IP must be set.
+  # node_ip = "10.180.1.1"
+	## Only for node scrape scope: interval in seconds for how often to get updated pod list for scraping.
+	## Default is 60 seconds.
+	# pod_scrape_interval = 60
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
   # monitor_kubernetes_pods_namespace = ""
@@ -158,14 +163,23 @@ func (p *Prometheus) Init() error {
 	// Config proccessing for node scrape scope for monitor_kubernetes_pods
 	p.isNodeScrapeScope = strings.EqualFold(p.PodScrapeScope, "node")
 	if p.isNodeScrapeScope {
-		p.nodeIP = os.Getenv("NODE_IP")
-		if p.nodeIP == "" {
-			return errors.New("The environment variable NODE_IP is not set. Cannot get pod list for monitor_kubernetes_pods using node scrape scope")
+
+		// Need node IP to make cAdvisor call for pod list. Check if set in config and valid IP address
+		if p.NodeIP == "" || net.ParseIP(p.NodeIP) == nil {
+			p.Log.Infof("The config node_ip is empty or invalid. Using NODE_IP env var as default.")
+
+			// Check if set as env var and is valid IP address
+			envVarNodeIP := os.Getenv("NODE_IP")
+			if envVarNodeIP == "" || net.ParseIP(envVarNodeIP) == nil {
+				errorMessage := "The node_ip config and the environment variable NODE_IP are not set or invalid. Cannot get pod list for monitor_kubernetes_pods using node scrape scope"
+				return errors.New(errorMessage)
+			}
+
+			p.NodeIP = envVarNodeIP
 		}
 
-		var err error
-
 		// Parse label and field selectors - will be used to filter pods after cAdvisor call
+		var err error
 		p.podLabelSelector, err = labels.Parse(p.KubernetesLabelSelector)
 		if err != nil {
 			return fmt.Errorf("Error parsing the specified label selector(s): %s", err.Error())

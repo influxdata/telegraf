@@ -258,8 +258,11 @@ func TestInitConfigErrors(t *testing.T) {
 		PodScrapeInterval: 60,
 	}
 
+	// Both invalid IP addresses
+	p.NodeIP = "10.240.0.0.0"
+	os.Setenv("NODE_IP", "10.000.0.0.0")
 	err := p.Init()
-	expectedMessage := "The environment variable NODE_IP is not set. Cannot get pod list for monitor_kubernetes_pods using node scrape scope"
+	expectedMessage := "The node_ip config and the environment variable NODE_IP are not set or invalid. Cannot get pod list for monitor_kubernetes_pods using node scrape scope"
 	assert.Equal(t, expectedMessage, err.Error())
 	os.Setenv("NODE_IP", "10.000.0.0")
 
