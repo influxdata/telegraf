@@ -365,15 +365,15 @@ func TestWrite_MultipleMetrics_SingleFullRequest(t *testing.T) {
 		svc:        svc,
 	}
 
-	testMetrics := createTestMetrics(t, maxRecordsPerRequest, serializer)
-	err := k.Write(getMetrics(testMetrics))
+	metrics, metricsData := createTestMetrics(t, maxRecordsPerRequest, serializer)
+	err := k.Write(metrics)
 	assert.Nil(err, "Should not return error")
 
 	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
 		{
 			StreamName: &streamName,
 			Records: createPutRecordsRequestEntries(
-				testMetrics,
+				metricsData,
 				&partitionKey,
 			),
 		},
@@ -401,22 +401,22 @@ func TestWrite_MultipleMetrics_MultipleRequests(t *testing.T) {
 		svc:        svc,
 	}
 
-	testMetrics := createTestMetrics(t, maxRecordsPerRequest+1, serializer)
-	err := k.Write(getMetrics(testMetrics))
+	metrics, metricsData := createTestMetrics(t, maxRecordsPerRequest+1, serializer)
+	err := k.Write(metrics)
 	assert.Nil(err, "Should not return error")
 
 	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
 		{
 			StreamName: &streamName,
 			Records: createPutRecordsRequestEntries(
-				testMetrics[0:maxRecordsPerRequest],
+				metricsData[0:maxRecordsPerRequest],
 				&partitionKey,
 			),
 		},
 		{
 			StreamName: &streamName,
 			Records: createPutRecordsRequestEntries(
-				testMetrics[maxRecordsPerRequest:],
+				metricsData[maxRecordsPerRequest:],
 				&partitionKey,
 			),
 		},
@@ -444,22 +444,22 @@ func TestWrite_MultipleMetrics_MultipleFullRequests(t *testing.T) {
 		svc:        svc,
 	}
 
-	testMetrics := createTestMetrics(t, maxRecordsPerRequest*2, serializer)
-	err := k.Write(getMetrics(testMetrics))
+	metrics, metricsData := createTestMetrics(t, maxRecordsPerRequest*2, serializer)
+	err := k.Write(metrics)
 	assert.Nil(err, "Should not return error")
 
 	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
 		{
 			StreamName: &streamName,
 			Records: createPutRecordsRequestEntries(
-				testMetrics[0:maxRecordsPerRequest],
+				metricsData[0:maxRecordsPerRequest],
 				&partitionKey,
 			),
 		},
 		{
 			StreamName: &streamName,
 			Records: createPutRecordsRequestEntries(
-				testMetrics[maxRecordsPerRequest:],
+				metricsData[maxRecordsPerRequest:],
 				&partitionKey,
 			),
 		},
@@ -661,45 +661,35 @@ func createTestMetrics(
 	t *testing.T,
 	count uint32,
 	serializer serializers.Serializer,
-) []testMetric {
+) ([]telegraf.Metric, [][]byte) {
 
-	metrics := make([]testMetric, count)
+	metrics := make([]telegraf.Metric, count)
+	metricsData := make([][]byte, count)
+
 	for i := uint32(0); i < count; i++ {
 		name := fmt.Sprintf("metric%d", i)
 		metric, data := createTestMetric(t, name, serializer)
-		metrics[i] = testMetric{
-			Metric: metric,
-			Data:   data,
-		}
+		metrics[i] = metric
+		metricsData[i] = data
 	}
-	return metrics
-}
 
-type testMetric struct {
-	Metric telegraf.Metric
-	Data   []byte
-}
-
-func getMetrics(testMetrics []testMetric) []telegraf.Metric {
-	count := len(testMetrics)
-	metrics := make([]telegraf.Metric, count)
-	for i := 0; i < count; i++ {
-		metrics[i] = testMetrics[i].Metric
-	}
-	return metrics
+	return metrics, metricsData
 }
 
 func createPutRecordsRequestEntries(
-	testMetrics []testMetric,
+	metricsData [][]byte,
 	partitionKey *string,
 ) []*kinesis.PutRecordsRequestEntry {
-	count := len(testMetrics)
+
+	count := len(metricsData)
 	records := make([]*kinesis.PutRecordsRequestEntry, count)
+
 	for i := 0; i < count; i++ {
 		records[i] = &kinesis.PutRecordsRequestEntry{
 			PartitionKey: partitionKey,
-			Data:         testMetrics[i].Data,
+			Data:         metricsData[i],
 		}
 	}
+
 	return records
 }
