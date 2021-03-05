@@ -47,6 +47,8 @@ following works:
 - github.com/couchbase/go-couchbase [MIT License](https://github.com/couchbase/go-couchbase/blob/master/LICENSE)
 - github.com/couchbase/gomemcached [MIT License](https://github.com/couchbase/gomemcached/blob/master/LICENSE)
 - github.com/couchbase/goutils [COUCHBASE INC. COMMUNITY EDITION LICENSE](https://github.com/couchbase/goutils/blob/master/LICENSE.md)
+- github.com/DamRCorba/huawei_telemetry_sensors [MIT License](https://github.com/DamRCorba/huawei_telemetry_sensors/blob/master/LICENCE)
+- github.com/DamRCorba/huawei_telemetry_sensors/sensors/huawei-telemetry [MIT License](https://github.com/DamRCorba/huawei_telemetry_sensors/blob/master/LICENCE)
 - github.com/davecgh/go-spew [ISC License](https://github.com/davecgh/go-spew/blob/master/LICENSE)
 - github.com/denisenkom/go-mssqldb [BSD 3-Clause "New" or "Revised" License](https://github.com/denisenkom/go-mssqldb/blob/master/LICENSE.txt)
 - github.com/devigned/tab [MIT License](https://github.com/devigned/tab/blob/master/LICENSE)
