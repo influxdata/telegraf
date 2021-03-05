@@ -5,15 +5,6 @@ If `fullstat` is set, a great deal of additional metrics are collected, detailed
 
 **NOTE** Many of the metrics, even if tagged with a mount point, are really _per-server_.  Thus, if you mount these two shares:  `nfs01:/vol/foo/bar` and `nfs01:/vol/foo/baz`, there will be two near identical entries in /proc/self/mountstats.  This is a limitation of the metrics exposed by the kernel, not the telegraf plugin.
 
-#### Plugin arguments:
-- **fullstat** bool: Collect per-operation type metrics.  Defaults to false.
-- **include_mounts** list(string): gather metrics for only these mounts.  Default is to watch all mounts.
-- **exclude_mounts** list(string): gather metrics for all mounts, except those listed in this option. Excludes take precedence over includes.
-- **include_operations** list(string): List of specific NFS operations to track.  See /proc/self/mountstats (the "per-op statistics" section) for complete lists of valid options for NFSv3 and NFSV4.  The default is to gather all metrics, but this is almost certainly *not* what you want (there are 22 operations for NFSv3, and well over 50 for NFSv4).  A suggested 'minimal' list of operations to collect for basic usage:  `['READ','WRITE','ACCESS','GETATTR','READDIR','LOOKUP','LOOKUP']`
-- **exclude_operations** list(string): Gather all metrics, except those listed.  Excludes take precedence over includes.
-
-*N.B.* the `include_mounts` and `exclude_mounts` arguments are both applied to the local mount location (e.g. /mnt/NFS), not the server export (e.g. nfsserver:/vol/NFS).  Go regexp patterns can be used in either.
-
 ### Configuration
 
 ```toml
@@ -44,7 +35,14 @@ If `fullstat` is set, a great deal of additional metrics are collected, detailed
   # include_operations = []
   # exclude_operations = []
 ```
+#### Configuration Options
+- **fullstat** bool: Collect per-operation type metrics.  Defaults to false.
+- **include_mounts** list(string): gather metrics for only these mounts.  Default is to watch all mounts.
+- **exclude_mounts** list(string): gather metrics for all mounts, except those listed in this option. Excludes take precedence over includes.
+- **include_operations** list(string): List of specific NFS operations to track.  See /proc/self/mountstats (the "per-op statistics" section) for complete lists of valid options for NFSv3 and NFSV4.  The default is to gather all metrics, but this is almost certainly *not* what you want (there are 22 operations for NFSv3, and well over 50 for NFSv4).  A suggested 'minimal' list of operations to collect for basic usage:  `['READ','WRITE','ACCESS','GETATTR','READDIR','LOOKUP','LOOKUP']`
+- **exclude_operations** list(string): Gather all metrics, except those listed.  Excludes take precedence over includes.
 
+*N.B.* the `include_mounts` and `exclude_mounts` arguments are both applied to the local mount location (e.g. /mnt/NFS), not the server export (e.g. nfsserver:/vol/NFS).  Go regexp patterns can be used in either.
 
 #### References
 1. [nfsiostat](http://git.linux-nfs.org/?p=steved/nfs-utils.git;a=summary)
