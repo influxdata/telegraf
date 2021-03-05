@@ -31,7 +31,6 @@
 
 
 load("json.star", "json")
-load("logging.star", "log")
 
 def apply(metric):
   j_list = json.decode(metric.fields.get('value')) # input JSON may be an arrow of objects
