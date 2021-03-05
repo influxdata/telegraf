@@ -63,7 +63,7 @@ type Prometheus struct {
 	// Should we scrape Kubernetes services for prometheus annotations
 	MonitorPods       bool   `toml:"monitor_kubernetes_pods"`
 	PodScrapeScope    string `toml:"pod_scrape_scope"`
-	NodeIP						string `toml:"node_ip"`
+	NodeIP            string `toml:"node_ip"`
 	PodScrapeInterval int    `toml:"pod_scrape_interval"`
 	PodNamespace      string `toml:"monitor_kubernetes_pods_namespace"`
 	lock              sync.Mutex
