@@ -274,10 +274,7 @@ func TestWrite_SingleMetric(t *testing.T) {
 	}
 
 	metric, metricData := createTestMetric(t, "metric1", serializer)
-
-	err := k.Write([]telegraf.Metric{
-		metric,
-	})
+	err := k.Write([]telegraf.Metric{metric})
 	assert.Nil(err, "Should not return error")
 
 	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
