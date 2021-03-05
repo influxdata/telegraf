@@ -550,9 +550,7 @@ func (m *mockKinesisPutRecords) SetupGenericResponse(
 	records := []*kinesis.PutRecordsResultEntry{}
 
 	for i := int64(0); i < successfulRecordCount; i++ {
-
 		sequenceNumber := fmt.Sprintf("%d", i)
-
 		records = append(records, &kinesis.PutRecordsResultEntry{
 			SequenceNumber: &sequenceNumber,
 			ShardId:        &shard,
@@ -560,7 +558,6 @@ func (m *mockKinesisPutRecords) SetupGenericResponse(
 	}
 
 	for i := int64(0); i < failedRecordCount; i++ {
-
 		records = append(records, &kinesis.PutRecordsResultEntry{
 			ErrorCode:    &errorCode,
 			ErrorMessage: &errorMessage,
