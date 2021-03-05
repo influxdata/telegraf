@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -28,9 +27,10 @@ func (c JolokiaClientImpl) MakeRequest(req *http.Request) (*http.Response, error
 
 type Cassandra struct {
 	jClient JolokiaClient
-	Context string
-	Servers []string
-	Metrics []string
+	Context string          `toml:"context"`
+	Servers []string        `toml:"servers"`
+	Metrics []string        `toml:"metrics"`
+	Log     telegraf.Logger `toml:"-"`
 }
 
 type javaMetric struct {
@@ -125,8 +125,7 @@ func (j javaMetric) addTagsFields(out map[string]interface{}) {
 		}
 		j.acc.AddFields(tokens["class"]+tokens["type"], fields, tags)
 	} else {
-		j.acc.AddError(fmt.Errorf("Missing key 'value' in '%s' output response\n%v\n",
-			j.metric, out))
+		j.acc.AddError(fmt.Errorf("missing key 'value' in '%s' output response: %v", j.metric, out))
 	}
 }
 
@@ -157,8 +156,7 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 				addCassandraMetric(k, c, v.(map[string]interface{}))
 			}
 		} else {
-			c.acc.AddError(fmt.Errorf("Missing key 'value' in '%s' output response\n%v\n",
-				c.metric, out))
+			c.acc.AddError(fmt.Errorf("missing key 'value' in '%s' output response: %v", c.metric, out))
 			return
 		}
 	} else {
@@ -166,14 +164,13 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 			addCassandraMetric(r.(map[string]interface{})["mbean"].(string),
 				c, values.(map[string]interface{}))
 		} else {
-			c.acc.AddError(fmt.Errorf("Missing key 'value' in '%s' output response\n%v\n",
-				c.metric, out))
+			c.acc.AddError(fmt.Errorf("missing key 'value' in '%s' output response: %v", c.metric, out))
 			return
 		}
 	}
 }
 
-func (j *Cassandra) SampleConfig() string {
+func (c *Cassandra) SampleConfig() string {
 	return `
   ## DEPRECATED: The cassandra plugin has been deprecated.  Please use the
   ## jolokia2 plugin instead.
@@ -196,18 +193,18 @@ func (j *Cassandra) SampleConfig() string {
 `
 }
 
-func (j *Cassandra) Description() string {
+func (c *Cassandra) Description() string {
 	return "Read Cassandra metrics through Jolokia"
 }
 
-func (j *Cassandra) getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
+func (c *Cassandra) getAttr(requestURL *url.URL) (map[string]interface{}, error) {
 	// Create + send request
-	req, err := http.NewRequest("GET", requestUrl.String(), nil)
+	req, err := http.NewRequest("GET", requestURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := j.jClient.MakeRequest(req)
+	resp, err := c.jClient.MakeRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -215,8 +212,8 @@ func (j *Cassandra) getAttr(requestUrl *url.URL) (map[string]interface{}, error)
 
 	// Process response
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
-			requestUrl,
+		err = fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
+			requestURL,
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
 			http.StatusOK,
@@ -232,8 +229,8 @@ func (j *Cassandra) getAttr(requestUrl *url.URL) (map[string]interface{}, error)
 
 	// Unmarshal json
 	var jsonOut map[string]interface{}
-	if err = json.Unmarshal([]byte(body), &jsonOut); err != nil {
-		return nil, errors.New("Error decoding JSON response")
+	if err = json.Unmarshal(body, &jsonOut); err != nil {
+		return nil, errors.New("error decoding JSON response")
 	}
 
 	return jsonOut, nil
@@ -263,8 +260,8 @@ func parseServerTokens(server string) map[string]string {
 	return serverTokens
 }
 
-func (c *Cassandra) Start(acc telegraf.Accumulator) error {
-	log.Println("W! DEPRECATED: The cassandra plugin has been deprecated. " +
+func (c *Cassandra) Start(_ telegraf.Accumulator) error {
+	c.Log.Warn("DEPRECATED: The cassandra plugin has been deprecated. " +
 		"Please use the jolokia2 plugin instead. " +
 		"https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2")
 	return nil
@@ -290,30 +287,29 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 				m = newCassandraMetric(serverTokens["host"], metric, acc)
 			} else {
 				// unsupported metric type
-				acc.AddError(fmt.Errorf("E! Unsupported Cassandra metric [%s], skipping",
-					metric))
+				acc.AddError(fmt.Errorf("unsupported Cassandra metric [%s], skipping", metric))
 				continue
 			}
 
 			// Prepare URL
-			requestUrl, err := url.Parse("http://" + serverTokens["host"] + ":" +
+			requestURL, err := url.Parse("http://" + serverTokens["host"] + ":" +
 				serverTokens["port"] + context + metric)
 			if err != nil {
 				acc.AddError(err)
 				continue
 			}
 			if serverTokens["user"] != "" && serverTokens["passwd"] != "" {
-				requestUrl.User = url.UserPassword(serverTokens["user"],
+				requestURL.User = url.UserPassword(serverTokens["user"],
 					serverTokens["passwd"])
 			}
 
-			out, err := c.getAttr(requestUrl)
+			out, err := c.getAttr(requestURL)
 			if err != nil {
 				acc.AddError(err)
 				continue
 			}
 			if out["status"] != 200.0 {
-				acc.AddError(fmt.Errorf("URL returned with status %v - %s\n", out["status"], requestUrl))
+				acc.AddError(fmt.Errorf("provided URL returned with status %v - %s", out["status"], requestURL))
 				continue
 			}
 			m.addTagsFields(out)

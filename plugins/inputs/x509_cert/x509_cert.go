@@ -73,6 +73,19 @@ func (c *X509Cert) locationToURL(location string) (*url.URL, error) {
 	return u, nil
 }
 
+func (c *X509Cert) serverName(u *url.URL) (string, error) {
+	if c.tlsCfg.ServerName != "" {
+		if c.ServerName != "" {
+			return "", fmt.Errorf("both server_name (%q) and tls_server_name (%q) are set, but they are mutually exclusive", c.ServerName, c.tlsCfg.ServerName)
+		}
+		return c.tlsCfg.ServerName, nil
+	}
+	if c.ServerName != "" {
+		return c.ServerName, nil
+	}
+	return u.Hostname(), nil
+}
+
 func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, error) {
 	switch u.Scheme {
 	case "https":
@@ -87,11 +100,11 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 		defer ipConn.Close()
 
-		if c.ServerName == "" {
-			c.tlsCfg.ServerName = u.Hostname()
-		} else {
-			c.tlsCfg.ServerName = c.ServerName
+		serverName, err := c.serverName(u)
+		if err != nil {
+			return nil, err
 		}
+		c.tlsCfg.ServerName = serverName
 
 		c.tlsCfg.InsecureSkipVerify = true
 		conn := tls.Client(ipConn, c.tlsCfg)
@@ -202,7 +215,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			return nil
 		}
 
-		certs, err := c.getCert(u, c.Timeout.Duration*time.Second)
+		certs, err := c.getCert(u, c.Timeout.Duration)
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
 		}
@@ -218,10 +231,9 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 			}
 			if i == 0 {
-				if c.ServerName == "" {
-					opts.DNSName = u.Hostname()
-				} else {
-					opts.DNSName = c.ServerName
+				opts.DNSName, err = c.serverName(u)
+				if err != nil {
+					return err
 				}
 				for j, cert := range certs {
 					if j != 0 {
@@ -268,7 +280,7 @@ func init() {
 	inputs.Add("x509_cert", func() telegraf.Input {
 		return &X509Cert{
 			Sources: []string{},
-			Timeout: internal.Duration{Duration: 5},
+			Timeout: internal.Duration{Duration: 5 * time.Second}, // set default timeout to 5s
 		}
 	})
 }

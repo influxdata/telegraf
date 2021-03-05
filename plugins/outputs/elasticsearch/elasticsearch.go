@@ -33,7 +33,7 @@ type Elasticsearch struct {
 	ManageTemplate      bool
 	TemplateName        string
 	OverwriteTemplate   bool
-	ForceDocumentId     bool
+	ForceDocumentID     bool `toml:"force_document_id"`
 	MajorReleaseNumber  int
 	tls.ClientConfig
 
@@ -284,7 +284,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 		br := elastic.NewBulkIndexRequest().Index(indexName).Doc(m)
 
-		if a.ForceDocumentId {
+		if a.ForceDocumentID {
 			id := GetPointID(metric)
 			br.Id(id)
 		}
@@ -309,6 +309,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	if res.Errors {
 		for id, err := range res.Failed() {
 			log.Printf("E! Elasticsearch indexing failure, id: %d, error: %s, caused by: %s, %s", id, err.Error.Reason, err.Error.CausedBy["reason"], err.Error.CausedBy["type"])
+			break
 		}
 		return fmt.Errorf("W! Elasticsearch failed to index %d metrics", len(res.Failed()))
 	}

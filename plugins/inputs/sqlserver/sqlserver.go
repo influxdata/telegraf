@@ -154,7 +154,7 @@ func initQueries(s *SQLServer) error {
 		queries["SQLServerSchedulers"] = Query{ScriptName: "SQLServerSchedulers", Script: sqlServerSchedulers, ResultByRow: false}
 		queries["SQLServerRequests"] = Query{ScriptName: "SQLServerRequests", Script: sqlServerRequests, ResultByRow: false}
 		queries["SQLServerVolumeSpace"] = Query{ScriptName: "SQLServerVolumeSpace", Script: sqlServerVolumeSpace, ResultByRow: false}
-		queries["SQLServerCpu"] = Query{ScriptName: "SQLServerCpu", Script: sqlServerRingBufferCpu, ResultByRow: false}
+		queries["SQLServerCpu"] = Query{ScriptName: "SQLServerCpu", Script: sqlServerRingBufferCPU, ResultByRow: false}
 		queries["SQLServerAvailabilityReplicaStates"] = Query{ScriptName: "SQLServerAvailabilityReplicaStates", Script: sqlServerAvailabilityReplicaStates, ResultByRow: false}
 		queries["SQLServerDatabaseReplicaStates"] = Query{ScriptName: "SQLServerDatabaseReplicaStates", Script: sqlServerDatabaseReplicaStates, ResultByRow: false}
 	} else {
@@ -174,7 +174,7 @@ func initQueries(s *SQLServer) error {
 			queries["Schedulers"] = Query{ScriptName: "Schedulers", Script: sqlServerSchedulersV2, ResultByRow: false}
 			queries["SqlRequests"] = Query{ScriptName: "SqlRequests", Script: sqlServerRequestsV2, ResultByRow: false}
 			queries["VolumeSpace"] = Query{ScriptName: "VolumeSpace", Script: sqlServerVolumeSpaceV2, ResultByRow: false}
-			queries["Cpu"] = Query{ScriptName: "Cpu", Script: sqlServerCpuV2, ResultByRow: false}
+			queries["Cpu"] = Query{ScriptName: "Cpu", Script: sqlServerCPUV2, ResultByRow: false}
 		} else {
 			log.Println("W! DEPRECATED: query_version=1 has been deprecated in favor of database_type.")
 			queries["PerformanceCounters"] = Query{ScriptName: "PerformanceCounters", Script: sqlPerformanceCounters, ResultByRow: true}
@@ -219,10 +219,6 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(err)
 			return err
 		}
-	}
-
-	if len(s.Servers) == 0 {
-		s.Servers = append(s.Servers, defaultServer)
 	}
 
 	var wg sync.WaitGroup
@@ -327,8 +323,16 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 	return nil
 }
 
+func (s *SQLServer) Init() error {
+	if len(s.Servers) == 0 {
+		log.Println("W! Warning: Server list is empty.")
+	}
+
+	return nil
+}
+
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
-		return &SQLServer{}
+		return &SQLServer{Servers: []string{defaultServer}}
 	})
 }

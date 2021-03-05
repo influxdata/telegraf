@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -45,11 +44,12 @@ func TestDellApis(t *testing.T) {
 	address, _, err := net.SplitHostPort(u.Host)
 	require.NoError(t, err)
 
-	expected_metrics := []telegraf.Metric{
+	expectedMetrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"redfish_thermal_temperatures",
 			map[string]string{
 				"name":       "CPU1 Temp",
+				"member_id":  "iDRAC.Embedded.1#CPU1Temp",
 				"source":     "tpa-hostname",
 				"address":    address,
 				"datacenter": "",
@@ -73,6 +73,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan1A",
+				"member_id":  "0x17||Fan.Embedded.1A",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -93,6 +94,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan1B",
+				"member_id":  "0x17||Fan.Embedded.1B",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -113,6 +115,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan2A",
+				"member_id":  "0x17||Fan.Embedded.2A",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -133,6 +136,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan2B",
+				"member_id":  "0x17||Fan.Embedded.2B",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -153,6 +157,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan3A",
+				"member_id":  "0x17||Fan.Embedded.3A",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -173,6 +178,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan3B",
+				"member_id":  "0x17||Fan.Embedded.3B",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -193,6 +199,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan4A",
+				"member_id":  "0x17||Fan.Embedded.4A",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -213,6 +220,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan4B",
+				"member_id":  "0x17||Fan.Embedded.4B",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -233,6 +241,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan5A",
+				"member_id":  "0x17||Fan.Embedded.5A",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -253,6 +262,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan5B",
+				"member_id":  "0x17||Fan.Embedded.5B",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -273,6 +283,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan6A",
+				"member_id":  "0x17||Fan.Embedded.6A",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -293,6 +304,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan6B",
+				"member_id":  "0x17||Fan.Embedded.6B",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -313,6 +325,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan7A",
+				"member_id":  "0x17||Fan.Embedded.7A",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -333,6 +346,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan7B",
+				"member_id":  "0x17||Fan.Embedded.7B",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -353,6 +367,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan8A",
+				"member_id":  "0x17||Fan.Embedded.8A",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -373,6 +388,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan8B",
+				"member_id":  "0x17||Fan.Embedded.8B",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -393,6 +409,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "PS1 Status",
+				"member_id":  "PSU.Slot.1",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -414,6 +431,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board DIMM PG",
+				"member_id":  "iDRAC.Embedded.1#SystemBoardDIMMPG",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -432,6 +450,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board NDC PG",
+				"member_id":  "iDRAC.Embedded.1#SystemBoardNDCPG",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -451,6 +470,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board PS1 PG FAIL",
+				"member_id":  "iDRAC.Embedded.1#SystemBoardPS1PGFAIL",
 				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
@@ -469,7 +489,7 @@ func TestDellApis(t *testing.T) {
 		Address:          ts.URL,
 		Username:         "test",
 		Password:         "test",
-		ComputerSystemId: "System.Embedded.1",
+		ComputerSystemID: "System.Embedded.1",
 	}
 	plugin.Init()
 	var acc testutil.Accumulator
@@ -477,7 +497,7 @@ func TestDellApis(t *testing.T) {
 	err = plugin.Gather(&acc)
 	require.NoError(t, err)
 	require.True(t, acc.HasMeasurement("redfish_thermal_temperatures"))
-	testutil.RequireMetricsEqual(t, expected_metrics, acc.GetTelegrafMetrics(),
+	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
 }
 
@@ -511,15 +531,16 @@ func TestHPApis(t *testing.T) {
 	address, _, err := net.SplitHostPort(u.Host)
 	require.NoError(t, err)
 
-	expected_metrics_hp := []telegraf.Metric{
+	expectedMetricsHp := []telegraf.Metric{
 		testutil.MustMetric(
 			"redfish_thermal_temperatures",
 			map[string]string{
-				"name":    "01-Inlet Ambient",
-				"source":  "tpa-hostname",
-				"address": address,
-				"health":  "OK",
-				"state":   "Enabled",
+				"name":      "01-Inlet Ambient",
+				"member_id": "0",
+				"source":    "tpa-hostname",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"reading_celsius":          19.0,
@@ -531,11 +552,12 @@ func TestHPApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_temperatures",
 			map[string]string{
-				"name":    "44-P/S 2 Zone",
-				"source":  "tpa-hostname",
-				"address": address,
-				"health":  "OK",
-				"state":   "Enabled",
+				"name":      "44-P/S 2 Zone",
+				"source":    "tpa-hostname",
+				"member_id": "42",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"reading_celsius":          34.0,
@@ -547,11 +569,12 @@ func TestHPApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":  "tpa-hostname",
-				"name":    "Fan 1",
-				"address": address,
-				"health":  "OK",
-				"state":   "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "Fan 1",
+				"member_id": "0",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"reading_percent": 23,
@@ -561,11 +584,12 @@ func TestHPApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":  "tpa-hostname",
-				"name":    "Fan 2",
-				"address": address,
-				"health":  "OK",
-				"state":   "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "Fan 2",
+				"member_id": "1",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"reading_percent": 23,
@@ -575,11 +599,12 @@ func TestHPApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":  "tpa-hostname",
-				"name":    "Fan 3",
-				"address": address,
-				"health":  "OK",
-				"state":   "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "Fan 3",
+				"member_id": "2",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"reading_percent": 23,
@@ -589,11 +614,12 @@ func TestHPApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_power_powersupplies",
 			map[string]string{
-				"source":  "tpa-hostname",
-				"name":    "HpeServerPowerSupply",
-				"address": address,
-				"health":  "OK",
-				"state":   "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "HpeServerPowerSupply",
+				"member_id": "0",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"power_capacity_watts":    800.0,
@@ -605,11 +631,12 @@ func TestHPApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_power_powersupplies",
 			map[string]string{
-				"source":  "tpa-hostname",
-				"name":    "HpeServerPowerSupply",
-				"address": address,
-				"health":  "OK",
-				"state":   "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "HpeServerPowerSupply",
+				"member_id": "1",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"power_capacity_watts":    800.0,
@@ -620,19 +647,19 @@ func TestHPApis(t *testing.T) {
 		),
 	}
 
-	hp_plugin := &Redfish{
+	hpPlugin := &Redfish{
 		Address:          ts.URL,
 		Username:         "test",
 		Password:         "test",
-		ComputerSystemId: "1",
+		ComputerSystemID: "1",
 	}
-	hp_plugin.Init()
-	var hp_acc testutil.Accumulator
+	hpPlugin.Init()
+	var hpAcc testutil.Accumulator
 
-	err = hp_plugin.Gather(&hp_acc)
+	err = hpPlugin.Gather(&hpAcc)
 	require.NoError(t, err)
-	require.True(t, hp_acc.HasMeasurement("redfish_thermal_temperatures"))
-	testutil.RequireMetricsEqual(t, expected_metrics_hp, hp_acc.GetTelegrafMetrics(),
+	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
+	testutil.RequireMetricsEqual(t, expectedMetricsHp, hpAcc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
 }
 
@@ -642,23 +669,6 @@ func checkAuth(r *http.Request, username, password string) bool {
 		return false
 	}
 	return user == username && pass == password
-}
-
-func TestConnection(t *testing.T) {
-	r := &Redfish{
-		Address:          "http://127.0.0.1",
-		Username:         "test",
-		Password:         "test",
-		ComputerSystemId: "System.Embedded.1",
-	}
-
-	var acc testutil.Accumulator
-	r.Init()
-	err := r.Gather(&acc)
-	if assert.Error(t, err) {
-		_, ok := err.(*url.Error)
-		assert.True(t, ok)
-	}
 }
 
 func TestInvalidUsernameorPassword(t *testing.T) {
@@ -683,14 +693,15 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 		Address:          ts.URL,
 		Username:         "test",
 		Password:         "test",
-		ComputerSystemId: "System.Embedded.1",
+		ComputerSystemID: "System.Embedded.1",
 	}
 
 	var acc testutil.Accumulator
 	r.Init()
-	err := r.Gather(&acc)
-	require.Error(t, err)
-	require.EqualError(t, err, "received status code 401 (Unauthorized), expected 200")
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	err = r.Gather(&acc)
+	require.EqualError(t, err, "received status code 401 (Unauthorized) for address http://"+u.Host+", expected 200")
 }
 func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 
@@ -712,7 +723,7 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 
 	r := &Redfish{
 		Address:          ts.URL,
-		ComputerSystemId: "System.Embedded.1",
+		ComputerSystemID: "System.Embedded.1",
 	}
 
 	err := r.Init()
@@ -785,7 +796,7 @@ func TestInvalidDellJSON(t *testing.T) {
 			Address:          ts.URL,
 			Username:         "test",
 			Password:         "test",
-			ComputerSystemId: "System.Embedded.1",
+			ComputerSystemID: "System.Embedded.1",
 		}
 
 		plugin.Init()
@@ -856,7 +867,7 @@ func TestInvalidHPJSON(t *testing.T) {
 				Address:          ts.URL,
 				Username:         "test",
 				Password:         "test",
-				ComputerSystemId: "System.Embedded.2",
+				ComputerSystemID: "System.Embedded.2",
 			}
 
 			plugin.Init()

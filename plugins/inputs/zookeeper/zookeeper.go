@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-var zookeeperFormatRE = regexp.MustCompile(`^zk_(\w+)\s+([\w\.\-]+)`)
+var zookeeperFormatRE = regexp.MustCompile(`^zk_(\w[\w\.\-]*)\s+([\w\.\-]+)`)
 
 // Zookeeper is a zookeeper plugin
 type Zookeeper struct {
@@ -72,9 +72,8 @@ func (z *Zookeeper) dial(ctx context.Context, addr string) (net.Conn, error) {
 			dialer.Deadline = deadline
 		}
 		return tls.DialWithDialer(&dialer, "tcp", addr, z.tlsConfig)
-	} else {
-		return dialer.DialContext(ctx, "tcp", addr)
 	}
+	return dialer.DialContext(ctx, "tcp", addr)
 }
 
 // Gather reads stats from all configured servers accumulates stats
@@ -108,7 +107,7 @@ func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
 }
 
 func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegraf.Accumulator) error {
-	var zookeeper_state string
+	var zookeeperState string
 	_, _, err := net.SplitHostPort(address)
 	if err != nil {
 		address = address + ":2181"
@@ -132,7 +131,7 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 
 	service := strings.Split(address, ":")
 	if len(service) != 2 {
-		return fmt.Errorf("Invalid service address: %s", address)
+		return fmt.Errorf("invalid service address: %s", address)
 	}
 
 	fields := make(map[string]interface{})
@@ -146,7 +145,7 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 
 		measurement := strings.TrimPrefix(parts[1], "zk_")
 		if measurement == "server_state" {
-			zookeeper_state = parts[2]
+			zookeeperState = parts[2]
 		} else {
 			sValue := string(parts[2])
 
@@ -167,7 +166,7 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 	tags := map[string]string{
 		"server": srv,
 		"port":   service[1],
-		"state":  zookeeper_state,
+		"state":  zookeeperState,
 	}
 	acc.AddFields("zookeeper", fields, tags)
 

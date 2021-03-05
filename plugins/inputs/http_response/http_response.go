@@ -97,8 +97,8 @@ var sampleConfig = `
   # {'fake':'data'}
   # '''
 
-  ## Optional name of the field that will contain the body of the response. 
-  ## By default it is set to an empty String indicating that the body's content won't be added 
+  ## Optional name of the field that will contain the body of the response.
+  ## By default it is set to an empty String indicating that the body's content won't be added
   # response_body_field = ''
 
   ## Maximum allowed HTTP response body size in bytes.
@@ -146,11 +146,11 @@ func (h *HTTPResponse) SampleConfig() string {
 var ErrRedirectAttempted = errors.New("redirect")
 
 // Set the proxy. A configured proxy overwrites the system wide proxy.
-func getProxyFunc(http_proxy string) func(*http.Request) (*url.URL, error) {
-	if http_proxy == "" {
+func getProxyFunc(httpProxy string) func(*http.Request) (*url.URL, error) {
+	if httpProxy == "" {
 		return http.ProxyFromEnvironment
 	}
-	proxyURL, err := url.Parse(http_proxy)
+	proxyURL, err := url.Parse(httpProxy)
 	if err != nil {
 		return func(_ *http.Request) (*url.URL, error) {
 			return nil, errors.New("bad proxy: " + err.Error())
@@ -161,9 +161,9 @@ func getProxyFunc(http_proxy string) func(*http.Request) (*url.URL, error) {
 	}
 }
 
-// createHttpClient creates an http client which will timeout at the specified
+// createHTTPClient creates an http client which will timeout at the specified
 // timeout period and can follow redirects if specified
-func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
+func (h *HTTPResponse) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := h.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -217,8 +217,8 @@ func localAddress(interfaceName string) (net.Addr, error) {
 	return nil, fmt.Errorf("cannot create local address for interface %q", interfaceName)
 }
 
-func setResult(result_string string, fields map[string]interface{}, tags map[string]string) {
-	result_codes := map[string]int{
+func setResult(resultString string, fields map[string]interface{}, tags map[string]string) {
+	resultCodes := map[string]int{
 		"success":                       0,
 		"response_string_mismatch":      1,
 		"body_read_error":               2,
@@ -228,9 +228,9 @@ func setResult(result_string string, fields map[string]interface{}, tags map[str
 		"response_status_code_mismatch": 6,
 	}
 
-	tags["result"] = result_string
-	fields["result_type"] = result_string
-	fields["result_code"] = result_codes[result_string]
+	tags["result"] = resultString
+	fields["result_type"] = resultString
+	fields["result_code"] = resultCodes[resultString]
 }
 
 func setError(err error, fields map[string]interface{}, tags map[string]string) error {
@@ -239,8 +239,8 @@ func setError(err error, fields map[string]interface{}, tags map[string]string) 
 		return timeoutError
 	}
 
-	urlErr, isUrlErr := err.(*url.Error)
-	if !isUrlErr {
+	urlErr, isURLErr := err.(*url.Error)
+	if !isURLErr {
 		return nil
 	}
 
@@ -299,7 +299,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	// Start Timer
 	start := time.Now()
 	resp, err := h.client.Do(request)
-	response_time := time.Since(start).Seconds()
+	responseTime := time.Since(start).Seconds()
 
 	// If an error in returned, it means we are dealing with a network error, as
 	// HTTP error codes do not generate errors in the net/http library
@@ -321,7 +321,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	}
 
 	if _, ok := fields["response_time"]; !ok {
-		fields["response_time"] = response_time
+		fields["response_time"] = responseTime
 	}
 
 	// This function closes the response body, as
@@ -396,8 +396,8 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 }
 
 // Set result in case of a body read error
-func (h *HTTPResponse) setBodyReadError(error_msg string, bodyBytes []byte, fields map[string]interface{}, tags map[string]string) {
-	h.Log.Debugf(error_msg)
+func (h *HTTPResponse) setBodyReadError(errorMsg string, bodyBytes []byte, fields map[string]interface{}, tags map[string]string) {
+	h.Log.Debugf(errorMsg)
 	setResult("body_read_error", fields, tags)
 	fields["content_length"] = len(bodyBytes)
 	if h.ResponseStringMatch != "" {
@@ -435,7 +435,7 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if h.client == nil {
-		client, err := h.createHttpClient()
+		client, err := h.createHTTPClient()
 		if err != nil {
 			return err
 		}

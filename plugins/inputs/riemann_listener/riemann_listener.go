@@ -170,8 +170,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 
 	for {
 		if rsl.ReadTimeout != nil && rsl.ReadTimeout.Duration > 0 {
-
-			err = conn.SetDeadline(time.Now().Add(rsl.ReadTimeout.Duration))
+			conn.SetDeadline(time.Now().Add(rsl.ReadTimeout.Duration))
 		}
 
 		messagePb := &riemangoProto.Msg{}

@@ -1,6 +1,7 @@
 package all
 
 import (
+	//Blank imports for plugins to register themselves
 	_ "github.com/influxdata/telegraf/plugins/inputs/activemq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/aerospike"
 	_ "github.com/influxdata/telegraf/plugins/inputs/amqp_consumer"
@@ -10,6 +11,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/azure_storage_queue"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bcache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/beanstalkd"
+	_ "github.com/influxdata/telegraf/plugins/inputs/beat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bind"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bond"
 	_ "github.com/influxdata/telegraf/plugins/inputs/burrow"
@@ -27,7 +29,9 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/couchbase"
 	_ "github.com/influxdata/telegraf/plugins/inputs/couchdb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cpu"
+	_ "github.com/influxdata/telegraf/plugins/inputs/csgo"
 	_ "github.com/influxdata/telegraf/plugins/inputs/dcos"
+	_ "github.com/influxdata/telegraf/plugins/inputs/directory_monitor"
 	_ "github.com/influxdata/telegraf/plugins/inputs/disk"
 	_ "github.com/influxdata/telegraf/plugins/inputs/diskio"
 	_ "github.com/influxdata/telegraf/plugins/inputs/disque"
@@ -143,6 +147,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/rabbitmq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/raindrops"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ras"
+	_ "github.com/influxdata/telegraf/plugins/inputs/ravendb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/redfish"
 	_ "github.com/influxdata/telegraf/plugins/inputs/redis"
 	_ "github.com/influxdata/telegraf/plugins/inputs/rethinkdb"
