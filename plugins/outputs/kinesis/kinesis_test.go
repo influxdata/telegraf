@@ -313,34 +313,17 @@ func TestWrite_MultipleMetrics_SinglePartialRequest(t *testing.T) {
 		svc:        svc,
 	}
 
-	metric1, metric1Data := createTestMetric(t, "metric1", serializer)
-	metric2, metric2Data := createTestMetric(t, "metric2", serializer)
-	metric3, metric3Data := createTestMetric(t, "metric3", serializer)
-
-	err := k.Write([]telegraf.Metric{
-		metric1,
-		metric2,
-		metric3,
-	})
+	metrics, metricsData := createTestMetrics(t, 3, serializer)
+	err := k.Write(metrics)
 	assert.Nil(err, "Should not return error")
 
 	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
 		{
 			StreamName: &streamName,
-			Records: []*kinesis.PutRecordsRequestEntry{
-				{
-					PartitionKey: &partitionKey,
-					Data:         metric1Data,
-				},
-				{
-					PartitionKey: &partitionKey,
-					Data:         metric2Data,
-				},
-				{
-					PartitionKey: &partitionKey,
-					Data:         metric3Data,
-				},
-			},
+			Records: createPutRecordsRequestEntries(
+				metricsData,
+				&partitionKey,
+			),
 		},
 	})
 }
