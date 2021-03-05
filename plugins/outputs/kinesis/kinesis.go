@@ -13,6 +13,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+// Limit set by AWS (https://docs.aws.amazon.com/kinesis/latest/APIReference/API_PutRecords.html)
+const maxRecordsPerRequest uint32 = 500
+
 type (
 	KinesisOutput struct {
 		Region      string `toml:"region"`
@@ -30,10 +33,9 @@ type (
 		Partition          *Partition `toml:"partition"`
 		Debug              bool       `toml:"debug"`
 
-		Log                  telegraf.Logger `toml:"-"`
-		maxRecordsPerRequest uint32
-		serializer           serializers.Serializer
-		svc                  kinesisiface.KinesisAPI
+		Log        telegraf.Logger `toml:"-"`
+		serializer serializers.Serializer
+		svc        kinesisiface.KinesisAPI
 	}
 
 	Partition struct {
@@ -244,7 +246,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 		r = append(r, &d)
 
-		if sz >= k.maxRecordsPerRequest {
+		if sz == maxRecordsPerRequest {
 			elapsed := k.writeKinesis(r)
 			k.Log.Debugf("Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 			sz = 0
@@ -262,10 +264,6 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("kinesis", func() telegraf.Output {
-		return &KinesisOutput{
-
-			// Limit set by AWS (https://docs.aws.amazon.com/kinesis/latest/APIReference/API_PutRecords.html)
-			maxRecordsPerRequest: 500,
-		}
+		return &KinesisOutput{}
 	})
 }

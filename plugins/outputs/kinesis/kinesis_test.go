@@ -237,8 +237,7 @@ func TestWrite_NoMetrics(t *testing.T) {
 	svc := &mockKinesisPutRecords{}
 
 	k := KinesisOutput{
-		Log:                  testutil.Logger{},
-		maxRecordsPerRequest: 500,
+		Log: testutil.Logger{},
 		Partition: &Partition{
 			Method: "static",
 			Key:    "partitionKey",
@@ -264,8 +263,7 @@ func TestWrite_SingleMetric(t *testing.T) {
 	svc.SetupGenericResponse(1, 0)
 
 	k := KinesisOutput{
-		Log:                  testutil.Logger{},
-		maxRecordsPerRequest: 500,
+		Log: testutil.Logger{},
 		Partition: &Partition{
 			Method: "static",
 			Key:    partitionKey,
@@ -305,8 +303,7 @@ func TestWrite_MultipleMetrics_SinglePartialRequest(t *testing.T) {
 	svc.SetupGenericResponse(3, 0)
 
 	k := KinesisOutput{
-		Log:                  testutil.Logger{},
-		maxRecordsPerRequest: 500,
+		Log: testutil.Logger{},
 		Partition: &Partition{
 			Method: "static",
 			Key:    partitionKey,
@@ -355,11 +352,10 @@ func TestWrite_MultipleMetrics_SingleFullRequest(t *testing.T) {
 	streamName := "stream"
 
 	svc := &mockKinesisPutRecords{}
-	svc.SetupGenericResponse(3, 0)
+	svc.SetupGenericResponse(maxRecordsPerRequest, 0)
 
 	k := KinesisOutput{
-		Log:                  testutil.Logger{},
-		maxRecordsPerRequest: 3,
+		Log: testutil.Logger{},
 		Partition: &Partition{
 			Method: "static",
 			Key:    partitionKey,
@@ -369,34 +365,17 @@ func TestWrite_MultipleMetrics_SingleFullRequest(t *testing.T) {
 		svc:        svc,
 	}
 
-	metric1, metric1Data := createTestMetric(t, "metric1", serializer)
-	metric2, metric2Data := createTestMetric(t, "metric2", serializer)
-	metric3, metric3Data := createTestMetric(t, "metric3", serializer)
-
-	err := k.Write([]telegraf.Metric{
-		metric1,
-		metric2,
-		metric3,
-	})
+	testMetrics := createTestMetrics(t, maxRecordsPerRequest, serializer)
+	err := k.Write(getMetrics(testMetrics))
 	assert.Nil(err, "Should not return error")
 
 	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
 		{
 			StreamName: &streamName,
-			Records: []*kinesis.PutRecordsRequestEntry{
-				{
-					PartitionKey: &partitionKey,
-					Data:         metric1Data,
-				},
-				{
-					PartitionKey: &partitionKey,
-					Data:         metric2Data,
-				},
-				{
-					PartitionKey: &partitionKey,
-					Data:         metric3Data,
-				},
-			},
+			Records: createPutRecordsRequestEntries(
+				testMetrics,
+				&partitionKey,
+			),
 		},
 	})
 }
@@ -408,12 +387,11 @@ func TestWrite_MultipleMetrics_MultipleRequests(t *testing.T) {
 	streamName := "stream"
 
 	svc := &mockKinesisPutRecords{}
-	svc.SetupGenericResponse(2, 0)
+	svc.SetupGenericResponse(maxRecordsPerRequest, 0)
 	svc.SetupGenericResponse(1, 0)
 
 	k := KinesisOutput{
-		Log:                  testutil.Logger{},
-		maxRecordsPerRequest: 2,
+		Log: testutil.Logger{},
 		Partition: &Partition{
 			Method: "static",
 			Key:    partitionKey,
@@ -423,39 +401,67 @@ func TestWrite_MultipleMetrics_MultipleRequests(t *testing.T) {
 		svc:        svc,
 	}
 
-	metric1, metric1Data := createTestMetric(t, "metric1", serializer)
-	metric2, metric2Data := createTestMetric(t, "metric2", serializer)
-	metric3, metric3Data := createTestMetric(t, "metric3", serializer)
-
-	err := k.Write([]telegraf.Metric{
-		metric1,
-		metric2,
-		metric3,
-	})
+	testMetrics := createTestMetrics(t, maxRecordsPerRequest+1, serializer)
+	err := k.Write(getMetrics(testMetrics))
 	assert.Nil(err, "Should not return error")
 
 	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
 		{
 			StreamName: &streamName,
-			Records: []*kinesis.PutRecordsRequestEntry{
-				{
-					PartitionKey: &partitionKey,
-					Data:         metric1Data,
-				},
-				{
-					PartitionKey: &partitionKey,
-					Data:         metric2Data,
-				},
-			},
+			Records: createPutRecordsRequestEntries(
+				testMetrics[0:maxRecordsPerRequest],
+				&partitionKey,
+			),
 		},
 		{
 			StreamName: &streamName,
-			Records: []*kinesis.PutRecordsRequestEntry{
-				{
-					PartitionKey: &partitionKey,
-					Data:         metric3Data,
-				},
-			},
+			Records: createPutRecordsRequestEntries(
+				testMetrics[maxRecordsPerRequest:],
+				&partitionKey,
+			),
+		},
+	})
+}
+
+func TestWrite_MultipleMetrics_MultipleFullRequests(t *testing.T) {
+	assert := assert.New(t)
+	serializer := influx.NewSerializer()
+	partitionKey := "partitionKey"
+	streamName := "stream"
+
+	svc := &mockKinesisPutRecords{}
+	svc.SetupGenericResponse(maxRecordsPerRequest, 0)
+	svc.SetupGenericResponse(maxRecordsPerRequest, 0)
+
+	k := KinesisOutput{
+		Log: testutil.Logger{},
+		Partition: &Partition{
+			Method: "static",
+			Key:    partitionKey,
+		},
+		StreamName: streamName,
+		serializer: serializer,
+		svc:        svc,
+	}
+
+	testMetrics := createTestMetrics(t, maxRecordsPerRequest*2, serializer)
+	err := k.Write(getMetrics(testMetrics))
+	assert.Nil(err, "Should not return error")
+
+	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
+		{
+			StreamName: &streamName,
+			Records: createPutRecordsRequestEntries(
+				testMetrics[0:maxRecordsPerRequest],
+				&partitionKey,
+			),
+		},
+		{
+			StreamName: &streamName,
+			Records: createPutRecordsRequestEntries(
+				testMetrics[maxRecordsPerRequest:],
+				&partitionKey,
+			),
 		},
 	})
 }
@@ -470,8 +476,7 @@ func TestWrite_SerializerError(t *testing.T) {
 	svc.SetupGenericResponse(2, 0)
 
 	k := KinesisOutput{
-		Log:                  testutil.Logger{},
-		maxRecordsPerRequest: 500,
+		Log: testutil.Logger{},
 		Partition: &Partition{
 			Method: "static",
 			Key:    partitionKey,
@@ -539,8 +544,8 @@ func (m *mockKinesisPutRecords) SetupResponse(
 }
 
 func (m *mockKinesisPutRecords) SetupGenericResponse(
-	successfulRecordCount int64,
-	failedRecordCount int64,
+	successfulRecordCount uint32,
+	failedRecordCount uint32,
 ) {
 
 	errorCode := "InternalFailure"
@@ -549,7 +554,7 @@ func (m *mockKinesisPutRecords) SetupGenericResponse(
 
 	records := []*kinesis.PutRecordsResultEntry{}
 
-	for i := int64(0); i < successfulRecordCount; i++ {
+	for i := uint32(0); i < successfulRecordCount; i++ {
 		sequenceNumber := fmt.Sprintf("%d", i)
 		records = append(records, &kinesis.PutRecordsResultEntry{
 			SequenceNumber: &sequenceNumber,
@@ -557,14 +562,14 @@ func (m *mockKinesisPutRecords) SetupGenericResponse(
 		})
 	}
 
-	for i := int64(0); i < failedRecordCount; i++ {
+	for i := uint32(0); i < failedRecordCount; i++ {
 		records = append(records, &kinesis.PutRecordsResultEntry{
 			ErrorCode:    &errorCode,
 			ErrorMessage: &errorMessage,
 		})
 	}
 
-	m.SetupResponse(failedRecordCount, records)
+	m.SetupResponse(int64(failedRecordCount), records)
 }
 
 func (m *mockKinesisPutRecords) SetupErrorResponse(err error) {
@@ -650,4 +655,51 @@ func createTestMetric(
 	require.NoError(t, err)
 
 	return metric, data
+}
+
+func createTestMetrics(
+	t *testing.T,
+	count uint32,
+	serializer serializers.Serializer,
+) []testMetric {
+
+	metrics := make([]testMetric, count)
+	for i := uint32(0); i < count; i++ {
+		name := fmt.Sprintf("metric%d", i)
+		metric, data := createTestMetric(t, name, serializer)
+		metrics[i] = testMetric{
+			Metric: metric,
+			Data:   data,
+		}
+	}
+	return metrics
+}
+
+type testMetric struct {
+	Metric telegraf.Metric
+	Data   []byte
+}
+
+func getMetrics(testMetrics []testMetric) []telegraf.Metric {
+	count := len(testMetrics)
+	metrics := make([]telegraf.Metric, count)
+	for i := 0; i < count; i++ {
+		metrics[i] = testMetrics[i].Metric
+	}
+	return metrics
+}
+
+func createPutRecordsRequestEntries(
+	testMetrics []testMetric,
+	partitionKey *string,
+) []*kinesis.PutRecordsRequestEntry {
+	count := len(testMetrics)
+	records := make([]*kinesis.PutRecordsRequestEntry, count)
+	for i := 0; i < count; i++ {
+		records[i] = &kinesis.PutRecordsRequestEntry{
+			PartitionKey: partitionKey,
+			Data:         testMetrics[i].Data,
+		}
+	}
+	return records
 }
