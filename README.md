@@ -259,6 +259,7 @@ For documentation on the latest development code see the [documentation index][d
 * [net](./plugins/inputs/net)
 * [net_response](./plugins/inputs/net_response)
 * [netstat](./plugins/inputs/net)
+* [nfsclient](./plugins/inputs/nfsclient)
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus_api](./plugins/inputs/nginx_plus_api)
 * [nginx_plus](./plugins/inputs/nginx_plus)
