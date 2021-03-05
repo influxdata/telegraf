@@ -98,7 +98,7 @@ Currently the following annotation are supported:
 
 Using the `monitor_kubernetes_pods_namespace` option allows you to limit which pods you are scraping.
 
-Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which will scrape pods only in the node that telegraf is running. It will fetch the pod list locally from the node's kubelet. This will require running Telegraf in every node of the cluster. Note that either `node_ip` must be specified in the config or the environment variable `NODE_IP` must be set to the host IP. The latter can be done in the yaml of the pod running telegraf:
+Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which will scrape pods only in the node that telegraf is running. It will fetch the pod list locally from the node's kubelet. This will require running Telegraf in every node of the cluster. Note that either `node_ip` must be specified in the config or the environment variable `NODE_IP` must be set to the host IP. ThisThe latter can be done in the yaml of the pod running telegraf:
 ```
 env:
   - name: NODE_IP
