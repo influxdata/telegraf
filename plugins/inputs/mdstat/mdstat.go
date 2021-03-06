@@ -18,11 +18,12 @@ import (
 // Telegraf plugin stuff
 // #############################################################################
 type MDSTAT_PLUGIN struct {
-
+  Mdstat_File string  `toml:"mdstat_file"`
 }
 
 var sampleConfig = `
-  # No Config required
+  # The location of the mdstat file to read.
+  # mdstat_file = /proc/mdstat
 `
 
 func (s *MDSTAT_PLUGIN) SampleConfig() string {
@@ -34,7 +35,12 @@ func (s *MDSTAT_PLUGIN) Description() string {
 }
 
 func (s *MDSTAT_PLUGIN) Gather(acc telegraf.Accumulator) error {
-  MDSTAT_FILE := "/proc/mdstat"
+  var MDSTAT_FILE string
+  if(s.Mdstat_File == "") {
+    MDSTAT_FILE = "/proc/mdstat"
+  } else {
+    MDSTAT_FILE = s.Mdstat_File
+  }
 
   // Lets open the file.
   f,err := os.Open(MDSTAT_FILE)
