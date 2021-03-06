@@ -25,6 +25,12 @@ The schema of the table on BigQuery:
 
   ## The BigQuery dataset
   dataset = "telegraf"
+
+  ## Timeout for BigQuery operations.
+  # timeout = "5s"
+
+  ## Character to replace hyphens on Metric name
+  # replace_hyphen_to = "_"
 ```
 
 ### Restrictions
