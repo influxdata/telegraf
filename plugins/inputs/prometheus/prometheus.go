@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,6 +44,9 @@ type Prometheus struct {
 	// Basic authentication credentials
 	Username string `toml:"username"`
 	Password string `toml:"password"`
+
+	// Headers map
+	Headers map[string]string
 
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
@@ -113,6 +117,10 @@ var sampleConfig = `
   # username = ""
   # password = ""
 
+  ## HTTP Headers (all values must be strings)
+  # [inputs.prometheus.headers]
+  #   X-Auth-Token = "my-xauth-token"
+  #   apiVersion = "v1"
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
 
@@ -307,6 +315,15 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.Header.Set("Authorization", "Bearer "+p.BearerTokenString)
 	} else if p.Username != "" || p.Password != "" {
 		req.SetBasicAuth(p.Username, p.Password)
+	}
+
+	// Add header parameters
+	for k, v := range p.Headers {
+		if strings.ToLower(k) == "host" {
+			req.Host = v
+		} else {
+			req.Header.Add(k, v)
+		}
 	}
 
 	var resp *http.Response
