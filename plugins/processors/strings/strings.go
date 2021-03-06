@@ -287,9 +287,9 @@ func (s *Strings) initOnce() {
 			newString := strings.Replace(s, c.Old, c.New, -1)
 			if newString == "" {
 				return s
-			} else {
-				return newString
 			}
+
+			return newString
 		}
 		s.converters = append(s.converters, c)
 	}
@@ -298,9 +298,9 @@ func (s *Strings) initOnce() {
 		c.fn = func(s string) string {
 			if len(s) < c.Width {
 				return s
-			} else {
-				return s[:c.Width]
 			}
+
+			return s[:c.Width]
 		}
 		s.converters = append(s.converters, c)
 	}

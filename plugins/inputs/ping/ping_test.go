@@ -5,11 +5,15 @@ package ping
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"reflect"
 	"sort"
 	"testing"
+	"time"
 
+	"github.com/go-ping/ping"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -258,6 +262,21 @@ func TestPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
+func TestPingGatherIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode, retrieves systems ping utility")
+	}
+
+	var acc testutil.Accumulator
+	p, ok := inputs.Inputs["ping"]().(*Ping)
+	require.True(t, ok)
+	p.Urls = []string{"localhost", "influxdata.com"}
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+	require.Equal(t, 0, acc.Metrics[0].Fields["result_code"])
+	require.Equal(t, 0, acc.Metrics[1].Fields["result_code"])
+}
+
 var lossyPingOutput = `
 PING www.google.com (216.58.218.164) 56(84) bytes of data.
 64 bytes from host.net (216.58.218.164): icmp_seq=1 ttl=63 time=35.2 ms
@@ -403,45 +422,118 @@ func mockHostResolver(ctx context.Context, ipv6 bool, host string) (*net.IPAddr,
 
 // Test that Gather function works using native ping
 func TestPingGatherNative(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping test due to permission requirements.")
+	type test struct {
+		P *Ping
 	}
 
-	var acc testutil.Accumulator
-	p := Ping{
+	fakePingFunc := func(destination string) (*pingStats, error) {
+		s := &pingStats{
+			Statistics: ping.Statistics{
+				PacketsSent: 5,
+				PacketsRecv: 5,
+				Rtts: []time.Duration{
+					3 * time.Millisecond,
+					4 * time.Millisecond,
+					1 * time.Millisecond,
+					5 * time.Millisecond,
+					2 * time.Millisecond,
+				},
+			},
+			ttl: 1,
+		}
+
+		return s, nil
+	}
+
+	tests := []test{
+		{
+			P: &Ping{
+				Urls:           []string{"localhost", "127.0.0.2"},
+				Method:         "native",
+				Count:          5,
+				Percentiles:    []int{50, 95, 99},
+				nativePingFunc: fakePingFunc,
+			},
+		},
+		{
+			P: &Ping{
+				Urls:           []string{"localhost", "127.0.0.2"},
+				Method:         "native",
+				Count:          5,
+				PingInterval:   1,
+				Percentiles:    []int{50, 95, 99},
+				nativePingFunc: fakePingFunc,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		var acc testutil.Accumulator
+		err := tc.P.Init()
+		require.NoError(t, err)
+		require.NoError(t, acc.GatherError(tc.P.Gather))
+		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
+		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
+		assert.True(t, acc.HasField("ping", "percentile50_ms"))
+		assert.Equal(t, float64(3), acc.Metrics[0].Fields["percentile50_ms"])
+		assert.True(t, acc.HasField("ping", "percentile95_ms"))
+		assert.Equal(t, float64(4.799999), acc.Metrics[0].Fields["percentile95_ms"])
+		assert.True(t, acc.HasField("ping", "percentile99_ms"))
+		assert.Equal(t, float64(4.96), acc.Metrics[0].Fields["percentile99_ms"])
+		assert.True(t, acc.HasField("ping", "percent_packet_loss"))
+		assert.True(t, acc.HasField("ping", "minimum_response_ms"))
+		assert.True(t, acc.HasField("ping", "average_response_ms"))
+		assert.True(t, acc.HasField("ping", "maximum_response_ms"))
+		assert.True(t, acc.HasField("ping", "standard_deviation_ms"))
+	}
+
+}
+
+func TestNoPacketsSent(t *testing.T) {
+	p := &Ping{
 		Urls:        []string{"localhost", "127.0.0.2"},
 		Method:      "native",
 		Count:       5,
-		resolveHost: mockHostResolver,
 		Percentiles: []int{50, 95, 99},
+		nativePingFunc: func(destination string) (*pingStats, error) {
+			s := &pingStats{
+				Statistics: ping.Statistics{
+					PacketsSent: 0,
+					PacketsRecv: 0,
+				},
+			}
+
+			return s, nil
+		},
 	}
 
-	assert.NoError(t, acc.GatherError(p.Gather))
-	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
-	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
-	assert.True(t, acc.HasField("ping", "percentile50_ms"))
-	assert.True(t, acc.HasField("ping", "percentile95_ms"))
-	assert.True(t, acc.HasField("ping", "percentile99_ms"))
-}
-
-func mockHostResolverError(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error) {
-	return nil, errors.New("myMock error")
+	var testAcc testutil.Accumulator
+	err := p.Init()
+	require.NoError(t, err)
+	p.pingToURLNative("localhost", &testAcc)
+	require.Zero(t, testAcc.Errors)
+	require.True(t, testAcc.HasField("ping", "result_code"))
+	require.Equal(t, 2, testAcc.Metrics[0].Fields["result_code"])
 }
 
 // Test failed DNS resolutions
 func TestDNSLookupError(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping test due to permission requirements.")
+	p := &Ping{
+		Count:  1,
+		Log:    testutil.Logger{},
+		Urls:   []string{"localhost"},
+		Method: "native",
+		IPv6:   false,
+		nativePingFunc: func(destination string) (*pingStats, error) {
+			return nil, fmt.Errorf("unknown")
+		},
 	}
 
-	var acc testutil.Accumulator
-	p := Ping{
-		Urls:        []string{"localhost"},
-		Method:      "native",
-		IPv6:        false,
-		resolveHost: mockHostResolverError,
-	}
-
-	acc.GatherError(p.Gather)
-	assert.True(t, len(acc.Errors) > 0)
+	var testAcc testutil.Accumulator
+	err := p.Init()
+	require.NoError(t, err)
+	p.pingToURLNative("localhost", &testAcc)
+	require.Zero(t, testAcc.Errors)
+	require.True(t, testAcc.HasField("ping", "result_code"))
+	require.Equal(t, 1, testAcc.Metrics[0].Fields["result_code"])
 }

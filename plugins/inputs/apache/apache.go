@@ -67,7 +67,7 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if n.client == nil {
-		client, err := n.createHttpClient()
+		client, err := n.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -77,14 +77,14 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			acc.AddError(fmt.Errorf("unable to parse address '%s': %s", u, err))
 			continue
 		}
 
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(n.gatherUrl(addr, acc))
+			acc.AddError(n.gatherURL(addr, acc))
 		}(addr)
 	}
 
@@ -92,7 +92,7 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *Apache) createHttpClient() (*http.Client, error) {
+func (n *Apache) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := n.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -108,10 +108,10 @@ func (n *Apache) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+func (n *Apache) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	req, err := http.NewRequest("GET", addr.String(), nil)
 	if err != nil {
-		return fmt.Errorf("error on new request to %s : %s\n", addr.String(), err)
+		return fmt.Errorf("error on new request to %s : %s", addr.String(), err)
 	}
 
 	if len(n.Username) != 0 && len(n.Password) != 0 {
@@ -120,7 +120,7 @@ func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 
 	resp, err := n.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error on request to %s : %s\n", addr.String(), err)
+		return fmt.Errorf("error on request to %s : %s", addr.String(), err)
 	}
 	defer resp.Body.Close()
 

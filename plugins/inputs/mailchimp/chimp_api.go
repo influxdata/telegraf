@@ -15,11 +15,11 @@ import (
 )
 
 const (
-	reports_endpoint          string = "/3.0/reports"
-	reports_endpoint_campaign string = "/3.0/reports/%s"
+	reportsEndpoint         string = "/3.0/reports"
+	reportsEndpointCampaign string = "/3.0/reports/%s"
 )
 
-var mailchimp_datacenter = regexp.MustCompile("[a-z]+[0-9]+$")
+var mailchimpDatacenter = regexp.MustCompile("[a-z]+[0-9]+$")
 
 type ChimpAPI struct {
 	Transport http.RoundTripper
@@ -57,7 +57,7 @@ func (p *ReportsParams) String() string {
 func NewChimpAPI(apiKey string) *ChimpAPI {
 	u := &url.URL{}
 	u.Scheme = "https"
-	u.Host = fmt.Sprintf("%s.api.mailchimp.com", mailchimp_datacenter.FindString(apiKey))
+	u.Host = fmt.Sprintf("%s.api.mailchimp.com", mailchimpDatacenter.FindString(apiKey))
 	u.User = url.UserPassword("", apiKey)
 	return &ChimpAPI{url: u}
 }
@@ -86,7 +86,7 @@ func chimpErrorCheck(body []byte) error {
 func (a *ChimpAPI) GetReports(params ReportsParams) (ReportsResponse, error) {
 	a.Lock()
 	defer a.Unlock()
-	a.url.Path = reports_endpoint
+	a.url.Path = reportsEndpoint
 
 	var response ReportsResponse
 	rawjson, err := runChimp(a, params)
@@ -105,7 +105,7 @@ func (a *ChimpAPI) GetReports(params ReportsParams) (ReportsResponse, error) {
 func (a *ChimpAPI) GetReport(campaignID string) (Report, error) {
 	a.Lock()
 	defer a.Unlock()
-	a.url.Path = fmt.Sprintf(reports_endpoint_campaign, campaignID)
+	a.url.Path = fmt.Sprintf(reportsEndpointCampaign, campaignID)
 
 	var response Report
 	rawjson, err := runChimp(a, ReportsParams{})

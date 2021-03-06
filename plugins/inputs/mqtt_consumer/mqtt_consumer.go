@@ -184,6 +184,7 @@ func (m *MQTTConsumer) Init() error {
 	}
 
 	m.opts = opts
+	m.messages = map[telegraf.TrackingID]bool{}
 
 	return nil
 }
@@ -221,9 +222,6 @@ func (m *MQTTConsumer) connect() error {
 
 	m.Log.Infof("Connected %v", m.Servers)
 	m.state = Connected
-	m.messagesMutex.Lock()
-	m.messages = make(map[telegraf.TrackingID]bool)
-	m.messagesMutex.Unlock()
 
 	// Persistent sessions should skip subscription if a session is present, as
 	// the subscriptions are stored by the server.

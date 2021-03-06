@@ -664,7 +664,7 @@ func (e *Elasticsearch) gatherSingleIndexStats(name string, index indexStat, now
 				shardTags := map[string]string{
 					"index_name": name,
 					"node_id":    routingNode,
-					"shard_name": string(shardNumber),
+					"shard_name": shardNumber,
 					"type":       shardType,
 				}
 
@@ -741,11 +741,7 @@ func (e *Elasticsearch) gatherJSONData(url string, v interface{}) error {
 			r.StatusCode, http.StatusOK)
 	}
 
-	if err = json.NewDecoder(r.Body).Decode(v); err != nil {
-		return err
-	}
-
-	return nil
+	return json.NewDecoder(r.Body).Decode(v)
 }
 
 func (e *Elasticsearch) compileIndexMatchers() (map[string]filter.Filter, error) {

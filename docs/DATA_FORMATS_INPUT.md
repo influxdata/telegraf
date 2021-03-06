@@ -17,6 +17,7 @@ Protocol or in JSON format.
 - [Prometheus](/plugins/parsers/prometheus)
 - [Value](/plugins/parsers/value), ie: 45 or "booyah"
 - [Wavefront](/plugins/parsers/wavefront)
+- [XML](/plugins/parsers/xml)
 
 Any input plugin containing the `data_format` option can use it to select the
 desired parser:
@@ -30,9 +31,6 @@ desired parser:
   name_suffix = "_mycollector"
 
   ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "json"
 ```
 

@@ -25,7 +25,7 @@ type Connector interface {
 	Connect() (Connection, error)
 }
 
-func NewConnector(hostname, port, password string) (*connector, error) {
+func newConnector(hostname, port, password string) (*connector, error) {
 	return &connector{
 		hostname: hostname,
 		port:     port,
@@ -58,7 +58,7 @@ func (c *connector) Connect() (Connection, error) {
 	return &connection{rcon: rcon}, nil
 }
 
-func NewClient(connector Connector) (*client, error) {
+func newClient(connector Connector) (*client, error) {
 	return &client{connector: connector}, nil
 }
 
