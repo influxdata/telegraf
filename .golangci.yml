@@ -1,36 +1,150 @@
 linters:
   enable:
+    - bodyclose
+    - deadcode
+    - dogsled
+    - errcheck
+    - funlen
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ifshort
+    - ineffassign
+    - nakedret
+    - nilerr
+    - predeclared
     - revive
+    - sqlclosecheck
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+  disable:
+    - asciicheck
+    - depguard
+    - dupl
+    - exhaustive
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - goerr113
+    - gofmt
+    - gofumpt
+    - goheader
+    - golint
+    - gomnd
+    - gomodguard
+    - interfacer
+    - lll
+    - makezero
+    - maligned
+    - megacheck
+    - misspell
+    - nestif
+    - nlreturn
+    - noctx
+    - nolintlint
+    - paralleltest
+    - prealloc
+    - rowserrcheck
+    - scopelint
+    - stylecheck
+    - testpackage
+    - thelper
+    - tparallel
+    - wastedassign
+    - whitespace
+    - wrapcheck
+    - wsl
 
 linters-settings:
   revive:
     rules:
+      - name: argument-limit
+        arguments: [ 4 ]
+      - name: atomic
+      - name: bare-return
       - name: blank-imports
+      - name: bool-literal-in-expr
+      - name: call-to-gc
+      - name: confusing-naming
+      - name: confusing-results
+      - name: cognitive-complexity
+        arguments: [ 7 ]
+      - name: constant-logical-expr
       - name: context-as-argument
       - name: context-keys-type
+      - name: cyclomatic
+        arguments: [ 3 ]
+      - name: deep-exit
+      - name: defer
       - name: dot-imports
+      - name: duplicated-imports
+      - name: early-return
+      - name: empty-block
+      - name: empty-lines
+      - name: error-naming
       - name: error-return
       - name: error-strings
-      - name: error-naming
+      - name: errorf
       - name: exported
+      - name: flag-parameter
+      - name: function-result-limit
+        arguments: [ 3 ]
+      - name: get-return
+      - name: identical-branches
       - name: if-return
       - name: increment-decrement
-      - name: var-naming
-      - name: var-declaration
+      - name: indent-error-flow
+      - name: imports-blacklist
+        arguments: [ "log" ]
+      - name: import-shadowing
+      - name: line-length-limit
+        arguments: [ 120 ]
+      - name: max-public-structs
+        arguments: [ 3 ]
+      - name: modifies-parameter
+      - name: modifies-value-receiver
       - name: package-comments
       - name: range
+      - name: range-val-in-closure
+      - name: range-val-address
       - name: receiver-naming
-      - name: time-naming
-      - name: unexported-return
-      - name: indent-error-flow
-      - name: errorf
-      - name: empty-block
-      - name: superfluous-else
-      - name: unused-parameter
-      - name: unreachable-code
       - name: redefines-builtin-id
+      - name: string-of-int
+      - name: struct-tag
+      - name: superfluous-else
+      - name: time-naming
+      - name: var-naming
+      - name: var-declaration
+      - name: unconditional-recursion
+      - name: unexported-naming
+      - name: unexported-return
+      - name: unhandled-error
+        arguments: [ "fmt.Printf" ]
+      - name: unnecessary-stmt
+      - name: unreachable-code
+      - name: unused-parameter
+      - name: unused-receiver
+      - name: waitgroup-by-value
 
 run:
+  # exit code when at least one issue was found, default is 1
+  issues-exit-code: 0
+
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 5m
+
   # which dirs to skip: issues from them won't be reported;
   # can use regexp here: generated.*, regexp is applied on full path;
   # default value is empty list, but default dirs are skipped independently
@@ -52,17 +166,16 @@ run:
     - plugins/parsers/influx/machine.go*
 
 issues:
-  # List of regexps of issue texts to exclude, empty list by default.
-  # But independently from this option we use default exclude patterns,
-  # it can be disabled by `exclude-use-default: false`. To list all
-  # excluded by default patterns execute `golangci-lint run --help`
-  exclude:
-    - don't use an underscore in package name
-    - exported.*should have comment.*or be unexported
-    - comment on exported.*should be of the form
-
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
   max-issues-per-linter: 0
 
   # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
   max-same-issues: 0
+
+  # Show only new issues created after git revision `HEAD~`
+  # Great for CI setups
+  # It's not practical to fix all existing issues at the moment of integration: much better to not allow issues in new code.
+  # new-from-rev: "HEAD~"
+
+output:
+  format: tab
