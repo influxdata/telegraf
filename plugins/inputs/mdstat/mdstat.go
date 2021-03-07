@@ -70,6 +70,8 @@ func (s *MDSTAT_PLUGIN) Gather(acc telegraf.Accumulator) error {
         "currDisks": device.currDisks,
         "missingDisks": device.missingDisks,
         "failedDisks": device.failedDisks,
+        "inRecovery": device.inRecovery,
+        "recoveryPercent": device.recoveryPercent,
       }
 
       // Add raid array stats per raid device
@@ -119,6 +121,8 @@ type Device struct {
   currDisks int
   missingDisks int
   failedDisks int
+  inRecovery bool
+  recoveryPercent float32
 }
 
 type MDSTAT struct {
@@ -128,6 +132,7 @@ type MDSTAT struct {
 
 const PERSONALITY_PREFIX = "Personalities : "
 const UNUSED_PREFIX = "unused"
+const RECOVERY_STRING = "recovery"
 
 func parseFile(r io.Reader) MDSTAT {
 
@@ -219,6 +224,17 @@ func parseDeviceEntry(deviceEntry []string) Device {
   // since they represent the number of inactive disks. Subtracting the failed disks from
   // The number of _'s represents the number of missing disks.
   parsedDevice.missingDisks = strings.Count(captures[3], "_") - parsedDevice.failedDisks
+
+
+  // Lets check for a recovery line.
+  if(strings.Contains(deviceEntry[2], RECOVERY_STRING)) {
+    RECOVERY_LINE_REGEX := "recovery = (?P<recoveryPercent>[0-9]+\\.[0-9]+)%"
+    re := regexp.MustCompile(RECOVERY_LINE_REGEX)
+    captures := re.FindStringSubmatch(deviceEntry[2])
+    parsedDevice.inRecovery = true
+    value,_ := strconv.ParseFloat(captures[1], 32)
+    parsedDevice.recoveryPercent = float32(value)
+  }
 
   return parsedDevice
 }
