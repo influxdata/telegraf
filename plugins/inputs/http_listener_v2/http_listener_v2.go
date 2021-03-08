@@ -272,9 +272,8 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 	if req.Header.Get("Content-Encoding") == "snappy" {
 		bytes, err = snappy.Decode(nil, bytes)
 		if err != nil {
-			res.Header().Set("Content-Type", "application/json")
-			res.WriteHeader(http.StatusBadRequest)
-			res.Write([]byte(`{"error":"http: snappy decode error"}`))
+			h.Log.Debug(err.Error())
+			badRequest(res)
 			return nil, false
 		}
 	}
