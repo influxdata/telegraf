@@ -246,13 +246,10 @@ func NewParser(config *Config) (Parser, error) {
 		)
 	case "prometheus":
 		parser, err = NewPrometheusParser(config.DefaultTags)
-<<<<<<< HEAD
 	case "prometheusremotewrite":
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
-=======
 	case "xml":
 		parser, err = NewXMLParser(config.MetricName, config.DefaultTags, config.XMLConfig)
->>>>>>> master
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
