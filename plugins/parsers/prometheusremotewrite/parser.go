@@ -18,8 +18,8 @@ type Parser struct {
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	var metrics []telegraf.Metric
 	var err error
+	var metrics []telegraf.Metric
 	var req prompb.WriteRequest
 
 	if err := proto.Unmarshal(buf, &req); err != nil {
@@ -39,25 +39,32 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 
 		metricName := tags[model.MetricNameLabel]
+		if metricName == "" {
+			return nil, fmt.Errorf("metric name %q not found in tag-set or empty", model.MetricNameLabel)
+		}
 		delete(tags, model.MetricNameLabel)
 
 		for _, s := range ts.Samples {
-			fields := getNameAndValue(&s, metricName)
-
+			fields := make(map[string]interface{})
+			if !math.IsNaN(s.Value) {
+				fields[metricName] = s.Value
+			}
 			// converting to telegraf metric
 			if len(fields) > 0 {
-				t := getTimestamp(&s, now)
+				var t time.Time
+				if s.Timestamp > 0 {
+					t = time.Unix(0, s.Timestamp*1000000)
+				} else {
+					t = now
+				}
 				metric, err := metric.New("prometheusremotewrite", tags, fields, t)
 				if err != nil {
 					return nil, fmt.Errorf("unable to convert to telegraf metric: %s", err)
 				}
-				if err == nil {
-					metrics = append(metrics, metric)
-				}
+				metrics = append(metrics, metric)
 			}
 		}
 	}
-
 	return metrics, err
 }
 
@@ -80,23 +87,4 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
-}
-
-// Get name and value from metric
-func getNameAndValue(s *prompb.Sample, metricName string) map[string]interface{} {
-	fields := make(map[string]interface{})
-	if !math.IsNaN(s.Value) {
-		fields[metricName] = s.Value
-	}
-	return fields
-}
-
-func getTimestamp(s *prompb.Sample, now time.Time) time.Time {
-	var t time.Time
-	if s.Timestamp > 0 {
-		t = time.Unix(0, s.Timestamp*1000000)
-	} else {
-		t = now
-	}
-	return t
 }
