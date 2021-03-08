@@ -102,6 +102,7 @@ jobs:
       - checkout
       - restore_cache:
           key: mac-go-mod-v2-{{ checksum "go.sum" }}
+      - run: 'brew update'
       - run: 'brew install go@16'
       - run: 'make deps'
       - run: 'make tidy'
