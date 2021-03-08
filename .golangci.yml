@@ -155,6 +155,7 @@ run:
     - scripts
     - docs
     - etc
+    - plugins/parsers/influx/plugins #workaround to skip weird "plugins/parsers/influx/plugins/parsers/influx" directory
 
   # which files to skip: they will be analyzed, but issues from them
   # won't be reported. Default value is empty list, but there is
