@@ -34,7 +34,6 @@ func (k *WriteConfig) SetConfig(config *sarama.Config) error {
 	config.Producer.Return.Successes = true
 	config.Producer.Idempotent = k.IdempotentWrites
 	config.Producer.Retry.Max = k.MaxRetry
-
 	if k.MaxMessageBytes > 0 {
 		config.Producer.MaxMessageBytes = k.MaxMessageBytes
 	}
