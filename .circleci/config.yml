@@ -179,8 +179,30 @@ jobs:
           shell: powershell.exe
           command: |
             ./scripts/windows-signing.ps1
+      - persist_to_workspace:
+          root: './build'
+          paths:
+            - 'dist'
       - store_artifacts:
           path: './build/dist'
+          destination: 'build/dist'
+  package-sign-mac:
+    macos:
+      xcode: "11.3"
+    working_directory: /Users/distiller/project
+    environment:
+      FL_OUTPUT_DIR: output
+      FASTLANE_LANE: test
+    shell: /bin/bash --login -o pipefail
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '.'
+      - run:
+          command: |
+            sh ./scripts/mac-signing.sh
+      - store_artifacts:
+          path: './dist'
           destination: 'build/dist'
 workflows:
   version: 2
@@ -253,6 +275,15 @@ workflows:
       - 'package-sign-windows':
           requires:
             - 'release'
+          filters:
+              tags:
+                only: /.*/
+      - 'package-sign-mac':
+           requires:
+             - 'package-sign-windows' 
+           filters:
+              tags:
+                only: /.*/
   nightly:
     jobs:
       - 'linter'
