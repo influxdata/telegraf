@@ -15,6 +15,7 @@ type ClientConfig struct {
 	TLSKey             string `toml:"tls_key"`
 	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
 	ServerName         string `toml:"tls_server_name"`
+	TLSMinVersion      string `toml:"tls_min_version"`
 
 	// Deprecated in 1.7; use TLS variables above
 	SSLCA   string `toml:"ssl_ca"`
@@ -57,9 +58,21 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 		return nil, nil
 	}
 
+	// TLS1.0 and TLS1.1 are effectively EOL, so make TLS1.2 the minimum. See
+	// https://github.com/influxdata/telegraf/issues/8171#issuecomment-777120753
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: c.InsecureSkipVerify,
 		Renegotiation:      tls.RenegotiateNever,
+		MinVersion:         tls.VersionTLS12,
+	}
+
+	if c.TLSMinVersion != "" {
+		version, err := ParseTLSVersion(c.TLSMinVersion)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"could not parse tls min version %q: %v", c.TLSMinVersion, err)
+		}
+		tlsConfig.MinVersion = version
 	}
 
 	if c.TLSCA != "" {
