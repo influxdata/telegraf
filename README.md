@@ -286,6 +286,7 @@ For documentation on the latest development code see the [documentation index][d
 * [postgresql](./plugins/inputs/postgresql)
 * [powerdns](./plugins/inputs/powerdns)
 * [powerdns_recursor](./plugins/inputs/powerdns_recursor)
+* [pressure](./plugins/inputs/pressure)
 * [processes](./plugins/inputs/processes)
 * [procstat](./plugins/inputs/procstat)
 * [prometheus](./plugins/inputs/prometheus) (can be used for [Caddy server](./plugins/inputs/prometheus/README.md#usage-for-caddy-http-server))
