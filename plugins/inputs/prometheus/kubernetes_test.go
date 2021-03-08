@@ -9,6 +9,9 @@ import (
 
 	v1 "github.com/ericchiang/k8s/apis/core/v1"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
+
+	"github.com/kubernetes/apimachinery/pkg/fields"
+	"github.com/kubernetes/apimachinery/pkg/labels"
 )
 
 func TestScrapeURLNoAnnotations(t *testing.T) {
@@ -140,6 +143,62 @@ func TestPodSelector(t *testing.T) {
 
 		assert.Equal(t, len(output), len(c.expected))
 	}
+}
+
+func TestPodHasMatchingNamespace(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}, PodNamespace: "default"}
+
+	pod := pod()
+	pod.Metadata.Name = str("Pod1")
+	pod.Metadata.Namespace = str("default")
+	shouldMatch := podHasMatchingNamespace(pod, prom)
+	assert.Equal(t, true, shouldMatch)
+
+	pod.Metadata.Name = str("Pod2")
+	pod.Metadata.Namespace = str("namespace")
+	shouldNotMatch := podHasMatchingNamespace(pod, prom)
+	assert.Equal(t, false, shouldNotMatch)
+}
+
+func TestPodHasMatchingLabelSelector(t *testing.T) {
+	labelSelectorString := "label0==label0,label1=label1,label2!=label,label3 in (label1,label2, label3),label4 notin (label1, label2,label3),label5,!label6"
+	prom := &Prometheus{Log: testutil.Logger{}, KubernetesLabelSelector: labelSelectorString}
+
+	pod := pod()
+	pod.Metadata.Labels = make(map[string]string)
+	pod.Metadata.Labels["label0"] = "label0"
+	pod.Metadata.Labels["label1"] = "label1"
+	pod.Metadata.Labels["label2"] = "label2"
+	pod.Metadata.Labels["label3"] = "label3"
+	pod.Metadata.Labels["label4"] = "label4"
+	pod.Metadata.Labels["label5"] = "label5"
+
+	labelSelector, err := labels.Parse(prom.KubernetesLabelSelector)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, true, podHasMatchingLabelSelector(pod, labelSelector))
+}
+
+func TestPodHasMatchingFieldSelector(t *testing.T) {
+	fieldSelectorString := "status.podIP=127.0.0.1,spec.restartPolicy=Always,spec.NodeName!=nodeName"
+	prom := &Prometheus{Log: testutil.Logger{}, KubernetesFieldSelector: fieldSelectorString}
+	pod := pod()
+	pod.Spec.RestartPolicy = str("Always")
+	pod.Spec.NodeName = str("node1000")
+
+	fieldSelector, err := fields.ParseSelector(prom.KubernetesFieldSelector)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, true, podHasMatchingFieldSelector(pod, fieldSelector))
+}
+
+func TestInvalidFieldSelector(t *testing.T) {
+	fieldSelectorString := "status.podIP=127.0.0.1,spec.restartPolicy=Always,spec.NodeName!=nodeName,spec.nodeName"
+	prom := &Prometheus{Log: testutil.Logger{}, KubernetesFieldSelector: fieldSelectorString}
+	pod := pod()
+	pod.Spec.RestartPolicy = str("Always")
+	pod.Spec.NodeName = str("node1000")
+
+	_, err := fields.ParseSelector(prom.KubernetesFieldSelector)
+	assert.NotEqual(t, err, nil)
 }
 
 func pod() *v1.Pod {
