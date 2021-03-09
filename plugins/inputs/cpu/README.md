@@ -49,7 +49,7 @@ On Linux, consult `man proc` for details on the meanings of these values.
 ### Troubleshooting
 
 On Linux systems the `/proc/stat` file is used to gather CPU times.
-Percentages are based on the last 2 samples...
+Percentages are based on the last 2 samples....
 
 ### Example Output
 
