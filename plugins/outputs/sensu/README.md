@@ -6,7 +6,7 @@ HTTP events API.
 ### Configuration:
 
 ```toml
-[[outputs.sensu-go]]
+[[outputs.sensu]]
   ## BACKEND API URL is the Sensu Backend API root URL to send metrics to 
   ## (protocol, host, and port only). The output plugin will automatically 
   ## append the corresponding backend API path
@@ -71,7 +71,7 @@ HTTP events API.
   ## Check specification
   ## The check name is the name to give the Sensu check associated with the event
   ## created. This maps to check.metatadata.name in the event.
-  [outputs.sensu-go.check]
+  [outputs.sensu.check]
     name = "telegraf"
 
   ## Entity specification
@@ -82,16 +82,16 @@ HTTP events API.
   ## backend_api_url and entity_name is not set, the value returned by 
   ## os.Hostname() will be used; if the output plugin is configured to send
   ## events to an agent_api_url, entity_name and entity_namespace are not used. 
-  # [outputs.sensu-go.entity]
+  # [outputs.sensu.entity]
   #   name = "server-01"
   #   namespace = "default"
 
   ## Metrics specification
   ## Configure the tags for the metrics that are sent as part of the Sensu event
-  # [outputs.sensu-go.tags]
+  # [outputs.sensu.tags]
   #   source = "telegraf"
 
   ## Configure the handler(s) for processing the provided metrics
-  # [outputs.sensu-go.metrics]
+  # [outputs.sensu.metrics]
   #   handlers = ["influxdb","elasticsearch"]
 ```

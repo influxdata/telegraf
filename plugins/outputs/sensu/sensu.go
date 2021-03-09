@@ -167,7 +167,7 @@ var sampleConfig = `
   ## Check specification
   ## The check name is the name to give the Sensu check associated with the event
   ## created. This maps to check.metatadata.name in the event.
-  [outputs.sensu-go.check]
+  [outputs.sensu.check]
   name = "telegraf"
 
   ## Entity specification
@@ -178,17 +178,17 @@ var sampleConfig = `
   ## backend_api_url and entity_name is not set, the value returned by
   ## os.Hostname() will be used; if the output plugin is configured to send
   ## events to an agent_api_url, entity_name and entity_namespace are not used.
-  # [outputs.sensu-go.entity]
+  # [outputs.sensu.entity]
   #   name = "server-01"
   #   namespace = "default"
 
   ## Metrics specification
   ## Configure the tags for the metrics that are sent as part of the Sensu event
-  # [outputs.sensu-go.tags]
+  # [outputs.sensu.tags]
   #   source = "telegraf"
 
   ## Configure the handler(s) for processing the provided metrics
-  # [outputs.sensu-go.metrics]
+  # [outputs.sensu.metrics]
   #   handlers = ["influxdb","elasticsearch"]
 `
 
@@ -401,7 +401,7 @@ func (s *Sensu) Init() error {
 }
 
 func init() {
-	outputs.Add("sensu-go", func() telegraf.Output {
+	outputs.Add("sensu", func() telegraf.Output {
 		// Default configuration values
 
 		// make a string from the defaultUrl const
