@@ -76,6 +76,7 @@ var (
 )
 
 var stop chan struct{}
+var runningAgent *agent.Agent
 
 func reloadLoop(
 	inputFilters []string,
@@ -106,7 +107,6 @@ func reloadLoop(
 				cancel()
 			}
 		}()
-
 		err := runAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
@@ -152,32 +152,40 @@ func runAgent(ctx context.Context,
 			c.Agent.Interval.Duration)
 	}
 
-	ag, err := agent.NewAgent(c)
+	if runningAgent != nil && runningAgent.Config != nil {
+		for idx := range runningAgent.Config.Outputs {
+			log.Printf("I! Closing running output: %s", runningAgent.Config.Outputs[idx].LogName())
+			runningAgent.Config.Outputs[idx].Close()
+		}
+	}
+
+	runningAgent, err = agent.NewAgent(c)
 	if err != nil {
+		runningAgent = nil // set runningAgent to nil in case of agent.NewAgent(c) fails
 		return err
 	}
 
 	// Setup logging as configured.
 	logConfig := logger.LogConfig{
-		Debug:               ag.Config.Agent.Debug || *fDebug,
-		Quiet:               ag.Config.Agent.Quiet || *fQuiet,
-		LogTarget:           ag.Config.Agent.LogTarget,
-		Logfile:             ag.Config.Agent.Logfile,
-		RotationInterval:    ag.Config.Agent.LogfileRotationInterval,
-		RotationMaxSize:     ag.Config.Agent.LogfileRotationMaxSize,
-		RotationMaxArchives: ag.Config.Agent.LogfileRotationMaxArchives,
+		Debug:               runningAgent.Config.Agent.Debug || *fDebug,
+		Quiet:               runningAgent.Config.Agent.Quiet || *fQuiet,
+		LogTarget:           runningAgent.Config.Agent.LogTarget,
+		Logfile:             runningAgent.Config.Agent.Logfile,
+		RotationInterval:    runningAgent.Config.Agent.LogfileRotationInterval,
+		RotationMaxSize:     runningAgent.Config.Agent.LogfileRotationMaxSize,
+		RotationMaxArchives: runningAgent.Config.Agent.LogfileRotationMaxArchives,
 	}
 
 	logger.SetupLogging(logConfig)
 
 	if *fRunOnce {
 		wait := time.Duration(*fTestWait) * time.Second
-		return ag.Once(ctx, wait)
+		return runningAgent.Once(ctx, wait)
 	}
 
 	if *fTest || *fTestWait != 0 {
 		wait := time.Duration(*fTestWait) * time.Second
-		return ag.Test(ctx, wait)
+		return runningAgent.Test(ctx, wait)
 	}
 
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
@@ -204,7 +212,7 @@ func runAgent(ctx context.Context,
 		}
 	}
 
-	return ag.Run(ctx)
+	return runningAgent.Run(ctx)
 }
 
 func usageExit(rc int) {
