@@ -265,6 +265,7 @@ func (t *RollingTicker) run(ctx context.Context) {
 	}
 }
 
+// Reset the ticker to the next interval + jitter.
 func (t *RollingTicker) Reset() {
 	t.timer.Reset(t.next())
 }
