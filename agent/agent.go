@@ -796,7 +796,7 @@ func (a *Agent) runOutputs(
 	cancel()
 	wg.Wait()
 
-	log.Printf("D! [agent] Stopping running outputs")
+	log.Printf("I [agent] Stopping running outputs")
 	stopRunningOutputs(unit.outputs)
 
 	return nil

@@ -76,7 +76,6 @@ var (
 )
 
 var stop chan struct{}
-var runningAgent *agent.Agent
 
 func reloadLoop(
 	inputFilters []string,
@@ -152,40 +151,32 @@ func runAgent(ctx context.Context,
 			c.Agent.Interval.Duration)
 	}
 
-	if runningAgent != nil && runningAgent.Config != nil {
-		for idx := range runningAgent.Config.Outputs {
-			log.Printf("I! Closing running output: %s", runningAgent.Config.Outputs[idx].LogName())
-			runningAgent.Config.Outputs[idx].Close()
-		}
-	}
-
-	runningAgent, err = agent.NewAgent(c)
+	ag, err := agent.NewAgent(c)
 	if err != nil {
-		runningAgent = nil // set runningAgent to nil in case of agent.NewAgent(c) fails
 		return err
 	}
 
 	// Setup logging as configured.
 	logConfig := logger.LogConfig{
-		Debug:               runningAgent.Config.Agent.Debug || *fDebug,
-		Quiet:               runningAgent.Config.Agent.Quiet || *fQuiet,
-		LogTarget:           runningAgent.Config.Agent.LogTarget,
-		Logfile:             runningAgent.Config.Agent.Logfile,
-		RotationInterval:    runningAgent.Config.Agent.LogfileRotationInterval,
-		RotationMaxSize:     runningAgent.Config.Agent.LogfileRotationMaxSize,
-		RotationMaxArchives: runningAgent.Config.Agent.LogfileRotationMaxArchives,
+		Debug:               ag.Config.Agent.Debug || *fDebug,
+		Quiet:               ag.Config.Agent.Quiet || *fQuiet,
+		LogTarget:           ag.Config.Agent.LogTarget,
+		Logfile:             ag.Config.Agent.Logfile,
+		RotationInterval:    ag.Config.Agent.LogfileRotationInterval,
+		RotationMaxSize:     ag.Config.Agent.LogfileRotationMaxSize,
+		RotationMaxArchives: ag.Config.Agent.LogfileRotationMaxArchives,
 	}
 
 	logger.SetupLogging(logConfig)
 
 	if *fRunOnce {
 		wait := time.Duration(*fTestWait) * time.Second
-		return runningAgent.Once(ctx, wait)
+		return ag.Once(ctx, wait)
 	}
 
 	if *fTest || *fTestWait != 0 {
 		wait := time.Duration(*fTestWait) * time.Second
-		return runningAgent.Test(ctx, wait)
+		return ag.Test(ctx, wait)
 	}
 
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
@@ -212,7 +203,7 @@ func runAgent(ctx context.Context,
 		}
 	}
 
-	return runningAgent.Run(ctx)
+	return ag.Run(ctx)
 }
 
 func usageExit(rc int) {
