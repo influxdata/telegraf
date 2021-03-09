@@ -1,6 +1,6 @@
-# HTTP Output Plugin
+# Sensu Go Output Plugin
 
-This plugin writes metrics events to [Sensu Go](https://sensu.io)  via its 
+This plugin writes metrics events to [Sensu Go](https://sensu.io) via its 
 HTTP events API.
 
 ### Configuration:
