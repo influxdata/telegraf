@@ -106,6 +106,7 @@ func reloadLoop(
 				cancel()
 			}
 		}()
+
 		err := runAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
