@@ -4,6 +4,8 @@ import (
 	"net"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestFetch(t *testing.T) {
@@ -104,9 +106,7 @@ func serve(t *testing.T, data []byte) net.Listener {
 	go func(t *testing.T) {
 		conn, err := l.Accept()
 
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		conn.Write(data)
 		conn.Close()
