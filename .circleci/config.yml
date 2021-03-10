@@ -1,6 +1,7 @@
 version: 2.1
 orbs:
   win: circleci/windows@2.4.0  
+  aws-cli: circleci/aws-cli@1.4.0
 
 executors:
   go-1_15:
@@ -205,86 +206,24 @@ jobs:
       - store_artifacts:
           path: './dist'
           destination: 'build/dist'
+  share-artifacts:
+    executor: aws-cli/default  
+    steps:
+      - aws-cli/setup:
+          aws-access-key-id: TIGER_AWS_ACCESS_KEY_ID
+          aws-secret-access-key: TIGER_AWS_SECRET_ACCESS_KEY
+          aws-region: TIGER_AWS_DEFAULT_REGION
+      - run:
+          command: |
+            PR=${CIRCLE_PULL_REQUEST##*/}
+            aws lambda invoke --function-name telegraf-tiger-prod-share_artifacts --cli-binary-format raw-in-base64-out --payload '{ "pullRequestNumber": $PR }' output.json
+
 workflows:
   version: 2
   check:
     jobs:
-      - 'linter'
-      - 'macdeps':
-          filters:
-            tags:
-              only: /.*/
-      - 'deps':
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_15':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_15-386':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_16':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_16-386':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-darwin':
-          requires:
-            - 'macdeps'
-          filters:
-            tags: # only runs on tags if you specify this filter
-              only: /.*/
-      - 'test-go-windows':
-          filters:
-            tags:
-              only: /.*/
-      - 'package':
-          requires:
-            - 'test-go-windows'
-            - 'test-go-darwin'
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
-            - 'test-go-1_16'
-            - 'test-go-1_16-386'
-      - 'release':
-          requires:
-            - 'test-go-windows'
-            - 'test-go-darwin'
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
-            - 'test-go-1_16'
-            - 'test-go-1_16-386'
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
-      - 'package-sign-windows':
-          requires:
-            - 'release'
-          filters:
-              tags:
-                only: /.*/
-      - 'package-sign-mac':
-           requires:
-             - 'package-sign-windows' 
-           filters:
-              tags:
-                only: /.*/
+      - share-artifacts
+
   nightly:
     jobs:
       - 'linter'
