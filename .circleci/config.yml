@@ -224,7 +224,10 @@ workflows:
   version: 2
   check:
     jobs:
-      - share-artifacts
+      - 'package'
+      - 'share-artifacts':
+          requires:
+            - 'package'
 
   nightly:
     jobs:
