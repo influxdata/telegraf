@@ -13,6 +13,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+// Limit set by AWS (https://docs.aws.amazon.com/kinesis/latest/APIReference/API_PutRecords.html)
+const maxRecordsPerRequest uint32 = 500
+
 type (
 	KinesisOutput struct {
 		Region      string `toml:"region"`
@@ -243,8 +246,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 		r = append(r, &d)
 
-		if sz == 500 {
-			// Max Messages Per PutRecordRequest is 500
+		if sz == maxRecordsPerRequest {
 			elapsed := k.writeKinesis(r)
 			k.Log.Debugf("Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 			sz = 0
