@@ -11,49 +11,67 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	// prometheus time series
-	input := prompb.WriteRequest{
+	prompbInput := prompb.WriteRequest{
 		Timeseries: []*prompb.TimeSeries{
 			{
 				Labels: []*prompb.Label{
-					{Name: "__name__", Value: "foo"},
-					{Name: "__eg__", Value: "bar"},
+					{Name: "__name__", Value: "go_gc_duration_seconds"},
+					{Name: "quantile", Value: "0.99"},
 				},
 				Samples: []prompb.Sample{
-					{Value: 1, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixNano()},
+					{Value: 4.63, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixNano()},
+				},
+			},
+			{
+				Labels: []*prompb.Label{
+					{Name: "__name__", Value: "prometheus_target_interval_length_seconds"},
+					{Name: "job", Value: "prometheus"},
+				},
+				Samples: []prompb.Sample{
+					{Value: 14.99, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixNano()},
 				},
 			},
 		},
 	}
-	// Marshal it
-	inoutBytes, err := input.Marshal()
 
-	// Expected telegraf metric
+	inoutBytes, err := prompbInput.Marshal()
+	assert.NoError(t, err)
+
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
 			"prometheusremotewrite",
 			map[string]string{
-				"__eg__": "bar",
+				"quantile": "0.99",
 			},
 			map[string]interface{}{
-				"foo": float64(1),
+				"go_gc_duration_seconds": float64(4.63),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"prometheusremotewrite",
+			map[string]string{
+				"job": "prometheus",
+			},
+			map[string]interface{}{
+				"prometheus_target_interval_length_seconds": float64(14.99),
 			},
 			time.Unix(0, 0),
 		),
 	}
+
 	parser := Parser{
 		DefaultTags: map[string]string{},
 	}
-	// hand it to parser
+
 	metrics, err := parser.Parse(inoutBytes)
 	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	assert.Len(t, metrics, 2)
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func TestDefautTags(t *testing.T) {
-	// prometheus time series
-	input := prompb.WriteRequest{
+func TestDefaultTags(t *testing.T) {
+	prompbInput := prompb.WriteRequest{
 		Timeseries: []*prompb.TimeSeries{
 			{
 				Labels: []*prompb.Label{
@@ -66,10 +84,10 @@ func TestDefautTags(t *testing.T) {
 			},
 		},
 	}
-	// Marshal it
-	inoutBytes, err := input.Marshal()
 
-	// Expected telegraf metric
+	inoutBytes, err := prompbInput.Marshal()
+	assert.NoError(t, err)
+
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
 			"prometheusremotewrite",
@@ -83,12 +101,13 @@ func TestDefautTags(t *testing.T) {
 			time.Unix(0, 0),
 		),
 	}
+
 	parser := Parser{
 		DefaultTags: map[string]string{
 			"defaultTag": "defaultTagValue",
 		},
 	}
-	// hand it to parser
+
 	metrics, err := parser.Parse(inoutBytes)
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
@@ -98,7 +117,7 @@ func TestDefautTags(t *testing.T) {
 func TestMetricsWithTimestamp(t *testing.T) {
 	testTime := time.Date(2020, time.October, 4, 17, 0, 0, 0, time.UTC)
 	testTimeUnix := testTime.UnixNano() / int64(time.Millisecond)
-	input := prompb.WriteRequest{
+	prompbInput := prompb.WriteRequest{
 		Timeseries: []*prompb.TimeSeries{
 			{
 				Labels: []*prompb.Label{
@@ -112,7 +131,9 @@ func TestMetricsWithTimestamp(t *testing.T) {
 		},
 	}
 
-	inoutBytes, err := input.Marshal()
+	inoutBytes, err := prompbInput.Marshal()
+	assert.NoError(t, err)
+
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
 			"prometheusremotewrite",

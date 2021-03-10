@@ -337,8 +337,9 @@ func TestWriteHTTPSnappyData(t *testing.T) {
 	defer listener.Stop()
 
 	testData := "cpu_load_short,host=server01 value=12.0 1422568543702900257\n"
-	encoded := snappy.Encode(nil, []byte(testData))
-	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", ""), bytes.NewBuffer(encoded))
+	encodedData := snappy.Encode(nil, []byte(testData))
+
+	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", ""), bytes.NewBuffer(encodedData))
 	require.NoError(t, err)
 	req.Header.Set("Content-Encoding", "snappy")
 
