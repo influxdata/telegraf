@@ -151,7 +151,6 @@ tidy:
 
 .PHONY: check
 check: fmtcheck vet
-	@$(MAKE) --no-print-directory tidy
 
 .PHONY: test-all
 test-all: fmtcheck vet
@@ -184,10 +183,10 @@ ci-1.15:
 	docker build -t quay.io/influxdb/telegraf-ci:1.15.8 - < scripts/ci-1.15.docker
 	docker push quay.io/influxdb/telegraf-ci:1.15.8
 
-.PHONY: ci-1.14
-ci-1.14:
-	docker build -t quay.io/influxdb/telegraf-ci:1.14.9 - < scripts/ci-1.14.docker
-	docker push quay.io/influxdb/telegraf-ci:1.14.9
+.PHONY: ci-1.16
+ci-1.16:
+	docker build -t quay.io/influxdb/telegraf-ci:1.16.0 - < scripts/ci-1.16.docker
+	docker push quay.io/influxdb/telegraf-ci:1.16.0
 
 .PHONY: install
 install: $(buildbin)

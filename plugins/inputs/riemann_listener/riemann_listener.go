@@ -386,7 +386,6 @@ func processOsSignals(cancelFunc context.CancelFunc) {
 func (rsl *RiemannSocketListener) Stop() {
 	rsl.wg.Done()
 	rsl.wg.Wait()
-	os.Exit(0)
 }
 
 func newRiemannSocketListener() *RiemannSocketListener {

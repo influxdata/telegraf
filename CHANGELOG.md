@@ -1,8 +1,12 @@
-## v1.18.0-rc0 [2021-03-03]
+## v1.18.0-rc1 [2021-03-10]
+
+#### Release Notes
+
+  - Support Go version 1.16
 
 #### Bugfixes
 
-  - [#7312](https://github.com/influxdata/telegraf/pull/7312) `inputs.docker` [plugins/input/docker] Make perdevice affect also cpu and add class granularity through perdevice_include/total_include
+  - [#7312](https://github.com/influxdata/telegraf/pull/7312) `inputs.docker` CPU stats respect perdevice
   - [#8397](https://github.com/influxdata/telegraf/pull/8397) `outputs.dynatrace` Dynatrace Plugin: Make conversion to counters possible / Changed large bulk handling
   - [#8655](https://github.com/influxdata/telegraf/pull/8655) `inputs.sqlserver` SqlServer - fix for default server list
   - [#8703](https://github.com/influxdata/telegraf/pull/8703) `inputs.docker` Use consistent container name in docker input plugin
@@ -15,6 +19,9 @@
   - [#8873](https://github.com/influxdata/telegraf/pull/8873) `processors.ifname` Fix mutex locking around ifname cache
   - [#8720](https://github.com/influxdata/telegraf/pull/8720) `parsers.influx` fix: remove ambiguity on '\v' from line-protocol parser
   - [#8678](https://github.com/influxdata/telegraf/pull/8678) `inputs.redis` Fix Redis output field type inconsistencies
+  - [#8953](https://github.com/influxdata/telegraf/pull/8953) `agent` Reset the flush interval timer when flush is requested or batch is ready.
+  - [#8954](https://github.com/influxdata/telegraf/pull/8954) `common.kafka` Fix max open requests to one if idempotent writes is set to true
+  - [#8721](https://github.com/influxdata/telegraf/pull/8721) `inputs.kube_inventory` Set $HOSTIP in default URL
 
 #### Features
 
@@ -33,6 +40,8 @@
   - [#8772](https://github.com/influxdata/telegraf/pull/8772) `processors.starlark` Allow to provide constants to a starlark script
   - [#8749](https://github.com/influxdata/telegraf/pull/8749) `outputs.newrelic` Add HTTP proxy setting to New Relic output plugin
   - [#8543](https://github.com/influxdata/telegraf/pull/8543) `inputs.elasticsearch` Add configurable number of 'most recent' date-stamped indices to gather in Elasticsearch input
+  - [#8675](https://github.com/influxdata/telegraf/pull/8675) `processors.starlark` Add Starlark parsing example of nested JSON
+  - [#8762](https://github.com/influxdata/telegraf/pull/8762) `inputs.prometheus` Optimize for bigger kubernetes clusters (500+ pods)
 
 #### New Input Plugins
 
@@ -40,6 +49,8 @@
   - [#8525](https://github.com/influxdata/telegraf/pull/8525) Add CSGO SRCDS input plugin
   - [#8751](https://github.com/influxdata/telegraf/pull/8751) Adding a new directory monitor input plugin.
   - [#6653](https://github.com/influxdata/telegraf/pull/6653) Add Beat input plugin
+  - [#4615](https://github.com/influxdata/telegraf/pull/4615) Add NFS client input
+  - [#8931](https://github.com/influxdata/telegraf/pull/8931) Add XML parser using XPath queries
 
 #### New Output Plugins
 
@@ -126,7 +137,7 @@
 
 #### New External Plugins
 
-  - [#8646](https://github.com/influxdata/telegraf/pull/8646) [Open Hardware Monitoring](https://github.com/marianob85/open_hardware_monitor-telegraf-plugin) Input Plugin 
+  - [#8646](https://github.com/influxdata/telegraf/pull/8646) [Open Hardware Monitoring](https://github.com/marianob85/open_hardware_monitor-telegraf-plugin) Input Plugin
 
 
 ## v1.17.0 [2020-12-18]
