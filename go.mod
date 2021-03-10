@@ -20,6 +20,7 @@ require (
 	github.com/Shopify/sarama v1.27.2
 	github.com/aerospike/aerospike-client-go v1.27.0
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
+	github.com/alexbrainman/odbc v0.0.0-20200426075526-f0492dfa1575
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/xmlquery v1.3.3
 	github.com/antchfx/xpath v1.1.11
