@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/snappy"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -319,6 +320,37 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
 	acc.Wait(len(hostTags))
+	for _, hostTag := range hostTags {
+		acc.AssertContainsTaggedFields(t, "cpu_load_short",
+			map[string]interface{}{"value": float64(12)},
+			map[string]string{"host": hostTag},
+		)
+	}
+}
+
+// test that writing snappy data works
+func TestWriteHTTPSnappyData(t *testing.T) {
+	listener := newTestHTTPListenerV2()
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	testData := "cpu_load_short,host=server01 value=12.0 1422568543702900257\n"
+	encodedData := snappy.Encode(nil, []byte(testData))
+
+	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", ""), bytes.NewBuffer(encodedData))
+	require.NoError(t, err)
+	req.Header.Set("Content-Encoding", "snappy")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	hostTags := []string{"server01"}
+	acc.Wait(len(hostTags))
+
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
 			map[string]interface{}{"value": float64(12)},

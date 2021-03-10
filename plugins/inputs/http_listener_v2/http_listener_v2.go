@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/snappy"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
@@ -266,6 +267,16 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 	if err != nil {
 		tooLarge(res)
 		return nil, false
+	}
+
+	// Handle snappy request bodies
+	if req.Header.Get("Content-Encoding") == "snappy" {
+		bytes, err = snappy.Decode(nil, bytes)
+		if err != nil {
+			h.Log.Debug(err.Error())
+			badRequest(res)
+			return nil, false
+		}
 	}
 
 	return bytes, true
