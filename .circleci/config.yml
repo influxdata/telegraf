@@ -217,8 +217,7 @@ jobs:
       - run:
           command: |
             PR=${CIRCLE_PULL_REQUEST##*/}
-            aws lambda invoke --function-name telegraf-tiger-prod-share_artifacts --profile TIGER --cli-binary-format raw-in-base64-out --payload '{ "pullRequestNumber": "$PR" }' output.json
-            cat output.json
+            aws lambda invoke --function-name telegraf-tiger-prod-share_artifacts --profile TIGER --cli-binary-format raw-in-base64-out --payload '{ "pullRequestNumber": "${PR}" }' output.json
             
 workflows:
   version: 2
