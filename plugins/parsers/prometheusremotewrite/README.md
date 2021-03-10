@@ -2,7 +2,6 @@
 
 Converts prometheus remote write samples directly into Telegraf metrics. It can be used with [http_listener_v2](/plugins/inputs/http_listener_v2). There are no additional configuration options for Prometheus Remote Write Samples.
 
-
 ### Configuration
 
 ```toml
@@ -11,7 +10,7 @@ Converts prometheus remote write samples directly into Telegraf metrics. It can 
   service_address = ":1234"
 
   ## Path to listen to.
-  # path = "/recieve"
+  path = "/recieve"
 
   ## Data format to consume.
   data_format = "prometheusremotewrite"
