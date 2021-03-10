@@ -248,6 +248,7 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 
 func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
 	body := req.Body
+
 	// Handle gzip request bodies
 	if req.Header.Get("Content-Encoding") == "gzip" {
 		var err error
