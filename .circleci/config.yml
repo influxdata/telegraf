@@ -210,13 +210,14 @@ jobs:
     executor: aws-cli/default  
     steps:
       - aws-cli/setup:
+          profile-name: TIGER
           aws-access-key-id: TIGER_AWS_ACCESS_KEY_ID
           aws-secret-access-key: TIGER_AWS_SECRET_ACCESS_KEY
           aws-region: TIGER_AWS_DEFAULT_REGION
       - run:
           command: |
             PR=${CIRCLE_PULL_REQUEST##*/}
-            aws lambda invoke --function-name arn:aws:lambda:us-east-1:525656239563:function:telegraf-tiger-prod-share_artifacts --cli-binary-format raw-in-base64-out --payload '{ "pullRequestNumber": "$PR" }' output.json
+            aws lambda invoke --function-name telegraf-tiger-prod-share_artifacts --profile TIGER --cli-binary-format raw-in-base64-out --payload '{ "pullRequestNumber": "$PR" }' output.json
             cat output.json
             
 workflows:
