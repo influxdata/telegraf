@@ -6,18 +6,22 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"path/filepath"
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
 type Conntrack struct {
-	Path  string
-	Dirs  []string
-	Files []string
+	ps           system.PS
+	Path         string
+	Dirs         []string
+	Files        []string
+	CollectStats bool `toml:"collect_stats"`
+	PerCPU       bool `toml:"percpu"`
 }
 
 const (
@@ -34,6 +38,14 @@ var dfltFiles = []string{
 	"ip_conntrack_max",
 	"nf_conntrack_count",
 	"nf_conntrack_max",
+}
+
+func NewConntrack(ps system.PS) *Conntrack {
+	return &Conntrack{
+		ps:           ps,
+		CollectStats: true,
+		PerCPU:       false,
+	}
 }
 
 func (c *Conntrack) setDefaults() {
@@ -63,6 +75,10 @@ var sampleConfig = `
    ## Directories to search within for the conntrack files above.
    ## Missing directories will be ignored.
    dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
+   ## If true, collect conntrack stats
+   collect_stats = false
+   ## Whether to report per-cpu stats or not
+   percpu = false
 `
 
 func (c *Conntrack) SampleConfig() string {
@@ -102,6 +118,47 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(fmt.Errorf("E! failed to parse metric, expected number but "+
 					" found '%s': %v", v, err))
 			}
+		}
+	}
+
+	if c.CollectStats {
+		stats, err := c.ps.NetConntrack(c.PerCPU)
+		if err != nil {
+			acc.AddError(fmt.Errorf("E! failed to retrieve conntrack statistics: %v", err))
+		}
+
+		for i, sts := range stats {
+			var tags map[string]string
+			if c.PerCPU {
+				tags = map[string]string{
+					"cpu": fmt.Sprintf("cpu%d", i),
+				}
+			} else {
+				tags = map[string]string{
+					"cpu": "all",
+				}
+			}
+
+			statFields := map[string]interface{}{
+				"entries":        sts.Entries,       // entries in the conntrack table
+				"searched":       sts.Searched,      // conntrack table lookups performed
+				"found":          sts.Found,         // searched entries which were successful
+				"new":            sts.New,           // entries added which were not expected before
+				"invalid":        sts.Invalid,       // packets seen which can not be tracked
+				"ignore":         sts.Ignore,        // packets seen which are already connected to an entry
+				"delete":         sts.Delete,        // entries which were removed
+				"delete_list":    sts.DeleteList,    // entries which were put to dying list
+				"insert":         sts.Insert,        // entries inserted into the list
+				"insert_failed":  sts.InsertFailed,  // insertion attempted but failed (same entry exists)
+				"drop":           sts.Drop,          // packets dropped due to conntrack failure
+				"early_drop":     sts.EarlyDrop,     // dropped entries to make room for new ones, if maxsize reached
+				"icmp_error":     sts.IcmpError,     // Subset of invalid. Packets that can't be tracked d/t error
+				"expect_new":     sts.ExpectNew,     // Entries added after an expectation was already present
+				"expect_create":  sts.ExpectCreate,  // Expectations added
+				"expect_delete":  sts.ExpectDelete,  // Expectations deleted
+				"search_restart": sts.SearchRestart, // onntrack table lookups restarted due to hashtable resizes
+			}
+			acc.AddCounter(inputName, statFields, tags)
 		}
 	}
 

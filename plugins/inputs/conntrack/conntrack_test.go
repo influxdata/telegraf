@@ -10,8 +10,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/shirou/gopsutil/net"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func restoreDflts(savedFiles, savedDirs []string) {
@@ -91,4 +94,63 @@ func TestConfigsUsed(t *testing.T) {
 			fix(cntFname): float64(count),
 			fix(maxFname): float64(max),
 		})
+}
+
+func TestCollectStats(t *testing.T) {
+	var mps system.MockPS
+	defer mps.AssertExpectations(t)
+	var acc testutil.Accumulator
+
+	sts := net.ConntrackStat{
+		Entries:       1234,
+		Searched:      10,
+		Found:         1,
+		New:           5,
+		Invalid:       43,
+		Ignore:        13,
+		Delete:        3,
+		DeleteList:    5,
+		Insert:        9,
+		InsertFailed:  20,
+		Drop:          49,
+		EarlyDrop:     7,
+		IcmpError:     21,
+		ExpectNew:     12,
+		ExpectCreate:  44,
+		ExpectDelete:  53,
+		SearchRestart: 31,
+	}
+
+	mps.On("NetConntrack", false).Return([]net.ConntrackStat{sts}, nil)
+
+	c := NewConntrack(&mps)
+
+	err := c.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedTags := map[string]string{
+		"cpu": "all",
+	}
+
+	expectedFields := map[string]interface{}{
+		"entries":        uint32(1234),
+		"searched":       uint32(10),
+		"found":          uint32(1),
+		"new":            uint32(5),
+		"invalid":        uint32(43),
+		"ignore":         uint32(13),
+		"delete":         uint32(3),
+		"delete_list":    uint32(5),
+		"insert":         uint32(9),
+		"insert_failed":  uint32(20),
+		"drop":           uint32(49),
+		"early_drop":     uint32(7),
+		"icmp_error":     uint32(21),
+		"expect_new":     uint32(12),
+		"expect_create":  uint32(44),
+		"expect_delete":  uint32(53),
+		"search_restart": uint32(31),
+	}
+
+	acc.AssertContainsTaggedFields(t, inputName, expectedFields, expectedTags)
 }
