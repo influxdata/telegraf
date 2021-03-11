@@ -271,6 +271,7 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 
 	// Handle snappy request bodies
 	if req.Header.Get("Content-Encoding") == "snappy" {
+		// Requires snappy decode for block format
 		bytes, err = snappy.Decode(nil, bytes)
 		if err != nil {
 			h.Log.Debug(err.Error())
