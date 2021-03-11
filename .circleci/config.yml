@@ -209,7 +209,7 @@ workflows:
   version: 2
   check:
     jobs:
- - 'linter'
+      - 'linter'
       - 'macdeps':
           filters:
             tags:
@@ -285,7 +285,6 @@ workflows:
            filters:
               tags:
                 only: /.*/
-
   nightly:
     jobs:
       - 'linter'
