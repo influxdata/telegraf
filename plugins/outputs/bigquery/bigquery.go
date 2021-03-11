@@ -94,7 +94,7 @@ func (b *BigQuery) setUpDefaultClient() error {
 		creds, err := google.FindDefaultCredentials(ctx)
 		if err != nil {
 			return fmt.Errorf(
-				"unable to find Google Cloud Platform Application Default Credentials: %v."+
+				"unable to find Google Cloud Platform Application Default Credentials: %v. "+
 					"Either set ADC or provide CredentialsFile config", err)
 		}
 		credentialsOption = option.WithCredentials(creds)
