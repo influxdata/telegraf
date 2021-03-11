@@ -3,9 +3,6 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
   schedule:
     # Trigger every day at 16:00 UTC
     - cron:  '0 16 * * *'
@@ -19,5 +16,4 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: v1.38
-          only-new-issues: true
-          args: --timeout=5m0s
+          args: --timeout=5m0s --issues-exit-code=0
