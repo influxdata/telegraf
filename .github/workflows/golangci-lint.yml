@@ -11,7 +11,8 @@ on:
     - cron:  '0 16 * * *'
 jobs:
   golangci-pr:
-    name: lint
+    if: github.ref != 'refs/heads/master'
+    name: lint-pr-changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -21,3 +22,15 @@ jobs:
           version: v1.38
           only-new-issues: true
           args: --timeout=5m0s
+  golangci-master:
+    if: github.ref == 'refs/heads/master'
+    name: lint-master-all
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.38
+          only-new-issues: true
+          args: --timeout=5m0s --issues-exit-code=0
