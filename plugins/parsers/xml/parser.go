@@ -165,6 +165,8 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 		case float64:
 			// Assume the value to contain a timestamp in seconds and fractions thereof.
 			timestamp = time.Unix(0, int64(v.(float64)*1e9))
+		case nil:
+			// No timestamp found. Just ignore the time and use "starttime"
 		default:
 			return nil, fmt.Errorf("unknown format '%T' for timestamp query '%v'", v, config.Timestamp)
 		}
@@ -185,6 +187,8 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 			tags[name] = strconv.FormatBool(v.(bool))
 		case float64:
 			tags[name] = strconv.FormatFloat(v.(float64), 'G', -1, 64)
+		case nil:
+			continue
 		default:
 			return nil, fmt.Errorf("unknown format '%T' for tag '%s'", v, name)
 		}
@@ -214,6 +218,8 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 			}
 		case float64:
 			fields[name] = int64(v.(float64))
+		case nil:
+			continue
 		default:
 			return nil, fmt.Errorf("unknown format '%T' for field (int) '%s'", v, name)
 		}
