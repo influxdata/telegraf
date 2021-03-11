@@ -15,16 +15,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	c := NewConfig()
 	err := os.Setenv("MY_TEST_SERVER", "192.168.1.1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = os.Setenv("TEST_INTERVAL", "10s")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	c.LoadConfig("./testdata/single_plugin_env_vars.toml")
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
@@ -48,7 +47,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, filter.Compile())
+	require.NoError(t, filter.Compile())
 	inputConfig := &models.InputConfig{
 		Name:     "memcached",
 		Filter:   filter,
@@ -59,8 +58,8 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	// Ignore Log and Parser
 	c.Inputs[0].Input.(*MockupInputPlugin).Log = nil
 	c.Inputs[0].Input.(*MockupInputPlugin).parser = nil
-	assert.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct mockup struct.")
-	assert.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct input metadata.")
+	require.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct mockup struct.")
+	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct input metadata.")
 }
 
 func TestConfig_LoadSingleInput(t *testing.T) {
@@ -88,7 +87,7 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, filter.Compile())
+	require.NoError(t, filter.Compile())
 	inputConfig := &models.InputConfig{
 		Name:     "memcached",
 		Filter:   filter,
@@ -99,8 +98,8 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	// Ignore Log and Parser
 	c.Inputs[0].Input.(*MockupInputPlugin).Log = nil
 	c.Inputs[0].Input.(*MockupInputPlugin).parser = nil
-	assert.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct memcached struct.")
-	assert.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
+	require.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct memcached struct.")
+	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
 }
 
 func TestConfig_LoadDirectory(t *testing.T) {
@@ -139,7 +138,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, filterMockup.Compile())
+	require.NoError(t, filterMockup.Compile())
 	expectedConfigs[0] = &models.InputConfig{
 		Name:     "memcached",
 		Filter:   filterMockup,
@@ -153,7 +152,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		DataFormat: "json",
 		JSONStrict: true,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	expectedPlugins[1].SetParser(p)
 	expectedPlugins[1].Command = "/usr/bin/myothercollector --foo=bar"
 	expectedConfigs[1] = &models.InputConfig{
@@ -183,7 +182,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, filterMemcached.Compile())
+	require.NoError(t, filterMemcached.Compile())
 	expectedConfigs[2] = &models.InputConfig{
 		Name:     "memcached",
 		Filter:   filterMemcached,
@@ -197,8 +196,8 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedConfigs[3].Tags = make(map[string]string)
 
 	// Check the generated plugins
-	assert.Len(t, c.Inputs, len(expectedPlugins))
-	assert.Len(t, c.Inputs, len(expectedConfigs))
+	require.Len(t, c.Inputs, len(expectedPlugins))
+	require.Len(t, c.Inputs, len(expectedConfigs))
 	for i, plugin := range c.Inputs {
 		input := plugin.Input.(*MockupInputPlugin)
 		// Check the logger and ignore it for comparison
@@ -210,8 +209,8 @@ func TestConfig_LoadDirectory(t *testing.T) {
 			input.parser = nil
 		}
 
-		assert.Equalf(t, expectedPlugins[i], plugin.Input, "Plugin %d: incorrect struct produced", i)
-		assert.Equalf(t, expectedConfigs[i], plugin.Config, "Plugin %d: incorrect config produced", i)
+		require.Equalf(t, expectedPlugins[i], plugin.Input, "Plugin %d: incorrect struct produced", i)
+		require.Equalf(t, expectedConfigs[i], plugin.Config, "Plugin %d: incorrect config produced", i)
 	}
 
 }
@@ -219,49 +218,49 @@ func TestConfig_LoadDirectory(t *testing.T) {
 func TestConfig_LoadSpecialTypes(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/special_types.toml")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, 1, len(c.Inputs))
 
 	input, ok := c.Inputs[0].Input.(*MockupInputPlugin)
-	assert.Equal(t, true, ok)
+	require.Equal(t, true, ok)
 	// Tests telegraf duration parsing.
-	assert.Equal(t, Duration(time.Second), input.WriteTimeout)
+	require.Equal(t, Duration(time.Second), input.WriteTimeout)
 	// Tests telegraf size parsing.
-	assert.Equal(t, internal.Size{Size: 1024 * 1024}, input.MaxBodySize)
+	require.Equal(t, internal.Size{Size: 1024 * 1024}, input.MaxBodySize)
 	// Tests toml multiline basic strings.
-	assert.Equal(t, "/path/to/my/cert", strings.TrimRight(input.TLSCert, "\r\n"))
+	require.Equal(t, "/path/to/my/cert", strings.TrimRight(input.TLSCert, "\r\n"))
 }
 
 func TestConfig_FieldNotDefined(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/invalid_field.toml")
 	require.Error(t, err, "invalid field name")
-	assert.Equal(t, "Error loading config file ./testdata/invalid_field.toml: plugin inputs.http_listener_v2: line 1: configuration specified the fields [\"not_a_field\"], but they weren't used", err.Error())
+	require.Equal(t, "Error loading config file ./testdata/invalid_field.toml: plugin inputs.http_listener_v2: line 1: configuration specified the fields [\"not_a_field\"], but they weren't used", err.Error())
 }
 
 func TestConfig_WrongFieldType(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/wrong_field_type.toml")
 	require.Error(t, err, "invalid field type")
-	assert.Equal(t, "Error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Port) cannot unmarshal TOML string into int", err.Error())
+	require.Equal(t, "Error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Port) cannot unmarshal TOML string into int", err.Error())
 
 	c = NewConfig()
 	err = c.LoadConfig("./testdata/wrong_field_type2.toml")
 	require.Error(t, err, "invalid field type2")
-	assert.Equal(t, "Error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Methods) cannot unmarshal TOML string into []string", err.Error())
+	require.Equal(t, "Error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Methods) cannot unmarshal TOML string into []string", err.Error())
 }
 
 func TestConfig_InlineTables(t *testing.T) {
 	// #4098
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/inline_table.toml")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, 2, len(c.Outputs))
 
 	output, ok := c.Outputs[1].Output.(*MockupOuputPlugin)
-	assert.Equal(t, true, ok)
-	assert.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, output.Headers)
-	assert.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
+	require.Equal(t, true, ok)
+	require.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, output.Headers)
+	require.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
 }
 
 func TestConfig_SliceComment(t *testing.T) {
@@ -269,12 +268,12 @@ func TestConfig_SliceComment(t *testing.T) {
 
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/slice_comment.toml")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, 1, len(c.Outputs))
 
 	output, ok := c.Outputs[0].Output.(*MockupOuputPlugin)
-	assert.Equal(t, []string{"test"}, output.Scopes)
-	assert.Equal(t, true, ok)
+	require.Equal(t, []string{"test"}, output.Scopes)
+	require.Equal(t, true, ok)
 }
 
 func TestConfig_BadOrdering(t *testing.T) {
@@ -283,21 +282,21 @@ func TestConfig_BadOrdering(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/non_slice_slice.toml")
 	require.Error(t, err, "bad ordering")
-	assert.Equal(t, "Error loading config file ./testdata/non_slice_slice.toml: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
+	require.Equal(t, "Error loading config file ./testdata/non_slice_slice.toml: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
 }
 
 func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 	// #8256 Cannot use empty string as the namespace prefix
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/azure_monitor.toml")
-	assert.NoError(t, err)
-	assert.Equal(t, 2, len(c.Outputs))
+	require.NoError(t, err)
+	require.Equal(t, 2, len(c.Outputs))
 
 	expectedPrefix := []string{"Telegraf/", ""}
 	for i, plugin := range c.Outputs {
 		output, ok := plugin.Output.(*MockupOuputPlugin)
-		assert.True(t, ok)
-		assert.Equal(t, expectedPrefix[i], output.NamespacePrefix)
+		require.True(t, ok)
+		require.Equal(t, expectedPrefix[i], output.NamespacePrefix)
 	}
 }
 
