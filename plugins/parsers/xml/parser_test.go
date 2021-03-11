@@ -1114,6 +1114,10 @@ func TestTestCases(t *testing.T) {
 			name:     "openweathermap forecast",
 			filename: "testcases/openweathermap.conf",
 		},
+		{
+			name:     "earthquakes quakeml",
+			filename: "testcases/earthquakes.conf",
+		},
 	}
 
 	parser := influx.NewParser(influx.NewMetricHandler())
