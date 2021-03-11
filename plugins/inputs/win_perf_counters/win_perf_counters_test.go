@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -734,7 +734,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 		Object:                  perfObjects,
 		UseWildcardsExpansion:   true,
 		query:                   fpm,
-		CountersRefreshInterval: config.Duration{Duration: time.Second * 10},
+		CountersRefreshInterval: config.Duration(time.Second * 10),
 	}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
@@ -791,7 +791,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 	acc2.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 	acc2.AssertDoesNotContainsTaggedFields(t, measurement, fields3, tags3)
-	time.Sleep(m.CountersRefreshInterval.Duration)
+	time.Sleep(time.Duration(m.CountersRefreshInterval))
 
 	var acc3 testutil.Accumulator
 	err = m.Gather(&acc3)
@@ -827,7 +827,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		Object:                  perfObjects,
 		UseWildcardsExpansion:   false,
 		query:                   fpm,
-		CountersRefreshInterval: config.Duration{Duration: time.Second * 10}}
+		CountersRefreshInterval: config.Duration(time.Second * 10)}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	assert.Len(t, m.counters, 2)
@@ -902,7 +902,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 
 	fpm.Open()
 
-	time.Sleep(m.CountersRefreshInterval.Duration)
+	time.Sleep(time.Duration(m.CountersRefreshInterval))
 
 	var acc3 testutil.Accumulator
 	err = m.Gather(&acc3)
