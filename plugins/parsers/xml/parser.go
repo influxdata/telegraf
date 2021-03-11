@@ -58,6 +58,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			p.debugEmptyQuery("metric selection", doc, config.Selection)
 			return nil, fmt.Errorf("cannot parse with empty selection node")
 		}
+		p.Log.Debugf("Number of selected metric nodes: %d", len(selectedNodes))
 
 		for _, selected := range selectedNodes {
 			m, err := p.parseQuery(t, doc, selected, config)
@@ -250,6 +251,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 		if err != nil {
 			return nil, err
 		}
+		p.Log.Debugf("Number of selected field nodes: %d", len(selectedFieldNodes))
 		if len(selectedFieldNodes) > 0 && selectedFieldNodes[0] != nil {
 			for _, selectedfield := range selectedFieldNodes {
 				n, err := executeQuery(doc, selectedfield, fieldnamequery)
