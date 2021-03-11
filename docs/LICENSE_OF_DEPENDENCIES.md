@@ -187,6 +187,7 @@ following works:
 - google.golang.org/api [BSD 3-Clause "New" or "Revised" License](https://github.com/googleapis/google-api-go-client/blob/master/LICENSE)
 - google.golang.org/genproto [Apache License 2.0](https://github.com/google/go-genproto/blob/master/LICENSE)
 - google.golang.org/grpc [Apache License 2.0](https://github.com/grpc/grpc-go/blob/master/LICENSE)
+- google.golang.org/protobuf [BSD-3-Clause License](https://github.com/golang/protobuf/blob/master/LICENSE)
 - gopkg.in/asn1-ber.v1 [MIT License](https://github.com/go-asn1-ber/asn1-ber/blob/v1.3/LICENSE)
 - gopkg.in/djherbis/times.v1 [MIT License](https://github.com/djherbis/times/blob/master/LICENSE)
 - gopkg.in/fatih/pool.v2 [MIT License](https://github.com/fatih/pool/blob/v2.0.0/LICENSE)
