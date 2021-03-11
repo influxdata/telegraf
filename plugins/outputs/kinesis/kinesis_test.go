@@ -546,46 +546,46 @@ func (m *mockKinesisPutRecords) AssertRequests(
 	expected []*kinesis.PutRecordsInput,
 ) {
 
-	require.Equal(t,
+	require.Equalf(t,
 		len(expected),
 		len(m.requests),
-		fmt.Sprintf("Expected %v requests", len(expected)),
+		"Expected %v requests", len(expected),
 	)
 
 	for i, expectedInput := range expected {
 		actualInput := m.requests[i]
 
-		require.Equal(t,
+		require.Equalf(t,
 			expectedInput.StreamName,
 			actualInput.StreamName,
-			fmt.Sprintf("Expected request %v to have correct StreamName", i),
+			"Expected request %v to have correct StreamName", i,
 		)
 
-		require.Equal(t,
+		require.Equalf(t,
 			len(expectedInput.Records),
 			len(actualInput.Records),
-			fmt.Sprintf("Expected request %v to have %v Records", i, len(expectedInput.Records)),
+			"Expected request %v to have %v Records", i, len(expectedInput.Records),
 		)
 
 		for r, expectedRecord := range expectedInput.Records {
 			actualRecord := actualInput.Records[r]
 
-			require.Equal(t,
+			require.Equalf(t,
 				expectedRecord.PartitionKey,
 				actualRecord.PartitionKey,
-				fmt.Sprintf("Expected (request %v, record %v) to have correct PartitionKey", i, r),
+				"Expected (request %v, record %v) to have correct PartitionKey", i, r,
 			)
 
-			require.Equal(t,
+			require.Equalf(t,
 				expectedRecord.ExplicitHashKey,
 				actualRecord.ExplicitHashKey,
-				fmt.Sprintf("Expected (request %v, record %v) to have correct ExplicitHashKey", i, r),
+				"Expected (request %v, record %v) to have correct ExplicitHashKey", i, r,
 			)
 
-			require.Equal(t,
+			require.Equalf(t,
 				expectedRecord.Data,
 				actualRecord.Data,
-				fmt.Sprintf("Expected (request %v, record %v) to have correct Data", i, r),
+				"Expected (request %v, record %v) to have correct Data", i, r,
 			)
 		}
 	}
