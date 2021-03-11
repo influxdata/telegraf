@@ -126,7 +126,7 @@ func TestParseInvalidXML(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
 
 			_, err := parser.ParseLine(tt.input)
 			require.Error(t, err)
@@ -162,7 +162,7 @@ func TestInvalidTypeQueriesFail(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
 
 			_, err := parser.ParseLine(tt.input)
 			require.Error(t, err)
@@ -227,7 +227,7 @@ func TestInvalidTypeQueries(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -356,7 +356,7 @@ func TestParseTimestamps(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -560,7 +560,7 @@ func TestParseSingleValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -771,7 +771,7 @@ func TestParseSingleAttributes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -857,7 +857,7 @@ func TestParseMultiValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -969,7 +969,7 @@ func TestParseMultiNodes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
 
 			actual, err := parser.Parse([]byte(tt.input))
 			require.NoError(t, err)
@@ -1014,7 +1014,7 @@ func TestParseMetricQuery(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags}
+			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -1141,7 +1141,7 @@ func TestTestCases(t *testing.T) {
 			expectedErrors, _ := testutil.ParseRawLinesFrom(header, "Expected Error:")
 
 			// Setup the parser and run it.
-			parser := Parser{Configs: []Config{*cfg}}
+			parser := &Parser{Configs: []Config{*cfg}, Log: testutil.Logger{Name: "parsers.xml"}}
 			outputs, err := parser.Parse(content)
 			if len(expectedErrors) == 0 {
 				require.NoError(t, err)
