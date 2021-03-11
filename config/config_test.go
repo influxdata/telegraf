@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -20,10 +21,8 @@ import (
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	c := NewConfig()
-	err := os.Setenv("MY_TEST_SERVER", "192.168.1.1")
-	require.NoError(t, err)
-	err = os.Setenv("TEST_INTERVAL", "10s")
-	require.NoError(t, err)
+	require.NoError(t, os.Setenv("MY_TEST_SERVER", "192.168.1.1"))
+	require.NoError(t, os.Setenv("TEST_INTERVAL", "10s"))
 	c.LoadConfig("./testdata/single_plugin_env_vars.toml")
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
@@ -104,14 +103,8 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 
 func TestConfig_LoadDirectory(t *testing.T) {
 	c := NewConfig()
-	err := c.LoadConfig("./testdata/single_plugin.toml")
-	if err != nil {
-		t.Error(err)
-	}
-	err = c.LoadDirectory("./testdata/subconfig")
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, c.LoadConfig("./testdata/single_plugin.toml"))
+	require.NoError(t, c.LoadDirectory("./testdata/subconfig"))
 
 	// Create the expected data
 	expectedPlugins := make([]*MockupInputPlugin, 4)
@@ -217,12 +210,11 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 func TestConfig_LoadSpecialTypes(t *testing.T) {
 	c := NewConfig()
-	err := c.LoadConfig("./testdata/special_types.toml")
-	require.NoError(t, err)
-	require.Equal(t, 1, len(c.Inputs))
+	require.NoError(t, c.LoadConfig("./testdata/special_types.toml"))
+	require.Len(t, c.Inputs, 1)
 
 	input, ok := c.Inputs[0].Input.(*MockupInputPlugin)
-	require.Equal(t, true, ok)
+	require.True(t, ok)
 	// Tests telegraf duration parsing.
 	require.Equal(t, Duration(time.Second), input.WriteTimeout)
 	// Tests telegraf size parsing.
@@ -253,12 +245,11 @@ func TestConfig_WrongFieldType(t *testing.T) {
 func TestConfig_InlineTables(t *testing.T) {
 	// #4098
 	c := NewConfig()
-	err := c.LoadConfig("./testdata/inline_table.toml")
-	require.NoError(t, err)
-	require.Equal(t, 2, len(c.Outputs))
+	require.NoError(t, c.LoadConfig("./testdata/inline_table.toml"))
+	require.Len(t, c.Outputs, 2)
 
 	output, ok := c.Outputs[1].Output.(*MockupOuputPlugin)
-	require.Equal(t, true, ok)
+	require.True(t, ok)
 	require.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, output.Headers)
 	require.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
 }
@@ -267,13 +258,12 @@ func TestConfig_SliceComment(t *testing.T) {
 	t.Skipf("Skipping until #3642 is resolved")
 
 	c := NewConfig()
-	err := c.LoadConfig("./testdata/slice_comment.toml")
-	require.NoError(t, err)
-	require.Equal(t, 1, len(c.Outputs))
+	require.NoError(t, c.LoadConfig("./testdata/slice_comment.toml"))
+	require.Len(t, c.Outputs, 1)
 
 	output, ok := c.Outputs[0].Output.(*MockupOuputPlugin)
+	require.True(t, ok)
 	require.Equal(t, []string{"test"}, output.Scopes)
-	require.Equal(t, true, ok)
 }
 
 func TestConfig_BadOrdering(t *testing.T) {
@@ -288,9 +278,8 @@ func TestConfig_BadOrdering(t *testing.T) {
 func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 	// #8256 Cannot use empty string as the namespace prefix
 	c := NewConfig()
-	err := c.LoadConfig("./testdata/azure_monitor.toml")
-	require.NoError(t, err)
-	require.Equal(t, 2, len(c.Outputs))
+	require.NoError(t, c.LoadConfig("./testdata/azure_monitor.toml"))
+	require.Len(t, c.Outputs, 2)
 
 	expectedPrefix := []string{"Telegraf/", ""}
 	for i, plugin := range c.Outputs {
@@ -309,9 +298,12 @@ func TestConfig_URLRetries3Fails(t *testing.T) {
 	}))
 	defer ts.Close()
 
+	expected := fmt.Sprintf("Error loading config file %s: Retry 3 of 3 failed to retrieve remote config: 404 Not Found", ts.URL)
+
 	c := NewConfig()
 	err := c.LoadConfig(ts.URL)
 	require.Error(t, err)
+	require.Equal(t, expected, err.Error())
 	require.Equal(t, 4, responseCounter)
 }
 
@@ -329,8 +321,7 @@ func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
 	defer ts.Close()
 
 	c := NewConfig()
-	err := c.LoadConfig(ts.URL)
-	require.NoError(t, err)
+	require.NoError(t, c.LoadConfig(ts.URL))
 	require.Equal(t, 4, responseCounter)
 }
 
@@ -358,11 +349,11 @@ func (m *MockupInputPlugin) SetParser(parser parsers.Parser)       { m.parser = 
 
 /*** Mockup OUTPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupOuputPlugin struct {
-	URL                 string            `toml:"url"`
-	Headers             map[string]string `toml:"headers"`
-	Scopes              []string          `toml:"scopes"`
-	NamespacePrefix     string            `toml:"namespace_prefix"`
-	Log                 telegraf.Logger   `toml:"-"`
+	URL             string            `toml:"url"`
+	Headers         map[string]string `toml:"headers"`
+	Scopes          []string          `toml:"scopes"`
+	NamespacePrefix string            `toml:"namespace_prefix"`
+	Log             telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
 }
 
