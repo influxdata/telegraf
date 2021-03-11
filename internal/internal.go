@@ -31,10 +31,6 @@ var (
 // Set via the main module
 var version string
 
-type Number struct {
-	Value float64
-}
-
 type ReadWaitCloser struct {
 	pipeReader *io.PipeReader
 	wg         sync.WaitGroup
@@ -58,16 +54,6 @@ func Version() string {
 func ProductToken() string {
 	return fmt.Sprintf("Telegraf/%s Go/%s",
 		Version(), strings.TrimPrefix(runtime.Version(), "go"))
-}
-
-func (n *Number) UnmarshalTOML(b []byte) error {
-	value, err := strconv.ParseFloat(string(b), 64)
-	if err != nil {
-		return err
-	}
-
-	n.Value = value
-	return nil
 }
 
 // ReadLines reads contents from a file and splits them by new lines.
