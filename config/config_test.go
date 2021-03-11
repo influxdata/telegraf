@@ -8,15 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/exec"
-	"github.com/influxdata/telegraf/plugins/inputs/http_listener_v2"
-	"github.com/influxdata/telegraf/plugins/inputs/memcached"
-	"github.com/influxdata/telegraf/plugins/inputs/procstat"
-	"github.com/influxdata/telegraf/plugins/outputs/azure_monitor"
-	httpOut "github.com/influxdata/telegraf/plugins/outputs/http"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,8 +27,8 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	assert.NoError(t, err)
 	c.LoadConfig("./testdata/single_plugin_env_vars.toml")
 
-	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
-	memcached.Servers = []string{"192.168.1.1"}
+	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
+	input.Servers = []string{"192.168.1.1"}
 
 	filter := models.Filter{
 		NameDrop:  []string{"metricname2"},
@@ -52,25 +49,26 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 		},
 	}
 	assert.NoError(t, filter.Compile())
-	mConfig := &models.InputConfig{
+	inputConfig := &models.InputConfig{
 		Name:     "memcached",
 		Filter:   filter,
 		Interval: 10 * time.Second,
 	}
-	mConfig.Tags = make(map[string]string)
+	inputConfig.Tags = make(map[string]string)
 
-	assert.Equal(t, memcached, c.Inputs[0].Input,
-		"Testdata did not produce a correct memcached struct.")
-	assert.Equal(t, mConfig, c.Inputs[0].Config,
-		"Testdata did not produce correct memcached metadata.")
+	// Ignore Log and Parser
+	c.Inputs[0].Input.(*MockupInputPlugin).Log = nil
+	c.Inputs[0].Input.(*MockupInputPlugin).parser = nil
+	assert.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct mockup struct.")
+	assert.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct input metadata.")
 }
 
 func TestConfig_LoadSingleInput(t *testing.T) {
 	c := NewConfig()
 	c.LoadConfig("./testdata/single_plugin.toml")
 
-	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
-	memcached.Servers = []string{"localhost"}
+	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
+	input.Servers = []string{"localhost"}
 
 	filter := models.Filter{
 		NameDrop:  []string{"metricname2"},
@@ -91,17 +89,18 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 		},
 	}
 	assert.NoError(t, filter.Compile())
-	mConfig := &models.InputConfig{
+	inputConfig := &models.InputConfig{
 		Name:     "memcached",
 		Filter:   filter,
 		Interval: 5 * time.Second,
 	}
-	mConfig.Tags = make(map[string]string)
+	inputConfig.Tags = make(map[string]string)
 
-	assert.Equal(t, memcached, c.Inputs[0].Input,
-		"Testdata did not produce a correct memcached struct.")
-	assert.Equal(t, mConfig, c.Inputs[0].Config,
-		"Testdata did not produce correct memcached metadata.")
+	// Ignore Log and Parser
+	c.Inputs[0].Input.(*MockupInputPlugin).Log = nil
+	c.Inputs[0].Input.(*MockupInputPlugin).parser = nil
+	assert.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct memcached struct.")
+	assert.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
 }
 
 func TestConfig_LoadDirectory(t *testing.T) {
@@ -115,10 +114,14 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		t.Error(err)
 	}
 
-	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
-	memcached.Servers = []string{"localhost"}
+	// Create the expected data
+	expectedPlugins := make([]*MockupInputPlugin, 4)
+	expectedConfigs := make([]*models.InputConfig, 4)
 
-	filter := models.Filter{
+	expectedPlugins[0] = inputs.Inputs["memcached"]().(*MockupInputPlugin)
+	expectedPlugins[0].Servers = []string{"localhost"}
+
+	filterMockup := models.Filter{
 		NameDrop:  []string{"metricname2"},
 		NamePass:  []string{"metricname1"},
 		FieldDrop: []string{"other", "stuff"},
@@ -136,59 +139,81 @@ func TestConfig_LoadDirectory(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, filter.Compile())
-	mConfig := &models.InputConfig{
+	assert.NoError(t, filterMockup.Compile())
+	expectedConfigs[0] = &models.InputConfig{
 		Name:     "memcached",
-		Filter:   filter,
+		Filter:   filterMockup,
 		Interval: 5 * time.Second,
 	}
-	mConfig.Tags = make(map[string]string)
+	expectedConfigs[0].Tags = make(map[string]string)
 
-	assert.Equal(t, memcached, c.Inputs[0].Input,
-		"Testdata did not produce a correct memcached struct.")
-	assert.Equal(t, mConfig, c.Inputs[0].Config,
-		"Testdata did not produce correct memcached metadata.")
-
-	ex := inputs.Inputs["exec"]().(*exec.Exec)
+	expectedPlugins[1] = inputs.Inputs["exec"]().(*MockupInputPlugin)
 	p, err := parsers.NewParser(&parsers.Config{
 		MetricName: "exec",
 		DataFormat: "json",
 		JSONStrict: true,
 	})
 	assert.NoError(t, err)
-	ex.SetParser(p)
-	ex.Command = "/usr/bin/myothercollector --foo=bar"
-	eConfig := &models.InputConfig{
+	expectedPlugins[1].SetParser(p)
+	expectedPlugins[1].Command = "/usr/bin/myothercollector --foo=bar"
+	expectedConfigs[1] = &models.InputConfig{
 		Name:              "exec",
 		MeasurementSuffix: "_myothercollector",
 	}
-	eConfig.Tags = make(map[string]string)
+	expectedConfigs[1].Tags = make(map[string]string)
 
-	exec := c.Inputs[1].Input.(*exec.Exec)
-	require.NotNil(t, exec.Log)
-	exec.Log = nil
+	expectedPlugins[2] = inputs.Inputs["memcached"]().(*MockupInputPlugin)
+	expectedPlugins[2].Servers = []string{"192.168.1.1"}
 
-	assert.Equal(t, ex, c.Inputs[1].Input,
-		"Merged Testdata did not produce a correct exec struct.")
-	assert.Equal(t, eConfig, c.Inputs[1].Config,
-		"Merged Testdata did not produce correct exec metadata.")
+	filterMemcached := models.Filter{
+		NameDrop:  []string{"metricname2"},
+		NamePass:  []string{"metricname1"},
+		FieldDrop: []string{"other", "stuff"},
+		FieldPass: []string{"some", "strings"},
+		TagDrop: []models.TagFilter{
+			{
+				Name:   "badtag",
+				Filter: []string{"othertag"},
+			},
+		},
+		TagPass: []models.TagFilter{
+			{
+				Name:   "goodtag",
+				Filter: []string{"mytag"},
+			},
+		},
+	}
+	assert.NoError(t, filterMemcached.Compile())
+	expectedConfigs[2] = &models.InputConfig{
+		Name:     "memcached",
+		Filter:   filterMemcached,
+		Interval: 5 * time.Second,
+	}
+	expectedConfigs[2].Tags = make(map[string]string)
 
-	memcached.Servers = []string{"192.168.1.1"}
-	assert.Equal(t, memcached, c.Inputs[2].Input,
-		"Testdata did not produce a correct memcached struct.")
-	assert.Equal(t, mConfig, c.Inputs[2].Config,
-		"Testdata did not produce correct memcached metadata.")
+	expectedPlugins[3] = inputs.Inputs["procstat"]().(*MockupInputPlugin)
+	expectedPlugins[3].PidFile = "/var/run/grafana-server.pid"
+	expectedConfigs[3] = &models.InputConfig{Name: "procstat"}
+	expectedConfigs[3].Tags = make(map[string]string)
 
-	pstat := inputs.Inputs["procstat"]().(*procstat.Procstat)
-	pstat.PidFile = "/var/run/grafana-server.pid"
+	// Check the generated plugins
+	assert.Len(t, c.Inputs, len(expectedPlugins))
+	assert.Len(t, c.Inputs, len(expectedConfigs))
+	for i, plugin := range c.Inputs {
+		input := plugin.Input.(*MockupInputPlugin)
+		// Check the logger and ignore it for comparison
+		require.NotNil(t, input.Log)
+		input.Log = nil
 
-	pConfig := &models.InputConfig{Name: "procstat"}
-	pConfig.Tags = make(map[string]string)
+		// Ignore the parser if not expected
+		if expectedPlugins[i].parser == nil {
+			input.parser = nil
+		}
 
-	assert.Equal(t, pstat, c.Inputs[3].Input,
-		"Merged Testdata did not produce a correct procstat struct.")
-	assert.Equal(t, pConfig, c.Inputs[3].Config,
-		"Merged Testdata did not produce correct procstat metadata.")
+		assert.Equalf(t, expectedPlugins[i], plugin.Input, "Plugin %d: incorrect struct produced", i)
+		assert.Equalf(t, expectedConfigs[i], plugin.Config, "Plugin %d: incorrect config produced", i)
+	}
+
 }
 
 func TestConfig_LoadSpecialTypes(t *testing.T) {
@@ -197,14 +222,14 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 	assert.NoError(t, err)
 	require.Equal(t, 1, len(c.Inputs))
 
-	inputHTTPListener, ok := c.Inputs[0].Input.(*http_listener_v2.HTTPListenerV2)
+	input, ok := c.Inputs[0].Input.(*MockupInputPlugin)
 	assert.Equal(t, true, ok)
 	// Tests telegraf duration parsing.
-	assert.Equal(t, config.Duration{Duration: time.Second}, inputHTTPListener.WriteTimeout)
+	assert.Equal(t, Duration(time.Second), input.WriteTimeout)
 	// Tests telegraf size parsing.
-	assert.Equal(t, internal.Size{Size: 1024 * 1024}, inputHTTPListener.MaxBodySize)
+	assert.Equal(t, internal.Size{Size: 1024 * 1024}, input.MaxBodySize)
 	// Tests toml multiline basic strings.
-	assert.Equal(t, "/path/to/my/cert", strings.TrimRight(inputHTTPListener.TLSCert, "\r\n"))
+	assert.Equal(t, "/path/to/my/cert", strings.TrimRight(input.TLSCert, "\r\n"))
 }
 
 func TestConfig_FieldNotDefined(t *testing.T) {
@@ -218,12 +243,12 @@ func TestConfig_WrongFieldType(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/wrong_field_type.toml")
 	require.Error(t, err, "invalid field type")
-	assert.Equal(t, "Error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: (http_listener_v2.HTTPListenerV2.Port) cannot unmarshal TOML string into int", err.Error())
+	assert.Equal(t, "Error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Port) cannot unmarshal TOML string into int", err.Error())
 
 	c = NewConfig()
 	err = c.LoadConfig("./testdata/wrong_field_type2.toml")
 	require.Error(t, err, "invalid field type2")
-	assert.Equal(t, "Error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (http_listener_v2.HTTPListenerV2.Methods) cannot unmarshal TOML string into []string", err.Error())
+	assert.Equal(t, "Error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Methods) cannot unmarshal TOML string into []string", err.Error())
 }
 
 func TestConfig_InlineTables(t *testing.T) {
@@ -233,9 +258,9 @@ func TestConfig_InlineTables(t *testing.T) {
 	assert.NoError(t, err)
 	require.Equal(t, 2, len(c.Outputs))
 
-	outputHTTP, ok := c.Outputs[1].Output.(*httpOut.HTTP)
+	output, ok := c.Outputs[1].Output.(*MockupOuputPlugin)
 	assert.Equal(t, true, ok)
-	assert.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, outputHTTP.Headers)
+	assert.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, output.Headers)
 	assert.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
 }
 
@@ -247,8 +272,8 @@ func TestConfig_SliceComment(t *testing.T) {
 	assert.NoError(t, err)
 	require.Equal(t, 1, len(c.Outputs))
 
-	outputHTTP, ok := c.Outputs[0].Output.(*httpOut.HTTP)
-	assert.Equal(t, []string{"test"}, outputHTTP.Scopes)
+	output, ok := c.Outputs[0].Output.(*MockupOuputPlugin)
+	assert.Equal(t, []string{"test"}, output.Scopes)
 	assert.Equal(t, true, ok)
 }
 
@@ -264,21 +289,16 @@ func TestConfig_BadOrdering(t *testing.T) {
 func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 	// #8256 Cannot use empty string as the namespace prefix
 	c := NewConfig()
-	defaultPrefixConfig := `[[outputs.azure_monitor]]`
-	err := c.LoadConfigData([]byte(defaultPrefixConfig))
+	err := c.LoadConfig("./testdata/azure_monitor.toml")
 	assert.NoError(t, err)
-	azureMonitor, ok := c.Outputs[0].Output.(*azure_monitor.AzureMonitor)
-	assert.Equal(t, "Telegraf/", azureMonitor.NamespacePrefix)
-	assert.Equal(t, true, ok)
+	assert.Equal(t, 2, len(c.Outputs))
 
-	c = NewConfig()
-	customPrefixConfig := `[[outputs.azure_monitor]]
-	namespace_prefix = ""`
-	err = c.LoadConfigData([]byte(customPrefixConfig))
-	assert.NoError(t, err)
-	azureMonitor, ok = c.Outputs[0].Output.(*azure_monitor.AzureMonitor)
-	assert.Equal(t, "", azureMonitor.NamespacePrefix)
-	assert.Equal(t, true, ok)
+	expectedPrefix := []string{"Telegraf/", ""}
+	for i, plugin := range c.Outputs {
+		output, ok := plugin.Output.(*MockupOuputPlugin)
+		assert.True(t, ok)
+		assert.Equal(t, expectedPrefix[i], output.NamespacePrefix)
+	}
 }
 
 func TestConfig_URLRetries3Fails(t *testing.T) {
@@ -313,4 +333,55 @@ func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
 	err := c.LoadConfig(ts.URL)
 	require.NoError(t, err)
 	require.Equal(t, 4, responseCounter)
+}
+
+/*** Mockup INPUT plugin for testing to avoid cyclic dependencies ***/
+type MockupInputPlugin struct {
+	Servers      []string      `toml:"servers"`
+	Methods      []string      `toml:"methods"`
+	Timeout      Duration      `toml:"timeout"`
+	ReadTimeout  Duration      `toml:"read_timeout"`
+	WriteTimeout Duration      `toml:"write_timeout"`
+	MaxBodySize  internal.Size `toml:"max_body_size"`
+	Port         int           `toml:"port"`
+	Command      string
+	PidFile      string
+	Log          telegraf.Logger `toml:"-"`
+	tls.ServerConfig
+
+	parser parsers.Parser
+}
+
+func (m *MockupInputPlugin) SampleConfig() string                  { return "Mockup test intput plugin" }
+func (m *MockupInputPlugin) Description() string                   { return "Mockup test intput plugin" }
+func (m *MockupInputPlugin) Gather(acc telegraf.Accumulator) error { return nil }
+func (m *MockupInputPlugin) SetParser(parser parsers.Parser)       { m.parser = parser }
+
+/*** Mockup OUTPUT plugin for testing to avoid cyclic dependencies ***/
+type MockupOuputPlugin struct {
+	URL                 string            `toml:"url"`
+	Headers             map[string]string `toml:"headers"`
+	Scopes              []string          `toml:"scopes"`
+	NamespacePrefix     string            `toml:"namespace_prefix"`
+	Log                 telegraf.Logger   `toml:"-"`
+	tls.ClientConfig
+}
+
+func (m *MockupOuputPlugin) Connect() error                        { return nil }
+func (m *MockupOuputPlugin) Close() error                          { return nil }
+func (m *MockupOuputPlugin) Description() string                   { return "Mockup test output plugin" }
+func (m *MockupOuputPlugin) SampleConfig() string                  { return "Mockup test output plugin" }
+func (m *MockupOuputPlugin) Write(metrics []telegraf.Metric) error { return nil }
+
+// Register the mockup plugin on loading
+func init() {
+	// Register the mockup input plugin for the required names
+	inputs.Add("exec", func() telegraf.Input { return &MockupInputPlugin{Timeout: Duration(time.Second * 5)} })
+	inputs.Add("http_listener_v2", func() telegraf.Input { return &MockupInputPlugin{} })
+	inputs.Add("memcached", func() telegraf.Input { return &MockupInputPlugin{} })
+	inputs.Add("procstat", func() telegraf.Input { return &MockupInputPlugin{} })
+
+	// Register the mockup output plugin for the required names
+	outputs.Add("azure_monitor", func() telegraf.Output { return &MockupOuputPlugin{NamespacePrefix: "Telegraf/"} })
+	outputs.Add("http", func() telegraf.Output { return &MockupOuputPlugin{} })
 }
