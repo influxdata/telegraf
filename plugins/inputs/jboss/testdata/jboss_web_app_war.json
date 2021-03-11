@@ -1,0 +1,35 @@
+{
+  "outcome" : "success",
+  "result" : {
+    "content" : [{"hash" : {
+      "BYTES_VALUE" : "gPUFOxZsadgWl7ohETxnP4NyrKA="
+    }}],
+    "enabled" : true,
+    "name" : "sample.war",
+    "persistent" : true,
+    "runtime-name" : "sample.war",
+    "status" : "OK",
+    "subdeployment" : null,
+    "subsystem" : {"web" : {
+      "active-sessions" : 0,
+      "context-root" : "/sample",
+      "duplicated-session-ids" : 0,
+      "expired-sessions" : 0,
+      "max-active-sessions" : 0,
+      "rejected-sessions" : 0,
+      "session-avg-alive-time" : 0,
+      "session-max-alive-time" : 0,
+      "sessions-created" : 0,
+      "virtual-host" : "default-host",
+      "servlet" : {"HelloServlet" : {
+        "load-time" : 0,
+        "maxTime" : 0,
+        "min-time" : 9223372036854775807,
+        "processingTime" : 0,
+        "requestCount" : 0,
+        "servlet-class" : "mypackage.Hello",
+        "servlet-name" : "HelloServlet"
+      }}
+    }}
+  }
+}

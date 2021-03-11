@@ -1,0 +1,35 @@
+{
+  "outcome" : "success",
+  "result" : {
+    "DLQ" : {
+      "consumer-count" : 0,
+      "dead-letter-address" : "jms.queue.DLQ",
+      "delivering-count" : 0,
+      "durable" : true,
+      "entries" : ["java:/jms/queue/DLQ"],
+      "expiry-address" : "jms.queue.ExpiryQueue",
+      "message-count" : 0,
+      "messages-added" : 0,
+      "paused" : false,
+      "queue-address" : "jms.queue.DLQ",
+      "scheduled-count" : 0,
+      "selector" : null,
+      "temporary" : false
+    },
+    "ExpiryQueue" : {
+      "consumer-count" : 0,
+      "dead-letter-address" : "jms.queue.DLQ",
+      "delivering-count" : 0,
+      "durable" : true,
+      "entries" : ["java:/jms/queue/ExpiryQueue"],
+      "expiry-address" : "jms.queue.ExpiryQueue",
+      "message-count" : 0,
+      "messages-added" : 0,
+      "paused" : false,
+      "queue-address" : "jms.queue.ExpiryQueue",
+      "scheduled-count" : 0,
+      "selector" : null,
+      "temporary" : false
+    }
+  }
+}

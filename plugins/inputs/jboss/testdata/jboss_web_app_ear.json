@@ -1,0 +1,63 @@
+{
+  "outcome" : "success",
+  "result" : {
+    "content" : [{"hash" : {
+      "BYTES_VALUE" : "L00a/u5Z7U2/rsIT5BsSijC8Usg="
+    }}],
+    "enabled" : true,
+    "name" : "HelloWorld.ear",
+    "persistent" : true,
+    "runtime-name" : "HelloWorld.ear",
+    "status" : "OK",
+    "subdeployment" : {
+      "web.war" : {"subsystem" : {"web" : {
+        "active-sessions" : 0,
+        "context-root" : "/HelloWorld",
+        "duplicated-session-ids" : 0,
+        "expired-sessions" : 0,
+        "max-active-sessions" : 0,
+        "rejected-sessions" : 0,
+        "session-avg-alive-time" : 0,
+        "session-max-alive-time" : 0,
+        "sessions-created" : 0,
+        "virtual-host" : "default-host",
+        "servlet" : {"HelloWorldServlet" : {
+          "load-time" : 0,
+          "maxTime" : 0,
+          "min-time" : 9223372036854775807,
+          "processingTime" : 0,
+          "requestCount" : 0,
+          "servlet-class" : "eu.glotzich.j2ee.common.HelloWorldServlet",
+          "servlet-name" : "HelloWorldServlet"
+        }}
+      }}},
+      "common.jar" : {"subsystem" : null},
+      "ejb.jar" : {"subsystem" : {"ejb3" : {
+        "entity-bean" : null,
+        "message-driven-bean" : null,
+        "singleton-bean" : null,
+        "stateful-session-bean" : null,
+        "stateless-session-bean" : {"MyEJB" : {
+          "component-class-name" : "MyEJB",
+          "declared-roles" : [],
+          "execution-time" : 0,
+          "invocations" : 0,
+          "methods" : {},
+          "peak-concurrent-invocations" : 0,
+          "pool-available-count" : 20,
+          "pool-create-count" : 0,
+          "pool-current-size" : 0,
+          "pool-max-size" : 20,
+          "pool-name" : "slsb-strict-max-pool",
+          "pool-remove-count" : 0,
+          "run-as-role" : null,
+          "security-domain" : "other",
+          "timers" : [],
+          "wait-time" : 0,
+          "service" : null
+        }}
+      }}}
+    },
+    "subsystem" : null
+  }
+}

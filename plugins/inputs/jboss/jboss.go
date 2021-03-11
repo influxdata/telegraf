@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -20,7 +19,7 @@ import (
 	dac "github.com/stefa975/go-http-digest-auth-client"
 )
 
-// GetHosts constan applied to jboss management query types
+// Constants applied to jboss management query types
 const (
 	GetExecStat = iota
 	GetHosts
@@ -172,55 +171,21 @@ type WebMetrics struct {
 
 // JBoss the main collectod struct
 type JBoss struct {
-	Servers []string
-	Metrics []string
+	Servers []string `toml:"servers"`
+	Metrics []string `toml:"metrics"`
 
 	Username string
 	Password string
 
 	Authorization string
 
-	ResponseTimeout internal.Duration
+	Log telegraf.Logger `toml:"-"`
+
+	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
 	tls.ClientConfig
 
-	client HTTPClient
-}
-
-// HTTPClient HTTP client struct
-type HTTPClient interface {
-	// Returns the result of an http request
-	//
-	// Parameters:
-	// req: HTTP request object
-	//
-	// Returns:
-	// http.Response:  HTTP respons object
-	// error        :  Any error that may have occurred
-	MakeRequest(req *http.Request) (*http.Response, error)
-
-	SetHTTPClient(client *http.Client)
-	HTTPClient() *http.Client
-}
-
-// RealHTTPClient the HTTP client handler
-type RealHTTPClient struct {
 	client *http.Client
-}
-
-// MakeRequest do an HTTP request
-func (c *RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
-	return c.client.Do(req)
-}
-
-// SetHTTPClient set http client
-func (c *RealHTTPClient) SetHTTPClient(client *http.Client) {
-	c.client = client
-}
-
-// HTTPClient return the HTTP client
-func (c *RealHTTPClient) HTTPClient() *http.Client {
-	return c.client
 }
 
 var sampleConfig = `
@@ -253,40 +218,28 @@ var sampleConfig = `
   ]
 `
 
-// SampleConfig returns a sample configuration block
 func (*JBoss) SampleConfig() string {
 	return sampleConfig
 }
 
-// Description just returns a short description of the JBoss plugin
 func (*JBoss) Description() string {
 	return "Telegraf plugin for gathering metrics from JBoss AS"
 }
 
-// Gather Gathers data for all servers.
 func (h *JBoss) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
 
-	if h.ResponseTimeout.Duration < time.Second {
-		h.ResponseTimeout.Duration = time.Second * 5
-	}
+	// Create an HTTP client that is re-used for each
+	// collection interval
 
-	if h.client.HTTPClient() == nil {
-		tlsCfg, err := h.ClientConfig.TLSConfig()
-
+	if h.client == nil {
+		client, err := h.createHttpClient()
 		if err != nil {
 			return err
 		}
-		tr := &http.Transport{
-			TLSClientConfig: tlsCfg,
-		}
-		client := &http.Client{
-			Transport: tr,
-			Timeout:   h.ResponseTimeout.Duration,
-		}
-		h.client.SetHTTPClient(client)
+		h.client = client
 	}
 
-	var wg sync.WaitGroup
 	for _, server := range h.Servers {
 
 		//Check Exec Mode for each servers
@@ -298,7 +251,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 
 		out, err := h.doRequest(server, bodyContent)
 		if err != nil {
-			log.Printf("E! JBoss Error handling ExecMode Test: %s\n", err)
+			h.Log.Errorf("JBoss Error handling ExecMode Test: %s", err)
 			acc.AddError(err)
 		}
 		// Unmarshal json
@@ -307,15 +260,10 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("Error decoding JSON response (ExecTypeResponse) %s,%s", out, err))
 			return nil
 		}
-		var execAsDomain bool
-		var isEAP7 bool
-		if exec.Result["launch-type"] == "DOMAIN" {
-			execAsDomain = true
-		} else {
-			execAsDomain = false
-		}
-		isEAP7 = isEAP7Version(exec.Result["product-name"].(string), exec.Result["product-version"].(string))
-		log.Printf("D! JBoss Plugin Working as Domain: %t EAP7: %t  for server %s \n", execAsDomain, isEAP7, server)
+
+		execAsDomain := exec.Result["launch-type"] == "DOMAIN"
+		isEAP7 := isEAP7Version(exec.Result["product-name"].(string), exec.Result["product-version"].(string))
+		h.Log.Debugf("JBoss Plugin Working as Domain: %t EAP7: %t  for server %s", execAsDomain, isEAP7, server)
 
 		wg.Add(1)
 		go func(server string, execAsDomain bool) {
@@ -332,8 +280,8 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 				out, err := h.doRequest(server, bodyContent)
 
 				if err != nil {
-					log.Printf("E! JBoss Error handling response 1: %s\n", err)
-					log.Printf("E! JBoss server:%s bodyContent %s\n", server, bodyContent)
+					h.Log.Errorf("JBoss Error handling response 1: %s", err)
+					h.Log.Errorf("JBoss server:%s bodyContent %s", server, bodyContent)
 					acc.AddError(err)
 					return
 				}
@@ -342,7 +290,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 				if err = json.Unmarshal(out, &hosts); err != nil {
 					acc.AddError(fmt.Errorf("Error decoding JSON response (HostResponse) %s :%s", out, err))
 				}
-				log.Printf("D! JBoss HOSTS %s", hosts)
+				h.Log.Debugf("JBoss HOSTS %s", hosts)
 			}
 
 			h.getServersOnHost(acc, server, execAsDomain, isEAP7, hosts.Result)
@@ -361,15 +309,13 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 //     productVersion: version of the produkt
 //
 // Returns:
-//     error: Any error that may have occurred
+//     bool
 
 func isEAP7Version(productName string, productVersion string) bool {
-	log.Printf("D! JBoss product: %s version %s", productName, productVersion)
 	if strings.Contains(productName, "EAP") {
 		return strings.HasPrefix(productVersion, "7.")
-	} else {
-		return strings.HasPrefix(productVersion, "10.")
 	}
+	return strings.HasPrefix(productVersion, "10.")
 }
 
 // Gathers data from a particular host
@@ -394,7 +340,7 @@ func (h *JBoss) getServersOnHost(
 		wg.Add(1)
 		go func(host string) {
 			defer wg.Done()
-			log.Printf("I! Get Servers from host: %s\n", host)
+			h.Log.Infof("Get Servers from host: %s\n", host)
 
 			servers := HostResponse{Outcome: "", Result: []string{"standalone"}}
 
@@ -411,19 +357,19 @@ func (h *JBoss) getServersOnHost(
 				out, err := h.doRequest(serverURL, bodyContent)
 
 				if err != nil {
-					log.Printf("E! JBoss Error handling response 2: ERR:%s : OUTPUT:%s\n", err, out)
+					h.Log.Errorf("JBoss Error handling response 2: ERR:%s : OUTPUT:%s", err, out)
 					acc.AddError(err)
 					return
 				}
 
 				if err = json.Unmarshal(out, &servers); err != nil {
-					log.Printf("E! JBoss Error on JSON decoding")
+					h.Log.Errorf("JBoss Error on JSON decoding")
 					acc.AddError(err)
 				}
 			}
 
 			for _, server := range servers.Result {
-				log.Printf("I! JBoss Plugin Processing Servers from host:[ %s ] : Server [ %s ]\n", host, server)
+				h.Log.Infof("JBoss Plugin Processing Servers from host:[ %s ] : Server [ %s ]", host, server)
 				for _, v := range h.Metrics {
 					switch v {
 					case "jvm":
@@ -452,7 +398,7 @@ func (h *JBoss) getServersOnHost(
 					case "transaction":
 						h.getTransactionStatistics(acc, serverURL, execAsDomain, host, server)
 					default:
-						log.Printf("E! Jboss doesn't exist the metric set %s\n", v)
+						h.Log.Errorf("Jboss doesn't exist the metric set %s", v)
 					}
 				}
 			}
@@ -501,28 +447,29 @@ func (h *JBoss) getTransactionStatistics(
 	}
 
 	out, err := h.doRequest(serverURL, bodyContent)
-
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
-	} else {
-		server := TransactionResponse{}
-		if err = json.Unmarshal(out, &server); err != nil {
-			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
-		}
+	}
 
-		fields := make(map[string]interface{})
-		for key, value := range server.Result {
-			if strings.Contains(key, "number-of") {
-				fields[key], _ = strconv.ParseInt(value.(string), 10, 64)
+	server := TransactionResponse{}
+	if err = json.Unmarshal(out, &server); err != nil {
+		return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
+	}
+
+	fields := make(map[string]interface{})
+	for key, value := range server.Result {
+		if strings.Contains(key, "number-of") {
+			if v, ok := value.(string); ok {
+				fields[key], _ = strconv.ParseInt(v, 10, 64)
 			}
 		}
-		tags := map[string]string{
-			"jboss_host":   host,
-			"jboss_server": serverName,
-		}
-
-		acc.AddFields("jboss_transaction", fields, tags)
 	}
+	tags := map[string]string{
+		"jboss_host":   host,
+		"jboss_server": serverName,
+	}
+
+	acc.AddFields("jboss_transaction", fields, tags)
 
 	return nil
 }
@@ -578,21 +525,19 @@ func (h *JBoss) getWebStatistics(
 
 	fields := make(map[string]interface{})
 	for key, value := range server.Result {
+		if value == nil {
+			continue
+		}
 		switch key {
 		case "bytesReceived", "bytesSent", "requestCount", "errorCount", "maxTime", "processingTime":
-			if value != nil {
-				switch value.(type) {
-				case int:
-					fields[key] = value.(float64)
-				case float64:
-					fields[key] = value.(float64)
-				case string:
-					f, err := strconv.ParseFloat(value.(string), 64)
-					if err != nil {
-						log.Printf("E! JBoss Error decoding Float  from string : %s = %s\n", key, value.(string))
-					} else {
-						fields[key] = f
-					}
+			switch v := value.(type) {
+			case int:
+				fields[key] = float64(v)
+			case float64:
+				fields[key] = v
+			case string:
+				if f, err := strconv.ParseFloat(v, 64); err == nil {
+					fields[key] = f
 				}
 			}
 		}
@@ -616,7 +561,7 @@ func (h *JBoss) getUndertowStatistics(
 	listener string,
 ) error {
 	adr := OrderedMap{}
-	var listenerName = "default"
+	listenerName := "default"
 	if listener == "ajp" || listener == "https" {
 		listenerName = listener
 	}
@@ -654,22 +599,20 @@ func (h *JBoss) getUndertowStatistics(
 
 	fields := make(map[string]interface{})
 	for key, value := range server.Result {
-		log.Printf("D! LISTERNER %s : %s \n", key, value)
+		h.Log.Debugf("LISTERNER %s : %s", key, value)
+		if value == nil {
+			continue
+		}
 		switch key {
 		case "bytes-received", "bytes-sent", "request-count", "error-count", "max-processing-time", "processing-time":
-			if value != nil {
-				switch value.(type) {
-				case int:
-					fields[key] = value.(float64)
-				case float64:
-					fields[key] = value.(float64)
-				case string:
-					f, err := strconv.ParseFloat(value.(string), 64)
-					if err != nil {
-						log.Printf("E! JBoss Error decoding Float  from string : %s = %s\n", key, value.(string))
-					} else {
-						fields[key] = f
-					}
+			switch v := value.(type) {
+			case int:
+				fields[key] = float64(v)
+			case float64:
+				fields[key] = v
+			case string:
+				if f, err := strconv.ParseFloat(v, 64); err == nil {
+					fields[key] = f
 				}
 			}
 		}
@@ -684,18 +627,18 @@ func (h *JBoss) getUndertowStatistics(
 	return nil
 }
 
-func GetPoolFields(pool DBPoolStatistics) map[string]interface{} {
+func getPoolFields(pool DBPoolStatistics) map[string]interface{} {
 	retmap := make(map[string]interface{})
 	//Jboss EAP 6/AS 7.X returns "strings", wildfly 12 returns integers
 	switch pool.ActiveCount.(type) {
 	case string:
-		retmap["in-use-count"], _ = strconv.ParseInt(pool.InUseCount.(string), 10, 64)
-		retmap["active-count"], _ = strconv.ParseInt(pool.ActiveCount.(string), 10, 64)
-		retmap["available-count"], _ = strconv.ParseInt(pool.AvailableCount.(string), 10, 64)
+		retmap["in-use-count"], _ = strconv.ParseFloat(pool.InUseCount.(string), 64)
+		retmap["active-count"], _ = strconv.ParseFloat(pool.ActiveCount.(string), 64)
+		retmap["available-count"], _ = strconv.ParseFloat(pool.AvailableCount.(string), 64)
 	case float64:
-		retmap["in-use-count"] = int(pool.InUseCount.(float64))
-		retmap["active-count"] = int(pool.ActiveCount.(float64))
-		retmap["available-count"] = int(pool.AvailableCount.(float64))
+		retmap["in-use-count"] = pool.InUseCount.(float64)
+		retmap["active-count"] = pool.ActiveCount.(float64)
+		retmap["available-count"] = pool.AvailableCount.(float64)
 	default:
 		retmap["in-use-count"] = pool.InUseCount
 		retmap["active-count"] = pool.ActiveCount
@@ -751,7 +694,7 @@ func (h *JBoss) getDatasourceStatistics(
 	}
 
 	for database, value := range server.Result.DataSource {
-		fields := GetPoolFields(value.Statistics.Pool)
+		fields := getPoolFields(value.Statistics.Pool)
 		tags := map[string]string{
 			"jboss_host":   host,
 			"jboss_server": serverName,
@@ -760,7 +703,7 @@ func (h *JBoss) getDatasourceStatistics(
 		acc.AddFields("jboss_database", fields, tags)
 	}
 	for database, value := range server.Result.XaDataSource {
-		fields := GetPoolFields(value.Statistics.Pool)
+		fields := getPoolFields(value.Statistics.Pool)
 		tags := map[string]string{
 			"jboss_host":   host,
 			"jboss_server": serverName,
@@ -794,12 +737,10 @@ func (h *JBoss) getJMSStatistics(
 
 	adr := OrderedMap{}
 
-	var serverID string
+	serverID := "hornetq-server"
 
 	if subsystem == "messaging-activemq" {
 		serverID = "server"
-	} else {
-		serverID = "hornetq-server"
 	}
 
 	if execAsDomain {
@@ -966,7 +907,7 @@ func (h *JBoss) processEJBAppStats(acc telegraf.Accumulator, ejb map[string]inte
 	return nil
 }
 
-func (h *JBoss) processWebAppStats(acc telegraf.Accumulator, web map[string]interface{}, tags map[string]string) error {
+func (h *JBoss) processWebAppStats(acc telegraf.Accumulator, web map[string]interface{}, tags map[string]string) {
 	fields := make(map[string]interface{})
 	contextRoot := web["context-root"].(string)
 	fields["active-sessions"] = web["active-sessions"]
@@ -975,7 +916,6 @@ func (h *JBoss) processWebAppStats(acc telegraf.Accumulator, web map[string]inte
 	fields["sessions-created"] = web["sessions-created"]
 	tags["context-root"] = contextRoot
 	acc.AddFields("jboss_web_app", fields, tags)
-	return nil
 }
 
 // Gathers Deployment data from a particular host and server
@@ -995,7 +935,6 @@ func (h *JBoss) getServerDeploymentStatistics(
 	host string,
 	serverName string,
 ) error {
-	var wg sync.WaitGroup
 	adr := OrderedMap{}
 
 	if execAsDomain {
@@ -1022,114 +961,107 @@ func (h *JBoss) getServerDeploymentStatistics(
 	}
 
 	for _, deployment := range deployments.Result {
-		wg.Add(1)
-		go func(deployment string) {
-			defer wg.Done()
-			adr2 := OrderedMap{}
-			if execAsDomain {
-				adr2 = OrderedMap{
-					{"host", host},
-					{"server", serverName},
-					{"deployment", deployment},
+		adr2 := OrderedMap{}
+		if execAsDomain {
+			adr2 = OrderedMap{
+				{"host", host},
+				{"server", serverName},
+				{"deployment", deployment},
+			}
+		} else {
+			adr2 = OrderedMap{
+				{"deployment", deployment},
+			}
+		}
+
+		bodyContent, err := h.createRequestBody(GetDeploymentStat, adr2)
+		if err != nil {
+			acc.AddError(err)
+		}
+
+		out, err := h.doRequest(serverURL, bodyContent)
+
+		h.Log.Debugf("JBoss Deployment API Req err: %s", err)
+		h.Log.Debugf("JBoss Deployment API Req out: %s", out)
+
+		if err != nil {
+			h.Log.Errorf("JBoss Deployment Error handling response 3: %s", err)
+			acc.AddError(err)
+		}
+		// everything ok ! continue with decoding data
+		deploy := DeploymentResponse{}
+		if err = json.Unmarshal(out, &deploy); err != nil {
+			acc.AddError(fmt.Errorf("Error decoding JSON response(DeploymentResponse): %s : %s", out, err))
+		}
+		// This struct apply on EAR files
+		for typeName, value := range deploy.Result.Subdeployment {
+			if value == nil {
+				h.Log.Debugf("JBoss Deployment WARNING Subdeployment value is NULL")
+				continue
+			}
+
+			t := value.(map[string]interface{})
+			if t["subsystem"] == nil {
+				h.Log.Debugf("D! JBoss Deployment WARNING SUBDEPLOYMENT Subsystem is NULL")
+				continue
+			}
+			subsystem := t["subsystem"].(map[string]interface{})
+
+			if ejbValue, ok := subsystem["ejb3"]; ok {
+				ejb := ejbValue.(map[string]interface{})
+				tags := map[string]string{
+					"jboss_host":   host,
+					"jboss_server": serverName,
+					"name":         typeName,
+					"runtime_name": deploy.Result.RuntimeName,
 				}
+				h.processEJBAppStats(acc, ejb, tags)
+			}
+
+			if webValue, ok := subsystem["web"]; ok {
+				web := webValue.(map[string]interface{})
+				tags := map[string]string{
+					"jboss_host":   host,
+					"jboss_server": serverName,
+					"name":         typeName,
+					"runtime_name": deploy.Result.RuntimeName,
+				}
+				h.processWebAppStats(acc, web, tags)
+			}
+			//undertow is the new web sybsystem since wildfly 8
+			if webValue, ok := subsystem["undertow"]; ok {
+				web := webValue.(map[string]interface{})
+				tags := map[string]string{
+					"jboss_host":   host,
+					"jboss_server": serverName,
+					"name":         typeName,
+					"runtime_name": deploy.Result.RuntimeName,
+				}
+				h.processWebAppStats(acc, web, tags)
+			}
+
+		}
+		// This struct apply on WAR files
+		for typeName, value := range deploy.Result.Subsystem {
+			if value == nil {
+				h.Log.Debugf("JBoss Deployment SUBSYSTEM  value NULL")
+				continue
+			}
+			if typeName == "web" || typeName == "undertow" {
+				web := value.(map[string]interface{})
+				tags := map[string]string{
+					"jboss_host":   host,
+					"jboss_server": serverName,
+					"name":         deploy.Result.Name,
+					"runtime_name": deploy.Result.RuntimeName,
+				}
+				h.processWebAppStats(acc, web, tags)
 			} else {
-				adr2 = OrderedMap{
-					{"deployment", deployment},
-				}
+				h.Log.Warnf("JBoss Deployment WAR  from type %s", typeName)
 			}
-
-			bodyContent, err := h.createRequestBody(GetDeploymentStat, adr2)
-			if err != nil {
-				acc.AddError(err)
-			}
-
-			out, err := h.doRequest(serverURL, bodyContent)
-
-			log.Printf("D! JBoss Deployment API Req err: %s", err)
-			log.Printf("D! JBoss Deployment API Req out: %s", out)
-
-			if err != nil {
-				log.Printf("E! JBoss Deployment Error handling response 3: %s\n", err)
-				acc.AddError(err)
-				return
-			}
-			// everything ok ! continue with decoding data
-			deploy := DeploymentResponse{}
-			if err = json.Unmarshal(out, &deploy); err != nil {
-				acc.AddError(fmt.Errorf("Error decoding JSON response(DeploymentResponse): %s : %s", out, err))
-			}
-			// This struct apply on EAR files
-			for typeName, value := range deploy.Result.Subdeployment {
-				if value == nil {
-					log.Printf("D! JBoss Deployment WARNING Subdeployment value is NULL")
-					continue
-				}
-
-				t := value.(map[string]interface{})
-				if t["subsystem"] == nil {
-					log.Printf("D! JBoss Deployment WARNING SUBDEPLOYMENT Subsystem is NULL")
-					continue
-				}
-				subsystem := t["subsystem"].(map[string]interface{})
-
-				if ejbValue, ok := subsystem["ejb3"]; ok {
-					ejb := ejbValue.(map[string]interface{})
-					tags := map[string]string{
-						"jboss_host":   host,
-						"jboss_server": serverName,
-						"name":         typeName,
-						"runtime_name": deploy.Result.RuntimeName,
-					}
-					h.processEJBAppStats(acc, ejb, tags)
-				}
-
-				if webValue, ok := subsystem["web"]; ok {
-					web := webValue.(map[string]interface{})
-					tags := map[string]string{
-						"jboss_host":   host,
-						"jboss_server": serverName,
-						"name":         typeName,
-						"runtime_name": deploy.Result.RuntimeName,
-					}
-					h.processWebAppStats(acc, web, tags)
-				}
-				//undertow is the new web sybsystem since wildfly 8
-				if webValue, ok := subsystem["undertow"]; ok {
-					web := webValue.(map[string]interface{})
-					tags := map[string]string{
-						"jboss_host":   host,
-						"jboss_server": serverName,
-						"name":         typeName,
-						"runtime_name": deploy.Result.RuntimeName,
-					}
-					h.processWebAppStats(acc, web, tags)
-				}
-
-			}
-			// This struct apply on WAR files
-			for typeName, value := range deploy.Result.Subsystem {
-				if value == nil {
-					log.Printf("D! JBoss Deployment SUBSYSTEM  value NULL")
-					continue
-				}
-				if typeName == "web" || typeName == "undertow" {
-					web := value.(map[string]interface{})
-					tags := map[string]string{
-						"jboss_host":   host,
-						"jboss_server": serverName,
-						"name":         deploy.Result.Name,
-						"runtime_name": deploy.Result.RuntimeName,
-					}
-					h.processWebAppStats(acc, web, tags)
-				} else {
-					log.Printf("W! JBoss Deployment WAR  from type %s", typeName)
-				}
-			}
-
-		}(deployment)
+		}
 	}
 
-	wg.Wait()
 	return nil
 }
 
@@ -1263,13 +1195,13 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 	}
 	requestBody, err := json.Marshal(bodyContent)
 	if err != nil {
-		log.Printf("E! JBoss Marshal error: %s", err)
+		h.Log.Errorf("JBoss Marshal error: %s", err)
 		return nil, err
 	}
 	method := "POST"
 
 	// Debug JSON request
-	log.Printf("D! Req: %s\n", requestBody)
+	h.Log.Debugf("Req: %s", requestBody)
 
 	dr := dac.NewRequest(h.Username, h.Password, method, serverURL.String(), string(requestBody[:]))
 	dr.Header.Add("Content-Type", "application/json")
@@ -1277,8 +1209,8 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 	resp, err := dr.Execute()
 
 	if err != nil {
-		log.Printf("E! HTTP REQ:%#+v", dr)
-		log.Printf("E! HTTP RESP:%#+v", resp)
+		h.Log.Errorf("HTTP REQ:%#+v", dr)
+		h.Log.Errorf("HTTP RESP:%#+v", resp)
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -1296,17 +1228,35 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 	// read body
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("E! JBoss Error: %s", err)
+		h.Log.Errorf("JBoss Error: %s", err)
 		return nil, err
 	}
 
 	return []byte(body), nil
 }
 
+func (j *JBoss) createHttpClient() (*http.Client, error) {
+	if j.ResponseTimeout.Duration < time.Second {
+		j.ResponseTimeout.Duration = time.Second * 5
+	}
+
+	tlsConfig, err := j.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+		Timeout: j.ResponseTimeout.Duration,
+	}
+
+	return client, nil
+}
+
 func init() {
 	inputs.Add("jboss", func() telegraf.Input {
-		return &JBoss{
-			client: &RealHTTPClient{},
-		}
+		return &JBoss{}
 	})
 }

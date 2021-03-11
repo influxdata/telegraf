@@ -1,0 +1,29 @@
+{
+  "outcome" : "success",
+  "result" : {
+    "bytesReceived" : "0",
+    "bytesSent" : "0",
+    "enable-lookups" : false,
+    "enabled" : true,
+    "errorCount" : "0",
+    "executor" : null,
+    "max-connections" : null,
+    "max-post-size" : 2097152,
+    "max-save-post-size" : 4096,
+    "maxTime" : "0",
+    "name" : "http",
+    "processingTime" : "0",
+    "protocol" : "HTTP/1.1",
+    "proxy-binding" : null,
+    "proxy-name" : null,
+    "proxy-port" : null,
+    "redirect-binding" : null,
+    "redirect-port" : 443,
+    "requestCount" : "0",
+    "scheme" : "http",
+    "secure" : false,
+    "socket-binding" : "http",
+    "virtual-server" : null,
+    "configuration" : null
+  }
+}
