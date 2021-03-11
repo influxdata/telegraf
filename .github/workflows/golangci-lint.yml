@@ -12,7 +12,7 @@ on:
 jobs:
   golangci-pr:
     if: github.ref != 'refs/heads/master'
-    name: lint
+    name: lint-pr-changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -24,7 +24,7 @@ jobs:
           args: --timeout=5m0s
   golangci-master:
     if: github.ref == 'refs/heads/master'
-    name: lint
+    name: lint-master-all
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
