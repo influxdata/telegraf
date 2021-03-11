@@ -48,9 +48,9 @@ func (ssl *streamSocketListener) listen() {
 			break
 		}
 
-		if ssl.ReadBufferSize.Size > 0 {
+		if ssl.ReadBufferSize > 0 {
 			if srb, ok := c.(setReadBufferer); ok {
-				if err := srb.SetReadBuffer(int(ssl.ReadBufferSize.Size)); err != nil {
+				if err := srb.SetReadBuffer(int(ssl.ReadBufferSize)); err != nil {
 					ssl.Log.Error(err.Error())
 					break
 				}
@@ -196,7 +196,7 @@ func (psl *packetSocketListener) listen() {
 type SocketListener struct {
 	ServiceAddress  string           `toml:"service_address"`
 	MaxConnections  int              `toml:"max_connections"`
-	ReadBufferSize  internal.Size    `toml:"read_buffer_size"`
+	ReadBufferSize  config.Size      `toml:"read_buffer_size"`
 	ReadTimeout     *config.Duration `toml:"read_timeout"`
 	KeepAlivePeriod *config.Duration `toml:"keep_alive_period"`
 	SocketMode      string           `toml:"socket_mode"`
@@ -373,9 +373,9 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			}
 		}
 
-		if sl.ReadBufferSize.Size > 0 {
+		if sl.ReadBufferSize > 0 {
 			if srb, ok := pc.(setReadBufferer); ok {
-				if err := srb.SetReadBuffer(int(sl.ReadBufferSize.Size)); err != nil {
+				if err := srb.SetReadBuffer(int(sl.ReadBufferSize)); err != nil {
 					sl.Log.Warnf("Setting read buffer on a %s socket failed: %v", protocol, err)
 				}
 			} else {

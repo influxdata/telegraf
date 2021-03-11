@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	riemanngo "github.com/riemann/riemann-go-client"
 	"github.com/stretchr/testify/require"
@@ -18,7 +18,7 @@ func TestSocketListener_tcp(t *testing.T) {
 	sl := newRiemannSocketListener()
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "tcp://127.0.0.1:5555"
-	sl.ReadBufferSize = internal.Size{Size: 1024}
+	sl.ReadBufferSize = config.Size(1024)
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)

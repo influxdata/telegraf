@@ -12,7 +12,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -30,7 +29,7 @@ type PubSubPush struct {
 	Path           string
 	ReadTimeout    config.Duration
 	WriteTimeout   config.Duration
-	MaxBodySize    internal.Size
+	MaxBodySize    config.Size
 	AddMeta        bool
 	Log            telegraf.Logger
 
@@ -130,8 +129,8 @@ func (p *PubSubPush) SetParser(parser parsers.Parser) {
 
 // Start starts the http listener service.
 func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
-	if p.MaxBodySize.Size == 0 {
-		p.MaxBodySize.Size = defaultMaxBodySize
+	if p.MaxBodySize == 0 {
+		p.MaxBodySize = config.Size(defaultMaxBodySize)
 	}
 
 	if p.ReadTimeout < config.Duration(time.Second) {
@@ -207,7 +206,7 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// Check that the content length is not too large for us to handle.
-	if req.ContentLength > p.MaxBodySize.Size {
+	if req.ContentLength > int64(p.MaxBodySize) {
 		res.WriteHeader(http.StatusRequestEntityTooLarge)
 		return
 	}
@@ -217,7 +216,7 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body := http.MaxBytesReader(res, req.Body, p.MaxBodySize.Size)
+	body := http.MaxBytesReader(res, req.Body, int64(p.MaxBodySize))
 	bytes, err := ioutil.ReadAll(body)
 	if err != nil {
 		res.WriteHeader(http.StatusRequestEntityTooLarge)

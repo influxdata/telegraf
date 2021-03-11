@@ -7,7 +7,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/karrick/godirwalk"
@@ -58,7 +57,7 @@ type FileCount struct {
 	Recursive      bool
 	RegularOnly    bool
 	FollowSymlinks bool
-	Size           internal.Size
+	Size           config.Size
 	MTime          config.Duration `toml:"mtime"`
 	fileFilters    []fileFilterFunc
 	globPaths      []globpath.GlobPath
@@ -109,7 +108,7 @@ func (fc *FileCount) regularOnlyFilter() fileFilterFunc {
 }
 
 func (fc *FileCount) sizeFilter() fileFilterFunc {
-	if fc.Size.Size == 0 {
+	if fc.Size == 0 {
 		return nil
 	}
 
@@ -117,10 +116,10 @@ func (fc *FileCount) sizeFilter() fileFilterFunc {
 		if !f.Mode().IsRegular() {
 			return false, nil
 		}
-		if fc.Size.Size < 0 {
-			return f.Size() < -fc.Size.Size, nil
+		if fc.Size < 0 {
+			return f.Size() < -int64(fc.Size), nil
 		}
-		return f.Size() >= fc.Size.Size, nil
+		return f.Size() >= int64(fc.Size), nil
 	}
 }
 
@@ -303,7 +302,7 @@ func NewFileCount() *FileCount {
 		Recursive:      true,
 		RegularOnly:    true,
 		FollowSymlinks: false,
-		Size:           internal.Size{Size: 0},
+		Size:           config.Size(0),
 		MTime:          config.Duration(0),
 		fileFilters:    nil,
 		Fs:             osFS{},

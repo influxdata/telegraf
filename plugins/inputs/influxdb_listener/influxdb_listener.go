@@ -32,8 +32,8 @@ type InfluxDBListener struct {
 
 	ReadTimeout        config.Duration `toml:"read_timeout"`
 	WriteTimeout       config.Duration `toml:"write_timeout"`
-	MaxBodySize        internal.Size   `toml:"max_body_size"`
-	MaxLineSize        internal.Size   `toml:"max_line_size"` // deprecated in 1.14; ignored
+	MaxBodySize        config.Size     `toml:"max_body_size"`
+	MaxLineSize        config.Size     `toml:"max_line_size"` // deprecated in 1.14; ignored
 	BasicUsername      string          `toml:"basic_username"`
 	BasicPassword      string          `toml:"basic_password"`
 	DatabaseTag        string          `toml:"database_tag"`
@@ -138,11 +138,11 @@ func (h *InfluxDBListener) Init() error {
 	h.authFailures = selfstat.Register("influxdb_listener", "auth_failures", tags)
 	h.routes()
 
-	if h.MaxBodySize.Size == 0 {
-		h.MaxBodySize.Size = defaultMaxBodySize
+	if h.MaxBodySize == 0 {
+		h.MaxBodySize = config.Size(defaultMaxBodySize)
 	}
 
-	if h.MaxLineSize.Size != 0 {
+	if h.MaxLineSize != 0 {
 		h.Log.Warnf("Use of deprecated configuration: 'max_line_size'; parser now handles lines of unlimited length and option is ignored")
 	}
 
@@ -260,7 +260,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		defer h.writesServed.Incr(1)
 		// Check that the content length is not too large for us to handle.
-		if req.ContentLength > h.MaxBodySize.Size {
+		if req.ContentLength > int64(h.MaxBodySize) {
 			if err := tooLarge(res); err != nil {
 				h.Log.Debugf("error in too-large: %v", err)
 			}
@@ -271,7 +271,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 		rp := req.URL.Query().Get("rp")
 
 		body := req.Body
-		body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
+		body = http.MaxBytesReader(res, body, int64(h.MaxBodySize))
 		// Handle gzip request bodies
 		if req.Header.Get("Content-Encoding") == "gzip" {
 			var err error

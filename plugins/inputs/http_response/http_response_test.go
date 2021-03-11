@@ -17,7 +17,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -326,7 +325,7 @@ func TestResponseBodyMaxSize(t *testing.T) {
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
-		ResponseBodyMaxSize: internal.Size{Size: 5},
+		ResponseBodyMaxSize: config.Size(5),
 		FollowRedirects:     true,
 	}
 

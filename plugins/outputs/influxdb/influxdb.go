@@ -10,7 +10,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -45,7 +44,7 @@ type InfluxDB struct {
 	UserAgent                 string            `toml:"user_agent"`
 	WriteConsistency          string            `toml:"write_consistency"`
 	Timeout                   config.Duration   `toml:"timeout"`
-	UDPPayload                internal.Size     `toml:"udp_payload"`
+	UDPPayload                config.Size       `toml:"udp_payload"`
 	HTTPProxy                 string            `toml:"http_proxy"`
 	HTTPHeaders               map[string]string `toml:"http_headers"`
 	ContentEncoding           string            `toml:"content_encoding"`
@@ -240,7 +239,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 func (i *InfluxDB) udpClient(url *url.URL) (Client, error) {
 	config := &UDPConfig{
 		URL:            url,
-		MaxPayloadSize: int(i.UDPPayload.Size),
+		MaxPayloadSize: int(i.UDPPayload),
 		Serializer:     i.newSerializer(),
 		Log:            i.Log,
 	}

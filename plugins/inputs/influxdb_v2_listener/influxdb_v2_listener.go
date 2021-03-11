@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -39,9 +40,9 @@ type InfluxDBV2Listener struct {
 	port           int
 	tlsint.ServerConfig
 
-	MaxBodySize internal.Size `toml:"max_body_size"`
-	Token       string        `toml:"token"`
-	BucketTag   string        `toml:"bucket_tag"`
+	MaxBodySize config.Size `toml:"max_body_size"`
+	Token       string      `toml:"token"`
+	BucketTag   string      `toml:"bucket_tag"`
 
 	timeFunc influx.TimeFunc
 
@@ -134,8 +135,8 @@ func (h *InfluxDBV2Listener) Init() error {
 	h.authFailures = selfstat.Register("influxdb_v2_listener", "auth_failures", tags)
 	h.routes()
 
-	if h.MaxBodySize.Size == 0 {
-		h.MaxBodySize.Size = defaultMaxBodySize
+	if h.MaxBodySize == 0 {
+		h.MaxBodySize = config.Size(defaultMaxBodySize)
 	}
 
 	return nil
@@ -227,8 +228,8 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		defer h.writesServed.Incr(1)
 		// Check that the content length is not too large for us to handle.
-		if req.ContentLength > h.MaxBodySize.Size {
-			if err := tooLarge(res, h.MaxBodySize.Size); err != nil {
+		if req.ContentLength > int64(h.MaxBodySize) {
+			if err := tooLarge(res, int64(h.MaxBodySize)); err != nil {
 				h.Log.Debugf("error in too-large: %v", err)
 			}
 			return
@@ -237,7 +238,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		bucket := req.URL.Query().Get("bucket")
 
 		body := req.Body
-		body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
+		body = http.MaxBytesReader(res, body, int64(h.MaxBodySize))
 		// Handle gzip request bodies
 		if req.Header.Get("Content-Encoding") == "gzip" {
 			var err error

@@ -20,7 +20,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	riemanngo "github.com/riemann/riemann-go-client"
@@ -30,7 +29,7 @@ import (
 type RiemannSocketListener struct {
 	ServiceAddress  string           `toml:"service_address"`
 	MaxConnections  int              `toml:"max_connections"`
-	ReadBufferSize  internal.Size    `toml:"read_buffer_size"`
+	ReadBufferSize  config.Size      `toml:"read_buffer_size"`
 	ReadTimeout     *config.Duration `toml:"read_timeout"`
 	KeepAlivePeriod *config.Duration `toml:"keep_alive_period"`
 	SocketMode      string           `toml:"socket_mode"`
@@ -76,9 +75,9 @@ func (rsl *riemannListener) listen(ctx context.Context) {
 				break
 			}
 
-			if rsl.ReadBufferSize.Size > 0 {
+			if rsl.ReadBufferSize > 0 {
 				if srb, ok := c.(setReadBufferer); ok {
-					if err := srb.SetReadBuffer(int(rsl.ReadBufferSize.Size)); err != nil {
+					if err := srb.SetReadBuffer(int(rsl.ReadBufferSize)); err != nil {
 						rsl.Log.Warnf("Setting read buffer failed: %v", err)
 					}
 				} else {

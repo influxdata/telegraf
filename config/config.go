@@ -182,7 +182,7 @@ type AgentConfig struct {
 
 	// The logfile will be rotated when it becomes larger than the specified
 	// size.  When set to 0 no size based rotation is performed.
-	LogfileRotationMaxSize internal.Size `toml:"logfile_rotation_max_size"`
+	LogfileRotationMaxSize Size `toml:"logfile_rotation_max_size"`
 
 	// Maximum number of rotated archives to keep, any older logs are deleted.
 	// If set to -1, no archives are removed.

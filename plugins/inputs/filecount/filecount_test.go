@@ -15,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -96,12 +95,12 @@ func TestRegularOnlyFilter(t *testing.T) {
 
 func TestSizeFilter(t *testing.T) {
 	fc := getNoFilterFileCount()
-	fc.Size = internal.Size{Size: -100}
+	fc.Size = config.Size(-100)
 	matches := []string{"foo", "bar", "baz",
 		"subdir/quux", "subdir/quuz"}
 	fileCountEquals(t, fc, len(matches), 0)
 
-	fc.Size = internal.Size{Size: 100}
+	fc.Size = config.Size(100)
 	matches = []string{"qux", "subdir/nested2//qux"}
 
 	fileCountEquals(t, fc, len(matches), 800)
@@ -176,7 +175,7 @@ func getNoFilterFileCount() FileCount {
 		Name:        "*",
 		Recursive:   true,
 		RegularOnly: false,
-		Size:        internal.Size{Size: 0},
+		Size:        config.Size(0),
 		MTime:       config.Duration(0),
 		fileFilters: nil,
 		Fs:          getFakeFileSystem(getTestdataDir()),

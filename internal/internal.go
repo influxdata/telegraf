@@ -2,7 +2,6 @@ package internal
 
 import (
 	"bufio"
-	"bytes"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -19,8 +18,6 @@ import (
 	"syscall"
 	"time"
 	"unicode"
-
-	"github.com/alecthomas/units"
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -33,11 +30,6 @@ var (
 
 // Set via the main module
 var version string
-
-// Size just wraps an int64
-type Size struct {
-	Size int64
-}
 
 type Number struct {
 	Value float64
@@ -66,27 +58,6 @@ func Version() string {
 func ProductToken() string {
 	return fmt.Sprintf("Telegraf/%s Go/%s",
 		Version(), strings.TrimPrefix(runtime.Version(), "go"))
-}
-
-func (s *Size) UnmarshalTOML(b []byte) error {
-	var err error
-	b = bytes.Trim(b, `'`)
-
-	val, err := strconv.ParseInt(string(b), 10, 64)
-	if err == nil {
-		s.Size = val
-		return nil
-	}
-	uq, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	val, err = units.ParseStrictBytes(uq)
-	if err != nil {
-		return err
-	}
-	s.Size = val
-	return nil
 }
 
 func (n *Number) UnmarshalTOML(b []byte) error {

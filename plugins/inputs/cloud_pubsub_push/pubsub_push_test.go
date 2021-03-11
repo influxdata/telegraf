@@ -16,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -120,11 +119,9 @@ func TestServeHTTP(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 		pubPush := &PubSubPush{
-			Log:  testutil.Logger{},
-			Path: "/",
-			MaxBodySize: internal.Size{
-				Size: test.maxsize,
-			},
+			Log:          testutil.Logger{},
+			Path:         "/",
+			MaxBodySize:  config.Size(test.maxsize),
 			sem:          make(chan struct{}, 1),
 			undelivered:  make(map[telegraf.TrackingID]chan bool),
 			mu:           &sync.Mutex{},

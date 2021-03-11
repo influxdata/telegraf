@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/rotate"
 	"github.com/influxdata/wlog"
 )
@@ -36,7 +35,7 @@ type LogConfig struct {
 	// will rotate when current file at the specified time interval
 	RotationInterval config.Duration
 	// will rotate when current file size exceeds this parameter.
-	RotationMaxSize internal.Size
+	RotationMaxSize config.Size
 	// maximum rotated files to keep (older ones will be deleted)
 	RotationMaxArchives int
 }
@@ -106,7 +105,7 @@ func (t *telegrafLogCreator) CreateLogger(config LogConfig) (io.Writer, error) {
 	case LogTargetFile:
 		if config.Logfile != "" {
 			var err error
-			if writer, err = rotate.NewFileWriter(config.Logfile, time.Duration(config.RotationInterval), config.RotationMaxSize.Size, config.RotationMaxArchives); err != nil {
+			if writer, err = rotate.NewFileWriter(config.Logfile, time.Duration(config.RotationInterval), int64(config.RotationMaxSize), config.RotationMaxArchives); err != nil {
 				log.Printf("E! Unable to open %s (%s), using stderr", config.Logfile, err)
 				writer = defaultWriter
 			}

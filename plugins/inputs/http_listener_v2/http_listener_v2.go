@@ -15,7 +15,6 @@ import (
 	"github.com/golang/snappy"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -42,7 +41,7 @@ type HTTPListenerV2 struct {
 	DataSource     string            `toml:"data_source"`
 	ReadTimeout    config.Duration   `toml:"read_timeout"`
 	WriteTimeout   config.Duration   `toml:"write_timeout"`
-	MaxBodySize    internal.Size     `toml:"max_body_size"`
+	MaxBodySize    config.Size       `toml:"max_body_size"`
 	Port           int               `toml:"port"`
 	BasicUsername  string            `toml:"basic_username"`
 	BasicPassword  string            `toml:"basic_password"`
@@ -126,8 +125,8 @@ func (h *HTTPListenerV2) SetParser(parser parsers.Parser) {
 
 // Start starts the http listener service.
 func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
-	if h.MaxBodySize.Size == 0 {
-		h.MaxBodySize.Size = defaultMaxBodySize
+	if h.MaxBodySize == 0 {
+		h.MaxBodySize = config.Size(defaultMaxBodySize)
 	}
 
 	if h.ReadTimeout < config.Duration(time.Second) {
@@ -199,7 +198,7 @@ func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) {
 	// Check that the content length is not too large for us to handle.
-	if req.ContentLength > h.MaxBodySize.Size {
+	if req.ContentLength > int64(h.MaxBodySize) {
 		if err := tooLarge(res); err != nil {
 			h.Log.Debugf("error in too-large: %v", err)
 		}
@@ -272,7 +271,7 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 			return nil, false
 		}
 		defer r.Close()
-		maxReader := http.MaxBytesReader(res, r, h.MaxBodySize.Size)
+		maxReader := http.MaxBytesReader(res, r, int64(h.MaxBodySize))
 		bytes, err := ioutil.ReadAll(maxReader)
 		if err != nil {
 			if err := tooLarge(res); err != nil {

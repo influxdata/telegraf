@@ -8,7 +8,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
@@ -96,7 +95,7 @@ func TestConnectUDPConfig(t *testing.T) {
 
 	output := influxdb.InfluxDB{
 		URLs:       []string{"udp://localhost:8089"},
-		UDPPayload: internal.Size{Size: 42},
+		UDPPayload: config.Size(42),
 
 		CreateUDPClientF: func(config *influxdb.UDPConfig) (influxdb.Client, error) {
 			actual = config

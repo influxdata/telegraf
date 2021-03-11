@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -218,7 +217,7 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 	// Tests telegraf duration parsing.
 	require.Equal(t, Duration(time.Second), input.WriteTimeout)
 	// Tests telegraf size parsing.
-	require.Equal(t, internal.Size{Size: 1024 * 1024}, input.MaxBodySize)
+	require.Equal(t, Size(1024*1024), input.MaxBodySize)
 	// Tests toml multiline basic strings.
 	require.Equal(t, "/path/to/my/cert", strings.TrimRight(input.TLSCert, "\r\n"))
 }
@@ -327,13 +326,13 @@ func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
 
 /*** Mockup INPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupInputPlugin struct {
-	Servers      []string      `toml:"servers"`
-	Methods      []string      `toml:"methods"`
-	Timeout      Duration      `toml:"timeout"`
-	ReadTimeout  Duration      `toml:"read_timeout"`
-	WriteTimeout Duration      `toml:"write_timeout"`
-	MaxBodySize  internal.Size `toml:"max_body_size"`
-	Port         int           `toml:"port"`
+	Servers      []string `toml:"servers"`
+	Methods      []string `toml:"methods"`
+	Timeout      Duration `toml:"timeout"`
+	ReadTimeout  Duration `toml:"read_timeout"`
+	WriteTimeout Duration `toml:"write_timeout"`
+	MaxBodySize  Size     `toml:"max_body_size"`
+	Port         int      `toml:"port"`
 	Command      string
 	PidFile      string
 	Log          telegraf.Logger `toml:"-"`
