@@ -138,7 +138,7 @@ func TestWriteKinesis_WhenSuccess(t *testing.T) {
 	elapsed := k.writeKinesis(records)
 	assert.GreaterOrEqual(elapsed.Nanoseconds(), zero)
 
-	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
+	svc.AssertRequests(t, []*kinesis.PutRecordsInput{
 		{
 			StreamName: aws.String(testStreamName),
 			Records:    records,
@@ -176,7 +176,7 @@ func TestWriteKinesis_WhenRecordErrors(t *testing.T) {
 	elapsed := k.writeKinesis(records)
 	assert.GreaterOrEqual(elapsed.Nanoseconds(), zero)
 
-	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
+	svc.AssertRequests(t, []*kinesis.PutRecordsInput{
 		{
 			StreamName: aws.String(testStreamName),
 			Records:    records,
@@ -208,7 +208,7 @@ func TestWriteKinesis_WhenServiceError(t *testing.T) {
 	elapsed := k.writeKinesis(records)
 	assert.GreaterOrEqual(elapsed.Nanoseconds(), zero)
 
-	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
+	svc.AssertRequests(t, []*kinesis.PutRecordsInput{
 		{
 			StreamName: aws.String(testStreamName),
 			Records:    records,
@@ -235,7 +235,7 @@ func TestWrite_NoMetrics(t *testing.T) {
 	err := k.Write([]telegraf.Metric{})
 	assert.Nil(err, "Should not return error")
 
-	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{})
+	svc.AssertRequests(t, []*kinesis.PutRecordsInput{})
 }
 
 func TestWrite_SingleMetric(t *testing.T) {
@@ -260,7 +260,7 @@ func TestWrite_SingleMetric(t *testing.T) {
 	err := k.Write([]telegraf.Metric{metric})
 	assert.Nil(err, "Should not return error")
 
-	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
+	svc.AssertRequests(t, []*kinesis.PutRecordsInput{
 		{
 			StreamName: aws.String(testStreamName),
 			Records: []*kinesis.PutRecordsRequestEntry{
@@ -295,7 +295,7 @@ func TestWrite_MultipleMetrics_SinglePartialRequest(t *testing.T) {
 	err := k.Write(metrics)
 	assert.Nil(err, "Should not return error")
 
-	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
+	svc.AssertRequests(t, []*kinesis.PutRecordsInput{
 		{
 			StreamName: aws.String(testStreamName),
 			Records: createPutRecordsRequestEntries(
@@ -328,7 +328,7 @@ func TestWrite_MultipleMetrics_SingleFullRequest(t *testing.T) {
 	err := k.Write(metrics)
 	assert.Nil(err, "Should not return error")
 
-	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
+	svc.AssertRequests(t, []*kinesis.PutRecordsInput{
 		{
 			StreamName: aws.String(testStreamName),
 			Records: createPutRecordsRequestEntries(
@@ -362,7 +362,7 @@ func TestWrite_MultipleMetrics_MultipleRequests(t *testing.T) {
 	err := k.Write(metrics)
 	assert.Nil(err, "Should not return error")
 
-	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
+	svc.AssertRequests(t, []*kinesis.PutRecordsInput{
 		{
 			StreamName: aws.String(testStreamName),
 			Records: createPutRecordsRequestEntries(
@@ -403,7 +403,7 @@ func TestWrite_MultipleMetrics_MultipleFullRequests(t *testing.T) {
 	err := k.Write(metrics)
 	assert.Nil(err, "Should not return error")
 
-	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
+	svc.AssertRequests(t, []*kinesis.PutRecordsInput{
 		{
 			StreamName: aws.String(testStreamName),
 			Records: createPutRecordsRequestEntries(
@@ -453,7 +453,7 @@ func TestWrite_SerializerError(t *testing.T) {
 	assert.Nil(err, "Should not return error")
 
 	// remaining valid metrics should still get written
-	svc.AssertRequests(assert, []*kinesis.PutRecordsInput{
+	svc.AssertRequests(t, []*kinesis.PutRecordsInput{
 		{
 			StreamName: aws.String(testStreamName),
 			Records: []*kinesis.PutRecordsRequestEntry{
@@ -542,51 +542,47 @@ func (m *mockKinesisPutRecords) PutRecords(input *kinesis.PutRecordsInput) (*kin
 }
 
 func (m *mockKinesisPutRecords) AssertRequests(
-	assert *assert.Assertions,
+	t *testing.T,
 	expected []*kinesis.PutRecordsInput,
 ) {
 
-	if !assert.Equal(
+	require.Equal(t,
 		len(expected),
 		len(m.requests),
 		fmt.Sprintf("Expected %v requests", len(expected)),
-	) {
-		return
-	}
+	)
 
 	for i, expectedInput := range expected {
 		actualInput := m.requests[i]
 
-		assert.Equal(
+		require.Equal(t,
 			expectedInput.StreamName,
 			actualInput.StreamName,
 			fmt.Sprintf("Expected request %v to have correct StreamName", i),
 		)
 
-		if !assert.Equal(
+		require.Equal(t,
 			len(expectedInput.Records),
 			len(actualInput.Records),
 			fmt.Sprintf("Expected request %v to have %v Records", i, len(expectedInput.Records)),
-		) {
-			return
-		}
+		)
 
 		for r, expectedRecord := range expectedInput.Records {
 			actualRecord := actualInput.Records[r]
 
-			assert.Equal(
+			require.Equal(t,
 				expectedRecord.PartitionKey,
 				actualRecord.PartitionKey,
 				fmt.Sprintf("Expected (request %v, record %v) to have correct PartitionKey", i, r),
 			)
 
-			assert.Equal(
+			require.Equal(t,
 				expectedRecord.ExplicitHashKey,
 				actualRecord.ExplicitHashKey,
 				fmt.Sprintf("Expected (request %v, record %v) to have correct ExplicitHashKey", i, r),
 			)
 
-			assert.Equal(
+			require.Equal(t,
 				expectedRecord.Data,
 				actualRecord.Data,
 				fmt.Sprintf("Expected (request %v, record %v) to have correct Data", i, r),
