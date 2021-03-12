@@ -27,7 +27,6 @@ func (h *mockFetcher) Fetch(address string) ([]hddtemp.Disk, error) {
 			Unit:        "C",
 		},
 	}, nil
-
 }
 func newMockFetcher() *mockFetcher {
 	return &mockFetcher{}
@@ -79,5 +78,4 @@ func TestFetch(t *testing.T) {
 	for _, test := range tests {
 		acc.AssertContainsTaggedFields(t, "hddtemp", test.fields, test.tags)
 	}
-
 }

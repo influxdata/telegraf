@@ -674,7 +674,6 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 
 	split := strings.Split(conv, ":")
 	if split[0] == "hextoint" && len(split) == 3 {
-
 		endian := split[1]
 		bit := split[2]
 

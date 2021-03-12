@@ -54,7 +54,6 @@ func (pg *NativeFinder) PidFile(path string) ([]PID, error) {
 	}
 	pids = append(pids, PID(pid))
 	return pids, nil
-
 }
 
 //FullPattern matches on the command line when the process was executed

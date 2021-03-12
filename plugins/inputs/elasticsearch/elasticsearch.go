@@ -277,7 +277,6 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 				e.serverInfoMutex.Lock()
 				e.serverInfo[s] = info
 				e.serverInfoMutex.Unlock()
-
 			}(serv, acc)
 		}
 		wgC.Wait()
@@ -640,7 +639,6 @@ func (e *Elasticsearch) gatherSingleIndexStats(name string, index indexStat, now
 	if e.IndicesLevel == "shards" {
 		for shardNumber, shards := range index.Shards {
 			for _, shard := range shards {
-
 				// Get Shard Stats
 				flattened := jsonparser.JSONFlattener{}
 				err := flattened.FullFlattenJSON("", shard, true, true)

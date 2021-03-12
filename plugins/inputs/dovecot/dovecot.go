@@ -110,7 +110,6 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 }
 
 func gatherStats(buf *bytes.Buffer, acc telegraf.Accumulator, host string, qtype string) error {
-
 	lines := strings.Split(buf.String(), "\n")
 	head := strings.Split(lines[0], "\t")
 	vals := lines[1:]
@@ -169,13 +168,11 @@ func splitSec(tm string) (sec int64, msec int64) {
 }
 
 func timeParser(tm string) time.Time {
-
 	sec, msec := splitSec(tm)
 	return time.Unix(sec, msec)
 }
 
 func secParser(tm string) float64 {
-
 	sec, msec := splitSec(tm)
 	return float64(sec) + (float64(msec) / 1000000.0)
 }

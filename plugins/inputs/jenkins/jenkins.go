@@ -197,7 +197,6 @@ func (j *Jenkins) initialize(client *http.Client) error {
 }
 
 func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
-
 	tags := map[string]string{}
 	if n.DisplayName == "" {
 		return fmt.Errorf("error empty node name")
@@ -249,7 +248,6 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 }
 
 func (j *Jenkins) gatherNodesData(acc telegraf.Accumulator) {
-
 	nodeResp, err := j.client.getAllNodes(context.Background())
 	if err != nil {
 		acc.AddError(err)

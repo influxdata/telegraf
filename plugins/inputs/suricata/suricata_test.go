@@ -202,7 +202,6 @@ func TestSuricataTooLongLine(t *testing.T) {
 	c.Close()
 
 	acc.WaitError(1)
-
 }
 
 func TestSuricataEmptyJSON(t *testing.T) {
@@ -224,7 +223,6 @@ func TestSuricataEmptyJSON(t *testing.T) {
 	c, err := net.Dial("unix", tmpfn)
 	if err != nil {
 		log.Println(err)
-
 	}
 	c.Write([]byte("\n"))
 	c.Close()

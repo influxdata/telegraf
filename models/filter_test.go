@@ -402,7 +402,6 @@ func TestFilter_FilterTagsMatches(t *testing.T) {
 // both parameters were defined
 // see: https://github.com/influxdata/telegraf/issues/2860
 func TestFilter_FilterNamePassAndDrop(t *testing.T) {
-
 	inputData := []string{"name1", "name2", "name3", "name4"}
 	expectedResult := []bool{false, true, false, false}
 
@@ -422,7 +421,6 @@ func TestFilter_FilterNamePassAndDrop(t *testing.T) {
 // both parameters were defined
 // see: https://github.com/influxdata/telegraf/issues/2860
 func TestFilter_FilterFieldPassAndDrop(t *testing.T) {
-
 	inputData := []string{"field1", "field2", "field3", "field4"}
 	expectedResult := []bool{false, true, false, false}
 
@@ -479,7 +477,6 @@ func TestFilter_FilterTagsPassAndDrop(t *testing.T) {
 	for i, tag := range inputData {
 		require.Equal(t, f.shouldTagsPass(tag), expectedResult[i])
 	}
-
 }
 
 func BenchmarkFilter(b *testing.B) {

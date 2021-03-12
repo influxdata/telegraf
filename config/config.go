@@ -908,7 +908,6 @@ func loadConfig(config string) ([]byte, error) {
 		// If it isn't a https scheme, try it as a file.
 	}
 	return ioutil.ReadFile(config)
-
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {

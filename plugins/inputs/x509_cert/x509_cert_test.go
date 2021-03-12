@@ -305,7 +305,6 @@ func TestGatherChain(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestStrings(t *testing.T) {

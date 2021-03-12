@@ -1122,7 +1122,6 @@ func TestHostnameFromID(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
@@ -1269,7 +1268,6 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 					[]string{"docker_container_cpu", "docker_container_net", "docker_container_blkio"})
 			})
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.OnlyTags(), testutil.SortMetrics())
-
 		})
 	}
 }
@@ -1360,7 +1358,6 @@ func TestDocker_Init(t *testing.T) {
 					t.Errorf("Total include: got  '%v', want '%v'", d.TotalInclude, tt.wantTotalInclude)
 				}
 			}
-
 		})
 	}
 }

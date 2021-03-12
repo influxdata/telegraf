@@ -364,7 +364,6 @@ func (a *Agent) testStartInputs(
 			if err != nil {
 				log.Printf("E! [agent] Starting input %s: %v", input.LogName(), err)
 			}
-
 		}
 
 		unit.inputs = append(unit.inputs, input)

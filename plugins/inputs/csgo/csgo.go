@@ -74,8 +74,8 @@ func init() {
 func (s *CSGO) gatherServer(
 	server []string,
 	request func(string, string) (string, error),
-	acc telegraf.Accumulator) error {
-
+	acc telegraf.Accumulator,
+) error {
 	if len(server) != 2 {
 		return errors.New("incorrect server config")
 	}

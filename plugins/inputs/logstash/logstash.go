@@ -270,8 +270,8 @@ func (logstash *Logstash) gatherPluginsStats(
 	plugins []Plugin,
 	pluginType string,
 	tags map[string]string,
-	accumulator telegraf.Accumulator) error {
-
+	accumulator telegraf.Accumulator,
+) error {
 	for _, plugin := range plugins {
 		pluginTags := map[string]string{
 			"plugin_name": plugin.Name,
@@ -295,9 +295,8 @@ func (logstash *Logstash) gatherPluginsStats(
 func (logstash *Logstash) gatherQueueStats(
 	queue *PipelineQueue,
 	tags map[string]string,
-	accumulator telegraf.Accumulator) error {
-
-	var err error
+	accumulator telegraf.Accumulator,
+) error {
 	queueTags := map[string]string{
 		"queue_type": queue.Type,
 	}
@@ -311,7 +310,7 @@ func (logstash *Logstash) gatherQueueStats(
 
 	if queue.Type != "memory" {
 		flattener := jsonParser.JSONFlattener{}
-		err = flattener.FlattenJSON("", queue.Capacity)
+		err := flattener.FlattenJSON("", queue.Capacity)
 		if err != nil {
 			return err
 		}

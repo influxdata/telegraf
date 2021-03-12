@@ -43,7 +43,6 @@ func TestSqlServer_QueriesInclusionExclusion(t *testing.T) {
 }
 
 func TestSqlServer_ParseMetrics(t *testing.T) {
-
 	var acc testutil.Accumulator
 
 	queries := make(MapQuery)
@@ -63,7 +62,6 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 	var fields = make(map[string]interface{})
 
 	for _, query := range queries {
-
 		mock = strings.Split(query.Script, "\n")
 		idx := 0
 
@@ -78,7 +76,6 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 				tags[headers[2]] = row[2] // tag 'type'
 
 				if query.ResultByRow {
-
 					// set value by converting to float64
 					value, err := strconv.ParseFloat(row[3], 64)
 					// require
@@ -90,11 +87,9 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 						tags, time.Now())
 					// assert
 					acc.AssertContainsTaggedFields(t, measurement, map[string]interface{}{"value": value}, tags)
-
 				} else {
 					// set fields
 					for i := 3; i < len(row); i++ {
-
 						// set value by converting to float64
 						value, err := strconv.ParseFloat(row[i], 64)
 						// require
@@ -232,7 +227,6 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 }
 
 func TestSqlServer_MultipleInit(t *testing.T) {
-
 	s := &SQLServer{}
 	s2 := &SQLServer{
 		ExcludeQuery: []string{"DatabaseSize"},

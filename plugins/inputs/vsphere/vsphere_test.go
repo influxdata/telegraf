@@ -471,7 +471,6 @@ func testCollection(t *testing.T, excludeClusters bool) {
 		v.Username = username
 		v.Password = password
 	} else {
-
 		// Don't run test on 32-bit machines due to bug in simulator.
 		// https://github.com/vmware/govmomi/issues/1330
 		var i int

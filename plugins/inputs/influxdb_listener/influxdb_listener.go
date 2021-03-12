@@ -327,7 +327,6 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 			}
 
 			h.acc.AddMetric(m)
-
 		}
 		if err != influx.EOF {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())

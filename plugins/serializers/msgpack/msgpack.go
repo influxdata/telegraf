@@ -38,7 +38,6 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-
 	}
 	return buf, nil
 }
