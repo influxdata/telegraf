@@ -1341,6 +1341,8 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 
 	c.getFieldStringSlice(tbl, "form_urlencoded_tag_keys", &pc.FormUrlencodedTagKeys)
 
+	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
+
 	//for XML parser
 	if node, ok := tbl.Fields["xml"]; ok {
 		if subtbls, ok := node.([]*ast.Table); ok {
@@ -1467,7 +1469,7 @@ func (c *Config) missingTomlField(typ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"wavefront_source_override", "wavefront_use_strict", "xml":
+		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml":
 
 		// ignore fields that are common to all plugins.
 	default:
