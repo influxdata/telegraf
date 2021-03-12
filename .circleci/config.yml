@@ -224,57 +224,7 @@ workflows:
   version: 2
   check:
     jobs:
-      - 'linter'
-      - 'macdeps':
-          filters:
-            tags:
-              only: /.*/
-      - 'deps':
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_15':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_15-386':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_16':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_16-386':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-darwin':
-          requires:
-            - 'macdeps'
-          filters:
-            tags: # only runs on tags if you specify this filter
-              only: /.*/
-      - 'test-go-windows':
-          filters:
-            tags:
-              only: /.*/
-      - 'package':
-          requires:
-            - 'test-go-windows'
-            - 'test-go-darwin'
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
-            - 'test-go-1_16'
-            - 'test-go-1_16-386'
+      - 'package'
       - 'share-artifacts':
           requires:
             - 'package'
@@ -282,31 +232,6 @@ workflows:
             branches:
               ignore:
                 - master
-      - 'release':
-          requires:
-            - 'test-go-windows'
-            - 'test-go-darwin'
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
-            - 'test-go-1_16'
-            - 'test-go-1_16-386'
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
-      - 'package-sign-windows':
-          requires:
-            - 'release'
-          filters:
-              tags:
-                only: /.*/
-      - 'package-sign-mac':
-           requires:
-             - 'package-sign-windows' 
-           filters:
-              tags:
-                only: /.*/
 
   nightly:
     jobs:
