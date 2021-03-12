@@ -59,10 +59,18 @@ func TestWrite(t *testing.T) {
 	}
 
 	mockMetrics := testutil.MockMetrics()
-	b.setUpTestClient()
-	b.Connect()
-	err := b.Write(mockMetrics)
-	require.NoError(t, err)
+	
+
+	if err := b.setUpTestClient(); err != nil {
+		require.NoError(t, err)
+	}
+	if err := b.Connect(); err != nil {
+		require.NoError(t, err)
+	}
+	
+	if err := b.Write(mockMetrics); err != nil {
+		require.NoError(t, err)
+	}
 
 	var rows []map[string]json.RawMessage
 	json.Unmarshal(receivedBody["rows"], &rows)
