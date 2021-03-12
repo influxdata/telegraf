@@ -116,7 +116,6 @@ func TestNginxUpstreamCheckRequest(test *testing.T) {
 		require.Equal(test, request.Header.Get("X-Test"), "test-value")
 		require.Equal(test, request.Header.Get("Authorization"), "Basic dXNlcjpwYXNzd29yZA==")
 		require.Equal(test, request.Host, "status.local")
-
 	}))
 	defer testServer.Close()
 

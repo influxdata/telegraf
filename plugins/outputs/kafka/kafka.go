@@ -66,7 +66,6 @@ func (*DebugLogger) Print(v ...interface{}) {
 	args := make([]interface{}, 0, len(v)+1)
 	args = append(append(args, "D! [sarama] "), v...)
 	log.Print(args...)
-
 }
 
 func (*DebugLogger) Printf(format string, v ...interface{}) {

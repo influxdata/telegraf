@@ -217,7 +217,6 @@ func (j *Jolokia) prepareRequest(server Server, metrics []Metric) (*http.Request
 			}
 
 			jolokiaURL = proxyURL
-
 		} else {
 			serverURL, err := url.Parse("http://" + server.Host + ":" + server.Port + context)
 			if err != nil {

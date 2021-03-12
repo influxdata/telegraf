@@ -201,7 +201,6 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			}
 			entries[metrickey] = promts
 		}
-
 	}
 
 	var promTS = make([]*prompb.TimeSeries, len(entries))
@@ -235,7 +234,6 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 			return false
 		})
-
 	}
 	data, err := proto.Marshal(&prompb.WriteRequest{Timeseries: promTS})
 	if err != nil {
@@ -302,7 +300,6 @@ func (s *Serializer) createLabels(metric telegraf.Metric) []*prompb.Label {
 
 		labels = append(labels, &prompb.Label{Name: name, Value: value})
 		addedFieldLabel = true
-
 	}
 
 	if addedFieldLabel {

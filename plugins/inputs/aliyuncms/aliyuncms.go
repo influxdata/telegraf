@@ -187,7 +187,6 @@ func (s *AliyunCMS) Description() string {
 }
 
 func (s *AliyunCMS) Init() error {
-
 	if s.Project == "" {
 		return errors.New("project is not set")
 	}
@@ -275,7 +274,6 @@ func (s *AliyunCMS) Start(telegraf.Accumulator) error {
 
 // Gather implements telegraf.Inputs interface
 func (s *AliyunCMS) Gather(acc telegraf.Accumulator) error {
-
 	s.updateWindow(time.Now())
 
 	// limit concurrency or we can easily exhaust user connection limit
@@ -288,7 +286,6 @@ func (s *AliyunCMS) Gather(acc telegraf.Accumulator) error {
 		s.prepareTagsAndDimensions(metric)
 		wg.Add(len(metric.MetricNames))
 		for _, metricName := range metric.MetricNames {
-
 			<-lmtr.C
 			go func(metricName string, metric *Metric) {
 				defer wg.Done()
@@ -308,7 +305,6 @@ func (s *AliyunCMS) Stop() {
 }
 
 func (s *AliyunCMS) updateWindow(relativeTo time.Time) {
-
 	//https://help.aliyun.com/document_detail/51936.html?spm=a2c4g.11186623.6.701.54025679zh6wiR
 	//The start and end times are executed in the mode of
 	//opening left and closing right, and startTime cannot be equal
@@ -329,7 +325,6 @@ func (s *AliyunCMS) updateWindow(relativeTo time.Time) {
 
 // Gather given metric and emit error
 func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, metric *Metric) error {
-
 	req := cms.CreateDescribeMetricListRequest()
 	req.Period = strconv.FormatInt(int64(s.Period.Duration.Seconds()), 10)
 	req.MetricName = metricName
@@ -368,7 +363,6 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 				case "instanceId", "BucketName":
 					tags[key] = value.(string)
 					if metric.discoveryTags != nil { //discovery can be not activated
-
 						//Skipping data point if discovery data not exist
 						if _, ok := metric.discoveryTags[value.(string)]; !ok &&
 							!metric.AllowDataPointWODiscoveryData {
@@ -401,7 +395,6 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 
 //Tag helper
 func parseTag(tagSpec string, data interface{}) (string, string, error) {
-
 	tagKey := tagSpec
 	queryPath := tagSpec
 
@@ -452,9 +445,8 @@ L:
 		}
 	}
 
-	if newData || //new data arrives, process it
-		len(metric.discoveryTags) == 0 { //or this is the first call
-
+	//new data arrives (so process it) or this is the first call
+	if newData || len(metric.discoveryTags) == 0 {
 		metric.dtLock.Lock()
 		defer metric.dtLock.Unlock()
 
@@ -467,14 +459,12 @@ L:
 
 		//Preparing tags & dims...
 		for instanceId, elem := range s.discoveryData {
-
 			//Start filing tags
 			//Remove old value if exist
 			delete(metric.discoveryTags, instanceId)
 			metric.discoveryTags[instanceId] = make(map[string]string, len(metric.TagsQueryPath)+len(defaulTags))
 
 			for _, tagQueryPath := range metric.TagsQueryPath {
-
 				tagKey, tagValue, err := parseTag(tagQueryPath, elem)
 				if err != nil {
 					s.Log.Errorf("%v", err)
@@ -510,7 +500,6 @@ L:
 			metric.requestDimensions = append(
 				metric.requestDimensions,
 				map[string]string{s.dimensionKey: instanceId})
-
 		}
 
 		//Get final dimension (need to get full lis of
@@ -531,7 +520,6 @@ L:
 		} else {
 			metric.requestDimensionsStr = string(reqDim)
 		}
-
 	}
 }
 

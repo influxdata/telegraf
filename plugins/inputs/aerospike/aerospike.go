@@ -248,7 +248,6 @@ func (a *Aerospike) parseNodeInfo(stats map[string]string, hostPort string, node
 	for k, v := range stats {
 		key := strings.Replace(k, "-", "_", -1)
 		fields[key] = parseAerospikeValue(key, v)
-
 	}
 	acc.AddFields("aerospike_node", fields, tags, time.Now())
 
@@ -279,7 +278,6 @@ func (a *Aerospike) getNamespaceInfo(namespace string, n *as.Node) (map[string]s
 	return stats, err
 }
 func (a *Aerospike) parseNamespaceInfo(stats map[string]string, hostPort string, namespace string, nodeName string, acc telegraf.Accumulator) {
-
 	nTags := map[string]string{
 		"aerospike_host": hostPort,
 		"node_name":      nodeName,
@@ -348,7 +346,6 @@ func (a *Aerospike) getSetInfo(namespaceSet string, n *as.Node) (map[string]stri
 }
 
 func (a *Aerospike) parseSetInfo(stats map[string]string, hostPort string, namespaceSet string, nodeName string, acc telegraf.Accumulator) {
-
 	stat := strings.Split(
 		strings.TrimSuffix(
 			stats[fmt.Sprintf("sets/%s", namespaceSet)], ";"), ":")
@@ -383,7 +380,6 @@ func (a *Aerospike) getTTLHistogram(hostPort string, namespace string, set strin
 }
 
 func (a *Aerospike) getObjectSizeLinearHistogram(hostPort string, namespace string, set string, n *as.Node, acc telegraf.Accumulator) error {
-
 	stats, err := a.getHistogram(namespace, set, "object-size-linear", n)
 	if err != nil {
 		return err
@@ -406,11 +402,9 @@ func (a *Aerospike) getHistogram(namespace string, set string, histogramType str
 		return nil, err
 	}
 	return stats, nil
-
 }
 
 func (a *Aerospike) parseHistogram(stats map[string]string, hostPort string, namespace string, set string, histogramType string, nodeName string, acc telegraf.Accumulator) {
-
 	nTags := map[string]string{
 		"aerospike_host": hostPort,
 		"node_name":      nodeName,
@@ -463,7 +457,6 @@ func (a *Aerospike) parseHistogram(stats map[string]string, hostPort string, nam
 						nFields[strconv.Itoa(bucketName)] = bucketSum
 					}
 				}
-
 			}
 		}
 	}

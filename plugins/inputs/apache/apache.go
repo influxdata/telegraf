@@ -162,7 +162,6 @@ func (n *Apache) gatherScores(data string) map[string]interface{} {
 	var S, R, W, K, D, C, L, G, I int = 0, 0, 0, 0, 0, 0, 0, 0, 0
 
 	for _, s := range strings.Split(data, "") {
-
 		switch s {
 		case "_":
 			waiting++

@@ -210,7 +210,6 @@ func TestHistogramWithAllFieldsNonCumulative(t *testing.T) {
 // TestHistogramWithTwoPeriodsAndAllFields tests two metrics getting added with a push/reset in between (simulates
 // getting added in different periods) for all fields
 func TestHistogramWithTwoPeriodsAndAllFields(t *testing.T) {
-
 	var cfg []config
 	cfg = append(cfg, config{Metric: "first_metric_name", Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
 	histogram := NewTestHistogram(cfg, false, true)

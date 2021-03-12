@@ -69,7 +69,6 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 				fields = makeBuckets(m)
 				fields["count"] = float64(m.GetHistogram().GetSampleCount())
 				fields["sum"] = float64(m.GetHistogram().GetSampleSum())
-
 			} else {
 				// standard metric
 				fields = getNameAndValue(m)

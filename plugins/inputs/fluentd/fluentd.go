@@ -81,14 +81,12 @@ func (h *Fluentd) SampleConfig() string { return sampleConfig }
 
 // Gather - Main code responsible for gathering, processing and creating metrics
 func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
-
 	_, err := url.Parse(h.Endpoint)
 	if err != nil {
 		return fmt.Errorf("Invalid URL \"%s\"", h.Endpoint)
 	}
 
 	if h.client == nil {
-
 		tr := &http.Transport{
 			ResponseHeaderTimeout: time.Duration(3 * time.Second),
 		}
@@ -127,7 +125,6 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 
 	// Go through all plugins one by one
 	for _, p := range dataPoints {
-
 		skip := false
 
 		// Check if this specific type was excluded in configuration
@@ -149,7 +146,6 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 
 			if p.BufferQueueLength != nil {
 				tmpFields["buffer_queue_length"] = *p.BufferQueueLength
-
 			}
 			if p.RetryCount != nil {
 				tmpFields["retry_count"] = *p.RetryCount

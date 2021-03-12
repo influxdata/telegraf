@@ -119,7 +119,6 @@ func (a *Accumulator) addFields(
 		} else {
 			t = a.TimeFunc()
 		}
-
 	}
 
 	if a.debug {

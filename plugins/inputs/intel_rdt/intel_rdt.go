@@ -298,11 +298,9 @@ func (r *IntelRDT) processOutput(cmdReader io.ReadCloser, processesPIDsAssociati
 	*/
 	toOmit := pqosInitOutputLinesNumber
 
-	// omit first measurements which are zeroes
-	if len(r.parsedCores) != 0 {
+	if len(r.parsedCores) != 0 { // omit first measurements which are zeroes
 		toOmit = toOmit + len(r.parsedCores)
-		// specify how many lines should pass before stopping
-	} else if len(processesPIDsAssociation) != 0 {
+	} else if len(processesPIDsAssociation) != 0 { // specify how many lines should pass before stopping
 		toOmit = toOmit + len(processesPIDsAssociation)
 	}
 	for omitCounter := 0; omitCounter < toOmit; omitCounter++ {

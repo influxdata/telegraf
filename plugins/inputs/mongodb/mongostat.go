@@ -1131,8 +1131,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			returnVal.NodeType = "ARB"
 		} else {
 			returnVal.NodeType = "UNK"
-		}
-		// END code modification
+		} // END code modification
 	} else if returnVal.IsMongos {
 		returnVal.NodeType = "RTR"
 	}

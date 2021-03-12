@@ -239,7 +239,6 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 				acc.AddFields("nfs_ops", fields, tags)
 			}
 		}
-
 	}
 
 	return nil
@@ -304,7 +303,6 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 }
 
 func (n *NFSClient) getMountStatsPath() string {
-
 	path := "/proc/self/mountstats"
 	if os.Getenv("MOUNT_PROC") != "" {
 		path = os.Getenv("MOUNT_PROC")
@@ -314,7 +312,6 @@ func (n *NFSClient) getMountStatsPath() string {
 }
 
 func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
-
 	file, err := os.Open(n.mountstatsPath)
 	if err != nil {
 		n.Log.Errorf("Failed opening the [%s] file: %s ", file, err)
@@ -334,7 +331,6 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 }
 
 func (n *NFSClient) Init() error {
-
 	var nfs3Fields = []string{
 		"NULL",
 		"GETATTR",

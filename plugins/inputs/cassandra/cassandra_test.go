@@ -198,9 +198,7 @@ func TestHttpJsonJavaMultiType(t *testing.T) {
 
 // Test that the proper values are ignored or collected
 func TestHttp404(t *testing.T) {
-
-	jolokia := genJolokiaClientStub(invalidJSON, 404, Servers,
-		[]string{HeapMetric})
+	jolokia := genJolokiaClientStub(invalidJSON, 404, Servers, []string{HeapMetric})
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(jolokia.Gather)

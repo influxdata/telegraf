@@ -72,7 +72,6 @@ type discoveryTool struct {
 //getRpcReqFromDiscoveryRequest - utility function to map between aliyun request primitives
 //discoveryRequest represents different type of discovery requests
 func getRpcReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, error) {
-
 	if reflect.ValueOf(req).Type().Kind() != reflect.Ptr ||
 		reflect.ValueOf(req).IsNil() {
 		return nil, errors.Errorf("Not expected type of the discovery request object: %q, %q", reflect.ValueOf(req).Type(), reflect.ValueOf(req).Kind())
@@ -81,7 +80,6 @@ func getRpcReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, 
 	ptrV := reflect.Indirect(reflect.ValueOf(req))
 
 	for i := 0; i < ptrV.NumField(); i++ {
-
 		if ptrV.Field(i).Type().String() == "*requests.RpcRequest" {
 			if !ptrV.Field(i).CanInterface() {
 				return nil, errors.Errorf("Can't get interface of %v", ptrV.Field(i))
@@ -323,7 +321,6 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 
 			//It should contain the array with discovered data
 			for _, item := range rootKeyVal {
-
 				if discData, foundDataItem = item.([]interface{}); foundDataItem {
 					break
 				}
@@ -338,7 +335,6 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 		case "PageNumber":
 			pageNumber = int(val.(float64))
 		}
-
 	}
 	if !foundRootKey {
 		return nil, 0, 0, 0, errors.Errorf("Didn't find root key %q in discovery response", dt.respRootKey)
@@ -390,14 +386,11 @@ func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.Com
 				} else {
 					return nil, errors.Errorf("Can't parse input data element, not a map[string]interface{} type")
 				}
-
 			}
 
 			return preparedData, nil
 		}
-
 	}
-
 }
 
 func (dt *discoveryTool) getDiscoveryDataAllRegions(limiter chan bool) (map[string]interface{}, error) {
@@ -468,7 +461,6 @@ func (dt *discoveryTool) Start() {
 			case <-dt.done:
 				return
 			case <-ticker.C:
-
 				data, err = dt.getDiscoveryDataAllRegions(lmtr.C)
 				if err != nil {
 					dt.lg.Errorf("Can't get discovery data: %v", err)
@@ -485,14 +477,12 @@ func (dt *discoveryTool) Start() {
 					//send discovery data in blocking mode
 					dt.dataChan <- data
 				}
-
 			}
 		}
 	}()
 }
 
 func (dt *discoveryTool) Stop() {
-
 	close(dt.done)
 
 	//Shutdown timer

@@ -25,7 +25,6 @@ const inputTitle = "inputs.aliyuncms"
 type mockGatherAliyunCMSClient struct{}
 
 func (m *mockGatherAliyunCMSClient) DescribeMetricList(request *cms.DescribeMetricListRequest) (*cms.DescribeMetricListResponse, error) {
-
 	resp := new(cms.DescribeMetricListResponse)
 
 	//switch request.Metric {
@@ -221,7 +220,6 @@ func TestUpdateWindow(t *testing.T) {
 }
 
 func TestGatherMetric(t *testing.T) {
-
 	plugin := &AliyunCMS{
 		Project:     "acs_slb_dashboard",
 		client:      new(mockGatherAliyunCMSClient),
@@ -255,13 +253,11 @@ func TestGatherMetric(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc telegraf.Accumulator
 			require.EqualError(t, plugin.gatherMetric(acc, tt.metricName, metric), tt.expectedErrorString)
-
 		})
 	}
 }
 
 func TestGather(t *testing.T) {
-
 	metric := &Metric{
 		MetricNames: []string{},
 		Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
@@ -332,7 +328,6 @@ func TestGather(t *testing.T) {
 }
 
 func TestGetDiscoveryDataAllRegions(t *testing.T) {
-
 	//test table:
 	tests := []struct {
 		name                string
@@ -403,8 +398,6 @@ func TestGetDiscoveryDataAllRegions(t *testing.T) {
 			if err != nil {
 				require.EqualError(t, err, tt.expectedErrorString)
 			}
-
 		})
 	}
-
 }

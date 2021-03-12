@@ -9,7 +9,6 @@ import (
 )
 
 func getMountStatsPath() string {
-
 	path := "./testdata/mountstats"
 	if os.Getenv("MOUNT_PROC") != "" {
 		path = os.Getenv("MOUNT_PROC")

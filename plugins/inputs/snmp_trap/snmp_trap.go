@@ -206,7 +206,6 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 			AuthenticationPassphrase: s.AuthPassword,
 			AuthenticationProtocol:   authenticationProtocol,
 		}
-
 	}
 
 	// wrap the handler, used in unit tests
