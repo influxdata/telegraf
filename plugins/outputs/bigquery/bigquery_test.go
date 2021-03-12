@@ -41,11 +41,10 @@ func TestConnect(t *testing.T) {
 		Timeout: testDuration,
 	}
 
-	var err
-	err = b.setUpTestClient()
-	require.NoError(t, err)
-	err = b.Connect()
-	require.NoError(t, err)
+	cerr := b.setUpTestClient()
+	require.NoError(t, cerr)
+	berr = b.Connect()
+	require.NoError(t, berr)
 }
 
 func TestWrite(t *testing.T) {
@@ -61,7 +60,7 @@ func TestWrite(t *testing.T) {
 
 	mockMetrics := testutil.MockMetrics()
 	b.setUpTestClient()
-	b.Connect()
+	:= b.Connect()
 	err := b.Write(mockMetrics)
 	require.NoError(t, err)
 
