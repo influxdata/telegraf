@@ -4,8 +4,8 @@ go 1.16
 
 require (
 	cloud.google.com/go v0.53.0
-	cloud.google.com/go/datastore v1.1.0 // indirect
-	cloud.google.com/go/pubsub v1.2.0
+	cloud.google.com/go/bigquery v1.3.0
+	cloud.google.com/go/pubsub v1.1.0
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.3.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
