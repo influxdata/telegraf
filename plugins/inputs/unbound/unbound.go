@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool, ConfigFile string) (*bytes.Buffer, error)
+type runner func(cmdName string, timeout internal.Duration, useSudo bool, server string, threadAsTag bool, configFile string) (*bytes.Buffer, error)
 
 // Unbound is used to store configuration values
 type Unbound struct {
@@ -71,26 +71,26 @@ func (s *Unbound) SampleConfig() string {
 }
 
 // Shell out to unbound_stat and return the output
-func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, _ bool, ConfigFile string) (*bytes.Buffer, error) {
+func unboundRunner(cmdName string, timeout internal.Duration, useSudo bool, server string, _ bool, configFile string) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
-	if Server != "" {
-		host, port, err := net.SplitHostPort(Server)
+	if server != "" {
+		host, port, err := net.SplitHostPort(server)
 		if err != nil { // No port was specified
-			host = Server
+			host = server
 			port = ""
 		}
 
 		// Unbound control requires an IP address, and we want to be nice to the user
 		resolver := net.Resolver{}
-		ctx, lookUpCancel := context.WithTimeout(context.Background(), Timeout.Duration)
+		ctx, lookUpCancel := context.WithTimeout(context.Background(), timeout.Duration)
 		defer lookUpCancel()
 		serverIps, err := resolver.LookupIPAddr(ctx, host)
 		if err != nil {
-			return nil, fmt.Errorf("error looking up ip for server: %s: %s", Server, err)
+			return nil, fmt.Errorf("error looking up ip for server: %s: %s", server, err)
 		}
 		if len(serverIps) == 0 {
-			return nil, fmt.Errorf("error no ip for server: %s: %s", Server, err)
+			return nil, fmt.Errorf("error no ip for server: %s: %s", server, err)
 		}
 		server := serverIps[0].IP.String()
 		if port != "" {
@@ -100,20 +100,20 @@ func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Serv
 		cmdArgs = append([]string{"-s", server}, cmdArgs...)
 	}
 
-	if ConfigFile != "" {
-		cmdArgs = append([]string{"-c", ConfigFile}, cmdArgs...)
+	if configFile != "" {
+		cmdArgs = append([]string{"-c", configFile}, cmdArgs...)
 	}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
 
-	if UseSudo {
+	if useSudo {
 		cmdArgs = append([]string{cmdName}, cmdArgs...)
 		cmd = exec.Command("sudo", cmdArgs...)
 	}
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, Timeout.Duration)
+	err := internal.RunTimeout(cmd, timeout.Duration)
 	if err != nil {
 		return &out, fmt.Errorf("error running unbound-control: %s (%s %v)", err, cmdName, cmdArgs)
 	}
