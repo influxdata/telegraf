@@ -1,15 +1,11 @@
 linters:
   enable:
     - bodyclose
-    - deadcode
     - dogsled
     - errcheck
-    - funlen
     - goprintffuncname
-    - gosec
     - gosimple
     - govet
-    - ifshort
     - ineffassign
     - nakedret
     - nilerr
@@ -17,7 +13,6 @@ linters:
     - revive
     - sqlclosecheck
     - staticcheck
-    - structcheck
     - typecheck
     - unconvert
     - unparam
@@ -25,9 +20,11 @@ linters:
     - varcheck
   disable:
     - asciicheck
+    - deadcode
     - depguard
     - dupl
     - exhaustive
+    - funlen
     - gci
     - gochecknoglobals
     - gochecknoinits
@@ -41,9 +38,12 @@ linters:
     - gofmt
     - gofumpt
     - goheader
+    - goimports
     - golint
     - gomnd
     - gomodguard
+    - gosec
+    - ifshort
     - interfacer
     - lll
     - makezero
@@ -58,6 +58,7 @@ linters:
     - prealloc
     - rowserrcheck
     - scopelint
+    - structcheck
     - stylecheck
     - testpackage
     - thelper
@@ -71,7 +72,7 @@ linters-settings:
   revive:
     rules:
       - name: argument-limit
-        arguments: [ 4 ]
+        arguments: [ 6 ]
       - name: atomic
       - name: bare-return
       - name: blank-imports
@@ -79,13 +80,9 @@ linters-settings:
       - name: call-to-gc
       - name: confusing-naming
       - name: confusing-results
-      - name: cognitive-complexity
-        arguments: [ 7 ]
       - name: constant-logical-expr
       - name: context-as-argument
       - name: context-keys-type
-      - name: cyclomatic
-        arguments: [ 3 ]
       - name: deep-exit
       - name: defer
       - name: dot-imports
@@ -97,48 +94,45 @@ linters-settings:
       - name: error-return
       - name: error-strings
       - name: errorf
-      - name: exported
       - name: flag-parameter
       - name: function-result-limit
         arguments: [ 3 ]
-      - name: get-return
       - name: identical-branches
       - name: if-return
-      - name: increment-decrement
-      - name: indent-error-flow
       - name: imports-blacklist
         arguments: [ "log" ]
       - name: import-shadowing
-      - name: line-length-limit
-        arguments: [ 120 ]
-      - name: max-public-structs
-        arguments: [ 3 ]
+      - name: increment-decrement
+      - name: indent-error-flow
       - name: modifies-parameter
       - name: modifies-value-receiver
       - name: package-comments
       - name: range
-      - name: range-val-in-closure
       - name: range-val-address
+      - name: range-val-in-closure
       - name: receiver-naming
       - name: redefines-builtin-id
       - name: string-of-int
       - name: struct-tag
       - name: superfluous-else
       - name: time-naming
-      - name: var-naming
-      - name: var-declaration
       - name: unconditional-recursion
       - name: unexported-naming
-      - name: unexported-return
       - name: unhandled-error
-        arguments: [ "fmt.Printf" ]
       - name: unnecessary-stmt
       - name: unreachable-code
       - name: unused-parameter
-      - name: unused-receiver
+      - name: var-declaration
+      - name: var-naming
       - name: waitgroup-by-value
+  nakedret:
+    # make an issue if func has more lines of code than this setting and it has naked returns; default is 30
+    max-func-lines: 1
 
 run:
+  # exit code when at least one issue was found, default is 1
+  issues-exit-code: 0
+
   # timeout for analysis, e.g. 30s, 5m, default is 1m
   timeout: 5m
 
@@ -149,10 +143,10 @@ run:
   # "/" will be replaced by current OS file path separator to properly work
   # on Windows.
   skip-dirs:
-    - scripts
+    - assets
     - docs
     - etc
-    - plugins/parsers/influx/plugins #workaround to skip weird "plugins/parsers/influx/plugins/parsers/influx" directory
+    - scripts
 
   # which files to skip: they will be analyzed, but issues from them
   # won't be reported. Default value is empty list, but there is
@@ -169,6 +163,14 @@ issues:
 
   # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
   max-same-issues: 0
+
+  exclude:
+    - don't use an underscore in package name #revive:var-naming
+
+  exclude-rules:
+    - path: plugins/parsers/influx
+      linters:
+        - govet
 
   # Show only new issues created after git revision `HEAD~`
   # Great for CI setups

@@ -138,7 +138,7 @@ ifeq (, $(shell which golangci-lint))
 	exit 1
 endif
 
-	golangci-lint run
+	golangci-lint -v run
 
 .PHONY: tidy
 tidy:
