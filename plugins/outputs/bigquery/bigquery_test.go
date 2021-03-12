@@ -60,7 +60,7 @@ func TestWrite(t *testing.T) {
 
 	mockMetrics := testutil.MockMetrics()
 	b.setUpTestClient()
-	:= b.Connect()
+	b.Connect()
 	err := b.Write(mockMetrics)
 	require.NoError(t, err)
 
