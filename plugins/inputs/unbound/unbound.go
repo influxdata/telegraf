@@ -71,7 +71,7 @@ func (s *Unbound) SampleConfig() string {
 }
 
 // Shell out to unbound_stat and return the output
-func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool, ConfigFile string) (*bytes.Buffer, error) {
+func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, _ bool, ConfigFile string) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
 	if Server != "" {

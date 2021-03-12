@@ -110,10 +110,7 @@ func TestIngress(t *testing.T) {
 		}
 		acc := new(testutil.Accumulator)
 		for _, ingress := range ((v.handler.responseMap["/ingress/"]).(*v1beta1EXT.IngressList)).Items {
-			err := ks.gatherIngress(*ingress, acc)
-			if err != nil {
-				t.Errorf("Failed to gather ingress - %s", err.Error())
-			}
+			ks.gatherIngress(*ingress, acc)
 		}
 
 		err := acc.FirstError()

@@ -61,7 +61,7 @@ func (s *Starlark) Init() error {
 	s.thread = &starlark.Thread{
 		Print: func(_ *starlark.Thread, msg string) { s.Log.Debug(msg) },
 		Load: func(thread *starlark.Thread, module string) (starlark.StringDict, error) {
-			return loadFunc(thread, module, s.Log)
+			return loadFunc(module, s.Log)
 		},
 	}
 
@@ -136,7 +136,7 @@ func (s *Starlark) Description() string {
 	return description
 }
 
-func (s *Starlark) Start(acc telegraf.Accumulator) error {
+func (s *Starlark) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -242,7 +242,7 @@ func init() {
 	})
 }
 
-func loadFunc(thread *starlark.Thread, module string, logger telegraf.Logger) (starlark.StringDict, error) {
+func loadFunc(module string, logger telegraf.Logger) (starlark.StringDict, error) {
 	switch module {
 	case "json.star":
 		return starlark.StringDict{

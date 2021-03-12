@@ -91,7 +91,7 @@ func newRunnerMock(out []byte, errout []byte, err error) Runner {
 	}
 }
 
-func (r runnerMock) Run(command string, _ time.Duration) ([]byte, []byte, error) {
+func (r runnerMock) Run(_ string, _ time.Duration) ([]byte, []byte, error) {
 	return r.out, r.errout, r.err
 }
 

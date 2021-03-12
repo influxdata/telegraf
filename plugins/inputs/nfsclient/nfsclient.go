@@ -244,7 +244,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 	return nil
 }
 
-func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator) error {
+func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator) {
 	var mount string
 	var version string
 	var export string
@@ -252,10 +252,9 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 
 	for scanner.Scan() {
 		line := strings.Fields(scanner.Text())
+		lineLength := len(line)
 
-		line_len := len(line)
-
-		if line_len == 0 {
+		if lineLength == 0 {
 			continue
 		}
 
@@ -263,10 +262,10 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 
 		// This denotes a new mount has been found, so set
 		// mount and export, and stop skipping (for now)
-		if line_len > 4 && choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) {
+		if lineLength > 4 && choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) {
 			mount = line[4]
 			export = line[1]
-		} else if line_len > 5 && (choice.Contains("(nfs)", line) || choice.Contains("(nfs4)", line)) {
+		} else if lineLength > 5 && (choice.Contains("(nfs)", line) || choice.Contains("(nfs4)", line)) {
 			version = strings.Split(line[5], "/")[1]
 		}
 
@@ -299,7 +298,6 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 			n.parseStat(mount, export, version, line, n.Fullstat, acc)
 		}
 	}
-	return nil
 }
 
 func (n *NFSClient) getMountStatsPath() string {

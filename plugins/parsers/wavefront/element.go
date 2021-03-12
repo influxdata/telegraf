@@ -168,7 +168,7 @@ func (ep *TagParser) parse(p *PointParser, pt *Point) error {
 	return nil
 }
 
-func (ep *WhiteSpaceParser) parse(p *PointParser, pt *Point) error {
+func (ep *WhiteSpaceParser) parse(p *PointParser, _ *Point) error {
 	tok := Ws
 	for tok != EOF && tok == Ws {
 		tok, _ = p.scan()
@@ -184,7 +184,7 @@ func (ep *WhiteSpaceParser) parse(p *PointParser, pt *Point) error {
 	return nil
 }
 
-func (ep *LiteralParser) parse(p *PointParser, pt *Point) error {
+func (ep *LiteralParser) parse(p *PointParser, _ *Point) error {
 	l, err := parseLiteral(p)
 	if err != nil {
 		return err

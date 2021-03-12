@@ -140,7 +140,7 @@ func testStrictNonTransparent(t *testing.T, protocol string, address string, wan
 	for _, tc := range getTestCasesForNonTransparent() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false, framing.NonTransparent)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 10, false, framing.NonTransparent)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()
@@ -196,7 +196,7 @@ func testBestEffortNonTransparent(t *testing.T, protocol string, address string,
 	for _, tc := range getTestCasesForNonTransparent() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true, framing.NonTransparent)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 10, true, framing.NonTransparent)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()

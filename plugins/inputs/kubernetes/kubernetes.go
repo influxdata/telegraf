@@ -139,7 +139,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 	}
 	buildSystemContainerMetrics(summaryMetrics, acc)
 	buildNodeMetrics(summaryMetrics, acc)
-	buildPodMetrics(baseURL, summaryMetrics, podInfos, k.labelFilter, acc)
+	buildPodMetrics(summaryMetrics, podInfos, k.labelFilter, acc)
 	return nil
 }
 
@@ -243,7 +243,7 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 	return nil
 }
 
-func buildPodMetrics(baseURL string, summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFilter filter.Filter, acc telegraf.Accumulator) {
+func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFilter filter.Filter, acc telegraf.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
 		for _, container := range pod.Containers {
 			tags := map[string]string{

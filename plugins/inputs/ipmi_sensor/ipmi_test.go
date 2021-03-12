@@ -227,7 +227,7 @@ func fakeExecCommand(command string, args ...string) *exec.Cmd {
 // For example, if you run:
 // GO_WANT_HELPER_PROCESS=1 go test -test.run=TestHelperProcess -- chrony tracking
 // it returns below mockData.
-func TestHelperProcess(t *testing.T) {
+func TestHelperProcess(_ *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -546,7 +546,7 @@ func fakeExecCommandV2(command string, args ...string) *exec.Cmd {
 // For example, if you run:
 // GO_WANT_HELPER_PROCESS=1 go test -test.run=TestHelperProcessV2 -- chrony tracking
 // it returns below mockData.
-func TestHelperProcessV2(t *testing.T) {
+func TestHelperProcessV2(_ *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}

@@ -98,9 +98,7 @@ func TestClient_Player(t *testing.T) {
 				conn: &MockConnection{commands: tt.commands},
 			}
 
-			client, err := newClient(connector)
-			require.NoError(t, err)
-
+			client := newClient(connector)
 			actual, err := client.Players()
 			require.NoError(t, err)
 
@@ -183,9 +181,7 @@ func TestClient_Scores(t *testing.T) {
 				conn: &MockConnection{commands: tt.commands},
 			}
 
-			client, err := newClient(connector)
-			require.NoError(t, err)
-
+			client := newClient(connector)
 			actual, err := client.Scores(tt.player)
 			require.NoError(t, err)
 

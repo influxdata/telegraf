@@ -62,7 +62,7 @@ type MockDialer struct {
 	DialContextF func(network, address string) (influxdb.Conn, error)
 }
 
-func (d *MockDialer) DialContext(ctx context.Context, network string, address string) (influxdb.Conn, error) {
+func (d *MockDialer) DialContext(_ context.Context, network string, address string) (influxdb.Conn, error) {
 	return d.DialContextF(network, address)
 }
 

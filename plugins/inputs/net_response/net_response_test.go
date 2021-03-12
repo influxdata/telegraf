@@ -125,7 +125,7 @@ func TestTCPOK1(t *testing.T) {
 	}
 	// Start TCP server
 	wg.Add(1)
-	go TCPServer(t, &wg)
+	go TCPServer(&wg)
 	wg.Wait()
 	// Connect
 	wg.Add(1)
@@ -169,7 +169,7 @@ func TestTCPOK2(t *testing.T) {
 	}
 	// Start TCP server
 	wg.Add(1)
-	go TCPServer(t, &wg)
+	go TCPServer(&wg)
 	wg.Wait()
 	// Connect
 	wg.Add(1)
@@ -247,7 +247,7 @@ func TestUDPOK1(t *testing.T) {
 	}
 	// Start UDP server
 	wg.Add(1)
-	go UDPServer(t, &wg)
+	go UDPServer(&wg)
 	wg.Wait()
 	// Connect
 	wg.Add(1)
@@ -277,7 +277,7 @@ func TestUDPOK1(t *testing.T) {
 	wg.Wait()
 }
 
-func UDPServer(t *testing.T, wg *sync.WaitGroup) {
+func UDPServer(wg *sync.WaitGroup) {
 	udpAddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:2004")
 	conn, _ := net.ListenUDP("udp", udpAddr)
 	wg.Done()
@@ -288,7 +288,7 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func TCPServer(t *testing.T, wg *sync.WaitGroup) {
+func TCPServer(wg *sync.WaitGroup) {
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:2004")
 	tcpServer, _ := net.ListenTCP("tcp", tcpAddr)
 	wg.Done()

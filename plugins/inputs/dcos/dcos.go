@@ -223,7 +223,7 @@ type point struct {
 	fields map[string]interface{}
 }
 
-func (d *DCOS) createPoints(acc telegraf.Accumulator, m *Metrics) []*point {
+func (d *DCOS) createPoints(m *Metrics) []*point {
 	points := make(map[string]*point)
 	for _, dp := range m.Datapoints {
 		fieldKey := strings.Replace(dp.Name, ".", "_", -1)
@@ -288,7 +288,7 @@ func (d *DCOS) createPoints(acc telegraf.Accumulator, m *Metrics) []*point {
 func (d *DCOS) addMetrics(acc telegraf.Accumulator, cluster, mname string, m *Metrics, tagDimensions []string) {
 	tm := time.Now()
 
-	points := d.createPoints(acc, m)
+	points := d.createPoints(m)
 
 	for _, p := range points {
 		tags := make(map[string]string)

@@ -99,7 +99,7 @@ var baseClient = MockClient{
 	},
 }
 
-func newClient(host string, tlsConfig *tls.Config) (Client, error) {
+func newClient(_ string, _ *tls.Config) (Client, error) {
 	return &baseClient, nil
 }
 

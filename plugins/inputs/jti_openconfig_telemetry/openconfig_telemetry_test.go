@@ -63,19 +63,19 @@ func (s *openConfigTelemetryServer) TelemetrySubscribe(req *telemetry.Subscripti
 	return nil
 }
 
-func (s *openConfigTelemetryServer) CancelTelemetrySubscription(ctx context.Context, req *telemetry.CancelSubscriptionRequest) (*telemetry.CancelSubscriptionReply, error) {
+func (s *openConfigTelemetryServer) CancelTelemetrySubscription(_ context.Context, _ *telemetry.CancelSubscriptionRequest) (*telemetry.CancelSubscriptionReply, error) {
 	return nil, nil
 }
 
-func (s *openConfigTelemetryServer) GetTelemetrySubscriptions(ctx context.Context, req *telemetry.GetSubscriptionsRequest) (*telemetry.GetSubscriptionsReply, error) {
+func (s *openConfigTelemetryServer) GetTelemetrySubscriptions(_ context.Context, _ *telemetry.GetSubscriptionsRequest) (*telemetry.GetSubscriptionsReply, error) {
 	return nil, nil
 }
 
-func (s *openConfigTelemetryServer) GetTelemetryOperationalState(ctx context.Context, req *telemetry.GetOperationalStateRequest) (*telemetry.GetOperationalStateReply, error) {
+func (s *openConfigTelemetryServer) GetTelemetryOperationalState(_ context.Context, _ *telemetry.GetOperationalStateRequest) (*telemetry.GetOperationalStateReply, error) {
 	return nil, nil
 }
 
-func (s *openConfigTelemetryServer) GetDataEncodings(ctx context.Context, req *telemetry.DataEncodingRequest) (*telemetry.DataEncodingReply, error) {
+func (s *openConfigTelemetryServer) GetDataEncodings(_ context.Context, _ *telemetry.DataEncodingRequest) (*telemetry.DataEncodingReply, error) {
 	return nil, nil
 }
 

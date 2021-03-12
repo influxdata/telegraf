@@ -160,18 +160,16 @@ func (d *DockerLogs) Init() error {
 	return nil
 }
 
-func (d *DockerLogs) addToContainerList(containerID string, cancel context.CancelFunc) error {
+func (d *DockerLogs) addToContainerList(containerID string, cancel context.CancelFunc) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.containerList[containerID] = cancel
-	return nil
 }
 
-func (d *DockerLogs) removeFromContainerList(containerID string) error {
+func (d *DockerLogs) removeFromContainerList(containerID string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	delete(d.containerList, containerID)
-	return nil
 }
 
 func (d *DockerLogs) containerInContainerList(containerID string) bool {
@@ -181,13 +179,12 @@ func (d *DockerLogs) containerInContainerList(containerID string) bool {
 	return ok
 }
 
-func (d *DockerLogs) cancelTails() error {
+func (d *DockerLogs) cancelTails() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	for _, cancel := range d.containerList {
 		cancel()
 	}
-	return nil
 }
 
 func (d *DockerLogs) matchedContainerName(names []string) string {

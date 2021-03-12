@@ -284,10 +284,7 @@ func TestPod(t *testing.T) {
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
 		for _, pod := range ((v.handler.responseMap["/pods/"]).(*v1.PodList)).Items {
-			err := ks.gatherPod(*pod, acc)
-			if err != nil {
-				t.Errorf("Failed to gather pod - %s", err.Error())
-			}
+			ks.gatherPod(*pod, acc)
 		}
 
 		err := acc.FirstError()
@@ -533,10 +530,7 @@ func TestPodSelectorFilter(t *testing.T) {
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
 		for _, pod := range ((v.handler.responseMap["/pods/"]).(*v1.PodList)).Items {
-			err := ks.gatherPod(*pod, acc)
-			if err != nil {
-				t.Errorf("Failed to gather pod - %s", err.Error())
-			}
+			ks.gatherPod(*pod, acc)
 		}
 
 		// Grab selector tags
@@ -741,10 +735,7 @@ func TestPodPendingContainers(t *testing.T) {
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
 		for _, pod := range ((v.handler.responseMap["/pods/"]).(*v1.PodList)).Items {
-			err := ks.gatherPod(*pod, acc)
-			if err != nil {
-				t.Errorf("Failed to gather pod - %s", err.Error())
-			}
+			ks.gatherPod(*pod, acc)
 		}
 
 		err := acc.FirstError()

@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
-func createMetric(name string, value int64, when time.Time) telegraf.Metric {
+func createMetric(name string, value int64, when time.Time) telegraf.Metric { //nolint
 	m, _ := metric.New(name,
 		map[string]string{"tag": "tag_value"},
 		map[string]interface{}{"value": value},
@@ -80,7 +80,7 @@ func assertMetricPassed(t *testing.T, target []telegraf.Metric, source telegraf.
 	require.Equal(t, target[0].Time(), source.Time())
 }
 
-func assertMetricSuppressed(t *testing.T, target []telegraf.Metric, source telegraf.Metric) {
+func assertMetricSuppressed(t *testing.T, target []telegraf.Metric) {
 	// target is empty
 	require.Equal(t, 0, len(target))
 }
@@ -103,7 +103,7 @@ func TestSuppressRepeatedValue(t *testing.T) {
 	target = deduplicate.Apply(source)
 
 	assertCacheHit(t, &deduplicate, source)
-	assertMetricSuppressed(t, target, source)
+	assertMetricSuppressed(t, target)
 }
 
 func TestPassUpdatedValue(t *testing.T) {

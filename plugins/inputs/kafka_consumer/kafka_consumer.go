@@ -256,7 +256,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (k *KafkaConsumer) Gather(acc telegraf.Accumulator) error {
+func (k *KafkaConsumer) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -314,11 +314,11 @@ func (h *ConsumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
 }
 
 // Run processes any delivered metrics during the lifetime of the session.
-func (h *ConsumerGroupHandler) run(ctx context.Context) error {
+func (h *ConsumerGroupHandler) run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return
 		case track := <-h.acc.Delivered():
 			h.onDelivery(track)
 		}

@@ -15,14 +15,11 @@ func collectDeployments(ctx context.Context, acc telegraf.Accumulator, ki *Kuber
 		return
 	}
 	for _, d := range list.Items {
-		if err = ki.gatherDeployment(*d, acc); err != nil {
-			acc.AddError(err)
-			return
-		}
+		ki.gatherDeployment(*d, acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherDeployment(d v1.Deployment, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherDeployment(d v1.Deployment, acc telegraf.Accumulator) {
 	fields := map[string]interface{}{
 		"replicas_available":   d.Status.GetAvailableReplicas(),
 		"replicas_unavailable": d.Status.GetUnavailableReplicas(),
@@ -39,6 +36,4 @@ func (ki *KubernetesInventory) gatherDeployment(d v1.Deployment, acc telegraf.Ac
 	}
 
 	acc.AddFields(deploymentMeasurement, fields, tags)
-
-	return nil
 }

@@ -29,10 +29,6 @@ func (c *MockClient) Close() error {
 	return c.CloseF()
 }
 
-func MockConnect(config *ClientConfig) (Client, error) {
-	return &MockClient{}, nil
-}
-
 func NewMockClient() Client {
 	return &MockClient{
 		PublishF: func(key string, body []byte) error {

@@ -39,7 +39,7 @@ func getMetric(t *testing.T) telegraf.Metric {
 	return m
 }
 
-func getMetrics(t *testing.T, count int) []telegraf.Metric {
+func getMetrics(t *testing.T, count int) []telegraf.Metric { //nolint
 	var metrics = make([]telegraf.Metric, count)
 
 	for i := 0; i < count; i++ {

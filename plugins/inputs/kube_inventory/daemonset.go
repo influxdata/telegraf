@@ -16,14 +16,11 @@ func collectDaemonSets(ctx context.Context, acc telegraf.Accumulator, ki *Kubern
 		return
 	}
 	for _, d := range list.Items {
-		if err = ki.gatherDaemonSet(*d, acc); err != nil {
-			acc.AddError(err)
-			return
-		}
+		ki.gatherDaemonSet(*d, acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherDaemonSet(d v1.DaemonSet, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherDaemonSet(d v1.DaemonSet, acc telegraf.Accumulator) {
 	fields := map[string]interface{}{
 		"generation":               d.Metadata.GetGeneration(),
 		"current_number_scheduled": d.Status.GetCurrentNumberScheduled(),
@@ -49,6 +46,4 @@ func (ki *KubernetesInventory) gatherDaemonSet(d v1.DaemonSet, acc telegraf.Accu
 	}
 
 	acc.AddFields(daemonSetMeasurement, fields, tags)
-
-	return nil
 }

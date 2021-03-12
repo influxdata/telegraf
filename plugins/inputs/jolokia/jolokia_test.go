@@ -130,7 +130,7 @@ type jolokiaClientStub struct {
 	statusCode   int
 }
 
-func (c jolokiaClientStub) MakeRequest(req *http.Request) (*http.Response, error) {
+func (c jolokiaClientStub) MakeRequest(_ *http.Request) (*http.Response, error) {
 	resp := http.Response{}
 	resp.StatusCode = c.statusCode
 	resp.Body = ioutil.NopCloser(strings.NewReader(c.responseBody))

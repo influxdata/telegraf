@@ -875,7 +875,7 @@ func submitChunkJob(ctx context.Context, te *ThrottledExecutor, job queryJob, pq
 	})
 }
 
-func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Time, latest time.Time, acc telegraf.Accumulator, job queryJob) {
+func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Time, latest time.Time, job queryJob) {
 	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
 	maxMetrics := e.Parent.MaxQueryMetrics
 	if maxMetrics < 1 {
@@ -1017,9 +1017,9 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	latestSample := time.Time{}
 
 	// Divide workload into chunks and process them concurrently
-	e.chunkify(ctx, res, now, latest, acc,
+	e.chunkify(ctx, res, now, latest,
 		func(chunk queryChunk) {
-			n, localLatest, err := e.collectChunk(ctx, chunk, res, acc, now, estInterval)
+			n, localLatest, err := e.collectChunk(ctx, chunk, res, acc, estInterval)
 			e.log.Debugf("CollectChunk for %s returned %d metrics", resourceType, n)
 			if err != nil {
 				acc.AddError(errors.New("while collecting " + res.name + ": " + err.Error()))
@@ -1081,7 +1081,7 @@ func (e *Endpoint) alignSamples(info []types.PerfSampleInfo, values []int64, int
 	return rInfo, rValues
 }
 
-func (e *Endpoint) collectChunk(ctx context.Context, pqs queryChunk, res *resourceKind, acc telegraf.Accumulator, now time.Time, interval time.Duration) (int, time.Time, error) {
+func (e *Endpoint) collectChunk(ctx context.Context, pqs queryChunk, res *resourceKind, acc telegraf.Accumulator, interval time.Duration) (int, time.Time, error) {
 	e.log.Debugf("Query for %s has %d QuerySpecs", res.name, len(pqs))
 	latestSample := time.Time{}
 	count := 0

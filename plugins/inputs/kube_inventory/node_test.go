@@ -128,10 +128,7 @@ func TestNode(t *testing.T) {
 		}
 		acc := new(testutil.Accumulator)
 		for _, node := range ((v.handler.responseMap["/nodes/"]).(*v1.NodeList)).Items {
-			err := ks.gatherNode(*node, acc)
-			if err != nil {
-				t.Errorf("Failed to gather node - %s", err.Error())
-			}
+			ks.gatherNode(*node, acc)
 		}
 
 		err := acc.FirstError()

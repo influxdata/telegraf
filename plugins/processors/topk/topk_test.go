@@ -117,7 +117,7 @@ func equalSets(l1 []telegraf.Metric, l2 []telegraf.Metric) bool {
 	return subSet(l1, l2) && subSet(l2, l1)
 }
 
-func createDuration(t int) internal.Duration {
+func createDuration(t int) internal.Duration { //nolint
 	return internal.Duration{Duration: time.Second * time.Duration(t)}
 }
 

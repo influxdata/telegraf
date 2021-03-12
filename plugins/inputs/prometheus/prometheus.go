@@ -456,7 +456,7 @@ func fieldSelectorIsSupported(fieldSelector fields.Selector) (bool, string) {
 }
 
 // Start will start the Kubernetes scraping if enabled in the configuration
-func (p *Prometheus) Start(a telegraf.Accumulator) error {
+func (p *Prometheus) Start(_ telegraf.Accumulator) error {
 	if p.MonitorPods {
 		var ctx context.Context
 		ctx, p.cancel = context.WithCancel(context.Background())

@@ -254,7 +254,7 @@ func TestRunParser(t *testing.T) {
 	)
 }
 
-func TestRunParserInvalidMsg(t *testing.T) {
+func TestRunParserInvalidMsg(_ *testing.T) {
 	var testmsg = []byte("cpu_load_short")
 
 	listener, in := newTestTCPListener()

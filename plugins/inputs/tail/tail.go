@@ -157,7 +157,7 @@ func (t *Tail) Init() error {
 	return err
 }
 
-func (t *Tail) Gather(acc telegraf.Accumulator) error {
+func (t *Tail) Gather(_ telegraf.Accumulator) error {
 	return t.tailNewFiles(true)
 }
 

@@ -395,7 +395,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		// to do it only the first time
 		// only if len(s.OidInstanceMapping) == 0
 		if len(host.OidInstanceMapping) >= 0 {
-			if err := host.SNMPMap(acc, s.nameToOid, s.subTableMap); err != nil {
+			if err := host.SNMPMap(s.nameToOid, s.subTableMap); err != nil {
 				s.Log.Errorf("Mapping error for host %q: %s", host.Address, err.Error())
 				continue
 			}
@@ -412,7 +412,6 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 }
 
 func (h *Host) SNMPMap(
-	acc telegraf.Accumulator,
 	nameToOid map[string]string,
 	subTableMap map[string]Subtable,
 ) error {

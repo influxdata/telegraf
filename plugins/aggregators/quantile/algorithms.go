@@ -21,7 +21,7 @@ type exactAlgorithmR7 struct {
 	sorted bool
 }
 
-func newExactR7(compression float64) (algorithm, error) {
+func newExactR7(_ float64) (algorithm, error) {
 	return &exactAlgorithmR7{xs: make([]float64, 0, 100), sorted: false}, nil
 }
 
@@ -68,7 +68,7 @@ type exactAlgorithmR8 struct {
 	sorted bool
 }
 
-func newExactR8(compression float64) (algorithm, error) {
+func newExactR8(_ float64) (algorithm, error) {
 	return &exactAlgorithmR8{xs: make([]float64, 0, 100), sorted: false}, nil
 }
 

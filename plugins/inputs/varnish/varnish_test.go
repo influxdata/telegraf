@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func fakeVarnishStat(output string, useSudo bool, InstanceName string, Timeout internal.Duration) func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
+func fakeVarnishStat(output string, _ bool, _ string, _ internal.Duration) func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
 	return func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}

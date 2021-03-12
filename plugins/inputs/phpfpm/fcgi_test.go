@@ -124,7 +124,7 @@ func (c *writeOnlyConn) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (c *writeOnlyConn) Read(p []byte) (int, error) {
+func (c *writeOnlyConn) Read(_ []byte) (int, error) {
 	return 0, errors.New("conn is write-only")
 }
 
@@ -164,7 +164,7 @@ func nameValuePair11(nameData, valueData string) []byte {
 
 func makeRecord(
 	recordType recType,
-	requestID uint16,
+	requestID uint16, //nolint
 	contentData []byte,
 ) []byte {
 	requestIDB1 := byte(requestID >> 8)
@@ -265,7 +265,7 @@ func (rwNopCloser) Close() error {
 }
 
 // Verifies it doesn't crash. 	Issue 11824.
-func TestMalformedParams(t *testing.T) {
+func TestMalformedParams(_ *testing.T) {
 	input := []byte{
 		// beginRequest, requestId=1, contentLength=8, role=1, keepConn=1
 		1, 1, 0, 1, 0, 8, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,

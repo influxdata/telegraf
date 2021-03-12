@@ -16,16 +16,13 @@ func collectServices(ctx context.Context, acc telegraf.Accumulator, ki *Kubernet
 		return
 	}
 	for _, i := range list.Items {
-		if err = ki.gatherService(*i, acc); err != nil {
-			acc.AddError(err)
-			return
-		}
+		ki.gatherService(*i, acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherService(s v1.Service, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherService(s v1.Service, acc telegraf.Accumulator) {
 	if s.Metadata.CreationTimestamp.GetSeconds() == 0 && s.Metadata.CreationTimestamp.GetNanos() == 0 {
-		return nil
+		return
 	}
 
 	fields := map[string]interface{}{
@@ -71,6 +68,4 @@ func (ki *KubernetesInventory) gatherService(s v1.Service, acc telegraf.Accumula
 	} else {
 		getPorts()
 	}
-
-	return nil
 }

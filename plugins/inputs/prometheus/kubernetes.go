@@ -164,7 +164,7 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 	client.SetHeaders(req.Header)
 
 	// Update right away so code is not waiting the length of the specified scrape interval initially
-	err = updateCadvisorPodList(ctx, p, client, req)
+	err = updateCadvisorPodList(p, client, req)
 	if err != nil {
 		return fmt.Errorf("Error initially updating pod list: %w", err)
 	}
@@ -179,7 +179,7 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 		case <-ctx.Done():
 			return nil
 		case <-time.After(time.Duration(scrapeInterval) * time.Second):
-			err := updateCadvisorPodList(ctx, p, client, req)
+			err := updateCadvisorPodList(p, client, req)
 			if err != nil {
 				return fmt.Errorf("Error updating pod list: %w", err)
 			}
@@ -187,7 +187,7 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 	}
 }
 
-func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Client, req *http.Request) error {
+func updateCadvisorPodList(p *Prometheus, client *k8s.Client, req *http.Request) error {
 	resp, err := client.Client.Do(req)
 	if err != nil {
 		return fmt.Errorf("Error when making request for pod list: %w", err)

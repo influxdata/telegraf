@@ -162,10 +162,7 @@ func TestEndpoint(t *testing.T) {
 		}
 		acc := new(testutil.Accumulator)
 		for _, endpoint := range ((v.handler.responseMap["/endpoints/"]).(*v1.EndpointsList)).Items {
-			err := ks.gatherEndpoint(*endpoint, acc)
-			if err != nil {
-				t.Errorf("Failed to gather endpoint - %s", err.Error())
-			}
+			ks.gatherEndpoint(*endpoint, acc)
 		}
 
 		err := acc.FirstError()

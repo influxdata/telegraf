@@ -12,7 +12,7 @@ import (
 
 var TestTimeout = internal.Duration{Duration: time.Second}
 
-func UnboundControl(output string, Timeout internal.Duration, useSudo bool, Server string, ThreadAsTag bool, ConfigFile string) func(string, internal.Duration, bool, string, bool, string) (*bytes.Buffer, error) {
+func UnboundControl(output string, _ internal.Duration, _ bool, _ string, _ bool, _ string) func(string, internal.Duration, bool, string, bool, string) (*bytes.Buffer, error) {
 	return func(string, internal.Duration, bool, string, bool, string) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
