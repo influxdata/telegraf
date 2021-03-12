@@ -95,7 +95,7 @@ jobs:
       - restore_cache:
           key: mac-go-mod-v3-{{ checksum "go.sum" }}
       - run: 'brew update'
-      - run: 'brew install go@1.16.1'
+      - run: 'brew install go@1.16'
       - run: 'make deps'
       - run: 'make tidy'
       - save_cache:
