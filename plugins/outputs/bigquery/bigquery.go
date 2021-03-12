@@ -63,33 +63,33 @@ func (s *BigQuery) Description() string {
 	return "Configuration for Google Cloud BigQuery to send entries"
 }
 
-func (b *BigQuery) Connect() error {
-	if b.Project == "" {
+func (s *BigQuery) Connect() error {
+	if s.Project == "" {
 		return fmt.Errorf("Project is a required field for BigQuery output")
 	}
 
-	if b.Dataset == "" {
+	if s.Dataset == "" {
 		return fmt.Errorf("Dataset is a required field for BigQuery output")
 	}
 
-	if b.client == nil {
-		return b.setUpDefaultClient()
+	if s.client == nil {
+		return s.setUpDefaultClient()
 	}
 
-	b.warnedOnHyphens = make(map[string]bool)
+	s.warnedOnHyphens = make(map[string]bool)
 
 	return nil
 }
 
-func (b *BigQuery) setUpDefaultClient() error {
+func (s *BigQuery) setUpDefaultClient() error {
 	var credentialsOption option.ClientOption
 
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, b.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, s.Timeout.Duration)
 	defer cancel()
 
-	if b.CredentialsFile != "" {
-		credentialsOption = option.WithCredentialsFile(b.CredentialsFile)
+	if s.CredentialsFile != "" {
+		credentialsOption = option.WithCredentialsFile(s.CredentialsFile)
 	} else {
 		creds, err := google.FindDefaultCredentials(ctx)
 		if err != nil {
@@ -100,14 +100,14 @@ func (b *BigQuery) setUpDefaultClient() error {
 		credentialsOption = option.WithCredentials(creds)
 	}
 
-	client, err := bigquery.NewClient(ctx, b.Project, credentialsOption)
-	b.client = client
+	client, err := bigquery.NewClient(ctx, s.Project, credentialsOption)
+	s.client = client
 	return err
 }
 
 // Write the metrics to Google Cloud BigQuery.
-func (b *BigQuery) Write(metrics []telegraf.Metric) error {
-	groupedMetrics := b.groupByMetricName(metrics)
+func (s *BigQuery) Write(metrics []telegraf.Metric) error {
+	groupedMetrics := s.groupByMetricName(metrics)
 
 	var wg sync.WaitGroup
 
@@ -115,7 +115,7 @@ func (b *BigQuery) Write(metrics []telegraf.Metric) error {
 		wg.Add(1)
 		go func(k string, v []bigquery.ValueSaver) {
 			defer wg.Done()
-			b.insertToTable(k, v)
+			s.insertToTable(k, v)
 		}(k, v)
 	}
 
@@ -124,7 +124,7 @@ func (b *BigQuery) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (b *BigQuery) groupByMetricName(metrics []telegraf.Metric) map[string][]bigquery.ValueSaver {
+func (s *BigQuery) groupByMetricName(metrics []telegraf.Metric) map[string][]bigquery.ValueSaver {
 	groupedMetrics := make(map[string][]bigquery.ValueSaver)
 
 	for _, m := range metrics {
@@ -203,42 +203,38 @@ func valueToBqType(v interface{}) bigquery.FieldType {
 	}
 }
 
-func (b *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSaver) {
+func (s *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSaver) {
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, b.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, s.Timeout.Duration)
 	defer cancel()
 
-	tableName := b.metricToTable(metricName)
-	table := b.client.DatasetInProject(b.Project, b.Dataset).Table(tableName)
+	tableName := s.metricToTable(metricName)
+	table := s.client.DatasetInProject(s.Project, s.Dataset).Table(tableName)
 	inserter := table.Inserter()
 
 	if err := inserter.Put(ctx, metrics); err != nil {
-		b.Log.Errorf("inserting metric %q failed: %v", metricName, err)
+		s.Log.Errorf("inserting metric %q failed: %v", metricName, err)
 	}
 }
 
-func (b *BigQuery) metricToTable(metricName string) string {
+func (s *BigQuery) metricToTable(metricName string) string {
 	if !strings.Contains(metricName, "-") {
 		return metricName
 	}
 
-	dhm := strings.ReplaceAll(metricName, "-", b.ReplaceHyphenTo)
+	dhm := strings.ReplaceAll(metricName, "-", s.ReplaceHyphenTo)
 
-	if warned := b.warnedOnHyphens[metricName]; !warned {
-		b.Log.Warnf("Metric %q contains hyphens please consider using the rename processor plugin, falling back to %q", metricName, dhm)
-		b.warnedOnHyphens[metricName] = true
+	if warned := s.warnedOnHyphens[metricName]; !warned {
+		s.Log.Warnf("Metric %q contains hyphens please consider using the rename processor plugin, falling back to %q", metricName, dhm)
+		s.warnedOnHyphens[metricName] = true
 	}
 
 	return dhm
 }
 
-func (b *BigQuery) tableForMetric(metricName string) *bigquery.Table {
-	return b.client.DatasetInProject(b.Project, b.Dataset).Table(metricName)
-}
-
 // Close will terminate the session to the backend, returning error if an issue arises.
-func (b *BigQuery) Close() error {
-	return b.client.Close()
+func (s *BigQuery) Close() error {
+	return s.client.Close()
 }
 
 func init() {
