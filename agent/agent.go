@@ -450,11 +450,7 @@ func stopServiceInputs(inputs []*models.RunningInput) {
 // stopRunningOutputs stops all running outputs.
 func stopRunningOutputs(outputs []*models.RunningOutput) {
 	for _, output := range outputs {
-		log.Printf("I! [agent] stop running output: %s", output.LogName())
-		err := output.Output.Close()
-		if err != nil {
-			log.Printf("E! [agent] Error stop running output: %v", err)
-		}
+		output.Close()
 	}
 }
 
@@ -796,7 +792,7 @@ func (a *Agent) runOutputs(
 	cancel()
 	wg.Wait()
 
-	log.Printf("I [agent] Stopping running outputs")
+	log.Println("I! [agent] Stopping running outputs")
 	stopRunningOutputs(unit.outputs)
 
 	return nil
