@@ -59,7 +59,6 @@ func TestWrite(t *testing.T) {
 	}
 
 	mockMetrics := testutil.MockMetrics()
-	
 
 	if err := b.setUpTestClient(); err != nil {
 		require.NoError(t, err)
@@ -67,7 +66,7 @@ func TestWrite(t *testing.T) {
 	if err := b.Connect(); err != nil {
 		require.NoError(t, err)
 	}
-	
+
 	if err := b.Write(mockMetrics); err != nil {
 		require.NoError(t, err)
 	}
@@ -148,13 +147,13 @@ func localBigQueryServer(t *testing.T) *httptest.Server {
 		switch r.URL.Path {
 		case "/projects/test-project/datasets/test-dataset/tables/test1/insertAll":
 			decoder := json.NewDecoder(r.Body)
-			
+
 			if err := decoder.Decode(&receivedBody); err != nil {
 				require.NoError(t, err)
 			}
 
 			w.WriteHeader(http.StatusOK)
-			if _, err := w.Write([]byte(successfulResponse)); err !=nil {
+			if _, err := w.Write([]byte(successfulResponse)); err != nil {
 				require.NoError(t, err)
 			}
 		default:
