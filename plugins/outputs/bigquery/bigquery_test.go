@@ -43,7 +43,7 @@ func TestConnect(t *testing.T) {
 
 	cerr := b.setUpTestClient()
 	require.NoError(t, cerr)
-	berr = b.Connect()
+	berr := b.Connect()
 	require.NoError(t, berr)
 }
 
