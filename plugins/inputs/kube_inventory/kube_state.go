@@ -62,7 +62,7 @@ var sampleConfig = `
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be - "daemonsets", deployments", "endpoints", "ingress", "nodes",
+  ## Values can be - "daemonsets", deployments", "endpoints", "ingress", "jobs", "nodes",
   ## "persistentvolumes", "persistentvolumeclaims", "pods", "services", "statefulsets"
   # resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
@@ -153,6 +153,7 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 	"deployments":            collectDeployments,
 	"endpoints":              collectEndpoints,
 	"ingress":                collectIngress,
+	"jobs":                   collectJobs,
 	"nodes":                  collectNodes,
 	"pods":                   collectPods,
 	"services":               collectServices,
@@ -200,6 +201,7 @@ var (
 	deploymentMeasurement            = "kubernetes_deployment"
 	endpointMeasurement              = "kubernetes_endpoint"
 	ingressMeasurement               = "kubernetes_ingress"
+	jobMeasurement                   = "kubernetes_job"
 	nodeMeasurement                  = "kubernetes_node"
 	persistentVolumeMeasurement      = "kubernetes_persistentvolume"
 	persistentVolumeClaimMeasurement = "kubernetes_persistentvolumeclaim"

@@ -6,6 +6,7 @@ import (
 
 	"github.com/ericchiang/k8s"
 	v1APPS "github.com/ericchiang/k8s/apis/apps/v1"
+	v1BATCH "github.com/ericchiang/k8s/apis/batch/v1"
 	v1 "github.com/ericchiang/k8s/apis/core/v1"
 	v1beta1EXT "github.com/ericchiang/k8s/apis/extensions/v1beta1"
 
@@ -70,6 +71,13 @@ func (c *client) getEndpoints(ctx context.Context) (*v1.EndpointsList, error) {
 
 func (c *client) getIngress(ctx context.Context) (*v1beta1EXT.IngressList, error) {
 	list := new(v1beta1EXT.IngressList)
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+	return list, c.List(ctx, c.namespace, list)
+}
+
+func (c *client) getJobs(ctx context.Context) (*v1BATCH.JobList, error) {
+	list := &v1BATCH.JobList{}
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	return list, c.List(ctx, c.namespace, list)

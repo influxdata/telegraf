@@ -6,6 +6,7 @@ This plugin generates metrics derived from the state of the following Kubernetes
 - deployments
 - endpoints
 - ingress
+- jobs
 - nodes
 - persistentvolumes
 - persistentvolumeclaims
@@ -55,7 +56,7 @@ avoid cardinality issues:
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be - "daemonsets", deployments", "endpoints", "ingress", "nodes",
+  ## Values can be - "daemonsets", deployments", "endpoints", "ingress", "jobs", "nodes",
   ## "persistentvolumes", "persistentvolumeclaims", "pods", "services", "statefulsets"
   # resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
@@ -186,7 +187,19 @@ subjects:
     - backend_service_port
     - tls
 
-- kubernetes_node
+- kubernetes_job
+  - tags:
+    - job_name
+    - namespace
+    - selector (*varies)
+  - fields:
+    - active
+    - completed
+    - failed
+    - started
+    - succeeded
+
+* kubernetes_node
   - tags:
     - node_name
   - fields:
@@ -199,7 +212,7 @@ subjects:
     - allocatable_memory_bytes
     - allocatable_pods
 
-* kubernetes_persistentvolume
+- kubernetes_persistentvolume
   - tags:
     - pv_name
     - phase
@@ -207,7 +220,7 @@ subjects:
   - fields:
     - phase_type (int, [see below](#pv-phase_type))
 
-- kubernetes_persistentvolumeclaim
+* kubernetes_persistentvolumeclaim
   - tags:
     - pvc_name
     - namespace
@@ -217,7 +230,7 @@ subjects:
   - fields:
     - phase_type (int, [see below](#pvc-phase_type))
 
-* kubernetes_pod_container
+- kubernetes_pod_container
   - tags:
     - container_name
     - namespace
@@ -238,7 +251,7 @@ subjects:
     - resource_limits_millicpu_units
     - resource_limits_memory_bytes
 
-- kubernetes_service
+* kubernetes_service
   - tags:
     - service_name
     - namespace
@@ -253,7 +266,7 @@ subjects:
     - port
     - target_port
 
-* kubernetes_statefulset
+- kubernetes_statefulset
   - tags:
     - statefulset_name
     - namespace
