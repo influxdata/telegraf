@@ -148,10 +148,15 @@ func localBigQueryServer(t *testing.T) *httptest.Server {
 		switch r.URL.Path {
 		case "/projects/test-project/datasets/test-dataset/tables/test1/insertAll":
 			decoder := json.NewDecoder(r.Body)
-			decoder.Decode(&receivedBody)
+			
+			if err := decoder.Decode(&receivedBody); err != nil {
+				require.NoError(t, err)
+			}
 
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(successfulResponse))
+			if _, err := w.Write([]byte(successfulResponse)); err !=nil {
+				require.NoError(t, err)
+			}
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
