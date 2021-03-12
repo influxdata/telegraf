@@ -73,10 +73,14 @@ func TestWrite(t *testing.T) {
 	}
 
 	var rows []map[string]json.RawMessage
-	json.Unmarshal(receivedBody["rows"], &rows)
+	if err := json.Unmarshal(receivedBody["rows"], &rows); err != nil {
+		require.NoError(t, err)
+	}
 
 	var row Row
-	json.Unmarshal(rows[0]["json"], &row)
+	if err := json.Unmarshal(rows[0]["json"], &row); err != nil {
+		require.NoError(t, err)
+	}
 
 	pt, _ := time.Parse(time.RFC3339, row.Timestamp)
 	require.Equal(t, mockMetrics[0].Tags()["tag1"], row.Tag1)
