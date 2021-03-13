@@ -65,6 +65,8 @@ arch() {
 			echo amd64;;
 		*s390x.*)
 			echo s390x;;
+		*ppc64le.*)
+			echo ppc64le;;
 		*mipsel.*)
 			echo mipsel;;
 		*mips.*)
@@ -176,4 +178,5 @@ aws s3 sync ./ "s3://$BUCKET/" \
 	--include "*.zip" \
 	--include "*.DIGESTS" \
 	--include "*.asc" \
+	--include "*.dmg" \
 	--acl public-read

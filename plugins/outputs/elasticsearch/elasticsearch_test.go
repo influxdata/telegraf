@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConnectAndWrite(t *testing.T) {
+func TestConnectAndWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -35,10 +35,9 @@ func TestConnectAndWrite(t *testing.T) {
 	// Verify that we can successfully write data to Elasticsearch
 	err = e.Write(testutil.MockMetrics())
 	require.NoError(t, err)
-
 }
 
-func TestTemplateManagementEmptyTemplate(t *testing.T) {
+func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -58,10 +57,9 @@ func TestTemplateManagementEmptyTemplate(t *testing.T) {
 
 	err := e.manageTemplate(ctx)
 	require.Error(t, err)
-
 }
 
-func TestTemplateManagement(t *testing.T) {
+func TestTemplateManagementIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -87,7 +85,7 @@ func TestTemplateManagement(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestTemplateInvalidIndexPattern(t *testing.T) {
+func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -164,7 +162,6 @@ func TestGetTagKeys(t *testing.T) {
 			t.Errorf("Expected tagKeys %s, got %s\n", test.ExpectedTagKeys, tagKeys)
 		}
 	}
-
 }
 
 func TestGetIndexName(t *testing.T) {

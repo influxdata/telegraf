@@ -8,6 +8,8 @@ more flexibility compared to internal Telegraf plugins.
 - External plugins can access to libraries not written in Go
 - Utilize licensed software that isn't available to the open source community
 - Can include large dependencies that would otherwise bloat Telegraf
+- You don't need to wait on the Telegraf team to publish your plugin and start working with it.
+- using the [shim](/plugins/common/shim) you can easily convert plugins between internal and external use
 
 ### External Plugin Guidelines
 The guidelines of writing external plugins would follow those for our general [input](/docs/INPUTS.md),
@@ -59,10 +61,9 @@ This is a guide to help you set up your plugin to use it with `execd`
   [openvpn](https://github.com/danielnelson/telegraf-execd-openvpn#usage) and [awsalarms](https://github.com/vipinvkmenon/awsalarms#installation) 
   for examples. Include the following steps:
      1. How to download the release package for your platform or how to clone the binary for your external plugin
-     1. The commands to unpack or build your binary
+     1. The commands to build your binary
      1. Location to edit your `telegraf.conf`
      1. Configuration to run your external plugin with [inputs.execd](/plugins/inputs/execd), 
      [processors.execd](/plugins/processors/execd) or [outputs.execd](/plugins/outputs/execd)
-     1. Note that restart or reload of Telegraf is required
   1. Submit your plugin by opening a PR to add your external plugin to the [/EXTERNAL_PLUGINS.md](/EXTERNAL_PLUGINS.md) 
   list. Please include the plugin name, link to the plugin repository and a short description of the plugin. 

@@ -10,19 +10,17 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	fakeURL   = "http://test.librato.com"
-	fakeUser  = "telegraf@influxdb.com"
-	fakeToken = "123456"
+	fakeURL = "http://test.librato.com"
 )
 
-func fakeLibrato() *Librato {
-	l := NewLibrato(fakeURL)
-	l.APIUser = fakeUser
-	l.APIToken = fakeToken
+func newTestLibrato(testURL string) *Librato {
+	l := NewLibrato(testURL)
+	l.Log = testutil.Logger{}
 	return l
 }
 
@@ -34,7 +32,7 @@ func TestUriOverride(t *testing.T) {
 			}))
 	defer ts.Close()
 
-	l := NewLibrato(ts.URL)
+	l := newTestLibrato(ts.URL)
 	l.APIUser = "telegraf@influxdb.com"
 	l.APIToken = "123456"
 	err := l.Connect()
@@ -50,7 +48,7 @@ func TestBadStatusCode(t *testing.T) {
 		}))
 	defer ts.Close()
 
-	l := NewLibrato(ts.URL)
+	l := newTestLibrato(ts.URL)
 	l.APIUser = "telegraf@influxdb.com"
 	l.APIToken = "123456"
 	err := l.Connect()
@@ -66,7 +64,6 @@ func TestBadStatusCode(t *testing.T) {
 }
 
 func TestBuildGauge(t *testing.T) {
-
 	mtime := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()
 	var gaugeTests = []struct {
 		ptIn     telegraf.Metric
@@ -140,7 +137,7 @@ func TestBuildGauge(t *testing.T) {
 		},
 	}
 
-	l := NewLibrato(fakeURL)
+	l := newTestLibrato(fakeURL)
 	for _, gt := range gaugeTests {
 		gauges, err := l.buildGauges(gt.ptIn)
 		if err != nil && gt.err == nil {
@@ -257,7 +254,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 		},
 	}
 
-	l := NewLibrato(fakeURL)
+	l := newTestLibrato(fakeURL)
 	for _, gt := range gaugeTests {
 		l.Template = gt.template
 		gauges, err := l.buildGauges(gt.ptIn)

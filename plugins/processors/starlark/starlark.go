@@ -27,12 +27,20 @@ def apply(metric):
 
   ## File containing a Starlark script.
   # script = "/usr/local/bin/myscript.star"
+
+  ## The constants of the Starlark script.
+  # [processors.starlark.constants]
+  #   max_size = 10
+  #   threshold = 0.75
+  #   default_name = "Julia"
+  #   debug_mode = true
 `
 )
 
 type Starlark struct {
-	Source string `toml:"source"`
-	Script string `toml:"script"`
+	Source    string                 `toml:"source"`
+	Script    string                 `toml:"script"`
+	Constants map[string]interface{} `toml:"constants"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -61,6 +69,7 @@ func (s *Starlark) Init() error {
 	builtins["Metric"] = starlark.NewBuiltin("Metric", newMetric)
 	builtins["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
 	builtins["catch"] = starlark.NewBuiltin("catch", catch)
+	s.addConstants(&builtins)
 
 	program, err := s.sourceProgram(builtins)
 	if err != nil {
@@ -72,6 +81,9 @@ func (s *Starlark) Init() error {
 	if err != nil {
 		return err
 	}
+
+	// Make available a shared state to the apply function
+	globals["state"] = starlark.NewDict(0)
 
 	// Freeze the global state.  This prevents modifications to the processor
 	// state and prevents scripts from containing errors storing tracking
@@ -192,6 +204,17 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 
 func (s *Starlark) Stop() error {
 	return nil
+}
+
+// Add all the constants defined in the plugin as constants of the script
+func (s *Starlark) addConstants(builtins *starlark.StringDict) {
+	for key, val := range s.Constants {
+		sVal, err := asStarlarkValue(val)
+		if err != nil {
+			s.Log.Errorf("Unsupported type: %T", val)
+		}
+		(*builtins)[key] = sVal
+	}
 }
 
 func containsMetric(metrics []telegraf.Metric, metric telegraf.Metric) bool {

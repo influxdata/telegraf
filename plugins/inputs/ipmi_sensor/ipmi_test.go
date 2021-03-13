@@ -10,7 +10,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,7 +19,9 @@ func TestGather(t *testing.T) {
 		Path:      "ipmitool",
 		Privilege: "USER",
 		Timeout:   internal.Duration{Duration: time.Second * 5},
+		HexKey:    "1234567F",
 	}
+
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
 	var acc testutil.Accumulator
@@ -29,11 +30,12 @@ func TestGather(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, acc.NFields(), 262, "non-numeric measurements should be ignored")
+	require.EqualValues(t, acc.NFields(), 262, "non-numeric measurements should be ignored")
 
-	conn := NewConnection(i.Servers[0], i.Privilege)
-	assert.Equal(t, "USERID", conn.Username)
-	assert.Equal(t, "lan", conn.Interface)
+	conn := NewConnection(i.Servers[0], i.Privilege, i.HexKey)
+	require.EqualValues(t, "USERID", conn.Username)
+	require.EqualValues(t, "lan", conn.Interface)
+	require.EqualValues(t, "1234567F", conn.HexKey)
 
 	var testsWithServer = []struct {
 		fields map[string]interface{}
@@ -376,7 +378,6 @@ OS RealTime Mod  | 0x00              | ok
 	} else {
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
-
 	}
 	os.Exit(0)
 }
@@ -388,6 +389,7 @@ func TestGatherV2(t *testing.T) {
 		Privilege:     "USER",
 		Timeout:       internal.Duration{Duration: time.Second * 5},
 		MetricVersion: 2,
+		HexKey:        "0000000F",
 	}
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommandV2
@@ -397,9 +399,10 @@ func TestGatherV2(t *testing.T) {
 
 	require.NoError(t, err)
 
-	conn := NewConnection(i.Servers[0], i.Privilege)
-	assert.Equal(t, "USERID", conn.Username)
-	assert.Equal(t, "lan", conn.Interface)
+	conn := NewConnection(i.Servers[0], i.Privilege, i.HexKey)
+	require.EqualValues(t, "USERID", conn.Username)
+	require.EqualValues(t, "lan", conn.Interface)
+	require.EqualValues(t, "0000000F", conn.HexKey)
 
 	var testsWithServer = []struct {
 		fields map[string]interface{}
@@ -569,7 +572,6 @@ Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
 	} else {
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
-
 	}
 	os.Exit(0)
 }
@@ -607,8 +609,8 @@ Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
 
 	for i := range tests {
 		t.Logf("Checking v%d data...", i+1)
-		extractFieldsFromRegex(re_v1_parse_line, tests[i])
-		extractFieldsFromRegex(re_v2_parse_line, tests[i])
+		extractFieldsFromRegex(reV1ParseLine, tests[i])
+		extractFieldsFromRegex(reV2ParseLine, tests[i])
 	}
 }
 

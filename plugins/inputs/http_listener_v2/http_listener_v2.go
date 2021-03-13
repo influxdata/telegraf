@@ -175,7 +175,9 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 
 // Stop cleans up all resources
 func (h *HTTPListenerV2) Stop() {
-	h.listener.Close()
+	if h.listener != nil {
+		h.listener.Close()
+	}
 	h.wg.Wait()
 }
 
@@ -311,7 +313,6 @@ func (h *HTTPListenerV2) authenticateIfSet(handler http.HandlerFunc, res http.Re
 		if !ok ||
 			subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.BasicUsername)) != 1 ||
 			subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.BasicPassword)) != 1 {
-
 			http.Error(res, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}

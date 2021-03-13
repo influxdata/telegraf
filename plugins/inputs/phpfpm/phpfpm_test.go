@@ -1,3 +1,8 @@
+// +build !windows
+
+// TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
+// https://github.com/influxdata/telegraf/issues/6248
+
 package phpfpm
 
 import (
@@ -322,8 +327,7 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testi
 
 	err = acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Equal(t, `dial unix /tmp/invalid.sock: connect: no such file or directory`, err.Error())
-
+	assert.Equal(t, `socket doesn't exist "/tmp/invalid.sock"`, err.Error())
 }
 
 const outputSample = `

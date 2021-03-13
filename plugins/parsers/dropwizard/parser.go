@@ -69,7 +69,6 @@ func NewParser() *parser {
 
 // Parse parses the input bytes to an array of metrics
 func (p *parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-
 	metrics := make([]telegraf.Metric, 0)
 
 	metricTime, err := p.parseTime(buf)
@@ -147,7 +146,6 @@ func (p *parser) SetDefaultTags(tags map[string]string) {
 }
 
 func (p *parser) readTags(buf []byte) map[string]string {
-
 	if p.TagsPath != "" {
 		var tagsBytes []byte
 		tagsResult := gjson.GetBytes(buf, p.TagsPath)
@@ -173,7 +171,6 @@ func (p *parser) readTags(buf []byte) map[string]string {
 }
 
 func (p *parser) parseTime(buf []byte) (time.Time, error) {
-
 	if p.TimePath != "" {
 		timeFormat := p.TimeFormat
 		if timeFormat == "" {
@@ -195,7 +192,6 @@ func (p *parser) parseTime(buf []byte) (time.Time, error) {
 }
 
 func (p *parser) unmarshalMetrics(buf []byte) (map[string]interface{}, error) {
-
 	var registryBytes []byte
 	if p.MetricRegistryPath != "" {
 		regResult := gjson.GetBytes(buf, p.MetricRegistryPath)

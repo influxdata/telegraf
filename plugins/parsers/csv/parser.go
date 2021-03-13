@@ -31,6 +31,7 @@ type Config struct {
 	TimestampFormat   string   `toml:"csv_timestamp_format"`
 	Timezone          string   `toml:"csv_timezone"`
 	TrimSpace         bool     `toml:"csv_trim_space"`
+	SkipValues        []string `toml:"csv_skip_values"`
 
 	gotColumnNames bool
 
@@ -197,11 +198,24 @@ outer:
 				value = strings.Trim(value, " ")
 			}
 
+			// don't record fields where the value matches a skip value
+			for _, s := range p.SkipValues {
+				if value == s {
+					continue outer
+				}
+			}
+
 			for _, tagName := range p.TagColumns {
 				if tagName == fieldName {
 					tags[tagName] = value
 					continue outer
 				}
+			}
+
+			// If the field name is the timestamp column, then keep field name as is.
+			if fieldName == p.TimestampColumn {
+				recordFields[fieldName] = value
+				continue
 			}
 
 			// Try explicit conversion only when column types is defined.

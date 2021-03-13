@@ -119,7 +119,7 @@ func TestThreadStats(t *testing.T) {
 	c.Write([]byte(ex3))
 	c.Write([]byte("\n"))
 	c.Close()
-	acc.Wait(1)
+	acc.Wait(2)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
@@ -202,7 +202,6 @@ func TestSuricataTooLongLine(t *testing.T) {
 	c.Close()
 
 	acc.WaitError(1)
-
 }
 
 func TestSuricataEmptyJSON(t *testing.T) {
@@ -224,7 +223,6 @@ func TestSuricataEmptyJSON(t *testing.T) {
 	c, err := net.Dial("unix", tmpfn)
 	if err != nil {
 		log.Println(err)
-
 	}
 	c.Write([]byte("\n"))
 	c.Close()

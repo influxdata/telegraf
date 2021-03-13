@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/kubernetes/apimachinery/pkg/fields"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -99,7 +101,7 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	assert.True(t, acc.TagValue("test_metric", "url") == ts.URL)
 }
 
-func TestPrometheusGeneratesMetricsAlthoughFirstDNSFails(t *testing.T) {
+func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -147,7 +149,6 @@ func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	assert.True(t, acc.HasFloatField("prometheus", "go_gc_duration_seconds_sum"))
 	assert.True(t, acc.HasFloatField("prometheus", "go_gc_duration_seconds_count"))
 	assert.True(t, acc.TagValue("prometheus", "url") == ts.URL+"/metrics")
-
 }
 
 func TestSummaryMayContainNaN(t *testing.T) {
@@ -233,4 +234,50 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 	assert.True(t, acc.HasFloatField("prometheus", "go_goroutines"))
 	assert.True(t, acc.TagValue("prometheus", "url") == ts.URL+"/metrics")
 	assert.True(t, acc.HasTimestamp("prometheus", time.Unix(1490802350, 0)))
+}
+
+func TestUnsupportedFieldSelector(t *testing.T) {
+	fieldSelectorString := "spec.containerName=container"
+	prom := &Prometheus{Log: testutil.Logger{}, KubernetesFieldSelector: fieldSelectorString}
+
+	fieldSelector, _ := fields.ParseSelector(prom.KubernetesFieldSelector)
+	isValid, invalidSelector := fieldSelectorIsSupported(fieldSelector)
+	assert.Equal(t, false, isValid)
+	assert.Equal(t, "spec.containerName", invalidSelector)
+}
+
+func TestInitConfigErrors(t *testing.T) {
+	p := &Prometheus{
+		MetricVersion:     2,
+		Log:               testutil.Logger{},
+		URLs:              nil,
+		URLTag:            "url",
+		MonitorPods:       true,
+		PodScrapeScope:    "node",
+		PodScrapeInterval: 60,
+	}
+
+	// Both invalid IP addresses
+	p.NodeIP = "10.240.0.0.0"
+	os.Setenv("NODE_IP", "10.000.0.0.0")
+	err := p.Init()
+	expectedMessage := "The node_ip config and the environment variable NODE_IP are not set or invalid. Cannot get pod list for monitor_kubernetes_pods using node scrape scope"
+	assert.Equal(t, expectedMessage, err.Error())
+	os.Setenv("NODE_IP", "10.000.0.0")
+
+	p.KubernetesLabelSelector = "label0==label0, label0 in (=)"
+	err = p.Init()
+	expectedMessage = "Error parsing the specified label selector(s): unable to parse requirement: found '=', expected: ',', ')' or identifier"
+	assert.Equal(t, expectedMessage, err.Error())
+	p.KubernetesLabelSelector = "label0==label"
+
+	p.KubernetesFieldSelector = "field,"
+	err = p.Init()
+	expectedMessage = "Error parsing the specified field selector(s): invalid selector: 'field,'; can't understand 'field'"
+	assert.Equal(t, expectedMessage, err.Error())
+
+	p.KubernetesFieldSelector = "spec.containerNames=containerNames"
+	err = p.Init()
+	expectedMessage = "The field selector spec.containerNames is not supported for pods"
+	assert.Equal(t, expectedMessage, err.Error())
 }

@@ -33,7 +33,7 @@ type Elasticsearch struct {
 	ManageTemplate      bool
 	TemplateName        string
 	OverwriteTemplate   bool
-	ForceDocumentId     bool
+	ForceDocumentID     bool `toml:"force_document_id"`
 	MajorReleaseNumber  int
 	tls.ClientConfig
 
@@ -250,7 +250,6 @@ func (a *Elasticsearch) Connect() error {
 
 // GetPointID generates a unique ID for a Metric Point
 func GetPointID(m telegraf.Metric) string {
-
 	var buffer bytes.Buffer
 	//Timestamp(ns),measurement name and Series Hash for compute the final SHA256 based hash ID
 
@@ -284,7 +283,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 		br := elastic.NewBulkIndexRequest().Index(indexName).Doc(m)
 
-		if a.ForceDocumentId {
+		if a.ForceDocumentID {
 			id := GetPointID(metric)
 			br.Id(id)
 		}
@@ -294,7 +293,6 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		}
 
 		bulkRequest.Add(br)
-
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), a.Timeout.Duration)
@@ -309,12 +307,12 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	if res.Errors {
 		for id, err := range res.Failed() {
 			log.Printf("E! Elasticsearch indexing failure, id: %d, error: %s, caused by: %s, %s", id, err.Error.Reason, err.Error.CausedBy["reason"], err.Error.CausedBy["type"])
+			break
 		}
 		return fmt.Errorf("W! Elasticsearch failed to index %d metrics", len(res.Failed()))
 	}
 
 	return nil
-
 }
 
 func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
@@ -359,17 +357,13 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 		}
 
 		log.Printf("D! Elasticsearch template %s created or updated\n", a.TemplateName)
-
 	} else {
-
 		log.Println("D! Found existing Elasticsearch template. Skipping template management")
-
 	}
 	return nil
 }
 
 func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
-
 	tagKeys := []string{}
 	startTag := strings.Index(indexName, "{{")
 
@@ -378,7 +372,6 @@ func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
 
 		if endTag < 0 {
 			startTag = -1
-
 		} else {
 			tagName := indexName[startTag+2 : endTag]
 
@@ -422,7 +415,6 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 	}
 
 	return fmt.Sprintf(indexName, tagValues...)
-
 }
 
 func getISOWeek(eventTime time.Time) string {

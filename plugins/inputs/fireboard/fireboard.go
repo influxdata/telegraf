@@ -69,7 +69,6 @@ func (r *Fireboard) Description() string {
 
 // Init the things
 func (r *Fireboard) Init() error {
-
 	if len(r.AuthToken) == 0 {
 		return fmt.Errorf("You must specify an authToken")
 	}
@@ -88,7 +87,6 @@ func (r *Fireboard) Init() error {
 
 // Gather Reads stats from all configured servers.
 func (r *Fireboard) Gather(acc telegraf.Accumulator) error {
-
 	// Perform the GET request to the fireboard servers
 	req, err := http.NewRequest("GET", r.URL, nil)
 	if err != nil {

@@ -3,7 +3,6 @@ package modbus
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"net/url"
@@ -34,6 +33,7 @@ type Modbus struct {
 	Coils            []fieldContainer  `toml:"coils"`
 	HoldingRegisters []fieldContainer  `toml:"holding_registers"`
 	InputRegisters   []fieldContainer  `toml:"input_registers"`
+	Log              telegraf.Logger   `toml:"-"`
 	registers        []register
 	isConnected      bool
 	tcpHandler       *mb.TCPClientHandler
@@ -132,7 +132,8 @@ const sampleConfig = `
   ##  |---BA, DCBA   - Little Endian
   ##  |---BADC       - Mid-Big Endian
   ##  |---CDAB       - Mid-Little Endian
-  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32-IEEE (the IEEE 754 binary representation)
+  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64,
+  ##              FLOAT32-IEEE, FLOAT64-IEEE (the IEEE 754 binary representation)
   ##              FLOAT32, FIXED, UFIXED (fixed-point representation on input)
   ## scale      - the final numeric variable representation
   ## address    - variable address
@@ -216,23 +217,33 @@ func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
 	sort.Slice(addrs, func(i, j int) bool { return addrs[i] < addrs[j] })
 
 	ii := 0
+	maxQuantity := 1
 	var registersRange []registerRange
+	if name == cDiscreteInputs || name == cCoils {
+		maxQuantity = 2000
+	} else if name == cInputRegisters || name == cHoldingRegisters {
+		maxQuantity = 125
+	}
 
 	// Get range of consecutive integers
 	// [1, 2, 3, 5, 6, 10, 11, 12, 14]
 	// (1, 3) , (5, 2) , (10, 3), (14 , 1)
 	for range addrs {
-		if ii < len(addrs) {
-			start := addrs[ii]
-			end := start
-
-			for ii < len(addrs)-1 && addrs[ii+1]-addrs[ii] == 1 {
-				end = addrs[ii+1]
-				ii++
-			}
-			ii++
-			registersRange = append(registersRange, registerRange{start, end - start + 1})
+		if ii >= len(addrs) {
+			break
 		}
+		quantity := 1
+		start := addrs[ii]
+		end := start
+
+		for ii < len(addrs)-1 && addrs[ii+1]-addrs[ii] == 1 && quantity < maxQuantity {
+			end = addrs[ii+1]
+			ii++
+			quantity++
+		}
+		ii++
+
+		registersRange = append(registersRange, registerRange{start, end - start + 1})
 	}
 
 	m.registers = append(m.registers, register{name, registersRange, fields})
@@ -337,12 +348,11 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 		}
 
 		//search name duplicate
-		canonical_name := item.Measurement + "." + item.Name
-		if nameEncountered[canonical_name] {
+		canonicalName := item.Measurement + "." + item.Name
+		if nameEncountered[canonicalName] {
 			return fmt.Errorf("name '%s' is duplicated in measurement '%s' '%s' - '%s'", item.Name, item.Measurement, n, item.Name)
-		} else {
-			nameEncountered[canonical_name] = true
 		}
+		nameEncountered[canonicalName] = true
 
 		if n == cInputRegisters || n == cHoldingRegisters {
 			// search byte order
@@ -355,7 +365,7 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 
 			// search data type
 			switch item.DataType {
-			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64", "FLOAT32-IEEE", "FLOAT32", "FIXED", "UFIXED":
+			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
 				break
 			default:
 				return fmt.Errorf("invalid data type '%s' in '%s' - '%s'", item.DataType, n, item.Name)
@@ -405,13 +415,13 @@ func removeDuplicates(elements []uint16) []uint16 {
 
 func readRegisterValues(m *Modbus, rt string, rr registerRange) ([]byte, error) {
 	if rt == cDiscreteInputs {
-		return m.client.ReadDiscreteInputs(uint16(rr.address), uint16(rr.length))
+		return m.client.ReadDiscreteInputs(rr.address, rr.length)
 	} else if rt == cCoils {
-		return m.client.ReadCoils(uint16(rr.address), uint16(rr.length))
+		return m.client.ReadCoils(rr.address, rr.length)
 	} else if rt == cInputRegisters {
-		return m.client.ReadInputRegisters(uint16(rr.address), uint16(rr.length))
+		return m.client.ReadInputRegisters(rr.address, rr.length)
 	} else if rt == cHoldingRegisters {
-		return m.client.ReadHoldingRegisters(uint16(rr.address), uint16(rr.length))
+		return m.client.ReadHoldingRegisters(rr.address, rr.length)
 	} else {
 		return []byte{}, fmt.Errorf("not Valid function")
 	}
@@ -434,7 +444,7 @@ func (m *Modbus) getFields() error {
 					for bitPosition := 0; bitPosition < 8; bitPosition++ {
 						bitRawValues[address] = getBitValue(readValue, bitPosition)
 						address = address + 1
-						if address+1 > rr.length {
+						if address > rr.address+rr.length {
 							break
 						}
 					}
@@ -462,18 +472,17 @@ func (m *Modbus) getFields() error {
 
 		if register.Type == cInputRegisters || register.Type == cHoldingRegisters {
 			for i := 0; i < len(register.Fields); i++ {
-				var values_t []byte
+				var valuesT []byte
 
 				for j := 0; j < len(register.Fields[i].Address); j++ {
 					tempArray := rawValues[register.Fields[i].Address[j]]
 					for x := 0; x < len(tempArray); x++ {
-						values_t = append(values_t, tempArray[x])
+						valuesT = append(valuesT, tempArray[x])
 					}
 				}
 
-				register.Fields[i].value = convertDataType(register.Fields[i], values_t)
+				register.Fields[i].value = convertDataType(register.Fields[i], valuesT)
 			}
-
 		}
 	}
 
@@ -512,6 +521,10 @@ func convertDataType(t fieldContainer, bytes []byte) interface{} {
 		e32 := convertEndianness32(t.ByteOrder, bytes)
 		f32 := math.Float32frombits(e32)
 		return scaleFloat32(t.Scale, f32)
+	case "FLOAT64-IEEE":
+		e64 := convertEndianness64(t.ByteOrder, bytes)
+		f64 := math.Float64frombits(e64)
+		return scaleFloat64(t.Scale, f64)
 	case "FIXED":
 		if len(bytes) == 2 {
 			e16 := convertEndianness16(t.ByteOrder, bytes)
@@ -583,30 +596,6 @@ func convertEndianness64(o string, b []byte) uint64 {
 	}
 }
 
-func format16(f string, r uint16) interface{} {
-	switch f {
-	case "UINT16":
-		return r
-	case "INT16":
-		return int16(r)
-	default:
-		return r
-	}
-}
-
-func format32(f string, r uint32) interface{} {
-	switch f {
-	case "UINT32":
-		return r
-	case "INT32":
-		return int32(r)
-	case "FLOAT32-IEEE":
-		return math.Float32frombits(r)
-	default:
-		return r
-	}
-}
-
 func format64(f string, r uint64) interface{} {
 	switch f {
 	case "UINT64":
@@ -662,6 +651,10 @@ func scaleFloat32(s float64, v float32) float32 {
 	return float32(float64(v) * s)
 }
 
+func scaleFloat64(s float64, v float64) float64 {
+	return v * s
+}
+
 func scaleUint64(s float64, v uint64) uint64 {
 	return uint64(float64(v) * float64(s))
 }
@@ -681,13 +674,13 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	}
 
 	timestamp := time.Now()
-	for retry := 0; retry <= m.Retries; retry += 1 {
+	for retry := 0; retry <= m.Retries; retry++ {
 		timestamp = time.Now()
 		err := m.getFields()
 		if err != nil {
 			mberr, ok := err.(*mb.ModbusError)
 			if ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
-				log.Printf("I! [inputs.modbus] device busy! Retrying %d more time(s)...", m.Retries-retry)
+				m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
 				time.Sleep(m.RetriesWaitTime.Duration)
 				continue
 			}

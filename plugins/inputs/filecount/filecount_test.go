@@ -1,3 +1,8 @@
+// +build !windows
+
+// TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
+// https://github.com/influxdata/telegraf/issues/6248
+
 package filecount
 
 import (
@@ -224,9 +229,7 @@ func getFakeFileSystem(basePath string) fakeFileSystem {
 		basePath + "/subdir/nested2/qux": {name: "qux", filemode: uint32(fmask), modtime: mtime, size: int64(400)},
 	}
 
-	fs := fakeFileSystem{files: fileList}
-	return fs
-
+	return fakeFileSystem{files: fileList}
 }
 
 func fileCountEquals(t *testing.T, fc FileCount, expectedCount int, expectedSize int) {

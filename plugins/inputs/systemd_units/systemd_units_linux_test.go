@@ -73,13 +73,13 @@ func TestSystemdUnits(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			systemd_units := &SystemdUnits{
+			systemdUnits := &SystemdUnits{
 				systemctl: func(Timeout internal.Duration, UnitType string) (*bytes.Buffer, error) {
 					return bytes.NewBufferString(tt.line), nil
 				},
 			}
 			acc := new(testutil.Accumulator)
-			err := acc.GatherError(systemd_units.Gather)
+			err := acc.GatherError(systemdUnits.Gather)
 			if !reflect.DeepEqual(tt.err, err) {
 				t.Errorf("%s: expected error '%#v' got '%#v'", tt.name, tt.err, err)
 			}

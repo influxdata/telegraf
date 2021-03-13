@@ -8,13 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"strings"
+
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"strings"
 )
 
-func TestWinPerformanceQueryImpl(t *testing.T) {
+func TestWinPerformanceQueryImplIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -116,7 +117,7 @@ func TestWinPerformanceQueryImpl(t *testing.T) {
 
 }
 
-func TestWinPerfcountersConfigGet1(t *testing.T) {
+func TestWinPerfcountersConfigGet1Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -150,7 +151,7 @@ func TestWinPerfcountersConfigGet1(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestWinPerfcountersConfigGet2(t *testing.T) {
+func TestWinPerfcountersConfigGet2Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -196,7 +197,7 @@ func TestWinPerfcountersConfigGet2(t *testing.T) {
 	}
 }
 
-func TestWinPerfcountersConfigGet3(t *testing.T) {
+func TestWinPerfcountersConfigGet3Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -245,7 +246,7 @@ func TestWinPerfcountersConfigGet3(t *testing.T) {
 	}
 }
 
-func TestWinPerfcountersConfigGet4(t *testing.T) {
+func TestWinPerfcountersConfigGet4Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -294,7 +295,7 @@ func TestWinPerfcountersConfigGet4(t *testing.T) {
 	}
 }
 
-func TestWinPerfcountersConfigGet5(t *testing.T) {
+func TestWinPerfcountersConfigGet5Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -342,7 +343,7 @@ func TestWinPerfcountersConfigGet5(t *testing.T) {
 	}
 }
 
-func TestWinPerfcountersConfigGet6(t *testing.T) {
+func TestWinPerfcountersConfigGet6Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -376,7 +377,7 @@ func TestWinPerfcountersConfigGet6(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestWinPerfcountersConfigGet7(t *testing.T) {
+func TestWinPerfcountersConfigGet7Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -424,7 +425,7 @@ func TestWinPerfcountersConfigGet7(t *testing.T) {
 	}
 }
 
-func TestWinPerfcountersConfigError1(t *testing.T) {
+func TestWinPerfcountersConfigError1Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -458,7 +459,7 @@ func TestWinPerfcountersConfigError1(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestWinPerfcountersConfigError2(t *testing.T) {
+func TestWinPerfcountersConfigError2Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -494,7 +495,7 @@ func TestWinPerfcountersConfigError2(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestWinPerfcountersConfigError3(t *testing.T) {
+func TestWinPerfcountersConfigError3Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -528,7 +529,7 @@ func TestWinPerfcountersConfigError3(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestWinPerfcountersCollect1(t *testing.T) {
+func TestWinPerfcountersCollect1Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -572,7 +573,7 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 	}
 
 }
-func TestWinPerfcountersCollect2(t *testing.T) {
+func TestWinPerfcountersCollect2Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

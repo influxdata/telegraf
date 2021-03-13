@@ -240,14 +240,17 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Co
 	return nil
 }
 
-// HandleSubscribeResponse message from gNMI and parse contained telemetry data
 func (c *GNMI) handleSubscribeResponse(address string, reply *gnmi.SubscribeResponse) {
-	// Check if response is a gNMI Update and if we have a prefix to derive the measurement name
-	response, ok := reply.Response.(*gnmi.SubscribeResponse_Update)
-	if !ok {
-		return
+	switch response := reply.Response.(type) {
+	case *gnmi.SubscribeResponse_Update:
+		c.handleSubscribeResponseUpdate(address, response)
+	case *gnmi.SubscribeResponse_Error:
+		c.Log.Errorf("Subscribe error (%d), %q", response.Error.Code, response.Error.Message)
 	}
+}
 
+// Handle SubscribeResponse_Update message from gNMI and parse contained telemetry data
+func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.SubscribeResponse_Update) {
 	var prefix, prefixAliasPath string
 	grouper := metric.NewSeriesGrouper()
 	timestamp := time.Unix(0, response.Update.Timestamp)
@@ -287,11 +290,11 @@ func (c *GNMI) handleSubscribeResponse(address string, reply *gnmi.SubscribeResp
 		// Group metrics
 		for k, v := range fields {
 			key := k
-			if len(aliasPath) < len(key) {
+			if len(aliasPath) < len(key) && len(aliasPath) != 0 {
 				// This may not be an exact prefix, due to naming style
 				// conversion on the key.
 				key = key[len(aliasPath)+1:]
-			} else {
+			} else if len(aliasPath) >= len(key) {
 				// Otherwise use the last path element as the field key.
 				key = path.Base(key)
 
@@ -400,7 +403,6 @@ func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string
 				} else {
 					tags[key] = val
 				}
-
 			}
 		}
 	}

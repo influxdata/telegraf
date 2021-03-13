@@ -1,7 +1,10 @@
 package config
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -201,7 +204,7 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 	// Tests telegraf size parsing.
 	assert.Equal(t, internal.Size{Size: 1024 * 1024}, inputHTTPListener.MaxBodySize)
 	// Tests toml multiline basic strings.
-	assert.Equal(t, "/path/to/my/cert\n", inputHTTPListener.TLSCert)
+	assert.Equal(t, "/path/to/my/cert", strings.TrimRight(inputHTTPListener.TLSCert, "\r\n"))
 }
 
 func TestConfig_FieldNotDefined(t *testing.T) {
@@ -276,4 +279,38 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 	azureMonitor, ok = c.Outputs[0].Output.(*azure_monitor.AzureMonitor)
 	assert.Equal(t, "", azureMonitor.NamespacePrefix)
 	assert.Equal(t, true, ok)
+}
+
+func TestConfig_URLRetries3Fails(t *testing.T) {
+	httpLoadConfigRetryInterval = 0 * time.Second
+	responseCounter := 0
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		responseCounter++
+	}))
+	defer ts.Close()
+
+	c := NewConfig()
+	err := c.LoadConfig(ts.URL)
+	require.Error(t, err)
+	require.Equal(t, 4, responseCounter)
+}
+
+func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
+	httpLoadConfigRetryInterval = 0 * time.Second
+	responseCounter := 0
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if responseCounter <= 2 {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+		responseCounter++
+	}))
+	defer ts.Close()
+
+	c := NewConfig()
+	err := c.LoadConfig(ts.URL)
+	require.NoError(t, err)
+	require.Equal(t, 4, responseCounter)
 }

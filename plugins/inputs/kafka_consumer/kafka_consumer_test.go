@@ -7,6 +7,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/testutil"
@@ -68,8 +69,12 @@ func TestInit(t *testing.T) {
 		{
 			name: "parses valid version string",
 			plugin: &KafkaConsumer{
-				Version: "1.0.0",
-				Log:     testutil.Logger{},
+				ReadConfig: kafka.ReadConfig{
+					Config: kafka.Config{
+						Version: "1.0.0",
+					},
+				},
+				Log: testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.Equal(t, plugin.config.Version, sarama.V1_0_0_0)
@@ -78,16 +83,24 @@ func TestInit(t *testing.T) {
 		{
 			name: "invalid version string",
 			plugin: &KafkaConsumer{
-				Version: "100",
-				Log:     testutil.Logger{},
+				ReadConfig: kafka.ReadConfig{
+					Config: kafka.Config{
+						Version: "100",
+					},
+				},
+				Log: testutil.Logger{},
 			},
 			initError: true,
 		},
 		{
 			name: "custom client_id",
 			plugin: &KafkaConsumer{
-				ClientID: "custom",
-				Log:      testutil.Logger{},
+				ReadConfig: kafka.ReadConfig{
+					Config: kafka.Config{
+						ClientID: "custom",
+					},
+				},
+				Log: testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.Equal(t, plugin.config.ClientID, "custom")
@@ -123,8 +136,12 @@ func TestInit(t *testing.T) {
 		{
 			name: "default tls with a tls config",
 			plugin: &KafkaConsumer{
-				ClientConfig: tls.ClientConfig{
-					InsecureSkipVerify: true,
+				ReadConfig: kafka.ReadConfig{
+					Config: kafka.Config{
+						ClientConfig: tls.ClientConfig{
+							InsecureSkipVerify: true,
+						},
+					},
 				},
 				Log: testutil.Logger{},
 			},
@@ -133,23 +150,16 @@ func TestInit(t *testing.T) {
 			},
 		},
 		{
-			name: "disable tls",
+			name: "Insecure tls",
 			plugin: &KafkaConsumer{
-				EnableTLS: func() *bool { v := false; return &v }(),
-				ClientConfig: tls.ClientConfig{
-					InsecureSkipVerify: true,
+				ReadConfig: kafka.ReadConfig{
+					Config: kafka.Config{
+						ClientConfig: tls.ClientConfig{
+							InsecureSkipVerify: true,
+						},
+					},
 				},
 				Log: testutil.Logger{},
-			},
-			check: func(t *testing.T, plugin *KafkaConsumer) {
-				require.False(t, plugin.config.Net.TLS.Enable)
-			},
-		},
-		{
-			name: "enable tls",
-			plugin: &KafkaConsumer{
-				EnableTLS: func() *bool { v := true; return &v }(),
-				Log:       testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.True(t, plugin.config.Net.TLS.Enable)
@@ -247,7 +257,7 @@ func (c *FakeConsumerGroupClaim) Messages() <-chan *sarama.ConsumerMessage {
 
 func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 	acc := &testutil.Accumulator{}
-	parser := &value.ValueParser{MetricName: "cpu", DataType: "int"}
+	parser := value.NewValueParser("cpu", "int", "", nil)
 	cg := NewConsumerGroupHandler(acc, 1, parser)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -272,7 +282,7 @@ func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 
 func TestConsumerGroupHandler_ConsumeClaim(t *testing.T) {
 	acc := &testutil.Accumulator{}
-	parser := &value.ValueParser{MetricName: "cpu", DataType: "int"}
+	parser := value.NewValueParser("cpu", "int", "", nil)
 	cg := NewConsumerGroupHandler(acc, 1, parser)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -382,7 +392,7 @@ func TestConsumerGroupHandler_Handle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			acc := &testutil.Accumulator{}
-			parser := &value.ValueParser{MetricName: "cpu", DataType: "int"}
+			parser := value.NewValueParser("cpu", "int", "", nil)
 			cg := NewConsumerGroupHandler(acc, 1, parser)
 			cg.MaxMessageLen = tt.maxMessageLen
 			cg.TopicTag = tt.topicTag

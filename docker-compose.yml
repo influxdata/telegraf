@@ -40,6 +40,9 @@ services:
       - MYSQL_ALLOW_EMPTY_PASSWORD=yes
     ports:
       - "3306:3306"
+    # removes warning "mbind operation not permitted" enables you to see the docker logs 
+    cap_add:
+    - SYS_NICE  # CAP_SYS_NICE
   memcached:
     image: memcached
     ports:
@@ -53,7 +56,7 @@ services:
       - "6432:6432"
   postgres:
     image: postgres:alpine
-    environment: 
+    environment:
       - POSTGRES_HOST_AUTH_METHOD=trust
     ports:
       - "5432:5432"

@@ -195,7 +195,6 @@ func tagSetsMatch(a, b map[string]string) bool {
 func makeReadRequests(metrics []Metric) []ReadRequest {
 	var requests []ReadRequest
 	for _, metric := range metrics {
-
 		if len(metric.Paths) == 0 {
 			requests = append(requests, ReadRequest{
 				Mbean:      metric.Mbean,

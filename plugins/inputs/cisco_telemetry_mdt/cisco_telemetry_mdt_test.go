@@ -588,5 +588,4 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	tags = map[string]string{"path": "type:model/other/path", "name": "str", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "other", fields, tags)
-
 }

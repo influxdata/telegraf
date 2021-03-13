@@ -75,6 +75,7 @@ help:
 	@echo '  test       - run short unit tests'
 	@echo '  fmt        - format source files'
 	@echo '  tidy       - tidy go modules'
+	@echo '  lint       - run linter'
 	@echo '  check-deps - check docs/LICENSE_OF_DEPENDENCIES.md'
 	@echo '  clean      - delete build artifacts'
 	@echo ''
@@ -83,7 +84,7 @@ help:
 
 .PHONY: deps
 deps:
-	go mod download
+	go mod download -x
 
 .PHONY: telegraf
 telegraf:
@@ -97,6 +98,10 @@ go-install:
 .PHONY: test
 test:
 	go test -short $(race_detector) ./...
+
+.PHONY: test-integration
+test-integration:
+	go test -run Integration $(race_detector) ./...
 
 .PHONY: fmt
 fmt:
@@ -114,12 +119,7 @@ fmtcheck:
 
 .PHONY: test-windows
 test-windows:
-	go test -short $(race_detector) ./plugins/inputs/ping/...
-	go test -short $(race_detector) ./plugins/inputs/win_perf_counters/...
-	go test -short $(race_detector) ./plugins/inputs/win_services/...
-	go test -short $(race_detector) ./plugins/inputs/procstat/...
-	go test -short $(race_detector) ./plugins/inputs/ntpq/...
-	go test -short $(race_detector) ./plugins/processors/port_name/...
+	go test -short ./...
 
 .PHONY: vet
 vet:
@@ -130,6 +130,15 @@ vet:
 		echo "to fix them before submitting code for review."; \
 		exit 1; \
 	fi
+
+.PHONY: lint
+lint:
+ifeq (, $(shell which golangci-lint))
+	$(info golangci-lint can't be found, please install it: https://golangci-lint.run/usage/install/)
+	exit 1
+endif
+
+	golangci-lint -v run
 
 .PHONY: tidy
 tidy:
@@ -142,7 +151,6 @@ tidy:
 
 .PHONY: check
 check: fmtcheck vet
-	@$(MAKE) --no-print-directory tidy
 
 .PHONY: test-all
 test-all: fmtcheck vet
@@ -172,13 +180,13 @@ plugin-%:
 
 .PHONY: ci-1.15
 ci-1.15:
-	docker build -t quay.io/influxdb/telegraf-ci:1.15.2 - < scripts/ci-1.15.docker
-	docker push quay.io/influxdb/telegraf-ci:1.15.2
+	docker build -t quay.io/influxdb/telegraf-ci:1.15.8 - < scripts/ci-1.15.docker
+	docker push quay.io/influxdb/telegraf-ci:1.15.8
 
-.PHONY: ci-1.14
-ci-1.14:
-	docker build -t quay.io/influxdb/telegraf-ci:1.14.9 - < scripts/ci-1.14.docker
-	docker push quay.io/influxdb/telegraf-ci:1.14.9
+.PHONY: ci-1.16
+ci-1.16:
+	docker build -t quay.io/influxdb/telegraf-ci:1.16.1 - < scripts/ci-1.16.docker
+	docker push quay.io/influxdb/telegraf-ci:1.16.1
 
 .PHONY: install
 install: $(buildbin)
@@ -212,12 +220,14 @@ debs += telegraf_$(deb_version)_i386.deb
 debs += telegraf_$(deb_version)_mips.deb
 debs += telegraf_$(deb_version)_mipsel.deb
 debs += telegraf_$(deb_version)_s390x.deb
+debs += telegraf_$(deb_version)_ppc64el.deb
 
 rpms += telegraf-$(rpm_version).aarch64.rpm
 rpms += telegraf-$(rpm_version).armel.rpm
 rpms += telegraf-$(rpm_version).armv6hl.rpm
 rpms += telegraf-$(rpm_version).i386.rpm
 rpms += telegraf-$(rpm_version).s390x.rpm
+rpms += telegraf-$(rpm_version).ppc64le.rpm
 rpms += telegraf-$(rpm_version).x86_64.rpm
 
 tars += telegraf-$(tar_version)_darwin_amd64.tar.gz
@@ -231,6 +241,7 @@ tars += telegraf-$(tar_version)_linux_i386.tar.gz
 tars += telegraf-$(tar_version)_linux_mips.tar.gz
 tars += telegraf-$(tar_version)_linux_mipsel.tar.gz
 tars += telegraf-$(tar_version)_linux_s390x.tar.gz
+tars += telegraf-$(tar_version)_linux_ppc64le.tar.gz
 tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
 
 zips += telegraf-$(tar_version)_windows_amd64.zip
@@ -244,6 +255,7 @@ package: $(dists)
 rpm_amd64 := amd64
 rpm_386 := i386
 rpm_s390x := s390x
+rpm_ppc64le := ppc64le
 rpm_arm5 := armel
 rpm_arm6 := armv6hl
 rpm_arm647 := aarch64
@@ -280,6 +292,7 @@ $(rpms):
 deb_amd64 := amd64
 deb_386 := i386
 deb_s390x := s390x
+deb_ppc64le := ppc64el
 deb_arm5 := armel
 deb_arm6 := armhf
 deb_arm647 := arm64
@@ -364,6 +377,9 @@ upload-nightly:
 
 %s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOOS := linux
 %s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOARCH := s390x
+
+%ppc64el.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOOS := linux
+%ppc64el.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOARCH := ppc64le
 
 %freebsd_amd64.tar.gz: export GOOS := freebsd
 %freebsd_amd64.tar.gz: export GOARCH := amd64
