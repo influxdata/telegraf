@@ -107,7 +107,6 @@ const sampleConfig = `
 
 const (
 	defaultMaxUndeliveredMessages = 1000
-	defaultMaxMessageLen          = 1000000
 	defaultConsumerGroup          = "telegraf_metrics_consumers"
 	reconnectDelay                = 5 * time.Second
 )

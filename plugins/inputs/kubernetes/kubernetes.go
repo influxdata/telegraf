@@ -65,7 +65,6 @@ var sampleConfig = `
 `
 
 const (
-	summaryEndpoint           = `%s/stats/summary`
 	defaultServiceAccountPath = "/run/secrets/kubernetes.io/serviceaccount/token"
 )
 

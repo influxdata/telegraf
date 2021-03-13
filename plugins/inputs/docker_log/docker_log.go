@@ -64,11 +64,6 @@ var sampleConfig = `
 
 const (
 	defaultEndpoint = "unix:///var/run/docker.sock"
-
-	// Maximum bytes of a log line before it will be split, size is mirroring
-	// docker code:
-	// https://github.com/moby/moby/blob/master/daemon/logger/copier.go#L21
-	maxLineBytes = 16 * 1024
 )
 
 var (

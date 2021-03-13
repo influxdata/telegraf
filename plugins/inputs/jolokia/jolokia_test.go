@@ -98,24 +98,7 @@ const validMultiValueJSON = `
   }
 ]`
 
-const validSingleValueJSON = `
-[
-  {
-    "request":{
-      "path":"used",
-      "mbean":"java.lang:type=Memory",
-      "attribute":"HeapMemoryUsage",
-      "type":"read"
-    },
-    "value":209274376,
-    "timestamp":1446129256,
-    "status":200
-  }
-]`
-
 const invalidJSON = "I don't think this is JSON"
-
-const empty = ""
 
 var Servers = []Server{{Name: "as1", Host: "127.0.0.1", Port: "8080"}}
 var HeapMetric = Metric{Name: "heap_memory_usage",

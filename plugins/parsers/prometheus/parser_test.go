@@ -24,9 +24,6 @@ cadvisor_version_info{cadvisorRevision="",cadvisorVersion="",dockerVersion="1.8.
 get_token_fail_count 0
 `
 
-	validUniqueLine = `# HELP get_token_fail_count Counter of failed Token() requests to the alternate token source
-`
-
 	validUniqueSummary = `# HELP http_request_duration_microseconds The HTTP request latencies in microseconds.
 # TYPE http_request_duration_microseconds summary
 http_request_duration_microseconds{handler="prometheus",quantile="0.5"} 552048.506

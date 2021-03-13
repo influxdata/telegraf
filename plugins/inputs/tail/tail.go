@@ -22,8 +22,7 @@ import (
 )
 
 const (
-	defaultWatchMethod         = "inotify"
-	defaultMaxUndeliveredLines = 1000
+	defaultWatchMethod = "inotify"
 )
 
 var (

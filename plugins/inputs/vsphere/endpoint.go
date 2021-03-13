@@ -31,8 +31,6 @@ var isIPv6 = regexp.MustCompile("^(?:[A-Fa-f0-9]{0,4}:){1,7}[A-Fa-f0-9]{1,4}$")
 
 const metricLookback = 3 // Number of time periods to look back at for non-realtime metrics
 
-const rtMetricLookback = 3 // Number of time periods to look back at for realtime metrics
-
 const maxSampleConst = 10 // Absolute maximum number of samples regardless of period
 
 const maxMetadataSamples = 100 // Number of resources to sample for metric metadata

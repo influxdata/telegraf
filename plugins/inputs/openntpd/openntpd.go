@@ -15,11 +15,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// Mapping of ntpctl header names to tag keys
-var tagHeaders = map[string]string{
-	"st": "stratum",
-}
-
 // Mapping of the ntpctl tag key to the index in the command output
 var tagI = map[string]int{
 	"stratum": 2,
