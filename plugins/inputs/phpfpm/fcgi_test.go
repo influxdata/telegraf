@@ -13,6 +13,8 @@ import (
 	"testing"
 )
 
+const requestID uint16 = 1
+
 var sizeTests = []struct {
 	size  uint32
 	bytes []byte
@@ -164,7 +166,6 @@ func nameValuePair11(nameData, valueData string) []byte {
 
 func makeRecord(
 	recordType recType,
-	requestID uint16, //nolint
 	contentData []byte,
 ) []byte {
 	requestIDB1 := byte(requestID >> 8)
@@ -185,14 +186,13 @@ func makeRecord(
 // request body
 var streamBeginTypeStdin = bytes.Join([][]byte{
 	// set up request 1
-	makeRecord(typeBeginRequest, 1,
-		[]byte{0, byte(roleResponder), 0, 0, 0, 0, 0, 0}),
+	makeRecord(typeBeginRequest, []byte{0, byte(roleResponder), 0, 0, 0, 0, 0, 0}),
 	// add required parameters to request 1
-	makeRecord(typeParams, 1, nameValuePair11("REQUEST_METHOD", "GET")),
-	makeRecord(typeParams, 1, nameValuePair11("SERVER_PROTOCOL", "HTTP/1.1")),
-	makeRecord(typeParams, 1, nil),
+	makeRecord(typeParams, nameValuePair11("REQUEST_METHOD", "GET")),
+	makeRecord(typeParams, nameValuePair11("SERVER_PROTOCOL", "HTTP/1.1")),
+	makeRecord(typeParams, nil),
 	// begin sending body of request 1
-	makeRecord(typeStdin, 1, []byte("0123456789abcdef")),
+	makeRecord(typeStdin, []byte("0123456789abcdef")),
 },
 	nil)
 
@@ -204,7 +204,7 @@ var cleanUpTests = []struct {
 	{
 		bytes.Join([][]byte{
 			streamBeginTypeStdin,
-			makeRecord(typeAbortRequest, 1, nil),
+			makeRecord(typeAbortRequest, nil),
 		},
 			nil),
 		ErrRequestAborted,

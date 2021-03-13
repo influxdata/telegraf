@@ -11,8 +11,10 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
-func createMetric(name string, value int64, when time.Time) telegraf.Metric { //nolint
-	m, _ := metric.New(name,
+const metricName = "m1"
+
+func createMetric(value int64, when time.Time) telegraf.Metric {
+	m, _ := metric.New(metricName,
 		map[string]string{"tag": "tag_value"},
 		map[string]interface{}{"value": value},
 		when,
@@ -70,7 +72,7 @@ func assertMetricPassed(t *testing.T, target []telegraf.Metric, source telegraf.
 	// target is not empty
 	require.NotEqual(t, 0, len(target))
 	// target has metric with proper name
-	require.Equal(t, "m1", target[0].Name())
+	require.Equal(t, metricName, target[0].Name())
 	// target metric has proper field
 	tValue, present := target[0].GetField("value")
 	require.True(t, present)
@@ -87,7 +89,7 @@ func assertMetricSuppressed(t *testing.T, target []telegraf.Metric) {
 
 func TestProcRetainsMetric(t *testing.T) {
 	deduplicate := createDedup(time.Now())
-	source := createMetric("m1", 1, time.Now())
+	source := createMetric(1, time.Now())
 	target := deduplicate.Apply(source)
 
 	assertCacheRefresh(t, &deduplicate, source)
@@ -97,9 +99,9 @@ func TestProcRetainsMetric(t *testing.T) {
 func TestSuppressRepeatedValue(t *testing.T) {
 	deduplicate := createDedup(time.Now())
 	// Create metric in the past
-	source := createMetric("m1", 1, time.Now().Add(-1*time.Second))
+	source := createMetric(1, time.Now().Add(-1*time.Second))
 	target := deduplicate.Apply(source)
-	source = createMetric("m1", 1, time.Now())
+	source = createMetric(1, time.Now())
 	target = deduplicate.Apply(source)
 
 	assertCacheHit(t, &deduplicate, source)
@@ -109,9 +111,9 @@ func TestSuppressRepeatedValue(t *testing.T) {
 func TestPassUpdatedValue(t *testing.T) {
 	deduplicate := createDedup(time.Now())
 	// Create metric in the past
-	source := createMetric("m1", 1, time.Now().Add(-1*time.Second))
+	source := createMetric(1, time.Now().Add(-1*time.Second))
 	target := deduplicate.Apply(source)
-	source = createMetric("m1", 2, time.Now())
+	source = createMetric(2, time.Now())
 	target = deduplicate.Apply(source)
 
 	assertCacheRefresh(t, &deduplicate, source)
@@ -121,9 +123,9 @@ func TestPassUpdatedValue(t *testing.T) {
 func TestPassAfterCacheExpire(t *testing.T) {
 	deduplicate := createDedup(time.Now())
 	// Create metric in the past
-	source := createMetric("m1", 1, time.Now().Add(-1*time.Hour))
+	source := createMetric(1, time.Now().Add(-1*time.Hour))
 	target := deduplicate.Apply(source)
-	source = createMetric("m1", 1, time.Now())
+	source = createMetric(1, time.Now())
 	target = deduplicate.Apply(source)
 
 	assertCacheRefresh(t, &deduplicate, source)
@@ -133,12 +135,12 @@ func TestPassAfterCacheExpire(t *testing.T) {
 func TestCacheRetainsMetrics(t *testing.T) {
 	deduplicate := createDedup(time.Now())
 	// Create metric in the past 3sec
-	source := createMetric("m1", 1, time.Now().Add(-3*time.Hour))
+	source := createMetric(1, time.Now().Add(-3*time.Hour))
 	deduplicate.Apply(source)
 	// Create metric in the past 2sec
-	source = createMetric("m1", 1, time.Now().Add(-2*time.Hour))
+	source = createMetric(1, time.Now().Add(-2*time.Hour))
 	deduplicate.Apply(source)
-	source = createMetric("m1", 1, time.Now())
+	source = createMetric(1, time.Now())
 	deduplicate.Apply(source)
 
 	assertCacheRefresh(t, &deduplicate, source)
@@ -148,7 +150,7 @@ func TestCacheShrink(t *testing.T) {
 	// Time offset is more than 2 * DedupInterval
 	deduplicate := createDedup(time.Now().Add(-2 * time.Hour))
 	// Time offset is more than 1 * DedupInterval
-	source := createMetric("m1", 1, time.Now().Add(-1*time.Hour))
+	source := createMetric(1, time.Now().Add(-1*time.Hour))
 	deduplicate.Apply(source)
 
 	require.Equal(t, 0, len(deduplicate.Cache))
