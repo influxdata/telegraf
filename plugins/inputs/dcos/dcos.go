@@ -66,7 +66,6 @@ type DCOS struct {
 	nodeFilter      filter.Filter
 	containerFilter filter.Filter
 	appFilter       filter.Filter
-	taskNameFilter  filter.Filter
 }
 
 func (d *DCOS) Description() string {

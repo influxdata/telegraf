@@ -296,11 +296,6 @@ func methodNotAllowed(res http.ResponseWriter) {
 	res.Write([]byte(`{"error":"http: method not allowed"}`))
 }
 
-func internalServerError(res http.ResponseWriter) {
-	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(http.StatusInternalServerError)
-}
-
 func badRequest(res http.ResponseWriter) {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusBadRequest)

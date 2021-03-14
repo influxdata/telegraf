@@ -93,13 +93,13 @@ func convertToInt64(line []string) []int64 {
 	return nline
 }
 
-func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, fullstat bool, acc telegraf.Accumulator) error {
+func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, fullstat bool, acc telegraf.Accumulator) {
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
 	nline := convertToInt64(line)
 
 	if len(nline) == 0 {
 		n.Log.Warnf("Parsing Stat line with one field: %s\n", line)
-		return nil
+		return
 	}
 
 	first := strings.Replace(line[0], ":", "", 1)
@@ -240,8 +240,6 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 			}
 		}
 	}
-
-	return nil
 }
 
 func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator) {

@@ -21,11 +21,6 @@ import (
 	"github.com/kubernetes/apimachinery/pkg/labels"
 )
 
-type payload struct {
-	eventype string
-	pod      *corev1.Pod
-}
-
 type podMetadata struct {
 	ResourceVersion string `json:"resourceVersion"`
 	SelfLink        string `json:"selfLink"`

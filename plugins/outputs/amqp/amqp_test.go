@@ -15,8 +15,6 @@ type MockClient struct {
 
 	PublishCallCount int
 	CloseCallCount   int
-
-	t *testing.T
 }
 
 func (c *MockClient) Publish(key string, body []byte) error {

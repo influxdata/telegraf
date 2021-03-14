@@ -1127,7 +1127,6 @@ func TestHostnameFromID(t *testing.T) {
 func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 	type args struct {
 		stat             *types.StatsJSON
-		acc              telegraf.Accumulator
 		tags             map[string]string
 		id               string
 		perDeviceInclude []string

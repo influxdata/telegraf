@@ -29,14 +29,6 @@ var next5 = []telegraf.Metric{
 	testutil.TestMetric(101, "metric10"),
 }
 
-func reverse(metrics []telegraf.Metric) []telegraf.Metric {
-	result := make([]telegraf.Metric, 0, len(metrics))
-	for i := len(metrics) - 1; i >= 0; i-- {
-		result = append(result, metrics[i])
-	}
-	return result
-}
-
 // Benchmark adding metrics.
 func BenchmarkRunningOutputAddWrite(b *testing.B) {
 	conf := &OutputConfig{

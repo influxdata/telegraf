@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"sync"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/signalfx/golib/v3/datapoint"
@@ -37,7 +35,6 @@ type SignalFx struct {
 
 	ctx    context.Context
 	cancel context.CancelFunc
-	wg     sync.WaitGroup
 }
 
 var sampleConfig = `

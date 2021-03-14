@@ -61,19 +61,19 @@ var fProcessorFilters = flag.String("processor-filter", "",
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 
-//nolint:varcheck // False positive - this var is used for non-default build tag: windows
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
 var fService = flag.String("service", "",
 	"operate on the service (windows only)")
 
-//nolint:varcheck // False positive - this var is used for non-default build tag: windows
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
 var fServiceName = flag.String("service-name", "telegraf",
 	"service name (windows only)")
 
-//nolint:varcheck // False positive - this var is used for non-default build tag: windows
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
 var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service",
 	"service display name (windows only)")
 
-//nolint:varcheck // False positive - this var is used for non-default build tag: windows
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
 var fRunAsConsole = flag.Bool("console", false,
 	"run as console application (windows only)")
 var fPlugins = flag.String("plugin-directory", "",

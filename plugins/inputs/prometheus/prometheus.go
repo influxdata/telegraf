@@ -74,7 +74,6 @@ type Prometheus struct {
 	// Only for monitor_kubernetes_pods=true and pod_scrape_scope="node"
 	podLabelSelector  labels.Selector
 	podFieldSelector  fields.Selector
-	nodeIP            string
 	isNodeScrapeScope bool
 }
 

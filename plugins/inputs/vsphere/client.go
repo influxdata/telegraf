@@ -49,7 +49,7 @@ type Client struct {
 }
 
 // NewClientFactory creates a new ClientFactory and prepares it for use.
-func NewClientFactory(ctx context.Context, url *url.URL, parent *VSphere) *ClientFactory {
+func NewClientFactory(url *url.URL, parent *VSphere) *ClientFactory {
 	return &ClientFactory{
 		client: nil,
 		parent: parent,

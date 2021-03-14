@@ -28,8 +28,7 @@ type Unbound struct {
 	ThreadAsTag bool              `toml:"thread_as_tag"`
 	ConfigFile  string            `toml:"config_file"`
 
-	filter filter.Filter
-	run    runner
+	run runner
 }
 
 var defaultBinary = "/usr/sbin/unbound-control"

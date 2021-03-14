@@ -71,12 +71,6 @@ func builtinAttrNames(methods map[string]builtinMethod) []string {
 	return names
 }
 
-// nameErr returns an error message of the form "name: msg"
-// where name is b.Name() and msg is a string or error.
-func nameErr(b *starlark.Builtin, msg interface{}) error {
-	return fmt.Errorf("%s: %v", b.Name(), msg)
-}
-
 // --- dictionary methods ---
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·clear

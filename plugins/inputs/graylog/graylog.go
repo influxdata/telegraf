@@ -19,7 +19,6 @@ import (
 )
 
 type ResponseMetrics struct {
-	total   int
 	Metrics []Metric `json:"metrics"`
 }
 

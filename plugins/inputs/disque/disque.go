@@ -18,8 +18,7 @@ import (
 type Disque struct {
 	Servers []string
 
-	c   net.Conn
-	buf []byte
+	c net.Conn
 }
 
 var sampleConfig = `

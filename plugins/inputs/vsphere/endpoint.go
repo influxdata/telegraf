@@ -124,7 +124,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL, log telegra
 		hwMarks:           NewTSCache(hwMarkTTL),
 		lun2ds:            make(map[string]string),
 		initialized:       false,
-		clientFactory:     NewClientFactory(ctx, url, parent),
+		clientFactory:     NewClientFactory(url, parent),
 		customAttrFilter:  newFilterOrPanic(parent.CustomAttributeInclude, parent.CustomAttributeExclude),
 		customAttrEnabled: anythingEnabled(parent.CustomAttributeExclude),
 		log:               log,

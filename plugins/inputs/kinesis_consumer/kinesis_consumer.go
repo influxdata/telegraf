@@ -44,7 +44,6 @@ type (
 		cons   *consumer.Consumer
 		parser parsers.Parser
 		cancel context.CancelFunc
-		ctx    context.Context
 		acc    telegraf.TrackingAccumulator
 		sem    chan struct{}
 

@@ -92,11 +92,10 @@ type AuthToken struct {
 
 // ClusterClient is a Client that uses the cluster URL.
 type ClusterClient struct {
-	clusterURL  *url.URL
-	httpClient  *http.Client
-	credentials *Credentials
-	token       string
-	semaphore   chan struct{}
+	clusterURL *url.URL
+	httpClient *http.Client
+	token      string
+	semaphore  chan struct{}
 }
 
 type claims struct {

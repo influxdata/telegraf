@@ -72,7 +72,7 @@ type header struct {
 type beginRequest struct {
 	role     uint16
 	flags    uint8
-	reserved [5]uint8
+	reserved [5]uint8 //nolint:unused // Memory reservation
 }
 
 func (br *beginRequest) read(content []byte) error {

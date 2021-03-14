@@ -68,68 +68,47 @@ func (ns *Nstat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// collect netstat data
-	err = ns.gatherNetstat(netstat, acc)
-	if err != nil {
-		return err
-	}
+	ns.gatherNetstat(netstat, acc)
 
 	// collect SNMP data
 	snmp, err := ioutil.ReadFile(ns.ProcNetSNMP)
 	if err != nil {
 		return err
 	}
-	err = ns.gatherSNMP(snmp, acc)
-	if err != nil {
-		return err
-	}
+	ns.gatherSNMP(snmp, acc)
 
 	// collect SNMP6 data, if SNMP6 directory exists (IPv6 enabled)
 	snmp6, err := ioutil.ReadFile(ns.ProcNetSNMP6)
 	if err == nil {
-		err = ns.gatherSNMP6(snmp6, acc)
-		if err != nil {
-			return err
-		}
+		ns.gatherSNMP6(snmp6, acc)
 	} else if !os.IsNotExist(err) {
 		return err
 	}
 	return nil
 }
 
-func (ns *Nstat) gatherNetstat(data []byte, acc telegraf.Accumulator) error {
-	metrics, err := loadUglyTable(data, ns.DumpZeros)
-	if err != nil {
-		return err
-	}
+func (ns *Nstat) gatherNetstat(data []byte, acc telegraf.Accumulator) {
+	metrics := loadUglyTable(data, ns.DumpZeros)
 	tags := map[string]string{
 		"name": "netstat",
 	}
 	acc.AddFields("nstat", metrics, tags)
-	return nil
 }
 
-func (ns *Nstat) gatherSNMP(data []byte, acc telegraf.Accumulator) error {
-	metrics, err := loadUglyTable(data, ns.DumpZeros)
-	if err != nil {
-		return err
-	}
+func (ns *Nstat) gatherSNMP(data []byte, acc telegraf.Accumulator) {
+	metrics := loadUglyTable(data, ns.DumpZeros)
 	tags := map[string]string{
 		"name": "snmp",
 	}
 	acc.AddFields("nstat", metrics, tags)
-	return nil
 }
 
-func (ns *Nstat) gatherSNMP6(data []byte, acc telegraf.Accumulator) error {
-	metrics, err := loadGoodTable(data, ns.DumpZeros)
-	if err != nil {
-		return err
-	}
+func (ns *Nstat) gatherSNMP6(data []byte, acc telegraf.Accumulator) {
+	metrics := loadGoodTable(data, ns.DumpZeros)
 	tags := map[string]string{
 		"name": "snmp6",
 	}
 	acc.AddFields("nstat", metrics, tags)
-	return nil
 }
 
 // loadPaths can be used to read paths firstly from config
@@ -148,7 +127,7 @@ func (ns *Nstat) loadPaths() {
 
 // loadGoodTable can be used to parse string heap that
 // headers and values are arranged in right order
-func loadGoodTable(table []byte, dumpZeros bool) (map[string]interface{}, error) {
+func loadGoodTable(table []byte, dumpZeros bool) map[string]interface{} {
 	entries := map[string]interface{}{}
 	fields := bytes.Fields(table)
 	var value int64
@@ -171,12 +150,12 @@ func loadGoodTable(table []byte, dumpZeros bool) (map[string]interface{}, error)
 			entries[string(fields[i])] = value
 		}
 	}
-	return entries, nil
+	return entries
 }
 
 // loadUglyTable can be used to parse string heap that
 // the headers and values are splitted with a newline
-func loadUglyTable(table []byte, dumpZeros bool) (map[string]interface{}, error) {
+func loadUglyTable(table []byte, dumpZeros bool) map[string]interface{} {
 	entries := map[string]interface{}{}
 	// split the lines by newline
 	lines := bytes.Split(table, newLineByte)
@@ -210,7 +189,7 @@ func loadUglyTable(table []byte, dumpZeros bool) (map[string]interface{}, error)
 			}
 		}
 	}
-	return entries, nil
+	return entries
 }
 
 // proc can be used to read file paths from env

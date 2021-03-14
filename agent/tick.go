@@ -9,8 +9,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-type empty struct{}
-
 type Ticker interface {
 	Elapsed() <-chan time.Time
 	Stop()

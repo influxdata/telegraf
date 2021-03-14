@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -114,15 +113,6 @@ func (k *Kubernetes) Init() error {
 func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
 	acc.AddError(k.gatherSummary(k.URL, acc))
 	return nil
-}
-
-func buildURL(endpoint string, base string) (*url.URL, error) {
-	u := fmt.Sprintf(endpoint, base)
-	addr, err := url.Parse(u)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to parse address '%s': %s", u, err)
-	}
-	return addr, nil
 }
 
 func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) error {
