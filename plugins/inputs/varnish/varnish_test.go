@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
-func fakeVarnishStat(output string, _ bool, _ string, _ internal.Duration) func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
+func fakeVarnishStat(output string) func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
 	return func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
@@ -23,7 +23,7 @@ func fakeVarnishStat(output string, _ bool, _ string, _ internal.Duration) func(
 func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(smOutput, false, "", internal.Duration{Duration: time.Second}),
+		run:   fakeVarnishStat(smOutput),
 		Stats: []string{"*"},
 	}
 	v.Gather(acc)
@@ -39,7 +39,7 @@ func TestGather(t *testing.T) {
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput, true, "", internal.Duration{Duration: time.Second}),
+		run:   fakeVarnishStat(fullOutput),
 		Stats: []string{"*"},
 	}
 	err := v.Gather(acc)
@@ -54,7 +54,7 @@ func TestParseFullOutput(t *testing.T) {
 func TestFilterSomeStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput, false, "", internal.Duration{Duration: time.Second}),
+		run:   fakeVarnishStat(fullOutput),
 		Stats: []string{"MGT.*", "VBE.*"},
 	}
 	err := v.Gather(acc)
@@ -77,7 +77,7 @@ func TestFieldConfig(t *testing.T) {
 	for fieldCfg, expected := range expect {
 		acc := &testutil.Accumulator{}
 		v := &Varnish{
-			run:   fakeVarnishStat(fullOutput, true, "", internal.Duration{Duration: time.Second}),
+			run:   fakeVarnishStat(fullOutput),
 			Stats: strings.Split(fieldCfg, ","),
 		}
 		err := v.Gather(acc)

@@ -88,7 +88,7 @@ func (ns *Nstat) Gather(acc telegraf.Accumulator) error {
 }
 
 func (ns *Nstat) gatherNetstat(data []byte, acc telegraf.Accumulator) {
-	metrics := loadUglyTable(data, ns.DumpZeros)
+	metrics := ns.loadUglyTable(data)
 	tags := map[string]string{
 		"name": "netstat",
 	}
@@ -96,7 +96,7 @@ func (ns *Nstat) gatherNetstat(data []byte, acc telegraf.Accumulator) {
 }
 
 func (ns *Nstat) gatherSNMP(data []byte, acc telegraf.Accumulator) {
-	metrics := loadUglyTable(data, ns.DumpZeros)
+	metrics := ns.loadUglyTable(data)
 	tags := map[string]string{
 		"name": "snmp",
 	}
@@ -104,7 +104,7 @@ func (ns *Nstat) gatherSNMP(data []byte, acc telegraf.Accumulator) {
 }
 
 func (ns *Nstat) gatherSNMP6(data []byte, acc telegraf.Accumulator) {
-	metrics := loadGoodTable(data, ns.DumpZeros)
+	metrics := ns.loadGoodTable(data)
 	tags := map[string]string{
 		"name": "snmp6",
 	}
@@ -127,7 +127,7 @@ func (ns *Nstat) loadPaths() {
 
 // loadGoodTable can be used to parse string heap that
 // headers and values are arranged in right order
-func loadGoodTable(table []byte, dumpZeros bool) map[string]interface{} {
+func (ns *Nstat) loadGoodTable(table []byte) map[string]interface{} {
 	entries := map[string]interface{}{}
 	fields := bytes.Fields(table)
 	var value int64
@@ -137,7 +137,7 @@ func loadGoodTable(table []byte, dumpZeros bool) map[string]interface{} {
 	for i := 0; i < len(fields); i = i + 2 {
 		// counter is zero
 		if bytes.Equal(fields[i+1], zeroByte) {
-			if !dumpZeros {
+			if !ns.DumpZeros {
 				continue
 			} else {
 				entries[string(fields[i])] = int64(0)
@@ -155,7 +155,7 @@ func loadGoodTable(table []byte, dumpZeros bool) map[string]interface{} {
 
 // loadUglyTable can be used to parse string heap that
 // the headers and values are splitted with a newline
-func loadUglyTable(table []byte, dumpZeros bool) map[string]interface{} {
+func (ns *Nstat) loadUglyTable(table []byte) map[string]interface{} {
 	entries := map[string]interface{}{}
 	// split the lines by newline
 	lines := bytes.Split(table, newLineByte)
@@ -175,7 +175,7 @@ func loadUglyTable(table []byte, dumpZeros bool) map[string]interface{} {
 		for j := 1; j < len(headers); j++ {
 			// counter is zero
 			if bytes.Equal(metrics[j], zeroByte) {
-				if !dumpZeros {
+				if !ns.DumpZeros {
 					continue
 				} else {
 					entries[string(append(prefix, headers[j]...))] = int64(0)

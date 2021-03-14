@@ -93,7 +93,7 @@ func convertToInt64(line []string) []int64 {
 	return nline
 }
 
-func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, fullstat bool, acc telegraf.Accumulator) {
+func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, acc telegraf.Accumulator) {
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
 	nline := convertToInt64(line)
 
@@ -191,7 +191,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 		acc.AddFields("nfsstat", fields, tags)
 	}
 
-	if fullstat {
+	if n.Fullstat {
 		switch first {
 		case "events":
 			if len(nline) >= len(eventsFields) {
@@ -293,7 +293,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 		}
 
 		if !skip {
-			n.parseStat(mount, export, version, line, n.Fullstat, acc)
+			n.parseStat(mount, export, version, line, acc)
 		}
 	}
 }

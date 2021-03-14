@@ -121,5 +121,8 @@ issues:
       linters:
         - govet
 
+    - path: _test\.go
+      text: "parameter.*seems to be a control flag, avoid control coupling"
+
 output:
   format: tab
