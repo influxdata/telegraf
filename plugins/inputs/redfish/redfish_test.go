@@ -15,9 +15,7 @@ import (
 )
 
 func TestDellApis(t *testing.T) {
-
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if !checkAuth(r, "test", "test") {
 			http.Error(w, "Unauthorized.", 401)
 			return
@@ -44,7 +42,7 @@ func TestDellApis(t *testing.T) {
 	address, _, err := net.SplitHostPort(u.Host)
 	require.NoError(t, err)
 
-	expected_metrics := []telegraf.Metric{
+	expectedMetrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"redfish_thermal_temperatures",
 			map[string]string{
@@ -489,7 +487,7 @@ func TestDellApis(t *testing.T) {
 		Address:          ts.URL,
 		Username:         "test",
 		Password:         "test",
-		ComputerSystemId: "System.Embedded.1",
+		ComputerSystemID: "System.Embedded.1",
 	}
 	plugin.Init()
 	var acc testutil.Accumulator
@@ -497,14 +495,12 @@ func TestDellApis(t *testing.T) {
 	err = plugin.Gather(&acc)
 	require.NoError(t, err)
 	require.True(t, acc.HasMeasurement("redfish_thermal_temperatures"))
-	testutil.RequireMetricsEqual(t, expected_metrics, acc.GetTelegrafMetrics(),
+	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
 }
 
 func TestHPApis(t *testing.T) {
-
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if !checkAuth(r, "test", "test") {
 			http.Error(w, "Unauthorized.", 401)
 			return
@@ -531,7 +527,7 @@ func TestHPApis(t *testing.T) {
 	address, _, err := net.SplitHostPort(u.Host)
 	require.NoError(t, err)
 
-	expected_metrics_hp := []telegraf.Metric{
+	expectedMetricsHp := []telegraf.Metric{
 		testutil.MustMetric(
 			"redfish_thermal_temperatures",
 			map[string]string{
@@ -647,19 +643,19 @@ func TestHPApis(t *testing.T) {
 		),
 	}
 
-	hp_plugin := &Redfish{
+	hpPlugin := &Redfish{
 		Address:          ts.URL,
 		Username:         "test",
 		Password:         "test",
-		ComputerSystemId: "1",
+		ComputerSystemID: "1",
 	}
-	hp_plugin.Init()
-	var hp_acc testutil.Accumulator
+	hpPlugin.Init()
+	var hpAcc testutil.Accumulator
 
-	err = hp_plugin.Gather(&hp_acc)
+	err = hpPlugin.Gather(&hpAcc)
 	require.NoError(t, err)
-	require.True(t, hp_acc.HasMeasurement("redfish_thermal_temperatures"))
-	testutil.RequireMetricsEqual(t, expected_metrics_hp, hp_acc.GetTelegrafMetrics(),
+	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
+	testutil.RequireMetricsEqual(t, expectedMetricsHp, hpAcc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
 }
 
@@ -672,9 +668,7 @@ func checkAuth(r *http.Request, username, password string) bool {
 }
 
 func TestInvalidUsernameorPassword(t *testing.T) {
-
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if !checkAuth(r, "testing", "testing") {
 			http.Error(w, "Unauthorized.", 401)
 			return
@@ -693,7 +687,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 		Address:          ts.URL,
 		Username:         "test",
 		Password:         "test",
-		ComputerSystemId: "System.Embedded.1",
+		ComputerSystemID: "System.Embedded.1",
 	}
 
 	var acc testutil.Accumulator
@@ -704,9 +698,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 	require.EqualError(t, err, "received status code 401 (Unauthorized) for address http://"+u.Host+", expected 200")
 }
 func TestNoUsernameorPasswordConfiguration(t *testing.T) {
-
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if !checkAuth(r, "testing", "testing") {
 			http.Error(w, "Unauthorized.", 401)
 			return
@@ -723,7 +715,7 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 
 	r := &Redfish{
 		Address:          ts.URL,
-		ComputerSystemId: "System.Embedded.1",
+		ComputerSystemID: "System.Embedded.1",
 	}
 
 	err := r.Init()
@@ -732,7 +724,6 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 }
 
 func TestInvalidDellJSON(t *testing.T) {
-
 	tests := []struct {
 		name             string
 		thermalfilename  string
@@ -771,7 +762,6 @@ func TestInvalidDellJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 			if !checkAuth(r, "test", "test") {
 				http.Error(w, "Unauthorized.", 401)
 				return
@@ -796,7 +786,7 @@ func TestInvalidDellJSON(t *testing.T) {
 			Address:          ts.URL,
 			Username:         "test",
 			Password:         "test",
-			ComputerSystemId: "System.Embedded.1",
+			ComputerSystemID: "System.Embedded.1",
 		}
 
 		plugin.Init()
@@ -809,7 +799,6 @@ func TestInvalidDellJSON(t *testing.T) {
 }
 
 func TestInvalidHPJSON(t *testing.T) {
-
 	tests := []struct {
 		name             string
 		thermalfilename  string
@@ -842,7 +831,6 @@ func TestInvalidHPJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 				if !checkAuth(r, "test", "test") {
 					http.Error(w, "Unauthorized.", 401)
 					return
@@ -867,7 +855,7 @@ func TestInvalidHPJSON(t *testing.T) {
 				Address:          ts.URL,
 				Username:         "test",
 				Password:         "test",
-				ComputerSystemId: "System.Embedded.2",
+				ComputerSystemID: "System.Embedded.2",
 			}
 
 			plugin.Init()

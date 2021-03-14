@@ -229,7 +229,6 @@ func (m *Monit) Init() error {
 }
 
 func (m *Monit) Gather(acc telegraf.Accumulator) error {
-
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/_status?format=xml", m.Address), nil)
 	if err != nil {
 		return err
@@ -245,7 +244,6 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 200 {
-
 		var status Status
 		decoder := xml.NewDecoder(resp.Body)
 		decoder.CharsetReader = charset.NewReaderLabel
@@ -345,10 +343,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("received status code %d (%s), expected 200",
-			resp.StatusCode,
-			http.StatusText(resp.StatusCode))
-
+		return fmt.Errorf("received status code %d (%s), expected 200", resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 	return nil
 }

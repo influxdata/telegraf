@@ -846,7 +846,6 @@ func TestGatherJobs(t *testing.T) {
 						}
 					}
 				}
-
 			}
 		})
 	}

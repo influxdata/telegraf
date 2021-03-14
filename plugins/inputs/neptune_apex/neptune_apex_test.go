@@ -51,7 +51,6 @@ func TestGather(t *testing.T) {
 				t.Errorf("Number of servers mismatch. got=%d, want=%d",
 					len(acc.Errors), len(test.servers))
 			}
-
 		})
 	}
 }

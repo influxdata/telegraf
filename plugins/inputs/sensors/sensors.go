@@ -41,7 +41,6 @@ func (*Sensors) SampleConfig() string {
   ## Timeout is the maximum amount of time that the sensors command can run.
   # timeout = "5s"
 `
-
 }
 
 func (s *Sensors) Gather(acc telegraf.Accumulator) error {

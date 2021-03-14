@@ -76,7 +76,6 @@ func TestMarklogic(t *testing.T) {
 	}
 
 	acc.AssertContainsTaggedFields(t, "marklogic", expectFields, expectTags)
-
 }
 
 var response = `

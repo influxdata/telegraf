@@ -111,14 +111,12 @@ var (
 )
 
 func Test_parse(t *testing.T) {
-
 	t.Log("Testing parser function")
 	_, err := parse([]byte(sampleJSON))
 
 	if err != nil {
 		t.Error(err)
 	}
-
 }
 
 func Test_Gather(t *testing.T) {
@@ -159,5 +157,4 @@ func Test_Gather(t *testing.T) {
 	assert.Equal(t, *expectedOutput[1].RetryCount, acc.Metrics[1].Fields["retry_count"])
 	assert.Equal(t, *expectedOutput[1].BufferQueueLength, acc.Metrics[1].Fields["buffer_queue_length"])
 	assert.Equal(t, *expectedOutput[1].BufferTotalQueuedSize, acc.Metrics[1].Fields["buffer_total_queued_size"])
-
 }

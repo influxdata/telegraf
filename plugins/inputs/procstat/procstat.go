@@ -111,7 +111,6 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 			p.PidFinder = "pgrep"
 			p.createPIDFinder = defaultPIDFinder
 		}
-
 	}
 	if p.createProcess == nil {
 		p.createProcess = defaultProcess
@@ -311,6 +310,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 		}
 	}
 
+	ppid, err := proc.Ppid()
+	if err == nil {
+		fields[prefix+"ppid"] = ppid
+	}
+
 	acc.AddFields("procstat", fields, proc.Tags(), t)
 }
 
@@ -388,7 +392,7 @@ func (p *Procstat) findPids() ([]PID, map[string]string, error) {
 		pids, err = f.FullPattern(p.Pattern)
 		tags = map[string]string{"pattern": p.Pattern}
 	} else if p.User != "" {
-		pids, err = f.Uid(p.User)
+		pids, err = f.UID(p.User)
 		tags = map[string]string{"user": p.User}
 	} else if p.SystemdUnit != "" {
 		pids, err = p.systemdUnitPIDs()

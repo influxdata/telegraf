@@ -107,7 +107,7 @@ func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
 }
 
 func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegraf.Accumulator) error {
-	var zookeeper_state string
+	var zookeeperState string
 	_, _, err := net.SplitHostPort(address)
 	if err != nil {
 		address = address + ":2181"
@@ -145,7 +145,7 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 
 		measurement := strings.TrimPrefix(parts[1], "zk_")
 		if measurement == "server_state" {
-			zookeeper_state = parts[2]
+			zookeeperState = parts[2]
 		} else {
 			sValue := string(parts[2])
 
@@ -166,7 +166,7 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 	tags := map[string]string{
 		"server": srv,
 		"port":   service[1],
-		"state":  zookeeper_state,
+		"state":  zookeeperState,
 	}
 	acc.AddFields("zookeeper", fields, tags)
 

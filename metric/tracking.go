@@ -117,7 +117,6 @@ func newTrackingMetricGroup(group []telegraf.Metric, fn NotifyFunc) ([]telegraf.
 			d:      d,
 		}
 		group[i] = dm
-
 	}
 	if finalizer != nil {
 		runtime.SetFinalizer(d, finalizer)

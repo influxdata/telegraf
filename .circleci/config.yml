@@ -3,21 +3,21 @@ orbs:
   win: circleci/windows@2.4.0  
 
 executors:
-  go-1_14:
-    working_directory: '/go/src/github.com/influxdata/telegraf'
-    docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.14.9'
-    environment:
-      GOFLAGS: -p=8
   go-1_15:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
       - image: 'quay.io/influxdb/telegraf-ci:1.15.8'
     environment:
       GOFLAGS: -p=8
+  go-1_16:
+    working_directory: '/go/src/github.com/influxdata/telegraf'
+    docker:
+      - image: 'quay.io/influxdb/telegraf-ci:1.16.1'
+    environment:
+      GOFLAGS: -p=8
   mac:
     macos:
-      xcode: 12.1.0
+      xcode: 12.4.0
     working_directory: '~/go/src/github.com/influxdata/telegraf'
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
@@ -71,16 +71,8 @@ commands:
           paths:
             - 'dist'
 jobs:
-  linter:
-    executor: go-1_15
-    steps:
-      - checkout
-      - restore_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
-      - run: wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.37.0
-      - run: make lint
   deps:
-    executor: go-1_15
+    executor: go-1_16
     steps:
       - checkout
       - restore_cache:
@@ -101,13 +93,14 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: mac-go-mod-v2-{{ checksum "go.sum" }}
-      - run: 'brew install go' # latest
+          key: mac-go-mod-v3-{{ checksum "go.sum" }}
+      - run: 'brew update'
+      - run: 'brew install go@1.16'
       - run: 'make deps'
       - run: 'make tidy'
       - save_cache:
           name: 'go module cache'
-          key: mac-go-mod-v2-{{ checksum "go.sum" }}
+          key: mac-go-mod-v3-{{ checksum "go.sum" }}
           paths:
             - '~/go/pkg/mod'
             - '/usr/local/Cellar/go'
@@ -120,21 +113,21 @@ jobs:
             - 'usr/local/Cellar/go'
             - 'usr/local/bin/gofmt'
             - 'Users/distiller/go'
-  test-go-1_14:
-    executor: go-1_14
-    steps:
-      - test-go
-  test-go-1_14-386:
-    executor: go-1_14
-    steps:
-      - test-go:
-          goarch: "386"
   test-go-1_15:
     executor: go-1_15
     steps:
       - test-go
   test-go-1_15-386:
     executor: go-1_15
+    steps:
+      - test-go:
+          goarch: "386"
+  test-go-1_16:
+    executor: go-1_16
+    steps:
+      - test-go
+  test-go-1_16-386:
+    executor: go-1_16
     steps:
       - test-go:
           goarch: "386"
@@ -154,15 +147,15 @@ jobs:
       - run: make test-windows
 
   package:
-    executor: go-1_15
+    executor: go-1_16
     steps:
       - package
   release:
-    executor: go-1_15
+    executor: go-1_16
     steps:
       - package
   nightly:
-    executor: go-1_15
+    executor: go-1_16
     steps:
       - package:
           nightly: true
@@ -179,31 +172,40 @@ jobs:
           shell: powershell.exe
           command: |
             ./scripts/windows-signing.ps1
+      - persist_to_workspace:
+          root: './build'
+          paths:
+            - 'dist'
       - store_artifacts:
           path: './build/dist'
+          destination: 'build/dist'
+  package-sign-mac:
+    macos:
+      xcode: "11.3"
+    working_directory: /Users/distiller/project
+    environment:
+      FL_OUTPUT_DIR: output
+      FASTLANE_LANE: test
+    shell: /bin/bash --login -o pipefail
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '.'
+      - run:
+          command: |
+            sh ./scripts/mac-signing.sh
+      - store_artifacts:
+          path: './dist'
           destination: 'build/dist'
 workflows:
   version: 2
   check:
     jobs:
-      - 'linter'
       - 'macdeps':
           filters:
             tags:
               only: /.*/
       - 'deps':
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_14':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_14-386':
-          requires:
-            - 'deps'
           filters:
             tags:
               only: /.*/
@@ -214,6 +216,18 @@ workflows:
             tags:
               only: /.*/
       - 'test-go-1_15-386':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_16':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_16-386':
           requires:
             - 'deps'
           filters:
@@ -233,18 +247,18 @@ workflows:
           requires:
             - 'test-go-windows'
             - 'test-go-darwin'
-            - 'test-go-1_14'
-            - 'test-go-1_14-386'
             - 'test-go-1_15'
             - 'test-go-1_15-386'
+            - 'test-go-1_16'
+            - 'test-go-1_16-386'
       - 'release':
           requires:
             - 'test-go-windows'
             - 'test-go-darwin'
-            - 'test-go-1_14'
-            - 'test-go-1_14-386'
             - 'test-go-1_15'
             - 'test-go-1_15-386'
+            - 'test-go-1_16'
+            - 'test-go-1_16-386'
           filters:
             tags:
               only: /.*/
@@ -253,21 +267,29 @@ workflows:
       - 'package-sign-windows':
           requires:
             - 'release'
+          filters:
+              tags:
+                only: /.*/
+      - 'package-sign-mac':
+           requires:
+             - 'package-sign-windows' 
+           filters:
+              tags:
+                only: /.*/
   nightly:
     jobs:
-      - 'linter'
       - 'deps'
       - 'macdeps'
-      - 'test-go-1_14':
-          requires:
-            - 'deps'
-      - 'test-go-1_14-386':
-          requires:
-            - 'deps'
       - 'test-go-1_15':
           requires:
             - 'deps'
       - 'test-go-1_15-386':
+          requires:
+            - 'deps'
+      - 'test-go-1_16':
+          requires:
+            - 'deps'
+      - 'test-go-1_16-386':
           requires:
             - 'deps'
       - 'test-go-darwin':
@@ -278,10 +300,10 @@ workflows:
           requires:
             - 'test-go-windows'
             - 'test-go-darwin'
-            - 'test-go-1_14'
-            - 'test-go-1_14-386'
             - 'test-go-1_15'
             - 'test-go-1_15-386'
+            - 'test-go-1_16'
+            - 'test-go-1_16-386'
     triggers:
       - schedule:
           cron: "0 7 * * *"

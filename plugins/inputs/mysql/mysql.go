@@ -1439,7 +1439,6 @@ func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, serv string, acc
 			"sum_no_good_index_used":      sumNoGoodIndexUsed,
 		}
 		acc.AddFields("mysql_perf_acc_event", sqlLWFields, sqlLWTags)
-
 	}
 
 	return nil
@@ -1662,8 +1661,8 @@ func (m *Mysql) gatherPerfFileEventsStatuses(db *sql.DB, serv string, acc telegr
 		fields["file_events_seconds_total"] = sumTimerWrite / picoSeconds
 		fields["file_events_bytes_totals"] = sumNumBytesWrite
 		acc.AddFields("mysql_perf_schema", fields, writeTags)
-
 	}
+
 	return nil
 }
 
