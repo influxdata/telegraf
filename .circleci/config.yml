@@ -94,14 +94,7 @@ jobs:
       - checkout
       - restore_cache:
           key: mac-go-mod-v3-{{ checksum "go.sum" }}
-      - run:
-          command: |
-            if brew ls --versions go > /dev/null; then
-              echo "Go is already installed"
-            else
-              brew update
-              brew install go@1.16
-            fi
+      - run: 'sh ./scripts/mac_installgo.sh'
       - run: 'make deps'
       - run: 'make tidy'
       - save_cache:
