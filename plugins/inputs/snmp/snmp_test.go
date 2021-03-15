@@ -507,7 +507,10 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 			}
 			reqCount++
 
-			srvr.WriteTo([]byte{'X'}, addr) // will cause decoding error
+			// will cause decoding error
+			if _, err := srvr.WriteTo([]byte{'X'}, addr); err != nil {
+				return
+			}
 		}
 	}()
 
@@ -527,7 +530,7 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 		GoSNMP: gs,
 	}
 	err = gsw.Walk(".1.0.0", func(_ gosnmp.SnmpPDU) error { return nil })
-	srvr.Close()
+	assert.NoError(t, srvr.Close())
 	wg.Wait()
 	assert.Error(t, err)
 	assert.False(t, gs.Conn == conn)
@@ -557,7 +560,10 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 			}
 			reqCount++
 
-			srvr.WriteTo([]byte{'X'}, addr) // will cause decoding error
+			// will cause decoding error
+			if _, err := srvr.WriteTo([]byte{'X'}, addr); err != nil {
+				return
+			}
 		}
 	}()
 
@@ -577,7 +583,7 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 		GoSNMP: gs,
 	}
 	_, err = gsw.Get([]string{".1.0.0"})
-	srvr.Close()
+	require.NoError(t, srvr.Close())
 	wg.Wait()
 	assert.Error(t, err)
 	assert.False(t, gs.Conn == conn)
@@ -760,7 +766,7 @@ func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	tstart := time.Now()
-	s.Gather(acc)
+	require.NoError(t, s.Gather(acc))
 	tstop := time.Now()
 
 	require.Len(t, acc.Metrics, 2)
@@ -807,7 +813,7 @@ func TestGather_host(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 
-	s.Gather(acc)
+	require.NoError(t, s.Gather(acc))
 
 	require.Len(t, acc.Metrics, 1)
 	m := acc.Metrics[0]

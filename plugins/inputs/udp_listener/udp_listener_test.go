@@ -93,7 +93,8 @@ func TestConnectUDP(t *testing.T) {
 	require.NoError(t, err)
 
 	// send single message to socket
-	fmt.Fprintf(conn, testMsg)
+	_, err = fmt.Fprintf(conn, testMsg)
+	require.NoError(t, err)
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
@@ -101,7 +102,8 @@ func TestConnectUDP(t *testing.T) {
 	)
 
 	// send multiple messages to socket
-	fmt.Fprintf(conn, testMsgs)
+	_, err = fmt.Fprintf(conn, testMsgs)
+	require.NoError(t, err)
 	acc.Wait(6)
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
@@ -127,7 +129,7 @@ func TestRunParser(t *testing.T) {
 	go listener.udpParser()
 
 	in <- testmsg
-	listener.Gather(&acc)
+	require.NoError(t, listener.Gather(&acc))
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
@@ -176,7 +178,7 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 	go listener.udpParser()
 
 	in <- testmsg
-	listener.Gather(&acc)
+	require.NoError(t, listener.Gather(&acc))
 
 	acc.Wait(1)
 	acc.AssertContainsFields(t, "cpu_load_graphite",
@@ -200,7 +202,7 @@ func TestRunParserJSONMsg(t *testing.T) {
 	go listener.udpParser()
 
 	in <- testmsg
-	listener.Gather(&acc)
+	require.NoError(t, listener.Gather(&acc))
 
 	acc.Wait(1)
 	acc.AssertContainsFields(t, "udp_json_test",

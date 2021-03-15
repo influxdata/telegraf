@@ -60,7 +60,7 @@ func TestTailBadLine(t *testing.T) {
 	_, err = tmpfile.WriteString("cpu usage_idle=100\n")
 	require.NoError(t, err)
 
-	tmpfile.Close()
+	require.NoError(t, tmpfile.Close())
 
 	buf := &bytes.Buffer{}
 	log.SetOutput(buf)
@@ -91,7 +91,7 @@ func TestTailDosLineEndings(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 	_, err = tmpfile.WriteString("cpu usage_idle=100\r\ncpu2 usage_idle=200\r\n")
 	require.NoError(t, err)
-	tmpfile.Close()
+	require.NoError(t, tmpfile.Close())
 
 	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
@@ -295,7 +295,7 @@ cpu,42
 cpu,42
 `)
 	require.NoError(t, err)
-	tmpfile.Close()
+	require.NoError(t, tmpfile.Close())
 
 	plugin := NewTestTail()
 	plugin.Log = testutil.Logger{}
@@ -352,7 +352,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 [{"time_idle": 42}, {"time_idle": 42}]
 `)
 	require.NoError(t, err)
-	tmpfile.Close()
+	require.NoError(t, tmpfile.Close())
 
 	plugin := NewTestTail()
 	plugin.Log = testutil.Logger{}

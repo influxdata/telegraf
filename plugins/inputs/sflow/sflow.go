@@ -84,7 +84,9 @@ func (s *SFlow) Start(acc telegraf.Accumulator) error {
 	s.addr = conn.LocalAddr()
 
 	if s.ReadBufferSize.Size > 0 {
-		conn.SetReadBuffer(int(s.ReadBufferSize.Size))
+		if err := conn.SetReadBuffer(int(s.ReadBufferSize.Size)); err != nil {
+			return err
+		}
 	}
 
 	s.Log.Infof("Listening on %s://%s", s.addr.Network(), s.addr.String())
@@ -105,6 +107,8 @@ func (s *SFlow) Gather(_ telegraf.Accumulator) error {
 
 func (s *SFlow) Stop() {
 	if s.closer != nil {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		s.closer.Close()
 	}
 	s.wg.Wait()

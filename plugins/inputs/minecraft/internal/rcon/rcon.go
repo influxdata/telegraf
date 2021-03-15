@@ -123,7 +123,9 @@ func (c *Client) Send(typ int32, command string) (response *Packet, err error) {
 
 	// Create a random challenge for the server to mirror in its response.
 	var challenge int32
-	binary.Read(rand.Reader, binary.LittleEndian, &challenge)
+	if err = binary.Read(rand.Reader, binary.LittleEndian, &challenge); nil != err {
+		return
+	}
 
 	// Create the packet from the challenge, typ and command
 	// and compile it to its byte payload
@@ -153,7 +155,9 @@ func (c *Client) Send(typ int32, command string) (response *Packet, err error) {
 
 	if packet.Header.Type == Auth && header.Type == ResponseValue {
 		// Discard, empty SERVERDATA_RESPONSE_VALUE from authorization.
-		c.Connection.Read(make([]byte, header.Size-int32(PacketHeaderSize)))
+		if _, err = c.Connection.Read(make([]byte, header.Size-int32(PacketHeaderSize))); nil != err {
+			return
+		}
 
 		// Reread the packet header.
 		if err = binary.Read(c.Connection, binary.LittleEndian, &header.Size); nil != err {

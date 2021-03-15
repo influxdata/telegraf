@@ -30,7 +30,6 @@ func (s *Server) gatherData(acc telegraf.Accumulator) error {
 	}
 
 	if err := s.addClusterStats(acc); err != nil {
-		fmt.Printf("error adding cluster stats, %s\n", err.Error())
 		return fmt.Errorf("error adding cluster stats, %s", err.Error())
 	}
 

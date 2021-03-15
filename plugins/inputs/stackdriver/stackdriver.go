@@ -613,7 +613,9 @@ func (s *Stackdriver) gatherTimeSeries(
 
 			if tsDesc.ValueType == metricpb.MetricDescriptor_DISTRIBUTION {
 				dist := p.Value.GetDistributionValue()
-				s.addDistribution(dist, tags, ts, grouper, tsConf)
+				if err := s.addDistribution(dist, tags, ts, grouper, tsConf); err != nil {
+					return err
+				}
 			} else {
 				var value interface{}
 
@@ -630,7 +632,9 @@ func (s *Stackdriver) gatherTimeSeries(
 					value = p.Value.GetStringValue()
 				}
 
-				grouper.Add(tsConf.measurement, tags, ts, tsConf.fieldKey, value)
+				if err := grouper.Add(tsConf.measurement, tags, ts, tsConf.fieldKey, value); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -642,17 +646,27 @@ func (s *Stackdriver) gatherTimeSeries(
 func (s *Stackdriver) addDistribution(
 	metric *distributionpb.Distribution,
 	tags map[string]string, ts time.Time, grouper *lockedSeriesGrouper, tsConf *timeSeriesConf,
-) {
+) error {
 	field := tsConf.fieldKey
 	name := tsConf.measurement
 
-	grouper.Add(name, tags, ts, field+"_count", metric.Count)
-	grouper.Add(name, tags, ts, field+"_mean", metric.Mean)
-	grouper.Add(name, tags, ts, field+"_sum_of_squared_deviation", metric.SumOfSquaredDeviation)
+	if err := grouper.Add(name, tags, ts, field+"_count", metric.Count); err != nil {
+		return err
+	}
+	if err := grouper.Add(name, tags, ts, field+"_mean", metric.Mean); err != nil {
+		return err
+	}
+	if err := grouper.Add(name, tags, ts, field+"_sum_of_squared_deviation", metric.SumOfSquaredDeviation); err != nil {
+		return err
+	}
 
 	if metric.Range != nil {
-		grouper.Add(name, tags, ts, field+"_range_min", metric.Range.Min)
-		grouper.Add(name, tags, ts, field+"_range_max", metric.Range.Max)
+		if err := grouper.Add(name, tags, ts, field+"_range_min", metric.Range.Min); err != nil {
+			return err
+		}
+		if err := grouper.Add(name, tags, ts, field+"_range_max", metric.Range.Max); err != nil {
+			return err
+		}
 	}
 
 	linearBuckets := metric.BucketOptions.GetLinearBuckets()
@@ -693,8 +707,12 @@ func (s *Stackdriver) addDistribution(
 		if i < int32(len(metric.BucketCounts)) {
 			count += metric.BucketCounts[i]
 		}
-		grouper.Add(name, tags, ts, field+"_bucket", count)
+		if err := grouper.Add(name, tags, ts, field+"_bucket", count); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func init() {

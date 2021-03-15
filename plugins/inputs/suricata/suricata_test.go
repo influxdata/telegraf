@@ -42,7 +42,7 @@ func TestSuricataLarge(t *testing.T) {
 
 	c, err := net.Dial("unix", tmpfn)
 	require.NoError(t, err)
-	_, err = c.Write(data)
+	_, err = c.Write([]byte(data))
 	require.NoError(t, err)
 	_, err = c.Write([]byte("\n"))
 	require.NoError(t, err)
@@ -70,9 +70,11 @@ func TestSuricata(t *testing.T) {
 
 	c, err := net.Dial("unix", tmpfn)
 	require.NoError(t, err)
-	c.Write([]byte(ex2))
-	c.Write([]byte("\n"))
-	c.Close()
+	_, err = c.Write([]byte(ex2))
+	require.NoError(t, err)
+	_, err = c.Write([]byte("\n"))
+	require.NoError(t, err)
+	require.NoError(t, c.Close())
 
 	acc.Wait(1)
 
@@ -115,12 +117,17 @@ func TestThreadStats(t *testing.T) {
 
 	c, err := net.Dial("unix", tmpfn)
 	require.NoError(t, err)
-	c.Write([]byte(""))
-	c.Write([]byte("\n"))
-	c.Write([]byte("foobard}\n"))
-	c.Write([]byte(ex3))
-	c.Write([]byte("\n"))
-	c.Close()
+	_, err = c.Write([]byte(""))
+	require.NoError(t, err)
+	_, err = c.Write([]byte("\n"))
+	require.NoError(t, err)
+	_, err = c.Write([]byte("foobard}\n"))
+	require.NoError(t, err)
+	_, err = c.Write([]byte(ex3))
+	require.NoError(t, err)
+	_, err = c.Write([]byte("\n"))
+	require.NoError(t, err)
+	require.NoError(t, c.Close())
 	acc.Wait(2)
 
 	expected := []telegraf.Metric{
@@ -160,9 +167,11 @@ func TestSuricataInvalid(t *testing.T) {
 
 	c, err := net.Dial("unix", tmpfn)
 	require.NoError(t, err)
-	c.Write([]byte("sfjiowef"))
-	c.Write([]byte("\n"))
-	c.Close()
+	_, err = c.Write([]byte("sfjiowef"))
+	require.NoError(t, err)
+	_, err = c.Write([]byte("\n"))
+	require.NoError(t, err)
+	require.NoError(t, c.Close())
 
 	acc.WaitError(1)
 }
@@ -199,9 +208,11 @@ func TestSuricataTooLongLine(t *testing.T) {
 
 	c, err := net.Dial("unix", tmpfn)
 	require.NoError(t, err)
-	c.Write([]byte(strings.Repeat("X", 20000000)))
-	c.Write([]byte("\n"))
-	c.Close()
+	_, err = c.Write([]byte(strings.Repeat("X", 20000000)))
+	require.NoError(t, err)
+	_, err = c.Write([]byte("\n"))
+	require.NoError(t, err)
+	require.NoError(t, c.Close())
 
 	acc.WaitError(1)
 }
@@ -226,8 +237,9 @@ func TestSuricataEmptyJSON(t *testing.T) {
 	if err != nil {
 		log.Println(err)
 	}
-	c.Write([]byte("\n"))
-	c.Close()
+	_, err = c.Write([]byte("\n"))
+	require.NoError(t, err)
+	require.NoError(t, c.Close())
 
 	acc.WaitError(1)
 }
@@ -251,15 +263,19 @@ func TestSuricataDisconnectSocket(t *testing.T) {
 
 	c, err := net.Dial("unix", tmpfn)
 	require.NoError(t, err)
-	c.Write([]byte(ex2))
-	c.Write([]byte("\n"))
-	c.Close()
+	_, err = c.Write([]byte(ex2))
+	require.NoError(t, err)
+	_, err = c.Write([]byte("\n"))
+	require.NoError(t, err)
+	require.NoError(t, c.Close())
 
 	c, err = net.Dial("unix", tmpfn)
 	require.NoError(t, err)
-	c.Write([]byte(ex3))
-	c.Write([]byte("\n"))
-	c.Close()
+	_, err = c.Write([]byte(ex3))
+	require.NoError(t, err)
+	_, err = c.Write([]byte("\n"))
+	require.NoError(t, err)
+	require.NoError(t, c.Close())
 
 	acc.Wait(2)
 }

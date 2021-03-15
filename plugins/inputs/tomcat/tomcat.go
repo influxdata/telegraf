@@ -131,7 +131,9 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var status TomcatStatus
-	xml.NewDecoder(resp.Body).Decode(&status)
+	if err := xml.NewDecoder(resp.Body).Decode(&status); err != nil {
+		return err
+	}
 
 	// add tomcat_jvm_memory measurements
 	tcm := map[string]interface{}{
