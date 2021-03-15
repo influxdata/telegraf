@@ -93,13 +93,13 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: mac-go-mod-v1-{{ checksum "go.sum" }}
+          key: mac-go-mod-v4-{{ checksum "go.sum" }}
       - run: 'sh ./scripts/mac_installgo.sh'
       - run: 'make deps'
       - run: 'make tidy'
       - save_cache:
           name: 'go module cache'
-          key: mac-go-mod-v1-{{ checksum "go.sum" }}
+          key: mac-go-mod-v4-{{ checksum "go.sum" }}
           paths:
             - '~/go/pkg/mod'
             - '/usr/local/Cellar/go'
