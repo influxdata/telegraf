@@ -27,7 +27,6 @@
 
   - [#8887](https://github.com/influxdata/telegraf/pull/8887) `inputs.procstat` Add PPID field to procstat input plugin
   - [#8852](https://github.com/influxdata/telegraf/pull/8852) `processors.starlark` Add Starlark script for estimating Line Protocol cardinality
-  - [#8828](https://github.com/influxdata/telegraf/pull/8828) `serializers.msgpack` Add MessagePack output data format
   - [#8915](https://github.com/influxdata/telegraf/pull/8915) `inputs.cloudwatch` add proxy
   - [#8910](https://github.com/influxdata/telegraf/pull/8910) Display error message on badly formatted config string array (eg. namepass)
   - [#8785](https://github.com/influxdata/telegraf/pull/8785) `inputs.diskio` Non systemd support with unittest
@@ -43,33 +42,43 @@
   - [#8675](https://github.com/influxdata/telegraf/pull/8675) `processors.starlark` Add Starlark parsing example of nested JSON
   - [#8762](https://github.com/influxdata/telegraf/pull/8762) `inputs.prometheus` Optimize for bigger kubernetes clusters (500+ pods)
 
-#### New Input Plugins
+#### New Inputs
 
-  - [#8834](https://github.com/influxdata/telegraf/pull/8834) Input plugin for RavenDB
-  - [#8525](https://github.com/influxdata/telegraf/pull/8525) Add CSGO SRCDS input plugin
-  - [#8751](https://github.com/influxdata/telegraf/pull/8751) Adding a new directory monitor input plugin.
-  - [#6653](https://github.com/influxdata/telegraf/pull/6653) Add Beat input plugin
-  - [#4615](https://github.com/influxdata/telegraf/pull/4615) Add NFS client input
-  - [#8931](https://github.com/influxdata/telegraf/pull/8931) Add XML parser using XPath queries
+-   [Beat Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/beat) - Contributed by @[nferch](https://github.com/nferch)
+-   [CS:GO Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/csgo) - Contributed by @[oofdog](https://github.com/oofdog)
+-   [Directory Monitoring Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/directory_monitor) - Contributed by [@InfluxData](https://community.influxdata.com/groups/influxdata)
+-   [RavenDB Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ravendb) - Contributed by @[ml054](https://github.com/ml054) @[bartoncasey](https://github.com/bartoncasey))
 
-#### New Output Plugins
+-   [NFS Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nfsclient) - Contributed by @[pmoranga](https://github.com/pmoranga)
 
-  - [#8398](https://github.com/influxdata/telegraf/pull/8398) Sensu Go Output Plugin for Telegraf
-  - [#8450](https://github.com/influxdata/telegraf/pull/8450) plugin: output loki
-  - [#6714](https://github.com/influxdata/telegraf/pull/6714) SignalFx Output
+#### New Outputs
 
-#### New Aggregator Plugins
+-   [Grafana Loki Output Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/loki) - Contributed by @[Eraac](https://github.com/Eraac)
+-   [Sensu Output Plugin](https://github.com/influxdata/telegraf/blob/master/plugins/outputs/sensu) - Contributed by @[calebhailey](https://github.com/calebhailey)
+-   [SignalFX Output Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/signalfx) - Contributed by @[keitwb](https://github.com/keitwb)
 
-  - [#3762](https://github.com/influxdata/telegraf/pull/3762) Add Derivative Aggregator Plugin
-  - [#8594](https://github.com/influxdata/telegraf/pull/8594) Add quantile aggregator plugin
+#### New Aggregators
 
-#### New Processor Plugins
+-   [Derivative Aggregator Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/aggregators/derivative)- Contributed by @[KarstenSchnitter](https://github.com/KarstenSchnitter)
+-   [Quantile Aggregator Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/aggregators/quantile) - Contributed by @[srebhan](https://github.com/srebhan)
 
-  - [#8707](https://github.com/influxdata/telegraf/pull/8707) AWS EC2 metadata processor Using StreamingProcessor
+#### New Processors
+
+-   [AWS EC2 Metadata Processor Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/processors/aws/ec2) - Contributed by @[pmalek-sumo](https://github.com/pmalek-sumo)
+
+#### New Parsers
+
+-   [XML Parser Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/parsers/xml) - Contributed by @[srebhan](https://github.com/srebhan) 
+
+#### New Serializers
+
+-   [MessagePack Serializer Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/serializers/msgpack) - Contributed by @[dialogbox](https://github.com/dialogbox)
 
 #### New External Plugins
 
-  - [#8897](https://github.com/influxdata/telegraf/pull/8897) add SMCIPMITool input to external plugin list
+-   [GeoIP Processor Plugin ](https://github.com/a-bali/telegraf-geoip) - Contributed by @[a-bali](https://github.com/a-bali/telegraf-geoip/commits?author=a-bali)
+-   [Plex Webhook Input Plugin](https://github.com/russorat/telegraf-webhooks-plex) - Contributed by @[russorat](https://github.com/russorat/telegraf-webhooks-plex/commits?author=russorat)
+-   [SMCIPMITool Input Plugin](https://github.com/jhpope/smc_ipmi) - Contributed by @[jhpope](https://github.com/jhpope/smc_ipmi/commits?author=jhpope)
 
 
 ## v1.17.3 [2021-02-17]
