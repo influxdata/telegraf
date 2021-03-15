@@ -90,15 +90,21 @@ func TestConnect(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	plugin := new(CloudWatchLogs)
-	plugin.Region = "eu-central-1"
-	plugin.AccessKey = "dummy"
-	plugin.SecretKey = "dummy"
-	plugin.EndpointURL = ts.URL
-	plugin.LogGroup = "TestLogGroup"
-	plugin.LogStream = "tag:source"
-	plugin.LDMetricName = "docker_log"
-	plugin.LDSource = "field:message"
+	plugin := &CloudWatchLogs{
+		Region:       "eu-central-1",
+		AccessKey:    "dummy",
+		SecretKey:    "dummy",
+		EndpointURL:  ts.URL,
+		LogGroup:     "TestLogGroup",
+		LogStream:    "tag:source",
+		LDMetricName: "docker_log",
+		LDSource:     "field:message",
+		Log: testutil.Logger{
+			Name: "outputs.cloudwatch_logs",
+		},
+	}
+
+	require.Nil(t, plugin.Init())
 	require.Nil(t, plugin.Connect())
 }
 
@@ -123,15 +129,20 @@ func TestWrite(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	plugin := new(CloudWatchLogs)
-	plugin.Region = "eu-central-1"
-	plugin.AccessKey = "dummy"
-	plugin.SecretKey = "dummy"
-	plugin.EndpointURL = ts.URL
-	plugin.LogGroup = "TestLogGroup"
-	plugin.LogStream = "tag:source"
-	plugin.LDMetricName = "docker_log"
-	plugin.LDSource = "field:message"
+	plugin := &CloudWatchLogs{
+		Region:       "eu-central-1",
+		AccessKey:    "dummy",
+		SecretKey:    "dummy",
+		EndpointURL:  ts.URL,
+		LogGroup:     "TestLogGroup",
+		LogStream:    "tag:source",
+		LDMetricName: "docker_log",
+		LDSource:     "field:message",
+		Log: testutil.Logger{
+			Name: "outputs.cloudwatch_logs",
+		},
+	}
+	require.Nil(t, plugin.Init())
 	require.Nil(t, plugin.Connect())
 
 	tests := []struct {
@@ -139,7 +150,6 @@ func TestWrite(t *testing.T) {
 		logStreamName        string
 		metrics              []telegraf.Metric
 		expectedMetricsOrder map[int]int //map[<index of pushed log event>]<index of corresponding metric>
-		expectedErrorMessage string
 		expectedMetricsCount int
 	}{
 		{

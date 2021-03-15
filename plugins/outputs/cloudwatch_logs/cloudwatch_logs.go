@@ -2,7 +2,6 @@ package cloudwatch_logs
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 	"time"
@@ -57,10 +56,11 @@ type CloudWatchLogs struct {
 	ldSource string //log data source tag or field name
 
 	svc cloudWatchLogs //cloudwatch logs service
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 const (
-	logId = "[outputs.cloudwatch_logs]"
 	// Log events must comply with the following
 	// (https://docs.aws.amazon.com/sdk-for-go/api/service/cloudwatchlogs/#CloudWatchLogs.PutLogEvents):
 	maxLogMessageLength           = 262144 - awsOverheadPerLogMessageBytes //In bytes
@@ -141,47 +141,50 @@ func (c *CloudWatchLogs) Description() string {
 	return "Configuration for AWS CloudWatchLogs output."
 }
 
-func (c *CloudWatchLogs) Connect() error {
-	var queryToken *string
-	var dummyToken = "dummy"
-	var logGroupsOutput = &cloudwatchlogs.DescribeLogGroupsOutput{NextToken: &dummyToken}
-	var err error
-
+func (c *CloudWatchLogs) Init() error {
 	if c.LogGroup == "" {
-		return fmt.Errorf("Log group is not set!")
+		return fmt.Errorf("log group is not set!")
 	}
 
 	if c.LogStream == "" {
-		return fmt.Errorf("Log stream is not set!")
+		return fmt.Errorf("log stream is not set!")
 	}
 
 	if c.LDMetricName == "" {
-		return fmt.Errorf("Log data metrics name is not set!")
+		return fmt.Errorf("log data metrics name is not set!")
 	}
 
 	if c.LDSource == "" {
-		return fmt.Errorf("Log data source is not set!")
+		return fmt.Errorf("log data source is not set!")
 	} else {
 		lsSplitArray := strings.Split(c.LDSource, ":")
 		if len(lsSplitArray) > 1 {
 			if lsSplitArray[0] == "tag" || lsSplitArray[0] == "field" {
 				c.ldKey = lsSplitArray[0]
 				c.ldSource = lsSplitArray[1]
-				log.Printf("D! %s Log data: key '%s', source '%s'...", logId, c.ldKey, c.ldSource)
+				c.Log.Debugf("Log data: key '%s', source '%s'...", c.ldKey, c.ldSource)
 			} else {
-				return fmt.Errorf("Log data source is not properly formatted.\n" +
+				return fmt.Errorf("log data source is not properly formatted.\n" +
 					"Should be 'tag:<tag_mame>' or 'field:<field_name>'")
 			}
 		} else {
-			return fmt.Errorf("Log data source is not properly formatted, ':' is missed.\n" +
+			return fmt.Errorf("log data source is not properly formatted, ':' is missed.\n" +
 				"Should be 'tag:<tag_mame>' or 'field:<field_name>'")
 		}
 
 		if c.lsSource == "" {
 			c.lsSource = c.LogStream
-			log.Printf("D! %s Log stream '%s'...", logId, c.lsSource)
+			c.Log.Debugf("Log stream '%s'...", c.lsSource)
 		}
 	}
+	return nil
+}
+
+func (c *CloudWatchLogs) Connect() error {
+	var queryToken *string
+	var dummyToken = "dummy"
+	var logGroupsOutput = &cloudwatchlogs.DescribeLogGroupsOutput{NextToken: &dummyToken}
+	var err error
 
 	credentialConfig := &internalaws.CredentialConfig{
 		Region:      c.Region,
@@ -197,7 +200,7 @@ func (c *CloudWatchLogs) Connect() error {
 
 	c.svc = cloudwatchlogs.New(configProvider)
 	if c.svc == nil {
-		return fmt.Errorf("Can't create cloudwatch logs service endpoint...")
+		return fmt.Errorf("can't create cloudwatch logs service endpoint...")
 	}
 
 	//Find log group with name 'c.LogGroup'
@@ -216,14 +219,14 @@ func (c *CloudWatchLogs) Connect() error {
 
 			for _, logGroup := range logGroupsOutput.LogGroups {
 				if *(logGroup.LogGroupName) == c.LogGroup {
-					log.Printf("D! %s Found log group '%s'", logId, c.LogGroup)
+					c.Log.Debugf("Found log group %q", c.LogGroup)
 					c.lg = logGroup
 				}
 			}
 		}
 
 		if c.lg == nil {
-			return fmt.Errorf("Can't find log group '%s'...", c.LogGroup)
+			return fmt.Errorf("can't find log group %q...", c.LogGroup)
 		}
 
 		lsSplitArray := strings.Split(c.LogStream, ":")
@@ -231,13 +234,13 @@ func (c *CloudWatchLogs) Connect() error {
 			if lsSplitArray[0] == "tag" || lsSplitArray[0] == "field" {
 				c.lsKey = lsSplitArray[0]
 				c.lsSource = lsSplitArray[1]
-				log.Printf("D! %s Log stream: key '%s', source '%s'...", logId, c.lsKey, c.lsSource)
+				c.Log.Debugf("Log stream: key %q, source %q...", c.lsKey, c.lsSource)
 			}
 		}
 
 		if c.lsSource == "" {
 			c.lsSource = c.LogStream
-			log.Printf("D! %s Log stream '%s'...", logId, c.lsSource)
+			c.Log.Debugf("Log stream %q...", c.lsSource)
 		}
 
 		c.ls = map[string]*logStreamContainer{}
@@ -268,7 +271,7 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 		}
 
 		if m.Time().After(maxTime) || m.Time().Before(minTime) {
-			log.Printf("D! %s Processing metric '%v': Metric is filtered based on TS!", logId, m)
+			c.Log.Debugf("Processing metric '%v': Metric is filtered based on TS!", m)
 			continue
 		}
 
@@ -294,7 +297,7 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 		}
 
 		if logStream == "" {
-			log.Printf("E! %s Processing metric '%v': log stream: key '%s', source '%s', not found!", logId, m, c.lsKey, c.lsSource)
+			c.Log.Errorf("Processing metric '%v': log stream: key %q, source %q, not found!", m, c.lsKey, c.lsSource)
 			continue
 		}
 
@@ -308,14 +311,14 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 		}
 
 		if logData == "" {
-			log.Printf("E! %s Processing metric '%v': log data: key '%s', source '%s', not found!", logId, m, c.ldKey, c.ldSource)
+			c.Log.Errorf("Processing metric '%v': log data: key %q, source %q, not found!", m, c.ldKey, c.ldSource)
 			continue
 		}
 
 		//Check if message size is not fit to batch
 		if len(logData) > maxLogMessageLength {
 			metricStr := fmt.Sprintf("%v", m)
-			log.Printf("E! %s Processing metric '%s...', message is too large to fit to aws max log message size: %d (bytes) !", logId, metricStr[0:maxLogMessageLength/1000], maxLogMessageLength)
+			c.Log.Errorf("Processing metric '%s...', message is too large to fit to aws max log message size: %d (bytes) !", metricStr[0:maxLogMessageLength/1000], maxLogMessageLength)
 			continue
 		}
 		//Batching log messages
@@ -362,7 +365,7 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 	for logStream, elem := range c.ls {
 		for index, batch := range elem.messageBatches {
 			if len(batch.logEvents) == 0 { //can't push empty batch
-				//log.Printf("W! Empty batch detected, skipping...")
+				//c.Log.Warnf("Empty batch detected, skipping...")
 				continue
 			}
 			//Sorting
@@ -382,17 +385,17 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 						LogGroupName:  &c.LogGroup,
 						LogStreamName: &logStream})
 					if err != nil {
-						log.Printf("E! %s Can't create log stream '%s' in log group. Reason: %v '%s'.", logId, logStream, c.LogGroup, err)
+						c.Log.Errorf("Can't create log stream %q in log group. Reason: %v %q.", logStream, c.LogGroup, err)
 						continue
 					}
 					putLogEvents.SequenceToken = nil
 				} else if err == nil && len(describeLogStreamOutput.LogStreams) == 1 {
 					putLogEvents.SequenceToken = describeLogStreamOutput.LogStreams[0].UploadSequenceToken
 				} else if err == nil && len(describeLogStreamOutput.LogStreams) > 1 { //Ambiguity
-					log.Printf("E! %s More than 1 log stream found with prefix '%s' in log group '%s'.", logId, logStream, c.LogGroup)
+					c.Log.Errorf("More than 1 log stream found with prefix %q in log group %q.", logStream, c.LogGroup)
 					continue
 				} else {
-					log.Printf("E! %s Error describing log streams in log group '%s'. Reason: %v", logId, c.LogGroup, err)
+					c.Log.Errorf("Error describing log streams in log group %q. Reason: %v", c.LogGroup, err)
 					continue
 				}
 
@@ -411,7 +414,7 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 			//requests are throttled. This quota can't be changed.
 			putLogEventsOutput, err := c.svc.PutLogEvents(&putLogEvents)
 			if err != nil {
-				log.Printf("E! %s Can't push logs batch to AWS. Reason: %v", logId, err)
+				c.Log.Errorf("Can't push logs batch to AWS. Reason: %v", err)
 				continue
 			}
 			//Cleanup batch
