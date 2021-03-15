@@ -51,7 +51,8 @@ go_goroutines 15 1490802350000
 
 func TestPrometheusGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, sampleTextFormat)
+		_, err := fmt.Fprintln(w, sampleTextFormat)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -76,7 +77,8 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 
 func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, sampleTextFormat)
+		_, err := fmt.Fprintln(w, sampleTextFormat)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -107,7 +109,8 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T
 	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, sampleTextFormat)
+		_, err := fmt.Fprintln(w, sampleTextFormat)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -130,7 +133,8 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T
 
 func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, sampleSummaryTextFormat)
+		_, err := fmt.Fprintln(w, sampleSummaryTextFormat)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -160,7 +164,8 @@ go_gc_duration_seconds_sum 42.0
 go_gc_duration_seconds_count 42
 `
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, data)
+		_, err := fmt.Fprintln(w, data)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -216,7 +221,8 @@ go_gc_duration_seconds_count 42
 
 func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, sampleGaugeTextFormat)
+		_, err := fmt.Fprintln(w, sampleGaugeTextFormat)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -259,11 +265,12 @@ func TestInitConfigErrors(t *testing.T) {
 
 	// Both invalid IP addresses
 	p.NodeIP = "10.240.0.0.0"
-	os.Setenv("NODE_IP", "10.000.0.0.0")
+	require.NoError(t, os.Setenv("NODE_IP", "10.000.0.0.0"))
 	err := p.Init()
-	expectedMessage := "the node_ip config and the environment variable NODE_IP are not set or invalid. Cannot get pod list for monitor_kubernetes_pods using node scrape scope"
-	require.Error(t, err, expectedMessage)
-	os.Setenv("NODE_IP", "10.000.0.0")
+	require.Error(t, err)
+	expectedMessage := "The node_ip config and the environment variable NODE_IP are not set or invalid. Cannot get pod list for monitor_kubernetes_pods using node scrape scope"
+	require.Equal(t, expectedMessage, err.Error())
+	require.NoError(t, os.Setenv("NODE_IP", "10.000.0.0"))
 
 	p.KubernetesLabelSelector = "label0==label0, label0 in (=)"
 	err = p.Init()

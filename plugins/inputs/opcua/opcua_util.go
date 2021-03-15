@@ -135,6 +135,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 	case *ecdsa.PrivateKey:
 		b, err := x509.MarshalECPrivateKey(k)
 		if err != nil {
+			//nolint:errcheck,revive
 			fmt.Fprintf(os.Stderr, "Unable to marshal ECDSA private key: %v", err)
 			os.Exit(2)
 		}

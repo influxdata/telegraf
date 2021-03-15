@@ -489,7 +489,7 @@ func TestDellApis(t *testing.T) {
 		Password:         "test",
 		ComputerSystemID: "System.Embedded.1",
 	}
-	plugin.Init()
+	require.NoError(t, plugin.Init())
 	var acc testutil.Accumulator
 
 	err = plugin.Gather(&acc)
@@ -649,7 +649,7 @@ func TestHPApis(t *testing.T) {
 		Password:         "test",
 		ComputerSystemID: "1",
 	}
-	hpPlugin.Init()
+	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
 
 	err = hpPlugin.Gather(&hpAcc)
@@ -691,7 +691,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	r.Init()
+	require.NoError(t, r.Init())
 	u, err := url.Parse(ts.URL)
 	require.NoError(t, err)
 	err = r.Gather(&acc)
@@ -789,7 +789,7 @@ func TestInvalidDellJSON(t *testing.T) {
 			ComputerSystemID: "System.Embedded.1",
 		}
 
-		plugin.Init()
+		require.NoError(t, plugin.Init())
 
 		var acc testutil.Accumulator
 		err := plugin.Gather(&acc)
@@ -858,7 +858,7 @@ func TestInvalidHPJSON(t *testing.T) {
 				ComputerSystemID: "System.Embedded.2",
 			}
 
-			plugin.Init()
+			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
 			err := plugin.Gather(&acc)
