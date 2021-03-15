@@ -91,8 +91,6 @@ var stop chan struct{}
 func reloadLoop(
 	inputFilters []string,
 	outputFilters []string,
-	aggregatorFilters []string,
-	processorFilters []string,
 ) {
 	reload := make(chan bool, 1)
 	reload <- true
@@ -371,7 +369,5 @@ func main() {
 	run(
 		inputFilters,
 		outputFilters,
-		aggregatorFilters,
-		processorFilters,
 	)
 }
