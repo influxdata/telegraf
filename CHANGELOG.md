@@ -44,43 +44,40 @@
 
 #### New Inputs
 
--   [Beat Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/beat) - Contributed by @[nferch](https://github.com/nferch)
--   [CS:GO Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/csgo) - Contributed by @[oofdog](https://github.com/oofdog)
--   [Directory Monitoring Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/directory_monitor) - Contributed by [@InfluxData](https://community.influxdata.com/groups/influxdata)
--   [RavenDB Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ravendb) - Contributed by @[ml054](https://github.com/ml054) @[bartoncasey](https://github.com/bartoncasey))
-
--   [NFS Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nfsclient) - Contributed by @[pmoranga](https://github.com/pmoranga)
+  - [Beat Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/beat) - Contributed by @nferch
+  - [CS:GO Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/csgo) - Contributed by @oofdog
+  - [Directory Monitoring Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/directory_monitor) - Contributed by @InfluxData
+  - [RavenDB Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ravendb) - Contributed by @ml054 and @bartoncasey
+  - [NFS Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nfsclient) - Contributed by @pmoranga
 
 #### New Outputs
 
--   [Grafana Loki Output Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/loki) - Contributed by @[Eraac](https://github.com/Eraac)
--   [Sensu Output Plugin](https://github.com/influxdata/telegraf/blob/master/plugins/outputs/sensu) - Contributed by @[calebhailey](https://github.com/calebhailey)
--   [SignalFX Output Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/signalfx) - Contributed by @[keitwb](https://github.com/keitwb)
+  - [Grafana Loki Output Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/loki) - Contributed by @Eraac
+  - [Sensu Output Plugin](https://github.com/influxdata/telegraf/blob/master/plugins/outputs/sensu) - Contributed by @calebhailey
+  - [SignalFX Output Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/signalfx) - Contributed by @keitwb
 
 #### New Aggregators
 
--   [Derivative Aggregator Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/aggregators/derivative)- Contributed by @[KarstenSchnitter](https://github.com/KarstenSchnitter)
--   [Quantile Aggregator Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/aggregators/quantile) - Contributed by @[srebhan](https://github.com/srebhan)
+  - [Derivative Aggregator Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/aggregators/derivative)- Contributed by @KarstenSchnitter
+  - [Quantile Aggregator Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/aggregators/quantile) - Contributed by @srebhan
 
 #### New Processors
 
--   [AWS EC2 Metadata Processor Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/processors/aws/ec2) - Contributed by @[pmalek-sumo](https://github.com/pmalek-sumo)
+  - [AWS EC2 Metadata Processor Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/processors/aws/ec2) - Contributed by @pmalek-sumo
 
 #### New Parsers
 
--   [XML Parser Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/parsers/xml) - Contributed by @[srebhan](https://github.com/srebhan) 
-
+  - [XML Parser Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/parsers/xml) - Contributed by @srebhan
 #### New Serializers
 
--   [MessagePack Serializer Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/serializers/msgpack) - Contributed by @[dialogbox](https://github.com/dialogbox)
+  - [MessagePack Serializer Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/serializers/msgpack) - Contributed by @dialogbox
 
 #### New External Plugins
 
--   [GeoIP Processor Plugin ](https://github.com/a-bali/telegraf-geoip) - Contributed by @[a-bali](https://github.com/a-bali/telegraf-geoip/commits?author=a-bali)
--   [Plex Webhook Input Plugin](https://github.com/russorat/telegraf-webhooks-plex) - Contributed by @[russorat](https://github.com/russorat/telegraf-webhooks-plex/commits?author=russorat)
--   [SMCIPMITool Input Plugin](https://github.com/jhpope/smc_ipmi) - Contributed by @[jhpope](https://github.com/jhpope/smc_ipmi/commits?author=jhpope)
-
-
+  - [GeoIP Processor Plugin ](https://github.com/a-bali/telegraf-geoip) - Contributed by @a-bali
+  - [Plex Webhook Input Plugin](https://github.com/russorat/telegraf-webhooks-plex) - Contributed by @russorat
+  - [SMCIPMITool Input Plugin](https://github.com/jhpope/smc_ipmi) - Contributed by @jhpope
+  - 
 ## v1.17.3 [2021-02-17]
 
 #### Bugfixes
