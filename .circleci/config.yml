@@ -102,13 +102,13 @@ jobs:
           key: mac-go-mod-v4-{{ checksum "go.sum" }}
           paths:
             - '~/go/pkg/mod'
-            - 'usr/local/go'
+            - '/tmp/go'
             - '/usr/local/bin/go'
             - '/usr/local/bin/gofmt'
       - persist_to_workspace:
           root: '/'
           paths:
-            - 'usr/local/go'
+            - '/tmp/go'
             - 'usr/local/bin/go'
             - 'usr/local/bin/gofmt'
             - 'Users/distiller/go'
