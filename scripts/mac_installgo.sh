@@ -1,8 +1,10 @@
+#!/bin/sh
+
 # Install Go directly from tar, the reason we aren't using brew: it is slow to update and we can't pull specific minor versions
-install_go() {
+install_go () {
     echo "installing go"
     curl https://golang.org/dl/go1.16.2.darwin-amd64.tar.gz --output go1.16.2.darwin-amd64.tar.gz
-    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.16.2.linux-amd64.tar.gz
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.16.2.darwin-amd64.tar.gz
     brew link --force --overwrite go@16
 }
 
