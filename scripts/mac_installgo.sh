@@ -8,7 +8,7 @@ install_go () {
     ln -s /usr/local/go/bin/go /usr/local/bin
 }
 
-if [ -d /usr/local/go ]; then
+if command -v go &> /dev/null; then
     echo "Go is already installed"
     v=`go version | { read _ _ v _; echo ${v#go}; }`
     echo "$v is installed"
