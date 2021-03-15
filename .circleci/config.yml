@@ -95,10 +95,10 @@ jobs:
       - restore_cache:
           key: mac-go-mod-v4-{{ checksum "go.sum" }}
       - run: 'sh ./scripts/mac_installgo.sh'
-      - run: 'ln -sf /tmp/go/bin/go /usr/local/bin'
+      - run: 'ln -sf /tmp/go/bin/go /usr/local/bin/go'
       - run: 'make deps'
       - run: 'make tidy'
-      - run: 'rm /usr/local/bin/go'
+      - run: 'unlink /usr/local/bin/go'
       - save_cache:
           name: 'go module cache'
           key: mac-go-mod-v4-{{ checksum "go.sum" }}
@@ -130,7 +130,7 @@ jobs:
   test-go-darwin:
     executor: mac
     steps:
-      - run: 'ln -sf /tmp/go/bin/go /usr/local/bin'
+      - run: 'ln -sf /tmp/go/bin/go /usr/local/bin/go'
       - test-go-mac
   test-go-windows:
     executor:
