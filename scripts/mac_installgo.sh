@@ -12,7 +12,7 @@ if command -v go &> /dev/null; then
     echo "Go is already installed"
     v=`go version | { read _ _ v _; echo ${v#go}; }`
     echo "$v is installed"
-    if [ "$v" != "1.6.2" ]; then
+    if [ "$v" != "1.16.2" ]; then
         install_go
         go version
     fi
