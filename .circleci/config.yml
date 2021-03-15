@@ -108,7 +108,7 @@ jobs:
       - persist_to_workspace:
           root: '/'
           paths:
-            - '/tmp/go'
+            - 'tmp/go'
             - 'usr/local/bin/go'
             - 'usr/local/bin/gofmt'
             - 'Users/distiller/go'
