@@ -39,9 +39,9 @@ commands:
       - run: 'GOARCH=<< parameters.goarch >> make test'
   setup-go:
     steps:
-      - run: sudo cp /home/Downloads/go/bin/go /usr/local/bin/
-      - run: sudo cp /home/Downloads/go/bin/gofmt /usr/local/bin/
-      - run: sudo cp -R /home/Downloads/go /usr/local/
+      - run: sudo cp /home/go/bin/go /usr/local/bin/
+      - run: sudo cp /home/go/bin/gofmt /usr/local/bin/
+      - run: sudo cp -R /home/go /usr/local/
   test-go-mac:
     steps:
       - checkout
@@ -109,11 +109,11 @@ jobs:
           key: mac-go-mod-v5-{{ checksum "go.sum" }}
           paths:
             - '~/go/pkg/mod'
-            - '/home/Downloads/go'
+            - '/home/go'
       - persist_to_workspace:
           root: '/'
           paths:
-            - 'home/Downloads/go'
+            - 'home/go'
   test-go-1_15:
     executor: go-1_15
     steps:

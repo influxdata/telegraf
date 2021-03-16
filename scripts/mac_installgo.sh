@@ -6,9 +6,8 @@ version="1.16.2"
 install_go () {
     echo "installing go"
     curl -OL https://golang.org/dl/go${version}.darwin-amd64.tar.gz --output go${version}.darwin-amd64.tar.gz
-    mkdir /home/Downloads/go
     rm -rf /usr/local/go
-    tar -C /home/Downloads/ -xzf go${version}.darwin-amd64.tar.gz
+    tar -C /home/ -xzf go${version}.darwin-amd64.tar.gz
 }
 
 if command -v go &> /dev/null; then
