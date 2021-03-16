@@ -7,7 +7,7 @@ install_go () {
     echo "installing go"
     curl -OL https://golang.org/dl/go${version}.darwin-amd64.tar.gz --output go${version}.darwin-amd64.tar.gz
     rm -rf /usr/local/go
-    tar -C /home/ -xzf go${version}.darwin-amd64.tar.gz
+    tar -C /Users/distiller/ -xzf go${version}.darwin-amd64.tar.gz
 }
 
 if command -v go &> /dev/null; then
