@@ -30,7 +30,7 @@ const sampleConfig = `
   timeout = "5s"
 
   ## measurement name suffix (for separating different commands)
-	name_suffix = "_mycollector"
+  name_suffix = "_mycollector"
 
   ## truncate errors after this many characters. Use 0 to disable error truncation.
   # error_truncate_length = 512
