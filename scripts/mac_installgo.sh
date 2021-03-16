@@ -1,53 +1,26 @@
 #!/bin/sh
 
 version="1.16.2"
-path="/Users/distiller"
 
 # Download Go directly from tar, the reason we aren't using brew: it is slow to update and we can't pull specific minor versions
-download_go () {
-    echo "installing go"
-    curl -OL https://golang.org/dl/go${version}.darwin-amd64.tar.gz --output go${version}.darwin-amd64.tar.gz
-    sudo rm -rf ${path}/go
-    tar -C ${path} -xzf go${version}.darwin-amd64.tar.gz
-}
-
-check_go () {
-    if find ${path}/go -mindepth 1 | read; then
-        echo "Go is already downloaded"
-        setup_go
-        v=`go version | { read _ _ v _; echo ${v#go}; }`
-        echo "$v is downloaded, required version is $version"
-        if [ "$v" != $version ]; then
-            download_go
-            setup_go
-            go version
-        fi
-    else
-        download_go
-        setup_go
-    fi
-}
-
 setup_go () {
-    if [ -d $path/go ]; then
-        sudo cp ${path}/go/bin/go /usr/local/bin/
-        sudo cp ${path}/go/bin/gofmt /usr/local/bin/
-        sudo cp -R ${path}/go /usr/local/
-    else
-        echo "Missing go from macdeps, ${path}/go doesn't exist"
-    fi
+    echo "installing go"
+    curl -OL https://golang.org/dl/go1.16.2.darwin-amd64.tar.gz --output go1.16.2.darwin-amd64.tar.gz
+    sudo rm -rf /usr/local/go
+    sudo tar -C /usr/local/ -xzf go1.16.2.darwin-amd64.tar.gz
+    sudo chown -R $USER:admin /usr/local/go
+    ln -sf /usr/local/go/bin/go /usr/local/bin/go
+    ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
 }
 
-for arg in "$@"
-do
-    case $arg in
-        --full)
-        check_go
-        shift
-        ;;
-        --cache)
+if command -v go &> /dev/null; then
+    echo "Go is already installed"
+    v=`go version | { read _ _ v _; echo ${v#go}; }`
+    echo "$v is installed, required version is $version"
+    if [ "$v" != $version ]; then
         setup_go
-        shift
-        ;;
-    esac
-done
+        go version
+    fi
+else
+    setup_go
+fi
