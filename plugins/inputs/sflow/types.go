@@ -118,12 +118,22 @@ type RawPacketHeaderFlowData struct {
 }
 
 func (h RawPacketHeaderFlowData) GetTags() map[string]string {
-	t := h.Header.GetTags()
+	var t map[string]string
+	if h.Header != nil {
+		t = h.Header.GetTags()
+	} else {
+		t = map[string]string{}
+	}
 	t["header_protocol"] = HeaderProtocolMap[h.HeaderProtocol]
 	return t
 }
 func (h RawPacketHeaderFlowData) GetFields() map[string]interface{} {
-	f := h.Header.GetFields()
+	var f map[string]interface{}
+	if h.Header != nil {
+		f = h.Header.GetFields()
+	} else {
+		f = map[string]interface{}{}
+	}
 	f["bytes"] = h.Bytes
 	f["frame_length"] = h.FrameLength
 	f["header_length"] = h.HeaderLength
@@ -143,14 +153,22 @@ type EthHeader struct {
 }
 
 func (h EthHeader) GetTags() map[string]string {
-	t := h.IPHeader.GetTags()
+	var t map[string]string
+	if h.IPHeader != nil {
+		t = h.IPHeader.GetTags()
+	} else {
+		t = map[string]string{}
+	}
 	t["src_mac"] = net.HardwareAddr(h.SourceMAC[:]).String()
 	t["dst_mac"] = net.HardwareAddr(h.DestinationMAC[:]).String()
 	t["ether_type"] = h.EtherType
 	return t
 }
 func (h EthHeader) GetFields() map[string]interface{} {
-	return h.IPHeader.GetFields()
+	if h.IPHeader != nil {
+		return h.IPHeader.GetFields()
+	}
+	return map[string]interface{}{}
 }
 
 type ProtocolHeader ContainsMetricData
