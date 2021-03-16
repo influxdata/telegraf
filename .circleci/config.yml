@@ -42,7 +42,7 @@ commands:
       - checkout
       - attach_workspace:
           at: '/'
-      - run: 'sh ./scripts/mac_installgo.sh --setup'
+      - run: 'sh ./scripts/mac_installgo.sh --cache'
       - run: 'make'
       - run: 'make check'
       - run: 'make test'
@@ -94,14 +94,13 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: mac-go-mod-v5-{{ checksum "go.sum" }}
-      - run: 'sh ./scripts/mac_installgo.sh --download'
-      - run: 'sh ./scripts/mac_installgo.sh --setup'
+          key: mac-go-mod-v6-{{ checksum "go.sum" }}
+      - run: 'sh ./scripts/mac_installgo.sh --full'
       - run: 'make deps'
       - run: 'make tidy'
       - save_cache:
           name: 'go module cache'
-          key: mac-go-mod-v5-{{ checksum "go.sum" }}
+          key: mac-go-mod-v6-{{ checksum "go.sum" }}
           paths:
             - '~/go/pkg/mod'
             - '/Users/distiller/go'

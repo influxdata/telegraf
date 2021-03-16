@@ -8,20 +8,23 @@ download_go () {
     echo "installing go"
     curl -OL https://golang.org/dl/go${version}.darwin-amd64.tar.gz --output go${version}.darwin-amd64.tar.gz
     sudo rm -rf ${path}/go
-    tar -C $path -xzf go${version}.darwin-amd64.tar.gz
+    tar -C ${path} -xzf go${version}.darwin-amd64.tar.gz
 }
 
 check_go () {
-    if [ -d $path/go ]; then
+    if [ -d ${path}/go ]; then
         echo "Go is already downloaded"
-        v=`${path}/go/bin/go version | { read _ _ v _; echo ${v#go}; }`
+        setup_go
+        v=`go version | { read _ _ v _; echo ${v#go}; }`
         echo "$v is downloaded, required version is $version"
         if [ "$v" != $version ]; then
             download_go
-            $path/go/bin/go version
+            setup_go
+            go version
         fi
     else
         download_go
+        setup_go
     fi
 }
 
@@ -38,11 +41,11 @@ setup_go () {
 for arg in "$@"
 do
     case $arg in
-        --download)
+        --full)
         check_go
         shift
         ;;
-        --setup)
+        --cache)
         setup_go
         shift
         ;;
