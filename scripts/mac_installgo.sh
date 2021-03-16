@@ -1,6 +1,7 @@
 #!/bin/sh
 
 version="1.16.2"
+# This path is cachable, while saving directly in /usr/local/ will cause issues restoring the cache
 path="/usr/local/Cellar"
 
 # Download Go directly from tar, the reason we aren't using brew: it is slow to update and we can't pull specific minor versions
