@@ -163,5 +163,4 @@ func TestParseValidPrometheus(t *testing.T) {
 	assert.Equal(t,
 		map[string]string{"verb": "POST", "resource": "bindings"},
 		metrics[0].Tags())
-
 }

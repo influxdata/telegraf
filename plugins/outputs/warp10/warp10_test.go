@@ -117,5 +117,4 @@ func TestHandleWarp10Error(t *testing.T) {
 		payload := w.HandleError(handledError.Message, 511)
 		require.Exactly(t, handledError.Expected, payload)
 	}
-
 }

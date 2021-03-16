@@ -65,7 +65,6 @@ func (r *GzipReader) Read(b []byte) (int, error) {
 		return n, nil
 	}
 	return n, err
-
 }
 
 // NewContentEncoder returns a ContentEncoder for the encoding type.

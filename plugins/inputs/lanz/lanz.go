@@ -48,7 +48,6 @@ func (l *Lanz) Gather(acc telegraf.Accumulator) error {
 }
 
 func (l *Lanz) Start(acc telegraf.Accumulator) error {
-
 	if len(l.Servers) == 0 {
 		l.Servers = append(l.Servers, "tcp://127.0.0.1:50001")
 	}

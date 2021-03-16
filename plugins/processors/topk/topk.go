@@ -280,7 +280,6 @@ func (t *TopK) push() []telegraf.Metric {
 	// Get the top K metrics for each field and add them to the return value
 	addedKeys := make(map[string]bool)
 	for _, field := range t.Fields {
-
 		// Sort the aggregations
 		sortMetrics(aggregations, field, t.Bottomk)
 

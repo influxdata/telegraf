@@ -24,7 +24,6 @@ const testStreamName = "streamName"
 const zero int64 = 0
 
 func TestPartitionKey(t *testing.T) {
-
 	assert := assert.New(t)
 	testPoint := testutil.TestMetric(1)
 
@@ -486,7 +485,6 @@ func (m *mockKinesisPutRecords) SetupResponse(
 	failedRecordCount int64,
 	records []*kinesis.PutRecordsResultEntry,
 ) {
-
 	m.responses = append(m.responses, &mockKinesisPutRecordsResponse{
 		Err: nil,
 		Output: &kinesis.PutRecordsOutput{
@@ -500,7 +498,6 @@ func (m *mockKinesisPutRecords) SetupGenericResponse(
 	successfulRecordCount uint32,
 	failedRecordCount uint32,
 ) {
-
 	records := []*kinesis.PutRecordsResultEntry{}
 
 	for i := uint32(0); i < successfulRecordCount; i++ {
@@ -521,7 +518,6 @@ func (m *mockKinesisPutRecords) SetupGenericResponse(
 }
 
 func (m *mockKinesisPutRecords) SetupErrorResponse(err error) {
-
 	m.responses = append(m.responses, &mockKinesisPutRecordsResponse{
 		Err:    err,
 		Output: nil,
@@ -529,7 +525,6 @@ func (m *mockKinesisPutRecords) SetupErrorResponse(err error) {
 }
 
 func (m *mockKinesisPutRecords) PutRecords(input *kinesis.PutRecordsInput) (*kinesis.PutRecordsOutput, error) {
-
 	reqNum := len(m.requests)
 	if reqNum > len(m.responses) {
 		return nil, fmt.Errorf("Response for request %+v not setup", reqNum)
@@ -545,7 +540,6 @@ func (m *mockKinesisPutRecords) AssertRequests(
 	t *testing.T,
 	expected []*kinesis.PutRecordsInput,
 ) {
-
 	require.Equalf(t,
 		len(expected),
 		len(m.requests),
@@ -596,7 +590,6 @@ func createTestMetric(
 	name string,
 	serializer serializers.Serializer,
 ) (telegraf.Metric, []byte) {
-
 	metric := testutil.TestMetric(1, name)
 
 	data, err := serializer.Serialize(metric)
@@ -610,7 +603,6 @@ func createTestMetrics(
 	count uint32,
 	serializer serializers.Serializer,
 ) ([]telegraf.Metric, [][]byte) {
-
 	metrics := make([]telegraf.Metric, count)
 	metricsData := make([][]byte, count)
 
@@ -628,7 +620,6 @@ func createPutRecordsRequestEntries(
 	metricsData [][]byte,
 	partitionKey string,
 ) []*kinesis.PutRecordsRequestEntry {
-
 	count := len(metricsData)
 	records := make([]*kinesis.PutRecordsRequestEntry, count)
 

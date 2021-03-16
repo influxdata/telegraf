@@ -583,5 +583,4 @@ func TestAutoDiscovery(t *testing.T) {
 	)
 	defer ts.Close()
 	ch.Gather(acc)
-
 }

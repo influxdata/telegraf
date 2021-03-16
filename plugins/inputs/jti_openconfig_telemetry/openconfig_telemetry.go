@@ -272,7 +272,6 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 		m.sensorsConfig = append(m.sensorsConfig, sensorConfig{
 			measurementName: measurementName, pathList: pathlist,
 		})
-
 	}
 
 	return len(m.sensorsConfig)

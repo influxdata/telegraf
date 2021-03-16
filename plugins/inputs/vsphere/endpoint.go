@@ -827,7 +827,6 @@ func (e *Endpoint) Close() {
 
 // Collect runs a round of data collections as specified in the configuration.
 func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error {
-
 	// If we never managed to do a discovery, collection will be a no-op. Therefore,
 	// we need to check that a connection is available, or the collection will
 	// silently fail.
@@ -896,7 +895,6 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 	for _, object := range res.objects {
 		timeBuckets := make(map[int64]*types.PerfQuerySpec, 0)
 		for metricIdx, metric := range res.metrics {
-
 			// Determine time of last successful collection
 			metricName := e.getMetricNameForID(metric.CounterId)
 			if metricName == "" {

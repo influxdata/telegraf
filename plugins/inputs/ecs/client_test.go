@@ -27,7 +27,6 @@ func (p *pollMock) ContainerStats() (map[string]types.StatsJSON, error) {
 }
 
 func TestEcsClient_PollSync(t *testing.T) {
-
 	tests := []struct {
 		name    string
 		mock    *pollMock

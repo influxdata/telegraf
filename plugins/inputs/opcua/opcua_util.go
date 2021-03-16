@@ -32,7 +32,6 @@ func newTempDir() (string, error) {
 }
 
 func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.Duration) (string, string) {
-
 	dir, _ := newTempDir()
 
 	if len(host) == 0 {
@@ -310,7 +309,6 @@ func generateAuth(a string, cert []byte, un, pw string) (ua.UserTokenType, opcua
 		log.Printf("unknown auth-mode, defaulting to Anonymous")
 		authMode = ua.UserTokenTypeAnonymous
 		authOption = opcua.AuthAnonymous()
-
 	}
 
 	return authMode, authOption

@@ -129,9 +129,7 @@ func (j javaMetric) addTagsFields(out map[string]interface{}) {
 	}
 }
 
-func addCassandraMetric(mbean string, c cassandraMetric,
-	values map[string]interface{}) {
-
+func addCassandraMetric(mbean string, c cassandraMetric, values map[string]interface{}) {
 	tags := make(map[string]string)
 	fields := make(map[string]interface{})
 	tokens := parseJmxMetricRequest(mbean)
@@ -139,11 +137,9 @@ func addCassandraMetric(mbean string, c cassandraMetric,
 	tags["cassandra_host"] = c.host
 	addValuesAsFields(values, fields, tags["mname"])
 	c.acc.AddFields(tokens["class"]+tokens["type"], fields, tags)
-
 }
 
 func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
-
 	r := out["request"]
 
 	tokens := parseJmxMetricRequest(r.(map[string]interface{})["mbean"].(string))

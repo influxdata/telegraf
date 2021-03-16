@@ -315,7 +315,6 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := endpoint.Collect(context.Background(), acc)
 			if err == context.Canceled {
-
 				// No need to signal errors if we were merely canceled.
 				err = nil
 			}

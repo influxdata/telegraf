@@ -123,7 +123,6 @@ func (check *NginxUpstreamCheck) createHTTPClient() (*http.Client, error) {
 
 // gatherJSONData query the data source and parse the response JSON
 func (check *NginxUpstreamCheck) gatherJSONData(url string, value interface{}) error {
-
 	var method string
 	if check.Method != "" {
 		method = check.Method
@@ -187,7 +186,6 @@ func (check *NginxUpstreamCheck) Gather(accumulator telegraf.Accumulator) error 
 	}
 
 	return nil
-
 }
 
 func (check *NginxUpstreamCheck) gatherStatusData(url string, accumulator telegraf.Accumulator) error {
@@ -199,7 +197,6 @@ func (check *NginxUpstreamCheck) gatherStatusData(url string, accumulator telegr
 	}
 
 	for _, server := range checkData.Servers.Server {
-
 		tags := map[string]string{
 			"upstream": server.Upstream,
 			"type":     server.Type,

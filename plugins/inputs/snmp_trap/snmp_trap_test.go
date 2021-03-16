@@ -1318,5 +1318,4 @@ func TestReceiveTrap(t *testing.T) {
 				testutil.SortMetrics())
 		})
 	}
-
 }

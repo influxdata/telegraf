@@ -49,7 +49,6 @@ func TestGather(t *testing.T) {
 		t.Fatal(err)
 	}
 	acc.AssertContainsTaggedFields(t, "chrony", fields, tags)
-
 }
 
 // fackeExecCommand is a helper function that mock
@@ -102,7 +101,6 @@ Leap status     : Not synchronized
 	} else {
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
-
 	}
 	os.Exit(0)
 }

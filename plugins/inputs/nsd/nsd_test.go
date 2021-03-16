@@ -35,7 +35,6 @@ func TestParseFullOutput(t *testing.T) {
 
 	acc.AssertContainsFields(t, "nsd", parsedFullOutput)
 	acc.AssertContainsFields(t, "nsd_servers", parsedFullOutputServerAsTag)
-
 }
 
 var parsedFullOutputServerAsTag = map[string]interface{}{

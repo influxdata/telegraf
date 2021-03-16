@@ -88,7 +88,6 @@ func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf
 			results = append(results, metrics...)
 		default:
 			return nil, ErrWrongType
-
 		}
 	}
 
@@ -155,7 +154,6 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 // will delete any strings/bools that shouldn't be fields
 // assumes that any non-numeric values in TagKeys should be displayed as tags
 func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
-
 	for name, value := range fields {
 		if p.tagKeys == nil {
 			continue

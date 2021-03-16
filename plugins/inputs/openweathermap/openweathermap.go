@@ -124,7 +124,6 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 					gatherWeather(acc, status)
 				}()
 			}
-
 		}
 	}
 

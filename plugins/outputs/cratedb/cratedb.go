@@ -79,7 +79,6 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
 	rows := make([]string, len(metrics))
 	for i, m := range metrics {
-
 		cols := []interface{}{
 			hashID(m),
 			m.Time().UTC(),

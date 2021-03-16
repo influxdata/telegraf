@@ -487,7 +487,6 @@ func TestPingGatherNative(t *testing.T) {
 		assert.True(t, acc.HasField("ping", "maximum_response_ms"))
 		assert.True(t, acc.HasField("ping", "standard_deviation_ms"))
 	}
-
 }
 
 func TestNoPacketsSent(t *testing.T) {

@@ -159,7 +159,6 @@ func (k *KinesisOutput) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (k *KinesisOutput) writeKinesis(r []*kinesis.PutRecordsRequestEntry) time.Duration {
-
 	start := time.Now()
 	payload := &kinesis.PutRecordsInput{
 		Records:    r,
@@ -252,7 +251,6 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 			sz = 0
 			r = nil
 		}
-
 	}
 	if sz > 0 {
 		elapsed := k.writeKinesis(r)

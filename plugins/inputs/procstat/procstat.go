@@ -111,7 +111,6 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 			p.PidFinder = "pgrep"
 			p.createPIDFinder = defaultPIDFinder
 		}
-
 	}
 	if p.createProcess == nil {
 		p.createProcess = defaultProcess

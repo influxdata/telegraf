@@ -156,16 +156,13 @@ func (n *Openntpd) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if key == "next" || key == "poll" {
-
 				m, err := strconv.ParseInt(strings.TrimSuffix(fields[index], "s"), 10, 64)
 				if err != nil {
 					acc.AddError(fmt.Errorf("integer value expected, got: %s", fields[index]))
 					continue
 				}
 				mFields[key] = m
-
 			} else {
-
 				m, err := strconv.ParseInt(fields[index], 10, 64)
 				if err != nil {
 					acc.AddError(fmt.Errorf("integer value expected, got: %s", fields[index]))
@@ -185,23 +182,19 @@ func (n *Openntpd) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if key == "offset" || key == "delay" || key == "jitter" {
-
 				m, err := strconv.ParseFloat(strings.TrimSuffix(fields[index], "ms"), 64)
 				if err != nil {
 					acc.AddError(fmt.Errorf("float value expected, got: %s", fields[index]))
 					continue
 				}
 				mFields[key] = m
-
 			} else {
-
 				m, err := strconv.ParseFloat(fields[index], 64)
 				if err != nil {
 					acc.AddError(fmt.Errorf("float value expected, got: %s", fields[index]))
 					continue
 				}
 				mFields[key] = m
-
 			}
 		}
 		acc.AddFields("openntpd", mFields, tags)

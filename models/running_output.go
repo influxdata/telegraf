@@ -125,7 +125,6 @@ func (r *RunningOutput) Init() error {
 		if err != nil {
 			return err
 		}
-
 	}
 	return nil
 }

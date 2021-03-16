@@ -4,8 +4,8 @@ go 1.16
 
 require (
 	cloud.google.com/go v0.53.0
-	cloud.google.com/go/datastore v1.1.0 // indirect
-	cloud.google.com/go/pubsub v1.2.0
+	cloud.google.com/go/bigquery v1.3.0
+	cloud.google.com/go/pubsub v1.1.0
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.3.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
@@ -20,6 +20,7 @@ require (
 	github.com/Shopify/sarama v1.27.2
 	github.com/aerospike/aerospike-client-go v1.27.0
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
+	github.com/aliyun/alibaba-cloud-sdk-go v1.61.785
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/xmlquery v1.3.3
 	github.com/antchfx/xpath v1.1.11
@@ -88,6 +89,7 @@ require (
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.6.0+incompatible
 	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
+	github.com/jmespath/go-jmespath v0.4.0
 	github.com/kardianos/service v1.0.0
 	github.com/karrick/godirwalk v1.16.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
