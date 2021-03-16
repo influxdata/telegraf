@@ -27,9 +27,9 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 	})
 
 	type fields struct {
-		DecompressionType string
-		parser            parsers.Parser
-		records           map[telegraf.TrackingID]string
+		ContentEncoding string
+		parser          parsers.Parser
+		records         map[telegraf.TrackingID]string
 	}
 	type args struct {
 		r *consumer.Record
@@ -48,9 +48,56 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 		{
 			name: "test no compression",
 			fields: fields{
-				DecompressionType: "none",
-				parser:            parser,
-				records:           make(map[telegraf.TrackingID]string),
+				ContentEncoding: "none",
+				parser:          parser,
+				records:         make(map[telegraf.TrackingID]string),
+			},
+			args: args{
+				r: &consumer.Record{Data: notZippedBytes, SequenceNumber: aws.String("anything")},
+			},
+			wantErr: false,
+			expected: expected{
+				messageContains: "bob",
+				numberOfMetrics: 2,
+			},
+		},
+		{
+			name: "test no compression via empty string for ContentEncoding",
+			fields: fields{
+				ContentEncoding: "",
+				parser:          parser,
+				records:         make(map[telegraf.TrackingID]string),
+			},
+			args: args{
+				r: &consumer.Record{Data: notZippedBytes, SequenceNumber: aws.String("anything")},
+			},
+			wantErr: false,
+			expected: expected{
+				messageContains: "bob",
+				numberOfMetrics: 2,
+			},
+		},
+		{
+			name: "test no compression via identity ContentEncoding",
+			fields: fields{
+				ContentEncoding: "identity",
+				parser:          parser,
+				records:         make(map[telegraf.TrackingID]string),
+			},
+			args: args{
+				r: &consumer.Record{Data: notZippedBytes, SequenceNumber: aws.String("anything")},
+			},
+			wantErr: false,
+			expected: expected{
+				messageContains: "bob",
+				numberOfMetrics: 2,
+			},
+		},
+		{
+			name: "test no compression via no ContentEncoding",
+			fields: fields{
+				parser:  parser,
+				records: make(map[telegraf.TrackingID]string),
 			},
 			args: args{
 				r: &consumer.Record{Data: notZippedBytes, SequenceNumber: aws.String("anything")},
@@ -64,9 +111,9 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 		{
 			name: "test gzip compression",
 			fields: fields{
-				DecompressionType: "gzip",
-				parser:            parser,
-				records:           make(map[telegraf.TrackingID]string),
+				ContentEncoding: "gzip",
+				parser:          parser,
+				records:         make(map[telegraf.TrackingID]string),
 			},
 			args: args{
 				r: &consumer.Record{Data: gzippedBytes, SequenceNumber: aws.String("anything")},
@@ -80,9 +127,9 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 		{
 			name: "test zlib compression",
 			fields: fields{
-				DecompressionType: "zlib",
-				parser:            parser,
-				records:           make(map[telegraf.TrackingID]string),
+				ContentEncoding: "zlib",
+				parser:          parser,
+				records:         make(map[telegraf.TrackingID]string),
 			},
 			args: args{
 				r: &consumer.Record{Data: zlibBytpes, SequenceNumber: aws.String("anything")},
@@ -96,7 +143,7 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 	}
 
 	k := &KinesisConsumer{
-		DecompressionType: "notsupported",
+		ContentEncoding: "notsupported",
 	}
 	err := k.Init()
 	assert.NotNil(t, err)
@@ -104,9 +151,9 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			k := &KinesisConsumer{
-				DecompressionType: tt.fields.DecompressionType,
-				parser:            tt.fields.parser,
-				records:           tt.fields.records,
+				ContentEncoding: tt.fields.ContentEncoding,
+				parser:          tt.fields.parser,
+				records:         tt.fields.records,
 			}
 			err := k.Init()
 			assert.Nil(t, err)

@@ -42,7 +42,7 @@ type (
 		ShardIteratorType      string    `toml:"shard_iterator_type"`
 		DynamoDB               *DynamoDB `toml:"checkpoint_dynamodb"`
 		MaxUndeliveredMessages int       `toml:"max_undelivered_messages"`
-		DecompressionType      string    `toml:"decompress"`
+		ContentEncoding        string    `toml:"content_encoding"`
 
 		Log telegraf.Logger
 
@@ -60,7 +60,7 @@ type (
 		recordsTex    sync.Mutex
 		wg            sync.WaitGroup
 
-		decompressionFunc decompress
+		processContentEncodingFunc processContent
 
 		lastSeqNum *big.Int
 	}
@@ -75,7 +75,7 @@ const (
 	defaultMaxUndeliveredMessages = 1000
 )
 
-type decompress func([]byte) ([]byte, error)
+type processContent func([]byte) ([]byte, error)
 
 // this is the largest sequence number allowed - https://docs.aws.amazon.com/kinesis/latest/APIReference/API_SequenceNumberRange.html
 var maxSeq = strToBint(strings.Repeat("9", 129))
@@ -128,13 +128,13 @@ var sampleConfig = `
   data_format = "influx"
 
   ##
-  ## Whether or not to uncompress the data from kinesis
+  ## The content encoding of the data from kinesis
   ## If you are processing a cloudwatch logs kinesis stream then set this to "gzip"
   ## as AWS compresses cloudwatch log data before it is sent to kinesis (aws
   ## also base64 encodes the zip byte data before pushing to the stream.  The base64 decoding
   ## is done automatically by the golang sdk, as data is read from kinesis)
   ##
-  # decompress = "none"
+  # content_encoding = "identity"
 
   ## Optional
   ## Configuration for a dynamodb checkpoint
@@ -257,7 +257,7 @@ func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
 }
 
 func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consumer.Record) error {
-	data, err := k.decompressionFunc(r.Data)
+	data, err := k.processContentEncodingFunc(r.Data)
 	if err != nil {
 		return err
 	}
@@ -356,7 +356,7 @@ func (k *KinesisConsumer) Set(streamName, shardID, sequenceNumber string) error 
 	return nil
 }
 
-func decompressGzip(data []byte) ([]byte, error) {
+func processGzip(data []byte) ([]byte, error) {
 	zipData, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, err
@@ -365,7 +365,7 @@ func decompressGzip(data []byte) ([]byte, error) {
 	return ioutil.ReadAll(zipData)
 }
 
-func decompressZlib(data []byte) ([]byte, error) {
+func processZlib(data []byte) ([]byte, error) {
 	zlibData, err := zlib.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, err
@@ -374,26 +374,26 @@ func decompressZlib(data []byte) ([]byte, error) {
 	return ioutil.ReadAll(zlibData)
 }
 
-func decompressNoOp(data []byte) ([]byte, error) {
+func processNoOp(data []byte) ([]byte, error) {
 	return data, nil
 }
 
-func (k *KinesisConsumer) configureDecompressionFunc() error {
-	switch k.DecompressionType {
+func (k *KinesisConsumer) configureProcessContentEncodingFunc() error {
+	switch k.ContentEncoding {
 	case "gzip":
-		k.decompressionFunc = decompressGzip
+		k.processContentEncodingFunc = processGzip
 	case "zlib":
-		k.decompressionFunc = decompressZlib
-	case "none", "":
-		k.decompressionFunc = decompressNoOp
+		k.processContentEncodingFunc = processZlib
+	case "none", "identity", "":
+		k.processContentEncodingFunc = processNoOp
 	default:
-		return fmt.Errorf("unknown decompression %q", k.DecompressionType)
+		return fmt.Errorf("unknown content encoding %q", k.ContentEncoding)
 	}
 	return nil
 }
 
 func (k *KinesisConsumer) Init() error {
-	return k.configureDecompressionFunc()
+	return k.configureProcessContentEncodingFunc()
 }
 
 type noopCheckpoint struct{}
@@ -409,7 +409,7 @@ func init() {
 			ShardIteratorType:      "TRIM_HORIZON",
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 			lastSeqNum:             maxSeq,
-			DecompressionType:      "none",
+			ContentEncoding:        "identity",
 		}
 	})
 }

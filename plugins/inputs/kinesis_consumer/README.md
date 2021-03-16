@@ -55,13 +55,13 @@ and creates metrics using one of the supported [input data formats][].
   data_format = "influx"
 
   ##
-  ## Whether or not to uncompress the data from kinesis
+  ## The content encoding of the data from kinesis
   ## If you are processing a cloudwatch logs kinesis stream then set this to "gzip"
   ## as AWS compresses cloudwatch log data before it is sent to kinesis (aws
   ## also base64 encodes the zip byte data before pushing to the stream.  The base64 decoding
   ## is done automatically by the golang sdk, as data is read from kinesis)
   ##
-  # decompress = "none"
+  # content_encoding = "identity"
 
   ## Optional
   ## Configuration for a dynamodb checkpoint
