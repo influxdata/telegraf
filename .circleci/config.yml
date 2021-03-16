@@ -109,9 +109,9 @@ jobs:
       - persist_to_workspace:
           root: '/'
           paths:
-            - '/usr/local/go'
-            - '/usr/local/bin/go'
-            - '/usr/local/bin/gofmt'
+            - 'usr/local/go'
+            - 'usr/local/bin/go'
+            - 'usr/local/bin/gofmt'
   test-go-1_15:
     executor: go-1_15
     steps:
