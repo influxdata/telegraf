@@ -37,17 +37,12 @@ commands:
       - run: 'GOARCH=<< parameters.goarch >> make check'
       - run: 'GOARCH=<< parameters.goarch >> make check-deps'
       - run: 'GOARCH=<< parameters.goarch >> make test'
-  setup-go:
-    steps:
-      - run: sudo cp /Users/distiller/go/bin/go /usr/local/bin/
-      - run: sudo cp /Users/distiller/go/bin/gofmt /usr/local/bin/
-      - run: sudo cp -R /Users/distiller/go /usr/local/
   test-go-mac:
     steps:
       - checkout
       - attach_workspace:
           at: '/'
-      - setup-go
+      - run: 'sh ./scripts/mac_installgo.sh --setup'
       - run: 'make'
       - run: 'make check'
       - run: 'make test'
@@ -100,8 +95,8 @@ jobs:
       - checkout
       - restore_cache:
           key: mac-go-mod-v5-{{ checksum "go.sum" }}
-      - run: 'sh ./scripts/mac_installgo.sh'
-      - setup-go
+      - run: 'sh ./scripts/mac_installgo.sh --download'
+      - run: 'sh ./scripts/mac_installgo.sh --setup'
       - run: 'make deps'
       - run: 'make tidy'
       - save_cache:
@@ -142,7 +137,7 @@ jobs:
         shell: powershell.exe
     steps:
       - checkout
-      - run: choco upgrade golang --version=1.15.8
+      - run: choco upgrade golang --version=1.16.2
       - run: choco install make
       - run: git config --system core.longpaths true
       - run: make test-windows
