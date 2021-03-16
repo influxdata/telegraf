@@ -39,7 +39,7 @@ func TestParse(t *testing.T) {
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
-			"prometheusremotewrite",
+			"prometheus_remote_write",
 			map[string]string{
 				"quantile": "0.99",
 			},
@@ -49,7 +49,7 @@ func TestParse(t *testing.T) {
 			time.Unix(0, 0),
 		),
 		testutil.MustMetric(
-			"prometheusremotewrite",
+			"prometheus_remote_write",
 			map[string]string{
 				"job": "prometheus",
 			},
@@ -90,7 +90,7 @@ func TestDefaultTags(t *testing.T) {
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
-			"prometheusremotewrite",
+			"prometheus_remote_write",
 			map[string]string{
 				"defaultTag": "defaultTagValue",
 				"__eg__":     "bar",
@@ -136,7 +136,7 @@ func TestMetricsWithTimestamp(t *testing.T) {
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
-			"prometheusremotewrite",
+			"prometheus_remote_write",
 			map[string]string{
 				"__eg__": "bar",
 			},
