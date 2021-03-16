@@ -1,17 +1,16 @@
 #!/bin/sh
 
 version="1.16.2"
+path="/usr/local/Cellar"
 
 # Download Go directly from tar, the reason we aren't using brew: it is slow to update and we can't pull specific minor versions
 setup_go () {
     echo "installing go"
-    curl -OL https://golang.org/dl/go1.16.2.darwin-amd64.tar.gz --output go1.16.2.darwin-amd64.tar.gz
-    sudo rm -rf /usr/local/Cellar/go
-    sudo tar -C /usr/local/Cellar/ -xzf go1.16.2.darwin-amd64.tar.gz
-    sudo chown -R $USER:admin /usr/local/Cellar/go
-    sudo chmod 775 /usr/local/Cellar/go
-    ln -sf /usr/local/Cellar/go/bin/go /usr/local/bin/go
-    ln -sf /usr/local/Cellar/go/bin/gofmt /usr/local/bin/gofmt
+    curl -OL https://golang.org/dl/go${version}.darwin-amd64.tar.gz --output go${version}.darwin-amd64.tar.gz
+    sudo rm -rf ${path}/go
+    sudo tar -C $path -xzf go${version}.darwin-amd64.tar.gz
+    ln -sf ${path}/go/bin/go /usr/local/bin/go
+    ln -sf ${path}/go/bin/gofmt /usr/local/bin/gofmt
 }
 
 if command -v go &> /dev/null; then
