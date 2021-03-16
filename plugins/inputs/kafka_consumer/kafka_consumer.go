@@ -77,7 +77,7 @@ const sampleConfig = `
   ##  3 : LZ4
   ##  4 : ZSTD
    # compression_codec = 0
-   
+
   ## Initial offset position; one of "oldest" or "newest".
   # offset = "oldest"
 
@@ -235,6 +235,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			err := k.consumer.Consume(ctx, k.Topics, handler)
 			if err != nil {
 				acc.AddError(err)
+				//nolint:errcheck,revive
 				internal.SleepContext(ctx, reconnectDelay)
 			}
 		}
@@ -393,7 +394,7 @@ func (h *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 	for {
 		err := h.Reserve(ctx)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		select {

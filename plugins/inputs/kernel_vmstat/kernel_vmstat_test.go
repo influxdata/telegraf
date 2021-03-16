@@ -9,11 +9,11 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFullVmStatProcFile(t *testing.T) {
-	tmpfile := makeFakeVMStatFile([]byte(vmStatFileFull))
+	tmpfile := makeFakeVMStatFile(t, []byte(vmStatFileFull))
 	defer os.Remove(tmpfile)
 
 	k := KernelVmstat{
@@ -21,8 +21,7 @@ func TestFullVmStatProcFile(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	err := k.Gather(&acc)
-	assert.NoError(t, err)
+	require.NoError(t, k.Gather(&acc))
 
 	fields := map[string]interface{}{
 		"nr_free_pages":                 int64(78730),
@@ -121,7 +120,7 @@ func TestFullVmStatProcFile(t *testing.T) {
 }
 
 func TestPartialVmStatProcFile(t *testing.T) {
-	tmpfile := makeFakeVMStatFile([]byte(vmStatFilePartial))
+	tmpfile := makeFakeVMStatFile(t, []byte(vmStatFilePartial))
 	defer os.Remove(tmpfile)
 
 	k := KernelVmstat{
@@ -130,7 +129,7 @@ func TestPartialVmStatProcFile(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	fields := map[string]interface{}{
 		"unevictable_pgs_culled":     int64(1531),
@@ -151,7 +150,7 @@ func TestPartialVmStatProcFile(t *testing.T) {
 }
 
 func TestInvalidVmStatProcFile1(t *testing.T) {
-	tmpfile := makeFakeVMStatFile([]byte(vmStatFileInvalid))
+	tmpfile := makeFakeVMStatFile(t, []byte(vmStatFileInvalid))
 	defer os.Remove(tmpfile)
 
 	k := KernelVmstat{
@@ -160,12 +159,13 @@ func TestInvalidVmStatProcFile1(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
-	assert.Error(t, err)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid syntax")
 }
 
 func TestNoVmStatProcFile(t *testing.T) {
-	tmpfile := makeFakeVMStatFile([]byte(vmStatFileInvalid))
-	os.Remove(tmpfile)
+	tmpfile := makeFakeVMStatFile(t, []byte(vmStatFileInvalid))
+	require.NoError(t, os.Remove(tmpfile))
 
 	k := KernelVmstat{
 		statFile: tmpfile,
@@ -173,8 +173,8 @@ func TestNoVmStatProcFile(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "does not exist")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "does not exist")
 }
 
 const vmStatFileFull = `nr_free_pages 78730
@@ -298,18 +298,14 @@ thp_collapse_alloc 24857
 thp_collapse_alloc_failed 102214
 thp_split abcd`
 
-func makeFakeVMStatFile(content []byte) string {
+func makeFakeVMStatFile(t *testing.T, content []byte) string {
 	tmpfile, err := ioutil.TempFile("", "kernel_vmstat_test")
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, err)
 
-	if _, err := tmpfile.Write(content); err != nil {
-		panic(err)
-	}
-	if err := tmpfile.Close(); err != nil {
-		panic(err)
-	}
+	_, err = tmpfile.Write(content)
+	require.NoError(t, err)
+
+	require.NoError(t, tmpfile.Close())
 
 	return tmpfile.Name()
 }
