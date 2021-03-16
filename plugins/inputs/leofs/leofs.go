@@ -162,8 +162,7 @@ func (l *LeoFS) Description() string {
 
 func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 	if len(l.Servers) == 0 {
-		l.gatherServer(defaultEndpoint, ServerTypeManagerMaster, acc)
-		return nil
+		return l.gatherServer(defaultEndpoint, ServerTypeManagerMaster, acc)
 	}
 	var wg sync.WaitGroup
 	for _, endpoint := range l.Servers {
@@ -206,7 +205,11 @@ func (l *LeoFS) gatherServer(
 	if err != nil {
 		return err
 	}
-	cmd.Start()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	defer internal.WaitTimeout(cmd, time.Second*5)
 	scanner := bufio.NewScanner(stdout)
 	if !scanner.Scan() {
