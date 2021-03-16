@@ -1,12 +1,14 @@
 package tls_test
 
 import (
+	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	tlsConfig "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -16,18 +18,18 @@ var pki = testutil.NewPKI("../../../testutil/pki")
 func TestClientConfig(t *testing.T) {
 	tests := []struct {
 		name   string
-		client tls.ClientConfig
+		client tlsConfig.ClientConfig
 		expNil bool
 		expErr bool
 	}{
 		{
 			name:   "unset",
-			client: tls.ClientConfig{},
+			client: tlsConfig.ClientConfig{},
 			expNil: true,
 		},
 		{
 			name: "success",
-			client: tls.ClientConfig{
+			client: tlsConfig.ClientConfig{
 				TLSCA:   pki.CACertPath(),
 				TLSCert: pki.ClientCertPath(),
 				TLSKey:  pki.ClientKeyPath(),
@@ -35,7 +37,7 @@ func TestClientConfig(t *testing.T) {
 		},
 		{
 			name: "invalid ca",
-			client: tls.ClientConfig{
+			client: tlsConfig.ClientConfig{
 				TLSCA:   pki.ClientKeyPath(),
 				TLSCert: pki.ClientCertPath(),
 				TLSKey:  pki.ClientKeyPath(),
@@ -45,14 +47,14 @@ func TestClientConfig(t *testing.T) {
 		},
 		{
 			name: "missing ca is okay",
-			client: tls.ClientConfig{
+			client: tlsConfig.ClientConfig{
 				TLSCert: pki.ClientCertPath(),
 				TLSKey:  pki.ClientKeyPath(),
 			},
 		},
 		{
 			name: "invalid cert",
-			client: tls.ClientConfig{
+			client: tlsConfig.ClientConfig{
 				TLSCA:   pki.CACertPath(),
 				TLSCert: pki.ClientKeyPath(),
 				TLSKey:  pki.ClientKeyPath(),
@@ -62,7 +64,7 @@ func TestClientConfig(t *testing.T) {
 		},
 		{
 			name: "missing cert skips client keypair",
-			client: tls.ClientConfig{
+			client: tlsConfig.ClientConfig{
 				TLSCA:  pki.CACertPath(),
 				TLSKey: pki.ClientKeyPath(),
 			},
@@ -71,7 +73,7 @@ func TestClientConfig(t *testing.T) {
 		},
 		{
 			name: "missing key skips client keypair",
-			client: tls.ClientConfig{
+			client: tlsConfig.ClientConfig{
 				TLSCA:   pki.CACertPath(),
 				TLSCert: pki.ClientCertPath(),
 			},
@@ -80,7 +82,7 @@ func TestClientConfig(t *testing.T) {
 		},
 		{
 			name: "support deprecated ssl field names",
-			client: tls.ClientConfig{
+			client: tlsConfig.ClientConfig{
 				SSLCA:   pki.CACertPath(),
 				SSLCert: pki.ClientCertPath(),
 				SSLKey:  pki.ClientKeyPath(),
@@ -88,7 +90,7 @@ func TestClientConfig(t *testing.T) {
 		},
 		{
 			name: "set SNI server name",
-			client: tls.ClientConfig{
+			client: tlsConfig.ClientConfig{
 				ServerName: "foo.example.com",
 			},
 			expNil: false,
@@ -113,21 +115,108 @@ func TestClientConfig(t *testing.T) {
 	}
 }
 
+func TestClientConfigTLSMinVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		client  tlsConfig.ClientConfig
+		expVers uint16
+		expErr  bool
+	}{
+		{
+			name: "default",
+			client: tlsConfig.ClientConfig{
+				TLSCA:   pki.CACertPath(),
+				TLSCert: pki.ClientCertPath(),
+				TLSKey:  pki.ClientKeyPath(),
+			},
+			expVers: tls.VersionTLS12,
+			expErr:  false,
+		},
+		{
+			name: "TLS13",
+			client: tlsConfig.ClientConfig{
+				TLSCA:         pki.CACertPath(),
+				TLSCert:       pki.ClientCertPath(),
+				TLSKey:        pki.ClientKeyPath(),
+				TLSMinVersion: "TLS13",
+			},
+			expVers: tls.VersionTLS13,
+			expErr:  false,
+		},
+		{
+			name: "explicit TLS12",
+			client: tlsConfig.ClientConfig{
+				TLSCA:         pki.CACertPath(),
+				TLSCert:       pki.ClientCertPath(),
+				TLSKey:        pki.ClientKeyPath(),
+				TLSMinVersion: "TLS12",
+			},
+			expVers: tls.VersionTLS12,
+			expErr:  false,
+		},
+		{
+			name: "TLS11",
+			client: tlsConfig.ClientConfig{
+				TLSCA:         pki.CACertPath(),
+				TLSCert:       pki.ClientCertPath(),
+				TLSKey:        pki.ClientKeyPath(),
+				TLSMinVersion: "TLS11",
+			},
+			expVers: tls.VersionTLS11,
+			expErr:  false,
+		},
+		{
+			name: "TLS10",
+			client: tlsConfig.ClientConfig{
+				TLSCA:         pki.CACertPath(),
+				TLSCert:       pki.ClientCertPath(),
+				TLSKey:        pki.ClientKeyPath(),
+				TLSMinVersion: "TLS10",
+			},
+			expVers: tls.VersionTLS10,
+			expErr:  false,
+		},
+		{
+			name: "bad version",
+			client: tlsConfig.ClientConfig{
+				TLSCA:         pki.CACertPath(),
+				TLSCert:       pki.ClientCertPath(),
+				TLSKey:        pki.ClientKeyPath(),
+				TLSMinVersion: "bad",
+			},
+			expErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tlsConfig, err := tt.client.TLSConfig()
+			if !tt.expErr {
+				require.NoError(t, err)
+				require.NotNil(t, tlsConfig)
+				require.Equal(t, tlsConfig.MinVersion, tt.expVers)
+			} else {
+				require.Error(t, err)
+				require.Nil(t, tlsConfig)
+			}
+		})
+	}
+}
+
 func TestServerConfig(t *testing.T) {
 	tests := []struct {
 		name   string
-		server tls.ServerConfig
+		server tlsConfig.ServerConfig
 		expNil bool
 		expErr bool
 	}{
 		{
 			name:   "unset",
-			server: tls.ServerConfig{},
+			server: tlsConfig.ServerConfig{},
 			expNil: true,
 		},
 		{
 			name: "success",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
 				TLSAllowedCACerts: []string{pki.CACertPath()},
@@ -138,7 +227,7 @@ func TestServerConfig(t *testing.T) {
 		},
 		{
 			name: "missing tls cipher suites is okay",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
 				TLSAllowedCACerts: []string{pki.CACertPath()},
@@ -147,7 +236,7 @@ func TestServerConfig(t *testing.T) {
 		},
 		{
 			name: "missing tls max version is okay",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
 				TLSAllowedCACerts: []string{pki.CACertPath()},
@@ -157,7 +246,7 @@ func TestServerConfig(t *testing.T) {
 		},
 		{
 			name: "missing tls min version is okay",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
 				TLSAllowedCACerts: []string{pki.CACertPath()},
@@ -167,7 +256,7 @@ func TestServerConfig(t *testing.T) {
 		},
 		{
 			name: "missing tls min/max versions is okay",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
 				TLSAllowedCACerts: []string{pki.CACertPath()},
@@ -176,7 +265,7 @@ func TestServerConfig(t *testing.T) {
 		},
 		{
 			name: "invalid ca",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
 				TLSAllowedCACerts: []string{pki.ServerKeyPath()},
@@ -186,7 +275,7 @@ func TestServerConfig(t *testing.T) {
 		},
 		{
 			name: "missing allowed ca is okay",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSCert: pki.ServerCertPath(),
 				TLSKey:  pki.ServerKeyPath(),
 			},
@@ -195,7 +284,7 @@ func TestServerConfig(t *testing.T) {
 		},
 		{
 			name: "invalid cert",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSCert:           pki.ServerKeyPath(),
 				TLSKey:            pki.ServerKeyPath(),
 				TLSAllowedCACerts: []string{pki.CACertPath()},
@@ -205,7 +294,7 @@ func TestServerConfig(t *testing.T) {
 		},
 		{
 			name: "missing cert",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSKey:            pki.ServerKeyPath(),
 				TLSAllowedCACerts: []string{pki.CACertPath()},
 			},
@@ -214,7 +303,7 @@ func TestServerConfig(t *testing.T) {
 		},
 		{
 			name: "missing key",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSAllowedCACerts: []string{pki.CACertPath()},
 			},
@@ -223,7 +312,7 @@ func TestServerConfig(t *testing.T) {
 		},
 		{
 			name: "invalid cipher suites",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
 				TLSAllowedCACerts: []string{pki.CACertPath()},
@@ -234,7 +323,7 @@ func TestServerConfig(t *testing.T) {
 		},
 		{
 			name: "TLS Max Version less than TLS Min version",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
 				TLSAllowedCACerts: []string{pki.CACertPath()},
@@ -247,7 +336,7 @@ func TestServerConfig(t *testing.T) {
 		},
 		{
 			name: "invalid tls min version",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
 				TLSAllowedCACerts: []string{pki.CACertPath()},
@@ -260,7 +349,7 @@ func TestServerConfig(t *testing.T) {
 		},
 		{
 			name: "invalid tls max version",
-			server: tls.ServerConfig{
+			server: tlsConfig.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
 				TLSAllowedCACerts: []string{pki.CACertPath()},
@@ -286,13 +375,13 @@ func TestServerConfig(t *testing.T) {
 }
 
 func TestConnect(t *testing.T) {
-	clientConfig := tls.ClientConfig{
+	clientConfig := tlsConfig.ClientConfig{
 		TLSCA:   pki.CACertPath(),
 		TLSCert: pki.ClientCertPath(),
 		TLSKey:  pki.ClientKeyPath(),
 	}
 
-	serverConfig := tls.ServerConfig{
+	serverConfig := tlsConfig.ServerConfig{
 		TLSCert:           pki.ServerCertPath(),
 		TLSKey:            pki.ServerKeyPath(),
 		TLSAllowedCACerts: []string{pki.CACertPath()},
@@ -322,4 +411,44 @@ func TestConnect(t *testing.T) {
 	resp, err := client.Get(ts.URL)
 	require.NoError(t, err)
 	require.Equal(t, 200, resp.StatusCode)
+}
+
+func TestConnectFailMinVersion(t *testing.T) {
+	clientConfig := tlsConfig.ClientConfig{
+		TLSCA:   pki.CACertPath(),
+		TLSCert: pki.ClientCertPath(),
+		TLSKey:  pki.ClientKeyPath(),
+	}
+
+	serverConfig := tlsConfig.ServerConfig{
+		TLSCert:           pki.ServerCertPath(),
+		TLSKey:            pki.ServerKeyPath(),
+		TLSAllowedCACerts: []string{pki.CACertPath()},
+		TLSMaxVersion:     "TLS11",
+	}
+
+	serverTLSConfig, err := serverConfig.TLSConfig()
+	require.NoError(t, err)
+
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	ts.TLS = serverTLSConfig
+
+	ts.StartTLS()
+	defer ts.Close()
+
+	clientTLSConfig, err := clientConfig.TLSConfig()
+	require.NoError(t, err)
+
+	client := http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: clientTLSConfig,
+		},
+		Timeout: 10 * time.Second,
+	}
+
+	_, err = client.Get(ts.URL)
+	require.Error(t, err)
+	require.True(t, strings.Contains(err.Error(), "protocol version not supported"))
 }
