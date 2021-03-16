@@ -47,6 +47,7 @@ commands:
       - checkout
       - attach_workspace:
           at: '/'
+      - setup-go
       - run: 'make'
       - run: 'make check'
       - run: 'make test'
@@ -134,7 +135,6 @@ jobs:
   test-go-darwin:
     executor: mac
     steps:
-      - setup-go
       - test-go-mac
   test-go-windows:
     executor:
