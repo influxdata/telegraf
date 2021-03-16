@@ -107,7 +107,6 @@ func (p *Prometheus) start(ctx context.Context) error {
 // pod, causing errors in the logs. This is only true if the pod going offline is not
 // directed to do so by K8s.
 func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
-
 	selectors := podSelector(p)
 
 	pod := &corev1.Pod{}
@@ -189,7 +188,6 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 }
 
 func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Client, req *http.Request) error {
-
 	resp, err := client.Client.Do(req)
 	if err != nil {
 		return fmt.Errorf("Error when making request for pod list: %w", err)
@@ -224,7 +222,6 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
 			podHasMatchingFieldSelector(pod, p.podFieldSelector) {
 			registerPod(pod, p)
 		}
-
 	}
 	p.lock.Unlock()
 
@@ -316,7 +313,6 @@ func podSelector(p *Prometheus) []k8s.Option {
 	}
 
 	return options
-
 }
 
 func registerPod(pod *corev1.Pod, p *Prometheus) {

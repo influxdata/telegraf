@@ -91,7 +91,6 @@ func GetHostProc() string {
 }
 
 func init() {
-
 	inputs.Add("linux_sysctl_fs", func() telegraf.Input {
 		return &SysctlFS{
 			path: path.Join(GetHostProc(), "/sys/fs"),

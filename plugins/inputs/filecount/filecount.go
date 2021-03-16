@@ -292,7 +292,6 @@ func (fc *FileCount) initGlobPaths(acc telegraf.Accumulator) {
 			fc.globPaths = append(fc.globPaths, *glob)
 		}
 	}
-
 }
 
 func NewFileCount() *FileCount {

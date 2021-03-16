@@ -318,7 +318,6 @@ func (s *Status) gatherProcessesMetrics(tags map[string]string, acc telegraf.Acc
 		},
 		tags,
 	)
-
 }
 
 func (s *Status) gatherConnectionsMetrics(tags map[string]string, acc telegraf.Accumulator) {

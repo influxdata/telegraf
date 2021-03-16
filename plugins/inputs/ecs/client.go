@@ -152,7 +152,6 @@ func (c *EcsClient) ContainerStats() (map[string]types.StatsJSON, error) {
 // PollSync executes Task and ContainerStats in parallel. If both succeed, both structs are returned.
 // If either errors, a single error is returned.
 func PollSync(c Client) (*Task, map[string]types.StatsJSON, error) {
-
 	var task *Task
 	var stats map[string]types.StatsJSON
 	var err error

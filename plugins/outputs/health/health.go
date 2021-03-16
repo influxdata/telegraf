@@ -240,7 +240,6 @@ func (h *Health) getOrigin(listener net.Listener) string {
 		}
 		return origin.String()
 	}
-
 }
 
 func (h *Health) setHealthy(healthy bool) {

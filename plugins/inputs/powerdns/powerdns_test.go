@@ -51,7 +51,6 @@ var intOverflowMetrics = "corrupt-packets=18446744073709550195,deferred-cache-in
 	"signature-cache-size=0,sys-msec=2889,uptime=86317,user-msec=2167,"
 
 func (s statServer) serverSocket(l net.Listener) {
-
 	for {
 		conn, err := l.Accept()
 		if err != nil {

@@ -89,7 +89,6 @@ func (k *Kubernetes) Description() string {
 }
 
 func (k *Kubernetes) Init() error {
-
 	// If neither are provided, use the default service account.
 	if k.BearerToken == "" && k.BearerTokenString == "" {
 		k.BearerToken = defaultServiceAccountPath

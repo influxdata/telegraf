@@ -377,7 +377,6 @@ Vcore Voltage:
 	} else {
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
-
 	}
 	os.Exit(0)
 }

@@ -10,7 +10,6 @@ import (
 )
 
 func TestDovecotIntegration(t *testing.T) {
-
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -103,7 +102,6 @@ func TestDovecotIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	acc.AssertContainsTaggedFields(t, "dovecot", fields, tags)
-
 }
 
 const sampleGlobal = `reset_timestamp	last_update	num_logins	num_cmds	num_connected_sessions	user_cpu	sys_cpu	clock_time	min_faults	maj_faults	vol_cs	invol_cs	disk_input	disk_output	read_count	read_bytes	write_count	write_bytes	mail_lookup_path	mail_lookup_attr	mail_read_count	mail_read_bytes	mail_cache_hits

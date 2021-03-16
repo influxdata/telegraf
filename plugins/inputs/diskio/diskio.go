@@ -104,7 +104,6 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, io := range diskio {
-
 		match := false
 		if d.deviceFilter != nil && d.deviceFilter.Match(io.Name) {
 			match = true

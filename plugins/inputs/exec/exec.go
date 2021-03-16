@@ -137,7 +137,6 @@ func removeCarriageReturns(b bytes.Buffer) bytes.Buffer {
 		b = buf
 	}
 	return b
-
 }
 
 func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {

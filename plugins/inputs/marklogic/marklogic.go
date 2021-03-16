@@ -108,7 +108,6 @@ var sampleConfig = `
 
 // Init parse all source URLs and place on the Marklogic struct
 func (c *Marklogic) Init() error {
-
 	if len(c.URL) == 0 {
 		c.URL = "http://localhost:8002/"
 	}

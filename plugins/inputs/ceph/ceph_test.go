@@ -105,7 +105,6 @@ func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	c := &Ceph{}
 	c.Gather(acc)
-
 }
 
 func TestFindSockets(t *testing.T) {

@@ -149,7 +149,6 @@ func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	assert.True(t, acc.HasFloatField("prometheus", "go_gc_duration_seconds_sum"))
 	assert.True(t, acc.HasFloatField("prometheus", "go_gc_duration_seconds_count"))
 	assert.True(t, acc.TagValue("prometheus", "url") == ts.URL+"/metrics")
-
 }
 
 func TestSummaryMayContainNaN(t *testing.T) {

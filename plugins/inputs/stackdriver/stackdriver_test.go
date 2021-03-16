@@ -803,7 +803,6 @@ func TestGatherAlign(t *testing.T) {
 			}
 
 			testutil.RequireMetricsEqual(t, tt.expected, actual)
-
 		})
 	}
 }

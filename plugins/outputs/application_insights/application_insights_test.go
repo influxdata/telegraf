@@ -397,7 +397,6 @@ func verifyAggregateTelemetry(
 	countField string,
 	telemetry *appinsights.AggregateMetricTelemetry,
 ) {
-
 	verifyAggregateField := func(fieldName string, telemetryValue float64) {
 		metricRawFieldValue, found := metric.Fields()[fieldName]
 		if !found {
@@ -426,7 +425,6 @@ func verifySimpleTelemetry(
 	expectedTelemetryName string,
 	telemetry *appinsights.MetricTelemetry,
 ) {
-
 	assert.Equal(expectedTelemetryName, telemetry.Name, "Telemetry name is not what was expected")
 	assert.EqualValues(metric.Fields()[valueField], telemetry.Value, "Telemetry value does not match metric value field")
 	assert.Equal(metric.Time(), telemetry.Timestamp, "Telemetry and metric timestamps do not match")

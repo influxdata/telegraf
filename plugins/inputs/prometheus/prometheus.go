@@ -163,7 +163,6 @@ func (p *Prometheus) Init() error {
 	// Config proccessing for node scrape scope for monitor_kubernetes_pods
 	p.isNodeScrapeScope = strings.EqualFold(p.PodScrapeScope, "node")
 	if p.isNodeScrapeScope {
-
 		// Need node IP to make cAdvisor call for pod list. Check if set in config and valid IP address
 		if p.NodeIP == "" || net.ParseIP(p.NodeIP) == nil {
 			p.Log.Infof("The config node_ip is empty or invalid. Using NODE_IP env var as default.")
