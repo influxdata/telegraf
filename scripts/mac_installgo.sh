@@ -12,7 +12,7 @@ download_go () {
 }
 
 check_go () {
-    if [ -d ${path}/go ]; then
+    if find ${path}/go -mindepth 1 | read; then
         echo "Go is already downloaded"
         setup_go
         v=`go version | { read _ _ v _; echo ${v#go}; }`
@@ -34,7 +34,7 @@ setup_go () {
         sudo cp ${path}/go/bin/gofmt /usr/local/bin/
         sudo cp -R ${path}/go /usr/local/
     else
-        echo "Missing go from macdeps, ${path} doesn't exist"
+        echo "Missing go from macdeps, ${path}/go doesn't exist"
     fi
 }
 
