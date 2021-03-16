@@ -43,7 +43,7 @@ commands:
           command: |
             mv /tmp/go/bin/go /usr/local/bin/
             mv /tmp/go/bin/gofmt /usr/local/bin/
-            sudo mv /tmp/go /usr/local/go
+            sudo cp -R /tmp/go/* /usr/local/go
   test-go-mac:
     steps:
       - checkout
