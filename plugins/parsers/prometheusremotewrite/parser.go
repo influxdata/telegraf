@@ -57,11 +57,11 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				} else {
 					t = now
 				}
-				metric, err := metric.New("prometheusremotewrite", tags, fields, t)
+				m, err := metric.New("prometheus_remote_write", tags, fields, t)
 				if err != nil {
 					return nil, fmt.Errorf("unable to convert to telegraf metric: %s", err)
 				}
-				metrics = append(metrics, metric)
+				metrics = append(metrics, m)
 			}
 		}
 	}

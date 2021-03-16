@@ -40,5 +40,5 @@ prompb.WriteRequest{
 
 **Example Output**
 ```
-prometheusremotewrite,instance=localhost:9090,job=prometheus,quantile=0.99 go_gc_duration_seconds=4.63 1614889298859000000
+prometheus_remote_write,instance=localhost:9090,job=prometheus,quantile=0.99 go_gc_duration_seconds=4.63 1614889298859000000
 ```
