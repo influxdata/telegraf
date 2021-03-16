@@ -162,7 +162,7 @@ func (c *CloudWatchLogs) Init() error {
 		return fmt.Errorf("log data source is not set")
 	}
 	lsSplitArray := strings.Split(c.LDSource, ":")
-	if len(lsSplitArray) < 1 {
+	if len(lsSplitArray) != 2 {
 		return fmt.Errorf("log data source is not properly formatted, ':' is missed.\n" +
 			"Should be 'tag:<tag_mame>' or 'field:<field_name>'")
 	}

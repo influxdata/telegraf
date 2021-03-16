@@ -72,6 +72,137 @@ func RandStringBytes(n int) string {
 	}
 	return string(b)
 }
+func TestInit(t *testing.T) {
+	tests := []struct {
+		name                string
+		expectedErrorString string
+		plugin              *CloudWatchLogs
+	}{
+		{
+			name:                "log group is not set",
+			expectedErrorString: "log group is not set",
+			plugin: &CloudWatchLogs{
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
+				LogGroup:     "",
+				LogStream:    "tag:source",
+				LDMetricName: "docker_log",
+				LDSource:     "field:message",
+				Log: testutil.Logger{
+					Name: "outputs.cloudwatch_logs",
+				},
+			},
+		},
+		{
+			name:                "log stream is not set",
+			expectedErrorString: "log stream is not set",
+			plugin: &CloudWatchLogs{
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
+				LogGroup:     "TestLogGroup",
+				LogStream:    "",
+				LDMetricName: "docker_log",
+				LDSource:     "field:message",
+				Log: testutil.Logger{
+					Name: "outputs.cloudwatch_logs",
+				},
+			},
+		},
+		{
+			name:                "log data metrics name is not set",
+			expectedErrorString: "log data metrics name is not set",
+			plugin: &CloudWatchLogs{
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
+				LogGroup:     "TestLogGroup",
+				LogStream:    "tag:source",
+				LDMetricName: "",
+				LDSource:     "field:message",
+				Log: testutil.Logger{
+					Name: "outputs.cloudwatch_logs",
+				},
+			},
+		},
+		{
+			name:                "log data source is not set",
+			expectedErrorString: "log data source is not set",
+			plugin: &CloudWatchLogs{
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
+				LogGroup:     "TestLogGroup",
+				LogStream:    "tag:source",
+				LDMetricName: "docker_log",
+				LDSource:     "",
+				Log: testutil.Logger{
+					Name: "outputs.cloudwatch_logs",
+				},
+			},
+		},
+		{
+			name: "log data source is not properly formatted (no divider)",
+			expectedErrorString: "log data source is not properly formatted, ':' is missed.\n" +
+				"Should be 'tag:<tag_mame>' or 'field:<field_name>'",
+			plugin: &CloudWatchLogs{
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
+				LogGroup:     "TestLogGroup",
+				LogStream:    "tag:source",
+				LDMetricName: "docker_log",
+				LDSource:     "field_message",
+				Log: testutil.Logger{
+					Name: "outputs.cloudwatch_logs",
+				},
+			},
+		},
+		{
+			name: "log data source is not properly formatted (inappropriate fields)",
+			expectedErrorString: "log data source is not properly formatted.\n" +
+				"Should be 'tag:<tag_mame>' or 'field:<field_name>'",
+			plugin: &CloudWatchLogs{
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
+				LogGroup:     "TestLogGroup",
+				LogStream:    "tag:source",
+				LDMetricName: "docker_log",
+				LDSource:     "bla:bla",
+				Log: testutil.Logger{
+					Name: "outputs.cloudwatch_logs",
+				},
+			},
+		},
+		{
+			name: "valid config",
+			plugin: &CloudWatchLogs{
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
+				LogGroup:     "TestLogGroup",
+				LogStream:    "tag:source",
+				LDMetricName: "docker_log",
+				LDSource:     "tag:location",
+				Log: testutil.Logger{
+					Name: "outputs.cloudwatch_logs",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.expectedErrorString != "" {
+				require.EqualError(t, tt.plugin.Init(), tt.expectedErrorString)
+			} else {
+				require.Nil(t, tt.plugin.Init())
+			}
+		})
+	}
+}
 
 func TestConnect(t *testing.T) {
 	//mock cloudwatch logs endpoint that is used only in plugin.Connect
