@@ -37,6 +37,13 @@ commands:
       - run: 'GOARCH=<< parameters.goarch >> make check'
       - run: 'GOARCH=<< parameters.goarch >> make check-deps'
       - run: 'GOARCH=<< parameters.goarch >> make test'
+  setup-go:
+    steps:
+      - run:
+        command: |
+          mv /tmp/go/bin/go /usr/local/bin/
+          mv /tmp/go/bin/gofmt /usr/local/bin/
+          sudo mv /tmp/go /usr/local/go
   test-go-mac:
     steps:
       - checkout
@@ -93,15 +100,14 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: mac-go-mod-v4-{{ checksum "go.sum" }}
+          key: mac-go-mod-v5-{{ checksum "go.sum" }}
       - run: 'sh ./scripts/mac_installgo.sh'
-      - run: 'ln -sf /tmp/go/bin/go /usr/local/bin/go'
+      - setup-go
       - run: 'make deps'
       - run: 'make tidy'
-      - run: 'unlink /usr/local/bin/go'
       - save_cache:
           name: 'go module cache'
-          key: mac-go-mod-v4-{{ checksum "go.sum" }}
+          key: mac-go-mod-v5-{{ checksum "go.sum" }}
           paths:
             - '~/go/pkg/mod'
             - '/tmp/go'
@@ -130,7 +136,7 @@ jobs:
   test-go-darwin:
     executor: mac
     steps:
-      - run: 'ln -sf /tmp/go/bin/go /usr/local/bin/go'
+      - setup-go
       - test-go-mac
   test-go-windows:
     executor:
