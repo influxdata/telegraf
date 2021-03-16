@@ -220,6 +220,7 @@ def apply(metric):
 
 - [drop string fields](/plugins/processors/starlark/testdata/drop_string_fields.star) - Drop fields containing string values.
 - [drop fields with unexpected type](/plugins/processors/starlark/testdata/drop_fields_with_unexpected_type.star) - Drop fields containing unexpected value types.
+- [iops](/plugins/processors/starlark/testdata/iops.star) - obtain IOPS (to aggregate, to produce max_iops)
 - [json](/plugins/processors/starlark/testdata/json.star) - an example of processing JSON from a field in a metric
 - [number logic](/plugins/processors/starlark/testdata/number_logic.star) - transform a numerical value to another numerical value
 - [pivot](/plugins/processors/starlark/testdata/pivot.star) - Pivots a key's value to be the key for another key.
