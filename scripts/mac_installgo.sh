@@ -6,12 +6,12 @@ version="1.16.2"
 setup_go () {
     echo "installing go"
     curl -OL https://golang.org/dl/go1.16.2.darwin-amd64.tar.gz --output go1.16.2.darwin-amd64.tar.gz
-    sudo rm -rf /usr/local/go
-    sudo tar -C /usr/local/ -xzf go1.16.2.darwin-amd64.tar.gz
-    sudo chown -R $USER:admin /usr/local/go
-    sudo chmod 775 /usr/local/go
-    ln -sf /usr/local/go/bin/go /usr/local/bin/go
-    ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
+    sudo rm -rf /usr/local/Cellar/go
+    sudo tar -C /usr/local/Cellar/ -xzf go1.16.2.darwin-amd64.tar.gz
+    sudo chown -R $USER:admin /usr/local/Cellar/go
+    sudo chmod 775 /usr/local/Cellar/go
+    ln -sf /usr/local/Cellar/go/bin/go /usr/local/bin/go
+    ln -sf /usr/local/Cellar/go/bin/gofmt /usr/local/bin/gofmt
 }
 
 if command -v go &> /dev/null; then

@@ -37,15 +37,6 @@ commands:
       - run: 'GOARCH=<< parameters.goarch >> make check'
       - run: 'GOARCH=<< parameters.goarch >> make check-deps'
       - run: 'GOARCH=<< parameters.goarch >> make test'
-  test-go-mac:
-    steps:
-      - checkout
-      - attach_workspace:
-          at: '/'
-      - run: 'sh ./scripts/mac_installgo.sh'
-      - run: 'make'
-      - run: 'make check'
-      - run: 'make test'
   package:
     parameters:
       nightly:
@@ -89,29 +80,6 @@ jobs:
           root: '/go'
           paths:
             - '*'
-  macdeps:
-    executor: mac
-    steps:
-      - checkout
-      - restore_cache:
-          key: mac-go-mod-v7-{{ checksum "go.sum" }}
-      - run: 'sh ./scripts/mac_installgo.sh'
-      - run: 'make deps'
-      - run: 'make tidy'
-      - save_cache:
-          name: 'go module cache'
-          key: mac-go-mod-v7-{{ checksum "go.sum" }}
-          paths:
-            - '~/go/pkg/mod'
-            - '/usr/local/go'
-            - '/usr/local/bin/go'
-            - '/usr/local/bin/gofmt'
-      - persist_to_workspace:
-          root: '/'
-          paths:
-            - 'usr/local/go'
-            - 'usr/local/bin/go'
-            - 'usr/local/bin/gofmt'
   test-go-1_15:
     executor: go-1_15
     steps:
@@ -130,10 +98,26 @@ jobs:
     steps:
       - test-go:
           goarch: "386"
-  test-go-darwin:
+  test-go-mac:
     executor: mac
     steps:
-      - test-go-mac
+      - checkout
+      - restore_cache:
+          key: mac-go-mod-v7-{{ checksum "go.sum" }}
+      - run: 'sh ./scripts/mac_installgo.sh'
+      - run: 'make deps'
+      - run: 'make tidy'
+      - run: 'make'
+      - run: 'make check'
+      - run: 'make test'
+      - save_cache:
+          name: 'go cache'
+          key: mac-go-mod-v7-{{ checksum "go.sum" }}
+          paths:
+            - '~/go/pkg/mod'
+            - '/usr/local/Cellar/go'
+            - '/usr/local/bin/go'
+            - '/usr/local/bin/gofmt'
   test-go-windows:
     executor:
         name: win/default
@@ -200,10 +184,6 @@ workflows:
   version: 2
   check:
     jobs:
-      - 'macdeps':
-          filters:
-            tags:
-              only: /.*/
       - 'deps':
           filters:
             tags:
@@ -232,9 +212,7 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'test-go-darwin':
-          requires:
-            - 'macdeps'
+      - 'test-go-mac':
           filters:
             tags: # only runs on tags if you specify this filter
               only: /.*/
@@ -245,7 +223,7 @@ workflows:
       - 'package':
           requires:
             - 'test-go-windows'
-            - 'test-go-darwin'
+            - 'test-go-mac'
             - 'test-go-1_15'
             - 'test-go-1_15-386'
             - 'test-go-1_16'
@@ -253,7 +231,7 @@ workflows:
       - 'release':
           requires:
             - 'test-go-windows'
-            - 'test-go-darwin'
+            - 'test-go-mac'
             - 'test-go-1_15'
             - 'test-go-1_15-386'
             - 'test-go-1_16'
@@ -278,7 +256,6 @@ workflows:
   nightly:
     jobs:
       - 'deps'
-      - 'macdeps'
       - 'test-go-1_15':
           requires:
             - 'deps'
@@ -291,14 +268,12 @@ workflows:
       - 'test-go-1_16-386':
           requires:
             - 'deps'
-      - 'test-go-darwin':
-          requires:
-            - 'macdeps'
+      - 'test-go-mac'
       - 'test-go-windows'
       - 'nightly':
           requires:
             - 'test-go-windows'
-            - 'test-go-darwin'
+            - 'test-go-mac'
             - 'test-go-1_15'
             - 'test-go-1_15-386'
             - 'test-go-1_16'
