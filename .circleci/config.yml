@@ -105,19 +105,18 @@ jobs:
       - restore_cache:
           key: mac-go-mod-v8-{{ checksum "go.sum" }}
       - run: 'sh ./scripts/mac_installgo.sh'
+      - save_cache:
+          name: 'go cache'
+          key: mac-go-mod-v8-{{ checksum "go.sum" }}
+          paths:
+            - '/usr/local/Cellar/go'
+            - '/usr/local/bin/go'
+            - '/usr/local/bin/gofmt'
       - run: 'make deps'
       - run: 'make tidy'
       - run: 'make'
       - run: 'make check'
       - run: 'make test'
-      - save_cache:
-          name: 'go cache'
-          key: mac-go-mod-v8-{{ checksum "go.sum" }}
-          paths:
-            - '~/go/pkg/mod'
-            - '/usr/local/Cellar/go'
-            - '/usr/local/bin/go'
-            - '/usr/local/bin/gofmt'
   test-go-windows:
     executor:
         name: win/default
