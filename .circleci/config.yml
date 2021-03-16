@@ -106,7 +106,7 @@ jobs:
           key: mac-go-mod-v8-{{ checksum "go.sum" }}
       - run: 'sh ./scripts/mac_installgo.sh'
       - save_cache:
-          name: 'go cache'
+          name: 'Saving cache'
           key: mac-go-mod-v8-{{ checksum "go.sum" }}
           paths:
             - '/usr/local/Cellar/go'
