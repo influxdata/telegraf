@@ -299,7 +299,6 @@ func TestWrite_MultipleMetrics_SinglePartialRequest(t *testing.T) {
 			StreamName: aws.String(testStreamName),
 			Records: createPutRecordsRequestEntries(
 				metricsData,
-				testPartitionKey,
 			),
 		},
 	})
@@ -332,7 +331,6 @@ func TestWrite_MultipleMetrics_SingleFullRequest(t *testing.T) {
 			StreamName: aws.String(testStreamName),
 			Records: createPutRecordsRequestEntries(
 				metricsData,
-				testPartitionKey,
 			),
 		},
 	})
@@ -366,14 +364,12 @@ func TestWrite_MultipleMetrics_MultipleRequests(t *testing.T) {
 			StreamName: aws.String(testStreamName),
 			Records: createPutRecordsRequestEntries(
 				metricsData[0:maxRecordsPerRequest],
-				testPartitionKey,
 			),
 		},
 		{
 			StreamName: aws.String(testStreamName),
 			Records: createPutRecordsRequestEntries(
 				metricsData[maxRecordsPerRequest:],
-				testPartitionKey,
 			),
 		},
 	})
@@ -407,14 +403,12 @@ func TestWrite_MultipleMetrics_MultipleFullRequests(t *testing.T) {
 			StreamName: aws.String(testStreamName),
 			Records: createPutRecordsRequestEntries(
 				metricsData[0:maxRecordsPerRequest],
-				testPartitionKey,
 			),
 		},
 		{
 			StreamName: aws.String(testStreamName),
 			Records: createPutRecordsRequestEntries(
 				metricsData[maxRecordsPerRequest:],
-				testPartitionKey,
 			),
 		},
 	})
@@ -618,14 +612,13 @@ func createTestMetrics(
 
 func createPutRecordsRequestEntries(
 	metricsData [][]byte,
-	partitionKey string,
 ) []*kinesis.PutRecordsRequestEntry {
 	count := len(metricsData)
 	records := make([]*kinesis.PutRecordsRequestEntry, count)
 
 	for i := 0; i < count; i++ {
 		records[i] = &kinesis.PutRecordsRequestEntry{
-			PartitionKey: aws.String(partitionKey),
+			PartitionKey: aws.String(testPartitionKey),
 			Data:         metricsData[i],
 		}
 	}
