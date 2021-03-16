@@ -1212,9 +1212,7 @@ func TestUnavailableEndpoints(t *testing.T) {
 	}
 
 	addr, err := url.Parse(ts.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 	n.gatherMetrics(addr, &acc)
@@ -1232,9 +1230,7 @@ func TestServerError(t *testing.T) {
 	}
 
 	addr, err := url.Parse(ts.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 	n.gatherMetrics(addr, &acc)
@@ -1244,7 +1240,8 @@ func TestServerError(t *testing.T) {
 func TestMalformedJSON(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		fmt.Fprintln(w, "this is not JSON")
+		_, err := fmt.Fprintln(w, "this is not JSON")
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -1253,9 +1250,7 @@ func TestMalformedJSON(t *testing.T) {
 	}
 
 	addr, err := url.Parse(ts.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 	n.gatherMetrics(addr, &acc)
@@ -1273,9 +1268,7 @@ func TestUnknownContentType(t *testing.T) {
 	}
 
 	addr, err := url.Parse(ts.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 	n.gatherMetrics(addr, &acc)
@@ -1285,9 +1278,7 @@ func TestUnknownContentType(t *testing.T) {
 func prepareAddr(t *testing.T, ts *httptest.Server) (*url.URL, string, string) {
 	t.Helper()
 	addr, err := url.Parse(fmt.Sprintf("%s/api", ts.URL))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	host, port, err := net.SplitHostPort(addr.Host)
 
@@ -1307,16 +1298,11 @@ func prepareAddr(t *testing.T, ts *httptest.Server) (*url.URL, string, string) {
 
 func prepareEndpoint(t *testing.T, path string, payload string) (*httptest.Server, *NginxPlusAPI) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var rsp string
+		require.Equal(t, r.URL.Path, fmt.Sprintf("/api/%d/%s", apiVersion, path), "unknown request path")
 
-		if r.URL.Path == fmt.Sprintf("/api/%d/%s", defaultAPIVersion, path) {
-			rsp = payload
-			w.Header()["Content-Type"] = []string{"application/json"}
-		} else {
-			t.Errorf("unknown request path")
-		}
-
-		fmt.Fprintln(w, rsp)
+		w.Header()["Content-Type"] = []string{"application/json"}
+		_, err := fmt.Fprintln(w, payload)
+		require.NoError(t, err)
 	}))
 
 	n := &NginxPlusAPI{
@@ -1325,9 +1311,8 @@ func prepareEndpoint(t *testing.T, path string, payload string) (*httptest.Serve
 	}
 
 	client, err := n.createHTTPClient()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
 	n.client = client
 
 	return ts, n
