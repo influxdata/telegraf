@@ -24,11 +24,11 @@ func (c *mockCloudWatchLogs) Init(lsName string) {
 	c.pushedLogEvents = make([]cloudwatchlogs.InputLogEvent, 0)
 }
 
-func (c *mockCloudWatchLogs) DescribeLogGroups(input *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+func (c *mockCloudWatchLogs) DescribeLogGroups(*cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
 	return nil, nil
 }
 
-func (c *mockCloudWatchLogs) DescribeLogStreams(input *cloudwatchlogs.DescribeLogStreamsInput) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
+func (c *mockCloudWatchLogs) DescribeLogStreams(*cloudwatchlogs.DescribeLogStreamsInput) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
 	arn := "arn"
 	creationTime := time.Now().Unix()
 	sequenceToken := "arbitraryToken"
@@ -47,7 +47,7 @@ func (c *mockCloudWatchLogs) DescribeLogStreams(input *cloudwatchlogs.DescribeLo
 	}
 	return output, nil
 }
-func (c *mockCloudWatchLogs) CreateLogStream(input *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+func (c *mockCloudWatchLogs) CreateLogStream(*cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
 	return nil, nil
 }
 func (c *mockCloudWatchLogs) PutLogEvents(input *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
@@ -61,6 +61,9 @@ func (c *mockCloudWatchLogs) PutLogEvents(input *cloudwatchlogs.PutLogEventsInpu
 	return output, nil
 }
 
+//Ensure mockCloudWatchLogs implement cloudWatchLogs interface
+var _ cloudWatchLogs = (*mockCloudWatchLogs)(nil)
+
 func RandStringBytes(n int) string {
 	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	b := make([]byte, n)
@@ -73,7 +76,7 @@ func RandStringBytes(n int) string {
 func TestConnect(t *testing.T) {
 	//mock cloudwatch logs endpoint that is used only in plugin.Connect
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w,
+		_, _ = fmt.Fprintln(w,
 			`{
 				   "logGroups": [ 
 					  { 
@@ -109,10 +112,9 @@ func TestConnect(t *testing.T) {
 }
 
 func TestWrite(t *testing.T) {
-
 	//mock cloudwatch logs endpoint that is used only in plugin.Connect
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w,
+		_, _ = fmt.Fprintln(w,
 			`{
 				   "logGroups": [ 
 					  { 
