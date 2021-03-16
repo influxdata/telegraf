@@ -335,14 +335,12 @@ func TestServiceType(t *testing.T) {
 				Address: ts.URL,
 			}
 
-			plugin.Init()
+			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
-			err := plugin.Gather(&acc)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Gather(&acc))
 
-			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
-				testutil.IgnoreTime())
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
 	}
 }
@@ -534,14 +532,12 @@ func TestMonitFailure(t *testing.T) {
 				Address: ts.URL,
 			}
 
-			plugin.Init()
+			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
-			err := plugin.Gather(&acc)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Gather(&acc))
 
-			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
-				testutil.IgnoreTime())
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
 	}
 }
@@ -566,10 +562,8 @@ func TestAllowHosts(t *testing.T) {
 	r.client.Transport = &transportMock{}
 
 	err := r.Gather(&acc)
-
-	if assert.Error(t, err) {
-		assert.Contains(t, err.Error(), "read: connection reset by peer")
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "read: connection reset by peer")
 }
 
 func TestConnection(t *testing.T) {
@@ -579,14 +573,14 @@ func TestConnection(t *testing.T) {
 		Password: "test",
 	}
 
-	r.Init()
+	require.NoError(t, r.Init())
 
 	var acc testutil.Accumulator
+
 	err := r.Gather(&acc)
-	if assert.Error(t, err) {
-		_, ok := err.(*url.Error)
-		assert.True(t, ok)
-	}
+	require.Error(t, err)
+	_, ok := err.(*url.Error)
+	require.True(t, ok)
 }
 
 func TestInvalidUsernameOrPassword(t *testing.T) {
@@ -596,12 +590,8 @@ func TestInvalidUsernameOrPassword(t *testing.T) {
 			return
 		}
 
-		switch r.URL.Path {
-		case "/_status":
-			http.ServeFile(w, r, "testdata/response_servicetype_0.xml")
-		default:
-			panic("Cannot handle request")
-		}
+		require.Equal(t, r.URL.Path, "/_status", "Cannot handle request")
+		http.ServeFile(w, r, "testdata/response_servicetype_0.xml")
 	}))
 
 	defer ts.Close()
@@ -614,11 +604,10 @@ func TestInvalidUsernameOrPassword(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	r.Init()
+	require.NoError(t, r.Init())
 
 	err := r.Gather(&acc)
-
-	assert.EqualError(t, err, "received status code 401 (Unauthorized), expected 200")
+	require.EqualError(t, err, "received status code 401 (Unauthorized), expected 200")
 }
 
 func TestNoUsernameOrPasswordConfiguration(t *testing.T) {
@@ -628,12 +617,8 @@ func TestNoUsernameOrPasswordConfiguration(t *testing.T) {
 			return
 		}
 
-		switch r.URL.Path {
-		case "/_status":
-			http.ServeFile(w, r, "testdata/response_servicetype_0.xml")
-		default:
-			panic("Cannot handle request")
-		}
+		require.Equal(t, r.URL.Path, "/_status", "Cannot handle request")
+		http.ServeFile(w, r, "testdata/response_servicetype_0.xml")
 	}))
 
 	defer ts.Close()
@@ -644,10 +629,9 @@ func TestNoUsernameOrPasswordConfiguration(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	r.Init()
+	require.NoError(t, r.Init())
 
 	err := r.Gather(&acc)
-
 	assert.EqualError(t, err, "received status code 401 (Unauthorized), expected 200")
 }
 
@@ -685,14 +669,13 @@ func TestInvalidXMLAndInvalidTypes(t *testing.T) {
 				Address: ts.URL,
 			}
 
-			plugin.Init()
+			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
-			err := plugin.Gather(&acc)
 
-			if assert.Error(t, err) {
-				assert.Contains(t, err.Error(), "error parsing input:")
-			}
+			err := plugin.Gather(&acc)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "error parsing input:")
 		})
 	}
 }

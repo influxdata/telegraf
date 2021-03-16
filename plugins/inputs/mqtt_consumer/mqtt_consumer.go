@@ -207,9 +207,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	}
 
 	m.state = Connecting
-	m.connect()
-
-	return nil
+	return m.connect()
 }
 
 func (m *MQTTConsumer) connect() error {
@@ -313,7 +311,7 @@ func (m *MQTTConsumer) Gather(_ telegraf.Accumulator) error {
 	if m.state == Disconnected {
 		m.state = Connecting
 		m.Log.Debugf("Connecting %v", m.Servers)
-		m.connect()
+		return m.connect()
 	}
 
 	return nil
