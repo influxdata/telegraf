@@ -40,10 +40,10 @@ commands:
   setup-go:
     steps:
       - run:
-        command: |
-          mv /tmp/go/bin/go /usr/local/bin/
-          mv /tmp/go/bin/gofmt /usr/local/bin/
-          sudo mv /tmp/go /usr/local/go
+          command: |
+            mv /tmp/go/bin/go /usr/local/bin/
+            mv /tmp/go/bin/gofmt /usr/local/bin/
+            sudo mv /tmp/go /usr/local/go
   test-go-mac:
     steps:
       - checkout
