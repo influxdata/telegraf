@@ -2,7 +2,6 @@ package kube_inventory
 
 import (
 	"context"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -29,7 +28,7 @@ func (ki *KubernetesInventory) gatherService(s corev1.Service, acc telegraf.Accu
 	}
 
 	fields := map[string]interface{}{
-		"created":    time.Unix(int64(s.GetCreationTimestamp().Second()), int64(s.GetCreationTimestamp().Nanosecond())).UnixNano(),
+		"created":    s.GetCreationTimestamp().UnixNano(),
 		"generation": s.Generation,
 	}
 

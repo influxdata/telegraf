@@ -2,7 +2,6 @@ package kube_inventory
 
 import (
 	"context"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	v1 "k8s.io/api/apps/v1"
@@ -26,7 +25,7 @@ func (ki *KubernetesInventory) gatherDeployment(d v1.Deployment, acc telegraf.Ac
 	fields := map[string]interface{}{
 		"replicas_available":   d.Status.AvailableReplicas,
 		"replicas_unavailable": d.Status.UnavailableReplicas,
-		"created":              time.Unix(int64(d.GetCreationTimestamp().Second()), int64(d.GetCreationTimestamp().Nanosecond())).UnixNano(),
+		"created":              d.GetCreationTimestamp().UnixNano(),
 	}
 	tags := map[string]string{
 		"deployment_name": d.Name,

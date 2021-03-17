@@ -2,7 +2,6 @@ package kube_inventory
 
 import (
 	"context"
-	"time"
 
 	netv1 "k8s.io/api/networking/v1"
 
@@ -29,7 +28,7 @@ func (ki *KubernetesInventory) gatherIngress(i netv1.Ingress, acc telegraf.Accum
 	}
 
 	fields := map[string]interface{}{
-		"created":    time.Unix(int64(i.GetCreationTimestamp().Second()), int64(i.GetCreationTimestamp().Nanosecond())).UnixNano(),
+		"created":    i.GetCreationTimestamp().UnixNano(),
 		"generation": i.Generation,
 	}
 

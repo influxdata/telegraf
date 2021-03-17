@@ -2,7 +2,6 @@ package kube_inventory
 
 import (
 	"context"
-	"time"
 
 	v1 "k8s.io/api/apps/v1"
 
@@ -45,7 +44,7 @@ func (ki *KubernetesInventory) gatherDaemonSet(d v1.DaemonSet, acc telegraf.Accu
 	}
 
 	if d.GetCreationTimestamp().Second() != 0 {
-		fields["created"] = time.Unix(int64(d.GetCreationTimestamp().Second()), int64(d.GetCreationTimestamp().Nanosecond())).UnixNano()
+		fields["created"] = d.GetCreationTimestamp().UnixNano()
 	}
 
 	acc.AddFields(daemonSetMeasurement, fields, tags)

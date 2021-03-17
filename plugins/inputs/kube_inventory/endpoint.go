@@ -3,7 +3,6 @@ package kube_inventory
 import (
 	"context"
 	"strings"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	corev1 "k8s.io/api/core/v1"
@@ -29,7 +28,7 @@ func (ki *KubernetesInventory) gatherEndpoint(e corev1.Endpoints, acc telegraf.A
 	}
 
 	fields := map[string]interface{}{
-		"created":    time.Unix(int64(e.GetCreationTimestamp().Second()), int64(e.GetCreationTimestamp().Nanosecond())).UnixNano(),
+		"created":    e.GetCreationTimestamp().UnixNano(),
 		"generation": e.Generation,
 	}
 

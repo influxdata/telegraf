@@ -2,6 +2,7 @@ package prometheus
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -15,6 +16,8 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
+	"github.com/kubernetes/apimachinery/pkg/fields"
+	"github.com/kubernetes/apimachinery/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -111,46 +114,44 @@ func (p *Prometheus) start(ctx context.Context) error {
 // (without the scrape annotations). K8s may re-assign the old pod ip to the non-scrape
 // pod, causing errors in the logs. This is only true if the pod going offline is not
 // directed to do so by K8s.
-func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
-	selectors := podSelector(p)
+func (p *Prometheus) watch(ctx context.Context, client *kubernetes.Clientset) error {
 
-	pod := &corev1.Pod{}
 	watcher, err := client.CoreV1().Pods(p.PodNamespace).Watch(ctx, metav1.ListOptions{
 		LabelSelector: p.KubernetesLabelSelector,
 		FieldSelector: p.KubernetesFieldSelector,
 	})
 	if err != nil {
-		return err
+		log.Fatal(err.Error())
 	}
-	for event := range watcher.ResultChan() {
-		pod = &corev1.Pod{}
-		// If the pod is not "ready", there will be no ip associated with it.
-		if pod.Annotations["prometheus.io/scrape"] != "true" ||
-			!podReady(pod.Status.ContainerStatuses) {
-			continue
-		}
+	pod := &corev1.Pod{}
+	go func() {
+		for event := range watcher.ResultChan() {
+			pod = &corev1.Pod{}
+			// If the pod is not "ready", there will be no ip associated with it.
+			if pod.Annotations["prometheus.io/scrape"] != "true" ||
+				!podReady(pod.Status.ContainerStatuses) {
+				continue
+			}
 
-		switch event.Type {
-		case watch.Added:
-			registerPod(pod, p)
-		case watch.Modified:
-			// To avoid multiple actions for each event, unregister on the first event
-			// in the delete sequence, when the containers are still "ready".
-			if pod.GetDeletionTimestamp() != nil {
-				unregisterPod(pod, p)
-			} else {
+			switch event.Type {
+			case watch.Added:
 				registerPod(pod, p)
+			case watch.Modified:
+				// To avoid multiple actions for each event, unregister on the first event
+				// in the delete sequence, when the containers are still "ready".
+				if pod.GetDeletionTimestamp() != nil {
+					unregisterPod(pod, p)
+				} else {
+					registerPod(pod, p)
+				}
 			}
 		}
-	}
+	}()
 
 	return nil
 }
 
-func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
-	// Set InsecureSkipVerify for cAdvisor client since Node IP will not be a SAN for the CA cert
-	tlsConfig := client.Client.Transport.(*http.Transport).TLSClientConfig
-	tlsConfig.InsecureSkipVerify = true
+func (p *Prometheus) cAdvisor(ctx context.Context, client *kubernetes.Clientset) error {
 
 	// The request will be the same each time
 	podsUrl := fmt.Sprintf("https://%s:10250/pods", p.NodeIP)
@@ -158,7 +159,6 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 	if err != nil {
 		return fmt.Errorf("Error when creating request to %s to get pod list: %w", podsUrl, err)
 	}
-	client.SetHeaders(req.Header)
 
 	// Update right away so code is not waiting the length of the specified scrape interval initially
 	err = updateCadvisorPodList(ctx, p, client, req)
@@ -184,8 +184,12 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *k8s.Client) error {
 	}
 }
 
-func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Client, req *http.Request) error {
-	resp, err := client.Client.Do(req)
+func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *kubernetes.Clientset, req *http.Request) error {
+
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	httpClient := http.Client{}
+
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("Error when making request for pod list: %w", err)
 	}
@@ -212,8 +216,8 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
 	// and if namespace and selectors are specified and match
 	for _, pod := range pods {
 		if necessaryPodFieldsArePresent(pod) &&
-			pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] == "true" &&
-			podReady(pod.GetStatus().GetContainerStatuses()) &&
+			pod.Annotations["prometheus.io/scrape"] == "true" &&
+			podReady(pod.Status.ContainerStatuses) &&
 			podHasMatchingNamespace(pod, p) &&
 			podHasMatchingLabelSelector(pod, p.podLabelSelector) &&
 			podHasMatchingFieldSelector(pod, p.podFieldSelector) {
@@ -227,12 +231,9 @@ func updateCadvisorPodList(ctx context.Context, p *Prometheus, client *k8s.Clien
 }
 
 func necessaryPodFieldsArePresent(pod *corev1.Pod) bool {
-	return pod.GetMetadata() != nil &&
-		pod.GetMetadata().GetAnnotations() != nil &&
-		pod.GetMetadata().GetLabels() != nil &&
-		pod.GetSpec() != nil &&
-		pod.GetStatus() != nil &&
-		pod.GetStatus().GetContainerStatuses() != nil
+	return pod.Annotations != nil &&
+		pod.Labels != nil &&
+		pod.Status.ContainerStatuses != nil
 }
 
 /* See the docs on kubernetes label selectors:
@@ -243,7 +244,7 @@ func podHasMatchingLabelSelector(pod *corev1.Pod, labelSelector labels.Selector)
 		return true
 	}
 
-	var labelsSet labels.Set = pod.GetMetadata().GetLabels()
+	var labelsSet labels.Set = pod.Labels
 	return labelSelector.Matches(labelsSet)
 }
 
@@ -257,23 +258,14 @@ func podHasMatchingFieldSelector(pod *corev1.Pod, fieldSelector fields.Selector)
 		return true
 	}
 
-	podSpec := pod.GetSpec()
-	podStatus := pod.GetStatus()
-
-	// Spec and Status shouldn't be nil.
-	// Error handling just in case something goes wrong but won't crash telegraf
-	if podSpec == nil || podStatus == nil {
-		return false
-	}
-
 	fieldsSet := make(fields.Set)
-	fieldsSet["spec.nodeName"] = podSpec.GetNodeName()
-	fieldsSet["spec.restartPolicy"] = podSpec.GetRestartPolicy()
-	fieldsSet["spec.schedulerName"] = podSpec.GetSchedulerName()
-	fieldsSet["spec.serviceAccountName"] = podSpec.GetServiceAccountName()
-	fieldsSet["status.phase"] = podStatus.GetPhase()
-	fieldsSet["status.podIP"] = podStatus.GetPodIP()
-	fieldsSet["status.nominatedNodeName"] = podStatus.GetNominatedNodeName()
+	fieldsSet["spec.nodeName"] = pod.Spec.NodeName
+	fieldsSet["spec.restartPolicy"] = string(pod.Spec.RestartPolicy)
+	fieldsSet["spec.schedulerName"] = pod.Spec.SchedulerName
+	fieldsSet["spec.serviceAccountName"] = pod.Spec.ServiceAccountName
+	fieldsSet["status.phase"] = string(pod.Status.Phase)
+	fieldsSet["status.podIP"] = pod.Status.PodIP
+	fieldsSet["status.nominatedNodeName"] = pod.Status.NominatedNodeName
 
 	return fieldSelector.Matches(fieldsSet)
 }
@@ -283,10 +275,10 @@ func podHasMatchingFieldSelector(pod *corev1.Pod, fieldSelector fields.Selector)
  * Else return true
  */
 func podHasMatchingNamespace(pod *corev1.Pod, p *Prometheus) bool {
-	return !(p.PodNamespace != "" && pod.GetMetadata().GetNamespace() != p.PodNamespace)
+	return !(p.PodNamespace != "" && pod.Namespace != p.PodNamespace)
 }
 
-func podReady(statuss []*corev1.ContainerStatus) bool {
+func podReady(statuss []corev1.ContainerStatus) bool {
 	if len(statuss) == 0 {
 		return false
 	}
@@ -296,20 +288,6 @@ func podReady(statuss []*corev1.ContainerStatus) bool {
 		}
 	}
 	return true
-}
-
-func podSelector(p *Prometheus) []k8s.Option {
-	options := []k8s.Option{}
-
-	if len(p.KubernetesLabelSelector) > 0 {
-		options = append(options, k8s.QueryParam("labelSelector", p.KubernetesLabelSelector))
-	}
-
-	if len(p.KubernetesFieldSelector) > 0 {
-		options = append(options, k8s.QueryParam("fieldSelector", p.KubernetesFieldSelector))
-	}
-
-	return options
 }
 
 func registerPod(pod *corev1.Pod, p *Prometheus) {

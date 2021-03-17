@@ -7,7 +7,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -98,7 +97,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 		}
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
-		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*v1.PersistentVolumeClaimList)).Items {
+		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*corev1.PersistentVolumeClaimList)).Items {
 			err := ks.gatherPersistentVolumeClaim(pvc, acc)
 			if err != nil {
 				t.Errorf("Failed to gather pvc - %s", err.Error())
@@ -136,7 +135,7 @@ func TestPersistentVolumeClaimSelectorFilter(t *testing.T) {
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 
 	responseMap := map[string]interface{}{
-		"/persistentvolumeclaims/": &v1.PersistentVolumeClaimList{
+		"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{
 			Items: []corev1.PersistentVolumeClaim{
 				{
 					Status: corev1.PersistentVolumeClaimStatus{
@@ -269,7 +268,7 @@ func TestPersistentVolumeClaimSelectorFilter(t *testing.T) {
 		ks.SelectorExclude = v.exclude
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
-		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*v1.PersistentVolumeClaimList)).Items {
+		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*corev1.PersistentVolumeClaimList)).Items {
 			err := ks.gatherPersistentVolumeClaim(pvc, acc)
 			if err != nil {
 				t.Errorf("Failed to gather pvc - %s", err.Error())

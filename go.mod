@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	cloud.google.com/go v0.54.0
+	cloud.google.com/go/bigquery v1.4.0
 	cloud.google.com/go/pubsub v1.2.0
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.3.0
@@ -160,6 +161,7 @@ require (
 	k8s.io/api v0.20.4
 	k8s.io/apimachinery v0.20.4
 	k8s.io/client-go v0.20.4
+	k8s.io/klog v1.0.0 // indirect
 	modernc.org/sqlite v1.7.4
 )
 

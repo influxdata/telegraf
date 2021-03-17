@@ -2,7 +2,6 @@ package kube_inventory
 
 import (
 	"context"
-	"time"
 
 	v1 "k8s.io/api/apps/v1"
 
@@ -26,7 +25,7 @@ func collectStatefulSets(ctx context.Context, acc telegraf.Accumulator, ki *Kube
 func (ki *KubernetesInventory) gatherStatefulSet(s v1.StatefulSet, acc telegraf.Accumulator) error {
 	status := s.Status
 	fields := map[string]interface{}{
-		"created":             time.Unix(int64(s.GetCreationTimestamp().Second()), int64(s.GetCreationTimestamp().Nanosecond())).UnixNano(),
+		"created":             s.GetCreationTimestamp().UnixNano(),
 		"generation":          s.Generation,
 		"replicas":            status.Replicas,
 		"replicas_current":    status.CurrentReplicas,

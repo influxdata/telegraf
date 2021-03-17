@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/kubernetes/apimachinery/pkg/fields"
+	"github.com/kubernetes/apimachinery/pkg/labels"
 	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
@@ -96,62 +98,17 @@ func TestDeletePods(t *testing.T) {
 	assert.Equal(t, 0, len(prom.kubernetesPods))
 }
 
-func TestPodSelector(t *testing.T) {
-	cases := []struct {
-		expected      []k8s.Option
-		labelselector string
-		fieldselector string
-	}{
-		{
-			expected: []k8s.Option{
-				k8s.QueryParam("labelSelector", "key1=val1,key2=val2,key3"),
-				k8s.QueryParam("fieldSelector", "spec.nodeName=ip-1-2-3-4.acme.com"),
-			},
-			labelselector: "key1=val1,key2=val2,key3",
-			fieldselector: "spec.nodeName=ip-1-2-3-4.acme.com",
-		},
-		{
-			expected: []k8s.Option{
-				k8s.QueryParam("labelSelector", "key1"),
-				k8s.QueryParam("fieldSelector", "spec.nodeName=ip-1-2-3-4.acme.com"),
-			},
-			labelselector: "key1",
-			fieldselector: "spec.nodeName=ip-1-2-3-4.acme.com",
-		},
-		{
-			expected: []k8s.Option{
-				k8s.QueryParam("labelSelector", "key1"),
-				k8s.QueryParam("fieldSelector", "somefield"),
-			},
-			labelselector: "key1",
-			fieldselector: "somefield",
-		},
-	}
-
-	for _, c := range cases {
-		prom := &Prometheus{
-			Log:                     testutil.Logger{},
-			KubernetesLabelSelector: c.labelselector,
-			KubernetesFieldSelector: c.fieldselector,
-		}
-
-		output := podSelector(prom)
-
-		assert.Equal(t, len(output), len(c.expected))
-	}
-}
-
 func TestPodHasMatchingNamespace(t *testing.T) {
 	prom := &Prometheus{Log: testutil.Logger{}, PodNamespace: "default"}
 
 	pod := pod()
-	pod.Metadata.Name = str("Pod1")
-	pod.Metadata.Namespace = str("default")
+	pod.Name = "Pod1"
+	pod.Namespace = "default"
 	shouldMatch := podHasMatchingNamespace(pod, prom)
 	assert.Equal(t, true, shouldMatch)
 
-	pod.Metadata.Name = str("Pod2")
-	pod.Metadata.Namespace = str("namespace")
+	pod.Name = "Pod2"
+	pod.Namespace = "namespace"
 	shouldNotMatch := podHasMatchingNamespace(pod, prom)
 	assert.Equal(t, false, shouldNotMatch)
 }
@@ -161,13 +118,13 @@ func TestPodHasMatchingLabelSelector(t *testing.T) {
 	prom := &Prometheus{Log: testutil.Logger{}, KubernetesLabelSelector: labelSelectorString}
 
 	pod := pod()
-	pod.Metadata.Labels = make(map[string]string)
-	pod.Metadata.Labels["label0"] = "label0"
-	pod.Metadata.Labels["label1"] = "label1"
-	pod.Metadata.Labels["label2"] = "label2"
-	pod.Metadata.Labels["label3"] = "label3"
-	pod.Metadata.Labels["label4"] = "label4"
-	pod.Metadata.Labels["label5"] = "label5"
+	pod.Labels = make(map[string]string)
+	pod.Labels["label0"] = "label0"
+	pod.Labels["label1"] = "label1"
+	pod.Labels["label2"] = "label2"
+	pod.Labels["label3"] = "label3"
+	pod.Labels["label4"] = "label4"
+	pod.Labels["label5"] = "label5"
 
 	labelSelector, err := labels.Parse(prom.KubernetesLabelSelector)
 	assert.Equal(t, err, nil)
@@ -178,8 +135,8 @@ func TestPodHasMatchingFieldSelector(t *testing.T) {
 	fieldSelectorString := "status.podIP=127.0.0.1,spec.restartPolicy=Always,spec.NodeName!=nodeName"
 	prom := &Prometheus{Log: testutil.Logger{}, KubernetesFieldSelector: fieldSelectorString}
 	pod := pod()
-	pod.Spec.RestartPolicy = str("Always")
-	pod.Spec.NodeName = str("node1000")
+	pod.Spec.RestartPolicy = "Always"
+	pod.Spec.NodeName = "node1000"
 
 	fieldSelector, err := fields.ParseSelector(prom.KubernetesFieldSelector)
 	assert.Equal(t, err, nil)
@@ -190,18 +147,18 @@ func TestInvalidFieldSelector(t *testing.T) {
 	fieldSelectorString := "status.podIP=127.0.0.1,spec.restartPolicy=Always,spec.NodeName!=nodeName,spec.nodeName"
 	prom := &Prometheus{Log: testutil.Logger{}, KubernetesFieldSelector: fieldSelectorString}
 	pod := pod()
-	pod.Spec.RestartPolicy = str("Always")
-	pod.Spec.NodeName = str("node1000")
+	pod.Spec.RestartPolicy = "Always"
+	pod.Spec.NodeName = "node1000"
 
 	_, err := fields.ParseSelector(prom.KubernetesFieldSelector)
 	assert.NotEqual(t, err, nil)
 }
 
 func pod() *v1.Pod {
-	p := &v1.Pod{Metadata: &metav1.ObjectMeta{}, Status: &v1.PodStatus{}, Spec: &v1.PodSpec{}}
-	p.Status.PodIP = str("127.0.0.1")
-	p.Metadata.Name = str("myPod")
-	p.Metadata.Namespace = str("default")
+	p := &v1.Pod{ObjectMeta: metav1.ObjectMeta{}, Status: v1.PodStatus{}, Spec: v1.PodSpec{}}
+	p.Status.PodIP = "127.0.0.1"
+	p.Name = "myPod"
+	p.Namespace = "default"
 	return p
 }
 

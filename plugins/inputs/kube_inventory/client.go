@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	v1apps "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,10 +37,6 @@ func newClient(baseURL, namespace, bearerToken string, timeout time.Duration, tl
 		return nil, err
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
 	return &client{
 		Clientset: c,
 		timeout:   timeout,
@@ -48,13 +44,13 @@ func newClient(baseURL, namespace, bearerToken string, timeout time.Duration, tl
 	}, nil
 }
 
-func (c *client) getDaemonSets(ctx context.Context) (*v1apps.DaemonSetList, error) {
+func (c *client) getDaemonSets(ctx context.Context) (*appsv1.DaemonSetList, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	return c.AppsV1().DaemonSets(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getDeployments(ctx context.Context) (*v1apps.DeploymentList, error) {
+func (c *client) getDeployments(ctx context.Context) (*appsv1.DeploymentList, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	return c.AppsV1().Deployments(c.namespace).List(ctx, metav1.ListOptions{})
@@ -102,7 +98,7 @@ func (c *client) getServices(ctx context.Context) (*corev1.ServiceList, error) {
 	return c.CoreV1().Services(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
-func (c *client) getStatefulSets(ctx context.Context) (*v1apps.StatefulSetList, error) {
+func (c *client) getStatefulSets(ctx context.Context) (*appsv1.StatefulSetList, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	return c.AppsV1().StatefulSets(c.namespace).List(ctx, metav1.ListOptions{})
