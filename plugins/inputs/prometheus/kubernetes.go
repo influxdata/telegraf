@@ -93,7 +93,7 @@ func (p *Prometheus) start(ctx context.Context) error {
 				return
 			case <-time.After(time.Second):
 				if p.isNodeScrapeScope {
-					err = p.cAdvisor(ctx, client)
+					err = p.cAdvisor(ctx)
 					if err != nil {
 						p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
 					}
@@ -150,16 +150,16 @@ func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset)
 	return nil
 }
 
-func (p *Prometheus) cAdvisor(ctx context.Context, client *kubernetes.Clientset) error {
+func (p *Prometheus) cAdvisor(ctx context.Context) error {
 	// The request will be the same each time
-	podsUrl := fmt.Sprintf("https://%s:10250/pods", p.NodeIP)
-	req, err := http.NewRequest("GET", podsUrl, nil)
+	podsURL := fmt.Sprintf("https://%s:10250/pods", p.NodeIP)
+	req, err := http.NewRequest("GET", podsURL, nil)
 	if err != nil {
-		return fmt.Errorf("Error when creating request to %s to get pod list: %w", podsUrl, err)
+		return fmt.Errorf("Error when creating request to %s to get pod list: %w", podsURL, err)
 	}
 
 	// Update right away so code is not waiting the length of the specified scrape interval initially
-	err = updateCadvisorPodList(p, client, req)
+	err = updateCadvisorPodList(p, req)
 	if err != nil {
 		return fmt.Errorf("Error initially updating pod list: %w", err)
 	}
@@ -174,7 +174,7 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *kubernetes.Clientset)
 		case <-ctx.Done():
 			return nil
 		case <-time.After(time.Duration(scrapeInterval) * time.Second):
-			err := updateCadvisorPodList(p, client, req)
+			err := updateCadvisorPodList(p, req)
 			if err != nil {
 				return fmt.Errorf("Error updating pod list: %w", err)
 			}
@@ -182,7 +182,7 @@ func (p *Prometheus) cAdvisor(ctx context.Context, client *kubernetes.Clientset)
 	}
 }
 
-func updateCadvisorPodList(p *Prometheus, client *kubernetes.Clientset, req *http.Request) error {
+func updateCadvisorPodList(p *Prometheus, req *http.Request) error {
 
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	httpClient := http.Client{}

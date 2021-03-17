@@ -8,7 +8,6 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -33,7 +32,7 @@ func TestPod(t *testing.T) {
 			name: "no pods",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/pods/": &v1.PodList{},
+					"/pods/": &corev1.PodList{},
 				},
 			},
 			hasError: false,
@@ -148,7 +147,7 @@ func TestPod(t *testing.T) {
 										{
 											Name: "running",
 											State: corev1.ContainerState{
-												Running: &v1.ContainerStateRunning{
+												Running: &corev1.ContainerStateRunning{
 													StartedAt: metav1.Time{Time: started},
 												},
 											},
@@ -160,8 +159,8 @@ func TestPod(t *testing.T) {
 										},
 										{
 											Name: "completed",
-											State: v1.ContainerState{
-												Terminated: &v1.ContainerStateTerminated{
+											State: corev1.ContainerState{
+												Terminated: &corev1.ContainerStateTerminated{
 													StartedAt: metav1.Time{Time: now},
 													ExitCode:  0,
 													Reason:    "Completed",
@@ -175,8 +174,8 @@ func TestPod(t *testing.T) {
 										},
 										{
 											Name: "waiting",
-											State: v1.ContainerState{
-												Waiting: &v1.ContainerStateWaiting{
+											State: corev1.ContainerState{
+												Waiting: &corev1.ContainerStateWaiting{
 													Reason: "PodUninitialized",
 												},
 											},
@@ -284,7 +283,7 @@ func TestPod(t *testing.T) {
 		}
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
-		for _, pod := range ((v.handler.responseMap["/pods/"]).(*v1.PodList)).Items {
+		for _, pod := range ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items {
 			ks.gatherPod(pod, acc)
 		}
 
@@ -322,7 +321,7 @@ func TestPodSelectorFilter(t *testing.T) {
 	cond2 := time.Date(now.Year(), 7, 5, 7, 53, 31, 0, now.Location())
 
 	responseMap := map[string]interface{}{
-		"/pods/": &v1.PodList{
+		"/pods/": &corev1.PodList{
 			Items: []corev1.Pod{
 				{
 					Spec: corev1.PodSpec{
@@ -338,10 +337,10 @@ func TestPodSelectorFilter(t *testing.T) {
 									},
 								},
 								Resources: corev1.ResourceRequirements{
-									Limits: v1.ResourceList{
+									Limits: corev1.ResourceList{
 										"cpu": resource.Quantity{Format: "100m"},
 									},
-									Requests: v1.ResourceList{
+									Requests: corev1.ResourceList{
 										"cpu": resource.Quantity{Format: "100m"},
 									},
 								},
@@ -351,7 +350,7 @@ func TestPodSelectorFilter(t *testing.T) {
 							{
 								Name: "vol1",
 								VolumeSource: corev1.VolumeSource{
-									PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+									PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 										ClaimName: "pc1",
 										ReadOnly:  true,
 									},
@@ -366,12 +365,12 @@ func TestPodSelectorFilter(t *testing.T) {
 							"select2": "s2",
 						},
 					},
-					Status: v1.PodStatus{
+					Status: corev1.PodStatus{
 						Phase:     "Running",
 						HostIP:    "180.12.10.18",
 						PodIP:     "10.244.2.15",
 						StartTime: &metav1.Time{Time: started},
-						Conditions: []v1.PodCondition{
+						Conditions: []corev1.PodCondition{
 							{
 								Type:               "Initialized",
 								Status:             "True",
@@ -388,11 +387,11 @@ func TestPodSelectorFilter(t *testing.T) {
 								LastTransitionTime: metav1.Time{Time: cond1},
 							},
 						},
-						ContainerStatuses: []v1.ContainerStatus{
+						ContainerStatuses: []corev1.ContainerStatus{
 							{
 								Name: "forwarder",
-								State: v1.ContainerState{
-									Running: &v1.ContainerStateRunning{
+								State: corev1.ContainerState{
+									Running: &corev1.ContainerStateRunning{
 										StartedAt: metav1.Time{Time: now},
 									},
 								},
@@ -530,7 +529,7 @@ func TestPodSelectorFilter(t *testing.T) {
 		ks.SelectorExclude = v.exclude
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
-		for _, pod := range ((v.handler.responseMap["/pods/"]).(*v1.PodList)).Items {
+		for _, pod := range ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items {
 			ks.gatherPod(pod, acc)
 		}
 
@@ -571,25 +570,25 @@ func TestPodPendingContainers(t *testing.T) {
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
 					"/pods/": &corev1.PodList{
-						Items: []v1.Pod{
+						Items: []corev1.Pod{
 							{
-								Spec: v1.PodSpec{
+								Spec: corev1.PodSpec{
 									NodeName: "node1",
-									Containers: []v1.Container{
+									Containers: []corev1.Container{
 										{
 											Name:  "waiting",
 											Image: "image1",
-											Ports: []v1.ContainerPort{
+											Ports: []corev1.ContainerPort{
 												{
 													ContainerPort: 8080,
 													Protocol:      "TCP",
 												},
 											},
-											Resources: v1.ResourceRequirements{
-												Limits: v1.ResourceList{
+											Resources: corev1.ResourceRequirements{
+												Limits: corev1.ResourceList{
 													"cpu": resource.Quantity{Format: "100m"},
 												},
-												Requests: v1.ResourceList{
+												Requests: corev1.ResourceList{
 													"cpu": resource.Quantity{Format: "100m"},
 												},
 											},
@@ -597,27 +596,27 @@ func TestPodPendingContainers(t *testing.T) {
 										{
 											Name:  "terminated",
 											Image: "image1",
-											Ports: []v1.ContainerPort{
+											Ports: []corev1.ContainerPort{
 												{
 													ContainerPort: 8080,
 													Protocol:      "TCP",
 												},
 											},
-											Resources: v1.ResourceRequirements{
-												Limits: v1.ResourceList{
+											Resources: corev1.ResourceRequirements{
+												Limits: corev1.ResourceList{
 													"cpu": resource.Quantity{Format: "100m"},
 												},
-												Requests: v1.ResourceList{
+												Requests: corev1.ResourceList{
 													"cpu": resource.Quantity{Format: "100m"},
 												},
 											},
 										},
 									},
-									Volumes: []v1.Volume{
+									Volumes: []corev1.Volume{
 										{
 											Name: "vol1",
-											VolumeSource: v1.VolumeSource{
-												PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+											VolumeSource: corev1.VolumeSource{
+												PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 													ClaimName: "pc1",
 													ReadOnly:  true,
 												},
@@ -632,13 +631,13 @@ func TestPodPendingContainers(t *testing.T) {
 										"select2": "s2",
 									},
 								},
-								Status: v1.PodStatus{
+								Status: corev1.PodStatus{
 									Phase:     "Pending",
 									Reason:    "NetworkNotReady",
 									HostIP:    "180.12.10.18",
 									PodIP:     "10.244.2.15",
 									StartTime: &metav1.Time{Time: started},
-									Conditions: []v1.PodCondition{
+									Conditions: []corev1.PodCondition{
 										{
 											Type:               "Initialized",
 											Status:             "True",
@@ -655,7 +654,7 @@ func TestPodPendingContainers(t *testing.T) {
 											LastTransitionTime: metav1.Time{Time: cond1},
 										},
 									},
-									ContainerStatuses: []v1.ContainerStatus{},
+									ContainerStatuses: []corev1.ContainerStatus{},
 								},
 								ObjectMeta: metav1.ObjectMeta{
 									OwnerReferences: []metav1.OwnerReference{
@@ -735,7 +734,7 @@ func TestPodPendingContainers(t *testing.T) {
 		}
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
-		for _, pod := range ((v.handler.responseMap["/pods/"]).(*v1.PodList)).Items {
+		for _, pod := range ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items {
 			ks.gatherPod(pod, acc)
 		}
 
