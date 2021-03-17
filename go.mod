@@ -3,15 +3,15 @@ module github.com/influxdata/telegraf
 go 1.16
 
 require (
-	cloud.google.com/go v0.53.0
-	cloud.google.com/go/bigquery v1.3.0
-	cloud.google.com/go/pubsub v1.1.0
+	cloud.google.com/go v0.54.0
+	cloud.google.com/go/bigquery v1.4.0
+	cloud.google.com/go/pubsub v1.2.0
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.3.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
 	github.com/Azure/azure-storage-queue-go v0.0.0-20181215014128-6ed74e755687
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
-	github.com/Azure/go-autorest/autorest v0.9.3
+	github.com/Azure/go-autorest/autorest v0.11.1
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
@@ -55,7 +55,6 @@ require (
 	github.com/docker/go-units v0.3.3 // indirect
 	github.com/docker/libnetwork v0.8.0-dev.2.0.20181012153825-d7b61745d166
 	github.com/eclipse/paho.mqtt.golang v1.3.0
-	github.com/ericchiang/k8s v1.2.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logfmt/logfmt v0.4.0
 	github.com/go-ping/ping v0.0.0-20210201095549-52eed920f98c
@@ -67,7 +66,7 @@ require (
 	github.com/gofrs/uuid v2.1.0+incompatible
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
-	github.com/golang/protobuf v1.3.5
+	github.com/golang/protobuf v1.4.3
 	github.com/golang/snappy v0.0.1
 	github.com/google/go-cmp v0.5.4
 	github.com/google/go-github/v32 v32.1.0
@@ -142,16 +141,14 @@ require (
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
 	go.starlark.net v0.0.0-20200901195727-6e684ef5eeee
-	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
-	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/net v0.0.0-20201209123823-ac852fbbde11
+	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20201119102817-f84b799fce68
+	golang.org/x/sys v0.0.0-20201112073958-5cba982894dd
 	golang.org/x/text v0.3.4
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	google.golang.org/api v0.20.0
-	google.golang.org/genproto v0.0.0-20200513103714-09dca8ec2884
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc v1.33.1
 	gopkg.in/djherbis/times.v1 v1.2.0
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
@@ -161,8 +158,10 @@ require (
 	gopkg.in/olivere/elastic.v5 v5.0.70
 	gopkg.in/yaml.v2 v2.3.0
 	gotest.tools v2.2.0+incompatible
-	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
-	k8s.io/apimachinery v0.17.1 // indirect
+	k8s.io/api v0.20.4
+	k8s.io/apimachinery v0.20.4
+	k8s.io/client-go v0.20.4
+	k8s.io/klog v1.0.0 // indirect
 	modernc.org/sqlite v1.7.4
 )
 
