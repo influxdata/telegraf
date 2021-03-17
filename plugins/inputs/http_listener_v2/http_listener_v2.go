@@ -267,8 +267,8 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 		}
 		return bytes, true
 	case "snappy":
+		defer req.Body.Close()
 		bytes, err := ioutil.ReadAll(req.Body)
-		req.Body.Close()
 		if err != nil {
 			h.Log.Debug(err.Error())
 			badRequest(res)
@@ -283,8 +283,8 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 		}
 		return bytes, true
 	default:
+		defer req.Body.Close()
 		bytes, err := ioutil.ReadAll(req.Body)
-		req.Body.Close()
 		if err != nil {
 			h.Log.Debug(err.Error())
 			badRequest(res)
