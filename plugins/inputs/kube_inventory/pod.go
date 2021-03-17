@@ -36,8 +36,6 @@ func (ki *KubernetesInventory) gatherPod(p corev1.Pod, acc telegraf.Accumulator)
 		}
 		gatherPodContainer(ki, p, *cs, c, acc)
 	}
-
-	return
 }
 
 func gatherPodContainer(ki *KubernetesInventory, p corev1.Pod, cs corev1.ContainerStatus, c corev1.Container, acc telegraf.Accumulator) {

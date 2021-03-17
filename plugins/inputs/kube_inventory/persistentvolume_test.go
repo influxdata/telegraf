@@ -80,10 +80,7 @@ func TestPersistentVolume(t *testing.T) {
 		}
 		acc := new(testutil.Accumulator)
 		for _, pv := range ((v.handler.responseMap["/persistentvolumes/"]).(*corev1.PersistentVolumeList)).Items {
-			err := ks.gatherPersistentVolume(pv, acc)
-			if err != nil {
-				t.Errorf("Failed to gather pv - %s", err.Error())
-			}
+			ks.gatherPersistentVolume(pv, acc)
 		}
 
 		err := acc.FirstError()

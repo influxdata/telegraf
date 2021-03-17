@@ -98,7 +98,7 @@ func (p *Prometheus) start(ctx context.Context) error {
 						p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
 					}
 				} else {
-					err = p.watch(ctx, client)
+					err = p.watchPod(ctx, client)
 					if err != nil {
 						p.Log.Errorf("Unable to watch resources: %s", err.Error())
 					}
@@ -114,7 +114,7 @@ func (p *Prometheus) start(ctx context.Context) error {
 // (without the scrape annotations). K8s may re-assign the old pod ip to the non-scrape
 // pod, causing errors in the logs. This is only true if the pod going offline is not
 // directed to do so by K8s.
-func (p *Prometheus) watch(ctx context.Context, client *kubernetes.Clientset) error {
+func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset) error {
 	watcher, err := client.CoreV1().Pods(p.PodNamespace).Watch(ctx, metav1.ListOptions{
 		LabelSelector: p.KubernetesLabelSelector,
 		FieldSelector: p.KubernetesFieldSelector,
