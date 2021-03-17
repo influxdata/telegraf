@@ -102,7 +102,6 @@ const defaultPort = "7711"
 
 func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 	if d.c == nil {
-
 		_, _, err := net.SplitHostPort(addr.Host)
 		if err != nil {
 			addr.Host = addr.Host + ":" + defaultPort

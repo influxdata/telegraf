@@ -364,7 +364,6 @@ func (a *Agent) testStartInputs(
 			if err != nil {
 				log.Printf("E! [agent] Starting input %s: %v", input.LogName(), err)
 			}
-
 		}
 
 		unit.inputs = append(unit.inputs, input)
@@ -444,6 +443,13 @@ func stopServiceInputs(inputs []*models.RunningInput) {
 		if si, ok := input.Input.(telegraf.ServiceInput); ok {
 			si.Stop()
 		}
+	}
+}
+
+// stopRunningOutputs stops all running outputs.
+func stopRunningOutputs(outputs []*models.RunningOutput) {
+	for _, output := range outputs {
+		output.Close()
 	}
 }
 
@@ -784,6 +790,9 @@ func (a *Agent) runOutputs(
 	log.Println("I! [agent] Hang on, flushing any cached metrics before shutdown")
 	cancel()
 	wg.Wait()
+
+	log.Println("I! [agent] Stopping running outputs")
+	stopRunningOutputs(unit.outputs)
 
 	return nil
 }

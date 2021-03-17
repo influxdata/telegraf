@@ -285,7 +285,6 @@ func addQueryHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansDa
 				"handler": name},
 			time,
 		)
-
 	}
 	return nil
 }

@@ -377,7 +377,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-
 	metrics := make([]telegraf.Metric, 0)
 
 	scanner := bufio.NewScanner(bytes.NewReader(buf))

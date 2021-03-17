@@ -108,7 +108,6 @@ func (ep *TimestampParser) parse(p *PointParser, pt *Point) error {
 }
 
 func setTimestamp(pt *Point, ts int64, numDigits int) error {
-
 	if numDigits == 19 {
 		// nanoseconds
 		ts = ts / 1e9

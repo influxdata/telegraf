@@ -35,7 +35,6 @@ func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {
 
 	dataFields := bytes.Fields(data)
 	for i, field := range dataFields {
-
 		// dataFields is an array of {"stat1_name", "stat1_value", "stat2_name",
 		// "stat2_value", ...}
 		// We only want the even number index as that contain the stat name.

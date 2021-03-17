@@ -257,7 +257,7 @@ func (c *FakeConsumerGroupClaim) Messages() <-chan *sarama.ConsumerMessage {
 
 func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 	acc := &testutil.Accumulator{}
-	parser := &value.ValueParser{MetricName: "cpu", DataType: "int"}
+	parser := value.NewValueParser("cpu", "int", "", nil)
 	cg := NewConsumerGroupHandler(acc, 1, parser)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -282,7 +282,7 @@ func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 
 func TestConsumerGroupHandler_ConsumeClaim(t *testing.T) {
 	acc := &testutil.Accumulator{}
-	parser := &value.ValueParser{MetricName: "cpu", DataType: "int"}
+	parser := value.NewValueParser("cpu", "int", "", nil)
 	cg := NewConsumerGroupHandler(acc, 1, parser)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -392,7 +392,7 @@ func TestConsumerGroupHandler_Handle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			acc := &testutil.Accumulator{}
-			parser := &value.ValueParser{MetricName: "cpu", DataType: "int"}
+			parser := value.NewValueParser("cpu", "int", "", nil)
 			cg := NewConsumerGroupHandler(acc, 1, parser)
 			cg.MaxMessageLen = tt.maxMessageLen
 			cg.TopicTag = tt.topicTag

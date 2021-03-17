@@ -157,7 +157,6 @@ func parsePlayers(input string) ([]string, error) {
 			continue
 		}
 		players = append(players, name)
-
 	}
 	return players, nil
 }

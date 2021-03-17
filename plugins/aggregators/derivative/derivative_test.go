@@ -119,7 +119,6 @@ func TestTwoFullEventsWithoutParameter(t *testing.T) {
 			"value_rate": float64(5),
 		},
 	)
-
 }
 
 func TestTwoFullEventsInSeperatePushes(t *testing.T) {

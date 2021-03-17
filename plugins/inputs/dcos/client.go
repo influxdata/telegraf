@@ -229,7 +229,6 @@ func (c *ClusterClient) GetContainers(ctx context.Context, node string) ([]Conta
 	containers := make([]Container, 0, len(list))
 	for _, c := range list {
 		containers = append(containers, Container{ID: c})
-
 	}
 
 	return containers, nil

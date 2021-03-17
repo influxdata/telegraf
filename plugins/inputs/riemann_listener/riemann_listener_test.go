@@ -40,7 +40,6 @@ func testStats(t *testing.T, sl *RiemannSocketListener) {
 		Service: "hello",
 	})
 	assert.Equal(t, result.GetOk(), true)
-
 }
 func testMissingService(t *testing.T, sl *RiemannSocketListener) {
 	c := riemanngo.NewTCPClient("127.0.0.1:5555", 5*time.Second)
@@ -51,5 +50,4 @@ func testMissingService(t *testing.T, sl *RiemannSocketListener) {
 	defer c.Close()
 	result, err := riemanngo.SendEvent(c, &riemanngo.Event{})
 	assert.Equal(t, result.GetOk(), false)
-
 }

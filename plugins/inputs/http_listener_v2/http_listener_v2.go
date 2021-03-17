@@ -325,7 +325,6 @@ func (h *HTTPListenerV2) authenticateIfSet(handler http.HandlerFunc, res http.Re
 		if !ok ||
 			subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.BasicUsername)) != 1 ||
 			subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.BasicPassword)) != 1 {
-
 			http.Error(res, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}

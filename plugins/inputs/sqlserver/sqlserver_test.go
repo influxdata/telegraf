@@ -43,7 +43,6 @@ func TestSqlServer_QueriesInclusionExclusion(t *testing.T) {
 }
 
 func TestSqlServer_ParseMetrics(t *testing.T) {
-
 	var acc testutil.Accumulator
 
 	queries := make(MapQuery)
@@ -63,7 +62,6 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 	var fields = make(map[string]interface{})
 
 	for _, query := range queries {
-
 		mock = strings.Split(query.Script, "\n")
 		idx := 0
 
@@ -78,7 +76,6 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 				tags[headers[2]] = row[2] // tag 'type'
 
 				if query.ResultByRow {
-
 					// set value by converting to float64
 					value, err := strconv.ParseFloat(row[3], 64)
 					// require
@@ -90,11 +87,9 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 						tags, time.Now())
 					// assert
 					acc.AssertContainsTaggedFields(t, measurement, map[string]interface{}{"value": value}, tags)
-
 				} else {
 					// set fields
 					for i := 3; i < len(row); i++ {
-
 						// set value by converting to float64
 						value, err := strconv.ParseFloat(row[i], 64)
 						// require
@@ -138,6 +133,7 @@ func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, s.isInitialized, true)
 	assert.Equal(t, s2.isInitialized, true)
+
 	// acc includes size metrics, and excludes memory metrics
 	assert.False(t, acc.HasMeasurement("Memory breakdown (%)"))
 	assert.True(t, acc.HasMeasurement("Log size (bytes)"))
@@ -147,8 +143,90 @@ func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
 	assert.False(t, acc2.HasMeasurement("Log size (bytes)"))
 }
 
-func TestSqlServer_MultipleInit(t *testing.T) {
+func TestSqlServer_MultipleInstanceWithHealthMetricIntegration(t *testing.T) {
+	// Invoke Gather() from two separate configurations and
+	// confirm they don't interfere with each other.
+	// This test is intentionally similar to TestSqlServer_MultipleInstanceIntegration.
+	// It is separated to ensure that the health metric code does not affect other metrics
+	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
 
+	testServer := "Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+	s := &SQLServer{
+		Servers:      []string{testServer},
+		ExcludeQuery: []string{"MemoryClerk"},
+	}
+	s2 := &SQLServer{
+		Servers:      []string{testServer},
+		ExcludeQuery: []string{"DatabaseSize"},
+		HealthMetric: true,
+	}
+
+	var acc, acc2 testutil.Accumulator
+	err := s.Gather(&acc)
+	require.NoError(t, err)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, false)
+
+	err = s2.Gather(&acc2)
+	require.NoError(t, err)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, true)
+
+	// acc includes size metrics, and excludes memory metrics and the health metric
+	assert.False(t, acc.HasMeasurement(healthMetricName))
+	assert.False(t, acc.HasMeasurement("Memory breakdown (%)"))
+	assert.True(t, acc.HasMeasurement("Log size (bytes)"))
+
+	// acc2 includes memory metrics and the health metric, and excludes size metrics
+	assert.True(t, acc2.HasMeasurement(healthMetricName))
+	assert.True(t, acc2.HasMeasurement("Memory breakdown (%)"))
+	assert.False(t, acc2.HasMeasurement("Log size (bytes)"))
+
+	sqlInstance, database := getConnectionIdentifiers(testServer)
+	tags := map[string]string{healthMetricInstanceTag: sqlInstance, healthMetricDatabaseTag: database}
+	assert.True(t, acc2.HasPoint(healthMetricName, tags, healthMetricAttemptedQueries, 9))
+	assert.True(t, acc2.HasPoint(healthMetricName, tags, healthMetricSuccessfulQueries, 9))
+}
+
+func TestSqlServer_HealthMetric(t *testing.T) {
+	fakeServer1 := "localhost\\fakeinstance1;Database=fakedb1"
+	fakeServer2 := "localhost\\fakeinstance2;Database=fakedb2"
+
+	s1 := &SQLServer{
+		Servers:      []string{fakeServer1, fakeServer2},
+		IncludeQuery: []string{"DatabaseSize", "MemoryClerk"},
+		HealthMetric: true,
+	}
+
+	s2 := &SQLServer{
+		Servers:      []string{fakeServer1},
+		IncludeQuery: []string{"DatabaseSize"},
+	}
+
+	// acc1 should have the health metric because it is specified in the config
+	var acc1 testutil.Accumulator
+	s1.Gather(&acc1)
+	assert.True(t, acc1.HasMeasurement(healthMetricName))
+
+	// There will be 2 attempted queries (because we specified 2 queries in IncludeQuery)
+	// Both queries should fail because the specified SQL instances do not exist
+	sqlInstance1, database1 := getConnectionIdentifiers(fakeServer1)
+	tags1 := map[string]string{healthMetricInstanceTag: sqlInstance1, healthMetricDatabaseTag: database1}
+	assert.True(t, acc1.HasPoint(healthMetricName, tags1, healthMetricAttemptedQueries, 2))
+	assert.True(t, acc1.HasPoint(healthMetricName, tags1, healthMetricSuccessfulQueries, 0))
+
+	sqlInstance2, database2 := getConnectionIdentifiers(fakeServer2)
+	tags2 := map[string]string{healthMetricInstanceTag: sqlInstance2, healthMetricDatabaseTag: database2}
+	assert.True(t, acc1.HasPoint(healthMetricName, tags2, healthMetricAttemptedQueries, 2))
+	assert.True(t, acc1.HasPoint(healthMetricName, tags2, healthMetricSuccessfulQueries, 0))
+
+	// acc2 should not have the health metric because it is not specified in the config
+	var acc2 testutil.Accumulator
+	s2.Gather(&acc2)
+	assert.False(t, acc2.HasMeasurement(healthMetricName))
+}
+
+func TestSqlServer_MultipleInit(t *testing.T) {
 	s := &SQLServer{}
 	s2 := &SQLServer{
 		ExcludeQuery: []string{"DatabaseSize"},
@@ -167,6 +245,86 @@ func TestSqlServer_MultipleInit(t *testing.T) {
 	assert.False(t, ok)
 	assert.Equal(t, s.isInitialized, true)
 	assert.Equal(t, s2.isInitialized, true)
+}
+
+func TestSqlServer_ConnectionString(t *testing.T) {
+	// URL format
+	connectionString := "sqlserver://username:password@hostname.database.windows.net?database=databasename&connection+timeout=30"
+	sqlInstance, database := getConnectionIdentifiers(connectionString)
+	assert.Equal(t, "hostname.database.windows.net", sqlInstance)
+	assert.Equal(t, "databasename", database)
+
+	connectionString = "    sqlserver://hostname2.somethingelse.net:1433?database=databasename2"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, "hostname2.somethingelse.net", sqlInstance)
+	assert.Equal(t, "databasename2", database)
+
+	connectionString = "sqlserver://hostname3:1433/SqlInstanceName3?database=databasename3"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, "hostname3\\SqlInstanceName3", sqlInstance)
+	assert.Equal(t, "databasename3", database)
+
+	connectionString = " sqlserver://hostname4/SqlInstanceName4?database=databasename4&connection%20timeout=30"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, "hostname4\\SqlInstanceName4", sqlInstance)
+	assert.Equal(t, "databasename4", database)
+
+	connectionString = "	sqlserver://username:password@hostname5?connection%20timeout=30"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, "hostname5", sqlInstance)
+	assert.Equal(t, emptyDatabaseName, database)
+
+	// odbc format
+	connectionString = "odbc:server=hostname.database.windows.net;user id=sa;database=master;Trusted_Connection=Yes;Integrated Security=true;"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, "hostname.database.windows.net", sqlInstance)
+	assert.Equal(t, "master", database)
+
+	connectionString = "   odbc:server=192.168.0.1;user id=somethingelse;Integrated Security=true;Database=mydb   "
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, "192.168.0.1", sqlInstance)
+	assert.Equal(t, "mydb", database)
+
+	connectionString = " odbc:Server=servername\\instancename;Database=dbname;"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, "servername\\instancename", sqlInstance)
+	assert.Equal(t, "dbname", database)
+
+	connectionString = "server=hostname2.database.windows.net;user id=sa;Trusted_Connection=Yes;Integrated Security=true;"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, "hostname2.database.windows.net", sqlInstance)
+	assert.Equal(t, emptyDatabaseName, database)
+
+	connectionString = "invalid connection string"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, emptySqlInstance, sqlInstance)
+	assert.Equal(t, emptyDatabaseName, database)
+
+	// Key/value format
+	connectionString = "  server=hostname.database.windows.net;user id=sa;database=master;Trusted_Connection=Yes;Integrated Security=true"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, "hostname.database.windows.net", sqlInstance)
+	assert.Equal(t, "master", database)
+
+	connectionString = " server=192.168.0.1;user id=somethingelse;Integrated Security=true;Database=mydb;"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, "192.168.0.1", sqlInstance)
+	assert.Equal(t, "mydb", database)
+
+	connectionString = "Server=servername\\instancename;Database=dbname;  "
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, "servername\\instancename", sqlInstance)
+	assert.Equal(t, "dbname", database)
+
+	connectionString = "server=hostname2.database.windows.net;user id=sa;Trusted_Connection=Yes;Integrated Security=true  "
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, "hostname2.database.windows.net", sqlInstance)
+	assert.Equal(t, emptyDatabaseName, database)
+
+	connectionString = "invalid connection string"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	assert.Equal(t, emptySqlInstance, sqlInstance)
+	assert.Equal(t, emptyDatabaseName, database)
 }
 
 func TestSqlServer_AGQueriesApplicableForDatabaseTypeSQLServer(t *testing.T) {

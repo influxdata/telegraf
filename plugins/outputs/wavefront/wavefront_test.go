@@ -73,7 +73,6 @@ func TestBuildMetrics(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func TestBuildMetricsStrict(t *testing.T) {
@@ -113,7 +112,6 @@ func TestBuildMetricsStrict(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func TestBuildMetricsWithSimpleFields(t *testing.T) {
@@ -152,11 +150,9 @@ func TestBuildMetricsWithSimpleFields(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func TestBuildTags(t *testing.T) {
-
 	w := defaultWavefront()
 
 	var tagtests = []struct {
@@ -284,7 +280,6 @@ func TestBuildValue(t *testing.T) {
 			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", vt.out, value)
 		}
 	}
-
 }
 
 func TestBuildValueString(t *testing.T) {
@@ -315,7 +310,6 @@ func TestBuildValueString(t *testing.T) {
 			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", vt.out, value)
 		}
 	}
-
 }
 
 func TestTagLimits(t *testing.T) {

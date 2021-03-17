@@ -183,7 +183,6 @@ func (k *Kibana) createHTTPClient() (*http.Client, error) {
 }
 
 func (k *Kibana) gatherKibanaStatus(baseURL string, acc telegraf.Accumulator) error {
-
 	kibanaStatus := &kibanaStatus{}
 	url := baseURL + statusPath
 
@@ -229,9 +228,7 @@ func (k *Kibana) gatherKibanaStatus(baseURL string, acc telegraf.Accumulator) er
 		fields["heap_max_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapMaxInBytes
 		fields["heap_total_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapMaxInBytes
 		fields["heap_used_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapUsedInBytes
-
 	}
-
 	acc.AddFields("kibana", fields, tags)
 
 	return nil

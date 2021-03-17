@@ -483,7 +483,6 @@ func (m *Modbus) getFields() error {
 
 				register.Fields[i].value = convertDataType(register.Fields[i], valuesT)
 			}
-
 		}
 	}
 

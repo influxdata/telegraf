@@ -100,7 +100,6 @@ func TestDeletePods(t *testing.T) {
 }
 
 func TestPodSelector(t *testing.T) {
-
 	cases := []struct {
 		expected      []k8s.Option
 		labelselector string

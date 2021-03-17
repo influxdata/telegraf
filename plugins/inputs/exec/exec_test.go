@@ -160,7 +160,7 @@ func TestCommandError(t *testing.T) {
 }
 
 func TestExecCommandWithGlob(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
 	e := NewExec()
 	e.Commands = []string{"/bin/ech* metric_value"}
 	e.SetParser(parser)
@@ -176,7 +176,7 @@ func TestExecCommandWithGlob(t *testing.T) {
 }
 
 func TestExecCommandWithoutGlob(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
 	e := NewExec()
 	e.Commands = []string{"/bin/echo metric_value"}
 	e.SetParser(parser)
@@ -192,7 +192,7 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 }
 
 func TestExecCommandWithoutGlobAndPath(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
 	e := NewExec()
 	e.Commands = []string{"echo metric_value"}
 	e.SetParser(parser)

@@ -89,7 +89,5 @@ func getTestFileSystem() fakeFileSystem {
 		"/testdata/foo": {name: "foo", filemode: uint32(fmask), modtime: mtime},
 	}
 
-	fs := fakeFileSystem{files: fileList}
-	return fs
-
+	return fakeFileSystem{files: fileList}
 }

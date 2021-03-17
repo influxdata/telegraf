@@ -134,7 +134,6 @@ func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if i := bytes.IndexByte(data, '\n'); i >= 0 {
 		// We have a full newline-terminated line.
 		return i + 1, data[0 : i+1], nil
-
 	}
 	return 0, nil, nil
 }

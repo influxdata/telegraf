@@ -223,9 +223,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			rsl.AddMetric(singleMetric)
 		}
 		riemannReturnResponse(conn)
-
 	}
-
 }
 
 func riemannReturnResponse(conn net.Conn) {
@@ -358,7 +356,6 @@ func (rsl *RiemannSocketListener) Start(acc telegraf.Accumulator) error {
 		go func() {
 			defer rsl.wg.Done()
 			rsl.listen(ctx)
-
 		}()
 	default:
 		return fmt.Errorf("unknown protocol '%s' in '%s'", protocol, rsl.ServiceAddress)
@@ -380,7 +377,6 @@ func processOsSignals(cancelFunc context.CancelFunc) {
 			return
 		}
 	}
-
 }
 
 func (rsl *RiemannSocketListener) Stop() {

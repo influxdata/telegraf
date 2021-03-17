@@ -211,17 +211,14 @@ var findSockets = func(c *Ceph) ([]*socket, error) {
 		if strings.HasPrefix(f, c.OsdPrefix) {
 			sockType = typeOsd
 			sockPrefix = osdPrefix
-
 		}
 		if strings.HasPrefix(f, c.MdsPrefix) {
 			sockType = typeMds
 			sockPrefix = mdsPrefix
-
 		}
 		if strings.HasPrefix(f, c.RgwPrefix) {
 			sockType = typeRgw
 			sockPrefix = rgwPrefix
-
 		}
 
 		if sockType == typeOsd || sockType == typeMon || sockType == typeMds || sockType == typeRgw {
