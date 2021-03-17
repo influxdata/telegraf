@@ -174,7 +174,7 @@ func (e *ElasticsearchQuery) getFunctionAggregation(function string, aggfield st
 	case "max":
 		agg = elastic5.NewMaxAggregation().Field(aggfield)
 	default:
-		return nil, fmt.Errorf("aggregation function %s not supported", function)
+		return nil, fmt.Errorf("aggregation function '%s' not supported", function)
 	}
 
 	return agg, nil
