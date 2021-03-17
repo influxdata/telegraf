@@ -12,7 +12,7 @@ func NewDummyInterface() (di KNXDummyInterface, err error) {
 	di, err = KNXDummyInterface{}, nil
 	di.inbound = make(chan knx.GroupEvent)
 
-	return
+	return di, err
 }
 
 func (di *KNXDummyInterface) Send(event knx.GroupEvent) {
