@@ -248,39 +248,48 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 }
 
 func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
-	body := req.Body
+	encoding := req.Header.Get("Content-Encoding")
 
-	// Handle gzip request bodies
-	if req.Header.Get("Content-Encoding") == "gzip" {
-		var err error
-		body, err = gzip.NewReader(req.Body)
+	switch encoding {
+	case "gzip":
+		r, err := gzip.NewReader(req.Body)
 		if err != nil {
 			h.Log.Debug(err.Error())
 			badRequest(res)
 			return nil, false
 		}
-		defer body.Close()
-	}
-
-	body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
-	bytes, err := ioutil.ReadAll(body)
-	if err != nil {
-		tooLarge(res)
-		return nil, false
-	}
-
-	// Handle snappy request bodies
-	if req.Header.Get("Content-Encoding") == "snappy" {
-		// Requires snappy decode for block format
+		defer r.Close()
+		maxReader := http.MaxBytesReader(res, r, h.MaxBodySize.Size)
+		bytes, err := ioutil.ReadAll(maxReader)
+		if err != nil {
+			tooLarge(res)
+			return nil, false
+		}
+		return bytes, true
+	case "snappy":
+		bytes, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			h.Log.Debug(err.Error())
+			badRequest(res)
+			return nil, false
+		}
+		// snappy block format is only supported by decode/encode not snappy reader/writer
 		bytes, err = snappy.Decode(nil, bytes)
 		if err != nil {
 			h.Log.Debug(err.Error())
 			badRequest(res)
 			return nil, false
 		}
+		return bytes, true
+	default:
+		bytes, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			h.Log.Debug(err.Error())
+			badRequest(res)
+			return nil, false
+		}
+		return bytes, true
 	}
-
-	return bytes, true
 }
 
 func (h *HTTPListenerV2) collectQuery(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
