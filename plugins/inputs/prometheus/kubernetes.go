@@ -183,7 +183,6 @@ func (p *Prometheus) cAdvisor(ctx context.Context) error {
 }
 
 func updateCadvisorPodList(p *Prometheus, req *http.Request) error {
-
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	httpClient := http.Client{}
 
