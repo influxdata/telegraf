@@ -61,18 +61,19 @@ const sampleConfig = `
   query_period = "1m"
 
   ## Lucene query to filter results
-  filter_query = "*"
+  # filter_query = "*"
 
   ## Fields to aggregate values (must be numeric fields)
-  metric_fields = ["metric"]
+  # metric_fields = ["metric"]
 
   ## Aggregation function to use on the metric fields
+  ## Must be set if 'metric_fields' is set
   ## Valid values are: avg, sum, min, max, sum
-  metric_function = "avg"
+  # metric_function = "avg"
 
   ## Fields to be used as tags
-  ## Must be non-analyzed fields, aggregations are performed per tag
-  tags = ["field.keyword", "field2.keyword"]
+  ## Must be text, non-analyzed fields. Metric aggregations are performed per tag
+  # tags = ["field.keyword", "field2.keyword"]
 
   ## Set to true to not ignore documents when the tag(s) above are missing
   # include_missing_tag = false
