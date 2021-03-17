@@ -16,14 +16,11 @@ func collectPersistentVolumeClaims(ctx context.Context, acc telegraf.Accumulator
 		return
 	}
 	for _, pvc := range list.Items {
-		if err = ki.gatherPersistentVolumeClaim(pvc, acc); err != nil {
-			acc.AddError(err)
-			return
-		}
+		ki.gatherPersistentVolumeClaim(pvc, acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherPersistentVolumeClaim(pvc corev1.PersistentVolumeClaim, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherPersistentVolumeClaim(pvc corev1.PersistentVolumeClaim, acc telegraf.Accumulator) {
 	phaseType := 3
 	switch strings.ToLower(string(pvc.Status.Phase)) {
 	case "bound":
@@ -49,6 +46,4 @@ func (ki *KubernetesInventory) gatherPersistentVolumeClaim(pvc corev1.Persistent
 	}
 
 	acc.AddFields(persistentVolumeClaimMeasurement, fields, tags)
-
-	return nil
 }

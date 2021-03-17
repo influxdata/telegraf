@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -154,8 +153,8 @@ func TestInvalidFieldSelector(t *testing.T) {
 	assert.NotEqual(t, err, nil)
 }
 
-func pod() *v1.Pod {
-	p := &v1.Pod{ObjectMeta: metav1.ObjectMeta{}, Status: v1.PodStatus{}, Spec: v1.PodSpec{}}
+func pod() *corev1.Pod {
+	p := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{}, Status: corev1.PodStatus{}, Spec: corev1.PodSpec{}}
 	p.Status.PodIP = "127.0.0.1"
 	p.Name = "myPod"
 	p.Namespace = "default"

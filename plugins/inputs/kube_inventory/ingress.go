@@ -15,16 +15,13 @@ func collectIngress(ctx context.Context, acc telegraf.Accumulator, ki *Kubernete
 		return
 	}
 	for _, i := range list.Items {
-		if err = ki.gatherIngress(i, acc); err != nil {
-			acc.AddError(err)
-			return
-		}
+		ki.gatherIngress(i, acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherIngress(i netv1.Ingress, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherIngress(i netv1.Ingress, acc telegraf.Accumulator) {
 	if i.GetCreationTimestamp().Second() == 0 && i.GetCreationTimestamp().Nanosecond() == 0 {
-		return nil
+		return
 	}
 
 	fields := map[string]interface{}{
@@ -54,6 +51,4 @@ func (ki *KubernetesInventory) gatherIngress(i netv1.Ingress, acc telegraf.Accum
 			}
 		}
 	}
-
-	return nil
 }

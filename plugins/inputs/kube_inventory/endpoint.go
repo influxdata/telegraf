@@ -15,16 +15,13 @@ func collectEndpoints(ctx context.Context, acc telegraf.Accumulator, ki *Kuberne
 		return
 	}
 	for _, i := range list.Items {
-		if err = ki.gatherEndpoint(i, acc); err != nil {
-			acc.AddError(err)
-			return
-		}
+		ki.gatherEndpoint(i, acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherEndpoint(e corev1.Endpoints, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherEndpoint(e corev1.Endpoints, acc telegraf.Accumulator) {
 	if e.GetCreationTimestamp().Second() == 0 && e.GetCreationTimestamp().Nanosecond() == 0 {
-		return nil
+		return
 	}
 
 	fields := map[string]interface{}{
@@ -75,6 +72,4 @@ func (ki *KubernetesInventory) gatherEndpoint(e corev1.Endpoints, acc telegraf.A
 			}
 		}
 	}
-
-	return nil
 }

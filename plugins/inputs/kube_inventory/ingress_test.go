@@ -90,7 +90,7 @@ func TestIngress(t *testing.T) {
 							"tls":                  false,
 							"backend_service_port": int32(8080),
 							"generation":           int64(12),
-							"created":              time.Unix(int64(now.Second()), int64(now.Nanosecond())).UnixNano(),
+							"created":              now.UnixNano(),
 						},
 						Tags: map[string]string{
 							"ingress_name":         "ui-lb",
@@ -114,10 +114,7 @@ func TestIngress(t *testing.T) {
 		}
 		acc := new(testutil.Accumulator)
 		for _, ingress := range ((v.handler.responseMap["/ingress/"]).(netv1.IngressList)).Items {
-			err := ks.gatherIngress(ingress, acc)
-			if err != nil {
-				t.Errorf("Failed to gather ingress - %s", err.Error())
-			}
+			ks.gatherIngress(ingress, acc)
 		}
 
 		err := acc.FirstError()

@@ -23,7 +23,7 @@ func TestDeployment(t *testing.T) {
 		Fields: map[string]interface{}{
 			"replicas_available":   int32(1),
 			"replicas_unavailable": int32(4),
-			"created":              time.Unix(int64(now.Second()), int64(now.Nanosecond())).UnixNano(),
+			"created":              now.UnixNano(),
 		},
 		Tags: map[string]string{
 			"namespace":        "ns1",

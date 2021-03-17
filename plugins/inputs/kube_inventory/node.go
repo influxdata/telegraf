@@ -15,14 +15,11 @@ func collectNodes(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesI
 		return
 	}
 	for _, n := range list.Items {
-		if err = ki.gatherNode(n, acc); err != nil {
-			acc.AddError(err)
-			return
-		}
+		ki.gatherNode(n, acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherNode(n corev1.Node, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherNode(n corev1.Node, acc telegraf.Accumulator) {
 	fields := map[string]interface{}{}
 	tags := map[string]string{
 		"node_name": n.Name,
@@ -53,6 +50,4 @@ func (ki *KubernetesInventory) gatherNode(n corev1.Node, acc telegraf.Accumulato
 	}
 
 	acc.AddFields(nodeMeasurement, fields, tags)
-
-	return nil
 }

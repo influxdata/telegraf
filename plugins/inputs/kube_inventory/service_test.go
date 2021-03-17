@@ -80,7 +80,7 @@ func TestService(t *testing.T) {
 							"port":        int32(8080),
 							"target_port": int32(1234),
 							"generation":  int64(12),
-							"created":     time.Unix(int64(now.Second()), int64(now.Nanosecond())).UnixNano(),
+							"created":     now.UnixNano(),
 						},
 						Tags: map[string]string{
 							"service_name":     "checker",
@@ -108,10 +108,7 @@ func TestService(t *testing.T) {
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
 		for _, service := range ((v.handler.responseMap["/service/"]).(*corev1.ServiceList)).Items {
-			err := ks.gatherService(service, acc)
-			if err != nil {
-				t.Errorf("Failed to gather service - %s", err.Error())
-			}
+			ks.gatherService(service, acc)
 		}
 
 		err := acc.FirstError()
@@ -281,10 +278,7 @@ func TestServiceSelectorFilter(t *testing.T) {
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
 		for _, service := range ((v.handler.responseMap["/service/"]).(*corev1.ServiceList)).Items {
-			err := ks.gatherService(service, acc)
-			if err != nil {
-				t.Errorf("Failed to gather service - %s", err.Error())
-			}
+			ks.gatherService(service, acc)
 		}
 
 		// Grab selector tags

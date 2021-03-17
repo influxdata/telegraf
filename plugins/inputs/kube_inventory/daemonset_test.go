@@ -84,7 +84,7 @@ func TestDaemonSet(t *testing.T) {
 							"number_ready":             int32(1),
 							"number_unavailable":       int32(1),
 							"updated_number_scheduled": int32(2),
-							"created":                  time.Unix(int64(now.Second()), int64(now.Nanosecond())).UnixNano(),
+							"created":                  now.UnixNano(),
 						},
 						Tags: map[string]string{
 							"daemonset_name":   "daemon1",

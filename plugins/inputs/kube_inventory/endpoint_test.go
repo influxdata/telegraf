@@ -76,7 +76,7 @@ func TestEndpoint(t *testing.T) {
 							"ready":      true,
 							"port":       int32(8080),
 							"generation": int64(12),
-							"created":    time.Unix(int64(now.Second()), int64(now.Nanosecond())).UnixNano(),
+							"created":    now.UnixNano(),
 						},
 						Tags: map[string]string{
 							"endpoint_name": "storage",
@@ -138,7 +138,7 @@ func TestEndpoint(t *testing.T) {
 							"ready":      false,
 							"port":       int32(8080),
 							"generation": int64(12),
-							"created":    time.Unix(int64(now.Second()), int64(now.Nanosecond())).UnixNano(),
+							"created":    now.UnixNano(),
 						},
 						Tags: map[string]string{
 							"endpoint_name": "storage",
@@ -162,10 +162,7 @@ func TestEndpoint(t *testing.T) {
 		}
 		acc := new(testutil.Accumulator)
 		for _, endpoint := range ((v.handler.responseMap["/endpoints/"]).(*v1.EndpointsList)).Items {
-			err := ks.gatherEndpoint(endpoint, acc)
-			if err != nil {
-				t.Errorf("Failed to gather endpoint - %s", err.Error())
-			}
+			ks.gatherEndpoint(endpoint, acc)
 		}
 
 		err := acc.FirstError()

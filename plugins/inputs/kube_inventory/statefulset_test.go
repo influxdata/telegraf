@@ -73,7 +73,7 @@ func TestStatefulSet(t *testing.T) {
 						Fields: map[string]interface{}{
 							"generation":          int64(332),
 							"observed_generation": int64(119),
-							"created":             time.Unix(int64(now.Second()), int64(now.Nanosecond())).UnixNano(),
+							"created":             now.UnixNano(),
 							"spec_replicas":       int32(3),
 							"replicas":            int32(2),
 							"replicas_current":    int32(4),
