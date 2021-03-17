@@ -1,6 +1,7 @@
 package application_insights
 
 import (
+	"github.com/influxdata/telegraf/testutil"
 	"math"
 	"testing"
 	"time"
@@ -25,6 +26,7 @@ func TestConnectFailsIfNoIkey(t *testing.T) {
 		transmitter: transmitter,
 		// Very long timeout to ensure we do not rely on timeouts for closing the transmitter
 		Timeout: internal.Duration{Duration: time.Hour},
+		Log:     testutil.Logger{},
 	}
 
 	err := ai.Connect()
@@ -40,6 +42,7 @@ func TestOutputCloseTimesOut(t *testing.T) {
 	ai := ApplicationInsights{
 		transmitter: transmitter,
 		Timeout:     internal.Duration{Duration: time.Millisecond * 50},
+		Log:         testutil.Logger{},
 	}
 
 	err := ai.Close()
@@ -67,6 +70,7 @@ func TestCloseRemovesDiagMsgListener(t *testing.T) {
 		EnableDiagnosticLogging: true,
 		diagMsgSubscriber:       diagMsgSubscriber,
 		InstrumentationKey:      "1234", // Fake, but necessary to enable tracking
+		Log:                     testutil.Logger{},
 	}
 
 	err := ai.Connect()
@@ -150,6 +154,7 @@ func TestAggregateMetricCreated(t *testing.T) {
 			ai := ApplicationInsights{
 				transmitter:        transmitter,
 				InstrumentationKey: "1234", // Fake, but necessary to enable tracking
+				Log:                testutil.Logger{},
 			}
 
 			err = ai.Connect()
@@ -208,6 +213,7 @@ func TestSimpleMetricCreated(t *testing.T) {
 			ai := ApplicationInsights{
 				transmitter:        transmitter,
 				InstrumentationKey: "1234", // Fake, but necessary to enable tracking
+				Log:                testutil.Logger{},
 			}
 
 			err = ai.Connect()
@@ -278,6 +284,7 @@ func TestTagsAppliedToTelemetry(t *testing.T) {
 			ai := ApplicationInsights{
 				transmitter:        transmitter,
 				InstrumentationKey: "1234", // Fake, but necessary to enable tracking
+				Log:                testutil.Logger{},
 			}
 
 			err = ai.Connect()
@@ -319,6 +326,7 @@ func TestContextTagsSetOnSimpleTelemetry(t *testing.T) {
 			"ai.cloud.roleInstance": "kubernetes_pod_name",
 			"ai.user.id":            "nonexistent",
 		},
+		Log: testutil.Logger{},
 	}
 
 	err = ai.Connect()
@@ -356,6 +364,7 @@ func TestContextTagsSetOnAggregateTelemetry(t *testing.T) {
 			"ai.cloud.roleInstance": "kubernetes_pod_name",
 			"ai.user.id":            "nonexistent",
 		},
+		Log: testutil.Logger{},
 	}
 
 	err = ai.Connect()
@@ -388,7 +397,6 @@ func verifyAggregateTelemetry(
 	countField string,
 	telemetry *appinsights.AggregateMetricTelemetry,
 ) {
-
 	verifyAggregateField := func(fieldName string, telemetryValue float64) {
 		metricRawFieldValue, found := metric.Fields()[fieldName]
 		if !found {
@@ -417,7 +425,6 @@ func verifySimpleTelemetry(
 	expectedTelemetryName string,
 	telemetry *appinsights.MetricTelemetry,
 ) {
-
 	assert.Equal(expectedTelemetryName, telemetry.Name, "Telemetry name is not what was expected")
 	assert.EqualValues(metric.Fields()[valueField], telemetry.Value, "Telemetry value does not match metric value field")
 	assert.Equal(metric.Time(), telemetry.Timestamp, "Telemetry and metric timestamps do not match")

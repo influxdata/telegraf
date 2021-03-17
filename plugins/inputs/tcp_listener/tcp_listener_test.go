@@ -30,9 +30,9 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 `
 )
 
-func newTestTcpListener() (*TcpListener, chan []byte) {
+func newTestTCPListener() (*TCPListener, chan []byte) {
 	in := make(chan []byte, 1500)
-	listener := &TcpListener{
+	listener := &TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8194",
 		AllowedPendingMessages: 10000,
@@ -45,7 +45,7 @@ func newTestTcpListener() (*TcpListener, chan []byte) {
 
 // benchmark how long it takes to accept & process 100,000 metrics:
 func BenchmarkTCP(b *testing.B) {
-	listener := TcpListener{
+	listener := TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8198",
 		AllowedPendingMessages: 100000,
@@ -77,7 +77,7 @@ func BenchmarkTCP(b *testing.B) {
 }
 
 func TestHighTrafficTCP(t *testing.T) {
-	listener := TcpListener{
+	listener := TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8199",
 		AllowedPendingMessages: 100000,
@@ -105,7 +105,7 @@ func TestHighTrafficTCP(t *testing.T) {
 }
 
 func TestConnectTCP(t *testing.T) {
-	listener := TcpListener{
+	listener := TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8194",
 		AllowedPendingMessages: 10000,
@@ -143,7 +143,7 @@ func TestConnectTCP(t *testing.T) {
 
 // Test that MaxTCPConnections is respected
 func TestConcurrentConns(t *testing.T) {
-	listener := TcpListener{
+	listener := TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8195",
 		AllowedPendingMessages: 10000,
@@ -179,7 +179,7 @@ func TestConcurrentConns(t *testing.T) {
 
 // Test that MaxTCPConnections is respected when max==1
 func TestConcurrentConns1(t *testing.T) {
-	listener := TcpListener{
+	listener := TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8196",
 		AllowedPendingMessages: 10000,
@@ -213,7 +213,7 @@ func TestConcurrentConns1(t *testing.T) {
 
 // Test that MaxTCPConnections is respected
 func TestCloseConcurrentConns(t *testing.T) {
-	listener := TcpListener{
+	listener := TCPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         "localhost:8195",
 		AllowedPendingMessages: 10000,
@@ -235,7 +235,7 @@ func TestCloseConcurrentConns(t *testing.T) {
 func TestRunParser(t *testing.T) {
 	var testmsg = []byte(testMsg)
 
-	listener, in := newTestTcpListener()
+	listener, in := newTestTCPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)
@@ -257,7 +257,7 @@ func TestRunParser(t *testing.T) {
 func TestRunParserInvalidMsg(t *testing.T) {
 	var testmsg = []byte("cpu_load_short")
 
-	listener, in := newTestTcpListener()
+	listener, in := newTestTCPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)
@@ -283,7 +283,7 @@ func TestRunParserInvalidMsg(t *testing.T) {
 func TestRunParserGraphiteMsg(t *testing.T) {
 	var testmsg = []byte("cpu.load.graphite 12 1454780029")
 
-	listener, in := newTestTcpListener()
+	listener, in := newTestTCPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)
@@ -303,7 +303,7 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 func TestRunParserJSONMsg(t *testing.T) {
 	var testmsg = []byte("{\"a\": 5, \"b\": {\"c\": 6}}\n")
 
-	listener, in := newTestTcpListener()
+	listener, in := newTestTCPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)

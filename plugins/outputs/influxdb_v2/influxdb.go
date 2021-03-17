@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/url"
 	"time"
@@ -96,12 +95,12 @@ type InfluxDB struct {
 	UintSupport      bool              `toml:"influx_uint_support"`
 	tls.ClientConfig
 
+	Log telegraf.Logger `toml:"-"`
+
 	clients []Client
 }
 
 func (i *InfluxDB) Connect() error {
-	ctx := context.Background()
-
 	if len(i.URLs) == 0 {
 		i.URLs = append(i.URLs, defaultURL)
 	}
@@ -122,7 +121,7 @@ func (i *InfluxDB) Connect() error {
 
 		switch parts.Scheme {
 		case "http", "https", "unix":
-			c, err := i.getHTTPClient(ctx, parts, proxy)
+			c, err := i.getHTTPClient(parts, proxy)
 			if err != nil {
 				return err
 			}
@@ -165,13 +164,13 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			return nil
 		}
 
-		log.Printf("E! [outputs.influxdb_v2] when writing to [%s]: %v", client.URL(), err)
+		i.Log.Errorf("When writing to [%s]: %v", client.URL(), err)
 	}
 
 	return err
 }
 
-func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.URL) (Client, error) {
+func (i *InfluxDB) getHTTPClient(url *url.URL, proxy *url.URL) (Client, error) {
 	tlsConfig, err := i.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err

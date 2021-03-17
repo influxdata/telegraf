@@ -94,7 +94,7 @@ func TestMailChimpGatherReport(t *testing.T) {
 	}
 	m := MailChimp{
 		api:        api,
-		CampaignId: "test",
+		CampaignID: "test",
 	}
 
 	var acc testutil.Accumulator
@@ -137,7 +137,6 @@ func TestMailChimpGatherReport(t *testing.T) {
 		"industry_type":            "Social Networks and Online Communities",
 	}
 	acc.AssertContainsTaggedFields(t, "mailchimp", fields, tags)
-
 }
 
 func TestMailChimpGatherError(t *testing.T) {
@@ -159,7 +158,7 @@ func TestMailChimpGatherError(t *testing.T) {
 	}
 	m := MailChimp{
 		api:        api,
-		CampaignId: "test",
+		CampaignID: "test",
 	}
 
 	var acc testutil.Accumulator

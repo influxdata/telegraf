@@ -186,5 +186,4 @@ func runCounterProgram() {
 		}
 		fmt.Fprint(os.Stdout, string(b))
 	}
-
 }

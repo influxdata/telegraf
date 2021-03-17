@@ -269,6 +269,7 @@ func TestPingGatherIntegration(t *testing.T) {
 
 	var acc testutil.Accumulator
 	p, ok := inputs.Inputs["ping"]().(*Ping)
+	p.Log = testutil.Logger{}
 	require.True(t, ok)
 	p.Urls = []string{"localhost", "influxdata.com"}
 	err := acc.GatherError(p.Gather)
@@ -432,11 +433,11 @@ func TestPingGatherNative(t *testing.T) {
 				PacketsSent: 5,
 				PacketsRecv: 5,
 				Rtts: []time.Duration{
-					1 * time.Millisecond,
-					2 * time.Millisecond,
 					3 * time.Millisecond,
 					4 * time.Millisecond,
+					1 * time.Millisecond,
 					5 * time.Millisecond,
+					2 * time.Millisecond,
 				},
 			},
 			ttl: 1,
@@ -475,19 +476,22 @@ func TestPingGatherNative(t *testing.T) {
 		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
 		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
 		assert.True(t, acc.HasField("ping", "percentile50_ms"))
+		assert.Equal(t, float64(3), acc.Metrics[0].Fields["percentile50_ms"])
 		assert.True(t, acc.HasField("ping", "percentile95_ms"))
+		assert.Equal(t, float64(4.799999), acc.Metrics[0].Fields["percentile95_ms"])
 		assert.True(t, acc.HasField("ping", "percentile99_ms"))
+		assert.Equal(t, float64(4.96), acc.Metrics[0].Fields["percentile99_ms"])
 		assert.True(t, acc.HasField("ping", "percent_packet_loss"))
 		assert.True(t, acc.HasField("ping", "minimum_response_ms"))
 		assert.True(t, acc.HasField("ping", "average_response_ms"))
 		assert.True(t, acc.HasField("ping", "maximum_response_ms"))
 		assert.True(t, acc.HasField("ping", "standard_deviation_ms"))
 	}
-
 }
 
 func TestNoPacketsSent(t *testing.T) {
 	p := &Ping{
+		Log:         testutil.Logger{},
 		Urls:        []string{"localhost", "127.0.0.2"},
 		Method:      "native",
 		Count:       5,

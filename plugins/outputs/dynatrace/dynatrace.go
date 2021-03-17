@@ -19,7 +19,8 @@ import (
 )
 
 const (
-	oneAgentMetricsUrl = "http://127.0.0.1:14499/metrics/ingest"
+	oneAgentMetricsURL   = "http://127.0.0.1:14499/metrics/ingest"
+	dtIngestApiLineLimit = 1000
 )
 
 var (
@@ -30,13 +31,14 @@ var (
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL         string            `toml:"url"`
-	APIToken    string            `toml:"api_token"`
-	Prefix      string            `toml:"prefix"`
-	Log         telegraf.Logger   `toml:"-"`
-	Timeout     internal.Duration `toml:"timeout"`
-	State       map[string]string
-	SendCounter int
+	URL               string            `toml:"url"`
+	APIToken          string            `toml:"api_token"`
+	Prefix            string            `toml:"prefix"`
+	Log               telegraf.Logger   `toml:"-"`
+	Timeout           internal.Duration `toml:"timeout"`
+	AddCounterMetrics []string          `toml:"additional_counters"`
+	State             map[string]string
+	SendCounter       int
 
 	tls.ClientConfig
 
@@ -73,6 +75,9 @@ const sampleConfig = `
 
   ## Connection timeout, defaults to "5s" if not set.
   timeout = "5s"
+
+  ## If you want to convert values represented as gauges to counters, add the metric names here
+  additional_counters = [ ]
 `
 
 // Connect Connects the Dynatrace output plugin to the Telegraf stream
@@ -130,6 +135,7 @@ func (d *Dynatrace) escape(v string) string {
 
 func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 	var buf bytes.Buffer
+	metricCounter := 1
 	var tagb bytes.Buffer
 	if len(metrics) == 0 {
 		return nil
@@ -151,8 +157,9 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				if err != nil {
 					continue
 				}
-				fmt.Fprintf(&tagb, ",%s=%s", strings.ToLower(tagKey), d.escape(metric.Tags()[k]))
-
+				if len(metric.Tags()[k]) > 0 {
+					fmt.Fprintf(&tagb, ",%s=%s", strings.ToLower(tagKey), d.escape(metric.Tags()[k]))
+				}
 			}
 		}
 		if len(metric.Fields()) > 0 {
@@ -194,9 +201,17 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 					continue
 				}
 				// write metric id,tags and value
-				switch metric.Type() {
+
+				metricType := metric.Type()
+				for _, i := range d.AddCounterMetrics {
+					if metric.Name()+"."+metricKey == i {
+						metricType = telegraf.Counter
+					}
+				}
+
+				switch metricType {
 				case telegraf.Counter:
-					var delta float64 = 0
+					var delta float64
 
 					// Check if LastValue exists
 					if lastvalue, ok := d.State[metricID+tagb.String()]; ok {
@@ -209,7 +224,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 						if err != nil {
 							d.Log.Debugf("Could not parse current value: %s", value)
 						}
-						if floatCurrentValue > floatLastValue {
+						if floatCurrentValue >= floatLastValue {
 							delta = floatCurrentValue - floatLastValue
 							fmt.Fprintf(&buf, "%s%s count,delta=%f\n", metricID, tagb.String(), delta)
 						}
@@ -219,6 +234,15 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				default:
 					fmt.Fprintf(&buf, "%s%s %v\n", metricID, tagb.String(), value)
 				}
+
+				if metricCounter%dtIngestApiLineLimit == 0 {
+					err = d.send(buf.Bytes())
+					if err != nil {
+						return err
+					}
+					buf.Reset()
+				}
+				metricCounter++
 			}
 		}
 	}
@@ -236,7 +260,7 @@ func (d *Dynatrace) send(msg []byte) error {
 	req, err := http.NewRequest("POST", d.URL, bytes.NewBuffer(msg))
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
-		return fmt.Errorf("Dynatrace error while creating HTTP request:, %s", err.Error())
+		return fmt.Errorf("error while creating HTTP request:, %s", err.Error())
 	}
 	req.Header.Add("Content-Type", "text/plain; charset=UTF-8")
 
@@ -249,13 +273,12 @@ func (d *Dynatrace) send(msg []byte) error {
 	resp, err := d.client.Do(req)
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
-		fmt.Println(req)
-		return fmt.Errorf("Dynatrace error while sending HTTP request:, %s", err.Error())
+		return fmt.Errorf("error while sending HTTP request:, %s", err.Error())
 	}
 	defer resp.Body.Close()
 
 	// print metric line results as info log
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusBadRequest {
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			d.Log.Errorf("Dynatrace error reading response")
@@ -263,9 +286,8 @@ func (d *Dynatrace) send(msg []byte) error {
 		bodyString := string(bodyBytes)
 		d.Log.Debugf("Dynatrace returned: %s", bodyString)
 	} else {
-		return fmt.Errorf("Dynatrace request failed with response code:, %d", resp.StatusCode)
+		return fmt.Errorf("request failed with response code:, %d", resp.StatusCode)
 	}
-
 	return nil
 }
 
@@ -273,9 +295,9 @@ func (d *Dynatrace) Init() error {
 	d.State = make(map[string]string)
 	if len(d.URL) == 0 {
 		d.Log.Infof("Dynatrace URL is empty, defaulting to OneAgent metrics interface")
-		d.URL = oneAgentMetricsUrl
+		d.URL = oneAgentMetricsURL
 	}
-	if d.URL != oneAgentMetricsUrl && len(d.APIToken) == 0 {
+	if d.URL != oneAgentMetricsURL && len(d.APIToken) == 0 {
 		d.Log.Errorf("Dynatrace api_token is a required field for Dynatrace output")
 		return fmt.Errorf("api_token is a required field for Dynatrace output")
 	}

@@ -104,7 +104,6 @@ func TestNoCoreDataHandling(t *testing.T) {
 	acc.AssertDoesNotContainMeasurement(t, "solr_queryhandler")
 	acc.AssertDoesNotContainMeasurement(t, "solr_updatehandler")
 	acc.AssertDoesNotContainMeasurement(t, "solr_handler")
-
 }
 
 func createMockServer() *httptest.Server {

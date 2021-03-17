@@ -14,7 +14,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	_ "github.com/jackc/pgx/stdlib"
+	_ "github.com/jackc/pgx/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
 )
 
 const MaxInt64 = int64(^uint64(0) >> 1)
@@ -79,7 +79,6 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
 	rows := make([]string, len(metrics))
 	for i, m := range metrics {
-
 		cols := []interface{}{
 			hashID(m),
 			m.Time().UTC(),
@@ -126,9 +125,8 @@ func escapeValue(val interface{}) (string, error) {
 		// possible value.
 		if t <= uint64(MaxInt64) {
 			return strconv.FormatInt(int64(t), 10), nil
-		} else {
-			return strconv.FormatInt(MaxInt64, 10), nil
 		}
+		return strconv.FormatInt(MaxInt64, 10), nil
 	case bool:
 		return strconv.FormatBool(t), nil
 	case time.Time:

@@ -41,7 +41,6 @@ func TestGatherServer(t *testing.T) {
 }
 
 func TestSanitizeURI(t *testing.T) {
-
 	var sanitizeTest = []struct {
 		input    string
 		expected string

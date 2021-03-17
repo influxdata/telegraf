@@ -1,21 +1,23 @@
 version: 2.1
+orbs:
+  win: circleci/windows@2.4.0  
 
 executors:
-  go-1_14:
-    working_directory: '/go/src/github.com/influxdata/telegraf'
-    docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.14.9'
-    environment:
-      GOFLAGS: -p=8
   go-1_15:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.15.5'
+      - image: 'quay.io/influxdb/telegraf-ci:1.15.8'
+    environment:
+      GOFLAGS: -p=8
+  go-1_16:
+    working_directory: '/go/src/github.com/influxdata/telegraf'
+    docker:
+      - image: 'quay.io/influxdb/telegraf-ci:1.16.2'
     environment:
       GOFLAGS: -p=8
   mac:
     macos:
-      xcode: 12.1.0
+      xcode: 12.4.0
     working_directory: '~/go/src/github.com/influxdata/telegraf'
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
@@ -35,14 +37,6 @@ commands:
       - run: 'GOARCH=<< parameters.goarch >> make check'
       - run: 'GOARCH=<< parameters.goarch >> make check-deps'
       - run: 'GOARCH=<< parameters.goarch >> make test'
-  test-go-mac:
-    steps:
-      - checkout
-      - attach_workspace:
-          at: '/'
-      - run: 'make'
-      - run: 'make check'
-      - run: 'make test'
   package:
     parameters:
       nightly:
@@ -64,9 +58,13 @@ commands:
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
+      - persist_to_workspace:
+          root: './build'
+          paths:
+            - 'dist'
 jobs:
   deps:
-    executor: go-1_15
+    executor: go-1_16
     steps:
       - checkout
       - restore_cache:
@@ -82,40 +80,6 @@ jobs:
           root: '/go'
           paths:
             - '*'
-  macdeps:
-    executor: mac
-    steps:
-      - checkout
-      - restore_cache:
-          key: mac-go-mod-v2-{{ checksum "go.sum" }}
-      - run: 'brew install go' # latest
-      - run: 'make deps'
-      - run: 'make tidy'
-      - save_cache:
-          name: 'go module cache'
-          key: mac-go-mod-v2-{{ checksum "go.sum" }}
-          paths:
-            - '~/go/pkg/mod'
-            - '/usr/local/Cellar/go'
-            - '/usr/local/bin/go'
-            - '/usr/local/bin/gofmt'
-      - persist_to_workspace:
-          root: '/'
-          paths:
-            - 'usr/local/bin/go'
-            - 'usr/local/Cellar/go'
-            - 'usr/local/bin/gofmt'
-            - 'Users/distiller/go'
-
-  test-go-1_14:
-    executor: go-1_14
-    steps:
-      - test-go
-  test-go-1_14-386:
-    executor: go-1_14
-    steps:
-      - test-go:
-          goarch: "386"
   test-go-1_15:
     executor: go-1_15
     steps:
@@ -125,46 +89,101 @@ jobs:
     steps:
       - test-go:
           goarch: "386"
-  test-go-darwin:
+  test-go-1_16:
+    executor: go-1_16
+    steps:
+      - test-go
+  test-go-1_16-386:
+    executor: go-1_16
+    steps:
+      - test-go:
+          goarch: "386"
+  test-go-mac:
     executor: mac
     steps:
-      - test-go-mac
+      - checkout
+      - restore_cache:
+          key: mac-go-mod-v0-{{ checksum "go.sum" }}
+      - run: 'sh ./scripts/mac_installgo.sh'
+      - save_cache:
+          name: 'Saving cache'
+          key: mac-go-mod-v0-{{ checksum "go.sum" }}
+          paths:
+            - '/usr/local/Cellar/go'
+            - '/usr/local/bin/go'
+            - '/usr/local/bin/gofmt'
+      - run: 'make deps'
+      - run: 'make tidy'
+      - run: 'make'
+      - run: 'make check'
+      - run: 'make test'
+  test-go-windows:
+    executor:
+        name: win/default
+        shell: powershell.exe
+    steps:
+      - checkout
+      - run: choco upgrade golang --version=1.16.2
+      - run: choco install make
+      - run: git config --system core.longpaths true
+      - run: make test-windows
 
   package:
-    executor: go-1_15
+    executor: go-1_16
     steps:
       - package
   release:
-    executor: go-1_15
+    executor: go-1_16
     steps:
       - package
   nightly:
-    executor: go-1_15
+    executor: go-1_16
     steps:
       - package:
           nightly: true
-
+  package-sign-windows:
+    executor:
+        name: win/default
+        shell: powershell.exe
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '/build'
+      - run:
+          name: "Sign Windows Executables"
+          shell: powershell.exe
+          command: |
+            ./scripts/windows-signing.ps1
+      - persist_to_workspace:
+          root: './build'
+          paths:
+            - 'dist'
+      - store_artifacts:
+          path: './build/dist'
+          destination: 'build/dist'
+  package-sign-mac:
+    macos:
+      xcode: "11.3"
+    working_directory: /Users/distiller/project
+    environment:
+      FL_OUTPUT_DIR: output
+      FASTLANE_LANE: test
+    shell: /bin/bash --login -o pipefail
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '.'
+      - run:
+          command: |
+            sh ./scripts/mac-signing.sh
+      - store_artifacts:
+          path: './dist'
+          destination: 'build/dist'
 workflows:
   version: 2
   check:
     jobs:
-      - 'macdeps':
-          filters:
-            tags:
-              only: /.*/
       - 'deps':
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_14':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_14-386':
-          requires:
-            - 'deps'
           filters:
             tags:
               only: /.*/
@@ -180,57 +199,84 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'test-go-darwin':
+      - 'test-go-1_16':
           requires:
-            - 'macdeps'
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_16-386':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-mac':
           filters:
             tags: # only runs on tags if you specify this filter
               only: /.*/
+      - 'test-go-windows':
+          filters:
+            tags:
+              only: /.*/
       - 'package':
           requires:
-            - 'test-go-darwin'
-            - 'test-go-1_14'
-            - 'test-go-1_14-386'
+            - 'test-go-windows'
+            - 'test-go-mac'
             - 'test-go-1_15'
             - 'test-go-1_15-386'
+            - 'test-go-1_16'
+            - 'test-go-1_16-386'
       - 'release':
           requires:
-            - 'test-go-darwin'
-            - 'test-go-1_14'
-            - 'test-go-1_14-386'
+            - 'test-go-windows'
+            - 'test-go-mac'
             - 'test-go-1_15'
             - 'test-go-1_15-386'
+            - 'test-go-1_16'
+            - 'test-go-1_16-386'
           filters:
             tags:
               only: /.*/
             branches:
               ignore: /.*/
+      - 'package-sign-windows':
+          requires:
+            - 'release'
+          filters:
+              tags:
+                only: /.*/
+      - 'package-sign-mac':
+           requires:
+             - 'package-sign-windows' 
+           filters:
+              tags:
+                only: /.*/
   nightly:
     jobs:
       - 'deps'
-      - 'macdeps'
-      - 'test-go-1_14':
-          requires:
-            - 'deps'
-      - 'test-go-1_14-386':
-          requires:
-            - 'deps'
       - 'test-go-1_15':
           requires:
             - 'deps'
       - 'test-go-1_15-386':
           requires:
             - 'deps'
-      - 'test-go-darwin':
+      - 'test-go-1_16':
           requires:
-            - 'macdeps'
+            - 'deps'
+      - 'test-go-1_16-386':
+          requires:
+            - 'deps'
+      - 'test-go-mac'
+      - 'test-go-windows'
       - 'nightly':
           requires:
-            - 'test-go-darwin'
-            - 'test-go-1_14'
-            - 'test-go-1_14-386'
+            - 'test-go-windows'
+            - 'test-go-mac'
             - 'test-go-1_15'
             - 'test-go-1_15-386'
+            - 'test-go-1_16'
+            - 'test-go-1_16-386'
     triggers:
       - schedule:
           cron: "0 7 * * *"

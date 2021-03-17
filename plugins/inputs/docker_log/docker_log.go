@@ -308,9 +308,8 @@ func (d *DockerLogs) tailContainerLogs(
 	// multiplexed.
 	if hasTTY {
 		return tailStream(acc, tags, container.ID, logReader, "tty")
-	} else {
-		return tailMultiplexed(acc, tags, container.ID, logReader)
 	}
+	return tailMultiplexed(acc, tags, container.ID, logReader)
 }
 
 func parseLine(line []byte) (time.Time, string, error) {

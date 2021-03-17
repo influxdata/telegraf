@@ -13,9 +13,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type NginxPlusApi struct {
+type NginxPlusAPI struct {
 	Urls            []string          `toml:"urls"`
-	ApiVersion      int64             `toml:"api_version"`
+	APIVersion      int64             `toml:"api_version"`
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 	tls.ClientConfig
 
@@ -24,7 +24,7 @@ type NginxPlusApi struct {
 
 const (
 	// Default settings
-	defaultApiVersion = 3
+	defaultAPIVersion = 3
 
 	// Paths
 	processesPath   = "processes"
@@ -61,26 +61,26 @@ var sampleConfig = `
   # insecure_skip_verify = false
 `
 
-func (n *NginxPlusApi) SampleConfig() string {
+func (n *NginxPlusAPI) SampleConfig() string {
 	return sampleConfig
 }
 
-func (n *NginxPlusApi) Description() string {
+func (n *NginxPlusAPI) Description() string {
 	return "Read Nginx Plus Api documentation"
 }
 
-func (n *NginxPlusApi) Gather(acc telegraf.Accumulator) error {
+func (n *NginxPlusAPI) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	// Create an HTTP client that is re-used for each
 	// collection interval
 
-	if n.ApiVersion == 0 {
-		n.ApiVersion = defaultApiVersion
+	if n.APIVersion == 0 {
+		n.APIVersion = defaultAPIVersion
 	}
 
 	if n.client == nil {
-		client, err := n.createHttpClient()
+		client, err := n.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -105,7 +105,7 @@ func (n *NginxPlusApi) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *NginxPlusApi) createHttpClient() (*http.Client, error) {
+func (n *NginxPlusAPI) createHTTPClient() (*http.Client, error) {
 	if n.ResponseTimeout.Duration < time.Second {
 		n.ResponseTimeout.Duration = time.Second * 5
 	}
@@ -127,6 +127,6 @@ func (n *NginxPlusApi) createHttpClient() (*http.Client, error) {
 
 func init() {
 	inputs.Add("nginx_plus_api", func() telegraf.Input {
-		return &NginxPlusApi{}
+		return &NginxPlusAPI{}
 	})
 }

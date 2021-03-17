@@ -155,7 +155,7 @@ func (s *SystemPS) NetConnections() ([]net.ConnectionStat, error) {
 
 func (s *SystemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {
 	m, err := disk.IOCounters(names...)
-	if err == internal.NotImplementedError {
+	if err == internal.ErrorNotImplemented {
 		return nil, nil
 	}
 

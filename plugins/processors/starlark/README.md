@@ -165,8 +165,11 @@ def apply(metric):
 
 **How can I save values across multiple calls to the script?**
 
-Telegraf freezes the global scope, which prevents it from being modified.
-Attempting to modify the global scope will fail with an error.
+Telegraf freezes the global scope, which prevents it from being modified, except for a special shared global dictionary 
+named `state`, this can be used by the `apply` function.
+See an example of this in [compare with previous metric](/plugins/processors/starlark/testdata/compare_metrics.star)
+
+Other than the `state` variable, attempting to modify the global scope will fail with an error.
 
 **How to manage errors that occur in the apply function?**
 

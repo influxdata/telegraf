@@ -32,15 +32,15 @@ var (
 	LXC  ResourceType = "lxc"
 )
 
-type VmStats struct {
-	Data []VmStat `json:"data"`
+type VMStats struct {
+	Data []VMStat `json:"data"`
 }
 
-type VmCurrentStats struct {
-	Data VmStat `json:"data"`
+type VMCurrentStats struct {
+	Data VMStat `json:"data"`
 }
 
-type VmStat struct {
+type VMStat struct {
 	ID        string      `json:"vmid"`
 	Name      string      `json:"name"`
 	Status    string      `json:"status"`
@@ -51,10 +51,10 @@ type VmStat struct {
 	UsedSwap  json.Number `json:"swap"`
 	TotalSwap json.Number `json:"maxswap"`
 	Uptime    json.Number `json:"uptime"`
-	CpuLoad   json.Number `json:"cpu"`
+	CPULoad   json.Number `json:"cpu"`
 }
 
-type VmConfig struct {
+type VMConfig struct {
 	Data struct {
 		Searchdomain string `json:"searchdomain"`
 		Hostname     string `json:"hostname"`
@@ -62,7 +62,7 @@ type VmConfig struct {
 	} `json:"data"`
 }
 
-type NodeDns struct {
+type NodeDNS struct {
 	Data struct {
 		Searchdomain string `json:"search"`
 	} `json:"data"`

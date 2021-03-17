@@ -378,7 +378,6 @@ OS RealTime Mod  | 0x00              | ok
 	} else {
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
-
 	}
 	os.Exit(0)
 }
@@ -573,7 +572,6 @@ Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
 	} else {
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
-
 	}
 	os.Exit(0)
 }
@@ -611,8 +609,8 @@ Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
 
 	for i := range tests {
 		t.Logf("Checking v%d data...", i+1)
-		extractFieldsFromRegex(re_v1_parse_line, tests[i])
-		extractFieldsFromRegex(re_v2_parse_line, tests[i])
+		extractFieldsFromRegex(reV1ParseLine, tests[i])
+		extractFieldsFromRegex(reV2ParseLine, tests[i])
 	}
 }
 

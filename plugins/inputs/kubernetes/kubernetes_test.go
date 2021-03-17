@@ -21,7 +21,6 @@ func TestKubernetesStats(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprintln(w, responsePods)
 		}
-
 	}))
 	defer ts.Close()
 
@@ -155,7 +154,6 @@ func TestKubernetesStats(t *testing.T) {
 		"pod_name":  "foopod",
 	}
 	acc.AssertContainsTaggedFields(t, "kubernetes_pod_network", fields, tags)
-
 }
 
 var responsePods = `

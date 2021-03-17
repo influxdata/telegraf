@@ -288,7 +288,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 		var m telegraf.Metric
 		var err error
 		var parseErrorCount int
-		var lastPos int = 0
+		var lastPos int
 		var firstParseErrorStr string
 		for {
 			select {
@@ -306,7 +306,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 
 			// Continue parsing metrics even if some are malformed
 			if parseErr, ok := err.(*influx.ParseError); ok {
-				parseErrorCount += 1
+				parseErrorCount++
 				errStr := parseErr.Error()
 				if firstParseErrorStr == "" {
 					firstParseErrorStr = errStr
@@ -327,7 +327,6 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 			}
 
 			h.acc.AddMetric(m)
-
 		}
 		if err != influx.EOF {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())

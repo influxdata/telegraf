@@ -1,17 +1,20 @@
 package kinesis
 
 import (
-	"log"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/aws/aws-sdk-go/service/kinesis/kinesisiface"
 	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+// Limit set by AWS (https://docs.aws.amazon.com/kinesis/latest/APIReference/API_PutRecords.html)
+const maxRecordsPerRequest uint32 = 500
 
 type (
 	KinesisOutput struct {
@@ -29,9 +32,10 @@ type (
 		RandomPartitionKey bool       `toml:"use_random_partitionkey"`
 		Partition          *Partition `toml:"partition"`
 		Debug              bool       `toml:"debug"`
-		svc                *kinesis.Kinesis
 
+		Log        telegraf.Logger `toml:"-"`
 		serializer serializers.Serializer
+		svc        kinesisiface.KinesisAPI
 	}
 
 	Partition struct {
@@ -117,13 +121,13 @@ func (k *KinesisOutput) Description() string {
 
 func (k *KinesisOutput) Connect() error {
 	if k.Partition == nil {
-		log.Print("E! kinesis : Deprecated partitionkey configuration in use, please consider using outputs.kinesis.partition")
+		k.Log.Error("Deprecated partitionkey configuration in use, please consider using outputs.kinesis.partition")
 	}
 
 	// We attempt first to create a session to Kinesis using an IAMS role, if that fails it will fall through to using
 	// environment variables, and then Shared Credentials.
 	if k.Debug {
-		log.Printf("I! kinesis: Establishing a connection to Kinesis in %s", k.Region)
+		k.Log.Infof("Establishing a connection to Kinesis in %s", k.Region)
 	}
 
 	credentialConfig := &internalaws.CredentialConfig{
@@ -154,26 +158,28 @@ func (k *KinesisOutput) SetSerializer(serializer serializers.Serializer) {
 	k.serializer = serializer
 }
 
-func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Duration {
+func (k *KinesisOutput) writeKinesis(r []*kinesis.PutRecordsRequestEntry) time.Duration {
 	start := time.Now()
 	payload := &kinesis.PutRecordsInput{
 		Records:    r,
 		StreamName: aws.String(k.StreamName),
 	}
 
-	if k.Debug {
-		resp, err := k.svc.PutRecords(payload)
-		if err != nil {
-			log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
-		}
-		log.Printf("I! Wrote: '%+v'", resp)
-
-	} else {
-		_, err := k.svc.PutRecords(payload)
-		if err != nil {
-			log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
-		}
+	resp, err := k.svc.PutRecords(payload)
+	if err != nil {
+		k.Log.Errorf("Unable to write to Kinesis : %s", err.Error())
+		return time.Since(start)
 	}
+
+	if k.Debug {
+		k.Log.Infof("Wrote: '%+v'", resp)
+	}
+
+	failed := *resp.FailedRecordCount
+	if failed > 0 {
+		k.Log.Errorf("Unable to write %+v of %+v record(s) to Kinesis", failed, len(r))
+	}
+
 	return time.Since(start)
 }
 
@@ -199,7 +205,7 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 			// Default partition name if default is not set
 			return "telegraf"
 		default:
-			log.Printf("E! kinesis : You have configured a Partition method of '%s' which is not supported", k.Partition.Method)
+			k.Log.Errorf("You have configured a Partition method of '%s' which is not supported", k.Partition.Method)
 		}
 	}
 	if k.RandomPartitionKey {
@@ -226,7 +232,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 		values, err := k.serializer.Serialize(metric)
 		if err != nil {
-			log.Printf("D! [outputs.kinesis] Could not serialize metric: %v", err)
+			k.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 
@@ -239,18 +245,16 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 		r = append(r, &d)
 
-		if sz == 500 {
-			// Max Messages Per PutRecordRequest is 500
-			elapsed := writekinesis(k, r)
-			log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
+		if sz == maxRecordsPerRequest {
+			elapsed := k.writeKinesis(r)
+			k.Log.Debugf("Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 			sz = 0
 			r = nil
 		}
-
 	}
 	if sz > 0 {
-		elapsed := writekinesis(k, r)
-		log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
+		elapsed := k.writeKinesis(r)
+		k.Log.Debugf("Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 	}
 
 	return nil

@@ -224,5 +224,4 @@ func Test_BeatRequest(test *testing.T) {
 	if err != nil {
 		test.Logf("Can't gather stats")
 	}
-
 }
