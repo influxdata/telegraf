@@ -1048,6 +1048,9 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 	require.NoError(t, s.parseStatsdLine("valid:45|c"))
 	require.NoError(t, s.Gather(acc))
 
+	// Wait for the metrics to arrive
+	acc.Wait(3)
+
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
 			testutil.MustMetric(
