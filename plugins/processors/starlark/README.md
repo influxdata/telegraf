@@ -227,7 +227,10 @@ def apply(metric):
 - [ratio](/plugins/processors/starlark/testdata/ratio.star) - Compute the ratio of two integer fields
 - [rename](/plugins/processors/starlark/testdata/rename.star) - Rename tags or fields using a name mapping.
 - [scale](/plugins/processors/starlark/testdata/scale.star) - Multiply any field by a number
-- [value filter](/plugins/processors/starlark/testdata/value_filter.star) - remove a metric based on a field value.
+- [time date](/plugins/processors/starlark/testdata/time_date.star) - Parse a date and extract the year, month and day from it.
+- [time duration](/plugins/processors/starlark/testdata/time_duration.star) - Parse a duration and convert it into a total amount of seconds.
+- [time timestamp](/plugins/processors/starlark/testdata/time_timestamp.star) - Filter metrics based on the timestamp.
+- [value filter](/plugins/processors/starlark/testdata/value_filter.star) - Remove a metric based on a field value.
 - [logging](/plugins/processors/starlark/testdata/logging.star) - Log messages with the logger of Telegraf
 - [multiple metrics](/plugins/processors/starlark/testdata/multiple_metrics.star) - Return multiple metrics by using [a list](https://docs.bazel.build/versions/master/skylark/lib/list.html) of metrics.
 - [multiple metrics from json array](/plugins/processors/starlark/testdata/multiple_metrics_with_json.star) - Builds a new metric from each element of a json array then returns all the created metrics.
