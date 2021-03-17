@@ -345,6 +345,9 @@ func TestWriteHTTPSnappyData(t *testing.T) {
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
+	if err != nil {
+		t.Log("Test client request failed. Error: ", err)
+	}
 	resp.Body.Close()
 	require.NoError(t, err)
 	require.EqualValues(t, 204, resp.StatusCode)
