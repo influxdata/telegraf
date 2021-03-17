@@ -349,7 +349,7 @@ func TestWriteHTTPSnappyData(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	hostTags := []string{"server01"}
-	acc.Wait(len(hostTags))
+	acc.Wait(1)
 
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
