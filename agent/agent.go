@@ -425,6 +425,13 @@ func stopServiceInputs(inputs []*models.RunningInput) {
 	}
 }
 
+// stopRunningOutputs stops all running outputs.
+func stopRunningOutputs(outputs []*models.RunningOutput) {
+	for _, output := range outputs {
+		output.Close()
+	}
+}
+
 // gather runs an input's gather function periodically until the context is
 // done.
 func (a *Agent) gatherLoop(
@@ -758,6 +765,9 @@ func (a *Agent) runOutputs(
 	log.Println("I! [agent] Hang on, flushing any cached metrics before shutdown")
 	cancel()
 	wg.Wait()
+
+	log.Println("I! [agent] Stopping running outputs")
+	stopRunningOutputs(unit.outputs)
 }
 
 // flushLoop runs an output's flush function periodically until the context is

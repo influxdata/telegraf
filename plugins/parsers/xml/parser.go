@@ -58,6 +58,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			p.debugEmptyQuery("metric selection", doc, config.Selection)
 			return nil, fmt.Errorf("cannot parse with empty selection node")
 		}
+		p.Log.Debugf("Number of selected metric nodes: %d", len(selectedNodes))
 
 		for _, selected := range selectedNodes {
 			m, err := p.parseQuery(t, doc, selected, config)
@@ -165,6 +166,8 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 		case float64:
 			// Assume the value to contain a timestamp in seconds and fractions thereof.
 			timestamp = time.Unix(0, int64(v.(float64)*1e9))
+		case nil:
+			// No timestamp found. Just ignore the time and use "starttime"
 		default:
 			return nil, fmt.Errorf("unknown format '%T' for timestamp query '%v'", v, config.Timestamp)
 		}
@@ -185,6 +188,8 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 			tags[name] = strconv.FormatBool(v.(bool))
 		case float64:
 			tags[name] = strconv.FormatFloat(v.(float64), 'G', -1, 64)
+		case nil:
+			continue
 		default:
 			return nil, fmt.Errorf("unknown format '%T' for tag '%s'", v, name)
 		}
@@ -214,6 +219,8 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 			}
 		case float64:
 			fields[name] = int64(v.(float64))
+		case nil:
+			continue
 		default:
 			return nil, fmt.Errorf("unknown format '%T' for field (int) '%s'", v, name)
 		}
@@ -244,6 +251,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 		if err != nil {
 			return nil, err
 		}
+		p.Log.Debugf("Number of selected field nodes: %d", len(selectedFieldNodes))
 		if len(selectedFieldNodes) > 0 && selectedFieldNodes[0] != nil {
 			for _, selectedfield := range selectedFieldNodes {
 				n, err := executeQuery(doc, selectedfield, fieldnamequery)

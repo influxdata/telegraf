@@ -51,6 +51,7 @@ func TestGather(t *testing.T) {
 		"packets_received_total": uint64(370),
 		"bytes_sent_total":       uint64(28058),
 		"bytes_received_total":   uint64(17468),
+		"query_clients_online":   int(1),
 	}
 
 	acc.AssertContainsFields(t, "teamspeak", fields)
