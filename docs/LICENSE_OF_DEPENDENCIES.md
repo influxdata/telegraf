@@ -169,6 +169,7 @@ following works:
 - github.com/tidwall/match [MIT License](https://github.com/tidwall/match/blob/master/LICENSE)
 - github.com/tidwall/pretty [MIT License](https://github.com/tidwall/pretty/blob/master/LICENSE)
 - github.com/tinylib/msgp [MIT License](https://github.com/tinylib/msgp/blob/master/LICENSE)
+- github.com/vapourismo/knx-go [MIT License](https://github.com/vapourismo/knx-go/blob/master/LICENSE)
 - github.com/vishvananda/netlink [Apache License 2.0](https://github.com/vishvananda/netlink/blob/master/LICENSE)
 - github.com/vishvananda/netns [Apache License 2.0](https://github.com/vishvananda/netns/blob/master/LICENSE)
 - github.com/vjeantet/grok [Apache License 2.0](https://github.com/vjeantet/grok/blob/master/LICENSE)
