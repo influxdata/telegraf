@@ -31,8 +31,8 @@ import (
 type sliceFlags []string
 
 func (i *sliceFlags) String() string {
- 	s := strings.Join(*i, " ")
-    return "[" + s + "]"
+	s := strings.Join(*i, " ")
+	return "[" + s + "]"
 }
 
 func (i *sliceFlags) Set(value string) error {
@@ -143,15 +143,15 @@ func runAgent(ctx context.Context,
 		err = c.LoadConfig("")
 		if err != nil {
 			return err
-		}			
+		}
 	}
-	for _, fConfig := range fConfigs{
+	for _, fConfig := range fConfigs {
 		err = c.LoadConfig(fConfig)
 		if err != nil {
 			return err
-		}			
+		}
 	}
-	
+
 	for _, fConfigDirectory := range fConfigDirs {
 		err = c.LoadDirectory(fConfigDirectory)
 		if err != nil {
