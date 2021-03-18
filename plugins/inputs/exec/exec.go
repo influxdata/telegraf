@@ -32,9 +32,6 @@ const sampleConfig = `
   ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ## truncate errors after this many characters. Use 0 to disable error truncation.
-  # error_truncate_length = 512
-
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -45,10 +42,9 @@ const sampleConfig = `
 const MaxStderrBytes int = 512
 
 type Exec struct {
-	Commands            []string          `toml:"commands"`
-	Command             string            `toml:"command"`
-	Timeout             internal.Duration `toml:"timeout"`
-	ErrorTruncateLength int               `toml:"error_truncate_length"`
+	Commands []string          `toml:"commands"`
+	Command  string            `toml:"command"`
+	Timeout  internal.Duration `toml:"timeout"`
 
 	parser parsers.Parser
 
@@ -58,10 +54,7 @@ type Exec struct {
 
 func NewExec() *Exec {
 	return &Exec{
-		ErrorTruncateLength: MaxStderrBytes,
-		runner: CommandRunner{
-			ErrorTruncateLength: MaxStderrBytes,
-		},
+		runner:  CommandRunner{},
 		Timeout: internal.Duration{Duration: time.Second * 5},
 	}
 }
@@ -71,7 +64,6 @@ type Runner interface {
 }
 
 type CommandRunner struct {
-	ErrorTruncateLength int
 }
 
 func (c CommandRunner) Run(
@@ -104,13 +96,13 @@ func (c CommandRunner) Run(
 }
 
 func (c CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
-	if c.ErrorTruncateLength <= 0 {
+	if telegraf.Debug {
 		return buf
 	}
 	// Limit the number of bytes.
 	didTruncate := false
-	if buf.Len() > c.ErrorTruncateLength {
-		buf.Truncate(c.ErrorTruncateLength)
+	if buf.Len() > MaxStderrBytes {
+		buf.Truncate(MaxStderrBytes)
 		didTruncate = true
 	}
 	if i := bytes.IndexByte(buf.Bytes(), '\n'); i > 0 {
@@ -240,9 +232,6 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 }
 
 func (e *Exec) Init() error {
-	if runner, ok := e.runner.(CommandRunner); ok {
-		runner.ErrorTruncateLength = e.ErrorTruncateLength
-	}
 	return nil
 }
 

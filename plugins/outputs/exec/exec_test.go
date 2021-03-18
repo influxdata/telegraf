@@ -83,9 +83,7 @@ func TestTruncate(t *testing.T) {
 			len:  len("hola") + len("..."),
 		},
 	}
-	c := CommandRunner{
-		ErrorTruncateLength: 512,
-	}
+	c := CommandRunner{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := c.truncate(*tt.buf)

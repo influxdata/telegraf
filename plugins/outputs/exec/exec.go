@@ -18,9 +18,8 @@ const maxStderrBytes = 512
 
 // Exec defines the exec output plugin.
 type Exec struct {
-	Command             []string          `toml:"command"`
-	Timeout             internal.Duration `toml:"timeout"`
-	ErrorTruncateLength int               `toml:"error_truncate_length"`
+	Command []string          `toml:"command"`
+	Timeout internal.Duration `toml:"timeout"`
 
 	runner     Runner
 	serializer serializers.Serializer
@@ -33,9 +32,6 @@ var sampleConfig = `
   ## Timeout for command to complete.
   # timeout = "5s"
 
-  ## truncate errors after this many characters. Use 0 to disable error truncation.
-  # error_truncate_length = 512
-
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -44,9 +40,6 @@ var sampleConfig = `
 `
 
 func (e *Exec) Init() error {
-	if runner, ok := e.runner.(*CommandRunner); ok {
-		runner.ErrorTruncateLength = e.ErrorTruncateLength
-	}
 	return nil
 }
 
@@ -98,8 +91,7 @@ type Runner interface {
 
 // CommandRunner runs a command with the ability to kill the process before the timeout.
 type CommandRunner struct {
-	cmd                 *exec.Cmd
-	ErrorTruncateLength int
+	cmd *exec.Cmd
 }
 
 // Run runs the command.
@@ -134,13 +126,13 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, buffer io.R
 }
 
 func (c *CommandRunner) truncate(buf bytes.Buffer) string {
-	if c.ErrorTruncateLength <= 0 {
+	if telegraf.Debug {
 		return buf.String()
 	}
 	// Limit the number of bytes.
 	didTruncate := false
-	if buf.Len() > c.ErrorTruncateLength {
-		buf.Truncate(c.ErrorTruncateLength)
+	if buf.Len() > maxStderrBytes {
+		buf.Truncate(maxStderrBytes)
 		didTruncate = true
 	}
 	if i := bytes.IndexByte(buf.Bytes(), '\n'); i > 0 {
@@ -159,9 +151,7 @@ func (c *CommandRunner) truncate(buf bytes.Buffer) string {
 func init() {
 	outputs.Add("exec", func() telegraf.Output {
 		return &Exec{
-			runner: &CommandRunner{
-				ErrorTruncateLength: maxStderrBytes,
-			},
+			runner:  &CommandRunner{},
 			Timeout: internal.Duration{Duration: time.Second * 5},
 		}
 	})
