@@ -3,6 +3,7 @@ package exec
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -63,8 +64,7 @@ type Runner interface {
 	Run(string, time.Duration) ([]byte, []byte, error)
 }
 
-type CommandRunner struct {
-}
+type CommandRunner struct{}
 
 func (c CommandRunner) Run(
 	command string,
@@ -121,21 +121,15 @@ func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
 	if runtime.GOOS == "windows" {
 		var buf bytes.Buffer
 		for {
-			byt, er := b.ReadBytes(0x0D)
-			end := len(byt)
-			if nil == er {
-				end--
+			byt, err := b.ReadBytes(0x0D)
+			byt = bytes.TrimRight(byt, "\x0d")
+			if len(byt) > 0 {
+				_, _ = buf.Write(byt)
 			}
-			if nil != byt {
-				buf.Write(byt[:end])
-			} else {
-				break
-			}
-			if nil != er {
-				break
+			if err == io.EOF {
+				return buf
 			}
 		}
-		b = buf
 	}
 	return b
 }
