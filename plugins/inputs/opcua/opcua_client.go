@@ -12,6 +12,7 @@ import (
 	"github.com/gopcua/opcua/ua"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -26,6 +27,7 @@ type OpcUA struct {
 	PrivateKey     string          `toml:"private_key"`
 	Username       string          `toml:"username"`
 	Password       string          `toml:"password"`
+	Timestamp      string          `toml:"timestamp"`
 	AuthMethod     string          `toml:"auth_method"`
 	ConnectTimeout config.Duration `toml:"connect_timeout"`
 	RequestTimeout config.Duration `toml:"request_timeout"`
@@ -77,12 +79,12 @@ type GroupSettings struct {
 
 // OPCData type
 type OPCData struct {
-	TagName   string
-	Value     interface{}
-	Quality   ua.StatusCode
-	TimeStamp string
-	Time      string
-	DataType  ua.TypeID
+	TagName    string
+	Value      interface{}
+	Quality    ua.StatusCode
+	ServerTime time.Time
+	SourceTime time.Time
+	DataType   ua.TypeID
 }
 
 // ConnectionState used for constants
@@ -136,6 +138,12 @@ const sampleConfig = `
   ## Password. Required for auth_method = "UserName"
   # password = ""
   #
+	## Option to select the metric timestamp to use. Valid options are:
+	##     "gather" -- uses the time of receiving the data in telegraf
+	##     "server" -- uses the timestamp provided by the server
+	##     "source" -- uses the timestamp provided by the source
+  # timestamp = "gather"
+  #
   ## Node ID configuration
   ## name              - field name to use in the output
   ## namespace         - OPC UA namespace of the node (integer value 0 thru 3)
@@ -188,7 +196,12 @@ func (o *OpcUA) SampleConfig() string {
 func (o *OpcUA) Init() error {
 	o.state = Disconnected
 
-	err := o.validateEndpoint()
+	err := choice.Check(o.Timestamp, []string{"", "gather", "server", "source"})
+	if err != nil {
+		return err
+	}
+
+	err = o.validateEndpoint()
 	if err != nil {
 		return err
 	}
@@ -485,8 +498,9 @@ func (o *OpcUA) getData() error {
 			o.nodeData[i].Value = d.Value.Value()
 			o.nodeData[i].DataType = d.Value.Type()
 		}
-		o.nodeData[i].TimeStamp = d.ServerTimestamp.String()
-		o.nodeData[i].Time = d.SourceTimestamp.String()
+		o.nodeData[i].Quality = d.Status
+		o.nodeData[i].ServerTime = d.ServerTimestamp
+		o.nodeData[i].SourceTime = d.SourceTimestamp
 	}
 	return nil
 }
@@ -551,6 +565,15 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 			fields[o.nodeData[i].TagName] = o.nodeData[i].Value
 			fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
 			acc.AddFields(n.metricName, fields, tags)
+
+			switch o.Timestamp {
+			case "server":
+				acc.AddFields(n.metricName, fields, tags, o.nodeData[i].ServerTime)
+			case "source":
+				acc.AddFields(n.metricName, fields, tags, o.nodeData[i].SourceTime)
+			default:
+				acc.AddFields(n.metricName, fields, tags)
+			}
 		}
 	}
 	return nil
@@ -564,6 +587,7 @@ func init() {
 			Endpoint:       "opc.tcp://localhost:4840",
 			SecurityPolicy: "auto",
 			SecurityMode:   "auto",
+			Timestamp:      "gather",
 			RequestTimeout: config.Duration(5 * time.Second),
 			ConnectTimeout: config.Duration(10 * time.Second),
 			Certificate:    "/etc/telegraf/cert.pem",
