@@ -81,7 +81,8 @@ const sampleConfig = `
   ##   "/var/log/**.log"  -> recursively find all .log files in /var/log
   ##   "/var/log/*/*.log" -> find all .log files with a parent dir in /var/log
   ##   "/var/log/apache.log" -> just tail the apache log file
-  ##
+  ##   "/var/log/log[!1-2]*  -> tail files without 1-2
+  ##   "/var/log/log[^1-2]*  -> identical behavior as above
   ## See https://github.com/gobwas/glob for more examples
   ##
   files = ["/var/mymetrics.out"]

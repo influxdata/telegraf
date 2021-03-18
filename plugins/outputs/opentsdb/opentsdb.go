@@ -22,7 +22,7 @@ var (
 		`%`, "-",
 		"#", "-",
 		"$", "-")
-	defaultHttpPath  = "/api/put"
+	defaultHTTPPath  = "/api/put"
 	defaultSeparator = "_"
 )
 
@@ -32,8 +32,8 @@ type OpenTSDB struct {
 	Host string `toml:"host"`
 	Port int    `toml:"port"`
 
-	HttpBatchSize int    `toml:"http_batch_size"` // deprecated httpBatchSize form in 1.8
-	HttpPath      string `toml:"http_path"`
+	HTTPBatchSize int    `toml:"http_batch_size"` // deprecated httpBatchSize form in 1.8
+	HTTPPath      string `toml:"http_path"`
 
 	Debug bool `toml:"debug"`
 
@@ -116,20 +116,20 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 	if u.Scheme == "" || u.Scheme == "tcp" {
 		return o.WriteTelnet(metrics, u)
 	} else if u.Scheme == "http" || u.Scheme == "https" {
-		return o.WriteHttp(metrics, u)
+		return o.WriteHTTP(metrics, u)
 	} else {
 		return fmt.Errorf("unknown scheme in host parameter")
 	}
 }
 
-func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
+func (o *OpenTSDB) WriteHTTP(metrics []telegraf.Metric, u *url.URL) error {
 	http := openTSDBHttp{
 		Host:      u.Host,
 		Port:      o.Port,
 		Scheme:    u.Scheme,
 		User:      u.User,
-		BatchSize: o.HttpBatchSize,
-		Path:      o.HttpPath,
+		BatchSize: o.HTTPBatchSize,
+		Path:      o.HTTPPath,
 		Debug:     o.Debug,
 	}
 
@@ -151,7 +151,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 				continue
 			}
 
-			metric := &HttpMetric{
+			metric := &HTTPMetric{
 				Metric: sanitize(fmt.Sprintf("%s%s%s%s",
 					o.Prefix, m.Name(), o.Separator, fieldName)),
 				Tags:      tags,
@@ -165,11 +165,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 		}
 	}
 
-	if err := http.flush(); err != nil {
-		return err
-	}
-
-	return nil
+	return http.flush()
 }
 
 func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
@@ -235,9 +231,9 @@ func buildValue(v interface{}) (string, error) {
 	var retv string
 	switch p := v.(type) {
 	case int64:
-		retv = IntToString(int64(p))
+		retv = IntToString(p)
 	case uint64:
-		retv = UIntToString(uint64(p))
+		retv = UIntToString(p)
 	case float64:
 		retv = FloatToString(float64(p))
 	default:
@@ -246,16 +242,16 @@ func buildValue(v interface{}) (string, error) {
 	return retv, nil
 }
 
-func IntToString(input_num int64) string {
-	return strconv.FormatInt(input_num, 10)
+func IntToString(inputNum int64) string {
+	return strconv.FormatInt(inputNum, 10)
 }
 
-func UIntToString(input_num uint64) string {
-	return strconv.FormatUint(input_num, 10)
+func UIntToString(inputNum uint64) string {
+	return strconv.FormatUint(inputNum, 10)
 }
 
-func FloatToString(input_num float64) string {
-	return strconv.FormatFloat(input_num, 'f', 6, 64)
+func FloatToString(inputNum float64) string {
+	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
 
 func (o *OpenTSDB) SampleConfig() string {
@@ -280,7 +276,7 @@ func sanitize(value string) string {
 func init() {
 	outputs.Add("opentsdb", func() telegraf.Output {
 		return &OpenTSDB{
-			HttpPath:  defaultHttpPath,
+			HTTPPath:  defaultHTTPPath,
 			Separator: defaultSeparator,
 		}
 	})

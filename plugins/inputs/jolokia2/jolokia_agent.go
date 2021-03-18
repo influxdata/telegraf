@@ -83,9 +83,8 @@ func (ja *JolokiaAgent) Gather(acc telegraf.Accumulator) error {
 
 			err := ja.gatherer.Gather(client, acc)
 			if err != nil {
-				acc.AddError(fmt.Errorf("Unable to gather metrics for %s: %v", client.URL, err))
+				acc.AddError(fmt.Errorf("unable to gather metrics for %s: %v", client.URL, err))
 			}
-
 		}(client)
 	}
 

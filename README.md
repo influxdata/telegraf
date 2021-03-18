@@ -1,4 +1,4 @@
-# Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
+# Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/) [![Total alerts](https://img.shields.io/lgtm/alerts/g/influxdata/telegraf.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/influxdata/telegraf/alerts/)
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://www.influxdata.com/slack)
 
 Telegraf is an agent for collecting, processing, aggregating, and writing metrics.
@@ -232,6 +232,7 @@ For documentation on the latest development code see the [documentation index][d
 * [kernel](./plugins/inputs/kernel)
 * [kernel_vmstat](./plugins/inputs/kernel_vmstat)
 * [kibana](./plugins/inputs/kibana)
+* [knx_listener](./plugins/inputs/knx_listener)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [kube_inventory](./plugins/inputs/kube_inventory)
 * [lanz](./plugins/inputs/lanz)
@@ -259,6 +260,7 @@ For documentation on the latest development code see the [documentation index][d
 * [net](./plugins/inputs/net)
 * [net_response](./plugins/inputs/net_response)
 * [netstat](./plugins/inputs/net)
+* [nfsclient](./plugins/inputs/nfsclient)
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus_api](./plugins/inputs/nginx_plus_api)
 * [nginx_plus](./plugins/inputs/nginx_plus)
@@ -294,6 +296,7 @@ For documentation on the latest development code see the [documentation index][d
 * [rabbitmq](./plugins/inputs/rabbitmq)
 * [raindrops](./plugins/inputs/raindrops)
 * [ras](./plugins/inputs/ras)
+* [ravendb](./plugins/inputs/ravendb)
 * [redfish](./plugins/inputs/redfish)
 * [redis](./plugins/inputs/redis)
 * [rethinkdb](./plugins/inputs/rethinkdb)
@@ -364,11 +367,12 @@ For documentation on the latest development code see the [documentation index][d
 ## Serializers
 
 - [InfluxDB Line Protocol](/plugins/serializers/influx)
-- [JSON](/plugins/serializers/json)
+- [Carbon2](/plugins/serializers/carbon2)
 - [Graphite](/plugins/serializers/graphite)
+- [JSON](/plugins/serializers/json)
+- [MessagePack](/plugins/serializers/msgpack)
 - [ServiceNow](/plugins/serializers/nowmetric)
 - [SplunkMetric](/plugins/serializers/splunkmetric)
-- [Carbon2](/plugins/serializers/carbon2)
 - [Wavefront](/plugins/serializers/wavefront)
 
 ## Processor Plugins
@@ -417,6 +421,7 @@ For documentation on the latest development code see the [documentation index][d
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
 * [azure_monitor](./plugins/outputs/azure_monitor)
+* [bigquery](./plugins/outputs/bigquery)
 * [cloud_pubsub](./plugins/outputs/cloud_pubsub) Google Cloud Pub/Sub
 * [cratedb](./plugins/outputs/cratedb)
 * [datadog](./plugins/outputs/datadog)
@@ -442,6 +447,8 @@ For documentation on the latest development code see the [documentation index][d
 * [prometheus](./plugins/outputs/prometheus_client)
 * [riemann](./plugins/outputs/riemann)
 * [riemann_legacy](./plugins/outputs/riemann_legacy)
+* [sensu](./plugins/outputs/sensu)
+* [signalfx](./plugins/outputs/signalfx)
 * [socket_writer](./plugins/outputs/socket_writer)
 * [stackdriver](./plugins/outputs/stackdriver) (Google Cloud Monitoring)
 * [syslog](./plugins/outputs/syslog)

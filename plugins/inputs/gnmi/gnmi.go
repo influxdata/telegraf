@@ -403,7 +403,6 @@ func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string
 				} else {
 					tags[key] = val
 				}
-
 			}
 		}
 	}

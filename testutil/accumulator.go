@@ -119,7 +119,6 @@ func (a *Accumulator) addFields(
 		} else {
 			t = a.TimeFunc()
 		}
-
 	}
 
 	if a.debug {
@@ -397,7 +396,6 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 	}
 	return
 }
-
 func (a *Accumulator) AssertContainsFields(
 	t *testing.T,
 	measurement string,

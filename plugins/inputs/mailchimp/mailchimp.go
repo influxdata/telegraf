@@ -11,9 +11,9 @@ import (
 type MailChimp struct {
 	api *ChimpAPI
 
-	ApiKey     string
-	DaysOld    int
-	CampaignId string
+	APIKey     string `toml:"api_key"`
+	DaysOld    int    `toml:"days_old"`
+	CampaignID string `toml:"campaign_id"`
 }
 
 var sampleConfig = `
@@ -37,11 +37,11 @@ func (m *MailChimp) Description() string {
 
 func (m *MailChimp) Gather(acc telegraf.Accumulator) error {
 	if m.api == nil {
-		m.api = NewChimpAPI(m.ApiKey)
+		m.api = NewChimpAPI(m.APIKey)
 	}
 	m.api.Debug = false
 
-	if m.CampaignId == "" {
+	if m.CampaignID == "" {
 		since := ""
 		if m.DaysOld > 0 {
 			now := time.Now()
@@ -61,7 +61,7 @@ func (m *MailChimp) Gather(acc telegraf.Accumulator) error {
 			gatherReport(acc, report, now)
 		}
 	} else {
-		report, err := m.api.GetReport(m.CampaignId)
+		report, err := m.api.GetReport(m.CampaignID)
 		if err != nil {
 			return err
 		}

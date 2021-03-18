@@ -63,7 +63,6 @@ func (g *Gelf) Write(message []byte) (n int, err error) {
 	length := compressed.Len()
 
 	if length > chunksize {
-
 		chunkCountInt := int(math.Ceil(float64(length) / float64(chunksize)))
 
 		id := make([]byte, 8)

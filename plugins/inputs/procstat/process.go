@@ -26,12 +26,13 @@ type Process interface {
 	RlimitUsage(bool) ([]process.RlimitStat, error)
 	Username() (string, error)
 	CreateTime() (int64, error)
+	Ppid() (int32, error)
 }
 
 type PIDFinder interface {
 	PidFile(path string) ([]PID, error)
 	Pattern(pattern string) ([]PID, error)
-	Uid(user string) ([]PID, error)
+	UID(user string) ([]PID, error)
 	FullPattern(path string) ([]PID, error)
 }
 
@@ -68,10 +69,10 @@ func (p *Proc) Username() (string, error) {
 }
 
 func (p *Proc) Percent(interval time.Duration) (float64, error) {
-	cpu_perc, err := p.Process.Percent(time.Duration(0))
+	cpuPerc, err := p.Process.Percent(time.Duration(0))
 	if !p.hasCPUTimes && err == nil {
 		p.hasCPUTimes = true
 		return 0, fmt.Errorf("must call Percent twice to compute percent cpu")
 	}
-	return cpu_perc, err
+	return cpuPerc, err
 }

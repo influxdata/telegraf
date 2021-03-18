@@ -11,7 +11,6 @@ import (
 )
 
 func TestGatherQueuesMetrics(t *testing.T) {
-
 	s := `<queues>
 <queue name="sandra">
 <stats size="0" consumerCount="0" enqueueCount="0" dequeueCount="0"/>
@@ -57,7 +56,6 @@ func TestGatherQueuesMetrics(t *testing.T) {
 }
 
 func TestGatherTopicsMetrics(t *testing.T) {
-
 	s := `<topics>
 <topic name="ActiveMQ.Advisory.MasterBroker ">
 <stats size="0" consumerCount="0" enqueueCount="1" dequeueCount="0"/>
@@ -104,7 +102,6 @@ func TestGatherTopicsMetrics(t *testing.T) {
 }
 
 func TestGatherSubscribersMetrics(t *testing.T) {
-
 	s := `<subscribers>
 <subscriber clientId="AAA" subscriptionName="AAA" connectionId="NOTSET" destinationName="AAA" selector="AA" active="no">
 <stats pendingQueueSize="0" dispatchedQueueSize="0" dispatchedCounter="0" enqueueCounter="0" dequeueCounter="0"/>

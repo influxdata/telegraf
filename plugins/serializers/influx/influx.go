@@ -237,7 +237,7 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 
 		// Additional length needed for field separator `,`
 		if !firstField {
-			bytesNeeded += 1
+			bytesNeeded++
 		}
 
 		if s.maxLineBytes > 0 && bytesNeeded > s.maxLineBytes {

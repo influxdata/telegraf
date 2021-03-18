@@ -30,17 +30,16 @@ type HECTimeSeries struct {
 }
 
 // NewSerializer Setup our new serializer
-func NewSerializer(splunkmetric_hec_routing bool, splunkmetric_multimetric bool) (*serializer, error) {
+func NewSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool) (*serializer, error) {
 	/*	Define output params */
 	s := &serializer{
-		HecRouting:              splunkmetric_hec_routing,
-		SplunkmetricMultiMetric: splunkmetric_multimetric,
+		HecRouting:              splunkmetricHecRouting,
+		SplunkmetricMultiMetric: splunkmetricMultimetric,
 	}
 	return s, nil
 }
 
 func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-
 	m, err := s.createObject(metric)
 	if err != nil {
 		return nil, fmt.Errorf("D! [serializer.splunkmetric] Dropping invalid metric: %s", metric.Name())
@@ -50,7 +49,6 @@ func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 }
 
 func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
-
 	var serialized []byte
 
 	for _, metric := range metrics {
@@ -121,7 +119,6 @@ func (s *serializer) createSingle(metric telegraf.Metric, dataGroup HECTimeSerie
 	var metricJSON []byte
 
 	for _, field := range metric.FieldList() {
-
 		value, valid := verifyValue(field.Value)
 
 		if !valid {
@@ -161,7 +158,6 @@ func (s *serializer) createSingle(metric telegraf.Metric, dataGroup HECTimeSerie
 }
 
 func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, err error) {
-
 	/*  Splunk supports one metric json object, and does _not_ support an array of JSON objects.
 	     ** Splunk has the following required names for the metric store:
 		 ** metric_name: The name of the metric

@@ -30,7 +30,6 @@ func TestTagAndField(t *testing.T) {
 	}
 	err := dateFormatTagAndField.Init()
 	require.Error(t, err)
-
 }
 
 func TestNoOutputSpecified(t *testing.T) {

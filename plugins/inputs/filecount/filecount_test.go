@@ -229,9 +229,7 @@ func getFakeFileSystem(basePath string) fakeFileSystem {
 		basePath + "/subdir/nested2/qux": {name: "qux", filemode: uint32(fmask), modtime: mtime, size: int64(400)},
 	}
 
-	fs := fakeFileSystem{files: fileList}
-	return fs
-
+	return fakeFileSystem{files: fileList}
 }
 
 func fileCountEquals(t *testing.T, fc FileCount, expectedCount int, expectedSize int) {

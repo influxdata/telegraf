@@ -86,7 +86,6 @@ func TestParse(t *testing.T) {
 	testMetric, err = metric.New("test.metric", map[string]string{"source": "mysource", "tag2": "value2"}, map[string]interface{}{"value": 1.1234}, time.Unix(1530939936, 0))
 	assert.NoError(t, err)
 	assert.EqualValues(t, parsedMetrics[0], testMetric)
-
 }
 
 func TestParseLine(t *testing.T) {
@@ -172,7 +171,6 @@ func TestParseMultiple(t *testing.T) {
 	assert.NoError(t, err)
 	testMetrics = []telegraf.Metric{testMetric1, testMetric2, testMetric3}
 	assert.EqualValues(t, parsedMetrics, testMetrics)
-
 }
 
 func TestParseSpecial(t *testing.T) {
@@ -189,7 +187,6 @@ func TestParseSpecial(t *testing.T) {
 	testMetric, err = metric.New("test.metric", map[string]string{"tag1": "val\\\"ue1"}, map[string]interface{}{"value": 1.}, time.Unix(1530939936, 0))
 	assert.NoError(t, err)
 	assert.EqualValues(t, parsedMetric, testMetric)
-
 }
 
 func TestParseInvalid(t *testing.T) {
@@ -221,7 +218,6 @@ func TestParseInvalid(t *testing.T) {
 
 	_, err = parser.Parse([]byte("\"test.metric\" -1.12-34 1530939936 \"source\"=\"mysource\" tag2=value2"))
 	assert.Error(t, err)
-
 }
 
 func TestParseDefaultTags(t *testing.T) {
@@ -244,5 +240,4 @@ func TestParseDefaultTags(t *testing.T) {
 	testMetric, err = metric.New("test.metric", map[string]string{"myDefault": "value1", "another": "test2"}, map[string]interface{}{"value": 1.1234}, time.Unix(1530939936, 0))
 	assert.NoError(t, err)
 	assert.EqualValues(t, parsedMetrics[0], testMetric)
-
 }

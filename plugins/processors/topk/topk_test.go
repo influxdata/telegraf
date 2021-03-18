@@ -139,7 +139,6 @@ func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metr
 
 // Smoke tests
 func TestTopkAggregatorsSmokeTests(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
@@ -162,7 +161,6 @@ func TestTopkAggregatorsSmokeTests(t *testing.T) {
 
 // AddAggregateFields + Mean aggregator
 func TestTopkMeanAddAggregateFields(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
@@ -192,7 +190,6 @@ func TestTopkMeanAddAggregateFields(t *testing.T) {
 
 // AddAggregateFields + Sum aggregator
 func TestTopkSumAddAggregateFields(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
@@ -222,7 +219,6 @@ func TestTopkSumAddAggregateFields(t *testing.T) {
 
 // AddAggregateFields + Max aggregator
 func TestTopkMaxAddAggregateFields(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
@@ -252,7 +248,6 @@ func TestTopkMaxAddAggregateFields(t *testing.T) {
 
 // AddAggregateFields + Min aggregator
 func TestTopkMinAddAggregateFields(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
@@ -282,7 +277,6 @@ func TestTopkMinAddAggregateFields(t *testing.T) {
 
 // GroupBy
 func TestTopkGroupby1(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
@@ -308,7 +302,6 @@ func TestTopkGroupby1(t *testing.T) {
 	runAndCompare(&topk, input, answer, "GroupBy test 1", t)
 }
 func TestTopkGroupby2(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
@@ -338,7 +331,6 @@ func TestTopkGroupby2(t *testing.T) {
 	runAndCompare(&topk, input, answer, "GroupBy test 2", t)
 }
 func TestTopkGroupby3(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
@@ -365,7 +357,6 @@ func TestTopkGroupby3(t *testing.T) {
 
 // GroupBy + Fields
 func TestTopkGroupbyFields1(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
@@ -393,7 +384,6 @@ func TestTopkGroupbyFields1(t *testing.T) {
 }
 
 func TestTopkGroupbyFields2(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
@@ -422,7 +412,6 @@ func TestTopkGroupbyFields2(t *testing.T) {
 
 // GroupBy metric name
 func TestTopkGroupbyMetricName1(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
@@ -449,7 +438,6 @@ func TestTopkGroupbyMetricName1(t *testing.T) {
 }
 
 func TestTopkGroupbyMetricName2(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
@@ -478,7 +466,6 @@ func TestTopkGroupbyMetricName2(t *testing.T) {
 
 // BottomK
 func TestTopkBottomk(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
@@ -505,7 +492,6 @@ func TestTopkBottomk(t *testing.T) {
 
 // GroupByKeyTag
 func TestTopkGroupByKeyTag(t *testing.T) {
-
 	// Build the processor
 	var topk TopK
 	topk = *New()
