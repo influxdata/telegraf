@@ -174,5 +174,4 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 			}
 		})
 	}
-
 }
