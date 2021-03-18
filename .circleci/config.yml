@@ -195,8 +195,8 @@ workflows:
     jobs:
       - package
       - 'share-artifacts':
-          require:
-            - package
+          requires:
+            - 'package'
           filters:
             branches:
               ignore:
