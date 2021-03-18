@@ -87,7 +87,7 @@ func (c CommandRunner) Run(
 	runErr := internal.RunTimeout(cmd, timeout)
 
 	out = removeWindowsCarriageReturns(out)
-	if stderr.Len() > 0 {
+	if stderr.Len() > 0 && !telegraf.Debug {
 		stderr = removeWindowsCarriageReturns(stderr)
 		stderr = c.truncate(stderr)
 	}
@@ -96,9 +96,6 @@ func (c CommandRunner) Run(
 }
 
 func (c CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
-	if telegraf.Debug {
-		return buf
-	}
 	// Limit the number of bytes.
 	didTruncate := false
 	if buf.Len() > MaxStderrBytes {

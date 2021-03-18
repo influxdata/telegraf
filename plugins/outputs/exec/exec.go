@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -109,8 +110,13 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, buffer io.R
 			return fmt.Errorf("%q timed out and was killed", command)
 		}
 
+		s = removeWindowsCarriageReturns(s)
 		if s.Len() > 0 {
-			log.Printf("E! [outputs.exec] Command error: %q", c.truncate(s))
+			if !telegraf.Debug {
+				log.Printf("E! [outputs.exec] Command error: %q", c.truncate(s))
+			} else {
+				log.Printf("D! [outputs.exec] Command error: %q", s)
+			}
 		}
 
 		if status, ok := internal.ExitStatus(err); ok {
@@ -126,9 +132,6 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, buffer io.R
 }
 
 func (c *CommandRunner) truncate(buf bytes.Buffer) string {
-	if telegraf.Debug {
-		return buf.String()
-	}
 	// Limit the number of bytes.
 	didTruncate := false
 	if buf.Len() > maxStderrBytes {
@@ -155,4 +158,29 @@ func init() {
 			Timeout: internal.Duration{Duration: time.Second * 5},
 		}
 	})
+}
+
+// removeWindowsCarriageReturns removes all carriage returns from the input if the
+// OS is Windows. It does not return any errors.
+func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
+	if runtime.GOOS == "windows" {
+		var buf bytes.Buffer
+		for {
+			byt, er := b.ReadBytes(0x0D)
+			end := len(byt)
+			if nil == er {
+				end--
+			}
+			if nil != byt {
+				buf.Write(byt[:end])
+			} else {
+				break
+			}
+			if nil != er {
+				break
+			}
+		}
+		b = buf
+	}
+	return b
 }
