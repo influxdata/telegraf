@@ -84,7 +84,6 @@ func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, process
 	// Handle the --service flag here to prevent any issues with tooling that
 	// may not have an interactive session, e.g. installing from Ansible.
 	if *fService != "" {
-		var err error
 		if len(fConfigs) > 0 {
 			svcConfig.Arguments = []string{}
 		}
