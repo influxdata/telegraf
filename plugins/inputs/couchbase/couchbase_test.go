@@ -80,7 +80,7 @@ func TestGatherExtendedBucketMetrics(t *testing.T) {
 	cb.zoom = "minute"
 
 	cb.Init()
-	cb.gatherExtendedBucketStats(&acc, bucketStats, tags)
+	cb.gatherExtendedBucketStats(&acc, bucketStats, tags, cb.lastInterval)
 
 	require.Equal(t, len(acc.Metrics), 30)
 }

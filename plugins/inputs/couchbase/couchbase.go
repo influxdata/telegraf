@@ -117,19 +117,23 @@ func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *co
 		acc.AddFields("couchbase_bucket", fields, tags)
 
 		// Move on to gathering 'extended' couchbase stats.
+		lastGather := r.lastInterval
 		extendedBucketStats := &BucketStats{}
 		err := r.extendedBucketStats(addr, bucketName, extendedBucketStats)
 		if err != nil {
 			return err
 		}
 
-		r.gatherExtendedBucketStats(acc, extendedBucketStats, tags)
+		// Set last interval so we know how far back to look into the metrics at the next run.
+		r.lastInterval = time.Now()
+
+		r.gatherExtendedBucketStats(acc, extendedBucketStats, tags, lastGather)
 	}
 
 	return nil
 }
 
-func (couchbase *Couchbase) gatherExtendedBucketStats(acc telegraf.Accumulator, extendedBucketStats *BucketStats, tags map[string]string) {
+func (couchbase *Couchbase) gatherExtendedBucketStats(acc telegraf.Accumulator, extendedBucketStats *BucketStats, tags map[string]string, lastGather time.Time) {
 	// Iterate backwards over the extended stats entries, so as to get the latest metric, and then the metric before that, etc.
 	timestamp := time.Unix(0, extendedBucketStats.Op.Lasttstamp*int64(time.Millisecond))
 
@@ -356,7 +360,7 @@ func (couchbase *Couchbase) gatherExtendedBucketStats(acc telegraf.Accumulator, 
 		timestamp = timestamp.Add(-1 * couchbase.couchbaseTimeIntervals[couchbase.zoom])
 
 		// If we've set the timestamp back before the last interval time, we've collected all the metrics since then. Time to stop.
-		if timestamp.Before(couchbase.lastInterval) || timestamp.Equal(couchbase.lastInterval) {
+		if timestamp.Before(lastGather) || timestamp.Equal(lastGather) {
 			break
 		}
 	}
@@ -380,8 +384,6 @@ func (couchbase *Couchbase) extendedBucketStats(server, bucket string, bucketSta
 		return err
 	}
 
-	// Set last interval so we know how far back to look into the metrics at the next run.
-	couchbase.lastInterval = time.Now()
 	defer r.Body.Close()
 
 	return json.NewDecoder(r.Body).Decode(bucketStats)
