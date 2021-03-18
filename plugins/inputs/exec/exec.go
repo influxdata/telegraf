@@ -3,6 +3,7 @@ package exec
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -39,12 +40,12 @@ const sampleConfig = `
   data_format = "influx"
 `
 
-const MaxStderrBytes = 512
+const MaxStderrBytes int = 512
 
 type Exec struct {
-	Commands []string
-	Command  string
-	Timeout  internal.Duration
+	Commands []string          `toml:"commands"`
+	Command  string            `toml:"command"`
+	Timeout  internal.Duration `toml:"timeout"`
 
 	parser parsers.Parser
 
@@ -85,16 +86,16 @@ func (c CommandRunner) Run(
 
 	runErr := internal.RunTimeout(cmd, timeout)
 
-	out = removeCarriageReturns(out)
-	if stderr.Len() > 0 {
-		stderr = removeCarriageReturns(stderr)
-		stderr = truncate(stderr)
+	out = removeWindowsCarriageReturns(out)
+	if stderr.Len() > 0 && !telegraf.Debug {
+		stderr = removeWindowsCarriageReturns(stderr)
+		stderr = c.truncate(stderr)
 	}
 
 	return out.Bytes(), stderr.Bytes(), runErr
 }
 
-func truncate(buf bytes.Buffer) bytes.Buffer {
+func (c CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
 	// Limit the number of bytes.
 	didTruncate := false
 	if buf.Len() > MaxStderrBytes {
@@ -114,27 +115,21 @@ func truncate(buf bytes.Buffer) bytes.Buffer {
 	return buf
 }
 
-// removeCarriageReturns removes all carriage returns from the input if the
+// removeWindowsCarriageReturns removes all carriage returns from the input if the
 // OS is Windows. It does not return any errors.
-func removeCarriageReturns(b bytes.Buffer) bytes.Buffer {
+func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
 	if runtime.GOOS == "windows" {
 		var buf bytes.Buffer
 		for {
-			byt, er := b.ReadBytes(0x0D)
-			end := len(byt)
-			if nil == er {
-				end--
+			byt, err := b.ReadBytes(0x0D)
+			byt = bytes.TrimRight(byt, "\x0d")
+			if len(byt) > 0 {
+				_, _ = buf.Write(byt)
 			}
-			if nil != byt {
-				buf.Write(byt[:end])
-			} else {
-				break
-			}
-			if nil != er {
-				break
+			if err == io.EOF {
+				return buf
 			}
 		}
-		b = buf
 	}
 	return b
 
