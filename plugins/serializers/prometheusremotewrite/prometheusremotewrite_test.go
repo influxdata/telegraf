@@ -3,13 +3,14 @@ package prometheusremotewrite
 import (
 	"bytes"
 	"fmt"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/prompb"
-	"strings"
-	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
