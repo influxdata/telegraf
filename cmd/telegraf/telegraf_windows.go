@@ -84,12 +84,18 @@ func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, process
 	// Handle the --service flag here to prevent any issues with tooling that
 	// may not have an interactive session, e.g. installing from Ansible.
 	if *fService != "" {
-		if *fConfig != "" {
-			svcConfig.Arguments = []string{"--config", *fConfig}
+		var err error
+		if len(fConfigs) > 0 {
+			svcConfig.Arguments = []string{}	
 		}
-		if *fConfigDirectory != "" {
-			svcConfig.Arguments = append(svcConfig.Arguments, "--config-directory", *fConfigDirectory)
+		for _, fConfig := range fConfigs {
+			svcConfig.Arguments = append(svcConfig.Arguments, "--config", fConfig)
 		}
+
+		for _, fConfigDirectory := range fConfigDirs {
+			svcConfig.Arguments = append(svcConfig.Arguments, "--config-directory", fConfigDirectory)
+		}
+
 		//set servicename to service cmd line, to have a custom name after relaunch as a service
 		svcConfig.Arguments = append(svcConfig.Arguments, "--service-name", *fServiceName)
 
