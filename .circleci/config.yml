@@ -193,6 +193,7 @@ workflows:
   version: 2
   check:
     jobs:
+      - package
       - 'share-artifacts':
           filters:
             branches:
