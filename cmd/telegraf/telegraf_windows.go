@@ -86,7 +86,7 @@ func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, process
 	if *fService != "" {
 		var err error
 		if len(fConfigs) > 0 {
-			svcConfig.Arguments = []string{}	
+			svcConfig.Arguments = []string{}
 		}
 		for _, fConfig := range fConfigs {
 			svcConfig.Arguments = append(svcConfig.Arguments, "--config", fConfig)
