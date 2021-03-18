@@ -161,9 +161,9 @@ func init() {
 
 //Function to get only address and port from URL
 func beautifyServerString(rawurl string) (string, error) {
-	parsedUrl, err := url.Parse(rawurl)
+	parsedURL, err := url.Parse(rawurl)
 	if err != nil {
 		return "", err
 	}
-	return parsedUrl.Host, nil
+	return parsedURL.Host, nil
 }
