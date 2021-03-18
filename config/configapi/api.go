@@ -11,7 +11,6 @@ import (
 	"unicode"
 
 	"github.com/alecthomas/units"
-	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
@@ -26,7 +25,7 @@ var API *api
 
 // api is the general interface to interacting with Telegraf's current config
 type api struct {
-	agent  *agent.Agent
+	agent  config.AgentController
 	config *config.Config
 
 	// api shutdown context
@@ -34,9 +33,9 @@ type api struct {
 	outputCtx context.Context
 }
 
-func newAPI(ctx context.Context, agent *agent.Agent) (_ *api, outputCancel context.CancelFunc) {
+func newAPI(ctx context.Context, cfg *config.Config, agent config.AgentController) (_ *api, outputCancel context.CancelFunc) {
 	API = &api{
-		config: agent.Config,
+		config: cfg,
 		agent:  agent,
 		ctx:    ctx,
 	}

@@ -32,7 +32,7 @@ func TestListPluginTypes(t *testing.T) {
 	a, err := agent.NewAgent(cfg)
 	require.NoError(t, err)
 
-	newAPI(context.Background(), a)
+	newAPI(context.Background(), cfg, a)
 
 	pluginConfigs := API.ListPluginTypes()
 	require.Greater(t, len(pluginConfigs), 10)
@@ -89,13 +89,14 @@ func TestInputPluginLifecycle(t *testing.T) {
 	cfg := config.NewConfig() // initalizes API
 	a, err := agent.NewAgent(cfg)
 	require.NoError(t, err)
-	_, outputCancel := newAPI(context.Background(), a)
+	_, outputCancel := newAPI(context.Background(), cfg, a)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	t.Log("Running")
-	go a.RunWithAPI(ctx, outputCancel)
+	a.InitAPI(ctx, outputCancel)
+	go a.RunWithAPI()
 	// TODO: defer a.Shutdown()
 
 	// create
@@ -148,13 +149,14 @@ func TestAllPluginLifecycle(t *testing.T) {
 
 	appCtx := context.Background()
 
-	_, outputCancel := newAPI(appCtx, a)
+	_, outputCancel := newAPI(appCtx, cfg, a)
 
 	runCtx, cancel := context.WithCancel(appCtx)
 	defer cancel()
 
 	t.Log("Running")
-	go a.RunWithAPI(runCtx, outputCancel)
+	a.InitAPI(runCtx, outputCancel)
+	go a.RunWithAPI()
 
 	// create
 	t.Log("Create plugin")

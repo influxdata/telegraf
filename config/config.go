@@ -67,7 +67,9 @@ type Config struct {
 	Inputs  []*models.RunningInput
 	Outputs []*models.RunningOutput
 	// Processors have a slice wrapper type because they need to be sorted
-	Processors models.ProcessorRunners
+	Processors     models.ProcessorRunners
+	ConfigPlugins  []ConfigPlugin
+	StoragePlugins []StoragePlugin
 }
 
 // NewConfig creates a new struct to hold the Telegraf config.
@@ -866,6 +868,40 @@ func (c *Config) LoadConfigData(data []byte) error {
 					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
+		case "config":
+			for pluginName, pluginVal := range subTable.Fields {
+				switch pluginSubTable := pluginVal.(type) {
+				case []*ast.Table:
+					for _, t := range pluginSubTable {
+						if err = c.addConfigPlugin(pluginName, t); err != nil {
+							return fmt.Errorf("Error parsing %s, %s", pluginName, err)
+						}
+					}
+				default:
+					return fmt.Errorf("Unsupported config format: %s",
+						pluginName)
+				}
+				if len(c.UnusedFields) > 0 {
+					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
+				}
+			}
+		case "storage":
+			for pluginName, pluginVal := range subTable.Fields {
+				switch pluginSubTable := pluginVal.(type) {
+				case []*ast.Table:
+					for _, t := range pluginSubTable {
+						if err = c.addStoragePlugin(pluginName, t); err != nil {
+							return fmt.Errorf("Error parsing %s, %s", pluginName, err)
+						}
+					}
+				default:
+					return fmt.Errorf("Unsupported config format: %s",
+						pluginName)
+				}
+				if len(c.UnusedFields) > 0 {
+					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
+				}
+			}
 		// Assume it's an input input for legacy config file support if no other
 		// identifiers are present
 		default:
@@ -963,6 +999,36 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	}
 
 	return toml.Parse(contents)
+}
+
+func (c *Config) addConfigPlugin(name string, table *ast.Table) error {
+	creator, ok := ConfigPlugins[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested config plugin: %s", name)
+	}
+	configPlugin := creator()
+
+	if err := c.toml.UnmarshalTable(table, configPlugin); err != nil {
+		return err
+	}
+
+	c.ConfigPlugins = append(c.ConfigPlugins, configPlugin)
+	return nil
+}
+
+func (c *Config) addStoragePlugin(name string, table *ast.Table) error {
+	creator, ok := StoragePlugins[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested storage plugin: %s", name)
+	}
+	storagePlugin := creator()
+
+	if err := c.toml.UnmarshalTable(table, storagePlugin); err != nil {
+		return err
+	}
+
+	c.StoragePlugins = append(c.StoragePlugins, storagePlugin)
+	return nil
 }
 
 func (c *Config) addAggregator(name string, table *ast.Table) error {

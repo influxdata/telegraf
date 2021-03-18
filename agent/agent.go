@@ -106,25 +106,32 @@ type inputGroupUnit struct {
 	inputUnits []inputUnit
 }
 
+func (a *Agent) InitAPI(ctx context.Context, outputCancel context.CancelFunc) error {
+	a.ctx = ctx
+
+	a.outputUnit.src = make(chan telegraf.Metric)
+
+	if err := a.initPlugins(); err != nil {
+		return err
+	}
+	go func() {
+		a.runOutputFanout()
+		outputCancel()
+	}()
+	return nil
+}
+
 // RunWithAPI runs Telegraf in API mode where all the plugins are controlled by
 // the user through the config API. When running in this mode plugins are not
 // loaded from the toml file.
-func (a *Agent) RunWithAPI(ctx context.Context, outputCancel context.CancelFunc) {
-	a.ctx = ctx
+func (a *Agent) RunWithAPI() {
 	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s",
 		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
 
-	// a.loadState()
-	a.outputUnit.src = make(chan telegraf.Metric)
-	go func() {
-		a.runOutputFanout()
-		outputCancel()
-	}()
-	<-ctx.Done()
+	<-a.Context().Done()
 	a.stopInputs()
-	// a.saveState()
 
 	// wait for all plugins to stop
 	log.Printf("D! [agent] Stopped Successfully")
@@ -189,24 +196,34 @@ func (a *Agent) Run(ctx context.Context) error {
 
 // initPlugins runs the Init function on plugins.
 func (a *Agent) initPlugins() error {
+	for _, cfg := range a.Config.ConfigPlugins {
+		if err := cfg.Init(a.ctx, a.Config, a); err != nil {
+			return fmt.Errorf("could not initialize config plugin %s: %w", cfg.GetName(), err)
+		}
+	}
+	for _, storage := range a.Config.StoragePlugins {
+		if err := storage.Init(); err != nil {
+			return fmt.Errorf("could not initialize storage plugin %s: %w", storage.GetName(), err)
+		}
+	}
 	for _, input := range a.Config.Inputs {
 		err := input.Init()
 		if err != nil {
-			return fmt.Errorf("could not initialize input %s: %v",
+			return fmt.Errorf("could not initialize input %s: %w",
 				input.LogName(), err)
 		}
 	}
 	for _, processor := range a.Config.Processors {
 		err := processor.Init()
 		if err != nil {
-			return fmt.Errorf("could not initialize processor %s: %v",
+			return fmt.Errorf("could not initialize processor %s: %w",
 				processor.LogName(), err)
 		}
 	}
 	for _, output := range a.Config.Outputs {
 		err := output.Init()
 		if err != nil {
-			return fmt.Errorf("could not initialize output %s: %v",
+			return fmt.Errorf("could not initialize output %s: %w",
 				output.LogName(), err)
 		}
 	}
@@ -538,6 +555,8 @@ func (a *Agent) startProcessors(dst chan<- telegraf.Metric) error {
 }
 
 func (a *Agent) StartProcessor(processor models.ProcessorRunner) error {
+	a.inputGroupUnit.Lock()
+	defer a.inputGroupUnit.Unlock()
 	a.processorGroupUnit.Lock()
 	defer a.processorGroupUnit.Unlock()
 
@@ -621,19 +640,21 @@ func (a *Agent) RunProcessor(p models.ProcessorRunner) {
 		panic("Must call StartProcessor before calling RunProcessor")
 	}
 
-	for m := range pu.src {
-		if err := pu.processor.Add(m, pu.accumulator); err != nil {
-			pu.accumulator.AddError(err)
-			m.Drop()
+	for a.ctx.Err() == nil {
+		for m := range pu.src {
+			if err := pu.processor.Add(m, pu.accumulator); err != nil {
+				pu.accumulator.AddError(err)
+				m.Drop()
+			}
 		}
 	}
 	pu.processor.Stop()
 
-	if a.ctx.Err() != nil {
-		a.processorGroupUnit.Lock()
+	a.processorGroupUnit.Lock()
+	if pu.dst != nil {
 		close(pu.dst)
-		a.processorGroupUnit.Unlock()
 	}
+	a.processorGroupUnit.Unlock()
 }
 
 // StopProcessor stops processors or aggregators.
@@ -802,6 +823,7 @@ func (a *Agent) RunOutput(ctx context.Context, output *models.RunningOutput) {
 // runOutputFanout does the outputUnit fanout, copying a metric to all outputs
 func (a *Agent) runOutputFanout() {
 	for metric := range a.outputUnit.src {
+		// if there are no outputs I guess we're dropping them.
 		a.outputUnit.Lock()
 		outs := a.outputUnit.outputs
 		a.outputUnit.Unlock()
@@ -1098,4 +1120,10 @@ func (a *Agent) RunningOutputs() []*models.RunningOutput {
 	// make sure we allocate and use a new slice that doesn't need a lock
 	runningOutputs = append(runningOutputs, a.outputUnit.outputs...)
 	return runningOutputs
+}
+
+func (a *Agent) Context() context.Context {
+	a.inputGroupUnit.Lock()
+	defer a.inputGroupUnit.Unlock()
+	return a.ctx
 }
