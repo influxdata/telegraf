@@ -15,7 +15,6 @@ linters:
     - staticcheck
     - typecheck
     - unconvert
-    - unparam
     - unused
     - varcheck
   disable:
@@ -63,6 +62,7 @@ linters:
     - testpackage
     - thelper
     - tparallel
+    - unparam
     - wastedassign
     - whitespace
     - wrapcheck
@@ -121,7 +121,7 @@ linters-settings:
       - name: unhandled-error
       - name: unnecessary-stmt
       - name: unreachable-code
-      - name: unused-parameter
+      # - name: unused-parameter
       - name: var-declaration
       - name: var-naming
       - name: waitgroup-by-value
@@ -144,6 +144,7 @@ run:
     - docs
     - etc
     - scripts
+    # - plugins/parsers/influx/machine.go
 
   # which files to skip: they will be analyzed, but issues from them
   # won't be reported. Default value is empty list, but there is
