@@ -187,16 +187,13 @@ jobs:
           command: |
             PR=${CIRCLE_PULL_REQUEST##*/}
             printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
-            curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data $payload   
+            curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"   
                       
 workflows:
   version: 2
   check:
     jobs:
-      - 'package'
       - 'share-artifacts':
-          requires:
-            - 'package'
           filters:
             branches:
               ignore:
