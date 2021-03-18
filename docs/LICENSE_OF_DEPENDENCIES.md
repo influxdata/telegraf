@@ -224,5 +224,6 @@ following works:
 - modernc.org/sqlite [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/sqlite/-/blob/master/LICENSE)
 - sigs.k8s.io/structured-merge-diff [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - sigs.k8s.io/yaml [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
+- github.com/kolo/xmlrpc [MIT License](https://github.com/kolo/xmlrpc/blob/master/LICENSE)
 ## telegraf used and modified code from these projects
 - github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/LICENSE)
