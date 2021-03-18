@@ -28,6 +28,18 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
 )
 
+type sliceFlags []string
+
+func (i *sliceFlags) String() string {
+ 	s := strings.Join(*i, " ")
+    return "[" + s + "]"
+}
+
+func (i *sliceFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
 // If you update these, update usage.go and usage_windows.go
 var fDebug = flag.Bool("debug", false,
 	"turn on debug logging")
@@ -37,9 +49,10 @@ var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
 var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit. Note: Test mode only runs inputs, not processors, aggregators, or outputs")
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
-var fConfig = flag.String("config", "", "configuration file to load")
-var fConfigDirectory = flag.String("config-directory", "",
-	"directory containing additional *.conf files")
+
+var fConfigs sliceFlags
+var fConfigDirs sliceFlags
+
 var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
@@ -124,17 +137,28 @@ func runAgent(ctx context.Context,
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-	err := c.LoadConfig(*fConfig)
-	if err != nil {
-		return err
+	var err error
+	// providing no "config" flag should load default config
+	if len(fConfigs) == 0 {
+		err = c.LoadConfig("")
+		if err != nil {
+			return err
+		}			
 	}
-
-	if *fConfigDirectory != "" {
-		err = c.LoadDirectory(*fConfigDirectory)
+	for _, fConfig := range fConfigs{
+		err = c.LoadConfig(fConfig)
+		if err != nil {
+			return err
+		}			
+	}
+	
+	for _, fConfigDirectory := range fConfigDirs {
+		err = c.LoadDirectory(fConfigDirectory)
 		if err != nil {
 			return err
 		}
 	}
+
 	if !*fTest && len(c.Outputs) == 0 {
 		return errors.New("Error: no outputs found, did you provide a valid config file?")
 	}
@@ -236,6 +260,9 @@ func formatFullVersion() string {
 }
 
 func main() {
+	flag.Var(&fConfigs, "config", "configuration file to load")
+	flag.Var(&fConfigDirs, "config-directory", "directory containing additional *.conf files")
+
 	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
 	args := flag.Args()
