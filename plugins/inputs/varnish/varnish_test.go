@@ -20,11 +20,18 @@ func fakeVarnishStat(output string, useSudo bool, InstanceName string, Timeout i
 	}
 }
 
+func fakeVarnishAdm(output string, useSudo bool, InstanceName string, Timeout internal.Duration) func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
+	return func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
+		return bytes.NewBuffer([]byte(output)), nil
+	}
+}
+
 func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(smOutput, false, "", internal.Duration{Duration: time.Second}),
-		Stats: []string{"*"},
+		admrun:  fakeVarnishStat(admOutput, false, "", internal.Duration{Duration: time.Second}),
+		statrun: fakeVarnishStat(smOutput, false, "", internal.Duration{Duration: time.Second}),
+		Stats:   []string{"*"},
 	}
 	v.Gather(acc)
 
@@ -32,6 +39,7 @@ func TestGather(t *testing.T) {
 	for tag, fields := range parsedSmOutput {
 		acc.AssertContainsTaggedFields(t, "varnish", fields, map[string]string{
 			"section": tag,
+			"vcl":     "reload_20200301_181101_4812",
 		})
 	}
 }
@@ -39,36 +47,38 @@ func TestGather(t *testing.T) {
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput, true, "", internal.Duration{Duration: time.Second}),
-		Stats: []string{"*"},
+		admrun:  fakeVarnishAdm(admOutput, false, "", internal.Duration{Duration: time.Second}),
+		statrun: fakeVarnishStat(fullOutput, true, "", internal.Duration{Duration: time.Second}),
+		Stats:   []string{"*"},
 	}
 	err := v.Gather(acc)
 
 	assert.NoError(t, err)
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
-	assert.Len(t, acc.Metrics, 6)
-	assert.Equal(t, 293, len(flat))
+	assert.Len(t, acc.Metrics, 5)
+	assert.Equal(t, 284, len(flat))
 }
 
 func TestFilterSomeStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput, false, "", internal.Duration{Duration: time.Second}),
-		Stats: []string{"MGT.*", "VBE.*"},
+		admrun:  fakeVarnishAdm(admOutput, false, "", internal.Duration{Duration: time.Second}),
+		statrun: fakeVarnishStat(fullOutput, false, "", internal.Duration{Duration: time.Second}),
+		Stats:   []string{"MGT.*", "VBE.*"},
 	}
 	err := v.Gather(acc)
 
 	assert.NoError(t, err)
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
-	assert.Len(t, acc.Metrics, 2)
-	assert.Equal(t, 16, len(flat))
+	assert.Len(t, acc.Metrics, 1)
+	assert.Equal(t, 7, len(flat))
 }
 
 func TestFieldConfig(t *testing.T) {
 	expect := map[string]int{
-		"*":                                     293,
+		"*":                                     284,
 		"":                                      0, // default
 		"MAIN.uptime":                           1,
 		"MEMPOOL.req0.sz_needed,MAIN.fetch_bad": 2,
@@ -77,8 +87,9 @@ func TestFieldConfig(t *testing.T) {
 	for fieldCfg, expected := range expect {
 		acc := &testutil.Accumulator{}
 		v := &Varnish{
-			run:   fakeVarnishStat(fullOutput, true, "", internal.Duration{Duration: time.Second}),
-			Stats: strings.Split(fieldCfg, ","),
+			admrun:  fakeVarnishAdm(admOutput, false, "", internal.Duration{Duration: time.Second}),
+			statrun: fakeVarnishStat(fullOutput, true, "", internal.Duration{Duration: time.Second}),
+			Stats:   strings.Split(fieldCfg, ","),
 		}
 		err := v.Gather(acc)
 
@@ -112,6 +123,12 @@ MGT.child_start                    1         0.00 Child process started
 MEMPOOL.vbc.live                   0          .   In use
 MEMPOOL.vbc.pool                   10          .   In Pool
 MEMPOOL.vbc.sz_wanted              88          .   Size requested
+`
+
+var admOutput = `
+available   auto/warm          0 boot
+active      auto/warm          0 reload_20200301_181101_4812
+
 `
 
 var parsedSmOutput = map[string]map[string]interface{}{
