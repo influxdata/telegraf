@@ -23,8 +23,14 @@ var formats = map[format]struct{}{
 	Carbon2FormatMetricIncludesField: {},
 }
 
+const (
+	replaceChar    rune = ':'
+	sanitizedChars      = "!@#$%^&*()+`'\"[]{};<>,?/\\|="
+)
+
 type Serializer struct {
-	metricsFormat format
+	metricsFormat    format
+	sanitizeReplacer *strings.Replacer
 }
 
 func NewSerializer(metricsFormat string) (*Serializer, error) {
@@ -40,7 +46,8 @@ func NewSerializer(metricsFormat string) (*Serializer, error) {
 	}
 
 	return &Serializer{
-		metricsFormat: f,
+		metricsFormat:    f,
+		sanitizeReplacer: createSanitizeReplacer(sanitizedChars, replaceChar),
 	}, nil
 }
 
@@ -65,15 +72,17 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 			continue
 		}
 
+		name := s.sanitizeReplacer.Replace(metric.Name())
+
 		switch metricsFormat {
 		case Carbon2FormatFieldSeparate:
 			m.WriteString(serializeMetricFieldSeparate(
-				metric.Name(), fieldName,
+				name, fieldName,
 			))
 
 		case Carbon2FormatMetricIncludesField:
 			m.WriteString(serializeMetricIncludeField(
-				metric.Name(), fieldName,
+				name, fieldName,
 			))
 		}
 
@@ -151,4 +160,14 @@ func bool2int(b bool) int {
 		i = 0
 	}
 	return i
+}
+
+// createSanitizeReplacer creates string replacer replacing all provided
+// characters with the replaceChar.
+func createSanitizeReplacer(sanitizedChars string, replaceChar rune) *strings.Replacer {
+	sanitizeCharPairs := make([]string, 0, 2*len(sanitizedChars))
+	for _, c := range sanitizedChars {
+		sanitizeCharPairs = append(sanitizeCharPairs, string(c), string(replaceChar))
+	}
+	return strings.NewReplacer(sanitizeCharPairs...)
 }
