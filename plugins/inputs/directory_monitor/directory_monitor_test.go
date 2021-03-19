@@ -8,7 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -35,13 +37,14 @@ func TestCSVGZImport(t *testing.T) {
 	err = r.Init()
 	require.NoError(t, err)
 
-	parserConfig := parsers.Config{
-		DataFormat:        "csv",
-		CSVHeaderRowCount: 1,
-	}
-	require.NoError(t, err)
-	r.SetParserFunc(func() (parsers.Parser, error) {
-		return parsers.NewParser(&parserConfig)
+	r.SetParserFunc(func() (telegraf.Parser, error) {
+		p := &csv.Parser{
+			HeaderRowCount: 1,
+		}
+		if err := p.Init(); err != nil {
+			return nil, err
+		}
+		return p, nil
 	})
 	r.Log = testutil.Logger{}
 
@@ -109,7 +112,7 @@ func TestMultipleJSONFileImports(t *testing.T) {
 		JSONNameKey: "Name",
 	}
 
-	r.SetParserFunc(func() (parsers.Parser, error) {
+	r.SetParserFunc(func() (telegraf.Parser, error) {
 		return parsers.NewParser(&parserConfig)
 	})
 

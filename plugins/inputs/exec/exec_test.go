@@ -144,13 +144,15 @@ func TestCommandError(t *testing.T) {
 }
 
 func TestExecCommandWithGlob(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
+	parser, err := parsers.NewValueParser("metric", "string", "", nil)
+	require.NoError(t, err)
+
 	e := NewExec()
 	e.Commands = []string{"/bin/ech* metric_value"}
 	e.SetParser(parser)
 
 	var acc testutil.Accumulator
-	err := acc.GatherError(e.Gather)
+	err = acc.GatherError(e.Gather)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{

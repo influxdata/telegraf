@@ -21,6 +21,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/xpath"
 )
 
+type Parser telegraf.Parser
+type ParserFunc telegraf.ParserFunc
+
 type Creator func(defaultMetricName string) telegraf.Parser
 
 var Parsers = map[string]Creator{}
@@ -256,11 +259,7 @@ func NewValueParser(
 	fieldName string,
 	defaultTags map[string]string,
 ) (telegraf.Parser, error) {
-	return &value.ValueParser{
-		MetricName:  metricName,
-		DataType:    dataType,
-		DefaultTags: defaultTags,
-	}, nil
+	return value.NewValueParser(metricName, dataType, fieldName, defaultTags), nil
 }
 
 func NewCollectdParser(

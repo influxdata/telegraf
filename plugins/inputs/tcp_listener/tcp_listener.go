@@ -77,7 +77,7 @@ func (t *TCPListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (t *TcpListener) SetParser(parser telegraf.Parser) {
+func (t *TCPListener) SetParser(parser telegraf.Parser) {
 	t.parser = parser
 }
 
