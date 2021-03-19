@@ -138,7 +138,7 @@ ifeq (, $(shell which golangci-lint))
 	exit 1
 endif
 
-	golangci-lint run --timeout 5m0s --issues-exit-code 0
+	golangci-lint -v run
 
 .PHONY: tidy
 tidy:
@@ -151,7 +151,6 @@ tidy:
 
 .PHONY: check
 check: fmtcheck vet
-	@$(MAKE) --no-print-directory tidy
 
 .PHONY: test-all
 test-all: fmtcheck vet
@@ -184,10 +183,10 @@ ci-1.15:
 	docker build -t quay.io/influxdb/telegraf-ci:1.15.8 - < scripts/ci-1.15.docker
 	docker push quay.io/influxdb/telegraf-ci:1.15.8
 
-.PHONY: ci-1.14
-ci-1.14:
-	docker build -t quay.io/influxdb/telegraf-ci:1.14.9 - < scripts/ci-1.14.docker
-	docker push quay.io/influxdb/telegraf-ci:1.14.9
+.PHONY: ci-1.16
+ci-1.16:
+	docker build -t quay.io/influxdb/telegraf-ci:1.16.2 - < scripts/ci-1.16.docker
+	docker push quay.io/influxdb/telegraf-ci:1.16.2
 
 .PHONY: install
 install: $(buildbin)

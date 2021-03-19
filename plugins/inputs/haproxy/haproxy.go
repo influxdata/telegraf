@@ -79,7 +79,6 @@ func (h *haproxy) Gather(acc telegraf.Accumulator) error {
 	endpoints := make([]string, 0, len(h.Servers))
 
 	for _, endpoint := range h.Servers {
-
 		if strings.HasPrefix(endpoint, "http") {
 			endpoints = append(endpoints, endpoint)
 			continue

@@ -15,6 +15,7 @@ type ValueParser struct {
 	MetricName  string
 	DataType    string
 	DefaultTags map[string]string
+	FieldName   string
 }
 
 func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -46,7 +47,7 @@ func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
-	fields := map[string]interface{}{"value": value}
+	fields := map[string]interface{}{v.FieldName: value}
 	metric, err := metric.New(v.MetricName, v.DefaultTags,
 		fields, time.Now().UTC())
 	if err != nil {
@@ -72,4 +73,17 @@ func (v *ValueParser) ParseLine(line string) (telegraf.Metric, error) {
 
 func (v *ValueParser) SetDefaultTags(tags map[string]string) {
 	v.DefaultTags = tags
+}
+
+func NewValueParser(metricName, dataType, fieldName string, defaultTags map[string]string) *ValueParser {
+	if fieldName == "" {
+		fieldName = "value"
+	}
+
+	return &ValueParser{
+		MetricName:  metricName,
+		DataType:    dataType,
+		DefaultTags: defaultTags,
+		FieldName:   fieldName,
+	}
 }

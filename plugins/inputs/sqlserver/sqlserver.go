@@ -21,6 +21,7 @@ type SQLServer struct {
 	DatabaseType  string   `toml:"database_type"`
 	IncludeQuery  []string `toml:"include_query"`
 	ExcludeQuery  []string `toml:"exclude_query"`
+	HealthMetric  bool     `toml:"health_metric"`
 	queries       MapQuery
 	isInitialized bool
 }
@@ -36,7 +37,28 @@ type Query struct {
 // MapQuery type
 type MapQuery map[string]Query
 
+// HealthMetric struct tracking the number of attempted vs successful connections for each connection string
+type HealthMetric struct {
+	AttemptedQueries  int
+	SuccessfulQueries int
+}
+
 const defaultServer = "Server=.;app name=telegraf;log=1;"
+
+const (
+	typeAzureSQLDB              = "AzureSQLDB"
+	typeAzureSQLManagedInstance = "AzureSQLManagedInstance"
+	typeSQLServer               = "SQLServer"
+)
+
+const (
+	healthMetricName              = "sqlserver_telegraf_health"
+	healthMetricInstanceTag       = "sql_instance"
+	healthMetricDatabaseTag       = "database_name"
+	healthMetricAttemptedQueries  = "attempted_queries"
+	healthMetricSuccessfulQueries = "successful_queries"
+	healthMetricDatabaseType      = "database_type"
+)
 
 const sampleConfig = `
 ## Specify instances to monitor with a list of connection strings.
@@ -124,7 +146,7 @@ func initQueries(s *SQLServer) error {
 	// Constant defintiions for type "AzureSQLDB" start with sqlAzureDB
 	// Constant defintiions for type "AzureSQLManagedInstance" start with sqlAzureMI
 	// Constant defintiions for type "SQLServer" start with sqlServer
-	if s.DatabaseType == "AzureSQLDB" {
+	if s.DatabaseType == typeAzureSQLDB {
 		queries["AzureSQLDBResourceStats"] = Query{ScriptName: "AzureSQLDBResourceStats", Script: sqlAzureDBResourceStats, ResultByRow: false}
 		queries["AzureSQLDBResourceGovernance"] = Query{ScriptName: "AzureSQLDBResourceGovernance", Script: sqlAzureDBResourceGovernance, ResultByRow: false}
 		queries["AzureSQLDBWaitStats"] = Query{ScriptName: "AzureSQLDBWaitStats", Script: sqlAzureDBWaitStats, ResultByRow: false}
@@ -135,7 +157,7 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLDBPerformanceCounters"] = Query{ScriptName: "AzureSQLDBPerformanceCounters", Script: sqlAzureDBPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLDBRequests"] = Query{ScriptName: "AzureSQLDBRequests", Script: sqlAzureDBRequests, ResultByRow: false}
 		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlAzureDBSchedulers, ResultByRow: false}
-	} else if s.DatabaseType == "AzureSQLManagedInstance" {
+	} else if s.DatabaseType == typeAzureSQLManagedInstance {
 		queries["AzureSQLMIResourceStats"] = Query{ScriptName: "AzureSQLMIResourceStats", Script: sqlAzureMIResourceStats, ResultByRow: false}
 		queries["AzureSQLMIResourceGovernance"] = Query{ScriptName: "AzureSQLMIResourceGovernance", Script: sqlAzureMIResourceGovernance, ResultByRow: false}
 		queries["AzureSQLMIDatabaseIO"] = Query{ScriptName: "AzureSQLMIDatabaseIO", Script: sqlAzureMIDatabaseIO, ResultByRow: false}
@@ -145,7 +167,7 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLMIPerformanceCounters"] = Query{ScriptName: "AzureSQLMIPerformanceCounters", Script: sqlAzureMIPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLMIRequests"] = Query{ScriptName: "AzureSQLMIRequests", Script: sqlAzureMIRequests, ResultByRow: false}
 		queries["AzureSQLMISchedulers"] = Query{ScriptName: "AzureSQLMISchedulers", Script: sqlAzureMISchedulers, ResultByRow: false}
-	} else if s.DatabaseType == "SQLServer" { //These are still V2 queries and have not been refactored yet.
+	} else if s.DatabaseType == typeSQLServer { //These are still V2 queries and have not been refactored yet.
 		queries["SQLServerPerformanceCounters"] = Query{ScriptName: "SQLServerPerformanceCounters", Script: sqlServerPerformanceCounters, ResultByRow: false}
 		queries["SQLServerWaitStatsCategorized"] = Query{ScriptName: "SQLServerWaitStatsCategorized", Script: sqlServerWaitStatsCategorized, ResultByRow: false}
 		queries["SQLServerDatabaseIO"] = Query{ScriptName: "SQLServerDatabaseIO", Script: sqlServerDatabaseIO, ResultByRow: false}
@@ -221,23 +243,34 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	if len(s.Servers) == 0 {
-		s.Servers = append(s.Servers, defaultServer)
-	}
-
 	var wg sync.WaitGroup
+	var mutex sync.Mutex
+	var healthMetrics = make(map[string]*HealthMetric)
 
 	for _, serv := range s.Servers {
 		for _, query := range s.queries {
 			wg.Add(1)
 			go func(serv string, query Query) {
 				defer wg.Done()
-				acc.AddError(s.gatherServer(serv, query, acc))
+				queryError := s.gatherServer(serv, query, acc)
+
+				if s.HealthMetric {
+					mutex.Lock()
+					s.gatherHealth(healthMetrics, serv, queryError)
+					mutex.Unlock()
+				}
+
+				acc.AddError(queryError)
 			}(serv, query)
 		}
 	}
 
 	wg.Wait()
+
+	if s.HealthMetric {
+		s.accHealth(healthMetrics, acc)
+	}
+
 	return nil
 }
 
@@ -327,8 +360,56 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 	return nil
 }
 
+// gatherHealth stores info about any query errors in the healthMetrics map
+func (s *SQLServer) gatherHealth(healthMetrics map[string]*HealthMetric, serv string, queryError error) {
+	if healthMetrics[serv] == nil {
+		healthMetrics[serv] = &HealthMetric{}
+	}
+
+	healthMetrics[serv].AttemptedQueries++
+	if queryError == nil {
+		healthMetrics[serv].SuccessfulQueries++
+	}
+}
+
+// accHealth accumulates the query health data contained within the healthMetrics map
+func (s *SQLServer) accHealth(healthMetrics map[string]*HealthMetric, acc telegraf.Accumulator) {
+	for connectionString, connectionStats := range healthMetrics {
+		sqlInstance, databaseName := getConnectionIdentifiers(connectionString)
+		tags := map[string]string{healthMetricInstanceTag: sqlInstance, healthMetricDatabaseTag: databaseName}
+		fields := map[string]interface{}{
+			healthMetricAttemptedQueries:  connectionStats.AttemptedQueries,
+			healthMetricSuccessfulQueries: connectionStats.SuccessfulQueries,
+			healthMetricDatabaseType:      s.getDatabaseTypeToLog(),
+		}
+
+		acc.AddFields(healthMetricName, fields, tags, time.Now())
+	}
+}
+
+// getDatabaseTypeToLog returns the type of database monitored by this plugin instance
+func (s *SQLServer) getDatabaseTypeToLog() string {
+	if s.DatabaseType == typeAzureSQLDB || s.DatabaseType == typeAzureSQLManagedInstance || s.DatabaseType == typeSQLServer {
+		return s.DatabaseType
+	}
+
+	logname := fmt.Sprintf("QueryVersion-%d", s.QueryVersion)
+	if s.AzureDB {
+		logname += "-AzureDB"
+	}
+	return logname
+}
+
+func (s *SQLServer) Init() error {
+	if len(s.Servers) == 0 {
+		log.Println("W! Warning: Server list is empty.")
+	}
+
+	return nil
+}
+
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
-		return &SQLServer{}
+		return &SQLServer{Servers: []string{defaultServer}}
 	})
 }

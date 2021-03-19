@@ -160,7 +160,7 @@ func TestCommandError(t *testing.T) {
 }
 
 func TestExecCommandWithGlob(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
 	e := NewExec()
 	e.Commands = []string{"/bin/ech* metric_value"}
 	e.SetParser(parser)
@@ -176,7 +176,7 @@ func TestExecCommandWithGlob(t *testing.T) {
 }
 
 func TestExecCommandWithoutGlob(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
 	e := NewExec()
 	e.Commands = []string{"/bin/echo metric_value"}
 	e.SetParser(parser)
@@ -192,7 +192,7 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 }
 
 func TestExecCommandWithoutGlobAndPath(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
 	e := NewExec()
 	e.Commands = []string{"echo metric_value"}
 	e.SetParser(parser)
@@ -259,9 +259,10 @@ func TestTruncate(t *testing.T) {
 		},
 	}
 
+	c := CommandRunner{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := truncate(*tt.bufF())
+			res := c.truncate(*tt.bufF())
 			require.Equal(t, tt.expF().Bytes(), res.Bytes())
 		})
 	}
@@ -272,14 +273,14 @@ func TestRemoveCarriageReturns(t *testing.T) {
 		// Test that all carriage returns are removed
 		for _, test := range crTests {
 			b := bytes.NewBuffer(test.input)
-			out := removeCarriageReturns(*b)
+			out := removeWindowsCarriageReturns(*b)
 			assert.True(t, bytes.Equal(test.output, out.Bytes()))
 		}
 	} else {
 		// Test that the buffer is returned unaltered
 		for _, test := range crTests {
 			b := bytes.NewBuffer(test.input)
-			out := removeCarriageReturns(*b)
+			out := removeWindowsCarriageReturns(*b)
 			assert.True(t, bytes.Equal(test.input, out.Bytes()))
 		}
 	}

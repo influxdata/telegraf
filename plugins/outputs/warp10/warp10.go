@@ -106,9 +106,7 @@ func (w *Warp10) Connect() error {
 func (w *Warp10) GenWarp10Payload(metrics []telegraf.Metric) string {
 	collectString := make([]string, 0)
 	for _, mm := range metrics {
-
 		for _, field := range mm.FieldList() {
-
 			metric := &MetricLine{
 				Metric:    fmt.Sprintf("%s%s", w.Prefix, mm.Name()+"."+field.Key),
 				Timestamp: mm.Time().UnixNano() / 1000,
@@ -171,7 +169,6 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 }
 
 func buildTags(tags []*telegraf.Tag) []string {
-
 	tagsString := make([]string, len(tags)+1)
 	indexSource := 0
 	for index, tag := range tags {

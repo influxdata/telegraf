@@ -409,5 +409,4 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 			"upstream_address": "1.2.3.123:80",
 			"id":               "0",
 		})
-
 }

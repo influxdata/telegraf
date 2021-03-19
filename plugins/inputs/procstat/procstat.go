@@ -111,7 +111,6 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 			p.PidFinder = "pgrep"
 			p.createPIDFinder = defaultPIDFinder
 		}
-
 	}
 	if p.createProcess == nil {
 		p.createProcess = defaultProcess
@@ -309,6 +308,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 				fields[prefix+name] = rlim.Used
 			}
 		}
+	}
+
+	ppid, err := proc.Ppid()
+	if err == nil {
+		fields[prefix+"ppid"] = ppid
 	}
 
 	acc.AddFields("procstat", fields, proc.Tags(), t)

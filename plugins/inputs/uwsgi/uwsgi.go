@@ -210,7 +210,6 @@ func (u *Uwsgi) gatherCores(acc telegraf.Accumulator, s *StatsServer) {
 			}
 			acc.AddFields("uwsgi_cores", fields, tags)
 		}
-
 	}
 }
 

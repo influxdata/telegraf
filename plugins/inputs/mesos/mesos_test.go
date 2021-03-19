@@ -278,7 +278,6 @@ func generateMetrics() {
 	for _, k := range slaveMetricNames {
 		slaveMetrics[k] = rand.Float64()
 	}
-
 	// slaveTaskMetrics = map[string]interface{}{
 	// 	"executor_id":   fmt.Sprintf("task_name.%s", randUUID()),
 	// 	"executor_name": "Some task description",

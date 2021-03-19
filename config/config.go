@@ -908,7 +908,6 @@ func loadConfig(config string) ([]byte, error) {
 		// If it isn't a https scheme, try it as a file.
 	}
 	return ioutil.ReadFile(config)
-
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
@@ -1268,7 +1267,14 @@ func (c *Config) buildParser(name string, tbl *ast.Table) (parsers.Parser, error
 	if err != nil {
 		return nil, err
 	}
-	return parsers.NewParser(config)
+	parser, err := parsers.NewParser(config)
+	if err != nil {
+		return nil, err
+	}
+	logger := models.NewLogger("parsers", config.DataFormat, name)
+	models.SetLoggerOnPlugin(parser, logger)
+
+	return parser, nil
 }
 
 func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
@@ -1334,6 +1340,30 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	c.getFieldStringSlice(tbl, "csv_skip_values", &pc.CSVSkipValues)
 
 	c.getFieldStringSlice(tbl, "form_urlencoded_tag_keys", &pc.FormUrlencodedTagKeys)
+
+	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
+
+	//for XML parser
+	if node, ok := tbl.Fields["xml"]; ok {
+		if subtbls, ok := node.([]*ast.Table); ok {
+			pc.XMLConfig = make([]parsers.XMLConfig, len(subtbls))
+			for i, subtbl := range subtbls {
+				subcfg := pc.XMLConfig[i]
+				c.getFieldString(subtbl, "metric_name", &subcfg.MetricQuery)
+				c.getFieldString(subtbl, "metric_selection", &subcfg.Selection)
+				c.getFieldString(subtbl, "timestamp", &subcfg.Timestamp)
+				c.getFieldString(subtbl, "timestamp_format", &subcfg.TimestampFmt)
+				c.getFieldStringMap(subtbl, "tags", &subcfg.Tags)
+				c.getFieldStringMap(subtbl, "fields", &subcfg.Fields)
+				c.getFieldStringMap(subtbl, "fields_int", &subcfg.FieldsInt)
+				c.getFieldString(subtbl, "field_selection", &subcfg.FieldSelection)
+				c.getFieldBool(subtbl, "field_name_expansion", &subcfg.FieldNameExpand)
+				c.getFieldString(subtbl, "field_name", &subcfg.FieldNameQuery)
+				c.getFieldString(subtbl, "field_value", &subcfg.FieldValueQuery)
+				pc.XMLConfig[i] = subcfg
+			}
+		}
+	}
 
 	pc.MetricName = name
 
@@ -1439,7 +1469,7 @@ func (c *Config) missingTomlField(typ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"wavefront_source_override", "wavefront_use_strict":
+		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml":
 
 		// ignore fields that are common to all plugins.
 	default:
@@ -1545,6 +1575,7 @@ func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string, target *[
 		}
 	}
 }
+
 func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]models.TagFilter) {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {

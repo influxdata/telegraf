@@ -269,6 +269,7 @@ func TestPingGatherIntegration(t *testing.T) {
 
 	var acc testutil.Accumulator
 	p, ok := inputs.Inputs["ping"]().(*Ping)
+	p.Log = testutil.Logger{}
 	require.True(t, ok)
 	p.Urls = []string{"localhost", "influxdata.com"}
 	err := acc.GatherError(p.Gather)
@@ -486,11 +487,11 @@ func TestPingGatherNative(t *testing.T) {
 		assert.True(t, acc.HasField("ping", "maximum_response_ms"))
 		assert.True(t, acc.HasField("ping", "standard_deviation_ms"))
 	}
-
 }
 
 func TestNoPacketsSent(t *testing.T) {
 	p := &Ping{
+		Log:         testutil.Logger{},
 		Urls:        []string{"localhost", "127.0.0.2"},
 		Method:      "native",
 		Count:       5,

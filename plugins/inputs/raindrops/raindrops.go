@@ -147,7 +147,6 @@ func (r *Raindrops) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 				"ip":   listener[0],
 				"port": listener[1],
 			}
-
 		} else {
 			tags = map[string]string{
 				"socket": listenName,

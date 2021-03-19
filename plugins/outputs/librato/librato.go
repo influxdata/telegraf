@@ -110,7 +110,6 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		} else {
 			l.Log.Infof("Unable to build Gauge for %s, skipping", m.Name())
 			l.Log.Debugf("Couldn't build gauge: %v", err)
-
 		}
 	}
 
@@ -192,7 +191,6 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 			fmt.Errorf("undeterminable Source type from Field, %s", l.Template)
 	}
 	for fieldName, value := range m.Fields() {
-
 		metricName := m.Name()
 		if fieldName != "value" {
 			metricName = fmt.Sprintf("%s.%s", m.Name(), fieldName)

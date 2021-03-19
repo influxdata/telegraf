@@ -19,7 +19,6 @@ var (
 )
 
 func TestCompileAndMatch(t *testing.T) {
-
 	type test struct {
 		path    string
 		matches int

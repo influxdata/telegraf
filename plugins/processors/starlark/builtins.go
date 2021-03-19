@@ -191,7 +191,6 @@ func dictUpdate(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tupl
 				iter2 := starlark.Iterate(pair)
 				if iter2 == nil {
 					return nil, fmt.Errorf("dictionary update sequence element #%d is not iterable (%s)", i, pair.Type())
-
 				}
 				defer iter2.Done()
 				len := starlark.Len(pair)

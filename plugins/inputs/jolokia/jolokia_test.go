@@ -239,9 +239,7 @@ func TestHttpJsonThreeLevelMultiValue(t *testing.T) {
 
 // Test that the proper values are ignored or collected
 func TestHttp404(t *testing.T) {
-
-	jolokia := genJolokiaClientStub(invalidJSON, 404, Servers,
-		[]Metric{UsedHeapMetric})
+	jolokia := genJolokiaClientStub(invalidJSON, 404, Servers, []Metric{UsedHeapMetric})
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
@@ -254,9 +252,7 @@ func TestHttp404(t *testing.T) {
 
 // Test that the proper values are ignored or collected
 func TestHttpInvalidJson(t *testing.T) {
-
-	jolokia := genJolokiaClientStub(invalidJSON, 200, Servers,
-		[]Metric{UsedHeapMetric})
+	jolokia := genJolokiaClientStub(invalidJSON, 200, Servers, []Metric{UsedHeapMetric})
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)

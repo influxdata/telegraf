@@ -222,8 +222,8 @@ func (a *ApplicationInsights) addContextTags(metric telegraf.Metric, telemetry a
 func getFloat64TelemetryPropertyValue(
 	candidateFields []string,
 	metric telegraf.Metric,
-	usedFields *[]string) (float64, error) {
-
+	usedFields *[]string,
+) (float64, error) {
 	for _, fieldName := range candidateFields {
 		fieldValue, found := metric.GetField(fieldName)
 		if !found {
@@ -248,8 +248,8 @@ func getFloat64TelemetryPropertyValue(
 func getIntTelemetryPropertyValue(
 	candidateFields []string,
 	metric telegraf.Metric,
-	usedFields *[]string) (int, error) {
-
+	usedFields *[]string,
+) (int, error) {
 	for _, fieldName := range candidateFields {
 		fieldValue, found := metric.GetField(fieldName)
 		if !found {

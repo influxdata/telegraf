@@ -64,7 +64,6 @@ func TestBadStatusCode(t *testing.T) {
 }
 
 func TestBuildGauge(t *testing.T) {
-
 	mtime := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()
 	var gaugeTests = []struct {
 		ptIn     telegraf.Metric

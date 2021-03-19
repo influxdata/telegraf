@@ -92,7 +92,6 @@ func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{})
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
-
 		cols := strings.Split(scanner.Text(), "=")
 
 		// Check split correctness

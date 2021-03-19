@@ -13,7 +13,6 @@ func TestTrig(t *testing.T) {
 	}
 
 	for i := 0.0; i < 10.0; i++ {
-
 		var acc testutil.Accumulator
 
 		sine := math.Sin((i*math.Pi)/5.0) * s.Amplitude

@@ -549,7 +549,6 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 			"queue_type":   string("persisted"),
 		},
 	)
-
 }
 
 func Test_Logstash5GatherJVMStats(test *testing.T) {
@@ -618,7 +617,6 @@ func Test_Logstash5GatherJVMStats(test *testing.T) {
 			"node_version": string("5.3.0"),
 		},
 	)
-
 }
 
 func Test_Logstash6GatherJVMStats(test *testing.T) {
@@ -687,5 +685,4 @@ func Test_Logstash6GatherJVMStats(test *testing.T) {
 			"node_version": string("6.4.2"),
 		},
 	)
-
 }

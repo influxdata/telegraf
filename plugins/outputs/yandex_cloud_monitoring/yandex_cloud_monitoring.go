@@ -156,7 +156,6 @@ func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return err
 	}
-	body = append(body, jsonBytes...)
 	body = append(jsonBytes, '\n')
 	return a.send(body)
 }
