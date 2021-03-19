@@ -235,6 +235,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			err := k.consumer.Consume(ctx, k.Topics, handler)
 			if err != nil {
 				acc.AddError(err)
+				// Ignore returned error as we cannot do anything about it anyway
 				//nolint:errcheck,revive
 				internal.SleepContext(ctx, reconnectDelay)
 			}
