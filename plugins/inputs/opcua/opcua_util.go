@@ -107,8 +107,12 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 		log.Printf("failed to open %s for writing: %s", keyFile, err)
 		return "", "", nil
 	}
-	if err := pem.Encode(keyOut, pemBlockForKey(priv)); err != nil {
-		return "", "", fmt.Errorf("failed to write data to %s: %s", keyFile, err)
+	key, err := pemBlockForKey(priv)
+	if err != nil {
+		log.Fatalf("error generating block: %v", err)
+	}
+	if err := pem.Encode(keyOut, key); err != nil {
+		log.Fatalf("failed to write data to %s: %s", keyFile, err)
 	}
 	if err := keyOut.Close(); err != nil {
 		return "", "", fmt.Errorf("error closing %s: %s", keyFile, err)
@@ -128,20 +132,18 @@ func publicKey(priv interface{}) interface{} {
 	}
 }
 
-func pemBlockForKey(priv interface{}) *pem.Block {
+func pemBlockForKey(priv interface{}) (*pem.Block, error) {
 	switch k := priv.(type) {
 	case *rsa.PrivateKey:
-		return &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)}
+		return &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)}, nil
 	case *ecdsa.PrivateKey:
 		b, err := x509.MarshalECPrivateKey(k)
 		if err != nil {
-			//nolint:errcheck,revive
-			fmt.Fprintf(os.Stderr, "Unable to marshal ECDSA private key: %v", err)
-			os.Exit(2)
+			return nil, fmt.Errorf("unable to marshal ECDSA private key: %v", err)
 		}
-		return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}
+		return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}, nil
 	default:
-		return nil
+		return nil, nil
 	}
 }
 
