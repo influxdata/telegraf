@@ -102,10 +102,7 @@ func TestStatefulSet(t *testing.T) {
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
 		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1.StatefulSetList)).Items {
-			err := ks.gatherStatefulSet(ss, acc)
-			if err != nil {
-				t.Errorf("Failed to gather ss - %s", err.Error())
-			}
+			ks.gatherStatefulSet(ss, acc)
 		}
 
 		err := acc.FirstError()
@@ -273,10 +270,7 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
 		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1.StatefulSetList)).Items {
-			err := ks.gatherStatefulSet(ss, acc)
-			if err != nil {
-				t.Errorf("Failed to gather ss - %s", err.Error())
-			}
+			ks.gatherStatefulSet(ss, acc)
 		}
 
 		// Grab selector tags

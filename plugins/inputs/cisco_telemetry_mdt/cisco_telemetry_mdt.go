@@ -449,7 +449,7 @@ func (c *CiscoTelemetryMDT) parseKeyField(tags map[string]string, field *telemet
 	}
 }
 
-func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string, path string, tags map[string]string, timestamp time.Time) {
+func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, path string, tags map[string]string, timestamp time.Time) {
 	// RIB
 	measurement := path
 	for _, subfield := range field.Fields {
@@ -481,13 +481,13 @@ func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telem
 	}
 }
 
-func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string, path string, tags map[string]string, timestamp time.Time) {
+func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, path string, tags map[string]string, timestamp time.Time) {
 	// DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
 	var nxAttributes *telemetry.TelemetryField
 	isDme := strings.Contains(path, "sys/")
 	if path == "rib" {
 		//handle native data path rib
-		c.parseRib(grouper, field, prefix, path, tags, timestamp)
+		c.parseRib(grouper, field, path, tags, timestamp)
 		return
 	}
 	if field == nil || !isDme || len(field.Fields) == 0 || len(field.Fields[0].Fields) == 0 || len(field.Fields[0].Fields[0].Fields) == 0 {
@@ -574,7 +574,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 			if nxAttributes == nil {
 				//call function walking over walking list.
 				for _, sub := range subfield.Fields {
-					c.parseClassAttributeField(grouper, sub, name, path, tags, timestamp)
+					c.parseClassAttributeField(grouper, sub, path, tags, timestamp)
 				}
 			}
 		} else if isNXOS && strings.HasPrefix(subfield.Name, "ROW_") {

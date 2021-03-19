@@ -160,7 +160,3 @@ func pod() *corev1.Pod {
 	p.Namespace = "default"
 	return p
 }
-
-func str(x string) *string {
-	return &x
-}
