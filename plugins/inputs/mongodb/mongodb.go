@@ -23,6 +23,7 @@ type MongoDB struct {
 	GatherClusterStatus bool
 	GatherPerdbStats    bool
 	GatherColStats      bool
+	GatherTopStat       bool
 	ColStatsDbs         []string
 	tlsint.ClientConfig
 
@@ -52,6 +53,10 @@ var sampleConfig = `
 
   ## When true, collect per collection stats
   # gather_col_stats = false
+
+  ## When true, collect usage statistics for each collection
+  ## (insert, update, queries, remove, getmore, commands etc...).
+  # gather_top_stat = false
 
   ## List of db where collections stats are collected
   ## If empty, all db are concerned
@@ -183,7 +188,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		}
 		server.Session = sess
 	}
-	return server.gatherData(acc, m.GatherClusterStatus, m.GatherPerdbStats, m.GatherColStats, m.ColStatsDbs)
+	return server.gatherData(acc, m.GatherClusterStatus, m.GatherPerdbStats, m.GatherColStats, m.GatherTopStat, m.ColStatsDbs)
 }
 
 func init() {
@@ -193,6 +198,7 @@ func init() {
 			GatherClusterStatus: true,
 			GatherPerdbStats:    false,
 			GatherColStats:      false,
+			GatherTopStat:       false,
 			ColStatsDbs:         []string{"local"},
 		}
 	})

@@ -232,6 +232,7 @@ For documentation on the latest development code see the [documentation index][d
 * [kernel](./plugins/inputs/kernel)
 * [kernel_vmstat](./plugins/inputs/kernel_vmstat)
 * [kibana](./plugins/inputs/kibana)
+* [knx_listener](./plugins/inputs/knx_listener)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [kube_inventory](./plugins/inputs/kube_inventory)
 * [lanz](./plugins/inputs/lanz)
