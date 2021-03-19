@@ -221,7 +221,10 @@ func (h *InfluxDBListener) handleQuery() http.HandlerFunc {
 		res.Header().Set("Content-Type", "application/json")
 		res.Header().Set("X-Influxdb-Version", "1.0")
 		res.WriteHeader(http.StatusOK)
-		res.Write([]byte("{\"results\":[]}"))
+		_, err := res.Write([]byte("{\"results\":[]}"))
+		if err != nil {
+			h.Log.Debugf("error writing result in handleQuery: %v", err)
+		}
 	}
 }
 
@@ -236,7 +239,9 @@ func (h *InfluxDBListener) handlePing() http.HandlerFunc {
 			res.Header().Set("Content-Type", "application/json")
 			res.WriteHeader(http.StatusOK)
 			b, _ := json.Marshal(map[string]string{"version": "1.0"}) // based on header set above
-			res.Write(b)
+			if _, err := res.Write(b); err != nil {
+				h.Log.Debugf("error writing result in handlePing: %v", err)
+			}
 		} else {
 			res.WriteHeader(http.StatusNoContent)
 		}
@@ -255,7 +260,9 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 		defer h.writesServed.Incr(1)
 		// Check that the content length is not too large for us to handle.
 		if req.ContentLength > h.MaxBodySize.Size {
-			tooLarge(res)
+			if err := tooLarge(res); err != nil {
+				h.Log.Debugf("error in too-large: %v", err)
+			}
 			return
 		}
 
@@ -270,7 +277,9 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 			body, err = gzip.NewReader(body)
 			if err != nil {
 				h.Log.Debugf("Error decompressing request body: %v", err.Error())
-				badRequest(res, err.Error())
+				if err := badRequest(res, err.Error()); err != nil {
+					h.Log.Debugf("error in bad-request: %v", err)
+				}
 				return
 			}
 			defer body.Close()
@@ -330,7 +339,9 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 		}
 		if err != influx.EOF {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
-			badRequest(res, err.Error())
+			if err := badRequest(res, err.Error()); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
 			return
 		}
 		if parseErrorCount > 0 {
@@ -343,7 +354,9 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 			default:
 				partialErrorString = fmt.Sprintf("%s (and %d other parse errors)", firstParseErrorStr, parseErrorCount-1)
 			}
-			partialWrite(res, partialErrorString)
+			if err := partialWrite(res, partialErrorString); err != nil {
+				h.Log.Debugf("error in partial-write: %v", err)
+			}
 			return
 		}
 
@@ -352,15 +365,16 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 	}
 }
 
-func tooLarge(res http.ResponseWriter) {
+func tooLarge(res http.ResponseWriter) error {
 	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.Header().Set("X-Influxdb-Error", "http: request body too large")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)
-	res.Write([]byte(`{"error":"http: request body too large"}`))
+	_, err := res.Write([]byte(`{"error":"http: request body too large"}`))
+	return err
 }
 
-func badRequest(res http.ResponseWriter, errString string) {
+func badRequest(res http.ResponseWriter, errString string) error {
 	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("X-Influxdb-Version", "1.0")
 	if errString == "" {
@@ -368,15 +382,17 @@ func badRequest(res http.ResponseWriter, errString string) {
 	}
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
-	res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
+	_, err := res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
+	return err
 }
 
-func partialWrite(res http.ResponseWriter, errString string) {
+func partialWrite(res http.ResponseWriter, errString string) error {
 	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
-	res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
+	_, err := res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
+	return err
 }
 
 func getPrecisionMultiplier(precision string) time.Duration {
