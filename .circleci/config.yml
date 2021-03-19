@@ -1,6 +1,7 @@
 version: 2.1
 orbs:
   win: circleci/windows@2.4.0  
+  aws-cli: circleci/aws-cli@1.4.0
 
 executors:
   go-1_15:
@@ -179,6 +180,15 @@ jobs:
       - store_artifacts:
           path: './dist'
           destination: 'build/dist'
+  share-artifacts:
+    executor: aws-cli/default  
+    steps:
+      - run:
+          command: |
+            PR=${CIRCLE_PULL_REQUEST##*/}
+            printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
+            curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"   
+                      
 workflows:
   version: 2
   check:
@@ -227,6 +237,13 @@ workflows:
             - 'test-go-1_15-386'
             - 'test-go-1_16'
             - 'test-go-1_16-386'
+      - 'share-artifacts':
+          requires:
+            - 'package'
+          filters:
+            branches:
+              ignore:
+                - master
       - 'release':
           requires:
             - 'test-go-windows'

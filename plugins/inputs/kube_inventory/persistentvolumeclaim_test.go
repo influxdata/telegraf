@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/core/v1"
-	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -29,7 +29,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 			name: "no pv claims",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumeclaims/": &v1.PersistentVolumeClaimList{},
+					"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{},
 				},
 			},
 			hasError: false,
@@ -38,14 +38,14 @@ func TestPersistentVolumeClaim(t *testing.T) {
 			name: "collect pv claims",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumeclaims/": &v1.PersistentVolumeClaimList{
-						Items: []*v1.PersistentVolumeClaim{
+					"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{
+						Items: []corev1.PersistentVolumeClaim{
 							{
-								Status: &v1.PersistentVolumeClaimStatus{
-									Phase: toStrPtr("bound"),
+								Status: corev1.PersistentVolumeClaimStatus{
+									Phase: "bound",
 								},
-								Spec: &v1.PersistentVolumeClaimSpec{
-									VolumeName:       toStrPtr("pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8"),
+								Spec: corev1.PersistentVolumeClaimSpec{
+									VolumeName:       "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
 									StorageClassName: toStrPtr("ebs-1"),
 									Selector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
@@ -54,14 +54,14 @@ func TestPersistentVolumeClaim(t *testing.T) {
 										},
 									},
 								},
-								Metadata: &metav1.ObjectMeta{
-									Namespace: toStrPtr("ns1"),
-									Name:      toStrPtr("pc1"),
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns1",
+									Name:      "pc1",
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+									CreationTimestamp: metav1.Time{Time: now},
 								},
 							},
 						},
@@ -97,8 +97,8 @@ func TestPersistentVolumeClaim(t *testing.T) {
 		}
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
-		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*v1.PersistentVolumeClaimList)).Items {
-			ks.gatherPersistentVolumeClaim(*pvc, acc)
+		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*corev1.PersistentVolumeClaimList)).Items {
+			ks.gatherPersistentVolumeClaim(pvc, acc)
 		}
 
 		err := acc.FirstError()
@@ -132,14 +132,14 @@ func TestPersistentVolumeClaimSelectorFilter(t *testing.T) {
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 
 	responseMap := map[string]interface{}{
-		"/persistentvolumeclaims/": &v1.PersistentVolumeClaimList{
-			Items: []*v1.PersistentVolumeClaim{
+		"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{
+			Items: []corev1.PersistentVolumeClaim{
 				{
-					Status: &v1.PersistentVolumeClaimStatus{
-						Phase: toStrPtr("bound"),
+					Status: corev1.PersistentVolumeClaimStatus{
+						Phase: "bound",
 					},
-					Spec: &v1.PersistentVolumeClaimSpec{
-						VolumeName:       toStrPtr("pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8"),
+					Spec: corev1.PersistentVolumeClaimSpec{
+						VolumeName:       "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
 						StorageClassName: toStrPtr("ebs-1"),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
@@ -148,14 +148,14 @@ func TestPersistentVolumeClaimSelectorFilter(t *testing.T) {
 							},
 						},
 					},
-					Metadata: &metav1.ObjectMeta{
-						Namespace: toStrPtr("ns1"),
-						Name:      toStrPtr("pc1"),
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "pc1",
 						Labels: map[string]string{
 							"lab1": "v1",
 							"lab2": "v2",
 						},
-						CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+						CreationTimestamp: metav1.Time{Time: now},
 					},
 				},
 			},
@@ -265,8 +265,8 @@ func TestPersistentVolumeClaimSelectorFilter(t *testing.T) {
 		ks.SelectorExclude = v.exclude
 		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
-		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*v1.PersistentVolumeClaimList)).Items {
-			ks.gatherPersistentVolumeClaim(*pvc, acc)
+		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*corev1.PersistentVolumeClaimList)).Items {
+			ks.gatherPersistentVolumeClaim(pvc, acc)
 		}
 
 		// Grab selector tags

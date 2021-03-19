@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/core/v1"
-	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
-	"github.com/ericchiang/k8s/apis/resource"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -26,7 +26,7 @@ func TestNode(t *testing.T) {
 			name: "no nodes",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/nodes/": &v1.NodeList{},
+					"/nodes/": corev1.NodeList{},
 				},
 			},
 			hasError: false,
@@ -35,63 +35,63 @@ func TestNode(t *testing.T) {
 			name: "collect nodes",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/nodes/": &v1.NodeList{
-						Items: []*v1.Node{
+					"/nodes/": corev1.NodeList{
+						Items: []corev1.Node{
 							{
-								Status: &v1.NodeStatus{
-									NodeInfo: &v1.NodeSystemInfo{
-										KernelVersion:           toStrPtr("4.14.48-coreos-r2"),
-										OsImage:                 toStrPtr("Container Linux by CoreOS 1745.7.0 (Rhyolite)"),
-										ContainerRuntimeVersion: toStrPtr("docker://18.3.1"),
-										KubeletVersion:          toStrPtr("v1.10.3"),
-										KubeProxyVersion:        toStrPtr("v1.10.3"),
+								Status: corev1.NodeStatus{
+									NodeInfo: corev1.NodeSystemInfo{
+										KernelVersion:           "4.14.48-coreos-r2",
+										OSImage:                 "Container Linux by CoreOS 1745.7.0 (Rhyolite)",
+										ContainerRuntimeVersion: "docker://18.3.1",
+										KubeletVersion:          "v1.10.3",
+										KubeProxyVersion:        "v1.10.3",
 									},
-									Phase: toStrPtr("Running"),
-									Capacity: map[string]*resource.Quantity{
-										"cpu":                     {String_: toStrPtr("16")},
-										"ephemeral_storage_bytes": {String_: toStrPtr("49536401408")},
-										"hugepages_1Gi_bytes":     {String_: toStrPtr("0")},
-										"hugepages_2Mi_bytes":     {String_: toStrPtr("0")},
-										"memory":                  {String_: toStrPtr("125817904Ki")},
-										"pods":                    {String_: toStrPtr("110")},
+									Phase: "Running",
+									Capacity: corev1.ResourceList{
+										"cpu":                     resource.Quantity{Format: "16"},
+										"ephemeral_storage_bytes": resource.Quantity{Format: "49536401408"},
+										"hugepages_1Gi_bytes":     resource.Quantity{Format: "0"},
+										"hugepages_2Mi_bytes":     resource.Quantity{Format: "0"},
+										"memory":                  resource.Quantity{Format: "125817904Ki"},
+										"pods":                    resource.Quantity{Format: "110"},
 									},
-									Allocatable: map[string]*resource.Quantity{
-										"cpu":                     {String_: toStrPtr("1000m")},
-										"ephemeral_storage_bytes": {String_: toStrPtr("44582761194")},
-										"hugepages_1Gi_bytes":     {String_: toStrPtr("0")},
-										"hugepages_2Mi_bytes":     {String_: toStrPtr("0")},
-										"memory":                  {String_: toStrPtr("125715504Ki")},
-										"pods":                    {String_: toStrPtr("110")},
+									Allocatable: corev1.ResourceList{
+										"cpu":                     resource.Quantity{Format: "1000m"},
+										"ephemeral_storage_bytes": resource.Quantity{Format: "44582761194"},
+										"hugepages_1Gi_bytes":     resource.Quantity{Format: "0"},
+										"hugepages_2Mi_bytes":     resource.Quantity{Format: "0"},
+										"memory":                  resource.Quantity{Format: "125715504Ki"},
+										"pods":                    resource.Quantity{Format: "110"},
 									},
-									Conditions: []*v1.NodeCondition{
-										{Type: toStrPtr("Ready"), Status: toStrPtr("true"), LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(now.Unix())}},
-										{Type: toStrPtr("OutOfDisk"), Status: toStrPtr("false"), LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(created.Unix())}},
-									},
-								},
-								Spec: &v1.NodeSpec{
-									ProviderID: toStrPtr("aws:///us-east-1c/i-0c00"),
-									Taints: []*v1.Taint{
-										{
-											Key:    toStrPtr("k1"),
-											Value:  toStrPtr("v1"),
-											Effect: toStrPtr("NoExecute"),
-										},
-										{
-											Key:    toStrPtr("k2"),
-											Value:  toStrPtr("v2"),
-											Effect: toStrPtr("NoSchedule"),
-										},
+									Conditions: []corev1.NodeCondition{
+										{Type: "Ready", Status: "true", LastTransitionTime: metav1.Time{Time: now}},
+										{Type: "OutOfDisk", Status: "false", LastTransitionTime: metav1.Time{Time: created}},
 									},
 								},
-								Metadata: &metav1.ObjectMeta{
-									Generation: toInt64Ptr(int64(11232)),
-									Namespace:  toStrPtr("ns1"),
-									Name:       toStrPtr("node1"),
+								Spec: corev1.NodeSpec{
+									ProviderID: "aws:///us-east-1c/i-0c00",
+									Taints: []corev1.Taint{
+										{
+											Key:    "k1",
+											Value:  "v1",
+											Effect: "NoExecute",
+										},
+										{
+											Key:    "k2",
+											Value:  "v2",
+											Effect: "NoSchedule",
+										},
+									},
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation: 11232,
+									Namespace:  "ns1",
+									Name:       "node1",
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(created.Unix())},
+									CreationTimestamp: metav1.Time{Time: now},
 								},
 							},
 						},
@@ -127,8 +127,8 @@ func TestNode(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, node := range ((v.handler.responseMap["/nodes/"]).(*v1.NodeList)).Items {
-			ks.gatherNode(*node, acc)
+		for _, node := range ((v.handler.responseMap["/nodes/"]).(corev1.NodeList)).Items {
+			ks.gatherNode(node, acc)
 		}
 
 		err := acc.FirstError()

@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -166,8 +167,9 @@ func runAgent(ctx context.Context,
 	}
 
 	// Setup logging as configured.
+	telegraf.Debug = ag.Config.Agent.Debug || *fDebug
 	logConfig := logger.LogConfig{
-		Debug:               ag.Config.Agent.Debug || *fDebug,
+		Debug:               telegraf.Debug,
 		Quiet:               ag.Config.Agent.Quiet || *fQuiet,
 		LogTarget:           ag.Config.Agent.LogTarget,
 		Logfile:             ag.Config.Agent.Logfile,

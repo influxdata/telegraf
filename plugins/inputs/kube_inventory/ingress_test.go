@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	v1 "github.com/ericchiang/k8s/apis/core/v1"
-	v1beta1EXT "github.com/ericchiang/k8s/apis/extensions/v1beta1"
-	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 	"github.com/influxdata/telegraf/testutil"
+	v1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestIngress(t *testing.T) {
@@ -26,7 +26,7 @@ func TestIngress(t *testing.T) {
 			name: "no ingress",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/ingress/": &v1beta1EXT.IngressList{},
+					"/ingress/": netv1.IngressList{},
 				},
 			},
 			hasError: false,
@@ -35,31 +35,35 @@ func TestIngress(t *testing.T) {
 			name: "collect ingress",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/ingress/": &v1beta1EXT.IngressList{
-						Items: []*v1beta1EXT.Ingress{
+					"/ingress/": netv1.IngressList{
+						Items: []netv1.Ingress{
 							{
-								Status: &v1beta1EXT.IngressStatus{
-									LoadBalancer: &v1.LoadBalancerStatus{
-										Ingress: []*v1.LoadBalancerIngress{
+								Status: netv1.IngressStatus{
+									LoadBalancer: v1.LoadBalancerStatus{
+										Ingress: []v1.LoadBalancerIngress{
 											{
-												Hostname: toStrPtr("chron-1"),
-												Ip:       toStrPtr("1.0.0.127"),
+												Hostname: "chron-1",
+												IP:       "1.0.0.127",
 											},
 										},
 									},
 								},
-								Spec: &v1beta1EXT.IngressSpec{
-									Rules: []*v1beta1EXT.IngressRule{
+								Spec: netv1.IngressSpec{
+									Rules: []netv1.IngressRule{
 										{
-											Host: toStrPtr("ui.internal"),
-											IngressRuleValue: &v1beta1EXT.IngressRuleValue{
-												Http: &v1beta1EXT.HTTPIngressRuleValue{
-													Paths: []*v1beta1EXT.HTTPIngressPath{
+											Host: "ui.internal",
+											IngressRuleValue: netv1.IngressRuleValue{
+												HTTP: &netv1.HTTPIngressRuleValue{
+													Paths: []netv1.HTTPIngressPath{
 														{
-															Path: toStrPtr("/"),
-															Backend: &v1beta1EXT.IngressBackend{
-																ServiceName: toStrPtr("chronografd"),
-																ServicePort: toIntStrPtrI(8080),
+															Path: "/",
+															Backend: netv1.IngressBackend{
+																Service: &netv1.IngressServiceBackend{
+																	Name: "chronografd",
+																	Port: netv1.ServiceBackendPort{
+																		Number: 8080,
+																	},
+																},
 															},
 														},
 													},
@@ -68,11 +72,11 @@ func TestIngress(t *testing.T) {
 										},
 									},
 								},
-								Metadata: &metav1.ObjectMeta{
-									Generation:        toInt64Ptr(12),
-									Namespace:         toStrPtr("ns1"),
-									Name:              toStrPtr("ui-lb"),
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation:        12,
+									Namespace:         "ns1",
+									Name:              "ui-lb",
+									CreationTimestamp: metav1.Time{Time: now},
 								},
 							},
 						},
@@ -109,8 +113,8 @@ func TestIngress(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, ingress := range ((v.handler.responseMap["/ingress/"]).(*v1beta1EXT.IngressList)).Items {
-			ks.gatherIngress(*ingress, acc)
+		for _, ingress := range ((v.handler.responseMap["/ingress/"]).(netv1.IngressList)).Items {
+			ks.gatherIngress(ingress, acc)
 		}
 
 		err := acc.FirstError()
