@@ -51,14 +51,15 @@ type openConfigTelemetryServer struct {
 
 func (s *openConfigTelemetryServer) TelemetrySubscribe(req *telemetry.SubscriptionRequest, stream telemetry.OpenConfigTelemetry_TelemetrySubscribeServer) error {
 	path := req.PathList[0].Path
-	if path == "/sensor" {
-		stream.Send(data)
-	} else if path == "/sensor_with_prefix" {
-		stream.Send(dataWithPrefix)
-	} else if path == "/sensor_with_multiple_tags" {
-		stream.Send(dataWithMultipleTags)
-	} else if path == "/sensor_with_string_values" {
-		stream.Send(dataWithStringValues)
+	switch path {
+	case "/sensor":
+		return stream.Send(data)
+	case "/sensor_with_prefix":
+		return stream.Send(dataWithPrefix)
+	case "/sensor_with_multiple_tags":
+		return stream.Send(dataWithMultipleTags)
+	case "/sensor_with_string_values":
+		return stream.Send(dataWithStringValues)
 	}
 	return nil
 }
@@ -219,6 +220,8 @@ func TestMain(m *testing.M) {
 	grpcServer := grpc.NewServer(opts...)
 	telemetry.RegisterOpenConfigTelemetryServer(grpcServer, newServer())
 	go func() {
+		// Ignore the returned error as the tests will fail anyway
+		//nolint:errcheck,revive
 		grpcServer.Serve(lis)
 	}()
 	defer grpcServer.Stop()

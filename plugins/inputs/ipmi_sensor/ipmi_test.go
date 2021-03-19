@@ -373,9 +373,12 @@ OS RealTime Mod  | 0x00              | ok
 	// /tmp/go-build970079519/…/_test/integration.test -test.run=TestHelperProcess --
 	cmd, args := args[3], args[4:]
 
+	// Ignore the returned errors for the mocked interface as tests will fail anyway
 	if cmd == "ipmitool" {
+		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, mockData)
 	} else {
+		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
 	}
@@ -567,9 +570,12 @@ Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
 	// /tmp/go-build970079519/…/_test/integration.test -test.run=TestHelperProcess --
 	cmd, args := args[3], args[4:]
 
+	// Ignore the returned errors for the mocked interface as tests will fail anyway
 	if cmd == "ipmitool" {
+		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, mockData)
 	} else {
+		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
 	}
