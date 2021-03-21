@@ -48,7 +48,7 @@ type X509Cert struct {
 	ServerName string            `toml:"server_name"`
 	tlsCfg     *tls.Config
 	_tls.ClientConfig
-	urls      []*url.URL
+	locations []*url.URL
 	globpaths []*globpath.GlobPath
 	Log       telegraf.Logger
 }
@@ -68,7 +68,6 @@ func (c *X509Cert) sourcesToURLs() error {
 		if strings.HasPrefix(source, "file://") ||
 			strings.HasPrefix(source, "/") ||
 			strings.Index(source, ":\\") != 1 {
-
 			source = filepath.ToSlash(strings.TrimPrefix(source, "file://"))
 			g, err := globpath.Compile(source)
 			if err != nil {
@@ -76,7 +75,6 @@ func (c *X509Cert) sourcesToURLs() error {
 			}
 			c.globpaths = append(c.globpaths, g)
 		} else {
-
 			if strings.Index(source, ":\\") == 1 {
 				source = "file://" + filepath.ToSlash(source)
 			}
@@ -85,7 +83,7 @@ func (c *X509Cert) sourcesToURLs() error {
 				return fmt.Errorf("failed to parse cert location - %s", err.Error())
 			}
 
-			c.urls = append(c.urls, u)
+			c.locations = append(c.locations, u)
 		}
 	}
 
@@ -226,10 +224,10 @@ func getTags(cert *x509.Certificate, location string) map[string]string {
 func (c *X509Cert) collectCertURLs() ([]*url.URL, error) {
 	var urls []*url.URL
 
-	for _, globpath := range c.globpaths {
-		files := globpath.Match()
+	for _, path := range c.globpaths {
+		files := path.Match()
 		if len(files) <= 0 {
-			c.Log.Errorf("could not find file: %v", globpath)
+			c.Log.Errorf("could not find file: %v", path)
 			continue
 		}
 		for _, file := range files {
@@ -253,15 +251,15 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 		acc.AddError(fmt.Errorf("cannot get file: %s", err.Error()))
 	}
 
-	for _, url := range append(c.urls, collectedUrls...) {
-		certs, err := c.getCert(url, c.Timeout.Duration*time.Second)
+	for _, location := range append(c.locations, collectedUrls...) {
+		certs, err := c.getCert(location, c.Timeout.Duration*time.Second)
 		if err != nil {
-			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", url, err.Error()))
+			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
 		}
 
 		for i, cert := range certs {
 			fields := getFields(cert, now)
-			tags := getTags(cert, url.String())
+			tags := getTags(cert, location.String())
 
 			// The first certificate is the leaf/end-entity certificate which needs DNS
 			// name validation against the URL hostname.
@@ -270,7 +268,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 			}
 			if i == 0 {
-				opts.DNSName, err = c.serverName(url)
+				opts.DNSName, err = c.serverName(location)
 				if err != nil {
 					return err
 				}
@@ -302,7 +300,6 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 }
 
 func (c *X509Cert) Init() error {
-
 	err := c.sourcesToURLs()
 	if err != nil {
 		return err
