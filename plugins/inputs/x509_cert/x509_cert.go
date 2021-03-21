@@ -77,9 +77,9 @@ func (c *X509Cert) sourcesToURLs() error {
 			c.globpaths = append(c.globpaths, g)
 		} else {
 
-      if strings.Index(source, ":\\") == 1 {
-        source = "file://" + filepath.ToSlash(source)
-      }
+			if strings.Index(source, ":\\") == 1 {
+				source = "file://" + filepath.ToSlash(source)
+			}
 			u, err := url.Parse(source)
 			if err != nil {
 				return fmt.Errorf("failed to parse cert location - %s", err.Error())
