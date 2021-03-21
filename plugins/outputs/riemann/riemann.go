@@ -145,7 +145,7 @@ func (r *Riemann) buildRiemannEvents(m telegraf.Metric) []*raidman.Event {
 			Tags:       r.tags(m.Tags()),
 		}
 
-		switch value := value.(type) {
+		switch v := value.(type) {
 		case string:
 			// only send string metrics if explicitly enabled, skip otherwise
 			if !r.StringAsState {
