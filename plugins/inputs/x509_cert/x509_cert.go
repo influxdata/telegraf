@@ -67,7 +67,7 @@ func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
 		if strings.HasPrefix(source, "file://") ||
 			strings.HasPrefix(source, "/") ||
-			strings.Index(source, ":\\") == 1 {
+			strings.Index(source, ":\\") != 1 {
 
 			source = filepath.ToSlash(strings.TrimPrefix(source, "file://"))
 			g, err := globpath.Compile(source)
@@ -77,6 +77,9 @@ func (c *X509Cert) sourcesToURLs() error {
 			c.globpaths = append(c.globpaths, g)
 		} else {
 
+      if strings.Index(source, ":\\") == 1 {
+        source = "file://" + filepath.ToSlash(source)
+      }
 			u, err := url.Parse(source)
 			if err != nil {
 				return fmt.Errorf("failed to parse cert location - %s", err.Error())
