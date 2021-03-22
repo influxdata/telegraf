@@ -10,10 +10,10 @@ require (
 	collectd.org v0.5.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
 	github.com/Azure/azure-storage-queue-go v0.0.0-20181215014128-6ed74e755687
-	github.com/Azure/go-autorest/autorest v0.11.17
-	github.com/Azure/go-autorest/autorest/adal v0.8.1
-	github.com/Azure/go-autorest/autorest/azure/auth v0.5.6
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
+	github.com/Azure/go-autorest/autorest v0.11.17
+	github.com/Azure/go-autorest/autorest/adal v0.9.5
+	github.com/Azure/go-autorest/autorest/azure/auth v0.5.6
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
 	github.com/Microsoft/ApplicationInsights-Go v0.4.2
@@ -101,7 +101,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
-	github.com/opentracing/opentracing-go v1.0.2 // indirect
 	github.com/openzipkin/zipkin-go-opentracing v0.3.4
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
@@ -120,6 +119,7 @@ require (
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
+	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00 // indirect
 	github.com/tidwall/gjson v1.6.0
 	github.com/tinylib/msgp v1.1.5
 	github.com/vapourismo/knx-go v0.0.0-20201122213738-75fe09ace330

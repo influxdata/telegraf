@@ -42,7 +42,7 @@ type Query struct {
 var adalToken *adal.Token
 
 // var for mutual exclusion lock
-var mutex sync.RWMutex
+var muCacheLock sync.RWMutex
 
 // MapQuery type
 type MapQuery map[string]Query
@@ -249,7 +249,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	var healthMetrics = make(map[string]*HealthMetric)
 
 	// initialize mutual exclusion lock
-	mutex = sync.RWMutex{}
+	muCacheLock = sync.RWMutex{}
 
 	for i, pool := range s.pools {
 		for _, query := range s.queries {
@@ -469,22 +469,22 @@ func getTokenProvider() (func() (string, error), error) {
 	var tokenString string
 
 	// load token
-	mutex.RLock()
-	token, err := LoadToken()
-	mutex.RUnlock()
+	muCacheLock.RLock()
+	token, err := loadToken()
+	muCacheLock.RUnlock()
 
 	// if there's error while loading token or found an expired token, refresh token and save it
 	if err != nil || token.IsExpired() {
 		// refresh token within a write-lock
-		mutex.Lock()
+		muCacheLock.Lock()
 
 		// load token again, in case it's been refreshed by another thread
-		token, err = LoadToken()
+		token, err = loadToken()
 
 		// check loaded token's error/validity, then refresh/save token
 		if err != nil || token.IsExpired() {
 			// get new token
-			spt, err := RefreshToken()
+			spt, err := refreshToken()
 			if err != nil {
 				return nil, err
 			}
@@ -496,7 +496,7 @@ func getTokenProvider() (func() (string, error), error) {
 			tokenString = token.OAuthToken()
 		}
 
-		mutex.Unlock()
+		muCacheLock.Unlock()
 	} else {
 		// use locally cached token
 		tokenString = token.OAuthToken()
@@ -509,7 +509,7 @@ func getTokenProvider() (func() (string, error), error) {
 }
 
 // Load token from in-mem cache
-func LoadToken() (*adal.Token, error) {
+func loadToken() (*adal.Token, error) {
 	if adalToken == nil {
 		return nil, fmt.Errorf("Token is nil or Failed to load existing token")
 	} else {
@@ -518,7 +518,7 @@ func LoadToken() (*adal.Token, error) {
 }
 
 // Refresh token for the resource, and save to in-mem cache
-func RefreshToken() (*adal.Token, error) {
+func refreshToken() (*adal.Token, error) {
 	// resource id for Azure SQL Database
 	const sqlAzureResourceID = "https://database.windows.net/"
 
