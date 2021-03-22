@@ -734,7 +734,7 @@ func parseContainerStats(
 		acc.AddFields("docker_container_cpu", cpufields, cputags, tm)
 	}
 
-	if choice.Contains("cpu", perDeviceInclude) {
+	if choice.Contains("cpu", perDeviceInclude) && len(stat.CPUStats.CPUUsage.PercpuUsage) > 0 {
 		// If we have OnlineCPUs field, then use it to restrict stats gathering to only Online CPUs
 		// (https://github.com/moby/moby/commit/115f91d7575d6de6c7781a96a082f144fd17e400)
 		var percpuusage []uint64
