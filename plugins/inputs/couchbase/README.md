@@ -1,16 +1,6 @@
 # Couchbase Input Plugin
 Couchbase is a distributed NoSQL database.
 This plugin gets metrics for each Couchbase node, as well as detailed metrics for each bucket, for a given couchbase server.
-Because of the way Couchbase returns many metrics in time-based intervals, the first Gather period will be skipped in order to determine 
-the time window of metrics for Telegraf to retrieve. Thus, the frequency of couchbase Bucket metrics will be based on your telegraf interval.
-
-Metrics will be retrieved at roughly these intervals from Couchbase, based on your interval:
-
-Interval less than 1 minute = bucket metrics every second.
-Interval less than 1 hour = bucket metrics every 4 seconds.
-Interval less than 1 day = bucket metrics every minute.
-Interval less than 8 days = bucket metrics every 10 minutes.
-Interval 8 or more days = bucket metrics every 6 hours.
 
 ## Configuration:
 
@@ -27,6 +17,9 @@ Interval 8 or more days = bucket metrics every 6 hours.
   ## If no protocol is specified, HTTP is used.
   ## If no port is specified, 8091 is used.
   servers = ["http://localhost:8091"]
+
+  ## Use "basic" for a limited number of basic bucket stats. Use "detailed" for a more comprehensive list of all bucket stats.
+  bucket_metric_type = "basic"
 ```
 
 ## Measurements:
@@ -47,7 +40,7 @@ Tags:
 - cluster: whatever you called it in `servers` in the configuration, e.g.: `http://couchbase-0.example.com/`)
 - bucket: the name of the couchbase bucket, e.g., `blastro-df`
 
-Fields:
+Fields for "basic" type:
 - quota_percent_used (unit: percent, example: 68.85424936294555)
 - ops_per_sec (unit: count, example: 5686.789686789687)
 - disk_fetches (unit: count, example: 0.0)
@@ -55,6 +48,8 @@ Fields:
 - disk_used (unit: bytes, example: 409178772321.0)
 - data_used (unit: bytes, example: 212179309111.0)
 - mem_used (unit: bytes, example: 202156957464.0)
+
+Additional fields for "detailed" type:
 - couch_total_disk_size                    
 - couch_docs_fragmentation
 - couch_views_fragmentation

@@ -2,8 +2,9 @@ package couchbase
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -65,24 +66,30 @@ func TestSanitizeURI(t *testing.T) {
 	}
 }
 
-func TestGatherExtendedBucketMetrics(t *testing.T) {
+func TestGatherDetailedBucketMetrics(t *testing.T) {
+	bucket := "Ducks"
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/pools/default/buckets/"+bucket+"/stats" {
+			_, _ = w.Write([]byte(bucketStatsResponse))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
 	var cb Couchbase
 	var acc testutil.Accumulator
 	bucketStats := &BucketStats{}
 	if err := json.Unmarshal([]byte(bucketStatsResponse), bucketStats); err != nil {
 		t.Fatal("parse bucketResponse", err)
 	}
-	tags := map[string]string{"cluster": "test_cluster", "bucket": "Ducks"}
 
-	// We're setting the last interval as 30 seconds ago.
-	// The response should have a minutes worth of metrics, so we're going to require that we gather half of them then.
-	cb.lastInterval = time.Unix(0, bucketStats.Op.Lasttstamp*int64(time.Millisecond)).Add(-30 * time.Second)
-	cb.zoom = "minute"
+	fields := make(map[string]interface{})
+	cb.gatherDetailedBucketStats(fakeServer.URL, bucket, fields)
+	acc.AddFields("couchbase_bucket", fields, nil)
 
-	cb.Init()
-	cb.gatherExtendedBucketStats(&acc, bucketStats, tags, cb.lastInterval)
-
-	require.Equal(t, len(acc.Metrics), 30)
+	// Ensure we gathered a copy of all the metrics, once.
+	require.Equal(t, len(acc.Metrics), 1)
+	require.Equal(t, len(acc.Metrics[0].Fields), 214)
 }
 
 // From `/pools/default` on a real cluster
