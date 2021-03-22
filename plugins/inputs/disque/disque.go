@@ -18,8 +18,7 @@ import (
 type Disque struct {
 	Servers []string
 
-	c   net.Conn
-	buf []byte
+	c net.Conn
 }
 
 var sampleConfig = `
@@ -87,10 +86,10 @@ func (d *Disque) Gather(acc telegraf.Accumulator) error {
 			u.Path = ""
 		}
 		wg.Add(1)
-		go func(serv string) {
+		go func() {
 			defer wg.Done()
 			acc.AddError(d.gatherServer(u, acc))
-		}(serv)
+		}()
 	}
 
 	wg.Wait()

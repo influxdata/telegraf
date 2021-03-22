@@ -12,7 +12,6 @@ import (
 
 // MetricHandler implements the Handler interface and produces telegraf.Metric.
 type MetricHandler struct {
-	err           error
 	timePrecision time.Duration
 	timeFunc      TimeFunc
 	metric        telegraf.Metric

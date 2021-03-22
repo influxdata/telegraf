@@ -486,14 +486,6 @@ func parseAerospikeValue(key string, v string) interface{} {
 	}
 }
 
-func copyTags(m map[string]string) map[string]string {
-	out := make(map[string]string)
-	for k, v := range m {
-		out[k] = v
-	}
-	return out
-}
-
 func init() {
 	inputs.Add("aerospike", func() telegraf.Input {
 		return &Aerospike{}

@@ -70,13 +70,13 @@ func (g *Gelf) Write(message []byte) (n int, err error) {
 
 		for i, index := 0, 0; i < length; i, index = i+chunksize, index+1 {
 			packet := g.createChunkedMessage(index, chunkCountInt, id, &compressed)
-			_, err = g.send(packet.Bytes())
+			err = g.send(packet.Bytes())
 			if err != nil {
 				return 0, err
 			}
 		}
 	} else {
-		_, err = g.send(compressed.Bytes())
+		err = g.send(compressed.Bytes())
 		if err != nil {
 			return 0, err
 		}
@@ -133,19 +133,19 @@ func (g *Gelf) compress(b []byte) bytes.Buffer {
 	return buf
 }
 
-func (g *Gelf) send(b []byte) (n int, err error) {
+func (g *Gelf) send(b []byte) error {
 	udpAddr, err := net.ResolveUDPAddr("udp", g.GelfConfig.GraylogEndpoint)
 	if err != nil {
-		return
+		return err
 	}
 
 	conn, err := net.DialUDP("udp", nil, udpAddr)
 	if err != nil {
-		return
+		return err
 	}
 
-	n, err = conn.Write(b)
-	return
+	_, err = conn.Write(b)
+	return err
 }
 
 type Graylog struct {

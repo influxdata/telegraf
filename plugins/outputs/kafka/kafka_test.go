@@ -179,7 +179,7 @@ func (p *MockProducer) Close() error {
 	return nil
 }
 
-func NewMockProducer(addrs []string, config *sarama.Config) (sarama.SyncProducer, error) {
+func NewMockProducer(_ []string, _ *sarama.Config) (sarama.SyncProducer, error) {
 	return &MockProducer{}, nil
 }
 

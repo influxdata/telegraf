@@ -1125,8 +1125,8 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 	}
 }
 
-func TestNewListTimeSeriesFilter(t *testing.T) {
+func TestNewListTimeSeriesFilter(_ *testing.T) {
 }
 
-func TestTimeSeriesConfCacheIsValid(t *testing.T) {
+func TestTimeSeriesConfCacheIsValid(_ *testing.T) {
 }

@@ -144,7 +144,7 @@ func TestServeHTTP(t *testing.T) {
 		pubPush.SetParser(p)
 
 		dst := make(chan telegraf.Metric, 1)
-		ro := models.NewRunningOutput("test", &testOutput{failWrite: test.fail}, &models.OutputConfig{}, 1, 1)
+		ro := models.NewRunningOutput(&testOutput{failWrite: test.fail}, &models.OutputConfig{}, 1, 1)
 		pubPush.acc = agent.NewAccumulator(&testMetricMaker{}, dst).WithTracking(1)
 
 		wg.Add(1)
@@ -154,13 +154,13 @@ func TestServeHTTP(t *testing.T) {
 		}()
 
 		wg.Add(1)
-		go func(status int, d chan telegraf.Metric) {
+		go func(d chan telegraf.Metric) {
 			defer wg.Done()
 			for m := range d {
 				ro.AddMetric(m)
 				ro.Write()
 			}
-		}(test.status, dst)
+		}(dst)
 
 		ctx, cancel := context.WithTimeout(req.Context(), pubPush.WriteTimeout.Duration)
 		req = req.WithContext(ctx)
@@ -218,7 +218,7 @@ func (*testOutput) SampleConfig() string {
 	return ""
 }
 
-func (t *testOutput) Write(metrics []telegraf.Metric) error {
+func (t *testOutput) Write(_ []telegraf.Metric) error {
 	if t.failWrite {
 		return fmt.Errorf("failed write")
 	}

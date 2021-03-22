@@ -96,8 +96,6 @@ const sampleJSON = `
 
 var (
 	zero           float64
-	err            error
-	pluginOutput   []pluginData
 	expectedOutput = []pluginData{
 		// 		{"object:f48698", "dummy", "input", nil, nil, nil},
 		// 		{"object:e27138", "dummy", "input", nil, nil, nil},

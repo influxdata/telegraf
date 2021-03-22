@@ -13,6 +13,8 @@ import (
 	"testing"
 )
 
+const requestID uint16 = 1
+
 var sizeTests = []struct {
 	size  uint32
 	bytes []byte
@@ -124,7 +126,7 @@ func (c *writeOnlyConn) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (c *writeOnlyConn) Read(p []byte) (int, error) {
+func (c *writeOnlyConn) Read(_ []byte) (int, error) {
 	return 0, errors.New("conn is write-only")
 }
 
@@ -164,7 +166,6 @@ func nameValuePair11(nameData, valueData string) []byte {
 
 func makeRecord(
 	recordType recType,
-	requestID uint16,
 	contentData []byte,
 ) []byte {
 	requestIDB1 := byte(requestID >> 8)
@@ -185,14 +186,13 @@ func makeRecord(
 // request body
 var streamBeginTypeStdin = bytes.Join([][]byte{
 	// set up request 1
-	makeRecord(typeBeginRequest, 1,
-		[]byte{0, byte(roleResponder), 0, 0, 0, 0, 0, 0}),
+	makeRecord(typeBeginRequest, []byte{0, byte(roleResponder), 0, 0, 0, 0, 0, 0}),
 	// add required parameters to request 1
-	makeRecord(typeParams, 1, nameValuePair11("REQUEST_METHOD", "GET")),
-	makeRecord(typeParams, 1, nameValuePair11("SERVER_PROTOCOL", "HTTP/1.1")),
-	makeRecord(typeParams, 1, nil),
+	makeRecord(typeParams, nameValuePair11("REQUEST_METHOD", "GET")),
+	makeRecord(typeParams, nameValuePair11("SERVER_PROTOCOL", "HTTP/1.1")),
+	makeRecord(typeParams, nil),
 	// begin sending body of request 1
-	makeRecord(typeStdin, 1, []byte("0123456789abcdef")),
+	makeRecord(typeStdin, []byte("0123456789abcdef")),
 },
 	nil)
 
@@ -204,7 +204,7 @@ var cleanUpTests = []struct {
 	{
 		bytes.Join([][]byte{
 			streamBeginTypeStdin,
-			makeRecord(typeAbortRequest, 1, nil),
+			makeRecord(typeAbortRequest, nil),
 		},
 			nil),
 		ErrRequestAborted,
@@ -265,7 +265,7 @@ func (rwNopCloser) Close() error {
 }
 
 // Verifies it doesn't crash. 	Issue 11824.
-func TestMalformedParams(t *testing.T) {
+func TestMalformedParams(_ *testing.T) {
 	input := []byte{
 		// beginRequest, requestId=1, contentLength=8, role=1, keepConn=1
 		1, 1, 0, 1, 0, 8, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,

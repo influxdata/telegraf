@@ -215,7 +215,7 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 
 // Gather measures and submits one full set of telemetry to Telegraf.
 // Not used here, submission is completely input-driven.
-func (s *Suricata) Gather(acc telegraf.Accumulator) error {
+func (s *Suricata) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

@@ -33,9 +33,9 @@ type transportMock struct {
 	body       string
 }
 
-func newTransportMock(statusCode int, body string) http.RoundTripper {
+func newTransportMock(body string) http.RoundTripper {
 	return &transportMock{
-		statusCode: statusCode,
+		statusCode: http.StatusOK,
 		body:       body,
 	}
 }
@@ -77,7 +77,7 @@ func checkNodeStatsResult(t *testing.T, acc *testutil.Accumulator) {
 func TestGather(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.Servers = []string{"http://example.com:9200"}
-	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+	es.client.Transport = newTransportMock(nodeStatsResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
@@ -94,7 +94,7 @@ func TestGatherIndividualStats(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.Servers = []string{"http://example.com:9200"}
 	es.NodeStats = []string{"jvm", "process"}
-	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponseJVMProcess)
+	es.client.Transport = newTransportMock(nodeStatsResponseJVMProcess)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
@@ -120,7 +120,7 @@ func TestGatherIndividualStats(t *testing.T) {
 func TestGatherNodeStats(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.Servers = []string{"http://example.com:9200"}
-	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+	es.client.Transport = newTransportMock(nodeStatsResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
@@ -138,7 +138,7 @@ func TestGatherClusterHealthEmptyClusterHealth(t *testing.T) {
 	es.Servers = []string{"http://example.com:9200"}
 	es.ClusterHealth = true
 	es.ClusterHealthLevel = ""
-	es.client.Transport = newTransportMock(http.StatusOK, clusterHealthResponse)
+	es.client.Transport = newTransportMock(clusterHealthResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
@@ -165,7 +165,7 @@ func TestGatherClusterHealthSpecificClusterHealth(t *testing.T) {
 	es.Servers = []string{"http://example.com:9200"}
 	es.ClusterHealth = true
 	es.ClusterHealthLevel = "cluster"
-	es.client.Transport = newTransportMock(http.StatusOK, clusterHealthResponse)
+	es.client.Transport = newTransportMock(clusterHealthResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
@@ -192,7 +192,7 @@ func TestGatherClusterHealthAlsoIndicesHealth(t *testing.T) {
 	es.Servers = []string{"http://example.com:9200"}
 	es.ClusterHealth = true
 	es.ClusterHealthLevel = "indices"
-	es.client.Transport = newTransportMock(http.StatusOK, clusterHealthResponseWithIndices)
+	es.client.Transport = newTransportMock(clusterHealthResponseWithIndices)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
@@ -223,7 +223,7 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 	info := serverInfo{nodeID: "SDFsfSDFsdfFSDSDfSFDSDF", masterID: ""}
 
 	// first get catMaster
-	es.client.Transport = newTransportMock(http.StatusOK, IsMasterResult)
+	es.client.Transport = newTransportMock(IsMasterResult)
 	masterID, err := es.getCatMaster("junk")
 	require.NoError(t, err)
 	info.masterID = masterID
@@ -238,7 +238,7 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 	// now get node status, which determines whether we're master
 	var acc testutil.Accumulator
 	es.Local = true
-	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+	es.client.Transport = newTransportMock(nodeStatsResponse)
 	if err := es.gatherNodeStats("junk", &acc); err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +247,7 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 	checkNodeStatsResult(t, &acc)
 
 	// now test the clusterstats method
-	es.client.Transport = newTransportMock(http.StatusOK, clusterStatsResponse)
+	es.client.Transport = newTransportMock(clusterStatsResponse)
 	require.NoError(t, es.gatherClusterStats("junk", &acc))
 
 	tags := map[string]string{
@@ -269,7 +269,7 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 	es.serverInfo["http://example.com:9200"] = serverInfo{nodeID: "SDFsfSDFsdfFSDSDfSFDSDF", masterID: ""}
 
 	// first get catMaster
-	es.client.Transport = newTransportMock(http.StatusOK, IsNotMasterResult)
+	es.client.Transport = newTransportMock(IsNotMasterResult)
 	masterID, err := es.getCatMaster("junk")
 	require.NoError(t, err)
 
@@ -282,7 +282,7 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 	// now get node status, which determines whether we're master
 	var acc testutil.Accumulator
 	es.Local = true
-	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+	es.client.Transport = newTransportMock(nodeStatsResponse)
 	if err := es.gatherNodeStats("junk", &acc); err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +296,7 @@ func TestGatherClusterIndicesStats(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.IndicesInclude = []string{"_all"}
 	es.Servers = []string{"http://example.com:9200"}
-	es.client.Transport = newTransportMock(http.StatusOK, clusterIndicesResponse)
+	es.client.Transport = newTransportMock(clusterIndicesResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
@@ -315,7 +315,7 @@ func TestGatherDateStampedIndicesStats(t *testing.T) {
 	es.IndicesInclude = []string{"twitter*", "influx*", "penguins"}
 	es.NumMostRecentIndices = 2
 	es.Servers = []string{"http://example.com:9200"}
-	es.client.Transport = newTransportMock(http.StatusOK, dateStampedIndicesResponse)
+	es.client.Transport = newTransportMock(dateStampedIndicesResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 	es.Init()
@@ -357,7 +357,7 @@ func TestGatherClusterIndiceShardsStats(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.IndicesLevel = "shards"
 	es.Servers = []string{"http://example.com:9200"}
-	es.client.Transport = newTransportMock(http.StatusOK, clusterIndicesShardsResponse)
+	es.client.Transport = newTransportMock(clusterIndicesShardsResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 

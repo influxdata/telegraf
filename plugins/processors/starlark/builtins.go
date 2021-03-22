@@ -9,7 +9,7 @@ import (
 	"go.starlark.net/starlark"
 )
 
-func newMetric(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func newMetric(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	var name starlark.String
 	if err := starlark.UnpackPositionalArgs("Metric", args, kwargs, 1, &name); err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func newMetric(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple
 	return &Metric{metric: m}, nil
 }
 
-func deepcopy(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func deepcopy(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	var sm *Metric
 	if err := starlark.UnpackPositionalArgs("deepcopy", args, kwargs, 1, &sm); err != nil {
 		return nil, err
@@ -69,12 +69,6 @@ func builtinAttrNames(methods map[string]builtinMethod) []string {
 	}
 	sort.Strings(names)
 	return names
-}
-
-// nameErr returns an error message of the form "name: msg"
-// where name is b.Name() and msg is a string or error.
-func nameErr(b *starlark.Builtin, msg interface{}) error {
-	return fmt.Errorf("%s: %v", b.Name(), msg)
 }
 
 // --- dictionary methods ---

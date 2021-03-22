@@ -77,13 +77,6 @@ func TestCSVGZImport(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// For JSON data.
-type event struct {
-	Name   string
-	Speed  float64
-	Length float64
-}
-
 func TestMultipleJSONFileImports(t *testing.T) {
 	acc := testutil.Accumulator{}
 	testJsonFile := "test.json"

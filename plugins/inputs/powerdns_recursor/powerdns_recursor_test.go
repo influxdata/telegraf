@@ -13,8 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type statServer struct{}
-
 var metrics = "all-outqueries\t3591637\nanswers-slow\t36451\nanswers0-1\t177297\nanswers1-10\t1209328\n" +
 	"answers10-100\t1238786\nanswers100-1000\t402917\nauth-zone-queries\t4\nauth4-answers-slow\t44248\n" +
 	"auth4-answers0-1\t59169\nauth4-answers1-10\t1747403\nauth4-answers10-100\t1315621\n" +

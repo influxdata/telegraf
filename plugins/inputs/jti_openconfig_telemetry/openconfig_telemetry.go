@@ -102,7 +102,7 @@ func (m *OpenConfigTelemetry) Description() string {
 	return "Read JTI OpenConfig Telemetry from listed sensors"
 }
 
-func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
+func (m *OpenConfigTelemetry) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -278,9 +278,12 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 }
 
 // Subscribes and collects OpenConfig telemetry data from given server
-func (m *OpenConfigTelemetry) collectData(ctx context.Context,
-	grpcServer string, grpcClientConn *grpc.ClientConn,
-	acc telegraf.Accumulator) error {
+func (m *OpenConfigTelemetry) collectData(
+	ctx context.Context,
+	grpcServer string,
+	grpcClientConn *grpc.ClientConn,
+	acc telegraf.Accumulator,
+) {
 	c := telemetry.NewOpenConfigTelemetryClient(grpcClientConn)
 	for _, sensor := range m.sensorsConfig {
 		m.wg.Add(1)
@@ -342,8 +345,6 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 			}
 		}(ctx, sensor)
 	}
-
-	return nil
 }
 
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {

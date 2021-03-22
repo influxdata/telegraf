@@ -17,19 +17,18 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool, ConfigFile string) (*bytes.Buffer, error)
+type runner func(unbound Unbound) (*bytes.Buffer, error)
 
 // Unbound is used to store configuration values
 type Unbound struct {
-	Binary      string
-	Timeout     internal.Duration
-	UseSudo     bool
-	Server      string
-	ThreadAsTag bool
-	ConfigFile  string
+	Binary      string            `toml:"binary"`
+	Timeout     internal.Duration `toml:"timeout"`
+	UseSudo     bool              `toml:"use_sudo"`
+	Server      string            `toml:"server"`
+	ThreadAsTag bool              `toml:"thread_as_tag"`
+	ConfigFile  string            `toml:"config_file"`
 
-	filter filter.Filter
-	run    runner
+	run runner
 }
 
 var defaultBinary = "/usr/sbin/unbound-control"
@@ -71,26 +70,26 @@ func (s *Unbound) SampleConfig() string {
 }
 
 // Shell out to unbound_stat and return the output
-func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool, ConfigFile string) (*bytes.Buffer, error) {
+func unboundRunner(unbound Unbound) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
-	if Server != "" {
-		host, port, err := net.SplitHostPort(Server)
+	if unbound.Server != "" {
+		host, port, err := net.SplitHostPort(unbound.Server)
 		if err != nil { // No port was specified
-			host = Server
+			host = unbound.Server
 			port = ""
 		}
 
 		// Unbound control requires an IP address, and we want to be nice to the user
 		resolver := net.Resolver{}
-		ctx, lookUpCancel := context.WithTimeout(context.Background(), Timeout.Duration)
+		ctx, lookUpCancel := context.WithTimeout(context.Background(), unbound.Timeout.Duration)
 		defer lookUpCancel()
 		serverIps, err := resolver.LookupIPAddr(ctx, host)
 		if err != nil {
-			return nil, fmt.Errorf("error looking up ip for server: %s: %s", Server, err)
+			return nil, fmt.Errorf("error looking up ip for server: %s: %s", unbound.Server, err)
 		}
 		if len(serverIps) == 0 {
-			return nil, fmt.Errorf("error no ip for server: %s: %s", Server, err)
+			return nil, fmt.Errorf("error no ip for server: %s: %s", unbound.Server, err)
 		}
 		server := serverIps[0].IP.String()
 		if port != "" {
@@ -100,22 +99,22 @@ func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Serv
 		cmdArgs = append([]string{"-s", server}, cmdArgs...)
 	}
 
-	if ConfigFile != "" {
-		cmdArgs = append([]string{"-c", ConfigFile}, cmdArgs...)
+	if unbound.ConfigFile != "" {
+		cmdArgs = append([]string{"-c", unbound.ConfigFile}, cmdArgs...)
 	}
 
-	cmd := exec.Command(cmdName, cmdArgs...)
+	cmd := exec.Command(unbound.Binary, cmdArgs...)
 
-	if UseSudo {
-		cmdArgs = append([]string{cmdName}, cmdArgs...)
+	if unbound.UseSudo {
+		cmdArgs = append([]string{unbound.Binary}, cmdArgs...)
 		cmd = exec.Command("sudo", cmdArgs...)
 	}
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, Timeout.Duration)
+	err := internal.RunTimeout(cmd, unbound.Timeout.Duration)
 	if err != nil {
-		return &out, fmt.Errorf("error running unbound-control: %s (%s %v)", err, cmdName, cmdArgs)
+		return &out, fmt.Errorf("error running unbound-control: %s (%s %v)", err, unbound.Binary, cmdArgs)
 	}
 
 	return &out, nil
@@ -132,7 +131,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	out, err := s.run(s.Binary, s.Timeout, s.UseSudo, s.Server, s.ThreadAsTag, s.ConfigFile)
+	out, err := s.run(*s)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}

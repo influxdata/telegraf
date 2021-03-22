@@ -93,13 +93,13 @@ func convertToInt64(line []string) []int64 {
 	return nline
 }
 
-func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, fullstat bool, acc telegraf.Accumulator) error {
+func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, acc telegraf.Accumulator) {
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
 	nline := convertToInt64(line)
 
 	if len(nline) == 0 {
 		n.Log.Warnf("Parsing Stat line with one field: %s\n", line)
-		return nil
+		return
 	}
 
 	first := strings.Replace(line[0], ":", "", 1)
@@ -191,7 +191,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 		acc.AddFields("nfsstat", fields, tags)
 	}
 
-	if fullstat {
+	if n.Fullstat {
 		switch first {
 		case "events":
 			if len(nline) >= len(eventsFields) {
@@ -240,11 +240,9 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 			}
 		}
 	}
-
-	return nil
 }
 
-func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator) error {
+func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator) {
 	var mount string
 	var version string
 	var export string
@@ -252,10 +250,9 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 
 	for scanner.Scan() {
 		line := strings.Fields(scanner.Text())
+		lineLength := len(line)
 
-		line_len := len(line)
-
-		if line_len == 0 {
+		if lineLength == 0 {
 			continue
 		}
 
@@ -263,10 +260,10 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 
 		// This denotes a new mount has been found, so set
 		// mount and export, and stop skipping (for now)
-		if line_len > 4 && choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) {
+		if lineLength > 4 && choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) {
 			mount = line[4]
 			export = line[1]
-		} else if line_len > 5 && (choice.Contains("(nfs)", line) || choice.Contains("(nfs4)", line)) {
+		} else if lineLength > 5 && (choice.Contains("(nfs)", line) || choice.Contains("(nfs4)", line)) {
 			version = strings.Split(line[5], "/")[1]
 		}
 
@@ -296,10 +293,9 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 		}
 
 		if !skip {
-			n.parseStat(mount, export, version, line, n.Fullstat, acc)
+			n.parseStat(mount, export, version, line, acc)
 		}
 	}
-	return nil
 }
 
 func (n *NFSClient) getMountStatsPath() string {

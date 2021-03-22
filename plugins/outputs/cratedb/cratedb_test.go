@@ -216,6 +216,7 @@ func Test_hashID(t *testing.T) {
 	}
 }
 
+//nolint:unused // Used in skipped tests
 func testURL() string {
 	url := os.Getenv("CRATE_URL")
 	if url == "" {

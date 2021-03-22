@@ -31,9 +31,6 @@ func TestBasic(t *testing.T) {
 }
 
 func TestNewRelic_Write(t *testing.T) {
-	type args struct {
-		metrics []telegraf.Metric
-	}
 	tests := []struct {
 		name         string
 		metrics      []telegraf.Metric

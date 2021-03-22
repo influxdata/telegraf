@@ -1,4 +1,5 @@
 linters:
+  disable-all: true
   enable:
     - bodyclose
     - dogsled
@@ -18,55 +19,6 @@ linters:
     - unparam
     - unused
     - varcheck
-  disable:
-    - asciicheck
-    - deadcode
-    - depguard
-    - dupl
-    - exhaustive
-    - funlen
-    - gci
-    - gochecknoglobals
-    - gochecknoinits
-    - gocognit
-    - goconst
-    - gocritic
-    - gocyclo
-    - godot
-    - godox
-    - goerr113
-    - gofmt
-    - gofumpt
-    - goheader
-    - goimports
-    - golint
-    - gomnd
-    - gomodguard
-    - gosec
-    - ifshort
-    - interfacer
-    - lll
-    - makezero
-    - maligned
-    - megacheck
-    - misspell
-    - nestif
-    - nlreturn
-    - noctx
-    - nolintlint
-    - paralleltest
-    - prealloc
-    - rowserrcheck
-    - scopelint
-    - structcheck
-    - stylecheck
-    - testpackage
-    - thelper
-    - tparallel
-    - wastedassign
-    - whitespace
-    - wrapcheck
-    - wsl
 
 linters-settings:
   revive:
@@ -131,7 +83,7 @@ linters-settings:
 
 run:
   # timeout for analysis, e.g. 30s, 5m, default is 1m
-  timeout: 5m
+  timeout: 10m
 
   # which dirs to skip: issues from them won't be reported;
   # can use regexp here: generated.*, regexp is applied on full path;
@@ -169,10 +121,8 @@ issues:
       linters:
         - govet
 
-  # Show only new issues created after git revision `HEAD~`
-  # Great for CI setups
-  # It's not practical to fix all existing issues at the moment of integration: much better to not allow issues in new code.
-  # new-from-rev: "HEAD~"
+    - path: _test\.go
+      text: "parameter.*seems to be a control flag, avoid control coupling"
 
 output:
   format: tab

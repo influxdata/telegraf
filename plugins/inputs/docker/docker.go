@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -57,7 +56,6 @@ type Docker struct {
 	newClient    func(string, *tls.Config) (Client, error)
 
 	client          Client
-	httpClient      *http.Client
 	engineHost      string
 	serverVersion   string
 	filtersCreated  bool
@@ -935,15 +933,6 @@ func copyTags(in map[string]string) map[string]string {
 		out[k] = v
 	}
 	return out
-}
-
-func sliceContains(in string, sl []string) bool {
-	for _, str := range sl {
-		if str == in {
-			return true
-		}
-	}
-	return false
 }
 
 // Parses the human-readable size string into the amount it represents.

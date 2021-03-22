@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -14,16 +13,12 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-var fieldEscaper = strings.NewReplacer("\\", "\\\\", "\"", "\\\"")
-var keyEscaper = strings.NewReplacer(" ", "\\ ", ",", "\\,", "=", "\\=")
-
 type TimeFunc func() time.Time
 
 // Parser parses json inputs containing dropwizard metrics,
 // either top-level or embedded inside a json field.
 // This parser is using gjson for retrieving paths within the json file.
 type parser struct {
-
 	// an optional json path containing the metric registry object
 	// if left empty, the whole json object is parsed as a metric registry
 	MetricRegistryPath string

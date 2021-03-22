@@ -74,7 +74,6 @@ type Prometheus struct {
 	// Only for monitor_kubernetes_pods=true and pod_scrape_scope="node"
 	podLabelSelector  labels.Selector
 	podFieldSelector  fields.Selector
-	nodeIP            string
 	isNodeScrapeScope bool
 }
 
@@ -456,7 +455,7 @@ func fieldSelectorIsSupported(fieldSelector fields.Selector) (bool, string) {
 }
 
 // Start will start the Kubernetes scraping if enabled in the configuration
-func (p *Prometheus) Start(a telegraf.Accumulator) error {
+func (p *Prometheus) Start(_ telegraf.Accumulator) error {
 	if p.MonitorPods {
 		var ctx context.Context
 		ctx, p.cancel = context.WithCancel(context.Background())
