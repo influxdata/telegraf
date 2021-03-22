@@ -36,6 +36,12 @@ type Query struct {
 	OrderedColumns []string
 }
 
+// var to cache ADAL MSI token
+var adalToken *adal.Token
+
+// var for mutual exclusion lock
+var mutex sync.RWMutex
+
 // MapQuery type
 type MapQuery map[string]Query
 
@@ -230,6 +236,9 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 
+	// initialize mutual exclusion lock
+	mutex = sync.RWMutex{}
+
 	for _, serv := range s.Servers {
 		for _, query := range s.queries {
 			wg.Add(1)
@@ -249,29 +258,24 @@ func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumu
 	var conn *sql.DB
 
 	// setup connection based on authentication
-	rx := regexp.MustCompile("(?i)\\b(?:;(Password=\\w+))\\b")
-	if rx.MatchString(server) {
-		// when password is provided in connection string, use SQL auth
+	rx := regexp.MustCompile("(?i)\\b(?:(Password=\\w+))\\b")
 
+	// when password is provided in connection string, use SQL auth
+	if rx.MatchString(server) {
 		var err error
 		conn, err = sql.Open("mssql", server)
 
 		if err != nil {
 			return err
 		}
-	} else {
-		// when password is not provided in connection string, use AAD auth with an MSI token
-
-		// return error if AAD Auth is used for DatabaseType SQLServer since AAD Auth is only supported for Azure SQL Database or Azure SQL Managed Instance
+	} else { // when password is not provided in connection string, use AAD auth with an managed-identity token
+		// AAD Auth is only supported for Azure SQL Database or Azure SQL Managed Instance
 		if s.DatabaseType == "SQLServer" {
 			return fmt.Errorf("Database connection failed : AAD auth is not supported for SQL VM i.e. DatabaseType=SQLServer")
 		}
 
-		tokenProvider, err := getMSITokenProvider()
-		if err != nil {
-			fmt.Println("Error creating token provider for system assigned Azure Managed Identity: ", err.Error())
-			return err
-		}
+		// get token from im-memory cache variable or from Azure Active Directory
+		tokenProvider, err := getTokenProvider()
 
 		connector, err := mssql.NewAccessTokenConnector(server, tokenProvider)
 		if err != nil {
@@ -363,28 +367,94 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 	return nil
 }
 
-func getMSITokenProvider() (func() (string, error), error) {
+// Get Token Provider by loading cached token or refreshed token
+func getTokenProvider() (func() (string, error), error) {
+	var tokenString string
+
+	// load token
+	mutex.RLock()
+	token, err := LoadToken()
+	mutex.RUnlock()
+
+	// if there's error while loading token or found an expired token, refresh token and save it
+	if err != nil || token.IsExpired() {
+		// refresh token within a write-lock
+		mutex.Lock()
+
+		// load token again, in case it's been refreshed by another thread
+		token, err = LoadToken()
+
+		// check loaded token's error/validity, then refresh/save token
+		if err != nil || token.IsExpired() {
+			// get new token
+			spt, err := RefreshToken()
+			if err != nil {
+				return nil, err
+			}
+
+			// use the refreshed token
+			tokenString = spt.OAuthToken()
+		} else {
+			// use locally cached token
+			tokenString = token.OAuthToken()
+		}
+
+		mutex.Unlock()
+	} else {
+		// use locally cached token
+		tokenString = token.OAuthToken()
+	}
+
+	// return acquired token
+	return func() (string, error) {
+		return tokenString, nil
+	}, nil
+}
+
+// Load token from in-mem cache
+func LoadToken() (*adal.Token, error) {
+	if adalToken == nil {
+		return nil, fmt.Errorf("Token is nil or Failed to load existing token")
+	} else {
+		return adalToken, nil
+	}
+}
+
+// Refresh token for the resource, and save to in-mem cache
+func RefreshToken() (*adal.Token, error) {
+	// resource id for Azure SQL Database
 	const sqlAzureResourceID = "https://database.windows.net/"
 
+	// get MSI endpoint to get a token
 	msiEndpoint, err := adal.GetMSIVMEndpoint()
 	if err != nil {
 		return nil, err
 	}
 
-	msi, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, sqlAzureResourceID)
+	// get new token for the resource id
+	spt, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, sqlAzureResourceID)
 	if err != nil {
 		return nil, err
 	}
 
-	return func() (string, error) {
-		err = msi.EnsureFresh()
-		if err != nil {
-			return "", err
-		}
+	// ensure token is fresh
+	err = spt.EnsureFresh()
+	if err != nil {
+		return nil, err
+	}
 
-		token := msi.OAuthToken()
-		return token, nil
-	}, nil
+	// save token to local in-mem cache
+	adalToken = &adal.Token{
+		AccessToken:  spt.Token().AccessToken,
+		RefreshToken: spt.Token().RefreshToken,
+		ExpiresIn:    spt.Token().ExpiresIn,
+		ExpiresOn:    spt.Token().ExpiresOn,
+		NotBefore:    spt.Token().NotBefore,
+		Resource:     spt.Token().Resource,
+		Type:         spt.Token().Type,
+	}
+
+	return adalToken, nil
 }
 
 func init() {
