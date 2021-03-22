@@ -3,7 +3,6 @@ package elasticsearch_query
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -95,6 +94,7 @@ type ElasticsearchQuery struct {
 	tls.ClientConfig
 	httpclient *http.Client
 	esClient   *elastic5.Client
+	Log        telegraf.Logger `toml:"-"`
 }
 
 // esAggregation struct
@@ -131,7 +131,7 @@ func (e *ElasticsearchQuery) Init() error {
 
 	err := e.connectToES()
 	if err != nil {
-		log.Printf("E! error connecting to elasticsearch: %s", err)
+		e.Log.Errorf("E! error connecting to elasticsearch: %s", err)
 		return nil
 	}
 
@@ -154,20 +154,20 @@ func (e *ElasticsearchQuery) initAggregation(ctx context.Context, agg esAggregat
 	// retrieve field mapping and build queries only once
 	mapMetricFields, err := e.getMetricFields(ctx, agg)
 	if err != nil {
-		log.Printf("E! %s", err.Error())
+		e.Log.Errorf("E! %s", err.Error())
 		return
 	}
 
 	for _, metricField := range agg.MetricFields {
 		if _, ok := mapMetricFields[metricField]; !ok {
-			log.Printf("E! metric field %s not found on index %s", metricField, agg.Index)
+			e.Log.Errorf("E! metric field %s not found on index %s", metricField, agg.Index)
 			return
 		}
 	}
 
 	aggregationQueryList, err := e.buildAggregationQuery(mapMetricFields, agg)
 	if err != nil {
-		log.Printf("E! %s", err.Error())
+		e.Log.Errorf("E! %s", err.Error())
 		return
 	}
 	agg.mapMetricFields = mapMetricFields

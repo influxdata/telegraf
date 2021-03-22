@@ -151,7 +151,6 @@ func (e *ElasticsearchQuery) buildAggregationQuery(mapMetricFields map[string]st
 		}
 
 		aggregationQueryList = append(aggregationQueryList, aggregationQuery)
-
 	}
 
 	for _, term := range aggregation.Tags {
