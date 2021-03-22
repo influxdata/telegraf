@@ -37,28 +37,28 @@ var sampleConfig = `
 var regexpURI = regexp.MustCompile(`(\S+://)?(\S+\:\S+@)`)
 var client = &http.Client{Timeout: 10 * time.Second}
 
-func (r *Couchbase) SampleConfig() string {
+func (cb *Couchbase) SampleConfig() string {
 	return sampleConfig
 }
 
-func (r *Couchbase) Description() string {
+func (cb *Couchbase) Description() string {
 	return "Read metrics from one or many couchbase clusters"
 }
 
 // Reads stats from all configured clusters. Accumulates stats.
 // Returns one of the errors encountered while gathering stats (if any).
-func (r *Couchbase) Gather(acc telegraf.Accumulator) error {
-	if len(r.Servers) == 0 {
-		r.gatherServer("http://localhost:8091/", acc, nil)
+func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {
+	if len(cb.Servers) == 0 {
+		cb.gatherServer("http://localhost:8091/", acc, nil)
 		return nil
 	}
 
 	var wg sync.WaitGroup
-	for _, serv := range r.Servers {
+	for _, serv := range cb.Servers {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			acc.AddError(r.gatherServer(serv, acc, nil))
+			acc.AddError(cb.gatherServer(serv, acc, nil))
 		}(serv)
 	}
 
@@ -67,7 +67,7 @@ func (r *Couchbase) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *couchbase.Pool) error {
+func (cb *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *couchbase.Pool) error {
 	if pool == nil {
 		client, err := couchbase.Connect(addr)
 		if err != nil {
@@ -105,8 +105,11 @@ func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *co
 		fields["data_used"] = bs["dataUsed"]
 		fields["mem_used"] = bs["memUsed"]
 
-		if r.BucketMetricType == "detailed" {
-			r.gatherDetailedBucketStats(addr, bucketName, fields)
+		if cb.BucketMetricType == "detailed" {
+			err := cb.gatherDetailedBucketStats(addr, bucketName, fields)
+			if err != nil {
+				return err
+			}
 		}
 
 		acc.AddFields("couchbase_bucket", fields, tags)
@@ -115,9 +118,9 @@ func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *co
 	return nil
 }
 
-func (couchbase *Couchbase) gatherDetailedBucketStats(server, bucket string, fields map[string]interface{}) error {
+func (cb *Couchbase) gatherDetailedBucketStats(server, bucket string, fields map[string]interface{}) error {
 	extendedBucketStats := &BucketStats{}
-	err := couchbase.queryDetailedBucketStats(server, bucket, extendedBucketStats)
+	err := cb.queryDetailedBucketStats(server, bucket, extendedBucketStats)
 	if err != nil {
 		return err
 	}
@@ -342,7 +345,7 @@ func (couchbase *Couchbase) gatherDetailedBucketStats(server, bucket string, fie
 	return nil
 }
 
-func (couchbase *Couchbase) queryDetailedBucketStats(server, bucket string, bucketStats *BucketStats) error {
+func (cb *Couchbase) queryDetailedBucketStats(server, bucket string, bucketStats *BucketStats) error {
 	// Set up an HTTP request to get the complete set of bucket stats.
 	req, err := http.NewRequest("GET", server+"/pools/default/buckets/"+bucket+"/stats?", nil)
 	if err != nil {

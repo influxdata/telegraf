@@ -84,7 +84,9 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 	}
 
 	fields := make(map[string]interface{})
-	cb.gatherDetailedBucketStats(fakeServer.URL, bucket, fields)
+	err := cb.gatherDetailedBucketStats(fakeServer.URL, bucket, fields)
+	require.NoError(t, err)
+
 	acc.AddFields("couchbase_bucket", fields, nil)
 
 	// Ensure we gathered a copy of all the metrics, once.
