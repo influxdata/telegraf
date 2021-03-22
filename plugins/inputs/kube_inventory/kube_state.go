@@ -166,7 +166,7 @@ func atoi(s string) int64 {
 	if err != nil {
 		return 0
 	}
-	return int64(i)
+	return i
 }
 
 func convertQuantity(s string, m float64) int64 {

@@ -41,8 +41,8 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		// This allows us to also "poison" it during test scenarios
 		udevDataPath = ic.udevDataPath
 	} else {
-		major := unix.Major(uint64(stat.Rdev))
-		minor := unix.Minor(uint64(stat.Rdev))
+		major := unix.Major(uint64(stat.Rdev)) //nolint:unconvert // Conversion needed for some architectures
+		minor := unix.Minor(uint64(stat.Rdev)) //nolint:unconvert // Conversion needed for some architectures
 		udevDataPath = fmt.Sprintf("/run/udev/data/b%d:%d", major, minor)
 
 		_, err := os.Stat(udevDataPath)

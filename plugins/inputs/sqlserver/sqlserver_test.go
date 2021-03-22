@@ -297,7 +297,7 @@ func TestSqlServer_ConnectionString(t *testing.T) {
 
 	connectionString = "invalid connection string"
 	sqlInstance, database = getConnectionIdentifiers(connectionString)
-	assert.Equal(t, emptySqlInstance, sqlInstance)
+	assert.Equal(t, emptySQLInstance, sqlInstance)
 	assert.Equal(t, emptyDatabaseName, database)
 
 	// Key/value format
@@ -323,7 +323,7 @@ func TestSqlServer_ConnectionString(t *testing.T) {
 
 	connectionString = "invalid connection string"
 	sqlInstance, database = getConnectionIdentifiers(connectionString)
-	assert.Equal(t, emptySqlInstance, sqlInstance)
+	assert.Equal(t, emptySQLInstance, sqlInstance)
 	assert.Equal(t, emptyDatabaseName, database)
 }
 

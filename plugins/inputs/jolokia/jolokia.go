@@ -160,7 +160,7 @@ func (j *Jolokia) doRequest(req *http.Request) ([]map[string]interface{}, error)
 
 	// Unmarshal json
 	var jsonOut []map[string]interface{}
-	if err = json.Unmarshal([]byte(body), &jsonOut); err != nil {
+	if err = json.Unmarshal(body, &jsonOut); err != nil {
 		return nil, fmt.Errorf("error decoding JSON response: %s: %s", err, body)
 	}
 

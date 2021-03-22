@@ -1136,7 +1136,7 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 
 	var (
 		testDate       = time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
-		metricCpuTotal = testutil.MustMetric(
+		metricCPUTotal = testutil.MustMetric(
 			"docker_container_cpu",
 			map[string]string{
 				"cpu": "cpu-total",
@@ -1144,14 +1144,14 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 			map[string]interface{}{},
 			testDate)
 
-		metricCpu0 = testutil.MustMetric(
+		metricCPU0 = testutil.MustMetric(
 			"docker_container_cpu",
 			map[string]string{
 				"cpu": "cpu0",
 			},
 			map[string]interface{}{},
 			testDate)
-		metricCpu1 = testutil.MustMetric(
+		metricCPU1 = testutil.MustMetric(
 			"docker_container_cpu",
 			map[string]string{
 				"cpu": "cpu1",
@@ -1218,7 +1218,7 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 				totalInclude:     containerMetricClasses,
 			},
 			expected: []telegraf.Metric{
-				metricCpuTotal, metricCpu0, metricCpu1,
+				metricCPUTotal, metricCPU0, metricCPU1,
 				metricNetworkTotal, metricNetworkEth0, metricNetworkEth1,
 				metricBlkioTotal, metricBlkio6_0, metricBlkio6_1,
 			},
@@ -1231,7 +1231,7 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 				totalInclude:     []string{},
 			},
 			expected: []telegraf.Metric{
-				metricCpu0, metricCpu1,
+				metricCPU0, metricCPU1,
 				metricNetworkEth0, metricNetworkEth1,
 				metricBlkio6_0, metricBlkio6_1,
 			},
@@ -1243,7 +1243,7 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 				perDeviceInclude: []string{},
 				totalInclude:     containerMetricClasses,
 			},
-			expected: []telegraf.Metric{metricCpuTotal, metricNetworkTotal, metricBlkioTotal},
+			expected: []telegraf.Metric{metricCPUTotal, metricNetworkTotal, metricBlkioTotal},
 		},
 		{
 			name: "Per device and total metrics disabled",

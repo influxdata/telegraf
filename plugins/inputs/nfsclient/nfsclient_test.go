@@ -26,7 +26,7 @@ func TestNFSClientParsev3(t *testing.T) {
 	data := strings.Fields("         READLINK: 500 501 502 503 504 505 506 507")
 	nfsclient.parseStat("1.2.3.4:/storage/NFS", "/A", "3", data, &acc)
 
-	fields_ops := map[string]interface{}{
+	fieldsOps := map[string]interface{}{
 		"ops":           int64(500),
 		"trans":         int64(501),
 		"timeouts":      int64(502),
@@ -36,7 +36,7 @@ func TestNFSClientParsev3(t *testing.T) {
 		"response_time": int64(506),
 		"total_time":    int64(507),
 	}
-	acc.AssertContainsFields(t, "nfs_ops", fields_ops)
+	acc.AssertContainsFields(t, "nfs_ops", fieldsOps)
 }
 
 func TestNFSClientParsev4(t *testing.T) {
@@ -48,7 +48,7 @@ func TestNFSClientParsev4(t *testing.T) {
 	data := strings.Fields("    DESTROY_SESSION: 500 501 502 503 504 505 506 507")
 	nfsclient.parseStat("2.2.2.2:/nfsdata/", "/B", "4", data, &acc)
 
-	fields_ops := map[string]interface{}{
+	fieldsOps := map[string]interface{}{
 		"ops":           int64(500),
 		"trans":         int64(501),
 		"timeouts":      int64(502),
@@ -58,7 +58,7 @@ func TestNFSClientParsev4(t *testing.T) {
 		"response_time": int64(506),
 		"total_time":    int64(507),
 	}
-	acc.AssertContainsFields(t, "nfs_ops", fields_ops)
+	acc.AssertContainsFields(t, "nfs_ops", fieldsOps)
 }
 
 func TestNFSClientProcessStat(t *testing.T) {
@@ -74,7 +74,7 @@ func TestNFSClientProcessStat(t *testing.T) {
 
 	nfsclient.processText(scanner, &acc)
 
-	fields_readstat := map[string]interface{}{
+	fieldsReadstat := map[string]interface{}{
 		"ops":     int64(600),
 		"retrans": int64(1),
 		"bytes":   int64(1207),
@@ -82,15 +82,15 @@ func TestNFSClientProcessStat(t *testing.T) {
 		"exe":     int64(607),
 	}
 
-	read_tags := map[string]string{
+	readTags := map[string]string{
 		"serverexport": "1.2.3.4:/storage/NFS",
 		"mountpoint":   "/A",
 		"operation":    "READ",
 	}
 
-	acc.AssertContainsTaggedFields(t, "nfsstat", fields_readstat, read_tags)
+	acc.AssertContainsTaggedFields(t, "nfsstat", fieldsReadstat, readTags)
 
-	fields_writestat := map[string]interface{}{
+	fieldsWritestat := map[string]interface{}{
 		"ops":     int64(700),
 		"retrans": int64(1),
 		"bytes":   int64(1407),
@@ -98,12 +98,12 @@ func TestNFSClientProcessStat(t *testing.T) {
 		"exe":     int64(707),
 	}
 
-	write_tags := map[string]string{
+	writeTags := map[string]string{
 		"serverexport": "1.2.3.4:/storage/NFS",
 		"mountpoint":   "/A",
 		"operation":    "WRITE",
 	}
-	acc.AssertContainsTaggedFields(t, "nfsstat", fields_writestat, write_tags)
+	acc.AssertContainsTaggedFields(t, "nfsstat", fieldsWritestat, writeTags)
 }
 
 func TestNFSClientProcessFull(t *testing.T) {
@@ -119,7 +119,7 @@ func TestNFSClientProcessFull(t *testing.T) {
 
 	nfsclient.processText(scanner, &acc)
 
-	fields_events := map[string]interface{}{
+	fieldsEvents := map[string]interface{}{
 		"inoderevalidates":  int64(301736),
 		"dentryrevalidates": int64(22838),
 		"datainvalidates":   int64(410979),
@@ -148,7 +148,7 @@ func TestNFSClientProcessFull(t *testing.T) {
 		"pnfsreads":         int64(0),
 		"pnfswrites":        int64(0),
 	}
-	fields_bytes := map[string]interface{}{
+	fieldsBytes := map[string]interface{}{
 		"normalreadbytes":  int64(204440464584),
 		"normalwritebytes": int64(110857586443),
 		"directreadbytes":  int64(783170354688),
@@ -158,7 +158,7 @@ func TestNFSClientProcessFull(t *testing.T) {
 		"readpages":        int64(85749323),
 		"writepages":       int64(30784819),
 	}
-	fields_xprt_tcp := map[string]interface{}{
+	fieldsXprtTCP := map[string]interface{}{
 		"bind_count":    int64(1),
 		"connect_count": int64(1),
 		"connect_time":  int64(0),
@@ -170,7 +170,7 @@ func TestNFSClientProcessFull(t *testing.T) {
 		"backlogutil":   int64(0),
 	}
 
-	acc.AssertContainsFields(t, "nfs_events", fields_events)
-	acc.AssertContainsFields(t, "nfs_bytes", fields_bytes)
-	acc.AssertContainsFields(t, "nfs_xprt_tcp", fields_xprt_tcp)
+	acc.AssertContainsFields(t, "nfs_events", fieldsEvents)
+	acc.AssertContainsFields(t, "nfs_bytes", fieldsBytes)
+	acc.AssertContainsFields(t, "nfs_xprt_tcp", fieldsXprtTCP)
 }

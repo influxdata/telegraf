@@ -37,7 +37,7 @@ const maxMetadataSamples = 100 // Number of resources to sample for metric metad
 
 const maxRealtimeMetrics = 50000 // Absolute maximum metrics per realtime query
 
-const hwMarkTTL = time.Duration(4 * time.Hour)
+const hwMarkTTL = 4 * time.Hour
 
 type queryChunk []types.PerfQuerySpec
 

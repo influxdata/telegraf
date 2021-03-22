@@ -225,7 +225,7 @@ func verifyValue(v interface{}) bool {
 func (g *Gauge) setValue(v interface{}) error {
 	switch d := v.(type) {
 	case int64:
-		g.Value = float64(int64(d))
+		g.Value = float64(d)
 	case uint64:
 		g.Value = float64(d)
 	case float64:

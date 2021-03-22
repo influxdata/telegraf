@@ -62,11 +62,11 @@ const defaultEnvironment = "production"
 // returns a new Salesforce plugin instance
 func NewSalesforce() *Salesforce {
 	tr := &http.Transport{
-		ResponseHeaderTimeout: time.Duration(5 * time.Second),
+		ResponseHeaderTimeout: 5 * time.Second,
 	}
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   time.Duration(10 * time.Second),
+		Timeout:   10 * time.Second,
 	}
 	return &Salesforce{
 		client:      client,
@@ -147,7 +147,7 @@ func (s *Salesforce) fetchLimits() (limits, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return l, fmt.Errorf("Salesforce responded with unexpected status code %d", resp.StatusCode)
+		return l, fmt.Errorf("salesforce responded with unexpected status code %d", resp.StatusCode)
 	}
 
 	l = limits{}
