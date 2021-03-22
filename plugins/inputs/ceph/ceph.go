@@ -120,7 +120,7 @@ func (c *Ceph) gatherAdminSocketStats(acc telegraf.Accumulator) error {
 		for tag, metrics := range data {
 			acc.AddFields(measurement,
 				map[string]interface{}(metrics),
-				map[string]string{"type": s.sockType, "id": s.sockId, "collection": tag})
+				map[string]string{"type": s.sockType, "id": s.sockID, "collection": tag})
 		}
 	}
 	return nil
@@ -211,28 +211,25 @@ var findSockets = func(c *Ceph) ([]*socket, error) {
 		if strings.HasPrefix(f, c.OsdPrefix) {
 			sockType = typeOsd
 			sockPrefix = osdPrefix
-
 		}
 		if strings.HasPrefix(f, c.MdsPrefix) {
 			sockType = typeMds
 			sockPrefix = mdsPrefix
-
 		}
 		if strings.HasPrefix(f, c.RgwPrefix) {
 			sockType = typeRgw
 			sockPrefix = rgwPrefix
-
 		}
 
 		if sockType == typeOsd || sockType == typeMon || sockType == typeMds || sockType == typeRgw {
 			path := filepath.Join(c.SocketDir, f)
-			sockets = append(sockets, &socket{parseSockId(f, sockPrefix, c.SocketSuffix), sockType, path})
+			sockets = append(sockets, &socket{parseSockID(f, sockPrefix, c.SocketSuffix), sockType, path})
 		}
 	}
 	return sockets, nil
 }
 
-func parseSockId(fname, prefix, suffix string) string {
+func parseSockID(fname, prefix, suffix string) string {
 	s := fname
 	s = strings.TrimPrefix(s, prefix)
 	s = strings.TrimSuffix(s, suffix)
@@ -241,7 +238,7 @@ func parseSockId(fname, prefix, suffix string) string {
 }
 
 type socket struct {
-	sockId   string
+	sockID   string
 	sockType string
 	socket   string
 }

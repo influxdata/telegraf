@@ -7,6 +7,7 @@ import (
 	"net"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -162,7 +163,7 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 
 	pinger, err := ping.NewPinger(destination)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create new pinger: %w", err)
+		return nil, fmt.Errorf("failed to create new pinger: %w", err)
 	}
 
 	// Required for windows. Despite the method name, this should work without the need to elevate privileges and has been tested on Windows 10
@@ -176,14 +177,9 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 
 	pinger.Source = p.sourceAddress
 	pinger.Interval = p.calcInterval
-	pinger.Timeout = p.calcTimeout
 
 	if p.Deadline > 0 {
-		// If deadline is set ping exits regardless of how many packets have been sent or received
-		timer := time.AfterFunc(time.Duration(p.Deadline)*time.Second, func() {
-			pinger.Stop()
-		})
-		defer timer.Stop()
+		pinger.Timeout = time.Duration(p.Deadline) * time.Second
 	}
 
 	// Get Time to live (TTL) of first response, matching original implementation
@@ -197,7 +193,7 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 	pinger.Count = p.Count
 	err = pinger.Run()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to run pinger: %w", err)
+		return nil, fmt.Errorf("failed to run pinger: %w", err)
 	}
 
 	ps.Statistics = *pinger.Statistics()
@@ -206,12 +202,12 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 }
 
 func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
-
 	tags := map[string]string{"url": destination}
 	fields := map[string]interface{}{}
 
 	stats, err := p.nativePingFunc(destination)
 	if err != nil {
+		p.Log.Errorf("ping failed: %s", err.Error())
 		if strings.Contains(err.Error(), "unknown") {
 			fields["result_code"] = 1
 		} else {
@@ -228,18 +224,21 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	}
 
 	if stats.PacketsSent == 0 {
+		p.Log.Debug("no packets sent")
 		fields["result_code"] = 2
 		acc.AddFields("ping", fields, tags)
 		return
 	}
 
 	if stats.PacketsRecv == 0 {
+		p.Log.Debug("no packets received")
 		fields["result_code"] = 1
 		fields["percent_packet_loss"] = float64(100)
 		acc.AddFields("ping", fields, tags)
 		return
 	}
 
+	sort.Sort(durationSlice(stats.Rtts))
 	for _, perc := range p.Percentiles {
 		var value = percentile(durationSlice(stats.Rtts), perc)
 		var field = fmt.Sprintf("percentile%v_ms", perc)
@@ -287,11 +286,11 @@ func percentile(values durationSlice, perc int) time.Duration {
 
 	if rankInteger >= count-1 {
 		return values[count-1]
-	} else {
-		upper := values[rankInteger+1]
-		lower := values[rankInteger]
-		return lower + time.Duration(rankFraction*float64(upper-lower))
 	}
+
+	upper := values[rankInteger+1]
+	lower := values[rankInteger]
+	return lower + time.Duration(rankFraction*float64(upper-lower))
 }
 
 // Init ensures the plugin is configured correctly.
@@ -321,11 +320,11 @@ func (p *Ping) Init() error {
 		} else {
 			i, err := net.InterfaceByName(p.Interface)
 			if err != nil {
-				return fmt.Errorf("Failed to get interface: %w", err)
+				return fmt.Errorf("failed to get interface: %w", err)
 			}
 			addrs, err := i.Addrs()
 			if err != nil {
-				return fmt.Errorf("Failed to get the address of interface: %w", err)
+				return fmt.Errorf("failed to get the address of interface: %w", err)
 			}
 			p.sourceAddress = addrs[0].(*net.IPNet).IP.String()
 		}

@@ -74,7 +74,7 @@ func TestJolokia2_ScalarValues(t *testing.T) {
 		"status": 200
 	  }]`
 
-	server := setupServer(http.StatusOK, response)
+	server := setupServer(response)
 	defer server.Close()
 	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
@@ -234,7 +234,7 @@ func TestJolokia2_ObjectValues(t *testing.T) {
 		"status": 200
 	  }]`
 
-	server := setupServer(http.StatusOK, response)
+	server := setupServer(response)
 	defer server.Close()
 	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
@@ -322,7 +322,7 @@ func TestJolokia2_StatusCodes(t *testing.T) {
 		"status": 500
 	}]`
 
-	server := setupServer(http.StatusOK, response)
+	server := setupServer(response)
 	defer server.Close()
 	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
@@ -372,7 +372,7 @@ func TestJolokia2_TagRenaming(t *testing.T) {
 		"status": 200
 	}]`
 
-	server := setupServer(http.StatusOK, response)
+	server := setupServer(response)
 	defer server.Close()
 	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
@@ -465,7 +465,7 @@ func TestJolokia2_FieldRenaming(t *testing.T) {
 		"status": 200
 	}]`
 
-	server := setupServer(http.StatusOK, response)
+	server := setupServer(response)
 	defer server.Close()
 	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
@@ -573,7 +573,7 @@ func TestJolokia2_MetricMbeanMatching(t *testing.T) {
 		"status": 200
 	}]`
 
-	server := setupServer(http.StatusOK, response)
+	server := setupServer(response)
 	defer server.Close()
 	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
@@ -666,7 +666,7 @@ func TestJolokia2_MetricCompaction(t *testing.T) {
 		"status": 200
 	}]`
 
-	server := setupServer(http.StatusOK, response)
+	server := setupServer(response)
 	defer server.Close()
 	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
@@ -727,7 +727,7 @@ func TestJolokia2_ProxyTargets(t *testing.T) {
 		"status": 200
 	}]`
 
-	server := setupServer(http.StatusOK, response)
+	server := setupServer(response)
 	defer server.Close()
 	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
@@ -762,7 +762,7 @@ func TestFillFields(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{}, results)
 }
 
-func setupServer(status int, resp string) *httptest.Server {
+func setupServer(resp string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		//body, err := ioutil.ReadAll(r.Body)

@@ -471,7 +471,6 @@ func testCollection(t *testing.T, excludeClusters bool) {
 		v.Username = username
 		v.Password = password
 	} else {
-
 		// Don't run test on 32-bit machines due to bug in simulator.
 		// https://github.com/vmware/govmomi/issues/1330
 		var i int
@@ -518,11 +517,11 @@ func testCollection(t *testing.T, excludeClusters bool) {
 				hostMoid = hosts[0].Reference().Value
 				hostCache[hostName] = hostMoid
 			}
-			if isInCluster(t, v, client, cache, "HostSystem", hostMoid) { // If the VM lives in a cluster
+			if isInCluster(v, client, cache, "HostSystem", hostMoid) { // If the VM lives in a cluster
 				mustContainAll(t, m.Tags, []string{"clustername"})
 			}
 		} else if strings.HasPrefix(m.Measurement, "vsphere.host.") {
-			if isInCluster(t, v, client, cache, "HostSystem", m.Tags["moid"]) { // If the host lives in a cluster
+			if isInCluster(v, client, cache, "HostSystem", m.Tags["moid"]) { // If the host lives in a cluster
 				mustContainAll(t, m.Tags, []string{"esxhostname", "clustername", "moid", "dcname"})
 			} else {
 				mustContainAll(t, m.Tags, []string{"esxhostname", "moid", "dcname"})
@@ -536,7 +535,7 @@ func testCollection(t *testing.T, excludeClusters bool) {
 	require.Empty(t, mustHaveMetrics, "Some metrics were not found")
 }
 
-func isInCluster(t *testing.T, v *VSphere, client *Client, cache map[string]string, resourceKind, moid string) bool {
+func isInCluster(v *VSphere, client *Client, cache map[string]string, resourceKind, moid string) bool {
 	ctx := context.Background()
 	ref := types.ManagedObjectReference{
 		Type:  resourceKind,

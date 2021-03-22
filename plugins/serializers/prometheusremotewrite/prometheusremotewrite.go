@@ -187,7 +187,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 					metrickey, promts = getPromTS(metricName, labels, value, metric.Time())
 				}
 			default:
-				return nil, fmt.Errorf("Unknown type %v", metric.Type())
+				return nil, fmt.Errorf("unknown type %v", metric.Type())
 			}
 
 			// A batch of metrics can contain multiple values for a single
@@ -201,11 +201,10 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			}
 			entries[metrickey] = promts
 		}
-
 	}
 
 	var promTS = make([]*prompb.TimeSeries, len(entries))
-	var i int64 = 0
+	var i int64
 	for _, promts := range entries {
 		promTS[i] = promts
 		i++
@@ -235,7 +234,6 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 			return false
 		})
-
 	}
 	data, err := proto.Marshal(&prompb.WriteRequest{Timeseries: promTS})
 	if err != nil {
@@ -302,7 +300,6 @@ func (s *Serializer) createLabels(metric telegraf.Metric) []*prompb.Label {
 
 		labels = append(labels, &prompb.Label{Name: name, Value: value})
 		addedFieldLabel = true
-
 	}
 
 	if addedFieldLabel {

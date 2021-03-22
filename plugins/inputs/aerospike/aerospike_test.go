@@ -31,7 +31,6 @@ func TestAerospikeStatisticsIntegration(t *testing.T) {
 
 	namespaceName := acc.TagValue("aerospike_namespace", "namespace")
 	assert.Equal(t, namespaceName, "test")
-
 }
 
 func TestAerospikeStatisticsPartialErrIntegration(t *testing.T) {
@@ -83,7 +82,7 @@ func TestSelectNamepsacesIntegration(t *testing.T) {
 	count := 0
 	for _, p := range acc.Metrics {
 		if p.Measurement == "aerospike_namespace" {
-			count += 1
+			count++
 		}
 	}
 	assert.Equal(t, count, 1)
@@ -165,7 +164,6 @@ func TestQuerySetsIntegration(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("aerospike_set"))
 	assert.True(t, acc.HasTag("aerospike_set", "set"))
 	assert.True(t, acc.HasInt64Field("aerospike_set", "memory_data_bytes"))
-
 }
 
 func TestSelectQuerySetsIntegration(t *testing.T) {
@@ -215,7 +213,6 @@ func TestSelectQuerySetsIntegration(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("aerospike_set"))
 	assert.True(t, acc.HasTag("aerospike_set", "set"))
 	assert.True(t, acc.HasInt64Field("aerospike_set", "memory_data_bytes"))
-
 }
 
 func TestDisableTTLHistogramIntegration(t *testing.T) {
@@ -264,7 +261,6 @@ func TestTTLHistogramIntegration(t *testing.T) {
 
 	assert.True(t, acc.HasMeasurement("aerospike_histogram_ttl"))
 	assert.True(t, FindTagValue(&acc, "aerospike_histogram_ttl", "namespace", "test"))
-
 }
 func TestDisableObjectSizeLinearHistogramIntegration(t *testing.T) {
 	if testing.Short() {
@@ -287,7 +283,6 @@ func TestDisableObjectSizeLinearHistogramIntegration(t *testing.T) {
 	assert.False(t, acc.HasMeasurement("aerospike_histogram_object_size_linear"))
 }
 func TestObjectSizeLinearHistogramIntegration(t *testing.T) {
-
 	if testing.Short() {
 		t.Skip("Skipping aerospike integration tests.")
 	} else {
@@ -419,7 +414,6 @@ func TestParseHistogramSet(t *testing.T) {
 
 	a.parseHistogram(stats, "127.0.0.1:3000", "test", "foo", "object-size-linear", "TestNodeName", &acc)
 	acc.AssertContainsTaggedFields(t, "aerospike_histogram_object_size_linear", expectedFields, expectedTags)
-
 }
 func TestParseHistogramNamespace(t *testing.T) {
 	a := &Aerospike{
@@ -450,7 +444,6 @@ func TestParseHistogramNamespace(t *testing.T) {
 
 	a.parseHistogram(stats, "127.0.0.1:3000", "test", "", "object-size-linear", "TestNodeName", &acc)
 	acc.AssertContainsTaggedFields(t, "aerospike_histogram_object_size_linear", expectedFields, expectedTags)
-
 }
 func TestAerospikeParseValue(t *testing.T) {
 	// uint64 with value bigger than int64 max
@@ -484,7 +477,6 @@ func FindTagValue(acc *testutil.Accumulator, measurement string, key string, val
 			if ok && v == value {
 				return true
 			}
-
 		}
 	}
 	return false

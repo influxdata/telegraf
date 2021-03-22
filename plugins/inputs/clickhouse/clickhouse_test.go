@@ -548,7 +548,7 @@ func TestOfflineServer(t *testing.T) {
 	assert.GreaterOrEqual(t, len(allMeasurements), len(acc.Errors))
 }
 
-func TestAutoDiscovery(t *testing.T) {
+func TestAutoDiscovery(_ *testing.T) {
 	var (
 		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			type result struct {
@@ -583,5 +583,4 @@ func TestAutoDiscovery(t *testing.T) {
 	)
 	defer ts.Close()
 	ch.Gather(acc)
-
 }

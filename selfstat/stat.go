@@ -9,7 +9,6 @@ type stat struct {
 	measurement string
 	field       string
 	tags        map[string]string
-	key         uint64
 }
 
 func (s *stat) Incr(v int64) {

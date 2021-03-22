@@ -50,17 +50,8 @@ func (s *Minecraft) SampleConfig() string {
 
 func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 	if s.client == nil {
-		connector, err := NewConnector(s.Server, s.Port, s.Password)
-		if err != nil {
-			return err
-		}
-
-		client, err := NewClient(connector)
-		if err != nil {
-			return err
-		}
-
-		s.client = client
+		connector := newConnector(s.Server, s.Port, s.Password)
+		s.client = newClient(connector)
 	}
 
 	players, err := s.client.Players()

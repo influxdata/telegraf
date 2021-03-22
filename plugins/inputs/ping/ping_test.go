@@ -3,10 +3,8 @@
 package ping
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"net"
 	"reflect"
 	"sort"
 	"testing"
@@ -231,7 +229,7 @@ func TestArguments(t *testing.T) {
 	}
 }
 
-func mockHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return linuxPingOutput, nil
 }
 
@@ -269,6 +267,7 @@ func TestPingGatherIntegration(t *testing.T) {
 
 	var acc testutil.Accumulator
 	p, ok := inputs.Inputs["ping"]().(*Ping)
+	p.Log = testutil.Logger{}
 	require.True(t, ok)
 	p.Urls = []string{"localhost", "influxdata.com"}
 	err := acc.GatherError(p.Gather)
@@ -288,7 +287,7 @@ PING www.google.com (216.58.218.164) 56(84) bytes of data.
 rtt min/avg/max/mdev = 35.225/44.033/51.806/5.325 ms
 `
 
-func mockLossyHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockLossyHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -324,7 +323,7 @@ Request timeout for icmp_seq 0
 2 packets transmitted, 0 packets received, 100.0% packet loss
 `
 
-func mockErrorHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockErrorHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	// This error will not trigger correct error paths
 	return errorPingOutput, nil
 }
@@ -349,7 +348,7 @@ func TestBadPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
-func mockFatalHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockFatalHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return fatalPingOutput, errors.New("So very bad")
 }
 
@@ -414,12 +413,6 @@ func TestPingBinary(t *testing.T) {
 	acc.GatherError(p.Gather)
 }
 
-func mockHostResolver(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error) {
-	ipaddr := net.IPAddr{}
-	ipaddr.IP = net.IPv4(127, 0, 0, 1)
-	return &ipaddr, nil
-}
-
 // Test that Gather function works using native ping
 func TestPingGatherNative(t *testing.T) {
 	type test struct {
@@ -432,11 +425,11 @@ func TestPingGatherNative(t *testing.T) {
 				PacketsSent: 5,
 				PacketsRecv: 5,
 				Rtts: []time.Duration{
-					1 * time.Millisecond,
-					2 * time.Millisecond,
 					3 * time.Millisecond,
 					4 * time.Millisecond,
+					1 * time.Millisecond,
 					5 * time.Millisecond,
+					2 * time.Millisecond,
 				},
 			},
 			ttl: 1,
@@ -475,19 +468,22 @@ func TestPingGatherNative(t *testing.T) {
 		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
 		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
 		assert.True(t, acc.HasField("ping", "percentile50_ms"))
+		assert.Equal(t, float64(3), acc.Metrics[0].Fields["percentile50_ms"])
 		assert.True(t, acc.HasField("ping", "percentile95_ms"))
+		assert.Equal(t, float64(4.799999), acc.Metrics[0].Fields["percentile95_ms"])
 		assert.True(t, acc.HasField("ping", "percentile99_ms"))
+		assert.Equal(t, float64(4.96), acc.Metrics[0].Fields["percentile99_ms"])
 		assert.True(t, acc.HasField("ping", "percent_packet_loss"))
 		assert.True(t, acc.HasField("ping", "minimum_response_ms"))
 		assert.True(t, acc.HasField("ping", "average_response_ms"))
 		assert.True(t, acc.HasField("ping", "maximum_response_ms"))
 		assert.True(t, acc.HasField("ping", "standard_deviation_ms"))
 	}
-
 }
 
 func TestNoPacketsSent(t *testing.T) {
 	p := &Ping{
+		Log:         testutil.Logger{},
 		Urls:        []string{"localhost", "127.0.0.2"},
 		Method:      "native",
 		Count:       5,

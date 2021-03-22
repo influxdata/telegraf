@@ -47,7 +47,7 @@ type VSphere struct {
 	CustomAttributeInclude  []string
 	CustomAttributeExclude  []string
 	UseIntSamples           bool
-	IpAddresses             []string
+	IPAddresses             []string
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
@@ -258,7 +258,7 @@ func (v *VSphere) Description() string {
 
 // Start is called from telegraf core when a plugin is started and allows it to
 // perform initialization tasks.
-func (v *VSphere) Start(acc telegraf.Accumulator) error {
+func (v *VSphere) Start(_ telegraf.Accumulator) error {
 	v.Log.Info("Starting plugin")
 	ctx, cancel := context.WithCancel(context.Background())
 	v.cancel = cancel
@@ -315,7 +315,6 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := endpoint.Collect(context.Background(), acc)
 			if err == context.Canceled {
-
 				// No need to signal errors if we were merely canceled.
 				err = nil
 			}
@@ -358,7 +357,7 @@ func init() {
 			CustomAttributeInclude:  []string{},
 			CustomAttributeExclude:  []string{"*"},
 			UseIntSamples:           true,
-			IpAddresses:             []string{},
+			IPAddresses:             []string{},
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,

@@ -68,7 +68,6 @@ func TestReadsMetricsFromNSQ(t *testing.T) {
 	} else {
 		t.Errorf("No points found in accumulator, expected 1")
 	}
-
 }
 
 // Waits for the metric that was sent to the kafka broker to arrive at the kafka

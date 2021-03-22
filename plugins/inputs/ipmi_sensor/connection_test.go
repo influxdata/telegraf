@@ -6,11 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type conTest struct {
-	Got  string
-	Want *Connection
-}
-
 func TestNewConnection(t *testing.T) {
 	testData := []struct {
 		addr string

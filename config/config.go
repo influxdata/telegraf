@@ -49,6 +49,7 @@ var (
 		`"`, `\"`,
 		`\`, `\\`,
 	)
+	httpLoadConfigRetryInterval = 10 * time.Second
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -907,7 +908,6 @@ func loadConfig(config string) ([]byte, error) {
 		// If it isn't a https scheme, try it as a file.
 	}
 	return ioutil.ReadFile(config)
-
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
@@ -921,17 +921,27 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 	}
 	req.Header.Add("Accept", "application/toml")
 	req.Header.Set("User-Agent", internal.ProductToken())
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
+
+	retries := 3
+	for i := 0; i <= retries; i++ {
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("Retry %d of %d failed connecting to HTTP config server %s", i, retries, err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			if i < retries {
+				log.Printf("Error getting HTTP config.  Retry %d of %d in %s.  Status=%d", i, retries, httpLoadConfigRetryInterval, resp.StatusCode)
+				time.Sleep(httpLoadConfigRetryInterval)
+				continue
+			}
+			return nil, fmt.Errorf("Retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status)
+		}
+		defer resp.Body.Close()
+		return ioutil.ReadAll(resp.Body)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to retrieve remote config: %s", resp.Status)
-	}
-
-	defer resp.Body.Close()
-	return ioutil.ReadAll(resp.Body)
+	return nil, nil
 }
 
 // parseConfig loads a TOML configuration from a provided path and
@@ -996,14 +1006,14 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		return err
 	}
 
-	rf, err := c.newRunningProcessor(creator, processorConfig, name, table)
+	rf, err := c.newRunningProcessor(creator, processorConfig, table)
 	if err != nil {
 		return err
 	}
 	c.Processors = append(c.Processors, rf)
 
 	// save a copy for the aggregator
-	rf, err = c.newRunningProcessor(creator, processorConfig, name, table)
+	rf, err = c.newRunningProcessor(creator, processorConfig, table)
 	if err != nil {
 		return err
 	}
@@ -1015,7 +1025,6 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 func (c *Config) newRunningProcessor(
 	creator processors.StreamingCreator,
 	processorConfig *models.ProcessorConfig,
-	name string,
 	table *ast.Table,
 ) (*models.RunningProcessor, error) {
 	processor := creator()
@@ -1048,7 +1057,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	// arbitrary types of output, so build the serializer and set it.
 	switch t := output.(type) {
 	case serializers.SerializerOutput:
-		serializer, err := c.buildSerializer(name, table)
+		serializer, err := c.buildSerializer(table)
 		if err != nil {
 			return err
 		}
@@ -1064,8 +1073,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	ro := models.NewRunningOutput(name, output, outputConfig,
-		c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
+	ro := models.NewRunningOutput(output, outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
 	return nil
 }
@@ -1257,7 +1265,14 @@ func (c *Config) buildParser(name string, tbl *ast.Table) (parsers.Parser, error
 	if err != nil {
 		return nil, err
 	}
-	return parsers.NewParser(config)
+	parser, err := parsers.NewParser(config)
+	if err != nil {
+		return nil, err
+	}
+	logger := models.NewLogger("parsers", config.DataFormat, name)
+	models.SetLoggerOnPlugin(parser, logger)
+
+	return parser, nil
 }
 
 func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
@@ -1324,6 +1339,30 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 
 	c.getFieldStringSlice(tbl, "form_urlencoded_tag_keys", &pc.FormUrlencodedTagKeys)
 
+	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
+
+	//for XML parser
+	if node, ok := tbl.Fields["xml"]; ok {
+		if subtbls, ok := node.([]*ast.Table); ok {
+			pc.XMLConfig = make([]parsers.XMLConfig, len(subtbls))
+			for i, subtbl := range subtbls {
+				subcfg := pc.XMLConfig[i]
+				c.getFieldString(subtbl, "metric_name", &subcfg.MetricQuery)
+				c.getFieldString(subtbl, "metric_selection", &subcfg.Selection)
+				c.getFieldString(subtbl, "timestamp", &subcfg.Timestamp)
+				c.getFieldString(subtbl, "timestamp_format", &subcfg.TimestampFmt)
+				c.getFieldStringMap(subtbl, "tags", &subcfg.Tags)
+				c.getFieldStringMap(subtbl, "fields", &subcfg.Fields)
+				c.getFieldStringMap(subtbl, "fields_int", &subcfg.FieldsInt)
+				c.getFieldString(subtbl, "field_selection", &subcfg.FieldSelection)
+				c.getFieldBool(subtbl, "field_name_expansion", &subcfg.FieldNameExpand)
+				c.getFieldString(subtbl, "field_name", &subcfg.FieldNameQuery)
+				c.getFieldString(subtbl, "field_value", &subcfg.FieldValueQuery)
+				pc.XMLConfig[i] = subcfg
+			}
+		}
+	}
+
 	pc.MetricName = name
 
 	if c.hasErrs() {
@@ -1336,8 +1375,8 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 // buildSerializer grabs the necessary entries from the ast.Table for creating
 // a serializers.Serializer object, and creates it, which can then be added onto
 // an Output object.
-func (c *Config) buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error) {
-	sc := &serializers.Config{TimestampUnits: time.Duration(1 * time.Second)}
+func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error) {
+	sc := &serializers.Config{TimestampUnits: 1 * time.Second}
 
 	c.getFieldString(tbl, "data_format", &sc.DataFormat)
 
@@ -1392,7 +1431,7 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 	// TODO: support FieldPass/FieldDrop on outputs
 
 	c.getFieldDuration(tbl, "flush_interval", &oc.FlushInterval)
-	c.getFieldDuration(tbl, "flush_jitter", oc.FlushJitter)
+	c.getFieldDuration(tbl, "flush_jitter", &oc.FlushJitter)
 
 	c.getFieldInt(tbl, "metric_buffer_limit", &oc.MetricBufferLimit)
 	c.getFieldInt(tbl, "metric_batch_size", &oc.MetricBatchSize)
@@ -1408,7 +1447,7 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 	return oc, nil
 }
 
-func (c *Config) missingTomlField(typ reflect.Type, key string) error {
+func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	switch key {
 	case "alias", "carbon2_format", "collectd_auth_file", "collectd_parse_multivalue",
 		"collectd_security_level", "collectd_typesdb", "collection_jitter", "csv_column_names",
@@ -1428,7 +1467,7 @@ func (c *Config) missingTomlField(typ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"wavefront_source_override", "wavefront_use_strict":
+		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml":
 
 		// ignore fields that are common to all plugins.
 	default:
@@ -1527,10 +1566,14 @@ func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string, target *[
 						*target = append(*target, str.Value)
 					}
 				}
+			} else {
+				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format", fieldName))
+				return
 			}
 		}
 	}
 }
+
 func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]models.TagFilter) {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
@@ -1543,6 +1586,9 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 								tagfilter.Filter = append(tagfilter.Filter, str.Value)
 							}
 						}
+					} else {
+						c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format on each entry", fieldName))
+						return
 					}
 					*target = append(*target, tagfilter)
 				}

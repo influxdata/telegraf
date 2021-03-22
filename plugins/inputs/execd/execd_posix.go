@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-func (e *Execd) Gather(acc telegraf.Accumulator) error {
+func (e *Execd) Gather(_ telegraf.Accumulator) error {
 	if e.process == nil || e.process.Cmd == nil {
 		return nil
 	}

@@ -23,8 +23,7 @@ type Opensmtpd struct {
 	Timeout internal.Duration
 	UseSudo bool
 
-	filter filter.Filter
-	run    runner
+	run runner
 }
 
 var defaultBinary = "/usr/sbin/smtpctl"
@@ -77,8 +76,8 @@ func opensmtpdRunner(cmdName string, Timeout internal.Duration, UseSudo bool) (*
 // All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
 func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 	// Always exclude uptime.human statistics
-	stat_excluded := []string{"uptime.human"}
-	filter_excluded, err := filter.Compile(stat_excluded)
+	statExcluded := []string{"uptime.human"}
+	filterExcluded, err := filter.Compile(statExcluded)
 	if err != nil {
 		return err
 	}
@@ -92,7 +91,6 @@ func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{})
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
-
 		cols := strings.Split(scanner.Text(), "=")
 
 		// Check split correctness
@@ -104,7 +102,7 @@ func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 		value := cols[1]
 
 		// Filter value
-		if filter_excluded.Match(stat) {
+		if filterExcluded.Match(stat) {
 			continue
 		}
 
@@ -112,8 +110,7 @@ func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 
 		fields[field], err = strconv.ParseFloat(value, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Expected a numerical value for %s = %v\n",
-				stat, value))
+			acc.AddError(fmt.Errorf("expected a numerical value for %s = %v", stat, value))
 		}
 	}
 

@@ -34,15 +34,15 @@ func (s *Shim) LoadConfig(filePath *string) error {
 	}
 	if conf.Input != nil {
 		if err = s.AddInput(conf.Input); err != nil {
-			return fmt.Errorf("Failed to add Input: %w", err)
+			return fmt.Errorf("failed to add Input: %w", err)
 		}
 	} else if conf.Processor != nil {
 		if err = s.AddStreamingProcessor(conf.Processor); err != nil {
-			return fmt.Errorf("Failed to add Processor: %w", err)
+			return fmt.Errorf("failed to add Processor: %w", err)
 		}
 	} else if conf.Output != nil {
 		if err = s.AddOutput(conf.Output); err != nil {
-			return fmt.Errorf("Failed to add Output: %w", err)
+			return fmt.Errorf("failed to add Output: %w", err)
 		}
 	}
 	return nil
@@ -53,14 +53,12 @@ func LoadConfig(filePath *string) (loaded loadedConfig, err error) {
 	var data string
 	conf := config{}
 	if filePath != nil && *filePath != "" {
-
 		b, err := ioutil.ReadFile(*filePath)
 		if err != nil {
 			return loadedConfig{}, err
 		}
 
 		data = expandEnvVars(b)
-
 	} else {
 		conf, err = DefaultImportedPlugins()
 		if err != nil {

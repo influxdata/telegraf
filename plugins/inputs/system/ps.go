@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 
 	"github.com/shirou/gopsutil/cpu"
@@ -32,13 +31,6 @@ type PSDiskDeps interface {
 	OSGetenv(key string) string
 	OSStat(name string) (os.FileInfo, error)
 	PSDiskUsage(path string) (*disk.UsageStat, error)
-}
-
-func add(acc telegraf.Accumulator,
-	name string, val float64, tags map[string]string) {
-	if val >= 0 {
-		acc.AddFields(name, map[string]interface{}{"value": val}, tags)
-	}
 }
 
 func NewSystemPS() *SystemPS {
@@ -155,7 +147,7 @@ func (s *SystemPS) NetConnections() ([]net.ConnectionStat, error) {
 
 func (s *SystemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {
 	m, err := disk.IOCounters(names...)
-	if err == internal.NotImplementedError {
+	if err == internal.ErrorNotImplemented {
 		return nil, nil
 	}
 

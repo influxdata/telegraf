@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	// UDP_MAX_PACKET_SIZE is the UDP packet limit, see
+	// UDPMaxPacketSize is the UDP packet limit, see
 	// https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
-	UDP_MAX_PACKET_SIZE int = 64 * 1024
+	UDPMaxPacketSize int = 64 * 1024
 
 	defaultFieldName = "value"
 
@@ -31,7 +31,6 @@ const (
 
 	defaultSeparator           = "_"
 	defaultAllowPendingMessage = 10000
-	MaxTCPConnections          = 250
 
 	parserGoRoutines = 5
 )
@@ -70,6 +69,11 @@ type Statsd struct {
 	// http://docs.datadoghq.com/guides/dogstatsd/
 	DataDogExtensions bool `toml:"datadog_extensions"`
 
+	// Parses distribution metrics in the datadog statsd format.
+	// Requires the DataDogExtension flag to be enabled.
+	// https://docs.datadoghq.com/developers/metrics/types/?tab=distribution#definition
+	DataDogDistributions bool `toml:"datadog_distributions"`
+
 	// UDPPacketSize is deprecated, it's only here for legacy support
 	// we now always create 1 max size buffer and then copy only what we need
 	// into the in channel
@@ -88,8 +92,6 @@ type Statsd struct {
 	accept chan bool
 	// drops tracks the number of dropped metrics.
 	drops int
-	// malformed tracks the number of malformed packets
-	malformed int
 
 	// Channel for all incoming statsd packets
 	in   chan input
@@ -98,10 +100,12 @@ type Statsd struct {
 	// Cache gauges, counters & sets so they can be aggregated as they arrive
 	// gauges and counters map measurement/tags hash -> field name -> metrics
 	// sets and timings map measurement/tags hash -> metrics
-	gauges   map[string]cachedgauge
-	counters map[string]cachedcounter
-	sets     map[string]cachedset
-	timings  map[string]cachedtimings
+	// distributions aggregate measurement/tags and are published directly
+	gauges        map[string]cachedgauge
+	counters      map[string]cachedcounter
+	sets          map[string]cachedset
+	timings       map[string]cachedtimings
+	distributions []cacheddistributions
 
 	// bucket -> influx templates
 	Templates []string
@@ -190,7 +194,13 @@ type cachedtimings struct {
 	expiresAt time.Time
 }
 
-func (_ *Statsd) Description() string {
+type cacheddistributions struct {
+	name  string
+	value float64
+	tags  map[string]string
+}
+
+func (s *Statsd) Description() string {
 	return "Statsd UDP/TCP Server"
 }
 
@@ -237,6 +247,10 @@ const sampleConfig = `
   ## Parses datadog extensions to the statsd format
   datadog_extensions = false
 
+  ## Parses distributions metric as specified in the datadog statsd format
+  ## https://docs.datadoghq.com/developers/metrics/types/?tab=distribution#definition
+  datadog_distributions = false
+
   ## Statsd data translation templates, more info can be read here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/TEMPLATE_PATTERN.md
   # templates = [
@@ -256,7 +270,7 @@ const sampleConfig = `
   #max_ttl = "1000h"
 `
 
-func (_ *Statsd) SampleConfig() string {
+func (s *Statsd) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -264,6 +278,14 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	s.Lock()
 	defer s.Unlock()
 	now := time.Now()
+
+	for _, m := range s.distributions {
+		fields := map[string]interface{}{
+			defaultFieldName: m.value,
+		}
+		acc.AddFields(m.name, fields, m.tags, now)
+	}
+	s.distributions = make([]cacheddistributions, 0)
 
 	for _, m := range s.timings {
 		// Defining a template to parse field names for timers allows us to split
@@ -336,6 +358,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
 	s.timings = make(map[string]cachedtimings)
+	s.distributions = make([]cacheddistributions, 0)
 
 	s.Lock()
 	defer s.Unlock()
@@ -473,7 +496,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 		s.UDPlistener.SetReadBuffer(s.ReadBufferSize)
 	}
 
-	buf := make([]byte, UDP_MAX_PACKET_SIZE)
+	buf := make([]byte, UDPMaxPacketSize)
 	for {
 		select {
 		case <-s.done:
@@ -513,11 +536,11 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 // parser monitors the s.in channel, if there is a packet ready, it parses the
 // packet into statsd strings and then calls parseStatsdLine, which parses a
 // single statsd metric into a struct.
-func (s *Statsd) parser() error {
+func (s *Statsd) parser() {
 	for {
 		select {
 		case <-s.done:
-			return nil
+			return
 		case in := <-s.in:
 			start := time.Now()
 			lines := strings.Split(in.Buffer.String(), "\n")
@@ -601,7 +624,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 		// Validate metric type
 		switch pipesplit[1] {
-		case "g", "c", "s", "ms", "h":
+		case "g", "c", "s", "ms", "h", "d":
 			m.mtype = pipesplit[1]
 		default:
 			s.Log.Errorf("Metric type %q unsupported", pipesplit[1])
@@ -618,7 +641,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		}
 
 		switch m.mtype {
-		case "g", "ms", "h":
+		case "g", "ms", "h", "d":
 			v, err := strconv.ParseFloat(pipesplit[0], 64)
 			if err != nil {
 				s.Log.Errorf("Parsing value to float64, unable to parse metric: %s", line)
@@ -658,6 +681,8 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			m.tags["metric_type"] = "timing"
 		case "h":
 			m.tags["metric_type"] = "histogram"
+		case "d":
+			m.tags["metric_type"] = "distribution"
 		}
 		if len(lineTags) > 0 {
 			for k, v := range lineTags {
@@ -685,6 +710,8 @@ func (s *Statsd) parseStatsdLine(line string) error {
 // map of tags.
 // Return values are (<name>, <field>, <tags>)
 func (s *Statsd) parseName(bucket string) (string, string, map[string]string) {
+	s.Lock()
+	defer s.Unlock()
 	tags := make(map[string]string)
 
 	bucketparts := strings.Split(bucket, ",")
@@ -749,6 +776,15 @@ func (s *Statsd) aggregate(m metric) {
 	defer s.Unlock()
 
 	switch m.mtype {
+	case "d":
+		if s.DataDogExtensions && s.DataDogDistributions {
+			cached := cacheddistributions{
+				name:  m.name,
+				value: m.floatvalue,
+				tags:  m.tags,
+			}
+			s.distributions = append(s.distributions, cached)
+		}
 	case "ms", "h":
 		// Check if the measurement exists
 		cached, ok := s.timings[m.hash]

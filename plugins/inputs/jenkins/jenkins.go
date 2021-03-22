@@ -197,7 +197,6 @@ func (j *Jenkins) initialize(client *http.Client) error {
 }
 
 func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
-
 	tags := map[string]string{}
 	if n.DisplayName == "" {
 		return fmt.Errorf("error empty node name")
@@ -249,7 +248,6 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 }
 
 func (j *Jenkins) gatherNodesData(acc telegraf.Accumulator) {
-
 	nodeResp, err := j.client.getAllNodes(context.Background())
 	if err != nil {
 		acc.AddError(err)
@@ -295,18 +293,6 @@ func (j *Jenkins) gatherJobs(acc telegraf.Accumulator) {
 		}(job.Name, &wg, acc)
 	}
 	wg.Wait()
-}
-
-// wrap the tcp request with doGet
-// block tcp request if buffered channel is full
-func (j *Jenkins) doGet(tcp func() error) error {
-	j.semaphore <- struct{}{}
-	if err := tcp(); err != nil {
-		<-j.semaphore
-		return err
-	}
-	<-j.semaphore
-	return nil
 }
 
 func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
@@ -453,7 +439,6 @@ type jobRequest struct {
 	name    string
 	parents []string
 	layer   int
-	number  int64
 }
 
 func (jr jobRequest) combined() []string {

@@ -47,11 +47,9 @@ func (c *client) init() error {
 			break
 		}
 	}
+
 	// first api fetch
-	if err := c.doGet(context.Background(), jobPath, new(jobResponse)); err != nil {
-		return err
-	}
-	return nil
+	return c.doGet(context.Background(), jobPath, new(jobResponse))
 }
 
 func (c *client) doGet(ctx context.Context, url string, v interface{}) error {
@@ -97,10 +95,8 @@ func (c *client) doGet(ctx context.Context, url string, v interface{}) error {
 			Title:      resp.Status,
 		}
 	}
-	if err = json.NewDecoder(resp.Body).Decode(v); err != nil {
-		return err
-	}
-	return nil
+
+	return json.NewDecoder(resp.Body).Decode(v)
 }
 
 type APIError struct {

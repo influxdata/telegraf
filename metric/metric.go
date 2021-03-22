@@ -251,8 +251,8 @@ func (m *metric) Copy() telegraf.Metric {
 	return m2
 }
 
-func (m *metric) SetAggregate(b bool) {
-	m.aggregate = true
+func (m *metric) SetAggregate(aggregate bool) {
+	m.aggregate = aggregate
 }
 
 func (m *metric) IsAggregate() bool {

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestApcupsdDocs(t *testing.T) {
+func TestApcupsdDocs(_ *testing.T) {
 	apc := &ApcUpsd{}
 	apc.Description()
 	apc.SampleConfig()
@@ -102,7 +102,6 @@ func TestConfig(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestApcupsdGather(t *testing.T) {
@@ -155,7 +154,6 @@ func TestApcupsdGather(t *testing.T) {
 	)
 
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 

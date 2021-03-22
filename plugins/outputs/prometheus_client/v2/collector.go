@@ -59,7 +59,7 @@ func NewCollector(expire time.Duration, stringsAsLabel bool, exportTimestamp boo
 	}
 }
 
-func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
+func (c *Collector) Describe(_ chan<- *prometheus.Desc) {
 	// Sending no descriptor at all marks the Collector as "unchecked",
 	// i.e. no checks will be performed at registration time, and the
 	// Collector may yield any Metric it sees fit in its Collect method.

@@ -102,7 +102,7 @@ func (m *OpenConfigTelemetry) Description() string {
 	return "Read JTI OpenConfig Telemetry from listed sensors"
 }
 
-func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
+func (m *OpenConfigTelemetry) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -272,16 +272,18 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 		m.sensorsConfig = append(m.sensorsConfig, sensorConfig{
 			measurementName: measurementName, pathList: pathlist,
 		})
-
 	}
 
 	return len(m.sensorsConfig)
 }
 
 // Subscribes and collects OpenConfig telemetry data from given server
-func (m *OpenConfigTelemetry) collectData(ctx context.Context,
-	grpcServer string, grpcClientConn *grpc.ClientConn,
-	acc telegraf.Accumulator) error {
+func (m *OpenConfigTelemetry) collectData(
+	ctx context.Context,
+	grpcServer string,
+	grpcClientConn *grpc.ClientConn,
+	acc telegraf.Accumulator,
+) {
 	c := telemetry.NewOpenConfigTelemetryClient(grpcClientConn)
 	for _, sensor := range m.sensorsConfig {
 		m.wg.Add(1)
@@ -298,17 +300,15 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 						acc.AddError(fmt.Errorf("could not subscribe to %s: %v", grpcServer,
 							err))
 						return
-					} else {
-						// Retry with delay. If delay is not provided, use default
-						if m.RetryDelay.Duration > 0 {
-							m.Log.Debugf("Retrying %s with timeout %v", grpcServer,
-								m.RetryDelay.Duration)
-							time.Sleep(m.RetryDelay.Duration)
-							continue
-						} else {
-							return
-						}
 					}
+
+					// Retry with delay. If delay is not provided, use default
+					if m.RetryDelay.Duration > 0 {
+						m.Log.Debugf("Retrying %s with timeout %v", grpcServer, m.RetryDelay.Duration)
+						time.Sleep(m.RetryDelay.Duration)
+						continue
+					}
+					return
 				}
 				for {
 					r, err := stream.Recv()
@@ -345,8 +345,6 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 			}
 		}(ctx, sensor)
 	}
-
-	return nil
 }
 
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {

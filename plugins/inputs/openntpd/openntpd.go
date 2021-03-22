@@ -10,15 +10,9 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
-
-// Mapping of ntpctl header names to tag keys
-var tagHeaders = map[string]string{
-	"st": "stratum",
-}
 
 // Mapping of the ntpctl tag key to the index in the command output
 var tagI = map[string]int{
@@ -48,8 +42,7 @@ type Openntpd struct {
 	Timeout internal.Duration
 	UseSudo bool
 
-	filter filter.Filter
-	run    runner
+	run runner
 }
 
 var defaultBinary = "/usr/sbin/ntpctl"
@@ -156,16 +149,13 @@ func (n *Openntpd) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if key == "next" || key == "poll" {
-
 				m, err := strconv.ParseInt(strings.TrimSuffix(fields[index], "s"), 10, 64)
 				if err != nil {
 					acc.AddError(fmt.Errorf("integer value expected, got: %s", fields[index]))
 					continue
 				}
 				mFields[key] = m
-
 			} else {
-
 				m, err := strconv.ParseInt(fields[index], 10, 64)
 				if err != nil {
 					acc.AddError(fmt.Errorf("integer value expected, got: %s", fields[index]))
@@ -185,23 +175,19 @@ func (n *Openntpd) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if key == "offset" || key == "delay" || key == "jitter" {
-
 				m, err := strconv.ParseFloat(strings.TrimSuffix(fields[index], "ms"), 64)
 				if err != nil {
 					acc.AddError(fmt.Errorf("float value expected, got: %s", fields[index]))
 					continue
 				}
 				mFields[key] = m
-
 			} else {
-
 				m, err := strconv.ParseFloat(fields[index], 64)
 				if err != nil {
 					acc.AddError(fmt.Errorf("float value expected, got: %s", fields[index]))
 					continue
 				}
 				mFields[key] = m
-
 			}
 		}
 		acc.AddFields("openntpd", mFields, tags)

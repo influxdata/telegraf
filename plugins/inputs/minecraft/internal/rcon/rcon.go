@@ -32,11 +32,11 @@ const (
 
 // Rcon package errors.
 var (
-	ErrInvalidWrite        = errors.New("Failed to write the payload correctly to remote connection.")
-	ErrInvalidRead         = errors.New("Failed to read the response correctly from remote connection.")
-	ErrInvalidChallenge    = errors.New("Server failed to mirror request challenge.")
-	ErrUnauthorizedRequest = errors.New("Client not authorized to remote server.")
-	ErrFailedAuthorization = errors.New("Failed to authorize to the remote server.")
+	ErrInvalidWrite        = errors.New("failed to write the payload correctly to remote connection")
+	ErrInvalidRead         = errors.New("failed to read the response correctly from remote connection")
+	ErrInvalidChallenge    = errors.New("server failed to mirror request challenge")
+	ErrUnauthorizedRequest = errors.New("client not authorized to remote server")
+	ErrFailedAuthorization = errors.New("failed to authorize to the remote server")
 )
 
 type Client struct {
@@ -62,7 +62,7 @@ type Packet struct {
 // Write method fails to write the header bytes in their little
 // endian byte order.
 func (p Packet) Compile() (payload []byte, err error) {
-	var size int32 = p.Header.Size
+	var size = p.Header.Size
 	var buffer bytes.Buffer
 	var padding [PacketPaddingSize]byte
 

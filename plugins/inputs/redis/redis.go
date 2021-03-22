@@ -230,7 +230,7 @@ var Tracking = map[string]string{
 	"role":              "replication_role",
 }
 
-func (r *Redis) init(acc telegraf.Accumulator) error {
+func (r *Redis) init() error {
 	if r.initialized {
 		return nil
 	}
@@ -307,7 +307,7 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 // Returns one of the errors encountered while gather stats (if any).
 func (r *Redis) Gather(acc telegraf.Accumulator) error {
 	if !r.initialized {
-		err := r.init(acc)
+		err := r.init()
 		if err != nil {
 			return err
 		}
@@ -361,7 +361,7 @@ func gatherInfoOutput(
 	tags map[string]string,
 ) error {
 	var section string
-	var keyspace_hits, keyspace_misses int64
+	var keyspaceHits, keyspaceMisses int64
 
 	scanner := bufio.NewScanner(rdr)
 	fields := make(map[string]interface{})
@@ -383,7 +383,7 @@ func gatherInfoOutput(
 		if len(parts) < 2 {
 			continue
 		}
-		name := string(parts[0])
+		name := parts[0]
 
 		if section == "Server" {
 			if name != "lru_clock" && name != "uptime_in_seconds" && name != "redis_version" {
@@ -406,7 +406,7 @@ func gatherInfoOutput(
 		metric, ok := Tracking[name]
 		if !ok {
 			if section == "Keyspace" {
-				kline := strings.TrimSpace(string(parts[1]))
+				kline := strings.TrimSpace(parts[1])
 				gatherKeyspaceLine(name, kline, acc, tags)
 				continue
 			}
@@ -433,9 +433,9 @@ func gatherInfoOutput(
 		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
 			switch name {
 			case "keyspace_hits":
-				keyspace_hits = ival
+				keyspaceHits = ival
 			case "keyspace_misses":
-				keyspace_misses = ival
+				keyspaceMisses = ival
 			case "rdb_last_save_time":
 				// influxdb can't calculate this, so we have to do it
 				fields["rdb_last_save_time_elapsed"] = time.Now().Unix() - ival
@@ -459,11 +459,11 @@ func gatherInfoOutput(
 
 		fields[metric] = val
 	}
-	var keyspace_hitrate float64 = 0.0
-	if keyspace_hits != 0 || keyspace_misses != 0 {
-		keyspace_hitrate = float64(keyspace_hits) / float64(keyspace_hits+keyspace_misses)
+	var keyspaceHitrate float64
+	if keyspaceHits != 0 || keyspaceMisses != 0 {
+		keyspaceHitrate = float64(keyspaceHits) / float64(keyspaceHits+keyspaceMisses)
 	}
-	fields["keyspace_hitrate"] = keyspace_hitrate
+	fields["keyspace_hitrate"] = keyspaceHitrate
 
 	o := RedisFieldTypes{}
 
@@ -482,12 +482,12 @@ func gatherKeyspaceLine(
 	name string,
 	line string,
 	acc telegraf.Accumulator,
-	global_tags map[string]string,
+	globalTags map[string]string,
 ) {
 	if strings.Contains(line, "keys=") {
 		fields := make(map[string]interface{})
 		tags := make(map[string]string)
-		for k, v := range global_tags {
+		for k, v := range globalTags {
 			tags[k] = v
 		}
 		tags["database"] = name
@@ -511,7 +511,7 @@ func gatherCommandstateLine(
 	name string,
 	line string,
 	acc telegraf.Accumulator,
-	global_tags map[string]string,
+	globalTags map[string]string,
 ) {
 	if !strings.HasPrefix(name, "cmdstat") {
 		return
@@ -519,7 +519,7 @@ func gatherCommandstateLine(
 
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
-	for k, v := range global_tags {
+	for k, v := range globalTags {
 		tags[k] = v
 	}
 	tags["command"] = strings.TrimPrefix(name, "cmdstat_")
@@ -556,11 +556,11 @@ func gatherReplicationLine(
 	name string,
 	line string,
 	acc telegraf.Accumulator,
-	global_tags map[string]string,
+	globalTags map[string]string,
 ) {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
-	for k, v := range global_tags {
+	for k, v := range globalTags {
 		tags[k] = v
 	}
 

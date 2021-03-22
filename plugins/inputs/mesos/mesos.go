@@ -159,7 +159,7 @@ func (m *Mesos) initialize() error {
 		m.slaveURLs = append(m.slaveURLs, u)
 	}
 
-	client, err := m.createHttpClient()
+	client, err := m.createHTTPClient()
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (m *Mesos) createHttpClient() (*http.Client, error) {
+func (m *Mesos) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := m.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -530,49 +530,6 @@ type TaskStats struct {
 	ExecutorID  string                 `json:"executor_id"`
 	FrameworkID string                 `json:"framework_id"`
 	Statistics  map[string]interface{} `json:"statistics"`
-}
-
-func (m *Mesos) gatherSlaveTaskMetrics(u *url.URL, acc telegraf.Accumulator) error {
-	var metrics []TaskStats
-
-	tags := map[string]string{
-		"server": u.Hostname(),
-		"url":    urlTag(u),
-	}
-
-	resp, err := m.client.Get(withPath(u, "/monitor/statistics").String())
-
-	if err != nil {
-		return err
-	}
-
-	data, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return err
-	}
-
-	if err = json.Unmarshal([]byte(data), &metrics); err != nil {
-		return errors.New("Error decoding JSON response")
-	}
-
-	for _, task := range metrics {
-		tags["framework_id"] = task.FrameworkID
-
-		jf := jsonparser.JSONFlattener{}
-		err = jf.FlattenJSON("", task.Statistics)
-
-		if err != nil {
-			return err
-		}
-
-		timestamp := time.Unix(int64(jf.Fields["timestamp"].(float64)), 0)
-		jf.Fields["executor_id"] = task.ExecutorID
-
-		acc.AddFields("mesos_tasks", jf.Fields, tags, timestamp)
-	}
-
-	return nil
 }
 
 func withPath(u *url.URL, path string) *url.URL {
