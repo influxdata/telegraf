@@ -45,41 +45,41 @@ const sampleConfig = `
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-[[inputs.elasticsearch_query.aggregation]]
-  ## measurement name for the results of the aggregation query
-  measurement_name = "measurement"
+  [[inputs.elasticsearch_query.aggregation]]
+    ## measurement name for the results of the aggregation query
+    measurement_name = "measurement"
 
-  ## Elasticsearch indexes to query (accept wildcards).
-  index = "index-*"
+    ## Elasticsearch indexes to query (accept wildcards).
+    index = "index-*"
 
-  ## The date/time field in the Elasticsearch index (mandatory).
-  date_field = "@timestamp"
+    ## The date/time field in the Elasticsearch index (mandatory).
+    date_field = "@timestamp"
 
-  ## Time window to query (eg. "1m" to query documents from last minute).
-  ## Normally should be set to same as collection interval
-  query_period = "1m"
+    ## Time window to query (eg. "1m" to query documents from last minute).
+    ## Normally should be set to same as collection interval
+    query_period = "1m"
 
-  ## Lucene query to filter results
-  # filter_query = "*"
+    ## Lucene query to filter results
+    # filter_query = "*"
 
-  ## Fields to aggregate values (must be numeric fields)
-  # metric_fields = ["metric"]
+    ## Fields to aggregate values (must be numeric fields)
+    # metric_fields = ["metric"]
 
-  ## Aggregation function to use on the metric fields
-  ## Must be set if 'metric_fields' is set
-  ## Valid values are: avg, sum, min, max, sum
-  # metric_function = "avg"
+    ## Aggregation function to use on the metric fields
+    ## Must be set if 'metric_fields' is set
+    ## Valid values are: avg, sum, min, max, sum
+    # metric_function = "avg"
 
-  ## Fields to be used as tags
-  ## Must be text, non-analyzed fields. Metric aggregations are performed per tag
-  # tags = ["field.keyword", "field2.keyword"]
+    ## Fields to be used as tags
+    ## Must be text, non-analyzed fields. Metric aggregations are performed per tag
+    # tags = ["field.keyword", "field2.keyword"]
 
-  ## Set to true to not ignore documents when the tag(s) above are missing
-  # include_missing_tag = false
+    ## Set to true to not ignore documents when the tag(s) above are missing
+    # include_missing_tag = false
 
-  ## String value of the tag when the tag does not exist
-  ## Used when include_missing_tag is true
-  # missing_tag_value = "null"
+    ## String value of the tag when the tag does not exist
+    ## Used when include_missing_tag is true
+    # missing_tag_value = "null"
 `
 
 // ElasticsearchQuery struct
