@@ -49,8 +49,7 @@ func (cb *Couchbase) Description() string {
 // Returns one of the errors encountered while gathering stats (if any).
 func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {
 	if len(cb.Servers) == 0 {
-		cb.gatherServer("http://localhost:8091/", acc, nil)
-		return nil
+		return cb.gatherServer("http://localhost:8091/", acc, nil)
 	}
 
 	var wg sync.WaitGroup
