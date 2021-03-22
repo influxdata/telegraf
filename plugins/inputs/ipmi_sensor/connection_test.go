@@ -38,6 +38,18 @@ func TestNewConnection(t *testing.T) {
 				HexKey:    "0001",
 			},
 		},
+		// test connection doesn't panic if incorrect symbol used
+		{
+			"USERID@PASSW0RD@lan(192.168.1.1)",
+			&Connection{
+				Hostname:  "192.168.1.1",
+				Username:  "",
+				Password:  "",
+				Interface: "lan",
+				Privilege: "USER",
+				HexKey:    "0001",
+			},
+		},
 	}
 
 	for _, v := range testData {

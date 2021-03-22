@@ -750,27 +750,3 @@ func Test_parseV2(t *testing.T) {
 		})
 	}
 }
-
-func TestUserPasswordWrongSymbol(t *testing.T) {
-	i := &Ipmi{
-		Servers:   []string{"USERID@PASSW0RD@lan(192.168.1.1)"},
-		Path:      "ipmitool",
-		Privilege: "USER",
-		Timeout:   internal.Duration{Duration: time.Second * 5},
-		HexKey:    "1234567F",
-	}
-
-	// overwriting exec commands with mock commands
-	execCommand = fakeExecCommand
-	var acc testutil.Accumulator
-
-	err := acc.GatherError(i.Gather)
-
-	require.NoError(t, err)
-
-	conn := NewConnection(i.Servers[0], i.Privilege, i.HexKey)
-
-	// require.EqualValues(t, "USERID", conn.Username)
-	require.EqualValues(t, "lan", conn.Interface)
-	require.EqualValues(t, "1234567F", conn.HexKey)
-}
