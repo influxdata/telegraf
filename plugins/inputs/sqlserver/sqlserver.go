@@ -259,6 +259,9 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	// initialize mutual exclusion lock
 	mutex = sync.RWMutex{}
 
+	// initialize mutual exclusion lock
+	mutex = sync.RWMutex{}
+
 	for _, serv := range s.Servers {
 		for _, query := range s.queries {
 			wg.Add(1)
