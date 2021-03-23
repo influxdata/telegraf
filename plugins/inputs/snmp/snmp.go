@@ -415,8 +415,25 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 			// index, and being added on the same row.
 			if pkt, err := gs.Get([]string{oid}); err != nil {
 				return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
-			} else if pkt != nil && pkt.PDUType == gosnmp.Report {
-				_, _, oidText, _, _ := SnmpTranslate(pkt.Variables[0].Name)
+			} else if pkt != nil && pkt.PDUType == gosnmp.Report && len(pkt.Variables) > 0 {
+				ent := pkt.Variables[0]
+
+				// check for usmStats to give clear error message
+				if len(ent.Name) > 20 && ent.Name[:20] == ".1.3.6.1.6.3.15.1.1." {
+					switch ent.Name {
+					case ".1.3.6.1.6.3.15.1.1.1.0":
+						return nil, fmt.Errorf("unknown security level (sec_level)")
+					case ".1.3.6.1.6.3.15.1.1.3.0":
+						return nil, fmt.Errorf("unknown username (sec_name)")
+					case ".1.3.6.1.6.3.15.1.1.5.0":
+						return nil, fmt.Errorf("wrong digest (auth_protocol, auth_password)")
+					case ".1.3.6.1.6.3.15.1.1.6.0":
+						return nil, fmt.Errorf("decryption error (priv_protocol, priv_password)")
+					}
+				}
+
+				// other kind of reports
+				_, _, oidText, _, _ := SnmpTranslate(ent.Name)
 				return nil, fmt.Errorf("recieved %s report", strings.TrimSuffix(oidText, ".0"))
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
