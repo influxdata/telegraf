@@ -17,7 +17,7 @@ def apply(metric):
     refDate = time.from_timestamp(1616198400)
     # 1616020365 sec = Wednesday, March 17, 2021 22:32:45 GMT
     # 1616150517 sec = Friday, March 19, 2021 10:41:57 GMT
-    metric_date = time.from_timestamp(int(metric.time / 1000000000))
+    metric_date = time.from_timestamp(int(metric.time / 1e9))
     # Only keep metrics with a timestamp that is not more than 24 hours before the reference date 
     if refDate - time.parse_duration("24h") < metric_date:
         return metric
