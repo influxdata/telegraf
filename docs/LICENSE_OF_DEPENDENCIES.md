@@ -189,7 +189,6 @@ following works:
 - golang.org/x/sys [BSD 3-Clause Clear License](https://github.com/golang/sys/blob/master/LICENSE)
 - golang.org/x/text [BSD 3-Clause Clear License](https://github.com/golang/text/blob/master/LICENSE)
 - golang.org/x/time [BSD 3-Clause Clear License](https://github.com/golang/time/blob/master/LICENSE)
-- golang.org/x/xerrors [BSD 3-Clause Clear License](https://github.com/golang/time/blob/master/LICENSE)
 - golang.zx2c4.com/wireguard [MIT License](https://github.com/WireGuard/wgctrl-go/blob/master/LICENSE.md)
 - golang.zx2c4.com/wireguard/wgctrl [MIT License](https://github.com/WireGuard/wgctrl-go/blob/master/LICENSE.md)
 - google.golang.org/api [BSD 3-Clause "New" or "Revised" License](https://github.com/googleapis/google-api-go-client/blob/master/LICENSE)
