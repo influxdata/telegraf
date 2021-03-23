@@ -39,6 +39,12 @@ var sampleConfig = `
 
   ## Use "basic" for a limited number of basic bucket stats. Use "detailed" for a more comprehensive list of all bucket stats.
   bucket_metric_type = "basic"
+
+  ## Filter fields to include only here.
+  # fields_included = []
+
+  ## Filter fields to exclude only here.
+  # fields_excluded = []
 `
 
 var regexpURI = regexp.MustCompile(`(\S+://)?(\S+\:\S+@)`)
