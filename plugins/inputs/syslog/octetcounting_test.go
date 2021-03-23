@@ -392,7 +392,8 @@ func testStrictOctetCounting(t *testing.T, protocol string, address string, want
 	}
 }
 
-func testBestEffortOctetCounting(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+func testBestEffortOctetCounting(t *testing.T, protocol string, address string, wantTLS bool) {
+	keepAlive := (*internal.Duration)(nil)
 	for _, tc := range getTestCasesForOctetCounting() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
@@ -445,7 +446,7 @@ func TestOctetCountingStrict_tcp(t *testing.T) {
 }
 
 func TestOctetCountingBestEffort_tcp(t *testing.T) {
-	testBestEffortOctetCounting(t, "tcp", address, false, nil)
+	testBestEffortOctetCounting(t, "tcp", address, false)
 }
 
 func TestOctetCountingStrict_tcp_tls(t *testing.T) {
@@ -453,7 +454,7 @@ func TestOctetCountingStrict_tcp_tls(t *testing.T) {
 }
 
 func TestOctetCountingBestEffort_tcp_tls(t *testing.T) {
-	testBestEffortOctetCounting(t, "tcp", address, true, nil)
+	testBestEffortOctetCounting(t, "tcp", address, true)
 }
 
 func TestOctetCountingStrictWithKeepAlive_tcp_tls(t *testing.T) {
@@ -477,7 +478,7 @@ func TestOctetCountingBestEffort_unix(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix.sock")
-	testBestEffortOctetCounting(t, "unix", sock, false, nil)
+	testBestEffortOctetCounting(t, "unix", sock, false)
 }
 
 func TestOctetCountingStrict_unix_tls(t *testing.T) {
@@ -493,5 +494,5 @@ func TestOctetCountingBestEffort_unix_tls(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix_tls.sock")
-	testBestEffortOctetCounting(t, "unix", sock, true, nil)
+	testBestEffortOctetCounting(t, "unix", sock, true)
 }

@@ -3,7 +3,6 @@ package sumologic
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"log"
 	"net/http"
 	"time"
@@ -139,13 +138,13 @@ func (s *SumoLogic) SetSerializer(serializer serializers.Serializer) {
 	s.serializer = serializer
 }
 
-func (s *SumoLogic) createClient(ctx context.Context) (*http.Client, error) {
+func (s *SumoLogic) createClient() *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
 		Timeout: s.Timeout.Duration,
-	}, nil
+	}
 }
 
 func (s *SumoLogic) Connect() error {
@@ -157,12 +156,7 @@ func (s *SumoLogic) Connect() error {
 		s.Timeout.Duration = defaultClientTimeout
 	}
 
-	client, err := s.createClient(context.Background())
-	if err != nil {
-		return err
-	}
-
-	s.client = client
+	s.client = s.createClient()
 
 	return nil
 }

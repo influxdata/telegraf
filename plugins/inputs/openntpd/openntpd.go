@@ -10,15 +10,9 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
-
-// Mapping of ntpctl header names to tag keys
-var tagHeaders = map[string]string{
-	"st": "stratum",
-}
 
 // Mapping of the ntpctl tag key to the index in the command output
 var tagI = map[string]int{
@@ -48,8 +42,7 @@ type Openntpd struct {
 	Timeout internal.Duration
 	UseSudo bool
 
-	filter filter.Filter
-	run    runner
+	run runner
 }
 
 var defaultBinary = "/usr/sbin/ntpctl"

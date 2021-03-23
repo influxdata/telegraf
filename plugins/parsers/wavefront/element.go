@@ -30,9 +30,6 @@ type LoopedParser struct {
 	wrappedParser ElementParser
 	wsParser      *WhiteSpaceParser
 }
-type LiteralParser struct {
-	literal string
-}
 
 func (ep *NameParser) parse(p *PointParser, pt *Point) error {
 	//Valid characters are: a-z, A-Z, 0-9, hyphen ("-"), underscore ("_"), dot (".").
@@ -168,7 +165,7 @@ func (ep *TagParser) parse(p *PointParser, pt *Point) error {
 	return nil
 }
 
-func (ep *WhiteSpaceParser) parse(p *PointParser, pt *Point) error {
+func (ep *WhiteSpaceParser) parse(p *PointParser, _ *Point) error {
 	tok := Ws
 	for tok != EOF && tok == Ws {
 		tok, _ = p.scan()
@@ -181,18 +178,6 @@ func (ep *WhiteSpaceParser) parse(p *PointParser, pt *Point) error {
 		return nil
 	}
 	p.unscan()
-	return nil
-}
-
-func (ep *LiteralParser) parse(p *PointParser, pt *Point) error {
-	l, err := parseLiteral(p)
-	if err != nil {
-		return err
-	}
-
-	if l != ep.literal {
-		return fmt.Errorf("found %s, expected %s", l, ep.literal)
-	}
 	return nil
 }
 

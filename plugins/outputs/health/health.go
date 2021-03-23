@@ -178,7 +178,7 @@ func (h *Health) listen() (net.Listener, error) {
 	return net.Listen(h.network, h.address)
 }
 
-func (h *Health) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (h *Health) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 	var code = http.StatusOK
 	if !h.isHealthy() {
 		code = http.StatusServiceUnavailable

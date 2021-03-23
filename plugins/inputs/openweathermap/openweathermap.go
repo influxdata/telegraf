@@ -131,7 +131,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *OpenWeatherMap) createHTTPClient() (*http.Client, error) {
+func (n *OpenWeatherMap) createHTTPClient() *http.Client {
 	if n.ResponseTimeout.Duration < time.Second {
 		n.ResponseTimeout.Duration = defaultResponseTimeout
 	}
@@ -141,7 +141,7 @@ func (n *OpenWeatherMap) createHTTPClient() (*http.Client, error) {
 		Timeout:   n.ResponseTimeout.Duration,
 	}
 
-	return client, nil
+	return client
 }
 
 func (n *OpenWeatherMap) gatherURL(addr string) (*Status, error) {
@@ -318,10 +318,7 @@ func (n *OpenWeatherMap) Init() error {
 
 	// Create an HTTP client that is re-used for each
 	// collection interval
-	n.client, err = n.createHTTPClient()
-	if err != nil {
-		return err
-	}
+	n.client = n.createHTTPClient()
 
 	switch n.Units {
 	case "imperial", "standard", "metric":

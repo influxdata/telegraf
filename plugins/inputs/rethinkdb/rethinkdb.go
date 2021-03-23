@@ -62,10 +62,10 @@ func (r *RethinkDB) Gather(acc telegraf.Accumulator) error {
 			u.Host = serv
 		}
 		wg.Add(1)
-		go func(serv string) {
+		go func() {
 			defer wg.Done()
 			acc.AddError(r.gatherServer(&Server{URL: u}, acc))
-		}(serv)
+		}()
 	}
 
 	wg.Wait()

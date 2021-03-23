@@ -39,7 +39,7 @@ func nxosValueXformUint64Toint64(field *telemetry.TelemetryField, value interfac
 }
 
 //xform string to float
-func nxosValueXformStringTofloat(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueXformStringTofloat(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	//convert property to float from string.
 	vals := field.GetStringValue()
 	if vals != "" {
@@ -51,7 +51,7 @@ func nxosValueXformStringTofloat(field *telemetry.TelemetryField, value interfac
 }
 
 //xform string to uint64
-func nxosValueXformStringToUint64(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueXformStringToUint64(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	//string to uint64
 	vals := field.GetStringValue()
 	if vals != "" {
@@ -63,7 +63,7 @@ func nxosValueXformStringToUint64(field *telemetry.TelemetryField, value interfa
 }
 
 //xform string to int64
-func nxosValueXformStringToInt64(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueXformStringToInt64(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	//string to int64
 	vals := field.GetStringValue()
 	if vals != "" {
@@ -74,26 +74,8 @@ func nxosValueXformStringToInt64(field *telemetry.TelemetryField, value interfac
 	return nil
 }
 
-//auto-xform
-func nxosValueAutoXform(field *telemetry.TelemetryField, value interface{}) interface{} {
-	//check if we want auto xformation
-	vals := field.GetStringValue()
-	if vals != "" {
-		if val64, err := strconv.ParseUint(vals, 10, 64); err == nil {
-			return val64
-		}
-		if valf, err := strconv.ParseFloat(vals, 64); err == nil {
-			return valf
-		}
-		if val64, err := strconv.ParseInt(vals, 10, 64); err == nil {
-			return val64
-		}
-	} // switch
-	return nil
-}
-
 //auto-xform float properties
-func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	//check if we want auto xformation
 	vals := field.GetStringValue()
 	if vals != "" {
@@ -105,7 +87,7 @@ func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, value interfac
 }
 
 //xform uint64 to string
-func nxosValueXformUint64ToString(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueXformUint64ToString(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	switch val := field.ValueByType.(type) {
 	case *telemetry.TelemetryField_StringValue:
 		if len(val.StringValue) > 0 {

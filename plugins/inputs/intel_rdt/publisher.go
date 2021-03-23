@@ -18,7 +18,6 @@ type Publisher struct {
 	BufferChanProcess chan processMeasurement
 	BufferChanCores   chan string
 	errChan           chan error
-	stopChan          chan bool
 }
 
 func NewPublisher(acc telegraf.Accumulator, log telegraf.Logger, shortenedMetrics bool) Publisher {

@@ -912,10 +912,8 @@ type fakeClient struct {
 	err        error
 }
 
-func (f *fakeClient) Do(req *http.Request) (*http.Response, error) {
-	return &http.Response{
-		StatusCode: f.statusCode,
-	}, f.err
+func (f *fakeClient) Do(_ *http.Request) (*http.Response, error) {
+	return &http.Response{StatusCode: f.statusCode}, f.err
 }
 
 func TestNetworkErrors(t *testing.T) {

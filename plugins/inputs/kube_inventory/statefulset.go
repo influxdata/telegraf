@@ -15,14 +15,11 @@ func collectStatefulSets(ctx context.Context, acc telegraf.Accumulator, ki *Kube
 		return
 	}
 	for _, s := range list.Items {
-		if err = ki.gatherStatefulSet(s, acc); err != nil {
-			acc.AddError(err)
-			return
-		}
+		ki.gatherStatefulSet(s, acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherStatefulSet(s v1.StatefulSet, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherStatefulSet(s v1.StatefulSet, acc telegraf.Accumulator) {
 	status := s.Status
 	fields := map[string]interface{}{
 		"created":             s.GetCreationTimestamp().UnixNano(),
@@ -45,6 +42,4 @@ func (ki *KubernetesInventory) gatherStatefulSet(s v1.StatefulSet, acc telegraf.
 	}
 
 	acc.AddFields(statefulSetMeasurement, fields, tags)
-
-	return nil
 }

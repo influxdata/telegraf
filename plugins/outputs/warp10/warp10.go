@@ -214,10 +214,6 @@ func boolToString(inputBool bool) string {
 	return strconv.FormatBool(inputBool)
 }
 
-func uIntToString(inputNum uint64) string {
-	return strconv.FormatUint(inputNum, 10)
-}
-
 func floatToString(inputNum float64) string {
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }

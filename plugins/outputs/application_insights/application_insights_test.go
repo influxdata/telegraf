@@ -459,15 +459,6 @@ func findTransmittedTelemetry(transmitter *mocks.Transmitter, telemetryName stri
 	return nil
 }
 
-func keys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-
-	return keys
-}
-
 func assertMapContains(assert *assert.Assertions, expected, actual map[string]string) {
 	if expected == nil && actual == nil {
 		return

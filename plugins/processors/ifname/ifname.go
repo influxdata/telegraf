@@ -226,7 +226,7 @@ func (d *IfName) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *IfName) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
+func (d *IfName) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 	d.parallel.Enqueue(metric)
 	return nil
 }

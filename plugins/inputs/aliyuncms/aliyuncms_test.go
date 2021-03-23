@@ -71,7 +71,7 @@ type mockAliyunSDKCli struct {
 	resp *responses.CommonResponse
 }
 
-func (m *mockAliyunSDKCli) ProcessCommonRequest(req *requests.CommonRequest) (response *responses.CommonResponse, err error) {
+func (m *mockAliyunSDKCli) ProcessCommonRequest(_ *requests.CommonRequest) (response *responses.CommonResponse, err error) {
 	return m.resp, nil
 }
 

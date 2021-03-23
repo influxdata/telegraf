@@ -1,7 +1,6 @@
 package kafka
 
 import (
-	"crypto/tls"
 	"fmt"
 	"log"
 	"strings"
@@ -43,8 +42,6 @@ type Kafka struct {
 	kafka.WriteConfig
 
 	Log telegraf.Logger `toml:"-"`
-
-	tlsConfig tls.Config
 
 	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
 	producer     sarama.SyncProducer

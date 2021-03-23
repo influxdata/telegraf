@@ -12,7 +12,7 @@ import (
 // Builds a module that defines all the supported logging functions which will log using the provided logger
 func LogModule(logger telegraf.Logger) *starlarkstruct.Module {
 	var logFunc = func(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-		return log(t, b, args, kwargs, logger)
+		return log(b, args, kwargs, logger)
 	}
 	return &starlarkstruct.Module{
 		Name: "log",
@@ -26,7 +26,7 @@ func LogModule(logger telegraf.Logger) *starlarkstruct.Module {
 }
 
 // Logs the provided message according to the level chosen
-func log(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple, logger telegraf.Logger) (starlark.Value, error) {
+func log(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple, logger telegraf.Logger) (starlark.Value, error) {
 	var msg starlark.String
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &msg); err != nil {
 		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)

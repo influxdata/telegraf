@@ -183,17 +183,12 @@ jobs:
   share-artifacts:
     executor: aws-cli/default  
     steps:
-      - aws-cli/setup:
-          profile-name: TIGER
-          aws-access-key-id: TIGER_AWS_ACCESS_KEY_ID
-          aws-secret-access-key: TIGER_AWS_SECRET_ACCESS_KEY
-          aws-region: TIGER_AWS_DEFAULT_REGION
       - run:
           command: |
             PR=${CIRCLE_PULL_REQUEST##*/}
             printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
-            aws lambda invoke --function-name telegraf-tiger-prod-share_artifacts --profile TIGER --cli-binary-format raw-in-base64-out --payload "$payload" output.json
-            
+            curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"   
+                      
 workflows:
   version: 2
   check:

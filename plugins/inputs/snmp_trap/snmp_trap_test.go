@@ -40,104 +40,111 @@ func fakeExecCmd(_ internal.Duration, x string, y ...string) ([]byte, error) {
 	return nil, fmt.Errorf("mock " + x + " " + strings.Join(y, " "))
 }
 
-func sendTrap(t *testing.T, port uint16, now uint32, trap gosnmp.SnmpTrap, version gosnmp.SnmpVersion, secLevel string, username string, authProto string, authPass string, privProto string, privPass string, contextName string, engineID string) {
-	var s gosnmp.GoSNMP
-
-	if version == gosnmp.Version3 {
-		var msgFlags gosnmp.SnmpV3MsgFlags
-		switch strings.ToLower(secLevel) {
-		case "noauthnopriv", "":
-			msgFlags = gosnmp.NoAuthNoPriv
-		case "authnopriv":
-			msgFlags = gosnmp.AuthNoPriv
-		case "authpriv":
-			msgFlags = gosnmp.AuthPriv
-		default:
-			msgFlags = gosnmp.NoAuthNoPriv
-		}
-
-		var authenticationProtocol gosnmp.SnmpV3AuthProtocol
-		switch strings.ToLower(authProto) {
-		case "md5":
-			authenticationProtocol = gosnmp.MD5
-		case "sha":
-			authenticationProtocol = gosnmp.SHA
-		//case "sha224":
-		//	authenticationProtocol = gosnmp.SHA224
-		//case "sha256":
-		//	authenticationProtocol = gosnmp.SHA256
-		//case "sha384":
-		//	authenticationProtocol = gosnmp.SHA384
-		//case "sha512":
-		//	authenticationProtocol = gosnmp.SHA512
-		case "":
-			authenticationProtocol = gosnmp.NoAuth
-		default:
-			authenticationProtocol = gosnmp.NoAuth
-		}
-
-		var privacyProtocol gosnmp.SnmpV3PrivProtocol
-		switch strings.ToLower(privProto) {
-		case "aes":
-			privacyProtocol = gosnmp.AES
-		case "des":
-			privacyProtocol = gosnmp.DES
-		case "aes192":
-			privacyProtocol = gosnmp.AES192
-		case "aes192c":
-			privacyProtocol = gosnmp.AES192C
-		case "aes256":
-			privacyProtocol = gosnmp.AES256
-		case "aes256c":
-			privacyProtocol = gosnmp.AES256C
-		case "":
-			privacyProtocol = gosnmp.NoPriv
-		default:
-			privacyProtocol = gosnmp.NoPriv
-		}
-
-		sp := &gosnmp.UsmSecurityParameters{
-			AuthoritativeEngineID:    "1",
-			AuthoritativeEngineBoots: 1,
-			AuthoritativeEngineTime:  1,
-			UserName:                 username,
-			PrivacyProtocol:          privacyProtocol,
-			PrivacyPassphrase:        privPass,
-			AuthenticationPassphrase: authPass,
-			AuthenticationProtocol:   authenticationProtocol,
-		}
-		s = gosnmp.GoSNMP{
-			Port:               port,
-			Version:            version,
-			Timeout:            time.Duration(2) * time.Second,
-			Retries:            1,
-			MaxOids:            gosnmp.MaxOids,
-			Target:             "127.0.0.1",
-			SecurityParameters: sp,
-			SecurityModel:      gosnmp.UserSecurityModel,
-			MsgFlags:           msgFlags,
-			ContextName:        contextName,
-			ContextEngineID:    engineID,
-		}
-	} else {
-		s = gosnmp.GoSNMP{
-			Port:      port,
-			Version:   version,
-			Timeout:   time.Duration(2) * time.Second,
-			Retries:   1,
-			MaxOids:   gosnmp.MaxOids,
-			Target:    "127.0.0.1",
-			Community: "public",
-		}
+func newMsgFlagsV3(secLevel string) gosnmp.SnmpV3MsgFlags {
+	var msgFlags gosnmp.SnmpV3MsgFlags
+	switch strings.ToLower(secLevel) {
+	case "noauthnopriv", "":
+		msgFlags = gosnmp.NoAuthNoPriv
+	case "authnopriv":
+		msgFlags = gosnmp.AuthNoPriv
+	case "authpriv":
+		msgFlags = gosnmp.AuthPriv
+	default:
+		msgFlags = gosnmp.NoAuthNoPriv
 	}
 
-	err := s.Connect()
+	return msgFlags
+}
+
+func newUsmSecurityParametersForV3(authProto string, privProto string, username string, privPass string, authPass string) *gosnmp.UsmSecurityParameters {
+	var authenticationProtocol gosnmp.SnmpV3AuthProtocol
+	switch strings.ToLower(authProto) {
+	case "md5":
+		authenticationProtocol = gosnmp.MD5
+	case "sha":
+		authenticationProtocol = gosnmp.SHA
+	//case "sha224":
+	//	authenticationProtocol = gosnmp.SHA224
+	//case "sha256":
+	//	authenticationProtocol = gosnmp.SHA256
+	//case "sha384":
+	//	authenticationProtocol = gosnmp.SHA384
+	//case "sha512":
+	//	authenticationProtocol = gosnmp.SHA512
+	case "":
+		authenticationProtocol = gosnmp.NoAuth
+	default:
+		authenticationProtocol = gosnmp.NoAuth
+	}
+
+	var privacyProtocol gosnmp.SnmpV3PrivProtocol
+	switch strings.ToLower(privProto) {
+	case "aes":
+		privacyProtocol = gosnmp.AES
+	case "des":
+		privacyProtocol = gosnmp.DES
+	case "aes192":
+		privacyProtocol = gosnmp.AES192
+	case "aes192c":
+		privacyProtocol = gosnmp.AES192C
+	case "aes256":
+		privacyProtocol = gosnmp.AES256
+	case "aes256c":
+		privacyProtocol = gosnmp.AES256C
+	case "":
+		privacyProtocol = gosnmp.NoPriv
+	default:
+		privacyProtocol = gosnmp.NoPriv
+	}
+
+	return &gosnmp.UsmSecurityParameters{
+		AuthoritativeEngineID:    "1",
+		AuthoritativeEngineBoots: 1,
+		AuthoritativeEngineTime:  1,
+		UserName:                 username,
+		PrivacyProtocol:          privacyProtocol,
+		PrivacyPassphrase:        privPass,
+		AuthenticationPassphrase: authPass,
+		AuthenticationProtocol:   authenticationProtocol,
+	}
+}
+
+func newGoSNMPV3(port uint16, contextName string, engineID string, msgFlags gosnmp.SnmpV3MsgFlags, sp *gosnmp.UsmSecurityParameters) gosnmp.GoSNMP {
+	return gosnmp.GoSNMP{
+		Port:               port,
+		Version:            gosnmp.Version3,
+		Timeout:            time.Duration(2) * time.Second,
+		Retries:            1,
+		MaxOids:            gosnmp.MaxOids,
+		Target:             "127.0.0.1",
+		SecurityParameters: sp,
+		SecurityModel:      gosnmp.UserSecurityModel,
+		MsgFlags:           msgFlags,
+		ContextName:        contextName,
+		ContextEngineID:    engineID,
+	}
+}
+
+func newGoSNMP(version gosnmp.SnmpVersion, port uint16) gosnmp.GoSNMP {
+	return gosnmp.GoSNMP{
+		Port:      port,
+		Version:   version,
+		Timeout:   time.Duration(2) * time.Second,
+		Retries:   1,
+		MaxOids:   gosnmp.MaxOids,
+		Target:    "127.0.0.1",
+		Community: "public",
+	}
+}
+
+func sendTrap(t *testing.T, goSNMP gosnmp.GoSNMP, trap gosnmp.SnmpTrap) {
+	err := goSNMP.Connect()
 	if err != nil {
 		t.Errorf("Connect() err: %v", err)
 	}
-	defer s.Conn.Close()
+	defer goSNMP.Conn.Close()
 
-	_, err = s.SendTrap(trap)
+	_, err = goSNMP.SendTrap(trap)
 	if err != nil {
 		t.Errorf("SendTrap() err: %v", err)
 	}
@@ -1302,8 +1309,17 @@ func TestReceiveTrap(t *testing.T) {
 				s.load(entry.oid, entry.e)
 			}
 
+			var goSNMP gosnmp.GoSNMP
+			if tt.version == gosnmp.Version3 {
+				msgFlags := newMsgFlagsV3(tt.secLevel)
+				sp := newUsmSecurityParametersForV3(tt.authProto, tt.privProto, tt.secName, tt.privPass, tt.authPass)
+				goSNMP = newGoSNMPV3(port, tt.contextName, tt.engineID, msgFlags, sp)
+			} else {
+				goSNMP = newGoSNMP(tt.version, port)
+			}
+
 			// Send the trap
-			sendTrap(t, port, now, tt.trap, tt.version, tt.secLevel, tt.secName, tt.authProto, tt.authPass, tt.privProto, tt.privPass, tt.contextName, tt.engineID)
+			sendTrap(t, goSNMP, tt.trap)
 
 			// Wait for trap to be received
 			select {

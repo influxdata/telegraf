@@ -295,18 +295,6 @@ func (j *Jenkins) gatherJobs(acc telegraf.Accumulator) {
 	wg.Wait()
 }
 
-// wrap the tcp request with doGet
-// block tcp request if buffered channel is full
-func (j *Jenkins) doGet(tcp func() error) error {
-	j.semaphore <- struct{}{}
-	if err := tcp(); err != nil {
-		<-j.semaphore
-		return err
-	}
-	<-j.semaphore
-	return nil
-}
-
 func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 	if j.MaxSubJobDepth > 0 && jr.layer == j.MaxSubJobDepth {
 		return nil
@@ -451,7 +439,6 @@ type jobRequest struct {
 	name    string
 	parents []string
 	layer   int
-	number  int64
 }
 
 func (jr jobRequest) combined() []string {
