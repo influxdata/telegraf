@@ -106,3 +106,9 @@ services:
       - -Ctransport.host=localhost
     environment:
       - CRATE_HEAP_SIZE=128m
+  supervisor:
+    image: bravado/supervisord
+    volumes:
+      - ./plugins/inputs/supervisor/testdata/supervisord.conf:/etc/supervisor/supervisord.conf
+    ports:
+      - "9001:9001"

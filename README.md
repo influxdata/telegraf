@@ -313,6 +313,7 @@ For documentation on the latest development code see the [documentation index][d
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
 * [stackdriver](./plugins/inputs/stackdriver) (Google Cloud Monitoring)
 * [statsd](./plugins/inputs/statsd)
+* [supervisor](./plugins/inputs/supervisor)
 * [suricata](./plugins/inputs/suricata)
 * [swap](./plugins/inputs/swap)
 * [synproxy](./plugins/inputs/synproxy)
