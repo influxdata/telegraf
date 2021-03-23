@@ -383,12 +383,12 @@ func (cb *Couchbase) queryDetailedBucketStats(server, bucket string, bucketStats
 }
 
 func (cb *Couchbase) Init() error {
-	filter, err := filter.NewIncludeExcludeFilter(cb.FieldsIncluded, cb.FieldsExcluded)
+	f, err := filter.NewIncludeExcludeFilter(cb.FieldsIncluded, cb.FieldsExcluded)
 	if err != nil {
 		return err
 	}
 
-	cb.includeExclude = filter
+	cb.includeExclude = f
 
 	return nil
 }
