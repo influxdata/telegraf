@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/adal"
-	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
 	mssql "github.com/denisenkom/go-mssqldb"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -289,7 +288,7 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 		var pool *sql.DB
 
 		// setup connection based on authentication
-		rx := regexp.MustCompile("(?i)\\b(?:(Password=\\w+))\\b")
+		rx := regexp.MustCompile(`(?i)\b(?:(Password=\w+))\b`)
 
 		// when password is provided in connection string, use SQL auth
 		if rx.MatchString(serv) {
@@ -309,14 +308,14 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			// get token from im-memory cache variable or from Azure Active Directory
 			tokenProvider, err := getTokenProvider()
 			if err != nil {
-				fmt.Println("Error creating token provider for system assigned Azure Managed Identity: ", err.Error())
+				fmt.Printf("Error creating AAD token provider for system assigned Azure managed identity for script %s : %w", query.ScriptName, err)
 				acc.AddError(err)
 				return err
 			}
 
 			connector, err := mssql.NewAccessTokenConnector(serv, tokenProvider)
 			if err != nil {
-				fmt.Println("Error creating the connector: ", err.Error())
+				fmt.Printf("Error creating the SQL connector for script %s : %w", query.ScriptName, err)
 				acc.AddError(err)
 				return err
 			}
@@ -512,9 +511,9 @@ func getTokenProvider() (func() (string, error), error) {
 func loadToken() (*adal.Token, error) {
 	if adalToken == nil {
 		return nil, fmt.Errorf("Token is nil or Failed to load existing token")
-	} else {
-		return adalToken, nil
 	}
+
+	return adalToken, nil
 }
 
 // Refresh token for the resource, and save to in-mem cache
