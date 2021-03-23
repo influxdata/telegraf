@@ -184,7 +184,7 @@ To enable support for AAD authentication, we leverage the existing AAD authentic
 
 #### How to use AAD Auth with MSI
 
-- Configure managed identity for Azure resources on the Monitoring VM (the VM that'd connect to the SQL server/database) [using the Azure portal](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/qs-configure-portal-windows-vm).
+- Configure "system-assigned managed identity" for Azure resources on the Monitoring VM (the VM that'd connect to the SQL server/database) [using the Azure portal](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/qs-configure-portal-windows-vm).
 - On the database being monitored, create/update a USER with the name of the Monitoring VM as the principal using the below script. This might require allow-listing the client machine's IP address (from where the below SQL script is being run) on the SQL Server resource.
 ```sql
 EXECUTE ('IF EXISTS(SELECT * FROM sys.database_principals WHERE name = ''<Monitoring_VM_Name>'')
