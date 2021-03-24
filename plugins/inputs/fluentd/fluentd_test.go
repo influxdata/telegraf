@@ -100,8 +100,8 @@ var (
 		// 		{"object:f48698", "dummy", "input", nil, nil, nil},
 		// 		{"object:e27138", "dummy", "input", nil, nil, nil},
 		// 		{"object:d74060", "monitor_agent", "input", nil, nil, nil},
-		{"object:11a5e2c", "stdout", "output", (*float64)(&zero), nil, nil},
-		{"object:11237ec", "s3", "output", (*float64)(&zero), (*float64)(&zero), (*float64)(&zero)},
+		{"object:11a5e2c", "stdout", "output", &zero, nil, nil},
+		{"object:11237ec", "s3", "output", &zero, &zero, &zero},
 	}
 	fluentdTest = &Fluentd{
 		Endpoint: "http://localhost:8081",

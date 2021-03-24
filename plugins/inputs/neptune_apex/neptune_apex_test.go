@@ -363,7 +363,7 @@ func TestParseXML(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			err := n.parseXML(&acc, []byte(test.xmlResponse))
+			err := n.parseXML(&acc, test.xmlResponse)
 			if (err != nil) != test.wantErr {
 				t.Errorf("err mismatch. got=%v, want=%t", err, test.wantErr)
 			}

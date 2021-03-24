@@ -124,7 +124,7 @@ func (a *ChimpAPI) GetReport(campaignID string) (Report, error) {
 func runChimp(api *ChimpAPI, params ReportsParams) ([]byte, error) {
 	client := &http.Client{
 		Transport: api.Transport,
-		Timeout:   time.Duration(4 * time.Second),
+		Timeout:   4 * time.Second,
 	}
 
 	var b bytes.Buffer

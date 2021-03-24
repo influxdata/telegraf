@@ -297,7 +297,7 @@ func convertField(v interface{}) interface{} {
 	case uint:
 		return uint64(v)
 	case uint64:
-		return uint64(v)
+		return v
 	case []byte:
 		return string(v)
 	case int32:
@@ -340,7 +340,7 @@ func convertField(v interface{}) interface{} {
 		}
 	case *uint64:
 		if v != nil {
-			return uint64(*v)
+			return *v
 		}
 	case *[]byte:
 		if v != nil {
