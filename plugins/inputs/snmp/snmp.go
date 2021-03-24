@@ -432,8 +432,11 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 					}
 				}
 
-				// other kind of reports
-				_, _, oidText, _, _ := SnmpTranslate(ent.Name)
+				// other kinds of reports
+				var oidText string
+				if _, _, oidText, _, err = SnmpTranslate(ent.Name); err != nil {
+					oidText = ent.Name
+				}
 				return nil, fmt.Errorf("recieved %s report", strings.TrimSuffix(oidText, ".0"))
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
