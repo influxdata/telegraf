@@ -205,7 +205,7 @@ func (h *GrayLog) flatten(item map[string]interface{}, fields map[string]interfa
 	for k, i := range item {
 		switch i := i.(type) {
 		case int:
-			fields[id+k] = i
+			fields[id+k] = float64(i)
 		case float64:
 			fields[id+k] = i
 		case map[string]interface{}:
