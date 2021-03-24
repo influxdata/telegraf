@@ -193,7 +193,7 @@ func (a *AzureMonitor) Connect() error {
 
 	a.auth, err = auth.NewAuthorizerFromEnvironmentWithResource(defaultAuthResource)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	a.Reset()
