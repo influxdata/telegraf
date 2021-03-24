@@ -33,7 +33,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
 	expS := `{"_value":91.5,"cpu":"cpu0","metric_name":"cpu.usage_idle","time":1529875740.819}`
-	assert.Equal(t, string(expS), string(buf))
+	assert.Equal(t, expS, string(buf))
 }
 
 func TestSerializeMetricFloatHec(t *testing.T) {
@@ -53,7 +53,7 @@ func TestSerializeMetricFloatHec(t *testing.T) {
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
 	expS := `{"time":1529875740.819,"fields":{"_value":91.5,"cpu":"cpu0","metric_name":"cpu.usage_idle"}}`
-	assert.Equal(t, string(expS), string(buf))
+	assert.Equal(t, expS, string(buf))
 }
 
 func TestSerializeMetricInt(t *testing.T) {
@@ -73,7 +73,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	assert.NoError(t, err)
 
 	expS := `{"_value":90,"cpu":"cpu0","metric_name":"cpu.usage_idle","time":0}`
-	assert.Equal(t, string(expS), string(buf))
+	assert.Equal(t, expS, string(buf))
 }
 
 func TestSerializeMetricIntHec(t *testing.T) {
@@ -93,7 +93,7 @@ func TestSerializeMetricIntHec(t *testing.T) {
 	assert.NoError(t, err)
 
 	expS := `{"time":0,"fields":{"_value":90,"cpu":"cpu0","metric_name":"cpu.usage_idle"}}`
-	assert.Equal(t, string(expS), string(buf))
+	assert.Equal(t, expS, string(buf))
 }
 
 func TestSerializeMetricBool(t *testing.T) {
@@ -113,7 +113,7 @@ func TestSerializeMetricBool(t *testing.T) {
 	assert.NoError(t, err)
 
 	expS := `{"_value":1,"container-name":"telegraf-test","metric_name":"docker.oomkiller","time":0}`
-	assert.Equal(t, string(expS), string(buf))
+	assert.Equal(t, expS, string(buf))
 }
 
 func TestSerializeMetricBoolHec(t *testing.T) {
@@ -133,7 +133,7 @@ func TestSerializeMetricBoolHec(t *testing.T) {
 	assert.NoError(t, err)
 
 	expS := `{"time":0,"fields":{"_value":0,"container-name":"telegraf-test","metric_name":"docker.oomkiller"}}`
-	assert.Equal(t, string(expS), string(buf))
+	assert.Equal(t, expS, string(buf))
 }
 
 func TestSerializeMetricString(t *testing.T) {
@@ -154,7 +154,7 @@ func TestSerializeMetricString(t *testing.T) {
 	assert.NoError(t, err)
 
 	expS := `{"_value":5,"cpu":"cpu0","metric_name":"cpu.usage_idle","time":0}`
-	assert.Equal(t, string(expS), string(buf))
+	assert.Equal(t, expS, string(buf))
 	assert.NoError(t, err)
 }
 
@@ -186,7 +186,7 @@ func TestSerializeBatch(t *testing.T) {
 	assert.NoError(t, err)
 
 	expS := `{"_value":42,"metric_name":"cpu.value","time":0}{"_value":92,"metric_name":"cpu.value","time":0}`
-	assert.Equal(t, string(expS), string(buf))
+	assert.Equal(t, expS, string(buf))
 }
 
 func TestSerializeMulti(t *testing.T) {
@@ -208,7 +208,7 @@ func TestSerializeMulti(t *testing.T) {
 	assert.NoError(t, err)
 
 	expS := `{"metric_name:cpu.system":8,"metric_name:cpu.user":42,"time":0}`
-	assert.Equal(t, string(expS), string(buf))
+	assert.Equal(t, expS, string(buf))
 }
 
 func TestSerializeBatchHec(t *testing.T) {
@@ -239,7 +239,7 @@ func TestSerializeBatchHec(t *testing.T) {
 	assert.NoError(t, err)
 
 	expS := `{"time":0,"fields":{"_value":42,"metric_name":"cpu.value"}}{"time":0,"fields":{"_value":92,"metric_name":"cpu.value"}}`
-	assert.Equal(t, string(expS), string(buf))
+	assert.Equal(t, expS, string(buf))
 }
 
 func TestSerializeMultiHec(t *testing.T) {
@@ -261,5 +261,5 @@ func TestSerializeMultiHec(t *testing.T) {
 	assert.NoError(t, err)
 
 	expS := `{"time":0,"fields":{"metric_name:cpu.system":8,"metric_name:cpu.usage":42}}`
-	assert.Equal(t, string(expS), string(buf))
+	assert.Equal(t, expS, string(buf))
 }

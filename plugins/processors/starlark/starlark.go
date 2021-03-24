@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"go.starlark.net/lib/math"
 	"go.starlark.net/lib/time"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
@@ -252,6 +253,10 @@ func loadFunc(module string, logger telegraf.Logger) (starlark.StringDict, error
 	case "logging.star":
 		return starlark.StringDict{
 			"log": LogModule(logger),
+		}, nil
+	case "math.star":
+		return starlark.StringDict{
+			"math": math.Module,
 		}, nil
 	case "time.star":
 		return starlark.StringDict{

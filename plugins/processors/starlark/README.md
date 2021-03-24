@@ -222,6 +222,7 @@ def apply(metric):
 - [drop fields with unexpected type](/plugins/processors/starlark/testdata/drop_fields_with_unexpected_type.star) - Drop fields containing unexpected value types.
 - [iops](/plugins/processors/starlark/testdata/iops.star) - obtain IOPS (to aggregate, to produce max_iops)
 - [json](/plugins/processors/starlark/testdata/json.star) - an example of processing JSON from a field in a metric
+- [math](/plugins/processors/starlark/testdata/math.star) - Use a math function to compute the value of a field. [The list of the supported math functions and constants](https://pkg.go.dev/go.starlark.net/lib/math).
 - [number logic](/plugins/processors/starlark/testdata/number_logic.star) - transform a numerical value to another numerical value
 - [pivot](/plugins/processors/starlark/testdata/pivot.star) - Pivots a key's value to be the key for another key.
 - [ratio](/plugins/processors/starlark/testdata/ratio.star) - Compute the ratio of two integer fields

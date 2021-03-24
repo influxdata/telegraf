@@ -458,11 +458,11 @@ L:
 		metric.requestDimensions = make([]map[string]string, 0, len(s.discoveryData))
 
 		//Preparing tags & dims...
-		for instanceId, elem := range s.discoveryData {
+		for instanceID, elem := range s.discoveryData {
 			//Start filing tags
 			//Remove old value if exist
-			delete(metric.discoveryTags, instanceId)
-			metric.discoveryTags[instanceId] = make(map[string]string, len(metric.TagsQueryPath)+len(defaulTags))
+			delete(metric.discoveryTags, instanceID)
+			metric.discoveryTags[instanceID] = make(map[string]string, len(metric.TagsQueryPath)+len(defaulTags))
 
 			for _, tagQueryPath := range metric.TagsQueryPath {
 				tagKey, tagValue, err := parseTag(tagQueryPath, elem)
@@ -471,11 +471,11 @@ L:
 					continue
 				}
 				if err == nil && tagValue == "" { //Nothing found
-					s.Log.Debugf("Data by query path %q: is not found, for instance %q", tagQueryPath, instanceId)
+					s.Log.Debugf("Data by query path %q: is not found, for instance %q", tagQueryPath, instanceID)
 					continue
 				}
 
-				metric.discoveryTags[instanceId][tagKey] = tagValue
+				metric.discoveryTags[instanceID][tagKey] = tagValue
 			}
 
 			//Adding default tags if not already there
@@ -489,17 +489,17 @@ L:
 
 				if err == nil && tagValue == "" { //Nothing found
 					s.Log.Debugf("Data by query path %q: is not found, for instance %q",
-						defaultTagQP, instanceId)
+						defaultTagQP, instanceID)
 					continue
 				}
 
-				metric.discoveryTags[instanceId][tagKey] = tagValue
+				metric.discoveryTags[instanceID][tagKey] = tagValue
 			}
 
 			//Preparing dimensions (first adding dimensions that comes from discovery data)
 			metric.requestDimensions = append(
 				metric.requestDimensions,
-				map[string]string{s.dimensionKey: instanceId})
+				map[string]string{s.dimensionKey: instanceID})
 		}
 
 		//Get final dimension (need to get full lis of

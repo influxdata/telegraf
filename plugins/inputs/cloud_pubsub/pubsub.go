@@ -180,7 +180,7 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		if err != nil {
 			return fmt.Errorf("unable to base64 decode message: %v", err)
 		}
-		data = []byte(strData)
+		data = strData
 	} else {
 		data = msg.Data()
 	}

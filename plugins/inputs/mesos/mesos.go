@@ -568,8 +568,8 @@ func (m *Mesos) gatherMainMetrics(u *url.URL, role Role, acc telegraf.Accumulato
 		return err
 	}
 
-	if err = json.Unmarshal([]byte(data), &jsonOut); err != nil {
-		return errors.New("Error decoding JSON response")
+	if err = json.Unmarshal(data, &jsonOut); err != nil {
+		return errors.New("error decoding JSON response")
 	}
 
 	m.filterMetrics(role, &jsonOut)
