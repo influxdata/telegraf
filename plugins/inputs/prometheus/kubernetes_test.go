@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/kubernetes/apimachinery/pkg/fields"
-	"github.com/kubernetes/apimachinery/pkg/labels"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
