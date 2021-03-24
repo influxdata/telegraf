@@ -20,7 +20,7 @@ import (
 
 const (
 	oneAgentMetricsURL   = "http://127.0.0.1:14499/metrics/ingest"
-	dtIngestApiLineLimit = 1000
+	dtIngestAPILineLimit = 1000
 )
 
 var (
@@ -235,7 +235,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 					fmt.Fprintf(&buf, "%s%s %v\n", metricID, tagb.String(), value)
 				}
 
-				if metricCounter%dtIngestApiLineLimit == 0 {
+				if metricCounter%dtIngestAPILineLimit == 0 {
 					err = d.send(buf.Bytes())
 					if err != nil {
 						return err

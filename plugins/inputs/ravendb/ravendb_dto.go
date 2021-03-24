@@ -4,10 +4,10 @@ type serverMetricsResponse struct {
 	ServerVersion     string               `json:"ServerVersion"`
 	ServerFullVersion string               `json:"ServerFullVersion"`
 	UpTimeInSec       int32                `json:"UpTimeInSec"`
-	ServerProcessId   int32                `json:"ServerProcessId"`
+	ServerProcessID   int32                `json:"ServerProcessId"`
 	Backup            backupMetrics        `json:"Backup"`
 	Config            configurationMetrics `json:"Config"`
-	Cpu               cpuMetrics           `json:"Cpu"`
+	CPU               cpuMetrics           `json:"Cpu"`
 	Memory            memoryMetrics        `json:"Memory"`
 	Disk              diskMetrics          `json:"Disk"`
 	License           licenseMetrics       `json:"License"`
@@ -24,9 +24,9 @@ type backupMetrics struct {
 
 type configurationMetrics struct {
 	ServerUrls          []string `json:"ServerUrls"`
-	PublicServerUrl     *string  `json:"PublicServerUrl"`
-	TcpServerUrls       []string `json:"TcpServerUrls"`
-	PublicTcpServerUrls []string `json:"PublicTcpServerUrls"`
+	PublicServerURL     *string  `json:"PublicServerUrl"`
+	TCPServerURLs       []string `json:"TcpServerUrls"`
+	PublicTCPServerURLs []string `json:"PublicTcpServerUrls"`
 }
 
 type cpuMetrics struct {
@@ -60,12 +60,12 @@ type diskMetrics struct {
 type licenseMetrics struct {
 	Type                string   `json:"Type"`
 	ExpirationLeftInSec *float64 `json:"ExpirationLeftInSec"`
-	UtilizedCpuCores    int32    `json:"UtilizedCpuCores"`
+	UtilizedCPUCores    int32    `json:"UtilizedCpuCores"`
 	MaxCores            int32    `json:"MaxCores"`
 }
 
 type networkMetrics struct {
-	TcpActiveConnections                          int64    `json:"TcpActiveConnections"`
+	TCPActiveConnections                          int64    `json:"TcpActiveConnections"`
 	ConcurrentRequestsCount                       int64    `json:"ConcurrentRequestsCount"`
 	TotalRequests                                 int64    `json:"TotalRequests"`
 	RequestsPerSec                                float64  `json:"RequestsPerSec"`
@@ -83,7 +83,7 @@ type clusterMetrics struct {
 	NodeState   string `json:"NodeState"`
 	CurrentTerm int64  `json:"CurrentTerm"`
 	Index       int64  `json:"Index"`
-	Id          string `json:"Id"`
+	ID          string `json:"Id"`
 }
 
 type allDatabasesMetrics struct {
@@ -93,13 +93,13 @@ type allDatabasesMetrics struct {
 
 type databasesMetricResponse struct {
 	Results         []*databaseMetrics `json:"Results"`
-	PublicServerUrl *string            `json:"PublicServerUrl"`
+	PublicServerURL *string            `json:"PublicServerUrl"`
 	NodeTag         string             `json:"NodeTag"`
 }
 
 type databaseMetrics struct {
 	DatabaseName             string   `json:"DatabaseName"`
-	DatabaseId               string   `json:"DatabaseId"`
+	DatabaseID               string   `json:"DatabaseId"`
 	UptimeInSec              float64  `json:"UptimeInSec"`
 	TimeSinceLastBackupInSec *float64 `json:"TimeSinceLastBackupInSec"`
 
@@ -153,7 +153,7 @@ type databaseStorageMetrics struct {
 
 type indexesMetricResponse struct {
 	Results         []*perDatabaseIndexMetrics `json:"Results"`
-	PublicServerUrl *string                    `json:"PublicServerUrl"`
+	PublicServerURL *string                    `json:"PublicServerUrl"`
 	NodeTag         string                     `json:"NodeTag"`
 }
 
@@ -180,7 +180,7 @@ type indexMetrics struct {
 
 type collectionsMetricResponse struct {
 	Results         []*perDatabaseCollectionMetrics `json:"Results"`
-	PublicServerUrl *string                         `json:"PublicServerUrl"`
+	PublicServerURL *string                         `json:"PublicServerUrl"`
 	NodeTag         string                          `json:"NodeTag"`
 }
 
