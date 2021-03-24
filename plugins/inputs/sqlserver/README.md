@@ -1,12 +1,12 @@
 # SQL Server Input Plugin
-The `sqlserver` plugin provides metrics for your SQL Server instance. It
-currently works with SQL Server 2008 SP3 and newer. Recorded metrics are
+The `sqlserver` plugin provides metrics for your SQL Server instance. Recorded metrics are
 lightweight and use Dynamic Management Views supplied by SQL Server.
 
 ### The SQL Server plugin supports the following editions/versions of SQL Server
 - SQL Server
-  - 2008 SP3 (with CU3)
-  - SQL Server 2008 R2 SP3 and newer versions
+  - 2012 or newer (Plugin support aligned with the [official Microsoft SQL Server support](https://docs.microsoft.com/en-us/sql/sql-server/end-of-support/sql-server-end-of-life-overview?view=sql-server-ver15#lifecycle-dates))
+  - End-of-life SQL Server versions are not guaranteed to be supported by Telegraf. Any issues with the SQL Server plugin for these EOL versions will 
+  need to be addressed by the community. 
 - Azure SQL Database (Single)
 - Azure SQL Managed Instance
 
