@@ -427,7 +427,7 @@ type buildResponse struct {
 }
 
 func (b *buildResponse) GetTimestamp() time.Time {
-	return time.Unix(0, int64(b.Timestamp)*int64(time.Millisecond))
+	return time.Unix(0, b.Timestamp*int64(time.Millisecond))
 }
 
 const (
@@ -501,7 +501,7 @@ func mapResultCode(s string) int {
 func init() {
 	inputs.Add("jenkins", func() telegraf.Input {
 		return &Jenkins{
-			MaxBuildAge:       internal.Duration{Duration: time.Duration(time.Hour)},
+			MaxBuildAge:       internal.Duration{Duration: time.Hour},
 			MaxConnections:    5,
 			MaxSubJobPerLayer: 10,
 		}

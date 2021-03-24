@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
-	"github.com/kubernetes/apimachinery/pkg/fields"
-	"github.com/kubernetes/apimachinery/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -32,7 +32,7 @@ type podMetadata struct {
 
 type podResponse struct {
 	Kind       string        `json:"kind"`
-	ApiVersion string        `json:"apiVersion"`
+	APIVersion string        `json:"apiVersion"`
 	Metadata   podMetadata   `json:"metadata"`
 	Items      []*corev1.Pod `json:"items,string,omitempty"`
 }
@@ -58,13 +58,13 @@ func loadClient(kubeconfigPath string) (*kubernetes.Clientset, error) {
 func (p *Prometheus) start(ctx context.Context) error {
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return fmt.Errorf("Failed to get InClusterConfig - %v", err)
+		return fmt.Errorf("failed to get InClusterConfig - %v", err)
 	}
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		u, err := user.Current()
 		if err != nil {
-			return fmt.Errorf("Failed to get current user - %v", err)
+			return fmt.Errorf("failed to get current user - %v", err)
 		}
 
 		configLocation := filepath.Join(u.HomeDir, ".kube/config")
@@ -150,13 +150,13 @@ func (p *Prometheus) cAdvisor(ctx context.Context) error {
 	podsURL := fmt.Sprintf("https://%s:10250/pods", p.NodeIP)
 	req, err := http.NewRequest("GET", podsURL, nil)
 	if err != nil {
-		return fmt.Errorf("Error when creating request to %s to get pod list: %w", podsURL, err)
+		return fmt.Errorf("error when creating request to %s to get pod list: %w", podsURL, err)
 	}
 
 	// Update right away so code is not waiting the length of the specified scrape interval initially
 	err = updateCadvisorPodList(p, req)
 	if err != nil {
-		return fmt.Errorf("Error initially updating pod list: %w", err)
+		return fmt.Errorf("error initially updating pod list: %w", err)
 	}
 
 	scrapeInterval := cAdvisorPodListDefaultInterval
@@ -171,7 +171,7 @@ func (p *Prometheus) cAdvisor(ctx context.Context) error {
 		case <-time.After(time.Duration(scrapeInterval) * time.Second):
 			err := updateCadvisorPodList(p, req)
 			if err != nil {
-				return fmt.Errorf("Error updating pod list: %w", err)
+				return fmt.Errorf("error updating pod list: %w", err)
 			}
 		}
 	}
@@ -183,12 +183,12 @@ func updateCadvisorPodList(p *Prometheus, req *http.Request) error {
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Error when making request for pod list: %w", err)
+		return fmt.Errorf("error when making request for pod list: %w", err)
 	}
 
 	// If err is nil, still check response code
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("Error when making request for pod list with status %s", resp.Status)
+		return fmt.Errorf("error when making request for pod list with status %s", resp.Status)
 	}
 
 	defer resp.Body.Close()

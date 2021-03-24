@@ -117,7 +117,7 @@ func (n *NetResponse) TCPGather() (tags map[string]string, fields map[string]int
 		} else {
 			// Looking for string in answer
 			RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
-			find := RegEx.FindString(string(data))
+			find := RegEx.FindString(data)
 			if find != "" {
 				setResult(Success, fields, tags, n.Expect)
 			} else {
@@ -198,10 +198,10 @@ func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 	}
 	// Check send and expected string
 	if n.Protocol == "udp" && n.Send == "" {
-		return errors.New("Send string cannot be empty")
+		return errors.New("send string cannot be empty")
 	}
 	if n.Protocol == "udp" && n.Expect == "" {
-		return errors.New("Expected string cannot be empty")
+		return errors.New("expected string cannot be empty")
 	}
 	// Prepare host and port
 	host, port, err := net.SplitHostPort(n.Address)
@@ -212,7 +212,7 @@ func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 		n.Address = "localhost:" + port
 	}
 	if port == "" {
-		return errors.New("Bad port")
+		return errors.New("bad port")
 	}
 	// Prepare data
 	tags := map[string]string{"server": host, "port": port}
@@ -226,7 +226,7 @@ func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 		returnTags, fields = n.UDPGather()
 		tags["protocol"] = "udp"
 	} else {
-		return errors.New("Bad protocol")
+		return errors.New("bad protocol")
 	}
 	// Merge the tags
 	for k, v := range returnTags {

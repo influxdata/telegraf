@@ -28,7 +28,7 @@ func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		if len(values) < 1 {
 			return []telegraf.Metric{}, nil
 		}
-		vStr = string(values[len(values)-1])
+		vStr = values[len(values)-1]
 	}
 
 	var value interface{}
@@ -65,7 +65,7 @@ func (v *ValueParser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(metrics) < 1 {
-		return nil, fmt.Errorf("Can not parse the line: %s, for data format: value", line)
+		return nil, fmt.Errorf("can not parse the line: %s, for data format: value", line)
 	}
 
 	return metrics[0], nil

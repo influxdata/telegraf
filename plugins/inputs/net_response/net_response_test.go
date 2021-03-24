@@ -38,7 +38,7 @@ func TestBadProtocol(t *testing.T) {
 	// Error
 	err1 := c.Gather(&acc)
 	require.Error(t, err1)
-	assert.Equal(t, "Bad protocol", err1.Error())
+	assert.Equal(t, "bad protocol", err1.Error())
 }
 
 func TestNoPort(t *testing.T) {
@@ -49,7 +49,7 @@ func TestNoPort(t *testing.T) {
 	}
 	err1 := c.Gather(&acc)
 	require.Error(t, err1)
-	assert.Equal(t, "Bad port", err1.Error())
+	assert.Equal(t, "bad port", err1.Error())
 }
 
 func TestAddressOnly(t *testing.T) {
@@ -79,10 +79,10 @@ func TestSendExpectStrings(t *testing.T) {
 	}
 	err1 := tc.Gather(&acc)
 	require.Error(t, err1)
-	assert.Equal(t, "Send string cannot be empty", err1.Error())
+	assert.Equal(t, "send string cannot be empty", err1.Error())
 	err2 := uc.Gather(&acc)
 	require.Error(t, err2)
-	assert.Equal(t, "Expected string cannot be empty", err2.Error())
+	assert.Equal(t, "expected string cannot be empty", err2.Error())
 }
 
 func TestTCPError(t *testing.T) {

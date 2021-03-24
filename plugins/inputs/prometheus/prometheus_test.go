@@ -12,9 +12,9 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/kubernetes/apimachinery/pkg/fields"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/fields"
 )
 
 const sampleTextFormat = `# HELP go_gc_duration_seconds A summary of the GC invocation durations.

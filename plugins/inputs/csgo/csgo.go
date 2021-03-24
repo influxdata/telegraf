@@ -176,15 +176,15 @@ func requestServer(url string, rconPw string) (string, error) {
 	}
 	defer remoteConsole.Close()
 
-	reqId, err := remoteConsole.Write("stats")
+	reqID, err := remoteConsole.Write("stats")
 	if err != nil {
 		return "", err
 	}
 
-	resp, respReqId, err := remoteConsole.Read()
+	resp, respReqID, err := remoteConsole.Read()
 	if err != nil {
 		return "", err
-	} else if reqId != respReqId {
+	} else if reqID != respReqID {
 		return "", errors.New("response/request mismatch")
 	} else {
 		return resp, nil

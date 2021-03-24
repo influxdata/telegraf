@@ -133,11 +133,11 @@ func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 func (p *Point) setValue(v interface{}) error {
 	switch d := v.(type) {
 	case int:
-		p[1] = float64(int(d))
+		p[1] = float64(d)
 	case int32:
-		p[1] = float64(int32(d))
+		p[1] = float64(d)
 	case int64:
-		p[1] = float64(int64(d))
+		p[1] = float64(d)
 	case float32:
 		p[1] = float64(d)
 	case float64:

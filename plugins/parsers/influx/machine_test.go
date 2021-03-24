@@ -2152,7 +2152,7 @@ func TestStreamMachine(t *testing.T) {
 	for _, tt := range tests {
 		tc = append(tc, testcase{
 			name:    tt.name,
-			input:   bytes.NewBuffer([]byte(tt.input)),
+			input:   bytes.NewBuffer(tt.input),
 			results: tt.results,
 			err:     tt.err,
 		})
@@ -2191,7 +2191,7 @@ func TestStreamMachinePosition(t *testing.T) {
 	for _, tt := range positionTests {
 		tc = append(tc, testcase{
 			name:   tt.name,
-			input:  bytes.NewBuffer([]byte(tt.input)),
+			input:  bytes.NewBuffer(tt.input),
 			lineno: tt.lineno,
 			column: tt.column,
 		})

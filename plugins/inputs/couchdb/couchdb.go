@@ -125,9 +125,9 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 	if c.client == nil {
 		c.client = &http.Client{
 			Transport: &http.Transport{
-				ResponseHeaderTimeout: time.Duration(3 * time.Second),
+				ResponseHeaderTimeout: 3 * time.Second,
 			},
-			Timeout: time.Duration(4 * time.Second),
+			Timeout: 4 * time.Second,
 		}
 	}
 
@@ -147,7 +147,7 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		return fmt.Errorf("Failed to get stats from couchdb: HTTP responded %d", response.StatusCode)
+		return fmt.Errorf("failed to get stats from couchdb: HTTP responded %d", response.StatusCode)
 	}
 
 	stats := Stats{}
@@ -287,9 +287,9 @@ func init() {
 		return &CouchDB{
 			client: &http.Client{
 				Transport: &http.Transport{
-					ResponseHeaderTimeout: time.Duration(3 * time.Second),
+					ResponseHeaderTimeout: 3 * time.Second,
 				},
-				Timeout: time.Duration(4 * time.Second),
+				Timeout: 4 * time.Second,
 			},
 		}
 	})
