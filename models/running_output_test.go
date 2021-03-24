@@ -539,9 +539,7 @@ func (m *mockOutput) Write(metrics []telegraf.Metric) error {
 		m.metrics = []telegraf.Metric{}
 	}
 
-	for _, metric := range metrics {
-		m.metrics = append(m.metrics, metric)
-	}
+	m.metrics = append(m.metrics, metrics...)
 	return nil
 }
 

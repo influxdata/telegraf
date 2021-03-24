@@ -66,10 +66,7 @@ func parse(data []byte) (datapointArray []pluginData, err error) {
 		return
 	}
 
-	for _, point := range endpointData.Payload {
-		datapointArray = append(datapointArray, point)
-	}
-
+	datapointArray = append(datapointArray, endpointData.Payload...)
 	return
 }
 

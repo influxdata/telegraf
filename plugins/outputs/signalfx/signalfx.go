@@ -130,10 +130,8 @@ func (s *SignalFx) ConvertToSignalFx(metrics []telegraf.Metric) ([]*datapoint.Da
 	for _, metric := range metrics {
 		s.Log.Debugf("Processing the following measurement: %v", metric)
 		var timestamp = metric.Time()
-		var metricType datapoint.MetricType
 
-		metricType = GetMetricType(metric.Type())
-
+		metricType := GetMetricType(metric.Type())
 		for field, val := range metric.Fields() {
 			// Copy the metric tags because they are meant to be treated as
 			// immutable

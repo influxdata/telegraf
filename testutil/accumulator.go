@@ -235,11 +235,9 @@ func (a *Accumulator) AddError(err error) {
 }
 
 func (a *Accumulator) SetPrecision(_ time.Duration) {
-	return
 }
 
 func (a *Accumulator) DisablePrecision() {
-	return
 }
 
 func (a *Accumulator) Debug() bool {
@@ -394,7 +392,6 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 			assert.Fail(t, msg)
 		}
 	}
-	return
 }
 func (a *Accumulator) AssertContainsFields(
 	t *testing.T,

@@ -2,7 +2,6 @@ package amqp
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 	"time"
 
@@ -29,7 +28,7 @@ func (a *externalAuth) Mechanism() string {
 }
 
 func (a *externalAuth) Response() string {
-	return fmt.Sprintf("\000")
+	return "\000"
 }
 
 type AMQP struct {

@@ -127,12 +127,12 @@ func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, valu
 			}
 		case *telemetry.TelemetryField_Uint32Value:
 			vali, ok := value.(uint32)
-			if ok == true {
+			if ok {
 				return vali
 			}
 		case *telemetry.TelemetryField_Uint64Value:
 			vali, ok := value.(uint64)
-			if ok == true {
+			if ok {
 				return vali
 			}
 		} //switch

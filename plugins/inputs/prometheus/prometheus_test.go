@@ -261,23 +261,23 @@ func TestInitConfigErrors(t *testing.T) {
 	p.NodeIP = "10.240.0.0.0"
 	os.Setenv("NODE_IP", "10.000.0.0.0")
 	err := p.Init()
-	expectedMessage := "The node_ip config and the environment variable NODE_IP are not set or invalid. Cannot get pod list for monitor_kubernetes_pods using node scrape scope"
-	assert.Equal(t, expectedMessage, err.Error())
+	expectedMessage := "the node_ip config and the environment variable NODE_IP are not set or invalid. Cannot get pod list for monitor_kubernetes_pods using node scrape scope"
+	require.Error(t, err, expectedMessage)
 	os.Setenv("NODE_IP", "10.000.0.0")
 
 	p.KubernetesLabelSelector = "label0==label0, label0 in (=)"
 	err = p.Init()
-	expectedMessage = "Error parsing the specified label selector(s): unable to parse requirement: found '=', expected: ',', ')' or identifier"
-	assert.Equal(t, expectedMessage, err.Error())
+	expectedMessage = "error parsing the specified label selector(s): unable to parse requirement: found '=', expected: ',', ')' or identifier"
+	require.Error(t, err, expectedMessage)
 	p.KubernetesLabelSelector = "label0==label"
 
 	p.KubernetesFieldSelector = "field,"
 	err = p.Init()
-	expectedMessage = "Error parsing the specified field selector(s): invalid selector: 'field,'; can't understand 'field'"
-	assert.Equal(t, expectedMessage, err.Error())
+	expectedMessage = "error parsing the specified field selector(s): invalid selector: 'field,'; can't understand 'field'"
+	require.Error(t, err, expectedMessage)
 
 	p.KubernetesFieldSelector = "spec.containerNames=containerNames"
 	err = p.Init()
-	expectedMessage = "The field selector spec.containerNames is not supported for pods"
-	assert.Equal(t, expectedMessage, err.Error())
+	expectedMessage = "the field selector spec.containerNames is not supported for pods"
+	require.Error(t, err, expectedMessage)
 }

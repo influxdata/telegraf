@@ -891,7 +891,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 	numQs := 0
 
 	for _, object := range res.objects {
-		timeBuckets := make(map[int64]*types.PerfQuerySpec, 0)
+		timeBuckets := make(map[int64]*types.PerfQuerySpec)
 		for metricIdx, metric := range res.metrics {
 			// Determine time of last successful collection
 			metricName := e.getMetricNameForID(metric.CounterId)

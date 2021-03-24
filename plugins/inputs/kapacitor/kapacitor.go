@@ -219,9 +219,7 @@ func (k *Kapacitor) gatherURL(
 			// Strip out high-cardinality or duplicative tags
 			excludeTags := []string{"host", "cluster_id", "server_id"}
 			for _, key := range excludeTags {
-				if _, ok := obj.Tags[key]; ok {
-					delete(obj.Tags, key)
-				}
+				delete(obj.Tags, key)
 			}
 
 			// Convert time-related string field to int

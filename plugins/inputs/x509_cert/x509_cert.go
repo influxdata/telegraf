@@ -154,7 +154,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 				}
 				certs = append(certs, cert)
 			}
-			if rest == nil || len(rest) == 0 {
+			if len(rest) == 0 {
 				break
 			}
 			content = rest

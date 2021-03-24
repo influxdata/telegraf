@@ -178,7 +178,6 @@ func (r *Registry) set(key uint64, s Stat) {
 	}
 
 	r.stats[key][s.FieldName()] = s
-	return
 }
 
 func key(measurement string, tags map[string]string) uint64 {

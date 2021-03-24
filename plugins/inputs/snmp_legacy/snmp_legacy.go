@@ -234,7 +234,7 @@ func fillnode(parentNode Node, oidName string, ids []string) {
 	// ids = ["1", "3", "6", ...]
 	id, ids := ids[0], ids[1:]
 	node, ok := parentNode.subnodes[id]
-	if ok == false {
+	if !ok {
 		node = Node{
 			id:       id,
 			name:     "",

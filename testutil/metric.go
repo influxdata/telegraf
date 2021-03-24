@@ -99,16 +99,12 @@ func newMetricDiff(metric telegraf.Metric) *metricDiff {
 	m := &metricDiff{}
 	m.Measurement = metric.Name()
 
-	for _, tag := range metric.TagList() {
-		m.Tags = append(m.Tags, tag)
-	}
+	m.Tags = append(m.Tags, metric.TagList()...)
 	sort.Slice(m.Tags, func(i, j int) bool {
 		return m.Tags[i].Key < m.Tags[j].Key
 	})
 
-	for _, field := range metric.FieldList() {
-		m.Fields = append(m.Fields, field)
-	}
+	m.Fields = append(m.Fields, metric.FieldList()...)
 	sort.Slice(m.Fields, func(i, j int) bool {
 		return m.Fields[i].Key < m.Fields[j].Key
 	})

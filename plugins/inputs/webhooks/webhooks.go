@@ -109,7 +109,7 @@ func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
 
 	wb.srv = &http.Server{Handler: r}
 
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s", wb.ServiceAddress))
+	ln, err := net.Listen("tcp", wb.ServiceAddress)
 	if err != nil {
 		return fmt.Errorf("error starting server: %v", err)
 	}

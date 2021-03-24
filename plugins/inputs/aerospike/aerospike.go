@@ -250,8 +250,6 @@ func (a *Aerospike) parseNodeInfo(stats map[string]string, hostPort string, node
 		fields[key] = parseAerospikeValue(key, v)
 	}
 	acc.AddFields("aerospike_node", fields, tags, time.Now())
-
-	return
 }
 
 func (a *Aerospike) getNamespaces(n *as.Node) ([]string, error) {
@@ -295,8 +293,6 @@ func (a *Aerospike) parseNamespaceInfo(stats map[string]string, hostPort string,
 		nFields[key] = parseAerospikeValue(key, parts[1])
 	}
 	acc.AddFields("aerospike_namespace", nFields, nTags, time.Now())
-
-	return
 }
 
 func (a *Aerospike) getSets(n *as.Node) ([]string, error) {
@@ -365,8 +361,6 @@ func (a *Aerospike) parseSetInfo(stats map[string]string, hostPort string, names
 		nFields[key] = parseAerospikeValue(key, pieces[1])
 	}
 	acc.AddFields("aerospike_set", nFields, nTags, time.Now())
-
-	return
 }
 
 func (a *Aerospike) getTTLHistogram(hostPort string, namespace string, set string, n *as.Node, acc telegraf.Accumulator) error {
@@ -430,7 +424,7 @@ func (a *Aerospike) parseHistogram(stats map[string]string, hostPort string, nam
 				// Normalize incase of less buckets than expected
 				numRecordsPerBucket := 1
 				if len(buckets) > a.NumberHistogramBuckets {
-					numRecordsPerBucket = int(math.Ceil((float64(len(buckets)) / float64(a.NumberHistogramBuckets))))
+					numRecordsPerBucket = int(math.Ceil(float64(len(buckets)) / float64(a.NumberHistogramBuckets)))
 				}
 
 				bucketCount := 0
@@ -462,8 +456,6 @@ func (a *Aerospike) parseHistogram(stats map[string]string, hostPort string, nam
 	}
 
 	acc.AddFields(fmt.Sprintf("aerospike_histogram_%v", strings.Replace(histogramType, "-", "_", -1)), nFields, nTags, time.Now())
-
-	return
 }
 
 func splitNamespaceSet(namespaceSet string) (string, string) {

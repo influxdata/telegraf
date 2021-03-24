@@ -252,7 +252,6 @@ func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
 	m.acc.AddError(fmt.Errorf("connection lost: %v", err))
 	m.Log.Debugf("Disconnected %v", m.Servers)
 	m.state = Disconnected
-	return
 }
 
 func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {

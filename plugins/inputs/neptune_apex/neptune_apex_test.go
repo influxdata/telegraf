@@ -437,7 +437,7 @@ func TestSendRequest(t *testing.T) {
 			if test.wantErr {
 				return
 			}
-			if bytes.Compare(resp, []byte("data")) != 0 {
+			if !bytes.Equal(resp, []byte("data")) {
 				t.Errorf(
 					"Response data mismatch. got=%q, want=%q", resp, "data")
 			}

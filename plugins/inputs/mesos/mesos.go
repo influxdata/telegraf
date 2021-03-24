@@ -185,7 +185,6 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 		go func(master *url.URL) {
 			acc.AddError(m.gatherMainMetrics(master, MASTER, acc))
 			wg.Done()
-			return
 		}(master)
 	}
 
@@ -194,7 +193,6 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 		go func(slave *url.URL) {
 			acc.AddError(m.gatherMainMetrics(slave, SLAVE, acc))
 			wg.Done()
-			return
 		}(slave)
 	}
 
@@ -244,9 +242,7 @@ func metricsDiff(role Role, w []string) []string {
 
 // masterBlocks serves as kind of metrics registry grouping them in sets
 func getMetrics(role Role, group string) []string {
-	var m map[string][]string
-
-	m = make(map[string][]string)
+	m := make(map[string][]string)
 
 	if role == MASTER {
 		m["resources"] = []string{
@@ -504,13 +500,13 @@ func (m *Mesos) filterMetrics(role Role, metrics *map[string]interface{}) {
 		case "allocator":
 			for m := range *metrics {
 				if strings.HasPrefix(m, "allocator/") {
-					delete((*metrics), m)
+					delete(*metrics, m)
 				}
 			}
 		case "framework_offers":
 			for m := range *metrics {
 				if strings.HasPrefix(m, "master/frameworks/") || strings.HasPrefix(m, "frameworks/") {
-					delete((*metrics), m)
+					delete(*metrics, m)
 				}
 			}
 
@@ -518,7 +514,7 @@ func (m *Mesos) filterMetrics(role Role, metrics *map[string]interface{}) {
 		default:
 			for _, v := range getMetrics(role, k) {
 				if _, ok = (*metrics)[v]; ok {
-					delete((*metrics), v)
+					delete(*metrics, v)
 				}
 			}
 		}
