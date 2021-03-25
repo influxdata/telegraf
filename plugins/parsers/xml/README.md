@@ -53,7 +53,8 @@ that need to be specified in a `fields_int` section.
 ```
 
 A configuration can contain muliple *xml* subsections for e.g. the file plugin to process the xml-string multiple times.
-Consult the [XPath syntax][xpath] and the [underlying library's functions][xpath lib] for details and help regarding XPath queries.
+Consult the [XPath syntax][xpath] and the [underlying library's functions][xpath lib] for details and help regarding XPath queries. Consider using an XPath tester such as [xpather.com](http://xpather.com/) or [Code Beautify's XPath Tester](https://codebeautify.org/Xpath-Tester) for help developing and debugging 
+your query.
 
 Alternatively to the configuration above, fields can also be specified in a batch way. So contrary to specify the fields
 in a section, you can define a `name` and a `value` selector used to determine the name and value of the fields in the
