@@ -21,10 +21,10 @@ This plugin gets metrics for each Couchbase node, as well as detailed metrics fo
   ## Use "basic" for a limited number of basic bucket stats. Use "detailed" for a more comprehensive list of all bucket stats.
   bucket_metric_type = "basic"
 
-  ## Filter fields to include only here.
+  ## Filter fields to include only here. Supports wildcards.
   # fields_included = []
 
-  ## Filter fields to exclude only here.
+  ## Filter fields to exclude only here. Supports wildcards.
   # fields_excluded = []
 ```
 
