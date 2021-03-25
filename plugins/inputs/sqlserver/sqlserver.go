@@ -290,10 +290,19 @@ func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumu
 	var conn *sql.DB
 
 	// setup connection based on authentication
-	rx := regexp.MustCompile(`(?i)(^|[;])(?:(\s*Authentication=Active Directory Integrated\s*))([;]|$)`)
+	rx := regexp.MustCompile(`\b(?:(Password=((?:&(?:[a-z]+|#[0-9]+);|[^;]){0,})))\b`)
 
-	// when auth mechanism is mentioned as AAD in the connection string, use managed-identity token
+	// when connection string contains a password, then use SQL Auth
 	if rx.MatchString(server) {
+		var err error
+		conn, err = sql.Open("mssql", server)
+
+		if err != nil {
+			return err
+		}
+	} else {
+		// otherwise assume AAD Auth with system-assigned managed identity (MSI)
+
 		// AAD Auth is only supported for Azure SQL Database or Azure SQL Managed Instance
 		if s.DatabaseType == "SQLServer" {
 			return fmt.Errorf("Database connection failed : AAD auth is not supported for SQL VM i.e. DatabaseType=SQLServer")
@@ -311,14 +320,6 @@ func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumu
 		}
 
 		conn = sql.OpenDB(connector)
-	} else {
-		// otherwise use SQL auth
-		var err error
-		conn, err = sql.Open("mssql", server)
-
-		if err != nil {
-			return err
-		}
 	}
 
 	defer conn.Close()
