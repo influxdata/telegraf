@@ -205,7 +205,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	}
 
 	var promTS = make([]prompb.TimeSeries, len(entries))
-	var i int64 = 0
+	var i int
 	for _, promts := range entries {
 		promTS[i] = promts
 		i++
