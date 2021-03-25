@@ -3,13 +3,12 @@ package kafka
 import (
 	"crypto/sha256"
 	"crypto/sha512"
-	"hash"
 
 	"github.com/xdg/scram"
 )
 
-var SHA256 scram.HashGeneratorFcn = func() hash.Hash { return sha256.New() }
-var SHA512 scram.HashGeneratorFcn = func() hash.Hash { return sha512.New() }
+var SHA256 scram.HashGeneratorFcn = sha256.New
+var SHA512 scram.HashGeneratorFcn = sha512.New
 
 type XDGSCRAMClient struct {
 	*scram.Client
