@@ -190,7 +190,6 @@ func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumul
 		}
 	}
 	acc.AddFields("openldap", fields, tags)
-	return
 }
 
 // Convert a DN to metric name, eg cn=Read,cn=Waiters,cn=Monitor becomes waiters_read

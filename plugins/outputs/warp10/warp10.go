@@ -178,7 +178,7 @@ func buildTags(tags []*telegraf.Tag) []string {
 		indexSource = index
 	}
 	indexSource++
-	tagsString[indexSource] = fmt.Sprintf("source=telegraf")
+	tagsString[indexSource] = "source=telegraf"
 	sort.Strings(tagsString)
 	return tagsString
 }

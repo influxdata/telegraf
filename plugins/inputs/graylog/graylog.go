@@ -203,13 +203,13 @@ func (h *GrayLog) flatten(item map[string]interface{}, fields map[string]interfa
 		id = id + "_"
 	}
 	for k, i := range item {
-		switch i.(type) {
+		switch i := i.(type) {
 		case int:
-			fields[id+k] = i.(float64)
+			fields[id+k] = float64(i)
 		case float64:
-			fields[id+k] = i.(float64)
+			fields[id+k] = i
 		case map[string]interface{}:
-			h.flatten(i.(map[string]interface{}), fields, id+k)
+			h.flatten(i, fields, id+k)
 		default:
 		}
 	}

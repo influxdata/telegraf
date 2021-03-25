@@ -54,7 +54,6 @@ func (p *Publisher) publishCores(measurement string) {
 		p.errChan <- err
 	}
 	p.addToAccumulatorCores(coresString, values, timestamp)
-	return
 }
 
 func (p *Publisher) publishProcess(measurement processMeasurement) {
@@ -63,7 +62,6 @@ func (p *Publisher) publishProcess(measurement processMeasurement) {
 		p.errChan <- err
 	}
 	p.addToAccumulatorProcesses(process, coresString, values, timestamp)
-	return
 }
 
 func parseCoresMeasurement(measurements string) (string, []float64, time.Time, error) {

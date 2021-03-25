@@ -63,7 +63,6 @@ func (c *Collector) Describe(_ chan<- *prometheus.Desc) {
 	// Sending no descriptor at all marks the Collector as "unchecked",
 	// i.e. no checks will be performed at registration time, and the
 	// Collector may yield any Metric it sees fit in its Collect method.
-	return
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {

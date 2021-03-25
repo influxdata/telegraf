@@ -301,7 +301,7 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 	}
 
 	// filter out not included job.
-	if j.jobFilterInclude != nil && j.jobFilterInclude.Match(jr.hierarchyName()) == false {
+	if j.jobFilterInclude != nil && !j.jobFilterInclude.Match(jr.hierarchyName()) {
 		return nil
 	}
 
