@@ -255,19 +255,22 @@ func (f *Field) init() error {
 		return nil
 	}
 
-	_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
-	if err != nil {
-		return fmt.Errorf("translating: %w", err)
-	}
-	f.Oid = oidNum
-	if f.Name == "" {
-		f.Name = oidText
-	}
-	if f.Conversion == "" {
-		f.Conversion = conversion
-	}
+	// check if oid needs translation or name is not set
+	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
+		_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
+		if err != nil {
+			return fmt.Errorf("translating: %w", err)
+		}
+		f.Oid = oidNum
+		if f.Name == "" {
+			f.Name = oidText
+		}
+		if f.Conversion == "" {
+			f.Conversion = conversion
+		}
 
-	//TODO use textual convention conversion from the MIB
+		//TODO use textual convention conversion from the MIB
+	}
 
 	f.initialized = true
 	return nil
