@@ -1,0 +1,18 @@
+{
+  "outcome" : "success",
+  "result" : {
+    "launch-type" : "STANDALONE",
+    "local-host-name" : "master",
+    "management-major-version" : 1,
+    "management-micro-version" : 0,
+    "management-minor-version" : 8,
+    "name" : "eaputv",
+    "namespaces" : [],
+    "process-type" : "Domain Controller",
+    "product-name" : "EAP",
+    "product-version" : "6.4.21.GA",
+    "release-codename" : "Janus",
+    "release-version" : "7.5.21.Final-redhat-1",
+    "schema-locations" : []
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "outcome" : "success",
+  "result" : {
+    "launch-type" : "STANDALONE",
+    "management-major-version" : 8,
+    "management-micro-version" : 0,
+    "management-minor-version" : 0,
+    "name" : "czc6249qm8",
+    "namespaces" : [],
+    "organization" : null,
+    "process-type" : "Server",
+    "product-name" : "JBoss EAP",
+    "product-version" : "6.4.21.GA",
+    "profile-name" : null,
+    "release-codename" : "",
+    "release-version" : "6.0.27.Final-redhat-00001",
+    "running-mode" : "NORMAL",
+    "runtime-configuration-state" : "ok",
+    "schema-locations" : [],
+    "server-state" : "running",
+    "suspend-state" : "RUNNING",
+    "uuid" : "d337bad3-2550-4159-87fd-400e5f289033"
+  }
+}

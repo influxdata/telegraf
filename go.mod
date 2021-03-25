@@ -125,6 +125,7 @@ require (
 	github.com/signalfx/golib/v3 v3.3.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/soniah/gosnmp v1.25.0
+	github.com/stefa975/go-http-digest-auth-client v0.5.0
 	github.com/streadway/amqp v0.0.0-20180528204448-e5adc2ada8b8
 	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
