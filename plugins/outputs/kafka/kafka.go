@@ -43,6 +43,7 @@ type Kafka struct {
 
 	Log telegraf.Logger `toml:"-"`
 
+	saramaConfig *sarama.Config
 	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
 	producer     sarama.SyncProducer
 
@@ -278,6 +279,8 @@ func (k *Kafka) Init() error {
 		return err
 	}
 
+	k.saramaConfig = config
+
 	// Legacy support ssl config
 	if k.Certificate != "" {
 		k.TLSCert = k.Certificate
@@ -285,15 +288,15 @@ func (k *Kafka) Init() error {
 		k.TLSKey = k.Key
 	}
 
-	producer, err := k.producerFunc(k.Brokers, config)
-	if err != nil {
-		return err
-	}
-	k.producer = producer
 	return nil
 }
 
 func (k *Kafka) Connect() error {
+	producer, err := k.producerFunc(k.Brokers, k.saramaConfig)
+	if err != nil {
+		return err
+	}
+	k.producer = producer
 	return nil
 }
 
