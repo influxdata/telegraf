@@ -197,11 +197,13 @@ EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
 - On the SQL Server resource of the database(s) being monitored, go to "Firewalls and Virtual Networks" tab and allowlist the monitoring VM IP address.
 - On the Monitoring VM, update the telegraf config file with the database connection string in the following format. Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
 - On the Monitoring VM, update the telegraf config file with the database connection string in the following format.
+- On the Monitoring VM, update the telegraf config file with the database connection string in the following format. The connection string only provides the server and database name, but no password (since the VM's system-assigned managed identity would be used for authentication).
 ```toml
   servers = [
-    "Server=<Azure_SQL_Server_Name>.database.windows.net;Port=1433;Database=<Azure_SQL_Database_Name>;Authentication=Active Directory Integrated;app name=telegraf;log=1;",
+    "Server=<Azure_SQL_Server_Name>.database.windows.net;Port=1433;Database=<Azure_SQL_Database_Name>;app name=telegraf;log=1;",
   ]
 ```
+- Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
 
 ### Metrics:
 To provide backwards compatibility, this plugin support two versions of metrics queries.

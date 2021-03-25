@@ -288,7 +288,7 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 		var pool *sql.DB
 
 		// setup connection based on authentication
-		rx := regexp.MustCompile(`(?i)\b(?:(Password=\w+))\b`)
+		rx := regexp.MustCompile(`\b(?:(Password=((?:&(?:[a-z]+|#[0-9]+);|[^;]){0,})))\b`)
 
 		// when password is provided in connection string, use SQL auth
 		if rx.MatchString(serv) {
@@ -299,7 +299,9 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				return err
 			}
-		} else { // when password is not provided in connection string, use AAD auth with an managed-identity token
+		} else {
+			// otherwise assume AAD Auth with system-assigned managed identity (MSI)
+
 			// AAD Auth is only supported for Azure SQL Database or Azure SQL Managed Instance
 			if s.DatabaseType == "SQLServer" {
 				return fmt.Errorf("Database connection failed : AAD auth is not supported for SQL VM i.e. DatabaseType=SQLServer")
