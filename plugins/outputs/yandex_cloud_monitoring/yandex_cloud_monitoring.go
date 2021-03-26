@@ -60,7 +60,7 @@ const (
 	defaultRequestTimeout    = time.Second * 20
 	defaultEndpointURL       = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
 	defaultMetadataTokenURL  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
-	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/instance/attributes/folder-id"
+	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
 )
 
 var sampleConfig = `
@@ -235,6 +235,7 @@ func (a *YandexCloudMonitoring) send(body []byte) error {
 	req.Header.Set("Authorization", "Bearer "+a.IAMToken)
 
 	a.Log.Debugf("sending metrics to %s", req.URL.String())
+	a.Log.Debugf("body: %s", body)
 	resp, err := a.client.Do(req)
 	if err != nil {
 		return err
