@@ -3,13 +3,13 @@ package mdstat
 import (
 	"bufio"
 	//"fmt"
+	"errors"
 	"io"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-  "errors"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -54,14 +54,14 @@ func (s *MDSTAT_PLUGIN) Gather(acc telegraf.Accumulator) error {
 		if err = f.Close(); err != nil {
 			return err
 		}
-    return nil
+		return nil
 	}
 	defer closingFunc()
 
 	result, err := parseFile(f)
-  if err != nil {
-    return err
-  }
+	if err != nil {
+		return err
+	}
 
 	for _, device := range result.devices {
 		devTags := map[string]string{
@@ -140,7 +140,7 @@ const UNUSED_PREFIX = "unused"
 const RECOVERY_STRING = "recovery"
 
 func parseFile(r io.Reader) (MDSTAT, error) {
-  var err error
+	var err error
 	// This is a text file, so we can scan it line by line.
 	// We will break the file up into it's parts so each can be parsed individually
 	s := bufio.NewScanner(r)
@@ -152,9 +152,9 @@ func parseFile(r io.Reader) (MDSTAT, error) {
 		// If the line is a personality line
 		if strings.HasPrefix(line, PERSONALITY_PREFIX) {
 			parsedMap.personalities, err = parsePersonalities(line)
-      if(err != nil) {
-        return parsedMap,err
-      }
+			if err != nil {
+				return parsedMap, err
+			}
 			continue
 		}
 
@@ -167,9 +167,9 @@ func parseFile(r io.Reader) (MDSTAT, error) {
 		if strings.Compare("", line) == 0 && len(deviceEntry) > 0 {
 
 			parsedDev, err := parseDeviceEntry(deviceEntry)
-      if(err != nil) {
-        return parsedMap, err
-      }
+			if err != nil {
+				return parsedMap, err
+			}
 			parsedMap.devices = append(parsedMap.devices, parsedDev)
 
 			// Reset the device entry so it's ready for a new one.
@@ -178,38 +178,38 @@ func parseFile(r io.Reader) (MDSTAT, error) {
 			continue
 		}
 
-    // If it's an empty line, don't append it to the device entry.
-    if(strings.Compare("", line) != 0) {
-		    deviceEntry = append(deviceEntry, line)
-    }
+		// If it's an empty line, don't append it to the device entry.
+		if strings.Compare("", line) != 0 {
+			deviceEntry = append(deviceEntry, line)
+		}
 	}
 
-  scanErr := s.Err()
-  if(scanErr != nil) {
-    err = scanErr
-  }
+	scanErr := s.Err()
+	if scanErr != nil {
+		err = scanErr
+	}
 
 	return parsedMap, err
 }
 
-func parsePersonalities(personalitiesLine string) (Personalities,error) {
+func parsePersonalities(personalitiesLine string) (Personalities, error) {
 	var result = strings.Fields(personalitiesLine)
-  if(len(result) <= 2) {
-    err := errors.New("Personalities line not long enough")
-    return nil, err
-  }
+	if len(result) <= 2 {
+		err := errors.New("Personalities line not long enough")
+		return nil, err
+	}
 	return result[2:], nil
 }
 
 func parseDeviceEntry(deviceEntry []string) (Device, error) {
 	var parsedDevice Device
-  var err error
+	var err error
 	// The first line should be the device line.
 	deviceLineFields := strings.Fields(deviceEntry[0])
-  if(len(deviceLineFields) <= 5) {
-    err = errors.New("Not enough lines in the device field")
-    return parsedDevice, err
-  }
+	if len(deviceLineFields) <= 5 {
+		err = errors.New("Not enough lines in the device field")
+		return parsedDevice, err
+	}
 
 	//Get name and status from the md device line
 	parsedDevice.name = deviceLineFields[0]
@@ -221,17 +221,17 @@ func parseDeviceEntry(deviceEntry []string) (Device, error) {
 		var DISK_REGEX = "(?P<diskname>[a-zA-Z0-9]+)\\[(?P<diskrole>[0-9]+)\\](?:\\((?P<failedstatus>F)\\))?"
 		re := regexp.MustCompile(DISK_REGEX)
 		captures := re.FindStringSubmatch(disk)
-    if(captures == nil){
-      err = errors.New("Malformed disk entry")
-      return parsedDevice, err
-    }
+		if captures == nil {
+			err = errors.New("Malformed disk entry")
+			return parsedDevice, err
+		}
 		var parsedDisk Disk
 		// Capture groups start at 1 because index 0 is the full string
 		parsedDisk.name = captures[1]
 		parsedDisk.role, err = strconv.Atoi(captures[2])
-    if(err != nil) {
-      return parsedDevice, err
-    }
+		if err != nil {
+			return parsedDevice, err
+		}
 
 		if captures[3] == "F" {
 			parsedDevice.failedDisks++
@@ -247,18 +247,18 @@ func parseDeviceEntry(deviceEntry []string) (Device, error) {
 	CONFIG_LINE_REGEX := ".* \\[(?P<ndisk>[0-9]+)/(?P<mdisks>[0-9]+)\\] \\[(?P<arraystat>[U_]+)\\]"
 	re := regexp.MustCompile(CONFIG_LINE_REGEX)
 	captures := re.FindStringSubmatch(deviceEntry[1])
-  if(captures == nil) {
-    err = errors.New("Malformed device config line")
-    return parsedDevice, err
-  }
+	if captures == nil {
+		err = errors.New("Malformed device config line")
+		return parsedDevice, err
+	}
 	parsedDevice.minDisks, err = strconv.Atoi(captures[1])
-  if(err != nil) {
-    return parsedDevice, err
-  }
+	if err != nil {
+		return parsedDevice, err
+	}
 	parsedDevice.currDisks, err = strconv.Atoi(captures[2])
-  if(err != nil) {
-    return parsedDevice, err
-  }
+	if err != nil {
+		return parsedDevice, err
+	}
 
 	//Since we already know the number of active disks, we don't need to count the U's
 	// in the [UUU_U] field. Instead we only need to count the number of _'s that appear
@@ -266,23 +266,23 @@ func parseDeviceEntry(deviceEntry []string) (Device, error) {
 	// The number of _'s represents the number of missing disks.
 	parsedDevice.missingDisks = strings.Count(captures[3], "_") - parsedDevice.failedDisks
 
-  //Some device entries have a third line. We only check for the recovery and not the bitmap
-  if(len(deviceEntry) >= 3) {
-  	// Lets check for a recovery line.
-  	if strings.Contains(deviceEntry[2], RECOVERY_STRING) {
-  		RECOVERY_LINE_REGEX := "recovery = (?P<recoveryPercent>[0-9]+\\.[0-9]+)%"
-  		re := regexp.MustCompile(RECOVERY_LINE_REGEX)
-  		captures := re.FindStringSubmatch(deviceEntry[2])
-      if(captures != nil) {
-    		parsedDevice.inRecovery = true
-    		value, err := strconv.ParseFloat(captures[1], 32)
-        if(err != nil) {
-          return parsedDevice, err
-        }
-    		parsedDevice.recoveryPercent = float32(value)
-      }
-  	}
-  }
+	//Some device entries have a third line. We only check for the recovery and not the bitmap
+	if len(deviceEntry) >= 3 {
+		// Lets check for a recovery line.
+		if strings.Contains(deviceEntry[2], RECOVERY_STRING) {
+			RECOVERY_LINE_REGEX := "recovery = (?P<recoveryPercent>[0-9]+\\.[0-9]+)%"
+			re := regexp.MustCompile(RECOVERY_LINE_REGEX)
+			captures := re.FindStringSubmatch(deviceEntry[2])
+			if captures != nil {
+				parsedDevice.inRecovery = true
+				value, err := strconv.ParseFloat(captures[1], 32)
+				if err != nil {
+					return parsedDevice, err
+				}
+				parsedDevice.recoveryPercent = float32(value)
+			}
+		}
+	}
 
 	return parsedDevice, nil
 }
