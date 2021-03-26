@@ -9,6 +9,7 @@ import (
 	"math"
 	"net"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -912,19 +913,10 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 				conversion = "ipaddr"
 			}
 		} else if strings.HasPrefix(line, "::= { ") {
-			objs := strings.TrimPrefix(line, "::= { ")
-			objs = strings.TrimSuffix(objs, " }")
+			re := regexp.MustCompile(`(?:\w+\()?(\d+)\)?`)
 
-			for _, obj := range strings.Split(objs, " ") {
-				if len(obj) == 0 {
-					continue
-				}
-				if i := strings.Index(obj, "("); i != -1 {
-					obj = obj[i+1:]
-					oidNum += "." + obj[:strings.Index(obj, ")")]
-				} else {
-					oidNum += "." + obj
-				}
+			for _, match := range re.FindAllStringSubmatch(line, -1) {
+				oidNum += "." + match[1]
 			}
 			break
 		}
