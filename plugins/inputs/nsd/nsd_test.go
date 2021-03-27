@@ -3,16 +3,14 @@ package nsd
 import (
 	"bytes"
 	"testing"
-	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
-var TestTimeout = internal.Duration{Duration: time.Second}
-
-func NSDControl(output string, Timeout internal.Duration, useSudo bool, Server string, ConfigFile string) func(string, internal.Duration, bool, string, string) (*bytes.Buffer, error) {
+func NSDControl(output string) func(string, internal.Duration, bool, string, string) (*bytes.Buffer, error) {
 	return func(string, internal.Duration, bool, string, string) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
@@ -21,7 +19,7 @@ func NSDControl(output string, Timeout internal.Duration, useSudo bool, Server s
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &NSD{
-		run: NSDControl(fullOutput, TestTimeout, true, "", ""),
+		run: NSDControl(fullOutput),
 	}
 	err := v.Gather(acc)
 
@@ -35,7 +33,6 @@ func TestParseFullOutput(t *testing.T) {
 
 	acc.AssertContainsFields(t, "nsd", parsedFullOutput)
 	acc.AssertContainsFields(t, "nsd_servers", parsedFullOutputServerAsTag)
-
 }
 
 var parsedFullOutputServerAsTag = map[string]interface{}{

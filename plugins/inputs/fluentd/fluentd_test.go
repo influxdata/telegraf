@@ -96,14 +96,12 @@ const sampleJSON = `
 
 var (
 	zero           float64
-	err            error
-	pluginOutput   []pluginData
 	expectedOutput = []pluginData{
 		// 		{"object:f48698", "dummy", "input", nil, nil, nil},
 		// 		{"object:e27138", "dummy", "input", nil, nil, nil},
 		// 		{"object:d74060", "monitor_agent", "input", nil, nil, nil},
-		{"object:11a5e2c", "stdout", "output", (*float64)(&zero), nil, nil},
-		{"object:11237ec", "s3", "output", (*float64)(&zero), (*float64)(&zero), (*float64)(&zero)},
+		{"object:11a5e2c", "stdout", "output", &zero, nil, nil},
+		{"object:11237ec", "s3", "output", &zero, &zero, &zero},
 	}
 	fluentdTest = &Fluentd{
 		Endpoint: "http://localhost:8081",
@@ -111,14 +109,12 @@ var (
 )
 
 func Test_parse(t *testing.T) {
-
 	t.Log("Testing parser function")
 	_, err := parse([]byte(sampleJSON))
 
 	if err != nil {
 		t.Error(err)
 	}
-
 }
 
 func Test_Gather(t *testing.T) {
@@ -159,5 +155,4 @@ func Test_Gather(t *testing.T) {
 	assert.Equal(t, *expectedOutput[1].RetryCount, acc.Metrics[1].Fields["retry_count"])
 	assert.Equal(t, *expectedOutput[1].BufferQueueLength, acc.Metrics[1].Fields["buffer_queue_length"])
 	assert.Equal(t, *expectedOutput[1].BufferTotalQueuedSize, acc.Metrics[1].Fields["buffer_total_queued_size"])
-
 }

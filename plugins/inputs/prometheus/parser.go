@@ -12,7 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	. "github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
 
 	"github.com/matttproud/golang_protobuf_extensions/pbutil"
 	dto "github.com/prometheus/client_model/go"
@@ -55,7 +55,7 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 	for metricName, mf := range metricFamilies {
 		for _, m := range mf.Metric {
 			// reading tags
-			tags := MakeLabels(m, nil)
+			tags := common.MakeLabels(m, nil)
 
 			// reading fields
 			var fields map[string]interface{}
@@ -69,7 +69,6 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 				fields = makeBuckets(m)
 				fields["count"] = float64(m.GetHistogram().GetSampleCount())
 				fields["sum"] = float64(m.GetHistogram().GetSampleSum())
-
 			} else {
 				// standard metric
 				fields = getNameAndValue(m)
@@ -82,7 +81,7 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 				} else {
 					t = now
 				}
-				metric, err := metric.New(metricName, tags, fields, t, ValueType(mf.GetType()))
+				metric, err := metric.New(metricName, tags, fields, t, common.ValueType(mf.GetType()))
 				if err == nil {
 					metrics = append(metrics, metric)
 				}

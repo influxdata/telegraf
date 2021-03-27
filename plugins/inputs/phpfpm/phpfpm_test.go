@@ -23,7 +23,7 @@ import (
 type statServer struct{}
 
 // We create a fake server to return test data
-func (s statServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s statServer) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.Header().Set("Content-Length", fmt.Sprint(len(outputSample)))
 	fmt.Fprint(w, outputSample)
@@ -327,8 +327,7 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testi
 
 	err = acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Equal(t, `dial unix /tmp/invalid.sock: connect: no such file or directory`, err.Error())
-
+	assert.Equal(t, `socket doesn't exist "/tmp/invalid.sock"`, err.Error())
 }
 
 const outputSample = `

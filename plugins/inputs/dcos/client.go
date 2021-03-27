@@ -92,11 +92,10 @@ type AuthToken struct {
 
 // ClusterClient is a Client that uses the cluster URL.
 type ClusterClient struct {
-	clusterURL  *url.URL
-	httpClient  *http.Client
-	credentials *Credentials
-	token       string
-	semaphore   chan struct{}
+	clusterURL *url.URL
+	httpClient *http.Client
+	token      string
+	semaphore  chan struct{}
 }
 
 type claims struct {
@@ -229,7 +228,6 @@ func (c *ClusterClient) GetContainers(ctx context.Context, node string) ([]Conta
 	containers := make([]Container, 0, len(list))
 	for _, c := range list {
 		containers = append(containers, Container{ID: c})
-
 	}
 
 	return containers, nil

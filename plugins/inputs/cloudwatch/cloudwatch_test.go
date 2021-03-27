@@ -1,6 +1,7 @@
 package cloudwatch
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -133,7 +135,7 @@ func TestGather(t *testing.T) {
 
 type mockSelectMetricsCloudWatchClient struct{}
 
-func (m *mockSelectMetricsCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
+func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
 	metrics := []*cloudwatch.Metric{}
 	// 4 metrics are available
 	metricNames := []string{"Latency", "RequestCount", "HealthyHostCount", "UnHealthyHostCount"}
@@ -180,7 +182,7 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(params *cloudwatch.ListM
 	return result, nil
 }
 
-func (m *mockSelectMetricsCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricDataInput) (*cloudwatch.GetMetricDataOutput, error) {
+func (m *mockSelectMetricsCloudWatchClient) GetMetricData(_ *cloudwatch.GetMetricDataInput) (*cloudwatch.GetMetricDataOutput, error) {
 	return nil, nil
 }
 
@@ -244,7 +246,7 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 	c.updateWindow(now)
 
 	statFilter, _ := filter.NewIncludeExcludeFilter(nil, nil)
-	queries, _ := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
+	queries := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
 	params := c.getDataInputs(queries)
 
 	assert.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
@@ -281,7 +283,7 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 	c.updateWindow(now)
 
 	statFilter, _ := filter.NewIncludeExcludeFilter([]string{"average", "sample_count"}, nil)
-	queries, _ := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
+	queries := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
 	params := c.getDataInputs(queries)
 
 	assert.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
@@ -332,4 +334,17 @@ func TestUpdateWindow(t *testing.T) {
 	// subsequent window uses previous end time as start time
 	assert.EqualValues(t, c.windowEnd, now.Add(-time.Duration(c.Delay)))
 	assert.EqualValues(t, c.windowStart, newStartTime)
+}
+
+func TestProxyFunction(t *testing.T) {
+	c := &CloudWatch{
+		HTTPProxy: proxy.HTTPProxy{HTTPProxyURL: "http://www.penguins.com"},
+	}
+
+	proxyFunction, err := c.HTTPProxy.Proxy()
+	require.NoError(t, err)
+
+	proxyResult, err := proxyFunction(&http.Request{})
+	require.NoError(t, err)
+	require.Equal(t, "www.penguins.com", proxyResult.Host)
 }

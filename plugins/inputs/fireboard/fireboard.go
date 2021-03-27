@@ -23,10 +23,10 @@ type Fireboard struct {
 
 // NewFireboard return a new instance of Fireboard with a default http client
 func NewFireboard() *Fireboard {
-	tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+	tr := &http.Transport{ResponseHeaderTimeout: 3 * time.Second}
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   time.Duration(4 * time.Second),
+		Timeout:   4 * time.Second,
 	}
 	return &Fireboard{client: client}
 }
@@ -69,9 +69,8 @@ func (r *Fireboard) Description() string {
 
 // Init the things
 func (r *Fireboard) Init() error {
-
 	if len(r.AuthToken) == 0 {
-		return fmt.Errorf("You must specify an authToken")
+		return fmt.Errorf("you must specify an authToken")
 	}
 	if len(r.URL) == 0 {
 		r.URL = "https://fireboard.io/api/v1/devices.json"
@@ -88,7 +87,6 @@ func (r *Fireboard) Init() error {
 
 // Gather Reads stats from all configured servers.
 func (r *Fireboard) Gather(acc telegraf.Accumulator) error {
-
 	// Perform the GET request to the fireboard servers
 	req, err := http.NewRequest("GET", r.URL, nil)
 	if err != nil {

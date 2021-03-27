@@ -31,9 +31,6 @@ func TestBasic(t *testing.T) {
 }
 
 func TestNewRelic_Write(t *testing.T) {
-	type args struct {
-		metrics []telegraf.Metric
-	}
 	tests := []struct {
 		name         string
 		metrics      []telegraf.Metric
@@ -165,6 +162,14 @@ func TestNewRelic_Connect(t *testing.T) {
 			newrelic: &NewRelic{
 				InsightsKey: "12312133",
 				Timeout:     internal.Duration{Duration: time.Second * 5},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Test: HTTP Proxy",
+			newrelic: &NewRelic{
+				InsightsKey: "12121212",
+				HTTPProxy:   "https://my.proxy",
 			},
 			wantErr: false,
 		},

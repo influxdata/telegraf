@@ -10,9 +10,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
+	"github.com/influxdata/telegraf/plugins/common/parallel"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"github.com/influxdata/telegraf/plugins/processors/reverse_dns/parallel"
 )
 
 var sampleConfig = `
@@ -100,8 +100,8 @@ type IfName struct {
 	ifTable  *si.Table `toml:"-"`
 	ifXTable *si.Table `toml:"-"`
 
-	rwLock sync.RWMutex `toml:"-"`
-	cache  *TTLCache    `toml:"-"`
+	lock  sync.Mutex `toml:"-"`
+	cache *TTLCache  `toml:"-"`
 
 	parallel parallel.Parallel    `toml:"-"`
 	acc      telegraf.Accumulator `toml:"-"`
@@ -143,13 +143,13 @@ func (d *IfName) addTag(metric telegraf.Metric) error {
 		return nil
 	}
 
-	num_s, ok := metric.GetTag(d.SourceTag)
+	numS, ok := metric.GetTag(d.SourceTag)
 	if !ok {
 		d.Log.Warn("Source tag missing.")
 		return nil
 	}
 
-	num, err := strconv.ParseUint(num_s, 10, 64)
+	num, err := strconv.ParseUint(numS, 10, 64)
 	if err != nil {
 		return fmt.Errorf("couldn't parse source tag as uint")
 	}
@@ -187,9 +187,9 @@ func (d *IfName) addTag(metric telegraf.Metric) error {
 }
 
 func (d *IfName) invalidate(agent string) {
-	d.rwLock.RLock()
+	d.lock.Lock()
 	d.cache.Delete(agent)
-	d.rwLock.RUnlock()
+	d.lock.Unlock()
 }
 
 func (d *IfName) Start(acc telegraf.Accumulator) error {
@@ -226,7 +226,7 @@ func (d *IfName) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *IfName) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
+func (d *IfName) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 	d.parallel.Enqueue(metric)
 	return nil
 }
@@ -241,61 +241,61 @@ func (d *IfName) Stop() error {
 func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err error) {
 	var sig chan struct{}
 
+	d.lock.Lock()
+
 	// Check cache
-	d.rwLock.RLock()
 	m, ok, age := d.cache.Get(agent)
-	d.rwLock.RUnlock()
 	if ok {
+		d.lock.Unlock()
 		return m, age, nil
 	}
 
-	// Is this the first request for this agent?
-	d.rwLock.Lock()
+	// cache miss.  Is this the first request for this agent?
 	sig, found := d.sigs[agent]
 	if !found {
+		// This is the first request.  Make signal for subsequent requests to wait on
 		s := make(chan struct{})
 		d.sigs[agent] = s
 		sig = s
 	}
-	d.rwLock.Unlock()
+
+	d.lock.Unlock()
 
 	if found {
 		// This is not the first request.  Wait for first to finish.
 		<-sig
+
 		// Check cache again
-		d.rwLock.RLock()
+		d.lock.Lock()
 		m, ok, age := d.cache.Get(agent)
-		d.rwLock.RUnlock()
+		d.lock.Unlock()
 		if ok {
 			return m, age, nil
-		} else {
-			return nil, 0, fmt.Errorf("getting remote table from cache")
 		}
+		return nil, 0, fmt.Errorf("getting remote table from cache")
 	}
 
 	// The cache missed and this is the first request for this
-	// agent.
-
-	// Make the SNMP request
+	// agent. Make the SNMP request
 	m, err = d.getMapRemote(agent)
+
+	d.lock.Lock()
 	if err != nil {
-		//failure.  signal without saving to cache
-		d.rwLock.Lock()
+		//snmp failure.  signal without saving to cache
 		close(sig)
 		delete(d.sigs, agent)
-		d.rwLock.Unlock()
 
+		d.lock.Unlock()
 		return nil, 0, fmt.Errorf("getting remote table: %w", err)
 	}
 
-	// Cache it, then signal any other waiting requests for this agent
-	// and clean up
-	d.rwLock.Lock()
+	// snmp success.  Cache response, then signal any other waiting
+	// requests for this agent and clean up
 	d.cache.Put(agent, m)
 	close(sig)
 	delete(d.sigs, agent)
-	d.rwLock.Unlock()
 
+	d.lock.Unlock()
 	return m, 0, nil
 }
 
@@ -378,21 +378,21 @@ func buildMap(gs snmp.GosnmpWrapper, tab *si.Table, column string) (nameMap, err
 
 	t := make(nameMap)
 	for _, v := range rtab.Rows {
-		i_str, ok := v.Tags["index"]
+		iStr, ok := v.Tags["index"]
 		if !ok {
 			//should always have an index tag because the table should
 			//always have IndexAsTag true
 			return nil, fmt.Errorf("no index tag")
 		}
-		i, err := strconv.ParseUint(i_str, 10, 64)
+		i, err := strconv.ParseUint(iStr, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("index tag isn't a uint")
 		}
-		name_if, ok := v.Fields[column]
+		nameIf, ok := v.Fields[column]
 		if !ok {
 			return nil, fmt.Errorf("field %s is missing", column)
 		}
-		name, ok := name_if.(string)
+		name, ok := nameIf.(string)
 		if !ok {
 			return nil, fmt.Errorf("field %s isn't a string", column)
 		}

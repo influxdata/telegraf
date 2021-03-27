@@ -27,20 +27,20 @@ var data = &telemetry.OpenConfigData{
 	Kv:   []*telemetry.KeyValue{{Key: "/sensor[tag='tagValue']/intKey", Value: &telemetry.KeyValue_IntValue{IntValue: 10}}},
 }
 
-var data_with_prefix = &telemetry.OpenConfigData{
+var dataWithPrefix = &telemetry.OpenConfigData{
 	Path: "/sensor_with_prefix",
 	Kv: []*telemetry.KeyValue{{Key: "__prefix__", Value: &telemetry.KeyValue_StrValue{StrValue: "/sensor/prefix/"}},
 		{Key: "intKey", Value: &telemetry.KeyValue_IntValue{IntValue: 10}}},
 }
 
-var data_with_multiple_tags = &telemetry.OpenConfigData{
+var dataWithMultipleTags = &telemetry.OpenConfigData{
 	Path: "/sensor_with_multiple_tags",
 	Kv: []*telemetry.KeyValue{{Key: "__prefix__", Value: &telemetry.KeyValue_StrValue{StrValue: "/sensor/prefix/"}},
 		{Key: "tagKey[tag='tagValue']/boolKey", Value: &telemetry.KeyValue_BoolValue{BoolValue: false}},
 		{Key: "intKey", Value: &telemetry.KeyValue_IntValue{IntValue: 10}}},
 }
 
-var data_with_string_values = &telemetry.OpenConfigData{
+var dataWithStringValues = &telemetry.OpenConfigData{
 	Path: "/sensor_with_string_values",
 	Kv: []*telemetry.KeyValue{{Key: "__prefix__", Value: &telemetry.KeyValue_StrValue{StrValue: "/sensor/prefix/"}},
 		{Key: "strKey[tag='tagValue']/strValue", Value: &telemetry.KeyValue_StrValue{StrValue: "10"}}},
@@ -54,28 +54,28 @@ func (s *openConfigTelemetryServer) TelemetrySubscribe(req *telemetry.Subscripti
 	if path == "/sensor" {
 		stream.Send(data)
 	} else if path == "/sensor_with_prefix" {
-		stream.Send(data_with_prefix)
+		stream.Send(dataWithPrefix)
 	} else if path == "/sensor_with_multiple_tags" {
-		stream.Send(data_with_multiple_tags)
+		stream.Send(dataWithMultipleTags)
 	} else if path == "/sensor_with_string_values" {
-		stream.Send(data_with_string_values)
+		stream.Send(dataWithStringValues)
 	}
 	return nil
 }
 
-func (s *openConfigTelemetryServer) CancelTelemetrySubscription(ctx context.Context, req *telemetry.CancelSubscriptionRequest) (*telemetry.CancelSubscriptionReply, error) {
+func (s *openConfigTelemetryServer) CancelTelemetrySubscription(_ context.Context, _ *telemetry.CancelSubscriptionRequest) (*telemetry.CancelSubscriptionReply, error) {
 	return nil, nil
 }
 
-func (s *openConfigTelemetryServer) GetTelemetrySubscriptions(ctx context.Context, req *telemetry.GetSubscriptionsRequest) (*telemetry.GetSubscriptionsReply, error) {
+func (s *openConfigTelemetryServer) GetTelemetrySubscriptions(_ context.Context, _ *telemetry.GetSubscriptionsRequest) (*telemetry.GetSubscriptionsReply, error) {
 	return nil, nil
 }
 
-func (s *openConfigTelemetryServer) GetTelemetryOperationalState(ctx context.Context, req *telemetry.GetOperationalStateRequest) (*telemetry.GetOperationalStateReply, error) {
+func (s *openConfigTelemetryServer) GetTelemetryOperationalState(_ context.Context, _ *telemetry.GetOperationalStateRequest) (*telemetry.GetOperationalStateReply, error) {
 	return nil, nil
 }
 
-func (s *openConfigTelemetryServer) GetDataEncodings(ctx context.Context, req *telemetry.DataEncodingRequest) (*telemetry.DataEncodingReply, error) {
+func (s *openConfigTelemetryServer) GetDataEncodings(_ context.Context, _ *telemetry.DataEncodingRequest) (*telemetry.DataEncodingReply, error) {
 	return nil, nil
 }
 

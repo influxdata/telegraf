@@ -28,9 +28,9 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 `
 )
 
-func newTestUdpListener() (*UdpListener, chan []byte) {
+func newTestUDPListener() (*UDPListener, chan []byte) {
 	in := make(chan []byte, 1500)
-	listener := &UdpListener{
+	listener := &UDPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         ":8125",
 		AllowedPendingMessages: 10000,
@@ -41,7 +41,7 @@ func newTestUdpListener() (*UdpListener, chan []byte) {
 }
 
 // func TestHighTrafficUDP(t *testing.T) {
-// 	listener := UdpListener{
+// 	listener := UDPListener{
 // 		ServiceAddress:         ":8126",
 // 		AllowedPendingMessages: 100000,
 // 	}
@@ -78,7 +78,7 @@ func newTestUdpListener() (*UdpListener, chan []byte) {
 // }
 
 func TestConnectUDP(t *testing.T) {
-	listener := UdpListener{
+	listener := UDPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         ":8127",
 		AllowedPendingMessages: 10000,
@@ -117,7 +117,7 @@ func TestRunParser(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
 	var testmsg = []byte("cpu_load_short,host=server01 value=12.0 1422568543702900257\n")
 
-	listener, in := newTestUdpListener()
+	listener, in := newTestUDPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)
@@ -136,11 +136,11 @@ func TestRunParser(t *testing.T) {
 	)
 }
 
-func TestRunParserInvalidMsg(t *testing.T) {
+func TestRunParserInvalidMsg(_ *testing.T) {
 	log.SetOutput(ioutil.Discard)
 	var testmsg = []byte("cpu_load_short")
 
-	listener, in := newTestUdpListener()
+	listener, in := newTestUDPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)
@@ -166,7 +166,7 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
 	var testmsg = []byte("cpu.load.graphite 12 1454780029")
 
-	listener, in := newTestUdpListener()
+	listener, in := newTestUDPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)
@@ -187,7 +187,7 @@ func TestRunParserJSONMsg(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
 	var testmsg = []byte("{\"a\": 5, \"b\": {\"c\": 6}}\n")
 
-	listener, in := newTestUdpListener()
+	listener, in := newTestUDPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -65,7 +64,6 @@ var sampleConfig = `
 `
 
 const (
-	summaryEndpoint           = `%s/stats/summary`
 	defaultServiceAccountPath = "/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
@@ -89,7 +87,6 @@ func (k *Kubernetes) Description() string {
 }
 
 func (k *Kubernetes) Init() error {
-
 	// If neither are provided, use the default service account.
 	if k.BearerToken == "" && k.BearerTokenString == "" {
 		k.BearerToken = defaultServiceAccountPath
@@ -118,18 +115,9 @@ func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func buildURL(endpoint string, base string) (*url.URL, error) {
-	u := fmt.Sprintf(endpoint, base)
-	addr, err := url.Parse(u)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to parse address '%s': %s", u, err)
-	}
-	return addr, nil
-}
-
 func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) error {
 	summaryMetrics := &SummaryMetrics{}
-	err := k.LoadJson(fmt.Sprintf("%s/stats/summary", baseURL), summaryMetrics)
+	err := k.LoadJSON(fmt.Sprintf("%s/stats/summary", baseURL), summaryMetrics)
 	if err != nil {
 		return err
 	}
@@ -140,7 +128,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 	}
 	buildSystemContainerMetrics(summaryMetrics, acc)
 	buildNodeMetrics(summaryMetrics, acc)
-	buildPodMetrics(baseURL, summaryMetrics, podInfos, k.labelFilter, acc)
+	buildPodMetrics(summaryMetrics, podInfos, k.labelFilter, acc)
 	return nil
 }
 
@@ -193,19 +181,19 @@ func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) 
 }
 
 func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Metadata, error) {
-	var podApi Pods
-	err := k.LoadJson(fmt.Sprintf("%s/pods", baseURL), &podApi)
+	var podAPI Pods
+	err := k.LoadJSON(fmt.Sprintf("%s/pods", baseURL), &podAPI)
 	if err != nil {
 		return nil, err
 	}
 	var podInfos []Metadata
-	for _, podMetadata := range podApi.Items {
+	for _, podMetadata := range podAPI.Items {
 		podInfos = append(podInfos, podMetadata.Metadata)
 	}
 	return podInfos, nil
 }
 
-func (k *Kubernetes) LoadJson(url string, v interface{}) error {
+func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 	var req, err = http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -244,7 +232,7 @@ func (k *Kubernetes) LoadJson(url string, v interface{}) error {
 	return nil
 }
 
-func buildPodMetrics(baseURL string, summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFilter filter.Filter, acc telegraf.Accumulator) {
+func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFilter filter.Filter, acc telegraf.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
 		for _, container := range pod.Containers {
 			tags := map[string]string{

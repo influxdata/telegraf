@@ -141,7 +141,7 @@ func (k *Kibana) Description() string {
 
 func (k *Kibana) Gather(acc telegraf.Accumulator) error {
 	if k.client == nil {
-		client, err := k.createHttpClient()
+		client, err := k.createHTTPClient()
 
 		if err != nil {
 			return err
@@ -166,7 +166,7 @@ func (k *Kibana) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (k *Kibana) createHttpClient() (*http.Client, error) {
+func (k *Kibana) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -182,12 +182,11 @@ func (k *Kibana) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (k *Kibana) gatherKibanaStatus(baseUrl string, acc telegraf.Accumulator) error {
-
+func (k *Kibana) gatherKibanaStatus(baseURL string, acc telegraf.Accumulator) error {
 	kibanaStatus := &kibanaStatus{}
-	url := baseUrl + statusPath
+	url := baseURL + statusPath
 
-	host, err := k.gatherJsonData(url, kibanaStatus)
+	host, err := k.gatherJSONData(url, kibanaStatus)
 	if err != nil {
 		return err
 	}
@@ -229,15 +228,13 @@ func (k *Kibana) gatherKibanaStatus(baseUrl string, acc telegraf.Accumulator) er
 		fields["heap_max_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapMaxInBytes
 		fields["heap_total_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapMaxInBytes
 		fields["heap_used_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapUsedInBytes
-
 	}
-
 	acc.AddFields("kibana", fields, tags)
 
 	return nil
 }
 
-func (k *Kibana) gatherJsonData(url string, v interface{}) (host string, err error) {
+func (k *Kibana) gatherJSONData(url string, v interface{}) (host string, err error) {
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", fmt.Errorf("unable to create new request '%s': %v", url, err)

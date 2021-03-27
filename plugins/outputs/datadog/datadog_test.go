@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	fakeUrl    = "http://test.datadog.com"
-	fakeApiKey = "123456"
+	fakeURL    = "http://test.datadog.com"
+	fakeAPIKey = "123456"
 )
 
 func NewDatadog(url string) *Datadog {
@@ -28,8 +28,8 @@ func NewDatadog(url string) *Datadog {
 }
 
 func fakeDatadog() *Datadog {
-	d := NewDatadog(fakeUrl)
-	d.Apikey = fakeApiKey
+	d := NewDatadog(fakeURL)
+	d.Apikey = fakeAPIKey
 	return d
 }
 
@@ -67,15 +67,15 @@ func TestBadStatusCode(t *testing.T) {
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
-		require.EqualError(t, fmt.Errorf("received bad status code, 500\n"), err.Error())
+		require.EqualError(t, fmt.Errorf("received bad status code, 500"), err.Error())
 	}
 }
 
 func TestAuthenticatedUrl(t *testing.T) {
 	d := fakeDatadog()
 
-	authUrl := d.authenticatedUrl()
-	assert.EqualValues(t, fmt.Sprintf("%s?api_key=%s", fakeUrl, fakeApiKey), authUrl)
+	authURL := d.authenticatedURL()
+	assert.EqualValues(t, fmt.Sprintf("%s?api_key=%s", fakeURL, fakeAPIKey), authURL)
 }
 
 func TestBuildTags(t *testing.T) {

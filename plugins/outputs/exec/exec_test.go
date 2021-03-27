@@ -83,9 +83,10 @@ func TestTruncate(t *testing.T) {
 			len:  len("hola") + len("..."),
 		},
 	}
+	c := CommandRunner{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := truncate(*tt.buf)
+			s := c.truncate(*tt.buf)
 			require.Equal(t, tt.len, len(s))
 		})
 	}

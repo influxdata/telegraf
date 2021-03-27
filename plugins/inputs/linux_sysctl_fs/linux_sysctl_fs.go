@@ -20,10 +20,10 @@ type SysctlFS struct {
 var sysctlFSDescription = `Provides Linux sysctl fs metrics`
 var sysctlFSSampleConfig = ``
 
-func (_ SysctlFS) Description() string {
+func (sfs SysctlFS) Description() string {
 	return sysctlFSDescription
 }
-func (_ SysctlFS) SampleConfig() string {
+func (sfs SysctlFS) SampleConfig() string {
 	return sysctlFSSampleConfig
 }
 
@@ -91,7 +91,6 @@ func GetHostProc() string {
 }
 
 func init() {
-
 	inputs.Add("linux_sysctl_fs", func() telegraf.Input {
 		return &SysctlFS{
 			path: path.Join(GetHostProc(), "/sys/fs"),

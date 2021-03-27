@@ -14,15 +14,15 @@ import (
 )
 
 func TestWrite(t *testing.T) {
-	readBody := func(r *http.Request) (yandexCloudMonitoringMessage, error) {
+	readBody := func(r *http.Request) yandexCloudMonitoringMessage {
 		decoder := json.NewDecoder(r.Body)
 		var message yandexCloudMonitoringMessage
 		err := decoder.Decode(&message)
 		require.NoError(t, err)
-		return message, nil
+		return message
 	}
 
-	testMetadataHttpServer := httptest.NewServer(
+	testMetadataHTTPServer := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasSuffix(r.URL.Path, "/token") {
 				token := MetadataIamToken{
@@ -39,9 +39,9 @@ func TestWrite(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		}),
 	)
-	defer testMetadataHttpServer.Close()
-	metadataTokenUrl := "http://" + testMetadataHttpServer.Listener.Addr().String() + "/token"
-	metadataFolderUrl := "http://" + testMetadataHttpServer.Listener.Addr().String() + "/folder"
+	defer testMetadataHTTPServer.Close()
+	metadataTokenURL := "http://" + testMetadataHTTPServer.Listener.Addr().String() + "/token"
+	metadataFolderURL := "http://" + testMetadataHTTPServer.Listener.Addr().String() + "/folder"
 
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
@@ -67,8 +67,7 @@ func TestWrite(t *testing.T) {
 				),
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				message, err := readBody(r)
-				require.NoError(t, err)
+				message := readBody(r)
 				require.Len(t, message.Metrics, 1)
 				require.Equal(t, "cpu", message.Metrics[0].Name)
 				require.Equal(t, 42.0, message.Metrics[0].Value)
@@ -82,9 +81,9 @@ func TestWrite(t *testing.T) {
 				tt.handler(t, w, r)
 			})
 			tt.plugin.Log = testutil.Logger{}
-			tt.plugin.EndpointUrl = url
-			tt.plugin.MetadataTokenURL = metadataTokenUrl
-			tt.plugin.MetadataFolderURL = metadataFolderUrl
+			tt.plugin.EndpointURL = url
+			tt.plugin.MetadataTokenURL = metadataTokenURL
+			tt.plugin.MetadataFolderURL = metadataFolderURL
 			err := tt.plugin.Connect()
 			require.NoError(t, err)
 

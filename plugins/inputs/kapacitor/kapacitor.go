@@ -51,7 +51,7 @@ func (*Kapacitor) SampleConfig() string {
 
 func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 	if k.client == nil {
-		client, err := k.createHttpClient()
+		client, err := k.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (k *Kapacitor) createHttpClient() (*http.Client, error) {
+func (k *Kapacitor) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -216,13 +216,10 @@ func (k *Kapacitor) gatherURL(
 
 	if s.Kapacitor != nil {
 		for _, obj := range *s.Kapacitor {
-
 			// Strip out high-cardinality or duplicative tags
 			excludeTags := []string{"host", "cluster_id", "server_id"}
 			for _, key := range excludeTags {
-				if _, ok := obj.Tags[key]; ok {
-					delete(obj.Tags, key)
-				}
+				delete(obj.Tags, key)
 			}
 
 			// Convert time-related string field to int

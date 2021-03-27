@@ -311,12 +311,169 @@ func TestHandleNXAPI(t *testing.T) {
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
 
-	tags1 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i1", "source": "hostname", "subscription": "subscription"}
+	tags1 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i1", "row_number": "0", "source": "hostname", "subscription": "subscription"}
 	fields1 := map[string]interface{}{"value": "foo"}
-	tags2 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i2", "source": "hostname", "subscription": "subscription"}
+	tags2 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i2", "row_number": "0", "source": "hostname", "subscription": "subscription"}
 	fields2 := map[string]interface{}{"value": "bar"}
 	acc.AssertContainsTaggedFields(t, "nxapi", fields1, tags1)
 	acc.AssertContainsTaggedFields(t, "nxapi", fields2, tags2)
+}
+
+func TestHandleNXAPIXformNXAPI(t *testing.T) {
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "dummy", Aliases: map[string]string{"nxapi": "show nxapi"}}
+	acc := &testutil.Accumulator{}
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
+
+	telemetry := &telemetry.Telemetry{
+		MsgTimestamp: 1543236572000,
+		EncodingPath: "show processes cpu",
+		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetry.TelemetryField{
+			{
+				Fields: []*telemetry.TelemetryField{
+					{
+						Name: "keys",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Name:        "foo",
+								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+							},
+						},
+					},
+					{
+						Name: "content",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Fields: []*telemetry.TelemetryField{
+									{
+										Name: "TABLE_process_cpu",
+										Fields: []*telemetry.TelemetryField{
+											{
+												Fields: []*telemetry.TelemetryField{
+													{
+														Name: "ROW_process_cpu",
+														Fields: []*telemetry.TelemetryField{
+															{
+																Fields: []*telemetry.TelemetryField{
+																	{
+																		Name:        "index",
+																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "i1"},
+																	},
+																	{
+																		Name:        "value",
+																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "foo"},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	data, _ := proto.Marshal(telemetry)
+
+	c.handleTelemetry(data)
+	require.Empty(t, acc.Errors)
+
+	tags1 := map[string]string{"path": "show processes cpu", "foo": "bar", "TABLE_process_cpu": "i1", "row_number": "0", "source": "hostname", "subscription": "subscription"}
+	fields1 := map[string]interface{}{"value": "foo"}
+	acc.AssertContainsTaggedFields(t, "show processes cpu", fields1, tags1)
+}
+
+func TestHandleNXXformMulti(t *testing.T) {
+	c := &CiscoTelemetryMDT{Transport: "dummy", Aliases: map[string]string{"dme": "sys/lldp"}}
+	acc := &testutil.Accumulator{}
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
+
+	telemetry := &telemetry.Telemetry{
+		MsgTimestamp: 1543236572000,
+		EncodingPath: "sys/lldp",
+		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetry.TelemetryField{
+			{
+				Fields: []*telemetry.TelemetryField{
+					{
+						Name: "keys",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Name:        "foo",
+								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+							},
+						},
+					},
+					{
+						Name: "content",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Fields: []*telemetry.TelemetryField{
+									{
+										Name: "fooEntity",
+										Fields: []*telemetry.TelemetryField{
+											{
+												Fields: []*telemetry.TelemetryField{
+													{
+														Name: "attributes",
+														Fields: []*telemetry.TelemetryField{
+															{
+																Fields: []*telemetry.TelemetryField{
+																	{
+																		Name:        "rn",
+																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "some-rn"},
+																	},
+																	{
+																		Name:        "portIdV",
+																		ValueByType: &telemetry.TelemetryField_Uint32Value{Uint32Value: 12},
+																	},
+																	{
+																		Name:        "portDesc",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 100},
+																	},
+																	{
+																		Name:        "test",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 281474976710655},
+																	},
+																	{
+																		Name:        "subscriptionId",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 2814749767106551},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	data, _ := proto.Marshal(telemetry)
+
+	c.handleTelemetry(data)
+	require.Empty(t, acc.Errors)
+	//validate various transformation scenaarios newly added in the code.
+	fields := map[string]interface{}{"portIdV": "12", "portDesc": "100", "test": int64(281474976710655), "subscriptionId": "2814749767106551"}
+	acc.AssertContainsFields(t, "dme", fields)
 }
 
 func TestHandleNXDME(t *testing.T) {
@@ -588,5 +745,4 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	tags = map[string]string{"path": "type:model/other/path", "name": "str", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "other", fields, tags)
-
 }

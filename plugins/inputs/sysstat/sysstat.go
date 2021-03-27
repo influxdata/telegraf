@@ -273,7 +273,6 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) e
 						tags[k] = v
 					}
 				}
-
 			}
 		}
 
@@ -285,7 +284,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) e
 					tags:   make(map[string]string),
 				}
 			}
-			g, _ := m[device]
+			g := m[device]
 			if len(g.tags) == 0 {
 				for k, v := range tags {
 					g.tags[k] = v
@@ -299,7 +298,6 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) e
 			}
 			acc.AddFields(measurement, fields, tags, ts)
 		}
-
 	}
 	if s.Group {
 		for _, v := range m {

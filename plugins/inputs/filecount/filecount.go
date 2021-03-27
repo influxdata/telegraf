@@ -65,11 +65,11 @@ type FileCount struct {
 	Log            telegraf.Logger
 }
 
-func (_ *FileCount) Description() string {
+func (fc *FileCount) Description() string {
 	return "Count files in a directory"
 }
 
-func (_ *FileCount) SampleConfig() string { return sampleConfig }
+func (fc *FileCount) SampleConfig() string { return sampleConfig }
 
 type fileFilterFunc func(os.FileInfo) (bool, error)
 
@@ -292,7 +292,6 @@ func (fc *FileCount) initGlobPaths(acc telegraf.Accumulator) {
 			fc.globPaths = append(fc.globPaths, *glob)
 		}
 	}
-
 }
 
 func NewFileCount() *FileCount {

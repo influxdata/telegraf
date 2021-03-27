@@ -195,7 +195,6 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 	}
 
 	for _, conn := range connects {
-
 		metricsFuncs := []func(acc telegraf.Accumulator, conn *connect) error{
 			ch.tables,
 			ch.zookeeper,
@@ -212,7 +211,6 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 			if err := metricFunc(acc, &conn); err != nil {
 				acc.AddError(err)
 			}
-
 		}
 
 		for metric := range commonMetrics {
@@ -342,7 +340,6 @@ func (ch *ClickHouse) replicationQueue(acc telegraf.Accumulator, conn *connect) 
 }
 
 func (ch *ClickHouse) detachedParts(acc telegraf.Accumulator, conn *connect) error {
-
 	var detachedParts []struct {
 		DetachedParts chUInt64 `json:"detached_parts"`
 	}
@@ -363,7 +360,6 @@ func (ch *ClickHouse) detachedParts(acc telegraf.Accumulator, conn *connect) err
 }
 
 func (ch *ClickHouse) dictionaries(acc telegraf.Accumulator, conn *connect) error {
-
 	var brokenDictionaries []struct {
 		Origin         string   `json:"origin"`
 		BytesAllocated chUInt64 `json:"bytes_allocated"`
@@ -397,7 +393,6 @@ func (ch *ClickHouse) dictionaries(acc telegraf.Accumulator, conn *connect) erro
 }
 
 func (ch *ClickHouse) mutations(acc telegraf.Accumulator, conn *connect) error {
-
 	var mutationsStatus []struct {
 		Failed    chUInt64 `json:"failed"`
 		Running   chUInt64 `json:"running"`
@@ -424,7 +419,6 @@ func (ch *ClickHouse) mutations(acc telegraf.Accumulator, conn *connect) error {
 }
 
 func (ch *ClickHouse) disks(acc telegraf.Accumulator, conn *connect) error {
-
 	var disksStatus []struct {
 		Name            string   `json:"name"`
 		Path            string   `json:"path"`
@@ -448,14 +442,12 @@ func (ch *ClickHouse) disks(acc telegraf.Accumulator, conn *connect) error {
 			},
 			tags,
 		)
-
 	}
 
 	return nil
 }
 
 func (ch *ClickHouse) processes(acc telegraf.Accumulator, conn *connect) error {
-
 	var processesStats []struct {
 		QueryType      string  `json:"query_type"`
 		Percentile50   float64 `json:"p50"`
@@ -479,7 +471,6 @@ func (ch *ClickHouse) processes(acc telegraf.Accumulator, conn *connect) error {
 			},
 			tags,
 		)
-
 	}
 
 	return nil

@@ -35,8 +35,6 @@ var (
 	ZipkinServerHost  string
 )
 
-const usage = `./stress_test_write -batch_size=<batch_size> -max_backlog=<max_span_buffer_backlog> -batch_interval=<batch_interval_in_seconds> -span_count<number_of_spans_to_write> -zipkin_host=<zipkin_service_hostname>`
-
 func init() {
 	flag.IntVar(&BatchSize, "batch_size", 10000, "")
 	flag.IntVar(&MaxBackLog, "max_backlog", 100000, "")

@@ -2,7 +2,6 @@ package sflow
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net"
@@ -40,7 +39,6 @@ type SFlow struct {
 	addr    net.Addr
 	decoder *PacketDecoder
 	closer  io.Closer
-	cancel  context.CancelFunc
 	wg      sync.WaitGroup
 }
 
@@ -131,7 +129,6 @@ func (s *SFlow) read(acc telegraf.Accumulator, conn net.PacketConn) {
 }
 
 func (s *SFlow) process(acc telegraf.Accumulator, buf []byte) {
-
 	if err := s.decoder.Decode(bytes.NewBuffer(buf)); err != nil {
 		acc.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
 	}

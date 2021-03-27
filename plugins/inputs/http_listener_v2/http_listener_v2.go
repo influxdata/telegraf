@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/snappy"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
@@ -247,28 +248,50 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 }
 
 func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
-	body := req.Body
+	encoding := req.Header.Get("Content-Encoding")
 
-	// Handle gzip request bodies
-	if req.Header.Get("Content-Encoding") == "gzip" {
-		var err error
-		body, err = gzip.NewReader(req.Body)
+	switch encoding {
+	case "gzip":
+		r, err := gzip.NewReader(req.Body)
 		if err != nil {
 			h.Log.Debug(err.Error())
 			badRequest(res)
 			return nil, false
 		}
-		defer body.Close()
+		defer r.Close()
+		maxReader := http.MaxBytesReader(res, r, h.MaxBodySize.Size)
+		bytes, err := ioutil.ReadAll(maxReader)
+		if err != nil {
+			tooLarge(res)
+			return nil, false
+		}
+		return bytes, true
+	case "snappy":
+		defer req.Body.Close()
+		bytes, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			h.Log.Debug(err.Error())
+			badRequest(res)
+			return nil, false
+		}
+		// snappy block format is only supported by decode/encode not snappy reader/writer
+		bytes, err = snappy.Decode(nil, bytes)
+		if err != nil {
+			h.Log.Debug(err.Error())
+			badRequest(res)
+			return nil, false
+		}
+		return bytes, true
+	default:
+		defer req.Body.Close()
+		bytes, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			h.Log.Debug(err.Error())
+			badRequest(res)
+			return nil, false
+		}
+		return bytes, true
 	}
-
-	body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
-	bytes, err := ioutil.ReadAll(body)
-	if err != nil {
-		tooLarge(res)
-		return nil, false
-	}
-
-	return bytes, true
 }
 
 func (h *HTTPListenerV2) collectQuery(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
@@ -296,11 +319,6 @@ func methodNotAllowed(res http.ResponseWriter) {
 	res.Write([]byte(`{"error":"http: method not allowed"}`))
 }
 
-func internalServerError(res http.ResponseWriter) {
-	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(http.StatusInternalServerError)
-}
-
 func badRequest(res http.ResponseWriter) {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusBadRequest)
@@ -313,7 +331,6 @@ func (h *HTTPListenerV2) authenticateIfSet(handler http.HandlerFunc, res http.Re
 		if !ok ||
 			subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.BasicUsername)) != 1 ||
 			subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.BasicPassword)) != 1 {
-
 			http.Error(res, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}

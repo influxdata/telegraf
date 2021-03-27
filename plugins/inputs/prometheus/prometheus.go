@@ -8,6 +8,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +18,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	parser_v2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1`
@@ -57,12 +61,20 @@ type Prometheus struct {
 	client *http.Client
 
 	// Should we scrape Kubernetes services for prometheus annotations
-	MonitorPods    bool   `toml:"monitor_kubernetes_pods"`
-	PodNamespace   string `toml:"monitor_kubernetes_pods_namespace"`
-	lock           sync.Mutex
-	kubernetesPods map[string]URLAndAddress
-	cancel         context.CancelFunc
-	wg             sync.WaitGroup
+	MonitorPods       bool   `toml:"monitor_kubernetes_pods"`
+	PodScrapeScope    string `toml:"pod_scrape_scope"`
+	NodeIP            string `toml:"node_ip"`
+	PodScrapeInterval int    `toml:"pod_scrape_interval"`
+	PodNamespace      string `toml:"monitor_kubernetes_pods_namespace"`
+	lock              sync.Mutex
+	kubernetesPods    map[string]URLAndAddress
+	cancel            context.CancelFunc
+	wg                sync.WaitGroup
+
+	// Only for monitor_kubernetes_pods=true and pod_scrape_scope="node"
+	podLabelSelector  labels.Selector
+	podFieldSelector  fields.Selector
+	isNodeScrapeScope bool
 }
 
 var sampleConfig = `
@@ -94,6 +106,16 @@ var sampleConfig = `
   ## - prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
   ## - prometheus.io/port: If port is not 9102 use this annotation
   # monitor_kubernetes_pods = true
+  ## Get the list of pods to scrape with either the scope of
+  ## - cluster: the kubernetes watch api (default, no need to specify)
+  ## - node: the local cadvisor api; for scalability. Note that the config node_ip or the environment variable NODE_IP must be set to the host IP.
+  # pod_scrape_scope = "cluster"
+  ## Only for node scrape scope: node IP of the node that telegraf is running on.
+  ## Either this config or the environment variable NODE_IP must be set.
+  # node_ip = "10.180.1.1"
+	## Only for node scrape scope: interval in seconds for how often to get updated pod list for scraping.
+	## Default is 60 seconds.
+	# pod_scrape_interval = 60
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
   # monitor_kubernetes_pods_namespace = ""
@@ -137,6 +159,42 @@ func (p *Prometheus) Init() error {
 		p.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
 	}
 
+	// Config proccessing for node scrape scope for monitor_kubernetes_pods
+	p.isNodeScrapeScope = strings.EqualFold(p.PodScrapeScope, "node")
+	if p.isNodeScrapeScope {
+		// Need node IP to make cAdvisor call for pod list. Check if set in config and valid IP address
+		if p.NodeIP == "" || net.ParseIP(p.NodeIP) == nil {
+			p.Log.Infof("The config node_ip is empty or invalid. Using NODE_IP env var as default.")
+
+			// Check if set as env var and is valid IP address
+			envVarNodeIP := os.Getenv("NODE_IP")
+			if envVarNodeIP == "" || net.ParseIP(envVarNodeIP) == nil {
+				return errors.New("the node_ip config and the environment variable NODE_IP are not set or invalid; " +
+					"cannot get pod list for monitor_kubernetes_pods using node scrape scope")
+			}
+
+			p.NodeIP = envVarNodeIP
+		}
+
+		// Parse label and field selectors - will be used to filter pods after cAdvisor call
+		var err error
+		p.podLabelSelector, err = labels.Parse(p.KubernetesLabelSelector)
+		if err != nil {
+			return fmt.Errorf("error parsing the specified label selector(s): %s", err.Error())
+		}
+		p.podFieldSelector, err = fields.ParseSelector(p.KubernetesFieldSelector)
+		if err != nil {
+			return fmt.Errorf("error parsing the specified field selector(s): %s", err.Error())
+		}
+		isValid, invalidSelector := fieldSelectorIsSupported(p.podFieldSelector)
+		if !isValid {
+			return fmt.Errorf("the field selector %s is not supported for pods", invalidSelector)
+		}
+
+		p.Log.Infof("Using pod scrape scope at node level to get pod list using cAdvisor.")
+		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
+	}
+
 	return nil
 }
 
@@ -169,7 +227,7 @@ type URLAndAddress struct {
 }
 
 func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
-	allURLs := make(map[string]URLAndAddress, 0)
+	allURLs := make(map[string]URLAndAddress)
 	for _, u := range p.URLs {
 		URL, err := url.Parse(u)
 		if err != nil {
@@ -372,8 +430,32 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	return nil
 }
 
+/* Check if the field selector specified is valid.
+ * See ToSelectableFields() for list of fields that are selectable:
+ * https://github.com/kubernetes/kubernetes/release-1.20/pkg/registry/core/pod/strategy.go
+ */
+func fieldSelectorIsSupported(fieldSelector fields.Selector) (bool, string) {
+	supportedFieldsToSelect := map[string]bool{
+		"spec.nodeName":            true,
+		"spec.restartPolicy":       true,
+		"spec.schedulerName":       true,
+		"spec.serviceAccountName":  true,
+		"status.phase":             true,
+		"status.podIP":             true,
+		"status.nominatedNodeName": true,
+	}
+
+	for _, requirement := range fieldSelector.Requirements() {
+		if !supportedFieldsToSelect[requirement.Field] {
+			return false, requirement.Field
+		}
+	}
+
+	return true, ""
+}
+
 // Start will start the Kubernetes scraping if enabled in the configuration
-func (p *Prometheus) Start(a telegraf.Accumulator) error {
+func (p *Prometheus) Start(_ telegraf.Accumulator) error {
 	if p.MonitorPods {
 		var ctx context.Context
 		ctx, p.cancel = context.WithCancel(context.Background())

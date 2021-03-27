@@ -227,7 +227,7 @@ func fakeExecCommand(command string, args ...string) *exec.Cmd {
 // For example, if you run:
 // GO_WANT_HELPER_PROCESS=1 go test -test.run=TestHelperProcess -- chrony tracking
 // it returns below mockData.
-func TestHelperProcess(t *testing.T) {
+func TestHelperProcess(_ *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -378,7 +378,6 @@ OS RealTime Mod  | 0x00              | ok
 	} else {
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
-
 	}
 	os.Exit(0)
 }
@@ -547,7 +546,7 @@ func fakeExecCommandV2(command string, args ...string) *exec.Cmd {
 // For example, if you run:
 // GO_WANT_HELPER_PROCESS=1 go test -test.run=TestHelperProcessV2 -- chrony tracking
 // it returns below mockData.
-func TestHelperProcessV2(t *testing.T) {
+func TestHelperProcessV2(_ *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -573,7 +572,6 @@ Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
 	} else {
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
-
 	}
 	os.Exit(0)
 }
@@ -611,8 +609,8 @@ Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
 
 	for i := range tests {
 		t.Logf("Checking v%d data...", i+1)
-		extractFieldsFromRegex(re_v1_parse_line, tests[i])
-		extractFieldsFromRegex(re_v2_parse_line, tests[i])
+		extractFieldsFromRegex(reV1ParseLine, tests[i])
+		extractFieldsFromRegex(reV2ParseLine, tests[i])
 	}
 }
 

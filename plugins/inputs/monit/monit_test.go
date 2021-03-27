@@ -17,7 +17,7 @@ import (
 type transportMock struct {
 }
 
-func (t *transportMock) RoundTrip(r *http.Request) (*http.Response, error) {
+func (t *transportMock) RoundTrip(_ *http.Request) (*http.Response, error) {
 	errorString := "Get http://127.0.0.1:2812/_status?format=xml: " +
 		"read tcp 192.168.10.2:55610->127.0.0.1:2812: " +
 		"read: connection reset by peer"
@@ -555,7 +555,6 @@ func checkAuth(r *http.Request, username, password string) bool {
 }
 
 func TestAllowHosts(t *testing.T) {
-
 	r := &Monit{
 		Address:  "http://127.0.0.1:2812",
 		Username: "test",
@@ -591,9 +590,7 @@ func TestConnection(t *testing.T) {
 }
 
 func TestInvalidUsernameOrPassword(t *testing.T) {
-
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if !checkAuth(r, "testing", "testing") {
 			http.Error(w, "Unauthorized.", 401)
 			return
@@ -625,9 +622,7 @@ func TestInvalidUsernameOrPassword(t *testing.T) {
 }
 
 func TestNoUsernameOrPasswordConfiguration(t *testing.T) {
-
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if !checkAuth(r, "testing", "testing") {
 			http.Error(w, "Unauthorized.", 401)
 			return
@@ -657,7 +652,6 @@ func TestNoUsernameOrPasswordConfiguration(t *testing.T) {
 }
 
 func TestInvalidXMLAndInvalidTypes(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		filename string

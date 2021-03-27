@@ -184,6 +184,7 @@ func (m *MQTTConsumer) Init() error {
 	}
 
 	m.opts = opts
+	m.messages = map[telegraf.TrackingID]bool{}
 
 	return nil
 }
@@ -221,9 +222,6 @@ func (m *MQTTConsumer) connect() error {
 
 	m.Log.Infof("Connected %v", m.Servers)
 	m.state = Connected
-	m.messagesMutex.Lock()
-	m.messages = make(map[telegraf.TrackingID]bool)
-	m.messagesMutex.Unlock()
 
 	// Persistent sessions should skip subscription if a session is present, as
 	// the subscriptions are stored by the server.
@@ -250,14 +248,13 @@ func (m *MQTTConsumer) connect() error {
 	return nil
 }
 
-func (m *MQTTConsumer) onConnectionLost(c mqtt.Client, err error) {
+func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
 	m.acc.AddError(fmt.Errorf("connection lost: %v", err))
 	m.Log.Debugf("Disconnected %v", m.Servers)
 	m.state = Disconnected
-	return
 }
 
-func (m *MQTTConsumer) recvMessage(c mqtt.Client, msg mqtt.Message) {
+func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {
 	for {
 		select {
 		case track := <-m.acc.Delivered():
@@ -312,7 +309,7 @@ func (m *MQTTConsumer) Stop() {
 	m.cancel()
 }
 
-func (m *MQTTConsumer) Gather(acc telegraf.Accumulator) error {
+func (m *MQTTConsumer) Gather(_ telegraf.Accumulator) error {
 	if m.state == Disconnected {
 		m.state = Connecting
 		m.Log.Debugf("Connecting %v", m.Servers)

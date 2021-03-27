@@ -59,14 +59,14 @@ func TestAddEngineStatsPartial(t *testing.T) {
 		"written_docs_per_sec",
 	}
 
-	missing_keys := []string{
+	missingKeys := []string{
 		"total_queries",
 		"total_reads",
 		"total_writes",
 	}
 	engine.AddEngineStats(keys, &acc, tags)
 
-	for _, metric := range missing_keys {
+	for _, metric := range missingKeys {
 		assert.False(t, acc.HasInt64Field("rethinkdb", metric))
 	}
 }

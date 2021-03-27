@@ -3,14 +3,15 @@ package prometheusremotewrite
 import (
 	"bytes"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
-	"github.com/golang/snappy"
-	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"hash/fnv"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gogo/protobuf/proto"
+	"github.com/golang/snappy"
+	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 
 	"github.com/influxdata/telegraf"
 	"github.com/prometheus/prometheus/prompb"
@@ -54,11 +55,11 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	var buf bytes.Buffer
-	var entries = make(map[MetricKey]*prompb.TimeSeries)
+	var entries = make(map[MetricKey]prompb.TimeSeries)
 	for _, metric := range metrics {
 		commonLabels := s.createLabels(metric)
 		var metrickey MetricKey
-		var promts *prompb.TimeSeries
+		var promts prompb.TimeSeries
 		for _, field := range metric.FieldList() {
 			metricName := prometheus.MetricName(metric.Name(), field.Key, metric.Type())
 			metricName, ok := prometheus.SanitizeMetricName(metricName)
@@ -88,9 +89,9 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 					if _, ok = entries[metrickeycount]; !ok {
 						entries[metrickeycount] = promtscount
 					}
-					labels := make([]*prompb.Label, len(commonLabels), len(commonLabels)+1)
+					labels := make([]prompb.Label, len(commonLabels), len(commonLabels)+1)
 					copy(labels, commonLabels)
-					labels = append(labels, &prompb.Label{
+					labels = append(labels, prompb.Label{
 						Name:  "le",
 						Value: "+Inf",
 					})
@@ -112,9 +113,9 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						continue
 					}
 
-					labels = make([]*prompb.Label, len(commonLabels), len(commonLabels)+1)
+					labels = make([]prompb.Label, len(commonLabels), len(commonLabels)+1)
 					copy(labels, commonLabels)
-					labels = append(labels, &prompb.Label{
+					labels = append(labels, prompb.Label{
 						Name:  "le",
 						Value: fmt.Sprint(bound),
 					})
@@ -133,9 +134,9 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 					}
 
 					// if no bucket generate +Inf entry
-					labels := make([]*prompb.Label, len(commonLabels), len(commonLabels)+1)
+					labels := make([]prompb.Label, len(commonLabels), len(commonLabels)+1)
 					copy(labels, commonLabels)
-					labels = append(labels, &prompb.Label{
+					labels = append(labels, prompb.Label{
 						Name:  "le",
 						Value: "+Inf",
 					})
@@ -178,16 +179,16 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						continue
 					}
 
-					labels := make([]*prompb.Label, len(commonLabels), len(commonLabels)+1)
+					labels := make([]prompb.Label, len(commonLabels), len(commonLabels)+1)
 					copy(labels, commonLabels)
-					labels = append(labels, &prompb.Label{
+					labels = append(labels, prompb.Label{
 						Name:  "quantile",
 						Value: fmt.Sprint(quantile),
 					})
 					metrickey, promts = getPromTS(metricName, labels, value, metric.Time())
 				}
 			default:
-				return nil, fmt.Errorf("Unknown type %v", metric.Type())
+				return nil, fmt.Errorf("unknown type %v", metric.Type())
 			}
 
 			// A batch of metrics can contain multiple values for a single
@@ -201,11 +202,10 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			}
 			entries[metrickey] = promts
 		}
-
 	}
 
-	var promTS = make([]*prompb.TimeSeries, len(entries))
-	var i int64 = 0
+	var promTS = make([]prompb.TimeSeries, len(entries))
+	var i int
 	for _, promts := range entries {
 		promTS[i] = promts
 		i++
@@ -235,7 +235,6 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 			return false
 		})
-
 	}
 	data, err := proto.Marshal(&prompb.WriteRequest{Timeseries: promTS})
 	if err != nil {
@@ -246,7 +245,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func hasLabel(name string, labels []*prompb.Label) bool {
+func hasLabel(name string, labels []prompb.Label) bool {
 	for _, label := range labels {
 		if name == label.Name {
 			return true
@@ -255,8 +254,8 @@ func hasLabel(name string, labels []*prompb.Label) bool {
 	return false
 }
 
-func (s *Serializer) createLabels(metric telegraf.Metric) []*prompb.Label {
-	labels := make([]*prompb.Label, 0, len(metric.TagList()))
+func (s *Serializer) createLabels(metric telegraf.Metric) []prompb.Label {
+	labels := make([]prompb.Label, 0, len(metric.TagList()))
 	for _, tag := range metric.TagList() {
 		// Ignore special tags for histogram and summary types.
 		switch metric.Type() {
@@ -275,7 +274,7 @@ func (s *Serializer) createLabels(metric telegraf.Metric) []*prompb.Label {
 			continue
 		}
 
-		labels = append(labels, &prompb.Label{Name: name, Value: tag.Value})
+		labels = append(labels, prompb.Label{Name: name, Value: tag.Value})
 	}
 
 	if s.config.StringHandling != StringAsLabel {
@@ -300,9 +299,8 @@ func (s *Serializer) createLabels(metric telegraf.Metric) []*prompb.Label {
 			continue
 		}
 
-		labels = append(labels, &prompb.Label{Name: name, Value: value})
+		labels = append(labels, prompb.Label{Name: name, Value: value})
 		addedFieldLabel = true
-
 	}
 
 	if addedFieldLabel {
@@ -314,7 +312,7 @@ func (s *Serializer) createLabels(metric telegraf.Metric) []*prompb.Label {
 	return labels
 }
 
-func MakeMetricKey(labels []*prompb.Label) MetricKey {
+func MakeMetricKey(labels []prompb.Label) MetricKey {
 	h := fnv.New64a()
 	for _, label := range labels {
 		h.Write([]byte(label.Name))
@@ -325,17 +323,17 @@ func MakeMetricKey(labels []*prompb.Label) MetricKey {
 	return MetricKey(h.Sum64())
 }
 
-func getPromTS(name string, labels []*prompb.Label, value float64, ts time.Time) (MetricKey, *prompb.TimeSeries) {
+func getPromTS(name string, labels []prompb.Label, value float64, ts time.Time) (MetricKey, prompb.TimeSeries) {
 	sample := []prompb.Sample{{
 		// Timestamp is int milliseconds for remote write.
 		Timestamp: ts.UnixNano() / int64(time.Millisecond),
 		Value:     value,
 	}}
-	labelscopy := make([]*prompb.Label, len(labels), len(labels)+1)
+	labelscopy := make([]prompb.Label, len(labels), len(labels)+1)
 	copy(labelscopy, labels)
-	labels = append(labelscopy, &prompb.Label{
+	labels = append(labelscopy, prompb.Label{
 		Name:  "__name__",
 		Value: name,
 	})
-	return MakeMetricKey(labels), &prompb.TimeSeries{Labels: labels, Samples: sample}
+	return MakeMetricKey(labels), prompb.TimeSeries{Labels: labels, Samples: sample}
 }

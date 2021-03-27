@@ -49,7 +49,6 @@ func TestGather(t *testing.T) {
 		t.Fatal(err)
 	}
 	acc.AssertContainsTaggedFields(t, "chrony", fields, tags)
-
 }
 
 // fackeExecCommand is a helper function that mock
@@ -66,7 +65,7 @@ func fakeExecCommand(command string, args ...string) *exec.Cmd {
 // For example, if you run:
 // GO_WANT_HELPER_PROCESS=1 go test -test.run=TestHelperProcess -- chrony tracking
 // it returns below mockData.
-func TestHelperProcess(t *testing.T) {
+func TestHelperProcess(_ *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -102,7 +101,6 @@ Leap status     : Not synchronized
 	} else {
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
-
 	}
 	os.Exit(0)
 }

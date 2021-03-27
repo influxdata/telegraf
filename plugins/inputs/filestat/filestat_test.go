@@ -83,6 +83,23 @@ func TestGatherExplicitFiles(t *testing.T) {
 	require.True(t, acc.HasPoint("filestat", tags3, "exists", int64(0)))
 }
 
+func TestNonExistentFile(t *testing.T) {
+	fs := NewFileStat()
+	fs.Log = testutil.Logger{}
+	fs.Md5 = true
+	fs.Files = []string{
+		"/non/existant/file",
+	}
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fs.Gather))
+
+	acc.AssertContainsFields(t, "filestat", map[string]interface{}{"exists": int64(0)})
+	assert.False(t, acc.HasField("filestat", "error"))
+	assert.False(t, acc.HasField("filestat", "md5_sum"))
+	assert.False(t, acc.HasField("filestat", "size_bytes"))
+	assert.False(t, acc.HasField("filestat", "modification_time"))
+}
+
 func TestGatherGlob(t *testing.T) {
 	fs := NewFileStat()
 	fs.Log = testutil.Logger{}

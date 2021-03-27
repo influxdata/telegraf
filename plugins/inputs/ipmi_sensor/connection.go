@@ -32,8 +32,10 @@ func NewConnection(server, privilege, hexKey string) *Connection {
 		security := server[0:inx1]
 		connstr = server[inx1+1:]
 		up := strings.SplitN(security, ":", 2)
-		conn.Username = up[0]
-		conn.Password = up[1]
+		if len(up) == 2 {
+			conn.Username = up[0]
+			conn.Password = up[1]
+		}
 	}
 
 	if inx2 > 0 {
@@ -47,27 +49,27 @@ func NewConnection(server, privilege, hexKey string) *Connection {
 	return conn
 }
 
-func (t *Connection) options() []string {
-	intf := t.Interface
+func (c *Connection) options() []string {
+	intf := c.Interface
 	if intf == "" {
 		intf = "lan"
 	}
 
 	options := []string{
-		"-H", t.Hostname,
-		"-U", t.Username,
-		"-P", t.Password,
+		"-H", c.Hostname,
+		"-U", c.Username,
+		"-P", c.Password,
 		"-I", intf,
 	}
 
-	if t.HexKey != "" {
-		options = append(options, "-y", t.HexKey)
+	if c.HexKey != "" {
+		options = append(options, "-y", c.HexKey)
 	}
-	if t.Port != 0 {
-		options = append(options, "-p", strconv.Itoa(t.Port))
+	if c.Port != 0 {
+		options = append(options, "-p", strconv.Itoa(c.Port))
 	}
-	if t.Privilege != "" {
-		options = append(options, "-L", t.Privilege)
+	if c.Privilege != "" {
+		options = append(options, "-L", c.Privilege)
 	}
 	return options
 }

@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -105,9 +106,7 @@ func (w *Warp10) Connect() error {
 func (w *Warp10) GenWarp10Payload(metrics []telegraf.Metric) string {
 	collectString := make([]string, 0)
 	for _, mm := range metrics {
-
 		for _, field := range mm.FieldList() {
-
 			metric := &MetricLine{
 				Metric:    fmt.Sprintf("%s%s", w.Prefix, mm.Name()+"."+field.Key),
 				Timestamp: mm.Time().UnixNano() / 1000,
@@ -170,15 +169,16 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 }
 
 func buildTags(tags []*telegraf.Tag) []string {
-
 	tagsString := make([]string, len(tags)+1)
 	indexSource := 0
 	for index, tag := range tags {
-		tagsString[index] = fmt.Sprintf("%s=%s", tag.Key, tag.Value)
+		key := url.QueryEscape(tag.Key)
+		value := url.QueryEscape(tag.Value)
+		tagsString[index] = fmt.Sprintf("%s=%s", key, value)
 		indexSource = index
 	}
 	indexSource++
-	tagsString[indexSource] = fmt.Sprintf("source=telegraf")
+	tagsString[indexSource] = "source=telegraf"
 	sort.Strings(tagsString)
 	return tagsString
 }
@@ -212,10 +212,6 @@ func intToString(inputNum int64) string {
 
 func boolToString(inputBool bool) string {
 	return strconv.FormatBool(inputBool)
-}
-
-func uIntToString(inputNum uint64) string {
-	return strconv.FormatUint(inputNum, 10)
 }
 
 func floatToString(inputNum float64) string {

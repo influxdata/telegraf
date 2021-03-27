@@ -35,7 +35,6 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	// Verify that we can successfully write data to Elasticsearch
 	err = e.Write(testutil.MockMetrics())
 	require.NoError(t, err)
-
 }
 
 func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
@@ -58,7 +57,6 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 
 	err := e.manageTemplate(ctx)
 	require.Error(t, err)
-
 }
 
 func TestTemplateManagementIntegration(t *testing.T) {
@@ -164,7 +162,6 @@ func TestGetTagKeys(t *testing.T) {
 			t.Errorf("Expected tagKeys %s, got %s\n", test.ExpectedTagKeys, tagKeys)
 		}
 	}
-
 }
 
 func TestGetIndexName(t *testing.T) {
