@@ -207,6 +207,7 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 
 	// acc1 should have the health metric because it is specified in the config
 	var acc1 testutil.Accumulator
+	require.NoError(t, s1.Start(&acc1))
 	s1.Gather(&acc1)
 	assert.True(t, acc1.HasMeasurement(healthMetricName))
 
@@ -224,8 +225,12 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 
 	// acc2 should not have the health metric because it is not specified in the config
 	var acc2 testutil.Accumulator
+	require.NoError(t, s2.Start(&acc2))
 	s2.Gather(&acc2)
 	assert.False(t, acc2.HasMeasurement(healthMetricName))
+
+	s1.Stop()
+	s2.Stop()
 }
 
 func TestSqlServer_MultipleInit(t *testing.T) {

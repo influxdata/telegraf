@@ -241,18 +241,18 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	for i, pool := range s.pools {
 		for _, query := range s.queries {
 			wg.Add(1)
-			go func(pool *sql.DB, query Query) {
+			go func(pool *sql.DB, query Query, serverIndex int) {
 				defer wg.Done()
 				queryError := s.gatherServer(pool, query, acc)
 
 				if s.HealthMetric {
 					mutex.Lock()
-					s.gatherHealth(healthMetrics, s.Servers[i], queryError)
+					s.gatherHealth(healthMetrics, s.Servers[serverIndex], queryError)
 					mutex.Unlock()
 				}
 
 				acc.AddError(queryError)
-			}(pool, query)
+			}(pool, query, i)
 		}
 	}
 
