@@ -201,13 +201,13 @@ func (d *IfName) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}
 
-	d.ifTable, err = d.makeTable("IF-MIB::ifTable")
+	d.ifTable, err = d.makeTable("IF-MIB::ifDescr")
 	if err != nil {
-		return fmt.Errorf("looking up ifTable in local MIB: %w", err)
+		return fmt.Errorf("looking up ifDescr in local MIB: %w", err)
 	}
-	d.ifXTable, err = d.makeTable("IF-MIB::ifXTable")
+	d.ifXTable, err = d.makeTable("IF-MIB::ifName")
 	if err != nil {
-		return fmt.Errorf("looking up ifXTable in local MIB: %w", err)
+		return fmt.Errorf("looking up ifName in local MIB: %w", err)
 	}
 
 	fn := func(m telegraf.Metric) []telegraf.Metric {
@@ -347,11 +347,13 @@ func init() {
 	})
 }
 
-func makeTableNoMock(tableName string) (*si.Table, error) {
+func makeTableNoMock(fieldName string) (*si.Table, error) {
 	var err error
 	tab := si.Table{
-		Oid:        tableName,
 		IndexAsTag: true,
+		Fields: []si.Field{
+			{Oid: fieldName},
+		},
 	}
 
 	err = tab.Init()
