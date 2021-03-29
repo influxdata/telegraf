@@ -2,7 +2,7 @@ package nfsclient
 
 import (
 	"bufio"
-	"log"
+	"fmt"
 	"os"
 	"regexp"
 	"strconv"
@@ -61,10 +61,10 @@ func (n *NFSClient) Description() string {
 	return "Read per-mount NFS client metrics from /proc/self/mountstats"
 }
 
-func convertToInt64(line []string) []int64 {
+func convertToUint64(line []string) ([]uint64, error) {
 	/* A "line" of input data (a pre-split array of strings) is
 	   processed one field at a time.  Each field is converted to
-	   an int64 value, and appened to an array of return values.
+	   an uint64 value, and appened to an array of return values.
 	   On an error, check for ErrRange, and throw a fatal error
 	   if found.  This situation indicates a pretty major issue in
 	   the /proc/self/mountstats file, and returning faulty data
@@ -72,34 +72,37 @@ func convertToInt64(line []string) []int64 {
 	   whatever we got in the first place (probably 0).
 	   Yes, this is ugly. */
 
-	var nline []int64
+	var nline []uint64
 
 	if len(line) < 2 {
-		return nline
+		return nline, nil
 	}
 
 	// Skip the first field; it's handled specially as the "first" variable
 	for _, l := range line[1:] {
-		val, err := strconv.ParseInt(l, 10, 64)
+		val, err := strconv.ParseUint(l, 10, 64)
 		if err != nil {
 			if numError, ok := err.(*strconv.NumError); ok {
 				if numError.Err == strconv.ErrRange {
-					log.Fatalf("ErrRange: line:[%v] raw:[%v] -> parsed:[%v]\n", line, l, val)
+					return nil, fmt.Errorf("errrange: line:[%v] raw:[%v] -> parsed:[%v]", line, l, val)
 				}
 			}
 		}
 		nline = append(nline, val)
 	}
-	return nline
+	return nline, nil
 }
 
-func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, acc telegraf.Accumulator) {
+func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, acc telegraf.Accumulator) error {
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
-	nline := convertToInt64(line)
+	nline, err := convertToUint64(line)
+	if err != nil {
+		return err
+	}
 
 	if len(nline) == 0 {
 		n.Log.Warnf("Parsing Stat line with one field: %s\n", line)
-		return
+		return nil
 	}
 
 	first := strings.Replace(line[0], ":", "", 1)
@@ -240,9 +243,11 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 			}
 		}
 	}
+
+	return nil
 }
 
-func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator) {
+func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator) error {
 	var mount string
 	var version string
 	var export string
@@ -293,9 +298,14 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 		}
 
 		if !skip {
-			n.parseStat(mount, export, version, line, acc)
+			err := n.parseStat(mount, export, version, line, acc)
+			if err != nil {
+				return err
+			}
 		}
 	}
+
+	return nil
 }
 
 func (n *NFSClient) getMountStatsPath() string {
@@ -316,7 +326,10 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	n.processText(scanner, acc)
+	err = n.processText(scanner, acc)
+	if err != nil {
+		return err
+	}
 
 	if err := scanner.Err(); err != nil {
 		n.Log.Errorf("%s", err)
