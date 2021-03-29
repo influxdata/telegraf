@@ -40,6 +40,7 @@ type Tail struct {
 	WatchMethod         string   `toml:"watch_method"`
 	MaxUndeliveredLines int      `toml:"max_undelivered_lines"`
 	CharacterEncoding   string   `toml:"character_encoding"`
+	SetPathTag          bool     `toml:"set_path_tag"`
 
 	Log        telegraf.Logger `toml:"-"`
 	tailers    map[string]*tail.Tail
@@ -70,6 +71,7 @@ func NewTail() *Tail {
 		FromBeginning:       false,
 		MaxUndeliveredLines: 1000,
 		offsets:             offsetsCopy,
+		SetPathTag:          true,
 	}
 }
 
@@ -380,8 +382,10 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 		}
 		firstLine = false
 
-		for _, metric := range metrics {
-			metric.AddTag("path", tailer.Filename)
+		if t.SetPathTag {
+			for _, metric := range metrics {
+				metric.AddTag("path", tailer.Filename)
+			}
 		}
 
 		// try writing out metric first without blocking
