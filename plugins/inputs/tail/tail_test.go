@@ -44,6 +44,7 @@ func NewTestTail() *Tail {
 		MaxUndeliveredLines: 1000,
 		offsets:             offsetsCopy,
 		WatchMethod:         watchMethod,
+		SetPathTag:          true,
 	}
 }
 
