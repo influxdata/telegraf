@@ -18,14 +18,8 @@ This plugin gets metrics for each Couchbase node, as well as detailed metrics fo
   ## If no port is specified, 8091 is used.
   servers = ["http://localhost:8091"]
 
-  ## Use "basic" for a limited number of basic bucket stats. Use "detailed" for a more comprehensive list of all bucket stats.
-  bucket_metric_type = "basic"
-
-  ## Filter fields to include only here. Supports wildcards.
-  # fields_included = []
-
-  ## Filter fields to exclude only here. Supports wildcards.
-  # fields_excluded = []
+  ## Filter bucket fields to include only here.
+  # bucket_stats_included = ["quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"]
 ```
 
 ## Measurements:
@@ -46,7 +40,7 @@ Tags:
 - cluster: whatever you called it in `servers` in the configuration, e.g.: `http://couchbase-0.example.com/`)
 - bucket: the name of the couchbase bucket, e.g., `blastro-df`
 
-Fields for "basic" type:
+Default bucket fields:
 - quota_percent_used (unit: percent, example: 68.85424936294555)
 - ops_per_sec (unit: count, example: 5686.789686789687)
 - disk_fetches (unit: count, example: 0.0)
@@ -55,7 +49,7 @@ Fields for "basic" type:
 - data_used (unit: bytes, example: 212179309111.0)
 - mem_used (unit: bytes, example: 202156957464.0)
 
-Additional fields for "detailed" type:
+Additional fields that can be configured with the `bucket_stats_included` option:
 - couch_total_disk_size                    
 - couch_docs_fragmentation
 - couch_views_fragmentation

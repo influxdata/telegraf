@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 
@@ -14,6 +13,15 @@ import (
 )
 
 func TestGatherServer(t *testing.T) {
+	bucket := "blastro-df"
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/pools/default/buckets/"+bucket+"/stats" {
+			_, _ = w.Write([]byte(bucketStatsResponse))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
 	var pool couchbase.Pool
 	var err error
 	if err := json.Unmarshal([]byte(poolsDefaultResponse), &pool); err != nil {
@@ -23,18 +31,27 @@ func TestGatherServer(t *testing.T) {
 	if err := json.Unmarshal([]byte(bucketResponse), &pool.BucketMap); err != nil {
 		t.Fatal("parse bucketResponse", err)
 	}
+
+	bucketStats := &BucketStats{}
+	if err := json.Unmarshal([]byte(bucketStatsResponse), bucketStats); err != nil {
+		t.Fatal("parse bucketResponse", err)
+	}
+
 	var cb Couchbase
-	cb.includeExclude, err = filter.NewIncludeExcludeFilter([]string{}, []string{})
 	require.NoError(t, err)
+	cb.BucketStatsIncluded = []string{"quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"}
+	cb.Init()
+	require.NoError(t, err)
+
 	var acc testutil.Accumulator
-	err = cb.gatherServer("mycluster", &acc, &pool)
+	err = cb.gatherServer(fakeServer.URL, &acc, &pool)
 	require.NoError(t, err)
 	acc.AssertContainsTaggedFields(t, "couchbase_node",
 		map[string]interface{}{"memory_free": 23181365248.0, "memory_total": 64424656896.0},
-		map[string]string{"cluster": "mycluster", "hostname": "172.16.10.187:8091"})
+		map[string]string{"cluster": fakeServer.URL, "hostname": "172.16.10.187:8091"})
 	acc.AssertContainsTaggedFields(t, "couchbase_node",
 		map[string]interface{}{"memory_free": 23665811456.0, "memory_total": 64424656896.0},
-		map[string]string{"cluster": "mycluster", "hostname": "172.16.10.65:8091"})
+		map[string]string{"cluster": fakeServer.URL, "hostname": "172.16.10.65:8091"})
 	acc.AssertContainsTaggedFields(t, "couchbase_bucket",
 		map[string]interface{}{
 			"quota_percent_used": 68.85424936294555,
@@ -45,7 +62,7 @@ func TestGatherServer(t *testing.T) {
 			"data_used":          212179309111.0,
 			"mem_used":           202156957464.0,
 		},
-		map[string]string{"cluster": "mycluster", "bucket": "blastro-df"})
+		map[string]string{"cluster": fakeServer.URL, "bucket": "blastro-df"})
 }
 
 func TestSanitizeURI(t *testing.T) {
@@ -83,7 +100,8 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 
 	var err error
 	var cb Couchbase
-	cb.includeExclude, err = filter.NewIncludeExcludeFilter([]string{}, []string{})
+	cb.BucketStatsIncluded = []string{"couch_total_disk_size"}
+	err = cb.Init()
 	require.NoError(t, err)
 	var acc testutil.Accumulator
 	bucketStats := &BucketStats{}
@@ -97,9 +115,9 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 
 	acc.AddFields("couchbase_bucket", fields, nil)
 
-	// Ensure we gathered a copy of all the metrics, once.
+	// Ensure we gathered only one metric (the one that we configured).
 	require.Equal(t, len(acc.Metrics), 1)
-	require.Equal(t, len(acc.Metrics[0].Fields), 214)
+	require.Equal(t, len(acc.Metrics[0].Fields), 1)
 }
 
 // From `/pools/default` on a real cluster
