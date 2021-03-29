@@ -65,7 +65,7 @@ func convertToUint64(line []string) ([]uint64, error) {
 	/* A "line" of input data (a pre-split array of strings) is
 	   processed one field at a time.  Each field is converted to
 	   an uint64 value, and appened to an array of return values.
-	   On an error, check for ErrRange, and throw a fatal error
+	   On an error, check for ErrRange, and returns an error
 	   if found.  This situation indicates a pretty major issue in
 	   the /proc/self/mountstats file, and returning faulty data
 	   is worse than no data.  Other errors are ignored, and append
