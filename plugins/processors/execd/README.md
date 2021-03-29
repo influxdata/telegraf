@@ -23,7 +23,7 @@ Telegraf minimum version: Telegraf 1.15.0
 ### Configuration:
 
 ```toml
-[[processor.execd]]
+[[processors.execd]]
   ## One program to run as daemon.
   ## NOTE: process and each argument should each be their own string
   ## eg: command = ["/path/to/your_program", "arg1", "arg2"]
