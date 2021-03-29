@@ -38,9 +38,8 @@ func TestGatherServer(t *testing.T) {
 	}
 
 	var cb Couchbase
-	require.NoError(t, err)
 	cb.BucketStatsIncluded = []string{"quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"}
-	cb.Init()
+	err = cb.Init()
 	require.NoError(t, err)
 
 	var acc testutil.Accumulator
