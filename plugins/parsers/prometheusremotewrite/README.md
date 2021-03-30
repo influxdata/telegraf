@@ -43,7 +43,7 @@ prometheus_remote_write,instance=localhost:9090,job=prometheus,quantile=0.99 go_
 
 **For alignment with the [InfluxDB v1.x Prometheus Remote Write Spec](https://docs.influxdata.com/influxdb/v1.8/supported_protocols/prometheus/#how-prometheus-metrics-are-parsed-in-influxdb)**
 
-- Use the [Starlark processor](plugins/processors/starlark) to rename the measurement name to the fieldname and rename the fieldname to value. Use namepass to only apply the script to prometheus_remote_write metrics
+- Use the [Starlark processor](https://github.com/influxdata/telegraf/blob/master/plugins/processors/starlark/README.md) to rename the measurement name to the fieldname and rename the fieldname to value. Use namepass to only apply the script to prometheus_remote_write metrics
 
 - Example script: 
 
