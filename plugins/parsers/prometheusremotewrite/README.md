@@ -16,9 +16,7 @@ Converts prometheus remote write samples directly into Telegraf metrics. It can 
   data_format = "prometheusremotewrite"
 ```
 
-### Example
-
-**Example Input**
+### Example Input
 ```
 prompb.WriteRequest{
 		Timeseries: []*prompb.TimeSeries{
@@ -38,14 +36,14 @@ prompb.WriteRequest{
 
 ```
 
-**Example Output**
+### Example Output
 ```
 prometheus_remote_write,instance=localhost:9090,job=prometheus,quantile=0.99 go_gc_duration_seconds=4.63 1614889298859000000
 ```
 
-**For alignment with the [InfluxDB Prometheus Remote Write Spec v1.8](https://docs.influxdata.com/influxdb/v1.8/supported_protocols/prometheus/#how-prometheus-metrics-are-parsed-in-influxdb)**
+**For alignment with the [InfluxDB v1.x Prometheus Remote Write Spec](https://docs.influxdata.com/influxdb/v1.8/supported_protocols/prometheus/#how-prometheus-metrics-are-parsed-in-influxdb)**
 
-- Use starlark to rename the measurement name to the fieldname and rename the fieldname to value. Use namepass to only apply the script to prometheus_remote_write metrics
+- Use the Starlark processor to rename the measurement name to the fieldname and rename the fieldname to value. Use namepass to only apply the script to prometheus_remote_write metrics
 
 - Example script: 
 
@@ -62,12 +60,12 @@ def apply(metric):
 '''
 ```
 
-# Example Input:
+### Example Input
 ```
 prometheus_remote_write,instance=localhost:9090,job=prometheus,quantile=0.99 go_gc_duration_seconds=4.63 1614889298859000000
 ```
 
-# Example Output:
+### Example Output
 ```
 go_gc_duration_seconds,instance=localhost:9090,job=prometheus,quantile=0.99 value=4.63 1614889299000000000
 ```
