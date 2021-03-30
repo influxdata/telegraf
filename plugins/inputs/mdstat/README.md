@@ -5,9 +5,14 @@ The `mdstat` plugin gathers metrics on raid arrays on the system that are manage
 #### Configuration
 ```toml
 [[inputs.mdstat]]
-  # The location of the mdstat file to read.
-  # mdstat_file = /proc/mdstat
+  ## Sets 'proc' directory path
+  ## If not specified, then default is /proc
+  # host_proc = "/proc"
 ```
+
+Additionally, if the `host_proc` config item is not set, the plugin will try to get the
+location of proc directory from the `HOST_PROC` environment variable. Failing this,
+it will default to `/proc`.
 
 ### Metrics
 

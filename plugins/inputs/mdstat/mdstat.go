@@ -18,13 +18,17 @@ import (
 // #############################################################################
 // Telegraf plugin stuff
 // #############################################################################
+const defaultHostProc = "/proc"
+const envProc = "HOST_PROC"
+
 type MdstatPlugin struct {
-	Mdstat_File string `toml:"mdstat_file"`
+	HostProc string `toml:"host_proc"`
 }
 
 var sampleConfig = `
-  # The location of the mdstat file to read.
-  # mdstat_file = /proc/mdstat
+	## Sets 'proc' directory path
+	## If not specified, then default is /proc
+	# host_proc = "/proc"
 `
 
 func (s *MdstatPlugin) SampleConfig() string {
@@ -37,10 +41,10 @@ func (s *MdstatPlugin) Description() string {
 
 func (s *MdstatPlugin) Gather(acc telegraf.Accumulator) error {
 	var mdstatFile string
-	if s.Mdstat_File == "" {
-		mdstatFile = "/proc/mdstat"
+	if s.HostProc == "" {
+		mdstatFile = proc(envProc, defaultHostProc) + "/mdstat"
 	} else {
-		mdstatFile = s.Mdstat_File
+		mdstatFile = s.HostProc + "/mdstat"
 	}
 
 	// Lets open the file.
@@ -104,6 +108,16 @@ func (s *MdstatPlugin) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("mdstat", func() telegraf.Input { return &MdstatPlugin{} })
+}
+
+// proc can be used to read file paths from env
+func proc(env, path string) string {
+	// try to read full file path
+	if p := os.Getenv(env); p != "" {
+		return p
+	}
+	// return default path
+	return path
 }
 
 // #############################################################################
