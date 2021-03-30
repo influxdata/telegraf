@@ -69,15 +69,17 @@ all:
 .PHONY: help
 help:
 	@echo 'Targets:'
-	@echo '  all        - download dependencies and compile telegraf binary'
-	@echo '  deps       - download dependencies'
-	@echo '  telegraf   - compile telegraf binary'
-	@echo '  test       - run short unit tests'
-	@echo '  fmt        - format source files'
-	@echo '  tidy       - tidy go modules'
-	@echo '  lint       - run linter'
-	@echo '  check-deps - check docs/LICENSE_OF_DEPENDENCIES.md'
-	@echo '  clean      - delete build artifacts'
+	@echo '  all          - download dependencies and compile telegraf binary'
+	@echo '  deps         - download dependencies'
+	@echo '  telegraf     - compile telegraf binary'
+	@echo '  test         - run short unit tests'
+	@echo '  fmt          - format source files'
+	@echo '  tidy         - tidy go modules'
+	@echo '  lint         - run linter'
+	@echo '  lint-branch  - run linter on changes in current branch since master'
+	@echo '  lint-install - install linter'
+	@echo '  check-deps   - check docs/LICENSE_OF_DEPENDENCIES.md'
+	@echo '  clean        - delete build artifacts'
 	@echo ''
 	@echo 'Package Targets:'
 	@$(foreach dist,$(dists),echo "  $(dist)";)
@@ -131,14 +133,28 @@ vet:
 		exit 1; \
 	fi
 
+.PHONY: lint-install
+lint-install:
+
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.38.0
+
 .PHONY: lint
 lint:
 ifeq (, $(shell which golangci-lint))
-	$(info golangci-lint can't be found, please install it: https://golangci-lint.run/usage/install/)
+	$(info golangci-lint can't be found, please run: make lint-install)
 	exit 1
 endif
 
-	golangci-lint -v run
+	golangci-lint run
+
+.PHONY: lint-branch
+lint-branch:
+ifeq (, $(shell which golangci-lint))
+	$(info golangci-lint can't be found, please run: make lint-install)
+	exit 1
+endif
+
+	golangci-lint run --new-from-rev master
 
 .PHONY: tidy
 tidy:
