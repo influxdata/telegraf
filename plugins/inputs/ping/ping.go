@@ -166,10 +166,7 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 		return nil, fmt.Errorf("failed to create new pinger: %w", err)
 	}
 
-	// Required for windows. Despite the method name, this should work without the need to elevate privileges and has been tested on Windows 10
-	if runtime.GOOS == "windows" {
-		pinger.SetPrivileged(true)
-	}
+	pinger.SetPrivileged(true)
 
 	if p.IPv6 {
 		pinger.SetNetwork("ip6")
