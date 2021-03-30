@@ -127,6 +127,10 @@ setting capabilities.
 
 [man 7 capabilities]: http://man7.org/linux/man-pages/man7/capabilities.7.html
 
+#### Other OS Permissions
+
+When using `method = "native"`, you will need permissions similar to the executable ping program for your OS. 
+
 ### Metrics
 
 - ping

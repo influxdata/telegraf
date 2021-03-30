@@ -190,7 +190,14 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 	pinger.Count = p.Count
 	err = pinger.Run()
 	if err != nil {
-		return nil, fmt.Errorf("failed to run pinger: %w", err)
+		if strings.Contains(err.Error(), "operation not permitted") {
+			if runtime.GOOS == "linux" {
+				return nil, fmt.Errorf("permission changes required, enable CAP_NET_RAW capabilities (refer to the ping plugin's README.md for more info)")
+			}
+
+			return nil, fmt.Errorf("permission changes required, refer to the ping plugin's README.md for more info")
+		}
+		return nil, fmt.Errorf("%w", err)
 	}
 
 	ps.Statistics = *pinger.Statistics()
