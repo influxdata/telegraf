@@ -1,4 +1,4 @@
-# Rename the measurement with the fieldname. Rename the fieldname as value. 
+# Rename the measurement name to the fieldname. Rename the fieldname to value. 
 #
 # Example Input:
 # prometheus_remote_write,instance=localhost:9090,job=prometheus,quantile=0.99 go_gc_duration_seconds=4.63 1614889298859000000
