@@ -18,7 +18,7 @@ import (
 // #############################################################################
 // Telegraf plugin stuff
 // #############################################################################
-type MDSTAT_PLUGIN struct {
+type MdstatPlugin struct {
 	Mdstat_File string `toml:"mdstat_file"`
 }
 
@@ -27,24 +27,24 @@ var sampleConfig = `
   # mdstat_file = /proc/mdstat
 `
 
-func (s *MDSTAT_PLUGIN) SampleConfig() string {
+func (s *MdstatPlugin) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *MDSTAT_PLUGIN) Description() string {
+func (s *MdstatPlugin) Description() string {
 	return "A plugin to read metrics about mdadm managed RAID arrays."
 }
 
-func (s *MDSTAT_PLUGIN) Gather(acc telegraf.Accumulator) error {
-	var MDSTAT_FILE string
+func (s *MdstatPlugin) Gather(acc telegraf.Accumulator) error {
+	var mdstatFile string
 	if s.Mdstat_File == "" {
-		MDSTAT_FILE = "/proc/mdstat"
+		mdstatFile = "/proc/mdstat"
 	} else {
-		MDSTAT_FILE = s.Mdstat_File
+		mdstatFile = s.Mdstat_File
 	}
 
 	// Lets open the file.
-	f, err := os.Open(MDSTAT_FILE)
+	f, err := os.Open(mdstatFile)
 	if err != nil {
 		return err
 	}
@@ -103,25 +103,25 @@ func (s *MDSTAT_PLUGIN) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("mdstat", func() telegraf.Input { return &MDSTAT_PLUGIN{} })
+	inputs.Add("mdstat", func() telegraf.Input { return &MdstatPlugin{} })
 }
 
 // #############################################################################
 // mdstat parsing stuff
 // #############################################################################
-type Personalities []string
+type personalities []string
 
-type Disk struct {
+type disk struct {
 	name   string
 	role   int
 	failed bool
 }
 
-type Device struct {
+type device struct {
 	name            string
 	status          string
 	raidType        string
-	diskList        []Disk
+	diskList        []disk
 	minDisks        int
 	currDisks       int
 	missingDisks    int
@@ -130,27 +130,27 @@ type Device struct {
 	recoveryPercent float32
 }
 
-type MDSTAT struct {
-	personalities Personalities
-	devices       []Device
+type mdstat struct {
+	personalities personalities
+	devices       []device
 }
 
-const PERSONALITY_PREFIX = "Personalities : "
-const UNUSED_PREFIX = "unused"
-const RECOVERY_STRING = "recovery"
+const personalityPrefix = "Personalities : "
+const unusedPrefix = "unused"
+const recoveryString = "recovery"
 
-func parseFile(r io.Reader) (MDSTAT, error) {
+func parseFile(r io.Reader) (mdstat, error) {
 	var err error
 	// This is a text file, so we can scan it line by line.
 	// We will break the file up into it's parts so each can be parsed individually
 	s := bufio.NewScanner(r)
-	var parsedMap MDSTAT
+	var parsedMap mdstat
 	var deviceEntry []string
 	for s.Scan() {
 		line := s.Text()
 
 		// If the line is a personality line
-		if strings.HasPrefix(line, PERSONALITY_PREFIX) {
+		if strings.HasPrefix(line, personalityPrefix) {
 			parsedMap.personalities, err = parsePersonalities(line)
 			if err != nil {
 				return parsedMap, err
@@ -159,7 +159,7 @@ func parseFile(r io.Reader) (MDSTAT, error) {
 		}
 
 		// If there's an unused line.
-		if strings.HasPrefix(line, UNUSED_PREFIX) {
+		if strings.HasPrefix(line, unusedPrefix) {
 			// Right now we don't use the "Unused" line
 			continue
 		}
@@ -192,7 +192,7 @@ func parseFile(r io.Reader) (MDSTAT, error) {
 	return parsedMap, err
 }
 
-func parsePersonalities(personalitiesLine string) (Personalities, error) {
+func parsePersonalities(personalitiesLine string) (personalities, error) {
 	var result = strings.Fields(personalitiesLine)
 	if len(result) <= 2 {
 		err := errors.New("Personalities line not long enough")
@@ -201,8 +201,8 @@ func parsePersonalities(personalitiesLine string) (Personalities, error) {
 	return result[2:], nil
 }
 
-func parseDeviceEntry(deviceEntry []string) (Device, error) {
-	var parsedDevice Device
+func parseDeviceEntry(deviceEntry []string) (device, error) {
+	var parsedDevice device
 	var err error
 	// The first line should be the device line.
 	deviceLineFields := strings.Fields(deviceEntry[0])
@@ -217,15 +217,15 @@ func parseDeviceEntry(deviceEntry []string) (Device, error) {
 	parsedDevice.raidType = deviceLineFields[3]
 
 	// For each disk, parse it's information
-	for _, disk := range deviceLineFields[4:] {
-		var DISK_REGEX = "(?P<diskname>[a-zA-Z0-9]+)\\[(?P<diskrole>[0-9]+)\\](?:\\((?P<failedstatus>F)\\))?"
-		re := regexp.MustCompile(DISK_REGEX)
-		captures := re.FindStringSubmatch(disk)
+	for _, diskEntry := range deviceLineFields[4:] {
+		var diskRegex = "(?P<diskname>[a-zA-Z0-9]+)\\[(?P<diskrole>[0-9]+)\\](?:\\((?P<failedstatus>F)\\))?"
+		re := regexp.MustCompile(diskRegex)
+		captures := re.FindStringSubmatch(diskEntry)
 		if captures == nil {
 			err = errors.New("Malformed disk entry")
 			return parsedDevice, err
 		}
-		var parsedDisk Disk
+		var parsedDisk disk
 		// Capture groups start at 1 because index 0 is the full string
 		parsedDisk.name = captures[1]
 		parsedDisk.role, err = strconv.Atoi(captures[2])
@@ -244,8 +244,8 @@ func parseDeviceEntry(deviceEntry []string) (Device, error) {
 	}
 
 	// Now for the config line
-	CONFIG_LINE_REGEX := ".* \\[(?P<ndisk>[0-9]+)/(?P<mdisks>[0-9]+)\\] \\[(?P<arraystat>[U_]+)\\]"
-	re := regexp.MustCompile(CONFIG_LINE_REGEX)
+	configLineRegex := ".* \\[(?P<ndisk>[0-9]+)/(?P<mdisks>[0-9]+)\\] \\[(?P<arraystat>[U_]+)\\]"
+	re := regexp.MustCompile(configLineRegex)
 	captures := re.FindStringSubmatch(deviceEntry[1])
 	if captures == nil {
 		err = errors.New("Malformed device config line")
@@ -269,9 +269,9 @@ func parseDeviceEntry(deviceEntry []string) (Device, error) {
 	//Some device entries have a third line. We only check for the recovery and not the bitmap
 	if len(deviceEntry) >= 3 {
 		// Lets check for a recovery line.
-		if strings.Contains(deviceEntry[2], RECOVERY_STRING) {
-			RECOVERY_LINE_REGEX := "recovery = (?P<recoveryPercent>[0-9]+\\.[0-9]+)%"
-			re := regexp.MustCompile(RECOVERY_LINE_REGEX)
+		if strings.Contains(deviceEntry[2], recoveryString) {
+			recoveryLineRegex := "recovery = (?P<recoveryPercent>[0-9]+\\.[0-9]+)%"
+			re := regexp.MustCompile(recoveryLineRegex)
 			captures := re.FindStringSubmatch(deviceEntry[2])
 			if captures != nil {
 				parsedDevice.inRecovery = true

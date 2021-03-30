@@ -33,11 +33,11 @@ md_d0 : active raid5 sde1[0] sdf1[4] sdb1[5] sdd1[2] sdc1[1]
 
 unused devices: <none>`
 
-	expectedD1 := Disk{"sde1", 0, false}
-	expectedD2 := Disk{"sdf1", 4, false}
-	expectedD3 := Disk{"sdb1", 5, false}
-	expectedD4 := Disk{"sdd1", 2, false}
-	expectedD5 := Disk{"sdc1", 1, false}
+	expectedD1 := disk{"sde1", 0, false}
+	expectedD2 := disk{"sdf1", 4, false}
+	expectedD3 := disk{"sdb1", 5, false}
+	expectedD4 := disk{"sdd1", 2, false}
+	expectedD5 := disk{"sdc1", 1, false}
 
 	result, _ := parseFile(strings.NewReader(exampleFile))
 	device := result.devices[0]
