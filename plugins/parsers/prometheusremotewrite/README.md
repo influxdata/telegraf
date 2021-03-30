@@ -45,7 +45,7 @@ prometheus_remote_write,instance=localhost:9090,job=prometheus,quantile=0.99 go_
 
 **For alignment with the [InfluxDB Prometheus Remote Write Spec v1.8](https://docs.influxdata.com/influxdb/v1.8/supported_protocols/prometheus/#how-prometheus-metrics-are-parsed-in-influxdb)**
 
-- Use starlark to rename the measurement with the prometheus metric name from the fieldname and rename the fieldname as value. Use namepass to only apply the script to prometheus_remote_write metrics
+- Use starlark to rename the measurement name to the fieldname and rename the fieldname to value. Use namepass to only apply the script to prometheus_remote_write metrics
 
 - Example script: 
 
@@ -60,4 +60,14 @@ def apply(metric):
         metric.fields.pop(k)
     return metric
 '''
+```
+
+# Example Input:
+```
+prometheus_remote_write,instance=localhost:9090,job=prometheus,quantile=0.99 go_gc_duration_seconds=4.63 1614889298859000000
+```
+
+# Example Output:
+```
+go_gc_duration_seconds,instance=localhost:9090,job=prometheus,quantile=0.99 value=4.63 1614889299000000000
 ```
