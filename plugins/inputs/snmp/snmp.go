@@ -268,7 +268,6 @@ func (f *Field) init() error {
 		if f.Conversion == "" {
 			f.Conversion = conversion
 		}
-
 		//TODO use textual convention conversion from the MIB
 	}
 
