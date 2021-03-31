@@ -300,7 +300,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 		if !skip {
 			err := n.parseStat(mount, export, version, line, acc)
 			if err != nil {
-				return err
+				return fmt.Errorf("could not parseStat: %w", err)
 			}
 		}
 	}
