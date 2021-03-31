@@ -64,8 +64,8 @@ The plugin expects messages in one of the
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 
-  ## Whether or not a 'path' tag should be set on all metrics with the path of the file being tailed.
-  # set_path_tag = true
+  ## Set the tag that will contain the path of the tailed file. If you don't want this tag, set it to an empty string.
+  # path_tag = "path"
 
   ## multiline parser/codec
   ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html

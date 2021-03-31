@@ -44,7 +44,7 @@ func NewTestTail() *Tail {
 		MaxUndeliveredLines: 1000,
 		offsets:             offsetsCopy,
 		WatchMethod:         watchMethod,
-		SetPathTag:          true,
+		PathTag:             "path",
 	}
 }
 
@@ -358,6 +358,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
+	plugin.PathTag = "customPathTagMyFile"
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
 		return json.New(
 			&json.Config{
@@ -380,7 +381,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	expected := []telegraf.Metric{
 		testutil.MustMetric("cpu",
 			map[string]string{
-				"path": tmpfile.Name(),
+				"customPathTagMyFile": tmpfile.Name(),
 			},
 			map[string]interface{}{
 				"time_idle": 42.0,
@@ -388,7 +389,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 			time.Unix(0, 0)),
 		testutil.MustMetric("cpu",
 			map[string]string{
-				"path": tmpfile.Name(),
+				"customPathTagMyFile": tmpfile.Name(),
 			},
 			map[string]interface{}{
 				"time_idle": 42.0,
