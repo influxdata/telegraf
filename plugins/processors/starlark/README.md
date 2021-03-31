@@ -237,7 +237,7 @@ def apply(metric):
 - [multiple metrics from json array](/plugins/processors/starlark/testdata/multiple_metrics_with_json.star) - Builds a new metric from each element of a json array then returns all the created metrics.
 - [custom error](/plugins/processors/starlark/testdata/fail.star) - Return a custom error with [fail](https://docs.bazel.build/versions/master/skylark/lib/globals.html#fail).
 - [compare with previous metric](/plugins/processors/starlark/testdata/compare_metrics.star) - Compare the current metric with the previous one using the shared state.
-- [rename measurement](/plugins/processors/starlark/testdata/rename.star) - Rename measurement name with fieldname and rename fieldname to value.
+- [rename prometheus](/plugins/processors/starlark/testdata/rename_prometheus_remote_write.star) - Rename prometheus remote write measurement name with fieldname and rename fieldname to value.
 
 [All examples](/plugins/processors/starlark/testdata) are in the testdata folder.
 

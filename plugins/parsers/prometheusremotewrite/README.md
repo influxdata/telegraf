@@ -43,29 +43,4 @@ prometheus_remote_write,instance=localhost:9090,job=prometheus,quantile=0.99 go_
 
 **For alignment with the [InfluxDB v1.x Prometheus Remote Write Spec](https://docs.influxdata.com/influxdb/v1.8/supported_protocols/prometheus/#how-prometheus-metrics-are-parsed-in-influxdb)**
 
-- Use the [Starlark processor](https://github.com/influxdata/telegraf/blob/master/plugins/processors/starlark/README.md) to rename the measurement name to the fieldname and rename the fieldname to value. Use namepass to only apply the script to prometheus_remote_write metrics
-
-- Example script: 
-
-```
-[[processors.starlark]]
-  namepass = ["prometheus_remote_write"]
-  source = '''
-def apply(metric):
-    for k, v in metric.fields.items():
-        metric.name = k
-        metric.fields["value"] = v
-        metric.fields.pop(k)
-    return metric
-'''
-```
-
-### Example Input
-```
-prometheus_remote_write,instance=localhost:9090,job=prometheus,quantile=0.99 go_gc_duration_seconds=4.63 1614889298859000000
-```
-
-### Example Output
-```
-go_gc_duration_seconds,instance=localhost:9090,job=prometheus,quantile=0.99 value=4.63 1614889299000000000
-```
+- Use the [Starlark processor rename prometheus remote write script](https://github.com/influxdata/telegraf/blob/master/plugins/processors/starlark/testdata/rename_prometheus_remote_write.star) to rename the measurement name to the fieldname and rename the fieldname to value. 
