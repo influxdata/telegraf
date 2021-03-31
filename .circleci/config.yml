@@ -25,6 +25,12 @@ executors:
       GOFLAGS: -p=8
 
 commands:
+  check-changed-files-or-halt:
+      parameters:
+        pattern:
+          type: string
+      steps:
+        - run: git show -m HEAD --name-only --pretty="" | egrep -q '<< parameters.pattern >>' || circleci step halt
   test-go:
     parameters:
       goarch:
@@ -70,6 +76,8 @@ jobs:
       - checkout
       - restore_cache:
           key: go-mod-v1-{{ checksum "go.sum" }}
+      - check-changed-files-or-halt:
+          pattern: ^(config.yml)|(.go|mod|sum)|(Makefile)$
       - run: 'make deps'
       - run: 'make tidy'
       - save_cache:
@@ -105,6 +113,8 @@ jobs:
       - checkout
       - restore_cache:
           key: mac-go-mod-v0-{{ checksum "go.sum" }}
+      - check-changed-files-or-halt:
+          pattern: ^(config.yml)|(.go|mod|sum)|(Makefile)$
       - run: 'sh ./scripts/mac_installgo.sh'
       - save_cache:
           name: 'Saving cache'
@@ -124,6 +134,8 @@ jobs:
         shell: powershell.exe
     steps:
       - checkout
+      - check-changed-files-or-halt:
+          pattern: ^(config.yml)|(.go|mod|sum)|(Makefile)$
       - run: choco upgrade golang --version=1.16.2
       - run: choco install make
       - run: git config --system core.longpaths true
