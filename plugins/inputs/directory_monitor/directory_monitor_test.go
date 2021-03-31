@@ -77,16 +77,9 @@ func TestCSVGZImport(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// For JSON data.
-type event struct {
-	Name   string
-	Speed  float64
-	Length float64
-}
-
 func TestMultipleJSONFileImports(t *testing.T) {
 	acc := testutil.Accumulator{}
-	testJsonFile := "test.json"
+	testJSONFile := "test.json"
 
 	// Establish process directory and finished directory.
 	finishedDirectory, err := ioutil.TempDir("", "finished")
@@ -117,7 +110,7 @@ func TestMultipleJSONFileImports(t *testing.T) {
 
 	// Let's drop a 5-line LINE-DELIMITED json.
 	// Write csv file to process into the 'process' directory.
-	f, err := os.Create(filepath.Join(processDirectory, testJsonFile))
+	f, err := os.Create(filepath.Join(processDirectory, testJSONFile))
 	require.NoError(t, err)
 	f.WriteString("{\"Name\": \"event1\",\"Speed\": 100.1,\"Length\": 20.1}\n{\"Name\": \"event2\",\"Speed\": 500,\"Length\": 1.4}\n{\"Name\": \"event3\",\"Speed\": 200,\"Length\": 10.23}\n{\"Name\": \"event4\",\"Speed\": 80,\"Length\": 250}\n{\"Name\": \"event5\",\"Speed\": 120.77,\"Length\": 25.97}")
 	f.Close()

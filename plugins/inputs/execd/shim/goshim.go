@@ -26,7 +26,6 @@ import (
 type empty struct{}
 
 var (
-	forever       = 100 * 365 * 24 * time.Hour
 	envVarEscaper = strings.NewReplacer(
 		`"`, `\"`,
 		`\`, `\\`,

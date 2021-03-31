@@ -48,8 +48,6 @@ var validQuery = map[string]bool{
 
 func (d *Dovecot) SampleConfig() string { return sampleConfig }
 
-const defaultPort = "24242"
-
 // Reads stats from all configured servers.
 func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 	if !validQuery[d.Type] {

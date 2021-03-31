@@ -1,5 +1,7 @@
 package telegraf
 
+var Debug bool
+
 // Initializer is an interface that all plugin types: Inputs, Outputs,
 // Processors, and Aggregators can optionally implement to initialize the
 // plugin.
@@ -21,7 +23,7 @@ type PluginDescriber interface {
 	Description() string
 }
 
-// Logger defines an interface for logging.
+// Logger defines an plugin-related interface for logging.
 type Logger interface {
 	// Errorf logs an error message, patterned after log.Printf.
 	Errorf(format string, args ...interface{})

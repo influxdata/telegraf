@@ -61,7 +61,7 @@ func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for rows.Next() {
-		tags, columnMap, err := p.accRow(rows, acc, columns)
+		tags, columnMap, err := p.accRow(rows, columns)
 
 		if err != nil {
 			return err
@@ -111,7 +111,7 @@ func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for poolRows.Next() {
-		tags, columnMap, err := p.accRow(poolRows, acc, columns)
+		tags, columnMap, err := p.accRow(poolRows, columns)
 		if err != nil {
 			return err
 		}
@@ -145,7 +145,7 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func (p *PgBouncer) accRow(row scanner, acc telegraf.Accumulator, columns []string) (map[string]string,
+func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string,
 	map[string]*interface{}, error) {
 	var columnVars []interface{}
 	var dbname bytes.Buffer

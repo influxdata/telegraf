@@ -185,7 +185,6 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 		go func(master *url.URL) {
 			acc.AddError(m.gatherMainMetrics(master, MASTER, acc))
 			wg.Done()
-			return
 		}(master)
 	}
 
@@ -194,7 +193,6 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 		go func(slave *url.URL) {
 			acc.AddError(m.gatherMainMetrics(slave, SLAVE, acc))
 			wg.Done()
-			return
 		}(slave)
 	}
 
@@ -244,9 +242,7 @@ func metricsDiff(role Role, w []string) []string {
 
 // masterBlocks serves as kind of metrics registry grouping them in sets
 func getMetrics(role Role, group string) []string {
-	var m map[string][]string
-
-	m = make(map[string][]string)
+	m := make(map[string][]string)
 
 	if role == MASTER {
 		m["resources"] = []string{
@@ -504,13 +500,13 @@ func (m *Mesos) filterMetrics(role Role, metrics *map[string]interface{}) {
 		case "allocator":
 			for m := range *metrics {
 				if strings.HasPrefix(m, "allocator/") {
-					delete((*metrics), m)
+					delete(*metrics, m)
 				}
 			}
 		case "framework_offers":
 			for m := range *metrics {
 				if strings.HasPrefix(m, "master/frameworks/") || strings.HasPrefix(m, "frameworks/") {
-					delete((*metrics), m)
+					delete(*metrics, m)
 				}
 			}
 
@@ -518,7 +514,7 @@ func (m *Mesos) filterMetrics(role Role, metrics *map[string]interface{}) {
 		default:
 			for _, v := range getMetrics(role, k) {
 				if _, ok = (*metrics)[v]; ok {
-					delete((*metrics), v)
+					delete(*metrics, v)
 				}
 			}
 		}
@@ -530,49 +526,6 @@ type TaskStats struct {
 	ExecutorID  string                 `json:"executor_id"`
 	FrameworkID string                 `json:"framework_id"`
 	Statistics  map[string]interface{} `json:"statistics"`
-}
-
-func (m *Mesos) gatherSlaveTaskMetrics(u *url.URL, acc telegraf.Accumulator) error {
-	var metrics []TaskStats
-
-	tags := map[string]string{
-		"server": u.Hostname(),
-		"url":    urlTag(u),
-	}
-
-	resp, err := m.client.Get(withPath(u, "/monitor/statistics").String())
-
-	if err != nil {
-		return err
-	}
-
-	data, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return err
-	}
-
-	if err = json.Unmarshal([]byte(data), &metrics); err != nil {
-		return errors.New("Error decoding JSON response")
-	}
-
-	for _, task := range metrics {
-		tags["framework_id"] = task.FrameworkID
-
-		jf := jsonparser.JSONFlattener{}
-		err = jf.FlattenJSON("", task.Statistics)
-
-		if err != nil {
-			return err
-		}
-
-		timestamp := time.Unix(int64(jf.Fields["timestamp"].(float64)), 0)
-		jf.Fields["executor_id"] = task.ExecutorID
-
-		acc.AddFields("mesos_tasks", jf.Fields, tags, timestamp)
-	}
-
-	return nil
 }
 
 func withPath(u *url.URL, path string) *url.URL {
@@ -611,8 +564,8 @@ func (m *Mesos) gatherMainMetrics(u *url.URL, role Role, acc telegraf.Accumulato
 		return err
 	}
 
-	if err = json.Unmarshal([]byte(data), &jsonOut); err != nil {
-		return errors.New("Error decoding JSON response")
+	if err = json.Unmarshal(data, &jsonOut); err != nil {
+		return errors.New("error decoding JSON response")
 	}
 
 	m.filterMetrics(role, &jsonOut)

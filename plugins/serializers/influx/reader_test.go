@@ -256,14 +256,14 @@ func BenchmarkReader(b *testing.B) {
 		),
 	)
 
-	metrics := make([]telegraf.Metric, 1000, 1000)
+	metrics := make([]telegraf.Metric, 1000)
 	for i := range metrics {
 		metrics[i] = m
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		readbuf := make([]byte, 4096, 4096)
+		readbuf := make([]byte, 4096)
 		serializer := NewSerializer()
 		reader := NewReader(metrics, serializer)
 		for {

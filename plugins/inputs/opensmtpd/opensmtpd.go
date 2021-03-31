@@ -23,8 +23,7 @@ type Opensmtpd struct {
 	Timeout internal.Duration
 	UseSudo bool
 
-	filter filter.Filter
-	run    runner
+	run runner
 }
 
 var defaultBinary = "/usr/sbin/smtpctl"

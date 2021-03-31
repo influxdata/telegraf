@@ -21,7 +21,7 @@ type logger struct {
 	log telegraf.Logger
 }
 
-func (l *logger) Output(calldepth int, s string) error {
+func (l *logger) Output(_ int, s string) error {
 	l.log.Debug(s)
 	return nil
 }
@@ -179,7 +179,7 @@ func (n *NSQConsumer) Stop() {
 }
 
 // Gather is a noop
-func (n *NSQConsumer) Gather(acc telegraf.Accumulator) error {
+func (n *NSQConsumer) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

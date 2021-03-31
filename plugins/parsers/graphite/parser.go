@@ -157,7 +157,7 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 			if len(tagValue) != 2 || len(tagValue[0]) == 0 || len(tagValue[1]) == 0 {
 				continue
 			}
-			if strings.IndexAny(tagValue[0], "!^") != -1 {
+			if strings.ContainsAny(tagValue[0], "!^") {
 				continue
 			}
 			if strings.Index(tagValue[1], "~") == 0 {

@@ -73,6 +73,20 @@ func (s *Server) gatherReplSetStatus() (*ReplSetStatus, error) {
 	return replSetStatus, nil
 }
 
+func (s *Server) gatherTopStatData() (*TopStats, error) {
+	topStats := &TopStats{}
+	err := s.Session.DB("admin").Run(bson.D{
+		{
+			Name:  "top",
+			Value: 1,
+		},
+	}, topStats)
+	if err != nil {
+		return nil, err
+	}
+	return topStats, nil
+}
+
 func (s *Server) gatherClusterStatus() (*ClusterStatus, error) {
 	chunkCount, err := s.Session.DB("config").C("chunks").Find(bson.M{"jumbo": true}).Count()
 	if err != nil {
@@ -192,7 +206,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 	return results, nil
 }
 
-func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, gatherDbStats bool, gatherColStats bool, colStatsDbs []string) error {
+func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, gatherDbStats bool, gatherColStats bool, gatherTopStat bool, colStatsDbs []string) error {
 	s.Session.SetMode(mgo.Eventual, true)
 	s.Session.SetSocketTimeout(0)
 
@@ -257,6 +271,16 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, 
 		}
 	}
 
+	topStatData := &TopStats{}
+	if gatherTopStat {
+		topStats, err := s.gatherTopStatData()
+		if err != nil {
+			s.Log.Debugf("Unable to gather top stat data: %s", err.Error())
+			return err
+		}
+		topStatData = topStats
+	}
+
 	result := &MongoStatus{
 		ServerStatus:  serverStatus,
 		ReplSetStatus: replSetStatus,
@@ -265,6 +289,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, 
 		ColStats:      collectionStats,
 		ShardStats:    shardStats,
 		OplogStats:    oplogStats,
+		TopStats:      topStatData,
 	}
 
 	result.SampleTime = time.Now()
@@ -282,6 +307,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, 
 		data.AddDbStats()
 		data.AddColStats()
 		data.AddShardHostStats()
+		data.AddTopStats()
 		data.flush(acc)
 	}
 

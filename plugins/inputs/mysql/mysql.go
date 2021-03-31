@@ -1858,11 +1858,11 @@ func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, bool) {
 
 // parseValue can be used to convert values such as "ON","OFF","Yes","No" to 0,1
 func parseValue(value sql.RawBytes) (interface{}, bool) {
-	if bytes.EqualFold(value, []byte("YES")) || bytes.Compare(value, []byte("ON")) == 0 {
+	if bytes.EqualFold(value, []byte("YES")) || bytes.Equal(value, []byte("ON")) {
 		return 1, true
 	}
 
-	if bytes.EqualFold(value, []byte("NO")) || bytes.Compare(value, []byte("OFF")) == 0 {
+	if bytes.EqualFold(value, []byte("NO")) || bytes.Equal(value, []byte("OFF")) {
 		return 0, true
 	}
 

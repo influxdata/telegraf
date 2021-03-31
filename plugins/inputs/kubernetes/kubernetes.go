@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -65,7 +64,6 @@ var sampleConfig = `
 `
 
 const (
-	summaryEndpoint           = `%s/stats/summary`
 	defaultServiceAccountPath = "/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
@@ -117,15 +115,6 @@ func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func buildURL(endpoint string, base string) (*url.URL, error) {
-	u := fmt.Sprintf(endpoint, base)
-	addr, err := url.Parse(u)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to parse address '%s': %s", u, err)
-	}
-	return addr, nil
-}
-
 func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) error {
 	summaryMetrics := &SummaryMetrics{}
 	err := k.LoadJSON(fmt.Sprintf("%s/stats/summary", baseURL), summaryMetrics)
@@ -139,7 +128,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 	}
 	buildSystemContainerMetrics(summaryMetrics, acc)
 	buildNodeMetrics(summaryMetrics, acc)
-	buildPodMetrics(baseURL, summaryMetrics, podInfos, k.labelFilter, acc)
+	buildPodMetrics(summaryMetrics, podInfos, k.labelFilter, acc)
 	return nil
 }
 
@@ -243,7 +232,7 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 	return nil
 }
 
-func buildPodMetrics(baseURL string, summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFilter filter.Filter, acc telegraf.Accumulator) {
+func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFilter filter.Filter, acc telegraf.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
 		for _, container := range pod.Containers {
 			tags := map[string]string{

@@ -94,7 +94,7 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *Execd) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
+func (e *Execd) Add(m telegraf.Metric, _ telegraf.Accumulator) error {
 	b, err := e.serializer.Serialize(m)
 	if err != nil {
 		return fmt.Errorf("metric serializing error: %w", err)

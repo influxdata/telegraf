@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -39,13 +38,12 @@ type PubSubPush struct {
 	tlsint.ServerConfig
 	parsers.Parser
 
-	listener net.Listener
-	server   *http.Server
-	acc      telegraf.TrackingAccumulator
-	ctx      context.Context
-	cancel   context.CancelFunc
-	wg       *sync.WaitGroup
-	mu       *sync.Mutex
+	server *http.Server
+	acc    telegraf.TrackingAccumulator
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     *sync.WaitGroup
+	mu     *sync.Mutex
 
 	undelivered map[telegraf.TrackingID]chan bool
 	sem         chan struct{}

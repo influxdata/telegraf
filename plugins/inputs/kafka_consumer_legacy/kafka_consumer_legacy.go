@@ -177,7 +177,7 @@ func (k *Kafka) Stop() {
 	}
 }
 
-func (k *Kafka) Gather(acc telegraf.Accumulator) error {
+func (k *Kafka) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

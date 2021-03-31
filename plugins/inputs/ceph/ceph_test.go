@@ -86,7 +86,7 @@ func TestDecodeOSDPoolStats(t *testing.T) {
 	}
 }
 
-func TestGather(t *testing.T) {
+func TestGather(_ *testing.T) {
 	saveFind := findSockets
 	saveDump := perfDump
 	defer func() {

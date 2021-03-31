@@ -243,7 +243,7 @@ func (t *TCPListener) handler(conn *net.TCPConn, id string) {
 }
 
 // tcpParser parses the incoming tcp byte packets
-func (t *TCPListener) tcpParser() error {
+func (t *TCPListener) tcpParser() {
 	defer t.wg.Done()
 
 	var packet []byte
@@ -254,7 +254,7 @@ func (t *TCPListener) tcpParser() error {
 		case <-t.done:
 			// drain input packets before finishing:
 			if len(t.in) == 0 {
-				return nil
+				return
 			}
 		case packet = <-t.in:
 			if len(packet) == 0 {

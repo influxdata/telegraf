@@ -140,7 +140,7 @@ func testStrictNonTransparent(t *testing.T, protocol string, address string, wan
 	for _, tc := range getTestCasesForNonTransparent() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false, framing.NonTransparent)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 10, false, framing.NonTransparent)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()
@@ -192,11 +192,12 @@ func testStrictNonTransparent(t *testing.T, protocol string, address string, wan
 	}
 }
 
-func testBestEffortNonTransparent(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+func testBestEffortNonTransparent(t *testing.T, protocol string, address string, wantTLS bool) {
+	keepAlive := (*internal.Duration)(nil)
 	for _, tc := range getTestCasesForNonTransparent() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true, framing.NonTransparent)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 10, true, framing.NonTransparent)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()
@@ -245,7 +246,7 @@ func TestNonTransparentStrict_tcp(t *testing.T) {
 }
 
 func TestNonTransparentBestEffort_tcp(t *testing.T) {
-	testBestEffortNonTransparent(t, "tcp", address, false, nil)
+	testBestEffortNonTransparent(t, "tcp", address, false)
 }
 
 func TestNonTransparentStrict_tcp_tls(t *testing.T) {
@@ -253,7 +254,7 @@ func TestNonTransparentStrict_tcp_tls(t *testing.T) {
 }
 
 func TestNonTransparentBestEffort_tcp_tls(t *testing.T) {
-	testBestEffortNonTransparent(t, "tcp", address, true, nil)
+	testBestEffortNonTransparent(t, "tcp", address, true)
 }
 
 func TestNonTransparentStrictWithKeepAlive_tcp_tls(t *testing.T) {
@@ -277,7 +278,7 @@ func TestNonTransparentBestEffort_unix(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix.sock")
-	testBestEffortNonTransparent(t, "unix", sock, false, nil)
+	testBestEffortNonTransparent(t, "unix", sock, false)
 }
 
 func TestNonTransparentStrict_unix_tls(t *testing.T) {
@@ -293,5 +294,5 @@ func TestNonTransparentBestEffort_unix_tls(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix_tls.sock")
-	testBestEffortNonTransparent(t, "unix", sock, true, nil)
+	testBestEffortNonTransparent(t, "unix", sock, true)
 }
