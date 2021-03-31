@@ -107,7 +107,6 @@ unused devices: <none>
 	assert.Equal(t, 4, len(result.personalities))
 	assert.Equal(t, 1, len(result.devices))
 	assert.Equal(t, "md_d0", result.devices[0].name)
-
 }
 
 func TestMultiDeviceParsing(t *testing.T) {
@@ -132,7 +131,6 @@ unused devices: <none>`
 	assert.Equal(t, "md2", result.devices[1].name)
 	assert.Equal(t, "md3", result.devices[2].name)
 	assert.Equal(t, "md0", result.devices[3].name)
-
 }
 
 func TestRecoveryParsing(t *testing.T) {

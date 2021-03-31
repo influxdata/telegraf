@@ -54,11 +54,8 @@ func (s *MdstatPlugin) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Make sure we schedule the clean up.
-	closingFunc := func() error {
-		if err = f.Close(); err != nil {
-			return err
-		}
-		return nil
+	closingFunc := func() {
+		_ = f.Close()
 	}
 	defer closingFunc()
 
@@ -100,7 +97,6 @@ func (s *MdstatPlugin) Gather(acc telegraf.Accumulator) error {
 
 			acc.AddGauge("mdstat_disk", diskFields, diskTags, time.Now())
 		}
-
 	}
 
 	return nil
@@ -179,7 +175,6 @@ func parseFile(r io.Reader) (mdstat, error) {
 		}
 
 		if strings.Compare("", line) == 0 && len(deviceEntry) > 0 {
-
 			parsedDev, err := parseDeviceEntry(deviceEntry)
 			if err != nil {
 				return parsedMap, err
