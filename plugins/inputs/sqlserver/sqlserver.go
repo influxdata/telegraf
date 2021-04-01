@@ -320,6 +320,8 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				return err
 			}
+
+			pool = sql.OpenDB(connector)
 		}
 
 		s.pools = append(s.pools, pool)
