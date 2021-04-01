@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -247,9 +246,6 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	var mutex sync.Mutex
 	var healthMetrics = make(map[string]*HealthMetric)
 
-	// initialize mutual exclusion lock
-	muCacheLock = sync.RWMutex{}
-
 	for i, pool := range s.pools {
 		for _, query := range s.queries {
 			wg.Add(1)
@@ -284,6 +280,9 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	// initialize mutual exclusion lock
+	muCacheLock = sync.RWMutex{}
+
 	for _, serv := range s.Servers {
 		var pool *sql.DB
 
@@ -310,14 +309,14 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			// get token from im-memory cache variable or from Azure Active Directory
 			tokenProvider, err := getTokenProvider()
 			if err != nil {
-				fmt.Printf("Error creating AAD token provider for system assigned Azure managed identity for script %s : %w", query.ScriptName, err)
+				fmt.Printf("Error creating AAD token provider for system assigned Azure managed identity : %s", err.Error())
 				acc.AddError(err)
 				return err
 			}
 
 			connector, err := mssql.NewAccessTokenConnector(serv, tokenProvider)
 			if err != nil {
-				fmt.Printf("Error creating the SQL connector for script %s : %w", query.ScriptName, err)
+				fmt.Printf("Error creating the SQL connector : %s", err.Error())
 				acc.AddError(err)
 				return err
 			}
