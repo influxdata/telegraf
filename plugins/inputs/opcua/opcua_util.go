@@ -31,7 +31,7 @@ func newTempDir() (string, error) {
 	return dir, err
 }
 
-func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.Duration) (string, string, error) {
+func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.Duration) (cert string, key string, err error) {
 	dir, _ := newTempDir()
 
 	if len(host) == 0 {
@@ -97,7 +97,6 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	}
 	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
 		return "", "", fmt.Errorf("failed to write data to %s: %s", certFile, err)
-
 	}
 	if err := certOut.Close(); err != nil {
 		return "", "", fmt.Errorf("error closing %s: %s", certFile, err)
