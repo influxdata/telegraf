@@ -691,7 +691,10 @@ func Test_Logstash6GatherJVMStats(test *testing.T) {
 func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash7PipelinesJSON))
+		_, err := fmt.Fprintf(writer, "%s", string(logstash7PipelinesJSON))
+		if err != nil {
+			test.Logf("Can't print test json")
+		}
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	if err != nil {
