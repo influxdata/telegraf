@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubernetes/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -166,7 +166,7 @@ func atoi(s string) int64 {
 	if err != nil {
 		return 0
 	}
-	return int64(i)
+	return i
 }
 
 func convertQuantity(s string, m float64) int64 {

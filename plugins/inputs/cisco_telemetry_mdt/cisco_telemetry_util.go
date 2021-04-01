@@ -127,12 +127,12 @@ func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, valu
 			}
 		case *telemetry.TelemetryField_Uint32Value:
 			vali, ok := value.(uint32)
-			if ok == true {
+			if ok {
 				return vali
 			}
 		case *telemetry.TelemetryField_Uint64Value:
 			vali, ok := value.(uint64)
-			if ok == true {
+			if ok {
 				return vali
 			}
 		} //switch
@@ -171,7 +171,7 @@ func (c *CiscoTelemetryMDT) initBgpV4() {
 	c.nxpathMap[key]["aspath"] = "string"
 }
 
-func (c *CiscoTelemetryMDT) initCpu() {
+func (c *CiscoTelemetryMDT) initCPU() {
 	key := "show processes cpu"
 	c.nxpathMap[key] = make(map[string]string, 5)
 	c.nxpathMap[key]["kernel_percent"] = "float"
@@ -654,7 +654,7 @@ func (c *CiscoTelemetryMDT) initPimVrf() {
 	c.nxpathMap[key]["table-id"] = "string"
 }
 
-func (c *CiscoTelemetryMDT) initIpMroute() {
+func (c *CiscoTelemetryMDT) initIPMroute() {
 	key := "show ip mroute summary vrf all"
 	c.nxpathMap[key] = make(map[string]string, 40)
 	c.nxpathMap[key]["nat-mode"] = "string"
@@ -842,7 +842,7 @@ func (c *CiscoTelemetryMDT) initDb() {
 	c.initPower()
 	c.initMemPhys()
 	c.initBgpV4()
-	c.initCpu()
+	c.initCPU()
 	c.initResources()
 	c.initPtpCorrection()
 	c.initTrans()
@@ -861,7 +861,7 @@ func (c *CiscoTelemetryMDT) initDb() {
 	c.initPimStats()
 	c.initIntfBrief()
 	c.initPimVrf()
-	c.initIpMroute()
+	c.initIPMroute()
 	c.initIpv6Mroute()
 	c.initVpc()
 	c.initBgp()

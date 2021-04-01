@@ -130,7 +130,6 @@ func setUpTestMux() http.Handler {
 	})
 	mux.HandleFunc("/twosecondnap", func(w http.ResponseWriter, req *http.Request) {
 		time.Sleep(time.Second * 2)
-		return
 	})
 	mux.HandleFunc("/nocontent", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)

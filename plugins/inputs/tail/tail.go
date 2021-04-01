@@ -40,6 +40,7 @@ type Tail struct {
 	WatchMethod         string   `toml:"watch_method"`
 	MaxUndeliveredLines int      `toml:"max_undelivered_lines"`
 	CharacterEncoding   string   `toml:"character_encoding"`
+	PathTag             string   `toml:"path_tag"`
 
 	Log        telegraf.Logger `toml:"-"`
 	tailers    map[string]*tail.Tail
@@ -70,6 +71,7 @@ func NewTail() *Tail {
 		FromBeginning:       false,
 		MaxUndeliveredLines: 1000,
 		offsets:             offsetsCopy,
+		PathTag:             "path",
 	}
 }
 
@@ -114,6 +116,9 @@ const sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Set the tag that will contain the path of the tailed file. If you don't want this tag, set it to an empty string.
+  # path_tag = "path"
 
   ## multiline parser/codec
   ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
@@ -380,8 +385,10 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 		}
 		firstLine = false
 
-		for _, metric := range metrics {
-			metric.AddTag("path", tailer.Filename)
+		if t.PathTag != "" {
+			for _, metric := range metrics {
+				metric.AddTag(t.PathTag, tailer.Filename)
+			}
 		}
 
 		// try writing out metric first without blocking

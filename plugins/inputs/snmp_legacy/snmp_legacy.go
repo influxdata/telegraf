@@ -234,7 +234,7 @@ func fillnode(parentNode Node, oidName string, ids []string) {
 	// ids = ["1", "3", "6", ...]
 	id, ids := ids[0], ids[1:]
 	node, ok := parentNode.subnodes[id]
-	if ok == false {
+	if !ok {
 		node = Node{
 			id:       id,
 			name:     "",
@@ -268,7 +268,7 @@ func findnodename(node Node, ids []string) (string, string) {
 		return node.name, "0"
 	} else if node.name != "" && len(ids) == 0 && id != "0" {
 		// node with an instance
-		return node.name, string(id)
+		return node.name, id
 	} else if node.name != "" && len(ids) > 0 {
 		// node with subinstances
 		return node.name, strings.Join(ids, ".")
@@ -339,7 +339,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			} else {
 				oid.Name = oidstring
 				oid.Oid = oidstring
-				if string(oidstring[:1]) != "." {
+				if oidstring[:1] != "." {
 					oid.rawOid = "." + oidstring
 				} else {
 					oid.rawOid = oidstring
@@ -764,7 +764,7 @@ func (h *Host) HandleResponse(
 					var instance string
 					// Get oidname and instance from translate file
 					oidName, instance = findnodename(initNode,
-						strings.Split(string(variable.Name[1:]), "."))
+						strings.Split(variable.Name[1:], "."))
 					// Set instance tag
 					// From mapping table
 					mapping, inMappingNoSubTable := h.OidInstanceMapping[oidKey]
@@ -798,7 +798,7 @@ func (h *Host) HandleResponse(
 					}
 					tags["snmp_host"], _, _ = net.SplitHostPort(h.Address)
 					fields := make(map[string]interface{})
-					fields[string(fieldName)] = variable.Value
+					fields[fieldName] = variable.Value
 
 					h.processedOids = append(h.processedOids, variable.Name)
 					acc.AddFields(fieldName, fields, tags)

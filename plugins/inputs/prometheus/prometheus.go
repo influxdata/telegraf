@@ -18,8 +18,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	parser_v2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
-	"github.com/kubernetes/apimachinery/pkg/fields"
-	"github.com/kubernetes/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1`
@@ -169,8 +169,8 @@ func (p *Prometheus) Init() error {
 			// Check if set as env var and is valid IP address
 			envVarNodeIP := os.Getenv("NODE_IP")
 			if envVarNodeIP == "" || net.ParseIP(envVarNodeIP) == nil {
-				errorMessage := "The node_ip config and the environment variable NODE_IP are not set or invalid. Cannot get pod list for monitor_kubernetes_pods using node scrape scope"
-				return errors.New(errorMessage)
+				return errors.New("the node_ip config and the environment variable NODE_IP are not set or invalid; " +
+					"cannot get pod list for monitor_kubernetes_pods using node scrape scope")
 			}
 
 			p.NodeIP = envVarNodeIP
@@ -180,15 +180,15 @@ func (p *Prometheus) Init() error {
 		var err error
 		p.podLabelSelector, err = labels.Parse(p.KubernetesLabelSelector)
 		if err != nil {
-			return fmt.Errorf("Error parsing the specified label selector(s): %s", err.Error())
+			return fmt.Errorf("error parsing the specified label selector(s): %s", err.Error())
 		}
 		p.podFieldSelector, err = fields.ParseSelector(p.KubernetesFieldSelector)
 		if err != nil {
-			return fmt.Errorf("Error parsing the specified field selector(s): %s", err.Error())
+			return fmt.Errorf("error parsing the specified field selector(s): %s", err.Error())
 		}
 		isValid, invalidSelector := fieldSelectorIsSupported(p.podFieldSelector)
 		if !isValid {
-			return fmt.Errorf("The field selector %s is not supported for pods", invalidSelector)
+			return fmt.Errorf("the field selector %s is not supported for pods", invalidSelector)
 		}
 
 		p.Log.Infof("Using pod scrape scope at node level to get pod list using cAdvisor.")
@@ -227,7 +227,7 @@ type URLAndAddress struct {
 }
 
 func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
-	allURLs := make(map[string]URLAndAddress, 0)
+	allURLs := make(map[string]URLAndAddress)
 	for _, u := range p.URLs {
 		URL, err := url.Parse(u)
 		if err != nil {

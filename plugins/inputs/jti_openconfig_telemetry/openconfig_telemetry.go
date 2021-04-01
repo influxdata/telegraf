@@ -169,25 +169,18 @@ func (m *OpenConfigTelemetry) extractData(r *telemetry.OpenConfigData, grpcServe
 			} else {
 				kv[xmlpath] = v.GetStrValue()
 			}
-			break
 		case *telemetry.KeyValue_DoubleValue:
 			kv[xmlpath] = v.GetDoubleValue()
-			break
 		case *telemetry.KeyValue_IntValue:
 			kv[xmlpath] = v.GetIntValue()
-			break
 		case *telemetry.KeyValue_UintValue:
 			kv[xmlpath] = v.GetUintValue()
-			break
 		case *telemetry.KeyValue_SintValue:
 			kv[xmlpath] = v.GetSintValue()
-			break
 		case *telemetry.KeyValue_BoolValue:
 			kv[xmlpath] = v.GetBoolValue()
-			break
 		case *telemetry.KeyValue_BytesValue:
 			kv[xmlpath] = v.GetBytesValue()
-			break
 		}
 
 		// Insert other tags from message

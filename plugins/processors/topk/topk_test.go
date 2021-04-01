@@ -138,8 +138,7 @@ func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metr
 // Smoke tests
 func TestTopkAggregatorsSmokeTests(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.Fields = []string{"a"}
 	topk.GroupBy = []string{"tag_name"}
@@ -160,8 +159,7 @@ func TestTopkAggregatorsSmokeTests(t *testing.T) {
 // AddAggregateFields + Mean aggregator
 func TestTopkMeanAddAggregateFields(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.Aggregation = "mean"
 	topk.AddAggregateFields = []string{"a"}
@@ -189,8 +187,7 @@ func TestTopkMeanAddAggregateFields(t *testing.T) {
 // AddAggregateFields + Sum aggregator
 func TestTopkSumAddAggregateFields(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.Aggregation = "sum"
 	topk.AddAggregateFields = []string{"a"}
@@ -218,8 +215,7 @@ func TestTopkSumAddAggregateFields(t *testing.T) {
 // AddAggregateFields + Max aggregator
 func TestTopkMaxAddAggregateFields(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.Aggregation = "max"
 	topk.AddAggregateFields = []string{"a"}
@@ -247,8 +243,7 @@ func TestTopkMaxAddAggregateFields(t *testing.T) {
 // AddAggregateFields + Min aggregator
 func TestTopkMinAddAggregateFields(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.Aggregation = "min"
 	topk.AddAggregateFields = []string{"a"}
@@ -276,8 +271,7 @@ func TestTopkMinAddAggregateFields(t *testing.T) {
 // GroupBy
 func TestTopkGroupby1(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.K = 3
 	topk.Aggregation = "sum"
@@ -301,8 +295,7 @@ func TestTopkGroupby1(t *testing.T) {
 }
 func TestTopkGroupby2(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.K = 3
 	topk.Aggregation = "mean"
@@ -330,8 +323,7 @@ func TestTopkGroupby2(t *testing.T) {
 }
 func TestTopkGroupby3(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.K = 1
 	topk.Aggregation = "min"
@@ -356,8 +348,7 @@ func TestTopkGroupby3(t *testing.T) {
 // GroupBy + Fields
 func TestTopkGroupbyFields1(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.K = 4 // This settings generate less than 3 groups
 	topk.Aggregation = "mean"
@@ -383,8 +374,7 @@ func TestTopkGroupbyFields1(t *testing.T) {
 
 func TestTopkGroupbyFields2(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.K = 2
 	topk.Aggregation = "sum"
@@ -411,8 +401,7 @@ func TestTopkGroupbyFields2(t *testing.T) {
 // GroupBy metric name
 func TestTopkGroupbyMetricName1(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.K = 1
 	topk.Aggregation = "sum"
@@ -437,8 +426,7 @@ func TestTopkGroupbyMetricName1(t *testing.T) {
 
 func TestTopkGroupbyMetricName2(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.K = 2
 	topk.Aggregation = "sum"
@@ -465,8 +453,7 @@ func TestTopkGroupbyMetricName2(t *testing.T) {
 // BottomK
 func TestTopkBottomk(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.K = 3
 	topk.Aggregation = "sum"
@@ -491,8 +478,7 @@ func TestTopkBottomk(t *testing.T) {
 // GroupByKeyTag
 func TestTopkGroupByKeyTag(t *testing.T) {
 	// Build the processor
-	var topk TopK
-	topk = *New()
+	topk := *New()
 	topk.Period = oneSecondDuration
 	topk.K = 3
 	topk.Aggregation = "sum"

@@ -69,8 +69,7 @@ func (t *telegrafLog) Write(b []byte) (n int, err error) {
 }
 
 func (t *telegrafLog) Close() error {
-	var stdErrWriter io.Writer
-	stdErrWriter = os.Stderr
+	stdErrWriter := os.Stderr
 	// avoid closing stderr
 	if t.internalWriter != stdErrWriter {
 		closer, isCloser := t.internalWriter.(io.Closer)

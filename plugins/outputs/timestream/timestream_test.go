@@ -635,8 +635,8 @@ func TestTransformMetricsUnsupportedFieldsAreSkipped(t *testing.T) {
 func comparisonTest(t *testing.T,
 	mappingMode string,
 	telegrafMetrics []telegraf.Metric,
-	timestreamRecords []*timestreamwrite.WriteRecordsInput) {
-
+	timestreamRecords []*timestreamwrite.WriteRecordsInput,
+) {
 	var plugin ts.Timestream
 	switch mappingMode {
 	case ts.MappingModeSingleTable:
@@ -668,8 +668,8 @@ func comparisonTest(t *testing.T,
 
 func arrayContains(
 	array []*timestreamwrite.WriteRecordsInput,
-	element *timestreamwrite.WriteRecordsInput) bool {
-
+	element *timestreamwrite.WriteRecordsInput,
+) bool {
 	sortWriteInputForComparison(*element)
 
 	for _, a := range array {

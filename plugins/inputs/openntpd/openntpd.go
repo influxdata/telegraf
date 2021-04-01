@@ -126,8 +126,8 @@ func (n *Openntpd) Gather(acc telegraf.Accumulator) error {
 		fields = strings.Fields(line)
 
 		// if there is an ntpctl state prefix, remove it and make it it's own tag
-		if strings.ContainsAny(string(fields[0]), "*") {
-			tags["state_prefix"] = string(fields[0])
+		if strings.ContainsAny(fields[0], "*") {
+			tags["state_prefix"] = fields[0]
 			fields = fields[1:]
 		}
 

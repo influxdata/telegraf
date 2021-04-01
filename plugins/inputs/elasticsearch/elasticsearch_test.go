@@ -8,8 +8,6 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
-	"fmt"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -56,8 +54,7 @@ func (t *transportMock) CancelRequest(_ *http.Request) {
 
 func checkIsMaster(es *Elasticsearch, server string, expected bool, t *testing.T) {
 	if es.serverInfo[server].isMaster() != expected {
-		msg := fmt.Sprintf("IsMaster set incorrectly")
-		assert.Fail(t, msg)
+		assert.Fail(t, "IsMaster set incorrectly")
 	}
 }
 
@@ -231,8 +228,7 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 
 	IsMasterResultTokens := strings.Split(string(IsMasterResult), " ")
 	if masterID != IsMasterResultTokens[0] {
-		msg := fmt.Sprintf("catmaster is incorrect")
-		assert.Fail(t, msg)
+		assert.Fail(t, "catmaster is incorrect")
 	}
 
 	// now get node status, which determines whether we're master
@@ -275,8 +271,7 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 
 	IsNotMasterResultTokens := strings.Split(string(IsNotMasterResult), " ")
 	if masterID != IsNotMasterResultTokens[0] {
-		msg := fmt.Sprintf("catmaster is incorrect")
-		assert.Fail(t, msg)
+		assert.Fail(t, "catmaster is incorrect")
 	}
 
 	// now get node status, which determines whether we're master

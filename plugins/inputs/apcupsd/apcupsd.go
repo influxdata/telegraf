@@ -15,7 +15,7 @@ import (
 
 const defaultAddress = "tcp://127.0.0.1:3551"
 
-var defaultTimeout = internal.Duration{Duration: time.Duration(time.Second * 5)}
+var defaultTimeout = internal.Duration{Duration: time.Second * 5}
 
 type ApcUpsd struct {
 	Servers []string

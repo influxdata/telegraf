@@ -151,11 +151,8 @@ func sendTrap(t *testing.T, goSNMP gosnmp.GoSNMP, trap gosnmp.SnmpTrap) {
 }
 
 func TestReceiveTrap(t *testing.T) {
-	var now uint32
-	now = 123123123
-
-	var fakeTime time.Time
-	fakeTime = time.Unix(456456456, 456)
+	now := uint32(123123123)
+	fakeTime := time.Unix(456456456, 456)
 
 	type entry struct {
 		oid string

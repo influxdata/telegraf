@@ -37,7 +37,7 @@ const maxMetadataSamples = 100 // Number of resources to sample for metric metad
 
 const maxRealtimeMetrics = 50000 // Absolute maximum metrics per realtime query
 
-const hwMarkTTL = time.Duration(4 * time.Hour)
+const hwMarkTTL = 4 * time.Hour
 
 type queryChunk []types.PerfQuerySpec
 
@@ -891,7 +891,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 	numQs := 0
 
 	for _, object := range res.objects {
-		timeBuckets := make(map[int64]*types.PerfQuerySpec, 0)
+		timeBuckets := make(map[int64]*types.PerfQuerySpec)
 		for metricIdx, metric := range res.metrics {
 			// Determine time of last successful collection
 			metricName := e.getMetricNameForID(metric.CounterId)
