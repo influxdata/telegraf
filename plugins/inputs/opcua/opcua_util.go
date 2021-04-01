@@ -145,7 +145,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 }
 
 // OPT FUNCTIONS
-
+//revive:disable-next-line:argument-limit
 func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, policy, mode, auth, username, password string, requestTimeout time.Duration) ([]opcua.Option, error) {
 	opts := []opcua.Option{}
 	appuri := "urn:telegraf:gopcua:client"
