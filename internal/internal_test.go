@@ -376,6 +376,54 @@ func TestParseTimestamp(t *testing.T) {
 		return tm
 	}
 
+	unixdate := func(value string) time.Time {
+		tm, err := time.Parse(time.UnixDate, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rubydate := func(value string) time.Time {
+		tm, err := time.Parse(time.RubyDate, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rfc822 := func(value string) time.Time {
+		tm, err := time.Parse(time.RFC822, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rfc822z := func(value string) time.Time {
+		tm, err := time.Parse(time.RFC822Z, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rfc850 := func(value string) time.Time {
+		tm, err := time.Parse(time.RFC850, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rfc1123 := func(value string) time.Time {
+		tm, err := time.Parse(time.RFC1123, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rfc1123z := func(value string) time.Time {
+		tm, err := time.Parse(time.RFC1123Z, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rfc3339nano := func(value string) time.Time {
+		tm, err := time.Parse(time.RFC3339Nano, value)
+		require.NoError(t, err)
+		return tm
+	}
+
 	tests := []struct {
 		name      string
 		format    string
@@ -480,8 +528,64 @@ func TestParseTimestamp(t *testing.T) {
 		{
 			name:      "ANSIC",
 			format:    "ANSIC",
-			timestamp: "Mon Jan _2 15:04:05 2006",
-			expected:  ansic("Mon Jan _2 15:04:05 2006"),
+			timestamp: "Mon Jan 2 15:04:05 2006",
+			expected:  ansic("Mon Jan 2 15:04:05 2006"),
+		},
+
+		{
+			name:      "UnixDate",
+			format:    "UnixDate",
+			timestamp: "Mon Jan 2 15:04:05 MST 2006",
+			expected:  unixdate("Mon Jan 2 15:04:05 MST 2006"),
+		},
+
+		{
+			name:      "RubyDate",
+			format:    "RubyDate",
+			timestamp: "Mon Jan 02 15:04:05 -0700 2006",
+			expected:  rubydate("Mon Jan 02 15:04:05 -0700 2006"),
+		},
+
+		{
+			name:      "RFC822",
+			format:    "RFC822",
+			timestamp: "02 Jan 06 15:04 MST",
+			expected:  rfc822("02 Jan 06 15:04 MST"),
+		},
+
+		{
+			name:      "RFC822Z",
+			format:    "RFC822Z",
+			timestamp: "02 Jan 06 15:04 -0700",
+			expected:  rfc822z("02 Jan 06 15:04 -0700"),
+		},
+
+		{
+			name:      "RFC850",
+			format:    "RFC850",
+			timestamp: "Monday, 02-Jan-06 15:04:05 MST",
+			expected:  rfc850("Monday, 02-Jan-06 15:04:05 MST"),
+		},
+
+		{
+			name:      "RFC1123",
+			format:    "RFC1123",
+			timestamp: "Mon, 02 Jan 2006 15:04:05 MST",
+			expected:  rfc1123("Mon, 02 Jan 2006 15:04:05 MST"),
+		},
+
+		{
+			name:      "RFC1123Z",
+			format:    "RFC1123Z",
+			timestamp: "Mon, 02 Jan 2006 15:04:05 -0700",
+			expected:  rfc1123z("Mon, 02 Jan 2006 15:04:05 -0700"),
+		},
+
+		{
+			name:      "RFC3339Nano",
+			format:    "RFC3339Nano",
+			timestamp: "2006-01-02T15:04:05.999999999Z07:00",
+			expected:  rfc3339nano("2006-01-02T15:04:05.999999999Z07:00"),
 		},
 	}
 	for _, tt := range tests {
