@@ -367,9 +367,12 @@ func TestAlignTime(t *testing.T) {
 func TestParseTimestamp(t *testing.T) {
 	rfc3339 := func(value string) time.Time {
 		tm, err := time.Parse(time.RFC3339Nano, value)
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(t, err)
+		return tm
+	}
+	ansic := func(value string) time.Time {
+		tm, err := time.Parse(time.ANSIC, value)
+		require.NoError(t, err)
 		return tm
 	}
 
@@ -466,6 +469,19 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "unix_ns",
 			timestamp: "1568338208000000500",
 			expected:  rfc3339("2019-09-13T01:30:08.000000500Z"),
+		},
+		{
+			name:      "rfc339 test",
+			format:    "RFC3339",
+			timestamp: "2018-10-26T13:30:33Z",
+			expected:  rfc3339("2018-10-26T13:30:33Z"),
+		},
+
+		{
+			name:      "ANSIC",
+			format:    "ANSIC",
+			timestamp: "Mon Jan _2 15:04:05 2006",
+			expected:  ansic("Mon Jan _2 15:04:05 2006"),
 		},
 	}
 	for _, tt := range tests {

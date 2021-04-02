@@ -415,6 +415,36 @@ func parseTime(format string, timestamp interface{}, location string) (time.Time
 		if err != nil {
 			return time.Unix(0, 0), err
 		}
+		switch strings.ToLower(format) {
+		case "ansic":
+			format = time.ANSIC
+		case "unixdate":
+			format = time.UnixDate
+		case "rubydate":
+			format = time.RubyDate
+		case "rfc822":
+			format = time.RFC822
+		case "rfc822z":
+			format = time.RFC822Z
+		case "rfc850":
+			format = time.RFC850
+		case "rfc1123":
+			format = time.RFC1123
+		case "rfc1123z":
+			format = time.RFC1123Z
+		case "rfc3339":
+			format = time.RFC3339
+		case "rfc3339nano":
+			format = time.RFC3339Nano
+		case "stamp":
+			format = time.Stamp
+		case "stampmilli":
+			format = time.StampMilli
+		case "stampmicro":
+			format = time.StampMicro
+		case "stampnano":
+			format = time.StampNano
+		}
 		return time.ParseInLocation(format, ts, loc)
 	default:
 		return time.Unix(0, 0), errors.New("unsupported type")
