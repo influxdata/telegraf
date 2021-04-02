@@ -1,6 +1,7 @@
 linters:
   disable-all: true
   enable:
+    - telegraf-lint
     - bodyclose
     - dogsled
     - errcheck
@@ -20,6 +21,10 @@ linters:
     - varcheck
 
 linters-settings:
+  custom:
+    telegraf-lint:
+      path: telegraf-lint/telegraf-lint.so
+      description: The linter to enforce the Telegraf project guidelines
   revive:
     rules:
       - name: argument-limit
