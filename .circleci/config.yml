@@ -67,10 +67,10 @@ commands:
           steps:
             - run: 'make'
       - store_artifacts:
-          path: './build/dist'
+          path: '~/build/dist'
           destination: 'build/dist'
       - persist_to_workspace:
-          root: './build'
+          root: '~/build'
           paths:
             - 'dist'
 jobs:
