@@ -19,7 +19,7 @@ executors:
   mac:
     macos:
       xcode: 12.4.0
-    working_directory: '~/go/src/github.com/influxdata/telegraf'
+    working_directory: '/go/src/github.com/influxdata/telegraf'
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
       GOFLAGS: -p=8
