@@ -67,12 +67,8 @@ commands:
           steps:
             - run: 'make'
       - store_artifacts:
-          path: '~/build/dist'
+          path: './dist'
           destination: 'build/dist'
-      - persist_to_workspace:
-          root: '~/build'
-          paths:
-            - 'dist'
 jobs:
   deps:
     executor: go-1_16
