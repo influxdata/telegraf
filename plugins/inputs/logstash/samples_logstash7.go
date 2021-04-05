@@ -26,7 +26,7 @@ const logstash7PipelinesJSON = `
       },
       "plugins" : {
         "inputs" : [ {
-          "id" : "8526c80bc2257ab08f96018f96b0c68dd03abc5695bb22fb9e96339a8dfb4f86",
+          "id" : "8526dc80bc2257ab08f96018f96b0c68dd03abc5695bb22fb9e96339a8dfb4f86",
           "events" : {
             "out" : 2665549,
             "queue_push_duration_in_millis" : 13300
