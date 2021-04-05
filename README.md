@@ -1,4 +1,13 @@
 # Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
+# Deprecation Notice
+
+:warning: **Please be advised this project is deprecated.** :warning:
+
+We recommend using the official [telegraf
+agent](https://github.com/influxdata/telegraf#installation) with the [signalfx
+output](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/signalfx).
+
+# Telegraf
 
 Telegraf is an agent written in Go for collecting, processing, aggregating,
 and writing metrics.
