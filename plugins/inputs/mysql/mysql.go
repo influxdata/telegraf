@@ -724,7 +724,7 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 	}
 	numColumns := len(columns)
 
-	// Iterate over rows and count the size and count of files
+	// iterate over rows and count the size and count of files
 	for rows.Next() {
 		if numColumns == 3 {
 			if err := rows.Scan(&fileName, &fileSize, &encrypted); err != nil {
