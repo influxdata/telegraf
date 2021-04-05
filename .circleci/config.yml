@@ -65,7 +65,7 @@ commands:
       - unless:
           condition: << parameters.nightly >>
           steps:
-            - run: 'make package'
+            - run: 'make'
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
