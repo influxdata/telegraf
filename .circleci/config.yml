@@ -44,7 +44,17 @@ commands:
         type: boolean
         default: false
     steps:
-      - checkout
+      - checkout      
+      - restore_cache:
+          key: mac-go-mod-v0-{{ checksum "go.sum" }}
+      - run: 'sh ./scripts/mac_installgo.sh'
+      - save_cache:
+          name: 'Saving cache'
+          key: mac-go-mod-v0-{{ checksum "go.sum" }}
+          paths:
+            - '/usr/local/Cellar/go'
+            - '/usr/local/bin/go'
+            - '/usr/local/bin/gofmt'
       - attach_workspace:
           at: '/go'
       - when:
