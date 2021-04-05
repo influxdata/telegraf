@@ -290,13 +290,13 @@ func generateAuth(a string, cert []byte, un, pw string) (ua.UserTokenType, opcua
 
 		if un == "" {
 			if err != nil {
-				return 0, nil, fmt.Errorf("error reading username input: %s", err)
+				return 0, nil, fmt.Errorf("error reading the username input: %s", err)
 			}
 		}
 
 		if pw == "" {
 			if err != nil {
-				return 0, nil, fmt.Errorf("error reading password input: %s", err)
+				return 0, nil, fmt.Errorf("error reading the password input: %s", err)
 			}
 		}
 
