@@ -408,7 +408,8 @@ upload-nightly:
 
 %darwin_amd64.tar.gz: export GOOS := darwin
 %darwin_amd64.tar.gz: export GOARCH := amd64
-
+%darwin_amd64.tar.gz: CGO_ENABLED := 1
+ 
 %windows_i386.zip: export GOOS := windows
 %windows_i386.zip: export GOARCH := 386
 
