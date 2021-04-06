@@ -88,21 +88,26 @@ func checkTags(t *testing.T, tags map[string]interface{}, acc *testutil.Accumula
 
 func setUpTestMux() http.Handler {
 	mux := http.NewServeMux()
+	// Ignore all returned errors below as the tests will fail anyway
 	mux.HandleFunc("/redirect", func(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/good", http.StatusMovedPermanently)
 	})
 	mux.HandleFunc("/good", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Server", "MyTestServer")
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		//nolint:errcheck,revive
 		fmt.Fprintf(w, "hit the good page!")
 	})
 	mux.HandleFunc("/invalidUTF8", func(w http.ResponseWriter, req *http.Request) {
+		//nolint:errcheck,revive
 		w.Write([]byte{0xff, 0xfe, 0xfd})
 	})
 	mux.HandleFunc("/noheader", func(w http.ResponseWriter, req *http.Request) {
+		//nolint:errcheck,revive
 		fmt.Fprintf(w, "hit the good page!")
 	})
 	mux.HandleFunc("/jsonresponse", func(w http.ResponseWriter, req *http.Request) {
+		//nolint:errcheck,revive
 		fmt.Fprintf(w, "\"service_status\": \"up\", \"healthy\" : \"true\"")
 	})
 	mux.HandleFunc("/badredirect", func(w http.ResponseWriter, req *http.Request) {
@@ -113,10 +118,12 @@ func setUpTestMux() http.Handler {
 			http.Error(w, "method wasn't post", http.StatusMethodNotAllowed)
 			return
 		}
+		//nolint:errcheck,revive
 		fmt.Fprintf(w, "used post correctly!")
 	})
 	mux.HandleFunc("/musthaveabody", func(w http.ResponseWriter, req *http.Request) {
 		body, err := ioutil.ReadAll(req.Body)
+		//nolint:errcheck,revive
 		req.Body.Close()
 		if err != nil {
 			http.Error(w, "couldn't read request body", http.StatusBadRequest)
@@ -126,6 +133,7 @@ func setUpTestMux() http.Handler {
 			http.Error(w, "body was empty", http.StatusBadRequest)
 			return
 		}
+		//nolint:errcheck,revive
 		fmt.Fprintf(w, "sent a body!")
 	})
 	mux.HandleFunc("/twosecondnap", func(w http.ResponseWriter, req *http.Request) {
@@ -1047,7 +1055,8 @@ func TestRedirect(t *testing.T) {
 	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Location", "http://example.org")
 		w.WriteHeader(http.StatusMovedPermanently)
-		w.Write([]byte("test"))
+		_, err := w.Write([]byte("test"))
+		require.NoError(t, err)
 	})
 
 	plugin := &HTTPResponse{

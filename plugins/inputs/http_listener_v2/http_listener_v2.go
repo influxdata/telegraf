@@ -166,7 +166,9 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
-		server.Serve(h.listener)
+		if err := server.Serve(h.listener); err != nil {
+			h.Log.Errorf("Serve failed: %v", err)
+		}
 	}()
 
 	h.Log.Infof("Listening on %s", listener.Addr().String())
@@ -177,6 +179,8 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 // Stop cleans up all resources
 func (h *HTTPListenerV2) Stop() {
 	if h.listener != nil {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		h.listener.Close()
 	}
 	h.wg.Wait()
@@ -195,7 +199,9 @@ func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) {
 	// Check that the content length is not too large for us to handle.
 	if req.ContentLength > h.MaxBodySize.Size {
-		tooLarge(res)
+		if err := tooLarge(res); err != nil {
+			h.Log.Debugf("error in too-large: %v", err)
+		}
 		return
 	}
 
@@ -208,7 +214,9 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 		}
 	}
 	if !isAcceptedMethod {
-		methodNotAllowed(res)
+		if err := methodNotAllowed(res); err != nil {
+			h.Log.Debugf("error in method-not-allowed: %v", err)
+		}
 		return
 	}
 
@@ -229,7 +237,9 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 	metrics, err := h.Parse(bytes)
 	if err != nil {
 		h.Log.Debugf("Parse error: %s", err.Error())
-		badRequest(res)
+		if err := badRequest(res); err != nil {
+			h.Log.Debugf("error in bad-request: %v", err)
+		}
 		return
 	}
 
@@ -255,14 +265,18 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 		r, err := gzip.NewReader(req.Body)
 		if err != nil {
 			h.Log.Debug(err.Error())
-			badRequest(res)
+			if err := badRequest(res); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
 			return nil, false
 		}
 		defer r.Close()
 		maxReader := http.MaxBytesReader(res, r, h.MaxBodySize.Size)
 		bytes, err := ioutil.ReadAll(maxReader)
 		if err != nil {
-			tooLarge(res)
+			if err := tooLarge(res); err != nil {
+				h.Log.Debugf("error in too-large: %v", err)
+			}
 			return nil, false
 		}
 		return bytes, true
@@ -271,14 +285,18 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 		bytes, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			h.Log.Debug(err.Error())
-			badRequest(res)
+			if err := badRequest(res); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
 			return nil, false
 		}
 		// snappy block format is only supported by decode/encode not snappy reader/writer
 		bytes, err = snappy.Decode(nil, bytes)
 		if err != nil {
 			h.Log.Debug(err.Error())
-			badRequest(res)
+			if err := badRequest(res); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
 			return nil, false
 		}
 		return bytes, true
@@ -287,7 +305,9 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 		bytes, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			h.Log.Debug(err.Error())
-			badRequest(res)
+			if err := badRequest(res); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
 			return nil, false
 		}
 		return bytes, true
@@ -300,29 +320,34 @@ func (h *HTTPListenerV2) collectQuery(res http.ResponseWriter, req *http.Request
 	query, err := url.QueryUnescape(rawQuery)
 	if err != nil {
 		h.Log.Debugf("Error parsing query: %s", err.Error())
-		badRequest(res)
+		if err := badRequest(res); err != nil {
+			h.Log.Debugf("error in bad-request: %v", err)
+		}
 		return nil, false
 	}
 
 	return []byte(query), true
 }
 
-func tooLarge(res http.ResponseWriter) {
+func tooLarge(res http.ResponseWriter) error {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)
-	res.Write([]byte(`{"error":"http: request body too large"}`))
+	_, err := res.Write([]byte(`{"error":"http: request body too large"}`))
+	return err
 }
 
-func methodNotAllowed(res http.ResponseWriter) {
+func methodNotAllowed(res http.ResponseWriter) error {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusMethodNotAllowed)
-	res.Write([]byte(`{"error":"http: method not allowed"}`))
+	_, err := res.Write([]byte(`{"error":"http: method not allowed"}`))
+	return err
 }
 
 func badRequest(res http.ResponseWriter) {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusBadRequest)
-	res.Write([]byte(`{"error":"http: bad request"}`))
+	_, err := res.Write([]byte(`{"error":"http: bad request"}`))
+	return err
 }
 
 func (h *HTTPListenerV2) authenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
