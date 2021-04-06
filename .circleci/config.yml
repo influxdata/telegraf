@@ -55,7 +55,7 @@ commands:
       - unless:
           condition: << parameters.nightly >>
           steps:
-            - run: 'make package'
+            - run: 'windows=1 make package'
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
