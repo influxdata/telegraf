@@ -13,8 +13,8 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
-	"github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
+	v1 "github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
+	v2 "github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
 )
 
 type Mysql struct {
@@ -711,17 +711,31 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	var (
-		size     uint64
-		count    uint64
-		fileSize uint64
-		fileName string
+		size      uint64
+		count     uint64
+		fileSize  uint64
+		fileName  string
+		encrypted string
 	)
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+	numColumns := len(columns)
 
 	// iterate over rows and count the size and count of files
 	for rows.Next() {
-		if err := rows.Scan(&fileName, &fileSize); err != nil {
-			return err
+		if numColumns == 3 {
+			if err := rows.Scan(&fileName, &fileSize, &encrypted); err != nil {
+				return err
+			}
+		} else {
+			if err := rows.Scan(&fileName, &fileSize); err != nil {
+				return err
+			}
 		}
+
 		size += fileSize
 		count++
 	}
@@ -729,6 +743,7 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 		"binary_size_bytes":  size,
 		"binary_files_count": count,
 	}
+
 	acc.AddFields("mysql", fields, tags)
 	return nil
 }
