@@ -1,0 +1,55 @@
+<!-- based on https://tfl.gov.uk/tfl/syndication/feeds/cycle-hire/livecyclehireupdates.xml -->
+<stations lastUpdate="1617397861012" version="2.0">
+</stations>
+<response>
+    <location id="1" name="River Street , Clerkenwell">
+        <info terminalName="001023"/>
+        <info lat="51.52916347"/>
+        <info long="-0.109970527"/>
+        <info installDate="1278947280000"/>
+        <temporary>false</temporary>
+        <info nbBikes="10"/>
+        <info nbEmptyDocks="9"/>
+        <info nbDocks="19"/>
+    </location>
+    <location id="2" name="Phillimore Gardens, Kensington">
+        <info terminalName="001018"/>
+        <info lat="51.49960695"/>
+        <info long="-0.197574246"/>
+        <info installDate="1278585780000"/>
+        <temporary>false</temporary>
+        <info nbBikes="28"/>
+        <info nbEmptyDocks="9"/>
+        <info nbDocks="37"/>
+    </location>
+    <location id="3" name="Christopher Street, Liverpool Street">
+        <info terminalName="001012"/>
+        <info lat="51.52128377"/>
+        <info long="-0.084605692"/>
+        <info installDate="1278240360000"/>
+        <temporary>false</temporary>
+        <info nbBikes="2"/>
+        <info nbEmptyDocks="30"/>
+        <info nbDocks="32"/>
+    </location>
+    <location id="4" name="St. Chad's Street, King's Cross">
+        <info terminalName="001013"/>
+        <info lat="51.53005939"/>
+        <info long="-0.120973687"/>
+        <info installDate="1278241080000"/>
+        <temporary>false</temporary>
+        <info nbBikes="1"/>
+        <info nbEmptyDocks="22"/>
+        <info nbDocks="23"/>
+    </location>
+    <location id="5" name="Sedding Street, Sloane Square">
+        <info terminalName="003420"/>
+        <info lat="51.49313"/>
+        <info long="-0.156876"/>
+        <info installDate="1278241440000"/>
+        <temporary>false</temporary>
+        <info nbBikes="22"/>
+        <info nbEmptyDocks="5"/>
+        <info nbDocks="27"/>
+    </location>
+</response>
