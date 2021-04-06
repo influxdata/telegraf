@@ -111,11 +111,11 @@ func init() {
 	})
 }
 
-func realExecCmd(Timeout internal.Duration, arg0 string, args ...string) ([]byte, error) {
+func realExecCmd(timeout internal.Duration, arg0 string, args ...string) ([]byte, error) {
 	cmd := exec.Command(arg0, args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, Timeout.Duration)
+	err := internal.RunTimeout(cmd, timeout.Duration)
 	if err != nil {
 		return nil, err
 	}

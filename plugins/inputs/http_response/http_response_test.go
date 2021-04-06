@@ -130,7 +130,6 @@ func setUpTestMux() http.Handler {
 	})
 	mux.HandleFunc("/twosecondnap", func(w http.ResponseWriter, req *http.Request) {
 		time.Sleep(time.Second * 2)
-		return
 	})
 	mux.HandleFunc("/nocontent", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
@@ -912,10 +911,8 @@ type fakeClient struct {
 	err        error
 }
 
-func (f *fakeClient) Do(req *http.Request) (*http.Response, error) {
-	return &http.Response{
-		StatusCode: f.statusCode,
-	}, f.err
+func (f *fakeClient) Do(_ *http.Request) (*http.Response, error) {
+	return &http.Response{StatusCode: f.statusCode}, f.err
 }
 
 func TestNetworkErrors(t *testing.T) {

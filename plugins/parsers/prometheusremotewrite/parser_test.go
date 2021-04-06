@@ -12,9 +12,9 @@ import (
 
 func TestParse(t *testing.T) {
 	prompbInput := prompb.WriteRequest{
-		Timeseries: []*prompb.TimeSeries{
+		Timeseries: []prompb.TimeSeries{
 			{
-				Labels: []*prompb.Label{
+				Labels: []prompb.Label{
 					{Name: "__name__", Value: "go_gc_duration_seconds"},
 					{Name: "quantile", Value: "0.99"},
 				},
@@ -23,7 +23,7 @@ func TestParse(t *testing.T) {
 				},
 			},
 			{
-				Labels: []*prompb.Label{
+				Labels: []prompb.Label{
 					{Name: "__name__", Value: "prometheus_target_interval_length_seconds"},
 					{Name: "job", Value: "prometheus"},
 				},
@@ -72,9 +72,9 @@ func TestParse(t *testing.T) {
 
 func TestDefaultTags(t *testing.T) {
 	prompbInput := prompb.WriteRequest{
-		Timeseries: []*prompb.TimeSeries{
+		Timeseries: []prompb.TimeSeries{
 			{
-				Labels: []*prompb.Label{
+				Labels: []prompb.Label{
 					{Name: "__name__", Value: "foo"},
 					{Name: "__eg__", Value: "bar"},
 				},
@@ -118,9 +118,9 @@ func TestMetricsWithTimestamp(t *testing.T) {
 	testTime := time.Date(2020, time.October, 4, 17, 0, 0, 0, time.UTC)
 	testTimeUnix := testTime.UnixNano() / int64(time.Millisecond)
 	prompbInput := prompb.WriteRequest{
-		Timeseries: []*prompb.TimeSeries{
+		Timeseries: []prompb.TimeSeries{
 			{
-				Labels: []*prompb.Label{
+				Labels: []prompb.Label{
 					{Name: "__name__", Value: "foo"},
 					{Name: "__eg__", Value: "bar"},
 				},

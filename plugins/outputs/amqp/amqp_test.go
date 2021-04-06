@@ -15,8 +15,6 @@ type MockClient struct {
 
 	PublishCallCount int
 	CloseCallCount   int
-
-	t *testing.T
 }
 
 func (c *MockClient) Publish(key string, body []byte) error {
@@ -27,10 +25,6 @@ func (c *MockClient) Publish(key string, body []byte) error {
 func (c *MockClient) Close() error {
 	c.CloseCallCount++
 	return c.CloseF()
-}
-
-func MockConnect(config *ClientConfig) (Client, error) {
-	return &MockClient{}, nil
 }
 
 func NewMockClient() Client {

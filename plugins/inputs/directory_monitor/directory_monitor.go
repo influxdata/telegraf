@@ -106,7 +106,7 @@ func (monitor *DirectoryMonitor) Description() string {
 	return "Ingests files in a directory and then moves them to a target directory."
 }
 
-func (monitor *DirectoryMonitor) Gather(acc telegraf.Accumulator) error {
+func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 	// Get all files sitting in the directory.
 	files, err := ioutil.ReadDir(monitor.Directory)
 	if err != nil {
@@ -130,7 +130,7 @@ func (monitor *DirectoryMonitor) Gather(acc telegraf.Accumulator) error {
 
 		// If file is decaying, process it.
 		if timeThresholdExceeded {
-			monitor.processFile(file, acc)
+			monitor.processFile(file)
 		}
 	}
 
@@ -149,7 +149,7 @@ func (monitor *DirectoryMonitor) Start(acc telegraf.Accumulator) error {
 	// Monitor the files channel and read what they receive.
 	monitor.waitGroup.Add(1)
 	go func() {
-		monitor.Monitor(acc)
+		monitor.Monitor()
 		monitor.waitGroup.Done()
 	}()
 
@@ -164,7 +164,7 @@ func (monitor *DirectoryMonitor) Stop() {
 	monitor.waitGroup.Wait()
 }
 
-func (monitor *DirectoryMonitor) Monitor(acc telegraf.Accumulator) {
+func (monitor *DirectoryMonitor) Monitor() {
 	for filePath := range monitor.filesToProcess {
 		if monitor.context.Err() != nil {
 			return
@@ -182,7 +182,7 @@ func (monitor *DirectoryMonitor) Monitor(acc telegraf.Accumulator) {
 	}
 }
 
-func (monitor *DirectoryMonitor) processFile(file os.FileInfo, acc telegraf.Accumulator) {
+func (monitor *DirectoryMonitor) processFile(file os.FileInfo) {
 	if file.IsDir() {
 		return
 	}

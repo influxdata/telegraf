@@ -558,11 +558,7 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 // gatherSortedIndicesStats gathers stats for all indices in no particular order.
 func (e *Elasticsearch) gatherIndividualIndicesStats(indices map[string]indexStat, now time.Time, acc telegraf.Accumulator) error {
 	// Sort indices into buckets based on their configured prefix, if any matches.
-	categorizedIndexNames, err := e.categorizeIndices(indices)
-	if err != nil {
-		return err
-	}
-
+	categorizedIndexNames := e.categorizeIndices(indices)
 	for _, matchingIndices := range categorizedIndexNames {
 		// Establish the number of each category of indices to use. User can configure to use only the latest 'X' amount.
 		indicesCount := len(matchingIndices)
@@ -590,7 +586,7 @@ func (e *Elasticsearch) gatherIndividualIndicesStats(indices map[string]indexSta
 	return nil
 }
 
-func (e *Elasticsearch) categorizeIndices(indices map[string]indexStat) (map[string][]string, error) {
+func (e *Elasticsearch) categorizeIndices(indices map[string]indexStat) map[string][]string {
 	categorizedIndexNames := map[string][]string{}
 
 	// If all indices are configured to be gathered, bucket them all together.
@@ -599,7 +595,7 @@ func (e *Elasticsearch) categorizeIndices(indices map[string]indexStat) (map[str
 			categorizedIndexNames["_all"] = append(categorizedIndexNames["_all"], indexName)
 		}
 
-		return categorizedIndexNames, nil
+		return categorizedIndexNames
 	}
 
 	// Bucket each returned index with its associated configured index (if any match).
@@ -617,7 +613,7 @@ func (e *Elasticsearch) categorizeIndices(indices map[string]indexStat) (map[str
 		categorizedIndexNames[match] = append(categorizedIndexNames[match], indexName)
 	}
 
-	return categorizedIndexNames, nil
+	return categorizedIndexNames
 }
 
 func (e *Elasticsearch) gatherSingleIndexStats(name string, index indexStat, now time.Time, acc telegraf.Accumulator) error {

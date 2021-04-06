@@ -2,7 +2,6 @@ package sflow
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net"
@@ -40,7 +39,6 @@ type SFlow struct {
 	addr    net.Addr
 	decoder *PacketDecoder
 	closer  io.Closer
-	cancel  context.CancelFunc
 	wg      sync.WaitGroup
 }
 

@@ -92,8 +92,6 @@ type Statsd struct {
 	accept chan bool
 	// drops tracks the number of dropped metrics.
 	drops int
-	// malformed tracks the number of malformed packets
-	malformed int
 
 	// Channel for all incoming statsd packets
 	in   chan input
@@ -538,11 +536,11 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 // parser monitors the s.in channel, if there is a packet ready, it parses the
 // packet into statsd strings and then calls parseStatsdLine, which parses a
 // single statsd metric into a struct.
-func (s *Statsd) parser() error {
+func (s *Statsd) parser() {
 	for {
 		select {
 		case <-s.done:
-			return nil
+			return
 		case in := <-s.in:
 			start := time.Now()
 			lines := strings.Split(in.Buffer.String(), "\n")

@@ -337,7 +337,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 			var partialErrorString string
 			switch parseErrorCount {
 			case 1:
-				partialErrorString = fmt.Sprintf("%s", firstParseErrorStr)
+				partialErrorString = firstParseErrorStr
 			case 2:
 				partialErrorString = fmt.Sprintf("%s (and 1 other parse error)", firstParseErrorStr)
 			default:

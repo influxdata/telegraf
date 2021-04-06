@@ -208,11 +208,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	c.updateWindow(time.Now())
 
 	// Get all of the possible queries so we can send groups of 100.
-	queries, err := c.getDataQueries(filteredMetrics)
-	if err != nil {
-		return err
-	}
-
+	queries := c.getDataQueries(filteredMetrics)
 	if len(queries) == 0 {
 		return nil
 	}
@@ -441,9 +437,9 @@ func (c *CloudWatch) updateWindow(relativeTo time.Time) {
 }
 
 // getDataQueries gets all of the possible queries so we can maximize the request payload.
-func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudwatch.MetricDataQuery, error) {
+func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) []*cloudwatch.MetricDataQuery {
 	if c.metricCache != nil && c.metricCache.queries != nil && c.metricCache.isValid() {
-		return c.metricCache.queries, nil
+		return c.metricCache.queries
 	}
 
 	c.queryDimensions = map[string]*map[string]string{}
@@ -518,7 +514,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 
 	if len(dataQueries) == 0 {
 		c.Log.Debug("no metrics found to collect")
-		return nil, nil
+		return nil
 	}
 
 	if c.metricCache == nil {
@@ -531,7 +527,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 		c.metricCache.queries = dataQueries
 	}
 
-	return dataQueries, nil
+	return dataQueries
 }
 
 // gatherMetrics gets metric data from Cloudwatch.

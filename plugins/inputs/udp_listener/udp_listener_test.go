@@ -136,7 +136,7 @@ func TestRunParser(t *testing.T) {
 	)
 }
 
-func TestRunParserInvalidMsg(t *testing.T) {
+func TestRunParserInvalidMsg(_ *testing.T) {
 	log.SetOutput(ioutil.Discard)
 	var testmsg = []byte("cpu_load_short")
 

@@ -124,15 +124,13 @@ func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
 	}
 
 	var acc, acc2 testutil.Accumulator
+	require.NoError(t, s.Start(&acc))
 	err := s.Gather(&acc)
 	require.NoError(t, err)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, false)
 
+	require.NoError(t, s2.Start(&acc2))
 	err = s2.Gather(&acc2)
 	require.NoError(t, err)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, true)
 
 	// acc includes size metrics, and excludes memory metrics
 	assert.False(t, acc.HasMeasurement("Memory breakdown (%)"))
@@ -141,6 +139,9 @@ func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
 	// acc2 includes memory metrics, and excludes size metrics
 	assert.True(t, acc2.HasMeasurement("Memory breakdown (%)"))
 	assert.False(t, acc2.HasMeasurement("Log size (bytes)"))
+
+	s.Stop()
+	s2.Stop()
 }
 
 func TestSqlServer_MultipleInstanceWithHealthMetricIntegration(t *testing.T) {
@@ -162,15 +163,13 @@ func TestSqlServer_MultipleInstanceWithHealthMetricIntegration(t *testing.T) {
 	}
 
 	var acc, acc2 testutil.Accumulator
+	require.NoError(t, s.Start(&acc))
 	err := s.Gather(&acc)
 	require.NoError(t, err)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, false)
 
+	require.NoError(t, s2.Start(&acc))
 	err = s2.Gather(&acc2)
 	require.NoError(t, err)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, true)
 
 	// acc includes size metrics, and excludes memory metrics and the health metric
 	assert.False(t, acc.HasMeasurement(healthMetricName))
@@ -186,6 +185,9 @@ func TestSqlServer_MultipleInstanceWithHealthMetricIntegration(t *testing.T) {
 	tags := map[string]string{healthMetricInstanceTag: sqlInstance, healthMetricDatabaseTag: database}
 	assert.True(t, acc2.HasPoint(healthMetricName, tags, healthMetricAttemptedQueries, 9))
 	assert.True(t, acc2.HasPoint(healthMetricName, tags, healthMetricSuccessfulQueries, 9))
+
+	s.Stop()
+	s2.Stop()
 }
 
 func TestSqlServer_HealthMetric(t *testing.T) {
@@ -205,6 +207,7 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 
 	// acc1 should have the health metric because it is specified in the config
 	var acc1 testutil.Accumulator
+	require.NoError(t, s1.Start(&acc1))
 	s1.Gather(&acc1)
 	assert.True(t, acc1.HasMeasurement(healthMetricName))
 
@@ -222,8 +225,12 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 
 	// acc2 should not have the health metric because it is not specified in the config
 	var acc2 testutil.Accumulator
+	require.NoError(t, s2.Start(&acc2))
 	s2.Gather(&acc2)
 	assert.False(t, acc2.HasMeasurement(healthMetricName))
+
+	s1.Stop()
+	s2.Stop()
 }
 
 func TestSqlServer_MultipleInit(t *testing.T) {
@@ -236,15 +243,14 @@ func TestSqlServer_MultipleInit(t *testing.T) {
 	_, ok := s.queries["DatabaseSize"]
 	// acc includes size metrics
 	assert.True(t, ok)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, false)
 
 	initQueries(s2)
 	_, ok = s2.queries["DatabaseSize"]
 	// acc2 excludes size metrics
 	assert.False(t, ok)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, true)
+
+	s.Stop()
+	s2.Stop()
 }
 
 func TestSqlServer_ConnectionString(t *testing.T) {
@@ -297,7 +303,7 @@ func TestSqlServer_ConnectionString(t *testing.T) {
 
 	connectionString = "invalid connection string"
 	sqlInstance, database = getConnectionIdentifiers(connectionString)
-	assert.Equal(t, emptySqlInstance, sqlInstance)
+	assert.Equal(t, emptySQLInstance, sqlInstance)
 	assert.Equal(t, emptyDatabaseName, database)
 
 	// Key/value format
@@ -323,7 +329,7 @@ func TestSqlServer_ConnectionString(t *testing.T) {
 
 	connectionString = "invalid connection string"
 	sqlInstance, database = getConnectionIdentifiers(connectionString)
-	assert.Equal(t, emptySqlInstance, sqlInstance)
+	assert.Equal(t, emptySQLInstance, sqlInstance)
 	assert.Equal(t, emptyDatabaseName, database)
 }
 
@@ -349,15 +355,13 @@ func TestSqlServer_AGQueriesApplicableForDatabaseTypeSQLServer(t *testing.T) {
 	}
 
 	var acc, acc2 testutil.Accumulator
+	require.NoError(t, s.Start(&acc))
 	err := s.Gather(&acc)
 	require.NoError(t, err)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, false)
 
 	err = s2.Gather(&acc2)
+	require.NoError(t, s2.Start(&acc))
 	require.NoError(t, err)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, true)
 
 	// acc includes size metrics, and excludes memory metrics
 	assert.True(t, acc.HasMeasurement("sqlserver_hadr_replica_states"))
@@ -366,6 +370,9 @@ func TestSqlServer_AGQueriesApplicableForDatabaseTypeSQLServer(t *testing.T) {
 	// acc2 includes memory metrics, and excludes size metrics
 	assert.False(t, acc2.HasMeasurement("sqlserver_hadr_replica_states"))
 	assert.False(t, acc2.HasMeasurement("sqlserver_hadr_dbreplica_states"))
+
+	s.Stop()
+	s2.Stop()
 }
 
 func TestSqlServer_AGQueryFieldsOutputBasedOnSQLServerVersion(t *testing.T) {
@@ -390,15 +397,13 @@ func TestSqlServer_AGQueryFieldsOutputBasedOnSQLServerVersion(t *testing.T) {
 	}
 
 	var acc2019, acc2012 testutil.Accumulator
+	require.NoError(t, s2019.Start(&acc2019))
 	err := s2019.Gather(&acc2019)
 	require.NoError(t, err)
-	assert.Equal(t, s2019.isInitialized, true)
-	assert.Equal(t, s2012.isInitialized, false)
 
 	err = s2012.Gather(&acc2012)
+	require.NoError(t, s2012.Start(&acc2012))
 	require.NoError(t, err)
-	assert.Equal(t, s2019.isInitialized, true)
-	assert.Equal(t, s2012.isInitialized, true)
 
 	// acc2019 includes new HADR query fields
 	assert.True(t, acc2019.HasField("sqlserver_hadr_replica_states", "basic_features"))
@@ -415,6 +420,9 @@ func TestSqlServer_AGQueryFieldsOutputBasedOnSQLServerVersion(t *testing.T) {
 	assert.False(t, acc2012.HasTag("sqlserver_hadr_replica_states", "seeding_mode_desc"))
 	assert.False(t, acc2012.HasField("sqlserver_hadr_dbreplica_states", "is_primary_replica"))
 	assert.False(t, acc2012.HasField("sqlserver_hadr_dbreplica_states", "secondary_lag_seconds"))
+
+	s2019.Stop()
+	s2012.Stop()
 }
 
 const mockPerformanceMetrics = `measurement;servername;type;Point In Time Recovery;Available physical memory (bytes);Average pending disk IO;Average runnable tasks;Average tasks;Buffer pool rate (bytes/sec);Connection memory per connection (bytes);Memory grant pending;Page File Usage (%);Page lookup per batch request;Page split per batch request;Readahead per page read;Signal wait (%);Sql compilation per batch request;Sql recompilation per batch request;Total target memory ratio

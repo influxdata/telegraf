@@ -101,7 +101,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 
 	if r.client == nil {
 		if err := r.Connect(); err != nil {
-			return fmt.Errorf("Failed to (re)connect to Riemann: %s", err.Error())
+			return fmt.Errorf("failed to (re)connect to Riemann: %s", err.Error())
 		}
 	}
 
@@ -109,14 +109,12 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 	var events []*raidman.Event
 	for _, m := range metrics {
 		evs := r.buildRiemannEvents(m)
-		for _, ev := range evs {
-			events = append(events, ev)
-		}
+		events = append(events, evs...)
 	}
 
 	if err := r.client.SendMulti(events); err != nil {
 		r.Close()
-		return fmt.Errorf("Failed to send riemann message: %s", err)
+		return fmt.Errorf("failed to send riemann message: %s", err)
 	}
 	return nil
 }
@@ -145,14 +143,14 @@ func (r *Riemann) buildRiemannEvents(m telegraf.Metric) []*raidman.Event {
 			Tags:       r.tags(m.Tags()),
 		}
 
-		switch value.(type) {
+		switch value := value.(type) {
 		case string:
 			// only send string metrics if explicitly enabled, skip otherwise
 			if !r.StringAsState {
 				r.Log.Debugf("Riemann event states disabled, skipping metric value [%s]", value)
 				continue
 			}
-			event.State = value.(string)
+			event.State = value
 		case int, int64, uint64, float32, float64:
 			event.Metric = value
 		default:

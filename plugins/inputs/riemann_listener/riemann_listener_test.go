@@ -25,10 +25,10 @@ func TestSocketListener_tcp(t *testing.T) {
 	require.NoError(t, err)
 	defer sl.Stop()
 
-	testStats(t, sl)
-	testMissingService(t, sl)
+	testStats(t)
+	testMissingService(t)
 }
-func testStats(t *testing.T, sl *RiemannSocketListener) {
+func testStats(t *testing.T) {
 	c := riemanngo.NewTCPClient("127.0.0.1:5555", 5*time.Second)
 	err := c.Connect()
 	if err != nil {
@@ -41,7 +41,7 @@ func testStats(t *testing.T, sl *RiemannSocketListener) {
 	})
 	assert.Equal(t, result.GetOk(), true)
 }
-func testMissingService(t *testing.T, sl *RiemannSocketListener) {
+func testMissingService(t *testing.T) {
 	c := riemanngo.NewTCPClient("127.0.0.1:5555", 5*time.Second)
 	err := c.Connect()
 	if err != nil {

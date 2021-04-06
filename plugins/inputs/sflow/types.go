@@ -6,23 +6,13 @@ import (
 )
 
 const (
-	AddressTypeIPv6 uint32 = 2 // sflow_version_5.txt line: 1384
-	AddressTypeIPv4 uint32 = 1 // sflow_version_5.txt line: 1383
-
 	IPProtocolTCP uint8 = 6
 	IPProtocolUDP uint8 = 17
-
-	metricName = "sflow"
 )
 
 var ETypeMap = map[uint16]string{
 	0x0800: "IPv4",
 	0x86DD: "IPv6",
-}
-
-var IPvMap = map[uint32]string{
-	1: "IPV4", // sflow_version_5.txt line: 1383
-	2: "IPV6", // sflow_version_5.txt line: 1384
 }
 
 type ContainsMetricData interface {

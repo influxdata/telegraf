@@ -295,25 +295,13 @@ func (j *Jenkins) gatherJobs(acc telegraf.Accumulator) {
 	wg.Wait()
 }
 
-// wrap the tcp request with doGet
-// block tcp request if buffered channel is full
-func (j *Jenkins) doGet(tcp func() error) error {
-	j.semaphore <- struct{}{}
-	if err := tcp(); err != nil {
-		<-j.semaphore
-		return err
-	}
-	<-j.semaphore
-	return nil
-}
-
 func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 	if j.MaxSubJobDepth > 0 && jr.layer == j.MaxSubJobDepth {
 		return nil
 	}
 
 	// filter out not included job.
-	if j.jobFilterInclude != nil && j.jobFilterInclude.Match(jr.hierarchyName()) == false {
+	if j.jobFilterInclude != nil && !j.jobFilterInclude.Match(jr.hierarchyName()) {
 		return nil
 	}
 
@@ -439,7 +427,7 @@ type buildResponse struct {
 }
 
 func (b *buildResponse) GetTimestamp() time.Time {
-	return time.Unix(0, int64(b.Timestamp)*int64(time.Millisecond))
+	return time.Unix(0, b.Timestamp*int64(time.Millisecond))
 }
 
 const (
@@ -451,7 +439,6 @@ type jobRequest struct {
 	name    string
 	parents []string
 	layer   int
-	number  int64
 }
 
 func (jr jobRequest) combined() []string {
@@ -514,7 +501,7 @@ func mapResultCode(s string) int {
 func init() {
 	inputs.Add("jenkins", func() telegraf.Input {
 		return &Jenkins{
-			MaxBuildAge:       internal.Duration{Duration: time.Duration(time.Hour)},
+			MaxBuildAge:       internal.Duration{Duration: time.Hour},
 			MaxConnections:    5,
 			MaxSubJobPerLayer: 10,
 		}

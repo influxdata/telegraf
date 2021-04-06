@@ -219,7 +219,7 @@ func (p *phpfpm) gatherHTTP(addr string, acc telegraf.Accumulator) error {
 }
 
 // Import stat data into Telegraf system
-func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) poolStat {
+func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) {
 	stats := make(poolStat)
 	var currentPool string
 
@@ -271,8 +271,6 @@ func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) poolStat {
 		}
 		acc.AddFields("phpfpm", fields, tags)
 	}
-
-	return stats
 }
 
 func expandUrls(urls []string) ([]string, error) {

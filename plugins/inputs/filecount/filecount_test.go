@@ -213,20 +213,20 @@ func getFakeFileSystem(basePath string) fakeFileSystem {
 	var dmask uint32 = 0666
 
 	// set directory bit
-	dmask |= (1 << uint(32-1))
+	dmask |= 1 << uint(32-1)
 
 	// create a lookup map for getting "files" from the "filesystem"
 	fileList := map[string]fakeFileInfo{
-		basePath:                         {name: "testdata", size: int64(4096), filemode: uint32(dmask), modtime: mtime, isdir: true},
-		basePath + "/foo":                {name: "foo", filemode: uint32(fmask), modtime: mtime},
-		basePath + "/bar":                {name: "bar", filemode: uint32(fmask), modtime: mtime},
-		basePath + "/baz":                {name: "baz", filemode: uint32(fmask), modtime: olderMtime},
-		basePath + "/qux":                {name: "qux", size: int64(400), filemode: uint32(fmask), modtime: mtime},
-		basePath + "/subdir":             {name: "subdir", size: int64(4096), filemode: uint32(dmask), modtime: mtime, isdir: true},
-		basePath + "/subdir/quux":        {name: "quux", filemode: uint32(fmask), modtime: mtime},
-		basePath + "/subdir/quuz":        {name: "quuz", filemode: uint32(fmask), modtime: mtime},
-		basePath + "/subdir/nested2":     {name: "nested2", size: int64(200), filemode: uint32(dmask), modtime: mtime, isdir: true},
-		basePath + "/subdir/nested2/qux": {name: "qux", filemode: uint32(fmask), modtime: mtime, size: int64(400)},
+		basePath:                         {name: "testdata", size: int64(4096), filemode: dmask, modtime: mtime, isdir: true},
+		basePath + "/foo":                {name: "foo", filemode: fmask, modtime: mtime},
+		basePath + "/bar":                {name: "bar", filemode: fmask, modtime: mtime},
+		basePath + "/baz":                {name: "baz", filemode: fmask, modtime: olderMtime},
+		basePath + "/qux":                {name: "qux", size: int64(400), filemode: fmask, modtime: mtime},
+		basePath + "/subdir":             {name: "subdir", size: int64(4096), filemode: dmask, modtime: mtime, isdir: true},
+		basePath + "/subdir/quux":        {name: "quux", filemode: fmask, modtime: mtime},
+		basePath + "/subdir/quuz":        {name: "quuz", filemode: fmask, modtime: mtime},
+		basePath + "/subdir/nested2":     {name: "nested2", size: int64(200), filemode: dmask, modtime: mtime, isdir: true},
+		basePath + "/subdir/nested2/qux": {name: "qux", filemode: fmask, modtime: mtime, size: int64(400)},
 	}
 
 	return fakeFileSystem{files: fileList}
