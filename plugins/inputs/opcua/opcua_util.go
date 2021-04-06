@@ -35,7 +35,7 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	dir, _ := newTempDir()
 
 	if len(host) == 0 {
-		return "", "", fmt.Errorf("Missing required host parameter")
+		return "", "", fmt.Errorf("missing required host parameter")
 	}
 	if rsaBits == 0 {
 		rsaBits = 2048
@@ -88,7 +88,7 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
 	if err != nil {
-		return "", "", fmt.Errorf("Failed to create certificate: %s", err)
+		return "", "", fmt.Errorf("failed to create certificate: %s", err)
 	}
 
 	certOut, err := os.Create(certFile)
@@ -175,7 +175,7 @@ func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, 
 		} else {
 			pk, ok := c.PrivateKey.(*rsa.PrivateKey)
 			if !ok {
-				return nil, fmt.Errorf("Invalid private key")
+				return nil, fmt.Errorf("invalid private key")
 			}
 			cert = c.Certificate[0]
 			opts = append(opts, opcua.PrivateKey(pk), opcua.Certificate(cert))
@@ -193,7 +193,7 @@ func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, 
 		secPolicy = ua.SecurityPolicyURIPrefix + policy
 		policy = ""
 	default:
-		return nil, fmt.Errorf("Invalid security policy: %s", policy)
+		return nil, fmt.Errorf("invalid security policy: %s", policy)
 	}
 
 	// Select the most appropriate authentication mode from server capabilities and user input
@@ -217,7 +217,7 @@ func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, 
 		secMode = ua.MessageSecurityModeSignAndEncrypt
 		mode = ""
 	default:
-		return nil, fmt.Errorf("Invalid security mode: %s", mode)
+		return nil, fmt.Errorf("invalid security mode: %s", mode)
 	}
 
 	// Allow input of only one of sec-mode,sec-policy when choosing 'None'
