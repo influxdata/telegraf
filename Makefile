@@ -263,7 +263,7 @@ tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
 zips += telegraf-$(tar_version)_windows_amd64.zip
 zips += telegraf-$(tar_version)_windows_i386.zip
 
-dists := $(debs) $(rpms) $(tars) $(zips)
+dists := $(zips)
 
 .PHONY: package
 package: $(dists)
