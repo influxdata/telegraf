@@ -15,8 +15,7 @@ type metric struct {
 	fields []*telegraf.Field
 	tm     time.Time
 
-	tp        telegraf.ValueType
-	aggregate bool
+	tp telegraf.ValueType
 }
 
 func New(
@@ -68,12 +67,11 @@ func New(
 // removed.
 func FromMetric(other telegraf.Metric) telegraf.Metric {
 	m := &metric{
-		name:      other.Name(),
-		tags:      make([]*telegraf.Tag, len(other.TagList())),
-		fields:    make([]*telegraf.Field, len(other.FieldList())),
-		tm:        other.Time(),
-		tp:        other.Type(),
-		aggregate: other.IsAggregate(),
+		name:   other.Name(),
+		tags:   make([]*telegraf.Tag, len(other.TagList())),
+		fields: make([]*telegraf.Field, len(other.FieldList())),
+		tm:     other.Time(),
+		tp:     other.Type(),
 	}
 
 	for i, tag := range other.TagList() {
@@ -233,12 +231,11 @@ func (m *metric) SetTime(t time.Time) {
 
 func (m *metric) Copy() telegraf.Metric {
 	m2 := &metric{
-		name:      m.name,
-		tags:      make([]*telegraf.Tag, len(m.tags)),
-		fields:    make([]*telegraf.Field, len(m.fields)),
-		tm:        m.tm,
-		tp:        m.tp,
-		aggregate: m.aggregate,
+		name:   m.name,
+		tags:   make([]*telegraf.Tag, len(m.tags)),
+		fields: make([]*telegraf.Field, len(m.fields)),
+		tm:     m.tm,
+		tp:     m.tp,
 	}
 
 	for i, tag := range m.tags {
@@ -249,14 +246,6 @@ func (m *metric) Copy() telegraf.Metric {
 		m2.fields[i] = &telegraf.Field{Key: field.Key, Value: field.Value}
 	}
 	return m2
-}
-
-func (m *metric) SetAggregate(aggregate bool) {
-	m.aggregate = aggregate
-}
-
-func (m *metric) IsAggregate() bool {
-	return m.aggregate
 }
 
 func (m *metric) HashID() uint64 {

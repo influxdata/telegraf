@@ -117,10 +117,6 @@ func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		r.Config.Tags,
 		nil)
 
-	if m != nil {
-		m.SetAggregate(true)
-	}
-
 	r.MetricsPushed.Incr(1)
 
 	return m
