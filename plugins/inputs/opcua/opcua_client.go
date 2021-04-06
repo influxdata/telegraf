@@ -440,13 +440,16 @@ func (o *OpcUA) setupOptions() error {
 
 	if o.Certificate == "" && o.PrivateKey == "" {
 		if o.SecurityPolicy != "None" || o.SecurityMode != "None" {
-			o.Certificate, o.PrivateKey = generateCert("urn:telegraf:gopcua:client", 2048, o.Certificate, o.PrivateKey, (365 * 24 * time.Hour))
+			o.Certificate, o.PrivateKey, err = generateCert("urn:telegraf:gopcua:client", 2048, o.Certificate, o.PrivateKey, (365 * 24 * time.Hour))
+			if err != nil {
+				return err
+			}
 		}
 	}
 
-	o.opts = generateClientOpts(endpoints, o.Certificate, o.PrivateKey, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password, time.Duration(o.RequestTimeout))
+	o.opts, err = generateClientOpts(endpoints, o.Certificate, o.PrivateKey, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password, time.Duration(o.RequestTimeout))
 
-	return nil
+	return err
 }
 
 func (o *OpcUA) getData() error {
