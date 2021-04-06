@@ -138,10 +138,13 @@ type PipelinePlugins struct {
 }
 
 type PipelineQueue struct {
-	Events   float64     `json:"events"`
-	Type     string      `json:"type"`
-	Capacity interface{} `json:"capacity"`
-	Data     interface{} `json:"data"`
+	Events              float64     `json:"events"`
+	EventsCount         *float64    `json:"events_count"`
+	Type                string      `json:"type"`
+	Capacity            interface{} `json:"capacity"`
+	Data                interface{} `json:"data"`
+	QueueSizeInBytes    *float64    `json:"queue_size_in_bytes"`
+	MaxQueueSizeInBytes *float64    `json:"max_queue_size_in_bytes"`
 }
 
 const jvmStats = "/_node/stats/jvm"
@@ -304,8 +307,13 @@ func (logstash *Logstash) gatherQueueStats(
 		queueTags[tag] = value
 	}
 
+	events := queue.Events
+	if queue.EventsCount != nil {
+		events = *queue.EventsCount
+	}
+
 	queueFields := map[string]interface{}{
-		"events": queue.Events,
+		"events": events,
 	}
 
 	if queue.Type != "memory" {
@@ -320,6 +328,14 @@ func (logstash *Logstash) gatherQueueStats(
 		}
 		for field, value := range flattener.Fields {
 			queueFields[field] = value
+		}
+
+		if queue.MaxQueueSizeInBytes != nil {
+			queueFields["max_queue_size_in_bytes"] = *queue.MaxQueueSizeInBytes
+		}
+
+		if queue.QueueSizeInBytes != nil {
+			queueFields["queue_size_in_bytes"] = *queue.QueueSizeInBytes
 		}
 	}
 
