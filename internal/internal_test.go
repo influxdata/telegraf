@@ -424,6 +424,30 @@ func TestParseTimestamp(t *testing.T) {
 		return tm
 	}
 
+	stamp := func(value string) time.Time {
+		tm, err := time.Parse(time.Stamp, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	stampmilli := func(value string) time.Time {
+		tm, err := time.Parse(time.StampMilli, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	stampmicro := func(value string) time.Time {
+		tm, err := time.Parse(time.StampMicro, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	stampnano := func(value string) time.Time {
+		tm, err := time.Parse(time.StampNano, value)
+		require.NoError(t, err)
+		return tm
+	}
+
 	tests := []struct {
 		name      string
 		format    string
@@ -584,8 +608,36 @@ func TestParseTimestamp(t *testing.T) {
 		{
 			name:      "RFC3339Nano",
 			format:    "RFC3339Nano",
-			timestamp: "2006-01-02T15:04:05.999999999Z07:00",
-			expected:  rfc3339nano("2006-01-02T15:04:05.999999999Z07:00"),
+			timestamp: "2006-01-02T15:04:05.999999999-07:00",
+			expected:  rfc3339nano("2006-01-02T15:04:05.999999999-07:00"),
+		},
+
+		{
+			name:      "Stamp",
+			format:    "Stamp",
+			timestamp: "Jan 2 15:04:05",
+			expected:  stamp("Jan 2 15:04:05"),
+		},
+
+		{
+			name:      "StampMilli",
+			format:    "StampMilli",
+			timestamp: "Jan 2 15:04:05.000",
+			expected:  stampmilli("Jan 2 15:04:05.000"),
+		},
+
+		{
+			name:      "StampMicro",
+			format:    "StampMicro",
+			timestamp: "Jan 2 15:04:05.000000",
+			expected:  stampmicro("Jan 2 15:04:05.000000"),
+		},
+
+		{
+			name:      "StampNano",
+			format:    "StampNano",
+			timestamp: "Jan 2 15:04:05.000000000",
+			expected:  stampnano("Jan 2 15:04:05.000000000"),
 		},
 	}
 	for _, tt := range tests {
