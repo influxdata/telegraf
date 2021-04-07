@@ -88,33 +88,33 @@ func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, fin
 	}
 
 	// Get percentage complete
-	matches := recoveryLinePctRE.FindStringSubmatch(recoveryLine)
+	matches = recoveryLinePctRE.FindStringSubmatch(recoveryLine)
 	if len(matches) != 1 {
 		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine: %s", recoveryLine)
 	}
 	pct, err = strconv.ParseFloat(matches[0], 10, 64)
 	if err != nil {
-		return 0, 0, 0, 0, fmt.Errorf("error parsing int from recoveryLine %q: %w", recoveryLine, err)
+		return 0, 0, 0, 0, fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
 	}
 
 	// Get time expected left to complete
-	matches := recoveryLineFinishRE.FindStringSubmatch(recoveryLine)
+	matches = recoveryLineFinishRE.FindStringSubmatch(recoveryLine)
 	if len(matches) != 1 {
 		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine: %s", recoveryLine)
 	}
 	finish, err = strconv.ParseFloat(matches[0], 10, 64)
 	if err != nil {
-		return 0, 0, 0, 0, fmt.Errorf("error parsing int from recoveryLine %q: %w", recoveryLine, err)
+		return 0, 0, 0, 0, fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
 	}
 
 	// Get recovery speed
-	matches := recoveryLineSpeedRE.FindStringSubmatch(recoveryLine)
+	matches = recoveryLineSpeedRE.FindStringSubmatch(recoveryLine)
 	if len(matches) != 1 {
 		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine: %s", recoveryLine)
 	}
 	speed, err = strconv.ParseFloat(matches[0], 10, 64)
 	if err != nil {
-		return 0, 0, 0, 0, fmt.Errorf("error parsing int from recoveryLine %q: %w", recoveryLine, err)
+		return 0, 0, 0, 0, fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
 	}
 
 	return syncedBlocks, pct, finish, speed, nil
@@ -143,9 +143,7 @@ func (k *mdadmStat) Gather(acc telegraf.Accumulator) error {
 	}
 	lines = strings.Split(string(data), "\n")
 	for i, line := range lines {
-		if strings.TrimSpace(line) == "" || line[0] == ' ' ||
-			strings.HasPrefix(line, "Personalities") ||
-			strings.HasPrefix(line, "unused") {
+		if strings.TrimSpace(line) == "" || line[0] == ' ' || strings.HasPrefix(line, "Personalities") || strings.HasPrefix(line, "unused") {
 			continue
 		}
 		deviceFields := strings.Fields(line)
@@ -194,8 +192,7 @@ func (k *mdadmStat) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Handle case when resync=PENDING or resync=DELAYED.
-			if strings.Contains(lines[syncLineIdx], "PENDING") ||
-				strings.Contains(lines[syncLineIdx], "DELAYED") {
+			if strings.Contains(lines[syncLineIdx], "PENDING") || strings.Contains(lines[syncLineIdx], "DELAYED") {
 				syncedBlocks = 0
 			} else {
 				syncedBlocks, pct, finish, speed, err = evalRecoveryLine(lines[syncLineIdx])
