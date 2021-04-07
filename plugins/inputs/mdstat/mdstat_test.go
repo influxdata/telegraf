@@ -27,10 +27,10 @@ func TestFullMdstatProcFile(t *testing.T) {
 		"BlocksSyncedPct":        float64(94.3),
 		"BlocksSyncedSpeed":      float64(103517),
 		"BlocksTotal":            int64(11251451904),
-		"DisksActive":            int64(2),
+		"DisksActive":            int64(12),
 		"DisksFailed":            int64(0),
 		"DisksSpare":             int64(0),
-		"DisksTotal":             int64(2),
+		"DisksTotal":             int64(12),
 	}
 	acc.AssertContainsFields(t, "mdstat", fields)
 }

@@ -19,9 +19,9 @@ For a better idea of what each field represents, see the
 
 - mdstat
   - BlocksSynced (if the array is rebuilding/checking, this is the count of blocks that have been scanned)
-  - BlocksSyncedFinishTime (the expected finish time of the rebuild scan)
+  - BlocksSyncedFinishTime (the expected finish time of the rebuild scan, listed in minutes remaining)
   - BlocksSyncedPct (the percentage of the rebuild scan left)
-  - BlocksSyncedSpeed (the current speed the rebuild is running at)
+  - BlocksSyncedSpeed (the current speed the rebuild is running at, listed in K/sec)
   - BlocksTotal (the total count of blocks in the array)
   - DisksActive (the number of disks that are currently considered healthy in the array)
   - DisksFailed (the current count of failed disks in the array)
