@@ -36,7 +36,7 @@ func TestFullMdstatProcFile(t *testing.T) {
 }
 
 func TestInvalidMdStatProcFile1(t *testing.T) {
-	tmpfile := makeFakeVMStatFile([]byte(mdStatFileInvalid))
+	tmpfile := makeFakeMDStatFile([]byte(mdStatFileInvalid))
 	defer os.Remove(tmpfile)
 
 	k := MdstatConf{
