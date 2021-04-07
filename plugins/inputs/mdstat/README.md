@@ -1,6 +1,6 @@
-# MDADM Input Plugin
+# mdstat Input Plugin
 
-The mdadm plugin gathers statistics about any Linux MD RAID arrays configured on the host
+The mdstat plugin gathers statistics about any Linux MD RAID arrays configured on the host
 by reading /proc/mdstat. For a full list of available fields see the 
 /proc/mdstat section of the [proc man page](http://man7.org/linux/man-pages/man5/proc.5.html).
 For a better idea of what each field represents, see the 
@@ -11,13 +11,13 @@ For a better idea of what each field represents, see the
 
 ```toml
 # Get kernel statistics from /proc/vmstat
-[[inputs.mdadm]]
+[[inputs.mdstat]]
   # no configuration
 ```
 
 ### Measurements & Fields:
 
-- mdadm
+- mdstat
   - BlocksSynced (if the array is rebuilding/checking, this is the count of blocks that have been scanned)
   - BlocksSyncedFinishTime (the expected finish time of the rebuild scan)
   - BlocksSyncedPct (the percentage of the rebuild scan left)
@@ -30,7 +30,7 @@ For a better idea of what each field represents, see the
 
 ### Tags:
 
-- mdadm
+- mdstat
   - ActivityState (`active` or `inactive`)
   - Devices (comma separated list of devices that make up the array)
   - Name (name of the array)
@@ -38,8 +38,8 @@ For a better idea of what each field represents, see the
 ### Example Output:
 
 ```
-$ telegraf --config ~/ws/telegraf.conf --input-filter mdadm --test
+$ telegraf --config ~/ws/telegraf.conf --input-filter mdstat --test
 * Plugin: kernel_vmstat, Collection 1
-> mdadm,ActivityState=active,Devices=sdm1\,sdn1,Name=md1 BlocksSynced=231299072i,BlocksSyncedFinishTime=0,BlocksSyncedPct=0,BlocksSyncedSpeed=0,BlocksTotal=231299072i,DisksActive=2i,DisksFailed=0i,DisksSpare=0i,DisksTotal=2i 1617814276000000000
-> mdadm,ActivityState=active,Devices=sdm5\,sdn5,Name=md2 BlocksSynced=2996224i,BlocksSyncedFinishTime=0,BlocksSyncedPct=0,BlocksSyncedSpeed=0,BlocksTotal=2996224i,DisksActive=2i,DisksFailed=0i,DisksSpare=0i,DisksTotal=2i 1617814276000000000
+> mdstat,ActivityState=active,Devices=sdm1\,sdn1,Name=md1 BlocksSynced=231299072i,BlocksSyncedFinishTime=0,BlocksSyncedPct=0,BlocksSyncedSpeed=0,BlocksTotal=231299072i,DisksActive=2i,DisksFailed=0i,DisksSpare=0i,DisksTotal=2i 1617814276000000000
+> mdstat,ActivityState=active,Devices=sdm5\,sdn5,Name=md2 BlocksSynced=2996224i,BlocksSyncedFinishTime=0,BlocksSyncedPct=0,BlocksSyncedSpeed=0,BlocksTotal=2996224i,DisksActive=2i,DisksFailed=0i,DisksSpare=0i,DisksTotal=2i 1617814276000000000
 ```

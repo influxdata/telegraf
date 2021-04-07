@@ -1,6 +1,6 @@
 // +build linux
 
-package mdadm
+package mdstat
 
 import (
 	"fmt"
@@ -24,11 +24,11 @@ var (
 	componentDeviceRE = regexp.MustCompile(`(.*)\[\d+\]`)
 )
 
-type mdadmStat struct {
+type MdstatConf struct {
 	statFile string
 }
 
-func (k *mdadmStat) Description() string {
+func (k *MdstatConf) Description() string {
 	return "Get md array statistics from /proc/mdstat"
 }
 
@@ -36,7 +36,7 @@ var mdSampleConfig = `
 	## No configuration required for this collector
 `
 
-func (k *mdadmStat) SampleConfig() string {
+func (k *MdstatConf) SampleConfig() string {
 	return mdSampleConfig
 }
 
@@ -137,7 +137,7 @@ func evalComponentDevices(deviceFields []string) string {
 	return strings.Join(mdComponentDevices, ",")
 }
 
-func (k *mdadmStat) Gather(acc telegraf.Accumulator) error {
+func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 	data, err := k.getProcMdstat()
 	if err != nil {
 		return err
@@ -219,15 +219,15 @@ func (k *mdadmStat) Gather(acc telegraf.Accumulator) error {
 			"ActivityState": state,
 			"Devices": evalComponentDevices(deviceFields),
 		}
-		acc.AddFields("mdadm", fields, tags)
+		acc.AddFields("mdstat", fields, tags)
 	}
 
 	return nil
 }
 
-func (k *mdadmStat) getProcMdstat() ([]byte, error) {
+func (k *MdstatConf) getProcMdstat() ([]byte, error) {
 	if _, err := os.Stat(k.statFile); os.IsNotExist(err) {
-		return nil, fmt.Errorf("mdadm: %s does not exist", k.statFile)
+		return nil, fmt.Errorf("mdstat: %s does not exist", k.statFile)
 	} else if err != nil {
 		return nil, err
 	}
@@ -241,8 +241,8 @@ func (k *mdadmStat) getProcMdstat() ([]byte, error) {
 }
 
 func init() {
-	inputs.Add("mdadm", func() telegraf.Input {
-		return &mdadmStat{
+	inputs.Add("mdstat", func() telegraf.Input {
+		return &MdstatConf{
 			statFile: "/proc/mdstat",
 		}
 	})
