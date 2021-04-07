@@ -79,12 +79,13 @@ func (e *ElasticsearchQuery) recurseResponse(acc telegraf.Accumulator, aggNameFu
 		case *elastic5.AggregationBucketKeyItems:
 			// we've found a terms aggregation, iterate over the buckets and try to retrieve the inner aggregation values
 			for _, bucket := range resp.Buckets {
+				var s string
+				var ok bool
 				m.fields["doc_count"] = bucket.DocCount
-				if s, ok := bucket.Key.(string); ok {
-					m.tags[aggName] = s
-				} else {
+				if s, ok = bucket.Key.(string); !ok {
 					return m, fmt.Errorf("bucket key is not a string (%s, %s)", aggName, aggFunction)
 				}
+				m.tags[aggName] = s
 
 				// we need to recurse down through the buckets, as it may contain another terms aggregation
 				m, err = e.recurseResponse(acc, aggNameFunction, bucket.Aggregations, m)

@@ -91,10 +91,12 @@ type ElasticsearchQuery struct {
 	Timeout             internal.Duration `toml:"timeout"`
 	HealthCheckInterval internal.Duration `toml:"health_check_interval"`
 	Aggregations        []esAggregation   `toml:"aggregation"`
+
+	Log telegraf.Logger `toml:"-"`
+
 	tls.ClientConfig
 	httpclient *http.Client
 	esClient   *elastic5.Client
-	Log        telegraf.Logger `toml:"-"`
 }
 
 // esAggregation struct
@@ -154,20 +156,20 @@ func (e *ElasticsearchQuery) initAggregation(ctx context.Context, agg esAggregat
 	// retrieve field mapping and build queries only once
 	mapMetricFields, err := e.getMetricFields(ctx, agg)
 	if err != nil {
-		e.Log.Errorf("E! %s", err.Error())
+		e.Log.Errorf("not possible to retrieve fields: %v", err.Error())
 		return
 	}
 
 	for _, metricField := range agg.MetricFields {
 		if _, ok := mapMetricFields[metricField]; !ok {
-			e.Log.Errorf("E! metric field %s not found on index %s", metricField, agg.Index)
+			e.Log.Infof("metric field '%s' not found on index '%s'", metricField, agg.Index)
 			return
 		}
 	}
 
 	aggregationQueryList, err := e.buildAggregationQuery(mapMetricFields, agg)
 	if err != nil {
-		e.Log.Errorf("E! %s", err.Error())
+		e.Log.Error(err.Error())
 		return
 	}
 	agg.mapMetricFields = mapMetricFields

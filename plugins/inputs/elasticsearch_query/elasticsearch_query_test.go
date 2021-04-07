@@ -3,7 +3,6 @@ package elasticsearch_query
 import (
 	"bufio"
 	"context"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -483,7 +482,7 @@ func setupIntegrationTest() {
 
 	err := e.connectToES()
 	if err != nil {
-		log.Printf("E! error setting up integration test: %s", err.Error())
+		e.Log.Errorf("error setting up integration test: %s", err.Error())
 		return
 	}
 
@@ -492,7 +491,7 @@ func setupIntegrationTest() {
 	// populate elasticsearch with nginx_logs test data file
 	file, err := os.Open("testdata/nginx_logs")
 	if err != nil {
-		log.Printf("E! error setting up integration test: %s", err.Error())
+		e.Log.Errorf("error setting up integration test: %s", err.Error())
 		return
 	}
 
@@ -523,13 +522,13 @@ func setupIntegrationTest() {
 	}
 
 	if err = scanner.Err(); err != nil {
-		log.Printf("E! error setting up integration test: %s", err.Error())
+		e.Log.Errorf("error setting up integration test: %s", err.Error())
 		return
 	}
 
 	_, err = bulkRequest.Do(context.Background())
 	if err != nil {
-		log.Printf("E! error setting up integration test: %s", err.Error())
+		e.Log.Errorf("error setting up integration test: %s", err.Error())
 		return
 	}
 
