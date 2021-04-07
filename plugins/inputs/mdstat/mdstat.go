@@ -56,7 +56,11 @@ func (k *MdstatConf) SampleConfig() string {
 }
 
 func evalStatusLine(deviceLine, statusLine string) (active, total, size int64, err error) {
-	sizeStr := strings.Fields(statusLine)[0]
+	sizeFields := strings.Fields(statusLine)
+	if len(sizeFields) < 1 {
+		return 0, 0, 0, fmt.Errorf("statusLine empty? %q: %w", statusLine, err)
+	}
+	sizeStr := sizeFields[0]
 	size, err = strconv.ParseInt(sizeStr, 10, 64)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
