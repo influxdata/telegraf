@@ -233,7 +233,8 @@ func TestHttpJsonGET_URL(t *testing.T) {
 		key := r.FormValue("api_key")
 		assert.Equal(t, "mykey", key)
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, validJSON2)
+		_, err := fmt.Fprintln(w, validJSON2)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -305,7 +306,8 @@ func TestHttpJsonGET(t *testing.T) {
 		key := r.FormValue("api_key")
 		assert.Equal(t, "mykey", key)
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, validJSON2)
+		_, err := fmt.Fprintln(w, validJSON2)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -379,7 +381,8 @@ func TestHttpJsonPOST(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "api_key=mykey", string(body))
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, validJSON2)
+		_, err = fmt.Fprintln(w, validJSON2)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 

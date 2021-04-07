@@ -274,11 +274,12 @@ func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 	require.NoError(t, err)
 
 	cancel()
-	cg.ConsumeClaim(session, &claim)
 	// This produces a flappy testcase probably due to a race between context cancelation and consumption.
 	// Furthermore, it is not clear what the outcome of this test should be...
 	// err = cg.ConsumeClaim(session, &claim)
 	//require.NoError(t, err)
+	// So stick with the line below for now.
+	cg.ConsumeClaim(session, &claim)
 
 	err = cg.Cleanup(session)
 	require.NoError(t, err)
