@@ -22,11 +22,11 @@ func TestFullMdstatProcFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	fields := map[string]interface{}{
-		"BlocksSynced":           int64(231299072),
-		"BlocksSyncedFinishTime": float64(0),
-		"BlocksSyncedPct":        float64(0),
-		"BlocksSyncedSpeed":      float64(0),
-		"BlocksTotal":            int64(231299072),
+		"BlocksSynced":           int64(10620027200),
+		"BlocksSyncedFinishTime": float64(101.6),
+		"BlocksSyncedPct":        float64(94.3),
+		"BlocksSyncedSpeed":      float64(103517),
+		"BlocksTotal":            int64(11251451904),
 		"DisksActive":            int64(2),
 		"DisksFailed":            int64(0),
 		"DisksSpare":             int64(0),
