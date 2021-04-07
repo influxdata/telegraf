@@ -68,7 +68,7 @@ func (p *Proc) Username() (string, error) {
 	return p.Process.Username()
 }
 
-func (p *Proc) Percent(interval time.Duration) (float64, error) {
+func (p *Proc) Percent(_ time.Duration) (float64, error) {
 	cpuPerc, err := p.Process.Percent(time.Duration(0))
 	if !p.hasCPUTimes && err == nil {
 		p.hasCPUTimes = true

@@ -23,7 +23,7 @@ type FakeConsumerGroup struct {
 	errors  chan error
 }
 
-func (g *FakeConsumerGroup) Consume(ctx context.Context, topics []string, handler sarama.ConsumerGroupHandler) error {
+func (g *FakeConsumerGroup) Consume(_ context.Context, _ []string, handler sarama.ConsumerGroupHandler) error {
 	g.handler = handler
 	g.handler.Setup(nil)
 	return nil
@@ -213,15 +213,15 @@ func (s *FakeConsumerGroupSession) GenerationID() int32 {
 	panic("not implemented")
 }
 
-func (s *FakeConsumerGroupSession) MarkOffset(topic string, partition int32, offset int64, metadata string) {
+func (s *FakeConsumerGroupSession) MarkOffset(_ string, _ int32, _ int64, _ string) {
 	panic("not implemented")
 }
 
-func (s *FakeConsumerGroupSession) ResetOffset(topic string, partition int32, offset int64, metadata string) {
+func (s *FakeConsumerGroupSession) ResetOffset(_ string, _ int32, _ int64, _ string) {
 	panic("not implemented")
 }
 
-func (s *FakeConsumerGroupSession) MarkMessage(msg *sarama.ConsumerMessage, metadata string) {
+func (s *FakeConsumerGroupSession) MarkMessage(_ *sarama.ConsumerMessage, _ string) {
 }
 
 func (s *FakeConsumerGroupSession) Context() context.Context {

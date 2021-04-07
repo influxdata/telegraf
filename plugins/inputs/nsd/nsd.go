@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -26,8 +25,7 @@ type NSD struct {
 	Server     string
 	ConfigFile string
 
-	filter filter.Filter
-	run    runner
+	run runner
 }
 
 var defaultBinary = "/usr/sbin/nsd-control"

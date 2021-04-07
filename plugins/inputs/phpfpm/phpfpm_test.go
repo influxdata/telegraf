@@ -23,7 +23,7 @@ import (
 type statServer struct{}
 
 // We create a fake server to return test data
-func (s statServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s statServer) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.Header().Set("Content-Length", fmt.Sprint(len(outputSample)))
 	fmt.Fprint(w, outputSample)

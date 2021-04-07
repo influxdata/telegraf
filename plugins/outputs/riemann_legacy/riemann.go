@@ -77,9 +77,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 	var events []*raidman.Event
 	for _, p := range metrics {
 		evs := buildEvents(p, r.Separator)
-		for _, ev := range evs {
-			events = append(events, ev)
-		}
+		events = append(events, evs...)
 	}
 
 	var senderr = r.client.SendMulti(events)
@@ -109,9 +107,9 @@ func buildEvents(p telegraf.Metric, s string) []*raidman.Event {
 			Service: serviceName(s, p.Name(), p.Tags(), fieldName),
 		}
 
-		switch value.(type) {
+		switch value := value.(type) {
 		case string:
-			event.State = value.(string)
+			event.State = value
 		default:
 			event.Metric = value
 		}

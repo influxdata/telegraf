@@ -115,7 +115,7 @@ func (c *udpClient) Write(ctx context.Context, metrics []telegraf.Metric) error 
 	return nil
 }
 
-func (c *udpClient) CreateDatabase(ctx context.Context, database string) error {
+func (c *udpClient) CreateDatabase(_ context.Context, _ string) error {
 	return nil
 }
 

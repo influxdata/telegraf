@@ -189,7 +189,7 @@ func (u *UDPListener) udpListenLoop() {
 	}
 }
 
-func (u *UDPListener) udpParser() error {
+func (u *UDPListener) udpParser() {
 	defer u.wg.Done()
 
 	var packet []byte
@@ -199,7 +199,7 @@ func (u *UDPListener) udpParser() error {
 		select {
 		case <-u.done:
 			if len(u.in) == 0 {
-				return nil
+				return
 			}
 		case packet = <-u.in:
 			metrics, err = u.parser.Parse(packet)

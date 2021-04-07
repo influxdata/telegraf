@@ -61,7 +61,7 @@ func (n *Nats) Gather(acc telegraf.Accumulator) error {
 	}
 
 	stats := new(gnatsd.Varz)
-	err = json.Unmarshal([]byte(bytes), &stats)
+	err = json.Unmarshal(bytes, &stats)
 	if err != nil {
 		return err
 	}

@@ -135,7 +135,7 @@ func TestGather(t *testing.T) {
 
 type mockSelectMetricsCloudWatchClient struct{}
 
-func (m *mockSelectMetricsCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
+func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
 	metrics := []*cloudwatch.Metric{}
 	// 4 metrics are available
 	metricNames := []string{"Latency", "RequestCount", "HealthyHostCount", "UnHealthyHostCount"}
@@ -182,7 +182,7 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(params *cloudwatch.ListM
 	return result, nil
 }
 
-func (m *mockSelectMetricsCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricDataInput) (*cloudwatch.GetMetricDataOutput, error) {
+func (m *mockSelectMetricsCloudWatchClient) GetMetricData(_ *cloudwatch.GetMetricDataInput) (*cloudwatch.GetMetricDataOutput, error) {
 	return nil, nil
 }
 
@@ -246,7 +246,7 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 	c.updateWindow(now)
 
 	statFilter, _ := filter.NewIncludeExcludeFilter(nil, nil)
-	queries, _ := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
+	queries := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
 	params := c.getDataInputs(queries)
 
 	assert.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
@@ -283,7 +283,7 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 	c.updateWindow(now)
 
 	statFilter, _ := filter.NewIncludeExcludeFilter([]string{"average", "sample_count"}, nil)
-	queries, _ := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
+	queries := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
 	params := c.getDataInputs(queries)
 
 	assert.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))

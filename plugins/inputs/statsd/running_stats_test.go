@@ -162,8 +162,5 @@ func TestRunningStats_PercentileLimit(t *testing.T) {
 }
 
 func fuzzyEqual(a, b, epsilon float64) bool {
-	if math.Abs(a-b) > epsilon {
-		return false
-	}
-	return true
+	return math.Abs(a-b) <= epsilon
 }

@@ -157,12 +157,7 @@ func gatherVMData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
 			return
 		}
 
-		fields, err := getFields(currentVMStatus)
-		if err != nil {
-			px.Log.Errorf("Error getting VM measurements: %v", err)
-			return
-		}
-
+		fields := getFields(currentVMStatus)
 		acc.AddFields("proxmox", fields, tags)
 	}
 }
@@ -216,7 +211,7 @@ func getVMConfig(px *Proxmox, vmID string, rt ResourceType) (VMConfig, error) {
 	return vmConfig, nil
 }
 
-func getFields(vmStat VMStat) (map[string]interface{}, error) {
+func getFields(vmStat VMStat) map[string]interface{} {
 	memTotal, memUsed, memFree, memUsedPercentage := getByteMetrics(vmStat.TotalMem, vmStat.UsedMem)
 	swapTotal, swapUsed, swapFree, swapUsedPercentage := getByteMetrics(vmStat.TotalSwap, vmStat.UsedSwap)
 	diskTotal, diskUsed, diskFree, diskUsedPercentage := getByteMetrics(vmStat.TotalDisk, vmStat.UsedDisk)
@@ -237,7 +232,7 @@ func getFields(vmStat VMStat) (map[string]interface{}, error) {
 		"disk_total":           diskTotal,
 		"disk_free":            diskFree,
 		"disk_used_percentage": diskUsedPercentage,
-	}, nil
+	}
 }
 
 func getByteMetrics(total json.Number, used json.Number) (int64, int64, int64, float64) {

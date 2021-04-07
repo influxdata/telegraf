@@ -149,7 +149,7 @@ func flexFlatten(outmap map[string]interface{}, field string, v interface{}, del
 	case float64:
 		outmap[field] = v.(float64)
 	default:
-		return fmt.Errorf("Unsupported type %T encountered", t)
+		return fmt.Errorf("unsupported type %T encountered", t)
 	}
 	return nil
 }
@@ -157,7 +157,7 @@ func flexFlatten(outmap map[string]interface{}, field string, v interface{}, del
 func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 	// initial parsing
 	var result map[string]interface{}
-	err := json.Unmarshal([]byte(sjson), &result)
+	err := json.Unmarshal(sjson, &result)
 	if err != nil {
 		acc.AddError(err)
 		return
@@ -215,7 +215,7 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 
 // Gather measures and submits one full set of telemetry to Telegraf.
 // Not used here, submission is completely input-driven.
-func (s *Suricata) Gather(acc telegraf.Accumulator) error {
+func (s *Suricata) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

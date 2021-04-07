@@ -39,7 +39,7 @@ func nxosValueXformUint64Toint64(field *telemetry.TelemetryField, value interfac
 }
 
 //xform string to float
-func nxosValueXformStringTofloat(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueXformStringTofloat(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	//convert property to float from string.
 	vals := field.GetStringValue()
 	if vals != "" {
@@ -51,7 +51,7 @@ func nxosValueXformStringTofloat(field *telemetry.TelemetryField, value interfac
 }
 
 //xform string to uint64
-func nxosValueXformStringToUint64(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueXformStringToUint64(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	//string to uint64
 	vals := field.GetStringValue()
 	if vals != "" {
@@ -63,7 +63,7 @@ func nxosValueXformStringToUint64(field *telemetry.TelemetryField, value interfa
 }
 
 //xform string to int64
-func nxosValueXformStringToInt64(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueXformStringToInt64(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	//string to int64
 	vals := field.GetStringValue()
 	if vals != "" {
@@ -74,26 +74,8 @@ func nxosValueXformStringToInt64(field *telemetry.TelemetryField, value interfac
 	return nil
 }
 
-//auto-xform
-func nxosValueAutoXform(field *telemetry.TelemetryField, value interface{}) interface{} {
-	//check if we want auto xformation
-	vals := field.GetStringValue()
-	if vals != "" {
-		if val64, err := strconv.ParseUint(vals, 10, 64); err == nil {
-			return val64
-		}
-		if valf, err := strconv.ParseFloat(vals, 64); err == nil {
-			return valf
-		}
-		if val64, err := strconv.ParseInt(vals, 10, 64); err == nil {
-			return val64
-		}
-	} // switch
-	return nil
-}
-
 //auto-xform float properties
-func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	//check if we want auto xformation
 	vals := field.GetStringValue()
 	if vals != "" {
@@ -105,7 +87,7 @@ func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, value interfac
 }
 
 //xform uint64 to string
-func nxosValueXformUint64ToString(field *telemetry.TelemetryField, value interface{}) interface{} {
+func nxosValueXformUint64ToString(field *telemetry.TelemetryField, _ interface{}) interface{} {
 	switch val := field.ValueByType.(type) {
 	case *telemetry.TelemetryField_StringValue:
 		if len(val.StringValue) > 0 {
@@ -145,12 +127,12 @@ func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, valu
 			}
 		case *telemetry.TelemetryField_Uint32Value:
 			vali, ok := value.(uint32)
-			if ok == true {
+			if ok {
 				return vali
 			}
 		case *telemetry.TelemetryField_Uint64Value:
 			vali, ok := value.(uint64)
-			if ok == true {
+			if ok {
 				return vali
 			}
 		} //switch
@@ -189,7 +171,7 @@ func (c *CiscoTelemetryMDT) initBgpV4() {
 	c.nxpathMap[key]["aspath"] = "string"
 }
 
-func (c *CiscoTelemetryMDT) initCpu() {
+func (c *CiscoTelemetryMDT) initCPU() {
 	key := "show processes cpu"
 	c.nxpathMap[key] = make(map[string]string, 5)
 	c.nxpathMap[key]["kernel_percent"] = "float"
@@ -672,7 +654,7 @@ func (c *CiscoTelemetryMDT) initPimVrf() {
 	c.nxpathMap[key]["table-id"] = "string"
 }
 
-func (c *CiscoTelemetryMDT) initIpMroute() {
+func (c *CiscoTelemetryMDT) initIPMroute() {
 	key := "show ip mroute summary vrf all"
 	c.nxpathMap[key] = make(map[string]string, 40)
 	c.nxpathMap[key]["nat-mode"] = "string"
@@ -860,7 +842,7 @@ func (c *CiscoTelemetryMDT) initDb() {
 	c.initPower()
 	c.initMemPhys()
 	c.initBgpV4()
-	c.initCpu()
+	c.initCPU()
 	c.initResources()
 	c.initPtpCorrection()
 	c.initTrans()
@@ -879,7 +861,7 @@ func (c *CiscoTelemetryMDT) initDb() {
 	c.initPimStats()
 	c.initIntfBrief()
 	c.initPimVrf()
-	c.initIpMroute()
+	c.initIPMroute()
 	c.initIpv6Mroute()
 	c.initVpc()
 	c.initBgp()

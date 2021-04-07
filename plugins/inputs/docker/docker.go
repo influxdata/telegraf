@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -57,7 +56,6 @@ type Docker struct {
 	newClient    func(string, *tls.Config) (Client, error)
 
 	client          Client
-	httpClient      *http.Client
 	engineHost      string
 	serverVersion   string
 	filtersCreated  bool
@@ -734,7 +732,7 @@ func parseContainerStats(
 		acc.AddFields("docker_container_cpu", cpufields, cputags, tm)
 	}
 
-	if choice.Contains("cpu", perDeviceInclude) {
+	if choice.Contains("cpu", perDeviceInclude) && len(stat.CPUStats.CPUUsage.PercpuUsage) > 0 {
 		// If we have OnlineCPUs field, then use it to restrict stats gathering to only Online CPUs
 		// (https://github.com/moby/moby/commit/115f91d7575d6de6c7781a96a082f144fd17e400)
 		var percpuusage []uint64
@@ -935,15 +933,6 @@ func copyTags(in map[string]string) map[string]string {
 		out[k] = v
 	}
 	return out
-}
-
-func sliceContains(in string, sl []string) bool {
-	for _, str := range sl {
-		if str == in {
-			return true
-		}
-	}
-	return false
 }
 
 // Parses the human-readable size string into the amount it represents.

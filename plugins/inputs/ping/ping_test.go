@@ -3,10 +3,8 @@
 package ping
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"net"
 	"reflect"
 	"sort"
 	"testing"
@@ -231,7 +229,7 @@ func TestArguments(t *testing.T) {
 	}
 }
 
-func mockHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return linuxPingOutput, nil
 }
 
@@ -289,7 +287,7 @@ PING www.google.com (216.58.218.164) 56(84) bytes of data.
 rtt min/avg/max/mdev = 35.225/44.033/51.806/5.325 ms
 `
 
-func mockLossyHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockLossyHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -325,7 +323,7 @@ Request timeout for icmp_seq 0
 2 packets transmitted, 0 packets received, 100.0% packet loss
 `
 
-func mockErrorHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockErrorHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	// This error will not trigger correct error paths
 	return errorPingOutput, nil
 }
@@ -350,7 +348,7 @@ func TestBadPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
-func mockFatalHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockFatalHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return fatalPingOutput, errors.New("So very bad")
 }
 
@@ -413,12 +411,6 @@ func TestPingBinary(t *testing.T) {
 		},
 	}
 	acc.GatherError(p.Gather)
-}
-
-func mockHostResolver(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error) {
-	ipaddr := net.IPAddr{}
-	ipaddr.IP = net.IPv4(127, 0, 0, 1)
-	return &ipaddr, nil
 }
 
 // Test that Gather function works using native ping

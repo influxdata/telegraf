@@ -188,7 +188,7 @@ func (h *HTTPResponse) createHTTPClient() (*http.Client, error) {
 		Timeout: h.ResponseTimeout.Duration,
 	}
 
-	if h.FollowRedirects == false {
+	if !h.FollowRedirects {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
@@ -247,10 +247,10 @@ func setError(err error, fields map[string]interface{}, tags map[string]string) 
 	opErr, isNetErr := (urlErr.Err).(*net.OpError)
 	if isNetErr {
 		switch e := (opErr.Err).(type) {
-		case (*net.DNSError):
+		case *net.DNSError:
 			setResult("dns_error", fields, tags)
 			return e
-		case (*net.ParseError):
+		case *net.ParseError:
 			// Parse error has to do with parsing of IP addresses, so we
 			// group it with address errors
 			setResult("address_error", fields, tags)
@@ -412,7 +412,7 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		var err error
 		h.compiledStringMatch, err = regexp.Compile(h.ResponseStringMatch)
 		if err != nil {
-			return fmt.Errorf("Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
+			return fmt.Errorf("failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
 		}
 	}
 
@@ -450,7 +450,7 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if addr.Scheme != "http" && addr.Scheme != "https" {
-			acc.AddError(errors.New("Only http and https are supported"))
+			acc.AddError(errors.New("only http and https are supported"))
 			continue
 		}
 

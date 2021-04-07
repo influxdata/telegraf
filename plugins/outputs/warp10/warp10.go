@@ -178,7 +178,7 @@ func buildTags(tags []*telegraf.Tag) []string {
 		indexSource = index
 	}
 	indexSource++
-	tagsString[indexSource] = fmt.Sprintf("source=telegraf")
+	tagsString[indexSource] = "source=telegraf"
 	sort.Strings(tagsString)
 	return tagsString
 }
@@ -212,10 +212,6 @@ func intToString(inputNum int64) string {
 
 func boolToString(inputBool bool) string {
 	return strconv.FormatBool(inputBool)
-}
-
-func uIntToString(inputNum uint64) string {
-	return strconv.FormatUint(inputNum, 10)
 }
 
 func floatToString(inputNum float64) string {

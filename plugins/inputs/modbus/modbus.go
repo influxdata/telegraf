@@ -208,9 +208,7 @@ func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
 
 	addrs := []uint16{}
 	for _, field := range fields {
-		for _, a := range field.Address {
-			addrs = append(addrs, a)
-		}
+		addrs = append(addrs, field.Address...)
 	}
 
 	addrs = removeDuplicates(addrs)

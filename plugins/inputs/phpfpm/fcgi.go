@@ -45,20 +45,20 @@ const (
 	maxPad   = 255
 )
 
+//nolint:varcheck // For having proper order
 const (
 	roleResponder = iota + 1 // only Responders are implemented.
 	roleAuthorizer
 	roleFilter
 )
 
+//nolint:varcheck // For having proper order
 const (
 	statusRequestComplete = iota
 	statusCantMultiplex
 	statusOverloaded
 	statusUnknownRole
 )
-
-const headerLen = 8
 
 type header struct {
 	Version       uint8
@@ -72,7 +72,7 @@ type header struct {
 type beginRequest struct {
 	role     uint16
 	flags    uint8
-	reserved [5]uint8
+	reserved [5]uint8 //nolint:unused // Memory reservation
 }
 
 func (br *beginRequest) read(content []byte) error {

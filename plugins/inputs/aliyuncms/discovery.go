@@ -60,7 +60,7 @@ type discoveryTool struct {
 	cli                map[string]aliyunSdkClient  //API client, which perform discovery request
 
 	respRootKey     string //Root key in JSON response where to look for discovery data
-	respObjectIdKey string //Key in element of array under root key, that stores object ID
+	respObjectIDKey string //Key in element of array under root key, that stores object ID
 	//for ,majority of cases it would be InstanceId, for OSS it is BucketName. This key is also used in dimension filtering// )
 	wg       sync.WaitGroup              //WG for primary discovery goroutine
 	interval time.Duration               //Discovery interval
@@ -69,9 +69,9 @@ type discoveryTool struct {
 	lg       telegraf.Logger             //Telegraf logger (should be provided)
 }
 
-//getRpcReqFromDiscoveryRequest - utility function to map between aliyun request primitives
+//getRPCReqFromDiscoveryRequest - utility function to map between aliyun request primitives
 //discoveryRequest represents different type of discovery requests
-func getRpcReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, error) {
+func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, error) {
 	if reflect.ValueOf(req).Type().Kind() != reflect.Ptr ||
 		reflect.ValueOf(req).IsNil() {
 		return nil, errors.Errorf("Not expected type of the discovery request object: %q, %q", reflect.ValueOf(req).Type(), reflect.ValueOf(req).Kind())
@@ -109,7 +109,7 @@ func NewDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 		cli                   = map[string]aliyunSdkClient{}
 		parseRootKey          = regexp.MustCompile(`Describe(.*)`)
 		responseRootKey       string
-		responseObjectIdKey   string
+		responseObjectIDKey   string
 		err                   error
 		noDiscoverySupportErr = errors.Errorf("no discovery support for project %q", project)
 	)
@@ -127,13 +127,13 @@ func NewDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 		switch project {
 		case "acs_ecs_dashboard":
 			dscReq[region] = ecs.CreateDescribeInstancesRequest()
-			responseObjectIdKey = "InstanceId"
+			responseObjectIDKey = "InstanceId"
 		case "acs_rds_dashboard":
 			dscReq[region] = rds.CreateDescribeDBInstancesRequest()
-			responseObjectIdKey = "DBInstanceId"
+			responseObjectIDKey = "DBInstanceId"
 		case "acs_slb_dashboard":
 			dscReq[region] = slb.CreateDescribeLoadBalancersRequest()
-			responseObjectIdKey = "LoadBalancerId"
+			responseObjectIDKey = "LoadBalancerId"
 		case "acs_memcache":
 			return nil, noDiscoverySupportErr
 		case "acs_ocs":
@@ -152,7 +152,7 @@ func NewDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 			//req.InitWithApiInfo("oss", "2014-08-15", "DescribeDBInstances", "oss", "openAPI")
 		case "acs_vpc_eip":
 			dscReq[region] = vpc.CreateDescribeEipAddressesRequest()
-			responseObjectIdKey = "AllocationId"
+			responseObjectIDKey = "AllocationId"
 		case "acs_kvstore":
 			return nil, noDiscoverySupportErr
 		case "acs_mns_new":
@@ -253,7 +253,7 @@ func NewDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 	//Getting response root key (if not set already). This is to be able to parse discovery responses
 	//As they differ per object type
 	//Discovery requests are of the same type per every region, so pick the first one
-	rpcReq, err := getRpcReqFromDiscoveryRequest(dscReq[regions[0]])
+	rpcReq, err := getRPCReqFromDiscoveryRequest(dscReq[regions[0]])
 	//This means that the discovery request is not of proper type/kind
 	if err != nil {
 		return nil, errors.Errorf("Can't parse rpc request object from  discovery request %v", dscReq[regions[0]])
@@ -283,7 +283,7 @@ func NewDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 		req:                dscReq,
 		cli:                cli,
 		respRootKey:        responseRootKey,
-		respObjectIdKey:    responseObjectIdKey,
+		respObjectIDKey:    responseObjectIDKey,
 		rateLimit:          rateLimit,
 		interval:           discoveryInterval,
 		reqDefaultPageSize: 20,
@@ -380,8 +380,8 @@ func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.Com
 
 			for _, raw := range discoveryData {
 				if elem, ok := raw.(map[string]interface{}); ok {
-					if objectId, ok := elem[dt.respObjectIdKey].(string); ok {
-						preparedData[objectId] = elem
+					if objectID, ok := elem[dt.respObjectIDKey].(string); ok {
+						preparedData[objectID] = elem
 					}
 				} else {
 					return nil, errors.Errorf("Can't parse input data element, not a map[string]interface{} type")
@@ -407,7 +407,7 @@ func (dt *discoveryTool) getDiscoveryDataAllRegions(limiter chan bool) (map[stri
 			return nil, errors.Errorf("Error building common discovery request: not valid region %q", region)
 		}
 
-		rpcReq, err := getRpcReqFromDiscoveryRequest(dscReq)
+		rpcReq, err := getRPCReqFromDiscoveryRequest(dscReq)
 		if err != nil {
 			return nil, err
 		}
