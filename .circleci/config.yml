@@ -38,11 +38,14 @@ commands:
       - run: 'GOARCH=<< parameters.goarch >> make check'
       - run: 'GOARCH=<< parameters.goarch >> make check-deps'
       - run: 'GOARCH=<< parameters.goarch >> make test'
-  windows-package:
+  package:
     parameters:
       nightly:
         type: boolean
         default: false
+      type:
+        type: string
+        default: "linux"
     steps:
       - checkout
       - attach_workspace:
@@ -55,132 +58,7 @@ commands:
       - unless:
           condition: << parameters.nightly >>
           steps:
-            - run: 'windows=1 make package'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
-      - persist_to_workspace:
-          root: './build'
-          paths:
-            - 'dist'
-  mac-package:
-    parameters:
-      nightly:
-        type: boolean
-        default: false
-    steps:
-      - checkout
-      - attach_workspace:
-          at: '/go'
-      - when:
-          condition: << parameters.nightly >>
-          steps: 
-            - run: 'NIGHTLY=1 make package'
-            - run: 'make upload-nightly'
-      - unless:
-          condition: << parameters.nightly >>
-          steps:
-            - run: 'mac=1 make package'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
-      - persist_to_workspace:
-          root: './build'
-          paths:
-            - 'dist'
-  debian-package:
-    parameters:
-      nightly:
-        type: boolean
-        default: false
-    steps:
-      - checkout
-      - attach_workspace:
-          at: '/go'
-      - when:
-          condition: << parameters.nightly >>
-          steps: 
-            - run: 'debian=1 make package'
-            - run: 'make upload-nightly'
-      - unless:
-          condition: << parameters.nightly >>
-          steps:
-            - run: 'debian=1 make package'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
-      - persist_to_workspace:
-          root: './build'
-          paths:
-            - 'dist'
-  centos-package:
-    parameters:
-      nightly:
-        type: boolean
-        default: false
-    steps:
-      - checkout
-      - attach_workspace:
-          at: '/go'
-      - when:
-          condition: << parameters.nightly >>
-          steps: 
-            - run: 'centos=1 make package'
-            - run: 'make upload-nightly'
-      - unless:
-          condition: << parameters.nightly >>
-          steps:
-            - run: 'centos=1 make package'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
-      - persist_to_workspace:
-          root: './build'
-          paths:
-            - 'dist'
-  freebsd-package:
-    parameters:
-      nightly:
-        type: boolean
-        default: false
-    steps:
-      - checkout
-      - attach_workspace:
-          at: '/go'
-      - when:
-          condition: << parameters.nightly >>
-          steps: 
-            - run: 'freebsd=1 make package'
-            - run: 'make upload-nightly'
-      - unless:
-          condition: << parameters.nightly >>
-          steps:
-            - run: 'freebsd=1 make package'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
-      - persist_to_workspace:
-          root: './build'
-          paths:
-            - 'dist'
-  linux-package:
-    parameters:
-      nightly:
-        type: boolean
-        default: false
-    steps:
-      - checkout
-      - attach_workspace:
-          at: '/go'
-      - when:
-          condition: << parameters.nightly >>
-          steps: 
-            - run: 'make package'
-            - run: 'make upload-nightly'
-      - unless:
-          condition: << parameters.nightly >>
-          steps:
-            - run: 'linux=1 make package'
+            - run: '<< parameters.type >> make package'
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
@@ -257,36 +135,42 @@ jobs:
   windows-package:
     executor: go-1_16
     steps:
-      - windows-package
+      - package:
+          type: windows
   debian-package:
     executor: go-1_16
     steps:
-      - debian-package
+      - package:
+          type: debian
   centos-package:
     executor: go-1_16
     steps:
-      - centos-package
+      - package:
+          type: centos
   mac-package:
     executor: go-1_16
     steps:
-      - mac-package
+      - package:
+          type: mac
   freebsd-package:
     executor: go-1_16
     steps:
-      - freebsd-package
+      - package:
+          type: freebsd
   linux-package:
     executor: go-1_16
     steps:
-      - linux-package
+      - package:
+          type: linux
 
   release:
     executor: go-1_16
     steps:
-      - windows-package
+      - package
   nightly:
     executor: go-1_16
     steps:
-      - windows-package:
+      - package:
           nightly: true
   package-sign-windows:
     executor:
