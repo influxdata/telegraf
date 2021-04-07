@@ -64,12 +64,12 @@ md0 : active raid1 sdb1[2] sda1[0]
 
 unused devices: <none>
 `
-
+/*
 const mdStatFileEmpty = `
 Personalities :
 unused devices: <none>
 `
-
+*/
 const mdStatFileInvalid = `
 Personalities :
 

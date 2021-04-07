@@ -56,7 +56,6 @@ func (k *MdstatConf) SampleConfig() string {
 }
 
 func evalStatusLine(deviceLine, statusLine string) (active, total, size int64, err error) {
-
 	sizeStr := strings.Fields(statusLine)[0]
 	size, err = strconv.ParseInt(sizeStr, 10, 64)
 	if err != nil {
