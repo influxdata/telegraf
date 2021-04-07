@@ -214,7 +214,6 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 				if err != nil {
 					return fmt.Errorf("error parsing sync line in md device %q: %w", mdName, err)
 				}
-
 			}
 		}
 		fields := map[string]interface{}{
