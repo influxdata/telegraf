@@ -228,7 +228,7 @@ $(buildbin):
 	@mkdir -pv $(dir $@)
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
-ifdef debian || all
+ifneq ($(call ifdef_any_of,debian all),)
 debs := telegraf_$(deb_version)_amd64.deb
 debs += telegraf_$(deb_version)_arm64.deb
 debs += telegraf_$(deb_version)_armel.deb
@@ -240,7 +240,7 @@ debs += telegraf_$(deb_version)_s390x.deb
 debs += telegraf_$(deb_version)_ppc64el.deb
 endif
 
-ifdef centos || all
+ifneq ($(call ifdef_any_of,centos all),)
 rpms += telegraf-$(rpm_version).aarch64.rpm
 rpms += telegraf-$(rpm_version).armel.rpm
 rpms += telegraf-$(rpm_version).armv6hl.rpm
@@ -250,16 +250,16 @@ rpms += telegraf-$(rpm_version).ppc64le.rpm
 rpms += telegraf-$(rpm_version).x86_64.rpm
 endif
 
-ifdef mac || all
+ifneq ($(call ifdef_any_of,mac all),)
 tars += telegraf-$(tar_version)_darwin_amd64.tar.gz
 endif
 
-ifdef freebsd || all
+ifneq ($(call ifdef_any_of,freebsd all),)
 tars += telegraf-$(tar_version)_freebsd_amd64.tar.gz
 tars += telegraf-$(tar_version)_freebsd_i386.tar.gz
 endif
 
-ifdef linux || all
+ifneq ($(call ifdef_any_of,linux all),)
 tars += telegraf-$(tar_version)_linux_amd64.tar.gz
 tars += telegraf-$(tar_version)_linux_arm64.tar.gz
 tars += telegraf-$(tar_version)_linux_armel.tar.gz
@@ -272,7 +272,7 @@ tars += telegraf-$(tar_version)_linux_ppc64le.tar.gz
 tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
 endif
 
-ifdef windows || all
+ifneq ($(call ifdef_any_of,windows all),)
 zips += telegraf-$(tar_version)_windows_amd64.zip
 zips += telegraf-$(tar_version)_windows_i386.zip
 endif
