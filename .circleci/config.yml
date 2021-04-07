@@ -63,7 +63,7 @@ commands:
             - run: 'debian=1 centos=1 mac=1 freebsd=1 linux=1 windows=1 NIGHTLY=1 make package'
             - run: 'make upload-nightly'
       - unless:
-          condition: << parameters.nightly >>
+          condition: << parameters.nightly >> or << parameters.release >>
           steps:
             - run: '<< parameters.type >>=1 make package'
       - store_artifacts:
