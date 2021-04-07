@@ -261,7 +261,7 @@ func fakeExecCommand(command string, args ...string) *exec.Cmd {
 // For example, if you run:
 // GO_WANT_HELPER_PROCESS=1 go test -test.run=TestHelperProcess -- sadf -p -- -p -C tmpFile
 // it returns mockData["C"] output.
-func TestHelperProcess(_ *testing.T) {
+func TestHelperProcess(t *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}

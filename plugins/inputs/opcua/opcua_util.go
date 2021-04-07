@@ -104,15 +104,14 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 
 	keyOut, err := os.OpenFile(keyFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Printf("failed to open %s for writing: %s", keyFile, err)
-		return "", "", nil
+		return "", "", fmt.Errorf("failed to open %s for writing: %s", keyFile, err)
 	}
-	key, err := pemBlockForKey(priv)
+	keyBlock, err := pemBlockForKey(priv)
 	if err != nil {
-		log.Fatalf("error generating block: %v", err)
+		return "", "", fmt.Errorf("error generating block: %v", err)
 	}
-	if err := pem.Encode(keyOut, key); err != nil {
-		log.Fatalf("failed to write data to %s: %s", keyFile, err)
+	if err := pem.Encode(keyOut, keyBlock); err != nil {
+		return "", "", fmt.Errorf("failed to write data to %s: %s", keyFile, err)
 	}
 	if err := keyOut.Close(); err != nil {
 		return "", "", fmt.Errorf("error closing %s: %s", keyFile, err)

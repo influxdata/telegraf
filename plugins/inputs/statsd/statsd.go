@@ -549,11 +549,11 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 // parser monitors the s.in channel, if there is a packet ready, it parses the
 // packet into statsd strings and then calls parseStatsdLine, which parses a
 // single statsd metric into a struct.
-func (s *Statsd) parser() {
+func (s *Statsd) parser() error {
 	for {
 		select {
 		case <-s.done:
-			return
+			return nil
 		case in := <-s.in:
 			start := time.Now()
 			lines := strings.Split(in.Buffer.String(), "\n")

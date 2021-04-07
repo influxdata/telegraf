@@ -33,7 +33,7 @@ func TestBadProtocol(t *testing.T) {
 	// Error
 	err := c.Gather(&acc)
 	require.Error(t, err)
-	require.Equal(t, "Bad protocol", err.Error())
+	require.Equal(t, "bad protocol", err.Error())
 }
 
 func TestNoPort(t *testing.T) {
@@ -44,7 +44,7 @@ func TestNoPort(t *testing.T) {
 	}
 	err := c.Gather(&acc)
 	require.Error(t, err)
-	require.Equal(t, "Bad port", err.Error())
+	require.Equal(t, "bad port", err.Error())
 }
 
 func TestAddressOnly(t *testing.T) {
@@ -74,10 +74,10 @@ func TestSendExpectStrings(t *testing.T) {
 	}
 	err := tc.Gather(&acc)
 	require.Error(t, err)
-	require.Equal(t, "Send string cannot be empty", err.Error())
+	require.Equal(t, "send string cannot be empty", err.Error())
 	err = uc.Gather(&acc)
 	require.Error(t, err)
-	require.Equal(t, "Expected string cannot be empty", err.Error())
+	require.Equal(t, "expected string cannot be empty", err.Error())
 }
 
 func TestTCPError(t *testing.T) {
@@ -163,7 +163,7 @@ func TestTCPOK2(t *testing.T) {
 	}
 	// Start TCP server
 	wg.Add(1)
-	go TCPServer(&wg)
+	go TCPServer(t, &wg)
 	wg.Wait()
 	wg.Add(1)
 
@@ -243,7 +243,7 @@ func TestUDPOK1(t *testing.T) {
 	}
 	// Start UDP server
 	wg.Add(1)
-	go UDPServer(&wg)
+	go UDPServer(t, &wg)
 	wg.Wait()
 	wg.Add(1)
 

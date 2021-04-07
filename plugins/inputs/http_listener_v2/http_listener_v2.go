@@ -343,7 +343,7 @@ func methodNotAllowed(res http.ResponseWriter) error {
 	return err
 }
 
-func badRequest(res http.ResponseWriter) {
+func badRequest(res http.ResponseWriter) error {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusBadRequest)
 	_, err := res.Write([]byte(`{"error":"http: bad request"}`))

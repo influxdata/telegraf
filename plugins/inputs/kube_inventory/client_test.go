@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/stretchr/testify/require"
 )
 
 type mockHandler struct {

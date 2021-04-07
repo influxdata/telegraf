@@ -1298,7 +1298,7 @@ func prepareAddr(t *testing.T, ts *httptest.Server) (*url.URL, string, string) {
 
 func prepareEndpoint(t *testing.T, path string, payload string) (*httptest.Server, *NginxPlusAPI) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, r.URL.Path, fmt.Sprintf("/api/%d/%s", apiVersion, path), "unknown request path")
+		require.Equal(t, r.URL.Path, fmt.Sprintf("/api/%d/%s", defaultAPIVersion, path), "unknown request path")
 
 		w.Header()["Content-Type"] = []string{"application/json"}
 		_, err := fmt.Fprintln(w, payload)

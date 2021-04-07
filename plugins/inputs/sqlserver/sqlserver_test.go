@@ -200,6 +200,7 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 
 	// acc1 should have the health metric because it is specified in the config
 	var acc1 testutil.Accumulator
+	require.NoError(t, s1.Start(&acc1))
 	require.NoError(t, s1.Gather(&acc1))
 	require.True(t, acc1.HasMeasurement(healthMetricName))
 
@@ -229,13 +230,10 @@ func TestSqlServer_MultipleInit(t *testing.T) {
 
 	require.NoError(t, initQueries(s))
 	_, ok := s.queries["DatabaseSize"]
-	// acc includes size metrics
-	assert.True(t, ok)
 	require.True(t, ok)
 
 	require.NoError(t, initQueries(s2))
 	_, ok = s2.queries["DatabaseSize"]
-	// acc2 excludes size metrics
 	require.False(t, ok)
 	s.Stop()
 	s2.Stop()
@@ -291,7 +289,7 @@ func TestSqlServer_ConnectionString(t *testing.T) {
 
 	connectionString = "invalid connection string"
 	sqlInstance, database = getConnectionIdentifiers(connectionString)
-	require.Equal(t, emptySqlInstance, sqlInstance)
+	require.Equal(t, emptySQLInstance, sqlInstance)
 	require.Equal(t, emptyDatabaseName, database)
 
 	// Key/value format
@@ -317,7 +315,7 @@ func TestSqlServer_ConnectionString(t *testing.T) {
 
 	connectionString = "invalid connection string"
 	sqlInstance, database = getConnectionIdentifiers(connectionString)
-	require.Equal(t, emptySqlInstance, sqlInstance)
+	require.Equal(t, emptySQLInstance, sqlInstance)
 	require.Equal(t, emptyDatabaseName, database)
 }
 
