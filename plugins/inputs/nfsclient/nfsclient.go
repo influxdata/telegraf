@@ -194,7 +194,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 		acc.AddFields("nfsstat", fields, tags)
 	}
 
-	if fullstat {
+	if n.Fullstat {
 		switch first {
 		case "events":
 			if len(nline) >= len(eventsFields) {

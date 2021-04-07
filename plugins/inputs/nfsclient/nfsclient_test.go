@@ -23,7 +23,7 @@ func getMountStatsPath() string {
 func TestNFSClientParsev3(t *testing.T) {
 	var acc testutil.Accumulator
 
-	nfsclient := NFSClient{}
+	nfsclient := NFSClient{Fullstat: true}
 	nfsclient.nfs3Ops = map[string]bool{"READLINK": true, "GETATTR": false}
 	nfsclient.nfs4Ops = map[string]bool{"READLINK": true, "GETATTR": false}
 	data := strings.Fields("         READLINK: 500 501 502 503 504 505 506 507")
@@ -40,13 +40,13 @@ func TestNFSClientParsev3(t *testing.T) {
 		"response_time": uint64(506),
 		"total_time":    uint64(507),
 	}
-	acc.AssertContainsFields(t, "nfs_ops", fields_ops)
+	acc.AssertContainsFields(t, "nfs_ops", fieldsOps)
 }
 
 func TestNFSClientParsev4(t *testing.T) {
 	var acc testutil.Accumulator
 
-	nfsclient := NFSClient{}
+	nfsclient := NFSClient{Fullstat: true}
 	nfsclient.nfs3Ops = map[string]bool{"DESTROY_SESSION": true, "GETATTR": false}
 	nfsclient.nfs4Ops = map[string]bool{"DESTROY_SESSION": true, "GETATTR": false}
 	data := strings.Fields("    DESTROY_SESSION: 500 501 502 503 504 505 506 507")
@@ -86,7 +86,7 @@ func TestNFSClientParseLargeValue(t *testing.T) {
 		"response_time": uint64(134),
 		"total_time":    uint64(197),
 	}
-	acc.AssertContainsFields(t, "nfs_ops", fields_ops)
+	acc.AssertContainsFields(t, "nfs_ops", fieldsOps)
 }
 
 func TestNFSClientProcessStat(t *testing.T) {
@@ -117,7 +117,7 @@ func TestNFSClientProcessStat(t *testing.T) {
 		"operation":    "READ",
 	}
 
-	acc.AssertContainsTaggedFields(t, "nfsstat", fields_readstat, read_tags)
+	acc.AssertContainsTaggedFields(t, "nfsstat", fieldsReadstat, read_tags)
 
 	fieldsWritestat := map[string]interface{}{
 		"ops":     uint64(700),
@@ -132,7 +132,7 @@ func TestNFSClientProcessStat(t *testing.T) {
 		"mountpoint":   "/A",
 		"operation":    "WRITE",
 	}
-	acc.AssertContainsTaggedFields(t, "nfsstat", fields_writestat, write_tags)
+	acc.AssertContainsTaggedFields(t, "nfsstat", fieldsWritestat, write_tags)
 }
 
 func TestNFSClientProcessFull(t *testing.T) {
@@ -200,7 +200,7 @@ func TestNFSClientProcessFull(t *testing.T) {
 		"backlogutil":   uint64(0),
 	}
 
-	acc.AssertContainsFields(t, "nfs_events", fields_events)
-	acc.AssertContainsFields(t, "nfs_bytes", fields_bytes)
-	acc.AssertContainsFields(t, "nfs_xprt_tcp", fields_xprt_tcp)
+	acc.AssertContainsFields(t, "nfs_events", fieldsEvents)
+	acc.AssertContainsFields(t, "nfs_bytes", fieldsBytes)
+	acc.AssertContainsFields(t, "nfs_xprt_tcp", fieldsXprtTCP)
 }
