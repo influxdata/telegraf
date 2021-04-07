@@ -93,8 +93,8 @@ func evalStatusLine(deviceLine, statusLine string) (active, total, size int64, e
 func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, finish float64, speed float64, err error) {
 	// Get count of completed vs. total blocks
 	matches := recoveryLineBlocksRE.FindStringSubmatch(recoveryLine)
-	if len(matches) != 1 {
-		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine: %s", recoveryLine)
+	if len(matches) != 2 {
+		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine matching syncedBlocks: %s", recoveryLine)
 	}
 	syncedBlocks, err = strconv.ParseInt(matches[1], 10, 64)
 	if err != nil {
@@ -103,30 +103,30 @@ func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, fin
 
 	// Get percentage complete
 	matches = recoveryLinePctRE.FindStringSubmatch(recoveryLine)
-	if len(matches) != 1 {
-		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine: %s", recoveryLine)
+	if len(matches) != 2 {
+		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine matching percentage: %s", recoveryLine)
 	}
-	pct, err = strconv.ParseFloat(matches[0], 64)
+	pct, err = strconv.ParseFloat(matches[1], 64)
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
 	}
 
 	// Get time expected left to complete
 	matches = recoveryLineFinishRE.FindStringSubmatch(recoveryLine)
-	if len(matches) != 1 {
-		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine: %s", recoveryLine)
+	if len(matches) != 2 {
+		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine matching est. finish time: %s", recoveryLine)
 	}
-	finish, err = strconv.ParseFloat(matches[0], 64)
+	finish, err = strconv.ParseFloat(matches[1], 64)
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
 	}
 
 	// Get recovery speed
 	matches = recoveryLineSpeedRE.FindStringSubmatch(recoveryLine)
-	if len(matches) != 1 {
-		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine: %s", recoveryLine)
+	if len(matches) != 2 {
+		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine matching speed: %s", recoveryLine)
 	}
-	speed, err = strconv.ParseFloat(matches[0], 64)
+	speed, err = strconv.ParseFloat(matches[1], 64)
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
 	}
