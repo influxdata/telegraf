@@ -92,7 +92,7 @@ func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, fin
 	if len(matches) != 1 {
 		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine: %s", recoveryLine)
 	}
-	pct, err = strconv.ParseFloat(matches[0], 10, 64)
+	pct, err = strconv.ParseFloat(matches[0], 64)
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
 	}
@@ -102,7 +102,7 @@ func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, fin
 	if len(matches) != 1 {
 		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine: %s", recoveryLine)
 	}
-	finish, err = strconv.ParseFloat(matches[0], 10, 64)
+	finish, err = strconv.ParseFloat(matches[0], 64)
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
 	}
@@ -112,7 +112,7 @@ func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, fin
 	if len(matches) != 1 {
 		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine: %s", recoveryLine)
 	}
-	speed, err = strconv.ParseFloat(matches[0], 10, 64)
+	speed, err = strconv.ParseFloat(matches[0], 64)
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
 	}
@@ -120,7 +120,7 @@ func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, fin
 	return syncedBlocks, pct, finish, speed, nil
 }
 
-func evalComponentDevices(deviceFields []string) []string {
+func evalComponentDevices(deviceFields []string) string {
 	mdComponentDevices := make([]string, 0)
 	if len(deviceFields) > 3 {
 		for _, field := range deviceFields[4:] {
@@ -133,7 +133,8 @@ func evalComponentDevices(deviceFields []string) []string {
 	}
 
 	// Ensure no churn on tag ordering change
-	return strings.Join(sort.Strings(mdComponentDevices), ",")
+	sort.Strings(mdComponentDevices)
+	return strings.Join(mdComponentDevices, ",")
 }
 
 func (k *mdadmStat) Gather(acc telegraf.Accumulator) error {
@@ -141,20 +142,20 @@ func (k *mdadmStat) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	lines = strings.Split(string(data), "\n")
+	lines := strings.Split(string(data), "\n")
 	for i, line := range lines {
 		if strings.TrimSpace(line) == "" || line[0] == ' ' || strings.HasPrefix(line, "Personalities") || strings.HasPrefix(line, "unused") {
 			continue
 		}
 		deviceFields := strings.Fields(line)
 		if len(deviceFields) < 3 {
-			return nil, fmt.Errorf("not enough fields in mdline (expected at least 3): %s", line)
+			return fmt.Errorf("not enough fields in mdline (expected at least 3): %s", line)
 		}
 		mdName := deviceFields[0] // mdx
 		state := deviceFields[2]  // active or inactive
 
 		if len(lines) <= i+3 {
-			return nil, fmt.Errorf("error parsing %q: too few lines for md device", mdName)
+			return fmt.Errorf("error parsing %q: too few lines for md device", mdName)
 		}
 
 		// Failed disks have the suffix (F) & Spare disks have the suffix (S).
@@ -163,7 +164,7 @@ func (k *mdadmStat) Gather(acc telegraf.Accumulator) error {
 
 		active, total, size, err := evalStatusLine(lines[i], lines[i+1])
 		if err != nil {
-			return nil, fmt.Errorf("error parsing md device lines: %w", err)
+			return fmt.Errorf("error parsing md device lines: %w", err)
 		}
 
 		syncLineIdx := i + 2
@@ -197,7 +198,7 @@ func (k *mdadmStat) Gather(acc telegraf.Accumulator) error {
 			} else {
 				syncedBlocks, pct, finish, speed, err = evalRecoveryLine(lines[syncLineIdx])
 				if err != nil {
-					return nil, fmt.Errorf("error parsing sync line in md device %q: %w", mdName, err)
+					return fmt.Errorf("error parsing sync line in md device %q: %w", mdName, err)
 				}
 
 			}
@@ -214,7 +215,7 @@ func (k *mdadmStat) Gather(acc telegraf.Accumulator) error {
 			"BlocksSyncedSpeed": speed,
 		}
 		tags := map[string]string {
-			"Name": mdName
+			"Name": mdName,
 			"ActivityState": state,
 			"Devices": evalComponentDevices(deviceFields),
 		}
