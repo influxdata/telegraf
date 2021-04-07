@@ -166,15 +166,11 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 		deviceFields := strings.Fields(line)
-		if len(deviceFields) < 3 {
+		if len(deviceFields) < 3 || len(lines) <= i+3 {
 			return fmt.Errorf("not enough fields in mdline (expected at least 3): %s", line)
 		}
 		mdName := deviceFields[0] // mdx
 		state := deviceFields[2]  // active or inactive
-
-		if len(lines) <= i+3 {
-			return fmt.Errorf("error parsing %q: too few lines for md device", mdName)
-		}
 
 		// Failed disks have the suffix (F) & Spare disks have the suffix (S).
 		fail := int64(strings.Count(line, "(F)"))
