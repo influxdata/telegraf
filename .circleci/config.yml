@@ -233,7 +233,7 @@ jobs:
     steps:
       - run:
           command: |
-            echo "Tests complete."
+            echo "Go tests complete."
 
   share-artifacts:
     executor: aws-cli/default  
@@ -286,15 +286,13 @@ workflows:
               only: /.*/
       - 'test-awaiter': 
           requires:
-            - 'test-go-windows'
-            - 'test-go-mac'
             - 'test-go-1_15'
             - 'test-go-1_15-386'
             - 'test-go-1_16'
             - 'test-go-1_16-386'
       - 'windows-package':
           requires: 
-            - 'test-awaiter'
+            - 'test-go-windows'
       - 'debian-package':
           requires: 
             - 'test-awaiter'
@@ -303,24 +301,21 @@ workflows:
             - 'test-awaiter'
       - 'mac-package':
           requires: 
-            - 'test-awaiter'
+            - 'test-go-mac'
       - 'freebsd-package':
           requires: 
             - 'test-awaiter'
       - 'linux-package':
           requires: 
             - 'test-awaiter'
-      - 'package-consolidate':
-          requires:
-          - 'windows-package'
-          - 'debian-package'
-          - 'centos-package'
-          - 'mac-package'
-          - 'freebsd-package'
-          - 'linux-package'
       - 'share-artifacts':
           requires:
-            - 'package-consolidate'
+            - 'linux-package'
+            - 'freebsd-package'
+            - 'mac-package'
+            - 'centos-package'
+            - 'debian-package'
+            - 'windows-package'
           filters:
             branches:
               ignore:
@@ -338,6 +333,18 @@ workflows:
               only: /.*/
             branches:
               ignore: /.*/
+      - 'package-sign-windows':
+          requires:
+            - 'release'
+          filters:
+              tags:
+                only: /.*/
+      - 'package-sign-mac':
+           requires:
+             - 'package-sign-windows' 
+           filters:
+              tags:
+                only: /.*/
 
   nightly:
     jobs:
