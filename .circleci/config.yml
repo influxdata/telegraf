@@ -228,6 +228,13 @@ jobs:
       - store_artifacts:
           path: './dist'
           destination: 'build/dist'
+  test-awaiter:
+    executor: go-1_16
+    steps:
+      - run:
+          command: |
+            sh ./scripts/mac-signing.sh
+
   share-artifacts:
     executor: aws-cli/default  
     steps:
@@ -241,12 +248,68 @@ workflows:
   version: 2
   check:
     jobs:
-      - 'windows-package'
-      - 'debian-package'
-      - 'centos-package'
-      - 'mac-package'
-      - 'freebsd-package'
-      - 'linux-package'
+      - 'deps':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_15':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_15-386':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_16':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_16-386':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-mac':
+          filters:
+            tags: # only runs on tags if you specify this filter
+              only: /.*/
+      - 'test-go-windows':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-awaiter': 
+          requires:
+            - 'test-go-windows'
+            - 'test-go-mac'
+            - 'test-go-1_15'
+            - 'test-go-1_15-386'
+            - 'test-go-1_16'
+            - 'test-go-1_16-386'
+      - 'windows-package':
+          requires: 
+            - 'test-awaiter'
+      - 'debian-package':
+          requires: 
+            - 'test-awaiter'
+      - 'centos-package':
+          requires: 
+            - 'test-awaiter'
+      - 'mac-package':
+          requires: 
+            - 'test-awaiter'
+      - 'freebsd-package':
+          requires: 
+            - 'test-awaiter'
+      - 'linux-package':
+          requires: 
+            - 'test-awaiter'
       - 'package-consolidate':
           requires:
           - 'windows-package'
@@ -255,12 +318,27 @@ workflows:
           - 'mac-package'
           - 'freebsd-package'
           - 'linux-package'
-      - 'package-sign-windows':
+      - 'share-artifacts':
           requires:
             - 'package-consolidate'
-      - 'package-sign-mac':
+          filters:
+            branches:
+              ignore:
+                - master
+      - 'release':
           requires:
-            - 'package-consolidate'
+            - 'test-go-windows'
+            - 'test-go-mac'
+            - 'test-go-1_15'
+            - 'test-go-1_15-386'
+            - 'test-go-1_16'
+            - 'test-go-1_16-386'
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
+
   nightly:
     jobs:
       - 'deps'
