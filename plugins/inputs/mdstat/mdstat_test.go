@@ -14,23 +14,23 @@ import (
 func TestFullMdstatProcFile(t *testing.T) {
 	tmpfile := makeFakeMDStatFile([]byte(mdStatFileFull))
 	defer os.Remove(tmpfile)
-	k := MdstatConf {
+	k := MdstatConf{
 		statFile: tmpfile,
 	}
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
 	assert.NoError(t, err)
 
-	fields := map[string]interface{} {
-		"BlocksSynced":	int64(231299072),
+	fields := map[string]interface{}{
+		"BlocksSynced":           int64(231299072),
 		"BlocksSyncedFinishTime": float64(0),
-		"BlocksSyncedPct": float64(0),
-		"BlocksSyncedSpeed": float64(0),
-		"BlocksTotal": int64(231299072),
-		"DisksActive": int64(2),
-		"DisksFailed": int64(0),
-		"DisksSpare": int64(0),
-		"DisksTotal": int64(2),
+		"BlocksSyncedPct":        float64(0),
+		"BlocksSyncedSpeed":      float64(0),
+		"BlocksTotal":            int64(231299072),
+		"DisksActive":            int64(2),
+		"DisksFailed":            int64(0),
+		"DisksSpare":             int64(0),
+		"DisksTotal":             int64(2),
 	}
 	acc.AssertContainsFields(t, "mdstat", fields)
 }
@@ -39,7 +39,7 @@ func TestInvalidMdStatProcFile1(t *testing.T) {
 	tmpfile := makeFakeVMStatFile([]byte(mdStatFileInvalid))
 	defer os.Remove(tmpfile)
 
-	k := MdstatConf {
+	k := MdstatConf{
 		statFile: tmpfile,
 	}
 

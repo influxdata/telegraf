@@ -31,12 +31,12 @@ import (
 )
 
 var (
-	statusLineRE      = regexp.MustCompile(`(\d+) blocks .*\[(\d+)/(\d+)\] \[[U_]+\]`)
+	statusLineRE         = regexp.MustCompile(`(\d+) blocks .*\[(\d+)/(\d+)\] \[[U_]+\]`)
 	recoveryLineBlocksRE = regexp.MustCompile(`\((\d+)/\d+\)`)
-	recoveryLinePctRE = regexp.MustCompile(`= (.+)%`)
+	recoveryLinePctRE    = regexp.MustCompile(`= (.+)%`)
 	recoveryLineFinishRE = regexp.MustCompile(`finish=(.+)\w`)
-	recoveryLineSpeedRE = regexp.MustCompile(`speed=(.+)[A-Z]`)
-	componentDeviceRE = regexp.MustCompile(`(.*)\[\d+\]`)
+	recoveryLineSpeedRE  = regexp.MustCompile(`speed=(.+)[A-Z]`)
+	componentDeviceRE    = regexp.MustCompile(`(.*)\[\d+\]`)
 )
 
 type MdstatConf struct {
@@ -218,21 +218,21 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 
 			}
 		}
-		fields := map[string]interface{} {
-			"DisksActive": active,
-			"DisksFailed": fail,
-			"DisksSpare": spare,
-			"DisksTotal": total,
-			"BlocksTotal": size,
-			"BlocksSynced": syncedBlocks,
-			"BlocksSyncedPct": pct,
+		fields := map[string]interface{}{
+			"DisksActive":            active,
+			"DisksFailed":            fail,
+			"DisksSpare":             spare,
+			"DisksTotal":             total,
+			"BlocksTotal":            size,
+			"BlocksSynced":           syncedBlocks,
+			"BlocksSyncedPct":        pct,
 			"BlocksSyncedFinishTime": finish,
-			"BlocksSyncedSpeed": speed,
+			"BlocksSyncedSpeed":      speed,
 		}
-		tags := map[string]string {
-			"Name": mdName,
+		tags := map[string]string{
+			"Name":          mdName,
 			"ActivityState": state,
-			"Devices": evalComponentDevices(deviceFields),
+			"Devices":       evalComponentDevices(deviceFields),
 		}
 		acc.AddFields("mdstat", fields, tags)
 	}
