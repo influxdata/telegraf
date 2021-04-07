@@ -58,7 +58,7 @@ commands:
       - unless:
           condition: << parameters.nightly >>
           steps:
-            - run: '<< parameters.type >> make package'
+            - run: '<< parameters.type >>=1 make package'
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
@@ -172,6 +172,16 @@ jobs:
     steps:
       - package:
           nightly: true
+  package:
+    executor:
+        name: win/default
+        shell: powershell.exe
+    steps:
+      - attach_workspace:
+          at: '/build'
+      - store_artifacts:
+          path: './build/dist'
+          destination: 'build/dist'
   package-sign-windows:
     executor:
         name: win/default
@@ -229,6 +239,14 @@ workflows:
       - 'mac-package'
       - 'freebsd-package'
       - 'linux-package'
+      - 'package':
+          requires:
+          - 'windows-package'
+          - 'debian-package'
+          - 'centos-package'
+          - 'mac-package'
+          - 'freebsd-package'
+          - 'linux-package'
   nightly:
     jobs:
       - 'deps'
