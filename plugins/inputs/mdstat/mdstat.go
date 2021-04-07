@@ -93,7 +93,7 @@ func evalStatusLine(deviceLine, statusLine string) (active, total, size int64, e
 func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, finish float64, speed float64, err error) {
 	// Get count of completed vs. total blocks
 	matches := recoveryLineBlocksRE.FindStringSubmatch(recoveryLine)
-	if len(matches) != 2 {
+	if len(matches) != 1 {
 		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine: %s", recoveryLine)
 	}
 	syncedBlocks, err = strconv.ParseInt(matches[1], 10, 64)
