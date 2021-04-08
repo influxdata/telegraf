@@ -102,7 +102,9 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	n.cancel = cancel
 
-	n.connect()
+	if err := n.connect(); err != nil {
+		return err
+	}
 	n.consumer.SetLogger(&logger{log: n.Log}, nsq.LogLevelInfo)
 	n.consumer.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
 		metrics, err := n.parser.Parse(message.Body)
@@ -133,9 +135,15 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 	}))
 
 	if len(n.Nsqlookupd) > 0 {
-		n.consumer.ConnectToNSQLookupds(n.Nsqlookupd)
+		err := n.consumer.ConnectToNSQLookupds(n.Nsqlookupd)
+		if err != nil && err != nsq.ErrAlreadyConnected {
+			return err
+		}
 	}
-	n.consumer.ConnectToNSQDs(append(n.Nsqd, n.Server))
+	err := n.consumer.ConnectToNSQDs(append(n.Nsqd, n.Server))
+	if err != nil && err != nsq.ErrAlreadyConnected {
+		return err
+	}
 
 	n.wg.Add(1)
 	go func() {

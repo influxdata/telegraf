@@ -77,7 +77,9 @@ func (rsl *riemannListener) listen(ctx context.Context) {
 
 			if rsl.ReadBufferSize.Size > 0 {
 				if srb, ok := c.(setReadBufferer); ok {
-					srb.SetReadBuffer(int(rsl.ReadBufferSize.Size))
+					if err := srb.SetReadBuffer(int(rsl.ReadBufferSize.Size)); err != nil {
+						rsl.Log.Warnf("Setting read buffer failed: %v", err)
+					}
 				} else {
 					rsl.Log.Warnf("Unable to set read buffer on a %s socket", rsl.sockType)
 				}
@@ -86,7 +88,9 @@ func (rsl *riemannListener) listen(ctx context.Context) {
 			rsl.connectionsMtx.Lock()
 			if rsl.MaxConnections > 0 && len(rsl.connections) >= rsl.MaxConnections {
 				rsl.connectionsMtx.Unlock()
-				c.Close()
+				if err := c.Close(); err != nil {
+					rsl.Log.Warnf("Closing the connection failed: %v", err)
+				}
 				continue
 			}
 			rsl.connections[c.RemoteAddr().String()] = c
@@ -110,7 +114,9 @@ func (rsl *riemannListener) listen(ctx context.Context) {
 func (rsl *riemannListener) closeAllConnections() {
 	rsl.connectionsMtx.Lock()
 	for _, c := range rsl.connections {
-		c.Close()
+		if err := c.Close(); err != nil {
+			rsl.Log.Warnf("Closing the connection failed: %v", err.Error())
+		}
 	}
 	rsl.connectionsMtx.Unlock()
 }
@@ -170,7 +176,9 @@ func (rsl *riemannListener) read(conn net.Conn) {
 
 	for {
 		if rsl.ReadTimeout != nil && rsl.ReadTimeout.Duration > 0 {
-			conn.SetDeadline(time.Now().Add(rsl.ReadTimeout.Duration))
+			if err := conn.SetDeadline(time.Now().Add(rsl.ReadTimeout.Duration)); err != nil {
+				rsl.Log.Warnf("Setting deadline failed: %v", err)
+			}
 		}
 
 		messagePb := &riemangoProto.Msg{}
@@ -278,7 +286,7 @@ func (rsl *RiemannSocketListener) Description() string {
 
 func (rsl *RiemannSocketListener) SampleConfig() string {
 	return `
-  ## URL to listen on. 
+  ## URL to listen on.
   ## Default is "tcp://:5555"
   # service_address = "tcp://:8094"
   # service_address = "tcp://127.0.0.1:http"

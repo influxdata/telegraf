@@ -53,7 +53,7 @@ type ObjectType string
 var sampleConfig = `
   ## Required Icinga2 server address
   # server = "https://localhost:5665"
-  
+
   ## Required Icinga2 object type ("services" or "hosts")
   # object_type = "services"
 
@@ -171,7 +171,7 @@ func (i *Icinga2) Gather(acc telegraf.Accumulator) error {
 	defer resp.Body.Close()
 
 	result := Result{}
-	json.NewDecoder(resp.Body).Decode(&result)
+	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		return err
 	}

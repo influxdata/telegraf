@@ -311,7 +311,8 @@ func (n *Tengine) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 		acc.AddFields("tengine", fields, tags)
 	}
 
-	return nil
+	// Return the potential error of the loop-read
+	return err
 }
 
 // Get tag(s) for the tengine plugin

@@ -213,7 +213,9 @@ func (m *Mcrouter) gatherServer(ctx context.Context, address string, acc telegra
 	deadline, ok := ctx.Deadline()
 
 	if ok {
-		conn.SetDeadline(deadline)
+		if err := conn.SetDeadline(deadline); err != nil {
+			return err
+		}
 	}
 
 	// Read and write buffer

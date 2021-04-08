@@ -396,9 +396,7 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 
 	defer resp.Body.Close()
 
-	json.NewDecoder(resp.Body).Decode(target)
-
-	return nil
+	return json.NewDecoder(resp.Body).Decode(target)
 }
 
 func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {

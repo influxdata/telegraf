@@ -185,7 +185,9 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if tlsConfig != nil {
-		mysql.RegisterTLSConfig("custom", tlsConfig)
+		if err := mysql.RegisterTLSConfig("custom", tlsConfig); err != nil {
+			return err
+		}
 	}
 
 	var wg sync.WaitGroup
@@ -453,7 +455,7 @@ const (
 			sum_sort_rows,
 			sum_sort_scan,
 			sum_no_index_used,
-			sum_no_good_index_used 
+			sum_no_good_index_used
 		FROM performance_schema.events_statements_summary_by_account_by_event_name
 	`
 )

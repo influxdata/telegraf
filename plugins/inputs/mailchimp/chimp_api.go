@@ -76,7 +76,9 @@ func (e APIError) Error() string {
 
 func chimpErrorCheck(body []byte) error {
 	var e APIError
-	json.Unmarshal(body, &e)
+	if err := json.Unmarshal(body, &e); err != nil {
+		return err
+	}
 	if e.Title != "" || e.Status != 0 {
 		return e
 	}

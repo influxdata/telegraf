@@ -133,6 +133,8 @@ func (t *TCPListener) Stop() {
 	t.Lock()
 	defer t.Unlock()
 	close(t.done)
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	t.listener.Close()
 
 	// Close all open TCP connections
@@ -146,6 +148,8 @@ func (t *TCPListener) Stop() {
 	}
 	t.cleanup.Unlock()
 	for _, conn := range conns {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		conn.Close()
 	}
 
@@ -155,18 +159,19 @@ func (t *TCPListener) Stop() {
 }
 
 // tcpListen listens for incoming TCP connections.
-func (t *TCPListener) tcpListen() error {
+func (t *TCPListener) tcpListen() {
 	defer t.wg.Done()
 
 	for {
 		select {
 		case <-t.done:
-			return nil
+			return
 		default:
 			// Accept connection:
 			conn, err := t.listener.AcceptTCP()
 			if err != nil {
-				return err
+				t.Log.Errorf("accepting TCP connection failed: %v", err)
+				return
 			}
 
 			select {
@@ -188,9 +193,11 @@ func (t *TCPListener) tcpListen() error {
 // refuser refuses a TCP connection
 func (t *TCPListener) refuser(conn *net.TCPConn) {
 	// Tell the connection why we are closing.
+	//nolint:errcheck,revive
 	fmt.Fprintf(conn, "Telegraf maximum concurrent TCP connections (%d)"+
 		" reached, closing.\nYou may want to increase max_tcp_connections in"+
 		" the Telegraf tcp listener configuration.\n", t.MaxTCPConnections)
+	//nolint:errcheck,revive
 	conn.Close()
 	t.Log.Infof("Refused TCP Connection from %s", conn.RemoteAddr())
 	t.Log.Warn("Maximum TCP Connections reached, you may want to adjust max_tcp_connections")
@@ -203,7 +210,9 @@ func (t *TCPListener) handler(conn *net.TCPConn, id string) {
 	// connection cleanup function
 	defer func() {
 		t.wg.Done()
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			t.acc.AddError(err)
+		}
 		// Add one connection potential back to channel when this one closes
 		t.accept <- true
 		t.forget(id)
