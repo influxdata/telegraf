@@ -15,7 +15,7 @@ func TestFullMdstatProcFile(t *testing.T) {
 	tmpfile := makeFakeMDStatFile([]byte(mdStatFileFull))
 	defer os.Remove(tmpfile)
 	k := MdstatConf{
-		statFile: tmpfile,
+		HostProc: "/tmp",
 	}
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
@@ -40,7 +40,7 @@ func TestInvalidMdStatProcFile1(t *testing.T) {
 	defer os.Remove(tmpfile)
 
 	k := MdstatConf{
-		statFile: tmpfile,
+		HostProc: "/tmp",
 	}
 
 	acc := testutil.Accumulator{}
@@ -83,8 +83,8 @@ md0 : active raid1 sdb1[2] sda1[0]
 unused devices: <none>
 `
 
-func makeFakeMDStatFile(content []byte) string {
-	tmpfile, err := ioutil.TempFile("", "mdstat")
+func makeFakeMDStatFile(proc string, content []byte) string {
+	tmpfile, err := ioutil.TempFile("/tmp", "mdstat")
 	if err != nil {
 		panic(err)
 	}
