@@ -47,6 +47,7 @@ type Mysql struct {
 	lastT            time.Time
 	initDone         bool
 	scanIntervalSlow uint32
+	getStatusQuery   string
 }
 
 const sampleConfig = `
@@ -166,6 +167,11 @@ func (m *Mysql) InitMysql() {
 			m.scanIntervalSlow = uint32(interval.Seconds())
 		}
 	}
+	if m.MariadbDialect {
+    	m.getStatusQuery = slaveStatusQueryMariadb
+    } else {
+        m.getStatusQuery = slaveStatusQuery
+    }
 	m.initDone = true
 }
 
@@ -620,11 +626,8 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 	// run query
 	var rows *sql.Rows
 	var err error
-	if m.MariadbDialect {
-		rows, err = db.Query(slaveStatusQueryMariadb)
-	} else {
-		rows, err = db.Query(slaveStatusQuery)
-	}
+
+	rows, err = db.Query(m.getStatusQuery)
 	if err != nil {
 		return err
 	}
@@ -673,6 +676,8 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		}
 		acc.AddFields("mysql", fields, tags)
 
+        // Only the first row is relevant if not all slave-channels should be gathered,
+        // so break here and skip the remaining rows
 		if !m.GatherAllSlaveChannels {
 			break
 		}
