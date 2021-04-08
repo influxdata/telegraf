@@ -13,15 +13,15 @@ import (
 	"google.golang.org/api/option"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 const timeStampFieldName = "timestamp"
 
-var defaultTimeout = internal.Duration{Duration: 5 * time.Second}
+var defaultTimeout = config.Duration(5 * time.Second)
 
-const sampleConfig = `	
+const sampleConfig = `
   ## Credentials File
   credentials_file = "/path/to/service/account/key.json"
 
@@ -43,8 +43,8 @@ type BigQuery struct {
 	Project         string `toml:"project"`
 	Dataset         string `toml:"dataset"`
 
-	Timeout         internal.Duration `toml:"timeout"`
-	ReplaceHyphenTo string            `toml:"replace_hyphen_to"`
+	Timeout         config.Duration `toml:"timeout"`
+	ReplaceHyphenTo string          `toml:"replace_hyphen_to"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -85,7 +85,7 @@ func (s *BigQuery) setUpDefaultClient() error {
 	var credentialsOption option.ClientOption
 
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, s.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
 	defer cancel()
 
 	if s.CredentialsFile != "" {
@@ -205,7 +205,7 @@ func valueToBqType(v interface{}) bigquery.FieldType {
 
 func (s *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSaver) {
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, s.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
 	defer cancel()
 
 	tableName := s.metricToTable(metricName)
