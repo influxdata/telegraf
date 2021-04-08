@@ -42,7 +42,7 @@ func TestSuricataLarge(t *testing.T) {
 
 	c, err := net.Dial("unix", tmpfn)
 	require.NoError(t, err)
-	_, err = c.Write([]byte(data))
+	_, err = c.Write(data)
 	require.NoError(t, err)
 	_, err = c.Write([]byte("\n"))
 	require.NoError(t, err)

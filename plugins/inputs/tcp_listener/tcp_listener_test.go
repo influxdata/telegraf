@@ -61,7 +61,7 @@ func BenchmarkTCP(b *testing.B) {
 		conn, err := net.Dial("tcp", "127.0.0.1:8198")
 		require.NoError(b, err)
 		for i := 0; i < 100000; i++ {
-			_, err := fmt.Fprintf(conn, testMsg)
+			_, err := fmt.Fprint(conn, testMsg)
 			require.NoError(b, err)
 		}
 		require.NoError(b, conn.(*net.TCPConn).CloseWrite())
@@ -90,7 +90,7 @@ func TestHighTrafficTCP(t *testing.T) {
 	conn, err := net.Dial("tcp", "127.0.0.1:8199")
 	require.NoError(t, err)
 	for i := 0; i < 100000; i++ {
-		_, err := fmt.Fprintf(conn, testMsg)
+		_, err := fmt.Fprint(conn, testMsg)
 		require.NoError(t, err)
 	}
 	require.NoError(t, conn.(*net.TCPConn).CloseWrite())
@@ -119,7 +119,7 @@ func TestConnectTCP(t *testing.T) {
 	require.NoError(t, err)
 
 	// send single message to socket
-	_, err = fmt.Fprintf(conn, testMsg)
+	_, err = fmt.Fprint(conn, testMsg)
 	require.NoError(t, err)
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
@@ -128,7 +128,7 @@ func TestConnectTCP(t *testing.T) {
 	)
 
 	// send multiple messages to socket
-	_, err = fmt.Fprintf(conn, testMsgs)
+	_, err = fmt.Fprint(conn, testMsgs)
 	require.NoError(t, err)
 	acc.Wait(6)
 	hostTags := []string{"server02", "server03",

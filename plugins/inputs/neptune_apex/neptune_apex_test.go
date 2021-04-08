@@ -362,7 +362,7 @@ func TestParseXML(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			err := n.parseXML(&acc, []byte(test.xmlResponse))
+			err := n.parseXML(&acc, test.xmlResponse)
 			if test.wantErr {
 				require.Error(t, err, "expected error but got <nil>")
 				return

@@ -93,7 +93,7 @@ func TestConnectUDP(t *testing.T) {
 	require.NoError(t, err)
 
 	// send single message to socket
-	_, err = fmt.Fprintf(conn, testMsg)
+	_, err = fmt.Fprint(conn, testMsg)
 	require.NoError(t, err)
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
@@ -102,7 +102,7 @@ func TestConnectUDP(t *testing.T) {
 	)
 
 	// send multiple messages to socket
-	_, err = fmt.Fprintf(conn, testMsgs)
+	_, err = fmt.Fprint(conn, testMsgs)
 	require.NoError(t, err)
 	acc.Wait(6)
 	hostTags := []string{"server02", "server03",

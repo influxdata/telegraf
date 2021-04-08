@@ -202,12 +202,12 @@ func (n *mockNSQD) handle(conn net.Conn) {
 			}
 			buf, err := framedResponse(inst.frameType, inst.body)
 			if err != nil {
-				log.Printf(err.Error())
+				log.Print(err.Error())
 				goto exit
 			}
 			_, err = conn.Write(buf)
 			if err != nil {
-				log.Printf(err.Error())
+				log.Print(err.Error())
 				goto exit
 			}
 			scriptTime = time.After(n.script[idx+1].delay)
