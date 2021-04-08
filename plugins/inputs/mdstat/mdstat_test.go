@@ -87,7 +87,4 @@ func makeFakeMDStatFile(content []byte) {
 	if err := ioutil.WriteFile("tmp/mdstat", content, 0666); err != nil {
 		panic(err)
 	}
-	if err := tmpfile.Close(); err != nil {
-		panic(err)
-	}
 }
