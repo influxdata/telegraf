@@ -5,7 +5,6 @@ package mdstat
 import (
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -14,7 +13,7 @@ import (
 
 func TestFullMdstatProcFile(t *testing.T) {
 	tmpfile := makeFakeMDStatFile([]byte(mdStatFileFull))
-	defer os.Remove(tmpfile)
+	defer os.Remove("tmp/mdstat")
 	k := MdstatConf{
 		HostProc: "tmp",
 	}
@@ -38,7 +37,7 @@ func TestFullMdstatProcFile(t *testing.T) {
 
 func TestInvalidMdStatProcFile1(t *testing.T) {
 	tmpfile := makeFakeMDStatFile([]byte(mdStatFileInvalid))
-	defer os.Remove(tmpfile)
+	defer os.Remove("tmp/mdstat")
 
 	k := MdstatConf{
 		HostProc: "tmp",
@@ -84,13 +83,11 @@ md0 : active raid1 sdb1[2] sda1[0]
 unused devices: <none>
 `
 
-func makeFakeMDStatFile(content []byte) string {
+func makeFakeMDStatFile(content []byte) {
 	if _, err := ioutil.WriteFile("tmp/mdstat", content, 0666); err != nil {
 		panic(err)
 	}
 	if err := tmpfile.Close(); err != nil {
 		panic(err)
 	}
-
-	return tmpfile.Name()
 }
