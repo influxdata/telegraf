@@ -85,12 +85,7 @@ unused devices: <none>
 `
 
 func makeFakeMDStatFile(content []byte) string {
-	dir, err := ioutil.TempDir("", "")
-	if err != nil {
-		panic(err)
-	}
-	tmpfn := filepath.Join(dir, "mdstat")
-	if _, err := ioutil.WriteFile(tmpfn, content, 0666); err != nil {
+	if _, err := ioutil.WriteFile("tmp/mdstat", content, 0666); err != nil {
 		panic(err)
 	}
 	if err := tmpfile.Close(); err != nil {
