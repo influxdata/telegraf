@@ -168,10 +168,10 @@ func (m *Mysql) InitMysql() {
 		}
 	}
 	if m.MariadbDialect {
-    	m.getStatusQuery = slaveStatusQueryMariadb
-    } else {
-        m.getStatusQuery = slaveStatusQuery
-    }
+		m.getStatusQuery = slaveStatusQueryMariadb
+	} else {
+		m.getStatusQuery = slaveStatusQuery
+	}
 	m.initDone = true
 }
 
@@ -676,8 +676,8 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		}
 		acc.AddFields("mysql", fields, tags)
 
-        // Only the first row is relevant if not all slave-channels should be gathered,
-        // so break here and skip the remaining rows
+		// Only the first row is relevant if not all slave-channels should be gathered,
+		// so break here and skip the remaining rows
 		if !m.GatherAllSlaveChannels {
 			break
 		}
