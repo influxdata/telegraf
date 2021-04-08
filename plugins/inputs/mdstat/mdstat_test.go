@@ -5,6 +5,7 @@ package mdstat
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -84,12 +85,12 @@ unused devices: <none>
 `
 
 func makeFakeMDStatFile(content []byte) string {
-	tmpfile, err := ioutil.TempFile("tmp", "mdstat")
+	dir, err := ioutil.TempDir("", "")
 	if err != nil {
 		panic(err)
 	}
-
-	if _, err := tmpfile.Write(content); err != nil {
+	tmpfn := filepath.Join(dir, "mdstat")
+	if _, err := ioutil.WriteFile(tmpfn, content, 0666); err != nil {
 		panic(err)
 	}
 	if err := tmpfile.Close(); err != nil {
