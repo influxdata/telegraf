@@ -30,6 +30,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+const (
+	defaultHostProc = "/proc"
+	envProc         = "HOST_PROC"
+)
+
 var (
 	statusLineRE         = regexp.MustCompile(`(\d+) blocks .*\[(\d+)/(\d+)\] \[[U_]+\]`)
 	recoveryLineBlocksRE = regexp.MustCompile(`\((\d+)/\d+\)`)
@@ -40,7 +45,7 @@ var (
 )
 
 type MdstatConf struct {
-	statFile string
+	HostProc string `toml:"host_proc"`
 }
 
 func (k *MdstatConf) Description() string {
@@ -48,7 +53,9 @@ func (k *MdstatConf) Description() string {
 }
 
 var mdSampleConfig = `
-	## No configuration required for this collector
+	## Sets 'proc' directory path
+	## If not specified, then default is /proc
+	# host_proc = "/proc"
 `
 
 func (k *MdstatConf) SampleConfig() string {
@@ -239,13 +246,19 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 }
 
 func (k *MdstatConf) getProcMdstat() ([]byte, error) {
-	if _, err := os.Stat(k.statFile); os.IsNotExist(err) {
-		return nil, fmt.Errorf("mdstat: %s does not exist", k.statFile)
+	var mdStatFile string
+	if k.HostProc == "" {
+		mdStatFile = proc(envProc, defaultHostProc) + "/mdstat"
+	} else {
+		mdStatFile = k.HostProc + "/mdstat"
+	}
+	if _, err := os.Stat(mdStatFile); os.IsNotExist(err) {
+		return nil, fmt.Errorf("mdstat: %s does not exist", mdStatFile)
 	} else if err != nil {
 		return nil, err
 	}
 
-	data, err := ioutil.ReadFile(k.statFile)
+	data, err := ioutil.ReadFile(mdStatFile)
 	if err != nil {
 		return nil, err
 	}
@@ -254,9 +267,15 @@ func (k *MdstatConf) getProcMdstat() ([]byte, error) {
 }
 
 func init() {
-	inputs.Add("mdstat", func() telegraf.Input {
-		return &MdstatConf{
-			statFile: "/proc/mdstat",
-		}
-	})
+	inputs.Add("mdstat", func() telegraf.Input { return &MdstatConf{} })
+}
+
+// proc can be used to read file paths from env
+func proc(env, path string) string {
+	// try to read full file path
+	if p := os.Getenv(env); p != "" {
+		return p
+	}
+	// return default path
+	return path
 }
