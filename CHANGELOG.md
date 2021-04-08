@@ -1,3 +1,7 @@
+#### New Outputs
+
+- [otlp](/plugins/outputs/otlp/README.md) - Contributed by @codeboten
+
 ## v1.18.0 [2021-03-17]
 
 #### Release Notes

@@ -444,6 +444,7 @@ For documentation on the latest development code see the [documentation index][d
 * [newrelic](./plugins/outputs/newrelic)
 * [nsq](./plugins/outputs/nsq)
 * [opentsdb](./plugins/outputs/opentsdb)
+* [otlp](./plugins/outputs/otlp) (OpenTelemetry Protocol)
 * [prometheus](./plugins/outputs/prometheus_client)
 * [riemann](./plugins/outputs/riemann)
 * [riemann_legacy](./plugins/outputs/riemann_legacy)
