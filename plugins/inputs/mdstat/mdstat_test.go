@@ -83,7 +83,7 @@ md0 : active raid1 sdb1[2] sda1[0]
 unused devices: <none>
 `
 
-func makeFakeMDStatFile(proc string, content []byte) string {
+func makeFakeMDStatFile(content []byte) string {
 	tmpfile, err := ioutil.TempFile("/tmp", "mdstat")
 	if err != nil {
 		panic(err)
