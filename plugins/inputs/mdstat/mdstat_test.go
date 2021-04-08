@@ -12,7 +12,7 @@ import (
 )
 
 func TestFullMdstatProcFile(t *testing.T) {
-	tmpfile := makeFakeMDStatFile([]byte(mdStatFileFull))
+	makeFakeMDStatFile([]byte(mdStatFileFull))
 	defer os.Remove("tmp/mdstat")
 	k := MdstatConf{
 		HostProc: "tmp",
@@ -36,7 +36,7 @@ func TestFullMdstatProcFile(t *testing.T) {
 }
 
 func TestInvalidMdStatProcFile1(t *testing.T) {
-	tmpfile := makeFakeMDStatFile([]byte(mdStatFileInvalid))
+	makeFakeMDStatFile([]byte(mdStatFileInvalid))
 	defer os.Remove("tmp/mdstat")
 
 	k := MdstatConf{
