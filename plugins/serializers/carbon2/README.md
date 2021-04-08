@@ -21,6 +21,11 @@ The `carbon2` serializer translates the Telegraf metric format to the [Carbon2 f
   ## * "metric_includes_field"
   ## * "" - defaults to "field_separate"
   # carbon2_format = "field_separate"
+
+  ## Character used for replacing sanitized characters. By default ":" is used.
+  ## The following character set is being replaced with sanitize replace char:
+  ## !@#$%^&*()+`'\"[]{};<>,?/\\|=
+  # carbon2_sanitize_replace_char = ":"
 ```
 
 Standard form:
@@ -51,6 +56,17 @@ metric=name_field_1 host=foo  30 1234567890
 metric=name_field_2 host=foo  4 1234567890
 metric=name_field_N host=foo  59 1234567890
 ```
+
+### Metric name sanitization
+
+In order to sanitize the metric name one can specify `carbon2_sanitize_replace_char`
+in order to replace the following characters in the metric name:
+
+```
+!@#$%^&*()+`'\"[]{};<>,?/\\|=
+```
+
+By default they will be replaced with `:`.
 
 ## Metrics
 

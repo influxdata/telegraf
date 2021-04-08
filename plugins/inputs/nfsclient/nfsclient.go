@@ -326,8 +326,7 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	err = n.processText(scanner, acc)
-	if err != nil {
+	if err := n.processText(scanner, acc); err != nil {
 		return err
 	}
 

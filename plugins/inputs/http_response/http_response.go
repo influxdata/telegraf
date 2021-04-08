@@ -308,15 +308,11 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 		h.Log.Debugf("Network error while polling %s: %s", u, err.Error())
 
 		// Get error details
-		netErr := setError(err, fields, tags)
-
-		// If recognize the returned error, get out
-		if netErr != nil {
-			return fields, tags, nil
+		if setError(err, fields, tags) == nil {
+			// Any error not recognized by `set_error` is considered a "connection_failed"
+			setResult("connection_failed", fields, tags)
 		}
 
-		// Any error not recognized by `set_error` is considered a "connection_failed"
-		setResult("connection_failed", fields, tags)
 		return fields, tags, nil
 	}
 

@@ -358,12 +358,14 @@ func testStrictOctetCounting(t *testing.T, protocol string, address string, want
 				require.NoError(t, e)
 				config.ServerName = "localhost"
 				conn, err = tls.Dial(protocol, address, config)
+				require.NotNil(t, conn)
+				require.NoError(t, err)
 			} else {
 				conn, err = net.Dial(protocol, address)
+				require.NotNil(t, conn)
+				require.NoError(t, err)
 				defer conn.Close()
 			}
-			require.NotNil(t, conn)
-			require.NoError(t, err)
 
 			// Clear
 			acc.ClearMetrics()

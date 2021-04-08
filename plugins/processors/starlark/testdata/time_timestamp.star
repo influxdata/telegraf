@@ -1,5 +1,4 @@
-# Example of filtering metrics based on the timestamp. Beware the built-in function from_timestamp
-# only supports timestamps in seconds.
+# Example of filtering metrics based on the timestamp in seconds.
 #
 # Example Input:
 # time result="KO" 1616020365100400201

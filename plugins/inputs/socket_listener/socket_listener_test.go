@@ -140,7 +140,7 @@ func TestSocketListener_unix(t *testing.T) {
 	defer testEmptyLog(t)()
 
 	f, _ := os.Create(sock)
-	f.Close()
+	require.NoError(t, f.Close())
 	sl := newSocketListener()
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "unix://" + sock
@@ -169,7 +169,8 @@ func TestSocketListener_unixgram(t *testing.T) {
 
 	defer testEmptyLog(t)()
 
-	os.Create(sock)
+	_, err = os.Create(sock)
+	require.NoError(t, err)
 	sl := newSocketListener()
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "unixgram://" + sock
@@ -242,9 +243,10 @@ func testSocketListener(t *testing.T, sl *SocketListener, client net.Conn) {
 		require.NoError(t, err)
 	}
 
-	client.Write(mstr12)
-	client.Write(mstr3)
-
+	_, err := client.Write(mstr12)
+	require.NoError(t, err)
+	_, err = client.Write(mstr3)
+	require.NoError(t, err)
 	acc := sl.Accumulator.(*testutil.Accumulator)
 
 	acc.Wait(3)

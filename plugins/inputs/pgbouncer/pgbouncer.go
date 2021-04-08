@@ -170,9 +170,13 @@ func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string,
 	}
 	if columnMap["database"] != nil {
 		// extract the database name from the column map
-		dbname.WriteString((*columnMap["database"]).(string))
+		if _, err := dbname.WriteString((*columnMap["database"]).(string)); err != nil {
+			return nil, nil, err
+		}
 	} else {
-		dbname.WriteString("postgres")
+		if _, err := dbname.WriteString("postgres"); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	var tagAddress string

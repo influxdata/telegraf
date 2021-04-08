@@ -682,6 +682,8 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 				time.Sleep(m.RetriesWaitTime.Duration)
 				continue
 			}
+			// Ignore return error to not shadow the initial error
+			//nolint:errcheck,revive
 			disconnect(m)
 			m.isConnected = false
 			return err
@@ -705,7 +707,9 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Group the data by series
-			grouper.Add(measurement, tags, timestamp, field.Name, field.value)
+			if err := grouper.Add(measurement, tags, timestamp, field.Name, field.value); err != nil {
+				return err
+			}
 		}
 
 		// Add the metrics grouped by series to the accumulator

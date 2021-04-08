@@ -253,14 +253,13 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string
 
-		if r.URL.Path == "/status" {
-			rsp = sampleStatusResponse
-			w.Header()["Content-Type"] = []string{"application/json"}
-		} else {
-			panic("Cannot handle request")
-		}
+		require.Equal(t, r.URL.Path, "/status", "Cannot handle request")
 
-		fmt.Fprintln(w, rsp)
+		rsp = sampleStatusResponse
+		w.Header()["Content-Type"] = []string{"application/json"}
+
+		_, err := fmt.Fprintln(w, rsp)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -271,13 +270,10 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
 	errNginx := n.Gather(&acc)
-
 	require.NoError(t, errNginx)
 
 	addr, err := url.Parse(ts.URL)
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, err)
 
 	host, port, err := net.SplitHostPort(addr.Host)
 	if err != nil {

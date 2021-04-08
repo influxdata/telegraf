@@ -93,9 +93,8 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 }
 
 func isProtobuf(header http.Header) bool {
-	mediatype, params, error := mime.ParseMediaType(header.Get("Content-Type"))
-
-	if error != nil {
+	mediatype, params, err := mime.ParseMediaType(header.Get("Content-Type"))
+	if err != nil {
 		return false
 	}
 

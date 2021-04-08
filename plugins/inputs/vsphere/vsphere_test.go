@@ -224,9 +224,7 @@ func TestParseConfig(t *testing.T) {
 	v := VSphere{}
 	c := v.SampleConfig()
 	p := regexp.MustCompile("\n#")
-	fmt.Printf("Source=%s", p.ReplaceAllLiteralString(c, "\n"))
 	c = configHeader + "\n[[inputs.vsphere]]\n" + p.ReplaceAllLiteralString(c, "\n")
-	fmt.Printf("Source=%s", c)
 	tab, err := toml.Parse([]byte(c))
 	require.NoError(t, err)
 	require.NotNil(t, tab)
@@ -512,7 +510,8 @@ func testCollection(t *testing.T, excludeClusters bool) {
 				// We have to follow the host parent path to locate a cluster. Look up the host!
 				finder := Finder{client}
 				var hosts []mo.HostSystem
-				finder.Find(context.Background(), "HostSystem", "/**/"+hostName, &hosts)
+				err := finder.Find(context.Background(), "HostSystem", "/**/"+hostName, &hosts)
+				require.NoError(t, err)
 				require.NotEmpty(t, hosts)
 				hostMoid = hosts[0].Reference().Value
 				hostCache[hostName] = hostMoid

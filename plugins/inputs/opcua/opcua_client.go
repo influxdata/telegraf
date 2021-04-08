@@ -328,10 +328,18 @@ func newMP(n *Node) metricParts {
 	var sb strings.Builder
 	for i, key := range keys {
 		if i != 0 {
+			// Writes to a string-builder will always succeed
+			//nolint:errcheck,revive
 			sb.WriteString(", ")
 		}
+		// Writes to a string-builder will always succeed
+		//nolint:errcheck,revive
 		sb.WriteString(key)
+		// Writes to a string-builder will always succeed
+		//nolint:errcheck,revive
 		sb.WriteString("=")
+		// Writes to a string-builder will always succeed
+		//nolint:errcheck,revive
 		sb.WriteString(n.metricTags[key])
 	}
 	x := metricParts{
@@ -397,7 +405,9 @@ func Connect(o *OpcUA) error {
 		o.state = Connecting
 
 		if o.client != nil {
-			o.client.CloseSession()
+			if err := o.client.CloseSession(); err != nil {
+				return err
+			}
 		}
 
 		o.client = opcua.NewClient(o.Endpoint, o.opts...)
@@ -515,6 +525,8 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	err := o.getData()
 	if err != nil && o.state == Connected {
 		o.state = Disconnected
+		// Ignore returned error to not mask the original problem
+		//nolint:errcheck,revive
 		disconnect(o)
 		return err
 	}

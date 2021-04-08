@@ -26,7 +26,7 @@ func TestGather(t *testing.T) {
 		run:   fakeVarnishStat(smOutput),
 		Stats: []string{"*"},
 	}
-	v.Gather(acc)
+	assert.NoError(t, v.Gather(acc))
 
 	acc.HasMeasurement("varnish")
 	for tag, fields := range parsedSmOutput {
@@ -42,9 +42,8 @@ func TestParseFullOutput(t *testing.T) {
 		run:   fakeVarnishStat(fullOutput),
 		Stats: []string{"*"},
 	}
-	err := v.Gather(acc)
+	assert.NoError(t, v.Gather(acc))
 
-	assert.NoError(t, err)
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
 	assert.Len(t, acc.Metrics, 6)
@@ -57,9 +56,8 @@ func TestFilterSomeStats(t *testing.T) {
 		run:   fakeVarnishStat(fullOutput),
 		Stats: []string{"MGT.*", "VBE.*"},
 	}
-	err := v.Gather(acc)
+	assert.NoError(t, v.Gather(acc))
 
-	assert.NoError(t, err)
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
 	assert.Len(t, acc.Metrics, 2)
@@ -80,9 +78,8 @@ func TestFieldConfig(t *testing.T) {
 			run:   fakeVarnishStat(fullOutput),
 			Stats: strings.Split(fieldCfg, ","),
 		}
-		err := v.Gather(acc)
+		assert.NoError(t, v.Gather(acc))
 
-		assert.NoError(t, err)
 		acc.HasMeasurement("varnish")
 		flat := flatten(acc.Metrics)
 		assert.Equal(t, expected, len(flat))
@@ -94,7 +91,10 @@ func flatten(metrics []*testutil.Metric) map[string]interface{} {
 	for _, m := range metrics {
 		buf := &bytes.Buffer{}
 		for k, v := range m.Tags {
-			buf.WriteString(fmt.Sprintf("%s=%s", k, v))
+			_, err := buf.WriteString(fmt.Sprintf("%s=%s", k, v))
+			if err != nil {
+				return nil
+			}
 		}
 		for k, v := range m.Fields {
 			flat[fmt.Sprintf("%s %s", buf.String(), k)] = v

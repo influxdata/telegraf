@@ -126,7 +126,9 @@ func checkSignature(secret string, data []byte, signature string) bool {
 
 func generateSignature(secret string, data []byte) string {
 	mac := hmac.New(sha1.New, []byte(secret))
-	mac.Write(data)
+	if _, err := mac.Write(data); err != nil {
+		return err.Error()
+	}
 	result := mac.Sum(nil)
 	return "sha1=" + hex.EncodeToString(result)
 }

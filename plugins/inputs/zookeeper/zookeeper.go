@@ -122,10 +122,14 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 	// Apply deadline to connection
 	deadline, ok := ctx.Deadline()
 	if ok {
-		c.SetDeadline(deadline)
+		if err := c.SetDeadline(deadline); err != nil {
+			return err
+		}
 	}
 
-	fmt.Fprintf(c, "%s\n", "mntr")
+	if _, err := fmt.Fprintf(c, "%s\n", "mntr"); err != nil {
+		return err
+	}
 	rdr := bufio.NewReader(c)
 	scanner := bufio.NewScanner(rdr)
 

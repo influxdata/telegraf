@@ -1388,6 +1388,7 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldString(tbl, "template", &sc.Template)
 	c.getFieldStringSlice(tbl, "templates", &sc.Templates)
 	c.getFieldString(tbl, "carbon2_format", &sc.Carbon2Format)
+	c.getFieldString(tbl, "carbon2_sanitize_replace_char", &sc.Carbon2SanitizeReplaceChar)
 	c.getFieldInt(tbl, "influx_max_line_bytes", &sc.InfluxMaxLineBytes)
 
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
@@ -1449,9 +1450,9 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 
 func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	switch key {
-	case "alias", "carbon2_format", "collectd_auth_file", "collectd_parse_multivalue",
-		"collectd_security_level", "collectd_typesdb", "collection_jitter", "csv_column_names",
-		"csv_column_types", "csv_comment", "csv_delimiter", "csv_header_row_count",
+	case "alias", "carbon2_format", "carbon2_sanitize_replace_char", "collectd_auth_file",
+		"collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb", "collection_jitter",
+		"csv_column_names", "csv_column_types", "csv_comment", "csv_delimiter", "csv_header_row_count",
 		"csv_measurement_column", "csv_skip_columns", "csv_skip_rows", "csv_tag_columns",
 		"csv_timestamp_column", "csv_timestamp_format", "csv_timezone", "csv_trim_space", "csv_skip_values",
 		"data_format", "data_type", "delay", "drop", "drop_original", "dropwizard_metric_registry_path",

@@ -2,7 +2,6 @@ package hddtemp
 
 import (
 	"net"
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,10 +12,7 @@ func TestFetch(t *testing.T) {
 	defer l.Close()
 
 	disks, err := New().Fetch(l.Addr().String())
-
-	if err != nil {
-		t.Error("expecting err to be nil")
-	}
+	require.NoError(t, err)
 
 	expected := []Disk{
 		{
@@ -26,18 +22,12 @@ func TestFetch(t *testing.T) {
 			Unit:        "C",
 		},
 	}
-
-	if !reflect.DeepEqual(expected, disks) {
-		t.Error("disks' slice is different from expected")
-	}
+	require.Equal(t, expected, disks, "disks' slice is different from expected")
 }
 
 func TestFetchWrongAddress(t *testing.T) {
 	_, err := New().Fetch("127.0.0.1:1")
-
-	if err == nil {
-		t.Error("expecting err to be non-nil")
-	}
+	require.Error(t, err)
 }
 
 func TestFetchStatus(t *testing.T) {
@@ -45,10 +35,7 @@ func TestFetchStatus(t *testing.T) {
 	defer l.Close()
 
 	disks, err := New().Fetch(l.Addr().String())
-
-	if err != nil {
-		t.Error("expecting err to be nil")
-	}
+	require.NoError(t, err)
 
 	expected := []Disk{
 		{
@@ -59,10 +46,7 @@ func TestFetchStatus(t *testing.T) {
 			Status:      "SLP",
 		},
 	}
-
-	if !reflect.DeepEqual(expected, disks) {
-		t.Error("disks' slice is different from expected")
-	}
+	require.Equal(t, expected, disks, "disks' slice is different from expected")
 }
 
 func TestFetchTwoDisks(t *testing.T) {
@@ -70,10 +54,7 @@ func TestFetchTwoDisks(t *testing.T) {
 	defer l.Close()
 
 	disks, err := New().Fetch(l.Addr().String())
-
-	if err != nil {
-		t.Error("expecting err to be nil")
-	}
+	require.NoError(t, err)
 
 	expected := []Disk{
 		{
@@ -90,26 +71,20 @@ func TestFetchTwoDisks(t *testing.T) {
 			Status:      "SLP",
 		},
 	}
-
-	if !reflect.DeepEqual(expected, disks) {
-		t.Error("disks' slice is different from expected")
-	}
+	require.Equal(t, expected, disks, "disks' slice is different from expected")
 }
 
 func serve(t *testing.T, data []byte) net.Listener {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	go func(t *testing.T) {
 		conn, err := l.Accept()
-
 		require.NoError(t, err)
 
-		conn.Write(data)
-		conn.Close()
+		_, err = conn.Write(data)
+		require.NoError(t, err)
+		require.NoError(t, conn.Close())
 	}(t)
 
 	return l

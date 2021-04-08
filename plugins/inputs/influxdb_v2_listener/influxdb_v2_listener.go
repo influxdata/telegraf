@@ -210,7 +210,9 @@ func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
 			"started": h.startTime.Format(time.RFC3339Nano),
 			"status":  "ready",
 			"up":      h.timeFunc().Sub(h.startTime).String()})
-		res.Write(b)
+		if _, err := res.Write(b); err != nil {
+			h.Log.Debugf("error writing in handle-ready: %v", err)
+		}
 	}
 }
 
@@ -226,7 +228,9 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		defer h.writesServed.Incr(1)
 		// Check that the content length is not too large for us to handle.
 		if req.ContentLength > h.MaxBodySize.Size {
-			tooLarge(res, h.MaxBodySize.Size)
+			if err := tooLarge(res, h.MaxBodySize.Size); err != nil {
+				h.Log.Debugf("error in too-large: %v", err)
+			}
 			return
 		}
 
@@ -240,7 +244,9 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 			body, err = gzip.NewReader(body)
 			if err != nil {
 				h.Log.Debugf("Error decompressing request body: %v", err.Error())
-				badRequest(res, Invalid, err.Error())
+				if err := badRequest(res, Invalid, err.Error()); err != nil {
+					h.Log.Debugf("error in bad-request: %v", err)
+				}
 				return
 			}
 			defer body.Close()
@@ -252,7 +258,9 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		bytes, readErr = ioutil.ReadAll(body)
 		if readErr != nil {
 			h.Log.Debugf("Error parsing the request body: %v", readErr.Error())
-			badRequest(res, InternalError, readErr.Error())
+			if err := badRequest(res, InternalError, readErr.Error()); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
 			return
 		}
 		metricHandler := influx.NewMetricHandler()
@@ -272,7 +280,9 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 
 		if err != influx.EOF && err != nil {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
-			badRequest(res, Invalid, err.Error())
+			if err := badRequest(res, Invalid, err.Error()); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
 			return
 		}
 
@@ -290,7 +300,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 	}
 }
 
-func tooLarge(res http.ResponseWriter, maxLength int64) {
+func tooLarge(res http.ResponseWriter, maxLength int64) error {
 	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("X-Influxdb-Error", "http: request body too large")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)
@@ -298,10 +308,11 @@ func tooLarge(res http.ResponseWriter, maxLength int64) {
 		"code":      fmt.Sprint(Invalid),
 		"message":   "http: request body too large",
 		"maxLength": fmt.Sprint(maxLength)})
-	res.Write(b)
+	_, err := res.Write(b)
+	return err
 }
 
-func badRequest(res http.ResponseWriter, code BadRequestCode, errString string) {
+func badRequest(res http.ResponseWriter, code BadRequestCode, errString string) error {
 	res.Header().Set("Content-Type", "application/json")
 	if errString == "" {
 		errString = "http: bad request"
@@ -314,7 +325,8 @@ func badRequest(res http.ResponseWriter, code BadRequestCode, errString string) 
 		"op":      "",
 		"err":     errString,
 	})
-	res.Write(b)
+	_, err := res.Write(b)
+	return err
 }
 
 func getPrecisionMultiplier(precision string) time.Duration {

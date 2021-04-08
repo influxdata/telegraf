@@ -49,7 +49,10 @@ func (ssl *streamSocketListener) listen() {
 
 		if ssl.ReadBufferSize.Size > 0 {
 			if srb, ok := c.(setReadBufferer); ok {
-				srb.SetReadBuffer(int(ssl.ReadBufferSize.Size))
+				if err := srb.SetReadBuffer(int(ssl.ReadBufferSize.Size)); err != nil {
+					ssl.Log.Error(err.Error())
+					break
+				}
 			} else {
 				ssl.Log.Warnf("Unable to set read buffer on a %s socket", ssl.sockType)
 			}
@@ -58,6 +61,8 @@ func (ssl *streamSocketListener) listen() {
 		ssl.connectionsMtx.Lock()
 		if ssl.MaxConnections > 0 && len(ssl.connections) >= ssl.MaxConnections {
 			ssl.connectionsMtx.Unlock()
+			// Ignore the returned error as we cannot do anything about it anyway
+			//nolint:errcheck,revive
 			c.Close()
 			continue
 		}
@@ -77,6 +82,8 @@ func (ssl *streamSocketListener) listen() {
 
 	ssl.connectionsMtx.Lock()
 	for _, c := range ssl.connections {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		c.Close()
 	}
 	ssl.connectionsMtx.Unlock()
@@ -120,7 +127,10 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	scnr := bufio.NewScanner(decoder)
 	for {
 		if ssl.ReadTimeout != nil && ssl.ReadTimeout.Duration > 0 {
-			c.SetReadDeadline(time.Now().Add(ssl.ReadTimeout.Duration))
+			if err := c.SetReadDeadline(time.Now().Add(ssl.ReadTimeout.Duration)); err != nil {
+				ssl.Log.Error("setting read deadline failed: %v", err)
+				return
+			}
 		}
 		if !scnr.Scan() {
 			break
@@ -289,6 +299,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		// no good way of testing for "file does not exist".
 		// Instead just ignore error and blow up when we try to listen, which will
 		// indicate "address already in use" if file existed and we couldn't remove.
+		//nolint:errcheck,revive
 		os.Remove(addr)
 	}
 
@@ -319,7 +330,9 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 				return err
 			}
 
-			os.Chmod(spl[1], os.FileMode(uint32(i)))
+			if err := os.Chmod(spl[1], os.FileMode(uint32(i))); err != nil {
+				return err
+			}
 		}
 
 		ssl := &streamSocketListener{
@@ -354,12 +367,16 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 				return err
 			}
 
-			os.Chmod(spl[1], os.FileMode(uint32(i)))
+			if err := os.Chmod(spl[1], os.FileMode(uint32(i))); err != nil {
+				return err
+			}
 		}
 
 		if sl.ReadBufferSize.Size > 0 {
 			if srb, ok := pc.(setReadBufferer); ok {
-				srb.SetReadBuffer(int(sl.ReadBufferSize.Size))
+				if err := srb.SetReadBuffer(int(sl.ReadBufferSize.Size)); err != nil {
+					sl.Log.Warnf("Setting read buffer on a %s socket failed: %v", protocol, err)
+				}
 			} else {
 				sl.Log.Warnf("Unable to set read buffer on a %s socket", protocol)
 			}
@@ -418,6 +435,8 @@ func udpListen(network string, address string) (net.PacketConn, error) {
 
 func (sl *SocketListener) Stop() {
 	if sl.Closer != nil {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		sl.Close()
 		sl.Closer = nil
 	}
@@ -439,7 +458,9 @@ type unixCloser struct {
 
 func (uc unixCloser) Close() error {
 	err := uc.closer.Close()
-	os.Remove(uc.path) // ignore error
+	// Ignore the error if e.g. the file does not exist
+	//nolint:errcheck,revive
+	os.Remove(uc.path)
 	return err
 }
 

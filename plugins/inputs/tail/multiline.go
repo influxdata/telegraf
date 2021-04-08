@@ -60,6 +60,8 @@ func (m *Multiline) IsEnabled() bool {
 
 func (m *Multiline) ProcessLine(text string, buffer *bytes.Buffer) string {
 	if m.matchString(text) {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		buffer.WriteString(text)
 		return ""
 	}
@@ -67,12 +69,16 @@ func (m *Multiline) ProcessLine(text string, buffer *bytes.Buffer) string {
 	if m.config.MatchWhichLine == Previous {
 		previousText := buffer.String()
 		buffer.Reset()
-		buffer.WriteString(text)
+		if _, err := buffer.WriteString(text); err != nil {
+			return ""
+		}
 		text = previousText
 	} else {
 		// Next
 		if buffer.Len() > 0 {
-			buffer.WriteString(text)
+			if _, err := buffer.WriteString(text); err != nil {
+				return ""
+			}
 			text = buffer.String()
 			buffer.Reset()
 		}

@@ -53,6 +53,9 @@ type Config struct {
 	// Carbon2 metric format.
 	Carbon2Format string `toml:"carbon2_format"`
 
+	// Character used for metric name sanitization in Carbon2.
+	Carbon2SanitizeReplaceChar string `toml:"carbon2_sanitize_replace_char"`
+
 	// Support tags in graphite protocol
 	GraphiteTagSupport bool `toml:"graphite_tag_support"`
 
@@ -123,7 +126,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "nowmetric":
 		serializer, err = NewNowSerializer()
 	case "carbon2":
-		serializer, err = NewCarbon2Serializer(config.Carbon2Format)
+		serializer, err = NewCarbon2Serializer(config.Carbon2Format, config.Carbon2SanitizeReplaceChar)
 	case "wavefront":
 		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
 	case "prometheus":
@@ -186,8 +189,8 @@ func NewJSONSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return json.NewSerializer(timestampUnits)
 }
 
-func NewCarbon2Serializer(carbon2format string) (Serializer, error) {
-	return carbon2.NewSerializer(carbon2format)
+func NewCarbon2Serializer(carbon2format string, carbon2SanitizeReplaceChar string) (Serializer, error) {
+	return carbon2.NewSerializer(carbon2format, carbon2SanitizeReplaceChar)
 }
 
 func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimetric bool) (Serializer, error) {

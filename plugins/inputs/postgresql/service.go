@@ -152,6 +152,8 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 
 // Stop stops the services and closes any necessary channels and connections
 func (p *Service) Stop() {
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	p.DB.Close()
 }
 
