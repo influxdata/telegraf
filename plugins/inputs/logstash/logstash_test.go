@@ -16,6 +16,7 @@ var logstashTest = NewLogstash()
 var (
 	logstash5accPipelineStats  testutil.Accumulator
 	logstash6accPipelinesStats testutil.Accumulator
+	logstash7accPipelinesStats testutil.Accumulator
 	logstash5accProcessStats   testutil.Accumulator
 	logstash6accProcessStats   testutil.Accumulator
 	logstash5accJVMStats       testutil.Accumulator
@@ -683,6 +684,74 @@ func Test_Logstash6GatherJVMStats(test *testing.T) {
 			"node_name":    string("node-6-test"),
 			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
+		},
+	)
+}
+
+func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
+	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		_, err := fmt.Fprintf(writer, "%s", string(logstash7PipelinesJSON))
+		if err != nil {
+			test.Logf("Can't print test json")
+		}
+	}))
+	requestURL, err := url.Parse(logstashTest.URL)
+	if err != nil {
+		test.Logf("Can't connect to: %s", logstashTest.URL)
+	}
+	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Start()
+	defer fakeServer.Close()
+
+	if logstashTest.client == nil {
+		client, err := logstashTest.createHTTPClient()
+
+		if err != nil {
+			test.Logf("Can't createHTTPClient")
+		}
+		logstashTest.client = client
+	}
+
+	if err := logstashTest.gatherPipelinesStats(logstashTest.URL+pipelineStats, &logstash7accPipelinesStats); err != nil {
+		test.Logf("Can't gather Pipeline stats")
+	}
+
+	fields := make(map[string]interface{})
+	fields["duration_in_millis"] = float64(3032875.0)
+	fields["queue_push_duration_in_millis"] = float64(13300.0)
+	fields["in"] = float64(2665549.0)
+	fields["filtered"] = float64(2665549.0)
+	fields["out"] = float64(2665549.0)
+
+	logstash7accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_events",
+		fields,
+		map[string]string{
+			"node_id":      string("28580380-ad2c-4032-934b-76359125edca"),
+			"node_name":    string("HOST01.local"),
+			"source":       string("HOST01.local"),
+			"node_version": string("7.4.2"),
+			"pipeline":     string("infra"),
+		},
+	)
+
+	logstash7accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_queue",
+		map[string]interface{}{
+			"events":                  float64(0),
+			"max_queue_size_in_bytes": float64(4294967296),
+			"queue_size_in_bytes":     float64(32028566),
+		},
+		map[string]string{
+			"node_id":      string("28580380-ad2c-4032-934b-76359125edca"),
+			"node_name":    string("HOST01.local"),
+			"source":       string("HOST01.local"),
+			"node_version": string("7.4.2"),
+			"pipeline":     string("infra"),
+			"queue_type":   string("persisted"),
 		},
 	)
 }
