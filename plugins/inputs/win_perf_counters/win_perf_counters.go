@@ -27,8 +27,8 @@ var sampleConfig = `
   # and in case of localized Windows, counter paths will be also localized. It also returns instance indexes in instance names.
   # If false, wildcards (not partial) in instance names will still be expanded, but instance indexes will not be returned in instance names.
   #UseWildcardsExpansion = false
-  # Period after which counters will be reread from configuration and wildcards in counter paths expanded
-  CountersRefreshInterval="1m"
+  # Period after which counters will be reread from configuration and wildcards in counter paths expanded 
+  #CountersRefreshInterval="1m"
 
   [[inputs.win_perf_counters.object]]
     # Processor usage, alternative to native, reports on a per core.
@@ -284,7 +284,6 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			if instance == "_Total" && origInstance == "*" && !includeTotal {
 				continue
 			}
-
 			newItem := &counter{counterPath, objectName, counterName, instance, measurement,
 				includeTotal, counterHandle}
 			m.counters = append(m.counters, newItem)
@@ -344,8 +343,10 @@ func (m *Win_PerfCounters) ParseConfig() error {
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// Parse the config once
 	var err error
-
+	start := time.Now()
+	m.Log.Debug("Gather started")
 	if m.lastRefreshed.IsZero() || (m.CountersRefreshInterval.Duration.Nanoseconds() > 0 && m.lastRefreshed.Add(m.CountersRefreshInterval.Duration).Before(time.Now())) {
+		m.Log.Debug("Refreshing counters")
 		if m.counters != nil {
 			m.counters = m.counters[:0]
 		}
@@ -384,6 +385,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.counters {
 		// collect
+		m.Log.Debug("Gathering values from: %s", metric.counterPath)
 		if m.UseWildcardsExpansion {
 			value, err := m.query.GetFormattedCounterValueDouble(metric.counterHandle)
 			if err != nil {
@@ -394,7 +396,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				m.Log.Warnf("error while getting value for counter %q, will skip metric: %v", metric.counterPath, err)
 				continue
 			}
-			addCounterMeasurement(metric, metric.instance, value, collectFields)
+			m.addCounterMeasurement(metric, metric.instance, value, collectFields)
 		} else {
 			counterValues, err := m.query.GetFormattedCounterArrayDouble(metric.counterHandle)
 			if err != nil {
@@ -414,7 +416,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				}
 
 				if shouldIncludeMetric(metric, cValue) {
-					addCounterMeasurement(metric, cValue.InstanceName, cValue.Value, collectFields)
+					m.addCounterMeasurement(metric, cValue.InstanceName, cValue.Value, collectFields)
 				}
 			}
 		}
@@ -429,8 +431,24 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		}
 		acc.AddFields(instance.name, fields, tags, timestamp)
 	}
-
+	took := time.Now().Sub(start)
+	m.Log.Debug("Gather finished, took %.3fms", float64(took.Nanoseconds())/1e6)
 	return nil
+}
+
+func (m *Win_PerfCounters) addCounterMeasurement(metric *counter, instanceName string, value float64, collectFields map[instanceGrouping]map[string]interface{}) {
+	measurement := sanitizedChars.Replace(metric.measurement)
+	if measurement == "" {
+		measurement = "win_perf_counters"
+	}
+
+	var instance = instanceGrouping{measurement, instanceName, metric.objectName}
+	if collectFields[instance] == nil {
+		collectFields[instance] = make(map[string]interface{})
+	}
+	counterName := sanitizedChars.Replace(metric.counter)
+	m.Log.Debugf("Got counter \\%s(%s)\\%s : %.2f, for measurement %s", metric.objectName, instanceName, counterName, value, measurement)
+	collectFields[instance][counterName] = float32(value)
 }
 
 func shouldIncludeMetric(metric *counter, cValue CounterValue) bool {
@@ -452,18 +470,6 @@ func shouldIncludeMetric(metric *counter, cValue CounterValue) bool {
 	return false
 }
 
-func addCounterMeasurement(metric *counter, instanceName string, value float64, collectFields map[instanceGrouping]map[string]interface{}) {
-	measurement := sanitizedChars.Replace(metric.measurement)
-	if measurement == "" {
-		measurement = "win_perf_counters"
-	}
-	var instance = instanceGrouping{measurement, instanceName, metric.objectName}
-	if collectFields[instance] == nil {
-		collectFields[instance] = make(map[string]interface{})
-	}
-	collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value)
-}
-
 func isKnownCounterDataError(err error) bool {
 	if pdhErr, ok := err.(*PdhError); ok && (pdhErr.ErrorCode == PDH_INVALID_DATA ||
 		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_DENOMINATOR ||
@@ -477,6 +483,6 @@ func isKnownCounterDataError(err error) bool {
 
 func init() {
 	inputs.Add("win_perf_counters", func() telegraf.Input {
-		return &Win_PerfCounters{query: &PerformanceQueryImpl{}, CountersRefreshInterval: internal.Duration{Duration: time.Second * 60}}
+		return &Win_PerfCounters{query: &PerformanceQueryImpl{}, CountersRefreshInterval: internal.Duration{Duration: 60 * time.Second}}
 	})
 }

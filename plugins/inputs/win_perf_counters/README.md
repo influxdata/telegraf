@@ -395,6 +395,20 @@ If you are getting an error about an invalid counter, use the `typeperf` command
 on the command line.
 E.g. `typeperf "Process(chrome*)\% Processor Time"`
 
+Also, use `typeperf` if you suspect Telegraf is emitting wrong values. Typeperf uses the same mechanism for reading performance counter values as Telegraf.
+You can use [the tail plugin](../tail/) to read output from `typeperf` and send it to InfluxDb for easy comparision:
+1. Redirect typeperf 's output to file: e.g. `typeperf "\Processor(_Total)\% Processor Time" >c:\tmp\typeperf_cpu.log`
+1. Setup the Telegraf's tail plugin to read typeperf output:
+```toml
+[[inputs.tail]]
+  files = ['c:\tmp\typeperf_cpu.log']
+  from_beginning = true
+  data_format = "grok"
+  grok_patterns = ['"%{DATESTAMP:timestamp:ts-"01/02/2006 15:04:05.000"}","%{NUMBER:value:float}"']
+  name_override = "typeperf_cpu"
+  grok_timezone = "Local"
+```
+
 If no metrics are emitted even with the default config, you may need to repair
 your performance counters.
 
@@ -405,3 +419,6 @@ your performance counters.
    ```
    lodctr /r
    ```
+
+If periodic peaks have been detected in CPU counter values when using wildcards expansion (`UseWildcardsExpansion=true`), 
+try disabling periodic counters refreshing (set `CountersRefreshInterval="0s"`) or using a larger refresh interval.
