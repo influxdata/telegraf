@@ -21,7 +21,7 @@ type SystemdUnits struct {
 	systemctl systemctl
 }
 
-type systemctl func(Timeout config.Duration, UnitType string) (*bytes.Buffer, error)
+type systemctl func(timeout config.Duration, unitType string) (*bytes.Buffer, error)
 
 const measurement = "systemd_units"
 
@@ -192,20 +192,20 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func setSystemctl(Timeout config.Duration, UnitType string) (*bytes.Buffer, error) {
+func setSystemctl(timeout config.Duration, unitType string) (*bytes.Buffer, error) {
 	// is systemctl available ?
 	systemctlPath, err := exec.LookPath("systemctl")
 	if err != nil {
 		return nil, err
 	}
 
-	cmd := exec.Command(systemctlPath, "list-units", "--all", "--plain", fmt.Sprintf("--type=%s", UnitType), "--no-legend")
+	cmd := exec.Command(systemctlPath, "list-units", "--all", "--plain", fmt.Sprintf("--type=%s", unitType), "--no-legend")
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err = internal.RunTimeout(cmd, time.Duration(Timeout))
+	err = internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
-		return &out, fmt.Errorf("error running systemctl list-units --all --plain --type=%s --no-legend: %s", UnitType, err)
+		return &out, fmt.Errorf("error running systemctl list-units --all --plain --type=%s --no-legend: %s", unitType, err)
 	}
 
 	return &out, nil

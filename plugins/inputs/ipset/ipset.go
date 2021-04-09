@@ -91,7 +91,7 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func setList(Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error) {
+func setList(timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {
 	// Is ipset installed ?
 	ipsetPath, err := exec.LookPath("ipset")
 	if err != nil {
@@ -99,7 +99,7 @@ func setList(Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error) {
 	}
 	var args []string
 	cmdName := ipsetPath
-	if UseSudo {
+	if useSudo {
 		cmdName = "sudo"
 		args = append(args, ipsetPath)
 	}
@@ -109,7 +109,7 @@ func setList(Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error) {
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err = internal.RunTimeout(cmd, time.Duration(Timeout))
+	err = internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
 		return &out, fmt.Errorf("error running ipset save: %s", err)
 	}

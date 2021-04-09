@@ -204,7 +204,6 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		require.Equalf(t, expectedPlugins[i], plugin.Input, "Plugin %d: incorrect struct produced", i)
 		require.Equalf(t, expectedConfigs[i], plugin.Config, "Plugin %d: incorrect config produced", i)
 	}
-
 }
 
 func TestConfig_LoadSpecialTypes(t *testing.T) {

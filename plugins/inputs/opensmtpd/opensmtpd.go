@@ -16,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error)
+type runner func(cmdName string, timeout config.Duration, useSudo bool) (*bytes.Buffer, error)
 
 // Opensmtpd is used to store configuration values
 type Opensmtpd struct {
@@ -51,19 +51,19 @@ func (s *Opensmtpd) SampleConfig() string {
 }
 
 // Shell out to opensmtpd_stat and return the output
-func opensmtpdRunner(cmdName string, Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error) {
+func opensmtpdRunner(cmdName string, timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {
 	cmdArgs := []string{"show", "stats"}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
 
-	if UseSudo {
+	if useSudo {
 		cmdArgs = append([]string{cmdName}, cmdArgs...)
 		cmd = exec.Command("sudo", cmdArgs...)
 	}
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, time.Duration(Timeout))
+	err := internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
 		return &out, fmt.Errorf("error running smtpctl: %s", err)
 	}

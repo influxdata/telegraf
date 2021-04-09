@@ -16,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout config.Duration, UseSudo bool, Server string, ConfigFile string) (*bytes.Buffer, error)
+type runner func(cmdName string, timeout config.Duration, useSudo bool, Server string, ConfigFile string) (*bytes.Buffer, error)
 
 // NSD is used to store configuration values
 type NSD struct {
@@ -61,7 +61,7 @@ func (s *NSD) SampleConfig() string {
 }
 
 // Shell out to nsd_stat and return the output
-func nsdRunner(cmdName string, Timeout config.Duration, UseSudo bool, Server string, ConfigFile string) (*bytes.Buffer, error) {
+func nsdRunner(cmdName string, timeout config.Duration, useSudo bool, Server string, ConfigFile string) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
 	if Server != "" {
@@ -79,14 +79,14 @@ func nsdRunner(cmdName string, Timeout config.Duration, UseSudo bool, Server str
 
 	cmd := exec.Command(cmdName, cmdArgs...)
 
-	if UseSudo {
+	if useSudo {
 		cmdArgs = append([]string{cmdName}, cmdArgs...)
 		cmd = exec.Command("sudo", cmdArgs...)
 	}
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, time.Duration(Timeout))
+	err := internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
 		return &out, fmt.Errorf("error running nsd-control: %s (%s %v)", err, cmdName, cmdArgs)
 	}

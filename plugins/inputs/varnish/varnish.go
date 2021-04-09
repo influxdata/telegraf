@@ -18,7 +18,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, UseSudo bool, InstanceName string, Timeout config.Duration) (*bytes.Buffer, error)
+type runner func(cmdName string, useSudo bool, instanceName string, timeout config.Duration) (*bytes.Buffer, error)
 
 // Varnish is used to store configuration values
 type Varnish struct {
@@ -67,16 +67,16 @@ func (s *Varnish) SampleConfig() string {
 }
 
 // Shell out to varnish_stat and return the output
-func varnishRunner(cmdName string, UseSudo bool, InstanceName string, Timeout config.Duration) (*bytes.Buffer, error) {
+func varnishRunner(cmdName string, useSudo bool, instanceName string, timeout config.Duration) (*bytes.Buffer, error) {
 	cmdArgs := []string{"-1"}
 
-	if InstanceName != "" {
-		cmdArgs = append(cmdArgs, []string{"-n", InstanceName}...)
+	if instanceName != "" {
+		cmdArgs = append(cmdArgs, []string{"-n", instanceName}...)
 	}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
 
-	if UseSudo {
+	if useSudo {
 		cmdArgs = append([]string{cmdName}, cmdArgs...)
 		cmdArgs = append([]string{"-n"}, cmdArgs...)
 		cmd = exec.Command("sudo", cmdArgs...)
@@ -85,7 +85,7 @@ func varnishRunner(cmdName string, UseSudo bool, InstanceName string, Timeout co
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
-	err := internal.RunTimeout(cmd, time.Duration(Timeout))
+	err := internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
 		return &out, fmt.Errorf("error running varnishstat: %s", err)
 	}
