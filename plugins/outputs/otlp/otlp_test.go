@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	"google.golang.org/grpc"
@@ -18,16 +19,22 @@ import (
 type metricServiceServer struct {
 	status *status.Status
 	metricsService.UnimplementedMetricsServiceServer
+	reqs []*metricsService.ExportMetricsServiceRequest
 }
 
 func (s *metricServiceServer) Export(ctx context.Context, req *metricsService.ExportMetricsServiceRequest) (*metricsService.ExportMetricsServiceResponse, error) {
 	var emptyValue = metricsService.ExportMetricsServiceResponse{}
+	s.reqs = append(s.reqs, req)
 
 	if s.status == nil {
 		return &emptyValue, nil
 	}
 
 	return nil, s.status.Err()
+}
+
+func (s *metricServiceServer) clear() {
+	s.reqs = []*metricsService.ExportMetricsServiceRequest{}
 }
 
 func newLocalListener() net.Listener {
@@ -40,14 +47,18 @@ func newLocalListener() net.Listener {
 	return l
 }
 
-var listener net.Listener
+var (
+	listener          net.Listener
+	mockMetricsServer metricServiceServer
+)
 
 func TestMain(m *testing.M) {
 	listener = newLocalListener()
 	grpcServer := grpc.NewServer()
-	metricsService.RegisterMetricsServiceServer(grpcServer, &metricServiceServer{
+	mockMetricsServer = metricServiceServer{
 		status: nil,
-	})
+	}
+	metricsService.RegisterMetricsServiceServer(grpcServer, &mockMetricsServer)
 	go grpcServer.Serve(listener)
 	defer grpcServer.Stop()
 	os.Exit(m.Run())
@@ -73,11 +84,11 @@ func TestConfigOptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	require.Equal(t, o.grpcTimeout, defaultTimeout)
-	require.Equal(t, o.Headers, map[string]string{"telemetry-reporting-agent": fmt.Sprint(
+	require.Equal(t, defaultTimeout, o.grpcTimeout)
+	require.Equal(t, map[string]string{"telemetry-reporting-agent": fmt.Sprint(
 		"telegraf/",
 		internal.Version(),
-	)})
+	)}, o.Headers)
 
 	attributes := map[string]string{
 		"service.name":    "test",
@@ -89,9 +100,7 @@ func TestConfigOptions(t *testing.T) {
 		Attributes: attributes,
 	}
 	err = o.Connect()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	require.Equal(t, o.grpcTimeout, time.Second*10)
 	require.Equal(t, len(o.resourceTags), 2)
@@ -100,32 +109,24 @@ func TestConfigOptions(t *testing.T) {
 	}
 }
 
-// func TestWrite(t *testing.T) {
-// 	expectedResponse := &emptypb.Empty{}
-// 	mockMetric.err = nil
-// 	mockMetric.reqs = nil
-// 	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
+func TestWrite(t *testing.T) {
+	o := OTLP{
+		Endpoint: "http://" + listener.Addr().String(),
+		Timeout:  "10s",
+	}
+	err := o.Connect()
+	require.NoError(t, err)
 
-// 	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	mockMetricsServer.clear()
+	err = o.Write(testutil.MockMetrics())
+	require.NoError(t, err)
 
-// 	s := &OTLP{
-// 		Endpoint:  "localhost:4317",
-// 		Namespace: "test",
-// 		client:    c,
-// 	}
+	require.Equal(t, 1, len(mockMetricsServer.reqs))
+	request := mockMetricsServer.reqs[0]
 
-// 	err = s.Connect()
-// 	require.NoError(t, err)
-// 	err = s.Write(testutil.MockMetrics())
-// 	require.NoError(t, err)
-
-// 	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
-// 	require.Equal(t, request.TimeSeries[0].Resource.Type, "global")
-// 	require.Equal(t, request.TimeSeries[0].Resource.Labels["project_id"], "projects/[PROJECT]")
-// }
+	require.Equal(t, 1, len(request.ResourceMetrics[0].GetInstrumentationLibraryMetrics()))
+	require.Equal(t, "Telegraf", request.ResourceMetrics[0].GetInstrumentationLibraryMetrics()[0].GetInstrumentationLibrary().GetName())
+}
 
 // func TestWriteResourceLabels(t *testing.T) {
 // 	expectedResponse := &emptypb.Empty{}
