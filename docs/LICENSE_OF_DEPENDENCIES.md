@@ -189,7 +189,6 @@ following works:
 - github.com/xdg/stringprep [Apache License 2.0](https://github.com/xdg-go/stringprep/blob/master/LICENSE)
 - github.com/yuin/gopher-lua [MIT License](https://github.com/yuin/gopher-lua/blob/master/LICENSE)
 - go.opencensus.io [Apache License 2.0](https://github.com/census-instrumentation/opencensus-go/blob/master/LICENSE)
-- go.opentelemetry.io/otel [Apache License 2.0](https://pkg.go.dev/go.opentelemetry.io/otel?tab=licenses)
 - go.opentelemetry.io/proto/otlp [Apache License 2.0](https://pkg.go.dev/go.opentelemetry.io/proto/otlp?tab=licenses)
 - go.starlark.net [BSD 3-Clause "New" or "Revised" License](https://github.com/google/starlark-go/blob/master/LICENSE)
 - go.uber.org/atomic [MIT License](https://pkg.go.dev/go.uber.org/atomic?tab=licenses)
