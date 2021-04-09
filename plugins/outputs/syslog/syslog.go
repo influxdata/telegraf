@@ -7,11 +7,12 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/influxdata/go-syslog/v2/nontransparent"
 	"github.com/influxdata/go-syslog/v2/rfc5424"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	framing "github.com/influxdata/telegraf/internal/syslog"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -19,7 +20,7 @@ import (
 
 type Syslog struct {
 	Address             string
-	KeepAlivePeriod     *internal.Duration
+	KeepAlivePeriod     *config.Duration
 	DefaultSdid         string
 	DefaultSeverityCode uint8
 	DefaultFacilityCode uint8
@@ -149,13 +150,13 @@ func (s *Syslog) setKeepAlive(c net.Conn) error {
 	if !ok {
 		return fmt.Errorf("cannot set keep alive on a %s socket", strings.SplitN(s.Address, "://", 2)[0])
 	}
-	if s.KeepAlivePeriod.Duration == 0 {
+	if *s.KeepAlivePeriod == 0 {
 		return tcpc.SetKeepAlive(false)
 	}
 	if err := tcpc.SetKeepAlive(true); err != nil {
 		return err
 	}
-	return tcpc.SetKeepAlivePeriod(s.KeepAlivePeriod.Duration)
+	return tcpc.SetKeepAlivePeriod(time.Duration(*s.KeepAlivePeriod))
 }
 
 func (s *Syslog) Close() error {

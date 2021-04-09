@@ -14,7 +14,7 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -39,9 +39,9 @@ type HTTPListenerV2 struct {
 	Path           string            `toml:"path"`
 	Methods        []string          `toml:"methods"`
 	DataSource     string            `toml:"data_source"`
-	ReadTimeout    internal.Duration `toml:"read_timeout"`
-	WriteTimeout   internal.Duration `toml:"write_timeout"`
-	MaxBodySize    internal.Size     `toml:"max_body_size"`
+	ReadTimeout    config.Duration   `toml:"read_timeout"`
+	WriteTimeout   config.Duration   `toml:"write_timeout"`
+	MaxBodySize    config.Size       `toml:"max_body_size"`
 	Port           int               `toml:"port"`
 	BasicUsername  string            `toml:"basic_username"`
 	BasicPassword  string            `toml:"basic_password"`
@@ -125,15 +125,15 @@ func (h *HTTPListenerV2) SetParser(parser parsers.Parser) {
 
 // Start starts the http listener service.
 func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
-	if h.MaxBodySize.Size == 0 {
-		h.MaxBodySize.Size = defaultMaxBodySize
+	if h.MaxBodySize == 0 {
+		h.MaxBodySize = config.Size(defaultMaxBodySize)
 	}
 
-	if h.ReadTimeout.Duration < time.Second {
-		h.ReadTimeout.Duration = time.Second * 10
+	if h.ReadTimeout < config.Duration(time.Second) {
+		h.ReadTimeout = config.Duration(time.Second * 10)
 	}
-	if h.WriteTimeout.Duration < time.Second {
-		h.WriteTimeout.Duration = time.Second * 10
+	if h.WriteTimeout < config.Duration(time.Second) {
+		h.WriteTimeout = config.Duration(time.Second * 10)
 	}
 
 	h.acc = acc
@@ -146,8 +146,8 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 	server := &http.Server{
 		Addr:         h.ServiceAddress,
 		Handler:      h,
-		ReadTimeout:  h.ReadTimeout.Duration,
-		WriteTimeout: h.WriteTimeout.Duration,
+		ReadTimeout:  time.Duration(h.ReadTimeout),
+		WriteTimeout: time.Duration(h.WriteTimeout),
 		TLSConfig:    tlsConf,
 	}
 
@@ -198,7 +198,7 @@ func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) {
 	// Check that the content length is not too large for us to handle.
-	if req.ContentLength > h.MaxBodySize.Size {
+	if req.ContentLength > int64(h.MaxBodySize) {
 		if err := tooLarge(res); err != nil {
 			h.Log.Debugf("error in too-large: %v", err)
 		}
@@ -271,7 +271,7 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 			return nil, false
 		}
 		defer r.Close()
-		maxReader := http.MaxBytesReader(res, r, h.MaxBodySize.Size)
+		maxReader := http.MaxBytesReader(res, r, int64(h.MaxBodySize))
 		bytes, err := ioutil.ReadAll(maxReader)
 		if err != nil {
 			if err := tooLarge(res); err != nil {

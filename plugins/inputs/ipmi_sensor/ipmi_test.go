@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +18,7 @@ func TestGather(t *testing.T) {
 		Servers:   []string{"USERID:PASSW0RD@lan(192.168.1.1)"},
 		Path:      "ipmitool",
 		Privilege: "USER",
-		Timeout:   internal.Duration{Duration: time.Second * 5},
+		Timeout:   config.Duration(time.Second * 5),
 		HexKey:    "1234567F",
 	}
 
@@ -126,7 +126,7 @@ func TestGather(t *testing.T) {
 
 	i = &Ipmi{
 		Path:    "ipmitool",
-		Timeout: internal.Duration{Duration: time.Second * 5},
+		Timeout: config.Duration(time.Second * 5),
 	}
 
 	err = acc.GatherError(i.Gather)
@@ -390,7 +390,7 @@ func TestGatherV2(t *testing.T) {
 		Servers:       []string{"USERID:PASSW0RD@lan(192.168.1.1)"},
 		Path:          "ipmitool",
 		Privilege:     "USER",
-		Timeout:       internal.Duration{Duration: time.Second * 5},
+		Timeout:       config.Duration(time.Second * 5),
 		MetricVersion: 2,
 		HexKey:        "0000000F",
 	}
@@ -432,7 +432,7 @@ func TestGatherV2(t *testing.T) {
 
 	i = &Ipmi{
 		Path:          "ipmitool",
-		Timeout:       internal.Duration{Duration: time.Second * 5},
+		Timeout:       config.Duration(time.Second * 5),
 		MetricVersion: 2,
 	}
 

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -80,7 +80,7 @@ type Beat struct {
 	Method     string            `toml:"method"`
 	Headers    map[string]string `toml:"headers"`
 	HostHeader string            `toml:"host_header"`
-	Timeout    internal.Duration `toml:"timeout"`
+	Timeout    config.Duration   `toml:"timeout"`
 
 	tls.ClientConfig
 	client *http.Client
@@ -92,7 +92,7 @@ func NewBeat() *Beat {
 		Includes: []string{"beat", "libbeat", "filebeat"},
 		Method:   "GET",
 		Headers:  make(map[string]string),
-		Timeout:  internal.Duration{Duration: time.Second * 5},
+		Timeout:  config.Duration(time.Second * 5),
 	}
 }
 
@@ -133,7 +133,7 @@ func (beat *Beat) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
-		Timeout: beat.Timeout.Duration,
+		Timeout: time.Duration(beat.Timeout),
 	}
 
 	return client, nil

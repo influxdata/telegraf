@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 )
 
 func UnboundControl(output string) func(unbound Unbound) (*bytes.Buffer, error) {

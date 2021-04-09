@@ -7,9 +7,10 @@ import (
 	"net"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
@@ -21,14 +22,14 @@ var (
 )
 
 type Instrumental struct {
-	Host       string            `toml:"host"`
-	APIToken   string            `toml:"api_token"`
-	Prefix     string            `toml:"prefix"`
-	DataFormat string            `toml:"data_format"`
-	Template   string            `toml:"template"`
-	Templates  []string          `toml:"templates"`
-	Timeout    internal.Duration `toml:"timeout"`
-	Debug      bool              `toml:"debug"`
+	Host       string          `toml:"host"`
+	APIToken   string          `toml:"api_token"`
+	Prefix     string          `toml:"prefix"`
+	DataFormat string          `toml:"data_format"`
+	Template   string          `toml:"template"`
+	Templates  []string        `toml:"templates"`
+	Timeout    config.Duration `toml:"timeout"`
+	Debug      bool            `toml:"debug"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -57,7 +58,7 @@ var sampleConfig = `
 `
 
 func (i *Instrumental) Connect() error {
-	connection, err := net.DialTimeout("tcp", i.Host+":8000", i.Timeout.Duration)
+	connection, err := net.DialTimeout("tcp", i.Host+":8000", time.Duration(i.Timeout))
 
 	if err != nil {
 		i.conn = nil

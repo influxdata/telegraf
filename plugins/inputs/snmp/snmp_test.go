@@ -10,9 +10,8 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
-	config "github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
@@ -93,8 +92,8 @@ func TestSampleConfig(t *testing.T) {
 	expected := &Snmp{
 		Agents:       []string{"udp://127.0.0.1:161"},
 		AgentHostTag: "",
-		ClientConfig: config.ClientConfig{
-			Timeout:        internal.Duration{Duration: 5 * time.Second},
+		ClientConfig: snmp.ClientConfig{
+			Timeout:        config.Duration(5 * time.Second),
 			Version:        2,
 			Community:      "public",
 			MaxRepetitions: 10,
@@ -239,8 +238,8 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 func TestGetSNMPConnection_v2(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
-		ClientConfig: config.ClientConfig{
-			Timeout:   internal.Duration{Duration: 3 * time.Second},
+		ClientConfig: snmp.ClientConfig{
+			Timeout:   config.Duration(3 * time.Second),
 			Retries:   4,
 			Version:   2,
 			Community: "foo",
@@ -308,7 +307,7 @@ func stubTCPServer(wg *sync.WaitGroup) {
 func TestGetSNMPConnection_v3(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4"},
-		ClientConfig: config.ClientConfig{
+		ClientConfig: snmp.ClientConfig{
 			Version:        3,
 			MaxRepetitions: 20,
 			ContextName:    "mycontext",
@@ -356,7 +355,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			Algorithm: gosnmp.AES192,
 			Config: &Snmp{
 				Agents: []string{"1.2.3.4"},
-				ClientConfig: config.ClientConfig{
+				ClientConfig: snmp.ClientConfig{
 					Version:        3,
 					MaxRepetitions: 20,
 					ContextName:    "mycontext",
@@ -377,7 +376,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			Algorithm: gosnmp.AES192C,
 			Config: &Snmp{
 				Agents: []string{"1.2.3.4"},
-				ClientConfig: config.ClientConfig{
+				ClientConfig: snmp.ClientConfig{
 					Version:        3,
 					MaxRepetitions: 20,
 					ContextName:    "mycontext",
@@ -398,7 +397,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			Algorithm: gosnmp.AES256,
 			Config: &Snmp{
 				Agents: []string{"1.2.3.4"},
-				ClientConfig: config.ClientConfig{
+				ClientConfig: snmp.ClientConfig{
 					Version:        3,
 					MaxRepetitions: 20,
 					ContextName:    "mycontext",
@@ -419,7 +418,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			Algorithm: gosnmp.AES256C,
 			Config: &Snmp{
 				Agents: []string{"1.2.3.4"},
-				ClientConfig: config.ClientConfig{
+				ClientConfig: snmp.ClientConfig{
 					Version:        3,
 					MaxRepetitions: 20,
 					ContextName:    "mycontext",

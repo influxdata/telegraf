@@ -9,6 +9,7 @@ import (
 
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -66,7 +67,7 @@ type MQTT struct {
 	Username    string
 	Password    string
 	Database    string
-	Timeout     internal.Duration
+	Timeout     config.Duration
 	TopicPrefix string
 	QoS         int    `toml:"qos"`
 	ClientID    string `toml:"client_id"`
@@ -180,7 +181,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 
 func (m *MQTT) publish(topic string, body []byte) error {
 	token := m.client.Publish(topic, byte(m.QoS), m.Retain, body)
-	token.WaitTimeout(m.Timeout.Duration)
+	token.WaitTimeout(time.Duration(m.Timeout))
 	if token.Error() != nil {
 		return token.Error()
 	}
@@ -191,10 +192,10 @@ func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	opts := paho.NewClientOptions()
 	opts.KeepAlive = 0
 
-	if m.Timeout.Duration < time.Second {
-		m.Timeout.Duration = 5 * time.Second
+	if m.Timeout < config.Duration(time.Second) {
+		m.Timeout = config.Duration(5 * time.Second)
 	}
-	opts.WriteTimeout = m.Timeout.Duration
+	opts.WriteTimeout = time.Duration(m.Timeout)
 
 	if m.ClientID != "" {
 		opts.SetClientID(m.ClientID)

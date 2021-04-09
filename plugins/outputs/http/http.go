@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -79,7 +80,7 @@ const (
 
 type HTTP struct {
 	URL             string            `toml:"url"`
-	Timeout         internal.Duration `toml:"timeout"`
+	Timeout         config.Duration   `toml:"timeout"`
 	Method          string            `toml:"method"`
 	Username        string            `toml:"username"`
 	Password        string            `toml:"password"`
@@ -89,7 +90,7 @@ type HTTP struct {
 	TokenURL        string            `toml:"token_url"`
 	Scopes          []string          `toml:"scopes"`
 	ContentEncoding string            `toml:"content_encoding"`
-	IdleConnTimeout internal.Duration `toml:"idle_conn_timeout"`
+	IdleConnTimeout config.Duration   `toml:"idle_conn_timeout"`
 	tls.ClientConfig
 
 	client     *http.Client
@@ -110,9 +111,9 @@ func (h *HTTP) createClient(ctx context.Context) (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 			Proxy:           http.ProxyFromEnvironment,
-			IdleConnTimeout: h.IdleConnTimeout.Duration,
+			IdleConnTimeout: time.Duration(h.IdleConnTimeout),
 		},
-		Timeout: h.Timeout.Duration,
+		Timeout: time.Duration(h.Timeout),
 	}
 
 	if h.ClientID != "" && h.ClientSecret != "" && h.TokenURL != "" {
@@ -138,8 +139,8 @@ func (h *HTTP) Connect() error {
 		return fmt.Errorf("invalid method [%s] %s", h.URL, h.Method)
 	}
 
-	if h.Timeout.Duration == 0 {
-		h.Timeout.Duration = defaultClientTimeout
+	if h.Timeout == 0 {
+		h.Timeout = config.Duration(defaultClientTimeout)
 	}
 
 	ctx := context.Background()
@@ -228,7 +229,7 @@ func (h *HTTP) write(reqBody []byte) error {
 func init() {
 	outputs.Add("http", func() telegraf.Output {
 		return &HTTP{
-			Timeout: internal.Duration{Duration: defaultClientTimeout},
+			Timeout: config.Duration(defaultClientTimeout),
 			Method:  defaultMethod,
 			URL:     defaultURL,
 		}

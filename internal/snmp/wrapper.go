@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gosnmp/gosnmp"
 )
@@ -62,7 +63,7 @@ func (gs GosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
 func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 	gs := GosnmpWrapper{&gosnmp.GoSNMP{}}
 
-	gs.Timeout = s.Timeout.Duration
+	gs.Timeout = time.Duration(s.Timeout)
 
 	gs.Retries = s.Retries
 

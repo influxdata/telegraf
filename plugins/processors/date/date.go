@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -37,11 +37,11 @@ const sampleConfig = `
 const defaultTimezone = "UTC"
 
 type Date struct {
-	TagKey     string            `toml:"tag_key"`
-	FieldKey   string            `toml:"field_key"`
-	DateFormat string            `toml:"date_format"`
-	DateOffset internal.Duration `toml:"date_offset"`
-	Timezone   string            `toml:"timezone"`
+	TagKey     string          `toml:"tag_key"`
+	FieldKey   string          `toml:"field_key"`
+	DateFormat string          `toml:"date_format"`
+	DateOffset config.Duration `toml:"date_offset"`
+	Timezone   string          `toml:"timezone"`
 
 	location *time.Location
 }
@@ -70,7 +70,7 @@ func (d *Date) Init() error {
 
 func (d *Date) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, point := range in {
-		tm := point.Time().In(d.location).Add(d.DateOffset.Duration)
+		tm := point.Time().In(d.location).Add(time.Duration(d.DateOffset))
 		if len(d.TagKey) > 0 {
 			point.AddTag(d.TagKey, tm.Format(d.DateFormat))
 		} else if len(d.FieldKey) > 0 {

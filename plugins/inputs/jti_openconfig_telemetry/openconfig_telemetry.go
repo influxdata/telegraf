@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
@@ -22,15 +22,15 @@ import (
 )
 
 type OpenConfigTelemetry struct {
-	Servers         []string          `toml:"servers"`
-	Sensors         []string          `toml:"sensors"`
-	Username        string            `toml:"username"`
-	Password        string            `toml:"password"`
-	ClientID        string            `toml:"client_id"`
-	SampleFrequency internal.Duration `toml:"sample_frequency"`
-	StrAsTags       bool              `toml:"str_as_tags"`
-	RetryDelay      internal.Duration `toml:"retry_delay"`
-	EnableTLS       bool              `toml:"enable_tls"`
+	Servers         []string        `toml:"servers"`
+	Sensors         []string        `toml:"sensors"`
+	Username        string          `toml:"username"`
+	Password        string          `toml:"password"`
+	ClientID        string          `toml:"client_id"`
+	SampleFrequency config.Duration `toml:"sample_frequency"`
+	StrAsTags       bool            `toml:"str_as_tags"`
+	RetryDelay      config.Duration `toml:"retry_delay"`
+	EnableTLS       bool            `toml:"enable_tls"`
 	internaltls.ClientConfig
 
 	Log telegraf.Logger
@@ -219,7 +219,7 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 	m.sensorsConfig = make([]sensorConfig, 0)
 	for _, sensor := range m.Sensors {
 		spathSplit := strings.Fields(sensor)
-		reportingRate = uint32(m.SampleFrequency.Duration / time.Millisecond)
+		reportingRate = uint32(time.Duration(m.SampleFrequency) / time.Millisecond)
 
 		// Extract measurement name and custom reporting rate if specified. Custom
 		// reporting rate will be specified at the beginning of sensor list,
@@ -296,9 +296,9 @@ func (m *OpenConfigTelemetry) collectData(
 					}
 
 					// Retry with delay. If delay is not provided, use default
-					if m.RetryDelay.Duration > 0 {
-						m.Log.Debugf("Retrying %s with timeout %v", grpcServer, m.RetryDelay.Duration)
-						time.Sleep(m.RetryDelay.Duration)
+					if time.Duration(m.RetryDelay) > 0 {
+						m.Log.Debugf("Retrying %s with timeout %v", grpcServer, time.Duration(m.RetryDelay))
+						time.Sleep(time.Duration(m.RetryDelay))
 						continue
 					}
 					return
@@ -408,7 +408,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("jti_openconfig_telemetry", func() telegraf.Input {
 		return &OpenConfigTelemetry{
-			RetryDelay: internal.Duration{Duration: time.Second},
+			RetryDelay: config.Duration(time.Second),
 			StrAsTags:  false,
 		}
 	})

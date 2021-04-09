@@ -9,7 +9,7 @@ import (
 	_ "github.com/jackc/pgx/stdlib"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -195,11 +195,9 @@ func init() {
 	inputs.Add("postgresql", func() telegraf.Input {
 		return &Postgresql{
 			Service: Service{
-				MaxIdle: 1,
-				MaxOpen: 1,
-				MaxLifetime: internal.Duration{
-					Duration: 0,
-				},
+				MaxIdle:     1,
+				MaxOpen:     1,
+				MaxLifetime: config.Duration(0),
 				IsPgBouncer: false,
 			},
 		}

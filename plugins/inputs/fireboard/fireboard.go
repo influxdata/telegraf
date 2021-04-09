@@ -8,15 +8,15 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Fireboard gathers statistics from the fireboard.io servers
 type Fireboard struct {
-	AuthToken   string            `toml:"auth_token"`
-	URL         string            `toml:"url"`
-	HTTPTimeout internal.Duration `toml:"http_timeout"`
+	AuthToken   string          `toml:"auth_token"`
+	URL         string          `toml:"url"`
+	HTTPTimeout config.Duration `toml:"http_timeout"`
 
 	client *http.Client
 }
@@ -76,11 +76,11 @@ func (r *Fireboard) Init() error {
 		r.URL = "https://fireboard.io/api/v1/devices.json"
 	}
 	// Have a default timeout of 4s
-	if r.HTTPTimeout.Duration == 0 {
-		r.HTTPTimeout.Duration = time.Second * 4
+	if r.HTTPTimeout == 0 {
+		r.HTTPTimeout = config.Duration(time.Second * 4)
 	}
 
-	r.client.Timeout = r.HTTPTimeout.Duration
+	r.client.Timeout = time.Duration(r.HTTPTimeout)
 
 	return nil
 }

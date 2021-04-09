@@ -10,21 +10,21 @@ import (
 
 	"github.com/amir/raidman"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type Riemann struct {
-	URL                    string            `toml:"url"`
-	TTL                    float32           `toml:"ttl"`
-	Separator              string            `toml:"separator"`
-	MeasurementAsAttribute bool              `toml:"measurement_as_attribute"`
-	StringAsState          bool              `toml:"string_as_state"`
-	TagKeys                []string          `toml:"tag_keys"`
-	Tags                   []string          `toml:"tags"`
-	DescriptionText        string            `toml:"description_text"`
-	Timeout                internal.Duration `toml:"timeout"`
-	Log                    telegraf.Logger   `toml:"-"`
+	URL                    string          `toml:"url"`
+	TTL                    float32         `toml:"ttl"`
+	Separator              string          `toml:"separator"`
+	MeasurementAsAttribute bool            `toml:"measurement_as_attribute"`
+	StringAsState          bool            `toml:"string_as_state"`
+	TagKeys                []string        `toml:"tag_keys"`
+	Tags                   []string        `toml:"tags"`
+	DescriptionText        string          `toml:"description_text"`
+	Timeout                config.Duration `toml:"timeout"`
+	Log                    telegraf.Logger `toml:"-"`
 
 	client *raidman.Client
 }
@@ -68,7 +68,7 @@ func (r *Riemann) Connect() error {
 		return err
 	}
 
-	client, err := raidman.DialWithTimeout(parsedURL.Scheme, parsedURL.Host, r.Timeout.Duration)
+	client, err := raidman.DialWithTimeout(parsedURL.Scheme, parsedURL.Host, time.Duration(r.Timeout))
 	if err != nil {
 		r.client = nil
 		return err
@@ -217,7 +217,7 @@ func (r *Riemann) tags(tags map[string]string) []string {
 func init() {
 	outputs.Add("riemann", func() telegraf.Output {
 		return &Riemann{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
 }

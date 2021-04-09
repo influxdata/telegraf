@@ -19,7 +19,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	riemanngo "github.com/riemann/riemann-go-client"
@@ -27,12 +27,12 @@ import (
 )
 
 type RiemannSocketListener struct {
-	ServiceAddress  string             `toml:"service_address"`
-	MaxConnections  int                `toml:"max_connections"`
-	ReadBufferSize  internal.Size      `toml:"read_buffer_size"`
-	ReadTimeout     *internal.Duration `toml:"read_timeout"`
-	KeepAlivePeriod *internal.Duration `toml:"keep_alive_period"`
-	SocketMode      string             `toml:"socket_mode"`
+	ServiceAddress  string           `toml:"service_address"`
+	MaxConnections  int              `toml:"max_connections"`
+	ReadBufferSize  config.Size      `toml:"read_buffer_size"`
+	ReadTimeout     *config.Duration `toml:"read_timeout"`
+	KeepAlivePeriod *config.Duration `toml:"keep_alive_period"`
+	SocketMode      string           `toml:"socket_mode"`
 	tlsint.ServerConfig
 
 	wg sync.WaitGroup
@@ -75,9 +75,9 @@ func (rsl *riemannListener) listen(ctx context.Context) {
 				break
 			}
 
-			if rsl.ReadBufferSize.Size > 0 {
+			if rsl.ReadBufferSize > 0 {
 				if srb, ok := c.(setReadBufferer); ok {
-					if err := srb.SetReadBuffer(int(rsl.ReadBufferSize.Size)); err != nil {
+					if err := srb.SetReadBuffer(int(rsl.ReadBufferSize)); err != nil {
 						rsl.Log.Warnf("Setting read buffer failed: %v", err)
 					}
 				} else {
@@ -129,13 +129,13 @@ func (rsl *riemannListener) setKeepAlive(c net.Conn) error {
 	if !ok {
 		return fmt.Errorf("cannot set keep alive on a %s socket", strings.SplitN(rsl.ServiceAddress, "://", 2)[0])
 	}
-	if rsl.KeepAlivePeriod.Duration == 0 {
+	if *rsl.KeepAlivePeriod == 0 {
 		return tcpc.SetKeepAlive(false)
 	}
 	if err := tcpc.SetKeepAlive(true); err != nil {
 		return err
 	}
-	return tcpc.SetKeepAlivePeriod(rsl.KeepAlivePeriod.Duration)
+	return tcpc.SetKeepAlivePeriod(time.Duration(*rsl.KeepAlivePeriod))
 }
 
 func (rsl *riemannListener) removeConnection(c net.Conn) {
@@ -175,8 +175,8 @@ func (rsl *riemannListener) read(conn net.Conn) {
 	var err error
 
 	for {
-		if rsl.ReadTimeout != nil && rsl.ReadTimeout.Duration > 0 {
-			if err := conn.SetDeadline(time.Now().Add(rsl.ReadTimeout.Duration)); err != nil {
+		if rsl.ReadTimeout != nil && *rsl.ReadTimeout > 0 {
+			if err := conn.SetDeadline(time.Now().Add(time.Duration(*rsl.ReadTimeout))); err != nil {
 				rsl.Log.Warnf("Setting deadline failed: %v", err)
 			}
 		}

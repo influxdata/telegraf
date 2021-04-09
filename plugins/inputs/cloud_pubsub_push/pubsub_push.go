@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -27,9 +27,9 @@ type PubSubPush struct {
 	ServiceAddress string
 	Token          string
 	Path           string
-	ReadTimeout    internal.Duration
-	WriteTimeout   internal.Duration
-	MaxBodySize    internal.Size
+	ReadTimeout    config.Duration
+	WriteTimeout   config.Duration
+	MaxBodySize    config.Size
 	AddMeta        bool
 	Log            telegraf.Logger
 
@@ -129,15 +129,15 @@ func (p *PubSubPush) SetParser(parser parsers.Parser) {
 
 // Start starts the http listener service.
 func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
-	if p.MaxBodySize.Size == 0 {
-		p.MaxBodySize.Size = defaultMaxBodySize
+	if p.MaxBodySize == 0 {
+		p.MaxBodySize = config.Size(defaultMaxBodySize)
 	}
 
-	if p.ReadTimeout.Duration < time.Second {
-		p.ReadTimeout.Duration = time.Second * 10
+	if p.ReadTimeout < config.Duration(time.Second) {
+		p.ReadTimeout = config.Duration(time.Second * 10)
 	}
-	if p.WriteTimeout.Duration < time.Second {
-		p.WriteTimeout.Duration = time.Second * 10
+	if p.WriteTimeout < config.Duration(time.Second) {
+		p.WriteTimeout = config.Duration(time.Second * 10)
 	}
 
 	tlsConf, err := p.ServerConfig.TLSConfig()
@@ -147,8 +147,8 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 
 	p.server = &http.Server{
 		Addr:        p.ServiceAddress,
-		Handler:     http.TimeoutHandler(p, p.WriteTimeout.Duration, "timed out processing metric"),
-		ReadTimeout: p.ReadTimeout.Duration,
+		Handler:     http.TimeoutHandler(p, time.Duration(p.WriteTimeout), "timed out processing metric"),
+		ReadTimeout: time.Duration(p.ReadTimeout),
 		TLSConfig:   tlsConf,
 	}
 
@@ -206,7 +206,7 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// Check that the content length is not too large for us to handle.
-	if req.ContentLength > p.MaxBodySize.Size {
+	if req.ContentLength > int64(p.MaxBodySize) {
 		res.WriteHeader(http.StatusRequestEntityTooLarge)
 		return
 	}
@@ -216,7 +216,7 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body := http.MaxBytesReader(res, req.Body, p.MaxBodySize.Size)
+	body := http.MaxBytesReader(res, req.Body, int64(p.MaxBodySize))
 	bytes, err := ioutil.ReadAll(body)
 	if err != nil {
 		res.WriteHeader(http.StatusRequestEntityTooLarge)

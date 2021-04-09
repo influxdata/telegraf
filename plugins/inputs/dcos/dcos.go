@@ -11,8 +11,8 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go/v4"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -56,7 +56,7 @@ type DCOS struct {
 	AppExclude       []string
 
 	MaxConnections  int
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	tls.ClientConfig
 
 	client Client
@@ -359,7 +359,7 @@ func (d *DCOS) createClient() (Client, error) {
 
 	client := NewClusterClient(
 		url,
-		d.ResponseTimeout.Duration,
+		time.Duration(d.ResponseTimeout),
 		d.MaxConnections,
 		tlsCfg,
 	)
@@ -421,10 +421,8 @@ func (d *DCOS) createFilters() error {
 func init() {
 	inputs.Add("dcos", func() telegraf.Input {
 		return &DCOS{
-			MaxConnections: defaultMaxConnections,
-			ResponseTimeout: internal.Duration{
-				Duration: defaultResponseTimeout,
-			},
+			MaxConnections:  defaultMaxConnections,
+			ResponseTimeout: config.Duration(defaultResponseTimeout),
 		}
 	})
 }

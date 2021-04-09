@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/vmware/govmomi/vim25/soap"
@@ -54,8 +54,8 @@ type VSphere struct {
 	CollectConcurrency      int
 	DiscoverConcurrency     int
 	ForceDiscoverOnInit     bool
-	ObjectDiscoveryInterval internal.Duration
-	Timeout                 internal.Duration
+	ObjectDiscoveryInterval config.Duration
+	Timeout                 config.Duration
 
 	endpoints []*Endpoint
 	cancel    context.CancelFunc
@@ -364,8 +364,8 @@ func init() {
 			CollectConcurrency:      1,
 			DiscoverConcurrency:     1,
 			ForceDiscoverOnInit:     true,
-			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
-			Timeout:                 internal.Duration{Duration: time.Second * 60},
+			ObjectDiscoveryInterval: config.Duration(time.Second * 300),
+			Timeout:                 config.Duration(time.Second * 60),
 		}
 	})
 }

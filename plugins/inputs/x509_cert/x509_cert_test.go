@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -60,7 +60,7 @@ func TestGatherRemoteIntegration(t *testing.T) {
 	pair, err := tls.X509KeyPair([]byte(pki.ReadServerCert()), []byte(pki.ReadServerKey()))
 	require.NoError(t, err)
 
-	config := &tls.Config{
+	cfg := &tls.Config{
 		InsecureSkipVerify: true,
 		Certificates:       []tls.Certificate{pair},
 	}
@@ -68,13 +68,13 @@ func TestGatherRemoteIntegration(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.unset {
-				config.Certificates = nil
-				config.GetCertificate = func(i *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				cfg.Certificates = nil
+				cfg.GetCertificate = func(i *tls.ClientHelloInfo) (*tls.Certificate, error) {
 					return nil, nil
 				}
 			}
 
-			ln, err := tls.Listen("tcp", ":0", config)
+			ln, err := tls.Listen("tcp", ":0", cfg)
 			require.NoError(t, err)
 			defer ln.Close()
 
@@ -85,7 +85,7 @@ func TestGatherRemoteIntegration(t *testing.T) {
 					sconn.Close()
 				}
 
-				serverConfig := config.Clone()
+				serverConfig := cfg.Clone()
 
 				srv := tls.Server(sconn, serverConfig)
 				if test.noshake {
@@ -100,7 +100,7 @@ func TestGatherRemoteIntegration(t *testing.T) {
 
 			sc := X509Cert{
 				Sources: []string{test.server},
-				Timeout: internal.Duration{Duration: test.timeout},
+				Timeout: config.Duration(test.timeout),
 			}
 			require.NoError(t, sc.Init())
 
@@ -306,7 +306,7 @@ func TestGatherCertMustNotTimeout(t *testing.T) {
 	duration := time.Duration(15) * time.Second
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443"},
-		Timeout: internal.Duration{Duration: duration},
+		Timeout: config.Duration(duration),
 	}
 	require.NoError(t, m.Init())
 

@@ -258,7 +258,7 @@ func isSimple(include []string, exclude []string) bool {
 }
 
 func (e *Endpoint) startDiscovery(ctx context.Context) {
-	e.discoveryTicker = time.NewTicker(e.Parent.ObjectDiscoveryInterval.Duration)
+	e.discoveryTicker = time.NewTicker(time.Duration(e.Parent.ObjectDiscoveryInterval))
 	go func() {
 		for {
 			select {
@@ -300,7 +300,7 @@ func (e *Endpoint) init(ctx context.Context) error {
 		}
 	}
 
-	if e.Parent.ObjectDiscoveryInterval.Duration > 0 {
+	if time.Duration(e.Parent.ObjectDiscoveryInterval) > 0 {
 		e.Parent.Log.Debug("Running initial discovery")
 		e.initalDiscovery(ctx)
 	}
@@ -339,7 +339,7 @@ func (e *Endpoint) getMetadata(ctx context.Context, obj *objectRef, sampling int
 		return nil, err
 	}
 
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
 	metrics, err := client.Perf.AvailableMetric(ctx1, obj.ref.Reference(), sampling)
 	if err != nil {
@@ -367,7 +367,7 @@ func (e *Endpoint) getAncestorName(ctx context.Context, client *Client, resource
 			path = append(path, here.Reference().String())
 			o := object.NewCommon(client.Client.Client, r)
 			var result mo.ManagedEntity
-			ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+			ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 			defer cancel1()
 			err := o.Properties(ctx1, here, []string{"parent", "name"}, &result)
 			if err != nil {
@@ -429,7 +429,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 				paths:        res.paths,
 				excludePaths: res.excludePaths}
 
-			ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+			ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 			objects, err := res.getObjects(ctx1, e, &rf)
 			cancel1()
 			if err != nil {
@@ -588,7 +588,7 @@ func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 
 func getDatacenters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.Datacenter
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
 	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
@@ -609,7 +609,7 @@ func getDatacenters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (o
 
 func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.ClusterComputeResource
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
 	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
@@ -623,7 +623,7 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 			// We're not interested in the immediate parent (a folder), but the data center.
 			p, ok := cache[r.Parent.Value]
 			if !ok {
-				ctx2, cancel2 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+				ctx2, cancel2 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 				defer cancel2()
 				client, err := e.clientFactory.GetClient(ctx2)
 				if err != nil {
@@ -631,7 +631,7 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 				}
 				o := object.NewFolder(client.Client.Client, *r.Parent)
 				var folder mo.Folder
-				ctx3, cancel3 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+				ctx3, cancel3 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 				defer cancel3()
 				err = o.Properties(ctx3, *r.Parent, []string{"parent"}, &folder)
 				if err != nil {
@@ -679,7 +679,7 @@ func getHosts(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectM
 
 func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.VirtualMachine
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
 	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
@@ -769,7 +769,7 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 
 func getDatastores(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.Datastore
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
 	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
@@ -840,7 +840,7 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 	}
 
 	// If discovery interval is disabled (0), discover on each collection cycle
-	if e.Parent.ObjectDiscoveryInterval.Duration == 0 {
+	if time.Duration(e.Parent.ObjectDiscoveryInterval) == 0 {
 		err := e.discover(ctx)
 		if err != nil {
 			return err

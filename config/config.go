@@ -82,9 +82,9 @@ func NewConfig() *Config {
 
 		// Agent defaults:
 		Agent: &AgentConfig{
-			Interval:                   internal.Duration{Duration: 10 * time.Second},
+			Interval:                   Duration(10 * time.Second),
 			RoundInterval:              true,
-			FlushInterval:              internal.Duration{Duration: 10 * time.Second},
+			FlushInterval:              Duration(10 * time.Second),
 			LogTarget:                  "file",
 			LogfileRotationMaxArchives: 5,
 		},
@@ -111,7 +111,7 @@ func NewConfig() *Config {
 // AgentConfig defines configuration that will be used by the Telegraf agent
 type AgentConfig struct {
 	// Interval at which to gather information
-	Interval internal.Duration
+	Interval Duration
 
 	// RoundInterval rounds collection interval to 'interval'.
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
@@ -123,22 +123,22 @@ type AgentConfig struct {
 	//       when interval = "250ms", precision will be "1ms"
 	// Precision will NOT be used for service inputs. It is up to each individual
 	// service input to set the timestamp at the appropriate precision.
-	Precision internal.Duration
+	Precision Duration
 
 	// CollectionJitter is used to jitter the collection by a random amount.
 	// Each plugin will sleep for a random time within jitter before collecting.
 	// This can be used to avoid many plugins querying things like sysfs at the
 	// same time, which can have a measurable effect on the system.
-	CollectionJitter internal.Duration
+	CollectionJitter Duration
 
 	// FlushInterval is the Interval at which to flush data
-	FlushInterval internal.Duration
+	FlushInterval Duration
 
 	// FlushJitter Jitters the flush interval by a random amount.
 	// This is primarily to avoid large write spikes for users running a large
 	// number of telegraf instances.
 	// ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
-	FlushJitter internal.Duration
+	FlushJitter Duration
 
 	// MetricBatchSize is the maximum number of metrics that is wrote to an
 	// output plugin in one call.
@@ -178,11 +178,11 @@ type AgentConfig struct {
 
 	// The file will be rotated after the time interval specified.  When set
 	// to 0 no time based rotation is performed.
-	LogfileRotationInterval internal.Duration `toml:"logfile_rotation_interval"`
+	LogfileRotationInterval Duration `toml:"logfile_rotation_interval"`
 
 	// The logfile will be rotated when it becomes larger than the specified
 	// size.  When set to 0 no size based rotation is performed.
-	LogfileRotationMaxSize internal.Size `toml:"logfile_rotation_max_size"`
+	LogfileRotationMaxSize Size `toml:"logfile_rotation_max_size"`
 
 	// Maximum number of rotated archives to keep, any older logs are deleted.
 	// If set to -1, no archives are removed.

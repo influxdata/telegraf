@@ -9,18 +9,19 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // SystemdUnits is a telegraf plugin to gather systemd unit status
 type SystemdUnits struct {
-	Timeout   internal.Duration
+	Timeout   config.Duration
 	UnitType  string `toml:"unittype"`
 	systemctl systemctl
 }
 
-type systemctl func(Timeout internal.Duration, UnitType string) (*bytes.Buffer, error)
+type systemctl func(timeout config.Duration, unitType string) (*bytes.Buffer, error)
 
 const measurement = "systemd_units"
 
@@ -112,7 +113,7 @@ var subMap = map[string]int{
 }
 
 var (
-	defaultTimeout  = internal.Duration{Duration: time.Second}
+	defaultTimeout  = config.Duration(time.Second)
 	defaultUnitType = "service"
 )
 
@@ -191,20 +192,20 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func setSystemctl(Timeout internal.Duration, UnitType string) (*bytes.Buffer, error) {
+func setSystemctl(timeout config.Duration, unitType string) (*bytes.Buffer, error) {
 	// is systemctl available ?
 	systemctlPath, err := exec.LookPath("systemctl")
 	if err != nil {
 		return nil, err
 	}
 
-	cmd := exec.Command(systemctlPath, "list-units", "--all", "--plain", fmt.Sprintf("--type=%s", UnitType), "--no-legend")
+	cmd := exec.Command(systemctlPath, "list-units", "--all", "--plain", fmt.Sprintf("--type=%s", unitType), "--no-legend")
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err = internal.RunTimeout(cmd, Timeout.Duration)
+	err = internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
-		return &out, fmt.Errorf("error running systemctl list-units --all --plain --type=%s --no-legend: %s", UnitType, err)
+		return &out, fmt.Errorf("error running systemctl list-units --all --plain --type=%s --no-legend: %s", unitType, err)
 	}
 
 	return &out, nil

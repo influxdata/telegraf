@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -30,13 +30,13 @@ const (
 )
 
 type OpenWeatherMap struct {
-	AppID           string            `toml:"app_id"`
-	CityID          []string          `toml:"city_id"`
-	Lang            string            `toml:"lang"`
-	Fetch           []string          `toml:"fetch"`
-	BaseURL         string            `toml:"base_url"`
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
-	Units           string            `toml:"units"`
+	AppID           string          `toml:"app_id"`
+	CityID          []string        `toml:"city_id"`
+	Lang            string          `toml:"lang"`
+	Fetch           []string        `toml:"fetch"`
+	BaseURL         string          `toml:"base_url"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
+	Units           string          `toml:"units"`
 
 	client  *http.Client
 	baseURL *url.URL
@@ -132,13 +132,13 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 }
 
 func (n *OpenWeatherMap) createHTTPClient() *http.Client {
-	if n.ResponseTimeout.Duration < time.Second {
-		n.ResponseTimeout.Duration = defaultResponseTimeout
+	if n.ResponseTimeout < config.Duration(time.Second) {
+		n.ResponseTimeout = config.Duration(defaultResponseTimeout)
 	}
 
 	client := &http.Client{
 		Transport: &http.Transport{},
-		Timeout:   n.ResponseTimeout.Duration,
+		Timeout:   time.Duration(n.ResponseTimeout),
 	}
 
 	return client
@@ -299,9 +299,7 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 
 func init() {
 	inputs.Add("openweathermap", func() telegraf.Input {
-		tmout := internal.Duration{
-			Duration: defaultResponseTimeout,
-		}
+		tmout := config.Duration(defaultResponseTimeout)
 		return &OpenWeatherMap{
 			ResponseTimeout: tmout,
 			BaseURL:         defaultBaseURL,

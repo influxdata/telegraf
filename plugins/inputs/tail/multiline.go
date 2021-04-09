@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 )
 
 // Indicates relation to the multiline event: previous or next
@@ -23,7 +23,7 @@ type MultilineConfig struct {
 	Pattern        string
 	MatchWhichLine MultilineMatchWhichLine `toml:"match_which_line"`
 	InvertMatch    bool
-	Timeout        *internal.Duration
+	Timeout        *config.Duration
 }
 
 const (
@@ -43,8 +43,9 @@ func (m *MultilineConfig) NewMultiline() (*Multiline, error) {
 		if r, err = regexp.Compile(m.Pattern); err != nil {
 			return nil, err
 		}
-		if m.Timeout == nil || m.Timeout.Duration.Nanoseconds() == int64(0) {
-			m.Timeout = &internal.Duration{Duration: 5 * time.Second}
+		if m.Timeout == nil || time.Duration(*m.Timeout).Nanoseconds() == int64(0) {
+			d := config.Duration(5 * time.Second)
+			m.Timeout = &d
 		}
 	}
 

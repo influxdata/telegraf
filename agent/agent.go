@@ -98,8 +98,8 @@ type outputUnit struct {
 func (a *Agent) Run(ctx context.Context) error {
 	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s",
-		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
-		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
+		time.Duration(a.Config.Agent.Interval), a.Config.Agent.Quiet,
+		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
 
 	log.Printf("D! [agent] Initializing plugins")
 	err := a.initPlugins()
@@ -274,19 +274,19 @@ func (a *Agent) runInputs(
 	var wg sync.WaitGroup
 	for _, input := range unit.inputs {
 		// Overwrite agent interval if this plugin has its own.
-		interval := a.Config.Agent.Interval.Duration
+		interval := time.Duration(a.Config.Agent.Interval)
 		if input.Config.Interval != 0 {
 			interval = input.Config.Interval
 		}
 
 		// Overwrite agent precision if this plugin has its own.
-		precision := a.Config.Agent.Precision.Duration
+		precision := time.Duration(a.Config.Agent.Precision)
 		if input.Config.Precision != 0 {
 			precision = input.Config.Precision
 		}
 
 		// Overwrite agent collection_jitter if this plugin has its own.
-		jitter := a.Config.Agent.CollectionJitter.Duration
+		jitter := time.Duration(a.Config.Agent.CollectionJitter)
 		if input.Config.CollectionJitter != 0 {
 			jitter = input.Config.CollectionJitter
 		}
@@ -373,13 +373,13 @@ func (a *Agent) testRunInputs(
 			defer wg.Done()
 
 			// Overwrite agent interval if this plugin has its own.
-			interval := a.Config.Agent.Interval.Duration
+			interval := time.Duration(a.Config.Agent.Interval)
 			if input.Config.Interval != 0 {
 				interval = input.Config.Interval
 			}
 
 			// Overwrite agent precision if this plugin has its own.
-			precision := a.Config.Agent.Precision.Duration
+			precision := time.Duration(a.Config.Agent.Precision)
 			if input.Config.Precision != 0 {
 				precision = input.Config.Precision
 			}
@@ -611,8 +611,8 @@ func (a *Agent) runAggregators(
 		go func(agg *models.RunningAggregator) {
 			defer wg.Done()
 
-			interval := a.Config.Agent.Interval.Duration
-			precision := a.Config.Agent.Precision.Duration
+			interval := time.Duration(a.Config.Agent.Interval)
+			precision := time.Duration(a.Config.Agent.Precision)
 
 			acc := NewAccumulator(agg, unit.aggC)
 			acc.SetPrecision(getPrecision(precision, interval))
@@ -723,8 +723,8 @@ func (a *Agent) runOutputs(
 	var wg sync.WaitGroup
 
 	// Start flush loop
-	interval := a.Config.Agent.FlushInterval.Duration
-	jitter := a.Config.Agent.FlushJitter.Duration
+	interval := time.Duration(a.Config.Agent.FlushInterval)
+	jitter := time.Duration(a.Config.Agent.FlushJitter)
 
 	ctx, cancel := context.WithCancel(context.Background())
 

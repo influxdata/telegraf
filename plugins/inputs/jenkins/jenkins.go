@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -25,19 +25,19 @@ type Jenkins struct {
 	Source   string
 	Port     string
 	// HTTP Timeout specified as a string - 3s, 1m, 1h
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 
 	tls.ClientConfig
 	client *client
 
 	Log telegraf.Logger
 
-	MaxConnections    int               `toml:"max_connections"`
-	MaxBuildAge       internal.Duration `toml:"max_build_age"`
-	MaxSubJobDepth    int               `toml:"max_subjob_depth"`
-	MaxSubJobPerLayer int               `toml:"max_subjob_per_layer"`
-	JobExclude        []string          `toml:"job_exclude"`
-	JobInclude        []string          `toml:"job_include"`
+	MaxConnections    int             `toml:"max_connections"`
+	MaxBuildAge       config.Duration `toml:"max_build_age"`
+	MaxSubJobDepth    int             `toml:"max_subjob_depth"`
+	MaxSubJobPerLayer int             `toml:"max_subjob_per_layer"`
+	JobExclude        []string        `toml:"job_exclude"`
+	JobInclude        []string        `toml:"job_include"`
 	jobFilterExclude  filter.Filter
 	jobFilterInclude  filter.Filter
 
@@ -138,7 +138,7 @@ func (j *Jenkins) newHTTPClient() (*http.Client, error) {
 			TLSClientConfig: tlsCfg,
 			MaxIdleConns:    j.MaxConnections,
 		},
-		Timeout: j.ResponseTimeout.Duration,
+		Timeout: time.Duration(j.ResponseTimeout),
 	}, nil
 }
 
@@ -353,7 +353,7 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 
 	// stop if build is too old
 	// Higher up in gatherJobs
-	cutoff := time.Now().Add(-1 * j.MaxBuildAge.Duration)
+	cutoff := time.Now().Add(-1 * time.Duration(j.MaxBuildAge))
 
 	// Here we just test
 	if build.GetTimestamp().Before(cutoff) {
@@ -501,7 +501,7 @@ func mapResultCode(s string) int {
 func init() {
 	inputs.Add("jenkins", func() telegraf.Input {
 		return &Jenkins{
-			MaxBuildAge:       internal.Duration{Duration: time.Hour},
+			MaxBuildAge:       config.Duration(time.Hour),
 			MaxConnections:    5,
 			MaxSubJobPerLayer: 10,
 		}
