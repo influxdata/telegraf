@@ -3,14 +3,11 @@ package opensmtpd
 import (
 	"bytes"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
-
-var TestTimeout = config.Duration(time.Second)
 
 func SMTPCTL(output string) func(string, config.Duration, bool) (*bytes.Buffer, error) {
 	return func(string, config.Duration, bool) (*bytes.Buffer, error) {
