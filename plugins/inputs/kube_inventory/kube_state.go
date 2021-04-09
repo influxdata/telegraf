@@ -13,8 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -25,14 +25,14 @@ const (
 
 // KubernetesInventory represents the config object for the plugin.
 type KubernetesInventory struct {
-	URL               string            `toml:"url"`
-	BearerToken       string            `toml:"bearer_token"`
-	BearerTokenString string            `toml:"bearer_token_string"`
-	Namespace         string            `toml:"namespace"`
-	ResponseTimeout   internal.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
-	ResourceExclude   []string          `toml:"resource_exclude"`
-	ResourceInclude   []string          `toml:"resource_include"`
-	MaxConfigMapAge   internal.Duration `toml:"max_config_map_age"`
+	URL               string          `toml:"url"`
+	BearerToken       string          `toml:"bearer_token"`
+	BearerTokenString string          `toml:"bearer_token_string"`
+	Namespace         string          `toml:"namespace"`
+	ResponseTimeout   config.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
+	ResourceExclude   []string        `toml:"resource_exclude"`
+	ResourceInclude   []string        `toml:"resource_include"`
+	MaxConfigMapAge   config.Duration `toml:"max_config_map_age"`
 
 	SelectorInclude []string `toml:"selector_include"`
 	SelectorExclude []string `toml:"selector_exclude"`
@@ -109,7 +109,7 @@ func (ki *KubernetesInventory) Init() error {
 	}
 
 	var err error
-	ki.client, err = newClient(ki.URL, ki.Namespace, ki.BearerTokenString, ki.ResponseTimeout.Duration, ki.ClientConfig)
+	ki.client, err = newClient(ki.URL, ki.Namespace, ki.BearerTokenString, time.Duration(ki.ResponseTimeout), ki.ClientConfig)
 
 	if err != nil {
 		return err
@@ -211,7 +211,7 @@ var (
 func init() {
 	inputs.Add("kube_inventory", func() telegraf.Input {
 		return &KubernetesInventory{
-			ResponseTimeout: internal.Duration{Duration: time.Second * 5},
+			ResponseTimeout: config.Duration(time.Second * 5),
 			Namespace:       "default",
 			SelectorInclude: []string{},
 			SelectorExclude: []string{"*"},

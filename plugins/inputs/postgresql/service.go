@@ -8,13 +8,14 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/jackc/pgx/stdlib"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 )
 
 // pulled from lib/pq
@@ -92,7 +93,7 @@ type Service struct {
 	Outputaddress string
 	MaxIdle       int
 	MaxOpen       int
-	MaxLifetime   internal.Duration
+	MaxLifetime   config.Duration
 	DB            *sql.DB
 	IsPgBouncer   bool
 }
@@ -145,13 +146,15 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 
 	p.DB.SetMaxOpenConns(p.MaxOpen)
 	p.DB.SetMaxIdleConns(p.MaxIdle)
-	p.DB.SetConnMaxLifetime(p.MaxLifetime.Duration)
+	p.DB.SetConnMaxLifetime(time.Duration(p.MaxLifetime))
 
 	return nil
 }
 
 // Stop stops the services and closes any necessary channels and connections
 func (p *Service) Stop() {
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	p.DB.Close()
 }
 

@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var oneSecondDuration = internal.Duration{Duration: time.Second}
+var oneSecondDuration = config.Duration(time.Second)
 
 // Key, value pair that represents a telegraf.Metric Field
 type field struct {
@@ -122,7 +122,7 @@ func equalSets(l1 []telegraf.Metric, l2 []telegraf.Metric) bool {
 func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metric, testID string, t *testing.T) {
 	// Sleep for `period`, otherwise the processor will only
 	// cache the metrics, but it will not process them
-	time.Sleep(topk.Period.Duration)
+	time.Sleep(time.Duration(topk.Period))
 
 	// Run the processor
 	ret := topk.Apply(metrics...)

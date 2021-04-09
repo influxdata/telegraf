@@ -46,10 +46,11 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 		} else if r.URL.Path == "/tengine_status" {
 			rsp = tengineSampleResponse
 		} else {
-			panic("Cannot handle request")
+			require.Fail(t, "Cannot handle request")
 		}
 
-		fmt.Fprintln(w, rsp)
+		_, err := fmt.Fprintln(w, rsp)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -64,11 +65,8 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 	var accNginx testutil.Accumulator
 	var accTengine testutil.Accumulator
 
-	errNginx := accNginx.GatherError(n.Gather)
-	errTengine := accTengine.GatherError(nt.Gather)
-
-	require.NoError(t, errNginx)
-	require.NoError(t, errTengine)
+	require.NoError(t, accNginx.GatherError(n.Gather))
+	require.NoError(t, accTengine.GatherError(nt.Gather))
 
 	fieldsNginx := map[string]interface{}{
 		"active":   uint64(585),
@@ -91,9 +89,7 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 	}
 
 	addr, err := url.Parse(ts.URL)
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, err)
 
 	host, port, err := net.SplitHostPort(addr.Host)
 	if err != nil {

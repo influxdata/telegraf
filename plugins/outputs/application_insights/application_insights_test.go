@@ -9,7 +9,7 @@ import (
 	"github.com/Microsoft/ApplicationInsights-Go/appinsights"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/application_insights/mocks"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +25,7 @@ func TestConnectFailsIfNoIkey(t *testing.T) {
 	ai := ApplicationInsights{
 		transmitter: transmitter,
 		// Very long timeout to ensure we do not rely on timeouts for closing the transmitter
-		Timeout: internal.Duration{Duration: time.Hour},
+		Timeout: config.Duration(time.Hour),
 		Log:     testutil.Logger{},
 	}
 
@@ -41,7 +41,7 @@ func TestOutputCloseTimesOut(t *testing.T) {
 
 	ai := ApplicationInsights{
 		transmitter: transmitter,
-		Timeout:     internal.Duration{Duration: time.Millisecond * 50},
+		Timeout:     config.Duration(time.Millisecond * 50),
 		Log:         testutil.Logger{},
 	}
 
@@ -66,7 +66,7 @@ func TestCloseRemovesDiagMsgListener(t *testing.T) {
 
 	ai := ApplicationInsights{
 		transmitter:             transmitter,
-		Timeout:                 internal.Duration{Duration: time.Hour},
+		Timeout:                 config.Duration(time.Hour),
 		EnableDiagnosticLogging: true,
 		diagMsgSubscriber:       diagMsgSubscriber,
 		InstrumentationKey:      "1234", // Fake, but necessary to enable tracking

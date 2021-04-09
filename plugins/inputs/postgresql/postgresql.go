@@ -9,7 +9,7 @@ import (
 	_ "github.com/jackc/pgx/stdlib"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -156,13 +156,19 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator, columns []str
 	if columnMap["datname"] != nil {
 		// extract the database name from the column map
 		if dbNameStr, ok := (*columnMap["datname"]).(string); ok {
-			dbname.WriteString(dbNameStr)
+			if _, err := dbname.WriteString(dbNameStr); err != nil {
+				return err
+			}
 		} else {
 			// PG 12 adds tracking of global objects to pg_stat_database
-			dbname.WriteString("postgres_global")
+			if _, err := dbname.WriteString("postgres_global"); err != nil {
+				return err
+			}
 		}
 	} else {
-		dbname.WriteString("postgres")
+		if _, err := dbname.WriteString("postgres"); err != nil {
+			return err
+		}
 	}
 
 	var tagAddress string
@@ -189,11 +195,9 @@ func init() {
 	inputs.Add("postgresql", func() telegraf.Input {
 		return &Postgresql{
 			Service: Service{
-				MaxIdle: 1,
-				MaxOpen: 1,
-				MaxLifetime: internal.Duration{
-					Duration: 0,
-				},
+				MaxIdle:     1,
+				MaxOpen:     1,
+				MaxLifetime: config.Duration(0),
 				IsPgBouncer: false,
 			},
 		}

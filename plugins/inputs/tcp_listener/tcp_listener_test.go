@@ -56,22 +56,20 @@ func BenchmarkTCP(b *testing.B) {
 
 	// send multiple messages to socket
 	for n := 0; n < b.N; n++ {
-		err := listener.Start(acc)
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(b, listener.Start(acc))
 
 		conn, err := net.Dial("tcp", "127.0.0.1:8198")
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(b, err)
 		for i := 0; i < 100000; i++ {
-			fmt.Fprintf(conn, testMsg)
+			_, err := fmt.Fprint(conn, testMsg)
+			require.NoError(b, err)
 		}
-		conn.(*net.TCPConn).CloseWrite()
+		require.NoError(b, conn.(*net.TCPConn).CloseWrite())
 		// wait for all 100,000 metrics to be processed
 		buf := []byte{0}
-		conn.Read(buf) // will EOF when completed
+		// will EOF when completed
+		_, err = conn.Read(buf)
+		require.NoError(b, err)
 		listener.Stop()
 	}
 }
@@ -87,15 +85,15 @@ func TestHighTrafficTCP(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	// send multiple messages to socket
-	err := listener.Start(acc)
-	require.NoError(t, err)
+	require.NoError(t, listener.Start(acc))
 
 	conn, err := net.Dial("tcp", "127.0.0.1:8199")
 	require.NoError(t, err)
 	for i := 0; i < 100000; i++ {
-		fmt.Fprintf(conn, testMsg)
+		_, err := fmt.Fprint(conn, testMsg)
+		require.NoError(t, err)
 	}
-	conn.(*net.TCPConn).CloseWrite()
+	require.NoError(t, conn.(*net.TCPConn).CloseWrite())
 	buf := []byte{0}
 	_, err = conn.Read(buf)
 	assert.Equal(t, err, io.EOF)
@@ -121,7 +119,8 @@ func TestConnectTCP(t *testing.T) {
 	require.NoError(t, err)
 
 	// send single message to socket
-	fmt.Fprintf(conn, testMsg)
+	_, err = fmt.Fprint(conn, testMsg)
+	require.NoError(t, err)
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
@@ -129,7 +128,8 @@ func TestConnectTCP(t *testing.T) {
 	)
 
 	// send multiple messages to socket
-	fmt.Fprintf(conn, testMsgs)
+	_, err = fmt.Fprint(conn, testMsgs)
+	require.NoError(t, err)
 	acc.Wait(6)
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
@@ -156,17 +156,18 @@ func TestConcurrentConns(t *testing.T) {
 	defer listener.Stop()
 
 	_, err := net.Dial("tcp", "127.0.0.1:8195")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8195")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Connection over the limit:
 	conn, err := net.Dial("tcp", "127.0.0.1:8195")
-	assert.NoError(t, err)
-	net.Dial("tcp", "127.0.0.1:8195")
+	require.NoError(t, err)
+	_, err = net.Dial("tcp", "127.0.0.1:8195")
+	require.NoError(t, err)
 	buf := make([]byte, 1500)
 	n, err := conn.Read(buf)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		"Telegraf maximum concurrent TCP connections (2) reached, closing.\n"+
 			"You may want to increase max_tcp_connections in"+
@@ -192,15 +193,16 @@ func TestConcurrentConns1(t *testing.T) {
 	defer listener.Stop()
 
 	_, err := net.Dial("tcp", "127.0.0.1:8196")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Connection over the limit:
 	conn, err := net.Dial("tcp", "127.0.0.1:8196")
-	assert.NoError(t, err)
-	net.Dial("tcp", "127.0.0.1:8196")
+	require.NoError(t, err)
+	_, err = net.Dial("tcp", "127.0.0.1:8196")
+	require.NoError(t, err)
 	buf := make([]byte, 1500)
 	n, err := conn.Read(buf)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t,
 		"Telegraf maximum concurrent TCP connections (1) reached, closing.\n"+
 			"You may want to increase max_tcp_connections in"+
@@ -225,9 +227,9 @@ func TestCloseConcurrentConns(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 
 	_, err := net.Dial("tcp", "127.0.0.1:8195")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8195")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	listener.Stop()
 }
@@ -245,7 +247,7 @@ func TestRunParser(t *testing.T) {
 	go listener.tcpParser()
 
 	in <- testmsg
-	listener.Gather(&acc)
+	require.NoError(t, listener.Gather(&acc))
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
@@ -293,7 +295,7 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 	go listener.tcpParser()
 
 	in <- testmsg
-	listener.Gather(&acc)
+	require.NoError(t, listener.Gather(&acc))
 
 	acc.Wait(1)
 	acc.AssertContainsFields(t, "cpu_load_graphite",
@@ -316,7 +318,7 @@ func TestRunParserJSONMsg(t *testing.T) {
 	go listener.tcpParser()
 
 	in <- testmsg
-	listener.Gather(&acc)
+	require.NoError(t, listener.Gather(&acc))
 
 	acc.Wait(1)
 	acc.AssertContainsFields(t, "udp_json_test",

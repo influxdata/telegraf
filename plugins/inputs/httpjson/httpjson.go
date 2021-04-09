@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -27,7 +27,7 @@ type HTTPJSON struct {
 	Servers         []string
 	Method          string
 	TagKeys         []string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	Parameters      map[string]string
 	Headers         map[string]string
 	tls.ClientConfig
@@ -131,12 +131,12 @@ func (h *HTTPJSON) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: h.ResponseTimeout.Duration,
+			ResponseHeaderTimeout: time.Duration(h.ResponseTimeout),
 			TLSClientConfig:       tlsCfg,
 		}
 		client := &http.Client{
 			Transport: tr,
-			Timeout:   h.ResponseTimeout.Duration,
+			Timeout:   time.Duration(h.ResponseTimeout),
 		}
 		h.client.SetHTTPClient(client)
 	}
@@ -286,10 +286,8 @@ func (h *HTTPJSON) sendRequest(serverURL string) (string, float64, error) {
 func init() {
 	inputs.Add("httpjson", func() telegraf.Input {
 		return &HTTPJSON{
-			client: &RealHTTPClient{},
-			ResponseTimeout: internal.Duration{
-				Duration: 5 * time.Second,
-			},
+			client:          &RealHTTPClient{},
+			ResponseTimeout: config.Duration(5 * time.Second),
 		}
 	})
 }

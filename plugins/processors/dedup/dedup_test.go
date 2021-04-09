@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -24,7 +24,7 @@ func createMetric(value int64, when time.Time) telegraf.Metric {
 
 func createDedup(initTime time.Time) Dedup {
 	return Dedup{
-		DedupInterval: internal.Duration{Duration: 10 * time.Minute},
+		DedupInterval: config.Duration(10 * time.Minute),
 		FlushTime:     initTime,
 		Cache:         make(map[uint64]telegraf.Metric),
 	}

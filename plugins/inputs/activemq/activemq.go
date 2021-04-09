@@ -12,19 +12,19 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type ActiveMQ struct {
-	Server          string            `toml:"server"`
-	Port            int               `toml:"port"`
-	URL             string            `toml:"url"`
-	Username        string            `toml:"username"`
-	Password        string            `toml:"password"`
-	Webadmin        string            `toml:"webadmin"`
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	Server          string          `toml:"server"`
+	Port            int             `toml:"port"`
+	URL             string          `toml:"url"`
+	Username        string          `toml:"username"`
+	Password        string          `toml:"password"`
+	Webadmin        string          `toml:"webadmin"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
 	tls.ClientConfig
 
 	client  *http.Client
@@ -127,15 +127,15 @@ func (a *ActiveMQ) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: a.ResponseTimeout.Duration,
+		Timeout: time.Duration(a.ResponseTimeout),
 	}
 
 	return client, nil
 }
 
 func (a *ActiveMQ) Init() error {
-	if a.ResponseTimeout.Duration < time.Second {
-		a.ResponseTimeout.Duration = time.Second * 5
+	if a.ResponseTimeout < config.Duration(time.Second) {
+		a.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 
 	var err error

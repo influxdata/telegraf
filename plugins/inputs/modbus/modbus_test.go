@@ -648,7 +648,7 @@ func TestHoldingRegisters(t *testing.T) {
 			err = modbus.Init()
 			assert.NoError(t, err)
 			var acc testutil.Accumulator
-			modbus.Gather(&acc)
+			assert.NoError(t, modbus.Gather(&acc))
 			assert.NotEmpty(t, modbus.registers)
 
 			for _, coil := range modbus.registers {

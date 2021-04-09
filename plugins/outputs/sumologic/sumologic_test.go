@@ -96,7 +96,7 @@ func TestMethod(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 			require.NoError(t, err)
 
 			plugin := tt.plugin()
@@ -173,7 +173,7 @@ func TestStatusCode(t *testing.T) {
 				w.WriteHeader(tt.statusCode)
 			})
 
-			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 			require.NoError(t, err)
 
 			tt.plugin.SetSerializer(serializer)
@@ -199,7 +199,7 @@ func TestContentType(t *testing.T) {
 				s.headers = map[string]string{
 					contentTypeHeader: carbon2ContentType,
 				}
-				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 				require.NoError(t, err)
 				s.SetSerializer(sr)
 				return s
@@ -213,7 +213,7 @@ func TestContentType(t *testing.T) {
 				s.headers = map[string]string{
 					contentTypeHeader: carbon2ContentType,
 				}
-				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatMetricIncludesField))
+				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatMetricIncludesField), carbon2.DefaultSanitizeReplaceChar)
 				require.NoError(t, err)
 				s.SetSerializer(sr)
 				return s
@@ -310,7 +310,7 @@ func TestContentEncodingGzip(t *testing.T) {
 				w.WriteHeader(http.StatusNoContent)
 			})
 
-			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 			require.NoError(t, err)
 
 			plugin := tt.plugin()
@@ -345,7 +345,7 @@ func TestDefaultUserAgent(t *testing.T) {
 			MaxRequstBodySize: Default().MaxRequstBodySize,
 		}
 
-		serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+		serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 		require.NoError(t, err)
 
 		plugin.SetSerializer(serializer)
@@ -594,7 +594,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 			require.NoError(t, err)
 
 			plugin := tt.plugin()
@@ -626,7 +626,7 @@ func TestTryingToSendEmptyMetricsDoesntFail(t *testing.T) {
 	plugin := Default()
 	plugin.URL = u.String()
 
-	serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+	serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 	require.NoError(t, err)
 	plugin.SetSerializer(serializer)
 

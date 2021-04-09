@@ -127,7 +127,7 @@ require (
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
 	go.opentelemetry.io/otel v0.18.0
 	go.opentelemetry.io/proto/otlp v0.7.0
-	go.starlark.net v0.0.0-20210312235212-74c10e2c17dc
+	go.starlark.net v0.0.0-20210406145628-7a1108eaa012
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b
 	golang.org/x/oauth2 v0.0.0-20201208152858-08078c50e5b5

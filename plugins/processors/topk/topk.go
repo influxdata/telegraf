@@ -7,23 +7,23 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 type TopK struct {
-	Period             internal.Duration `toml:"period"`
-	K                  int               `toml:"k"`
-	GroupBy            []string          `toml:"group_by"`
-	Fields             []string          `toml:"fields"`
-	Aggregation        string            `toml:"aggregation"`
-	Bottomk            bool              `toml:"bottomk"`
-	AddGroupByTag      string            `toml:"add_groupby_tag"`
-	AddRankFields      []string          `toml:"add_rank_fields"`
-	AddAggregateFields []string          `toml:"add_aggregate_fields"`
-	Log                telegraf.Logger   `toml:"-"`
+	Period             config.Duration `toml:"period"`
+	K                  int             `toml:"k"`
+	GroupBy            []string        `toml:"group_by"`
+	Fields             []string        `toml:"fields"`
+	Aggregation        string          `toml:"aggregation"`
+	Bottomk            bool            `toml:"bottomk"`
+	AddGroupByTag      string          `toml:"add_groupby_tag"`
+	AddRankFields      []string        `toml:"add_rank_fields"`
+	AddAggregateFields []string        `toml:"add_aggregate_fields"`
+	Log                telegraf.Logger `toml:"-"`
 
 	cache           map[string][]telegraf.Metric
 	tagsGlobs       filter.Filter
@@ -37,7 +37,7 @@ func New() *TopK {
 	topk := TopK{}
 
 	// Setup defaults
-	topk.Period = internal.Duration{Duration: time.Second * time.Duration(10)}
+	topk.Period = config.Duration(time.Second * time.Duration(10))
 	topk.K = 10
 	topk.Fields = []string{"value"}
 	topk.Aggregation = "mean"
@@ -231,7 +231,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 	// If enough time has passed
 	elapsed := time.Since(t.lastAggregation)
-	if elapsed >= t.Period.Duration {
+	if elapsed >= time.Duration(t.Period) {
 		return t.push()
 	}
 

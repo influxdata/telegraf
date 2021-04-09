@@ -12,7 +12,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -165,7 +165,7 @@ func Test(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 			plugin := &DockerLogs{
-				Timeout:          internal.Duration{Duration: time.Second * 5},
+				Timeout:          config.Duration(time.Second * 5),
 				newClient:        func(string, *tls.Config) (Client, error) { return tt.client, nil },
 				containerList:    make(map[string]context.CancelFunc),
 				IncludeSourceTag: true,

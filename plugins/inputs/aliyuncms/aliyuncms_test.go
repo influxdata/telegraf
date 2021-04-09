@@ -13,7 +13,7 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cms"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/pkg/errors"
@@ -34,11 +34,11 @@ func (m *mockGatherAliyunCMSClient) DescribeMetricList(request *cms.DescribeMetr
 		resp.Period = "60"
 		resp.Datapoints = `
 		[{
-			"timestamp": 1490152860000, 
-			"Maximum": 200, 
-			"userId": "1234567898765432", 
-			"Minimum": 100, 
-			"instanceId": "i-abcdefgh123456", 
+			"timestamp": 1490152860000,
+			"Maximum": 200,
+			"userId": "1234567898765432",
+			"Minimum": 100,
+			"instanceId": "i-abcdefgh123456",
 			"Average": 150,
 			"Value": 300
 		}]`
@@ -50,11 +50,11 @@ func (m *mockGatherAliyunCMSClient) DescribeMetricList(request *cms.DescribeMetr
 		resp.Period = "60"
 		resp.Datapoints = `
 		[{
-			"timestamp": 1490152860000, 
-			"Maximum": 200, 
-			"userId": "1234567898765432", 
-			"Minimum": 100, 
-			"instanceId": "i-abcdefgh123456", 
+			"timestamp": 1490152860000,
+			"Maximum": 200,
+			"userId": "1234567898765432",
+			"Minimum": 100,
+			"instanceId": "i-abcdefgh123456",
 			"Average": 150,
 		}]`
 	case "EmptyDatapoint":
@@ -113,7 +113,7 @@ func getMockSdkCli(httpResp *http.Response) (mockAliyunSDKCli, error) {
 
 func TestPluginDefaults(t *testing.T) {
 	require.Equal(t, &AliyunCMS{RateLimit: 200,
-		DiscoveryInterval: internal.Duration{Duration: time.Minute},
+		DiscoveryInterval: config.Duration(time.Minute),
 		dimensionKey:      "instanceId",
 	}, inputs.Inputs["aliyuncms"]())
 }
@@ -136,7 +136,7 @@ func TestPluginInitialize(t *testing.T) {
 			`{
 						"LoadBalancers":
 						 {
-						  "LoadBalancer": [ 
+						  "LoadBalancer": [
  							 {"LoadBalancerId":"bla"}
                            ]
                          },
@@ -187,9 +187,7 @@ func TestPluginInitialize(t *testing.T) {
 
 func TestUpdateWindow(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
-	internalDuration := internal.Duration{
-		Duration: duration,
-	}
+	internalDuration := config.Duration(duration)
 
 	plugin := &AliyunCMS{
 		Project: "acs_slb_dashboard",
@@ -208,14 +206,14 @@ func TestUpdateWindow(t *testing.T) {
 	newStartTime := plugin.windowEnd
 
 	// initial window just has a single period
-	require.EqualValues(t, plugin.windowEnd, now.Add(-plugin.Delay.Duration))
-	require.EqualValues(t, plugin.windowStart, now.Add(-plugin.Delay.Duration).Add(-plugin.Period.Duration))
+	require.EqualValues(t, plugin.windowEnd, now.Add(-time.Duration(plugin.Delay)))
+	require.EqualValues(t, plugin.windowStart, now.Add(-time.Duration(plugin.Delay)).Add(-time.Duration(plugin.Period)))
 
 	now = time.Now()
 	plugin.updateWindow(now)
 
 	// subsequent window uses previous end time as start time
-	require.EqualValues(t, plugin.windowEnd, now.Add(-plugin.Delay.Duration))
+	require.EqualValues(t, plugin.windowEnd, now.Add(-time.Duration(plugin.Delay)))
 	require.EqualValues(t, plugin.windowStart, newStartTime)
 }
 
@@ -363,7 +361,7 @@ func TestGetDiscoveryDataAllRegions(t *testing.T) {
 					`{
 						"LoadBalancers":
 						 {
-						  "LoadBalancer": [ 
+						  "LoadBalancer": [
  							 {"LoadBalancerId":"bla"}
                            ]
                          },

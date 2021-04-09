@@ -26,8 +26,8 @@ func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 		Query:     q,
 	}
 	var acc testutil.Accumulator
-	p.Start(&acc)
-	p.Init()
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Start(&acc))
 	require.NoError(t, acc.GatherError(p.Gather))
 	return &acc
 }
@@ -231,8 +231,8 @@ func TestPostgresqlSqlScript(t *testing.T) {
 		Query:     q,
 	}
 	var acc testutil.Accumulator
-	p.Start(&acc)
-	p.Init()
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Start(&acc))
 
 	require.NoError(t, acc.GatherError(p.Gather))
 }

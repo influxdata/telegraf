@@ -11,7 +11,7 @@ import (
 	_ "github.com/jackc/pgx/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 )
@@ -83,16 +83,16 @@ var sampleConfig = `
   ## output measurement name ("postgresql").
   ##
   ## The script option can be used to specify the .sql file path.
-  ## If script and sqlquery options specified at same time, sqlquery will be used 
+  ## If script and sqlquery options specified at same time, sqlquery will be used
   ##
   ## the tagvalue field is used to define custom tags (separated by comas).
   ## the query is expected to return columns which match the names of the
   ## defined tags. The values in these columns must be of a string-type,
   ## a number-type or a blob-type.
-  ## 
+  ##
   ## The timestamp field is used to override the data points timestamp value. By
   ## default, all rows inserted with current time. By setting a timestamp column,
-  ## the row will be inserted with that column's value. 
+  ## the row will be inserted with that column's value.
   ##
   ## Structure :
   ## [[inputs.postgresql_extensible.query]]
@@ -268,12 +268,18 @@ func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulat
 		// extract the database name from the column map
 		switch datname := (*c).(type) {
 		case string:
-			dbname.WriteString(datname)
+			if _, err := dbname.WriteString(datname); err != nil {
+				return err
+			}
 		default:
-			dbname.WriteString("postgres")
+			if _, err := dbname.WriteString("postgres"); err != nil {
+				return err
+			}
 		}
 	} else {
-		dbname.WriteString("postgres")
+		if _, err := dbname.WriteString("postgres"); err != nil {
+			return err
+		}
 	}
 
 	if tagAddress, err = p.SanitizedAddress(); err != nil {
@@ -336,11 +342,9 @@ func init() {
 	inputs.Add("postgresql_extensible", func() telegraf.Input {
 		return &Postgresql{
 			Service: postgresql.Service{
-				MaxIdle: 1,
-				MaxOpen: 1,
-				MaxLifetime: internal.Duration{
-					Duration: 0,
-				},
+				MaxIdle:     1,
+				MaxOpen:     1,
+				MaxLifetime: config.Duration(0),
 				IsPgBouncer: false,
 			},
 		}

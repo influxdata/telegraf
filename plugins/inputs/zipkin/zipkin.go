@@ -125,6 +125,8 @@ func (z *Zipkin) Stop() {
 	defer z.waitGroup.Wait()
 	defer cancel()
 
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	z.server.Shutdown(ctx)
 }
 

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -43,9 +44,9 @@ const sampleConfig = `
 const MaxStderrBytes int = 512
 
 type Exec struct {
-	Commands []string          `toml:"commands"`
-	Command  string            `toml:"command"`
-	Timeout  internal.Duration `toml:"timeout"`
+	Commands []string        `toml:"commands"`
+	Command  string          `toml:"command"`
+	Timeout  config.Duration `toml:"timeout"`
 
 	parser parsers.Parser
 
@@ -56,7 +57,7 @@ type Exec struct {
 func NewExec() *Exec {
 	return &Exec{
 		runner:  CommandRunner{},
-		Timeout: internal.Duration{Duration: time.Second * 5},
+		Timeout: config.Duration(time.Second * 5),
 	}
 }
 
@@ -138,7 +139,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	defer wg.Done()
 	_, isNagios := e.parser.(*nagios.NagiosParser)
 
-	out, errbuf, runErr := e.runner.Run(command, e.Timeout.Duration)
+	out, errbuf, runErr := e.runner.Run(command, time.Duration(e.Timeout))
 	if !isNagios && runErr != nil {
 		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errbuf))
 		acc.AddError(err)

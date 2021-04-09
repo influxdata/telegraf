@@ -1,8 +1,10 @@
 package puppetagent
 
 import (
-	"github.com/influxdata/telegraf/testutil"
 	"testing"
+
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGather(t *testing.T) {
@@ -11,7 +13,7 @@ func TestGather(t *testing.T) {
 	pa := PuppetAgent{
 		Location: "last_run_summary.yaml",
 	}
-	pa.Gather(&acc)
+	require.NoError(t, pa.Gather(&acc))
 
 	tags := map[string]string{"location": "last_run_summary.yaml"}
 	fields := map[string]interface{}{

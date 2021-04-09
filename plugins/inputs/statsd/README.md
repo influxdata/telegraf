@@ -190,7 +190,7 @@ metric type:
 - **max_tcp_connections** []int: Maximum number of concurrent TCP connections
 to allow. Used when protocol is set to tcp.
 - **tcp_keep_alive** boolean: Enable TCP keep alive probes
-- **tcp_keep_alive_period** internal.Duration: Specifies the keep-alive period for an active network connection
+- **tcp_keep_alive_period** duration: Specifies the keep-alive period for an active network connection
 - **service_address** string: Address to listen for statsd UDP packets on
 - **delete_gauges** boolean: Delete gauges on every collection interval
 - **delete_counters** boolean: Delete counters on every collection interval

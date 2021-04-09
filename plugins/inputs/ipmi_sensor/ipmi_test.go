@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +18,7 @@ func TestGather(t *testing.T) {
 		Servers:   []string{"USERID:PASSW0RD@lan(192.168.1.1)"},
 		Path:      "ipmitool",
 		Privilege: "USER",
-		Timeout:   internal.Duration{Duration: time.Second * 5},
+		Timeout:   config.Duration(time.Second * 5),
 		HexKey:    "1234567F",
 	}
 
@@ -126,7 +126,7 @@ func TestGather(t *testing.T) {
 
 	i = &Ipmi{
 		Path:    "ipmitool",
-		Timeout: internal.Duration{Duration: time.Second * 5},
+		Timeout: config.Duration(time.Second * 5),
 	}
 
 	err = acc.GatherError(i.Gather)
@@ -373,9 +373,12 @@ OS RealTime Mod  | 0x00              | ok
 	// /tmp/go-build970079519/…/_test/integration.test -test.run=TestHelperProcess --
 	cmd, args := args[3], args[4:]
 
+	// Ignore the returned errors for the mocked interface as tests will fail anyway
 	if cmd == "ipmitool" {
+		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, mockData)
 	} else {
+		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
 	}
@@ -387,7 +390,7 @@ func TestGatherV2(t *testing.T) {
 		Servers:       []string{"USERID:PASSW0RD@lan(192.168.1.1)"},
 		Path:          "ipmitool",
 		Privilege:     "USER",
-		Timeout:       internal.Duration{Duration: time.Second * 5},
+		Timeout:       config.Duration(time.Second * 5),
 		MetricVersion: 2,
 		HexKey:        "0000000F",
 	}
@@ -429,7 +432,7 @@ func TestGatherV2(t *testing.T) {
 
 	i = &Ipmi{
 		Path:          "ipmitool",
-		Timeout:       internal.Duration{Duration: time.Second * 5},
+		Timeout:       config.Duration(time.Second * 5),
 		MetricVersion: 2,
 	}
 
@@ -567,9 +570,12 @@ Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
 	// /tmp/go-build970079519/…/_test/integration.test -test.run=TestHelperProcess --
 	cmd, args := args[3], args[4:]
 
+	// Ignore the returned errors for the mocked interface as tests will fail anyway
 	if cmd == "ipmitool" {
+		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, mockData)
 	} else {
+		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
 	}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -37,7 +38,7 @@ type HTTP struct {
 
 	SuccessStatusCodes []int `toml:"success_status_codes"`
 
-	Timeout internal.Duration `toml:"timeout"`
+	Timeout config.Duration `toml:"timeout"`
 
 	client *http.Client
 
@@ -124,7 +125,7 @@ func (h *HTTP) Init() error {
 
 	h.client = &http.Client{
 		Transport: transport,
-		Timeout:   h.Timeout.Duration,
+		Timeout:   time.Duration(h.Timeout),
 	}
 
 	// Set default as [200]
@@ -261,7 +262,7 @@ func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) 
 func init() {
 	inputs.Add("http", func() telegraf.Input {
 		return &HTTP{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 			Method:  "GET",
 		}
 	})

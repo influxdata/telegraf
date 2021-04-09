@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -19,8 +20,8 @@ const maxStderrBytes = 512
 
 // Exec defines the exec output plugin.
 type Exec struct {
-	Command []string          `toml:"command"`
-	Timeout internal.Duration `toml:"timeout"`
+	Command []string        `toml:"command"`
+	Timeout config.Duration `toml:"timeout"`
 
 	runner     Runner
 	serializer serializers.Serializer
@@ -82,7 +83,7 @@ func (e *Exec) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	return e.runner.Run(e.Timeout.Duration, e.Command, &buffer)
+	return e.runner.Run(time.Duration(e.Timeout), e.Command, &buffer)
 }
 
 // Runner provides an interface for running exec.Cmd.
@@ -155,7 +156,7 @@ func init() {
 	outputs.Add("exec", func() telegraf.Output {
 		return &Exec{
 			runner:  &CommandRunner{},
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
 }
