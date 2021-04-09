@@ -17,6 +17,9 @@ log line will content all fields in `key="value"` format which is easily parsabl
   ## Connection timeout, defaults to "5s" if not set.
   # timeout = "5s"
 
+  ## Use system time rather than metric time for timestamp
+  # system_timestamp = false
+
   ## Basic auth credential
   # username = "loki"
   # password = "pass"

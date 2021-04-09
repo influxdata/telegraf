@@ -34,6 +34,9 @@ var sampleConfig = `
   ## Connection timeout, defaults to "5s" if not set.
   # timeout = "5s"
 
+  ## Use system time rather than metric time for timestamp
+  # system_timestamp = false
+
   ## Basic auth credential
   # username = "loki"
   # password = "pass"
@@ -51,17 +54,18 @@ var sampleConfig = `
 `
 
 type Loki struct {
-	Domain       string            `toml:"domain"`
-	Endpoint     string            `toml:"endpoint"`
-	Timeout      config.Duration   `toml:"timeout"`
-	Username     string            `toml:"username"`
-	Password     string            `toml:"password"`
-	Headers      map[string]string `toml:"headers"`
-	ClientID     string            `toml:"client_id"`
-	ClientSecret string            `toml:"client_secret"`
-	TokenURL     string            `toml:"token_url"`
-	Scopes       []string          `toml:"scopes"`
-	GZipRequest  bool              `toml:"gzip_request"`
+	Domain          string            `toml:"domain"`
+	Endpoint        string            `toml:"endpoint"`
+	Timeout         config.Duration   `toml:"timeout"`
+	Username        string            `toml:"username"`
+	Password        string            `toml:"password"`
+	Headers         map[string]string `toml:"headers"`
+	ClientID        string            `toml:"client_id"`
+	ClientSecret    string            `toml:"client_secret"`
+	TokenURL        string            `toml:"token_url"`
+	Scopes          []string          `toml:"scopes"`
+	GZipRequest     bool              `toml:"gzip_request"`
+	SystemTimestamp bool              `toml:"system_timestamp"`
 
 	url    string
 	client *http.Client
@@ -144,8 +148,13 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 		for _, f := range m.FieldList() {
 			line += fmt.Sprintf("%s=\"%v\" ", f.Key, f.Value)
 		}
-
-		s.insertLog(tags, Log{fmt.Sprintf("%d", m.Time().UnixNano()), line})
+		var timestamp int64
+		if l.SystemTimestamp {
+			timestamp = time.Now().UnixNano()
+		} else {
+			timestamp = m.Time().UnixNano()
+		}
+		s.insertLog(tags, Log{fmt.Sprintf("%d", timestamp), line})
 	}
 
 	return l.write(s)
