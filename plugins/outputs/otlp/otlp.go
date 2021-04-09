@@ -3,7 +3,6 @@ package otlp
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/url"
 	"sort"
 	"time"
@@ -29,6 +28,7 @@ type OTLP struct {
 	Attributes map[string]string `toml:"attributes"`
 
 	Namespace string
+	Log       telegraf.Logger
 
 	client       *Client
 	resourceTags []*telegraf.Tag
@@ -289,10 +289,10 @@ func (o *OTLP) Write(metrics []telegraf.Metric) error {
 						}
 					}
 				case string:
-					log.Println("E! [outputs.otlp] get type failed: unsupported telegraf value type string")
+					o.Log.Error("get type failed: unsupported telegraf value type string")
 					continue
 				default:
-					log.Printf("E! [outputs.otlp] get type failed: unsupported telegraf value type %v\n", f.Value)
+					o.Log.Errorf("get type failed: unsupported telegraf value type %v\n", f.Value)
 					continue
 				}
 			case telegraf.Gauge, telegraf.Untyped:
@@ -326,17 +326,17 @@ func (o *OTLP) Write(metrics []telegraf.Metric) error {
 						}
 					}
 				case string:
-					log.Println("E! [outputs.otlp] get type failed: unsupported telegraf value type string")
+					o.Log.Error("get type failed: unsupported telegraf value type string")
 					continue
 				default:
-					log.Printf("E! [outputs.otlp] get type failed: unsupported telegraf value type %v\n", f.Value)
+					o.Log.Errorf("get type failed: unsupported telegraf value type %v\n", f.Value)
 					continue
 				}
 			// TODO: add support for histogram & summary
 			case telegraf.Histogram, telegraf.Summary:
 				fallthrough
 			default:
-				log.Println("E! [outputs.otlp] get type failed: unsupported telegraf metric kind")
+				o.Log.Error("get type failed: unsupported telegraf metric kind")
 				continue
 			}
 			samples = append(samples, sample)
@@ -346,7 +346,7 @@ func (o *OTLP) Write(metrics []telegraf.Metric) error {
 	if err := o.client.Store(&metricsService.ExportMetricsServiceRequest{
 		ResourceMetrics: samples,
 	}); err != nil {
-		log.Printf("E! [outputs.otlp] unable to write to endpoint: %s", err)
+		o.Log.Errorf("unable to write to endpoint: %s", err)
 		return err
 	}
 	return nil
