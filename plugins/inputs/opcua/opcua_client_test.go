@@ -20,6 +20,9 @@ type OPCTags struct {
 }
 
 func TestClient1Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var testopctags = []OPCTags{
 		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
