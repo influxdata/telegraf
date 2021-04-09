@@ -60,7 +60,9 @@ func TestMain(m *testing.M) {
 		status: nil,
 	}
 	metricsService.RegisterMetricsServiceServer(grpcServer, &mockMetricsServer)
-	go grpcServer.Serve(listener)
+	go func() {
+		_ = grpcServer.Serve(listener)
+	}()
 	defer grpcServer.Stop()
 	os.Exit(m.Run())
 }

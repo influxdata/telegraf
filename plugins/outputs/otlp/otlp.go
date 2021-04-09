@@ -51,10 +51,6 @@ const (
 	// MaxInt is the max int64 value.
 	MaxInt = int(^uint(0) >> 1)
 
-	errStringPointsOutOfOrder  = "One or more of the points specified had an older end time than the most recent point"
-	errStringPointsTooOld      = "Data points cannot be written more than 24h in the past"
-	errStringPointsTooFrequent = "One or more points were written more frequently than the maximum sampling period configured for the metric"
-
 	defaultEndpoint = "http://localhost:4317"
 	defaultTimeout  = time.Second * 60
 )
@@ -357,17 +353,17 @@ func (o *OTLP) Write(metrics []telegraf.Metric) error {
 }
 
 // Close will terminate the session to the backend, returning error if an issue arises.
-func (s *OTLP) Close() error {
-	return s.client.Close()
+func (o *OTLP) Close() error {
+	return o.client.Close()
 }
 
 // SampleConfig returns the formatted sample configuration for the plugin.
-func (s *OTLP) SampleConfig() string {
+func (o *OTLP) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description returns the human-readable function definition of the plugin.
-func (s *OTLP) Description() string {
+func (o *OTLP) Description() string {
 	return "Configuration for OTLP to send metrics to"
 }
 

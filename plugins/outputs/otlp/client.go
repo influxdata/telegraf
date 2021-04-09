@@ -9,18 +9,16 @@ import (
 	"io/ioutil"
 	"net"
 	"net/url"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"go.opentelemetry.io/otel/attribute"
 	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
-	grpcMetadata "google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
@@ -52,17 +50,11 @@ const (
 		}
 	}]
 }`
-
-	metricNameKey attribute.Key = "metric_name"
-
-	invalidTrailerPrefix = "otlp-invalid-"
 )
 
 var (
 	maxErrorDetailStringLen = 512
 	maxTimeseriesPerRequest = 500
-
-	errNoSingleCount = fmt.Errorf("no single count")
 )
 
 // Client allows reading and writing from/to a remote gRPC endpoint. The
@@ -73,7 +65,7 @@ type Client struct {
 	url              *url.URL
 	timeout          time.Duration
 	rootCertificates []string
-	headers          grpcMetadata.MD
+	headers          metadata.MD
 	compressor       string
 
 	conn *grpc.ClientConn
@@ -85,7 +77,7 @@ type ClientConfig struct {
 	URL              *url.URL
 	Timeout          time.Duration
 	RootCertificates []string
-	Headers          grpcMetadata.MD
+	Headers          metadata.MD
 	Compressor       string
 }
 
@@ -117,7 +109,7 @@ func (c *Client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr 
 	defer cancel()
 
 	useAuth := c.url.Scheme != "http"
-	level.Debug(c.logger).Log(
+	_ = level.Debug(c.logger).Log(
 		"msg", "new OTLP connection",
 		"auth", useAuth,
 		"url", c.url.String(),
@@ -152,7 +144,7 @@ func (c *Client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr 
 				RootCAs:    certPool,
 			}
 		}
-		level.Debug(c.logger).Log(
+		_ = level.Debug(c.logger).Log(
 			"msg", "TLS configured",
 			"server", c.url.Hostname(),
 			"root_certs", fmt.Sprint(c.rootCertificates),
@@ -171,7 +163,7 @@ func (c *Client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr 
 	conn, err := grpc.DialContext(ctx, address, dopts...)
 	c.conn = conn
 	if err != nil {
-		level.Debug(c.logger).Log(
+		_ = level.Debug(c.logger).Log(
 			"msg", "connection status",
 			"address", address,
 			"err", err,
@@ -203,7 +195,7 @@ func (c *Client) Selftest(ctx context.Context) error {
 			return ctx.Err()
 		default:
 			if isRecoverable(err) {
-				level.Info(c.logger).Log("msg", "selftest recoverable error, still trying", "err", err)
+				_ = level.Info(c.logger).Log("msg", "selftest recoverable error, still trying", "err", err)
 				continue
 			}
 		}
@@ -234,7 +226,7 @@ func (c *Client) Store(req *metricsService.ExportMetricsServiceRequest) error {
 
 	service := metricsService.NewMetricsServiceClient(conn)
 
-	errors := make(chan error, len(tss)/maxTimeseriesPerRequest+1)
+	errs := make(chan error, len(tss)/maxTimeseriesPerRequest+1)
 	var wg sync.WaitGroup
 	for i := 0; i < len(tss); i += maxTimeseriesPerRequest {
 		end := i + maxTimeseriesPerRequest
@@ -248,22 +240,22 @@ func (c *Client) Store(req *metricsService.ExportMetricsServiceRequest) error {
 				ResourceMetrics: req.ResourceMetrics[begin:end],
 			}
 
-			var md grpcMetadata.MD
+			var md metadata.MD
 			var err error
 
 			if _, err = service.Export(c.grpcMetadata(ctx), reqCopy, grpc.Trailer(&md)); err != nil {
-				level.Error(c.logger).Log(
+				_ = level.Error(c.logger).Log(
 					"msg", "export failure",
 					"err", truncateErrorString(err),
 					"size", proto.Size(reqCopy),
 					"trailers", fmt.Sprint(md),
 					"recoverable", isRecoverable(err),
 				)
-				errors <- err
+				errs <- err
 				return
 			}
 
-			level.Debug(c.logger).Log(
+			_ = level.Debug(c.logger).Log(
 				"msg", "successful write",
 				"records", end-begin,
 				"size", proto.Size(reqCopy),
@@ -272,18 +264,11 @@ func (c *Client) Store(req *metricsService.ExportMetricsServiceRequest) error {
 		}(i, end)
 	}
 	wg.Wait()
-	close(errors)
-	if err, ok := <-errors; ok {
+	close(errs)
+	if err, ok := <-errs; ok {
 		return err
 	}
 	return nil
-}
-
-func singleCount(values []string) (int, error) {
-	if len(values) != 1 {
-		return 0, errNoSingleCount
-	}
-	return strconv.Atoi(values[0])
 }
 
 func (c *Client) Close() error {
@@ -294,7 +279,7 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) grpcMetadata(ctx context.Context) context.Context {
-	return grpcMetadata.NewOutgoingContext(ctx, c.headers)
+	return metadata.NewOutgoingContext(ctx, c.headers)
 }
 
 // truncateErrorString avoids printing error messages that are very
@@ -316,11 +301,11 @@ func isRecoverable(err error) bool {
 		return true
 	}
 
-	status, ok := status.FromError(err)
+	s, ok := status.FromError(err)
 	if !ok {
 		return false
 	}
-	switch status.Code() {
+	switch s.Code() {
 	case codes.DeadlineExceeded, codes.Canceled, codes.ResourceExhausted,
 		codes.Aborted, codes.OutOfRange, codes.Unavailable, codes.DataLoss:
 		// See https://github.com/open-telemetry/opentelemetry-specification/
