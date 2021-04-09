@@ -32,6 +32,7 @@ type OTLP struct {
 
 	client       *Client
 	resourceTags []*telegraf.Tag
+	grpcTimeout  time.Duration
 }
 
 const (
@@ -54,7 +55,8 @@ const (
 	errStringPointsTooOld      = "Data points cannot be written more than 24h in the past"
 	errStringPointsTooFrequent = "One or more points were written more frequently than the maximum sampling period configured for the metric"
 
-	defaultTimeout = time.Second * 60
+	defaultEndpoint = "http://localhost:4317"
+	defaultTimeout  = time.Second * 60
 )
 
 var sampleConfig = `
@@ -76,17 +78,29 @@ var sampleConfig = `
 
 // Connect initiates the primary connection to the OTLP endpoint.
 func (o *OTLP) Connect() error {
+	if o.Endpoint == "" {
+		o.Endpoint = defaultEndpoint
+	}
 	endpoint, err := url.Parse(o.Endpoint)
 	if err != nil {
 		return fmt.Errorf("invalid endpoint configured")
 	}
-	// TODO: parse timeout
-	// if o.Timeout == "" {
-	// 	o.Timeout =
-	// }
+
+	if o.Timeout == "" {
+		o.grpcTimeout = defaultTimeout
+	} else {
+		o.grpcTimeout, err = time.ParseDuration(o.Timeout)
+		if err != nil {
+			return fmt.Errorf("invalid timeout configured")
+		}
+	}
 
 	for k, v := range o.Attributes {
 		o.resourceTags = append(o.resourceTags, &telegraf.Tag{Key: k, Value: v})
+	}
+
+	if o.Headers == nil {
+		o.Headers = make(map[string]string, 1)
 	}
 
 	o.Headers["telemetry-reporting-agent"] = fmt.Sprint(
@@ -99,7 +113,7 @@ func (o *OTLP) Connect() error {
 		o.client = NewClient(ClientConfig{
 			URL:     endpoint,
 			Headers: metadata.New(o.Headers),
-			Timeout: defaultTimeout,
+			Timeout: o.grpcTimeout,
 		})
 		if err := o.client.Selftest(ctx); err != nil {
 			_ = o.client.Close()
