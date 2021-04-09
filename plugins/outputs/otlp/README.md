@@ -20,7 +20,7 @@ Additional gRPC metadata can be configured by `headers`.
 
   # Additional resource attributes
   [outputs.otlp.attributes]
-  	service.name = "demo"
+  	"service.name" = "demo"
 
   # Additional grpc metadata
   [outputs.otlp.headers]

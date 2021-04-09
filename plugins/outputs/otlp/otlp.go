@@ -32,7 +32,8 @@ type OTLP struct {
 
 	Namespace string
 
-	client *sidecarotlp.Client
+	client       *sidecarotlp.Client
+	resourceTags []*telegraf.Tag
 }
 
 const (
@@ -67,7 +68,7 @@ var sampleConfig = `
 
   # Additional resource attributes
   [outputs.otlp.attributes]
-  	service.name = "demo"
+  	"service.name" = "demo"
 
   # Additional grpc metadata
   [outputs.otlp.headers]
@@ -85,6 +86,10 @@ func (o *OTLP) Connect() error {
 	// if o.Timeout == "" {
 	// 	o.Timeout =
 	// }
+
+	for k, v := range o.Attributes {
+		o.resourceTags = append(o.resourceTags, &telegraf.Tag{Key: k, Value: v})
+	}
 
 	o.Headers["telemetry-reporting-agent"] = fmt.Sprint(
 		"telegraf/",
@@ -189,18 +194,15 @@ func protoStringLabels(tags []*telegraf.Tag) []*otlpcommonpb.StringKeyValue {
 	return ret
 }
 
-func protoTimeseries(m telegraf.Metric, f *telegraf.Field) (*otlpmetricpb.ResourceMetrics, *otlpmetricpb.Metric) {
+func (o *OTLP) protoTimeseries(m telegraf.Metric, f *telegraf.Field) (*otlpmetricpb.ResourceMetrics, *otlpmetricpb.Metric) {
 	metric := &otlpmetricpb.Metric{
 		Name:        fmt.Sprintf("%s.%s", m.Name(), f.Key),
 		Description: "", // TODO
 		Unit:        "", // TODO
 	}
-	resourceTags := []*telegraf.Tag{
-		{Key: "service.name", Value: "demo"}, // TODO: this should not be here, we should pull this from the config
-	}
 	return &otlpmetricpb.ResourceMetrics{
 		Resource: &otlpresourcepb.Resource{
-			Attributes: protoResourceAttributes(resourceTags),
+			Attributes: protoResourceAttributes(o.resourceTags),
 		},
 		InstrumentationLibraryMetrics: []*otlpmetricpb.InstrumentationLibraryMetrics{
 			{
@@ -243,7 +245,7 @@ func (o *OTLP) Write(metrics []telegraf.Metric) error {
 	currentTs := time.Now().UnixNano()
 	for _, m := range batch {
 		for _, f := range m.FieldList() {
-			sample, point := protoTimeseries(m, f)
+			sample, point := o.protoTimeseries(m, f)
 
 			labels := protoStringLabels(m.TagList())
 			ts := m.Time().UnixNano()
