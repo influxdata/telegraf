@@ -109,6 +109,12 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return err
 			}
 			influx.Net = append(influx.Net, &m)
+		case "netstat":
+			m := Netstat{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return err
+			}
+			influx.Netstat = append(influx.Netstat, &m)
 		case "interrupts":
 			m := Interrupts{}
 			if err := json.Unmarshal(b, &m); err != nil {

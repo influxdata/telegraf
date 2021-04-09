@@ -627,6 +627,36 @@ message DockerNet {
   double timestamp = 4;
 }
 
+message Netstat {
+
+  message Fields {
+    double tcp_close = 1;
+    double tcp_close_wait = 2;
+    double tcp_closing = 3;
+    double tcp_established = 4;
+    double tcp_fin_wait1 = 5;
+    double tcp_fin_wait2 = 6;
+    double tcp_last_ack = 7;
+    double tcp_listen = 8;
+    double tcp_none = 9;
+    double tcp_syn_recv = 10;
+    double tcp_syn_sent = 11;
+    double tcp_time_wait = 12;
+    double udp_socket = 13;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string host = 1;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+
 message Influx {
   repeated Kernel kernel = 1;
   repeated LinuxSysctlFs linux_sysctl_fs = 2;
@@ -648,6 +678,7 @@ message Influx {
   repeated LTE lte = 18;
   repeated Glog glog = 19;
   repeated Diskio diskio = 20;
+  repeated Netstat netstat = 21;
 }
 
 
