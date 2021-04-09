@@ -69,18 +69,21 @@ func TestMain(m *testing.M) {
 func TestConfigOptions(t *testing.T) {
 	o := OTLP{
 		Endpoint: ":::::",
+		Log:      testutil.Logger{},
 	}
 	err := o.Connect()
 	require.EqualError(t, err, "invalid endpoint configured")
 
 	o = OTLP{
 		Timeout: "9zzz",
+		Log:     testutil.Logger{},
 	}
 	err = o.Connect()
 	require.EqualError(t, err, "invalid timeout configured")
 
 	o = OTLP{
 		Endpoint: "http://" + listener.Addr().String(),
+		Log:      testutil.Logger{},
 	}
 	err = o.Connect()
 	if err != nil {
@@ -101,6 +104,7 @@ func TestConfigOptions(t *testing.T) {
 		Endpoint:   "http://" + listener.Addr().String(),
 		Timeout:    "10s",
 		Attributes: attributes,
+		Log:        testutil.Logger{},
 	}
 	err = o.Connect()
 	require.NoError(t, err)
@@ -116,6 +120,7 @@ func TestWrite(t *testing.T) {
 	o := OTLP{
 		Endpoint: "http://" + listener.Addr().String(),
 		Timeout:  "10s",
+		Log:      testutil.Logger{},
 	}
 	err := o.Connect()
 	require.NoError(t, err)
@@ -192,6 +197,7 @@ func TestWriteSupportedMetricKinds(t *testing.T) {
 	o := OTLP{
 		Endpoint: "http://" + listener.Addr().String(),
 		Timeout:  "10s",
+		Log:      testutil.Logger{},
 	}
 	err := o.Connect()
 	require.NoError(t, err)
@@ -240,6 +246,7 @@ func TestWriteIgnoresInvalidKinds(t *testing.T) {
 	o := OTLP{
 		Endpoint: "http://" + listener.Addr().String(),
 		Timeout:  "10s",
+		Log:      testutil.Logger{},
 	}
 	err := o.Connect()
 	require.NoError(t, err)
