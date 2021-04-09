@@ -56,6 +56,11 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
 
+  ## Use batch serialization format instead of line based delimiting.  The
+  ## batch format allows for the production of non line based output formats and
+  ## may more efficiently encode metric groups.
+  # use_batch_format = true
+
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
@@ -90,6 +95,7 @@ type HTTP struct {
 	Scopes          []string          `toml:"scopes"`
 	ContentEncoding string            `toml:"content_encoding"`
 	IdleConnTimeout internal.Duration `toml:"idle_conn_timeout"`
+	UseBatchFormat  bool              `toml:"use_batch_format"`
 	tls.ClientConfig
 
 	client     *http.Client
@@ -166,12 +172,30 @@ func (h *HTTP) SampleConfig() string {
 }
 
 func (h *HTTP) Write(metrics []telegraf.Metric) error {
-	reqBody, err := h.serializer.SerializeBatch(metrics)
-	if err != nil {
-		return err
+	var reqBody []byte
+
+	if h.UseBatchFormat {
+		var err error
+		reqBody, err = h.serializer.SerializeBatch(metrics)
+		if err != nil {
+			return err
+		}
+
+		return h.write(reqBody)
 	}
 
-	return h.write(reqBody)
+	for _, metric := range metrics {
+		var err error
+		reqBody, err = h.serializer.Serialize(metric)
+		if err != nil {
+			return err
+		}
+
+		if err := h.write(reqBody); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (h *HTTP) write(reqBody []byte) error {
