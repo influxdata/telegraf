@@ -14,8 +14,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/lightstep/opentelemetry-prometheus-sidecar/config"
-	sidecarotlp "github.com/lightstep/opentelemetry-prometheus-sidecar/otlp"
 	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	otlpcommonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	otlpmetricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
@@ -32,7 +30,7 @@ type OTLP struct {
 
 	Namespace string
 
-	client       *sidecarotlp.Client
+	client       *Client
 	resourceTags []*telegraf.Tag
 }
 
@@ -98,11 +96,10 @@ func (o *OTLP) Connect() error {
 
 	if o.client == nil {
 		ctx := context.Background()
-		o.client = sidecarotlp.NewClient(sidecarotlp.ClientConfig{
-			URL:        endpoint,
-			Headers:    metadata.New(o.Headers),
-			Prometheus: config.PromConfig{MaxTimeseriesPerRequest: 500},
-			Timeout:    defaultTimeout,
+		o.client = NewClient(ClientConfig{
+			URL:     endpoint,
+			Headers: metadata.New(o.Headers),
+			Timeout: defaultTimeout,
 		})
 		if err := o.client.Selftest(ctx); err != nil {
 			_ = o.client.Close()

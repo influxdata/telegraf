@@ -50,6 +50,7 @@ require (
 	github.com/docker/libnetwork v0.8.0-dev.2.0.20181012153825-d7b61745d166
 	github.com/eclipse/paho.mqtt.golang v1.3.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
+	github.com/go-kit/kit v0.10.0
 	github.com/go-logfmt/logfmt v0.5.0
 	github.com/go-ping/ping v0.0.0-20210201095549-52eed920f98c
 	github.com/go-redis/redis v6.15.9+incompatible
@@ -67,7 +68,6 @@ require (
 	github.com/gopcua/opcua v0.1.13
 	github.com/gorilla/mux v1.7.3
 	github.com/gosnmp/gosnmp v1.30.0
-	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/harlow/kinesis-consumer v0.3.1-0.20181230152818-2f58b136fee0
 	github.com/hashicorp/consul/api v1.8.1
@@ -84,7 +84,6 @@ require (
 	github.com/karrick/godirwalk v1.16.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/lib/pq v1.3.0 // indirect
-	github.com/lightstep/opentelemetry-prometheus-sidecar v0.21.2-0.20210408155249-214869e19b5f // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1
 	github.com/mdlayher/apcupsd v0.0.0-20200608131503-2bf01da7bf1b
 	github.com/miekg/dns v1.1.35
@@ -126,7 +125,8 @@ require (
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
-	go.opentelemetry.io/proto/otlp v0.7.0 // indirect
+	go.opentelemetry.io/otel v0.18.0
+	go.opentelemetry.io/proto/otlp v0.7.0
 	go.starlark.net v0.0.0-20210312235212-74c10e2c17dc
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b
@@ -138,6 +138,7 @@ require (
 	google.golang.org/api v0.36.0
 	google.golang.org/genproto v0.0.0-20201201144952-b05cb90ed32e
 	google.golang.org/grpc v1.36.0
+	google.golang.org/protobuf v1.26.0
 	gopkg.in/djherbis/times.v1 v1.2.0
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
@@ -150,7 +151,6 @@ require (
 	k8s.io/apimachinery v0.20.4
 	k8s.io/client-go v0.20.4
 	modernc.org/sqlite v1.7.4
-	sigs.k8s.io/structured-merge-diff/v3 v3.0.0 // indirect
 )
 
 // replaced due to https://github.com/satori/go.uuid/issues/73
