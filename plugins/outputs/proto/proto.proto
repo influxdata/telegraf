@@ -1,5 +1,33 @@
 syntax = "proto3";
 
+message Diskio {
+
+  message Fields {
+    double io_time = 1;
+    double iops_in_progress = 2;
+    double merged_reads = 3;
+    double merged_writes = 4;
+    double read_bytes = 5;
+    double read_time = 6;
+    double reads = 7;
+    double weighted_io_time = 8;
+    double write_bytes = 9;
+    double write_time = 10;
+    double writes = 11;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string host = 1;
+    string name = 2;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
 message Glog {
   message Fields {
     string log_level = 1;
@@ -619,6 +647,7 @@ message Influx {
   repeated SMART smart = 17;
   repeated LTE lte = 18;
   repeated Glog glog = 19;
+  repeated Diskio diskio = 20;
 }
 
 

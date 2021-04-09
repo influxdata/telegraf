@@ -127,6 +127,12 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return err
 			}
 			influx.Disk = append(influx.Disk, &m)
+		case "diskio":
+			m := Diskio{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return err
+			}
+			influx.Diskio = append(influx.Diskio, &m)
 		case "docker":
 			m := DockerStats{
 				Fields: &DockerStats_FIELDS{
