@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -308,7 +308,7 @@ func TestWriteVerySmallMaxBody(t *testing.T) {
 	listener := &InfluxDBListener{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		MaxBodySize:    internal.Size{Size: 4096},
+		MaxBodySize:    config.Size(4096),
 		timeFunc:       time.Now,
 	}
 

@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -43,9 +43,9 @@ const description = "Reads metrics from a SSL certificate"
 
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
-	Sources    []string          `toml:"sources"`
-	Timeout    internal.Duration `toml:"timeout"`
-	ServerName string            `toml:"server_name"`
+	Sources    []string        `toml:"sources"`
+	Timeout    config.Duration `toml:"timeout"`
+	ServerName string          `toml:"server_name"`
 	tlsCfg     *tls.Config
 	_tls.ClientConfig
 	locations []*url.URL
@@ -252,7 +252,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, location := range append(c.locations, collectedUrls...) {
-		certs, err := c.getCert(location, c.Timeout.Duration*time.Second)
+		certs, err := c.getCert(location, time.Duration(c.Timeout))
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
 		}
@@ -322,7 +322,7 @@ func init() {
 	inputs.Add("x509_cert", func() telegraf.Input {
 		return &X509Cert{
 			Sources: []string{},
-			Timeout: internal.Duration{Duration: 5 * time.Second}, // set default timeout to 5s
+			Timeout: config.Duration(5 * time.Second), // set default timeout to 5s
 		}
 	})
 }

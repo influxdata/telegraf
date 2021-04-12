@@ -15,7 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -33,14 +33,14 @@ type HTTPResponse struct {
 	HTTPProxy       string   `toml:"http_proxy"`
 	Body            string
 	Method          string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	HTTPHeaderTags  map[string]string `toml:"http_header_tags"`
 	Headers         map[string]string
 	FollowRedirects bool
 	// Absolute path to file with Bearer token
-	BearerToken         string        `toml:"bearer_token"`
-	ResponseBodyField   string        `toml:"response_body_field"`
-	ResponseBodyMaxSize internal.Size `toml:"response_body_max_size"`
+	BearerToken         string      `toml:"bearer_token"`
+	ResponseBodyField   string      `toml:"response_body_field"`
+	ResponseBodyMaxSize config.Size `toml:"response_body_max_size"`
 	ResponseStringMatch string
 	ResponseStatusCode  int
 	Interface           string
@@ -185,7 +185,7 @@ func (h *HTTPResponse) createHTTPClient() (*http.Client, error) {
 			DisableKeepAlives: true,
 			TLSClientConfig:   tlsCfg,
 		},
-		Timeout: h.ResponseTimeout.Duration,
+		Timeout: time.Duration(h.ResponseTimeout),
 	}
 
 	if !h.FollowRedirects {
@@ -336,12 +336,12 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	tags["status_code"] = strconv.Itoa(resp.StatusCode)
 	fields["http_response_code"] = resp.StatusCode
 
-	if h.ResponseBodyMaxSize.Size == 0 {
-		h.ResponseBodyMaxSize.Size = defaultResponseBodyMaxSize
+	if h.ResponseBodyMaxSize == 0 {
+		h.ResponseBodyMaxSize = config.Size(defaultResponseBodyMaxSize)
 	}
-	bodyBytes, err := ioutil.ReadAll(io.LimitReader(resp.Body, h.ResponseBodyMaxSize.Size+1))
+	bodyBytes, err := ioutil.ReadAll(io.LimitReader(resp.Body, int64(h.ResponseBodyMaxSize)+1))
 	// Check first if the response body size exceeds the limit.
-	if err == nil && int64(len(bodyBytes)) > h.ResponseBodyMaxSize.Size {
+	if err == nil && int64(len(bodyBytes)) > int64(h.ResponseBodyMaxSize) {
 		h.setBodyReadError("The body of the HTTP Response is too large", bodyBytes, fields, tags)
 		return fields, tags, nil
 	} else if err != nil {
@@ -413,8 +413,8 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Set default values
-	if h.ResponseTimeout.Duration < time.Second {
-		h.ResponseTimeout.Duration = time.Second * 5
+	if h.ResponseTimeout < config.Duration(time.Second) {
+		h.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 	// Check send and expected string
 	if h.Method == "" {

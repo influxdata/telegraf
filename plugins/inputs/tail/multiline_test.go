@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,20 +32,20 @@ func TestMultilineConfigError(t *testing.T) {
 }
 
 func TestMultilineConfigTimeoutSpecified(t *testing.T) {
-	duration, _ := time.ParseDuration("10s")
+	duration := config.Duration(10 * time.Second)
 	c := &MultilineConfig{
 		Pattern:        ".*",
 		MatchWhichLine: Previous,
-		Timeout:        &internal.Duration{Duration: duration},
+		Timeout:        &duration,
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
 
-	assert.Equal(t, duration, m.config.Timeout.Duration)
+	assert.Equal(t, duration, *m.config.Timeout)
 }
 
 func TestMultilineConfigDefaultTimeout(t *testing.T) {
-	duration, _ := time.ParseDuration("5s")
+	duration := config.Duration(5 * time.Second)
 	c := &MultilineConfig{
 		Pattern:        ".*",
 		MatchWhichLine: Previous,
@@ -53,7 +53,7 @@ func TestMultilineConfigDefaultTimeout(t *testing.T) {
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
 
-	assert.Equal(t, duration, m.config.Timeout.Duration)
+	assert.Equal(t, duration, *m.config.Timeout)
 }
 
 func TestMultilineIsEnabled(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -39,10 +39,10 @@ var sampleConfig = `
 `
 
 type Logzio struct {
-	Log     telegraf.Logger   `toml:"-"`
-	Timeout internal.Duration `toml:"timeout"`
-	Token   string            `toml:"token"`
-	URL     string            `toml:"url"`
+	Log     telegraf.Logger `toml:"-"`
+	Timeout config.Duration `toml:"timeout"`
+	Token   string          `toml:"token"`
+	URL     string          `toml:"url"`
 
 	tls.ClientConfig
 	client *http.Client
@@ -77,7 +77,7 @@ func (l *Logzio) Connect() error {
 			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: l.Timeout.Duration,
+		Timeout: time.Duration(l.Timeout),
 	}
 
 	return nil
@@ -169,7 +169,7 @@ func init() {
 	outputs.Add("logzio", func() telegraf.Output {
 		return &Logzio{
 			URL:     defaultLogzioURL,
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
 }

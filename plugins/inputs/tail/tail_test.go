@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -120,9 +120,9 @@ func TestTailDosLineEndings(t *testing.T) {
 
 func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	//we make sure the timeout won't kick in
-	duration, _ := time.ParseDuration("100s")
-
-	tt := NewTestTail()
+	d, _ := time.ParseDuration("100s")
+	duration := config.Duration(d)
+	tt := NewTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{filepath.Join(testdataDir, "test_multiline.log")}
@@ -130,7 +130,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 		Pattern:        `^[^\[]`,
 		MatchWhichLine: Previous,
 		InvertMatch:    false,
-		Timeout:        &internal.Duration{Duration: duration},
+		Timeout:        &duration,
 	}
 	tt.SetParserFunc(createGrokParser)
 
@@ -183,9 +183,10 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 	require.NoError(t, tmpfile.Sync())
 
 	// set tight timeout for tests
-	duration := 10 * time.Millisecond
+	d := 10 * time.Millisecond
+	duration := config.Duration(d)
+	tt := NewTail()
 
-	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
@@ -193,7 +194,7 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 		Pattern:        `^[^\[]`,
 		MatchWhichLine: Previous,
 		InvertMatch:    false,
-		Timeout:        &internal.Duration{Duration: duration},
+		Timeout:        &duration,
 	}
 	tt.SetParserFunc(createGrokParser)
 
@@ -236,7 +237,7 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 
 func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *testing.T) {
 	//we make sure the timeout won't kick in
-	duration := 100 * time.Second
+	duration := config.Duration(100 * time.Second)
 
 	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
@@ -246,7 +247,7 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 		Pattern:        `^[^\[]`,
 		MatchWhichLine: Previous,
 		InvertMatch:    false,
-		Timeout:        &internal.Duration{Duration: duration},
+		Timeout:        &duration,
 	}
 	tt.SetParserFunc(createGrokParser)
 

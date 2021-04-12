@@ -11,7 +11,7 @@ import (
 	_ "github.com/jackc/pgx/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 )
@@ -342,11 +342,9 @@ func init() {
 	inputs.Add("postgresql_extensible", func() telegraf.Input {
 		return &Postgresql{
 			Service: postgresql.Service{
-				MaxIdle: 1,
-				MaxOpen: 1,
-				MaxLifetime: internal.Duration{
-					Duration: 0,
-				},
+				MaxIdle:     1,
+				MaxOpen:     1,
+				MaxLifetime: config.Duration(0),
 				IsPgBouncer: false,
 			},
 		}

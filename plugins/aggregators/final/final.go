@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
@@ -20,7 +20,7 @@ var sampleConfig = `
 `
 
 type Final struct {
-	SeriesTimeout internal.Duration `toml:"series_timeout"`
+	SeriesTimeout config.Duration `toml:"series_timeout"`
 
 	// The last metric for all series which are active
 	metricCache map[uint64]telegraf.Metric
@@ -28,7 +28,7 @@ type Final struct {
 
 func NewFinal() *Final {
 	return &Final{
-		SeriesTimeout: internal.Duration{Duration: 5 * time.Minute},
+		SeriesTimeout: config.Duration(5 * time.Minute),
 		metricCache:   make(map[uint64]telegraf.Metric),
 	}
 }
@@ -51,7 +51,7 @@ func (m *Final) Push(acc telegraf.Accumulator) {
 	acc.SetPrecision(time.Nanosecond)
 
 	for id, metric := range m.metricCache {
-		if time.Since(metric.Time()) > m.SeriesTimeout.Duration {
+		if time.Since(metric.Time()) > time.Duration(m.SeriesTimeout) {
 			fields := map[string]interface{}{}
 			for _, field := range metric.FieldList() {
 				fields[field.Key+"_final"] = field.Value

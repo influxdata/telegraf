@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -66,7 +67,7 @@ func (px *Proxmox) Init() error {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: px.ResponseTimeout.Duration,
+		Timeout: time.Duration(px.ResponseTimeout),
 	}
 
 	return nil

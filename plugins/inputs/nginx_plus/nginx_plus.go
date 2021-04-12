@@ -13,14 +13,14 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type NginxPlus struct {
-	Urls            []string          `toml:"urls"`
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	Urls            []string        `toml:"urls"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
 	tls.ClientConfig
 
 	client *http.Client
@@ -82,8 +82,8 @@ func (n *NginxPlus) Gather(acc telegraf.Accumulator) error {
 }
 
 func (n *NginxPlus) createHTTPClient() (*http.Client, error) {
-	if n.ResponseTimeout.Duration < time.Second {
-		n.ResponseTimeout.Duration = time.Second * 5
+	if n.ResponseTimeout < config.Duration(time.Second) {
+		n.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 
 	tlsConfig, err := n.ClientConfig.TLSConfig()
@@ -95,7 +95,7 @@ func (n *NginxPlus) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
-		Timeout: n.ResponseTimeout.Duration,
+		Timeout: time.Duration(n.ResponseTimeout),
 	}
 
 	return client, nil

@@ -13,7 +13,7 @@ import (
 	googlepbduration "github.com/golang/protobuf/ptypes/duration"
 	googlepbts "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs" // Imports the Stackdriver Monitoring client package.
@@ -108,9 +108,9 @@ const (
 )
 
 var (
-	defaultCacheTTL = internal.Duration{Duration: 1 * time.Hour}
-	defaultWindow   = internal.Duration{Duration: 1 * time.Minute}
-	defaultDelay    = internal.Duration{Duration: 5 * time.Minute}
+	defaultCacheTTL = config.Duration(1 * time.Hour)
+	defaultWindow   = config.Duration(1 * time.Minute)
+	defaultDelay    = config.Duration(5 * time.Minute)
 )
 
 type (
@@ -118,9 +118,9 @@ type (
 	Stackdriver struct {
 		Project                         string                `toml:"project"`
 		RateLimit                       int                   `toml:"rate_limit"`
-		Window                          internal.Duration     `toml:"window"`
-		Delay                           internal.Duration     `toml:"delay"`
-		CacheTTL                        internal.Duration     `toml:"cache_ttl"`
+		Window                          config.Duration       `toml:"window"`
+		Delay                           config.Duration       `toml:"delay"`
+		CacheTTL                        config.Duration       `toml:"cache_ttl"`
 		MetricTypePrefixInclude         []string              `toml:"metric_type_prefix_include"`
 		MetricTypePrefixExclude         []string              `toml:"metric_type_prefix_exclude"`
 		GatherRawDistributionBuckets    bool                  `toml:"gather_raw_distribution_buckets"`
@@ -322,14 +322,14 @@ func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {
 // Returns the start and end time for the next collection.
 func (s *Stackdriver) updateWindow(prevEnd time.Time) (time.Time, time.Time) {
 	var start time.Time
-	if s.Window.Duration != 0 {
-		start = time.Now().Add(-s.Delay.Duration).Add(-s.Window.Duration)
+	if time.Duration(s.Window) != 0 {
+		start = time.Now().Add(-time.Duration(s.Delay)).Add(-time.Duration(s.Window))
 	} else if prevEnd.IsZero() {
-		start = time.Now().Add(-s.Delay.Duration).Add(-defaultWindow.Duration)
+		start = time.Now().Add(-time.Duration(s.Delay)).Add(-time.Duration(defaultWindow))
 	} else {
 		start = prevEnd
 	}
-	end := time.Now().Add(-s.Delay.Duration)
+	end := time.Now().Add(-time.Duration(s.Delay))
 	return start, end
 }
 
@@ -579,7 +579,7 @@ func (s *Stackdriver) generatetimeSeriesConfs(
 	s.timeSeriesConfCache = &timeSeriesConfCache{
 		TimeSeriesConfs: ret,
 		Generated:       time.Now(),
-		TTL:             s.CacheTTL.Duration,
+		TTL:             time.Duration(s.CacheTTL),
 	}
 
 	return ret, nil

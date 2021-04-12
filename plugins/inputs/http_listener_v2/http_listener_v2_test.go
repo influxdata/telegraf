@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -53,7 +53,7 @@ func newTestHTTPListenerV2() *HTTPListenerV2 {
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		TimeFunc:       time.Now,
-		MaxBodySize:    internal.Size{Size: 70000},
+		MaxBodySize:    config.Size(70000),
 		DataSource:     "body",
 	}
 	return listener
@@ -114,7 +114,7 @@ func TestInvalidListenerConfig(t *testing.T) {
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		TimeFunc:       time.Now,
-		MaxBodySize:    internal.Size{Size: 70000},
+		MaxBodySize:    config.Size(70000),
 		DataSource:     "body",
 	}
 
@@ -260,7 +260,7 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 		Path:           "/write",
 		Methods:        []string{"POST"},
 		Parser:         parser,
-		MaxBodySize:    internal.Size{Size: int64(len(hugeMetric))},
+		MaxBodySize:    config.Size(len(hugeMetric)),
 		TimeFunc:       time.Now,
 	}
 
@@ -283,7 +283,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 		Path:           "/write",
 		Methods:        []string{"POST"},
 		Parser:         parser,
-		MaxBodySize:    internal.Size{Size: 4096},
+		MaxBodySize:    config.Size(4096),
 		TimeFunc:       time.Now,
 	}
 

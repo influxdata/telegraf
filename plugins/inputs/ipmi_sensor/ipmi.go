@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -33,7 +34,7 @@ type Ipmi struct {
 	Privilege     string
 	HexKey        string `toml:"hex_key"`
 	Servers       []string
-	Timeout       internal.Duration
+	Timeout       config.Duration
 	MetricVersion int
 	UseSudo       bool
 	UseCache      bool
@@ -147,7 +148,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 				name = "sudo"
 			}
 			cmd := execCommand(name, dumpOpts...)
-			out, err := internal.CombinedOutputTimeout(cmd, m.Timeout.Duration)
+			out, err := internal.CombinedOutputTimeout(cmd, time.Duration(m.Timeout))
 			if err != nil {
 				return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 			}
@@ -165,7 +166,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 		name = "sudo"
 	}
 	cmd := execCommand(name, opts...)
-	out, err := internal.CombinedOutputTimeout(cmd, m.Timeout.Duration)
+	out, err := internal.CombinedOutputTimeout(cmd, time.Duration(m.Timeout))
 	timestamp := time.Now()
 	if err != nil {
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
@@ -329,7 +330,7 @@ func init() {
 	if len(path) > 0 {
 		m.Path = path
 	}
-	m.Timeout = internal.Duration{Duration: time.Second * 20}
+	m.Timeout = config.Duration(time.Second * 20)
 	m.UseCache = false
 	m.CachePath = os.TempDir()
 	inputs.Add("ipmi_sensor", func() telegraf.Input {

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -37,7 +37,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	c := &CrateDB{
 		URL:         url,
 		Table:       table,
-		Timeout:     internal.Duration{Duration: time.Second * 5},
+		Timeout:     config.Duration(time.Second * 5),
 		TableCreate: true,
 	}
 
