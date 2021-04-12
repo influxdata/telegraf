@@ -1,3 +1,8 @@
+// +build !windows
+
+// TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
+// https://github.com/influxdata/telegraf/issues/6248
+
 package exec
 
 import (
@@ -13,10 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Midnight 9/22/2015
-const baseTimeSeconds = 1442905200
-
-const validJson = `
+const validJSON = `
 {
     "status": "green",
     "num_processes": 82,
@@ -30,23 +32,9 @@ const validJson = `
     "users": [0, 1, 2, 3]
 }`
 
-const malformedJson = `
+const malformedJSON = `
 {
     "status": "green",
-`
-
-const lineProtocol = "cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1\n"
-const lineProtocolEmpty = ""
-const lineProtocolShort = "ab"
-
-const lineProtocolMulti = `
-cpu,cpu=cpu0,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu1,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu2,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu3,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu4,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu5,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu6,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
 `
 
 type CarriageReturnTest struct {
@@ -86,7 +74,7 @@ func newRunnerMock(out []byte, errout []byte, err error) Runner {
 	}
 }
 
-func (r runnerMock) Run(command string, _ time.Duration) ([]byte, []byte, error) {
+func (r runnerMock) Run(_ string, _ time.Duration) ([]byte, []byte, error) {
 	return r.out, r.errout, r.err
 }
 
@@ -97,7 +85,7 @@ func TestExec(t *testing.T) {
 	})
 	e := &Exec{
 		Log:      testutil.Logger{},
-		runner:   newRunnerMock([]byte(validJson), nil, nil),
+		runner:   newRunnerMock([]byte(validJSON), nil, nil),
 		Commands: []string{"testcommand arg1"},
 		parser:   parser,
 	}
@@ -127,7 +115,7 @@ func TestExecMalformed(t *testing.T) {
 	})
 	e := &Exec{
 		Log:      testutil.Logger{},
-		runner:   newRunnerMock([]byte(malformedJson), nil, nil),
+		runner:   newRunnerMock([]byte(malformedJSON), nil, nil),
 		Commands: []string{"badcommand arg1"},
 		parser:   parser,
 	}
@@ -155,7 +143,7 @@ func TestCommandError(t *testing.T) {
 }
 
 func TestExecCommandWithGlob(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
 	e := NewExec()
 	e.Commands = []string{"/bin/ech* metric_value"}
 	e.SetParser(parser)
@@ -171,7 +159,7 @@ func TestExecCommandWithGlob(t *testing.T) {
 }
 
 func TestExecCommandWithoutGlob(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
 	e := NewExec()
 	e.Commands = []string{"/bin/echo metric_value"}
 	e.SetParser(parser)
@@ -187,7 +175,7 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 }
 
 func TestExecCommandWithoutGlobAndPath(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
 	e := NewExec()
 	e.Commands = []string{"echo metric_value"}
 	e.SetParser(parser)
@@ -254,9 +242,10 @@ func TestTruncate(t *testing.T) {
 		},
 	}
 
+	c := CommandRunner{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := truncate(*tt.bufF())
+			res := c.truncate(*tt.bufF())
 			require.Equal(t, tt.expF().Bytes(), res.Bytes())
 		})
 	}
@@ -267,14 +256,14 @@ func TestRemoveCarriageReturns(t *testing.T) {
 		// Test that all carriage returns are removed
 		for _, test := range crTests {
 			b := bytes.NewBuffer(test.input)
-			out := removeCarriageReturns(*b)
+			out := removeWindowsCarriageReturns(*b)
 			assert.True(t, bytes.Equal(test.output, out.Bytes()))
 		}
 	} else {
 		// Test that the buffer is returned unaltered
 		for _, test := range crTests {
 			b := bytes.NewBuffer(test.input)
-			out := removeCarriageReturns(*b)
+			out := removeWindowsCarriageReturns(*b)
 			assert.True(t, bytes.Equal(test.input, out.Bytes()))
 		}
 	}

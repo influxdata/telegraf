@@ -1,12 +1,14 @@
 package all
 
 import (
+	//Blank imports for plugins to register themselves
 	_ "github.com/influxdata/telegraf/plugins/outputs/amon"
 	_ "github.com/influxdata/telegraf/plugins/outputs/amqp"
 	_ "github.com/influxdata/telegraf/plugins/outputs/application_insights"
 	_ "github.com/influxdata/telegraf/plugins/outputs/azure_monitor"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloud_pubsub"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch"
+	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch_logs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cratedb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/datadog"
 	_ "github.com/influxdata/telegraf/plugins/outputs/discard"
@@ -25,6 +27,8 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/kafka"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kinesis"
 	_ "github.com/influxdata/telegraf/plugins/outputs/librato"
+	_ "github.com/influxdata/telegraf/plugins/outputs/logzio"
+	_ "github.com/influxdata/telegraf/plugins/outputs/loki"
 	_ "github.com/influxdata/telegraf/plugins/outputs/mqtt"
 	_ "github.com/influxdata/telegraf/plugins/outputs/nats"
 	_ "github.com/influxdata/telegraf/plugins/outputs/newrelic"
@@ -33,10 +37,14 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann_legacy"
+	_ "github.com/influxdata/telegraf/plugins/outputs/sensu"
+	_ "github.com/influxdata/telegraf/plugins/outputs/signalfx"
 	_ "github.com/influxdata/telegraf/plugins/outputs/socket_writer"
 	_ "github.com/influxdata/telegraf/plugins/outputs/stackdriver"
 	_ "github.com/influxdata/telegraf/plugins/outputs/sumologic"
 	_ "github.com/influxdata/telegraf/plugins/outputs/syslog"
+	_ "github.com/influxdata/telegraf/plugins/outputs/timestream"
 	_ "github.com/influxdata/telegraf/plugins/outputs/warp10"
 	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
+	_ "github.com/influxdata/telegraf/plugins/outputs/yandex_cloud_monitoring"
 )

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -99,10 +99,10 @@ func TestWriteToTruncatedFile(t *testing.T) {
 func TestWriteToFileInRotation(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "LogRotation")
 	require.NoError(t, err)
-	config := createBasicLogConfig(filepath.Join(tempDir, "test.log"))
-	config.LogTarget = LogTargetFile
-	config.RotationMaxSize = internal.Size{Size: int64(30)}
-	writer := newLogWriter(config)
+	cfg := createBasicLogConfig(filepath.Join(tempDir, "test.log"))
+	cfg.LogTarget = LogTargetFile
+	cfg.RotationMaxSize = config.Size(30)
+	writer := newLogWriter(cfg)
 	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
 	closer, isCloser := writer.(io.Closer)
 	assert.True(t, isCloser)

@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go/v4"
 )
 
 const (
@@ -92,11 +92,10 @@ type AuthToken struct {
 
 // ClusterClient is a Client that uses the cluster URL.
 type ClusterClient struct {
-	clusterURL  *url.URL
-	httpClient  *http.Client
-	credentials *Credentials
-	token       string
-	semaphore   chan struct{}
+	clusterURL *url.URL
+	httpClient *http.Client
+	token      string
+	semaphore  chan struct{}
 }
 
 type claims struct {
@@ -229,7 +228,6 @@ func (c *ClusterClient) GetContainers(ctx context.Context, node string) ([]Conta
 	containers := make([]Container, 0, len(list))
 	for _, c := range list {
 		containers = append(containers, Container{ID: c})
-
 	}
 
 	return containers, nil
@@ -330,7 +328,7 @@ func (c *ClusterClient) createLoginToken(sa *ServiceAccount) (string, error) {
 		UID: sa.AccountID,
 		StandardClaims: jwt.StandardClaims{
 			// How long we have to login with this token
-			ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
+			ExpiresAt: jwt.At(time.Now().Add(5 * time.Minute)),
 		},
 	})
 	return token.SignedString(sa.PrivateKey)

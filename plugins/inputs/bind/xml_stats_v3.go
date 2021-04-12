@@ -25,7 +25,7 @@ type v3Stats struct {
 type v3Memory struct {
 	Contexts []struct {
 		// Omitted nodes: references, maxinuse, blocksize, pools, hiwater, lowater
-		Id    string `xml:"id"`
+		ID    string `xml:"id"`
 		Name  string `xml:"name"`
 		Total int64  `xml:"total"`
 		InUse int64  `xml:"inuse"`
@@ -98,7 +98,7 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 	// Detailed, per-context memory stats
 	if b.GatherMemoryContexts {
 		for _, c := range stats.Memory.Contexts {
-			tags := map[string]string{"url": hostPort, "source": host, "port": port, "id": c.Id, "name": c.Name}
+			tags := map[string]string{"url": hostPort, "source": host, "port": port, "id": c.ID, "name": c.Name}
 			fields := map[string]interface{}{"total": c.Total, "in_use": c.InUse}
 
 			acc.AddGauge("bind_memory_context", fields, tags)
@@ -138,9 +138,9 @@ func (b *Bind) readStatsXMLv3(addr *url.URL, acc telegraf.Accumulator) error {
 
 	// Progressively build up full v3Stats struct by parsing the individual HTTP responses
 	for _, suffix := range [...]string{"/server", "/net", "/mem"} {
-		scrapeUrl := addr.String() + suffix
+		scrapeURL := addr.String() + suffix
 
-		resp, err := client.Get(scrapeUrl)
+		resp, err := b.client.Get(scrapeURL)
 		if err != nil {
 			return err
 		}
@@ -148,7 +148,7 @@ func (b *Bind) readStatsXMLv3(addr *url.URL, acc telegraf.Accumulator) error {
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("%s returned HTTP status: %s", scrapeUrl, resp.Status)
+			return fmt.Errorf("%s returned HTTP status: %s", scrapeURL, resp.Status)
 		}
 
 		if err := xml.NewDecoder(resp.Body).Decode(&stats); err != nil {

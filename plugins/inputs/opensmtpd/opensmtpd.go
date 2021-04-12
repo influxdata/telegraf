@@ -10,25 +10,25 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error)
+type runner func(cmdName string, timeout config.Duration, useSudo bool) (*bytes.Buffer, error)
 
 // Opensmtpd is used to store configuration values
 type Opensmtpd struct {
 	Binary  string
-	Timeout internal.Duration
+	Timeout config.Duration
 	UseSudo bool
 
-	filter filter.Filter
-	run    runner
+	run runner
 }
 
 var defaultBinary = "/usr/sbin/smtpctl"
-var defaultTimeout = internal.Duration{Duration: time.Second}
+var defaultTimeout = config.Duration(time.Second)
 
 var sampleConfig = `
   ## If running as a restricted user you can prepend sudo for additional access:
@@ -51,19 +51,19 @@ func (s *Opensmtpd) SampleConfig() string {
 }
 
 // Shell out to opensmtpd_stat and return the output
-func opensmtpdRunner(cmdName string, Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error) {
+func opensmtpdRunner(cmdName string, timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {
 	cmdArgs := []string{"show", "stats"}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
 
-	if UseSudo {
+	if useSudo {
 		cmdArgs = append([]string{cmdName}, cmdArgs...)
 		cmd = exec.Command("sudo", cmdArgs...)
 	}
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, Timeout.Duration)
+	err := internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
 		return &out, fmt.Errorf("error running smtpctl: %s", err)
 	}
@@ -77,8 +77,8 @@ func opensmtpdRunner(cmdName string, Timeout internal.Duration, UseSudo bool) (*
 // All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
 func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 	// Always exclude uptime.human statistics
-	stat_excluded := []string{"uptime.human"}
-	filter_excluded, err := filter.Compile(stat_excluded)
+	statExcluded := []string{"uptime.human"}
+	filterExcluded, err := filter.Compile(statExcluded)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,6 @@ func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{})
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
-
 		cols := strings.Split(scanner.Text(), "=")
 
 		// Check split correctness
@@ -104,7 +103,7 @@ func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 		value := cols[1]
 
 		// Filter value
-		if filter_excluded.Match(stat) {
+		if filterExcluded.Match(stat) {
 			continue
 		}
 
@@ -112,8 +111,7 @@ func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 
 		fields[field], err = strconv.ParseFloat(value, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Expected a numerical value for %s = %v\n",
-				stat, value))
+			acc.AddError(fmt.Errorf("expected a numerical value for %s = %v", stat, value))
 		}
 	}
 

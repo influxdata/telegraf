@@ -4,9 +4,10 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"golang.org/x/net/html/charset"
@@ -114,11 +115,12 @@ type Upload struct {
 }
 
 type Port struct {
-	Hostname   string `xml:"hostname"`
-	PortNumber int64  `xml:"portnumber"`
-	Request    string `xml:"request"`
-	Protocol   string `xml:"protocol"`
-	Type       string `xml:"type"`
+	Hostname     string  `xml:"hostname"`
+	PortNumber   int64   `xml:"portnumber"`
+	Request      string  `xml:"request"`
+	ResponseTime float64 `xml:"responsetime"`
+	Protocol     string  `xml:"protocol"`
+	Type         string  `xml:"type"`
 }
 
 type Block struct {
@@ -177,7 +179,7 @@ type Monit struct {
 	Password string `toml:"password"`
 	client   http.Client
 	tls.ClientConfig
-	Timeout internal.Duration `toml:"timeout"`
+	Timeout config.Duration `toml:"timeout"`
 }
 
 type Messagebody struct {
@@ -222,13 +224,12 @@ func (m *Monit) Init() error {
 			TLSClientConfig: tlsCfg,
 			Proxy:           http.ProxyFromEnvironment,
 		},
-		Timeout: m.Timeout.Duration,
+		Timeout: time.Duration(m.Timeout),
 	}
 	return nil
 }
 
 func (m *Monit) Gather(acc telegraf.Accumulator) error {
-
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/_status?format=xml", m.Address), nil)
 	if err != nil {
 		return err
@@ -244,7 +245,6 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 200 {
-
 		var status Status
 		decoder := xml.NewDecoder(resp.Body)
 		decoder.CharsetReader = charset.NewReaderLabel
@@ -301,6 +301,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 				fields["remote_hostname"] = service.Port.Hostname
 				fields["port_number"] = service.Port.PortNumber
 				fields["request"] = service.Port.Request
+				fields["response_time"] = service.Port.ResponseTime
 				fields["protocol"] = service.Port.Protocol
 				fields["type"] = service.Port.Type
 				acc.AddFields("monit_remote_host", fields, tags)
@@ -343,10 +344,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("received status code %d (%s), expected 200",
-			resp.StatusCode,
-			http.StatusText(resp.StatusCode))
-
+		return fmt.Errorf("received status code %d (%s), expected 200", resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 	return nil
 }
@@ -364,9 +362,8 @@ func linkMode(s Service) string {
 func serviceStatus(s Service) string {
 	if s.Status == 0 {
 		return "running"
-	} else {
-		return "failure"
 	}
+	return "failure"
 }
 
 func pendingAction(s Service) string {
@@ -375,9 +372,8 @@ func pendingAction(s Service) string {
 			return "unknown"
 		}
 		return pendingActions[s.PendingAction-1]
-	} else {
-		return "none"
 	}
+	return "none"
 }
 
 func monitoringMode(s Service) string {

@@ -15,14 +15,15 @@ import (
 
 // SQLServer struct
 type SQLServer struct {
-	Servers       []string `toml:"servers"`
-	QueryVersion  int      `toml:"query_version"`
-	AzureDB       bool     `toml:"azuredb"`
-	DatabaseType  string   `toml:"database_type"`
-	IncludeQuery  []string `toml:"include_query"`
-	ExcludeQuery  []string `toml:"exclude_query"`
-	queries       MapQuery
-	isInitialized bool
+	Servers      []string `toml:"servers"`
+	QueryVersion int      `toml:"query_version"`
+	AzureDB      bool     `toml:"azuredb"`
+	DatabaseType string   `toml:"database_type"`
+	IncludeQuery []string `toml:"include_query"`
+	ExcludeQuery []string `toml:"exclude_query"`
+	HealthMetric bool     `toml:"health_metric"`
+	pools        []*sql.DB
+	queries      MapQuery
 }
 
 // Query struct
@@ -36,7 +37,28 @@ type Query struct {
 // MapQuery type
 type MapQuery map[string]Query
 
+// HealthMetric struct tracking the number of attempted vs successful connections for each connection string
+type HealthMetric struct {
+	AttemptedQueries  int
+	SuccessfulQueries int
+}
+
 const defaultServer = "Server=.;app name=telegraf;log=1;"
+
+const (
+	typeAzureSQLDB              = "AzureSQLDB"
+	typeAzureSQLManagedInstance = "AzureSQLManagedInstance"
+	typeSQLServer               = "SQLServer"
+)
+
+const (
+	healthMetricName              = "sqlserver_telegraf_health"
+	healthMetricInstanceTag       = "sql_instance"
+	healthMetricDatabaseTag       = "database_name"
+	healthMetricAttemptedQueries  = "attempted_queries"
+	healthMetricSuccessfulQueries = "successful_queries"
+	healthMetricDatabaseType      = "database_type"
+)
 
 const sampleConfig = `
 ## Specify instances to monitor with a list of connection strings.
@@ -46,62 +68,58 @@ const sampleConfig = `
 ##   See https://github.com/denisenkom/go-mssqldb for detailed connection
 ##   parameters, in particular, tls connections can be created like so:
 ##   "encrypt=true;certificate=<cert>;hostNameInCertificate=<SqlServer host fqdn>"
-# servers = [
-#  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
-# ]
+servers = [
+  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
+]
 
-## This enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
-## In the config file, the sql server plugin section should be repeated  each with a set of servers for a specific database_type.
-## Possible values for database_type are  
-## "AzureSQLDB" 
-## "SQLServer"
-## "AzureSQLManagedInstance"
+## "database_type" enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
+## In the config file, the sql server plugin section should be repeated each with a set of servers for a specific database_type.
+## Possible values for database_type are - "AzureSQLDB" or "AzureSQLManagedInstance" or "SQLServer"
+
+## Queries enabled by default for database_type = "AzureSQLDB" are - 
+## AzureSQLDBResourceStats, AzureSQLDBResourceGovernance, AzureSQLDBWaitStats, AzureSQLDBDatabaseIO, AzureSQLDBServerProperties, 
+## AzureSQLDBOsWaitstats, AzureSQLDBMemoryClerks, AzureSQLDBPerformanceCounters, AzureSQLDBRequests, AzureSQLDBSchedulers
+
 # database_type = "AzureSQLDB"
-
-
-## Optional parameter, setting this to 2 will use a new version
-## of the collection queries that break compatibility with the original
-## dashboards.
-## Version 2 - is compatible from SQL Server 2012 and later versions and also for SQL Azure DB
-query_version = 2
-
-## If you are using AzureDB, setting this to true will gather resource utilization metrics
-# azuredb = false
-
-## Possible queries
-## Version 2:
-## - PerformanceCounters
-## - WaitStatsCategorized
-## - DatabaseIO
-## - ServerProperties
-## - MemoryClerk
-## - Schedulers
-## - SqlRequests
-## - VolumeSpace
-## - Cpu
-
-## Version 1:
-## - PerformanceCounters
-## - WaitStatsCategorized
-## - CPUHistory
-## - DatabaseIO
-## - DatabaseSize
-## - DatabaseStats
-## - DatabaseProperties
-## - MemoryClerk
-## - VolumeSpace
-## - PerformanceMetrics
-
-
-## Queries enabled by default for specific Database Type
-## database_type =  AzureSQLDB
-	## AzureDBWaitStats, AzureDBResourceStats, AzureDBResourceGovernance, sqlAzureDBDatabaseIO
 
 ## A list of queries to include. If not specified, all the above listed queries are used.
 # include_query = []
 
 ## A list of queries to explicitly ignore.
-exclude_query = [ 'Schedulers' , 'SqlRequests']
+# exclude_query = []
+
+## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
+## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
+## AzureSQLMIMemoryClerks, AzureSQLMIPerformanceCounters, AzureSQLMIRequests, AzureSQLMISchedulers
+
+# database_type = "AzureSQLManagedInstance"
+
+# include_query = []
+
+# exclude_query = []
+
+## Queries enabled by default for database_type = "SQLServer" are - 
+## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks, 
+## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu
+
+database_type = "SQLServer"
+
+include_query = []
+
+## SQLServerAvailabilityReplicaStates and SQLServerDatabaseReplicaStates are optional queries and hence excluded here as default
+exclude_query = ["SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"]
+
+## Following are old config settings, you may use them only if you are using the earlier flavor of queries, however it is recommended to use 
+## the new mechanism of identifying the database_type there by use it's corresponding queries
+
+## Optional parameter, setting this to 2 will use a new version
+## of the collection queries that break compatibility with the original
+## dashboards.
+## Version 2 - is compatible from SQL Server 2012 and later versions and also for SQL Azure DB
+# query_version = 2
+
+## If you are using AzureDB, setting this to true will gather resource utilization metrics
+# azuredb = false
 `
 
 // SampleConfig return the sample configuration
@@ -128,7 +146,7 @@ func initQueries(s *SQLServer) error {
 	// Constant defintiions for type "AzureSQLDB" start with sqlAzureDB
 	// Constant defintiions for type "AzureSQLManagedInstance" start with sqlAzureMI
 	// Constant defintiions for type "SQLServer" start with sqlServer
-	if s.DatabaseType == "AzureSQLDB" {
+	if s.DatabaseType == typeAzureSQLDB {
 		queries["AzureSQLDBResourceStats"] = Query{ScriptName: "AzureSQLDBResourceStats", Script: sqlAzureDBResourceStats, ResultByRow: false}
 		queries["AzureSQLDBResourceGovernance"] = Query{ScriptName: "AzureSQLDBResourceGovernance", Script: sqlAzureDBResourceGovernance, ResultByRow: false}
 		queries["AzureSQLDBWaitStats"] = Query{ScriptName: "AzureSQLDBWaitStats", Script: sqlAzureDBWaitStats, ResultByRow: false}
@@ -138,8 +156,8 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLDBMemoryClerks"] = Query{ScriptName: "AzureSQLDBMemoryClerks", Script: sqlAzureDBMemoryClerks, ResultByRow: false}
 		queries["AzureSQLDBPerformanceCounters"] = Query{ScriptName: "AzureSQLDBPerformanceCounters", Script: sqlAzureDBPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLDBRequests"] = Query{ScriptName: "AzureSQLDBRequests", Script: sqlAzureDBRequests, ResultByRow: false}
-		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlServerSchedulers, ResultByRow: false}
-	} else if s.DatabaseType == "AzureSQLManagedInstance" {
+		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlAzureDBSchedulers, ResultByRow: false}
+	} else if s.DatabaseType == typeAzureSQLManagedInstance {
 		queries["AzureSQLMIResourceStats"] = Query{ScriptName: "AzureSQLMIResourceStats", Script: sqlAzureMIResourceStats, ResultByRow: false}
 		queries["AzureSQLMIResourceGovernance"] = Query{ScriptName: "AzureSQLMIResourceGovernance", Script: sqlAzureMIResourceGovernance, ResultByRow: false}
 		queries["AzureSQLMIDatabaseIO"] = Query{ScriptName: "AzureSQLMIDatabaseIO", Script: sqlAzureMIDatabaseIO, ResultByRow: false}
@@ -147,9 +165,9 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLMIOsWaitstats"] = Query{ScriptName: "AzureSQLMIOsWaitstats", Script: sqlAzureMIOsWaitStats, ResultByRow: false}
 		queries["AzureSQLMIMemoryClerks"] = Query{ScriptName: "AzureSQLMIMemoryClerks", Script: sqlAzureMIMemoryClerks, ResultByRow: false}
 		queries["AzureSQLMIPerformanceCounters"] = Query{ScriptName: "AzureSQLMIPerformanceCounters", Script: sqlAzureMIPerformanceCounters, ResultByRow: false}
-		queries["AzureSQLMISqlRequests"] = Query{ScriptName: "AzureSQLMISqlRequests", Script: sqlAzureMIRequests, ResultByRow: false}
-		queries["AzureSQLMISchedulers"] = Query{ScriptName: "AzureSQLMISchedulers", Script: sqlServerSchedulers, ResultByRow: false}
-	} else if s.DatabaseType == "SQLServer" { //These are still V2 queries and have not been refactored yet.
+		queries["AzureSQLMIRequests"] = Query{ScriptName: "AzureSQLMIRequests", Script: sqlAzureMIRequests, ResultByRow: false}
+		queries["AzureSQLMISchedulers"] = Query{ScriptName: "AzureSQLMISchedulers", Script: sqlAzureMISchedulers, ResultByRow: false}
+	} else if s.DatabaseType == typeSQLServer { //These are still V2 queries and have not been refactored yet.
 		queries["SQLServerPerformanceCounters"] = Query{ScriptName: "SQLServerPerformanceCounters", Script: sqlServerPerformanceCounters, ResultByRow: false}
 		queries["SQLServerWaitStatsCategorized"] = Query{ScriptName: "SQLServerWaitStatsCategorized", Script: sqlServerWaitStatsCategorized, ResultByRow: false}
 		queries["SQLServerDatabaseIO"] = Query{ScriptName: "SQLServerDatabaseIO", Script: sqlServerDatabaseIO, ResultByRow: false}
@@ -158,7 +176,9 @@ func initQueries(s *SQLServer) error {
 		queries["SQLServerSchedulers"] = Query{ScriptName: "SQLServerSchedulers", Script: sqlServerSchedulers, ResultByRow: false}
 		queries["SQLServerRequests"] = Query{ScriptName: "SQLServerRequests", Script: sqlServerRequests, ResultByRow: false}
 		queries["SQLServerVolumeSpace"] = Query{ScriptName: "SQLServerVolumeSpace", Script: sqlServerVolumeSpace, ResultByRow: false}
-		queries["SQLServerCpu"] = Query{ScriptName: "SQLServerCpu", Script: sqlServerRingBufferCpu, ResultByRow: false}
+		queries["SQLServerCpu"] = Query{ScriptName: "SQLServerCpu", Script: sqlServerRingBufferCPU, ResultByRow: false}
+		queries["SQLServerAvailabilityReplicaStates"] = Query{ScriptName: "SQLServerAvailabilityReplicaStates", Script: sqlServerAvailabilityReplicaStates, ResultByRow: false}
+		queries["SQLServerDatabaseReplicaStates"] = Query{ScriptName: "SQLServerDatabaseReplicaStates", Script: sqlServerDatabaseReplicaStates, ResultByRow: false}
 	} else {
 		// If this is an AzureDB instance, grab some extra metrics
 		if s.AzureDB {
@@ -176,7 +196,7 @@ func initQueries(s *SQLServer) error {
 			queries["Schedulers"] = Query{ScriptName: "Schedulers", Script: sqlServerSchedulersV2, ResultByRow: false}
 			queries["SqlRequests"] = Query{ScriptName: "SqlRequests", Script: sqlServerRequestsV2, ResultByRow: false}
 			queries["VolumeSpace"] = Query{ScriptName: "VolumeSpace", Script: sqlServerVolumeSpaceV2, ResultByRow: false}
-			queries["Cpu"] = Query{ScriptName: "Cpu", Script: sqlServerCpuV2, ResultByRow: false}
+			queries["Cpu"] = Query{ScriptName: "Cpu", Script: sqlServerCPUV2, ResultByRow: false}
 		} else {
 			log.Println("W! DEPRECATED: query_version=1 has been deprecated in favor of database_type.")
 			queries["PerformanceCounters"] = Query{ScriptName: "PerformanceCounters", Script: sqlPerformanceCounters, ResultByRow: true}
@@ -203,8 +223,6 @@ func initQueries(s *SQLServer) error {
 		}
 	}
 
-	// Set a flag so we know that queries have already been initialized
-	s.isInitialized = true
 	var querylist []string
 	for query := range queries {
 		querylist = append(querylist, query)
@@ -216,43 +234,71 @@ func initQueries(s *SQLServer) error {
 
 // Gather collect data from SQL Server
 func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
-	if !s.isInitialized {
-		if err := initQueries(s); err != nil {
-			acc.AddError(err)
-			return err
+	var wg sync.WaitGroup
+	var mutex sync.Mutex
+	var healthMetrics = make(map[string]*HealthMetric)
+
+	for i, pool := range s.pools {
+		for _, query := range s.queries {
+			wg.Add(1)
+			go func(pool *sql.DB, query Query, serverIndex int) {
+				defer wg.Done()
+				queryError := s.gatherServer(pool, query, acc)
+
+				if s.HealthMetric {
+					mutex.Lock()
+					s.gatherHealth(healthMetrics, s.Servers[serverIndex], queryError)
+					mutex.Unlock()
+				}
+
+				acc.AddError(queryError)
+			}(pool, query, i)
 		}
+	}
+
+	wg.Wait()
+
+	if s.HealthMetric {
+		s.accHealth(healthMetrics, acc)
+	}
+
+	return nil
+}
+
+// Start initialize a list of connection pools
+func (s *SQLServer) Start(acc telegraf.Accumulator) error {
+	if err := initQueries(s); err != nil {
+		acc.AddError(err)
+		return err
 	}
 
 	if len(s.Servers) == 0 {
 		s.Servers = append(s.Servers, defaultServer)
 	}
 
-	var wg sync.WaitGroup
-
 	for _, serv := range s.Servers {
-		for _, query := range s.queries {
-			wg.Add(1)
-			go func(serv string, query Query) {
-				defer wg.Done()
-				acc.AddError(s.gatherServer(serv, query, acc))
-			}(serv, query)
+		pool, err := sql.Open("mssql", serv)
+		if err != nil {
+			acc.AddError(err)
+			return err
 		}
+
+		s.pools = append(s.pools, pool)
 	}
 
-	wg.Wait()
 	return nil
 }
 
-func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumulator) error {
-	// deferred opening
-	conn, err := sql.Open("mssql", server)
-	if err != nil {
-		return err
+// Stop cleanup server connection pools
+func (s *SQLServer) Stop() {
+	for _, pool := range s.pools {
+		_ = pool.Close()
 	}
-	defer conn.Close()
+}
 
+func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumulator) error {
 	// execute query
-	rows, err := conn.Query(query.Script)
+	rows, err := pool.Query(query.Script)
 	if err != nil {
 		return fmt.Errorf("Script %s failed: %w", query.ScriptName, err)
 		//return   err
@@ -307,6 +353,10 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 		}
 	}
 
+	if s.DatabaseType != "" {
+		tags["measurement_db_type"] = s.DatabaseType
+	}
+
 	if query.ResultByRow {
 		// add measurement to Accumulator
 		acc.AddFields(measurement,
@@ -325,8 +375,56 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 	return nil
 }
 
+// gatherHealth stores info about any query errors in the healthMetrics map
+func (s *SQLServer) gatherHealth(healthMetrics map[string]*HealthMetric, serv string, queryError error) {
+	if healthMetrics[serv] == nil {
+		healthMetrics[serv] = &HealthMetric{}
+	}
+
+	healthMetrics[serv].AttemptedQueries++
+	if queryError == nil {
+		healthMetrics[serv].SuccessfulQueries++
+	}
+}
+
+// accHealth accumulates the query health data contained within the healthMetrics map
+func (s *SQLServer) accHealth(healthMetrics map[string]*HealthMetric, acc telegraf.Accumulator) {
+	for connectionString, connectionStats := range healthMetrics {
+		sqlInstance, databaseName := getConnectionIdentifiers(connectionString)
+		tags := map[string]string{healthMetricInstanceTag: sqlInstance, healthMetricDatabaseTag: databaseName}
+		fields := map[string]interface{}{
+			healthMetricAttemptedQueries:  connectionStats.AttemptedQueries,
+			healthMetricSuccessfulQueries: connectionStats.SuccessfulQueries,
+			healthMetricDatabaseType:      s.getDatabaseTypeToLog(),
+		}
+
+		acc.AddFields(healthMetricName, fields, tags, time.Now())
+	}
+}
+
+// getDatabaseTypeToLog returns the type of database monitored by this plugin instance
+func (s *SQLServer) getDatabaseTypeToLog() string {
+	if s.DatabaseType == typeAzureSQLDB || s.DatabaseType == typeAzureSQLManagedInstance || s.DatabaseType == typeSQLServer {
+		return s.DatabaseType
+	}
+
+	logname := fmt.Sprintf("QueryVersion-%d", s.QueryVersion)
+	if s.AzureDB {
+		logname += "-AzureDB"
+	}
+	return logname
+}
+
+func (s *SQLServer) Init() error {
+	if len(s.Servers) == 0 {
+		log.Println("W! Warning: Server list is empty.")
+	}
+
+	return nil
+}
+
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
-		return &SQLServer{}
+		return &SQLServer{Servers: []string{defaultServer}}
 	})
 }

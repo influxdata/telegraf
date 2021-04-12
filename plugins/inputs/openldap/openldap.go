@@ -123,8 +123,12 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 				return nil
 			}
 			err = l.StartTLS(tlsConfig)
+			if err != nil {
+				acc.AddError(err)
+				return nil
+			}
 		} else {
-			acc.AddError(fmt.Errorf("Invalid setting for ssl: %s", o.TLS))
+			acc.AddError(fmt.Errorf("invalid setting for ssl: %s", o.TLS))
 			return nil
 		}
 	} else {
@@ -186,7 +190,6 @@ func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumul
 		}
 	}
 	acc.AddFields("openldap", fields, tags)
-	return
 }
 
 // Convert a DN to metric name, eg cn=Read,cn=Waiters,cn=Monitor becomes waiters_read
@@ -204,15 +207,15 @@ func dnToMetric(dn string, o *Openldap) string {
 			metricParts[i], metricParts[j] = metricParts[j], metricParts[i]
 		}
 		return strings.Join(metricParts[1:], "_")
-	} else {
-		metricName := strings.Trim(dn, " ")
-		metricName = strings.Replace(metricName, " ", "_", -1)
-		metricName = strings.ToLower(metricName)
-		metricName = strings.TrimPrefix(metricName, "cn=")
-		metricName = strings.Replace(metricName, strings.ToLower("cn=Monitor"), "", -1)
-		metricName = strings.Replace(metricName, "cn=", "_", -1)
-		return strings.Replace(metricName, ",", "", -1)
 	}
+
+	metricName := strings.Trim(dn, " ")
+	metricName = strings.Replace(metricName, " ", "_", -1)
+	metricName = strings.ToLower(metricName)
+	metricName = strings.TrimPrefix(metricName, "cn=")
+	metricName = strings.Replace(metricName, strings.ToLower("cn=Monitor"), "", -1)
+	metricName = strings.Replace(metricName, "cn=", "_", -1)
+	return strings.Replace(metricName, ",", "", -1)
 }
 
 func init() {

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/vmware/govmomi/vim25/soap"
@@ -47,15 +47,15 @@ type VSphere struct {
 	CustomAttributeInclude  []string
 	CustomAttributeExclude  []string
 	UseIntSamples           bool
-	IpAddresses             []string
+	IPAddresses             []string
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
 	CollectConcurrency      int
 	DiscoverConcurrency     int
 	ForceDiscoverOnInit     bool
-	ObjectDiscoveryInterval internal.Duration
-	Timeout                 internal.Duration
+	ObjectDiscoveryInterval config.Duration
+	Timeout                 config.Duration
 
 	endpoints []*Endpoint
 	cancel    context.CancelFunc
@@ -258,7 +258,7 @@ func (v *VSphere) Description() string {
 
 // Start is called from telegraf core when a plugin is started and allows it to
 // perform initialization tasks.
-func (v *VSphere) Start(acc telegraf.Accumulator) error {
+func (v *VSphere) Start(_ telegraf.Accumulator) error {
 	v.Log.Info("Starting plugin")
 	ctx, cancel := context.WithCancel(context.Background())
 	v.cancel = cancel
@@ -315,7 +315,6 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := endpoint.Collect(context.Background(), acc)
 			if err == context.Canceled {
-
 				// No need to signal errors if we were merely canceled.
 				err = nil
 			}
@@ -358,15 +357,15 @@ func init() {
 			CustomAttributeInclude:  []string{},
 			CustomAttributeExclude:  []string{"*"},
 			UseIntSamples:           true,
-			IpAddresses:             []string{},
+			IPAddresses:             []string{},
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,
 			CollectConcurrency:      1,
 			DiscoverConcurrency:     1,
 			ForceDiscoverOnInit:     true,
-			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
-			Timeout:                 internal.Duration{Duration: time.Second * 60},
+			ObjectDiscoveryInterval: config.Duration(time.Second * 300),
+			Timeout:                 config.Duration(time.Second * 60),
 		}
 	})
 }

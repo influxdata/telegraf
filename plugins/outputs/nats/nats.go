@@ -15,6 +15,7 @@ import (
 type NATS struct {
 	Servers     []string `toml:"servers"`
 	Secure      bool     `toml:"secure"`
+	Name        string   `toml:"name"`
 	Username    string   `toml:"username"`
 	Password    string   `toml:"password"`
 	Credentials string   `toml:"credentials"`
@@ -29,6 +30,9 @@ type NATS struct {
 var sampleConfig = `
   ## URLs of NATS servers
   servers = ["nats://localhost:4222"]
+
+  ## Optional client name
+  # name = ""
 
   ## Optional credentials
   # username = ""
@@ -69,8 +73,16 @@ func (n *NATS) Connect() error {
 	}
 
 	// override authentication, if any was specified
-	if n.Username != "" {
+	if n.Username != "" && n.Password != "" {
 		opts = append(opts, nats.UserInfo(n.Username, n.Password))
+	}
+
+	if n.Credentials != "" {
+		opts = append(opts, nats.UserCredentials(n.Credentials))
+	}
+
+	if n.Name != "" {
+		opts = append(opts, nats.Name(n.Name))
 	}
 
 	if n.Secure {

@@ -1,3 +1,7 @@
+// +build !windows
+
+// postfix doesn't aim for Windows
+
 package postfix
 
 import (
@@ -57,7 +61,7 @@ func qScan(path string, acc telegraf.Accumulator) (int64, int64, int64, error) {
 	}
 	var age int64
 	if !oldest.IsZero() {
-		age = int64(time.Now().Sub(oldest) / time.Second)
+		age = int64(time.Since(oldest) / time.Second)
 	} else if length != 0 {
 		// system doesn't support ctime
 		age = -1

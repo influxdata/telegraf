@@ -2,6 +2,7 @@ package carbon2
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -12,29 +13,48 @@ import (
 type format string
 
 const (
-	Carbon2FormatFieldEmpty          = format("")
+	carbon2FormatFieldEmpty          = format("")
 	Carbon2FormatFieldSeparate       = format("field_separate")
 	Carbon2FormatMetricIncludesField = format("metric_includes_field")
 )
 
 var formats = map[format]struct{}{
-	Carbon2FormatFieldEmpty:          {},
+	carbon2FormatFieldEmpty:          {},
 	Carbon2FormatFieldSeparate:       {},
 	Carbon2FormatMetricIncludesField: {},
 }
 
+const (
+	DefaultSanitizeReplaceChar = ":"
+	sanitizedChars             = "!@#$%^&*()+`'\"[]{};<>,?/\\|="
+)
+
 type Serializer struct {
-	metricsFormat format
+	metricsFormat    format
+	sanitizeReplacer *strings.Replacer
 }
 
-func NewSerializer(metricsFormat string) (*Serializer, error) {
+func NewSerializer(metricsFormat string, sanitizeReplaceChar string) (*Serializer, error) {
+	if sanitizeReplaceChar == "" {
+		sanitizeReplaceChar = DefaultSanitizeReplaceChar
+	} else if len(sanitizeReplaceChar) > 1 {
+		return nil, errors.New("sanitize replace char has to be a singular character")
+	}
+
 	var f = format(metricsFormat)
+
 	if _, ok := formats[f]; !ok {
 		return nil, fmt.Errorf("unknown carbon2 format: %s", f)
 	}
 
+	// When unset, default to field separate.
+	if f == carbon2FormatFieldEmpty {
+		f = Carbon2FormatFieldSeparate
+	}
+
 	return &Serializer{
-		metricsFormat: f,
+		metricsFormat:    f,
+		sanitizeReplacer: createSanitizeReplacer(sanitizedChars, rune(sanitizeReplaceChar[0])),
 	}, nil
 }
 
@@ -55,21 +75,21 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 	metricsFormat := s.getMetricsFormat()
 
 	for fieldName, fieldValue := range metric.Fields() {
-		if !isNumeric(fieldValue) {
+		if isString(fieldValue) {
 			continue
 		}
 
+		name := s.sanitizeReplacer.Replace(metric.Name())
+
 		switch metricsFormat {
-		// Field separate is the default when no format specified.
-		case Carbon2FormatFieldEmpty:
 		case Carbon2FormatFieldSeparate:
 			m.WriteString(serializeMetricFieldSeparate(
-				metric.Name(), fieldName,
+				name, fieldName,
 			))
 
 		case Carbon2FormatMetricIncludesField:
 			m.WriteString(serializeMetricIncludeField(
-				metric.Name(), fieldName,
+				name, fieldName,
 			))
 		}
 
@@ -84,7 +104,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 			m.WriteString(" ")
 		}
 		m.WriteString(" ")
-		m.WriteString(fmt.Sprintf("%v", fieldValue))
+		m.WriteString(formatValue(fieldValue))
 		m.WriteString(" ")
 		m.WriteString(strconv.FormatInt(metric.Time().Unix(), 10))
 		m.WriteString("\n")
@@ -101,7 +121,7 @@ func (s *Serializer) getMetricsFormat() format {
 }
 
 func (s *Serializer) IsMetricsFormatUnset() bool {
-	return s.metricsFormat == Carbon2FormatFieldEmpty
+	return s.metricsFormat == carbon2FormatFieldEmpty
 }
 
 func serializeMetricFieldSeparate(name, fieldName string) string {
@@ -118,11 +138,43 @@ func serializeMetricIncludeField(name, fieldName string) string {
 	)
 }
 
-func isNumeric(v interface{}) bool {
+func formatValue(fieldValue interface{}) string {
+	switch v := fieldValue.(type) {
+	case bool:
+		// Print bools as 0s and 1s
+		return fmt.Sprintf("%d", bool2int(v))
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+func isString(v interface{}) bool {
 	switch v.(type) {
 	case string:
-		return false
-	default:
 		return true
+	default:
+		return false
 	}
+}
+
+func bool2int(b bool) int {
+	// Slightly more optimized than a usual if ... return ... else return ... .
+	// See: https://0x0f.me/blog/golang-compiler-optimization/
+	var i int
+	if b {
+		i = 1
+	} else {
+		i = 0
+	}
+	return i
+}
+
+// createSanitizeReplacer creates string replacer replacing all provided
+// characters with the replaceChar.
+func createSanitizeReplacer(sanitizedChars string, replaceChar rune) *strings.Replacer {
+	sanitizeCharPairs := make([]string, 0, 2*len(sanitizedChars))
+	for _, c := range sanitizedChars {
+		sanitizeCharPairs = append(sanitizeCharPairs, string(c), string(replaceChar))
+	}
+	return strings.NewReplacer(sanitizeCharPairs...)
 }

@@ -99,8 +99,6 @@ func jsonToZipkinThrift(jsonRaw []byte) ([]byte, error) {
 	}
 	zspans = append(zspans, spans...)
 
-	fmt.Println(spans)
-
 	buf := thrift.NewTMemoryBuffer()
 	transport := thrift.NewTBinaryProtocolTransport(buf)
 

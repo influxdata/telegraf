@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGather_RealPattern(t *testing.T) {
+func TestGather_RealPatternIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -22,7 +22,7 @@ func TestGather_RealPattern(t *testing.T) {
 	assert.Equal(t, len(pids) > 0, true)
 }
 
-func TestGather_RealFullPattern(t *testing.T) {
+func TestGather_RealFullPatternIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -34,7 +34,7 @@ func TestGather_RealFullPattern(t *testing.T) {
 	assert.Equal(t, len(pids) > 0, true)
 }
 
-func TestGather_RealUser(t *testing.T) {
+func TestGather_RealUserIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -42,7 +42,7 @@ func TestGather_RealUser(t *testing.T) {
 	require.NoError(t, err)
 	pg, err := NewNativeFinder()
 	require.NoError(t, err)
-	pids, err := pg.Uid(user.Username)
+	pids, err := pg.UID(user.Username)
 	require.NoError(t, err)
 	fmt.Println(pids)
 	assert.Equal(t, len(pids) > 0, true)

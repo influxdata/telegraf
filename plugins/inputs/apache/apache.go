@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -21,7 +21,7 @@ type Apache struct {
 	Urls            []string
 	Username        string
 	Password        string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	tls.ClientConfig
 
 	client *http.Client
@@ -62,12 +62,12 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	if len(n.Urls) == 0 {
 		n.Urls = []string{"http://localhost/server-status?auto"}
 	}
-	if n.ResponseTimeout.Duration < time.Second {
-		n.ResponseTimeout.Duration = time.Second * 5
+	if n.ResponseTimeout < config.Duration(time.Second) {
+		n.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 
 	if n.client == nil {
-		client, err := n.createHttpClient()
+		client, err := n.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -77,14 +77,14 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			acc.AddError(fmt.Errorf("unable to parse address '%s': %s", u, err))
 			continue
 		}
 
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(n.gatherUrl(addr, acc))
+			acc.AddError(n.gatherURL(addr, acc))
 		}(addr)
 	}
 
@@ -92,7 +92,7 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *Apache) createHttpClient() (*http.Client, error) {
+func (n *Apache) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := n.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -102,16 +102,16 @@ func (n *Apache) createHttpClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: n.ResponseTimeout.Duration,
+		Timeout: time.Duration(n.ResponseTimeout),
 	}
 
 	return client, nil
 }
 
-func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+func (n *Apache) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	req, err := http.NewRequest("GET", addr.String(), nil)
 	if err != nil {
-		return fmt.Errorf("error on new request to %s : %s\n", addr.String(), err)
+		return fmt.Errorf("error on new request to %s : %s", addr.String(), err)
 	}
 
 	if len(n.Username) != 0 && len(n.Password) != 0 {
@@ -120,7 +120,7 @@ func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 
 	resp, err := n.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error on request to %s : %s\n", addr.String(), err)
+		return fmt.Errorf("error on request to %s : %s", addr.String(), err)
 	}
 	defer resp.Body.Close()
 
@@ -162,7 +162,6 @@ func (n *Apache) gatherScores(data string) map[string]interface{} {
 	var S, R, W, K, D, C, L, G, I int = 0, 0, 0, 0, 0, 0, 0, 0, 0
 
 	for _, s := range strings.Split(data, "") {
-
 		switch s {
 		case "_":
 			waiting++

@@ -34,15 +34,15 @@ func (s *Shim) LoadConfig(filePath *string) error {
 	}
 	if conf.Input != nil {
 		if err = s.AddInput(conf.Input); err != nil {
-			return fmt.Errorf("Failed to add Input: %w", err)
+			return fmt.Errorf("failed to add Input: %w", err)
 		}
 	} else if conf.Processor != nil {
 		if err = s.AddStreamingProcessor(conf.Processor); err != nil {
-			return fmt.Errorf("Failed to add Processor: %w", err)
+			return fmt.Errorf("failed to add Processor: %w", err)
 		}
 	} else if conf.Output != nil {
 		if err = s.AddOutput(conf.Output); err != nil {
-			return fmt.Errorf("Failed to add Output: %w", err)
+			return fmt.Errorf("failed to add Output: %w", err)
 		}
 	}
 	return nil
@@ -53,14 +53,12 @@ func LoadConfig(filePath *string) (loaded loadedConfig, err error) {
 	var data string
 	conf := config{}
 	if filePath != nil && *filePath != "" {
-
 		b, err := ioutil.ReadFile(*filePath)
 		if err != nil {
 			return loadedConfig{}, err
 		}
 
 		data = expandEnvVars(b)
-
 	} else {
 		conf, err = DefaultImportedPlugins()
 		if err != nil {
@@ -116,7 +114,11 @@ func createPluginsWithTomlConfig(md toml.MetaData, conf config) (loadedConfig, e
 		plugin := creator()
 		if len(primitives) > 0 {
 			primitive := primitives[0]
-			if err := md.PrimitiveDecode(primitive, plugin); err != nil {
+			var p telegraf.PluginDescriber = plugin
+			if processor, ok := plugin.(unwrappable); ok {
+				p = processor.Unwrap()
+			}
+			if err := md.PrimitiveDecode(primitive, p); err != nil {
 				return loadedConf, err
 			}
 		}
@@ -168,4 +170,8 @@ func DefaultImportedPlugins() (config, error) {
 		return conf, nil
 	}
 	return conf, nil
+}
+
+type unwrappable interface {
+	Unwrap() telegraf.Processor
 }

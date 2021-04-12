@@ -7,19 +7,19 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGatherAttributes(t *testing.T) {
-	s := NewSmart()
+	s := newSmart()
 	s.Attributes = true
 
-	assert.Equal(t, time.Second*30, s.Timeout.Duration)
+	assert.Equal(t, time.Second*30, time.Duration(s.Timeout))
 
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		if len(args) > 0 {
 			if args[0] == "--info" && args[7] == "/dev/ada0" {
 				return []byte(mockInfoAttributeData), nil
@@ -78,12 +78,12 @@ func TestGatherAttributes(t *testing.T) {
 }
 
 func TestGatherNoAttributes(t *testing.T) {
-	s := NewSmart()
+	s := newSmart()
 	s.Attributes = false
 
-	assert.Equal(t, time.Second*30, s.Timeout.Duration)
+	assert.Equal(t, time.Second*30, time.Duration(s.Timeout))
 
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		if len(args) > 0 {
 			if args[0] == "--scan" && len(args) == 1 {
 				return []byte(mockScanData), nil
@@ -124,7 +124,7 @@ func TestExcludedDev(t *testing.T) {
 }
 
 func TestGatherSATAInfo(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(hgstSATAInfoData), nil
 	}
 
@@ -134,13 +134,13 @@ func TestGatherSATAInfo(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+	gatherDisk(acc, config.Duration(time.Second*30), true, true, "", "", "", wg)
 	assert.Equal(t, 101, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(20), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSATAInfo65(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(hgstSATAInfoData65), nil
 	}
 
@@ -150,13 +150,13 @@ func TestGatherSATAInfo65(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+	gatherDisk(acc, config.Duration(time.Second*30), true, true, "", "", "", wg)
 	assert.Equal(t, 91, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(18), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherHgstSAS(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(hgstSASInfoData), nil
 	}
 
@@ -166,13 +166,13 @@ func TestGatherHgstSAS(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+	gatherDisk(acc, config.Duration(time.Second*30), true, true, "", "", "", wg)
 	assert.Equal(t, 6, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(4), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherHtSAS(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(htSASInfoData), nil
 	}
 
@@ -182,13 +182,13 @@ func TestGatherHtSAS(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+	gatherDisk(acc, config.Duration(time.Second*30), true, true, "", "", "", wg)
 
 	testutil.RequireMetricsEqual(t, testHtsasAtributtes, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
 func TestGatherSSD(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(ssdInfoData), nil
 	}
 
@@ -198,13 +198,13 @@ func TestGatherSSD(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+	gatherDisk(acc, config.Duration(time.Second*30), true, true, "", "", "", wg)
 	assert.Equal(t, 105, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSSDRaid(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(ssdRaidInfoData), nil
 	}
 
@@ -214,13 +214,13 @@ func TestGatherSSDRaid(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+	gatherDisk(acc, config.Duration(time.Second*30), true, true, "", "", "", wg)
 	assert.Equal(t, 74, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherNvme(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(smartctlNvmeInfoData), nil
 	}
 
@@ -230,21 +230,21 @@ func TestGatherNvme(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "nvme0", wg)
+	gatherDisk(acc, config.Duration(time.Second*30), true, true, "", "", "nvme0", wg)
 
 	testutil.RequireMetricsEqual(t, testSmartctlNvmeAttributes, acc.GetTelegrafMetrics(),
 		testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
 func TestGatherIntelNvme(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(nvmeIntelInfoData), nil
 	}
 
 	var (
 		acc    = &testutil.Accumulator{}
 		wg     = &sync.WaitGroup{}
-		device = NVMeDevice{
+		device = nvmeDevice{
 			name:         "nvme0",
 			model:        mockModel,
 			serialNumber: mockSerial,
@@ -252,7 +252,7 @@ func TestGatherIntelNvme(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherIntelNVMeDisk(acc, internal.Duration{Duration: time.Second * 30}, true, "", device, wg)
+	gatherIntelNVMeDisk(acc, config.Duration(time.Second*30), true, "", device, wg)
 
 	result := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, testIntelInvmeAttributes, result,
@@ -275,13 +275,6 @@ func Test_checkForNVMeDevices(t *testing.T) {
 	assert.Equal(t, expectedNVMeDevices, resultNVMeDevices)
 }
 
-func Test_excludeWrongDeviceNames(t *testing.T) {
-	devices := []string{"/dev/sda", "/dev/nvme -d nvme", "/dev/sda1 -d megaraid,1", "/dev/sda ; ./suspicious_script.sh"}
-	validDevices := []string{"/dev/sda", "/dev/nvme -d nvme", "/dev/sda1 -d megaraid,1"}
-	result := excludeWrongDeviceNames(devices)
-	assert.Equal(t, validDevices, result)
-}
-
 func Test_contains(t *testing.T) {
 	devices := []string{"/dev/sda", "/dev/nvme1"}
 	device := "/dev/nvme1"
@@ -299,7 +292,7 @@ func Test_difference(t *testing.T) {
 }
 
 func Test_integerOverflow(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(smartctlNvmeInfoDataWithOverflow), nil
 	}
 
@@ -310,7 +303,7 @@ func Test_integerOverflow(t *testing.T) {
 
 	t.Run("If data raw_value is out of int64 range, there should be no metrics for that attribute", func(t *testing.T) {
 		wg.Add(1)
-		gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "nvme0", wg)
+		gatherDisk(acc, config.Duration(time.Second*30), true, true, "", "", "nvme0", wg)
 
 		result := acc.GetTelegrafMetrics()
 		testutil.RequireMetricsEqual(t, testOverflowAttributes, result,

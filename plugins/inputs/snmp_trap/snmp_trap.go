@@ -12,16 +12,17 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/soniah/gosnmp"
 )
 
-var defaultTimeout = internal.Duration{Duration: time.Second * 5}
+var defaultTimeout = config.Duration(time.Second * 5)
 
 type handler func(*gosnmp.SnmpPacket, *net.UDPAddr)
-type execer func(internal.Duration, string, ...string) ([]byte, error)
+type execer func(config.Duration, string, ...string) ([]byte, error)
 
 type mibEntry struct {
 	mibName string
@@ -29,9 +30,9 @@ type mibEntry struct {
 }
 
 type SnmpTrap struct {
-	ServiceAddress string            `toml:"service_address"`
-	Timeout        internal.Duration `toml:"timeout"`
-	Version        string            `toml:"version"`
+	ServiceAddress string          `toml:"service_address"`
+	Timeout        config.Duration `toml:"timeout"`
+	Version        string          `toml:"version"`
 
 	// Settings for version 3
 	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
@@ -111,11 +112,11 @@ func init() {
 	})
 }
 
-func realExecCmd(Timeout internal.Duration, arg0 string, args ...string) ([]byte, error) {
+func realExecCmd(timeout config.Duration, arg0 string, args ...string) ([]byte, error) {
 	cmd := exec.Command(arg0, args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, Timeout.Duration)
+	err := internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +207,6 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 			AuthenticationPassphrase: s.AuthPassword,
 			AuthenticationProtocol:   authenticationProtocol,
 		}
-
 	}
 
 	// wrap the handler, used in unit tests
@@ -284,7 +284,7 @@ func makeTrapHandler(s *SnmpTrap) handler {
 			if trapOid != "" {
 				e, err := s.lookup(trapOid)
 				if err != nil {
-					s.Log.Errorf("Error resolving V1 OID: %v", err)
+					s.Log.Errorf("Error resolving V1 OID, oid=%s, source=%s: %v", trapOid, tags["source"], err)
 					return
 				}
 				setTrapOid(tags, trapOid, e)
@@ -322,7 +322,7 @@ func makeTrapHandler(s *SnmpTrap) handler {
 				var err error
 				e, err = s.lookup(val)
 				if nil != err {
-					s.Log.Errorf("Error resolving value OID: %v", err)
+					s.Log.Errorf("Error resolving value OID, oid=%s, source=%s: %v", val, tags["source"], err)
 					return
 				}
 
@@ -340,7 +340,7 @@ func makeTrapHandler(s *SnmpTrap) handler {
 
 			e, err := s.lookup(v.Name)
 			if nil != err {
-				s.Log.Errorf("Error resolving OID: %v", err)
+				s.Log.Errorf("Error resolving OID oid=%s, source=%s: %v", v.Name, tags["source"], err)
 				return
 			}
 

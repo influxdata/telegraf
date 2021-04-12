@@ -65,24 +65,11 @@ func (b *metricBuilder) n(v string) *metricBuilder {
 	return b
 }
 
-func (b *metricBuilder) t(k, v string) *metricBuilder {
-	if b.tags == nil {
-		b.tags = make(map[string]string)
-	}
-	b.tags[k] = v
-	return b
-}
-
 func (b *metricBuilder) f(k string, v interface{}) *metricBuilder {
 	if b.fields == nil {
 		b.fields = make(map[string]interface{})
 	}
 	b.fields[k] = v
-	return b
-}
-
-func (b *metricBuilder) ts(v time.Time) *metricBuilder {
-	b.timestamp = v
 	return b
 }
 

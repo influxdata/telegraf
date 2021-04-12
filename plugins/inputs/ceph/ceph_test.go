@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -24,7 +24,7 @@ type expectedResult struct {
 }
 
 func TestParseSockId(t *testing.T) {
-	s := parseSockId(sockFile(osdPrefix, 1), osdPrefix, sockSuffix)
+	s := parseSockID(sockFile(osdPrefix, 1), osdPrefix, sockSuffix)
 	assert.Equal(t, s, "1")
 }
 
@@ -86,7 +86,7 @@ func TestDecodeOSDPoolStats(t *testing.T) {
 	}
 }
 
-func TestGather(t *testing.T) {
+func TestGather(_ *testing.T) {
 	saveFind := findSockets
 	saveDump := perfDump
 	defer func() {
@@ -105,7 +105,6 @@ func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	c := &Ceph{}
 	c.Gather(acc)
-
 }
 
 func TestFindSockets(t *testing.T) {
@@ -163,14 +162,14 @@ func assertFoundSocket(t *testing.T, dir, sockType string, i int, sockets []*soc
 	} else {
 		prefix = monPrefix
 	}
-	expected := path.Join(dir, sockFile(prefix, i))
+	expected := filepath.Join(dir, sockFile(prefix, i))
 	found := false
 	for _, s := range sockets {
 		fmt.Printf("Checking %s\n", s.socket)
 		if s.socket == expected {
 			found = true
 			assert.Equal(t, s.sockType, sockType, "Unexpected socket type for '%s'", s)
-			assert.Equal(t, s.sockId, strconv.Itoa(i))
+			assert.Equal(t, s.sockID, strconv.Itoa(i))
 		}
 	}
 	assert.True(t, found, "Did not find socket: %s", expected)
@@ -183,7 +182,7 @@ func sockFile(prefix string, i int) string {
 func createTestFiles(dir string, st *SockTest) {
 	writeFile := func(prefix string, i int) {
 		f := sockFile(prefix, i)
-		fpath := path.Join(dir, f)
+		fpath := filepath.Join(dir, f)
 		ioutil.WriteFile(fpath, []byte(""), 0777)
 	}
 	tstFileApply(st, writeFile)
@@ -192,7 +191,7 @@ func createTestFiles(dir string, st *SockTest) {
 func cleanupTestFiles(dir string, st *SockTest) {
 	rmFile := func(prefix string, i int) {
 		f := sockFile(prefix, i)
-		fpath := path.Join(dir, f)
+		fpath := filepath.Join(dir, f)
 		err := os.Remove(fpath)
 		if err != nil {
 			fmt.Printf("Error removing test file %s: %v\n", fpath, err)

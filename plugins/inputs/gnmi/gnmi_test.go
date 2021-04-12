@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/stretchr/testify/assert"
@@ -77,7 +77,7 @@ func TestWaitError(t *testing.T) {
 		Log:       testutil.Logger{},
 		Addresses: []string{listener.Addr().String()},
 		Encoding:  "proto",
-		Redial:    internal.Duration{Duration: 1 * time.Second},
+		Redial:    config.Duration(1 * time.Second),
 	}
 
 	var acc testutil.Accumulator
@@ -135,7 +135,7 @@ func TestUsernamePassword(t *testing.T) {
 		Username:  "theusername",
 		Password:  "thepassword",
 		Encoding:  "proto",
-		Redial:    internal.Duration{Duration: 1 * time.Second},
+		Redial:    config.Duration(1 * time.Second),
 	}
 
 	var acc testutil.Accumulator
@@ -218,7 +218,7 @@ func TestNotification(t *testing.T) {
 			plugin: &GNMI{
 				Log:      testutil.Logger{},
 				Encoding: "proto",
-				Redial:   internal.Duration{Duration: 1 * time.Second},
+				Redial:   config.Duration(1 * time.Second),
 				Subscriptions: []Subscription{
 					{
 						Name:             "alias",
@@ -302,7 +302,7 @@ func TestNotification(t *testing.T) {
 			plugin: &GNMI{
 				Log:      testutil.Logger{},
 				Encoding: "proto",
-				Redial:   internal.Duration{Duration: 1 * time.Second},
+				Redial:   config.Duration(1 * time.Second),
 				Subscriptions: []Subscription{
 					{
 						Name:             "PHY_COUNTERS",
@@ -403,6 +403,30 @@ func TestNotification(t *testing.T) {
 	}
 }
 
+type MockLogger struct {
+	telegraf.Logger
+	lastFormat string
+	lastArgs   []interface{}
+}
+
+func (l *MockLogger) Errorf(format string, args ...interface{}) {
+	l.lastFormat = format
+	l.lastArgs = args
+}
+
+func TestSubscribeResponseError(t *testing.T) {
+	me := "mock error message"
+	var mc uint32 = 7
+	ml := &MockLogger{}
+	plugin := &GNMI{Log: ml}
+	errorResponse := &gnmi.SubscribeResponse_Error{
+		Error: &gnmi.Error{Message: me, Code: mc}}
+	plugin.handleSubscribeResponse(
+		"127.0.0.1:0", &gnmi.SubscribeResponse{Response: errorResponse})
+	require.NotEmpty(t, ml.lastFormat)
+	require.Equal(t, ml.lastArgs, []interface{}{mc, me})
+}
+
 func TestRedial(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -411,7 +435,7 @@ func TestRedial(t *testing.T) {
 		Log:       testutil.Logger{},
 		Addresses: []string{listener.Addr().String()},
 		Encoding:  "proto",
-		Redial:    internal.Duration{Duration: 10 * time.Millisecond},
+		Redial:    config.Duration(10 * time.Millisecond),
 	}
 
 	grpcServer := grpc.NewServer()

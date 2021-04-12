@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -40,8 +40,8 @@ type RabbitMQ struct {
 	Password string `toml:"password"`
 	tls.ClientConfig
 
-	ResponseHeaderTimeout internal.Duration `toml:"header_timeout"`
-	ClientTimeout         internal.Duration `toml:"client_timeout"`
+	ResponseHeaderTimeout config.Duration `toml:"header_timeout"`
+	ClientTimeout         config.Duration `toml:"client_timeout"`
 
 	Nodes     []string `toml:"nodes"`
 	Queues    []string `toml:"queues"`
@@ -157,8 +157,8 @@ type Node struct {
 	Uptime                   int64   `json:"uptime"`
 	MnesiaDiskTxCount        int64   `json:"mnesia_disk_tx_count"`
 	MnesiaDiskTxCountDetails Details `json:"mnesia_disk_tx_count_details"`
-	MnesiaRamTxCount         int64   `json:"mnesia_ram_tx_count"`
-	MnesiaRamTxCountDetails  Details `json:"mnesia_ram_tx_count_details"`
+	MnesiaRAMTxCount         int64   `json:"mnesia_ram_tx_count"`
+	MnesiaRAMTxCountDetails  Details `json:"mnesia_ram_tx_count_details"`
 	GcNum                    int64   `json:"gc_num"`
 	GcNumDetails             Details `json:"gc_num_details"`
 	GcBytesReclaimed         int64   `json:"gc_bytes_reclaimed"`
@@ -331,12 +331,12 @@ func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: r.ResponseHeaderTimeout.Duration,
+			ResponseHeaderTimeout: time.Duration(r.ResponseHeaderTimeout),
 			TLSClientConfig:       tlsCfg,
 		}
 		r.Client = &http.Client{
 			Transport: tr,
-			Timeout:   r.ClientTimeout.Duration,
+			Timeout:   time.Duration(r.ClientTimeout),
 		}
 	}
 
@@ -396,9 +396,7 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 
 	defer resp.Body.Close()
 
-	json.NewDecoder(resp.Body).Decode(target)
-
-	return nil
+	return json.NewDecoder(resp.Body).Decode(target)
 }
 
 func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
@@ -491,8 +489,8 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				"uptime":                    node.Uptime,
 				"mnesia_disk_tx_count":      node.MnesiaDiskTxCount,
 				"mnesia_disk_tx_count_rate": node.MnesiaDiskTxCountDetails.Rate,
-				"mnesia_ram_tx_count":       node.MnesiaRamTxCount,
-				"mnesia_ram_tx_count_rate":  node.MnesiaRamTxCountDetails.Rate,
+				"mnesia_ram_tx_count":       node.MnesiaRAMTxCount,
+				"mnesia_ram_tx_count_rate":  node.MnesiaRAMTxCountDetails.Rate,
 				"gc_num":                    node.GcNum,
 				"gc_num_rate":               node.GcNumDetails.Rate,
 				"gc_bytes_reclaimed":        node.GcBytesReclaimed,
@@ -764,8 +762,8 @@ func (r *RabbitMQ) shouldGatherFederationLink(link FederationLink) bool {
 func init() {
 	inputs.Add("rabbitmq", func() telegraf.Input {
 		return &RabbitMQ{
-			ResponseHeaderTimeout: internal.Duration{Duration: DefaultResponseHeaderTimeout * time.Second},
-			ClientTimeout:         internal.Duration{Duration: DefaultClientTimeout * time.Second},
+			ResponseHeaderTimeout: config.Duration(DefaultResponseHeaderTimeout * time.Second),
+			ClientTimeout:         config.Duration(DefaultClientTimeout * time.Second),
 		}
 	})
 }

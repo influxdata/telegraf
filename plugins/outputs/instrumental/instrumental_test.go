@@ -20,7 +20,7 @@ func TestWrite(t *testing.T) {
 
 	i := Instrumental{
 		Host:     "127.0.0.1",
-		ApiToken: "abc123token",
+		APIToken: "abc123token",
 		Prefix:   "my.prefix",
 	}
 

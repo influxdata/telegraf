@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -93,7 +93,7 @@ func TestTwoTags(t *testing.T) {
 func TestLongDifference(t *testing.T) {
 	acc := testutil.Accumulator{}
 	final := NewFinal()
-	final.SeriesTimeout = internal.Duration{Duration: 30 * time.Second}
+	final.SeriesTimeout = config.Duration(30 * time.Second)
 	tags := map[string]string{"foo": "bar"}
 
 	now := time.Now()

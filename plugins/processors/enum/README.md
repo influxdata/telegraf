@@ -14,10 +14,10 @@ source tag or field is overwritten.
 ```toml
 [[processors.enum]]
   [[processors.enum.mapping]]
-    ## Name of the field to map
+    ## Name of the field to map. Globs accepted.
     field = "status"
 
-    ## Name of the tag to map
+    ## Name of the tag to map. Globs accepted.
     # tag = "status"
 
     ## Destination tag or field to be used for the mapped value.  By default the

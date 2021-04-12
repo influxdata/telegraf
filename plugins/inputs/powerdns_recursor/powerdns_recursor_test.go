@@ -13,8 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type statServer struct{}
-
 var metrics = "all-outqueries\t3591637\nanswers-slow\t36451\nanswers0-1\t177297\nanswers1-10\t1209328\n" +
 	"answers10-100\t1238786\nanswers100-1000\t402917\nauth-zone-queries\t4\nauth4-answers-slow\t44248\n" +
 	"auth4-answers0-1\t59169\nauth4-answers1-10\t1747403\nauth4-answers10-100\t1315621\n" +
@@ -99,25 +97,26 @@ var intOverflowMetrics = "all-outqueries\t18446744073709550195\nanswers-slow\t36
 	"x-ourtime2-4\t302\nx-ourtime4-8\t194\nx-ourtime8-16\t24\n"
 
 func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
-	if runtime.GOOS == "darwin" {
-		t.Skip("Skipping test on darwin")
+	if runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
+		t.Skip("Skipping on windows and darwin, as unixgram sockets are not supported")
 	}
 	// We create a fake server to return test data
 	controlSocket := "/tmp/pdns5724354148158589552.controlsocket"
 	addr, err := net.ResolveUnixAddr("unixgram", controlSocket)
-	if err != nil {
-		t.Fatal("Cannot parse unix socket")
-	}
+	require.NoError(t, err, "Cannot parse unix socket")
 	socket, err := net.ListenUnixgram("unixgram", addr)
-	if err != nil {
-		t.Fatal("Cannot initialize server on port")
-	}
+	require.NoError(t, err, "Cannot initialize server on port")
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer func() {
+			// Ignore the returned error as we need to remove the socket file anyway
+			//nolint:errcheck,revive
 			socket.Close()
+			// Ignore the returned error as we want to remove the file and ignore
+			// no-such-file errors
+			//nolint:errcheck,revive
 			os.Remove(controlSocket)
 			wg.Done()
 		}()
@@ -126,13 +125,19 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 			buf := make([]byte, 1024)
 			n, remote, err := socket.ReadFromUnix(buf)
 			if err != nil {
+				// Ignore the returned error as we cannot do anything about it anyway
+				//nolint:errcheck,revive
 				socket.Close()
 				return
 			}
 
 			data := buf[:n]
 			if string(data) == "get-all\n" {
+				// Ignore the returned error as we need to close the socket anyway
+				//nolint:errcheck,revive
 				socket.WriteToUnix([]byte(metrics), remote)
+				// Ignore the returned error as we cannot do anything about it anyway
+				//nolint:errcheck,revive
 				socket.Close()
 			}
 
@@ -145,13 +150,11 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 		SocketDir:   "/tmp",
 		SocketMode:  "0666",
 	}
-	err = p.Init()
-	require.NoError(t, err)
+	require.NoError(t, p.Init())
 
 	var acc testutil.Accumulator
 
-	err = acc.GatherError(p.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(p.Gather))
 
 	wg.Wait()
 
@@ -299,14 +302,10 @@ func TestPowerdnsRecursorParseMetrics(t *testing.T) {
 
 	for _, test := range tests {
 		value, ok := values[test.key]
-		if !ok {
-			t.Errorf("Did not find key for metric %s in values", test.key)
+		if !assert.Truef(t, ok, "Did not find key for metric %s in values", test.key) {
 			continue
 		}
-		if value != test.value {
-			t.Errorf("Metric: %s, Expected: %d, actual: %d",
-				test.key, test.value, value)
-		}
+		require.EqualValuesf(t, value, test.value, "Metric: %s, Expected: %d, actual: %d", test.key, test.value, value)
 	}
 }
 
@@ -424,14 +423,10 @@ func TestPowerdnsRecursorParseCorruptMetrics(t *testing.T) {
 
 	for _, test := range tests {
 		value, ok := values[test.key]
-		if !ok {
-			t.Errorf("Did not find key for metric %s in values", test.key)
+		if !assert.Truef(t, ok, "Did not find key for metric %s in values", test.key) {
 			continue
 		}
-		if value != test.value {
-			t.Errorf("Metric: %s, Expected: %d, actual: %d",
-				test.key, test.value, value)
-		}
+		require.EqualValuesf(t, value, test.value, "Metric: %s, Expected: %d, actual: %d", test.key, test.value, value)
 	}
 }
 
@@ -549,13 +544,9 @@ func TestPowerdnsRecursorParseIntOverflowMetrics(t *testing.T) {
 
 	for _, test := range tests {
 		value, ok := values[test.key]
-		if !ok {
-			t.Errorf("Did not find key for metric %s in values", test.key)
+		if !assert.Truef(t, ok, "Did not find key for metric %s in values", test.key) {
 			continue
 		}
-		if value != test.value {
-			t.Errorf("Metric: %s, Expected: %d, actual: %d",
-				test.key, test.value, value)
-		}
+		require.EqualValuesf(t, value, test.value, "Metric: %s, Expected: %d, actual: %d", test.key, test.value, value)
 	}
 }

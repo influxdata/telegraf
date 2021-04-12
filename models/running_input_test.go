@@ -289,6 +289,6 @@ func TestMetricErrorCounters(t *testing.T) {
 
 type testInput struct{}
 
-func (t *testInput) Description() string                   { return "" }
-func (t *testInput) SampleConfig() string                  { return "" }
-func (t *testInput) Gather(acc telegraf.Accumulator) error { return nil }
+func (t *testInput) Description() string                 { return "" }
+func (t *testInput) SampleConfig() string                { return "" }
+func (t *testInput) Gather(_ telegraf.Accumulator) error { return nil }

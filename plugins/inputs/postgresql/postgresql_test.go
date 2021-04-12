@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPostgresqlGeneratesMetrics(t *testing.T) {
+func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -94,7 +94,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	assert.Equal(t, len(floatMetrics)+len(intMetrics)+len(int32Metrics)+len(stringMetrics), metricsCounted)
 }
 
-func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
+func TestPostgresqlTagsMetricsWithDatabaseNameIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -120,7 +120,7 @@ func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
 	assert.Equal(t, "postgres", point.Tags["db"])
 }
 
-func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
+func TestPostgresqlDefaultsToAllDatabasesIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -153,7 +153,7 @@ func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 	assert.True(t, found)
 }
 
-func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
+func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -176,7 +176,7 @@ func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
 	}
 }
 
-func TestPostgresqlDatabaseWhitelistTest(t *testing.T) {
+func TestPostgresqlDatabaseWhitelistTestIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -216,7 +216,7 @@ func TestPostgresqlDatabaseWhitelistTest(t *testing.T) {
 	assert.False(t, foundTemplate1)
 }
 
-func TestPostgresqlDatabaseBlacklistTest(t *testing.T) {
+func TestPostgresqlDatabaseBlacklistTestIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

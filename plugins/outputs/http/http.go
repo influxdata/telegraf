@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -64,6 +65,11 @@ var sampleConfig = `
   # [outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format
   #   Content-Type = "text/plain; charset=utf-8"
+
+  ## Idle (keep-alive) connection timeout.
+  ## Maximum amount of time before idle connection is closed.
+  ## Zero means no limit.
+  # idle_conn_timeout = 0
 `
 
 const (
@@ -74,7 +80,7 @@ const (
 
 type HTTP struct {
 	URL             string            `toml:"url"`
-	Timeout         internal.Duration `toml:"timeout"`
+	Timeout         config.Duration   `toml:"timeout"`
 	Method          string            `toml:"method"`
 	Username        string            `toml:"username"`
 	Password        string            `toml:"password"`
@@ -84,6 +90,7 @@ type HTTP struct {
 	TokenURL        string            `toml:"token_url"`
 	Scopes          []string          `toml:"scopes"`
 	ContentEncoding string            `toml:"content_encoding"`
+	IdleConnTimeout config.Duration   `toml:"idle_conn_timeout"`
 	tls.ClientConfig
 
 	client     *http.Client
@@ -104,8 +111,9 @@ func (h *HTTP) createClient(ctx context.Context) (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 			Proxy:           http.ProxyFromEnvironment,
+			IdleConnTimeout: time.Duration(h.IdleConnTimeout),
 		},
-		Timeout: h.Timeout.Duration,
+		Timeout: time.Duration(h.Timeout),
 	}
 
 	if h.ClientID != "" && h.ClientSecret != "" && h.TokenURL != "" {
@@ -131,8 +139,8 @@ func (h *HTTP) Connect() error {
 		return fmt.Errorf("invalid method [%s] %s", h.URL, h.Method)
 	}
 
-	if h.Timeout.Duration == 0 {
-		h.Timeout.Duration = defaultClientTimeout
+	if h.Timeout == 0 {
+		h.Timeout = config.Duration(defaultClientTimeout)
 	}
 
 	ctx := context.Background()
@@ -164,11 +172,7 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	if err := h.write(reqBody); err != nil {
-		return err
-	}
-
-	return nil
+	return h.write(reqBody)
 }
 
 func (h *HTTP) write(reqBody []byte) error {
@@ -215,6 +219,9 @@ func (h *HTTP) write(reqBody []byte) error {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("when writing to [%s] received status code: %d", h.URL, resp.StatusCode)
 	}
+	if err != nil {
+		return fmt.Errorf("when writing to [%s] received error: %v", h.URL, err)
+	}
 
 	return nil
 }
@@ -222,7 +229,7 @@ func (h *HTTP) write(reqBody []byte) error {
 func init() {
 	outputs.Add("http", func() telegraf.Output {
 		return &HTTP{
-			Timeout: internal.Duration{Duration: defaultClientTimeout},
+			Timeout: config.Duration(defaultClientTimeout),
 			Method:  defaultMethod,
 			URL:     defaultURL,
 		}

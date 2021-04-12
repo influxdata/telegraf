@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -43,8 +43,8 @@ type InfluxDB struct {
 	ExcludeRetentionPolicyTag bool              `toml:"exclude_retention_policy_tag"`
 	UserAgent                 string            `toml:"user_agent"`
 	WriteConsistency          string            `toml:"write_consistency"`
-	Timeout                   internal.Duration `toml:"timeout"`
-	UDPPayload                internal.Size     `toml:"udp_payload"`
+	Timeout                   config.Duration   `toml:"timeout"`
+	UDPPayload                config.Size       `toml:"udp_payload"`
 	HTTPProxy                 string            `toml:"http_proxy"`
 	HTTPHeaders               map[string]string `toml:"http_headers"`
 	ContentEncoding           string            `toml:"content_encoding"`
@@ -131,7 +131,7 @@ var sampleConfig = `
 
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
-  # content_encoding = "identity"
+  # content_encoding = "gzip"
 
   ## When true, Telegraf will output unsigned integers as unsigned values,
   ## i.e.: "42u".  You will need a version of InfluxDB supporting unsigned
@@ -239,7 +239,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 func (i *InfluxDB) udpClient(url *url.URL) (Client, error) {
 	config := &UDPConfig{
 		URL:            url,
-		MaxPayloadSize: int(i.UDPPayload.Size),
+		MaxPayloadSize: int(i.UDPPayload),
 		Serializer:     i.newSerializer(),
 		Log:            i.Log,
 	}
@@ -260,7 +260,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 
 	config := &HTTPConfig{
 		URL:                       url,
-		Timeout:                   i.Timeout.Duration,
+		Timeout:                   time.Duration(i.Timeout),
 		TLSConfig:                 tlsConfig,
 		UserAgent:                 i.UserAgent,
 		Username:                  i.Username,
@@ -308,13 +308,14 @@ func (i *InfluxDB) newSerializer() *influx.Serializer {
 func init() {
 	outputs.Add("influxdb", func() telegraf.Output {
 		return &InfluxDB{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 			CreateHTTPClientF: func(config *HTTPConfig) (Client, error) {
 				return NewHTTPClient(*config)
 			},
 			CreateUDPClientF: func(config *UDPConfig) (Client, error) {
 				return NewUDPClient(*config)
 			},
+			ContentEncoding: "gzip",
 		}
 	})
 }

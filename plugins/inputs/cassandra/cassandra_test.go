@@ -77,19 +77,6 @@ const validCassandraNestedMultiValueJSON = `
 	}
 }`
 
-const validSingleValueJSON = `
-{
-  "request":{
-    "path":"used",
-    "mbean":"java.lang:type=Memory",
-    "attribute":"HeapMemoryUsage",
-    "type":"read"
-  },
-  "value":209274376,
-  "timestamp":1446129256,
-  "status":200
-}`
-
 const validJavaMultiTypeJSON = `
 {
    "request":{
@@ -103,8 +90,6 @@ const validJavaMultiTypeJSON = `
 }`
 
 const invalidJSON = "I don't think this is JSON"
-
-const empty = ""
 
 var Servers = []string{"10.10.10.10:8778"}
 var AuthServers = []string{"user:passwd@10.10.10.10:8778"}
@@ -121,7 +106,7 @@ type jolokiaClientStub struct {
 	statusCode   int
 }
 
-func (c jolokiaClientStub) MakeRequest(req *http.Request) (*http.Response, error) {
+func (c jolokiaClientStub) MakeRequest(_ *http.Request) (*http.Response, error) {
 	resp := http.Response{}
 	resp.StatusCode = c.statusCode
 	resp.Body = ioutil.NopCloser(strings.NewReader(c.responseBody))
@@ -198,9 +183,7 @@ func TestHttpJsonJavaMultiType(t *testing.T) {
 
 // Test that the proper values are ignored or collected
 func TestHttp404(t *testing.T) {
-
-	jolokia := genJolokiaClientStub(invalidJSON, 404, Servers,
-		[]string{HeapMetric})
+	jolokia := genJolokiaClientStub(invalidJSON, 404, Servers, []string{HeapMetric})
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(jolokia.Gather)

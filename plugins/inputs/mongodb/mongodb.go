@@ -23,6 +23,7 @@ type MongoDB struct {
 	GatherClusterStatus bool
 	GatherPerdbStats    bool
 	GatherColStats      bool
+	GatherTopStat       bool
 	ColStatsDbs         []string
 	tlsint.ClientConfig
 
@@ -53,6 +54,10 @@ var sampleConfig = `
   ## When true, collect per collection stats
   # gather_col_stats = false
 
+  ## When true, collect usage statistics for each collection
+  ## (insert, update, queries, remove, getmore, commands etc...).
+  # gather_top_stat = false
+
   ## List of db where collections stats are collected
   ## If empty, all db are concerned
   # col_stats_dbs = ["local"]
@@ -79,8 +84,7 @@ var localhost = &url.URL{Host: "mongodb://127.0.0.1:27017"}
 // Returns one of the errors encountered while gather stats (if any).
 func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 	if len(m.Servers) == 0 {
-		m.gatherServer(m.getMongoServer(localhost), acc)
-		return nil
+		return m.gatherServer(m.getMongoServer(localhost), acc)
 	}
 
 	var wg sync.WaitGroup
@@ -121,7 +125,7 @@ func (m *MongoDB) getMongoServer(url *url.URL) *Server {
 	if _, ok := m.mongos[url.Host]; !ok {
 		m.mongos[url.Host] = &Server{
 			Log: m.Log,
-			Url: url,
+			URL: url,
 		}
 	}
 	return m.mongos[url.Host]
@@ -130,10 +134,10 @@ func (m *MongoDB) getMongoServer(url *url.URL) *Server {
 func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 	if server.Session == nil {
 		var dialAddrs []string
-		if server.Url.User != nil {
-			dialAddrs = []string{server.Url.String()}
+		if server.URL.User != nil {
+			dialAddrs = []string{server.URL.String()}
 		} else {
-			dialAddrs = []string{server.Url.Host}
+			dialAddrs = []string{server.URL.Host}
 		}
 		dialInfo, err := mgo.ParseURL(dialAddrs[0])
 		if err != nil {
@@ -169,11 +173,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		// If configured to use TLS, add a dial function
 		if tlsConfig != nil {
 			dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
-				conn, err := tls.Dial("tcp", addr.String(), tlsConfig)
-				if err != nil {
-					fmt.Printf("error in Dial, %s\n", err.Error())
-				}
-				return conn, err
+				return tls.Dial("tcp", addr.String(), tlsConfig)
 			}
 		}
 
@@ -183,7 +183,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		}
 		server.Session = sess
 	}
-	return server.gatherData(acc, m.GatherClusterStatus, m.GatherPerdbStats, m.GatherColStats, m.ColStatsDbs)
+	return server.gatherData(acc, m.GatherClusterStatus, m.GatherPerdbStats, m.GatherColStats, m.GatherTopStat, m.ColStatsDbs)
 }
 
 func init() {
@@ -193,6 +193,7 @@ func init() {
 			GatherClusterStatus: true,
 			GatherPerdbStats:    false,
 			GatherColStats:      false,
+			GatherTopStat:       false,
 			ColStatsDbs:         []string{"local"},
 		}
 	})

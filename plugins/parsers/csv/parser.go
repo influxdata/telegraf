@@ -31,6 +31,9 @@ type Config struct {
 	TimestampFormat   string   `toml:"csv_timestamp_format"`
 	Timezone          string   `toml:"csv_timezone"`
 	TrimSpace         bool     `toml:"csv_trim_space"`
+	SkipValues        []string `toml:"csv_skip_values"`
+
+	gotColumnNames bool
 
 	TimeFunc    func() time.Time
 	DefaultTags map[string]string
@@ -64,6 +67,8 @@ func NewParser(c *Config) (*Parser, error) {
 		return nil, fmt.Errorf("csv_column_names field count doesn't match with csv_column_types")
 	}
 
+	c.gotColumnNames = len(c.ColumnNames) > 0
+
 	if c.TimeFunc == nil {
 		c.TimeFunc = time.Now
 	}
@@ -75,7 +80,7 @@ func (p *Parser) SetTimeFunc(fn TimeFunc) {
 	p.TimeFunc = fn
 }
 
-func (p *Parser) compile(r io.Reader) (*csv.Reader, error) {
+func (p *Parser) compile(r io.Reader) *csv.Reader {
 	csvReader := csv.NewReader(r)
 	// ensures that the reader reads records of different lengths without an error
 	csvReader.FieldsPerRecord = -1
@@ -86,15 +91,12 @@ func (p *Parser) compile(r io.Reader) (*csv.Reader, error) {
 		csvReader.Comment = []rune(p.Comment)[0]
 	}
 	csvReader.TrimLeadingSpace = p.TrimSpace
-	return csvReader, nil
+	return csvReader
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	r := bytes.NewReader(buf)
-	csvReader, err := p.compile(r)
-	if err != nil {
-		return nil, err
-	}
+	csvReader := p.compile(r)
 	// skip first rows
 	for i := 0; i < p.SkipRows; i++ {
 		_, err := csvReader.Read()
@@ -102,10 +104,13 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			return nil, err
 		}
 	}
-	// if there is a header and nothing in DataColumns
+	// if there is a header and we did not get DataColumns
 	// set DataColumns to names extracted from the header
-	headerNames := make([]string, 0)
-	if len(p.ColumnNames) == 0 {
+	// we always reread the header to avoid side effects
+	// in cases where multiple files with different
+	// headers are read
+	if !p.gotColumnNames {
+		headerNames := make([]string, 0)
 		for i := 0; i < p.HeaderRowCount; i++ {
 			header, err := csvReader.Read()
 			if err != nil {
@@ -155,11 +160,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 // it will also not skip any rows
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	r := bytes.NewReader([]byte(line))
-	csvReader, err := p.compile(r)
-	if err != nil {
-		return nil, err
-	}
-
+	csvReader := p.compile(r)
 	// if there is nothing in DataColumns, ParseLine will fail
 	if len(p.ColumnNames) == 0 {
 		return nil, fmt.Errorf("[parsers.csv] data columns must be specified")
@@ -190,11 +191,24 @@ outer:
 				value = strings.Trim(value, " ")
 			}
 
+			// don't record fields where the value matches a skip value
+			for _, s := range p.SkipValues {
+				if value == s {
+					continue outer
+				}
+			}
+
 			for _, tagName := range p.TagColumns {
 				if tagName == fieldName {
 					tags[tagName] = value
 					continue outer
 				}
+			}
+
+			// If the field name is the timestamp column, then keep field name as is.
+			if fieldName == p.TimestampColumn {
+				recordFields[fieldName] = value
+				continue
 			}
 
 			// Try explicit conversion only when column types is defined.

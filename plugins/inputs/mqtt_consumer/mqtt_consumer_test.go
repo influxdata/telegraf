@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -49,20 +49,21 @@ type FakeParser struct {
 // FakeParser satisfies parsers.Parser
 var _ parsers.Parser = &FakeParser{}
 
-func (p *FakeParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *FakeParser) Parse(_ []byte) ([]telegraf.Metric, error) {
 	panic("not implemented")
 }
 
-func (p *FakeParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *FakeParser) ParseLine(_ string) (telegraf.Metric, error) {
 	panic("not implemented")
 }
 
-func (p *FakeParser) SetDefaultTags(tags map[string]string) {
+func (p *FakeParser) SetDefaultTags(_ map[string]string) {
 	panic("not implemented")
 }
 
 type FakeToken struct {
 	sessionPresent bool
+	complete       chan struct{}
 }
 
 // FakeToken satisfies mqtt.Token
@@ -82,6 +83,10 @@ func (t *FakeToken) Error() error {
 
 func (t *FakeToken) SessionPresent() bool {
 	return t.sessionPresent
+}
+
+func (t *FakeToken) Done() <-chan struct{} {
+	return t.complete
 }
 
 // Test the basic lifecycle transitions of the plugin.

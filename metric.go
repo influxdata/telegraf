@@ -122,14 +122,4 @@ type Metric interface {
 	// Drop marks the metric as processed successfully without being written
 	// to any output.
 	Drop()
-
-	// SetAggregate indicates the metric is an aggregated value.
-	//
-	// This method may be removed in the future and its use is discouraged.
-	SetAggregate(bool)
-
-	// IsAggregate returns true if the Metric is an aggregate.
-	//
-	// This method may be removed in the future and its use is discouraged.
-	IsAggregate() bool
 }

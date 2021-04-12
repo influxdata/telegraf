@@ -239,17 +239,15 @@ func (r *IntelRDT) createArgsAndStartPQOS(ctx context.Context) {
 	if len(r.parsedCores) != 0 {
 		coresArg := createArgCores(r.parsedCores)
 		args = append(args, coresArg)
-		go r.readData(args, nil, ctx)
-
+		go r.readData(ctx, args, nil)
 	} else if len(r.processesPIDsMap) != 0 {
 		processArg := createArgProcess(r.processesPIDsMap)
 		args = append(args, processArg)
-		go r.readData(args, r.processesPIDsMap, ctx)
+		go r.readData(ctx, args, r.processesPIDsMap)
 	}
-	return
 }
 
-func (r *IntelRDT) readData(args []string, processesPIDsAssociation map[string]string, ctx context.Context) {
+func (r *IntelRDT) readData(ctx context.Context, args []string, processesPIDsAssociation map[string]string) {
 	r.wg.Add(1)
 	defer r.wg.Done()
 
@@ -299,11 +297,9 @@ func (r *IntelRDT) processOutput(cmdReader io.ReadCloser, processesPIDsAssociati
 	*/
 	toOmit := pqosInitOutputLinesNumber
 
-	// omit first measurements which are zeroes
-	if len(r.parsedCores) != 0 {
+	if len(r.parsedCores) != 0 { // omit first measurements which are zeroes
 		toOmit = toOmit + len(r.parsedCores)
-		// specify how many lines should pass before stopping
-	} else if len(processesPIDsAssociation) != 0 {
+	} else if len(processesPIDsAssociation) != 0 { // specify how many lines should pass before stopping
 		toOmit = toOmit + len(processesPIDsAssociation)
 	}
 	for omitCounter := 0; omitCounter < toOmit; omitCounter++ {
@@ -541,7 +537,7 @@ func makeRange(min, max int) []int {
 }
 
 func init() {
-	inputs.Add("IntelRDT", func() telegraf.Input {
+	inputs.Add("intel_rdt", func() telegraf.Input {
 		rdt := IntelRDT{}
 		pathPqos, _ := exec.LookPath("pqos")
 		if len(pathPqos) > 0 {

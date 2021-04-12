@@ -27,9 +27,10 @@ type Ethtool struct {
 }
 
 const (
-	pluginName    = "ethtool"
-	tagInterface  = "interface"
-	tagDriverName = "driver"
+	pluginName       = "ethtool"
+	tagInterface     = "interface"
+	tagDriverName    = "driver"
+	fieldInterfaceUp = "interface_up"
 
 	sampleConfig = `
   ## List of interfaces to pull metrics for

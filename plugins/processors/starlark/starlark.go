@@ -7,6 +7,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"go.starlark.net/lib/math"
+	"go.starlark.net/lib/time"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkjson"
@@ -27,12 +29,20 @@ def apply(metric):
 
   ## File containing a Starlark script.
   # script = "/usr/local/bin/myscript.star"
+
+  ## The constants of the Starlark script.
+  # [processors.starlark.constants]
+  #   max_size = 10
+  #   threshold = 0.75
+  #   default_name = "Julia"
+  #   debug_mode = true
 `
 )
 
 type Starlark struct {
-	Source string `toml:"source"`
-	Script string `toml:"script"`
+	Source    string                 `toml:"source"`
+	Script    string                 `toml:"script"`
+	Constants map[string]interface{} `toml:"constants"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -52,12 +62,16 @@ func (s *Starlark) Init() error {
 
 	s.thread = &starlark.Thread{
 		Print: func(_ *starlark.Thread, msg string) { s.Log.Debug(msg) },
-		Load:  loadFunc,
+		Load: func(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+			return loadFunc(module, s.Log)
+		},
 	}
 
 	builtins := starlark.StringDict{}
 	builtins["Metric"] = starlark.NewBuiltin("Metric", newMetric)
 	builtins["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
+	builtins["catch"] = starlark.NewBuiltin("catch", catch)
+	s.addConstants(&builtins)
 
 	program, err := s.sourceProgram(builtins)
 	if err != nil {
@@ -69,6 +83,9 @@ func (s *Starlark) Init() error {
 	if err != nil {
 		return err
 	}
+
+	// Make available a shared state to the apply function
+	globals["state"] = starlark.NewDict(0)
 
 	// Freeze the global state.  This prevents modifications to the processor
 	// state and prevents scripts from containing errors storing tracking
@@ -121,7 +138,7 @@ func (s *Starlark) Description() string {
 	return description
 }
 
-func (s *Starlark) Start(acc telegraf.Accumulator) error {
+func (s *Starlark) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -191,6 +208,17 @@ func (s *Starlark) Stop() error {
 	return nil
 }
 
+// Add all the constants defined in the plugin as constants of the script
+func (s *Starlark) addConstants(builtins *starlark.StringDict) {
+	for key, val := range s.Constants {
+		sVal, err := asStarlarkValue(val)
+		if err != nil {
+			s.Log.Errorf("Unsupported type: %T", val)
+		}
+		(*builtins)[key] = sVal
+	}
+}
+
 func containsMetric(metrics []telegraf.Metric, metric telegraf.Metric) bool {
 	for _, m := range metrics {
 		if m == metric {
@@ -216,11 +244,23 @@ func init() {
 	})
 }
 
-func loadFunc(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+func loadFunc(module string, logger telegraf.Logger) (starlark.StringDict, error) {
 	switch module {
 	case "json.star":
 		return starlark.StringDict{
 			"json": starlarkjson.Module,
+		}, nil
+	case "logging.star":
+		return starlark.StringDict{
+			"log": LogModule(logger),
+		}, nil
+	case "math.star":
+		return starlark.StringDict{
+			"math": math.Module,
+		}, nil
+	case "time.star":
+		return starlark.StringDict{
+			"time": time.Module,
 		}, nil
 	default:
 		return nil, errors.New("module " + module + " is not available")

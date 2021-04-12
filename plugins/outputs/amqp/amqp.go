@@ -2,12 +2,11 @@ package amqp
 
 import (
 	"bytes"
-	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -30,7 +29,7 @@ func (a *externalAuth) Mechanism() string {
 }
 
 func (a *externalAuth) Response() string {
-	return fmt.Sprintf("\000")
+	return "\000"
 }
 
 type AMQP struct {
@@ -52,9 +51,10 @@ type AMQP struct {
 	RetentionPolicy    string            `toml:"retention_policy"` // deprecated in 1.7; use headers
 	Precision          string            `toml:"precision"`        // deprecated; has no effect
 	Headers            map[string]string `toml:"headers"`
-	Timeout            internal.Duration `toml:"timeout"`
+	Timeout            config.Duration   `toml:"timeout"`
 	UseBatchFormat     bool              `toml:"use_batch_format"`
 	ContentEncoding    string            `toml:"content_encoding"`
+	Log                telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
 
 	serializer   serializers.Serializer
@@ -267,7 +267,7 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 	}
 
 	if q.sentMessages >= q.MaxMessages && q.MaxMessages > 0 {
-		log.Printf("D! Output [amqp] sent MaxMessages; closing connection")
+		q.Log.Debug("Sent MaxMessages; closing connection")
 		q.client.Close()
 		q.client = nil
 	}
@@ -296,22 +296,22 @@ func (q *AMQP) publish(key string, body []byte) error {
 func (q *AMQP) serialize(metrics []telegraf.Metric) ([]byte, error) {
 	if q.UseBatchFormat {
 		return q.serializer.SerializeBatch(metrics)
-	} else {
-		var buf bytes.Buffer
-		for _, metric := range metrics {
-			octets, err := q.serializer.Serialize(metric)
-			if err != nil {
-				log.Printf("D! [outputs.amqp] Could not serialize metric: %v", err)
-				continue
-			}
-			_, err = buf.Write(octets)
-			if err != nil {
-				return nil, err
-			}
-		}
-		body := buf.Bytes()
-		return body, nil
 	}
+
+	var buf bytes.Buffer
+	for _, metric := range metrics {
+		octets, err := q.serializer.Serialize(metric)
+		if err != nil {
+			q.Log.Debugf("Could not serialize metric: %v", err)
+			continue
+		}
+		_, err = buf.Write(octets)
+		if err != nil {
+			return nil, err
+		}
+	}
+	body := buf.Bytes()
+	return body, nil
 }
 
 func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
@@ -320,7 +320,7 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 		exchangeType:    q.ExchangeType,
 		exchangePassive: q.ExchangePassive,
 		encoding:        q.ContentEncoding,
-		timeout:         q.Timeout.Duration,
+		timeout:         time.Duration(q.Timeout),
 	}
 
 	switch q.ExchangeDurability {
@@ -398,7 +398,7 @@ func init() {
 			AuthMethod:      DefaultAuthMethod,
 			Database:        DefaultDatabase,
 			RetentionPolicy: DefaultRetentionPolicy,
-			Timeout:         internal.Duration{Duration: time.Second * 5},
+			Timeout:         config.Duration(time.Second * 5),
 			connect:         connect,
 		}
 	})

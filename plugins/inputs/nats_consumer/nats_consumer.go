@@ -264,7 +264,7 @@ func (n *natsConsumer) Stop() {
 	n.clean()
 }
 
-func (n *natsConsumer) Gather(acc telegraf.Accumulator) error {
+func (n *natsConsumer) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

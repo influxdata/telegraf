@@ -13,8 +13,8 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
-	"github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
+	v1 "github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
+	v2 "github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
 )
 
 type Mysql struct {
@@ -37,6 +37,8 @@ type Mysql struct {
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
 	GatherGlobalVars                    bool     `toml:"gather_global_variables"`
+	GatherPerfSummaryPerAccountPerEvent bool     `toml:"gather_perf_sum_per_acc_per_event"`
+	PerfSummaryEvents                   []string `toml:"perf_summary_events"`
 	IntervalSlow                        string   `toml:"interval_slow"`
 	MetricVersion                       int      `toml:"metric_version"`
 
@@ -121,6 +123,13 @@ const sampleConfig = `
   # perf_events_statements_limit = 250
   # perf_events_statements_time_limit = 86400
 
+  ## gather metrics from PERFORMANCE_SCHEMA.EVENTS_STATEMENTS_SUMMARY_BY_ACCOUNT_BY_EVENT_NAME
+  # gather_perf_sum_per_acc_per_event         = false
+
+  ## list of events to be gathered for gather_perf_sum_per_acc_per_event
+  ## in case of empty list all events will be gathered
+  # perf_summary_events                       = []
+
   ## Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
   ##   example: interval_slow = "30m"
   # interval_slow = ""
@@ -134,7 +143,6 @@ const sampleConfig = `
 `
 
 const (
-	defaultTimeout                             = 5 * time.Second
 	defaultPerfEventsStatementsDigestTextLimit = 120
 	defaultPerfEventsStatementsLimit           = 250
 	defaultPerfEventsStatementsTimeLimit       = 86400
@@ -177,7 +185,9 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if tlsConfig != nil {
-		mysql.RegisterTLSConfig("custom", tlsConfig)
+		if err := mysql.RegisterTLSConfig("custom", tlsConfig); err != nil {
+			return err
+		}
 	}
 
 	var wg sync.WaitGroup
@@ -416,6 +426,38 @@ const (
 			FROM information_schema.tables
 		WHERE table_schema = 'performance_schema' AND table_name = ?
 	`
+
+	perfSummaryPerAccountPerEvent = `
+        SELECT
+			coalesce(user, "unknown"),
+			coalesce(host, "unknown"),
+			coalesce(event_name, "unknown"),
+			count_star,
+			sum_timer_wait,
+			min_timer_wait,
+			avg_timer_wait,
+			max_timer_wait,
+			sum_lock_time,
+			sum_errors,
+			sum_warnings,
+			sum_rows_affected,
+			sum_rows_sent,
+			sum_rows_examined,
+			sum_created_tmp_disk_tables,
+			sum_created_tmp_tables,
+			sum_select_full_join,
+			sum_select_full_range_join,
+			sum_select_range,
+			sum_select_range_check,
+			sum_select_scan,
+			sum_sort_merge_passes,
+			sum_sort_range,
+			sum_sort_rows,
+			sum_sort_scan,
+			sum_no_index_used,
+			sum_no_good_index_used
+		FROM performance_schema.events_statements_summary_by_account_by_event_name
+	`
 )
 
 func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
@@ -486,6 +528,13 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	if m.GatherInnoDBMetrics {
 		err = m.gatherInnoDBMetrics(db, serv, acc)
+		if err != nil {
+			return err
+		}
+	}
+
+	if m.GatherPerfSummaryPerAccountPerEvent {
+		err = m.gatherPerfSummaryPerAccountPerEvent(db, serv, acc)
 		if err != nil {
 			return err
 		}
@@ -598,9 +647,8 @@ func (m *Mysql) parseGlobalVariables(key string, value sql.RawBytes) (interface{
 			return v, nil
 		}
 		return v, fmt.Errorf("could not parse value: %q", string(value))
-	} else {
-		return v2.ConvertGlobalVariables(key, value)
 	}
+	return v2.ConvertGlobalVariables(key, value)
 }
 
 // gatherSlaveStatuses can be used to get replication analytics
@@ -665,17 +713,31 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	var (
-		size     uint64 = 0
-		count    uint64 = 0
-		fileSize uint64
-		fileName string
+		size      uint64
+		count     uint64
+		fileSize  uint64
+		fileName  string
+		encrypted string
 	)
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+	numColumns := len(columns)
 
 	// iterate over rows and count the size and count of files
 	for rows.Next() {
-		if err := rows.Scan(&fileName, &fileSize); err != nil {
-			return err
+		if numColumns == 3 {
+			if err := rows.Scan(&fileName, &fileSize, &encrypted); err != nil {
+				return err
+			}
+		} else {
+			if err := rows.Scan(&fileName, &fileSize); err != nil {
+				return err
+			}
 		}
+
 		size += fileSize
 		count++
 	}
@@ -683,6 +745,7 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 		"binary_size_bytes":  size,
 		"binary_files_count": count,
 	}
+
 	acc.AddFields("mysql", fields, tags)
 	return nil
 }
@@ -734,42 +797,42 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			case "Queries":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
 				} else {
 					fields["queries"] = i
 				}
 			case "Questions":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
 				} else {
 					fields["questions"] = i
 				}
 			case "Slow_queries":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
 				} else {
 					fields["slow_queries"] = i
 				}
 			case "Connections":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
 				} else {
 					fields["connections"] = i
 				}
 			case "Syncs":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
 				} else {
 					fields["syncs"] = i
 				}
 			case "Uptime":
 				i, err := strconv.ParseInt(string(val), 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+					acc.AddError(fmt.Errorf("error mysql: parsing %s int value (%s)", key, err))
 				} else {
 					fields["uptime"] = i
 				}
@@ -846,16 +909,16 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 	}
 
 	// get count of connections from each user
-	conn_rows, err := db.Query("SELECT user, sum(1) AS connections FROM INFORMATION_SCHEMA.PROCESSLIST GROUP BY user")
+	connRows, err := db.Query("SELECT user, sum(1) AS connections FROM INFORMATION_SCHEMA.PROCESSLIST GROUP BY user")
 	if err != nil {
 		return err
 	}
 
-	for conn_rows.Next() {
+	for connRows.Next() {
 		var user string
 		var connections int64
 
-		err = conn_rows.Scan(&user, &connections)
+		err = connRows.Scan(&user, &connections)
 		if err != nil {
 			return err
 		}
@@ -917,7 +980,7 @@ func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegr
 			case *string:
 				fields[cols[i]] = *v
 			default:
-				return fmt.Errorf("Unknown column type - %T", v)
+				return fmt.Errorf("unknown column type - %T", v)
 			}
 		}
 		acc.AddFields("mysql_user_stats", fields, tags)
@@ -942,146 +1005,146 @@ func columnsToLower(s []string, e error) ([]string, error) {
 func getColSlice(l int) ([]interface{}, error) {
 	// list of all possible column names
 	var (
-		user                        string
-		total_connections           int64
-		concurrent_connections      int64
-		connected_time              int64
-		busy_time                   int64
-		cpu_time                    int64
-		bytes_received              int64
-		bytes_sent                  int64
-		binlog_bytes_written        int64
-		rows_read                   int64
-		rows_sent                   int64
-		rows_deleted                int64
-		rows_inserted               int64
-		rows_updated                int64
-		select_commands             int64
-		update_commands             int64
-		other_commands              int64
-		commit_transactions         int64
-		rollback_transactions       int64
-		denied_connections          int64
-		lost_connections            int64
-		access_denied               int64
-		empty_queries               int64
-		total_ssl_connections       int64
-		max_statement_time_exceeded int64
+		user                     string
+		totalConnections         int64
+		concurrentConnections    int64
+		connectedTime            int64
+		busyTime                 int64
+		cpuTime                  int64
+		bytesReceived            int64
+		bytesSent                int64
+		binlogBytesWritten       int64
+		rowsRead                 int64
+		rowsSent                 int64
+		rowsDeleted              int64
+		rowsInserted             int64
+		rowsUpdated              int64
+		selectCommands           int64
+		updateCommands           int64
+		otherCommands            int64
+		commitTransactions       int64
+		rollbackTransactions     int64
+		deniedConnections        int64
+		lostConnections          int64
+		accessDenied             int64
+		emptyQueries             int64
+		totalSslConnections      int64
+		maxStatementTimeExceeded int64
 		// maria specific
-		fbusy_time float64
-		fcpu_time  float64
+		fbusyTime float64
+		fcpuTime  float64
 		// percona specific
-		rows_fetched    int64
-		table_rows_read int64
+		rowsFetched   int64
+		tableRowsRead int64
 	)
 
 	switch l {
 	case 23: // maria5
 		return []interface{}{
 			&user,
-			&total_connections,
-			&concurrent_connections,
-			&connected_time,
-			&fbusy_time,
-			&fcpu_time,
-			&bytes_received,
-			&bytes_sent,
-			&binlog_bytes_written,
-			&rows_read,
-			&rows_sent,
-			&rows_deleted,
-			&rows_inserted,
-			&rows_updated,
-			&select_commands,
-			&update_commands,
-			&other_commands,
-			&commit_transactions,
-			&rollback_transactions,
-			&denied_connections,
-			&lost_connections,
-			&access_denied,
-			&empty_queries,
+			&totalConnections,
+			&concurrentConnections,
+			&connectedTime,
+			&fbusyTime,
+			&fcpuTime,
+			&bytesReceived,
+			&bytesSent,
+			&binlogBytesWritten,
+			&rowsRead,
+			&rowsSent,
+			&rowsDeleted,
+			&rowsInserted,
+			&rowsUpdated,
+			&selectCommands,
+			&updateCommands,
+			&otherCommands,
+			&commitTransactions,
+			&rollbackTransactions,
+			&deniedConnections,
+			&lostConnections,
+			&accessDenied,
+			&emptyQueries,
 		}, nil
 	case 25: // maria10
 		return []interface{}{
 			&user,
-			&total_connections,
-			&concurrent_connections,
-			&connected_time,
-			&fbusy_time,
-			&fcpu_time,
-			&bytes_received,
-			&bytes_sent,
-			&binlog_bytes_written,
-			&rows_read,
-			&rows_sent,
-			&rows_deleted,
-			&rows_inserted,
-			&rows_updated,
-			&select_commands,
-			&update_commands,
-			&other_commands,
-			&commit_transactions,
-			&rollback_transactions,
-			&denied_connections,
-			&lost_connections,
-			&access_denied,
-			&empty_queries,
-			&total_ssl_connections,
-			&max_statement_time_exceeded,
+			&totalConnections,
+			&concurrentConnections,
+			&connectedTime,
+			&fbusyTime,
+			&fcpuTime,
+			&bytesReceived,
+			&bytesSent,
+			&binlogBytesWritten,
+			&rowsRead,
+			&rowsSent,
+			&rowsDeleted,
+			&rowsInserted,
+			&rowsUpdated,
+			&selectCommands,
+			&updateCommands,
+			&otherCommands,
+			&commitTransactions,
+			&rollbackTransactions,
+			&deniedConnections,
+			&lostConnections,
+			&accessDenied,
+			&emptyQueries,
+			&totalSslConnections,
+			&maxStatementTimeExceeded,
 		}, nil
 	case 21: // mysql 5.5
 		return []interface{}{
 			&user,
-			&total_connections,
-			&concurrent_connections,
-			&connected_time,
-			&busy_time,
-			&cpu_time,
-			&bytes_received,
-			&bytes_sent,
-			&binlog_bytes_written,
-			&rows_fetched,
-			&rows_updated,
-			&table_rows_read,
-			&select_commands,
-			&update_commands,
-			&other_commands,
-			&commit_transactions,
-			&rollback_transactions,
-			&denied_connections,
-			&lost_connections,
-			&access_denied,
-			&empty_queries,
+			&totalConnections,
+			&concurrentConnections,
+			&connectedTime,
+			&busyTime,
+			&cpuTime,
+			&bytesReceived,
+			&bytesSent,
+			&binlogBytesWritten,
+			&rowsFetched,
+			&rowsUpdated,
+			&tableRowsRead,
+			&selectCommands,
+			&updateCommands,
+			&otherCommands,
+			&commitTransactions,
+			&rollbackTransactions,
+			&deniedConnections,
+			&lostConnections,
+			&accessDenied,
+			&emptyQueries,
 		}, nil
 	case 22: // percona
 		return []interface{}{
 			&user,
-			&total_connections,
-			&concurrent_connections,
-			&connected_time,
-			&busy_time,
-			&cpu_time,
-			&bytes_received,
-			&bytes_sent,
-			&binlog_bytes_written,
-			&rows_fetched,
-			&rows_updated,
-			&table_rows_read,
-			&select_commands,
-			&update_commands,
-			&other_commands,
-			&commit_transactions,
-			&rollback_transactions,
-			&denied_connections,
-			&lost_connections,
-			&access_denied,
-			&empty_queries,
-			&total_ssl_connections,
+			&totalConnections,
+			&concurrentConnections,
+			&connectedTime,
+			&busyTime,
+			&cpuTime,
+			&bytesReceived,
+			&bytesSent,
+			&binlogBytesWritten,
+			&rowsFetched,
+			&rowsUpdated,
+			&tableRowsRead,
+			&selectCommands,
+			&updateCommands,
+			&otherCommands,
+			&commitTransactions,
+			&rollbackTransactions,
+			&deniedConnections,
+			&lostConnections,
+			&accessDenied,
+			&emptyQueries,
+			&totalSslConnections,
 		}, nil
 	}
 
-	return nil, fmt.Errorf("Not Supported - %d columns", l)
+	return nil, fmt.Errorf("not Supported - %d columns", l)
 }
 
 // gatherPerfTableIOWaits can be used to get total count and time
@@ -1259,6 +1322,142 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumu
 	if len(fields) > 0 {
 		acc.AddFields("mysql_innodb", fields, tags)
 	}
+	return nil
+}
+
+// gatherPerfSummaryPerAccountPerEvent can be used to fetch enabled metrics from
+// performance_schema.events_statements_summary_by_account_by_event_name
+func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+	sqlQuery := perfSummaryPerAccountPerEvent
+
+	var rows *sql.Rows
+	var err error
+
+	var (
+		srcUser                 string
+		srcHost                 string
+		eventName               string
+		countStar               float64
+		sumTimerWait            float64
+		minTimerWait            float64
+		avgTimerWait            float64
+		maxTimerWait            float64
+		sumLockTime             float64
+		sumErrors               float64
+		sumWarnings             float64
+		sumRowsAffected         float64
+		sumRowsSent             float64
+		sumRowsExamined         float64
+		sumCreatedTmpDiskTables float64
+		sumCreatedTmpTables     float64
+		sumSelectFullJoin       float64
+		sumSelectFullRangeJoin  float64
+		sumSelectRange          float64
+		sumSelectRangeCheck     float64
+		sumSelectScan           float64
+		sumSortMergePasses      float64
+		sumSortRange            float64
+		sumSortRows             float64
+		sumSortScan             float64
+		sumNoIndexUsed          float64
+		sumNoGoodIndexUsed      float64
+	)
+
+	var events []interface{}
+	// if we have perf_summary_events set - select only listed events (adding filter criteria for rows)
+	if len(m.PerfSummaryEvents) > 0 {
+		sqlQuery += " WHERE EVENT_NAME IN ("
+		for i, eventName := range m.PerfSummaryEvents {
+			if i > 0 {
+				sqlQuery += ", "
+			}
+			sqlQuery += "?"
+			events = append(events, eventName)
+		}
+		sqlQuery += ")"
+
+		rows, err = db.Query(sqlQuery, events...)
+	} else {
+		// otherwise no filter, hence, select all rows
+		rows, err = db.Query(perfSummaryPerAccountPerEvent)
+	}
+
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	// parse DSN and save server tag
+	servtag := getDSNTag(serv)
+	tags := map[string]string{"server": servtag}
+	for rows.Next() {
+		if err := rows.Scan(
+			&srcUser,
+			&srcHost,
+			&eventName,
+			&countStar,
+			&sumTimerWait,
+			&minTimerWait,
+			&avgTimerWait,
+			&maxTimerWait,
+			&sumLockTime,
+			&sumErrors,
+			&sumWarnings,
+			&sumRowsAffected,
+			&sumRowsSent,
+			&sumRowsExamined,
+			&sumCreatedTmpDiskTables,
+			&sumCreatedTmpTables,
+			&sumSelectFullJoin,
+			&sumSelectFullRangeJoin,
+			&sumSelectRange,
+			&sumSelectRangeCheck,
+			&sumSelectScan,
+			&sumSortMergePasses,
+			&sumSortRange,
+			&sumSortRows,
+			&sumSortScan,
+			&sumNoIndexUsed,
+			&sumNoGoodIndexUsed,
+		); err != nil {
+			return err
+		}
+		srcUser = strings.ToLower(srcUser)
+		srcHost = strings.ToLower(srcHost)
+
+		sqlLWTags := copyTags(tags)
+		sqlLWTags["src_user"] = srcUser
+		sqlLWTags["src_host"] = srcHost
+		sqlLWTags["event"] = eventName
+		sqlLWFields := map[string]interface{}{
+			"count_star":                  countStar,
+			"sum_timer_wait":              sumTimerWait,
+			"min_timer_wait":              minTimerWait,
+			"avg_timer_wait":              avgTimerWait,
+			"max_timer_wait":              maxTimerWait,
+			"sum_lock_time":               sumLockTime,
+			"sum_errors":                  sumErrors,
+			"sum_warnings":                sumWarnings,
+			"sum_rows_affected":           sumRowsAffected,
+			"sum_rows_sent":               sumRowsSent,
+			"sum_rows_examined":           sumRowsExamined,
+			"sum_created_tmp_disk_tables": sumCreatedTmpDiskTables,
+			"sum_created_tmp_tables":      sumCreatedTmpTables,
+			"sum_select_full_join":        sumSelectFullJoin,
+			"sum_select_full_range_join":  sumSelectFullRangeJoin,
+			"sum_select_range":            sumSelectRange,
+			"sum_select_range_check":      sumSelectRangeCheck,
+			"sum_select_scan":             sumSelectScan,
+			"sum_sort_merge_passes":       sumSortMergePasses,
+			"sum_sort_range":              sumSortRange,
+			"sum_sort_rows":               sumSortRows,
+			"sum_sort_scan":               sumSortScan,
+			"sum_no_index_used":           sumNoIndexUsed,
+			"sum_no_good_index_used":      sumNoGoodIndexUsed,
+		}
+		acc.AddFields("mysql_perf_acc_event", sqlLWFields, sqlLWTags)
+	}
+
 	return nil
 }
 
@@ -1479,8 +1678,8 @@ func (m *Mysql) gatherPerfFileEventsStatuses(db *sql.DB, serv string, acc telegr
 		fields["file_events_seconds_total"] = sumTimerWrite / picoSeconds
 		fields["file_events_bytes_totals"] = sumNumBytesWrite
 		acc.AddFields("mysql_perf_schema", fields, writeTags)
-
 	}
+
 	return nil
 }
 
@@ -1501,7 +1700,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 	defer rows.Close()
 
 	var (
-		schemaName, digest, digest_text      string
+		schemaName, digest, digestText       string
 		count, queryTime, errors, warnings   float64
 		rowsAffected, rowsSent, rowsExamined float64
 		tmpTables, tmpDiskTables             float64
@@ -1516,7 +1715,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 
 	for rows.Next() {
 		err = rows.Scan(
-			&schemaName, &digest, &digest_text,
+			&schemaName, &digest, &digestText,
 			&count, &queryTime, &errors, &warnings,
 			&rowsAffected, &rowsSent, &rowsExamined,
 			&tmpTables, &tmpDiskTables,
@@ -1529,7 +1728,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 		}
 		tags["schema"] = schemaName
 		tags["digest"] = digest
-		tags["digest_text"] = digest_text
+		tags["digest_text"] = digestText
 
 		fields := map[string]interface{}{
 			"events_statements_total":                   count,
@@ -1670,18 +1869,17 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, bool) {
 	if m.MetricVersion < 2 {
 		return v1.ParseValue(value)
-	} else {
-		return parseValue(value)
 	}
+	return parseValue(value)
 }
 
 // parseValue can be used to convert values such as "ON","OFF","Yes","No" to 0,1
 func parseValue(value sql.RawBytes) (interface{}, bool) {
-	if bytes.EqualFold(value, []byte("YES")) || bytes.Compare(value, []byte("ON")) == 0 {
+	if bytes.EqualFold(value, []byte("YES")) || bytes.Equal(value, []byte("ON")) {
 		return 1, true
 	}
 
-	if bytes.EqualFold(value, []byte("NO")) || bytes.Compare(value, []byte("OFF")) == 0 {
+	if bytes.EqualFold(value, []byte("NO")) || bytes.Equal(value, []byte("OFF")) {
 		return 0, true
 	}
 

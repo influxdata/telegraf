@@ -164,7 +164,6 @@ func parseCounterTable(lines []string, fields map[string]interface{}) error {
 }
 
 func storeFieldValues(lines []string, regex *regexp.Regexp, fields map[string]interface{}, entryTable []*Entry) error {
-
 	for _, v := range lines {
 		entries := regex.FindStringSubmatch(v)
 		if entries != nil {
