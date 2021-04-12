@@ -6,13 +6,17 @@ by reading /proc/mdstat. For a full list of available fields see the
 For a better idea of what each field represents, see the 
 [mdstat man page](https://raid.wiki.kernel.org/index.php/Mdstat).
 
+Stat collection based on Prometheus' mdstat collection library at https://github.com/prometheus/procfs/blob/master/mdstat.go
+
 
 ### Configuration:
 
 ```toml
 # Get kernel statistics from /proc/vmstat
 [[inputs.mdstat]]
-  # no configuration
+  ## Sets file path
+  ## If not specified, then default is /proc/mdstat
+  # file_name = "/proc/mdstat"
 ```
 
 ### Measurements & Fields:
