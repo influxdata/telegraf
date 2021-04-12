@@ -11,7 +11,7 @@ import (
 )
 
 func createTestMetric() telegraf.Metric {
-	metric, _ := metric.New("m1",
+	metric := metric.New("m1",
 		map[string]string{
 			"tag":           "tag_value",
 			"duplicate_tag": "tag_value",

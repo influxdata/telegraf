@@ -490,7 +490,7 @@ func TestHTTP_Write(t *testing.T) {
 
 			ctx := context.Background()
 
-			m, err := metric.New(
+			m := metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -498,7 +498,6 @@ func TestHTTP_Write(t *testing.T) {
 				},
 				time.Unix(0, 0),
 			)
-			require.NoError(t, err)
 			metrics := []telegraf.Metric{m}
 
 			client, err := influxdb.NewHTTPClient(tt.config)
@@ -541,7 +540,7 @@ func TestHTTP_WritePathPrefix(t *testing.T) {
 
 	ctx := context.Background()
 
-	m, err := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
@@ -549,7 +548,6 @@ func TestHTTP_WritePathPrefix(t *testing.T) {
 		},
 		time.Unix(0, 0),
 	)
-	require.NoError(t, err)
 	metrics := []telegraf.Metric{m}
 
 	config := influxdb.HTTPConfig{
@@ -595,7 +593,7 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 
 	ctx := context.Background()
 
-	m, err := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{

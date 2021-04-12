@@ -497,10 +497,7 @@ func containsAll(t1 map[string]string, t2 map[string]string) bool {
 	return true
 }
 
-func Metric(v telegraf.Metric, err error) telegraf.Metric {
-	if err != nil {
-		panic(err)
-	}
+func Metric(v telegraf.Metric) telegraf.Metric {
 	return v
 }
 

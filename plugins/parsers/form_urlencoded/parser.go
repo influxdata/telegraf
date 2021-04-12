@@ -47,10 +47,7 @@ func (p Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		tags[key] = value
 	}
 
-	metric, err := metric.New(p.MetricName, tags, fields, time.Now().UTC())
-	if err != nil {
-		return nil, err
-	}
+	metric := metric.New(p.MetricName, tags, fields, time.Now().UTC())
 
 	return []telegraf.Metric{metric}, nil
 }

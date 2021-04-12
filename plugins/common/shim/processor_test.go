@@ -40,7 +40,7 @@ func TestProcessorShim(t *testing.T) {
 	serializer, _ := serializers.NewInfluxSerializer()
 	parser, _ := parsers.NewInfluxParser()
 
-	m, _ := metric.New("thing",
+	m := metric.New("thing",
 		map[string]string{
 			"a": "b",
 		},

@@ -226,10 +226,8 @@ func TestValueConversion(t *testing.T) {
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
 
-	expectedMetric, err1 := metric.New("test_value", expectedTags, expectedFields, time.Unix(0, 0))
-	returnedMetric, err2 := metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
-	require.NoError(t, err1)
-	require.NoError(t, err2)
+	expectedMetric := metric.New("test_value", expectedTags, expectedFields, time.Unix(0, 0))
+	returnedMetric := metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
 
 	//deep equal fields
 	require.Equal(t, expectedMetric.Fields(), returnedMetric.Fields())
@@ -240,8 +238,7 @@ func TestValueConversion(t *testing.T) {
 	metrics, err = p.Parse([]byte(testCSV))
 	require.NoError(t, err)
 
-	returnedMetric, err2 = metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
-	require.NoError(t, err2)
+	returnedMetric = metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
 
 	//deep equal fields
 	require.Equal(t, expectedMetric.Fields(), returnedMetric.Fields())

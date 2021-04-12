@@ -142,10 +142,8 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 	}
 
 	tags, nFields := p.switchFieldToTag(tags, f.Fields)
-	metric, err := metric.New(name, tags, nFields, timestamp)
-	if err != nil {
-		return nil, err
-	}
+	metric := metric.New(name, tags, nFields, timestamp)
+
 	return []telegraf.Metric{metric}, nil
 }
 

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 )
-
-var m, _ = New(
+ 
+var m = New(
 	"mymetric",
 	map[string]string{
 		"host":        "host.example.com",

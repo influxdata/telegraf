@@ -10,7 +10,7 @@ import (
 )
 
 func createTestMetric() telegraf.Metric {
-	metric, _ := metric.New("m1",
+	metric := metric.New("m1",
 		map[string]string{"metric_tag": "from_metric"},
 		map[string]interface{}{"value": int64(1)},
 		time.Now(),

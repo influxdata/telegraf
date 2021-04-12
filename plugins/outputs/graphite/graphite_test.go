@@ -2,12 +2,13 @@ package graphite
 
 import (
 	"bufio"
-	"github.com/influxdata/telegraf/testutil"
 	"net"
 	"net/textproto"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -24,7 +25,7 @@ func TestGraphiteError(t *testing.T) {
 		Log:     testutil.Logger{},
 	}
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"mymeasurement": float64(3.14)},
@@ -56,19 +57,19 @@ func TestGraphiteOK(t *testing.T) {
 	}
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m2, _ := metric.New(
+	m2 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m3, _ := metric.New(
+	m3 := metric.New(
 		"my_measurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
@@ -118,19 +119,19 @@ func TestGraphiteOkWithSeparatorDot(t *testing.T) {
 	}
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m2, _ := metric.New(
+	m2 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m3, _ := metric.New(
+	m3 := metric.New(
 		"my_measurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
@@ -180,19 +181,19 @@ func TestGraphiteOkWithSeparatorUnderscore(t *testing.T) {
 	}
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m2, _ := metric.New(
+	m2 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m3, _ := metric.New(
+	m3 := metric.New(
 		"my_measurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
@@ -246,19 +247,19 @@ func TestGraphiteOKWithMultipleTemplates(t *testing.T) {
 	}
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1", "mytag": "valuetag"},
 		map[string]interface{}{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m2, _ := metric.New(
+	m2 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1", "mytag": "valuetag"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m3, _ := metric.New(
+	m3 := metric.New(
 		"my_measurement",
 		map[string]string{"host": "192.168.0.1", "mytag": "valuetag"},
 		map[string]interface{}{"value": float64(3.14)},
@@ -308,19 +309,19 @@ func TestGraphiteOkWithTags(t *testing.T) {
 	}
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m2, _ := metric.New(
+	m2 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m3, _ := metric.New(
+	m3 := metric.New(
 		"my_measurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
@@ -371,19 +372,19 @@ func TestGraphiteOkWithTagsAndSeparatorDot(t *testing.T) {
 	}
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m2, _ := metric.New(
+	m2 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m3, _ := metric.New(
+	m3 := metric.New(
 		"my_measurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
@@ -434,19 +435,19 @@ func TestGraphiteOkWithTagsAndSeparatorUnderscore(t *testing.T) {
 	}
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m2, _ := metric.New(
+	m2 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m3, _ := metric.New(
+	m3 := metric.New(
 		"my_measurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},

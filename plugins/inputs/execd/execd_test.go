@@ -170,7 +170,7 @@ func runCounterProgram() {
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		metric, _ := metric.New("counter",
+		metric := metric.New("counter",
 			map[string]string{},
 			map[string]interface{}{
 				"count": i,

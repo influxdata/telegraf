@@ -15,7 +15,7 @@ func TestSyslogMapperWithDefaults(t *testing.T) {
 	s.initializeSyslogMapper()
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"testmetric",
 		map[string]string{},
 		map[string]interface{}{},
@@ -34,7 +34,7 @@ func TestSyslogMapperWithHostname(t *testing.T) {
 	s.initializeSyslogMapper()
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"testmetric",
 		map[string]string{
 			"hostname": "testhost",
@@ -54,7 +54,7 @@ func TestSyslogMapperWithHostnameSourceFallback(t *testing.T) {
 	s.initializeSyslogMapper()
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"testmetric",
 		map[string]string{
 			"source": "sourcevalue",
@@ -74,7 +74,7 @@ func TestSyslogMapperWithHostnameHostFallback(t *testing.T) {
 	s.initializeSyslogMapper()
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"testmetric",
 		map[string]string{
 			"host": "hostvalue",
@@ -94,7 +94,7 @@ func TestSyslogMapperWithDefaultSdid(t *testing.T) {
 	s.initializeSyslogMapper()
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"testmetric",
 		map[string]string{
 			"appname":            "testapp",
@@ -130,7 +130,7 @@ func TestSyslogMapperWithDefaultSdidAndOtherSdids(t *testing.T) {
 	s.initializeSyslogMapper()
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"testmetric",
 		map[string]string{
 			"appname":            "testapp",
@@ -167,7 +167,7 @@ func TestSyslogMapperWithNoSdids(t *testing.T) {
 	s.initializeSyslogMapper()
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"testmetric",
 		map[string]string{
 			"appname":            "testapp",

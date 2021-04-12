@@ -292,7 +292,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 		}
 	}
 
-	return metric.New(metricname, tags, fields, timestamp)
+	return metric.New(metricname, tags, fields, timestamp), nil
 }
 
 func getNodePath(node, relativeTo *xmlquery.Node, sep string) string {

@@ -12,7 +12,7 @@ import (
 )
 
 func newM1() telegraf.Metric {
-	m1, _ := metric.New("IIS_log",
+	m1 := metric.New("IIS_log",
 		map[string]string{
 			"verb":           "GET",
 			"s-computername": "MIXEDCASE_hostname",
@@ -27,7 +27,7 @@ func newM1() telegraf.Metric {
 }
 
 func newM2() telegraf.Metric {
-	m1, _ := metric.New("IIS_log",
+	m1 := metric.New("IIS_log",
 		map[string]string{
 			"verb":           "GET",
 			"S-ComputerName": "MIXEDCASE_hostname",
@@ -795,7 +795,7 @@ func TestMultipleConversions(t *testing.T) {
 		},
 	}
 
-	m, _ := metric.New("IIS_log",
+	m := metric.New("IIS_log",
 		map[string]string{
 			"verb":           "GET",
 			"resp_code":      "200",
@@ -856,7 +856,7 @@ func TestReadmeExample(t *testing.T) {
 		},
 	}
 
-	m, _ := metric.New("iis_log",
+	m := metric.New("iis_log",
 		map[string]string{
 			"verb":     "get",
 			"uri_stem": "/API/HealthCheck",
@@ -895,7 +895,7 @@ func TestReadmeExample(t *testing.T) {
 func newMetric(name string) telegraf.Metric {
 	tags := map[string]string{}
 	fields := map[string]interface{}{}
-	m, _ := metric.New(name, tags, fields, time.Now())
+	m := metric.New(name, tags, fields, time.Now())
 	return m
 }
 

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var m1, _ = metric.New("m1",
+var m1 = metric.New("m1",
 	map[string]string{"foo": "bar"},
 	map[string]interface{}{
 		"a": int64(1),
@@ -21,7 +21,7 @@ var m1, _ = metric.New("m1",
 	},
 	time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
 )
-var m2, _ = metric.New("m1",
+var m2 = metric.New("m1",
 	map[string]string{"foo": "bar"},
 	map[string]interface{}{
 		"a":        int64(1),
@@ -326,28 +326,28 @@ func TestBasicStatsWithOnlySum(t *testing.T) {
 // implementations of sum were calculated from mean and count, which
 // e.g. summed "1, 1, 5, 1" as "7.999999..." instead of 8.
 func TestBasicStatsWithOnlySumFloatingPointErrata(t *testing.T) {
-	var sum1, _ = metric.New("m1",
+	var sum1 = metric.New("m1",
 		map[string]string{},
 		map[string]interface{}{
 			"a": int64(1),
 		},
 		time.Now(),
 	)
-	var sum2, _ = metric.New("m1",
+	var sum2 = metric.New("m1",
 		map[string]string{},
 		map[string]interface{}{
 			"a": int64(1),
 		},
 		time.Now(),
 	)
-	var sum3, _ = metric.New("m1",
+	var sum3 = metric.New("m1",
 		map[string]string{},
 		map[string]interface{}{
 			"a": int64(5),
 		},
 		time.Now(),
 	)
-	var sum4, _ = metric.New("m1",
+	var sum4 = metric.New("m1",
 		map[string]string{},
 		map[string]interface{}{
 			"a": int64(1),

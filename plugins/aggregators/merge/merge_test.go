@@ -187,7 +187,7 @@ func TestReset(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
-var m1, _ = metric.New(
+var m1 = metric.New(
 	"mymetric",
 	map[string]string{
 		"host":        "host.example.com",
@@ -206,7 +206,7 @@ var m1, _ = metric.New(
 	},
 	time.Now(),
 )
-var m2, _ = metric.New(
+var m2 = metric.New(
 	"mymetric",
 	map[string]string{
 		"host":        "host.example.com",

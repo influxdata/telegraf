@@ -15,10 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Metric(v telegraf.Metric, err error) telegraf.Metric {
-	if err != nil {
-		panic(err)
-	}
+func Metric(v telegraf.Metric) telegraf.Metric {
 	return v
 }
 
