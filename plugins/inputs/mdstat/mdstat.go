@@ -275,8 +275,7 @@ func proc(env, path string) string {
 	// try to read full file path
 	if p := os.Getenv(env); p != "" {
 		return p
-	} else {
-		// return default path
-		return path
 	}
+	// return default path
+	return path
 }
