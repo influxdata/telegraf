@@ -425,3 +425,209 @@ func TestCollectionExpire(t *testing.T) {
 		})
 	}
 }
+
+func TestExportTimestamps(t *testing.T) {
+	tests := []struct {
+		name     string
+		now      time.Time
+		age      time.Duration
+		input    []Input
+		expected []*dto.MetricFamily
+	}{
+		{
+			name: "histogram bucket updates",
+			now:  time.Unix(0, 0),
+			age:  10 * time.Second,
+			input: []Input{
+				{
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{},
+						map[string]interface{}{
+							"http_request_duration_seconds_sum":   10.0,
+							"http_request_duration_seconds_count": 2,
+						},
+						time.Unix(15, 0),
+						telegraf.Histogram,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{"le": "0.05"},
+						map[string]interface{}{
+							"http_request_duration_seconds_bucket": 1.0,
+						},
+						time.Unix(15, 0),
+						telegraf.Histogram,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{"le": "+Inf"},
+						map[string]interface{}{
+							"http_request_duration_seconds_bucket": 1.0,
+						},
+						time.Unix(15, 0),
+						telegraf.Histogram,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					// Next interval
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{},
+						map[string]interface{}{
+							"http_request_duration_seconds_sum":   20.0,
+							"http_request_duration_seconds_count": 4,
+						},
+						time.Unix(20, 0), // Updated timestamp
+						telegraf.Histogram,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{"le": "0.05"},
+						map[string]interface{}{
+							"http_request_duration_seconds_bucket": 2.0,
+						},
+						time.Unix(20, 0),// Updated timestamp
+						telegraf.Histogram,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{"le": "+Inf"},
+						map[string]interface{}{
+							"http_request_duration_seconds_bucket": 2.0,
+						},
+						time.Unix(20, 0), // Updated timestamp
+						telegraf.Histogram,
+					),
+					addtime: time.Unix(0, 0),
+				},
+			},
+			expected: []*dto.MetricFamily{
+				{
+					Name: proto.String("http_request_duration_seconds"),
+					Help: proto.String(helpString),
+					Type: dto.MetricType_HISTOGRAM.Enum(),
+					Metric: []*dto.Metric{
+						{
+							Label: []*dto.LabelPair{},
+							TimestampMs: proto.Int64(time.Unix(20, 0).UnixNano() / int64(time.Millisecond)),
+							Histogram: &dto.Histogram{
+								SampleCount: proto.Uint64(4),
+								SampleSum:   proto.Float64(20.0),
+								Bucket: []*dto.Bucket{
+									{
+										UpperBound:      proto.Float64(0.05),
+										CumulativeCount: proto.Uint64(2),
+									},
+									{
+										UpperBound:      proto.Float64(math.Inf(1)),
+										CumulativeCount: proto.Uint64(2),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "summary quantile updates",
+			now:  time.Unix(0, 0),
+			age:  10 * time.Second,
+			input: []Input{
+				{
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{},
+						map[string]interface{}{
+							"rpc_duration_seconds_sum":   1.0,
+							"rpc_duration_seconds_count": 1,
+						},
+						time.Unix(15, 0),
+						telegraf.Summary,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{"quantile": "0.01"},
+						map[string]interface{}{
+							"rpc_duration_seconds": 1.0,
+						},
+						time.Unix(15, 0),
+						telegraf.Summary,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					// Updated Summary
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{},
+						map[string]interface{}{
+							"rpc_duration_seconds_sum":   2.0,
+							"rpc_duration_seconds_count": 2,
+						},
+						time.Unix(20, 0), // Updated timestamp
+						telegraf.Summary,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{"quantile": "0.01"},
+						map[string]interface{}{
+							"rpc_duration_seconds": 2.0,
+						},
+						time.Unix(20, 0), // Updated timestamp
+						telegraf.Summary,
+					),
+					addtime: time.Unix(0, 0),
+				},
+			},
+			expected: []*dto.MetricFamily{
+				{
+					Name: proto.String("rpc_duration_seconds"),
+					Help: proto.String(helpString),
+					Type: dto.MetricType_SUMMARY.Enum(),
+					Metric: []*dto.Metric{
+						{
+							Label: []*dto.LabelPair{},
+							TimestampMs: proto.Int64(time.Unix(20, 0).UnixNano() / int64(time.Millisecond)),
+							Summary: &dto.Summary{
+								SampleCount: proto.Uint64(2),
+								SampleSum:   proto.Float64(2.0),
+								Quantile: []*dto.Quantile{
+									{
+										Quantile: proto.Float64(0.01),
+										Value:    proto.Float64(2),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewCollection(FormatConfig{TimestampExport: ExportTimestamp})
+			for _, item := range tt.input {
+				c.Add(item.metric, item.addtime)
+			}
+			c.Expire(tt.now, tt.age)
+
+			actual := c.GetProto()
+
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
