@@ -604,7 +604,7 @@ func getMetricFieldList(metric telegraf.Metric) interface{} {
 }
 
 func BenchmarkFieldListing(b *testing.B) {
-	metric := metric.New(
+	m := metric.New(
 		"test",
 		map[string]string{
 			"some": "tag",
@@ -621,12 +621,12 @@ func BenchmarkFieldListing(b *testing.B) {
 		time.Unix(0, 0))
 
 	for n := 0; n < b.N; n++ {
-		getMetricFieldList(metric)
+		getMetricFieldList(m)
 	}
 }
 
 func BenchmarkFields(b *testing.B) {
-	metric := metric.New(
+	m := metric.New(
 		"test",
 		map[string]string{
 			"some": "tag",
@@ -643,6 +643,6 @@ func BenchmarkFields(b *testing.B) {
 		time.Unix(0, 0))
 
 	for n := 0; n < b.N; n++ {
-		getMetricFields(metric)
+		getMetricFields(m)
 	}
 }
