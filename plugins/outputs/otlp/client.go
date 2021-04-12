@@ -118,9 +118,6 @@ func (c *Client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr 
 	dopts := []grpc.DialOption{
 		grpc.WithBlock(), // Wait for the connection to be established before using it.
 		grpc.WithDefaultServiceConfig(serviceConfig),
-
-		// Note: The Sidecar->OTel gRPC connection is not traced:
-		// grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
 	}
 	if useAuth {
 		var tcfg tls.Config
