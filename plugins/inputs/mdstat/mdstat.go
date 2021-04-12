@@ -45,7 +45,7 @@ var (
 )
 
 type MdstatConf struct {
-	HostProc string `toml:"host_proc"`
+	FileName string `toml:"file_name"`
 }
 
 func (k *MdstatConf) Description() string {
@@ -53,9 +53,9 @@ func (k *MdstatConf) Description() string {
 }
 
 var mdSampleConfig = `
-	## Sets 'proc' directory path
-	## If not specified, then default is /proc
-	# host_proc = "/proc"
+	## Sets file path
+	## If not specified, then default is /proc/mdstat
+	# file_name = "/proc/mdstat"
 `
 
 func (k *MdstatConf) SampleConfig() string {
@@ -247,10 +247,10 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 
 func (k *MdstatConf) getProcMdstat() ([]byte, error) {
 	var mdStatFile string
-	if k.HostProc == "" {
+	if k.FileName == "" {
 		mdStatFile = proc(envProc, defaultHostProc) + "/mdstat"
 	} else {
-		mdStatFile = k.HostProc + "/mdstat"
+		mdStatFile = k.FileName
 	}
 	if _, err := os.Stat(mdStatFile); os.IsNotExist(err) {
 		return nil, fmt.Errorf("mdstat: %s does not exist", mdStatFile)
@@ -275,7 +275,8 @@ func proc(env, path string) string {
 	// try to read full file path
 	if p := os.Getenv(env); p != "" {
 		return p
+	} else {
+		// return default path
+		return path
 	}
-	// return default path
-	return path
 }

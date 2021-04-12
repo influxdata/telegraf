@@ -12,10 +12,10 @@ import (
 )
 
 func TestFullMdstatProcFile(t *testing.T) {
-	makeFakeMDStatFile([]byte(mdStatFileFull))
-	defer os.Remove("tmp/mdstat")
+	filename := makeFakeMDStatFile([]byte(mdStatFileFull))
+	defer os.Remove(filename)
 	k := MdstatConf{
-		HostProc: "tmp",
+		FileName: filename,
 	}
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
@@ -36,11 +36,11 @@ func TestFullMdstatProcFile(t *testing.T) {
 }
 
 func TestInvalidMdStatProcFile1(t *testing.T) {
-	makeFakeMDStatFile([]byte(mdStatFileInvalid))
-	defer os.Remove("tmp/mdstat")
+	filename := makeFakeMDStatFile([]byte(mdStatFileInvalid))
+	defer os.Remove(filename)
 
 	k := MdstatConf{
-		HostProc: "tmp",
+		FileName: filename,
 	}
 
 	acc := testutil.Accumulator{}
@@ -83,8 +83,17 @@ md0 : active raid1 sdb1[2] sda1[0]
 unused devices: <none>
 `
 
-func makeFakeMDStatFile(content []byte) {
-	if err := ioutil.WriteFile("tmp/mdstat", content, 0666); err != nil {
+func makeFakeMDStatFile(content []byte) (filename string) {
+	fileobj, err := ioutil.TempFile("", "mdstat")
+	if err != nil {
 		panic(err)
 	}
+
+	if _, err = fileobj.Write(content); err != nil {
+		panic(err)
+	}
+	if err := fileobj.Close(); err != nil {
+		panic(err)
+	}
+	return fileobj.Name()
 }
