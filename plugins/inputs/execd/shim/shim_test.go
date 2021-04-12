@@ -36,7 +36,8 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 
 	metricProcessed, exited := runInputPlugin(t, 40*time.Second, stdinReader, stdoutWriter, nil)
 
-	stdinWriter.Write([]byte("\n"))
+	_, err := stdinWriter.Write([]byte("\n"))
+	require.NoError(t, err)
 
 	<-metricProcessed
 
@@ -45,7 +46,7 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "measurement,tag=tag field=1i 1234000005678\n", out)
 
-	stdinWriter.Close()
+	require.NoError(t, stdinWriter.Close())
 
 	readUntilEmpty(r)
 
@@ -71,7 +72,7 @@ func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdou
 		shim.stderr = stderr
 	}
 
-	shim.AddInput(inp)
+	require.NoError(t, shim.AddInput(inp))
 	go func() {
 		err := shim.Run(interval)
 		require.NoError(t, err)
@@ -112,8 +113,8 @@ func (i *testInput) Stop() {
 }
 
 func TestLoadConfig(t *testing.T) {
-	os.Setenv("SECRET_TOKEN", "xxxxxxxxxx")
-	os.Setenv("SECRET_VALUE", `test"\test`)
+	require.NoError(t, os.Setenv("SECRET_TOKEN", "xxxxxxxxxx"))
+	require.NoError(t, os.Setenv("SECRET_VALUE", `test"\test`))
 
 	inputs.Add("test", func() telegraf.Input {
 		return &serviceInput{}

@@ -164,6 +164,7 @@ func runCounterProgram() {
 	i := 0
 	serializer, err := serializers.NewInfluxSerializer()
 	if err != nil {
+		//nolint:errcheck,revive // Test will fail anyway
 		fmt.Fprintln(os.Stderr, "ERR InfluxSerializer failed to load")
 		os.Exit(1)
 	}
@@ -181,9 +182,12 @@ func runCounterProgram() {
 
 		b, err := serializer.Serialize(m)
 		if err != nil {
+			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Fprint(os.Stdout, string(b))
+		if _, err := fmt.Fprint(os.Stdout, string(b)); err != nil {
+			os.Exit(1)
+		}
 	}
 }
