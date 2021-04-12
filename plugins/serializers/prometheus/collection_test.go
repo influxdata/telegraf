@@ -303,6 +303,117 @@ func TestCollectionExpire(t *testing.T) {
 			},
 		},
 		{
+			name: "entire histogram expires",
+			now:  time.Unix(20, 0),
+			age:  10 * time.Second,
+			input: []Input{
+				{
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{},
+						map[string]interface{}{
+							"http_request_duration_seconds_sum":   10.0,
+							"http_request_duration_seconds_count": 2,
+						},
+						time.Unix(0, 0),
+						telegraf.Histogram,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{"le": "0.05"},
+						map[string]interface{}{
+							"http_request_duration_seconds_bucket": 1.0,
+						},
+						time.Unix(0, 0),
+						telegraf.Histogram,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{"le": "+Inf"},
+						map[string]interface{}{
+							"http_request_duration_seconds_bucket": 1.0,
+						},
+						time.Unix(0, 0),
+						telegraf.Histogram,
+					),
+					addtime: time.Unix(0, 0),
+				},
+			},
+			expected: []*dto.MetricFamily{},
+		},
+		{
+			name: "histogram does not expire because of addtime from bucket",
+			now:  time.Unix(20, 0),
+			age:  10 * time.Second,
+			input: []Input{
+				{
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{"le": "+Inf"},
+						map[string]interface{}{
+							"http_request_duration_seconds_bucket": 1.0,
+						},
+						time.Unix(0, 0),
+						telegraf.Histogram,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{},
+						map[string]interface{}{
+							"http_request_duration_seconds_sum":   10.0,
+							"http_request_duration_seconds_count": 2,
+						},
+						time.Unix(0, 0),
+						telegraf.Histogram,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{"le": "0.05"},
+						map[string]interface{}{
+							"http_request_duration_seconds_bucket": 1.0,
+						},
+						time.Unix(0, 0),
+						telegraf.Histogram,
+					),
+					addtime: time.Unix(15, 0), // More recent addtime causes entire metric to stay valid
+				},
+			},
+			expected: []*dto.MetricFamily{
+				{
+					Name: proto.String("http_request_duration_seconds"),
+					Help: proto.String(helpString),
+					Type: dto.MetricType_HISTOGRAM.Enum(),
+					Metric: []*dto.Metric{
+						{
+							Label: []*dto.LabelPair{},
+							Histogram: &dto.Histogram{
+								SampleCount: proto.Uint64(2),
+								SampleSum:   proto.Float64(10.0),
+								Bucket: []*dto.Bucket{
+									{
+										UpperBound:      proto.Float64(math.Inf(1)),
+										CumulativeCount: proto.Uint64(1),
+									},
+									{
+										UpperBound:      proto.Float64(0.05),
+										CumulativeCount: proto.Uint64(1),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "summary quantile updates",
 			now:  time.Unix(0, 0),
 			age:  10 * time.Second,
@@ -371,6 +482,106 @@ func TestCollectionExpire(t *testing.T) {
 									{
 										Quantile: proto.Float64(0.01),
 										Value:    proto.Float64(2),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Entire summary expires",
+			now:  time.Unix(20, 0),
+			age:  10 * time.Second,
+			input: []Input{
+				{
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{},
+						map[string]interface{}{
+							"rpc_duration_seconds_sum":   1.0,
+							"rpc_duration_seconds_count": 1,
+						},
+						time.Unix(0, 0),
+						telegraf.Summary,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{"quantile": "0.01"},
+						map[string]interface{}{
+							"rpc_duration_seconds": 1.0,
+						},
+						time.Unix(0, 0),
+						telegraf.Summary,
+					),
+					addtime: time.Unix(0, 0),
+				},
+			},
+			expected: []*dto.MetricFamily{},
+		},
+		{
+			name: "summary does not expire because of quantile addtime",
+			now:  time.Unix(20, 0),
+			age:  10 * time.Second,
+			input: []Input{
+				{
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{},
+						map[string]interface{}{
+							"rpc_duration_seconds_sum":   1.0,
+							"rpc_duration_seconds_count": 1,
+						},
+						time.Unix(0, 0),
+						telegraf.Summary,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{"quantile": "0.5"},
+						map[string]interface{}{
+							"rpc_duration_seconds": 10.0,
+						},
+						time.Unix(0, 0),
+						telegraf.Summary,
+					),
+					addtime: time.Unix(0, 0),
+				}, {
+					metric: testutil.MustMetric(
+						"prometheus",
+						map[string]string{"quantile": "0.01"},
+						map[string]interface{}{
+							"rpc_duration_seconds": 1.0,
+						},
+						time.Unix(0, 0),
+						telegraf.Summary,
+					),
+					addtime: time.Unix(15, 0), // Recent addtime keeps entire metric around
+				},
+			},
+			expected: []*dto.MetricFamily{
+				{
+					Name: proto.String("rpc_duration_seconds"),
+					Help: proto.String(helpString),
+					Type: dto.MetricType_SUMMARY.Enum(),
+					Metric: []*dto.Metric{
+						{
+							Label: []*dto.LabelPair{},
+							Summary: &dto.Summary{
+								SampleSum:   proto.Float64(1),
+								SampleCount: proto.Uint64(1),
+								Quantile: []*dto.Quantile{
+									{
+										Quantile: proto.Float64(0.5),
+										Value:    proto.Float64(10),
+									},
+									{
+										Quantile: proto.Float64(0.01),
+										Value:    proto.Float64(1),
 									},
 								},
 							},
@@ -493,7 +704,7 @@ func TestExportTimestamps(t *testing.T) {
 						map[string]interface{}{
 							"http_request_duration_seconds_bucket": 2.0,
 						},
-						time.Unix(20, 0),// Updated timestamp
+						time.Unix(20, 0), // Updated timestamp
 						telegraf.Histogram,
 					),
 					addtime: time.Unix(0, 0),
@@ -517,7 +728,7 @@ func TestExportTimestamps(t *testing.T) {
 					Type: dto.MetricType_HISTOGRAM.Enum(),
 					Metric: []*dto.Metric{
 						{
-							Label: []*dto.LabelPair{},
+							Label:       []*dto.LabelPair{},
 							TimestampMs: proto.Int64(time.Unix(20, 0).UnixNano() / int64(time.Millisecond)),
 							Histogram: &dto.Histogram{
 								SampleCount: proto.Uint64(4),
@@ -599,7 +810,7 @@ func TestExportTimestamps(t *testing.T) {
 					Type: dto.MetricType_SUMMARY.Enum(),
 					Metric: []*dto.Metric{
 						{
-							Label: []*dto.LabelPair{},
+							Label:       []*dto.LabelPair{},
 							TimestampMs: proto.Int64(time.Unix(20, 0).UnixNano() / int64(time.Millisecond)),
 							Summary: &dto.Summary{
 								SampleCount: proto.Uint64(2),

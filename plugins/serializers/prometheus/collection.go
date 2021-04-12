@@ -243,6 +243,7 @@ func (c *Collection) Add(metric telegraf.Metric, now time.Time) {
 				}
 			} else {
 				m.Time = metric.Time()
+				m.AddTime = now
 			}
 			switch {
 			case strings.HasSuffix(field.Key, "_bucket"):
@@ -293,6 +294,7 @@ func (c *Collection) Add(metric telegraf.Metric, now time.Time) {
 				}
 			} else {
 				m.Time = metric.Time()
+				m.AddTime = now
 			}
 			switch {
 			case strings.HasSuffix(field.Key, "_sum"):
