@@ -14,6 +14,7 @@ Implemented functions are:
 - replace
 - left
 - base64decode
+- valid_utf8
 
 Please note that in this implementation these are processed in the order that they appear above.
 
@@ -78,6 +79,11 @@ If you'd like to apply multiple processings to the same `tag_key` or `field_key`
   ## Decode a base64 encoded utf-8 string
   # [[processors.strings.base64decode]]
   #   field = "message"
+
+  ## Sanitize a string to ensure it is a valid utf-8 string. Non-valid characters are replaced by 'new'
+  # [[processors.strings.valid_utf8]]
+  #   field = "message"
+  #   new = ""
 ```
 
 #### Trim, TrimLeft, TrimRight

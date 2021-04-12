@@ -22,6 +22,7 @@ type Strings struct {
 	Replace      []converter `toml:"replace"`
 	Left         []converter `toml:"left"`
 	Base64Decode []converter `toml:"base64decode"`
+	ValidUTF8    []converter `toml:"valid_utf8"`
 
 	converters []converter
 	init       bool
@@ -98,6 +99,11 @@ const sampleConfig = `
   ## Decode a base64 encoded utf-8 string
   # [[processors.strings.base64decode]]
   #   field = "message"
+
+  ## Sanitize a string to ensure it is a valid utf-8 string. Non-valid characters are replaced by 'new'
+  # [[processors.strings.valid_utf8]]
+  #   field = "message"
+  #   new = ""
 `
 
 func (s *Strings) SampleConfig() string {
@@ -316,6 +322,11 @@ func (s *Strings) initOnce() {
 			}
 			return s
 		}
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.ValidUTF8 {
+		c := c
+		c.fn = func(s string) string { return strings.ToValidUTF8(s, c.New) }
 		s.converters = append(s.converters, c)
 	}
 
