@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -434,30 +435,17 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 			// empty string. This results in all the non-table fields sharing the same
 			// index, and being added on the same row.
 			if pkt, err := gs.Get([]string{oid}); err != nil {
-				return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
-			} else if pkt != nil && pkt.PDUType == gosnmp.Report && len(pkt.Variables) > 0 {
-				ent := pkt.Variables[0]
-
-				// check for usmStats to give clear error message
-				if len(ent.Name) > 20 && ent.Name[:20] == ".1.3.6.1.6.3.15.1.1." {
-					switch ent.Name {
-					case ".1.3.6.1.6.3.15.1.1.1.0":
-						return nil, fmt.Errorf("unknown security level (sec_level)")
-					case ".1.3.6.1.6.3.15.1.1.3.0":
-						return nil, fmt.Errorf("unknown username (sec_name)")
-					case ".1.3.6.1.6.3.15.1.1.5.0":
-						return nil, fmt.Errorf("wrong digest (auth_protocol, auth_password)")
-					case ".1.3.6.1.6.3.15.1.1.6.0":
-						return nil, fmt.Errorf("decryption error (priv_protocol, priv_password)")
-					}
+				if errors.Is(err, gosnmp.ErrUnknownSecurityLevel) {
+					return nil, fmt.Errorf("unknown security level (sec_level)")
+				} else if errors.Is(err, gosnmp.ErrUnknownUsername) {
+					return nil, fmt.Errorf("unknown username (sec_name)")
+				} else if errors.Is(err, gosnmp.ErrWrongDigest) {
+					return nil, fmt.Errorf("wrong digest (auth_protocol, auth_password)")
+				} else if errors.Is(err, gosnmp.ErrDecryption) {
+					return nil, fmt.Errorf("decryption error (priv_protocol, priv_password)")
+				} else {
+					return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
 				}
-
-				// other kinds of reports
-				var oidText string
-				if _, _, oidText, _, err = SnmpTranslate(ent.Name); err != nil {
-					oidText = ent.Name
-				}
-				return nil, fmt.Errorf("recieved %s report", strings.TrimSuffix(oidText, ".0"))
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
 				fv, err := fieldConvert(f.Conversion, ent.Value)
