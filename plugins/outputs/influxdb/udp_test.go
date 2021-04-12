@@ -23,7 +23,7 @@ var (
 )
 
 func getMetric() telegraf.Metric {
-	metric := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
@@ -32,7 +32,7 @@ func getMetric() telegraf.Metric {
 		time.Unix(0, 0),
 	)
 
-	return metric
+	return m
 }
 
 func getURL() *url.URL {

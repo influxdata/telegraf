@@ -81,8 +81,8 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 				} else {
 					t = now
 				}
-				metric := metric.New(metricName, tags, fields, t, common.ValueType(mf.GetType()))
-				metrics = append(metrics, metric)
+				m := metric.New(metricName, tags, fields, t, common.ValueType(mf.GetType()))
+				metrics = append(metrics, m)
 			}
 		}
 	}
