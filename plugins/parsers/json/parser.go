@@ -142,9 +142,9 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 	}
 
 	tags, nFields := p.switchFieldToTag(tags, f.Fields)
-	metric := metric.New(name, tags, nFields, timestamp)
+	m := metric.New(name, tags, nFields, timestamp)
 
-	return []telegraf.Metric{metric}, nil
+	return []telegraf.Metric{m}, nil
 }
 
 // will take in field map with strings and bools,

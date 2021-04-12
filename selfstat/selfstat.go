@@ -95,8 +95,8 @@ func Metrics() []telegraf.Metric {
 				fields[fieldname] = stat.Get()
 				j++
 			}
-			metric := metric.New(name, tags, fields, now)
-			metrics[i] = metric
+			m := metric.New(name, tags, fields, now)
+			metrics[i] = m
 			i++
 		}
 	}

@@ -241,10 +241,10 @@ func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, er
 		}
 
 		// Create metric
-		metric := metric.New("nagios", tags, fields, timestamp)
+		m := metric.New("nagios", tags, fields, timestamp)
 
 		// Add Metric
-		metrics = append(metrics, metric)
+		metrics = append(metrics, m)
 	}
 
 	return metrics, nil

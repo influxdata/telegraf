@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 )
- 
+
 var m = New(
 	"mymetric",
 	map[string]string{

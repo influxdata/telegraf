@@ -81,8 +81,8 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				// converting to telegraf metric
 				if len(fields) > 0 {
 					t := getTimestamp(m, now)
-					metric := metric.New("prometheus", tags, fields, t, common.ValueType(mf.GetType()))
-					metrics = append(metrics, metric)
+					m := metric.New("prometheus", tags, fields, t, common.ValueType(mf.GetType()))
+					metrics = append(metrics, m)
 				}
 			}
 		}

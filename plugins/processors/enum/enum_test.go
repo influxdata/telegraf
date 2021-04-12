@@ -11,7 +11,7 @@ import (
 )
 
 func createTestMetric() telegraf.Metric {
-	metric := metric.New("m1",
+	m := metric.New("m1",
 		map[string]string{
 			"tag":           "tag_value",
 			"duplicate_tag": "tag_value",
@@ -26,7 +26,7 @@ func createTestMetric() telegraf.Metric {
 		},
 		time.Now(),
 	)
-	return metric
+	return m
 }
 
 func calculateProcessedValues(mapper EnumMapper, metric telegraf.Metric) map[string]interface{} {
