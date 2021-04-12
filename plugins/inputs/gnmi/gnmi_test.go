@@ -231,13 +231,18 @@ func TestNotification(t *testing.T) {
 			server: &MockServer{
 				SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 					notification := mockGNMINotification()
-					server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
-					server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}})
+					err := server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
+					if err != nil {
+						return err
+					}
+					err = server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}})
+					if err != nil {
+						return err
+					}
 					notification.Prefix.Elem[0].Key["foo"] = "bar2"
 					notification.Update[0].Path.Elem[1].Key["name"] = "str2"
 					notification.Update[0].Val = &gnmi.TypedValue{Value: &gnmi.TypedValue_JsonVal{JsonVal: []byte{'"', '1', '2', '3', '"'}}}
-					server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
-					return nil
+					return server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
 				},
 			},
 			expected: []telegraf.Metric{
@@ -348,8 +353,7 @@ func TestNotification(t *testing.T) {
 							},
 						},
 					}
-					server.Send(response)
-					return nil
+					return server.Send(response)
 				},
 			},
 			expected: []telegraf.Metric{
@@ -419,10 +423,9 @@ func TestSubscribeResponseError(t *testing.T) {
 	var mc uint32 = 7
 	ml := &MockLogger{}
 	plugin := &GNMI{Log: ml}
-	errorResponse := &gnmi.SubscribeResponse_Error{
-		Error: &gnmi.Error{Message: me, Code: mc}}
-	plugin.handleSubscribeResponse(
-		"127.0.0.1:0", &gnmi.SubscribeResponse{Response: errorResponse})
+	// TODO: FIX SA1019: gnmi.Error is deprecated: Do not use.
+	errorResponse := &gnmi.SubscribeResponse_Error{Error: &gnmi.Error{Message: me, Code: mc}}
+	plugin.handleSubscribeResponse("127.0.0.1:0", &gnmi.SubscribeResponse{Response: errorResponse})
 	require.NotEmpty(t, ml.lastFormat)
 	require.Equal(t, ml.lastArgs, []interface{}{mc, me})
 }
@@ -442,8 +445,7 @@ func TestRedial(t *testing.T) {
 	gnmiServer := &MockServer{
 		SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 			notification := mockGNMINotification()
-			server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
-			return nil
+			return server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
 		},
 		GRPCServer: grpcServer,
 	}
@@ -476,8 +478,7 @@ func TestRedial(t *testing.T) {
 			notification.Prefix.Elem[0].Key["foo"] = "bar2"
 			notification.Update[0].Path.Elem[1].Key["name"] = "str2"
 			notification.Update[0].Val = &gnmi.TypedValue{Value: &gnmi.TypedValue_BoolVal{BoolVal: false}}
-			server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
-			return nil
+			return server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
 		},
 		GRPCServer: grpcServer,
 	}
