@@ -1,17 +1,27 @@
 Supported Platforms
 ===================
-Telegraf is released on Linux, FreeBSD, Windows, and macOS. This doc helps define which distributions and releases are targeted.
+Telegraf is a cross-platform application. This doc helps define which operating systems, distributions, and releases Telegraf supports.
+
+Telegraf is supported on Linux, FreeBSD, Windows, and macOS. It is written in Go which supports these operating systems and more. Telegraf may work on Go's other operating systems and users are welcome to build their own binaries for them. Bug reports should be submitted only for supported platforms.
+
+https://golang.org/doc/install/source
+
+https://github.com/golang/go/wiki/MinimumRequirements#operating-systems
 
 Linux
 -----
 Telegraf intent: *Support latest versions of the most popular distributions*
 
-Telegraf supports RHEL, Fedora, Debian, and Ubuntu. InfluxData provides package repositories for these distributions. Instructions for using the package repositories can be found on [docs.influxdata.com](https://docs.influxdata.com/telegraf/v1.16/introduction/installation/)
-
 https://distrowatch.com/dwres.php?resource=major
 
+Telegraf supports RHEL, Fedora, Debian, and Ubuntu. InfluxData provides package repositories for these distributions. Instructions for using the package repositories can be found on [docs.influxdata.com](https://docs.influxdata.com/telegraf/v1.16/introduction/installation/) Bug reports shuld be submitted only for supported distributions and releases.
+
+Telegraf releases include .tar.gz packages for use with other distributions, for building containers, or for installation without a package manager. As part of telegraf's release process we publish official images to Docker Hub.
+
+https://hub.docker.com/_/telegraf
+
 ### RHEL
-Red Hat makes a major release every four to five years and supports each release in production for ten years.  Extended support is available for three or more years.
+Red Hat makes a major release every four to five years and supports each release in production for ten years. Extended support is available for three or more years.
 
 Telegraf intent: *Support releases in RHEL production, but not in extended support.*
 
@@ -20,7 +30,7 @@ https://en.wikipedia.org/wiki/Red_Hat_Enterprise_Linux#Version_history_and_timel
 As of April 2021, 7 and 8 are production releases.
 
 ### Ubuntu
-Ubuntu makes two releases a year.  Every two years one of the releases is an LTS (long-term support) release.  Non-LTS releases are supported for nine months.  LTS releases are in maintenance for five years, then in extended security maintenance for up to three more years.
+Ubuntu makes two releases a year. Every two years one of the releases is an LTS (long-term support) release. Non-LTS releases are supported for nine months. LTS releases are in maintenance for five years, then in extended security maintenance for up to three more years.
 
 Telegraf intent: *Support LTS releases in Ubuntu maintenance, but not in extended security maintenance.*
 
@@ -48,7 +58,7 @@ https://en.wikipedia.org/wiki/Fedora_version_history#Version_history
 
 FreeBSD
 -------
-FreeBSD makes major releases about every two years.  Releases reach end of life after five years.
+FreeBSD makes major releases about every two years. Releases reach end of life after five years.
 
 Telegraf intent: *Support releases under FreeBSD security support*
 
