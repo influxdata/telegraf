@@ -188,8 +188,8 @@ type AgentConfig struct {
 	// If set to -1, no archives are removed.
 	LogfileRotationMaxArchives int `toml:"logfile_rotation_max_archives"`
 
-	// Inidicates whether or not to use local time as the logging prefix.
-	LogWithLocalTime bool `toml:"log_with_local_time"`
+	// Pick a timezone to use when logging or type 'local' for local time.
+	LogWithTimezone string `toml:"log_with_timezone"`
 
 	Hostname     string
 	OmitHostname bool
