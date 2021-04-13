@@ -1060,8 +1060,8 @@ func TestValidUTF8(t *testing.T) {
 			plugin: &Strings{
 				ValidUTF8: []converter{
 					{
-						Field: "message",
-						New:   "r",
+						Field:       "message",
+						Replacement: "r",
 					},
 				},
 			},
@@ -1091,8 +1091,8 @@ func TestValidUTF8(t *testing.T) {
 			plugin: &Strings{
 				ValidUTF8: []converter{
 					{
-						Field: "message",
-						New:   "r",
+						Field:       "message",
+						Replacement: "r",
 					},
 				},
 			},
@@ -1101,7 +1101,7 @@ func TestValidUTF8(t *testing.T) {
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
-						"message": "howdy" + string([]byte{0xff}),
+						"message": "ho" + string([]byte{0xff}) + "wdy",
 					},
 					time.Unix(0, 0),
 				),
@@ -1111,7 +1111,7 @@ func TestValidUTF8(t *testing.T) {
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
-						"message": "howdyr",
+						"message": "horwdy",
 					},
 					time.Unix(0, 0),
 				),
@@ -1122,8 +1122,8 @@ func TestValidUTF8(t *testing.T) {
 			plugin: &Strings{
 				ValidUTF8: []converter{
 					{
-						Field: "message",
-						New:   "",
+						Field:       "message",
+						Replacement: "",
 					},
 				},
 			},
@@ -1132,7 +1132,7 @@ func TestValidUTF8(t *testing.T) {
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
-						"message": "howdy" + string([]byte{0xff}),
+						"message": "ho" + string([]byte{0xff}) + "wdy",
 					},
 					time.Unix(0, 0),
 				),

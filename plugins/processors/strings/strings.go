@@ -43,6 +43,7 @@ type converter struct {
 	Old         string
 	New         string
 	Width       int
+	Replacement string
 
 	fn ConvertFunc
 }
@@ -100,10 +101,11 @@ const sampleConfig = `
   # [[processors.strings.base64decode]]
   #   field = "message"
 
-  ## Sanitize a string to ensure it is a valid utf-8 string. Non-valid characters are replaced by 'new'
+  ## Sanitize a string to ensure it is a valid utf-8 string
+  ## Each run of invalid UTF-8 byte sequences is replaced by the replacement string, which may be empty
   # [[processors.strings.valid_utf8]]
   #   field = "message"
-  #   new = ""
+  #   replacement = ""
 `
 
 func (s *Strings) SampleConfig() string {
@@ -326,7 +328,7 @@ func (s *Strings) initOnce() {
 	}
 	for _, c := range s.ValidUTF8 {
 		c := c
-		c.fn = func(s string) string { return strings.ToValidUTF8(s, c.New) }
+		c.fn = func(s string) string { return strings.ToValidUTF8(s, c.Replacement) }
 		s.converters = append(s.converters, c)
 	}
 

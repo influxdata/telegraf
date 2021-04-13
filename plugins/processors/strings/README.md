@@ -80,10 +80,11 @@ If you'd like to apply multiple processings to the same `tag_key` or `field_key`
   # [[processors.strings.base64decode]]
   #   field = "message"
 
-  ## Sanitize a string to ensure it is a valid utf-8 string. Non-valid characters are replaced by 'new'
+  ## Sanitize a string to ensure it is a valid utf-8 string
+  ## Each run of invalid UTF-8 byte sequences is replaced by the replacement string, which may be empty
   # [[processors.strings.valid_utf8]]
   #   field = "message"
-  #   new = ""
+  #   replacement = ""
 ```
 
 #### Trim, TrimLeft, TrimRight
