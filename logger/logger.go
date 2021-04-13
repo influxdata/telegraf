@@ -38,6 +38,8 @@ type LogConfig struct {
 	RotationMaxSize config.Size
 	// maximum rotated files to keep (older ones will be deleted)
 	RotationMaxArchives int
+	// whether or not to use local time as the prefix when logging
+	UseLocalTime bool
 }
 
 type LoggerCreator interface {
@@ -56,15 +58,23 @@ func registerLogger(name string, loggerCreator LoggerCreator) {
 type telegrafLog struct {
 	writer         io.Writer
 	internalWriter io.Writer
+	useLocalTime   bool
 }
 
 func (t *telegrafLog) Write(b []byte) (n int, err error) {
 	var line []byte
-	if !prefixRegex.Match(b) {
-		line = append([]byte(time.Now().UTC().Format(time.RFC3339)+" I! "), b...)
-	} else {
-		line = append([]byte(time.Now().UTC().Format(time.RFC3339)+" "), b...)
+	timeToPrint := time.Now()
+
+	if !t.useLocalTime {
+		timeToPrint = timeToPrint.UTC()
 	}
+
+	if !prefixRegex.Match(b) {
+		line = append([]byte(timeToPrint.Format(time.RFC3339)+" I! "), b...)
+	} else {
+		line = append([]byte(timeToPrint.Format(time.RFC3339)+" "), b...)
+	}
+
 	return t.writer.Write(line)
 }
 
@@ -82,10 +92,11 @@ func (t *telegrafLog) Close() error {
 }
 
 // newTelegrafWriter returns a logging-wrapped writer.
-func newTelegrafWriter(w io.Writer) io.Writer {
+func newTelegrafWriter(w io.Writer, config LogConfig) io.Writer {
 	return &telegrafLog{
 		writer:         wlog.NewWriter(w),
 		internalWriter: w,
+		useLocalTime:   config.UseLocalTime,
 	}
 }
 
@@ -119,7 +130,7 @@ func (t *telegrafLogCreator) CreateLogger(config LogConfig) (io.Writer, error) {
 		writer = defaultWriter
 	}
 
-	return newTelegrafWriter(writer), nil
+	return newTelegrafWriter(writer, config), nil
 }
 
 // Keep track what is actually set as a log output, because log package doesn't provide a getter.

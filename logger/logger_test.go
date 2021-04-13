@@ -137,7 +137,7 @@ func TestLogTargetSettings(t *testing.T) {
 func BenchmarkTelegrafLogWrite(b *testing.B) {
 	var msg = []byte("test")
 	var buf bytes.Buffer
-	w := newTelegrafWriter(&buf)
+	w := newTelegrafWriter(&buf, LogConfig{})
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
 		w.Write(msg)

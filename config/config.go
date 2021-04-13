@@ -188,6 +188,9 @@ type AgentConfig struct {
 	// If set to -1, no archives are removed.
 	LogfileRotationMaxArchives int `toml:"logfile_rotation_max_archives"`
 
+	// Inidicates whether or not to use local time as the logging prefix.
+	LogWithLocalTime bool `toml:"log_with_local_time"`
+
 	Hostname     string
 	OmitHostname bool
 }
@@ -355,6 +358,9 @@ var agentConfig = `
   ## Maximum number of rotated archives to keep, any older logs are deleted.
   ## If set to -1, no archives are removed.
   # logfile_rotation_max_archives = 5
+
+  ## Inidicates whether or not to use local time as the logging prefix.
+  # log_with_local_time = false
 
   ## Override default hostname, if empty use os.Hostname()
   hostname = ""
