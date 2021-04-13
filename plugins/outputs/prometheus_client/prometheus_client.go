@@ -14,8 +14,8 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
-	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
+	v1 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
+	v2 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -34,7 +34,7 @@ var sampleConfig = `
   ## Prometheus format.  When using the prometheus input, use the same value in
   ## both plugins to ensure metrics are round-tripped without modification.
   ##
-  ##   example: metric_version = 1; deprecated in 1.13
+  ##   example: metric_version = 1;
   ##            metric_version = 2; recommended version
   # metric_version = 1
 
@@ -132,7 +132,6 @@ func (p *PrometheusClient) Init() error {
 	default:
 		fallthrough
 	case 1:
-		p.Log.Warnf("Use of deprecated configuration: metric_version = 1; please update to metric_version = 2")
 		p.collector = v1.NewCollector(p.ExpirationInterval.Duration, p.StringAsLabel, p.Log)
 		err := registry.Register(p.collector)
 		if err != nil {
