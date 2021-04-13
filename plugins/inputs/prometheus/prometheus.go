@@ -86,7 +86,7 @@ var sampleConfig = `
   ## value in both plugins to ensure metrics are round-tripped without
   ## modification.
   ##
-  ##   example: metric_version = 1; deprecated in 1.13
+  ##   example: metric_version = 1; 
   ##            metric_version = 2; recommended version
   # metric_version = 1
 
@@ -155,9 +155,6 @@ func (p *Prometheus) Description() string {
 }
 
 func (p *Prometheus) Init() error {
-	if p.MetricVersion != 2 {
-		p.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
-	}
 
 	// Config proccessing for node scrape scope for monitor_kubernetes_pods
 	p.isNodeScrapeScope = strings.EqualFold(p.PodScrapeScope, "node")
