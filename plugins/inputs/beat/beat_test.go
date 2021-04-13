@@ -35,11 +35,12 @@ func Test_BeatStats(test *testing.T) {
 		}
 
 		data, err := ioutil.ReadFile(jsonFilePath)
-
 		if err != nil {
 			panic(fmt.Sprintf("could not read from data file %s", jsonFilePath))
 		}
-		w.Write(data)
+		if _, err := w.Write(data); err != nil {
+			panic("could not write data")
+		}
 	}))
 	requestURL, err := url.Parse(beatTest.URL)
 	if err != nil {
@@ -200,7 +201,9 @@ func Test_BeatRequest(test *testing.T) {
 		assert.Equal(test, request.Header.Get("Authorization"), "Basic YWRtaW46UFdE")
 		assert.Equal(test, request.Header.Get("X-Test"), "test-value")
 
-		w.Write(data)
+		if _, err := w.Write(data); err != nil {
+			panic("could not write data")
+		}
 	}))
 
 	requestURL, err := url.Parse(beatTest.URL)

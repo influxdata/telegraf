@@ -62,7 +62,10 @@ func (b *Beanstalkd) Gather(acc telegraf.Accumulator) error {
 	for _, tube := range tubes {
 		wg.Add(1)
 		go func(tube string) {
-			b.gatherTubeStats(connection, tube, acc)
+			err := b.gatherTubeStats(connection, tube, acc)
+			if err != nil {
+				acc.AddError(err)
+			}
 			wg.Done()
 		}(tube)
 	}
