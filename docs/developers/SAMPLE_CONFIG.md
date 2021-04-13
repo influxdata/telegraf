@@ -1,4 +1,4 @@
-#SampleConfig
+# Sample Configuration
 
 The sample config file is generated from a results of the `SampleConfig()` and
 `Description()` functions of the plugins.
