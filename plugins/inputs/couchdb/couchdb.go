@@ -140,9 +140,9 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 		req.SetBasicAuth(c.BasicUsername, c.BasicPassword)
 	}
 
-	response, error := c.client.Do(req)
-	if error != nil {
-		return error
+	response, err := c.client.Do(req)
+	if err != nil {
+		return err
 	}
 	defer response.Body.Close()
 
@@ -152,7 +152,9 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 
 	stats := Stats{}
 	decoder := json.NewDecoder(response.Body)
-	decoder.Decode(&stats)
+	if err := decoder.Decode(&stats); err != nil {
+		return fmt.Errorf("failed to decode stats from couchdb: HTTP body %q", response.Body)
+	}
 
 	fields := map[string]interface{}{}
 

@@ -152,6 +152,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 		var opts []grpc.ServerOption
 		tlsConfig, err := c.ServerConfig.TLSConfig()
 		if err != nil {
+			//nolint:errcheck,revive // we cannot do anything if the closing fails
 			c.listener.Close()
 			return err
 		} else if tlsConfig != nil {
@@ -167,11 +168,14 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 
 		c.wg.Add(1)
 		go func() {
-			c.grpcServer.Serve(c.listener)
+			if err := c.grpcServer.Serve(c.listener); err != nil {
+				c.Log.Errorf("serving GRPC server failed: %v", err)
+			}
 			c.wg.Done()
 		}()
 
 	default:
+		//nolint:errcheck,revive // we cannot do anything if the closing fails
 		c.listener.Close()
 		return fmt.Errorf("invalid Cisco MDT transport: %s", c.Transport)
 	}
@@ -210,7 +214,9 @@ func (c *CiscoTelemetryMDT) acceptTCPClients() {
 			delete(clients, conn)
 			mutex.Unlock()
 
-			conn.Close()
+			if err := conn.Close(); err != nil {
+				c.Log.Warnf("closing connection failed: %v", err)
+			}
 			c.wg.Done()
 		}()
 	}
@@ -295,7 +301,9 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 		if packet.TotalSize == 0 {
 			c.handleTelemetry(packet.Data)
 		} else if int(packet.TotalSize) <= c.MaxMsgSize {
-			chunkBuffer.Write(packet.Data)
+			if _, err := chunkBuffer.Write(packet.Data); err != nil {
+				c.acc.AddError(fmt.Errorf("writing packet %q failed: %v", packet.Data, err))
+			}
 			if chunkBuffer.Len() >= int(packet.TotalSize) {
 				c.handleTelemetry(chunkBuffer.Bytes())
 				chunkBuffer.Reset()
@@ -460,7 +468,9 @@ func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telem
 			tags[subfield.Name] = decodeTag(subfield)
 		}
 		if value := decodeValue(subfield); value != nil {
-			grouper.Add(measurement, tags, timestamp, subfield.Name, value)
+			if err := grouper.Add(measurement, tags, timestamp, subfield.Name, value); err != nil {
+				c.Log.Errorf("adding field %q to group failed: %v", subfield.Name, err)
+			}
 		}
 		if subfield.Name != "nextHop" {
 			continue
@@ -475,7 +485,9 @@ func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telem
 				}
 				if value := decodeValue(ff); value != nil {
 					name := "nextHop/" + ff.Name
-					grouper.Add(measurement, tags, timestamp, name, value)
+					if err := grouper.Add(measurement, tags, timestamp, name, value); err != nil {
+						c.Log.Errorf("adding field %q to group failed: %v", name, err)
+					}
 				}
 			}
 		}
@@ -540,9 +552,13 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 		}
 
 		if val := c.nxosValueXform(field, value, encodingPath); val != nil {
-			grouper.Add(measurement, tags, timestamp, name, val)
+			if err := grouper.Add(measurement, tags, timestamp, name, val); err != nil {
+				c.Log.Errorf("adding field %q to group failed: %v", name, err)
+			}
 		} else {
-			grouper.Add(measurement, tags, timestamp, name, value)
+			if err := grouper.Add(measurement, tags, timestamp, name, value); err != nil {
+				c.Log.Errorf("adding field %q to group failed: %v", name, err)
+			}
 		}
 		return
 	}
@@ -652,9 +668,11 @@ func (c *CiscoTelemetryMDT) Address() net.Addr {
 func (c *CiscoTelemetryMDT) Stop() {
 	if c.grpcServer != nil {
 		// Stop server and terminate all running dialout routines
+		//nolint:errcheck,revive // we cannot do anything if the stopping fails
 		c.grpcServer.Stop()
 	}
 	if c.listener != nil {
+		//nolint:errcheck,revive // we cannot do anything if the closing fails
 		c.listener.Close()
 	}
 	c.wg.Wait()

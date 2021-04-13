@@ -156,6 +156,7 @@ func TestServeHTTP(t *testing.T) {
 			defer wg.Done()
 			for m := range d {
 				ro.AddMetric(m)
+				//nolint:errcheck,revive // test will fail anyway if the write fails
 				ro.Write()
 			}
 		}(dst)

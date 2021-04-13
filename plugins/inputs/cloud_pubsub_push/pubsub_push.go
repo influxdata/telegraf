@@ -169,9 +169,13 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 	go func() {
 		defer p.wg.Done()
 		if tlsConf != nil {
-			p.server.ListenAndServeTLS("", "")
+			if err := p.server.ListenAndServeTLS("", ""); err != nil {
+				p.Log.Errorf("listening and serving TLS failed: %v", err)
+			}
 		} else {
-			p.server.ListenAndServe()
+			if err := p.server.ListenAndServe(); err != nil {
+				p.Log.Errorf("listening and serving TLS failed: %v", err)
+			}
 		}
 	}()
 
@@ -181,6 +185,7 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 // Stop cleans up all resources
 func (p *PubSubPush) Stop() {
 	p.cancel()
+	//nolint:errcheck,revive // we cannot do anything if the shutdown fails
 	p.server.Shutdown(p.ctx)
 	p.wg.Wait()
 }
