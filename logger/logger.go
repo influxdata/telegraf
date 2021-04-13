@@ -89,8 +89,8 @@ func (t *telegrafLog) Close() error {
 }
 
 // newTelegrafWriter returns a logging-wrapped writer.
-func newTelegrafWriter(w io.Writer, config LogConfig) (io.Writer, error) {
-	timezoneName := config.LogWithTimezone
+func newTelegrafWriter(w io.Writer, c LogConfig) (io.Writer, error) {
+	timezoneName := c.LogWithTimezone
 
 	if strings.ToLower(timezoneName) == "local" {
 		timezoneName = "Local"
