@@ -65,10 +65,8 @@ func TryAddState(runErr error, metrics []telegraf.Metric) ([]telegraf.Metric, er
 	f := map[string]interface{}{
 		"state": state,
 	}
-	m, err := metric.New("nagios_state", nil, f, ts)
-	if err != nil {
-		return metrics, err
-	}
+	m := metric.New("nagios_state", nil, f, ts)
+
 	metrics = append(metrics, m)
 	return metrics, nil
 }
@@ -166,12 +164,8 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		fields["long_service_output"] = longmsg.String()
 	}
 
-	m, err := metric.New("nagios_state", nil, fields, ts)
-	if err == nil {
-		metrics = append(metrics, m)
-	} else {
-		log.Printf("E! [parser.nagios] failed to add nagios_state: %s\n", err)
-	}
+	m := metric.New("nagios_state", nil, fields, ts)
+	metrics = append(metrics, m)
 
 	return metrics, nil
 }
@@ -247,12 +241,10 @@ func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, er
 		}
 
 		// Create metric
-		metric, err := metric.New("nagios", tags, fields, timestamp)
-		if err != nil {
-			return nil, err
-		}
+		m := metric.New("nagios", tags, fields, timestamp)
+
 		// Add Metric
-		metrics = append(metrics, metric)
+		metrics = append(metrics, m)
 	}
 
 	return metrics, nil

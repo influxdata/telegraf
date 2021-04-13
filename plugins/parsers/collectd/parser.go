@@ -156,11 +156,7 @@ func UnmarshalValueList(vl *api.ValueList, multiValue string) []telegraf.Metric 
 			}
 
 			// Drop invalid points
-			m, err := metric.New(name, tags, fields, timestamp)
-			if err != nil {
-				log.Printf("E! Dropping metric %v: %v", name, err)
-				continue
-			}
+			m := metric.New(name, tags, fields, timestamp)
 
 			metrics = append(metrics, m)
 		}
@@ -192,10 +188,7 @@ func UnmarshalValueList(vl *api.ValueList, multiValue string) []telegraf.Metric 
 			}
 		}
 
-		m, err := metric.New(name, tags, fields, timestamp)
-		if err != nil {
-			log.Printf("E! Dropping metric %v: %v", name, err)
-		}
+		m := metric.New(name, tags, fields, timestamp)
 
 		metrics = append(metrics, m)
 	default:

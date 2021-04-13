@@ -203,13 +203,12 @@ func Test_hashID(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		m, err := metric.New(
+		m := metric.New(
 			test.Name,
 			test.Tags,
 			test.Fields,
 			time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 		)
-		require.NoError(t, err)
 		if got := hashID(m); got != test.Want {
 			t.Errorf("test #%d: got=%d want=%d", i, got, test.Want)
 		}

@@ -14,7 +14,7 @@ import (
 const metricName = "m1"
 
 func createMetric(value int64, when time.Time) telegraf.Metric {
-	m, _ := metric.New(metricName,
+	m := metric.New(metricName,
 		map[string]string{"tag": "tag_value"},
 		map[string]interface{}{"value": value},
 		when,
@@ -162,7 +162,7 @@ func TestSameTimestamp(t *testing.T) {
 	var in telegraf.Metric
 	var out []telegraf.Metric
 
-	in, _ = metric.New("metric",
+	in = metric.New("metric",
 		map[string]string{"tag": "value"},
 		map[string]interface{}{"foo": 1}, // field
 		now,
@@ -170,7 +170,7 @@ func TestSameTimestamp(t *testing.T) {
 	out = dedup.Apply(in)
 	require.Equal(t, []telegraf.Metric{in}, out) // pass
 
-	in, _ = metric.New("metric",
+	in = metric.New("metric",
 		map[string]string{"tag": "value"},
 		map[string]interface{}{"bar": 1}, // different field
 		now,
@@ -178,7 +178,7 @@ func TestSameTimestamp(t *testing.T) {
 	out = dedup.Apply(in)
 	require.Equal(t, []telegraf.Metric{in}, out) // pass
 
-	in, _ = metric.New("metric",
+	in = metric.New("metric",
 		map[string]string{"tag": "value"},
 		map[string]interface{}{"bar": 2}, // same field different value
 		now,
@@ -186,7 +186,7 @@ func TestSameTimestamp(t *testing.T) {
 	out = dedup.Apply(in)
 	require.Equal(t, []telegraf.Metric{in}, out) // pass
 
-	in, _ = metric.New("metric",
+	in = metric.New("metric",
 		map[string]string{"tag": "value"},
 		map[string]interface{}{"bar": 2}, // same field same value
 		now,

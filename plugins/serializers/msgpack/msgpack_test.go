@@ -10,8 +10,7 @@ import (
 )
 
 func toTelegrafMetric(m Metric) telegraf.Metric {
-	tm, _ := metric.New(m.Name, m.Tags, m.Fields, m.Time.time)
-
+	tm := metric.New(m.Name, m.Tags, m.Fields, m.Time.time)
 	return tm
 }
 

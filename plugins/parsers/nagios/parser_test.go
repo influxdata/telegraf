@@ -74,10 +74,7 @@ func (b *metricBuilder) f(k string, v interface{}) *metricBuilder {
 }
 
 func (b *metricBuilder) b() telegraf.Metric {
-	m, err := metric.New(b.name, b.tags, b.fields, b.timestamp)
-	if err != nil {
-		panic(err)
-	}
+	m := metric.New(b.name, b.tags, b.fields, b.timestamp)
 	return m
 }
 

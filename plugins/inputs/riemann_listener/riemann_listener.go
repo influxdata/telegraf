@@ -221,13 +221,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			tags["State"] = m.State
 			fieldValues["Metric"] = m.Metric
 			fieldValues["TTL"] = m.TTL.Seconds()
-			singleMetric, err := metric.New(m.Service, tags, fieldValues, m.Time, telegraf.Untyped)
-			if err != nil {
-				rsl.Log.Debugf("Could not create metric for service %s at %s", m.Service, m.Time.String())
-				riemannReturnErrorResponse(conn, "Could not create metric")
-				return
-			}
-
+			singleMetric := metric.New(m.Service, tags, fieldValues, m.Time, telegraf.Untyped)
 			rsl.AddMetric(singleMetric)
 		}
 		riemannReturnResponse(conn)

@@ -599,7 +599,7 @@ func (a *AzureMonitor) Push() []telegraf.Metric {
 				tags[tag.name] = tag.value
 			}
 
-			m, err := metric.New(agg.name,
+			m := metric.New(agg.name,
 				tags,
 				map[string]interface{}{
 					"min":   agg.min,
@@ -609,10 +609,6 @@ func (a *AzureMonitor) Push() []telegraf.Metric {
 				},
 				tbucket,
 			)
-
-			if err != nil {
-				a.Log.Errorf("Could not create metric for aggregation %q; discarding point", agg.name)
-			}
 
 			metrics = append(metrics, m)
 		}
