@@ -48,6 +48,7 @@ type VSphere struct {
 	CustomAttributeExclude  []string
 	UseIntSamples           bool
 	IPAddresses             []string
+	MetricLookback          int
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
@@ -237,6 +238,12 @@ var sampleConfig = `
   # custom_attribute_include = []
   # custom_attribute_exclude = ["*"]
 
+  ## The number of vSphere 5 minute metric collection cycles to look back for non-realtime metrics. In 
+  ## some versions (6.7, 7.0 and possible more), certain metrics, such as cluster metrics, may be reported
+  ## with a significant delay (>30min). If this happens, try increasing this number. Please note that increasing
+  ## it too much may cause performance issues.
+  # metric_lookback = 3
+
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
   # ssl_cert = "/path/to/certfile"
@@ -363,6 +370,7 @@ func init() {
 			MaxQueryMetrics:         256,
 			CollectConcurrency:      1,
 			DiscoverConcurrency:     1,
+			MetricLookback:          3,
 			ForceDiscoverOnInit:     true,
 			ObjectDiscoveryInterval: config.Duration(time.Second * 300),
 			Timeout:                 config.Duration(time.Second * 60),

@@ -29,8 +29,6 @@ var isIPv4 = regexp.MustCompile("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$")
 
 var isIPv6 = regexp.MustCompile("^(?:[A-Fa-f0-9]{0,4}:){1,7}[A-Fa-f0-9]{1,4}$")
 
-const metricLookback = 3 // Number of time periods to look back at for non-realtime metrics
-
 const maxSampleConst = 10 // Absolute maximum number of samples regardless of period
 
 const maxMetadataSamples = 100 // Number of resources to sample for metric metadata
@@ -901,7 +899,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			}
 			start, ok := e.hwMarks.Get(object.ref.Value, metricName)
 			if !ok {
-				start = latest.Add(time.Duration(-res.sampling) * time.Second * (metricLookback - 1))
+				start = latest.Add(time.Duration(-res.sampling) * time.Second * (time.Duration(e.Parent.MetricLookback) - 1))
 			}
 			start = start.Truncate(20 * time.Second) // Truncate to maximum resolution
 
