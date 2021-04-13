@@ -27,6 +27,9 @@ executors:
 commands:
   check-changed-files-or-halt:
       steps:
+        - run: git diff master --name-only --no-color | grep -e "^(\.circleci\/.*)|(.*\.(go|mod|sum))|Makefile$" || circleci step halt
+  check-changed-files-or-halt-windows:
+      steps:
         - run: 
             command: git diff master --name-only --no-color | grep -e "^(\.circleci\/.*)|(.*\.(go|mod|sum))|Makefile$" || circleci step halt
             shell: bash.exe
@@ -133,7 +136,7 @@ jobs:
         shell: powershell.exe
     steps:
       - checkout
-      - check-changed-files-or-halt
+      - check-changed-files-or-halt-windows
       - run: choco upgrade golang --version=1.16.2
       - run: choco install make
       - run: git config --system core.longpaths true
