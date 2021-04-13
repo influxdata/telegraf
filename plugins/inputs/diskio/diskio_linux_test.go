@@ -19,7 +19,7 @@ S:foo/bar/devlink1
 `)
 
 // setupNullDisk sets up fake udev info as if /dev/null were a disk.
-func setupNullDisk(t *testing.T, s *DiskIO, devName string) func() error {
+func setupNullDisk(t *testing.T, s *DiskIO, devName string) func() {
 	td, err := ioutil.TempFile("", ".telegraf.DiskInfoTest")
 	require.NoError(t, err)
 
@@ -37,9 +37,10 @@ func setupNullDisk(t *testing.T, s *DiskIO, devName string) func() error {
 	}
 	origUdevPath := ic.udevDataPath
 
-	cleanFunc := func() error {
+	cleanFunc := func() {
 		ic.udevDataPath = origUdevPath
-		return os.Remove(td.Name())
+		//nolint:errcheck,revive // we cannot do anything if file cannot be removed
+		os.Remove(td.Name())
 	}
 
 	ic.udevDataPath = td.Name()
@@ -63,8 +64,7 @@ func TestDiskInfo(t *testing.T) {
 	assert.Equal(t, "/dev/foo/bar/devlink /dev/foo/bar/devlink1", di["DEVLINKS"])
 
 	// test that data is cached
-	err = clean()
-	require.NoError(t, err)
+	clean()
 
 	di, err = s.diskInfo("null")
 	require.NoError(t, err)

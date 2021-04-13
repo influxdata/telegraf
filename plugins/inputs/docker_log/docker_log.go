@@ -398,8 +398,11 @@ func tailMultiplexed(
 	}()
 
 	_, err := stdcopy.StdCopy(outWriter, errWriter, src)
+	//nolint:errcheck,revive // we cannot do anything if the closing fails
 	outWriter.Close()
+	//nolint:errcheck,revive // we cannot do anything if the closing fails
 	errWriter.Close()
+	//nolint:errcheck,revive // we cannot do anything if the closing fails
 	src.Close()
 	wg.Wait()
 	return err
