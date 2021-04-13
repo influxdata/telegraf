@@ -332,7 +332,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 
 // HandleTelemetryField and add it to a measurement
 func (c *GNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
-	path, aliasPath, err := c.handlePath(update.Path, tags, prefix)
+	gpath, aliasPath, err := c.handlePath(update.Path, tags, prefix)
 	if err != nil {
 		c.Log.Errorf("handling path %q failed: %v", update.Path, err)
 	}
@@ -342,7 +342,7 @@ func (c *GNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string,
 
 	// Make sure a value is actually set
 	if update.Val == nil || update.Val.Value == nil {
-		c.Log.Infof("Discarded empty or legacy type value with path: %q", path)
+		c.Log.Infof("Discarded empty or legacy type value with path: %q", gpath)
 		return aliasPath, nil
 	}
 
@@ -369,7 +369,7 @@ func (c *GNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string,
 		jsondata = val.JsonVal
 	}
 
-	name := strings.Replace(path, "-", "_", -1)
+	name := strings.Replace(gpath, "-", "_", -1)
 	fields := make(map[string]interface{})
 	if value != nil {
 		fields[name] = value

@@ -153,20 +153,22 @@ var counter = flag.Bool("counter", false,
 func TestMain(m *testing.M) {
 	flag.Parse()
 	if *counter {
-		runCounterProgram()
+		if err := runCounterProgram(); err != nil {
+			os.Exit(1)
+		}
 		os.Exit(0)
 	}
 	code := m.Run()
 	os.Exit(code)
 }
 
-func runCounterProgram() {
+func runCounterProgram() error {
 	i := 0
 	serializer, err := serializers.NewInfluxSerializer()
 	if err != nil {
 		//nolint:errcheck,revive // Test will fail anyway
 		fmt.Fprintln(os.Stderr, "ERR InfluxSerializer failed to load")
-		os.Exit(1)
+		return err
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -184,10 +186,11 @@ func runCounterProgram() {
 		if err != nil {
 			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
-			os.Exit(1)
+			return err
 		}
 		if _, err := fmt.Fprint(os.Stdout, string(b)); err != nil {
-			os.Exit(1)
+			return err
 		}
 	}
+	return nil
 }
