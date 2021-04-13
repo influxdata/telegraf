@@ -74,6 +74,17 @@ make test-all
 
 Use `make docker-kill` to stop the containers.
 
+### For more developer resources
+- [Code Style][codestyle]
+- [Deprecation][deprecation]
+- [Logging][logging]
+- [Metric Format Changes][metricformat]
+- [Packaging][packaging]
+- [Logging][logging]
+- [Packaging][packaging]
+- [Profiling][profiling]
+- [Reviews][reviews]
+- [Sample Config][sample config]  
 
 [cla]: https://www.influxdata.com/legal/cla/
 [new issue]: https://github.com/influxdata/telegraf/issues/new/choose
@@ -82,3 +93,11 @@ Use `make docker-kill` to stop the containers.
 [processors]: /docs/PROCESSORS.md
 [aggregators]: /docs/AGGREGATORS.md
 [outputs]: /docs/OUTPUTS.md
+[codestyle]: /docs/developers/CODE_STYLE.md
+[deprecation]: /docs/developers/DEPRECATION.md
+[logging]: /docs/developers/LOGGING.md
+[metricformat]: /docs/developers/METRIC_FORMAT_CHANGES.md
+[packaging]: /docs/developers/PACKAGING.md
+[profiling]: /docs/developers/PROFILING.md
+[reviews]: /docs/developers/REVIEWS.md
+[sample config]: /docs/developers/SAMPLE_CONFIG.md
