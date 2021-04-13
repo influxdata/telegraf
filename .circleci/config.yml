@@ -26,11 +26,8 @@ executors:
 
 commands:
   check-changed-files-or-halt:
-      parameters:
-        pattern:
-          type: string
       steps:
-        - run: git show -m HEAD --name-only --pretty="" | egrep -q '<< parameters.pattern >>' || circleci step halt
+        - run: git diff master --name-only --no-color | grep -e "^(\.circleci\/.*)|(.*\.(go|mod|sum))|Makefile$" || circleci step halt
   test-go:
     parameters:
       goarch:
@@ -38,6 +35,7 @@ commands:
         default: "amd64"
     steps:
       - checkout
+      - check-changed-files-or-halt
       - attach_workspace:
           at: '/go'
       - run: 'GOARCH=<< parameters.goarch >> make'
@@ -51,6 +49,7 @@ commands:
         default: false
     steps:
       - checkout
+      - check-changed-files-or-halt
       - attach_workspace:
           at: '/go'
       - when:
@@ -76,8 +75,7 @@ jobs:
       - checkout
       - restore_cache:
           key: go-mod-v1-{{ checksum "go.sum" }}
-      - check-changed-files-or-halt:
-          pattern: ^(config.yml)|(.go|mod|sum)|(Makefile)$
+      - check-changed-files-or-halt
       - run: 'make deps'
       - run: 'make tidy'
       - save_cache:
@@ -134,8 +132,7 @@ jobs:
         shell: powershell.exe
     steps:
       - checkout
-      - check-changed-files-or-halt:
-          pattern: ^(config.yml)|(.go|mod|sum)|(Makefile)$
+      - check-changed-files-or-halt
       - run: choco upgrade golang --version=1.16.2
       - run: choco install make
       - run: git config --system core.longpaths true
@@ -160,6 +157,7 @@ jobs:
         shell: powershell.exe
     steps:
       - checkout
+      - check-changed-files-or-halt
       - attach_workspace:
           at: '/build'
       - run:
@@ -184,6 +182,7 @@ jobs:
     shell: /bin/bash --login -o pipefail
     steps:
       - checkout
+      - check-changed-files-or-halt
       - attach_workspace:
           at: '.'
       - run:
