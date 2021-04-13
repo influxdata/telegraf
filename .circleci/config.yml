@@ -111,8 +111,7 @@ jobs:
       - checkout
       - restore_cache:
           key: mac-go-mod-v0-{{ checksum "go.sum" }}
-      - check-changed-files-or-halt:
-          pattern: ^(config.yml)|(.go|mod|sum)|(Makefile)$
+      - check-changed-files-or-halt
       - run: 'sh ./scripts/mac_installgo.sh'
       - save_cache:
           name: 'Saving cache'
