@@ -27,7 +27,9 @@ executors:
 commands:
   check-changed-files-or-halt:
       steps:
-        - run: git diff master --name-only --no-color | grep -e "^(\.circleci\/.*)|(.*\.(go|mod|sum))|Makefile$" || circleci step halt
+        - run: 
+            command: git diff master --name-only --no-color | grep -e "^(\.circleci\/.*)|(.*\.(go|mod|sum))|Makefile$" || circleci step halt
+            shell: bash.exe
   test-go:
     parameters:
       goarch:
