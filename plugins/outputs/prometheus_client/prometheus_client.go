@@ -35,7 +35,7 @@ var sampleConfig = `
   ## Prometheus format.  When using the prometheus input, use the same value in
   ## both plugins to ensure metrics are round-tripped without modification.
   ##
-  ##   example: metric_version = 1; deprecated in 1.13
+  ##   example: metric_version = 1;
   ##            metric_version = 2; recommended version
   # metric_version = 1
 
@@ -133,7 +133,6 @@ func (p *PrometheusClient) Init() error {
 	default:
 		fallthrough
 	case 1:
-		p.Log.Warnf("Use of deprecated configuration: metric_version = 1; please update to metric_version = 2")
 		p.collector = v1.NewCollector(time.Duration(p.ExpirationInterval), p.StringAsLabel, p.Log)
 		err := registry.Register(p.collector)
 		if err != nil {
