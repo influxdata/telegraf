@@ -1,3 +1,4 @@
+# Code Style
 Code is required to be formatted using `gofmt`, this covers most code style
 requirements.  It is also highly recommended to use `goimports` to
 automatically order imports.
