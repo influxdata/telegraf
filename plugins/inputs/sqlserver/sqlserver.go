@@ -2,6 +2,7 @@ package sqlserver
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -26,6 +27,8 @@ type SQLServer struct {
 	HealthMetric bool     `toml:"health_metric"`
 	pools        []*sql.DB
 	queries      MapQuery
+	adalToken    *adal.Token
+	muCacheLock  sync.RWMutex
 }
 
 // Query struct
@@ -35,12 +38,6 @@ type Query struct {
 	ResultByRow    bool
 	OrderedColumns []string
 }
-
-// var to cache ADAL MSI token
-var adalToken *adal.Token
-
-// var for mutual exclusion lock
-var muCacheLock sync.RWMutex
 
 // MapQuery type
 type MapQuery map[string]Query
@@ -67,6 +64,9 @@ const (
 	healthMetricSuccessfulQueries = "successful_queries"
 	healthMetricDatabaseType      = "database_type"
 )
+
+// resource id for Azure SQL Database
+const sqlAzureResourceID = "https://database.windows.net/"
 
 const sampleConfig = `
 ## Specify instances to monitor with a list of connection strings.
@@ -281,7 +281,7 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 	}
 
 	// initialize mutual exclusion lock
-	muCacheLock = sync.RWMutex{}
+	s.muCacheLock = sync.RWMutex{}
 
 	for _, serv := range s.Servers {
 		var pool *sql.DB
@@ -296,29 +296,29 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 
 			if err != nil {
 				acc.AddError(err)
-				return err
+				continue
 			}
 		} else {
 			// otherwise assume AAD Auth with system-assigned managed identity (MSI)
 
 			// AAD Auth is only supported for Azure SQL Database or Azure SQL Managed Instance
 			if s.DatabaseType == "SQLServer" {
-				return fmt.Errorf("Database connection failed : AAD auth is not supported for SQL VM i.e. DatabaseType=SQLServer")
+				er := errors.New("database connection failed : AAD auth is not supported for SQL VM i.e. DatabaseType=SQLServer")
+				acc.AddError(er)
+				continue
 			}
 
-			// get token from im-memory cache variable or from Azure Active Directory
-			tokenProvider, err := getTokenProvider()
+			// get token from in-memory cache variable or from Azure Active Directory
+			tokenProvider, err := s.getTokenProvider()
 			if err != nil {
-				fmt.Printf("Error creating AAD token provider for system assigned Azure managed identity : %s", err.Error())
-				acc.AddError(err)
-				return err
+				acc.AddError(fmt.Errorf("error creating AAD token provider for system assigned Azure managed identity : %s", err.Error()))
+				continue
 			}
 
 			connector, err := mssql.NewAccessTokenConnector(serv, tokenProvider)
 			if err != nil {
-				fmt.Printf("Error creating the SQL connector : %s", err.Error())
-				acc.AddError(err)
-				return err
+				acc.AddError(fmt.Errorf("error creating the SQL connector : %s", err.Error()))
+				continue
 			}
 
 			pool = sql.OpenDB(connector)
@@ -341,8 +341,7 @@ func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumul
 	// execute query
 	rows, err := pool.Query(query.Script)
 	if err != nil {
-		return fmt.Errorf("Script %s failed: %w", query.ScriptName, err)
-		//return   err
+		return fmt.Errorf("script %s failed: %w", query.ScriptName, err)
 	}
 	defer rows.Close()
 
@@ -465,26 +464,27 @@ func (s *SQLServer) Init() error {
 }
 
 // Get Token Provider by loading cached token or refreshed token
-func getTokenProvider() (func() (string, error), error) {
+func (s *SQLServer) getTokenProvider() (func() (string, error), error) {
 	var tokenString string
 
 	// load token
-	muCacheLock.RLock()
-	token, err := loadToken()
-	muCacheLock.RUnlock()
+	s.muCacheLock.RLock()
+	token, err := s.loadToken()
+	s.muCacheLock.RUnlock()
 
 	// if there's error while loading token or found an expired token, refresh token and save it
 	if err != nil || token.IsExpired() {
 		// refresh token within a write-lock
-		muCacheLock.Lock()
+		s.muCacheLock.Lock()
+		defer s.muCacheLock.Unlock()
 
 		// load token again, in case it's been refreshed by another thread
-		token, err = loadToken()
+		token, err = s.loadToken()
 
 		// check loaded token's error/validity, then refresh/save token
 		if err != nil || token.IsExpired() {
 			// get new token
-			spt, err := refreshToken()
+			spt, err := s.refreshToken()
 			if err != nil {
 				return nil, err
 			}
@@ -495,8 +495,6 @@ func getTokenProvider() (func() (string, error), error) {
 			// use locally cached token
 			tokenString = token.OAuthToken()
 		}
-
-		muCacheLock.Unlock()
 	} else {
 		// use locally cached token
 		tokenString = token.OAuthToken()
@@ -509,19 +507,16 @@ func getTokenProvider() (func() (string, error), error) {
 }
 
 // Load token from in-mem cache
-func loadToken() (*adal.Token, error) {
-	if adalToken == nil {
-		return nil, fmt.Errorf("Token is nil or Failed to load existing token")
+func (s *SQLServer) loadToken() (*adal.Token, error) {
+	if s.adalToken == nil {
+		return nil, fmt.Errorf("token is nil or failed to load existing token")
 	}
 
-	return adalToken, nil
+	return s.adalToken, nil
 }
 
 // Refresh token for the resource, and save to in-mem cache
-func refreshToken() (*adal.Token, error) {
-	// resource id for Azure SQL Database
-	const sqlAzureResourceID = "https://database.windows.net/"
-
+func (s *SQLServer) refreshToken() (*adal.Token, error) {
 	// get MSI endpoint to get a token
 	msiEndpoint, err := adal.GetMSIVMEndpoint()
 	if err != nil {
@@ -541,7 +536,7 @@ func refreshToken() (*adal.Token, error) {
 	}
 
 	// save token to local in-mem cache
-	adalToken = &adal.Token{
+	s.adalToken = &adal.Token{
 		AccessToken:  spt.Token().AccessToken,
 		RefreshToken: spt.Token().RefreshToken,
 		ExpiresIn:    spt.Token().ExpiresIn,
@@ -551,7 +546,7 @@ func refreshToken() (*adal.Token, error) {
 		Type:         spt.Token().Type,
 	}
 
-	return adalToken, nil
+	return s.adalToken, nil
 }
 
 func init() {
