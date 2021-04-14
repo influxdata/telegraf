@@ -359,14 +359,14 @@ var agentConfig = `
   ## If set to -1, no archives are removed.
   # logfile_rotation_max_archives = 5
 
-  ## Inidicates whether or not to use local time as the logging prefix.
-  # log_with_local_time = false
+  ## Pick a timezone to use when logging or type 'local' for local time.
+  ## Example: America/Chicago
+  # log_with_timezone = ""
 
   ## Override default hostname, if empty use os.Hostname()
   hostname = ""
   ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
-
 `
 
 var outputHeader = `

@@ -220,7 +220,7 @@ The agent table configures Telegraf and the defaults used across all plugins.
   set to -1, no archives are removed.
 
 - **log_with_timezone**:
-  Pick a timezone to use when logging or type 'local' for local time.
+  Pick a timezone to use when logging or type 'local' for local time. Example: 'America/Chicago'.
   [See this page for options/formats.](https://socketloop.com/tutorials/golang-display-list-of-timezones-with-gmt)
 
 - **hostname**:
