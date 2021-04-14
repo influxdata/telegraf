@@ -303,8 +303,8 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 
 			// AAD Auth is only supported for Azure SQL Database or Azure SQL Managed Instance
 			if s.DatabaseType == "SQLServer" {
-				er := errors.New("database connection failed : AAD auth is not supported for SQL VM i.e. DatabaseType=SQLServer")
-				acc.AddError(er)
+				err := errors.New("database connection failed : AAD auth is not supported for SQL VM i.e. DatabaseType=SQLServer")
+				acc.AddError(err)
 				continue
 			}
 
@@ -508,6 +508,9 @@ func (s *SQLServer) getTokenProvider() (func() (string, error), error) {
 
 // Load token from in-mem cache
 func (s *SQLServer) loadToken() (*adal.Token, error) {
+	// This method currently does a simplistic task of reading a from variable (in-mem cache),
+	// however it's been structured here to allow extending the cache mechanism to a different approach in future
+
 	if s.adalToken == nil {
 		return nil, fmt.Errorf("token is nil or failed to load existing token")
 	}
