@@ -51,7 +51,7 @@ def apply(metric):
         produce_pairs(new_metric, str_keys, "str", key=True)
         produce_pairs(new_metric, str_vals, "str")
 
-
+    new_metric.time = metric.time
     return new_metric
 
 def produce_pairs(metric, li, field_type, key=False):
