@@ -9,7 +9,8 @@ import (
 	"sort"
 	"time"
 
-	mb "github.com/goburrow/modbus"
+	"github.com/grid-x/modbus"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
@@ -36,10 +37,10 @@ type Modbus struct {
 	Log              telegraf.Logger  `toml:"-"`
 	registers        []register
 	isConnected      bool
-	tcpHandler       *mb.TCPClientHandler
-	rtuHandler       *mb.RTUClientHandler
-	asciiHandler     *mb.ASCIIClientHandler
-	client           mb.Client
+	tcpHandler       *modbus.TCPClientHandler
+	rtuHandler       *modbus.RTUClientHandler
+	asciiHandler     *modbus.ASCIIClientHandler
+	client           modbus.Client
 }
 
 type register struct {
@@ -263,10 +264,10 @@ func connect(m *Modbus) error {
 		if err != nil {
 			return err
 		}
-		m.tcpHandler = mb.NewTCPClientHandler(host + ":" + port)
+		m.tcpHandler = modbus.NewTCPClientHandler(host + ":" + port)
 		m.tcpHandler.Timeout = time.Duration(m.Timeout)
-		m.tcpHandler.SlaveId = byte(m.SlaveID)
-		m.client = mb.NewClient(m.tcpHandler)
+		m.tcpHandler.SlaveID = byte(m.SlaveID)
+		m.client = modbus.NewClient(m.tcpHandler)
 		err := m.tcpHandler.Connect()
 		if err != nil {
 			return err
@@ -275,14 +276,14 @@ func connect(m *Modbus) error {
 		return nil
 	case "file":
 		if m.TransmissionMode == "RTU" {
-			m.rtuHandler = mb.NewRTUClientHandler(u.Path)
+			m.rtuHandler = modbus.NewRTUClientHandler(u.Path)
 			m.rtuHandler.Timeout = time.Duration(m.Timeout)
-			m.rtuHandler.SlaveId = byte(m.SlaveID)
+			m.rtuHandler.SlaveID = byte(m.SlaveID)
 			m.rtuHandler.BaudRate = m.BaudRate
 			m.rtuHandler.DataBits = m.DataBits
 			m.rtuHandler.Parity = m.Parity
 			m.rtuHandler.StopBits = m.StopBits
-			m.client = mb.NewClient(m.rtuHandler)
+			m.client = modbus.NewClient(m.rtuHandler)
 			err := m.rtuHandler.Connect()
 			if err != nil {
 				return err
@@ -290,14 +291,14 @@ func connect(m *Modbus) error {
 			m.isConnected = true
 			return nil
 		} else if m.TransmissionMode == "ASCII" {
-			m.asciiHandler = mb.NewASCIIClientHandler(u.Path)
+			m.asciiHandler = modbus.NewASCIIClientHandler(u.Path)
 			m.asciiHandler.Timeout = time.Duration(m.Timeout)
-			m.asciiHandler.SlaveId = byte(m.SlaveID)
+			m.asciiHandler.SlaveID = byte(m.SlaveID)
 			m.asciiHandler.BaudRate = m.BaudRate
 			m.asciiHandler.DataBits = m.DataBits
 			m.asciiHandler.Parity = m.Parity
 			m.asciiHandler.StopBits = m.StopBits
-			m.client = mb.NewClient(m.asciiHandler)
+			m.client = modbus.NewClient(m.asciiHandler)
 			err := m.asciiHandler.Connect()
 			if err != nil {
 				return err
@@ -676,8 +677,8 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		timestamp = time.Now()
 		err := m.getFields()
 		if err != nil {
-			mberr, ok := err.(*mb.ModbusError)
-			if ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
+			mberr, ok := err.(*modbus.Error)
+			if ok && mberr.ExceptionCode == modbus.ExceptionCodeServerDeviceBusy && retry < m.Retries {
 				m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
 				time.Sleep(time.Duration(m.RetriesWaitTime))
 				continue

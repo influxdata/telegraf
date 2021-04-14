@@ -71,7 +71,7 @@ following works:
 - github.com/go-redis/redis [BSD 2-Clause "Simplified" License](https://github.com/go-redis/redis/blob/master/LICENSE)
 - github.com/go-sql-driver/mysql [Mozilla Public License 2.0](https://github.com/go-sql-driver/mysql/blob/master/LICENSE)
 - github.com/go-stack/stack [MIT License](https://github.com/go-stack/stack/blob/master/LICENSE.md)
-- github.com/goburrow/modbus [BSD 3-Clause "New" or "Revised" License](https://github.com/goburrow/modbus/blob/master/LICENSE)
+- github.com/grid-x/modbus [BSD 3-Clause "New" or "Revised" License](https://github.com/grid-x/modbus/blob/master/LICENSE)
 - github.com/goburrow/serial [MIT License](https://github.com/goburrow/serial/LICENSE)
 - github.com/gobwas/glob [MIT License](https://github.com/gobwas/glob/blob/master/LICENSE)
 - github.com/gofrs/uuid [MIT License](https://github.com/gofrs/uuid/blob/master/LICENSE)
