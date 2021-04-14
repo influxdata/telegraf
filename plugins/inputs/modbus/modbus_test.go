@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/grid-x/modbus"
+	mb "github.com/grid-x/modbus"
 	"github.com/stretchr/testify/assert"
 	"github.com/tbrandon/mbserver"
 
@@ -82,11 +82,11 @@ func TestCoils(t *testing.T) {
 	defer serv.Close()
 	assert.NoError(t, err)
 
-	handler := modbus.NewTCPClientHandler("localhost:1502")
+	handler := mb.NewTCPClientHandler("localhost:1502")
 	err = handler.Connect()
 	assert.NoError(t, err)
 	defer handler.Close()
-	client := modbus.NewClient(handler)
+	client := mb.NewClient(handler)
 
 	for _, ct := range coilTests {
 		t.Run(ct.name, func(t *testing.T) {
@@ -618,11 +618,11 @@ func TestHoldingRegisters(t *testing.T) {
 	defer serv.Close()
 	assert.NoError(t, err)
 
-	handler := modbus.NewTCPClientHandler("localhost:1502")
+	handler := mb.NewTCPClientHandler("localhost:1502")
 	err = handler.Connect()
 	assert.NoError(t, err)
 	defer handler.Close()
-	client := modbus.NewClient(handler)
+	client := mb.NewClient(handler)
 
 	for _, hrt := range holdingRegisterTests {
 		t.Run(hrt.name, func(t *testing.T) {
@@ -664,11 +664,11 @@ func TestReadMultipleCoilLimit(t *testing.T) {
 	assert.NoError(t, err)
 	defer serv.Close()
 
-	handler := modbus.NewTCPClientHandler("localhost:1502")
+	handler := mb.NewTCPClientHandler("localhost:1502")
 	err = handler.Connect()
 	assert.NoError(t, err)
 	defer handler.Close()
-	client := modbus.NewClient(handler)
+	client := mb.NewClient(handler)
 
 	fcs := []fieldContainer{}
 	writeValue := uint16(0)
@@ -714,11 +714,11 @@ func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
 	assert.NoError(t, err)
 	defer serv.Close()
 
-	handler := modbus.NewTCPClientHandler("localhost:1502")
+	handler := mb.NewTCPClientHandler("localhost:1502")
 	err = handler.Connect()
 	assert.NoError(t, err)
 	defer handler.Close()
-	client := modbus.NewClient(handler)
+	client := mb.NewClient(handler)
 
 	fcs := []fieldContainer{}
 	for i := 0; i <= 400; i++ {
