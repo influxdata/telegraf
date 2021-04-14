@@ -530,8 +530,7 @@ func (s *SQLServer) refreshToken() (*adal.Token, error) {
 	}
 
 	// ensure token is fresh
-	err = spt.EnsureFresh()
-	if err != nil {
+	if err := spt.EnsureFresh(); err != nil {
 		return nil, err
 	}
 
