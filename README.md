@@ -244,6 +244,7 @@ For documentation on the latest development code see the [documentation index][d
 * [mailchimp](./plugins/inputs/mailchimp)
 * [marklogic](./plugins/inputs/marklogic)
 * [mcrouter](./plugins/inputs/mcrouter)
+* [mdstat](./plugins/inputs/mdstat)
 * [memcached](./plugins/inputs/memcached)
 * [mem](./plugins/inputs/mem)
 * [mesos](./plugins/inputs/mesos)
