@@ -646,7 +646,7 @@ func (f *metricCache) isValid() bool {
 
 func hasWildcard(dimensions []*Dimension) bool {
 	for _, d := range dimensions {
-		if strings.ContainsAny(d.Value, "*?[") {
+		if d.Value == "" || strings.ContainsAny(d.Value, "*?[") {
 			return true
 		}
 	}
