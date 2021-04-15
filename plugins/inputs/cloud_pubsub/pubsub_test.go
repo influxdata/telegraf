@@ -207,7 +207,7 @@ func TestRunErrorInSubscriber(t *testing.T) {
 		messages: make(chan *testMsg, 100),
 	}
 	fakeErrStr := "a fake error"
-	sub.receiver = testMessagesError(sub, errors.New("a fake error"))
+	sub.receiver = testMessagesError(errors.New("a fake error"))
 
 	ps := &PubSub{
 		Log:                      testutil.Logger{},

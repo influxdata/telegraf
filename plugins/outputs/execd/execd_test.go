@@ -55,13 +55,12 @@ func TestExternalOutputWorks(t *testing.T) {
 		wg.Done()
 	}
 
-	m, err := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{"name": "cpu1"},
 		map[string]interface{}{"idle": 50, "sys": 30},
 		now,
 	)
-	require.NoError(t, err)
 
 	require.NoError(t, e.Connect())
 	require.NoError(t, e.Write([]telegraf.Metric{m}))

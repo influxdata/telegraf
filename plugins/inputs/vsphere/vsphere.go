@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/vmware/govmomi/vim25/soap"
@@ -48,14 +48,15 @@ type VSphere struct {
 	CustomAttributeExclude  []string
 	UseIntSamples           bool
 	IPAddresses             []string
+	MetricLookback          int
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
 	CollectConcurrency      int
 	DiscoverConcurrency     int
 	ForceDiscoverOnInit     bool
-	ObjectDiscoveryInterval internal.Duration
-	Timeout                 internal.Duration
+	ObjectDiscoveryInterval config.Duration
+	Timeout                 config.Duration
 
 	endpoints []*Endpoint
 	cancel    context.CancelFunc
@@ -237,6 +238,12 @@ var sampleConfig = `
   # custom_attribute_include = []
   # custom_attribute_exclude = ["*"]
 
+  ## The number of vSphere 5 minute metric collection cycles to look back for non-realtime metrics. In 
+  ## some versions (6.7, 7.0 and possible more), certain metrics, such as cluster metrics, may be reported
+  ## with a significant delay (>30min). If this happens, try increasing this number. Please note that increasing
+  ## it too much may cause performance issues.
+  # metric_lookback = 3
+
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
   # ssl_cert = "/path/to/certfile"
@@ -258,7 +265,7 @@ func (v *VSphere) Description() string {
 
 // Start is called from telegraf core when a plugin is started and allows it to
 // perform initialization tasks.
-func (v *VSphere) Start(acc telegraf.Accumulator) error {
+func (v *VSphere) Start(_ telegraf.Accumulator) error {
 	v.Log.Info("Starting plugin")
 	ctx, cancel := context.WithCancel(context.Background())
 	v.cancel = cancel
@@ -315,7 +322,6 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := endpoint.Collect(context.Background(), acc)
 			if err == context.Canceled {
-
 				// No need to signal errors if we were merely canceled.
 				err = nil
 			}
@@ -364,9 +370,10 @@ func init() {
 			MaxQueryMetrics:         256,
 			CollectConcurrency:      1,
 			DiscoverConcurrency:     1,
+			MetricLookback:          3,
 			ForceDiscoverOnInit:     true,
-			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
-			Timeout:                 internal.Duration{Duration: time.Second * 60},
+			ObjectDiscoveryInterval: config.Duration(time.Second * 300),
+			Timeout:                 config.Duration(time.Second * 60),
 		}
 	})
 }

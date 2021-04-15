@@ -24,7 +24,7 @@ func setupNullDisk(t *testing.T, s *DiskIO, devName string) func() error {
 	require.NoError(t, err)
 
 	if s.infoCache == nil {
-		s.infoCache = make(map[string]diskInfoCache, 0)
+		s.infoCache = make(map[string]diskInfoCache)
 	}
 	ic, ok := s.infoCache[devName]
 	if !ok {
@@ -71,7 +71,6 @@ func TestDiskInfo(t *testing.T) {
 	assert.Equal(t, "myval1", di["MY_PARAM_1"])
 	assert.Equal(t, "myval2", di["MY_PARAM_2"])
 	assert.Equal(t, "/dev/foo/bar/devlink /dev/foo/bar/devlink1", di["DEVLINKS"])
-
 	// unfortunately we can't adjust mtime on /dev/null to test cache invalidation
 }
 

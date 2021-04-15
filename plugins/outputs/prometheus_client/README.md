@@ -14,7 +14,7 @@ all metrics on `/metrics` (default) to be polled by a Prometheus server.
   ## Prometheus format.  When using the prometheus input, use the same value in
   ## both plugins to ensure metrics are round-tripped without modification.
   ##
-  ##   example: metric_version = 1; deprecated in 1.13
+  ##   example: metric_version = 1;
   ##            metric_version = 2; recommended version
   # metric_version = 1
 

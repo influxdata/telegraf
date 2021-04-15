@@ -55,7 +55,10 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, vserver := range ts.VirtualServers {
-		ts.client.Use(vserver)
+		if err := ts.client.Use(vserver); err != nil {
+			ts.connected = false
+			return err
+		}
 
 		sm, err := ts.client.Server.Info()
 		if err != nil {
@@ -83,6 +86,7 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 			"packets_received_total": sc.PacketsReceivedTotal,
 			"bytes_sent_total":       sc.BytesSentTotal,
 			"bytes_received_total":   sc.BytesReceivedTotal,
+			"query_clients_online":   sm.QueryClientsOnline,
 		}
 
 		acc.AddFields("teamspeak", fields, tags)

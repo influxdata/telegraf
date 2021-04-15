@@ -1,14 +1,13 @@
 package shim
 
 import (
-	"bufio"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -37,12 +36,7 @@ func (s *Shim) RunProcessor() error {
 	acc := agent.NewAccumulator(s, s.metricCh)
 	acc.SetPrecision(time.Nanosecond)
 
-	parser, err := parsers.NewInfluxParser()
-	if err != nil {
-		return fmt.Errorf("Failed to create new parser: %w", err)
-	}
-
-	err = s.Processor.Start(acc)
+	err := s.Processor.Start(acc)
 	if err != nil {
 		return fmt.Errorf("failed to start processor: %w", err)
 	}
@@ -54,13 +48,21 @@ func (s *Shim) RunProcessor() error {
 		wg.Done()
 	}()
 
-	scanner := bufio.NewScanner(s.stdin)
-	for scanner.Scan() {
-		m, err := parser.ParseLine(scanner.Text())
+	parser := influx.NewStreamParser(s.stdin)
+	for {
+		m, err := parser.Next()
 		if err != nil {
-			fmt.Fprintf(s.stderr, "Failed to parse metric: %s\b", err)
+			if err == influx.EOF {
+				break // stream ended
+			}
+			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
+				fmt.Fprintf(s.stderr, "Failed to parse metric: %s\b", parseErr)
+				continue
+			}
+			fmt.Fprintf(s.stderr, "Failure during reading stdin: %s\b", err)
 			continue
 		}
+
 		s.Processor.Add(m, acc)
 	}
 

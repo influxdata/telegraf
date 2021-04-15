@@ -1,12 +1,12 @@
 # SQL Server Input Plugin
-The `sqlserver` plugin provides metrics for your SQL Server instance. It
-currently works with SQL Server 2008 SP3 and newer. Recorded metrics are
+The `sqlserver` plugin provides metrics for your SQL Server instance. Recorded metrics are
 lightweight and use Dynamic Management Views supplied by SQL Server.
 
 ### The SQL Server plugin supports the following editions/versions of SQL Server
 - SQL Server
-  - 2008 SP3 (with CU3)
-  - SQL Server 2008 R2 SP3 and newer versions
+  - 2012 or newer (Plugin support aligned with the [official Microsoft SQL Server support](https://docs.microsoft.com/en-us/sql/sql-server/end-of-support/sql-server-end-of-life-overview?view=sql-server-ver15#lifecycle-dates))
+  - End-of-life SQL Server versions are not guaranteed to be supported by Telegraf. Any issues with the SQL Server plugin for these EOL versions will 
+  need to be addressed by the community. 
 - Azure SQL Database (Single)
 - Azure SQL Managed Instance
 
@@ -100,6 +100,12 @@ GO
 
   ## If you are using AzureDB, setting this to true will gather resource utilization metrics
   # azuredb = false
+
+  ## Toggling this to true will emit an additional metric called "sqlserver_telegraf_health". 
+  ## This metric tracks the count of attempted queries and successful queries for each SQL instance specified in "servers". 
+  ## The purpose of this metric is to assist with identifying and diagnosing any connectivity or query issues. 
+  ## This setting/metric is optional and is disabled by default.
+  # health_metric = false
 
   ## Possible queries accross different versions of the collectors
   ## Queries enabled by default for specific Database Type
@@ -322,5 +328,21 @@ The following Performance counter metrics can be used directly, with no delta ca
 Version 2 queries have the following tags:
 - `sql_instance`: Physical host and instance name (hostname:instance)
 - `database_name`:  For Azure SQLDB, database_name denotes the name of the Azure SQL Database as server name is a logical construct.
+
+#### Health Metric
+All collection versions (version 1, version 2, and database_type) support an optional plugin health metric called `sqlserver_telegraf_health`. This metric tracks if connections to SQL Server are succeeding or failing. Users can leverage this metric to detect if their SQL Server monitoring is not working as intended.
+
+In the configuration file, toggling `health_metric` to `true` will enable collection of this metric. By default, this value is set to `false` and the metric is not collected. The health metric emits one record for each connection specified by `servers` in the configuration file.
+
+The health metric emits the following tags:
+- `sql_instance` - Name of the server specified in the connection string. This value is emitted as-is in the connection string. If the server could not be parsed from the connection string, a constant placeholder value is emitted
+- `database_name` -  Name of the database or (initial catalog) specified in the connection string. This value is emitted as-is in the connection string. If the database could not be parsed from the connection string, a constant placeholder value is emitted
+
+The health metric emits the following fields:
+- `attempted_queries` - Number of queries that were attempted for this connection
+- `successful_queries` - Number of queries that completed successfully for this connection
+- `database_type` - Type of database as specified by `database_type`. If `database_type` is empty, the `QueryVersion` and `AzureDB` fields are concatenated instead
+
+If `attempted_queries` and `successful_queries` are not equal for a given connection, some metrics were not successfully gathered for that connection. If `successful_queries` is 0, no metrics were successfully gathered.
 
 [cardinality]: /docs/FAQ.md#user-content-q-how-can-i-manage-series-cardinality

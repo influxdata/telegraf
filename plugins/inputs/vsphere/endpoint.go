@@ -29,17 +29,13 @@ var isIPv4 = regexp.MustCompile("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$")
 
 var isIPv6 = regexp.MustCompile("^(?:[A-Fa-f0-9]{0,4}:){1,7}[A-Fa-f0-9]{1,4}$")
 
-const metricLookback = 3 // Number of time periods to look back at for non-realtime metrics
-
-const rtMetricLookback = 3 // Number of time periods to look back at for realtime metrics
-
 const maxSampleConst = 10 // Absolute maximum number of samples regardless of period
 
 const maxMetadataSamples = 100 // Number of resources to sample for metric metadata
 
 const maxRealtimeMetrics = 50000 // Absolute maximum metrics per realtime query
 
-const hwMarkTTL = time.Duration(4 * time.Hour)
+const hwMarkTTL = 4 * time.Hour
 
 type queryChunk []types.PerfQuerySpec
 
@@ -126,7 +122,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL, log telegra
 		hwMarks:           NewTSCache(hwMarkTTL),
 		lun2ds:            make(map[string]string),
 		initialized:       false,
-		clientFactory:     NewClientFactory(ctx, url, parent),
+		clientFactory:     NewClientFactory(url, parent),
 		customAttrFilter:  newFilterOrPanic(parent.CustomAttributeInclude, parent.CustomAttributeExclude),
 		customAttrEnabled: anythingEnabled(parent.CustomAttributeExclude),
 		log:               log,
@@ -260,7 +256,7 @@ func isSimple(include []string, exclude []string) bool {
 }
 
 func (e *Endpoint) startDiscovery(ctx context.Context) {
-	e.discoveryTicker = time.NewTicker(e.Parent.ObjectDiscoveryInterval.Duration)
+	e.discoveryTicker = time.NewTicker(time.Duration(e.Parent.ObjectDiscoveryInterval))
 	go func() {
 		for {
 			select {
@@ -302,7 +298,7 @@ func (e *Endpoint) init(ctx context.Context) error {
 		}
 	}
 
-	if e.Parent.ObjectDiscoveryInterval.Duration > 0 {
+	if time.Duration(e.Parent.ObjectDiscoveryInterval) > 0 {
 		e.Parent.Log.Debug("Running initial discovery")
 		e.initalDiscovery(ctx)
 	}
@@ -341,7 +337,7 @@ func (e *Endpoint) getMetadata(ctx context.Context, obj *objectRef, sampling int
 		return nil, err
 	}
 
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
 	metrics, err := client.Perf.AvailableMetric(ctx1, obj.ref.Reference(), sampling)
 	if err != nil {
@@ -369,7 +365,7 @@ func (e *Endpoint) getAncestorName(ctx context.Context, client *Client, resource
 			path = append(path, here.Reference().String())
 			o := object.NewCommon(client.Client.Client, r)
 			var result mo.ManagedEntity
-			ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+			ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 			defer cancel1()
 			err := o.Properties(ctx1, here, []string{"parent", "name"}, &result)
 			if err != nil {
@@ -431,7 +427,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 				paths:        res.paths,
 				excludePaths: res.excludePaths}
 
-			ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+			ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 			objects, err := res.getObjects(ctx1, e, &rf)
 			cancel1()
 			if err != nil {
@@ -590,7 +586,7 @@ func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 
 func getDatacenters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.Datacenter
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
 	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
@@ -611,7 +607,7 @@ func getDatacenters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (o
 
 func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.ClusterComputeResource
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
 	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
@@ -625,7 +621,7 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 			// We're not interested in the immediate parent (a folder), but the data center.
 			p, ok := cache[r.Parent.Value]
 			if !ok {
-				ctx2, cancel2 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+				ctx2, cancel2 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 				defer cancel2()
 				client, err := e.clientFactory.GetClient(ctx2)
 				if err != nil {
@@ -633,7 +629,7 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 				}
 				o := object.NewFolder(client.Client.Client, *r.Parent)
 				var folder mo.Folder
-				ctx3, cancel3 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+				ctx3, cancel3 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 				defer cancel3()
 				err = o.Properties(ctx3, *r.Parent, []string{"parent"}, &folder)
 				if err != nil {
@@ -681,7 +677,7 @@ func getHosts(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectM
 
 func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.VirtualMachine
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
 	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
@@ -771,7 +767,7 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 
 func getDatastores(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.Datastore
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
 	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
@@ -827,7 +823,6 @@ func (e *Endpoint) Close() {
 
 // Collect runs a round of data collections as specified in the configuration.
 func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error {
-
 	// If we never managed to do a discovery, collection will be a no-op. Therefore,
 	// we need to check that a connection is available, or the collection will
 	// silently fail.
@@ -843,7 +838,7 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 	}
 
 	// If discovery interval is disabled (0), discover on each collection cycle
-	if e.Parent.ObjectDiscoveryInterval.Duration == 0 {
+	if time.Duration(e.Parent.ObjectDiscoveryInterval) == 0 {
 		err := e.discover(ctx)
 		if err != nil {
 			return err
@@ -876,7 +871,7 @@ func submitChunkJob(ctx context.Context, te *ThrottledExecutor, job queryJob, pq
 	})
 }
 
-func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Time, latest time.Time, acc telegraf.Accumulator, job queryJob) {
+func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Time, latest time.Time, job queryJob) {
 	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
 	maxMetrics := e.Parent.MaxQueryMetrics
 	if maxMetrics < 1 {
@@ -894,9 +889,8 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 	numQs := 0
 
 	for _, object := range res.objects {
-		timeBuckets := make(map[int64]*types.PerfQuerySpec, 0)
+		timeBuckets := make(map[int64]*types.PerfQuerySpec)
 		for metricIdx, metric := range res.metrics {
-
 			// Determine time of last successful collection
 			metricName := e.getMetricNameForID(metric.CounterId)
 			if metricName == "" {
@@ -905,7 +899,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			}
 			start, ok := e.hwMarks.Get(object.ref.Value, metricName)
 			if !ok {
-				start = latest.Add(time.Duration(-res.sampling) * time.Second * (metricLookback - 1))
+				start = latest.Add(time.Duration(-res.sampling) * time.Second * (time.Duration(e.Parent.MetricLookback) - 1))
 			}
 			start = start.Truncate(20 * time.Second) // Truncate to maximum resolution
 
@@ -1019,9 +1013,9 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	latestSample := time.Time{}
 
 	// Divide workload into chunks and process them concurrently
-	e.chunkify(ctx, res, now, latest, acc,
+	e.chunkify(ctx, res, now, latest,
 		func(chunk queryChunk) {
-			n, localLatest, err := e.collectChunk(ctx, chunk, res, acc, now, estInterval)
+			n, localLatest, err := e.collectChunk(ctx, chunk, res, acc, estInterval)
 			e.log.Debugf("CollectChunk for %s returned %d metrics", resourceType, n)
 			if err != nil {
 				acc.AddError(errors.New("while collecting " + res.name + ": " + err.Error()))
@@ -1083,7 +1077,7 @@ func (e *Endpoint) alignSamples(info []types.PerfSampleInfo, values []int64, int
 	return rInfo, rValues
 }
 
-func (e *Endpoint) collectChunk(ctx context.Context, pqs queryChunk, res *resourceKind, acc telegraf.Accumulator, now time.Time, interval time.Duration) (int, time.Time, error) {
+func (e *Endpoint) collectChunk(ctx context.Context, pqs queryChunk, res *resourceKind, acc telegraf.Accumulator, interval time.Duration) (int, time.Time, error) {
 	e.log.Debugf("Query for %s has %d QuerySpecs", res.name, len(pqs))
 	latestSample := time.Time{}
 	count := 0

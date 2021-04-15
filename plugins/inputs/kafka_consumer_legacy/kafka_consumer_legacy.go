@@ -161,8 +161,11 @@ func (k *Kafka) receiver() {
 				// TODO(cam) this locking can be removed if this PR gets merged:
 				// https://github.com/wvanbergen/kafka/pull/84
 				k.Lock()
-				k.Consumer.CommitUpto(msg)
+				err := k.Consumer.CommitUpto(msg)
 				k.Unlock()
+				if err != nil {
+					k.acc.AddError(fmt.Errorf("committing to consumer failed: %v", err))
+				}
 			}
 		}
 	}
@@ -177,7 +180,7 @@ func (k *Kafka) Stop() {
 	}
 }
 
-func (k *Kafka) Gather(acc telegraf.Accumulator) error {
+func (k *Kafka) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

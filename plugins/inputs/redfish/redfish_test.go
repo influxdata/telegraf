@@ -15,9 +15,7 @@ import (
 )
 
 func TestDellApis(t *testing.T) {
-
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if !checkAuth(r, "test", "test") {
 			http.Error(w, "Unauthorized.", 401)
 			return
@@ -491,7 +489,7 @@ func TestDellApis(t *testing.T) {
 		Password:         "test",
 		ComputerSystemID: "System.Embedded.1",
 	}
-	plugin.Init()
+	require.NoError(t, plugin.Init())
 	var acc testutil.Accumulator
 
 	err = plugin.Gather(&acc)
@@ -502,9 +500,7 @@ func TestDellApis(t *testing.T) {
 }
 
 func TestHPApis(t *testing.T) {
-
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if !checkAuth(r, "test", "test") {
 			http.Error(w, "Unauthorized.", 401)
 			return
@@ -653,7 +649,7 @@ func TestHPApis(t *testing.T) {
 		Password:         "test",
 		ComputerSystemID: "1",
 	}
-	hpPlugin.Init()
+	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
 
 	err = hpPlugin.Gather(&hpAcc)
@@ -672,9 +668,7 @@ func checkAuth(r *http.Request, username, password string) bool {
 }
 
 func TestInvalidUsernameorPassword(t *testing.T) {
-
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if !checkAuth(r, "testing", "testing") {
 			http.Error(w, "Unauthorized.", 401)
 			return
@@ -697,16 +691,14 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	r.Init()
+	require.NoError(t, r.Init())
 	u, err := url.Parse(ts.URL)
 	require.NoError(t, err)
 	err = r.Gather(&acc)
 	require.EqualError(t, err, "received status code 401 (Unauthorized) for address http://"+u.Host+", expected 200")
 }
 func TestNoUsernameorPasswordConfiguration(t *testing.T) {
-
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if !checkAuth(r, "testing", "testing") {
 			http.Error(w, "Unauthorized.", 401)
 			return
@@ -732,7 +724,6 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 }
 
 func TestInvalidDellJSON(t *testing.T) {
-
 	tests := []struct {
 		name             string
 		thermalfilename  string
@@ -771,7 +762,6 @@ func TestInvalidDellJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 			if !checkAuth(r, "test", "test") {
 				http.Error(w, "Unauthorized.", 401)
 				return
@@ -799,7 +789,7 @@ func TestInvalidDellJSON(t *testing.T) {
 			ComputerSystemID: "System.Embedded.1",
 		}
 
-		plugin.Init()
+		require.NoError(t, plugin.Init())
 
 		var acc testutil.Accumulator
 		err := plugin.Gather(&acc)
@@ -809,7 +799,6 @@ func TestInvalidDellJSON(t *testing.T) {
 }
 
 func TestInvalidHPJSON(t *testing.T) {
-
 	tests := []struct {
 		name             string
 		thermalfilename  string
@@ -842,7 +831,6 @@ func TestInvalidHPJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 				if !checkAuth(r, "test", "test") {
 					http.Error(w, "Unauthorized.", 401)
 					return
@@ -870,7 +858,7 @@ func TestInvalidHPJSON(t *testing.T) {
 				ComputerSystemID: "System.Embedded.2",
 			}
 
-			plugin.Init()
+			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
 			err := plugin.Gather(&acc)

@@ -125,7 +125,6 @@ type MetricPoint struct {
 }
 
 func (w *Wavefront) Connect() error {
-
 	if len(w.StringToNumber) > 0 {
 		w.Log.Warn("The string_to_number option is deprecated; please use the enum processor instead")
 	}
@@ -168,7 +167,6 @@ func (w *Wavefront) Connect() error {
 }
 
 func (w *Wavefront) Write(metrics []telegraf.Metric) error {
-
 	for _, m := range metrics {
 		for _, point := range w.buildMetrics(m) {
 			err := w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
@@ -233,7 +231,6 @@ func (w *Wavefront) buildMetrics(m telegraf.Metric) []*MetricPoint {
 }
 
 func (w *Wavefront) buildTags(mTags map[string]string) (string, map[string]string) {
-
 	// Remove all empty tags.
 	for k, v := range mTags {
 		if v == "" {
@@ -319,7 +316,7 @@ func buildValue(v interface{}, name string, w *Wavefront) (float64, error) {
 		for prefix, mappings := range w.StringToNumber {
 			if strings.HasPrefix(name, prefix) {
 				for _, mapping := range mappings {
-					val, hasVal := mapping[string(p)]
+					val, hasVal := mapping[p]
 					if hasVal {
 						return val, nil
 					}

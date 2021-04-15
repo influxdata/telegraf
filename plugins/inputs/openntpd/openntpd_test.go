@@ -5,15 +5,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
-var TestTimeout = internal.Duration{Duration: time.Second}
+var TestTimeout = config.Duration(time.Second)
 
-func OpenntpdCTL(output string, Timeout internal.Duration, useSudo bool) func(string, internal.Duration, bool) (*bytes.Buffer, error) {
-	return func(string, internal.Duration, bool) (*bytes.Buffer, error) {
+func OpenntpdCTL(output string) func(string, config.Duration, bool) (*bytes.Buffer, error) {
+	return func(string, config.Duration, bool) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -21,7 +22,7 @@ func OpenntpdCTL(output string, Timeout internal.Duration, useSudo bool) func(st
 func TestParseSimpleOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Openntpd{
-		run: OpenntpdCTL(simpleOutput, TestTimeout, false),
+		run: OpenntpdCTL(simpleOutput),
 	}
 	err := v.Gather(acc)
 
@@ -52,7 +53,7 @@ func TestParseSimpleOutput(t *testing.T) {
 func TestParseSimpleOutputwithStatePrefix(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Openntpd{
-		run: OpenntpdCTL(simpleOutputwithStatePrefix, TestTimeout, false),
+		run: OpenntpdCTL(simpleOutputwithStatePrefix),
 	}
 	err := v.Gather(acc)
 
@@ -84,7 +85,7 @@ func TestParseSimpleOutputwithStatePrefix(t *testing.T) {
 func TestParseSimpleOutputInvalidPeer(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Openntpd{
-		run: OpenntpdCTL(simpleOutputInvalidPeer, TestTimeout, false),
+		run: OpenntpdCTL(simpleOutputInvalidPeer),
 	}
 	err := v.Gather(acc)
 
@@ -112,7 +113,7 @@ func TestParseSimpleOutputInvalidPeer(t *testing.T) {
 func TestParseSimpleOutputServersDNSError(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Openntpd{
-		run: OpenntpdCTL(simpleOutputServersDNSError, TestTimeout, false),
+		run: OpenntpdCTL(simpleOutputServersDNSError),
 	}
 	err := v.Gather(acc)
 
@@ -154,7 +155,7 @@ func TestParseSimpleOutputServersDNSError(t *testing.T) {
 func TestParseSimpleOutputServerDNSError(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Openntpd{
-		run: OpenntpdCTL(simpleOutputServerDNSError, TestTimeout, false),
+		run: OpenntpdCTL(simpleOutputServerDNSError),
 	}
 	err := v.Gather(acc)
 
@@ -182,7 +183,7 @@ func TestParseSimpleOutputServerDNSError(t *testing.T) {
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Openntpd{
-		run: OpenntpdCTL(fullOutput, TestTimeout, false),
+		run: OpenntpdCTL(fullOutput),
 	}
 	err := v.Gather(acc)
 

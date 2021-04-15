@@ -438,6 +438,9 @@ WITH PerfCounters AS (
 			ELSE d.[physical_database_name]
 		END
 	WHERE
+		/*filter out unnecessary SQL DB system database counters, other than master and tempdb*/
+		NOT (spi.object_name LIKE 'MSSQL%:Databases%' AND spi.instance_name IN ('model','model_masterdb','model_userdb','msdb','mssqlsystemresource'))
+		AND
 		counter_name IN (
 			 'SQL Compilations/sec'
 			,'SQL Re-Compilations/sec'

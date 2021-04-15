@@ -13,8 +13,8 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
-	"github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
+	v1 "github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
+	v2 "github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
 )
 
 type Mysql struct {
@@ -28,6 +28,8 @@ type Mysql struct {
 	GatherInfoSchemaAutoInc             bool     `toml:"gather_info_schema_auto_inc"`
 	GatherInnoDBMetrics                 bool     `toml:"gather_innodb_metrics"`
 	GatherSlaveStatus                   bool     `toml:"gather_slave_status"`
+	GatherAllSlaveChannels              bool     `toml:"gather_all_slave_channels"`
+	MariadbDialect                      bool     `toml:"mariadb_dialect"`
 	GatherBinaryLogs                    bool     `toml:"gather_binary_logs"`
 	GatherTableIOWaits                  bool     `toml:"gather_table_io_waits"`
 	GatherTableLockWaits                bool     `toml:"gather_table_lock_waits"`
@@ -47,6 +49,7 @@ type Mysql struct {
 	lastT            time.Time
 	initDone         bool
 	scanIntervalSlow uint32
+	getStatusQuery   string
 }
 
 const sampleConfig = `
@@ -93,6 +96,12 @@ const sampleConfig = `
 
   ## gather metrics from SHOW SLAVE STATUS command output
   # gather_slave_status = false
+
+  ## gather metrics from all channels from SHOW SLAVE STATUS command output
+  # gather_all_slave_channels = false
+
+  ## use MariaDB dialect for all channels SHOW SLAVE STATUS
+  # mariadb_dialect = false
 
   ## gather metrics from SHOW BINARY LOGS command output
   # gather_binary_logs = false
@@ -166,6 +175,11 @@ func (m *Mysql) InitMysql() {
 			m.scanIntervalSlow = uint32(interval.Seconds())
 		}
 	}
+	if m.MariadbDialect {
+		m.getStatusQuery = slaveStatusQueryMariadb
+	} else {
+		m.getStatusQuery = slaveStatusQuery
+	}
 	m.initDone = true
 }
 
@@ -185,7 +199,9 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if tlsConfig != nil {
-		mysql.RegisterTLSConfig("custom", tlsConfig)
+		if err := mysql.RegisterTLSConfig("custom", tlsConfig); err != nil {
+			return err
+		}
 	}
 
 	var wg sync.WaitGroup
@@ -293,6 +309,7 @@ const (
 	globalStatusQuery          = `SHOW GLOBAL STATUS`
 	globalVariablesQuery       = `SHOW GLOBAL VARIABLES`
 	slaveStatusQuery           = `SHOW SLAVE STATUS`
+	slaveStatusQueryMariadb    = `SHOW ALL SLAVES STATUS`
 	binaryLogsQuery            = `SHOW BINARY LOGS`
 	infoSchemaProcessListQuery = `
         SELECT COALESCE(command,''),COALESCE(state,''),count(*)
@@ -453,7 +470,7 @@ const (
 			sum_sort_rows,
 			sum_sort_scan,
 			sum_no_index_used,
-			sum_no_good_index_used 
+			sum_no_good_index_used
 		FROM performance_schema.events_statements_summary_by_account_by_event_name
 	`
 )
@@ -655,7 +672,10 @@ func (m *Mysql) parseGlobalVariables(key string, value sql.RawBytes) (interface{
 // This code does not work with multi-source replication.
 func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
 	// run query
-	rows, err := db.Query(slaveStatusQuery)
+	var rows *sql.Rows
+	var err error
+
+	rows, err = db.Query(m.getStatusQuery)
 	if err != nil {
 		return err
 	}
@@ -666,9 +686,11 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 
-	// to save the column names as a field key
-	// scanning keys and values separately
-	if rows.Next() {
+	// for each channel record
+	for rows.Next() {
+		// to save the column names as a field key
+		// scanning keys and values separately
+
 		// get columns names, and create an array with its length
 		cols, err := rows.Columns()
 		if err != nil {
@@ -687,11 +709,26 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 			if m.MetricVersion >= 2 {
 				col = strings.ToLower(col)
 			}
-			if value, ok := m.parseValue(*vals[i].(*sql.RawBytes)); ok {
+
+			if m.GatherAllSlaveChannels &&
+				(strings.ToLower(col) == "channel_name" || strings.ToLower(col) == "connection_name") {
+				// Since the default channel name is empty, we need this block
+				channelName := "default"
+				if len(*vals[i].(*sql.RawBytes)) > 0 {
+					channelName = string(*vals[i].(*sql.RawBytes))
+				}
+				tags["channel"] = channelName
+			} else if value, ok := m.parseValue(*vals[i].(*sql.RawBytes)); ok {
 				fields["slave_"+col] = value
 			}
 		}
 		acc.AddFields("mysql", fields, tags)
+
+		// Only the first row is relevant if not all slave-channels should be gathered,
+		// so break here and skip the remaining rows
+		if !m.GatherAllSlaveChannels {
+			break
+		}
 	}
 
 	return nil
@@ -711,17 +748,31 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	var (
-		size     uint64
-		count    uint64
-		fileSize uint64
-		fileName string
+		size      uint64
+		count     uint64
+		fileSize  uint64
+		fileName  string
+		encrypted string
 	)
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+	numColumns := len(columns)
 
 	// iterate over rows and count the size and count of files
 	for rows.Next() {
-		if err := rows.Scan(&fileName, &fileSize); err != nil {
-			return err
+		if numColumns == 3 {
+			if err := rows.Scan(&fileName, &fileSize, &encrypted); err != nil {
+				return err
+			}
+		} else {
+			if err := rows.Scan(&fileName, &fileSize); err != nil {
+				return err
+			}
 		}
+
 		size += fileSize
 		count++
 	}
@@ -729,6 +780,7 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 		"binary_size_bytes":  size,
 		"binary_files_count": count,
 	}
+
 	acc.AddFields("mysql", fields, tags)
 	return nil
 }
@@ -1439,7 +1491,6 @@ func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, serv string, acc
 			"sum_no_good_index_used":      sumNoGoodIndexUsed,
 		}
 		acc.AddFields("mysql_perf_acc_event", sqlLWFields, sqlLWTags)
-
 	}
 
 	return nil
@@ -1662,8 +1713,8 @@ func (m *Mysql) gatherPerfFileEventsStatuses(db *sql.DB, serv string, acc telegr
 		fields["file_events_seconds_total"] = sumTimerWrite / picoSeconds
 		fields["file_events_bytes_totals"] = sumNumBytesWrite
 		acc.AddFields("mysql_perf_schema", fields, writeTags)
-
 	}
+
 	return nil
 }
 
@@ -1859,11 +1910,11 @@ func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, bool) {
 
 // parseValue can be used to convert values such as "ON","OFF","Yes","No" to 0,1
 func parseValue(value sql.RawBytes) (interface{}, bool) {
-	if bytes.EqualFold(value, []byte("YES")) || bytes.Compare(value, []byte("ON")) == 0 {
+	if bytes.EqualFold(value, []byte("YES")) || bytes.Equal(value, []byte("ON")) {
 		return 1, true
 	}
 
-	if bytes.EqualFold(value, []byte("NO")) || bytes.Compare(value, []byte("OFF")) == 0 {
+	if bytes.EqualFold(value, []byte("NO")) || bytes.Equal(value, []byte("OFF")) {
 		return 0, true
 	}
 

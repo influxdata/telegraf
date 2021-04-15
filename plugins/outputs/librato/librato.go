@@ -7,22 +7,23 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
 
 // Librato structure for configuration and client
 type Librato struct {
-	APIUser   string            `toml:"api_user"`
-	APIToken  string            `toml:"api_token"`
-	Debug     bool              `toml:"debug"`
-	SourceTag string            `toml:"source_tag"` // Deprecated, keeping for backward-compatibility
-	Timeout   internal.Duration `toml:"timeout"`
-	Template  string            `toml:"template"`
-	Log       telegraf.Logger   `toml:"-"`
+	APIUser   string          `toml:"api_user"`
+	APIToken  string          `toml:"api_token"`
+	Debug     bool            `toml:"debug"`
+	SourceTag string          `toml:"source_tag"` // Deprecated, keeping for backward-compatibility
+	Timeout   config.Duration `toml:"timeout"`
+	Template  string          `toml:"template"`
+	Log       telegraf.Logger `toml:"-"`
 
 	APIUrl string
 	client *http.Client
@@ -83,7 +84,7 @@ func (l *Librato) Connect() error {
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: l.Timeout.Duration,
+		Timeout: time.Duration(l.Timeout),
 	}
 	return nil
 }
@@ -110,7 +111,6 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		} else {
 			l.Log.Infof("Unable to build Gauge for %s, skipping", m.Name())
 			l.Log.Debugf("Couldn't build gauge: %v", err)
-
 		}
 	}
 
@@ -192,7 +192,6 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 			fmt.Errorf("undeterminable Source type from Field, %s", l.Template)
 	}
 	for fieldName, value := range m.Fields() {
-
 		metricName := m.Name()
 		if fieldName != "value" {
 			metricName = fmt.Sprintf("%s.%s", m.Name(), fieldName)
@@ -227,7 +226,7 @@ func verifyValue(v interface{}) bool {
 func (g *Gauge) setValue(v interface{}) error {
 	switch d := v.(type) {
 	case int64:
-		g.Value = float64(int64(d))
+		g.Value = float64(d)
 	case uint64:
 		g.Value = float64(d)
 	case float64:

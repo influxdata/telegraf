@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -16,7 +17,7 @@ import (
 
 	"github.com/gosnmp/gosnmp"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/wlog"
@@ -26,7 +27,7 @@ const description = `Retrieves SNMP values from remote agents`
 const sampleConfig = `
   ## Agent addresses to retrieve values from.
   ##   format:  agents = ["<scheme://><hostname>:<port>"]
-  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.            
+  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.
   ##            default is udp
   ##   port:    optional
   ##   example: agents = ["udp://127.0.0.1:161"]
@@ -255,19 +256,21 @@ func (f *Field) init() error {
 		return nil
 	}
 
-	_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
-	if err != nil {
-		return fmt.Errorf("translating: %w", err)
+	// check if oid needs translation or name is not set
+	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
+		_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
+		if err != nil {
+			return fmt.Errorf("translating: %w", err)
+		}
+		f.Oid = oidNum
+		if f.Name == "" {
+			f.Name = oidText
+		}
+		if f.Conversion == "" {
+			f.Conversion = conversion
+		}
+		//TODO use textual convention conversion from the MIB
 	}
-	f.Oid = oidNum
-	if f.Name == "" {
-		f.Name = oidText
-	}
-	if f.Conversion == "" {
-		f.Conversion = conversion
-	}
-
-	//TODO use textual convention conversion from the MIB
 
 	f.initialized = true
 	return nil
@@ -312,7 +315,7 @@ func init() {
 			ClientConfig: snmp.ClientConfig{
 				Retries:        3,
 				MaxRepetitions: 10,
-				Timeout:        internal.Duration{Duration: 5 * time.Second},
+				Timeout:        config.Duration(5 * time.Second),
 				Version:        2,
 				Community:      "public",
 			},
@@ -432,7 +435,17 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 			// empty string. This results in all the non-table fields sharing the same
 			// index, and being added on the same row.
 			if pkt, err := gs.Get([]string{oid}); err != nil {
-				return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
+				if errors.Is(err, gosnmp.ErrUnknownSecurityLevel) {
+					return nil, fmt.Errorf("unknown security level (sec_level)")
+				} else if errors.Is(err, gosnmp.ErrUnknownUsername) {
+					return nil, fmt.Errorf("unknown username (sec_name)")
+				} else if errors.Is(err, gosnmp.ErrWrongDigest) {
+					return nil, fmt.Errorf("wrong digest (auth_protocol, auth_password)")
+				} else if errors.Is(err, gosnmp.ErrDecryption) {
+					return nil, fmt.Errorf("decryption error (priv_protocol, priv_password)")
+				} else {
+					return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
+				}
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
 				fv, err := fieldConvert(f.Conversion, ent.Value)
@@ -674,7 +687,6 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 
 	split := strings.Split(conv, ":")
 	if split[0] == "hextoint" && len(split) == 3 {
-
 		endian := split[1]
 		bit := split[2]
 

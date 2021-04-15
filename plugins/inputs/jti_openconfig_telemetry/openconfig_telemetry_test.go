@@ -10,7 +10,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -19,7 +19,7 @@ import (
 var cfg = &OpenConfigTelemetry{
 	Log:             testutil.Logger{},
 	Servers:         []string{"127.0.0.1:50051"},
-	SampleFrequency: internal.Duration{Duration: time.Second * 2},
+	SampleFrequency: config.Duration(time.Second * 2),
 }
 
 var data = &telemetry.OpenConfigData{
@@ -51,31 +51,32 @@ type openConfigTelemetryServer struct {
 
 func (s *openConfigTelemetryServer) TelemetrySubscribe(req *telemetry.SubscriptionRequest, stream telemetry.OpenConfigTelemetry_TelemetrySubscribeServer) error {
 	path := req.PathList[0].Path
-	if path == "/sensor" {
-		stream.Send(data)
-	} else if path == "/sensor_with_prefix" {
-		stream.Send(dataWithPrefix)
-	} else if path == "/sensor_with_multiple_tags" {
-		stream.Send(dataWithMultipleTags)
-	} else if path == "/sensor_with_string_values" {
-		stream.Send(dataWithStringValues)
+	switch path {
+	case "/sensor":
+		return stream.Send(data)
+	case "/sensor_with_prefix":
+		return stream.Send(dataWithPrefix)
+	case "/sensor_with_multiple_tags":
+		return stream.Send(dataWithMultipleTags)
+	case "/sensor_with_string_values":
+		return stream.Send(dataWithStringValues)
 	}
 	return nil
 }
 
-func (s *openConfigTelemetryServer) CancelTelemetrySubscription(ctx context.Context, req *telemetry.CancelSubscriptionRequest) (*telemetry.CancelSubscriptionReply, error) {
+func (s *openConfigTelemetryServer) CancelTelemetrySubscription(_ context.Context, _ *telemetry.CancelSubscriptionRequest) (*telemetry.CancelSubscriptionReply, error) {
 	return nil, nil
 }
 
-func (s *openConfigTelemetryServer) GetTelemetrySubscriptions(ctx context.Context, req *telemetry.GetSubscriptionsRequest) (*telemetry.GetSubscriptionsReply, error) {
+func (s *openConfigTelemetryServer) GetTelemetrySubscriptions(_ context.Context, _ *telemetry.GetSubscriptionsRequest) (*telemetry.GetSubscriptionsReply, error) {
 	return nil, nil
 }
 
-func (s *openConfigTelemetryServer) GetTelemetryOperationalState(ctx context.Context, req *telemetry.GetOperationalStateRequest) (*telemetry.GetOperationalStateReply, error) {
+func (s *openConfigTelemetryServer) GetTelemetryOperationalState(_ context.Context, _ *telemetry.GetOperationalStateRequest) (*telemetry.GetOperationalStateReply, error) {
 	return nil, nil
 }
 
-func (s *openConfigTelemetryServer) GetDataEncodings(ctx context.Context, req *telemetry.DataEncodingRequest) (*telemetry.DataEncodingReply, error) {
+func (s *openConfigTelemetryServer) GetDataEncodings(_ context.Context, _ *telemetry.DataEncodingRequest) (*telemetry.DataEncodingReply, error) {
 	return nil, nil
 }
 
@@ -219,6 +220,8 @@ func TestMain(m *testing.M) {
 	grpcServer := grpc.NewServer(opts...)
 	telemetry.RegisterOpenConfigTelemetryServer(grpcServer, newServer())
 	go func() {
+		// Ignore the returned error as the tests will fail anyway
+		//nolint:errcheck,revive
 		grpcServer.Serve(lis)
 	}()
 	defer grpcServer.Stop()

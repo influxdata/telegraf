@@ -49,7 +49,7 @@ type Statsd struct {
 
 	// Percentiles specifies the percentiles that will be calculated for timing
 	// and histogram stats.
-	Percentiles     []internal.Number
+	Percentiles     []float64
 	PercentileLimit int
 
 	DeleteGauges   bool
@@ -92,8 +92,6 @@ type Statsd struct {
 	accept chan bool
 	// drops tracks the number of dropped metrics.
 	drops int
-	// malformed tracks the number of malformed packets
-	malformed int
 
 	// Channel for all incoming statsd packets
 	in   chan input
@@ -121,8 +119,8 @@ type Statsd struct {
 
 	MaxTCPConnections int `toml:"max_tcp_connections"`
 
-	TCPKeepAlive       bool               `toml:"tcp_keep_alive"`
-	TCPKeepAlivePeriod *internal.Duration `toml:"tcp_keep_alive_period"`
+	TCPKeepAlive       bool             `toml:"tcp_keep_alive"`
+	TCPKeepAlivePeriod *config.Duration `toml:"tcp_keep_alive_period"`
 
 	// Max duration for each metric to stay cached without being updated.
 	MaxTTL config.Duration `toml:"max_ttl"`
@@ -306,8 +304,8 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 			fields[prefix+"lower"] = stats.Lower()
 			fields[prefix+"count"] = stats.Count()
 			for _, percentile := range s.Percentiles {
-				name := fmt.Sprintf("%s%v_percentile", prefix, percentile.Value)
-				fields[name] = stats.Percentile(percentile.Value)
+				name := fmt.Sprintf("%s%v_percentile", prefix, percentile)
+				fields[name] = stats.Percentile(percentile)
 			}
 		}
 
@@ -417,7 +415,9 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 		s.wg.Add(1)
 		go func() {
 			defer s.wg.Done()
-			s.udpListen(conn)
+			if err := s.udpListen(conn); err != nil {
+				ac.AddError(err)
+			}
 		}()
 	} else {
 		address, err := net.ResolveTCPAddr("tcp", s.ServiceAddress)
@@ -435,7 +435,9 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 		s.wg.Add(1)
 		go func() {
 			defer s.wg.Done()
-			s.tcpListen(listener)
+			if err := s.tcpListen(listener); err != nil {
+				ac.AddError(err)
+			}
 		}()
 	}
 
@@ -444,7 +446,9 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 		s.wg.Add(1)
 		go func() {
 			defer s.wg.Done()
-			s.parser()
+			if err := s.parser(); err != nil {
+				ac.AddError(err)
+			}
 		}()
 	}
 	s.Log.Infof("Started the statsd service on %q", s.ServiceAddress)
@@ -470,7 +474,7 @@ func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 				}
 
 				if s.TCPKeepAlivePeriod != nil {
-					if err = conn.SetKeepAlivePeriod(s.TCPKeepAlivePeriod.Duration); err != nil {
+					if err = conn.SetKeepAlivePeriod(time.Duration(*s.TCPKeepAlivePeriod)); err != nil {
 						return err
 					}
 				}
@@ -495,7 +499,9 @@ func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 // udpListen starts listening for udp packets on the configured port.
 func (s *Statsd) udpListen(conn *net.UDPConn) error {
 	if s.ReadBufferSize > 0 {
-		s.UDPlistener.SetReadBuffer(s.ReadBufferSize)
+		if err := s.UDPlistener.SetReadBuffer(s.ReadBufferSize); err != nil {
+			return err
+		}
 	}
 
 	buf := make([]byte, UDPMaxPacketSize)
@@ -514,9 +520,14 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 			}
 			s.UDPPacketsRecv.Incr(1)
 			s.UDPBytesRecv.Incr(int64(n))
-			b := s.bufPool.Get().(*bytes.Buffer)
+			b, ok := s.bufPool.Get().(*bytes.Buffer)
+			if !ok {
+				return fmt.Errorf("bufPool is not a bytes buffer")
+			}
 			b.Reset()
-			b.Write(buf[:n])
+			if _, err := b.Write(buf[:n]); err != nil {
+				return err
+			}
 			select {
 			case s.in <- input{
 				Buffer: b,
@@ -552,9 +563,13 @@ func (s *Statsd) parser() error {
 				switch {
 				case line == "":
 				case s.DataDogExtensions && strings.HasPrefix(line, "_e"):
-					s.parseEventMessage(in.Time, line, in.Addr)
+					if err := s.parseEventMessage(in.Time, line, in.Addr); err != nil {
+						return err
+					}
 				default:
-					s.parseStatsdLine(line)
+					if err := s.parseStatsdLine(line); err != nil {
+						return err
+					}
 				}
 			}
 			elapsed := time.Since(start)
@@ -884,7 +899,11 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 	// connection cleanup function
 	defer func() {
 		s.wg.Done()
+
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		conn.Close()
+
 		// Add one connection potential back to channel when this one closes
 		s.accept <- true
 		s.forget(id)
@@ -915,7 +934,10 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 			b := s.bufPool.Get().(*bytes.Buffer)
 			b.Reset()
+			// Writes to a bytes buffer always succeed, so do not check the errors here
+			//nolint:errcheck,revive
 			b.Write(scanner.Bytes())
+			//nolint:errcheck,revive
 			b.WriteByte('\n')
 
 			select {
@@ -934,6 +956,8 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 // refuser refuses a TCP connection
 func (s *Statsd) refuser(conn *net.TCPConn) {
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	conn.Close()
 	s.Log.Infof("Refused TCP Connection from %s", conn.RemoteAddr())
 	s.Log.Warn("Maximum TCP Connections reached, you may want to adjust max_tcp_connections")
@@ -958,8 +982,12 @@ func (s *Statsd) Stop() {
 	s.Log.Infof("Stopping the statsd service")
 	close(s.done)
 	if s.isUDP() {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		s.UDPlistener.Close()
 	} else {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		s.TCPlistener.Close()
 		// Close all open TCP connections
 		//  - get all conns from the s.conns map and put into slice
@@ -972,6 +1000,8 @@ func (s *Statsd) Stop() {
 		}
 		s.cleanup.Unlock()
 		for _, conn := range conns {
+			// Ignore the returned error as we cannot do anything about it anyway
+			//nolint:errcheck,revive
 			conn.Close()
 		}
 	}

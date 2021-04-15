@@ -74,8 +74,8 @@ func init() {
 func (s *CSGO) gatherServer(
 	server []string,
 	request func(string, string) (string, error),
-	acc telegraf.Accumulator) error {
-
+	acc telegraf.Accumulator,
+) error {
 	if len(server) != 2 {
 		return errors.New("incorrect server config")
 	}
@@ -176,15 +176,15 @@ func requestServer(url string, rconPw string) (string, error) {
 	}
 	defer remoteConsole.Close()
 
-	reqId, err := remoteConsole.Write("stats")
+	reqID, err := remoteConsole.Write("stats")
 	if err != nil {
 		return "", err
 	}
 
-	resp, respReqId, err := remoteConsole.Read()
+	resp, respReqID, err := remoteConsole.Read()
 	if err != nil {
 		return "", err
-	} else if reqId != respReqId {
+	} else if reqID != respReqID {
 		return "", errors.New("response/request mismatch")
 	} else {
 		return resp, nil

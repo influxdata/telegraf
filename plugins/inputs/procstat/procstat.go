@@ -111,7 +111,6 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 			p.PidFinder = "pgrep"
 			p.createPIDFinder = defaultPIDFinder
 		}
-
 	}
 	if p.createProcess == nil {
 		p.createProcess = defaultProcess
@@ -134,20 +133,14 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	procs, err := p.updateProcesses(pids, tags, p.procs)
-	if err != nil {
-		acc.AddError(fmt.Errorf("procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
-			p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
-	}
-	p.procs = procs
-
+	p.procs = p.updateProcesses(pids, tags, p.procs)
 	for _, proc := range p.procs {
 		p.addMetric(proc, acc, now)
 	}
 
 	fields := map[string]interface{}{
 		"pid_count":   len(pids),
-		"running":     len(procs),
+		"running":     len(p.procs),
 		"result_code": 0,
 	}
 	tags["pid_finder"] = p.PidFinder
@@ -320,7 +313,7 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 }
 
 // Update monitored Processes
-func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo map[PID]Process) (map[PID]Process, error) {
+func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo map[PID]Process) map[PID]Process {
 	procs := make(map[PID]Process, len(prevInfo))
 
 	for _, pid := range pids {
@@ -357,7 +350,8 @@ func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo 
 			}
 		}
 	}
-	return procs, nil
+
+	return procs
 }
 
 // Create and return PIDGatherer lazily

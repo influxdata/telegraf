@@ -11,7 +11,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-func run(inputFilters, outputFilters, aggregatorFilters, processorFilters []string) {
+func run(inputFilters, outputFilters []string) {
 	// Register the eventlog logging target for windows.
 	logger.RegisterEventLogger(*fServiceName)
 
@@ -19,25 +19,19 @@ func run(inputFilters, outputFilters, aggregatorFilters, processorFilters []stri
 		runAsWindowsService(
 			inputFilters,
 			outputFilters,
-			aggregatorFilters,
-			processorFilters,
 		)
 	} else {
 		stop = make(chan struct{})
 		reloadLoop(
 			inputFilters,
 			outputFilters,
-			aggregatorFilters,
-			processorFilters,
 		)
 	}
 }
 
 type program struct {
-	inputFilters      []string
-	outputFilters     []string
-	aggregatorFilters []string
-	processorFilters  []string
+	inputFilters  []string
+	outputFilters []string
 }
 
 func (p *program) Start(s service.Service) error {
@@ -49,8 +43,6 @@ func (p *program) run() {
 	reloadLoop(
 		p.inputFilters,
 		p.outputFilters,
-		p.aggregatorFilters,
-		p.processorFilters,
 	)
 }
 func (p *program) Stop(s service.Service) error {
@@ -58,7 +50,7 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
-func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, processorFilters []string) {
+func runAsWindowsService(inputFilters, outputFilters []string) {
 	programFiles := os.Getenv("ProgramFiles")
 	if programFiles == "" { // Should never happen
 		programFiles = "C:\\Program Files"
@@ -72,10 +64,8 @@ func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, process
 	}
 
 	prg := &program{
-		inputFilters:      inputFilters,
-		outputFilters:     outputFilters,
-		aggregatorFilters: aggregatorFilters,
-		processorFilters:  processorFilters,
+		inputFilters:  inputFilters,
+		outputFilters: outputFilters,
 	}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {

@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/jackc/pgx/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
 )
@@ -21,7 +21,7 @@ const MaxInt64 = int64(^uint64(0) >> 1)
 
 type CrateDB struct {
 	URL         string
-	Timeout     internal.Duration
+	Timeout     config.Duration
 	Table       string
 	TableCreate bool `toml:"table_create"`
 	DB          *sql.DB
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 	PRIMARY KEY ("timestamp", "hash_id","day")
 ) PARTITIONED BY("day");
 `
-		ctx, cancel := context.WithTimeout(context.Background(), c.Timeout.Duration)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout))
 		defer cancel()
 		if _, err := db.ExecContext(ctx, sql); err != nil {
 			return err
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 }
 
 func (c *CrateDB) Write(metrics []telegraf.Metric) error {
-	ctx, cancel := context.WithTimeout(context.Background(), c.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout))
 	defer cancel()
 	if sql, err := insertSQL(c.Table, metrics); err != nil {
 		return err
@@ -79,7 +79,6 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
 	rows := make([]string, len(metrics))
 	for i, m := range metrics {
-
 		cols := []interface{}{
 			hashID(m),
 			m.Time().UTC(),
@@ -234,7 +233,7 @@ func (c *CrateDB) Close() error {
 func init() {
 	outputs.Add("cratedb", func() telegraf.Output {
 		return &CrateDB{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
 }

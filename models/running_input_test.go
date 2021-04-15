@@ -23,17 +23,16 @@ func TestMakeMetricFilterAfterApplyingGlobalTags(t *testing.T) {
 	require.NoError(t, ri.Config.Filter.Compile())
 	ri.SetDefaultTags(map[string]string{"a": "x", "b": "y"})
 
-	m, err := metric.New("cpu",
+	m := metric.New("cpu",
 		map[string]string{},
 		map[string]interface{}{
 			"value": 42,
 		},
 		now)
-	require.NoError(t, err)
 
 	actual := ri.MakeMetric(m)
 
-	expected, err := metric.New("cpu",
+	expected := metric.New("cpu",
 		map[string]string{
 			"b": "y",
 		},
@@ -41,7 +40,6 @@ func TestMakeMetricFilterAfterApplyingGlobalTags(t *testing.T) {
 			"value": 42,
 		},
 		now)
-	require.NoError(t, err)
 
 	testutil.RequireMetricEqual(t, expected, actual)
 }
@@ -52,13 +50,12 @@ func TestMakeMetricNoFields(t *testing.T) {
 		Name: "TestRunningInput",
 	})
 
-	m, err := metric.New("RITest",
+	m := metric.New("RITest",
 		map[string]string{},
 		map[string]interface{}{},
 		now,
 		telegraf.Untyped)
 	m = ri.MakeMetric(m)
-	require.NoError(t, err)
 	assert.Nil(t, m)
 }
 
@@ -69,7 +66,7 @@ func TestMakeMetricNilFields(t *testing.T) {
 		Name: "TestRunningInput",
 	})
 
-	m, err := metric.New("RITest",
+	m := metric.New("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
@@ -77,17 +74,15 @@ func TestMakeMetricNilFields(t *testing.T) {
 		},
 		now,
 		telegraf.Untyped)
-	require.NoError(t, err)
 	m = ri.MakeMetric(m)
 
-	expected, err := metric.New("RITest",
+	expected := metric.New("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int(101),
 		},
 		now,
 	)
-	require.NoError(t, err)
 
 	require.Equal(t, expected, m)
 }
@@ -110,7 +105,7 @@ func TestMakeMetricWithPluginTags(t *testing.T) {
 		telegraf.Untyped)
 	m = ri.MakeMetric(m)
 
-	expected, err := metric.New("RITest",
+	expected := metric.New("RITest",
 		map[string]string{
 			"foo": "bar",
 		},
@@ -119,7 +114,6 @@ func TestMakeMetricWithPluginTags(t *testing.T) {
 		},
 		now,
 	)
-	require.NoError(t, err)
 	require.Equal(t, expected, m)
 }
 
@@ -135,7 +129,7 @@ func TestMakeMetricFilteredOut(t *testing.T) {
 
 	assert.NoError(t, ri.Config.Filter.Compile())
 
-	m, err := metric.New("RITest",
+	m := metric.New("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
@@ -143,7 +137,6 @@ func TestMakeMetricFilteredOut(t *testing.T) {
 		now,
 		telegraf.Untyped)
 	m = ri.MakeMetric(m)
-	require.NoError(t, err)
 	assert.Nil(t, m)
 }
 
@@ -164,7 +157,7 @@ func TestMakeMetricWithDaemonTags(t *testing.T) {
 		now,
 		telegraf.Untyped)
 	m = ri.MakeMetric(m)
-	expected, err := metric.New("RITest",
+	expected := metric.New("RITest",
 		map[string]string{
 			"foo": "bar",
 		},
@@ -173,7 +166,6 @@ func TestMakeMetricWithDaemonTags(t *testing.T) {
 		},
 		now,
 	)
-	require.NoError(t, err)
 	require.Equal(t, expected, m)
 }
 
@@ -184,23 +176,21 @@ func TestMakeMetricNameOverride(t *testing.T) {
 		NameOverride: "foobar",
 	})
 
-	m, err := metric.New("RITest",
+	m := metric.New("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
 		now,
 		telegraf.Untyped)
-	require.NoError(t, err)
 	m = ri.MakeMetric(m)
-	expected, err := metric.New("foobar",
+	expected := metric.New("foobar",
 		nil,
 		map[string]interface{}{
 			"value": 101,
 		},
 		now,
 	)
-	require.NoError(t, err)
 	require.Equal(t, expected, m)
 }
 
@@ -211,23 +201,21 @@ func TestMakeMetricNamePrefix(t *testing.T) {
 		MeasurementPrefix: "foobar_",
 	})
 
-	m, err := metric.New("RITest",
+	m := metric.New("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
 		now,
 		telegraf.Untyped)
-	require.NoError(t, err)
 	m = ri.MakeMetric(m)
-	expected, err := metric.New("foobar_RITest",
+	expected := metric.New("foobar_RITest",
 		nil,
 		map[string]interface{}{
 			"value": 101,
 		},
 		now,
 	)
-	require.NoError(t, err)
 	require.Equal(t, expected, m)
 }
 
@@ -238,23 +226,21 @@ func TestMakeMetricNameSuffix(t *testing.T) {
 		MeasurementSuffix: "_foobar",
 	})
 
-	m, err := metric.New("RITest",
+	m := metric.New("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
 		now,
 		telegraf.Untyped)
-	require.NoError(t, err)
 	m = ri.MakeMetric(m)
-	expected, err := metric.New("RITest_foobar",
+	expected := metric.New("RITest_foobar",
 		nil,
 		map[string]interface{}{
 			"value": 101,
 		},
 		now,
 	)
-	require.NoError(t, err)
 	require.Equal(t, expected, m)
 }
 
@@ -289,6 +275,6 @@ func TestMetricErrorCounters(t *testing.T) {
 
 type testInput struct{}
 
-func (t *testInput) Description() string                   { return "" }
-func (t *testInput) SampleConfig() string                  { return "" }
-func (t *testInput) Gather(acc telegraf.Accumulator) error { return nil }
+func (t *testInput) Description() string                 { return "" }
+func (t *testInput) SampleConfig() string                { return "" }
+func (t *testInput) Gather(_ telegraf.Accumulator) error { return nil }

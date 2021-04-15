@@ -35,7 +35,6 @@ func (k *Kernel) Description() string {
 func (k *Kernel) SampleConfig() string { return "" }
 
 func (k *Kernel) Gather(acc telegraf.Accumulator) error {
-
 	data, err := k.getProcStat()
 	if err != nil {
 		return err
@@ -54,7 +53,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 
 	fields := make(map[string]interface{})
 
-	fields["entropy_avail"] = int64(entropyValue)
+	fields["entropy_avail"] = entropyValue
 
 	dataFields := bytes.Fields(data)
 	for i, field := range dataFields {
@@ -64,25 +63,25 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				return err
 			}
-			fields["interrupts"] = int64(m)
+			fields["interrupts"] = m
 		case bytes.Equal(field, contextSwitches):
 			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
-			fields["context_switches"] = int64(m)
+			fields["context_switches"] = m
 		case bytes.Equal(field, processesForked):
 			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
-			fields["processes_forked"] = int64(m)
+			fields["processes_forked"] = m
 		case bytes.Equal(field, bootTime):
 			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
-			fields["boot_time"] = int64(m)
+			fields["boot_time"] = m
 		case bytes.Equal(field, diskPages):
 			in, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
@@ -92,8 +91,8 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				return err
 			}
-			fields["disk_pages_in"] = int64(in)
-			fields["disk_pages_out"] = int64(out)
+			fields["disk_pages_in"] = in
+			fields["disk_pages_out"] = out
 		}
 	}
 

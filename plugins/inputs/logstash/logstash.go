@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -59,7 +59,7 @@ type Logstash struct {
 	Username string            `toml:"username"`
 	Password string            `toml:"password"`
 	Headers  map[string]string `toml:"headers"`
-	Timeout  internal.Duration `toml:"timeout"`
+	Timeout  config.Duration   `toml:"timeout"`
 	tls.ClientConfig
 
 	client *http.Client
@@ -72,7 +72,7 @@ func NewLogstash() *Logstash {
 		SinglePipeline: false,
 		Collect:        []string{"pipelines", "process", "jvm"},
 		Headers:        make(map[string]string),
-		Timeout:        internal.Duration{Duration: time.Second * 5},
+		Timeout:        config.Duration(time.Second * 5),
 	}
 }
 
@@ -138,10 +138,13 @@ type PipelinePlugins struct {
 }
 
 type PipelineQueue struct {
-	Events   float64     `json:"events"`
-	Type     string      `json:"type"`
-	Capacity interface{} `json:"capacity"`
-	Data     interface{} `json:"data"`
+	Events              float64     `json:"events"`
+	EventsCount         *float64    `json:"events_count"`
+	Type                string      `json:"type"`
+	Capacity            interface{} `json:"capacity"`
+	Data                interface{} `json:"data"`
+	QueueSizeInBytes    *float64    `json:"queue_size_in_bytes"`
+	MaxQueueSizeInBytes *float64    `json:"max_queue_size_in_bytes"`
 }
 
 const jvmStats = "/_node/stats/jvm"
@@ -168,7 +171,7 @@ func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
-		Timeout: logstash.Timeout.Duration,
+		Timeout: time.Duration(logstash.Timeout),
 	}
 
 	return client, nil
@@ -270,8 +273,8 @@ func (logstash *Logstash) gatherPluginsStats(
 	plugins []Plugin,
 	pluginType string,
 	tags map[string]string,
-	accumulator telegraf.Accumulator) error {
-
+	accumulator telegraf.Accumulator,
+) error {
 	for _, plugin := range plugins {
 		pluginTags := map[string]string{
 			"plugin_name": plugin.Name,
@@ -295,9 +298,8 @@ func (logstash *Logstash) gatherPluginsStats(
 func (logstash *Logstash) gatherQueueStats(
 	queue *PipelineQueue,
 	tags map[string]string,
-	accumulator telegraf.Accumulator) error {
-
-	var err error
+	accumulator telegraf.Accumulator,
+) error {
 	queueTags := map[string]string{
 		"queue_type": queue.Type,
 	}
@@ -305,13 +307,18 @@ func (logstash *Logstash) gatherQueueStats(
 		queueTags[tag] = value
 	}
 
+	events := queue.Events
+	if queue.EventsCount != nil {
+		events = *queue.EventsCount
+	}
+
 	queueFields := map[string]interface{}{
-		"events": queue.Events,
+		"events": events,
 	}
 
 	if queue.Type != "memory" {
 		flattener := jsonParser.JSONFlattener{}
-		err = flattener.FlattenJSON("", queue.Capacity)
+		err := flattener.FlattenJSON("", queue.Capacity)
 		if err != nil {
 			return err
 		}
@@ -321,6 +328,14 @@ func (logstash *Logstash) gatherQueueStats(
 		}
 		for field, value := range flattener.Fields {
 			queueFields[field] = value
+		}
+
+		if queue.MaxQueueSizeInBytes != nil {
+			queueFields["max_queue_size_in_bytes"] = *queue.MaxQueueSizeInBytes
+		}
+
+		if queue.QueueSizeInBytes != nil {
+			queueFields["queue_size_in_bytes"] = *queue.QueueSizeInBytes
 		}
 	}
 

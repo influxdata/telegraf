@@ -76,7 +76,9 @@ func (e APIError) Error() string {
 
 func chimpErrorCheck(body []byte) error {
 	var e APIError
-	json.Unmarshal(body, &e)
+	if err := json.Unmarshal(body, &e); err != nil {
+		return err
+	}
 	if e.Title != "" || e.Status != 0 {
 		return e
 	}
@@ -124,7 +126,7 @@ func (a *ChimpAPI) GetReport(campaignID string) (Report, error) {
 func runChimp(api *ChimpAPI, params ReportsParams) ([]byte, error) {
 	client := &http.Client{
 		Transport: api.Transport,
-		Timeout:   time.Duration(4 * time.Second),
+		Timeout:   4 * time.Second,
 	}
 
 	var b bytes.Buffer

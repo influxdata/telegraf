@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -36,7 +37,7 @@ type Solr struct {
 	Servers     []string
 	Username    string
 	Password    string
-	HTTPTimeout internal.Duration
+	HTTPTimeout config.Duration
 	Cores       []string
 	client      *http.Client
 }
@@ -121,7 +122,7 @@ type Cache struct {
 // NewSolr return a new instance of Solr
 func NewSolr() *Solr {
 	return &Solr{
-		HTTPTimeout: internal.Duration{Duration: time.Second * 5},
+		HTTPTimeout: config.Duration(time.Second * 5),
 	}
 }
 
@@ -285,7 +286,6 @@ func addQueryHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansDa
 				"handler": name},
 			time,
 		)
-
 	}
 	return nil
 }
@@ -462,11 +462,11 @@ func (s *Solr) mbeansURL(server string, core string) string {
 
 func (s *Solr) createHTTPClient() *http.Client {
 	tr := &http.Transport{
-		ResponseHeaderTimeout: s.HTTPTimeout.Duration,
+		ResponseHeaderTimeout: time.Duration(s.HTTPTimeout),
 	}
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   s.HTTPTimeout.Duration,
+		Timeout:   time.Duration(s.HTTPTimeout),
 	}
 
 	return client

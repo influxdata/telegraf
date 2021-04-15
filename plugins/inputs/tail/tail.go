@@ -22,8 +22,7 @@ import (
 )
 
 const (
-	defaultWatchMethod         = "inotify"
-	defaultMaxUndeliveredLines = 1000
+	defaultWatchMethod = "inotify"
 )
 
 var (
@@ -41,6 +40,7 @@ type Tail struct {
 	WatchMethod         string   `toml:"watch_method"`
 	MaxUndeliveredLines int      `toml:"max_undelivered_lines"`
 	CharacterEncoding   string   `toml:"character_encoding"`
+	PathTag             string   `toml:"path_tag"`
 
 	Log        telegraf.Logger `toml:"-"`
 	tailers    map[string]*tail.Tail
@@ -71,6 +71,7 @@ func NewTail() *Tail {
 		FromBeginning:       false,
 		MaxUndeliveredLines: 1000,
 		offsets:             offsetsCopy,
+		PathTag:             "path",
 	}
 }
 
@@ -116,6 +117,9 @@ const sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 
+  ## Set the tag that will contain the path of the tailed file. If you don't want this tag, set it to an empty string.
+  # path_tag = "path"
+
   ## multiline parser/codec
   ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
   #[inputs.tail.multiline]
@@ -157,7 +161,7 @@ func (t *Tail) Init() error {
 	return err
 }
 
-func (t *Tail) Gather(acc telegraf.Accumulator) error {
+func (t *Tail) Gather(_ telegraf.Accumulator) error {
 	return t.tailNewFiles(true)
 }
 
@@ -321,7 +325,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 	// The multiline mode requires a timer in order to flush the multiline buffer
 	// if no new lines are incoming.
 	if t.multiline.IsEnabled() {
-		timer = time.NewTimer(t.MultilineConfig.Timeout.Duration)
+		timer = time.NewTimer(time.Duration(*t.MultilineConfig.Timeout))
 		timeout = timer.C
 	}
 
@@ -333,7 +337,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 		line = nil
 
 		if timer != nil {
-			timer.Reset(t.MultilineConfig.Timeout.Duration)
+			timer.Reset(time.Duration(*t.MultilineConfig.Timeout))
 		}
 
 		select {
@@ -381,8 +385,10 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 		}
 		firstLine = false
 
-		for _, metric := range metrics {
-			metric.AddTag("path", tailer.Filename)
+		if t.PathTag != "" {
+			for _, metric := range metrics {
+				metric.AddTag(t.PathTag, tailer.Filename)
+			}
 		}
 
 		// try writing out metric first without blocking

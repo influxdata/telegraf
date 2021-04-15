@@ -29,14 +29,6 @@ var next5 = []telegraf.Metric{
 	testutil.TestMetric(101, "metric10"),
 }
 
-func reverse(metrics []telegraf.Metric) []telegraf.Metric {
-	result := make([]telegraf.Metric, 0, len(metrics))
-	for i := len(metrics) - 1; i >= 0; i-- {
-		result = append(result, metrics[i])
-	}
-	return result
-}
-
 // Benchmark adding metrics.
 func BenchmarkRunningOutputAddWrite(b *testing.B) {
 	conf := &OutputConfig{
@@ -44,7 +36,7 @@ func BenchmarkRunningOutputAddWrite(b *testing.B) {
 	}
 
 	m := &perfOutput{}
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	for n := 0; n < b.N; n++ {
 		ro.AddMetric(testutil.TestMetric(101, "metric1"))
@@ -59,7 +51,7 @@ func BenchmarkRunningOutputAddWriteEvery100(b *testing.B) {
 	}
 
 	m := &perfOutput{}
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	for n := 0; n < b.N; n++ {
 		ro.AddMetric(testutil.TestMetric(101, "metric1"))
@@ -77,7 +69,7 @@ func BenchmarkRunningOutputAddFailWrites(b *testing.B) {
 
 	m := &perfOutput{}
 	m.failWrite = true
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	for n := 0; n < b.N; n++ {
 		ro.AddMetric(testutil.TestMetric(101, "metric1"))
@@ -94,7 +86,7 @@ func TestRunningOutput_DropFilter(t *testing.T) {
 	assert.NoError(t, conf.Filter.Compile())
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	for _, metric := range first5 {
 		ro.AddMetric(metric)
@@ -119,7 +111,7 @@ func TestRunningOutput_PassFilter(t *testing.T) {
 	assert.NoError(t, conf.Filter.Compile())
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	for _, metric := range first5 {
 		ro.AddMetric(metric)
@@ -144,7 +136,7 @@ func TestRunningOutput_TagIncludeNoMatch(t *testing.T) {
 	assert.NoError(t, conf.Filter.Compile())
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
 	assert.Len(t, m.Metrics(), 0)
@@ -165,7 +157,7 @@ func TestRunningOutput_TagExcludeMatch(t *testing.T) {
 	assert.NoError(t, conf.Filter.Compile())
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
 	assert.Len(t, m.Metrics(), 0)
@@ -186,7 +178,7 @@ func TestRunningOutput_TagExcludeNoMatch(t *testing.T) {
 	assert.NoError(t, conf.Filter.Compile())
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
 	assert.Len(t, m.Metrics(), 0)
@@ -207,7 +199,7 @@ func TestRunningOutput_TagIncludeMatch(t *testing.T) {
 	assert.NoError(t, conf.Filter.Compile())
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
 	assert.Len(t, m.Metrics(), 0)
@@ -225,7 +217,7 @@ func TestRunningOutput_NameOverride(t *testing.T) {
 	}
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
 	assert.Len(t, m.Metrics(), 0)
@@ -243,7 +235,7 @@ func TestRunningOutput_NamePrefix(t *testing.T) {
 	}
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
 	assert.Len(t, m.Metrics(), 0)
@@ -261,7 +253,7 @@ func TestRunningOutput_NameSuffix(t *testing.T) {
 	}
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	ro.AddMetric(testutil.TestMetric(101, "metric1"))
 	assert.Len(t, m.Metrics(), 0)
@@ -279,7 +271,7 @@ func TestRunningOutputDefault(t *testing.T) {
 	}
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro := NewRunningOutput(m, conf, 1000, 10000)
 
 	for _, metric := range first5 {
 		ro.AddMetric(metric)
@@ -301,7 +293,7 @@ func TestRunningOutputWriteFail(t *testing.T) {
 
 	m := &mockOutput{}
 	m.failWrite = true
-	ro := NewRunningOutput("test", m, conf, 4, 12)
+	ro := NewRunningOutput(m, conf, 4, 12)
 
 	// Fill buffer to limit twice
 	for _, metric := range first5 {
@@ -334,7 +326,7 @@ func TestRunningOutputWriteFailOrder(t *testing.T) {
 
 	m := &mockOutput{}
 	m.failWrite = true
-	ro := NewRunningOutput("test", m, conf, 100, 1000)
+	ro := NewRunningOutput(m, conf, 100, 1000)
 
 	// add 5 metrics
 	for _, metric := range first5 {
@@ -372,7 +364,7 @@ func TestRunningOutputWriteFailOrder2(t *testing.T) {
 
 	m := &mockOutput{}
 	m.failWrite = true
-	ro := NewRunningOutput("test", m, conf, 5, 100)
+	ro := NewRunningOutput(m, conf, 5, 100)
 
 	// add 5 metrics
 	for _, metric := range first5 {
@@ -436,7 +428,7 @@ func TestRunningOutputWriteFailOrder3(t *testing.T) {
 
 	m := &mockOutput{}
 	m.failWrite = true
-	ro := NewRunningOutput("test", m, conf, 5, 1000)
+	ro := NewRunningOutput(m, conf, 5, 1000)
 
 	// add 5 metrics
 	for _, metric := range first5 {
@@ -470,7 +462,6 @@ func TestRunningOutputWriteFailOrder3(t *testing.T) {
 
 func TestInternalMetrics(t *testing.T) {
 	_ = NewRunningOutput(
-		"test_internal",
 		&mockOutput{},
 		&OutputConfig{
 			Filter: Filter{},
@@ -548,9 +539,7 @@ func (m *mockOutput) Write(metrics []telegraf.Metric) error {
 		m.metrics = []telegraf.Metric{}
 	}
 
-	for _, metric := range metrics {
-		m.metrics = append(m.metrics, metric)
-	}
+	m.metrics = append(m.metrics, metrics...)
 	return nil
 }
 
@@ -581,7 +570,7 @@ func (m *perfOutput) SampleConfig() string {
 	return ""
 }
 
-func (m *perfOutput) Write(metrics []telegraf.Metric) error {
+func (m *perfOutput) Write(_ []telegraf.Metric) error {
 	if m.failWrite {
 		return fmt.Errorf("failed write")
 	}

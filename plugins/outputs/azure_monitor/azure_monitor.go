@@ -16,7 +16,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/selfstat"
@@ -25,7 +25,7 @@ import (
 // AzureMonitor allows publishing of metrics to the Azure Monitor custom metrics
 // service
 type AzureMonitor struct {
-	Timeout             internal.Duration
+	Timeout             config.Duration
 	NamespacePrefix     string          `toml:"namespace_prefix"`
 	StringsAsDimensions bool            `toml:"strings_as_dimensions"`
 	Region              string          `toml:"region"`
@@ -144,15 +144,15 @@ func (a *AzureMonitor) SampleConfig() string {
 func (a *AzureMonitor) Connect() error {
 	a.cache = make(map[time.Time]map[uint64]*aggregate, 36)
 
-	if a.Timeout.Duration == 0 {
-		a.Timeout.Duration = defaultRequestTimeout
+	if a.Timeout == 0 {
+		a.Timeout = config.Duration(defaultRequestTimeout)
 	}
 
 	a.client = &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: a.Timeout.Duration,
+		Timeout: time.Duration(a.Timeout),
 	}
 
 	var err error
@@ -193,7 +193,7 @@ func (a *AzureMonitor) Connect() error {
 
 	a.auth, err = auth.NewAuthorizerFromEnvironmentWithResource(defaultAuthResource)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	a.Reset()
@@ -599,7 +599,7 @@ func (a *AzureMonitor) Push() []telegraf.Metric {
 				tags[tag.name] = tag.value
 			}
 
-			m, err := metric.New(agg.name,
+			m := metric.New(agg.name,
 				tags,
 				map[string]interface{}{
 					"min":   agg.min,
@@ -609,10 +609,6 @@ func (a *AzureMonitor) Push() []telegraf.Metric {
 				},
 				tbucket,
 			)
-
-			if err != nil {
-				a.Log.Errorf("Could not create metric for aggregation %q; discarding point", agg.name)
-			}
 
 			metrics = append(metrics, m)
 		}

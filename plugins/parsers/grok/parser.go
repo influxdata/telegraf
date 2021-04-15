@@ -370,14 +370,13 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if p.UniqueTimestamp != "auto" {
-		return metric.New(p.Measurement, tags, fields, timestamp)
+		return metric.New(p.Measurement, tags, fields, timestamp), nil
 	}
 
-	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
+	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp)), nil
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-
 	metrics := make([]telegraf.Metric, 0)
 
 	scanner := bufio.NewScanner(bytes.NewReader(buf))

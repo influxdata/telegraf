@@ -69,7 +69,6 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 				fields = makeBuckets(m)
 				fields["count"] = float64(m.GetHistogram().GetSampleCount())
 				fields["sum"] = float64(m.GetHistogram().GetSampleSum())
-
 			} else {
 				// standard metric
 				fields = getNameAndValue(m)
@@ -82,10 +81,8 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 				} else {
 					t = now
 				}
-				metric, err := metric.New(metricName, tags, fields, t, common.ValueType(mf.GetType()))
-				if err == nil {
-					metrics = append(metrics, metric)
-				}
+				m := metric.New(metricName, tags, fields, t, common.ValueType(mf.GetType()))
+				metrics = append(metrics, m)
 			}
 		}
 	}
@@ -94,9 +91,8 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 }
 
 func isProtobuf(header http.Header) bool {
-	mediatype, params, error := mime.ParseMediaType(header.Get("Content-Type"))
-
-	if error != nil {
+	mediatype, params, err := mime.ParseMediaType(header.Get("Content-Type"))
+	if err != nil {
 		return false
 	}
 

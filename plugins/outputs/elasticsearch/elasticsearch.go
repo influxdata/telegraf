@@ -14,7 +14,7 @@ import (
 	"crypto/sha256"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"gopkg.in/olivere/elastic.v5"
@@ -28,8 +28,8 @@ type Elasticsearch struct {
 	Username            string
 	Password            string
 	EnableSniffer       bool
-	Timeout             internal.Duration
-	HealthCheckInterval internal.Duration
+	Timeout             config.Duration
+	HealthCheckInterval config.Duration
 	ManageTemplate      bool
 	TemplateName        string
 	OverwriteTemplate   bool
@@ -174,7 +174,7 @@ func (a *Elasticsearch) Connect() error {
 		return fmt.Errorf("Elasticsearch urls or index_name is not defined")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), a.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 	defer cancel()
 
 	var clientOptions []elastic.ClientOptionFunc
@@ -189,14 +189,14 @@ func (a *Elasticsearch) Connect() error {
 
 	httpclient := &http.Client{
 		Transport: tr,
-		Timeout:   a.Timeout.Duration,
+		Timeout:   time.Duration(a.Timeout),
 	}
 
 	clientOptions = append(clientOptions,
 		elastic.SetHttpClient(httpclient),
 		elastic.SetSniff(a.EnableSniffer),
 		elastic.SetURL(a.URLs...),
-		elastic.SetHealthcheckInterval(a.HealthCheckInterval.Duration),
+		elastic.SetHealthcheckInterval(time.Duration(a.HealthCheckInterval)),
 	)
 
 	if a.Username != "" && a.Password != "" {
@@ -205,7 +205,7 @@ func (a *Elasticsearch) Connect() error {
 		)
 	}
 
-	if a.HealthCheckInterval.Duration == 0 {
+	if time.Duration(a.HealthCheckInterval) == 0 {
 		clientOptions = append(clientOptions,
 			elastic.SetHealthcheck(false),
 		)
@@ -250,7 +250,6 @@ func (a *Elasticsearch) Connect() error {
 
 // GetPointID generates a unique ID for a Metric Point
 func GetPointID(m telegraf.Metric) string {
-
 	var buffer bytes.Buffer
 	//Timestamp(ns),measurement name and Series Hash for compute the final SHA256 based hash ID
 
@@ -294,10 +293,9 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		}
 
 		bulkRequest.Add(br)
-
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), a.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 	defer cancel()
 
 	res, err := bulkRequest.Do(ctx)
@@ -315,7 +313,6 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	}
 
 	return nil
-
 }
 
 func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
@@ -360,17 +357,13 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 		}
 
 		log.Printf("D! Elasticsearch template %s created or updated\n", a.TemplateName)
-
 	} else {
-
 		log.Println("D! Found existing Elasticsearch template. Skipping template management")
-
 	}
 	return nil
 }
 
 func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
-
 	tagKeys := []string{}
 	startTag := strings.Index(indexName, "{{")
 
@@ -379,7 +372,6 @@ func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
 
 		if endTag < 0 {
 			startTag = -1
-
 		} else {
 			tagName := indexName[startTag+2 : endTag]
 
@@ -423,7 +415,6 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 	}
 
 	return fmt.Sprintf(indexName, tagValues...)
-
 }
 
 func getISOWeek(eventTime time.Time) string {
@@ -447,8 +438,8 @@ func (a *Elasticsearch) Close() error {
 func init() {
 	outputs.Add("elasticsearch", func() telegraf.Output {
 		return &Elasticsearch{
-			Timeout:             internal.Duration{Duration: time.Second * 5},
-			HealthCheckInterval: internal.Duration{Duration: time.Second * 10},
+			Timeout:             config.Duration(time.Second * 5),
+			HealthCheckInterval: config.Duration(time.Second * 10),
 		}
 	})
 }

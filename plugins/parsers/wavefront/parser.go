@@ -90,7 +90,6 @@ func (p *WavefrontParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *PointParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-
 	// parse even if the buffer begins with a newline
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
 	// add newline to end if not exists:
@@ -133,7 +132,6 @@ func (p *WavefrontParser) SetDefaultTags(tags map[string]string) {
 }
 
 func (p *PointParser) convertPointToTelegrafMetric(points []Point) ([]telegraf.Metric, error) {
-
 	metrics := make([]telegraf.Metric, 0)
 
 	for _, point := range points {
@@ -154,10 +152,7 @@ func (p *PointParser) convertPointToTelegrafMetric(points []Point) ([]telegraf.M
 		}
 		fields["value"] = v
 
-		m, err := metric.New(point.Name, tags, fields, time.Unix(point.Timestamp, 0))
-		if err != nil {
-			return nil, err
-		}
+		m := metric.New(point.Name, tags, fields, time.Unix(point.Timestamp, 0))
 
 		metrics = append(metrics, m)
 	}
@@ -211,7 +206,6 @@ func (p *PointParser) unscanTokens(n int) {
 }
 
 func (p *PointParser) reset(buf []byte) {
-
 	// reset the scan buffer and write new byte
 	p.scanBuf.Reset()
 	p.scanBuf.Write(buf)

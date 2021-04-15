@@ -6,9 +6,11 @@ import (
 	"io"
 	"log"
 	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -18,8 +20,8 @@ const maxStderrBytes = 512
 
 // Exec defines the exec output plugin.
 type Exec struct {
-	Command []string          `toml:"command"`
-	Timeout internal.Duration `toml:"timeout"`
+	Command []string        `toml:"command"`
+	Timeout config.Duration `toml:"timeout"`
 
 	runner     Runner
 	serializer serializers.Serializer
@@ -38,6 +40,10 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
 `
+
+func (e *Exec) Init() error {
+	return nil
+}
 
 // SetSerializer sets the serializer for the output.
 func (e *Exec) SetSerializer(serializer serializers.Serializer) {
@@ -77,7 +83,7 @@ func (e *Exec) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	return e.runner.Run(e.Timeout.Duration, e.Command, &buffer)
+	return e.runner.Run(time.Duration(e.Timeout), e.Command, &buffer)
 }
 
 // Runner provides an interface for running exec.Cmd.
@@ -105,8 +111,13 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, buffer io.R
 			return fmt.Errorf("%q timed out and was killed", command)
 		}
 
+		s = removeWindowsCarriageReturns(s)
 		if s.Len() > 0 {
-			log.Printf("E! [outputs.exec] Command error: %q", truncate(s))
+			if !telegraf.Debug {
+				log.Printf("E! [outputs.exec] Command error: %q", c.truncate(s))
+			} else {
+				log.Printf("D! [outputs.exec] Command error: %q", s)
+			}
 		}
 
 		if status, ok := internal.ExitStatus(err); ok {
@@ -121,7 +132,7 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, buffer io.R
 	return nil
 }
 
-func truncate(buf bytes.Buffer) string {
+func (c *CommandRunner) truncate(buf bytes.Buffer) string {
 	// Limit the number of bytes.
 	didTruncate := false
 	if buf.Len() > maxStderrBytes {
@@ -145,7 +156,26 @@ func init() {
 	outputs.Add("exec", func() telegraf.Output {
 		return &Exec{
 			runner:  &CommandRunner{},
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
+}
+
+// removeWindowsCarriageReturns removes all carriage returns from the input if the
+// OS is Windows. It does not return any errors.
+func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
+	if runtime.GOOS == "windows" {
+		var buf bytes.Buffer
+		for {
+			byt, err := b.ReadBytes(0x0D)
+			byt = bytes.TrimRight(byt, "\x0d")
+			if len(byt) > 0 {
+				_, _ = buf.Write(byt)
+			}
+			if err == io.EOF {
+				return buf
+			}
+		}
+	}
+	return b
 }
