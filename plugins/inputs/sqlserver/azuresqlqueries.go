@@ -443,7 +443,7 @@ WITH PerfCounters AS (
 		AND
 		(
 			counter_name IN (
-				'SQL Compilations/sec'
+				 'SQL Compilations/sec'
 				,'SQL Re-Compilations/sec'
 				,'User Connections'
 				,'Batch Requests/sec'
@@ -539,7 +539,7 @@ WITH PerfCounters AS (
 			) OR (
 				spi.[instance_name] IN ('_Total')
 				AND spi.[counter_name] IN (
-					'Lock Timeouts/sec'
+					 'Lock Timeouts/sec'
 					,'Lock Timeouts (timeout > 0)/sec'
 					,'Number of Deadlocks/sec'
 					,'Lock Waits/sec'
