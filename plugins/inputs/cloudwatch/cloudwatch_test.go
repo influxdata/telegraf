@@ -201,17 +201,19 @@ func TestSelectMetrics(t *testing.T) {
 				Dimensions: []*Dimension{
 					{
 						Name:  "LoadBalancerName",
-						Value: "*",
+						Value: "lb*",
 					},
 					{
 						Name:  "AvailabilityZone",
-						Value: "*",
+						Value: "us-east*",
 					},
 				},
 			},
 		},
 	}
+	err := c.initializeCloudWatch()
 	c.client = &mockSelectMetricsCloudWatchClient{}
+	assert.NoError(t, err)
 	filtered, err := getFilteredMetrics(c)
 	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
 	// AZs. We should get 12 metrics.
