@@ -296,8 +296,8 @@ func (c *CloudWatch) initializeCloudWatch() error {
 	c.client = cloudwatch.New(configProvider, cfg.WithLogLevel(loglevel))
 
 	// Initialize regex matchers for each Dimension value.
-	for _, metric := range c.Metrics {
-		for _, dimension := range metric.Dimensions {
+	for _, m := range c.Metrics {
+		for _, dimension := range m.Dimensions {
 			matcher, err := filter.NewIncludeExcludeFilter([]string{dimension.Value}, nil)
 			if err != nil {
 				return err
