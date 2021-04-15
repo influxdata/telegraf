@@ -169,7 +169,7 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 	go func() {
 		defer p.wg.Done()
 		if tlsConf != nil {
-			if err := p.server.ListenAndServeTLS("", ""); err != nil {
+			if err := p.server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
 				p.Log.Errorf("listening and serving TLS failed: %v", err)
 			}
 		} else {
