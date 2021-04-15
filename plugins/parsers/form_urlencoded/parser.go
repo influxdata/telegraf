@@ -47,12 +47,9 @@ func (p Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		tags[key] = value
 	}
 
-	metric, err := metric.New(p.MetricName, tags, fields, time.Now().UTC())
-	if err != nil {
-		return nil, err
-	}
+	m := metric.New(p.MetricName, tags, fields, time.Now().UTC())
 
-	return []telegraf.Metric{metric}, nil
+	return []telegraf.Metric{m}, nil
 }
 
 // ParseLine delegates a single line of text to the Parse function

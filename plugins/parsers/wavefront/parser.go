@@ -152,10 +152,7 @@ func (p *PointParser) convertPointToTelegrafMetric(points []Point) ([]telegraf.M
 		}
 		fields["value"] = v
 
-		m, err := metric.New(point.Name, tags, fields, time.Unix(point.Timestamp, 0))
-		if err != nil {
-			return nil, err
-		}
+		m := metric.New(point.Name, tags, fields, time.Unix(point.Timestamp, 0))
 
 		metrics = append(metrics, m)
 	}

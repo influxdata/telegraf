@@ -55,10 +55,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				if s.Timestamp > 0 {
 					t = time.Unix(0, s.Timestamp*1000000)
 				}
-				m, err := metric.New("prometheus_remote_write", tags, fields, t)
-				if err != nil {
-					return nil, fmt.Errorf("unable to convert to telegraf metric: %s", err)
-				}
+				m := metric.New("prometheus_remote_write", tags, fields, t)
 				metrics = append(metrics, m)
 			}
 		}

@@ -48,13 +48,10 @@ func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	fields := map[string]interface{}{v.FieldName: value}
-	metric, err := metric.New(v.MetricName, v.DefaultTags,
+	m := metric.New(v.MetricName, v.DefaultTags,
 		fields, time.Now().UTC())
-	if err != nil {
-		return nil, err
-	}
 
-	return []telegraf.Metric{metric}, nil
+	return []telegraf.Metric{m}, nil
 }
 
 func (v *ValueParser) ParseLine(line string) (telegraf.Metric, error) {

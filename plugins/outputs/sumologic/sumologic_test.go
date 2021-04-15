@@ -27,7 +27,7 @@ import (
 )
 
 func getMetric(t *testing.T) telegraf.Metric {
-	m, err := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
@@ -35,7 +35,6 @@ func getMetric(t *testing.T) telegraf.Metric {
 		},
 		time.Unix(0, 0),
 	)
-	require.NoError(t, err)
 	return m
 }
 
@@ -44,7 +43,7 @@ func getMetrics(t *testing.T) []telegraf.Metric {
 	var metrics = make([]telegraf.Metric, count)
 
 	for i := 0; i < count; i++ {
-		m, err := metric.New(
+		m := metric.New(
 			fmt.Sprintf("cpu-%d", i),
 			map[string]string{
 				"ec2_instance": "aws-129038123",
@@ -59,7 +58,6 @@ func getMetrics(t *testing.T) []telegraf.Metric {
 			},
 			time.Unix(0, 0),
 		)
-		require.NoError(t, err)
 		metrics[i] = m
 	}
 	return metrics
