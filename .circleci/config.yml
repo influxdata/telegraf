@@ -30,8 +30,9 @@ commands:
         - run: ./scripts/check-file-changes
   check-changed-files-or-halt-windows:
       steps:
-        - run: ./scripts/check-file-changes
-          shell: bash.exe
+        - run: 
+            command: ./scripts/check-file-changes
+            shell: bash.exe
   test-go:
     parameters:
       goarch:
