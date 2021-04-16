@@ -13,7 +13,7 @@ const (
 
 type Configuration interface {
 	Check() error
-	Process(m *Modbus) error
+	Process() ([]request, error)
 }
 
 func removeDuplicates(elements []uint16) []uint16 {

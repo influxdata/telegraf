@@ -31,11 +31,9 @@ type Modbus struct {
 	// Register configuration
 	ConfigurationOriginal
 	// Connection handling
-	client       mb.Client
-	isConnected  bool
-	tcpHandler   *mb.TCPClientHandler
-	rtuHandler   *mb.RTUClientHandler
-	asciiHandler *mb.ASCIIClientHandler
+	client      mb.Client
+	handler     mb.ClientHandler
+	isConnected bool
 	// Request handling
 	requests []request
 }
@@ -43,7 +41,7 @@ type Modbus struct {
 type fieldConverterFunc func(bytes []byte) interface{}
 
 type request struct {
-	slaveID      int
+	slaveID      byte
 	registerType string
 	address      uint16
 	length       uint16
@@ -175,99 +173,74 @@ func (m *Modbus) Init() error {
 		return fmt.Errorf("original configuraton invalid: %v", err)
 	}
 
-	if err := m.ConfigurationOriginal.Process(m); err != nil {
+	r, err := m.ConfigurationOriginal.Process()
+	if err != nil {
 		return fmt.Errorf("cannot process original configuraton: %v", err)
 	}
+	m.requests = append(m.requests, r...)
+
+	// Setup client
+	return m.initClient()
+}
+
+func (m *Modbus) initClient() error {
+	u, err := url.Parse(m.Controller)
+	if err != nil {
+		return err
+	}
+
+	switch u.Scheme {
+	case "tcp":
+		host, port, err := net.SplitHostPort(u.Host)
+		if err != nil {
+			return err
+		}
+		handler := mb.NewTCPClientHandler(host + ":" + port)
+		handler.Timeout = time.Duration(m.Timeout)
+		m.handler = handler
+	case "file":
+		switch m.TransmissionMode {
+		case "RTU":
+			handler := mb.NewRTUClientHandler(u.Path)
+			handler.Timeout = time.Duration(m.Timeout)
+			handler.BaudRate = m.BaudRate
+			handler.DataBits = m.DataBits
+			handler.Parity = m.Parity
+			handler.StopBits = m.StopBits
+			m.handler = handler
+		case "ASCII":
+			handler := mb.NewASCIIClientHandler(u.Path)
+			handler.Timeout = time.Duration(m.Timeout)
+			handler.BaudRate = m.BaudRate
+			handler.DataBits = m.DataBits
+			handler.Parity = m.Parity
+			handler.StopBits = m.StopBits
+			m.handler = handler
+		default:
+			return fmt.Errorf("invalid protocol '%s' - '%s' ", u.Scheme, m.TransmissionMode)
+		}
+	default:
+		return fmt.Errorf("invalid controller %q", m.Controller)
+	}
+
+	m.handler.SetSlave(m.SlaveID)
+	m.client = mb.NewClient(m.handler)
+	m.isConnected = false
 
 	return nil
 }
 
 // Connect to a MODBUS Slave device via Modbus/[TCP|RTU|ASCII]
-func connect(m *Modbus) error {
-	u, err := url.Parse(m.Controller)
-	if err != nil {
-		return err
-	}
-
-	switch u.Scheme {
-	case "tcp":
-		var host, port string
-		host, port, err = net.SplitHostPort(u.Host)
-		if err != nil {
-			return err
-		}
-		m.tcpHandler = mb.NewTCPClientHandler(host + ":" + port)
-		m.tcpHandler.Timeout = time.Duration(m.Timeout)
-		m.tcpHandler.SlaveID = byte(m.SlaveID)
-		m.client = mb.NewClient(m.tcpHandler)
-		err := m.tcpHandler.Connect()
-		if err != nil {
-			return err
-		}
-		m.isConnected = true
-		return nil
-	case "file":
-		if m.TransmissionMode == "RTU" {
-			m.rtuHandler = mb.NewRTUClientHandler(u.Path)
-			m.rtuHandler.Timeout = time.Duration(m.Timeout)
-			m.rtuHandler.SlaveID = byte(m.SlaveID)
-			m.rtuHandler.BaudRate = m.BaudRate
-			m.rtuHandler.DataBits = m.DataBits
-			m.rtuHandler.Parity = m.Parity
-			m.rtuHandler.StopBits = m.StopBits
-			m.client = mb.NewClient(m.rtuHandler)
-			err := m.rtuHandler.Connect()
-			if err != nil {
-				return err
-			}
-			m.isConnected = true
-			return nil
-		} else if m.TransmissionMode == "ASCII" {
-			m.asciiHandler = mb.NewASCIIClientHandler(u.Path)
-			m.asciiHandler.Timeout = time.Duration(m.Timeout)
-			m.asciiHandler.SlaveID = byte(m.SlaveID)
-			m.asciiHandler.BaudRate = m.BaudRate
-			m.asciiHandler.DataBits = m.DataBits
-			m.asciiHandler.Parity = m.Parity
-			m.asciiHandler.StopBits = m.StopBits
-			m.client = mb.NewClient(m.asciiHandler)
-			err := m.asciiHandler.Connect()
-			if err != nil {
-				return err
-			}
-			m.isConnected = true
-			return nil
-		} else {
-			return fmt.Errorf("invalid protocol '%s' - '%s' ", u.Scheme, m.TransmissionMode)
-		}
-	default:
-		return fmt.Errorf("invalid controller")
-	}
+func (m *Modbus) connect() error {
+	err := m.handler.Connect()
+	m.isConnected = err == nil
+	return err
 }
 
-func disconnect(m *Modbus) error {
-	u, err := url.Parse(m.Controller)
-	if err != nil {
-		return err
-	}
-
-	switch u.Scheme {
-	case "tcp":
-		m.tcpHandler.Close()
-		return nil
-	case "file":
-		if m.TransmissionMode == "RTU" {
-			m.rtuHandler.Close()
-			return nil
-		} else if m.TransmissionMode == "ASCII" {
-			m.asciiHandler.Close()
-			return nil
-		} else {
-			return fmt.Errorf("invalid protocol '%s' - '%s' ", u.Scheme, m.TransmissionMode)
-		}
-	default:
-		return fmt.Errorf("invalid controller")
-	}
+func (m *Modbus) disconnect() error {
+	err := m.handler.Close()
+	m.isConnected = false
+	return err
 }
 
 func (m *Modbus) readRegisterValues(registerType string, address, length uint16) ([]byte, error) {
@@ -320,9 +293,7 @@ func (m *Modbus) getFields() error {
 // Gather implements the telegraf plugin interface method for data accumulation
 func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	if !m.isConnected {
-		err := connect(m)
-		if err != nil {
-			m.isConnected = false
+		if err := m.connect(); err != nil {
 			return err
 		}
 	}
@@ -340,8 +311,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 			}
 			// Ignore return error to not shadow the initial error
 			//nolint:errcheck,revive
-			disconnect(m)
-			m.isConnected = false
+			m.disconnect()
 			return err
 		}
 		// Reading was successful, leave the retry loop
@@ -353,7 +323,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		tags := map[string]string{
 			"name":     m.Name,
 			"type":     request.registerType,
-			"slave_id": strconv.Itoa(request.slaveID),
+			"slave_id": strconv.Itoa(int(request.slaveID)),
 		}
 
 		for _, field := range request.fields {

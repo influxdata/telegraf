@@ -16,39 +16,41 @@ type fieldDefinition struct {
 }
 
 type ConfigurationOriginal struct {
-	SlaveID          int               `toml:"slave_id"`
+	SlaveID          byte              `toml:"slave_id"`
 	DiscreteInputs   []fieldDefinition `toml:"discrete_inputs"`
 	Coils            []fieldDefinition `toml:"coils"`
 	HoldingRegisters []fieldDefinition `toml:"holding_registers"`
 	InputRegisters   []fieldDefinition `toml:"input_registers"`
 }
 
-func (c *ConfigurationOriginal) Process(m *Modbus) error {
-	r, err := m.initRequests(c.DiscreteInputs, cDiscreteInputs, maxQuantityDiscreteInput)
+func (c *ConfigurationOriginal) Process() ([]request, error) {
+	var requests []request
+
+	r, err := c.initRequests(c.DiscreteInputs, cDiscreteInputs, maxQuantityDiscreteInput)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	m.requests = append(m.requests, r...)
+	requests = append(requests, r...)
 
 	r, err = c.initRequests(c.Coils, cCoils, maxQuantityCoils)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	m.requests = append(m.requests, r...)
+	requests = append(requests, r...)
 
-	r, err = m.initRequests(c.HoldingRegisters, cHoldingRegisters, maxQuantityHoldingRegisters)
+	r, err = c.initRequests(c.HoldingRegisters, cHoldingRegisters, maxQuantityHoldingRegisters)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	m.requests = append(m.requests, r...)
+	requests = append(requests, r...)
 
-	r, err = c.initRequests(m.InputRegisters, cInputRegisters, maxQuantityInputRegisters)
+	r, err = c.initRequests(c.InputRegisters, cInputRegisters, maxQuantityInputRegisters)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	m.requests = append(m.requests, r...)
+	requests = append(requests, r...)
 
-	return nil
+	return requests, nil
 }
 
 func (c *ConfigurationOriginal) Check() error {
@@ -75,7 +77,7 @@ func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, regist
 	return c.initRequestsPerSlaveAndType(fieldDefs, c.SlaveID, registerType, maxQuantity)
 }
 
-func (c *ConfigurationOriginal) initRequestsPerSlaveAndType(fieldDefs []fieldDefinition, slaveID int, registerType string, maxQuantity uint16) ([]request, error) {
+func (c *ConfigurationOriginal) initRequestsPerSlaveAndType(fieldDefs []fieldDefinition, slaveID byte, registerType string, maxQuantity uint16) ([]request, error) {
 	if len(fieldDefs) < 1 {
 		return nil, nil
 	}
