@@ -1,8 +1,6 @@
 package modbus
 
-import (
-	"fmt"
-)
+import "fmt"
 
 const (
 	maxQuantityDiscreteInput    = uint16(2000)

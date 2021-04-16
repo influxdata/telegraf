@@ -1,8 +1,6 @@
 package modbus
 
-import (
-	"sort"
-)
+import "sort"
 
 type requestReaderFunc func(address, length uint16) ([]byte, error)
 
