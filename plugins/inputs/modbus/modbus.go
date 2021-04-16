@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strconv"
 	"time"
 
 	mb "github.com/grid-x/modbus"
@@ -42,17 +43,17 @@ type Modbus struct {
 type fieldConverterFunc func(bytes []byte) interface{}
 
 type request struct {
-	SlaveID int
-	Type    string
-	address uint16
-	length  uint16
-	Fields  []field
+	slaveID      int
+	registerType string
+	address      uint16
+	length       uint16
+	fields       []field
 }
 
 type field struct {
-	Measurement string
-	Name        string
-	Scale       float64
+	measurement string
+	name        string
+	scale       float64
 	address     uint16
 	length      uint16
 	converter   fieldConverterFunc
@@ -285,31 +286,30 @@ func (m *Modbus) readRegisterValues(registerType string, address, length uint16)
 
 func (m *Modbus) getFields() error {
 	for _, request := range m.requests {
-		bytes, err := m.readRegisterValues(request.Type, request.address, request.length)
+		bytes, err := m.readRegisterValues(request.registerType, request.address, request.length)
 		if err != nil {
 			return err
 		}
 
-		// Bit value handling
-		if request.Type == cDiscreteInputs || request.Type == cCoils {
-			for i, field := range request.Fields {
+		switch request.registerType {
+		case cDiscreteInputs, cCoils:
+			// Bit value handling
+			for i, field := range request.fields {
 				offset := field.address - request.address
 				idx := offset / 8
 				bit := offset % 8
 
-				request.Fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
+				request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
 			}
-		}
-
-		// Non-bit value handling
-		if request.Type == cInputRegisters || request.Type == cHoldingRegisters {
-			for i, field := range request.Fields {
+		case cInputRegisters, cHoldingRegisters:
+			// Non-bit value handling
+			for i, field := range request.fields {
 				// Determine the offset of the field values in the read array
 				offset := 2 * (field.address - request.address) // registers are 16bit = 2 byte
 				length := 2 * field.length                      // field length is in registers a 16bit
 
 				// Convert the actual value
-				request.Fields[i].value = field.converter(bytes[offset : offset+length])
+				request.fields[i].value = field.converter(bytes[offset : offset+length])
 			}
 		}
 	}
@@ -349,21 +349,22 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	}
 
 	grouper := metric.NewSeriesGrouper()
-	for _, reg := range m.requests {
+	for _, request := range m.requests {
 		tags := map[string]string{
-			"name": m.Name,
-			"type": reg.Type,
+			"name":     m.Name,
+			"type":     request.registerType,
+			"slave_id": strconv.Itoa(request.slaveID),
 		}
 
-		for _, field := range reg.Fields {
+		for _, field := range request.fields {
 			// In case no measurement was specified we use "modbus" as default
 			measurement := "modbus"
-			if field.Measurement != "" {
-				measurement = field.Measurement
+			if field.measurement != "" {
+				measurement = field.measurement
 			}
 
 			// Group the data by series
-			if err := grouper.Add(measurement, tags, timestamp, field.Name, field.value); err != nil {
+			if err := grouper.Add(measurement, tags, timestamp, field.name, field.value); err != nil {
 				return err
 			}
 		}

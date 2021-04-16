@@ -115,7 +115,7 @@ func TestCoils(t *testing.T) {
 			require.NotEmpty(t, modbus.requests)
 
 			for _, coil := range modbus.requests {
-				require.Equal(t, ct.read, coil.Fields[0].value)
+				require.Equal(t, ct.read, coil.fields[0].value)
 			}
 		})
 	}
@@ -653,7 +653,7 @@ func TestHoldingRegisters(t *testing.T) {
 			require.NotEmpty(t, modbus.requests)
 
 			for _, coil := range modbus.requests {
-				require.Equal(t, hrt.read, coil.Fields[0].value)
+				require.Equal(t, hrt.read, coil.fields[0].value)
 			}
 		})
 	}
@@ -702,7 +702,7 @@ func TestReadMultipleCoilLimit(t *testing.T) {
 	for i := uint16(0); i < 4000; i++ {
 		ri := i / maxQuantityCoils
 		fi := i % maxQuantityCoils
-		require.Equal(t, writeValue, modbus.requests[ri].Fields[fi].value)
+		require.Equal(t, writeValue, modbus.requests[ri].fields[fi].value)
 		writeValue = 1 - writeValue
 	}
 }
@@ -761,10 +761,10 @@ func TestReadMultipleHoldingRegisterWithHole(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 0; i < 10; i++ {
-		require.Equal(t, int64(i), modbus.requests[0].Fields[i].value)
+		require.Equal(t, int64(i), modbus.requests[0].fields[i].value)
 	}
 	for i := 0; i < 10; i++ {
-		require.Equal(t, int64(i+20), modbus.requests[1].Fields[i].value)
+		require.Equal(t, int64(i+20), modbus.requests[1].fields[i].value)
 	}
 }
 
@@ -812,7 +812,7 @@ func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
 	for i := uint16(0); i <= 400; i++ {
 		ri := i / maxQuantityHoldingRegisters
 		fi := i % maxQuantityHoldingRegisters
-		require.Equal(t, int64(i), modbus.requests[ri].Fields[fi].value)
+		require.Equal(t, int64(i), modbus.requests[ri].fields[fi].value)
 	}
 }
 
@@ -866,7 +866,7 @@ func TestRetrySuccessful(t *testing.T) {
 		require.NotEmpty(t, modbus.requests)
 
 		for _, coil := range modbus.requests {
-			require.Equal(t, uint16(value), coil.Fields[0].value)
+			require.Equal(t, uint16(value), coil.fields[0].value)
 		}
 	})
 }

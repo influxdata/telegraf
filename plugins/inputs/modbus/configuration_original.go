@@ -104,11 +104,11 @@ func (c *ConfigurationOriginal) initRequestsPerSlaveAndType(fieldDefs []fieldDef
 	var requests []request
 
 	current := request{
-		SlaveID: c.SlaveID,
-		Type:    registerType,
-		address: fields[0].address,
-		length:  fields[0].length,
-		Fields:  []field{fields[0]},
+		slaveID:      c.SlaveID,
+		registerType: registerType,
+		address:      fields[0].address,
+		length:       fields[0].length,
+		fields:       []field{fields[0]},
 	}
 
 	for _, f := range fields[1:] {
@@ -119,18 +119,18 @@ func (c *ConfigurationOriginal) initRequestsPerSlaveAndType(fieldDefs []fieldDef
 		if !needInterrupt {
 			// Still save to add the field to the current request
 			current.length += f.length
-			current.Fields = append(current.Fields, f) // TODO: omit the field with a future flag
+			current.fields = append(current.fields, f) // TODO: omit the field with a future flag
 			continue
 		}
 
 		// Finish the current request, add it to the list and construct a new one
 		requests = append(requests, current)
 		current = request{
-			SlaveID: c.SlaveID,
-			Type:    registerType,
-			address: f.address,
-			length:  f.length,
-			Fields:  []field{f},
+			slaveID:      c.SlaveID,
+			registerType: registerType,
+			address:      f.address,
+			length:       f.length,
+			fields:       []field{f},
 		}
 	}
 	requests = append(requests, current)
@@ -150,9 +150,9 @@ func (c *ConfigurationOriginal) initField(def fieldDefinition) (field, error) {
 
 	// Initialize the field
 	f := field{
-		Measurement: def.Measurement,
-		Name:        def.Name,
-		Scale:       def.Scale,
+		measurement: def.Measurement,
+		name:        def.Name,
+		scale:       def.Scale,
 		address:     def.Address[0],
 		length:      uint16(len(def.Address)),
 	}
