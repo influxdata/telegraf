@@ -673,16 +673,14 @@ func TestReadMultipleCoilLimit(t *testing.T) {
 
 	fcs := []fieldDefinition{}
 	writeValue := uint16(0)
-	for i := 0; i <= 4000; i++ {
+	for i := 0; i < 4000; i++ {
 		fc := fieldDefinition{}
 		fc.Name = fmt.Sprintf("coil-%v", i)
 		fc.Address = []uint16{uint16(i)}
 		fcs = append(fcs, fc)
 
-		t.Run(fc.Name, func(t *testing.T) {
-			_, err = client.WriteSingleCoil(fc.Address[0], writeValue)
-			require.NoError(t, err)
-		})
+		_, err = client.WriteSingleCoil(fc.Address[0], writeValue)
+		require.NoError(t, err)
 
 		writeValue = 65280 - writeValue
 	}
@@ -701,11 +699,11 @@ func TestReadMultipleCoilLimit(t *testing.T) {
 	require.NoError(t, err)
 
 	writeValue = 0
-	for i := 0; i <= 4000; i++ {
-		t.Run(modbus.requests[0].Fields[i].Name, func(t *testing.T) {
-			require.Equal(t, writeValue, modbus.requests[0].Fields[i].value)
-			writeValue = 1 - writeValue
-		})
+	for i := uint16(0); i < 4000; i++ {
+		ri := i / maxQuantityCoils
+		fi := i % maxQuantityCoils
+		require.Equal(t, writeValue, modbus.requests[ri].Fields[fi].value)
+		writeValue = 1 - writeValue
 	}
 }
 
@@ -750,8 +748,10 @@ func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
 	err = modbus.Gather(&acc)
 	require.NoError(t, err)
 
-	for i := 0; i <= 400; i++ {
-		require.Equal(t, int64(i), modbus.requests[0].Fields[i].value)
+	for i := uint16(0); i <= 400; i++ {
+		ri := i / maxQuantityHoldingRegisters
+		fi := i % maxQuantityHoldingRegisters
+		require.Equal(t, int64(i), modbus.requests[ri].Fields[fi].value)
 	}
 }
 

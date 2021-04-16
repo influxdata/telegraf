@@ -42,24 +42,21 @@ type Modbus struct {
 type fieldConverterFunc func(bytes []byte) interface{}
 
 type request struct {
-	SlaveID        int
-	Type           string
-	RegistersRange []registerRange
-	Fields         []field
+	SlaveID int
+	Type    string
+	address uint16
+	length  uint16
+	Fields  []field
 }
 
 type field struct {
 	Measurement string
 	Name        string
 	Scale       float64
-	Address     []uint16
+	address     uint16
+	length      uint16
 	converter   fieldConverterFunc
 	value       interface{}
-}
-
-type registerRange struct {
-	address uint16
-	length  uint16
 }
 
 const (
@@ -177,7 +174,11 @@ func (m *Modbus) Init() error {
 		return fmt.Errorf("original configuraton invalid: %v", err)
 	}
 
-	return m.ConfigurationOriginal.Process(m)
+	if err := m.ConfigurationOriginal.Process(m); err != nil {
+		return fmt.Errorf("cannot process original configuraton: %v", err)
+	}
+
+	return nil
 }
 
 // Connect to a MODBUS Slave device via Modbus/[TCP|RTU|ASCII]
@@ -268,60 +269,59 @@ func disconnect(m *Modbus) error {
 	}
 }
 
-func readRegisterValues(m *Modbus, rt string, rr registerRange) ([]byte, error) {
-	if rt == cDiscreteInputs {
-		return m.client.ReadDiscreteInputs(rr.address, rr.length)
-	} else if rt == cCoils {
-		return m.client.ReadCoils(rr.address, rr.length)
-	} else if rt == cInputRegisters {
-		return m.client.ReadInputRegisters(rr.address, rr.length)
-	} else if rt == cHoldingRegisters {
-		return m.client.ReadHoldingRegisters(rr.address, rr.length)
-	} else {
-		return []byte{}, fmt.Errorf("not Valid function")
+func (m *Modbus) readRegisterValues(registerType string, address, length uint16) ([]byte, error) {
+	switch registerType {
+	case cDiscreteInputs:
+		return m.client.ReadDiscreteInputs(address, length)
+	case cCoils:
+		return m.client.ReadCoils(address, length)
+	case cInputRegisters:
+		return m.client.ReadInputRegisters(address, length)
+	case cHoldingRegisters:
+		return m.client.ReadHoldingRegisters(address, length)
 	}
+	return nil, fmt.Errorf("invalid register type %q", registerType)
 }
 
 func (m *Modbus) getFields() error {
 	for _, request := range m.requests {
 		rawValues := make(map[uint16][]byte)
 		bitRawValues := make(map[uint16]uint16)
-		for _, rr := range request.RegistersRange {
-			address := rr.address
-			readValues, err := readRegisterValues(m, request.Type, rr)
-			if err != nil {
-				return err
-			}
 
-			// Raw Values
-			if request.Type == cDiscreteInputs || request.Type == cCoils {
-				for _, readValue := range readValues {
-					for bitPosition := uint(0); bitPosition < 8; bitPosition++ {
-						bitRawValues[address] = getBitValue(readValue, bitPosition)
-						address = address + 1
-						if address > rr.address+rr.length {
-							break
-						}
+		address := request.address
+		readValues, err := m.readRegisterValues(request.Type, request.address, request.length)
+		if err != nil {
+			return err
+		}
+
+		// Raw Values
+		if request.Type == cDiscreteInputs || request.Type == cCoils {
+			for _, readValue := range readValues {
+				for bitPosition := uint(0); bitPosition < 8; bitPosition++ {
+					bitRawValues[address] = getBitValue(readValue, bitPosition)
+					address = address + 1
+					if address > request.address+request.length {
+						break
 					}
 				}
 			}
+		}
 
-			// Raw Values
-			if request.Type == cInputRegisters || request.Type == cHoldingRegisters {
-				batchSize := 2
-				for batchSize < len(readValues) {
-					rawValues[address] = readValues[0:batchSize:batchSize]
-					address = address + 1
-					readValues = readValues[batchSize:]
-				}
-
+		// Raw Values
+		if request.Type == cInputRegisters || request.Type == cHoldingRegisters {
+			batchSize := 2
+			for batchSize < len(readValues) {
 				rawValues[address] = readValues[0:batchSize:batchSize]
+				address = address + 1
+				readValues = readValues[batchSize:]
 			}
+
+			rawValues[address] = readValues[0:batchSize:batchSize]
 		}
 
 		if request.Type == cDiscreteInputs || request.Type == cCoils {
 			for i := 0; i < len(request.Fields); i++ {
-				request.Fields[i].value = bitRawValues[request.Fields[i].Address[0]]
+				request.Fields[i].value = bitRawValues[request.Fields[i].address]
 			}
 		}
 
@@ -329,8 +329,8 @@ func (m *Modbus) getFields() error {
 			for i := 0; i < len(request.Fields); i++ {
 				var buf []byte
 
-				for j := 0; j < len(request.Fields[i].Address); j++ {
-					tempArray := rawValues[request.Fields[i].Address[j]]
+				for j := uint16(0); j < request.Fields[i].length; j++ {
+					tempArray := rawValues[request.Fields[i].address+j]
 					for x := 0; x < len(tempArray); x++ {
 						buf = append(buf, tempArray[x])
 					}

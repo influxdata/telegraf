@@ -25,39 +25,35 @@ type ConfigurationOriginal struct {
 
 func (c *ConfigurationOriginal) Process(m *Modbus) error {
 	if len(c.DiscreteInputs) > 0 {
-		r, err := m.initRegister(c.DiscreteInputs, maxQuantityDiscreteInput)
+		r, err := m.initRequests(c.DiscreteInputs, cDiscreteInputs, maxQuantityDiscreteInput)
 		if err != nil {
 			return err
 		}
-		r.Type = cDiscreteInputs
-		m.requests = append(m.requests, r)
+		m.requests = append(m.requests, r...)
 	}
 
 	if len(c.Coils) > 0 {
-		r, err := c.initRegister(c.Coils, maxQuantityCoils)
+		r, err := c.initRequests(c.Coils, cCoils, maxQuantityCoils)
 		if err != nil {
 			return err
 		}
-		r.Type = cCoils
-		m.requests = append(m.requests, r)
+		m.requests = append(m.requests, r...)
 	}
 
 	if len(c.HoldingRegisters) > 0 {
-		r, err := m.initRegister(c.HoldingRegisters, maxQuantityHoldingRegisters)
+		r, err := m.initRequests(c.HoldingRegisters, cHoldingRegisters, maxQuantityHoldingRegisters)
 		if err != nil {
 			return err
 		}
-		r.Type = cHoldingRegisters
-		m.requests = append(m.requests, r)
+		m.requests = append(m.requests, r...)
 	}
 
 	if len(c.InputRegisters) > 0 {
-		r, err := c.initRegister(m.InputRegisters, maxQuantityInputRegisters)
+		r, err := c.initRequests(m.InputRegisters, cInputRegisters, maxQuantityInputRegisters)
 		if err != nil {
 			return err
 		}
-		r.Type = cInputRegisters
-		m.requests = append(m.requests, r)
+		m.requests = append(m.requests, r...)
 	}
 
 	return nil
@@ -91,62 +87,87 @@ func (c *ConfigurationOriginal) Check() error {
 	return nil
 }
 
-func (c *ConfigurationOriginal) initRegister(fieldDefs []fieldDefinition, maxQuantity int) (request, error) {
-	addrs := []uint16{}
-	for _, def := range fieldDefs {
-		addrs = append(addrs, def.Address...)
-	}
+func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, registerType string, maxQuantity uint16) ([]request, error) {
+	return c.initRequestsPerSlaveAndType(fieldDefs, c.SlaveID, registerType, maxQuantity)
+}
 
+func (c *ConfigurationOriginal) initRequestsPerSlaveAndType(fieldDefs []fieldDefinition, slaveID int, registerType string, maxQuantity uint16) ([]request, error) {
+	// Construct the fields from the field definitions
 	fields := make([]field, 0, len(fieldDefs))
 	for _, def := range fieldDefs {
 		f, err := c.initField(def)
 		if err != nil {
-			return request{}, fmt.Errorf("initializing field %q failed: %v", def.Name, err)
+			return nil, fmt.Errorf("initializing field %q failed: %v", def.Name, err)
 		}
 		fields = append(fields, f)
 	}
 
-	addrs = removeDuplicates(addrs)
-	sort.Slice(addrs, func(i, j int) bool { return addrs[i] < addrs[j] })
+	// Sort the fields by address (ascending) and length
+	sort.Slice(fields, func(i, j int) bool {
+		addrI := fields[i].address
+		addrJ := fields[j].address
+		return addrI < addrJ || (addrI == addrJ && fields[i].length > fields[j].length)
+	})
 
-	ii := 0
+	// Construct the consecutive register chunks for the addresses and construct Modbus requests.
+	// For field addresses like [1, 2, 3, 5, 6, 10, 11, 12, 14] we should construct the following
+	// requests (1, 3) , (5, 2) , (10, 3), (14 , 1). Furthermore, we should respect field boundaries
+	// and the given maximum chunk sizes.
+	var requests []request
+	var current request
 
-	var registersRange []registerRange
-
-	// Get range of consecutive integers
-	// [1, 2, 3, 5, 6, 10, 11, 12, 14]
-	// (1, 3) , (5, 2) , (10, 3), (14 , 1)
-	for range addrs {
-		if ii >= len(addrs) {
-			break
-		}
-		quantity := 1
-		start := addrs[ii]
-		end := start
-
-		for ii < len(addrs)-1 && addrs[ii+1]-addrs[ii] == 1 && quantity < maxQuantity {
-			end = addrs[ii+1]
-			ii++
-			quantity++
-		}
-		ii++
-
-		registersRange = append(registersRange, registerRange{start, end - start + 1})
+	current = request{
+		SlaveID: c.SlaveID,
+		Type:    registerType,
+		address: fields[0].address,
+		length:  fields[0].length,
+		Fields:  []field{fields[0]},
 	}
 
-	return request{
-		SlaveID:        c.SlaveID,
-		RegistersRange: registersRange,
-		Fields:         fields,
-	}, nil
+	for _, f := range fields[1:] {
+		// Check if we need to interrupt the current chunk and require a new one
+		needInterrupt := f.address != current.address+current.length           // not consecutive
+		needInterrupt = needInterrupt || f.length+current.length > maxQuantity // too large
+
+		if !needInterrupt {
+			// Still save to add the field to the current request
+			current.length += f.length
+			current.Fields = append(current.Fields, f) // TODO: omit the field with a future flag
+			continue
+		}
+
+		// Finish the current request, add it to the list and construct a new one
+		requests = append(requests, current)
+		current = request{
+			SlaveID: c.SlaveID,
+			Type:    registerType,
+			address: f.address,
+			length:  f.length,
+			Fields:  []field{f},
+		}
+	}
+	requests = append(requests, current)
+
+	return requests, nil
 }
 
 func (c *ConfigurationOriginal) initField(def fieldDefinition) (field, error) {
+	// Check if the addresses are consecutive
+	expected := def.Address[0]
+	for _, current := range def.Address[1:] {
+		expected++
+		if current != expected {
+			return field{}, fmt.Errorf("addresses of field %q are not consecutive", def.Name)
+		}
+	}
+
+	// Initialize the field
 	f := field{
 		Measurement: def.Measurement,
 		Name:        def.Name,
 		Scale:       def.Scale,
-		Address:     def.Address,
+		address:     def.Address[0],
+		length:      uint16(len(def.Address)),
 	}
 	if def.DataType != "" {
 		inType, err := c.normalizeInputDatatype(def.DataType, len(def.Address))

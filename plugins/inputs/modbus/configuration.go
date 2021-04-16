@@ -5,10 +5,10 @@ import (
 )
 
 const (
-	maxQuantityDiscreteInput    = 2000
-	maxQuantityCoils            = 2000
-	maxQuantityInputRegisters   = 125
-	maxQuantityHoldingRegisters = 125
+	maxQuantityDiscreteInput    = uint16(2000)
+	maxQuantityCoils            = uint16(2000)
+	maxQuantityInputRegisters   = uint16(125)
+	maxQuantityHoldingRegisters = uint16(125)
 )
 
 type Configuration interface {
