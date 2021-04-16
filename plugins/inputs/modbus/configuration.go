@@ -13,7 +13,7 @@ const (
 
 type Configuration interface {
 	Check() error
-	Process() ([]request, error)
+	Process() (map[byte]requestSet, error)
 }
 
 func removeDuplicates(elements []uint16) []uint16 {

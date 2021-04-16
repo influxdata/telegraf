@@ -35,10 +35,17 @@ type Modbus struct {
 	handler     mb.ClientHandler
 	isConnected bool
 	// Request handling
-	requests map[byte][]request
+	requests map[byte]requestSet
 }
 
 type fieldConverterFunc func(bytes []byte) interface{}
+
+type requestSet struct {
+	coil     []request
+	discrete []request
+	holding  []request
+	input    []request
+}
 
 type field struct {
 	measurement string
@@ -169,16 +176,11 @@ func (m *Modbus) Init() error {
 	if err != nil {
 		return fmt.Errorf("cannot process original configuraton: %v", err)
 	}
-	m.requests = append(m.requests, r...)
+	m.requests = r
 
 	// Setup client
 	if err := m.initClient(); err != nil {
 		return fmt.Errorf("initializing client failed: %v", err)
-	}
-
-	// Setup the request readers. We need the client for doing it.
-	if err := m.initRequestReaders(); err != nil {
-		return fmt.Errorf("initializing request failed: %v", err)
 	}
 
 	return nil
@@ -231,24 +233,6 @@ func (m *Modbus) initClient() error {
 	return nil
 }
 
-func (m *Modbus) initRequestReaders() error {
-	for i, request := range m.requests {
-		switch request.registerType {
-		case cDiscreteInputs:
-			m.requests[i].reader = m.client.ReadDiscreteInputs
-		case cCoils:
-			m.requests[i].reader = m.client.ReadCoils
-		case cInputRegisters:
-			m.requests[i].reader = m.client.ReadInputRegisters
-		case cHoldingRegisters:
-			m.requests[i].reader = m.client.ReadHoldingRegisters
-		default:
-			return fmt.Errorf("invalid register type %q", request.registerType)
-		}
-	}
-	return nil
-}
-
 // Connect to a MODBUS Slave device via Modbus/[TCP|RTU|ASCII]
 func (m *Modbus) connect() error {
 	err := m.handler.Connect()
@@ -263,35 +247,100 @@ func (m *Modbus) disconnect() error {
 }
 
 func (m *Modbus) gatherFields() error {
-	for _, request := range m.requests {
-		bytes, err := request.read()
+	for slaveID, requests := range m.requests {
+		_ = slaveID
+		if err := m.gatherRequestsCoil(requests.coil); err != nil {
+			return err
+		}
+		if err := m.gatherRequestsDiscrete(requests.discrete); err != nil {
+			return err
+		}
+		if err := m.gatherRequestsHolding(requests.holding); err != nil {
+			return err
+		}
+		if err := m.gatherRequestsInput(requests.input); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *Modbus) gatherRequestsCoil(requests []request) error {
+	for _, request := range requests {
+		bytes, err := m.client.ReadCoils(request.address, request.length)
 		if err != nil {
 			return err
 		}
 
-		switch request.registerType {
-		case cDiscreteInputs, cCoils:
-			// Bit value handling
-			for i, field := range request.fields {
-				offset := field.address - request.address
-				idx := offset / 8
-				bit := offset % 8
+		// Bit value handling
+		for i, field := range request.fields {
+			offset := field.address - request.address
+			idx := offset / 8
+			bit := offset % 8
 
-				request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
-			}
-		case cInputRegisters, cHoldingRegisters:
-			// Non-bit value handling
-			for i, field := range request.fields {
-				// Determine the offset of the field values in the read array
-				offset := 2 * (field.address - request.address) // registers are 16bit = 2 byte
-				length := 2 * field.length                      // field length is in registers a 16bit
-
-				// Convert the actual value
-				request.fields[i].value = field.converter(bytes[offset : offset+length])
-			}
+			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
 		}
 	}
+	return nil
+}
 
+func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
+	for _, request := range requests {
+		bytes, err := m.client.ReadDiscreteInputs(request.address, request.length)
+		if err != nil {
+			return err
+		}
+
+		// Bit value handling
+		for i, field := range request.fields {
+			offset := field.address - request.address
+			idx := offset / 8
+			bit := offset % 8
+
+			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
+		}
+	}
+	return nil
+}
+
+func (m *Modbus) gatherRequestsHolding(requests []request) error {
+	for _, request := range requests {
+		bytes, err := m.client.ReadHoldingRegisters(request.address, request.length)
+		if err != nil {
+			return err
+		}
+
+		// Non-bit value handling
+		for i, field := range request.fields {
+			// Determine the offset of the field values in the read array
+			offset := 2 * (field.address - request.address) // registers are 16bit = 2 byte
+			length := 2 * field.length                      // field length is in registers a 16bit
+
+			// Convert the actual value
+			request.fields[i].value = field.converter(bytes[offset : offset+length])
+		}
+	}
+	return nil
+}
+
+func (m *Modbus) gatherRequestsInput(requests []request) error {
+	for _, request := range requests {
+		bytes, err := m.client.ReadInputRegisters(request.address, request.length)
+		if err != nil {
+			return err
+		}
+
+		// Non-bit value handling
+		for i, field := range request.fields {
+			// Determine the offset of the field values in the read array
+			offset := 2 * (field.address - request.address) // registers are 16bit = 2 byte
+			length := 2 * field.length                      // field length is in registers a 16bit
+
+			// Convert the actual value
+			request.fields[i].value = field.converter(bytes[offset : offset+length])
+		}
+	}
 	return nil
 }
 
@@ -322,14 +371,30 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		break
 	}
 
-	grouper := metric.NewSeriesGrouper()
-	for _, request := range m.requests {
+	for slaveID, requests := range m.requests {
 		tags := map[string]string{
 			"name":     m.Name,
-			"type":     request.registerType,
-			"slave_id": strconv.Itoa(int(request.slaveID)),
+			"type":     cCoils,
+			"slave_id": strconv.Itoa(int(slaveID)),
 		}
+		m.collectFields(acc, timestamp, tags, requests.coil)
 
+		tags["type"] = cDiscreteInputs
+		m.collectFields(acc, timestamp, tags, requests.discrete)
+
+		tags["type"] = cHoldingRegisters
+		m.collectFields(acc, timestamp, tags, requests.holding)
+
+		tags["type"] = cInputRegisters
+		m.collectFields(acc, timestamp, tags, requests.input)
+	}
+
+	return nil
+}
+
+func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, tags map[string]string, requests []request) {
+	grouper := metric.NewSeriesGrouper()
+	for _, request := range requests {
 		for _, field := range request.fields {
 			// In case no measurement was specified we use "modbus" as default
 			measurement := "modbus"
@@ -339,17 +404,16 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 
 			// Group the data by series
 			if err := grouper.Add(measurement, tags, timestamp, field.name, field.value); err != nil {
-				return err
+				acc.AddError(fmt.Errorf("cannot add field %q for measurement %q: %v", field.name, measurement, err))
+				continue
 			}
-		}
-
-		// Add the metrics grouped by series to the accumulator
-		for _, x := range grouper.Metrics() {
-			acc.AddMetric(x)
 		}
 	}
 
-	return nil
+	// Add the metrics grouped by series to the accumulator
+	for _, x := range grouper.Metrics() {
+		acc.AddMetric(x)
+	}
 }
 
 // Add this plugin to telegraf

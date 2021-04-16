@@ -22,34 +22,35 @@ type ConfigurationOriginal struct {
 	InputRegisters   []fieldDefinition `toml:"input_registers"`
 }
 
-func (c *ConfigurationOriginal) Process() ([]request, error) {
-	var requests []request
-
-	r, err := c.initRequests(c.DiscreteInputs, cDiscreteInputs, maxQuantityDiscreteInput)
+func (c *ConfigurationOriginal) Process() (map[byte]requestSet, error) {
+	coil, err := c.initRequests(c.Coils, cCoils, maxQuantityCoils)
 	if err != nil {
 		return nil, err
 	}
-	requests = append(requests, r...)
 
-	r, err = c.initRequests(c.Coils, cCoils, maxQuantityCoils)
+	discrete, err := c.initRequests(c.DiscreteInputs, cDiscreteInputs, maxQuantityDiscreteInput)
 	if err != nil {
 		return nil, err
 	}
-	requests = append(requests, r...)
 
-	r, err = c.initRequests(c.HoldingRegisters, cHoldingRegisters, maxQuantityHoldingRegisters)
+	holding, err := c.initRequests(c.HoldingRegisters, cHoldingRegisters, maxQuantityHoldingRegisters)
 	if err != nil {
 		return nil, err
 	}
-	requests = append(requests, r...)
 
-	r, err = c.initRequests(c.InputRegisters, cInputRegisters, maxQuantityInputRegisters)
+	input, err := c.initRequests(c.InputRegisters, cInputRegisters, maxQuantityInputRegisters)
 	if err != nil {
 		return nil, err
 	}
-	requests = append(requests, r...)
 
-	return requests, nil
+	return map[byte]requestSet{
+		c.SlaveID: {
+			coil:     coil,
+			discrete: discrete,
+			holding:  holding,
+			input:    input,
+		},
+	}, nil
 }
 
 func (c *ConfigurationOriginal) Check() error {
