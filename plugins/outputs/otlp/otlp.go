@@ -58,7 +58,7 @@ const (
 
 var sampleConfig = `
   ## OpenTelemetry endpoint
-  endpoint = "localhost:4317"
+  endpoint = "http://localhost:4317"
 
   ## Timeout used when sending data over grpc
   timeout = "10s"

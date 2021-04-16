@@ -270,7 +270,7 @@ func TestWriteIgnoresInvalidKinds(t *testing.T) {
 // 	}
 
 // 	s := &OTLP{
-// 		Endpoint: "localhost:4317",
+// 		Endpoint: "http://localhost:4317",
 // 		Headers: map[string]string{
 // 			"mylabel": "myvalue",
 // 		},
@@ -301,7 +301,7 @@ func TestWriteIgnoresInvalidKinds(t *testing.T) {
 // 	}
 
 // 	s := &OTLP{
-// 		Endpoint:  "localhost:4317",
+// 		Endpoint:  "http://localhost:4317",
 // 		Namespace: "test",
 // 		client:    c,
 // 	}
