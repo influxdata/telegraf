@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,6 +17,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 type HTTP struct {
@@ -30,6 +33,12 @@ type HTTP struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 	tls.ClientConfig
+
+	// OAuth2 Credentials
+	ClientID     string   `toml:"client_id"`
+	ClientSecret string   `toml:"client_secret"`
+	TokenURL     string   `toml:"token_url"`
+	Scopes       []string `toml:"scopes"`
 
 	proxy.HTTPProxy
 
@@ -77,6 +86,12 @@ var sampleConfig = `
   ## HTTP Proxy support
   # http_proxy_url = ""
 
+  ## OAuth2 Client Credentials Grant
+  # client_id = "clientid"
+  # client_secret = "secret"
+  # token_url = "https://indentityprovider/oauth2/v1/token"
+  # scopes = ["urn:opc:idm:__myscopes__"]
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -108,14 +123,30 @@ func (*HTTP) Description() string {
 }
 
 func (h *HTTP) Init() error {
-	tlsCfg, err := h.ClientConfig.TLSConfig()
+	ctx := context.Background()
+	client, err := h.createClient(ctx)
 	if err != nil {
 		return err
 	}
 
+	h.client = client
+
+	// Set default as [200]
+	if len(h.SuccessStatusCodes) == 0 {
+		h.SuccessStatusCodes = []int{200}
+	}
+	return nil
+}
+
+func (h *HTTP) createClient(ctx context.Context) (*http.Client, error) {
+	tlsCfg, err := h.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	proxy, err := h.HTTPProxy.Proxy()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	transport := &http.Transport{
@@ -123,16 +154,23 @@ func (h *HTTP) Init() error {
 		Proxy:           proxy,
 	}
 
-	h.client = &http.Client{
+	client := &http.Client{
 		Transport: transport,
 		Timeout:   time.Duration(h.Timeout),
 	}
 
-	// Set default as [200]
-	if len(h.SuccessStatusCodes) == 0 {
-		h.SuccessStatusCodes = []int{200}
+	if h.ClientID != "" && h.ClientSecret != "" && h.TokenURL != "" {
+		oauthConfig := clientcredentials.Config{
+			ClientID:     h.ClientID,
+			ClientSecret: h.ClientSecret,
+			TokenURL:     h.TokenURL,
+			Scopes:       h.Scopes,
+		}
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, client)
+		client = oauthConfig.Client(ctx)
 	}
-	return nil
+
+	return client, nil
 }
 
 // Gather takes in an accumulator and adds the metrics that the Input

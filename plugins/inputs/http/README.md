@@ -34,6 +34,12 @@ The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The 
   # username = "username"
   # password = "pa$$word"
 
+  ## OAuth2 Client Credentials Grant
+  # client_id = "clientid"
+  # client_secret = "secret"
+  # token_url = "https://indentityprovider/oauth2/v1/token"
+  # scopes = ["urn:opc:idm:__myscopes__"]
+
   ## HTTP Proxy support
   # http_proxy_url = ""
 
