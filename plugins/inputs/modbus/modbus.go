@@ -35,18 +35,10 @@ type Modbus struct {
 	handler     mb.ClientHandler
 	isConnected bool
 	// Request handling
-	requests []request
+	requests map[byte][]request
 }
 
 type fieldConverterFunc func(bytes []byte) interface{}
-
-type request struct {
-	slaveID      byte
-	registerType string
-	address      uint16
-	length       uint16
-	fields       []field
-}
 
 type field struct {
 	measurement string
@@ -180,7 +172,16 @@ func (m *Modbus) Init() error {
 	m.requests = append(m.requests, r...)
 
 	// Setup client
-	return m.initClient()
+	if err := m.initClient(); err != nil {
+		return fmt.Errorf("initializing client failed: %v", err)
+	}
+
+	// Setup the request readers. We need the client for doing it.
+	if err := m.initRequestReaders(); err != nil {
+		return fmt.Errorf("initializing request failed: %v", err)
+	}
+
+	return nil
 }
 
 func (m *Modbus) initClient() error {
@@ -230,6 +231,24 @@ func (m *Modbus) initClient() error {
 	return nil
 }
 
+func (m *Modbus) initRequestReaders() error {
+	for i, request := range m.requests {
+		switch request.registerType {
+		case cDiscreteInputs:
+			m.requests[i].reader = m.client.ReadDiscreteInputs
+		case cCoils:
+			m.requests[i].reader = m.client.ReadCoils
+		case cInputRegisters:
+			m.requests[i].reader = m.client.ReadInputRegisters
+		case cHoldingRegisters:
+			m.requests[i].reader = m.client.ReadHoldingRegisters
+		default:
+			return fmt.Errorf("invalid register type %q", request.registerType)
+		}
+	}
+	return nil
+}
+
 // Connect to a MODBUS Slave device via Modbus/[TCP|RTU|ASCII]
 func (m *Modbus) connect() error {
 	err := m.handler.Connect()
@@ -243,23 +262,9 @@ func (m *Modbus) disconnect() error {
 	return err
 }
 
-func (m *Modbus) readRegisterValues(registerType string, address, length uint16) ([]byte, error) {
-	switch registerType {
-	case cDiscreteInputs:
-		return m.client.ReadDiscreteInputs(address, length)
-	case cCoils:
-		return m.client.ReadCoils(address, length)
-	case cInputRegisters:
-		return m.client.ReadInputRegisters(address, length)
-	case cHoldingRegisters:
-		return m.client.ReadHoldingRegisters(address, length)
-	}
-	return nil, fmt.Errorf("invalid register type %q", registerType)
-}
-
-func (m *Modbus) getFields() error {
+func (m *Modbus) gatherFields() error {
 	for _, request := range m.requests {
-		bytes, err := m.readRegisterValues(request.registerType, request.address, request.length)
+		bytes, err := request.read()
 		if err != nil {
 			return err
 		}
@@ -301,17 +306,16 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	timestamp := time.Now()
 	for retry := 0; retry <= m.Retries; retry++ {
 		timestamp = time.Now()
-		err := m.getFields()
-		if err != nil {
-			mberr, ok := err.(*mb.Error)
-			if ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
+		if err := m.gatherFields(); err != nil {
+			if mberr, ok := err.(*mb.Error); ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
 				m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
 				time.Sleep(time.Duration(m.RetriesWaitTime))
 				continue
 			}
-			// Ignore return error to not shadow the initial error
-			//nolint:errcheck,revive
-			m.disconnect()
+			// Show the disconnect error this way to not shadow the initial error
+			if discerr := m.disconnect(); discerr != nil {
+				m.Log.Errorf("Disconnecting failed: %v", discerr)
+			}
 			return err
 		}
 		// Reading was successful, leave the retry loop

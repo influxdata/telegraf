@@ -2,7 +2,6 @@ package modbus
 
 import (
 	"fmt"
-	"sort"
 )
 
 type fieldDefinition struct {
@@ -74,73 +73,28 @@ func (c *ConfigurationOriginal) Check() error {
 }
 
 func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, registerType string, maxQuantity uint16) ([]request, error) {
-	return c.initRequestsPerSlaveAndType(fieldDefs, c.SlaveID, registerType, maxQuantity)
+	fields, err := c.initFields(fieldDefs)
+	if err != nil {
+		return nil, err
+	}
+	return newRequestsFromFields(fields, c.SlaveID, registerType, maxQuantity), nil
 }
 
-func (c *ConfigurationOriginal) initRequestsPerSlaveAndType(fieldDefs []fieldDefinition, slaveID byte, registerType string, maxQuantity uint16) ([]request, error) {
-	if len(fieldDefs) < 1 {
-		return nil, nil
-	}
-
+func (c *ConfigurationOriginal) initFields(fieldDefs []fieldDefinition) ([]field, error) {
 	// Construct the fields from the field definitions
 	fields := make([]field, 0, len(fieldDefs))
 	for _, def := range fieldDefs {
-		f, err := c.initField(def)
+		f, err := c.newFieldFromDefinition(def)
 		if err != nil {
 			return nil, fmt.Errorf("initializing field %q failed: %v", def.Name, err)
 		}
 		fields = append(fields, f)
 	}
 
-	// Sort the fields by address (ascending) and length
-	sort.Slice(fields, func(i, j int) bool {
-		addrI := fields[i].address
-		addrJ := fields[j].address
-		return addrI < addrJ || (addrI == addrJ && fields[i].length > fields[j].length)
-	})
-
-	// Construct the consecutive register chunks for the addresses and construct Modbus requests.
-	// For field addresses like [1, 2, 3, 5, 6, 10, 11, 12, 14] we should construct the following
-	// requests (1, 3) , (5, 2) , (10, 3), (14 , 1). Furthermore, we should respect field boundaries
-	// and the given maximum chunk sizes.
-	var requests []request
-
-	current := request{
-		slaveID:      c.SlaveID,
-		registerType: registerType,
-		address:      fields[0].address,
-		length:       fields[0].length,
-		fields:       []field{fields[0]},
-	}
-
-	for _, f := range fields[1:] {
-		// Check if we need to interrupt the current chunk and require a new one
-		needInterrupt := f.address != current.address+current.length           // not consecutive
-		needInterrupt = needInterrupt || f.length+current.length > maxQuantity // too large
-
-		if !needInterrupt {
-			// Still save to add the field to the current request
-			current.length += f.length
-			current.fields = append(current.fields, f) // TODO: omit the field with a future flag
-			continue
-		}
-
-		// Finish the current request, add it to the list and construct a new one
-		requests = append(requests, current)
-		current = request{
-			slaveID:      c.SlaveID,
-			registerType: registerType,
-			address:      f.address,
-			length:       f.length,
-			fields:       []field{f},
-		}
-	}
-	requests = append(requests, current)
-
-	return requests, nil
+	return fields, nil
 }
 
-func (c *ConfigurationOriginal) initField(def fieldDefinition) (field, error) {
+func (c *ConfigurationOriginal) newFieldFromDefinition(def fieldDefinition) (field, error) {
 	// Check if the addresses are consecutive
 	expected := def.Address[0]
 	for _, current := range def.Address[1:] {
