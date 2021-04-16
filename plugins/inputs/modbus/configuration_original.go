@@ -30,7 +30,7 @@ func (c *ConfigurationOriginal) Process(m *Modbus) error {
 			return err
 		}
 		r.Type = cDiscreteInputs
-		m.registers = append(m.registers, r)
+		m.requests = append(m.requests, r)
 	}
 
 	if len(c.Coils) > 0 {
@@ -39,7 +39,7 @@ func (c *ConfigurationOriginal) Process(m *Modbus) error {
 			return err
 		}
 		r.Type = cCoils
-		m.registers = append(m.registers, r)
+		m.requests = append(m.requests, r)
 	}
 
 	if len(c.HoldingRegisters) > 0 {
@@ -48,7 +48,7 @@ func (c *ConfigurationOriginal) Process(m *Modbus) error {
 			return err
 		}
 		r.Type = cHoldingRegisters
-		m.registers = append(m.registers, r)
+		m.requests = append(m.requests, r)
 	}
 
 	if len(c.InputRegisters) > 0 {
@@ -57,7 +57,7 @@ func (c *ConfigurationOriginal) Process(m *Modbus) error {
 			return err
 		}
 		r.Type = cInputRegisters
-		m.registers = append(m.registers, r)
+		m.requests = append(m.requests, r)
 	}
 
 	return nil
@@ -91,7 +91,7 @@ func (c *ConfigurationOriginal) Check() error {
 	return nil
 }
 
-func (c *ConfigurationOriginal) initRegister(fieldDefs []fieldDefinition, maxQuantity int) (register, error) {
+func (c *ConfigurationOriginal) initRegister(fieldDefs []fieldDefinition, maxQuantity int) (request, error) {
 	addrs := []uint16{}
 	for _, def := range fieldDefs {
 		addrs = append(addrs, def.Address...)
@@ -101,7 +101,7 @@ func (c *ConfigurationOriginal) initRegister(fieldDefs []fieldDefinition, maxQua
 	for _, def := range fieldDefs {
 		f, err := c.initField(def)
 		if err != nil {
-			return register{}, fmt.Errorf("initializing field %q failed: %v", def.Name, err)
+			return request{}, fmt.Errorf("initializing field %q failed: %v", def.Name, err)
 		}
 		fields = append(fields, f)
 	}
@@ -134,19 +134,19 @@ func (c *ConfigurationOriginal) initRegister(fieldDefs []fieldDefinition, maxQua
 		registersRange = append(registersRange, registerRange{start, end - start + 1})
 	}
 
-	return register{
-		SlaveID: c.SlaveID,
+	return request{
+		SlaveID:        c.SlaveID,
 		RegistersRange: registersRange,
-		Fields: fields,
+		Fields:         fields,
 	}, nil
 }
 
 func (c *ConfigurationOriginal) initField(def fieldDefinition) (field, error) {
-	f := field {
+	f := field{
 		Measurement: def.Measurement,
-		Name: def.Name,
-		Scale: def.Scale,
-		Address: def.Address,
+		Name:        def.Name,
+		Scale:       def.Scale,
+		Address:     def.Address,
 	}
 	if def.DataType != "" {
 		inType, err := c.normalizeInputDatatype(def.DataType, len(def.Address))

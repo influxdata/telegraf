@@ -111,9 +111,9 @@ func TestCoils(t *testing.T) {
 			var acc testutil.Accumulator
 			err = modbus.Gather(&acc)
 			assert.NoError(t, err)
-			assert.NotEmpty(t, modbus.registers)
+			assert.NotEmpty(t, modbus.requests)
 
-			for _, coil := range modbus.registers {
+			for _, coil := range modbus.requests {
 				assert.Equal(t, ct.read, coil.Fields[0].value)
 			}
 		})
@@ -649,9 +649,9 @@ func TestHoldingRegisters(t *testing.T) {
 			assert.NoError(t, err)
 			var acc testutil.Accumulator
 			assert.NoError(t, modbus.Gather(&acc))
-			assert.NotEmpty(t, modbus.registers)
+			assert.NotEmpty(t, modbus.requests)
 
-			for _, coil := range modbus.registers {
+			for _, coil := range modbus.requests {
 				assert.Equal(t, hrt.read, coil.Fields[0].value)
 			}
 		})
@@ -701,8 +701,8 @@ func TestReadMultipleCoilLimit(t *testing.T) {
 
 	writeValue = 0
 	for i := 0; i <= 4000; i++ {
-		t.Run(modbus.registers[0].Fields[i].Name, func(t *testing.T) {
-			assert.Equal(t, writeValue, modbus.registers[0].Fields[i].value)
+		t.Run(modbus.requests[0].Fields[i].Name, func(t *testing.T) {
+			assert.Equal(t, writeValue, modbus.requests[0].Fields[i].value)
 			writeValue = 1 - writeValue
 		})
 	}
@@ -750,7 +750,7 @@ func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
 	assert.NoError(t, err)
 
 	for i := 0; i <= 400; i++ {
-		assert.Equal(t, int64(i), modbus.registers[0].Fields[i].value)
+		assert.Equal(t, int64(i), modbus.requests[0].Fields[i].value)
 	}
 }
 
@@ -801,9 +801,9 @@ func TestRetrySuccessful(t *testing.T) {
 		var acc testutil.Accumulator
 		err = modbus.Gather(&acc)
 		assert.NoError(t, err)
-		assert.NotEmpty(t, modbus.registers)
+		assert.NotEmpty(t, modbus.requests)
 
-		for _, coil := range modbus.registers {
+		for _, coil := range modbus.requests {
 			assert.Equal(t, uint16(value), coil.Fields[0].value)
 		}
 	})

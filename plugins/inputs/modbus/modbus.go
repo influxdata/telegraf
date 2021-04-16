@@ -35,16 +35,15 @@ type Modbus struct {
 	tcpHandler   *mb.TCPClientHandler
 	rtuHandler   *mb.RTUClientHandler
 	asciiHandler *mb.ASCIIClientHandler
-	// Register handling
-	registers []register
+	// Request handling
+	requests []request
 }
 
 type fieldConverterFunc func(bytes []byte) interface{}
-type registerReadFunc func(address, quantity uint16) (results []byte, err error)
 
-type register struct {
-	Type           string
+type request struct {
 	SlaveID        int
+	Type           string
 	RegistersRange []registerRange
 	Fields         []field
 }
@@ -284,18 +283,18 @@ func readRegisterValues(m *Modbus, rt string, rr registerRange) ([]byte, error) 
 }
 
 func (m *Modbus) getFields() error {
-	for _, register := range m.registers {
+	for _, request := range m.requests {
 		rawValues := make(map[uint16][]byte)
 		bitRawValues := make(map[uint16]uint16)
-		for _, rr := range register.RegistersRange {
+		for _, rr := range request.RegistersRange {
 			address := rr.address
-			readValues, err := readRegisterValues(m, register.Type, rr)
+			readValues, err := readRegisterValues(m, request.Type, rr)
 			if err != nil {
 				return err
 			}
 
 			// Raw Values
-			if register.Type == cDiscreteInputs || register.Type == cCoils {
+			if request.Type == cDiscreteInputs || request.Type == cCoils {
 				for _, readValue := range readValues {
 					for bitPosition := uint(0); bitPosition < 8; bitPosition++ {
 						bitRawValues[address] = getBitValue(readValue, bitPosition)
@@ -308,7 +307,7 @@ func (m *Modbus) getFields() error {
 			}
 
 			// Raw Values
-			if register.Type == cInputRegisters || register.Type == cHoldingRegisters {
+			if request.Type == cInputRegisters || request.Type == cHoldingRegisters {
 				batchSize := 2
 				for batchSize < len(readValues) {
 					rawValues[address] = readValues[0:batchSize:batchSize]
@@ -320,24 +319,24 @@ func (m *Modbus) getFields() error {
 			}
 		}
 
-		if register.Type == cDiscreteInputs || register.Type == cCoils {
-			for i := 0; i < len(register.Fields); i++ {
-				register.Fields[i].value = bitRawValues[register.Fields[i].Address[0]]
+		if request.Type == cDiscreteInputs || request.Type == cCoils {
+			for i := 0; i < len(request.Fields); i++ {
+				request.Fields[i].value = bitRawValues[request.Fields[i].Address[0]]
 			}
 		}
 
-		if register.Type == cInputRegisters || register.Type == cHoldingRegisters {
-			for i := 0; i < len(register.Fields); i++ {
+		if request.Type == cInputRegisters || request.Type == cHoldingRegisters {
+			for i := 0; i < len(request.Fields); i++ {
 				var buf []byte
 
-				for j := 0; j < len(register.Fields[i].Address); j++ {
-					tempArray := rawValues[register.Fields[i].Address[j]]
+				for j := 0; j < len(request.Fields[i].Address); j++ {
+					tempArray := rawValues[request.Fields[i].Address[j]]
 					for x := 0; x < len(tempArray); x++ {
 						buf = append(buf, tempArray[x])
 					}
 				}
 
-				register.Fields[i].value = register.Fields[i].converter(buf)
+				request.Fields[i].value = request.Fields[i].converter(buf)
 			}
 		}
 	}
@@ -377,7 +376,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	}
 
 	grouper := metric.NewSeriesGrouper()
-	for _, reg := range m.registers {
+	for _, reg := range m.requests {
 		tags := map[string]string{
 			"name": m.Name,
 			"type": reg.Type,
