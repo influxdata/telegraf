@@ -11,7 +11,6 @@ type fieldDefinition struct {
 	DataType    string   `toml:"data_type"`
 	Scale       float64  `toml:"scale"`
 	Address     []uint16 `toml:"address"`
-	value       interface{}
 }
 
 type ConfigurationOriginal struct {
@@ -66,11 +65,7 @@ func (c *ConfigurationOriginal) Check() error {
 		return err
 	}
 
-	if err := c.validateFieldDefinitions(c.InputRegisters, cInputRegisters); err != nil {
-		return err
-	}
-
-	return nil
+	return c.validateFieldDefinitions(c.InputRegisters, cInputRegisters)
 }
 
 func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, registerType string, maxQuantity uint16) ([]request, error) {
