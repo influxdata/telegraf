@@ -28,6 +28,8 @@ type Mysql struct {
 	GatherInfoSchemaAutoInc             bool     `toml:"gather_info_schema_auto_inc"`
 	GatherInnoDBMetrics                 bool     `toml:"gather_innodb_metrics"`
 	GatherSlaveStatus                   bool     `toml:"gather_slave_status"`
+	GatherAllSlaveChannels              bool     `toml:"gather_all_slave_channels"`
+	MariadbDialect                      bool     `toml:"mariadb_dialect"`
 	GatherBinaryLogs                    bool     `toml:"gather_binary_logs"`
 	GatherTableIOWaits                  bool     `toml:"gather_table_io_waits"`
 	GatherTableLockWaits                bool     `toml:"gather_table_lock_waits"`
@@ -47,6 +49,7 @@ type Mysql struct {
 	lastT            time.Time
 	initDone         bool
 	scanIntervalSlow uint32
+	getStatusQuery   string
 }
 
 const sampleConfig = `
@@ -93,6 +96,12 @@ const sampleConfig = `
 
   ## gather metrics from SHOW SLAVE STATUS command output
   # gather_slave_status = false
+
+  ## gather metrics from all channels from SHOW SLAVE STATUS command output
+  # gather_all_slave_channels = false
+
+  ## use MariaDB dialect for all channels SHOW SLAVE STATUS
+  # mariadb_dialect = false
 
   ## gather metrics from SHOW BINARY LOGS command output
   # gather_binary_logs = false
@@ -165,6 +174,11 @@ func (m *Mysql) InitMysql() {
 		if err == nil && interval.Seconds() >= 1.0 {
 			m.scanIntervalSlow = uint32(interval.Seconds())
 		}
+	}
+	if m.MariadbDialect {
+		m.getStatusQuery = slaveStatusQueryMariadb
+	} else {
+		m.getStatusQuery = slaveStatusQuery
 	}
 	m.initDone = true
 }
@@ -295,6 +309,7 @@ const (
 	globalStatusQuery          = `SHOW GLOBAL STATUS`
 	globalVariablesQuery       = `SHOW GLOBAL VARIABLES`
 	slaveStatusQuery           = `SHOW SLAVE STATUS`
+	slaveStatusQueryMariadb    = `SHOW ALL SLAVES STATUS`
 	binaryLogsQuery            = `SHOW BINARY LOGS`
 	infoSchemaProcessListQuery = `
         SELECT COALESCE(command,''),COALESCE(state,''),count(*)
@@ -657,7 +672,10 @@ func (m *Mysql) parseGlobalVariables(key string, value sql.RawBytes) (interface{
 // This code does not work with multi-source replication.
 func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
 	// run query
-	rows, err := db.Query(slaveStatusQuery)
+	var rows *sql.Rows
+	var err error
+
+	rows, err = db.Query(m.getStatusQuery)
 	if err != nil {
 		return err
 	}
@@ -668,9 +686,11 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 
-	// to save the column names as a field key
-	// scanning keys and values separately
-	if rows.Next() {
+	// for each channel record
+	for rows.Next() {
+		// to save the column names as a field key
+		// scanning keys and values separately
+
 		// get columns names, and create an array with its length
 		cols, err := rows.Columns()
 		if err != nil {
@@ -689,11 +709,26 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 			if m.MetricVersion >= 2 {
 				col = strings.ToLower(col)
 			}
-			if value, ok := m.parseValue(*vals[i].(*sql.RawBytes)); ok {
+
+			if m.GatherAllSlaveChannels &&
+				(strings.ToLower(col) == "channel_name" || strings.ToLower(col) == "connection_name") {
+				// Since the default channel name is empty, we need this block
+				channelName := "default"
+				if len(*vals[i].(*sql.RawBytes)) > 0 {
+					channelName = string(*vals[i].(*sql.RawBytes))
+				}
+				tags["channel"] = channelName
+			} else if value, ok := m.parseValue(*vals[i].(*sql.RawBytes)); ok {
 				fields["slave_"+col] = value
 			}
 		}
 		acc.AddFields("mysql", fields, tags)
+
+		// Only the first row is relevant if not all slave-channels should be gathered,
+		// so break here and skip the remaining rows
+		if !m.GatherAllSlaveChannels {
+			break
+		}
 	}
 
 	return nil

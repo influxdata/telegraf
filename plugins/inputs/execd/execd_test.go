@@ -170,7 +170,7 @@ func runCounterProgram() {
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		metric, _ := metric.New("counter",
+		m := metric.New("counter",
 			map[string]string{},
 			map[string]interface{}{
 				"count": i,
@@ -179,7 +179,7 @@ func runCounterProgram() {
 		)
 		i++
 
-		b, err := serializer.Serialize(metric)
+		b, err := serializer.Serialize(m)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
 			os.Exit(1)

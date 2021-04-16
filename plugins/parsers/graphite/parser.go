@@ -174,7 +174,7 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 		}
 	}
 
-	return metric.New(measurement, tags, fieldValues, timestamp)
+	return metric.New(measurement, tags, fieldValues, timestamp), nil
 }
 
 // ApplyTemplate extracts the template fields from the given line and

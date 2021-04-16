@@ -18,7 +18,7 @@ import (
 )
 
 func getMetric() telegraf.Metric {
-	m, err := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
@@ -26,9 +26,7 @@ func getMetric() telegraf.Metric {
 		},
 		time.Unix(0, 0),
 	)
-	if err != nil {
-		panic(err)
-	}
+
 	return m
 }
 

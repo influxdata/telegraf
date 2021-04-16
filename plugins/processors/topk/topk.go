@@ -312,10 +312,7 @@ func (t *TopK) push() []telegraf.Metric {
 
 	result := make([]telegraf.Metric, 0, len(ret))
 	for _, m := range ret {
-		newMetric, err := metric.New(m.Name(), m.Tags(), m.Fields(), m.Time(), m.Type())
-		if err != nil {
-			continue
-		}
+		newMetric := metric.New(m.Name(), m.Tags(), m.Fields(), m.Time(), m.Type())
 		result = append(result, newMetric)
 	}
 
