@@ -27,21 +27,11 @@ executors:
 commands:
   check-changed-files-or-halt:
       steps:
-        - run: 
-            command: |
-              BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-              if [[ "$BRANCH" != "master" ]]; then
-                git diff master --name-only --no-color | egrep -e "^(\.circleci\/.*)|(.*\.(go|mod|sum))|Makefile$" || circleci step halt;
-              fi
+        - run: ./scripts/check-file-changes
   check-changed-files-or-halt-windows:
       steps:
-        - run: 
-            command: |
-              BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-              if [[ "$BRANCH" != "master" ]]; then
-                git diff master --name-only --no-color | egrep -e "^(\.circleci\/.*)|(.*\.(go|mod|sum))|Makefile$" || circleci step halt;
-              fi
-            shell: bash.exe
+        - run: ./scripts/check-file-changes
+          shell: bash.exe
   test-go:
     parameters:
       goarch:
