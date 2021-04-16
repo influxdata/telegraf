@@ -5,10 +5,11 @@ import (
 	"testing"
 
 	mb "github.com/grid-x/modbus"
-	"github.com/stretchr/testify/assert"
+
 	"github.com/tbrandon/mbserver"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCoils(t *testing.T) {
@@ -80,18 +81,18 @@ func TestCoils(t *testing.T) {
 	serv := mbserver.NewServer()
 	err := serv.ListenTCP("localhost:1502")
 	defer serv.Close()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
 	err = handler.Connect()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
 	for _, ct := range coilTests {
 		t.Run(ct.name, func(t *testing.T) {
 			_, err = client.WriteMultipleCoils(ct.address, ct.quantity, ct.write)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			modbus := Modbus{
 				Name:       "TestCoils",
@@ -107,14 +108,14 @@ func TestCoils(t *testing.T) {
 			}
 
 			err = modbus.Init()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			var acc testutil.Accumulator
 			err = modbus.Gather(&acc)
-			assert.NoError(t, err)
-			assert.NotEmpty(t, modbus.requests)
+			require.NoError(t, err)
+			require.NotEmpty(t, modbus.requests)
 
 			for _, coil := range modbus.requests {
-				assert.Equal(t, ct.read, coil.Fields[0].value)
+				require.Equal(t, ct.read, coil.Fields[0].value)
 			}
 		})
 	}
@@ -616,18 +617,18 @@ func TestHoldingRegisters(t *testing.T) {
 	serv := mbserver.NewServer()
 	err := serv.ListenTCP("localhost:1502")
 	defer serv.Close()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
 	err = handler.Connect()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
 	for _, hrt := range holdingRegisterTests {
 		t.Run(hrt.name, func(t *testing.T) {
 			_, err = client.WriteMultipleRegisters(hrt.address[0], hrt.quantity, hrt.write)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			modbus := Modbus{
 				Name:       "TestHoldingRegisters",
@@ -646,13 +647,13 @@ func TestHoldingRegisters(t *testing.T) {
 			}
 
 			err = modbus.Init()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			var acc testutil.Accumulator
-			assert.NoError(t, modbus.Gather(&acc))
-			assert.NotEmpty(t, modbus.requests)
+			require.NoError(t, modbus.Gather(&acc))
+			require.NotEmpty(t, modbus.requests)
 
 			for _, coil := range modbus.requests {
-				assert.Equal(t, hrt.read, coil.Fields[0].value)
+				require.Equal(t, hrt.read, coil.Fields[0].value)
 			}
 		})
 	}
@@ -661,12 +662,12 @@ func TestHoldingRegisters(t *testing.T) {
 func TestReadMultipleCoilLimit(t *testing.T) {
 	serv := mbserver.NewServer()
 	err := serv.ListenTCP("localhost:1502")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
 	err = handler.Connect()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
@@ -680,7 +681,7 @@ func TestReadMultipleCoilLimit(t *testing.T) {
 
 		t.Run(fc.Name, func(t *testing.T) {
 			_, err = client.WriteSingleCoil(fc.Address[0], writeValue)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		})
 
 		writeValue = 65280 - writeValue
@@ -694,15 +695,15 @@ func TestReadMultipleCoilLimit(t *testing.T) {
 	modbus.Coils = fcs
 
 	err = modbus.Init()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	var acc testutil.Accumulator
 	err = modbus.Gather(&acc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	writeValue = 0
 	for i := 0; i <= 4000; i++ {
 		t.Run(modbus.requests[0].Fields[i].Name, func(t *testing.T) {
-			assert.Equal(t, writeValue, modbus.requests[0].Fields[i].value)
+			require.Equal(t, writeValue, modbus.requests[0].Fields[i].value)
 			writeValue = 1 - writeValue
 		})
 	}
@@ -711,12 +712,12 @@ func TestReadMultipleCoilLimit(t *testing.T) {
 func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
 	serv := mbserver.NewServer()
 	err := serv.ListenTCP("localhost:1502")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
 	err = handler.Connect()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
@@ -732,7 +733,7 @@ func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
 
 		t.Run(fc.Name, func(t *testing.T) {
 			_, err = client.WriteSingleRegister(fc.Address[0], uint16(i))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		})
 	}
 
@@ -744,13 +745,13 @@ func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
 	modbus.HoldingRegisters = fcs
 
 	err = modbus.Init()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	var acc testutil.Accumulator
 	err = modbus.Gather(&acc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	for i := 0; i <= 400; i++ {
-		assert.Equal(t, int64(i), modbus.requests[0].Fields[i].value)
+		require.Equal(t, int64(i), modbus.requests[0].Fields[i].value)
 	}
 }
 
@@ -761,7 +762,7 @@ func TestRetrySuccessful(t *testing.T) {
 
 	serv := mbserver.NewServer()
 	err := serv.ListenTCP("localhost:1502")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer serv.Close()
 
 	// Make read on coil-registers fail for some trials by making the device
@@ -797,14 +798,14 @@ func TestRetrySuccessful(t *testing.T) {
 		}
 
 		err = modbus.Init()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		var acc testutil.Accumulator
 		err = modbus.Gather(&acc)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, modbus.requests)
+		require.NoError(t, err)
+		require.NotEmpty(t, modbus.requests)
 
 		for _, coil := range modbus.requests {
-			assert.Equal(t, uint16(value), coil.Fields[0].value)
+			require.Equal(t, uint16(value), coil.Fields[0].value)
 		}
 	})
 }
@@ -814,7 +815,7 @@ func TestRetryFail(t *testing.T) {
 
 	serv := mbserver.NewServer()
 	err := serv.ListenTCP("localhost:1502")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer serv.Close()
 
 	// Make the read on coils fail with busy
@@ -843,10 +844,10 @@ func TestRetryFail(t *testing.T) {
 		}
 
 		err = modbus.Init()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		var acc testutil.Accumulator
 		err = modbus.Gather(&acc)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	// Make the read on coils fail with illegal function preventing retry
@@ -877,10 +878,10 @@ func TestRetryFail(t *testing.T) {
 		}
 
 		err = modbus.Init()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		var acc testutil.Accumulator
 		err = modbus.Gather(&acc)
-		assert.Error(t, err)
-		assert.Equal(t, counter, 1)
+		require.Error(t, err)
+		require.Equal(t, counter, 1)
 	})
 }
