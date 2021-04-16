@@ -24,64 +24,48 @@ type ConfigurationOriginal struct {
 }
 
 func (c *ConfigurationOriginal) Process(m *Modbus) error {
-	if len(c.DiscreteInputs) > 0 {
-		r, err := m.initRequests(c.DiscreteInputs, cDiscreteInputs, maxQuantityDiscreteInput)
-		if err != nil {
-			return err
-		}
-		m.requests = append(m.requests, r...)
+	r, err := m.initRequests(c.DiscreteInputs, cDiscreteInputs, maxQuantityDiscreteInput)
+	if err != nil {
+		return err
 	}
+	m.requests = append(m.requests, r...)
 
-	if len(c.Coils) > 0 {
-		r, err := c.initRequests(c.Coils, cCoils, maxQuantityCoils)
-		if err != nil {
-			return err
-		}
-		m.requests = append(m.requests, r...)
+	r, err = c.initRequests(c.Coils, cCoils, maxQuantityCoils)
+	if err != nil {
+		return err
 	}
+	m.requests = append(m.requests, r...)
 
-	if len(c.HoldingRegisters) > 0 {
-		r, err := m.initRequests(c.HoldingRegisters, cHoldingRegisters, maxQuantityHoldingRegisters)
-		if err != nil {
-			return err
-		}
-		m.requests = append(m.requests, r...)
+	r, err = m.initRequests(c.HoldingRegisters, cHoldingRegisters, maxQuantityHoldingRegisters)
+	if err != nil {
+		return err
 	}
+	m.requests = append(m.requests, r...)
 
-	if len(c.InputRegisters) > 0 {
-		r, err := c.initRequests(m.InputRegisters, cInputRegisters, maxQuantityInputRegisters)
-		if err != nil {
-			return err
-		}
-		m.requests = append(m.requests, r...)
+	r, err = c.initRequests(m.InputRegisters, cInputRegisters, maxQuantityInputRegisters)
+	if err != nil {
+		return err
 	}
+	m.requests = append(m.requests, r...)
 
 	return nil
 }
 
 func (c *ConfigurationOriginal) Check() error {
-	if len(c.DiscreteInputs) > 0 {
-		if err := c.validateFieldDefinitions(c.DiscreteInputs, cDiscreteInputs); err != nil {
-			return err
-		}
+	if err := c.validateFieldDefinitions(c.DiscreteInputs, cDiscreteInputs); err != nil {
+		return err
 	}
 
-	if len(c.Coils) > 0 {
-		if err := c.validateFieldDefinitions(c.Coils, cCoils); err != nil {
-			return err
-		}
+	if err := c.validateFieldDefinitions(c.Coils, cCoils); err != nil {
+		return err
 	}
 
-	if len(c.HoldingRegisters) > 0 {
-		if err := c.validateFieldDefinitions(c.HoldingRegisters, cHoldingRegisters); err != nil {
-			return err
-		}
+	if err := c.validateFieldDefinitions(c.HoldingRegisters, cHoldingRegisters); err != nil {
+		return err
 	}
 
-	if len(c.InputRegisters) > 0 {
-		if err := c.validateFieldDefinitions(c.InputRegisters, cInputRegisters); err != nil {
-			return err
-		}
+	if err := c.validateFieldDefinitions(c.InputRegisters, cInputRegisters); err != nil {
+		return err
 	}
 
 	return nil
@@ -92,6 +76,10 @@ func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, regist
 }
 
 func (c *ConfigurationOriginal) initRequestsPerSlaveAndType(fieldDefs []fieldDefinition, slaveID int, registerType string, maxQuantity uint16) ([]request, error) {
+	if len(fieldDefs) < 1 {
+		return nil, nil
+	}
+
 	// Construct the fields from the field definitions
 	fields := make([]field, 0, len(fieldDefs))
 	for _, def := range fieldDefs {
@@ -114,9 +102,8 @@ func (c *ConfigurationOriginal) initRequestsPerSlaveAndType(fieldDefs []fieldDef
 	// requests (1, 3) , (5, 2) , (10, 3), (14 , 1). Furthermore, we should respect field boundaries
 	// and the given maximum chunk sizes.
 	var requests []request
-	var current request
 
-	current = request{
+	current := request{
 		SlaveID: c.SlaveID,
 		Type:    registerType,
 		address: fields[0].address,
