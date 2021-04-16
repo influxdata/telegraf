@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf/config"
@@ -38,6 +39,8 @@ type LogConfig struct {
 	RotationMaxSize config.Size
 	// maximum rotated files to keep (older ones will be deleted)
 	RotationMaxArchives int
+	// pick a timezone to use when logging. or type 'local' for local time.
+	LogWithTimezone string
 }
 
 type LoggerCreator interface {
@@ -56,15 +59,19 @@ func registerLogger(name string, loggerCreator LoggerCreator) {
 type telegrafLog struct {
 	writer         io.Writer
 	internalWriter io.Writer
+	timezone       *time.Location
 }
 
 func (t *telegrafLog) Write(b []byte) (n int, err error) {
 	var line []byte
+	timeToPrint := time.Now().In(t.timezone)
+
 	if !prefixRegex.Match(b) {
-		line = append([]byte(time.Now().UTC().Format(time.RFC3339)+" I! "), b...)
+		line = append([]byte(timeToPrint.Format(time.RFC3339)+" I! "), b...)
 	} else {
-		line = append([]byte(time.Now().UTC().Format(time.RFC3339)+" "), b...)
+		line = append([]byte(timeToPrint.Format(time.RFC3339)+" "), b...)
 	}
+
 	return t.writer.Write(line)
 }
 
@@ -82,11 +89,23 @@ func (t *telegrafLog) Close() error {
 }
 
 // newTelegrafWriter returns a logging-wrapped writer.
-func newTelegrafWriter(w io.Writer) io.Writer {
+func newTelegrafWriter(w io.Writer, c LogConfig) (io.Writer, error) {
+	timezoneName := c.LogWithTimezone
+
+	if strings.ToLower(timezoneName) == "local" {
+		timezoneName = "Local"
+	}
+
+	tz, err := time.LoadLocation(timezoneName)
+	if err != nil {
+		return nil, errors.New("error while setting logging timezone: " + err.Error())
+	}
+
 	return &telegrafLog{
 		writer:         wlog.NewWriter(w),
 		internalWriter: w,
-	}
+		timezone:       tz,
+	}, nil
 }
 
 // SetupLogging configures the logging output.
@@ -119,7 +138,7 @@ func (t *telegrafLogCreator) CreateLogger(config LogConfig) (io.Writer, error) {
 		writer = defaultWriter
 	}
 
-	return newTelegrafWriter(writer), nil
+	return newTelegrafWriter(writer, config)
 }
 
 // Keep track what is actually set as a log output, because log package doesn't provide a getter.

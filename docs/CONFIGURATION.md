@@ -219,6 +219,10 @@ The agent table configures Telegraf and the defaults used across all plugins.
   Maximum number of rotated archives to keep, any older logs are deleted.  If
   set to -1, no archives are removed.
 
+- **log_with_timezone**:
+  Pick a timezone to use when logging or type 'local' for local time. Example: 'America/Chicago'.
+  [See this page for options/formats.](https://socketloop.com/tutorials/golang-display-list-of-timezones-with-gmt)
+
 - **hostname**:
   Override default hostname, if empty use os.Hostname()
 - **omit_hostname**:
