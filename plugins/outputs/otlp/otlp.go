@@ -61,7 +61,7 @@ var sampleConfig = `
   endpoint = "localhost:4317"
 
   ## Timeout used when sending data over grpc
-  timeout = 10s
+  timeout = "10s"
 
   # Additional resource attributes
   [outputs.otlp.attributes]
