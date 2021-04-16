@@ -25,6 +25,14 @@ executors:
       GOFLAGS: -p=8
 
 commands:
+  check-changed-files-or-halt:
+      steps:
+        - run: git diff master --name-only --no-color | egrep -e "^(\.circleci\/.*)|(.*\.(go|mod|sum))|Makefile$" || circleci step halt
+  check-changed-files-or-halt-windows:
+      steps:
+        - run: 
+            command: git diff master --name-only --no-color | egrep -e "^(\.circleci\/.*)|(.*\.(go|mod|sum))|Makefile$" || circleci step halt
+            shell: bash.exe
   test-go:
     parameters:
       goarch:
@@ -32,6 +40,7 @@ commands:
         default: "amd64"
     steps:
       - checkout
+      - check-changed-files-or-halt
       - attach_workspace:
           at: '/go'
       - run: 'GOARCH=<< parameters.goarch >> make'
@@ -45,6 +54,7 @@ commands:
         default: false
     steps:
       - checkout
+      - check-changed-files-or-halt
       - attach_workspace:
           at: '/go'
       - when:
@@ -70,6 +80,7 @@ jobs:
       - checkout
       - restore_cache:
           key: go-mod-v1-{{ checksum "go.sum" }}
+      - check-changed-files-or-halt
       - run: 'make deps'
       - run: 'make tidy'
       - save_cache:
@@ -105,6 +116,7 @@ jobs:
       - checkout
       - restore_cache:
           key: mac-go-mod-v0-{{ checksum "go.sum" }}
+      - check-changed-files-or-halt
       - run: 'sh ./scripts/mac_installgo.sh'
       - save_cache:
           name: 'Saving cache'
@@ -124,6 +136,7 @@ jobs:
         shell: powershell.exe
     steps:
       - checkout
+      - check-changed-files-or-halt-windows
       - run: choco upgrade golang --version=1.16.2
       - run: choco install make
       - run: git config --system core.longpaths true
@@ -148,6 +161,7 @@ jobs:
         shell: powershell.exe
     steps:
       - checkout
+      - check-changed-files-or-halt
       - attach_workspace:
           at: '/build'
       - run:
@@ -172,6 +186,7 @@ jobs:
     shell: /bin/bash --login -o pipefail
     steps:
       - checkout
+      - check-changed-files-or-halt
       - attach_workspace:
           at: '.'
       - run:
