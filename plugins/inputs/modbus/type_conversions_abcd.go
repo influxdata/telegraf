@@ -266,50 +266,49 @@ func determineConverterABCDU64Scale(outType string, scale float64) (fieldConvert
 
 // F32 - ABCD
 func determineConverterABCDF32NoScale(outType string) (fieldConverterFunc, error) {
-	switch outType {
-	case "FLOAT64":
-		return func(b []byte) interface{} {
-			raw := binary.BigEndian.Uint32(b)
-			in := math.Float32frombits(raw)
-			return float64(in)
-		}, nil
+	if outType != "FLOAT64" {
+		return nil, fmt.Errorf("invalid output data-type: %s", outType)
 	}
-	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+
+	return func(b []byte) interface{} {
+		raw := binary.BigEndian.Uint32(b)
+		in := math.Float32frombits(raw)
+		return float64(in)
+	}, nil
 }
 
 func determineConverterABCDF32Scale(outType string, scale float64) (fieldConverterFunc, error) {
-	switch outType {
-	case "FLOAT64":
-		return func(b []byte) interface{} {
-			raw := binary.BigEndian.Uint32(b)
-			in := math.Float32frombits(raw)
-			return float64(in) * scale
-		}, nil
+	if outType != "FLOAT64" {
+		return nil, fmt.Errorf("invalid output data-type: %s", outType)
 	}
-	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+
+	return func(b []byte) interface{} {
+		raw := binary.BigEndian.Uint32(b)
+		in := math.Float32frombits(raw)
+		return float64(in) * scale
+	}, nil
 }
 
 // F64 - ABCD
 func determineConverterABCDF64NoScale(outType string) (fieldConverterFunc, error) {
-	switch outType {
-	case "FLOAT64":
-		return func(b []byte) interface{} {
-			raw := binary.BigEndian.Uint64(b)
-			in := math.Float64frombits(raw)
-			return float64(in)
-		}, nil
+	if outType != "FLOAT64" {
+		return nil, fmt.Errorf("invalid output data-type: %s", outType)
 	}
-	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+
+	return func(b []byte) interface{} {
+		raw := binary.BigEndian.Uint64(b)
+		return math.Float64frombits(raw)
+	}, nil
 }
 
 func determineConverterABCDF64Scale(outType string, scale float64) (fieldConverterFunc, error) {
-	switch outType {
-	case "FLOAT64":
-		return func(b []byte) interface{} {
-			raw := binary.BigEndian.Uint64(b)
-			in := math.Float64frombits(raw)
-			return float64(in) * scale
-		}, nil
+	if outType != "FLOAT64" {
+		return nil, fmt.Errorf("invalid output data-type: %s", outType)
 	}
-	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+
+	return func(b []byte) interface{} {
+		raw := binary.BigEndian.Uint64(b)
+		in := math.Float64frombits(raw)
+		return in * scale
+	}, nil
 }

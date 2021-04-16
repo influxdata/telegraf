@@ -1,13 +1,6 @@
 package modbus
 
-import (
-	"encoding/binary"
-	"fmt"
-)
-
-func getBitValue(n byte, pos uint) uint16 {
-	return uint16((n >> pos) & 0x01)
-}
+import "fmt"
 
 func determineConverter(inType, byteOrder, outType string, scale float64) (fieldConverterFunc, error) {
 	switch byteOrder {
@@ -177,22 +170,4 @@ func determineConverterDCBA(inType, outType string, scale float64) (fieldConvert
 		return determineConverterDCBAF64NoScale(outType)
 	}
 	return nil, fmt.Errorf("invalid input data-type: %s", inType)
-}
-
-func convertEndianness32(o string, b []byte) uint32 {
-	switch o {
-	case "CDAB":
-		return uint32(binary.BigEndian.Uint16(b[2:]))<<16 | uint32(binary.BigEndian.Uint16(b[0:]))
-	default:
-		return 0
-	}
-}
-
-func convertEndianness64(o string, b []byte) uint64 {
-	switch o {
-	case "GHEFCDAB":
-		return uint64(binary.BigEndian.Uint16(b[6:]))<<48 | uint64(binary.BigEndian.Uint16(b[4:]))<<32 | uint64(binary.BigEndian.Uint16(b[2:]))<<16 | uint64(binary.BigEndian.Uint16(b[0:]))
-	default:
-		return 0
-	}
 }

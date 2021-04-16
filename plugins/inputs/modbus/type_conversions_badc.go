@@ -190,50 +190,49 @@ func determineConverterBADCU64Scale(outType string, scale float64) (fieldConvert
 
 // F32 - BADC
 func determineConverterBADCF32NoScale(outType string) (fieldConverterFunc, error) {
-	switch outType {
-	case "FLOAT64":
-		return func(b []byte) interface{} {
-			raw := binaryMSWLEUint32(b)
-			in := math.Float32frombits(raw)
-			return float64(in)
-		}, nil
+	if outType != "FLOAT64" {
+		return nil, fmt.Errorf("invalid output data-type: %s", outType)
 	}
-	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+
+	return func(b []byte) interface{} {
+		raw := binaryMSWLEUint32(b)
+		in := math.Float32frombits(raw)
+		return float64(in)
+	}, nil
 }
 
 func determineConverterBADCF32Scale(outType string, scale float64) (fieldConverterFunc, error) {
-	switch outType {
-	case "FLOAT64":
-		return func(b []byte) interface{} {
-			raw := binaryMSWLEUint32(b)
-			in := math.Float32frombits(raw)
-			return float64(in) * scale
-		}, nil
+	if outType != "FLOAT64" {
+		return nil, fmt.Errorf("invalid output data-type: %s", outType)
 	}
-	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+
+	return func(b []byte) interface{} {
+		raw := binaryMSWLEUint32(b)
+		in := math.Float32frombits(raw)
+		return float64(in) * scale
+	}, nil
 }
 
 // F64 - BADC
 func determineConverterBADCF64NoScale(outType string) (fieldConverterFunc, error) {
-	switch outType {
-	case "FLOAT64":
-		return func(b []byte) interface{} {
-			raw := binaryMSWLEUint64(b)
-			in := math.Float64frombits(raw)
-			return float64(in)
-		}, nil
+	if outType != "FLOAT64" {
+		return nil, fmt.Errorf("invalid output data-type: %s", outType)
 	}
-	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+
+	return func(b []byte) interface{} {
+		raw := binaryMSWLEUint64(b)
+		return math.Float64frombits(raw)
+	}, nil
 }
 
 func determineConverterBADCF64Scale(outType string, scale float64) (fieldConverterFunc, error) {
-	switch outType {
-	case "FLOAT64":
-		return func(b []byte) interface{} {
-			raw := binaryMSWLEUint64(b)
-			in := math.Float64frombits(raw)
-			return float64(in) * scale
-		}, nil
+	if outType != "FLOAT64" {
+		return nil, fmt.Errorf("invalid output data-type: %s", outType)
 	}
-	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+
+	return func(b []byte) interface{} {
+		raw := binaryMSWLEUint64(b)
+		in := math.Float64frombits(raw)
+		return in * scale
+	}, nil
 }
