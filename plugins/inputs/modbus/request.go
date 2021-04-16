@@ -2,8 +2,6 @@ package modbus
 
 import "sort"
 
-type requestReaderFunc func(address, length uint16) ([]byte, error)
-
 type request struct {
 	address uint16
 	length  uint16
