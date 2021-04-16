@@ -285,58 +285,31 @@ func (m *Modbus) readRegisterValues(registerType string, address, length uint16)
 
 func (m *Modbus) getFields() error {
 	for _, request := range m.requests {
-		rawValues := make(map[uint16][]byte)
-		bitRawValues := make(map[uint16]uint16)
-
-		address := request.address
-		readValues, err := m.readRegisterValues(request.Type, request.address, request.length)
+		bytes, err := m.readRegisterValues(request.Type, request.address, request.length)
 		if err != nil {
 			return err
 		}
 
-		// Raw Values
+		// Bit value handling
 		if request.Type == cDiscreteInputs || request.Type == cCoils {
-			for _, readValue := range readValues {
-				for bitPosition := uint(0); bitPosition < 8; bitPosition++ {
-					bitRawValues[address] = getBitValue(readValue, bitPosition)
-					address = address + 1
-					if address > request.address+request.length {
-						break
-					}
-				}
+			for i, field := range request.Fields {
+				offset := field.address - request.address
+				idx := offset / 8
+				bit := offset % 8
+
+				request.Fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
 			}
 		}
 
-		// Raw Values
+		// Non-bit value handling
 		if request.Type == cInputRegisters || request.Type == cHoldingRegisters {
-			batchSize := 2
-			for batchSize < len(readValues) {
-				rawValues[address] = readValues[0:batchSize:batchSize]
-				address = address + 1
-				readValues = readValues[batchSize:]
-			}
+			for i, field := range request.Fields {
+				// Determine the offset of the field values in the read array
+				offset := 2 * (field.address - request.address) // registers are 16bit = 2 byte
+				length := 2 * field.length                      // field length is in registers a 16bit
 
-			rawValues[address] = readValues[0:batchSize:batchSize]
-		}
-
-		if request.Type == cDiscreteInputs || request.Type == cCoils {
-			for i := 0; i < len(request.Fields); i++ {
-				request.Fields[i].value = bitRawValues[request.Fields[i].address]
-			}
-		}
-
-		if request.Type == cInputRegisters || request.Type == cHoldingRegisters {
-			for i := 0; i < len(request.Fields); i++ {
-				var buf []byte
-
-				for j := uint16(0); j < request.Fields[i].length; j++ {
-					tempArray := rawValues[request.Fields[i].address+j]
-					for x := 0; x < len(tempArray); x++ {
-						buf = append(buf, tempArray[x])
-					}
-				}
-
-				request.Fields[i].value = request.Fields[i].converter(buf)
+				// Convert the actual value
+				request.Fields[i].value = field.converter(bytes[offset : offset+length])
 			}
 		}
 	}
