@@ -707,6 +707,67 @@ func TestReadMultipleCoilLimit(t *testing.T) {
 	}
 }
 
+func TestReadMultipleHoldingRegisterWithHole(t *testing.T) {
+	serv := mbserver.NewServer()
+	err := serv.ListenTCP("localhost:1502")
+	require.NoError(t, err)
+	defer serv.Close()
+
+	handler := mb.NewTCPClientHandler("localhost:1502")
+	err = handler.Connect()
+	require.NoError(t, err)
+	defer handler.Close()
+	client := mb.NewClient(handler)
+
+	fcs := []fieldDefinition{}
+	for i := 0; i < 10; i++ {
+		fc := fieldDefinition{
+			Name:      fmt.Sprintf("HoldingRegister-%v", i),
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Scale:     1.0,
+			Address:   []uint16{uint16(i)},
+		}
+		fcs = append(fcs, fc)
+
+		_, err = client.WriteSingleRegister(fc.Address[0], uint16(i))
+		require.NoError(t, err)
+	}
+	for i := 20; i < 30; i++ {
+		fc := fieldDefinition{
+			Name:      fmt.Sprintf("HoldingRegister-%v", i),
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Scale:     1.0,
+			Address:   []uint16{uint16(i)},
+		}
+		fcs = append(fcs, fc)
+
+		_, err = client.WriteSingleRegister(fc.Address[0], uint16(i))
+		require.NoError(t, err)
+	}
+
+	modbus := Modbus{
+		Name:       "TestHoldingRegister",
+		Controller: "tcp://localhost:1502",
+	}
+	modbus.SlaveID = 1
+	modbus.HoldingRegisters = fcs
+
+	err = modbus.Init()
+	require.NoError(t, err)
+	var acc testutil.Accumulator
+	err = modbus.Gather(&acc)
+	require.NoError(t, err)
+
+	for i := 0; i < 10; i++ {
+		require.Equal(t, int64(i), modbus.requests[0].Fields[i].value)
+	}
+	for i := 0; i < 10; i++ {
+		require.Equal(t, int64(i+20), modbus.requests[1].Fields[i].value)
+	}
+}
+
 func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
 	serv := mbserver.NewServer()
 	err := serv.ListenTCP("localhost:1502")
