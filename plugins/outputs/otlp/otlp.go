@@ -51,8 +51,9 @@ const (
 	// MaxInt is the max int64 value.
 	MaxInt = int(^uint(0) >> 1)
 
-	defaultEndpoint = "http://localhost:4317"
-	defaultTimeout  = time.Second * 60
+	defaultEndpoint            = "http://localhost:4317"
+	defaultTimeout             = time.Second * 60
+	instrumentationLibraryName = "Telegraf"
 )
 
 var sampleConfig = `
@@ -214,7 +215,7 @@ func (o *OTLP) protoTimeseries(m telegraf.Metric, f *telegraf.Field) (*otlpmetri
 		InstrumentationLibraryMetrics: []*otlpmetricpb.InstrumentationLibraryMetrics{
 			{
 				InstrumentationLibrary: &otlpcommonpb.InstrumentationLibrary{
-					Name:    "Telegraf", //TODO: dont hardcode this
+					Name:    instrumentationLibraryName,
 					Version: internal.Version(),
 				},
 				Metrics: []*otlpmetricpb.Metric{metric},
@@ -336,7 +337,7 @@ func (o *OTLP) Write(metrics []telegraf.Metric) error {
 			case telegraf.Histogram, telegraf.Summary:
 				fallthrough
 			default:
-				o.Log.Error("get type failed: unsupported telegraf metric kind")
+				o.Log.Errorf("get type failed: unsupported telegraf metric kind %v\n", m.Type())
 				continue
 			}
 			samples = append(samples, sample)
