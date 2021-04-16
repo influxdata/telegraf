@@ -186,6 +186,54 @@ func (m *Modbus) Init() error {
 	return nil
 }
 
+// Gather implements the telegraf plugin interface method for data accumulation
+func (m *Modbus) Gather(acc telegraf.Accumulator) error {
+	if !m.isConnected {
+		if err := m.connect(); err != nil {
+			return err
+		}
+	}
+
+	timestamp := time.Now()
+	for retry := 0; retry <= m.Retries; retry++ {
+		timestamp = time.Now()
+		if err := m.gatherFields(); err != nil {
+			if mberr, ok := err.(*mb.Error); ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
+				m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
+				time.Sleep(time.Duration(m.RetriesWaitTime))
+				continue
+			}
+			// Show the disconnect error this way to not shadow the initial error
+			if discerr := m.disconnect(); discerr != nil {
+				m.Log.Errorf("Disconnecting failed: %v", discerr)
+			}
+			return err
+		}
+		// Reading was successful, leave the retry loop
+		break
+	}
+
+	for slaveID, requests := range m.requests {
+		tags := map[string]string{
+			"name":     m.Name,
+			"type":     cCoils,
+			"slave_id": strconv.Itoa(int(slaveID)),
+		}
+		m.collectFields(acc, timestamp, tags, requests.coil)
+
+		tags["type"] = cDiscreteInputs
+		m.collectFields(acc, timestamp, tags, requests.discrete)
+
+		tags["type"] = cHoldingRegisters
+		m.collectFields(acc, timestamp, tags, requests.holding)
+
+		tags["type"] = cInputRegisters
+		m.collectFields(acc, timestamp, tags, requests.input)
+	}
+
+	return nil
+}
+
 func (m *Modbus) initClient() error {
 	u, err := url.Parse(m.Controller)
 	if err != nil {
@@ -341,54 +389,6 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 			request.fields[i].value = field.converter(bytes[offset : offset+length])
 		}
 	}
-	return nil
-}
-
-// Gather implements the telegraf plugin interface method for data accumulation
-func (m *Modbus) Gather(acc telegraf.Accumulator) error {
-	if !m.isConnected {
-		if err := m.connect(); err != nil {
-			return err
-		}
-	}
-
-	timestamp := time.Now()
-	for retry := 0; retry <= m.Retries; retry++ {
-		timestamp = time.Now()
-		if err := m.gatherFields(); err != nil {
-			if mberr, ok := err.(*mb.Error); ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
-				m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
-				time.Sleep(time.Duration(m.RetriesWaitTime))
-				continue
-			}
-			// Show the disconnect error this way to not shadow the initial error
-			if discerr := m.disconnect(); discerr != nil {
-				m.Log.Errorf("Disconnecting failed: %v", discerr)
-			}
-			return err
-		}
-		// Reading was successful, leave the retry loop
-		break
-	}
-
-	for slaveID, requests := range m.requests {
-		tags := map[string]string{
-			"name":     m.Name,
-			"type":     cCoils,
-			"slave_id": strconv.Itoa(int(slaveID)),
-		}
-		m.collectFields(acc, timestamp, tags, requests.coil)
-
-		tags["type"] = cDiscreteInputs
-		m.collectFields(acc, timestamp, tags, requests.discrete)
-
-		tags["type"] = cHoldingRegisters
-		m.collectFields(acc, timestamp, tags, requests.holding)
-
-		tags["type"] = cInputRegisters
-		m.collectFields(acc, timestamp, tags, requests.input)
-	}
-
 	return nil
 }
 
