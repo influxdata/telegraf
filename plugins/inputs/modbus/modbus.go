@@ -16,46 +16,45 @@ import (
 
 // Modbus holds all data relevant to the plugin
 type Modbus struct {
-	Name             string           `toml:"name"`
-	Controller       string           `toml:"controller"`
-	TransmissionMode string           `toml:"transmission_mode"`
-	BaudRate         int              `toml:"baud_rate"`
-	DataBits         int              `toml:"data_bits"`
-	Parity           string           `toml:"parity"`
-	StopBits         int              `toml:"stop_bits"`
-	SlaveID          int              `toml:"slave_id"`
-	Timeout          config.Duration  `toml:"timeout"`
-	Retries          int              `toml:"busy_retries"`
-	RetriesWaitTime  config.Duration  `toml:"busy_retries_wait"`
+	Name             string          `toml:"name"`
+	Controller       string          `toml:"controller"`
+	TransmissionMode string          `toml:"transmission_mode"`
+	BaudRate         int             `toml:"baud_rate"`
+	DataBits         int             `toml:"data_bits"`
+	Parity           string          `toml:"parity"`
+	StopBits         int             `toml:"stop_bits"`
+	Timeout          config.Duration `toml:"timeout"`
+	Retries          int             `toml:"busy_retries"`
+	RetriesWaitTime  config.Duration `toml:"busy_retries_wait"`
+	Log              telegraf.Logger `toml:"-"`
 	// Register configuration
-	DiscreteInputs   []fieldContainer `toml:"discrete_inputs"`
-	Coils            []fieldContainer `toml:"coils"`
-	HoldingRegisters []fieldContainer `toml:"holding_registers"`
-	InputRegisters   []fieldContainer `toml:"input_registers"`
-	Log              telegraf.Logger  `toml:"-"`
+	ConfigurationOriginal
 	// Connection handling
-	client           mb.Client
-	isConnected      bool
-	tcpHandler       *mb.TCPClientHandler
-	rtuHandler       *mb.RTUClientHandler
-	asciiHandler     *mb.ASCIIClientHandler
+	client       mb.Client
+	isConnected  bool
+	tcpHandler   *mb.TCPClientHandler
+	rtuHandler   *mb.RTUClientHandler
+	asciiHandler *mb.ASCIIClientHandler
 	// Register handling
-	registers        []register
+	registers []register
 }
+
+type fieldConverterFunc func(bytes []byte) interface{}
+type registerReadFunc func(address, quantity uint16) (results []byte, err error)
 
 type register struct {
 	Type           string
+	SlaveID        int
 	RegistersRange []registerRange
-	Fields         []fieldContainer
+	Fields         []field
 }
 
-type fieldContainer struct {
-	Measurement string   `toml:"measurement"`
-	Name        string   `toml:"name"`
-	ByteOrder   string   `toml:"byte_order"`
-	DataType    string   `toml:"data_type"`
-	Scale       float64  `toml:"scale"`
-	Address     []uint16 `toml:"address"`
+type field struct {
+	Measurement string
+	Name        string
+	Scale       float64
+	Address     []uint16
+	converter   fieldConverterFunc
 	value       interface{}
 }
 
@@ -174,7 +173,12 @@ func (m *Modbus) Init() error {
 		return fmt.Errorf("retries cannot be negative")
 	}
 
-	return m.initRegisters()
+	// Check and process the configuration
+	if err := m.ConfigurationOriginal.Check(); err != nil {
+		return fmt.Errorf("original configuraton invalid: %v", err)
+	}
+
+	return m.ConfigurationOriginal.Process(m)
 }
 
 // Connect to a MODBUS Slave device via Modbus/[TCP|RTU|ASCII]
@@ -324,16 +328,16 @@ func (m *Modbus) getFields() error {
 
 		if register.Type == cInputRegisters || register.Type == cHoldingRegisters {
 			for i := 0; i < len(register.Fields); i++ {
-				var valuesT []byte
+				var buf []byte
 
 				for j := 0; j < len(register.Fields[i].Address); j++ {
 					tempArray := rawValues[register.Fields[i].Address[j]]
 					for x := 0; x < len(tempArray); x++ {
-						valuesT = append(valuesT, tempArray[x])
+						buf = append(buf, tempArray[x])
 					}
 				}
 
-				register.Fields[i].value = convertDataType(register.Fields[i], valuesT)
+				register.Fields[i].value = register.Fields[i].converter(buf)
 			}
 		}
 	}

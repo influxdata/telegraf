@@ -96,14 +96,14 @@ func TestCoils(t *testing.T) {
 			modbus := Modbus{
 				Name:       "TestCoils",
 				Controller: "tcp://localhost:1502",
-				SlaveID:    1,
-				Coils: []fieldContainer{
-					{
-						Name:    ct.name,
-						Address: []uint16{ct.address},
-					},
+				Log:        testutil.Logger{},
+			}
+			modbus.SlaveID = 1
+			modbus.Coils = []fieldDefinition{
+				{
+					Name:    ct.name,
+					Address: []uint16{ct.address},
 				},
-				Log: testutil.Logger{},
 			}
 
 			err = modbus.Init()
@@ -289,7 +289,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "UINT16",
 			scale:     1,
 			write:     []byte{0xAB, 0xCD},
-			read:      uint16(43981),
+			read:      uint64(43981),
 		},
 		{
 			name:      "register10_ab_uint16-scale_.1",
@@ -299,7 +299,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "UINT16",
 			scale:     .1,
 			write:     []byte{0xAB, 0xCD},
-			read:      uint16(4398),
+			read:      uint64(4398),
 		},
 		{
 			name:      "register10_ab_uint16_scale_10",
@@ -309,7 +309,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "UINT16",
 			scale:     10,
 			write:     []byte{0x00, 0x2A},
-			read:      uint16(420),
+			read:      uint64(420),
 		},
 		{
 			name:      "register20_ba_uint16",
@@ -319,7 +319,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "UINT16",
 			scale:     1,
 			write:     []byte{0xAB, 0xCD},
-			read:      uint16(52651),
+			read:      uint64(52651),
 		},
 		{
 			name:      "register30_ab_int16",
@@ -329,7 +329,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "INT16",
 			scale:     1,
 			write:     []byte{0xAB, 0xCD},
-			read:      int16(-21555),
+			read:      int64(-21555),
 		},
 		{
 			name:      "register40_ba_int16",
@@ -339,7 +339,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "INT16",
 			scale:     1,
 			write:     []byte{0xAB, 0xCD},
-			read:      int16(-12885),
+			read:      int64(-12885),
 		},
 		{
 			name:      "register50_register51_abcd_int32_scaled",
@@ -349,7 +349,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "INT32",
 			scale:     10,
 			write:     []byte{0x00, 0x00, 0xAB, 0xCD},
-			read:      int32(439810),
+			read:      int64(439810),
 		},
 		{
 			name:      "register50_register51_abcd_int32",
@@ -359,7 +359,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "INT32",
 			scale:     1,
 			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      int32(-1430532899),
+			read:      int64(-1430532899),
 		},
 		{
 			name:      "register60_register61_dcba_int32",
@@ -369,7 +369,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "INT32",
 			scale:     1,
 			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      int32(-573785174),
+			read:      int64(-573785174),
 		},
 		{
 			name:      "register70_register71_badc_int32",
@@ -379,7 +379,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "INT32",
 			scale:     1,
 			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      int32(-1146430004),
+			read:      int64(-1146430004),
 		},
 		{
 			name:      "register80_register81_cdab_int32",
@@ -389,7 +389,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "INT32",
 			scale:     1,
 			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      int32(-857888069),
+			read:      int64(-857888069),
 		},
 		{
 			name:      "register90_register91_abcd_uint32",
@@ -399,7 +399,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "UINT32",
 			scale:     1,
 			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      uint32(2864434397),
+			read:      uint64(2864434397),
 		},
 		{
 			name:      "register100_register101_dcba_uint32",
@@ -409,7 +409,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "UINT32",
 			scale:     1,
 			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      uint32(3721182122),
+			read:      uint64(3721182122),
 		},
 		{
 			name:      "register110_register111_badc_uint32",
@@ -419,7 +419,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "UINT32",
 			scale:     1,
 			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      uint32(3148537292),
+			read:      uint64(3148537292),
 		},
 		{
 			name:      "register120_register121_cdab_uint32",
@@ -429,7 +429,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "UINT32",
 			scale:     1,
 			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      uint32(3437079227),
+			read:      uint64(3437079227),
 		},
 		{
 			name:      "register130_register131_abcd_float32_ieee",
@@ -439,7 +439,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "FLOAT32-IEEE",
 			scale:     1,
 			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      float32(-3.3360025e-13),
+			read:      float64(-3.336002535412469e-13),
 		},
 		{
 			name:      "register130_register131_abcd_float32_ieee_scaled",
@@ -449,7 +449,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "FLOAT32-IEEE",
 			scale:     10,
 			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      float32(-3.3360025e-12),
+			read:      float64(-3.336002535412469e-12),
 		},
 		{
 			name:      "register140_to_register143_abcdefgh_int64_scaled",
@@ -632,17 +632,17 @@ func TestHoldingRegisters(t *testing.T) {
 			modbus := Modbus{
 				Name:       "TestHoldingRegisters",
 				Controller: "tcp://localhost:1502",
-				SlaveID:    1,
-				HoldingRegisters: []fieldContainer{
-					{
-						Name:      hrt.name,
-						ByteOrder: hrt.byteOrder,
-						DataType:  hrt.dataType,
-						Scale:     hrt.scale,
-						Address:   hrt.address,
-					},
+				Log:        testutil.Logger{},
+			}
+			modbus.SlaveID = 1
+			modbus.HoldingRegisters = []fieldDefinition{
+				{
+					Name:      hrt.name,
+					ByteOrder: hrt.byteOrder,
+					DataType:  hrt.dataType,
+					Scale:     hrt.scale,
+					Address:   hrt.address,
 				},
-				Log: testutil.Logger{},
 			}
 
 			err = modbus.Init()
@@ -670,10 +670,10 @@ func TestReadMultipleCoilLimit(t *testing.T) {
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
-	fcs := []fieldContainer{}
+	fcs := []fieldDefinition{}
 	writeValue := uint16(0)
 	for i := 0; i <= 4000; i++ {
-		fc := fieldContainer{}
+		fc := fieldDefinition{}
 		fc.Name = fmt.Sprintf("coil-%v", i)
 		fc.Address = []uint16{uint16(i)}
 		fcs = append(fcs, fc)
@@ -689,9 +689,9 @@ func TestReadMultipleCoilLimit(t *testing.T) {
 	modbus := Modbus{
 		Name:       "TestReadCoils",
 		Controller: "tcp://localhost:1502",
-		SlaveID:    1,
-		Coils:      fcs,
 	}
+	modbus.SlaveID = 1
+	modbus.Coils = fcs
 
 	err = modbus.Init()
 	assert.NoError(t, err)
@@ -720,9 +720,9 @@ func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
-	fcs := []fieldContainer{}
+	fcs := []fieldDefinition{}
 	for i := 0; i <= 400; i++ {
-		fc := fieldContainer{}
+		fc := fieldDefinition{}
 		fc.Name = fmt.Sprintf("HoldingRegister-%v", i)
 		fc.ByteOrder = "AB"
 		fc.DataType = "INT16"
@@ -737,11 +737,11 @@ func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
 	}
 
 	modbus := Modbus{
-		Name:             "TestHoldingRegister",
-		Controller:       "tcp://localhost:1502",
-		SlaveID:          1,
-		HoldingRegisters: fcs,
+		Name:       "TestHoldingRegister",
+		Controller: "tcp://localhost:1502",
 	}
+	modbus.SlaveID = 1
+	modbus.HoldingRegisters = fcs
 
 	err = modbus.Init()
 	assert.NoError(t, err)
@@ -750,7 +750,7 @@ func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
 	assert.NoError(t, err)
 
 	for i := 0; i <= 400; i++ {
-		assert.Equal(t, int16(i), modbus.registers[0].Fields[i].value)
+		assert.Equal(t, int64(i), modbus.registers[0].Fields[i].value)
 	}
 }
 
@@ -785,15 +785,15 @@ func TestRetrySuccessful(t *testing.T) {
 		modbus := Modbus{
 			Name:       "TestRetry",
 			Controller: "tcp://localhost:1502",
-			SlaveID:    1,
 			Retries:    maxretries,
-			Coils: []fieldContainer{
-				{
-					Name:    "retry_success",
-					Address: []uint16{0},
-				},
+			Log:        testutil.Logger{},
+		}
+		modbus.SlaveID = 1
+		modbus.Coils = []fieldDefinition{
+			{
+				Name:    "retry_success",
+				Address: []uint16{0},
 			},
-			Log: testutil.Logger{},
 		}
 
 		err = modbus.Init()
@@ -831,15 +831,15 @@ func TestRetryFail(t *testing.T) {
 		modbus := Modbus{
 			Name:       "TestRetryFail",
 			Controller: "tcp://localhost:1502",
-			SlaveID:    1,
 			Retries:    maxretries,
-			Coils: []fieldContainer{
-				{
-					Name:    "retry_fail",
-					Address: []uint16{0},
-				},
+			Log:        testutil.Logger{},
+		}
+		modbus.SlaveID = 1
+		modbus.Coils = []fieldDefinition{
+			{
+				Name:    "retry_fail",
+				Address: []uint16{0},
 			},
-			Log: testutil.Logger{},
 		}
 
 		err = modbus.Init()
@@ -865,15 +865,15 @@ func TestRetryFail(t *testing.T) {
 		modbus := Modbus{
 			Name:       "TestRetryFail",
 			Controller: "tcp://localhost:1502",
-			SlaveID:    1,
 			Retries:    maxretries,
-			Coils: []fieldContainer{
-				{
-					Name:    "retry_fail",
-					Address: []uint16{0},
-				},
+			Log:        testutil.Logger{},
+		}
+		modbus.SlaveID = 1
+		modbus.Coils = []fieldDefinition{
+			{
+				Name:    "retry_fail",
+				Address: []uint16{0},
 			},
-			Log: testutil.Logger{},
 		}
 
 		err = modbus.Init()
