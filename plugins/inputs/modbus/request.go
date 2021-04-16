@@ -7,9 +7,9 @@ import (
 type requestReaderFunc func(address, length uint16) ([]byte, error)
 
 type request struct {
-	address      uint16
-	length       uint16
-	fields       []field
+	address uint16
+	length  uint16
+	fields  []field
 }
 
 func newRequestsFromFields(fields []field, slaveID byte, registerType string, maxBatchSize uint16) []request {
@@ -31,14 +31,14 @@ func newRequestsFromFields(fields []field, slaveID byte, registerType string, ma
 	var requests []request
 
 	current := request{
-		address:      fields[0].address,
-		length:       fields[0].length,
-		fields:       []field{fields[0]},
+		address: fields[0].address,
+		length:  fields[0].length,
+		fields:  []field{fields[0]},
 	}
 
 	for _, f := range fields[1:] {
 		// Check if we need to interrupt the current chunk and require a new one
-		needInterrupt := f.address != current.address+current.length           // not consecutive
+		needInterrupt := f.address != current.address+current.length            // not consecutive
 		needInterrupt = needInterrupt || f.length+current.length > maxBatchSize // too large
 
 		if !needInterrupt {
@@ -51,9 +51,9 @@ func newRequestsFromFields(fields []field, slaveID byte, registerType string, ma
 		// Finish the current request, add it to the list and construct a new one
 		requests = append(requests, current)
 		current = request{
-			address:      f.address,
-			length:       f.length,
-			fields:       []field{f},
+			address: f.address,
+			length:  f.length,
+			fields:  []field{f},
 		}
 	}
 	requests = append(requests, current)
