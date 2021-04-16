@@ -49,6 +49,7 @@ var (
 		`"`, `\"`,
 		`\`, `\\`,
 	)
+	httpLoadConfigRetryInterval = 10 * time.Second
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -81,9 +82,9 @@ func NewConfig() *Config {
 
 		// Agent defaults:
 		Agent: &AgentConfig{
-			Interval:                   internal.Duration{Duration: 10 * time.Second},
+			Interval:                   Duration(10 * time.Second),
 			RoundInterval:              true,
-			FlushInterval:              internal.Duration{Duration: 10 * time.Second},
+			FlushInterval:              Duration(10 * time.Second),
 			LogTarget:                  "file",
 			LogfileRotationMaxArchives: 5,
 		},
@@ -110,7 +111,7 @@ func NewConfig() *Config {
 // AgentConfig defines configuration that will be used by the Telegraf agent
 type AgentConfig struct {
 	// Interval at which to gather information
-	Interval internal.Duration
+	Interval Duration
 
 	// RoundInterval rounds collection interval to 'interval'.
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
@@ -122,22 +123,22 @@ type AgentConfig struct {
 	//       when interval = "250ms", precision will be "1ms"
 	// Precision will NOT be used for service inputs. It is up to each individual
 	// service input to set the timestamp at the appropriate precision.
-	Precision internal.Duration
+	Precision Duration
 
 	// CollectionJitter is used to jitter the collection by a random amount.
 	// Each plugin will sleep for a random time within jitter before collecting.
 	// This can be used to avoid many plugins querying things like sysfs at the
 	// same time, which can have a measurable effect on the system.
-	CollectionJitter internal.Duration
+	CollectionJitter Duration
 
 	// FlushInterval is the Interval at which to flush data
-	FlushInterval internal.Duration
+	FlushInterval Duration
 
 	// FlushJitter Jitters the flush interval by a random amount.
 	// This is primarily to avoid large write spikes for users running a large
 	// number of telegraf instances.
 	// ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
-	FlushJitter internal.Duration
+	FlushJitter Duration
 
 	// MetricBatchSize is the maximum number of metrics that is wrote to an
 	// output plugin in one call.
@@ -177,11 +178,11 @@ type AgentConfig struct {
 
 	// The file will be rotated after the time interval specified.  When set
 	// to 0 no time based rotation is performed.
-	LogfileRotationInterval internal.Duration `toml:"logfile_rotation_interval"`
+	LogfileRotationInterval Duration `toml:"logfile_rotation_interval"`
 
 	// The logfile will be rotated when it becomes larger than the specified
 	// size.  When set to 0 no size based rotation is performed.
-	LogfileRotationMaxSize internal.Size `toml:"logfile_rotation_max_size"`
+	LogfileRotationMaxSize Size `toml:"logfile_rotation_max_size"`
 
 	// Maximum number of rotated archives to keep, any older logs are deleted.
 	// If set to -1, no archives are removed.
@@ -907,7 +908,6 @@ func loadConfig(config string) ([]byte, error) {
 		// If it isn't a https scheme, try it as a file.
 	}
 	return ioutil.ReadFile(config)
-
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
@@ -921,17 +921,27 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 	}
 	req.Header.Add("Accept", "application/toml")
 	req.Header.Set("User-Agent", internal.ProductToken())
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
+
+	retries := 3
+	for i := 0; i <= retries; i++ {
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("Retry %d of %d failed connecting to HTTP config server %s", i, retries, err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			if i < retries {
+				log.Printf("Error getting HTTP config.  Retry %d of %d in %s.  Status=%d", i, retries, httpLoadConfigRetryInterval, resp.StatusCode)
+				time.Sleep(httpLoadConfigRetryInterval)
+				continue
+			}
+			return nil, fmt.Errorf("Retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status)
+		}
+		defer resp.Body.Close()
+		return ioutil.ReadAll(resp.Body)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to retrieve remote config: %s", resp.Status)
-	}
-
-	defer resp.Body.Close()
-	return ioutil.ReadAll(resp.Body)
+	return nil, nil
 }
 
 // parseConfig loads a TOML configuration from a provided path and
@@ -996,14 +1006,14 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		return err
 	}
 
-	rf, err := c.newRunningProcessor(creator, processorConfig, name, table)
+	rf, err := c.newRunningProcessor(creator, processorConfig, table)
 	if err != nil {
 		return err
 	}
 	c.Processors = append(c.Processors, rf)
 
 	// save a copy for the aggregator
-	rf, err = c.newRunningProcessor(creator, processorConfig, name, table)
+	rf, err = c.newRunningProcessor(creator, processorConfig, table)
 	if err != nil {
 		return err
 	}
@@ -1015,7 +1025,6 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 func (c *Config) newRunningProcessor(
 	creator processors.StreamingCreator,
 	processorConfig *models.ProcessorConfig,
-	name string,
 	table *ast.Table,
 ) (*models.RunningProcessor, error) {
 	processor := creator()
@@ -1048,7 +1057,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	// arbitrary types of output, so build the serializer and set it.
 	switch t := output.(type) {
 	case serializers.SerializerOutput:
-		serializer, err := c.buildSerializer(name, table)
+		serializer, err := c.buildSerializer(table)
 		if err != nil {
 			return err
 		}
@@ -1064,8 +1073,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	ro := models.NewRunningOutput(name, output, outputConfig,
-		c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
+	ro := models.NewRunningOutput(output, outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
 	return nil
 }
@@ -1257,7 +1265,14 @@ func (c *Config) buildParser(name string, tbl *ast.Table) (parsers.Parser, error
 	if err != nil {
 		return nil, err
 	}
-	return parsers.NewParser(config)
+	parser, err := parsers.NewParser(config)
+	if err != nil {
+		return nil, err
+	}
+	logger := models.NewLogger("parsers", config.DataFormat, name)
+	models.SetLoggerOnPlugin(parser, logger)
+
+	return parser, nil
 }
 
 func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
@@ -1320,8 +1335,33 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	c.getFieldInt(tbl, "csv_skip_rows", &pc.CSVSkipRows)
 	c.getFieldInt(tbl, "csv_skip_columns", &pc.CSVSkipColumns)
 	c.getFieldBool(tbl, "csv_trim_space", &pc.CSVTrimSpace)
+	c.getFieldStringSlice(tbl, "csv_skip_values", &pc.CSVSkipValues)
 
 	c.getFieldStringSlice(tbl, "form_urlencoded_tag_keys", &pc.FormUrlencodedTagKeys)
+
+	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
+
+	//for XML parser
+	if node, ok := tbl.Fields["xml"]; ok {
+		if subtbls, ok := node.([]*ast.Table); ok {
+			pc.XMLConfig = make([]parsers.XMLConfig, len(subtbls))
+			for i, subtbl := range subtbls {
+				subcfg := pc.XMLConfig[i]
+				c.getFieldString(subtbl, "metric_name", &subcfg.MetricQuery)
+				c.getFieldString(subtbl, "metric_selection", &subcfg.Selection)
+				c.getFieldString(subtbl, "timestamp", &subcfg.Timestamp)
+				c.getFieldString(subtbl, "timestamp_format", &subcfg.TimestampFmt)
+				c.getFieldStringMap(subtbl, "tags", &subcfg.Tags)
+				c.getFieldStringMap(subtbl, "fields", &subcfg.Fields)
+				c.getFieldStringMap(subtbl, "fields_int", &subcfg.FieldsInt)
+				c.getFieldString(subtbl, "field_selection", &subcfg.FieldSelection)
+				c.getFieldBool(subtbl, "field_name_expansion", &subcfg.FieldNameExpand)
+				c.getFieldString(subtbl, "field_name", &subcfg.FieldNameQuery)
+				c.getFieldString(subtbl, "field_value", &subcfg.FieldValueQuery)
+				pc.XMLConfig[i] = subcfg
+			}
+		}
+	}
 
 	pc.MetricName = name
 
@@ -1335,8 +1375,8 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 // buildSerializer grabs the necessary entries from the ast.Table for creating
 // a serializers.Serializer object, and creates it, which can then be added onto
 // an Output object.
-func (c *Config) buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error) {
-	sc := &serializers.Config{TimestampUnits: time.Duration(1 * time.Second)}
+func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error) {
+	sc := &serializers.Config{TimestampUnits: 1 * time.Second}
 
 	c.getFieldString(tbl, "data_format", &sc.DataFormat)
 
@@ -1348,6 +1388,7 @@ func (c *Config) buildSerializer(name string, tbl *ast.Table) (serializers.Seria
 	c.getFieldString(tbl, "template", &sc.Template)
 	c.getFieldStringSlice(tbl, "templates", &sc.Templates)
 	c.getFieldString(tbl, "carbon2_format", &sc.Carbon2Format)
+	c.getFieldString(tbl, "carbon2_sanitize_replace_char", &sc.Carbon2SanitizeReplaceChar)
 	c.getFieldInt(tbl, "influx_max_line_bytes", &sc.InfluxMaxLineBytes)
 
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
@@ -1391,7 +1432,7 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 	// TODO: support FieldPass/FieldDrop on outputs
 
 	c.getFieldDuration(tbl, "flush_interval", &oc.FlushInterval)
-	c.getFieldDuration(tbl, "flush_jitter", oc.FlushJitter)
+	c.getFieldDuration(tbl, "flush_jitter", &oc.FlushJitter)
 
 	c.getFieldInt(tbl, "metric_buffer_limit", &oc.MetricBufferLimit)
 	c.getFieldInt(tbl, "metric_batch_size", &oc.MetricBatchSize)
@@ -1407,13 +1448,13 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 	return oc, nil
 }
 
-func (c *Config) missingTomlField(typ reflect.Type, key string) error {
+func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	switch key {
-	case "alias", "carbon2_format", "collectd_auth_file", "collectd_parse_multivalue",
-		"collectd_security_level", "collectd_typesdb", "collection_jitter", "csv_column_names",
-		"csv_column_types", "csv_comment", "csv_delimiter", "csv_header_row_count",
+	case "alias", "carbon2_format", "carbon2_sanitize_replace_char", "collectd_auth_file",
+		"collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb", "collection_jitter",
+		"csv_column_names", "csv_column_types", "csv_comment", "csv_delimiter", "csv_header_row_count",
 		"csv_measurement_column", "csv_skip_columns", "csv_skip_rows", "csv_tag_columns",
-		"csv_timestamp_column", "csv_timestamp_format", "csv_timezone", "csv_trim_space",
+		"csv_timestamp_column", "csv_timestamp_format", "csv_timezone", "csv_trim_space", "csv_skip_values",
 		"data_format", "data_type", "delay", "drop", "drop_original", "dropwizard_metric_registry_path",
 		"dropwizard_tag_paths", "dropwizard_tags_path", "dropwizard_time_format", "dropwizard_time_path",
 		"fielddrop", "fieldpass", "flush_interval", "flush_jitter", "form_urlencoded_tag_keys",
@@ -1427,7 +1468,7 @@ func (c *Config) missingTomlField(typ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"wavefront_source_override", "wavefront_use_strict":
+		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml":
 
 		// ignore fields that are common to all plugins.
 	default:
@@ -1526,10 +1567,14 @@ func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string, target *[
 						*target = append(*target, str.Value)
 					}
 				}
+			} else {
+				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format", fieldName))
+				return
 			}
 		}
 	}
 }
+
 func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]models.TagFilter) {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
@@ -1542,6 +1587,9 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 								tagfilter.Filter = append(tagfilter.Filter, str.Value)
 							}
 						}
+					} else {
+						c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format on each entry", fieldName))
+						return
 					}
 					*target = append(*target, tagfilter)
 				}

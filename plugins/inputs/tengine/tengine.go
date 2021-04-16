@@ -14,14 +14,14 @@ import (
 	"io"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Tengine struct {
 	Urls            []string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	tls.ClientConfig
 
 	client *http.Client
@@ -56,7 +56,7 @@ func (n *Tengine) Gather(acc telegraf.Accumulator) error {
 	// Create an HTTP client that is re-used for each
 	// collection interval
 	if n.client == nil {
-		client, err := n.createHttpClient()
+		client, err := n.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ func (n *Tengine) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(n.gatherUrl(addr, acc))
+			acc.AddError(n.gatherURL(addr, acc))
 		}(addr)
 	}
 
@@ -81,61 +81,61 @@ func (n *Tengine) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *Tengine) createHttpClient() (*http.Client, error) {
+func (n *Tengine) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := n.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	if n.ResponseTimeout.Duration < time.Second {
-		n.ResponseTimeout.Duration = time.Second * 5
+	if n.ResponseTimeout < config.Duration(time.Second) {
+		n.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: n.ResponseTimeout.Duration,
+		Timeout: time.Duration(n.ResponseTimeout),
 	}
 
 	return client, nil
 }
 
 type TengineStatus struct {
-	host                     string
-	bytes_in                 uint64
-	bytes_out                uint64
-	conn_total               uint64
-	req_total                uint64
-	http_2xx                 uint64
-	http_3xx                 uint64
-	http_4xx                 uint64
-	http_5xx                 uint64
-	http_other_status        uint64
-	rt                       uint64
-	ups_req                  uint64
-	ups_rt                   uint64
-	ups_tries                uint64
-	http_200                 uint64
-	http_206                 uint64
-	http_302                 uint64
-	http_304                 uint64
-	http_403                 uint64
-	http_404                 uint64
-	http_416                 uint64
-	http_499                 uint64
-	http_500                 uint64
-	http_502                 uint64
-	http_503                 uint64
-	http_504                 uint64
-	http_508                 uint64
-	http_other_detail_status uint64
-	http_ups_4xx             uint64
-	http_ups_5xx             uint64
+	host                  string
+	bytesIn               uint64
+	bytesOut              uint64
+	connTotal             uint64
+	reqTotal              uint64
+	http2xx               uint64
+	http3xx               uint64
+	http4xx               uint64
+	http5xx               uint64
+	httpOtherStatus       uint64
+	rt                    uint64
+	upsReq                uint64
+	upsRt                 uint64
+	upsTries              uint64
+	http200               uint64
+	http206               uint64
+	http302               uint64
+	http304               uint64
+	http403               uint64
+	http404               uint64
+	http416               uint64
+	http499               uint64
+	http500               uint64
+	http502               uint64
+	http503               uint64
+	http504               uint64
+	http508               uint64
+	httpOtherDetailStatus uint64
+	httpUps4xx            uint64
+	httpUps5xx            uint64
 }
 
-func (n *Tengine) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
-	var tenginestatus TengineStatus
+func (n *Tengine) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
+	var tengineStatus TengineStatus
 	resp, err := n.client.Get(addr.String())
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
@@ -152,170 +152,171 @@ func (n *Tengine) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 		if err != nil || io.EOF == err {
 			break
 		}
-		line_split := strings.Split(strings.TrimSpace(line), ",")
-		if len(line_split) != 30 {
+		lineSplit := strings.Split(strings.TrimSpace(line), ",")
+		if len(lineSplit) != 30 {
 			continue
 		}
-		tenginestatus.host = line_split[0]
+		tengineStatus.host = lineSplit[0]
 		if err != nil {
 			return err
 		}
-		tenginestatus.bytes_in, err = strconv.ParseUint(line_split[1], 10, 64)
+		tengineStatus.bytesIn, err = strconv.ParseUint(lineSplit[1], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.bytes_out, err = strconv.ParseUint(line_split[2], 10, 64)
+		tengineStatus.bytesOut, err = strconv.ParseUint(lineSplit[2], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.conn_total, err = strconv.ParseUint(line_split[3], 10, 64)
+		tengineStatus.connTotal, err = strconv.ParseUint(lineSplit[3], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.req_total, err = strconv.ParseUint(line_split[4], 10, 64)
+		tengineStatus.reqTotal, err = strconv.ParseUint(lineSplit[4], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_2xx, err = strconv.ParseUint(line_split[5], 10, 64)
+		tengineStatus.http2xx, err = strconv.ParseUint(lineSplit[5], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_3xx, err = strconv.ParseUint(line_split[6], 10, 64)
+		tengineStatus.http3xx, err = strconv.ParseUint(lineSplit[6], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_4xx, err = strconv.ParseUint(line_split[7], 10, 64)
+		tengineStatus.http4xx, err = strconv.ParseUint(lineSplit[7], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_5xx, err = strconv.ParseUint(line_split[8], 10, 64)
+		tengineStatus.http5xx, err = strconv.ParseUint(lineSplit[8], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_other_status, err = strconv.ParseUint(line_split[9], 10, 64)
+		tengineStatus.httpOtherStatus, err = strconv.ParseUint(lineSplit[9], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.rt, err = strconv.ParseUint(line_split[10], 10, 64)
+		tengineStatus.rt, err = strconv.ParseUint(lineSplit[10], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.ups_req, err = strconv.ParseUint(line_split[11], 10, 64)
+		tengineStatus.upsReq, err = strconv.ParseUint(lineSplit[11], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.ups_rt, err = strconv.ParseUint(line_split[12], 10, 64)
+		tengineStatus.upsRt, err = strconv.ParseUint(lineSplit[12], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.ups_tries, err = strconv.ParseUint(line_split[13], 10, 64)
+		tengineStatus.upsTries, err = strconv.ParseUint(lineSplit[13], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_200, err = strconv.ParseUint(line_split[14], 10, 64)
+		tengineStatus.http200, err = strconv.ParseUint(lineSplit[14], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_206, err = strconv.ParseUint(line_split[15], 10, 64)
+		tengineStatus.http206, err = strconv.ParseUint(lineSplit[15], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_302, err = strconv.ParseUint(line_split[16], 10, 64)
+		tengineStatus.http302, err = strconv.ParseUint(lineSplit[16], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_304, err = strconv.ParseUint(line_split[17], 10, 64)
+		tengineStatus.http304, err = strconv.ParseUint(lineSplit[17], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_403, err = strconv.ParseUint(line_split[18], 10, 64)
+		tengineStatus.http403, err = strconv.ParseUint(lineSplit[18], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_404, err = strconv.ParseUint(line_split[19], 10, 64)
+		tengineStatus.http404, err = strconv.ParseUint(lineSplit[19], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_416, err = strconv.ParseUint(line_split[20], 10, 64)
+		tengineStatus.http416, err = strconv.ParseUint(lineSplit[20], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_499, err = strconv.ParseUint(line_split[21], 10, 64)
+		tengineStatus.http499, err = strconv.ParseUint(lineSplit[21], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_500, err = strconv.ParseUint(line_split[22], 10, 64)
+		tengineStatus.http500, err = strconv.ParseUint(lineSplit[22], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_502, err = strconv.ParseUint(line_split[23], 10, 64)
+		tengineStatus.http502, err = strconv.ParseUint(lineSplit[23], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_503, err = strconv.ParseUint(line_split[24], 10, 64)
+		tengineStatus.http503, err = strconv.ParseUint(lineSplit[24], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_504, err = strconv.ParseUint(line_split[25], 10, 64)
+		tengineStatus.http504, err = strconv.ParseUint(lineSplit[25], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_508, err = strconv.ParseUint(line_split[26], 10, 64)
+		tengineStatus.http508, err = strconv.ParseUint(lineSplit[26], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_other_detail_status, err = strconv.ParseUint(line_split[27], 10, 64)
+		tengineStatus.httpOtherDetailStatus, err = strconv.ParseUint(lineSplit[27], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_ups_4xx, err = strconv.ParseUint(line_split[28], 10, 64)
+		tengineStatus.httpUps4xx, err = strconv.ParseUint(lineSplit[28], 10, 64)
 		if err != nil {
 			return err
 		}
-		tenginestatus.http_ups_5xx, err = strconv.ParseUint(line_split[29], 10, 64)
+		tengineStatus.httpUps5xx, err = strconv.ParseUint(lineSplit[29], 10, 64)
 		if err != nil {
 			return err
 		}
-		tags := getTags(addr, tenginestatus.host)
+		tags := getTags(addr, tengineStatus.host)
 		fields := map[string]interface{}{
-			"bytes_in":                 tenginestatus.bytes_in,
-			"bytes_out":                tenginestatus.bytes_out,
-			"conn_total":               tenginestatus.conn_total,
-			"req_total":                tenginestatus.req_total,
-			"http_2xx":                 tenginestatus.http_2xx,
-			"http_3xx":                 tenginestatus.http_3xx,
-			"http_4xx":                 tenginestatus.http_4xx,
-			"http_5xx":                 tenginestatus.http_5xx,
-			"http_other_status":        tenginestatus.http_other_status,
-			"rt":                       tenginestatus.rt,
-			"ups_req":                  tenginestatus.ups_req,
-			"ups_rt":                   tenginestatus.ups_rt,
-			"ups_tries":                tenginestatus.ups_tries,
-			"http_200":                 tenginestatus.http_200,
-			"http_206":                 tenginestatus.http_206,
-			"http_302":                 tenginestatus.http_302,
-			"http_304":                 tenginestatus.http_304,
-			"http_403":                 tenginestatus.http_403,
-			"http_404":                 tenginestatus.http_404,
-			"http_416":                 tenginestatus.http_416,
-			"http_499":                 tenginestatus.http_499,
-			"http_500":                 tenginestatus.http_500,
-			"http_502":                 tenginestatus.http_502,
-			"http_503":                 tenginestatus.http_503,
-			"http_504":                 tenginestatus.http_504,
-			"http_508":                 tenginestatus.http_508,
-			"http_other_detail_status": tenginestatus.http_other_detail_status,
-			"http_ups_4xx":             tenginestatus.http_ups_4xx,
-			"http_ups_5xx":             tenginestatus.http_ups_5xx,
+			"bytes_in":                 tengineStatus.bytesIn,
+			"bytes_out":                tengineStatus.bytesOut,
+			"conn_total":               tengineStatus.connTotal,
+			"req_total":                tengineStatus.reqTotal,
+			"http_2xx":                 tengineStatus.http2xx,
+			"http_3xx":                 tengineStatus.http3xx,
+			"http_4xx":                 tengineStatus.http4xx,
+			"http_5xx":                 tengineStatus.http5xx,
+			"http_other_status":        tengineStatus.httpOtherStatus,
+			"rt":                       tengineStatus.rt,
+			"ups_req":                  tengineStatus.upsReq,
+			"ups_rt":                   tengineStatus.upsRt,
+			"ups_tries":                tengineStatus.upsTries,
+			"http_200":                 tengineStatus.http200,
+			"http_206":                 tengineStatus.http206,
+			"http_302":                 tengineStatus.http302,
+			"http_304":                 tengineStatus.http304,
+			"http_403":                 tengineStatus.http403,
+			"http_404":                 tengineStatus.http404,
+			"http_416":                 tengineStatus.http416,
+			"http_499":                 tengineStatus.http499,
+			"http_500":                 tengineStatus.http500,
+			"http_502":                 tengineStatus.http502,
+			"http_503":                 tengineStatus.http503,
+			"http_504":                 tengineStatus.http504,
+			"http_508":                 tengineStatus.http508,
+			"http_other_detail_status": tengineStatus.httpOtherDetailStatus,
+			"http_ups_4xx":             tengineStatus.httpUps4xx,
+			"http_ups_5xx":             tengineStatus.httpUps5xx,
 		}
 		acc.AddFields("tengine", fields, tags)
 	}
 
-	return nil
+	// Return the potential error of the loop-read
+	return err
 }
 
 // Get tag(s) for the tengine plugin
-func getTags(addr *url.URL, server_name string) map[string]string {
+func getTags(addr *url.URL, serverName string) map[string]string {
 	h := addr.Host
 	host, port, err := net.SplitHostPort(h)
 	if err != nil {
@@ -328,7 +329,7 @@ func getTags(addr *url.URL, server_name string) map[string]string {
 			port = ""
 		}
 	}
-	return map[string]string{"server": host, "port": port, "server_name": server_name}
+	return map[string]string{"server": host, "port": port, "server_name": serverName}
 }
 
 func init() {

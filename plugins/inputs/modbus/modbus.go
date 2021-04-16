@@ -3,7 +3,6 @@ package modbus
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"net/url"
@@ -12,28 +11,29 @@ import (
 
 	mb "github.com/goburrow/modbus"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Modbus holds all data relevant to the plugin
 type Modbus struct {
-	Name             string            `toml:"name"`
-	Controller       string            `toml:"controller"`
-	TransmissionMode string            `toml:"transmission_mode"`
-	BaudRate         int               `toml:"baud_rate"`
-	DataBits         int               `toml:"data_bits"`
-	Parity           string            `toml:"parity"`
-	StopBits         int               `toml:"stop_bits"`
-	SlaveID          int               `toml:"slave_id"`
-	Timeout          internal.Duration `toml:"timeout"`
-	Retries          int               `toml:"busy_retries"`
-	RetriesWaitTime  internal.Duration `toml:"busy_retries_wait"`
-	DiscreteInputs   []fieldContainer  `toml:"discrete_inputs"`
-	Coils            []fieldContainer  `toml:"coils"`
-	HoldingRegisters []fieldContainer  `toml:"holding_registers"`
-	InputRegisters   []fieldContainer  `toml:"input_registers"`
+	Name             string           `toml:"name"`
+	Controller       string           `toml:"controller"`
+	TransmissionMode string           `toml:"transmission_mode"`
+	BaudRate         int              `toml:"baud_rate"`
+	DataBits         int              `toml:"data_bits"`
+	Parity           string           `toml:"parity"`
+	StopBits         int              `toml:"stop_bits"`
+	SlaveID          int              `toml:"slave_id"`
+	Timeout          config.Duration  `toml:"timeout"`
+	Retries          int              `toml:"busy_retries"`
+	RetriesWaitTime  config.Duration  `toml:"busy_retries_wait"`
+	DiscreteInputs   []fieldContainer `toml:"discrete_inputs"`
+	Coils            []fieldContainer `toml:"coils"`
+	HoldingRegisters []fieldContainer `toml:"holding_registers"`
+	InputRegisters   []fieldContainer `toml:"input_registers"`
+	Log              telegraf.Logger  `toml:"-"`
 	registers        []register
 	isConnected      bool
 	tcpHandler       *mb.TCPClientHandler
@@ -208,32 +208,40 @@ func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
 
 	addrs := []uint16{}
 	for _, field := range fields {
-		for _, a := range field.Address {
-			addrs = append(addrs, a)
-		}
+		addrs = append(addrs, field.Address...)
 	}
 
 	addrs = removeDuplicates(addrs)
 	sort.Slice(addrs, func(i, j int) bool { return addrs[i] < addrs[j] })
 
 	ii := 0
+	maxQuantity := 1
 	var registersRange []registerRange
+	if name == cDiscreteInputs || name == cCoils {
+		maxQuantity = 2000
+	} else if name == cInputRegisters || name == cHoldingRegisters {
+		maxQuantity = 125
+	}
 
 	// Get range of consecutive integers
 	// [1, 2, 3, 5, 6, 10, 11, 12, 14]
 	// (1, 3) , (5, 2) , (10, 3), (14 , 1)
 	for range addrs {
-		if ii < len(addrs) {
-			start := addrs[ii]
-			end := start
-
-			for ii < len(addrs)-1 && addrs[ii+1]-addrs[ii] == 1 {
-				end = addrs[ii+1]
-				ii++
-			}
-			ii++
-			registersRange = append(registersRange, registerRange{start, end - start + 1})
+		if ii >= len(addrs) {
+			break
 		}
+		quantity := 1
+		start := addrs[ii]
+		end := start
+
+		for ii < len(addrs)-1 && addrs[ii+1]-addrs[ii] == 1 && quantity < maxQuantity {
+			end = addrs[ii+1]
+			ii++
+			quantity++
+		}
+		ii++
+
+		registersRange = append(registersRange, registerRange{start, end - start + 1})
 	}
 
 	m.registers = append(m.registers, register{name, registersRange, fields})
@@ -256,7 +264,7 @@ func connect(m *Modbus) error {
 			return err
 		}
 		m.tcpHandler = mb.NewTCPClientHandler(host + ":" + port)
-		m.tcpHandler.Timeout = m.Timeout.Duration
+		m.tcpHandler.Timeout = time.Duration(m.Timeout)
 		m.tcpHandler.SlaveId = byte(m.SlaveID)
 		m.client = mb.NewClient(m.tcpHandler)
 		err := m.tcpHandler.Connect()
@@ -268,7 +276,7 @@ func connect(m *Modbus) error {
 	case "file":
 		if m.TransmissionMode == "RTU" {
 			m.rtuHandler = mb.NewRTUClientHandler(u.Path)
-			m.rtuHandler.Timeout = m.Timeout.Duration
+			m.rtuHandler.Timeout = time.Duration(m.Timeout)
 			m.rtuHandler.SlaveId = byte(m.SlaveID)
 			m.rtuHandler.BaudRate = m.BaudRate
 			m.rtuHandler.DataBits = m.DataBits
@@ -283,7 +291,7 @@ func connect(m *Modbus) error {
 			return nil
 		} else if m.TransmissionMode == "ASCII" {
 			m.asciiHandler = mb.NewASCIIClientHandler(u.Path)
-			m.asciiHandler.Timeout = m.Timeout.Duration
+			m.asciiHandler.Timeout = time.Duration(m.Timeout)
 			m.asciiHandler.SlaveId = byte(m.SlaveID)
 			m.asciiHandler.BaudRate = m.BaudRate
 			m.asciiHandler.DataBits = m.DataBits
@@ -338,12 +346,11 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 		}
 
 		//search name duplicate
-		canonical_name := item.Measurement + "." + item.Name
-		if nameEncountered[canonical_name] {
+		canonicalName := item.Measurement + "." + item.Name
+		if nameEncountered[canonicalName] {
 			return fmt.Errorf("name '%s' is duplicated in measurement '%s' '%s' - '%s'", item.Name, item.Measurement, n, item.Name)
-		} else {
-			nameEncountered[canonical_name] = true
 		}
+		nameEncountered[canonicalName] = true
 
 		if n == cInputRegisters || n == cHoldingRegisters {
 			// search byte order
@@ -406,13 +413,13 @@ func removeDuplicates(elements []uint16) []uint16 {
 
 func readRegisterValues(m *Modbus, rt string, rr registerRange) ([]byte, error) {
 	if rt == cDiscreteInputs {
-		return m.client.ReadDiscreteInputs(uint16(rr.address), uint16(rr.length))
+		return m.client.ReadDiscreteInputs(rr.address, rr.length)
 	} else if rt == cCoils {
-		return m.client.ReadCoils(uint16(rr.address), uint16(rr.length))
+		return m.client.ReadCoils(rr.address, rr.length)
 	} else if rt == cInputRegisters {
-		return m.client.ReadInputRegisters(uint16(rr.address), uint16(rr.length))
+		return m.client.ReadInputRegisters(rr.address, rr.length)
 	} else if rt == cHoldingRegisters {
-		return m.client.ReadHoldingRegisters(uint16(rr.address), uint16(rr.length))
+		return m.client.ReadHoldingRegisters(rr.address, rr.length)
 	} else {
 		return []byte{}, fmt.Errorf("not Valid function")
 	}
@@ -435,7 +442,7 @@ func (m *Modbus) getFields() error {
 					for bitPosition := 0; bitPosition < 8; bitPosition++ {
 						bitRawValues[address] = getBitValue(readValue, bitPosition)
 						address = address + 1
-						if address+1 > rr.length {
+						if address > rr.address+rr.length {
 							break
 						}
 					}
@@ -463,18 +470,17 @@ func (m *Modbus) getFields() error {
 
 		if register.Type == cInputRegisters || register.Type == cHoldingRegisters {
 			for i := 0; i < len(register.Fields); i++ {
-				var values_t []byte
+				var valuesT []byte
 
 				for j := 0; j < len(register.Fields[i].Address); j++ {
 					tempArray := rawValues[register.Fields[i].Address[j]]
 					for x := 0; x < len(tempArray); x++ {
-						values_t = append(values_t, tempArray[x])
+						valuesT = append(valuesT, tempArray[x])
 					}
 				}
 
-				register.Fields[i].value = convertDataType(register.Fields[i], values_t)
+				register.Fields[i].value = convertDataType(register.Fields[i], valuesT)
 			}
-
 		}
 	}
 
@@ -588,30 +594,6 @@ func convertEndianness64(o string, b []byte) uint64 {
 	}
 }
 
-func format16(f string, r uint16) interface{} {
-	switch f {
-	case "UINT16":
-		return r
-	case "INT16":
-		return int16(r)
-	default:
-		return r
-	}
-}
-
-func format32(f string, r uint32) interface{} {
-	switch f {
-	case "UINT32":
-		return r
-	case "INT32":
-		return int32(r)
-	case "FLOAT32-IEEE":
-		return math.Float32frombits(r)
-	default:
-		return r
-	}
-}
-
 func format64(f string, r uint64) interface{} {
 	switch f {
 	case "UINT64":
@@ -690,16 +672,18 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	}
 
 	timestamp := time.Now()
-	for retry := 0; retry <= m.Retries; retry += 1 {
+	for retry := 0; retry <= m.Retries; retry++ {
 		timestamp = time.Now()
 		err := m.getFields()
 		if err != nil {
 			mberr, ok := err.(*mb.ModbusError)
 			if ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
-				log.Printf("I! [inputs.modbus] device busy! Retrying %d more time(s)...", m.Retries-retry)
-				time.Sleep(m.RetriesWaitTime.Duration)
+				m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
+				time.Sleep(time.Duration(m.RetriesWaitTime))
 				continue
 			}
+			// Ignore return error to not shadow the initial error
+			//nolint:errcheck,revive
 			disconnect(m)
 			m.isConnected = false
 			return err
@@ -723,7 +707,9 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Group the data by series
-			grouper.Add(measurement, tags, timestamp, field.Name, field.value)
+			if err := grouper.Add(measurement, tags, timestamp, field.Name, field.value); err != nil {
+				return err
+			}
 		}
 
 		// Add the metrics grouped by series to the accumulator

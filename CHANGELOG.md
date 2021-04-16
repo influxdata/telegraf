@@ -1,3 +1,169 @@
+## v1.18.1 [2021-04-07]
+
+#### Bugfixes
+
+  - [#9082](https://github.com/influxdata/telegraf/pull/9082) `inputs.mysql` Fix 'binary logs' query for MySQL 8
+  - [#9069](https://github.com/influxdata/telegraf/pull/9069) `inputs.tail` Add configurable option for the 'path' tag override
+  - [#9067](https://github.com/influxdata/telegraf/pull/9067) `inputs.nfsclient` Fix integer overflow in fields from mountstat
+  - [#9050](https://github.com/influxdata/telegraf/pull/9050) `inputs.snmp` Fix init when no mibs are installed
+  - [#9072](https://github.com/influxdata/telegraf/pull/9072) `inputs.ping` Always call SetPrivileged(true) in native mode
+  - [#9043](https://github.com/influxdata/telegraf/pull/9043) `processors.ifname` Get interface name more effeciently
+  - [#9056](https://github.com/influxdata/telegraf/pull/9056) `outputs.yandex_cloud_monitoring` Use correct compute metadata URL to get folder-id
+  - [#9048](https://github.com/influxdata/telegraf/pull/9048) `outputs.azure_monitor` Handle error when initializing the auth object
+  - [#8549](https://github.com/influxdata/telegraf/pull/8549) `inputs.sqlserver` Fix sqlserver_process_cpu calculation
+  - [#9035](https://github.com/influxdata/telegraf/pull/9035) `inputs.ipmi_sensor` Fix panic
+  - [#9009](https://github.com/influxdata/telegraf/pull/9009) `inputs.docker` Fix panic when parsing container stats
+  - [#8333](https://github.com/influxdata/telegraf/pull/8333) `inputs.exec` Don't truncate messages in debug mode
+  - [#8769](https://github.com/influxdata/telegraf/pull/8769) `agent` Close running outputs when reloadinlg
+
+## v1.18.0 [2021-03-17]
+
+#### Release Notes
+
+  - Support Go version 1.16.2
+  - Added support for code signing in Windows
+
+#### Bugfixes
+
+  - [#7312](https://github.com/influxdata/telegraf/pull/7312) `inputs.docker` CPU stats respect perdevice
+  - [#8397](https://github.com/influxdata/telegraf/pull/8397) `outputs.dynatrace` Dynatrace Plugin: Make conversion to counters possible / Changed large bulk handling
+  - [#8655](https://github.com/influxdata/telegraf/pull/8655) `inputs.sqlserver` SqlServer - fix for default server list
+  - [#8703](https://github.com/influxdata/telegraf/pull/8703) `inputs.docker` Use consistent container name in docker input plugin
+  - [#8902](https://github.com/influxdata/telegraf/pull/8902) `inputs.snmp` Fix max_repetitions signedness issues
+  - [#8817](https://github.com/influxdata/telegraf/pull/8817) `outputs.kinesis` outputs.kinesis - log record error count
+  - [#8833](https://github.com/influxdata/telegraf/pull/8833) `inputs.sqlserver` Bug Fix - SQL Server HADR queries for SQL Versions
+  - [#8628](https://github.com/influxdata/telegraf/pull/8628) `inputs.modbus` fix: reading multiple holding registers in modbus input plugin
+  - [#8885](https://github.com/influxdata/telegraf/pull/8885) `inputs.statsd` Fix statsd concurrency bug
+  - [#8393](https://github.com/influxdata/telegraf/pull/8393) `inputs.sqlserver` SQL Perfmon counters - synced queries from v2 to all db types
+  - [#8873](https://github.com/influxdata/telegraf/pull/8873) `processors.ifname` Fix mutex locking around ifname cache
+  - [#8720](https://github.com/influxdata/telegraf/pull/8720) `parsers.influx` fix: remove ambiguity on '\v' from line-protocol parser
+  - [#8678](https://github.com/influxdata/telegraf/pull/8678) `inputs.redis` Fix Redis output field type inconsistencies
+  - [#8953](https://github.com/influxdata/telegraf/pull/8953) `agent` Reset the flush interval timer when flush is requested or batch is ready.
+  - [#8954](https://github.com/influxdata/telegraf/pull/8954) `common.kafka` Fix max open requests to one if idempotent writes is set to true
+  - [#8721](https://github.com/influxdata/telegraf/pull/8721) `inputs.kube_inventory` Set $HOSTIP in default URL
+  - [#8995](https://github.com/influxdata/telegraf/pull/8995) `inputs.sflow` fix segfaults in sflow plugin by checking if protocol headers are set
+  - [#8986](https://github.com/influxdata/telegraf/pull/8986) `outputs.nats` nats_output: use the configured credentials file
+
+#### Features
+
+  - [#8887](https://github.com/influxdata/telegraf/pull/8887) `inputs.procstat` Add PPID field to procstat input plugin
+  - [#8852](https://github.com/influxdata/telegraf/pull/8852) `processors.starlark` Add Starlark script for estimating Line Protocol cardinality
+  - [#8915](https://github.com/influxdata/telegraf/pull/8915) `inputs.cloudwatch` add proxy
+  - [#8910](https://github.com/influxdata/telegraf/pull/8910) `agent` Display error message on badly formatted config string array (eg. namepass)
+  - [#8785](https://github.com/influxdata/telegraf/pull/8785) `inputs.diskio` Non systemd support with unittest
+  - [#8850](https://github.com/influxdata/telegraf/pull/8850) `inputs.snmp` Support more snmpv3 authentication protocols
+  - [#8813](https://github.com/influxdata/telegraf/pull/8813) `inputs.redfish` added member_id as tag(as it is a unique value) for redfish plugin and added address of the server when the status is other than 200 for better debugging
+  - [#8613](https://github.com/influxdata/telegraf/pull/8613) `inputs.phpfpm` Support exclamation mark to create non-matching list in tail plugin
+  - [#8179](https://github.com/influxdata/telegraf/pull/8179) `inputs.statsd` Add support for datadog distributions metric
+  - [#8803](https://github.com/influxdata/telegraf/pull/8803) `agent` Add default retry for load config via url
+  - [#8816](https://github.com/influxdata/telegraf/pull/8816) Code Signing for Windows
+  - [#8772](https://github.com/influxdata/telegraf/pull/8772) `processors.starlark` Allow to provide constants to a starlark script
+  - [#8749](https://github.com/influxdata/telegraf/pull/8749) `outputs.newrelic` Add HTTP proxy setting to New Relic output plugin
+  - [#8543](https://github.com/influxdata/telegraf/pull/8543) `inputs.elasticsearch` Add configurable number of 'most recent' date-stamped indices to gather in Elasticsearch input
+  - [#8675](https://github.com/influxdata/telegraf/pull/8675) `processors.starlark` Add Starlark parsing example of nested JSON
+  - [#8762](https://github.com/influxdata/telegraf/pull/8762) `inputs.prometheus` Optimize for bigger kubernetes clusters (500+ pods)
+  - [#8950](https://github.com/influxdata/telegraf/pull/8950) `inputs.teamspeak` Teamspeak input plugin query clients
+  - [#8849](https://github.com/influxdata/telegraf/pull/8849) `inputs.sqlserver` Filter data out from system databases for Azure SQL DB only
+
+#### New Inputs
+  - [Beat Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/beat) - Contributed by @nferch
+  - [CS:GO Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/csgo) - Contributed by @oofdog
+  - [Directory Monitoring Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/directory_monitor) - Contributed by @InfluxData
+  - [RavenDB Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ravendb) - Contributed by @ml054 and @bartoncasey
+  - [NFS Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nfsclient) - Contributed by @pmoranga
+
+#### New Outputs
+  - [Grafana Loki Output Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/loki) - Contributed by @Eraac
+  - [Google BigQuery Output Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/loki) - Contributed by @gkatzioura
+  - [Sensu Output Plugin](https://github.com/influxdata/telegraf/blob/master/plugins/outputs/sensu) - Contributed by @calebhailey
+  - [SignalFX Output Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/signalfx) - Contributed by @keitwb
+
+#### New Aggregators
+  - [Derivative Aggregator Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/aggregators/derivative)- Contributed by @KarstenSchnitter
+  - [Quantile Aggregator Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/aggregators/quantile) - Contributed by @srebhan
+
+#### New Processors
+  - [AWS EC2 Metadata Processor Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/processors/aws/ec2) - Contributed by @pmalek-sumo
+
+#### New Parsers
+ - [XML Parser Plugin ](https://github.com/influxdata/telegraf/tree/master/plugins/parsers/xml) - Contributed by @srebhan
+ 
+#### New Serializers
+  - [MessagePack Serializer Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/serializers/msgpack) - Contributed by @dialogbox
+
+#### New External Plugins
+  - [GeoIP Processor Plugin ](https://github.com/a-bali/telegraf-geoip) - Contributed by @a-bali
+  - [Plex Webhook Input Plugin](https://github.com/russorat/telegraf-webhooks-plex) - Contributed by @russorat
+  - [SMCIPMITool Input Plugin](https://github.com/jhpope/smc_ipmi) - Contributed by @jhpope
+ 
+## v1.17.3 [2021-02-17]
+
+#### Bugfixes
+
+  - [#7316](https://github.com/influxdata/telegraf/pull/7316) `inputs.filestat` plugins/filestat: Skip missing files
+  - [#8868](https://github.com/influxdata/telegraf/pull/8868) Update to Go 1.15.8
+  - [#8744](https://github.com/influxdata/telegraf/pull/8744) Bump github.com/gopcua/opcua from 0.1.12 to 0.1.13
+  - [#8657](https://github.com/influxdata/telegraf/pull/8657) `outputs.warp10` outputs/warp10: url encode comma in tags value
+  - [#8824](https://github.com/influxdata/telegraf/pull/8824) `inputs.x509_cert` inputs.x509_cert: Fix timeout issue
+  - [#8821](https://github.com/influxdata/telegraf/pull/8821) `inputs.mqtt_consumer` Fix reconnection issues mqtt
+  - [#8775](https://github.com/influxdata/telegraf/pull/8775) `outputs.influxdb` Validate the response from InfluxDB after writing/creating a database to avoid json parsing panics/errors
+  - [#8804](https://github.com/influxdata/telegraf/pull/8804) `inputs.snmp` Expose v4/v6-only connection-schemes through GosnmpWrapper
+  - [#8838](https://github.com/influxdata/telegraf/pull/8838) `agent` fix issue with reading flush_jitter output from config
+  - [#8839](https://github.com/influxdata/telegraf/pull/8839) `inputs.ping` fixes Sort and timeout around deadline
+  - [#8787](https://github.com/influxdata/telegraf/pull/8787) `inputs.ping` Update README for inputs.ping with correct cmd for native ping on Linux
+  - [#8771](https://github.com/influxdata/telegraf/pull/8771) Update go-ping to latest version
+
+
+## v1.17.2 [2021-01-28]
+
+#### Bugfixes
+
+  - [#8770](https://github.com/influxdata/telegraf/pull/8770) `inputs.ping` Set interface for native
+  - [#8764](https://github.com/influxdata/telegraf/pull/8764) `inputs.ping` Resolve regression, re-add missing function
+
+
+## v1.17.1 [2021-01-27]
+
+#### Release Notes
+
+  Included a few more changes that add configuration options to plugins as it's been while since the last release
+
+  - [#8335](https://github.com/influxdata/telegraf/pull/8335) `inputs.ipmi_sensor` Add setting to enable caching in ipmitool
+  - [#8616](https://github.com/influxdata/telegraf/pull/8616) Add Event Log support for Windows
+  - [#8602](https://github.com/influxdata/telegraf/pull/8602) `inputs.postgresql_extensible` Add timestamp column support to postgresql_extensible
+  - [#8627](https://github.com/influxdata/telegraf/pull/8627) `parsers.csv` Added ability to define skip values in csv parser
+  - [#8055](https://github.com/influxdata/telegraf/pull/8055) `outputs.http` outputs/http: add option to control idle connection timeout
+  - [#7897](https://github.com/influxdata/telegraf/pull/7897) `common.tls` common/tls: Allow specifying SNI hostnames
+  - [#8541](https://github.com/influxdata/telegraf/pull/8541) `inputs.snmp` Extended the internal snmp wrapper to support AES192, AES192C, AES256, and AES256C
+  - [#6165](https://github.com/influxdata/telegraf/pull/6165) `inputs.procstat` Provide method to include core count when reporting cpu_usage in procstat input
+  - [#8287](https://github.com/influxdata/telegraf/pull/8287) `inputs.jenkins` Add support for an inclusive job list in Jenkins plugin
+  - [#8524](https://github.com/influxdata/telegraf/pull/8524) `inputs.ipmi_sensor` Add hex_key parameter for IPMI input plugin connection
+
+#### Bugfixes
+
+  - [#8662](https://github.com/influxdata/telegraf/pull/8662) `outputs.influxdb_v2` [outputs.influxdb_v2] add exponential backoff, and respect client error responses
+  - [#8748](https://github.com/influxdata/telegraf/pull/8748) `outputs.elasticsearch` Fix issue with elasticsearch output being really noisy about some errors
+  - [#7533](https://github.com/influxdata/telegraf/pull/7533) `inputs.zookeeper` improve mntr regex to match user specific keys.
+  - [#7967](https://github.com/influxdata/telegraf/pull/7967) `inputs.lustre2` Fix crash in lustre2 input plugin, when field name and value
+  - [#8673](https://github.com/influxdata/telegraf/pull/8673) Update grok-library to v1.0.1 with dots and dash-patterns fixed.
+  - [#8679](https://github.com/influxdata/telegraf/pull/8679) `inputs.ping` Use go-ping for "native" execution in Ping plugin
+  - [#8741](https://github.com/influxdata/telegraf/pull/8741) `inputs.x509_cert` fix x509 cert timeout issue
+  - [#8714](https://github.com/influxdata/telegraf/pull/8714) Bump github.com/nsqio/go-nsq from 1.0.7 to 1.0.8
+  - [#8715](https://github.com/influxdata/telegraf/pull/8715) Bump github.com/Shopify/sarama from 1.27.1 to 1.27.2
+  - [#8712](https://github.com/influxdata/telegraf/pull/8712) Bump github.com/newrelic/newrelic-telemetry-sdk-go from 0.2.0 to 0.5.1
+  - [#8659](https://github.com/influxdata/telegraf/pull/8659) `inputs.gnmi` GNMI plugin should not take off the first character of field keys when no 'alias path' exists.
+  - [#8609](https://github.com/influxdata/telegraf/pull/8609) `inputs.webhooks` Use the 'measurement' json field from the particle webhook as the measurment name, or if it's blank, use the 'name' field of the event's json.
+  - [#8658](https://github.com/influxdata/telegraf/pull/8658) `inputs.procstat` Procstat input plugin should use the same timestamp in all metrics in the same Gather() cycle.
+  - [#8391](https://github.com/influxdata/telegraf/pull/8391) `aggregators.merge` Optimize SeriesGrouper & aggregators.merge
+  - [#8545](https://github.com/influxdata/telegraf/pull/8545) `inputs.prometheus` Using mime-type in prometheus parser to handle protocol-buffer responses
+  - [#8588](https://github.com/influxdata/telegraf/pull/8588) `inputs.snmp` Input SNMP plugin - upgrade gosnmp library to version 1.29.0
+  - [#8502](https://github.com/influxdata/telegraf/pull/8502) `inputs.http_listener_v2` Fix Stop() bug when plugin fails to start
+
+#### New External Plugins
+
+  - [#8646](https://github.com/influxdata/telegraf/pull/8646) [Open Hardware Monitoring](https://github.com/marianob85/open_hardware_monitor-telegraf-plugin) Input Plugin
+
+
 ## v1.17.0 [2020-12-18]
 
 #### Release Notes

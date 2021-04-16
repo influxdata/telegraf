@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -17,9 +17,9 @@ import (
 // YandexCloudMonitoring allows publishing of metrics to the Yandex Cloud Monitoring custom metrics
 // service
 type YandexCloudMonitoring struct {
-	Timeout     internal.Duration `toml:"timeout"`
-	EndpointUrl string            `toml:"endpoint_url"`
-	Service     string            `toml:"service"`
+	Timeout     config.Duration `toml:"timeout"`
+	EndpointURL string          `toml:"endpoint_url"`
+	Service     string          `toml:"service"`
 
 	Log telegraf.Logger
 
@@ -58,9 +58,9 @@ type MetadataIamToken struct {
 
 const (
 	defaultRequestTimeout    = time.Second * 20
-	defaultEndpointUrl       = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
-	defaultMetadataTokenUrl  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
-	defaultMetadataFolderUrl = "http://169.254.169.254/computeMetadata/v1/instance/attributes/folder-id"
+	defaultEndpointURL       = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
+	defaultMetadataTokenURL  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
+	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
 )
 
 var sampleConfig = `
@@ -86,27 +86,27 @@ func (a *YandexCloudMonitoring) SampleConfig() string {
 
 // Connect initializes the plugin and validates connectivity
 func (a *YandexCloudMonitoring) Connect() error {
-	if a.Timeout.Duration <= 0 {
-		a.Timeout.Duration = defaultRequestTimeout
+	if a.Timeout <= 0 {
+		a.Timeout = config.Duration(defaultRequestTimeout)
 	}
-	if a.EndpointUrl == "" {
-		a.EndpointUrl = defaultEndpointUrl
+	if a.EndpointURL == "" {
+		a.EndpointURL = defaultEndpointURL
 	}
 	if a.Service == "" {
 		a.Service = "custom"
 	}
 	if a.MetadataTokenURL == "" {
-		a.MetadataTokenURL = defaultMetadataTokenUrl
+		a.MetadataTokenURL = defaultMetadataTokenURL
 	}
 	if a.MetadataFolderURL == "" {
-		a.MetadataFolderURL = defaultMetadataFolderUrl
+		a.MetadataFolderURL = defaultMetadataFolderURL
 	}
 
 	a.client = &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: a.Timeout.Duration,
+		Timeout: time.Duration(a.Timeout),
 	}
 
 	var err error
@@ -115,7 +115,7 @@ func (a *YandexCloudMonitoring) Connect() error {
 		return err
 	}
 
-	a.Log.Infof("Writing to Yandex.Cloud Monitoring URL: %s", a.EndpointUrl)
+	a.Log.Infof("Writing to Yandex.Cloud Monitoring URL: %s", a.EndpointURL)
 
 	tags := map[string]string{}
 	a.MetricOutsideWindow = selfstat.Register("yandex_cloud_monitoring", "metric_outside_window", tags)
@@ -156,13 +156,12 @@ func (a *YandexCloudMonitoring) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return err
 	}
-	body = append(body, jsonBytes...)
 	body = append(jsonBytes, '\n')
 	return a.send(body)
 }
 
-func getResponseFromMetadata(c *http.Client, metadataUrl string) ([]byte, error) {
-	req, err := http.NewRequest("GET", metadataUrl, nil)
+func getResponseFromMetadata(c *http.Client, metadataURL string) ([]byte, error) {
+	req, err := http.NewRequest("GET", metadataURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %v", err)
 	}
@@ -179,7 +178,7 @@ func getResponseFromMetadata(c *http.Client, metadataUrl string) ([]byte, error)
 	}
 	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
 		return nil, fmt.Errorf("unable to fetch instance metadata: [%s] %d",
-			metadataUrl, resp.StatusCode)
+			metadataURL, resp.StatusCode)
 	}
 	return body, nil
 }
@@ -214,7 +213,7 @@ func (a *YandexCloudMonitoring) getIAMTokenFromMetadata() (string, int, error) {
 }
 
 func (a *YandexCloudMonitoring) send(body []byte) error {
-	req, err := http.NewRequest("POST", a.EndpointUrl, bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", a.EndpointURL, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -236,6 +235,7 @@ func (a *YandexCloudMonitoring) send(body []byte) error {
 	req.Header.Set("Authorization", "Bearer "+a.IAMToken)
 
 	a.Log.Debugf("sending metrics to %s", req.URL.String())
+	a.Log.Debugf("body: %s", body)
 	resp, err := a.client.Do(req)
 	if err != nil {
 		return err

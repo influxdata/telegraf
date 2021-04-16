@@ -58,15 +58,15 @@ func (d TagDict) Attr(name string) (starlark.Value, error) {
 }
 
 var TagDictMethods = map[string]builtinMethod{
-	"clear":      dict_clear,
-	"get":        dict_get,
-	"items":      dict_items,
-	"keys":       dict_keys,
-	"pop":        dict_pop,
-	"popitem":    dict_popitem,
-	"setdefault": dict_setdefault,
-	"update":     dict_update,
-	"values":     dict_values,
+	"clear":      dictClear,
+	"get":        dictGet,
+	"items":      dictItems,
+	"keys":       dictKeys,
+	"pop":        dictPop,
+	"popitem":    dictPopitem,
+	"setdefault": dictSetdefault,
+	"update":     dictUpdate,
+	"values":     dictValues,
 }
 
 // Get implements the starlark.Mapping interface.

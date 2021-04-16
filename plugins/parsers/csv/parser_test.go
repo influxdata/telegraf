@@ -226,10 +226,8 @@ func TestValueConversion(t *testing.T) {
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
 
-	expectedMetric, err1 := metric.New("test_value", expectedTags, expectedFields, time.Unix(0, 0))
-	returnedMetric, err2 := metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
-	require.NoError(t, err1)
-	require.NoError(t, err2)
+	expectedMetric := metric.New("test_value", expectedTags, expectedFields, time.Unix(0, 0))
+	returnedMetric := metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
 
 	//deep equal fields
 	require.Equal(t, expectedMetric.Fields(), returnedMetric.Fields())
@@ -240,8 +238,7 @@ func TestValueConversion(t *testing.T) {
 	metrics, err = p.Parse([]byte(testCSV))
 	require.NoError(t, err)
 
-	returnedMetric, err2 = metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
-	require.NoError(t, err2)
+	returnedMetric = metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
 
 	//deep equal fields
 	require.Equal(t, expectedMetric.Fields(), returnedMetric.Fields())
@@ -607,6 +604,60 @@ func TestStaticMeasurementName(t *testing.T) {
 			map[string]interface{}{
 				"a": 1,
 				"b": 2,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime())
+}
+
+func TestSkipEmptyStringValue(t *testing.T) {
+	p, err := NewParser(
+		&Config{
+			MetricName:     "csv",
+			HeaderRowCount: 1,
+			ColumnNames:    []string{"a", "b"},
+			SkipValues:     []string{""},
+		},
+	)
+	require.NoError(t, err)
+	testCSV := `a,b
+1,""`
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("csv",
+			map[string]string{},
+			map[string]interface{}{
+				"a": 1,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime())
+}
+
+func TestSkipSpecifiedStringValue(t *testing.T) {
+	p, err := NewParser(
+		&Config{
+			MetricName:     "csv",
+			HeaderRowCount: 1,
+			ColumnNames:    []string{"a", "b"},
+			SkipValues:     []string{"MM"},
+		},
+	)
+	require.NoError(t, err)
+	testCSV := `a,b
+1,MM`
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("csv",
+			map[string]string{},
+			map[string]interface{}{
+				"a": 1,
 			},
 			time.Unix(0, 0),
 		),

@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -60,11 +61,22 @@ var fProcessorFilters = flag.String("processor-filter", "",
 	"filter the processors to enable, separator is :")
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf --usage mysql'")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
 var fService = flag.String("service", "",
 	"operate on the service (windows only)")
-var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
-var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
-var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fServiceName = flag.String("service-name", "telegraf",
+	"service name (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service",
+	"service display name (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fRunAsConsole = flag.Bool("console", false,
+	"run as console application (windows only)")
 var fPlugins = flag.String("plugin-directory", "",
 	"path to directory containing external plugins")
 var fRunOnce = flag.Bool("once", false, "run one gather and exit")
@@ -80,14 +92,11 @@ var stop chan struct{}
 func reloadLoop(
 	inputFilters []string,
 	outputFilters []string,
-	aggregatorFilters []string,
-	processorFilters []string,
 ) {
 	reload := make(chan bool, 1)
 	reload <- true
 	for <-reload {
 		reload <- false
-
 		ctx, cancel := context.WithCancel(context.Background())
 
 		signals := make(chan os.Signal, 1)
@@ -142,14 +151,12 @@ func runAgent(ctx context.Context,
 		return errors.New("Error: no inputs found, did you provide a valid config file?")
 	}
 
-	if int64(c.Agent.Interval.Duration) <= 0 {
-		return fmt.Errorf("Agent interval must be positive, found %s",
-			c.Agent.Interval.Duration)
+	if int64(c.Agent.Interval) <= 0 {
+		return fmt.Errorf("Agent interval must be positive, found %v", c.Agent.Interval)
 	}
 
-	if int64(c.Agent.FlushInterval.Duration) <= 0 {
-		return fmt.Errorf("Agent flush_interval must be positive; found %s",
-			c.Agent.Interval.Duration)
+	if int64(c.Agent.FlushInterval) <= 0 {
+		return fmt.Errorf("Agent flush_interval must be positive; found %v", c.Agent.Interval)
 	}
 
 	ag, err := agent.NewAgent(c)
@@ -158,8 +165,9 @@ func runAgent(ctx context.Context,
 	}
 
 	// Setup logging as configured.
+	telegraf.Debug = ag.Config.Agent.Debug || *fDebug
 	logConfig := logger.LogConfig{
-		Debug:               ag.Config.Agent.Debug || *fDebug,
+		Debug:               telegraf.Debug,
 		Quiet:               ag.Config.Agent.Quiet || *fQuiet,
 		LogTarget:           ag.Config.Agent.LogTarget,
 		Logfile:             ag.Config.Agent.Logfile,
@@ -361,7 +369,5 @@ func main() {
 	run(
 		inputFilters,
 		outputFilters,
-		aggregatorFilters,
-		processorFilters,
 	)
 }

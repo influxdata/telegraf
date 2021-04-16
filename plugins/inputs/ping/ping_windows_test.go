@@ -113,6 +113,7 @@ func mockErrorHostPinger(binary string, timeout float64, args ...string) (string
 func TestBadPingGather(t *testing.T) {
 	var acc testutil.Accumulator
 	p := Ping{
+		Log:      testutil.Logger{},
 		Urls:     []string{"www.amazon.com"},
 		pingHost: mockErrorHostPinger,
 	}
@@ -133,6 +134,7 @@ func TestBadPingGather(t *testing.T) {
 func TestArguments(t *testing.T) {
 	arguments := []string{"-c", "3"}
 	p := Ping{
+		Log:       testutil.Logger{},
 		Count:     2,
 		Timeout:   12.0,
 		Arguments: arguments,
@@ -169,6 +171,7 @@ func mockLossyHostPinger(binary string, timeout float64, args ...string) (string
 func TestLossyPingGather(t *testing.T) {
 	var acc testutil.Accumulator
 	p := Ping{
+		Log:      testutil.Logger{},
 		Urls:     []string{"www.google.com"},
 		pingHost: mockLossyHostPinger,
 	}
@@ -229,6 +232,7 @@ func mockFatalHostPinger(binary string, timeout float64, args ...string) (string
 func TestFatalPingGather(t *testing.T) {
 	var acc testutil.Accumulator
 	p := Ping{
+		Log:      testutil.Logger{},
 		Urls:     []string{"www.amazon.com"},
 		pingHost: mockFatalHostPinger,
 	}
@@ -274,6 +278,7 @@ func mockUnreachableHostPinger(binary string, timeout float64, args ...string) (
 func TestUnreachablePingGather(t *testing.T) {
 	var acc testutil.Accumulator
 	p := Ping{
+		Log:      testutil.Logger{},
 		Urls:     []string{"www.google.com"},
 		pingHost: mockUnreachableHostPinger,
 	}
@@ -321,6 +326,7 @@ func mockTTLExpiredPinger(binary string, timeout float64, args ...string) (strin
 func TestTTLExpiredPingGather(t *testing.T) {
 	var acc testutil.Accumulator
 	p := Ping{
+		Log:      testutil.Logger{},
 		Urls:     []string{"www.google.com"},
 		pingHost: mockTTLExpiredPinger,
 	}
@@ -351,6 +357,7 @@ func TestTTLExpiredPingGather(t *testing.T) {
 func TestPingBinary(t *testing.T) {
 	var acc testutil.Accumulator
 	p := Ping{
+		Log:    testutil.Logger{},
 		Urls:   []string{"www.google.com"},
 		Binary: "ping6",
 		pingHost: func(binary string, timeout float64, args ...string) (string, error) {

@@ -1,4 +1,4 @@
-// selfstat is a package for tracking and collecting internal statistics
+// Package selfstat is a package for tracking and collecting internal statistics
 // about telegraf. Metrics can be registered using this package, and then
 // incremented or set within your code. If the inputs.internal plugin is enabled,
 // then all registered stats will be collected as they would by any other input
@@ -7,7 +7,6 @@ package selfstat
 
 import (
 	"hash/fnv"
-	"log"
 	"sort"
 	"sync"
 	"time"
@@ -96,12 +95,8 @@ func Metrics() []telegraf.Metric {
 				fields[fieldname] = stat.Get()
 				j++
 			}
-			metric, err := metric.New(name, tags, fields, now)
-			if err != nil {
-				log.Printf("E! Error creating selfstat metric: %s", err)
-				continue
-			}
-			metrics[i] = metric
+			m := metric.New(name, tags, fields, now)
+			metrics[i] = m
 			i++
 		}
 	}
@@ -178,7 +173,6 @@ func (r *Registry) set(key uint64, s Stat) {
 	}
 
 	r.stats[key][s.FieldName()] = s
-	return
 }
 
 func key(measurement string, tags map[string]string) uint64 {

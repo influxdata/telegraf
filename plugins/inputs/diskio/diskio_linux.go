@@ -16,9 +16,7 @@ type diskInfoCache struct {
 	values       map[string]string
 }
 
-var udevPath = "/run/udev/data"
-
-func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
+func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	var err error
 	var stat unix.Stat_t
 
@@ -28,32 +26,50 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		return nil, err
 	}
 
-	if s.infoCache == nil {
-		s.infoCache = map[string]diskInfoCache{}
+	if d.infoCache == nil {
+		d.infoCache = map[string]diskInfoCache{}
 	}
-	ic, ok := s.infoCache[devName]
+	ic, ok := d.infoCache[devName]
 
 	if ok && stat.Mtim.Nano() == ic.modifiedAt {
 		return ic.values, nil
 	}
 
-	major := unix.Major(uint64(stat.Rdev))
-	minor := unix.Minor(uint64(stat.Rdev))
-	udevDataPath := fmt.Sprintf("%s/b%d:%d", udevPath, major, minor)
+	var udevDataPath string
+	if ok && len(ic.udevDataPath) > 0 {
+		// We can reuse the udev data path from a "previous" entry.
+		// This allows us to also "poison" it during test scenarios
+		udevDataPath = ic.udevDataPath
+	} else {
+		major := unix.Major(uint64(stat.Rdev)) //nolint:unconvert // Conversion needed for some architectures
+		minor := unix.Minor(uint64(stat.Rdev)) //nolint:unconvert // Conversion needed for some architectures
+		udevDataPath = fmt.Sprintf("/run/udev/data/b%d:%d", major, minor)
+
+		_, err := os.Stat(udevDataPath)
+		if err != nil {
+			// This path failed, try the fallback .udev style (non-systemd)
+			udevDataPath = fmt.Sprintf("/dev/.udev/db/block:%s", devName)
+			_, err := os.Stat(udevDataPath)
+			if err != nil {
+				// Giving up, cannot retrieve disk info
+				return nil, err
+			}
+		}
+	}
+	// Final open of the confirmed (or the previously detected/used) udev file
+	f, err := os.Open(udevDataPath)
+	defer f.Close()
+	if err != nil {
+		return nil, err
+	}
 
 	di := map[string]string{}
 
-	s.infoCache[devName] = diskInfoCache{
+	d.infoCache[devName] = diskInfoCache{
 		modifiedAt:   stat.Mtim.Nano(),
 		udevDataPath: udevDataPath,
 		values:       di,
 	}
-
-	f, err := os.Open(udevDataPath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
 
 	scnr := bufio.NewScanner(f)
 	var devlinks bytes.Buffer

@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
@@ -55,11 +56,17 @@ func TestMetric(value interface{}, name ...string) telegraf.Metric {
 		measurement = name[0]
 	}
 	tags := map[string]string{"tag1": "value1"}
-	pt, _ := metric.New(
+	pt := metric.New(
 		measurement,
 		tags,
 		map[string]interface{}{"value": value},
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	return pt
+}
+
+// OnlyTags returns an option for keeping only "Tags" for a given Metric
+func OnlyTags() cmp.Option {
+	f := func(p cmp.Path) bool { return p.String() != "Tags" && p.String() != "" }
+	return cmp.FilterPath(f, cmp.Ignore())
 }

@@ -37,7 +37,6 @@ func (h *basicAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		if !ok ||
 			subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.username)) != 1 ||
 			subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.password)) != 1 {
-
 			rw.Header().Set("WWW-Authenticate", "Basic realm=\""+h.realm+"\"")
 			h.onError(rw)
 			http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
@@ -73,7 +72,6 @@ func (h *genericAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		// Scheme checking
 		authorization := req.Header.Get("Authorization")
 		if subtle.ConstantTimeCompare([]byte(authorization), []byte(h.credentials)) != 1 {
-
 			h.onError(rw)
 			http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return

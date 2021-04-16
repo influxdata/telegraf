@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -44,7 +44,7 @@ type GNMI struct {
 	Password string
 
 	// Redial
-	Redial internal.Duration
+	Redial config.Duration
 
 	// GRPC TLS settings
 	EnableTLS bool `toml:"enable_tls"`
@@ -66,12 +66,12 @@ type Subscription struct {
 	Path   string
 
 	// Subscription mode and interval
-	SubscriptionMode string            `toml:"subscription_mode"`
-	SampleInterval   internal.Duration `toml:"sample_interval"`
+	SubscriptionMode string          `toml:"subscription_mode"`
+	SampleInterval   config.Duration `toml:"sample_interval"`
 
 	// Duplicate suppression
-	SuppressRedundant bool              `toml:"suppress_redundant"`
-	HeartbeatInterval internal.Duration `toml:"heartbeat_interval"`
+	SuppressRedundant bool            `toml:"suppress_redundant"`
+	HeartbeatInterval config.Duration `toml:"heartbeat_interval"`
 }
 
 // Start the http listener service
@@ -86,7 +86,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	// Validate configuration
 	if request, err = c.newSubscribeRequest(); err != nil {
 		return err
-	} else if c.Redial.Duration.Nanoseconds() <= 0 {
+	} else if time.Duration(c.Redial).Nanoseconds() <= 0 {
 		return fmt.Errorf("redial duration must be positive")
 	}
 
@@ -143,7 +143,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 
 				select {
 				case <-ctx.Done():
-				case <-time.After(c.Redial.Duration):
+				case <-time.After(time.Duration(c.Redial)):
 				}
 			}
 		}(addr)
@@ -167,9 +167,9 @@ func (c *GNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
 		subscriptions[i] = &gnmi.Subscription{
 			Path:              gnmiPath,
 			Mode:              gnmi.SubscriptionMode(mode),
-			SampleInterval:    uint64(subscription.SampleInterval.Duration.Nanoseconds()),
+			SampleInterval:    uint64(time.Duration(subscription.SampleInterval).Nanoseconds()),
 			SuppressRedundant: subscription.SuppressRedundant,
-			HeartbeatInterval: uint64(subscription.HeartbeatInterval.Duration.Nanoseconds()),
+			HeartbeatInterval: uint64(time.Duration(subscription.HeartbeatInterval).Nanoseconds()),
 		}
 	}
 
@@ -290,11 +290,11 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 		// Group metrics
 		for k, v := range fields {
 			key := k
-			if len(aliasPath) < len(key) {
+			if len(aliasPath) < len(key) && len(aliasPath) != 0 {
 				// This may not be an exact prefix, due to naming style
 				// conversion on the key.
 				key = key[len(aliasPath)+1:]
-			} else {
+			} else if len(aliasPath) >= len(key) {
 				// Otherwise use the last path element as the field key.
 				key = path.Base(key)
 
@@ -403,7 +403,6 @@ func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string
 				} else {
 					tags[key] = val
 				}
-
 			}
 		}
 	}
@@ -556,7 +555,7 @@ func (c *GNMI) Gather(_ telegraf.Accumulator) error {
 func New() telegraf.Input {
 	return &GNMI{
 		Encoding: "proto",
-		Redial:   internal.Duration{Duration: 10 * time.Second},
+		Redial:   config.Duration(10 * time.Second),
 	}
 }
 

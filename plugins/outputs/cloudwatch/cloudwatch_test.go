@@ -31,7 +31,7 @@ func TestBuildDimensions(t *testing.T) {
 	i := 0
 	for k := range testPoint.Tags() {
 		tagKeys[i] = k
-		i += 1
+		i++
 	}
 
 	sort.Strings(tagKeys)
@@ -83,7 +83,7 @@ func TestBuildMetricDatums(t *testing.T) {
 		assert.Equal(0, len(datums), fmt.Sprintf("Valid point should not create a Datum {value: %v}", point))
 	}
 
-	statisticMetric, _ := metric.New(
+	statisticMetric := metric.New(
 		"test1",
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{"value_max": float64(10), "value_min": float64(0), "value_sum": float64(100), "value_count": float64(20)},
@@ -92,7 +92,7 @@ func TestBuildMetricDatums(t *testing.T) {
 	datums := BuildMetricDatum(true, false, statisticMetric)
 	assert.Equal(1, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", statisticMetric))
 
-	multiFieldsMetric, _ := metric.New(
+	multiFieldsMetric := metric.New(
 		"test1",
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{"valueA": float64(10), "valueB": float64(0), "valueC": float64(100), "valueD": float64(20)},
@@ -101,7 +101,7 @@ func TestBuildMetricDatums(t *testing.T) {
 	datums = BuildMetricDatum(true, false, multiFieldsMetric)
 	assert.Equal(4, len(datums), fmt.Sprintf("Each field should create a Datum {value: %v}", multiFieldsMetric))
 
-	multiStatisticMetric, _ := metric.New(
+	multiStatisticMetric := metric.New(
 		"test1",
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{
@@ -151,7 +151,6 @@ func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
 }
 
 func TestPartitionDatums(t *testing.T) {
-
 	assert := assert.New(t)
 
 	testDatum := cloudwatch.MetricDatum{

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -23,7 +24,7 @@ import (
 var (
 	defaultListen             = ":9273"
 	defaultPath               = "/metrics"
-	defaultExpirationInterval = internal.Duration{Duration: 60 * time.Second}
+	defaultExpirationInterval = config.Duration(60 * time.Second)
 )
 
 var sampleConfig = `
@@ -34,7 +35,7 @@ var sampleConfig = `
   ## Prometheus format.  When using the prometheus input, use the same value in
   ## both plugins to ensure metrics are round-tripped without modification.
   ##
-  ##   example: metric_version = 1; deprecated in 1.13
+  ##   example: metric_version = 1;
   ##            metric_version = 2; recommended version
   # metric_version = 1
 
@@ -79,16 +80,16 @@ type Collector interface {
 }
 
 type PrometheusClient struct {
-	Listen             string            `toml:"listen"`
-	MetricVersion      int               `toml:"metric_version"`
-	BasicUsername      string            `toml:"basic_username"`
-	BasicPassword      string            `toml:"basic_password"`
-	IPRange            []string          `toml:"ip_range"`
-	ExpirationInterval internal.Duration `toml:"expiration_interval"`
-	Path               string            `toml:"path"`
-	CollectorsExclude  []string          `toml:"collectors_exclude"`
-	StringAsLabel      bool              `toml:"string_as_label"`
-	ExportTimestamp    bool              `toml:"export_timestamp"`
+	Listen             string          `toml:"listen"`
+	MetricVersion      int             `toml:"metric_version"`
+	BasicUsername      string          `toml:"basic_username"`
+	BasicPassword      string          `toml:"basic_password"`
+	IPRange            []string        `toml:"ip_range"`
+	ExpirationInterval config.Duration `toml:"expiration_interval"`
+	Path               string          `toml:"path"`
+	CollectorsExclude  []string        `toml:"collectors_exclude"`
+	StringAsLabel      bool            `toml:"string_as_label"`
+	ExportTimestamp    bool            `toml:"export_timestamp"`
 	tlsint.ServerConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -132,14 +133,13 @@ func (p *PrometheusClient) Init() error {
 	default:
 		fallthrough
 	case 1:
-		p.Log.Warnf("Use of deprecated configuration: metric_version = 1; please update to metric_version = 2")
-		p.collector = v1.NewCollector(p.ExpirationInterval.Duration, p.StringAsLabel, p.Log)
+		p.collector = v1.NewCollector(time.Duration(p.ExpirationInterval), p.StringAsLabel, p.Log)
 		err := registry.Register(p.collector)
 		if err != nil {
 			return err
 		}
 	case 2:
-		p.collector = v2.NewCollector(p.ExpirationInterval.Duration, p.StringAsLabel, p.ExportTimestamp)
+		p.collector = v2.NewCollector(time.Duration(p.ExpirationInterval), p.StringAsLabel, p.ExportTimestamp)
 		err := registry.Register(p.collector)
 		if err != nil {
 			return err
@@ -183,9 +183,8 @@ func (p *PrometheusClient) Init() error {
 func (p *PrometheusClient) listen() (net.Listener, error) {
 	if p.server.TLSConfig != nil {
 		return tls.Listen("tcp", p.Listen, p.server.TLSConfig)
-	} else {
-		return net.Listen("tcp", p.Listen)
 	}
+	return net.Listen("tcp", p.Listen)
 }
 
 func (p *PrometheusClient) Connect() error {

@@ -102,7 +102,7 @@ $ systemctl edit telegraf
 #### Linux Permissions
 
 When using `method = "native"`, Telegraf will attempt to use privileged raw
-ICMP sockets.  On most systems, doing so requires `CAP_NET_RAW` capabilities.
+ICMP sockets.  On most systems, doing so requires `CAP_NET_RAW` capabilities or for Telegraf to be run as root.
 
 With systemd:
 ```sh
@@ -127,18 +127,9 @@ setting capabilities.
 
 [man 7 capabilities]: http://man7.org/linux/man-pages/man7/capabilities.7.html
 
-When Telegraf cannot listen on a privileged ICMP socket it will attempt to use
-ICMP echo sockets.  If you wish to use this method you must ensure Telegraf's
-group, usually `telegraf`, is allowed to use ICMP echo sockets:
+#### Other OS Permissions
 
-```sh
-$ sysctl -w net.ipv4.ping_group_range="GROUP_ID_LOW   GROUP_ID_HIGH"
-```
-
-Reference [`man 7 icmp`][man 7 icmp] for more information about ICMP echo
-sockets and the `ping_group_range` setting.
-
-[man 7 icmp]: http://man7.org/linux/man-pages/man7/icmp.7.html
+When using `method = "native"`, you will need permissions similar to the executable ping program for your OS. 
 
 ### Metrics
 

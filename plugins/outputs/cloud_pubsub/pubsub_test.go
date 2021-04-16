@@ -14,7 +14,6 @@ import (
 )
 
 func TestPubSub_WriteSingle(t *testing.T) {
-
 	testMetrics := []testMetric{
 		{testutil.TestMetric("value_1", "test"), false /*return error */},
 	}
@@ -126,7 +125,6 @@ func TestPubSub_WriteOverByteThreshold(t *testing.T) {
 }
 
 func TestPubSub_WriteBase64Single(t *testing.T) {
-
 	testMetrics := []testMetric{
 		{testutil.TestMetric("value_1", "test"), false /*return error */},
 		{testutil.TestMetric("value_2", "test"), false},
@@ -185,7 +183,7 @@ func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string
 		if err != nil {
 			t.Fatalf("Unable to decode expected base64-encoded message: %s", err)
 		}
-		data = []byte(v)
+		data = v
 	}
 
 	parsed, err := p.Parse(data)

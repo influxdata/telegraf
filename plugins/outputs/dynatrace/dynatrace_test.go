@@ -2,16 +2,17 @@ package dynatrace
 
 import (
 	"encoding/json"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNilMetrics(t *testing.T) {
@@ -22,7 +23,7 @@ func TestNilMetrics(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{
-		Timeout: internal.Duration{Duration: time.Second * 5},
+		Timeout: config.Duration(time.Second * 5),
 	}
 
 	d.URL = ts.URL
@@ -87,9 +88,9 @@ func TestMissingURL(t *testing.T) {
 
 	d.Log = testutil.Logger{}
 	err := d.Init()
-	require.Equal(t, oneAgentMetricsUrl, d.URL)
+	require.Equal(t, oneAgentMetricsURL, d.URL)
 	err = d.Connect()
-	require.Equal(t, oneAgentMetricsUrl, d.URL)
+	require.Equal(t, oneAgentMetricsURL, d.URL)
 	require.NoError(t, err)
 }
 
@@ -98,9 +99,9 @@ func TestMissingAPITokenMissingURL(t *testing.T) {
 
 	d.Log = testutil.Logger{}
 	err := d.Init()
-	require.Equal(t, oneAgentMetricsUrl, d.URL)
+	require.Equal(t, oneAgentMetricsURL, d.URL)
 	err = d.Connect()
-	require.Equal(t, oneAgentMetricsUrl, d.URL)
+	require.Equal(t, oneAgentMetricsURL, d.URL)
 	require.NoError(t, err)
 }
 
@@ -142,14 +143,14 @@ func TestSendMetric(t *testing.T) {
 
 	// Init metrics
 
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1", "nix": "nix"},
 		map[string]interface{}{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
-	m2, _ := metric.New(
+	m2 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
@@ -191,7 +192,7 @@ func TestSendSingleMetricWithUnorderedTags(t *testing.T) {
 
 	// Init metrics
 
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"a": "test", "c": "test", "b": "test"},
 		map[string]interface{}{"myfield": float64(3.14)},
@@ -233,7 +234,7 @@ func TestSendMetricWithoutTags(t *testing.T) {
 
 	// Init metrics
 
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{},
 		map[string]interface{}{"myfield": float64(3.14)},
@@ -275,7 +276,7 @@ func TestSendMetricWithUpperCaseTagKeys(t *testing.T) {
 
 	// Init metrics
 
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"AAA": "test", "CcC": "test", "B B": "test"},
 		map[string]interface{}{"myfield": float64(3.14)},
@@ -317,7 +318,7 @@ func TestSendBooleanMetricWithoutTags(t *testing.T) {
 
 	// Init metrics
 
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{},
 		map[string]interface{}{"myfield": bool(true)},

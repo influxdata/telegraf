@@ -140,11 +140,11 @@ func (k *Kafka) receiver() {
 			return
 		case err := <-k.errs:
 			if err != nil {
-				k.acc.AddError(fmt.Errorf("Consumer Error: %s\n", err))
+				k.acc.AddError(fmt.Errorf("consumer Error: %s", err))
 			}
 		case msg := <-k.in:
 			if k.MaxMessageLen != 0 && len(msg.Value) > k.MaxMessageLen {
-				k.acc.AddError(fmt.Errorf("Message longer than max_message_len (%d > %d)",
+				k.acc.AddError(fmt.Errorf("message longer than max_message_len (%d > %d)",
 					len(msg.Value), k.MaxMessageLen))
 			} else {
 				metrics, err := k.parser.Parse(msg.Value)
@@ -161,8 +161,11 @@ func (k *Kafka) receiver() {
 				// TODO(cam) this locking can be removed if this PR gets merged:
 				// https://github.com/wvanbergen/kafka/pull/84
 				k.Lock()
-				k.Consumer.CommitUpto(msg)
+				err := k.Consumer.CommitUpto(msg)
 				k.Unlock()
+				if err != nil {
+					k.acc.AddError(fmt.Errorf("committing to consumer failed: %v", err))
+				}
 			}
 		}
 	}
@@ -173,11 +176,11 @@ func (k *Kafka) Stop() {
 	defer k.Unlock()
 	close(k.done)
 	if err := k.Consumer.Close(); err != nil {
-		k.acc.AddError(fmt.Errorf("Error closing consumer: %s\n", err.Error()))
+		k.acc.AddError(fmt.Errorf("error closing consumer: %s", err.Error()))
 	}
 }
 
-func (k *Kafka) Gather(acc telegraf.Accumulator) error {
+func (k *Kafka) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 	"github.com/influxdata/telegraf/testutil"
@@ -25,13 +26,13 @@ func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 		Query:     q,
 	}
 	var acc testutil.Accumulator
-	p.Start(&acc)
-	p.Init()
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Start(&acc))
 	require.NoError(t, acc.GatherError(p.Gather))
 	return &acc
 }
 
-func TestPostgresqlGeneratesMetrics(t *testing.T) {
+func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -98,7 +99,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	assert.Equal(t, len(floatMetrics)+len(intMetrics)+len(int32Metrics)+len(stringMetrics), metricsCounted)
 }
 
-func TestPostgresqlQueryOutputTests(t *testing.T) {
+func TestPostgresqlQueryOutputTestsIntegration(t *testing.T) {
 	const measurement = "postgresql"
 
 	if testing.Short() {
@@ -126,6 +127,13 @@ func TestPostgresqlQueryOutputTests(t *testing.T) {
 			assert.True(t, found)
 			assert.Equal(t, true, v)
 		},
+		"SELECT timestamp'1980-07-23' as ts, true AS myvalue": func(acc *testutil.Accumulator) {
+			expectedTime := time.Date(1980, 7, 23, 0, 0, 0, 0, time.UTC)
+			v, found := acc.BoolField(measurement, "myvalue")
+			assert.True(t, found)
+			assert.Equal(t, true, v)
+			assert.True(t, acc.HasTimestamp(measurement, expectedTime))
+		},
 	}
 
 	for q, assertions := range examples {
@@ -134,12 +142,13 @@ func TestPostgresqlQueryOutputTests(t *testing.T) {
 			Version:    901,
 			Withdbname: false,
 			Tagvalue:   "",
+			Timestamp:  "ts",
 		}})
 		assertions(acc)
 	}
 }
 
-func TestPostgresqlFieldOutput(t *testing.T) {
+func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 	const measurement = "postgresql"
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -222,13 +231,13 @@ func TestPostgresqlSqlScript(t *testing.T) {
 		Query:     q,
 	}
 	var acc testutil.Accumulator
-	p.Start(&acc)
-	p.Init()
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Start(&acc))
 
 	require.NoError(t, acc.GatherError(p.Gather))
 }
 
-func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
+func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -280,15 +289,15 @@ type fakeRow struct {
 
 func (f fakeRow) Scan(dest ...interface{}) error {
 	if len(f.fields) != len(dest) {
-		return errors.New("Nada matchy buddy")
+		return errors.New("nada matchy buddy")
 	}
 
 	for i, d := range dest {
-		switch d.(type) {
-		case (*interface{}):
-			*d.(*interface{}) = f.fields[i]
+		switch d := d.(type) {
+		case *interface{}:
+			*d = f.fields[i]
 		default:
-			return fmt.Errorf("Bad type %T", d)
+			return fmt.Errorf("bad type %T", d)
 		}
 	}
 	return nil

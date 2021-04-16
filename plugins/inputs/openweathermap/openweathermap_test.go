@@ -408,26 +408,26 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 		} else if r.URL.Path == "/data/2.5/group" {
 			rsp = sampleNoContent
 		} else {
-			panic("Cannot handle request")
+			require.Fail(t, "Cannot handle request")
 		}
 
-		fmt.Fprintln(w, rsp)
+		_, err := fmt.Fprintln(w, rsp)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		BaseUrl: ts.URL,
-		AppId:   "noappid",
-		CityId:  []string{"2988507"},
+		BaseURL: ts.URL,
+		AppID:   "noappid",
+		CityID:  []string{"2988507"},
 		Fetch:   []string{"weather", "forecast"},
 		Units:   "metric",
 	}
-	n.Init()
+	require.NoError(t, n.Init())
 
 	var acc testutil.Accumulator
 
-	err := n.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, n.Gather(&acc))
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
@@ -492,26 +492,26 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 		} else if r.URL.Path == "/data/2.5/forecast" {
 			rsp = sampleNoContent
 		} else {
-			panic("Cannot handle request")
+			require.Fail(t, "Cannot handle request")
 		}
 
-		fmt.Fprintln(w, rsp)
+		_, err := fmt.Fprintln(w, rsp)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		BaseUrl: ts.URL,
-		AppId:   "noappid",
-		CityId:  []string{"2988507"},
+		BaseURL: ts.URL,
+		AppID:   "noappid",
+		CityID:  []string{"2988507"},
 		Fetch:   []string{"weather"},
 		Units:   "metric",
 	}
-	n.Init()
+	require.NoError(t, n.Init())
 
 	var acc testutil.Accumulator
 
-	err := n.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, n.Gather(&acc))
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
@@ -552,26 +552,26 @@ func TestRainMetrics(t *testing.T) {
 			rsp = rainWeatherResponse
 			w.Header()["Content-Type"] = []string{"application/json"}
 		} else {
-			panic("Cannot handle request")
+			require.Fail(t, "Cannot handle request")
 		}
 
-		fmt.Fprintln(w, rsp)
+		_, err := fmt.Fprintln(w, rsp)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		BaseUrl: ts.URL,
-		AppId:   "noappid",
-		CityId:  []string{"111", "222", "333", "444"},
+		BaseURL: ts.URL,
+		AppID:   "noappid",
+		CityID:  []string{"111", "222", "333", "444"},
 		Fetch:   []string{"weather"},
 		Units:   "metric",
 	}
-	n.Init()
+	require.NoError(t, n.Init())
 
 	var acc testutil.Accumulator
 
-	err := n.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, n.Gather(&acc))
 
 	expected := []telegraf.Metric{
 		// City with 1h rain value
@@ -695,26 +695,26 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 		} else if r.URL.Path == "/data/2.5/forecast" {
 			rsp = sampleNoContent
 		} else {
-			panic("Cannot handle request")
+			require.Fail(t, "Cannot handle request")
 		}
 
-		fmt.Fprintln(w, rsp)
+		_, err := fmt.Fprintln(w, rsp)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		BaseUrl: ts.URL,
-		AppId:   "noappid",
-		CityId:  []string{"524901", "703448", "2643743"},
+		BaseURL: ts.URL,
+		AppID:   "noappid",
+		CityID:  []string{"524901", "703448", "2643743"},
 		Fetch:   []string{"weather"},
 		Units:   "metric",
 	}
-	n.Init()
+	require.NoError(t, n.Init())
 
 	var acc testutil.Accumulator
 
-	err := n.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, n.Gather(&acc))
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
@@ -803,28 +803,28 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 
 func TestFormatURL(t *testing.T) {
 	n := &OpenWeatherMap{
-		AppId:   "appid",
-		Units:   "units",
-		Lang:    "lang",
-		BaseUrl: "http://foo.com",
+		AppID:   "appid",
+		Units:   "metric",
+		Lang:    "de",
+		BaseURL: "http://foo.com",
 	}
-	n.Init()
+	require.NoError(t, n.Init())
 
 	require.Equal(t,
-		"http://foo.com/data/2.5/forecast?APPID=appid&id=12345&lang=lang&units=units",
+		"http://foo.com/data/2.5/forecast?APPID=appid&id=12345&lang=de&units=metric",
 		n.formatURL("/data/2.5/forecast", "12345"))
 }
 
 func TestDefaultUnits(t *testing.T) {
 	n := &OpenWeatherMap{}
-	n.Init()
+	require.NoError(t, n.Init())
 
 	require.Equal(t, "metric", n.Units)
 }
 
 func TestDefaultLang(t *testing.T) {
 	n := &OpenWeatherMap{}
-	n.Init()
+	require.NoError(t, n.Init())
 
 	require.Equal(t, "en", n.Lang)
 }

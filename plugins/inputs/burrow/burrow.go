@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -73,7 +73,7 @@ type (
 		Servers               []string
 		Username              string
 		Password              string
-		ResponseTimeout       internal.Duration
+		ResponseTimeout       config.Duration
 		ConcurrentConnections int
 
 		APIPrefix       string `toml:"api_prefix"`
@@ -188,10 +188,8 @@ func (b *burrow) setDefaults() {
 	if b.ConcurrentConnections < 1 {
 		b.ConcurrentConnections = defaultConcurrentConnections
 	}
-	if b.ResponseTimeout.Duration < time.Second {
-		b.ResponseTimeout = internal.Duration{
-			Duration: defaultResponseTimeout,
-		}
+	if time.Duration(b.ResponseTimeout) < time.Second {
+		b.ResponseTimeout = config.Duration(defaultResponseTimeout)
 	}
 }
 
@@ -224,7 +222,7 @@ func (b *burrow) createClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: b.ResponseTimeout.Duration,
+		Timeout: time.Duration(b.ResponseTimeout),
 	}
 
 	return client, nil

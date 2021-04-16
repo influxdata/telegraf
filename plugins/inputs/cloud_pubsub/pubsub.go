@@ -10,6 +10,7 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -31,10 +32,10 @@ type PubSub struct {
 	Subscription    string `toml:"subscription"`
 
 	// Subscription ReceiveSettings
-	MaxExtension           internal.Duration `toml:"max_extension"`
-	MaxOutstandingMessages int               `toml:"max_outstanding_messages"`
-	MaxOutstandingBytes    int               `toml:"max_outstanding_bytes"`
-	MaxReceiverGoRoutines  int               `toml:"max_receiver_go_routines"`
+	MaxExtension           config.Duration `toml:"max_extension"`
+	MaxOutstandingMessages int             `toml:"max_outstanding_messages"`
+	MaxOutstandingBytes    int             `toml:"max_outstanding_bytes"`
+	MaxReceiverGoRoutines  int             `toml:"max_receiver_go_routines"`
 
 	// Agent settings
 	MaxMessageLen            int `toml:"max_message_len"`
@@ -67,7 +68,7 @@ func (ps *PubSub) SampleConfig() string {
 }
 
 // Gather does nothing for this service input.
-func (ps *PubSub) Gather(acc telegraf.Accumulator) error {
+func (ps *PubSub) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -180,7 +181,7 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		if err != nil {
 			return fmt.Errorf("unable to base64 decode message: %v", err)
 		}
-		data = []byte(strData)
+		data = strData
 	} else {
 		data = msg.Data()
 	}
@@ -269,15 +270,15 @@ func (ps *PubSub) getPubSubClient() (*pubsub.Client, error) {
 	return client, nil
 }
 
-func (ps *PubSub) getGCPSubscription(subId string) (subscription, error) {
+func (ps *PubSub) getGCPSubscription(subID string) (subscription, error) {
 	client, err := ps.getPubSubClient()
 	if err != nil {
 		return nil, err
 	}
-	s := client.Subscription(subId)
+	s := client.Subscription(subID)
 	s.ReceiveSettings = pubsub.ReceiveSettings{
 		NumGoroutines:          ps.MaxReceiverGoRoutines,
-		MaxExtension:           ps.MaxExtension.Duration,
+		MaxExtension:           time.Duration(ps.MaxExtension),
 		MaxOutstandingMessages: ps.MaxOutstandingMessages,
 		MaxOutstandingBytes:    ps.MaxOutstandingBytes,
 	}
@@ -312,8 +313,8 @@ const sampleConfig = `
   ## Application Default Credentials, which is preferred.
   # credentials_file = "path/to/my/creds.json"
 
-  ## Optional. Number of seconds to wait before attempting to restart the 
-  ## PubSub subscription receiver after an unexpected error. 
+  ## Optional. Number of seconds to wait before attempting to restart the
+  ## PubSub subscription receiver after an unexpected error.
   ## If the streaming pull for a PubSub Subscription fails (receiver),
   ## the agent attempts to restart receiving messages after this many seconds.
   # retry_delay_seconds = 5
@@ -362,7 +363,7 @@ const sampleConfig = `
   ## processed concurrently (use "max_outstanding_messages" instead).
   # max_receiver_go_routines = 0
 
-  ## Optional. If true, Telegraf will attempt to base64 decode the 
+  ## Optional. If true, Telegraf will attempt to base64 decode the
   ## PubSub message data before parsing
   # base64_data = false
 `

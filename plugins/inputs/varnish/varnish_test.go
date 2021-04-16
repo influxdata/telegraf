@@ -7,15 +7,15 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
-func fakeVarnishStat(output string, useSudo bool, InstanceName string, Timeout internal.Duration) func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
-	return func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
+func fakeVarnishStat(output string) func(string, bool, string, config.Duration) (*bytes.Buffer, error) {
+	return func(string, bool, string, config.Duration) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -23,10 +23,10 @@ func fakeVarnishStat(output string, useSudo bool, InstanceName string, Timeout i
 func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(smOutput, false, "", internal.Duration{Duration: time.Second}),
+		run:   fakeVarnishStat(smOutput),
 		Stats: []string{"*"},
 	}
-	v.Gather(acc)
+	assert.NoError(t, v.Gather(acc))
 
 	acc.HasMeasurement("varnish")
 	for tag, fields := range parsedSmOutput {
@@ -39,12 +39,11 @@ func TestGather(t *testing.T) {
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput, true, "", internal.Duration{Duration: time.Second}),
+		run:   fakeVarnishStat(fullOutput),
 		Stats: []string{"*"},
 	}
-	err := v.Gather(acc)
+	assert.NoError(t, v.Gather(acc))
 
-	assert.NoError(t, err)
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
 	assert.Len(t, acc.Metrics, 6)
@@ -54,12 +53,11 @@ func TestParseFullOutput(t *testing.T) {
 func TestFilterSomeStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput, false, "", internal.Duration{Duration: time.Second}),
+		run:   fakeVarnishStat(fullOutput),
 		Stats: []string{"MGT.*", "VBE.*"},
 	}
-	err := v.Gather(acc)
+	assert.NoError(t, v.Gather(acc))
 
-	assert.NoError(t, err)
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
 	assert.Len(t, acc.Metrics, 2)
@@ -77,12 +75,11 @@ func TestFieldConfig(t *testing.T) {
 	for fieldCfg, expected := range expect {
 		acc := &testutil.Accumulator{}
 		v := &Varnish{
-			run:   fakeVarnishStat(fullOutput, true, "", internal.Duration{Duration: time.Second}),
+			run:   fakeVarnishStat(fullOutput),
 			Stats: strings.Split(fieldCfg, ","),
 		}
-		err := v.Gather(acc)
+		assert.NoError(t, v.Gather(acc))
 
-		assert.NoError(t, err)
 		acc.HasMeasurement("varnish")
 		flat := flatten(acc.Metrics)
 		assert.Equal(t, expected, len(flat))
@@ -94,7 +91,10 @@ func flatten(metrics []*testutil.Metric) map[string]interface{} {
 	for _, m := range metrics {
 		buf := &bytes.Buffer{}
 		for k, v := range m.Tags {
-			buf.WriteString(fmt.Sprintf("%s=%s", k, v))
+			_, err := buf.WriteString(fmt.Sprintf("%s=%s", k, v))
+			if err != nil {
+				return nil
+			}
 		}
 		for k, v := range m.Fields {
 			flat[fmt.Sprintf("%s %s", buf.String(), k)] = v

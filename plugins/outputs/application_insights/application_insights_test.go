@@ -5,10 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/testutil"
+
 	"github.com/Microsoft/ApplicationInsights-Go/appinsights"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/application_insights/mocks"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +26,8 @@ func TestConnectFailsIfNoIkey(t *testing.T) {
 	ai := ApplicationInsights{
 		transmitter: transmitter,
 		// Very long timeout to ensure we do not rely on timeouts for closing the transmitter
-		Timeout: internal.Duration{Duration: time.Hour},
+		Timeout: config.Duration(time.Hour),
+		Log:     testutil.Logger{},
 	}
 
 	err := ai.Connect()
@@ -39,7 +42,8 @@ func TestOutputCloseTimesOut(t *testing.T) {
 
 	ai := ApplicationInsights{
 		transmitter: transmitter,
-		Timeout:     internal.Duration{Duration: time.Millisecond * 50},
+		Timeout:     config.Duration(time.Millisecond * 50),
+		Log:         testutil.Logger{},
 	}
 
 	err := ai.Close()
@@ -63,10 +67,11 @@ func TestCloseRemovesDiagMsgListener(t *testing.T) {
 
 	ai := ApplicationInsights{
 		transmitter:             transmitter,
-		Timeout:                 internal.Duration{Duration: time.Hour},
+		Timeout:                 config.Duration(time.Hour),
 		EnableDiagnosticLogging: true,
 		diagMsgSubscriber:       diagMsgSubscriber,
 		InstrumentationKey:      "1234", // Fake, but necessary to enable tracking
+		Log:                     testutil.Logger{},
 	}
 
 	err := ai.Connect()
@@ -139,20 +144,20 @@ func TestAggregateMetricCreated(t *testing.T) {
 			transmitter.On("Track", mock.Anything)
 			metricName := "ShouldBeAggregateMetric"
 
-			m, err := metric.New(
+			m := metric.New(
 				metricName,
 				nil, // tags
 				tt.fields,
 				now,
 			)
-			assert.NoError(err)
 
 			ai := ApplicationInsights{
 				transmitter:        transmitter,
 				InstrumentationKey: "1234", // Fake, but necessary to enable tracking
+				Log:                testutil.Logger{},
 			}
 
-			err = ai.Connect()
+			err := ai.Connect()
 			assert.NoError(err)
 
 			mSet := []telegraf.Metric{m}
@@ -197,20 +202,20 @@ func TestSimpleMetricCreated(t *testing.T) {
 			transmitter.On("Track", mock.Anything)
 			metricName := "ShouldBeSimpleMetric"
 
-			m, err := metric.New(
+			m := metric.New(
 				metricName,
 				nil, // tags
 				tt.fields,
 				now,
 			)
-			assert.NoError(err)
 
 			ai := ApplicationInsights{
 				transmitter:        transmitter,
 				InstrumentationKey: "1234", // Fake, but necessary to enable tracking
+				Log:                testutil.Logger{},
 			}
 
-			err = ai.Connect()
+			err := ai.Connect()
 			assert.NoError(err)
 
 			mSet := []telegraf.Metric{m}
@@ -267,20 +272,20 @@ func TestTagsAppliedToTelemetry(t *testing.T) {
 			transmitter.On("Track", mock.Anything)
 			metricName := "ShouldBeSimpleMetric"
 
-			m, err := metric.New(
+			m := metric.New(
 				metricName,
 				tt.tags,
 				tt.fields,
 				now,
 			)
-			assert.NoError(err)
 
 			ai := ApplicationInsights{
 				transmitter:        transmitter,
 				InstrumentationKey: "1234", // Fake, but necessary to enable tracking
+				Log:                testutil.Logger{},
 			}
 
-			err = ai.Connect()
+			err := ai.Connect()
 			assert.NoError(err)
 
 			mSet := []telegraf.Metric{m}
@@ -303,13 +308,12 @@ func TestContextTagsSetOnSimpleTelemetry(t *testing.T) {
 	transmitter := new(mocks.Transmitter)
 	transmitter.On("Track", mock.Anything)
 
-	m, err := metric.New(
+	m := metric.New(
 		"SimpleMetric",
 		map[string]string{"kubernetes_container_name": "atcsvc", "kubernetes_pod_name": "bunkie17554"},
 		map[string]interface{}{"value": 23.0},
 		now,
 	)
-	assert.NoError(err)
 
 	ai := ApplicationInsights{
 		transmitter:        transmitter,
@@ -319,9 +323,10 @@ func TestContextTagsSetOnSimpleTelemetry(t *testing.T) {
 			"ai.cloud.roleInstance": "kubernetes_pod_name",
 			"ai.user.id":            "nonexistent",
 		},
+		Log: testutil.Logger{},
 	}
 
-	err = ai.Connect()
+	err := ai.Connect()
 	assert.NoError(err)
 
 	mSet := []telegraf.Metric{m}
@@ -340,13 +345,12 @@ func TestContextTagsSetOnAggregateTelemetry(t *testing.T) {
 	transmitter := new(mocks.Transmitter)
 	transmitter.On("Track", mock.Anything)
 
-	m, err := metric.New(
+	m := metric.New(
 		"AggregateMetric",
 		map[string]string{"kubernetes_container_name": "atcsvc", "kubernetes_pod_name": "bunkie17554"},
 		map[string]interface{}{"value": 23.0, "count": 5},
 		now,
 	)
-	assert.NoError(err)
 
 	ai := ApplicationInsights{
 		transmitter:        transmitter,
@@ -356,9 +360,10 @@ func TestContextTagsSetOnAggregateTelemetry(t *testing.T) {
 			"ai.cloud.roleInstance": "kubernetes_pod_name",
 			"ai.user.id":            "nonexistent",
 		},
+		Log: testutil.Logger{},
 	}
 
-	err = ai.Connect()
+	err := ai.Connect()
 	assert.NoError(err)
 
 	mSet := []telegraf.Metric{m}
@@ -388,7 +393,6 @@ func verifyAggregateTelemetry(
 	countField string,
 	telemetry *appinsights.AggregateMetricTelemetry,
 ) {
-
 	verifyAggregateField := func(fieldName string, telemetryValue float64) {
 		metricRawFieldValue, found := metric.Fields()[fieldName]
 		if !found {
@@ -417,7 +421,6 @@ func verifySimpleTelemetry(
 	expectedTelemetryName string,
 	telemetry *appinsights.MetricTelemetry,
 ) {
-
 	assert.Equal(expectedTelemetryName, telemetry.Name, "Telemetry name is not what was expected")
 	assert.EqualValues(metric.Fields()[valueField], telemetry.Value, "Telemetry value does not match metric value field")
 	assert.Equal(metric.Time(), telemetry.Timestamp, "Telemetry and metric timestamps do not match")
@@ -450,15 +453,6 @@ func findTransmittedTelemetry(transmitter *mocks.Transmitter, telemetryName stri
 	}
 
 	return nil
-}
-
-func keys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-
-	return keys
 }
 
 func assertMapContains(assert *assert.Assertions, expected, actual map[string]string) {
