@@ -27,12 +27,7 @@ executors:
 commands:
   check-changed-files-or-halt:
       steps:
-        - run: ./scripts/check-file-changes
-  check-changed-files-or-halt-windows:
-      steps:
-        - run: 
-            command: ./scripts/check-file-changes
-            shell: bash.exe
+        - run: ./scripts/check-file-changes.sh
   test-go:
     parameters:
       goarch:
@@ -136,7 +131,7 @@ jobs:
         shell: powershell.exe
     steps:
       - checkout
-      - check-changed-files-or-halt-windows
+      - check-changed-files-or-halt
       - run: choco upgrade golang --version=1.16.2
       - run: choco install make
       - run: git config --system core.longpaths true
