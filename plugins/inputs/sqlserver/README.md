@@ -62,11 +62,11 @@ GO
 
   # database_type = "AzureSQLDB"
 
-  ## A list of queries to include. If not specified, all the above listed queries are used.
+  ## A list of queries to include. 
   # include_query = []
 
-  ## A list of queries to explicitly ignore.
-  # exclude_query = ["AzureSQLDBQueryStoreRuntimeStatistics", "AzureSQLDBQueryStoreWaitStatistics"]
+  ## A list of queries to explicitly ignore. QDS queries are excluded by default.
+  # exclude_query = [AzureSQLDBQueryStoreRuntimeStatistics, AzureSQLDBQueryStoreWaitStatistics]
 
   ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
   ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
@@ -76,7 +76,8 @@ GO
 
   # include_query = []
 
-  # exclude_query = ["AzureSQLMIQueryStoreRuntimeStatistics", "AzureSQLMIQueryStoreWaitStatistics"]
+  ## A list of queries to explicitly ignore.
+  # exclude_query = []
 
   ## Queries enabled by default for database_type = "SQLServer" are - 
   ## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks, 
@@ -106,6 +107,10 @@ GO
   ## The purpose of this metric is to assist with identifying and diagnosing any connectivity or query issues. 
   ## This setting/metric is optional and is disabled by default.
   # health_metric = false
+
+  ## Toggling this to true enables telegraf to start collecting data from query store.
+  ## This setting is optional and is disabled by default as it the queries are expensive and collection interval should be >=15m
+  # query_store_collection = false
 
   ## Possible queries accross different versions of the collectors
   ## Queries enabled by default for specific Database Type
@@ -247,7 +252,6 @@ These are metrics for Azure SQL Database (single database) and are very similar 
 - AzureSQLDBQueryStoreRuntimeStatistics: Collects queries runtime statistics from `sys.query_store_runtime_stats` 
 - AzureSQLDBQueryStoreWaitStatistics: Collects queries wait statistics from `sys.query_store_wait_stats`
 
-
 #### database_type = "AzureSQLManagedInstance 
 These are metrics for Azure SQL Managed instance, are very similar to version 2 but split out for maintenance reasons, better ability to test, differences in DMVs:
 - AzureSQLMIDatabaseIO: IO stats from `sys.dm_io_virtual_file_stats` including resource governance time, RBPEX, IO for Hyperscale.
@@ -258,8 +262,6 @@ These are metrics for Azure SQL Managed instance, are very similar to version 2 
 - AzureSQLMIOsWaitstats: Wait time in ms from `sys.dm_os_wait_stats`, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store. These waits are collected as they occur and instance wide
 - AzureSQLMIRequests: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`
 - AzureSQLMISchedulers - This captures `sys.dm_os_schedulers` snapshots.
-- AzureSQLMIQueryStoreRuntimeStatistics: Collects queries runtime statistics from `sys.query_store_runtime_stats` 
-- AzureSQLMIQueryStoreWaitStatistics: Collects queries wait statistics from `sys.query_store_wait_stats`
 
 #### database_type = "SQLServer 
 - SQLServerDatabaseIO: IO stats from `sys.dm_io_virtual_file_stats`
