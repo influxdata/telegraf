@@ -389,130 +389,6 @@ HAVING
 OPTION(RECOMPILE);
 `
 
-const sqlAzureDBPartQueryPeriod = `
-DECLARE @QueryData NVARCHAR(MAX) = ?1; --input parameter
-
-IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
-	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
-	RAISERROR (@ErrorMessage,11,1)
-	RETURN
-END;
-
-DECLARE @lastIntervalEndTimestamp BIGINT = 0;
-
-/* Get the time when the query was previously called */
-IF @QueryData != '' AND @QueryData IS NOT NULL
-	SET @lastIntervalEndTimestamp = CAST(@QueryData AS BIGINT);
-
-DECLARE @secondsInDay INT = 86400;
-
-/* Get query aggregation interval from query store */
-DECLARE @timeGrain BIGINT = (SELECT interval_length_minutes * 60 FROM sys.database_query_store_options WITH (NOLOCK)); 
-
-/* Get current time and round it down to a multiple of @timeGrain */
-DECLARE @currDate DATETIME = GETUTCDATE();
-DECLARE @currIntervalEndTimestamp BIGINT = DATEDIFF_BIG(second, 0, @currDate) / @timeGrain * @timeGrain;
-
-/* If we are still in the same @timeGrain interval with when the query was previously called, quit and do not report any data */
-IF @lastIntervalEndTimestamp = @currIntervalEndTimestamp
-	RETURN;
-
-/* Calculate the start time for returning data from query store:
-If the query was never called before, start time is end time minus @timeGrain */
-DECLARE @currIntervalStartTimestamp BIGINT = @currIntervalEndTimestamp - @timeGrain;
-
-/* If the query was called before, start time is when the query was previously called, so that we return all the records since the previous call */
-IF @lastIntervalEndTimestamp != 0
-	SET @currIntervalStartTimestamp = @lastIntervalEndTimestamp;
-
-/* Convert start and end times to datetime */
-DECLARE @currIntervalEndDate datetime = DATEADD(second, @currIntervalEndTimestamp % @secondsInDay, DATEADD(day, @currIntervalEndTimestamp / @secondsInDay, 0));
-DECLARE @currIntervalStartDate datetime = DATEADD(second, @currIntervalStartTimestamp % @secondsInDay, DATEADD(day, @currIntervalStartTimestamp / @secondsInDay, 0));
-
-`
-
-const sqlAzureDBQueryStoreRuntimeStatistics = sqlAzureDBPartQueryPeriod + `
-/* Query the data from query store. Group by plan_id, execution_type, runtime_stats_interval_id, as specified here:
-https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-runtime-stats-transact-sql?view=sql-server-ver15
-*/
-SELECT
-	'sqlserver_azuredb_querystore_runtime_stats' AS [measurement],
-	REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance],
-	DB_NAME() AS [database_name],
-	CONVERT(nvarchar(30), MAX(rsi.start_time), 126) AS interval_start_time,
-	CONVERT(nvarchar(30), MAX(rsi.end_time), 126) AS interval_end_time,
-	MAX(q.query_id) AS query_id,
-	CONVERT(nvarchar(20), MAX(q.query_hash), 1) as query_hash,
-	CAST(rs.plan_id AS nvarchar(20)) AS plan_id,
-	CONVERT(nvarchar(20), MAX(p.query_plan_hash), 1) as query_plan_hash,
-	MAX(rs.max_logical_io_reads) as max_logical_io_reads,
-	SUM(rs.avg_logical_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_logical_io_reads,
-	MAX(rs.max_physical_io_reads) as max_physical_io_reads,
-	SUM(rs.avg_physical_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_physical_io_reads,
-	MAX(rs.max_logical_io_writes) as max_logical_io_writes,
-	SUM(rs.avg_logical_io_writes * rs.count_executions) / SUM(rs.count_executions) as avg_logical_io_writes,
-	rs.execution_type,
-	MAX(rs.execution_type_desc) AS execution_type_desc,
-	SUM(rs.count_executions) as count_executions,
-	MAX(rs.max_cpu_time) as max_cpu_time,
-	SUM(rs.avg_cpu_time * rs.count_executions) / SUM(rs.count_executions) as avg_cpu_time,
-	MAX(rs.max_dop) as max_dop,
-	SUM(rs.avg_dop * rs.count_executions) / SUM(rs.count_executions) as avg_dop,
-	MAX(rs.max_rowcount) as max_rowcount,
-	SUM(rs.avg_rowcount * rs.count_executions) / SUM(rs.count_executions) as avg_rowcount,
-	MAX(rs.max_query_max_used_memory) AS max_query_max_used_memory,
-	SUM(rs.avg_query_max_used_memory * rs.count_executions) / SUM(rs.count_executions) AS avg_query_max_used_memory,
-	MAX(rs.max_duration) as [max_duration],
-	SUM(rs.avg_duration * rs.count_executions) / SUM(rs.count_executions) as avg_duration,
-	MAX(rs.max_num_physical_io_reads) as max_num_physical_io_reads,
-	SUM(rs.avg_num_physical_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_num_physical_io_reads,
-	MAX(rs.max_page_server_io_reads) as max_page_server_io_reads,
-	SUM(rs.avg_page_server_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_page_server_io_reads,
-	MAX(rs.max_log_bytes_used) as [max_log_bytes_used],
-	SUM(rs.avg_log_bytes_used * rs.count_executions) / SUM(rs.count_executions) as avg_log_bytes_used
-FROM sys.query_store_query q WITH (NOLOCK)
-	JOIN sys.query_store_plan p WITH (NOLOCK) ON q.query_id = p.query_id
-	JOIN sys.query_store_runtime_stats rs WITH (NOLOCK) ON p.plan_id = rs.plan_id
-	JOIN sys.query_store_runtime_stats_interval rsi WITH (NOLOCK) ON rs.runtime_stats_interval_id = rsi.runtime_stats_interval_id
-WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate
-GROUP BY rs.plan_id, rs.execution_type, rs.runtime_stats_interval_id;
-
-/* Return the timestamp when the query was run, to be used in the next call */
-SELECT CAST(@currIntervalEndTimestamp AS nvarchar(20)) AS QueryData;
-`
-
-const sqlAzureDBQueryStoreWaitStatistics = sqlAzureDBPartQueryPeriod + `
-/* Query the data from query store. Group  by plan_id, runtime_stats_interval_id, execution_type and wait_category, and specified here:
-https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15
-*/
-SELECT
-	'sqlserver_azuredb_querystore_wait_stats' AS [measurement],
-	REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance],
-	DB_NAME() AS [database_name],
-	CONVERT(nvarchar(30), MAX(rsi.start_time), 126) AS interval_start_time,
-	CONVERT(nvarchar(30), MAX(rsi.end_time), 126) AS interval_end_time,
-	MAX(q.query_id) AS query_id,
-	CONVERT(nvarchar(20), MAX(q.query_hash), 1) as query_hash,
-	CAST(ws.plan_id AS nvarchar(20)) AS plan_id,
-	CONVERT(nvarchar(20), MAX(p.query_plan_hash), 1) as query_plan_hash,
-	ws.wait_category_desc AS wait_category_s,
-	ws.execution_type AS exec_type_d,
-	MAX(ws.execution_type_desc) AS exec_type_desc,
-	SUM(ws.total_query_wait_time_ms) AS total_query_wait_time_ms_d,
-	CAST(SUM(IIF(avg_query_wait_time_ms = 0, 0, ws.total_query_wait_time_ms / avg_query_wait_time_ms)) AS BIGINT) AS count_executions,
-	MAX(ws.max_query_wait_time_ms) AS max_query_wait_time_ms_d,
-	MAX(q.query_parameterization_type) AS query_param_type_d
-FROM sys.query_store_query q WITH (NOLOCK)
-	JOIN sys.query_store_plan p WITH (NOLOCK) ON q.query_id = p.query_id
-	JOIN sys.query_store_wait_stats ws WITH (NOLOCK) ON p.plan_id = ws.plan_id
-	JOIN sys.query_store_runtime_stats_interval rsi WITH (NOLOCK) on ws.runtime_stats_interval_id = rsi.runtime_stats_interval_id
-WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate
-GROUP BY ws.plan_id, ws.execution_type, ws.runtime_stats_interval_id, ws.wait_category_desc;
-
-/* Return the timestamp when the query was run, to be used in the next call */
-SELECT CAST(@currIntervalEndTimestamp AS nvarchar(20)) AS QueryData;
-`
-
 const sqlAzureDBPerformanceCounters = `
 SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
@@ -1349,7 +1225,8 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	RETURN
 END;
 
-IF OBJECT_ID ('tempdb.dbo.#ExecForeachDb') IS NOT NULL DROP PROCEDURE #ExecForeachDb;
+
+DROP PROCEDURE IF EXISTS #ExecForeachDb
 
 /* Create a temporary procedure that iterates through all DBs that the user has access to in this managed instance, except system DBs, and execute the query specified with @queryText */
 EXEC('CREATE PROCEDURE #ExecForeachDb @queryText NVARCHAR(MAX)
@@ -1357,7 +1234,7 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	DECLARE dbCursor CURSOR LOCAL FOR 
+	DECLARE dbCursor CURSOR FAST_FORWARD LOCAL FOR 
 	SELECT 
 		[name] 
 	FROM sys.databases
@@ -1447,7 +1324,7 @@ CREATE TABLE #QueryStoreMetrics(
 	[database_name] nvarchar(128),
 	interval_start_time nvarchar(30),
 	interval_end_time nvarchar(30),
-	query_id bigint,
+	query_id nvarchar(20),
 	query_hash nvarchar(20),
 	plan_id nvarchar(20),
 	query_plan_hash nvarchar(20),
@@ -1489,7 +1366,7 @@ SELECT
 	DB_NAME() AS [database_name],
 	CONVERT(nvarchar(30), MAX(rsi.start_time), 126) AS interval_start_time,
 	CONVERT(nvarchar(30), MAX(rsi.end_time), 126) AS interval_end_time,
-	MAX(q.query_id) AS query_id,
+	CAST(q.query_id AS nvarchar(20)) AS query_id,
 	CONVERT(nvarchar(20), MAX(q.query_hash), 1) as query_hash,
 	CAST(rs.plan_id AS nvarchar(20)) AS plan_id,
 	CONVERT(nvarchar(20), MAX(p.query_plan_hash), 1) as query_plan_hash,
@@ -1545,7 +1422,7 @@ CREATE TABLE #QueryStoreWaitStat(
 	[database_name] nvarchar(128),
 	interval_start_time nvarchar(30),
 	interval_end_time nvarchar(30),
-	query_id bigint,
+	query_id nvarchar(20),
 	query_hash nvarchar(20),
 	plan_id nvarchar(20),
 	query_plan_hash nvarchar(20),
@@ -1569,7 +1446,7 @@ SELECT
 	DB_NAME() AS [database_name],
 	CONVERT(nvarchar(30), MAX(rsi.start_time), 126) AS interval_start_time,
 	CONVERT(nvarchar(30), MAX(rsi.end_time), 126) AS interval_end_time,
-	MAX(q.query_id) AS query_id,
+	CAST(ws.query_id AS nvarchar(20)) AS query_id,
 	CONVERT(nvarchar(20), MAX(q.query_hash), 1) as query_hash,
 	CAST(ws.plan_id AS nvarchar(20)) AS plan_id,
 	CONVERT(nvarchar(20), MAX(p.query_plan_hash), 1) as query_plan_hash,

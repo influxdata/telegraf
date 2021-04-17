@@ -88,7 +88,7 @@ servers = [
 # include_query = []
 
 ## A list of queries to explicitly ignore.
-# exclude_query = ["AzureSQLDBQueryStoreRuntimeStatistics", "AzureSQLDBQueryStoreWaitStatistics"]
+# exclude_query = []
 
 ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
 ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
@@ -98,6 +98,7 @@ servers = [
 
 # include_query = []
 
+## QDS data collection is optional and not enabled by default for SQL MI
 # exclude_query = ["AzureSQLMIQueryStoreRuntimeStatistics", "AzureSQLMIQueryStoreWaitStatistics"]
 
 ## Queries enabled by default for database_type = "SQLServer" are - 
@@ -159,8 +160,6 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLDBPerformanceCounters"] = Query{ScriptName: "AzureSQLDBPerformanceCounters", Script: sqlAzureDBPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLDBRequests"] = Query{ScriptName: "AzureSQLDBRequests", Script: sqlAzureDBRequests, ResultByRow: false}
 		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlAzureDBSchedulers, ResultByRow: false}
-		queries["AzureSQLDBQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreRuntimeStatistics", Script: sqlAzureDBQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
-		queries["AzureSQLDBQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreWaitStatistics", Script: sqlAzureDBQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
 	} else if s.DatabaseType == typeAzureSQLManagedInstance {
 		queries["AzureSQLMIResourceStats"] = Query{ScriptName: "AzureSQLMIResourceStats", Script: sqlAzureMIResourceStats, ResultByRow: false}
 		queries["AzureSQLMIResourceGovernance"] = Query{ScriptName: "AzureSQLMIResourceGovernance", Script: sqlAzureMIResourceGovernance, ResultByRow: false}
@@ -249,11 +248,12 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 			wg.Add(1)
 			go func(pool *sql.DB, query *Query, serverIndex int) {
 				defer wg.Done()
-				queryError := s.gatherServer(pool, s.Servers[serverIndex], query, acc)
+				server := s.Servers[serverIndex]
+				queryError := s.gatherServer(pool, server, query, acc)
 
 				if s.HealthMetric {
 					mutex.Lock()
-					s.gatherHealth(healthMetrics, s.Servers[serverIndex], queryError)
+					s.gatherHealth(healthMetrics, server, queryError)
 					mutex.Unlock()
 				}
 

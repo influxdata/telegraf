@@ -65,8 +65,8 @@ GO
   ## A list of queries to include. If not specified, all the above listed queries are used.
   # include_query = []
 
-  ## A list of queries to explicitly ignore.
-  # exclude_query = ["AzureSQLDBQueryStoreRuntimeStatistics", "AzureSQLDBQueryStoreWaitStatistics"]
+  ## A list of queries to explicitly ignore. 
+  # exclude_query = []
 
   ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
   ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
@@ -76,6 +76,7 @@ GO
 
   # include_query = []
 
+  ## A list of queries to explicitly ignore. QDS data collection is not enabled by default for SQL MI
   # exclude_query = ["AzureSQLMIQueryStoreRuntimeStatistics", "AzureSQLMIQueryStoreWaitStatistics"]
 
   ## Queries enabled by default for database_type = "SQLServer" are - 
