@@ -95,8 +95,8 @@ func (o *OpenTelemetry) Connect() error {
 			Headers: metadata.New(o.Headers),
 			Timeout: o.grpcTimeout,
 		})
-		if err := o.client.Selftest(ctx); err != nil {
-			_ = o.client.Close()
+		if err := o.client.ping(ctx); err != nil {
+			_ = o.client.close()
 			return err
 		}
 	}
@@ -316,7 +316,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	if err := o.client.Store(&metricsService.ExportMetricsServiceRequest{
+	if err := o.client.store(&metricsService.ExportMetricsServiceRequest{
 		ResourceMetrics: samples,
 	}); err != nil {
 		return fmt.Errorf("unable to write to endpoint: %s", err)
@@ -326,7 +326,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 
 // Close will terminate the session to the backend, returning error if an issue arises.
 func (o *OpenTelemetry) Close() error {
-	return o.client.Close()
+	return o.client.close()
 }
 
 // SampleConfig returns the formatted sample configuration for the plugin.

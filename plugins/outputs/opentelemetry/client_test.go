@@ -60,7 +60,7 @@ func TestClientWithUnrecoverableError(t *testing.T) {
 		},
 	)
 
-	err = client.Selftest(context.Background())
+	err = client.ping(context.Background())
 	require.False(t, isRecoverable(err), "expected unrecoverableError in error %v", err)
 
 	_, err = client.getConnection(context.Background())
@@ -76,6 +76,6 @@ func TestEmptyRequest(t *testing.T) {
 		Timeout: time.Second,
 	})
 
-	err = c.Store(&metricsService.ExportMetricsServiceRequest{})
+	err = c.store(&metricsService.ExportMetricsServiceRequest{})
 	require.NoError(t, err)
 }

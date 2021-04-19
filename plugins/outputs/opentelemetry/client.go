@@ -99,7 +99,7 @@ func NewClient(conf ClientConfig) *Client {
 
 // getConnection will dial a new connection if one is not set.  When
 // dialing, this function uses its a new context and the same timeout
-// used for Store().
+// used for store().
 func (c *Client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr error) {
 	if c.conn != nil {
 		return c.conn, nil
@@ -171,8 +171,8 @@ func (c *Client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr 
 	return conn, err
 }
 
-// Selftest sends an empty request the endpoint.
-func (c *Client) Selftest(ctx context.Context) error {
+// ping sends an empty request the endpoint.
+func (c *Client) ping(ctx context.Context) error {
 	// Loop until the context is canceled, allowing for retryable failures.
 	for {
 		conn, err := c.getConnection(ctx)
@@ -203,8 +203,8 @@ func (c *Client) Selftest(ctx context.Context) error {
 	}
 }
 
-// Store sends a batch of samples to the endpoint.
-func (c *Client) Store(req *metricsService.ExportMetricsServiceRequest) error {
+// store sends a batch of samples to the endpoint.
+func (c *Client) store(req *metricsService.ExportMetricsServiceRequest) error {
 	tss := req.ResourceMetrics
 	if len(tss) == 0 {
 		// Nothing to do, return silently.
@@ -268,7 +268,7 @@ func (c *Client) Store(req *metricsService.ExportMetricsServiceRequest) error {
 	return nil
 }
 
-func (c *Client) Close() error {
+func (c *Client) close() error {
 	if c.conn == nil {
 		return nil
 	}
