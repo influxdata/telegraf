@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"testing"
 
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	plugin "github.com/influxdata/telegraf/plugins/inputs/http"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -284,11 +285,13 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 		{
 			name: "success",
 			plugin: &plugin.HTTP{
-				URLs:         []string{u.String() + "/write"},
-				ClientID:     "howdy",
-				ClientSecret: "secret",
-				TokenURL:     u.String() + "/token",
-				Scopes:       []string{"urn:opc:idm:__myscopes__"},
+				URLs: []string{u.String() + "/write"},
+				HttpClientConfig: httpconfig.HttpClientConfig{
+					ClientID:     "howdy",
+					ClientSecret: "secret",
+					TokenURL:     u.String() + "/token",
+					Scopes:       []string{"urn:opc:idm:__myscopes__"},
+				},
 			},
 			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
