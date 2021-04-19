@@ -171,6 +171,7 @@ func (c *CloudWatch) SampleConfig() string {
   #
   #  ## Dimension filters for Metric.  All dimensions defined for the metric names
   #  ## must be specified in order to retrieve the metric statistics.
+  #  ## 'value' has wildcard / 'glob' matching support. such as 'p-*'.
   #  [[inputs.cloudwatch.metrics.dimensions]]
   #    name = "LoadBalancerName"
   #    value = "p-example"
