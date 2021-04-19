@@ -1,4 +1,4 @@
-package otlp
+package opentelemetry
 
 import (
 	"context"
@@ -67,7 +67,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 func TestConfigOptions(t *testing.T) {
-	o := OTLP{
+	o := OpenTelemetry{
 		Endpoint: ":::::",
 		Log:      testutil.Logger{},
 	}
@@ -75,14 +75,14 @@ func TestConfigOptions(t *testing.T) {
 	require.Error(t, err)
 	require.EqualError(t, err, "invalid endpoint configured")
 
-	o = OTLP{
+	o = OpenTelemetry{
 		Timeout: "9zzz",
 		Log:     testutil.Logger{},
 	}
 	err = o.Connect()
 	require.EqualError(t, err, "invalid timeout configured")
 
-	o = OTLP{
+	o = OpenTelemetry{
 		Endpoint: "http://" + listener.Addr().String(),
 		Log:      testutil.Logger{},
 	}
@@ -99,7 +99,7 @@ func TestConfigOptions(t *testing.T) {
 		"service.name":    "test",
 		"service.version": "0.0.1",
 	}
-	o = OTLP{
+	o = OpenTelemetry{
 		Endpoint:   "http://" + listener.Addr().String(),
 		Timeout:    "10s",
 		Attributes: attributes,
@@ -116,7 +116,7 @@ func TestConfigOptions(t *testing.T) {
 }
 
 func TestWrite(t *testing.T) {
-	o := OTLP{
+	o := OpenTelemetry{
 		Endpoint: "http://" + listener.Addr().String(),
 		Timeout:  "10s",
 		Log:      testutil.Logger{},
@@ -193,7 +193,7 @@ func TestWriteSupportedMetricKinds(t *testing.T) {
 			time.Unix(1, 0),
 		),
 	}
-	o := OTLP{
+	o := OpenTelemetry{
 		Endpoint: "http://" + listener.Addr().String(),
 		Timeout:  "10s",
 		Log:      testutil.Logger{},
@@ -242,7 +242,7 @@ func TestWriteIgnoresInvalidKinds(t *testing.T) {
 			telegraf.Summary,
 		),
 	}
-	o := OTLP{
+	o := OpenTelemetry{
 		Endpoint: "http://" + listener.Addr().String(),
 		Timeout:  "10s",
 		Log:      testutil.Logger{},

@@ -1,4 +1,4 @@
-package otlp
+package opentelemetry
 
 import (
 	"context"

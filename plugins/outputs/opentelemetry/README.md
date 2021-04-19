@@ -1,4 +1,4 @@
-# OpenTelemetry Protocol Output Plugin
+# OpenTelemetry Output Plugin
 
 This plugin writes to any backend that support the OpenTelemetry Protocol (OTLP)
 
@@ -11,7 +11,7 @@ Additional gRPC metadata can be configured by `headers`.
 ### Configuration
 
 ```toml
-[[outputs.otlp]]
+[[outputs.opentelemetry]]
   ## OpenTelemetry endpoint
   endpoint = "http://localhost:4317"
 
@@ -19,11 +19,11 @@ Additional gRPC metadata can be configured by `headers`.
   timeout = "10s"
 
   # Additional resource attributes
-  [outputs.otlp.attributes]
+  [outputs.opentelemetry.attributes]
   	"service.name" = "demo"
 
   # Additional grpc metadata
-  [outputs.otlp.headers]
+  [outputs.opentelemetry.headers]
     key1 = "value1"
 
 ```

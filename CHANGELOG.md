@@ -1,6 +1,6 @@
 #### New Outputs
 
-- [otlp](/plugins/outputs/otlp/README.md) - Contributed by @codeboten
+- [opentelemetry](/plugins/outputs/opentelemetry/README.md) - Contributed by @codeboten
 ## v1.18.1 [2021-04-07]
 
 #### Bugfixes

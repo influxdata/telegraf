@@ -1,4 +1,4 @@
-package otlp
+package opentelemetry
 
 import (
 	"context"
@@ -11,14 +11,14 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	otlpcommonpb "go.opentelemetry.io/proto/otlp/common/v1"
-	otlpmetricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	otlpresourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
+	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
 	"google.golang.org/grpc/metadata"
 )
 
-// OTLP is the OpenTelemetry Protocol config info.
-type OTLP struct {
+// OpenTelemetry is the OpenTelemetry Protocol config info.
+type OpenTelemetry struct {
 	Endpoint   string            `toml:"endpoint"`
 	Timeout    string            `toml:"timeout"`
 	Headers    map[string]string `toml:"headers"`
@@ -49,17 +49,17 @@ var sampleConfig = `
   # timeout = "10s"
 
   # Additional resource attributes
-  [outputs.otlp.attributes]
+  [outputs.opentelemetry.attributes]
   	"service.name" = "demo"
 
   # Additional grpc metadata
-  [outputs.otlp.headers]
+  [outputs.opentelemetry.headers]
     key1 = "value1"
 
 `
 
-// Connect initiates the primary connection to the OTLP endpoint.
-func (o *OTLP) Connect() error {
+// Connect initiates the primary connection to the OpenTelemetry endpoint.
+func (o *OpenTelemetry) Connect() error {
 	if o.Endpoint == "" {
 		o.Endpoint = defaultEndpoint
 	}
@@ -120,121 +120,116 @@ func sorted(metrics []telegraf.Metric) []telegraf.Metric {
 	return batch
 }
 
-// getNanos converts a millisecond timestamp into a OTLP nanosecond timestamp.
-func getNanos(t int64) uint64 {
-	return uint64(time.Duration(t) * time.Nanosecond)
-}
-
-func monotonicIntegerPoint(labels []*otlpcommonpb.StringKeyValue, start, end int64, value int64) *otlpmetricpb.IntSum {
-	integer := &otlpmetricpb.IntDataPoint{
+func monotonicIntegerPoint(labels []*commonpb.StringKeyValue, start, end int64, value int64) *metricpb.IntSum {
+	integer := &metricpb.IntDataPoint{
 		Labels:            labels,
 		StartTimeUnixNano: uint64(start),
 		TimeUnixNano:      uint64(end),
 		Value:             value,
 	}
-	return &otlpmetricpb.IntSum{
+	return &metricpb.IntSum{
 		IsMonotonic:            true,
-		AggregationTemporality: otlpmetricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
-		DataPoints:             []*otlpmetricpb.IntDataPoint{integer},
+		AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+		DataPoints:             []*metricpb.IntDataPoint{integer},
 	}
 }
 
-func monotonicDoublePoint(labels []*otlpcommonpb.StringKeyValue, start, end int64, value float64) *otlpmetricpb.DoubleSum {
-	double := &otlpmetricpb.DoubleDataPoint{
+func monotonicDoublePoint(labels []*commonpb.StringKeyValue, start, end int64, value float64) *metricpb.DoubleSum {
+	double := &metricpb.DoubleDataPoint{
 		Labels:            labels,
-		StartTimeUnixNano: getNanos(start),
-		TimeUnixNano:      getNanos(end),
+		StartTimeUnixNano: uint64(time.Duration(start) * time.Nanosecond),
+		TimeUnixNano:      uint64(time.Duration(end) * time.Nanosecond),
 		Value:             value,
 	}
-	return &otlpmetricpb.DoubleSum{
+	return &metricpb.DoubleSum{
 		IsMonotonic:            true,
-		AggregationTemporality: otlpmetricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
-		DataPoints:             []*otlpmetricpb.DoubleDataPoint{double},
+		AggregationTemporality: metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+		DataPoints:             []*metricpb.DoubleDataPoint{double},
 	}
 }
 
-func protoLabel(tag *telegraf.Tag) *otlpcommonpb.KeyValue {
-	return &otlpcommonpb.KeyValue{
+func protoLabel(tag *telegraf.Tag) *commonpb.KeyValue {
+	return &commonpb.KeyValue{
 		Key: tag.Key,
-		Value: &otlpcommonpb.AnyValue{
-			Value: &otlpcommonpb.AnyValue_StringValue{
+		Value: &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_StringValue{
 				StringValue: tag.Value,
 			},
 		},
 	}
 }
 
-func protoStringLabel(tag *telegraf.Tag) *otlpcommonpb.StringKeyValue {
-	return &otlpcommonpb.StringKeyValue{
+func protoStringLabel(tag *telegraf.Tag) *commonpb.StringKeyValue {
+	return &commonpb.StringKeyValue{
 		Key:   tag.Key,
 		Value: tag.Value,
 	}
 }
 
-func protoResourceAttributes(tags []*telegraf.Tag) []*otlpcommonpb.KeyValue {
-	ret := make([]*otlpcommonpb.KeyValue, len(tags))
+func protoResourceAttributes(tags []*telegraf.Tag) []*commonpb.KeyValue {
+	ret := make([]*commonpb.KeyValue, len(tags))
 	for i := range tags {
 		ret[i] = protoLabel(tags[i])
 	}
 	return ret
 }
 
-func protoStringLabels(tags []*telegraf.Tag) []*otlpcommonpb.StringKeyValue {
-	ret := make([]*otlpcommonpb.StringKeyValue, len(tags))
+func protoStringLabels(tags []*telegraf.Tag) []*commonpb.StringKeyValue {
+	ret := make([]*commonpb.StringKeyValue, len(tags))
 	for i := range tags {
 		ret[i] = protoStringLabel(tags[i])
 	}
 	return ret
 }
 
-func (o *OTLP) protoTimeseries(m telegraf.Metric, f *telegraf.Field) (*otlpmetricpb.ResourceMetrics, *otlpmetricpb.Metric) {
-	metric := &otlpmetricpb.Metric{
+func (o *OpenTelemetry) protoTimeseries(m telegraf.Metric, f *telegraf.Field) (*metricpb.ResourceMetrics, *metricpb.Metric) {
+	metric := &metricpb.Metric{
 		Name:        fmt.Sprintf("%s.%s", m.Name(), f.Key),
 		Description: "", // TODO
 		Unit:        "", // TODO
 	}
-	return &otlpmetricpb.ResourceMetrics{
-		Resource: &otlpresourcepb.Resource{
+	return &metricpb.ResourceMetrics{
+		Resource: &resourcepb.Resource{
 			Attributes: protoResourceAttributes(o.resourceTags),
 		},
-		InstrumentationLibraryMetrics: []*otlpmetricpb.InstrumentationLibraryMetrics{
+		InstrumentationLibraryMetrics: []*metricpb.InstrumentationLibraryMetrics{
 			{
-				InstrumentationLibrary: &otlpcommonpb.InstrumentationLibrary{
+				InstrumentationLibrary: &commonpb.InstrumentationLibrary{
 					Name:    instrumentationLibraryName,
 					Version: internal.Version(),
 				},
-				Metrics: []*otlpmetricpb.Metric{metric},
+				Metrics: []*metricpb.Metric{metric},
 			},
 		},
 	}, metric
 }
 
-func intGauge(labels []*otlpcommonpb.StringKeyValue, ts int64, value int64) *otlpmetricpb.IntGauge {
-	integer := &otlpmetricpb.IntDataPoint{
+func intGauge(labels []*commonpb.StringKeyValue, ts int64, value int64) *metricpb.IntGauge {
+	integer := &metricpb.IntDataPoint{
 		Labels:       labels,
 		TimeUnixNano: uint64(ts),
 		Value:        value,
 	}
-	return &otlpmetricpb.IntGauge{
-		DataPoints: []*otlpmetricpb.IntDataPoint{integer},
+	return &metricpb.IntGauge{
+		DataPoints: []*metricpb.IntDataPoint{integer},
 	}
 }
 
-func doubleGauge(labels []*otlpcommonpb.StringKeyValue, ts int64, value float64) *otlpmetricpb.DoubleGauge {
-	double := &otlpmetricpb.DoubleDataPoint{
+func doubleGauge(labels []*commonpb.StringKeyValue, ts int64, value float64) *metricpb.DoubleGauge {
+	double := &metricpb.DoubleDataPoint{
 		Labels:       labels,
 		TimeUnixNano: uint64(ts),
 		Value:        value,
 	}
-	return &otlpmetricpb.DoubleGauge{
-		DataPoints: []*otlpmetricpb.DoubleDataPoint{double},
+	return &metricpb.DoubleGauge{
+		DataPoints: []*metricpb.DoubleDataPoint{double},
 	}
 }
 
 // Write the metrics to OTLP destination
-func (o *OTLP) Write(metrics []telegraf.Metric) error {
+func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	batch := sorted(metrics)
-	samples := []*otlpmetricpb.ResourceMetrics{}
+	samples := []*metricpb.ResourceMetrics{}
 	currentTs := time.Now().UnixNano()
 	for _, m := range batch {
 		for _, f := range m.FieldList() {
@@ -248,29 +243,29 @@ func (o *OTLP) Write(metrics []telegraf.Metric) error {
 				switch v := f.Value.(type) {
 				case uint64:
 					if v <= uint64(maxInt) {
-						point.Data = &otlpmetricpb.Metric_IntSum{
+						point.Data = &metricpb.Metric_IntSum{
 							IntSum: monotonicIntegerPoint(labels, ts, currentTs, int64(v)),
 						}
 					} else {
-						point.Data = &otlpmetricpb.Metric_IntSum{
+						point.Data = &metricpb.Metric_IntSum{
 							IntSum: monotonicIntegerPoint(labels, ts, currentTs, int64(maxInt)),
 						}
 					}
 				case int64:
-					point.Data = &otlpmetricpb.Metric_IntSum{
+					point.Data = &metricpb.Metric_IntSum{
 						IntSum: monotonicIntegerPoint(labels, ts, currentTs, v),
 					}
 				case float64:
-					point.Data = &otlpmetricpb.Metric_DoubleSum{
+					point.Data = &metricpb.Metric_DoubleSum{
 						DoubleSum: monotonicDoublePoint(labels, ts, currentTs, v),
 					}
 				case bool:
 					if v {
-						point.Data = &otlpmetricpb.Metric_IntSum{
+						point.Data = &metricpb.Metric_IntSum{
 							IntSum: monotonicIntegerPoint(labels, ts, currentTs, 1),
 						}
 					} else {
-						point.Data = &otlpmetricpb.Metric_IntSum{
+						point.Data = &metricpb.Metric_IntSum{
 							IntSum: monotonicIntegerPoint(labels, ts, currentTs, 0),
 						}
 					}
@@ -285,29 +280,29 @@ func (o *OTLP) Write(metrics []telegraf.Metric) error {
 				switch v := f.Value.(type) {
 				case uint64:
 					if v <= uint64(maxInt) {
-						point.Data = &otlpmetricpb.Metric_IntGauge{
+						point.Data = &metricpb.Metric_IntGauge{
 							IntGauge: intGauge(labels, ts, int64(v)),
 						}
 					} else {
-						point.Data = &otlpmetricpb.Metric_IntGauge{
+						point.Data = &metricpb.Metric_IntGauge{
 							IntGauge: intGauge(labels, ts, int64(maxInt)),
 						}
 					}
 				case int64:
-					point.Data = &otlpmetricpb.Metric_IntGauge{
+					point.Data = &metricpb.Metric_IntGauge{
 						IntGauge: intGauge(labels, ts, v),
 					}
 				case float64:
-					point.Data = &otlpmetricpb.Metric_DoubleGauge{
+					point.Data = &metricpb.Metric_DoubleGauge{
 						DoubleGauge: doubleGauge(labels, ts, v),
 					}
 				case bool:
 					if v {
-						point.Data = &otlpmetricpb.Metric_IntGauge{
+						point.Data = &metricpb.Metric_IntGauge{
 							IntGauge: intGauge(labels, ts, 1),
 						}
 					} else {
-						point.Data = &otlpmetricpb.Metric_IntGauge{
+						point.Data = &metricpb.Metric_IntGauge{
 							IntGauge: intGauge(labels, ts, 0),
 						}
 					}
@@ -338,26 +333,26 @@ func (o *OTLP) Write(metrics []telegraf.Metric) error {
 }
 
 // Close will terminate the session to the backend, returning error if an issue arises.
-func (o *OTLP) Close() error {
+func (o *OpenTelemetry) Close() error {
 	return o.client.Close()
 }
 
 // SampleConfig returns the formatted sample configuration for the plugin.
-func (o *OTLP) SampleConfig() string {
+func (o *OpenTelemetry) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description returns the human-readable function definition of the plugin.
-func (o *OTLP) Description() string {
-	return "Configuration for OTLP to send metrics to"
+func (o *OpenTelemetry) Description() string {
+	return "Configuration for OpenTelemetry to send metrics to"
 }
 
-func newOTLP() *OTLP {
-	return &OTLP{}
+func newOTLP() *OpenTelemetry {
+	return &OpenTelemetry{}
 }
 
 func init() {
-	outputs.Add("otlp", func() telegraf.Output {
+	outputs.Add("opentelemetry", func() telegraf.Output {
 		return newOTLP()
 	})
 }

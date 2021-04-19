@@ -1,4 +1,4 @@
-package otlp
+package opentelemetry
 
 import (
 	"context"
@@ -110,7 +110,7 @@ func (c *Client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr 
 
 	useAuth := c.url.Scheme != "http"
 	_ = level.Debug(c.logger).Log(
-		"msg", "new OTLP connection",
+		"msg", "new OpenTelemetry connection",
 		"auth", useAuth,
 		"url", c.url.String(),
 		"timeout", c.timeout)
