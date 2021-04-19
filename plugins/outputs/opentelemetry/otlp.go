@@ -339,12 +339,8 @@ func (o *OpenTelemetry) Description() string {
 	return "Configuration for OpenTelemetry to send metrics to"
 }
 
-func newOTLP() *OpenTelemetry {
-	return &OpenTelemetry{}
-}
-
 func init() {
 	outputs.Add("opentelemetry", func() telegraf.Output {
-		return newOTLP()
+		return &OpenTelemetry{}
 	})
 }
