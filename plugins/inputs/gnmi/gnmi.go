@@ -55,7 +55,7 @@ type GNMI struct {
 	acc     telegraf.Accumulator
 	cancel  context.CancelFunc
 	wg      sync.WaitGroup
-	// Lookup/name/value
+	// path/lookup_str/value
 	lookup map[string]map[string]string
 
 	Log telegraf.Logger
@@ -314,7 +314,9 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 
 		// Update tag lookups and discard rest of update
 		if lu, ok := c.lookup[name]; ok {
-			updateLookups(lu, luKey, fields)
+	        for _, v := range fields {
+		        lu[luKey] = fmt.Sprintf("%v", v)
+	        }
 			continue
 		}
 
@@ -352,12 +354,6 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 	// Add grouped measurements
 	for _, metric := range grouper.Metrics() {
 		c.acc.AddMetric(metric)
-	}
-}
-
-func updateLookups(lu map[string]string, luKey string, fields map[string]interface{}) {
-	for _, v := range fields {
-		lu[luKey] = fmt.Sprintf("%v", v)
 	}
 }
 
