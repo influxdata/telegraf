@@ -10,7 +10,7 @@ Linux
 -----
 Telegraf intent: *Support latest versions of major linux distributions*
 
-Telegraf supports RHEL, Fedora, Debian, and Ubuntu. InfluxData provides package repositories for these distributions. Instructions for using the package repositories can be found on [docs.influxdata.com](https://docs.influxdata.com/telegraf/latest/introduction/installation/). Bug reports shuld be submitted only for supported distributions and releases.
+Telegraf supports RHEL, Fedora, Debian, and Ubuntu. InfluxData provides package repositories for these distributions. Instructions for using the package repositories can be found on [docs.influxdata.com](https://docs.influxdata.com/telegraf/latest/introduction/installation/). Bug reports should be submitted only for supported distributions and releases.
 
 Telegraf's Debian or Ubuntu packages are likely to work on other Debian-based distributions although these are not supported. Similarly, Telegraf's Fedora and RHEL packages are likely to work on other Redhat-based distributions although again these are not supported.
 
