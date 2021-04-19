@@ -181,7 +181,7 @@ func (c *Client) ping(ctx context.Context) error {
 			service := metricsService.NewMetricsServiceClient(conn)
 			empty := &metricsService.ExportMetricsServiceRequest{}
 
-			_, err = service.Export(c.grpcMetadata(ctx), empty)
+			_, err = service.Export(metadata.NewOutgoingContext(ctx, c.headers), empty)
 			if err == nil {
 				return nil
 			}
@@ -240,7 +240,7 @@ func (c *Client) store(req *metricsService.ExportMetricsServiceRequest) error {
 			var md metadata.MD
 			var err error
 
-			if _, err = service.Export(c.grpcMetadata(ctx), reqCopy, grpc.Trailer(&md)); err != nil {
+			if _, err = service.Export(metadata.NewOutgoingContext(ctx, c.headers), reqCopy, grpc.Trailer(&md)); err != nil {
 				_ = level.Error(c.logger).Log(
 					"msg", "export failure",
 					"err", truncateErrorString(err),
@@ -273,10 +273,6 @@ func (c *Client) close() error {
 		return nil
 	}
 	return c.conn.Close()
-}
-
-func (c *Client) grpcMetadata(ctx context.Context) context.Context {
-	return metadata.NewOutgoingContext(ctx, c.headers)
 }
 
 // truncateErrorString avoids printing error messages that are very
