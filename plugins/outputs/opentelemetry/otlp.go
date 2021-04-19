@@ -23,9 +23,7 @@ type OpenTelemetry struct {
 	Timeout    string            `toml:"timeout"`
 	Headers    map[string]string `toml:"headers"`
 	Attributes map[string]string `toml:"attributes"`
-
-	Namespace string
-	Log       telegraf.Logger `toml:"-"`
+	Log        telegraf.Logger   `toml:"-"`
 
 	client       *Client
 	resourceTags []*telegraf.Tag
