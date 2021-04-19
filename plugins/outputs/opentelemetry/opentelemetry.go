@@ -25,7 +25,7 @@ type OpenTelemetry struct {
 	Attributes map[string]string `toml:"attributes"`
 	Log        telegraf.Logger   `toml:"-"`
 
-	client       *Client
+	client       *client
 	resourceTags []*telegraf.Tag
 	grpcTimeout  time.Duration
 }

@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	// serviceConfig copied from OTel-Go.
-	// https://github.com/open-telemetry/opentelemetry-go/blob/5ed96e92446d2d58d131e0672da613a84c16af7a/exporters/otlp/grpcoptions.go#L37
+	// serviceConfig copied from OTel-Go
+	// https://github.com/open-telemetry/opentelemetry-go/blob/a2cecb6e80f6a0712187b080a97f8efb5a61082a/exporters/otlp/internal/otlpconfig/options.go#L47.
 	serviceConfig = `{
 	"methodConfig":[{
 		"name":[
@@ -38,7 +38,6 @@ const (
 			"MaxBackoff":"5s",
 			"BackoffMultiplier":2,
 			"RetryableStatusCodes":[
-				"UNAVAILABLE",
 				"CANCELLED",
 				"DEADLINE_EXCEEDED",
 				"RESOURCE_EXHAUSTED",
@@ -57,10 +56,10 @@ var (
 	maxTimeseriesPerRequest = 500
 )
 
-// Client allows reading and writing from/to a remote gRPC endpoint. The
+// client allows reading and writing from/to a remote gRPC endpoint. The
 // implementation may hit a single backend, so the application should create a
 // number of these clients.
-type Client struct {
+type client struct {
 	logger           log.Logger
 	url              *url.URL
 	timeout          time.Duration
@@ -82,12 +81,12 @@ type ClientConfig struct {
 }
 
 // NewClient creates a new Client.
-func NewClient(conf ClientConfig) *Client {
+func NewClient(conf ClientConfig) *client {
 	logger := conf.Logger
 	if logger == nil {
 		logger = log.NewNopLogger()
 	}
-	return &Client{
+	return &client{
 		logger:           logger,
 		url:              conf.URL,
 		timeout:          conf.Timeout,
@@ -100,7 +99,7 @@ func NewClient(conf ClientConfig) *Client {
 // getConnection will dial a new connection if one is not set.  When
 // dialing, this function uses its a new context and the same timeout
 // used for store().
-func (c *Client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr error) {
+func (c *client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr error) {
 	if c.conn != nil {
 		return c.conn, nil
 	}
@@ -172,7 +171,7 @@ func (c *Client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr 
 }
 
 // ping sends an empty request the endpoint.
-func (c *Client) ping(ctx context.Context) error {
+func (c *client) ping(ctx context.Context) error {
 	// Loop until the context is canceled, allowing for retryable failures.
 	for {
 		conn, err := c.getConnection(ctx)
@@ -204,7 +203,7 @@ func (c *Client) ping(ctx context.Context) error {
 }
 
 // store sends a batch of samples to the endpoint.
-func (c *Client) store(req *metricsService.ExportMetricsServiceRequest) error {
+func (c *client) store(req *metricsService.ExportMetricsServiceRequest) error {
 	tss := req.ResourceMetrics
 	if len(tss) == 0 {
 		// Nothing to do, return silently.
@@ -268,7 +267,7 @@ func (c *Client) store(req *metricsService.ExportMetricsServiceRequest) error {
 	return nil
 }
 
-func (c *Client) close() error {
+func (c *client) close() error {
 	if c.conn == nil {
 		return nil
 	}
