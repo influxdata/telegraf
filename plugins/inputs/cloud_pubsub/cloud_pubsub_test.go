@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gotest.tools/assert"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -28,6 +30,8 @@ func TestRunParse(t *testing.T) {
 	}
 	sub.receiver = testMessagesReceive(sub)
 
+	decoder, _ := internal.NewContentDecoder("identity")
+
 	ps := &PubSub{
 		Log:                    testutil.Logger{},
 		parser:                 testParser,
@@ -35,6 +39,7 @@ func TestRunParse(t *testing.T) {
 		Project:                "projectIDontMatterForTests",
 		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		decoder:                decoder,
 	}
 
 	acc := &testutil.Accumulator{}
@@ -73,6 +78,8 @@ func TestRunBase64(t *testing.T) {
 	}
 	sub.receiver = testMessagesReceive(sub)
 
+	decoder, _ := internal.NewContentDecoder("identity")
+
 	ps := &PubSub{
 		Log:                    testutil.Logger{},
 		parser:                 testParser,
@@ -81,6 +88,7 @@ func TestRunBase64(t *testing.T) {
 		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		Base64Data:             true,
+		decoder:                decoder,
 	}
 
 	acc := &testutil.Accumulator{}
@@ -106,6 +114,57 @@ func TestRunBase64(t *testing.T) {
 	validateTestInfluxMetric(t, metric)
 }
 
+func TestRunGzipDecode(t *testing.T) {
+	subID := "sub-run-gzip"
+
+	testParser, _ := parsers.NewInfluxParser()
+
+	sub := &stubSub{
+		id:       subID,
+		messages: make(chan *testMsg, 100),
+	}
+	sub.receiver = testMessagesReceive(sub)
+
+	decoder, err := internal.NewContentDecoder("gzip")
+	require.NoError(t, err)
+
+	ps := &PubSub{
+		Log:                    testutil.Logger{},
+		parser:                 testParser,
+		stubSub:                func() subscription { return sub },
+		Project:                "projectIDontMatterForTests",
+		Subscription:           subID,
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		ContentEncoding:        "gzip",
+		decoder:                decoder,
+	}
+
+	acc := &testutil.Accumulator{}
+	if err := ps.Start(acc); err != nil {
+		t.Fatalf("test PubSub failed to start: %s", err)
+	}
+	defer ps.Stop()
+
+	if ps.sub == nil {
+		t.Fatal("expected plugin subscription to be non-nil")
+	}
+
+	testTracker := &testTracker{}
+	enc, err := internal.NewGzipEncoder()
+	require.NoError(t, err)
+	gzippedMsg, err := enc.Encode([]byte(msgInflux))
+	require.NoError(t, err)
+	msg := &testMsg{
+		value:   string(gzippedMsg),
+		tracker: testTracker,
+	}
+	sub.messages <- msg
+	acc.Wait(1)
+	assert.Equal(t, acc.NFields(), 1)
+	metric := acc.Metrics[0]
+	validateTestInfluxMetric(t, metric)
+}
+
 func TestRunInvalidMessages(t *testing.T) {
 	subID := "sub-invalid-messages"
 
@@ -118,6 +177,8 @@ func TestRunInvalidMessages(t *testing.T) {
 	}
 	sub.receiver = testMessagesReceive(sub)
 
+	decoder, err := internal.NewContentDecoder("identity")
+	require.NoError(t, err)
 	ps := &PubSub{
 		Log:                    testutil.Logger{},
 		parser:                 testParser,
@@ -125,6 +186,7 @@ func TestRunInvalidMessages(t *testing.T) {
 		Project:                "projectIDontMatterForTests",
 		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		decoder:                decoder,
 	}
 
 	acc := &testutil.Accumulator{}
@@ -166,6 +228,8 @@ func TestRunOverlongMessages(t *testing.T) {
 	}
 	sub.receiver = testMessagesReceive(sub)
 
+	decoder, err := internal.NewContentDecoder("identity")
+	require.NoError(t, err)
 	ps := &PubSub{
 		Log:                    testutil.Logger{},
 		parser:                 testParser,
@@ -173,6 +237,7 @@ func TestRunOverlongMessages(t *testing.T) {
 		Project:                "projectIDontMatterForTests",
 		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		decoder:                decoder,
 		// Add MaxMessageLen Param
 		MaxMessageLen: 1,
 	}
@@ -215,6 +280,8 @@ func TestRunErrorInSubscriber(t *testing.T) {
 	fakeErrStr := "a fake error"
 	sub.receiver = testMessagesError(errors.New("a fake error"))
 
+	decoder, err := internal.NewContentDecoder("identity")
+	require.NoError(t, err)
 	ps := &PubSub{
 		Log:                      testutil.Logger{},
 		parser:                   testParser,
@@ -222,6 +289,7 @@ func TestRunErrorInSubscriber(t *testing.T) {
 		Project:                  "projectIDontMatterForTests",
 		Subscription:             subID,
 		MaxUndeliveredMessages:   defaultMaxUndeliveredMessages,
+		decoder:                  decoder,
 		RetryReceiveDelaySeconds: 1,
 	}
 
