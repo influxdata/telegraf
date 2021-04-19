@@ -72,6 +72,7 @@ func TestConfigOptions(t *testing.T) {
 		Log:      testutil.Logger{},
 	}
 	err := o.Connect()
+	require.Error(t, err)
 	require.EqualError(t, err, "invalid endpoint configured")
 
 	o = OTLP{
@@ -86,9 +87,7 @@ func TestConfigOptions(t *testing.T) {
 		Log:      testutil.Logger{},
 	}
 	err = o.Connect()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	require.Equal(t, defaultTimeout, o.grpcTimeout)
 	require.Equal(t, map[string]string{"telemetry-reporting-agent": fmt.Sprint(

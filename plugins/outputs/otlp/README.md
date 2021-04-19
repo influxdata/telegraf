@@ -31,4 +31,4 @@ Additional gRPC metadata can be configured by `headers`.
 ### Restrictions
 
 OTLP does not support string values in custom metrics, any string
-fields will not be written.
+fields will be omitted not be written to the endpoint.

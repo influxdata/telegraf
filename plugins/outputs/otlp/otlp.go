@@ -25,7 +25,7 @@ type OTLP struct {
 	Attributes map[string]string `toml:"attributes"`
 
 	Namespace string
-	Log       telegraf.Logger
+	Log       telegraf.Logger `toml:"-"`
 
 	client       *Client
 	resourceTags []*telegraf.Tag
@@ -43,10 +43,10 @@ const (
 
 var sampleConfig = `
   ## OpenTelemetry endpoint
-  endpoint = "http://localhost:4317"
+  # endpoint = "http://localhost:4317"
 
   ## Timeout used when sending data over grpc
-  timeout = "10s"
+  # timeout = "10s"
 
   # Additional resource attributes
   [outputs.otlp.attributes]
@@ -332,8 +332,7 @@ func (o *OTLP) Write(metrics []telegraf.Metric) error {
 	if err := o.client.Store(&metricsService.ExportMetricsServiceRequest{
 		ResourceMetrics: samples,
 	}); err != nil {
-		o.Log.Errorf("unable to write to endpoint: %s", err)
-		return err
+		return fmt.Errorf("unable to write to endpoint: %s", err)
 	}
 	return nil
 }
