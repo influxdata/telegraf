@@ -267,9 +267,6 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 							IntSum: monotonicIntegerPoint(labels, ts, currentTs, 0),
 						}
 					}
-				case string:
-					o.Log.Error("get type failed: unsupported telegraf value type string")
-					continue
 				default:
 					o.Log.Errorf("get type failed: unsupported telegraf value type %v\n", f.Value)
 					continue
@@ -304,9 +301,6 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 							IntGauge: intGauge(labels, ts, 0),
 						}
 					}
-				case string:
-					o.Log.Error("get type failed: unsupported telegraf value type string")
-					continue
 				default:
 					o.Log.Errorf("get type failed: unsupported telegraf value type %v\n", f.Value)
 					continue
