@@ -44,7 +44,8 @@ type PubSub struct {
 
 	Base64Data bool `toml:"base64_data"`
 
-	Log telegraf.Logger
+	Log             telegraf.Logger
+	ContentEncoding string `toml:"content_encoding"`
 
 	sub     subscription
 	stubSub func() subscription
@@ -57,6 +58,7 @@ type PubSub struct {
 
 	undelivered map[telegraf.TrackingID]message
 	sem         semaphore
+	decoder     internal.ContentDecoder
 }
 
 func (ps *PubSub) Description() string {
@@ -88,7 +90,11 @@ func (ps *PubSub) Start(ac telegraf.Accumulator) error {
 	if ps.Project == "" {
 		return fmt.Errorf(`"project" is required`)
 	}
-
+	var err error
+	ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding)
+	if err != nil {
+		return err
+	}
 	ps.sem = make(semaphore, ps.MaxUndeliveredMessages)
 	ps.acc = ac.WithTracking(ps.MaxUndeliveredMessages)
 
@@ -175,15 +181,18 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		return fmt.Errorf("message longer than max_message_len (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
 	}
 
-	var data []byte
+	var data = msg.Data()
+	data, err := ps.decoder.Decode(data)
+	if err != nil {
+		return fmt.Errorf("unable to decode message: %v", err)
+	}
+
 	if ps.Base64Data {
-		strData, err := base64.StdEncoding.DecodeString(string(msg.Data()))
+		strData, err := base64.StdEncoding.DecodeString(string(data))
 		if err != nil {
 			return fmt.Errorf("unable to base64 decode message: %v", err)
 		}
 		data = strData
-	} else {
-		data = msg.Data()
 	}
 
 	metrics, err := ps.parser.Parse(data)
@@ -366,4 +375,8 @@ const sampleConfig = `
   ## Optional. If true, Telegraf will attempt to base64 decode the
   ## PubSub message data before parsing
   # base64_data = false
+
+  ## Content encoding for message payloads, can be set to "gzip" or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
 `

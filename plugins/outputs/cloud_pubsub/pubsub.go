@@ -62,6 +62,14 @@ const sampleConfig = `
   ## Optional. If true, published PubSub message data will be base64-encoded.
   # base64_data = false
 
+  ## Content encoding for message payloads, can be set to "gzip" or
+  ## "identity" to apply no encoding.
+
+  ## Please note that when send_batched = false each pubsub message contains only
+  ## a single metric, it is recommended to use compression with batch format
+  ## for best results.
+  # content_encoding = "identity"
+
   ## Optional. PubSub attributes to add to metrics.
   # [outputs.cloud_pubsub.attributes]
   #   my_attr = "tag_value"
@@ -79,6 +87,7 @@ type PubSub struct {
 	PublishNumGoroutines  int             `toml:"publish_num_go_routines"`
 	PublishTimeout        config.Duration `toml:"publish_timeout"`
 	Base64Data            bool            `toml:"base64_data"`
+	ContentEncoding       string          `toml:"content_encoding"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -89,6 +98,7 @@ type PubSub struct {
 
 	serializer     serializers.Serializer
 	publishResults []publishResult
+	encoder        internal.ContentEncoder
 }
 
 func (ps *PubSub) Description() string {
@@ -114,6 +124,12 @@ func (ps *PubSub) Connect() error {
 
 	if ps.stubTopic == nil {
 		return ps.initPubSubClient()
+	}
+
+	var err error
+	ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -220,6 +236,10 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 			encoded := base64.StdEncoding.EncodeToString(b)
 			b = []byte(encoded)
 		}
+		b, err = ps.encoder.Encode(b)
+		if err != nil {
+			return nil, err
+		}
 
 		msg := &pubsub.Message{Data: b}
 		if ps.Attributes != nil {
@@ -241,8 +261,15 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 			b = []byte(encoded)
 		}
 
+		b, err = ps.encoder.Encode(b)
+		if err != nil {
+			ps.Log.Debugf("could not encode metric: %v", err)
+			continue
+		}
+		data := make([]byte, len(b))
+		copy(data, b)
 		msgs[i] = &pubsub.Message{
-			Data: b,
+			Data: data,
 		}
 		if ps.Attributes != nil {
 			msgs[i].Attributes = ps.Attributes

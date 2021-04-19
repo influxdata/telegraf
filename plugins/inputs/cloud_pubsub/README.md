@@ -80,6 +80,10 @@ and creates metrics using one of the supported [input data formats][].
   ## PubSub message data before parsing. Many GCP services that
   ## output JSON to Google PubSub base64-encode the JSON payload.
   # base64_data = false
+
+  ## Content encoding for message payloads, can be set to "gzip" or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
 ```
 
 ### Multiple Subscriptions and Topics

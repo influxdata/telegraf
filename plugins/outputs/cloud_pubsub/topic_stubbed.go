@@ -14,6 +14,7 @@ import (
 	"cloud.google.com/go/pubsub"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"google.golang.org/api/support/bundler"
@@ -53,9 +54,11 @@ type (
 
 		published map[string]*pubsub.Message
 
-		bundler     *bundler.Bundler
-		bLock       sync.Mutex
-		bundleCount int
+		bundler         *bundler.Bundler
+		bLock           sync.Mutex
+		bundleCount     int
+		Base64Data      bool
+		ContentEncoding string
 	}
 )
 
@@ -64,9 +67,10 @@ func getTestResources(tT *testing.T, settings pubsub.PublishSettings, testM []te
 
 	metrics := make([]telegraf.Metric, len(testM))
 	t := &stubTopic{
-		T:         tT,
-		ReturnErr: make(map[string]bool),
-		published: make(map[string]*pubsub.Message),
+		T:               tT,
+		ReturnErr:       make(map[string]bool),
+		published:       make(map[string]*pubsub.Message),
+		ContentEncoding: "identity",
 	}
 
 	for i, tm := range testM {
@@ -85,7 +89,9 @@ func getTestResources(tT *testing.T, settings pubsub.PublishSettings, testM []te
 		PublishByteThreshold:  settings.ByteThreshold,
 		PublishNumGoroutines:  settings.NumGoroutines,
 		PublishTimeout:        config.Duration(settings.Timeout),
+		ContentEncoding:       "identity",
 	}
+	ps.encoder, _ = internal.NewContentEncoder(ps.ContentEncoding)
 	ps.SetSerializer(s)
 
 	return ps, t, metrics
@@ -179,19 +185,23 @@ func (t *stubTopic) sendBundle() func(items interface{}) {
 
 func (t *stubTopic) parseIDs(msg *pubsub.Message) []string {
 	p, _ := parsers.NewInfluxParser()
-	metrics, err := p.Parse(msg.Data)
+	d := msg.Data
+	decoder, _ := internal.NewContentDecoder(t.ContentEncoding)
+	d, err := decoder.Decode(d)
 	if err != nil {
-		// Just attempt to base64-decode first before returning error.
-		d, err := base64.StdEncoding.DecodeString(string(msg.Data))
-		if err != nil {
-			t.Errorf("unable to base64-decode potential test message: %v", err)
-		}
-		metrics, err = p.Parse(d)
-		if err != nil {
-			t.Fatalf("unexpected parsing error: %v", err)
-		}
+		t.Errorf("unable to decode message: %v", err)
 	}
-
+	if t.Base64Data {
+		strData, err := base64.StdEncoding.DecodeString(string(d))
+		if err != nil {
+			t.Errorf("unable to base64 decode message: %v", err)
+		}
+		d = strData
+	}
+	metrics, err := p.Parse(d)
+	if err != nil {
+		t.Fatalf("unexpected parsing error: %v", err)
+	}
 	ids := make([]string, len(metrics))
 	for i, met := range metrics {
 		id, _ := met.GetField("value")
