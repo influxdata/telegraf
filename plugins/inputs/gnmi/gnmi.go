@@ -55,8 +55,8 @@ type GNMI struct {
 	acc     telegraf.Accumulator
 	cancel  context.CancelFunc
 	wg      sync.WaitGroup
-	// Lookup/name/key/value
-	lookup map[string]map[string]map[string]interface{}
+	// Lookup/name/value
+	lookup map[string]map[string]string
 
 	Log telegraf.Logger
 }
@@ -87,7 +87,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	var request *gnmi.SubscribeRequest
 	c.acc = acc
 	ctx, c.cancel = context.WithCancel(context.Background())
-	c.lookup = make(map[string]map[string]map[string]interface{})
+	c.lookup = make(map[string]map[string]string)
 
 	// Validate configuration
 	if request, err = c.newSubscribeRequest(); err != nil {
@@ -135,7 +135,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 
 		if subscription.TagOnly {
 			// Create the top-level lookup for this tag
-			c.lookup[name] = make(map[string]map[string]interface{})
+			c.lookup[name] = make(map[string]string)
 		}
 	}
 	for alias, path := range c.Aliases {
@@ -147,7 +147,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	for _, addr := range c.Addresses {
 		// Update the lookup table with this address
 		for lu := range c.lookup {
-			c.lookup[lu] = make(map[string]map[string]interface{})
+			c.lookup[lu] = make(map[string]string)
 		}
 		go func(address string) {
 			defer c.wg.Done()
@@ -300,24 +300,28 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 			} else {
 				c.Log.Debugf("No measurement alias for gNMI path: %s", name)
 			}
+		    lastAliasPath = aliasPath
 		}
+
+        luTags := make(map[string]string, len(tags))
+        for key, val := range tags {
+            if key != "path" {
+              luTags[key] = val
+            }
+        }
+        luBKey, _ := json.Marshal(luTags)
+        luKey := string(luBKey)
 
 		// Update tag lookups and discard rest of update
 		if lu, ok := c.lookup[name]; ok {
-			updateLookups(lu, tags, fields)
+			updateLookups(lu, luKey, fields)
 			continue
 		}
 
 		// Apply lookups if present
 		for k, v := range c.lookup {
-            lu_jkey, _ := json.Marshal(tags)
-            lu_key := string(lu_jkey)
-            c.Log.Debugf("CRF: %s", lu_key)
-			if t, ok := v[lu_key]; ok {
-				for name, val := range t {
-					tagName := fmt.Sprintf("%s_%s", k, name)
-					tags[tagName] = val.(string)
-				}
+			if t, ok := v[luKey]; ok {
+                tags[k] = t
 			}
 		}
 
@@ -343,8 +347,6 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 
 			grouper.Add(name, tags, timestamp, key, v)
 		}
-
-		lastAliasPath = aliasPath
 	}
 
 	// Add grouped measurements
@@ -353,17 +355,9 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 	}
 }
 
-func updateLookups(lu map[string]map[string]interface{}, tags map[string]string, fields map[string]interface{}) {
-    lu_jkey, _ := json.Marshal(tags)
-    lu_key := string(lu_jkey)
-	name, ok := lu[lu_key]
-	if !ok {
-		name = make(map[string]interface{})
-		lu[lu_key] = name
-	}
-	for k, v := range fields {
-		shortName := path.Base(k)
-		name[shortName] = v
+func updateLookups(lu map[string]string, luKey string, fields map[string]interface{}) {
+	for _, v := range fields {
+		lu[luKey] = fmt.Sprintf("%v", v)
 	}
 }
 
@@ -419,18 +413,18 @@ func (c *GNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string,
 }
 
 // Parse path to path-buffer and tag-field
-func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string) (string, string) {
+func (c *GNMI) handlePath(gPath *gnmi.Path, tags map[string]string, prefix string) (string, string) {
 	var aliasPath string
 	builder := bytes.NewBufferString(prefix)
 
 	// Prefix with origin
-	if len(path.Origin) > 0 {
-		builder.WriteString(path.Origin)
+	if len(gPath.Origin) > 0 {
+		builder.WriteString(gPath.Origin)
 		builder.WriteRune(':')
 	}
 
 	// Parse generic keys from prefix
-	for _, elem := range path.Elem {
+	for _, elem := range gPath.Elem {
 		if len(elem.Name) > 0 {
 			builder.WriteRune('/')
 			builder.WriteString(elem.Name)
@@ -446,10 +440,11 @@ func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string
 				key = strings.Replace(key, "-", "_", -1)
 
 				// Use short-form of key if possible
-				if _, exists := tags[key]; exists {
+                shortKey := path.Base(name)+"/"+key
+				if _, exists := tags[shortKey]; exists {
 					tags[name+"/"+key] = val
 				} else {
-					tags[key] = val
+					tags[shortKey] = val
 				}
 
 			}
