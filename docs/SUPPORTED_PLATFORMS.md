@@ -4,48 +4,44 @@ Telegraf is a cross-platform application. This doc helps define which operating 
 
 Telegraf is supported on Linux, FreeBSD, Windows, and macOS. It is written in Go which supports these operating systems and more. Telegraf may work on Go's other operating systems and users are welcome to build their own binaries for them. Bug reports should be submitted only for supported platforms.
 
-https://golang.org/doc/install/source
-
-https://github.com/golang/go/wiki/MinimumRequirements#operating-systems
+Golang.org has a [table](https://golang.org/doc/install/source#environment) of valid OS and architecture combinations and the golang wiki has more specific [minimum requirements](https://github.com/golang/go/wiki/MinimumRequirements#operating-systems) for Go itself.
 
 Linux
 -----
-Telegraf intent: *Support latest versions of the most popular distributions*
+Telegraf intent: *Support latest versions of major linux distributions*
 
-https://distrowatch.com/dwres.php?resource=major
+Telegraf supports RHEL, Fedora, Debian, and Ubuntu. InfluxData provides package repositories for these distributions. Instructions for using the package repositories can be found on [docs.influxdata.com](https://docs.influxdata.com/telegraf/latest/introduction/installation/). Bug reports shuld be submitted only for supported distributions and releases.
 
-Telegraf supports RHEL, Fedora, Debian, and Ubuntu. InfluxData provides package repositories for these distributions. Instructions for using the package repositories can be found on [docs.influxdata.com](https://docs.influxdata.com/telegraf/v1.16/introduction/installation/) Bug reports shuld be submitted only for supported distributions and releases.
+Telegraf's Debian or Ubuntu packages are likely to work on other Debian-based distributions although these are not supported. Similarly, Telegraf's Fedora and RHEL packages are likely to work on other Redhat-based distributions although again these are not supported.
 
-Telegraf releases include .tar.gz packages for use with other distributions, for building containers, or for installation without a package manager. As part of telegraf's release process we publish official images to Docker Hub.
+Telegraf releases include .tar.gz packages for use with other distributions, for building container images, or for installation without a package manager. As part of telegraf's release process we publish [official images](https://hub.docker.com/_/telegraf) to Docker Hub.
 
-https://hub.docker.com/_/telegraf
+Distrowatch lists [major distributions](https://distrowatch.com/dwres.php?resource=major) and tracks [popularity](https://distrowatch.com/dwres.php?resource=popularity) of distributions. Wikipedia lists [linux distributions](https://en.wikipedia.org/wiki/List_of_Linux_distributions) by the major distribution they're based on.
 
 ### RHEL
 Red Hat makes a major release every four to five years and supports each release in production for ten years. Extended support is available for three or more years.
 
 Telegraf intent: *Support releases in RHEL production, but not in extended support.*
 
-https://en.wikipedia.org/wiki/Red_Hat_Enterprise_Linux#Version_history_and_timeline
+Redhat publishes [release history](https://access.redhat.com/articles/3078) and wikipedia has a [summary timeline](https://en.wikipedia.org/wiki/Red_Hat_Enterprise_Linux#Version_history_and_timeline).
 
 As of April 2021, 7 and 8 are production releases.
 
 ### Ubuntu
-Ubuntu makes two releases a year. Every two years one of the releases is an LTS (long-term support) release. Non-LTS releases are supported for nine months. LTS releases are in maintenance for five years, then in extended security maintenance for up to three more years.
+Ubuntu makes two releases a year. Every two years one of the releases is an LTS (long-term support) release. Interim (non-LTS) releases are in standard support for nine months. LTS releases are in maintenance for five years, then in extended security maintenance for up to three more years.
 
-Telegraf intent: *Support LTS releases in Ubuntu maintenance, but not in extended security maintenance.*
+Telegraf intent: *Support interim releases and LTS releases in Ubuntu maintenance, but not in extended security maintenance.*
 
-https://ubuntu.com/about/release-cycle
+Ubuntu publishes [release history](https://ubuntu.com/about/release-cycle) and wikipedia has a [table](https://en.wikipedia.org/wiki/Ubuntu_version_history#Table_of_versions) of all releases and support status.
 
-https://en.wikipedia.org/wiki/Ubuntu_version_history
-
-As of April 2021, Ubuntu 16.04 LTS, 20.04 LTS, and 21.04 are in maintenance.
+As of April 2021, Ubuntu 20.10 is in standard support. Ubuntu 18.04 LTS and 20.04 LTS are in maintenance.
 
 ### Debian
-Debian generally makes major releases every two years and provides security support for each release for three years.
+Debian generally makes major releases every two years and provides security support for each release for three years. After security support expires the release enters long term support (LTS) until at least five years after release.
 
 Telegraf intent: *Support releases under Debian security support*
 
-https://en.wikipedia.org/wiki/Debian_version_history#Release_table
+Debian publishes [releases and support status](https://www.debian.org/releases/) and wikipedia has a [summary table](https://en.wikipedia.org/wiki/Debian_version_history#Release_table).
 
 As of April 2021, Debian 10 is in security support.
 
@@ -54,7 +50,7 @@ Fedora makes two releases a year and supports each release for a year.
 
 Telegraf intent: *Support releases supported by Fedora*
 
-https://en.wikipedia.org/wiki/Fedora_version_history#Version_history
+Fedora publishes [release history](https://fedoraproject.org/wiki/Releases) and wikipedia has a [summary table](https://en.wikipedia.org/wiki/Fedora_version_history#Version_history).
 
 FreeBSD
 -------
@@ -62,34 +58,36 @@ FreeBSD makes major releases about every two years. Releases reach end of life a
 
 Telegraf intent: *Support releases under FreeBSD security support*
 
-https://en.wikipedia.org/wiki/FreeBSD#Version_history
-
-https://www.freebsd.org/security/#sup
+FreeBSD publishes [release history](https://www.freebsd.org/security/#sup) and wikipedia has a [summary table](https://en.wikipedia.org/wiki/FreeBSD#Version_history).
 
 As of April 2021, releases 11 and 12 are under security support.
 
 Windows
 -------
-Windows 10 and Windows Server.
+Telegraf intent: *Support current versions of Windows and Windows Server*
+
+Microsoft has two release channels, the semi-annual channel (SAC) and the long-term servicing channel (LTSC). The semi-annual channel is for mainstream feature releases.
+
+Microsoft publishes [lifecycle policy by release](https://docs.microsoft.com/en-us/lifecycle/products/?terms=windows) and a [product lifecycle faq](https://docs.microsoft.com/en-us/lifecycle/faq/windows).
 
 ### Windows 10
-Windows 10 releases are in mainstream servicing timeline for 18 or 30 months.
+Windows 10 makes SAC releases twice a year and supports those releases for [18 or 30 months](https://docs.microsoft.com/en-us/lifecycle/faq/windows#what-is-the-servicing-timeline-for-a-version-feature-update-of-windows-10). They also make LTSC releases which are supported for 10 years but are intended only for medical or industrial devices that require a static feature set.
 
-Telegraf intent: *Support versions in mainstream servicing timeline*
+Telegraf intent: *Support semi-annual channel releases supported by Microsoft*
 
-https://docs.microsoft.com/en-us/lifecycle/faq/windows
+Microsoft publishes Windows 10 [release information](https://docs.microsoft.com/en-us/windows/release-health/release-information), and [servicing channels](https://docs.microsoft.com/en-us/windows/deployment/update/get-started-updates-channels-tools). Wikipedia has a [summary table](https://en.wikipedia.org/wiki/Windows_10_version_history#Channels) of support status.
 
-https://en.wikipedia.org/wiki/Windows_10#Feature_updates
+As of April 2021, versions 19H2, 20H1, and 20H2 are supported.
 
 ### Windows Server
 
-Windows server has much longer support periods: 5 years mainstream + 5 additional years extended.
+Windows Server makes SAC releases for that are supported for 18 months and LTSC releases that are supported for five years under mainstream support and five more years under extended support.
 
-https://en.wikipedia.org/wiki/Windows_Server#Long_Term_Servicing_Channel_(LTSC)
+Telegraf intent: *Support current semi-annual channel releases supported by Microsoft and long-term releases under mainstream support*
 
-Telegraf intent: *Support releases under mainstream support*
+Microsoft publishes Windows Server [release information](https://docs.microsoft.com/en-us/windows-server/get-started/windows-server-release-info) and [servicing channels](https://docs.microsoft.com/en-us/windows-server/get-started-19/servicing-channels-19).
 
-As of April 2021, Server 2016 and Server 2019 are under mainstream support.
+As of April 2021, Server 2016 (version 1607) and Server 2019 (version 1809) are LTSC releases under mainstream support and versions 1909, 2004, and 20H2 are supported SAC releases.
 
 macOS
 -----
@@ -97,6 +95,6 @@ MacOS makes one major release a year and provides support for each release for t
 
 Telegraf intent: *Support releases supported by Apple*
 
-https://en.wikipedia.org/wiki/MacOS#Release_history
+Release history is available from [wikipedia]https://en.wikipedia.org/wiki/MacOS#Release_history
 
 As of April 2021, 10.14, 10.15, and 11 are supported.
