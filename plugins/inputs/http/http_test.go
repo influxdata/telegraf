@@ -286,7 +286,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			name: "success",
 			plugin: &plugin.HTTP{
 				URLs: []string{u.String() + "/write"},
-				HttpClientConfig: httpconfig.HttpClientConfig{
+				HTTPClientConfig: httpconfig.HTTPClientConfig{
 					ClientID:     "howdy",
 					ClientSecret: "secret",
 					TokenURL:     u.String() + "/token",

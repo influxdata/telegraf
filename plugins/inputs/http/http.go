@@ -34,7 +34,7 @@ type HTTP struct {
 	SuccessStatusCodes []int `toml:"success_status_codes"`
 
 	client *http.Client
-	httpconfig.HttpClientConfig
+	httpconfig.HTTPClientConfig
 
 	// The parser will automatically be set by Telegraf core code because
 	// this plugin implements the ParserInput interface (i.e. the SetParser method)
@@ -109,7 +109,7 @@ func (*HTTP) Description() string {
 
 func (h *HTTP) Init() error {
 	ctx := context.Background()
-	client, err := h.HttpClientConfig.CreateClient(ctx)
+	client, err := h.HTTPClientConfig.CreateClient(ctx)
 	if err != nil {
 		return err
 	}

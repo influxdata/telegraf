@@ -13,7 +13,7 @@ import (
 )
 
 // Common HTTP client struct.
-type HttpClientConfig struct {
+type HTTPClientConfig struct {
 	// OAuth2 Credentials
 	ClientID     string   `toml:"client_id"`
 	ClientSecret string   `toml:"client_secret"`
@@ -26,20 +26,20 @@ type HttpClientConfig struct {
 	tls.ClientConfig
 }
 
-func (h *HttpClientConfig) CreateClient(ctx context.Context) (*http.Client, error) {
+func (h *HTTPClientConfig) CreateClient(ctx context.Context) (*http.Client, error) {
 	tlsCfg, err := h.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	proxy, err := h.HTTPProxy.Proxy()
+	prox, err := h.HTTPProxy.Proxy()
 	if err != nil {
 		return nil, err
 	}
 
 	transport := &http.Transport{
 		TLSClientConfig: tlsCfg,
-		Proxy:           proxy,
+		Proxy:           prox,
 	}
 
 	timeout := h.Timeout
