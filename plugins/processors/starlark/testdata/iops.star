@@ -41,7 +41,8 @@ def apply(metric):
         diskiops.fields["iops"] = ( io / interval_seconds )
         diskiops.tags["name"] = disk_name
         diskiops.tags["host"] = metric.tags["host"]
-        return [diskiops]
+        diskiops.time = metric.time
+        return diskiops
 
 # This could be aggregated to obtain max IOPS using:
 #

@@ -46,10 +46,11 @@ type Starlark struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	thread    *starlark.Thread
-	applyFunc *starlark.Function
-	args      starlark.Tuple
-	results   []telegraf.Metric
+	thread           *starlark.Thread
+	applyFunc        *starlark.Function
+	args             starlark.Tuple
+	results          []telegraf.Metric
+	starlarkLoadFunc func(module string, logger telegraf.Logger) (starlark.StringDict, error)
 }
 
 func (s *Starlark) Init() error {
@@ -63,7 +64,7 @@ func (s *Starlark) Init() error {
 	s.thread = &starlark.Thread{
 		Print: func(_ *starlark.Thread, msg string) { s.Log.Debug(msg) },
 		Load: func(thread *starlark.Thread, module string) (starlark.StringDict, error) {
-			return loadFunc(module, s.Log)
+			return s.starlarkLoadFunc(module, s.Log)
 		},
 	}
 
@@ -240,7 +241,9 @@ func init() {
 
 func init() {
 	processors.AddStreaming("starlark", func() telegraf.StreamingProcessor {
-		return &Starlark{}
+		return &Starlark{
+			starlarkLoadFunc: loadFunc,
+		}
 	})
 }
 
