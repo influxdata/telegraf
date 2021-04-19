@@ -7,9 +7,6 @@ import (
 	"sort"
 	"time"
 
-	// TODO: this should be simplified
-	// Imports the OTLP client from the prometheus sidecar
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -36,20 +33,8 @@ type OTLP struct {
 }
 
 const (
-	// QuotaLabelsPerMetricDescriptor is the limit
-	// to labels (tags) per metric descriptor.
-	QuotaLabelsPerMetricDescriptor = 10
-	// QuotaStringLengthForLabelKey is the limit
-	// to string length for label key.
-	QuotaStringLengthForLabelKey = 100
-	// QuotaStringLengthForLabelValue is the limit
-	// to string length for label value.
-	QuotaStringLengthForLabelValue = 1024
-
-	// StartTime for cumulative metrics.
-	StartTime = int64(1)
-	// MaxInt is the max int64 value.
-	MaxInt = int(^uint(0) >> 1)
+	// maxInt is the max int64 value.
+	maxInt = int(^uint(0) >> 1)
 
 	defaultEndpoint            = "http://localhost:4317"
 	defaultTimeout             = time.Second * 60
@@ -262,13 +247,13 @@ func (o *OTLP) Write(metrics []telegraf.Metric) error {
 			case telegraf.Counter:
 				switch v := f.Value.(type) {
 				case uint64:
-					if v <= uint64(MaxInt) {
+					if v <= uint64(maxInt) {
 						point.Data = &otlpmetricpb.Metric_IntSum{
 							IntSum: monotonicIntegerPoint(labels, ts, currentTs, int64(v)),
 						}
 					} else {
 						point.Data = &otlpmetricpb.Metric_IntSum{
-							IntSum: monotonicIntegerPoint(labels, ts, currentTs, int64(MaxInt)),
+							IntSum: monotonicIntegerPoint(labels, ts, currentTs, int64(maxInt)),
 						}
 					}
 				case int64:
@@ -299,13 +284,13 @@ func (o *OTLP) Write(metrics []telegraf.Metric) error {
 			case telegraf.Gauge, telegraf.Untyped:
 				switch v := f.Value.(type) {
 				case uint64:
-					if v <= uint64(MaxInt) {
+					if v <= uint64(maxInt) {
 						point.Data = &otlpmetricpb.Metric_IntGauge{
 							IntGauge: intGauge(labels, ts, int64(v)),
 						}
 					} else {
 						point.Data = &otlpmetricpb.Metric_IntGauge{
-							IntGauge: intGauge(labels, ts, int64(MaxInt)),
+							IntGauge: intGauge(labels, ts, int64(maxInt)),
 						}
 					}
 				case int64:
