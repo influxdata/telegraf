@@ -19,11 +19,13 @@ import (
 
 // OpenTelemetry is the OpenTelemetry Protocol config info.
 type OpenTelemetry struct {
-	Endpoint   string            `toml:"endpoint"`
-	Timeout    string            `toml:"timeout"`
-	Headers    map[string]string `toml:"headers"`
-	Attributes map[string]string `toml:"attributes"`
-	Log        telegraf.Logger   `toml:"-"`
+	Endpoint         string            `toml:"endpoint"`
+	Timeout          string            `toml:"timeout"`
+	Compression      string            `toml:"compression"`
+	RootCertificates []string          `toml:"root_certificates"`
+	Headers          map[string]string `toml:"headers"`
+	Attributes       map[string]string `toml:"attributes"`
+	Log              telegraf.Logger   `toml:"-"`
 
 	client       *client
 	resourceTags []*telegraf.Tag
@@ -35,7 +37,8 @@ const (
 	maxInt = int(^uint(0) >> 1)
 
 	defaultEndpoint            = "http://localhost:4317"
-	defaultTimeout             = time.Second * 60
+	defaultTimeout             = time.Second * 10
+	defaultCompression         = "gzip"
 	instrumentationLibraryName = "Telegraf"
 )
 
@@ -43,12 +46,18 @@ var sampleConfig = `
   ## OpenTelemetry endpoint
   # endpoint = "http://localhost:4317"
 
-  ## Timeout used when sending data over grpc
+  ## Timeout when sending data over grpc
   # timeout = "10s"
+
+  ## Compression used to send data, supports: "gzip", "none"
+  # compression = "gzip"
+
+  ## Root certificate files for TLS
+  # root_certificates = []
 
   # Additional resource attributes
   [outputs.opentelemetry.attributes]
-  	"service.name" = "demo"
+    "service.name" = "demo"
 
   # Additional grpc metadata
   [outputs.opentelemetry.headers]
@@ -56,8 +65,7 @@ var sampleConfig = `
 
 `
 
-// Connect initiates the primary connection to the OpenTelemetry endpoint.
-func (o *OpenTelemetry) Connect() error {
+func (o *OpenTelemetry) Init() error {
 	if o.Endpoint == "" {
 		o.Endpoint = defaultEndpoint
 	}
@@ -69,10 +77,15 @@ func (o *OpenTelemetry) Connect() error {
 	if o.Timeout == "" {
 		o.grpcTimeout = defaultTimeout
 	} else {
+		var err error
 		o.grpcTimeout, err = time.ParseDuration(o.Timeout)
 		if err != nil {
 			return fmt.Errorf("invalid timeout configured")
 		}
+	}
+
+	if o.Compression == "" {
+		o.Compression = defaultCompression
 	}
 
 	for k, v := range o.Attributes {
@@ -89,16 +102,24 @@ func (o *OpenTelemetry) Connect() error {
 	)
 
 	if o.client == nil {
-		ctx := context.Background()
-		o.client = NewClient(ClientConfig{
-			URL:     endpoint,
-			Headers: metadata.New(o.Headers),
-			Timeout: o.grpcTimeout,
-		})
-		if err := o.client.ping(ctx); err != nil {
-			_ = o.client.close()
-			return err
+		o.client = &client{
+			logger:           o.Log,
+			url:              endpoint,
+			timeout:          o.grpcTimeout,
+			rootCertificates: o.RootCertificates,
+			headers:          metadata.New(o.Headers),
+			compressor:       o.Compression,
 		}
+	}
+	return nil
+}
+
+// Connect initiates the primary connection to the OpenTelemetry endpoint.
+func (o *OpenTelemetry) Connect() error {
+	ctx := context.Background()
+	if err := o.client.ping(ctx); err != nil {
+		_ = o.client.close()
+		return err
 	}
 
 	return nil

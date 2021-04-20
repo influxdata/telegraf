@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	"google.golang.org/grpc"
@@ -28,12 +29,11 @@ func TestClientWithRecoverableError(t *testing.T) {
 	u, err := url.Parse("https://" + listener.Addr().String())
 	require.NoError(t, err)
 
-	client := NewClient(
-		ClientConfig{
-			URL:     u,
-			Timeout: time.Second * 1,
-		},
-	)
+	client := client{
+		logger:  testutil.Logger{},
+		url:     u,
+		timeout: time.Second,
+	}
 	_, err = client.getConnection(context.Background())
 	require.True(t, isRecoverable(err), "expected recoverableError in error %v", err)
 }
@@ -53,12 +53,11 @@ func TestClientWithUnrecoverableError(t *testing.T) {
 	u, err := url.Parse("http://" + thing.Addr().String())
 	require.NoError(t, err)
 
-	client := NewClient(
-		ClientConfig{
-			URL:     u,
-			Timeout: time.Second * 1,
-		},
-	)
+	client := client{
+		logger:  testutil.Logger{},
+		url:     u,
+		timeout: time.Second,
+	}
 
 	err = client.ping(context.Background())
 	require.False(t, isRecoverable(err), "expected unrecoverableError in error %v", err)
@@ -71,10 +70,11 @@ func TestEmptyRequest(t *testing.T) {
 	serverURL, err := url.Parse("http://localhost:12345")
 	require.NoError(t, err)
 
-	c := NewClient(ClientConfig{
-		URL:     serverURL,
-		Timeout: time.Second,
-	})
+	c := client{
+		logger:  testutil.Logger{},
+		url:     serverURL,
+		timeout: time.Second,
+	}
 
 	err = c.store(&metricsService.ExportMetricsServiceRequest{})
 	require.NoError(t, err)

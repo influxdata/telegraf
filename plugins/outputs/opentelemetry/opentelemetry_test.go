@@ -71,7 +71,7 @@ func TestConfigOptions(t *testing.T) {
 		Endpoint: ":::::",
 		Log:      testutil.Logger{},
 	}
-	err := o.Connect()
+	err := o.Init()
 	require.Error(t, err)
 	require.EqualError(t, err, "invalid endpoint configured")
 
@@ -79,13 +79,18 @@ func TestConfigOptions(t *testing.T) {
 		Timeout: "9zzz",
 		Log:     testutil.Logger{},
 	}
-	err = o.Connect()
+	err = o.Init()
+	require.Error(t, err)
 	require.EqualError(t, err, "invalid timeout configured")
 
 	o = OpenTelemetry{
-		Endpoint: "http://" + listener.Addr().String(),
-		Log:      testutil.Logger{},
+		Endpoint:    "http://" + listener.Addr().String(),
+		Compression: "none",
+		Log:         testutil.Logger{},
 	}
+	err = o.Init()
+	require.NoError(t, err)
+
 	err = o.Connect()
 	require.NoError(t, err)
 
@@ -100,11 +105,15 @@ func TestConfigOptions(t *testing.T) {
 		"service.version": "0.0.1",
 	}
 	o = OpenTelemetry{
-		Endpoint:   "http://" + listener.Addr().String(),
-		Timeout:    "10s",
-		Attributes: attributes,
-		Log:        testutil.Logger{},
+		Endpoint:    "http://" + listener.Addr().String(),
+		Timeout:     "10s",
+		Compression: "none",
+		Attributes:  attributes,
+		Log:         testutil.Logger{},
 	}
+	err = o.Init()
+	require.NoError(t, err)
+
 	err = o.Connect()
 	require.NoError(t, err)
 
@@ -117,11 +126,15 @@ func TestConfigOptions(t *testing.T) {
 
 func TestWrite(t *testing.T) {
 	o := OpenTelemetry{
-		Endpoint: "http://" + listener.Addr().String(),
-		Timeout:  "10s",
-		Log:      testutil.Logger{},
+		Endpoint:    "http://" + listener.Addr().String(),
+		Timeout:     "10s",
+		Compression: "none",
+		Log:         testutil.Logger{},
 	}
-	err := o.Connect()
+	err := o.Init()
+	require.NoError(t, err)
+
+	err = o.Connect()
 	require.NoError(t, err)
 
 	mockMetricsServer.clear()
@@ -194,11 +207,15 @@ func TestWriteSupportedMetricKinds(t *testing.T) {
 		),
 	}
 	o := OpenTelemetry{
-		Endpoint: "http://" + listener.Addr().String(),
-		Timeout:  "10s",
-		Log:      testutil.Logger{},
+		Endpoint:    "http://" + listener.Addr().String(),
+		Timeout:     "10s",
+		Compression: "none",
+		Log:         testutil.Logger{},
 	}
-	err := o.Connect()
+	err := o.Init()
+	require.NoError(t, err)
+
+	err = o.Connect()
 	require.NoError(t, err)
 
 	mockMetricsServer.clear()
@@ -243,11 +260,15 @@ func TestWriteIgnoresInvalidKinds(t *testing.T) {
 		),
 	}
 	o := OpenTelemetry{
-		Endpoint: "http://" + listener.Addr().String(),
-		Timeout:  "10s",
-		Log:      testutil.Logger{},
+		Endpoint:    "http://" + listener.Addr().String(),
+		Timeout:     "10s",
+		Compression: "none",
+		Log:         testutil.Logger{},
 	}
-	err := o.Connect()
+	err := o.Init()
+	require.NoError(t, err)
+
+	err = o.Connect()
 	require.NoError(t, err)
 
 	mockMetricsServer.clear()

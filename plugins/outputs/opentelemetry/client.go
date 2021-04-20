@@ -12,8 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
+	"github.com/influxdata/telegraf"
 	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -60,7 +59,7 @@ var (
 // implementation may hit a single backend, so the application should create a
 // number of these clients.
 type client struct {
-	logger           log.Logger
+	logger           telegraf.Logger
 	url              *url.URL
 	timeout          time.Duration
 	rootCertificates []string
@@ -68,32 +67,6 @@ type client struct {
 	compressor       string
 
 	conn *grpc.ClientConn
-}
-
-// ClientConfig configures a Client.
-type ClientConfig struct {
-	Logger           log.Logger
-	URL              *url.URL
-	Timeout          time.Duration
-	RootCertificates []string
-	Headers          metadata.MD
-	Compressor       string
-}
-
-// NewClient creates a new Client.
-func NewClient(conf ClientConfig) *client {
-	logger := conf.Logger
-	if logger == nil {
-		logger = log.NewNopLogger()
-	}
-	return &client{
-		logger:           logger,
-		url:              conf.URL,
-		timeout:          conf.Timeout,
-		rootCertificates: conf.RootCertificates,
-		headers:          conf.Headers,
-		compressor:       conf.Compressor,
-	}
 }
 
 // getConnection will dial a new connection if one is not set.  When
@@ -107,18 +80,13 @@ func (c *client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr 
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	useAuth := c.url.Scheme != "http"
-	_ = level.Debug(c.logger).Log(
-		"msg", "new OpenTelemetry connection",
-		"auth", useAuth,
-		"url", c.url.String(),
-		"timeout", c.timeout)
+	c.logger.Debugf("new OpenTelemetry connection, url=%s timeout=%s", c.url.String(), c.timeout)
 
 	dopts := []grpc.DialOption{
 		grpc.WithBlock(), // Wait for the connection to be established before using it.
 		grpc.WithDefaultServiceConfig(serviceConfig),
 	}
-	if useAuth {
+	if c.url.Scheme != "http" {
 		var tcfg tls.Config
 		if len(c.rootCertificates) != 0 {
 			certPool := x509.NewCertPool()
@@ -140,11 +108,7 @@ func (c *client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr 
 				RootCAs:    certPool,
 			}
 		}
-		_ = level.Debug(c.logger).Log(
-			"msg", "TLS configured",
-			"server", c.url.Hostname(),
-			"root_certs", fmt.Sprint(c.rootCertificates),
-		)
+		c.logger.Debug("TLS configured, server=%s root_certs=%v", c.url.Hostname(), c.rootCertificates)
 		dopts = append(dopts, grpc.WithTransportCredentials(credentials.NewTLS(&tcfg)))
 	} else {
 		dopts = append(dopts, grpc.WithInsecure())
@@ -159,11 +123,7 @@ func (c *client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr 
 	conn, err := grpc.DialContext(ctx, address, dopts...)
 	c.conn = conn
 	if err != nil {
-		_ = level.Debug(c.logger).Log(
-			"msg", "connection status",
-			"address", address,
-			"err", err,
-		)
+		c.logger.Debug("connection status, address=%s err=%w", address, err)
 		return nil, err
 	}
 
@@ -191,14 +151,11 @@ func (c *client) ping(ctx context.Context) error {
 			return ctx.Err()
 		default:
 			if isRecoverable(err) {
-				_ = level.Info(c.logger).Log("msg", "selftest recoverable error, still trying", "err", err)
+				c.logger.Infof("ping recoverable error, still trying, err=%w", err)
 				continue
 			}
 		}
-		return fmt.Errorf(
-			"non-recoverable failure in selftest: %s",
-			truncateErrorString(err),
-		)
+		return fmt.Errorf("non-recoverable failure in ping, err=%w", err)
 	}
 }
 
@@ -240,23 +197,17 @@ func (c *client) store(req *metricsService.ExportMetricsServiceRequest) error {
 			var err error
 
 			if _, err = service.Export(metadata.NewOutgoingContext(ctx, c.headers), reqCopy, grpc.Trailer(&md)); err != nil {
-				_ = level.Error(c.logger).Log(
-					"msg", "export failure",
-					"err", truncateErrorString(err),
-					"size", proto.Size(reqCopy),
-					"trailers", fmt.Sprint(md),
-					"recoverable", isRecoverable(err),
+				c.logger.Errorf("export failure, err=%w size=%d trailers=%v recoverable=%t",
+					truncateErrorString(err),
+					proto.Size(reqCopy),
+					md,
+					isRecoverable(err),
 				)
 				errs <- err
 				return
 			}
 
-			_ = level.Debug(c.logger).Log(
-				"msg", "successful write",
-				"records", end-begin,
-				"size", proto.Size(reqCopy),
-				"trailers", fmt.Sprint(md),
-			)
+			c.logger.Debug("successful write, records=%d size=%d trailers=%v", end-begin, proto.Size(reqCopy), md)
 		}(i, end)
 	}
 	wg.Wait()
