@@ -70,9 +70,9 @@ type client struct {
 // connect will dial a new connection if one is not set.  When
 // dialing, this function uses its a new context and the same timeout
 // used for store().
-func (c *client) connect(ctx context.Context) (_ *grpc.ClientConn, retErr error) {
+func (c *client) connect(ctx context.Context) error {
 	if c.conn != nil {
-		return c.conn, nil
+		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
@@ -97,23 +97,21 @@ func (c *client) connect(ctx context.Context) (_ *grpc.ClientConn, retErr error)
 		address = net.JoinHostPort(address, c.url.Port())
 	}
 	conn, err := grpc.DialContext(ctx, address, dopts...)
-	c.conn = conn
 	if err != nil {
-		c.logger.Debug("connection status, address=%s err=%w", address, err)
-		return nil, err
+		return err
 	}
-
-	return conn, err
+	c.conn = conn
+	return err
 }
 
 // ping sends an empty request the endpoint.
 func (c *client) ping(ctx context.Context) error {
 	// Loop until the context is canceled, allowing for retryable failures.
 	for {
-		conn, err := c.connect(ctx)
+		err := c.connect(ctx)
 
 		if err == nil {
-			service := metricsService.NewMetricsServiceClient(conn)
+			service := metricsService.NewMetricsServiceClient(c.conn)
 			empty := &metricsService.ExportMetricsServiceRequest{}
 
 			_, err = service.Export(metadata.NewOutgoingContext(ctx, c.headers), empty)
@@ -145,7 +143,7 @@ func (c *client) store(req *metricsService.ExportMetricsServiceRequest) error {
 
 	// Note the call to connect() applies its own timeout for Dial().
 	ctx := context.Background()
-	conn, err := c.connect(ctx)
+	err := c.connect(ctx)
 	if err != nil {
 		return err
 	}
@@ -153,7 +151,7 @@ func (c *client) store(req *metricsService.ExportMetricsServiceRequest) error {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	service := metricsService.NewMetricsServiceClient(conn)
+	service := metricsService.NewMetricsServiceClient(c.conn)
 
 	errs := make(chan error, len(tss)/maxTimeseriesPerRequest+1)
 	var wg sync.WaitGroup

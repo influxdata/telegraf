@@ -22,7 +22,8 @@ func TestClientWithRecoverableError(t *testing.T) {
 	}
 	metricsService.RegisterMetricsServiceServer(grpcServer, &mockMetricsServer)
 	go func() {
-		_ = grpcServer.Serve(listener)
+		err := grpcServer.Serve(listener)
+		require.NoError(t, err)
 	}()
 	defer grpcServer.Stop()
 
@@ -34,7 +35,7 @@ func TestClientWithRecoverableError(t *testing.T) {
 		url:     u,
 		timeout: time.Second,
 	}
-	_, err = client.connect(context.Background())
+	err = client.connect(context.Background())
 	require.True(t, isRecoverable(err), "expected recoverableError in error %v", err)
 }
 
@@ -46,7 +47,8 @@ func TestClientWithUnrecoverableError(t *testing.T) {
 	}
 	metricsService.RegisterMetricsServiceServer(grpcServer, &mockMetricsServer)
 	go func() {
-		_ = grpcServer.Serve(thing)
+		err := grpcServer.Serve(thing)
+		require.NoError(t, err)
 	}()
 	defer grpcServer.Stop()
 
@@ -62,7 +64,7 @@ func TestClientWithUnrecoverableError(t *testing.T) {
 	err = client.ping(context.Background())
 	require.False(t, isRecoverable(err), "expected unrecoverableError in error %v", err)
 
-	_, err = client.connect(context.Background())
+	err = client.connect(context.Background())
 	require.False(t, isRecoverable(err), "expected unrecoverableError in error %v", err)
 }
 
