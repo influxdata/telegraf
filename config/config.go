@@ -827,6 +827,8 @@ func (c *Config) LoadConfigData(data []byte) error {
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
+						// If it's not specify then it's accepted true 
+						// Config file filter
 						isActive  := false						
 						if _, ok := t.Fields["is_active"]; ok {
 							c.getFieldBool(t, "is_active", &isActive)
