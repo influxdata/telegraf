@@ -2,6 +2,7 @@ package httpconfig
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 
@@ -61,6 +62,8 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context) (*http.Client, erro
 		}
 		ctx = context.WithValue(ctx, oauth2.HTTPClient, client)
 		client = oauthConfig.Client(ctx)
+	} else if h.ClientID != "" || h.ClientSecret != "" || h.TokenURL != "" {
+		log.Printf("One of the following fields is empty: Client ID, Client Secret or Token URL. Skipping OAuth.")
 	}
 
 	return client, nil
