@@ -48,7 +48,7 @@ const sampleConfigPartPerRequest = `
 		##
 		## *2: Thise fields are ignored for both "coil" and "discrete"-input type of registers. For those register types
 		##     the fields are output as zero or one in UINT64 format by default.
-		##
+
 		## Coil / discrete input example
 		# fields = [
 		#   { address=0, name="motor1_run"},
@@ -56,7 +56,7 @@ const sampleConfigPartPerRequest = `
 		#   { address=2, name="motor1_stop", omit=true},
 		#   { address=3, name="motor1_overheating"},
 		# ]
-		#
+
 		## Holding / input example
 		## All of those examples will result in FLOAT64 field outputs
 		# fields = [
@@ -67,7 +67,7 @@ const sampleConfigPartPerRequest = `
 		#   { address=7, name="frequency",    type="UINT32",  scale=0.1   },
 		#   { address=8, name="power_factor", type="INT64",   scale=0.01  },
 		# ]
-		#
+
 		## Holding / input example with type conversions
 		# fields = [
 		#   { address=0, name="rpm",         type="INT16"                   },  # will result in INT64 field
