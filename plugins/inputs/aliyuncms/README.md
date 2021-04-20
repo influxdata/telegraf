@@ -36,7 +36,26 @@ In the following order the plugin will attempt to authenticate.
   # private_key = ""
   # public_key_id = ""
   # role_name = ""
-  
+
+  ## Specify the ali cloud region list to be queried for metrics and objects discovery
+  ## If not set, all supported regions (see below) would be covered, it can provide a significant load on API, so the recommendation here 
+  ## is to limit the list as much as possible. Allowed values: https://www.alibabacloud.com/help/zh/doc-detail/40654.htm
+  ## Default supported regions are:
+  ## 21 items: cn-qingdao,cn-beijing,cn-zhangjiakou,cn-huhehaote,cn-hangzhou,cn-shanghai,cn-shenzhen,
+  ##           cn-heyuan,cn-chengdu,cn-hongkong,ap-southeast-1,ap-southeast-2,ap-southeast-3,ap-southeast-5,
+  ##           ap-south-1,ap-northeast-1,us-west-1,us-east-1,eu-central-1,eu-west-1,me-east-1
+  ##
+  ## From discovery perspective it set the scope for object discovery, the discovered info can be used to enrich
+  ## the metrics with objects attributes/tags. Discovery is supported not for all projects (if not supported, then 
+  ## it will be reported on the start - for example for 'acs_cdn' project:
+  ## 'E! [inputs.aliyuncms] Discovery tool is not activated: no discovery support for project "acs_cdn"' )
+  ## Currently, discovery supported for the following projects:
+  ## - acs_ecs_dashboard
+  ## - acs_rds_dashboard
+  ## - acs_slb_dashboard
+  ## - acs_vpc_eip   
+  regions = ["cn-hongkong"]
+
   # The minimum period for AliyunCMS metrics is 1 minute (60s). However not all
   # metrics are made available to the 1 minute period. Some are collected at
   # 3 minute, 5 minute, or larger intervals.
@@ -61,19 +80,8 @@ In the following order the plugin will attempt to authenticate.
   ## Maximum requests per second, default value is 200
   ratelimit = 200
   
-  ## Discovery regions set the scope for object discovery, the discovered info can be used to enrich
-  ## the metrics with objects attributes/tags. Discovery is supported not for all projects (if not supported, then 
-  ## it will be reported on the start - foo example for 'acs_cdn' project:
-  ## 'E! [inputs.aliyuncms] Discovery tool is not activated: no discovery support for project "acs_cdn"' )
-  ## Currently, discovery supported for the following projects:
-  ## - acs_ecs_dashboard
-  ## - acs_rds_dashboard
-  ## - acs_slb_dashboard
-  ## - acs_vpc_eip
-  ##
-  ## If not set, all regions would be covered, it can provide a significant load on API, so the recommendation here
-  ## is to limit the list as much as possible. Allowed values: https://www.alibabacloud.com/help/zh/doc-detail/40654.htm
-  discovery_regions = ["cn-hongkong"]
+  ## Deprecated, use regions instead
+  #discovery_regions = ["cn-hongkong"]
   
   ## how often the discovery API call executed (default 1m)
   #discovery_interval = "1m"

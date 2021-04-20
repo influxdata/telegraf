@@ -75,7 +75,7 @@ func (m *mockAliyunSDKCli) ProcessCommonRequest(_ *requests.CommonRequest) (resp
 	return m.resp, nil
 }
 
-func getDiscoveryTool(project string, discoverRegions []string) (*discoveryTool, error) {
+func getDiscoveryTool(project string, discoverRegions []string) (*DiscoveryTool, error) {
 	var (
 		err        error
 		credential auth.Credential
@@ -122,13 +122,12 @@ func TestPluginInitialize(t *testing.T) {
 	var err error
 
 	plugin := new(AliyunCMS)
-	plugin.DiscoveryRegions = []string{"cn-shanghai"}
-	plugin.dt, err = getDiscoveryTool("acs_slb_dashboard", plugin.DiscoveryRegions)
+	plugin.Log = testutil.Logger{Name: inputTitle}
+	plugin.Regions = []string{"cn-shanghai"}
+	plugin.dt, err = getDiscoveryTool("acs_slb_dashboard", plugin.Regions)
 	if err != nil {
 		t.Fatalf("Can't create discovery tool object: %v", err)
 	}
-
-	plugin.Log = testutil.Logger{Name: inputTitle}
 
 	httpResp := &http.Response{
 		StatusCode: 200,
@@ -149,7 +148,7 @@ func TestPluginInitialize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't create mock sdk cli: %v", err)
 	}
-	plugin.dt.cli = map[string]aliyunSdkClient{plugin.DiscoveryRegions[0]: &mockCli}
+	plugin.dt.cli = map[string]aliyunSdkClient{plugin.Regions[0]: &mockCli}
 
 	tests := []struct {
 		name                string
@@ -157,13 +156,30 @@ func TestPluginInitialize(t *testing.T) {
 		accessKeyID         string
 		accessKeySecret     string
 		expectedErrorString string
+		regions             []string
+		discoveryRegions    []string
 	}{
 		{
 			name:                "Empty project",
 			expectedErrorString: "project is not set",
+			regions:             []string{"cn-shanghai"},
 		},
 		{
 			name:            "Valid project",
+			project:         "acs_slb_dashboard",
+			regions:         []string{"cn-shanghai"},
+			accessKeyID:     "dummy",
+			accessKeySecret: "dummy",
+		},
+		{
+			name:             "'regions' is not set, but 'discovery_regions' set",
+			project:          "acs_slb_dashboard",
+			accessKeyID:      "dummy",
+			accessKeySecret:  "dummy",
+			discoveryRegions: []string{"region1", "region2"},
+		},
+		{
+			name:            "'regions' & 'discovery_regions' are not set",
 			project:         "acs_slb_dashboard",
 			accessKeyID:     "dummy",
 			accessKeySecret: "dummy",
@@ -175,11 +191,21 @@ func TestPluginInitialize(t *testing.T) {
 			plugin.Project = tt.project
 			plugin.AccessKeyID = tt.accessKeyID
 			plugin.AccessKeySecret = tt.accessKeySecret
+			plugin.Regions = tt.regions
+			plugin.DiscoveryRegions = tt.discoveryRegions
 
 			if tt.expectedErrorString != "" {
 				require.EqualError(t, plugin.Init(), tt.expectedErrorString)
 			} else {
 				require.Equal(t, nil, plugin.Init())
+			}
+
+			if len(tt.discoveryRegions) != 0 && len(tt.regions) == 0 {
+				require.Equal(t, plugin.Regions, plugin.DiscoveryRegions)
+			}
+
+			if len(tt.discoveryRegions) == 0 && len(tt.regions) == 0 { //Check if set to default
+				require.Equal(t, plugin.Regions, aliyunRegionList)
 			}
 		})
 	}
@@ -223,6 +249,7 @@ func TestGatherMetric(t *testing.T) {
 		client:      new(mockGatherAliyunCMSClient),
 		measurement: formatMeasurement("acs_slb_dashboard"),
 		Log:         testutil.Logger{Name: inputTitle},
+		Regions:     []string{"cn-shanghai"},
 	}
 
 	metric := &Metric{
@@ -261,15 +288,15 @@ func TestGather(t *testing.T) {
 		Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
 	}
 	plugin := &AliyunCMS{
-		AccessKeyID:      "my_access_key_id",
-		AccessKeySecret:  "my_access_key_secret",
-		Project:          "acs_slb_dashboard",
-		Metrics:          []*Metric{metric},
-		RateLimit:        200,
-		measurement:      formatMeasurement("acs_slb_dashboard"),
-		DiscoveryRegions: []string{"cn-shanghai"},
-		client:           new(mockGatherAliyunCMSClient),
-		Log:              testutil.Logger{Name: inputTitle},
+		AccessKeyID:     "my_access_key_id",
+		AccessKeySecret: "my_access_key_secret",
+		Project:         "acs_slb_dashboard",
+		Metrics:         []*Metric{metric},
+		RateLimit:       200,
+		measurement:     formatMeasurement("acs_slb_dashboard"),
+		Regions:         []string{"cn-shanghai"},
+		client:          new(mockGatherAliyunCMSClient),
+		Log:             testutil.Logger{Name: inputTitle},
 	}
 
 	//test table:
@@ -325,7 +352,7 @@ func TestGather(t *testing.T) {
 	}
 }
 
-func TestGetDiscoveryDataAllRegions(t *testing.T) {
+func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
 	//test table:
 	tests := []struct {
 		name                string
@@ -390,7 +417,7 @@ func TestGetDiscoveryDataAllRegions(t *testing.T) {
 				t.Fatalf("Can't create mock sdk cli: %v", err)
 			}
 			dt.cli = map[string]aliyunSdkClient{tt.region: &mockCli}
-			data, err := dt.getDiscoveryDataAllRegions(nil)
+			data, err := dt.GetDiscoveryDataAcrossRegions(nil)
 
 			require.Equal(t, tt.discData, data)
 			if err != nil {

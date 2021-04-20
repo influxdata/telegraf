@@ -23,84 +23,92 @@ import (
 const (
 	description  = "Pull Metric Statistics from Aliyun CMS"
 	sampleConfig = `
-	## Aliyun Credentials
-	## Credentials are loaded in the following order
-	## 1) Ram RoleArn credential
-	## 2) AccessKey STS token credential
-	## 3) AccessKey credential
-	## 4) Ecs Ram Role credential
-	## 5) RSA keypair credential
-	## 6) Environment variables credential
-	## 7) Instance metadata credential
-
-	# access_key_id = ""
-	# access_key_secret = ""
-	# access_key_sts_token = ""
-	# role_arn = ""
-	# role_session_name = ""
-	# private_key = ""
-	# public_key_id = ""
-	# role_name = ""
-
-	# The minimum period for AliyunCMS metrics is 1 minute (60s). However not all
-	# metrics are made available to the 1 minute period. Some are collected at
-	# 3 minute, 5 minute, or larger intervals.
-	# See: https://help.aliyun.com/document_detail/51936.html?spm=a2c4g.11186623.2.18.2bc1750eeOw1Pv
-	# Note that if a period is configured that is smaller than the minimum for a
-	# particular metric, that metric will not be returned by the Aliyun OpenAPI
-	# and will not be collected by Telegraf.
-	#
-	## Requested AliyunCMS aggregation Period (required - must be a multiple of 60s)
-	period = "5m"
-
-	## Collection Delay (required - must account for metrics availability via AliyunCMS API)
-	delay = "1m"
-
-	## Recommended: use metric 'interval' that is a multiple of 'period' to avoid
-	## gaps or overlap in pulled data
-	interval = "5m"
-
-	## Metric Statistic Project (required)
-	project = "acs_slb_dashboard"
-
-	## Maximum requests per second, default value is 200
-	ratelimit = 200
-
-	## Discovery regions set the scope for object discovery, the discovered info can be used to enrich
-	## the metrics with objects attributes/tags. Discovery is supported not for all projects (if not supported, then
-	## it will be reported on the start - foo example for 'acs_cdn' project:
-	## 'E! [inputs.aliyuncms] Discovery tool is not activated: no discovery support for project "acs_cdn"' )
-	## Currently, discovery supported for the following projects:
-	## - acs_ecs_dashboard
-	## - acs_rds_dashboard
-	## - acs_slb_dashboard
-	## - acs_vpc_eip
-	##
-	## If not set, all regions would be covered, it can provide a significant load on API, so the recommendation here
-	## is to limit the list as much as possible. Allowed values: https://www.alibabacloud.com/help/zh/doc-detail/40654.htm
-	discovery_regions = ["cn-hongkong"]
-
-	## how often the discovery API call executed (default 1m)
-	#discovery_interval = "1m"
-
-	## Metrics to Pull (Required)
-	[[inputs.aliyuncms.metrics]]
-	  ## Metrics names to be requested,
+	  ## Aliyun Credentials
+	  ## Credentials are loaded in the following order
+	  ## 1) Ram RoleArn credential
+	  ## 2) AccessKey STS token credential
+	  ## 3) AccessKey credential
+	  ## 4) Ecs Ram Role credential
+	  ## 5) RSA keypair credential
+	  ## 6) Environment variables credential
+	  ## 7) Instance metadata credential
+	  
+	  # access_key_id = ""
+	  # access_key_secret = ""
+	  # access_key_sts_token = ""
+	  # role_arn = ""
+	  # role_session_name = ""
+	  # private_key = ""
+	  # public_key_id = ""
+	  # role_name = ""
+	
+	  ## Specify the ali cloud region list to be queried for metrics and objects discovery
+	  ## If not set, all supported regions (see below) would be covered, it can provide a significant load on API, so the recommendation here 
+	  ## is to limit the list as much as possible. Allowed values: https://www.alibabacloud.com/help/zh/doc-detail/40654.htm
+	  ## Default supported regions are:
+	  ## 21 items: cn-qingdao,cn-beijing,cn-zhangjiakou,cn-huhehaote,cn-hangzhou,cn-shanghai,cn-shenzhen,
+	  ##           cn-heyuan,cn-chengdu,cn-hongkong,ap-southeast-1,ap-southeast-2,ap-southeast-3,ap-southeast-5,
+	  ##           ap-south-1,ap-northeast-1,us-west-1,us-east-1,eu-central-1,eu-west-1,me-east-1
+	  ##
+	  ## From discovery perspective it set the scope for object discovery, the discovered info can be used to enrich
+	  ## the metrics with objects attributes/tags. Discovery is supported not for all projects (if not supported, then 
+	  ## it will be reported on the start - for example for 'acs_cdn' project:
+	  ## 'E! [inputs.aliyuncms] Discovery tool is not activated: no discovery support for project "acs_cdn"' )
+	  ## Currently, discovery supported for the following projects:
+	  ## - acs_ecs_dashboard
+	  ## - acs_rds_dashboard
+	  ## - acs_slb_dashboard
+	  ## - acs_vpc_eip   
+	  regions = ["cn-hongkong"]
+	
+	  # The minimum period for AliyunCMS metrics is 1 minute (60s). However not all
+	  # metrics are made available to the 1 minute period. Some are collected at
+	  # 3 minute, 5 minute, or larger intervals.
+	  # See: https://help.aliyun.com/document_detail/51936.html?spm=a2c4g.11186623.2.18.2bc1750eeOw1Pv
+	  # Note that if a period is configured that is smaller than the minimum for a
+	  # particular metric, that metric will not be returned by the Aliyun OpenAPI
+	  # and will not be collected by Telegraf.
+	  #
+	  ## Requested AliyunCMS aggregation Period (required - must be a multiple of 60s)
+	  period = "5m"
+	  
+	  ## Collection Delay (required - must account for metrics availability via AliyunCMS API)
+	  delay = "1m"
+	  
+	  ## Recommended: use metric 'interval' that is a multiple of 'period' to avoid
+	  ## gaps or overlap in pulled data
+	  interval = "5m"
+	  
+	  ## Metric Statistic Project (required)
+	  project = "acs_slb_dashboard"
+	  
+	  ## Maximum requests per second, default value is 200
+	  ratelimit = 200
+	  
+	  ## Deprecated, use regions instead
+	  #discovery_regions = ["cn-hongkong"]
+	  
+	  ## how often the discovery API call executed (default 1m)
+	  #discovery_interval = "1m"
+	  
+	  ## Metrics to Pull (Required)
+	  [[inputs.aliyuncms.metrics]]
+	  ## Metrics names to be requested, 
 	  ## described here (per project): https://help.aliyun.com/document_detail/28619.html?spm=a2c4g.11186623.6.690.1938ad41wg8QSq
 	  names = ["InstanceActiveConnection", "InstanceNewConnection"]
-
+	  
 	  ## Dimension filters for Metric (these are optional).
 	  ## This allows to get additional metric dimension. If dimension is not specified it can be returned or
 	  ## the data can be aggregated - it depends on particular metric, you can find details here: https://help.aliyun.com/document_detail/28619.html?spm=a2c4g.11186623.6.690.1938ad41wg8QSq
 	  ##
 	  ## Note, that by default dimension filter includes the list of discovered objects in scope (if discovery is enabled)
 	  ## Values specified here would be added into the list of discovered objects.
-	  ## You can specify either single dimension:
+	  ## You can specify either single dimension:      
 	  #dimensions = '{"instanceId": "p-example"}'
-
+	  
 	  ## Or you can specify several dimensions at once:
 	  #dimensions = '[{"instanceId": "p-example"},{"instanceId": "q-example"}]'
-
+	  
 	  ## Enrichment tags, can be added from discovery (if supported)
 	  ## Notation is <measurement_tag_name>:<JMES query path (https://jmespath.org/tutorial.html)>
 	  ## To figure out which fields are available, consult the Describe<ObjectType> API per project.
@@ -111,10 +119,10 @@ const (
 	  #    "cluster_owner:Tags.Tag[?TagKey=='cs.cluster.name'].TagValue | [0]"
 	  #    ]
 	  ## The following tags added by default: regionId (if discovery enabled), userId, instanceId.
-
+	  
 	  ## Allow metrics without discovery data, if discovery is enabled. If set to true, then metric without discovery
-	  ## data would be emitted, otherwise dropped. This cane be of help, in case debugging dimension filters, or partial coverage
-	  ## of discovery scope vs monitoring scope
+	  ## data would be emitted, otherwise dropped. This cane be of help, in case debugging dimension filters, or partial coverage 
+	  ## of discovery scope vs monitoring scope 
 	  #allow_dps_without_discovery = false
 `
 )
@@ -131,7 +139,8 @@ type (
 		PublicKeyID       string `toml:"public_key_id"`
 		RoleName          string `toml:"role_name"`
 
-		DiscoveryRegions  []string        `toml:"discovery_regions"`
+		Regions           []string        `toml:"regions"`
+		DiscoveryRegions  []string        `toml:"discovery_regions"` //this is obsolete
 		DiscoveryInterval config.Duration `toml:"discovery_interval"`
 		Period            config.Duration `toml:"period"`
 		Delay             config.Duration `toml:"delay"`
@@ -144,7 +153,7 @@ type (
 		client        aliyuncmsClient
 		windowStart   time.Time
 		windowEnd     time.Time
-		dt            *discoveryTool
+		dt            *DiscoveryTool
 		dimensionKey  string
 		discoveryData map[string]interface{}
 		measurement   string
@@ -177,6 +186,31 @@ type (
 	}
 )
 
+// https://www.alibabacloud.com/help/doc-detail/40654.htm?gclid=Cj0KCQjw4dr0BRCxARIsAKUNjWTAMfyVUn_Y3OevFBV3CMaazrhq0URHsgE7c0m0SeMQRKlhlsJGgIEaAviyEALw_wcB
+var aliyunRegionList = []string{
+	"cn-qingdao",
+	"cn-beijing",
+	"cn-zhangjiakou",
+	"cn-huhehaote",
+	"cn-hangzhou",
+	"cn-shanghai",
+	"cn-shenzhen",
+	"cn-heyuan",
+	"cn-chengdu",
+	"cn-hongkong",
+	"ap-southeast-1",
+	"ap-southeast-2",
+	"ap-southeast-3",
+	"ap-southeast-5",
+	"ap-south-1",
+	"ap-northeast-1",
+	"us-west-1",
+	"us-east-1",
+	"eu-central-1",
+	"eu-west-1",
+	"me-east-1",
+}
+
 // SampleConfig implements telegraf.Inputs interface
 func (s *AliyunCMS) SampleConfig() string {
 	return sampleConfig
@@ -187,6 +221,7 @@ func (s *AliyunCMS) Description() string {
 	return description
 }
 
+// Init perform checks of plugin inputs and initialize internals
 func (s *AliyunCMS) Init() error {
 	if s.Project == "" {
 		return errors.New("project is not set")
@@ -237,9 +272,26 @@ func (s *AliyunCMS) Init() error {
 
 	s.measurement = formatMeasurement(s.Project)
 
+	//Check regions
+	if len(s.DiscoveryRegions) != 0 {
+		s.Log.Warn("'discovery_regions' is deprecated. Use 'regions' instead.")
+	}
+
+	if len(s.Regions) == 0 {
+		s.Regions = s.DiscoveryRegions
+	} else {
+		s.Log.Warn("'discovery_regions' is deprecated and ignored in favour of 'regions'.")
+	}
+
+	if len(s.Regions) == 0 {
+		s.Regions = aliyunRegionList
+		s.Log.Warnf("'regions' is not set. Metrics will be queried across %d regions:\n%s",
+			len(aliyunRegionList), strings.Join(aliyunRegionList, ","))
+	}
+
 	//Init discovery...
 	if s.dt == nil { //Support for tests
-		s.dt, err = NewDiscoveryTool(s.DiscoveryRegions, s.Project, s.Log, credential, int(float32(s.RateLimit)*0.2), time.Duration(s.DiscoveryInterval))
+		s.dt, err = NewDiscoveryTool(s.Regions, s.Project, s.Log, credential, int(float32(s.RateLimit)*0.2), time.Duration(s.DiscoveryInterval))
 		if err != nil {
 			s.Log.Errorf("Discovery tool is not activated: %v", err)
 			s.dt = nil
@@ -247,7 +299,7 @@ func (s *AliyunCMS) Init() error {
 		}
 	}
 
-	s.discoveryData, err = s.dt.getDiscoveryDataAllRegions(nil)
+	s.discoveryData, err = s.dt.GetDiscoveryDataAcrossRegions(nil)
 	if err != nil {
 		s.Log.Errorf("Discovery tool is not activated: %v", err)
 		s.dt = nil
@@ -264,6 +316,7 @@ func (s *AliyunCMS) Init() error {
 	return nil
 }
 
+// Start plugin discovery loop, metrics are gathered through Gather
 func (s *AliyunCMS) Start(telegraf.Accumulator) error {
 	//Start periodic discovery process
 	if s.dt != nil {
@@ -299,6 +352,7 @@ func (s *AliyunCMS) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// Stop - stops the plugin discovery loop
 func (s *AliyunCMS) Stop() {
 	if s.dt != nil {
 		s.dt.Stop()
@@ -326,71 +380,73 @@ func (s *AliyunCMS) updateWindow(relativeTo time.Time) {
 
 // Gather given metric and emit error
 func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, metric *Metric) error {
-	req := cms.CreateDescribeMetricListRequest()
-	req.Period = strconv.FormatInt(int64(time.Duration(s.Period).Seconds()), 10)
-	req.MetricName = metricName
-	req.Length = "10000"
-	req.Namespace = s.Project
-	req.EndTime = strconv.FormatInt(s.windowEnd.Unix()*1000, 10)
-	req.StartTime = strconv.FormatInt(s.windowStart.Unix()*1000, 10)
-	req.Dimensions = metric.requestDimensionsStr
+	for _, region := range s.Regions {
+		req := cms.CreateDescribeMetricListRequest()
+		req.Period = strconv.FormatInt(int64(time.Duration(s.Period).Seconds()), 10)
+		req.MetricName = metricName
+		req.Length = "10000"
+		req.Namespace = s.Project
+		req.EndTime = strconv.FormatInt(s.windowEnd.Unix()*1000, 10)
+		req.StartTime = strconv.FormatInt(s.windowStart.Unix()*1000, 10)
+		req.Dimensions = metric.requestDimensionsStr
+		req.RegionId = region
 
-	for more := true; more; {
-		resp, err := s.client.DescribeMetricList(req)
-		if err != nil {
-			return errors.Errorf("failed to query metricName list: %v", err)
-		} else if resp.Code != "200" {
-			s.Log.Errorf("failed to query metricName list: %v", resp.Message)
-			break
-		}
-
-		var datapoints []map[string]interface{}
-		if err = json.Unmarshal([]byte(resp.Datapoints), &datapoints); err != nil {
-			return errors.Errorf("failed to decode response datapoints: %v", err)
-		}
-
-		if len(datapoints) == 0 {
-			s.Log.Debugf("No metrics returned from CMS, response msg: %s", resp.Message)
-			break
-		}
-
-	NextDataPoint:
-		for _, datapoint := range datapoints {
-			fields := map[string]interface{}{}
-			datapointTime := int64(0)
-			tags := map[string]string{}
-			for key, value := range datapoint {
-				switch key {
-				case "instanceId", "BucketName":
-					tags[key] = value.(string)
-					if metric.discoveryTags != nil { //discovery can be not activated
-						//Skipping data point if discovery data not exist
-						if _, ok := metric.discoveryTags[value.(string)]; !ok &&
-							!metric.AllowDataPointWODiscoveryData {
-							s.Log.Warnf("Instance %q is not found in discovery, skipping monitoring datapoint...", value.(string))
-							continue NextDataPoint
-						}
-
-						for k, v := range metric.discoveryTags[value.(string)] {
-							tags[k] = v
-						}
-					}
-				case "userId":
-					tags[key] = value.(string)
-				case "timestamp":
-					datapointTime = int64(value.(float64)) / 1000
-				default:
-					fields[formatField(metricName, key)] = value
-				}
+		for more := true; more; {
+			resp, err := s.client.DescribeMetricList(req)
+			if err != nil {
+				return errors.Errorf("failed to query metricName list: %v", err)
+			} else if resp.Code != "200" {
+				s.Log.Errorf("failed to query metricName list: %v", resp.Message)
+				break
 			}
-			//Log.logW("Datapoint time: %s, now: %s", time.Unix(datapointTime, 0).Format(time.RFC3339), time.Now().Format(time.RFC3339))
-			acc.AddFields(s.measurement, fields, tags, time.Unix(datapointTime, 0))
+
+			var datapoints []map[string]interface{}
+			if err = json.Unmarshal([]byte(resp.Datapoints), &datapoints); err != nil {
+				return errors.Errorf("failed to decode response datapoints: %v", err)
+			}
+
+			if len(datapoints) == 0 {
+				s.Log.Debugf("No metrics returned from CMS, response msg: %s", resp.Message)
+				break
+			}
+
+		NextDataPoint:
+			for _, datapoint := range datapoints {
+				fields := map[string]interface{}{}
+				datapointTime := int64(0)
+				tags := map[string]string{}
+				for key, value := range datapoint {
+					switch key {
+					case "instanceId", "BucketName":
+						tags[key] = value.(string)
+						if metric.discoveryTags != nil { //discovery can be not activated
+							//Skipping data point if discovery data not exist
+							if _, ok := metric.discoveryTags[value.(string)]; !ok &&
+								!metric.AllowDataPointWODiscoveryData {
+								s.Log.Warnf("Instance %q is not found in discovery, skipping monitoring datapoint...", value.(string))
+								continue NextDataPoint
+							}
+
+							for k, v := range metric.discoveryTags[value.(string)] {
+								tags[k] = v
+							}
+						}
+					case "userId":
+						tags[key] = value.(string)
+					case "timestamp":
+						datapointTime = int64(value.(float64)) / 1000
+					default:
+						fields[formatField(metricName, key)] = value
+					}
+				}
+				//Log.logW("Datapoint time: %s, now: %s", time.Unix(datapointTime, 0).Format(time.RFC3339), time.Now().Format(time.RFC3339))
+				acc.AddFields(s.measurement, fields, tags, time.Unix(datapointTime, 0))
+			}
+
+			req.NextToken = resp.NextToken
+			more = req.NextToken != ""
 		}
-
-		req.NextToken = resp.NextToken
-		more = req.NextToken != ""
 	}
-
 	return nil
 }
 
@@ -438,7 +494,7 @@ func (s *AliyunCMS) prepareTagsAndDimensions(metric *Metric) {
 L:
 	for {
 		select {
-		case s.discoveryData = <-s.dt.dataChan:
+		case s.discoveryData = <-s.dt.DataChan:
 			newData = true
 			continue
 		default:
