@@ -31,4 +31,7 @@ type ClientConfig struct {
 	EngineID     string `toml:"-"`
 	EngineBoots  uint32 `toml:"-"`
 	EngineTime   uint32 `toml:"-"`
+
+	//Values : true, false
+	IsActive bool `toml:"is_active"`
 }

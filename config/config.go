@@ -827,6 +827,13 @@ func (c *Config) LoadConfigData(data []byte) error {
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
+						isActive  := false						
+						if _, ok := t.Fields["is_active"]; ok {
+							c.getFieldBool(t, "is_active", &isActive)
+							if !isActive {
+								continue
+							}	
+						}
 						if err = c.addInput(pluginName, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
@@ -1474,7 +1481,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml":
+		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml", "is_active":
 
 		// ignore fields that are common to all plugins.
 	default:
