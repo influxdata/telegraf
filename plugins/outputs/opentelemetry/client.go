@@ -3,10 +3,8 @@ package opentelemetry
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/url"
 	"sync"
@@ -59,12 +57,12 @@ var (
 // implementation may hit a single backend, so the application should create a
 // number of these clients.
 type client struct {
-	logger           telegraf.Logger
-	url              *url.URL
-	timeout          time.Duration
-	rootCertificates []string
-	headers          metadata.MD
-	compressor       string
+	logger     telegraf.Logger
+	url        *url.URL
+	timeout    time.Duration
+	tlsConfig  *tls.Config
+	headers    metadata.MD
+	compressor string
 
 	conn *grpc.ClientConn
 }
@@ -87,29 +85,7 @@ func (c *client) connect(ctx context.Context) (_ *grpc.ClientConn, retErr error)
 		grpc.WithDefaultServiceConfig(serviceConfig),
 	}
 	if c.url.Scheme != "http" {
-		var tcfg tls.Config
-		if len(c.rootCertificates) != 0 {
-			certPool := x509.NewCertPool()
-
-			for _, cert := range c.rootCertificates {
-				bs, err := ioutil.ReadFile(cert)
-				if err != nil {
-					return nil, fmt.Errorf("could not read certificate authority certificate: %s: %w", cert, err)
-				}
-
-				ok := certPool.AppendCertsFromPEM(bs)
-				if !ok {
-					return nil, fmt.Errorf("could not parse certificate authority certificate: %s: %w", cert, err)
-				}
-			}
-
-			tcfg = tls.Config{
-				ServerName: c.url.Hostname(),
-				RootCAs:    certPool,
-			}
-		}
-		c.logger.Debug("TLS configured, server=%s root_certs=%v", c.url.Hostname(), c.rootCertificates)
-		dopts = append(dopts, grpc.WithTransportCredentials(credentials.NewTLS(&tcfg)))
+		dopts = append(dopts, grpc.WithTransportCredentials(credentials.NewTLS(c.tlsConfig)))
 	} else {
 		dopts = append(dopts, grpc.WithInsecure())
 	}

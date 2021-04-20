@@ -9,7 +9,10 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/pkg/errors"
+
 	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
@@ -19,13 +22,13 @@ import (
 
 // OpenTelemetry is the OpenTelemetry Protocol config info.
 type OpenTelemetry struct {
-	Endpoint         string            `toml:"endpoint"`
-	Timeout          string            `toml:"timeout"`
-	Compression      string            `toml:"compression"`
-	RootCertificates []string          `toml:"root_certificates"`
-	Headers          map[string]string `toml:"headers"`
-	Attributes       map[string]string `toml:"attributes"`
-	Log              telegraf.Logger   `toml:"-"`
+	Endpoint    string            `toml:"endpoint"`
+	Timeout     string            `toml:"timeout"`
+	Compression string            `toml:"compression"`
+	Headers     map[string]string `toml:"headers"`
+	Attributes  map[string]string `toml:"attributes"`
+	Log         telegraf.Logger   `toml:"-"`
+	tls.ClientConfig
 
 	client       *client
 	resourceTags []*telegraf.Tag
@@ -39,7 +42,7 @@ const (
 	defaultEndpoint            = "http://localhost:4317"
 	defaultTimeout             = time.Second * 10
 	defaultCompression         = "gzip"
-	instrumentationLibraryName = "Telegraf"
+	instrumentationLibraryName = "telegraf"
 )
 
 var sampleConfig = `
@@ -52,8 +55,12 @@ var sampleConfig = `
   ## Compression used to send data, supports: "gzip", "none"
   # compression = "gzip"
 
-  ## Root certificate files for TLS
-  # root_certificates = []
+  ## Optional TLS Config for use on gRPC connections.
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 
   # Additional resource attributes
   [outputs.opentelemetry.attributes]
@@ -71,7 +78,7 @@ func (o *OpenTelemetry) Init() error {
 	}
 	endpoint, err := url.Parse(o.Endpoint)
 	if err != nil {
-		return fmt.Errorf("invalid endpoint configured")
+		return errors.Wrap(err, "invalid endpoint configured")
 	}
 
 	if o.Timeout == "" {
@@ -80,7 +87,7 @@ func (o *OpenTelemetry) Init() error {
 		var err error
 		o.grpcTimeout, err = time.ParseDuration(o.Timeout)
 		if err != nil {
-			return fmt.Errorf("invalid timeout configured")
+			return errors.Wrap(err, "invalid timeout configured")
 		}
 	}
 
@@ -96,19 +103,25 @@ func (o *OpenTelemetry) Init() error {
 		o.Headers = make(map[string]string, 1)
 	}
 
-	o.Headers["telemetry-reporting-agent"] = fmt.Sprint(
-		"telegraf/",
+	o.Headers["telemetry-reporting-agent"] = fmt.Sprintf(
+		"%s/%s",
+		instrumentationLibraryName,
 		internal.Version(),
 	)
 
+	tlsConfig, err := o.TLSConfig()
+	if err != nil {
+		return errors.Wrap(err, "invalid tls configuration")
+	}
+
 	if o.client == nil {
 		o.client = &client{
-			logger:           o.Log,
-			url:              endpoint,
-			timeout:          o.grpcTimeout,
-			rootCertificates: o.RootCertificates,
-			headers:          metadata.New(o.Headers),
-			compressor:       o.Compression,
+			logger:     o.Log,
+			url:        endpoint,
+			timeout:    o.grpcTimeout,
+			tlsConfig:  tlsConfig,
+			headers:    metadata.New(o.Headers),
+			compressor: o.Compression,
 		}
 	}
 	return nil
@@ -326,9 +339,6 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 					o.Log.Errorf("get type failed: unsupported telegraf value type %v\n", f.Value)
 					continue
 				}
-			// TODO: add support for histogram & summary
-			case telegraf.Histogram, telegraf.Summary:
-				fallthrough
 			default:
 				o.Log.Errorf("get type failed: unsupported telegraf metric kind %v\n", m.Type())
 				continue
@@ -340,7 +350,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	if err := o.client.store(&metricsService.ExportMetricsServiceRequest{
 		ResourceMetrics: samples,
 	}); err != nil {
-		return fmt.Errorf("unable to write to endpoint: %s", err)
+		return errors.Wrap(err, "unable to write to endpoint")
 	}
 	return nil
 }

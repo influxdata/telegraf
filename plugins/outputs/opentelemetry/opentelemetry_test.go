@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
@@ -73,7 +75,7 @@ func TestConfigOptions(t *testing.T) {
 	}
 	err := o.Init()
 	require.Error(t, err)
-	require.EqualError(t, err, "invalid endpoint configured")
+	require.True(t, strings.HasPrefix(err.Error(), "invalid endpoint configured"))
 
 	o = OpenTelemetry{
 		Timeout: "9zzz",
@@ -81,7 +83,19 @@ func TestConfigOptions(t *testing.T) {
 	}
 	err = o.Init()
 	require.Error(t, err)
-	require.EqualError(t, err, "invalid timeout configured")
+	require.True(t, strings.HasPrefix(err.Error(), "invalid timeout configured"))
+
+	o = OpenTelemetry{
+		Endpoint:    "http://" + listener.Addr().String(),
+		Compression: "none",
+		Log:         testutil.Logger{},
+		ClientConfig: tls.ClientConfig{
+			TLSCA: "invalid_ca",
+		},
+	}
+	err = o.Init()
+	require.Error(t, err)
+	require.True(t, strings.HasPrefix(err.Error(), "invalid tls configuration"))
 
 	o = OpenTelemetry{
 		Endpoint:    "http://" + listener.Addr().String(),
@@ -145,7 +159,7 @@ func TestWrite(t *testing.T) {
 	request := mockMetricsServer.reqs[0]
 
 	require.Equal(t, 1, len(request.ResourceMetrics[0].GetInstrumentationLibraryMetrics()))
-	require.Equal(t, "Telegraf", request.ResourceMetrics[0].GetInstrumentationLibraryMetrics()[0].GetInstrumentationLibrary().GetName())
+	require.Equal(t, instrumentationLibraryName, request.ResourceMetrics[0].GetInstrumentationLibraryMetrics()[0].GetInstrumentationLibrary().GetName())
 }
 
 func TestWriteSupportedMetricKinds(t *testing.T) {

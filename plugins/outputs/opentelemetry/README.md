@@ -15,16 +15,26 @@ Additional gRPC metadata can be configured by `headers`.
   ## OpenTelemetry endpoint
   endpoint = "http://localhost:4317"
 
-  ## Timeout used when sending data over grpc
+  ## Timeout when sending data over grpc
   timeout = "10s"
+
+  ## Compression used to send data, supports: "gzip", "none"
+  compression = "gzip"
+
+  ## Optional TLS Config for use on gRPC connections.
+  tls_ca = "/etc/telegraf/ca.pem"
+  tls_cert = "/etc/telegraf/cert.pem"
+  tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  insecure_skip_verify = false
 
   # Additional resource attributes
   [outputs.opentelemetry.attributes]
-  	"service.name" = "demo"
+      "service.name" = "demo"
 
   # Additional grpc metadata
   [outputs.opentelemetry.headers]
-    key1 = "value1"
+      key1 = "value1"
 
 ```
 
