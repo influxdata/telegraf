@@ -14,6 +14,7 @@ const (
 type Configuration interface {
 	Check() error
 	Process() (map[byte]requestSet, error)
+	SampleConfigPart() string
 }
 
 func removeDuplicates(elements []uint16) []uint16 {
