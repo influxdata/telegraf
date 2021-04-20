@@ -1,9 +1,12 @@
 package converter
 
 import (
+	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"strconv"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -368,10 +371,19 @@ func toInteger(v interface{}) (int64, bool) {
 		result, err := strconv.ParseInt(value, 0, 64)
 
 		if err != nil {
-			result, err := strconv.ParseFloat(value, 64)
+			var result float64
+			var err error
+
+			if isHexadecimal(value) {
+				result, err = parseHexadecimal(value)
+			} else {
+				result, err = strconv.ParseFloat(value, 64)
+			}
+
 			if err != nil {
 				return 0, false
 			}
+
 			return toInteger(result)
 		}
 		return result, true
@@ -405,10 +417,19 @@ func toUnsigned(v interface{}) (uint64, bool) {
 		result, err := strconv.ParseUint(value, 0, 64)
 
 		if err != nil {
-			result, err := strconv.ParseFloat(value, 64)
+			var result float64
+			var err error
+
+			if isHexadecimal(value) {
+				result, err = parseHexadecimal(value)
+			} else {
+				result, err = strconv.ParseFloat(value, 64)
+			}
+
 			if err != nil {
 				return 0, false
 			}
+
 			return toUnsigned(result)
 		}
 		return result, true
@@ -430,6 +451,11 @@ func toFloat(v interface{}) (float64, bool) {
 		}
 		return 0.0, true
 	case string:
+		if isHexadecimal(value) {
+			result, err := parseHexadecimal(value)
+			return result, err == nil
+		}
+
 		result, err := strconv.ParseFloat(value, 64)
 		return result, err == nil
 	}
@@ -450,6 +476,24 @@ func toString(v interface{}) (string, bool) {
 		return value, true
 	}
 	return "", false
+}
+
+func parseHexadecimal(value string) (float64, error) {
+	i := new(big.Int)
+
+	_, success := i.SetString(value, 0)
+	if !success {
+		return 0, errors.New("Unable to parse string to big int.")
+	}
+
+	f := new(big.Float).SetInt(i)
+	result, _ := f.Float64()
+
+	return result, nil
+}
+
+func isHexadecimal(value string) bool {
+	return len(value) >= 3 && strings.ToLower(value)[1] == 'x'
 }
 
 func init() {
