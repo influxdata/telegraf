@@ -1297,6 +1297,22 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 		errormsg string
 	}{
 		{
+			name: "empty field name (coil)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "coil",
+					Fields: []requestFieldDefinition{
+						{
+							Address: uint16(15),
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: empty field name in request for slave 1",
+		},
+		{
 			name: "invalid byte-order (coil)",
 			requests: []requestDefinition{
 				{
