@@ -483,7 +483,7 @@ func parseHexadecimal(value string) (float64, error) {
 
 	_, success := i.SetString(value, 0)
 	if !success {
-		return 0, errors.New("Unable to parse string to big int.")
+		return 0, errors.New("unable to parse string to big int")
 	}
 
 	f := new(big.Float).SetInt(i)
