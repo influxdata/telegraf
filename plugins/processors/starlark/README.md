@@ -232,6 +232,7 @@ def apply(metric):
 - [time duration](/plugins/processors/starlark/testdata/time_duration.star) - Parse a duration and convert it into a total amount of seconds.
 - [time timestamp](/plugins/processors/starlark/testdata/time_timestamp.star) - Filter metrics based on the timestamp in seconds.
 - [time timestamp nanoseconds](/plugins/processors/starlark/testdata/time_timestamp_nanos.star) - Filter metrics based on the timestamp with nanoseconds.
+- [time timestamp current](/plugins/processors/starlark/testdata/time_set_timestamp.star) - Setting the metric timestamp to the current/local time.
 - [value filter](/plugins/processors/starlark/testdata/value_filter.star) - Remove a metric based on a field value.
 - [logging](/plugins/processors/starlark/testdata/logging.star) - Log messages with the logger of Telegraf
 - [multiple metrics](/plugins/processors/starlark/testdata/multiple_metrics.star) - Return multiple metrics by using [a list](https://docs.bazel.build/versions/master/skylark/lib/list.html) of metrics.
