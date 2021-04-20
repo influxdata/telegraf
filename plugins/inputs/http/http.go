@@ -81,7 +81,6 @@ var sampleConfig = `
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
-
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
@@ -90,7 +89,7 @@ var sampleConfig = `
 
   ## List of success status codes
   # success_status_codes = [200]
-  
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
