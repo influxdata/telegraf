@@ -10,7 +10,7 @@ type request struct {
 	fields  []field
 }
 
-func newRequestsFromFields(fields []field, slaveID byte, registerType string, maxBatchSize uint16) []request {
+func newRequestsFromFields(fields []field, maxBatchSize uint16) []request {
 	if len(fields) == 0 {
 		return nil
 	}

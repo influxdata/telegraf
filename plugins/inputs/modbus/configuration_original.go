@@ -24,22 +24,22 @@ type ConfigurationOriginal struct {
 }
 
 func (c *ConfigurationOriginal) Process() (map[byte]requestSet, error) {
-	coil, err := c.initRequests(c.Coils, cCoils, maxQuantityCoils)
+	coil, err := c.initRequests(c.Coils, maxQuantityCoils)
 	if err != nil {
 		return nil, err
 	}
 
-	discrete, err := c.initRequests(c.DiscreteInputs, cDiscreteInputs, maxQuantityDiscreteInput)
+	discrete, err := c.initRequests(c.DiscreteInputs, maxQuantityDiscreteInput)
 	if err != nil {
 		return nil, err
 	}
 
-	holding, err := c.initRequests(c.HoldingRegisters, cHoldingRegisters, maxQuantityHoldingRegisters)
+	holding, err := c.initRequests(c.HoldingRegisters, maxQuantityHoldingRegisters)
 	if err != nil {
 		return nil, err
 	}
 
-	input, err := c.initRequests(c.InputRegisters, cInputRegisters, maxQuantityInputRegisters)
+	input, err := c.initRequests(c.InputRegisters, maxQuantityInputRegisters)
 	if err != nil {
 		return nil, err
 	}
@@ -70,12 +70,12 @@ func (c *ConfigurationOriginal) Check() error {
 	return c.validateFieldDefinitions(c.InputRegisters, cInputRegisters)
 }
 
-func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, registerType string, maxQuantity uint16) ([]request, error) {
+func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, maxQuantity uint16) ([]request, error) {
 	fields, err := c.initFields(fieldDefs)
 	if err != nil {
 		return nil, err
 	}
-	return newRequestsFromFields(fields, c.SlaveID, registerType, maxQuantity), nil
+	return newRequestsFromFields(fields, maxQuantity), nil
 }
 
 func (c *ConfigurationOriginal) initFields(fieldDefs []fieldDefinition) ([]field, error) {
