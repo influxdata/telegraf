@@ -69,10 +69,10 @@ type client struct {
 	conn *grpc.ClientConn
 }
 
-// getConnection will dial a new connection if one is not set.  When
+// connect will dial a new connection if one is not set.  When
 // dialing, this function uses its a new context and the same timeout
 // used for store().
-func (c *client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr error) {
+func (c *client) connect(ctx context.Context) (_ *grpc.ClientConn, retErr error) {
 	if c.conn != nil {
 		return c.conn, nil
 	}
@@ -134,7 +134,7 @@ func (c *client) getConnection(ctx context.Context) (_ *grpc.ClientConn, retErr 
 func (c *client) ping(ctx context.Context) error {
 	// Loop until the context is canceled, allowing for retryable failures.
 	for {
-		conn, err := c.getConnection(ctx)
+		conn, err := c.connect(ctx)
 
 		if err == nil {
 			service := metricsService.NewMetricsServiceClient(conn)
@@ -167,9 +167,9 @@ func (c *client) store(req *metricsService.ExportMetricsServiceRequest) error {
 		return nil
 	}
 
-	// Note the call to getConnection() applies its own timeout for Dial().
+	// Note the call to connect() applies its own timeout for Dial().
 	ctx := context.Background()
-	conn, err := c.getConnection(ctx)
+	conn, err := c.connect(ctx)
 	if err != nil {
 		return err
 	}

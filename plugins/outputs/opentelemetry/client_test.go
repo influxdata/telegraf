@@ -34,7 +34,7 @@ func TestClientWithRecoverableError(t *testing.T) {
 		url:     u,
 		timeout: time.Second,
 	}
-	_, err = client.getConnection(context.Background())
+	_, err = client.connect(context.Background())
 	require.True(t, isRecoverable(err), "expected recoverableError in error %v", err)
 }
 
@@ -62,7 +62,7 @@ func TestClientWithUnrecoverableError(t *testing.T) {
 	err = client.ping(context.Background())
 	require.False(t, isRecoverable(err), "expected unrecoverableError in error %v", err)
 
-	_, err = client.getConnection(context.Background())
+	_, err = client.connect(context.Background())
 	require.False(t, isRecoverable(err), "expected unrecoverableError in error %v", err)
 }
 
