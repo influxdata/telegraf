@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,8 +16,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/clientcredentials"
 )
 
 type HTTP struct {
@@ -33,12 +30,6 @@ type HTTP struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 	tls.ClientConfig
-
-	// OAuth2 Credentials
-	ClientID     string   `toml:"client_id"`
-	ClientSecret string   `toml:"client_secret"`
-	TokenURL     string   `toml:"token_url"`
-	Scopes       []string `toml:"scopes"`
 
 	proxy.HTTPProxy
 
@@ -61,50 +52,33 @@ var sampleConfig = `
   urls = [
     "http://localhost/metrics"
   ]
-
   ## HTTP method
   # method = "GET"
-
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
-
   ## Optional file with Bearer token
   ## file content is added as an Authorization header
   # bearer_token = "/path/to/file"
-
   ## Optional HTTP Basic Auth Credentials
   # username = "username"
   # password = "pa$$word"
-
   ## HTTP entity-body to send with POST/PUT requests.
   # body = ""
-
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
-
   ## HTTP Proxy support
   # http_proxy_url = ""
-
-  ## OAuth2 Client Credentials Grant
-  # client_id = "clientid"
-  # client_secret = "secret"
-  # token_url = "https://indentityprovider/oauth2/v1/token"
-  # scopes = ["urn:opc:idm:__myscopes__"]
-
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
-
   ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"
-
   ## List of success status codes
   # success_status_codes = [200]
-
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -123,30 +97,14 @@ func (*HTTP) Description() string {
 }
 
 func (h *HTTP) Init() error {
-	ctx := context.Background()
-	client, err := h.createClient(ctx)
+	tlsCfg, err := h.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}
 
-	h.client = client
-
-	// Set default as [200]
-	if len(h.SuccessStatusCodes) == 0 {
-		h.SuccessStatusCodes = []int{200}
-	}
-	return nil
-}
-
-func (h *HTTP) createClient(ctx context.Context) (*http.Client, error) {
-	tlsCfg, err := h.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-
 	proxy, err := h.HTTPProxy.Proxy()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	transport := &http.Transport{
@@ -154,23 +112,16 @@ func (h *HTTP) createClient(ctx context.Context) (*http.Client, error) {
 		Proxy:           proxy,
 	}
 
-	client := &http.Client{
+	h.client = &http.Client{
 		Transport: transport,
 		Timeout:   time.Duration(h.Timeout),
 	}
 
-	if h.ClientID != "" && h.ClientSecret != "" && h.TokenURL != "" {
-		oauthConfig := clientcredentials.Config{
-			ClientID:     h.ClientID,
-			ClientSecret: h.ClientSecret,
-			TokenURL:     h.TokenURL,
-			Scopes:       h.Scopes,
-		}
-		ctx = context.WithValue(ctx, oauth2.HTTPClient, client)
-		client = oauthConfig.Client(ctx)
+	// Set default as [200]
+	if len(h.SuccessStatusCodes) == 0 {
+		h.SuccessStatusCodes = []int{200}
 	}
-
-	return client, nil
+	return nil
 }
 
 // Gather takes in an accumulator and adds the metrics that the Input
