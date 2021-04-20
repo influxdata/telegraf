@@ -38,7 +38,10 @@ type Modbus struct {
 	Workarounds      ModbusWorkarounds `toml:"workarounds"`
 	Log              telegraf.Logger   `toml:"-"`
 	// Register configuration
+	ConfigurationType string `toml:"configuration_type"`
 	ConfigurationOriginal
+	ConfigurationPerRequest
+
 	// Connection handling
 	client      mb.Client
 	handler     mb.ClientHandler
@@ -114,6 +117,11 @@ const sampleConfigStart = `
   ## default behaviour is "TCP" if the controller is TCP
   ## For Serial you can choose between "RTU" and "ASCII"
   # transmission_mode = "RTU"
+
+	## Define the configuration schema
+  ##  |---original -- original style defining fields per register type (only supports one slave ID)
+  ##  |---request  -- define fields on a requests base
+  configuration_type = "original"
 `
 const sampleConfigEnd =	`
   ## Enable workarounds required by some devices to work correctly
@@ -130,12 +138,12 @@ const sampleConfigEnd =	`
 func (m *Modbus) SampleConfig() string {
 	configs := []Configuration{}
 	cfgOriginal := m.ConfigurationOriginal
-	configs = append(configs, &cfgOriginal)
+	cfgPerRequest := m.ConfigurationPerRequest
+	configs = append(configs, &cfgOriginal, &cfgPerRequest)
 
 	totalConfig := sampleConfigStart
 	for _, c := range configs {
-		totalConfig += "\n"
-		totalConfig += c.SampleConfigPart()
+		totalConfig += c.SampleConfigPart() + "\n"
 	}
 	totalConfig += "\n"
 	totalConfig += sampleConfigEnd
@@ -157,14 +165,25 @@ func (m *Modbus) Init() error {
 		return fmt.Errorf("retries cannot be negative")
 	}
 
-	// Check and process the configuration
-	if err := m.ConfigurationOriginal.Check(); err != nil {
-		return fmt.Errorf("original configuraton invalid: %v", err)
+	// Determine the configuration style
+	var cfg Configuration
+	switch m.ConfigurationType {
+	case "", "original":
+		cfg = &m.ConfigurationOriginal
+	case "request":
+		cfg = &m.ConfigurationPerRequest
+	default:
+		return fmt.Errorf("unknown configuration type %q", m.ConfigurationType)
 	}
 
-	r, err := m.ConfigurationOriginal.Process()
+	// Check and process the configuration
+	if err := cfg.Check(); err != nil {
+		return fmt.Errorf("configuraton invalid: %v", err)
+	}
+
+	r, err := cfg.Process()
 	if err != nil {
-		return fmt.Errorf("cannot process original configuraton: %v", err)
+		return fmt.Errorf("cannot process configuraton: %v", err)
 	}
 	m.requests = r
 
