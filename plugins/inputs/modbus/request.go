@@ -40,9 +40,12 @@ func newRequestsFromFields(fields []field, maxBatchSize uint16) []request {
 		needInterrupt = needInterrupt || f.length+current.length > maxBatchSize // too large
 
 		if !needInterrupt {
-			// Still save to add the field to the current request
+			// Still safe to add the field to the current request
 			current.length += f.length
-			current.fields = append(current.fields, f) // TODO: omit the field with a future flag
+			if !f.omit {
+				// Omit adding the field but use it for constructing the request.
+				current.fields = append(current.fields, f)
+			}
 			continue
 		}
 
