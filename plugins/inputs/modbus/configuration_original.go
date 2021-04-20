@@ -106,7 +106,6 @@ func (c *ConfigurationOriginal) newFieldFromDefinition(def fieldDefinition) (fie
 	f := field{
 		measurement: def.Measurement,
 		name:        def.Name,
-		scale:       def.Scale,
 		address:     def.Address[0],
 		length:      uint16(len(def.Address)),
 	}
