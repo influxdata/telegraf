@@ -8,7 +8,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
-	_ "github.com/jackc/pgx/stdlib" // register driver
+	_ "github.com/jackc/pgx/v4/stdlib" // register driver
 )
 
 type PgBouncer struct {

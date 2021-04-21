@@ -38,7 +38,6 @@ require (
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
 	github.com/caio/go-tdigest v3.1.0+incompatible
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6
-	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/containerd/containerd v1.4.1 // indirect
 	github.com/couchbase/go-couchbase v0.0.0-20180501122049-16db1f1fe037
 	github.com/couchbase/gomemcached v0.0.0-20180502221210-0da75df14530 // indirect
@@ -57,7 +56,7 @@ require (
 	github.com/goburrow/modbus v0.1.0
 	github.com/goburrow/serial v0.1.0 // indirect
 	github.com/gobwas/glob v0.2.3
-	github.com/gofrs/uuid v2.1.0+incompatible
+	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/protobuf v1.5.1
@@ -76,8 +75,7 @@ require (
 	github.com/influxdata/tail v1.0.1-0.20200707181643-03a791b270e4
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
-	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
-	github.com/jackc/pgx v3.6.0+incompatible
+	github.com/jackc/pgx/v4 v4.6.0
 	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/kardianos/service v1.0.0
@@ -148,6 +146,3 @@ require (
 	k8s.io/client-go v0.20.4
 	modernc.org/sqlite v1.7.4
 )
-
-// replaced due to https://github.com/satori/go.uuid/issues/73
-replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible

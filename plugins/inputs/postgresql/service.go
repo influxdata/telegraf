@@ -3,16 +3,14 @@ package postgresql
 import (
 	"database/sql"
 	"fmt"
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/stdlib"
 	"net"
 	"net/url"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/jackc/pgx"
-	"github.com/jackc/pgx/pgtype"
-	"github.com/jackc/pgx/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -90,7 +88,7 @@ func parseURL(uri string) (string, error) {
 // packages.
 type Service struct {
 	Address       string
-	Outputaddress string
+	OutputAddress string
 	MaxIdle       int
 	MaxOpen       int
 	MaxLifetime   config.Duration
@@ -111,33 +109,14 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 	// Specific support to make it work with PgBouncer too
 	// See https://github.com/influxdata/telegraf/issues/3253#issuecomment-357505343
 	if p.IsPgBouncer {
-		d := &stdlib.DriverConfig{
-			ConnConfig: pgx.ConnConfig{
-				PreferSimpleProtocol: true,
-				RuntimeParams: map[string]string{
-					"client_encoding": "UTF8",
-				},
-				CustomConnInfo: func(c *pgx.Conn) (*pgtype.ConnInfo, error) {
-					info := c.ConnInfo.DeepCopy()
-					info.RegisterDataType(pgtype.DataType{
-						Value: &pgtype.OIDValue{},
-						Name:  "int8OID",
-						OID:   pgtype.Int8OID,
-					})
-					// Newer versions of pgbouncer need this defined. See the discussion here:
-					// https://github.com/jackc/pgx/issues/649
-					info.RegisterDataType(pgtype.DataType{
-						Value: &pgtype.OIDValue{},
-						Name:  "numericOID",
-						OID:   pgtype.NumericOID,
-					})
-
-					return info, nil
-				},
-			},
+		// Remove DriveConfig and revert it by the ParseConfig method
+		// See https://github.com/influxdata/telegraf/issues/9134
+		d, err := pgx.ParseConfig(p.Address)
+		if err != nil {
+			return err
 		}
-		stdlib.RegisterDriverConfig(d)
-		connectionString = d.ConnectionString(p.Address)
+
+		connectionString = stdlib.RegisterConnConfig(d)
 	}
 
 	if p.DB, err = sql.Open("pgx", connectionString); err != nil {
@@ -166,8 +145,8 @@ func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
 		canonicalizedAddress string
 	)
 
-	if p.Outputaddress != "" {
-		return p.Outputaddress, nil
+	if p.OutputAddress != "" {
+		return p.OutputAddress, nil
 	}
 
 	if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {
