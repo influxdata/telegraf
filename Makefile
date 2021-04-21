@@ -228,6 +228,7 @@ $(buildbin):
 	@mkdir -pv $(dir $@)
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
+ifdef debian
 debs := telegraf_$(deb_version)_amd64.deb
 debs += telegraf_$(deb_version)_arm64.deb
 debs += telegraf_$(deb_version)_armel.deb
@@ -237,7 +238,9 @@ debs += telegraf_$(deb_version)_mips.deb
 debs += telegraf_$(deb_version)_mipsel.deb
 debs += telegraf_$(deb_version)_s390x.deb
 debs += telegraf_$(deb_version)_ppc64el.deb
+endif
 
+ifdef centos
 rpms += telegraf-$(rpm_version).aarch64.rpm
 rpms += telegraf-$(rpm_version).armel.rpm
 rpms += telegraf-$(rpm_version).armv6hl.rpm
@@ -245,10 +248,18 @@ rpms += telegraf-$(rpm_version).i386.rpm
 rpms += telegraf-$(rpm_version).s390x.rpm
 rpms += telegraf-$(rpm_version).ppc64le.rpm
 rpms += telegraf-$(rpm_version).x86_64.rpm
+endif
 
+ifdef mac
 tars += telegraf-$(tar_version)_darwin_amd64.tar.gz
+endif
+
+ifdef freebsd
 tars += telegraf-$(tar_version)_freebsd_amd64.tar.gz
 tars += telegraf-$(tar_version)_freebsd_i386.tar.gz
+endif
+
+ifdef linux
 tars += telegraf-$(tar_version)_linux_amd64.tar.gz
 tars += telegraf-$(tar_version)_linux_arm64.tar.gz
 tars += telegraf-$(tar_version)_linux_armel.tar.gz
@@ -259,9 +270,12 @@ tars += telegraf-$(tar_version)_linux_mipsel.tar.gz
 tars += telegraf-$(tar_version)_linux_s390x.tar.gz
 tars += telegraf-$(tar_version)_linux_ppc64le.tar.gz
 tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
+endif
 
+ifdef windows
 zips += telegraf-$(tar_version)_windows_amd64.zip
 zips += telegraf-$(tar_version)_windows_i386.zip
+endif
 
 dists := $(debs) $(rpms) $(tars) $(zips)
 

@@ -47,25 +47,35 @@ commands:
       - run: 'GOARCH=<< parameters.goarch >> make check'
       - run: 'GOARCH=<< parameters.goarch >> make check-deps'
       - run: 'GOARCH=<< parameters.goarch >> make test'
-  package:
+  package-build:
     parameters:
+      release:
+        type: boolean
+        default: false
       nightly:
         type: boolean
         default: false
+      type:
+        type: string
+        default: ""
     steps:
       - checkout
       - check-changed-files-or-halt
       - attach_workspace:
           at: '/go'
       - when:
+          condition: << parameters.release >>
+          steps: 
+            - run: 'debian=1 centos=1 mac=1 freebsd=1 linux=1 windows=1 make package'
+      - when:
           condition: << parameters.nightly >>
           steps: 
-            - run: 'NIGHTLY=1 make package'
+            - run: 'debian=1 centos=1 mac=1 freebsd=1 linux=1 windows=1 NIGHTLY=1 make package'
             - run: 'make upload-nightly'
       - unless:
           condition: << parameters.nightly >>
           steps:
-            - run: 'make package'
+            - run: '<< parameters.type >>=1 make package'
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
@@ -142,19 +152,57 @@ jobs:
       - run: git config --system core.longpaths true
       - run: make test-windows
 
-  package:
+  windows-package:
     executor: go-1_16
     steps:
-      - package
+      - package-build:
+          type: windows
+  debian-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: debian
+  centos-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: centos
+  mac-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: mac
+  freebsd-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: freebsd
+  linux-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: linux
+
   release:
     executor: go-1_16
     steps:
-      - package
+      - package-build:
+          release: true
   nightly:
     executor: go-1_16
     steps:
-      - package:
+      - package-build:
           nightly: true
+  package-consolidate:
+    executor:
+        name: win/default
+        shell: powershell.exe
+    steps:
+      - attach_workspace:
+          at: '/build'
+      - store_artifacts:
+          path: './build/dist'
+          destination: 'build/dist'
   package-sign-windows:
     executor:
         name: win/default
@@ -195,6 +243,12 @@ jobs:
       - store_artifacts:
           path: './dist'
           destination: 'build/dist'
+  test-awaiter:
+    executor: go-1_16
+    steps:
+      - run:
+          command: |
+            echo "Go tests complete."
   share-artifacts:
     executor: aws-cli/default  
     steps:
@@ -244,17 +298,38 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'package':
+      - 'test-awaiter': 
           requires:
-            - 'test-go-windows'
-            - 'test-go-mac'
             - 'test-go-1_15'
             - 'test-go-1_15-386'
             - 'test-go-1_16'
             - 'test-go-1_16-386'
+      - 'windows-package':
+          requires: 
+            - 'test-go-windows'
+      - 'debian-package':
+          requires: 
+            - 'test-awaiter'
+      - 'centos-package':
+          requires: 
+            - 'test-awaiter'
+      - 'mac-package':
+          requires: 
+            - 'test-go-mac'
+      - 'freebsd-package':
+          requires: 
+            - 'test-awaiter'
+      - 'linux-package':
+          requires: 
+            - 'test-awaiter'
       - 'share-artifacts':
           requires:
-            - 'package'
+            - 'linux-package'
+            - 'freebsd-package'
+            - 'mac-package'
+            - 'centos-package'
+            - 'debian-package'
+            - 'windows-package'
           filters:
             branches:
               ignore:
@@ -284,6 +359,7 @@ workflows:
            filters:
               tags:
                 only: /.*/
+
   nightly:
     jobs:
       - 'deps'
