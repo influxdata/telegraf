@@ -122,15 +122,16 @@ func (ps *PubSub) Connect() error {
 		return fmt.Errorf(`"project" is required`)
 	}
 
-	if ps.stubTopic == nil {
-		return ps.initPubSubClient()
-	}
-
 	var err error
 	ps.encoder, err = internal.NewContentEncoder(ps.ContentEncoding)
 	if err != nil {
 		return err
 	}
+
+	if ps.stubTopic == nil {
+		return ps.initPubSubClient()
+	}
+
 	return nil
 }
 
