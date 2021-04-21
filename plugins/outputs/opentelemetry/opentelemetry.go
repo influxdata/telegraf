@@ -121,7 +121,9 @@ func (o *OpenTelemetry) Init() error {
 func (o *OpenTelemetry) Connect() error {
 	ctx := context.Background()
 	if err := o.client.ping(ctx); err != nil {
-		_ = o.client.close()
+		if closeErr := o.client.close(); closeErr != nil {
+			return errors.Wrap(err, closeErr.Error())
+		}
 		return err
 	}
 
