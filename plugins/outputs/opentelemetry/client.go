@@ -132,8 +132,8 @@ func (c *client) ping(ctx context.Context) error {
 
 // store sends a batch of samples to the endpoint.
 func (c *client) store(req *metricsService.ExportMetricsServiceRequest) error {
-	tss := req.ResourceMetrics
-	if len(tss) == 0 {
+	metricsLen := len(req.ResourceMetrics)
+	if metricsLen == 0 {
 		// Nothing to do, return silently.
 		return nil
 	}
@@ -150,12 +150,12 @@ func (c *client) store(req *metricsService.ExportMetricsServiceRequest) error {
 
 	service := metricsService.NewMetricsServiceClient(c.conn)
 
-	errs := make(chan error, len(tss)/maxTimeseriesPerRequest+1)
+	errs := make(chan error, metricsLen/maxTimeseriesPerRequest+1)
 	var wg sync.WaitGroup
-	for i := 0; i < len(tss); i += maxTimeseriesPerRequest {
+	for i := 0; i < metricsLen; i += maxTimeseriesPerRequest {
 		end := i + maxTimeseriesPerRequest
-		if end > len(tss) {
-			end = len(tss)
+		if end > metricsLen {
+			end = metricsLen
 		}
 		wg.Add(1)
 		go func(begin int, end int) {
