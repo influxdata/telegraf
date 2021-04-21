@@ -9,13 +9,15 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	"golang.org/x/net/nettest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 func TestClientWithRecoverableError(t *testing.T) {
-	listener := newLocalListener()
+	listener, err := nettest.NewLocalListener("tcp")
+	require.NoError(t, err)
 	grpcServer := grpc.NewServer()
 	mockMetricsServer := metricServiceServer{
 		status: nil,
@@ -40,19 +42,20 @@ func TestClientWithRecoverableError(t *testing.T) {
 }
 
 func TestClientWithUnrecoverableError(t *testing.T) {
-	thing := newLocalListener()
+	listener, err := nettest.NewLocalListener("tcp")
+	require.NoError(t, err)
 	grpcServer := grpc.NewServer()
 	mockMetricsServer := metricServiceServer{
 		status: status.New(codes.InvalidArgument, "the request was missing some important arguments, change the arguments before retrying the request"),
 	}
 	metricsService.RegisterMetricsServiceServer(grpcServer, &mockMetricsServer)
 	go func() {
-		err := grpcServer.Serve(thing)
+		err := grpcServer.Serve(listener)
 		require.NoError(t, err)
 	}()
 	defer grpcServer.Stop()
 
-	u, err := url.Parse("http://" + thing.Addr().String())
+	u, err := url.Parse("http://" + listener.Addr().String())
 	require.NoError(t, err)
 
 	client := client{

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -16,12 +15,14 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	"golang.org/x/net/nettest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
 
 type metricServiceServer struct {
 	status *status.Status
+	server *grpc.Server
 	metricsService.UnimplementedMetricsServiceServer
 	reqs []*metricsService.ExportMetricsServiceRequest
 }
@@ -41,35 +42,30 @@ func (s *metricServiceServer) clear() {
 	s.reqs = []*metricsService.ExportMetricsServiceRequest{}
 }
 
-func newLocalListener() net.Listener {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		if l, err = net.Listen("tcp6", "[::1]:0"); err != nil {
-			panic(fmt.Sprintf("httptest: failed to listen on a port: %v", err))
-		}
-	}
-	return l
+func (s *metricServiceServer) stop() {
+	s.server.Stop()
 }
 
-var (
-	listener          net.Listener
-	mockMetricsServer metricServiceServer
-)
-
-func TestMain(m *testing.M) {
-	listener = newLocalListener()
+func getListenerAndServer(t *testing.T) (net.Listener, *metricServiceServer) {
+	listener, err := nettest.NewLocalListener("tcp")
+	require.NoError(t, err)
 	grpcServer := grpc.NewServer()
-	mockMetricsServer = metricServiceServer{
+	mockMetricsServer := metricServiceServer{
+		server: grpcServer,
 		status: nil,
 	}
 	metricsService.RegisterMetricsServiceServer(grpcServer, &mockMetricsServer)
 	go func() {
-		_ = grpcServer.Serve(listener)
+		err := grpcServer.Serve(listener)
+		require.NoError(t, err)
 	}()
-	defer grpcServer.Stop()
-	os.Exit(m.Run())
+	return listener, &mockMetricsServer
 }
+
 func TestConfigOptions(t *testing.T) {
+	listener, mockMetricsServer := getListenerAndServer(t)
+	defer mockMetricsServer.stop()
+
 	o := OpenTelemetry{
 		Endpoint: ":::::",
 		Log:      testutil.Logger{},
@@ -132,6 +128,8 @@ func TestConfigOptions(t *testing.T) {
 }
 
 func TestWrite(t *testing.T) {
+	listener, mockMetricsServer := getListenerAndServer(t)
+	defer mockMetricsServer.stop()
 	o := OpenTelemetry{
 		Endpoint:    "http://" + listener.Addr().String(),
 		Timeout:     config.Duration(time.Second * 10),
@@ -156,6 +154,8 @@ func TestWrite(t *testing.T) {
 }
 
 func TestWriteSupportedMetricKinds(t *testing.T) {
+	listener, mockMetricsServer := getListenerAndServer(t)
+	defer mockMetricsServer.stop()
 	// Metrics in descending order of timestamp
 	metrics := []telegraf.Metric{
 		testutil.MustMetric("cpu",
@@ -234,6 +234,8 @@ func TestWriteSupportedMetricKinds(t *testing.T) {
 }
 
 func TestWriteIgnoresInvalidKinds(t *testing.T) {
+	listener, mockMetricsServer := getListenerAndServer(t)
+	defer mockMetricsServer.stop()
 	// Metrics in descending order of timestamp
 	metrics := []telegraf.Metric{
 		testutil.MustMetric("custom_string_metric",
