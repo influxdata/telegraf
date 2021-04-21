@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
@@ -78,14 +79,6 @@ func TestConfigOptions(t *testing.T) {
 	require.True(t, strings.HasPrefix(err.Error(), "invalid endpoint configured"))
 
 	o = OpenTelemetry{
-		Timeout: "9zzz",
-		Log:     testutil.Logger{},
-	}
-	err = o.Init()
-	require.Error(t, err)
-	require.True(t, strings.HasPrefix(err.Error(), "invalid timeout configured"))
-
-	o = OpenTelemetry{
 		Endpoint:    "http://" + listener.Addr().String(),
 		Compression: "none",
 		Log:         testutil.Logger{},
@@ -108,7 +101,7 @@ func TestConfigOptions(t *testing.T) {
 	err = o.Connect()
 	require.NoError(t, err)
 
-	require.Equal(t, defaultTimeout, o.grpcTimeout)
+	require.Equal(t, defaultTimeout, time.Duration(o.Timeout))
 	require.Equal(t, map[string]string{"telemetry-reporting-agent": fmt.Sprint(
 		"telegraf/",
 		internal.Version(),
@@ -120,7 +113,7 @@ func TestConfigOptions(t *testing.T) {
 	}
 	o = OpenTelemetry{
 		Endpoint:    "http://" + listener.Addr().String(),
-		Timeout:     "10s",
+		Timeout:     config.Duration(time.Second * 10),
 		Compression: "none",
 		Attributes:  attributes,
 		Log:         testutil.Logger{},
@@ -131,7 +124,7 @@ func TestConfigOptions(t *testing.T) {
 	err = o.Connect()
 	require.NoError(t, err)
 
-	require.Equal(t, o.grpcTimeout, time.Second*10)
+	require.Equal(t, time.Second*10, time.Duration(o.Timeout))
 	require.Equal(t, len(o.resourceTags), 2)
 	for _, tag := range o.resourceTags {
 		require.Equal(t, attributes[tag.Key], tag.Value)
@@ -141,7 +134,7 @@ func TestConfigOptions(t *testing.T) {
 func TestWrite(t *testing.T) {
 	o := OpenTelemetry{
 		Endpoint:    "http://" + listener.Addr().String(),
-		Timeout:     "10s",
+		Timeout:     config.Duration(time.Second * 10),
 		Compression: "none",
 		Log:         testutil.Logger{},
 	}
@@ -222,7 +215,7 @@ func TestWriteSupportedMetricKinds(t *testing.T) {
 	}
 	o := OpenTelemetry{
 		Endpoint:    "http://" + listener.Addr().String(),
-		Timeout:     "10s",
+		Timeout:     config.Duration(time.Second * 10),
 		Compression: "none",
 		Log:         testutil.Logger{},
 	}
@@ -275,7 +268,7 @@ func TestWriteIgnoresInvalidKinds(t *testing.T) {
 	}
 	o := OpenTelemetry{
 		Endpoint:    "http://" + listener.Addr().String(),
-		Timeout:     "10s",
+		Timeout:     config.Duration(time.Second * 10),
 		Compression: "none",
 		Log:         testutil.Logger{},
 	}

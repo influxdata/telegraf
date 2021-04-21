@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -23,7 +24,7 @@ import (
 // OpenTelemetry is the OpenTelemetry Protocol config info.
 type OpenTelemetry struct {
 	Endpoint    string            `toml:"endpoint"`
-	Timeout     string            `toml:"timeout"`
+	Timeout     config.Duration   `toml:"timeout"`
 	Compression string            `toml:"compression"`
 	Headers     map[string]string `toml:"headers"`
 	Attributes  map[string]string `toml:"attributes"`
@@ -32,7 +33,6 @@ type OpenTelemetry struct {
 
 	client       *client
 	resourceTags []*telegraf.Tag
-	grpcTimeout  time.Duration
 }
 
 const (
@@ -81,14 +81,8 @@ func (o *OpenTelemetry) Init() error {
 		return errors.Wrap(err, "invalid endpoint configured")
 	}
 
-	if o.Timeout == "" {
-		o.grpcTimeout = defaultTimeout
-	} else {
-		var err error
-		o.grpcTimeout, err = time.ParseDuration(o.Timeout)
-		if err != nil {
-			return errors.Wrap(err, "invalid timeout configured")
-		}
+	if o.Timeout < config.Duration(time.Second) {
+		o.Timeout = config.Duration(defaultTimeout)
 	}
 
 	if o.Compression == "" {
@@ -118,7 +112,7 @@ func (o *OpenTelemetry) Init() error {
 		o.client = &client{
 			logger:     o.Log,
 			url:        endpoint,
-			timeout:    o.grpcTimeout,
+			timeout:    time.Duration(o.Timeout),
 			tlsConfig:  tlsConfig,
 			headers:    metadata.New(o.Headers),
 			compressor: o.Compression,
