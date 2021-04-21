@@ -66,7 +66,6 @@ following works:
 - github.com/fatih/color [MIT License](https://github.com/fatih/color/blob/master/LICENSE.md)
 - github.com/form3tech-oss/jwt-go [MIT License](https://github.com/form3tech-oss/jwt-go/blob/master/LICENSE)
 - github.com/ghodss/yaml [MIT License](https://github.com/ghodss/yaml/blob/master/LICENSE)
-- github.com/go-kit/kit [MIT License](https://github.com/go-kit/kit/blob/master/LICENSE)
 - github.com/go-logfmt/logfmt [MIT License](https://github.com/go-logfmt/logfmt/blob/master/LICENSE)
 - github.com/go-logr/logr [Apache License 2.0](https://github.com/go-logr/logr/blob/master/LICENSE)
 - github.com/go-ole/go-ole [MIT License](https://github.com/go-ole/go-ole/blob/master/LICENSE)
