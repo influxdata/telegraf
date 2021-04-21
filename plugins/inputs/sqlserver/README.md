@@ -172,10 +172,38 @@ GO
   ## - VolumeSpace
   ## - PerformanceMetrics
 
-
-
-
 ```
+
+### Support for Azure Active Directory (AAD) authentication using [Managed Identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview)
+
+Azure SQL Database supports 2 main methods of authentication: [SQL authentication and AAD authentication](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication). The recommended practice is to [use AAD authentication when possible](https://docs.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-overview).
+
+AAD is a more modern authentication protocol, allows for easier credential/role management, and can eliminate the need to include passwords in a connection string.
+
+To enable support for AAD authentication, we leverage the existing AAD authentication support in the [SQL Server driver for Go](https://github.com/denisenkom/go-mssqldb#azure-active-directory-authentication---preview)
+
+#### How to use AAD Auth with MSI
+
+- Configure "system-assigned managed identity" for Azure resources on the Monitoring VM (the VM that'd connect to the SQL server/database) [using the Azure portal](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/qs-configure-portal-windows-vm).
+- On the database being monitored, create/update a USER with the name of the Monitoring VM as the principal using the below script. This might require allow-listing the client machine's IP address (from where the below SQL script is being run) on the SQL Server resource.
+```sql
+EXECUTE ('IF EXISTS(SELECT * FROM sys.database_principals WHERE name = ''<Monitoring_VM_Name>'')
+    BEGIN
+        DROP USER [<Monitoring_VM_Name>]
+    END')
+EXECUTE ('CREATE USER [<Monitoring_VM_Name>] FROM EXTERNAL PROVIDER')
+EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
+```
+- On the SQL Server resource of the database(s) being monitored, go to "Firewalls and Virtual Networks" tab and allowlist the monitoring VM IP address.
+- On the Monitoring VM, update the telegraf config file with the database connection string in the following format. Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
+- On the Monitoring VM, update the telegraf config file with the database connection string in the following format.
+- On the Monitoring VM, update the telegraf config file with the database connection string in the following format. The connection string only provides the server and database name, but no password (since the VM's system-assigned managed identity would be used for authentication).
+```toml
+  servers = [
+    "Server=<Azure_SQL_Server_Name>.database.windows.net;Port=1433;Database=<Azure_SQL_Database_Name>;app name=telegraf;log=1;",
+  ]
+```
+- Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
 
 ### Metrics:
 To provide backwards compatibility, this plugin support two versions of metrics queries.
