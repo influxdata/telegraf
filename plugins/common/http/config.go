@@ -22,7 +22,8 @@ type HTTPClientConfig struct {
 	Scopes       []string `toml:"scopes"`
 	Log          telegraf.Logger
 
-	Timeout config.Duration `toml:"timeout"`
+	Timeout         config.Duration `toml:"timeout"`
+	IdleConnTimeout config.Duration `toml:"idle_conn_timeout"`
 
 	proxy.HTTPProxy
 	tls.ClientConfig
@@ -42,6 +43,7 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context) (*http.Client, erro
 	transport := &http.Transport{
 		TLSClientConfig: tlsCfg,
 		Proxy:           prox,
+		IdleConnTimeout: time.Duration(h.IdleConnTimeout),
 	}
 
 	timeout := h.Timeout
