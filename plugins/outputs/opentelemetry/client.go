@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	metricspb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -131,11 +132,14 @@ func (c *client) ping(ctx context.Context) error {
 }
 
 // store sends a batch of samples to the endpoint.
-func (c *client) store(req *metricsService.ExportMetricsServiceRequest) error {
-	metricsLen := len(req.ResourceMetrics)
+func (c *client) store(samples []*metricspb.ResourceMetrics) error {
+	metricsLen := len(samples)
 	if metricsLen == 0 {
 		// Nothing to do, return silently.
 		return nil
+	}
+	req := metricsService.ExportMetricsServiceRequest{
+		ResourceMetrics: samples,
 	}
 
 	// Note the call to connect() applies its own timeout for Dial().

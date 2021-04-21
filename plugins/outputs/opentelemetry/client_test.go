@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	metricspb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	"golang.org/x/net/nettest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -81,6 +82,6 @@ func TestEmptyRequest(t *testing.T) {
 		timeout: time.Second,
 	}
 
-	err = c.store(&metricsService.ExportMetricsServiceRequest{})
+	err = c.store([]*metricspb.ResourceMetrics{})
 	require.NoError(t, err)
 }
