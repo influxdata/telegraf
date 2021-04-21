@@ -380,13 +380,14 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 		{
 			name: "success",
 			plugin: &HTTP{
-				URL:          u.String() + "/write",
+				URL: u.String() + "/write",
 				HTTPClientConfig: httpconfig.HTTPClientConfig{
 					ClientID:     "howdy",
 					ClientSecret: "secret",
 					TokenURL:     u.String() + "/token",
 					Scopes:       []string{"urn:opc:idm:__myscopes__"},
-				},			},
+				},
+			},
 			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				values := url.Values{}
