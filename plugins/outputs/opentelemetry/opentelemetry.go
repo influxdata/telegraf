@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"sort"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -132,20 +131,6 @@ func (o *OpenTelemetry) Connect() error {
 	return nil
 }
 
-// Sorted returns a copy of the metrics in time ascending order.  A copy is
-// made to avoid modifying the input metric slice since doing so is not
-// allowed.
-func sorted(metrics []telegraf.Metric) []telegraf.Metric {
-	batch := make([]telegraf.Metric, 0, len(metrics))
-	for i := len(metrics) - 1; i >= 0; i-- {
-		batch = append(batch, metrics[i])
-	}
-	sort.Slice(batch, func(i, j int) bool {
-		return batch[i].Time().Before(batch[j].Time())
-	})
-	return batch
-}
-
 func monotonicIntegerPoint(labels []*commonpb.StringKeyValue, start, end int64, value int64) *metricpb.IntSum {
 	integer := &metricpb.IntDataPoint{
 		Labels:            labels,
@@ -254,7 +239,7 @@ func doubleGauge(labels []*commonpb.StringKeyValue, ts int64, value float64) *me
 
 // Write the metrics to OTLP destination
 func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
-	batch := sorted(metrics)
+	batch := metrics
 	samples := []*metricpb.ResourceMetrics{}
 	currentTs := time.Now().UnixNano()
 	for _, m := range batch {
