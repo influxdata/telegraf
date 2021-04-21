@@ -172,7 +172,7 @@ func (c *client) store(req *metricsService.ExportMetricsServiceRequest) error {
 
 			if _, err = service.Export(metadata.NewOutgoingContext(ctx, c.headers), reqCopy, grpc.Trailer(&md)); err != nil {
 				c.logger.Errorf("export failure, err=%w size=%d trailers=%v recoverable=%t",
-					truncateErrorString(err),
+					err,
 					proto.Size(reqCopy),
 					md,
 					isRecoverable(err),
@@ -197,16 +197,6 @@ func (c *client) close() error {
 		return nil
 	}
 	return c.conn.Close()
-}
-
-// truncateErrorString avoids printing error messages that are very
-// large.
-func truncateErrorString(err error) string {
-	tmp := fmt.Sprint(err)
-	if len(tmp) > maxErrorDetailStringLen {
-		tmp = fmt.Sprint(tmp[:maxErrorDetailStringLen], " ...")
-	}
-	return tmp
 }
 
 func isRecoverable(err error) bool {
