@@ -226,10 +226,8 @@ func (c *ConfigurationOriginal) normalizeOutputDatatype(dataType string) (string
 	switch dataType {
 	case "FIXED", "FLOAT32", "UFIXED":
 		return "FLOAT64", nil
-	case "FLOAT32-IEEE", "FLOAT64-IEEE":
-		return "FLOAT64", nil
 	}
-	return normalizeOutputDatatype(dataType)
+	return normalizeOutputDatatype("native")
 }
 
 func (c *ConfigurationOriginal) normalizeByteOrder(byteOrder string) (string, error) {

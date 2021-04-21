@@ -38,12 +38,10 @@ func normalizeInputDatatype(dataType string) (string, error) {
 
 func normalizeOutputDatatype(dataType string) (string, error) {
 	switch dataType {
-	case "INT16", "INT32", "INT64":
-		return "INT64", nil
-	case "UINT16", "UINT32", "UINT64":
-		return "UINT64", nil
-	case "FLOAT32", "FLOAT64":
-		return "FLOAT64", nil
+	case "", "native":
+		return "native", nil
+	case "INT64", "UINT64", "FLOAT64":
+		return dataType, nil
 	}
 	return "unknown", fmt.Errorf("unknown type %q", dataType)
 }
