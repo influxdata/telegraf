@@ -102,8 +102,10 @@ While Starlark is similar to Python, there are important differences to note:
 
 The ability to load external scripts other than your own is pretty limited. The following libraries are available for loading:
 
-* json: `load("json.star", "json")` provides the following functions: `json.encode()`, `json.decode()`, `json.indent()`. See [json.star](/plugins/processors/starlark/testdata/json.star) for an example.
-* log: `load("logging.star", "log")` provides the following functions: `log.debug()`, `log.info()`, `log.warn()`, `log.error()`. See [logging.star](/plugins/processors/starlark/testdata/logging.star) for an example.
+* json: `load("json.star", "json")` provides the following functions: `json.encode()`, `json.decode()`, `json.indent()`. See [json.star](/plugins/processors/starlark/testdata/json.star) for an example. For more details about the functions, please refer to [the documentation of this library](https://pkg.go.dev/go.starlark.net/lib/json).
+* log: `load("logging.star", "log")` provides the following functions: `log.debug()`, `log.info()`, `log.warn()`, `log.error()`. See [logging.star](/plugins/processors/starlark/testdata/logging.star) for an example. 
+* math: `load("math.star", "math")` provides [the following functions and constants](https://pkg.go.dev/go.starlark.net/lib/math). See [math.star](/plugins/processors/starlark/testdata/math.star) for an example.
+* time: `load("time.star", "time")` provides the following functions: `time.from_timestamp()`, `time.is_valid_timezone()`, `time.now()`, `time.parse_duration()`, `time.parseTime()`, `time.time()`. See [time_date.star](/plugins/processors/starlark/testdata/time_date.star), [time_duration.star](/plugins/processors/starlark/testdata/time_duration.star) and/or [time_timestamp.star](/plugins/processors/starlark/testdata/time_timestamp.star) for an example. For more details about the functions, please refer to [the documentation of this library](https://pkg.go.dev/go.starlark.net/lib/time).
 
 If you would like to see support for something else here, please open an issue.
 
