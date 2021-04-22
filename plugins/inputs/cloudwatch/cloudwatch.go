@@ -66,8 +66,9 @@ type Metric struct {
 
 // Dimension defines a simplified Cloudwatch dimension (provides metric filtering).
 type Dimension struct {
-	Name  string `toml:"name"`
-	Value string `toml:"value"`
+	Name         string `toml:"name"`
+	Value        string `toml:"value"`
+	valueMatcher filter.Filter
 }
 
 // metricCache caches metrics, their filters, and generated queries.
@@ -170,6 +171,7 @@ func (c *CloudWatch) SampleConfig() string {
   #
   #  ## Dimension filters for Metric.  All dimensions defined for the metric names
   #  ## must be specified in order to retrieve the metric statistics.
+  #  ## 'value' has wildcard / 'glob' matching support. such as 'p-*'.
   #  [[inputs.cloudwatch.metrics.dimensions]]
   #    name = "LoadBalancerName"
   #    value = "p-example"
@@ -293,6 +295,18 @@ func (c *CloudWatch) initializeCloudWatch() error {
 
 	loglevel := aws.LogOff
 	c.client = cloudwatch.New(configProvider, cfg.WithLogLevel(loglevel))
+
+	// Initialize regex matchers for each Dimension value.
+	for _, m := range c.Metrics {
+		for _, dimension := range m.Dimensions {
+			matcher, err := filter.NewIncludeExcludeFilter([]string{dimension.Value}, nil)
+			if err != nil {
+				return err
+			}
+
+			dimension.valueMatcher = matcher
+		}
+	}
 
 	return nil
 }
@@ -633,7 +647,7 @@ func (f *metricCache) isValid() bool {
 
 func hasWildcard(dimensions []*Dimension) bool {
 	for _, d := range dimensions {
-		if d.Value == "" || d.Value == "*" {
+		if d.Value == "" || strings.ContainsAny(d.Value, "*?[") {
 			return true
 		}
 	}
@@ -651,7 +665,7 @@ func isSelected(name string, metric *cloudwatch.Metric, dimensions []*Dimension)
 		selected := false
 		for _, d2 := range metric.Dimensions {
 			if d.Name == *d2.Name {
-				if d.Value == "" || d.Value == "*" || d.Value == *d2.Value {
+				if d.Value == "" || d.valueMatcher.Match(*d2.Value) {
 					selected = true
 				}
 			}
