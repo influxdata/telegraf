@@ -381,7 +381,6 @@ func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.Com
 	}
 }
 
-// getDiscoveryDataAcrossRegions returns discovery data across defined (when creating) list of regions
 func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[string]interface{}, error) {
 	var (
 		data       map[string]interface{}

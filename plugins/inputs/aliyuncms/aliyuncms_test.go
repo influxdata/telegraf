@@ -172,14 +172,7 @@ func TestPluginInitialize(t *testing.T) {
 			accessKeySecret: "dummy",
 		},
 		{
-			name:             "'regions' is not set, but 'discovery_regions' set",
-			project:          "acs_slb_dashboard",
-			accessKeyID:      "dummy",
-			accessKeySecret:  "dummy",
-			discoveryRegions: []string{"region1", "region2"},
-		},
-		{
-			name:            "'regions' & 'discovery_regions' are not set",
+			name:            "'regions' is not set",
 			project:         "acs_slb_dashboard",
 			accessKeyID:     "dummy",
 			accessKeySecret: "dummy",
@@ -192,19 +185,13 @@ func TestPluginInitialize(t *testing.T) {
 			plugin.AccessKeyID = tt.accessKeyID
 			plugin.AccessKeySecret = tt.accessKeySecret
 			plugin.Regions = tt.regions
-			plugin.DiscoveryRegions = tt.discoveryRegions
 
 			if tt.expectedErrorString != "" {
 				require.EqualError(t, plugin.Init(), tt.expectedErrorString)
 			} else {
 				require.Equal(t, nil, plugin.Init())
 			}
-
-			if len(tt.discoveryRegions) != 0 && len(tt.regions) == 0 {
-				require.Equal(t, plugin.Regions, plugin.DiscoveryRegions)
-			}
-
-			if len(tt.discoveryRegions) == 0 && len(tt.regions) == 0 { //Check if set to default
+			if len(tt.regions) == 0 { //Check if set to default
 				require.Equal(t, plugin.Regions, aliyunRegionList)
 			}
 		})

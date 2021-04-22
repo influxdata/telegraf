@@ -80,10 +80,7 @@ In the following order the plugin will attempt to authenticate.
   ## Maximum requests per second, default value is 200
   ratelimit = 200
   
-  ## Deprecated, use regions instead
-  #discovery_regions = ["cn-hongkong"]
-  
-  ## how often the discovery API call executed (default 1m)
+  ## How often the discovery API call executed (default 1m)
   #discovery_interval = "1m"
   
   ## Metrics to Pull (Required)

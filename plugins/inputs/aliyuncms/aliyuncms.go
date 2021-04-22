@@ -85,10 +85,7 @@ const (
   ## Maximum requests per second, default value is 200
   ratelimit = 200
   
-  ## Deprecated, use regions instead
-  #discovery_regions = ["cn-hongkong"]
-  
-  ## how often the discovery API call executed (default 1m)
+  ## How often the discovery API call executed (default 1m)
   #discovery_interval = "1m"
   
   ## Metrics to Pull (Required)
@@ -140,7 +137,6 @@ type (
 		RoleName          string `toml:"role_name"`
 
 		Regions           []string        `toml:"regions"`
-		DiscoveryRegions  []string        `toml:"discovery_regions"` // obsolete since 1.19, use "regions" instead
 		DiscoveryInterval config.Duration `toml:"discovery_interval"`
 		Period            config.Duration `toml:"period"`
 		Delay             config.Duration `toml:"delay"`
@@ -273,20 +269,10 @@ func (s *AliyunCMS) Init() error {
 	s.measurement = formatMeasurement(s.Project)
 
 	//Check regions
-	if len(s.DiscoveryRegions) != 0 {
-		s.Log.Warn("'discovery_regions' is deprecated. Use 'regions' instead.")
-	}
-
-	if len(s.Regions) == 0 {
-		s.Regions = s.DiscoveryRegions
-	} else if len(s.DiscoveryRegions) != 0 {
-		s.Log.Warn("'discovery_regions' is deprecated and ignored in favour of 'regions'.")
-	}
-
 	if len(s.Regions) == 0 {
 		s.Regions = aliyunRegionList
 		s.Log.Infof("'regions' is not set. Metrics will be queried across %d regions:\n%s",
-			len(aliyunRegionList), strings.Join(aliyunRegionList, ","))
+			len(s.Regions), strings.Join(s.Regions, ","))
 	}
 
 	//Init discovery...
