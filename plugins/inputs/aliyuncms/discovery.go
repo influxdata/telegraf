@@ -100,7 +100,7 @@ func NewDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 
 	if len(regions) == 0 {
 		regions = aliyunRegionList
-		lg.Warnf("'regions' is not provided! Discovery data will be queried across %d regions:\n%s",
+		lg.Infof("'regions' is not provided! Discovery data will be queried across %d regions:\n%s",
 			len(aliyunRegionList), strings.Join(aliyunRegionList, ","))
 	}
 
