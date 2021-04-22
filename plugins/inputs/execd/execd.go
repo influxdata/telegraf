@@ -41,10 +41,12 @@ const sampleConfig = `
 `
 
 type Execd struct {
-	Command      []string        `toml:"command"`
-	Signal       string          `toml:"signal"`
-	RestartDelay config.Duration `toml:"restart_delay"`
-	Log          telegraf.Logger `toml:"-"`
+	Command       []string        `toml:"command"`
+	Signal        string          `toml:"signal"`
+	RestartDelay  config.Duration `toml:"restart_delay"`
+	Log           telegraf.Logger `toml:"-"`
+	WriteOnStart  string          `toml:"write_on_start"`
+	WriteOnGather string          `toml:"write_on_gather"`
 
 	process *process.Process
 	acc     telegraf.Accumulator
@@ -75,6 +77,18 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.process.ReadStdoutFn = e.cmdReadOut
 	e.process.ReadStderrFn = e.cmdReadErr
 
+	if e.WriteOnStart != "" {
+		/*
+		 * User has specified an initialization string.  If the daemon is restarted,
+		 * this string has to be sent again.
+		 */
+		e.process.RestartNotificationFn = func(p *process.Process) {
+			if _, err := io.WriteString(e.process.Stdin, e.WriteOnStart); err != nil {
+				e.Log.Errorf("Error writing to process's stdin: %s", err)
+			}
+		}
+	}
+
 	if err = e.process.Start(); err != nil {
 		// if there was only one argument, and it contained spaces, warn the user
 		// that they may have configured it wrong.
@@ -85,12 +99,18 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 		}
 		return fmt.Errorf("failed to start process %s: %w", e.Command, err)
 	}
+	if len(e.WriteOnStart) > 0 {
+		if _, err := io.WriteString(e.process.Stdin, e.WriteOnStart); err != nil {
+
+			return fmt.Errorf("Error writing to process's stdin: %s", err)
+		}
+	}
 
 	return nil
 }
 
 func (e *Execd) Stop() {
-	e.process.Stop()
+	e.process.Stop() /* also closes stdin */
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
@@ -157,14 +177,19 @@ func (e *Execd) Init() error {
 	if len(e.Command) == 0 {
 		return errors.New("no command specified")
 	}
+
+	if e.WriteOnGather == "" {
+		e.WriteOnGather = "\n"
+	}
 	return nil
 }
 
 func init() {
 	inputs.Add("execd", func() telegraf.Input {
 		return &Execd{
-			Signal:       "none",
-			RestartDelay: config.Duration(10 * time.Second),
+			Signal:        "none",
+			RestartDelay:  config.Duration(10 * time.Second),
+			WriteOnGather: "\n",
 		}
 	})
 }
