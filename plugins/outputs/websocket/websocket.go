@@ -24,8 +24,8 @@ var sampleConfig = `
   # write_timeout = "5s"
   # read_timeout = "30s"
 
-  ## Optionally turn on binary message type (text by default).
-  # binary = false
+  ## Optionally turn on using text data frames (binary by default).
+  # use_text_frames = false
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -58,7 +58,7 @@ type WebSocket struct {
 	WriteTimeout   config.Duration   `toml:"write_timeout"`
 	ReadTimeout    config.Duration   `toml:"read_timeout"`
 	Headers        map[string]string `toml:"headers"`
-	Binary         bool              `toml:"binary"`
+	UseTextFrames  bool              `toml:"use_text_frames"`
 	tls.ClientConfig
 
 	conn       *websocket.Conn
@@ -141,20 +141,20 @@ func (w *WebSocket) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	reqBody, err := w.serializer.SerializeBatch(metrics)
+	messageData, err := w.serializer.SerializeBatch(metrics)
 	if err != nil {
 		return err
 	}
 
-	messageType := websocket.TextMessage
-	if w.Binary {
-		messageType = websocket.BinaryMessage
+	messageType := websocket.BinaryMessage
+	if w.UseTextFrames {
+		messageType = websocket.TextMessage
 	}
 
 	if w.WriteTimeout > 0 {
 		_ = w.conn.SetWriteDeadline(time.Now().Add(time.Duration(w.WriteTimeout)))
 	}
-	err = w.conn.WriteMessage(messageType, reqBody)
+	err = w.conn.WriteMessage(messageType, messageData)
 	if err != nil {
 		_ = w.conn.Close()
 		w.conn = nil

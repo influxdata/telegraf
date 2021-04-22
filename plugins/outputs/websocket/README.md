@@ -17,8 +17,8 @@ It can output data in any of the [supported output formats](https://github.com/i
   # write_timeout = "5s"
   # read_timeout = "30s"
 
-  ## Optionally turn on binary message type (text by default).
-  # binary = false
+  ## Optionally turn on using text data frames (binary by default).
+  # use_text_frames = false
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
