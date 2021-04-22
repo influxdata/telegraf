@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
-	"github.com/influxdata/telegraf/plugins/common/oauth2"
+	oauth "github.com/influxdata/telegraf/plugins/common/oauth"
 	plugin "github.com/influxdata/telegraf/plugins/inputs/http"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -288,7 +288,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			plugin: &plugin.HTTP{
 				URLs: []string{u.String() + "/write"},
 				HTTPClientConfig: httpconfig.HTTPClientConfig{
-					OAuth2Config: oauth2.OAuth2Config{
+					OAuth2Config: oauth.OAuth2Config{
 						ClientID:     "howdy",
 						ClientSecret: "secret",
 						TokenURL:     u.String() + "/token",

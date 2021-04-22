@@ -1,4 +1,4 @@
-package oauth2
+package oauth
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type OAuth2Config struct {
 	Log telegraf.Logger
 }
 
-func (o *OAuth2Config) CreateOauth2Client(client *http.Client, ctx context.Context) *http.Client {
+func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Client) *http.Client {
 	if o.ClientID != "" && o.ClientSecret != "" && o.TokenURL != "" {
 		oauthConfig := clientcredentials.Config{
 			ClientID:     o.ClientID,

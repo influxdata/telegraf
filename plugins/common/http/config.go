@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/config"
-	oauth2Config "github.com/influxdata/telegraf/plugins/common/oauth2"
+	oauthConfig "github.com/influxdata/telegraf/plugins/common/oauth"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
@@ -18,7 +18,7 @@ type HTTPClientConfig struct {
 
 	proxy.HTTPProxy
 	tls.ClientConfig
-	oauth2Config.OAuth2Config
+	oauthConfig.OAuth2Config
 }
 
 func (h *HTTPClientConfig) CreateClient(ctx context.Context) (*http.Client, error) {
@@ -48,7 +48,7 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context) (*http.Client, erro
 		Timeout:   time.Duration(timeout),
 	}
 
-	client = h.OAuth2Config.CreateOauth2Client(client, ctx)
+	client = h.OAuth2Config.CreateOauth2Client(ctx, client)
 
 	return client, nil
 }
