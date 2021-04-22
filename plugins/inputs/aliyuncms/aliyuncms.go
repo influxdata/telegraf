@@ -153,7 +153,7 @@ type (
 		client        aliyuncmsClient
 		windowStart   time.Time
 		windowEnd     time.Time
-		dt            *DiscoveryTool
+		dt            *discoveryTool
 		dimensionKey  string
 		discoveryData map[string]interface{}
 		measurement   string
@@ -496,7 +496,7 @@ func (s *AliyunCMS) prepareTagsAndDimensions(metric *Metric) {
 L:
 	for {
 		select {
-		case s.discoveryData = <-s.dt.DataChan:
+		case s.discoveryData = <-s.dt.dataChan:
 			newData = true
 			continue
 		default:

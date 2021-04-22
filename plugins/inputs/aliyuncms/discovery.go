@@ -29,8 +29,8 @@ type aliyunSdkClient interface {
 	ProcessCommonRequest(req *requests.CommonRequest) (response *responses.CommonResponse, err error)
 }
 
-// DiscoveryTool is a object that provides discovery feature
-type DiscoveryTool struct {
+// discoveryTool is a object that provides discovery feature
+type discoveryTool struct {
 	req                map[string]discoveryRequest //Discovery request (specific per object type)
 	rateLimit          int                         //Rate limit for API query, as it is limited by API backend
 	reqDefaultPageSize int                         //Default page size while querying data from API (how many objects per request)
@@ -42,7 +42,7 @@ type DiscoveryTool struct {
 	wg       sync.WaitGroup              //WG for primary discovery goroutine
 	interval time.Duration               //Discovery interval
 	done     chan bool                   //Done channel to stop primary discovery goroutine
-	DataChan chan map[string]interface{} //Discovery data
+	dataChan chan map[string]interface{} //Discovery data
 	lg       telegraf.Logger             //Telegraf logger (should be provided)
 }
 
@@ -87,7 +87,7 @@ func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, 
 //Discovery is supported for a limited set of object types (defined by project) and can be extended in future.
 //Discovery can be limited by region if not set, then all regions is queried.
 //Request against API can inquire additional costs, consult with aliyun API documentation.
-func NewDiscoveryTool(regions []string, project string, lg telegraf.Logger, credential auth.Credential, rateLimit int, discoveryInterval time.Duration) (*DiscoveryTool, error) {
+func NewDiscoveryTool(regions []string, project string, lg telegraf.Logger, credential auth.Credential, rateLimit int, discoveryInterval time.Duration) (*discoveryTool, error) {
 	var (
 		dscReq                = map[string]discoveryRequest{}
 		cli                   = map[string]aliyunSdkClient{}
@@ -264,7 +264,7 @@ func NewDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 	}
 	responseRootKey = result[1]
 
-	return &DiscoveryTool{
+	return &discoveryTool{
 		req:                dscReq,
 		cli:                cli,
 		respRootKey:        responseRootKey,
@@ -272,13 +272,13 @@ func NewDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 		rateLimit:          rateLimit,
 		interval:           discoveryInterval,
 		reqDefaultPageSize: 20,
-		DataChan:           make(chan map[string]interface{}, 1),
+		dataChan:           make(chan map[string]interface{}, 1),
 		lg:                 lg,
 	}, nil
 }
 
-//func (dt *DiscoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) (data []interface{}, totalCount int, pageSize int, pageNumber int, err error) {
-func (dt *DiscoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) (pdResp *parsedDResp, err error) {
+//func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) (data []interface{}, totalCount int, pageSize int, pageNumber int, err error) {
+func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) (pdResp *parsedDResp, err error) {
 	var (
 		fullOutput    = map[string]interface{}{}
 		data          []byte
@@ -331,7 +331,7 @@ func (dt *DiscoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 	return
 }
 
-func (dt *DiscoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.CommonRequest, lmtr chan bool) (map[string]interface{}, error) {
+func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.CommonRequest, lmtr chan bool) (map[string]interface{}, error) {
 	var (
 		err           error
 		resp          *responses.CommonResponse
@@ -383,7 +383,7 @@ func (dt *DiscoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.Com
 }
 
 // GetDiscoveryDataAcrossRegions returns discovery data across defined (when creating) list of regions
-func (dt *DiscoveryTool) GetDiscoveryDataAcrossRegions(lmtr chan bool) (map[string]interface{}, error) {
+func (dt *discoveryTool) GetDiscoveryDataAcrossRegions(lmtr chan bool) (map[string]interface{}, error) {
 	var (
 		data       map[string]interface{}
 		resultData = map[string]interface{}{}
@@ -428,7 +428,7 @@ func (dt *DiscoveryTool) GetDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 
 // Start the discovery pooling
 // In case smth. new found it will be reported back through `DataChan`
-func (dt *DiscoveryTool) Start() {
+func (dt *discoveryTool) Start() {
 	var (
 		err      error
 		data     map[string]interface{}
@@ -467,7 +467,7 @@ func (dt *DiscoveryTool) Start() {
 					}
 
 					//send discovery data in blocking mode
-					dt.DataChan <- data
+					dt.dataChan <- data
 				}
 			}
 		}
@@ -476,7 +476,7 @@ func (dt *DiscoveryTool) Start() {
 
 // Stop the discovery loop, making sure
 // all data is read from 'DataChan'
-func (dt *DiscoveryTool) Stop() {
+func (dt *discoveryTool) Stop() {
 	close(dt.done)
 
 	//Shutdown timer
@@ -487,7 +487,7 @@ L:
 		select {
 		case <-timer.C:
 			break L
-		case <-dt.DataChan:
+		case <-dt.dataChan:
 		}
 	}
 

@@ -75,7 +75,7 @@ func (m *mockAliyunSDKCli) ProcessCommonRequest(_ *requests.CommonRequest) (resp
 	return m.resp, nil
 }
 
-func getDiscoveryTool(project string, discoverRegions []string) (*DiscoveryTool, error) {
+func getDiscoveryTool(project string, discoverRegions []string) (*discoveryTool, error) {
 	var (
 		err        error
 		credential auth.Credential
