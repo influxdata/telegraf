@@ -72,7 +72,7 @@ func determineConverterU64(outType, byteOrder string) (fieldConverterFunc, error
 		}, nil
 	case "native", "UINT64":
 		return func(b []byte) interface{} {
-			return uint64(tohost(b))
+			return tohost(b)
 		}, nil
 	case "FLOAT64":
 		return func(b []byte) interface{} {
