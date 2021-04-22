@@ -95,7 +95,7 @@ func getDiscoveryTool(project string, discoverRegions []string) (*discoveryTool,
 		return nil, errors.Errorf("failed to retrieve credential: %v", err)
 	}
 
-	dt, err := NewDiscoveryTool(discoverRegions, project, testutil.Logger{Name: inputTitle}, credential, 1, time.Minute*2)
+	dt, err := newDiscoveryTool(discoverRegions, project, testutil.Logger{Name: inputTitle}, credential, 1, time.Minute*2)
 
 	if err != nil {
 		return nil, errors.Errorf("Can't create discovery tool object: %v", err)
@@ -417,7 +417,7 @@ func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
 				t.Fatalf("Can't create mock sdk cli: %v", err)
 			}
 			dt.cli = map[string]aliyunSdkClient{tt.region: &mockCli}
-			data, err := dt.GetDiscoveryDataAcrossRegions(nil)
+			data, err := dt.getDiscoveryDataAcrossRegions(nil)
 
 			require.Equal(t, tt.discData, data)
 			if err != nil {

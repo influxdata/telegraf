@@ -291,7 +291,7 @@ func (s *AliyunCMS) Init() error {
 
 	//Init discovery...
 	if s.dt == nil { //Support for tests
-		s.dt, err = NewDiscoveryTool(s.Regions, s.Project, s.Log, credential, int(float32(s.RateLimit)*0.2), time.Duration(s.DiscoveryInterval))
+		s.dt, err = newDiscoveryTool(s.Regions, s.Project, s.Log, credential, int(float32(s.RateLimit)*0.2), time.Duration(s.DiscoveryInterval))
 		if err != nil {
 			s.Log.Errorf("Discovery tool is not activated: %v", err)
 			s.dt = nil
@@ -299,7 +299,7 @@ func (s *AliyunCMS) Init() error {
 		}
 	}
 
-	s.discoveryData, err = s.dt.GetDiscoveryDataAcrossRegions(nil)
+	s.discoveryData, err = s.dt.getDiscoveryDataAcrossRegions(nil)
 	if err != nil {
 		s.Log.Errorf("Discovery tool is not activated: %v", err)
 		s.dt = nil
@@ -320,7 +320,7 @@ func (s *AliyunCMS) Init() error {
 func (s *AliyunCMS) Start(telegraf.Accumulator) error {
 	//Start periodic discovery process
 	if s.dt != nil {
-		s.dt.Start()
+		s.dt.start()
 	}
 
 	return nil
@@ -355,7 +355,7 @@ func (s *AliyunCMS) Gather(acc telegraf.Accumulator) error {
 // Stop - stops the plugin discovery loop
 func (s *AliyunCMS) Stop() {
 	if s.dt != nil {
-		s.dt.Stop()
+		s.dt.stop()
 	}
 }
 

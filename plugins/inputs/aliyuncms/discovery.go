@@ -81,13 +81,13 @@ func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, 
 	return nil, errors.Errorf("Didn't find *requests.RpcRequest embedded struct in %q", ptrV.Type())
 }
 
-//NewDiscoveryTool function returns discovery tool object.
+//newDiscoveryTool function returns discovery tool object.
 //The object is used to periodically get data about aliyun objects and send this
 //data into channel. The intention is to enrich reported metrics with discovery data.
 //Discovery is supported for a limited set of object types (defined by project) and can be extended in future.
 //Discovery can be limited by region if not set, then all regions is queried.
 //Request against API can inquire additional costs, consult with aliyun API documentation.
-func NewDiscoveryTool(regions []string, project string, lg telegraf.Logger, credential auth.Credential, rateLimit int, discoveryInterval time.Duration) (*discoveryTool, error) {
+func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, credential auth.Credential, rateLimit int, discoveryInterval time.Duration) (*discoveryTool, error) {
 	var (
 		dscReq                = map[string]discoveryRequest{}
 		cli                   = map[string]aliyunSdkClient{}
@@ -277,7 +277,6 @@ func NewDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 	}, nil
 }
 
-//func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) (data []interface{}, totalCount int, pageSize int, pageNumber int, err error) {
 func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) (pdResp *parsedDResp, err error) {
 	var (
 		fullOutput    = map[string]interface{}{}
@@ -382,8 +381,8 @@ func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.Com
 	}
 }
 
-// GetDiscoveryDataAcrossRegions returns discovery data across defined (when creating) list of regions
-func (dt *discoveryTool) GetDiscoveryDataAcrossRegions(lmtr chan bool) (map[string]interface{}, error) {
+// getDiscoveryDataAcrossRegions returns discovery data across defined (when creating) list of regions
+func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[string]interface{}, error) {
 	var (
 		data       map[string]interface{}
 		resultData = map[string]interface{}{}
@@ -426,9 +425,9 @@ func (dt *discoveryTool) GetDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 	return resultData, nil
 }
 
-// Start the discovery pooling
+// start the discovery pooling
 // In case smth. new found it will be reported back through `DataChan`
-func (dt *discoveryTool) Start() {
+func (dt *discoveryTool) start() {
 	var (
 		err      error
 		data     map[string]interface{}
@@ -453,7 +452,7 @@ func (dt *discoveryTool) Start() {
 			case <-dt.done:
 				return
 			case <-ticker.C:
-				data, err = dt.GetDiscoveryDataAcrossRegions(lmtr.C)
+				data, err = dt.getDiscoveryDataAcrossRegions(lmtr.C)
 				if err != nil {
 					dt.lg.Errorf("Can't get discovery data: %v", err)
 					continue
@@ -474,16 +473,16 @@ func (dt *discoveryTool) Start() {
 	}()
 }
 
-// Stop the discovery loop, making sure
-// all data is read from 'DataChan'
-func (dt *discoveryTool) Stop() {
+// stop the discovery loop, making sure
+// all data is read from 'dataChan'
+func (dt *discoveryTool) stop() {
 	close(dt.done)
 
 	//Shutdown timer
 	timer := time.NewTimer(time.Second * 3)
 	defer timer.Stop()
 L:
-	for { //Unblock go routine by reading from dt.DataChan
+	for { //Unblock go routine by reading from dt.dataChan
 		select {
 		case <-timer.C:
 			break L
