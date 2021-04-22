@@ -157,31 +157,51 @@ jobs:
     steps:
       - package-build:
           type: windows
-  debian-package:
-    executor: go-1_16
-    steps:
-      - package-build:
-          type: debian
-  centos-package:
-    executor: go-1_16
-    steps:
-      - package-build:
-          type: centos
   mac-package:
     executor: go-1_16
     steps:
       - package-build:
-          type: mac
-  freebsd-package:
+          type: darwin
+  i386-package:
     executor: go-1_16
     steps:
       - package-build:
-          type: freebsd
-  linux-package:
+          type: i386
+  ppc641e-package:
     executor: go-1_16
     steps:
       - package-build:
-          type: linux
+          type: ppc641e
+  s390x-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: s390x
+  armel-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: armel
+  amd64-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: amd64
+  arm64-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: arm64
+  mipsel-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: mipsel
+  mips-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: mips
 
   release:
     executor: go-1_16
@@ -262,103 +282,34 @@ workflows:
   version: 2
   check:
     jobs:
-      - 'deps':
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_15':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_15-386':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_16':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_16-386':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-mac':
-          filters:
-            tags: # only runs on tags if you specify this filter
-              only: /.*/
-      - 'test-go-windows':
-          filters:
-            tags:
-              only: /.*/
-      - 'test-awaiter': 
-          requires:
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
-            - 'test-go-1_16'
-            - 'test-go-1_16-386'
+      - 'test-awaiter'
       - 'windows-package':
-          requires: 
-            - 'test-go-windows'
-      - 'debian-package':
-          requires: 
-            - 'test-awaiter'
-      - 'centos-package':
           requires: 
             - 'test-awaiter'
       - 'mac-package':
           requires: 
-            - 'test-go-mac'
-      - 'freebsd-package':
+            - 'test-awaiter'
+      - 'i386-package':
           requires: 
             - 'test-awaiter'
-      - 'linux-package':
+      - 'ppc641e-package':
           requires: 
             - 'test-awaiter'
-      - 'share-artifacts':
-          requires:
-            - 'linux-package'
-            - 'freebsd-package'
-            - 'mac-package'
-            - 'centos-package'
-            - 'debian-package'
-            - 'windows-package'
-          filters:
-            branches:
-              ignore:
-                - master
-      - 'release':
-          requires:
-            - 'test-go-windows'
-            - 'test-go-mac'
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
-            - 'test-go-1_16'
-            - 'test-go-1_16-386'
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
-      - 'package-sign-windows':
-          requires:
-            - 'release'
-          filters:
-              tags:
-                only: /.*/
-      - 'package-sign-mac':
-           requires:
-             - 'package-sign-windows' 
-           filters:
-              tags:
-                only: /.*/
+      - 's390x-package':
+          requires: 
+            - 'test-awaiter'
+      - 'armel-package':
+          requires: 
+            - 'test-awaiter'
+      - 'amd64-package':
+          requires: 
+            - 'test-awaiter'
+      - 'mipsel-package':
+          requires: 
+            - 'test-awaiter'
+      - 'mips-package':
+          requires: 
+            - 'test-awaiter'
 
   nightly:
     jobs:
