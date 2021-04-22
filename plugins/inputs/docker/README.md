@@ -115,6 +115,22 @@ may prefer to exclude them:
   docker_label_exclude = ["annotation.kubernetes*"]
 ```
 
+
+#### Docker-compose Labels
+
+Docker-compose will add labels to your containers. You can limit restrict labels to selected ones, e.g. 
+
+```
+  docker_label_include = [
+    "com.docker.compose.config-hash",
+    "com.docker.compose.container-number",
+    "com.docker.compose.oneoff",
+    "com.docker.compose.project",
+    "com.docker.compose.service",
+  ]
+```
+
+
 ### Metrics:
 
 - docker
