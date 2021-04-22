@@ -43,7 +43,7 @@ func listen(ctx context.Context, t *testing.T, out [][]byte) (string, error) {
 				continue
 			}
 			defer conn.Close()
-			conn.SetReadDeadline(time.Now().Add(time.Second))
+			require.NoError(t, conn.SetReadDeadline(time.Now().Add(time.Second)))
 
 			in := make([]byte, 128)
 			n, err := conn.Read(in)

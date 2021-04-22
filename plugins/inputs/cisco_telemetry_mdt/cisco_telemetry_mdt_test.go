@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"io"
 	"net"
 	"testing"
 
@@ -78,7 +79,8 @@ func TestHandleTelemetryTwoSimple(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -149,7 +151,8 @@ func TestHandleTelemetrySingleNested(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -218,7 +221,8 @@ func TestHandleEmbeddedTags(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -306,7 +310,8 @@ func TestHandleNXAPI(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -382,7 +387,8 @@ func TestHandleNXAPIXformNXAPI(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -467,7 +473,8 @@ func TestHandleNXXformMulti(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -539,7 +546,8 @@ func TestHandleNXDME(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -566,9 +574,10 @@ func TestTCPDialoutOverflow(t *testing.T) {
 	addr := c.Address()
 	conn, err := net.Dial(addr.Network(), addr.String())
 	require.NoError(t, err)
-	binary.Write(conn, binary.BigEndian, hdr)
-	conn.Read([]byte{0})
-	conn.Close()
+	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
+	_, err = conn.Read([]byte{0})
+	require.True(t, err == nil || err == io.EOF)
+	require.NoError(t, conn.Close())
 
 	c.Stop()
 
@@ -629,32 +638,42 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	conn, err := net.Dial(addr.Network(), addr.String())
 	require.NoError(t, err)
 
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 	hdr.MsgLen = uint32(len(data))
-	binary.Write(conn, binary.BigEndian, hdr)
-	conn.Write(data)
+	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
+	_, err = conn.Write(data)
+	require.NoError(t, err)
 
 	conn2, err := net.Dial(addr.Network(), addr.String())
 	require.NoError(t, err)
 
 	telemetry.EncodingPath = "type:model/parallel/path"
-	data, _ = proto.Marshal(telemetry)
+	data, err = proto.Marshal(telemetry)
+	require.NoError(t, err)
 	hdr.MsgLen = uint32(len(data))
-	binary.Write(conn2, binary.BigEndian, hdr)
-	conn2.Write(data)
-	conn2.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
-	conn2.Read([]byte{0})
-	conn2.Close()
+	require.NoError(t, binary.Write(conn2, binary.BigEndian, hdr))
+	_, err = conn2.Write(data)
+	require.NoError(t, err)
+	_, err = conn2.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
+	require.NoError(t, err)
+	_, err = conn2.Read([]byte{0})
+	require.True(t, err == nil || err == io.EOF)
+	require.NoError(t, conn2.Close())
 
 	telemetry.EncodingPath = "type:model/other/path"
-	data, _ = proto.Marshal(telemetry)
+	data, err = proto.Marshal(telemetry)
+	require.NoError(t, err)
 	hdr.MsgLen = uint32(len(data))
-	binary.Write(conn, binary.BigEndian, hdr)
-	conn.Write(data)
-	conn.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
-	conn.Read([]byte{0})
+	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
+	_, err = conn.Write(data)
+	require.NoError(t, err)
+	_, err = conn.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
+	require.NoError(t, err)
+	_, err = conn.Read([]byte{0})
+	require.True(t, err == nil || err == io.EOF)
 	c.Stop()
-	conn.Close()
+	require.NoError(t, conn.Close())
 
 	// We use the invalid dialout flags to let the server close the connection
 	require.Equal(t, acc.Errors, []error{errors.New("invalid dialout flags: 257"), errors.New("invalid dialout flags: 257")})
@@ -679,15 +698,18 @@ func TestGRPCDialoutError(t *testing.T) {
 	require.NoError(t, err)
 
 	addr := c.Address()
-	conn, _ := grpc.Dial(addr.String(), grpc.WithInsecure())
+	conn, err := grpc.Dial(addr.String(), grpc.WithInsecure())
+	require.NoError(t, err)
 	client := dialout.NewGRPCMdtDialoutClient(conn)
-	stream, _ := client.MdtDialout(context.Background())
+	stream, err := client.MdtDialout(context.Background())
+	require.NoError(t, err)
 
 	args := &dialout.MdtDialoutArgs{Errors: "foobar"}
-	stream.Send(args)
+	require.NoError(t, stream.Send(args))
 
 	// Wait for the server to close
-	stream.Recv()
+	_, err = stream.Recv()
+	require.True(t, err == nil || err == io.EOF)
 	c.Stop()
 
 	require.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: foobar")})
@@ -702,35 +724,44 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	telemetry := mockTelemetryMessage()
 
 	addr := c.Address()
-	conn, _ := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	require.NoError(t, err)
 	client := dialout.NewGRPCMdtDialoutClient(conn)
-	stream, _ := client.MdtDialout(context.TODO())
+	stream, err := client.MdtDialout(context.TODO())
+	require.NoError(t, err)
 
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 	args := &dialout.MdtDialoutArgs{Data: data, ReqId: 456}
-	stream.Send(args)
+	require.NoError(t, stream.Send(args))
 
-	conn2, _ := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	conn2, err := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	require.NoError(t, err)
 	client2 := dialout.NewGRPCMdtDialoutClient(conn2)
-	stream2, _ := client2.MdtDialout(context.TODO())
+	stream2, err := client2.MdtDialout(context.TODO())
+	require.NoError(t, err)
 
 	telemetry.EncodingPath = "type:model/parallel/path"
-	data, _ = proto.Marshal(telemetry)
+	data, err = proto.Marshal(telemetry)
+	require.NoError(t, err)
 	args = &dialout.MdtDialoutArgs{Data: data}
-	stream2.Send(args)
-	stream2.Send(&dialout.MdtDialoutArgs{Errors: "testclose"})
-	stream2.Recv()
-	conn2.Close()
+	require.NoError(t, stream2.Send(args))
+	require.NoError(t, stream2.Send(&dialout.MdtDialoutArgs{Errors: "testclose"}))
+	_, err = stream2.Recv()
+	require.True(t, err == nil || err == io.EOF)
+	require.NoError(t, conn2.Close())
 
 	telemetry.EncodingPath = "type:model/other/path"
-	data, _ = proto.Marshal(telemetry)
+	data, err = proto.Marshal(telemetry)
+	require.NoError(t, err)
 	args = &dialout.MdtDialoutArgs{Data: data}
-	stream.Send(args)
-	stream.Send(&dialout.MdtDialoutArgs{Errors: "testclose"})
-	stream.Recv()
+	require.NoError(t, stream.Send(args))
+	require.NoError(t, stream.Send(&dialout.MdtDialoutArgs{Errors: "testclose"}))
+	_, err = stream.Recv()
+	require.True(t, err == nil || err == io.EOF)
 
 	c.Stop()
-	conn.Close()
+	require.NoError(t, conn.Close())
 
 	require.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: testclose"), errors.New("GRPC dialout error: testclose")})
 
