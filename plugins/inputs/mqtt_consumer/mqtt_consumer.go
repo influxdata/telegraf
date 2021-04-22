@@ -62,7 +62,8 @@ type MQTTConsumer struct {
 	ClientID          string `toml:"client_id"`
 	tls.ClientConfig
 
-	Log telegraf.Logger
+	ContentEncoding string `toml:"content_encoding"`
+	Log             telegraf.Logger
 
 	clientFactory ClientFactory
 	client        Client
@@ -74,8 +75,9 @@ type MQTTConsumer struct {
 	messagesMutex sync.Mutex
 	topicTag      string
 
-	ctx    context.Context
-	cancel context.CancelFunc
+	ctx     context.Context
+	cancel  context.CancelFunc
+	decoder internal.ContentDecoder
 }
 
 var sampleConfig = `
@@ -140,6 +142,10 @@ var sampleConfig = `
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -192,6 +198,12 @@ func (m *MQTTConsumer) Init() error {
 
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	m.state = Disconnected
+
+	var err error
+	m.decoder, err = internal.NewContentDecoder(m.ContentEncoding)
+	if err != nil {
+		return err
+	}
 
 	m.acc = acc.WithTracking(m.MaxUndeliveredMessages)
 	m.sem = make(semaphore, m.MaxUndeliveredMessages)
@@ -279,7 +291,12 @@ func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {
 }
 
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
-	metrics, err := m.parser.Parse(msg.Payload())
+	payload, err := m.decoder.Decode(msg.Payload())
+	if err != nil {
+		return err
+	}
+
+	metrics, err := m.parser.Parse(payload)
 	if err != nil {
 		return err
 	}
