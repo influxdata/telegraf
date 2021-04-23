@@ -110,10 +110,16 @@ func (w *WebSocket) Connect() error {
 	}
 
 	w.conn = conn
+	go w.read(conn)
 
+	return nil
+}
+
+func (w *WebSocket) read(conn *websocket.Conn) {
+	defer func() { _ = conn.Close() }()
 	if w.ReadTimeout > 0 {
 		if err := conn.SetReadDeadline(time.Now().Add(time.Duration(w.ReadTimeout))); err != nil {
-			return fmt.Errorf("error setting read deadline: %v", err)
+			return
 		}
 		conn.SetPingHandler(func(string) error {
 			err := conn.SetReadDeadline(time.Now().Add(time.Duration(w.ReadTimeout)))
@@ -123,20 +129,16 @@ func (w *WebSocket) Connect() error {
 			return conn.WriteControl(websocket.PongMessage, nil, time.Now().Add(time.Duration(w.WriteTimeout)))
 		})
 	}
-	go w.read(conn)
-
-	return nil
-}
-
-func (w *WebSocket) read(conn *websocket.Conn) {
 	for {
-		// Just read connection (required to process pings from a server).
+		// Need to read a connection (to properly process pings from a server).
 		_, _, err := conn.ReadMessage()
 		if err != nil {
-			// Return from read. If this was caused by read deadline then
-			// eventually connection may be closed by a server since client
-			// stops answering on pings.
 			return
+		}
+		if w.ReadTimeout > 0 {
+			if err := conn.SetReadDeadline(time.Now().Add(time.Duration(w.ReadTimeout))); err != nil {
+				return
+			}
 		}
 	}
 }
