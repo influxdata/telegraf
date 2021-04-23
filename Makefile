@@ -247,9 +247,12 @@ endif
 ifdef amd64
 tars += telegraf-$(tar_version)_freebsd_amd64.tar.gz
 tars += telegraf-$(tar_version)_linux_amd64.tar.gz
-tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
 debs := telegraf_$(deb_version)_amd64.deb
 rpms += telegraf-$(rpm_version).x86_64.rpm
+endif
+
+ifdef static 
+tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
 endif
 
 ifdef armel
