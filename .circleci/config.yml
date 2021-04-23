@@ -66,11 +66,11 @@ commands:
       - when:
           condition: << parameters.release >>
           steps: 
-            - run: 'debian=1 centos=1 mac=1 freebsd=1 linux=1 windows=1 make package'
+            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 make package'
       - when:
           condition: << parameters.nightly >>
           steps: 
-            - run: 'debian=1 centos=1 mac=1 freebsd=1 linux=1 windows=1 NIGHTLY=1 make package'
+            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 NIGHTLY=1 make package'
             - run: 'make upload-nightly'
       - unless:
           condition: << parameters.nightly >>
@@ -157,7 +157,7 @@ jobs:
     steps:
       - package-build:
           type: windows
-  mac-package:
+  darwin-package:
     executor: go-1_16
     steps:
       - package-build:
@@ -202,6 +202,11 @@ jobs:
     steps:
       - package-build:
           type: mips
+  static-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: static
 
   release:
     executor: go-1_16
@@ -282,13 +287,54 @@ workflows:
   version: 2
   check:
     jobs:
-      - 'test-awaiter'
+      - 'deps':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_15':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_15-386':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_16':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_16-386':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-mac':
+          filters:
+            tags: # only runs on tags if you specify this filter
+              only: /.*/
+      - 'test-go-windows':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-awaiter': 
+          requires:
+            - 'test-go-1_15'
+            - 'test-go-1_15-386'
+            - 'test-go-1_16'
+            - 'test-go-1_16-386'
       - 'windows-package':
           requires: 
-            - 'test-awaiter'
-      - 'mac-package':
+            - 'test-go-windows'
+      - 'darwin-package':
           requires: 
-            - 'test-awaiter'
+            - 'test-go-mac'
       - 'i386-package':
           requires: 
             - 'test-awaiter'
@@ -304,12 +350,56 @@ workflows:
       - 'amd64-package':
           requires: 
             - 'test-awaiter'
+      - 'static-package':
+          requires:
+            - 'test-awaiter'
       - 'mipsel-package':
           requires: 
             - 'test-awaiter'
       - 'mips-package':
           requires: 
             - 'test-awaiter'
+      - 'share-artifacts':
+          requires:
+            - 'i386-package'
+            - 'ppc641e-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'darwin-package'
+            - 'windows-package'
+            - 'static-package'
+          filters:
+            branches:
+              ignore:
+                - master
+      - 'release':
+          requires:
+            - 'test-go-windows'
+            - 'test-go-mac'
+            - 'test-go-1_15'
+            - 'test-go-1_15-386'
+            - 'test-go-1_16'
+            - 'test-go-1_16-386'
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
+      - 'package-sign-windows':
+          requires:
+            - 'release'
+          filters:
+              tags:
+                only: /.*/
+      - 'package-sign-mac':
+           requires:
+             - 'package-sign-windows' 
+           filters:
+              tags:
+                only: /.*/
 
   nightly:
     jobs:
