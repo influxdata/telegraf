@@ -20,9 +20,7 @@ func TestClientWithRecoverableError(t *testing.T) {
 	listener, err := nettest.NewLocalListener("tcp")
 	require.NoError(t, err)
 	grpcServer := grpc.NewServer()
-	mockMetricsServer := metricServiceServer{
-		status: nil,
-	}
+	mockMetricsServer := metricServiceServer{}
 	metricsService.RegisterMetricsServiceServer(grpcServer, &mockMetricsServer)
 	go func() {
 		err := grpcServer.Serve(listener)

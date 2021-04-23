@@ -219,7 +219,6 @@ func isRecoverable(err error) bool {
 		// See https://github.com/open-telemetry/opentelemetry-specification/
 		// blob/master/specification/protocol/otlp.md#response
 		return true
-	default:
-		return false
 	}
+	return false
 }
