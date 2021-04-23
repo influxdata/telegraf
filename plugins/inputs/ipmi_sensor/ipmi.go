@@ -39,6 +39,7 @@ type Ipmi struct {
 	UseSudo       bool
 	UseCache      bool
 	CachePath     string
+	WantedMetrics []string
 }
 
 var sampleConfig = `
@@ -83,6 +84,10 @@ var sampleConfig = `
   ## Path to the ipmitools cache file (defaults to OS temp dir)
   ## The provided path must exist and must be writable
   # cache_path = ""
+
+  ## Store specific IPMI sensor data
+  ## If no value is specified all sensor data will be stored
+  # wantedmetrics = [ "inlet_temp" ]
 `
 
 // SampleConfig returns the documentation about the sample configuration
@@ -172,12 +177,12 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
 	if m.MetricVersion == 2 {
-		return parseV2(acc, hostname, out, timestamp)
+		return parseV2(acc, hostname, out, timestamp, m.WantedMetrics)
 	}
-	return parseV1(acc, hostname, out, timestamp)
+	return parseV1(acc, hostname, out, timestamp, m.WantedMetrics)
 }
 
-func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredAt time.Time) error {
+func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredAt time.Time, wantedmetrics []string) error {
 	// each line will look something like
 	// Planar VBAT      | 3.05 Volts        | ok
 	scanner := bufio.NewScanner(bytes.NewReader(cmdOut))
@@ -228,13 +233,20 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredA
 			fields["value"] = 0.0
 		}
 
-		acc.AddFields("ipmi_sensor", fields, tags, measuredAt)
+		if len(wantedmetrics) > 0 {
+			_, found := Find(wantedmetrics, tags["name"])
+			if found {
+				acc.AddFields("ipmi_sensor", fields, tags, measuredAt)
+			}
+		} else {
+			acc.AddFields("ipmi_sensor", fields, tags, measuredAt)
+		}
 	}
 
 	return scanner.Err()
 }
 
-func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredAt time.Time) error {
+func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredAt time.Time, wantedmetrics []string) error {
 	// each line will look something like
 	// CMOS Battery     | 65h | ok  |  7.1 |
 	// Temp             | 0Eh | ok  |  3.1 | 55 degrees C
@@ -282,7 +294,14 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredA
 			}
 		}
 
-		acc.AddFields("ipmi_sensor", fields, tags, measuredAt)
+		if len(wantedmetrics) > 0 {
+			_, found := Find(wantedmetrics, tags["name"])
+			if found {
+				acc.AddFields("ipmi_sensor", fields, tags, measuredAt)
+			}
+		} else {
+			acc.AddFields("ipmi_sensor", fields, tags, measuredAt)
+		}
 	}
 
 	return scanner.Err()
@@ -322,6 +341,15 @@ func transform(s string) string {
 	s = trim(s)
 	s = strings.ToLower(s)
 	return strings.Replace(s, " ", "_", -1)
+}
+
+func Find(slice []string, val string) (int, bool) {
+	for i, item := range slice {
+		if item == val {
+			return i, true
+		}
+	}
+	return -1, false
 }
 
 func init() {

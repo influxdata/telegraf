@@ -70,6 +70,10 @@ Any of the following parameters will be added to the aformentioned query if they
   ## Path to the ipmitools cache file (defaults to OS temp dir)
   ## The provided path must exist and must be writable
   # cache_path = ""
+
+  ## Store specific IPMI sensor data
+  ## If no value is specified all sensor data will be stored
+  # wantedmetrics = [ "inlet_temp" ]
 ```
 
 ### Measurements
