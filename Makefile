@@ -236,6 +236,7 @@ debs += telegraf_$(deb_version)_armhf.deb
 debs += telegraf_$(deb_version)_i386.deb
 debs += telegraf_$(deb_version)_mips.deb
 debs += telegraf_$(deb_version)_mipsel.deb
+debs += telegraf_$(deb_version)_ppc64le.deb
 debs += telegraf_$(deb_version)_s390x.deb
 debs += telegraf_$(deb_version)_ppc64el.deb
 endif
@@ -245,6 +246,7 @@ rpms += telegraf-$(rpm_version).aarch64.rpm
 rpms += telegraf-$(rpm_version).armel.rpm
 rpms += telegraf-$(rpm_version).armv6hl.rpm
 rpms += telegraf-$(rpm_version).i386.rpm
+rpms += telegraf-$(rpm_version).ppc64le.rpm
 rpms += telegraf-$(rpm_version).s390x.rpm
 rpms += telegraf-$(rpm_version).ppc64le.rpm
 rpms += telegraf-$(rpm_version).x86_64.rpm
@@ -267,6 +269,7 @@ tars += telegraf-$(tar_version)_linux_armhf.tar.gz
 tars += telegraf-$(tar_version)_linux_i386.tar.gz
 tars += telegraf-$(tar_version)_linux_mips.tar.gz
 tars += telegraf-$(tar_version)_linux_mipsel.tar.gz
+tars += telegraf-$(tar_version)_linux_ppc64le.tar.gz
 tars += telegraf-$(tar_version)_linux_s390x.tar.gz
 tars += telegraf-$(tar_version)_linux_ppc64le.tar.gz
 tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
@@ -284,6 +287,7 @@ package: $(dists)
 
 rpm_amd64 := amd64
 rpm_386 := i386
+rpm_ppc64le := ppc64le
 rpm_s390x := s390x
 rpm_ppc64le := ppc64le
 rpm_arm5 := armel
@@ -321,6 +325,7 @@ $(rpms):
 
 deb_amd64 := amd64
 deb_386 := i386
+deb_ppc64le := ppc64le
 deb_s390x := s390x
 deb_ppc64le := ppc64el
 deb_arm5 := armel
@@ -404,6 +409,9 @@ upload-nightly:
 
 %mipsel.deb %linux_mipsel.tar.gz: export GOOS := linux
 %mipsel.deb %linux_mipsel.tar.gz: export GOARCH := mipsle
+
+%ppc64le.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOOS := linux
+%ppc64le.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOARCH := ppc64le
 
 %s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOOS := linux
 %s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOARCH := s390x
