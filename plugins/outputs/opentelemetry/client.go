@@ -49,7 +49,7 @@ const (
 }`
 )
 
-var maxTimeseriesPerRequest = 500
+const maxTimeseriesPerRequest = 500
 
 // client allows reading and writing from/to a remote gRPC endpoint. The
 // implementation may hit a single backend, so the application should create a
