@@ -21,30 +21,30 @@ import (
 
 // Constants applied to jboss management query types
 const (
-	GetExecStat = iota
-	GetHosts
-	GetServers
-	GetDBStat
-	GetJVMStat
-	GetDeployments
-	GetDeploymentStat
-	GetWebStat
-	GetJMSQueueStat
-	GetJMSTopicStat
-	GetTransactionStat
+	getExecStat = iota
+	getHosts
+	getServers
+	getDBStat
+	getJVMStat
+	getDeployments
+	getDeploymentStat
+	getWebStat
+	getJMSQueueStat
+	getJMSTopicStat
+	getTransactionStat
 )
 
-// KeyVal key / value struct
-type KeyVal struct {
+// keyVal key / value struct
+type keyVal struct {
 	Key string
 	Val interface{}
 }
 
-// OrderedMap Define an ordered map
-type OrderedMap []KeyVal
+// orderedMap Define an ordered map
+type orderedMap []keyVal
 
 // MarshalJSON Implement the json.Marshaler interface
-func (omap OrderedMap) MarshalJSON() ([]byte, error) {
+func (omap orderedMap) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 
 	buf.WriteString("[")
@@ -73,111 +73,16 @@ func (omap OrderedMap) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// HostResponse expected GetHost response type
-type ExecTypeResponse struct {
-	Outcome string                 `json:"outcome"`
-	Result  map[string]interface{} `json:"result"`
-}
-
-// HostResponse expected GetHost response type
-type HostResponse struct {
-	Outcome string   `json:"outcome"`
-	Result  []string `json:"result"`
-}
-
-// DatasourceResponse expected GetDBStat response type
-type DatasourceResponse struct {
-	Outcome string          `json:"outcome"`
-	Result  DatabaseMetrics `json:"result"`
-}
-
-// JMSResponse expected GetJMSTopicStat/GetJMSQueueStat response type
-type JMSResponse struct {
-	Outcome string                 `json:"outcome"`
-	Result  map[string]interface{} `json:"result"`
-}
-
-// TransactionResponse transaction related metrics
-type TransactionResponse struct {
-	Outcome string                 `json:"outcome"`
-	Result  map[string]interface{} `json:"result"`
-}
-
-// DatabaseMetrics database related metrics
-type DatabaseMetrics struct {
-	DataSource   map[string]DataSourceMetrics `json:"data-source"`
-	XaDataSource map[string]DataSourceMetrics `json:"xa-data-source"`
-}
-
-//DataSourceMetrics Datasource related metrics
-type DataSourceMetrics struct {
-	JndiName   string       `json:"jndi-name"`
-	Statistics DBStatistics `json:"statistics"`
-}
-
-// DBStatistics DB statistics per pool
-type DBStatistics struct {
-	Pool DBPoolStatistics `json:"pool"`
-}
-
-// DBPoolStatistics pool related statistics
-type DBPoolStatistics struct {
-	ActiveCount    interface{} `json:"ActiveCount"`
-	AvailableCount interface{} `json:"AvailableCount"`
-	InUseCount     interface{} `json:"InUseCount"`
-}
-
-// JVMResponse GetJVMStat expected response type
-type JVMResponse struct {
-	Outcome string     `json:"outcome"`
-	Result  JVMMetrics `json:"result"`
-}
-
-// JVMMetrics JVM related metrics type
-type JVMMetrics struct {
-	Type map[string]interface{} `json:"type"`
-}
-
-// WebResponse getWebStatistics expected response type
-type WebResponse struct {
-	Outcome string                 `json:"outcome"`
-	Result  map[string]interface{} `json:"result"`
-}
-
-// DeploymentResponse GetDeployments expected response type
-type DeploymentResponse struct {
-	Outcome string            `json:"outcome"`
-	Result  DeploymentMetrics `json:"result"`
-}
-
-// DeploymentMetrics deployment related type
-type DeploymentMetrics struct {
-	Name          string                 `json:"name"`
-	RuntimeName   string                 `json:"runtime-name"`
-	Status        string                 `json:"status"`
-	Subdeployment map[string]interface{} `json:"subdeployment"`
-	Subsystem     map[string]interface{} `json:"subsystem"`
-}
-
-// WebMetrics  Web Modules related metrics
-type WebMetrics struct {
-	ActiveSessions    string                 `json:"active-sessions"`
-	ContextRoot       string                 `json:"context-root"`
-	ExpiredSessions   string                 `json:"expired-sessions"`
-	MaxActiveSessions string                 `json:"max-active-sessions"`
-	SessionsCreated   string                 `json:"sessions-created"`
-	Servlet           map[string]interface{} `json:"servlet"`
-}
 
 // JBoss the main collectod struct
 type JBoss struct {
 	Servers []string `toml:"servers"`
 	Metrics []string `toml:"metrics"`
 
-	Username string
-	Password string
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 
-	Authorization string
+	Authorization string `toml:"authorization"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -195,11 +100,11 @@ var sampleConfig = `
   ]
   
   ## Username and password
-  username = ""
-  password = ""
+  # username = ""
+  # password = ""
   
   ## authorization mode could be "basic" or "digest"
-  authorization = "digest"
+  # authorization = "digest"
 
   ## Optional SSL Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -223,7 +128,27 @@ func (*JBoss) SampleConfig() string {
 }
 
 func (*JBoss) Description() string {
-	return "Telegraf plugin for gathering metrics from JBoss AS"
+	return "Gathering metrics from JBoss AS"
+}
+
+func (j *JBoss) Init() error {
+	if j.ResponseTimeout.Duration < time.Second {
+		j.ResponseTimeout.Duration = time.Second * 5
+	}
+
+	tlsConfig, err := j.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	j.client = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+		Timeout: j.ResponseTimeout.Duration,
+	}
+
+	return nil
 }
 
 func (h *JBoss) Gather(acc telegraf.Accumulator) error {
@@ -231,20 +156,9 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 
 	// Create an HTTP client that is re-used for each
 	// collection interval
-
-	if h.client == nil {
-		client, err := h.createHttpClient()
-		if err != nil {
-			return err
-		}
-		h.client = client
-	}
-
 	for _, server := range h.Servers {
-
 		//Check Exec Mode for each servers
-
-		bodyContent, err := h.createRequestBody(GetExecStat, nil)
+		bodyContent, err := h.createRequestBody(getExecStat, nil)
 		if err != nil {
 			acc.AddError(err)
 		}
@@ -272,7 +186,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 			hosts := HostResponse{Outcome: "", Result: []string{"standalone"}}
 
 			if execAsDomain {
-				bodyContent, err := h.createRequestBody(GetHosts, nil)
+				bodyContent, err := h.createRequestBody(getHosts, nil)
 				if err != nil {
 					acc.AddError(err)
 				}
@@ -340,16 +254,16 @@ func (h *JBoss) getServersOnHost(
 		wg.Add(1)
 		go func(host string) {
 			defer wg.Done()
-			h.Log.Infof("Get Servers from host: %s\n", host)
+			h.Log.Infof("get Servers from host: %s\n", host)
 
 			servers := HostResponse{Outcome: "", Result: []string{"standalone"}}
 
 			if execAsDomain {
 				//get servers
-				adr := OrderedMap{
+				adr := orderedMap{
 					{"host", host},
 				}
-				bodyContent, err := h.createRequestBody(GetServers, adr)
+				bodyContent, err := h.createRequestBody(getServers, adr)
 				if err != nil {
 					acc.AddError(err)
 				}
@@ -389,11 +303,11 @@ func (h *JBoss) getServersOnHost(
 						h.getDatasourceStatistics(acc, serverURL, execAsDomain, host, server)
 					case "jms":
 						if isEAP7 {
-							h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging-activemq", GetJMSQueueStat)
-							h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging-activemq", GetJMSTopicStat)
+							h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging-activemq", getJMSQueueStat)
+							h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging-activemq", getJMSTopicStat)
 						} else {
-							h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging", GetJMSQueueStat)
-							h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging", GetJMSTopicStat)
+							h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging", getJMSQueueStat)
+							h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging", getJMSTopicStat)
 						}
 					case "transaction":
 						h.getTransactionStatistics(acc, serverURL, execAsDomain, host, server)
@@ -427,21 +341,21 @@ func (h *JBoss) getTransactionStatistics(
 	host string,
 	serverName string,
 ) error {
-	adr := OrderedMap{}
+	adr := orderedMap{}
 
 	if execAsDomain {
-		adr = OrderedMap{
+		adr = orderedMap{
 			{"host", host},
 			{"server", serverName},
 			{"subsystem", "transactions"},
 		}
 	} else {
-		adr = OrderedMap{
+		adr = orderedMap{
 			{"subsystem", "transactions"},
 		}
 	}
 
-	bodyContent, err := h.createRequestBody(GetTransactionStat, adr)
+	bodyContent, err := h.createRequestBody(getTransactionStat, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
@@ -493,22 +407,22 @@ func (h *JBoss) getWebStatistics(
 	serverName string,
 	connector string,
 ) error {
-	adr := OrderedMap{}
+	adr := orderedMap{}
 	if execAsDomain {
-		adr = OrderedMap{
+		adr = orderedMap{
 			{"host", host},
 			{"server", serverName},
 			{"subsystem", "web"},
 			{"connector", connector},
 		}
 	} else {
-		adr = OrderedMap{
+		adr = orderedMap{
 			{"subsystem", "web"},
 			{"connector", connector},
 		}
 	}
 
-	bodyContent, err := h.createRequestBody(GetWebStat, adr)
+	bodyContent, err := h.createRequestBody(getWebStat, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
@@ -560,14 +474,14 @@ func (h *JBoss) getUndertowStatistics(
 	serverName string,
 	listener string,
 ) error {
-	adr := OrderedMap{}
+	adr := orderedMap{}
 	listenerName := "default"
 	if listener == "ajp" || listener == "https" {
 		listenerName = listener
 	}
 	listener = listener + "-listener"
 	if execAsDomain {
-		adr = OrderedMap{
+		adr = orderedMap{
 			{"host", host},
 			{"server", serverName},
 			{"subsystem", "undertow"},
@@ -575,14 +489,14 @@ func (h *JBoss) getUndertowStatistics(
 			{listener, listenerName},
 		}
 	} else {
-		adr = OrderedMap{
+		adr = orderedMap{
 			{"subsystem", "undertow"},
 			{"server", "default-server"},
 			{listener, listenerName},
 		}
 	}
 
-	bodyContent, err := h.createRequestBody(GetWebStat, adr)
+	bodyContent, err := h.createRequestBody(getWebStat, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
@@ -632,13 +546,13 @@ func getPoolFields(pool DBPoolStatistics) map[string]interface{} {
 	//Jboss EAP 6/AS 7.X returns "strings", wildfly 12 returns integers
 	switch pool.ActiveCount.(type) {
 	case string:
-		retmap["in-use-count"], _ = strconv.ParseFloat(pool.InUseCount.(string), 64)
-		retmap["active-count"], _ = strconv.ParseFloat(pool.ActiveCount.(string), 64)
-		retmap["available-count"], _ = strconv.ParseFloat(pool.AvailableCount.(string), 64)
+		retmap["in-use-count"], _ = strconv.ParseInt(pool.InUseCount.(string), 10, 64)
+		retmap["active-count"], _ = strconv.ParseInt(pool.ActiveCount.(string), 10, 64)
+		retmap["available-count"], _ = strconv.ParseInt(pool.AvailableCount.(string), 10, 64)
 	case float64:
-		retmap["in-use-count"] = pool.InUseCount.(float64)
-		retmap["active-count"] = pool.ActiveCount.(float64)
-		retmap["available-count"] = pool.AvailableCount.(float64)
+		retmap["in-use-count"] = int(pool.InUseCount.(float64))
+		retmap["active-count"] = int(pool.ActiveCount.(float64))
+		retmap["available-count"] = int(pool.AvailableCount.(float64))
 	default:
 		retmap["in-use-count"] = pool.InUseCount
 		retmap["active-count"] = pool.ActiveCount
@@ -664,21 +578,21 @@ func (h *JBoss) getDatasourceStatistics(
 	host string,
 	serverName string,
 ) error {
-	adr := OrderedMap{}
+	adr := orderedMap{}
 	if execAsDomain {
-		adr = OrderedMap{
+		adr = orderedMap{
 			{"host", host},
 			{"server", serverName},
 			{"subsystem", "datasources"},
 		}
 
 	} else {
-		adr = OrderedMap{
+		adr = orderedMap{
 			{"subsystem", "datasources"},
 		}
 	}
 
-	bodyContent, err := h.createRequestBody(GetDBStat, adr)
+	bodyContent, err := h.createRequestBody(getDBStat, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
@@ -735,7 +649,7 @@ func (h *JBoss) getJMSStatistics(
 	opType int,
 ) error {
 
-	adr := OrderedMap{}
+	adr := orderedMap{}
 
 	serverID := "hornetq-server"
 
@@ -744,14 +658,14 @@ func (h *JBoss) getJMSStatistics(
 	}
 
 	if execAsDomain {
-		adr = OrderedMap{
+		adr = orderedMap{
 			{"host", host},
 			{"server", serverName},
 			{"subsystem", subsystem},
 			{serverID, "default"},
 		}
 	} else {
-		adr = OrderedMap{
+		adr = orderedMap{
 			{"subsystem", subsystem},
 			{serverID, "default"},
 		}
@@ -777,7 +691,7 @@ func (h *JBoss) getJMSStatistics(
 		v := value.(map[string]interface{})
 		fields["message-count"] = v["message-count"]
 		fields["messages-added"] = v["messages-added"]
-		if opType == GetJMSQueueStat {
+		if opType == getJMSQueueStat {
 			fields["consumer-count"] = v["consumer-count"]
 		} else {
 			fields["subscription-count"] = v["subscription-count"]
@@ -811,20 +725,20 @@ func (h *JBoss) getJVMStatistics(
 	host string,
 	serverName string,
 ) error {
-	adr := OrderedMap{}
+	adr := orderedMap{}
 	if execAsDomain {
-		adr = OrderedMap{
+		adr = orderedMap{
 			{"host", host},
 			{"server", serverName},
 			{"core-service", "platform-mbean"},
 		}
 	} else {
-		adr = OrderedMap{
+		adr = orderedMap{
 			{"core-service", "platform-mbean"},
 		}
 	}
 
-	bodyContent, err := h.createRequestBody(GetJVMStat, adr)
+	bodyContent, err := h.createRequestBody(getJVMStat, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
@@ -935,16 +849,16 @@ func (h *JBoss) getServerDeploymentStatistics(
 	host string,
 	serverName string,
 ) error {
-	adr := OrderedMap{}
+	adr := orderedMap{}
 
 	if execAsDomain {
-		adr = OrderedMap{
+		adr = orderedMap{
 			{"host", host},
 			{"server", serverName},
 		}
 	}
 
-	bodyContent, err := h.createRequestBody(GetDeployments, adr)
+	bodyContent, err := h.createRequestBody(getDeployments, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
@@ -961,20 +875,20 @@ func (h *JBoss) getServerDeploymentStatistics(
 	}
 
 	for _, deployment := range deployments.Result {
-		adr2 := OrderedMap{}
+		adr2 := orderedMap{}
 		if execAsDomain {
-			adr2 = OrderedMap{
+			adr2 = orderedMap{
 				{"host", host},
 				{"server", serverName},
 				{"deployment", deployment},
 			}
 		} else {
-			adr2 = OrderedMap{
+			adr2 = orderedMap{
 				{"deployment", deployment},
 			}
 		}
 
-		bodyContent, err := h.createRequestBody(GetDeploymentStat, adr2)
+		bodyContent, err := h.createRequestBody(getDeploymentStat, adr2)
 		if err != nil {
 			acc.AddError(err)
 		}
@@ -1089,12 +1003,12 @@ func (h *JBoss) flatten(item map[string]interface{}, fields map[string]interface
 	}
 }
 
-func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]interface{}, error) {
+func (h *JBoss) createRequestBody(optype int, address orderedMap) (map[string]interface{}, error) {
 	bodyContent := make(map[string]interface{})
 
 	// Create bodyContent
 	switch optype {
-	case GetExecStat:
+	case getExecStat:
 		bodyContent = map[string]interface{}{
 			"operation":       "read-resource",
 			"attributes-only": "true",
@@ -1102,14 +1016,14 @@ func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]in
 			"address":         address,
 			"json.pretty":     1,
 		}
-	case GetHosts:
+	case getHosts:
 		bodyContent = map[string]interface{}{
 			"operation":   "read-children-names",
 			"child-type":  "host",
 			"address":     address,
 			"json.pretty": 1,
 		}
-	case GetServers:
+	case getServers:
 		bodyContent = map[string]interface{}{
 			"operation":       "read-children-names",
 			"child-type":      "server",
@@ -1117,7 +1031,7 @@ func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]in
 			"address":         address,
 			"json.pretty":     1,
 		}
-	case GetDBStat:
+	case getDBStat:
 		bodyContent = map[string]interface{}{
 			"operation":       "read-resource",
 			"include-runtime": "true",
@@ -1125,7 +1039,7 @@ func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]in
 			"address":         address,
 			"json.pretty":     1,
 		}
-	case GetJVMStat:
+	case getJVMStat:
 		bodyContent = map[string]interface{}{
 			"operation":       "read-resource",
 			"include-runtime": "true",
@@ -1133,14 +1047,14 @@ func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]in
 			"address":         address,
 			"json.pretty":     1,
 		}
-	case GetDeployments:
+	case getDeployments:
 		bodyContent = map[string]interface{}{
 			"operation":   "read-children-names",
 			"child-type":  "deployment",
 			"address":     address,
 			"json.pretty": 1,
 		}
-	case GetDeploymentStat:
+	case getDeploymentStat:
 		bodyContent = map[string]interface{}{
 			"operation":       "read-resource",
 			"include-runtime": "true",
@@ -1148,7 +1062,7 @@ func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]in
 			"address":         address,
 			"json.pretty":     1,
 		}
-	case GetWebStat:
+	case getWebStat:
 		bodyContent = map[string]interface{}{
 			"operation":       "read-resource",
 			"include-runtime": "true",
@@ -1156,7 +1070,7 @@ func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]in
 			"address":         address,
 			"json.pretty":     1,
 		}
-	case GetJMSQueueStat:
+	case getJMSQueueStat:
 		bodyContent = map[string]interface{}{
 			"operation":       "read-children-resources",
 			"child-type":      "jms-queue",
@@ -1165,7 +1079,7 @@ func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]in
 			"address":         address,
 			"json.pretty":     1,
 		}
-	case GetJMSTopicStat:
+	case getJMSTopicStat:
 		bodyContent = map[string]interface{}{
 			"operation":       "read-children-resources",
 			"child-type":      "jms-topic",
@@ -1174,7 +1088,7 @@ func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]in
 			"address":         address,
 			"json.pretty":     1,
 		}
-	case GetTransactionStat:
+	case getTransactionStat:
 		bodyContent = map[string]interface{}{
 			"operation":       "read-resources",
 			"include-runtime": "true",
@@ -1235,28 +1149,6 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 	return []byte(body), nil
 }
 
-func (j *JBoss) createHttpClient() (*http.Client, error) {
-	if j.ResponseTimeout.Duration < time.Second {
-		j.ResponseTimeout.Duration = time.Second * 5
-	}
-
-	tlsConfig, err := j.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
-		},
-		Timeout: j.ResponseTimeout.Duration,
-	}
-
-	return client, nil
-}
-
 func init() {
-	inputs.Add("jboss", func() telegraf.Input {
-		return &JBoss{}
-	})
+	inputs.Add("jboss", func() telegraf.Input { return &JBoss{} })
 }
