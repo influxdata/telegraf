@@ -1,19 +1,17 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/common/proxy"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -29,18 +27,14 @@ type HTTP struct {
 	// HTTP Basic Auth Credentials
 	Username string `toml:"username"`
 	Password string `toml:"password"`
-	tls.ClientConfig
-
-	proxy.HTTPProxy
 
 	// Absolute path to file with Bearer token
 	BearerToken string `toml:"bearer_token"`
 
 	SuccessStatusCodes []int `toml:"success_status_codes"`
 
-	Timeout config.Duration `toml:"timeout"`
-
 	client *http.Client
+	httpconfig.HTTPClientConfig
 
 	// The parser will automatically be set by Telegraf core code because
 	// this plugin implements the ParserInput interface (i.e. the SetParser method)
@@ -77,6 +71,12 @@ var sampleConfig = `
   ## HTTP Proxy support
   # http_proxy_url = ""
 
+  ## OAuth2 Client Credentials Grant
+  # client_id = "clientid"
+  # client_secret = "secret"
+  # token_url = "https://indentityprovider/oauth2/v1/token"
+  # scopes = ["urn:opc:idm:__myscopes__"]
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -108,25 +108,13 @@ func (*HTTP) Description() string {
 }
 
 func (h *HTTP) Init() error {
-	tlsCfg, err := h.ClientConfig.TLSConfig()
+	ctx := context.Background()
+	client, err := h.HTTPClientConfig.CreateClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	proxy, err := h.HTTPProxy.Proxy()
-	if err != nil {
-		return err
-	}
-
-	transport := &http.Transport{
-		TLSClientConfig: tlsCfg,
-		Proxy:           proxy,
-	}
-
-	h.client = &http.Client{
-		Transport: transport,
-		Timeout:   time.Duration(h.Timeout),
-	}
+	h.client = client
 
 	// Set default as [200]
 	if len(h.SuccessStatusCodes) == 0 {
@@ -262,8 +250,7 @@ func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) 
 func init() {
 	inputs.Add("http", func() telegraf.Input {
 		return &HTTP{
-			Timeout: config.Duration(time.Second * 5),
-			Method:  "GET",
+			Method: "GET",
 		}
 	})
 }
