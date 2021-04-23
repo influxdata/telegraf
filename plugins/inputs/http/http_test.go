@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 
 	plugin "github.com/influxdata/telegraf/plugins/inputs/http"
