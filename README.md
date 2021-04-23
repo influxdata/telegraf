@@ -456,5 +456,6 @@ For documentation on the latest development code see the [documentation index][d
 * [udp](./plugins/outputs/socket_writer)
 * [warp10](./plugins/outputs/warp10)
 * [wavefront](./plugins/outputs/wavefront)
+* [websocket](./plugins/outputs/websocket) 
 * [sumologic](./plugins/outputs/sumologic)
 * [yandex_cloud_monitoring](./plugins/outputs/yandex_cloud_monitoring)
