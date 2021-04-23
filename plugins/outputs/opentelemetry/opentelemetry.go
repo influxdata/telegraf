@@ -104,15 +104,13 @@ func (o *OpenTelemetry) Init() error {
 		return errors.Wrap(err, "invalid tls configuration")
 	}
 
-	if o.client == nil {
-		o.client = &client{
-			logger:     o.Log,
-			url:        endpoint,
-			timeout:    time.Duration(o.Timeout),
-			tlsConfig:  tlsConfig,
-			headers:    metadata.New(o.Headers),
-			compressor: o.Compression,
-		}
+	o.client = &client{
+		logger:     o.Log,
+		url:        endpoint,
+		timeout:    time.Duration(o.Timeout),
+		tlsConfig:  tlsConfig,
+		headers:    metadata.New(o.Headers),
+		compressor: o.Compression,
 	}
 	return nil
 }
