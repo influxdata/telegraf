@@ -207,6 +207,11 @@ jobs:
     steps:
       - package-build:
           type: static
+  armhf-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: armhf
 
   release:
     executor: go-1_16
@@ -350,6 +355,12 @@ workflows:
       - 'amd64-package':
           requires: 
             - 'test-awaiter'
+      - 'arm64-package':
+          requires: 
+            - 'test-awaiter'
+      - 'armhf-package':
+          requires: 
+            - 'test-awaiter'
       - 'static-package':
           requires:
             - 'test-awaiter'
@@ -371,6 +382,8 @@ workflows:
             - 'darwin-package'
             - 'windows-package'
             - 'static-package'
+            - 'arm64-package'
+            - 'armhf-package'
           filters:
             branches:
               ignore:
