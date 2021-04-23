@@ -52,7 +52,7 @@ var sampleConfig = `
   urls = [
     "http://localhost/metrics"
   ]
-  
+
   ## HTTP method
   # method = "GET"
 
