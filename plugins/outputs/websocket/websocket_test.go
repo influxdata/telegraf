@@ -33,7 +33,6 @@ func (t testSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error
 
 type testServer struct {
 	*httptest.Server
-	URL              string
 	t                *testing.T
 	messages         chan []byte
 	upgradeDelay     time.Duration
@@ -90,7 +89,11 @@ func (s *testServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if s.expectTextFrames && messageType != websocket.TextMessage {
 			s.t.Fatalf("unexpected frame type: %d", messageType)
 		}
-		s.messages <- data
+		select {
+		case s.messages <- data:
+		case <-time.After(5 * time.Second):
+			s.t.Fatal("timeout writing to messages channel, make sure there are readers")
+		}
 	}
 }
 
@@ -155,7 +158,7 @@ func TestWebSocket_Write_OK(t *testing.T) {
 
 	select {
 	case data := <-messages:
-		require.Equal(t, "2", string(data))
+		require.Equal(t, []byte("2"), data)
 	case <-time.After(time.Second):
 		t.Fatal("timeout receiving data")
 	}
@@ -199,7 +202,7 @@ func TestWebSocket_Write_Reconnect(t *testing.T) {
 
 	select {
 	case data := <-messages:
-		require.Equal(t, "1", string(data))
+		require.Equal(t, []byte("1"), data)
 	case <-time.After(time.Second):
 		t.Fatal("timeout receiving data")
 	}
