@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -77,9 +78,11 @@ func (w *WebSocket) SampleConfig() string {
 	return sampleConfig
 }
 
+var invalidURL = errors.New("invalid websocket URL")
+
 func (w *WebSocket) Connect() error {
 	if parsedURL, err := url.Parse(w.URL); err != nil || (parsedURL.Scheme != "ws" && parsedURL.Scheme != "wss") {
-		return fmt.Errorf("valid websocket URL expected, got \"%s\"", w.URL)
+		return fmt.Errorf("%w: \"%s\"", invalidURL, w.URL)
 	}
 
 	tlsCfg, err := w.ClientConfig.TLSConfig()
@@ -107,19 +110,25 @@ func (w *WebSocket) Connect() error {
 	}
 
 	w.conn = conn
+
+	if w.ReadTimeout > 0 {
+		if err := conn.SetReadDeadline(time.Now().Add(time.Duration(w.ReadTimeout))); err != nil {
+			return fmt.Errorf("error setting read deadline: %v", err)
+		}
+		conn.SetPingHandler(func(string) error {
+			err := conn.SetReadDeadline(time.Now().Add(time.Duration(w.ReadTimeout)))
+			if err != nil {
+				return err
+			}
+			return conn.WriteControl(websocket.PongMessage, nil, time.Now().Add(time.Duration(w.WriteTimeout)))
+		})
+	}
 	go w.read(conn)
+
 	return nil
 }
 
 func (w *WebSocket) read(conn *websocket.Conn) {
-	if w.ReadTimeout > 0 {
-		_ = conn.SetReadDeadline(time.Now().Add(time.Duration(w.ReadTimeout)))
-		conn.SetPingHandler(func(string) error {
-			_ = conn.SetReadDeadline(time.Now().Add(time.Duration(w.ReadTimeout)))
-			_ = conn.WriteControl(websocket.PongMessage, nil, time.Now().Add(time.Duration(w.WriteTimeout)))
-			return nil
-		})
-	}
 	for {
 		// Just read connection (required to process pings from a server).
 		_, _, err := conn.ReadMessage()
@@ -135,7 +144,7 @@ func (w *WebSocket) read(conn *websocket.Conn) {
 // Write writes the given metrics to the destination. Not thread-safe.
 func (w *WebSocket) Write(metrics []telegraf.Metric) error {
 	if w.conn == nil {
-		// Previous write failed with permanent error and ws conn was closed.
+		// Previous write failed with error and ws conn was closed.
 		if err := w.Connect(); err != nil {
 			return err
 		}
@@ -152,16 +161,15 @@ func (w *WebSocket) Write(metrics []telegraf.Metric) error {
 	}
 
 	if w.WriteTimeout > 0 {
-		_ = w.conn.SetWriteDeadline(time.Now().Add(time.Duration(w.WriteTimeout)))
+		if err := w.conn.SetWriteDeadline(time.Now().Add(time.Duration(w.WriteTimeout))); err != nil {
+			return fmt.Errorf("error setting write deadline: %v", err)
+		}
 	}
 	err = w.conn.WriteMessage(messageType, messageData)
 	if err != nil {
 		_ = w.conn.Close()
 		w.conn = nil
 		return fmt.Errorf("error writing to connection: %v", err)
-	}
-	if w.WriteTimeout > 0 {
-		_ = w.conn.SetWriteDeadline(time.Time{})
 	}
 	return nil
 }
@@ -176,12 +184,16 @@ func (w *WebSocket) Close() error {
 	return err
 }
 
+func newWebSocket() *WebSocket {
+	return &WebSocket{
+		ConnectTimeout: config.Duration(defaultConnectTimeout),
+		WriteTimeout:   config.Duration(defaultWriteTimeout),
+		ReadTimeout:    config.Duration(defaultReadTimeout),
+	}
+}
+
 func init() {
 	outputs.Add("websocket", func() telegraf.Output {
-		return &WebSocket{
-			ConnectTimeout: config.Duration(defaultConnectTimeout),
-			WriteTimeout:   config.Duration(defaultWriteTimeout),
-			ReadTimeout:    config.Duration(defaultReadTimeout),
-		}
+		return newWebSocket()
 	})
 }
