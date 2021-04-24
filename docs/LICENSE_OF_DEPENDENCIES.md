@@ -171,6 +171,7 @@ following works:
 - github.com/streadway/amqp [BSD 2-Clause "Simplified" License](https://github.com/streadway/amqp/blob/master/LICENSE)
 - github.com/stretchr/objx [MIT License](https://github.com/stretchr/objx/blob/master/LICENSE)
 - github.com/stretchr/testify [custom -- permissive](https://github.com/stretchr/testify/blob/master/LICENSE)
+- github.com/tencentcloud/tencentcloud-sdk-go [Apache License 2.0](https://github.com/TencentCloud/tencentcloud-sdk-go/blob/master/LICENSE)
 - github.com/tidwall/gjson [MIT License](https://github.com/tidwall/gjson/blob/master/LICENSE)
 - github.com/tidwall/match [MIT License](https://github.com/tidwall/match/blob/master/LICENSE)
 - github.com/tidwall/pretty [MIT License](https://github.com/tidwall/pretty/blob/master/LICENSE)
