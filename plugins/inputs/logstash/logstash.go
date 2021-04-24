@@ -295,9 +295,8 @@ func (logstash *Logstash) gatherPluginsStats(
 		    failuresFields := map[string]interface{}{
     		    	"failures": *plugin.Failures,
     		    }
-            accumulator.AddFields("logstash_plugins", failuresFields, pluginTags)
+        	    accumulator.AddFields("logstash_plugins", failuresFields, pluginTags)
 		}
-
 	}
 
 	return nil
