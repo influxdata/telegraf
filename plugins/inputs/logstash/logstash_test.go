@@ -335,7 +335,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		test,
 		"logstash_plugins",
 		map[string]interface{}{
-			"failures":           int64(2),
+			"failures": int64(2),
 		},
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
@@ -348,7 +348,6 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 			"plugin_type":  string("filter"),
 		},
 	)
-
 
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
