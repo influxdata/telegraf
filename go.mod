@@ -56,7 +56,7 @@ require (
 	github.com/goburrow/modbus v0.1.0
 	github.com/goburrow/serial v0.1.0 // indirect
 	github.com/gobwas/glob v0.2.3
-	github.com/gofrs/uuid v3.2.0+incompatible
+	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/protobuf v1.5.1
@@ -146,3 +146,6 @@ require (
 	k8s.io/client-go v0.20.4
 	modernc.org/sqlite v1.7.4
 )
+
+// replaced due to https://github.com/satori/go.uuid/issues/73
+replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible

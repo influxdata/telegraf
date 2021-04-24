@@ -3,14 +3,15 @@ package postgresql
 import (
 	"database/sql"
 	"fmt"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/stdlib"
 	"net"
 	"net/url"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -115,6 +116,8 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 		if err != nil {
 			return err
 		}
+
+		d.PreferSimpleProtocol = true
 
 		connectionString = stdlib.RegisterConnConfig(d)
 	}

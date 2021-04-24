@@ -168,7 +168,6 @@ following works:
 - github.com/riemann/riemann-go-client [MIT License](https://github.com/riemann/riemann-go-client/blob/master/LICENSE)
 - github.com/safchain/ethtool [Apache License 2.0](https://github.com/safchain/ethtool/blob/master/LICENSE)
 - github.com/samuel/go-zookeeper [BSD 3-Clause Clear License](https://github.com/samuel/go-zookeeper/blob/master/LICENSE)
-- github.com/satori/go.uuid [MIT License](https://github.com/satori/go.uuid/blob/master/LICENSE)
 - github.com/shirou/gopsutil [BSD 3-Clause Clear License](https://github.com/shirou/gopsutil/blob/master/LICENSE)
 - github.com/signalfx/com_signalfx_metrics_protobuf [Apache License 2.0](https://github.com/signalfx/com_signalfx_metrics_protobuf/blob/master/LICENSE)
 - github.com/signalfx/gohistogram [MIT License](https://github.com/signalfx/gohistogram/blob/master/LICENSE)
