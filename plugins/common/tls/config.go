@@ -14,6 +14,7 @@ type ClientConfig struct {
 	TLSCert            string `toml:"tls_cert"`
 	TLSKey             string `toml:"tls_key"`
 	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
+	ServerName         string `toml:"tls_server_name"`
 
 	// Deprecated in 1.7; use TLS variables above
 	SSLCA   string `toml:"ssl_ca"`
@@ -45,11 +46,14 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 		c.TLSKey = c.SSLKey
 	}
 
-	// TODO: return default tls.Config; plugins should not call if they don't
-	// want TLS, this will require using another option to determine.  In the
-	// case of an HTTP plugin, you could use `https`.  Other plugins may need
-	// the dedicated option `TLSEnable`.
-	if c.TLSCA == "" && c.TLSKey == "" && c.TLSCert == "" && !c.InsecureSkipVerify {
+	// This check returns a nil (aka, "use the default")
+	// tls.Config if no field is set that would have an effect on
+	// a TLS connection. That is, any of:
+	//     * client certificate settings,
+	//     * peer certificate authorities,
+	//     * disabled security, or
+	//     * an SNI server name.
+	if c.TLSCA == "" && c.TLSKey == "" && c.TLSCert == "" && !c.InsecureSkipVerify && c.ServerName == "" {
 		return nil, nil
 	}
 
@@ -71,6 +75,10 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if c.ServerName != "" {
+		tlsConfig.ServerName = c.ServerName
 	}
 
 	return tlsConfig, nil

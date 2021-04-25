@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
-const MAX_BUFFER_SIZE = 2
+const MaxBufferSize = 2
 
 type Point struct {
 	Name      string
@@ -90,7 +90,6 @@ func (p *WavefrontParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *PointParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-
 	// parse even if the buffer begins with a newline
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
 	// add newline to end if not exists:
@@ -133,7 +132,6 @@ func (p *WavefrontParser) SetDefaultTags(tags map[string]string) {
 }
 
 func (p *PointParser) convertPointToTelegrafMetric(points []Point) ([]telegraf.Metric, error) {
-
 	metrics := make([]telegraf.Metric, 0)
 
 	for _, point := range points {
@@ -154,10 +152,7 @@ func (p *PointParser) convertPointToTelegrafMetric(points []Point) ([]telegraf.M
 		}
 		fields["value"] = v
 
-		m, err := metric.New(point.Name, tags, fields, time.Unix(point.Timestamp, 0))
-		if err != nil {
-			return nil, err
-		}
+		m := metric.New(point.Name, tags, fields, time.Unix(point.Timestamp, 0))
 
 		metrics = append(metrics, m)
 	}
@@ -170,9 +165,9 @@ func (p *PointParser) convertPointToTelegrafMetric(points []Point) ([]telegraf.M
 func (p *PointParser) scan() (Token, string) {
 	// If we have a token on the buffer, then return it.
 	if p.buf.n != 0 {
-		idx := p.buf.n % MAX_BUFFER_SIZE
+		idx := p.buf.n % MaxBufferSize
 		tok, lit := p.buf.tok[idx], p.buf.lit[idx]
-		p.buf.n -= 1
+		p.buf.n--
 		return tok, lit
 	}
 
@@ -188,8 +183,8 @@ func (p *PointParser) scan() (Token, string) {
 func (p *PointParser) buffer(tok Token, lit string) {
 	// create the buffer if it is empty
 	if len(p.buf.tok) == 0 {
-		p.buf.tok = make([]Token, MAX_BUFFER_SIZE)
-		p.buf.lit = make([]string, MAX_BUFFER_SIZE)
+		p.buf.tok = make([]Token, MaxBufferSize)
+		p.buf.lit = make([]string, MaxBufferSize)
 	}
 
 	// for now assume a simple circular buffer of length two
@@ -203,15 +198,14 @@ func (p *PointParser) unscan() {
 }
 
 func (p *PointParser) unscanTokens(n int) {
-	if n > MAX_BUFFER_SIZE {
+	if n > MaxBufferSize {
 		// just log for now
-		log.Printf("cannot unscan more than %d tokens", MAX_BUFFER_SIZE)
+		log.Printf("cannot unscan more than %d tokens", MaxBufferSize)
 	}
 	p.buf.n += n
 }
 
 func (p *PointParser) reset(buf []byte) {
-
 	// reset the scan buffer and write new byte
 	p.scanBuf.Reset()
 	p.scanBuf.Write(buf)

@@ -8,18 +8,18 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/mdlayher/apcupsd"
 )
 
 const defaultAddress = "tcp://127.0.0.1:3551"
 
-var defaultTimeout = internal.Duration{Duration: time.Duration(time.Second * 5)}
+var defaultTimeout = config.Duration(5 * time.Second)
 
 type ApcUpsd struct {
 	Servers []string
-	Timeout internal.Duration
+	Timeout config.Duration
 }
 
 func (*ApcUpsd) Description() string {
@@ -51,7 +51,7 @@ func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {
 			addrBits.Scheme = "tcp"
 		}
 
-		ctx, cancel := context.WithTimeout(ctx, h.Timeout.Duration)
+		ctx, cancel := context.WithTimeout(ctx, time.Duration(h.Timeout))
 		defer cancel()
 
 		status, err := fetchStatus(ctx, addrBits)

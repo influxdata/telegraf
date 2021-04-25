@@ -1,7 +1,7 @@
 # HTTP Output Plugin
 
 This plugin sends metrics in a HTTP message encoded using one of the output
-data formats.  For data_formats that support batching, metrics are sent in batch format.
+data formats. For data_formats that support batching, metrics are sent in batch format.
 
 ### Configuration:
 
@@ -48,4 +48,9 @@ data formats.  For data_formats that support batching, metrics are sent in batch
   # [outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format
   #   Content-Type = "text/plain; charset=utf-8"
+
+  ## Idle (keep-alive) connection timeout.
+  ## Maximum amount of time before idle connection is closed.
+  ## Zero means no limit.
+  # idle_conn_timeout = 0
 ```

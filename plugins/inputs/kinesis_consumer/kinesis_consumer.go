@@ -1,8 +1,12 @@
 package kinesis_consumer
 
 import (
+	"bytes"
+	"compress/gzip"
+	"compress/zlib"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"strings"
 	"sync"
@@ -38,13 +42,13 @@ type (
 		ShardIteratorType      string    `toml:"shard_iterator_type"`
 		DynamoDB               *DynamoDB `toml:"checkpoint_dynamodb"`
 		MaxUndeliveredMessages int       `toml:"max_undelivered_messages"`
+		ContentEncoding        string    `toml:"content_encoding"`
 
 		Log telegraf.Logger
 
 		cons   *consumer.Consumer
 		parser parsers.Parser
 		cancel context.CancelFunc
-		ctx    context.Context
 		acc    telegraf.TrackingAccumulator
 		sem    chan struct{}
 
@@ -54,6 +58,8 @@ type (
 		checkpointTex sync.Mutex
 		recordsTex    sync.Mutex
 		wg            sync.WaitGroup
+
+		processContentEncodingFunc processContent
 
 		lastSeqNum *big.Int
 	}
@@ -67,6 +73,8 @@ type (
 const (
 	defaultMaxUndeliveredMessages = 1000
 )
+
+type processContent func([]byte) ([]byte, error)
 
 // this is the largest sequence number allowed - https://docs.aws.amazon.com/kinesis/latest/APIReference/API_SequenceNumberRange.html
 var maxSeq = strToBint(strings.Repeat("9", 129))
@@ -117,6 +125,15 @@ var sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ##
+  ## The content encoding of the data from kinesis
+  ## If you are processing a cloudwatch logs kinesis stream then set this to "gzip"
+  ## as AWS compresses cloudwatch log data before it is sent to kinesis (aws
+  ## also base64 encodes the zip byte data before pushing to the stream.  The base64 decoding
+  ## is done automatically by the golang sdk, as data is read from kinesis)
+  ##
+  # content_encoding = "identity"
 
   ## Optional
   ## Configuration for a dynamodb checkpoint
@@ -239,7 +256,11 @@ func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
 }
 
 func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consumer.Record) error {
-	metrics, err := k.parser.Parse(r.Data)
+	data, err := k.processContentEncodingFunc(r.Data)
+	if err != nil {
+		return err
+	}
+	metrics, err := k.parser.Parse(data)
 	if err != nil {
 		return err
 	}
@@ -284,7 +305,9 @@ func (k *KinesisConsumer) onDelivery(ctx context.Context) {
 				}
 
 				k.lastSeqNum = strToBint(sequenceNum)
-				k.checkpoint.Set(chk.streamName, chk.shardID, sequenceNum)
+				if err := k.checkpoint.Set(chk.streamName, chk.shardID, sequenceNum); err != nil {
+					k.Log.Debug("Setting checkpoint failed: %v", err)
+				}
 			} else {
 				k.Log.Debug("Metric group failed to process")
 			}
@@ -334,6 +357,46 @@ func (k *KinesisConsumer) Set(streamName, shardID, sequenceNumber string) error 
 	return nil
 }
 
+func processGzip(data []byte) ([]byte, error) {
+	zipData, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	defer zipData.Close()
+	return ioutil.ReadAll(zipData)
+}
+
+func processZlib(data []byte) ([]byte, error) {
+	zlibData, err := zlib.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	defer zlibData.Close()
+	return ioutil.ReadAll(zlibData)
+}
+
+func processNoOp(data []byte) ([]byte, error) {
+	return data, nil
+}
+
+func (k *KinesisConsumer) configureProcessContentEncodingFunc() error {
+	switch k.ContentEncoding {
+	case "gzip":
+		k.processContentEncodingFunc = processGzip
+	case "zlib":
+		k.processContentEncodingFunc = processZlib
+	case "none", "identity", "":
+		k.processContentEncodingFunc = processNoOp
+	default:
+		return fmt.Errorf("unknown content encoding %q", k.ContentEncoding)
+	}
+	return nil
+}
+
+func (k *KinesisConsumer) Init() error {
+	return k.configureProcessContentEncodingFunc()
+}
+
 type noopCheckpoint struct{}
 
 func (n noopCheckpoint) Set(string, string, string) error   { return nil }
@@ -347,6 +410,7 @@ func init() {
 			ShardIteratorType:      "TRIM_HORIZON",
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 			lastSeqNum:             maxSeq,
+			ContentEncoding:        "identity",
 		}
 	})
 }

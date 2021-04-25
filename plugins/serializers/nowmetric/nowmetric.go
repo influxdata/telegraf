@@ -123,9 +123,9 @@ func (s *serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 		allmetrics = append(allmetrics, oimetric)
 	}
 
-	metricsJson, err := json.Marshal(allmetrics)
+	metricsJSON, err := json.Marshal(allmetrics)
 
-	return metricsJson, err
+	return metricsJSON, err
 }
 
 func verifyValue(v interface{}) bool {

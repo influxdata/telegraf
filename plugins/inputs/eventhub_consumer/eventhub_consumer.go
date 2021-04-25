@@ -207,11 +207,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	}()
 
 	// Configure receiver options
-	receiveOpts, err := e.configureReceiver()
-	if err != nil {
-		return err
-	}
-
+	receiveOpts := e.configureReceiver()
 	partitions := e.PartitionIDs
 
 	if len(e.PartitionIDs) == 0 {
@@ -224,7 +220,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	}
 
 	for _, partitionID := range partitions {
-		_, err = e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
+		_, err := e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
 		if err != nil {
 			return fmt.Errorf("creating receiver for partition %q: %v", partitionID, err)
 		}
@@ -233,7 +229,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *EventHub) configureReceiver() ([]eventhub.ReceiveOption, error) {
+func (e *EventHub) configureReceiver() []eventhub.ReceiveOption {
 	receiveOpts := []eventhub.ReceiveOption{}
 
 	if e.ConsumerGroup != "" {
@@ -254,7 +250,7 @@ func (e *EventHub) configureReceiver() ([]eventhub.ReceiveOption, error) {
 		receiveOpts = append(receiveOpts, eventhub.ReceiveWithEpoch(e.Epoch))
 	}
 
-	return receiveOpts, nil
+	return receiveOpts
 }
 
 // OnMessage handles an Event.  When this function returns without error the

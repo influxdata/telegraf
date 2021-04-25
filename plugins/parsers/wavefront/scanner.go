@@ -24,24 +24,18 @@ func (s *PointScanner) read() rune {
 	return ch
 }
 
-// unread places the previously read rune back on the reader.
-func (s *PointScanner) unread() {
-	_ = s.r.UnreadRune()
-}
-
 // Scan returns the next token and literal value.
 func (s *PointScanner) Scan() (Token, string) {
-
 	// Read the next rune
 	ch := s.read()
 	if isWhitespace(ch) {
-		return WS, string(ch)
+		return Ws, string(ch)
 	} else if isLetter(ch) {
-		return LETTER, string(ch)
+		return Letter, string(ch)
 	} else if isNumber(ch) {
-		return NUMBER, string(ch)
+		return Number, string(ch)
 	} else if isDelta(ch) {
-		return DELTA, string(ch)
+		return Delta, string(ch)
 	}
 
 	// Otherwise read the individual character.
@@ -49,23 +43,23 @@ func (s *PointScanner) Scan() (Token, string) {
 	case eof:
 		return EOF, ""
 	case '\n':
-		return NEWLINE, string(ch)
+		return Newline, string(ch)
 	case '.':
-		return DOT, string(ch)
+		return Dot, string(ch)
 	case '-':
-		return MINUS_SIGN, string(ch)
+		return MinusSign, string(ch)
 	case '_':
-		return UNDERSCORE, string(ch)
+		return Underscore, string(ch)
 	case '/':
-		return SLASH, string(ch)
+		return Slash, string(ch)
 	case '\\':
-		return BACKSLASH, string(ch)
+		return Backslash, string(ch)
 	case ',':
-		return COMMA, string(ch)
+		return Comma, string(ch)
 	case '"':
-		return QUOTES, string(ch)
+		return Quotes, string(ch)
 	case '=':
-		return EQUALS, string(ch)
+		return Equals, string(ch)
 	}
-	return ILLEGAL, string(ch)
+	return Illegal, string(ch)
 }

@@ -18,6 +18,8 @@ For client TLS support we have the following options:
 # tls_key = "/etc/telegraf/key.pem"
 ## Skip TLS verification.
 # insecure_skip_verify = false
+## Send the specified TLS server name via SNI.
+# tls_server_name = "foo.example.com"
 ```
 
 ### Server Configuration

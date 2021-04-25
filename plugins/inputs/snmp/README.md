@@ -22,8 +22,13 @@ information.
 ```toml
 [[inputs.snmp]]
   ## Agent addresses to retrieve values from.
+  ##   format:  agents = ["<scheme://><hostname>:<port>"]
+  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.  
+  ##            default is udp
+  ##   port:    optional
   ##   example: agents = ["udp://127.0.0.1:161"]
   ##            agents = ["tcp://127.0.0.1:161"]
+  ##            agents = ["udp4://v4only-snmp-agent"]
   agents = ["udp://127.0.0.1:161"]
 
   ## Timeout for each request.
@@ -35,6 +40,9 @@ information.
   ## SNMP community string.
   # community = "public"
 
+  ## Agent host tag
+  # agent_host_tag = "agent_host"
+
   ## Number of retries to attempt.
   # retries = 3
 
@@ -45,7 +53,7 @@ information.
   ##
   ## Security Name.
   # sec_name = "myuser"
-  ## Authentication protocol; one of "MD5", "SHA", or "".
+  ## Authentication protocol; one of "MD5", "SHA", "SHA224", "SHA256", "SHA384", "SHA512" or "".
   # auth_protocol = "MD5"
   ## Authentication password.
   # auth_password = "pass"
@@ -53,7 +61,9 @@ information.
   # sec_level = "authNoPriv"
   ## Context Name.
   # context_name = ""
-  ## Privacy protocol used for encrypted messages; one of "DES", "AES" or "".
+  ## Privacy protocol used for encrypted messages; one of "DES", "AES", "AES192", "AES192C", "AES256", "AES256C", or "".
+  ### Protocols "AES192", "AES192", "AES256", and "AES256C" require the underlying net-snmp tools 
+  ### to be compiled with --enable-blumenthal-aes (http://www.net-snmp.org/docs/INSTALL.html)
   # priv_protocol = ""
   ## Privacy password used for encrypted messages.
   # priv_password = ""
@@ -110,15 +120,21 @@ option operate similar to the `snmpget` utility.
     # is_tag = false
 
     ## Apply one of the following conversions to the variable value:
-    ##   float(X) Convert the input value into a float and divides by the
-    ##            Xth power of 10. Effectively just moves the decimal left
-    ##            X places. For example a value of `123` with `float(2)`
-    ##            will result in `1.23`.
-    ##   float:   Convert the value into a float with no adjustment. Same
-    ##            as `float(0)`.
-    ##   int:     Convert the value into an integer.
-    ##   hwaddr:  Convert the value to a MAC address.
-    ##   ipaddr:  Convert the value to an IP address.
+    ##   float(X):    Convert the input value into a float and divides by the
+    ##                Xth power of 10. Effectively just moves the decimal left
+    ##                X places. For example a value of `123` with `float(2)`
+    ##                will result in `1.23`.
+    ##   float:       Convert the value into a float with no adjustment. Same
+    ##                as `float(0)`.
+    ##   int:         Convert the value into an integer.
+    ##   hwaddr:      Convert the value to a MAC address.
+    ##   ipaddr:      Convert the value to an IP address.
+    ##   hextoint:X:Y Convert a hex string value to integer. Where X is the Endian
+    ##                and Y the bit size. For example: hextoint:LittleEndian:uint64
+    ##                or hextoint:BigEndian:uint32. Valid options for the Endian are:
+    ##                BigEndian and LittleEndian. For the bit size: uint16, uint32
+    ##                and uint64.
+    ##                      
     # conversion = ""
 ```
 
@@ -130,9 +146,11 @@ formed with this option operate similarly way to the `snmptable` command.
 Control the handling of specific table columns using a nested `field`.  These
 nested fields are specified similarly to a top-level `field`.
 
-All columns of the SNMP table will be collected, it is not required to add a
-nested field for each column, only those which you wish to modify.  To exclude
-columns use [metric filtering][].
+By default all columns of the SNMP table will be collected - it is not required
+to add a nested field for each column, only those which you wish to modify. To
+*only* collect certain columns, omit the `oid` from the `table` section and only
+include `oid` settings in `field` sections. For more complex include/exclude
+cases for columns use [metric filtering][].
 
 One [metric][] is created for each row of the SNMP table.
 
@@ -179,6 +197,10 @@ One [metric][] is created for each row of the SNMP table.
       ## path segments). Truncates the index after this point to remove non-fixed
       ## value or length index suffixes.
       # oid_index_length = 0
+
+      ## Specifies if the value of given field should be snmptranslated
+      ## by default no field values are translated
+      # translate = true
 ```
 
 ### Troubleshooting

@@ -34,7 +34,7 @@ func TestExternalProcessorWorks(t *testing.T) {
 	orig := now
 	metrics := []telegraf.Metric{}
 	for i := 0; i < 10; i++ {
-		m, err := metric.New("test",
+		m := metric.New("test",
 			map[string]string{
 				"city": "Toronto",
 			},
@@ -43,7 +43,6 @@ func TestExternalProcessorWorks(t *testing.T) {
 				"count":      1,
 			},
 			now)
-		require.NoError(t, err)
 		metrics = append(metrics, m)
 		now = now.Add(1)
 
@@ -77,6 +76,54 @@ func TestExternalProcessorWorks(t *testing.T) {
 		require.EqualValues(t, metricTime+1, m.Time().UnixNano())
 		metricTime = m.Time().UnixNano()
 	}
+}
+
+func TestParseLinesWithNewLines(t *testing.T) {
+	e := New()
+	e.Log = testutil.Logger{}
+
+	exe, err := os.Executable()
+	require.NoError(t, err)
+	t.Log(exe)
+	e.Command = []string{exe, "-countmultiplier"}
+	e.RestartDelay = config.Duration(5 * time.Second)
+
+	acc := &testutil.Accumulator{}
+
+	require.NoError(t, e.Start(acc))
+
+	now := time.Now()
+	orig := now
+
+	m := metric.New("test",
+		map[string]string{
+			"author": "Mr. Gopher",
+		},
+		map[string]interface{}{
+			"phrase": "Gophers are amazing creatures.\nAbsolutely amazing.",
+			"count":  3,
+		},
+		now)
+
+	e.Add(m, acc)
+
+	acc.Wait(1)
+	require.NoError(t, e.Stop())
+
+	processedMetric := acc.GetTelegrafMetrics()[0]
+
+	expectedMetric := testutil.MustMetric("test",
+		map[string]string{
+			"author": "Mr. Gopher",
+		},
+		map[string]interface{}{
+			"phrase": "Gophers are amazing creatures.\nAbsolutely amazing.",
+			"count":  6,
+		},
+		orig,
+	)
+
+	testutil.RequireMetricEqual(t, expectedMetric, processedMetric)
 }
 
 var countmultiplier = flag.Bool("countmultiplier", false,

@@ -9,8 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDovecot(t *testing.T) {
-
+func TestDovecotIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -63,7 +62,7 @@ func TestDovecot(t *testing.T) {
 
 	// Test type=ip
 	tags = map[string]string{"server": "dovecot.test", "type": "ip", "ip": "192.168.0.100"}
-	buf = bytes.NewBufferString(sampleIp)
+	buf = bytes.NewBufferString(sampleIP)
 
 	err = gatherStats(buf, &acc, "dovecot.test", "ip")
 	require.NoError(t, err)
@@ -103,7 +102,6 @@ func TestDovecot(t *testing.T) {
 	require.NoError(t, err)
 
 	acc.AssertContainsTaggedFields(t, "dovecot", fields, tags)
-
 }
 
 const sampleGlobal = `reset_timestamp	last_update	num_logins	num_cmds	num_connected_sessions	user_cpu	sys_cpu	clock_time	min_faults	maj_faults	vol_cs	invol_cs	disk_input	disk_output	read_count	read_bytes	write_count	write_bytes	mail_lookup_path	mail_lookup_attr	mail_read_count	mail_read_bytes	mail_cache_hits
@@ -112,7 +110,7 @@ const sampleGlobal = `reset_timestamp	last_update	num_logins	num_cmds	num_connec
 const sampleDomain = `domain	reset_timestamp	last_update	num_logins	num_cmds	num_connected_sessions	user_cpu	sys_cpu	clock_time	min_faults	maj_faults	vol_cs	invol_cs	disk_input	disk_output	read_count	read_bytes	write_count	write_bytes	mail_lookup_path	mail_lookup_attr	mail_read_count	mail_read_bytes	mail_cache_hits
 domain.test	1453969886	1454603963.039864	7503897	52595715	1204	100831175.372000	83849071.112000	4326001931528183.495762	763950011	1112443	4120386897	3685239306	41679480946688	1819070669176832	2368906465	2957928122981169	3545389615	1666822498251286	24396105	302845	20155768	669946617705	1557255080`
 
-const sampleIp = `ip	reset_timestamp	last_update	num_logins	num_cmds	num_connected_sessions	user_cpu	sys_cpu	clock_time	min_faults	maj_faults	vol_cs	invol_cs	disk_input	disk_output	read_count	read_bytes	write_count	write_bytes	mail_lookup_path	mail_lookup_attr	mail_read_count	mail_read_bytes	mail_cache_hits
+const sampleIP = `ip	reset_timestamp	last_update	num_logins	num_cmds	num_connected_sessions	user_cpu	sys_cpu	clock_time	min_faults	maj_faults	vol_cs	invol_cs	disk_input	disk_output	read_count	read_bytes	write_count	write_bytes	mail_lookup_path	mail_lookup_attr	mail_read_count	mail_read_bytes	mail_cache_hits
 192.168.0.100	1453969886	1454603963.039864	7503897	52595715	1204	100831175.372000	83849071.112000	4326001931528183.495762	763950011	1112443	4120386897	3685239306	41679480946688	1819070669176832	2368906465	2957928122981169	3545389615	1666822498251286	24396105	302845	20155768	669946617705	1557255080`
 
 const sampleUser = `user	reset_timestamp	last_update	num_logins	num_cmds	user_cpu	sys_cpu	clock_time	min_faults	maj_faults	vol_cs	invol_cs	disk_input	disk_output	read_count	read_bytes	write_count	write_bytes	mail_lookup_path	mail_lookup_attr	mail_read_count	mail_read_bytes	mail_cache_hits

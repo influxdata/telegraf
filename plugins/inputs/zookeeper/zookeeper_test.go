@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestZookeeperGeneratesMetrics(t *testing.T) {
+func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

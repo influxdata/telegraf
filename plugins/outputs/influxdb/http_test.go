@@ -212,6 +212,26 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			},
 		},
+		{
+			name: "invalid json response is handled",
+			config: influxdb.HTTPConfig{
+				URL:      u,
+				Database: `database`,
+			},
+			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`invalid response`))
+			},
+			errFunc: func(t *testing.T, err error) {
+				expected := &influxdb.APIError{
+					StatusCode:  400,
+					Title:       "400 Bad Request",
+					Description: "An error response was received while attempting to create the following database: database. Error: invalid response",
+				}
+
+				require.Equal(t, expected, err)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -470,7 +490,7 @@ func TestHTTP_Write(t *testing.T) {
 
 			ctx := context.Background()
 
-			m, err := metric.New(
+			m := metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -478,7 +498,6 @@ func TestHTTP_Write(t *testing.T) {
 				},
 				time.Unix(0, 0),
 			)
-			require.NoError(t, err)
 			metrics := []telegraf.Metric{m}
 
 			client, err := influxdb.NewHTTPClient(tt.config)
@@ -521,7 +540,7 @@ func TestHTTP_WritePathPrefix(t *testing.T) {
 
 	ctx := context.Background()
 
-	m, err := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
@@ -529,7 +548,6 @@ func TestHTTP_WritePathPrefix(t *testing.T) {
 		},
 		time.Unix(0, 0),
 	)
-	require.NoError(t, err)
 	metrics := []telegraf.Metric{m}
 
 	config := influxdb.HTTPConfig{
@@ -575,7 +593,7 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 
 	ctx := context.Background()
 
-	m, err := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{

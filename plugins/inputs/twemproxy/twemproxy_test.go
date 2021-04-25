@@ -67,8 +67,12 @@ func mockTwemproxyServer() (net.Listener, error) {
 	go func(l net.Listener) {
 		for {
 			conn, _ := l.Accept()
-			conn.Write([]byte(sampleStats))
-			conn.Close()
+			if _, err := conn.Write([]byte(sampleStats)); err != nil {
+				return
+			}
+			if err := conn.Close(); err != nil {
+				return
+			}
 			break
 		}
 	}(listener)

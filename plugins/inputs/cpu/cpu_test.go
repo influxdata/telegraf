@@ -48,26 +48,22 @@ func TestCPUStats(t *testing.T) {
 
 	cs := NewCPUStats(&mps)
 
-	cputags := map[string]string{
-		"cpu": "cpu0",
-	}
-
 	err := cs.Gather(&acc)
 	require.NoError(t, err)
 
 	// Computed values are checked with delta > 0 because of floating point arithmetic
 	// imprecision
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_user", 8.8, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_system", 8.2, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_idle", 80.1, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_active", 19.9, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_nice", 1.3, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_iowait", 0.8389, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_irq", 0.6, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_softirq", 0.11, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_steal", 0.0511, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_guest", 3.1, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_guest_nice", 0.324, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_user", 8.8, 0)
+	assertContainsTaggedFloat(t, &acc, "time_system", 8.2, 0)
+	assertContainsTaggedFloat(t, &acc, "time_idle", 80.1, 0)
+	assertContainsTaggedFloat(t, &acc, "time_active", 19.9, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "time_nice", 1.3, 0)
+	assertContainsTaggedFloat(t, &acc, "time_iowait", 0.8389, 0)
+	assertContainsTaggedFloat(t, &acc, "time_irq", 0.6, 0)
+	assertContainsTaggedFloat(t, &acc, "time_softirq", 0.11, 0)
+	assertContainsTaggedFloat(t, &acc, "time_steal", 0.0511, 0)
+	assertContainsTaggedFloat(t, &acc, "time_guest", 3.1, 0)
+	assertContainsTaggedFloat(t, &acc, "time_guest_nice", 0.324, 0)
 
 	mps2 := system.MockPS{}
 	mps2.On("CPUTimes").Return([]cpu.TimesStat{cts2}, nil)
@@ -77,29 +73,29 @@ func TestCPUStats(t *testing.T) {
 	err = cs.Gather(&acc)
 	require.NoError(t, err)
 
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_user", 24.9, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_system", 10.9, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_idle", 157.9798, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_active", 42.0202, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_nice", 3.5, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_iowait", 0.929, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_irq", 1.2, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_softirq", 0.31, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_steal", 0.2812, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_guest", 11.4, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_guest_nice", 2.524, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_user", 24.9, 0)
+	assertContainsTaggedFloat(t, &acc, "time_system", 10.9, 0)
+	assertContainsTaggedFloat(t, &acc, "time_idle", 157.9798, 0)
+	assertContainsTaggedFloat(t, &acc, "time_active", 42.0202, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "time_nice", 3.5, 0)
+	assertContainsTaggedFloat(t, &acc, "time_iowait", 0.929, 0)
+	assertContainsTaggedFloat(t, &acc, "time_irq", 1.2, 0)
+	assertContainsTaggedFloat(t, &acc, "time_softirq", 0.31, 0)
+	assertContainsTaggedFloat(t, &acc, "time_steal", 0.2812, 0)
+	assertContainsTaggedFloat(t, &acc, "time_guest", 11.4, 0)
+	assertContainsTaggedFloat(t, &acc, "time_guest_nice", 2.524, 0)
 
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_user", 7.8, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_system", 2.7, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_idle", 77.8798, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_active", 22.1202, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_nice", 0, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_iowait", 0.0901, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_irq", 0.6, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_softirq", 0.2, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_steal", 0.2301, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_guest", 8.3, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_guest_nice", 2.2, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "usage_user", 7.8, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "usage_system", 2.7, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "usage_idle", 77.8798, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "usage_active", 22.1202, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "usage_nice", 0, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "usage_iowait", 0.0901, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "usage_irq", 0.6, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "usage_softirq", 0.2, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "usage_steal", 0.2301, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "usage_guest", 8.3, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "usage_guest_nice", 2.2, 0.0005)
 }
 
 // Asserts that a given accumulator contains a measurement of type float64 with
@@ -109,24 +105,21 @@ func TestCPUStats(t *testing.T) {
 // Parameters:
 //     t *testing.T            : Testing object to use
 //     acc testutil.Accumulator: Accumulator to examine
-//     measurement string      : Name of the measurement to examine
+//     field string            : Name of field to examine
 //     expectedValue float64   : Value to search for within the measurement
 //     delta float64           : Maximum acceptable distance of an accumulated value
 //                               from the expectedValue parameter. Useful when
 //                               floating-point arithmetic imprecision makes looking
 //                               for an exact match impractical
-//     tags map[string]string  : Tag set the found measurement must have. Set to nil to
-//                               ignore the tag set.
 func assertContainsTaggedFloat(
 	t *testing.T,
 	acc *testutil.Accumulator,
-	measurement string,
 	field string,
 	expectedValue float64,
 	delta float64,
-	tags map[string]string,
 ) {
 	var actualValue float64
+	measurement := "cpu" // always cpu
 	for _, pt := range acc.Metrics {
 		if pt.Measurement == measurement {
 			for fieldname, value := range pt.Fields {
@@ -218,18 +211,14 @@ func TestCPUTimesDecrease(t *testing.T) {
 
 	cs := NewCPUStats(&mps)
 
-	cputags := map[string]string{
-		"cpu": "cpu0",
-	}
-
 	err := cs.Gather(&acc)
 	require.NoError(t, err)
 
 	// Computed values are checked with delta > 0 because of floating point arithmetic
 	// imprecision
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_user", 18, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_idle", 80, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_iowait", 2, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_user", 18, 0)
+	assertContainsTaggedFloat(t, &acc, "time_idle", 80, 0)
+	assertContainsTaggedFloat(t, &acc, "time_iowait", 2, 0)
 
 	mps2 := system.MockPS{}
 	mps2.On("CPUTimes").Return([]cpu.TimesStat{cts2}, nil)
@@ -246,11 +235,11 @@ func TestCPUTimesDecrease(t *testing.T) {
 	err = cs.Gather(&acc)
 	require.NoError(t, err)
 
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_user", 56, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_idle", 120, 0, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "time_iowait", 3, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_user", 56, 0)
+	assertContainsTaggedFloat(t, &acc, "time_idle", 120, 0)
+	assertContainsTaggedFloat(t, &acc, "time_iowait", 3, 0)
 
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_user", 18, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_idle", 80, 0.0005, cputags)
-	assertContainsTaggedFloat(t, &acc, "cpu", "usage_iowait", 2, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "usage_user", 18, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "usage_idle", 80, 0.0005)
+	assertContainsTaggedFloat(t, &acc, "usage_iowait", 2, 0.0005)
 }

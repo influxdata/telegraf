@@ -37,7 +37,7 @@ func TestHTTPwithJSONFormat(t *testing.T) {
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
-	plugin.Init()
+	require.NoError(t, plugin.Init())
 	require.NoError(t, acc.GatherError(plugin.Gather))
 
 	require.Len(t, acc.Metrics, 1)
@@ -79,7 +79,7 @@ func TestHTTPHeaders(t *testing.T) {
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
-	plugin.Init()
+	require.NoError(t, plugin.Init())
 	require.NoError(t, acc.GatherError(plugin.Gather))
 }
 
@@ -102,7 +102,7 @@ func TestInvalidStatusCode(t *testing.T) {
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
-	plugin.Init()
+	require.NoError(t, plugin.Init())
 	require.Error(t, acc.GatherError(plugin.Gather))
 }
 
@@ -126,7 +126,7 @@ func TestSuccessStatusCodes(t *testing.T) {
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
-	plugin.Init()
+	require.NoError(t, plugin.Init())
 	require.NoError(t, acc.GatherError(plugin.Gather))
 }
 
@@ -152,7 +152,7 @@ func TestMethod(t *testing.T) {
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
-	plugin.Init()
+	require.NoError(t, plugin.Init())
 	require.NoError(t, acc.GatherError(plugin.Gather))
 }
 
@@ -246,7 +246,7 @@ func TestBodyAndContentEncoding(t *testing.T) {
 			tt.plugin.SetParser(parser)
 
 			var acc testutil.Accumulator
-			tt.plugin.Init()
+			require.NoError(t, tt.plugin.Init())
 			err = tt.plugin.Gather(&acc)
 			require.NoError(t, err)
 		})

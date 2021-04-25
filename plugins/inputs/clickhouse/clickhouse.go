@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -101,20 +102,20 @@ func init() {
 			ClientConfig: tls.ClientConfig{
 				InsecureSkipVerify: false,
 			},
-			Timeout: internal.Duration{Duration: defaultTimeout},
+			Timeout: config.Duration(defaultTimeout),
 		}
 	})
 }
 
 // ClickHouse Telegraf Input Plugin
 type ClickHouse struct {
-	Username       string            `toml:"username"`
-	Password       string            `toml:"password"`
-	Servers        []string          `toml:"servers"`
-	AutoDiscovery  bool              `toml:"auto_discovery"`
-	ClusterInclude []string          `toml:"cluster_include"`
-	ClusterExclude []string          `toml:"cluster_exclude"`
-	Timeout        internal.Duration `toml:"timeout"`
+	Username       string          `toml:"username"`
+	Password       string          `toml:"password"`
+	Servers        []string        `toml:"servers"`
+	AutoDiscovery  bool            `toml:"auto_discovery"`
+	ClusterInclude []string        `toml:"cluster_include"`
+	ClusterExclude []string        `toml:"cluster_exclude"`
+	Timeout        config.Duration `toml:"timeout"`
 	HTTPClient     http.Client
 	tls.ClientConfig
 }
@@ -132,8 +133,8 @@ func (*ClickHouse) Description() string {
 // Start ClickHouse input service
 func (ch *ClickHouse) Start(telegraf.Accumulator) error {
 	timeout := defaultTimeout
-	if ch.Timeout.Duration != 0 {
-		timeout = ch.Timeout.Duration
+	if time.Duration(ch.Timeout) != 0 {
+		timeout = time.Duration(ch.Timeout)
 	}
 	tlsCfg, err := ch.ClientConfig.TLSConfig()
 	if err != nil {
@@ -195,7 +196,6 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 	}
 
 	for _, conn := range connects {
-
 		metricsFuncs := []func(acc telegraf.Accumulator, conn *connect) error{
 			ch.tables,
 			ch.zookeeper,
@@ -212,7 +212,6 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 			if err := metricFunc(acc, &conn); err != nil {
 				acc.AddError(err)
 			}
-
 		}
 
 		for metric := range commonMetrics {
@@ -342,7 +341,6 @@ func (ch *ClickHouse) replicationQueue(acc telegraf.Accumulator, conn *connect) 
 }
 
 func (ch *ClickHouse) detachedParts(acc telegraf.Accumulator, conn *connect) error {
-
 	var detachedParts []struct {
 		DetachedParts chUInt64 `json:"detached_parts"`
 	}
@@ -363,7 +361,6 @@ func (ch *ClickHouse) detachedParts(acc telegraf.Accumulator, conn *connect) err
 }
 
 func (ch *ClickHouse) dictionaries(acc telegraf.Accumulator, conn *connect) error {
-
 	var brokenDictionaries []struct {
 		Origin         string   `json:"origin"`
 		BytesAllocated chUInt64 `json:"bytes_allocated"`
@@ -397,7 +394,6 @@ func (ch *ClickHouse) dictionaries(acc telegraf.Accumulator, conn *connect) erro
 }
 
 func (ch *ClickHouse) mutations(acc telegraf.Accumulator, conn *connect) error {
-
 	var mutationsStatus []struct {
 		Failed    chUInt64 `json:"failed"`
 		Running   chUInt64 `json:"running"`
@@ -424,7 +420,6 @@ func (ch *ClickHouse) mutations(acc telegraf.Accumulator, conn *connect) error {
 }
 
 func (ch *ClickHouse) disks(acc telegraf.Accumulator, conn *connect) error {
-
 	var disksStatus []struct {
 		Name            string   `json:"name"`
 		Path            string   `json:"path"`
@@ -448,14 +443,12 @@ func (ch *ClickHouse) disks(acc telegraf.Accumulator, conn *connect) error {
 			},
 			tags,
 		)
-
 	}
 
 	return nil
 }
 
 func (ch *ClickHouse) processes(acc telegraf.Accumulator, conn *connect) error {
-
 	var processesStats []struct {
 		QueryType      string  `json:"query_type"`
 		Percentile50   float64 `json:"p50"`
@@ -479,7 +472,6 @@ func (ch *ClickHouse) processes(acc telegraf.Accumulator, conn *connect) error {
 			},
 			tags,
 		)
-
 	}
 
 	return nil

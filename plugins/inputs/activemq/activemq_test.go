@@ -11,7 +11,6 @@ import (
 )
 
 func TestGatherQueuesMetrics(t *testing.T) {
-
 	s := `<queues>
 <queue name="sandra">
 <stats size="0" consumerCount="0" enqueueCount="0" dequeueCount="0"/>
@@ -31,7 +30,7 @@ func TestGatherQueuesMetrics(t *testing.T) {
 
 	queues := Queues{}
 
-	xml.Unmarshal([]byte(s), &queues)
+	require.NoError(t, xml.Unmarshal([]byte(s), &queues))
 
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
@@ -50,14 +49,13 @@ func TestGatherQueuesMetrics(t *testing.T) {
 	activeMQ := new(ActiveMQ)
 	activeMQ.Server = "localhost"
 	activeMQ.Port = 8161
-	activeMQ.Init()
+	require.NoError(t, activeMQ.Init())
 
 	activeMQ.GatherQueuesMetrics(&acc, queues)
 	acc.AssertContainsTaggedFields(t, "activemq_queues", records, tags)
 }
 
 func TestGatherTopicsMetrics(t *testing.T) {
-
 	s := `<topics>
 <topic name="ActiveMQ.Advisory.MasterBroker ">
 <stats size="0" consumerCount="0" enqueueCount="1" dequeueCount="0"/>
@@ -78,7 +76,7 @@ func TestGatherTopicsMetrics(t *testing.T) {
 
 	topics := Topics{}
 
-	xml.Unmarshal([]byte(s), &topics)
+	require.NoError(t, xml.Unmarshal([]byte(s), &topics))
 
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
@@ -97,14 +95,13 @@ func TestGatherTopicsMetrics(t *testing.T) {
 	activeMQ := new(ActiveMQ)
 	activeMQ.Server = "localhost"
 	activeMQ.Port = 8161
-	activeMQ.Init()
+	require.NoError(t, activeMQ.Init())
 
 	activeMQ.GatherTopicsMetrics(&acc, topics)
 	acc.AssertContainsTaggedFields(t, "activemq_topics", records, tags)
 }
 
 func TestGatherSubscribersMetrics(t *testing.T) {
-
 	s := `<subscribers>
 <subscriber clientId="AAA" subscriptionName="AAA" connectionId="NOTSET" destinationName="AAA" selector="AA" active="no">
 <stats pendingQueueSize="0" dispatchedQueueSize="0" dispatchedCounter="0" enqueueCounter="0" dequeueCounter="0"/>
@@ -113,7 +110,7 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 
 	subscribers := Subscribers{}
 
-	xml.Unmarshal([]byte(s), &subscribers)
+	require.NoError(t, xml.Unmarshal([]byte(s), &subscribers))
 
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
@@ -138,7 +135,7 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 	activeMQ := new(ActiveMQ)
 	activeMQ.Server = "localhost"
 	activeMQ.Port = 8161
-	activeMQ.Init()
+	require.NoError(t, activeMQ.Init())
 
 	activeMQ.GatherSubscribersMetrics(&acc, subscribers)
 	acc.AssertContainsTaggedFields(t, "activemq_subscribers", records, tags)
@@ -152,13 +149,16 @@ func TestURLs(t *testing.T) {
 		switch r.URL.Path {
 		case "/admin/xml/queues.jsp":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("<queues></queues>"))
+			_, err := w.Write([]byte("<queues></queues>"))
+			require.NoError(t, err)
 		case "/admin/xml/topics.jsp":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("<topics></topics>"))
+			_, err := w.Write([]byte("<topics></topics>"))
+			require.NoError(t, err)
 		case "/admin/xml/subscribers.jsp":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("<subscribers></subscribers>"))
+			_, err := w.Write([]byte("<subscribers></subscribers>"))
+			require.NoError(t, err)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 			t.Fatalf("unexpected path: " + r.URL.Path)

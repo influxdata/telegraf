@@ -17,7 +17,7 @@ type topicSuffixTestpair struct {
 	expectedTopic string
 }
 
-func TestConnectAndWrite(t *testing.T) {
+func TestConnectAndWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -25,13 +25,16 @@ func TestConnectAndWrite(t *testing.T) {
 	brokers := []string{testutil.GetLocalHost() + ":9092"}
 	s, _ := serializers.NewInfluxSerializer()
 	k := &Kafka{
-		Brokers:    brokers,
-		Topic:      "Test",
-		serializer: s,
+		Brokers:      brokers,
+		Topic:        "Test",
+		serializer:   s,
+		producerFunc: sarama.NewSyncProducer,
 	}
 
 	// Verify that we can connect to the Kafka broker
-	err := k.Connect()
+	err := k.Init()
+	require.NoError(t, err)
+	err = k.Connect()
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the kafka broker
@@ -40,7 +43,7 @@ func TestConnectAndWrite(t *testing.T) {
 	k.Close()
 }
 
-func TestTopicSuffixes(t *testing.T) {
+func TestTopicSuffixesIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -87,7 +90,7 @@ func TestTopicSuffixes(t *testing.T) {
 	}
 }
 
-func TestValidateTopicSuffixMethod(t *testing.T) {
+func TestValidateTopicSuffixMethodIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -114,7 +117,7 @@ func TestRoutingKey(t *testing.T) {
 				RoutingKey: "static",
 			},
 			metric: func() telegraf.Metric {
-				m, _ := metric.New(
+				m := metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -134,7 +137,7 @@ func TestRoutingKey(t *testing.T) {
 				RoutingKey: "random",
 			},
 			metric: func() telegraf.Metric {
-				m, _ := metric.New(
+				m := metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -176,7 +179,7 @@ func (p *MockProducer) Close() error {
 	return nil
 }
 
-func NewMockProducer(addrs []string, config *sarama.Config) (sarama.SyncProducer, error) {
+func NewMockProducer(_ []string, _ *sarama.Config) (sarama.SyncProducer, error) {
 	return &MockProducer{}, nil
 }
 

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/stretchr/testify/assert"
@@ -77,7 +77,7 @@ func TestWaitError(t *testing.T) {
 		Log:       testutil.Logger{},
 		Addresses: []string{listener.Addr().String()},
 		Encoding:  "proto",
-		Redial:    internal.Duration{Duration: 1 * time.Second},
+		Redial:    config.Duration(1 * time.Second),
 	}
 
 	var acc testutil.Accumulator
@@ -135,7 +135,7 @@ func TestUsernamePassword(t *testing.T) {
 		Username:  "theusername",
 		Password:  "thepassword",
 		Encoding:  "proto",
-		Redial:    internal.Duration{Duration: 1 * time.Second},
+		Redial:    config.Duration(1 * time.Second),
 	}
 
 	var acc testutil.Accumulator
@@ -218,7 +218,7 @@ func TestNotification(t *testing.T) {
 			plugin: &GNMI{
 				Log:      testutil.Logger{},
 				Encoding: "proto",
-				Redial:   internal.Duration{Duration: 1 * time.Second},
+				Redial:   config.Duration(1 * time.Second),
 				Subscriptions: []Subscription{
 					{
 						Name:             "alias",
@@ -231,13 +231,18 @@ func TestNotification(t *testing.T) {
 			server: &MockServer{
 				SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 					notification := mockGNMINotification()
-					server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
-					server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}})
+					err := server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
+					if err != nil {
+						return err
+					}
+					err = server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}})
+					if err != nil {
+						return err
+					}
 					notification.Prefix.Elem[0].Key["foo"] = "bar2"
 					notification.Update[0].Path.Elem[1].Key["name"] = "str2"
 					notification.Update[0].Val = &gnmi.TypedValue{Value: &gnmi.TypedValue_JsonVal{JsonVal: []byte{'"', '1', '2', '3', '"'}}}
-					server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
-					return nil
+					return server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
 				},
 			},
 			expected: []telegraf.Metric{
@@ -302,7 +307,7 @@ func TestNotification(t *testing.T) {
 			plugin: &GNMI{
 				Log:      testutil.Logger{},
 				Encoding: "proto",
-				Redial:   internal.Duration{Duration: 1 * time.Second},
+				Redial:   config.Duration(1 * time.Second),
 				Subscriptions: []Subscription{
 					{
 						Name:             "PHY_COUNTERS",
@@ -348,8 +353,7 @@ func TestNotification(t *testing.T) {
 							},
 						},
 					}
-					server.Send(response)
-					return nil
+					return server.Send(response)
 				},
 			},
 			expected: []telegraf.Metric{
@@ -403,6 +407,29 @@ func TestNotification(t *testing.T) {
 	}
 }
 
+type MockLogger struct {
+	telegraf.Logger
+	lastFormat string
+	lastArgs   []interface{}
+}
+
+func (l *MockLogger) Errorf(format string, args ...interface{}) {
+	l.lastFormat = format
+	l.lastArgs = args
+}
+
+func TestSubscribeResponseError(t *testing.T) {
+	me := "mock error message"
+	var mc uint32 = 7
+	ml := &MockLogger{}
+	plugin := &GNMI{Log: ml}
+	// TODO: FIX SA1019: gnmi.Error is deprecated: Do not use.
+	errorResponse := &gnmi.SubscribeResponse_Error{Error: &gnmi.Error{Message: me, Code: mc}}
+	plugin.handleSubscribeResponse("127.0.0.1:0", &gnmi.SubscribeResponse{Response: errorResponse})
+	require.NotEmpty(t, ml.lastFormat)
+	require.Equal(t, ml.lastArgs, []interface{}{mc, me})
+}
+
 func TestRedial(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -411,15 +438,14 @@ func TestRedial(t *testing.T) {
 		Log:       testutil.Logger{},
 		Addresses: []string{listener.Addr().String()},
 		Encoding:  "proto",
-		Redial:    internal.Duration{Duration: 10 * time.Millisecond},
+		Redial:    config.Duration(10 * time.Millisecond),
 	}
 
 	grpcServer := grpc.NewServer()
 	gnmiServer := &MockServer{
 		SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 			notification := mockGNMINotification()
-			server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
-			return nil
+			return server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
 		},
 		GRPCServer: grpcServer,
 	}
@@ -452,8 +478,7 @@ func TestRedial(t *testing.T) {
 			notification.Prefix.Elem[0].Key["foo"] = "bar2"
 			notification.Update[0].Path.Elem[1].Key["name"] = "str2"
 			notification.Update[0].Val = &gnmi.TypedValue{Value: &gnmi.TypedValue_BoolVal{BoolVal: false}}
-			server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
-			return nil
+			return server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
 		},
 		GRPCServer: grpcServer,
 	}

@@ -48,13 +48,10 @@ var validQuery = map[string]bool{
 
 func (d *Dovecot) SampleConfig() string { return sampleConfig }
 
-const defaultPort = "24242"
-
 // Reads stats from all configured servers.
 func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 	if !validQuery[d.Type] {
-		return fmt.Errorf("Error: %s is not a valid query type\n",
-			d.Type)
+		return fmt.Errorf("error: %s is not a valid query type", d.Type)
 	}
 
 	if len(d.Servers) == 0 {
@@ -93,7 +90,9 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 	defer c.Close()
 
 	// Extend connection
-	c.SetDeadline(time.Now().Add(defaultTimeout))
+	if err := c.SetDeadline(time.Now().Add(defaultTimeout)); err != nil {
+		return fmt.Errorf("setting deadline failed for dovecot server '%s': %s", addr, err)
+	}
 
 	msg := fmt.Sprintf("EXPORT\t%s", qtype)
 	if len(filter) > 0 {
@@ -101,9 +100,13 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 	}
 	msg += "\n"
 
-	c.Write([]byte(msg))
+	if _, err := c.Write([]byte(msg)); err != nil {
+		return fmt.Errorf("writing message %q failed for dovecot server '%s': %s", msg, addr, err)
+	}
 	var buf bytes.Buffer
-	io.Copy(&buf, c)
+	if _, err := io.Copy(&buf, c); err != nil {
+		return fmt.Errorf("copying message failed for dovecot server '%s': %s", addr, err)
+	}
 
 	host, _, _ := net.SplitHostPort(addr)
 
@@ -111,7 +114,6 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 }
 
 func gatherStats(buf *bytes.Buffer, acc telegraf.Accumulator, host string, qtype string) error {
-
 	lines := strings.Split(buf.String(), "\n")
 	head := strings.Split(lines[0], "\t")
 	vals := lines[1:]
@@ -170,13 +172,11 @@ func splitSec(tm string) (sec int64, msec int64) {
 }
 
 func timeParser(tm string) time.Time {
-
 	sec, msec := splitSec(tm)
 	return time.Unix(sec, msec)
 }
 
 func secParser(tm string) float64 {
-
 	sec, msec := splitSec(tm)
 	return float64(sec) + (float64(msec) / 1000000.0)
 }

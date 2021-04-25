@@ -3,6 +3,7 @@ package exec
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -26,14 +28,10 @@ const sampleConfig = `
     "/tmp/collect_*.sh"
   ]
 
-  ## additional parameters that will be added to the metrics as tags
-  ## Lines correspond to the command lines, so first line of parameters are 
-  ## added to metrics of first command and so on. If one command should not have additional tags,
-  ## add an empty array.
-  tags = [
-    [ ],
-	[ [ "tag_1", "value_tag_1" ], [ "tag_2", "value_tag_2" ] ],
-	[ [ "tag_3", "value_tag_3" ] ]
+  # Extended commands array with support for custom tags per command
+  commands_extended = [
+    { command = "/tmp/test.sh",tags = [ ["tag_1", "metricA"], ["tag_2", "custom"] ] },
+    { command = "/usr/bin/mycollector --foo=bar", tags = [ ["tag_1", "metricB"], ["tag_2", "custom"] ] }
   ]
 
   ## Timeout for each command to complete.
@@ -49,13 +47,19 @@ const sampleConfig = `
   data_format = "influx"
 `
 
-const MaxStderrBytes = 512
+const MaxStderrBytes int = 512
+
+// CommandExtended defines a command object with custom data
+type CommandExtended struct {
+	Command string
+	Tags    [][]string
+}
 
 type Exec struct {
-	Commands []string
-	Command  string
-	Timeout  internal.Duration
-	Tags     [][][]string
+	Commands         []string          `toml:"commands"`
+	CommandsExtended []CommandExtended `toml:"commands_extended"`
+	Command          string            `toml:"command"`
+	Timeout          config.Duration   `toml:"timeout"`
 
 	parser parsers.Parser
 
@@ -66,7 +70,7 @@ type Exec struct {
 func NewExec() *Exec {
 	return &Exec{
 		runner:  CommandRunner{},
-		Timeout: internal.Duration{Duration: time.Second * 5},
+		Timeout: config.Duration(time.Second * 5),
 	}
 }
 
@@ -80,12 +84,12 @@ func (c CommandRunner) Run(
 	command string,
 	timeout time.Duration,
 ) ([]byte, []byte, error) {
-	split_cmd, err := shellquote.Split(command)
-	if err != nil || len(split_cmd) == 0 {
+	splitCmd, err := shellquote.Split(command)
+	if err != nil || len(splitCmd) == 0 {
 		return nil, nil, fmt.Errorf("exec: unable to parse command, %s", err)
 	}
 
-	cmd := exec.Command(split_cmd[0], split_cmd[1:]...)
+	cmd := exec.Command(splitCmd[0], splitCmd[1:]...)
 
 	var (
 		out    bytes.Buffer
@@ -96,16 +100,16 @@ func (c CommandRunner) Run(
 
 	runErr := internal.RunTimeout(cmd, timeout)
 
-	out = removeCarriageReturns(out)
-	if stderr.Len() > 0 {
-		stderr = removeCarriageReturns(stderr)
-		stderr = truncate(stderr)
+	out = removeWindowsCarriageReturns(out)
+	if stderr.Len() > 0 && !telegraf.Debug {
+		stderr = removeWindowsCarriageReturns(stderr)
+		stderr = c.truncate(stderr)
 	}
 
 	return out.Bytes(), stderr.Bytes(), runErr
 }
 
-func truncate(buf bytes.Buffer) bytes.Buffer {
+func (c CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
 	// Limit the number of bytes.
 	didTruncate := false
 	if buf.Len() > MaxStderrBytes {
@@ -120,42 +124,36 @@ func truncate(buf bytes.Buffer) bytes.Buffer {
 		buf.Truncate(i)
 	}
 	if didTruncate {
+		//nolint:errcheck,revive // Will always return nil or panic
 		buf.WriteString("...")
 	}
 	return buf
 }
 
-// removeCarriageReturns removes all carriage returns from the input if the
+// removeWindowsCarriageReturns removes all carriage returns from the input if the
 // OS is Windows. It does not return any errors.
-func removeCarriageReturns(b bytes.Buffer) bytes.Buffer {
+func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
 	if runtime.GOOS == "windows" {
 		var buf bytes.Buffer
 		for {
-			byt, er := b.ReadBytes(0x0D)
-			end := len(byt)
-			if nil == er {
-				end -= 1
+			byt, err := b.ReadBytes(0x0D)
+			byt = bytes.TrimRight(byt, "\x0d")
+			if len(byt) > 0 {
+				_, _ = buf.Write(byt)
 			}
-			if nil != byt {
-				buf.Write(byt[:end])
-			} else {
-				break
-			}
-			if nil != er {
-				break
+			if err == io.EOF {
+				return buf
 			}
 		}
-		b = buf
 	}
 	return b
-
 }
 
-func (e *Exec) ProcessCommand(command string, tags [][]string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
+func (e *Exec) ProcessCommand(command CommandExtended, acc telegraf.Accumulator, wg *sync.WaitGroup) {
 	defer wg.Done()
 	_, isNagios := e.parser.(*nagios.NagiosParser)
 
-	out, errbuf, runErr := e.runner.Run(command, e.Timeout.Duration)
+	out, errbuf, runErr := e.runner.Run(command.Command, time.Duration(e.Timeout))
 	if !isNagios && runErr != nil {
 		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errbuf))
 		acc.AddError(err)
@@ -176,10 +174,8 @@ func (e *Exec) ProcessCommand(command string, tags [][]string, acc telegraf.Accu
 	}
 
 	for _, m := range metrics {
-		for _, t := range tags {
-			if len(t) == 2 {
-				m.AddTag(t[0], t[1])
-			}
+		for _, tag := range command.Tags {
+			m.AddTag(tag[0], tag[1])
 		}
 		acc.AddMetric(m)
 	}
@@ -199,15 +195,20 @@ func (e *Exec) SetParser(parser parsers.Parser) {
 
 func (e *Exec) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
+	//transform all commands into extended ones to unify them
+	for _, cmd := range e.Commands {
+		e.CommandsExtended = append(e.CommandsExtended, CommandExtended{Command: cmd})
+	}
+
 	// Legacy single command support
 	if e.Command != "" {
-		e.Commands = append(e.Commands, e.Command)
+		e.CommandsExtended = append(e.CommandsExtended, CommandExtended{Command: e.Command})
 		e.Command = ""
 	}
 
-	commands := make([]string, 0, len(e.Commands))
-	for _, pattern := range e.Commands {
-		cmdAndArgs := strings.SplitN(pattern, " ", 2)
+	commands := make([]CommandExtended, 0, len(e.CommandsExtended))
+	for _, cmd := range e.CommandsExtended {
+		cmdAndArgs := strings.SplitN(cmd.Command, " ", 2)
 		if len(cmdAndArgs) == 0 {
 			continue
 		}
@@ -219,30 +220,31 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if len(matches) == 0 {
-			// There were no matches with the glob pattern, so let's assume
+			// There were no matches with the glob cmd, so let's assume
 			// that the command is in PATH and just run it as it is
-			commands = append(commands, pattern)
+			commands = append(commands, cmd)
 		} else {
 			// There were matches, so we'll append each match together with
 			// the arguments to the commands slice
 			for _, match := range matches {
 				if len(cmdAndArgs) == 1 {
-					commands = append(commands, match)
+					commands = append(commands, CommandExtended{
+						Command: match,
+						Tags:    cmd.Tags,
+					})
 				} else {
-					commands = append(commands,
-						strings.Join([]string{match, cmdAndArgs[1]}, " "))
+					commands = append(commands, CommandExtended{
+						Command: strings.Join([]string{match, cmdAndArgs[1]}, " "),
+						Tags:    cmd.Tags,
+					})
 				}
 			}
 		}
 	}
-	lenTags := len(e.Tags) - 1
+
 	wg.Add(len(commands))
-	for idx, command := range commands {
-		var tags [][]string
-		if lenTags >= idx {
-			tags = e.Tags[idx]
-		}
-		go e.ProcessCommand(command, tags, acc, &wg)
+	for _, command := range commands {
+		go e.ProcessCommand(command, acc, &wg)
 	}
 	wg.Wait()
 	return nil

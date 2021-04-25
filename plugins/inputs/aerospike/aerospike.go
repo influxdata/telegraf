@@ -81,6 +81,14 @@ var sampleConfig = `
   # num_histogram_buckets = 100 # default: 10
 `
 
+// On the random chance a hex value is all digits
+// these are fields that can contain hex and should always be strings
+var protectedHexFields = map[string]bool{
+	"node_name":       true,
+	"cluster_key":     true,
+	"paxos_principal": true,
+}
+
 func (a *Aerospike) SampleConfig() string {
 	return sampleConfig
 }
@@ -238,12 +246,10 @@ func (a *Aerospike) parseNodeInfo(stats map[string]string, hostPort string, node
 	fields := make(map[string]interface{})
 
 	for k, v := range stats {
-		val := parseValue(v)
-		fields[strings.Replace(k, "-", "_", -1)] = val
+		key := strings.Replace(k, "-", "_", -1)
+		fields[key] = parseAerospikeValue(key, v)
 	}
 	acc.AddFields("aerospike_node", fields, tags, time.Now())
-
-	return
 }
 
 func (a *Aerospike) getNamespaces(n *as.Node) ([]string, error) {
@@ -270,7 +276,6 @@ func (a *Aerospike) getNamespaceInfo(namespace string, n *as.Node) (map[string]s
 	return stats, err
 }
 func (a *Aerospike) parseNamespaceInfo(stats map[string]string, hostPort string, namespace string, nodeName string, acc telegraf.Accumulator) {
-
 	nTags := map[string]string{
 		"aerospike_host": hostPort,
 		"node_name":      nodeName,
@@ -284,12 +289,10 @@ func (a *Aerospike) parseNamespaceInfo(stats map[string]string, hostPort string,
 		if len(parts) < 2 {
 			continue
 		}
-		val := parseValue(parts[1])
-		nFields[strings.Replace(parts[0], "-", "_", -1)] = val
+		key := strings.Replace(parts[0], "-", "_", -1)
+		nFields[key] = parseAerospikeValue(key, parts[1])
 	}
 	acc.AddFields("aerospike_namespace", nFields, nTags, time.Now())
-
-	return
 }
 
 func (a *Aerospike) getSets(n *as.Node) ([]string, error) {
@@ -339,7 +342,6 @@ func (a *Aerospike) getSetInfo(namespaceSet string, n *as.Node) (map[string]stri
 }
 
 func (a *Aerospike) parseSetInfo(stats map[string]string, hostPort string, namespaceSet string, nodeName string, acc telegraf.Accumulator) {
-
 	stat := strings.Split(
 		strings.TrimSuffix(
 			stats[fmt.Sprintf("sets/%s", namespaceSet)], ";"), ":")
@@ -355,12 +357,10 @@ func (a *Aerospike) parseSetInfo(stats map[string]string, hostPort string, names
 			continue
 		}
 
-		val := parseValue(pieces[1])
-		nFields[strings.Replace(pieces[0], "-", "_", -1)] = val
+		key := strings.Replace(pieces[0], "-", "_", -1)
+		nFields[key] = parseAerospikeValue(key, pieces[1])
 	}
 	acc.AddFields("aerospike_set", nFields, nTags, time.Now())
-
-	return
 }
 
 func (a *Aerospike) getTTLHistogram(hostPort string, namespace string, set string, n *as.Node, acc telegraf.Accumulator) error {
@@ -374,7 +374,6 @@ func (a *Aerospike) getTTLHistogram(hostPort string, namespace string, set strin
 }
 
 func (a *Aerospike) getObjectSizeLinearHistogram(hostPort string, namespace string, set string, n *as.Node, acc telegraf.Accumulator) error {
-
 	stats, err := a.getHistogram(namespace, set, "object-size-linear", n)
 	if err != nil {
 		return err
@@ -397,11 +396,9 @@ func (a *Aerospike) getHistogram(namespace string, set string, histogramType str
 		return nil, err
 	}
 	return stats, nil
-
 }
 
 func (a *Aerospike) parseHistogram(stats map[string]string, hostPort string, namespace string, set string, histogramType string, nodeName string, acc telegraf.Accumulator) {
-
 	nTags := map[string]string{
 		"aerospike_host": hostPort,
 		"node_name":      nodeName,
@@ -427,7 +424,7 @@ func (a *Aerospike) parseHistogram(stats map[string]string, hostPort string, nam
 				// Normalize incase of less buckets than expected
 				numRecordsPerBucket := 1
 				if len(buckets) > a.NumberHistogramBuckets {
-					numRecordsPerBucket = int(math.Ceil((float64(len(buckets)) / float64(a.NumberHistogramBuckets))))
+					numRecordsPerBucket = int(math.Ceil(float64(len(buckets)) / float64(a.NumberHistogramBuckets)))
 				}
 
 				bucketCount := 0
@@ -436,7 +433,7 @@ func (a *Aerospike) parseHistogram(stats map[string]string, hostPort string, nam
 				for i, bucket := range buckets {
 					// Sum records and increment bucket collection counter
 					if bucketCount < numRecordsPerBucket {
-						bucketSum = bucketSum + parseValue(bucket).(int64)
+						bucketSum = bucketSum + parseAerospikeValue("", bucket).(int64)
 						bucketCount++
 					}
 
@@ -454,14 +451,11 @@ func (a *Aerospike) parseHistogram(stats map[string]string, hostPort string, nam
 						nFields[strconv.Itoa(bucketName)] = bucketSum
 					}
 				}
-
 			}
 		}
 	}
 
 	acc.AddFields(fmt.Sprintf("aerospike_histogram_%v", strings.Replace(histogramType, "-", "_", -1)), nFields, nTags, time.Now())
-
-	return
 }
 
 func splitNamespaceSet(namespaceSet string) (string, string) {
@@ -469,8 +463,10 @@ func splitNamespaceSet(namespaceSet string) (string, string) {
 	return split[0], split[1]
 }
 
-func parseValue(v string) interface{} {
-	if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
+func parseAerospikeValue(key string, v string) interface{} {
+	if protectedHexFields[key] {
+		return v
+	} else if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
 		return parsed
 	} else if parsed, err := strconv.ParseUint(v, 10, 64); err == nil {
 		return parsed
@@ -480,14 +476,6 @@ func parseValue(v string) interface{} {
 		// leave as string
 		return v
 	}
-}
-
-func copyTags(m map[string]string) map[string]string {
-	out := make(map[string]string)
-	for k, v := range m {
-		out[k] = v
-	}
-	return out
 }
 
 func init() {

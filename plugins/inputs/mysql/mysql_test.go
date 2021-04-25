@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMysqlDefaultsToLocal(t *testing.T) {
+func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -26,7 +26,7 @@ func TestMysqlDefaultsToLocal(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("mysql"))
 }
 
-func TestMysqlMultipleInstances(t *testing.T) {
+func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 	// Invoke Gather() from two separate configurations and
 	//  confirm they don't interfere with each other
 	if testing.Short() {
@@ -34,8 +34,10 @@ func TestMysqlMultipleInstances(t *testing.T) {
 	}
 	testServer := "root@tcp(127.0.0.1:3306)/?tls=false"
 	m := &Mysql{
-		Servers:      []string{testServer},
-		IntervalSlow: "30s",
+		Servers:          []string{testServer},
+		IntervalSlow:     "30s",
+		GatherGlobalVars: true,
+		MetricVersion:    2,
 	}
 
 	var acc, acc2 testutil.Accumulator
@@ -46,7 +48,8 @@ func TestMysqlMultipleInstances(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("mysql_variables"))
 
 	m2 := &Mysql{
-		Servers: []string{testServer},
+		Servers:       []string{testServer},
+		MetricVersion: 2,
 	}
 	err = m2.Gather(&acc2)
 	require.NoError(t, err)
@@ -190,6 +193,8 @@ func TestParseValue(t *testing.T) {
 		{sql.RawBytes("YES"), 1, true},
 		{sql.RawBytes("No"), 0, true},
 		{sql.RawBytes("Yes"), 1, true},
+		{sql.RawBytes("-794"), int64(-794), true},
+		{sql.RawBytes("18446744073709552333"), float64(18446744073709552000), true},
 		{sql.RawBytes(""), nil, false},
 	}
 	for _, cases := range testCases {

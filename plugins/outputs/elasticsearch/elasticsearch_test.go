@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
-func TestConnectAndWrite(t *testing.T) {
+func TestConnectAndWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -21,11 +21,11 @@ func TestConnectAndWrite(t *testing.T) {
 	e := &Elasticsearch{
 		URLs:                urls,
 		IndexName:           "test-%Y.%m.%d",
-		Timeout:             internal.Duration{Duration: time.Second * 5},
+		Timeout:             config.Duration(time.Second * 5),
 		ManageTemplate:      true,
 		TemplateName:        "telegraf",
 		OverwriteTemplate:   false,
-		HealthCheckInterval: internal.Duration{Duration: time.Second * 10},
+		HealthCheckInterval: config.Duration(time.Second * 10),
 	}
 
 	// Verify that we can connect to Elasticsearch
@@ -35,10 +35,9 @@ func TestConnectAndWrite(t *testing.T) {
 	// Verify that we can successfully write data to Elasticsearch
 	err = e.Write(testutil.MockMetrics())
 	require.NoError(t, err)
-
 }
 
-func TestTemplateManagementEmptyTemplate(t *testing.T) {
+func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -50,7 +49,7 @@ func TestTemplateManagementEmptyTemplate(t *testing.T) {
 	e := &Elasticsearch{
 		URLs:              urls,
 		IndexName:         "test-%Y.%m.%d",
-		Timeout:           internal.Duration{Duration: time.Second * 5},
+		Timeout:           config.Duration(time.Second * 5),
 		ManageTemplate:    true,
 		TemplateName:      "",
 		OverwriteTemplate: true,
@@ -58,10 +57,9 @@ func TestTemplateManagementEmptyTemplate(t *testing.T) {
 
 	err := e.manageTemplate(ctx)
 	require.Error(t, err)
-
 }
 
-func TestTemplateManagement(t *testing.T) {
+func TestTemplateManagementIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -71,13 +69,13 @@ func TestTemplateManagement(t *testing.T) {
 	e := &Elasticsearch{
 		URLs:              urls,
 		IndexName:         "test-%Y.%m.%d",
-		Timeout:           internal.Duration{Duration: time.Second * 5},
+		Timeout:           config.Duration(time.Second * 5),
 		ManageTemplate:    true,
 		TemplateName:      "telegraf",
 		OverwriteTemplate: true,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), e.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
 	defer cancel()
 
 	err := e.Connect()
@@ -87,7 +85,7 @@ func TestTemplateManagement(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestTemplateInvalidIndexPattern(t *testing.T) {
+func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -97,7 +95,7 @@ func TestTemplateInvalidIndexPattern(t *testing.T) {
 	e := &Elasticsearch{
 		URLs:              urls,
 		IndexName:         "{{host}}-%Y.%m.%d",
-		Timeout:           internal.Duration{Duration: time.Second * 5},
+		Timeout:           config.Duration(time.Second * 5),
 		ManageTemplate:    true,
 		TemplateName:      "telegraf",
 		OverwriteTemplate: true,
@@ -164,7 +162,6 @@ func TestGetTagKeys(t *testing.T) {
 			t.Errorf("Expected tagKeys %s, got %s\n", test.ExpectedTagKeys, tagKeys)
 		}
 	}
-
 }
 
 func TestGetIndexName(t *testing.T) {

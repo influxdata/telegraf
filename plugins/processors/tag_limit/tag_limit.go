@@ -39,8 +39,8 @@ func (d *TagLimit) initOnce() error {
 	}
 	d.keepTags = make(map[string]string)
 	// convert list of tags-to-keep to a map so we can do constant-time lookups
-	for _, tag_key := range d.Keep {
-		d.keepTags[tag_key] = ""
+	for _, tagKey := range d.Keep {
+		d.keepTags[tagKey] = ""
 	}
 	d.init = true
 	return nil

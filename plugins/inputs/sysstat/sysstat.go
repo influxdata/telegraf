@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -33,7 +34,7 @@ type Sysstat struct {
 	Sadc string `toml:"sadc_path"`
 
 	// Force the execution time of sadc
-	SadcInterval internal.Duration `toml:"sadc_interval"`
+	SadcInterval config.Duration `toml:"sadc_interval"`
 
 	// Sadf represents the path to the sadf cmd.
 	Sadf string `toml:"sadf_path"`
@@ -135,9 +136,9 @@ func (*Sysstat) SampleConfig() string {
 }
 
 func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
-	if s.SadcInterval.Duration != 0 {
+	if time.Duration(s.SadcInterval) != 0 {
 		// Collect interval is calculated as interval - parseInterval
-		s.interval = int(s.SadcInterval.Duration.Seconds()) + parseInterval
+		s.interval = int(time.Duration(s.SadcInterval).Seconds()) + parseInterval
 	}
 
 	if s.interval == 0 {
@@ -273,7 +274,6 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) e
 						tags[k] = v
 					}
 				}
-
 			}
 		}
 
@@ -285,7 +285,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) e
 					tags:   make(map[string]string),
 				}
 			}
-			g, _ := m[device]
+			g := m[device]
 			if len(g.tags) == 0 {
 				for k, v := range tags {
 					g.tags[k] = v
@@ -299,7 +299,6 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) e
 			}
 			acc.AddFields(measurement, fields, tags, ts)
 		}
-
 	}
 	if s.Group {
 		for _, v := range m {

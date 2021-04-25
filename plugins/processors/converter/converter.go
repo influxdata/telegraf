@@ -349,9 +349,8 @@ func toInteger(v interface{}) (int64, bool) {
 	case uint64:
 		if value <= uint64(math.MaxInt64) {
 			return int64(value), true
-		} else {
-			return math.MaxInt64, true
 		}
+		return math.MaxInt64, true
 	case float64:
 		if value < float64(math.MinInt64) {
 			return math.MinInt64, true
@@ -363,9 +362,8 @@ func toInteger(v interface{}) (int64, bool) {
 	case bool:
 		if value {
 			return 1, true
-		} else {
-			return 0, true
 		}
+		return 0, true
 	case string:
 		result, err := strconv.ParseInt(value, 0, 64)
 
@@ -388,9 +386,8 @@ func toUnsigned(v interface{}) (uint64, bool) {
 	case int64:
 		if value < 0 {
 			return 0, true
-		} else {
-			return uint64(value), true
 		}
+		return uint64(value), true
 	case float64:
 		if value < 0.0 {
 			return 0, true
@@ -402,9 +399,8 @@ func toUnsigned(v interface{}) (uint64, bool) {
 	case bool:
 		if value {
 			return 1, true
-		} else {
-			return 0, true
 		}
+		return 0, true
 	case string:
 		result, err := strconv.ParseUint(value, 0, 64)
 
@@ -431,9 +427,8 @@ func toFloat(v interface{}) (float64, bool) {
 	case bool:
 		if value {
 			return 1.0, true
-		} else {
-			return 0.0, true
 		}
+		return 0.0, true
 	case string:
 		result, err := strconv.ParseFloat(value, 64)
 		return result, err == nil

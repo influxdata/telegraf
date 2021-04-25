@@ -10,18 +10,22 @@ import (
 	"io/ioutil"
 	"net"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/globpath"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const sampleConfig = `
   ## List certificate sources
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443"]
+  ## Prefix your entry with 'file://' if you intend to use relative paths
+  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443",
+            "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem"]
 
   ## Timeout for SSL connection
   # timeout = "5s"
@@ -39,11 +43,14 @@ const description = "Reads metrics from a SSL certificate"
 
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
-	Sources    []string          `toml:"sources"`
-	Timeout    internal.Duration `toml:"timeout"`
-	ServerName string            `toml:"server_name"`
+	Sources    []string        `toml:"sources"`
+	Timeout    config.Duration `toml:"timeout"`
+	ServerName string          `toml:"server_name"`
 	tlsCfg     *tls.Config
 	_tls.ClientConfig
+	locations []*url.URL
+	globpaths []*globpath.GlobPath
+	Log       telegraf.Logger
 }
 
 // Description returns description of the plugin.
@@ -56,17 +63,44 @@ func (c *X509Cert) SampleConfig() string {
 	return sampleConfig
 }
 
-func (c *X509Cert) locationToURL(location string) (*url.URL, error) {
-	if strings.HasPrefix(location, "/") {
-		location = "file://" + location
+func (c *X509Cert) sourcesToURLs() error {
+	for _, source := range c.Sources {
+		if strings.HasPrefix(source, "file://") ||
+			strings.HasPrefix(source, "/") ||
+			strings.Index(source, ":\\") != 1 {
+			source = filepath.ToSlash(strings.TrimPrefix(source, "file://"))
+			g, err := globpath.Compile(source)
+			if err != nil {
+				return fmt.Errorf("could not compile glob %v: %v", source, err)
+			}
+			c.globpaths = append(c.globpaths, g)
+		} else {
+			if strings.Index(source, ":\\") == 1 {
+				source = "file://" + filepath.ToSlash(source)
+			}
+			u, err := url.Parse(source)
+			if err != nil {
+				return fmt.Errorf("failed to parse cert location - %s", err.Error())
+			}
+
+			c.locations = append(c.locations, u)
+		}
 	}
 
-	u, err := url.Parse(location)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse cert location - %s", err.Error())
-	}
+	return nil
+}
 
-	return u, nil
+func (c *X509Cert) serverName(u *url.URL) (string, error) {
+	if c.tlsCfg.ServerName != "" {
+		if c.ServerName != "" {
+			return "", fmt.Errorf("both server_name (%q) and tls_server_name (%q) are set, but they are mutually exclusive", c.ServerName, c.tlsCfg.ServerName)
+		}
+		return c.tlsCfg.ServerName, nil
+	}
+	if c.ServerName != "" {
+		return c.ServerName, nil
+	}
+	return u.Hostname(), nil
 }
 
 func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, error) {
@@ -83,11 +117,11 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 		defer ipConn.Close()
 
-		if c.ServerName == "" {
-			c.tlsCfg.ServerName = u.Hostname()
-		} else {
-			c.tlsCfg.ServerName = c.ServerName
+		serverName, err := c.serverName(u)
+		if err != nil {
+			return nil, err
 		}
+		c.tlsCfg.ServerName = serverName
 
 		c.tlsCfg.InsecureSkipVerify = true
 		conn := tls.Client(ipConn, c.tlsCfg)
@@ -120,7 +154,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 				}
 				certs = append(certs, cert)
 			}
-			if rest == nil || len(rest) == 0 {
+			if len(rest) == 0 {
 				break
 			}
 			content = rest
@@ -187,25 +221,45 @@ func getTags(cert *x509.Certificate, location string) map[string]string {
 	return tags
 }
 
+func (c *X509Cert) collectCertURLs() ([]*url.URL, error) {
+	var urls []*url.URL
+
+	for _, path := range c.globpaths {
+		files := path.Match()
+		if len(files) <= 0 {
+			c.Log.Errorf("could not find file: %v", path)
+			continue
+		}
+		for _, file := range files {
+			file = "file://" + file
+			u, err := url.Parse(file)
+			if err != nil {
+				return urls, fmt.Errorf("failed to parse cert location - %s", err.Error())
+			}
+			urls = append(urls, u)
+		}
+	}
+
+	return urls, nil
+}
+
 // Gather adds metrics into the accumulator.
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
+	collectedUrls, err := c.collectCertURLs()
+	if err != nil {
+		acc.AddError(fmt.Errorf("cannot get file: %s", err.Error()))
+	}
 
-	for _, location := range c.Sources {
-		u, err := c.locationToURL(location)
-		if err != nil {
-			acc.AddError(err)
-			return nil
-		}
-
-		certs, err := c.getCert(u, c.Timeout.Duration*time.Second)
+	for _, location := range append(c.locations, collectedUrls...) {
+		certs, err := c.getCert(location, time.Duration(c.Timeout))
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
 		}
 
 		for i, cert := range certs {
 			fields := getFields(cert, now)
-			tags := getTags(cert, location)
+			tags := getTags(cert, location.String())
 
 			// The first certificate is the leaf/end-entity certificate which needs DNS
 			// name validation against the URL hostname.
@@ -214,10 +268,9 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 			}
 			if i == 0 {
-				if c.ServerName == "" {
-					opts.DNSName = u.Hostname()
-				} else {
-					opts.DNSName = c.ServerName
+				opts.DNSName, err = c.serverName(location)
+				if err != nil {
+					return err
 				}
 				for j, cert := range certs {
 					if j != 0 {
@@ -247,6 +300,11 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 }
 
 func (c *X509Cert) Init() error {
+	err := c.sourcesToURLs()
+	if err != nil {
+		return err
+	}
+
 	tlsCfg, err := c.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
@@ -264,7 +322,7 @@ func init() {
 	inputs.Add("x509_cert", func() telegraf.Input {
 		return &X509Cert{
 			Sources: []string{},
-			Timeout: internal.Duration{Duration: 5},
+			Timeout: config.Duration(5 * time.Second), // set default timeout to 5s
 		}
 	})
 }

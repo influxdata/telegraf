@@ -24,16 +24,16 @@ import (
 // it's converted to an http.Request.
 type request struct {
 	pw        *io.PipeWriter
-	reqId     uint16
+	reqID     uint16
 	params    map[string]string
 	buf       [1024]byte
 	rawParams []byte
 	keepConn  bool
 }
 
-func newRequest(reqId uint16, flags uint8) *request {
+func newRequest(reqID uint16, flags uint8) *request {
 	r := &request{
-		reqId:    reqId,
+		reqID:    reqID,
 		params:   map[string]string{},
 		keepConn: flags&flagKeepConn != 0,
 	}
@@ -79,7 +79,7 @@ func newResponse(c *child, req *request) *response {
 	return &response{
 		req:    req,
 		header: http.Header{},
-		w:      newWriter(c.conn, typeStdout, req.reqId),
+		w:      newWriter(c.conn, typeStdout, req.reqID),
 	}
 }
 
@@ -173,7 +173,7 @@ var ErrConnClosed = errors.New("fcgi: connection to web server closed")
 
 func (c *child) handleRecord(rec *record) error {
 	c.mu.Lock()
-	req, ok := c.requests[rec.h.Id]
+	req, ok := c.requests[rec.h.ID]
 	c.mu.Unlock()
 	if !ok && rec.h.Type != typeBeginRequest && rec.h.Type != typeGetValues {
 		// The spec says to ignore unknown request IDs.
@@ -193,12 +193,11 @@ func (c *child) handleRecord(rec *record) error {
 			return err
 		}
 		if br.role != roleResponder {
-			c.conn.writeEndRequest(rec.h.Id, 0, statusUnknownRole)
-			return nil
+			return c.conn.writeEndRequest(rec.h.ID, 0, statusUnknownRole)
 		}
-		req = newRequest(rec.h.Id, br.flags)
+		req = newRequest(rec.h.ID, br.flags)
 		c.mu.Lock()
-		c.requests[rec.h.Id] = req
+		c.requests[rec.h.ID] = req
 		c.mu.Unlock()
 		return nil
 	case typeParams:
@@ -226,25 +225,32 @@ func (c *child) handleRecord(rec *record) error {
 		if len(content) > 0 {
 			// TODO(eds): This blocks until the handler reads from the pipe.
 			// If the handler takes a long time, it might be a problem.
-			req.pw.Write(content)
+			if _, err := req.pw.Write(content); err != nil {
+				return err
+			}
 		} else if req.pw != nil {
-			req.pw.Close()
+			if err := req.pw.Close(); err != nil {
+				return err
+			}
 		}
 		return nil
 	case typeGetValues:
 		values := map[string]string{"FCGI_MPXS_CONNS": "1"}
-		c.conn.writePairs(typeGetValuesResult, 0, values)
-		return nil
+		return c.conn.writePairs(typeGetValuesResult, 0, values)
 	case typeData:
 		// If the filter role is implemented, read the data stream here.
 		return nil
 	case typeAbortRequest:
 		c.mu.Lock()
-		delete(c.requests, rec.h.Id)
+		delete(c.requests, rec.h.ID)
 		c.mu.Unlock()
-		c.conn.writeEndRequest(rec.h.Id, 0, statusRequestComplete)
+		if err := c.conn.writeEndRequest(rec.h.ID, 0, statusRequestComplete); err != nil {
+			return err
+		}
 		if req.pw != nil {
-			req.pw.CloseWithError(ErrRequestAborted)
+			if err := req.pw.CloseWithError(ErrRequestAborted); err != nil {
+				return err
+			}
 		}
 		if !req.keepConn {
 			// connection will close upon return
@@ -254,8 +260,7 @@ func (c *child) handleRecord(rec *record) error {
 	default:
 		b := make([]byte, 8)
 		b[0] = byte(rec.h.Type)
-		c.conn.writeRecord(typeUnknownType, 0, b)
-		return nil
+		return c.conn.writeRecord(typeUnknownType, 0, b)
 	}
 }
 
@@ -265,16 +270,22 @@ func (c *child) serveRequest(req *request, body io.ReadCloser) {
 	if err != nil {
 		// there was an error reading the request
 		r.WriteHeader(http.StatusInternalServerError)
-		c.conn.writeRecord(typeStderr, req.reqId, []byte(err.Error()))
+		if err := c.conn.writeRecord(typeStderr, req.reqID, []byte(err.Error())); err != nil {
+			return
+		}
 	} else {
 		httpReq.Body = body
 		c.handler.ServeHTTP(r, httpReq)
 	}
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	r.Close()
 	c.mu.Lock()
-	delete(c.requests, req.reqId)
+	delete(c.requests, req.reqID)
 	c.mu.Unlock()
-	c.conn.writeEndRequest(req.reqId, 0, statusRequestComplete)
+	if err := c.conn.writeEndRequest(req.reqID, 0, statusRequestComplete); err != nil {
+		return
+	}
 
 	// Consume the entire body, so the host isn't still writing to
 	// us when we close the socket below in the !keepConn case,
@@ -283,10 +294,14 @@ func (c *child) serveRequest(req *request, body io.ReadCloser) {
 	// some sort of abort request to the host, so the host
 	// can properly cut off the client sending all the data.
 	// For now just bound it a little and
+	//nolint:errcheck,revive
 	io.CopyN(ioutil.Discard, body, 100<<20)
+	//nolint:errcheck,revive
 	body.Close()
 
 	if !req.keepConn {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		c.conn.Close()
 	}
 }
@@ -298,6 +313,8 @@ func (c *child) cleanUp() {
 		if req.pw != nil {
 			// race with call to Close in c.serveRequest doesn't matter because
 			// Pipe(Reader|Writer).Close are idempotent
+			// Ignore the returned error as we continue in the loop anyway
+			//nolint:errcheck,revive
 			req.pw.CloseWithError(ErrConnClosed)
 		}
 	}

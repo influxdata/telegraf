@@ -11,14 +11,14 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	gnatsd "github.com/nats-io/nats-server/v2/server"
 )
 
 type Nats struct {
 	Server          string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 
 	client *http.Client
 }
@@ -61,7 +61,7 @@ func (n *Nats) Gather(acc telegraf.Accumulator) error {
 	}
 
 	stats := new(gnatsd.Varz)
-	err = json.Unmarshal([]byte(bytes), &stats)
+	err = json.Unmarshal(bytes, &stats)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (n *Nats) createHTTPClient() *http.Client {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 	}
-	timeout := n.ResponseTimeout.Duration
+	timeout := time.Duration(n.ResponseTimeout)
 	if timeout == time.Duration(0) {
 		timeout = 5 * time.Second
 	}

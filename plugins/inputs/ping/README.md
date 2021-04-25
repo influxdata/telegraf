@@ -57,6 +57,9 @@ native Go by the Telegraf process, eliminating the need to execute the system
   ## option of the ping command.
   # interface = ""
 
+  ## Percentiles to calculate. This only works with the native method.
+  # percentiles = [50, 95, 99]
+
   ## Specify the ping executable binary.
   # binary = "ping"
 
@@ -99,7 +102,7 @@ $ systemctl edit telegraf
 #### Linux Permissions
 
 When using `method = "native"`, Telegraf will attempt to use privileged raw
-ICMP sockets.  On most systems, doing so requires `CAP_NET_RAW` capabilities.
+ICMP sockets.  On most systems, doing so requires `CAP_NET_RAW` capabilities or for Telegraf to be run as root.
 
 With systemd:
 ```sh
@@ -124,18 +127,9 @@ setting capabilities.
 
 [man 7 capabilities]: http://man7.org/linux/man-pages/man7/capabilities.7.html
 
-When Telegraf cannot listen on a privileged ICMP socket it will attempt to use
-ICMP echo sockets.  If you wish to use this method you must ensure Telegraf's
-group, usually `telegraf`, is allowed to use ICMP echo sockets:
+#### Other OS Permissions
 
-```sh
-$ sysctl -w net.ipv4.ping_group_range="GROUP_ID_LOW   GROUP_ID_HIGH"
-```
-
-Reference [`man 7 icmp`][man 7 icmp] for more information about ICMP echo
-sockets and the `ping_group_range` setting.
-
-[man 7 icmp]: http://man7.org/linux/man-pages/man7/icmp.7.html
+When using `method = "native"`, you will need permissions similar to the executable ping program for your OS. 
 
 ### Metrics
 
@@ -147,10 +141,11 @@ sockets and the `ping_group_range` setting.
     - packets_received (integer)
     - percent_packet_loss (float)
     - ttl (integer, Not available on Windows)
-    - average_response_ms (integer)
-    - minimum_response_ms (integer)
-    - maximum_response_ms (integer)
-    - standard_deviation_ms (integer, Available on Windows only with native ping)
+    - average_response_ms (float)
+    - minimum_response_ms (float)
+    - maximum_response_ms (float)
+    - standard_deviation_ms (float, Available on Windows only with method = "native")
+    - percentile\<N\>_ms (float, Where `<N>` is the percentile specified in `percentiles`. Available with method = "native" only)
     - errors (float, Windows only)
     - reply_received (integer, Windows with method = "exec" only)
     - percent_reply_loss (float, Windows with method = "exec" only)

@@ -11,14 +11,14 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Mcrouter is a mcrouter plugin
 type Mcrouter struct {
 	Servers []string
-	Timeout internal.Duration
+	Timeout config.Duration
 }
 
 // enum for statType
@@ -127,11 +127,11 @@ func (m *Mcrouter) Description() string {
 func (m *Mcrouter) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 
-	if m.Timeout.Duration < 1*time.Second {
-		m.Timeout.Duration = defaultTimeout
+	if m.Timeout < config.Duration(1*time.Second) {
+		m.Timeout = config.Duration(defaultTimeout)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, m.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(m.Timeout))
 	defer cancel()
 
 	if len(m.Servers) == 0 {
@@ -198,9 +198,11 @@ func (m *Mcrouter) gatherServer(ctx context.Context, address string, acc telegra
 	var dialer net.Dialer
 
 	address, protocol, err = m.ParseAddress(address)
+	if err != nil {
+		return err
+	}
 
 	conn, err = dialer.DialContext(ctx, protocol, address)
-
 	if err != nil {
 		return err
 	}
@@ -211,7 +213,9 @@ func (m *Mcrouter) gatherServer(ctx context.Context, address string, acc telegra
 	deadline, ok := ctx.Deadline()
 
 	if ok {
-		conn.SetDeadline(deadline)
+		if err := conn.SetDeadline(deadline); err != nil {
+			return err
+		}
 	}
 
 	// Read and write buffer
