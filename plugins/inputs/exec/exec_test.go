@@ -275,22 +275,28 @@ func TestRemoveCarriageReturns(t *testing.T) {
 }
 
 func TestAddAdditionalTags(t *testing.T) {
-	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	parser, _ := parsers.NewValueParser("metric", "string", "field", nil)
 	e := NewExec()
 	e.Commands = []string{"echo metric_value", "echo metric_value"}
-	e.Tags = [][][]string{{}, {{"tag_1", "value_tag_1"}}}
+	e.CommandsExtended = []CommandExtended{{
+		Command: "echo extended_command",
+		Tags:    [][]string{{"tag_1", "value_1"}},
+	}}
 	e.SetParser(parser)
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(e.Gather)
 	require.NoError(t, err)
 
-	fields := map[string]interface{}{
-		"value": "metric_value",
+	fieldsCommands := map[string]interface{}{
+		"field": "metric_value",
+	}
+	fieldsExtended := map[string]interface{}{
+		"field": "extended_command",
 	}
 	tags := map[string]string{
-		"tag_1": "value_tag_1",
+		"tag_1": "value_1",
 	}
-	acc.AssertContainsFields(t, "metric", fields)
-	acc.AssertContainsTaggedFields(t, "metric", fields, tags)
+	acc.AssertContainsFields(t, "metric", fieldsCommands)
+	acc.AssertContainsTaggedFields(t, "metric", fieldsExtended, tags)
 }
