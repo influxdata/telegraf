@@ -47,7 +47,7 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 		cmdName = "sudo"
 		args = append(args, lvdisplayPath)
 	} else {
-		cmdName := lvdisplayPath
+		cmdName = lvdisplayPath
 	}
 
 	var lv_attrs string = "lv_size,lv_metadata_size,data_percent,metadata_percent,thin_count"
