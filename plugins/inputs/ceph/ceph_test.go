@@ -9,8 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const (
@@ -29,28 +30,32 @@ func TestParseSockId(t *testing.T) {
 }
 
 func TestParseMonDump(t *testing.T) {
-	dump, err := parseDump(monPerfDump)
+	c := &Ceph{Log: testutil.Logger{}}
+	dump, err := c.parseDump(monPerfDump)
 	require.NoError(t, err)
 	require.InEpsilon(t, int64(5678670180), dump["cluster"]["osd_kb_used"], epsilon)
 	require.InEpsilon(t, 6866.540527000, dump["paxos"]["store_state_latency.sum"], epsilon)
 }
 
 func TestParseOsdDump(t *testing.T) {
-	dump, err := parseDump(osdPerfDump)
+	c := &Ceph{Log: testutil.Logger{}}
+	dump, err := c.parseDump(osdPerfDump)
 	require.NoError(t, err)
 	require.InEpsilon(t, 552132.109360000, dump["filestore"]["commitcycle_interval.sum"], epsilon)
 	require.Equal(t, float64(0), dump["mutex-FileJournal::finisher_lock"]["wait.avgcount"])
 }
 
 func TestParseMdsDump(t *testing.T) {
-	dump, err := parseDump(mdsPerfDump)
+	c := &Ceph{Log: testutil.Logger{}}
+	dump, err := c.parseDump(mdsPerfDump)
 	require.NoError(t, err)
 	require.InEpsilon(t, 2408386.600934982, dump["mds"]["reply_latency.sum"], epsilon)
 	require.Equal(t, float64(0), dump["throttle-write_buf_throttle"]["wait.avgcount"])
 }
 
 func TestParseRgwDump(t *testing.T) {
-	dump, err := parseDump(rgwPerfDump)
+	c := &Ceph{Log: testutil.Logger{}}
+	dump, err := c.parseDump(rgwPerfDump)
 	require.NoError(t, err)
 	require.InEpsilon(t, 0.002219876, dump["rgw"]["get_initial_lat.sum"], epsilon)
 	require.Equal(t, float64(0), dump["rgw"]["put_initial_lat.avgcount"])
