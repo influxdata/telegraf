@@ -66,11 +66,11 @@ commands:
       - when:
           condition: << parameters.release >>
           steps: 
-            - run: 'debian=1 centos=1 mac=1 freebsd=1 linux=1 windows=1 make package'
+            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 make package'
       - when:
           condition: << parameters.nightly >>
           steps: 
-            - run: 'debian=1 centos=1 mac=1 freebsd=1 linux=1 windows=1 NIGHTLY=1 make package'
+            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 NIGHTLY=1 make package'
             - run: 'make upload-nightly'
       - unless:
           condition: << parameters.nightly >>
@@ -157,31 +157,61 @@ jobs:
     steps:
       - package-build:
           type: windows
-  debian-package:
+  darwin-package:
     executor: go-1_16
     steps:
       - package-build:
-          type: debian
-  centos-package:
+          type: darwin
+  i386-package:
     executor: go-1_16
     steps:
       - package-build:
-          type: centos
-  mac-package:
+          type: i386
+  ppc641e-package:
     executor: go-1_16
     steps:
       - package-build:
-          type: mac
-  freebsd-package:
+          type: ppc641e
+  s390x-package:
     executor: go-1_16
     steps:
       - package-build:
-          type: freebsd
-  linux-package:
+          type: s390x
+  armel-package:
     executor: go-1_16
     steps:
       - package-build:
-          type: linux
+          type: armel
+  amd64-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: amd64
+  arm64-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: arm64
+  mipsel-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: mipsel
+  mips-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: mips
+  static-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: static
+  armhf-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: armhf
 
   release:
     executor: go-1_16
@@ -307,29 +337,53 @@ workflows:
       - 'windows-package':
           requires: 
             - 'test-go-windows'
-      - 'debian-package':
-          requires: 
-            - 'test-awaiter'
-      - 'centos-package':
-          requires: 
-            - 'test-awaiter'
-      - 'mac-package':
+      - 'darwin-package':
           requires: 
             - 'test-go-mac'
-      - 'freebsd-package':
+      - 'i386-package':
           requires: 
             - 'test-awaiter'
-      - 'linux-package':
+      - 'ppc641e-package':
+          requires: 
+            - 'test-awaiter'
+      - 's390x-package':
+          requires: 
+            - 'test-awaiter'
+      - 'armel-package':
+          requires: 
+            - 'test-awaiter'
+      - 'amd64-package':
+          requires: 
+            - 'test-awaiter'
+      - 'arm64-package':
+          requires: 
+            - 'test-awaiter'
+      - 'armhf-package':
+          requires: 
+            - 'test-awaiter'
+      - 'static-package':
+          requires:
+            - 'test-awaiter'
+      - 'mipsel-package':
+          requires: 
+            - 'test-awaiter'
+      - 'mips-package':
           requires: 
             - 'test-awaiter'
       - 'share-artifacts':
           requires:
-            - 'linux-package'
-            - 'freebsd-package'
-            - 'mac-package'
-            - 'centos-package'
-            - 'debian-package'
+            - 'i386-package'
+            - 'ppc641e-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'darwin-package'
             - 'windows-package'
+            - 'static-package'
+            - 'arm64-package'
+            - 'armhf-package'
           filters:
             branches:
               ignore:
