@@ -113,6 +113,7 @@ require (
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
+	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00 // indirect
 	github.com/tidwall/gjson v1.6.0
 	github.com/tinylib/msgp v1.1.5
 	github.com/vapourismo/knx-go v0.0.0-20201122213738-75fe09ace330
@@ -152,3 +153,6 @@ require (
 
 // replaced due to https://github.com/satori/go.uuid/issues/73
 replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
+
+// replaced due to https//github.com/mdlayher/apcupsd/issues/10
+replace github.com/mdlayher/apcupsd => github.com/Jagularr/apcupsd v0.0.0-20210426184201-254fa5f5b434
