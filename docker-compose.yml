@@ -60,6 +60,12 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=trust
     ports:
       - "5432:5432"
+  timescaledb:
+    image: timescale/timescaledb:2.1.1-pg12
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - "5433:5432"
   rabbitmq:
     image: rabbitmq:3-management
     ports:
