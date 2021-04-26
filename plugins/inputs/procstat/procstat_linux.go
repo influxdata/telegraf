@@ -60,6 +60,7 @@ func addConnectionEndpoints(acc telegraf.Accumulator, proc Process, netInfo netw
 		}
 
 		if c.state == linux.TCP_LISTEN {
+			// Ignore is parent pid is listening in the same address:port
 			if netInfo.IsPidListeningInAddr(uint32(ppid), c.srcIP, c.srcPort) {
 				continue
 			}

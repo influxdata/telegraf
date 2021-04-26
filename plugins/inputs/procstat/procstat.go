@@ -165,12 +165,12 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 
 	// Initialize the conn object. Gather info about all TCP connections organized per PID
 	// Avoid repeating this task for each proc
-	netInfo := networkInfo{}
+	netInfo := networkInfo{log: p.Log}
 	// Only collect this info if we are going to use it (avoid reading all /proc/N/fd dirs)
 	if (p.metricEnabled(metricsTCPStats) || p.metricEnabled(metricsConnectionsEndpoints)) && len(p.procs) > 0 {
 		err := netInfo.Fetch()
 		if err != nil {
-			acc.AddError(fmt.Errorf("getting TCP network info: %w", err))
+			acc.AddError(fmt.Errorf("gather network info: %w", err))
 		}
 	}
 

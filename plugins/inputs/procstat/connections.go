@@ -3,6 +3,8 @@ package procstat
 import (
 	"fmt"
 	"net"
+
+	"github.com/influxdata/telegraf"
 )
 
 const (
@@ -25,6 +27,7 @@ type inodeInfo struct {
 
 // networkInfo implements networkInfo using the netlink calls and parsing /proc to map sockets to PIDs
 type networkInfo struct {
+	log telegraf.Logger
 	// tcp contains the connection info for each pid
 	tcp map[uint32][]connInfo
 	// listenPorts is a map with the listen ports in the host, used to ignore inbound connections
