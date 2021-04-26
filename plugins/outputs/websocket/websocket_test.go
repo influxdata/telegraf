@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/gorilla/websocket"
+	ws "github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
 )
 
@@ -61,7 +61,7 @@ const (
 	testHeaderValue = "1"
 )
 
-var testUpgrader = websocket.Upgrader{}
+var testUpgrader = ws.Upgrader{}
 
 func (s *testServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get(testHeaderName) != testHeaderValue {
@@ -75,18 +75,18 @@ func (s *testServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case <-time.After(s.upgradeDelay):
 		}
 	}
-	ws, err := testUpgrader.Upgrade(w, r, http.Header{})
+	conn, err := testUpgrader.Upgrade(w, r, http.Header{})
 	if err != nil {
 		return
 	}
-	defer func() { _ = ws.Close() }()
+	defer func() { _ = conn.Close() }()
 
 	for {
-		messageType, data, err := ws.ReadMessage()
+		messageType, data, err := conn.ReadMessage()
 		if err != nil {
 			break
 		}
-		if s.expectTextFrames && messageType != websocket.TextMessage {
+		if s.expectTextFrames && messageType != ws.TextMessage {
 			s.t.Fatalf("unexpected frame type: %d", messageType)
 		}
 		select {
@@ -113,7 +113,7 @@ func connect(t *testing.T, w *WebSocket) {
 func TestWebSocket_NoURL(t *testing.T) {
 	w := newWebSocket()
 	err := w.Connect()
-	require.ErrorIs(t, err, invalidURL)
+	require.ErrorIs(t, err, errInvalidURL)
 }
 
 func TestWebSocket_Connect_Timeout(t *testing.T) {

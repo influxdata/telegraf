@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 
-	"github.com/gorilla/websocket"
+	ws "github.com/gorilla/websocket"
 )
 
 var sampleConfig = `
@@ -52,6 +52,7 @@ const (
 	defaultReadTimeout    = 30 * time.Second
 )
 
+// WebSocket can output to WebSocket endpoint.
 type WebSocket struct {
 	URL            string            `toml:"url"`
 	ConnectTimeout config.Duration   `toml:"connect_timeout"`
@@ -61,27 +62,31 @@ type WebSocket struct {
 	UseTextFrames  bool              `toml:"use_text_frames"`
 	tls.ClientConfig
 
-	conn       *websocket.Conn
+	conn       *ws.Conn
 	serializer serializers.Serializer
 }
 
+// SetSerializer implements serializers.SerializerOutput.
 func (w *WebSocket) SetSerializer(serializer serializers.Serializer) {
 	w.serializer = serializer
 }
 
+// Description of plugin.
 func (w *WebSocket) Description() string {
 	return "Generic WebSocket output writer."
 }
 
+// SampleConfig returns plugin config sample.
 func (w *WebSocket) SampleConfig() string {
 	return sampleConfig
 }
 
-var invalidURL = errors.New("invalid websocket URL")
+var errInvalidURL = errors.New("invalid websocket URL")
 
+// Connect to the output endpoint.
 func (w *WebSocket) Connect() error {
 	if parsedURL, err := url.Parse(w.URL); err != nil || (parsedURL.Scheme != "ws" && parsedURL.Scheme != "wss") {
-		return fmt.Errorf("%w: \"%s\"", invalidURL, w.URL)
+		return fmt.Errorf("%w: \"%s\"", errInvalidURL, w.URL)
 	}
 
 	tlsCfg, err := w.ClientConfig.TLSConfig()
@@ -89,7 +94,7 @@ func (w *WebSocket) Connect() error {
 		return fmt.Errorf("error creating TLS config: %v", err)
 	}
 
-	dialer := &websocket.Dialer{
+	dialer := &ws.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
 		HandshakeTimeout: time.Duration(w.ConnectTimeout),
 		TLSClientConfig:  tlsCfg,
@@ -104,6 +109,7 @@ func (w *WebSocket) Connect() error {
 	if err != nil {
 		return fmt.Errorf("error dial: %v", err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusSwitchingProtocols {
 		return fmt.Errorf("wrong status code while connecting to server: %d", resp.StatusCode)
 	}
@@ -114,7 +120,7 @@ func (w *WebSocket) Connect() error {
 	return nil
 }
 
-func (w *WebSocket) read(conn *websocket.Conn) {
+func (w *WebSocket) read(conn *ws.Conn) {
 	defer func() { _ = conn.Close() }()
 	if w.ReadTimeout > 0 {
 		if err := conn.SetReadDeadline(time.Now().Add(time.Duration(w.ReadTimeout))); err != nil {
@@ -125,7 +131,7 @@ func (w *WebSocket) read(conn *websocket.Conn) {
 			if err != nil {
 				return err
 			}
-			return conn.WriteControl(websocket.PongMessage, nil, time.Now().Add(time.Duration(w.WriteTimeout)))
+			return conn.WriteControl(ws.PongMessage, nil, time.Now().Add(time.Duration(w.WriteTimeout)))
 		})
 	}
 	for {
@@ -156,9 +162,9 @@ func (w *WebSocket) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	messageType := websocket.BinaryMessage
+	messageType := ws.BinaryMessage
 	if w.UseTextFrames {
-		messageType = websocket.TextMessage
+		messageType = ws.TextMessage
 	}
 
 	if w.WriteTimeout > 0 {
