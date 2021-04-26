@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -92,15 +93,15 @@ func Test_getParams(t *testing.T) {
 func Test_jsonToArray(t *testing.T) {
 	key := "/ethdev/list"
 	t.Run("when got numeric array then string array should be returned", func(t *testing.T) {
-		firstValue := 0
-		secondValue := 1
+		firstValue := int64(0)
+		secondValue := int64(1)
 		jsonString := fmt.Sprintf(`{"%s": [%d, %d]}`, key, firstValue, secondValue)
 
 		arr, err := jsonToArray([]byte(jsonString), key)
 
 		require.NoError(t, err)
-		require.Equal(t, fmt.Sprintf("%d", firstValue), arr[0])
-		require.Equal(t, fmt.Sprintf("%d", secondValue), arr[1])
+		require.Equal(t, strconv.FormatInt(firstValue, 10), arr[0])
+		require.Equal(t, strconv.FormatInt(secondValue, 10), arr[1])
 	})
 
 	t.Run("if non-json string is supplied as input then error should be returned", func(t *testing.T) {

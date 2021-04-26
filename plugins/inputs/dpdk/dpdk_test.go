@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/mock"
-
-	"github.com/influxdata/telegraf/plugins/inputs/dpdk/mocks"
-
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/plugins/inputs/dpdk/mocks"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -44,18 +44,35 @@ func Test_Init(t *testing.T) {
 		require.Contains(t, err.Error(), "command should start with '/'")
 	})
 
-	t.Run("When all values are valid, then no error should be returned", func(t *testing.T) {
+	t.Run("when all values are valid, then no error should be returned", func(t *testing.T) {
 		pathToSocket, socket := createSocketForTest(t)
 		defer socket.Close()
 		dpdk := dpdk{
-			SocketPath: pathToSocket,
-			Log:        testutil.Logger{},
+			SocketPath:  pathToSocket,
+			DeviceTypes: []string{"ethdev"},
+			Log:         testutil.Logger{},
 		}
 		go simulateSocketResponse(socket, t)
 
 		err := dpdk.Init()
 
 		require.NoError(t, err)
+	})
+
+	t.Run("when device_types and additional_commands are empty, then error should be returned", func(t *testing.T) {
+		pathToSocket, socket := createSocketForTest(t)
+		defer socket.Close()
+		dpdk := dpdk{
+			SocketPath:         pathToSocket,
+			DeviceTypes:        []string{},
+			AdditionalCommands: []string{},
+			Log:                testutil.Logger{},
+		}
+
+		err := dpdk.Init()
+
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "plugin was configured with nothing to read")
 	})
 }
 
@@ -140,11 +157,11 @@ func Test_validateCommands(t *testing.T) {
 func Test_dpdkPluginDescriber(t *testing.T) {
 	dpdk := dpdk{}
 	t.Run("sampleConfig function should return value from constant", func(t *testing.T) {
-		require.Equal(t, dpdkSampleConfig, dpdk.SampleConfig())
+		require.Equal(t, sampleConfig, dpdk.SampleConfig())
 	})
 
 	t.Run("description function should return value from constant", func(t *testing.T) {
-		require.Equal(t, dpdkDescription, dpdk.Description())
+		require.Equal(t, description, dpdk.Description())
 	})
 }
 
@@ -169,7 +186,7 @@ func Test_processCommand(t *testing.T) {
 		response := `{"/": ["/", "/eal/app_params", "/eal/params", "/ethdev/link_status"]}`
 		simulateResponse(mockConn, response, nil)
 
-		dpdk.processCommand("/", mockAcc)
+		dpdk.processCommand(mockAcc, "/")
 
 		require.Equal(t, 0, len(mockAcc.Errors))
 	})
@@ -180,7 +197,7 @@ func Test_processCommand(t *testing.T) {
 		response := `notAJson`
 		simulateResponse(mockConn, response, nil)
 
-		dpdk.processCommand("/", mockAcc)
+		dpdk.processCommand(mockAcc, "/")
 
 		require.Equal(t, 1, len(mockAcc.Errors))
 		require.Contains(t, mockAcc.Errors[0].Error(), "invalid character")
@@ -193,7 +210,7 @@ func Test_processCommand(t *testing.T) {
 		mockConn.On("SetDeadline", mock.Anything).Return(nil)
 		mockConn.On("Close").Return(nil)
 
-		dpdk.processCommand("/", mockAcc)
+		dpdk.processCommand(mockAcc, "/")
 
 		require.Equal(t, 1, len(mockAcc.Errors))
 		require.Contains(t, mockAcc.Errors[0].Error(), "deadline exceeded")
@@ -205,7 +222,7 @@ func Test_processCommand(t *testing.T) {
 		response := `{"/test": null}`
 		simulateResponse(mockConn, response, nil)
 
-		dpdk.processCommand("/test,param", mockAcc)
+		dpdk.processCommand(mockAcc, "/test,param")
 
 		require.Equal(t, 1, len(mockAcc.Errors))
 		require.Contains(t, mockAcc.Errors[0].Error(), "got empty json on")
@@ -234,14 +251,32 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		defer mockConn.AssertExpectations(t)
 		response := fmt.Sprintf(`{"%s": [1, 123]}`, ethdevListCommand)
 		simulateResponse(mockConn, response, nil)
-		ethdevCommands := []string{"/ethdev/stats", "/ethdev/xstats"}
 		expectedCommands := []string{"/ethdev/stats,1", "/ethdev/stats,123", "/ethdev/xstats,1", "/ethdev/xstats,123"}
 
-		commands := dpdk.getCommandsAndParamsCombinations(ethdevCommands, []string{}, ethdevListCommand, mockAcc)
+		dpdk.DeviceTypes = []string{"ethdev"}
+		dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats"}
+		dpdk.ethdevExcludedCommandsFilter, _ = filter.Compile([]string{})
+		dpdk.AdditionalCommands = []string{}
+		commands := dpdk.gatherCommands(mockAcc)
 
-		require.Equal(t, 4, len(commands))
-		require.Equal(t, 0, len(mockAcc.Errors))
 		require.ElementsMatch(t, commands, expectedCommands)
+		require.Equal(t, 0, len(mockAcc.Errors))
+	})
+
+	t.Run("when 1 rawdev command is enabled, then 2*numberOfIds new commands should be appended", func(t *testing.T) {
+		mockConn, dpdk, mockAcc := prepareEnvironment()
+		defer mockConn.AssertExpectations(t)
+		response := fmt.Sprintf(`{"%s": [1, 123]}`, rawdevListCommand)
+		simulateResponse(mockConn, response, nil)
+		expectedCommands := []string{"/rawdev/xstats,1", "/rawdev/xstats,123"}
+
+		dpdk.DeviceTypes = []string{"rawdev"}
+		dpdk.rawdevCommands = []string{"/rawdev/xstats"}
+		dpdk.AdditionalCommands = []string{}
+		commands := dpdk.gatherCommands(mockAcc)
+
+		require.ElementsMatch(t, commands, expectedCommands)
+		require.Equal(t, 0, len(mockAcc.Errors))
 	})
 
 	t.Run("when 2 ethdev commands are enabled but one command is disabled, then numberOfIds new commands should be appended", func(t *testing.T) {
@@ -249,24 +284,28 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 		defer mockConn.AssertExpectations(t)
 		response := fmt.Sprintf(`{"%s": [1, 123]}`, ethdevListCommand)
 		simulateResponse(mockConn, response, nil)
-		ethdevCommands := []string{"/ethdev/stats", "/ethdev/xstats"}
-		excludedCommands := []string{"/ethdev/xstats"}
 		expectedCommands := []string{"/ethdev/stats,1", "/ethdev/stats,123"}
 
-		commands := dpdk.getCommandsAndParamsCombinations(ethdevCommands, excludedCommands, ethdevListCommand, mockAcc)
+		dpdk.DeviceTypes = []string{"ethdev"}
+		dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats"}
+		dpdk.ethdevExcludedCommandsFilter, _ = filter.Compile([]string{"/ethdev/xstats"})
+		dpdk.AdditionalCommands = []string{}
+		commands := dpdk.gatherCommands(mockAcc)
 
-		require.Equal(t, 2, len(commands))
-		require.Equal(t, 0, len(mockAcc.Errors))
 		require.ElementsMatch(t, commands, expectedCommands)
+		require.Equal(t, 0, len(mockAcc.Errors))
 	})
 
 	t.Run("when ethdev commands are enabled but params fetching command returns error then error should be logged in accumulator", func(t *testing.T) {
 		mockConn, dpdk, mockAcc := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
 		simulateResponse(mockConn, `{notAJson}`, fmt.Errorf("some error"))
-		ethdevCommands := []string{"/ethdev/stats", "/ethdev/xstats"}
 
-		commands := dpdk.getCommandsAndParamsCombinations(ethdevCommands, []string{}, ethdevListCommand, mockAcc)
+		dpdk.DeviceTypes = []string{"ethdev"}
+		dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats"}
+		dpdk.ethdevExcludedCommandsFilter, _ = filter.Compile([]string{})
+		dpdk.AdditionalCommands = []string{}
+		commands := dpdk.gatherCommands(mockAcc)
 
 		require.Equal(t, 0, len(commands))
 		require.Equal(t, 1, len(mockAcc.Errors))
@@ -274,7 +313,7 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 }
 
 func Test_Gather(t *testing.T) {
-	t.Run("When parsing a plain json without nested object, then it key should equal to \"\"", func(t *testing.T) {
+	t.Run("When parsing a plain json without nested object, then its key should be equal to \"\"", func(t *testing.T) {
 		mockConn, dpdk, mockAcc := prepareEnvironment()
 		defer mockConn.AssertExpectations(t)
 		dpdk.AdditionalCommands = []string{"/endpoint1"}
@@ -284,8 +323,23 @@ func Test_Gather(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t, 0, len(mockAcc.Errors))
-		require.Equal(t, 1, len(mockAcc.Metrics))
-		require.Equal(t, "myvalue", mockAcc.Metrics[0].Fields[""])
+
+		expected := []telegraf.Metric{
+			testutil.MustMetric(
+				"dpdk",
+				map[string]string{
+					"command": "/endpoint1",
+					"params":  "",
+				},
+				map[string]interface{}{
+					"": "myvalue",
+				},
+				time.Unix(0, 0),
+			),
+		}
+
+		actual := mockAcc.GetTelegrafMetrics()
+		testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 	})
 
 	t.Run("When parsing a list of value in nested object then list should be flattened", func(t *testing.T) {
@@ -295,13 +349,27 @@ func Test_Gather(t *testing.T) {
 		simulateResponse(mockConn, `{"/endpoint1":{"myvalue":[0,1,123]}}`, nil)
 
 		err := dpdk.Gather(mockAcc)
-
 		require.NoError(t, err)
 		require.Equal(t, 0, len(mockAcc.Errors))
-		require.Equal(t, 1, len(mockAcc.Metrics))
-		require.Equal(t, float64(0), mockAcc.Metrics[0].Fields["myvalue_0"])
-		require.Equal(t, float64(1), mockAcc.Metrics[0].Fields["myvalue_1"])
-		require.Equal(t, float64(123), mockAcc.Metrics[0].Fields["myvalue_2"])
+
+		expected := []telegraf.Metric{
+			testutil.MustMetric(
+				"dpdk",
+				map[string]string{
+					"command": "/endpoint1",
+					"params":  "",
+				},
+				map[string]interface{}{
+					"myvalue_0": float64(0),
+					"myvalue_1": float64(1),
+					"myvalue_2": float64(123),
+				},
+				time.Unix(0, 0),
+			),
+		}
+
+		actual := mockAcc.GetTelegrafMetrics()
+		testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 	})
 }
 

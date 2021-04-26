@@ -7,30 +7,34 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/influxdata/telegraf/config"
-
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 const (
-	dpdkDescription  = "Reads metrics from DPDK applications using v2 telemetry interface."
-	dpdkSampleConfig = `
+	description  = "Reads metrics from DPDK applications using v2 telemetry interface."
+	sampleConfig = `
   ## Path to DPDK telemetry socket. This shall point to v2 version of DPDK telemetry interface.
   # socket_path = "/var/run/dpdk/rte/dpdk_telemetry.v2"
 
   ## Duration that defines how long the connected socket client will wait for a response before terminating connection.
-  ## This includes both writing to and reading from socket.
+  ## This includes both writing to and reading from socket. Since it's local socket access
+  ## to a fast packet processing application, the timeout should be sufficient for most users.
   ## Setting the value to 0 disables the timeout (not recommended)
   # socket_access_timeout = "200ms"
 
   ## Enables telemetry data collection for selected device types.
   ## Adding "ethdev" enables collection of telemetry from DPDK NICs (stats, xstats, link_status).
   ## Adding "rawdev" enables collection of telemetry from DPDK Raw Devices (xstats).
-  device_types = ["ethdev", "rawdev"]
+  # device_types = ["ethdev"]
 
-  ## List of custom, application-specific telemetry commands to query 
+  ## List of custom, application-specific telemetry commands to query
+  ## The list of available commands depend on the application deployed. Applications can register their own commands
+  ##   via telemetry library API http://doc.dpdk.org/guides/prog_guide/telemetry_lib.html#registering-commands
   ## For e.g. L3 Forwarding with Power Management Sample Application this could be: 
   ##   additional_commands = ["/l3fwd-power/stats"]
   # additional_commands = []
@@ -49,7 +53,7 @@ const (
 	defaultAccessTimeout       = config.Duration(200 * time.Millisecond)
 	maxCommandLength           = 56
 	maxCommandLengthWithParams = 1024
-	dpdkPluginName             = "dpdk"
+	pluginName                 = "dpdk"
 	ethdevListCommand          = "/ethdev/list"
 	rawdevListCommand          = "/rawdev/list"
 )
@@ -61,9 +65,11 @@ type dpdk struct {
 	EthdevConfig       ethdevConfig    `toml:"ethdev"`
 	AdditionalCommands []string        `toml:"additional_commands"`
 	Log                telegraf.Logger `toml:"-"`
-	connector          *dpdkConnector  `toml:"-"`
-	rawdevCommands     []string        `toml:"-"`
-	ethdevCommands     []string        `toml:"-"`
+
+	connector                    *dpdkConnector
+	rawdevCommands               []string
+	ethdevCommands               []string
+	ethdevExcludedCommandsFilter filter.Filter
 }
 
 type ethdevConfig struct {
@@ -71,50 +77,65 @@ type ethdevConfig struct {
 }
 
 func init() {
-	inputs.Add(dpdkPluginName, func() telegraf.Input {
+	inputs.Add(pluginName, func() telegraf.Input {
 		dpdk := &dpdk{
-			SocketPath:     defaultPathToSocket,
-			AccessTimeout:  defaultAccessTimeout,
-			rawdevCommands: []string{"/rawdev/xstats"},
-			ethdevCommands: []string{"/ethdev/stats", "/ethdev/xstats", "/ethdev/link_status"},
+			// Setting it here (rather than in `Init()`) to distinguish between "zero" value,
+			// default value and don't having value in config at all.
+			AccessTimeout: defaultAccessTimeout,
 		}
 		return dpdk
 	})
 }
 
 func (dpdk *dpdk) SampleConfig() string {
-	return dpdkSampleConfig
+	return sampleConfig
 }
 
 func (dpdk *dpdk) Description() string {
-	return dpdkDescription
+	return description
 }
 
 // Performs validation of all parameters from configuration
 func (dpdk *dpdk) Init() error {
 	if dpdk.SocketPath == "" {
 		dpdk.SocketPath = defaultPathToSocket
-		dpdk.Log.Infof("using default '%v' path for socket_path", defaultPathToSocket)
+		dpdk.Log.Debugf("using default '%v' path for socket_path", defaultPathToSocket)
 	}
-	if err := isSocket(dpdk.SocketPath); err != nil {
+
+	if dpdk.DeviceTypes == nil {
+		dpdk.DeviceTypes = []string{"ethdev"}
+	}
+
+	var err error
+	if err = isSocket(dpdk.SocketPath); err != nil {
 		return err
 	}
 
-	if err := dpdk.validateCommands(); err != nil {
+	dpdk.rawdevCommands = []string{"/rawdev/xstats"}
+	dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats", "/ethdev/link_status"}
+
+	if err = dpdk.validateCommands(); err != nil {
 		return err
 	}
 
 	if dpdk.AccessTimeout < 0 {
 		return fmt.Errorf("socket_access_timeout should be positive number or equal to 0 (to disable timeouts)")
 	}
+
 	if len(dpdk.AdditionalCommands) == 0 && len(dpdk.DeviceTypes) == 0 {
-		dpdk.Log.Warn("DPDK plugin is enabled and configured with nothing to read")
+		return fmt.Errorf("plugin was configured with nothing to read")
+	}
+
+	dpdk.ethdevExcludedCommandsFilter, err = filter.Compile(dpdk.EthdevConfig.EthdevExcludeCommands)
+	if err != nil {
+		return fmt.Errorf("error occurred during filter prepation for ethdev excluded commands - %v", err)
 	}
 
 	dpdk.connector = newDpdkConnector(dpdk.SocketPath, dpdk.AccessTimeout)
-	result, err := dpdk.connector.connect()
-	if result != "" {
-		dpdk.Log.Info(result)
+	initMessage, err := dpdk.connector.connect()
+	if initMessage != nil {
+		dpdk.Log.Debugf("Successfully connected to %v running as process with PID %v with len %v",
+			initMessage.Version, initMessage.Pid, initMessage.MaxOutputLen)
 	}
 	return err
 }
@@ -146,40 +167,42 @@ func (dpdk *dpdk) validateCommands() error {
 
 // Gathers all unique commands and processes each command sequentially
 // Parallel processing could be achieved by running several instances of this plugin with different settings
-func (dpdk *dpdk) Gather(accumulator telegraf.Accumulator) error {
-	commands := dpdk.gatherCommands(accumulator)
+func (dpdk *dpdk) Gather(acc telegraf.Accumulator) error {
+	// This needs to be done during every `Gather(...)`, because DPDK can be restarted between consecutive
+	// `Gather(...)` cycles which can cause that it will be exposing different set of metrics.
+	commands := dpdk.gatherCommands(acc)
 
 	for _, command := range commands {
-		dpdk.processCommand(command, accumulator)
+		dpdk.processCommand(acc, command)
 	}
 
 	return nil
 }
 
 // Gathers all unique commands
-func (dpdk *dpdk) gatherCommands(accumulator telegraf.Accumulator) []string {
+func (dpdk *dpdk) gatherCommands(acc telegraf.Accumulator) []string {
 	var commands []string
-	if contains(dpdk.DeviceTypes, "ethdev") {
-		commands = append(commands, dpdk.getCommandsAndParamsCombinations(dpdk.ethdevCommands, dpdk.EthdevConfig.EthdevExcludeCommands, ethdevListCommand, accumulator)...)
+	if choice.Contains("ethdev", dpdk.DeviceTypes) {
+		ethdevCommands := removeSubset(dpdk.ethdevCommands, dpdk.ethdevExcludedCommandsFilter)
+		ethdevCommands, err := dpdk.appendCommandsWithParamsFromList(ethdevListCommand, ethdevCommands)
+		if err != nil {
+			acc.AddError(fmt.Errorf("error occurred during fetching of %v params - %v", ethdevListCommand, err))
+		}
+
+		commands = append(commands, ethdevCommands...)
 	}
 
-	if contains(dpdk.DeviceTypes, "rawdev") {
-		commands = append(commands, dpdk.getCommandsAndParamsCombinations(dpdk.rawdevCommands, []string{}, rawdevListCommand, accumulator)...)
+	if choice.Contains("rawdev", dpdk.DeviceTypes) {
+		rawdevCommands, err := dpdk.appendCommandsWithParamsFromList(rawdevListCommand, dpdk.rawdevCommands)
+		if err != nil {
+			acc.AddError(fmt.Errorf("error occurred during fetching of %v params - %v", rawdevListCommand, err))
+		}
+
+		commands = append(commands, rawdevCommands...)
 	}
 
 	commands = append(commands, dpdk.AdditionalCommands...)
-
 	return uniqueValues(commands)
-}
-
-func (dpdk *dpdk) getCommandsAndParamsCombinations(appendedCommands []string, excludedCommands []string, listCommand string, accumulator telegraf.Accumulator) []string {
-	validCommands := removeSubset(appendedCommands, excludedCommands)
-
-	commands, err := dpdk.appendCommandsWithParamsFromList(listCommand, validCommands)
-	if err != nil {
-		accumulator.AddError(fmt.Errorf("error occurred during fetching of %v params - %v", listCommand, err))
-	}
-	return commands
 }
 
 // Fetches all identifiers of devices and then creates all possible combinations of commands for each device
@@ -201,39 +224,39 @@ func (dpdk *dpdk) appendCommandsWithParamsFromList(listCommand string, commands 
 		}
 	}
 
-	return uniqueValues(result), nil
+	return result, nil
 }
 
 // Executes command, parses response and creates/writes metric from response
-func (dpdk *dpdk) processCommand(commandWithParams string, accumulator telegraf.Accumulator) {
+func (dpdk *dpdk) processCommand(acc telegraf.Accumulator, commandWithParams string) {
 	buf, err := dpdk.connector.getCommandResponse(commandWithParams)
 	if err != nil {
-		accumulator.AddError(err)
+		acc.AddError(err)
 		return
 	}
 
 	var parsedResponse map[string]interface{}
 	err = json.Unmarshal(buf, &parsedResponse)
 	if err != nil {
-		accumulator.AddError(fmt.Errorf("failed to unmarshall json response from %v command - %v", commandWithParams, err))
+		acc.AddError(fmt.Errorf("failed to unmarshall json response from %v command - %v", commandWithParams, err))
 		return
 	}
 
 	command := stripParams(commandWithParams)
 	value := parsedResponse[command]
 	if isEmpty(value) {
-		accumulator.AddError(fmt.Errorf("got empty json on '%v' command", commandWithParams))
+		acc.AddError(fmt.Errorf("got empty json on '%v' command", commandWithParams))
 		return
 	}
 
 	jf := jsonparser.JSONFlattener{}
 	err = jf.FullFlattenJSON("", value, true, true)
 	if err != nil {
-		accumulator.AddError(fmt.Errorf("failed to flatten response - %v", err))
+		acc.AddError(fmt.Errorf("failed to flatten response - %v", err))
 		return
 	}
 
-	accumulator.AddFields(dpdkPluginName, jf.Fields, map[string]string{
+	acc.AddFields(pluginName, jf.Fields, map[string]string{
 		"command": command,
 		"params":  getParams(commandWithParams),
 	})

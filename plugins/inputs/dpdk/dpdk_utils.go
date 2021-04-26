@@ -7,7 +7,10 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
+
+	"github.com/influxdata/telegraf/filter"
 )
 
 func commandWithParams(command string, params string) string {
@@ -66,7 +69,7 @@ func jsonToArray(input []byte, command string) ([]string, error) {
 		return nil, err
 	}
 
-	var intArray []int
+	var intArray []int64
 	var stringArray []string
 	err = json.Unmarshal(rawMessage[command], &intArray)
 	if err != nil {
@@ -74,30 +77,20 @@ func jsonToArray(input []byte, command string) ([]string, error) {
 	}
 
 	for _, value := range intArray {
-		stringArray = append(stringArray, fmt.Sprintf("%v", value))
+		stringArray = append(stringArray, strconv.FormatInt(value, 10))
 	}
+
 	return stringArray, nil
-
 }
 
-func contains(slice []string, value string) bool {
-	for _, elem := range slice {
-		if value == elem {
-			return true
-		}
-	}
-	return false
-}
-
-func removeSubset(elements, excluded []string) []string {
-	excludedMap := make(map[string]bool)
-	for _, exclude := range excluded {
-		excludedMap[exclude] = true
+func removeSubset(elements []string, excludedFilter filter.Filter) []string {
+	if excludedFilter == nil {
+		return elements
 	}
 
 	var result []string
 	for _, element := range elements {
-		if isExcluded := excludedMap[element]; !isExcluded {
+		if !excludedFilter.Match(element) {
 			result = append(result, element)
 		}
 	}
@@ -110,7 +103,7 @@ func uniqueValues(values []string) []string {
 	result := make([]string, 0, len(values))
 
 	for _, value := range values {
-		if isAdded := in[value]; !isAdded {
+		if !in[value] {
 			in[value] = true
 			result = append(result, value)
 		}

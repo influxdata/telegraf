@@ -1,15 +1,28 @@
 # DPDK Input Plugin
 The `dpdk` plugin collects metrics exposed by applications built with [Data Plane Development Kit](https://www.dpdk.org/)
-which is an extensive set of open source libraries designed for accelerating packet processing workloads. 
- 
-[DPDK Release 20.05](https://doc.dpdk.org/guides/rel_notes/release_20_05.html) introduces updated telemetry interface
-that enables DPDK libraries and applications to provide their own specific telemetry. This is referred to as `v2` version
-of this socket-based telemetry interface. The example usage of this interface can be found in
-[Telemetry User Guide](https://doc.dpdk.org/guides/howto/telemetry.html). A variety of
-[DPDK Sample Applications](https://doc.dpdk.org/guides/sample_app_ug/index.html) is also available for users
-to discover and test the capabilities of DPDK.
+which is an extensive set of open source libraries designed for accelerating packet processing workloads.
 
-This plugin uses this `v2` interface to read telemetry data from applications build with `DPDK version >= 20.05`. 
+DPDK provides APIs that enable exposing various statistics from the devices used by DPDK applications and enable exposing
+KPI metrics directly from applications. Device statistics include e.g. common statistics available across NICs, like:
+received and sent packets, received and sent bytes etc. In addition to this generic statistics, an extended statistics API
+is available that allows providing more detailed, driver-specific metrics that are not available as generic statistics.
+
+[DPDK Release 20.05](https://doc.dpdk.org/guides/rel_notes/release_20_05.html) introduced updated telemetry interface
+that enables DPDK libraries and applications to provide their telemetry. This is referred to as `v2` version of this
+socket-based telemetry interface. This release enabled e.g. reading driver-specific extended stats (`/ethdev/xstats`)
+via this new interface.
+
+[DPDK Release 20.11](https://doc.dpdk.org/guides/rel_notes/release_20_11.html) introduced reading via `v2` interface
+common statistics (`/ethdev/stats`) in addition to existing (`/ethdev/xstats`).
+
+The example usage of `v2` telemetry interface can be found in [Telemetry User Guide](https://doc.dpdk.org/guides/howto/telemetry.html).
+A variety of [DPDK Sample Applications](https://doc.dpdk.org/guides/sample_app_ug/index.html) is also available for users
+to discover and test the capabilities of DPDK libraries and to explore the exposed metrics.
+
+> **DPDK Version Info:** This plugin uses this `v2` interface to read telemetry data from applications build with
+> `DPDK version >= 20.05`. The default configuration include reading common statistics from `/ethdev/stats` that is
+> available from `DPDK version >= 20.11`. When using `DPDK 20.05 <= version < DPDK 20.11` it is recommended to disable
+> querying `/ethdev/stats` by setting corresponding `exclude_commands` configuration option.
 
 > **NOTE:** Since DPDK will most likely run with root privileges, the socket telemetry interface exposed by DPDK
 > will also require root access. This means that either access permissions have to be adjusted for socket telemetry
@@ -24,16 +37,19 @@ This plugin offers multiple configuration options, please review examples below 
   # socket_path = "/var/run/dpdk/rte/dpdk_telemetry.v2"
 
   ## Duration that defines how long the connected socket client will wait for a response before terminating connection.
-  ## This includes both writing to and reading from socket.
+  ## This includes both writing to and reading from socket. Since it's local socket access
+  ## to a fast packet processing application, the timeout should be sufficient for most users.
   ## Setting the value to 0 disables the timeout (not recommended)
   # socket_access_timeout = "200ms"
 
   ## Enables telemetry data collection for selected device types.
   ## Adding "ethdev" enables collection of telemetry from DPDK NICs (stats, xstats, link_status).
   ## Adding "rawdev" enables collection of telemetry from DPDK Raw Devices (xstats).
-  device_types = ["ethdev", "rawdev"]
+  # device_types = ["ethdev"]
 
-  ## List of custom, application-specific telemetry commands to query 
+  ## List of custom, application-specific telemetry commands to query
+  ## The list of available commands depend on the application deployed. Applications can register their own commands
+  ##   via telemetry library API http://doc.dpdk.org/guides/prog_guide/telemetry_lib.html#registering-commands
   ## For e.g. L3 Forwarding with Power Management Sample Application this could be: 
   ##   additional_commands = ["/l3fwd-power/stats"]
   # additional_commands = []
@@ -51,7 +67,7 @@ This plugin offers multiple configuration options, please review examples below 
 
 ### Example: Minimal Configuration for NIC metrics
 This configuration allows getting metrics for all devices reported via `/ethdev/list` command:
-* `/ethdev/stats` - basic device statistics
+* `/ethdev/stats` - basic device statistics (since `DPDK 20.11`)
 * `/ethdev/xstats` - extended device statistics
 * `/ethdev/link_status` - up/down link status
 ```toml
@@ -148,7 +164,7 @@ If DPDK response contains no information (is empty or is null) then such respons
 > **NOTE:**  Since DPDK allows registering custom metrics in its telemetry framework the JSON response from DPDK 
 > may contain various sets of metrics. While metrics from `/ethdev/stats` should be most stable, the `/ethdev/xstats`
 > may contain driver-specific metrics (depending on DPDK application configuration). The application-specific commands
-> like `/l3fwd-power/stats` can return their own specific set of metrics.  
+> like `/l3fwd-power/stats` can return their own specific set of metrics.
 
 ## Example output
 The output consists of plugin name (`dpdk`), and a set of tags that identify querying hierarchy:
@@ -159,7 +175,7 @@ dpdk,host=dpdk-host,dpdk_instance=l3fwd-power,command=/ethdev/stats,params=0 [fi
 | Tag | Description |
 |-----|-------------|
 | `host` | hostname of the machine (consult [Telegraf Agent configuration](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#agent) for additional details) |
-| `dpdk_instance` | custom tag from `[inputs.dpdk.tags]` (optional) | 
+| `dpdk_instance` | custom tag from `[inputs.dpdk.tags]` (optional) |
 | `command` | executed command (without params) |
 | `params` | command parameter, e.g. for `/ethdev/stats` it is the id of NIC as exposed by `/ethdev/list`<br>For DPDK app that uses 2 NICs the metrics will output e.g. `params=0`, `params=1`. |
 

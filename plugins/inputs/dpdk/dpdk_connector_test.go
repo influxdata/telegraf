@@ -8,10 +8,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/inputs/dpdk/mocks"
-
-	"github.com/stretchr/testify/require"
 )
 
 func Test_readMaxOutputLen(t *testing.T) {
@@ -19,9 +18,9 @@ func Test_readMaxOutputLen(t *testing.T) {
 		conn := &mocks.Conn{}
 		conn.On("Read", mock.Anything).Return(0, fmt.Errorf("timeout"))
 		conn.On("SetDeadline", mock.Anything).Return(nil)
-		connector := dpdkConnector{}
+		connector := dpdkConnector{connection: conn}
 
-		_, err := connector.readMaxOutputLen(conn)
+		_, err := connector.readMaxOutputLen()
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "timeout")
@@ -42,9 +41,9 @@ func Test_readMaxOutputLen(t *testing.T) {
 			copy(elem, message)
 		}).Return(len(message), nil)
 		conn.On("SetDeadline", mock.Anything).Return(nil)
-		connector := dpdkConnector{}
+		connector := dpdkConnector{connection: conn}
 
-		_, err = connector.readMaxOutputLen(conn)
+		_, err = connector.readMaxOutputLen()
 
 		require.NoError(t, err)
 		require.Equal(t, maxOutputLen, connector.maxOutputLen)
@@ -58,9 +57,9 @@ func Test_readMaxOutputLen(t *testing.T) {
 			copy(elem, message)
 		}).Return(len(message), nil)
 		conn.On("SetDeadline", mock.Anything).Return(nil)
-		connector := dpdkConnector{}
+		connector := dpdkConnector{connection: conn}
 
-		_, err := connector.readMaxOutputLen(conn)
+		_, err := connector.readMaxOutputLen()
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "looking for beginning of object key string")
@@ -79,9 +78,9 @@ func Test_readMaxOutputLen(t *testing.T) {
 			copy(elem, message)
 		}).Return(len(message), nil)
 		conn.On("SetDeadline", mock.Anything).Return(nil)
-		connector := dpdkConnector{}
+		connector := dpdkConnector{connection: conn}
 
-		_, err = connector.readMaxOutputLen(conn)
+		_, err = connector.readMaxOutputLen()
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to read maxOutputLen information")
