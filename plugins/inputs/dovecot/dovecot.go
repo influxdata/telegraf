@@ -90,7 +90,9 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 	defer c.Close()
 
 	// Extend connection
-	c.SetDeadline(time.Now().Add(defaultTimeout))
+	if err := c.SetDeadline(time.Now().Add(defaultTimeout)); err != nil {
+		return fmt.Errorf("setting deadline failed for dovecot server '%s': %s", addr, err)
+	}
 
 	msg := fmt.Sprintf("EXPORT\t%s", qtype)
 	if len(filter) > 0 {
@@ -98,9 +100,13 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 	}
 	msg += "\n"
 
-	c.Write([]byte(msg))
+	if _, err := c.Write([]byte(msg)); err != nil {
+		return fmt.Errorf("writing message %q failed for dovecot server '%s': %s", msg, addr, err)
+	}
 	var buf bytes.Buffer
-	io.Copy(&buf, c)
+	if _, err := io.Copy(&buf, c); err != nil {
+		return fmt.Errorf("copying message failed for dovecot server '%s': %s", addr, err)
+	}
 
 	host, _, _ := net.SplitHostPort(addr)
 

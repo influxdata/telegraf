@@ -241,7 +241,7 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 		Period:    internalDuration,
 	}
 
-	c.initializeCloudWatch()
+	require.NoError(t, c.initializeCloudWatch())
 
 	now := time.Now()
 
@@ -278,7 +278,7 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 		Period:    internalDuration,
 	}
 
-	c.initializeCloudWatch()
+	require.NoError(t, c.initializeCloudWatch())
 
 	now := time.Now()
 

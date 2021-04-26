@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"testing"
 
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	oauth "github.com/influxdata/telegraf/plugins/common/oauth"
 	plugin "github.com/influxdata/telegraf/plugins/inputs/http"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -284,11 +286,15 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 		{
 			name: "success",
 			plugin: &plugin.HTTP{
-				URLs:         []string{u.String() + "/write"},
-				ClientID:     "howdy",
-				ClientSecret: "secret",
-				TokenURL:     u.String() + "/token",
-				Scopes:       []string{"urn:opc:idm:__myscopes__"},
+				URLs: []string{u.String() + "/write"},
+				HTTPClientConfig: httpconfig.HTTPClientConfig{
+					OAuth2Config: oauth.OAuth2Config{
+						ClientID:     "howdy",
+						ClientSecret: "secret",
+						TokenURL:     u.String() + "/token",
+						Scopes:       []string{"urn:opc:idm:__myscopes__"},
+					},
+				},
 			},
 			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
@@ -296,7 +302,8 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				values.Add("access_token", token)
 				values.Add("token_type", "bearer")
 				values.Add("expires_in", "3600")
-				w.Write([]byte(values.Encode()))
+				_, err := w.Write([]byte(values.Encode()))
+				require.NoError(t, err)
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, []string{"Bearer " + token}, r.Header["Authorization"])
