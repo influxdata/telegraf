@@ -263,7 +263,7 @@ endif
 
 ifdef armhf
 tars += telegraf-$(tar_version)_linux_armhf.tar.gz
-tars += telegraf-$(tar_version)_freebsd_armhf.tar.gz
+tars += telegraf-$(tar_version)_freebsd_armv7.tar.gz
 debs += telegraf_$(deb_version)_armhf.deb
 rpms += telegraf-$(rpm_version).armv6hl.rpm
 endif 
@@ -436,9 +436,9 @@ upload-nightly:
 %freebsd_i386.tar.gz: export GOOS := freebsd
 %freebsd_i386.tar.gz: export GOARCH := 386
 
-%freebsd_armhf.tar.gz: export GOOS := freebsd
-%freebsd_armhf.tar.gz: export GOARCH := arm
-%freebsd_armhf.tar.gz: export GOARM := 7
+%freebsd_armv7.tar.gz: export GOOS := freebsd
+%freebsd_armv7.tar.gz: export GOARCH := arm
+%freebsd_armv7.tar.gz: export GOARM := 7
 
 %windows_amd64.zip: export GOOS := windows
 %windows_amd64.zip: export GOARCH := amd64
