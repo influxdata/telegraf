@@ -64,7 +64,7 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 
 	// extract values
 	var dataParsed [4] float64
-	var thinCount uint
+	var thinCount uint64
 	for i, d := range data {
 		if i < 4 {
 			d = strings.TrimPrefix(d, "  ")
