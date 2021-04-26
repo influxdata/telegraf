@@ -64,18 +64,19 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 
 	// extract values
 	var dataParsed [5] float64 
-	for i,d := range data {
+	for i, d := range data {
 		if i < 4 {
 			d = strings.TrimPrefix(d, "  ")
 			d = strings.TrimSuffix(d, "m")
-			dataParsed[i], err := strconv.ParseFloat(d, 64)
+			dp, err := strconv.ParseFloat(d, 64)
 		} else {
 			d = strings.TrimSuffix(d, "\n")
-			dataParsed[i], err := strconv.ParseUint(d, 10, 64)
+			dp, err := strconv.ParseUint(d, 10, 64)
 		}
 		if err != nil {
 			acc.AddError(err)
 		}
+		dataParsed[i] = dp
 	}
 	// lvSize, err := strconv.ParseFloat(strings.TrimSuffix(data[0], "m"), 64)
 	// if err != nil {
