@@ -188,6 +188,9 @@ type AgentConfig struct {
 	// If set to -1, no archives are removed.
 	LogfileRotationMaxArchives int `toml:"logfile_rotation_max_archives"`
 
+	// Pick a timezone to use when logging or type 'local' for local time.
+	LogWithTimezone string `toml:"log_with_timezone"`
+
 	Hostname     string
 	OmitHostname bool
 }
@@ -356,11 +359,14 @@ var agentConfig = `
   ## If set to -1, no archives are removed.
   # logfile_rotation_max_archives = 5
 
+  ## Pick a timezone to use when logging or type 'local' for local time.
+  ## Example: America/Chicago
+  # log_with_timezone = ""
+
   ## Override default hostname, if empty use os.Hostname()
   hostname = ""
   ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
-
 `
 
 var outputHeader = `
