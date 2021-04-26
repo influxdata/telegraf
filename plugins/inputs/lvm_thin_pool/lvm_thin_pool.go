@@ -37,19 +37,20 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 	// check if lvdisplay is available
 	lvdisplayPath, err := exec.LookPath("lvdisplay")
 	if err != nil {
-		return nil, err
+		acc.AddError(err)
 	}
 
 	// compose command and arguments slice
+	var cmdName string
 	var args []string
 	if p.UseSudo {
-		var cmdName string = "sudo"
+		cmdName = "sudo"
 		args = append(args, lvdisplayPath)
 	} else {
 		cmdName := lvdisplayPath
 	}
 
-	lv_attrs := 'lv_size,lv_metadata_size,data_percent,metadata_percent,thin_count'
+	var lv_attrs string = "lv_size,lv_metadata_size,data_percent,metadata_percent,thin_count"
 	var lvdisplay_args = []string{"-C", "-o", lv_attrs, "--units", "m", "--separator", ":", "--noheadings", p.path}
 	args = append(args, lvdisplay_args...)
 		
