@@ -43,7 +43,7 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 	// compose command and arguments slice
 	var args []string
 	if p.UseSudo {
-		cmdName = "sudo"
+		var cmdName string = "sudo"
 		args = append(args, lvdisplayPath)
 	} else {
 		cmdName := lvdisplayPath
