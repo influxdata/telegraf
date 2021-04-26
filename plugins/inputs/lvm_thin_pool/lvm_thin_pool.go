@@ -63,33 +63,44 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 	data := strings.Split(string(out), ":")
 
 	// extract values
-	lvSize, err := strconv.ParseFloat(strings.TrimSuffix(data[0], "m"), 64)
-	if err != nil {
-		acc.AddError(err)
+	var dataParsed [5] float64 
+	for i,d := range data {
+		if i < 4 {
+			d = strings.TrimPrefix(d, "  ")
+			d = strings.TrimSuffix(d, "m")
+			dataParsed[i] = strconv.ParseFloat(d, 64)
+		} else {
+			d = strings.TrimSuffix(d, "\n")
+			dataParsed[i] = strconv.ParseUint(d, 10, 64)
+		}
 	}
-	lvMetadata, err := strconv.ParseFloat(strings.TrimSuffix(data[1], "m"), 64)
-	if err != nil {
-		acc.AddError(err)
-	}
-	usedData, err := strconv.ParseFloat(data[2], 64)
-	if err != nil {
-		acc.AddError(err)
-	}
-	usedMetadata, err := strconv.ParseFloat(data[3], 64)
-	if err != nil {
-		acc.AddError(err)
-	}
-	thinCount, err := strconv.ParseUint(data[4], 10, 64)
-	if err != nil {
-		acc.AddError(err)
-	}
+	// lvSize, err := strconv.ParseFloat(strings.TrimSuffix(data[0], "m"), 64)
+	// if err != nil {
+	// 	acc.AddError(err)
+	// }
+	// lvMetadata, err := strconv.ParseFloat(strings.TrimSuffix(data[1], "m"), 64)
+	// if err != nil {
+	// 	acc.AddError(err)
+	// }
+	// usedData, err := strconv.ParseFloat(data[2], 64)
+	// if err != nil {
+	// 	acc.AddError(err)
+	// }
+	// usedMetadata, err := strconv.ParseFloat(data[3], 64)
+	// if err != nil {
+	// 	acc.AddError(err)
+	// }
+	// thinCount, err := strconv.ParseUint(data[4], 10, 64)
+	// if err != nil {
+	// 	acc.AddError(err)
+	// }
 
 	fields := map[string]interface{}{
-		"lv_size": lvSize,
-		"lv_metadata": lvMetadata,
-		"data_percent": usedData,
-		"metadata_percent": usedMetadata,
-		"thin_count": thinCount,
+		"lv_size": dataParsed[0],
+		"lv_metadata": dataParsed[1],
+		"data_percent": dataParsed[2],
+		"metadata_percent": dataParsed[3],
+		"thin_count": dataParsed[4],
 	}
 	tags := map[string]string{
 		"path":  p.Path,
