@@ -397,6 +397,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 
 //Tag helper
 func parseTag(tagSpec string, data interface{}) (tagKey string, tagValue string, err error) {
+	tagKey = tagSpec
 	queryPath := tagSpec
 
 	//Split query path to tagKey and query path
