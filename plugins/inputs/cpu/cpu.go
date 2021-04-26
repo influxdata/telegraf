@@ -59,8 +59,8 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 			"cpu": cts.CPU,
 		}
 
-		total := totalCpuTime(cts)
-		active := activeCpuTime(cts)
+		total := totalCPUTime(cts)
+		active := activeCPUTime(cts)
 
 		if c.CollectCPUTime {
 			// Add cpu time metrics
@@ -77,7 +77,7 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 				"time_guest_nice": cts.GuestNice,
 			}
 			if c.ReportActive {
-				fieldsC["time_active"] = activeCpuTime(cts)
+				fieldsC["time_active"] = activeCPUTime(cts)
 			}
 			acc.AddCounter("cpu", fieldsC, tags, now)
 		}
@@ -92,8 +92,8 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 		if !ok {
 			continue
 		}
-		lastTotal := totalCpuTime(lastCts)
-		lastActive := activeCpuTime(lastCts)
+		lastTotal := totalCPUTime(lastCts)
+		lastActive := activeCPUTime(lastCts)
 		totalDelta := total - lastTotal
 
 		if totalDelta < 0 {
@@ -131,14 +131,13 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 	return err
 }
 
-func totalCpuTime(t cpu.TimesStat) float64 {
-	total := t.User + t.System + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal +
-		t.Idle
+func totalCPUTime(t cpu.TimesStat) float64 {
+	total := t.User + t.System + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal + t.Idle
 	return total
 }
 
-func activeCpuTime(t cpu.TimesStat) float64 {
-	active := totalCpuTime(t) - t.Idle
+func activeCPUTime(t cpu.TimesStat) float64 {
+	active := totalCPUTime(t) - t.Idle
 	return active
 }
 

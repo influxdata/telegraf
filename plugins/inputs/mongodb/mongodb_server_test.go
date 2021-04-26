@@ -35,7 +35,7 @@ func TestAddDefaultStats(t *testing.T) {
 	err = server.gatherData(&acc, false)
 	require.NoError(t, err)
 
-	for key := range DefaultStats {
+	for key := range defaultStats {
 		assert.True(t, acc.HasInt64Field("mongodb", key))
 	}
 }

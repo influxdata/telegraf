@@ -7,6 +7,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"go.starlark.net/lib/math"
+	"go.starlark.net/lib/time"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkjson"
@@ -44,10 +46,11 @@ type Starlark struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	thread    *starlark.Thread
-	applyFunc *starlark.Function
-	args      starlark.Tuple
-	results   []telegraf.Metric
+	thread           *starlark.Thread
+	applyFunc        *starlark.Function
+	args             starlark.Tuple
+	results          []telegraf.Metric
+	starlarkLoadFunc func(module string, logger telegraf.Logger) (starlark.StringDict, error)
 }
 
 func (s *Starlark) Init() error {
@@ -61,7 +64,7 @@ func (s *Starlark) Init() error {
 	s.thread = &starlark.Thread{
 		Print: func(_ *starlark.Thread, msg string) { s.Log.Debug(msg) },
 		Load: func(thread *starlark.Thread, module string) (starlark.StringDict, error) {
-			return loadFunc(thread, module, s.Log)
+			return s.starlarkLoadFunc(module, s.Log)
 		},
 	}
 
@@ -136,7 +139,7 @@ func (s *Starlark) Description() string {
 	return description
 }
 
-func (s *Starlark) Start(acc telegraf.Accumulator) error {
+func (s *Starlark) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -238,11 +241,13 @@ func init() {
 
 func init() {
 	processors.AddStreaming("starlark", func() telegraf.StreamingProcessor {
-		return &Starlark{}
+		return &Starlark{
+			starlarkLoadFunc: loadFunc,
+		}
 	})
 }
 
-func loadFunc(thread *starlark.Thread, module string, logger telegraf.Logger) (starlark.StringDict, error) {
+func loadFunc(module string, logger telegraf.Logger) (starlark.StringDict, error) {
 	switch module {
 	case "json.star":
 		return starlark.StringDict{
@@ -251,6 +256,14 @@ func loadFunc(thread *starlark.Thread, module string, logger telegraf.Logger) (s
 	case "logging.star":
 		return starlark.StringDict{
 			"log": LogModule(logger),
+		}, nil
+	case "math.star":
+		return starlark.StringDict{
+			"math": math.Module,
+		}, nil
+	case "time.star":
+		return starlark.StringDict{
+			"time": time.Module,
 		}, nil
 	default:
 		return nil, errors.New("module " + module + " is not available")

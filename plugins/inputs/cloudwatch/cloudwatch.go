@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -34,6 +35,8 @@ type CloudWatch struct {
 	StatisticExclude []string        `toml:"statistic_exclude"`
 	StatisticInclude []string        `toml:"statistic_include"`
 	Timeout          config.Duration `toml:"timeout"`
+
+	proxy.HTTPProxy
 
 	Period         config.Duration `toml:"period"`
 	Delay          config.Duration `toml:"delay"`
@@ -63,8 +66,9 @@ type Metric struct {
 
 // Dimension defines a simplified Cloudwatch dimension (provides metric filtering).
 type Dimension struct {
-	Name  string `toml:"name"`
-	Value string `toml:"value"`
+	Name         string `toml:"name"`
+	Value        string `toml:"value"`
+	valueMatcher filter.Filter
 }
 
 // metricCache caches metrics, their filters, and generated queries.
@@ -106,6 +110,9 @@ func (c *CloudWatch) SampleConfig() string {
   ## default.
   ##   ex: endpoint_url = "http://localhost:8000"
   # endpoint_url = ""
+
+  ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
+  # http_proxy_url = "http://localhost:8888"
 
   # The minimum period for Cloudwatch metrics is 1 minute (60s). However not all
   # metrics are made available to the 1 minute period. Some are collected at
@@ -164,6 +171,7 @@ func (c *CloudWatch) SampleConfig() string {
   #
   #  ## Dimension filters for Metric.  All dimensions defined for the metric names
   #  ## must be specified in order to retrieve the metric statistics.
+  #  ## 'value' has wildcard / 'glob' matching support. such as 'p-*'.
   #  [[inputs.cloudwatch.metrics.dimensions]]
   #    name = "LoadBalancerName"
   #    value = "p-example"
@@ -188,7 +196,10 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if c.client == nil {
-		c.initializeCloudWatch()
+		err := c.initializeCloudWatch()
+		if err != nil {
+			return err
+		}
 	}
 
 	filteredMetrics, err := getFilteredMetrics(c)
@@ -199,11 +210,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	c.updateWindow(time.Now())
 
 	// Get all of the possible queries so we can send groups of 100.
-	queries, err := c.getDataQueries(filteredMetrics)
-	if err != nil {
-		return err
-	}
-
+	queries := c.getDataQueries(filteredMetrics)
 	if len(queries) == 0 {
 		return nil
 	}
@@ -249,7 +256,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	return c.aggregateMetrics(acc, results)
 }
 
-func (c *CloudWatch) initializeCloudWatch() {
+func (c *CloudWatch) initializeCloudWatch() error {
 	credentialConfig := &internalaws.CredentialConfig{
 		Region:      c.Region,
 		AccessKey:   c.AccessKey,
@@ -262,11 +269,16 @@ func (c *CloudWatch) initializeCloudWatch() {
 	}
 	configProvider := credentialConfig.Credentials()
 
+	proxy, err := c.HTTPProxy.Proxy()
+	if err != nil {
+		return err
+	}
+
 	cfg := &aws.Config{
 		HTTPClient: &http.Client{
 			// use values from DefaultTransport
 			Transport: &http.Transport{
-				Proxy: http.ProxyFromEnvironment,
+				Proxy: proxy,
 				DialContext: (&net.Dialer{
 					Timeout:   30 * time.Second,
 					KeepAlive: 30 * time.Second,
@@ -283,6 +295,20 @@ func (c *CloudWatch) initializeCloudWatch() {
 
 	loglevel := aws.LogOff
 	c.client = cloudwatch.New(configProvider, cfg.WithLogLevel(loglevel))
+
+	// Initialize regex matchers for each Dimension value.
+	for _, m := range c.Metrics {
+		for _, dimension := range m.Dimensions {
+			matcher, err := filter.NewIncludeExcludeFilter([]string{dimension.Value}, nil)
+			if err != nil {
+				return err
+			}
+
+			dimension.valueMatcher = matcher
+		}
+	}
+
+	return nil
 }
 
 type filteredMetric struct {
@@ -425,9 +451,9 @@ func (c *CloudWatch) updateWindow(relativeTo time.Time) {
 }
 
 // getDataQueries gets all of the possible queries so we can maximize the request payload.
-func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudwatch.MetricDataQuery, error) {
+func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) []*cloudwatch.MetricDataQuery {
 	if c.metricCache != nil && c.metricCache.queries != nil && c.metricCache.isValid() {
-		return c.metricCache.queries, nil
+		return c.metricCache.queries
 	}
 
 	c.queryDimensions = map[string]*map[string]string{}
@@ -502,7 +528,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 
 	if len(dataQueries) == 0 {
 		c.Log.Debug("no metrics found to collect")
-		return nil, nil
+		return nil
 	}
 
 	if c.metricCache == nil {
@@ -515,7 +541,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 		c.metricCache.queries = dataQueries
 	}
 
-	return dataQueries, nil
+	return dataQueries
 }
 
 // gatherMetrics gets metric data from Cloudwatch.
@@ -558,7 +584,9 @@ func (c *CloudWatch) aggregateMetrics(
 		tags["region"] = c.Region
 
 		for i := range result.Values {
-			grouper.Add(namespace, tags, *result.Timestamps[i], *result.Label, *result.Values[i])
+			if err := grouper.Add(namespace, tags, *result.Timestamps[i], *result.Label, *result.Values[i]); err != nil {
+				acc.AddError(err)
+			}
 		}
 	}
 
@@ -621,7 +649,7 @@ func (f *metricCache) isValid() bool {
 
 func hasWildcard(dimensions []*Dimension) bool {
 	for _, d := range dimensions {
-		if d.Value == "" || d.Value == "*" {
+		if d.Value == "" || strings.ContainsAny(d.Value, "*?[") {
 			return true
 		}
 	}
@@ -639,7 +667,7 @@ func isSelected(name string, metric *cloudwatch.Metric, dimensions []*Dimension)
 		selected := false
 		for _, d2 := range metric.Dimensions {
 			if d.Name == *d2.Name {
-				if d.Value == "" || d.Value == "*" || d.Value == *d2.Value {
+				if d.Value == "" || d.valueMatcher.Match(*d2.Value) {
 					selected = true
 				}
 			}

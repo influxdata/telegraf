@@ -2,7 +2,7 @@ package kubernetes
 
 type Pods struct {
 	Kind       string `json:"kind"`
-	ApiVersion string `json:"apiVersion"`
+	APIVersion string `json:"apiVersion"`
 	Items      []Item `json:"items"`
 }
 

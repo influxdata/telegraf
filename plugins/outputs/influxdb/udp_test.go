@@ -23,7 +23,7 @@ var (
 )
 
 func getMetric() telegraf.Metric {
-	metric, err := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
@@ -31,10 +31,8 @@ func getMetric() telegraf.Metric {
 		},
 		time.Unix(0, 0),
 	)
-	if err != nil {
-		panic(err)
-	}
-	return metric
+
+	return m
 }
 
 func getURL() *url.URL {
@@ -62,7 +60,7 @@ type MockDialer struct {
 	DialContextF func(network, address string) (influxdb.Conn, error)
 }
 
-func (d *MockDialer) DialContext(ctx context.Context, network string, address string) (influxdb.Conn, error) {
+func (d *MockDialer) DialContext(_ context.Context, network string, address string) (influxdb.Conn, error) {
 	return d.DialContextF(network, address)
 }
 
@@ -202,7 +200,7 @@ func TestUDP_ErrorLogging(t *testing.T) {
 			},
 			metrics: []telegraf.Metric{
 				func() telegraf.Metric {
-					metric, _ := metric.New(
+					m := metric.New(
 						"cpu",
 						map[string]string{
 							"host": "example.org",
@@ -210,7 +208,7 @@ func TestUDP_ErrorLogging(t *testing.T) {
 						map[string]interface{}{},
 						time.Unix(0, 0),
 					)
-					return metric
+					return m
 				}(),
 			},
 			logContains: `could not serialize metric: "cpu,host=example.org": no serializable fields`,

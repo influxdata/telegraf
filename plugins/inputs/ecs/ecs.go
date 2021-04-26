@@ -6,15 +6,15 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Ecs config object
 type Ecs struct {
 	EndpointURL string `toml:"endpoint_url"`
-	Timeout     internal.Duration
+	Timeout     config.Duration
 
 	ContainerNameInclude []string `toml:"container_name_include"`
 	ContainerNameExclude []string `toml:"container_name_exclude"`
@@ -114,7 +114,7 @@ func initSetup(ecs *Ecs) error {
 	if ecs.client == nil {
 		resolveEndpoint(ecs)
 
-		c, err := ecs.newClient(ecs.Timeout.Duration, ecs.EndpointURL, ecs.metadataVersion)
+		c, err := ecs.newClient(time.Duration(ecs.Timeout), ecs.EndpointURL, ecs.metadataVersion)
 		if err != nil {
 			return err
 		}
@@ -262,7 +262,7 @@ func init() {
 	inputs.Add("ecs", func() telegraf.Input {
 		return &Ecs{
 			EndpointURL:    "",
-			Timeout:        internal.Duration{Duration: 5 * time.Second},
+			Timeout:        config.Duration(5 * time.Second),
 			newClient:      NewClient,
 			filtersCreated: false,
 		}

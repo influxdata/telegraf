@@ -11,7 +11,7 @@ import (
 	_ "github.com/jackc/pgx/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 )
@@ -83,16 +83,16 @@ var sampleConfig = `
   ## output measurement name ("postgresql").
   ##
   ## The script option can be used to specify the .sql file path.
-  ## If script and sqlquery options specified at same time, sqlquery will be used 
+  ## If script and sqlquery options specified at same time, sqlquery will be used
   ##
   ## the tagvalue field is used to define custom tags (separated by comas).
   ## the query is expected to return columns which match the names of the
   ## defined tags. The values in these columns must be of a string-type,
   ## a number-type or a blob-type.
-  ## 
+  ##
   ## The timestamp field is used to override the data points timestamp value. By
   ## default, all rows inserted with current time. By setting a timestamp column,
-  ## the row will be inserted with that column's value. 
+  ## the row will be inserted with that column's value.
   ##
   ## Structure :
   ## [[inputs.postgresql_extensible.query]]
@@ -156,50 +156,49 @@ func ReadQueryFromFile(filePath string) (string, error) {
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	var (
-		err         error
-		sql_query   string
-		query_addon string
-		db_version  int
-		query       string
-		tag_value   string
-		meas_name   string
-		timestamp   string
-		columns     []string
+		err        error
+		sqlQuery   string
+		queryAddon string
+		dbVersion  int
+		query      string
+		tagValue   string
+		measName   string
+		timestamp  string
+		columns    []string
 	)
 
 	// Retrieving the database version
 	query = `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
-	if err = p.DB.QueryRow(query).Scan(&db_version); err != nil {
-		db_version = 0
+	if err = p.DB.QueryRow(query).Scan(&dbVersion); err != nil {
+		dbVersion = 0
 	}
 
 	// We loop in order to process each query
 	// Query is not run if Database version does not match the query version.
 	for i := range p.Query {
-		sql_query = p.Query[i].Sqlquery
-		tag_value = p.Query[i].Tagvalue
+		sqlQuery = p.Query[i].Sqlquery
+		tagValue = p.Query[i].Tagvalue
 		timestamp = p.Query[i].Timestamp
 
 		if p.Query[i].Measurement != "" {
-			meas_name = p.Query[i].Measurement
+			measName = p.Query[i].Measurement
 		} else {
-			meas_name = "postgresql"
+			measName = "postgresql"
 		}
 
 		if p.Query[i].Withdbname {
 			if len(p.Databases) != 0 {
-				query_addon = fmt.Sprintf(` IN ('%s')`,
-					strings.Join(p.Databases, "','"))
+				queryAddon = fmt.Sprintf(` IN ('%s')`, strings.Join(p.Databases, "','"))
 			} else {
-				query_addon = " is not null"
+				queryAddon = " is not null"
 			}
 		} else {
-			query_addon = ""
+			queryAddon = ""
 		}
-		sql_query += query_addon
+		sqlQuery += queryAddon
 
-		if p.Query[i].Version <= db_version {
-			rows, err := p.DB.Query(sql_query)
+		if p.Query[i].Version <= dbVersion {
+			rows, err := p.DB.Query(sqlQuery)
 			if err != nil {
 				p.Log.Error(err.Error())
 				continue
@@ -214,17 +213,17 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			}
 
 			p.AdditionalTags = nil
-			if tag_value != "" {
-				tag_list := strings.Split(tag_value, ",")
-				for t := range tag_list {
-					p.AdditionalTags = append(p.AdditionalTags, tag_list[t])
+			if tagValue != "" {
+				tagList := strings.Split(tagValue, ",")
+				for t := range tagList {
+					p.AdditionalTags = append(p.AdditionalTags, tagList[t])
 				}
 			}
 
 			p.Timestamp = timestamp
 
 			for rows.Next() {
-				err = p.accRow(meas_name, rows, acc, columns)
+				err = p.accRow(measName, rows, acc, columns)
 				if err != nil {
 					p.Log.Error(err.Error())
 					break
@@ -239,7 +238,7 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumulator, columns []string) error {
+func (p *Postgresql) accRow(measName string, row scanner, acc telegraf.Accumulator, columns []string) error {
 	var (
 		err        error
 		columnVars []interface{}
@@ -269,12 +268,18 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 		// extract the database name from the column map
 		switch datname := (*c).(type) {
 		case string:
-			dbname.WriteString(datname)
+			if _, err := dbname.WriteString(datname); err != nil {
+				return err
+			}
 		default:
-			dbname.WriteString("postgres")
+			if _, err := dbname.WriteString("postgres"); err != nil {
+				return err
+			}
 		}
 	} else {
-		dbname.WriteString("postgres")
+		if _, err := dbname.WriteString("postgres"); err != nil {
+			return err
+		}
 	}
 
 	if tagAddress, err = p.SanitizedAddress(); err != nil {
@@ -329,7 +334,7 @@ COLUMN:
 			fields[col] = *val
 		}
 	}
-	acc.AddFields(meas_name, fields, tags, timestamp)
+	acc.AddFields(measName, fields, tags, timestamp)
 	return nil
 }
 
@@ -337,11 +342,9 @@ func init() {
 	inputs.Add("postgresql_extensible", func() telegraf.Input {
 		return &Postgresql{
 			Service: postgresql.Service{
-				MaxIdle: 1,
-				MaxOpen: 1,
-				MaxLifetime: internal.Duration{
-					Duration: 0,
-				},
+				MaxIdle:     1,
+				MaxOpen:     1,
+				MaxLifetime: config.Duration(0),
 				IsPgBouncer: false,
 			},
 		}

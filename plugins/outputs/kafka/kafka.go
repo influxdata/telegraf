@@ -1,7 +1,6 @@
 package kafka
 
 import (
-	"crypto/tls"
 	"fmt"
 	"log"
 	"strings"
@@ -44,8 +43,7 @@ type Kafka struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	tlsConfig tls.Config
-
+	saramaConfig *sarama.Config
 	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
 	producer     sarama.SyncProducer
 
@@ -66,7 +64,6 @@ func (*DebugLogger) Print(v ...interface{}) {
 	args := make([]interface{}, 0, len(v)+1)
 	args = append(append(args, "D! [sarama] "), v...)
 	log.Print(args...)
-
 }
 
 func (*DebugLogger) Printf(format string, v ...interface{}) {
@@ -282,6 +279,8 @@ func (k *Kafka) Init() error {
 		return err
 	}
 
+	k.saramaConfig = config
+
 	// Legacy support ssl config
 	if k.Certificate != "" {
 		k.TLSCert = k.Certificate
@@ -289,15 +288,15 @@ func (k *Kafka) Init() error {
 		k.TLSKey = k.Key
 	}
 
-	producer, err := k.producerFunc(k.Brokers, config)
-	if err != nil {
-		return err
-	}
-	k.producer = producer
 	return nil
 }
 
 func (k *Kafka) Connect() error {
+	producer, err := k.producerFunc(k.Brokers, k.saramaConfig)
+	if err != nil {
+		return err
+	}
+	k.producer = producer
 	return nil
 }
 

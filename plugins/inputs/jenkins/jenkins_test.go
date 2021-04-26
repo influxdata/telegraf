@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -97,6 +97,8 @@ func (h mockHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
+	// Ignore the returned error as the tests will fail anyway
+	//nolint:errcheck,revive
 	w.Write(b)
 }
 
@@ -302,7 +304,7 @@ func TestGatherNodeData(t *testing.T) {
 			j := &Jenkins{
 				Log:             testutil.Logger{},
 				URL:             ts.URL,
-				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				ResponseTimeout: config.Duration(time.Microsecond),
 				NodeExclude:     []string{"ignore-1", "ignore-2"},
 			}
 			te := j.initialize(&http.Client{Transport: &http.Transport{}})
@@ -358,7 +360,7 @@ func TestInitialize(t *testing.T) {
 			input: &Jenkins{
 				Log:             testutil.Logger{},
 				URL:             "http://a bad url",
-				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				ResponseTimeout: config.Duration(time.Microsecond),
 			},
 			wantErr: true,
 		},
@@ -367,7 +369,7 @@ func TestInitialize(t *testing.T) {
 			input: &Jenkins{
 				Log:             testutil.Logger{},
 				URL:             ts.URL,
-				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				ResponseTimeout: config.Duration(time.Microsecond),
 				JobInclude:      []string{"jobA", "jobB"},
 				JobExclude:      []string{"job1", "job2"},
 				NodeExclude:     []string{"node1", "node2"},
@@ -378,7 +380,7 @@ func TestInitialize(t *testing.T) {
 			input: &Jenkins{
 				Log:             testutil.Logger{},
 				URL:             ts.URL,
-				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				ResponseTimeout: config.Duration(time.Microsecond),
 			},
 			output: &Jenkins{
 				Log:               testutil.Logger{},
@@ -805,8 +807,8 @@ func TestGatherJobs(t *testing.T) {
 			j := &Jenkins{
 				Log:             testutil.Logger{},
 				URL:             ts.URL,
-				MaxBuildAge:     internal.Duration{Duration: time.Hour},
-				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				MaxBuildAge:     config.Duration(time.Hour),
+				ResponseTimeout: config.Duration(time.Microsecond),
 				JobInclude: []string{
 					"*",
 				},
@@ -846,7 +848,6 @@ func TestGatherJobs(t *testing.T) {
 						}
 					}
 				}
-
 			}
 		})
 	}

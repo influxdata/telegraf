@@ -119,7 +119,6 @@ func (a *Accumulator) addFields(
 		} else {
 			t = a.TimeFunc()
 		}
-
 	}
 
 	if a.debug {
@@ -197,7 +196,7 @@ func (a *Accumulator) AddMetric(m telegraf.Metric) {
 	a.addFields(m.Name(), m.Tags(), m.Fields(), m.Type(), m.Time())
 }
 
-func (a *Accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
+func (a *Accumulator) WithTracking(_ int) telegraf.TrackingAccumulator {
 	return a
 }
 
@@ -235,12 +234,10 @@ func (a *Accumulator) AddError(err error) {
 	a.Unlock()
 }
 
-func (a *Accumulator) SetPrecision(precision time.Duration) {
-	return
+func (a *Accumulator) SetPrecision(_ time.Duration) {
 }
 
 func (a *Accumulator) DisablePrecision() {
-	return
 }
 
 func (a *Accumulator) Debug() bool {
@@ -395,9 +392,7 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 			assert.Fail(t, msg)
 		}
 	}
-	return
 }
-
 func (a *Accumulator) AssertContainsFields(
 	t *testing.T,
 	measurement string,
@@ -730,17 +725,17 @@ func (a *Accumulator) BoolField(measurement string, field string) (bool, bool) {
 // telegraf accumulator machinery.
 type NopAccumulator struct{}
 
-func (n *NopAccumulator) AddFields(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+func (n *NopAccumulator) AddFields(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
 }
-func (n *NopAccumulator) AddGauge(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+func (n *NopAccumulator) AddGauge(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
 }
-func (n *NopAccumulator) AddCounter(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+func (n *NopAccumulator) AddCounter(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
 }
-func (n *NopAccumulator) AddSummary(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+func (n *NopAccumulator) AddSummary(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
 }
-func (n *NopAccumulator) AddHistogram(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+func (n *NopAccumulator) AddHistogram(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
 }
-func (n *NopAccumulator) AddMetric(telegraf.Metric)                                {}
-func (n *NopAccumulator) SetPrecision(precision time.Duration)                     {}
-func (n *NopAccumulator) AddError(err error)                                       {}
-func (n *NopAccumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator { return nil }
+func (n *NopAccumulator) AddMetric(telegraf.Metric)                       {}
+func (n *NopAccumulator) SetPrecision(_ time.Duration)                    {}
+func (n *NopAccumulator) AddError(_ error)                                {}
+func (n *NopAccumulator) WithTracking(_ int) telegraf.TrackingAccumulator { return nil }

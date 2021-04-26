@@ -166,10 +166,7 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 		return nil, fmt.Errorf("failed to create new pinger: %w", err)
 	}
 
-	// Required for windows. Despite the method name, this should work without the need to elevate privileges and has been tested on Windows 10
-	if runtime.GOOS == "windows" {
-		pinger.SetPrivileged(true)
-	}
+	pinger.SetPrivileged(true)
 
 	if p.IPv6 {
 		pinger.SetNetwork("ip6")
@@ -193,7 +190,14 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 	pinger.Count = p.Count
 	err = pinger.Run()
 	if err != nil {
-		return nil, fmt.Errorf("failed to run pinger: %w", err)
+		if strings.Contains(err.Error(), "operation not permitted") {
+			if runtime.GOOS == "linux" {
+				return nil, fmt.Errorf("permission changes required, enable CAP_NET_RAW capabilities (refer to the ping plugin's README.md for more info)")
+			}
+
+			return nil, fmt.Errorf("permission changes required, refer to the ping plugin's README.md for more info")
+		}
+		return nil, fmt.Errorf("%w", err)
 	}
 
 	ps.Statistics = *pinger.Statistics()
@@ -202,12 +206,12 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 }
 
 func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
-
 	tags := map[string]string{"url": destination}
 	fields := map[string]interface{}{}
 
 	stats, err := p.nativePingFunc(destination)
 	if err != nil {
+		p.Log.Errorf("ping failed: %s", err.Error())
 		if strings.Contains(err.Error(), "unknown") {
 			fields["result_code"] = 1
 		} else {
@@ -224,12 +228,14 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	}
 
 	if stats.PacketsSent == 0 {
+		p.Log.Debug("no packets sent")
 		fields["result_code"] = 2
 		acc.AddFields("ping", fields, tags)
 		return
 	}
 
 	if stats.PacketsRecv == 0 {
+		p.Log.Debug("no packets received")
 		fields["result_code"] = 1
 		fields["percent_packet_loss"] = float64(100)
 		acc.AddFields("ping", fields, tags)

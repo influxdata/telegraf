@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gosnmp/gosnmp"
 )
@@ -62,7 +63,7 @@ func (gs GosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
 func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 	gs := GosnmpWrapper{&gosnmp.GoSNMP{}}
 
-	gs.Timeout = s.Timeout.Duration
+	gs.Timeout = time.Duration(s.Timeout)
 
 	gs.Retries = s.Retries
 
@@ -112,6 +113,14 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 			sp.AuthenticationProtocol = gosnmp.MD5
 		case "sha":
 			sp.AuthenticationProtocol = gosnmp.SHA
+		case "sha224":
+			sp.AuthenticationProtocol = gosnmp.SHA224
+		case "sha256":
+			sp.AuthenticationProtocol = gosnmp.SHA256
+		case "sha384":
+			sp.AuthenticationProtocol = gosnmp.SHA384
+		case "sha512":
+			sp.AuthenticationProtocol = gosnmp.SHA512
 		case "":
 			sp.AuthenticationProtocol = gosnmp.NoAuth
 		default:

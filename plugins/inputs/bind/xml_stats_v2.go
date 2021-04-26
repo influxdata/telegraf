@@ -42,7 +42,7 @@ type v2Statistics struct {
 	Memory struct {
 		Contexts []struct {
 			// Omitted nodes: references, maxinuse, blocksize, pools, hiwater, lowater
-			Id    string `xml:"id"`
+			ID    string `xml:"id"`
 			Name  string `xml:"name"`
 			Total int64  `xml:"total"`
 			InUse int64  `xml:"inuse"`
@@ -75,7 +75,9 @@ func addXMLv2Counter(acc telegraf.Accumulator, commonTags map[string]string, sta
 			tags[k] = v
 		}
 
-		grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
+		if err := grouper.Add("bind_counter", tags, ts, c.Name, c.Value); err != nil {
+			acc.AddError(fmt.Errorf("adding field %q to group failed: %v", c.Name, err))
+		}
 	}
 
 	//Add grouped metrics
@@ -142,7 +144,7 @@ func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator) error {
 	// Detailed, per-context memory stats
 	if b.GatherMemoryContexts {
 		for _, c := range stats.Statistics.Memory.Contexts {
-			tags := map[string]string{"url": addr.Host, "id": c.Id, "name": c.Name, "source": host, "port": port}
+			tags := map[string]string{"url": addr.Host, "id": c.ID, "name": c.Name, "source": host, "port": port}
 			fields := map[string]interface{}{"total": c.Total, "in_use": c.InUse}
 
 			acc.AddGauge("bind_memory_context", fields, tags)

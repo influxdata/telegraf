@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"io"
 	"net"
 	"testing"
 
@@ -78,7 +79,8 @@ func TestHandleTelemetryTwoSimple(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -149,7 +151,8 @@ func TestHandleTelemetrySingleNested(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -218,7 +221,8 @@ func TestHandleEmbeddedTags(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -306,17 +310,177 @@ func TestHandleNXAPI(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
 
-	tags1 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i1", "source": "hostname", "subscription": "subscription"}
+	tags1 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i1", "row_number": "0", "source": "hostname", "subscription": "subscription"}
 	fields1 := map[string]interface{}{"value": "foo"}
-	tags2 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i2", "source": "hostname", "subscription": "subscription"}
+	tags2 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i2", "row_number": "0", "source": "hostname", "subscription": "subscription"}
 	fields2 := map[string]interface{}{"value": "bar"}
 	acc.AssertContainsTaggedFields(t, "nxapi", fields1, tags1)
 	acc.AssertContainsTaggedFields(t, "nxapi", fields2, tags2)
+}
+
+func TestHandleNXAPIXformNXAPI(t *testing.T) {
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "dummy", Aliases: map[string]string{"nxapi": "show nxapi"}}
+	acc := &testutil.Accumulator{}
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
+
+	telemetry := &telemetry.Telemetry{
+		MsgTimestamp: 1543236572000,
+		EncodingPath: "show processes cpu",
+		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetry.TelemetryField{
+			{
+				Fields: []*telemetry.TelemetryField{
+					{
+						Name: "keys",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Name:        "foo",
+								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+							},
+						},
+					},
+					{
+						Name: "content",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Fields: []*telemetry.TelemetryField{
+									{
+										Name: "TABLE_process_cpu",
+										Fields: []*telemetry.TelemetryField{
+											{
+												Fields: []*telemetry.TelemetryField{
+													{
+														Name: "ROW_process_cpu",
+														Fields: []*telemetry.TelemetryField{
+															{
+																Fields: []*telemetry.TelemetryField{
+																	{
+																		Name:        "index",
+																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "i1"},
+																	},
+																	{
+																		Name:        "value",
+																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "foo"},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
+
+	c.handleTelemetry(data)
+	require.Empty(t, acc.Errors)
+
+	tags1 := map[string]string{"path": "show processes cpu", "foo": "bar", "TABLE_process_cpu": "i1", "row_number": "0", "source": "hostname", "subscription": "subscription"}
+	fields1 := map[string]interface{}{"value": "foo"}
+	acc.AssertContainsTaggedFields(t, "show processes cpu", fields1, tags1)
+}
+
+func TestHandleNXXformMulti(t *testing.T) {
+	c := &CiscoTelemetryMDT{Transport: "dummy", Aliases: map[string]string{"dme": "sys/lldp"}}
+	acc := &testutil.Accumulator{}
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
+
+	telemetry := &telemetry.Telemetry{
+		MsgTimestamp: 1543236572000,
+		EncodingPath: "sys/lldp",
+		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetry.TelemetryField{
+			{
+				Fields: []*telemetry.TelemetryField{
+					{
+						Name: "keys",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Name:        "foo",
+								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+							},
+						},
+					},
+					{
+						Name: "content",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Fields: []*telemetry.TelemetryField{
+									{
+										Name: "fooEntity",
+										Fields: []*telemetry.TelemetryField{
+											{
+												Fields: []*telemetry.TelemetryField{
+													{
+														Name: "attributes",
+														Fields: []*telemetry.TelemetryField{
+															{
+																Fields: []*telemetry.TelemetryField{
+																	{
+																		Name:        "rn",
+																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "some-rn"},
+																	},
+																	{
+																		Name:        "portIdV",
+																		ValueByType: &telemetry.TelemetryField_Uint32Value{Uint32Value: 12},
+																	},
+																	{
+																		Name:        "portDesc",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 100},
+																	},
+																	{
+																		Name:        "test",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 281474976710655},
+																	},
+																	{
+																		Name:        "subscriptionId",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 2814749767106551},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
+
+	c.handleTelemetry(data)
+	require.Empty(t, acc.Errors)
+	//validate various transformation scenaarios newly added in the code.
+	fields := map[string]interface{}{"portIdV": "12", "portDesc": "100", "test": int64(281474976710655), "subscriptionId": "2814749767106551"}
+	acc.AssertContainsFields(t, "dme", fields)
 }
 
 func TestHandleNXDME(t *testing.T) {
@@ -382,7 +546,8 @@ func TestHandleNXDME(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -409,9 +574,10 @@ func TestTCPDialoutOverflow(t *testing.T) {
 	addr := c.Address()
 	conn, err := net.Dial(addr.Network(), addr.String())
 	require.NoError(t, err)
-	binary.Write(conn, binary.BigEndian, hdr)
-	conn.Read([]byte{0})
-	conn.Close()
+	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
+	_, err = conn.Read([]byte{0})
+	require.True(t, err == nil || err == io.EOF)
+	require.NoError(t, conn.Close())
 
 	c.Stop()
 
@@ -472,32 +638,42 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	conn, err := net.Dial(addr.Network(), addr.String())
 	require.NoError(t, err)
 
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 	hdr.MsgLen = uint32(len(data))
-	binary.Write(conn, binary.BigEndian, hdr)
-	conn.Write(data)
+	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
+	_, err = conn.Write(data)
+	require.NoError(t, err)
 
 	conn2, err := net.Dial(addr.Network(), addr.String())
 	require.NoError(t, err)
 
 	telemetry.EncodingPath = "type:model/parallel/path"
-	data, _ = proto.Marshal(telemetry)
+	data, err = proto.Marshal(telemetry)
+	require.NoError(t, err)
 	hdr.MsgLen = uint32(len(data))
-	binary.Write(conn2, binary.BigEndian, hdr)
-	conn2.Write(data)
-	conn2.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
-	conn2.Read([]byte{0})
-	conn2.Close()
+	require.NoError(t, binary.Write(conn2, binary.BigEndian, hdr))
+	_, err = conn2.Write(data)
+	require.NoError(t, err)
+	_, err = conn2.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
+	require.NoError(t, err)
+	_, err = conn2.Read([]byte{0})
+	require.True(t, err == nil || err == io.EOF)
+	require.NoError(t, conn2.Close())
 
 	telemetry.EncodingPath = "type:model/other/path"
-	data, _ = proto.Marshal(telemetry)
+	data, err = proto.Marshal(telemetry)
+	require.NoError(t, err)
 	hdr.MsgLen = uint32(len(data))
-	binary.Write(conn, binary.BigEndian, hdr)
-	conn.Write(data)
-	conn.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
-	conn.Read([]byte{0})
+	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
+	_, err = conn.Write(data)
+	require.NoError(t, err)
+	_, err = conn.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
+	require.NoError(t, err)
+	_, err = conn.Read([]byte{0})
+	require.True(t, err == nil || err == io.EOF)
 	c.Stop()
-	conn.Close()
+	require.NoError(t, conn.Close())
 
 	// We use the invalid dialout flags to let the server close the connection
 	require.Equal(t, acc.Errors, []error{errors.New("invalid dialout flags: 257"), errors.New("invalid dialout flags: 257")})
@@ -522,15 +698,18 @@ func TestGRPCDialoutError(t *testing.T) {
 	require.NoError(t, err)
 
 	addr := c.Address()
-	conn, _ := grpc.Dial(addr.String(), grpc.WithInsecure())
+	conn, err := grpc.Dial(addr.String(), grpc.WithInsecure())
+	require.NoError(t, err)
 	client := dialout.NewGRPCMdtDialoutClient(conn)
-	stream, _ := client.MdtDialout(context.Background())
+	stream, err := client.MdtDialout(context.Background())
+	require.NoError(t, err)
 
 	args := &dialout.MdtDialoutArgs{Errors: "foobar"}
-	stream.Send(args)
+	require.NoError(t, stream.Send(args))
 
 	// Wait for the server to close
-	stream.Recv()
+	_, err = stream.Recv()
+	require.True(t, err == nil || err == io.EOF)
 	c.Stop()
 
 	require.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: foobar")})
@@ -545,35 +724,44 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	telemetry := mockTelemetryMessage()
 
 	addr := c.Address()
-	conn, _ := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	require.NoError(t, err)
 	client := dialout.NewGRPCMdtDialoutClient(conn)
-	stream, _ := client.MdtDialout(context.TODO())
+	stream, err := client.MdtDialout(context.TODO())
+	require.NoError(t, err)
 
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 	args := &dialout.MdtDialoutArgs{Data: data, ReqId: 456}
-	stream.Send(args)
+	require.NoError(t, stream.Send(args))
 
-	conn2, _ := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	conn2, err := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	require.NoError(t, err)
 	client2 := dialout.NewGRPCMdtDialoutClient(conn2)
-	stream2, _ := client2.MdtDialout(context.TODO())
+	stream2, err := client2.MdtDialout(context.TODO())
+	require.NoError(t, err)
 
 	telemetry.EncodingPath = "type:model/parallel/path"
-	data, _ = proto.Marshal(telemetry)
+	data, err = proto.Marshal(telemetry)
+	require.NoError(t, err)
 	args = &dialout.MdtDialoutArgs{Data: data}
-	stream2.Send(args)
-	stream2.Send(&dialout.MdtDialoutArgs{Errors: "testclose"})
-	stream2.Recv()
-	conn2.Close()
+	require.NoError(t, stream2.Send(args))
+	require.NoError(t, stream2.Send(&dialout.MdtDialoutArgs{Errors: "testclose"}))
+	_, err = stream2.Recv()
+	require.True(t, err == nil || err == io.EOF)
+	require.NoError(t, conn2.Close())
 
 	telemetry.EncodingPath = "type:model/other/path"
-	data, _ = proto.Marshal(telemetry)
+	data, err = proto.Marshal(telemetry)
+	require.NoError(t, err)
 	args = &dialout.MdtDialoutArgs{Data: data}
-	stream.Send(args)
-	stream.Send(&dialout.MdtDialoutArgs{Errors: "testclose"})
-	stream.Recv()
+	require.NoError(t, stream.Send(args))
+	require.NoError(t, stream.Send(&dialout.MdtDialoutArgs{Errors: "testclose"}))
+	_, err = stream.Recv()
+	require.True(t, err == nil || err == io.EOF)
 
 	c.Stop()
-	conn.Close()
+	require.NoError(t, conn.Close())
 
 	require.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: testclose"), errors.New("GRPC dialout error: testclose")})
 
@@ -588,5 +776,4 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	tags = map[string]string{"path": "type:model/other/path", "name": "str", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "other", fields, tags)
-
 }

@@ -100,7 +100,6 @@ func UnrollXMLFields(data []byte, fieldsUsage map[string]int, separator string) 
 			break
 		}
 		if err != nil {
-			// log.Fatal(err)
 			break
 		}
 		var parents []string

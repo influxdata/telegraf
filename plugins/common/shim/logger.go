@@ -84,6 +84,4 @@ func setLoggerOnPlugin(i interface{}, log telegraf.Logger) {
 			field.Set(reflect.ValueOf(log))
 		}
 	}
-
-	return
 }

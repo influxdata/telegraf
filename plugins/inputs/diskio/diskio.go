@@ -68,7 +68,7 @@ func (d *DiskIO) SampleConfig() string {
 
 // hasMeta reports whether s contains any special glob characters.
 func hasMeta(s string) bool {
-	return strings.IndexAny(s, "*?[") >= 0
+	return strings.ContainsAny(s, "*?[")
 }
 
 func (d *DiskIO) init() error {
@@ -104,7 +104,6 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, io := range diskio {
-
 		match := false
 		if d.deviceFilter != nil && d.deviceFilter.Match(io.Name) {
 			match = true

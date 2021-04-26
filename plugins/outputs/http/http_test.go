@@ -13,12 +13,14 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	oauth "github.com/influxdata/telegraf/plugins/common/oauth"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/stretchr/testify/require"
 )
 
 func getMetric() telegraf.Metric {
-	m, err := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
@@ -26,9 +28,7 @@ func getMetric() telegraf.Metric {
 		},
 		time.Unix(0, 0),
 	)
-	if err != nil {
-		panic(err)
-	}
+
 	return m
 }
 
@@ -381,11 +381,15 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 		{
 			name: "success",
 			plugin: &HTTP{
-				URL:          u.String() + "/write",
-				ClientID:     "howdy",
-				ClientSecret: "secret",
-				TokenURL:     u.String() + "/token",
-				Scopes:       []string{"urn:opc:idm:__myscopes__"},
+				URL: u.String() + "/write",
+				HTTPClientConfig: httpconfig.HTTPClientConfig{
+					OAuth2Config: oauth.OAuth2Config{
+						ClientID:     "howdy",
+						ClientSecret: "secret",
+						TokenURL:     u.String() + "/token",
+						Scopes:       []string{"urn:opc:idm:__myscopes__"},
+					},
+				},
 			},
 			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)

@@ -14,7 +14,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/nsqio/go-nsq"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // This test is modeled after the kafka consumer integration test
@@ -22,12 +22,15 @@ func TestReadsMetricsFromNSQ(t *testing.T) {
 	msgID := nsq.MessageID{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'a', 's', 'd', 'f', 'g', 'h'}
 	msg := nsq.NewMessage(msgID, []byte("cpu_load_short,direction=in,host=server01,region=us-west value=23422.0 1422568543702900257\n"))
 
+	frameMsg, err := frameMessage(msg)
+	require.NoError(t, err)
+
 	script := []instruction{
 		// SUB
 		{0, nsq.FrameTypeResponse, []byte("OK")},
 		// IDENTIFY
 		{0, nsq.FrameTypeResponse, []byte("OK")},
-		{20 * time.Millisecond, nsq.FrameTypeMessage, frameMessage(msg)},
+		{20 * time.Millisecond, nsq.FrameTypeMessage, frameMsg},
 		// needed to exit test
 		{100 * time.Millisecond, -1, []byte("exit")},
 	}
@@ -48,27 +51,22 @@ func TestReadsMetricsFromNSQ(t *testing.T) {
 	p, _ := parsers.NewInfluxParser()
 	consumer.SetParser(p)
 	var acc testutil.Accumulator
-	assert.Equal(t, 0, len(acc.Metrics), "There should not be any points")
-	if err := consumer.Start(&acc); err != nil {
-		t.Fatal(err.Error())
-	}
+	require.Len(t, acc.Metrics, 0, "There should not be any points")
+	require.NoError(t, consumer.Start(&acc))
 
 	waitForPoint(&acc, t)
 
-	if len(acc.Metrics) == 1 {
-		point := acc.Metrics[0]
-		assert.Equal(t, "cpu_load_short", point.Measurement)
-		assert.Equal(t, map[string]interface{}{"value": 23422.0}, point.Fields)
-		assert.Equal(t, map[string]string{
-			"host":      "server01",
-			"direction": "in",
-			"region":    "us-west",
-		}, point.Tags)
-		assert.Equal(t, time.Unix(0, 1422568543702900257).Unix(), point.Time.Unix())
-	} else {
-		t.Errorf("No points found in accumulator, expected 1")
-	}
+	require.Len(t, acc.Metrics, 1, "No points found in accumulator, expected 1")
 
+	point := acc.Metrics[0]
+	require.Equal(t, "cpu_load_short", point.Measurement)
+	require.Equal(t, map[string]interface{}{"value": 23422.0}, point.Fields)
+	require.Equal(t, map[string]string{
+		"host":      "server01",
+		"direction": "in",
+		"region":    "us-west",
+	}, point.Tags)
+	require.Equal(t, time.Unix(0, 1422568543702900257).Unix(), point.Time.Unix())
 }
 
 // Waits for the metric that was sent to the kafka broker to arrive at the kafka
@@ -202,9 +200,14 @@ func (n *mockNSQD) handle(conn net.Conn) {
 				}
 				rdyCount--
 			}
-			_, err := conn.Write(framedResponse(inst.frameType, inst.body))
+			buf, err := framedResponse(inst.frameType, inst.body)
 			if err != nil {
-				log.Printf(err.Error())
+				log.Print(err.Error())
+				goto exit
+			}
+			_, err = conn.Write(buf)
+			if err != nil {
+				log.Print(err.Error())
 				goto exit
 			}
 			scriptTime = time.After(n.script[idx+1].delay)
@@ -213,11 +216,14 @@ func (n *mockNSQD) handle(conn net.Conn) {
 	}
 
 exit:
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	n.tcpListener.Close()
+	//nolint:errcheck,revive
 	conn.Close()
 }
 
-func framedResponse(frameType int32, data []byte) []byte {
+func framedResponse(frameType int32, data []byte) ([]byte, error) {
 	var w bytes.Buffer
 
 	beBuf := make([]byte, 4)
@@ -226,21 +232,21 @@ func framedResponse(frameType int32, data []byte) []byte {
 	binary.BigEndian.PutUint32(beBuf, size)
 	_, err := w.Write(beBuf)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	binary.BigEndian.PutUint32(beBuf, uint32(frameType))
 	_, err = w.Write(beBuf)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	w.Write(data)
-	return w.Bytes()
+	_, err = w.Write(data)
+	return w.Bytes(), err
 }
 
-func frameMessage(m *nsq.Message) []byte {
+func frameMessage(m *nsq.Message) ([]byte, error) {
 	var b bytes.Buffer
-	m.WriteTo(&b)
-	return b.Bytes()
+	_, err := m.WriteTo(&b)
+	return b.Bytes(), err
 }

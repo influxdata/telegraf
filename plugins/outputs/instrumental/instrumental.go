@@ -7,9 +7,10 @@ import (
 	"net"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
@@ -21,14 +22,14 @@ var (
 )
 
 type Instrumental struct {
-	Host       string
-	ApiToken   string
-	Prefix     string
-	DataFormat string
-	Template   string
-	Templates  []string
-	Timeout    internal.Duration
-	Debug      bool
+	Host       string          `toml:"host"`
+	APIToken   string          `toml:"api_token"`
+	Prefix     string          `toml:"prefix"`
+	DataFormat string          `toml:"data_format"`
+	Template   string          `toml:"template"`
+	Templates  []string        `toml:"templates"`
+	Timeout    config.Duration `toml:"timeout"`
+	Debug      bool            `toml:"debug"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -57,7 +58,7 @@ var sampleConfig = `
 `
 
 func (i *Instrumental) Connect() error {
-	connection, err := net.DialTimeout("tcp", i.Host+":8000", i.Timeout.Duration)
+	connection, err := net.DialTimeout("tcp", i.Host+":8000", time.Duration(i.Timeout))
 
 	if err != nil {
 		i.conn = nil
@@ -140,10 +141,10 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 			time := splitStat[2]
 
 			// replace invalid components of metric name with underscore
-			clean_metric := MetricNameReplacer.ReplaceAllString(name, "_")
+			cleanMetric := MetricNameReplacer.ReplaceAllString(name, "_")
 
 			if !ValueIncludesBadChar.MatchString(value) {
-				points = append(points, fmt.Sprintf("%s %s %s %s", metricType, clean_metric, value, time))
+				points = append(points, fmt.Sprintf("%s %s %s %s", metricType, cleanMetric, value, time))
 			}
 		}
 	}
@@ -176,7 +177,7 @@ func (i *Instrumental) SampleConfig() string {
 }
 
 func (i *Instrumental) authenticate(conn net.Conn) error {
-	_, err := fmt.Fprintf(conn, HandshakeFormat, i.ApiToken)
+	_, err := fmt.Fprintf(conn, HandshakeFormat, i.APIToken)
 	if err != nil {
 		return err
 	}
@@ -199,7 +200,7 @@ func init() {
 	outputs.Add("instrumental", func() telegraf.Output {
 		return &Instrumental{
 			Host:     DefaultHost,
-			Template: graphite.DEFAULT_TEMPLATE,
+			Template: graphite.DefaultTemplate,
 		}
 	})
 }

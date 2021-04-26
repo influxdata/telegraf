@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/go-github/v32/github"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/selfstat"
 	"golang.org/x/oauth2"
@@ -18,11 +18,11 @@ import (
 
 // GitHub - plugin main structure
 type GitHub struct {
-	Repositories      []string          `toml:"repositories"`
-	AccessToken       string            `toml:"access_token"`
-	AdditionalFields  []string          `toml:"additional_fields"`
-	EnterpriseBaseURL string            `toml:"enterprise_base_url"`
-	HTTPTimeout       internal.Duration `toml:"http_timeout"`
+	Repositories      []string        `toml:"repositories"`
+	AccessToken       string          `toml:"access_token"`
+	AdditionalFields  []string        `toml:"additional_fields"`
+	EnterpriseBaseURL string          `toml:"enterprise_base_url"`
+	HTTPTimeout       config.Duration `toml:"http_timeout"`
 	githubClient      *github.Client
 
 	obfuscatedToken string
@@ -73,7 +73,7 @@ func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error)
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: g.HTTPTimeout.Duration,
+		Timeout: time.Duration(g.HTTPTimeout),
 	}
 
 	g.obfuscatedToken = "Unauthenticated"
@@ -146,21 +146,21 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 			fields := getFields(repositoryInfo)
 
 			for _, field := range g.AdditionalFields {
-				addFields := make(map[string]interface{})
 				switch field {
 				case "pull-requests":
 					// Pull request properties
-					addFields, err = g.getPullRequestFields(ctx, owner, repository)
+					addFields, err := g.getPullRequestFields(ctx, owner, repository)
 					if err != nil {
 						acc.AddError(err)
 						continue
 					}
+
+					for k, v := range addFields {
+						fields[k] = v
+					}
 				default:
 					acc.AddError(fmt.Errorf("unknown additional field %q", field))
 					continue
-				}
-				for k, v := range addFields {
-					fields[k] = v
 				}
 			}
 
@@ -249,7 +249,7 @@ func (g *GitHub) getPullRequestFields(ctx context.Context, owner, repo string) (
 func init() {
 	inputs.Add("github", func() telegraf.Input {
 		return &GitHub{
-			HTTPTimeout: internal.Duration{Duration: time.Second * 5},
+			HTTPTimeout: config.Duration(time.Second * 5),
 		}
 	})
 }

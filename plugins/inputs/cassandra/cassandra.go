@@ -129,9 +129,7 @@ func (j javaMetric) addTagsFields(out map[string]interface{}) {
 	}
 }
 
-func addCassandraMetric(mbean string, c cassandraMetric,
-	values map[string]interface{}) {
-
+func addCassandraMetric(mbean string, c cassandraMetric, values map[string]interface{}) {
 	tags := make(map[string]string)
 	fields := make(map[string]interface{})
 	tokens := parseJmxMetricRequest(mbean)
@@ -139,11 +137,9 @@ func addCassandraMetric(mbean string, c cassandraMetric,
 	tags["cassandra_host"] = c.host
 	addValuesAsFields(values, fields, tags["mname"])
 	c.acc.AddFields(tokens["class"]+tokens["type"], fields, tags)
-
 }
 
 func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
-
 	r := out["request"]
 
 	tokens := parseJmxMetricRequest(r.(map[string]interface{})["mbean"].(string))
@@ -197,9 +193,9 @@ func (c *Cassandra) Description() string {
 	return "Read Cassandra metrics through Jolokia"
 }
 
-func (c *Cassandra) getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
+func (c *Cassandra) getAttr(requestURL *url.URL) (map[string]interface{}, error) {
 	// Create + send request
-	req, err := http.NewRequest("GET", requestUrl.String(), nil)
+	req, err := http.NewRequest("GET", requestURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +209,7 @@ func (c *Cassandra) getAttr(requestUrl *url.URL) (map[string]interface{}, error)
 	// Process response
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
-			requestUrl,
+			requestURL,
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
 			http.StatusOK,
@@ -292,24 +288,24 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Prepare URL
-			requestUrl, err := url.Parse("http://" + serverTokens["host"] + ":" +
+			requestURL, err := url.Parse("http://" + serverTokens["host"] + ":" +
 				serverTokens["port"] + context + metric)
 			if err != nil {
 				acc.AddError(err)
 				continue
 			}
 			if serverTokens["user"] != "" && serverTokens["passwd"] != "" {
-				requestUrl.User = url.UserPassword(serverTokens["user"],
+				requestURL.User = url.UserPassword(serverTokens["user"],
 					serverTokens["passwd"])
 			}
 
-			out, err := c.getAttr(requestUrl)
+			out, err := c.getAttr(requestURL)
 			if err != nil {
 				acc.AddError(err)
 				continue
 			}
 			if out["status"] != 200.0 {
-				acc.AddError(fmt.Errorf("provided URL returned with status %v - %s", out["status"], requestUrl))
+				acc.AddError(fmt.Errorf("provided URL returned with status %v - %s", out["status"], requestURL))
 				continue
 			}
 			m.addTagsFields(out)

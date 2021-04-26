@@ -8,7 +8,7 @@ import (
 
 	"github.com/Microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -24,7 +24,7 @@ type DiagnosticsMessageSubscriber interface {
 type ApplicationInsights struct {
 	InstrumentationKey      string            `toml:"instrumentation_key"`
 	EndpointURL             string            `toml:"endpoint_url"`
-	Timeout                 internal.Duration `toml:"timeout"`
+	Timeout                 config.Duration   `toml:"timeout"`
 	EnableDiagnosticLogging bool              `toml:"enable_diagnostic_logging"`
 	ContextTagSources       map[string]string `toml:"context_tag_sources"`
 	Log                     telegraf.Logger   `toml:"-"`
@@ -112,8 +112,8 @@ func (a *ApplicationInsights) Close() error {
 	select {
 	case <-a.transmitter.Close():
 		a.Log.Info("Closed")
-	case <-time.After(a.Timeout.Duration):
-		a.Log.Warnf("Close operation timed out after %v", a.Timeout.Duration)
+	case <-time.After(time.Duration(a.Timeout)):
+		a.Log.Warnf("Close operation timed out after %v", time.Duration(a.Timeout))
 	}
 
 	return nil
@@ -222,8 +222,8 @@ func (a *ApplicationInsights) addContextTags(metric telegraf.Metric, telemetry a
 func getFloat64TelemetryPropertyValue(
 	candidateFields []string,
 	metric telegraf.Metric,
-	usedFields *[]string) (float64, error) {
-
+	usedFields *[]string,
+) (float64, error) {
 	for _, fieldName := range candidateFields {
 		fieldValue, found := metric.GetField(fieldName)
 		if !found {
@@ -248,8 +248,8 @@ func getFloat64TelemetryPropertyValue(
 func getIntTelemetryPropertyValue(
 	candidateFields []string,
 	metric telegraf.Metric,
-	usedFields *[]string) (int, error) {
-
+	usedFields *[]string,
+) (int, error) {
 	for _, fieldName := range candidateFields {
 		fieldValue, found := metric.GetField(fieldName)
 		if !found {
@@ -337,7 +337,7 @@ func toInt(value interface{}) (int, error) {
 func init() {
 	outputs.Add("application_insights", func() telegraf.Output {
 		return &ApplicationInsights{
-			Timeout:           internal.Duration{Duration: time.Second * 5},
+			Timeout:           config.Duration(time.Second * 5),
 			diagMsgSubscriber: diagnosticsMessageSubscriber{},
 			// It is very common to set Cloud.RoleName and Cloud.RoleInstance context properties, hence initial capacity of two
 			ContextTagSources: make(map[string]string, 2),

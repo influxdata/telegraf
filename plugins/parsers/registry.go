@@ -15,8 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
+	"github.com/influxdata/telegraf/plugins/parsers/xml"
 )
 
 type ParserFunc func() (Parser, error)
@@ -150,6 +152,16 @@ type Config struct {
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
+
+	// Value configuration
+	ValueFieldName string `toml:"value_field_name"`
+
+	// XML configuration
+	XMLConfig []XMLConfig `toml:"xml"`
+}
+
+type XMLConfig struct {
+	xml.Config
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -174,7 +186,7 @@ func NewParser(config *Config) (Parser, error) {
 		)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
-			config.DataType, config.DefaultTags)
+			config.DataType, config.ValueFieldName, config.DefaultTags)
 	case "influx":
 		parser, err = NewInfluxParser()
 	case "nagios":
@@ -237,6 +249,10 @@ func NewParser(config *Config) (Parser, error) {
 		)
 	case "prometheus":
 		parser, err = NewPrometheusParser(config.DefaultTags)
+	case "prometheusremotewrite":
+		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
+	case "xml":
+		parser, err = NewXMLParser(config.MetricName, config.DefaultTags, config.XMLConfig)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -281,13 +297,10 @@ func NewGraphiteParser(
 func NewValueParser(
 	metricName string,
 	dataType string,
+	fieldName string,
 	defaultTags map[string]string,
 ) (Parser, error) {
-	return &value.ValueParser{
-		MetricName:  metricName,
-		DataType:    dataType,
-		DefaultTags: defaultTags,
-	}, nil
+	return value.NewValueParser(metricName, dataType, fieldName, defaultTags), nil
 }
 
 func NewCollectdParser(
@@ -347,6 +360,38 @@ func NewFormUrlencodedParser(
 
 func NewPrometheusParser(defaultTags map[string]string) (Parser, error) {
 	return &prometheus.Parser{
+		DefaultTags: defaultTags,
+	}, nil
+}
+
+func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, error) {
+	return &prometheusremotewrite.Parser{
+		DefaultTags: defaultTags,
+	}, nil
+}
+
+func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs []XMLConfig) (Parser, error) {
+	// Convert the config formats which is a one-to-one copy
+	configs := make([]xml.Config, len(xmlConfigs))
+	for i, cfg := range xmlConfigs {
+		configs[i].MetricName = metricName
+		configs[i].MetricQuery = cfg.MetricQuery
+		configs[i].Selection = cfg.Selection
+		configs[i].Timestamp = cfg.Timestamp
+		configs[i].TimestampFmt = cfg.TimestampFmt
+		configs[i].Tags = cfg.Tags
+		configs[i].Fields = cfg.Fields
+		configs[i].FieldsInt = cfg.FieldsInt
+
+		configs[i].FieldSelection = cfg.FieldSelection
+		configs[i].FieldNameQuery = cfg.FieldNameQuery
+		configs[i].FieldValueQuery = cfg.FieldValueQuery
+
+		configs[i].FieldNameExpand = cfg.FieldNameExpand
+	}
+
+	return &xml.Parser{
+		Configs:     configs,
 		DefaultTags: defaultTags,
 	}, nil
 }

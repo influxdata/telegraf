@@ -27,7 +27,7 @@ import (
 )
 
 func getMetric(t *testing.T) telegraf.Metric {
-	m, err := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
@@ -35,15 +35,15 @@ func getMetric(t *testing.T) telegraf.Metric {
 		},
 		time.Unix(0, 0),
 	)
-	require.NoError(t, err)
 	return m
 }
 
-func getMetrics(t *testing.T, count int) []telegraf.Metric {
+func getMetrics(t *testing.T) []telegraf.Metric {
+	const count = 100
 	var metrics = make([]telegraf.Metric, count)
 
 	for i := 0; i < count; i++ {
-		m, err := metric.New(
+		m := metric.New(
 			fmt.Sprintf("cpu-%d", i),
 			map[string]string{
 				"ec2_instance": "aws-129038123",
@@ -58,7 +58,6 @@ func getMetrics(t *testing.T, count int) []telegraf.Metric {
 			},
 			time.Unix(0, 0),
 		)
-		require.NoError(t, err)
 		metrics[i] = m
 	}
 	return metrics
@@ -95,7 +94,7 @@ func TestMethod(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 			require.NoError(t, err)
 
 			plugin := tt.plugin()
@@ -172,7 +171,7 @@ func TestStatusCode(t *testing.T) {
 				w.WriteHeader(tt.statusCode)
 			})
 
-			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 			require.NoError(t, err)
 
 			tt.plugin.SetSerializer(serializer)
@@ -198,7 +197,7 @@ func TestContentType(t *testing.T) {
 				s.headers = map[string]string{
 					contentTypeHeader: carbon2ContentType,
 				}
-				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 				require.NoError(t, err)
 				s.SetSerializer(sr)
 				return s
@@ -212,7 +211,7 @@ func TestContentType(t *testing.T) {
 				s.headers = map[string]string{
 					contentTypeHeader: carbon2ContentType,
 				}
-				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatMetricIncludesField))
+				sr, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatMetricIncludesField), carbon2.DefaultSanitizeReplaceChar)
 				require.NoError(t, err)
 				s.SetSerializer(sr)
 				return s
@@ -309,7 +308,7 @@ func TestContentEncodingGzip(t *testing.T) {
 				w.WriteHeader(http.StatusNoContent)
 			})
 
-			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 			require.NoError(t, err)
 
 			plugin := tt.plugin()
@@ -344,7 +343,7 @@ func TestDefaultUserAgent(t *testing.T) {
 			MaxRequstBodySize: Default().MaxRequstBodySize,
 		}
 
-		serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+		serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 		require.NoError(t, err)
 
 		plugin.SetSerializer(serializer)
@@ -450,8 +449,6 @@ func TestMaxRequestBodySize(t *testing.T) {
 	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
 	require.NoError(t, err)
 
-	const count = 100
-
 	testcases := []struct {
 		name                     string
 		plugin                   func() *SumoLogic
@@ -479,7 +476,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.URL = u.String()
 				return s
 			},
-			metrics:                  getMetrics(t, count),
+			metrics:                  getMetrics(t),
 			expectedError:            false,
 			expectedRequestCount:     1,
 			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
@@ -494,7 +491,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.MaxRequstBodySize = 43_749
 				return s
 			},
-			metrics:                  getMetrics(t, count),
+			metrics:                  getMetrics(t),
 			expectedError:            false,
 			expectedRequestCount:     2,
 			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
@@ -507,7 +504,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.MaxRequstBodySize = 10_000
 				return s
 			},
-			metrics:                  getMetrics(t, count),
+			metrics:                  getMetrics(t),
 			expectedError:            false,
 			expectedRequestCount:     5,
 			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
@@ -520,7 +517,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.MaxRequstBodySize = 5_000
 				return s
 			},
-			metrics:                  getMetrics(t, count),
+			metrics:                  getMetrics(t),
 			expectedError:            false,
 			expectedRequestCount:     10,
 			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
@@ -533,7 +530,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.MaxRequstBodySize = 2_500
 				return s
 			},
-			metrics:                  getMetrics(t, count),
+			metrics:                  getMetrics(t),
 			expectedError:            false,
 			expectedRequestCount:     20,
 			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
@@ -546,7 +543,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.MaxRequstBodySize = 1_000
 				return s
 			},
-			metrics:                  getMetrics(t, count),
+			metrics:                  getMetrics(t),
 			expectedError:            false,
 			expectedRequestCount:     50,
 			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
@@ -559,7 +556,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.MaxRequstBodySize = 500
 				return s
 			},
-			metrics:                  getMetrics(t, count),
+			metrics:                  getMetrics(t),
 			expectedError:            false,
 			expectedRequestCount:     100,
 			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
@@ -572,7 +569,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.MaxRequstBodySize = 300
 				return s
 			},
-			metrics:                  getMetrics(t, count),
+			metrics:                  getMetrics(t),
 			expectedError:            false,
 			expectedRequestCount:     100,
 			expectedMetricLinesCount: 500, // count (100) metrics, 5 lines per each (steal, idle, system, user, temp) = 500
@@ -595,7 +592,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+			serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 			require.NoError(t, err)
 
 			plugin := tt.plugin()
@@ -627,7 +624,7 @@ func TestTryingToSendEmptyMetricsDoesntFail(t *testing.T) {
 	plugin := Default()
 	plugin.URL = u.String()
 
-	serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate))
+	serializer, err := carbon2.NewSerializer(string(carbon2.Carbon2FormatFieldSeparate), carbon2.DefaultSanitizeReplaceChar)
 	require.NoError(t, err)
 	plugin.SetSerializer(serializer)
 

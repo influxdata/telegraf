@@ -2,7 +2,6 @@ package internal
 
 import (
 	"bufio"
-	"bytes"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -19,8 +18,6 @@ import (
 	"syscall"
 	"time"
 	"unicode"
-
-	"github.com/alecthomas/units"
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -33,20 +30,6 @@ var (
 
 // Set via the main module
 var version string
-
-// Duration just wraps time.Duration
-type Duration struct {
-	Duration time.Duration
-}
-
-// Size just wraps an int64
-type Size struct {
-	Size int64
-}
-
-type Number struct {
-	Value float64
-}
 
 type ReadWaitCloser struct {
 	pipeReader *io.PipeReader
@@ -71,72 +54,6 @@ func Version() string {
 func ProductToken() string {
 	return fmt.Sprintf("Telegraf/%s Go/%s",
 		Version(), strings.TrimPrefix(runtime.Version(), "go"))
-}
-
-// UnmarshalTOML parses the duration from the TOML config file
-func (d *Duration) UnmarshalTOML(b []byte) error {
-	var err error
-	b = bytes.Trim(b, `'`)
-
-	// see if we can directly convert it
-	d.Duration, err = time.ParseDuration(string(b))
-	if err == nil {
-		return nil
-	}
-
-	// Parse string duration, ie, "1s"
-	if uq, err := strconv.Unquote(string(b)); err == nil && len(uq) > 0 {
-		d.Duration, err = time.ParseDuration(uq)
-		if err == nil {
-			return nil
-		}
-	}
-
-	// First try parsing as integer seconds
-	sI, err := strconv.ParseInt(string(b), 10, 64)
-	if err == nil {
-		d.Duration = time.Second * time.Duration(sI)
-		return nil
-	}
-	// Second try parsing as float seconds
-	sF, err := strconv.ParseFloat(string(b), 64)
-	if err == nil {
-		d.Duration = time.Second * time.Duration(sF)
-		return nil
-	}
-
-	return nil
-}
-
-func (s *Size) UnmarshalTOML(b []byte) error {
-	var err error
-	b = bytes.Trim(b, `'`)
-
-	val, err := strconv.ParseInt(string(b), 10, 64)
-	if err == nil {
-		s.Size = val
-		return nil
-	}
-	uq, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	val, err = units.ParseStrictBytes(uq)
-	if err != nil {
-		return err
-	}
-	s.Size = val
-	return nil
-}
-
-func (n *Number) UnmarshalTOML(b []byte) error {
-	value, err := strconv.ParseFloat(string(b), 64)
-	if err != nil {
-		return err
-	}
-
-	n.Value = value
-	return nil
 }
 
 // ReadLines reads contents from a file and splits them by new lines.

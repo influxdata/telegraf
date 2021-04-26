@@ -3,13 +3,14 @@ package prometheusremotewrite
 import (
 	"bytes"
 	"fmt"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/prompb"
-	"strings"
-	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
@@ -140,6 +141,7 @@ http_request_duration_seconds_bucket{le="0.5"} 129389
 			})
 			require.NoError(t, err)
 			data, err := s.Serialize(tt.metric)
+			require.NoError(t, err)
 			actual, err := prompbToText(data)
 			require.NoError(t, err)
 
@@ -646,7 +648,10 @@ func prompbToText(data []byte) ([]byte, error) {
 	}
 	samples := protoToSamples(&req)
 	for _, sample := range samples {
-		buf.Write([]byte(fmt.Sprintf("%s %s\n", sample.Metric.String(), sample.Value.String())))
+		_, err = buf.Write([]byte(fmt.Sprintf("%s %s\n", sample.Metric.String(), sample.Value.String())))
+		if err != nil {
+			return nil, err
+		}
 	}
 	if err != nil {
 		return nil, err

@@ -13,9 +13,9 @@ type Zfs struct {
 	KstatMetrics   []string
 	PoolMetrics    bool
 	DatasetMetrics bool
-	sysctl         Sysctl
-	zpool          Zpool
-	zdataset       Zdataset
+	sysctl         Sysctl          //nolint:varcheck,unused // False positive - this var is used for non-default build tag: freebsd
+	zpool          Zpool           //nolint:varcheck,unused // False positive - this var is used for non-default build tag: freebsd
+	zdataset       Zdataset        //nolint:varcheck,unused // False positive - this var is used for non-default build tag: freebsd
 	Log            telegraf.Logger `toml:"-"`
 }
 

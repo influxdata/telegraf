@@ -15,7 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -33,14 +33,14 @@ type HTTPResponse struct {
 	HTTPProxy       string   `toml:"http_proxy"`
 	Body            string
 	Method          string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	HTTPHeaderTags  map[string]string `toml:"http_header_tags"`
 	Headers         map[string]string
 	FollowRedirects bool
 	// Absolute path to file with Bearer token
-	BearerToken         string        `toml:"bearer_token"`
-	ResponseBodyField   string        `toml:"response_body_field"`
-	ResponseBodyMaxSize internal.Size `toml:"response_body_max_size"`
+	BearerToken         string      `toml:"bearer_token"`
+	ResponseBodyField   string      `toml:"response_body_field"`
+	ResponseBodyMaxSize config.Size `toml:"response_body_max_size"`
 	ResponseStringMatch string
 	ResponseStatusCode  int
 	Interface           string
@@ -146,11 +146,11 @@ func (h *HTTPResponse) SampleConfig() string {
 var ErrRedirectAttempted = errors.New("redirect")
 
 // Set the proxy. A configured proxy overwrites the system wide proxy.
-func getProxyFunc(http_proxy string) func(*http.Request) (*url.URL, error) {
-	if http_proxy == "" {
+func getProxyFunc(httpProxy string) func(*http.Request) (*url.URL, error) {
+	if httpProxy == "" {
 		return http.ProxyFromEnvironment
 	}
-	proxyURL, err := url.Parse(http_proxy)
+	proxyURL, err := url.Parse(httpProxy)
 	if err != nil {
 		return func(_ *http.Request) (*url.URL, error) {
 			return nil, errors.New("bad proxy: " + err.Error())
@@ -161,9 +161,9 @@ func getProxyFunc(http_proxy string) func(*http.Request) (*url.URL, error) {
 	}
 }
 
-// createHttpClient creates an http client which will timeout at the specified
+// createHTTPClient creates an http client which will timeout at the specified
 // timeout period and can follow redirects if specified
-func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
+func (h *HTTPResponse) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := h.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -185,10 +185,10 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 			DisableKeepAlives: true,
 			TLSClientConfig:   tlsCfg,
 		},
-		Timeout: h.ResponseTimeout.Duration,
+		Timeout: time.Duration(h.ResponseTimeout),
 	}
 
-	if h.FollowRedirects == false {
+	if !h.FollowRedirects {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
@@ -217,8 +217,8 @@ func localAddress(interfaceName string) (net.Addr, error) {
 	return nil, fmt.Errorf("cannot create local address for interface %q", interfaceName)
 }
 
-func setResult(result_string string, fields map[string]interface{}, tags map[string]string) {
-	result_codes := map[string]int{
+func setResult(resultString string, fields map[string]interface{}, tags map[string]string) {
+	resultCodes := map[string]int{
 		"success":                       0,
 		"response_string_mismatch":      1,
 		"body_read_error":               2,
@@ -228,9 +228,9 @@ func setResult(result_string string, fields map[string]interface{}, tags map[str
 		"response_status_code_mismatch": 6,
 	}
 
-	tags["result"] = result_string
-	fields["result_type"] = result_string
-	fields["result_code"] = result_codes[result_string]
+	tags["result"] = resultString
+	fields["result_type"] = resultString
+	fields["result_code"] = resultCodes[resultString]
 }
 
 func setError(err error, fields map[string]interface{}, tags map[string]string) error {
@@ -239,18 +239,18 @@ func setError(err error, fields map[string]interface{}, tags map[string]string) 
 		return timeoutError
 	}
 
-	urlErr, isUrlErr := err.(*url.Error)
-	if !isUrlErr {
+	urlErr, isURLErr := err.(*url.Error)
+	if !isURLErr {
 		return nil
 	}
 
 	opErr, isNetErr := (urlErr.Err).(*net.OpError)
 	if isNetErr {
 		switch e := (opErr.Err).(type) {
-		case (*net.DNSError):
+		case *net.DNSError:
 			setResult("dns_error", fields, tags)
 			return e
-		case (*net.ParseError):
+		case *net.ParseError:
 			// Parse error has to do with parsing of IP addresses, so we
 			// group it with address errors
 			setResult("address_error", fields, tags)
@@ -299,7 +299,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	// Start Timer
 	start := time.Now()
 	resp, err := h.client.Do(request)
-	response_time := time.Since(start).Seconds()
+	responseTime := time.Since(start).Seconds()
 
 	// If an error in returned, it means we are dealing with a network error, as
 	// HTTP error codes do not generate errors in the net/http library
@@ -308,20 +308,16 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 		h.Log.Debugf("Network error while polling %s: %s", u, err.Error())
 
 		// Get error details
-		netErr := setError(err, fields, tags)
-
-		// If recognize the returned error, get out
-		if netErr != nil {
-			return fields, tags, nil
+		if setError(err, fields, tags) == nil {
+			// Any error not recognized by `set_error` is considered a "connection_failed"
+			setResult("connection_failed", fields, tags)
 		}
 
-		// Any error not recognized by `set_error` is considered a "connection_failed"
-		setResult("connection_failed", fields, tags)
 		return fields, tags, nil
 	}
 
 	if _, ok := fields["response_time"]; !ok {
-		fields["response_time"] = response_time
+		fields["response_time"] = responseTime
 	}
 
 	// This function closes the response body, as
@@ -340,12 +336,12 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	tags["status_code"] = strconv.Itoa(resp.StatusCode)
 	fields["http_response_code"] = resp.StatusCode
 
-	if h.ResponseBodyMaxSize.Size == 0 {
-		h.ResponseBodyMaxSize.Size = defaultResponseBodyMaxSize
+	if h.ResponseBodyMaxSize == 0 {
+		h.ResponseBodyMaxSize = config.Size(defaultResponseBodyMaxSize)
 	}
-	bodyBytes, err := ioutil.ReadAll(io.LimitReader(resp.Body, h.ResponseBodyMaxSize.Size+1))
+	bodyBytes, err := ioutil.ReadAll(io.LimitReader(resp.Body, int64(h.ResponseBodyMaxSize)+1))
 	// Check first if the response body size exceeds the limit.
-	if err == nil && int64(len(bodyBytes)) > h.ResponseBodyMaxSize.Size {
+	if err == nil && int64(len(bodyBytes)) > int64(h.ResponseBodyMaxSize) {
 		h.setBodyReadError("The body of the HTTP Response is too large", bodyBytes, fields, tags)
 		return fields, tags, nil
 	} else if err != nil {
@@ -396,8 +392,8 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 }
 
 // Set result in case of a body read error
-func (h *HTTPResponse) setBodyReadError(error_msg string, bodyBytes []byte, fields map[string]interface{}, tags map[string]string) {
-	h.Log.Debugf(error_msg)
+func (h *HTTPResponse) setBodyReadError(errorMsg string, bodyBytes []byte, fields map[string]interface{}, tags map[string]string) {
+	h.Log.Debugf(errorMsg)
 	setResult("body_read_error", fields, tags)
 	fields["content_length"] = len(bodyBytes)
 	if h.ResponseStringMatch != "" {
@@ -412,13 +408,13 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		var err error
 		h.compiledStringMatch, err = regexp.Compile(h.ResponseStringMatch)
 		if err != nil {
-			return fmt.Errorf("Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
+			return fmt.Errorf("failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
 		}
 	}
 
 	// Set default values
-	if h.ResponseTimeout.Duration < time.Second {
-		h.ResponseTimeout.Duration = time.Second * 5
+	if h.ResponseTimeout < config.Duration(time.Second) {
+		h.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 	// Check send and expected string
 	if h.Method == "" {
@@ -435,7 +431,7 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if h.client == nil {
-		client, err := h.createHttpClient()
+		client, err := h.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -450,7 +446,7 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if addr.Scheme != "http" && addr.Scheme != "https" {
-			acc.AddError(errors.New("Only http and https are supported"))
+			acc.AddError(errors.New("only http and https are supported"))
 			continue
 		}
 

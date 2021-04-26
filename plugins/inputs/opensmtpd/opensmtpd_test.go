@@ -3,17 +3,14 @@ package opensmtpd
 import (
 	"bytes"
 	"testing"
-	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
-var TestTimeout = internal.Duration{Duration: time.Second}
-
-func SmtpCTL(output string, Timeout internal.Duration, useSudo bool) func(string, internal.Duration, bool) (*bytes.Buffer, error) {
-	return func(string, internal.Duration, bool) (*bytes.Buffer, error) {
+func SMTPCTL(output string) func(string, config.Duration, bool) (*bytes.Buffer, error) {
+	return func(string, config.Duration, bool) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -21,7 +18,7 @@ func SmtpCTL(output string, Timeout internal.Duration, useSudo bool) func(string
 func TestFilterSomeStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Opensmtpd{
-		run: SmtpCTL(fullOutput, TestTimeout, false),
+		run: SMTPCTL(fullOutput),
 	}
 	err := v.Gather(acc)
 
