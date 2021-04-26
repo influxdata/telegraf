@@ -51,7 +51,7 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var lv_attrs string = "lv_size,lv_metadata_size,data_percent,metadata_percent,thin_count"
-	var lvdisplay_args = []string{"-C", "-o", lv_attrs, "--units", "m", "--separator", "':'", "--noheadings", p.Path}
+	var lvdisplay_args = []string{"-C", "-o", lv_attrs, "--units", "m", "--separator", ",", "--noheadings", p.Path}
 	args = append(args, lvdisplay_args...)
 		
 	// execute lvdisplay
@@ -60,13 +60,13 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("Failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
-	data := strings.Split(string(out), ":")
+	data := strings.Split(string(out), ",")
 
 	// extract values
 	var dataParsed [4] float64
 	var thinCount uint64
 	for i, d := range data {
-		d = strings.Trim(d, "' m\n")
+		d = strings.Trim(d, " m\n")
 		if i < 4 {
 			dp, err := strconv.ParseFloat(d, 64)
 			dataParsed[i] = dp
@@ -81,26 +81,6 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 	}
-	// lvSize, err := strconv.ParseFloat(strings.TrimSuffix(data[0], "m"), 64)
-	// if err != nil {
-	// 	acc.AddError(err)
-	// }
-	// lvMetadata, err := strconv.ParseFloat(strings.TrimSuffix(data[1], "m"), 64)
-	// if err != nil {
-	// 	acc.AddError(err)
-	// }
-	// usedData, err := strconv.ParseFloat(data[2], 64)
-	// if err != nil {
-	// 	acc.AddError(err)
-	// }
-	// usedMetadata, err := strconv.ParseFloat(data[3], 64)
-	// if err != nil {
-	// 	acc.AddError(err)
-	// }
-	// thinCount, err := strconv.ParseUint(data[4], 10, 64)
-	// if err != nil {
-	// 	acc.AddError(err)
-	// }
 
 	fields := map[string]interface{}{
 		"lv_size": dataParsed[0],
