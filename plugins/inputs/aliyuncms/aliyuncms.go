@@ -11,13 +11,14 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cms"
+	"github.com/jmespath/go-jmespath"
+	"github.com/pkg/errors"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/jmespath/go-jmespath"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -161,7 +162,7 @@ type (
 		dtLock               sync.Mutex                   //Guard for discoveryTags & dimensions
 		discoveryTags        map[string]map[string]string //Internal data structure that can enrich metrics with tags
 		dimensionsUdObj      map[string]string
-		dimensionsUdArr      []map[string]string //Parsed Dimesnsions JSON string (unmarshalled)
+		dimensionsUdArr      []map[string]string //Parsed Dimensions JSON string (unmarshalled)
 		requestDimensions    []map[string]string //this is the actual dimensions list that would be used in API request
 		requestDimensionsStr string              //String representation of the above
 
@@ -239,7 +240,7 @@ func (s *AliyunCMS) Init() error {
 
 	//Init discovery...
 	if s.dt == nil { //Support for tests
-		s.dt, err = NewDiscoveryTool(s.DiscoveryRegions, s.Project, s.Log, credential, int(float32(s.RateLimit)*0.2), time.Duration(s.DiscoveryInterval))
+		s.dt, err = newDiscoveryTool(s.DiscoveryRegions, s.Project, s.Log, credential, int(float32(s.RateLimit)*0.2), time.Duration(s.DiscoveryInterval))
 		if err != nil {
 			s.Log.Errorf("Discovery tool is not activated: %v", err)
 			s.dt = nil
@@ -395,8 +396,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 }
 
 //Tag helper
-func parseTag(tagSpec string, data interface{}) (string, string, error) {
-	tagKey := tagSpec
+func parseTag(tagSpec string, data interface{}) (tagKey string, tagValue string, err error) {
 	queryPath := tagSpec
 
 	//Split query path to tagKey and query path
