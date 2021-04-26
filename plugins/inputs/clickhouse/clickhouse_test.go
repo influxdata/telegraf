@@ -30,7 +30,6 @@ func TestClusterIncludeExcludeFilter(t *testing.T) {
 	ch.ClusterExclude = []string{"cluster1", "cluster2"}
 	ch.ClusterInclude = []string{}
 	require.Equal(t, "WHERE cluster NOT IN ('cluster1', 'cluster2')", ch.clusterIncludeExcludeFilter())
-
 }
 
 func TestChInt64(t *testing.T) {
