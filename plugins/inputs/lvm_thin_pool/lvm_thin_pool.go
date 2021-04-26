@@ -13,7 +13,7 @@ import (
 // LvmThinPool is a telegraf plugin to gather information about lvm thin pools
 type LvmThinPool struct {
 	UseSudo bool
-	path string
+	Path string
 }
 
 const measurement = "lvm_thin_pool"
@@ -51,14 +51,14 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var lv_attrs string = "lv_size,lv_metadata_size,data_percent,metadata_percent,thin_count"
-	var lvdisplay_args = []string{"-C", "-o", lv_attrs, "--units", "m", "--separator", ":", "--noheadings", p.path}
+	var lvdisplay_args = []string{"-C", "-o", lv_attrs, "--units", "m", "--separator", "':'", "--noheadings", p.Path}
 	args = append(args, lvdisplay_args...)
 		
 	// execute lvdisplay
 	cmd := exec.Command(cmdName, args...)
 	out, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+		return fmt.Errorf("Failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
 	data := strings.Split(string(out), ":")
 
@@ -92,7 +92,7 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 		"thin_count": thinCount,
 	}
 	tags := map[string]string{
-		"path":  p.path,
+		"path":  p.Path,
 	}
 	acc.AddCounter(measurement, fields, tags)
 
