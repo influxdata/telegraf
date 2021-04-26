@@ -83,14 +83,14 @@ func evalStatusLine(deviceLine, statusLine string) (active, total, size int64, e
 		return 0, total, size, nil
 	}
 
-	total, err = strconv.ParseInt(matches[2], 10, 64)
-	if err != nil {
-		return 0, 0, size, fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
-	}
-
 	matches := statusLineRE.FindStringSubmatch(statusLine)
 	if len(matches) != 4 {
 		return 0, total, size, fmt.Errorf("couldn't find all the substring matches: %s", statusLine)
+	}
+
+	total, err = strconv.ParseInt(matches[2], 10, 64)
+	if err != nil {
+		return 0, 0, size, fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
 	}
 
 	active, err = strconv.ParseInt(matches[3], 10, 64)
