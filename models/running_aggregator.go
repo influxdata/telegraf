@@ -49,7 +49,7 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 	SetLoggerOnPlugin(aggregator, logger)
 
 	a := &RunningAggregator{
-		ID:         nextPluginID(),
+		ID:         NextPluginID(),
 		Aggregator: aggregator,
 		Config:     config,
 		MetricsPushed: selfstat.Register(
@@ -136,7 +136,6 @@ func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 func (r *RunningAggregator) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 	defer func() {
 		if !r.Config.DropOriginal && len(m.FieldList()) > 0 {
-			// m.Drop()
 			acc.AddMetric(m)
 		}
 	}()

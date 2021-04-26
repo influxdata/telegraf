@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -12,7 +13,8 @@ import (
 
 func TestConfigDuration(t *testing.T) {
 	c := config.NewConfig()
-	err := c.LoadConfigData([]byte(`
+	c.SetAgent(&testAgentController{})
+	err := c.LoadConfigData(context.Background(), context.Background(), []byte(`
 [[processors.reverse_dns]]
   cache_ttl = "3h"
   lookup_timeout = "17s"
@@ -23,8 +25,8 @@ func TestConfigDuration(t *testing.T) {
     dest = "source_name"
 `))
 	require.NoError(t, err)
-	require.Len(t, c.Processors, 1)
-	p := c.Processors[0].(*models.RunningProcessor).Processor.(*reverse_dns.ReverseDNS)
+	require.Len(t, c.Processors(), 1)
+	p := c.Processors()[0].(*models.RunningProcessor).Processor.(*reverse_dns.ReverseDNS)
 	require.EqualValues(t, p.CacheTTL, 3*time.Hour)
 	require.EqualValues(t, p.LookupTimeout, 17*time.Second)
 	require.Equal(t, p.MaxParallelLookups, 13)

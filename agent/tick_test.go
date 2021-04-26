@@ -36,10 +36,8 @@ func TestAlignedTicker(t *testing.T) {
 
 	clock.Add(10 * time.Second)
 	for !clock.Now().After(until) {
-		select {
-		case tm := <-ticker.Elapsed():
-			actual = append(actual, tm.UTC())
-		}
+		tm := <-ticker.Elapsed()
+		actual = append(actual, tm.UTC())
 		clock.Add(10 * time.Second)
 	}
 

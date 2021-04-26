@@ -1,111 +1,93 @@
 package agent
 
 import (
+	"context"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf/config"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAgent_OmitHostname(t *testing.T) {
 	c := config.NewConfig()
 	c.Agent.OmitHostname = true
-	_, err := NewAgent(c)
-	assert.NoError(t, err)
-	assert.NotContains(t, c.Tags, "host")
+	NewAgent(context.Background(), c)
+	require.NotContains(t, c.Tags, "host")
 }
 
 func TestAgent_LoadPlugin(t *testing.T) {
 	c := config.NewConfig()
 	c.InputFilters = []string{"mysql"}
-	err := c.LoadConfig("../config/testdata/telegraf-agent.toml")
-	assert.NoError(t, err)
-	a, _ := NewAgent(c)
-	assert.Equal(t, 1, len(a.Config.Inputs))
+	a := NewAgent(context.Background(), c)
+	c.SetAgent(a)
+	err := c.LoadConfig(context.Background(), context.Background(), "../config/testdata/telegraf-agent.toml")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(a.Config.Inputs()))
 
 	c = config.NewConfig()
 	c.InputFilters = []string{"foo"}
-	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
-	assert.NoError(t, err)
-	a, _ = NewAgent(c)
-	assert.Equal(t, 0, len(a.Config.Inputs))
+	a = NewAgent(context.Background(), c)
+	c.SetAgent(a)
+	err = c.LoadConfig(context.Background(), context.Background(), "../config/testdata/telegraf-agent.toml")
+	require.NoError(t, err)
+	require.Equal(t, 0, len(a.Config.Inputs()))
 
 	c = config.NewConfig()
 	c.InputFilters = []string{"mysql", "foo"}
-	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
-	assert.NoError(t, err)
-	a, _ = NewAgent(c)
-	assert.Equal(t, 1, len(a.Config.Inputs))
+	a = NewAgent(context.Background(), c)
+	c.SetAgent(a)
+	err = c.LoadConfig(context.Background(), context.Background(), "../config/testdata/telegraf-agent.toml")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(a.Config.Inputs()))
 
 	c = config.NewConfig()
 	c.InputFilters = []string{"mysql", "redis"}
-	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
-	assert.NoError(t, err)
-	a, _ = NewAgent(c)
-	assert.Equal(t, 2, len(a.Config.Inputs))
+	a = NewAgent(context.Background(), c)
+	c.SetAgent(a)
+	err = c.LoadConfig(context.Background(), context.Background(), "../config/testdata/telegraf-agent.toml")
+	require.NoError(t, err)
+	require.Equal(t, 2, len(a.Config.Inputs()))
 
 	c = config.NewConfig()
 	c.InputFilters = []string{"mysql", "foo", "redis", "bar"}
-	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
-	assert.NoError(t, err)
-	a, _ = NewAgent(c)
-	assert.Equal(t, 2, len(a.Config.Inputs))
+	a = NewAgent(context.Background(), c)
+	c.SetAgent(a)
+	err = c.LoadConfig(context.Background(), context.Background(), "../config/testdata/telegraf-agent.toml")
+	require.NoError(t, err)
+	require.Equal(t, 2, len(a.Config.Inputs()))
 }
 
 func TestAgent_LoadOutput(t *testing.T) {
-	c := config.NewConfig()
-	c.OutputFilters = []string{"influxdb"}
-	err := c.LoadConfig("../config/testdata/telegraf-agent.toml")
-	assert.NoError(t, err)
-	a, _ := NewAgent(c)
-	assert.Equal(t, 2, len(a.Config.Outputs))
-
-	c = config.NewConfig()
-	c.OutputFilters = []string{"kafka"}
-	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
-	assert.NoError(t, err)
-	a, _ = NewAgent(c)
-	assert.Equal(t, 1, len(a.Config.Outputs))
-
-	c = config.NewConfig()
-	c.OutputFilters = []string{}
-	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
-	assert.NoError(t, err)
-	a, _ = NewAgent(c)
-	assert.Equal(t, 3, len(a.Config.Outputs))
-
-	c = config.NewConfig()
-	c.OutputFilters = []string{"foo"}
-	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
-	assert.NoError(t, err)
-	a, _ = NewAgent(c)
-	assert.Equal(t, 0, len(a.Config.Outputs))
-
-	c = config.NewConfig()
-	c.OutputFilters = []string{"influxdb", "foo"}
-	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
-	assert.NoError(t, err)
-	a, _ = NewAgent(c)
-	assert.Equal(t, 2, len(a.Config.Outputs))
-
-	c = config.NewConfig()
-	c.OutputFilters = []string{"influxdb", "kafka"}
-	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
-	assert.NoError(t, err)
-	assert.Equal(t, 3, len(c.Outputs))
-	a, _ = NewAgent(c)
-	assert.Equal(t, 3, len(a.Config.Outputs))
-
-	c = config.NewConfig()
-	c.OutputFilters = []string{"influxdb", "foo", "kafka", "bar"}
-	err = c.LoadConfig("../config/testdata/telegraf-agent.toml")
-	assert.NoError(t, err)
-	a, _ = NewAgent(c)
-	assert.Equal(t, 3, len(a.Config.Outputs))
+	tests := []struct {
+		OutputFilters   []string
+		ExpectedOutputs int
+	}{
+		{OutputFilters: []string{"influxdb"}, ExpectedOutputs: 2}, // two instances in toml
+		{OutputFilters: []string{"kafka"}, ExpectedOutputs: 1},
+		{OutputFilters: []string{}, ExpectedOutputs: 3},
+		{OutputFilters: []string{"foo"}, ExpectedOutputs: 0},
+		{OutputFilters: []string{"influxdb", "foo"}, ExpectedOutputs: 2},
+		{OutputFilters: []string{"influxdb", "kafka"}, ExpectedOutputs: 3},
+		{OutputFilters: []string{"influxdb", "foo", "kafka", "bar"}, ExpectedOutputs: 3},
+	}
+	for _, test := range tests {
+		name := strings.Join(test.OutputFilters, "-")
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			c := config.NewConfig()
+			c.OutputFilters = test.OutputFilters
+			a := NewAgent(ctx, c)
+			c.SetAgent(a)
+			err := c.LoadConfig(context.Background(), context.Background(), "../config/testdata/telegraf-agent.toml")
+			require.NoError(t, err)
+			require.Len(t, a.Config.Outputs(), test.ExpectedOutputs)
+		})
+	}
 }
 
 func TestWindow(t *testing.T) {

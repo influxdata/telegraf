@@ -40,7 +40,7 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 	SetLoggerOnPlugin(input, logger)
 
 	return &RunningInput{
-		ID:     nextPluginID(),
+		ID:     NextPluginID(),
 		Input:  input,
 		Config: config,
 		MetricsGathered: selfstat.Register(

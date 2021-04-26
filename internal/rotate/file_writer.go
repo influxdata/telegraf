@@ -4,6 +4,7 @@ package rotate
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -134,7 +135,7 @@ func (w *FileWriter) rotateIfNeeded() error {
 		(w.maxSizeInBytes > 0 && w.bytesWritten >= w.maxSizeInBytes) {
 		if err := w.rotate(); err != nil {
 			//Ignore rotation errors and keep the log open
-			fmt.Printf("unable to rotate the file '%s', %s", w.filename, err.Error())
+			log.Printf("E! [agent] unable to rotate the file '%s', %s", w.filename, err.Error())
 		}
 		return w.openCurrent()
 	}

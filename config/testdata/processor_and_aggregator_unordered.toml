@@ -1,0 +1,11 @@
+[[inputs.file]]
+[[aggregators.minmax]]
+  alias = "one"
+[[processors.rename]]
+  alias = "two"
+[[aggregators.minmax]]
+  alias = "three"
+[[processors.rename]]
+  alias = "four"
+  order = 4
+[[outputs.file]]

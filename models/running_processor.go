@@ -38,7 +38,7 @@ func NewRunningProcessor(processor telegraf.StreamingProcessor, config *Processo
 	SetLoggerOnPlugin(processor, logger)
 
 	p := &RunningProcessor{
-		ID:        nextPluginID(),
+		ID:        NextPluginID(),
 		Processor: processor,
 		Config:    config,
 		log:       logger,

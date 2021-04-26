@@ -68,8 +68,7 @@ func (f *File) Connect() error {
 		if file == "stdout" {
 			writers = append(writers, os.Stdout)
 		} else {
-			of, err := rotate.NewFileWriter(
-				file, f.RotationInterval.Duration, f.RotationMaxSize.Size, f.RotationMaxArchives)
+			of, err := rotate.NewFileWriter(file, f.RotationInterval.Duration, f.RotationMaxSize.Size, f.RotationMaxArchives)
 			if err != nil {
 				return err
 			}

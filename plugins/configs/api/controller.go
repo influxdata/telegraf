@@ -1,4 +1,4 @@
-package configapi
+package api
 
 import (
 	"context"
@@ -19,10 +19,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-// API is the main interaction with this package
-// This is set by telegraf when it loads up.
-var API *api
-
 // api is the general interface to interacting with Telegraf's current config
 type api struct {
 	agent  config.AgentController
@@ -34,23 +30,28 @@ type api struct {
 }
 
 func newAPI(ctx context.Context, cfg *config.Config, agent config.AgentController) (_ *api, outputCancel context.CancelFunc) {
-	API = &api{
+	c := &api{
 		config: cfg,
 		agent:  agent,
 		ctx:    ctx,
 	}
-	API.outputCtx, outputCancel = context.WithCancel(context.Background())
-	return API, outputCancel
+	c.outputCtx, outputCancel = context.WithCancel(context.Background())
+	return c, outputCancel
 }
 
 // PluginConfig is a plugin name and details about the config fields.
-type PluginConfig struct {
+type PluginConfigTypeInfo struct {
 	Name   string
 	Config map[string]FieldConfig
 }
 
+type PluginConfig struct {
+	ID string // unique identifer
+	PluginConfigCreate
+}
+
 type PluginConfigCreate struct {
-	Name   string
+	Name   string                 // name of the plugin
 	Config map[string]interface{} // map field name to field value
 }
 
@@ -90,8 +91,8 @@ type Plugin struct {
 	Config map[string]FieldConfig
 }
 
-func (a *api) ListPluginTypes() []PluginConfig {
-	result := []PluginConfig{}
+func (a *api) ListPluginTypes() []PluginConfigTypeInfo {
+	result := []PluginConfigTypeInfo{}
 	inputNames := []string{}
 	for name := range inputs.Inputs {
 		inputNames = append(inputNames, name)
@@ -100,7 +101,7 @@ func (a *api) ListPluginTypes() []PluginConfig {
 
 	for _, name := range inputNames {
 		creator := inputs.Inputs[name]
-		cfg := PluginConfig{
+		cfg := PluginConfigTypeInfo{
 			Name:   name,
 			Config: map[string]FieldConfig{},
 		}
@@ -110,6 +111,7 @@ func (a *api) ListPluginTypes() []PluginConfig {
 
 		result = append(result, cfg)
 	}
+	// TODO: add more types?
 	return result
 }
 
@@ -150,11 +152,12 @@ func (a *api) ListRunningPlugins() (runningPlugins []Plugin) {
 		runningPlugins = append(runningPlugins, p)
 
 	}
+	// TODO: add more types?
 	return runningPlugins
 }
 
 func (a *api) UpdatePlugin(ID models.PluginID, config PluginConfigCreate) error {
-	// check config, call init.
+	// TODO: shut down plugin and start a new plugin with the same id.
 	return nil
 }
 
@@ -187,13 +190,9 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 			return models.PluginID(""), fmt.Errorf("could not initialize plugin %w", err)
 		}
 
-		if err := a.agent.StartInput(rp); err != nil {
-			return models.PluginID(""), fmt.Errorf("Could not start input: %w", err)
-		}
+		a.agent.AddInput(rp)
 
-		go func(rp *models.RunningInput) {
-			a.agent.RunInput(rp, time.Now())
-		}(rp)
+		go a.agent.RunInput(rp, time.Now())
 
 		return idToString(rp.ID), nil
 	case "outputs":
@@ -220,13 +219,9 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 			return models.PluginID(""), fmt.Errorf("could not initialize plugin %w", err)
 		}
 
-		if err := a.agent.StartOutput(ro); err != nil {
-			return models.PluginID(""), fmt.Errorf("Could not start input: %w", err)
-		}
+		a.agent.AddOutput(ro)
 
-		go func(ro *models.RunningOutput) {
-			a.agent.RunOutput(a.outputCtx, ro)
-		}(ro)
+		go a.agent.RunOutput(a.outputCtx, ro)
 
 		return idToString(ro.ID), nil
 	case "processors", "aggregators":
@@ -252,13 +247,9 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 			return models.PluginID(""), fmt.Errorf("could not initialize plugin %w", err)
 		}
 
-		if err := a.agent.StartProcessor(rp); err != nil {
-			return models.PluginID(""), fmt.Errorf("Could not start input: %w", err)
-		}
+		a.agent.AddProcessor(rp)
 
-		go func(rp *models.RunningProcessor) {
-			a.agent.RunProcessor(rp)
-		}(rp)
+		go a.agent.RunProcessor(rp)
 
 		return idToString(rp.ID), nil
 	default:

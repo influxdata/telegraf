@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -13,7 +12,6 @@ import (
 	"sort"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
@@ -21,11 +19,15 @@ import (
 	"github.com/influxdata/telegraf/internal/goplugin"
 	"github.com/influxdata/telegraf/logger"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
+	_ "github.com/influxdata/telegraf/plugins/configs"
+	_ "github.com/influxdata/telegraf/plugins/configs/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
+	_ "github.com/influxdata/telegraf/plugins/storage"
+	_ "github.com/influxdata/telegraf/plugins/storage/all"
 )
 
 // If you update these, update usage.go and usage_windows.go
@@ -124,23 +126,13 @@ func runAgent(ctx context.Context,
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-	err := c.LoadConfig(*fConfig)
-	if err != nil {
-		return err
-	}
 
-	if *fConfigDirectory != "" {
-		err = c.LoadDirectory(*fConfigDirectory)
-		if err != nil {
-			return err
-		}
-	}
-	if !*fTest && len(c.Outputs) == 0 {
-		return errors.New("Error: no outputs found, did you provide a valid config file?")
-	}
-	if *fPlugins == "" && len(c.Inputs) == 0 {
-		return errors.New("Error: no inputs found, did you provide a valid config file?")
-	}
+	// if !*fTest && len(c.Outputs) == 0 {
+	// 	return errors.New("Error: no outputs found, did you provide a valid config file?")
+	// }
+	// if *fPlugins == "" && len(c.Inputs) == 0 {
+	// 	return errors.New("Error: no inputs found, did you provide a valid config file?")
+	// }
 
 	if int64(c.Agent.Interval.Duration) <= 0 {
 		return fmt.Errorf("Agent interval must be positive, found %s",
@@ -152,9 +144,21 @@ func runAgent(ctx context.Context,
 			c.Agent.Interval.Duration)
 	}
 
-	ag, err := agent.NewAgent(c)
+	ag := agent.NewAgent(ctx, c)
+	c.SetAgent(ag)
+	outputCtx, outputCancel := context.WithCancel(context.Background())
+	defer outputCancel()
+
+	err := c.LoadConfig(ctx, outputCtx, *fConfig)
 	if err != nil {
 		return err
+	}
+
+	if *fConfigDirectory != "" {
+		err = c.LoadDirectory(ctx, outputCtx, *fConfigDirectory)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Setup logging as configured.
@@ -171,13 +175,13 @@ func runAgent(ctx context.Context,
 	logger.SetupLogging(logConfig)
 
 	if *fRunOnce {
-		wait := time.Duration(*fTestWait) * time.Second
-		return ag.Once(ctx, wait)
+		// wait := time.Duration(*fTestWait) * time.Second
+		// return ag.Once(ctx, wait)
 	}
 
 	if *fTest || *fTestWait != 0 {
-		wait := time.Duration(*fTestWait) * time.Second
-		return ag.Test(ctx, wait)
+		// wait := time.Duration(*fTestWait) * time.Second
+		// return ag.Test(ctx, wait)
 	}
 
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
@@ -204,7 +208,8 @@ func runAgent(ctx context.Context,
 		}
 	}
 
-	return ag.Run(ctx)
+	ag.RunWithAPI(outputCancel)
+	return nil
 }
 
 func usageExit(rc int) {

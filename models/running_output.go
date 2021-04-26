@@ -90,7 +90,7 @@ func NewRunningOutput(
 	}
 
 	ro := &RunningOutput{
-		ID:                nextPluginID(),
+		ID:                NextPluginID(),
 		buffer:            NewBuffer(config.Name, config.Alias, bufferLimit),
 		BatchReady:        make(chan time.Time, 1),
 		Output:            output,

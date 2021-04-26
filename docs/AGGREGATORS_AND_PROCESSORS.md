@@ -65,3 +65,20 @@ the plugin receives, you can make use of `taginclude` to group
 aggregates by specific tags only.
 
 **Note:** Aggregator plugins only aggregate metrics within their periods (`now() - period`). Data with a timestamp earlier than `now() - period` cannot be included.
+
+
+  +------------+                     Processors and aggregators can be ordered                     +--------+
+  | Input      +---+                        and chained arbitrarily                           +--->+ Output |
+  +------------+   |                                                                          |    +--------+
+                   |                                                                          |
+  +------------+   |   +-----------+    +------------+      +-----------+    +------------+   |    +--------+
+  | Input      +------>+ Processor +--->+ Aggregator +----->+ Processor +--->+ Aggregator +-->---->+ Output |
+  +------------+   |   +-----------+    +------------+      +-----------+    +------------+   |    +--------+
+                   |                                                                          |
+  +------------+   |                                                                          |    +--------+
+  | Input      +---+                                                                          +--->+ Output |
+  +------------+   |                                                                          |    +--------+
+                   |                                                                          |
+  +------------+   |                                                                          |    +--------+
+  | Input      +---+                                                                          +--->+ Output |
+  +------------+                                                                                   +--------+

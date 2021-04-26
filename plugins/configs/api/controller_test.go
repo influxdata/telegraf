@@ -1,4 +1,4 @@
-package configapi
+package api
 
 import (
 	"context"
@@ -29,18 +29,18 @@ import (
 // for type information to build a schema.
 func TestListPluginTypes(t *testing.T) {
 	cfg := config.NewConfig() // initalizes API
-	a, err := agent.NewAgent(cfg)
-	require.NoError(t, err)
+	a := agent.NewAgent(context.Background(), cfg)
 
-	newAPI(context.Background(), cfg, a)
+	api, cancel := newAPI(context.Background(), cfg, a)
+	defer cancel()
 
-	pluginConfigs := API.ListPluginTypes()
+	pluginConfigs := api.ListPluginTypes()
 	require.Greater(t, len(pluginConfigs), 10)
 	// b, _ := json.Marshal(pluginConfigs)
 	// fmt.Println(string(b))
 
 	// find the gnmi plugin
-	var gnmi PluginConfig
+	var gnmi PluginConfigTypeInfo
 	for _, conf := range pluginConfigs {
 		if conf.Name == "gnmi" {
 			gnmi = conf
@@ -49,7 +49,7 @@ func TestListPluginTypes(t *testing.T) {
 	}
 
 	// find the cloudwatch plugin
-	var cloudwatch PluginConfig
+	var cloudwatch PluginConfigTypeInfo
 	for _, conf := range pluginConfigs {
 		if conf.Name == "cloudwatch" {
 			cloudwatch = conf
@@ -86,22 +86,22 @@ func TestListPluginTypes(t *testing.T) {
 }
 
 func TestInputPluginLifecycle(t *testing.T) {
-	cfg := config.NewConfig() // initalizes API
-	a, err := agent.NewAgent(cfg)
-	require.NoError(t, err)
-	_, outputCancel := newAPI(context.Background(), cfg, a)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	t.Log("Running")
-	a.InitAPI(ctx, outputCancel)
-	go a.RunWithAPI()
+	cfg := config.NewConfig() // initalizes API
+	a := agent.NewAgent(ctx, cfg)
+	api, outputCancel := newAPI(ctx, cfg, a)
+	defer outputCancel()
+
+	// t.Log("Running")
+
+	go a.RunWithAPI(outputCancel)
 	// TODO: defer a.Shutdown()
 
 	// create
-	t.Log("Create plugin")
-	newPluginID, err := API.CreatePlugin(PluginConfigCreate{
+	// t.Log("Create plugin")
+	newPluginID, err := api.CreatePlugin(PluginConfigCreate{
 		Name: "inputs.cpu",
 		Config: map[string]interface{}{
 			"percpu":           true,
@@ -114,62 +114,60 @@ func TestInputPluginLifecycle(t *testing.T) {
 	require.NotZero(t, len(newPluginID))
 
 	// get plugin status
-	t.Log("wait for start state")
-	waitForStatus(t, newPluginID, "running", 1*time.Second)
+	// t.Log("wait for start state")
+	waitForStatus(t, api, newPluginID, "running", 20*time.Second)
 
 	// list running
-	t.Log("List running plugins")
-	runningPlugins := API.ListRunningPlugins()
+	// t.Log("List running plugins")
+	runningPlugins := api.ListRunningPlugins()
 	require.Len(t, runningPlugins, 1)
 
-	status := API.GetPluginStatus(newPluginID)
+	status := api.GetPluginStatus(newPluginID)
 	require.Equal(t, "running", status.String())
 	// delete
-	t.Log("delete plugin")
-	err = API.DeletePlugin(newPluginID)
+	// t.Log("delete plugin")
+	err = api.DeletePlugin(newPluginID)
 	require.NoError(t, err)
 
-	t.Log("wait for dead state")
-	waitForStatus(t, newPluginID, "dead", 300*time.Millisecond)
+	// t.Log("wait for dead state")
+	waitForStatus(t, api, newPluginID, "dead", 300*time.Millisecond)
 
 	// get plugin status until dead
-	status = API.GetPluginStatus(newPluginID)
+	status = api.GetPluginStatus(newPluginID)
 	require.Equal(t, "dead", status.String())
 
 	// list running should have none
-	t.Log("list plugins")
-	runningPlugins = API.ListRunningPlugins()
+	// t.Log("list plugins")
+	runningPlugins = api.ListRunningPlugins()
 	require.Len(t, runningPlugins, 0)
 }
 
 func TestAllPluginLifecycle(t *testing.T) {
-	cfg := config.NewConfig()
-	a, err := agent.NewAgent(cfg)
-	require.NoError(t, err)
-
-	appCtx := context.Background()
-
-	_, outputCancel := newAPI(appCtx, cfg, a)
-
-	runCtx, cancel := context.WithCancel(appCtx)
+	runCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	t.Log("Running")
-	a.InitAPI(runCtx, outputCancel)
-	go a.RunWithAPI()
+	cfg := config.NewConfig()
+	a := agent.NewAgent(context.Background(), cfg)
+
+	api, outputCancel := newAPI(runCtx, cfg, a)
+	defer outputCancel()
+
+	// t.Log("Running")
+	go a.RunWithAPI(outputCancel)
 
 	// create
-	t.Log("Create plugin")
+	// t.Log("Create plugin")
 	pluginIDs := []models.PluginID{}
-	newPluginID, err := API.CreatePlugin(PluginConfigCreate{
+	newPluginID, err := api.CreatePlugin(PluginConfigCreate{
 		Name:   "inputs.cpu",
 		Config: map[string]interface{}{},
 	})
+	// t.Log("inputs.cpu", newPluginID)
 	pluginIDs = append(pluginIDs, newPluginID)
 	require.NoError(t, err)
 	require.NotZero(t, len(newPluginID))
 
-	newPluginID, err = API.CreatePlugin(PluginConfigCreate{
+	newPluginID, err = api.CreatePlugin(PluginConfigCreate{
 		Name: "processors.rename",
 		Config: map[string]interface{}{
 			"replace": map[string]interface{}{
@@ -178,53 +176,57 @@ func TestAllPluginLifecycle(t *testing.T) {
 			},
 		},
 	})
+	// t.Log("processors.rename", newPluginID)
 	pluginIDs = append(pluginIDs, newPluginID)
 	require.NoError(t, err)
 	require.NotZero(t, len(newPluginID))
 
-	newPluginID, err = API.CreatePlugin(PluginConfigCreate{
+	newPluginID, err = api.CreatePlugin(PluginConfigCreate{
 		Name: "outputs.file",
 		Config: map[string]interface{}{
 			"files": []string{"stdout"},
 		},
 	})
+	// t.Log("outputs.file", newPluginID)
 	pluginIDs = append(pluginIDs, newPluginID)
 	require.NoError(t, err)
 	require.NotZero(t, len(newPluginID))
 
 	for _, id := range pluginIDs {
-		waitForStatus(t, id, "running", 1*time.Second)
+		// t.Log("waiting for plugin", id)
+		waitForStatus(t, api, id, "running", 10*time.Second)
 	}
 
 	// list running
-	t.Log("List running plugins")
-	runningPlugins := API.ListRunningPlugins()
+	// t.Log("List running plugins")
+	runningPlugins := api.ListRunningPlugins()
 	require.Len(t, runningPlugins, 3)
 
 	time.Sleep(5 * time.Second)
 
 	// delete
-	t.Log("delete plugins")
+	// t.Log("delete plugins")
 	for _, id := range pluginIDs {
-		err = API.DeletePlugin(id)
+		err = api.DeletePlugin(id)
 		require.NoError(t, err)
 	}
 
-	t.Log("wait for dead state")
+	// t.Log("wait for dead state")
 	for _, id := range pluginIDs {
-		waitForStatus(t, id, "dead", 300*time.Millisecond)
+		waitForStatus(t, api, id, "dead", 300*time.Millisecond)
 	}
 
 	// list running should have none
-	runningPlugins = API.ListRunningPlugins()
+	runningPlugins = api.ListRunningPlugins()
 	require.Len(t, runningPlugins, 0)
 
 }
 
-func waitForStatus(t *testing.T, newPluginID models.PluginID, waitStatus string, timeout time.Duration) {
+func waitForStatus(t *testing.T, api *api, newPluginID models.PluginID, waitStatus string, timeout time.Duration) {
 	timeoutAt := time.Now().Add(timeout)
 	for timeoutAt.After(time.Now()) {
-		status := API.GetPluginStatus(newPluginID)
+		status := api.GetPluginStatus(newPluginID)
+		// t.Log("plugin", newPluginID, "status", status)
 		if status.String() == waitStatus {
 			return
 		}

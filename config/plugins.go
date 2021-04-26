@@ -24,32 +24,30 @@ type ConfigPlugin interface {
 
 // StoragePlugin is the interface to implement if you're building a plugin that implements state storage
 type StoragePlugin interface {
-	GetName() string
 	Init() error
 
-	Load(namespace string) map[string]interface{}
-	Save(namespace string, values map[string]interface{})
-
-	LoadKey(namespace, key string) interface{}
-	SaveKey(namespace, key string, value interface{})
+	Load(namespace, key string, obj interface{}) error
+	Save(namespace, key string, obj interface{}) error
 
 	Close() error
 }
 
+// AgentController represents the plugin management that the agent is currently doing
 type AgentController interface {
 	RunningInputs() []*models.RunningInput
 	RunningProcessors() []models.ProcessorRunner
 	RunningOutputs() []*models.RunningOutput
 
-	StartInput(input *models.RunningInput) error
+	AddInput(input *models.RunningInput)
+	AddProcessor(processor models.ProcessorRunner)
+	AddOutput(output *models.RunningOutput)
+
 	RunInput(input *models.RunningInput, startTime time.Time)
-	StopInput(i *models.RunningInput)
-
-	StartProcessor(processor models.ProcessorRunner) error
 	RunProcessor(p models.ProcessorRunner)
-	StopProcessor(p models.ProcessorRunner)
-
-	StartOutput(output *models.RunningOutput) error
 	RunOutput(ctx context.Context, output *models.RunningOutput)
+	RunConfigPlugin(ctx context.Context, plugin ConfigPlugin)
+
+	StopInput(i *models.RunningInput)
+	StopProcessor(p models.ProcessorRunner)
 	StopOutput(p *models.RunningOutput)
 }

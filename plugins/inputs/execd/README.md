@@ -1,7 +1,7 @@
 # Execd Input Plugin
 
-The `execd` plugin runs an external program as a long-running daemon. 
-The programs must output metrics in any one of the accepted 
+The `execd` plugin runs an external program as a long-running daemon.
+The programs must output metrics in any one of the accepted
 [Input Data Formats][] on the process's STDOUT, and is expected to
 stay running. If you'd instead like the process to collect metrics and then exit,
 check out the [inputs.exec][] plugin.
@@ -22,6 +22,9 @@ STDERR from the process will be relayed to Telegraf as errors in the logs.
   command = ["telegraf-smartctl", "-d", "/dev/sda"]
 
   ## Define how the process is signaled on each collection interval.
+  ## This is how Telegraf communicates to the app that it's time gather metrics.
+  ## If you want to manage the collection schedule yourself, use "none"
+  ##
   ## Valid values are:
   ##   "none"    : Do not signal anything. (Recommended for service inputs)
   ##               The process must output metrics by itself.
