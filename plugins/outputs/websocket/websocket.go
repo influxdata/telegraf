@@ -42,8 +42,7 @@ var sampleConfig = `
   # data_format = "influx"
 
   ## Additional HTTP Upgrade headers
-  # [outputs.http.headers]
-  #   # Should be set manually to "application/json" for json data_format
+  # [outputs.websocket.headers]
   #   Authorization = "Bearer <TOKEN>"
 `
 
