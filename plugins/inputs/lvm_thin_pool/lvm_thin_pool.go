@@ -63,7 +63,8 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 	data := strings.Split(string(out), ":")
 
 	// extract values
-	var dataParsed [5] float64 
+	var dataParsed [4] float64
+	var thinCount uint
 	for i, d := range data {
 		if i < 4 {
 			d = strings.TrimPrefix(d, "  ")
@@ -76,7 +77,7 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 		} else {
 			d = strings.TrimSuffix(d, "\n")
 			dp, err := strconv.ParseUint(d, 10, 64)
-			dataParsed[i] = dp
+			thinCount = dp
 			if err != nil {
 				acc.AddError(err)
 			}
@@ -108,7 +109,7 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 		"lv_metadata": dataParsed[1],
 		"data_percent": dataParsed[2],
 		"metadata_percent": dataParsed[3],
-		"thin_count": dataParsed[4],
+		"thin_count": thinCount,
 	}
 	tags := map[string]string{
 		"path":  p.Path,
