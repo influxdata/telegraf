@@ -257,13 +257,13 @@ endif
 
 ifdef armel
 tars += telegraf-$(tar_version)_linux_armel.tar.gz
-tars += telegraf-$(tar_version)_freebsd_armhf.tar.gz
 rpms += telegraf-$(rpm_version).armel.rpm
 debs += telegraf_$(deb_version)_armel.deb
 endif
 
 ifdef armhf
 tars += telegraf-$(tar_version)_linux_armhf.tar.gz
+tars += telegraf-$(tar_version)_freebsd_armhf.tar.gz
 debs += telegraf_$(deb_version)_armhf.deb
 rpms += telegraf-$(rpm_version).armv6hl.rpm
 endif 
