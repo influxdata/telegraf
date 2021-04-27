@@ -12,12 +12,13 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cms"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 )
 
 const inputTitle = "inputs.aliyuncms"
@@ -95,7 +96,7 @@ func getDiscoveryTool(project string, discoverRegions []string) (*discoveryTool,
 		return nil, errors.Errorf("failed to retrieve credential: %v", err)
 	}
 
-	dt, err := NewDiscoveryTool(discoverRegions, project, testutil.Logger{Name: inputTitle}, credential, 1, time.Minute*2)
+	dt, err := newDiscoveryTool(discoverRegions, project, testutil.Logger{Name: inputTitle}, credential, 1, time.Minute*2)
 
 	if err != nil {
 		return nil, errors.Errorf("Can't create discovery tool object: %v", err)
