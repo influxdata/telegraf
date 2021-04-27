@@ -23,7 +23,7 @@ func (p *LvmThinPool) SampleConfig() string {
 	return `
   ## Adjust your sudo settings appropriately if using this option
   use_sudo = false
-  # set path to the thin pool and use it as tag
+  # set path to the thin pool
   path = my_volume_group/my_thin_pool
 `
 }

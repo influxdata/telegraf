@@ -1,13 +1,12 @@
 # LVM Thin Pool Input Plugin
 
-The lvm_thin_pool gathers size and usage data from LVM thin pools.
-It runs the "lvdisplay" utility with filtered output options showing
-columns "lv_size", "lv_metadata", "data_percent", "metadata_percent" and
-"thin_count".
+The lvm_thin_pool plugin gathers size and usage data from LVM thin pools.
+It runs the "lvdisplay" utility with filtered output options showing columns
+"lv_size", "lv_metadata", "data_percent", "metadata_percent" and "thin_count".
 
 Results are tagged with the volume path.
 
-As telegraf doesn't have the permission to run lvdisplay, one should
+As telegraf usually doesn't have the permissions to run lvdisplay, one should
 configure and use sudo to make the plugin work properly.
 
 ### Using sudo
@@ -33,7 +32,7 @@ Defaults!LVDISPLAY !logfile, !syslog, !pam_session
   [[inputs.lvm_thin_pool]]
     ## Adjust your sudo settings appropriately if using this option
     use_sudo = false
-    # set path to the thin pool and use it as tag
+    # set path to the thin pool
     path = "my_vg/my_thin_pool"
 ```
 
