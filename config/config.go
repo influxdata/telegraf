@@ -21,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/persister"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -34,7 +35,7 @@ import (
 
 var (
 	// Default sections
-	sectionDefaults = []string{"global_tags", "agent", "outputs",
+	sectionDefaults = []string{"global_tags", "agent", "persister", "outputs",
 		"processors", "aggregators", "inputs"}
 
 	// Default input plugins
@@ -77,6 +78,8 @@ type Config struct {
 	// Processors have a slice wrapper type because they need to be sorted
 	Processors    models.RunningProcessors
 	AggProcessors models.RunningProcessors
+
+	Persister *persister.Persister
 }
 
 // NewConfig creates a new struct to hold the Telegraf config.
@@ -102,6 +105,8 @@ func NewConfig() *Config {
 		AggProcessors: make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
+
+		Persister: &persister.Persister{},
 	}
 
 	tomlCfg := &toml.Config{
@@ -375,6 +380,8 @@ var agentConfig = `
   omit_hostname = false
 `
 
+const persisterConfig = persister.SampleConfig
+
 var outputHeader = `
 ###############################################################################
 #                            OUTPUT PLUGINS                                   #
@@ -614,6 +621,10 @@ func printFilteredGlobalSections(sectionFilters []string) {
 	if sliceContains("agent", sectionFilters) {
 		fmt.Printf(agentConfig)
 	}
+
+	if sliceContains("persister", sectionFilters) {
+		fmt.Printf(persisterConfig)
+	}
 }
 
 func printConfig(name string, p telegraf.PluginDescriber, op string, commented bool) {
@@ -802,6 +813,18 @@ func (c *Config) LoadConfigData(data []byte) error {
 		return fmt.Errorf("line %d: configuration specified the fields %q, but they weren't used", tbl.Line, keys(c.UnusedFields))
 	}
 
+	// Parse agent table:
+	if val, ok := tbl.Fields["persister"]; ok {
+		subTable, ok := val.(*ast.Table)
+		if !ok {
+			return fmt.Errorf("invalid configuration, error parsing persister table")
+		}
+
+		if err = c.toml.UnmarshalTable(subTable, c.Persister); err != nil {
+			return fmt.Errorf("error parsing [persister]: %w", err)
+		}
+	}
+
 	// Parse all the rest of the plugins:
 	for name, val := range tbl.Fields {
 		subTable, ok := val.(*ast.Table)
@@ -810,7 +833,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 		}
 
 		switch name {
-		case "agent", "global_tags", "tags":
+		case "agent", "global_tags", "tags", "persister":
 		case "outputs":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
