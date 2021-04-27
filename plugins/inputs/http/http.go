@@ -120,7 +120,6 @@ func (h *HTTP) Init() error {
 	if len(h.SuccessStatusCodes) == 0 {
 		h.SuccessStatusCodes = []int{200}
 	}
-
 	return nil
 }
 
