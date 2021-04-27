@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: "weekly"
     ignore:
-      # Dependabot isn't able to update this package do the name not matching the source
-      - dependency-name: "gopkg.in/djherbis/times.v1"
+      # Dependabot isn't able to update this packages that do not match the source, so anything with a version
+      - dependency-name: "*.v*"
       # Updating this package is blocked by: https://github.com/gosnmp/gosnmp/issues/284
       - dependency-name: "github.com/soniah/gosnmp"      
