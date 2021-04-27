@@ -1,12 +1,13 @@
 package application_insights
 
 import (
-	"github.com/influxdata/telegraf/testutil"
 	"math"
 	"testing"
 	"time"
 
-	"github.com/Microsoft/ApplicationInsights-Go/appinsights"
+	"github.com/influxdata/telegraf/testutil"
+
+	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
