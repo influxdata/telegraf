@@ -34,7 +34,6 @@ The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The 
   # username = "username"
   # password = "pa$$word"
 
-  ## OAuth2 Client Credentials Grant
   ## OAuth2 Client Credentials. The options 'client_id', 'client_secret', and 'token_url' are required to use OAuth2.
   # client_id = "clientid"
   # client_secret = "secret"
