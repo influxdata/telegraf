@@ -7,3 +7,5 @@ updates:
     ignore:
       # Dependabot isn't able to update this package do the name not matching the source
       - dependency-name: "gopkg.in/djherbis/times.v1"
+      # Updating this package is blocked by: https://github.com/gosnmp/gosnmp/issues/284
+      - dependency-name: "github.com/soniah/gosnmp"      
