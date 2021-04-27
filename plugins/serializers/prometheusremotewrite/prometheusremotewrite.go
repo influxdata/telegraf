@@ -274,6 +274,11 @@ func (s *Serializer) createLabels(metric telegraf.Metric) []prompb.Label {
 			continue
 		}
 
+		// remove tags with empty values
+		if tag.Value == "" {
+			continue
+		}
+
 		labels = append(labels, prompb.Label{Name: name, Value: tag.Value})
 	}
 
