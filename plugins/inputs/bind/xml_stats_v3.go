@@ -129,8 +129,8 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 	}
 
 	//Add grouped metrics
-	for _, metric := range grouper.Metrics() {
-		acc.AddMetric(metric)
+	for _, groupedMetric := range grouper.Metrics() {
+		acc.AddMetric(groupedMetric)
 	}
 }
 
@@ -142,21 +142,29 @@ func (b *Bind) readStatsXMLv3(addr *url.URL, acc telegraf.Accumulator) error {
 
 	// Progressively build up full v3Stats struct by parsing the individual HTTP responses
 	for _, suffix := range [...]string{"/server", "/net", "/mem"} {
-		scrapeURL := addr.String() + suffix
+		err := func() error {
+			scrapeURL := addr.String() + suffix
 
-		resp, err := b.client.Get(scrapeURL)
+			resp, err := b.client.Get(scrapeURL)
+			if err != nil {
+				return err
+			}
+
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("%s returned HTTP status: %s", scrapeURL, resp.Status)
+			}
+
+			if err := xml.NewDecoder(resp.Body).Decode(&stats); err != nil {
+				return fmt.Errorf("unable to decode XML document: %s", err)
+			}
+
+			return nil
+		}()
+
 		if err != nil {
 			return err
-		}
-
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("%s returned HTTP status: %s", scrapeURL, resp.Status)
-		}
-
-		if err := xml.NewDecoder(resp.Body).Decode(&stats); err != nil {
-			return fmt.Errorf("Unable to decode XML document: %s", err)
 		}
 	}
 
