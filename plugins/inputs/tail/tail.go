@@ -42,7 +42,8 @@ type Tail struct {
 	CharacterEncoding   string   `toml:"character_encoding"`
 	PathTag             string   `toml:"path_tag"`
 
-	Log        telegraf.Logger `toml:"-"`
+	Log telegraf.Logger `toml:"-"`
+
 	tailers    map[string]*tail.Tail
 	offsets    map[string]int64
 	parserFunc parsers.ParserFunc
@@ -156,9 +157,27 @@ func (t *Tail) Init() error {
 	}
 	t.sem = make(semaphore, t.MaxUndeliveredLines)
 
+	// init offsets
+	t.offsets = make(map[string]int64)
+
 	var err error
 	t.decoder, err = encoding.NewDecoder(t.CharacterEncoding)
 	return err
+}
+
+func (t *Tail) GetState() interface{} {
+	return t.offsets
+}
+
+func (t *Tail) SetState(state interface{}) error {
+	offsets_state, ok := state.(map[string]int64)
+	if !ok {
+		return errors.New("state has to be of type 'map[string]int64'")
+	}
+	for k, v := range offsets_state {
+		t.offsets[k] = v
+	}
+	return nil
 }
 
 func (t *Tail) Gather(_ telegraf.Accumulator) error {
@@ -194,8 +213,6 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 
 	err = t.tailNewFiles(t.FromBeginning)
 
-	// clear offsets
-	t.offsets = make(map[string]int64)
 	// assumption that once Start is called, all parallel plugins have already been initialized
 	offsetsMutex.Lock()
 	offsets = make(map[string]int64)
@@ -420,6 +437,7 @@ func (t *Tail) Stop() {
 			offset, err := tailer.Tell()
 			if err == nil {
 				t.Log.Debugf("Recording offset %d for %q", offset, tailer.Filename)
+				t.offsets[tailer.Filename] = offset
 			} else {
 				t.Log.Errorf("Recording offset for %q: %s", tailer.Filename, err.Error())
 			}
