@@ -1,6 +1,5 @@
 # LVM Thin Pool Input Plugin
 
-TO EDIT:
 The lvm_thin_pool gathers size and usage data from LVM thin pools.
 It runs the "lvdisplay" utility with filtered output options showing
 columns "lv_size", "lv_metadata", "data_percent", "metadata_percent" and
@@ -22,7 +21,7 @@ You will need the following in your telegraf config:
 You will also need to update your sudoers file:
 ```bash
 $ visudo
-# Add the following line:
+# Add the following lines:
 Cmnd_Alias LVDISPLAY = /usr/sbin/lvdisplay
 telegraf  ALL=(root) NOPASSWD: LVDISPLAY
 Defaults!LVDISPLAY !logfile, !syslog, !pam_session
