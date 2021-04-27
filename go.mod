@@ -154,4 +154,4 @@ require (
 replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
 
 // replaced due to https//github.com/mdlayher/apcupsd/issues/10
-replace github.com/mdlayher/apcupsd => github.com/Jagularr/apcupsd v0.0.0-20210426184201-254fa5f5b434
+replace github.com/mdlayher/apcupsd => github.com/influxdata/apcupsd v0.0.0-20210427145308-694d5caead0e
