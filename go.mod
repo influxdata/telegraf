@@ -112,7 +112,6 @@ require (
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
 	github.com/signalfx/golib/v3 v3.3.0
 	github.com/sirupsen/logrus v1.6.0
-	github.com/soniah/gosnmp v1.25.0
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
