@@ -23,6 +23,50 @@ type PluginDescriber interface {
 	Description() string
 }
 
+// StatefulPluginWithID allows a plugin to overwrite the state
+// identifier of the plugin instance. By default the state-persister
+// will generate an ID for the plugin depending on the plugin's
+// configuration. However, it might be favorable to set the ID in
+// another way, e.g. by allowing the user to set an ID in the config.
+type StatefulPluginWithID interface {
+	// GetStateID returns the ID of the plugin instance
+	// Note: This function has to be callable directly after the
+	// plugin's Init() function if there is any!
+	GetPluginStateID() string
+
+	StatefulPlugin
+}
+
+// StatefulPlugin contains the functions that plugins must implement to
+// persist an internal state across Telegraf runs.
+// Note that plugins may define a persister that is not part of the
+// interface, but can be used to trigger state updates by the plugin if
+// it exists in the plugin struct,
+// eg: Persister telegraf.StatePersister `toml:"-"`
+type StatefulPlugin interface {
+	// GetState returns the current state of the plugin to persist
+	// The returned state can be of any time as long as it can be
+	// serialized to JSON. The best choice is a structure defined in
+	// your plugin.
+	// Note: This function has to be callable directly after the
+	// plugin's Init() function if there is any!
+	GetState() interface{}
+
+	// SetState is called by the Persister once after loading and
+	// initialization (after Init() function).
+	SetState(state interface{}) error
+}
+
+// StatePersister defines the plugin facing interface
+// for persisting states
+type StatePersister interface {
+	// UpdateState can be called by a plugin to actively announce
+	// a changed state to the Persister.
+	// Note: The persister may or may not immediately persist
+	// the state to disk.
+	UpdateState(state interface{}) error
+}
+
 // Logger defines an plugin-related interface for logging.
 type Logger interface {
 	// Errorf logs an error message, patterned after log.Printf.
