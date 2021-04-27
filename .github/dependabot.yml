@@ -4,3 +4,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # Dependabot isn't able to update this package do the name not matching the source
+      - dependency-name: "gopkg.in/djherbis/times.v1"
