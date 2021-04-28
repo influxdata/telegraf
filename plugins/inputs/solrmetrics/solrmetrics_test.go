@@ -11,9 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	path = "/solr/admin/metrics"
-)
+const path = "/solr/admin/metrics"
 
 // Test an error messgae if both keys and prefix are empty
 func TestEmptyParameters(t *testing.T) {
