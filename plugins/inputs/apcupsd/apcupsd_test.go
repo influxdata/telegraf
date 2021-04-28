@@ -208,6 +208,7 @@ func genOutput() [][]byte {
 		"NOMBATTV : 12.0 Volts",
 		"NOMPOWER : 865 Watts",
 		"FIRMWARE : 857.L3 .I USB FW:L3",
+		"ALARMDEL : Low Battery",
 	}
 
 	var out [][]byte
