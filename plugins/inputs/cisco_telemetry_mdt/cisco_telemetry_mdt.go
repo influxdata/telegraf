@@ -15,15 +15,16 @@ import (
 
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
-	"github.com/golang/protobuf/proto"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
-	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/golang/protobuf/proto" //nolint:staticcheck // Cannot switch to "google.golang.org/protobuf/proto", "github.com/golang/protobuf/proto" is used by "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Register GRPC gzip decoder to support compressed telemetry
 	"google.golang.org/grpc/peer"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const (
@@ -51,15 +52,15 @@ type CiscoTelemetryMDT struct {
 	listener   net.Listener
 
 	// Internal state
-	aliases   map[string]string
-	dmesFuncs map[string]string
-	warned    map[string]struct{}
-	extraTags map[string]map[string]struct{}
-	nxpathMap map[string]map[string]string //per path map
-	propMap   map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}
-	mutex     sync.Mutex
-	acc       telegraf.Accumulator
-	wg        sync.WaitGroup
+	internalAliases map[string]string
+	dmesFuncs       map[string]string
+	warned          map[string]struct{}
+	extraTags       map[string]map[string]struct{}
+	nxpathMap       map[string]map[string]string //per path map
+	propMap         map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}
+	mutex           sync.Mutex
+	acc             telegraf.Accumulator
+	wg              sync.WaitGroup
 }
 
 type NxPayloadXfromStructure struct {
@@ -87,9 +88,9 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 
 	// Invert aliases list
 	c.warned = make(map[string]struct{})
-	c.aliases = make(map[string]string, len(c.Aliases))
+	c.internalAliases = make(map[string]string, len(c.Aliases))
 	for alias, encodingPath := range c.Aliases {
-		c.aliases[encodingPath] = alias
+		c.internalAliases[encodingPath] = alias
 	}
 	c.initDb()
 
@@ -276,9 +277,9 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 
 // MdtDialout RPC server method for grpc-dialout transport
 func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutServer) error {
-	peer, peerOK := peer.FromContext(stream.Context())
+	peerInCtx, peerOK := peer.FromContext(stream.Context())
 	if peerOK {
-		c.Log.Debugf("Accepted Cisco MDT GRPC dialout connection from %s", peer.Addr)
+		c.Log.Debugf("Accepted Cisco MDT GRPC dialout connection from %s", peerInCtx.Addr)
 	}
 
 	var chunkBuffer bytes.Buffer
@@ -314,7 +315,7 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 	}
 
 	if peerOK {
-		c.Log.Debugf("Closed Cisco MDT GRPC dialout connection from %s", peer.Addr)
+		c.Log.Debugf("Closed Cisco MDT GRPC dialout connection from %s", peerInCtx.Addr)
 	}
 
 	return nil
@@ -375,8 +376,8 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		}
 	}
 
-	for _, metric := range grouper.Metrics() {
-		c.acc.AddMetric(metric)
+	for _, groupedMetric := range grouper.Metrics() {
+		c.acc.AddMetric(groupedMetric)
 	}
 }
 
@@ -540,7 +541,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 	if value := decodeValue(field); value != nil {
 		// Do alias lookup, to shorten measurement names
 		measurement := encodingPath
-		if alias, ok := c.aliases[encodingPath]; ok {
+		if alias, ok := c.internalAliases[encodingPath]; ok {
 			measurement = alias
 		} else {
 			c.mutex.Lock()

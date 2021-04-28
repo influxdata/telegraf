@@ -139,6 +139,7 @@ func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, valu
 		return nil
 	//Xformation supported is only from String
 	case "float":
+		//nolint:revive // switch needed for `.(type)`
 		switch val := field.ValueByType.(type) {
 		case *telemetry.TelemetryField_StringValue:
 			if valf, err := strconv.ParseFloat(val.StringValue, 64); err == nil {

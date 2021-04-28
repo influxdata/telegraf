@@ -4,6 +4,7 @@ The `csgo` plugin gather metrics from Counter-Strike: Global Offensive servers.
 
 #### Configuration
 ```toml
+# Fetch metrics from a CSGO SRCDS
 [[inputs.csgo]]
   ## Specify servers using the following format:
   ##    servers = [
