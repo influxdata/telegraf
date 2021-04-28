@@ -50,9 +50,9 @@ func (p *LvmThinPool) Gather(acc telegraf.Accumulator) error {
 		cmdName = lvdisplayPath
 	}
 
-	var lv_attrs string = "lv_size,lv_metadata_size,data_percent,metadata_percent,thin_count"
-	var lvdisplay_args = []string{"-C", "-o", lv_attrs, "--units", "m", "--separator", ",", "--noheadings", p.Path}
-	args = append(args, lvdisplay_args...)
+	var lvAttrs string = "lv_size,lv_metadata_size,data_percent,metadata_percent,thin_count"
+	var lvdisplayArgs = []string{"-C", "-o", lvAttrs, "--units", "m", "--separator", ",", "--noheadings", p.Path}
+	args = append(args, lvdisplayArgs...)
 		
 	// execute lvdisplay
 	cmd := exec.Command(cmdName, args...)
