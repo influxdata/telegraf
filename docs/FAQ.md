@@ -60,8 +60,3 @@ You can use the following techniques to avoid cardinality issues:
 [tsi]: https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/
 [show cardinality]: https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality
 [influx docs]: https://docs.influxdata.com/influxdb/latest/
-
-### Q: When will the next version be released?
-
-The latest release date estimate can be viewed on the
-[milestones](https://github.com/influxdata/telegraf/milestones) page.
