@@ -153,7 +153,7 @@ func copyStrMaps(src, dst map[string]string) {
 
 // parseMetric parses metric and returns fields with name "preffix.field" and values
 func parseMetrics(metrics Metrics, acc telegraf.Accumulator) Metrics {
-	f := make(Metrics)
+	f := make(map[string]interface{})
 	for k, v := range metrics {
 		t := reflect.ValueOf(v)
 		switch t.Kind() {
