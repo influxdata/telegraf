@@ -197,7 +197,7 @@ func metricsToSeries(metrics Metrics, addTags Tags, acc telegraf.Accumulator) (r
 		copyStrMaps(addTags, series[group].tags)
 	}
 
-	// Parce metrics by a group
+	// Parse metrics by a group
 	for k, v := range metrics {
 		// standard groups
 		for _, group := range []string{"jvm", "jetty", "node"} {
