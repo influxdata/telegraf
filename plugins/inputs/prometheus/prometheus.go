@@ -45,7 +45,7 @@ type Prometheus struct {
 	Password string `toml:"password"`
 
 	// Headers map
-	Headers map[string]string
+	Headers map[string]string `toml:"headers"`
 
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
@@ -313,9 +313,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	for k, v := range p.Headers {
 		if strings.ToLower(k) == "host" {
 			req.Host = v
-		} else {
-			req.Header.Add(k, v)
+			continue
 		}
+		req.Header.Add(k, v)
 	}
 
 	var resp *http.Response
