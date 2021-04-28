@@ -157,14 +157,8 @@ func parseMetrics(metrics Metrics, acc telegraf.Accumulator) Metrics {
 	for k, v := range metrics {
 		t := reflect.ValueOf(v)
 		switch t.Kind() {
-		case reflect.Int:
-			f[k] = t.Int()
-		case reflect.Float32, reflect.Float64:
-			f[k] = t.Float()
-		case reflect.String:
-			f[k] = t.String()
-		case reflect.Bool:
-			f[k] = t.Bool()
+		case reflect.Int, reflect.Float32, reflect.Float64, reflect.String, reflect.Bool:
+			f[k] = v
 		case reflect.Map:
 			subMetsMap, ok := v.(map[string]interface{})
 			if !ok {
@@ -172,9 +166,6 @@ func parseMetrics(metrics Metrics, acc telegraf.Accumulator) Metrics {
 				continue
 			}
 			subMets := parseMetrics(subMetsMap, acc)
-			if len(subMets) == 0 {
-				continue
-			}
 			for km, vm := range subMets {
 				key := k + delimeter + km
 				f[key] = vm
