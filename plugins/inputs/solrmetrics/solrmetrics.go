@@ -134,9 +134,9 @@ type MetricResponse struct {
 // Solr is a plugin to read stats from one or many Solr servers
 type Solr struct {
 	Local       bool
-	Servers     []string
-	Username    string
-	Password    string
+	Servers     []string `toml:"servers"`
+	Username    string `toml:"username"`
+	Password    string `toml:"password"`
 	Prefixes    []string
 	Keys        []string
 	Httptimeout time.Duration
