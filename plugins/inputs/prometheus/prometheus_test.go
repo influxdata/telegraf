@@ -234,3 +234,32 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 	assert.True(t, acc.TagValue("prometheus", "url") == ts.URL+"/metrics")
 	assert.True(t, acc.HasTimestamp("prometheus", time.Unix(1490802350, 0)))
 }
+
+func TestHTTPHeadersGaugeMetricsV2(t *testing.T) {
+	header := "X-Special-Header"
+	headerValue := "Special-Value"
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get(header) == headerValue {
+			fmt.Fprintln(w, sampleGaugeTextFormat)
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+		}
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		URLs:          []string{ts.URL},
+		URLTag:        "url",
+		MetricVersion: 2,
+	}
+
+	var acc testutil.Accumulator
+
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
+	assert.True(t, acc.HasFloatField("prometheus", "go_goroutines"))
+	assert.True(t, acc.TagValue("prometheus", "url") == ts.URL+"/metrics")
+	assert.True(t, acc.HasTimestamp("prometheus", time.Unix(1490802350, 0)))
+}
