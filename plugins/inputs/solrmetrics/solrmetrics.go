@@ -283,7 +283,7 @@ func (s *Solr) metricsURLs(acc telegraf.Accumulator) ([]url.URL, error) {
 			URLPrs["prefixes"].Set("prefix", strings.Join(s.Prefixes, ","))
 		}
 		// URL for a server
-		strURL := fmt.Sprintf("%s/solr%s", server, metricPath)
+		strURL := server + "/solr" + metricPath
 		serverURL, err := url.Parse(strURL)
 		if err != nil {
 			acc.AddError(err)
