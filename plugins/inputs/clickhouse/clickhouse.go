@@ -24,7 +24,7 @@ var defaultTimeout = 5 * time.Second
 
 var sampleConfig = `
   ## Username for authorization on ClickHouse server
-  ## example: username = "default""
+  ## example: username = "default"
   username = "default"
 
   ## Password for authorization on ClickHouse server
@@ -560,11 +560,11 @@ func (e *clickhouseError) Error() string {
 	return fmt.Sprintf("received error code %d: %s", e.StatusCode, e.body)
 }
 
-func (ch *ClickHouse) execQuery(url *url.URL, query string, i interface{}) error {
-	q := url.Query()
+func (ch *ClickHouse) execQuery(address *url.URL, query string, i interface{}) error {
+	q := address.Query()
 	q.Set("query", query+" FORMAT JSON")
-	url.RawQuery = q.Encode()
-	req, _ := http.NewRequest("GET", url.String(), nil)
+	address.RawQuery = q.Encode()
+	req, _ := http.NewRequest("GET", address.String(), nil)
 	if ch.Username != "" {
 		req.Header.Add("X-ClickHouse-User", ch.Username)
 	}
