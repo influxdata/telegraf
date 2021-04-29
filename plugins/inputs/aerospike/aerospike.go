@@ -96,7 +96,7 @@ func (a *Aerospike) SampleConfig() string {
 }
 
 func (a *Aerospike) Description() string {
-	fmt.Prinlnt("I am a random change")
+	fmt.Println("cla work?")
 	return "Read stats from aerospike server(s)"
 }
 
