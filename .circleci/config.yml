@@ -63,7 +63,10 @@ commands:
             - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 NIGHTLY=1 make package'
             - run: 'make upload-nightly'
       - unless:
-          condition: << parameters.nightly >>
+          condition:
+            or:
+              - << parameters.nightly >>
+              - << parameters.release >>
           steps:
             - run: '<< parameters.type >>=1 make package'
       - store_artifacts:
