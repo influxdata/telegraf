@@ -180,6 +180,12 @@ func (e *ElasticsearchQuery) initAggregation(ctx context.Context, agg esAggregat
 func (e *ElasticsearchQuery) connectToES() error {
 	var clientOptions []elastic5.ClientOptionFunc
 
+	if e.esClient != nil {
+		if e.esClient.IsRunning() {
+			return nil
+		}
+	}
+
 	if e.httpclient == nil {
 		httpclient, err := e.createHTTPClient()
 		if err != nil {
@@ -234,11 +240,9 @@ func (e *ElasticsearchQuery) connectToES() error {
 func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
-	if !e.esClient.IsRunning() {
-		err := e.connectToES()
-		if err != nil {
-			return err
-		}
+	err := e.connectToES()
+	if err != nil {
+		return err
 	}
 
 	for i, agg := range e.Aggregations {
