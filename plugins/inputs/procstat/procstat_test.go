@@ -45,6 +45,7 @@ func TestMockExecCommand(_ *testing.T) {
 	cmdline := strings.Join(cmd, " ")
 
 	if cmdline == "systemctl show TestGather_systemdUnitPIDs" {
+		//nolint:errcheck,revive
 		fmt.Printf(`PIDFile=
 GuessMainPID=yes
 MainPID=11408
@@ -54,6 +55,7 @@ ExecMainPID=11408
 		os.Exit(0)
 	}
 
+	//nolint:errcheck,revive
 	fmt.Printf("command not found\n")
 	os.Exit(1)
 }

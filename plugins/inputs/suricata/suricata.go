@@ -81,6 +81,8 @@ func (s *Suricata) Start(acc telegraf.Accumulator) error {
 // Stop causes the plugin to cease collecting JSON data from the socket provided
 // to Suricata.
 func (s *Suricata) Stop() {
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	s.inputListener.Close()
 	if s.cancel != nil {
 		s.cancel()

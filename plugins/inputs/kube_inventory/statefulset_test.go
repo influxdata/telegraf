@@ -1,7 +1,6 @@
 package kube_inventory
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -9,7 +8,9 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStatefulSet(t *testing.T) {
@@ -21,7 +22,7 @@ func TestStatefulSet(t *testing.T) {
 	tests := []struct {
 		name     string
 		handler  *mockHandler
-		output   *testutil.Accumulator
+		output   []telegraf.Metric
 		hasError bool
 	}{
 		{
@@ -67,27 +68,27 @@ func TestStatefulSet(t *testing.T) {
 					},
 				},
 			},
-			output: &testutil.Accumulator{
-				Metrics: []*testutil.Metric{
-					{
-						Fields: map[string]interface{}{
-							"generation":          int64(332),
-							"observed_generation": int64(119),
-							"created":             now.UnixNano(),
-							"spec_replicas":       int32(3),
-							"replicas":            int32(2),
-							"replicas_current":    int32(4),
-							"replicas_ready":      int32(1),
-							"replicas_updated":    int32(3),
-						},
-						Tags: map[string]string{
-							"namespace":        "ns1",
-							"statefulset_name": "sts1",
-							"selector_select1": "s1",
-							"selector_select2": "s2",
-						},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_statefulset",
+					map[string]string{
+						"namespace":        "ns1",
+						"statefulset_name": "sts1",
+						"selector_select1": "s1",
+						"selector_select2": "s2",
 					},
-				},
+					map[string]interface{}{
+						"generation":          int64(332),
+						"observed_generation": int64(119),
+						"created":             now.UnixNano(),
+						"spec_replicas":       int32(3),
+						"replicas":            int32(2),
+						"replicas_current":    int32(4),
+						"replicas_ready":      int32(1),
+						"replicas_updated":    int32(3),
+					},
+					time.Unix(0, 0),
+				),
 			},
 			hasError: false,
 		},
@@ -99,34 +100,23 @@ func TestStatefulSet(t *testing.T) {
 			SelectorInclude: selectInclude,
 			SelectorExclude: selectExclude,
 		}
-		ks.createSelectorFilters()
-		acc := new(testutil.Accumulator)
+		require.NoError(t, ks.createSelectorFilters())
+		acc := &testutil.Accumulator{}
 		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1.StatefulSetList)).Items {
 			ks.gatherStatefulSet(ss, acc)
 		}
 
 		err := acc.FirstError()
-		if err == nil && v.hasError {
-			t.Fatalf("%s failed, should have error", v.name)
-		} else if err != nil && !v.hasError {
-			t.Fatalf("%s failed, err: %v", v.name, err)
+		if v.hasError {
+			require.Errorf(t, err, "%s failed, should have error", v.name)
+			continue
 		}
-		if v.output == nil && len(acc.Metrics) > 0 {
-			t.Fatalf("%s: collected extra data", v.name)
-		} else if v.output != nil && len(v.output.Metrics) > 0 {
-			for i := range v.output.Metrics {
-				for k, m := range v.output.Metrics[i].Tags {
-					if acc.Metrics[i].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s\n", v.name, k, m, acc.Metrics[i].Tags[k])
-					}
-				}
-				for k, m := range v.output.Metrics[i].Fields {
-					if acc.Metrics[i].Fields[k] != m {
-						t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", v.name, k, m, m, acc.Metrics[i].Fields[k], acc.Metrics[i].Fields[k])
-					}
-				}
-			}
-		}
+
+		// No error case
+		require.NoErrorf(t, err, "%s failed, err: %v", v.name, err)
+
+		require.Len(t, acc.Metrics, len(v.output))
+		testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), v.output, testutil.IgnoreTime())
 	}
 }
 
@@ -267,7 +257,7 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 		}
 		ks.SelectorInclude = v.include
 		ks.SelectorExclude = v.exclude
-		ks.createSelectorFilters()
+		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
 		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1.StatefulSetList)).Items {
 			ks.gatherStatefulSet(ss, acc)
@@ -283,8 +273,7 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 			}
 		}
 
-		if !reflect.DeepEqual(v.expected, actual) {
-			t.Fatalf("actual selector tags (%v) do not match expected selector tags (%v)", actual, v.expected)
-		}
+		require.Equalf(t, v.expected, actual,
+			"actual selector tags (%v) do not match expected selector tags (%v)", actual, v.expected)
 	}
 }

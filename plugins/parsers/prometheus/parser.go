@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/matttproud/golang_protobuf_extensions/pbutil"
 	"io"
 	"math"
 	"mime"
 	"net/http"
 	"time"
+
+	"github.com/matttproud/golang_protobuf_extensions/pbutil"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -80,10 +81,8 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				// converting to telegraf metric
 				if len(fields) > 0 {
 					t := getTimestamp(m, now)
-					metric, err := metric.New("prometheus", tags, fields, t, common.ValueType(mf.GetType()))
-					if err == nil {
-						metrics = append(metrics, metric)
-					}
+					m := metric.New("prometheus", tags, fields, t, common.ValueType(mf.GetType()))
+					metrics = append(metrics, m)
 				}
 			}
 		}
@@ -121,10 +120,8 @@ func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, met
 
 	fields[metricName+"_count"] = float64(m.GetSummary().GetSampleCount())
 	fields[metricName+"_sum"] = float64(m.GetSummary().GetSampleSum())
-	met, err := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
-	if err == nil {
-		metrics = append(metrics, met)
-	}
+	met := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
+	metrics = append(metrics, met)
 
 	for _, q := range m.GetSummary().Quantile {
 		newTags := tags
@@ -133,10 +130,8 @@ func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, met
 		newTags["quantile"] = fmt.Sprint(q.GetQuantile())
 		fields[metricName] = float64(q.GetValue())
 
-		quantileMetric, err := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
-		if err == nil {
-			metrics = append(metrics, quantileMetric)
-		}
+		quantileMetric := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
+		metrics = append(metrics, quantileMetric)
 	}
 	return metrics
 }
@@ -150,10 +145,8 @@ func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metri
 	fields[metricName+"_count"] = float64(m.GetHistogram().GetSampleCount())
 	fields[metricName+"_sum"] = float64(m.GetHistogram().GetSampleSum())
 
-	met, err := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
-	if err == nil {
-		metrics = append(metrics, met)
-	}
+	met := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
+	metrics = append(metrics, met)
 
 	for _, b := range m.GetHistogram().Bucket {
 		newTags := tags
@@ -161,10 +154,8 @@ func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metri
 		newTags["le"] = fmt.Sprint(b.GetUpperBound())
 		fields[metricName+"_bucket"] = float64(b.GetCumulativeCount())
 
-		histogramMetric, err := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
-		if err == nil {
-			metrics = append(metrics, histogramMetric)
-		}
+		histogramMetric := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
+		metrics = append(metrics, histogramMetric)
 	}
 	return metrics
 }

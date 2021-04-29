@@ -325,7 +325,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 	// The multiline mode requires a timer in order to flush the multiline buffer
 	// if no new lines are incoming.
 	if t.multiline.IsEnabled() {
-		timer = time.NewTimer(t.MultilineConfig.Timeout.Duration)
+		timer = time.NewTimer(time.Duration(*t.MultilineConfig.Timeout))
 		timeout = timer.C
 	}
 
@@ -337,7 +337,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 		line = nil
 
 		if timer != nil {
-			timer.Reset(t.MultilineConfig.Timeout.Duration)
+			timer.Reset(time.Duration(*t.MultilineConfig.Timeout))
 		}
 
 		select {

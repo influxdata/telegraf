@@ -10,13 +10,13 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Default http timeouts
-var DefaultResponseHeaderTimeout = internal.Duration{Duration: 3 * time.Second}
-var DefaultClientTimeout = internal.Duration{Duration: 4 * time.Second}
+var DefaultResponseHeaderTimeout = config.Duration(3 * time.Second)
+var DefaultClientTimeout = config.Duration(4 * time.Second)
 
 type Server struct {
 	Name     string
@@ -54,9 +54,9 @@ type Jolokia struct {
 	Proxy     Server
 	Delimiter string
 
-	ResponseHeaderTimeout internal.Duration `toml:"response_header_timeout"`
-	ClientTimeout         internal.Duration `toml:"client_timeout"`
-	Log                   telegraf.Logger   `toml:"-"`
+	ResponseHeaderTimeout config.Duration `toml:"response_header_timeout"`
+	ClientTimeout         config.Duration `toml:"client_timeout"`
+	Log                   telegraf.Logger `toml:"-"`
 }
 
 const sampleConfig = `
@@ -263,10 +263,10 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 			"in favor of the jolokia2 plugin " +
 			"(https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2)")
 
-		tr := &http.Transport{ResponseHeaderTimeout: j.ResponseHeaderTimeout.Duration}
+		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(j.ResponseHeaderTimeout)}
 		j.jClient = &JolokiaClientImpl{&http.Client{
 			Transport: tr,
-			Timeout:   j.ClientTimeout.Duration,
+			Timeout:   time.Duration(j.ClientTimeout),
 		}}
 	}
 

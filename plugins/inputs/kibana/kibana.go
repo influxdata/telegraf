@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -104,7 +104,7 @@ type Kibana struct {
 	Servers  []string
 	Username string
 	Password string
-	Timeout  internal.Duration
+	Timeout  config.Duration
 	tls.ClientConfig
 
 	client *http.Client
@@ -112,7 +112,7 @@ type Kibana struct {
 
 func NewKibana() *Kibana {
 	return &Kibana{
-		Timeout: internal.Duration{Duration: time.Second * 5},
+		Timeout: config.Duration(time.Second * 5),
 	}
 }
 
@@ -176,7 +176,7 @@ func (k *Kibana) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: k.Timeout.Duration,
+		Timeout: time.Duration(k.Timeout),
 	}
 
 	return client, nil

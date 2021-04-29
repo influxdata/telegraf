@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -21,11 +21,11 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	e := &Elasticsearch{
 		URLs:                urls,
 		IndexName:           "test-%Y.%m.%d",
-		Timeout:             internal.Duration{Duration: time.Second * 5},
+		Timeout:             config.Duration(time.Second * 5),
 		ManageTemplate:      true,
 		TemplateName:        "telegraf",
 		OverwriteTemplate:   false,
-		HealthCheckInterval: internal.Duration{Duration: time.Second * 10},
+		HealthCheckInterval: config.Duration(time.Second * 10),
 	}
 
 	// Verify that we can connect to Elasticsearch
@@ -49,7 +49,7 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 	e := &Elasticsearch{
 		URLs:              urls,
 		IndexName:         "test-%Y.%m.%d",
-		Timeout:           internal.Duration{Duration: time.Second * 5},
+		Timeout:           config.Duration(time.Second * 5),
 		ManageTemplate:    true,
 		TemplateName:      "",
 		OverwriteTemplate: true,
@@ -69,13 +69,13 @@ func TestTemplateManagementIntegration(t *testing.T) {
 	e := &Elasticsearch{
 		URLs:              urls,
 		IndexName:         "test-%Y.%m.%d",
-		Timeout:           internal.Duration{Duration: time.Second * 5},
+		Timeout:           config.Duration(time.Second * 5),
 		ManageTemplate:    true,
 		TemplateName:      "telegraf",
 		OverwriteTemplate: true,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), e.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
 	defer cancel()
 
 	err := e.Connect()
@@ -95,7 +95,7 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 	e := &Elasticsearch{
 		URLs:              urls,
 		IndexName:         "{{host}}-%Y.%m.%d",
-		Timeout:           internal.Duration{Duration: time.Second * 5},
+		Timeout:           config.Duration(time.Second * 5),
 		ManageTemplate:    true,
 		TemplateName:      "telegraf",
 		OverwriteTemplate: true,

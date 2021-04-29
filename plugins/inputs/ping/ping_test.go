@@ -241,7 +241,7 @@ func TestPingGather(t *testing.T) {
 		pingHost: mockHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "localhost"}
 	fields := map[string]interface{}{
 		"packets_transmitted":   5,
@@ -270,8 +270,8 @@ func TestPingGatherIntegration(t *testing.T) {
 	p.Log = testutil.Logger{}
 	require.True(t, ok)
 	p.Urls = []string{"localhost", "influxdata.com"}
-	err := acc.GatherError(p.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(p.Gather))
+
 	require.Equal(t, 0, acc.Metrics[0].Fields["result_code"])
 	require.Equal(t, 0, acc.Metrics[1].Fields["result_code"])
 }
@@ -299,7 +299,7 @@ func TestLossyPingGather(t *testing.T) {
 		pingHost: mockLossyHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted":   5,
@@ -337,7 +337,7 @@ func TestBadPingGather(t *testing.T) {
 		pingHost: mockErrorHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "www.amazon.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 2,
@@ -360,7 +360,9 @@ func TestFatalPingGather(t *testing.T) {
 		pingHost: mockFatalHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.Error(t, err)
+	require.EqualValues(t, err.Error(), "host www.amazon.com: ping: -i interval too short: Operation not permitted, So very bad")
 	assert.False(t, acc.HasMeasurement("packets_transmitted"),
 		"Fatal ping should not have packet measurements")
 	assert.False(t, acc.HasMeasurement("packets_received"),
@@ -394,7 +396,7 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 				return param.out, errors.New("So very bad")
 			},
 		}
-		acc.GatherError(p.Gather)
+		require.Error(t, acc.GatherError(p.Gather))
 		assert.True(t, len(acc.Errors) > 0)
 		assert.Contains(t, acc.Errors, param.error)
 	}
@@ -410,7 +412,9 @@ func TestPingBinary(t *testing.T) {
 			return "", nil
 		},
 	}
-	acc.GatherError(p.Gather)
+	err := acc.GatherError(p.Gather)
+	require.Error(t, err)
+	require.EqualValues(t, err.Error(), "Fatal error processing ping output: www.google.com")
 }
 
 // Test that Gather function works using native ping
@@ -462,8 +466,7 @@ func TestPingGatherNative(t *testing.T) {
 
 	for _, tc := range tests {
 		var acc testutil.Accumulator
-		err := tc.P.Init()
-		require.NoError(t, err)
+		require.NoError(t, tc.P.Init())
 		require.NoError(t, acc.GatherError(tc.P.Gather))
 		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
 		assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
@@ -501,8 +504,8 @@ func TestNoPacketsSent(t *testing.T) {
 	}
 
 	var testAcc testutil.Accumulator
-	err := p.Init()
-	require.NoError(t, err)
+	require.NoError(t, p.Init())
+
 	p.pingToURLNative("localhost", &testAcc)
 	require.Zero(t, testAcc.Errors)
 	require.True(t, testAcc.HasField("ping", "result_code"))
@@ -523,8 +526,8 @@ func TestDNSLookupError(t *testing.T) {
 	}
 
 	var testAcc testutil.Accumulator
-	err := p.Init()
-	require.NoError(t, err)
+	require.NoError(t, p.Init())
+
 	p.pingToURLNative("localhost", &testAcc)
 	require.Zero(t, testAcc.Errors)
 	require.True(t, testAcc.HasField("ping", "result_code"))

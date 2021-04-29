@@ -16,8 +16,8 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/internal/docker"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
@@ -31,7 +31,7 @@ type Docker struct {
 
 	GatherServices bool `toml:"gather_services"`
 
-	Timeout          internal.Duration
+	Timeout          config.Duration
 	PerDevice        bool     `toml:"perdevice"`
 	PerDeviceInclude []string `toml:"perdevice_include"`
 	Total            bool     `toml:"total"`
@@ -259,7 +259,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	opts := types.ContainerListOptions{
 		Filters: filterArgs,
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
 	containers, err := d.client.ContainerList(ctx, opts)
@@ -287,7 +287,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 }
 
 func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
-	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
 	services, err := d.client.ServiceList(ctx, types.ServiceListOptions{})
@@ -364,7 +364,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	// Get info from docker daemon
-	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
 	info, err := d.client.Info(ctx)
@@ -524,7 +524,7 @@ func (d *Docker) gatherContainer(
 		tags["source"] = hostnameFromID(container.ID)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
 	r, err := d.client.ContainerStats(ctx, container.ID, false)
@@ -562,7 +562,7 @@ func (d *Docker) gatherContainerInspect(
 	daemonOSType string,
 	v *types.StatsJSON,
 ) error {
-	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
 	info, err := d.client.ContainerInspect(ctx, container.ID)
@@ -1010,7 +1010,7 @@ func init() {
 			PerDevice:        true,
 			PerDeviceInclude: []string{"cpu"},
 			TotalInclude:     []string{"cpu", "blkio", "network"},
-			Timeout:          internal.Duration{Duration: time.Second * 5},
+			Timeout:          config.Duration(time.Second * 5),
 			Endpoint:         defaultEndpoint,
 			newEnvClient:     NewEnvClient,
 			newClient:        NewClient,

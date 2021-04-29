@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 var s = Sysstat{
@@ -260,7 +261,7 @@ func fakeExecCommand(command string, args ...string) *exec.Cmd {
 // For example, if you run:
 // GO_WANT_HELPER_PROCESS=1 go test -test.run=TestHelperProcess -- sadf -p -- -p -C tmpFile
 // it returns mockData["C"] output.
-func TestHelperProcess(_ *testing.T) {
+func TestHelperProcess(t *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -303,7 +304,8 @@ dell-xps	5	2016-03-25 16:18:10 UTC	sdb	%util	0.30
 
 	switch path.Base(cmd) {
 	case "sadf":
-		fmt.Fprint(os.Stdout, mockData[args[3]])
+		_, err := fmt.Fprint(os.Stdout, mockData[args[3]])
+		require.NoError(t, err)
 	default:
 	}
 	// some code here to check arguments perhaps?

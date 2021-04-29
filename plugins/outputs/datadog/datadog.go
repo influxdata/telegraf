@@ -8,17 +8,18 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type Datadog struct {
-	Apikey  string            `toml:"apikey"`
-	Timeout internal.Duration `toml:"timeout"`
-	URL     string            `toml:"url"`
-	Log     telegraf.Logger   `toml:"-"`
+	Apikey  string          `toml:"apikey"`
+	Timeout config.Duration `toml:"timeout"`
+	URL     string          `toml:"url"`
+	Log     telegraf.Logger `toml:"-"`
 
 	client *http.Client
 }
@@ -58,7 +59,7 @@ func (d *Datadog) Connect() error {
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: d.Timeout.Duration,
+		Timeout: time.Duration(d.Timeout),
 	}
 	return nil
 }

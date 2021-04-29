@@ -6,8 +6,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
-	"github.com/stretchr/testify/assert"
+	cwClient "github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
@@ -18,13 +17,13 @@ import (
 
 type mockGatherCloudWatchClient struct{}
 
-func (m *mockGatherCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
-	return &cloudwatch.ListMetricsOutput{
-		Metrics: []*cloudwatch.Metric{
+func (m *mockGatherCloudWatchClient) ListMetrics(params *cwClient.ListMetricsInput) (*cwClient.ListMetricsOutput, error) {
+	return &cwClient.ListMetricsOutput{
+		Metrics: []*cwClient.Metric{
 			{
 				Namespace:  params.Namespace,
 				MetricName: aws.String("Latency"),
-				Dimensions: []*cloudwatch.Dimension{
+				Dimensions: []*cwClient.Dimension{
 					{
 						Name:  aws.String("LoadBalancerName"),
 						Value: aws.String("p-example"),
@@ -35,9 +34,9 @@ func (m *mockGatherCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsI
 	}, nil
 }
 
-func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricDataInput) (*cloudwatch.GetMetricDataOutput, error) {
-	return &cloudwatch.GetMetricDataOutput{
-		MetricDataResults: []*cloudwatch.MetricDataResult{
+func (m *mockGatherCloudWatchClient) GetMetricData(params *cwClient.GetMetricDataInput) (*cwClient.GetMetricDataOutput, error) {
+	return &cwClient.GetMetricDataOutput{
+		MetricDataResults: []*cwClient.MetricDataResult{
 			{
 				Id:         aws.String("minimum_0_0"),
 				Label:      aws.String("latency_minimum"),
@@ -98,8 +97,8 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 }
 
 func TestSnakeCase(t *testing.T) {
-	assert.Equal(t, "cluster_name", snakeCase("Cluster Name"))
-	assert.Equal(t, "broker_id", snakeCase("Broker ID"))
+	require.Equal(t, "cluster_name", snakeCase("Cluster Name"))
+	require.Equal(t, "broker_id", snakeCase("Broker ID"))
 }
 
 func TestGather(t *testing.T) {
@@ -116,7 +115,7 @@ func TestGather(t *testing.T) {
 	var acc testutil.Accumulator
 	c.client = &mockGatherCloudWatchClient{}
 
-	assert.NoError(t, acc.GatherError(c.Gather))
+	require.NoError(t, acc.GatherError(c.Gather))
 
 	fields := map[string]interface{}{}
 	fields["latency_minimum"] = 0.1
@@ -129,14 +128,14 @@ func TestGather(t *testing.T) {
 	tags["region"] = "us-east-1"
 	tags["load_balancer_name"] = "p-example"
 
-	assert.True(t, acc.HasMeasurement("cloudwatch_aws_elb"))
+	require.True(t, acc.HasMeasurement("cloudwatch_aws_elb"))
 	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_elb", fields, tags)
 }
 
 type mockSelectMetricsCloudWatchClient struct{}
 
-func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
-	metrics := []*cloudwatch.Metric{}
+func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ *cwClient.ListMetricsInput) (*cwClient.ListMetricsOutput, error) {
+	metrics := []*cwClient.Metric{}
 	// 4 metrics are available
 	metricNames := []string{"Latency", "RequestCount", "HealthyHostCount", "UnHealthyHostCount"}
 	// for 3 ELBs
@@ -146,10 +145,10 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ *cloudwatch.ListMetric
 	for _, m := range metricNames {
 		for _, lb := range loadBalancers {
 			// For each metric/ELB pair, we get an aggregate value across all AZs.
-			metrics = append(metrics, &cloudwatch.Metric{
+			metrics = append(metrics, &cwClient.Metric{
 				Namespace:  aws.String("AWS/ELB"),
 				MetricName: aws.String(m),
-				Dimensions: []*cloudwatch.Dimension{
+				Dimensions: []*cwClient.Dimension{
 					{
 						Name:  aws.String("LoadBalancerName"),
 						Value: aws.String(lb),
@@ -158,10 +157,10 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ *cloudwatch.ListMetric
 			})
 			for _, az := range availabilityZones {
 				// We get a metric for each metric/ELB/AZ triplet.
-				metrics = append(metrics, &cloudwatch.Metric{
+				metrics = append(metrics, &cwClient.Metric{
 					Namespace:  aws.String("AWS/ELB"),
 					MetricName: aws.String(m),
-					Dimensions: []*cloudwatch.Dimension{
+					Dimensions: []*cwClient.Dimension{
 						{
 							Name:  aws.String("LoadBalancerName"),
 							Value: aws.String(lb),
@@ -176,13 +175,13 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ *cloudwatch.ListMetric
 		}
 	}
 
-	result := &cloudwatch.ListMetricsOutput{
+	result := &cwClient.ListMetricsOutput{
 		Metrics: metrics,
 	}
 	return result, nil
 }
 
-func (m *mockSelectMetricsCloudWatchClient) GetMetricData(_ *cloudwatch.GetMetricDataInput) (*cloudwatch.GetMetricDataOutput, error) {
+func (m *mockSelectMetricsCloudWatchClient) GetMetricData(_ *cwClient.GetMetricDataInput) (*cwClient.GetMetricDataOutput, error) {
 	return nil, nil
 }
 
@@ -201,33 +200,35 @@ func TestSelectMetrics(t *testing.T) {
 				Dimensions: []*Dimension{
 					{
 						Name:  "LoadBalancerName",
-						Value: "*",
+						Value: "lb*",
 					},
 					{
 						Name:  "AvailabilityZone",
-						Value: "*",
+						Value: "us-east*",
 					},
 				},
 			},
 		},
 	}
+	err := c.initializeCloudWatch()
+	require.NoError(t, err)
 	c.client = &mockSelectMetricsCloudWatchClient{}
 	filtered, err := getFilteredMetrics(c)
 	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
 	// AZs. We should get 12 metrics.
-	assert.Equal(t, 12, len(filtered[0].metrics))
-	assert.NoError(t, err)
+	require.Equal(t, 12, len(filtered[0].metrics))
+	require.NoError(t, err)
 }
 
 func TestGenerateStatisticsInputParams(t *testing.T) {
-	d := &cloudwatch.Dimension{
+	d := &cwClient.Dimension{
 		Name:  aws.String("LoadBalancerName"),
 		Value: aws.String("p-example"),
 	}
 
-	m := &cloudwatch.Metric{
+	m := &cwClient.Metric{
 		MetricName: aws.String("Latency"),
-		Dimensions: []*cloudwatch.Dimension{d},
+		Dimensions: []*cwClient.Dimension{d},
 	}
 
 	duration, _ := time.ParseDuration("1m")
@@ -239,32 +240,32 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 		Period:    internalDuration,
 	}
 
-	c.initializeCloudWatch()
+	require.NoError(t, c.initializeCloudWatch())
 
 	now := time.Now()
 
 	c.updateWindow(now)
 
 	statFilter, _ := filter.NewIncludeExcludeFilter(nil, nil)
-	queries := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
+	queries := c.getDataQueries([]filteredMetric{{metrics: []*cwClient.Metric{m}, statFilter: statFilter}})
 	params := c.getDataInputs(queries)
 
-	assert.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
-	assert.EqualValues(t, *params.StartTime, now.Add(-time.Duration(c.Period)).Add(-time.Duration(c.Delay)))
+	require.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
+	require.EqualValues(t, *params.StartTime, now.Add(-time.Duration(c.Period)).Add(-time.Duration(c.Delay)))
 	require.Len(t, params.MetricDataQueries, 5)
-	assert.Len(t, params.MetricDataQueries[0].MetricStat.Metric.Dimensions, 1)
-	assert.EqualValues(t, *params.MetricDataQueries[0].MetricStat.Period, 60)
+	require.Len(t, params.MetricDataQueries[0].MetricStat.Metric.Dimensions, 1)
+	require.EqualValues(t, *params.MetricDataQueries[0].MetricStat.Period, 60)
 }
 
 func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
-	d := &cloudwatch.Dimension{
+	d := &cwClient.Dimension{
 		Name:  aws.String("LoadBalancerName"),
 		Value: aws.String("p-example"),
 	}
 
-	m := &cloudwatch.Metric{
+	m := &cwClient.Metric{
 		MetricName: aws.String("Latency"),
-		Dimensions: []*cloudwatch.Dimension{d},
+		Dimensions: []*cwClient.Dimension{d},
 	}
 
 	duration, _ := time.ParseDuration("1m")
@@ -276,21 +277,21 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 		Period:    internalDuration,
 	}
 
-	c.initializeCloudWatch()
+	require.NoError(t, c.initializeCloudWatch())
 
 	now := time.Now()
 
 	c.updateWindow(now)
 
 	statFilter, _ := filter.NewIncludeExcludeFilter([]string{"average", "sample_count"}, nil)
-	queries := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
+	queries := c.getDataQueries([]filteredMetric{{metrics: []*cwClient.Metric{m}, statFilter: statFilter}})
 	params := c.getDataInputs(queries)
 
-	assert.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
-	assert.EqualValues(t, *params.StartTime, now.Add(-time.Duration(c.Period)).Add(-time.Duration(c.Delay)))
+	require.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
+	require.EqualValues(t, *params.StartTime, now.Add(-time.Duration(c.Period)).Add(-time.Duration(c.Delay)))
 	require.Len(t, params.MetricDataQueries, 2)
-	assert.Len(t, params.MetricDataQueries[0].MetricStat.Metric.Dimensions, 1)
-	assert.EqualValues(t, *params.MetricDataQueries[0].MetricStat.Period, 60)
+	require.Len(t, params.MetricDataQueries[0].MetricStat.Metric.Dimensions, 1)
+	require.EqualValues(t, *params.MetricDataQueries[0].MetricStat.Period, 60)
 }
 
 func TestMetricsCacheTimeout(t *testing.T) {
@@ -300,9 +301,9 @@ func TestMetricsCacheTimeout(t *testing.T) {
 		ttl:     time.Minute,
 	}
 
-	assert.True(t, cache.isValid())
+	require.True(t, cache.isValid())
 	cache.built = time.Now().Add(-time.Minute)
-	assert.False(t, cache.isValid())
+	require.False(t, cache.isValid())
 }
 
 func TestUpdateWindow(t *testing.T) {
@@ -317,23 +318,23 @@ func TestUpdateWindow(t *testing.T) {
 
 	now := time.Now()
 
-	assert.True(t, c.windowEnd.IsZero())
-	assert.True(t, c.windowStart.IsZero())
+	require.True(t, c.windowEnd.IsZero())
+	require.True(t, c.windowStart.IsZero())
 
 	c.updateWindow(now)
 
 	newStartTime := c.windowEnd
 
 	// initial window just has a single period
-	assert.EqualValues(t, c.windowEnd, now.Add(-time.Duration(c.Delay)))
-	assert.EqualValues(t, c.windowStart, now.Add(-time.Duration(c.Delay)).Add(-time.Duration(c.Period)))
+	require.EqualValues(t, c.windowEnd, now.Add(-time.Duration(c.Delay)))
+	require.EqualValues(t, c.windowStart, now.Add(-time.Duration(c.Delay)).Add(-time.Duration(c.Period)))
 
 	now = time.Now()
 	c.updateWindow(now)
 
 	// subsequent window uses previous end time as start time
-	assert.EqualValues(t, c.windowEnd, now.Add(-time.Duration(c.Delay)))
-	assert.EqualValues(t, c.windowStart, newStartTime)
+	require.EqualValues(t, c.windowEnd, now.Add(-time.Duration(c.Delay)))
+	require.EqualValues(t, c.windowStart, newStartTime)
 }
 
 func TestProxyFunction(t *testing.T) {

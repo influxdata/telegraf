@@ -186,8 +186,7 @@ func (c *conn) writePairs(recType recType, reqID uint16, pairs map[string]string
 			return err
 		}
 	}
-	w.Close()
-	return nil
+	return w.Close()
 }
 
 func readSize(s []byte) (uint32, int) {
@@ -232,6 +231,8 @@ type bufWriter struct {
 
 func (w *bufWriter) Close() error {
 	if err := w.Writer.Flush(); err != nil {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		w.closer.Close()
 		return err
 	}

@@ -78,6 +78,10 @@ services:
     image: ncarlier/mqtt
     ports:
       - "1883:1883"
+  opcua:
+    image: open62541/open62541
+    ports:
+      - "4840:4840"
   riemann:
     image: stealthly/docker-riemann
     ports:

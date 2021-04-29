@@ -171,52 +171,6 @@ func TestRandomSleep(t *testing.T) {
 	assert.True(t, elapsed < time.Millisecond*150)
 }
 
-func TestDuration(t *testing.T) {
-	var d Duration
-
-	d.UnmarshalTOML([]byte(`"1s"`))
-	assert.Equal(t, time.Second, d.Duration)
-
-	d = Duration{}
-	d.UnmarshalTOML([]byte(`1s`))
-	assert.Equal(t, time.Second, d.Duration)
-
-	d = Duration{}
-	d.UnmarshalTOML([]byte(`'1s'`))
-	assert.Equal(t, time.Second, d.Duration)
-
-	d = Duration{}
-	d.UnmarshalTOML([]byte(`10`))
-	assert.Equal(t, 10*time.Second, d.Duration)
-
-	d = Duration{}
-	d.UnmarshalTOML([]byte(`1.5`))
-	assert.Equal(t, time.Second, d.Duration)
-}
-
-func TestSize(t *testing.T) {
-	var s Size
-
-	s.UnmarshalTOML([]byte(`"1B"`))
-	assert.Equal(t, int64(1), s.Size)
-
-	s = Size{}
-	s.UnmarshalTOML([]byte(`1`))
-	assert.Equal(t, int64(1), s.Size)
-
-	s = Size{}
-	s.UnmarshalTOML([]byte(`'1'`))
-	assert.Equal(t, int64(1), s.Size)
-
-	s = Size{}
-	s.UnmarshalTOML([]byte(`"1GB"`))
-	assert.Equal(t, int64(1000*1000*1000), s.Size)
-
-	s = Size{}
-	s.UnmarshalTOML([]byte(`"12GiB"`))
-	assert.Equal(t, int64(12*1024*1024*1024), s.Size)
-}
-
 func TestCompressWithGzip(t *testing.T) {
 	testData := "the quick brown fox jumps over the lazy dog"
 	inputBuffer := bytes.NewBuffer([]byte(testData))

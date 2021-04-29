@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -52,7 +52,7 @@ func TestExec(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &Exec{
 				Command: tt.command,
-				Timeout: internal.Duration{Duration: time.Second},
+				Timeout: config.Duration(time.Second),
 				runner:  &CommandRunner{},
 			}
 

@@ -68,8 +68,7 @@ func (d *Disque) Gather(acc telegraf.Accumulator) error {
 		url := &url.URL{
 			Host: ":7711",
 		}
-		d.gatherServer(url, acc)
-		return nil
+		return d.gatherServer(url, acc)
 	}
 
 	var wg sync.WaitGroup
@@ -114,7 +113,9 @@ func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 		if addr.User != nil {
 			pwd, set := addr.User.Password()
 			if set && pwd != "" {
-				c.Write([]byte(fmt.Sprintf("AUTH %s\r\n", pwd)))
+				if _, err := c.Write([]byte(fmt.Sprintf("AUTH %s\r\n", pwd))); err != nil {
+					return err
+				}
 
 				r := bufio.NewReader(c)
 
@@ -132,9 +133,13 @@ func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 	}
 
 	// Extend connection
-	d.c.SetDeadline(time.Now().Add(defaultTimeout))
+	if err := d.c.SetDeadline(time.Now().Add(defaultTimeout)); err != nil {
+		return err
+	}
 
-	d.c.Write([]byte("info\r\n"))
+	if _, err := d.c.Write([]byte("info\r\n")); err != nil {
+		return err
+	}
 
 	r := bufio.NewReader(d.c)
 

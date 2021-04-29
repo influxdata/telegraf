@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -22,7 +22,7 @@ var zookeeperFormatRE = regexp.MustCompile(`^zk_(\w[\w\.\-]*)\s+([\w\.\-]+)`)
 // Zookeeper is a zookeeper plugin
 type Zookeeper struct {
 	Servers []string
-	Timeout internal.Duration
+	Timeout config.Duration
 
 	EnableTLS bool `toml:"enable_tls"`
 	EnableSSL bool `toml:"enable_ssl"` // deprecated in 1.7; use enable_tls
@@ -89,11 +89,11 @@ func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
 		z.initialized = true
 	}
 
-	if z.Timeout.Duration < 1*time.Second {
-		z.Timeout.Duration = defaultTimeout
+	if z.Timeout < config.Duration(1*time.Second) {
+		z.Timeout = config.Duration(defaultTimeout)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, z.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(z.Timeout))
 	defer cancel()
 
 	if len(z.Servers) == 0 {
@@ -122,10 +122,14 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 	// Apply deadline to connection
 	deadline, ok := ctx.Deadline()
 	if ok {
-		c.SetDeadline(deadline)
+		if err := c.SetDeadline(deadline); err != nil {
+			return err
+		}
 	}
 
-	fmt.Fprintf(c, "%s\n", "mntr")
+	if _, err := fmt.Fprintf(c, "%s\n", "mntr"); err != nil {
+		return err
+	}
 	rdr := bufio.NewReader(c)
 	scanner := bufio.NewScanner(rdr)
 
