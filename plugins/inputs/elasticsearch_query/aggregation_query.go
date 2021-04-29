@@ -24,7 +24,7 @@ type aggregationQueryData struct {
 
 func (e *ElasticsearchQuery) runAggregationQuery(ctx context.Context, aggregation esAggregation) (*elastic5.SearchResult, error) {
 	now := time.Now().UTC()
-	from := now.Add(-aggregation.QueryPeriod.Duration)
+	from := now.Add(time.Duration(-aggregation.QueryPeriod))
 	filterQuery := aggregation.FilterQuery
 	if filterQuery == "" {
 		filterQuery = "*"

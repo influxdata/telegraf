@@ -12,7 +12,7 @@ import (
 	elastic5 "gopkg.in/olivere/elastic.v5"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -84,13 +84,13 @@ const sampleConfig = `
 
 // ElasticsearchQuery struct
 type ElasticsearchQuery struct {
-	URLs                []string          `toml:"urls"`
-	Username            string            `toml:"username"`
-	Password            string            `toml:"password"`
-	EnableSniffer       bool              `toml:"enable_sniffer"`
-	Timeout             internal.Duration `toml:"timeout"`
-	HealthCheckInterval internal.Duration `toml:"health_check_interval"`
-	Aggregations        []esAggregation   `toml:"aggregation"`
+	URLs                []string        `toml:"urls"`
+	Username            string          `toml:"username"`
+	Password            string          `toml:"password"`
+	EnableSniffer       bool            `toml:"enable_sniffer"`
+	Timeout             config.Duration `toml:"timeout"`
+	HealthCheckInterval config.Duration `toml:"health_check_interval"`
+	Aggregations        []esAggregation `toml:"aggregation"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -101,16 +101,16 @@ type ElasticsearchQuery struct {
 
 // esAggregation struct
 type esAggregation struct {
-	Index                string            `toml:"index"`
-	MeasurementName      string            `toml:"measurement_name"`
-	DateField            string            `toml:"date_field"`
-	QueryPeriod          internal.Duration `toml:"query_period"`
-	FilterQuery          string            `toml:"filter_query"`
-	MetricFields         []string          `toml:"metric_fields"`
-	MetricFunction       string            `toml:"metric_function"`
-	Tags                 []string          `toml:"tags"`
-	IncludeMissingTag    bool              `toml:"include_missing_tag"`
-	MissingTagValue      string            `toml:"missing_tag_value"`
+	Index                string          `toml:"index"`
+	MeasurementName      string          `toml:"measurement_name"`
+	DateField            string          `toml:"date_field"`
+	QueryPeriod          config.Duration `toml:"query_period"`
+	FilterQuery          string          `toml:"filter_query"`
+	MetricFields         []string        `toml:"metric_fields"`
+	MetricFunction       string          `toml:"metric_function"`
+	Tags                 []string        `toml:"tags"`
+	IncludeMissingTag    bool            `toml:"include_missing_tag"`
+	MissingTagValue      string          `toml:"missing_tag_value"`
 	mapMetricFields      map[string]string
 	aggregationQueryList []aggregationQueryData
 }
@@ -137,7 +137,7 @@ func (e *ElasticsearchQuery) Init() error {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), e.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
 	defer cancel()
 
 	for i, agg := range e.Aggregations {
@@ -192,14 +192,14 @@ func (e *ElasticsearchQuery) connectToES() error {
 		elastic5.SetHttpClient(e.httpclient),
 		elastic5.SetSniff(e.EnableSniffer),
 		elastic5.SetURL(e.URLs...),
-		elastic5.SetHealthcheckInterval(e.HealthCheckInterval.Duration),
+		elastic5.SetHealthcheckInterval(time.Duration(e.HealthCheckInterval)),
 	)
 
 	if e.Username != "" {
 		clientOptions = append(clientOptions, elastic5.SetBasicAuth(e.Username, e.Password))
 	}
 
-	if e.HealthCheckInterval.Duration == 0 {
+	if time.Duration(e.HealthCheckInterval) == 0 {
 		clientOptions = append(clientOptions, elastic5.SetHealthcheck(false))
 	}
 
@@ -262,19 +262,19 @@ func (e *ElasticsearchQuery) createHTTPClient() (*http.Client, error) {
 		return nil, err
 	}
 	tr := &http.Transport{
-		ResponseHeaderTimeout: e.Timeout.Duration,
+		ResponseHeaderTimeout: time.Duration(e.Timeout),
 		TLSClientConfig:       tlsCfg,
 	}
 	httpclient := &http.Client{
 		Transport: tr,
-		Timeout:   e.Timeout.Duration,
+		Timeout:   time.Duration(e.Timeout),
 	}
 
 	return httpclient, nil
 }
 
 func (e *ElasticsearchQuery) esAggregationQuery(acc telegraf.Accumulator, aggregation esAggregation, i int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), e.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
 	defer cancel()
 
 	// try to init the aggregation query if it is not done already
@@ -299,8 +299,8 @@ func (e *ElasticsearchQuery) esAggregationQuery(acc telegraf.Accumulator, aggreg
 func init() {
 	inputs.Add("elasticsearch_query", func() telegraf.Input {
 		return &ElasticsearchQuery{
-			Timeout:             internal.Duration{Duration: time.Second * 5},
-			HealthCheckInterval: internal.Duration{Duration: time.Second * 10},
+			Timeout:             config.Duration(time.Second * 5),
+			HealthCheckInterval: config.Duration(time.Second * 10),
 		}
 	})
 }

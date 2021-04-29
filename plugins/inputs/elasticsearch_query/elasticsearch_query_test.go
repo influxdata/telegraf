@@ -12,7 +12,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	elastic5 "gopkg.in/olivere/elastic.v5"
@@ -23,7 +23,7 @@ var (
 	setupOnce sync.Once
 	e         = &ElasticsearchQuery{
 		URLs:    []string{"http://" + testutil.GetLocalHost() + ":9200"},
-		Timeout: internal.Duration{Duration: time.Second * 30},
+		Timeout: config.Duration(time.Second * 30),
 		Log:     testutil.Logger{},
 	}
 )
@@ -45,6 +45,8 @@ type expectedMetric struct {
 	tags        map[string]string
 }
 
+var queryPeriod = config.Duration(time.Second * 600)
+
 var testEsAggregationData = []esAggregationQueryTest{
 	{
 		"query 1",
@@ -55,7 +57,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			FilterQuery:     "product_1",
 			MetricFunction:  "avg",
 			DateField:       "@timestamp",
-			QueryPeriod:     internal.Duration{Duration: time.Second * 600},
+			QueryPeriod:     queryPeriod,
 			Tags:            []string{"URI.keyword"},
 		},
 		[]aggregationQueryData{
@@ -89,7 +91,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			FilterQuery:     "downloads",
 			MetricFunction:  "max",
 			DateField:       "@timestamp",
-			QueryPeriod:     internal.Duration{Duration: time.Second * 600},
+			QueryPeriod:     queryPeriod,
 			Tags:            []string{"URI.keyword"},
 		},
 		[]aggregationQueryData{
@@ -128,7 +130,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			FilterQuery:     "downloads",
 			MetricFunction:  "sum",
 			DateField:       "@timestamp",
-			QueryPeriod:     internal.Duration{Duration: time.Second * 600},
+			QueryPeriod:     queryPeriod,
 			Tags:            []string{"response.keyword"},
 		},
 		[]aggregationQueryData{
@@ -172,7 +174,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			FilterQuery:       "downloads",
 			MetricFunction:    "min",
 			DateField:         "@timestamp",
-			QueryPeriod:       internal.Duration{Duration: time.Second * 600},
+			QueryPeriod:       queryPeriod,
 			IncludeMissingTag: true,
 			MissingTagValue:   "missing",
 			Tags:              []string{"response.keyword", "URI.keyword", "method.keyword"},
@@ -253,7 +255,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			MeasurementName: "measurement5",
 			FilterQuery:     "product_2",
 			DateField:       "@timestamp",
-			QueryPeriod:     internal.Duration{Duration: time.Second * 600},
+			QueryPeriod:     queryPeriod,
 			Tags:            []string{"URI.keyword"},
 		},
 		[]aggregationQueryData{
@@ -281,7 +283,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			MeasurementName: "measurement6",
 			FilterQuery:     "response: 200",
 			DateField:       "@timestamp",
-			QueryPeriod:     internal.Duration{Duration: time.Second * 600},
+			QueryPeriod:     queryPeriod,
 			Tags:            []string{"URI.keyword", "response.keyword"},
 		},
 		[]aggregationQueryData{
@@ -318,7 +320,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			MeasurementName: "measurement7",
 			FilterQuery:     "response: 200",
 			DateField:       "@timestamp",
-			QueryPeriod:     internal.Duration{Duration: time.Second * 600},
+			QueryPeriod:     queryPeriod,
 			Tags:            []string{},
 		},
 		nil,
@@ -343,7 +345,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			FilterQuery:     "downloads",
 			MetricFunction:  "max",
 			DateField:       "@timestamp",
-			QueryPeriod:     internal.Duration{Duration: time.Second * 600},
+			QueryPeriod:     queryPeriod,
 			Tags:            []string{},
 		},
 		[]aggregationQueryData{
@@ -373,7 +375,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			FilterQuery:     "downloads",
 			MetricFunction:  "average",
 			DateField:       "@timestamp",
-			QueryPeriod:     internal.Duration{Duration: time.Second * 600},
+			QueryPeriod:     queryPeriod,
 			Tags:            []string{},
 		},
 		nil,
@@ -390,7 +392,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			MeasurementName: "measurement10",
 			MetricFields:    []string{"none"},
 			DateField:       "@timestamp",
-			QueryPeriod:     internal.Duration{Duration: time.Second * 600},
+			QueryPeriod:     queryPeriod,
 			Tags:            []string{},
 		},
 		nil,
@@ -406,7 +408,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			Index:           "notanindex",
 			MeasurementName: "measurement11",
 			DateField:       "@timestamp",
-			QueryPeriod:     internal.Duration{Duration: time.Second * 600},
+			QueryPeriod:     queryPeriod,
 			Tags:            []string{},
 		},
 		nil,
@@ -424,7 +426,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			MetricFields:    []string{"size"},
 			MetricFunction:  "avg",
 			DateField:       "@notatimestamp",
-			QueryPeriod:     internal.Duration{Duration: time.Second * 600},
+			QueryPeriod:     queryPeriod,
 			Tags:            []string{},
 		},
 		[]aggregationQueryData{
@@ -447,7 +449,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			MetricFields:      []string{"size"},
 			MetricFunction:    "avg",
 			DateField:         "@timestamp",
-			QueryPeriod:       internal.Duration{Duration: time.Second * 600},
+			QueryPeriod:       queryPeriod,
 			IncludeMissingTag: false,
 			Tags:              []string{"nothere"},
 		},
