@@ -20,13 +20,11 @@ type OpenTelemetry struct {
 
 	MetricsSchema string `toml:"metrics_schema"`
 
-	grpcServer    *grpc.Server
-	grpcServerErr error
-	listener      net.Listener
+	Log telegraf.Logger `toml:"-"`
+
+	grpcServer *grpc.Server
 
 	wg sync.WaitGroup
-
-	Log telegraf.Logger `toml:"-"`
 }
 
 const sampleConfig = `
@@ -55,8 +53,7 @@ func (o *OpenTelemetry) Gather(_ telegraf.Accumulator) error {
 }
 
 func (o *OpenTelemetry) Start(accumulator telegraf.Accumulator) error {
-	var err error
-	o.listener, err = net.Listen("tcp", o.ServiceAddress)
+	listener, err := net.Listen("tcp", o.ServiceAddress)
 	if err != nil {
 		return err
 	}
@@ -75,7 +72,9 @@ func (o *OpenTelemetry) Start(accumulator telegraf.Accumulator) error {
 
 	o.wg.Add(1)
 	go func() {
-		o.grpcServerErr = o.grpcServer.Serve(o.listener)
+		if err := o.grpcServer.Serve(listener); err != nil {
+			o.Log.Warn("failed to stop OpenTelemetry gRPC service: %q", err)
+		}
 		o.wg.Done()
 	}()
 
@@ -86,19 +85,8 @@ func (o *OpenTelemetry) Stop() {
 	if o.grpcServer != nil {
 		o.grpcServer.Stop()
 	}
-	var listenerErr error
-	if o.listener != nil {
-		listenerErr = o.listener.Close()
-	}
 
 	o.wg.Wait()
-
-	if o.grpcServerErr != nil {
-		o.Log.Warn("failed to stop OpenTelemetry gRPC service: %q", o.grpcServerErr)
-	}
-	if listenerErr != nil {
-		o.Log.Warn("failed to stop OpenTelemetry net.Listener: %q", listenerErr)
-	}
 }
 
 func init() {
@@ -106,6 +94,7 @@ func init() {
 		return &OpenTelemetry{
 			ServiceAddress: "0.0.0.0:4317",
 			Timeout:        config.Duration(time.Second),
+			MetricsSchema:  "prometheus-v1",
 		}
 	})
 }
