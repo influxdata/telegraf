@@ -118,7 +118,7 @@ func (o *OpenTelemetry) Init() error {
 // Connect initiates the primary connection to the OpenTelemetry endpoint.
 func (o *OpenTelemetry) Connect() error {
 	ctx := context.Background()
-	if err := o.client.ping(ctx); err != nil {
+	if err := o.client.connect(ctx); err != nil {
 		if closeErr := o.client.close(); closeErr != nil {
 			return errors.Wrap(err, closeErr.Error())
 		}

@@ -94,27 +94,23 @@ func (c *client) connect(ctx context.Context) error {
 	if len(c.url.Port()) > 0 {
 		address = net.JoinHostPort(address, c.url.Port())
 	}
-	conn, err := grpc.DialContext(ctx, address, dopts...)
-	if err != nil {
-		return err
-	}
-	c.conn = conn
-	return err
-}
 
-// ping sends an empty request the endpoint.
-func (c *client) ping(ctx context.Context) error {
-	// Loop until the context is canceled, allowing for retryable failures.
+	var conn *grpc.ClientConn
+
 	for {
-		err := c.connect(ctx)
+		var err error
+		conn, err = grpc.DialContext(ctx, address, dopts...)
+		if err != nil {
+			return err
+		}
 
 		if err == nil {
-			service := metricsService.NewMetricsServiceClient(c.conn)
+			service := metricsService.NewMetricsServiceClient(conn)
 			empty := &metricsService.ExportMetricsServiceRequest{}
 
 			_, err = service.Export(metadata.NewOutgoingContext(ctx, c.headers), empty)
 			if err == nil {
-				return nil
+				break
 			}
 		}
 
@@ -129,6 +125,8 @@ func (c *client) ping(ctx context.Context) error {
 		}
 		return fmt.Errorf("non-recoverable failure in ping, err=%w", err)
 	}
+	c.conn = conn
+	return nil
 }
 
 // store sends a batch of samples to the endpoint.

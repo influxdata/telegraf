@@ -63,7 +63,7 @@ func TestClientWithUnrecoverableError(t *testing.T) {
 		timeout: time.Second,
 	}
 
-	err = client.ping(context.Background())
+	err = client.connect(context.Background())
 	require.False(t, isRecoverable(err), "expected unrecoverableError in error %v", err)
 
 	err = client.store([]*metricspb.ResourceMetrics{{}})
