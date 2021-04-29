@@ -154,7 +154,12 @@ func (e *ElasticsearchQuery) buildAggregationQuery(mapMetricFields map[string]st
 	}
 
 	for _, term := range aggregation.Tags {
-		aggregationQueryList = e.getTermsAggregation(aggregation.MeasurementName, term, aggregation.IncludeMissingTag, aggregation.MissingTagValue, aggregationQueryList)
+		missingTagValue := aggregation.MissingTagValue
+		if !aggregation.IncludeMissingTag {
+			missingTagValue = ""
+		}
+
+		aggregationQueryList = e.getTermsAggregation(aggregation.MeasurementName, term, missingTagValue, aggregationQueryList)
 	}
 
 	return aggregationQueryList, nil
@@ -179,10 +184,10 @@ func (e *ElasticsearchQuery) getFunctionAggregation(function string, aggfield st
 	return agg, nil
 }
 
-func (e *ElasticsearchQuery) getTermsAggregation(aggMeasurementName string, aggTerm string, includeMissing bool, missingTagValue string, subAggList []aggregationQueryData) []aggregationQueryData {
+func (e *ElasticsearchQuery) getTermsAggregation(aggMeasurementName string, aggTerm string, missingTagValue string, subAggList []aggregationQueryData) []aggregationQueryData {
 	agg := elastic5.NewTermsAggregation()
 
-	if includeMissing && missingTagValue != "" {
+	if missingTagValue != "" {
 		agg.Missing(missingTagValue)
 	}
 
