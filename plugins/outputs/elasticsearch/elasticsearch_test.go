@@ -2,12 +2,14 @@ package elasticsearch
 
 import (
 	"context"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -38,6 +40,34 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 
 	// Verify that we can successfully write data to Elasticsearch
 	err = e.Write(testutil.MockMetrics())
+	require.NoError(t, err)
+}
+
+func TestConnectAndWriteMetricWithNaNValue(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+
+	e := &Elasticsearch{
+		URLs:                urls,
+		IndexName:           "test-%Y.%m.%d",
+		Timeout:             config.Duration(time.Second * 5),
+		ManageTemplate:      true,
+		TemplateName:        "telegraf",
+		OverwriteTemplate:   false,
+		HealthCheckInterval: config.Duration(time.Second * 10),
+	}
+
+	// Verify that we can connect to Elasticsearch
+	err := e.Connect()
+	require.NoError(t, err)
+
+	// Verify that we can successfully write a metric with NaN value
+	err = e.Write([]telegraf.Metric{
+		testutil.TestMetric(math.NaN()),
+	})
 	require.NoError(t, err)
 }
 
@@ -121,7 +151,7 @@ func TestGetTagKeys(t *testing.T) {
 		Log:             testutil.Logger{},
 	}
 
-	var tests = []struct {
+	tests := []struct {
 		IndexName         string
 		ExpectedIndexName string
 		ExpectedTagKeys   []string
@@ -181,7 +211,7 @@ func TestGetIndexName(t *testing.T) {
 		Log:             testutil.Logger{},
 	}
 
-	var tests = []struct {
+	tests := []struct {
 		EventTime time.Time
 		Tags      map[string]string
 		TagKeys   []string
