@@ -2,7 +2,6 @@ package aliyuncms
 
 import (
 	"encoding/json"
-	"github.com/influxdata/telegraf"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -18,6 +17,7 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/pkg/errors"
 )
@@ -277,12 +277,13 @@ func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 	}, nil
 }
 
-func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) (pdResp *parsedDResp, err error) {
+func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) (*parsedDResp, error) {
 	var (
 		fullOutput    = map[string]interface{}{}
 		data          []byte
 		foundDataItem bool
 		foundRootKey  bool
+		pdResp        = &parsedDResp{}
 	)
 
 	data = resp.GetHttpContentBytes()
@@ -290,12 +291,9 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 		return nil, errors.Errorf("No data in response to be parsed")
 	}
 
-	err = json.Unmarshal(data, &fullOutput)
-	if err != nil {
+	if err := json.Unmarshal(data, &fullOutput); err != nil {
 		return nil, errors.Errorf("Can't parse JSON from discovery response: %v", err)
 	}
-
-	pdResp = &parsedDResp{}
 
 	for key, val := range fullOutput {
 		switch key {
@@ -327,7 +325,7 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 		return nil, errors.Errorf("Didn't find root key %q in discovery response", dt.respRootKey)
 	}
 
-	return
+	return pdResp, nil
 }
 
 func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.CommonRequest, lmtr chan bool) (map[string]interface{}, error) {
