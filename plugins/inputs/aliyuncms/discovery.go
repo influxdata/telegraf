@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,36 +17,10 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
-	"github.com/pkg/errors"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/limiter"
+	"github.com/pkg/errors"
 )
-
-// https://www.alibabacloud.com/help/doc-detail/40654.htm?gclid=Cj0KCQjw4dr0BRCxARIsAKUNjWTAMfyVUn_Y3OevFBV3CMaazrhq0URHsgE7c0m0SeMQRKlhlsJGgIEaAviyEALw_wcB
-var aliyunRegionList = []string{
-	"cn-qingdao",
-	"cn-beijing",
-	"cn-zhangjiakou",
-	"cn-huhehaote",
-	"cn-hangzhou",
-	"cn-shanghai",
-	"cn-shenzhen",
-	"cn-heyuan",
-	"cn-chengdu",
-	"cn-hongkong",
-	"ap-southeast-1",
-	"ap-southeast-2",
-	"ap-southeast-3",
-	"ap-southeast-5",
-	"ap-south-1",
-	"ap-northeast-1",
-	"us-west-1",
-	"us-east-1",
-	"eu-central-1",
-	"eu-west-1",
-	"me-east-1",
-}
 
 type discoveryRequest interface {
 }
@@ -54,6 +29,7 @@ type aliyunSdkClient interface {
 	ProcessCommonRequest(req *requests.CommonRequest) (response *responses.CommonResponse, err error)
 }
 
+// discoveryTool is a object that provides discovery feature
 type discoveryTool struct {
 	req                map[string]discoveryRequest //Discovery request (specific per object type)
 	rateLimit          int                         //Rate limit for API query, as it is limited by API backend
@@ -70,8 +46,8 @@ type discoveryTool struct {
 	lg       telegraf.Logger             //Telegraf logger (should be provided)
 }
 
-type response struct {
-	discData   []interface{}
+type parsedDResp struct {
+	data       []interface{}
 	totalCount int
 	pageSize   int
 	pageNumber int
@@ -124,7 +100,8 @@ func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 
 	if len(regions) == 0 {
 		regions = aliyunRegionList
-		lg.Warnf("Discovery regions are not provided! Data will be queried across %d regions!", len(aliyunRegionList))
+		lg.Infof("'regions' is not provided! Discovery data will be queried across %d regions:\n%s",
+			len(aliyunRegionList), strings.Join(aliyunRegionList, ","))
 	}
 
 	if rateLimit == 0 { //Can be a rounding case
@@ -300,21 +277,21 @@ func newDiscoveryTool(regions []string, project string, lg telegraf.Logger, cred
 	}, nil
 }
 
-func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) (discoveryResponse *response, err error) {
+func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) (*parsedDResp, error) {
 	var (
-		fullOutput                       = map[string]interface{}{}
-		foundDataItem, foundRootKey      bool
-		discData                         []interface{}
-		totalCount, pageSize, pageNumber int
+		fullOutput    = map[string]interface{}{}
+		data          []byte
+		foundDataItem bool
+		foundRootKey  bool
+		pdResp        = &parsedDResp{}
 	)
 
-	data := resp.GetHttpContentBytes()
+	data = resp.GetHttpContentBytes()
 	if data == nil { //No data
 		return nil, errors.Errorf("No data in response to be parsed")
 	}
 
-	err = json.Unmarshal(data, &fullOutput)
-	if err != nil {
+	if err := json.Unmarshal(data, &fullOutput); err != nil {
 		return nil, errors.Errorf("Can't parse JSON from discovery response: %v", err)
 	}
 
@@ -329,7 +306,7 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 
 			//It should contain the array with discovered data
 			for _, item := range rootKeyVal {
-				if discData, foundDataItem = item.([]interface{}); foundDataItem {
+				if pdResp.data, foundDataItem = item.([]interface{}); foundDataItem {
 					break
 				}
 			}
@@ -337,70 +314,72 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 				return nil, errors.Errorf("Didn't find array item in root key %q", key)
 			}
 		case "TotalCount":
-			totalCount = int(val.(float64))
+			pdResp.totalCount = int(val.(float64))
 		case "PageSize":
-			pageSize = int(val.(float64))
+			pdResp.pageSize = int(val.(float64))
 		case "PageNumber":
-			pageNumber = int(val.(float64))
+			pdResp.pageNumber = int(val.(float64))
 		}
 	}
 	if !foundRootKey {
 		return nil, errors.Errorf("Didn't find root key %q in discovery response", dt.respRootKey)
 	}
 
-	return &response{
-		discData:   discData,
-		totalCount: totalCount,
-		pageSize:   pageSize,
-		pageNumber: pageNumber,
-	}, nil
+	return pdResp, nil
 }
 
-func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.CommonRequest, limiterChan chan bool) (map[string]interface{}, error) {
-	var discoveryData []interface{}
-
+func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.CommonRequest, lmtr chan bool) (map[string]interface{}, error) {
+	var (
+		err           error
+		resp          *responses.CommonResponse
+		pDResp        *parsedDResp
+		discoveryData []interface{}
+		totalCount    int
+		pageNumber    int
+	)
 	defer delete(req.QueryParams, "PageNumber")
 
 	for {
-		if limiterChan != nil {
-			<-limiterChan //Rate limiting
+		if lmtr != nil {
+			<-lmtr //Rate limiting
 		}
 
-		resp, err := cli.ProcessCommonRequest(req)
+		resp, err = cli.ProcessCommonRequest(req)
 		if err != nil {
 			return nil, err
 		}
 
-		discoveryResponse, err := dt.parseDiscoveryResponse(resp)
+		pDResp, err = dt.parseDiscoveryResponse(resp)
 		if err != nil {
 			return nil, err
 		}
-		discoveryData = append(discoveryData, discoveryResponse.discData...)
+		discoveryData = append(discoveryData, pDResp.data...)
+		pageNumber = pDResp.pageNumber
+		totalCount = pDResp.totalCount
 
 		//Pagination
-		discoveryResponse.pageNumber++
-		req.QueryParams["PageNumber"] = strconv.Itoa(discoveryResponse.pageNumber)
+		pageNumber++
+		req.QueryParams["PageNumber"] = strconv.Itoa(pageNumber)
 
-		if len(discoveryData) == discoveryResponse.totalCount { //All data received
+		if len(discoveryData) == totalCount { //All data received
 			//Map data to appropriate shape before return
 			preparedData := map[string]interface{}{}
 
 			for _, raw := range discoveryData {
 				elem, ok := raw.(map[string]interface{})
 				if !ok {
-					return nil, errors.Errorf("Can't parse input data element, not a map[string]interface{} type")
+					return nil, errors.Errorf("can't parse input data element, not a map[string]interface{} type")
 				}
 				if objectID, ok := elem[dt.respObjectIDKey].(string); ok {
 					preparedData[objectID] = elem
 				}
 			}
-
 			return preparedData, nil
 		}
 	}
 }
 
-func (dt *discoveryTool) getDiscoveryDataAllRegions(limiterChan chan bool) (map[string]interface{}, error) {
+func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[string]interface{}, error) {
 	var (
 		data       map[string]interface{}
 		resultData = map[string]interface{}{}
@@ -431,7 +410,7 @@ func (dt *discoveryTool) getDiscoveryDataAllRegions(limiterChan chan bool) (map[
 		commonRequest.TransToAcsRequest()
 
 		//Get discovery data using common request
-		data, err = dt.getDiscoveryData(cli, commonRequest, limiterChan)
+		data, err = dt.getDiscoveryData(cli, commonRequest, lmtr)
 		if err != nil {
 			return nil, err
 		}
@@ -443,7 +422,9 @@ func (dt *discoveryTool) getDiscoveryDataAllRegions(limiterChan chan bool) (map[
 	return resultData, nil
 }
 
-func (dt *discoveryTool) Start() {
+// start the discovery pooling
+// In case smth. new found it will be reported back through `DataChan`
+func (dt *discoveryTool) start() {
 	var (
 		err      error
 		data     map[string]interface{}
@@ -468,7 +449,7 @@ func (dt *discoveryTool) Start() {
 			case <-dt.done:
 				return
 			case <-ticker.C:
-				data, err = dt.getDiscoveryDataAllRegions(lmtr.C)
+				data, err = dt.getDiscoveryDataAcrossRegions(lmtr.C)
 				if err != nil {
 					dt.lg.Errorf("Can't get discovery data: %v", err)
 					continue
@@ -489,7 +470,9 @@ func (dt *discoveryTool) Start() {
 	}()
 }
 
-func (dt *discoveryTool) Stop() {
+// stop the discovery loop, making sure
+// all data is read from 'dataChan'
+func (dt *discoveryTool) stop() {
 	close(dt.done)
 
 	//Shutdown timer
