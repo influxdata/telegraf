@@ -24,6 +24,7 @@ var (
 	e         = &ElasticsearchQuery{
 		URLs:    []string{"http://" + testutil.GetLocalHost() + ":9200"},
 		Timeout: internal.Duration{Duration: time.Second * 30},
+		Log:     testutil.Logger{},
 	}
 )
 
