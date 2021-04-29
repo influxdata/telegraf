@@ -25,7 +25,7 @@ func (g *CGroup) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(dir.err)
 			continue
 		}
-		if err := g.gatherDir(dir.path, acc); err != nil {
+		if err := g.gatherDir(acc, dir.path); err != nil {
 			acc.AddError(err)
 		}
 	}
@@ -33,7 +33,7 @@ func (g *CGroup) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (g *CGroup) gatherDir(dir string, acc telegraf.Accumulator) error {
+func (g *CGroup) gatherDir(acc telegraf.Accumulator, dir string) error {
 	fields := make(map[string]interface{})
 
 	list := make(chan pathInfo)
@@ -72,8 +72,8 @@ type pathInfo struct {
 	err  error
 }
 
-func isDir(path string) (bool, error) {
-	result, err := os.Stat(path)
+func isDir(pathToCheck string) (bool, error) {
+	result, err := os.Stat(pathToCheck)
 	if err != nil {
 		return false, err
 	}

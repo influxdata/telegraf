@@ -1,7 +1,7 @@
 package application_insights
 
 import (
-	"github.com/Microsoft/ApplicationInsights-Go/appinsights"
+	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 )
 
 type Transmitter struct {
