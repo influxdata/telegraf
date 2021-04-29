@@ -1,4 +1,4 @@
-package opentelemetry_listener
+package opentelemetry
 
 import (
 	"strings"

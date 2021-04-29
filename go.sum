@@ -235,6 +235,7 @@ github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6/go.mod
 github.com/clbanning/x2j v0.0.0-20191024224557-825249438eec/go.mod h1:jMjuTZXRI4dUb/I5gc9Hdhagfvm9+RyrPryS/auMzxE=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
+github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/cockroachdb/apd v1.1.0 h1:3LFP3629v+1aKXU5Q37mxmRxX/pIu1nijXydLShEq5I=
 github.com/cockroachdb/apd v1.1.0/go.mod h1:8Sl8LxpKi29FqWXR16WEFZRNSz3SoPzUzeMeY4+DwBQ=
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
@@ -315,6 +316,7 @@ github.com/envoyproxy/go-control-plane v0.6.9/go.mod h1:SBwIajubJHhxtWwsL9s8ss4s
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
+github.com/envoyproxy/go-control-plane v0.9.9-0.20210217033140-668b12f5399d/go.mod h1:cXg6YxExXjJnVBQHBLXeUAgxn2UodCpnH306RInaBQk=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/evanphx/json-patch v0.0.0-20200808040245-162e5629780b/go.mod h1:NAJj0yf/KaRKURN6nyi7A9IZydMivZEm9oQLWNjfKDc=
 github.com/evanphx/json-patch v4.2.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
@@ -668,10 +670,13 @@ github.com/influxdata/flux v0.65.0/go.mod h1:BwN2XG2lMszOoquQaFdPET8FRQfrXiZsWmc
 github.com/influxdata/go-syslog/v2 v2.0.1 h1:l44S4l4Q8MhGQcoOxJpbo+QQYxJqp0vdgIVHh4+DO0s=
 github.com/influxdata/go-syslog/v2 v2.0.1/go.mod h1:hjvie1UTaD5E1fTnDmxaCw8RRDrT4Ve+XHr5O2dKSCo=
 github.com/influxdata/influxdb v1.8.2/go.mod h1:SIzcnsjaHRFpmlxpJ4S3NT64qtEKYweNTUMb/vh0OMQ=
-github.com/influxdata/influxdb-observability/otel2influx v0.0.0-20210331195339-2c548c8df125 h1:cSj99e/RJzLXjRVgICBV6qJvYJb/6eBnOOPztML5dMc=
-github.com/influxdata/influxdb-observability/otel2influx v0.0.0-20210331195339-2c548c8df125/go.mod h1:Dd+v0Z9cLkbT/LxKhxwQSx+H0m69zL7xZuFLVuU/Tls=
-github.com/influxdata/influxdb-observability/otlp v0.0.0-20210331191746-e3b3b09c4303 h1:SohJPw7tCsxXczuWFVlb8q+TwMWW9LG6cPfvtlQUFB0=
-github.com/influxdata/influxdb-observability/otlp v0.0.0-20210331191746-e3b3b09c4303/go.mod h1:h73xVwciMbwxo5DD21Nk3sirY86eM8OoLBvGjixdMIg=
+github.com/influxdata/influxdb-observability/common v0.0.0-20210428231528-a010f53e3e02 h1:yyxbGRqznA/nmlsORBMCEz5H/8jGIDA2P9D7RUU5rjw=
+github.com/influxdata/influxdb-observability/common v0.0.0-20210428231528-a010f53e3e02/go.mod h1:PMngVYsW4uwtzIVmj0ZfLL9UIOwo7Vs+09QHkoYMZv8=
+github.com/influxdata/influxdb-observability/otel2influx v0.0.0-20210429002128-7cc12eacb248 h1:aulk/hDmP+up3N8RY43h/wowLzX1xjoH5swctS4SFiY=
+github.com/influxdata/influxdb-observability/otel2influx v0.0.0-20210429002128-7cc12eacb248/go.mod h1:43guzIbK1oO/UMBuMCqG++LHZqLhMbWxqU4H1Lgpf28=
+github.com/influxdata/influxdb-observability/otlp v0.0.0-20210428231528-a010f53e3e02/go.mod h1:J2N8KOAXSXgDhLjYWvjbxPhrgq3nVQ/npzW8l8T77Qo=
+github.com/influxdata/influxdb-observability/otlp v0.0.0-20210429002128-7cc12eacb248 h1:h9svempM0x7v9UwOViKHhPgTGFNg0k4GiuYrLzmcgT0=
+github.com/influxdata/influxdb-observability/otlp v0.0.0-20210429002128-7cc12eacb248/go.mod h1:23SLY21Ag84PC0TbvVhdKoOVvrQF6nq5j5sFOW09ZBU=
 github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d/go.mod h1:qj24IKcXYK6Iy9ceXlo3Tc+vtHo9lIhSX5JddghvEPo=
 github.com/influxdata/influxql v1.1.0/go.mod h1:KpVI7okXjK6PRi3Z5B+mtKZli+R1DnZgb3N+tzevNgo=
 github.com/influxdata/line-protocol v0.0.0-20180522152040-32c6aa80de5e/go.mod h1:4kt73NQhadE3daL3WhR5EJ/J2ocX0PZzwxQ0gXJ7oFE=
@@ -1537,8 +1542,9 @@ google.golang.org/grpc v1.27.0/go.mod h1:qbnxyOmOxrQa7FizSgH+ReBfzJrCY1pSN7KXBS8
 google.golang.org/grpc v1.27.1/go.mod h1:qbnxyOmOxrQa7FizSgH+ReBfzJrCY1pSN7KXBS8abTk=
 google.golang.org/grpc v1.28.0/go.mod h1:rpkK4SK4GF4Ach/+MFLZUBavHOvF2JJB5uozKKal+60=
 google.golang.org/grpc v1.29.1/go.mod h1:itym6AZVZYACWQqET3MqgPpjcuV5QH3BxFS3IjizoKk=
-google.golang.org/grpc v1.33.1 h1:DGeFlSan2f+WEtCERJ4J9GJWk15TxUi8QGagfI87Xyc=
 google.golang.org/grpc v1.33.1/go.mod h1:fr5YgcSWrqhRRxogOsw7RzIpsmvOZ6IcH4kBYTpR3n0=
+google.golang.org/grpc v1.37.0 h1:uSZWeQJX5j11bIQ4AJoj+McDBo29cY1MCoC1wO3ts+c=
+google.golang.org/grpc v1.37.0/go.mod h1:NREThFqKR1f3iQ6oBuvc5LadQuXVGo9rkm5ZGrQdJfM=
 google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd/go.mod h1:DFci5gLYBciE7Vtevhsrf46CRTquxDuWsQurQQe4oz8=
 google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64/go.mod h1:kwYJMbMJ01Woi6D6+Kah6886xMZcty6N08ah7+eCXa0=
 google.golang.org/protobuf v0.0.0-20200228230310-ab0ca4ff8a60/go.mod h1:cfTl7dwQJ+fmap5saPgwCLgHXTUD7jkjRqWcaiX5VyM=

@@ -73,8 +73,9 @@ require (
 	github.com/hashicorp/consul/api v1.6.0
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
 	github.com/influxdata/go-syslog/v2 v2.0.1
-	github.com/influxdata/influxdb-observability/otel2influx v0.0.0-20210331195339-2c548c8df125
-	github.com/influxdata/influxdb-observability/otlp v0.0.0-20210331191746-e3b3b09c4303
+	github.com/influxdata/influxdb-observability/common v0.0.0-20210428231528-a010f53e3e02
+	github.com/influxdata/influxdb-observability/otel2influx v0.0.0-20210429002128-7cc12eacb248
+	github.com/influxdata/influxdb-observability/otlp v0.0.0-20210429002128-7cc12eacb248
 	github.com/influxdata/tail v1.0.1-0.20200707181643-03a791b270e4
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
@@ -138,7 +139,7 @@ require (
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	google.golang.org/api v0.29.0
 	google.golang.org/genproto v0.0.0-20200815001618-f69a88009b70
-	google.golang.org/grpc v1.33.1
+	google.golang.org/grpc v1.37.0
 	gopkg.in/djherbis/times.v1 v1.2.0
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
@@ -158,5 +159,3 @@ replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
 
 // replaced due to https//github.com/mdlayher/apcupsd/issues/10
 replace github.com/mdlayher/apcupsd => github.com/influxdata/apcupsd v0.0.0-20210427145308-694d5caead0e
-
-replace github.com/influxdata/influxdb-observability/otlp v0.0.0 => github.com/influxdata/influxdb-observability/otlp v0.0.0-20210331191746-e3b3b09c4303
