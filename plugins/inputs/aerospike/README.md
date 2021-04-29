@@ -28,18 +28,17 @@ All metrics are attempted to be cast to integers, then booleans, then strings.
   # tls_key = "/etc/telegraf/key.pem"
   ## If false, skip chain & host verification
   # insecure_skip_verify = true
-  
+
   # Feature Options
   # Add namespace variable to limit the namespaces executed on
   # Leave blank to do all
   # disable_query_namespaces = true # default false
   # namespaces = ["namespace1", "namespace2"]
 
-  # Enable set level telmetry
+  # Enable set level telemetry
   # query_sets = true # default: false
   # Add namespace set combinations to limit sets executed on
-  # Leave blank to do all
-  # sets = ["namespace1/set1", "namespace1/set2"]
+  # Leave blank to do all sets
   # sets = ["namespace1/set1", "namespace1/set2", "namespace3"]
 
   # Histograms
@@ -48,12 +47,10 @@ All metrics are attempted to be cast to integers, then booleans, then strings.
 
   # by default, aerospike produces a 100 bucket histogram
   # this is not great for most graphing tools, this will allow
-  # the ability to squash this to a smaller number of buckets 
+  # the ability to squash this to a smaller number of buckets
   # To have a balanced histogram, the number of buckets chosen 
   # should divide evenly into 100.
   # num_histogram_buckets = 100 # default: 10
-
-
 ```
 
 ### Measurements:
