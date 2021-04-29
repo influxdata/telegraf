@@ -117,7 +117,7 @@ require (
 	github.com/riemann/riemann-go-client v0.5.0
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/sensu/sensu-go/api/core/v2 v2.6.0
-	github.com/shirou/gopsutil v3.20.11+incompatible
+	github.com/shirou/gopsutil v3.21.3+incompatible
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
 	github.com/signalfx/golib/v3 v3.3.0
 	github.com/sirupsen/logrus v1.7.0
@@ -127,6 +127,7 @@ require (
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/tidwall/gjson v1.6.0
 	github.com/tinylib/msgp v1.1.5
+	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/vishvananda/netlink v0.0.0-20171020171820-b2de5d10e38e // indirect
 	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc // indirect
 	github.com/vjeantet/grok v1.0.1
@@ -141,7 +142,7 @@ require (
 	golang.org/x/net v0.0.0-20201209123823-ac852fbbde11
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
+	golang.org/x/sys v0.0.0-20210316164454-77fc1eacc6aa
 	golang.org/x/text v0.3.4
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	google.golang.org/api v0.20.0
