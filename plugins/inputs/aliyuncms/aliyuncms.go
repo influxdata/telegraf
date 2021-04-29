@@ -438,10 +438,13 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 	return nil
 }
 
-//Tag helper
-func parseTag(tagSpec string, data interface{}) (string, string, error) {
-	tagKey := tagSpec
-	queryPath := tagSpec
+//tag helper
+func parseTag(tagSpec string, data interface{}) (tagKey string, tagValue string, err error) {
+	var (
+		ok        bool
+		queryPath = tagSpec
+	)
+	tagKey = tagSpec
 
 	//Split query path to tagKey and query path
 	if splitted := strings.Split(tagSpec, ":"); len(splitted) == 2 {
@@ -459,7 +462,7 @@ func parseTag(tagSpec string, data interface{}) (string, string, error) {
 		return "", "", nil
 	}
 
-	tagValue, ok := tagRawValue.(string)
+	tagValue, ok = tagRawValue.(string)
 	if !ok {
 		return "", "", errors.Errorf("Tag value %v parsed by query %q is not a string value",
 			tagRawValue, queryPath)
