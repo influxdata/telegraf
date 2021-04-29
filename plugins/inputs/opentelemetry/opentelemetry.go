@@ -1,6 +1,7 @@
 package opentelemetry
 
 import (
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -32,7 +33,7 @@ const sampleConfig = `
   # service_address = "0.0.0.0:4317"
 
   ## Override the default request timeout
-  # timeout = "1s"
+  # timeout = "5s"
 
   ## Select a schema for metrics: prometheus-v1 or prometheus-v2
   ## For more information about the alternatives, read the Prometheus input
@@ -73,7 +74,7 @@ func (o *OpenTelemetry) Start(accumulator telegraf.Accumulator) error {
 	o.wg.Add(1)
 	go func() {
 		if err := o.grpcServer.Serve(listener); err != nil {
-			o.Log.Warn("failed to stop OpenTelemetry gRPC service: %q", err)
+			accumulator.AddError(fmt.Errorf("failed to stop OpenTelemetry gRPC service: %w", err))
 		}
 		o.wg.Done()
 	}()
@@ -93,7 +94,7 @@ func init() {
 	inputs.Add("opentelemetry", func() telegraf.Input {
 		return &OpenTelemetry{
 			ServiceAddress: "0.0.0.0:4317",
-			Timeout:        config.Duration(time.Second),
+			Timeout:        config.Duration(5 * time.Second),
 			MetricsSchema:  "prometheus-v1",
 		}
 	})

@@ -10,7 +10,7 @@ This plugin receives traces, metrics and logs from [OpenTelemetry](https://opent
   # service_address = "0.0.0.0:4317"
   
   ## Override the default request timeout
-  # timeout = "1s"
+  # timeout = "5s"
   
   ## Select a schema for metrics: "prometheus-v1" or "prometheus-v2"
   ## For more information about the alternatives, read the Prometheus input

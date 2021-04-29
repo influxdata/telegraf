@@ -108,6 +108,7 @@ following works:
 - github.com/influxdata/tail [MIT License](https://github.com/influxdata/tail/blob/master/LICENSE.txt)
 - github.com/influxdata/toml [MIT License](https://github.com/influxdata/toml/blob/master/LICENSE)
 - github.com/influxdata/wlog [MIT License](https://github.com/influxdata/wlog/blob/master/LICENSE)
+- github.com/influxdata/influxdb-observability [MIT License](https://github.com/influxdata/influxdb-observability/blob/main/LICENSE)
 - github.com/jackc/pgx [MIT License](https://github.com/jackc/pgx/blob/master/LICENSE)
 - github.com/jaegertracing/jaeger [Apache License 2.0](https://github.com/jaegertracing/jaeger/blob/master/LICENSE)
 - github.com/james4k/rcon [MIT License](https://github.com/james4k/rcon/blob/master/LICENSE)
