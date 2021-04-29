@@ -96,7 +96,7 @@ func (a *Aerospike) SampleConfig() string {
 }
 
 func (a *Aerospike) Description() string {
-	fmt.Println("cla work?")
+	fmt.Println("Now it should work!")
 	return "Read stats from aerospike server(s)"
 }
 
