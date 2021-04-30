@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	metricsService "github.com/influxdata/influxdb-observability/otlp/collector/metrics/v1"
+	metricspb "github.com/influxdata/influxdb-observability/otlp/metrics/v1"
 	"github.com/influxdata/telegraf"
-	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	metricspb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"

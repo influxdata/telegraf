@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/pkg/errors"
 
-	metricspb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	metricspb "github.com/influxdata/influxdb-observability/otlp/metrics/v1"
 	"google.golang.org/grpc/metadata"
 )
 

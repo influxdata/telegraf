@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	metricsService "github.com/influxdata/influxdb-observability/otlp/collector/metrics/v1"
+	metricspb "github.com/influxdata/influxdb-observability/otlp/metrics/v1"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
-	metricsService "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	metricspb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	"golang.org/x/net/nettest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

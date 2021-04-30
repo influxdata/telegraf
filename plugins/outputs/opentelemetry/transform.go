@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	commonpb "github.com/influxdata/influxdb-observability/otlp/common/v1"
+	metricpb "github.com/influxdata/influxdb-observability/otlp/metrics/v1"
+	resourcepb "github.com/influxdata/influxdb-observability/otlp/resource/v1"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
 )
 
 func monotonicIntegerPoint(labels []*commonpb.StringKeyValue, start, end int64, value int64) *metricpb.IntSum {
