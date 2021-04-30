@@ -72,6 +72,9 @@ require (
 	github.com/hashicorp/consul/api v1.6.0
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
 	github.com/influxdata/go-syslog/v2 v2.0.1
+	github.com/influxdata/influxdb-observability/common v0.0.0-20210429174543-86ae73cafd31
+	github.com/influxdata/influxdb-observability/otel2influx v0.0.0-20210429174543-86ae73cafd31
+	github.com/influxdata/influxdb-observability/otlp v0.0.0-20210429174543-86ae73cafd31
 	github.com/influxdata/tail v1.0.1-0.20200707181643-03a791b270e4
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
@@ -104,7 +107,7 @@ require (
 	github.com/riemann/riemann-go-client v0.5.0
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/sensu/sensu-go/api/core/v2 v2.6.0
-	github.com/shirou/gopsutil v3.20.11+incompatible
+	github.com/shirou/gopsutil v3.21.3+incompatible
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
 	github.com/signalfx/golib/v3 v3.3.0
 	github.com/sirupsen/logrus v1.6.0
@@ -114,6 +117,7 @@ require (
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/tidwall/gjson v1.6.0
 	github.com/tinylib/msgp v1.1.5
+	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/vapourismo/knx-go v0.0.0-20201122213738-75fe09ace330
 	github.com/vishvananda/netlink v0.0.0-20171020171820-b2de5d10e38e // indirect
 	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc // indirect
@@ -130,13 +134,13 @@ require (
 	golang.org/x/net v0.0.0-20201209123823-ac852fbbde11
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4
+	golang.org/x/sys v0.0.0-20210316164454-77fc1eacc6aa
 	golang.org/x/text v0.3.4
 	golang.org/x/tools v0.1.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	google.golang.org/api v0.29.0
 	google.golang.org/genproto v0.0.0-20200815001618-f69a88009b70
-	google.golang.org/grpc v1.36.0
+	google.golang.org/grpc v1.37.0
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/djherbis/times.v1 v1.2.0
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
