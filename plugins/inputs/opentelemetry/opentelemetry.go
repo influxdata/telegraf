@@ -29,7 +29,7 @@ type OpenTelemetry struct {
 }
 
 const sampleConfig = `
-  ## Override the OpenTelemetry gRPC service address:port 
+  ## Override the OpenTelemetry gRPC service address:port
   # service_address = "0.0.0.0:4317"
 
   ## Override the default request timeout

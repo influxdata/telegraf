@@ -41,9 +41,9 @@ type metricsService struct {
 	writer    *writeToAccumulator
 }
 
-var metricsSchemata = map[string]otel2influx.MetricsSchema{
-	"prometheus-v1": otel2influx.MetricsSchemaTelegrafPrometheusV1,
-	"prometheus-v2": otel2influx.MetricsSchemaTelegrafPrometheusV2,
+var metricsSchemata = map[string]common.MetricsSchema{
+	"prometheus-v1": common.MetricsSchemaTelegrafPrometheusV1,
+	"prometheus-v2": common.MetricsSchemaTelegrafPrometheusV2,
 }
 
 func newMetricsService(logger common.Logger, writer *writeToAccumulator, schema string) (*metricsService, error) {
