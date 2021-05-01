@@ -128,7 +128,7 @@ func (s *NetStatsConnections) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 	}
-	var port := ""
+	var port = ""
 	for _, netcon := range netconns {
 		if netcon.Status != "LISTEN" {
 			//Add count status by listen port
