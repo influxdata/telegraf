@@ -128,8 +128,8 @@ func (s *NetStatsConnections) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 	}
+	var port := ""
 	for _, netcon := range netconns {
-		var port = ""
 		if netcon.Status != "LISTEN" {
 			//Add count status by listen port
 			port = strconv.Itoa(int(netcon.Laddr.Port))
@@ -137,27 +137,27 @@ func (s *NetStatsConnections) Gather(acc telegraf.Accumulator) error {
 			if ok {
 				switch netcon.Status {
 				case "ESTABLISHED":
-					c.Established += 1
+					c.Established++
 				case "SYN_SENT":
-					c.SynSent += 1
+					c.SynSent++
 				case "SYN_RECV":
-					c.SynRecv += 1
+					c.SynRecv++
 				case "FIN_WAIT1":
-					c.FinWait1 += 1
+					c.FinWait1++
 				case "FIN_WAIT2":
-					c.FinWait2 += 1
+					c.FinWait2++
 				case "TIME_WAIT":
-					c.TimeWait += 1
+					c.TimeWait++
 				case "CLOSE":
-					c.Close += 1
+					c.Close++
 				case "CLOSE_WAIT":
-					c.CloseWait += 1
+					c.CloseWait++
 				case "LAST_ACK":
-					c.LastAck += 1
+					c.LastAck++
 				case "CLOSING":
-					c.Closing += 1
+					c.Closing++
 				case "NONE":
-					c.None += 1
+					c.None++
 				}
 			} else if s.RemoteConnections && netcon.Raddr.Port > 0 { //Only generate remote connectios by parameter
 				var process_name string
@@ -202,27 +202,27 @@ func (s *NetStatsConnections) Gather(acc telegraf.Accumulator) error {
 				}
 				switch netcon.Status {
 				case "ESTABLISHED":
-					c.Established += 1
+					c.Established++
 				case "SYN_SENT":
-					c.SynSent += 1
+					c.SynSent++
 				case "SYN_RECV":
-					c.SynRecv += 1
+					c.SynRecv++
 				case "FIN_WAIT1":
-					c.FinWait1 += 1
+					c.FinWait1++
 				case "FIN_WAIT2":
-					c.FinWait2 += 1
+					c.FinWait2++
 				case "TIME_WAIT":
-					c.TimeWait += 1
+					c.TimeWait++
 				case "CLOSE":
-					c.Close += 1
+					c.Close++
 				case "CLOSE_WAIT":
-					c.CloseWait += 1
+					c.CloseWait++
 				case "LAST_ACK":
-					c.LastAck += 1
+					c.LastAck++
 				case "CLOSING":
-					c.Closing += 1
+					c.Closing++
 				case "NONE":
-					c.None += 1
+					c.None++
 				}
 			}
 		}
