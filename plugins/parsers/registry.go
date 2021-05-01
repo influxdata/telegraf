@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/jsonpath"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
@@ -158,6 +159,8 @@ type Config struct {
 
 	// XML configuration
 	XMLConfig []XMLConfig `toml:"xml"`
+
+	JSONPathConfig []jsonpath.Config `toml:"jsonpath"`
 }
 
 type XMLConfig struct {
