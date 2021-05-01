@@ -31,6 +31,8 @@ For metrics, two output schemata exist.
 Metrics received with `metrics_schema=prometheus-v1` are assigned measurement from the OTel field `Metric.name`.
 Metrics received with `metrics_schema=prometheus-v2` are stored in measurement `prometheus`.
 
+Also see the OpenTelemetry output plugin for Telegraf.
+
 ### Example Output
 
 #### Tracing Spans
