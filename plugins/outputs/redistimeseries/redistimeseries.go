@@ -30,15 +30,15 @@ type RedisTimeSeries struct {
 	Password string `toml:"password"`
 	Database int    `toml:"database"`
 	tls.ClientConfig
-	client   *redis.Client
+	client *redis.Client
 }
 
 func (r *RedisTimeSeries) Connect() error {
 	r.client = redis.NewClient(&redis.Options{
-		Addr:	  r.Address,
+		Addr:     r.Address,
 		Password: r.Password,
 		Username: r.Username,
-		DB:	  r.Database,
+		DB:       r.Database,
 	})
 	return r.client.Ping().Err()
 }
@@ -59,19 +59,37 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 	for _, m := range metrics {
-		now := m.Time().UnixNano() / 1000000
-		//		tags := m.Tags() TODO add support for tags
+		now := m.Time().UnixNano() / 1000000 // in milliseconds
+		tags := m.Tags()
+
 		name := m.Name()
 		for fieldName, value := range m.Fields() {
 			key := name + "_" + fieldName
-			err := r.client.Do("TS.ADD", key, now, value).Err()
+
+			var addSlice []interface{}
+			addSlice = append(addSlice, "TS.ADD")
+			addSlice = append(addSlice, key)
+			addSlice = append(addSlice, now)
+			addSlice = append(addSlice, value)
+			for k, v := range tags {
+				addSlice = append(addSlice, k)
+				addSlice = append(addSlice, v)
+			}
+
+			err := r.client.Do(addSlice...).Err() //
 			if err != nil {
-				// TODO add tags
-				err2 := r.client.Do("TS.CREATE", key).Err()
+				var createSlice []interface{}
+				createSlice = append(createSlice, "TS.CREATE")
+				createSlice = append(createSlice, key)
+				for k, v := range tags {
+					createSlice = append(createSlice, k)
+					createSlice = append(createSlice, v)
+				}
+				err2 := r.client.Do(createSlice...).Err() //Create a new timeseries with new labels
 				if err2 != nil {
 					return err
 				}
-				err3 := r.client.Do("TS.ADD", key, now, value).Err()
+				err3 := r.client.Do(addSlice...).Err() // Attempt the add again
 				if err3 != nil {
 					return err
 				}
