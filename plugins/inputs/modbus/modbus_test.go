@@ -710,6 +710,7 @@ func TestReadMultipleCoilLimit(t *testing.T) {
 	modbus := Modbus{
 		Name:       "TestReadCoils",
 		Controller: "tcp://localhost:1502",
+		Log:        testutil.Logger{},
 	}
 	modbus.SlaveID = 1
 	modbus.Coils = fcs
@@ -783,6 +784,7 @@ func TestReadMultipleHoldingRegisterWithHole(t *testing.T) {
 	modbus := Modbus{
 		Name:       "TestHoldingRegister",
 		Controller: "tcp://localhost:1502",
+		Log:        testutil.Logger{},
 	}
 	modbus.SlaveID = 1
 	modbus.HoldingRegisters = fcs
@@ -839,6 +841,7 @@ func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
 	modbus := Modbus{
 		Name:       "TestHoldingRegister",
 		Controller: "tcp://localhost:1502",
+		Log:        testutil.Logger{},
 	}
 	modbus.SlaveID = 1
 	modbus.HoldingRegisters = fcs

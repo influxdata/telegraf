@@ -320,7 +320,7 @@ func (m *Modbus) gatherRequestsCoil(requests []request) error {
 		if err != nil {
 			return err
 		}
-		m.Log.Debug("got coil@%v[%v]: %v", request.address, request.length, bytes)
+		m.Log.Debugf("got coil@%v[%v]: %v", request.address, request.length, bytes)
 
 		// Bit value handling
 		for i, field := range request.fields {
@@ -329,7 +329,7 @@ func (m *Modbus) gatherRequestsCoil(requests []request) error {
 			bit := offset % 8
 
 			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
-			m.Log.Debug("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
+			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
 		}
 	}
 	return nil
@@ -341,7 +341,7 @@ func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
 		if err != nil {
 			return err
 		}
-		m.Log.Debug("got discrete@%v[%v]: %v", request.address, request.length, bytes)
+		m.Log.Debugf("got discrete@%v[%v]: %v", request.address, request.length, bytes)
 
 		// Bit value handling
 		for i, field := range request.fields {
@@ -350,7 +350,7 @@ func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
 			bit := offset % 8
 
 			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
-			m.Log.Debug("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
+			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
 		}
 	}
 	return nil
@@ -362,7 +362,7 @@ func (m *Modbus) gatherRequestsHolding(requests []request) error {
 		if err != nil {
 			return err
 		}
-		m.Log.Debug("got holding@%v[%v]: %v", request.address, request.length, bytes)
+		m.Log.Debugf("got holding@%v[%v]: %v", request.address, request.length, bytes)
 
 		// Non-bit value handling
 		for i, field := range request.fields {
@@ -372,7 +372,7 @@ func (m *Modbus) gatherRequestsHolding(requests []request) error {
 
 			// Convert the actual value
 			request.fields[i].value = field.converter(bytes[offset : offset+length])
-			m.Log.Debug("  field %s with offset %d with len %d: %v --> %v", field.name, offset, length, bytes[offset:offset+length], request.fields[i].value)
+			m.Log.Debugf("  field %s with offset %d with len %d: %v --> %v", field.name, offset, length, bytes[offset:offset+length], request.fields[i].value)
 		}
 	}
 	return nil
@@ -384,7 +384,7 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 		if err != nil {
 			return err
 		}
-		m.Log.Debug("got input@%v[%v]: %v", request.address, request.length, bytes)
+		m.Log.Debugf("got input@%v[%v]: %v", request.address, request.length, bytes)
 
 		// Non-bit value handling
 		for i, field := range request.fields {
@@ -394,7 +394,7 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 
 			// Convert the actual value
 			request.fields[i].value = field.converter(bytes[offset : offset+length])
-			m.Log.Debug("  field %s with offset %d with len %d: %v --> %v", field.name, offset, length, bytes[offset:offset+length], request.fields[i].value)
+			m.Log.Debugf("  field %s with offset %d with len %d: %v --> %v", field.name, offset, length, bytes[offset:offset+length], request.fields[i].value)
 		}
 	}
 	return nil
