@@ -118,6 +118,7 @@ following works:
 - github.com/hashicorp/serf [Mozilla Public License 2.0](https://github.com/hashicorp/serf/blob/master/LICENSE)
 - github.com/influxdata/go-syslog [MIT License](https://github.com/influxdata/go-syslog/blob/develop/LICENSE)
 - github.com/influxdata/influxdb-observability/common [MIT License](https://github.com/influxdata/influxdb-observability/blob/main/LICENSE)
+- github.com/influxdata/influxdb-observability/influx2otel [MIT License](https://github.com/influxdata/influxdb-observability/blob/main/LICENSE)
 - github.com/influxdata/influxdb-observability/otel2influx [MIT License](https://github.com/influxdata/influxdb-observability/blob/main/LICENSE)
 - github.com/influxdata/influxdb-observability/otlp [MIT License](https://github.com/influxdata/influxdb-observability/blob/main/LICENSE)
 - github.com/influxdata/tail [MIT License](https://github.com/influxdata/tail/blob/master/LICENSE.txt)
