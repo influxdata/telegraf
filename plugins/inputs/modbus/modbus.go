@@ -328,8 +328,8 @@ func (m *Modbus) gatherRequestsCoil(requests []request) error {
 			idx := offset / 8
 			bit := offset % 8
 
-			m.Log.Debug("  field %s with bit %d @ byte %d: %v", field.name, bit, idx, uint16((bytes[idx]>>bit)&0x01))
 			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
+			m.Log.Debug("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
 		}
 	}
 	return nil
@@ -349,8 +349,8 @@ func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
 			idx := offset / 8
 			bit := offset % 8
 
-			m.Log.Debug("  field %s with bit %d @ byte %d: %v", field.name, bit, idx, uint16((bytes[idx]>>bit)&0x01))
 			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
+			m.Log.Debug("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
 		}
 	}
 	return nil
@@ -371,8 +371,8 @@ func (m *Modbus) gatherRequestsHolding(requests []request) error {
 			length := 2 * field.length                      // field length is in registers a 16bit
 
 			// Convert the actual value
-			m.Log.Debug("  field %s with offset %d with len %d: %v", field.name, offset, length, bytes[offset:offset+length])
 			request.fields[i].value = field.converter(bytes[offset : offset+length])
+			m.Log.Debug("  field %s with offset %d with len %d: %v --> %v", field.name, offset, length, bytes[offset:offset+length], request.fields[i].value)
 		}
 	}
 	return nil
@@ -393,8 +393,8 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 			length := 2 * field.length                      // field length is in registers a 16bit
 
 			// Convert the actual value
-			m.Log.Debug("  field %s with offset %d with len %d: %v", field.name, offset, length, bytes[offset:offset+length])
 			request.fields[i].value = field.converter(bytes[offset : offset+length])
+			m.Log.Debug("  field %s with offset %d with len %d: %v --> %v", field.name, offset, length, bytes[offset:offset+length], request.fields[i].value)
 		}
 	}
 	return nil
