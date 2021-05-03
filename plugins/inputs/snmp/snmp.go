@@ -770,12 +770,28 @@ func snmpTable(oid string) (mibName string, oidNum string, oidText string, field
 
 	var stc snmpTableCache
 	var ok bool
-	if stc, ok = snmpTableCaches[oid]; !ok {
-		stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err = snmpTableCall(oid)
-		snmpTableCaches[oid] = stc
+	stc, ok = snmpTableCaches[oid]
+	snmpTableCachesLock.Unlock()
+
+	if ok {
+		// cache hit
+		return stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err
 	}
 
+	// cache miss
+
+	// Avoid holding the lock while calling snmptable.  It starts
+	// another process and can take some time.
+	stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err = snmpTableCall(oid)
+
+	// Don't try to prevent multiple concurrent calls to snmptable.
+	// Each call will return the same information so overwriting the
+	// map entry isn't a problem.
+
+	snmpTableCachesLock.Lock()
+	snmpTableCaches[oid] = stc
 	snmpTableCachesLock.Unlock()
+
 	return stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err
 }
 
