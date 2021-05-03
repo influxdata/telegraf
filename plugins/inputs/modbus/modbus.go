@@ -320,6 +320,7 @@ func (m *Modbus) gatherRequestsCoil(requests []request) error {
 		if err != nil {
 			return err
 		}
+		m.Log.Debug("got coil@%v[%v]: %v", request.address, request.length, bytes)
 
 		// Bit value handling
 		for i, field := range request.fields {
@@ -327,6 +328,7 @@ func (m *Modbus) gatherRequestsCoil(requests []request) error {
 			idx := offset / 8
 			bit := offset % 8
 
+			m.Log.Debug("  field %s with bit %d @ byte %d: %v", field.name, bit, idx, uint16((bytes[idx]>>bit)&0x01))
 			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
 		}
 	}
@@ -339,6 +341,7 @@ func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
 		if err != nil {
 			return err
 		}
+		m.Log.Debug("got discrete@%v[%v]: %v", request.address, request.length, bytes)
 
 		// Bit value handling
 		for i, field := range request.fields {
@@ -346,6 +349,7 @@ func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
 			idx := offset / 8
 			bit := offset % 8
 
+			m.Log.Debug("  field %s with bit %d @ byte %d: %v", field.name, bit, idx, uint16((bytes[idx]>>bit)&0x01))
 			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
 		}
 	}
@@ -358,6 +362,7 @@ func (m *Modbus) gatherRequestsHolding(requests []request) error {
 		if err != nil {
 			return err
 		}
+		m.Log.Debug("got holding@%v[%v]: %v", request.address, request.length, bytes)
 
 		// Non-bit value handling
 		for i, field := range request.fields {
@@ -366,6 +371,7 @@ func (m *Modbus) gatherRequestsHolding(requests []request) error {
 			length := 2 * field.length                      // field length is in registers a 16bit
 
 			// Convert the actual value
+			m.Log.Debug("  field %s with offset %d with len %d: %v", field.name, offset, length, bytes[offset:offset+length])
 			request.fields[i].value = field.converter(bytes[offset : offset+length])
 		}
 	}
@@ -378,6 +384,7 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 		if err != nil {
 			return err
 		}
+		m.Log.Debug("got input@%v[%v]: %v", request.address, request.length, bytes)
 
 		// Non-bit value handling
 		for i, field := range request.fields {
@@ -386,6 +393,7 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 			length := 2 * field.length                      // field length is in registers a 16bit
 
 			// Convert the actual value
+			m.Log.Debug("  field %s with offset %d with len %d: %v", field.name, offset, length, bytes[offset:offset+length])
 			request.fields[i].value = field.converter(bytes[offset : offset+length])
 		}
 	}
