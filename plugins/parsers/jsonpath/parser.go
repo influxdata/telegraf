@@ -10,6 +10,10 @@ import (
 	"github.com/ohler55/ojg/oj"
 )
 
+// NOTE: To test changes quickly you can run the following
+// 1. make go-install
+// 2. telegraf --config ./plugins/parsers/jsonpath/testdata/simple/simple.config --debug
+
 type TimeFunc func() time.Time
 
 type Parser struct {
@@ -32,7 +36,25 @@ type FieldKeys struct {
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	return []telegraf.Metric{}, nil
+
+	err := oj.Validate(buf)
+	if err != nil {
+		return nil, fmt.Errorf("The provided JSON is invalid: %v", err)
+	}
+
+	obj, err := oj.Parse(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	var t []telegraf.Metric
+	m, err := p.query(obj)
+	if err != nil {
+		return nil, err
+	}
+	t = append(t, m)
+
+	return t, nil
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
@@ -47,17 +69,27 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, err
 	}
 
-	x, err := jp.ParseString(p.Configs[0].MetricSelection)
+	return p.query(obj)
+}
+
+func (p *Parser) query(obj interface{}) (telegraf.Metric, error) {
+
+	if len(p.Configs) < 0 {
+		return nil, fmt.Errorf("No metric selection!")
+	}
+	fmt.Println(p.Configs[0].Fields.Query)
+	x, err := jp.ParseString(p.Configs[0].Fields.Query)
 	if err != nil {
 		return nil, err
 	}
 	result := x.Get(obj)
 	fmt.Println(oj.JSON(result))
-
-	metricname := p.Configs[0].MetricName
+	metricname := "lol"
 	tags := map[string]string{}
 	fields := map[string]interface{}{}
-	fields[p.Configs[0].Fields.FieldName] = result[0]
+	if len(result) > 0 {
+		fields[p.Configs[0].Fields.FieldName] = result[0]
+	}
 
 	if p.TimeFunc == nil {
 		p.TimeFunc = time.Now

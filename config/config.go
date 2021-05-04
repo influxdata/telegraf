@@ -1387,6 +1387,35 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 		}
 	}
 
+	//for JSONPath parser
+	if node, ok := tbl.Fields["jsonpath"]; ok {
+		if subtbls, ok := node.([]*ast.Table); ok {
+			pc.JSONPathConfig = make([]parsers.JSONPathConfig, len(subtbls))
+			for i, subtbl := range subtbls {
+				subcfg := pc.JSONPathConfig[i]
+				c.getFieldString(subtbl, "metric_name", &subcfg.MetricName)
+				c.getFieldString(subtbl, "metric_selection", &subcfg.MetricSelection)
+
+				if subnode, ok := subtbl.Fields["fields"]; ok {
+					fmt.Println("whaaat")
+					if subsubtbl, ok := subnode.(*ast.Table); ok {
+						c.getFieldString(subsubtbl, "fieldname", &subcfg.Fields.FieldName)
+						c.getFieldString(subsubtbl, "query", &subcfg.Fields.Query)
+						fmt.Println("field name", subcfg.Fields.FieldName)
+						fmt.Println("query", subcfg.Fields.Query)
+						// for _, subsubtbl := range subsubtbls {
+						// 	c.getFieldString(subsubtbl, "fieldname", &subcfg.Fields.FieldName)
+						// 	fmt.Println("field name", subcfg.Fields.FieldName)
+						// }
+
+					}
+				}
+
+				pc.JSONPathConfig[i] = subcfg
+			}
+		}
+	}
+
 	pc.MetricName = name
 
 	if c.hasErrs() {
@@ -1494,7 +1523,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml":
+		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml", "jsonpath":
 
 		// ignore fields that are common to all plugins.
 	default:

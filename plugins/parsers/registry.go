@@ -160,11 +160,16 @@ type Config struct {
 	// XML configuration
 	XMLConfig []XMLConfig `toml:"xml"`
 
-	JSONPathConfig []jsonpath.Config `toml:"jsonpath"`
+	// JSONPath configuration
+	JSONPathConfig []JSONPathConfig `toml:"jsonpath"`
 }
 
 type XMLConfig struct {
 	xml.Config
+}
+
+type JSONPathConfig struct {
+	jsonpath.Config
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -256,6 +261,8 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
 	case "xml":
 		parser, err = NewXMLParser(config.MetricName, config.DefaultTags, config.XMLConfig)
+	case "jsonpath":
+		parser, err = NewJSONPathParser(config.JSONPathConfig)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -396,5 +403,18 @@ func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs [
 	return &xml.Parser{
 		Configs:     configs,
 		DefaultTags: defaultTags,
+	}, nil
+}
+
+func NewJSONPathParser(jsonpathconfig []JSONPathConfig) (Parser, error) {
+	configs := make([]jsonpath.Config, len(jsonpathconfig))
+	fmt.Println("HELLO", len(jsonpathconfig), jsonpathconfig[0].MetricName, jsonpathconfig[0].MetricSelection)
+	for i, cfg := range jsonpathconfig {
+		configs[i].MetricName = cfg.MetricName
+		configs[i].MetricSelection = cfg.MetricSelection
+		configs[i].Fields = cfg.Fields
+	}
+	return &jsonpath.Parser{
+		Configs: configs,
 	}, nil
 }
