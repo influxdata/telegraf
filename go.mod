@@ -70,7 +70,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/harlow/kinesis-consumer v0.3.1-0.20181230152818-2f58b136fee0
-	github.com/hashicorp/consul/api v1.6.0
+	github.com/hashicorp/consul/api v1.8.1
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
 	github.com/influxdata/go-syslog/v2 v2.0.1
 	github.com/influxdata/influxdb-observability/common v0.0.0-20210429174543-86ae73cafd31
