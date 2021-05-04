@@ -42,18 +42,18 @@ func newAPI(ctx context.Context, cfg *config.Config, agent config.AgentControlle
 
 // PluginConfig is a plugin name and details about the config fields.
 type PluginConfigTypeInfo struct {
-	Name   string
-	Config map[string]FieldConfig
+	Name   string                 `json:"name"`
+	Config map[string]FieldConfig `json:"config"`
 }
 
 type PluginConfig struct {
-	ID string // unique identifer
+	ID string `json:"id"` // unique identifer
 	PluginConfigCreate
 }
 
 type PluginConfigCreate struct {
-	Name   string                 // name of the plugin
-	Config map[string]interface{} // map field name to field value
+	Name   string                 `json:"name"`   // name of the plugin
+	Config map[string]interface{} `json:"config"` // map field name to field value
 }
 
 // FieldConfig describes a single field
