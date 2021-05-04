@@ -242,7 +242,6 @@ func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 	for resources, gatherer := range gatherers {
 		for _, i := range o.EnabledServices {
 		    if resources == i {
-				//fmt.Println("Gathering for", i)
 		        if err := gatherer(); err != nil {
 			        log.Println("W!", plugin, "failed to get", resources, err)
 				}
@@ -271,7 +270,6 @@ func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 	for resources, accumulator := range accumulators {
 		for _, i := range o.EnabledServices {
 		    if resources == i {
-			    //fmt.Println("in acc for",resources)
 				accumulator(acc)
 			}
 		}
@@ -314,7 +312,6 @@ func (o *OpenStack) initialize() error {
 //		Password:         o.Password,
 //	})
 
-	//fmt.Println(o.services)
 	if err != nil {
 		return fmt.Errorf("Unable to authenticate OpenStack user: %v", err)
 	}
@@ -333,25 +330,25 @@ func (o *OpenStack) initialize() error {
 	}
 
 	// The SharedFileSystem service is optional
-	//if o.services.ContainsService(SharedFileSystem) {
-	//	if o.share, err = openstack.NewSharedFileSystemV2(provider,gophercloud.EndpointOpts{}); err != nil {
-	//		return fmt.Errorf("unable to create V2 share filesystem client: %v", err)
-	//	}
-	//}
+	if o.services.ContainsService(SharedFileSystem) {
+		if o.share, err = openstack.NewSharedFileSystemV2(provider,gophercloud.EndpointOpts{}); err != nil {
+			return fmt.Errorf("unable to create V2 share filesystem client: %v", err)
+		}
+	}
 
 	// The Orchestration service is optional
-	//if o.services.ContainsService(Orchestration) {
+	if o.services.ContainsService(Orchestration) {
     	if o.stack, err = openstack.NewOrchestrationV1(provider,gophercloud.EndpointOpts{}); err != nil {   
 			return fmt.Errorf("unable to create V1 stack client: %v", err)
 		}
-	//}
+	}
 
 	// The Cinder volume storage service is optional
-	//if o.services.ContainsService(volumeV2) {
+	if o.services.ContainsService(volumeV2) {
 		if o.volume, err = openstack.NewBlockStorageV2(provider, gophercloud.EndpointOpts{}); err != nil {
 			return fmt.Errorf("unable to create V2 volume client: %v", err)
 		}
-	//}
+	}
 
 	// Initialize resource maps and slices
 	o.services = serviceMap{}
@@ -368,7 +365,7 @@ func (o *OpenStack) initialize() error {
 	o.nova_services = nova_serviceMap{}
 	o.shares = shareMap{}
 	o.agents = agentMap{}
-    o.diag = serverDiag{}
+        o.diag = serverDiag{}
 	return nil
 }
 
@@ -384,7 +381,6 @@ func (o *OpenStack) gatherStacks() error {
 	}
 	for _, stack := range stacks {
 		o.stacks[stack.ID] = stack
-		//fmt.Println(stack)
 	}
 	return nil
 }
@@ -401,7 +397,6 @@ func (o *OpenStack) gatherServices() error {
 	}
 	for _, service := range services {
 		o.services[service.ID] = service
-		//fmt.Println(service)
 	}
 	return nil
 }
@@ -418,7 +413,6 @@ func (o *OpenStack) gatherNovaServices() error {
 	}
 	for _, nova_service := range nova_services {
 		o.nova_services[nova_service.ID] = nova_service
-		//fmt.Println(nova_service)
 	}
 	return nil
 }
@@ -435,7 +429,6 @@ func (o *OpenStack) gatherSubnets() error {
 	}
 	for _, subnet := range subnets {
 		o.subnets[subnet.ID] = subnet
-		//fmt.Println(subnet)
 	}
 	return nil
 }
@@ -468,14 +461,12 @@ func (o *OpenStack) gatherNetworks() error {
 	}
 	for _, network := range networks {
 		o.networks[network.ID] = network
-		//fmt.Println(network)
 	}
 	return nil
 }
 
 // gatherAgents collects agents from the OpenStack API.
 func (o *OpenStack) gatherAgents() error {
-	//fmt.Println("in gather")
 	page, err := agents.List(o.network, &agents.ListOpts{}).AllPages()
 	if err != nil {
 		return fmt.Errorf("unable to list newtron agents: %v", err)
@@ -486,7 +477,6 @@ func (o *OpenStack) gatherAgents() error {
 	}
 	for _, agent := range agents {
 		o.agents[agent.ID] = agent
-		//fmt.Println(agent)	
 	}
 	return nil
 }
@@ -519,7 +509,6 @@ func (o *OpenStack) gatherAggregates() error {
 	}
 	for _, aggregate := range aggregates {
 		o.aggregates[aggregate.ID] = aggregate
-		//fmt.Println(aggregate)
 	}
 	return nil
 }
@@ -574,7 +563,6 @@ func (o *OpenStack) gatherFlavors() error {
 
 // gatherServers collects servers from the OpenStack API.
 func (o *OpenStack) gatherServers() error {
-	//fmt.Println("in server gather")
 	page, err := servers.List(o.compute, &servers.ListOpts{AllTenants: true}).AllPages()
 	if err != nil {
 		return fmt.Errorf("unable to list servers: %v", err)
@@ -817,7 +805,6 @@ func (o *OpenStack) accumulateServers(acc telegraf.Accumulator) {
 			h.Write([]byte(string(project.ID) + string(hypervisor.HypervisorHostname)))
 			compute_hosts[project.ID][hex.EncodeToString(h.Sum(nil))] = hypervisor.HypervisorHostname
 		}
-		//fmt.Println(compute_hosts)
 	}
 	for _, server := range o.servers {
 		// Extract the flavor details to avoid joins (ignore errors and leave as zero values)
@@ -1121,7 +1108,6 @@ func (o *OpenStack) accumulateNovaServices(acc telegraf.Accumulator) {
 
 // accumulateAgents accumulates statistics from agents.
 func (o *OpenStack) accumulateAgents(acc telegraf.Accumulator) {
-	//fmt.Println("in acc")
 	for _, agent := range o.agents {
 		tags := tagMap{
 			"id":                        agent.ID,
