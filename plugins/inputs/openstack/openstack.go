@@ -22,7 +22,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/diagnostics"
 	nova_services "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/services"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/agents"
-	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/shares"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/aggregates"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
@@ -51,6 +50,7 @@ type serviceType string
 
 const (
 	volumeV2Service serviceType = "volumev2"
+	Orchestration serviceType = "orchestration"
 )
 
 // tagMap maps a tag name to value.
@@ -105,8 +105,6 @@ type networkMap map[string]networks.Network
 // aggregateMap maps a aggregate id to a Aggregate struct.
 type aggregateMap map[int]aggregates.Aggregate
 
-// shareMap maps a share id to a shares struct.
-type shareMap map[string]shares.Share
 
 // agentMap maps a agent id to a agents struct.
 type agentMap map[string]agents.Agent
@@ -140,7 +138,6 @@ type OpenStack struct {
 	compute    *gophercloud.ServiceClient
 	volume     *gophercloud.ServiceClient
 	network    *gophercloud.ServiceClient
-	share      *gophercloud.ServiceClient
 	stack      *gophercloud.ServiceClient
 
 	// Locally cached resources
@@ -155,7 +152,6 @@ type OpenStack struct {
 	ports          portMap
 	networks       networkMap
 	aggregates     aggregateMap
-	shares         shareMap
 	nova_services  nova_serviceMap
 	agents         agentMap
 	stacks         stackMap
@@ -191,7 +187,7 @@ var sampleConfig = `
   password = "Passw0rd"
 
   ## Services to be enabled
-  #enabled_services = ["stacks","services", "projects", "hypervisors", "flavors", "servers", "volumes", "storage" , "subnets", "ports", "networks", "aggregates", "shares", "nova_services", "agents"]
+  #enabled_services = ["stacks","services", "projects", "hypervisors", "flavors", "servers", "volumes", "storage" , "subnets", "ports", "networks", "aggregates", "nova_services", "agents"]
   enabled_services = ["services", "projects", "hypervisors", "flavors", "networks", "volumes"]
 
   #Dependencies
@@ -222,7 +218,6 @@ func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 	// Gather resources.  Note service harvesting must come first as the other
 	// gatherers are dependant on this information.
 	gatherers := map[string]func() error{
-		"services":        o.gatherServices,
 		"projects":        o.gatherProjects,
 		"hypervisors":     o.gatherHypervisors,
 		"flavors":         o.gatherFlavors,
@@ -233,12 +228,10 @@ func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 		"ports":           o.gatherPorts,
 		"networks":        o.gatherNetworks,
 		"aggregates":      o.gatherAggregates,
-		"shares":          o.gatherShares,
 		"nova_services":   o.gatherNovaServices,
 		"agents":          o.gatherAgents,
 		"stacks":          o.gatherStacks,
 	}
-	//var iter := o.EnabledServices
 	for resources, gatherer := range gatherers {
 		for _, i := range o.EnabledServices {
 		    if resources == i {
@@ -248,7 +241,7 @@ func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 			}
 	    }
 	}
-	
+
 	// Accumulate statistics
 	accumulators := map[string]func(telegraf.Accumulator){
 	    "services":       o.accumulateServices,
@@ -262,10 +255,9 @@ func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 	    "ports":          o.accumulatePorts,
 	    "networks":       o.accumulateNetworks,
 	    "aggregates":     o.accumulateAggregates,
-	    "shares":         o.accumulateShares,
 	    "nova_services":  o.accumulateNovaServices,
-	    "agents":         o.accumulateAgents,		
-		"stacks":         o.accumulateStacks,
+	    "agents":         o.accumulateAgents,
+	    "stacks":         o.accumulateStacks,
 	}
 	for resources, accumulator := range accumulators {
 		for _, i := range o.EnabledServices {
@@ -300,17 +292,6 @@ func (o *OpenStack) initialize() error {
 	}
 
 	err = openstack.Authenticate(provider, authOption)
-//	if err != nil {
-//		return nil, errors.WithStack(err)
-//	}
-
-//	provider, err := openstack.AuthenticatedClient(gophercloud.AuthOptions{
-//		IdentityEndpoint: o.IdentityEndpoint,
-//		DomainName:       o.Domain,
-//		TenantName:       o.Project,
-//		Username:         o.Username,
-//		Password:         o.Password,
-//	})
 
 	if err != nil {
 		return fmt.Errorf("Unable to authenticate OpenStack user: %v", err)
@@ -320,6 +301,10 @@ func (o *OpenStack) initialize() error {
 	if o.identity, err = openstack.NewIdentityV3(provider, gophercloud.EndpointOpts{}); err != nil {
 		return fmt.Errorf("unable to create V3 identity client: %v", err)
 	}
+
+	o.services = serviceMap{}
+	o.gatherServices()
+
 	if o.compute, err = openstack.NewComputeV2(provider, gophercloud.EndpointOpts{}); err != nil {
 		return fmt.Errorf("unable to create V2 compute client: %v", err)
 	}
@@ -329,30 +314,22 @@ func (o *OpenStack) initialize() error {
 		return fmt.Errorf("unable to create V2 network client: %v", err)
 	}
 
-	// The SharedFileSystem service is optional
-	if o.services.ContainsService(SharedFileSystem) {
-		if o.share, err = openstack.NewSharedFileSystemV2(provider,gophercloud.EndpointOpts{}); err != nil {
-			return fmt.Errorf("unable to create V2 share filesystem client: %v", err)
-		}
-	}
-
 	// The Orchestration service is optional
 	if o.services.ContainsService(Orchestration) {
-    	if o.stack, err = openstack.NewOrchestrationV1(provider,gophercloud.EndpointOpts{}); err != nil {   
+		if o.stack, err = openstack.NewOrchestrationV1(provider,gophercloud.EndpointOpts{}); err != nil {
 			return fmt.Errorf("unable to create V1 stack client: %v", err)
 		}
 	}
 
 	// The Cinder volume storage service is optional
-	if o.services.ContainsService(volumeV2) {
+	if o.services.ContainsService(volumeV2Service) {
 		if o.volume, err = openstack.NewBlockStorageV2(provider, gophercloud.EndpointOpts{}); err != nil {
 			return fmt.Errorf("unable to create V2 volume client: %v", err)
 		}
 	}
 
 	// Initialize resource maps and slices
-	o.services = serviceMap{}
-	o.projects = projectMap{}	
+	o.projects = projectMap{}
 	o.hypervisors = hypervisorMap{}
 	o.flavors = flavorMap{}
 	o.servers = serverMap{}
@@ -363,7 +340,6 @@ func (o *OpenStack) initialize() error {
 	o.ports = portMap{}
 	o.aggregates = aggregateMap{}
 	o.nova_services = nova_serviceMap{}
-	o.shares = shareMap{}
 	o.agents = agentMap{}
         o.diag = serverDiag{}
 	return nil
@@ -481,21 +457,6 @@ func (o *OpenStack) gatherAgents() error {
 	return nil
 }
 
-// gathershares collects shares from the OpenStack API.
-func (o *OpenStack) gatherShares() error {
-	page, err := shares.ListDetail(o.share, &shares.ListOpts{}).AllPages()
-	if err != nil {
-		return fmt.Errorf("unable to list shares: %v", err)
-	}
-	shares, err := shares.ExtractShares(page)
-	if err != nil {
-		return fmt.Errorf("unable to extract shares")
-	}
-	for _, share := range shares {
-		o.shares[share.ID] = share	
-	}
-	return nil
-}
 
 // gatherAggregates collects aggregates from the OpenStack API.
 func (o *OpenStack) gatherAggregates() error {
@@ -696,44 +657,6 @@ func (o *OpenStack) accumulateFlavors(acc telegraf.Accumulator) {
     }
 }
 
-// accumulateShares accumulates statistics from the share service.
-func (o *OpenStack) accumulateShares(acc telegraf.Accumulator) {
-	for _, share := range o.shares {
-		tags := tagMap{
-			"id":              share.ID,
-		}
-	    fields := fieldMap{    
-			"availability_zone":                   share.AvailabilityZone,                 
-			"description":                         share.Description,                     
-			"display_description":                 share.DisplayDescription,                             
-			"display_name":                        share.DisplayName,                      
-			"has_replicas":                        share.HasReplicas,            
-			"host":                                share.Host,    
-			"id":                                  share.ID,  
-			"is_public":                           share.IsPublic,                   
-			"name":                                share.Name,              
-			"project_id":                          share.ProjectID,          
-			"replication_type":                    share.ReplicationType,                          
-			"share_network_id":                    share.ShareNetworkID,                
-			"share_proto":                         share.ShareProto,           
-			"share_server_id":                     share.ShareServerID,               
-			"share_type":                          share.ShareType,          
-			"share_type_name":                     share.ShareTypeName,               
-			"size":                                share.Size,    
-			"snapshot_id":                         share.SnapshotID,           
-			"status":                              share.Status,      
-			"task_state":                          share.TaskState,          
-			"volume_type":                         share.VolumeType,                     
-			"consistency_group_id":                share.ConsistencyGroupID,                    
-			"snapshot_support":                    share.SnapshotSupport,                
-			"source_cgsnapshot_member_id":         share.SourceCgsnapshotMemberID,    
-			"created_at":                          share.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"updated_at":                          share.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),                                             
-
-	    }
-	    acc.AddFields("openstack_share", fields, tags)
-    }
-}
 
 // accumulateIdentity accumulates statistics from the identity service.
 func (o *OpenStack) accumulateIdentity(acc telegraf.Accumulator) {
