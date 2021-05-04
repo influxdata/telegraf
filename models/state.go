@@ -7,17 +7,15 @@ import "sync/atomic"
 type PluginState int32
 
 const (
-	PluginStateDead PluginState = iota
-	PluginStateCreated
+	PluginStateCreated PluginState = iota
 	PluginStateStarting
 	PluginStateRunning
 	PluginStateStopping
+	PluginStateDead
 )
 
 func (p PluginState) String() string {
 	switch p {
-	case PluginStateDead:
-		return "dead"
 	case PluginStateCreated:
 		return "created"
 	case PluginStateStarting:
@@ -27,7 +25,7 @@ func (p PluginState) String() string {
 	case PluginStateStopping:
 		return "stopping"
 	default:
-		return "unknown"
+		return "dead"
 	}
 }
 

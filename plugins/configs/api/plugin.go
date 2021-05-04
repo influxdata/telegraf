@@ -3,21 +3,26 @@ package api
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/configs"
 )
 
 type ConfigAPIPlugin struct {
+	ServiceAddress string `toml:"service_address"`
 	// Name string `toml:"name"`
-	Protocol []string `toml:"protocol"` // protocol = ["http", "grpc", "websocket"]
 	// Storage string `toml:"storage"` // storage = "config_state"
 	Storage config.StoragePlugin `toml:"storage"`
+	tls.ServerConfig
+
 	// [config.api.storage.internal]
 	//   file = "config_state.db"
 
 	api    *api
 	cancel context.CancelFunc
+	server *ConfigAPIService
 
 	plugins []PluginConfig
 }
@@ -50,28 +55,32 @@ func (a *ConfigAPIPlugin) Init(ctx context.Context, cfg *config.Config, agent co
 	}
 
 	// start listening for HTTP requests
+	tlsConfig, err := a.TLSConfig()
+	if err != nil {
+		return err
+	}
+	if a.ServiceAddress == "" {
+		a.ServiceAddress = ":7551"
+	}
+	a.server = newConfigAPIService(&http.Server{
+		Addr:      a.ServiceAddress,
+		TLSConfig: tlsConfig,
+	}, a.api)
 
+	a.server.Start()
 	return nil
 }
 
 func (a *ConfigAPIPlugin) Close() error {
-	fmt.Println("api closing")
+	// shut down server
 	// stop accepting new requests
 	// wait until all requests finish
-	// store state
-	m := map[string]interface{}{}
-	for _, plugin := range a.plugins {
-		m[plugin.ID] = map[string]interface{}{
-			"name":   plugin.Name,
-			"config": plugin.Config,
-		}
-	}
+	a.server.Stop()
 
+	// store state
 	if err := a.Storage.Save("config-api", "plugins", &a.plugins); err != nil {
 		return fmt.Errorf("saving plugin state: %w", err)
 	}
-	// shut down server
-	// trigger all plugins to stop and wait for them to exit
 	return nil
 }
 

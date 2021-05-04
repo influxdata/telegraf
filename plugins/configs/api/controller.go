@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"sort"
 	"strings"
@@ -162,6 +163,8 @@ func (a *api) UpdatePlugin(ID models.PluginID, config PluginConfigCreate) error 
 }
 
 func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
+	log.Printf("I! [configapi] creating plugin %q", config.Name)
+
 	parts := strings.Split(config.Name, ".")
 	pluginType, name := parts[0], parts[1]
 	switch pluginType {
@@ -273,7 +276,7 @@ func (a *api) GetPluginStatus(ID models.PluginID) models.PluginState {
 			return v.GetState()
 		}
 	}
-	return models.PluginState(0)
+	return models.PluginStateDead
 }
 
 func (a *api) getPluginByID(ID models.PluginID) {

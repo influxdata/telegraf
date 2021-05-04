@@ -1,21 +1,21 @@
 
 # New Config API issues
-- review chan and ctx closure on shutdown vs delete plugin
-! - test that metrics flow through after startup and add/remove plugins
-- starting plugins in any order?
-- change agent to use config api style exclusively.
-- ability to modify existing plugin without re-creating it
+x test that metrics flow through after startup and add/remove plugins
+x review chan and ctx closure on shutdown vs delete plugin
+x starting plugins in any order?
+x change agent to use config api style exclusively.
+  - change test/once to use config api style
+v ability to modify existing plugin without re-creating it
+x move configapi to a plugin
+x make sure config and storage plugins are initialized from toml
+x start config api in config plugin init() if configured
+x loop processors when last input is removed and ctx not cancelled
+x started plugins shouldn't run until the agent tells them to, or at least the metrics shouldn't flow until the agent says "go"
+
 - close config/storage plugins on shutdown
-
-- move configapi to a plugin
-- make sure config and storage plugins are initialized from toml
-- start config api in config plugin init() if configured
-- loop processors when last input is removed and ctx not cancelled
-
-- started plugins shouldn't run until the agent tells them to, or at least the metrics shouldn't flow until the agent says "go"
+- wait for all plugins to stop
 - pull config out to its own package
 - check that all inputs write to the input dst channel,
-- reject vs drop?
 - add support for --test and --once
 
 [done]  design api spec
@@ -34,8 +34,8 @@
 
 ## out of scope
 
-[future]  separate toml config parsing from Telegraf config
-[future]  support config versioning to revert to older config versions and record changes
+[future] separate toml config parsing from Telegraf config
+[future] support config versioning to revert to older config versions and record changes
 [future] support outputting toml configuration from the current config?
 
 Config UI for Cloud support (out of current scope)

@@ -482,6 +482,7 @@ retry:
 	for pos, iu := range a.inputGroupUnit.inputUnits {
 		if iu.input == i {
 			if iu.cancelGather == nil {
+				// plugin hasn't finished starting, wait longer.
 				a.inputGroupUnit.Unlock()
 				time.Sleep(1 * time.Millisecond)
 				goto retry
