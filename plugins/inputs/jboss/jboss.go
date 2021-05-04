@@ -73,7 +73,6 @@ func (omap orderedMap) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-
 // JBoss the main collectod struct
 type JBoss struct {
 	Servers []string `toml:"servers"`
