@@ -1,13 +1,13 @@
 package snmp
 
 import (
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 )
 
 type ClientConfig struct {
 	// Timeout to wait for a response.
-	Timeout internal.Duration `toml:"timeout"`
-	Retries int               `toml:"retries"`
+	Timeout config.Duration `toml:"timeout"`
+	Retries int             `toml:"retries"`
 	// Values: 1, 2, 3
 	Version uint8 `toml:"version"`
 

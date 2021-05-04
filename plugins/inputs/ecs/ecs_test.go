@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // codified golden objects for tests
@@ -800,10 +800,10 @@ func TestResolveEndpoint(t *testing.T) {
 		{
 			name: "Endpoint is not set, ECS_CONTAINER_METADATA_URI is set => use v3 metadata",
 			preF: func() {
-				os.Setenv("ECS_CONTAINER_METADATA_URI", "v3-endpoint.local")
+				require.NoError(t, os.Setenv("ECS_CONTAINER_METADATA_URI", "v3-endpoint.local"))
 			},
 			afterF: func() {
-				os.Unsetenv("ECS_CONTAINER_METADATA_URI")
+				require.NoError(t, os.Unsetenv("ECS_CONTAINER_METADATA_URI"))
 			},
 			given: Ecs{
 				EndpointURL: "",
@@ -825,7 +825,7 @@ func TestResolveEndpoint(t *testing.T) {
 
 			act := tt.given
 			resolveEndpoint(&act)
-			assert.Equal(t, tt.exp, act)
+			require.Equal(t, tt.exp, act)
 		})
 	}
 }

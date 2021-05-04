@@ -110,7 +110,9 @@ func (u *UDPListener) Start(acc telegraf.Accumulator) error {
 	u.in = make(chan []byte, u.AllowedPendingMessages)
 	u.done = make(chan struct{})
 
-	u.udpListen()
+	if err := u.udpListen(); err != nil {
+		return err
+	}
 
 	u.wg.Add(1)
 	go u.udpParser()
@@ -124,6 +126,8 @@ func (u *UDPListener) Stop() {
 	defer u.Unlock()
 	close(u.done)
 	u.wg.Wait()
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	u.listener.Close()
 	close(u.in)
 	u.Log.Infof("Stopped service on %q", u.ServiceAddress)
@@ -162,7 +166,9 @@ func (u *UDPListener) udpListenLoop() {
 		case <-u.done:
 			return
 		default:
-			u.listener.SetReadDeadline(time.Now().Add(time.Second))
+			if err := u.listener.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+				u.Log.Error("setting read-deadline failed: " + err.Error())
+			}
 
 			n, _, err := u.listener.ReadFromUDP(buf)
 			if err != nil {

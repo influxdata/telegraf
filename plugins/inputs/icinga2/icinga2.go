@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -18,7 +18,7 @@ type Icinga2 struct {
 	ObjectType      string
 	Username        string
 	Password        string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	tls.ClientConfig
 
 	Log telegraf.Logger
@@ -53,7 +53,7 @@ type ObjectType string
 var sampleConfig = `
   ## Required Icinga2 server address
   # server = "https://localhost:5665"
-  
+
   ## Required Icinga2 object type ("services" or "hosts")
   # object_type = "services"
 
@@ -125,15 +125,15 @@ func (i *Icinga2) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: i.ResponseTimeout.Duration,
+		Timeout: time.Duration(i.ResponseTimeout),
 	}
 
 	return client, nil
 }
 
 func (i *Icinga2) Gather(acc telegraf.Accumulator) error {
-	if i.ResponseTimeout.Duration < time.Second {
-		i.ResponseTimeout.Duration = time.Second * 5
+	if i.ResponseTimeout < config.Duration(time.Second) {
+		i.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 
 	if i.client == nil {
@@ -171,7 +171,7 @@ func (i *Icinga2) Gather(acc telegraf.Accumulator) error {
 	defer resp.Body.Close()
 
 	result := Result{}
-	json.NewDecoder(resp.Body).Decode(&result)
+	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		return err
 	}
@@ -186,7 +186,7 @@ func init() {
 		return &Icinga2{
 			Server:          "https://localhost:5665",
 			ObjectType:      "services",
-			ResponseTimeout: internal.Duration{Duration: time.Second * 5},
+			ResponseTimeout: config.Duration(time.Second * 5),
 		}
 	})
 }

@@ -429,12 +429,10 @@ func TestSignalFx_SignalFx(t *testing.T) {
 			measurements := []telegraf.Metric{}
 
 			for _, measurement := range tt.measurements {
-				m, err := metric.New(
+				m := metric.New(
 					measurement.name, measurement.tags, measurement.fields, measurement.time, measurement.tp,
 				)
-				if err != nil {
-					t.Errorf("Error creating measurement %v", measurement)
-				}
+
 				measurements = append(measurements, m)
 			}
 
@@ -594,12 +592,10 @@ func TestSignalFx_Errors(t *testing.T) {
 			}
 
 			for _, measurement := range tt.measurements {
-				m, err := metric.New(
+				m := metric.New(
 					measurement.name, measurement.tags, measurement.fields, measurement.time, measurement.tp,
 				)
-				if err != nil {
-					t.Errorf("Error creating measurement %v", measurement)
-				}
+
 				s.Write([]telegraf.Metric{m})
 			}
 			for !(len(s.client.(*errorsink).dps) == len(tt.want.datapoints) && len(s.client.(*errorsink).evs) == len(tt.want.events)) {

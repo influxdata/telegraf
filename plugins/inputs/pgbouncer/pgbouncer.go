@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 	_ "github.com/jackc/pgx/stdlib" // register driver
@@ -170,9 +170,13 @@ func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string,
 	}
 	if columnMap["database"] != nil {
 		// extract the database name from the column map
-		dbname.WriteString((*columnMap["database"]).(string))
+		if _, err := dbname.WriteString((*columnMap["database"]).(string)); err != nil {
+			return nil, nil, err
+		}
 	} else {
-		dbname.WriteString("postgres")
+		if _, err := dbname.WriteString("postgres"); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	var tagAddress string
@@ -189,11 +193,9 @@ func init() {
 	inputs.Add("pgbouncer", func() telegraf.Input {
 		return &PgBouncer{
 			Service: postgresql.Service{
-				MaxIdle: 1,
-				MaxOpen: 1,
-				MaxLifetime: internal.Duration{
-					Duration: 0,
-				},
+				MaxIdle:     1,
+				MaxOpen:     1,
+				MaxLifetime: config.Duration(0),
 				IsPgBouncer: true,
 			},
 		}

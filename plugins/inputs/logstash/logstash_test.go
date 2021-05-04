@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 var logstashTest = NewLogstash()
@@ -26,28 +27,23 @@ var (
 func Test_Logstash5GatherProcessStats(test *testing.T) {
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash5ProcessJSON))
+		_, err := fmt.Fprintf(writer, "%s", string(logstash5ProcessJSON))
+		require.NoError(test, err)
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
-	if err != nil {
-		test.Logf("Can't connect to: %s", logstashTest.URL)
-	}
+	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
 	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
 	fakeServer.Start()
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
 		client, err := logstashTest.createHTTPClient()
-
-		if err != nil {
-			test.Logf("Can't createHTTPClient")
-		}
+		require.NoError(test, err, "Can't createHTTPClient")
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherProcessStats(logstashTest.URL+processStats, &logstash5accProcessStats); err != nil {
-		test.Logf("Can't gather Process stats")
-	}
+	err = logstashTest.gatherProcessStats(logstashTest.URL+processStats, &logstash5accProcessStats)
+	require.NoError(test, err, "Can't gather Process stats")
 
 	logstash5accProcessStats.AssertContainsTaggedFields(
 		test,
@@ -75,28 +71,23 @@ func Test_Logstash5GatherProcessStats(test *testing.T) {
 func Test_Logstash6GatherProcessStats(test *testing.T) {
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash6ProcessJSON))
+		_, err := fmt.Fprintf(writer, "%s", string(logstash6ProcessJSON))
+		require.NoError(test, err)
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
-	if err != nil {
-		test.Logf("Can't connect to: %s", logstashTest.URL)
-	}
+	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
 	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
 	fakeServer.Start()
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
 		client, err := logstashTest.createHTTPClient()
-
-		if err != nil {
-			test.Logf("Can't createHTTPClient")
-		}
+		require.NoError(test, err, "Can't createHTTPClient")
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherProcessStats(logstashTest.URL+processStats, &logstash6accProcessStats); err != nil {
-		test.Logf("Can't gather Process stats")
-	}
+	err = logstashTest.gatherProcessStats(logstashTest.URL+processStats, &logstash6accProcessStats)
+	require.NoError(test, err, "Can't gather Process stats")
 
 	logstash6accProcessStats.AssertContainsTaggedFields(
 		test,
@@ -125,28 +116,23 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 	//logstash5accPipelineStats.SetDebug(true)
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash5PipelineJSON))
+		_, err := fmt.Fprintf(writer, "%s", string(logstash5PipelineJSON))
+		require.NoError(test, err)
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
-	if err != nil {
-		test.Logf("Can't connect to: %s", logstashTest.URL)
-	}
+	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
 	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
 	fakeServer.Start()
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
 		client, err := logstashTest.createHTTPClient()
-
-		if err != nil {
-			test.Logf("Can't createHTTPClient")
-		}
+		require.NoError(test, err, "Can't createHTTPClient")
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherPipelineStats(logstashTest.URL+pipelineStats, &logstash5accPipelineStats); err != nil {
-		test.Logf("Can't gather Pipeline stats")
-	}
+	err = logstashTest.gatherPipelineStats(logstashTest.URL+pipelineStats, &logstash5accPipelineStats)
+	require.NoError(test, err, "Can't gather Pipeline stats")
 
 	logstash5accPipelineStats.AssertContainsTaggedFields(
 		test,
@@ -227,28 +213,23 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	//logstash6accPipelinesStats.SetDebug(true)
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash6PipelinesJSON))
+		_, err := fmt.Fprintf(writer, "%s", string(logstash6PipelinesJSON))
+		require.NoError(test, err)
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
-	if err != nil {
-		test.Logf("Can't connect to: %s", logstashTest.URL)
-	}
+	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
 	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
 	fakeServer.Start()
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
 		client, err := logstashTest.createHTTPClient()
-
-		if err != nil {
-			test.Logf("Can't createHTTPClient")
-		}
+		require.NoError(test, err, "Can't createHTTPClient")
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherPipelinesStats(logstashTest.URL+pipelineStats, &logstash6accPipelinesStats); err != nil {
-		test.Logf("Can't gather Pipeline stats")
-	}
+	err = logstashTest.gatherPipelinesStats(logstashTest.URL+pipelineStats, &logstash6accPipelinesStats)
+	require.NoError(test, err, "Can't gather Pipeline stats")
 
 	fields := make(map[string]interface{})
 	fields["duration_in_millis"] = float64(8540751.0)
@@ -555,28 +536,23 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 func Test_Logstash5GatherJVMStats(test *testing.T) {
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash5JvmJSON))
+		_, err := fmt.Fprintf(writer, "%s", string(logstash5JvmJSON))
+		require.NoError(test, err)
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
-	if err != nil {
-		test.Logf("Can't connect to: %s", logstashTest.URL)
-	}
+	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
 	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
 	fakeServer.Start()
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
 		client, err := logstashTest.createHTTPClient()
-
-		if err != nil {
-			test.Logf("Can't createHTTPClient")
-		}
+		require.NoError(test, err, "Can't createHTTPClient")
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherJVMStats(logstashTest.URL+jvmStats, &logstash5accJVMStats); err != nil {
-		test.Logf("Can't gather JVM stats")
-	}
+	err = logstashTest.gatherJVMStats(logstashTest.URL+jvmStats, &logstash5accJVMStats)
+	require.NoError(test, err, "Can't gather JVM stats")
 
 	logstash5accJVMStats.AssertContainsTaggedFields(
 		test,
@@ -623,28 +599,23 @@ func Test_Logstash5GatherJVMStats(test *testing.T) {
 func Test_Logstash6GatherJVMStats(test *testing.T) {
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash6JvmJSON))
+		_, err := fmt.Fprintf(writer, "%s", string(logstash6JvmJSON))
+		require.NoError(test, err)
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
-	if err != nil {
-		test.Logf("Can't connect to: %s", logstashTest.URL)
-	}
+	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
 	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
 	fakeServer.Start()
 	defer fakeServer.Close()
 
 	if logstashTest.client == nil {
 		client, err := logstashTest.createHTTPClient()
-
-		if err != nil {
-			test.Logf("Can't createHTTPClient")
-		}
+		require.NoError(test, err, "Can't createHTTPClient")
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherJVMStats(logstashTest.URL+jvmStats, &logstash6accJVMStats); err != nil {
-		test.Logf("Can't gather JVM stats")
-	}
+	err = logstashTest.gatherJVMStats(logstashTest.URL+jvmStats, &logstash6accJVMStats)
+	require.NoError(test, err, "Can't gather JVM stats")
 
 	logstash6accJVMStats.AssertContainsTaggedFields(
 		test,

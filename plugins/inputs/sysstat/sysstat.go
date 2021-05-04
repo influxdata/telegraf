@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -33,7 +34,7 @@ type Sysstat struct {
 	Sadc string `toml:"sadc_path"`
 
 	// Force the execution time of sadc
-	SadcInterval internal.Duration `toml:"sadc_interval"`
+	SadcInterval config.Duration `toml:"sadc_interval"`
 
 	// Sadf represents the path to the sadf cmd.
 	Sadf string `toml:"sadf_path"`
@@ -135,9 +136,9 @@ func (*Sysstat) SampleConfig() string {
 }
 
 func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
-	if s.SadcInterval.Duration != 0 {
+	if time.Duration(s.SadcInterval) != 0 {
 		// Collect interval is calculated as interval - parseInterval
-		s.interval = int(s.SadcInterval.Duration.Seconds()) + parseInterval
+		s.interval = int(time.Duration(s.SadcInterval).Seconds()) + parseInterval
 	}
 
 	if s.interval == 0 {

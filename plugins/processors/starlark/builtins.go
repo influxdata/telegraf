@@ -15,10 +15,7 @@ func newMetric(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwa
 		return nil, err
 	}
 
-	m, err := metric.New(string(name), nil, nil, time.Now())
-	if err != nil {
-		return nil, err
-	}
+	m := metric.New(string(name), nil, nil, time.Now())
 
 	return &Metric{metric: m}, nil
 }

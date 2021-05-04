@@ -764,11 +764,8 @@ func TestFillFields(t *testing.T) {
 func setupServer(resp string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		//body, err := ioutil.ReadAll(r.Body)
-		//if err == nil {
-		//	fmt.Println(string(body))
-		//}
-
+		// Ignore the returned error as the tests will fail anyway
+		//nolint:errcheck,revive
 		fmt.Fprintln(w, resp)
 	}))
 }

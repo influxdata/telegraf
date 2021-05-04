@@ -326,8 +326,7 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	err = n.processText(scanner, acc)
-	if err != nil {
+	if err := n.processText(scanner, acc); err != nil {
 		return err
 	}
 
@@ -467,6 +466,9 @@ func (n *NFSClient) Init() error {
 			}
 		}
 	}
+
+	n.nfs3Ops = nfs3Ops
+	n.nfs4Ops = nfs4Ops
 
 	if len(n.IncludeMounts) > 0 {
 		n.Log.Debugf("Including these mount patterns: %v", n.IncludeMounts)

@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	parser_v2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
@@ -48,7 +48,7 @@ type Prometheus struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
 
 	MetricVersion int `toml:"metric_version"`
 
@@ -86,7 +86,7 @@ var sampleConfig = `
   ## value in both plugins to ensure metrics are round-tripped without
   ## modification.
   ##
-  ##   example: metric_version = 1; deprecated in 1.13
+  ##   example: metric_version = 1; 
   ##            metric_version = 2; recommended version
   # metric_version = 1
 
@@ -155,9 +155,6 @@ func (p *Prometheus) Description() string {
 }
 
 func (p *Prometheus) Init() error {
-	if p.MetricVersion != 2 {
-		p.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
-	}
 
 	// Config proccessing for node scrape scope for monitor_kubernetes_pods
 	p.isNodeScrapeScope = strings.EqualFold(p.PodScrapeScope, "node")
@@ -308,7 +305,7 @@ func (p *Prometheus) createHTTPClient() (*http.Client, error) {
 			TLSClientConfig:   tlsCfg,
 			DisableKeepAlives: true,
 		},
-		Timeout: p.ResponseTimeout.Duration,
+		Timeout: time.Duration(p.ResponseTimeout),
 	}
 
 	return client, nil
@@ -341,7 +338,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 					return c, err
 				},
 			},
-			Timeout: p.ResponseTimeout.Duration,
+			Timeout: time.Duration(p.ResponseTimeout),
 		}
 	} else {
 		if u.URL.Path == "" {
@@ -474,7 +471,7 @@ func (p *Prometheus) Stop() {
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
 		return &Prometheus{
-			ResponseTimeout: internal.Duration{Duration: time.Second * 3},
+			ResponseTimeout: config.Duration(time.Second * 3),
 			kubernetesPods:  map[string]URLAndAddress{},
 			URLTag:          "url",
 		}

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -59,7 +59,7 @@ type Logstash struct {
 	Username string            `toml:"username"`
 	Password string            `toml:"password"`
 	Headers  map[string]string `toml:"headers"`
-	Timeout  internal.Duration `toml:"timeout"`
+	Timeout  config.Duration   `toml:"timeout"`
 	tls.ClientConfig
 
 	client *http.Client
@@ -72,7 +72,7 @@ func NewLogstash() *Logstash {
 		SinglePipeline: false,
 		Collect:        []string{"pipelines", "process", "jvm"},
 		Headers:        make(map[string]string),
-		Timeout:        internal.Duration{Duration: time.Second * 5},
+		Timeout:        config.Duration(time.Second * 5),
 	}
 }
 
@@ -171,7 +171,7 @@ func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
-		Timeout: logstash.Timeout.Duration,
+		Timeout: time.Duration(logstash.Timeout),
 	}
 
 	return client, nil

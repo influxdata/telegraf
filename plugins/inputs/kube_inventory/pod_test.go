@@ -1,15 +1,17 @@
 package kube_inventory
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPod(t *testing.T) {
@@ -25,7 +27,7 @@ func TestPod(t *testing.T) {
 	tests := []struct {
 		name     string
 		handler  *mockHandler
-		output   *testutil.Accumulator
+		output   []telegraf.Metric
 		hasError bool
 	}{
 		{
@@ -210,67 +212,73 @@ func TestPod(t *testing.T) {
 					},
 				},
 			},
-			output: &testutil.Accumulator{
-				Metrics: []*testutil.Metric{
-					{
-						Measurement: podContainerMeasurement,
-						Fields: map[string]interface{}{
-							"restarts_total":                   int32(3),
-							"state_code":                       0,
-							"resource_requests_millicpu_units": int64(100),
-							"resource_limits_millicpu_units":   int64(100),
-						},
-						Tags: map[string]string{
-							"namespace":             "ns1",
-							"container_name":        "running",
-							"node_name":             "node1",
-							"pod_name":              "pod1",
-							"phase":                 "Running",
-							"state":                 "running",
-							"readiness":             "ready",
-							"node_selector_select1": "s1",
-							"node_selector_select2": "s2",
-						},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"namespace":             "ns1",
+						"container_name":        "running",
+						"node_name":             "node1",
+						"pod_name":              "pod1",
+						"phase":                 "Running",
+						"state":                 "running",
+						"readiness":             "ready",
+						"node_selector_select1": "s1",
+						"node_selector_select2": "s2",
 					},
-					{
-						Measurement: podContainerMeasurement,
-						Fields: map[string]interface{}{
-							"restarts_total":                   int32(3),
-							"state_code":                       1,
-							"state_reason":                     "Completed",
-							"resource_requests_millicpu_units": int64(100),
-							"resource_limits_millicpu_units":   int64(100),
-						},
-						Tags: map[string]string{
-							"namespace":      "ns1",
-							"container_name": "completed",
-							"node_name":      "node1",
-							"pod_name":       "pod1",
-							"phase":          "Running",
-							"state":          "terminated",
-							"readiness":      "unready",
-						},
+					map[string]interface{}{
+						"restarts_total":                   int32(3),
+						"state_code":                       0,
+						"resource_requests_millicpu_units": int64(100),
+						"resource_limits_millicpu_units":   int64(100),
 					},
-					{
-						Measurement: podContainerMeasurement,
-						Fields: map[string]interface{}{
-							"restarts_total":                   int32(3),
-							"state_code":                       2,
-							"state_reason":                     "PodUninitialized",
-							"resource_requests_millicpu_units": int64(100),
-							"resource_limits_millicpu_units":   int64(100),
-						},
-						Tags: map[string]string{
-							"namespace":      "ns1",
-							"container_name": "waiting",
-							"node_name":      "node1",
-							"pod_name":       "pod1",
-							"phase":          "Running",
-							"state":          "waiting",
-							"readiness":      "unready",
-						},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"namespace":             "ns1",
+						"container_name":        "completed",
+						"node_name":             "node1",
+						"pod_name":              "pod1",
+						"phase":                 "Running",
+						"state":                 "terminated",
+						"readiness":             "unready",
+						"node_selector_select1": "s1",
+						"node_selector_select2": "s2",
 					},
-				},
+					map[string]interface{}{
+						"restarts_total":                   int32(3),
+						"state_code":                       1,
+						"state_reason":                     "Completed",
+						"resource_requests_millicpu_units": int64(100),
+						"resource_limits_millicpu_units":   int64(100),
+						"terminated_reason":                "Completed",
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"namespace":             "ns1",
+						"container_name":        "waiting",
+						"node_name":             "node1",
+						"pod_name":              "pod1",
+						"phase":                 "Running",
+						"state":                 "waiting",
+						"readiness":             "unready",
+						"node_selector_select1": "s1",
+						"node_selector_select2": "s2",
+					},
+					map[string]interface{}{
+						"restarts_total":                   int32(3),
+						"state_code":                       2,
+						"state_reason":                     "PodUninitialized",
+						"resource_requests_millicpu_units": int64(100),
+						"resource_limits_millicpu_units":   int64(100),
+					},
+					time.Unix(0, 0),
+				),
 			},
 			hasError: false,
 		},
@@ -281,34 +289,23 @@ func TestPod(t *testing.T) {
 			SelectorInclude: selectInclude,
 			SelectorExclude: selectExclude,
 		}
-		ks.createSelectorFilters()
+		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
 		for _, pod := range ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items {
 			ks.gatherPod(pod, acc)
 		}
 
 		err := acc.FirstError()
-		if err == nil && v.hasError {
-			t.Fatalf("%s failed, should have error", v.name)
-		} else if err != nil && !v.hasError {
-			t.Fatalf("%s failed, err: %v", v.name, err)
+		if v.hasError {
+			require.Errorf(t, err, "%s failed, should have error", v.name)
+			continue
 		}
-		if v.output == nil && len(acc.Metrics) > 0 {
-			t.Fatalf("%s: collected extra data", v.name)
-		} else if v.output != nil && len(v.output.Metrics) > 0 {
-			for i := range v.output.Metrics {
-				for k, m := range v.output.Metrics[i].Tags {
-					if acc.Metrics[i].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s, i %d\n", v.name, k, m, acc.Metrics[i].Tags[k], i)
-					}
-				}
-				for k, m := range v.output.Metrics[i].Fields {
-					if acc.Metrics[i].Fields[k] != m {
-						t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T), i %d\n", v.name, k, m, m, acc.Metrics[i].Fields[k], acc.Metrics[i].Fields[k], i)
-					}
-				}
-			}
-		}
+
+		// No error case
+		require.NoErrorf(t, err, "%s failed, err: %v", v.name, err)
+
+		require.Len(t, acc.Metrics, len(v.output))
+		testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), v.output, testutil.IgnoreTime())
 	}
 }
 
@@ -527,7 +524,7 @@ func TestPodSelectorFilter(t *testing.T) {
 		}
 		ks.SelectorInclude = v.include
 		ks.SelectorExclude = v.exclude
-		ks.createSelectorFilters()
+		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
 		for _, pod := range ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items {
 			ks.gatherPod(pod, acc)
@@ -543,9 +540,8 @@ func TestPodSelectorFilter(t *testing.T) {
 			}
 		}
 
-		if !reflect.DeepEqual(v.expected, actual) {
-			t.Fatalf("actual selector tags (%v) do not match expected selector tags (%v)", actual, v.expected)
-		}
+		require.Equalf(t, v.expected, actual,
+			"actual selector tags (%v) do not match expected selector tags (%v)", actual, v.expected)
 	}
 }
 
@@ -562,7 +558,7 @@ func TestPodPendingContainers(t *testing.T) {
 	tests := []struct {
 		name     string
 		handler  *mockHandler
-		output   *testutil.Accumulator
+		output   []telegraf.Metric
 		hasError bool
 	}{
 		{
@@ -679,49 +675,51 @@ func TestPodPendingContainers(t *testing.T) {
 					},
 				},
 			},
-			output: &testutil.Accumulator{
-				Metrics: []*testutil.Metric{
-					{
-						Measurement: podContainerMeasurement,
-						Fields: map[string]interface{}{
-							"phase_reason":                     "NetworkNotReady",
-							"restarts_total":                   int32(0),
-							"state_code":                       3,
-							"resource_requests_millicpu_units": int64(100),
-							"resource_limits_millicpu_units":   int64(100),
-						},
-						Tags: map[string]string{
-							"namespace":             "ns1",
-							"container_name":        "waiting",
-							"node_name":             "node1",
-							"pod_name":              "pod1",
-							"phase":                 "Pending",
-							"state":                 "unknown",
-							"readiness":             "unready",
-							"node_selector_select1": "s1",
-							"node_selector_select2": "s2",
-						},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"namespace":             "ns1",
+						"container_name":        "waiting",
+						"node_name":             "node1",
+						"pod_name":              "pod1",
+						"phase":                 "Pending",
+						"state":                 "unknown",
+						"readiness":             "unready",
+						"node_selector_select1": "s1",
+						"node_selector_select2": "s2",
 					},
-					{
-						Measurement: podContainerMeasurement,
-						Fields: map[string]interface{}{
-							"phase_reason":                     "NetworkNotReady",
-							"restarts_total":                   int32(0),
-							"state_code":                       3,
-							"resource_requests_millicpu_units": int64(100),
-							"resource_limits_millicpu_units":   int64(100),
-						},
-						Tags: map[string]string{
-							"namespace":      "ns1",
-							"container_name": "terminated",
-							"node_name":      "node1",
-							"pod_name":       "pod1",
-							"phase":          "Pending",
-							"state":          "unknown",
-							"readiness":      "unready",
-						},
+					map[string]interface{}{
+						"phase_reason":                     "NetworkNotReady",
+						"restarts_total":                   int32(0),
+						"state_code":                       3,
+						"resource_requests_millicpu_units": int64(100),
+						"resource_limits_millicpu_units":   int64(100),
 					},
-				},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"namespace":             "ns1",
+						"container_name":        "terminated",
+						"node_name":             "node1",
+						"pod_name":              "pod1",
+						"phase":                 "Pending",
+						"state":                 "unknown",
+						"readiness":             "unready",
+						"node_selector_select1": "s1",
+						"node_selector_select2": "s2",
+					},
+					map[string]interface{}{
+						"phase_reason":                     "NetworkNotReady",
+						"restarts_total":                   int32(0),
+						"state_code":                       3,
+						"resource_requests_millicpu_units": int64(100),
+						"resource_limits_millicpu_units":   int64(100),
+					},
+					time.Unix(0, 0),
+				),
 			},
 			hasError: false,
 		},
@@ -732,33 +730,22 @@ func TestPodPendingContainers(t *testing.T) {
 			SelectorInclude: selectInclude,
 			SelectorExclude: selectExclude,
 		}
-		ks.createSelectorFilters()
+		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
 		for _, pod := range ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items {
 			ks.gatherPod(pod, acc)
 		}
 
 		err := acc.FirstError()
-		if err == nil && v.hasError {
-			t.Fatalf("%s failed, should have error", v.name)
-		} else if err != nil && !v.hasError {
-			t.Fatalf("%s failed, err: %v", v.name, err)
+		if v.hasError {
+			require.Errorf(t, err, "%s failed, should have error", v.name)
+			continue
 		}
-		if v.output == nil && len(acc.Metrics) > 0 {
-			t.Fatalf("%s: collected extra data", v.name)
-		} else if v.output != nil && len(v.output.Metrics) > 0 {
-			for i := range v.output.Metrics {
-				for k, m := range v.output.Metrics[i].Tags {
-					if acc.Metrics[i].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s, i %d\n", v.name, k, m, acc.Metrics[i].Tags[k], i)
-					}
-				}
-				for k, m := range v.output.Metrics[i].Fields {
-					if acc.Metrics[i].Fields[k] != m {
-						t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T), i %d\n", v.name, k, m, m, acc.Metrics[i].Fields[k], acc.Metrics[i].Fields[k], i)
-					}
-				}
-			}
-		}
+
+		// No error case
+		require.NoErrorf(t, err, "%s failed, err: %v", v.name, err)
+
+		require.Len(t, acc.Metrics, len(v.output))
+		testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), v.output, testutil.IgnoreTime())
 	}
 }

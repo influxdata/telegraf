@@ -51,10 +51,10 @@ func main() {
 		zipkin.HTTPBatchSize(BatchSize),
 		zipkin.HTTPMaxBacklog(MaxBackLog),
 		zipkin.HTTPBatchInterval(time.Duration(BatchTimeInterval)*time.Second))
-	defer collector.Close()
 	if err != nil {
 		log.Fatalf("Error initializing zipkin http collector: %v\n", err)
 	}
+	defer collector.Close()
 
 	tracer, err := zipkin.NewTracer(
 		zipkin.NewRecorder(collector, false, "127.0.0.1:0", "Trivial"))

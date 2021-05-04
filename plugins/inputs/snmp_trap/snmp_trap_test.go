@@ -11,7 +11,7 @@ import (
 	"github.com/soniah/gosnmp"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/require"
@@ -36,7 +36,7 @@ func TestLoad(t *testing.T) {
 	require.Equal(t, "coldStart", e.oidText)
 }
 
-func fakeExecCmd(_ internal.Duration, x string, y ...string) ([]byte, error) {
+func fakeExecCmd(_ config.Duration, x string, y ...string) ([]byte, error) {
 	return nil, fmt.Errorf("mock " + x + " " + strings.Join(y, " "))
 }
 

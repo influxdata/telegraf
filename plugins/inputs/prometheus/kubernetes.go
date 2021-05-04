@@ -197,7 +197,9 @@ func updateCadvisorPodList(p *Prometheus, req *http.Request) error {
 
 	// Will have expected type errors for some parts of corev1.Pod struct for some unused fields
 	// Instead have nil checks for every used field in case of incorrect decoding
-	json.NewDecoder(resp.Body).Decode(&cadvisorPodsResponse)
+	if err := json.NewDecoder(resp.Body).Decode(&cadvisorPodsResponse); err != nil {
+		return fmt.Errorf("decoding response failed: %v", err)
+	}
 	pods := cadvisorPodsResponse.Items
 
 	// Updating pod list to be latest cadvisor response

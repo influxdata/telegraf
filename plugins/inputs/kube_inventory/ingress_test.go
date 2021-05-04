@@ -4,10 +4,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	v1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIngress(t *testing.T) {
@@ -19,7 +22,7 @@ func TestIngress(t *testing.T) {
 	tests := []struct {
 		name     string
 		handler  *mockHandler
-		output   *testutil.Accumulator
+		output   []telegraf.Metric
 		hasError bool
 	}{
 		{
@@ -83,26 +86,26 @@ func TestIngress(t *testing.T) {
 					},
 				},
 			},
-			output: &testutil.Accumulator{
-				Metrics: []*testutil.Metric{
-					{
-						Fields: map[string]interface{}{
-							"tls":                  false,
-							"backend_service_port": int32(8080),
-							"generation":           int64(12),
-							"created":              now.UnixNano(),
-						},
-						Tags: map[string]string{
-							"ingress_name":         "ui-lb",
-							"namespace":            "ns1",
-							"ip":                   "1.0.0.127",
-							"hostname":             "chron-1",
-							"backend_service_name": "chronografd",
-							"host":                 "ui.internal",
-							"path":                 "/",
-						},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_ingress",
+					map[string]string{
+						"ingress_name":         "ui-lb",
+						"namespace":            "ns1",
+						"ip":                   "1.0.0.127",
+						"hostname":             "chron-1",
+						"backend_service_name": "chronografd",
+						"host":                 "ui.internal",
+						"path":                 "/",
 					},
-				},
+					map[string]interface{}{
+						"tls":                  false,
+						"backend_service_port": int32(8080),
+						"generation":           int64(12),
+						"created":              now.UnixNano(),
+					},
+					time.Unix(0, 0),
+				),
 			},
 			hasError: false,
 		},
@@ -118,26 +121,15 @@ func TestIngress(t *testing.T) {
 		}
 
 		err := acc.FirstError()
-		if err == nil && v.hasError {
-			t.Fatalf("%s failed, should have error", v.name)
-		} else if err != nil && !v.hasError {
-			t.Fatalf("%s failed, err: %v", v.name, err)
+		if v.hasError {
+			require.Errorf(t, err, "%s failed, should have error", v.name)
+			continue
 		}
-		if v.output == nil && len(acc.Metrics) > 0 {
-			t.Fatalf("%s: collected extra data", v.name)
-		} else if v.output != nil && len(v.output.Metrics) > 0 {
-			for i := range v.output.Metrics {
-				for k, m := range v.output.Metrics[i].Tags {
-					if acc.Metrics[i].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got '%v'\n", v.name, k, m, acc.Metrics[i].Tags[k])
-					}
-				}
-				for k, m := range v.output.Metrics[i].Fields {
-					if acc.Metrics[i].Fields[k] != m {
-						t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", v.name, k, m, m, acc.Metrics[i].Fields[k], acc.Metrics[i].Fields[k])
-					}
-				}
-			}
-		}
+
+		// No error case
+		require.NoErrorf(t, err, "%s failed, err: %v", v.name, err)
+
+		require.Len(t, acc.Metrics, len(v.output))
+		testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), v.output, testutil.IgnoreTime())
 	}
 }

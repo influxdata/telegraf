@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	framing "github.com/influxdata/telegraf/internal/syslog"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -136,7 +136,7 @@ func getTestCasesForNonTransparent() []testCaseStream {
 	return testCases
 }
 
-func testStrictNonTransparent(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+func testStrictNonTransparent(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *config.Duration) {
 	for _, tc := range getTestCasesForNonTransparent() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
@@ -158,12 +158,14 @@ func testStrictNonTransparent(t *testing.T, protocol string, address string, wan
 				require.NoError(t, e)
 				config.ServerName = "localhost"
 				conn, err = tls.Dial(protocol, address, config)
+				require.NotNil(t, conn)
+				require.NoError(t, err)
 			} else {
 				conn, err = net.Dial(protocol, address)
+				require.NotNil(t, conn)
+				require.NoError(t, err)
 				defer conn.Close()
 			}
-			require.NotNil(t, conn)
-			require.NoError(t, err)
 
 			// Clear
 			acc.ClearMetrics()
@@ -193,7 +195,7 @@ func testStrictNonTransparent(t *testing.T, protocol string, address string, wan
 }
 
 func testBestEffortNonTransparent(t *testing.T, protocol string, address string, wantTLS bool) {
-	keepAlive := (*internal.Duration)(nil)
+	keepAlive := (*config.Duration)(nil)
 	for _, tc := range getTestCasesForNonTransparent() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
@@ -258,11 +260,13 @@ func TestNonTransparentBestEffort_tcp_tls(t *testing.T) {
 }
 
 func TestNonTransparentStrictWithKeepAlive_tcp_tls(t *testing.T) {
-	testStrictNonTransparent(t, "tcp", address, true, &internal.Duration{Duration: time.Minute})
+	d := config.Duration(time.Minute)
+	testStrictNonTransparent(t, "tcp", address, true, &d)
 }
 
 func TestNonTransparentStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
-	testStrictNonTransparent(t, "tcp", address, true, &internal.Duration{Duration: 0})
+	d := config.Duration(0)
+	testStrictNonTransparent(t, "tcp", address, true, &d)
 }
 
 func TestNonTransparentStrict_unix(t *testing.T) {

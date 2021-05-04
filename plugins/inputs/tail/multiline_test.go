@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,20 +32,20 @@ func TestMultilineConfigError(t *testing.T) {
 }
 
 func TestMultilineConfigTimeoutSpecified(t *testing.T) {
-	duration, _ := time.ParseDuration("10s")
+	duration := config.Duration(10 * time.Second)
 	c := &MultilineConfig{
 		Pattern:        ".*",
 		MatchWhichLine: Previous,
-		Timeout:        &internal.Duration{Duration: duration},
+		Timeout:        &duration,
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
 
-	assert.Equal(t, duration, m.config.Timeout.Duration)
+	assert.Equal(t, duration, *m.config.Timeout)
 }
 
 func TestMultilineConfigDefaultTimeout(t *testing.T) {
-	duration, _ := time.ParseDuration("5s")
+	duration := config.Duration(5 * time.Second)
 	c := &MultilineConfig{
 		Pattern:        ".*",
 		MatchWhichLine: Previous,
@@ -53,7 +53,7 @@ func TestMultilineConfigDefaultTimeout(t *testing.T) {
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
 
-	assert.Equal(t, duration, m.config.Timeout.Duration)
+	assert.Equal(t, duration, *m.config.Timeout)
 }
 
 func TestMultilineIsEnabled(t *testing.T) {
@@ -103,7 +103,8 @@ func TestMultilineFlush(t *testing.T) {
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
 	var buffer bytes.Buffer
-	buffer.WriteString("foo")
+	_, err = buffer.WriteString("foo")
+	assert.NoError(t, err)
 
 	text := m.Flush(&buffer)
 
@@ -205,31 +206,30 @@ func TestMultiLineMatchStringWithInvertTrue(t *testing.T) {
 
 func TestMultilineWhat(t *testing.T) {
 	var w1 MultilineMatchWhichLine
-	w1.UnmarshalTOML([]byte(`"previous"`))
+	assert.NoError(t, w1.UnmarshalTOML([]byte(`"previous"`)))
 	assert.Equal(t, Previous, w1)
 
 	var w2 MultilineMatchWhichLine
-	w2.UnmarshalTOML([]byte(`previous`))
+	assert.NoError(t, w2.UnmarshalTOML([]byte(`previous`)))
 	assert.Equal(t, Previous, w2)
 
 	var w3 MultilineMatchWhichLine
-	w3.UnmarshalTOML([]byte(`'previous'`))
+	assert.NoError(t, w3.UnmarshalTOML([]byte(`'previous'`)))
 	assert.Equal(t, Previous, w3)
 
 	var w4 MultilineMatchWhichLine
-	w4.UnmarshalTOML([]byte(`"next"`))
+	assert.NoError(t, w4.UnmarshalTOML([]byte(`"next"`)))
 	assert.Equal(t, Next, w4)
 
 	var w5 MultilineMatchWhichLine
-	w5.UnmarshalTOML([]byte(`next`))
+	assert.NoError(t, w5.UnmarshalTOML([]byte(`next`)))
 	assert.Equal(t, Next, w5)
 
 	var w6 MultilineMatchWhichLine
-	w6.UnmarshalTOML([]byte(`'next'`))
+	assert.NoError(t, w6.UnmarshalTOML([]byte(`'next'`)))
 	assert.Equal(t, Next, w6)
 
 	var w7 MultilineMatchWhichLine
-	err := w7.UnmarshalTOML([]byte(`nope`))
+	assert.Error(t, w7.UnmarshalTOML([]byte(`nope`)))
 	assert.Equal(t, MultilineMatchWhichLine(-1), w7)
-	assert.Error(t, err)
 }

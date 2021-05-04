@@ -46,8 +46,7 @@ var localhost = &Server{URL: &url.URL{Host: "127.0.0.1:28015"}}
 // Returns one of the errors encountered while gather stats (if any).
 func (r *RethinkDB) Gather(acc telegraf.Accumulator) error {
 	if len(r.Servers) == 0 {
-		r.gatherServer(localhost, acc)
-		return nil
+		return r.gatherServer(localhost, acc)
 	}
 
 	var wg sync.WaitGroup

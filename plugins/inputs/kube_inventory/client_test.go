@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/stretchr/testify/require"
 )
 
 type mockHandler struct {
@@ -25,7 +26,5 @@ func toBoolPtr(b bool) *bool {
 
 func TestNewClient(t *testing.T) {
 	_, err := newClient("https://127.0.0.1:443/", "default", "abc123", time.Second, tls.ClientConfig{})
-	if err != nil {
-		t.Errorf("Failed to create new client - %s", err.Error())
-	}
+	require.NoErrorf(t, err, "Failed to create new client - %v", err)
 }

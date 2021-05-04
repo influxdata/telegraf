@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -19,7 +19,7 @@ const (
 
 type Kapacitor struct {
 	URLs    []string `toml:"urls"`
-	Timeout internal.Duration
+	Timeout config.Duration
 	tls.ClientConfig
 
 	client *http.Client
@@ -83,7 +83,7 @@ func (k *Kapacitor) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: k.Timeout.Duration,
+		Timeout: time.Duration(k.Timeout),
 	}
 
 	return client, nil
@@ -247,7 +247,7 @@ func init() {
 	inputs.Add("kapacitor", func() telegraf.Input {
 		return &Kapacitor{
 			URLs:    []string{defaultURL},
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
 }
