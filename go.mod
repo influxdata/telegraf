@@ -47,7 +47,6 @@ require (
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200916142827-bd33bbf0497b+incompatible
-	github.com/docker/libnetwork v0.8.0-dev.2.0.20181012153825-d7b61745d166
 	github.com/eclipse/paho.mqtt.golang v1.3.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logfmt/logfmt v0.5.0
@@ -90,6 +89,7 @@ require (
 	github.com/mdlayher/apcupsd v0.0.0-20200608131503-2bf01da7bf1b
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
 	github.com/miekg/dns v1.1.31
+	github.com/moby/ipvs v1.0.1
 	github.com/multiplay/go-ts3 v1.0.0
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/nats-io/nats-server/v2 v2.1.4
@@ -119,8 +119,6 @@ require (
 	github.com/tinylib/msgp v1.1.5
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/vapourismo/knx-go v0.0.0-20201122213738-75fe09ace330
-	github.com/vishvananda/netlink v0.0.0-20171020171820-b2de5d10e38e // indirect
-	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc // indirect
 	github.com/vjeantet/grok v1.0.1
 	github.com/vmware/govmomi v0.19.0
 	github.com/wavefronthq/wavefront-sdk-go v0.9.7
