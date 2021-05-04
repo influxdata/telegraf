@@ -3,10 +3,13 @@ package metric
 import (
 	"fmt"
 	"hash/fnv"
+	"log"
 	"sort"
 	"time"
+	"unicode/utf8"
 
 	"github.com/influxdata/telegraf"
+	"golang.org/x/text/encoding/unicode"
 )
 
 type metric struct {
@@ -44,6 +47,8 @@ func New(
 	if len(tags) > 0 {
 		m.tags = make([]*telegraf.Tag, 0, len(tags))
 		for k, v := range tags {
+			k = m.ensureValidString(k)
+			v = m.ensureValidString(v)
 			m.tags = append(m.tags,
 				&telegraf.Tag{Key: k, Value: v})
 		}
@@ -128,18 +133,24 @@ func (m *metric) Type() telegraf.ValueType {
 }
 
 func (m *metric) SetName(name string) {
+	name = m.ensureValidString(name)
 	m.name = name
 }
 
 func (m *metric) AddPrefix(prefix string) {
+	prefix = m.ensureValidString(prefix)
 	m.name = prefix + m.name
 }
 
 func (m *metric) AddSuffix(suffix string) {
+	suffix = m.ensureValidString(suffix)
 	m.name = m.name + suffix
 }
 
 func (m *metric) AddTag(key, value string) {
+	key = m.ensureValidString(key)
+	value = m.ensureValidString(value)
+
 	for i, tag := range m.tags {
 		if key > tag.Key {
 			continue
@@ -189,6 +200,11 @@ func (m *metric) RemoveTag(key string) {
 }
 
 func (m *metric) AddField(key string, value interface{}) {
+	key = m.ensureValidString(key)
+	if v, ok := value.(string); ok {
+		value = m.ensureValidString(v)
+	}
+
 	for i, field := range m.fields {
 		if key == field.Key {
 			m.fields[i] = &telegraf.Field{Key: key, Value: convertField(value)}
@@ -279,6 +295,22 @@ func (m *metric) Reject() {
 }
 
 func (m *metric) Drop() {
+}
+
+// validString ensures the given string is in utf-8 string and if not replaces
+// invalid bytes with the unicode replacement char.
+func (m *metric) ensureValidString(str string) string {
+	if utf8.ValidString(str) {
+		return str
+	}
+
+	log.Printf("E! [telegraf] Error adding string to measurement name %q that is not valid UTF-8: %q", m.name, str)
+	decoder := unicode.UTF8.NewDecoder()
+	str, err := decoder.String(str)
+	if err != nil {
+		log.Printf("E! [telegraf] Error decoding string to UTF-8: %v", err)
+	}
+	return str
 }
 
 // Convert field to a supported type or nil if unconvertible
