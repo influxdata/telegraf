@@ -4,7 +4,7 @@ WORKDIR /go/src/github.com/influxdata/telegraf
 COPY . /go/src/github.com/influxdata/telegraf
 RUN CGO_ENABLED=0 make go-install
 RUN cp /go/bin/* /usr/bin/
-CMD ["telegraf"]
+CMD ["tail", "-f", "/dev/null"]
 
 
 # FROM alpine:3.12

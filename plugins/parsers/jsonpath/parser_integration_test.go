@@ -1,10 +1,10 @@
 package jsonpath
 
 import (
-	"bytes"
 	"context"
-	"fmt"
+	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,15 +15,17 @@ import (
 
 func TestSimple(t *testing.T) {
 	ctx := context.Background()
+
 	dir, _ := os.Getwd()
-	fmt.Println(dir)
+	localBindDir := dir + "/testdata"
+
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:    dir + "/../../../",
-			Dockerfile: "scripts/alpine.docker",
+			Dockerfile: "scripts/integration_tests.docker",
 		},
-		Cmd: []string{
-			"telegraf", "--config", "./plugins/parsers/jsonpath/testdata/simple/simple.config",
+		BindMounts: map[string]string{
+			localBindDir: "/tmp/",
 		},
 	}
 
@@ -31,15 +33,18 @@ func TestSimple(t *testing.T) {
 		ContainerRequest: req,
 		Started:          true,
 	})
-	require.NoError(t, err)
 	defer telegrafDocker.Terminate(ctx)
-	rc, err := telegrafDocker.Logs(ctx)
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(rc)
-	fmt.Println(buf.String())
+
+	_, err = telegrafDocker.Exec(ctx, []string{
+		"telegraf", "--config", "./plugins/parsers/jsonpath/testdata/simple/simple.conf", "--once",
+	})
 	require.NoError(t, err)
 
-	ip, err := telegrafDocker.Host(ctx)
+	expectedMetric := `lol,host=docker name="John"`
+
+	dat, err := ioutil.ReadFile(localBindDir + "/simple.out")
 	require.NoError(t, err)
-	fmt.Println(ip)
+	require.True(t, strings.Contains(string(dat), expectedMetric))
+	err = os.Remove(localBindDir + "/simple.out")
+	require.NoError(t, err)
 }

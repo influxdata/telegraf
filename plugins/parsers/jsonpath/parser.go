@@ -12,7 +12,7 @@ import (
 
 // NOTE: To test changes quickly you can run the following
 // 1. make go-install
-// 2. telegraf --config ./plugins/parsers/jsonpath/testdata/simple/simple.config --debug
+// 2. telegraf --config ./plugins/parsers/jsonpath/testdata/simple/simple.conf --debug
 
 type TimeFunc func() time.Time
 
