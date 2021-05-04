@@ -775,9 +775,9 @@ func (c *Config) LoadConfigData(ctx context.Context, outputCtx context.Context, 
 		c.Tags["host"] = c.Agent.Hostname
 	}
 
-	// if len(c.UnusedFields) > 0 {
-	// 	return fmt.Errorf("line %d: configuration specified the fields %q, but they weren't used", tbl.Line, keys(c.UnusedFields))
-	// }
+	if len(c.UnusedFields) > 0 {
+		return fmt.Errorf("line %d: configuration specified the fields %q, but they weren't used", tbl.Line, keys(c.UnusedFields))
+	}
 
 	// Parse all the rest of the plugins:
 	for name, val := range tbl.Fields {
@@ -806,9 +806,9 @@ func (c *Config) LoadConfigData(ctx context.Context, outputCtx context.Context, 
 					return fmt.Errorf("unsupported config format: %s",
 						pluginName)
 				}
-				// if len(c.UnusedFields) > 0 {
-				// 	return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
-				// }
+				if len(c.UnusedFields) > 0 {
+					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
+				}
 			}
 		case "inputs", "plugins":
 			for pluginName, pluginVal := range subTable.Fields {
@@ -828,9 +828,9 @@ func (c *Config) LoadConfigData(ctx context.Context, outputCtx context.Context, 
 					return fmt.Errorf("Unsupported config format: %s",
 						pluginName)
 				}
-				// if len(c.UnusedFields) > 0 {
-				// 	return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
-				// }
+				if len(c.UnusedFields) > 0 {
+					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
+				}
 			}
 		case "processors":
 			for pluginName, pluginVal := range subTable.Fields {
@@ -845,9 +845,9 @@ func (c *Config) LoadConfigData(ctx context.Context, outputCtx context.Context, 
 					return fmt.Errorf("Unsupported config format: %s",
 						pluginName)
 				}
-				// if len(c.UnusedFields) > 0 {
-				// 	return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
-				// }
+				if len(c.UnusedFields) > 0 {
+					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
+				}
 			}
 		case "aggregators":
 			for pluginName, pluginVal := range subTable.Fields {
@@ -862,9 +862,9 @@ func (c *Config) LoadConfigData(ctx context.Context, outputCtx context.Context, 
 					return fmt.Errorf("Unsupported config format: %s",
 						pluginName)
 				}
-				// if len(c.UnusedFields) > 0 {
-				// 	return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
-				// }
+				if len(c.UnusedFields) > 0 {
+					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
+				}
 			}
 		case "config":
 			for pluginName, pluginVal := range subTable.Fields {
@@ -879,9 +879,9 @@ func (c *Config) LoadConfigData(ctx context.Context, outputCtx context.Context, 
 					return fmt.Errorf("Unsupported config format: %s",
 						pluginName)
 				}
-				// if len(c.UnusedFields) > 0 {
-				// 	return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
-				// }
+				if len(c.UnusedFields) > 0 {
+					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
+				}
 			}
 		// Assume it's an input input for legacy config file support if no other
 		// identifiers are present
