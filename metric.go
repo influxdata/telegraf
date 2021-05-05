@@ -58,8 +58,6 @@ type Metric interface {
 
 	// Type returns a general type for the entire metric that describes how you
 	// might interpret, aggregate the values.
-	//
-	// This method may be removed in the future and its use is discouraged.
 	Type() ValueType
 
 	// SetName sets the metric name.
