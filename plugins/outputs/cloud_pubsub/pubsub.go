@@ -267,10 +267,8 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 			ps.Log.Debugf("could not encode metric: %v", err)
 			continue
 		}
-		data := make([]byte, len(b))
-		copy(data, b)
 		msgs[i] = &pubsub.Message{
-			Data: data,
+			Data: b,
 		}
 		if ps.Attributes != nil {
 			msgs[i].Attributes = ps.Attributes

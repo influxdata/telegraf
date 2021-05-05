@@ -122,7 +122,9 @@ func (e *GzipEncoder) Encode(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return e.buf.Bytes(), nil
+	out := make([]byte, e.buf.Len())
+	copy(out, e.buf.Bytes())
+	return out, nil
 }
 
 // IdentityEncoder is a null encoder that applies no transformation.
@@ -166,7 +168,9 @@ func (d *GzipDecoder) Decode(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return d.buf.Bytes(), nil
+	out := make([]byte, d.buf.Len())
+	copy(out, d.buf.Bytes())
+	return out, nil
 }
 
 // IdentityDecoder is a null decoder that returns the input.
