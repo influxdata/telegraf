@@ -1047,3 +1047,113 @@ func TestBase64Decode(t *testing.T) {
 		})
 	}
 }
+
+func TestValidUTF8(t *testing.T) {
+	tests := []struct {
+		name     string
+		plugin   *Strings
+		metric   []telegraf.Metric
+		expected []telegraf.Metric
+	}{
+		{
+			name: "valid utf-8 keeps original string",
+			plugin: &Strings{
+				ValidUTF8: []converter{
+					{
+						Field:       "message",
+						Replacement: "r",
+					},
+				},
+			},
+			metric: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "howdy",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "howdy",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "non-valid utf-8 modifies original string",
+			plugin: &Strings{
+				ValidUTF8: []converter{
+					{
+						Field:       "message",
+						Replacement: "r",
+					},
+				},
+			},
+			metric: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "ho" + string([]byte{0xff}) + "wdy",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "horwdy",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "non-valid utf-8 and empty replacement removes invalid characters",
+			plugin: &Strings{
+				ValidUTF8: []converter{
+					{
+						Field:       "message",
+						Replacement: "",
+					},
+				},
+			},
+			metric: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "ho" + string([]byte{0xff}) + "wdy",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "howdy",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.plugin.Apply(tt.metric...)
+			testutil.RequireMetricsEqual(t, tt.expected, actual)
+		})
+	}
+}
