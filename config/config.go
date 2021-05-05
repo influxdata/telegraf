@@ -1398,15 +1398,15 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 
 				if subnode, ok := subtbl.Fields["fields"]; ok {
 					fmt.Println("whaaat")
-					if subsubtbl, ok := subnode.(*ast.Table); ok {
-						c.getFieldString(subsubtbl, "fieldname", &subcfg.Fields.FieldName)
-						c.getFieldString(subsubtbl, "query", &subcfg.Fields.Query)
-						fmt.Println("field name", subcfg.Fields.FieldName)
-						fmt.Println("query", subcfg.Fields.Query)
-						// for _, subsubtbl := range subsubtbls {
-						// 	c.getFieldString(subsubtbl, "fieldname", &subcfg.Fields.FieldName)
-						// 	fmt.Println("field name", subcfg.Fields.FieldName)
-						// }
+					if subsubtbls, ok := subnode.([]*ast.Table); ok {
+						// c.getFieldString(subsubtbl, "name", &subcfg.Fields.Name)
+						// c.getFieldString(subsubtbl, "query", &subcfg.Fields.Query)
+						for i, subsubtbl := range subsubtbls {
+							c.getFieldString(subsubtbl, "name", &subcfg.Fields[i].Name)
+							fmt.Println("field name", subcfg.Fields[i].Name)
+							c.getFieldString(subsubtbl, "query", &subcfg.Fields[i].Query)
+							c.getFieldString(subsubtbl, "type", &subcfg.Fields[i].Type)
+						}
 
 					}
 				}

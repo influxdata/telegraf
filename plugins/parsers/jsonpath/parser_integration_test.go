@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"testing"
@@ -20,7 +21,7 @@ func TestJSONPathDockerIntegration(t *testing.T) {
 	}
 
 	tests := []string{
-		"simple",
+		"types",
 	}
 
 	ctx := context.Background()
@@ -71,7 +72,11 @@ func TestJSONPathDockerIntegration(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, len(expectedMetrics) == len(resultingMetrics))
 		for i := range resultingMetrics {
-			require.True(t, strings.Contains(resultingMetrics[i], expectedMetrics[i]))
+			contains := strings.Contains(resultingMetrics[i], expectedMetrics[i])
+			if !contains {
+				log.Printf("Result doesn't contain expected metric: \n Expected: %s \n Resulting: %s", expectedMetrics[i], resultingMetrics[i])
+			}
+			require.True(t, contains)
 		}
 		err = os.Remove(resultingMetricPath)
 		require.NoError(t, err)
