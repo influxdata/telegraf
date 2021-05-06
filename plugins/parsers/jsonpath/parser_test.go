@@ -1,7 +1,6 @@
 package jsonpath
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -9,13 +8,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
-
-// *** Notes:***
-// import cycle is caused trying to put influx line protocol expected output in a separate file, need influx line parser
-// How to print telegraf.Metric to stdout? currently only get: file map[] map[name:John] 3600000000000
-// Integration tests idea, completely separate test file that uses docker to run telegraf with a toml config
-// Use: https://github.com/testcontainers/testcontainers-go
-// Trying to load TOML config in unit tests a bit too complicated trying to get parser data
 
 var DefaultTime = func() time.Time {
 	return time.Unix(3600, 0)
@@ -261,8 +253,6 @@ func TestParseLineTypes(t *testing.T) {
 
 			actual, err := parser.ParseLine(tt.JSONInput)
 			require.NoError(t, err)
-
-			fmt.Println(actual)
 
 			testutil.RequireMetricEqual(t, tt.expected, actual)
 		})

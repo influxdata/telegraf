@@ -11,10 +11,6 @@ import (
 	"github.com/ohler55/ojg/oj"
 )
 
-// NOTE: To test changes quickly you can run the following
-// 1. make go-install
-// 2. telegraf --config ./plugins/parsers/jsonpath/testdata/simple/simple.conf --debug
-
 type TimeFunc func() time.Time
 
 type Parser struct {
@@ -93,7 +89,6 @@ func (p *Parser) query(obj interface{}, config Config) (telegraf.Metric, error) 
 		}
 
 		result := x.Get(obj)
-		// fmt.Println("oj result", oj.JSON(result))
 		for i, input := range result {
 			// If a field type is defined, check if needs to be converted
 			if field.Type != "" {
@@ -156,9 +151,9 @@ func (p *Parser) convertType(input interface{}, configField FieldKeys) (interfac
 			case "int":
 				if inputType {
 					return int64(1), nil
-				} else {
-					return int64(0), nil
 				}
+
+				return int64(0), nil
 			}
 		}
 	case int64:
