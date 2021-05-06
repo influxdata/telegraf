@@ -47,7 +47,7 @@ https://docs.jboss.org/author/display/WFLY10/The%20HTTP%20management%20API.html
 
 ### Metrics:
 
-The jboss_jvm measurement has static fields (those related to threading and memory info ) and dinamic fields ( those related to garbage-collector info) , these dinamic fields has as many  (count/time) pairs as diferent collection modes.
+The jboss_jvm measurement has static fields (those related to threading and memory info) and dinamic fields ( those related to garbage-collector info) , these dinamic fields has as many  (count/time) pairs as diferent collection modes.
 
 These fields will be in the form
 
