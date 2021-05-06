@@ -5,7 +5,6 @@ orbs:
 
 executors:
   machine-ubuntu:
-    working_directory: '/go/src/github.com/influxdata/telegraf'
     machine:
       image: ubuntu-2004:202101-01
   go-1_15:
