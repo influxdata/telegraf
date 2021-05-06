@@ -408,7 +408,6 @@ func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs [
 
 func NewJSONPathParser(jsonpathconfig []JSONPathConfig) (Parser, error) {
 	configs := make([]jsonpath.Config, len(jsonpathconfig))
-	fmt.Println("HELLO", len(jsonpathconfig), jsonpathconfig[0].MetricName, jsonpathconfig[0].MetricSelection)
 	for i, cfg := range jsonpathconfig {
 		configs[i].MetricName = cfg.MetricName
 		configs[i].MetricSelection = cfg.MetricSelection

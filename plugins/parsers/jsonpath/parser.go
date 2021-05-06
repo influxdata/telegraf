@@ -93,7 +93,7 @@ func (p *Parser) query(obj interface{}, config Config) (telegraf.Metric, error) 
 		}
 
 		result := x.Get(obj)
-		// fmt.Println(oj.JSON(result))
+		// fmt.Println("oj result", oj.JSON(result))
 		for i, input := range result {
 			// If a field type is defined, check if needs to be converted
 			if field.Type != "" {

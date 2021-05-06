@@ -24,6 +24,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/jsonpath"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
@@ -1394,20 +1395,20 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 			for i, subtbl := range subtbls {
 				subcfg := pc.JSONPathConfig[i]
 				c.getFieldString(subtbl, "metric_name", &subcfg.MetricName)
+				if subcfg.MetricName == "" {
+					subcfg.MetricName = name
+				}
 				c.getFieldString(subtbl, "metric_selection", &subcfg.MetricSelection)
 
 				if subnode, ok := subtbl.Fields["fields"]; ok {
-					fmt.Println("whaaat")
 					if subsubtbls, ok := subnode.([]*ast.Table); ok {
-						// c.getFieldString(subsubtbl, "name", &subcfg.Fields.Name)
-						// c.getFieldString(subsubtbl, "query", &subcfg.Fields.Query)
-						for i, subsubtbl := range subsubtbls {
-							c.getFieldString(subsubtbl, "name", &subcfg.Fields[i].Name)
-							fmt.Println("field name", subcfg.Fields[i].Name)
-							c.getFieldString(subsubtbl, "query", &subcfg.Fields[i].Query)
-							c.getFieldString(subsubtbl, "type", &subcfg.Fields[i].Type)
+						for _, subsubtbl := range subsubtbls {
+							var f jsonpath.FieldKeys
+							c.getFieldString(subsubtbl, "name", &f.Name)
+							c.getFieldString(subsubtbl, "query", &f.Query)
+							c.getFieldString(subsubtbl, "type", &f.Type)
+							subcfg.Fields = append(subcfg.Fields, f)
 						}
-
 					}
 				}
 

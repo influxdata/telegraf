@@ -4,16 +4,15 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"log"
 	"os"
-	"strings"
 	"testing"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 )
-
-// TAKES ABOUT 3 MINUTES, how to improve?
 
 func TestJSONPathDockerIntegration(t *testing.T) {
 	if testing.Short() {
@@ -54,7 +53,7 @@ func TestJSONPathDockerIntegration(t *testing.T) {
 	// The integration tests require a directory within `testdata` to contain the following files:
 	// 1. `telegraf.conf` file defining the telegraf configuration for the test, requires output.file plugin to be defined
 	// 2. `input.json` file defining the JSON that will be parsed
-	// 3. `expected.out` file defining the expected resulting metrics, this shouldn't contain anything dynamic like the timestamp
+	// 3. `expected.out` file defining the expected resulting metrics, the timestamp isn't necessary and will be overwritten
 	for _, testName := range tests {
 		_, err = telegrafDocker.Exec(ctx, []string{
 			"telegraf", "--config", fmt.Sprintf("./plugins/parsers/jsonpath/testdata/%s/telegraf.conf", testName), "--once",
@@ -62,21 +61,38 @@ func TestJSONPathDockerIntegration(t *testing.T) {
 		require.NoError(t, err)
 
 		// Read the file in the testdata with the expected metrics
-		expectedMetrics, err := readMetricFile(fmt.Sprintf("%s/%s/expected.out", localBindDir, testName))
+		expectedMetricsFile, err := readMetricFile(fmt.Sprintf("%s/%s/expected.out", localBindDir, testName))
 		require.NoError(t, err)
 
 		// Read the file outputed by the docker container with the expected metrics
 		// All test telegraf configs need the plugin `output.file` defined to write out a file to /tmp/
 		resultingMetricPath := fmt.Sprintf("%s/%s.out", localBindDir, testName)
-		resultingMetrics, err := readMetricFile(resultingMetricPath)
+		resultingMetricsFile, err := readMetricFile(resultingMetricPath)
 		require.NoError(t, err)
-		require.True(t, len(expectedMetrics) == len(resultingMetrics))
-		for i := range resultingMetrics {
-			contains := strings.Contains(resultingMetrics[i], expectedMetrics[i])
-			if !contains {
-				log.Printf("Result doesn't contain expected metric: \n Expected: %s \n Resulting: %s", expectedMetrics[i], resultingMetrics[i])
+		require.True(t, len(expectedMetricsFile) == len(resultingMetricsFile))
+		var resultingMetrics, expectedMetrics []telegraf.Metric
+		for i := range resultingMetricsFile {
+			metricHandler := influx.NewMetricHandler()
+			influxParser := influx.NewParser(metricHandler)
+			// Extract all the resulting metrics from running the Telegraf with the test data
+			resultM, err := influxParser.ParseLine(resultingMetricsFile[i])
+			require.NoError(t, err)
+			resultingMetrics = append(resultingMetrics, resultM)
+			// Extract all the expected metrics from the testdata directory
+			expectedM, err := influxParser.ParseLine(expectedMetricsFile[i])
+			require.NoError(t, err)
+			expectedM.SetTime(resultM.Time())
+			expectedMetrics = append(expectedMetrics, expectedM)
+		}
+		// The resulting metrics can be in any order, loop over the slice to verify a match exists
+		for _, expectedMetric := range expectedMetrics {
+			var found bool
+			for _, resultMetric := range resultingMetrics {
+				if found = testutil.MetricEqual(expectedMetric, resultMetric); found {
+					break
+				}
 			}
-			require.True(t, contains)
+			require.True(t, found)
 		}
 		err = os.Remove(resultingMetricPath)
 		require.NoError(t, err)

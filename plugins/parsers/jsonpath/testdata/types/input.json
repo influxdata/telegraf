@@ -6,11 +6,16 @@
     "convertfloattostring": 1.1,
     "explicitinttype": 1,
     "defaultinttype": 2,
+    "convertfloatoint": 3.1,
+    "convertstringtoint": "4",
+    "convertbooltoint": false,
+    "explicitfloattype": 1.1,
+    "defaultfloattype": 2.1,
+    "convertintotfloat": 3,
+    "convertstringtofloat": "4.1",
     "explicitbooltype": true,
     "defaultbooltype": false,
-    "explicitfloatype": 1.2,
-    "defaultfloattype": 3.4,
-    "convertinttype": 5.6,
-    "convertfloattype": 3,
-    "convertbooleantype": "true"
+    "convertinttobool": 1,
+    "convertstringtobool": "false",
+    "convertintstringtobool": "1"
 }
