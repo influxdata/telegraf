@@ -268,11 +268,11 @@ func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 			require.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 			require.Equal(t, "gzip", r.Header.Get("Accept-Encoding"))
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("{}"))
+			_, _ = w.Write([]byte("{}"))
 			return
 		default:
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"version": {"number": "7.8"}}`))
+			_, _ = w.Write([]byte(`{"version": {"number": "7.8"}}`))
 			return
 		}
 	}))
@@ -301,11 +301,11 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 		case "/_bulk":
 			require.NotEqual(t, "gzip", r.Header.Get("Content-Encoding"))
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("{}"))
+			_, _ = w.Write([]byte("{}"))
 			return
 		default:
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"version": {"number": "7.8"}}`))
+			_, _ = w.Write([]byte(`{"version": {"number": "7.8"}}`))
 			return
 		}
 	}))
