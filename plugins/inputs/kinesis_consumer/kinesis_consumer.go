@@ -230,7 +230,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 			}
 			err := k.onMessage(k.acc, r)
 			if err != nil {
-				<- k.sem
+				<-k.sem
 				k.Log.Errorf("Scan parser error: %s", err.Error())
 			}
 
