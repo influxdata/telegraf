@@ -15,9 +15,12 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 // api is the general interface to interacting with Telegraf's current config
@@ -172,25 +175,58 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 		// add an input
 		input, ok := inputs.Inputs[name]
 		if !ok {
-			return models.PluginID(""), fmt.Errorf("Error finding plugin with name %s", name)
+			return "", fmt.Errorf("Error finding plugin with name %s", name)
 		}
 		// create a copy
 		i := input()
 		// set the config
 		if err := setFieldConfig(config.Config, i); err != nil {
-			return models.PluginID(""), err
+			return "", err
 		}
+
+		// get parser!
+		if t, ok := i.(parsers.ParserInput); ok {
+			pc := &parsers.Config{
+				MetricName: name,
+				JSONStrict: true,
+				DataFormat: "influx",
+			}
+			if err := setFieldConfig(config.Config, pc); err != nil {
+				return "", err
+			}
+			parser, err := parsers.NewParser(pc)
+			if err != nil {
+				return "", err
+			}
+			t.SetParser(parser)
+		}
+
+		if t, ok := i.(parsers.ParserFuncInput); ok {
+			pc := &parsers.Config{
+				MetricName: name,
+				JSONStrict: true,
+				DataFormat: "influx",
+			}
+			if err := setFieldConfig(config.Config, pc); err != nil {
+				return "", err
+			}
+
+			t.SetParserFunc(func() (parsers.Parser, error) {
+				return parsers.NewParser(pc)
+			})
+		}
+
 		// start it and put it into the agent manager?
 		pluginConfig := &models.InputConfig{Name: name}
 		if err := setFieldConfig(config.Config, pluginConfig); err != nil {
-			return models.PluginID(""), err
+			return "", err
 		}
 
 		rp := models.NewRunningInput(i, pluginConfig)
 		rp.SetDefaultTags(a.config.Tags)
 
 		if err := rp.Init(); err != nil {
-			return models.PluginID(""), fmt.Errorf("could not initialize plugin %w", err)
+			return "", fmt.Errorf("could not initialize plugin %w", err)
 		}
 
 		a.agent.AddInput(rp)
@@ -202,24 +238,39 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 		// add an output
 		output, ok := outputs.Outputs[name]
 		if !ok {
-			return models.PluginID(""), fmt.Errorf("Error finding plugin with name %s", name)
+			return "", fmt.Errorf("Error finding plugin with name %s", name)
 		}
 		// create a copy
 		o := output()
 		// set the config
 		if err := setFieldConfig(config.Config, o); err != nil {
-			return models.PluginID(""), err
+			return "", err
 		}
 		// start it and put it into the agent manager?
 		pluginConfig := &models.OutputConfig{Name: name}
 		if err := setFieldConfig(config.Config, pluginConfig); err != nil {
-			return models.PluginID(""), err
+			return "", err
+		}
+
+		if t, ok := o.(serializers.SerializerOutput); ok {
+			sc := &serializers.Config{
+				TimestampUnits: time.Duration(1 * time.Second),
+				DataFormat:     "influx",
+			}
+			if err := setFieldConfig(config.Config, sc); err != nil {
+				return "", err
+			}
+			serializer, err := serializers.NewSerializer(sc)
+			if err != nil {
+				return "", err
+			}
+			t.SetSerializer(serializer)
 		}
 
 		ro := models.NewRunningOutput(o, pluginConfig, a.config.Agent.MetricBatchSize, a.config.Agent.MetricBufferLimit)
 
 		if err := ro.Init(); err != nil {
-			return models.PluginID(""), fmt.Errorf("could not initialize plugin %w", err)
+			return "", fmt.Errorf("could not initialize plugin %w", err)
 		}
 
 		a.agent.AddOutput(ro)
@@ -227,27 +278,57 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 		go a.agent.RunOutput(a.outputCtx, ro)
 
 		return idToString(ro.ID), nil
-	case "processors", "aggregators":
+	case "aggregators":
+		aggregator, ok := aggregators.Aggregators[name]
+		if !ok {
+			return "", fmt.Errorf("Error finding aggregator plugin with name %s", name)
+		}
+		agg := aggregator()
+
+		// set the config
+		if err := setFieldConfig(config.Config, agg); err != nil {
+			return "", err
+		}
+		aggCfg := &models.AggregatorConfig{
+			Name:   name,
+			Delay:  time.Millisecond * 100,
+			Period: time.Second * 30,
+			Grace:  time.Second * 0,
+		}
+		if err := setFieldConfig(config.Config, aggCfg); err != nil {
+			return "", err
+		}
+
+		ra := models.NewRunningAggregator(agg, aggCfg)
+		if err := ra.Init(); err != nil {
+			return "", fmt.Errorf("could not initialize plugin %w", err)
+		}
+		a.agent.AddProcessor(ra)
+		go a.agent.RunProcessor(ra)
+
+		return idToString(ra.ID), nil
+
+	case "processors":
 		processor, ok := processors.Processors[name]
 		if !ok {
-			return models.PluginID(""), fmt.Errorf("Error finding plugin with name %s", name)
+			return "", fmt.Errorf("Error finding processor plugin with name %s", name)
 		}
 		// create a copy
 		p := processor()
 		// set the config
 		if err := setFieldConfig(config.Config, p); err != nil {
-			return models.PluginID(""), err
+			return "", err
 		}
 		// start it and put it into the agent manager?
 		pluginConfig := &models.ProcessorConfig{Name: name}
 		if err := setFieldConfig(config.Config, pluginConfig); err != nil {
-			return models.PluginID(""), err
+			return "", err
 		}
 
 		rp := models.NewRunningProcessor(p, pluginConfig)
 
 		if err := rp.Init(); err != nil {
-			return models.PluginID(""), fmt.Errorf("could not initialize plugin %w", err)
+			return "", fmt.Errorf("could not initialize plugin %w", err)
 		}
 
 		a.agent.AddProcessor(rp)
@@ -256,7 +337,7 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 
 		return idToString(rp.ID), nil
 	default:
-		return models.PluginID(""), errors.New("Unknown plugin type")
+		return "", errors.New("Unknown plugin type")
 	}
 }
 
@@ -808,6 +889,7 @@ func idToString(id uint64) models.PluginID {
 	return models.PluginID(fmt.Sprintf("%016x", id))
 }
 
+// make sure these models implement RunningPlugin
 var _ models.RunningPlugin = &models.RunningProcessor{}
 var _ models.RunningPlugin = &models.RunningAggregator{}
 var _ models.RunningPlugin = &models.RunningInput{}

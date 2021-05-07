@@ -11,14 +11,9 @@ import (
 )
 
 type ConfigAPIPlugin struct {
-	ServiceAddress string `toml:"service_address"`
-	// Name string `toml:"name"`
-	// Storage string `toml:"storage"` // storage = "config_state"
-	Storage config.StoragePlugin `toml:"storage"`
+	ServiceAddress string               `toml:"service_address"`
+	Storage        config.StoragePlugin `toml:"storage"`
 	tls.ServerConfig
-
-	// [config.api.storage.internal]
-	//   file = "config_state.db"
 
 	api    *api
 	cancel context.CancelFunc
@@ -26,17 +21,6 @@ type ConfigAPIPlugin struct {
 
 	plugins []PluginConfig
 }
-
-// type RunningPlugins struct {
-// 	Plugins []Plugin `json:"plugins"`
-// }
-
-// func (a *ConfigAPIPlugin) GetName() string {
-// 	if a.Name != "" {
-// 		return "api." + a.Name
-// 	}
-// 	return "api"
-// }
 
 func (a *ConfigAPIPlugin) GetName() string {
 	return "api"
