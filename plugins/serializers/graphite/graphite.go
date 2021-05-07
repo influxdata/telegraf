@@ -28,6 +28,10 @@ var (
 	)
 
 	fieldDeleter = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
+
+	allowedCharsTagName = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`)
+	allowedCharsTagValue = regexp.MustCompile(`[^ -:<-~\p{L}]`)
+	
 )
 
 type GraphiteTemplate struct {
@@ -36,11 +40,12 @@ type GraphiteTemplate struct {
 }
 
 type GraphiteSerializer struct {
-	Prefix     string
-	Template   string
-	TagSupport bool
-	Separator  string
-	Templates  []*GraphiteTemplate
+	Prefix     		string
+	Template   		string
+	TagSupport 		bool
+	TagNewSanitize 	bool
+	Separator  		string
+	Templates  		[]*GraphiteTemplate
 }
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -56,7 +61,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 			if fieldValue == "" {
 				continue
 			}
-			bucket := SerializeBucketNameWithTags(metric.Name(), metric.Tags(), s.Prefix, s.Separator, fieldName)
+			bucket := SerializeBucketNameWithTags(metric.Name(), metric.Tags(), s.Prefix, s.Separator, fieldName, s.TagNewSanitize)
 			metricString := fmt.Sprintf("%s %s %d\n",
 				// insert "field" section of template
 				bucket,
@@ -248,6 +253,7 @@ func SerializeBucketNameWithTags(
 	prefix string,
 	separator string,
 	field string,
+	tagNewSanitize bool,
 ) string {
 	var out string
 	var tagsCopy []string
@@ -255,7 +261,12 @@ func SerializeBucketNameWithTags(
 		if k == "name" {
 			k = "_name"
 		}
-		tagsCopy = append(tagsCopy, sanitize(k+"="+v))
+		if tagNewSanitize {
+			tagsCopy = append(tagsCopy, sanitizeTag(k,v))
+		} else {
+			tagsCopy = append(tagsCopy, sanitize(k+"="+v))
+		}
+		
 	}
 	sort.Strings(tagsCopy)
 
@@ -315,4 +326,13 @@ func sanitize(value string) string {
 	value = dropChars.Replace(value)
 	// Replace any remaining illegal chars
 	return allowedChars.ReplaceAllLiteralString(value, "_")
+}
+
+func sanitizeTag(name string, value string) string {
+	if strings.HasPrefix(value, "~") {
+		value = "_" + value[1:]
+	}
+	name = allowedCharsTagName.ReplaceAllLiteralString(name, "_")
+	value = allowedCharsTagValue.ReplaceAllLiteralString(value, "_")
+	return name + "=" + value
 }
