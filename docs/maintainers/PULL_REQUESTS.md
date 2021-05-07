@@ -19,7 +19,7 @@ contributor to merge or rebase.
 
 ## Review
 
-[Review the pull request](Review).
+[Review the pull request](docs/developers/REVIEWS.md).
 
 ## Merge
 
@@ -53,7 +53,7 @@ message.  If applicable mention the plugin in the message.
 
 ## After Merge
 
-[Update the Changelog](Changelog).
+[Update the Changelog](https://github.com/influxdata/telegraf/blob/master/docs/maintainers/CHANGELOG.md).
 
 If required, backport the patch and the changelog update to the current
 release branch.  Usually this can be done by cherry picking the commits:
