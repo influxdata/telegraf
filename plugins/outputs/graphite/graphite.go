@@ -15,16 +15,16 @@ import (
 )
 
 type Graphite struct {
-	GraphiteTagSupport bool   	`toml:"graphite_tag_support"`
-	GraphiteTagNewSanitize bool `toml:"graphite_tag_new_sanitize"`
-	GraphiteSeparator  string 	`toml:"graphite_separator"`
+	GraphiteTagSupport     bool   `toml:"graphite_tag_support"`
+	GraphiteTagNewSanitize bool   `toml:"graphite_tag_new_sanitize"`
+	GraphiteSeparator      string `toml:"graphite_separator"`
 	// URL is only for backwards compatibility
-	Servers   []string       	`toml:"servers"`
-	Prefix    string          	`toml:"prefix"`
-	Template  string          	`toml:"template"`
-	Templates []string        	`toml:"templates"`
-	Timeout   int             	`toml:"timeout"`
-	Log       telegraf.Logger 	`toml:"-"`
+	Servers   []string        `toml:"servers"`
+	Prefix    string          `toml:"prefix"`
+	Template  string          `toml:"template"`
+	Templates []string        `toml:"templates"`
+	Timeout   int             `toml:"timeout"`
+	Log       telegraf.Logger `toml:"-"`
 
 	conns []net.Conn
 	tlsint.ClientConfig

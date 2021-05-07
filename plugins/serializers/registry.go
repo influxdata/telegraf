@@ -242,12 +242,12 @@ func NewGraphiteSerializer(prefix, template string, tagSupport bool, tagNewSanit
 	}
 
 	return &graphite.GraphiteSerializer{
-		Prefix:     	prefix,
-		Template:		template,
-		TagSupport:  	tagSupport,
+		Prefix:         prefix,
+		Template:       template,
+		TagSupport:     tagSupport,
 		TagNewSanitize: tagNewSanitize,
-		Separator:  	separator,
-		Templates:  	graphiteTemplates,
+		Separator:      separator,
+		Templates:      graphiteTemplates,
 	}, nil
 }
 

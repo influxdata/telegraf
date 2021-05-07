@@ -29,9 +29,8 @@ var (
 
 	fieldDeleter = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
 
-	allowedCharsTagName = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`)
+	allowedCharsTagName  = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`)
 	allowedCharsTagValue = regexp.MustCompile(`[^ -:<-~\p{L}]`)
-	
 )
 
 type GraphiteTemplate struct {
@@ -40,12 +39,12 @@ type GraphiteTemplate struct {
 }
 
 type GraphiteSerializer struct {
-	Prefix     		string
-	Template   		string
-	TagSupport 		bool
-	TagNewSanitize 	bool
-	Separator  		string
-	Templates  		[]*GraphiteTemplate
+	Prefix         string
+	Template       string
+	TagSupport     bool
+	TagNewSanitize bool
+	Separator      string
+	Templates      []*GraphiteTemplate
 }
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -262,11 +261,11 @@ func SerializeBucketNameWithTags(
 			k = "_name"
 		}
 		if tagNewSanitize {
-			tagsCopy = append(tagsCopy, sanitizeTag(k,v))
+			tagsCopy = append(tagsCopy, sanitizeTag(k, v))
 		} else {
 			tagsCopy = append(tagsCopy, sanitize(k+"="+v))
 		}
-		
+
 	}
 	sort.Strings(tagsCopy)
 

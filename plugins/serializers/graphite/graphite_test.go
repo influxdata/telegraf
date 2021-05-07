@@ -556,9 +556,9 @@ func TestSerializeTagWithSpacesWithTagSupportNewSanitize(t *testing.T) {
 	m := metric.New("cpu", tags, fields, now)
 
 	s := GraphiteSerializer{
-		TagSupport: true,
+		TagSupport:     true,
 		TagNewSanitize: true,
-		Separator:  ".",
+		Separator:      ".",
 	}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
@@ -1050,9 +1050,9 @@ func TestCleanWithTagsSupportNewSanitize(t *testing.T) {
 	}
 
 	s := GraphiteSerializer{
-		TagSupport: true,
+		TagSupport:     true,
 		TagNewSanitize: true,
-		Separator:  ".",
+		Separator:      ".",
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
