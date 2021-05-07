@@ -191,7 +191,7 @@ func (t *Table) Init() error {
 			if SecondaryIndexTable == false {
 				SecondaryIndexTable = true
 			} else {
-				return errors.New("Only one field can be a SecondaryIndexTable")
+				return fmt.Errorf("only one field can be SecondaryIndexTable")
 			}
 		}
 	}
@@ -294,11 +294,11 @@ func (f *Field) init() error {
 	}
 
 	if f.SecondaryIndexTable == true && f.SecondaryIndexUse == true {
-		return errors.New("SecondaryIndexTable and UseSecondaryIndex are exclusive")
+		return fmt.Errorf("SecondaryIndexTable and UseSecondaryIndex are exclusive")
 	}
 
 	if f.SecondaryIndexTable == false && f.SecondaryIndexUse == false && f.SecondaryOuterJoin == true {
-		return errors.New("SecondaryOuterJoin set to true, but field is not being used in join")
+		return fmt.Errorf("SecondaryOuterJoin set to true, but field is not being used in join")
 	}
 
 	f.initialized = true
