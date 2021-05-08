@@ -30,6 +30,7 @@ type Elasticsearch struct {
 	EnableSniffer       bool
 	Timeout             internal.Duration
 	HealthCheckInterval internal.Duration
+	EnableGzip          bool
 	ManageTemplate      bool
 	TemplateName        string
 	OverwriteTemplate   bool
@@ -50,6 +51,8 @@ var sampleConfig = `
   ## Set to true to ask Elasticsearch a list of all cluster nodes,
   ## thus it is not necessary to list all nodes in the urls config option.
   enable_sniffer = false
+  ## Set to true to enable gzip compression
+  enable_gzip = false
   ## Set the interval to check if the Elasticsearch nodes are available
   ## Setting to "0s" will disable the health check (not recommended in production)
   health_check_interval = "10s"
@@ -197,6 +200,7 @@ func (a *Elasticsearch) Connect() error {
 		elastic.SetSniff(a.EnableSniffer),
 		elastic.SetURL(a.URLs...),
 		elastic.SetHealthcheckInterval(a.HealthCheckInterval.Duration),
+		elastic.SetGzip(a.EnableGzip),
 	)
 
 	if a.Username != "" && a.Password != "" {

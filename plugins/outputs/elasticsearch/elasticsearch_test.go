@@ -2,6 +2,8 @@ package elasticsearch
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
@@ -22,6 +24,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		URLs:                urls,
 		IndexName:           "test-%Y.%m.%d",
 		Timeout:             internal.Duration{Duration: time.Second * 5},
+		EnableGzip:          true,
 		ManageTemplate:      true,
 		TemplateName:        "telegraf",
 		OverwriteTemplate:   false,
@@ -51,6 +54,7 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 		URLs:              urls,
 		IndexName:         "test-%Y.%m.%d",
 		Timeout:           internal.Duration{Duration: time.Second * 5},
+		EnableGzip:        true,
 		ManageTemplate:    true,
 		TemplateName:      "",
 		OverwriteTemplate: true,
@@ -72,6 +76,7 @@ func TestTemplateManagementIntegration(t *testing.T) {
 		URLs:              urls,
 		IndexName:         "test-%Y.%m.%d",
 		Timeout:           internal.Duration{Duration: time.Second * 5},
+		EnableGzip:        true,
 		ManageTemplate:    true,
 		TemplateName:      "telegraf",
 		OverwriteTemplate: true,
@@ -98,6 +103,7 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 		URLs:              urls,
 		IndexName:         "{{host}}-%Y.%m.%d",
 		Timeout:           internal.Duration{Duration: time.Second * 5},
+		EnableGzip:        true,
 		ManageTemplate:    true,
 		TemplateName:      "telegraf",
 		OverwriteTemplate: true,
@@ -256,4 +262,71 @@ func TestGetIndexName(t *testing.T) {
 			t.Errorf("Expected indexname %s, got %s\n", test.Expected, indexName)
 		}
 	}
+}
+
+func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/_bulk":
+			require.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+			require.Equal(t, "gzip", r.Header.Get("Accept-Encoding"))
+			_, err := w.Write([]byte("{}"))
+			require.NoError(t, err)
+			return
+		default:
+			_, err := w.Write([]byte(`{"version": {"number": "7.8"}}`))
+			require.NoError(t, err)
+			return
+		}
+	}))
+	defer ts.Close()
+
+	urls := []string{"http://" + ts.Listener.Addr().String()}
+
+	e := &Elasticsearch{
+		URLs:           urls,
+		IndexName:      "{{host}}-%Y.%m.%d",
+		Timeout:        internal.Duration{Duration: time.Second * 5},
+		EnableGzip:     true,
+		ManageTemplate: false,
+	}
+
+	err := e.Connect()
+	require.NoError(t, err)
+
+	err = e.Write(testutil.MockMetrics())
+	require.NoError(t, err)
+}
+
+func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/_bulk":
+			require.NotEqual(t, "gzip", r.Header.Get("Content-Encoding"))
+			_, err := w.Write([]byte("{}"))
+			require.NoError(t, err)
+			return
+		default:
+			_, err := w.Write([]byte(`{"version": {"number": "7.8"}}`))
+			require.NoError(t, err)
+			return
+		}
+	}))
+	defer ts.Close()
+
+	urls := []string{"http://" + ts.Listener.Addr().String()}
+
+	e := &Elasticsearch{
+		URLs:           urls,
+		IndexName:      "{{host}}-%Y.%m.%d",
+		Timeout:        internal.Duration{Duration: time.Second * 5},
+		EnableGzip:     false,
+		ManageTemplate: false,
+	}
+
+	err := e.Connect()
+	require.NoError(t, err)
+
+	err = e.Write(testutil.MockMetrics())
+	require.NoError(t, err)
 }
