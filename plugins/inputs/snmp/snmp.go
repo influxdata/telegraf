@@ -181,15 +181,15 @@ func (t *Table) Init() error {
 		return err
 	}
 
-	SecondaryIndexTable := false
+	secondaryIndexTablePresent := false
 	// initialize all the nested fields
 	for i := range t.Fields {
 		if err := t.Fields[i].init(); err != nil {
 			return fmt.Errorf("initializing field %s: %w", t.Fields[i].Name, err)
 		}
 		if t.Fields[i].SecondaryIndexTable {
-			if SecondaryIndexTable == false {
-				SecondaryIndexTable = true
+			if !secondaryIndexTablePresent {
+				secondaryIndexTablePresent = true
 			} else {
 				return fmt.Errorf("only one field can be SecondaryIndexTable")
 			}
@@ -555,7 +555,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		}
 
 		for idx, v := range ifv {
-			if f.SecondaryIndexUse == true {
+			if f.SecondaryIndexUse {
 				if newidx, ok := secIdxTab[idx]; ok {
 					idx = newidx
 				} else {
@@ -590,7 +590,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				} else {
 					rtr.Fields[f.Name] = v
 				}
-				if f.SecondaryIndexTable == true {
+				if f.SecondaryIndexTable {
 					//indexes are stored here with prepending "." so we need to add them
 					var vss string
 					if ok {
