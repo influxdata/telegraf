@@ -35,6 +35,8 @@ method is used, otherwise the [Template Pattern](templates) is used.
 
   ## Support Graphite tags, recommended to enable when using Graphite 1.1 or later.
   # graphite_tag_support = false
+  ## Enable Graphite tags to support the full list of allowed characters
+  # graphite_tag_new_sanitize = false
   ## Character for separating metric name and field for Graphite tags
   # graphite_separator = "."
 ```
@@ -63,5 +65,8 @@ cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 145532
 cpu_usage_user;cpu=cpu-total;dc=us-east-1;host=tars 0.89 1455320690
 cpu_usage_idle;cpu=cpu-total;dc=us-east-1;host=tars 98.09 1455320690
 ```
+
+When the `graphite_tag_new_sanitize` option is enabled, the tags support the
+full range of characters defined by Graphite.
 
 [templates]: /docs/TEMPLATE_PATTERN.md

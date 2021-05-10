@@ -564,7 +564,7 @@ func TestSerializeTagWithSpacesWithTagSupportNewSanitize(t *testing.T) {
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{
-		fmt.Sprintf("cpu.field_with_spaces;cpu=cpu 0;datacenter=us-west-2;host=localhost 91.5 %d", now.Unix()),
+		fmt.Sprintf("cpu.field_with_spaces;cpu=cpu\\ 0;datacenter=us-west-2;host=localhost 91.5 %d", now.Unix()),
 	}
 	assert.Equal(t, expS, mS)
 }
