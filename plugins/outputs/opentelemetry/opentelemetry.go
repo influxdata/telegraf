@@ -3,22 +3,18 @@ package opentelemetry
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/influxdb-observability/influx2otel"
 	otlpcollectormetrics "github.com/influxdata/influxdb-observability/otlp/collector/metrics/v1"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"google.golang.org/grpc"
 )
 
 type OpenTelemetry struct {
-	ServiceAddress string          `toml:"service_address"`
-	Timeout        config.Duration `toml:"timeout"`
-
-	MetricsSchema string `toml:"metrics_schema"`
+	ServiceAddress string `toml:"service_address"`
+	MetricsSchema  string `toml:"metrics_schema"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -30,7 +26,6 @@ type OpenTelemetry struct {
 func newOpenTelemetry() *OpenTelemetry {
 	return &OpenTelemetry{
 		ServiceAddress: "localhost:4317",
-		Timeout:        config.Duration(5 * time.Second),
 		MetricsSchema:  "prometheus-v1",
 	}
 }
@@ -121,9 +116,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 		ResourceMetrics: otlpResourceMetricss,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
-	defer cancel()
-	_, err := o.metricsServiceClient.Export(ctx, req)
+	_, err := o.metricsServiceClient.Export(context.Background(), req)
 	return err
 }
 
