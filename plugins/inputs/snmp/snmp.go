@@ -188,11 +188,10 @@ func (t *Table) Init() error {
 			return fmt.Errorf("initializing field %s: %w", t.Fields[i].Name, err)
 		}
 		if t.Fields[i].SecondaryIndexTable {
-			if !secondaryIndexTablePresent {
-				secondaryIndexTablePresent = true
-			} else {
+			if secondaryIndexTablePresent {
 				return fmt.Errorf("only one field can be SecondaryIndexTable")
 			}
+			secondaryIndexTablePresent = true
 		}
 	}
 
