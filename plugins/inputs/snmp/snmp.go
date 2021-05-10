@@ -293,11 +293,11 @@ func (f *Field) init() error {
 		//TODO use textual convention conversion from the MIB
 	}
 
-	if f.SecondaryIndexTable == true && f.SecondaryIndexUse == true {
+	if f.SecondaryIndexTable && f.SecondaryIndexUse {
 		return fmt.Errorf("SecondaryIndexTable and UseSecondaryIndex are exclusive")
 	}
 
-	if f.SecondaryIndexTable == false && f.SecondaryIndexUse == false && f.SecondaryOuterJoin == true {
+	if !f.SecondaryIndexTable && !f.SecondaryIndexUse && f.SecondaryOuterJoin {
 		return fmt.Errorf("SecondaryOuterJoin set to true, but field is not being used in join")
 	}
 
@@ -561,9 +561,8 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				} else {
 					if !secGlobalOuterJoin && !f.SecondaryOuterJoin {
 						continue
-					} else {
-						idx = ".Secondary" + idx
 					}
+					idx = ".Secondary" + idx
 				}
 			}
 			rtr, ok := rows[idx]
