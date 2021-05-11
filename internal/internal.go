@@ -297,8 +297,25 @@ func parseComponents(timestamp interface{}) (int64, int64, error) {
 			return 0, 0, err
 		}
 		return integer, 0, nil
+	case int8:
+		return int64(ts), 0, nil
+	case int16:
+		return int64(ts), 0, nil
+	case int32:
+		return int64(ts), 0, nil
 	case int64:
 		return ts, 0, nil
+	case uint8:
+		return int64(ts), 0, nil
+	case uint16:
+		return int64(ts), 0, nil
+	case uint32:
+		return int64(ts), 0, nil
+	case uint64:
+		return int64(ts), 0, nil
+	case float32:
+		integer, fractional := math.Modf(float64(ts))
+		return int64(integer), int64(fractional * 1e9), nil
 	case float64:
 		integer, fractional := math.Modf(ts)
 		return int64(integer), int64(fractional * 1e9), nil
