@@ -11,6 +11,7 @@
   - [Windows Service][winsvc]
   - [FAQ][faq]
 
+[command line options]: /docs/COMMAND_LINE_OPTIONS.md
 [conf]: /docs/CONFIGURATION.md
 [metrics]: /docs/METRICS.md
 [parsers]: /docs/DATA_FORMATS_INPUT.md
