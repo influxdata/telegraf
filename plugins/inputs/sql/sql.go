@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -62,11 +61,11 @@ const sampleConfig = `
     ## Column name containing the name of the measurement
     ## If given, this will take precedence over the 'measurement' setting. In case a query result
     ## does not contain the specified column, we fall-back to the 'measurement' setting.
-    # measurement_col = ""
+    # measurement_column = ""
 
     ## Column name containing the time of the measurement
     ## If ommited, the time of the query will be used.
-    # time_col = ""
+    # time_column = ""
 
     ## Format of the time contained in 'time_col'
     ## The time must be 'unix', 'unix_ms', 'unix_us', 'unix_ns', or a golang time format.
@@ -76,15 +75,25 @@ const sampleConfig = `
     ## Column names containing tags
     ## An empty include list will reject all columns and an empty exclude list will not exclude any column.
     ## I.e. by default no columns will be returned as tag and the tags are empty.
-    # tag_cols_include = []
-    # tag_cols_exclude = []
+    # tag_columns_include = []
+    # tag_columns_exclude = []
 
-    ## Column names containing fields
+		## Column names containing fields (explicit types)
+    ## Convert the given columns to the corresponding type. Explicit type conversions take precedence over
+		## the automatic (driver-based) conversion below.
+		## NOTE: Columns should not be specified for multiple types or the resulting type is undefined.
+    # field_columns_float = []
+    # field_columns_int = []
+		# field_columns_uint = []
+		# field_columns_bool = []
+		# field_columns_string = []
+
+    ## Column names containing fields (automatic types)
     ## An empty include list is equivalent to '[*]' and all returned columns will be accepted. An empty
     ## exclude list will not exclude any column. I.e. by default all columns will be returned as fields.
     ## NOTE: We rely on the database driver to perform automatic datatype conversion.
-    # field_cols_include = []
-    # field_cols_exclude = []
+    # field_columns_include = []
+    # field_columns_exclude = []
 `
 
 const magicIdleCount int = (-int(^uint(0) >> 1))
@@ -93,17 +102,27 @@ type Query struct {
 	Query               string   `toml:"query"`
 	Script              string   `toml:"query_script"`
 	Measurement         string   `toml:"measurement"`
-	MeasurementColumn   string   `toml:"measurement_col"`
-	TimeColumn          string   `toml:"time_col"`
+	MeasurementColumn   string   `toml:"measurement_column"`
+	TimeColumn          string   `toml:"time_column"`
 	TimeFormat          string   `toml:"time_format"`
-	TagColumnsInclude   []string `toml:"tag_cols_include"`
-	TagColumnsExclude   []string `toml:"tag_cols_exclude"`
-	FieldColumnsInclude []string `toml:"field_cols_include"`
-	FieldColumnsExclude []string `toml:"field_cols_exclude"`
+	TagColumnsInclude   []string `toml:"tag_columns_include"`
+	TagColumnsExclude   []string `toml:"tag_columns_exclude"`
+	FieldColumnsInclude []string `toml:"field_columns_include"`
+	FieldColumnsExclude []string `toml:"field_columns_exclude"`
+	FieldColumnsFloat   []string `toml:"field_columns_float"`
+	FieldColumnsInt     []string `toml:"field_columns_int"`
+	FieldColumnsUint    []string `toml:"field_columns_uint"`
+	FieldColumnsBool    []string `toml:"field_columns_bool"`
+	FieldColumnsString  []string `toml:"field_columns_string"`
 
-	statement   *sql.Stmt
-	tagFilter   filter.Filter
-	fieldFilter filter.Filter
+	statement         *sql.Stmt
+	tagFilter         filter.Filter
+	fieldFilter       filter.Filter
+	fieldFilterFloat  filter.Filter
+	fieldFilterInt    filter.Filter
+	fieldFilterUint   filter.Filter
+	fieldFilterBool   filter.Filter
+	fieldFilterString filter.Filter
 }
 
 func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *sql.Rows, t time.Time) (error, int, int) {
@@ -142,115 +161,81 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *sql.R
 			}
 
 			if q.TimeColumn != "" && name == q.TimeColumn {
-				var e error
-
-				switch v := columnData[i].(type) {
-				case time.Time:
-					timestamp, e = v, nil
-				case int:
-					timestamp, e = internal.ParseTimestamp(q.TimeFormat, int64(v), "")
-				case int32:
-					timestamp, e = internal.ParseTimestamp(q.TimeFormat, int64(v), "")
-				case int64:
-					timestamp, e = internal.ParseTimestamp(q.TimeFormat, v, "")
-				case float32:
-					timestamp, e = internal.ParseTimestamp(q.TimeFormat, float64(v), "")
-				case float64:
-					timestamp, e = internal.ParseTimestamp(q.TimeFormat, v, "")
-				case string:
-					timestamp, e = internal.ParseTimestamp(q.TimeFormat, v, "")
-				default:
-					e = fmt.Errorf("column type \"%T\" unsupported", columnData[i])
-				}
-				if e != nil {
-					err := fmt.Errorf("parsing time failed: %v", e)
-					return err, len(columnNames), 0
+				if timestamp, err = internal.ParseTimestamp(q.TimeFormat, columnData[i], ""); err != nil {
+					return fmt.Errorf("parsing time failed: %v", err), len(columnNames), 0
 				}
 			}
 
 			if q.tagFilter.Match(name) {
-				var tagvalue string
-				switch v := columnData[i].(type) {
-				case string:
-					tagvalue = v
-				case []byte:
-					tagvalue = string(v)
-				case int:
-					tagvalue = strconv.FormatInt(int64(v), 10)
-				case int8:
-					tagvalue = strconv.FormatInt(int64(v), 10)
-				case int16:
-					tagvalue = strconv.FormatInt(int64(v), 10)
-				case int32:
-					tagvalue = strconv.FormatInt(int64(v), 10)
-				case int64:
-					tagvalue = strconv.FormatInt(int64(v), 10)
-				case uint:
-					tagvalue = strconv.FormatUint(uint64(v), 10)
-				case uint8:
-					tagvalue = strconv.FormatUint(uint64(v), 10)
-				case uint16:
-					tagvalue = strconv.FormatUint(uint64(v), 10)
-				case uint32:
-					tagvalue = strconv.FormatUint(uint64(v), 10)
-				case uint64:
-					tagvalue = strconv.FormatUint(uint64(v), 10)
-				case float32:
-					tagvalue = strconv.FormatFloat(float64(v), 'f', -1, 32)
-				case float64:
-					tagvalue = strconv.FormatFloat(float64(v), 'f', -1, 64)
-				case bool:
-					tagvalue = strconv.FormatBool(v)
-				case time.Time:
-					tagvalue = v.String()
-				case nil:
-					tagvalue = ""
-				default:
-					err := fmt.Errorf("tag column %q of type \"%T\" unsupported", name, columnData[i])
-					return err, len(columnNames), 0
+				tagvalue, err := internal.ToString(columnData[i])
+				if err != nil {
+					return fmt.Errorf("converting tag column %q failed: %v", name, err), len(columnNames), 0
 				}
 				if v := strings.TrimSpace(tagvalue); v != "" {
 					tags[name] = v
 				}
 			}
 
+			// Explicit type conversions take precedence
+			if q.fieldFilterFloat.Match(name) {
+				v, err := internal.ToFloat64(columnData[i])
+				if err != nil {
+					return fmt.Errorf("converting field column %q to float failed: %v", name, err), len(columnNames), 0
+				}
+				fields[name] = v
+				continue
+			}
+
+			if q.fieldFilterInt.Match(name) {
+				v, err := internal.ToInt64(columnData[i])
+				if err != nil {
+					return fmt.Errorf("converting field column %q to int failed: %v", name, err), len(columnNames), 0
+				}
+				fields[name] = v
+				continue
+			}
+
+			if q.fieldFilterUint.Match(name) {
+				v, err := internal.ToUint64(columnData[i])
+				if err != nil {
+					return fmt.Errorf("converting field column %q to uint failed: %v", name, err), len(columnNames), 0
+				}
+				fields[name] = v
+				continue
+			}
+
+			if q.fieldFilterBool.Match(name) {
+				v, err := internal.ToBool(columnData[i])
+				if err != nil {
+					return fmt.Errorf("converting field column %q to bool failed: %v", name, err), len(columnNames), 0
+				}
+				fields[name] = v
+				continue
+			}
+
+			if q.fieldFilterString.Match(name) {
+				v, err := internal.ToString(columnData[i])
+				if err != nil {
+					return fmt.Errorf("converting field column %q to string failed: %v", name, err), len(columnNames), 0
+				}
+				fields[name] = v
+				continue
+			}
+
+			// Try automatic conversion for all remaining fields
 			if q.fieldFilter.Match(name) {
 				var fieldvalue interface{}
 				switch v := columnData[i].(type) {
-				case string:
+				case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
 					fieldvalue = v
 				case []byte:
 					fieldvalue = string(v)
-				case int:
-					fieldvalue = int64(v)
-				case int8:
-					fieldvalue = int64(v)
-				case int16:
-					fieldvalue = int64(v)
-				case int32:
-					fieldvalue = int64(v)
-				case int64:
-					fieldvalue = int64(v)
-				case uint:
-					fieldvalue = uint64(v)
-				case uint8:
-					fieldvalue = uint64(v)
-				case uint16:
-					fieldvalue = uint64(v)
-				case uint32:
-					fieldvalue = uint64(v)
-				case uint64:
-					fieldvalue = uint64(v)
-				case float32:
-					fieldvalue = float64(v)
-				case float64:
-					fieldvalue = v
-				case bool:
-					fieldvalue = v
 				case time.Time:
 					fieldvalue = v.UnixNano()
 				case nil:
 					fieldvalue = nil
+				case fmt.Stringer:
+					fieldvalue = v.String()
 				default:
 					err := fmt.Errorf("field column %q of type \"%T\" unsupported", name, columnData[i])
 					return err, len(columnNames), 0
@@ -342,6 +327,37 @@ func (s *SQL) Init() error {
 			return fmt.Errorf("creating tag filter failed: %v", err)
 		}
 		s.Queries[i].tagFilter = tagfilter
+
+		// Compile the explicit type field-filter
+		fieldfilterFloat, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsFloat, nil, false, false)
+		if err != nil {
+			return fmt.Errorf("creating field filter for float failed: %v", err)
+		}
+		s.Queries[i].fieldFilterFloat = fieldfilterFloat
+
+		fieldfilterInt, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsInt, nil, false, false)
+		if err != nil {
+			return fmt.Errorf("creating field filter for int failed: %v", err)
+		}
+		s.Queries[i].fieldFilterInt = fieldfilterInt
+
+		fieldfilterUint, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsUint, nil, false, false)
+		if err != nil {
+			return fmt.Errorf("creating field filter for uint failed: %v", err)
+		}
+		s.Queries[i].fieldFilterUint = fieldfilterUint
+
+		fieldfilterBool, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsBool, nil, false, false)
+		if err != nil {
+			return fmt.Errorf("creating field filter for bool failed: %v", err)
+		}
+		s.Queries[i].fieldFilterBool = fieldfilterBool
+
+		fieldfilterString, err := filter.NewIncludeExcludeFilterDefaults(q.FieldColumnsString, nil, false, false)
+		if err != nil {
+			return fmt.Errorf("creating field filter for string failed: %v", err)
+		}
+		s.Queries[i].fieldFilterString = fieldfilterString
 
 		// Compile the field-filter
 		fieldfilter, err := filter.NewIncludeExcludeFilter(q.FieldColumnsInclude, q.FieldColumnsExclude)
