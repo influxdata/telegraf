@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
@@ -271,15 +272,15 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *sql.R
 }
 
 type SQL struct {
-	Driver             string            `toml:"driver"`
-	Dsn                string            `toml:"dsn"`
-	Timeout            internal.Duration `toml:"timeout"`
-	MaxIdleTime        internal.Duration `toml:"connection_max_idle_time"`
-	MaxLifetime        internal.Duration `toml:"connection_max_life_time"`
-	MaxOpenConnections int               `toml:"connection_max_open"`
-	MaxIdleConnections int               `toml:"connection_max_idle"`
-	Queries            []Query           `toml:"query"`
-	Log                telegraf.Logger   `toml:"-"`
+	Driver             string          `toml:"driver"`
+	Dsn                string          `toml:"dsn"`
+	Timeout            config.Duration `toml:"timeout"`
+	MaxIdleTime        config.Duration `toml:"connection_max_idle_time"`
+	MaxLifetime        config.Duration `toml:"connection_max_life_time"`
+	MaxOpenConnections int             `toml:"connection_max_open"`
+	MaxIdleConnections int             `toml:"connection_max_idle"`
+	Queries            []Query         `toml:"query"`
+	Log                telegraf.Logger `toml:"-"`
 
 	driverName string
 	db         *sql.DB
@@ -303,8 +304,8 @@ func (s *SQL) Init() error {
 		return errors.New("missing data source name (DSN) option")
 	}
 
-	if s.Timeout.Duration <= 0 {
-		s.Timeout = internal.Duration{Duration: 5 * time.Second}
+	if s.Timeout <= 0 {
+		s.Timeout = config.Duration(5 * time.Second)
 	}
 
 	if s.MaxIdleConnections == magicIdleCount {
@@ -404,14 +405,14 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	}
 
 	// Set the connection limits
-	// s.db.SetConnMaxIdleTime(s.MaxIdleTime.Duration) // Requires go >= 1.15
-	s.db.SetConnMaxLifetime(s.MaxLifetime.Duration)
+	// s.db.SetConnMaxIdleTime(time.Duration(s.MaxIdleTime)) // Requires go >= 1.15
+	s.db.SetConnMaxLifetime(time.Duration(s.MaxLifetime))
 	s.db.SetMaxOpenConns(s.MaxOpenConnections)
 	s.db.SetMaxIdleConns(s.MaxIdleConnections)
 
 	// Test if the connection can be established
 	s.Log.Debugf("Testing connectivity...")
-	ctx, cancel := context.WithTimeout(context.Background(), s.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
 	err = s.db.PingContext(ctx)
 	cancel()
 	if err != nil {
@@ -421,7 +422,7 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	// Prepare the statements
 	for i, q := range s.Queries {
 		s.Log.Debugf("Preparing statement %q...", q.Query)
-		ctx, cancel := context.WithTimeout(context.Background(), s.Timeout.Duration)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
 		stmt, err := s.db.PrepareContext(ctx, q.Query)
 		cancel()
 		if err != nil {
@@ -450,7 +451,7 @@ func (s *SQL) Stop() {
 func (s *SQL) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
-	ctx, cancel := context.WithTimeout(context.Background(), s.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
 	defer cancel()
 
 	tstart := time.Now()
@@ -473,10 +474,10 @@ func (s *SQL) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("sql", func() telegraf.Input {
 		return &SQL{
-			MaxIdleTime:        internal.Duration{Duration: 0 * time.Second}, // unlimited
-			MaxLifetime:        internal.Duration{Duration: 0 * time.Second}, // unlimited
-			MaxOpenConnections: 0,                                            // unlimited
-			MaxIdleConnections: magicIdleCount,                               // will trigger auto calculation
+			MaxIdleTime:        config.Duration(0), // unlimited
+			MaxLifetime:        config.Duration(0), // unlimited
+			MaxOpenConnections: 0,                  // unlimited
+			MaxIdleConnections: magicIdleCount,     // will trigger auto calculation
 		}
 	})
 }
