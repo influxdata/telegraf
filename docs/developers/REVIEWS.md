@@ -1,27 +1,48 @@
 # Reviews
 
-Expect several rounds of back and forth on reviews, non-trivial changes are
-rarely accepted on the first pass.
-
-While review cannot be exhaustively documented, there are several things that
-should always be double checked.
+Pull-requests are double-reviewed before being merged. Expect several rounds of back and forth on
+reviews, non-trivial changes are rarely accepted on the first pass. It might take some time
+until you see a first review so please be patient.
 
 All pull requests should follow the style and best practices in the
 [CONTRIBUTING.md](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md)
 document.
+
+## Process
+The review process is roughly structured as follows:
+1. You submit a pull request.
+Please check that you signed the CLA (and CCLA in case of companies), provide a short description of your submission and reference issues that you potentially close. Make sure the CI tests are all green and there are no linter-issues.
+1. You get feedback from a first reviewer and a `ready for final review` tag.
+Please constructively work with the reviewer to get your code into a mergable state (see also [below](#reviewing-plugin-code)).
+1. You will get a final review by one of the InfluxData maintainers.
+Please fix any issue raised.
+1. Your pull-request will be merged.
+It might take some time until your PR gets merged, depending on the release cycle and the type of
+your pull-request (bugfix, enhancement of existing code, new plugin, etc). Remember, it might be necessary to rebase your code before merge to solve merge-conflicts.
+
+Please read the review comments carefully, fix the related part of the code and/or respond in case there is anything unclear. If there is no activity in a pull-request or the contributor does not respond, we apply the following scheme:
+1. We send a first reminder after at least 2 weeks of inactivity.
+1. After at least another two weeks of inactivity we send a second reminder and are setting the `waiting for response` tag. This is a hint that we believe you dropped the ball on the PR.
+1. Another two weeks later we will ask the community for help setting the `help wanted` reminder.
+1. In case nobody volunteers to take over the PR within the next 30 days, InfluxData will triage the PR and might close it due to inactivity.
+
+So in case you expect a longer period of inactivity or you want to abandon a pull-request, please drop us a note and optionally close the PR.
+
+While review cannot be exhaustively documented, there are several things that
+should always be double checked.
 
 ## Reviewing Plugin Code
 
 - Avoid variables scoped to the package. Everything should be scoped to the plugin struct, since multiple instances of the same plugin are allowed and package-level variables will cause race conditions.
 - SampleConfig must match the readme, but not include the plugin name.
 - structs should include toml tags for fields that are expected to be editable from the config. eg `toml:"command"` (snake_case)
-- plugins that want to log should declare the Telegraf logger, not use the log package. eg: 
+- plugins that want to log should declare the Telegraf logger, not use the log package. eg:
 ```Go
   Log telegraf.Logger `toml:"-"`
 ```
 (in tests, you can do `myPlugin.Log = testutil.Logger{}`)
 - Initialization and config checking should be done on the `Init() error` function, not in the Connect, Gather, or Start functions.
-- plugins should avoid synchronization code if they are not starting goroutines. Plugin functions are never called in parallel. 
+- plugins should avoid synchronization code if they are not starting goroutines. Plugin functions are never called in parallel.
 - avoid goroutines when you don't need them and removing them would simplify the code
 - errors should almost always be checked.
 - avoid boolean fields when a string or enumerated type would be better for future extension. Lots of boolean fields also make the code difficult to maintain.
@@ -39,8 +60,8 @@ document.
   - they seem unnecessary, superfluous, or gratuitous
 - consider adding build tags if plugins have OS-specific considerations
 - use the right logger log levels so that Telegraf is normally quiet eg `plugin.Log.Debugf()` only shows up when running Telegraf with `--debug`
-- consistent field types: dynamically setting the type of a field should be strongly avoided as it causes problems that are difficult to solve later, made worse by having to worry about backwards compatibility in future changes. For example, if an numeric value comes from a string field and it is not clear if the field can sometimes be a float, the author should pick either a float or an int, and parse that field consistently every time. Better to sometimes truncate a float, or to always store ints as floats, rather than changing the field type, which causes downstream problems with output databases. 
-- backwards compatibility: We work hard not to break existing configurations during new changes. Upgrading Telegraf should be a seamless transition. Possible tools to make this transition smooth are: 
+- consistent field types: dynamically setting the type of a field should be strongly avoided as it causes problems that are difficult to solve later, made worse by having to worry about backwards compatibility in future changes. For example, if an numeric value comes from a string field and it is not clear if the field can sometimes be a float, the author should pick either a float or an int, and parse that field consistently every time. Better to sometimes truncate a float, or to always store ints as floats, rather than changing the field type, which causes downstream problems with output databases.
+- backwards compatibility: We work hard not to break existing configurations during new changes. Upgrading Telegraf should be a seamless transition. Possible tools to make this transition smooth are:
   - enumerable type fields that allow you to customize behavior (avoid boolean feature flags)
   - version fields that can be used to opt in to newer changed behavior without breaking old (see inputs.mysql for example)
   - a new version of the plugin if it has changed significantly (eg outputs.influxdb and outputs.influxdb_v2)
