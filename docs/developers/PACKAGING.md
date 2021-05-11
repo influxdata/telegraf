@@ -27,15 +27,10 @@ git checkout release-1.10
 git reset --hard 1.10.2
 make deps
 
-# This builds _all_ platforms and architectures; will take a long time
-./scripts/build.py --release --package
-```
-
-If you would like to only build a subset of the packages run this:
+# To build packages run:
 
 ```
-# Use the platform and arch arguments to skip unwanted packages:
-./scripts/build.py --release --package --platform=linux --arch=amd64
+make package amd64=1
 ```
 
 From the host system, copy the build artifacts out of the container:
