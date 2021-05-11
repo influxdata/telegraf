@@ -27,7 +27,6 @@ type Modbus struct {
 	Timeout          config.Duration `toml:"timeout"`
 	Retries          int             `toml:"busy_retries"`
 	RetriesWaitTime  config.Duration `toml:"busy_retries_wait"`
-	TraceConnection  bool            `toml:"trace_connection"`
 	Log              telegraf.Logger `toml:"-"`
 	// Register configuration
 	ConfigurationOriginal
@@ -98,8 +97,6 @@ const sampleConfig = `
   # stop_bits = 1
   # transmission_mode = "RTU"
 
-	## Trace the connection to the modbus device as debug messages
-	# trace_connection = false
 
   ## Measurements
   ##
@@ -251,9 +248,6 @@ func (m *Modbus) initClient() error {
 		}
 		handler := mb.NewTCPClientHandler(host + ":" + port)
 		handler.Timeout = time.Duration(m.Timeout)
-		if m.TraceConnection {
-			handler.Logger = m
-		}
 		m.handler = handler
 	case "file":
 		switch m.TransmissionMode {
@@ -264,9 +258,6 @@ func (m *Modbus) initClient() error {
 			handler.DataBits = m.DataBits
 			handler.Parity = m.Parity
 			handler.StopBits = m.StopBits
-			if m.TraceConnection {
-				handler.Logger = m
-			}
 			m.handler = handler
 		case "ASCII":
 			handler := mb.NewASCIIClientHandler(u.Path)
@@ -275,9 +266,6 @@ func (m *Modbus) initClient() error {
 			handler.DataBits = m.DataBits
 			handler.Parity = m.Parity
 			handler.StopBits = m.StopBits
-			if m.TraceConnection {
-				handler.Logger = m
-			}
 			m.handler = handler
 		default:
 			return fmt.Errorf("invalid protocol '%s' - '%s' ", u.Scheme, m.TransmissionMode)
@@ -434,11 +422,6 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 	for _, x := range grouper.Metrics() {
 		acc.AddMetric(x)
 	}
-}
-
-// Implement the logger interface of the modbus client
-func (m *Modbus) Printf(format string, v ...interface{}) {
-	m.Log.Debugf(format, v...)
 }
 
 // Add this plugin to telegraf
