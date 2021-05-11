@@ -28,7 +28,6 @@ type Modbus struct {
 	Retries          int             `toml:"busy_retries"`
 	RetriesWaitTime  config.Duration `toml:"busy_retries_wait"`
 	TraceConnection  bool            `toml:"trace_connection"`
-	CloseAfterRead   bool            `toml:"close_connection"`
 	Log              telegraf.Logger `toml:"-"`
 	// Register configuration
 	ConfigurationOriginal
@@ -98,12 +97,6 @@ const sampleConfig = `
   # parity = "N"
   # stop_bits = 1
   # transmission_mode = "RTU"
-
-	## Close the connection to the server after each gather cycle
-	## This option is helpful for devices only accepting a limited number of
-	## simultaneous connections (some ModbusTCP devices).
-	## This option is always set to "true" for serial devices.
-	# close_connection = false
 
 	## Trace the connection to the modbus device as debug messages
 	# trace_connection = false
@@ -241,11 +234,6 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		m.collectFields(acc, timestamp, tags, requests.input)
 	}
 
-	// Disconnect after read if configured
-	if m.CloseAfterRead {
-		return m.disconnect()
-	}
-
 	return nil
 }
 
@@ -268,7 +256,6 @@ func (m *Modbus) initClient() error {
 		}
 		m.handler = handler
 	case "file":
-		m.CloseAfterRead = true
 		switch m.TransmissionMode {
 		case "RTU":
 			handler := mb.NewRTUClientHandler(u.Path)
