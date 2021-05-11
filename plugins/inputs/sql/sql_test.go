@@ -73,7 +73,9 @@ func TestMysql(t *testing.T) {
 		}
 		mariadbContainer, err := testcontainers.GenericContainer(ctx, req)
 		require.NoError(t, err, "starting container failed")
-		defer mariadbContainer.Terminate(ctx)
+		defer func() {
+			require.NoError(t, mariadbContainer.Terminate(ctx), "terminating container failed")
+		}()
 
 		// Get the connection details from the container
 		addr, err = mariadbContainer.Host(ctx)

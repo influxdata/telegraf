@@ -2,7 +2,7 @@ package sql
 
 import (
 	"context"
-	"database/sql"
+	dbsql "database/sql"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -115,7 +115,7 @@ type Query struct {
 	FieldColumnsBool    []string `toml:"field_columns_bool"`
 	FieldColumnsString  []string `toml:"field_columns_string"`
 
-	statement         *sql.Stmt
+	statement         *dbsql.Stmt
 	tagFilter         filter.Filter
 	fieldFilter       filter.Filter
 	fieldFilterFloat  filter.Filter
@@ -125,10 +125,10 @@ type Query struct {
 	fieldFilterString filter.Filter
 }
 
-func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *sql.Rows, t time.Time) (error, int, int) {
+func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time) (int, error) {
 	columnNames, err := rows.Columns()
 	if err != nil {
-		return err, 0, 0
+		return 0, err
 	}
 
 	// Prepare the list of datapoints according to the received row
@@ -143,33 +143,32 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *sql.R
 	for rows.Next() {
 		measurement := q.Measurement
 		timestamp := t
-		tags := make(map[string]string, 0)
+		tags := make(map[string]string)
 		fields := make(map[string]interface{}, len(columnNames))
 
 		// Do the parsing with (hopefully) automatic type conversion
 		if err := rows.Scan(columnDataPtr...); err != nil {
-			return err, len(columnNames), 0
+			return 0, err
 		}
 
 		for i, name := range columnNames {
 			if q.MeasurementColumn != "" && name == q.MeasurementColumn {
 				var ok bool
 				if measurement, ok = columnData[i].(string); !ok {
-					err := fmt.Errorf("measurement column type \"%T\" unsupported", columnData[i])
-					return err, len(columnNames), 0
+					return 0, fmt.Errorf("measurement column type \"%T\" unsupported", columnData[i])
 				}
 			}
 
 			if q.TimeColumn != "" && name == q.TimeColumn {
 				if timestamp, err = internal.ParseTimestamp(q.TimeFormat, columnData[i], ""); err != nil {
-					return fmt.Errorf("parsing time failed: %v", err), len(columnNames), 0
+					return 0, fmt.Errorf("parsing time failed: %v", err)
 				}
 			}
 
 			if q.tagFilter.Match(name) {
 				tagvalue, err := internal.ToString(columnData[i])
 				if err != nil {
-					return fmt.Errorf("converting tag column %q failed: %v", name, err), len(columnNames), 0
+					return 0, fmt.Errorf("converting tag column %q failed: %v", name, err)
 				}
 				if v := strings.TrimSpace(tagvalue); v != "" {
 					tags[name] = v
@@ -180,7 +179,7 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *sql.R
 			if q.fieldFilterFloat.Match(name) {
 				v, err := internal.ToFloat64(columnData[i])
 				if err != nil {
-					return fmt.Errorf("converting field column %q to float failed: %v", name, err), len(columnNames), 0
+					return 0, fmt.Errorf("converting field column %q to float failed: %v", name, err)
 				}
 				fields[name] = v
 				continue
@@ -189,7 +188,7 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *sql.R
 			if q.fieldFilterInt.Match(name) {
 				v, err := internal.ToInt64(columnData[i])
 				if err != nil {
-					return fmt.Errorf("converting field column %q to int failed: %v", name, err), len(columnNames), 0
+					return 0, fmt.Errorf("converting field column %q to int failed: %v", name, err)
 				}
 				fields[name] = v
 				continue
@@ -198,7 +197,7 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *sql.R
 			if q.fieldFilterUint.Match(name) {
 				v, err := internal.ToUint64(columnData[i])
 				if err != nil {
-					return fmt.Errorf("converting field column %q to uint failed: %v", name, err), len(columnNames), 0
+					return 0, fmt.Errorf("converting field column %q to uint failed: %v", name, err)
 				}
 				fields[name] = v
 				continue
@@ -207,7 +206,7 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *sql.R
 			if q.fieldFilterBool.Match(name) {
 				v, err := internal.ToBool(columnData[i])
 				if err != nil {
-					return fmt.Errorf("converting field column %q to bool failed: %v", name, err), len(columnNames), 0
+					return 0, fmt.Errorf("converting field column %q to bool failed: %v", name, err)
 				}
 				fields[name] = v
 				continue
@@ -216,7 +215,7 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *sql.R
 			if q.fieldFilterString.Match(name) {
 				v, err := internal.ToString(columnData[i])
 				if err != nil {
-					return fmt.Errorf("converting field column %q to string failed: %v", name, err), len(columnNames), 0
+					return 0, fmt.Errorf("converting field column %q to string failed: %v", name, err)
 				}
 				fields[name] = v
 				continue
@@ -237,8 +236,7 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *sql.R
 				case fmt.Stringer:
 					fieldvalue = v.String()
 				default:
-					err := fmt.Errorf("field column %q of type \"%T\" unsupported", name, columnData[i])
-					return err, len(columnNames), 0
+					return 0, fmt.Errorf("field column %q of type \"%T\" unsupported", name, columnData[i])
 				}
 				if fieldvalue != nil {
 					fields[name] = fieldvalue
@@ -250,10 +248,10 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *sql.R
 	}
 
 	if err := rows.Err(); err != nil {
-		return err, len(columnNames), rowCount
+		return rowCount, err
 	}
 
-	return nil, len(columnNames), rowCount
+	return rowCount, nil
 }
 
 type SQL struct {
@@ -268,7 +266,7 @@ type SQL struct {
 	Log                telegraf.Logger `toml:"-"`
 
 	driverName string
-	db         *sql.DB
+	db         *dbsql.DB
 }
 
 func (s *SQL) Description() string {
@@ -385,7 +383,7 @@ func (s *SQL) Init() error {
 		s.driverName = driver
 	}
 
-	availDrivers := sql.Drivers()
+	availDrivers := dbsql.Drivers()
 	if !choice.Contains(s.driverName, availDrivers) {
 		for d, r := range aliases {
 			if choice.Contains(r, availDrivers) {
@@ -415,7 +413,7 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 
 	// Connect to the database server
 	s.Log.Debugf("Connecting to %q...", s.Dsn)
-	s.db, err = sql.Open(s.driverName, s.Dsn)
+	s.db, err = dbsql.Open(s.driverName, s.Dsn)
 	if err != nil {
 		return err
 	}
@@ -439,7 +437,7 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	for i, q := range s.Queries {
 		s.Log.Debugf("Preparing statement %q...", q.Query)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
-		stmt, err := s.db.PrepareContext(ctx, q.Query)
+		stmt, err := s.db.PrepareContext(ctx, q.Query) //nolint:sqlclosecheck // Closed in Stop()
 		cancel()
 		if err != nil {
 			return fmt.Errorf("preparing query %q failed: %v", q.Query, err)
@@ -454,13 +452,17 @@ func (s *SQL) Stop() {
 	// Free the statements
 	for _, q := range s.Queries {
 		if q.statement != nil {
-			q.statement.Close()
+			if err := q.statement.Close(); err != nil {
+				s.Log.Errorf("closing statement for query %q failed: %v", q.Query, err)
+			}
 		}
 	}
 
 	// Close the connection to the server
 	if s.db != nil {
-		s.db.Close()
+		if err := s.db.Close(); err != nil {
+			s.Log.Errorf("closing database connection failed: %v", err)
+		}
 	}
 }
 
@@ -505,14 +507,18 @@ func (s *SQL) executeQuery(ctx context.Context, acc telegraf.Accumulator, q Quer
 
 	// Execute the query
 	rows, err := q.statement.QueryContext(ctx)
-	defer rows.Close()
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	// Handle the rows
-	err, colCount, rowCount := q.parse(ctx, acc, rows, tquery)
-	s.Log.Debugf("Received %d rows and %d columns for query %q", rowCount, colCount, q.Query)
+	columnNames, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+	rowCount, err := q.parse(ctx, acc, rows, tquery)
+	s.Log.Debugf("Received %d rows and %d columns for query %q", rowCount, len(columnNames), q.Query)
 
 	return err
 }

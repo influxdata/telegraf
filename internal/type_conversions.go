@@ -20,7 +20,7 @@ func ToString(value interface{}) (string, error) {
 	case int32:
 		return strconv.FormatInt(int64(v), 10), nil
 	case int64:
-		return strconv.FormatInt(int64(v), 10), nil
+		return strconv.FormatInt(v, 10), nil
 	case uint:
 		return strconv.FormatUint(uint64(v), 10), nil
 	case uint8:
@@ -30,11 +30,11 @@ func ToString(value interface{}) (string, error) {
 	case uint32:
 		return strconv.FormatUint(uint64(v), 10), nil
 	case uint64:
-		return strconv.FormatUint(uint64(v), 10), nil
+		return strconv.FormatUint(v, 10), nil
 	case float32:
 		return strconv.FormatFloat(float64(v), 'f', -1, 32), nil
 	case float64:
-		return strconv.FormatFloat(float64(v), 'f', -1, 64), nil
+		return strconv.FormatFloat(v, 'f', -1, 64), nil
 	case bool:
 		return strconv.FormatBool(v), nil
 	case fmt.Stringer:
@@ -76,7 +76,7 @@ func ToFloat64(value interface{}) (float64, error) {
 	case float32:
 		return float64(v), nil
 	case float64:
-		return float64(v), nil
+		return v, nil
 	case nil:
 		return 0, nil
 	}
@@ -100,7 +100,7 @@ func ToInt64(value interface{}) (int64, error) {
 	case int32:
 		return int64(v), nil
 	case int64:
-		return int64(v), nil
+		return v, nil
 	case uint:
 		return int64(v), nil
 	case uint8:
@@ -148,7 +148,7 @@ func ToUint64(value interface{}) (uint64, error) {
 	case uint32:
 		return uint64(v), nil
 	case uint64:
-		return uint64(v), nil
+		return v, nil
 	case float32:
 		return uint64(v), nil
 	case float64:
