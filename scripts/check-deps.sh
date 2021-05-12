@@ -28,8 +28,8 @@ for dep in $(LC_ALL=C sort -u "${tmpdir}/golist"); do
 		# ignore ourselves
 		github.com/influxdata/telegraf) continue;;
 
-    # dependency is replaced in go.mod
-    github.com/satori/go.uuid) continue;;
+		# dependency is replaced in go.mod
+		github.com/satori/go.uuid) continue;;
 
 		# go-autorest has a single license for all sub modules
 		github.com/Azure/go-autorest/autorest)
