@@ -176,9 +176,8 @@ func TestAllPluginLifecycle(t *testing.T) {
 			},
 		},
 	})
-	// t.Log("processors.rename", newPluginID)
-	pluginIDs = append(pluginIDs, newPluginID)
 	require.NoError(t, err)
+	pluginIDs = append(pluginIDs, newPluginID)
 	require.NotZero(t, len(newPluginID))
 
 	newPluginID, err = api.CreatePlugin(PluginConfigCreate{

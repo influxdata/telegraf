@@ -12,6 +12,7 @@ import (
 	"unicode"
 
 	"github.com/alecthomas/units"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
@@ -222,6 +223,10 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 			return "", err
 		}
 
+		if err := setFieldConfig(config.Config, &pluginConfig.Filter); err != nil {
+			return "", err
+		}
+
 		rp := models.NewRunningInput(i, pluginConfig)
 		rp.SetDefaultTags(a.config.Tags)
 
@@ -249,6 +254,10 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 		// start it and put it into the agent manager?
 		pluginConfig := &models.OutputConfig{Name: name}
 		if err := setFieldConfig(config.Config, pluginConfig); err != nil {
+			return "", err
+		}
+
+		if err := setFieldConfig(config.Config, &pluginConfig.Filter); err != nil {
 			return "", err
 		}
 
@@ -299,6 +308,10 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 			return "", err
 		}
 
+		if err := setFieldConfig(config.Config, &aggCfg.Filter); err != nil {
+			return "", err
+		}
+
 		ra := models.NewRunningAggregator(agg, aggCfg)
 		if err := ra.Init(); err != nil {
 			return "", fmt.Errorf("could not initialize plugin %w", err)
@@ -315,13 +328,20 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 		}
 		// create a copy
 		p := processor()
+		rootp := p.(telegraf.PluginDescriber)
+		if unwrapme, ok := rootp.(unwrappable); ok {
+			rootp = unwrapme.Unwrap()
+		}
 		// set the config
-		if err := setFieldConfig(config.Config, p); err != nil {
+		if err := setFieldConfig(config.Config, rootp); err != nil {
 			return "", err
 		}
 		// start it and put it into the agent manager?
 		pluginConfig := &models.ProcessorConfig{Name: name}
 		if err := setFieldConfig(config.Config, pluginConfig); err != nil {
+			return "", err
+		}
+		if err := setFieldConfig(config.Config, &pluginConfig.Filter); err != nil {
 			return "", err
 		}
 
@@ -894,3 +914,7 @@ var _ models.RunningPlugin = &models.RunningProcessor{}
 var _ models.RunningPlugin = &models.RunningAggregator{}
 var _ models.RunningPlugin = &models.RunningInput{}
 var _ models.RunningPlugin = &models.RunningOutput{}
+
+type unwrappable interface {
+	Unwrap() telegraf.Processor
+}

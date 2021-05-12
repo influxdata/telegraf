@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -126,10 +125,9 @@ func (pg *processorGroupUnit) Find(pr models.ProcessorRunner) *processorUnit {
 // └───────┘
 type inputGroupUnit struct {
 	sync.Mutex
-	runningInputUnitCount int32
-	dst                   chan<- telegraf.Metric // must stay open until app is shutting down
-	relay                 *channel.Relay
-	inputUnits            []inputUnit
+	dst        chan<- telegraf.Metric // owns channel; must stay open until app is shutting down
+	relay      *channel.Relay
+	inputUnits []inputUnit
 }
 
 // RunWithAPI runs Telegraf in API mode where all the plugins are controlled by
@@ -345,7 +343,6 @@ func (a *Agent) RunInput(input *models.RunningInput, startTime time.Time) {
 	ctx, cancelFunc := context.WithCancel(a.ctx)
 	defer cancelFunc() // just to keep linters happy
 
-	atomic.AddInt32(&a.inputGroupUnit.runningInputUnitCount, 1)
 	err := errors.New("loop at least once")
 	for err != nil && ctx.Err() == nil {
 		if err = a.startInput(input); err != nil {
@@ -365,12 +362,15 @@ func (a *Agent) RunInput(input *models.RunningInput, startTime time.Time) {
 
 	a.gatherLoop(ctx, acc, input, ticker, interval)
 
-	inputsLeft := atomic.AddInt32(&a.inputGroupUnit.runningInputUnitCount, -1)
-	if ctx.Err() != nil && inputsLeft == 0 { // shutting down
-		// a.inputGroupUnit.Lock()
-		close(a.inputGroupUnit.dst)
-		// a.inputGroupUnit.Unlock()
+	a.inputGroupUnit.Lock()
+	for i, iu := range a.inputGroupUnit.inputUnits {
+		if iu.input == input {
+			// remove from list
+			a.inputGroupUnit.inputUnits = append(a.inputGroupUnit.inputUnits[0:i], a.inputGroupUnit.inputUnits[i:]...)
+			break
+		}
 	}
+	a.inputGroupUnit.Unlock()
 }
 
 // // testStartInputs is a variation of startInputs for use in --test and --once
