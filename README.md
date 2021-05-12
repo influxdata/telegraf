@@ -74,6 +74,7 @@ version.
 ### Nightly Builds
 
 These builds are generated from the master branch:
+
 FreeBSD - .tar.gz
 - [telegraf-nightly_freebsd_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_freebsd_amd64.tar.gz)
 - [telegraf-nightly_freebsd_armv7.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_freebsd_armv7.tar.gz)
