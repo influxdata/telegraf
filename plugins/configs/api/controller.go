@@ -794,7 +794,7 @@ func setObject(from, to reflect.Value, destType reflect.Type) error {
 				return fmt.Errorf("can't write settings into map of type map[string]%s", destType.Elem().Kind().String())
 			}
 		default:
-			return fmt.Errorf("Cannot load map into %s", destType.Kind().String())
+			return fmt.Errorf("Cannot load map into %q", destType.Kind().String())
 			// panic("foo")
 		}
 		// to.Set(val)

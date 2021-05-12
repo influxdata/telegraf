@@ -378,14 +378,14 @@ type testAgentController struct {
 	inputs     []*models.RunningInput
 	processors []models.ProcessorRunner
 	outputs    []*models.RunningOutput
-	configs    []*config.RunningConfigPlugin
+	// configs    []*config.RunningConfigPlugin
 }
 
 func (a *testAgentController) reset() {
 	a.inputs = nil
 	a.processors = nil
 	a.outputs = nil
-	a.configs = nil
+	// a.configs = nil
 }
 
 func (a *testAgentController) RunningInputs() []*models.RunningInput {

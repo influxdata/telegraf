@@ -170,10 +170,10 @@ func TestAllPluginLifecycle(t *testing.T) {
 	newPluginID, err = api.CreatePlugin(PluginConfigCreate{
 		Name: "processors.rename",
 		Config: map[string]interface{}{
-			"replace": map[string]interface{}{
+			"replace": []map[string]interface{}{{
 				"tag":  "hostname",
 				"dest": "a_host",
-			},
+			}},
 		},
 	})
 	require.NoError(t, err)
