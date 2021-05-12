@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/testutil"
 
 	ws "github.com/gorilla/websocket"
 )
@@ -47,8 +48,8 @@ var sampleConfig = `
 `
 
 const (
-	defaultConnectTimeout = 5 * time.Second
-	defaultWriteTimeout   = 5 * time.Second
+	defaultConnectTimeout = 10 * time.Second
+	defaultWriteTimeout   = 10 * time.Second
 	defaultReadTimeout    = 30 * time.Second
 )
 
@@ -60,6 +61,7 @@ type WebSocket struct {
 	ReadTimeout    config.Duration   `toml:"read_timeout"`
 	Headers        map[string]string `toml:"headers"`
 	UseTextFrames  bool              `toml:"use_text_frames"`
+	Logger         telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
 
 	conn       *ws.Conn
@@ -83,12 +85,16 @@ func (w *WebSocket) SampleConfig() string {
 
 var errInvalidURL = errors.New("invalid websocket URL")
 
-// Connect to the output endpoint.
-func (w *WebSocket) Connect() error {
+// Init the output plugin.
+func (w *WebSocket) Init() error {
 	if parsedURL, err := url.Parse(w.URL); err != nil || (parsedURL.Scheme != "ws" && parsedURL.Scheme != "wss") {
 		return fmt.Errorf("%w: \"%s\"", errInvalidURL, w.URL)
 	}
+	return nil
+}
 
+// Connect to the output endpoint.
+func (w *WebSocket) Connect() error {
 	tlsCfg, err := w.ClientConfig.TLSConfig()
 	if err != nil {
 		return fmt.Errorf("error creating TLS config: %v", err)
@@ -138,6 +144,9 @@ func (w *WebSocket) read(conn *ws.Conn) {
 		// Need to read a connection (to properly process pings from a server).
 		_, _, err := conn.ReadMessage()
 		if err != nil {
+			if ws.IsUnexpectedCloseError(err, ws.CloseGoingAway, ws.CloseAbnormalClosure) {
+				w.Logger.Errorf("error reading websocket connection: %v", err)
+			}
 			return
 		}
 		if w.ReadTimeout > 0 {
@@ -196,6 +205,7 @@ func newWebSocket() *WebSocket {
 		ConnectTimeout: config.Duration(defaultConnectTimeout),
 		WriteTimeout:   config.Duration(defaultWriteTimeout),
 		ReadTimeout:    config.Duration(defaultReadTimeout),
+		Logger:         testutil.Logger{},
 	}
 }
 

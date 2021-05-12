@@ -112,7 +112,7 @@ func connect(t *testing.T, w *WebSocket) {
 
 func TestWebSocket_NoURL(t *testing.T) {
 	w := newWebSocket()
-	err := w.Connect()
+	err := w.Init()
 	require.ErrorIs(t, err, errInvalidURL)
 }
 
