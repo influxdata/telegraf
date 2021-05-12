@@ -482,18 +482,13 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 
 				fv, err := fieldConvert(f.Conversion, ent.Value)
 				if err != nil {
-					return &walkError{
-						msg: fmt.Sprintf("converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name),
-						err: err,
-					}
+					return fmt.Errorf("converting %q (OID %s) for field %s: %w", ent.Value, ent.Name, f.Name, err)
 				}
 				ifv[idx] = fv
 				return nil
 			})
 			if err != nil {
-				// Our callback always wraps errors in a walkError.
-				// If this error isn't a walkError, we know it's not
-				// from the callback
+				// If the error is a walkError from the callback, we can safely ignore it
 				if _, ok := err.(*walkError); !ok {
 					return nil, fmt.Errorf("performing bulk walk for field %s: %w", f.Name, err)
 				}
