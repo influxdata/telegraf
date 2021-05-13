@@ -16,10 +16,10 @@ import (
 const DefaultTemplate = "host.tags.measurement.field"
 
 var (
-	strictAllowedChars = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
+	strictAllowedChars          = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
 	compatibleAllowedCharsName  = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`)
 	compatibleAllowedCharsValue = regexp.MustCompile(`[^ -:<-~\p{L}]`)
-	hyphenChars  = strings.NewReplacer(
+	hyphenChars                 = strings.NewReplacer(
 		"/", "-",
 		"@", "-",
 		"*", "-",

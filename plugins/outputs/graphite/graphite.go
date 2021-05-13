@@ -15,9 +15,9 @@ import (
 )
 
 type Graphite struct {
-	GraphiteTagSupport     bool   `toml:"graphite_tag_support"`
-	GraphiteTagSanitizeMode   string `toml:"graphite_tag_sanitize_mode"`
-	GraphiteSeparator      string `toml:"graphite_separator"`
+	GraphiteTagSupport      bool   `toml:"graphite_tag_support"`
+	GraphiteTagSanitizeMode string `toml:"graphite_tag_sanitize_mode"`
+	GraphiteSeparator       string `toml:"graphite_separator"`
 	// URL is only for backwards compatibility
 	Servers   []string        `toml:"servers"`
 	Prefix    string          `toml:"prefix"`
