@@ -16,10 +16,10 @@ import (
 const DefaultTemplate = "host.tags.measurement.field"
 
 var (
-	strictAllowedChars = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
+	strictAllowedChars          = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
 	compatibleAllowedCharsName  = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`)
 	compatibleAllowedCharsValue = regexp.MustCompile(`[^ -:<-~\p{L}]`)
-	hyphenChars  = strings.NewReplacer(
+	hyphenChars                 = strings.NewReplacer(
 		"/", "-",
 		"@", "-",
 		"*", "-",
@@ -327,7 +327,6 @@ func strictSanitize(value string) string {
 
 func compatibleSanitize(name string, value string) string {
 	value = regexp.MustCompile(`^[~]*(.*)`).FindStringSubmatch(value)[1]
-	
 	name = compatibleAllowedCharsName.ReplaceAllLiteralString(name, "_")
 	value = compatibleAllowedCharsValue.ReplaceAllLiteralString(value, "_")
 	return name + "=" + value
