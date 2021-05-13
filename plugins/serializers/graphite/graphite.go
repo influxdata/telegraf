@@ -326,9 +326,8 @@ func strictSanitize(value string) string {
 }
 
 func compatibleSanitize(name string, value string) string {
-	if strings.HasPrefix(value, "~") {
-		value = value[1:]
-	}
+	value = regexp.MustCompile(`^[~]+(.*)`).FindStringSubmatch(value)[1]
+
 	name = compatibleAllowedCharsName.ReplaceAllLiteralString(name, "_")
 	value = compatibleAllowedCharsValue.ReplaceAllLiteralString(value, "_")
 	return name + "=" + value
