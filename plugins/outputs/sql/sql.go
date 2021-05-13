@@ -8,6 +8,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx"
+
 	// These SQL drivers can be enabled if
 	// they are added to depencies
 	// _ "github.com/lib/pq"
@@ -90,8 +91,6 @@ func (p *Sql) deriveDatatype(value interface{}) string {
 }
 
 var sampleConfig = `
-# Send metrics to SQL-Database (Example configuration for MySQL/MariaDB)
-[[outputs.sql]]
   ## Database Driver, required.
   ## Valid options: mssql (SQLServer), mysql (MySQL), postgres (Postgres), sqlite3 (SQLite), [oci8 ora.v4 (Oracle)]
   driver = "mysql"
