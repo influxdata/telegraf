@@ -16,7 +16,9 @@ import (
 const DefaultTemplate = "host.tags.measurement.field"
 
 var (
-	allowedChars = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
+	strictAllowedChars = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
+	compatibleAllowedCharsName  = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`)
+	compatibleAllowedCharsValue = regexp.MustCompile(`[^ -:<-~\p{L}]`)
 	hyphenChars  = strings.NewReplacer(
 		"/", "-",
 		"@", "-",
@@ -28,9 +30,6 @@ var (
 	)
 
 	fieldDeleter = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
-
-	allowedCharsTagName  = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`)
-	allowedCharsTagValue = regexp.MustCompile(`[^ -:<-~\p{L}]`)
 )
 
 type GraphiteTemplate struct {
@@ -39,12 +38,12 @@ type GraphiteTemplate struct {
 }
 
 type GraphiteSerializer struct {
-	Prefix         string
-	Template       string
-	TagSupport     bool
-	TagNewSanitize bool
-	Separator      string
-	Templates      []*GraphiteTemplate
+	Prefix          string
+	Template        string
+	TagSupport      bool
+	TagSanitizeMode string
+	Separator       string
+	Templates       []*GraphiteTemplate
 }
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -60,7 +59,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 			if fieldValue == "" {
 				continue
 			}
-			bucket := SerializeBucketNameWithTags(metric.Name(), metric.Tags(), s.Prefix, s.Separator, fieldName, s.TagNewSanitize)
+			bucket := SerializeBucketNameWithTags(metric.Name(), metric.Tags(), s.Prefix, s.Separator, fieldName, s.TagSanitizeMode)
 			metricString := fmt.Sprintf("%s %s %d\n",
 				// insert "field" section of template
 				bucket,
@@ -91,7 +90,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 			}
 			metricString := fmt.Sprintf("%s %s %d\n",
 				// insert "field" section of template
-				sanitize(InsertField(bucket, fieldName)),
+				strictSanitize(InsertField(bucket, fieldName)),
 				fieldValue,
 				timestamp)
 			point := []byte(metricString)
@@ -252,7 +251,7 @@ func SerializeBucketNameWithTags(
 	prefix string,
 	separator string,
 	field string,
-	tagNewSanitize bool,
+	tagSanitizeMode string,
 ) string {
 	var out string
 	var tagsCopy []string
@@ -260,12 +259,11 @@ func SerializeBucketNameWithTags(
 		if k == "name" {
 			k = "_name"
 		}
-		if tagNewSanitize {
-			tagsCopy = append(tagsCopy, sanitizeTag(k, v))
+		if tagSanitizeMode == "compatible" {
+			tagsCopy = append(tagsCopy, compatibleSanitize(k, v))
 		} else {
-			tagsCopy = append(tagsCopy, sanitize(k+"="+v))
+			tagsCopy = append(tagsCopy, strictSanitize(k+"="+v))
 		}
-
 	}
 	sort.Strings(tagsCopy)
 
@@ -279,7 +277,7 @@ func SerializeBucketNameWithTags(
 		out += separator + field
 	}
 
-	out = sanitize(out)
+	out = strictSanitize(out)
 
 	if len(tagsCopy) > 0 {
 		out += ";" + strings.Join(tagsCopy, ";")
@@ -318,20 +316,20 @@ func buildTags(tags map[string]string) string {
 	return tagStr
 }
 
-func sanitize(value string) string {
+func strictSanitize(value string) string {
 	// Apply special hyphenation rules to preserve backwards compatibility
 	value = hyphenChars.Replace(value)
 	// Apply rule to drop some chars to preserve backwards compatibility
 	value = dropChars.Replace(value)
 	// Replace any remaining illegal chars
-	return allowedChars.ReplaceAllLiteralString(value, "_")
+	return strictAllowedChars.ReplaceAllLiteralString(value, "_")
 }
 
-func sanitizeTag(name string, value string) string {
+func compatibleSanitize(name string, value string) string {
 	if strings.HasPrefix(value, "~") {
-		value = "_" + value[1:]
+		value = value[1:]
 	}
-	name = allowedCharsTagName.ReplaceAllLiteralString(name, "_")
-	value = allowedCharsTagValue.ReplaceAllLiteralString(value, "_")
+	name = compatibleAllowedCharsName.ReplaceAllLiteralString(name, "_")
+	value = compatibleAllowedCharsValue.ReplaceAllLiteralString(value, "_")
 	return name + "=" + value
 }

@@ -60,7 +60,7 @@ type Config struct {
 	GraphiteTagSupport bool `toml:"graphite_tag_support"`
 
 	// Support tags which follow the spec
-	GraphiteTagNewSanitize bool `toml:"graphite_tag_new_sanitize"`
+	GraphiteTagSanitizeMode bool `toml:"graphite_tag_sanitize_mode"`
 
 	// Character for separating metric name and field for Graphite tags
 	GraphiteSeparator string `toml:"graphite_separator"`
@@ -121,7 +121,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "influx":
 		serializer, err = NewInfluxSerializerConfig(config)
 	case "graphite":
-		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteTagNewSanitize, config.GraphiteSeparator, config.Templates)
+		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteTagSanitizeMode, config.GraphiteSeparator, config.Templates)
 	case "json":
 		serializer, err = NewJSONSerializer(config.TimestampUnits)
 	case "splunkmetric":
@@ -226,7 +226,7 @@ func NewInfluxSerializer() (Serializer, error) {
 	return influx.NewSerializer(), nil
 }
 
-func NewGraphiteSerializer(prefix, template string, tagSupport bool, tagNewSanitize bool, separator string, templates []string) (Serializer, error) {
+func NewGraphiteSerializer(prefix, template string, tagSupport bool, tagSanitizeMode string, separator string, templates []string) (Serializer, error) {
 	graphiteTemplates, defaultTemplate, err := graphite.InitGraphiteTemplates(templates)
 
 	if err != nil {
@@ -237,17 +237,21 @@ func NewGraphiteSerializer(prefix, template string, tagSupport bool, tagNewSanit
 		template = defaultTemplate
 	}
 
+	if tagSanitizeMode == "" {
+		tagSanitizeMode = "strict"
+	}
+
 	if separator == "" {
 		separator = "."
 	}
 
 	return &graphite.GraphiteSerializer{
-		Prefix:         prefix,
-		Template:       template,
-		TagSupport:     tagSupport,
-		TagNewSanitize: tagNewSanitize,
-		Separator:      separator,
-		Templates:      graphiteTemplates,
+		Prefix:          prefix,
+		Template:        template,
+		TagSupport:      tagSupport,
+		TagSanitizeMode: tagSanitizeMode,
+		Separator:       separator,
+		Templates:       graphiteTemplates,
 	}, nil
 }
 
