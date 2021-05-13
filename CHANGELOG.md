@@ -1,3 +1,6 @@
+#### New Outputs
+
+- [opentelemetry](/plugins/outputs/opentelemetry/README.md) - Contributed by @codeboten
 ## v1.18.2 [2021-04-28]
 
 #### Bugfixes

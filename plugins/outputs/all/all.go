@@ -33,6 +33,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/nats"
 	_ "github.com/influxdata/telegraf/plugins/outputs/newrelic"
 	_ "github.com/influxdata/telegraf/plugins/outputs/nsq"
+	_ "github.com/influxdata/telegraf/plugins/outputs/opentelemetry"
 	_ "github.com/influxdata/telegraf/plugins/outputs/opentsdb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann"

@@ -66,7 +66,6 @@ require (
 	github.com/gopcua/opcua v0.1.13
 	github.com/gorilla/mux v1.7.3
 	github.com/gosnmp/gosnmp v1.31.0
-	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/harlow/kinesis-consumer v0.3.1-0.20181230152818-2f58b136fee0
 	github.com/hashicorp/consul/api v1.8.1
@@ -139,6 +138,7 @@ require (
 	google.golang.org/api v0.29.0
 	google.golang.org/genproto v0.0.0-20200815001618-f69a88009b70
 	google.golang.org/grpc v1.37.0
+	google.golang.org/protobuf v1.26.0
 	gopkg.in/djherbis/times.v1 v1.2.0
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
