@@ -543,7 +543,7 @@ func TestSerializeTagWithSpacesWithTagSupport(t *testing.T) {
 	assert.Equal(t, expS, mS)
 }
 
-func TestSerializeTagWithSpacesWithTagSupportNewSanitize(t *testing.T) {
+func TestSerializeTagWithSpacesWithTagSupportCompatibleSanitize(t *testing.T) {
 	now := time.Now()
 	tags := map[string]string{
 		"host":       "localhost",
@@ -556,9 +556,9 @@ func TestSerializeTagWithSpacesWithTagSupportNewSanitize(t *testing.T) {
 	m := metric.New("cpu", tags, fields, now)
 
 	s := GraphiteSerializer{
-		TagSupport:     true,
-		TagNewSanitize: true,
-		Separator:      ".",
+		TagSupport:      true,
+		TagSanitizeMode: "compatible",
+		Separator:       ".",
 	}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
@@ -968,7 +968,7 @@ func TestCleanWithTagsSupport(t *testing.T) {
 	}
 }
 
-func TestCleanWithTagsSupportNewSanitize(t *testing.T) {
+func TestCleanWithTagsSupportCompatibleSanitize(t *testing.T) {
 	now := time.Unix(1234567890, 0)
 	tests := []struct {
 		name       string
@@ -1050,9 +1050,9 @@ func TestCleanWithTagsSupportNewSanitize(t *testing.T) {
 	}
 
 	s := GraphiteSerializer{
-		TagSupport:     true,
-		TagNewSanitize: true,
-		Separator:      ".",
+		TagSupport:      true,
+		TagSanitizeMode: "compatible",
+		Separator:       ".",
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

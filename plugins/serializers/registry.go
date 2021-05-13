@@ -60,7 +60,7 @@ type Config struct {
 	GraphiteTagSupport bool `toml:"graphite_tag_support"`
 
 	// Support tags which follow the spec
-	GraphiteTagSanitizeMode bool `toml:"graphite_tag_sanitize_mode"`
+	GraphiteTagSanitizeMode string `toml:"graphite_tag_sanitize_mode"`
 
 	// Character for separating metric name and field for Graphite tags
 	GraphiteSeparator string `toml:"graphite_separator"`
