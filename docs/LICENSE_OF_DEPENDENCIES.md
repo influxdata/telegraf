@@ -170,7 +170,6 @@ following works:
 - github.com/signalfx/golib [Apache License 2.0](https://github.com/signalfx/golib/blob/master/LICENSE)
 - github.com/signalfx/sapm-proto [Apache License 2.0](https://github.com/signalfx/sapm-proto/blob/master/LICENSE)
 - github.com/sirupsen/logrus [MIT License](https://github.com/sirupsen/logrus/blob/master/LICENSE)
-- github.com/soniah/gosnmp [BSD 2-Clause "Simplified" License](https://github.com/soniah/gosnmp/blob/master/LICENSE)
 - github.com/streadway/amqp [BSD 2-Clause "Simplified" License](https://github.com/streadway/amqp/blob/master/LICENSE)
 - github.com/stretchr/objx [MIT License](https://github.com/stretchr/objx/blob/master/LICENSE)
 - github.com/stretchr/testify [custom -- permissive](https://github.com/stretchr/testify/blob/master/LICENSE)
