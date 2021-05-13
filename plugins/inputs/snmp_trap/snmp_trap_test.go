@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/soniah/gosnmp"
+	"github.com/gosnmp/gosnmp"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -1266,7 +1266,7 @@ func TestReceiveTrap(t *testing.T) {
 			// Hook into the trap handler so the test knows when the
 			// trap has been received
 			received := make(chan int)
-			wrap := func(f handler) handler {
+			wrap := func(f gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc {
 				return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
 					f(p, a)
 					received <- 0

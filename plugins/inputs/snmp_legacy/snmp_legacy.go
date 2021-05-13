@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	"github.com/soniah/gosnmp"
+	"github.com/gosnmp/gosnmp"
 )
 
 // Snmp is a snmp plugin
@@ -102,7 +102,7 @@ type Data struct {
 	// Unit
 	Unit string
 	//  SNMP getbulk max repetition
-	MaxRepetition uint8 `toml:"max_repetition"`
+	MaxRepetition uint32 `toml:"max_repetition"`
 	// SNMP Instance (default 0)
 	// (only used with  GET request and if
 	//  OID is a name from snmptranslate file)
@@ -477,7 +477,7 @@ func (h *Host) SNMPMap(
 			oidNext := oidAsked
 			needMoreRequests := true
 			// Set max repetition
-			maxRepetition := uint8(32)
+			maxRepetition := uint32(32)
 			// Launch requests
 			for needMoreRequests {
 				// Launch request
