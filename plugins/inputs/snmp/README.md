@@ -207,7 +207,7 @@ One [metric][] is created for each row of the SNMP table.
 Snmp plugin can join two snmp tables that have different indexes. For this to work one table
 should have translation field that return index of second table as value. Examples
 of such fields are:
- * Cisco portTable with translation field: `1.3.6.1.4.1.9.5.1.4.1.1.11` (portIfIndex),
+ * Cisco portTable with translation field: `CISCO-STACK-MIB::portIfIndex`,
 which value is IfIndex from ifTable
  * Adva entityFacilityTable with translation field: `ADVA-FSPR7-MIB::entityFacilityOneIndex`,
 which value is IfIndex from ifTable
@@ -218,7 +218,7 @@ Such field can be used to translate index to secondary table with `secondary_ind
 and all fields from secondary table (with index pointed from translation field), should have added option
 `secondary_index_use = true`. Telegraf cannot duplicate entries during join so translation
 must be 1-to-1 (not 1-to-many). To add fields from secondary table with index that is not present
-in translation table (outer join), there is an second option for translation index `secondary_outer_join = true`.
+in translation table (outer join), there is a second option for translation index `secondary_outer_join = true`.
 
 ### Troubleshooting
 
