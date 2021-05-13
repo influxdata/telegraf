@@ -1,4 +1,4 @@
 file,host=docker explicitstringtypeName="Bilbo",defaultstringtypeName="Baggins",convertbooltostringName="true",convertinttostringName="1",convertfloattostringName="1.1"
-file,host=docker defaultinttypeName=2i,convertfloatointName=3i,convertstringtointName=4i,convertbooltointName=0i,explicitinttypeName=1i
+file,host=docker defaultinttypeName=2,convertfloatointName=3i,convertstringtointName=4i,convertbooltointName=0i,explicitinttypeName=1i
 file,host=docker convertstringtofloatName=4.1,explicitfloattypeName=1.1,defaultfloattypeName=2.1,convertintotfloatName=3
 file,host=docker explicitbooltypeName=true,defaultbooltypeName=false,convertinttoboolName=true,convertstringtoboolName=false,convertintstringtoboolName=true

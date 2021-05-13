@@ -1,4 +1,4 @@
-package jsonpath
+package enhancedjson
 
 import (
 	"bufio"
@@ -10,6 +10,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 )
@@ -56,7 +57,7 @@ func TestJSONPathDockerIntegration(t *testing.T) {
 	// 3. `expected.out` file defining the expected resulting metrics, the timestamp isn't necessary and will be overwritten
 	for _, testName := range tests {
 		_, err = telegrafDocker.Exec(ctx, []string{
-			"telegraf", "--config", fmt.Sprintf("./plugins/parsers/jsonpath/testdata/%s/telegraf.conf", testName), "--once",
+			"telegraf", "--config", fmt.Sprintf("./plugins/parsers/enhancedjson/testdata/%s/telegraf.conf", testName), "--once",
 		})
 		require.NoError(t, err)
 
@@ -69,7 +70,15 @@ func TestJSONPathDockerIntegration(t *testing.T) {
 		resultingMetricPath := fmt.Sprintf("%s/%s.out", localBindDir, testName)
 		resultingMetricsFile, err := readMetricFile(resultingMetricPath)
 		require.NoError(t, err)
-		require.True(t, len(expectedMetricsFile) == len(resultingMetricsFile))
+		if !assert.True(t, len(expectedMetricsFile) == len(resultingMetricsFile)) {
+			// Cleanup resulting metrics
+			if _, ok := os.Stat(resultingMetricPath); os.IsExist(ok) {
+				err = os.Remove(resultingMetricPath)
+				require.NoError(t, err)
+			}
+			t.Fatal(fmt.Sprintf("The expected file (len=%v) and resulting file (len%v) weren't equal length", len(expectedMetricsFile), len(resultingMetricsFile)))
+		}
+
 		var resultingMetrics, expectedMetrics []telegraf.Metric
 		for i := range resultingMetricsFile {
 			metricHandler := influx.NewMetricHandler()
@@ -92,7 +101,7 @@ func TestJSONPathDockerIntegration(t *testing.T) {
 					break
 				}
 			}
-			require.True(t, found)
+			require.True(t, found, fmt.Sprintf("expected metric: %v not found", expectedMetric))
 		}
 		err = os.Remove(resultingMetricPath)
 		require.NoError(t, err)

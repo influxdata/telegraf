@@ -24,7 +24,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/jsonpath"
+	"github.com/influxdata/telegraf/plugins/parsers/enhancedjson"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
@@ -1389,7 +1389,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	}
 
 	//for JSONPath parser
-	if node, ok := tbl.Fields["jsonpath"]; ok {
+	if node, ok := tbl.Fields["enhancedjson"]; ok {
 		if subtbls, ok := node.([]*ast.Table); ok {
 			pc.JSONPathConfig = make([]parsers.JSONPathConfig, len(subtbls))
 			for i, subtbl := range subtbls {
@@ -1400,14 +1400,14 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 				}
 				c.getFieldString(subtbl, "metric_selection", &subcfg.MetricSelection)
 
-				if subnode, ok := subtbl.Fields["fields"]; ok {
+				if subnode, ok := subtbl.Fields["basic_fields"]; ok {
 					if subsubtbls, ok := subnode.([]*ast.Table); ok {
 						for _, subsubtbl := range subsubtbls {
-							var f jsonpath.FieldKeys
+							var f enhancedjson.BasicField
 							c.getFieldString(subsubtbl, "name", &f.Name)
 							c.getFieldString(subsubtbl, "query", &f.Query)
 							c.getFieldString(subsubtbl, "type", &f.Type)
-							subcfg.Fields = append(subcfg.Fields, f)
+							subcfg.BasicFields = append(subcfg.BasicFields, f)
 						}
 					}
 				}
@@ -1524,7 +1524,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml", "jsonpath":
+		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml", "enhancedjson":
 
 		// ignore fields that are common to all plugins.
 	default:

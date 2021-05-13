@@ -7,12 +7,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
+	"github.com/influxdata/telegraf/plugins/parsers/enhancedjson"
 	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
-	"github.com/influxdata/telegraf/plugins/parsers/jsonpath"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
@@ -52,6 +52,8 @@ type Parser interface {
 	// and parses it into a telegraf metric.
 	//
 	// Must be thread-safe.
+	// This function is only called by plugins that expect line based protocols
+	// Doesn't need to be implemented by non-linebased parsers (e.g. json, xml)
 	ParseLine(line string) (telegraf.Metric, error)
 
 	// SetDefaultTags tells the parser to add all of the given tags
@@ -161,7 +163,7 @@ type Config struct {
 	XMLConfig []XMLConfig `toml:"xml"`
 
 	// JSONPath configuration
-	JSONPathConfig []JSONPathConfig `toml:"jsonpath"`
+	JSONPathConfig []JSONPathConfig `toml:"enhancedjson"`
 }
 
 type XMLConfig struct {
@@ -169,7 +171,7 @@ type XMLConfig struct {
 }
 
 type JSONPathConfig struct {
-	jsonpath.Config
+	enhancedjson.Config
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -261,7 +263,7 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
 	case "xml":
 		parser, err = NewXMLParser(config.MetricName, config.DefaultTags, config.XMLConfig)
-	case "jsonpath":
+	case "enhancedjson":
 		parser, err = NewJSONPathParser(config.JSONPathConfig)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
@@ -406,14 +408,14 @@ func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs [
 	}, nil
 }
 
-func NewJSONPathParser(jsonpathconfig []JSONPathConfig) (Parser, error) {
-	configs := make([]jsonpath.Config, len(jsonpathconfig))
-	for i, cfg := range jsonpathconfig {
+func NewJSONPathParser(enhancedjsonconfig []JSONPathConfig) (Parser, error) {
+	configs := make([]enhancedjson.Config, len(enhancedjsonconfig))
+	for i, cfg := range enhancedjsonconfig {
 		configs[i].MetricName = cfg.MetricName
 		configs[i].MetricSelection = cfg.MetricSelection
-		configs[i].Fields = cfg.Fields
+		configs[i].BasicFields = cfg.BasicFields
 	}
-	return &jsonpath.Parser{
+	return &enhancedjson.Parser{
 		Configs: configs,
 	}, nil
 }
