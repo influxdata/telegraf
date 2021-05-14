@@ -42,8 +42,9 @@ type ObjectField struct {
 }
 
 type MetricNode struct {
-	MetricName string
-	MetricType string
+	RootFieldName string
+	DesiredType   string
+	Metric        telegraf.Metric
 	gjson.Result
 }
 
@@ -95,41 +96,47 @@ func (p *Parser) processBasicFields(metricName string, basicFields []BasicField,
 		}
 
 		// TODO: Handle invalid input characters, are spaces allowed?? probably not
-		name := field.Name
+		fieldName := field.Name
 		// Default to the last query word, should be the upper key name
 		// TODO: figure out what to do with special characters, probably ok to remove any special characters?
-		if name == "" {
+		if fieldName == "" {
 			s := strings.Split(field.Query, ".")
-			name = s[len(s)-1]
+			fieldName = s[len(s)-1]
 		}
 
 		// Store result into a MetricNode to keep metadata together
 		mNode := MetricNode{
-			MetricName: name,
-			MetricType: field.Type,
-			Result:     result,
+			RootFieldName: fieldName,
+			DesiredType:   field.Type,
+			Metric: metric.New(
+				metricName,
+				map[string]string{},
+				map[string]interface{}{},
+				p.TimeFunc(),
+			),
+			Result: result,
 		}
 		// Expand all array's and nested arrays into separate metrics
-		nodes, err := expandArray(mNode)
+		nodes, err := p.expandArray(mNode, metricName)
 		if err != nil {
 			return nil, err
 		}
 
 		var metricField []telegraf.Metric
 		for _, n := range nodes {
-			v, err := p.convertType(n.Value(), n.MetricType, n.MetricName)
-			if err != nil {
-				return nil, err
-			}
-			m := metric.New(
-				metricName,
-				map[string]string{},
-				map[string]interface{}{
-					n.MetricName: v,
-				},
-				p.TimeFunc(),
-			)
-			metricField = append(metricField, m)
+			// v, err := p.convertType(n.Value(), n.DesiredType, n.Metric.Name())
+			// if err != nil {
+			// 	return nil, err
+			// }
+			// m := metric.New(
+			// 	metricName,
+			// 	map[string]string{},
+			// 	map[string]interface{}{
+			// 		n.MetricName: v,
+			// 	},
+			// 	p.TimeFunc(),
+			// )
+			metricField = append(metricField, n.Metric)
 		}
 		metricFields = append(metricFields, metricField)
 	}
@@ -168,7 +175,8 @@ func (p *Parser) processBasicFields(metricName string, basicFields []BasicField,
 	return t, nil
 }
 
-func expandArray(result MetricNode) ([]MetricNode, error) {
+// expandArray will recursively create a new MetricNode for each element in a JSON array
+func (p *Parser) expandArray(result MetricNode, metricName string) ([]MetricNode, error) {
 	var results []MetricNode
 
 	if result.IsObject() {
@@ -177,25 +185,52 @@ func expandArray(result MetricNode) ([]MetricNode, error) {
 
 	if result.IsArray() {
 		var err error
-		result.ForEach(func(_, value gjson.Result) bool {
+		result.ForEach(func(_, val gjson.Result) bool {
 			// TODO: implement `ignore_objects` config key to ignore this error
-			if value.IsObject() {
+			if val.IsObject() {
 				err = fmt.Errorf("encountered object")
 				return false
 			}
 
-			n := MetricNode{
-				MetricName: result.MetricName,
-				Result:     value,
+			m := metric.New(
+				metricName,
+				map[string]string{},
+				map[string]interface{}{},
+				p.TimeFunc(),
+			)
+
+			for _, f := range result.Metric.FieldList() {
+				m.AddField(f.Key, f.Value)
 			}
 
-			if value.IsArray() {
-				r, err := expandArray(n)
+			if val.IsArray() {
+				n := MetricNode{
+					RootFieldName: result.RootFieldName,
+					Metric:        m,
+					Result:        val,
+				}
+				r, err := p.expandArray(n, metricName)
 				if err != nil {
 					return false
 				}
 				results = append(results, r...)
 			} else {
+				v, err := p.convertType(val.Value(), result.DesiredType, result.RootFieldName)
+				if err != nil {
+					return false
+				}
+
+				m.AddField(result.RootFieldName, v)
+
+				for _, f := range result.Metric.FieldList() {
+					m.AddField(f.Key, f.Value)
+				}
+
+				n := MetricNode{
+					RootFieldName: result.RootFieldName,
+					Metric:        m,
+					Result:        val,
+				}
 				results = append(results, n)
 			}
 			return true
@@ -205,6 +240,11 @@ func expandArray(result MetricNode) ([]MetricNode, error) {
 		}
 	} else {
 		if result.Exists() {
+			v, err := p.convertType(result.Value(), result.DesiredType, result.RootFieldName)
+			if err != nil {
+				return nil, err
+			}
+			result.Metric.AddField(result.RootFieldName, v)
 			results = append(results, result)
 		}
 	}
@@ -213,9 +253,97 @@ func expandArray(result MetricNode) ([]MetricNode, error) {
 }
 
 func (p *Parser) processObjectFields(metricName string, objectFields []ObjectField, input []byte) ([]telegraf.Metric, error) {
-
 	var t []telegraf.Metric
+	for _, field := range objectFields {
+		result := gjson.GetBytes(input, field.Query)
+
+		// TODO: Figoure out how to handle root fieldname, will be blank
+		// Default to the last query word, should be the upper key name
+		// TODO: figure out what to do with special characters, probably ok to remove any special characters?
+		s := strings.Split(field.Query, ".")
+		fieldName := s[len(s)-1]
+
+		rootObject := MetricNode{
+			RootFieldName: fieldName,
+			Metric: metric.New(
+				metricName,
+				map[string]string{},
+				map[string]interface{}{},
+				p.TimeFunc(),
+			),
+			Result: result,
+		}
+		metrics, err := p.combineObject(rootObject, field.NameMap, field.TypeMap)
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range metrics {
+			t = append(t, m.Metric)
+		}
+	}
+
 	return t, nil
+}
+
+func (p *Parser) combineObject(result MetricNode, nameMap map[string]string, typeMap map[string]string) ([]MetricNode, error) {
+
+	var metrics []MetricNode
+	result.ForEach(func(key, val gjson.Result) bool {
+		// Update key with user configuration
+		fieldName := key.String()
+		if fieldName != "" {
+			if newName, ok := nameMap[fieldName]; ok {
+				fieldName = newName
+			}
+			//Sanitize fieldname
+			fieldName = strings.ReplaceAll(fieldName, " ", "")
+		} else {
+			fieldName = result.RootFieldName
+		}
+
+		if val.IsArray() {
+			arrayNode := MetricNode{
+				RootFieldName: key.String(),
+				Metric:        result.Metric,
+				Result:        val,
+			}
+
+			m, err := p.expandArray(arrayNode, result.Metric.Name())
+			if err != nil {
+				return false
+			}
+			// TODO: THIS IS WRONG, where to put newly expanded metrics?!?!?
+			metrics = append(metrics, m...)
+		} else if val.IsObject() {
+			arrayNode := MetricNode{
+				RootFieldName: key.String(),
+				Metric:        result.Metric,
+				Result:        val,
+			}
+			_, err := p.combineObject(arrayNode, nameMap, typeMap)
+			if err != nil {
+				return false
+			}
+		} else {
+			fieldValue := val.Value()
+			if desiredType, ok := typeMap[key.String()]; ok {
+				var err error
+				// TODO: Return this error
+				fieldValue, err = p.convertType(val.Value(), desiredType, key.String())
+				if err != nil {
+					return false
+				}
+			}
+
+			result.Metric.AddField(fieldName, fieldValue)
+		}
+
+		return true
+	})
+
+	metrics = append(metrics, result)
+
+	return metrics, nil
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {

@@ -20,7 +20,11 @@ const nestedJSON = `
             {
                 "category": "fiction",
                 "author": "Evelyn Waugh",
-                "title": "Sword of Honour"
+                "title": "Sword of Honour",
+				"movie": {
+					"director": "Bill Anderson",
+					"Release Date": 2001
+				}
             },
             {
                 "category": "fiction",
@@ -48,6 +52,114 @@ const nestedJSON = `
     }
 }
 `
+
+func TestParseObjectFields(t *testing.T) {
+	var tests = []struct {
+		name           string
+		JSONInput      string
+		configs        []Config
+		expectedFields []map[string]interface{}
+	}{
+		{
+			name:      "Get metrics from object",
+			JSONInput: nestedJSON,
+			configs: []Config{
+				{
+					MetricName: "file",
+					ObjectFields: []ObjectField{
+						{
+							Query: "store.book.0",
+							TypeMap: map[string]string{
+								"Release Date": "int",
+							},
+						},
+					},
+				},
+			},
+			expectedFields: []map[string]interface{}{
+				{
+					"category":    "fiction",
+					"author":      "Evelyn Waugh",
+					"title":       "Sword of Honour",
+					"director":    "Bill Anderson",
+					"ReleaseDate": 2001,
+				},
+			},
+		},
+		// {
+		// 	name:      "Get metrics from object",
+		// 	JSONInput: nestedJSON,
+		// 	configs: []Config{
+		// 		{
+		// 			MetricName: "file",
+		// 			ObjectFields: []ObjectField{
+		// 				{
+		// 					Query: "store.book",
+		// 					TypeMap: map[string]string{
+		// 						"Release Date": "int",
+		// 					},
+		// 				},
+		// 			},
+		// 		},
+		// 	},
+		// 	expectedFields: []map[string]interface{}{
+		// 		{
+		// 			"category":    "fiction",
+		// 			"author":      "Evelyn Waugh",
+		// 			"title":       "Sword of Honour",
+		// 			"director":    "Bill Anderson",
+		// 			"ReleaseDate": 2001,
+		// 		},
+		// 		{
+		// 			"category":   "fiction",
+		// 			"author":     "Herman Melville",
+		// 			"title":      "Moby Dick",
+		// 			"characters": "Ahab",
+		// 		},
+		// 		{
+		// 			"category":   "fiction",
+		// 			"author":     "Herman Melville",
+		// 			"characters": "Ishmael",
+		// 		},
+		// 		{
+		// 			"category":   "fiction",
+		// 			"author":     "J. R. R. Tolkien",
+		// 			"title":      "The Lord of the Rings",
+		// 			"characters": "Bilbo",
+		// 		},
+		// 		{
+		// 			"category":   "fiction",
+		// 			"author":     "J. R. R. Tolkien",
+		// 			"title":      "The Lord of the Rings",
+		// 			"characters": "Frodo",
+		// 		},
+		// 	},
+		// },
+	}
+
+	for _, tc := range tests {
+		parser := &Parser{
+			Configs:  tc.configs,
+			Log:      testutil.Logger{Name: "parsers.enhancedjson"},
+			TimeFunc: DefaultTime,
+		}
+
+		actual, err := parser.Parse([]byte(tc.JSONInput))
+		require.NoError(t, err)
+
+		var expectedMetrics []telegraf.Metric
+		for _, f := range tc.expectedFields {
+			expectedMetrics = append(expectedMetrics, testutil.MustMetric(
+				"file",
+				map[string]string{},
+				f,
+				DefaultTime(),
+			))
+		}
+
+		testutil.RequireMetricsEqual(t, expectedMetrics, actual)
+	}
+}
 
 func TestParseBasicFields(t *testing.T) {
 	var tests = []struct {
