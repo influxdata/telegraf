@@ -78,19 +78,29 @@ func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 }
 
 func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype string, filter string) error {
-	_, _, err := net.SplitHostPort(addr)
-	if err != nil {
-		return fmt.Errorf("%q on url %s", err.Error(), addr)
+	var proto string
+
+	if strings.HasPrefix(addr, "/") {
+		proto = "unix"
+	} else {
+		proto = "tcp"
+
+		_, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			return fmt.Errorf("%q on url %s", err.Error(), addr)
+		}
 	}
 
-	c, err := net.DialTimeout("tcp", addr, defaultTimeout)
+	c, err := net.DialTimeout(proto, addr, defaultTimeout)
 	if err != nil {
 		return fmt.Errorf("enable to connect to dovecot server '%s': %s", addr, err)
 	}
 	defer c.Close()
 
 	// Extend connection
-	c.SetDeadline(time.Now().Add(defaultTimeout))
+	if err := c.SetDeadline(time.Now().Add(defaultTimeout)); err != nil {
+		return fmt.Errorf("setting deadline failed for dovecot server '%s': %s", addr, err)
+	}
 
 	msg := fmt.Sprintf("EXPORT\t%s", qtype)
 	if len(filter) > 0 {
@@ -98,11 +108,20 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 	}
 	msg += "\n"
 
-	c.Write([]byte(msg))
+	if _, err := c.Write([]byte(msg)); err != nil {
+		return fmt.Errorf("writing message %q failed for dovecot server '%s': %s", msg, addr, err)
+	}
 	var buf bytes.Buffer
-	io.Copy(&buf, c)
+	if _, err := io.Copy(&buf, c); err != nil {
+		return fmt.Errorf("copying message failed for dovecot server '%s': %s", addr, err)
+	}
 
-	host, _, _ := net.SplitHostPort(addr)
+	var host string
+	if strings.HasPrefix(addr, "/") {
+		host = addr
+	} else {
+		host, _, _ = net.SplitHostPort(addr)
+	}
 
 	return gatherStats(&buf, acc, host, qtype)
 }

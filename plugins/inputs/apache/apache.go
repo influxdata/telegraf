@@ -158,31 +158,31 @@ func (n *Apache) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 }
 
 func (n *Apache) gatherScores(data string) map[string]interface{} {
-	var waiting, open int = 0, 0
-	var S, R, W, K, D, C, L, G, I int = 0, 0, 0, 0, 0, 0, 0, 0, 0
+	var waiting, open = 0, 0
+	var s, r, w, k, d, c, l, g, i = 0, 0, 0, 0, 0, 0, 0, 0, 0
 
-	for _, s := range strings.Split(data, "") {
-		switch s {
+	for _, str := range strings.Split(data, "") {
+		switch str {
 		case "_":
 			waiting++
 		case "S":
-			S++
+			s++
 		case "R":
-			R++
+			r++
 		case "W":
-			W++
+			w++
 		case "K":
-			K++
+			k++
 		case "D":
-			D++
+			d++
 		case "C":
-			C++
+			c++
 		case "L":
-			L++
+			l++
 		case "G":
-			G++
+			g++
 		case "I":
-			I++
+			i++
 		case ".":
 			open++
 		}
@@ -190,15 +190,15 @@ func (n *Apache) gatherScores(data string) map[string]interface{} {
 
 	fields := map[string]interface{}{
 		"scboard_waiting":      float64(waiting),
-		"scboard_starting":     float64(S),
-		"scboard_reading":      float64(R),
-		"scboard_sending":      float64(W),
-		"scboard_keepalive":    float64(K),
-		"scboard_dnslookup":    float64(D),
-		"scboard_closing":      float64(C),
-		"scboard_logging":      float64(L),
-		"scboard_finishing":    float64(G),
-		"scboard_idle_cleanup": float64(I),
+		"scboard_starting":     float64(s),
+		"scboard_reading":      float64(r),
+		"scboard_sending":      float64(w),
+		"scboard_keepalive":    float64(k),
+		"scboard_dnslookup":    float64(d),
+		"scboard_closing":      float64(c),
+		"scboard_logging":      float64(l),
+		"scboard_finishing":    float64(g),
+		"scboard_idle_cleanup": float64(i),
 		"scboard_open":         float64(open),
 	}
 	return fields

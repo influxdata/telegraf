@@ -7,7 +7,8 @@ import (
 	"sync"
 	"time"
 
-	couchbase "github.com/couchbase/go-couchbase"
+	couchbaseClient "github.com/couchbase/go-couchbase"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -33,7 +34,7 @@ var sampleConfig = `
   ## If no port is specified, 8091 is used.
   servers = ["http://localhost:8091"]
 
-  ## Filter fields to include only here.
+  ## Filter bucket fields to include only here.
   # bucket_stats_included = ["quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"]
 `
 
@@ -45,14 +46,14 @@ func (cb *Couchbase) SampleConfig() string {
 }
 
 func (cb *Couchbase) Description() string {
-	return "Read metrics from one or many couchbase clusters"
+	return "Read per-node and per-bucket metrics from Couchbase"
 }
 
 // Reads stats from all configured clusters. Accumulates stats.
 // Returns one of the errors encountered while gathering stats (if any).
 func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {
 	if len(cb.Servers) == 0 {
-		return cb.gatherServer("http://localhost:8091/", acc, nil)
+		return cb.gatherServer(acc, "http://localhost:8091/", nil)
 	}
 
 	var wg sync.WaitGroup
@@ -60,7 +61,7 @@ func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			acc.AddError(cb.gatherServer(serv, acc, nil))
+			acc.AddError(cb.gatherServer(acc, serv, nil))
 		}(serv)
 	}
 
@@ -69,9 +70,9 @@ func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (cb *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *couchbase.Pool) error {
+func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string, pool *couchbaseClient.Pool) error {
 	if pool == nil {
-		client, err := couchbase.Connect(addr)
+		client, err := couchbaseClient.Connect(addr)
 		if err != nil {
 			return err
 		}

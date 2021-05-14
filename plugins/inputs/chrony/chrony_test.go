@@ -51,7 +51,7 @@ func TestGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "chrony", fields, tags)
 }
 
-// fackeExecCommand is a helper function that mock
+// fakeExecCommand is a helper function that mock
 // the exec.Command call (and call the test binary)
 func fakeExecCommand(command string, args ...string) *exec.Cmd {
 	cs := []string{"-test.run=TestHelperProcess", "--", command}
@@ -94,13 +94,18 @@ Leap status     : Not synchronized
 
 	if cmd == "chronyc" {
 		if args[0] == "tracking" {
+			//nolint:errcheck,revive // test will fail anyway
 			fmt.Fprint(os.Stdout, lookup+mockData)
 		} else {
+			//nolint:errcheck,revive // test will fail anyway
 			fmt.Fprint(os.Stdout, noLookup+mockData)
 		}
 	} else {
+		//nolint:errcheck,revive // test will fail anyway
 		fmt.Fprint(os.Stdout, "command not found")
+		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
 	}
+	//nolint:revive // error code is important for this "test"
 	os.Exit(0)
 }
