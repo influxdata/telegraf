@@ -19,6 +19,7 @@ var (
 	strictAllowedChars          = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
 	compatibleAllowedCharsName  = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`)
 	compatibleAllowedCharsValue = regexp.MustCompile(`[^ -:<-~\p{L}]`)
+	compatibleLeadingTildeDrop  = regexp.MustCompile(`^[~]*(.*)`)
 	hyphenChars                 = strings.NewReplacer(
 		"/", "-",
 		"@", "-",
@@ -328,6 +329,6 @@ func strictSanitize(value string) string {
 func compatibleSanitize(name string, value string) string {
 	name = compatibleAllowedCharsName.ReplaceAllLiteralString(name, "_")
 	value = compatibleAllowedCharsValue.ReplaceAllLiteralString(value, "_")
-	value = regexp.MustCompile(`^[~]*(.*)`).FindStringSubmatch(value)[1]
+	value = compatibleLeadingTildeDrop.FindStringSubmatch(value)[1]
 	return name + "=" + value
 }
