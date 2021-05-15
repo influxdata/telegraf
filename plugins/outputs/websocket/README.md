@@ -13,8 +13,8 @@ It can output data in any of the [supported output formats](https://github.com/i
   url = "ws://127.0.0.1:3000/telegraf"
 
   ## Timeouts (make sure read_timeout is larger than server ping interval or set to zero).
-  # connect_timeout = "5s"
-  # write_timeout = "5s"
+  # connect_timeout = "30s"
+  # write_timeout = "30s"
   # read_timeout = "30s"
 
   ## Optionally turn on using text data frames (binary by default).

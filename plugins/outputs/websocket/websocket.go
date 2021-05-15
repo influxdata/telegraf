@@ -22,8 +22,8 @@ var sampleConfig = `
   url = "ws://127.0.0.1:8080/telegraf"
 
   ## Timeouts (make sure read_timeout is larger than server ping interval or set to zero).
-  # connect_timeout = "5s"
-  # write_timeout = "5s"
+  # connect_timeout = "30s"
+  # write_timeout = "30s"
   # read_timeout = "30s"
 
   ## Optionally turn on using text data frames (binary by default).
@@ -48,8 +48,8 @@ var sampleConfig = `
 `
 
 const (
-	defaultConnectTimeout = 10 * time.Second
-	defaultWriteTimeout   = 10 * time.Second
+	defaultConnectTimeout = 30 * time.Second
+	defaultWriteTimeout   = 30 * time.Second
 	defaultReadTimeout    = 30 * time.Second
 )
 
