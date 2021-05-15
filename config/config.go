@@ -24,7 +24,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/enhancedjson"
+	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
@@ -1389,30 +1389,31 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	}
 
 	//for JSONPath parser
-	if node, ok := tbl.Fields["enhancedjson"]; ok {
+	if node, ok := tbl.Fields["json_v2"]; ok {
 		if subtbls, ok := node.([]*ast.Table); ok {
-			pc.JSONPathConfig = make([]parsers.JSONPathConfig, len(subtbls))
+			pc.JSONV2Config = make([]parsers.JSONV2Config, len(subtbls))
 			for i, subtbl := range subtbls {
-				subcfg := pc.JSONPathConfig[i]
+				subcfg := pc.JSONV2Config[i]
 				c.getFieldString(subtbl, "metric_name", &subcfg.MetricName)
 				if subcfg.MetricName == "" {
 					subcfg.MetricName = name
 				}
 				c.getFieldString(subtbl, "metric_selection", &subcfg.MetricSelection)
 
-				if subnode, ok := subtbl.Fields["basic_fields"]; ok {
+				if subnode, ok := subtbl.Fields["uniform_collection"]; ok {
 					if subsubtbls, ok := subnode.([]*ast.Table); ok {
 						for _, subsubtbl := range subsubtbls {
-							var f enhancedjson.BasicField
+							var f json_v2.UniformCollection
 							c.getFieldString(subsubtbl, "name", &f.Name)
 							c.getFieldString(subsubtbl, "query", &f.Query)
-							c.getFieldString(subsubtbl, "type", &f.Type)
-							subcfg.BasicFields = append(subcfg.BasicFields, f)
+							c.getFieldString(subsubtbl, "value_type", &f.ValueType)
+							c.getFieldString(subsubtbl, "set_type", &f.SetType)
+							subcfg.UniformCollections = append(subcfg.UniformCollections, f)
 						}
 					}
 				}
 
-				pc.JSONPathConfig[i] = subcfg
+				pc.JSONV2Config[i] = subcfg
 			}
 		}
 	}
@@ -1524,7 +1525,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml", "enhancedjson":
+		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml", "json_v2":
 
 		// ignore fields that are common to all plugins.
 	default:

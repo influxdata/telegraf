@@ -113,7 +113,7 @@ jobs:
     steps:
       - run: go version
       - checkout
-      - run: go test plugins/parsers/enhancedjson/parser_integration_test.go -v
+      - run: go test plugins/parsers/json_v2/parser_integration_test.go -v
   test-go-1_15:
     executor: go-1_15
     steps:

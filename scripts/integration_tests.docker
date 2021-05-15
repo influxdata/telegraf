@@ -1,6 +1,0 @@
-FROM golang:1.16.2 as builder
-WORKDIR /go/src/github.com/influxdata/telegraf
-COPY . /go/src/github.com/influxdata/telegraf
-RUN CGO_ENABLED=0 make go-install
-RUN cp /go/bin/* /usr/bin/
-CMD ["tail", "-f", "/dev/null"]

@@ -7,12 +7,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
-	"github.com/influxdata/telegraf/plugins/parsers/enhancedjson"
 	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
@@ -163,15 +163,15 @@ type Config struct {
 	XMLConfig []XMLConfig `toml:"xml"`
 
 	// JSONPath configuration
-	JSONPathConfig []JSONPathConfig `toml:"enhancedjson"`
+	JSONV2Config []JSONV2Config `toml:"json_v2"`
 }
 
 type XMLConfig struct {
 	xml.Config
 }
 
-type JSONPathConfig struct {
-	enhancedjson.Config
+type JSONV2Config struct {
+	json_v2.Config
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -263,8 +263,8 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
 	case "xml":
 		parser, err = NewXMLParser(config.MetricName, config.DefaultTags, config.XMLConfig)
-	case "enhancedjson":
-		parser, err = NewJSONPathParser(config.JSONPathConfig)
+	case "json_v2":
+		parser, err = NewJSONPathParser(config.JSONV2Config)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -408,14 +408,14 @@ func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs [
 	}, nil
 }
 
-func NewJSONPathParser(enhancedjsonconfig []JSONPathConfig) (Parser, error) {
-	configs := make([]enhancedjson.Config, len(enhancedjsonconfig))
-	for i, cfg := range enhancedjsonconfig {
+func NewJSONPathParser(json_v2config []JSONV2Config) (Parser, error) {
+	configs := make([]json_v2.Config, len(json_v2config))
+	for i, cfg := range json_v2config {
 		configs[i].MetricName = cfg.MetricName
 		configs[i].MetricSelection = cfg.MetricSelection
-		configs[i].BasicFields = cfg.BasicFields
+		configs[i].UniformCollections = cfg.UniformCollections
 	}
-	return &enhancedjson.Parser{
+	return &json_v2.Parser{
 		Configs: configs,
 	}, nil
 }

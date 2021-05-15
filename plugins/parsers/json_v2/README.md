@@ -6,59 +6,60 @@ This new JSON Parser is parses JSON into metric fields using [GJSON Path Syntax]
 
 ## Configuration
 
-By setting the data_format to `enhancedjson` this parser will be used. You can then define what fields and tags you want by defining sub-sections such as so:
+By setting the data_format to `json_v2` this parser will be used. You can then define what fields and tags you want by defining sub-sections such as so:
 
 ```toml
 [[inputs.file]]
 files = ["input.json"]
-data_format = "enhancedjson"
-        [[inputs.file.enhancedjson]]
-            [[inputs.file.enhancedjson.basic_fields]]
+data_format = "json_v2"
+        [[inputs.file.json_v2]]
+            [[inputs.file.json_v2.uniform_collection]]
                 query = "books.#.characters"
-            [[inputs.file.enhancedjson.object_fields]]
+            [[inputs.file.json_v2.object_selection]]
                 query = "books"
 ```
 
-The configuration options for this parser has been separated into two different types, `basic_fields` and `object_fields`. These types are described in more detail below.
+The configuration options for this parser has been separated into two different types, `uniform_collection` and `object_selection`. These types are described in more detail below.
 
-### basic_fields
+### uniform_collection
 
-To explicitly gather fields from basic types (string, int bool) and non-object array's (supports nested non-object array's), you need to use the configuration `basic_fields`.
-The following keys can be set for `basic_fields`:
+To explicitly gather fields from basic types (string, int bool) and non-object array's (supports nested non-object array's), you need to use the configuration `uniform_collection`. If the query you provides returns any objects (nested or directly) they will be ignored and not show up in the resulting metrics.
+The following keys can be set for `uniform_collection`:
 
 * **query (REQUIRED)**: You must define the path query that gathers the object with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md)
 * **name (OPTIONAL)**: You can define a string value to set the field name. If not defined it will use the trailing word from the provided query.
-* **type (OPTIONAL)**: You can define a string value to set the desired type (int, bool, string, float). If not defined it won't enforce a type and default to using the original type defined in the JSON (bool, float64, or string).
-* **ignore_objects (OPTIONAL)**: By default an error will be thrown if a object is found. You can set this key to `true` or `false`, if `true` then if an object is encountered it will ignore it and not throw an error.
+* **value_type (OPTIONAL)**: You can define a string value to set the desired type (int, bool, string, float). If not defined it won't enforce a type and default to using the original type defined in the JSON (bool, float64, or string).
+* **set_type (OPTIONAL)**: Can be the string "field" or "tag"
 
-### object_fields
+### object_selection
 
-To explicitly gather fields from objects (supports nested arrays/objects and basic types), you need to use the configuration `object_fields`.
-The following keys can be set for `object_fields`:
+To explicitly gather fields from objects (supports nested arrays/objects and basic types), you need to use the configuration `object_selection`.
+The following keys can be set for `object_selection`:
 
 * **query (REQUIRED)**: You must define the path query that gathers the object with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md)
 * **include_list (OPTIONAL)**: You can define a list of key's that should be the only data included in the metric, by default it will include everything.
 * **ignore_list (OPTIONAL)**: You can define a list of key's that should be ignored, by default it won't ignore anything.
 * **name_map (OPTIONAL)**: You can define a key-value map, to associate object keys with the desired field name. If not defined it will use the JSON key as the field name by default.
-* **type_map (OPTIONAL)**: You can define a key-value map, to associate object keys with the desired type (int, bool, string, float). If not defined it won't enforce a type and default to using the original type defined in the JSON (bool, float64, or string).
+* **value_type_map (OPTIONAL)**: You can define a key-value map, to associate object keys with the desired type (int, bool, string, float). If not defined it won't enforce a type and default to using the original type defined in the JSON (bool, float64, or string).
+* **tag_list (OPTIONAL)**: Can be the string "field" or "tag"
 
 ### Separate metrics
 
-You can define multiple "enhancedjson" under a plugin such as so:
+You can define multiple "json_v2" under a plugin such as so:
 
 ```toml
 [[inputs.file]]
 files = ["input.json"]
-data_format = "enhancedjson"
-        [[inputs.file.enhancedjson]]
-            [[inputs.file.enhancedjson.basic_fields]]
+data_format = "json_v2"
+        [[inputs.file.json_v2]]
+            [[inputs.file.json_v2.uniform_collection]]
                 query = "books.#.characters"
-        [[inputs.file.enhancedjson]]
-            [[inputs.file.enhancedjson.object_fields]]
+        [[inputs.file.json_v2]]
+            [[inputs.file.json_v2.object_selection]]
                 query = "books"
 ```
 
-This will ensure that the queried data isn't combined and will be outputted separately. Otherwise, all `basic_fields` and `object_fields` under a `enhancedjson` subsection will be merged into a single metric.
+This will ensure that the queried data isn't combined and will be outputted separately. Otherwise, all `uniform_collection` and `object_selection` under a `json_v2` subsection will be merged into a single metric.
 
 ## Arrays and Objects
 
@@ -96,9 +97,9 @@ Example configuration:
 ```toml
 [[inputs.file]]
 files = ["input.json"]
-data_format = "enhancedjson"
-        [[inputs.file.enhancedjson]]
-            [[inputs.file.enhancedjson.object_fields]]
+data_format = "json_v2"
+        [[inputs.file.json_v2]]
+            [[inputs.file.json_v2.object_selection]]
                 query = "books"
 ```
 
@@ -106,8 +107,10 @@ Expected metrics:
 
 ```
 file,host=test title="Sword of Honour",author="Evelyn Waugh" 1596294243000000000
-file,host=test title="The Lord of the Rings",author="J. R. R. Tolkien",characters="Bilbo" 1596294243000000000
-file,host=test title="The Lord of the Rings",author="J. R. R. Tolkien",characters="Frodo" 1596294243000000000
+file,host=test title="The Lord of the Rings",author="J. R. R. Tolkien",characters="Bilbo",chapter=1 1596294243000000000
+file,host=test title="The Lord of the Rings",author="J. R. R. Tolkien",characters="Bilbo",chapter=2 1596294243000000000
+file,host=test title="The Lord of the Rings",author="J. R. R. Tolkien",characters="Frodo",chapter=1 1596294243000000000
+file,host=test title="The Lord of the Rings",author="J. R. R. Tolkien",characters="Frodo",chapter=2 1596294243000000000
 ```
 
 You can find more complicated examples under the folder `testdata`.

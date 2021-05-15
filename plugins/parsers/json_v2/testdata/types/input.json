@@ -17,5 +17,6 @@
     "defaultbooltype": false,
     "convertinttobool": 1,
     "convertstringtobool": "false",
-    "convertintstringtobool": "1"
+    "convertintstringtoboolTrue": "1",
+    "convertintstringtoboolFalse": "0"
 }
