@@ -4,9 +4,6 @@ orbs:
   aws-cli: circleci/aws-cli@1.4.0
 
 executors:
-  machine-ubuntu:
-    machine:
-      image: ubuntu-2004:202101-01
   go-1_15:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
@@ -108,12 +105,6 @@ jobs:
           root: '/go'
           paths:
             - '*'
-  test-integration:
-    executor: machine-ubuntu
-    steps:
-      - run: go version
-      - checkout
-      - run: go test plugins/parsers/json_v2/parser_integration_test.go -v
   test-go-1_15:
     executor: go-1_15
     steps:
@@ -308,7 +299,6 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'test-integration'
       - 'test-go-1_15':
           requires:
             - 'deps'

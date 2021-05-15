@@ -47,48 +47,6 @@
                 "outputenable": 1.0
             },
             {
-                "outputnumber": 6.0,
-                "outputname": "1B-CC01-PC01",
-                "outputcurrent": -2.8,
-                "outputfusestatus": 1.0,
-                "outputenable": 1.0
-            },
-            {
-                "outputnumber": 7.0,
-                "outputname": "2B-CC01-KA01",
-                "outputcurrent": 0.0,
-                "outputfusestatus": 1.0,
-                "outputenable": 1.0
-            },
-            {
-                "outputnumber": 8.0,
-                "outputname": "3B-CC01-CC02",
-                "outputcurrent": 0.0,
-                "outputfusestatus": 1.0,
-                "outputenable": 1.0
-            },
-            {
-                "outputnumber": 9.0,
-                "outputname": "4B",
-                "outputcurrent": 0.0,
-                "outputfusestatus": 1.0,
-                "outputenable": 1.0
-            },
-            {
-                "outputnumber": 10.0,
-                "outputname": "5B",
-                "outputcurrent": 0.0,
-                "outputfusestatus": 1.0,
-                "outputenable": 1.0
-            },
-            {
-                "outputnumber": 11.0,
-                "outputname": "6B-CC01-88-INV01-B",
-                "outputcurrent": -1.3,
-                "outputfusestatus": 1.0,
-                "outputenable": 1.0
-            },
-            {
                 "busnumber": 0.0,
                 "busname": "A--48A",
                 "busvoltage": -54.1,
@@ -172,48 +130,6 @@
                 "outputname": "6A",
                 "outputcurrent": 0.0,
                 "outputfusestatus": 2.0,
-                "outputenable": 1.0
-            },
-            {
-                "outputnumber": 6.0,
-                "outputname": "1B",
-                "outputcurrent": 0.0,
-                "outputfusestatus": 1.0,
-                "outputenable": 1.0
-            },
-            {
-                "outputnumber": 7.0,
-                "outputname": "2B",
-                "outputcurrent": 0.0,
-                "outputfusestatus": 1.0,
-                "outputenable": 1.0
-            },
-            {
-                "outputnumber": 8.0,
-                "outputname": "3B",
-                "outputcurrent": 0.0,
-                "outputfusestatus": 2.0,
-                "outputenable": 1.0
-            },
-            {
-                "outputnumber": 9.0,
-                "outputname": "4B",
-                "outputcurrent": 0.0,
-                "outputfusestatus": 1.0,
-                "outputenable": 1.0
-            },
-            {
-                "outputnumber": 10.0,
-                "outputname": "5B",
-                "outputcurrent": 0.0,
-                "outputfusestatus": 1.0,
-                "outputenable": 1.0
-            },
-            {
-                "outputnumber": 11.0,
-                "outputname": "6B",
-                "outputcurrent": 0.0,
-                "outputfusestatus": 1.0,
                 "outputenable": 1.0
             },
             {

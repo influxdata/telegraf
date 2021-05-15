@@ -21,14 +21,18 @@ func TestData(t *testing.T) {
 		name string
 		test string
 	}{
-		{
-			name: "Test type conversion",
-			test: "types",
-		},
 		// {
-		// 	name: "Test nested fields and tags with object_selection",
-		// 	test: "jolokia",
+		// 	name: "Test a simple example of uniform_collection",
+		// 	test: "simple_uniform_collection",
 		// },
+		// {
+		// 	name: "Test type conversion",
+		// 	test: "types",
+		// },
+		{
+			name: "Test nested fields and tags with object_selection",
+			test: "kafka_logs",
+		},
 	}
 
 	for _, tc := range tests {
