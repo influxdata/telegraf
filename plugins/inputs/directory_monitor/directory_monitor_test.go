@@ -49,15 +49,20 @@ func TestCSVGZImport(t *testing.T) {
 	// Write csv file to process into the 'process' directory.
 	f, err := os.Create(filepath.Join(processDirectory, testCsvFile))
 	require.NoError(t, err)
-	f.WriteString("thing,color\nsky,blue\ngrass,green\nclifford,red\n")
-	f.Close()
+	_, err = f.WriteString("thing,color\nsky,blue\ngrass,green\nclifford,red\n")
+	require.NoError(t, err)
+	err = f.Close()
+	require.NoError(t, err)
 
 	// Write csv.gz file to process into the 'process' directory.
 	var b bytes.Buffer
 	w := gzip.NewWriter(&b)
-	w.Write([]byte("thing,color\nsky,blue\ngrass,green\nclifford,red\n"))
-	w.Close()
+	_, err = w.Write([]byte("thing,color\nsky,blue\ngrass,green\nclifford,red\n"))
+	require.NoError(t, err)
+	err = w.Close()
+	require.NoError(t, err)
 	err = ioutil.WriteFile(filepath.Join(processDirectory, testCsvGzFile), b.Bytes(), 0666)
+	require.NoError(t, err)
 
 	// Start plugin before adding file.
 	err = r.Start(&acc)
@@ -112,8 +117,10 @@ func TestMultipleJSONFileImports(t *testing.T) {
 	// Write csv file to process into the 'process' directory.
 	f, err := os.Create(filepath.Join(processDirectory, testJSONFile))
 	require.NoError(t, err)
-	f.WriteString("{\"Name\": \"event1\",\"Speed\": 100.1,\"Length\": 20.1}\n{\"Name\": \"event2\",\"Speed\": 500,\"Length\": 1.4}\n{\"Name\": \"event3\",\"Speed\": 200,\"Length\": 10.23}\n{\"Name\": \"event4\",\"Speed\": 80,\"Length\": 250}\n{\"Name\": \"event5\",\"Speed\": 120.77,\"Length\": 25.97}")
-	f.Close()
+	_, err = f.WriteString("{\"Name\": \"event1\",\"Speed\": 100.1,\"Length\": 20.1}\n{\"Name\": \"event2\",\"Speed\": 500,\"Length\": 1.4}\n{\"Name\": \"event3\",\"Speed\": 200,\"Length\": 10.23}\n{\"Name\": \"event4\",\"Speed\": 80,\"Length\": 250}\n{\"Name\": \"event5\",\"Speed\": 120.77,\"Length\": 25.97}")
+	require.NoError(t, err)
+	err = f.Close()
+	require.NoError(t, err)
 
 	err = r.Start(&acc)
 	r.Log = testutil.Logger{}

@@ -16,12 +16,11 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	"github.com/soniah/gosnmp"
+	"github.com/gosnmp/gosnmp"
 )
 
 var defaultTimeout = config.Duration(time.Second * 5)
 
-type handler func(*gosnmp.SnmpPacket, *net.UDPAddr)
 type execer func(config.Duration, string, ...string) ([]byte, error)
 
 type mibEntry struct {
@@ -50,7 +49,7 @@ type SnmpTrap struct {
 	timeFunc func() time.Time
 	errCh    chan error
 
-	makeHandlerWrapper func(handler) handler
+	makeHandlerWrapper func(gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -261,7 +260,7 @@ func setTrapOid(tags map[string]string, oid string, e mibEntry) {
 	tags["mib"] = e.mibName
 }
 
-func makeTrapHandler(s *SnmpTrap) handler {
+func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 	return func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr) {
 		tm := s.timeFunc()
 		fields := map[string]interface{}{}

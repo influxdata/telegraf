@@ -19,7 +19,7 @@ var (
 func TestCPUStats(t *testing.T) {
 	c := NewCSGOStats()
 	var acc testutil.Accumulator
-	err := c.gatherServer(c.Servers[0], requestMock, &acc)
+	err := c.gatherServer(&acc, c.Servers[0], requestMock)
 	if err != nil {
 		t.Error(err)
 	}

@@ -6,6 +6,7 @@ package bcache
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -128,7 +129,7 @@ func (b *Bcache) Gather(acc telegraf.Accumulator) error {
 	}
 	bdevs, _ := filepath.Glob(bcachePath + "/*/bdev*")
 	if len(bdevs) < 1 {
-		return errors.New("Can't find any bcache device")
+		return errors.New("can't find any bcache device")
 	}
 	for _, bdev := range bdevs {
 		if restrictDevs {
@@ -137,7 +138,9 @@ func (b *Bcache) Gather(acc telegraf.Accumulator) error {
 				continue
 			}
 		}
-		b.gatherBcache(bdev, acc)
+		if err := b.gatherBcache(bdev, acc); err != nil {
+			return fmt.Errorf("gathering bcache failed: %v", err)
+		}
 	}
 	return nil
 }

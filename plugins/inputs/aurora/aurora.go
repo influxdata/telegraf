@@ -190,7 +190,9 @@ func (a *Aurora) gatherRole(ctx context.Context, origin *url.URL) (RoleType, err
 	if err != nil {
 		return Unknown, err
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		return Unknown, fmt.Errorf("closing body failed: %v", err)
+	}
 
 	switch resp.StatusCode {
 	case http.StatusOK:

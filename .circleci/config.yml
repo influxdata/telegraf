@@ -47,25 +47,35 @@ commands:
       - run: 'GOARCH=<< parameters.goarch >> make check'
       - run: 'GOARCH=<< parameters.goarch >> make check-deps'
       - run: 'GOARCH=<< parameters.goarch >> make test'
-  package:
+  package-build:
     parameters:
+      release:
+        type: boolean
+        default: false
       nightly:
         type: boolean
         default: false
+      type:
+        type: string
+        default: ""
     steps:
       - checkout
       - check-changed-files-or-halt
       - attach_workspace:
           at: '/go'
       - when:
+          condition: << parameters.release >>
+          steps: 
+            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 make package'
+      - when:
           condition: << parameters.nightly >>
           steps: 
-            - run: 'NIGHTLY=1 make package'
+            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 NIGHTLY=1 make package'
             - run: 'make upload-nightly'
       - unless:
           condition: << parameters.nightly >>
           steps:
-            - run: 'make package'
+            - run: '<< parameters.type >>=1 make package'
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
@@ -142,19 +152,87 @@ jobs:
       - run: git config --system core.longpaths true
       - run: make test-windows
 
-  package:
+  windows-package:
     executor: go-1_16
     steps:
-      - package
+      - package-build:
+          type: windows
+  darwin-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: darwin
+  i386-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: i386
+  ppc641e-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: ppc641e
+  s390x-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: s390x
+  armel-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: armel
+  amd64-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: amd64
+  arm64-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: arm64
+  mipsel-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: mipsel
+  mips-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: mips
+  static-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: static
+  armhf-package:
+    executor: go-1_16
+    steps:
+      - package-build:
+          type: armhf
+
   release:
     executor: go-1_16
     steps:
-      - package
+      - package-build:
+          release: true
   nightly:
     executor: go-1_16
     steps:
-      - package:
+      - package-build:
           nightly: true
+  package-consolidate:
+    executor:
+        name: win/default
+        shell: powershell.exe
+    steps:
+      - attach_workspace:
+          at: '/build'
+      - store_artifacts:
+          path: './build/dist'
+          destination: 'build/dist'
   package-sign-windows:
     executor:
         name: win/default
@@ -195,6 +273,12 @@ jobs:
       - store_artifacts:
           path: './dist'
           destination: 'build/dist'
+  test-awaiter:
+    executor: go-1_16
+    steps:
+      - run:
+          command: |
+            echo "Go tests complete."
   share-artifacts:
     executor: aws-cli/default  
     steps:
@@ -244,17 +328,62 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'package':
+      - 'test-awaiter': 
           requires:
-            - 'test-go-windows'
-            - 'test-go-mac'
             - 'test-go-1_15'
             - 'test-go-1_15-386'
             - 'test-go-1_16'
             - 'test-go-1_16-386'
+      - 'windows-package':
+          requires: 
+            - 'test-go-windows'
+      - 'darwin-package':
+          requires: 
+            - 'test-go-mac'
+      - 'i386-package':
+          requires: 
+            - 'test-awaiter'
+      - 'ppc641e-package':
+          requires: 
+            - 'test-awaiter'
+      - 's390x-package':
+          requires: 
+            - 'test-awaiter'
+      - 'armel-package':
+          requires: 
+            - 'test-awaiter'
+      - 'amd64-package':
+          requires: 
+            - 'test-awaiter'
+      - 'arm64-package':
+          requires: 
+            - 'test-awaiter'
+      - 'armhf-package':
+          requires: 
+            - 'test-awaiter'
+      - 'static-package':
+          requires:
+            - 'test-awaiter'
+      - 'mipsel-package':
+          requires: 
+            - 'test-awaiter'
+      - 'mips-package':
+          requires: 
+            - 'test-awaiter'
       - 'share-artifacts':
           requires:
-            - 'package'
+            - 'i386-package'
+            - 'ppc641e-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'darwin-package'
+            - 'windows-package'
+            - 'static-package'
+            - 'arm64-package'
+            - 'armhf-package'
           filters:
             branches:
               ignore:
@@ -284,6 +413,7 @@ workflows:
            filters:
               tags:
                 only: /.*/
+
   nightly:
     jobs:
       - 'deps'

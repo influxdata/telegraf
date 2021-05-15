@@ -43,7 +43,7 @@ func TestGatherServer(t *testing.T) {
 	require.NoError(t, err)
 
 	var acc testutil.Accumulator
-	err = cb.gatherServer(fakeServer.URL, &acc, &pool)
+	err = cb.gatherServer(&acc, fakeServer.URL, &pool)
 	require.NoError(t, err)
 	acc.AssertContainsTaggedFields(t, "couchbase_node",
 		map[string]interface{}{"memory_free": 23181365248.0, "memory_total": 64424656896.0},
