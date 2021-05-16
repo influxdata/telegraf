@@ -338,6 +338,10 @@ func (p *Parser) processObjectSelections(objectSelections []ObjectSelection, inp
 		p.includedKeys = c.IncludedKeys
 		result := gjson.GetBytes(input, c.Query)
 
+		if result.Type == gjson.Null {
+			return nil, fmt.Errorf("Query returned null")
+		}
+
 		// TODO: Figoure out how to handle root fieldname, will be blank
 		// Default to the last query word, should be the upper key name
 		// TODO: figure out what to do with special characters, probably ok to remove any special characters?

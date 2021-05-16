@@ -31,11 +31,15 @@ func TestData(t *testing.T) {
 		},
 		{
 			name: "Test nested fields and tags with object_selection",
-			test: "kafka_logs",
+			test: "fields_tags_in_object",
 		},
 		{
 			name: "Test selecting with both uniform_collection and object_selection",
 			test: "uniform_and_objects_together",
+		},
+		{
+			name: "Test nested tags",
+			test: "nested_tags",
 		},
 	}
 
