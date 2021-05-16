@@ -1398,17 +1398,33 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 				if subcfg.MetricName == "" {
 					subcfg.MetricName = name
 				}
-				c.getFieldString(subtbl, "metric_selection", &subcfg.MetricSelection)
 
 				if subnode, ok := subtbl.Fields["uniform_collection"]; ok {
 					if subsubtbls, ok := subnode.([]*ast.Table); ok {
 						for _, subsubtbl := range subsubtbls {
 							var f json_v2.UniformCollection
-							c.getFieldString(subsubtbl, "name", &f.Name)
 							c.getFieldString(subsubtbl, "query", &f.Query)
+							c.getFieldString(subsubtbl, "name", &f.Name)
 							c.getFieldString(subsubtbl, "value_type", &f.ValueType)
 							c.getFieldString(subsubtbl, "set_type", &f.SetType)
 							subcfg.UniformCollections = append(subcfg.UniformCollections, f)
+						}
+					}
+				}
+
+				if subnode, ok := subtbl.Fields["object_selection"]; ok {
+					if subsubtbls, ok := subnode.([]*ast.Table); ok {
+						for _, subsubtbl := range subsubtbls {
+							var f json_v2.ObjectSelection
+							c.getFieldString(subsubtbl, "query", &f.Query)
+
+							c.getFieldStringMap(subsubtbl, "names", &f.Names)
+							c.getFieldStringMap(subsubtbl, "value_types", &f.ValueTypes)
+
+							c.getFieldStringSlice(subsubtbl, "tag_list", &f.TagList)
+							c.getFieldStringSlice(subsubtbl, "included_keys", &f.IncludedKeys)
+							c.getFieldStringSlice(subsubtbl, "ignored_keys", &f.IgnoredKeys)
+							subcfg.ObjectSelections = append(subcfg.ObjectSelections, f)
 						}
 					}
 				}

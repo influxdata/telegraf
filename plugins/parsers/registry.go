@@ -408,12 +408,12 @@ func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs [
 	}, nil
 }
 
-func NewJSONPathParser(json_v2config []JSONV2Config) (Parser, error) {
-	configs := make([]json_v2.Config, len(json_v2config))
-	for i, cfg := range json_v2config {
+func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
+	configs := make([]json_v2.Config, len(jsonv2config))
+	for i, cfg := range jsonv2config {
 		configs[i].MetricName = cfg.MetricName
-		configs[i].MetricSelection = cfg.MetricSelection
 		configs[i].UniformCollections = cfg.UniformCollections
+		configs[i].ObjectSelections = cfg.ObjectSelections
 	}
 	return &json_v2.Parser{
 		Configs: configs,

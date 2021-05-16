@@ -1,0 +1,20 @@
+{
+    "book": {
+        "title": "The Lord Of The Rings",
+        "author": "Tolkien",
+        "chapters": [
+            "A Long-expected Party",
+            "The Shadow of the Past"
+        ],
+        "characters": [
+            {
+                "name": "Bilbo",
+                "species": "hobbit"
+            },
+            {
+                "name": "Frodo",
+                "species": "hobbit"
+            }
+        ]
+    }
+}

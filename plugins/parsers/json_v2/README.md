@@ -37,10 +37,10 @@ To explicitly gather fields from objects (supports nested arrays/objects and bas
 The following keys can be set for `object_selection`:
 
 * **query (REQUIRED)**: You must define the path query that gathers the object with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md)
-* **include_list (OPTIONAL)**: You can define a list of key's that should be the only data included in the metric, by default it will include everything.
-* **ignore_list (OPTIONAL)**: You can define a list of key's that should be ignored, by default it won't ignore anything.
-* **name_map (OPTIONAL)**: You can define a key-value map, to associate object keys with the desired field name. If not defined it will use the JSON key as the field name by default.
-* **value_type_map (OPTIONAL)**: You can define a key-value map, to associate object keys with the desired type (int, bool, string, float). If not defined it won't enforce a type and default to using the original type defined in the JSON (bool, float64, or string).
+* **included_keys (OPTIONAL)**: You can define a list of key's that should be the only data included in the metric, by default it will include everything.
+* **ignored_keys (OPTIONAL)**: You can define a list of key's that should be ignored, by default it won't ignore anything.
+* **names (OPTIONAL)**: You can define a key-value map, to associate object keys with the desired field name. If not defined it will use the JSON key as the field name by default.
+* **value_types (OPTIONAL)**: You can define a key-value map, to associate object keys with the desired type (int, bool, string, float). If not defined it won't enforce a type and default to using the original type defined in the JSON (bool, float64, or string).
 * **tag_list (OPTIONAL)**: Can be the string "field" or "tag"
 
 ### Separate metrics
