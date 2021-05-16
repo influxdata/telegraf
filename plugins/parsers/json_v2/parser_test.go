@@ -33,6 +33,10 @@ func TestData(t *testing.T) {
 			name: "Test nested fields and tags with object_selection",
 			test: "kafka_logs",
 		},
+		{
+			name: "Test selecting with both uniform_collection and object_selection",
+			test: "uniform_and_objects_together",
+		},
 	}
 
 	for _, tc := range tests {

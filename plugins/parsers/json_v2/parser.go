@@ -86,16 +86,18 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 		if err != nil {
 			return nil, err
 		}
-		if len(uniformCollection) != 0 {
-			t = append(t, uniformCollection...)
-		}
 
 		objectMetrics, err := p.processObjectSelections(config.ObjectSelections, input)
 		if err != nil {
 			return nil, err
 		}
-		if len(objectMetrics) != 0 {
+
+		if len(objectMetrics) != 0 && len(uniformCollection) != 0 {
+			t = append(t, cartesianProduct(objectMetrics, uniformCollection)...)
+		} else if len(objectMetrics) != 0 {
 			t = append(t, objectMetrics...)
+		} else if len(uniformCollection) != 0 {
+			t = append(t, uniformCollection...)
 		}
 		//TODO: Should object metrics and uniform metrics be merged?!?!?
 	}
@@ -303,22 +305,20 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 			return nil, err
 		}
 	} else {
-		if result.Exists() {
-			if result.SetType == "field" {
-				v, err := p.convertType(result.Value(), result.DesiredType, result.RootFieldName)
-				if err != nil {
-					return nil, err
-				}
-				result.Metric.AddField(result.RootFieldName, v)
-			} else {
-				v, err := p.convertType(result.Value(), "string", result.RootFieldName)
-				if err != nil {
-					return nil, err
-				}
-				result.Metric.AddTag(result.RootFieldName, v.(string))
+		if result.SetType == "field" && !result.IsObject() {
+			v, err := p.convertType(result.Value(), result.DesiredType, result.RootFieldName)
+			if err != nil {
+				return nil, err
 			}
-			results = append(results, result)
+			result.Metric.AddField(result.RootFieldName, v)
+		} else if !result.IsObject() {
+			v, err := p.convertType(result.Value(), "string", result.RootFieldName)
+			if err != nil {
+				return nil, err
+			}
+			result.Metric.AddTag(result.RootFieldName, v.(string))
 		}
+		results = append(results, result)
 	}
 
 	return results, nil
@@ -372,7 +372,7 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 	if result.IsArray() || result.IsObject() {
 		var err error
 		result.ForEach(func(key, val gjson.Result) bool {
-			if p.isIgnored(key.String()) {
+			if p.isIgnored(key.String()) || !p.isIncluded(key.String()) {
 				return true
 			}
 
@@ -420,6 +420,18 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 	}
 
 	return results, nil
+}
+
+func (p *Parser) isIncluded(key string) bool {
+	if len(p.includedKeys) == 0 {
+		return true
+	}
+	for _, i := range p.includedKeys {
+		if i == key {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *Parser) isIgnored(key string) bool {
