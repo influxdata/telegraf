@@ -408,11 +408,10 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 						}
 					}
 				}
-				r, err := p.expandArray(arrayNode)
+				results, err = p.expandArray(arrayNode)
 				if err != nil {
 					return false
 				}
-				results = append(results, r...)
 			}
 
 			return true

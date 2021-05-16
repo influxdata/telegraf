@@ -41,6 +41,10 @@ func TestData(t *testing.T) {
 			name: "Test nested tags",
 			test: "nested_tags",
 		},
+		{
+			name: "Test nested tags in a more complicated structure",
+			test: "nested_tags_complex",
+		},
 	}
 
 	for _, tc := range tests {
