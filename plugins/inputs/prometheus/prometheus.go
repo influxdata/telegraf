@@ -279,7 +279,6 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 			"User-Agent": internal.ProductToken(),
 			"Accept":     acceptHeader,
 		}
-
 	}
 
 	var wg sync.WaitGroup
