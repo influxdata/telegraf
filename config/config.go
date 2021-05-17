@@ -902,18 +902,22 @@ func escapeEnv(value string) string {
 }
 
 func loadConfig(config string) ([]byte, error) {
-	u, err := url.Parse(config)
-	if err != nil {
-		return nil, err
+	content, err := ioutil.ReadFile(config)
+	if os.IsNotExist(err) {
+		u, err := url.Parse(config)
+		if err != nil {
+			return nil, err
+		}
+
+		switch u.Scheme {
+		case "https", "http":
+			return fetchConfig(u)
+		default:
+			// If it isn't a https scheme, an error occurred
+		}
 	}
 
-	switch u.Scheme {
-	case "https", "http":
-		return fetchConfig(u)
-	default:
-		// If it isn't a https scheme, try it as a file.
-	}
-	return ioutil.ReadFile(config)
+	return content, err
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
