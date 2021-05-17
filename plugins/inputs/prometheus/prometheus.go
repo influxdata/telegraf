@@ -91,7 +91,7 @@ var sampleConfig = `
   # metric_version = 1
 
   ## Url tag name (tag containing scrapped url. optional, default is "url")
-  # url_tag = "scrapeUrl"
+  # url_tag = "url"
 
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
