@@ -181,7 +181,7 @@ func cartesianProduct(a, b []telegraf.Metric) []telegraf.Metric {
 	for _, a := range a {
 		for _, b := range b {
 			m := a.Copy()
-			m = mergeMetric(b, m)
+			mergeMetric(b, m)
 			p[i] = m
 			i++
 		}
@@ -190,15 +190,13 @@ func cartesianProduct(a, b []telegraf.Metric) []telegraf.Metric {
 	return p
 }
 
-func mergeMetric(a telegraf.Metric, m telegraf.Metric) telegraf.Metric {
+func mergeMetric(a telegraf.Metric, m telegraf.Metric) {
 	for _, f := range a.FieldList() {
 		m.AddField(f.Key, f.Value)
 	}
 	for _, t := range a.TagList() {
 		m.AddTag(t.Key, t.Value)
 	}
-
-	return m
 }
 
 // expandArray will recursively create a new MetricNode for each element in a JSON array
@@ -239,9 +237,15 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 					if err != nil {
 						return false
 					}
+
 					results = append(results, r...)
 				} else {
 					p.Log.Debugf("Found object in the uniform collection query ignoring it please use object_selection to gather metrics from objects")
+				}
+				if len(results) != 0 {
+					for _, newResult := range results {
+						mergeMetric(result.Metric, newResult.Metric)
+					}
 				}
 				return true
 			}
@@ -255,50 +259,17 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 					m.AddTag(f.Key, f.Value)
 				}
 			}
-
-			if val.IsArray() {
-				n := MetricNode{
-					SetType:       result.SetType,
-					RootFieldName: result.RootFieldName,
-					Metric:        m,
-					Result:        val,
-				}
-				r, err := p.expandArray(n)
-				if err != nil {
-					return false
-				}
-				results = append(results, r...)
-			} else {
-				if result.SetType == "field" {
-					v, err := p.convertType(val.Value(), result.DesiredType, result.RootFieldName)
-					if err != nil {
-						return false
-					}
-
-					m.AddField(result.RootFieldName, v)
-
-					for _, f := range result.Metric.FieldList() {
-						m.AddField(f.Key, f.Value)
-					}
-				} else {
-					v, err := p.convertType(val.Value(), "string", result.RootFieldName)
-					if err != nil {
-						return false
-					}
-					m.AddTag(result.RootFieldName, v.(string))
-
-					for _, f := range result.Metric.TagList() {
-						m.AddTag(f.Key, f.Value)
-					}
-				}
-
-				n := MetricNode{
-					RootFieldName: result.RootFieldName,
-					Metric:        m,
-					Result:        val,
-				}
-				results = append(results, n)
+			n := MetricNode{
+				SetType:       result.SetType,
+				RootFieldName: result.RootFieldName,
+				Metric:        m,
+				Result:        val,
 			}
+			r, err := p.expandArray(n)
+			if err != nil {
+				return false
+			}
+			results = append(results, r...)
 			return true
 		})
 		if err != nil {
