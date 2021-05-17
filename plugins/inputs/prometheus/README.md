@@ -47,8 +47,8 @@ in Prometheus format.
   # node_ip = "10.180.1.1"
 	
   ## Only for node scrape scope: interval in seconds for how often to get updated pod list for scraping.
-	## Default is 60 seconds.
-	# pod_scrape_interval = 60
+  ## Default is 60 seconds.
+  # pod_scrape_interval = 60
   
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
