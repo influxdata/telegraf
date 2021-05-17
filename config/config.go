@@ -903,7 +903,7 @@ func escapeEnv(value string) string {
 
 func loadConfig(config string) ([]byte, error) {
 	content, err := ioutil.ReadFile(config)
-	if os.IsNotExist(err) {
+	if err != nil {
 		u, err := url.Parse(config)
 		if err != nil {
 			return nil, err
