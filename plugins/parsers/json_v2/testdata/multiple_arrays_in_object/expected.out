@@ -1,4 +1,4 @@
-file,title="The Lord Of The Rings" author="Tolkien",chapters="A Long-expected Party"
-file,title="The Lord Of The Rings" author="Tolkien",chapters="The Shadow of the Past"
-file,title="The Lord Of The Rings" author="Tolkien",characters="Bilbo",species="hobbit"
-file,title="The Lord Of The Rings" author="Tolkien",characters="Frodo",species="hobbit"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="A Long-expected Party"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="The Shadow of the Past"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",name="Bilbo",species="hobbit"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",name="Frodo",species="hobbit"

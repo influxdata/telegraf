@@ -49,6 +49,10 @@ func TestData(t *testing.T) {
 			name: "Test nested and non-nested tags",
 			test: "nested_and_nonnested_tags",
 		},
+		{
+			name: "Test multiple arrays in object",
+			test: "multiple_arrays_in_object",
+		},
 	}
 
 	for _, tc := range tests {

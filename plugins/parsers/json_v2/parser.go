@@ -208,10 +208,12 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 			p.Log.Debugf("Found object in the uniform collection query ignoring it please use object_selection to gather metrics from objects")
 			return results, nil
 		}
-		_, err := p.combineObject(result)
+		r, err := p.combineObject(result)
 		if err != nil {
 			return nil, err
 		}
+		results = append(results, r...)
+		return results, nil
 	}
 
 	if result.IsArray() {
@@ -250,14 +252,11 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 				return true
 			}
 
-			if result.SetType == "field" {
-				for _, f := range result.Metric.FieldList() {
-					m.AddField(f.Key, f.Value)
-				}
-			} else {
-				for _, f := range result.Metric.TagList() {
-					m.AddTag(f.Key, f.Value)
-				}
+			for _, f := range result.Metric.FieldList() {
+				m.AddField(f.Key, f.Value)
+			}
+			for _, f := range result.Metric.TagList() {
+				m.AddTag(f.Key, f.Value)
 			}
 			n := MetricNode{
 				SetType:       result.SetType,
@@ -346,6 +345,7 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 	var results []MetricNode
 	if result.IsArray() || result.IsObject() {
 		var err error
+		var prevArray bool
 		result.ForEach(func(key, val gjson.Result) bool {
 			if p.isIgnored(key.String()) || !p.isIncluded(key.String()) {
 				return true
@@ -359,6 +359,7 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 			}
 
 			if val.IsObject() {
+				prevArray = false
 				_, err := p.combineObject(arrayNode)
 				if err != nil {
 					return false
@@ -379,9 +380,19 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 						}
 					}
 				}
-				results, err = p.expandArray(arrayNode)
+
+				r, err := p.expandArray(arrayNode)
 				if err != nil {
 					return false
+				}
+				if prevArray {
+					results = append(results, r...)
+				} else {
+					results = r
+				}
+
+				if val.IsArray() {
+					prevArray = true
 				}
 			}
 
