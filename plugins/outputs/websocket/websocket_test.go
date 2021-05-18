@@ -99,6 +99,7 @@ func (s *testServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func initWebSocket(s *testServer) *WebSocket {
 	w := newWebSocket()
+	w.Log = testutil.Logger{}
 	w.URL = s.URL
 	w.Headers = map[string]string{testHeaderName: testHeaderValue}
 	w.SetSerializer(newTestSerializer())

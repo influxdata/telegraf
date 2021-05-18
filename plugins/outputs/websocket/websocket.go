@@ -9,10 +9,10 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/influxdata/telegraf/testutil"
 
 	ws "github.com/gorilla/websocket"
 )
@@ -61,7 +61,8 @@ type WebSocket struct {
 	ReadTimeout    config.Duration   `toml:"read_timeout"`
 	Headers        map[string]string `toml:"headers"`
 	UseTextFrames  bool              `toml:"use_text_frames"`
-	Logger         telegraf.Logger   `toml:"-"`
+	Log            telegraf.Logger   `toml:"-"`
+	proxy.HTTPProxy
 	tls.ClientConfig
 
 	conn       *ws.Conn
@@ -100,8 +101,13 @@ func (w *WebSocket) Connect() error {
 		return fmt.Errorf("error creating TLS config: %v", err)
 	}
 
+	dialProxy, err := w.HTTPProxy.Proxy()
+	if err != nil {
+		return fmt.Errorf("error creating proxy: %v", err)
+	}
+
 	dialer := &ws.Dialer{
-		Proxy:            http.ProxyFromEnvironment,
+		Proxy:            dialProxy,
 		HandshakeTimeout: time.Duration(w.ConnectTimeout),
 		TLSClientConfig:  tlsCfg,
 	}
@@ -115,7 +121,7 @@ func (w *WebSocket) Connect() error {
 	if err != nil {
 		return fmt.Errorf("error dial: %v", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
+	_ = resp.Body.Close()
 	if resp.StatusCode != http.StatusSwitchingProtocols {
 		return fmt.Errorf("wrong status code while connecting to server: %d", resp.StatusCode)
 	}
@@ -130,11 +136,13 @@ func (w *WebSocket) read(conn *ws.Conn) {
 	defer func() { _ = conn.Close() }()
 	if w.ReadTimeout > 0 {
 		if err := conn.SetReadDeadline(time.Now().Add(time.Duration(w.ReadTimeout))); err != nil {
+			w.Log.Errorf("error setting read deadline: %v", err)
 			return
 		}
 		conn.SetPingHandler(func(string) error {
 			err := conn.SetReadDeadline(time.Now().Add(time.Duration(w.ReadTimeout)))
 			if err != nil {
+				w.Log.Errorf("error setting read deadline: %v", err)
 				return err
 			}
 			return conn.WriteControl(ws.PongMessage, nil, time.Now().Add(time.Duration(w.WriteTimeout)))
@@ -144,8 +152,11 @@ func (w *WebSocket) read(conn *ws.Conn) {
 		// Need to read a connection (to properly process pings from a server).
 		_, _, err := conn.ReadMessage()
 		if err != nil {
+			// Websocket connection is not readable after first error, it's going to error state.
+			// In the beginning of this goroutine we have defer section that closes such connection.
+			// After that connection will be tried to reestablish on next Write.
 			if ws.IsUnexpectedCloseError(err, ws.CloseGoingAway, ws.CloseAbnormalClosure) {
-				w.Logger.Errorf("error reading websocket connection: %v", err)
+				w.Log.Errorf("error reading websocket connection: %v", err)
 			}
 			return
 		}
@@ -171,15 +182,14 @@ func (w *WebSocket) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	messageType := ws.BinaryMessage
-	if w.UseTextFrames {
-		messageType = ws.TextMessage
-	}
-
 	if w.WriteTimeout > 0 {
 		if err := w.conn.SetWriteDeadline(time.Now().Add(time.Duration(w.WriteTimeout))); err != nil {
 			return fmt.Errorf("error setting write deadline: %v", err)
 		}
+	}
+	messageType := ws.BinaryMessage
+	if w.UseTextFrames {
+		messageType = ws.TextMessage
 	}
 	err = w.conn.WriteMessage(messageType, messageData)
 	if err != nil {
@@ -205,7 +215,6 @@ func newWebSocket() *WebSocket {
 		ConnectTimeout: config.Duration(defaultConnectTimeout),
 		WriteTimeout:   config.Duration(defaultWriteTimeout),
 		ReadTimeout:    config.Duration(defaultReadTimeout),
-		Logger:         testutil.Logger{},
 	}
 }
 
