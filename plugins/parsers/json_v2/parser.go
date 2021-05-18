@@ -52,36 +52,30 @@ type ObjectSelection struct {
 	IgnoredKeys  []string          `toml:"ignored_keys"`
 }
 
-// One field is required, set to true if one is added
+// A Metric requires at least one field, returns an error if false so that the user isn't surprised when no metrics are returned
 var FieldExists = false
 
 type MetricNode struct {
-	// For unfirom collection
-	RootFieldName string
-	DesiredType   string // Can be "int", "bool", "string"
+	SetName     string
+	DesiredType string // Can be "int", "bool", "string"
 
-	SetType string // Can either be "field" or "tag"
-	// TODO: Make this a slice, array's in an object could make this expand
 	Metric telegraf.Metric
 	gjson.Result
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
-	// This is used to set a default time in the unit tests
-	if p.TimeFunc == nil {
-		p.TimeFunc = time.Now
-	}
+	p.TimeFunc = time.Now
 
 	// Only valid JSON is supported
 	if !gjson.Valid(string(input)) {
 		return nil, fmt.Errorf("Invalid JSON provided, unable to parse")
 	}
 
-	var t []telegraf.Metric
+	var metrics []telegraf.Metric
 
 	for _, config := range p.Configs {
 		p.metricName = config.MetricName
-		// Process all `uniform_collection` configurations
+
 		uniformCollection, err := p.processUniformCollections(config.UniformCollections, input)
 		if err != nil {
 			return nil, err
@@ -93,60 +87,66 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 		}
 
 		if len(objectMetrics) != 0 && len(uniformCollection) != 0 {
-			t = append(t, cartesianProduct(objectMetrics, uniformCollection)...)
+			metrics = append(metrics, cartesianProduct(objectMetrics, uniformCollection)...)
 		} else if len(objectMetrics) != 0 {
-			t = append(t, objectMetrics...)
+			metrics = append(metrics, objectMetrics...)
 		} else if len(uniformCollection) != 0 {
-			t = append(t, uniformCollection...)
+			metrics = append(metrics, uniformCollection...)
 		}
-		//TODO: Should object metrics and uniform metrics be merged?!?!?
 	}
 
 	if !FieldExists {
 		return nil, fmt.Errorf("No field configured for the metrics")
 	}
 
-	return t, nil
+	for k, v := range p.DefaultTags {
+		for _, t := range metrics {
+			t.AddTag(k, v)
+		}
+	}
+
+	return metrics, nil
 }
 
+// processUniformCollections will iterate over all 'uniform_collection' configs and create metrics for each
+// A uniform collection can either be a single value or an array of values, each resulting in its own metric
+// For multiple configs, a set of metrics is created from the cartesian product of each separate config
 func (p *Parser) processUniformCollections(uniformCollection []UniformCollection, input []byte) ([]telegraf.Metric, error) {
 	if len(uniformCollection) == 0 {
 		return nil, nil
 	}
 
-	// For each uniform_collection configuration, get all the metric data returned from the query
-	// Keep the metric data per field separate so all results from each query can be combined
 	p.iterateObjects = false
 	var metrics [][]telegraf.Metric
-	for _, c := range uniformCollection {
-		result := gjson.GetBytes(input, c.Query)
+
+	for _, config := range uniformCollection {
+		result := gjson.GetBytes(input, config.Query)
 
 		if result.IsObject() {
-			p.Log.Debugf("Found object in the uniform collection query: %s, ignoring it please use object_selection to gather metrics from objects", c.Query)
+			p.Log.Debugf("Found object in the uniform collection query: %s, ignoring it please use object_selection to gather metrics from objects", config.Query)
 			continue
 		}
 
-		var setType string
-		if c.SetType == "tag" {
-			setType = "tag"
-		} else {
+		setType := "tag"
+		if config.SetType != "tag" {
 			FieldExists = true
 			setType = "field"
 		}
 
-		fieldName := c.Name
-		// Default to the last query word, should be the upper key name
-		// TODO: figure out what to do with special characters, probably ok to remove any special characters?
-		if fieldName == "" {
-			s := strings.Split(c.Query, ".")
-			fieldName = s[len(s)-1]
+		if config.SetType != "tag" && config.SetType != "field" {
+			p.Log.Debugf("set_type was defined as %v, it can only be configured to 'tag' or 'field'", config.SetType)
 		}
 
-		// Store result into a MetricNode to keep metadata together
+		setName := config.Name
+		// Default to the last query word, should be the upper key name
+		if setName == "" {
+			s := strings.Split(config.Query, ".")
+			setName = s[len(s)-1]
+		}
+
 		mNode := MetricNode{
-			RootFieldName: fieldName,
-			DesiredType:   c.ValueType,
-			SetType:       setType,
+			SetName:     setName,
+			DesiredType: config.ValueType,
 			Metric: metric.New(
 				p.metricName,
 				map[string]string{},
@@ -155,8 +155,9 @@ func (p *Parser) processUniformCollections(uniformCollection []UniformCollection
 			),
 			Result: result,
 		}
+
 		// Expand all array's and nested arrays into separate metrics
-		nodes, err := p.expandArray(mNode)
+		nodes, err := p.expandArray(mNode, setType)
 		if err != nil {
 			return nil, err
 		}
@@ -199,8 +200,8 @@ func mergeMetric(a telegraf.Metric, m telegraf.Metric) {
 	}
 }
 
-// expandArray will recursively create a new MetricNode for each element in a JSON array
-func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
+// expandArray will recursively create a new MetricNode for each element in a JSON array or single value
+func (p *Parser) expandArray(result MetricNode, setType string) ([]MetricNode, error) {
 	var results []MetricNode
 
 	if result.IsObject() {
@@ -225,15 +226,13 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 				map[string]interface{}{},
 				p.TimeFunc(),
 			)
-			// TODO: implement `ignore_objects` config key to ignore this error
-			// TODO: combineObjects calls this if it has an array of objects, need to handle this case
+
 			if val.IsObject() {
 				if p.iterateObjects {
 					n := MetricNode{
-						SetType:       result.SetType,
-						RootFieldName: result.RootFieldName,
-						Metric:        m,
-						Result:        val,
+						SetName: result.SetName,
+						Metric:  m,
+						Result:  val,
 					}
 					r, err := p.combineObject(n)
 					if err != nil {
@@ -259,12 +258,11 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 				m.AddTag(f.Key, f.Value)
 			}
 			n := MetricNode{
-				SetType:       result.SetType,
-				RootFieldName: result.RootFieldName,
-				Metric:        m,
-				Result:        val,
+				SetName: result.SetName,
+				Metric:  m,
+				Result:  val,
 			}
-			r, err := p.expandArray(n)
+			r, err := p.expandArray(n, setType)
 			if err != nil {
 				return false
 			}
@@ -275,18 +273,18 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 			return nil, err
 		}
 	} else {
-		if result.SetType == "field" && !result.IsObject() {
-			v, err := p.convertType(result.Value(), result.DesiredType, result.RootFieldName)
+		if setType == "field" && !result.IsObject() {
+			v, err := p.convertType(result.Value(), result.DesiredType, result.SetName)
 			if err != nil {
 				return nil, err
 			}
-			result.Metric.AddField(result.RootFieldName, v)
+			result.Metric.AddField(result.SetName, v)
 		} else if !result.IsObject() {
-			v, err := p.convertType(result.Value(), "string", result.RootFieldName)
+			v, err := p.convertType(result.Value(), "string", result.SetName)
 			if err != nil {
 				return nil, err
 			}
-			result.Metric.AddTag(result.RootFieldName, v.(string))
+			result.Metric.AddTag(result.SetName, v.(string))
 		}
 		results = append(results, result)
 	}
@@ -294,33 +292,29 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 	return results, nil
 }
 
+// processObjectSelections will iterate over all 'object_selection' configs and create metrics for each
 func (p *Parser) processObjectSelections(objectSelections []ObjectSelection, input []byte) ([]telegraf.Metric, error) {
 	p.iterateObjects = true
 	var t []telegraf.Metric
 	for _, c := range objectSelections {
-		// TODO: Verify this through tag_list somehow
-		FieldExists = true
-
 		p.tagList = c.TagList
 		p.valueTypes = c.ValueTypes
 		p.names = c.Names
 		p.ignoredKeys = c.IgnoredKeys
 		p.includedKeys = c.IncludedKeys
+
 		result := gjson.GetBytes(input, c.Query)
 
 		if result.Type == gjson.Null {
 			return nil, fmt.Errorf("Query returned null")
 		}
 
-		// TODO: Figoure out how to handle root fieldname, will be blank
 		// Default to the last query word, should be the upper key name
-		// TODO: figure out what to do with special characters, probably ok to remove any special characters?
 		s := strings.Split(c.Query, ".")
 		fieldName := s[len(s)-1]
 
 		rootObject := MetricNode{
-			RootFieldName: fieldName,
-			SetType:       "field", // TODO: Somehow set this to field
+			SetName: fieldName,
 			Metric: metric.New(
 				p.metricName,
 				map[string]string{},
@@ -329,7 +323,7 @@ func (p *Parser) processObjectSelections(objectSelections []ObjectSelection, inp
 			),
 			Result: result,
 		}
-		metrics, err := p.expandArray(rootObject)
+		metrics, err := p.expandArray(rootObject, "field")
 		if err != nil {
 			return nil, err
 		}
@@ -341,6 +335,8 @@ func (p *Parser) processObjectSelections(objectSelections []ObjectSelection, inp
 	return t, nil
 }
 
+// combineObject will add all fields/tags to a single metric
+// If the object has multiple array's as elements it won't comine those, they will remain separate metrics
 func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 	var results []MetricNode
 	if result.IsArray() || result.IsObject() {
@@ -351,11 +347,19 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 				return true
 			}
 
+			// Determine if field/tag set name is configured
+			setName := key.String()
+			for k, n := range p.names {
+				if k == key.String() {
+					setName = n
+					break
+				}
+			}
+
 			arrayNode := MetricNode{
-				RootFieldName: key.String(),
-				Metric:        result.Metric,
-				Result:        val,
-				SetType:       result.SetType,
+				SetName: setName,
+				Metric:  result.Metric,
+				Result:  val,
 			}
 
 			if val.IsObject() {
@@ -365,6 +369,8 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 					return false
 				}
 			} else {
+				setType := "field"
+
 				if !val.IsArray() {
 					for k, t := range p.valueTypes {
 						if key.String() == k {
@@ -375,27 +381,34 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 
 					for _, t := range p.tagList {
 						if key.String() == t {
-							arrayNode.SetType = t
+							setType = "tag"
 							break
 						}
 					}
 				}
 
-				r, err := p.expandArray(arrayNode)
+				if setType == "field" {
+					FieldExists = true
+				}
+
+				r, err := p.expandArray(arrayNode, setType)
 				if err != nil {
 					return false
 				}
 				if prevArray {
 					if !arrayNode.IsArray() {
+						// If another non-array element was found, merge it into all previous gathered metrics
 						if len(results) != 0 {
 							for _, newResult := range results {
 								mergeMetric(result.Metric, newResult.Metric)
 							}
 						}
 					} else {
+						// Multiple array's won't be merged but kept separate, add additional metrics gathered from an array
 						results = append(results, r...)
 					}
 				} else {
+					// Continue using the same metric if its an object
 					results = r
 				}
 
@@ -441,11 +454,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 }
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {
-
-}
-
-func (p *Parser) SetTimeFunc(fn TimeFunc) {
-	p.TimeFunc = fn
+	p.DefaultTags = tags
 }
 
 // convertType will convert the value parsed from the input JSON to the specified type in the config
