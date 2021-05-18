@@ -41,6 +41,7 @@ var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for servi
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
+var fConfigToken = flag.String("config-token", "", "token to use when downloading configuration")
 var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
@@ -133,7 +134,7 @@ func runAgent(ctx context.Context,
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-	err := c.LoadConfig(*fConfig)
+	err := c.LoadConfig(*fConfig, fConfigToken)
 	if err != nil {
 		return err
 	}
