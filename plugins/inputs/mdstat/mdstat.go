@@ -62,87 +62,118 @@ func (k *MdstatConf) SampleConfig() string {
 	return mdSampleConfig
 }
 
-func evalStatusLine(deviceLine, statusLine string) (active, total, size int64, err error) {
+func evalStatusLine(deviceLine, statusLine string) (active, total, size int64, errCond error) {
+	size := 0
+	total := 0
+	active := 0
+	errCond := nil
 	sizeFields := strings.Fields(statusLine)
+
 	if len(sizeFields) < 1 {
-		return 0, 0, 0, fmt.Errorf("statusLine empty? %q: %w", statusLine, err)
+		errCond := fmt.Errorf("statusLine empty? %q: %w", statusLine, err)
 	}
-	sizeStr := sizeFields[0]
-	size, err = strconv.ParseInt(sizeStr, 10, 64)
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
-	}
-
-	if strings.Contains(deviceLine, "raid0") || strings.Contains(deviceLine, "linear") {
-		// In the device deviceLine, only disks have a number associated with them in [].
-		total = int64(strings.Count(deviceLine, "["))
-		return total, total, size, nil
+	if errCond == nil {
+		sizeStr := sizeFields[0]
+		size, err = strconv.ParseInt(sizeStr, 10, 64)
+		if err != nil {
+			errCond := fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
+		}
 	}
 
-	if strings.Contains(deviceLine, "inactive") {
-		return 0, total, size, nil
+	if errCond == nil {
+		if strings.Contains(deviceLine, "raid0") || strings.Contains(deviceLine, "linear") {
+			// In the device deviceLine, only disks have a number associated with them in [].
+			total = int64(strings.Count(deviceLine, "["))
+			return total, total, size, nil
+		}
+
+		if strings.Contains(deviceLine, "inactive") {
+			return 0, total, size, nil
+		}
 	}
 
-	matches := statusLineRE.FindStringSubmatch(statusLine)
-	if len(matches) != 4 {
-		return 0, total, size, fmt.Errorf("couldn't find all the substring matches: %s", statusLine)
+	if errCond == nil {
+		matches := statusLineRE.FindStringSubmatch(statusLine)
+		if len(matches) != 4 {
+			errCond := fmt.Errorf("couldn't find all the substring matches: %s", statusLine)
+		}
+	}
+	if errCond == nil {
+		total, err = strconv.ParseInt(matches[2], 10, 64)
+		if err != nil {
+			errCond := fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
+		}
+	}
+	if errCond == nil {
+		active, err = strconv.ParseInt(matches[3], 10, 64)
+		if err != nil {
+			errCond := fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
+		}
 	}
 
-	total, err = strconv.ParseInt(matches[2], 10, 64)
-	if err != nil {
-		return 0, 0, size, fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
-	}
-
-	active, err = strconv.ParseInt(matches[3], 10, 64)
-	if err != nil {
-		return 0, total, size, fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
-	}
-
-	return active, total, size, nil
+	return active, total, size, errCond
 }
 
-func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, finish float64, speed float64, err error) {
+func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, finish float64, speed float64, errCond error) {
+	syncedBlocks := 0
+	pct := 0
+	finish := 0
+	speed := 0
+	errCond := nil
 	// Get count of completed vs. total blocks
 	matches := recoveryLineBlocksRE.FindStringSubmatch(recoveryLine)
 	if len(matches) != 2 {
-		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine matching syncedBlocks: %s", recoveryLine)
+		errCond := fmt.Errorf("unexpected recoveryLine matching syncedBlocks: %s", recoveryLine)
 	}
-	syncedBlocks, err = strconv.ParseInt(matches[1], 10, 64)
-	if err != nil {
-		return 0, 0, 0, 0, fmt.Errorf("error parsing int from recoveryLine %q: %w", recoveryLine, err)
+	if errCond == nil {
+		syncedBlocks, err = strconv.ParseInt(matches[1], 10, 64)
+		if err != nil {
+			errCond := fmt.Errorf("error parsing int from recoveryLine %q: %w", recoveryLine, err)
+		}
 	}
 
 	// Get percentage complete
-	matches = recoveryLinePctRE.FindStringSubmatch(recoveryLine)
-	if len(matches) != 2 {
-		return syncedBlocks, 0, 0, 0, fmt.Errorf("unexpected recoveryLine matching percentage: %s", recoveryLine)
+	if errCond == nil {
+		matches = recoveryLinePctRE.FindStringSubmatch(recoveryLine)
+		if len(matches) != 2 {
+			errCond := fmt.Errorf("unexpected recoveryLine matching percentage: %s", recoveryLine)
+		}
 	}
-	pct, err = strconv.ParseFloat(matches[1], 64)
-	if err != nil {
-		return syncedBlocks, 0, 0, 0, fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
+	if errCond == nil {
+		pct, err = strconv.ParseFloat(matches[1], 64)
+		if err != nil {
+			errCond := fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
+		}
 	}
 
 	// Get time expected left to complete
-	matches = recoveryLineFinishRE.FindStringSubmatch(recoveryLine)
-	if len(matches) != 2 {
-		return syncedBlocks, pct, 0, 0, fmt.Errorf("unexpected recoveryLine matching est. finish time: %s", recoveryLine)
+	if errCond == nil {
+		matches = recoveryLineFinishRE.FindStringSubmatch(recoveryLine)
+		if len(matches) != 2 {
+			errCond := fmt.Errorf("unexpected recoveryLine matching est. finish time: %s", recoveryLine)
+		}
 	}
-	finish, err = strconv.ParseFloat(matches[1], 64)
-	if err != nil {
-		return syncedBlocks, pct, 0, 0, fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
+	if errCond == nil {
+		finish, err = strconv.ParseFloat(matches[1], 64)
+		if err != nil {
+			errCond := fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
+		}
 	}
 
 	// Get recovery speed
-	matches = recoveryLineSpeedRE.FindStringSubmatch(recoveryLine)
-	if len(matches) != 2 {
-		return syncedBlocks, pct, finish, 0, fmt.Errorf("unexpected recoveryLine matching speed: %s", recoveryLine)
+	if errCond == nil {
+		matches = recoveryLineSpeedRE.FindStringSubmatch(recoveryLine)
+		if len(matches) != 2 {
+			errCond := fmt.Errorf("unexpected recoveryLine matching speed: %s", recoveryLine)
+		}
 	}
-	speed, err = strconv.ParseFloat(matches[1], 64)
-	if err != nil {
-		return syncedBlocks, pct, finish, 0, fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
+	if errCond == nil {
+		speed, err = strconv.ParseFloat(matches[1], 64)
+		if err != nil {
+			errCond := fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
+		}
 	}
-
-	return syncedBlocks, pct, finish, speed, nil
+	return syncedBlocks, pct, finish, speed, errCond
 }
 
 func evalComponentDevices(deviceFields []string) string {
