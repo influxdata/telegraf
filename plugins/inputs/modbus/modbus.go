@@ -316,6 +316,7 @@ func (m *Modbus) gatherFields() error {
 
 func (m *Modbus) gatherRequestsCoil(requests []request) error {
 	for _, request := range requests {
+		m.Log.Debugf("trying to read coil@%v[%v]...", request.address, request.length)
 		bytes, err := m.client.ReadCoils(request.address, request.length)
 		if err != nil {
 			return err
@@ -337,6 +338,7 @@ func (m *Modbus) gatherRequestsCoil(requests []request) error {
 
 func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
 	for _, request := range requests {
+		m.Log.Debugf("trying to read discrete@%v[%v]...", request.address, request.length)
 		bytes, err := m.client.ReadDiscreteInputs(request.address, request.length)
 		if err != nil {
 			return err
@@ -358,6 +360,7 @@ func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
 
 func (m *Modbus) gatherRequestsHolding(requests []request) error {
 	for _, request := range requests {
+		m.Log.Debugf("trying to read holding@%v[%v]...", request.address, request.length)
 		bytes, err := m.client.ReadHoldingRegisters(request.address, request.length)
 		if err != nil {
 			return err
@@ -380,6 +383,7 @@ func (m *Modbus) gatherRequestsHolding(requests []request) error {
 
 func (m *Modbus) gatherRequestsInput(requests []request) error {
 	for _, request := range requests {
+		m.Log.Debugf("trying to read input@%v[%v]...", request.address, request.length)
 		bytes, err := m.client.ReadInputRegisters(request.address, request.length)
 		if err != nil {
 			return err
