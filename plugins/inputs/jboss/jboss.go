@@ -300,8 +300,8 @@ func (h *JBoss) getServersOnHost(
 						}
 					case "web_con":
 						h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "ajp")
-                                                h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "http")
-                                                h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "https")
+						h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "http")
+						h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "https")
 					case "deployment":
 						h.getServerDeploymentStatistics(acc, serverURL, execAsDomain, host, server)
 					case "database":
@@ -555,9 +555,9 @@ func getPoolFields(pool DBPoolStatistics) map[string]interface{} {
 		retmap["in-use-count"], _ = strconv.ParseInt(pool.InUseCount.(string), 10, 64)
 		retmap["active-count"], _ = strconv.ParseInt(pool.ActiveCount.(string), 10, 64)
 		retmap["available-count"], _ = strconv.ParseInt(pool.AvailableCount.(string), 10, 64)
-//	case float64:
-//		retmap["in-use-count"] = int(pool.InUseCount.(float64))
-//		retmap["active-count"] = int(pool.ActiveCount.(float64))
+		//	case float64:
+		//		retmap["in-use-count"] = int(pool.InUseCount.(float64))
+		//		retmap["active-count"] = int(pool.ActiveCount.(float64))
 		retmap["available-count"] = int(pool.AvailableCount.(float64))
 	default:
 		retmap["in-use-count"] = pool.InUseCount
@@ -776,6 +776,13 @@ func (h *JBoss) getJVMStatistics(
 			nonHeap := mem["non-heap-memory-usage"].(map[string]interface{})
 			h.flatten(heap, fields, "heap")
 			h.flatten(nonHeap, fields, "nonheap")
+		case "memory-pool":
+			mp := value.(map[string]interface{})
+			mpName := mp["name"].(map[string]interface{})
+			for mpType, mpVal := range mpName {
+				object := mpVal.(map[string]interface{})
+				h.flatten(object["usage"].(map[string]interface{}), fields, mpType)
+			}
 		case "garbage-collector":
 			gc := value.(map[string]interface{})
 			gcName := gc["name"].(map[string]interface{})
@@ -783,6 +790,14 @@ func (h *JBoss) getJVMStatistics(
 				object := gcVal.(map[string]interface{})
 				fields[gcType+"_count"] = object["collection-count"]
 				fields[gcType+"_time"] = object["collection-time"]
+			}
+		case "buffer-pool":
+			bp := value.(map[string]interface{})
+			bpName := bp["name"].(map[string]interface{})
+			for bpType, bpVal := range bpName {
+				object := bpVal.(map[string]interface{})
+				fields["buffer_"+bpType+"_count"] = object["count"]
+				fields["buffer_"+bpType+"_used"] = object["memory-used"]
 			}
 		}
 	}
@@ -1151,7 +1166,7 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 		h.Log.Errorf("JBoss Error: %s", err)
 		return nil, err
 	}
-
+	h.Log.Debugf("Resp: %s", body)
 	return []byte(body), nil
 }
 
