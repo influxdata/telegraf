@@ -116,7 +116,7 @@ func evalStatusLine(deviceLine, statusLineStr string) statusLine {
 			err: fmt.Errorf("unexpected statusLine %q: %w", statusLineStr, err)}
 	}
 
-	return statusLine{active: active, total: total, size: size, nil}
+	return statusLine{active: active, total: total, size: size, err: nil}
 }
 
 func evalRecoveryLine(recoveryLineStr string) recoveryLine {
@@ -167,7 +167,7 @@ func evalRecoveryLine(recoveryLineStr string) recoveryLine {
 		return recoveryLine{syncedBlocks: syncedBlocks, pct: pct, finish: finish, speed: 0,
 			err: fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLineStr, err)}
 	}
-	return recoveryLine{syncedBlocks: syncedBlocks, pct: pct, finish: finish, speed: speed, nil}
+	return recoveryLine{syncedBlocks: syncedBlocks, pct: pct, finish: finish, speed: speed, err: nil}
 }
 
 func evalComponentDevices(deviceFields []string) string {
