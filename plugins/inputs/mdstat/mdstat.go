@@ -100,7 +100,7 @@ func evalStatusLine(deviceLine, statusLineStr string) statusLine {
 		return statusLine{active: 0, total: 0, size: size, err: nil}
 	}
 
-	matches := statusLineRE.FindStringSubmatch(statusLine)
+	matches := statusLineRE.FindStringSubmatch(statusLineStr)
 	if len(matches) != 4 {
 		return statusLine{active: 0, total: 0, size: size,
 			err: fmt.Errorf("couldn't find all the substring matches: %s", statusLineStr)}
