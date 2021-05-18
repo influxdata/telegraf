@@ -19,7 +19,7 @@ type Parser struct {
 	Log         telegraf.Logger
 	TimeFunc    func() time.Time
 
-	metricName string
+	measurementName string
 
 	// For objects
 	iterateObjects bool
@@ -31,9 +31,10 @@ type Parser struct {
 }
 
 type Config struct {
-	MetricName         string
-	UniformCollections []UniformCollection
-	ObjectSelections   []ObjectSelection
+	DefaultMeasurementName string
+	MeasurementNameQuery   string
+	UniformCollections     []UniformCollection
+	ObjectSelections       []ObjectSelection
 }
 
 type UniformCollection struct {
@@ -73,15 +74,21 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 
 	var metrics []telegraf.Metric
 
-	for _, config := range p.Configs {
-		p.metricName = config.MetricName
+	for _, c := range p.Configs {
+		p.measurementName = c.DefaultMeasurementName
+		if c.MeasurementNameQuery != "" {
+			result := gjson.GetBytes(input, c.MeasurementNameQuery)
+			if !result.IsArray() && !result.IsObject() {
+				p.measurementName = result.String()
+			}
+		}
 
-		uniformCollection, err := p.processUniformCollections(config.UniformCollections, input)
+		uniformCollection, err := p.processUniformCollections(c.UniformCollections, input)
 		if err != nil {
 			return nil, err
 		}
 
-		objectMetrics, err := p.processObjectSelections(config.ObjectSelections, input)
+		objectMetrics, err := p.processObjectSelections(c.ObjectSelections, input)
 		if err != nil {
 			return nil, err
 		}
@@ -127,14 +134,14 @@ func (p *Parser) processUniformCollections(uniformCollection []UniformCollection
 			continue
 		}
 
+		if config.SetType != "" && config.SetType != "tag" && config.SetType != "field" {
+			p.Log.Debugf("set_type was defined as %v, it can only be configured to 'tag' or 'field'", config.SetType)
+		}
+
 		setType := "tag"
 		if config.SetType != "tag" {
 			FieldExists = true
 			setType = "field"
-		}
-
-		if config.SetType != "tag" && config.SetType != "field" {
-			p.Log.Debugf("set_type was defined as %v, it can only be configured to 'tag' or 'field'", config.SetType)
 		}
 
 		setName := config.Name
@@ -148,7 +155,7 @@ func (p *Parser) processUniformCollections(uniformCollection []UniformCollection
 			SetName:     setName,
 			DesiredType: config.ValueType,
 			Metric: metric.New(
-				p.metricName,
+				p.measurementName,
 				map[string]string{},
 				map[string]interface{}{},
 				p.TimeFunc(),
@@ -221,7 +228,7 @@ func (p *Parser) expandArray(result MetricNode, setType string) ([]MetricNode, e
 		var err error
 		result.ForEach(func(_, val gjson.Result) bool {
 			m := metric.New(
-				p.metricName,
+				p.measurementName,
 				map[string]string{},
 				map[string]interface{}{},
 				p.TimeFunc(),
@@ -316,7 +323,7 @@ func (p *Parser) processObjectSelections(objectSelections []ObjectSelection, inp
 		rootObject := MetricNode{
 			SetName: fieldName,
 			Metric: metric.New(
-				p.metricName,
+				p.measurementName,
 				map[string]string{},
 				map[string]interface{}{},
 				p.TimeFunc(),

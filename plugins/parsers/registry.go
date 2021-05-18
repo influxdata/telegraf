@@ -411,7 +411,8 @@ func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs [
 func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
 	configs := make([]json_v2.Config, len(jsonv2config))
 	for i, cfg := range jsonv2config {
-		configs[i].MetricName = cfg.MetricName
+		configs[i].MeasurementNameQuery = cfg.MeasurementNameQuery
+		configs[i].DefaultMeasurementName = cfg.DefaultMeasurementName
 		configs[i].UniformCollections = cfg.UniformCollections
 		configs[i].ObjectSelections = cfg.ObjectSelections
 	}

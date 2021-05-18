@@ -1394,10 +1394,8 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 			pc.JSONV2Config = make([]parsers.JSONV2Config, len(subtbls))
 			for i, subtbl := range subtbls {
 				subcfg := pc.JSONV2Config[i]
-				c.getFieldString(subtbl, "metric_name", &subcfg.MetricName)
-				if subcfg.MetricName == "" {
-					subcfg.MetricName = name
-				}
+				c.getFieldString(subtbl, "measurement_name_query", &subcfg.MeasurementNameQuery)
+				subcfg.DefaultMeasurementName = name
 
 				if subnode, ok := subtbl.Fields["uniform_collection"]; ok {
 					if subsubtbls, ok := subnode.([]*ast.Table); ok {

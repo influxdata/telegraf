@@ -53,6 +53,10 @@ func TestData(t *testing.T) {
 			name: "Test multiple arrays in object",
 			test: "multiple_arrays_in_object",
 		},
+		{
+			name: "Test query for measurement name",
+			test: "measurement_name",
+		},
 	}
 
 	for _, tc := range tests {

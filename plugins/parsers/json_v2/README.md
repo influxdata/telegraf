@@ -1,12 +1,10 @@
-# Enhanced JSON Parser
+# JSON Parser - Version 2
 
-THIS PARSER IS STILL A WORK IN PROGRESS
-
-This new JSON Parser is parses JSON into metric fields using [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md). This parser is designed to be more flexible then the previous implementation. The reason this is a separate parser is ensure backwards compatibility and allow users to migrate overtime to this new parser.
+This parser takes valid JSON input and turns it into metrics. The goals for this parser is to gracefully handle arrays/objects and provide more flexbility in gathering tags/fields. The query syntax supported is still [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md), but with the new configuration options you will have an easier time gathering metrics.
 
 ## Configuration
 
-By setting the data_format to `json_v2` this parser will be used. You can then define what fields and tags you want by defining sub-sections such as so:
+By setting the data_format to `json_v2` this parser will be used. You can then define what fields and tags you want by defining sub-tables such as so:
 
 ```toml
 [[inputs.file]]
@@ -19,21 +17,27 @@ data_format = "json_v2"
                 query = "books"
 ```
 
-The configuration options for this parser has been separated into two different types, `uniform_collection` and `object_selection`. These types are described in more detail below.
+The following keys can be set for the root configuration section:
+
+* **measurement_name_query (OPTIONAL)**: You can define a query with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md) to set a measurement name from the JSON input. The query must return a single data value or it will use the default measurement name. This query is completely independent from the queries in `uniform_collection` or `object_Selection`.
+
+The query configuration options for this parser has been separated into two different sections, `uniform_collection` and `object_selection`.
 
 ### uniform_collection
 
-To explicitly gather fields from basic types (string, int bool) and non-object array's (supports nested non-object array's), you need to use the configuration `uniform_collection`. If the query you provides returns any objects (nested or directly) they will be ignored and not show up in the resulting metrics.
+With the configuration section `uniform_collection`, you can gather a collection of metrics from "uniform" data. The definition of "uniform" data is data which all share the same type and name. This can either be a single value or an array of values, but can't be an object (any objects found will be ignored, a debug log will be created if this happens). Any valid JSON type is supported (string,int,bool) and if possible can be converted to another type (string,int,float,bool), read the section [Types](#Types) to see what type conversion is supported.
+
 The following keys can be set for `uniform_collection`:
 
-* **query (REQUIRED)**: You must define the path query that gathers the object with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md)
+* **query (REQUIRED)**: You must define the path query that gathers the object with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md).
 * **name (OPTIONAL)**: You can define a string value to set the field name. If not defined it will use the trailing word from the provided query.
 * **value_type (OPTIONAL)**: You can define a string value to set the desired type (int, bool, string, float). If not defined it won't enforce a type and default to using the original type defined in the JSON (bool, float64, or string).
 * **set_type (OPTIONAL)**: Can be the string "field" or "tag"
 
 ### object_selection
 
-To explicitly gather fields from objects (supports nested arrays/objects and basic types), you need to use the configuration `object_selection`.
+With the configuration section `object_selection`, you can gather metrics from objects. The data doesn't have to be "uniform" and can contain multiple types.
+
 The following keys can be set for `object_selection`:
 
 * **query (REQUIRED)**: You must define the path query that gathers the object with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md)
@@ -59,7 +63,7 @@ data_format = "json_v2"
                 query = "books"
 ```
 
-This will ensure that the queried data isn't combined and will be outputted separately. Otherwise, all `uniform_collection` and `object_selection` under a `json_v2` subsection will be merged into a single metric.
+This will ensure that the queried data isn't combined and will be outputted separately. Otherwise, all `uniform_collection` and `object_selection` under a `json_v2` subsections will be merged.
 
 ## Arrays and Objects
 
@@ -69,48 +73,60 @@ The following describes the high-level approach when parsing arrays and objects:
 
 **Object**: Every key/value in a object is treated as a *single* metric
 
-When handling nested arrays and objects, these above rules continue to apply as the parser creates metrics. Below you can see an example of this behavior, with an input json containing an array of book objects that has a nested array of characters.
+When handling nested arrays and objects, these above rules continue to apply as the parser creates metrics. When an object has multiple array's as values, the array's will become separate metrics containing only non-array values from the obejct. Below you can see an example of this behavior, with an input json containing an array of book objects that has a nested array of characters.
 
 Example JSON:
 
 ```json
 {
-    "book": [
-        {
-            "title": "Sword of Honour",
-            "author": "Evelyn Waugh"
-        },
-        {
-            "title": "The Lord of the Rings",
-            "author": "J. R. R. Tolkien",
-            "characters": [
-                "Bilbo",
-                "Frodo"
-            ]
-        }
-    ]
+    "book": {
+        "title": "The Lord Of The Rings",
+        "chapters": [
+            "A Long-expected Party",
+            "The Shadow of the Past"
+        ],
+        "author": "Tolkien",
+        "characters": [
+            {
+                "name": "Bilbo",
+                "species": "hobbit"
+            },
+            {
+                "name": "Frodo",
+                "species": "hobbit"
+            }
+        ],
+        "random": [
+            1,
+            2
+        ]
+    }
 }
+
 ```
 
 Example configuration:
 
 ```toml
 [[inputs.file]]
-files = ["input.json"]
+files = ["./testdata/multiple_arrays_in_object/input.json"]
 data_format = "json_v2"
         [[inputs.file.json_v2]]
             [[inputs.file.json_v2.object_selection]]
-                query = "books"
+            query = "book"
+            tag_list = ["title"]
 ```
 
 Expected metrics:
 
 ```
-file,host=test title="Sword of Honour",author="Evelyn Waugh" 1596294243000000000
-file,host=test title="The Lord of the Rings",author="J. R. R. Tolkien",characters="Bilbo",chapter=1 1596294243000000000
-file,host=test title="The Lord of the Rings",author="J. R. R. Tolkien",characters="Bilbo",chapter=2 1596294243000000000
-file,host=test title="The Lord of the Rings",author="J. R. R. Tolkien",characters="Frodo",chapter=1 1596294243000000000
-file,host=test title="The Lord of the Rings",author="J. R. R. Tolkien",characters="Frodo",chapter=2 1596294243000000000
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="A Long-expected Party"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="The Shadow of the Past"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",name="Bilbo",species="hobbit"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",name="Frodo",species="hobbit"
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",random=1
+file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",random=2
+
 ```
 
 You can find more complicated examples under the folder `testdata`.
