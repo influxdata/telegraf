@@ -9,8 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // remap uri to json file, eg: /v3/kafka -> ./testdata/v3_kafka.json
@@ -49,7 +50,7 @@ func getHTTPServerBasicAuth() *httptest.Server {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 
 		username, password, authOK := r.BasicAuth()
-		if authOK == false {
+		if !authOK {
 			http.Error(w, "Not authorized", 401)
 			return
 		}

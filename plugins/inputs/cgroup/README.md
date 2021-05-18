@@ -44,12 +44,19 @@ All measurements have the following tags:
 ### Configuration:
 
 ```toml
+# Read specific statistics per cgroup
 # [[inputs.cgroup]]
+  ## Directories in which to look for files, globs are supported.
+  ## Consider restricting paths to the set of cgroups you really
+  ## want to monitor if you have a large number of cgroups, to avoid
+  ## any cardinality issues.
   # paths = [
-  #   "/sys/fs/cgroup/memory",           # root cgroup
-  #   "/sys/fs/cgroup/memory/child1",    # container cgroup
-  #   "/sys/fs/cgroup/memory/child2/*",  # all children cgroups under child2, but not child2 itself
+  #   "/sys/fs/cgroup/memory",
+  #   "/sys/fs/cgroup/memory/child1",
+  #   "/sys/fs/cgroup/memory/child2/*",
   # ]
+  ## cgroup stat fields, as file names, globs are supported.
+  ## these file names are appended to each path from above.
   # files = ["memory.*usage*", "memory.limit_in_bytes"]
 ```
 
