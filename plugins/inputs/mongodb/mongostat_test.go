@@ -9,7 +9,6 @@ import (
 )
 
 func TestLatencyStats(t *testing.T) {
-
 	sl := NewStatLine(
 		MongoStatus{
 			ServerStatus: &ServerStatus{
@@ -65,7 +64,6 @@ func TestLatencyStats(t *testing.T) {
 }
 
 func TestLatencyStatsDiffZero(t *testing.T) {
-
 	sl := NewStatLine(
 		MongoStatus{
 			ServerStatus: &ServerStatus{
@@ -135,7 +133,6 @@ func TestLatencyStatsDiffZero(t *testing.T) {
 }
 
 func TestLatencyStatsDiff(t *testing.T) {
-
 	sl := NewStatLine(
 		MongoStatus{
 			ServerStatus: &ServerStatus{

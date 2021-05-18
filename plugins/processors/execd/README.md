@@ -23,7 +23,7 @@ Telegraf minimum version: Telegraf 1.15.0
 ### Configuration:
 
 ```toml
-[[processor.execd]]
+[[processors.execd]]
   ## One program to run as daemon.
   ## NOTE: process and each argument should each be their own string
   ## eg: command = ["/path/to/your_program", "arg1", "arg2"]
@@ -103,7 +103,7 @@ to run it, you'd build the binary using go, eg `go build -o multiplier.exe main.
   command = ["multiplier.exe"]
 ```
 
-#### Ruby daemon using SIGHUP
+#### Ruby daemon
 
 - See [Ruby daemon](./examples/multiplier_line_protocol/multiplier_line_protocol.rb)
 

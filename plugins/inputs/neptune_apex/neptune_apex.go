@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -51,7 +51,7 @@ type outlet struct {
 // NeptuneApex implements telegraf.Input.
 type NeptuneApex struct {
 	Servers         []string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	httpClient      *http.Client
 }
 

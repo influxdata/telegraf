@@ -108,7 +108,6 @@ var sampleConfig = `
 
 // Init parse all source URLs and place on the Marklogic struct
 func (c *Marklogic) Init() error {
-
 	if len(c.URL) == 0 {
 		c.URL = "http://localhost:8002/"
 	}
@@ -220,7 +219,7 @@ func (c *Marklogic) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: time.Duration(5 * time.Second),
+		Timeout: 5 * time.Second,
 	}
 
 	return client, nil
@@ -246,11 +245,7 @@ func (c *Marklogic) gatherJSONData(url string, v interface{}) error {
 			response.StatusCode, http.StatusOK)
 	}
 
-	if err = json.NewDecoder(response.Body).Decode(v); err != nil {
-		return err
-	}
-
-	return nil
+	return json.NewDecoder(response.Body).Decode(v)
 }
 
 func init() {

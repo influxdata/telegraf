@@ -5,18 +5,48 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
+
+var (
+	testdataDir = getTestdataDir()
+)
+
+func NewTestTail() *Tail {
+	offsetsMutex.Lock()
+	offsetsCopy := make(map[string]int64, len(offsets))
+	for k, v := range offsets {
+		offsetsCopy[k] = v
+	}
+	offsetsMutex.Unlock()
+	watchMethod := defaultWatchMethod
+
+	if runtime.GOOS == "windows" {
+		watchMethod = "poll"
+	}
+
+	return &Tail{
+		FromBeginning:       false,
+		MaxUndeliveredLines: 1000,
+		offsets:             offsetsCopy,
+		WatchMethod:         watchMethod,
+		PathTag:             "path",
+	}
+}
 
 func TestTailBadLine(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
@@ -30,12 +60,12 @@ func TestTailBadLine(t *testing.T) {
 	_, err = tmpfile.WriteString("cpu usage_idle=100\n")
 	require.NoError(t, err)
 
-	tmpfile.Close()
+	require.NoError(t, tmpfile.Close())
 
 	buf := &bytes.Buffer{}
 	log.SetOutput(buf)
 
-	tt := NewTail()
+	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
@@ -55,15 +85,15 @@ func TestTailBadLine(t *testing.T) {
 	assert.Contains(t, buf.String(), "Malformed log line")
 }
 
-func TestTailDosLineendings(t *testing.T) {
+func TestTailDosLineEndings(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 	_, err = tmpfile.WriteString("cpu usage_idle=100\r\ncpu2 usage_idle=200\r\n")
 	require.NoError(t, err)
-	tmpfile.Close()
+	require.NoError(t, tmpfile.Close())
 
-	tt := NewTail()
+	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
@@ -88,6 +118,172 @@ func TestTailDosLineendings(t *testing.T) {
 		})
 }
 
+func TestGrokParseLogFilesWithMultiline(t *testing.T) {
+	//we make sure the timeout won't kick in
+	d, _ := time.ParseDuration("100s")
+	duration := config.Duration(d)
+	tt := NewTail()
+	tt.Log = testutil.Logger{}
+	tt.FromBeginning = true
+	tt.Files = []string{filepath.Join(testdataDir, "test_multiline.log")}
+	tt.MultilineConfig = MultilineConfig{
+		Pattern:        `^[^\[]`,
+		MatchWhichLine: Previous,
+		InvertMatch:    false,
+		Timeout:        &duration,
+	}
+	tt.SetParserFunc(createGrokParser)
+
+	err := tt.Init()
+	require.NoError(t, err)
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
+
+	acc.Wait(3)
+
+	expectedPath := filepath.Join(testdataDir, "test_multiline.log")
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is debug",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "DEBUG",
+		})
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is info",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "INFO",
+		})
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: Sorry, something wrong! java.lang.ArithmeticException: / by zero\tat com.foo.HelloExample2.divide(HelloExample2.java:24)\tat com.foo.HelloExample2.main(HelloExample2.java:14)",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "ERROR",
+		})
+
+	assert.Equal(t, uint64(3), acc.NMetrics())
+}
+
+func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
+	tmpfile, err := ioutil.TempFile("", "")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	// This seems necessary in order to get the test to read the following lines.
+	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] INFO HelloExample: This is fluff\r\n")
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Sync())
+
+	// set tight timeout for tests
+	d := 10 * time.Millisecond
+	duration := config.Duration(d)
+	tt := NewTail()
+
+	tt.Log = testutil.Logger{}
+	tt.FromBeginning = true
+	tt.Files = []string{tmpfile.Name()}
+	tt.MultilineConfig = MultilineConfig{
+		Pattern:        `^[^\[]`,
+		MatchWhichLine: Previous,
+		InvertMatch:    false,
+		Timeout:        &duration,
+	}
+	tt.SetParserFunc(createGrokParser)
+
+	err = tt.Init()
+	require.NoError(t, err)
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, tt.Start(&acc))
+	time.Sleep(11 * time.Millisecond) // will force timeout
+	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] INFO HelloExample: This is info\r\n")
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Sync())
+	acc.Wait(2)
+	time.Sleep(11 * time.Millisecond) // will force timeout
+	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] WARN HelloExample: This is warn\r\n")
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Sync())
+	acc.Wait(3)
+	tt.Stop()
+	assert.Equal(t, uint64(3), acc.NMetrics())
+	expectedPath := tmpfile.Name()
+
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is info",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "INFO",
+		})
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is warn",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "WARN",
+		})
+}
+
+func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *testing.T) {
+	//we make sure the timeout won't kick in
+	duration := config.Duration(100 * time.Second)
+
+	tt := NewTestTail()
+	tt.Log = testutil.Logger{}
+	tt.FromBeginning = true
+	tt.Files = []string{filepath.Join(testdataDir, "test_multiline.log")}
+	tt.MultilineConfig = MultilineConfig{
+		Pattern:        `^[^\[]`,
+		MatchWhichLine: Previous,
+		InvertMatch:    false,
+		Timeout:        &duration,
+	}
+	tt.SetParserFunc(createGrokParser)
+
+	err := tt.Init()
+	require.NoError(t, err)
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, tt.Start(&acc))
+	acc.Wait(3)
+	assert.Equal(t, uint64(3), acc.NMetrics())
+	// Close tailer, so multiline buffer is flushed
+	tt.Stop()
+	acc.Wait(4)
+
+	expectedPath := filepath.Join(testdataDir, "test_multiline.log")
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is warn",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "WARN",
+		})
+}
+
+func createGrokParser() (parsers.Parser, error) {
+	grokConfig := &parsers.Config{
+		MetricName:             "tail_grok",
+		GrokPatterns:           []string{"%{TEST_LOG_MULTILINE}"},
+		GrokCustomPatternFiles: []string{filepath.Join(testdataDir, "test-patterns")},
+		DataFormat:             "grok",
+	}
+	parser, err := parsers.NewParser(grokConfig)
+	return parser, err
+}
+
 // The csv parser should only parse the header line once per file.
 func TestCSVHeadersParsedOnce(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
@@ -100,9 +296,9 @@ cpu,42
 cpu,42
 `)
 	require.NoError(t, err)
-	tmpfile.Close()
+	require.NoError(t, tmpfile.Close())
 
-	plugin := NewTail()
+	plugin := NewTestTail()
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
@@ -157,12 +353,13 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 [{"time_idle": 42}, {"time_idle": 42}]
 `)
 	require.NoError(t, err)
-	tmpfile.Close()
+	require.NoError(t, tmpfile.Close())
 
-	plugin := NewTail()
+	plugin := NewTestTail()
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
+	plugin.PathTag = "customPathTagMyFile"
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
 		return json.New(
 			&json.Config{
@@ -185,7 +382,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	expected := []telegraf.Metric{
 		testutil.MustMetric("cpu",
 			map[string]string{
-				"path": tmpfile.Name(),
+				"customPathTagMyFile": tmpfile.Name(),
 			},
 			map[string]interface{}{
 				"time_idle": 42.0,
@@ -193,7 +390,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 			time.Unix(0, 0)),
 		testutil.MustMetric("cpu",
 			map[string]string{
-				"path": tmpfile.Name(),
+				"customPathTagMyFile": tmpfile.Name(),
 			},
 			map[string]interface{}{
 				"time_idle": 42.0,
@@ -262,7 +459,7 @@ func TestCharacterEncoding(t *testing.T) {
 		{
 			name: "utf-8",
 			plugin: &Tail{
-				Files:               []string{"testdata/cpu-utf-8.influx"},
+				Files:               []string{filepath.Join(testdataDir, "cpu-utf-8.influx")},
 				FromBeginning:       true,
 				MaxUndeliveredLines: 1000,
 				Log:                 testutil.Logger{},
@@ -273,7 +470,7 @@ func TestCharacterEncoding(t *testing.T) {
 		{
 			name: "utf-8 seek",
 			plugin: &Tail{
-				Files:               []string{"testdata/cpu-utf-8.influx"},
+				Files:               []string{filepath.Join(testdataDir, "cpu-utf-8.influx")},
 				MaxUndeliveredLines: 1000,
 				Log:                 testutil.Logger{},
 				CharacterEncoding:   "utf-8",
@@ -284,7 +481,7 @@ func TestCharacterEncoding(t *testing.T) {
 		{
 			name: "utf-16le",
 			plugin: &Tail{
-				Files:               []string{"testdata/cpu-utf-16le.influx"},
+				Files:               []string{filepath.Join(testdataDir, "cpu-utf-16le.influx")},
 				FromBeginning:       true,
 				MaxUndeliveredLines: 1000,
 				Log:                 testutil.Logger{},
@@ -295,7 +492,7 @@ func TestCharacterEncoding(t *testing.T) {
 		{
 			name: "utf-16le seek",
 			plugin: &Tail{
-				Files:               []string{"testdata/cpu-utf-16le.influx"},
+				Files:               []string{filepath.Join(testdataDir, "cpu-utf-16le.influx")},
 				MaxUndeliveredLines: 1000,
 				Log:                 testutil.Logger{},
 				CharacterEncoding:   "utf-16le",
@@ -306,7 +503,7 @@ func TestCharacterEncoding(t *testing.T) {
 		{
 			name: "utf-16be",
 			plugin: &Tail{
-				Files:               []string{"testdata/cpu-utf-16be.influx"},
+				Files:               []string{filepath.Join(testdataDir, "cpu-utf-16be.influx")},
 				FromBeginning:       true,
 				MaxUndeliveredLines: 1000,
 				Log:                 testutil.Logger{},
@@ -356,7 +553,7 @@ func TestTailEOF(t *testing.T) {
 	err = tmpfile.Sync()
 	require.NoError(t, err)
 
-	tt := NewTail()
+	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
@@ -389,4 +586,14 @@ func TestTailEOF(t *testing.T) {
 
 	err = tmpfile.Close()
 	require.NoError(t, err)
+}
+
+func getTestdataDir() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		// if we cannot even establish the test directory, further progress is meaningless
+		panic(err)
+	}
+
+	return filepath.Join(dir, "testdata")
 }

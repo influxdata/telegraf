@@ -1,4 +1,4 @@
-// Helper functions copied from
+// Package docker contains few helper functions copied from
 // https://github.com/docker/cli/blob/master/cli/command/container/stats_helpers.go
 package docker
 

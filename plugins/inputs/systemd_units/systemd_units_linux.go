@@ -9,25 +9,26 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // SystemdUnits is a telegraf plugin to gather systemd unit status
 type SystemdUnits struct {
-	Timeout   internal.Duration
+	Timeout   config.Duration
 	UnitType  string `toml:"unittype"`
 	systemctl systemctl
 }
 
-type systemctl func(Timeout internal.Duration, UnitType string) (*bytes.Buffer, error)
+type systemctl func(timeout config.Duration, unitType string) (*bytes.Buffer, error)
 
 const measurement = "systemd_units"
 
 // Below are mappings of systemd state tables as defined in
 // https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c
 // Duplicate strings are removed from this list.
-var load_map = map[string]int{
+var loadMap = map[string]int{
 	"loaded":      0,
 	"stub":        1,
 	"not-found":   2,
@@ -37,7 +38,7 @@ var load_map = map[string]int{
 	"masked":      6,
 }
 
-var active_map = map[string]int{
+var activeMap = map[string]int{
 	"active":       0,
 	"reloading":    1,
 	"inactive":     2,
@@ -46,7 +47,7 @@ var active_map = map[string]int{
 	"deactivating": 5,
 }
 
-var sub_map = map[string]int{
+var subMap = map[string]int{
 	// service_state_table, offset 0x0000
 	"running":       0x0000,
 	"dead":          0x0001,
@@ -112,7 +113,7 @@ var sub_map = map[string]int{
 }
 
 var (
-	defaultTimeout  = internal.Duration{Duration: time.Second}
+	defaultTimeout  = config.Duration(time.Second)
 	defaultUnitType = "service"
 )
 
@@ -162,27 +163,27 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 		}
 
 		var (
-			load_code   int
-			active_code int
-			sub_code    int
-			ok          bool
+			loadCode   int
+			activeCode int
+			subCode    int
+			ok         bool
 		)
-		if load_code, ok = load_map[load]; !ok {
+		if loadCode, ok = loadMap[load]; !ok {
 			acc.AddError(fmt.Errorf("Error parsing field 'load', value not in map: %s", load))
 			continue
 		}
-		if active_code, ok = active_map[active]; !ok {
+		if activeCode, ok = activeMap[active]; !ok {
 			acc.AddError(fmt.Errorf("Error parsing field 'active', value not in map: %s", active))
 			continue
 		}
-		if sub_code, ok = sub_map[sub]; !ok {
+		if subCode, ok = subMap[sub]; !ok {
 			acc.AddError(fmt.Errorf("Error parsing field 'sub', value not in map: %s", sub))
 			continue
 		}
 		fields := map[string]interface{}{
-			"load_code":   load_code,
-			"active_code": active_code,
-			"sub_code":    sub_code,
+			"load_code":   loadCode,
+			"active_code": activeCode,
+			"sub_code":    subCode,
 		}
 
 		acc.AddFields(measurement, fields, tags)
@@ -191,20 +192,20 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func setSystemctl(Timeout internal.Duration, UnitType string) (*bytes.Buffer, error) {
+func setSystemctl(timeout config.Duration, unitType string) (*bytes.Buffer, error) {
 	// is systemctl available ?
 	systemctlPath, err := exec.LookPath("systemctl")
 	if err != nil {
 		return nil, err
 	}
 
-	cmd := exec.Command(systemctlPath, "list-units", "--all", fmt.Sprintf("--type=%s", UnitType), "--no-legend")
+	cmd := exec.Command(systemctlPath, "list-units", "--all", "--plain", fmt.Sprintf("--type=%s", unitType), "--no-legend")
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err = internal.RunTimeout(cmd, Timeout.Duration)
+	err = internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
-		return &out, fmt.Errorf("error running systemctl list-units --all --type=%s --no-legend: %s", UnitType, err)
+		return &out, fmt.Errorf("error running systemctl list-units --all --plain --type=%s --no-legend: %s", unitType, err)
 	}
 
 	return &out, nil

@@ -1,12 +1,13 @@
 package proxmox
 
 import (
-	"github.com/bmizerany/assert"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/bmizerany/assert"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 var nodeSearchDomainTestData = `{"data":{"search":"test.example.com","dns1":"1.0.0.1"}}`
@@ -14,20 +15,26 @@ var qemuTestData = `{"data":[{"name":"qemu1","status":"running","maxdisk":107374
 var qemuConfigTestData = `{"data":{"hostname":"qemu1","searchdomain":"test.example.com"}}`
 var lxcTestData = `{"data":[{"vmid":"111","type":"lxc","uptime":2078164,"swap":9412608,"disk":"744189952","maxmem":536870912,"mem":98500608,"maxswap":536870912,"cpu":0.00371567669193613,"status":"running","maxdisk":"5217320960","name":"container1"}]}`
 var lxcConfigTestData = `{"data":{"hostname":"container1","searchdomain":"test.example.com"}}`
+var lxcCurrentStatusTestData = `{"data":{"vmid":"111","type":"lxc","uptime":2078164,"swap":9412608,"disk":"744189952","maxmem":536870912,"mem":98500608,"maxswap":536870912,"cpu":0.00371567669193613,"status":"running","maxdisk":"5217320960","name":"container1"}}`
+var qemuCurrentStatusTestData = `{"data":{"name":"qemu1","status":"running","maxdisk":10737418240,"cpu":0.029336643550795,"vmid":"113","uptime":2159739,"disk":0,"maxmem":2147483648,"mem":1722451796}}`
 
-func performTestRequest(px *Proxmox, apiUrl string, method string, data url.Values) ([]byte, error) {
+func performTestRequest(_ *Proxmox, apiURL string, _ string, _ url.Values) ([]byte, error) {
 	var bytedata = []byte("")
 
-	if strings.HasSuffix(apiUrl, "dns") {
+	if strings.HasSuffix(apiURL, "dns") {
 		bytedata = []byte(nodeSearchDomainTestData)
-	} else if strings.HasSuffix(apiUrl, "qemu") {
+	} else if strings.HasSuffix(apiURL, "qemu") {
 		bytedata = []byte(qemuTestData)
-	} else if strings.HasSuffix(apiUrl, "113/config") {
+	} else if strings.HasSuffix(apiURL, "113/config") {
 		bytedata = []byte(qemuConfigTestData)
-	} else if strings.HasSuffix(apiUrl, "lxc") {
+	} else if strings.HasSuffix(apiURL, "lxc") {
 		bytedata = []byte(lxcTestData)
-	} else if strings.HasSuffix(apiUrl, "111/config") {
+	} else if strings.HasSuffix(apiURL, "111/config") {
 		bytedata = []byte(lxcConfigTestData)
+	} else if strings.HasSuffix(apiURL, "111/status/current") {
+		bytedata = []byte(lxcCurrentStatusTestData)
+	} else if strings.HasSuffix(apiURL, "113/status/current") {
+		bytedata = []byte(qemuCurrentStatusTestData)
 	}
 
 	return bytedata, nil
@@ -36,12 +43,12 @@ func performTestRequest(px *Proxmox, apiUrl string, method string, data url.Valu
 func setUp(t *testing.T) *Proxmox {
 	px := &Proxmox{
 		requestFunction: performTestRequest,
+		NodeName:        "testnode",
 	}
 
 	require.NoError(t, px.Init())
 
-	// Override hostname and logger for test
-	px.hostname = "testnode"
+	// Override logger for test
 	px.Log = testutil.Logger{}
 	return px
 }

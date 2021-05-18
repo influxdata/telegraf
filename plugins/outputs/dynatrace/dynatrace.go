@@ -3,10 +3,6 @@ package dynatrace
 import (
 	"bytes"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/common/tls"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -15,25 +11,34 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 const (
-	oneAgentMetricsUrl = "http://127.0.0.1:14499/metrics/ingest"
+	oneAgentMetricsURL   = "http://127.0.0.1:14499/metrics/ingest"
+	dtIngestAPILineLimit = 1000
 )
 
 var (
-	reNameAllowedCharList = regexp.MustCompile("[^A-Za-z0-9.]+")
+	reNameAllowedCharList = regexp.MustCompile("[^A-Za-z0-9.-]+")
 	maxDimKeyLen          = 100
 	maxMetricKeyLen       = 250
 )
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL      string            `toml:"url"`
-	APIToken string            `toml:"api_token"`
-	Prefix   string            `toml:"prefix"`
-	Log      telegraf.Logger   `toml:"-"`
-	Timeout  internal.Duration `toml:"timeout"`
+	URL               string          `toml:"url"`
+	APIToken          string          `toml:"api_token"`
+	Prefix            string          `toml:"prefix"`
+	Log               telegraf.Logger `toml:"-"`
+	Timeout           config.Duration `toml:"timeout"`
+	AddCounterMetrics []string        `toml:"additional_counters"`
+	State             map[string]string
+	SendCounter       int
 
 	tls.ClientConfig
 
@@ -70,6 +75,9 @@ const sampleConfig = `
 
   ## Connection timeout, defaults to "5s" if not set.
   timeout = "5s"
+
+  ## If you want to convert values represented as gauges to counters, add the metric names here
+  additional_counters = [ ]
 `
 
 // Connect Connects the Dynatrace output plugin to the Telegraf stream
@@ -113,6 +121,8 @@ func (d *Dynatrace) normalize(s string, max int) (string, error) {
 		normalizedString = normalizedString[:len(normalizedString)-1]
 	}
 
+	normalizedString = strings.ReplaceAll(normalizedString, "..", "_")
+
 	if len(normalizedString) == 0 {
 		return "", fmt.Errorf("error normalizing the string: %s", s)
 	}
@@ -125,6 +135,7 @@ func (d *Dynatrace) escape(v string) string {
 
 func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 	var buf bytes.Buffer
+	metricCounter := 1
 	var tagb bytes.Buffer
 	if len(metrics) == 0 {
 		return nil
@@ -146,8 +157,9 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				if err != nil {
 					continue
 				}
-				fmt.Fprintf(&tagb, ",%s=%s", strings.ToLower(tagKey), d.escape(metric.Tags()[k]))
-
+				if len(metric.Tags()[k]) > 0 {
+					fmt.Fprintf(&tagb, ",%s=%s", strings.ToLower(tagKey), d.escape(metric.Tags()[k]))
+				}
 			}
 		}
 		if len(metric.Fields()) > 0 {
@@ -188,16 +200,58 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				if err != nil {
 					continue
 				}
-				fmt.Fprintf(&buf, "%s", metricID)
-				// add the tag string
-				fmt.Fprintf(&buf, "%s", tagb.String())
+				// write metric id,tags and value
 
-				// write measured value
-				fmt.Fprintf(&buf, " %v\n", value)
+				metricType := metric.Type()
+				for _, i := range d.AddCounterMetrics {
+					if metric.Name()+"."+metricKey == i {
+						metricType = telegraf.Counter
+					}
+				}
+
+				switch metricType {
+				case telegraf.Counter:
+					var delta float64
+
+					// Check if LastValue exists
+					if lastvalue, ok := d.State[metricID+tagb.String()]; ok {
+						// Convert Strings to Floats
+						floatLastValue, err := strconv.ParseFloat(lastvalue, 32)
+						if err != nil {
+							d.Log.Debugf("Could not parse last value: %s", lastvalue)
+						}
+						floatCurrentValue, err := strconv.ParseFloat(value, 32)
+						if err != nil {
+							d.Log.Debugf("Could not parse current value: %s", value)
+						}
+						if floatCurrentValue >= floatLastValue {
+							delta = floatCurrentValue - floatLastValue
+							fmt.Fprintf(&buf, "%s%s count,delta=%f\n", metricID, tagb.String(), delta)
+						}
+					}
+					d.State[metricID+tagb.String()] = value
+
+				default:
+					fmt.Fprintf(&buf, "%s%s %v\n", metricID, tagb.String(), value)
+				}
+
+				if metricCounter%dtIngestAPILineLimit == 0 {
+					err = d.send(buf.Bytes())
+					if err != nil {
+						return err
+					}
+					buf.Reset()
+				}
+				metricCounter++
 			}
 		}
 	}
+	d.SendCounter++
+	// in typical interval of 10s, we will clean the counter state once in 24h which is 8640 iterations
 
+	if d.SendCounter%8640 == 0 {
+		d.State = make(map[string]string)
+	}
 	return d.send(buf.Bytes())
 }
 
@@ -206,7 +260,7 @@ func (d *Dynatrace) send(msg []byte) error {
 	req, err := http.NewRequest("POST", d.URL, bytes.NewBuffer(msg))
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
-		return fmt.Errorf("Dynatrace error while creating HTTP request:, %s", err.Error())
+		return fmt.Errorf("error while creating HTTP request:, %s", err.Error())
 	}
 	req.Header.Add("Content-Type", "text/plain; charset=UTF-8")
 
@@ -219,13 +273,12 @@ func (d *Dynatrace) send(msg []byte) error {
 	resp, err := d.client.Do(req)
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
-		fmt.Println(req)
-		return fmt.Errorf("Dynatrace error while sending HTTP request:, %s", err.Error())
+		return fmt.Errorf("error while sending HTTP request:, %s", err.Error())
 	}
 	defer resp.Body.Close()
 
 	// print metric line results as info log
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusBadRequest {
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			d.Log.Errorf("Dynatrace error reading response")
@@ -233,18 +286,18 @@ func (d *Dynatrace) send(msg []byte) error {
 		bodyString := string(bodyBytes)
 		d.Log.Debugf("Dynatrace returned: %s", bodyString)
 	} else {
-		return fmt.Errorf("Dynatrace request failed with response code:, %d", resp.StatusCode)
+		return fmt.Errorf("request failed with response code:, %d", resp.StatusCode)
 	}
-
 	return nil
 }
 
 func (d *Dynatrace) Init() error {
+	d.State = make(map[string]string)
 	if len(d.URL) == 0 {
 		d.Log.Infof("Dynatrace URL is empty, defaulting to OneAgent metrics interface")
-		d.URL = oneAgentMetricsUrl
+		d.URL = oneAgentMetricsURL
 	}
-	if d.URL != oneAgentMetricsUrl && len(d.APIToken) == 0 {
+	if d.URL != oneAgentMetricsURL && len(d.APIToken) == 0 {
 		d.Log.Errorf("Dynatrace api_token is a required field for Dynatrace output")
 		return fmt.Errorf("api_token is a required field for Dynatrace output")
 	}
@@ -259,7 +312,7 @@ func (d *Dynatrace) Init() error {
 			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: d.Timeout.Duration,
+		Timeout: time.Duration(d.Timeout),
 	}
 	return nil
 }
@@ -267,7 +320,8 @@ func (d *Dynatrace) Init() error {
 func init() {
 	outputs.Add("dynatrace", func() telegraf.Output {
 		return &Dynatrace{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout:     config.Duration(time.Second * 5),
+			SendCounter: 0,
 		}
 	})
 }

@@ -25,12 +25,12 @@ type Connector interface {
 	Connect() (Connection, error)
 }
 
-func NewConnector(hostname, port, password string) (*connector, error) {
+func newConnector(hostname, port, password string) *connector {
 	return &connector{
 		hostname: hostname,
 		port:     port,
 		password: password,
-	}, nil
+	}
 }
 
 type connector struct {
@@ -58,8 +58,8 @@ func (c *connector) Connect() (Connection, error) {
 	return &connection{rcon: rcon}, nil
 }
 
-func NewClient(connector Connector) (*client, error) {
-	return &client{connector: connector}, nil
+func newClient(connector Connector) *client {
+	return &client{connector: connector}
 }
 
 type client struct {
@@ -90,13 +90,7 @@ func (c *client) Players() ([]string, error) {
 		return nil, err
 	}
 
-	players, err := parsePlayers(resp)
-	if err != nil {
-		c.conn = nil
-		return nil, err
-	}
-
-	return players, nil
+	return parsePlayers(resp), nil
 }
 
 func (c *client) Scores(player string) ([]Score, error) {
@@ -113,13 +107,7 @@ func (c *client) Scores(player string) ([]Score, error) {
 		return nil, err
 	}
 
-	scores, err := parseScores(resp)
-	if err != nil {
-		c.conn = nil
-		return nil, err
-	}
-
-	return scores, nil
+	return parseScores(resp), nil
 }
 
 type connection struct {
@@ -134,10 +122,10 @@ func (c *connection) Execute(command string) (string, error) {
 	return packet.Body, nil
 }
 
-func parsePlayers(input string) ([]string, error) {
+func parsePlayers(input string) []string {
 	parts := strings.SplitAfterN(input, ":", 2)
 	if len(parts) != 2 {
-		return []string{}, nil
+		return []string{}
 	}
 
 	names := strings.Split(parts[1], ",")
@@ -157,9 +145,8 @@ func parsePlayers(input string) ([]string, error) {
 			continue
 		}
 		players = append(players, name)
-
 	}
-	return players, nil
+	return players
 }
 
 // Score is an individual tracked scoreboard stat.
@@ -168,9 +155,9 @@ type Score struct {
 	Value int64
 }
 
-func parseScores(input string) ([]Score, error) {
+func parseScores(input string) []Score {
 	if strings.Contains(input, "has no scores") {
-		return []Score{}, nil
+		return []Score{}
 	}
 
 	// Detect Minecraft <= 1.12
@@ -201,5 +188,6 @@ func parseScores(input string) ([]Score, error) {
 		}
 		scores = append(scores, score)
 	}
-	return scores, nil
+
+	return scores
 }

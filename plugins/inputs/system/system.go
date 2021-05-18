@@ -86,6 +86,8 @@ func formatUptime(uptime uint64) string {
 		if days > 1 {
 			s = "s"
 		}
+		// This will always succeed, so skip checking the error
+		//nolint:errcheck,revive
 		fmt.Fprintf(w, "%d day%s, ", days, s)
 	}
 
@@ -94,8 +96,12 @@ func formatUptime(uptime uint64) string {
 	hours %= 24
 	minutes %= 60
 
+	// This will always succeed, so skip checking the error
+	//nolint:errcheck,revive
 	fmt.Fprintf(w, "%2d:%02d", hours, minutes)
 
+	// This will always succeed, so skip checking the error
+	//nolint:errcheck,revive
 	w.Flush()
 	return buf.String()
 }

@@ -168,7 +168,6 @@ func (c *Collection) createLabels(metric telegraf.Metric) []LabelPair {
 
 		labels = append(labels, LabelPair{Name: name, Value: value})
 		addedFieldLabel = true
-
 	}
 
 	if addedFieldLabel {
@@ -201,7 +200,6 @@ func (c *Collection) Add(metric telegraf.Metric, now time.Time) {
 				Metrics: make(map[MetricKey]*Metric),
 			}
 			c.Entries[family] = entry
-
 		}
 
 		metricKey := MakeMetricKey(labels)

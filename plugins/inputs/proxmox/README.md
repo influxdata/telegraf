@@ -2,6 +2,8 @@
 
 The proxmox plugin gathers metrics about containers and VMs using the Proxmox API.
 
+Telegraf minimum version: Telegraf 1.16.0
+
 ### Configuration:
 
 ```toml
@@ -9,6 +11,8 @@ The proxmox plugin gathers metrics about containers and VMs using the Proxmox AP
   ## API connection configuration. The API token was introduced in Proxmox v6.2. Required permissions for user and token: PVEAuditor role on /.
   base_url = "https://localhost:8006/api2/json"
   api_token = "USER@REALM!TOKENID=UUID"
+  ## Node name, defaults to OS hostname
+  # node_name = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

@@ -2,17 +2,16 @@ package pgbouncer
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
-func TestPgBouncerGeneratesMetrics(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
+	t.Skip("Skipping due to not allowed (SQLSTATE 08P01)")
 
 	p := &PgBouncer{
 		Service: postgresql.Service{

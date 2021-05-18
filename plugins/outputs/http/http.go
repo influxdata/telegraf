@@ -12,11 +12,10 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/clientcredentials"
 )
 
 const (
@@ -64,6 +63,11 @@ var sampleConfig = `
   # [outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format
   #   Content-Type = "text/plain; charset=utf-8"
+
+  ## Idle (keep-alive) connection timeout.
+  ## Maximum amount of time before idle connection is closed.
+  ## Zero means no limit.
+  # idle_conn_timeout = 0
 `
 
 const (
@@ -74,17 +78,13 @@ const (
 
 type HTTP struct {
 	URL             string            `toml:"url"`
-	Timeout         internal.Duration `toml:"timeout"`
 	Method          string            `toml:"method"`
 	Username        string            `toml:"username"`
 	Password        string            `toml:"password"`
 	Headers         map[string]string `toml:"headers"`
-	ClientID        string            `toml:"client_id"`
-	ClientSecret    string            `toml:"client_secret"`
-	TokenURL        string            `toml:"token_url"`
-	Scopes          []string          `toml:"scopes"`
 	ContentEncoding string            `toml:"content_encoding"`
 	tls.ClientConfig
+	httpconfig.HTTPClientConfig
 
 	client     *http.Client
 	serializer serializers.Serializer
@@ -92,34 +92,6 @@ type HTTP struct {
 
 func (h *HTTP) SetSerializer(serializer serializers.Serializer) {
 	h.serializer = serializer
-}
-
-func (h *HTTP) createClient(ctx context.Context) (*http.Client, error) {
-	tlsCfg, err := h.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
-			Proxy:           http.ProxyFromEnvironment,
-		},
-		Timeout: h.Timeout.Duration,
-	}
-
-	if h.ClientID != "" && h.ClientSecret != "" && h.TokenURL != "" {
-		oauthConfig := clientcredentials.Config{
-			ClientID:     h.ClientID,
-			ClientSecret: h.ClientSecret,
-			TokenURL:     h.TokenURL,
-			Scopes:       h.Scopes,
-		}
-		ctx = context.WithValue(ctx, oauth2.HTTPClient, client)
-		client = oauthConfig.Client(ctx)
-	}
-
-	return client, nil
 }
 
 func (h *HTTP) Connect() error {
@@ -131,12 +103,8 @@ func (h *HTTP) Connect() error {
 		return fmt.Errorf("invalid method [%s] %s", h.URL, h.Method)
 	}
 
-	if h.Timeout.Duration == 0 {
-		h.Timeout.Duration = defaultClientTimeout
-	}
-
 	ctx := context.Background()
-	client, err := h.createClient(ctx)
+	client, err := h.HTTPClientConfig.CreateClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -164,11 +132,7 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	if err := h.write(reqBody); err != nil {
-		return err
-	}
-
-	return nil
+	return h.write(reqBody)
 }
 
 func (h *HTTP) write(reqBody []byte) error {
@@ -215,6 +179,9 @@ func (h *HTTP) write(reqBody []byte) error {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("when writing to [%s] received status code: %d", h.URL, resp.StatusCode)
 	}
+	if err != nil {
+		return fmt.Errorf("when writing to [%s] received error: %v", h.URL, err)
+	}
 
 	return nil
 }
@@ -222,9 +189,8 @@ func (h *HTTP) write(reqBody []byte) error {
 func init() {
 	outputs.Add("http", func() telegraf.Output {
 		return &HTTP{
-			Timeout: internal.Duration{Duration: defaultClientTimeout},
-			Method:  defaultMethod,
-			URL:     defaultURL,
+			Method: defaultMethod,
+			URL:    defaultURL,
 		}
 	})
 }
