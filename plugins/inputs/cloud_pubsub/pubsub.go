@@ -44,8 +44,8 @@ type PubSub struct {
 
 	Base64Data bool `toml:"base64_data"`
 
-	Log             telegraf.Logger
 	ContentEncoding string `toml:"content_encoding"`
+	Log             telegraf.Logger `toml:"-"`
 
 	sub     subscription
 	stubSub func() subscription
