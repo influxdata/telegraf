@@ -323,6 +323,13 @@ func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
 	require.Equal(t, 4, responseCounter)
 }
 
+func TestConfig_URLLikeFileName(t *testing.T) {
+	c := NewConfig()
+	err := c.LoadConfig("http:##www.example.com.conf")
+	require.Error(t, err)
+	require.Equal(t, "Error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: no such file or directory", err.Error())
+}
+
 /*** Mockup INPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupInputPlugin struct {
 	Servers      []string `toml:"servers"`
