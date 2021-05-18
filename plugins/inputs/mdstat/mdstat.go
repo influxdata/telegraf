@@ -133,7 +133,7 @@ func evalRecoveryLine(recoveryLineStr string) recoveryLine {
 	}
 
 	// Get percentage complete
-	matches = recoveryLinePctRE.FindStringSubmatch(recoveryLine)
+	matches = recoveryLinePctRE.FindStringSubmatch(recoveryLineStr)
 	if len(matches) != 2 {
 		return recoveryLine{syncedBlocks: syncedBlocks, pct: 0, finish: 0, speed: 0,
 			err: fmt.Errorf("unexpected recoveryLine matching percentage: %s", recoveryLineStr)}
