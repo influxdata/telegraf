@@ -1,6 +1,6 @@
 # Reviews
 
-Pull-requests are double-reviewed before being merged. Expect several rounds of back and forth on
+Pull-requests require two approvals before being merged. Expect several rounds of back and forth on
 reviews, non-trivial changes are rarely accepted on the first pass. It might take some time
 until you see a first review so please be patient.
 
@@ -10,15 +10,15 @@ document.
 
 ## Process
 The review process is roughly structured as follows:
-1. You submit a pull request.
-Please check that you signed the CLA (and CCLA in case of companies), provide a short description of your submission and reference issues that you potentially close. Make sure the CI tests are all green and there are no linter-issues.
-1. You get feedback from a first reviewer and a `ready for final review` tag.
+1. Submit a pull request.
+Please check that you signed the [CLA](https://www.influxdata.com/legal/cla/) (and [Corporate CLA](https://www.influxdata.com/legal/ccla/) if you are contributing code on as an employee of your company). Provide a short description of your submission and reference issues that you potentially close. Make sure the CI tests are all green and there are no linter-issues.
+1. Get feedback from a first reviewer and a `ready for final review` tag.
 Please constructively work with the reviewer to get your code into a mergable state (see also [below](#reviewing-plugin-code)).
-1. You will get a final review by one of the InfluxData maintainers.
+1. Get a final review by one of the InfluxData maintainers.
 Please fix any issue raised.
-1. Your pull-request will be merged.
+1. Wait for the pull-request to be merged.
 It might take some time until your PR gets merged, depending on the release cycle and the type of
-your pull-request (bugfix, enhancement of existing code, new plugin, etc). Remember, it might be necessary to rebase your code before merge to solve merge-conflicts.
+your pull-request (bugfix, enhancement of existing code, new plugin, etc). Remember, it might be necessary to rebase your code before merge to resolve conflicts.
 
 Please read the review comments carefully, fix the related part of the code and/or respond in case there is anything unclear. If there is no activity in a pull-request or the contributor does not respond, we apply the following scheme:
 1. We send a first reminder after at least 2 weeks of inactivity.
