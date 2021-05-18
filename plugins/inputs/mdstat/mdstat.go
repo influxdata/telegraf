@@ -54,7 +54,7 @@ type statusLine struct {
 type recoveryLine struct {
 	syncedBlocks int64
 	pct          float64
-	finsh        float64
+	finish       float64
 	speed        float64
 	err          error
 }
