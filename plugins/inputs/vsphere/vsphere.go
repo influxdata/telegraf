@@ -379,7 +379,7 @@ func init() {
 			ForceDiscoverOnInit:        true,
 			ObjectDiscoveryInterval:    config.Duration(time.Second * 300),
 			Timeout:                    config.Duration(time.Second * 60),
-			HistoricalIntervalDuration: 60,
+			HistoricalIntervalDuration: 300,
 		}
 	})
 }
