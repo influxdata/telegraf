@@ -435,7 +435,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 
 func (p *Prometheus) addHeaders(req *http.Request) {
 	for header, value := range p.headers {
-		req.Header.Set(header, value)
+		req.Header.Add(header, value)
 	}
 }
 
