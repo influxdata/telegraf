@@ -84,7 +84,7 @@ func evalStatusLine(deviceLine, statusLineStr string) statusLine {
 			err: fmt.Errorf("statusLine empty? %q", statusLineStr)}
 	}
 	sizeStr := sizeFields[0]
-	size, err = strconv.ParseInt(sizeStr, 10, 64)
+	size, err := strconv.ParseInt(sizeStr, 10, 64)
 	if err != nil {
 		return statusLine{active: 0, total: 0, size: 0,
 			err: fmt.Errorf("unexpected statusLine %q: %w", statusLineStr, err)}
