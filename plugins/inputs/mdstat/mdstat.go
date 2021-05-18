@@ -44,6 +44,21 @@ var (
 	componentDeviceRE    = regexp.MustCompile(`(.*)\[\d+\]`)
 )
 
+type statusLine struct {
+	active int64
+	total  int64
+	size   int64
+	err    error
+}
+
+type recoveryLine struct {
+	syncedBlocks int64
+	pct          float64
+	finsh        float64
+	speed        float64
+	err          error
+}
+
 type MdstatConf struct {
 	FileName string `toml:"file_name"`
 }
@@ -62,118 +77,97 @@ func (k *MdstatConf) SampleConfig() string {
 	return mdSampleConfig
 }
 
-func evalStatusLine(deviceLine, statusLine string) (active, total, size int64, errCond error) {
-	size = 0
-	total = 0
-	active = 0
-	errCond = nil
-
-	sizeFields := strings.Fields(statusLine)
+func evalStatusLine(deviceLine, statusLineStr string) statusLine {
+	sizeFields := strings.Fields(statusLineStr)
 	if len(sizeFields) < 1 {
-		errCond := fmt.Errorf("statusLine empty? %q: %w", statusLine, err)
+		return statusLine{active: 0, total: 0, size: 0,
+			err: fmt.Errorf("statusLine empty? %q", statusLineStr)}
 	}
-	if errCond == nil {
-		sizeStr := sizeFields[0]
-		size, err = strconv.ParseInt(sizeStr, 10, 64)
-		if err != nil {
-			errCond := fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
-		}
-	}
-
-	if errCond == nil {
-		if strings.Contains(deviceLine, "raid0") || strings.Contains(deviceLine, "linear") {
-			// In the device deviceLine, only disks have a number associated with them in [].
-			total = int64(strings.Count(deviceLine, "["))
-			return total, total, size, nil
-		}
-
-		if strings.Contains(deviceLine, "inactive") {
-			return 0, total, size, nil
-		}
+	sizeStr := sizeFields[0]
+	size, err = strconv.ParseInt(sizeStr, 10, 64)
+	if err != nil {
+		return statusLine{active: 0, total: 0, size: 0,
+			err: fmt.Errorf("unexpected statusLine %q: %w", statusLineStr, err)}
 	}
 
-	if errCond == nil {
-		matches := statusLineRE.FindStringSubmatch(statusLine)
-		if len(matches) != 4 {
-			errCond := fmt.Errorf("couldn't find all the substring matches: %s", statusLine)
-		}
-	}
-	if errCond == nil {
-		total, err = strconv.ParseInt(matches[2], 10, 64)
-		if err != nil {
-			errCond := fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
-		}
-	}
-	if errCond == nil {
-		active, err = strconv.ParseInt(matches[3], 10, 64)
-		if err != nil {
-			errCond := fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
-		}
+	if strings.Contains(deviceLine, "raid0") || strings.Contains(deviceLine, "linear") {
+		// In the device deviceLine, only disks have a number associated with them in [].
+		total := int64(strings.Count(deviceLine, "["))
+		return statusLine{active: total, total: total, size: size, err: nil}
 	}
 
-	return active, total, size, errCond
+	if strings.Contains(deviceLine, "inactive") {
+		return statusLine{active: 0, total: 0, size: size, err: nil}
+	}
+
+	matches := statusLineRE.FindStringSubmatch(statusLine)
+	if len(matches) != 4 {
+		return statusLine{active: 0, total: 0, size: size,
+			err: fmt.Errorf("couldn't find all the substring matches: %s", statusLineStr)}
+	}
+	total, err := strconv.ParseInt(matches[2], 10, 64)
+	if err != nil {
+		return statusLine{active: 0, total: 0, size: size,
+			err: fmt.Errorf("unexpected statusLine %q: %w", statusLineStr, err)}
+	}
+	active, err := strconv.ParseInt(matches[3], 10, 64)
+	if err != nil {
+		return statusLine{active: 0, total: total, size: size,
+			err: fmt.Errorf("unexpected statusLine %q: %w", statusLineStr, err)}
+	}
+
+	return statusLine{active: active, total: total, size: size, nil}
 }
 
-func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, finish float64, speed float64, errCond error) {
-	syncedBlocks = 0
-	pct = 0
-	finish = 0
-	speed = 0
-	errCond = nil
+func evalRecoveryLine(recoveryLineStr string) recoveryLine {
 	// Get count of completed vs. total blocks
-	matches := recoveryLineBlocksRE.FindStringSubmatch(recoveryLine)
+	matches := recoveryLineBlocksRE.FindStringSubmatch(recoveryLineStr)
 	if len(matches) != 2 {
-		errCond := fmt.Errorf("unexpected recoveryLine matching syncedBlocks: %s", recoveryLine)
+		return recoveryLine{syncedBlocks: 0, pct: 0, finish: 0, speed: 0,
+			err: fmt.Errorf("unexpected recoveryLine matching syncedBlocks: %s", recoveryLineStr)}
 	}
-	if errCond == nil {
-		syncedBlocks, err = strconv.ParseInt(matches[1], 10, 64)
-		if err != nil {
-			errCond := fmt.Errorf("error parsing int from recoveryLine %q: %w", recoveryLine, err)
-		}
+	syncedBlocks, err := strconv.ParseInt(matches[1], 10, 64)
+	if err != nil {
+		return recoveryLine{syncedBlocks: 0, pct: 0, finish: 0, speed: 0,
+			err: fmt.Errorf("error parsing int from recoveryLine %q: %w", recoveryLineStr, err)}
 	}
 
 	// Get percentage complete
-	if errCond == nil {
-		matches = recoveryLinePctRE.FindStringSubmatch(recoveryLine)
-		if len(matches) != 2 {
-			errCond := fmt.Errorf("unexpected recoveryLine matching percentage: %s", recoveryLine)
-		}
+	matches = recoveryLinePctRE.FindStringSubmatch(recoveryLine)
+	if len(matches) != 2 {
+		return recoveryLine{syncedBlocks: syncedBlocks, pct: 0, finish: 0, speed: 0,
+			err: fmt.Errorf("unexpected recoveryLine matching percentage: %s", recoveryLineStr)}
 	}
-	if errCond == nil {
-		pct, err = strconv.ParseFloat(matches[1], 64)
-		if err != nil {
-			errCond := fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
-		}
+	pct, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return recoveryLine{syncedBlocks: syncedBlocks, pct: 0, finish: 0, speed: 0,
+			err: fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLineStr, err)}
 	}
 
 	// Get time expected left to complete
-	if errCond == nil {
-		matches = recoveryLineFinishRE.FindStringSubmatch(recoveryLine)
-		if len(matches) != 2 {
-			errCond := fmt.Errorf("unexpected recoveryLine matching est. finish time: %s", recoveryLine)
-		}
+	matches = recoveryLineFinishRE.FindStringSubmatch(recoveryLineStr)
+	if len(matches) != 2 {
+		return recoveryLine{syncedBlocks: syncedBlocks, pct: pct, finish: 0, speed: 0,
+			err: fmt.Errorf("unexpected recoveryLine matching est. finish time: %s", recoveryLineStr)}
 	}
-	if errCond == nil {
-		finish, err = strconv.ParseFloat(matches[1], 64)
-		if err != nil {
-			errCond := fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
-		}
+	finish, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return recoveryLine{syncedBlocks: syncedBlocks, pct: pct, finish: 0, speed: 0,
+			err: fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLineStr, err)}
 	}
 
 	// Get recovery speed
-	if errCond == nil {
-		matches = recoveryLineSpeedRE.FindStringSubmatch(recoveryLine)
-		if len(matches) != 2 {
-			errCond := fmt.Errorf("unexpected recoveryLine matching speed: %s", recoveryLine)
-		}
+	matches = recoveryLineSpeedRE.FindStringSubmatch(recoveryLineStr)
+	if len(matches) != 2 {
+		return recoveryLine{syncedBlocks: syncedBlocks, pct: pct, finish: finish, speed: 0,
+			err: fmt.Errorf("unexpected recoveryLine matching speed: %s", recoveryLineStr)}
 	}
-	if errCond == nil {
-		speed, err = strconv.ParseFloat(matches[1], 64)
-		if err != nil {
-			errCond := fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLine, err)
-		}
+	speed, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return recoveryLine{syncedBlocks: syncedBlocks, pct: pct, finish: finish, speed: 0,
+			err: fmt.Errorf("error parsing float from recoveryLine %q: %w", recoveryLineStr, err)}
 	}
-	return syncedBlocks, pct, finish, speed, errCond
+	return recoveryLine{syncedBlocks: syncedBlocks, pct: pct, finish: finish, speed: speed, nil}
 }
 
 func evalComponentDevices(deviceFields []string) string {
@@ -214,9 +208,9 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 		fail := int64(strings.Count(line, "(F)"))
 		spare := int64(strings.Count(line, "(S)"))
 
-		active, total, size, err := evalStatusLine(lines[i], lines[i+1])
-		if err != nil {
-			return fmt.Errorf("error parsing md device lines: %w", err)
+		sts := evalStatusLine(lines[i], lines[i+1])
+		if sts.err != nil {
+			return fmt.Errorf("error parsing md device lines: %w", sts.err)
 		}
 
 		syncLineIdx := i + 2
@@ -224,12 +218,10 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 			syncLineIdx++
 		}
 
+		var rcvry recoveryLine
 		// If device is syncing at the moment, get the number of currently
 		// synced bytes, otherwise that number equals the size of the device.
-		syncedBlocks := size
-		speed := float64(0)
-		finish := float64(0)
-		pct := float64(0)
+		rcvry.syncedBlocks = sts.size
 		recovering := strings.Contains(lines[syncLineIdx], "recovery")
 		resyncing := strings.Contains(lines[syncLineIdx], "resync")
 		checking := strings.Contains(lines[syncLineIdx], "check")
@@ -246,24 +238,24 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 
 			// Handle case when resync=PENDING or resync=DELAYED.
 			if strings.Contains(lines[syncLineIdx], "PENDING") || strings.Contains(lines[syncLineIdx], "DELAYED") {
-				syncedBlocks = 0
+				rcvry.syncedBlocks = 0
 			} else {
-				syncedBlocks, pct, finish, speed, err = evalRecoveryLine(lines[syncLineIdx])
-				if err != nil {
-					return fmt.Errorf("error parsing sync line in md device %q: %w", mdName, err)
+				rcvry = evalRecoveryLine(lines[syncLineIdx])
+				if rcvry.err != nil {
+					return fmt.Errorf("error parsing sync line in md device %q: %w", mdName, rcvry.err)
 				}
 			}
 		}
 		fields := map[string]interface{}{
-			"DisksActive":            active,
+			"DisksActive":            sts.active,
 			"DisksFailed":            fail,
 			"DisksSpare":             spare,
-			"DisksTotal":             total,
-			"BlocksTotal":            size,
-			"BlocksSynced":           syncedBlocks,
-			"BlocksSyncedPct":        pct,
-			"BlocksSyncedFinishTime": finish,
-			"BlocksSyncedSpeed":      speed,
+			"DisksTotal":             sts.total,
+			"BlocksTotal":            sts.size,
+			"BlocksSynced":           rcvry.syncedBlocks,
+			"BlocksSyncedPct":        rcvry.pct,
+			"BlocksSyncedFinishTime": rcvry.finish,
+			"BlocksSyncedSpeed":      rcvry.speed,
 		}
 		tags := map[string]string{
 			"Name":          mdName,
