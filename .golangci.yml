@@ -1,6 +1,7 @@
 linters:
   disable-all: true
   enable:
+    # - telegraflinter
     - bodyclose
     - dogsled
     - errcheck
@@ -20,6 +21,10 @@ linters:
     - varcheck
 
 linters-settings:
+  # custom:
+  #   telegraflinter:
+  #     path: telegraflinter.so
+  #     description: "Find Telegraf specific review criteria, more info: https://github.com/influxdata/telegraf/wiki/Review"
   revive:
     rules:
       - name: argument-limit

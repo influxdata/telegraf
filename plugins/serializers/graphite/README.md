@@ -35,6 +35,8 @@ method is used, otherwise the [Template Pattern](templates) is used.
 
   ## Support Graphite tags, recommended to enable when using Graphite 1.1 or later.
   # graphite_tag_support = false
+  ## Enable Graphite tags to support the full list of allowed characters
+  # graphite_tag_new_sanitize = false
   ## Character for separating metric name and field for Graphite tags
   # graphite_separator = "."
 ```
@@ -63,5 +65,14 @@ cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 145532
 cpu_usage_user;cpu=cpu-total;dc=us-east-1;host=tars 0.89 1455320690
 cpu_usage_idle;cpu=cpu-total;dc=us-east-1;host=tars 98.09 1455320690
 ```
+
+The `graphite_tag_sanitize_mode` option defines how we should sanitize the tag names and values. Possible values are `strict`, or `compatible`, with the default being `strict`.
+
+When in `strict` mode Telegraf uses the same rules as metrics when not using tags.
+When in `compatible` mode Telegraf allows more characters through, and is based on the Graphite specification:
+>Tag names must have a length >= 1 and may contain any ascii characters except `;!^=`. Tag values must also have a length >= 1, they may contain any ascii characters except `;` and the first character must not be `~`. UTF-8 characters may work for names and values, but they are not well tested and it is not recommended to use non-ascii characters in metric names or tags. Metric names get indexed under the special tag name, if a metric name starts with one or multiple ~ they simply get removed from the derived tag value because the ~ character is not allowed to be in the first position of the tag value. If a metric name consists of no other characters than ~, then it is considered invalid and may get dropped.
+
+
+
 
 [templates]: /docs/TEMPLATE_PATTERN.md
