@@ -63,12 +63,12 @@ func (k *MdstatConf) SampleConfig() string {
 }
 
 func evalStatusLine(deviceLine, statusLine string) (active, total, size int64, errCond error) {
-	size := 0
-	total := 0
-	active := 0
-	errCond := nil
-	sizeFields := strings.Fields(statusLine)
+	size = 0
+	total = 0
+	active = 0
+	errCond = nil
 
+	sizeFields := strings.Fields(statusLine)
 	if len(sizeFields) < 1 {
 		errCond := fmt.Errorf("statusLine empty? %q: %w", statusLine, err)
 	}
@@ -115,11 +115,11 @@ func evalStatusLine(deviceLine, statusLine string) (active, total, size int64, e
 }
 
 func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, finish float64, speed float64, errCond error) {
-	syncedBlocks := 0
-	pct := 0
-	finish := 0
-	speed := 0
-	errCond := nil
+	syncedBlocks = 0
+	pct = 0
+	finish = 0
+	speed = 0
+	errCond = nil
 	// Get count of completed vs. total blocks
 	matches := recoveryLineBlocksRE.FindStringSubmatch(recoveryLine)
 	if len(matches) != 2 {
