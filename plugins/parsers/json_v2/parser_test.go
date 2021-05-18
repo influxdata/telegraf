@@ -57,6 +57,10 @@ func TestData(t *testing.T) {
 			name: "Test query for measurement name",
 			test: "measurement_name",
 		},
+		{
+			name: "Test query for measurement name with an integer",
+			test: "measurement_name_int",
+		},
 	}
 
 	for _, tc := range tests {
