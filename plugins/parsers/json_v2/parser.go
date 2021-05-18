@@ -386,7 +386,15 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 					return false
 				}
 				if prevArray {
-					results = append(results, r...)
+					if !arrayNode.IsArray() {
+						if len(results) != 0 {
+							for _, newResult := range results {
+								mergeMetric(result.Metric, newResult.Metric)
+							}
+						}
+					} else {
+						results = append(results, r...)
+					}
 				} else {
 					results = r
 				}

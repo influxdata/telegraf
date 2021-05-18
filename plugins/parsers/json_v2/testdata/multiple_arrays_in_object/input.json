@@ -1,11 +1,11 @@
 {
     "book": {
         "title": "The Lord Of The Rings",
-        "author": "Tolkien",
         "chapters": [
             "A Long-expected Party",
             "The Shadow of the Past"
         ],
+        "author": "Tolkien",
         "characters": [
             {
                 "name": "Bilbo",
@@ -15,6 +15,10 @@
                 "name": "Frodo",
                 "species": "hobbit"
             }
+        ],
+        "random": [
+            1,
+            2
         ]
     }
 }
