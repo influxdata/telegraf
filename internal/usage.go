@@ -16,6 +16,8 @@ The commands & flags are:
   --aggregator-filter <filter>   filter the aggregators to enable, separator is :
   --config <file>                configuration file to load
   --config-directory <directory> directory containing additional *.conf files
+  --no-config                    Run Telegraf with no main config file.
+                                 Useful with --config-directory.
   --plugin-directory             directory containing *.so files, this directory will be
                                  searched recursively. Any Plugin found will be loaded
                                  and namespaced.
