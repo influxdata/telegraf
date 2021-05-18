@@ -331,7 +331,7 @@ func TestConfig_URLLikeFileName(t *testing.T) {
 
 	if runtime.GOOS == "windows" {
 		// The error file not found error message is different on windows
-		require.Equal(t, "Error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: The system cannot find the file specified", err.Error())
+		require.Equal(t, "Error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: The system cannot find the file specified.", err.Error())
 	} else {
 		require.Equal(t, "Error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: no such file or directory", err.Error())
 	}
