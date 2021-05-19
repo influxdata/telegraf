@@ -26,10 +26,7 @@ Please read the review comments carefully, fix the related part of the code and/
 1. Another two weeks later we will ask the community for help setting the `help wanted` reminder.
 1. In case nobody volunteers to take over the PR within the next 30 days, InfluxData will triage the PR and might close it due to inactivity.
 
-So in case you expect a longer period of inactivity or you want to abandon a pull-request, please drop us a note and optionally close the PR.
-
-While review cannot be exhaustively documented, there are several things that
-should always be double checked.
+So in case you expect a longer period of inactivity or you want to abandon a pull-request, please let us know.
 
 ## Reviewing Plugin Code
 
