@@ -24,6 +24,7 @@ type dataDocument interface {
 
 type Parser struct {
 	Format      string
+	MessageType string
 	Configs     []Config
 	DefaultTags map[string]string
 	Log         telegraf.Logger
@@ -53,6 +54,12 @@ func (p *Parser) Init() error {
 		p.document = &xmlDocument{}
 	case "json", "json_xpath":
 		p.document = &jsonDocument{}
+	case "protobuf":
+		pbdoc := protobufDocument{MessageType: p.MessageType}
+		if err := pbdoc.Init(); err != nil {
+			return err
+		}
+		p.document = &pbdoc
 	default:
 		return fmt.Errorf("unknown data-format %q for xpath parser", p.Format)
 	}

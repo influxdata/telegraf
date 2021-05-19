@@ -1368,7 +1368,8 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
 
 	//for XPath parser family
-	if choice.Contains(pc.DataFormat, []string{"xml", "json_xpath"}) {
+	if choice.Contains(pc.DataFormat, []string{"xml", "json_xpath", "protobuf"}) {
+		c.getFieldString(tbl, "xpath_protobuf_type", &pc.XPathProtobufType)
 		if node, ok := tbl.Fields[pc.DataFormat]; ok {
 			if subtbls, ok := node.([]*ast.Table); ok {
 				pc.XPathConfig = make([]parsers.XPathConfig, len(subtbls))
@@ -1560,7 +1561,8 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml", "json_xpath", "json_v2":
+		"value_field_name", "wavefront_source_override", "wavefront_use_strict",
+		"xml", "json_xpath", "protobuf", "xpath_protobuf_type", "json_v2":
 
 		// ignore fields that are common to all plugins.
 	default:
