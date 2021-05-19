@@ -50,6 +50,10 @@ var (
 		`\`, `\\`,
 	)
 	httpLoadConfigRetryInterval = 10 * time.Second
+
+	// fetchURLRe is a regex to determine whether the requested file should
+	// be fetched from a remote or read from the filesystem.
+	fetchURLRe = regexp.MustCompile(`^\w+://`)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -902,20 +906,18 @@ func escapeEnv(value string) string {
 }
 
 func loadConfig(config string) ([]byte, error) {
-	u, err := url.Parse(config)
-	if err != nil {
-		return nil, err
-	}
+	if fetchURLRe.MatchString(config) {
+		u, err := url.Parse(config)
+		if err != nil {
+			return nil, err
+		}
 
-	if u.Host == "" {
-		return ioutil.ReadFile(config)
-	}
-
-	switch u.Scheme {
-	case "https", "http":
-		return fetchConfig(u)
-	default:
-		// If it isn't a https or file scheme, try it as a file
+		switch u.Scheme {
+		case "https", "http":
+			return fetchConfig(u)
+		default:
+			// If it isn't a https scheme, try it as a file
+		}
 	}
 
 	return ioutil.ReadFile(config)
