@@ -50,14 +50,14 @@ type VSphere struct {
 	IPAddresses             []string
 	MetricLookback          int
 
-	MaxQueryObjects            int
-	MaxQueryMetrics            int
-	CollectConcurrency         int
-	DiscoverConcurrency        int
-	ForceDiscoverOnInit        bool
-	ObjectDiscoveryInterval    config.Duration
-	Timeout                    config.Duration
-	HistoricalIntervalDuration config.Duration
+	MaxQueryObjects         int
+	MaxQueryMetrics         int
+	CollectConcurrency      int
+	DiscoverConcurrency     int
+	ForceDiscoverOnInit     bool
+	ObjectDiscoveryInterval config.Duration
+	Timeout                 config.Duration
+	HistoricalInterval      config.Duration
 
 	endpoints []*Endpoint
 	cancel    context.CancelFunc
@@ -252,9 +252,9 @@ var sampleConfig = `
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## The Historical Interval Duration value must match EXACTLY the interval in the daily 
+  ## The Historical Interval value must match EXACTLY the interval in the daily 
   # "Interval Duration" found on the VCenter server under Configure > General > Statistics > Statistic intervals
-  # historical_interval_duration = "5m"
+  # historical_interval = "5m"
 `
 
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
@@ -371,15 +371,15 @@ func init() {
 			UseIntSamples:           true,
 			IPAddresses:             []string{},
 
-			MaxQueryObjects:            256,
-			MaxQueryMetrics:            256,
-			CollectConcurrency:         1,
-			DiscoverConcurrency:        1,
-			MetricLookback:             3,
-			ForceDiscoverOnInit:        true,
-			ObjectDiscoveryInterval:    config.Duration(time.Second * 300),
-			Timeout:                    config.Duration(time.Second * 60),
-			HistoricalIntervalDuration: config.Duration(time.Second * 300),
+			MaxQueryObjects:         256,
+			MaxQueryMetrics:         256,
+			CollectConcurrency:      1,
+			DiscoverConcurrency:     1,
+			MetricLookback:          3,
+			ForceDiscoverOnInit:     true,
+			ObjectDiscoveryInterval: config.Duration(time.Second * 300),
+			Timeout:                 config.Duration(time.Second * 60),
+			HistoricalInterval:      config.Duration(time.Second * 300),
 		}
 	})
 }

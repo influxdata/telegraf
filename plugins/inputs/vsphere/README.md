@@ -355,10 +355,10 @@ The vSphere plugin allows you to specify two concurrency settings:
 
 While a higher level of concurrency typically has a positive impact on performance, increasing these numbers too much can cause performance issues at the vCenter server. A rule of thumb is to set these parameters to the number of virtual machines divided by 1500 and rounded up to the nearest integer.
 
-### Configuring historical_interval_duration setting
+### Configuring historical_interval setting
 
 When the vSphere plugin queries vCenter for historical statistics it queries for statistics that exist at a specific interval.  The default historical interval duration is 5 minutes but if this interval has been changed then you must override the default query interval in the vSphere plugin.
-* ```historical_interval_duration```: The interval of the most granular statistics configured in vSphere represented in seconds.
+* ```historical_interval```: The interval of the most granular statistics configured in vSphere represented in seconds.
 
 ## Measurements &amp; Fields
 

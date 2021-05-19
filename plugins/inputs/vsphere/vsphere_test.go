@@ -145,15 +145,15 @@ func defaultVSphere() *VSphere {
 		DatacenterInclude:       []string{"/**"},
 		ClientConfig:            itls.ClientConfig{InsecureSkipVerify: true},
 
-		MaxQueryObjects:            256,
-		MaxQueryMetrics:            256,
-		ObjectDiscoveryInterval:    config.Duration(time.Second * 300),
-		Timeout:                    config.Duration(time.Second * 20),
-		ForceDiscoverOnInit:        true,
-		DiscoverConcurrency:        1,
-		CollectConcurrency:         1,
-		Separator:                  ".",
-		HistoricalIntervalDuration: config.Duration(time.Second * 300),
+		MaxQueryObjects:         256,
+		MaxQueryMetrics:         256,
+		ObjectDiscoveryInterval: config.Duration(time.Second * 300),
+		Timeout:                 config.Duration(time.Second * 20),
+		ForceDiscoverOnInit:     true,
+		DiscoverConcurrency:     1,
+		CollectConcurrency:      1,
+		Separator:               ".",
+		HistoricalInterval:      config.Duration(time.Second * 300),
 	}
 }
 
@@ -234,7 +234,7 @@ func TestParseConfig(t *testing.T) {
 
 func TestConfigDurationParsing(t *testing.T) {
 	v := defaultVSphere()
-	require.Equal(t, int32(300), int32(time.Duration(v.HistoricalIntervalDuration).Seconds()), "HistoricalIntervalDuration.Seconds() with default duration should resolve 300")
+	require.Equal(t, int32(300), int32(time.Duration(v.HistoricalInterval).Seconds()), "HistoricalInterval.Seconds() with default duration should resolve 300")
 }
 
 func TestMaxQuery(t *testing.T) {
