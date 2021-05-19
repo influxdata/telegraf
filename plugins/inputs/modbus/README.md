@@ -267,7 +267,9 @@ In case you see strange values, the `byte_order` might be off. You can either pr
 
 If your data still looks corrupted, please post your configuration, error message and/or the output of `byte_order="ABCD" data_type="UINT32"` to one of the telegraf support channels (forum, slack or as issue).
 If nothing helps, please post your configuration, error message and/or the output of `byte_order="ABCD" data_type="UINT32"` to one of the telegraf support channels (forum, slack or as issue).
+
 ---
+
 ### `request` configuration style
 
 This sytle can be used to specify the modbus requests directly. It allows to specify multiple `[[inputs.modbus.request]]` sections including multiple slave-devices. This way, _modbus_ gateway devices can be queried. Please not that _requests_ might be split for non-consecutive addresses. If you want to avoid this behavior please add _fields_ with the `omit` flag set filling the gaps between addresses.
