@@ -682,7 +682,7 @@ func (c *Config) LoadDirectory(path string) error {
 		if len(name) < 6 || name[len(name)-5:] != ".conf" {
 			return nil
 		}
-		err := c.LoadConfig(thispath, nil)
+		err := c.LoadConfig(thispath, "")
 		if err != nil {
 			return err
 		}
@@ -720,7 +720,7 @@ func getDefaultConfigPath() (string, error) {
 }
 
 // LoadConfig loads the given config file and applies it to c
-func (c *Config) LoadConfig(path string, token *string) error {
+func (c *Config) LoadConfig(path string, token string) error {
 	var err error
 	if path == "" {
 		if path, err = getDefaultConfigPath(); err != nil {
@@ -901,7 +901,7 @@ func escapeEnv(value string) string {
 	return envVarEscaper.Replace(value)
 }
 
-func loadConfig(config string, token *string) ([]byte, error) {
+func loadConfig(config string, token string) ([]byte, error) {
 	u, err := url.Parse(config)
 	if err != nil {
 		return nil, err
@@ -916,14 +916,14 @@ func loadConfig(config string, token *string) ([]byte, error) {
 	return ioutil.ReadFile(config)
 }
 
-func fetchConfig(u *url.URL, token *string) ([]byte, error) {
+func fetchConfig(u *url.URL, token string) ([]byte, error) {
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if token != nil && *token != "" {
-		req.Header.Add("Authorization", "Token "+*token)
+	if token != "" {
+		req.Header.Add("Authorization", "Token "+token)
 	} else if v, exists := os.LookupEnv("INFLUX_FETCH_TOKEN"); exists {
 		req.Header.Add("Authorization", "Token "+v)
 	} else if v, exists = os.LookupEnv("INFLUX_TOKEN"); exists {

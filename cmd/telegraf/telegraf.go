@@ -134,7 +134,7 @@ func runAgent(ctx context.Context,
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-	err := c.LoadConfig(*fConfig, fConfigToken)
+	err := c.LoadConfig(*fConfig, *fConfigToken)
 	if err != nil {
 		return err
 	}
