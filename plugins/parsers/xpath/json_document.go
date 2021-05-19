@@ -4,16 +4,16 @@ import (
 	"strings"
 
 	"github.com/antchfx/jsonquery"
-	"github.com/antchfx/xpath"
+	path "github.com/antchfx/xpath"
 )
 
 type jsonDocument struct{}
 
-func (xh *jsonDocument) Parse(buf []byte) (dataNode, error) {
+func (d *jsonDocument) Parse(buf []byte) (dataNode, error) {
 	return jsonquery.Parse(strings.NewReader(string(buf)))
 }
 
-func (xh *jsonDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
+func (d *jsonDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
 	// If this panics it's a programming error as we changed the document type while processing
 	native, err := jsonquery.QueryAll(node.(*jsonquery.Node), expr)
 	if err != nil {
@@ -27,12 +27,12 @@ func (xh *jsonDocument) QueryAll(node dataNode, expr string) ([]dataNode, error)
 	return nodes, nil
 }
 
-func (xh *jsonDocument) CreateXPathNavigator(node dataNode) xpath.NodeNavigator {
+func (d *jsonDocument) CreateXPathNavigator(node dataNode) path.NodeNavigator {
 	// If this panics it's a programming error as we changed the document type while processing
 	return jsonquery.CreateXPathNavigator(node.(*jsonquery.Node))
 }
 
-func (xh *jsonDocument) GetNodePath(node, relativeTo dataNode, sep string) string {
+func (d *jsonDocument) GetNodePath(node, relativeTo dataNode, sep string) string {
 	names := make([]string, 0)
 
 	// If these panic it's a programming error as we changed the document type while processing
@@ -51,15 +51,15 @@ func (xh *jsonDocument) GetNodePath(node, relativeTo dataNode, sep string) strin
 	}
 
 	// Construct the nodes
-	path := ""
+	nodepath := ""
 	for _, name := range names {
-		path = name + sep + path
+		nodepath = name + sep + nodepath
 	}
 
-	return path[:len(path)-1]
+	return nodepath[:len(nodepath)-1]
 }
 
-func (xh *jsonDocument) OutputXML(node dataNode) string {
+func (d *jsonDocument) OutputXML(node dataNode) string {
 	native := node.(*jsonquery.Node)
 	return native.OutputXML()
 }

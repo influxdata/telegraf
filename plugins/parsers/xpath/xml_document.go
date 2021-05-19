@@ -4,16 +4,16 @@ import (
 	"strings"
 
 	"github.com/antchfx/xmlquery"
-	"github.com/antchfx/xpath"
+	path "github.com/antchfx/xpath"
 )
 
 type xmlDocument struct{}
 
-func (xh *xmlDocument) Parse(buf []byte) (dataNode, error) {
+func (d *xmlDocument) Parse(buf []byte) (dataNode, error) {
 	return xmlquery.Parse(strings.NewReader(string(buf)))
 }
 
-func (xh *xmlDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
+func (d *xmlDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
 	// If this panics it's a programming error as we changed the document type while processing
 	native, err := xmlquery.QueryAll(node.(*xmlquery.Node), expr)
 	if err != nil {
@@ -27,12 +27,12 @@ func (xh *xmlDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) 
 	return nodes, nil
 }
 
-func (xh *xmlDocument) CreateXPathNavigator(node dataNode) xpath.NodeNavigator {
+func (d *xmlDocument) CreateXPathNavigator(node dataNode) path.NodeNavigator {
 	// If this panics it's a programming error as we changed the document type while processing
 	return xmlquery.CreateXPathNavigator(node.(*xmlquery.Node))
 }
 
-func (xh *xmlDocument) GetNodePath(node, relativeTo dataNode, sep string) string {
+func (d *xmlDocument) GetNodePath(node, relativeTo dataNode, sep string) string {
 	names := make([]string, 0)
 
 	// If these panic it's a programming error as we changed the document type while processing
@@ -51,15 +51,15 @@ func (xh *xmlDocument) GetNodePath(node, relativeTo dataNode, sep string) string
 	}
 
 	// Construct the nodes
-	path := ""
+	nodepath := ""
 	for _, name := range names {
-		path = name + sep + path
+		nodepath = name + sep + nodepath
 	}
 
-	return path[:len(path)-1]
+	return nodepath[:len(nodepath)-1]
 }
 
-func (xh *xmlDocument) OutputXML(node dataNode) string {
+func (d *xmlDocument) OutputXML(node dataNode) string {
 	native := node.(*xmlquery.Node)
 	return native.OutputXML(false)
 }

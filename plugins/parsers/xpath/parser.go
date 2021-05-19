@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/antchfx/xpath"
+	path "github.com/antchfx/xpath"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -17,7 +17,7 @@ type dataNode interface{}
 type dataDocument interface {
 	Parse(buf []byte) (dataNode, error)
 	QueryAll(node dataNode, expr string) ([]dataNode, error)
-	CreateXPathNavigator(node dataNode) xpath.NodeNavigator
+	CreateXPathNavigator(node dataNode) path.NodeNavigator
 	GetNodePath(node, relativeTo dataNode, sep string) string
 	OutputXML(node dataNode) string
 }
@@ -336,7 +336,7 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 	}
 
 	// Compile the query
-	expr, err := xpath.Compile(query)
+	expr, err := path.Compile(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile query '%s': %v", query, err)
 	}
@@ -345,7 +345,7 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 	// separately. Those iterators will be returned for queries directly
 	// referencing a node (value or attribute).
 	n := expr.Evaluate(p.document.CreateXPathNavigator(root))
-	if iter, ok := n.(*xpath.NodeIterator); ok {
+	if iter, ok := n.(*path.NodeIterator); ok {
 		// We got an iterator, so take the first match and get the referenced
 		// property. This will always be a string.
 		if iter.MoveNext() {

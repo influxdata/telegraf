@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/dynamicpb"
 
-	"github.com/antchfx/xpath"
+	path "github.com/antchfx/xpath"
 	"github.com/doclambda/protobufquery"
 
 	// Register all known definitions APIv2 types
@@ -83,7 +83,7 @@ func (d *protobufDocument) QueryAll(node dataNode, expr string) ([]dataNode, err
 	return nodes, nil
 }
 
-func (d *protobufDocument) CreateXPathNavigator(node dataNode) xpath.NodeNavigator {
+func (d *protobufDocument) CreateXPathNavigator(node dataNode) path.NodeNavigator {
 	// If this panics it's a programming error as we changed the document type while processing
 	return protobufquery.CreateXPathNavigator(node.(*protobufquery.Node))
 }
@@ -107,12 +107,12 @@ func (d *protobufDocument) GetNodePath(node, relativeTo dataNode, sep string) st
 	}
 
 	// Construct the nodes
-	path := ""
+	nodepath := ""
 	for _, name := range names {
-		path = name + sep + path
+		nodepath = name + sep + nodepath
 	}
 
-	return path[:len(path)-1]
+	return nodepath[:len(nodepath)-1]
 }
 
 func (d *protobufDocument) OutputXML(node dataNode) string {
