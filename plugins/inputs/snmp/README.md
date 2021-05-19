@@ -201,9 +201,26 @@ One [metric][] is created for each row of the SNMP table.
       ## Specifies if the value of given field should be snmptranslated
       ## by default no field values are translated
       # translate = true
+		
+      ## Secondary index table allows to merge data from two tables with
+      ## different index that this filed will be used to join them. There can
+      ## be only one secondary index table.
+      # secondary_index_table = false
+      
+      ## This field is using secondary index, and will be later merged with
+      ## primary index using SecondaryIndexTable. SecondaryIndexTable and
+      ## SecondaryIndexUse are exclusive.
+      # secondary_index_use = false
+      
+      ## Controls if entries from secondary table should be added or not
+      ## if joining index is present or not. I set to true, means that join
+      ## is outer, and index is prepended with "Secondary." for missing values
+      ## to avoid overlaping indexes from both tables. Can be set per field or
+      ## globally with SecondaryIndexTable, global true overrides per field false.
+      # secondary_outer_join = false
 ```
 
-### Two Table Join
+##### Two Table Join
 Snmp plugin can join two snmp tables that have different indexes. For this to work one table
 should have translation field that return index of second table as value. Examples
 of such fields are:
