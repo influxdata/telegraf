@@ -51,6 +51,8 @@ func (p *Parser) Init() error {
 	switch p.Format {
 	case "", "xml":
 		p.document = &xmlDocument{}
+	case "json", "json_xpath":
+		p.document = &jsonDocument{}
 	default:
 		return fmt.Errorf("unknown data-format %q for xpath parser", p.Format)
 	}
@@ -66,6 +68,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
+	// p.Log.Debugf("XML document equivalent: %q", p.document.OutputXML(doc))
 
 	// Queries
 	metrics := make([]telegraf.Metric, 0)

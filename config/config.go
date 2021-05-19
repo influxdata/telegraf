@@ -19,6 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -1366,24 +1367,26 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 
 	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
 
-	//for XML parser
-	if node, ok := tbl.Fields["xml"]; ok {
-		if subtbls, ok := node.([]*ast.Table); ok {
-			pc.XMLConfig = make([]parsers.XMLConfig, len(subtbls))
-			for i, subtbl := range subtbls {
-				subcfg := pc.XMLConfig[i]
-				c.getFieldString(subtbl, "metric_name", &subcfg.MetricQuery)
-				c.getFieldString(subtbl, "metric_selection", &subcfg.Selection)
-				c.getFieldString(subtbl, "timestamp", &subcfg.Timestamp)
-				c.getFieldString(subtbl, "timestamp_format", &subcfg.TimestampFmt)
-				c.getFieldStringMap(subtbl, "tags", &subcfg.Tags)
-				c.getFieldStringMap(subtbl, "fields", &subcfg.Fields)
-				c.getFieldStringMap(subtbl, "fields_int", &subcfg.FieldsInt)
-				c.getFieldString(subtbl, "field_selection", &subcfg.FieldSelection)
-				c.getFieldBool(subtbl, "field_name_expansion", &subcfg.FieldNameExpand)
-				c.getFieldString(subtbl, "field_name", &subcfg.FieldNameQuery)
-				c.getFieldString(subtbl, "field_value", &subcfg.FieldValueQuery)
-				pc.XMLConfig[i] = subcfg
+	//for XPath parser family
+	if choice.Contains(pc.DataFormat, []string{"xml", "json_xpath"}) {
+		if node, ok := tbl.Fields[pc.DataFormat]; ok {
+			if subtbls, ok := node.([]*ast.Table); ok {
+				pc.XPathConfig = make([]parsers.XPathConfig, len(subtbls))
+				for i, subtbl := range subtbls {
+					subcfg := pc.XPathConfig[i]
+					c.getFieldString(subtbl, "metric_name", &subcfg.MetricQuery)
+					c.getFieldString(subtbl, "metric_selection", &subcfg.Selection)
+					c.getFieldString(subtbl, "timestamp", &subcfg.Timestamp)
+					c.getFieldString(subtbl, "timestamp_format", &subcfg.TimestampFmt)
+					c.getFieldStringMap(subtbl, "tags", &subcfg.Tags)
+					c.getFieldStringMap(subtbl, "fields", &subcfg.Fields)
+					c.getFieldStringMap(subtbl, "fields_int", &subcfg.FieldsInt)
+					c.getFieldString(subtbl, "field_selection", &subcfg.FieldSelection)
+					c.getFieldBool(subtbl, "field_name_expansion", &subcfg.FieldNameExpand)
+					c.getFieldString(subtbl, "field_name", &subcfg.FieldNameQuery)
+					c.getFieldString(subtbl, "field_value", &subcfg.FieldValueQuery)
+					pc.XPathConfig[i] = subcfg
+				}
 			}
 		}
 	}
@@ -1557,7 +1560,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml", "json_v2":
+		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml", "json_xpath", "json_v2":
 
 		// ignore fields that are common to all plugins.
 	default:

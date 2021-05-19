@@ -160,13 +160,13 @@ type Config struct {
 	ValueFieldName string `toml:"value_field_name"`
 
 	// XML configuration
-	XMLConfig []XMLConfig `toml:"xml"`
+	XPathConfig []XPathConfig
 
 	// JSONPath configuration
 	JSONV2Config []JSONV2Config `toml:"json_v2"`
 }
 
-type XMLConfig xpath.Config
+type XPathConfig xpath.Config
 
 type JSONV2Config struct {
 	json_v2.Config
@@ -259,8 +259,8 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewPrometheusParser(config.DefaultTags)
 	case "prometheusremotewrite":
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
-	case "xml":
-		parser, err = NewXMLParser(config.MetricName, config.DefaultTags, config.XMLConfig)
+	case "xml", "json_xpath":
+		parser, err = NewXPathParser(config.DataFormat, config.MetricName, config.DefaultTags, config.XPathConfig)
 	case "json_v2":
 		parser, err = NewJSONPathParser(config.JSONV2Config)
 	default:
@@ -380,7 +380,7 @@ func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, erro
 	}, nil
 }
 
-func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs []XMLConfig) (Parser, error) {
+func NewXPathParser(format, metricName string, defaultTags map[string]string, xmlConfigs []XPathConfig) (Parser, error) {
 	// Convert the config formats which is a one-to-one copy
 	configs := make([]xpath.Config, 0, len(xmlConfigs))
 	for _, cfg := range xmlConfigs {
@@ -390,7 +390,7 @@ func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs [
 	}
 
 	parser := &xpath.Parser{
-		Format:      "xml",
+		Format:      format,
 		Configs:     configs,
 		DefaultTags: defaultTags,
 	}
