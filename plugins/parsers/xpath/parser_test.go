@@ -12,7 +12,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -127,6 +126,7 @@ func TestParseInvalidXML(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			require.NoError(t, parser.Init())
 
 			_, err := parser.ParseLine(tt.input)
 			require.Error(t, err)
@@ -163,6 +163,7 @@ func TestInvalidTypeQueriesFail(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			require.NoError(t, parser.Init())
 
 			_, err := parser.ParseLine(tt.input)
 			require.Error(t, err)
@@ -228,6 +229,7 @@ func TestInvalidTypeQueries(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			require.NoError(t, parser.Init())
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -357,6 +359,7 @@ func TestParseTimestamps(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			require.NoError(t, parser.Init())
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -561,6 +564,7 @@ func TestParseSingleValues(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			require.NoError(t, parser.Init())
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -772,6 +776,7 @@ func TestParseSingleAttributes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			require.NoError(t, parser.Init())
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -858,6 +863,7 @@ func TestParseMultiValues(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			require.NoError(t, parser.Init())
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -970,6 +976,7 @@ func TestParseMultiNodes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			require.NoError(t, parser.Init())
 
 			actual, err := parser.Parse([]byte(tt.input))
 			require.NoError(t, err)
@@ -1015,6 +1022,7 @@ func TestParseMetricQuery(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			require.NoError(t, parser.Init())
 
 			actual, err := parser.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -1085,6 +1093,7 @@ func TestEmptySelection(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := &Parser{Configs: tt.configs, DefaultTags: map[string]string{}, Log: logger}
+			require.NoError(t, parser.Init())
 
 			_, err := parser.Parse([]byte(tt.input))
 			require.Error(t, err)
@@ -1132,7 +1141,7 @@ func TestTestCases(t *testing.T) {
 			// Load the xml-content
 			input, err := testutil.ParseRawLinesFrom(header, "File:")
 			require.NoError(t, err)
-			assert.Len(t, input, 1)
+			require.Len(t, input, 1)
 
 			datafile := filepath.FromSlash(input[0])
 			content, err := ioutil.ReadFile(datafile)
@@ -1146,6 +1155,7 @@ func TestTestCases(t *testing.T) {
 
 			// Setup the parser and run it.
 			parser := &Parser{Configs: []Config{*cfg}, Log: testutil.Logger{Name: "parsers.xml"}}
+			require.NoError(t, parser.Init())
 			outputs, err := parser.Parse(content)
 			if len(expectedErrors) == 0 {
 				require.NoError(t, err)
