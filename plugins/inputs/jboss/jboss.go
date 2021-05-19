@@ -175,8 +175,6 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 		}
 
 		execAsDomain := exec.Result["launch-type"] == "DOMAIN"
-		h.Log.Debugf("product-name %s", exec.Result["product-name"].(string))
-		h.Log.Debugf("product-version %s", exec.Result["product-version"].(string))
 		isEAP7 := isEAP7Version(exec.Result["product-name"].(string), exec.Result["product-version"].(string))
 		h.Log.Debugf("JBoss Plugin Working as Domain: %t EAP7: %t  for server %s", execAsDomain, isEAP7, server)
 
@@ -298,10 +296,6 @@ func (h *JBoss) getServersOnHost(
 							h.getWebStatistics(acc, serverURL, execAsDomain, host, server, "ajp")
 							h.getWebStatistics(acc, serverURL, execAsDomain, host, server, "http")
 						}
-					case "web_con":
-						h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "ajp")
-						h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "http")
-						h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "https")
 					case "deployment":
 						h.getServerDeploymentStatistics(acc, serverURL, execAsDomain, host, server)
 					case "database":
@@ -542,7 +536,6 @@ func (h *JBoss) getUndertowStatistics(
 		"type":         listener,
 	}
 	acc.AddFields("jboss_web", fields, tags)
-	acc.AddFields("jboss_web_con", fields, tags)
 
 	return nil
 }
@@ -555,9 +548,9 @@ func getPoolFields(pool DBPoolStatistics) map[string]interface{} {
 		retmap["in-use-count"], _ = strconv.ParseInt(pool.InUseCount.(string), 10, 64)
 		retmap["active-count"], _ = strconv.ParseInt(pool.ActiveCount.(string), 10, 64)
 		retmap["available-count"], _ = strconv.ParseInt(pool.AvailableCount.(string), 10, 64)
-		//	case float64:
-		//		retmap["in-use-count"] = int(pool.InUseCount.(float64))
-		//		retmap["active-count"] = int(pool.ActiveCount.(float64))
+	case float64:
+		retmap["in-use-count"] = int(pool.InUseCount.(float64))
+		retmap["active-count"] = int(pool.ActiveCount.(float64))
 		retmap["available-count"] = int(pool.AvailableCount.(float64))
 	default:
 		retmap["in-use-count"] = pool.InUseCount
@@ -1166,7 +1159,6 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 		h.Log.Errorf("JBoss Error: %s", err)
 		return nil, err
 	}
-	h.Log.Debugf("Resp: %s", body)
 	return []byte(body), nil
 }
 
