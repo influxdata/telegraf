@@ -49,7 +49,7 @@ type Config struct {
 
 func (p *Parser) Init() error {
 	switch p.Format {
-	case "xml":
+	case "", "xml":
 		p.document = &xmlDocument{}
 	default:
 		return fmt.Errorf("unknown data-format %q for xpath parser", p.Format)
