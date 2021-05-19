@@ -237,6 +237,79 @@ and all fields from secondary table (with index pointed from translation field),
 must be 1-to-1 (not 1-to-many). To add fields from secondary table with index that is not present
 in translation table (outer join), there is a second option for translation index `secondary_outer_join = true`.
 
+###### Example configuration for table joins
+
+CISCO-POWER-ETHERNET-EXT-MIB table before join:
+```
+[[inputs.snmp.table]]
+name = "ciscoPower"
+index_as_tag = true
+
+[[inputs.snmp.table.field]]
+name = "PortPwrConsumption"
+oid = "CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortPwrConsumption"
+
+[[inputs.snmp.table.field]]
+name = "EntPhyIndex"
+oid = "CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortEntPhyIndex"
+```
+
+Partial result (removed agent_host and host columns from all following outputs in this section):
+```
+> ciscoPower,index=1.2 EntPhyIndex=1002i,PortPwrConsumption=6643i 1621460628000000000
+> ciscoPower,index=1.6 EntPhyIndex=1006i,PortPwrConsumption=10287i 1621460628000000000
+> ciscoPower,index=1.5 EntPhyIndex=1005i,PortPwrConsumption=8358i 1621460628000000000
+```
+
+Note here that EntPhyIndex column carries index from ENTITY-MIB table, config for it:
+```
+[[inputs.snmp.table]]
+name = "entityTable"
+index_as_tag = true
+
+[[inputs.snmp.table.field]]
+name = "EntPhysicalName"
+oid = "ENTITY-MIB::entPhysicalName"
+```
+Partial result:
+```
+> entityTable,index=1006 EntPhysicalName="GigabitEthernet1/6" 1621460809000000000
+> entityTable,index=1002 EntPhysicalName="GigabitEthernet1/2" 1621460809000000000
+> entityTable,index=1005 EntPhysicalName="GigabitEthernet1/5" 1621460809000000000
+```
+
+Now, lets attempt to join these results into one table. EntPhyIndex matches index
+from second table, and lets convert EntPhysicalName into tag, so second table will
+only provide tags into result. Configuration:
+
+```
+[[inputs.snmp.table]]
+name = "ciscoPowerEntity"
+index_as_tag = true
+
+[[inputs.snmp.table.field]]
+name = "PortPwrConsumption"
+oid = "CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortPwrConsumption"
+
+[[inputs.snmp.table.field]]
+name = "EntPhyIndex"
+oid = "CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortEntPhyIndex"
+secondary_index_table = true    # enables joining
+
+[[inputs.snmp.table.field]]
+name = "EntPhysicalName"
+oid = "ENTITY-MIB::entPhysicalName"
+secondary_index_use = true      # this tag is indexed from secondary table
+is_tag = true
+```
+
+Result:
+```
+> ciscoPowerEntity,EntPhysicalName=GigabitEthernet1/2,index=1.2 EntPhyIndex=1002i,PortPwrConsumption=6643i 1621461148000000000
+> ciscoPowerEntity,EntPhysicalName=GigabitEthernet1/6,index=1.6 EntPhyIndex=1006i,PortPwrConsumption=10287i 1621461148000000000
+> ciscoPowerEntity,EntPhysicalName=GigabitEthernet1/5,index=1.5 EntPhyIndex=1005i,PortPwrConsumption=8358i 1621461148000000000
+```
+
 ### Troubleshooting
 
 Check that a numeric field can be translated to a textual field:
