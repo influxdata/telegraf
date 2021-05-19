@@ -153,7 +153,7 @@ func defaultVSphere() *VSphere {
 		DiscoverConcurrency:        1,
 		CollectConcurrency:         1,
 		Separator:                  ".",
-		HistoricalIntervalDuration: 300,
+		HistoricalIntervalDuration: config.Duration(time.Second * 300),
 	}
 }
 
@@ -229,6 +229,12 @@ func TestParseConfig(t *testing.T) {
 	tab, err := toml.Parse([]byte(c))
 	require.NoError(t, err)
 	require.NotNil(t, tab)
+
+}
+
+func TestConfigDurationParsing(t *testing.T) {
+	v := defaultVSphere()
+	require.Equal(t, int32(300), int32(time.Duration(v.HistoricalIntervalDuration).Seconds()), "HistoricalIntervalDuration.Seconds() with default duration should resolve 300")
 }
 
 func TestMaxQuery(t *testing.T) {
