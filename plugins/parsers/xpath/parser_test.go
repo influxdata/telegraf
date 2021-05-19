@@ -1088,11 +1088,9 @@ func TestEmptySelection(t *testing.T) {
 		},
 	}
 
-	logger := testutil.Logger{Name: "parsers.xml"}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: map[string]string{}, Log: logger}
+			parser := &Parser{Configs: tt.configs, DefaultTags: map[string]string{}, Log: testutil.Logger{Name: "parsers.xml"}}
 			require.NoError(t, parser.Init())
 
 			_, err := parser.Parse([]byte(tt.input))
@@ -1120,8 +1118,8 @@ func TestTestCases(t *testing.T) {
 			filename: "testcases/multisensor_selection_batch.conf",
 		},
 		{
-			name:     "openweathermap forecast",
-			filename: "testcases/openweathermap.conf",
+			name:     "openweathermap forecast (xml)",
+			filename: "testcases/openweathermap_xml.conf",
 		},
 		{
 			name:     "earthquakes quakeml",
