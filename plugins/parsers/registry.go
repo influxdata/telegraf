@@ -166,9 +166,7 @@ type Config struct {
 	JSONV2Config []JSONV2Config `toml:"json_v2"`
 }
 
-type XMLConfig struct {
-	xpath.Config
-}
+type XMLConfig xpath.Config
 
 type JSONV2Config struct {
 	json_v2.Config
@@ -384,22 +382,11 @@ func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, erro
 
 func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs []XMLConfig) (Parser, error) {
 	// Convert the config formats which is a one-to-one copy
-	configs := make([]xpath.Config, len(xmlConfigs))
-	for i, cfg := range xmlConfigs {
-		configs[i].MetricName = metricName
-		configs[i].MetricQuery = cfg.MetricQuery
-		configs[i].Selection = cfg.Selection
-		configs[i].Timestamp = cfg.Timestamp
-		configs[i].TimestampFmt = cfg.TimestampFmt
-		configs[i].Tags = cfg.Tags
-		configs[i].Fields = cfg.Fields
-		configs[i].FieldsInt = cfg.FieldsInt
-
-		configs[i].FieldSelection = cfg.FieldSelection
-		configs[i].FieldNameQuery = cfg.FieldNameQuery
-		configs[i].FieldValueQuery = cfg.FieldValueQuery
-
-		configs[i].FieldNameExpand = cfg.FieldNameExpand
+	configs := make([]xpath.Config, 0, len(xmlConfigs))
+	for _, cfg := range xmlConfigs {
+		config := xpath.Config(cfg)
+		config.MetricName = metricName
+		configs = append(configs, config)
 	}
 
 	return &xpath.Parser{
