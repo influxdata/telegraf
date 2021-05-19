@@ -34,9 +34,8 @@ type Sql struct {
 	Address             string
 	TableTemplate       string
 	TableExistsTemplate string
-	TagTableSuffix      string
 	Tables              map[string]bool
-	Convert             []ConvertStruct
+	Convert             ConvertStruct
 }
 
 func (p *Sql) Connect() error {
@@ -76,15 +75,15 @@ func (p *Sql) deriveDatatype(value interface{}) string {
 
 	switch value.(type) {
 	case int64:
-		datatype = p.Convert[0].Integer
+		datatype = p.Convert.Integer
 	case uint64:
-		datatype = fmt.Sprintf("%s %s", p.Convert[0].Integer, p.Convert[0].Unsigned)
+		datatype = fmt.Sprintf("%s %s", p.Convert.Integer, p.Convert.Unsigned)
 	case float64:
-		datatype = p.Convert[0].Real
+		datatype = p.Convert.Real
 	case string:
-		datatype = p.Convert[0].Text
+		datatype = p.Convert.Text
 	default:
-		datatype = p.Convert[0].Defaultvalue
+		datatype = p.Convert.Defaultvalue
 		log.Printf("E! Unknown datatype: '%T' %v", value, value)
 	}
 	return datatype
@@ -130,13 +129,13 @@ var sampleConfig = `
   # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
 
   ## Convert Telegraf datatypes to these types
-  [[outputs.sql.convert]]
-    integer              = "INT"
-    real                 = "DOUBLE"
-    text                 = "TEXT"
-    timestamp            = "TIMESTAMP"
-    defaultvalue         = "TEXT"
-    unsigned             = "UNSIGNED"
+  #[outputs.sql.convert]
+  #  integer              = "INT"
+  #  real                 = "DOUBLE"
+  #  text                 = "TEXT"
+  #  timestamp            = "TIMESTAMP"
+  #  defaultvalue         = "TEXT"
+  #  unsigned             = "UNSIGNED"
 `
 
 func (p *Sql) SampleConfig() string { return sampleConfig }
@@ -148,25 +147,23 @@ func (p *Sql) generateCreateTable(metric telegraf.Metric) string {
 	var sql []string
 
 	pk = append(pk, quoteIdent("timestamp"))
-	columns = append(columns, fmt.Sprintf("timestamp %s", p.Convert[0].Timestamp))
+	columns = append(columns, fmt.Sprintf("timestamp %s", p.Convert.Timestamp))
 
-	// handle tags if necessary
-	if len(metric.Tags()) > 0 {
-		// tags in measurement table
-		for column := range metric.Tags() {
-			pk = append(pk, quoteIdent(column))
-			columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(column), p.Convert[0].Text))
-		}
+	// tags in measurement table
+	for _, tag := range metric.TagList() {
+		pk = append(pk, quoteIdent(tag.Key))
+		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(tag.Key), p.Convert.Text))
 	}
 
 	var datatype string
-	for column, v := range metric.Fields() {
-		datatype = p.deriveDatatype(v)
-		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(column), datatype))
+	for _, field := range metric.FieldList() {
+		datatype = p.deriveDatatype(field.Value)
+		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(field.Key), datatype))
 	}
 
-	query := strings.Replace(p.TableTemplate, "{TABLE}", quoteIdent(metric.Name()), -1)
-	query = strings.Replace(query, "{TABLELITERAL}", quoteLiteral(metric.Name()), -1)
+	var query string
+	query = strings.Replace(p.TableTemplate, "{TABLE}", quoteIdent(metric.Name()), -1) //metric name
+	query = strings.Replace(query, "{TABLELITERAL}", quoteLiteral(metric.Name()), -1)  //quoted metric name
 	query = strings.Replace(query, "{COLUMNS}", strings.Join(columns, ","), -1)
 	query = strings.Replace(query, "{KEY_COLUMNS}", strings.Join(pk, ","), -1)
 
@@ -214,15 +211,12 @@ func (p *Sql) Write(metrics []telegraf.Metric) error {
 		var values []interface{}
 
 		// We assume that SQL is making auto timestamp
-		//columns = append(columns, "timestamp")
-		//values = append(values, metric.Time())
+		columns = append(columns, "timestamp")
+		values = append(values, metric.Time())
 
-		if len(metric.Tags()) > 0 {
-			// tags in measurement table
-			for column, value := range metric.Tags() {
-				columns = append(columns, column)
-				values = append(values, value)
-			}
+		for column, value := range metric.Tags() {
+			columns = append(columns, column)
+			values = append(values, value)
 		}
 
 		for column, value := range metric.Fields() {
@@ -250,6 +244,13 @@ func newSql() *Sql {
 	return &Sql{
 		TableTemplate:       "CREATE TABLE {TABLE}({COLUMNS})",
 		TableExistsTemplate: "SELECT 1 FROM {TABLE} LIMIT 1",
-		TagTableSuffix:      "_tag",
+		Convert: ConvertStruct{
+			Integer:      "INT",
+			Real:         "DOUBLE",
+			Text:         "TEXT",
+			Timestamp:    "TIMESTAMP",
+			Defaultvalue: "TEXT",
+			Unsigned:     "UNSIGNED",
+		},
 	}
 }

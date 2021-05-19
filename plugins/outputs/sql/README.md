@@ -1,19 +1,28 @@
 # SQL plugin
 
 The plugin inserts values to SQL various database.
-Supported/integrated drivers are mssql (SQLServer), mysql (MySQL), postgres (Postgres)
-Activable drivers (read below) are all golang SQL compliant drivers (see https://github.com/golang/go/wiki/SQLDrivers): for instance oci8 for Oracle or sqlite3 (SQLite)
+Supported/integrated drivers are mssql (SQLServer), mysql (MySQL),
+postgres (Postgres) Activable drivers (read below) are all golang SQL
+compliant drivers (see the list of golang SQL
+[drivers](https://github.com/golang/go/wiki/SQLDrivers)): for instance
+oci8 for Oracle or sqlite3 (SQLite)
 
-## Getting started :
-First you need to grant insert (if auto create table create) privileges to the database user you use for the connection
+## Getting started
 
-## Configuration:
+First you need to grant insert (if auto create table create)
+privileges to the database user you use for the connection
+
+timestamp is always added.  Default type "TIMESTAMP" makes mysql use
+the insertion time.
+
+## Configuration
 
 ```
 # Send metrics to SQL-Database (Example configuration for MySQL/MariaDB)
 [[outputs.sql]]
   ## Database Driver, required.
-  ## Valid options: mssql (SQLServer), mysql (MySQL), postgres (Postgres), sqlite3 (SQLite), [oci8 ora.v4 (Oracle)]
+  ## Valid options: mssql (SQLServer), mysql (MySQL), postgres (Postgres),
+  ##   sqlite3 (SQLite), [oci8 ora.v4 (Oracle)]
   driver = "mysql"
 
   ## specify address via a url matching:
@@ -51,23 +60,27 @@ First you need to grant insert (if auto create table create) privileges to the d
   # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
 
   ## Convert Telegraf datatypes to these types
-  [[outputs.sql.convert]]
-    integer              = "INT"
-    real                 = "DOUBLE"
-    text                 = "TEXT"
-    timestamp            = "TIMESTAMP"
-    defaultvalue         = "TEXT"
-    unsigned             = "UNSIGNED"
+  #[outputs.sql.convert]
+  #  integer              = "INT"
+  #  real                 = "DOUBLE"
+  #  text                 = "TEXT"
+  #  timestamp            = "TIMESTAMP"
+  #  defaultvalue         = "TEXT"
+  #  unsigned             = "UNSIGNED"
 ```
+
 sql_script is read only once, if you change the script you need to reload telegraf
 
 ## Field names
-If database table is not pre-created tries driver to create database. There can be errors as
-SQL has strict scheming.
+
+If database table is not pre-created tries driver to create
+database. There can be errors as SQL has strict scheming.
 
 ## Tested Databases
+
 Actually I run the plugin using MySQL
 
 ## TODO
+
 1) Test with other databases
 2) More sane testing
