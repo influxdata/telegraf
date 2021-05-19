@@ -6,17 +6,29 @@ import (
 	"strings"
 	"time"
 
-	"github.com/antchfx/xmlquery"
 	"github.com/antchfx/xpath"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
 
+type dataNode interface{}
+
+type dataDocument interface {
+	Parse(buf []byte) (dataNode, error)
+	QueryAll(node dataNode, expr string) ([]dataNode, error)
+	CreateXPathNavigator(node dataNode) xpath.NodeNavigator
+	GetNodePath(node, relativeTo dataNode, sep string) string
+	OutputXML(node dataNode) string
+}
+
 type Parser struct {
+	Format      string
 	Configs     []Config
 	DefaultTags map[string]string
 	Log         telegraf.Logger
+
+	document dataDocument
 }
 
 type Config struct {
@@ -35,11 +47,22 @@ type Config struct {
 	FieldNameExpand bool   `toml:"field_name_expansion"`
 }
 
+func (p *Parser) Init() error {
+	switch p.Format {
+	case "xml":
+		p.document = &xmlDocument{}
+	default:
+		return fmt.Errorf("unknown data-format %q for xpath parser", p.Format)
+	}
+
+	return nil
+}
+
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	t := time.Now()
 
 	// Parse the XML
-	doc, err := xmlquery.Parse(strings.NewReader(string(buf)))
+	doc, err := p.document.Parse(buf)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +73,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		if len(config.Selection) == 0 {
 			config.Selection = "/"
 		}
-		selectedNodes, err := xmlquery.QueryAll(doc, config.Selection)
+		selectedNodes, err := p.document.QueryAll(doc, config.Selection)
 		if err != nil {
 			return nil, err
 		}
@@ -82,14 +105,14 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	case 1:
 		config := p.Configs[0]
 
-		doc, err := xmlquery.Parse(strings.NewReader(line))
+		doc, err := p.document.Parse([]byte(line))
 		if err != nil {
 			return nil, err
 		}
 
 		selected := doc
 		if len(config.Selection) > 0 {
-			selectedNodes, err := xmlquery.QueryAll(doc, config.Selection)
+			selectedNodes, err := p.document.QueryAll(doc, config.Selection)
 			if err != nil {
 				return nil, err
 			}
@@ -111,7 +134,7 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, config Config) (telegraf.Metric, error) {
+func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config Config) (telegraf.Metric, error) {
 	var timestamp time.Time
 	var metricname string
 
@@ -119,7 +142,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 	// otherwise.
 	metricname = config.MetricName
 	if len(config.MetricQuery) > 0 {
-		v, err := executeQuery(doc, selected, config.MetricQuery)
+		v, err := p.executeQuery(doc, selected, config.MetricQuery)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query metric name: %v", err)
 		}
@@ -130,7 +153,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 	// with the queried timestamp if an expresion was specified.
 	timestamp = starttime
 	if len(config.Timestamp) > 0 {
-		v, err := executeQuery(doc, selected, config.Timestamp)
+		v, err := p.executeQuery(doc, selected, config.Timestamp)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query timestamp: %v", err)
 		}
@@ -177,7 +200,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 	tags := make(map[string]string)
 	for name, query := range config.Tags {
 		// Execute the query and cast the returned values into strings
-		v, err := executeQuery(doc, selected, query)
+		v, err := p.executeQuery(doc, selected, query)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query tag '%s': %v", name, err)
 		}
@@ -202,7 +225,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 	fields := make(map[string]interface{})
 	for name, query := range config.FieldsInt {
 		// Execute the query and cast the returned values into integers
-		v, err := executeQuery(doc, selected, query)
+		v, err := p.executeQuery(doc, selected, query)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query field (int) '%s': %v", name, err)
 		}
@@ -228,7 +251,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 
 	for name, query := range config.Fields {
 		// Execute the query and store the result in fields
-		v, err := executeQuery(doc, selected, query)
+		v, err := p.executeQuery(doc, selected, query)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query field '%s': %v", name, err)
 		}
@@ -247,14 +270,14 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 		}
 
 		// Query all fields
-		selectedFieldNodes, err := xmlquery.QueryAll(selected, config.FieldSelection)
+		selectedFieldNodes, err := p.document.QueryAll(selected, config.FieldSelection)
 		if err != nil {
 			return nil, err
 		}
 		p.Log.Debugf("Number of selected field nodes: %d", len(selectedFieldNodes))
 		if len(selectedFieldNodes) > 0 && selectedFieldNodes[0] != nil {
 			for _, selectedfield := range selectedFieldNodes {
-				n, err := executeQuery(doc, selectedfield, fieldnamequery)
+				n, err := p.executeQuery(doc, selectedfield, fieldnamequery)
 				if err != nil {
 					return nil, fmt.Errorf("failed to query field name with query '%s': %v", fieldnamequery, err)
 				}
@@ -262,13 +285,13 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 				if !ok {
 					return nil, fmt.Errorf("failed to query field name with query '%s': result is not a string (%v)", fieldnamequery, n)
 				}
-				v, err := executeQuery(doc, selectedfield, fieldvaluequery)
+				v, err := p.executeQuery(doc, selectedfield, fieldvaluequery)
 				if err != nil {
 					return nil, fmt.Errorf("failed to query field value for '%s': %v", name, err)
 				}
 				path := name
 				if config.FieldNameExpand {
-					p := getNodePath(selectedfield, selected, "_")
+					p := p.document.GetNodePath(selectedfield, selected, "_")
 					if len(p) > 0 {
 						path = p + "_" + name
 					}
@@ -295,30 +318,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected *xmlquery.Node, c
 	return metric.New(metricname, tags, fields, timestamp), nil
 }
 
-func getNodePath(node, relativeTo *xmlquery.Node, sep string) string {
-	names := make([]string, 0)
-
-	// Climb up the tree and collect the node names
-	n := node.Parent
-	for n != nil && n != relativeTo {
-		names = append(names, n.Data)
-		n = n.Parent
-	}
-
-	if len(names) < 1 {
-		return ""
-	}
-
-	// Construct the nodes
-	path := ""
-	for _, name := range names {
-		path = name + sep + path
-	}
-
-	return path[:len(path)-1]
-}
-
-func executeQuery(doc, selected *xmlquery.Node, query string) (r interface{}, err error) {
+func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface{}, err error) {
 	// Check if the query is relative or absolute and set the root for the query
 	root := selected
 	if strings.HasPrefix(query, "/") {
@@ -334,7 +334,7 @@ func executeQuery(doc, selected *xmlquery.Node, query string) (r interface{}, er
 	// Evaluate the compiled expression and handle returned node-iterators
 	// separately. Those iterators will be returned for queries directly
 	// referencing a node (value or attribute).
-	n := expr.Evaluate(xmlquery.CreateXPathNavigator(root))
+	n := expr.Evaluate(p.document.CreateXPathNavigator(root))
 	if iter, ok := n.(*xpath.NodeIterator); ok {
 		// We got an iterator, so take the first match and get the referenced
 		// property. This will always be a string.
@@ -399,7 +399,7 @@ func splitLastPathElement(query string) []string {
 	return elements
 }
 
-func (p *Parser) debugEmptyQuery(operation string, root *xmlquery.Node, initialquery string) {
+func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery string) {
 	if p.Log == nil {
 		return
 	}
@@ -415,7 +415,7 @@ func (p *Parser) debugEmptyQuery(operation string, root *xmlquery.Node, initialq
 		}
 		for i := len(parts) - 1; i >= 0; i-- {
 			q := parts[i]
-			nodes, err := xmlquery.QueryAll(root, q)
+			nodes, err := p.document.QueryAll(root, q)
 			if err != nil {
 				p.Log.Debugf("executing query %q in %s failed: %v", q, operation, err)
 				return

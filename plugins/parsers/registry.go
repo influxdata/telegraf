@@ -389,10 +389,14 @@ func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs [
 		configs = append(configs, config)
 	}
 
-	return &xpath.Parser{
+	parser := &xpath.Parser{
+		Format:      "xml",
 		Configs:     configs,
 		DefaultTags: defaultTags,
-	}, nil
+	}
+	err := parser.Init()
+
+	return parser, err
 }
 
 func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
