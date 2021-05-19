@@ -1122,6 +1122,10 @@ func TestTestCases(t *testing.T) {
 			filename: "testcases/openweathermap_xml.conf",
 		},
 		{
+			name:     "openweathermap forecast (json)",
+			filename: "testcases/openweathermap_json.conf",
+		},
+		{
 			name:     "earthquakes quakeml",
 			filename: "testcases/earthquakes.conf",
 		},
@@ -1141,7 +1145,14 @@ func TestTestCases(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, input, 1)
 
-			datafile := filepath.FromSlash(input[0])
+			filefields := strings.Fields(input[0])
+			require.GreaterOrEqual(t, len(filefields), 1)
+			datafile := filepath.FromSlash(filefields[0])
+			fileformat := ""
+			if len(filefields) > 1 {
+				fileformat = filefields[1]
+			}
+
 			content, err := ioutil.ReadFile(datafile)
 			require.NoError(t, err)
 
@@ -1152,7 +1163,11 @@ func TestTestCases(t *testing.T) {
 			expectedErrors, _ := testutil.ParseRawLinesFrom(header, "Expected Error:")
 
 			// Setup the parser and run it.
-			parser := &Parser{Configs: []Config{*cfg}, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				Format:  fileformat,
+				Configs: []Config{*cfg},
+				Log:     testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 			outputs, err := parser.Parse(content)
 			if len(expectedErrors) == 0 {
