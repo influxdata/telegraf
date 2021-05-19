@@ -589,14 +589,18 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 					rtr.Fields[f.Name] = v
 				}
 				if f.SecondaryIndexTable {
-					//indexes are stored here with prepending "." so we need to add them
+					//indexes are stored here with prepending "." so we need to add them if needed
 					var vss string
 					if ok {
 						vss = "." + vs
 					} else {
 						vss = fmt.Sprintf(".%v", v)
 					}
-					secIdxTab[vss] = "." + idx
+					if idx[0] == '.' {
+						secIdxTab[vss] = idx
+					} else {
+						secIdxTab[vss] = "." + idx
+					}
 				}
 			}
 		}
