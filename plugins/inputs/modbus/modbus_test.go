@@ -678,6 +678,91 @@ func TestHoldingRegisters(t *testing.T) {
 	}
 }
 
+func TestReadMultipleCoilWithHole(t *testing.T) {
+	serv := mbserver.NewServer()
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	handler := mb.NewTCPClientHandler("localhost:1502")
+	require.NoError(t, handler.Connect())
+	defer handler.Close()
+	client := mb.NewClient(handler)
+
+	fcs := []fieldDefinition{}
+	expectedFields := make(map[string]interface{})
+	writeValue := uint16(0)
+	readValue := uint16(0)
+	for i := 0; i < 14; i++ {
+		fc := fieldDefinition{}
+		fc.Name = fmt.Sprintf("coil-%v", i)
+		fc.Address = []uint16{uint16(i)}
+		fcs = append(fcs, fc)
+
+		_, err := client.WriteSingleCoil(fc.Address[0], writeValue)
+		require.NoError(t, err)
+
+		expectedFields[fc.Name] = readValue
+		writeValue = 65280 - writeValue
+		readValue = 1 - readValue
+	}
+	for i := 15; i < 18; i++ {
+		fc := fieldDefinition{}
+		fc.Name = fmt.Sprintf("coil-%v", i)
+		fc.Address = []uint16{uint16(i)}
+		fcs = append(fcs, fc)
+
+		_, err := client.WriteSingleCoil(fc.Address[0], writeValue)
+		require.NoError(t, err)
+
+		expectedFields[fc.Name] = readValue
+		writeValue = 65280 - writeValue
+		readValue = 1 - readValue
+	}
+	for i := 24; i < 33; i++ {
+		fc := fieldDefinition{}
+		fc.Name = fmt.Sprintf("coil-%v", i)
+		fc.Address = []uint16{uint16(i)}
+		fcs = append(fcs, fc)
+
+		_, err := client.WriteSingleCoil(fc.Address[0], writeValue)
+		require.NoError(t, err)
+
+		expectedFields[fc.Name] = readValue
+		writeValue = 65280 - writeValue
+		readValue = 1 - readValue
+	}
+	require.Len(t, expectedFields, len(fcs))
+
+	modbus := Modbus{
+		Name:       "TestReadMultipleCoilWithHole",
+		Controller: "tcp://localhost:1502",
+		Log:        testutil.Logger{Name: "modbus:MultipleCoilWithHole"},
+	}
+	modbus.SlaveID = 1
+	modbus.Coils = fcs
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"modbus",
+			map[string]string{
+				"type":     cCoils,
+				"slave_id": strconv.Itoa(int(modbus.SlaveID)),
+				"name":     modbus.Name,
+			},
+			expectedFields,
+			time.Unix(0, 0),
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+	require.NoError(t, modbus.Gather(&acc))
+	acc.Wait(len(expected))
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
 func TestReadMultipleCoilLimit(t *testing.T) {
 	serv := mbserver.NewServer()
 	require.NoError(t, serv.ListenTCP("localhost:1502"))
