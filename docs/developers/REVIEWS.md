@@ -22,7 +22,7 @@ your pull-request (bugfix, enhancement of existing code, new plugin, etc). Remem
 
 Please read the review comments carefully, fix the related part of the code and/or respond in case there is anything unclear. If there is no activity in a pull-request or the contributor does not respond, we apply the following scheme:
 1. We send a first reminder after at least 2 weeks of inactivity.
-1. After at least another two weeks of inactivity we send a second reminder and are setting the `waiting for response` tag. This is a hint that we believe you dropped the ball on the PR.
+1. After at least another two weeks of inactivity we send a second reminder and are setting the `waiting for response` tag.
 1. Another two weeks later we will ask the community for help setting the `help wanted` reminder.
 1. In case nobody volunteers to take over the PR within the next 30 days, InfluxData will triage the PR and might close it due to inactivity.
 
