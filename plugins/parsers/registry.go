@@ -19,7 +19,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
-	"github.com/influxdata/telegraf/plugins/parsers/xml"
+	"github.com/influxdata/telegraf/plugins/parsers/xpath"
 )
 
 type ParserFunc func() (Parser, error)
@@ -167,7 +167,7 @@ type Config struct {
 }
 
 type XMLConfig struct {
-	xml.Config
+	xpath.Config
 }
 
 type JSONV2Config struct {
@@ -384,7 +384,7 @@ func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, erro
 
 func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs []XMLConfig) (Parser, error) {
 	// Convert the config formats which is a one-to-one copy
-	configs := make([]xml.Config, len(xmlConfigs))
+	configs := make([]xpath.Config, len(xmlConfigs))
 	for i, cfg := range xmlConfigs {
 		configs[i].MetricName = metricName
 		configs[i].MetricQuery = cfg.MetricQuery
@@ -402,7 +402,7 @@ func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs [
 		configs[i].FieldNameExpand = cfg.FieldNameExpand
 	}
 
-	return &xml.Parser{
+	return &xpath.Parser{
 		Configs:     configs,
 		DefaultTags: defaultTags,
 	}, nil

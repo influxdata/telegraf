@@ -1,4 +1,4 @@
-package xml
+package xpath
 
 import (
 	"io/ioutil"
