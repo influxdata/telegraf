@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -47,8 +49,7 @@ func HuaweiTelemetryDecoder(body []byte) (*metric.SeriesGrouper, error) {
 	err := proto.Unmarshal(body[12:], msg)
 	if err != nil {
 		fmt.Println("Unable to decode incoming packet: ", err.Error())
-		return nil, err
-		//panic(err)
+		return nil, err		
 	}
 	grouper := metric.NewSeriesGrouper()
 	for _, gpbkv := range msg.GetDataGpb().GetRow() {
@@ -74,7 +75,7 @@ func HuaweiTelemetryDecoder(body []byte) (*metric.SeriesGrouper, error) {
 		}
 		// Create Metrics
 		for i := 0; i < len(fields); i++ {
-			huawei_sensorPath.CreateMetrics(grouper, tags, timestamp, msg.GetSensorPath(), fields[i], vals[i])
+			CreateMetrics(grouper, tags, timestamp, msg.GetSensorPath(), fields[i], vals[i])
 		}
 	}
 	return grouper, nil
@@ -180,6 +181,189 @@ func (h *HuaweiRoutersTelemetry) Start(acc telegraf.Accumulator) error {
 	}()
 	return nil
 }
+
+/*
+  Creates and add metrics from json mapped data in telegraf metrics SeriesGrouper
+  @params:
+  - grouper (*metric.SeriesGrouper) - pointer of metric series to append data.
+  - tags (map[string]string) json data mapped
+  - timestamp (time.Time) -
+  - path (string) - sensor path
+  - subfield (string) - subkey data.
+    vals (string) - subkey content
+
+*/
+func CreateMetrics(grouper *metric.SeriesGrouper, tags map[string]string, timestamp time.Time, path string, subfield string, vals string)  {
+  if subfield == "ifAdminStatus" {
+    name:= strings.Replace(subfield,"\"","",-1)
+    if vals == "IfAdminStatus_UP" {
+      grouper.Add(path, tags, timestamp, string(name), 1)
+    } else {
+      grouper.Add(path, tags, timestamp, string(name), 0)
+    }
+  }
+  if subfield == "ifOperStatus" {
+    name:= strings.Replace(subfield,"\"","",-1)
+    if vals == "IfOperStatus_UP" {
+      grouper.Add(path, tags, timestamp, string(name), 1)
+    } else {
+      grouper.Add(path, tags, timestamp, string(name), 0)
+    }
+  }
+  if vals != "" && subfield != "ifName" && subfield != "position" && subfield != "pemIndex" && subfield != "address" && subfield != "i2c" && subfield != "channel" &&
+  subfield != "queueType" && subfield != "ifAdminStatus" && subfield != "ifOperStatus" {
+    name:= strings.Replace(subfield,"\"","",-1)
+    endPointTypes:=GetTypeValue(path)
+    grouper.Add(path, tags, timestamp, string(name), decodeVal(endPointTypes[name], vals))
+  }
+}
+
+/*
+  Append to the tags the telemetry values for position.
+  @params:
+  k - Key to evaluate
+  v - Content of the Key
+  tags - Global tags of the metric
+  path - Telemetry path
+  @returns
+  original tag append the key if its a name Key.
+
+*/
+func AppendTags(k string, v string, tags map[string]string, path string) map[string]string {
+  resolve := tags
+  endPointTypes:=GetTypeValue(path)
+  if endPointTypes[k] != nil {
+    if reflect.TypeOf(decodeVal(endPointTypes[k], v)) == reflect.TypeOf("") {
+      if k != "ifAdminStatus" {
+          resolve[k] = v
+      }
+    }
+  } else {
+    if k == "ifName" || k == "position" || k == "pemIndex" || k == "i2c"{
+      resolve[k] = v
+    }
+
+  }
+  return resolve
+}
+
+/*
+  Convert the telemetry Data to its type.
+  @Params:
+  tipo - telemetry path data type
+  val - string value
+  Returns the converted value
+*/
+func decodeVal(tipo interface{}, val string) interface{} {
+  if tipo == nil {
+    return val
+  } else {
+  value := reflect.New(tipo.(reflect.Type)).Elem().Interface()
+  switch value.(type) {
+  case uint32: resolve, _ := strconv.ParseUint(val,10,32); return resolve;
+  case uint64: resolve,_ :=  strconv.ParseUint(val,10,64); return resolve;
+  case int32: resolve,_ :=  strconv.ParseInt(val,10,32);   return resolve;
+  case int64: resolve,_ :=  strconv.ParseInt(val,10,64);   return resolve;
+  case float64: resolve, err :=  strconv.ParseFloat(val,64);
+                if err != nil {
+                  name:= strings.Replace(val,"\"","",-1)
+                  resolve, _=  strconv.ParseFloat(name,64);
+                }
+                return resolve;
+  case bool: resolve,_ :=  strconv.ParseBool(val); return resolve;
+  }
+  }
+  resolve := val;
+  return resolve;
+}
+
+/*
+  Search de keys and vals of the data row in telemetry message.
+  @params:
+  - Message (*TelemetryRowGPB) - data buffer GPB of sensor data
+  - sensorType (string) - sensor-path group.
+  @returns:
+  - keys (string) - Keys of the fields
+  - vals (string) - Vals of the fields
+*/
+func SearchKey(Message *telemetry.TelemetryRowGPB, path string)  ([]string, []string){
+  sensorType := strings.Split(path,":")[0]
+  sensorMsg := GetMessageType(sensorType)
+  err := proto.Unmarshal(Message.Content, sensorMsg)
+  if (err != nil) {
+    panic(err)
+  }
+  primero := reflect.ValueOf(sensorMsg).Interface()
+
+  str := fmt.Sprintf("%v", primero)
+  // format string to JsonString with some modifications.
+  jsonString := strings.Replace(str,"<>", "0",-1)
+  jsonString = strings.Replace(jsonString,"<", "{\"",-1)
+  jsonString= strings.Replace(jsonString,">", "\"}",-1)
+  jsonString= strings.Replace(jsonString," ", ",\"",-1)
+  jsonString= strings.Replace(jsonString,":", "\":",-1)
+  jsonString= strings.Replace(jsonString,",\"\"","",-1)
+  jsonString= strings.Replace(jsonString,"},\"", "}",-1)
+  jsonString= strings.Replace(jsonString,","," ",-1)
+  jsonString= strings.Replace(jsonString,"{"," ",-1)
+  jsonString= strings.Replace(jsonString,"}","",-1)
+  jsonString="\""+jsonString
+  if path == "huawei-ifm:ifm/interfaces/interface/ifDynamicInfo" { // Particular case.....
+    jsonString= strings.Replace(jsonString,"IfOperStatus_UPifName\"","IfOperStatus_UP \"ifName\"",-1)
+  }
+  lastQuote := rune(0)
+      f := func(c rune) bool {
+          switch {
+          case c == lastQuote:
+              lastQuote = rune(0)
+              return false
+          case lastQuote != rune(0):
+              return false
+          case unicode.In(c, unicode.Quotation_Mark):
+              lastQuote = c
+              return false
+          default:
+              return unicode.IsSpace(c)
+
+          }
+      }
+
+    // splitting string by space but considering quoted section
+    items := strings.FieldsFunc(jsonString, f)
+
+    // create and fill the map
+    m := make(map[string]string)
+    for _, item := range items {
+        x := strings.Split(item, ":")
+        m[x[0]] = x[1]
+    }
+    // get keys and vals of fields
+    var keys []string
+    var vals []string
+    for k, v := range m {
+        name:= strings.Replace(k,"\"","",-1) // remove quotes
+        keys = append(keys, name)
+        vals = append(vals, v)
+
+    }
+    // Adaptation to resolve Huawei bad struct Data.
+    if path == "huawei-ifm:ifm/interfaces/interface" {
+      if Find(keys, "ifAdminStatus") == -1 {
+        keys = append(keys, "ifAdminStatus")
+        vals = append(vals, "IfAdminStatus_DOWN")
+      }
+    }
+    // Adaptation to resolve Huawei bad struct Data.
+    if path == "huawei-ifm:ifm/interfaces/interface/ifDynamicInfo" {
+      if Find(keys, "ifOperStatus") == -1 {
+        keys = append(keys, "ifOperStatus")
+        vals = append(vals, "IfOperStatus_DOWN")
+      }
+    }
+
+  return keys, vals
+}
+
 
 func udpListen(network string, address string) (net.PacketConn, error) {
 	switch network {
