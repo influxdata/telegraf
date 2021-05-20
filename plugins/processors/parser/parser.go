@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"log"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -49,7 +47,7 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		var err error
 		p.parser, err = parsers.NewParser(&p.Config)
 		if err != nil {
-			log.Printf("E! [processors.parser] could not create parser: %v", err)
+			p.Log.Errorf("could not create parser: %v", err)
 			return metrics
 		}
 		models.SetLoggerOnPlugin(p.parser, p.Log)
@@ -70,7 +68,7 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 					case string:
 						fromFieldMetric, err := p.parseField(value)
 						if err != nil {
-							log.Printf("E! [processors.parser] could not parse field %s: %v", key, err)
+							p.Log.Errorf("could not parse field %s: %v", key, err)
 						}
 
 						for _, m := range fromFieldMetric {
@@ -84,7 +82,7 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 						// prior to returning.
 						newMetrics = append(newMetrics, fromFieldMetric...)
 					default:
-						log.Printf("E! [processors.parser] field '%s' not a string, skipping", key)
+						p.Log.Errorf("field '%s' not a string, skipping", key)
 					}
 				}
 			}

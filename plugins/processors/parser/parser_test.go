@@ -7,6 +7,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
+
+	"github.com/influxdata/telegraf/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -503,6 +506,7 @@ func TestApply(t *testing.T) {
 				ParseFields:  tt.parseFields,
 				DropOriginal: tt.dropOriginal,
 				Merge:        tt.merge,
+				Log:          testutil.Logger{Name: "processor.parser"},
 			}
 
 			output := parser.Apply(tt.input)
@@ -573,6 +577,7 @@ func TestBadApply(t *testing.T) {
 			parser := Parser{
 				Config:      tt.config,
 				ParseFields: tt.parseFields,
+				Log:         testutil.Logger{Name: "processor.parser"},
 			}
 
 			output := parser.Apply(tt.input)
