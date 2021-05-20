@@ -923,6 +923,7 @@ func fetchConfig(u *url.URL, token string) ([]byte, error) {
 	}
 
 	if token != "" {
+		log.Printf("W! [config] Use INFLUX_CONFIG_TOKEN or INFLUX_TOKEN instead of --config-token for security")
 		req.Header.Add("Authorization", "Token "+token)
 	} else if v, exists := os.LookupEnv("INFLUX_CONFIG_TOKEN"); exists {
 		req.Header.Add("Authorization", "Token "+v)
