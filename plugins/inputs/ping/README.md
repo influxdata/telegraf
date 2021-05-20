@@ -70,6 +70,10 @@ native Go by the Telegraf process, eliminating the need to execute the system
 
   ## Use only IPv6 addresses when resolving a hostname.
   # ipv6 = false
+
+  ## Number of data bytes to be sent. Corresponds to the "-s"
+  ## option of the ping command. This only works with the native method.
+  # size = 56
 ```
 
 #### File Limit

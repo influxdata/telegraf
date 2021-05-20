@@ -18,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+const (
+	defaultPingDataBytesSize = 56
+)
+
 // HostPinger is a function that runs the "ping" function using a list of
 // passed arguments. This can be easily switched with a mocked ping function
 // for unit test purposes (see ping_test.go)
@@ -73,6 +77,9 @@ type Ping struct {
 
 	// Calculate the given percentiles when using native method
 	Percentiles []int
+
+	// Packet size
+	Size *int
 }
 
 func (*Ping) Description() string {
@@ -125,6 +132,10 @@ const sampleConfig = `
 
   ## Use only IPv6 addresses when resolving a hostname.
   # ipv6 = false
+
+  ## Number of data bytes to be sent. Corresponds to the "-s"
+  ## option of the ping command. This only works with the native method.
+  # size = 56
 `
 
 func (*Ping) SampleConfig() string {
@@ -170,6 +181,13 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 
 	if p.IPv6 {
 		pinger.SetNetwork("ip6")
+	}
+
+	if p.Method == "native" {
+		pinger.Size = defaultPingDataBytesSize
+		if p.Size != nil {
+			pinger.Size = *p.Size
+		}
 	}
 
 	pinger.Source = p.sourceAddress
