@@ -10,13 +10,12 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 //compares metrics without comparing time
 func compareMetrics(t *testing.T, expected, actual []telegraf.Metric) {
-	assert.Equal(t, len(expected), len(actual))
+	require.Equal(t, len(expected), len(actual))
 	for i, metric := range actual {
 		require.Equal(t, expected[i].Name(), metric.Name())
 		require.Equal(t, expected[i].Fields(), metric.Fields())
