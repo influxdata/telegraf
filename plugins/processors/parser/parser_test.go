@@ -16,10 +16,10 @@ import (
 //compares metrics without comparing time
 func compareMetrics(t *testing.T, expected, actual []telegraf.Metric) {
 	require.Equal(t, len(expected), len(actual))
-	for i, metric := range actual {
-		require.Equal(t, expected[i].Name(), metric.Name())
-		require.Equal(t, expected[i].Fields(), metric.Fields())
-		require.Equal(t, expected[i].Tags(), metric.Tags())
+	for i, m := range actual {
+		require.Equal(t, expected[i].Name(), m.Name())
+		require.Equal(t, expected[i].Fields(), m.Fields())
+		require.Equal(t, expected[i].Tags(), m.Tags())
 	}
 }
 
@@ -588,17 +588,17 @@ func TestBadApply(t *testing.T) {
 
 // Benchmarks
 
-func getMetricFields(metric telegraf.Metric) interface{} {
+func getMetricFields(m telegraf.Metric) interface{} {
 	key := "field3"
-	if value, ok := metric.Fields()[key]; ok {
+	if value, ok := m.Fields()[key]; ok {
 		return value
 	}
 	return nil
 }
 
-func getMetricFieldList(metric telegraf.Metric) interface{} {
+func getMetricFieldList(m telegraf.Metric) interface{} {
 	key := "field3"
-	fields := metric.FieldList()
+	fields := m.FieldList()
 	for _, field := range fields {
 		if field.Key == key {
 			return field.Value
