@@ -28,8 +28,8 @@ type SQLServer struct {
 	QueryStoreCollection bool     `toml:"query_store_collection"`
 	pools                []*sql.DB
 	queries              MapQuery
-	adalToken    *adal.Token
-	muCacheLock  sync.RWMutex
+	adalToken            *adal.Token
+	muCacheLock          sync.RWMutex
 }
 
 // Query struct
