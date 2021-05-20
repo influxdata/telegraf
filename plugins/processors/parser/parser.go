@@ -15,7 +15,7 @@ type Parser struct {
 	Merge        string          `toml:"merge"`
 	ParseFields  []string        `toml:"parse_fields"`
 	Log          telegraf.Logger `toml:"-"`
-	Parser       parsers.Parser
+	parser       parsers.Parser
 }
 
 var SampleConfig = `
@@ -45,14 +45,14 @@ func (p *Parser) Description() string {
 }
 
 func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
-	if p.Parser == nil {
+	if p.parser == nil {
 		var err error
-		p.Parser, err = parsers.NewParser(&p.Config)
+		p.parser, err = parsers.NewParser(&p.Config)
 		if err != nil {
 			log.Printf("E! [processors.parser] could not create parser: %v", err)
 			return metrics
 		}
-		models.SetLoggerOnPlugin(p.Parser, p.Log)
+		models.SetLoggerOnPlugin(p.parser, p.Log)
 	}
 
 	results := []telegraf.Metric{}
@@ -117,7 +117,7 @@ func merge(base telegraf.Metric, metrics []telegraf.Metric) telegraf.Metric {
 }
 
 func (p *Parser) parseField(value string) ([]telegraf.Metric, error) {
-	return p.Parser.Parse([]byte(value))
+	return p.parser.Parse([]byte(value))
 }
 
 func init() {
