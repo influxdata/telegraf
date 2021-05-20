@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+  "unicode"
 
 	"github.com/DamRCorba/huawei_telemetry_sensors"
 	"github.com/DamRCorba/huawei_telemetry_sensors/sensors/huawei-telemetry"
@@ -35,7 +36,7 @@ type HuaweiRoutersTelemetry struct {
 
 	wg              sync.WaitGroup
 
-	telegraf.Accumulator
+	acc telegraf.Accumulator
 	io.Closer
 }
 
@@ -86,13 +87,13 @@ func HuaweiTelemetryDecoder(body []byte, h *HuaweiRoutersTelemetry) (*metric.Ser
 func (h *HuaweiRoutersTelemetry) listen() {
 	buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
 	for {
-		n, _, err := h.ReadFrom(buf)
+		n, _, err := h.connection.ReadFrom(buf)
 		if err != nil {
 			h.Log.Error("Unable to read buffer: %v", err)
 			break
 		}
 
-		body, err := h.connection.decoder.Decode(buf[:n])
+		body, err := h.decoder.Decode(buf[:n])
 		if err != nil {
 			h.Log.Errorf("Unable to decode incoming packet: %v", err)
 			continue
@@ -104,7 +105,7 @@ func (h *HuaweiRoutersTelemetry) listen() {
 			break
 		}
 		for _, metric := range grouper.Metrics() {
-			h.AddMetric(metric)
+			h.acc.AddMetric(metric)
 		}
 
 		if err != nil {
@@ -160,7 +161,7 @@ func (h *HuaweiRoutersTelemetry) Start(acc telegraf.Accumulator) error {
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
-		h.connection.listen()
+		h.listen()
 	}()
 	return nil
 }
@@ -196,7 +197,7 @@ func CreateMetrics(grouper *metric.SeriesGrouper, tags map[string]string, timest
   if vals != "" && subfield != "ifName" && subfield != "position" && subfield != "pemIndex" && subfield != "address" && subfield != "i2c" && subfield != "channel" &&
   subfield != "queueType" && subfield != "ifAdminStatus" && subfield != "ifOperStatus" {
     name:= strings.Replace(subfield,"\"","",-1)
-    endPointTypes:=GetTypeValue(path)
+    endPointTypes:=huawei_sensorPath.GetTypeValue(path)
     grouper.Add(path, tags, timestamp, string(name), decodeVal(endPointTypes[name], vals))
   }
 }
@@ -214,7 +215,7 @@ func CreateMetrics(grouper *metric.SeriesGrouper, tags map[string]string, timest
 */
 func AppendTags(k string, v string, tags map[string]string, path string) map[string]string {
   resolve := tags
-  endPointTypes:=GetTypeValue(path)
+  endPointTypes:=huawei_sensorPath.GetTypeValue(path)
   if endPointTypes[k] != nil {
     if reflect.TypeOf(decodeVal(endPointTypes[k], v)) == reflect.TypeOf("") {
       if k != "ifAdminStatus" {
@@ -260,6 +261,21 @@ func decodeVal(tipo interface{}, val string) interface{} {
   return resolve;
 }
 
+
+/* Search for a string in a string array.
+  @Params: a String Array
+           x String to Search
+  @Returns: Returns the index location de x in a or -1 if not Found
+*/
+func Find(a []string, x string) int {
+    for i, n := range a {
+        if x == n {
+            return i
+        }
+    }
+    return -1
+}
+
 /*
   Search de keys and vals of the data row in telemetry message.
   @params:
@@ -271,7 +287,7 @@ func decodeVal(tipo interface{}, val string) interface{} {
 */
 func SearchKey(Message *telemetry.TelemetryRowGPB, path string)  ([]string, []string){
   sensorType := strings.Split(path,":")[0]
-  sensorMsg := GetMessageType(sensorType)
+  sensorMsg := huawei_sensorPath.GetMessageType(sensorType)
   err := proto.Unmarshal(Message.Content, sensorMsg)
   if (err != nil) {
     panic(err)
@@ -356,7 +372,7 @@ func udpListen(address string) (net.PacketConn, error) {
 	if err != nil {
 		return nil, err
 	}
-	if addr.IP.IsMulticast() {"udp"
+	if addr.IP.IsMulticast() {
 		return net.ListenMulticastUDP("udp", ifi, addr)
 	}
 	return net.ListenUDP("udp", addr)	

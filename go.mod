@@ -8,13 +8,14 @@ require (
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.3.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
+	github.com/Azure/azure-sdk-for-go v41.3.0+incompatible // indirect
 	github.com/Azure/azure-storage-queue-go v0.0.0-20181215014128-6ed74e755687
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Azure/go-autorest/autorest v0.10.1
+	github.com/Azure/go-autorest/autorest/adal v0.8.3 // indirect
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
 	github.com/BurntSushi/toml v0.3.1
 	github.com/DamRCorba/huawei_telemetry_sensors v0.0.0-20200303204802-9d9cdfdbfa02
-	github.com/DamRCorba/telegraf v0.10.1 // indirect
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
 	github.com/Microsoft/ApplicationInsights-Go v0.4.2
 	github.com/Microsoft/go-winio v0.4.9 // indirect
@@ -27,6 +28,7 @@ require (
 	github.com/apache/thrift v0.13.0
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
+	github.com/armon/go-metrics v0.3.3 // indirect
 	github.com/aws/aws-sdk-go v1.34.34
 	github.com/aws/aws-sdk-go-v2 v1.1.0
 	github.com/aws/aws-sdk-go-v2/config v1.1.0
@@ -50,10 +52,12 @@ require (
 	github.com/docker/distribution v2.6.0-rc.1.0.20170726174610-edc3ab29cdff+incompatible // indirect
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200916142827-bd33bbf0497b+incompatible
 	github.com/docker/go-connections v0.3.0 // indirect
+	github.com/docker/go-units v0.4.0 // indirect
 	github.com/docker/libnetwork v0.8.0-dev.2.0.20181012153825-d7b61745d166
 	github.com/eclipse/paho.mqtt.golang v1.3.0
 	github.com/ericchiang/k8s v1.2.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
+	github.com/go-kit/kit v0.10.0 // indirect
 	github.com/go-logfmt/logfmt v0.5.0
 	github.com/go-ping/ping v0.0.0-20210201095549-52eed920f98c
 	github.com/go-redis/redis v6.15.9+incompatible
@@ -74,25 +78,33 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/harlow/kinesis-consumer v0.3.1-0.20181230152818-2f58b136fee0
-	github.com/hashicorp/consul v1.2.1
+	github.com/hashicorp/consul/api v1.4.0
+	github.com/hashicorp/go-hclog v0.12.2 // indirect
+	github.com/hashicorp/go-immutable-radix v1.2.0 // indirect
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
+	github.com/hashicorp/go-sockaddr v1.0.2 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
+	github.com/hashicorp/serf v0.9.0 // indirect
 	github.com/influxdata/go-syslog/v2 v2.0.1
-	github.com/influxdata/influxdb v1.9.0 // indirect
 	github.com/influxdata/tail v1.0.1-0.20200707181643-03a791b270e4
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.6.0+incompatible
 	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
+	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/kardianos/service v1.0.0
 	github.com/karrick/godirwalk v1.16.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kubernetes/apimachinery v0.0.0-20190119020841-d41becfba9ee
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lib/pq v1.3.0 // indirect
+	github.com/mailru/easyjson v0.7.1 // indirect
+	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1
 	github.com/mdlayher/apcupsd v0.0.0-20200608131503-2bf01da7bf1b
 	github.com/miekg/dns v1.1.29
+	github.com/mitchellh/mapstructure v1.2.2 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/multiplay/go-ts3 v1.0.0
 	github.com/naoina/go-stringutil v0.1.0 // indirect
@@ -112,6 +124,7 @@ require (
 	github.com/prometheus/prometheus v2.5.0+incompatible
 	github.com/riemann/riemann-go-client v0.5.0
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
+	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
 	github.com/sensu/sensu-go/api/core/v2 v2.6.0
 	github.com/shirou/gopsutil v3.20.11+incompatible
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
@@ -119,6 +132,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/soniah/gosnmp v1.25.0
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
+	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00 // indirect
@@ -139,8 +153,10 @@ require (
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/sys v0.0.0-20201119102817-f84b799fce68
 	golang.org/x/text v0.3.4
+	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	google.golang.org/api v0.22.0
+	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/genproto v0.0.0-20200513103714-09dca8ec2884
 	google.golang.org/grpc v1.33.1
 	gopkg.in/djherbis/times.v1 v1.2.0
@@ -151,8 +167,8 @@ require (
 	gopkg.in/olivere/elastic.v5 v5.0.70
 	gopkg.in/yaml.v2 v2.3.0
 	gotest.tools v2.2.0+incompatible
+	k8s.io/apimachinery v0.17.5 // indirect
 	modernc.org/sqlite v1.7.4
-	sigs.k8s.io/structured-merge-diff v0.0.0-20190525122527-15d366b2352e // indirect
 )
 
 // replaced due to https://github.com/satori/go.uuid/issues/73
