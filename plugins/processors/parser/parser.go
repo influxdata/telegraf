@@ -4,15 +4,17 @@ import (
 	"log"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 type Parser struct {
 	parsers.Config
-	DropOriginal bool     `toml:"drop_original"`
-	Merge        string   `toml:"merge"`
-	ParseFields  []string `toml:"parse_fields"`
+	DropOriginal bool            `toml:"drop_original"`
+	Merge        string          `toml:"merge"`
+	ParseFields  []string        `toml:"parse_fields"`
+	Log          telegraf.Logger `toml:"-"`
 	Parser       parsers.Parser
 }
 
@@ -50,6 +52,7 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			log.Printf("E! [processors.parser] could not create parser: %v", err)
 			return metrics
 		}
+		models.SetLoggerOnPlugin(p.Parser, p.Log)
 	}
 
 	results := []telegraf.Metric{}
