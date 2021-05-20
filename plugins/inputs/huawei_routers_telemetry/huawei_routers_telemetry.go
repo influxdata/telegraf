@@ -25,30 +25,29 @@ type setReadBufferer interface {
 	SetReadBuffer(bytes int) error
 }
 
-type streamSocketListener struct {
-	net.Listener
-	*HuaweiRoutersTelemetry
+type HuaweiRoutersTelemetry struct {
+	ServicePort     string        `toml:"service_port"`
+	ReadBufferSize  internal.Size `toml:"read_buffer_size"`
+	ContentEncoding string        `toml:"content_encoding"`
+	Log telegraf.Logger `toml:"-"`
+	connection net.PacketConn
+	decoder internal.ContentDecoder
 
-	sockType string
+	wg              sync.WaitGroup
 
-	connections    map[string]net.Conn
-	connectionsMtx sync.Mutex
-}
-
-type packetSocketListener struct {
-	net.PacketConn
-	*HuaweiRoutersTelemetry
+	telegraf.Accumulator
+	io.Closer
 }
 
 /*
   Telemetry Decoder.
 
 */
-func HuaweiTelemetryDecoder(body []byte) (*metric.SeriesGrouper, error) {
+func HuaweiTelemetryDecoder(body []byte, h *HuaweiRoutersTelemetry) (*metric.SeriesGrouper, error) {
 	msg := &telemetry.Telemetry{}
 	err := proto.Unmarshal(body[12:], msg)
 	if err != nil {
-		fmt.Println("Unable to decode incoming packet: ", err.Error())
+		h.Log.Error("Unable to decode incoming packet:  %v", err)		
 		return nil, err		
 	}
 	grouper := metric.NewSeriesGrouper()
@@ -57,11 +56,11 @@ func HuaweiTelemetryDecoder(body []byte) (*metric.SeriesGrouper, error) {
 		if dataTime == 0 {
 			dataTime = msg.MsgTimestamp
 		}
-		timestamp := time.Unix(int64(dataTime/1000), int64(dataTime%1000)*1000000)
+		timestamp := time.Unix(0, int64(dataTime)*1000000)
 		sensorMsg := huawei_sensorPath.GetMessageType(msg.GetSensorPath())
 		err = proto.Unmarshal(gpbkv.Content, sensorMsg)
 		if err != nil {
-			fmt.Println("Sensor Error: ", err.Error())
+			h.Log.Error("Sensor Error:  %v", err)			
 			return nil, err
 		}
 		fields, vals := huawei_sensorPath.SearchKey(gpbkv, msg.GetSensorPath())
@@ -84,24 +83,24 @@ func HuaweiTelemetryDecoder(body []byte) (*metric.SeriesGrouper, error) {
 /*
   Listen UDP packets and call the telemetryDecoder.
 */
-func (h *packetSocketListener) listen() {
+func (h *HuaweiRoutersTelemetry) listen() {
 	buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
 	for {
 		n, _, err := h.ReadFrom(buf)
 		if err != nil {
-			h.Log.Error("Unable to read buffer: %s", err.Error())
+			h.Log.Error("Unable to read buffer: %v", err)
 			break
 		}
 
-		body, err := h.decoder.Decode(buf[:n])
+		body, err := h.connection.decoder.Decode(buf[:n])
 		if err != nil {
-			h.Log.Errorf("Unable to decode incoming packet: %s", err.Error())
+			h.Log.Errorf("Unable to decode incoming packet: %v", err)
 			continue
 		}
 		// Telemetry parsing over packet payload
-		grouper, err := HuaweiTelemetryDecoder(body)
+		grouper, err := HuaweiTelemetryDecoder(body,h)
 		if err != nil {
-			h.Log.Errorf("Unable to decode telemetry information: %s", err.Error())
+			h.Log.Errorf("Unable to decode telemetry information: %v", err)
 			break
 		}
 		for _, metric := range grouper.Metrics() {
@@ -109,26 +108,14 @@ func (h *packetSocketListener) listen() {
 		}
 
 		if err != nil {
-			h.Log.Errorf("Unable to parse incoming packet: %s", err.Error())
+			h.Log.Errorf("Unable to parse incoming packet: %v", err)
 		}
 	}
 }
 
-type HuaweiRoutersTelemetry struct {
-	ServicePort     string        `toml:"service_port"`
-	ReadBufferSize  internal.Size `toml:"read_buffer_size"`
-	ContentEncoding string        `toml:"content_encoding"`
-	wg              sync.WaitGroup
-
-	Log telegraf.Logger `toml:"-"`
-
-	telegraf.Accumulator
-	io.Closer
-	decoder internal.ContentDecoder
-}
 
 func (h *HuaweiRoutersTelemetry) Description() string {
-	return "Huawei Telemetry UDP model input Plugin"
+	return "Input plugin for receiving Huawei Router Telemetry data via UDP"
 }
 
 func (h *HuaweiRoutersTelemetry) SampleConfig() string {
@@ -144,7 +131,7 @@ func (h *HuaweiRoutersTelemetry) Gather(_ telegraf.Accumulator) error {
 }
 
 func (h *HuaweiRoutersTelemetry) Start(acc telegraf.Accumulator) error {
-	h.Accumulator = acc
+	h.acc = acc
 
 	var err error
 	h.decoder, err = internal.NewContentDecoder(h.ContentEncoding)
@@ -152,7 +139,7 @@ func (h *HuaweiRoutersTelemetry) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	pc, err := udpListen("udp", ":"+h.ServicePort)
+	pc, err := udpListen(":"+h.ServicePort)
 	if err != nil {
 		return err
 	}
@@ -165,19 +152,15 @@ func (h *HuaweiRoutersTelemetry) Start(acc telegraf.Accumulator) error {
 		}
 	}
 
-	h.Log.Infof("Listening on %s://%s", "udp", pc.LocalAddr())
+	h.Log.Infof("Listening Routers on port %s", pc.LocalAddr())
+	h.connection = pc
 
-	psl := &packetSocketListener{
-		PacketConn:             pc,
-		HuaweiRoutersTelemetry: h,
-	}
-
-	h.Closer = psl
+	
 	h.wg = sync.WaitGroup{}
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
-		psl.listen()
+		h.connection.listen()
 	}()
 	return nil
 }
@@ -365,35 +348,23 @@ func SearchKey(Message *telemetry.TelemetryRowGPB, path string)  ([]string, []st
 }
 
 
-func udpListen(network string, address string) (net.PacketConn, error) {
-	switch network {
-	case "udp", "udp4", "udp6":
-		var addr *net.UDPAddr
-		var err error
-		var ifi *net.Interface
-		if spl := strings.SplitN(address, "%", 2); len(spl) == 2 {
-			address = spl[0]
-			ifi, err = net.InterfaceByName(spl[1])
-			if err != nil {
-				return nil, err
-			}
-		}
-		addr, err = net.ResolveUDPAddr(network, address)
-		if err != nil {
-			return nil, err
-		}
-		if addr.IP.IsMulticast() {
-			return net.ListenMulticastUDP(network, ifi, addr)
-		}
-		return net.ListenUDP(network, addr)
+func udpListen(address string) (net.PacketConn, error) {	
+	var addr *net.UDPAddr
+	var err error
+	var ifi *net.Interface
+	addr, err = net.ResolveUDPAddr("udp", address)
+	if err != nil {
+		return nil, err
 	}
-	return net.ListenPacket(network, address)
+	if addr.IP.IsMulticast() {"udp"
+		return net.ListenMulticastUDP("udp", ifi, addr)
+	}
+	return net.ListenUDP("udp", addr)	
 }
 
 func (h *HuaweiRoutersTelemetry) Stop() {
-	if h.Closer != nil {
-		h.Close()
-		h.Closer = nil
+	if h.connection != nil {
+		h.connection.Close()		
 	}
 	h.wg.Wait()
 }
