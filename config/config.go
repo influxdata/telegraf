@@ -924,7 +924,7 @@ func fetchConfig(u *url.URL, token string) ([]byte, error) {
 
 	if token != "" {
 		req.Header.Add("Authorization", "Token "+token)
-	} else if v, exists := os.LookupEnv("INFLUX_FETCH_TOKEN"); exists {
+	} else if v, exists := os.LookupEnv("INFLUX_CONFIG_TOKEN"); exists {
 		req.Header.Add("Authorization", "Token "+v)
 	} else if v, exists = os.LookupEnv("INFLUX_TOKEN"); exists {
 		req.Header.Add("Authorization", "Token "+v)
