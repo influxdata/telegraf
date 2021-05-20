@@ -18,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+const (
+	defaultPingDataBytesSize = 56
+)
+
 // HostPinger is a function that runs the "ping" function using a list of
 // passed arguments. This can be easily switched with a mocked ping function
 // for unit test purposes (see ping_test.go)
@@ -75,7 +79,7 @@ type Ping struct {
 	Percentiles []int
 
 	// Packet size
-	Size int
+	Size *int
 }
 
 func (*Ping) Description() string {
@@ -180,7 +184,10 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 	}
 
 	if p.Method == "native" {
-		pinger.Size = p.Size
+		pinger.Size = defaultPingDataBytesSize
+		if p.Size != nil {
+			pinger.Size = *p.Size
+		}
 	}
 
 	pinger.Source = p.sourceAddress
