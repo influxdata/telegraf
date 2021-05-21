@@ -30,6 +30,8 @@ type Dynatrace struct {
 	tls.ClientConfig
 
 	client *http.Client
+
+	loggedMetrics map[string]bool // New empty set
 }
 
 const sampleConfig = `
@@ -48,8 +50,8 @@ const sampleConfig = `
   ## The API token needs data ingest scope permission. When using OneAgent, no API token is required.
   api_token = "" 
 
-  ## Optional prefix for metric names (e.g.: "telegraf.")
-  prefix = "telegraf."
+  ## Optional prefix for metric names (e.g.: "telegraf")
+  prefix = "telegraf"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -114,8 +116,9 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 
 		metricType := tm.Type()
 		for _, field := range tm.FieldList() {
+			metricName := tm.Name() + "." + field.Key
 			for _, i := range d.AddCounterMetrics {
-				if tm.Name()+"."+field.Key == i {
+				if metricName == i {
 					metricType = telegraf.Counter
 				}
 			}
@@ -123,7 +126,11 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 			typeOpt := getTypeOption(metricType, field)
 
 			if typeOpt == nil {
-				// unsupported type
+				// Unsupported type. Log only once per unsupported metric name
+				if !d.loggedMetrics[metricName] {
+					d.Log.Warnf("Unsupported type for %s", metricName)
+					d.loggedMetrics[metricName] = true
+				}
 				continue
 			}
 
