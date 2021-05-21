@@ -26,8 +26,6 @@ type Dynatrace struct {
 	Log               telegraf.Logger `toml:"-"`
 	Timeout           config.Duration `toml:"timeout"`
 	AddCounterMetrics []string        `toml:"additional_counters"`
-	State             map[string]string
-	SendCounter       int
 
 	tls.ClientConfig
 
@@ -114,8 +112,15 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 			dims = append(dims, dimensions.NewDimension(string(tag.Key), tag.Value))
 		}
 
+		metricType := tm.Type()
 		for _, field := range tm.FieldList() {
-			typeOpt := getTypeOption(tm, field)
+			for _, i := range d.AddCounterMetrics {
+				if tm.Name()+"."+field.Key == i {
+					metricType = telegraf.Counter
+				}
+			}
+
+			typeOpt := getTypeOption(metricType, field)
 
 			if typeOpt == nil {
 				// unsupported type
@@ -203,7 +208,6 @@ func (d *Dynatrace) send(msg string) error {
 }
 
 func (d *Dynatrace) Init() error {
-	d.State = make(map[string]string)
 	if len(d.URL) == 0 {
 		d.Log.Infof("Dynatrace URL is empty, defaulting to OneAgent metrics interface")
 		d.URL = apiconstants.GetDefaultOneAgentEndpoint()
@@ -231,16 +235,13 @@ func (d *Dynatrace) Init() error {
 func init() {
 	outputs.Add("dynatrace", func() telegraf.Output {
 		return &Dynatrace{
-			Timeout:     config.Duration(time.Second * 5),
-			SendCounter: 0,
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
 }
 
-func getTypeOption(metric telegraf.Metric, field *telegraf.Field) dtMetric.MetricOption {
-	metricType := metric.Type()
-	switch metricType {
-	case telegraf.Counter:
+func getTypeOption(metricType telegraf.ValueType, field *telegraf.Field) dtMetric.MetricOption {
+	if metricType == telegraf.Counter {
 		switch v := field.Value.(type) {
 		case float64:
 			return dtMetric.WithFloatCounterValueTotal(v)
@@ -248,36 +249,23 @@ func getTypeOption(metric telegraf.Metric, field *telegraf.Field) dtMetric.Metri
 			return dtMetric.WithIntCounterValueTotal(int64(v))
 		case int64:
 			return dtMetric.WithIntCounterValueTotal(v)
-		case string:
-			return nil
-		case bool:
+		default:
 			return nil
 		}
+	}
 
-	case telegraf.Summary:
-		// TODO export summaries as DT summaries
-		fallthrough
-	case telegraf.Histogram:
-		// TODO export histograms as DT summaries
-		fallthrough
-	case telegraf.Untyped:
-		fallthrough
-	case telegraf.Gauge:
-		switch v := field.Value.(type) {
-		case float64:
-			return dtMetric.WithFloatGaugeValue(v)
-		case uint64:
-			return dtMetric.WithIntGaugeValue(int64(v))
-		case int64:
-			return dtMetric.WithIntGaugeValue(32)
-		case bool:
-			if v {
-				return dtMetric.WithIntGaugeValue(1)
-			}
-			return dtMetric.WithIntGaugeValue(0)
-		case string:
-			return nil
+	switch v := field.Value.(type) {
+	case float64:
+		return dtMetric.WithFloatGaugeValue(v)
+	case uint64:
+		return dtMetric.WithIntGaugeValue(int64(v))
+	case int64:
+		return dtMetric.WithIntGaugeValue(32)
+	case bool:
+		if v {
+			return dtMetric.WithIntGaugeValue(1)
 		}
+		return dtMetric.WithIntGaugeValue(0)
 	}
 
 	return nil
