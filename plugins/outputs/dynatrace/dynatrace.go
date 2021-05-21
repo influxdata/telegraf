@@ -111,7 +111,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 					continue
 				}
 			}
-			dims = append(dims, dimensions.NewDimension(string(tag.Key), tag.Value))
+			dims = append(dims, dimensions.NewDimension(tag.Key, tag.Value))
 		}
 
 		metricType := tm.Type()
