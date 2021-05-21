@@ -82,7 +82,6 @@ func (s *NetStatsConnections) Gather(acc telegraf.Accumulator) error {
 
 	for _, netcon := range netconns {
 		var port = ""
-		//var proc *process.Process
 		switch netcon.Status {
 		case "LISTEN":
 			port = strconv.Itoa(int(netcon.Laddr.Port))
