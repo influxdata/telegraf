@@ -263,7 +263,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	for i, pool := range s.pools {
 		for _, query := range s.queries {
 			wg.Add(1)
-			go func(pool *sql.DB, query *Query, serverIndex int) {
+			go func(pool *sql.DB, query Query, serverIndex int) {
 				defer wg.Done()
 				server := s.Servers[serverIndex]
 				queryError := s.gatherServer(pool, server, query, acc)
@@ -275,7 +275,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 				}
 
 				acc.AddError(queryError)
-			}(pool, &query, i)
+			}(pool, query, i)
 		}
 	}
 
@@ -352,7 +352,7 @@ func (s *SQLServer) Stop() {
 	}
 }
 
-func (s *SQLServer) gatherServer(pool *sql.DB, server string, query *Query, acc telegraf.Accumulator) error {
+func (s *SQLServer) gatherServer(pool *sql.DB, server string, query Query, acc telegraf.Accumulator) error {
 	var rows *sql.Rows
 	var err error
 
@@ -393,7 +393,7 @@ func (s *SQLServer) gatherServer(pool *sql.DB, server string, query *Query, acc 
 	return rows.Err()
 }
 
-func (s *SQLServer) accRow(query *Query, acc telegraf.Accumulator, row scanner) error {
+func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) error {
 	var columnVars []interface{}
 	var fields = make(map[string]interface{})
 
