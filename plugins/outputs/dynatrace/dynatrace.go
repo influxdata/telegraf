@@ -4,11 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"net/http"
-	"regexp"
-	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,17 +12,10 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-)
 
-const (
-	oneAgentMetricsURL   = "http://127.0.0.1:14499/metrics/ingest"
-	dtIngestAPILineLimit = 1000
-)
-
-var (
-	reNameAllowedCharList = regexp.MustCompile("[^A-Za-z0-9.-]+")
-	maxDimKeyLen          = 100
-	maxMetricKeyLen       = 250
+	dtMetric "github.com/dynatrace-oss/dynatrace-metric-utils-go/metric"
+	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
+	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/dimensions"
 )
 
 // Dynatrace Configuration for the Dynatrace output plugin
@@ -101,163 +90,85 @@ func (d *Dynatrace) Description() string {
 	return "Send telegraf metrics to a Dynatrace environment"
 }
 
-// Normalizes a metric keys or metric dimension identifiers
-// according to Dynatrace format.
-func (d *Dynatrace) normalize(s string, max int) (string, error) {
-	s = reNameAllowedCharList.ReplaceAllString(s, "_")
-
-	// Strip Digits and underscores if they are at the beginning of the string
-	normalizedString := strings.TrimLeft(s, "_0123456789")
-
-	for strings.HasPrefix(normalizedString, "_") {
-		normalizedString = normalizedString[1:]
-	}
-
-	if len(normalizedString) > max {
-		normalizedString = normalizedString[:max]
-	}
-
-	for strings.HasSuffix(normalizedString, "_") {
-		normalizedString = normalizedString[:len(normalizedString)-1]
-	}
-
-	normalizedString = strings.ReplaceAll(normalizedString, "..", "_")
-
-	if len(normalizedString) == 0 {
-		return "", fmt.Errorf("error normalizing the string: %s", s)
-	}
-	return normalizedString, nil
-}
-
-func (d *Dynatrace) escape(v string) string {
-	return strconv.Quote(v)
-}
-
 func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
-	var buf bytes.Buffer
-	metricCounter := 1
-	var tagb bytes.Buffer
 	if len(metrics) == 0 {
 		return nil
 	}
 
-	for _, metric := range metrics {
-		// first write the tags into a buffer
-		tagb.Reset()
-		if len(metric.Tags()) > 0 {
-			keys := make([]string, 0, len(metric.Tags()))
-			for k := range metric.Tags() {
-				keys = append(keys, k)
-			}
-			// sort tag keys to expect the same order in ech run
-			sort.Strings(keys)
+	lines := []string{}
 
-			for _, k := range keys {
-				tagKey, err := d.normalize(k, maxDimKeyLen)
-				if err != nil {
+	for _, tm := range metrics {
+		dims := []dimensions.Dimension{}
+		for _, tag := range tm.TagList() {
+			// Ignore special tags for histogram and summary types.
+			switch tm.Type() {
+			case telegraf.Histogram:
+				if tag.Key == "le" || tag.Key == "gt" {
 					continue
 				}
-				if len(metric.Tags()[k]) > 0 {
-					fmt.Fprintf(&tagb, ",%s=%s", strings.ToLower(tagKey), d.escape(metric.Tags()[k]))
+			case telegraf.Summary:
+				if tag.Key == "quantile" {
+					continue
 				}
 			}
+			dims = append(dims, dimensions.NewDimension(string(tag.Key), tag.Value))
 		}
-		if len(metric.Fields()) > 0 {
-			for k, v := range metric.Fields() {
-				var value string
-				switch v := v.(type) {
-				case string:
-					continue
-				case float64:
-					if !math.IsNaN(v) && !math.IsInf(v, 0) {
-						value = fmt.Sprintf("%f", v)
-					} else {
-						continue
-					}
-				case uint64:
-					value = strconv.FormatUint(v, 10)
-				case int64:
-					value = strconv.FormatInt(v, 10)
-				case bool:
-					if v {
-						value = "1"
-					} else {
-						value = "0"
-					}
-				default:
-					d.Log.Debugf("Dynatrace type not supported! %s", v)
-					continue
-				}
 
-				// metric name
-				metricKey, err := d.normalize(k, maxMetricKeyLen)
-				if err != nil {
-					continue
-				}
+		for _, field := range tm.FieldList() {
+			typeOpt := getTypeOption(tm, field)
 
-				metricID, err := d.normalize(d.Prefix+metric.Name()+"."+metricKey, maxMetricKeyLen)
-				// write metric name combined with its field
-				if err != nil {
-					continue
-				}
-				// write metric id,tags and value
+			if typeOpt == nil {
+				// unsupported type
+				continue
+			}
 
-				metricType := metric.Type()
-				for _, i := range d.AddCounterMetrics {
-					if metric.Name()+"."+metricKey == i {
-						metricType = telegraf.Counter
-					}
-				}
+			name := tm.Name() + "." + field.Key
+			dm, err := dtMetric.NewMetric(
+				name,
+				dtMetric.WithPrefix(d.Prefix),
+				dtMetric.WithDimensions(
+					dimensions.MergeLists(
+						// dimensions.NewNormalizedDimensionList(e.opts.DefaultDimensions...),
+						dimensions.NewNormalizedDimensionList(dims...),
+					),
+				),
+				typeOpt,
+			)
 
-				switch metricType {
-				case telegraf.Counter:
-					var delta float64
+			if err != nil {
+				d.Log.Warn(fmt.Sprintf("failed to normalize metric: %s - %s", name, err.Error()))
+				continue
+			}
 
-					// Check if LastValue exists
-					if lastvalue, ok := d.State[metricID+tagb.String()]; ok {
-						// Convert Strings to Floats
-						floatLastValue, err := strconv.ParseFloat(lastvalue, 32)
-						if err != nil {
-							d.Log.Debugf("Could not parse last value: %s", lastvalue)
-						}
-						floatCurrentValue, err := strconv.ParseFloat(value, 32)
-						if err != nil {
-							d.Log.Debugf("Could not parse current value: %s", value)
-						}
-						if floatCurrentValue >= floatLastValue {
-							delta = floatCurrentValue - floatLastValue
-							fmt.Fprintf(&buf, "%s%s count,delta=%f\n", metricID, tagb.String(), delta)
-						}
-					}
-					d.State[metricID+tagb.String()] = value
+			line, err := dm.Serialize()
 
-				default:
-					fmt.Fprintf(&buf, "%s%s %v\n", metricID, tagb.String(), value)
-				}
+			if err != nil {
+				d.Log.Warn(fmt.Sprintf("failed to serialize metric: %s - %s", name, err.Error()))
+				continue
+			}
 
-				if metricCounter%dtIngestAPILineLimit == 0 {
-					err = d.send(buf.Bytes())
-					if err != nil {
-						return err
-					}
-					buf.Reset()
-				}
-				metricCounter++
+			lines = append(lines, line)
+		}
+	}
+
+	limit := apiconstants.GetPayloadLinesLimit()
+	for i := 0; i < len(lines); i += limit {
+		batch := lines[i:min(i+limit, len(lines))]
+
+		output := strings.Join(batch, "\n")
+		if output != "" {
+			if err := d.send(output); err != nil {
+				return fmt.Errorf("error processing data:, %s", err.Error())
 			}
 		}
 	}
-	d.SendCounter++
-	// in typical interval of 10s, we will clean the counter state once in 24h which is 8640 iterations
 
-	if d.SendCounter%8640 == 0 {
-		d.State = make(map[string]string)
-	}
-	return d.send(buf.Bytes())
+	return nil
 }
 
-func (d *Dynatrace) send(msg []byte) error {
+func (d *Dynatrace) send(msg string) error {
 	var err error
-	req, err := http.NewRequest("POST", d.URL, bytes.NewBuffer(msg))
+	req, err := http.NewRequest("POST", d.URL, bytes.NewBufferString(msg))
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
 		return fmt.Errorf("error while creating HTTP request:, %s", err.Error())
@@ -295,9 +206,9 @@ func (d *Dynatrace) Init() error {
 	d.State = make(map[string]string)
 	if len(d.URL) == 0 {
 		d.Log.Infof("Dynatrace URL is empty, defaulting to OneAgent metrics interface")
-		d.URL = oneAgentMetricsURL
+		d.URL = apiconstants.GetDefaultOneAgentEndpoint()
 	}
-	if d.URL != oneAgentMetricsURL && len(d.APIToken) == 0 {
+	if d.URL != apiconstants.GetDefaultOneAgentEndpoint() && len(d.APIToken) == 0 {
 		d.Log.Errorf("Dynatrace api_token is a required field for Dynatrace output")
 		return fmt.Errorf("api_token is a required field for Dynatrace output")
 	}
@@ -324,4 +235,57 @@ func init() {
 			SendCounter: 0,
 		}
 	})
+}
+
+func getTypeOption(metric telegraf.Metric, field *telegraf.Field) dtMetric.MetricOption {
+	metricType := metric.Type()
+	switch metricType {
+	case telegraf.Counter:
+		switch v := field.Value.(type) {
+		case float64:
+			return dtMetric.WithFloatCounterValueTotal(v)
+		case uint64:
+			return dtMetric.WithIntCounterValueTotal(int64(v))
+		case int64:
+			return dtMetric.WithIntCounterValueTotal(v)
+		case string:
+			return nil
+		case bool:
+			return nil
+		}
+
+	case telegraf.Summary:
+		// TODO export summaries as DT summaries
+		fallthrough
+	case telegraf.Histogram:
+		// TODO export histograms as DT summaries
+		fallthrough
+	case telegraf.Untyped:
+		fallthrough
+	case telegraf.Gauge:
+		switch v := field.Value.(type) {
+		case float64:
+			return dtMetric.WithFloatGaugeValue(v)
+		case uint64:
+			return dtMetric.WithIntGaugeValue(int64(v))
+		case int64:
+			return dtMetric.WithIntGaugeValue(32)
+		case bool:
+			if v {
+				return dtMetric.WithIntGaugeValue(1)
+			}
+			return dtMetric.WithIntGaugeValue(0)
+		case string:
+			return nil
+		}
+	}
+
+	return nil
+}
+
+func min(a, b int) int {
+	if a <= b {
+		return a
+	}
+	return b
 }
