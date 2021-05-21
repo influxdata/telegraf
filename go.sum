@@ -335,6 +335,8 @@ github.com/dynatrace-oss/dynatrace-metric-utils-go v0.0.0-20210519091403-3773270
 github.com/dynatrace-oss/dynatrace-metric-utils-go v0.0.0-20210519091403-3773270074eb/go.mod h1:qw0E9EJ0PnSlhWawDNuqE0zhc1hqOBUCFIAj3dd9DNw=
 github.com/dynatrace-oss/dynatrace-metric-utils-go v0.0.0-20210521073335-344f3dab6119 h1:lKi2xgQxbntyEyXWfJeCkG1GuQw+xENcm6nYt723zbo=
 github.com/dynatrace-oss/dynatrace-metric-utils-go v0.0.0-20210521073335-344f3dab6119/go.mod h1:qw0E9EJ0PnSlhWawDNuqE0zhc1hqOBUCFIAj3dd9DNw=
+github.com/dynatrace-oss/dynatrace-metric-utils-go v0.1.0 h1:ldKn47mFgWCoiJRXA32psdEACPKffX9O1Msh1K8M+f0=
+github.com/dynatrace-oss/dynatrace-metric-utils-go v0.1.0/go.mod h1:qw0E9EJ0PnSlhWawDNuqE0zhc1hqOBUCFIAj3dd9DNw=
 github.com/eapache/go-resiliency v1.1.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
 github.com/eapache/go-resiliency v1.2.0 h1:v7g92e/KSN71Rq7vSThKaWIq68fL4YHvWyiUKorFR1Q=
 github.com/eapache/go-resiliency v1.2.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=

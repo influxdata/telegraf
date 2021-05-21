@@ -47,7 +47,7 @@ require (
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200916142827-bd33bbf0497b+incompatible
-	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.0.0-20210521073335-344f3dab6119
+	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.1.0
 	github.com/eclipse/paho.mqtt.golang v1.3.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logfmt/logfmt v0.5.0
