@@ -90,6 +90,7 @@ func TestMissingURL(t *testing.T) {
 
 	d.Log = testutil.Logger{}
 	err := d.Init()
+	require.NoError(t, err)
 	require.Equal(t, apiconstants.GetDefaultOneAgentEndpoint(), d.URL)
 	err = d.Connect()
 	require.Equal(t, apiconstants.GetDefaultOneAgentEndpoint(), d.URL)
@@ -101,6 +102,7 @@ func TestMissingAPITokenMissingURL(t *testing.T) {
 
 	d.Log = testutil.Logger{}
 	err := d.Init()
+	require.NoError(t, err)
 	require.Equal(t, apiconstants.GetDefaultOneAgentEndpoint(), d.URL)
 	err = d.Connect()
 	require.Equal(t, apiconstants.GetDefaultOneAgentEndpoint(), d.URL)
