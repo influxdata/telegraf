@@ -254,7 +254,6 @@ func (s *NetStatsConnections) Gather(acc telegraf.Accumulator) error {
 				//"remote_addr": value.Remote_addr,
 				//"remote_port": strconv.Itoa(int(value.Remote_port)),
 				//"status": value.Status,
-                                //
 			})
 	}
 	for _, value := range connected_ports {
