@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
@@ -89,9 +90,9 @@ func TestMissingURL(t *testing.T) {
 
 	d.Log = testutil.Logger{}
 	err := d.Init()
-	require.Equal(t, oneAgentMetricsURL, d.URL)
+	require.Equal(t, apiconstants.GetDefaultOneAgentEndpoint(), d.URL)
 	err = d.Connect()
-	require.Equal(t, oneAgentMetricsURL, d.URL)
+	require.Equal(t, apiconstants.GetDefaultOneAgentEndpoint(), d.URL)
 	require.NoError(t, err)
 }
 
@@ -100,9 +101,9 @@ func TestMissingAPITokenMissingURL(t *testing.T) {
 
 	d.Log = testutil.Logger{}
 	err := d.Init()
-	require.Equal(t, oneAgentMetricsURL, d.URL)
+	require.Equal(t, apiconstants.GetDefaultOneAgentEndpoint(), d.URL)
 	err = d.Connect()
-	require.Equal(t, oneAgentMetricsURL, d.URL)
+	require.Equal(t, apiconstants.GetDefaultOneAgentEndpoint(), d.URL)
 	require.NoError(t, err)
 }
 
