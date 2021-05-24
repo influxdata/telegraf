@@ -1,0 +1,63 @@
+{
+  "data": {
+    "actor": {
+      "account": {
+        "nrql": {
+          "metadata": {
+            "eventTypes": [
+              "ProcessSample"
+            ],
+            "facets": [
+              "ec2Tag_FQDN",
+              "processDisplayName"
+            ]
+          },
+          "results": [
+            {
+              "facet": [
+                "inf-138df57e6",
+                "c-icap"
+              ],
+              "latest.threadCount": 12
+            },
+            {
+              "facet": [
+                "inf-94ba037a2",
+                "c-icap"
+              ],
+              "latest.threadCount": 12
+            },
+            {
+              "facet": [
+                "inf-138df57e6",
+                "clamd@scan"
+              ],
+              "latest.threadCount": 3
+            },
+            {
+              "facet": [
+                "inf-94ba037a2",
+                "clamd@scan"
+              ],
+              "latest.threadCount": 3
+            },
+            {
+              "facet": [
+                "inf-138df57e6",
+                "icap"
+              ],
+              "latest.threadCount": 1
+            },
+            {
+              "facet": [
+                "inf-94ba037a2",
+                "icap"
+              ],
+              "latest.threadCount": 1
+            }
+          ]
+        }
+      }
+    }
+  }
+}
