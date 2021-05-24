@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -377,7 +376,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 
 	//checks for any 4xx code and drops metric and retrying will not make the request work
 	if len(resp.Status) > 0 && resp.Status[0] == '4' && c.config.SkipDatabaseCreation {
-		log.Printf("E! [outputs.influxdb] Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
+		c.log.Errorf("E! [outputs.influxdb] Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
 		return nil
 	}
 
