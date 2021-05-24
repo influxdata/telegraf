@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -22,6 +23,7 @@ type Datadog struct {
 	Log     telegraf.Logger `toml:"-"`
 
 	client *http.Client
+	proxy.HTTPProxy
 }
 
 var sampleConfig = `
@@ -33,6 +35,9 @@ var sampleConfig = `
 
   ## Write URL override; useful for debugging.
   # url = "https://app.datadoghq.com/api/v1/series"
+
+  ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
+  # http_proxy_url = "http://localhost:8888"
 `
 
 type TimeSeries struct {
@@ -55,9 +60,14 @@ func (d *Datadog) Connect() error {
 		return fmt.Errorf("apikey is a required field for datadog output")
 	}
 
+	proxyFunc, err := d.Proxy()
+	if err != nil {
+		return err
+	}
+
 	d.client = &http.Client{
 		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
+			Proxy: proxyFunc,
 		},
 		Timeout: time.Duration(d.Timeout),
 	}

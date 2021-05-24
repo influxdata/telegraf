@@ -16,6 +16,9 @@ This plugin writes to the [Datadog Metrics API][metrics] and requires an
 
   ## Write URL override; useful for debugging.
   # url = "https://app.datadoghq.com/api/v1/series"
+
+  ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
+  # http_proxy_url = "http://localhost:8888"
 ```
 
 ### Metrics
