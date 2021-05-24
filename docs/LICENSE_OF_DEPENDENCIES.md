@@ -57,6 +57,7 @@ following works:
 - github.com/docker/docker [Apache License 2.0](https://github.com/docker/docker/blob/master/LICENSE)
 - github.com/docker/go-connections [Apache License 2.0](https://github.com/docker/go-connections/blob/master/LICENSE)
 - github.com/docker/go-units [Apache License 2.0](https://github.com/docker/go-units/blob/master/LICENSE)
+- github.com/dynatrace-oss/dynatrace-metric-utils-go [Apache License 2.0](https://github.com/dynatrace-oss/dynatrace-metric-utils-go/blob/master/LICENSE)
 - github.com/eapache/go-resiliency [MIT License](https://github.com/eapache/go-resiliency/blob/master/LICENSE)
 - github.com/eapache/go-xerial-snappy [MIT License](https://github.com/eapache/go-xerial-snappy/blob/master/LICENSE)
 - github.com/eapache/queue [MIT License](https://github.com/eapache/queue/blob/master/LICENSE)
