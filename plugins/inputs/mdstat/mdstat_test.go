@@ -31,6 +31,7 @@ func TestFullMdstatProcFile(t *testing.T) {
 		"DisksFailed":            int64(0),
 		"DisksSpare":             int64(0),
 		"DisksTotal":             int64(12),
+		"DisksDown":              int64(0),
 	}
 	acc.AssertContainsFields(t, "mdstat", fields)
 }
@@ -54,9 +55,10 @@ func TestFailedDiskMdStatProcFile1(t *testing.T) {
 		"BlocksSyncedSpeed":      float64(0),
 		"BlocksTotal":            int64(5860144128),
 		"DisksActive":            int64(3),
-		"DisksFailed":            int64(1),
+		"DisksFailed":            int64(0),
 		"DisksSpare":             int64(0),
 		"DisksTotal":             int64(4),
+		"DisksDown":              int64(1),
 	}
 	acc.AssertContainsFields(t, "mdstat", fields)
 }

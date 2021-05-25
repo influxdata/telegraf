@@ -48,7 +48,7 @@ type statusLine struct {
 	active int64
 	total  int64
 	size   int64
-	failed int64
+	down   int64
 }
 
 type recoveryLine struct {
@@ -79,44 +79,44 @@ func (k *MdstatConf) SampleConfig() string {
 func evalStatusLine(deviceLine, statusLineStr string) (statusLine, error) {
 	sizeFields := strings.Fields(statusLineStr)
 	if len(sizeFields) < 1 {
-		return statusLine{active: 0, total: 0, failed: 0, size: 0},
+		return statusLine{active: 0, total: 0, down: 0, size: 0},
 			fmt.Errorf("statusLine empty? %q", statusLineStr)
 	}
 	sizeStr := sizeFields[0]
 	size, err := strconv.ParseInt(sizeStr, 10, 64)
 	if err != nil {
-		return statusLine{active: 0, total: 0, failed: 0, size: 0},
+		return statusLine{active: 0, total: 0, down: 0, size: 0},
 			fmt.Errorf("unexpected statusLine %q: %w", statusLineStr, err)
 	}
 
 	if strings.Contains(deviceLine, "raid0") || strings.Contains(deviceLine, "linear") {
 		// In the device deviceLine, only disks have a number associated with them in [].
 		total := int64(strings.Count(deviceLine, "["))
-		return statusLine{active: total, total: total, failed: 0, size: size}, nil
+		return statusLine{active: total, total: total, down: 0, size: size}, nil
 	}
 
 	if strings.Contains(deviceLine, "inactive") {
-		return statusLine{active: 0, total: 0, failed: 0, size: size}, nil
+		return statusLine{active: 0, total: 0, down: 0, size: size}, nil
 	}
 
 	matches := statusLineRE.FindStringSubmatch(statusLineStr)
 	if len(matches) != 5 {
-		return statusLine{active: 0, total: 0, failed: 0, size: size},
+		return statusLine{active: 0, total: 0, down: 0, size: size},
 			fmt.Errorf("couldn't find all the substring matches: %s", statusLineStr)
 	}
 	total, err := strconv.ParseInt(matches[2], 10, 64)
 	if err != nil {
-		return statusLine{active: 0, total: 0, failed: 0, size: size},
+		return statusLine{active: 0, total: 0, down: 0, size: size},
 			fmt.Errorf("unexpected statusLine %q: %w", statusLineStr, err)
 	}
 	active, err := strconv.ParseInt(matches[3], 10, 64)
 	if err != nil {
-		return statusLine{active: 0, total: total, failed: 0, size: size},
+		return statusLine{active: 0, total: total, down: 0, size: size},
 			fmt.Errorf("unexpected statusLine %q: %w", statusLineStr, err)
 	}
-	failed := int64(strings.Count(matches[4], "_"))
+	down := int64(strings.Count(matches[4], "_"))
 
-	return statusLine{active: active, total: total, size: size, failed: failed}, nil
+	return statusLine{active: active, total: total, size: size, down: down}, nil
 }
 
 func evalRecoveryLine(recoveryLineStr string) (recoveryLine, error) {
@@ -219,7 +219,6 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return fmt.Errorf("error parsing md device lines: %w", err)
 		}
-		fail = fail + sts.failed
 
 		syncLineIdx := i + 2
 		if strings.Contains(lines[i+2], "bitmap") { // skip bitmap line
@@ -260,6 +259,7 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 			"DisksFailed":            fail,
 			"DisksSpare":             spare,
 			"DisksTotal":             sts.total,
+			"DisksDown":              sts.down,
 			"BlocksTotal":            sts.size,
 			"BlocksSynced":           rcvry.syncedBlocks,
 			"BlocksSyncedPct":        rcvry.pct,
