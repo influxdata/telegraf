@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/jackc/pgx"
+	_ "github.com/jackc/pgx/stdlib"
 
 	// These SQL drivers can be enabled if
 	// they are added to depencies
@@ -43,6 +43,12 @@ func (p *Sql) Connect() error {
 	if err != nil {
 		return err
 	}
+
+	err = db.Ping()
+	if err != nil {
+		return err
+	}
+
 	p.db = db
 	p.Tables = make(map[string]bool)
 
@@ -172,11 +178,20 @@ func (p *Sql) generateCreateTable(metric telegraf.Metric) string {
 }
 
 func (p *Sql) generateInsert(tablename string, columns []string) string {
-
 	var placeholder, quoted []string
 	for _, column := range columns {
-		placeholder = append(placeholder, fmt.Sprintf("?"))
 		quoted = append(quoted, quoteIdent(column))
+	}
+	if p.Driver == "pgx" {
+		// Postgres uses $1 $2 $3 as placeholders
+		for i := 0; i < len(columns); i++ {
+			placeholder = append(placeholder, fmt.Sprintf("$%d", i+1))
+		}
+	} else {
+		// Everything else uses ? ? ? as placeholders
+		for i := 0; i < len(columns); i++ {
+			placeholder = append(placeholder, "?")
+		}
 	}
 
 	sql := fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", quoteIdent(tablename), strings.Join(quoted, ","), strings.Join(placeholder, ","))
@@ -229,7 +244,7 @@ func (p *Sql) Write(metrics []telegraf.Metric) error {
 
 		if err != nil {
 			// check if insert error was caused by column mismatch
-			log.Printf("E! Error during insert: %v", err)
+			log.Printf("E! Error during insert: %v, %v", err, sql)
 			return err
 		}
 	}

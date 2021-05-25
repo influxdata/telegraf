@@ -120,21 +120,6 @@ var (
 	}
 )
 
-func writeMysql(t *testing.T, host string, port string, username string, password string, database string) {
-	address := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
-		username, password, host, port, database,
-	)
-	p := newSql()
-	p.Driver = "mysql"
-	p.Address = address
-	p.Convert.Timestamp = "TEXT" //disable mysql default current_timestamp()
-
-	require.NoError(t, p.Connect())
-	require.NoError(t, p.Write(
-		testMetrics,
-	))
-}
-
 func TestMysqlIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -181,13 +166,24 @@ func TestMysqlIntegration(t *testing.T) {
 	host, err := mariadbContainer.Host(ctx)
 	require.NoError(t, err, "getting container host address failed")
 	require.NotEmpty(t, host)
-	p, err := mariadbContainer.MappedPort(ctx, "3306/tcp")
+	natPort, err := mariadbContainer.MappedPort(ctx, "3306/tcp")
 	require.NoError(t, err, "getting container host port failed")
-	port := p.Port()
+	port := natPort.Port()
 	require.NotEmpty(t, port)
 
 	//use the plugin to write to the database
-	writeMysql(t, host, port, username, password, dbname)
+	address := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
+		username, password, host, port, dbname,
+	)
+	p := newSql()
+	p.Driver = "mysql"
+	p.Address = address
+	p.Convert.Timestamp = "TEXT" //disable mysql default current_timestamp()
+
+	require.NoError(t, p.Connect())
+	require.NoError(t, p.Write(
+		testMetrics,
+	))
 
 	//dump the database
 	var rc int
@@ -200,12 +196,112 @@ func TestMysqlIntegration(t *testing.T) {
 			dbname +
 			" > /out/dump",
 	})
+	require.NoError(t, err)
 	require.Equal(t, 0, rc)
 	dumpfile := filepath.Join(outDir, "dump")
 	require.FileExists(t, dumpfile)
 
 	//compare the dump to what we expected
 	expected, err := ioutil.ReadFile("testdata/mariadb/expected.sql")
+	require.NoError(t, err)
+	actual, err := ioutil.ReadFile(dumpfile)
+	require.NoError(t, err)
+	require.Equal(t, string(expected), string(actual))
+}
+
+func TestPostgresIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	initdb, err := filepath.Abs("testdata/postgres/initdb")
+	require.NoError(t, err)
+
+	// initdb/init.sql creates this database
+	const dbname = "foo"
+
+	// default username for postgres is postgres
+	const username = "postgres"
+
+	password := pwgen(32)
+	outDir, err := ioutil.TempDir("", "tg-postgres-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(outDir)
+
+	ctx := context.Background()
+	req := testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image: "postgres",
+			Env: map[string]string{
+				"POSTGRES_PASSWORD": password,
+			},
+			BindMounts: map[string]string{
+				initdb: "/docker-entrypoint-initdb.d",
+				outDir: "/out",
+			},
+			ExposedPorts: []string{"5432/tcp"},
+			WaitingFor:   wait.ForListeningPort("5432/tcp"),
+		},
+		Started: true,
+	}
+	cont, err := testcontainers.GenericContainer(ctx, req)
+	require.NoError(t, err, "starting container failed")
+	defer func() {
+		require.NoError(t, cont.Terminate(ctx), "terminating container failed")
+	}()
+
+	// Get the connection details from the container
+	host, err := cont.Host(ctx)
+	require.NoError(t, err, "getting container host address failed")
+	require.NotEmpty(t, host)
+	natPort, err := cont.MappedPort(ctx, "5432/tcp")
+	require.NoError(t, err, "getting container host port failed")
+	port := natPort.Port()
+	require.NotEmpty(t, port)
+
+	//use the plugin to write to the database
+	// host, port, username, password, dbname
+	address := fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
+		username, password, host, port, dbname,
+	)
+	p := newSql()
+	p.Driver = "pgx"
+	p.Address = address
+	//p.Convert.Timestamp = "TEXT" //disable mysql default current_timestamp()
+
+	require.NoError(t, p.Connect())
+	require.NoError(t, p.Write(
+		testMetrics,
+	))
+
+	//dump the database
+	//psql -u postgres
+	var rc int
+	rc, err = cont.Exec(ctx, []string{
+		"bash",
+		"-c",
+		"pg_dump" +
+			" --username=" + username +
+			//" --password=" + password +
+			//			" --compact --skip-opt " +
+			" --no-comments" +
+			//" --data-only" +
+			" " + dbname +
+			// pg_dump's output has comments that include build info
+			// of postgres and pg_dump. The build info changes with
+			// each release. To prevent these changes from causing the
+			// test to fail, we strip out comments. Also strip out
+			// blank lines.
+			"|grep -E -v '(^--|^$)'" +
+			" > /out/dump 2>&1",
+	})
+	require.NoError(t, err)
+	require.Equal(t, 0, rc)
+	dumpfile := filepath.Join(outDir, "dump")
+	require.FileExists(t, dumpfile)
+
+	//compare the dump to what we expected
+	expected, err := ioutil.ReadFile("testdata/postgres/expected.sql")
 	require.NoError(t, err)
 	actual, err := ioutil.ReadFile(dumpfile)
 	require.NoError(t, err)
