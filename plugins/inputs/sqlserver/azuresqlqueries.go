@@ -722,7 +722,7 @@ DECLARE @currIntervalStartDate datetimeoffset = DATEADD(second, @currIntervalSta
 const sqlAzureDBQueryStoreRuntimeStatistics = sqlAzureDBPartQueryPeriod + `
 
 /*QDS is not enabled on read-only replicas: https://docs.microsoft.com/en-us/sql/t-sql/functions/databasepropertyex-transact-sql?view=sql-server-ver15*/
-IF DATABASEPROPERTYEX(DB_Name(), 'Updatability') = 'READ_ONLY'  
+IF DATABASEPROPERTYEX(DB_Name(), 'Updateability') = 'READ_ONLY'  
 	RETURN
 
 /* Query the data from query store. Group by plan_id, execution_type, runtime_stats_interval_id, as specified here:
@@ -768,7 +768,8 @@ FROM sys.query_store_query q WITH (NOLOCK)
 	JOIN sys.query_store_runtime_stats rs WITH (NOLOCK) ON p.plan_id = rs.plan_id
 	JOIN sys.query_store_runtime_stats_interval rsi WITH (NOLOCK) ON rs.runtime_stats_interval_id = rsi.runtime_stats_interval_id
 WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate
-GROUP BY rs.plan_id, rs.execution_type, rs.runtime_stats_interval_id;
+GROUP BY rs.plan_id, rs.execution_type, rs.runtime_stats_interval_id
+OPTION (RECOMPILE);
 
 /* Return the timestamp when the query was run, to be used in the next call */
 SELECT CAST(@currIntervalEndTimestamp AS nvarchar(35)) AS QueryData;
@@ -777,7 +778,7 @@ SELECT CAST(@currIntervalEndTimestamp AS nvarchar(35)) AS QueryData;
 const sqlAzureDBQueryStoreWaitStatistics = sqlAzureDBPartQueryPeriod + `
 
 /*QDS is not enabled on read-only replicas: https://docs.microsoft.com/en-us/sql/t-sql/functions/databasepropertyex-transact-sql?view=sql-server-ver15*/
-IF DATABASEPROPERTYEX(DB_Name(), 'Updatability') = 'READ_ONLY'  
+IF DATABASEPROPERTYEX(DB_Name(), 'Updateability') = 'READ_ONLY'  
 	RETURN
 
 /* Query the data from query store. Group  by plan_id, runtime_stats_interval_id, execution_type and wait_category, and specified here:
@@ -805,7 +806,8 @@ FROM sys.query_store_query q WITH (NOLOCK)
 	JOIN sys.query_store_wait_stats ws WITH (NOLOCK) ON p.plan_id = ws.plan_id
 	JOIN sys.query_store_runtime_stats_interval rsi WITH (NOLOCK) on ws.runtime_stats_interval_id = rsi.runtime_stats_interval_id
 WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate
-GROUP BY ws.plan_id, ws.execution_type, ws.runtime_stats_interval_id, ws.wait_category_desc;
+GROUP BY ws.plan_id, ws.execution_type, ws.runtime_stats_interval_id, ws.wait_category_desc
+OPTION (RECOMPILE);
 
 /* Return the timestamp when the query was run, to be used in the next call */
 SELECT CAST(@currIntervalEndTimestamp AS nvarchar(35)) AS QueryData;
