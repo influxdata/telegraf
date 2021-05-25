@@ -36,7 +36,7 @@ var sampleConfig = `
   ## Write URL override; useful for debugging.
   # url = "https://app.datadoghq.com/api/v1/series"
 
-  ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
+  ## Set http_proxy (telegraf uses the system wide proxy settings if it isn't set)
   # http_proxy_url = "http://localhost:8888"
 `
 
