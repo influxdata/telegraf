@@ -17,6 +17,8 @@ Pull requests welcome.
 - [youtube](https://github.com/inabagumi/youtube-telegraf-plugin) - Gather account information from YouTube channels
 - [Big Blue Button](https://github.com/SLedunois/bigbluebutton-telegraf-plugin) - Gather meetings information from [Big Blue Button](https://bigbluebutton.org/) server
 - [dnsmasq](https://github.com/machinly/dnsmasq-telegraf-plugin) - Gather dnsmasq statistics from dnsmasq
+- [ldap_org and ds389](https://github.com/falon/CSI-telegraf-plugins) - Gather statistics from 389ds and from LDAP trees.
+- [x509_crl](https://github.com/jcgonnard/telegraf-input-x590crl) - Gather information from your X509 CRL files
 
 ## Outputs
 - [kinesis](https://github.com/morfien101/telegraf-output-kinesis) - Aggregation and compression of metrics to send Amazon Kinesis.
