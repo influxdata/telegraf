@@ -1,5 +1,3 @@
-export GOSUMDB=sum.golang.org
-export GOPROXY=https://proxy.golang.org,direct
 next_version :=  $(shell cat build_version.txt)
 tag := $(shell git describe --exact-match --tags 2>git_describe_error.tmp; rm -f git_describe_error.tmp)
 branch := $(shell git rev-parse --abbrev-ref HEAD)
