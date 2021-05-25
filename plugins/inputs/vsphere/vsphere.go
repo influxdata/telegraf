@@ -57,6 +57,7 @@ type VSphere struct {
 	ForceDiscoverOnInit     bool
 	ObjectDiscoveryInterval config.Duration
 	Timeout                 config.Duration
+	HistoricalInterval      config.Duration
 
 	endpoints []*Endpoint
 	cancel    context.CancelFunc
@@ -250,6 +251,10 @@ var sampleConfig = `
   # ssl_key = "/path/to/keyfile"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## The Historical Interval value must match EXACTLY the interval in the daily 
+  # "Interval Duration" found on the VCenter server under Configure > General > Statistics > Statistic intervals
+  # historical_interval = "5m"
 `
 
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
@@ -374,6 +379,7 @@ func init() {
 			ForceDiscoverOnInit:     true,
 			ObjectDiscoveryInterval: config.Duration(time.Second * 300),
 			Timeout:                 config.Duration(time.Second * 60),
+			HistoricalInterval:      config.Duration(time.Second * 300),
 		}
 	})
 }
