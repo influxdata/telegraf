@@ -80,21 +80,21 @@ var (
 		stableMetric(
 			"metric_one",
 			[]telegraf.Tag{
-				telegraf.Tag{
+				{
 					Key:   "tag_one",
 					Value: "tag1",
 				},
-				telegraf.Tag{
+				{
 					Key:   "tag_two",
 					Value: "tag2",
 				},
 			},
 			[]telegraf.Field{
-				telegraf.Field{
+				{
 					Key:   "int64_one",
 					Value: int64(1234),
 				},
-				telegraf.Field{
+				{
 					Key:   "int64_two",
 					Value: int64(2345),
 				},
@@ -104,13 +104,13 @@ var (
 		stableMetric(
 			"metric_two",
 			[]telegraf.Tag{
-				telegraf.Tag{
+				{
 					Key:   "tag_three",
 					Value: "tag3",
 				},
 			},
 			[]telegraf.Field{
-				telegraf.Field{
+				{
 					Key:   "string_one",
 					Value: "string1",
 				},
