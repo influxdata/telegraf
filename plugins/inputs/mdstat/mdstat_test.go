@@ -35,6 +35,45 @@ func TestFullMdstatProcFile(t *testing.T) {
 	acc.AssertContainsFields(t, "mdstat", fields)
 }
 
+func TestFailedDiskMdStatProcFile1(t *testing.T) {
+	filename := makeFakeMDStatFile([]byte(mdStatFileFailedDisk))
+	defer os.Remove(filename)
+
+	k := MdstatConf{
+		FileName: filename,
+	}
+
+	acc := testutil.Accumulator{}
+	err := k.Gather(&acc)
+	assert.NoError(t, err)
+
+	fields := map[string]interface{}{
+		"BlocksSynced":           int64(5860144128),
+		"BlocksSyncedFinishTime": float64(0),
+		"BlocksSyncedPct":        float64(0),
+		"BlocksSyncedSpeed":      float64(0),
+		"BlocksTotal":            int64(5860144128),
+		"DisksActive":            int64(3),
+		"DisksFailed":            int64(1),
+		"DisksSpare":             int64(0),
+		"DisksTotal":             int64(4),
+	}
+	acc.AssertContainsFields(t, "mdstat", fields)
+}
+
+func TestEmptyMdStatProcFile1(t *testing.T) {
+	filename := makeFakeMDStatFile([]byte(mdStatFileEmpty))
+	defer os.Remove(filename)
+
+	k := MdstatConf{
+		FileName: filename,
+	}
+
+	acc := testutil.Accumulator{}
+	err := k.Gather(&acc)
+	assert.NoError(t, err)
+}
+
 func TestInvalidMdStatProcFile1(t *testing.T) {
 	filename := makeFakeMDStatFile([]byte(mdStatFileInvalid))
 	defer os.Remove(filename)
@@ -65,12 +104,20 @@ md0 : active raid1 sdb1[2] sda1[0]
 unused devices: <none>
 `
 
-/*
+const mdStatFileFailedDisk = `
+Personalities : [linear] [multipath] [raid0] [raid1] [raid6] [raid5] [raid4] [raid10]
+md0 : active raid5 sdd1[3] sdb1[1] sda1[0]
+      5860144128 blocks super 1.2 level 5, 64k chunk, algorithm 2 [4/3] [UUU_]
+      bitmap: 8/15 pages [32KB], 65536KB chunk
+
+unused devices: <none>
+`
+
 const mdStatFileEmpty = `
 Personalities :
 unused devices: <none>
 `
-*/
+
 const mdStatFileInvalid = `
 Personalities :
 
