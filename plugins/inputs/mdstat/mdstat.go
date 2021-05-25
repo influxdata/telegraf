@@ -79,39 +79,39 @@ func (k *MdstatConf) SampleConfig() string {
 func evalStatusLine(deviceLine, statusLineStr string) (statusLine, error) {
 	sizeFields := strings.Fields(statusLineStr)
 	if len(sizeFields) < 1 {
-		return statusLine{active: 0, total: 0, size: 0},
+		return statusLine{active: 0, total: 0, failed: 0, size: 0},
 			fmt.Errorf("statusLine empty? %q", statusLineStr)
 	}
 	sizeStr := sizeFields[0]
 	size, err := strconv.ParseInt(sizeStr, 10, 64)
 	if err != nil {
-		return statusLine{active: 0, total: 0, size: 0},
+		return statusLine{active: 0, total: 0, failed: 0, size: 0},
 			fmt.Errorf("unexpected statusLine %q: %w", statusLineStr, err)
 	}
 
 	if strings.Contains(deviceLine, "raid0") || strings.Contains(deviceLine, "linear") {
 		// In the device deviceLine, only disks have a number associated with them in [].
 		total := int64(strings.Count(deviceLine, "["))
-		return statusLine{active: total, total: total, size: size}, nil
+		return statusLine{active: total, total: total, failed: 0, size: size}, nil
 	}
 
 	if strings.Contains(deviceLine, "inactive") {
-		return statusLine{active: 0, total: 0, size: size}, nil
+		return statusLine{active: 0, total: 0, failed: 0, size: size}, nil
 	}
 
 	matches := statusLineRE.FindStringSubmatch(statusLineStr)
 	if len(matches) != 5 {
-		return statusLine{active: 0, total: 0, size: size},
+		return statusLine{active: 0, total: 0, failed: 0, size: size},
 			fmt.Errorf("couldn't find all the substring matches: %s", statusLineStr)
 	}
 	total, err := strconv.ParseInt(matches[2], 10, 64)
 	if err != nil {
-		return statusLine{active: 0, total: 0, size: size},
+		return statusLine{active: 0, total: 0, failed: 0, size: size},
 			fmt.Errorf("unexpected statusLine %q: %w", statusLineStr, err)
 	}
 	active, err := strconv.ParseInt(matches[3], 10, 64)
 	if err != nil {
-		return statusLine{active: 0, total: total, size: size},
+		return statusLine{active: 0, total: total, failed: 0, size: size},
 			fmt.Errorf("unexpected statusLine %q: %w", statusLineStr, err)
 	}
 	failed := int64(strings.Count(matches[4], "_"))
