@@ -1,27 +1,25 @@
 package snmp_trap
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"net"
-	"os/exec"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/sleepinggenius2/gosmi"
+	"github.com/sleepinggenius2/gosmi/types"
 
 	"github.com/gosnmp/gosnmp"
 )
 
 var defaultTimeout = config.Duration(time.Second * 5)
-
-type execer func(config.Duration, string, ...string) ([]byte, error)
 
 type mibEntry struct {
 	mibName string
@@ -52,11 +50,6 @@ type SnmpTrap struct {
 	makeHandlerWrapper func(gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc
 
 	Log telegraf.Logger `toml:"-"`
-
-	cacheLock sync.Mutex
-	cache     map[string]mibEntry
-
-	execCmd execer
 }
 
 var sampleConfig = `
@@ -101,6 +94,29 @@ func (s *SnmpTrap) Gather(_ telegraf.Accumulator) error {
 }
 
 func init() {
+	gosmi.Init()
+	gosmi.AppendPath("/usr/share/snmp/mibs")
+	root := "/usr/share/snmp/mibs"
+	var folders []string
+	folders = append(folders, root)
+	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if info.Mode()&os.ModeSymlink != 0 {
+			s, _ := os.Readlink(path)
+			folders = append(folders, s)
+		}
+		return nil
+	})
+	for _, folder := range folders {
+		filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+			if info.IsDir() {
+				gosmi.AppendPath(path)
+			} else if info.Mode()&os.ModeSymlink == 0 {
+				gosmi.LoadModule(info.Name())
+			}
+			return nil
+		})
+	}
+
 	inputs.Add("snmp_trap", func() telegraf.Input {
 		return &SnmpTrap{
 			timeFunc:       time.Now,
@@ -109,23 +125,6 @@ func init() {
 			Version:        "2c",
 		}
 	})
-}
-
-func realExecCmd(timeout config.Duration, arg0 string, args ...string) ([]byte, error) {
-	cmd := exec.Command(arg0, args...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, time.Duration(timeout))
-	if err != nil {
-		return nil, err
-	}
-	return out.Bytes(), nil
-}
-
-func (s *SnmpTrap) Init() error {
-	s.cache = map[string]mibEntry{}
-	s.execCmd = realExecCmd
-	return nil
 }
 
 func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
@@ -367,47 +366,13 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 }
 
 func (s *SnmpTrap) lookup(oid string) (e mibEntry, err error) {
-	s.cacheLock.Lock()
-	defer s.cacheLock.Unlock()
-	var ok bool
-	if e, ok = s.cache[oid]; !ok {
-		// cache miss.  exec snmptranslate
-		e, err = s.snmptranslate(oid)
-		if err == nil {
-			s.cache[oid] = e
-		}
-		return e, err
-	}
-	return e, nil
-}
-
-func (s *SnmpTrap) clear() {
-	s.cacheLock.Lock()
-	defer s.cacheLock.Unlock()
-	s.cache = map[string]mibEntry{}
-}
-
-func (s *SnmpTrap) load(oid string, e mibEntry) {
-	s.cacheLock.Lock()
-	defer s.cacheLock.Unlock()
-	s.cache[oid] = e
-}
-
-func (s *SnmpTrap) snmptranslate(oid string) (e mibEntry, err error) {
-	var out []byte
-	out, err = s.execCmd(s.Timeout, "snmptranslate", "-Td", "-Ob", "-m", "all", oid)
-
+	var node gosmi.SmiNode
+	node, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
 	if err != nil {
 		return e, err
 	}
 
-	scanner := bufio.NewScanner(bytes.NewBuffer(out))
-	ok := scanner.Scan()
-	if err = scanner.Err(); !ok && err != nil {
-		return e, err
-	}
-
-	e.oidText = scanner.Text()
+	e.oidText = node.RenderQualified()
 
 	i := strings.Index(e.oidText, "::")
 	if i == -1 {

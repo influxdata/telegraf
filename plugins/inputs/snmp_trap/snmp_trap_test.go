@@ -1,7 +1,6 @@
 package snmp_trap
 
 import (
-	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -16,29 +15,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 )
-
-func TestLoad(t *testing.T) {
-	s := &SnmpTrap{}
-	require.Nil(t, s.Init())
-
-	defer s.clear()
-	s.load(
-		".1.3.6.1.6.3.1.1.5.1",
-		mibEntry{
-			"SNMPv2-MIB",
-			"coldStart",
-		},
-	)
-
-	e, err := s.lookup(".1.3.6.1.6.3.1.1.5.1")
-	require.NoError(t, err)
-	require.Equal(t, "SNMPv2-MIB", e.mibName)
-	require.Equal(t, "coldStart", e.oidText)
-}
-
-func fakeExecCmd(_ config.Duration, x string, y ...string) ([]byte, error) {
-	return nil, fmt.Errorf("mock " + x + " " + strings.Join(y, " "))
-}
 
 func newMsgFlagsV3(secLevel string) gosnmp.SnmpV3MsgFlags {
 	var msgFlags gosnmp.SnmpV3MsgFlags
@@ -242,30 +218,6 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//Check that we're not running snmptranslate to look up oids
-		//when we shouldn't be.  This sends and receives a valid trap
-		//but metric production should fail because the oids aren't in
-		//the cache and oid lookup is intentionally mocked to fail.
-		{
-			name:    "missing oid",
-			version: gosnmp.Version2c,
-			trap: gosnmp.SnmpTrap{
-				Variables: []gosnmp.SnmpPDU{
-					{
-						Name:  ".1.3.6.1.2.1.1.3.0",
-						Type:  gosnmp.TimeTicks,
-						Value: now,
-					},
-					{
-						Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
-						Type:  gosnmp.ObjectIdentifier,
-						Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
-					},
-				},
-			},
-			entries: []entry{}, //nothing in cache
-			metrics: []telegraf.Metric{},
-		},
 		//v1 enterprise specific trap
 		{
 			name:    "v1 trap enterprise",
@@ -305,8 +257,8 @@ func TestReceiveTrap(t *testing.T) {
 					"snmp_trap", // name
 					map[string]string{ // tags
 						"oid":           ".1.2.3.0.55",
-						"name":          "enterpriseOID",
-						"mib":           "enterpriseMIB",
+						"name":          "iso",
+						"mib":           "<well-known>",
 						"version":       "1",
 						"source":        "127.0.0.1",
 						"agent_address": "10.20.30.40",
@@ -314,7 +266,7 @@ func TestReceiveTrap(t *testing.T) {
 					},
 					map[string]interface{}{ // fields
 						"sysUpTimeInstance": uint(now),
-						"valueOID":          "payload",
+						"iso":               "payload",
 					},
 					fakeTime,
 				),
@@ -359,8 +311,8 @@ func TestReceiveTrap(t *testing.T) {
 					"snmp_trap", // name
 					map[string]string{ // tags
 						"oid":           ".1.3.6.1.6.3.1.1.5.1",
-						"name":          "coldStartOID",
-						"mib":           "coldStartMIB",
+						"name":          "coldStart",
+						"mib":           "SNMPv2-MIB",
 						"version":       "1",
 						"source":        "127.0.0.1",
 						"agent_address": "10.20.30.40",
@@ -368,7 +320,7 @@ func TestReceiveTrap(t *testing.T) {
 					},
 					map[string]interface{}{ // fields
 						"sysUpTimeInstance": uint(now),
-						"valueOID":          "payload",
+						"iso":               "payload",
 					},
 					fakeTime,
 				),
@@ -1293,18 +1245,10 @@ func TestReceiveTrap(t *testing.T) {
 				PrivProtocol: tt.privProto,
 				PrivPassword: tt.privPass,
 			}
-			require.Nil(t, s.Init())
 			// Don't look up oid with snmptranslate.
-			s.execCmd = fakeExecCmd
 			var acc testutil.Accumulator
 			require.Nil(t, s.Start(&acc))
 			defer s.Stop()
-
-			// Preload the cache with the oids we'll use in this test
-			// so snmptranslate and mibs don't need to be installed.
-			for _, entry := range tt.entries {
-				s.load(entry.oid, entry.e)
-			}
 
 			var goSNMP gosnmp.GoSNMP
 			if tt.version == gosnmp.Version3 {
