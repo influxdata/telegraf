@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -38,15 +40,20 @@ type X509Cert struct {
 	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
 	tlsCfg           *tls.Config
 	_tls.ClientConfig
+	proxy.TCPProxy
 	locations []*url.URL
 	globpaths []*globpath.GlobPath
 	Log       telegraf.Logger
 }
 
+var remoteURLRe = regexp.MustCompile("^((udp|tcp)[46]?|https)://")
+
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
-		if strings.HasPrefix(source, "file://") ||
-			strings.HasPrefix(source, "/") {
+		if !remoteURLRe.MatchString(source) &&
+			(strings.HasPrefix(source, "file://") ||
+				strings.HasPrefix(source, "/") ||
+				strings.Index(source, ":\\") != 1) {
 			source = filepath.ToSlash(strings.TrimPrefix(source, "file://"))
 			g, err := globpath.Compile(source)
 			if err != nil {
@@ -82,7 +89,6 @@ func (c *X509Cert) serverName(u *url.URL) (string, error) {
 }
 
 func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, error) {
-	protocol := u.Scheme
 	switch u.Scheme {
 	case "udp", "udp4", "udp6":
 		ipConn, err := net.DialTimeout(u.Scheme, u.Host, timeout)
@@ -123,10 +129,14 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		return certs, nil
 	case "https":
-		protocol = "tcp"
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
-		ipConn, err := net.DialTimeout(protocol, u.Host, timeout)
+		dialer, err := c.Proxy()
+		if err != nil {
+			return nil, err
+		}
+
+		ipConn, err := dialer.Dial(u.Scheme, u.Host) // TODO: add timeout
 		if err != nil {
 			return nil, err
 		}
