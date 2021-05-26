@@ -915,6 +915,8 @@ func loadConfig(config string) ([]byte, error) {
 		switch u.Scheme {
 		case "https", "http":
 			return fetchConfig(u)
+		default:
+			return nil, fmt.Errorf("scheme %q not supported", u.Scheme)
 		}
 	}
 
