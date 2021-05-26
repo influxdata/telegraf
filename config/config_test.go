@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -321,6 +322,19 @@ func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
 	c := NewConfig()
 	require.NoError(t, c.LoadConfig(ts.URL))
 	require.Equal(t, 4, responseCounter)
+}
+
+func TestConfig_URLLikeFileName(t *testing.T) {
+	c := NewConfig()
+	err := c.LoadConfig("http:##www.example.com.conf")
+	require.Error(t, err)
+
+	if runtime.GOOS == "windows" {
+		// The error file not found error message is different on windows
+		require.Equal(t, "Error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: The system cannot find the file specified.", err.Error())
+	} else {
+		require.Equal(t, "Error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: no such file or directory", err.Error())
+	}
 }
 
 /*** Mockup INPUT plugin for testing to avoid cyclic dependencies ***/
