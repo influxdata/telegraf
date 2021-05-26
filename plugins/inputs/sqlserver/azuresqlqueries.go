@@ -697,7 +697,7 @@ IF @QueryData != '' AND @QueryData IS NOT NULL
 DECLARE @secondsInDay INT = 86400;
 
 /* Get query aggregation interval from query store */
-DECLARE @timeGrain BIGINT = (SELECT interval_length_minutes * 60 FROM sys.database_query_store_options WITH (NOLOCK)); 
+DECLARE @timeGrain BIGINT = (SELECT interval_length_minutes * 60 FROM sys.database_query_store_options); 
 
 /* Get current time and round it down to a multiple of @timeGrain */
 DECLARE @currDate datetimeoffset =  SYSDATETIMEOFFSET();
@@ -765,10 +765,10 @@ SELECT
 	SUM(rs.avg_log_bytes_used * rs.count_executions) / SUM(rs.count_executions) as avg_log_bytes_used,
 	MAX(rs.max_tempdb_space_used) as max_tempdb_space_used,
 	SUM(rs.avg_tempdb_space_used * rs.count_executions) / SUM(rs.count_executions) as avg_tempdb_space_used
-FROM sys.query_store_query q WITH (NOLOCK)
-	JOIN sys.query_store_plan p WITH (NOLOCK) ON q.query_id = p.query_id
-	JOIN sys.query_store_runtime_stats rs WITH (NOLOCK) ON p.plan_id = rs.plan_id
-	JOIN sys.query_store_runtime_stats_interval rsi WITH (NOLOCK) ON rs.runtime_stats_interval_id = rsi.runtime_stats_interval_id
+FROM sys.query_store_query q
+	JOIN sys.query_store_plan p ON q.query_id = p.query_id
+	JOIN sys.query_store_runtime_stats rs ON p.plan_id = rs.plan_id
+	JOIN sys.query_store_runtime_stats_interval rsi ON rs.runtime_stats_interval_id = rsi.runtime_stats_interval_id
 WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate
 GROUP BY rs.plan_id, rs.execution_type, rs.runtime_stats_interval_id
 OPTION (RECOMPILE);
@@ -803,10 +803,10 @@ SELECT
 	CAST(SUM(IIF(avg_query_wait_time_ms = 0, 0, ws.total_query_wait_time_ms / avg_query_wait_time_ms)) AS BIGINT) AS count_executions,
 	MAX(ws.max_query_wait_time_ms) AS max_query_wait_time_ms,
 	MAX(q.query_parameterization_type) AS query_param_type
-FROM sys.query_store_query q WITH (NOLOCK)
-	JOIN sys.query_store_plan p WITH (NOLOCK) ON q.query_id = p.query_id
-	JOIN sys.query_store_wait_stats ws WITH (NOLOCK) ON p.plan_id = ws.plan_id
-	JOIN sys.query_store_runtime_stats_interval rsi WITH (NOLOCK) on ws.runtime_stats_interval_id = rsi.runtime_stats_interval_id
+FROM sys.query_store_query q
+	JOIN sys.query_store_plan p ON q.query_id = p.query_id
+	JOIN sys.query_store_wait_stats ws ON p.plan_id = ws.plan_id
+	JOIN sys.query_store_runtime_stats_interval rsi on ws.runtime_stats_interval_id = rsi.runtime_stats_interval_id
 WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate
 GROUP BY ws.plan_id, ws.execution_type, ws.runtime_stats_interval_id, ws.wait_category_desc
 OPTION (RECOMPILE);
