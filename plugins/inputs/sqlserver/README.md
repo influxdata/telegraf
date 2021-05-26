@@ -108,8 +108,9 @@ GO
   ## This setting/metric is optional and is disabled by default.
   # health_metric = false
 
-  ## Toggling this to true enables telegraf to start collecting data from query store.
-  ## This setting is optional and is disabled by default as it the queries are expensive and collection interval should be >=15m
+  ## Toggling this to true enables telegraf to start collecting data from Query Store.
+  ## This setting is optional and is disabled by default.
+  ## Collection interval should be >=15m. Shorter intervals may cause higher performance impact on source.
   # query_store_collection = false
 
   ## Possible queries accross different versions of the collectors
