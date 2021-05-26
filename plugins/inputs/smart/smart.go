@@ -21,6 +21,7 @@ import (
 
 const intelVID = "0x8086"
 
+//there might need to be one of these for power mode
 var (
 	// Device Model:     APPLE SSD SM256E
 	// Product:              HUH721212AL5204
@@ -34,6 +35,10 @@ var (
 	userCapacityInfo = regexp.MustCompile("^User Capacity:\\s+([0-9,]+)\\s+bytes.*$")
 	// SMART support is: Enabled
 	smartEnabledInfo = regexp.MustCompile("^SMART support is:\\s+(\\w+)$")
+	// Power mode is:    ACTIVE or IDLE or Power mode was:   STANDBY
+	powermodeInfo = regexp.MustCompile("^Power mode \\w+:\\s+(\\w+)")
+	// Device is in STANDBY mode
+	standbyInfo = regexp.MustCompile("^Device is in\\s+(\\w+)")
 	// SMART overall-health self-assessment test result: PASSED
 	// SMART Health Status: OK
 	// PASSED, FAILED, UNKNOWN
@@ -693,11 +698,29 @@ func gatherDisk(acc telegraf.Accumulator, timeout config.Duration, usesudo, coll
 			deviceFields["health_ok"] = health[2] == "PASSED" || health[2] == "OK"
 		}
 
+		// checks to see if there is a power mode to print to user
+		// if not look for Device is in STANDBY which happens when 
+		// nocheck is set to standby (will exit to not spin up the disk)
+		// otherwise nothing is found so nothing is printed (NVMe does not show power)
+		if powermodeInfo.FindStringSubmatch(line) != nil {
+			power := powermodeInfo.FindStringSubmatch(line)
+			if len(power) > 1 {
+				deviceTags["power"] = power[1]
+			}
+		} else {
+			power := standbyInfo.FindStringSubmatch(line)
+			if len(power) > 1 {
+				deviceTags["power"] = power[1]
+			}
+		}
+
+
 		tags := map[string]string{}
 		fields := make(map[string]interface{})
 
 		if collectAttributes {
-			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled"}
+			//add power mode
+			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled", "power"}
 			for _, key := range keys {
 				if value, ok := deviceTags[key]; ok {
 					tags[key] = value
