@@ -7,10 +7,11 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"io/ioutil"
-	"net"
 	"net/url"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -48,6 +49,7 @@ type X509Cert struct {
 	ServerName string          `toml:"server_name"`
 	tlsCfg     *tls.Config
 	_tls.ClientConfig
+	proxy.TCPProxy
 	locations []*url.URL
 	globpaths []*globpath.GlobPath
 	Log       telegraf.Logger
@@ -62,6 +64,8 @@ func (c *X509Cert) Description() string {
 func (c *X509Cert) SampleConfig() string {
 	return sampleConfig
 }
+
+var remoteURLRe = regexp.MustCompile("^((udp|tcp)[46]?|https)://")
 
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
@@ -110,7 +114,12 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 	case "udp", "udp4", "udp6":
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
-		ipConn, err := net.DialTimeout(protocol, u.Host, timeout)
+		dialer, err := c.Proxy()
+		if err != nil {
+			return nil, err
+		}
+
+		ipConn, err := dialer.Dial(protocol, u.Host) // TODO: add timeout
 		if err != nil {
 			return nil, err
 		}
