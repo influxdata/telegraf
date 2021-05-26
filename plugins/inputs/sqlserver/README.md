@@ -65,7 +65,7 @@ GO
   ## A list of queries to include. 
   # include_query = []
 
-  ## A list of queries to explicitly ignore. QDS queries are excluded by default.
+  ## A list of queries to explicitly ignore. Query Store queries are excluded by default.
   # exclude_query = [AzureSQLDBQueryStoreRuntimeStatistics, AzureSQLDBQueryStoreWaitStatistics]
 
   ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 

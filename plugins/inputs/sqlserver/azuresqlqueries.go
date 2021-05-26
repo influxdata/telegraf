@@ -721,7 +721,7 @@ DECLARE @currIntervalStartDate datetimeoffset = DATEADD(second, @currIntervalSta
 `
 const sqlAzureDBQueryStoreRuntimeStatistics = sqlAzureDBPartQueryPeriod + `
 
-/*QDS is not enabled on read-only replicas: https://docs.microsoft.com/en-us/sql/t-sql/functions/databasepropertyex-transact-sql?view=sql-server-ver15*/
+/*Query Store is not enabled on read-only replicas: https://docs.microsoft.com/en-us/sql/t-sql/functions/databasepropertyex-transact-sql?view=sql-server-ver15*/
 IF DATABASEPROPERTYEX(DB_Name(), 'Updateability') = 'READ_ONLY'  
 	RETURN
 
@@ -779,7 +779,7 @@ SELECT CAST(@currIntervalEndTimestamp AS nvarchar(35)) AS QueryData;
 
 const sqlAzureDBQueryStoreWaitStatistics = sqlAzureDBPartQueryPeriod + `
 
-/*QDS is not enabled on read-only replicas: https://docs.microsoft.com/en-us/sql/t-sql/functions/databasepropertyex-transact-sql?view=sql-server-ver15*/
+/*Query Store is not enabled on read-only replicas: https://docs.microsoft.com/en-us/sql/t-sql/functions/databasepropertyex-transact-sql?view=sql-server-ver15*/
 IF DATABASEPROPERTYEX(DB_Name(), 'Updateability') = 'READ_ONLY'  
 	RETURN
 
