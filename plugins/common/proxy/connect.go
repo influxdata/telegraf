@@ -20,10 +20,10 @@ func (c *httpConnectProxy) DialContext(ctx context.Context, network, addr string
 	var proxyConn net.Conn
 	var err error
 	if dialer, ok := c.forward.(proxy.ContextDialer); ok {
-		proxyConn, err = dialer.DialContext(ctx, "tcp", addr)
+		proxyConn, err = dialer.DialContext(ctx, "tcp", c.url.Host)
 	} else {
 		// TODO: still support timeout/cancellation w/o context
-		proxyConn, err = c.forward.Dial("tcp", addr)
+		proxyConn, err = c.forward.Dial("tcp", c.url.Host)
 	}
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func (c *httpConnectProxy) DialContext(ctx context.Context, network, addr string
 	requestURL.Scheme = ""
 
 	// Build HTTP CONNECT request
-	req, err := http.NewRequest("CONNECT", requestURL.String(), nil)
+	req, err := http.NewRequest(http.MethodConnect, requestURL.String(), nil)
 	if err != nil {
 		proxyConn.Close()
 		return nil, err
