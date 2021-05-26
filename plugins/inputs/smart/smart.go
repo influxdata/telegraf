@@ -21,7 +21,6 @@ import (
 
 const intelVID = "0x8086"
 
-//there might need to be one of these for power mode
 var (
 	// Device Model:     APPLE SSD SM256E
 	// Product:              HUH721212AL5204
@@ -41,7 +40,7 @@ var (
 	standbyInfo = regexp.MustCompile("^Device is in\\s+(\\w+)")
 	// SMART overall-health self-assessment test result: PASSED
 	// SMART Health Status: OK
-	// PASSED, FAILED, UNKNOWN
+	// PASSED, FAILED, UNKNOWN 
 	smartOverallHealth = regexp.MustCompile("^(SMART overall-health self-assessment test result|SMART Health Status):\\s+(\\w+).*$")
 
 	// sasNvmeAttr is a SAS or NVME SMART attribute
@@ -981,7 +980,7 @@ func parseTemperatureSensor(fields, _ map[string]interface{}, str string) error 
 func validatePath(path string) error {
 	pathInfo, err := os.Stat(path)
 	if os.IsNotExist(err) {
-		return fmt.Errorf("provided path does not exist: [%s]", path)
+		return fmt.Errorf("provided path does  not exist: [%s]", path)
 	}
 	if mode := pathInfo.Mode(); !mode.IsRegular() {
 		return fmt.Errorf("provided path does not point to a regular file: [%s]", path)
