@@ -39,6 +39,9 @@ const sampleConfig = `
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
+
+  ## Set the proxy settings (telegraf uses the system wide proxy settings if it isn't set)
+  # proxy_url = "http://localhost:8888"
 `
 const description = "Reads metrics from a SSL certificate"
 
