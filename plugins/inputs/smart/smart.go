@@ -980,7 +980,7 @@ func parseTemperatureSensor(fields, _ map[string]interface{}, str string) error 
 func validatePath(path string) error {
 	pathInfo, err := os.Stat(path)
 	if os.IsNotExist(err) {
-		return fmt.Errorf("provided path does  not exist: [%s]", path)
+		return fmt.Errorf("provided path does not exist: [%s]", path)
 	}
 	if mode := pathInfo.Mode(); !mode.IsRegular() {
 		return fmt.Errorf("provided path does not point to a regular file: [%s]", path)
