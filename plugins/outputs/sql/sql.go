@@ -1,13 +1,12 @@
 package sql
 
 import (
-	"database/sql"
+	gosql "database/sql"
 	"fmt"
-	"log"
 	"strings"
 
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/jackc/pgx/stdlib"
+	_ "github.com/go-sql-driver/mysql" // Register mysql sql driver
+	_ "github.com/jackc/pgx/stdlib"    // Register postgres pgx sql driver
 
 	// These SQL drivers can be enabled if
 	// they are added to depencies
@@ -28,18 +27,20 @@ type ConvertStruct struct {
 	Unsigned     string
 }
 
-type Sql struct {
-	db                  *sql.DB
+type SQL struct {
+	db                  *gosql.DB
 	Driver              string
 	Address             string
 	TableTemplate       string
 	TableExistsTemplate string
 	Tables              map[string]bool
 	Convert             ConvertStruct
+
+	Log telegraf.Logger `toml:"-"`
 }
 
-func (p *Sql) Connect() error {
-	db, err := sql.Open(p.Driver, p.Address)
+func (p *SQL) Connect() error {
+	db, err := gosql.Open(p.Driver, p.Address)
 	if err != nil {
 		return err
 	}
@@ -55,17 +56,8 @@ func (p *Sql) Connect() error {
 	return nil
 }
 
-func (p *Sql) Close() error {
+func (p *SQL) Close() error {
 	return p.db.Close()
-}
-
-func contains(haystack []string, needle string) bool {
-	for _, key := range haystack {
-		if key == needle {
-			return true
-		}
-	}
-	return false
 }
 
 func quoteIdent(name string) string {
@@ -76,7 +68,7 @@ func quoteLiteral(name string) string {
 	return "'" + strings.Replace(name, "'", "''", -1) + "'"
 }
 
-func (p *Sql) deriveDatatype(value interface{}) string {
+func (p *SQL) deriveDatatype(value interface{}) string {
 	var datatype string
 
 	switch value.(type) {
@@ -90,7 +82,7 @@ func (p *Sql) deriveDatatype(value interface{}) string {
 		datatype = p.Convert.Text
 	default:
 		datatype = p.Convert.Defaultvalue
-		log.Printf("E! Unknown datatype: '%T' %v", value, value)
+		p.Log.Errorf("Unknown datatype: '%T' %v", value, value)
 	}
 	return datatype
 }
@@ -144,10 +136,10 @@ var sampleConfig = `
   #  unsigned             = "UNSIGNED"
 `
 
-func (p *Sql) SampleConfig() string { return sampleConfig }
-func (p *Sql) Description() string  { return "Send metrics to SQL Database" }
+func (p *SQL) SampleConfig() string { return sampleConfig }
+func (p *SQL) Description() string  { return "Send metrics to SQL Database" }
 
-func (p *Sql) generateCreateTable(metric telegraf.Metric) string {
+func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	var columns []string
 	var pk []string
 	var sql []string
@@ -177,7 +169,7 @@ func (p *Sql) generateCreateTable(metric telegraf.Metric) string {
 	return strings.Join(sql, ";")
 }
 
-func (p *Sql) generateInsert(tablename string, columns []string) string {
+func (p *SQL) generateInsert(tablename string, columns []string) string {
 	var placeholder, quoted []string
 	for _, column := range columns {
 		quoted = append(quoted, quoteIdent(column))
@@ -194,26 +186,22 @@ func (p *Sql) generateInsert(tablename string, columns []string) string {
 		}
 	}
 
-	sql := fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", quoteIdent(tablename), strings.Join(quoted, ","), strings.Join(placeholder, ","))
-	return sql
+	return fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", quoteIdent(tablename), strings.Join(quoted, ","), strings.Join(placeholder, ","))
 }
 
-func (p *Sql) tableExists(tableName string) bool {
+func (p *SQL) tableExists(tableName string) bool {
 	stmt := strings.Replace(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName), -1)
 
 	_, err := p.db.Exec(stmt)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
-func (p *Sql) Write(metrics []telegraf.Metric) error {
+func (p *SQL) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		tablename := metric.Name()
 
 		// create table if needed
-		if p.Tables[tablename] == false && p.tableExists(tablename) == false {
+		if !p.Tables[tablename] && !p.tableExists(tablename) {
 			createStmt := p.generateCreateTable(metric)
 			_, err := p.db.Exec(createStmt)
 			if err != nil {
@@ -244,7 +232,7 @@ func (p *Sql) Write(metrics []telegraf.Metric) error {
 
 		if err != nil {
 			// check if insert error was caused by column mismatch
-			log.Printf("E! Error during insert: %v, %v", err, sql)
+			p.Log.Errorf("Error during insert: %v, %v", err, sql)
 			return err
 		}
 	}
@@ -252,11 +240,11 @@ func (p *Sql) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("sql", func() telegraf.Output { return newSql() })
+	outputs.Add("sql", func() telegraf.Output { return newSQL() })
 }
 
-func newSql() *Sql {
-	return &Sql{
+func newSQL() *SQL {
+	return &SQL{
 		TableTemplate:       "CREATE TABLE {TABLE}({COLUMNS})",
 		TableExistsTemplate: "SELECT 1 FROM {TABLE} LIMIT 1",
 		Convert: ConvertStruct{

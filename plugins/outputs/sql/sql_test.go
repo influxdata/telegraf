@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -21,14 +22,12 @@ func TestSqlQuote(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-
 }
 
 func TestSqlCreateStatement(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-
 }
 
 func TestSqlInsertStatement(t *testing.T) {
@@ -57,7 +56,6 @@ func stableMetric(
 	tm time.Time,
 	tp ...telegraf.ValueType,
 ) telegraf.Metric {
-
 	// We want to compare the output of this plugin with expected
 	// output. Maps don't preserve order so comparison fails. There's
 	// no metric constructor that takes a slice of tag and slice of
@@ -175,7 +173,8 @@ func TestMysqlIntegration(t *testing.T) {
 	address := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
 		username, password, host, port, dbname,
 	)
-	p := newSql()
+	p := newSQL()
+	p.Log = testutil.Logger{}
 	p.Driver = "mysql"
 	p.Address = address
 	p.Convert.Timestamp = "TEXT" //disable mysql default current_timestamp()
@@ -264,7 +263,8 @@ func TestPostgresIntegration(t *testing.T) {
 	address := fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
 		username, password, host, port, dbname,
 	)
-	p := newSql()
+	p := newSQL()
+	p.Log = testutil.Logger{}
 	p.Driver = "pgx"
 	p.Address = address
 	//p.Convert.Timestamp = "TEXT" //disable mysql default current_timestamp()
