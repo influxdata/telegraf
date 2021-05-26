@@ -796,13 +796,13 @@ SELECT
 	CONVERT(nvarchar(20), MAX(q.query_hash), 1) as query_hash,
 	CAST(ws.plan_id AS nvarchar(20)) AS plan_id,
 	CONVERT(nvarchar(20), MAX(p.query_plan_hash), 1) as query_plan_hash,
-	ws.wait_category_desc AS wait_category_s,
-	ws.execution_type AS exec_type_d,
+	ws.wait_category_desc AS wait_category,
+	ws.execution_type AS exec_type,
 	MAX(ws.execution_type_desc) AS exec_type_desc,
-	SUM(ws.total_query_wait_time_ms) AS total_query_wait_time_ms_d,
+	SUM(ws.total_query_wait_time_ms) AS total_query_wait_time_ms,
 	CAST(SUM(IIF(avg_query_wait_time_ms = 0, 0, ws.total_query_wait_time_ms / avg_query_wait_time_ms)) AS BIGINT) AS count_executions,
-	MAX(ws.max_query_wait_time_ms) AS max_query_wait_time_ms_d,
-	MAX(q.query_parameterization_type) AS query_param_type_d
+	MAX(ws.max_query_wait_time_ms) AS max_query_wait_time_ms,
+	MAX(q.query_parameterization_type) AS query_param_type
 FROM sys.query_store_query q WITH (NOLOCK)
 	JOIN sys.query_store_plan p WITH (NOLOCK) ON q.query_id = p.query_id
 	JOIN sys.query_store_wait_stats ws WITH (NOLOCK) ON p.plan_id = ws.plan_id
