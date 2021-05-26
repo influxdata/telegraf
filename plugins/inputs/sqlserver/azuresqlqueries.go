@@ -762,7 +762,9 @@ SELECT
 	MAX(rs.max_page_server_io_reads) as max_page_server_io_reads,
 	SUM(rs.avg_page_server_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_page_server_io_reads,
 	MAX(rs.max_log_bytes_used) as [max_log_bytes_used],
-	SUM(rs.avg_log_bytes_used * rs.count_executions) / SUM(rs.count_executions) as avg_log_bytes_used
+	SUM(rs.avg_log_bytes_used * rs.count_executions) / SUM(rs.count_executions) as avg_log_bytes_used,
+	MAX(rs.max_tempdb_space_used) as max_tempdb_space_used,
+	SUM(rs.avg_tempdb_space_used * rs.count_executions) / SUM(rs.count_executions) as avg_tempdb_space_used
 FROM sys.query_store_query q WITH (NOLOCK)
 	JOIN sys.query_store_plan p WITH (NOLOCK) ON q.query_id = p.query_id
 	JOIN sys.query_store_runtime_stats rs WITH (NOLOCK) ON p.plan_id = rs.plan_id
