@@ -680,7 +680,7 @@ FROM sys.dm_os_schedulers AS s
 `
 
 const sqlAzureDBPartQueryPeriod = `
-DECLARE @QueryData NVARCHAR(MAX) = ?1; --input parameter
+DECLARE @QueryData VARCHAR(MAX) = ?1; --input parameter
 
 IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
@@ -732,12 +732,12 @@ SELECT
 	'sqlserver_azuredb_querystore_runtime_stats' AS [measurement],
 	REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance],
 	DB_NAME() AS [database_name],
-	CONVERT(nvarchar(35), MAX(rsi.start_time), 126) AS interval_start_time,
-	CONVERT(nvarchar(35), MAX(rsi.end_time), 126) AS interval_end_time,
-	CAST(MAX(q.query_id) AS nvarchar(20)) AS query_id,
-	CONVERT(nvarchar(20), MAX(q.query_hash), 1) as query_hash,
-	CAST(rs.plan_id AS nvarchar(20)) AS plan_id,
-	CONVERT(nvarchar(20), MAX(p.query_plan_hash), 1) as query_plan_hash,
+	CONVERT(varchar(35), MAX(rsi.start_time), 126) AS interval_start_time,
+	CONVERT(varchar(35), MAX(rsi.end_time), 126) AS interval_end_time,
+	CAST(MAX(q.query_id) AS varchar(20)) AS query_id,
+	CONVERT(varchar(20), MAX(q.query_hash), 1) as query_hash,
+	CAST(rs.plan_id AS varchar(20)) AS plan_id,
+	CONVERT(varchar(20), MAX(p.query_plan_hash), 1) as query_plan_hash,
 	MAX(rs.max_logical_io_reads) as max_logical_io_reads,
 	SUM(rs.avg_logical_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_logical_io_reads,
 	MAX(rs.max_physical_io_reads) as max_physical_io_reads,
@@ -774,7 +774,7 @@ GROUP BY rs.plan_id, rs.execution_type, rs.runtime_stats_interval_id
 OPTION (RECOMPILE);
 
 /* Return the timestamp when the query was run, to be used in the next call */
-SELECT CAST(@currIntervalEndTimestamp AS nvarchar(35)) AS QueryData;
+SELECT CAST(@currIntervalEndTimestamp AS varchar(35)) AS QueryData;
 `
 
 const sqlAzureDBQueryStoreWaitStatistics = sqlAzureDBPartQueryPeriod + `
@@ -790,12 +790,12 @@ SELECT
 	'sqlserver_azuredb_querystore_wait_stats' AS [measurement],
 	REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance],
 	DB_NAME() AS [database_name],
-	CONVERT(nvarchar(35), MAX(rsi.start_time), 126) AS interval_start_time,
-	CONVERT(nvarchar(35), MAX(rsi.end_time), 126) AS interval_end_time,
-	CAST(MAX(q.query_id) AS nvarchar(20)) AS query_id,
-	CONVERT(nvarchar(20), MAX(q.query_hash), 1) as query_hash,
-	CAST(ws.plan_id AS nvarchar(20)) AS plan_id,
-	CONVERT(nvarchar(20), MAX(p.query_plan_hash), 1) as query_plan_hash,
+	CONVERT(varchar(35), MAX(rsi.start_time), 126) AS interval_start_time,
+	CONVERT(varchar(35), MAX(rsi.end_time), 126) AS interval_end_time,
+	CAST(MAX(q.query_id) AS varchar(20)) AS query_id,
+	CONVERT(varchar(20), MAX(q.query_hash), 1) as query_hash,
+	CAST(ws.plan_id AS varchar(20)) AS plan_id,
+	CONVERT(varchar(20), MAX(p.query_plan_hash), 1) as query_plan_hash,
 	ws.wait_category_desc AS wait_category,
 	ws.execution_type AS exec_type,
 	MAX(ws.execution_type_desc) AS exec_type_desc,
@@ -812,7 +812,7 @@ GROUP BY ws.plan_id, ws.execution_type, ws.runtime_stats_interval_id, ws.wait_ca
 OPTION (RECOMPILE);
 
 /* Return the timestamp when the query was run, to be used in the next call */
-SELECT CAST(@currIntervalEndTimestamp AS nvarchar(35)) AS QueryData;
+SELECT CAST(@currIntervalEndTimestamp AS varchar(35)) AS QueryData;
 `
 
 //------------------------------------------------------------------------------------------------
