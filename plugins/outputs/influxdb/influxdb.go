@@ -224,15 +224,15 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 
 		switch apiError := err.(type) {
 		case *DatabaseNotFoundError:
-			if i.SkipDatabaseCreation {
-				// try another client, if all clients fail with this error, do not return error
-				continue
-			} else {
+			if !i.SkipDatabaseCreation {
 				allErrorsAreDatabaseNotFoundErrors = false
 				err := client.CreateDatabase(ctx, apiError.Database)
 				if err != nil {
 					i.Log.Errorf("When writing to [%s]: database %q not found and failed to recreate",
 						client.URL(), apiError.Database)
+				} else {
+					// try another client, if all clients fail with this error, do not return error
+					continue
 				}
 			}
 		}
