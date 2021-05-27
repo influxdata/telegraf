@@ -318,6 +318,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 					c.config.URL, dbrp.Database, err)
 			}
 		}
+
 		err := c.writeBatch(ctx, dbrp.Database, dbrp.RetentionPolicy, batch)
 		if err != nil {
 			return err
@@ -373,13 +374,6 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 	if err == nil {
 		desc = writeResp.Err
 	}
-
-	//checks for any 4xx code and drops metric and retrying will not make the request work
-	if len(resp.Status) > 0 && resp.Status[0] == '4' && c.config.SkipDatabaseCreation {
-		c.log.Errorf("E! [outputs.influxdb] Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
-		return nil
-	}
-
 	if strings.Contains(desc, errStringDatabaseNotFound) {
 		return &DatabaseNotFoundError{
 			APIError: APIError{
@@ -389,6 +383,12 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 			},
 			Database: db,
 		}
+	}
+
+	//checks for any 4xx code and drops metric and retrying will not make the request work
+	if len(resp.Status) > 0 && resp.Status[0] == '4' {
+		c.log.Errorf("E! [outputs.influxdb] Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
+		return nil
 	}
 
 	// This error handles if there is an invaild or missing retention policy
