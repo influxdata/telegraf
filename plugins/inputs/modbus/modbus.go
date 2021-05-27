@@ -295,8 +295,7 @@ func (m *Modbus) disconnect() error {
 }
 
 func (m *Modbus) gatherFields() error {
-	for slaveID, requests := range m.requests {
-		_ = slaveID
+	for _, requests := range m.requests {
 		if err := m.gatherRequestsCoil(requests.coil); err != nil {
 			return err
 		}
