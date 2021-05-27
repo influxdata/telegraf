@@ -7,8 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	//nolint:revive
-	"log"
+	"log" //nolint:imports-blacklist
 	"net"
 	"net/http"
 	"net/http/httptest"
