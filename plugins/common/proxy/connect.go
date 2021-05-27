@@ -22,8 +22,8 @@ func (c *httpConnectProxy) DialContext(ctx context.Context, network, addr string
 	if dialer, ok := c.forward.(proxy.ContextDialer); ok {
 		proxyConn, err = dialer.DialContext(ctx, "tcp", c.url.Host)
 	} else {
-		// TODO: still support timeout/cancellation w/o context
-		proxyConn, err = c.forward.Dial("tcp", c.url.Host)
+		shim := contextDialerShim{c.forward}
+		proxyConn, err = shim.DialContext(ctx, "tcp", c.url.Host)
 	}
 	if err != nil {
 		return nil, err
@@ -83,4 +83,37 @@ func init() {
 	// Register new proxy types
 	proxy.RegisterDialerType("http", newHTTPConnectProxy)
 	proxy.RegisterDialerType("https", newHTTPConnectProxy)
+}
+
+// contextDialerShim allows cancellation of the dial from a context even if the underlying
+// dialer does not implement `proxy.ContextDialer`. Arguably, this shouldn't actually get run,
+// unless a new proxy type is added that doesn't implement `proxy.ContextDialer`, as all the
+// standard library dialers implement `proxy.ContextDialer`.
+type contextDialerShim struct {
+	dialer proxy.Dialer
+}
+
+func (cd *contextDialerShim) Dial(network, addr string) (net.Conn, error) {
+	return cd.dialer.Dial(network, addr)
+}
+
+func (cd *contextDialerShim) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	resultChan := make(chan struct {
+		net.Conn
+		error
+	})
+	go func() {
+		conn, connErr := cd.dialer.Dial(network, addr)
+		resultChan <- struct {
+			net.Conn
+			error
+		}{conn, connErr}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("context deadline exceeded")
+	case r := <-resultChan:
+		return r.Conn, r.error
+	}
 }

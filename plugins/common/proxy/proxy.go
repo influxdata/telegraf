@@ -28,14 +28,24 @@ type TCPProxy struct {
 	ProxyURL string `toml:"proxy_url"`
 }
 
-func (p *TCPProxy) Proxy() (proxy.Dialer, error) {
+func (p *TCPProxy) Proxy() (proxy.ContextDialer, error) {
+	var dialer proxy.Dialer
 	if len(p.ProxyURL) > 0 {
 		parsed, err := url.Parse(p.ProxyURL)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing proxy url %q: %w", p.ProxyURL, err)
 		}
 
-		return proxy.FromURL(parsed, proxy.Direct)
+		if dialer, err = proxy.FromURL(parsed, proxy.Direct); err != nil {
+			return nil, err
+		}
+	} else {
+		dialer = proxy.FromEnvironment()
 	}
-	return proxy.FromEnvironment(), nil
+
+	if contextDialer, ok := dialer.(proxy.ContextDialer); ok {
+		return contextDialer, nil
+	}
+
+	return &contextDialerShim{dialer}, nil
 }
