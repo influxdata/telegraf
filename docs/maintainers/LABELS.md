@@ -26,7 +26,7 @@ For bugs you may want to add `panic`, `regression`, or `upstream` to provide
 further detail.
 
 Summary of Labels:
-| Label | Reason | Type |
+| Label | Description | Purpose |
 | --- | ----------- | ---|
 | `area/*` | These labels each corresponding to a plugin or group of plugins that can be added to identify the affected plugin or group of plugins | categorization |
 | `breaking change` | Improvement to Telegraf that requires breaking changes to the plugin or agent; for minor/major releases | triage |
@@ -53,6 +53,7 @@ Summary of Labels:
 Labels starting with `pm` are not applied by maintainers.
 
 ## Closing Issues
+
 We close issues for the following reasons:
 
 | Label | Reason |
