@@ -96,7 +96,7 @@ servers = [
 ## A list of queries to include. If not specified, all the above listed queries are used.
 # include_query = []
 
-## A list of queries to explicitly ignore. QDS queries are excluded by default.
+## A list of queries to explicitly ignore. Query Store queries are excluded by default.
 # exclude_query = [AzureSQLDBQueryStoreRuntimeStatistics, AzureSQLDBQueryStoreWaitStatistics]
 
 ## Toggling this to true enables telegraf to start collecting data from query store.
@@ -173,8 +173,8 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLDBPerformanceCounters"] = Query{ScriptName: "AzureSQLDBPerformanceCounters", Script: sqlAzureDBPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLDBRequests"] = Query{ScriptName: "AzureSQLDBRequests", Script: sqlAzureDBRequests, ResultByRow: false}
 		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlAzureDBSchedulers, ResultByRow: false}
-		// These two QDS queries are not run by default as they are expensive and collection interval should be >=15m.
-		// If user needs data from QDS, they will need to toggle the setting to true. By default it is turned off
+		// These two Query Store queries are not run by default as they are expensive and collection interval should be >=15m.
+		// If user needs data from Query Store, they will need to toggle the setting to true. By default it is turned off
 		if s.QueryStoreCollection == true {
 			queries["AzureSQLDBQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreRuntimeStatistics", Script: sqlAzureDBQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
 			queries["AzureSQLDBQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreWaitStatistics", Script: sqlAzureDBQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
