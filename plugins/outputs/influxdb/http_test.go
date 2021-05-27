@@ -1154,6 +1154,7 @@ func TestDBNotFoundShouldDropMetricWhenSkipDatabaseCreateIsTrue(t *testing.T) {
 		default:
 			w.WriteHeader(http.StatusInternalServerError)
 		}
+
 	}
 
 	ts.Config.Handler = http.HandlerFunc(f)
