@@ -783,6 +783,10 @@ const sqlAzureDBQueryStoreWaitStatistics = sqlAzureDBPartQueryPeriod + `
 IF DATABASEPROPERTYEX(DB_Name(), 'Updateability') = 'READ_ONLY'  
 	RETURN
 
+/* Skip the queries below if Query Store is not configured to capture wait statistics*/
+IF NOT EXISTS (SELECT * FROM sys.database_query_store_options WHERE wait_stats_capture_mode = 1)
+	RETURN;
+
 /* Query the data from query store. Group  by plan_id, runtime_stats_interval_id, execution_type and wait_category, and specified here:
 https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15
 */
