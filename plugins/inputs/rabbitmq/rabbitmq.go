@@ -405,7 +405,7 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
 		return
 	}
 
-	if overview.QueueTotals == nil || overview.ObjectTotals == nil || overview.MessageStats == nil || overview.Listeners == nil {
+	if overview.QueueTotals == nil || overview.ObjectTotals == nil || overview.MessageStats == nil {
 		acc.AddError(fmt.Errorf("Wrong answer from rabbitmq. Probably auth issue"))
 		return
 	}
