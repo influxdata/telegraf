@@ -688,36 +688,25 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RETURN
 END;
 
-DECLARE @lastIntervalEndTimestamp BIGINT = 0;
+DECLARE @lastIntervalEndTime DATETIMEOFFSET;
 
-/* Get the time when the query was previously called */
+/*Get the time when the query was previously called*/
 IF @QueryData != '' AND @QueryData IS NOT NULL
-	SET @lastIntervalEndTimestamp = CAST(@QueryData AS BIGINT);
+	SET @lastIntervalEndTime = CAST(@QueryData AS DATETIMEOFFSET);
 
-DECLARE @secondsInDay INT = 86400;
+DECLARE @currIntervalStartTime DATETIMEOFFSET, @currIntervalEndTime DATETIMEOFFSET, @queryStartTime DATETIMEOFFSET;
 
-/* Get query aggregation interval from query store */
-DECLARE @timeGrain BIGINT = (SELECT interval_length_minutes * 60 FROM sys.database_query_store_options); 
+/*Get the last completed interval*/
+SELECT TOP 1 @queryStartTime = start_time,  @currIntervalEndTime = end_time
+FROM sys.query_store_runtime_stats_interval
+WHERE end_time < SYSDATETIMEOFFSET()
+ORDER BY runtime_stats_interval_id DESC;
 
-/* Get current time and round it down to a multiple of @timeGrain */
-DECLARE @currDate datetimeoffset =  SYSDATETIMEOFFSET();
-DECLARE @currIntervalEndTimestamp BIGINT = DATEDIFF_BIG(second, 0, @currDate) / @timeGrain * @timeGrain;
-
-/* If we are still in the same @timeGrain interval with when the query was previously called, quit and do not report any data */
-IF @lastIntervalEndTimestamp = @currIntervalEndTimestamp
+/* Query Store is disabled OR interval is already collected */
+if @currIntervalEndTime IS NULL OR @currIntervalEndTime = @lastIntervalEndTime
 	RETURN;
 
-/* Calculate the start time for returning data from query store:
-If the query was never called before, start time is end time minus @timeGrain */
-DECLARE @currIntervalStartTimestamp BIGINT = @currIntervalEndTimestamp - @timeGrain;
-
-/* If the query was called before, start time is when the query was previously called, so that we return all the records since the previous call */
-IF @lastIntervalEndTimestamp != 0
-	SET @currIntervalStartTimestamp = @lastIntervalEndTimestamp;
-
-/* Convert start and end times to datetime */
-DECLARE @currIntervalEndDate datetimeoffset = DATEADD(second, @currIntervalEndTimestamp % @secondsInDay, DATEADD(day, @currIntervalEndTimestamp / @secondsInDay, 0));
-DECLARE @currIntervalStartDate datetimeoffset = DATEADD(second, @currIntervalStartTimestamp % @secondsInDay, DATEADD(day, @currIntervalStartTimestamp / @secondsInDay, 0));
+SET @currIntervalStartTime = IIF(@lastIntervalEndTime IS NOT NULL, @lastIntervalEndTime, @queryStartTime);
 `
 const sqlAzureDBQueryStoreRuntimeStatistics = sqlAzureDBPartQueryPeriod + `
 
@@ -769,12 +758,12 @@ FROM sys.query_store_query q
 	JOIN sys.query_store_plan p ON q.query_id = p.query_id
 	JOIN sys.query_store_runtime_stats rs ON p.plan_id = rs.plan_id
 	JOIN sys.query_store_runtime_stats_interval rsi ON rs.runtime_stats_interval_id = rsi.runtime_stats_interval_id
-WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate
+WHERE rsi.start_time >= @currIntervalStartTime AND rsi.end_time <= @currIntervalEndTime
 GROUP BY rs.plan_id, rs.execution_type, rs.runtime_stats_interval_id
 OPTION (RECOMPILE);
 
 /* Return the timestamp when the query was run, to be used in the next call */
-SELECT CAST(@currIntervalEndTimestamp AS varchar(35)) AS QueryData;
+SELECT CONVERT(varchar(35), @currIntervalEndTime, 126) AS QueryData;
 `
 
 const sqlAzureDBQueryStoreWaitStatistics = sqlAzureDBPartQueryPeriod + `
@@ -783,7 +772,7 @@ const sqlAzureDBQueryStoreWaitStatistics = sqlAzureDBPartQueryPeriod + `
 IF DATABASEPROPERTYEX(DB_Name(), 'Updateability') = 'READ_ONLY'  
 	RETURN
 
-/* Skip the queries below if Query Store is not configured to capture wait statistics*/
+/* Skip the data collection logic if Query Store is not configured to capture wait statistics */
 IF NOT EXISTS (SELECT * FROM sys.database_query_store_options WHERE wait_stats_capture_mode = 1)
 	RETURN;
 
@@ -811,12 +800,12 @@ FROM sys.query_store_query q
 	JOIN sys.query_store_plan p ON q.query_id = p.query_id
 	JOIN sys.query_store_wait_stats ws ON p.plan_id = ws.plan_id
 	JOIN sys.query_store_runtime_stats_interval rsi on ws.runtime_stats_interval_id = rsi.runtime_stats_interval_id
-WHERE rsi.start_time >= @currIntervalStartDate AND rsi.end_time <= @currIntervalEndDate
+WHERE rsi.start_time >= @currIntervalStartTime AND rsi.end_time <= @currIntervalEndTime
 GROUP BY ws.plan_id, ws.execution_type, ws.runtime_stats_interval_id, ws.wait_category_desc
 OPTION (RECOMPILE);
 
 /* Return the timestamp when the query was run, to be used in the next call */
-SELECT CAST(@currIntervalEndTimestamp AS varchar(35)) AS QueryData;
+SELECT CONVERT(varchar(35), @currIntervalEndTime, 126) AS QueryData;
 `
 
 //------------------------------------------------------------------------------------------------
