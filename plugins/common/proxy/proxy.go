@@ -2,9 +2,10 @@ package proxy
 
 import (
 	"fmt"
-	"golang.org/x/net/proxy"
 	"net/http"
 	"net/url"
+
+	"golang.org/x/net/proxy"
 )
 
 type HTTPProxy struct {
