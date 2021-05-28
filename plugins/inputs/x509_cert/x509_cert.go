@@ -141,8 +141,12 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 			return nil, err
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
+		ctx := context.Background()
+		if timeout.Seconds() != 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, timeout)
+			defer cancel()
+		}
 
 		ipConn, err := dialer.DialContext(ctx, u.Scheme, u.Host)
 		if err != nil {
