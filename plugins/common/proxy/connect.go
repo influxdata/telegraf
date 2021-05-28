@@ -99,22 +99,25 @@ func (cd *contextDialerShim) Dial(network, addr string) (net.Conn, error) {
 }
 
 func (cd *contextDialerShim) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	resultChan := make(chan struct {
-		net.Conn
-		error
-	})
+	var (
+		conn net.Conn
+		done = make(chan struct{}, 1)
+		err  error
+	)
+
 	go func() {
-		conn, connErr := cd.dialer.Dial(network, addr)
-		resultChan <- struct {
-			net.Conn
-			error
-		}{conn, connErr}
+		conn, err = cd.dialer.Dial(network, addr)
+		close(done)
+		if conn != nil && ctx.Err() != nil {
+			conn.Close()
+		}
 	}()
 
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("context deadline exceeded")
-	case r := <-resultChan:
-		return r.Conn, r.error
+		err = ctx.Err()
+	case <-done:
 	}
+
+	return conn, err
 }
