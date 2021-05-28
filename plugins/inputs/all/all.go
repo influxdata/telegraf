@@ -182,6 +182,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/teamspeak"
 	_ "github.com/influxdata/telegraf/plugins/inputs/temp"
 	_ "github.com/influxdata/telegraf/plugins/inputs/tengine"
+	_ "github.com/influxdata/telegraf/plugins/inputs/test"
 	_ "github.com/influxdata/telegraf/plugins/inputs/tomcat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/trig"
 	_ "github.com/influxdata/telegraf/plugins/inputs/twemproxy"
