@@ -21,11 +21,6 @@ import (
 var (
 	testindex = "test-elasticsearch_query-" + strconv.Itoa(int(time.Now().Unix()))
 	setupOnce sync.Once
-	e         = &ElasticsearchQuery{
-		URLs:    []string{"http://" + testutil.GetLocalHost() + ":9200"},
-		Timeout: config.Duration(time.Second * 30),
-		Log:     testutil.Logger{},
-	}
 )
 
 type esAggregationQueryTest struct {
@@ -471,7 +466,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 	},
 }
 
-func setupIntegrationTest() {
+func setupIntegrationTest() error {
 	type nginxlog struct {
 		IPaddress    string    `json:"IP"`
 		Timestamp    time.Time `json:"@timestamp"`
@@ -483,10 +478,15 @@ func setupIntegrationTest() {
 		ResponseTime float64   `json:"response_time"`
 	}
 
+	e := &ElasticsearchQuery{
+		URLs:    []string{"http://" + testutil.GetLocalHost() + ":9200"},
+		Timeout: config.Duration(time.Second * 30),
+		Log:     testutil.Logger{},
+	}
+
 	err := e.connectToES()
 	if err != nil {
-		e.Log.Errorf("error setting up integration test: %s", err.Error())
-		return
+		return err
 	}
 
 	bulkRequest := e.esClient.Bulk()
@@ -494,8 +494,7 @@ func setupIntegrationTest() {
 	// populate elasticsearch with nginx_logs test data file
 	file, err := os.Open("testdata/nginx_logs")
 	if err != nil {
-		e.Log.Errorf("error setting up integration test: %s", err.Error())
-		return
+		return err
 	}
 
 	defer file.Close()
@@ -523,20 +522,18 @@ func setupIntegrationTest() {
 			Type("testquery_data").
 			Doc(logline))
 	}
-
-	if err = scanner.Err(); err != nil {
-		e.Log.Errorf("error setting up integration test: %s", err.Error())
-		return
+	if scanner.Err() != nil {
+		return err
 	}
 
 	_, err = bulkRequest.Do(context.Background())
 	if err != nil {
-		e.Log.Errorf("error setting up integration test: %s", err.Error())
-		return
+		return err
 	}
 
 	// wait 5s (default) for Elasticsearch to index, so results are consistent
 	time.Sleep(time.Second * 5)
+	return nil
 }
 
 func TestElasticsearchQuery(t *testing.T) {
@@ -544,9 +541,18 @@ func TestElasticsearchQuery(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	var acc testutil.Accumulator
+	setupOnce.Do(func() {
+		err := setupIntegrationTest()
+		require.NoError(t, err)
+	})
 
-	setupOnce.Do(setupIntegrationTest)
+	var acc testutil.Accumulator
+	e := &ElasticsearchQuery{
+		URLs:    []string{"http://" + testutil.GetLocalHost() + ":9200"},
+		Timeout: config.Duration(time.Second * 30),
+		Log:     testutil.Logger{},
+	}
+
 	err := e.connectToES()
 	require.NoError(t, err)
 
@@ -593,12 +599,21 @@ func TestElasticsearchQuery_getMetricFields(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	setupOnce.Do(func() {
+		err := setupIntegrationTest()
+		require.NoError(t, err)
+	})
+
 	type args struct {
 		ctx         context.Context
 		aggregation esAggregation
 	}
 
-	setupOnce.Do(setupIntegrationTest)
+	e := &ElasticsearchQuery{
+		URLs:    []string{"http://" + testutil.GetLocalHost() + ":9200"},
+		Timeout: config.Duration(time.Second * 30),
+		Log:     testutil.Logger{},
+	}
 
 	err := e.connectToES()
 	require.NoError(t, err)
