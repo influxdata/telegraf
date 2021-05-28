@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"golang.org/x/net/proxy"
 	"net"
 	"net/http"
 	"net/url"
+
+	"golang.org/x/net/proxy"
 )
 
 // httpConnectProxy proxies (only?) TCP over a HTTP tunnel using the CONNECT method
