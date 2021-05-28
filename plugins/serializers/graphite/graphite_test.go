@@ -543,6 +543,32 @@ func TestSerializeTagWithSpacesWithTagSupport(t *testing.T) {
 	assert.Equal(t, expS, mS)
 }
 
+func TestSerializeTagWithSpacesWithTagSupportCompatibleSanitize(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"host":       "localhost",
+		"cpu":        `cpu\ 0`,
+		"datacenter": "us-west-2",
+	}
+	fields := map[string]interface{}{
+		`field_with_spaces`: float64(91.5),
+	}
+	m := metric.New("cpu", tags, fields, now)
+
+	s := GraphiteSerializer{
+		TagSupport:      true,
+		TagSanitizeMode: "compatible",
+		Separator:       ".",
+	}
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
+
+	expS := []string{
+		fmt.Sprintf("cpu.field_with_spaces;cpu=cpu\\ 0;datacenter=us-west-2;host=localhost 91.5 %d", now.Unix()),
+	}
+	assert.Equal(t, expS, mS)
+}
+
 // test that a field named "value" gets ignored at beginning of template.
 func TestSerializeValueField3(t *testing.T) {
 	now := time.Now()
@@ -932,6 +958,101 @@ func TestCleanWithTagsSupport(t *testing.T) {
 	s := GraphiteSerializer{
 		TagSupport: true,
 		Separator:  ".",
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := metric.New(tt.metricName, tt.tags, tt.fields, now)
+			actual, _ := s.Serialize(m)
+			require.Equal(t, tt.expected, string(actual))
+		})
+	}
+}
+
+func TestCleanWithTagsSupportCompatibleSanitize(t *testing.T) {
+	now := time.Unix(1234567890, 0)
+	tests := []struct {
+		name       string
+		metricName string
+		tags       map[string]string
+		fields     map[string]interface{}
+		expected   string
+	}{
+		{
+			"Base metric",
+			"cpu",
+			map[string]string{"host": "localhost"},
+			map[string]interface{}{"usage_busy": float64(8.5)},
+			"cpu.usage_busy;host=localhost 8.5 1234567890\n",
+		},
+		{
+			"Dot and whitespace in tags",
+			"cpu",
+			map[string]string{"host": "localhost", "label.dot and space": "value with.dot"},
+			map[string]interface{}{"usage_busy": float64(8.5)},
+			"cpu.usage_busy;host=localhost;label.dot and space=value with.dot 8.5 1234567890\n",
+		},
+		{
+			"Field with space",
+			"system",
+			map[string]string{"host": "localhost"},
+			map[string]interface{}{"uptime_format": "20 days, 23:26"},
+			"", // yes nothing. graphite don't serialize string fields
+		},
+		{
+			"Allowed punct",
+			"cpu",
+			map[string]string{"host": "localhost", "tag": "-_:=!^~"},
+			map[string]interface{}{"usage_busy": float64(10)},
+			"cpu.usage_busy;host=localhost;tag=-_:=!^~ 10 1234567890\n",
+		},
+		{
+			"Special characters preserved",
+			"cpu",
+			map[string]string{"host": "localhost", "tag": "/@*"},
+			map[string]interface{}{"usage_busy": float64(10)},
+			"cpu.usage_busy;host=localhost;tag=/@* 10 1234567890\n",
+		},
+		{
+			"Special characters preserved 2",
+			"cpu",
+			map[string]string{"host": "localhost", "tag": `\no change to slash`},
+			map[string]interface{}{"usage_busy": float64(10)},
+			"cpu.usage_busy;host=localhost;tag=\\no change to slash 10 1234567890\n",
+		},
+		{
+			"Empty tag & value field",
+			"cpu",
+			map[string]string{"host": "localhost"},
+			map[string]interface{}{"value": float64(10)},
+			"cpu;host=localhost 10 1234567890\n",
+		},
+		{
+			"Unicode Letters allowed",
+			"cpu",
+			map[string]string{"host": "localhost", "tag": "μnicodε_letters"},
+			map[string]interface{}{"value": float64(10)},
+			"cpu;host=localhost;tag=μnicodε_letters 10 1234567890\n",
+		},
+		{
+			"Other Unicode not allowed",
+			"cpu",
+			map[string]string{"host": "localhost", "tag": "“☢”"},
+			map[string]interface{}{"value": float64(10)},
+			"cpu;host=localhost;tag=___ 10 1234567890\n",
+		},
+		{
+			"Newline in tags",
+			"cpu",
+			map[string]string{"host": "localhost", "label": "some\nthing\nwith\nnewline"},
+			map[string]interface{}{"usage_busy": float64(8.5)},
+			"cpu.usage_busy;host=localhost;label=some_thing_with_newline 8.5 1234567890\n",
+		},
+	}
+
+	s := GraphiteSerializer{
+		TagSupport:      true,
+		TagSanitizeMode: "compatible",
+		Separator:       ".",
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

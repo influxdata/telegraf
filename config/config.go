@@ -50,6 +50,10 @@ var (
 		`\`, `\\`,
 	)
 	httpLoadConfigRetryInterval = 10 * time.Second
+
+	// fetchURLRe is a regex to determine whether the requested file should
+	// be fetched from a remote or read from the filesystem.
+	fetchURLRe = regexp.MustCompile(`^\w+://`)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -902,17 +906,21 @@ func escapeEnv(value string) string {
 }
 
 func loadConfig(config string) ([]byte, error) {
-	u, err := url.Parse(config)
-	if err != nil {
-		return nil, err
+	if fetchURLRe.MatchString(config) {
+		u, err := url.Parse(config)
+		if err != nil {
+			return nil, err
+		}
+
+		switch u.Scheme {
+		case "https", "http":
+			return fetchConfig(u)
+		default:
+			return nil, fmt.Errorf("scheme %q not supported", u.Scheme)
+		}
 	}
 
-	switch u.Scheme {
-	case "https", "http":
-		return fetchConfig(u)
-	default:
-		// If it isn't a https scheme, try it as a file.
-	}
+	// If it isn't a https scheme, try it as a file
 	return ioutil.ReadFile(config)
 }
 
@@ -1400,6 +1408,8 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
 	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
 	c.getFieldBool(tbl, "graphite_tag_support", &sc.GraphiteTagSupport)
+	c.getFieldString(tbl, "graphite_tag_sanitize_mode", &sc.GraphiteTagSanitizeMode)
+
 	c.getFieldString(tbl, "graphite_separator", &sc.GraphiteSeparator)
 
 	c.getFieldDuration(tbl, "json_timestamp_units", &sc.TimestampUnits)
@@ -1464,11 +1474,11 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"data_format", "data_type", "delay", "drop", "drop_original", "dropwizard_metric_registry_path",
 		"dropwizard_tag_paths", "dropwizard_tags_path", "dropwizard_time_format", "dropwizard_time_path",
 		"fielddrop", "fieldpass", "flush_interval", "flush_jitter", "form_urlencoded_tag_keys",
-		"grace", "graphite_separator", "graphite_tag_support", "grok_custom_pattern_files",
-		"grok_custom_patterns", "grok_named_patterns", "grok_patterns", "grok_timezone",
-		"grok_unique_timestamp", "influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
-		"interval", "json_name_key", "json_query", "json_strict", "json_string_fields",
-		"json_time_format", "json_time_key", "json_timestamp_units", "json_timezone",
+		"grace", "graphite_separator", "graphite_tag_sanitize_mode", "graphite_tag_support",
+		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
+		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_sort_fields",
+		"influx_uint_support", "interval", "json_name_key", "json_query", "json_strict",
+		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_units", "json_timezone",
 		"metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
 		"name_suffix", "namedrop", "namepass", "order", "pass", "period", "precision",
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
