@@ -278,8 +278,8 @@ These are metrics for Azure SQL Database (single database) and are very similar 
 - *AzureSQLOsWaitstats*: Wait time in ms from `sys.dm_os_wait_stats`, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store. These waits are collected as they occur and instance wide
 - *AzureSQLDBRequests*: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`
 - *AzureSQLDBSchedulers*: This captures `sys.dm_os_schedulers` snapshots
-- AzureSQLDBQueryStoreRuntimeStatistics: Collects queries runtime statistics from `sys.query_store_runtime_stats` 
-- AzureSQLDBQueryStoreWaitStatistics: Collects queries wait statistics from `sys.query_store_wait_stats`
+- AzureSQLDBQueryStoreRuntimeStatistics: Collects queries runtime statistics from `sys.query_store_runtime_stats` and other views related to Query Store
+- AzureSQLDBQueryStoreWaitStatistics: Collects queries wait statistics from `sys.query_store_wait_stats` and other views related to Query Store
 
 #### database_type = "AzureSQLManagedInstance 
 These are metrics for Azure SQL Managed instance, are very similar to version 2 but split out for maintenance reasons, better ability to test, differences in DMVs:
