@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -318,6 +320,47 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 
 	require.Len(t, acc.Errors, 0)
 	require.True(t, acc.HasMeasurement("x509_cert"))
+}
+
+func TestGatherTCPCert(t *testing.T) {
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	m := &X509Cert{
+		Sources: []string{ts.URL},
+	}
+	require.NoError(t, m.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, m.Gather(&acc))
+
+	require.Len(t, acc.Errors, 0)
+	require.True(t, acc.HasMeasurement("x509_cert"))
+}
+
+func TestStrings(t *testing.T) {
+	sc := X509Cert{}
+	require.NoError(t, sc.Init())
+
+	tests := []struct {
+		name     string
+		method   string
+		returned string
+		expected string
+	}{
+		{name: "description", method: "Description", returned: sc.Description(), expected: description},
+		{name: "sample config", method: "SampleConfig", returned: sc.SampleConfig(), expected: sampleConfig},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if test.returned != test.expected {
+				t.Errorf("Expected method %s to return '%s', found '%s'.", test.method, test.expected, test.returned)
+			}
+		})
+	}
 }
 
 func TestGatherCertIntegration(t *testing.T) {
