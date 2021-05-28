@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -68,8 +67,6 @@ func (c *X509Cert) Description() string {
 func (c *X509Cert) SampleConfig() string {
 	return sampleConfig
 }
-
-var remoteURLRe = regexp.MustCompile("^((udp|tcp)[46]?|https)://")
 
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
