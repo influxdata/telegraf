@@ -67,4 +67,3 @@ func TestGrokParser(t *testing.T) {
 	require.Equal(t, 2, len(acc.Metrics))
 	require.Equal(t, 6, len(acc.Metrics[0].Fields))
 }
-

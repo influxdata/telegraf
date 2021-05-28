@@ -8,8 +8,8 @@ import (
 
 // taken ffrom file.go as an example but needs to be reworked
 type Test struct {
-	Metrics           []string `toml:"metrics"`
-	parser            parsers.Parser
+	Metrics []string `toml:"metrics"`
+	parser  parsers.Parser
 }
 
 const sampleConfig = `
@@ -46,7 +46,7 @@ func (t *Test) Gather(acc telegraf.Accumulator) error {
 	for _, raw := range t.Metrics {
 		metric, err := t.parser.Parse([]byte(raw))
 		if err != nil {
-			return err 
+			return err
 		}
 
 		for _, m := range metric {
