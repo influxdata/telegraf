@@ -16,6 +16,7 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 ### Configuration:
 
 ```toml
+# Pull Metric Statistics from Amazon CloudWatch
 [[inputs.cloudwatch]]
   ## Amazon Region
   region = "us-east-1"
@@ -101,7 +102,7 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   #
   #  ## Dimension filters for Metric.  All dimensions defined for the metric names
   #  ## must be specified in order to retrieve the metric statistics.
-  #  ## 'value' has wildcard / 'glob' matching support such as `p-*`.
+  #  ## 'value' has wildcard / 'glob' matching support such as 'p-*'.
   #  [[inputs.cloudwatch.metrics.dimensions]]
   #    name = "LoadBalancerName"
   #    value = "p-example"

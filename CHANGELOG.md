@@ -1,3 +1,44 @@
+## v1.18.3 [2021-05-20]
+
+#### Release Notes
+
+  - Added FreeBSD armv7 build
+
+#### Bugfixes
+
+  - [#9271](https://github.com/influxdata/telegraf/pull/9271) `inputs.prometheus` Set user agent when scraping prom metrics
+  - [#9203](https://github.com/influxdata/telegraf/pull/9203) Migrate from soniah/gosnmp to gosnmp/gosnmp and update to 1.32.0
+  - [#9169](https://github.com/influxdata/telegraf/pull/9169) `inputs.kinesis_consumer` Fix repeating parser error
+  - [#9130](https://github.com/influxdata/telegraf/pull/9130) `inputs.sqlserver` Remove disallowed whitespace from sqlServerRingBufferCPU query
+  - [#9238](https://github.com/influxdata/telegraf/pull/9238) Update hashicorp/consul/api module to v1.8.1
+  - [#9235](https://github.com/influxdata/telegraf/pull/9235) Migrate from docker/libnetwork/ipvs to moby/ipvs
+  - [#9224](https://github.com/influxdata/telegraf/pull/9224) Update shirou/gopsutil to 3.21.3
+  - [#9209](https://github.com/influxdata/telegraf/pull/9209) Update microsoft/ApplicationInsights-Go to 0.4.4
+  - [#9190](https://github.com/influxdata/telegraf/pull/9190) Update gogo/protobuf to 1.3.2
+  - [#8746](https://github.com/influxdata/telegraf/pull/8746) Update Azure/go-autorest/autorest/azure/auth to 0.5.6 and Azure/go-autorest/autorest to 0.11.17
+  - [#8745](https://github.com/influxdata/telegraf/pull/8745) Update collectd.org to 0.5.0
+  - [#8716](https://github.com/influxdata/telegraf/pull/8716) Update nats-io/nats.go 1.10.0
+  - [#9039](https://github.com/influxdata/telegraf/pull/9039) Update golang/protobuf to v1.5.1
+  - [#8937](https://github.com/influxdata/telegraf/pull/8937) Migrate from ericchiang/k8s to kubernetes/client-go
+
+#### Features
+
+  - [#8913](https://github.com/influxdata/telegraf/pull/8913) `outputs.elasticsearch` Add ability to enable gzip compression
+
+## v1.18.2 [2021-04-28]
+
+#### Bugfixes
+
+  - [#9160](https://github.com/influxdata/telegraf/pull/9160) `processors.converter` Add support for large hexadecimal strings
+  - [#9195](https://github.com/influxdata/telegraf/pull/9195) `inputs.apcupsd` Fix apcupsd 'ALARMDEL' bug via forked repo
+  - [#9110](https://github.com/influxdata/telegraf/pull/9110) `parsers.json` Make JSON format compatible with nulls
+  - [#9128](https://github.com/influxdata/telegraf/pull/9128) `inputs.nfsclient` Fix nfsclient ops map to allow collection of metrics other than read and write
+  - [#8917](https://github.com/influxdata/telegraf/pull/8917) `inputs.snmp` Log snmpv3 auth failures
+  - [#8892](https://github.com/influxdata/telegraf/pull/8892) `common.shim` Accept larger inputs from scanner
+  - [#9045](https://github.com/influxdata/telegraf/pull/9045) `inputs.vsphere` Add MetricLookback setting to handle reporting delays in vCenter 6.7 and later
+  - [#9026](https://github.com/influxdata/telegraf/pull/9026) `outputs.sumologic` Carbon2 serializer: sanitize metric name
+  - [#9086](https://github.com/influxdata/telegraf/pull/9086) `inputs.opcua` Fix error handling
+
 ## v1.18.1 [2021-04-07]
 
 #### Bugfixes
