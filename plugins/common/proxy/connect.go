@@ -18,6 +18,11 @@ type httpConnectProxy struct {
 }
 
 func (c *httpConnectProxy) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	// Prevent using UDP
+	if network == "udp" {
+		return nil, fmt.Errorf("cannot proxy %q traffic over HTTP CONNECT", network)
+	}
+
 	var proxyConn net.Conn
 	var err error
 	if dialer, ok := c.forward.(proxy.ContextDialer); ok {
