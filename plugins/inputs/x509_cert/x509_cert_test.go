@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -258,6 +260,24 @@ func TestGatherChain(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGatherTCPCert(t *testing.T) {
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	m := &X509Cert{
+		Sources: []string{ts.URL},
+	}
+	require.NoError(t, m.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, m.Gather(&acc))
+
+	assert.Len(t, acc.Errors, 0)
+	assert.True(t, acc.HasMeasurement("x509_cert"))
 }
 
 func TestStrings(t *testing.T) {
