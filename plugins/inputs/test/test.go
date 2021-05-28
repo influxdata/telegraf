@@ -32,8 +32,7 @@ func (t *Test) SampleConfig() string {
 	return sampleConfig
 }
 
-//not sure if this is necessary or not
-func (f *Test) Description() string {
+func (t *Test) Description() string {
 	return "Parse a passed metric each interval"
 }
 
