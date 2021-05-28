@@ -47,14 +47,18 @@ type X509Cert struct {
 	Log       telegraf.Logger
 }
 
+// Description returns description of the plugin.
+func (c *X509Cert) Description() string {
+	return description
+}
+
 var remoteURLRe = regexp.MustCompile("^((udp|tcp)[46]?|https)://")
 
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
-		if !remoteURLRe.MatchString(source) &&
-			(strings.HasPrefix(source, "file://") ||
-				strings.HasPrefix(source, "/") ||
-				strings.Index(source, ":\\") != 1) {
+		if strings.HasPrefix(source, "file://") ||
+			strings.HasPrefix(source, "/") ||
+			strings.Index(source, ":\\") != 1 {
 			source = filepath.ToSlash(strings.TrimPrefix(source, "file://"))
 			g, err := globpath.Compile(source)
 			if err != nil {
