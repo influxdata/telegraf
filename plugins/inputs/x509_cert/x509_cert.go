@@ -3,7 +3,6 @@ package x509_cert
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -120,14 +119,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 			return nil, err
 		}
 
-		ctx := context.Background()
-		if timeout.Seconds() != 0 {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(ctx, timeout)
-			defer cancel()
-		}
-
-		ipConn, err := dialer.DialContext(ctx, protocol, u.Host)
+		ipConn, err := dialer.DialTimeout(protocol, u.Host, timeout)
 		if err != nil {
 			return nil, err
 		}

@@ -29,7 +29,7 @@ type TCPProxy struct {
 	ProxyURL string `toml:"proxy_url"`
 }
 
-func (p *TCPProxy) Proxy() (proxy.ContextDialer, error) {
+func (p *TCPProxy) Proxy() (*ProxiedDialer, error) {
 	var dialer proxy.Dialer
 	if len(p.ProxyURL) > 0 {
 		parsed, err := url.Parse(p.ProxyURL)
@@ -44,9 +44,5 @@ func (p *TCPProxy) Proxy() (proxy.ContextDialer, error) {
 		dialer = proxy.FromEnvironment()
 	}
 
-	if contextDialer, ok := dialer.(proxy.ContextDialer); ok {
-		return contextDialer, nil
-	}
-
-	return &contextDialerShim{dialer}, nil
+	return &ProxiedDialer{dialer}, nil
 }
