@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"net/url"
 
-	"golang.org/x/net/proxy"
+	netProxy "golang.org/x/net/proxy"
 )
 
 // httpConnectProxy proxies (only?) TCP over a HTTP tunnel using the CONNECT method
 type httpConnectProxy struct {
-	forward proxy.Dialer
+	forward netProxy.Dialer
 	url     *url.URL
 }
 
@@ -25,7 +25,7 @@ func (c *httpConnectProxy) DialContext(ctx context.Context, network, addr string
 
 	var proxyConn net.Conn
 	var err error
-	if dialer, ok := c.forward.(proxy.ContextDialer); ok {
+	if dialer, ok := c.forward.(netProxy.ContextDialer); ok {
 		proxyConn, err = dialer.DialContext(ctx, "tcp", c.url.Host)
 	} else {
 		shim := contextDialerShim{c.forward}
@@ -40,7 +40,9 @@ func (c *httpConnectProxy) DialContext(ctx context.Context, network, addr string
 	// look something like: "CONNECT www.influxdata.com:443 HTTP/1.1"
 	requestURL, err := url.Parse("http://" + addr)
 	if err != nil {
-		proxyConn.Close()
+		if err := proxyConn.Close(); err != nil {
+			return nil, err
+		}
 		return nil, err
 	}
 	requestURL.Scheme = ""
@@ -48,7 +50,9 @@ func (c *httpConnectProxy) DialContext(ctx context.Context, network, addr string
 	// Build HTTP CONNECT request
 	req, err := http.NewRequest(http.MethodConnect, requestURL.String(), nil)
 	if err != nil {
-		proxyConn.Close()
+		if err := proxyConn.Close(); err != nil {
+			return nil, err
+		}
 		return nil, err
 	}
 	req.Close = false
@@ -58,19 +62,27 @@ func (c *httpConnectProxy) DialContext(ctx context.Context, network, addr string
 
 	err = req.Write(proxyConn)
 	if err != nil {
-		proxyConn.Close()
+		if err := proxyConn.Close(); err != nil {
+			return nil, err
+		}
 		return nil, err
 	}
 
 	resp, err := http.ReadResponse(bufio.NewReader(proxyConn), req)
 	if err != nil {
-		proxyConn.Close()
+		if err := proxyConn.Close(); err != nil {
+			return nil, err
+		}
 		return nil, err
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		return nil, err
+	}
 
 	if resp.StatusCode != 200 {
-		proxyConn.Close()
+		if err := proxyConn.Close(); err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("failed to connect to proxy: %q", resp.Status)
 	}
 
@@ -81,14 +93,14 @@ func (c *httpConnectProxy) Dial(network, addr string) (net.Conn, error) {
 	return c.DialContext(context.Background(), network, addr)
 }
 
-func newHTTPConnectProxy(url *url.URL, forward proxy.Dialer) (proxy.Dialer, error) {
-	return &httpConnectProxy{forward, url}, nil
+func newHTTPConnectProxy(proxyURL *url.URL, forward netProxy.Dialer) (netProxy.Dialer, error) {
+	return &httpConnectProxy{forward, proxyURL}, nil
 }
 
 func init() {
 	// Register new proxy types
-	proxy.RegisterDialerType("http", newHTTPConnectProxy)
-	proxy.RegisterDialerType("https", newHTTPConnectProxy)
+	netProxy.RegisterDialerType("http", newHTTPConnectProxy)
+	netProxy.RegisterDialerType("https", newHTTPConnectProxy)
 }
 
 // contextDialerShim allows cancellation of the dial from a context even if the underlying
@@ -96,7 +108,7 @@ func init() {
 // unless a new proxy type is added that doesn't implement `proxy.ContextDialer`, as all the
 // standard library dialers implement `proxy.ContextDialer`.
 type contextDialerShim struct {
-	dialer proxy.Dialer
+	dialer netProxy.Dialer
 }
 
 func (cd *contextDialerShim) Dial(network, addr string) (net.Conn, error) {
@@ -114,7 +126,7 @@ func (cd *contextDialerShim) DialContext(ctx context.Context, network, addr stri
 		conn, err = cd.dialer.Dial(network, addr)
 		close(done)
 		if conn != nil && ctx.Err() != nil {
-			conn.Close()
+			_ = conn.Close()
 		}
 	}()
 
