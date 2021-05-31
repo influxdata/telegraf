@@ -794,8 +794,7 @@ SELECT
 	MAX(ws.execution_type_desc) AS exec_type_desc,
 	SUM(ws.total_query_wait_time_ms) AS total_query_wait_time_ms,
 	CAST(SUM(IIF(avg_query_wait_time_ms = 0, 0, ws.total_query_wait_time_ms / avg_query_wait_time_ms)) AS BIGINT) AS count_executions,
-	MAX(ws.max_query_wait_time_ms) AS max_query_wait_time_ms,
-	MAX(q.query_parameterization_type) AS query_param_type
+	MAX(ws.max_query_wait_time_ms) AS max_query_wait_time_ms
 FROM sys.query_store_query q
 	JOIN sys.query_store_plan p ON q.query_id = p.query_id
 	JOIN sys.query_store_wait_stats ws ON p.plan_id = ws.plan_id
