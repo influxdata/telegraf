@@ -104,6 +104,7 @@ require (
 	github.com/nsqio/go-nsq v1.0.8
 	github.com/openconfig/gnmi v0.0.0-20180912164834-33a1865c3029
 	github.com/openzipkin/zipkin-go-opentracing v0.3.4
+	github.com/pion/dtls/v2 v2.0.9
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/client_model v0.2.0
@@ -136,7 +137,7 @@ require (
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
 	go.starlark.net v0.0.0-20210406145628-7a1108eaa012
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
+	golang.org/x/net v0.0.0-20210331212208-0fccb6fa2b5c
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
