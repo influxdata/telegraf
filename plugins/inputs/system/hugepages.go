@@ -111,7 +111,7 @@ func statsPerNUMA(path string) (map[string]HugepagesNUMAStats, error) {
 	}
 
 	for _, d := range dirs {
-		if !(d.IsDir() && strings.HasPrefix(d.Name(), "node")) {
+		if !d.IsDir() || !strings.HasPrefix(d.Name(), "node") {
 			continue
 		}
 
