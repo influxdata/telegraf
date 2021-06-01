@@ -2,8 +2,8 @@ package system
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -36,7 +36,6 @@ var hugepagesSampleConfig = `
   # meminfo_path = "/proc/meminfo"
 `
 
-// Mem is the
 type Hugepages struct {
 	NUMANodePath string `toml:"numa_node_path"`
 	MeminfoPath  string `toml:"meminfo_path"`
@@ -51,17 +50,16 @@ func (mem *Hugepages) SampleConfig() string {
 }
 
 func (mem *Hugepages) Gather(acc telegraf.Accumulator) error {
-	mem.loadPaths()
-	err := mem.GatherStatsPerNode(acc)
+	err := mem.gatherStatsPerNode(acc)
 	if err != nil {
 		return err
 	}
 
-	return mem.GatherStatsFromMeminfo(acc)
+	return mem.gatherStatsFromMeminfo(acc)
 }
 
 // GatherHugepagesStatsPerNode collects hugepages stats per NUMA nodes
-func (mem *Hugepages) GatherStatsPerNode(acc telegraf.Accumulator) error {
+func (mem *Hugepages) gatherStatsPerNode(acc telegraf.Accumulator) error {
 	numaNodeMetrics, err := statsPerNUMA(mem.NUMANodePath)
 	if err != nil {
 		return err
@@ -80,7 +78,7 @@ func (mem *Hugepages) GatherStatsPerNode(acc telegraf.Accumulator) error {
 }
 
 // GatherHugepagesStatsFromMeminfo collects hugepages statistics from meminfo file
-func (mem *Hugepages) GatherStatsFromMeminfo(acc telegraf.Accumulator) error {
+func (mem *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
 	tags := map[string]string{
 		"name": "meminfo",
 	}
@@ -97,14 +95,14 @@ func (mem *Hugepages) GatherStatsFromMeminfo(acc telegraf.Accumulator) error {
 	return nil
 }
 
-type HugepagesNUMAStats struct {
+type hugepagesNUMAStats struct {
 	Free int
 	NR   int
 }
 
 // statsPerNUMA gathers hugepages statistics from each NUMA node
-func statsPerNUMA(path string) (map[string]HugepagesNUMAStats, error) {
-	var hugepagesStats = make(map[string]HugepagesNUMAStats)
+func statsPerNUMA(path string) (map[string]hugepagesNUMAStats, error) {
+	var hugepagesStats = make(map[string]hugepagesNUMAStats)
 	dirs, err := ioutil.ReadDir(path)
 	if err != nil {
 		return hugepagesStats, err
@@ -115,8 +113,8 @@ func statsPerNUMA(path string) (map[string]HugepagesNUMAStats, error) {
 			continue
 		}
 
-		hugepagesFree := fmt.Sprintf("%s/%s/hugepages/hugepages-2048kB/free_hugepages", path, d.Name())
-		hugepagesNR := fmt.Sprintf("%s/%s/hugepages/hugepages-2048kB/nr_hugepages", path, d.Name())
+		hugepagesFree := filepath.Join(path, d.Name(), "hugepages", "hugepages-2048kB", "free_hugepages")
+		hugepagesNR := filepath.Join(path, d.Name(), "hugepages", "hugepages-2048kB", "nr_hugepages")
 
 		free, err := ioutil.ReadFile(hugepagesFree)
 		if err != nil {
@@ -128,10 +126,16 @@ func statsPerNUMA(path string) (map[string]HugepagesNUMAStats, error) {
 			return hugepagesStats, err
 		}
 
-		f, _ := strconv.Atoi(string(bytes.TrimSuffix(free, newlineByte)))
-		n, _ := strconv.Atoi(string(bytes.TrimSuffix(nr, newlineByte)))
+		f, err := strconv.Atoi(string(bytes.TrimSuffix(free, newlineByte)))
+		if err != nil {
+			return hugepagesStats, err
+		}
+		n, err := strconv.Atoi(string(bytes.TrimSuffix(nr, newlineByte)))
+		if err != nil {
+			return hugepagesStats, err
+		}
 
-		hugepagesStats[d.Name()] = HugepagesNUMAStats{Free: f, NR: n}
+		hugepagesStats[d.Name()] = hugepagesNUMAStats{Free: f, NR: n}
 
 	}
 	return hugepagesStats, nil
@@ -162,9 +166,7 @@ func statsFromMeminfo(path string) (map[string]interface{}, error) {
 	return stats, nil
 }
 
-// loadPaths can be used to read paths firstly from config
-// if it is empty then try read from env variables
-func (mem *Hugepages) loadPaths() {
+func (mem *Hugepages) Init() {
 	if mem.NUMANodePath == "" {
 		mem.NUMANodePath = NUMA_NODE_PATH
 	}

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 var hugepages = Hugepages{
@@ -11,30 +12,13 @@ var hugepages = Hugepages{
 	MeminfoPath:  "./testdata/meminfo",
 }
 
-func init() {
-	hugepages.loadPaths()
-}
-
-func TestHugepagesStatsFromMeminfo(t *testing.T) {
+func TestHugepagesStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
-	require.NoError(t, hugepages.GatherStatsFromMeminfo(acc))
+	require.NoError(t, hugepages.Gather(acc))
 
-	fields := map[string]interface{}{
-		"HugePages_Total": int(666),
-		"HugePages_Free":  int(999),
-	}
-	acc.AssertContainsFields(t, "hugepages", fields)
-}
+	require.True(t, acc.HasPoint("hugepages", map[string]string{"node": "node0"}, "free", int(123)))
+	require.True(t, acc.HasPoint("hugepages", map[string]string{"node": "node0"}, "nr", int(456)))
 
-func TestHugepagesStatsPerNode(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	err := hugepages.GatherStatsPerNode(acc)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fields := map[string]interface{}{
-		"free": int(123),
-		"nr":   int(456),
-	}
-	acc.AssertContainsFields(t, "hugepages", fields)
+	require.True(t, acc.HasPoint("hugepages", map[string]string{"name": "meminfo"}, "HugePages_Total", int(666)))
+	require.True(t, acc.HasPoint("hugepages", map[string]string{"name": "meminfo"}, "HugePages_Free", int(999)))
 }
