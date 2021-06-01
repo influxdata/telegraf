@@ -50,8 +50,8 @@ const sampleConfig = `
   # becomes "detect_alert" when delimiter is "_".
   delimiter = "_"
   
-  # Detect alert logs 
-  alerts = false 
+  ## Detect alert logs 
+  # alerts = false 
 `
 
 // SampleConfig returns a sample TOML section to illustrate configuration
