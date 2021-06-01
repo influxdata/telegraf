@@ -11,7 +11,8 @@ file or network connection.
 [[inputs.x509_cert]]
   ## List certificate sources, support wildcard expands for files
   ## Prefix your entry with 'file://' if you intend to use relative paths
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443",
+  sources = ["tcp://example.org:443", "https://influxdata.com:443",
+            "udp://127.0.0.1:4433", "/etc/ssl/certs/ssl-cert-snakeoil.pem",
             "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem"]
 
   ## Timeout for SSL connection
