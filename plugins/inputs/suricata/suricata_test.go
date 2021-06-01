@@ -90,7 +90,6 @@ func TestSuricataAlerts(t *testing.T) {
 	require.NoError(t, c.Close())
 
 	acc.Wait(1)
-	fmt.Println(acc.GetTelegrafMetrics())
 }
 
 func TestSuricata(t *testing.T) {
