@@ -164,7 +164,7 @@ func flexFlatten(outmap map[string]interface{}, field string, v interface{}, del
 
 func (s *Suricata) parseAlert(acc telegraf.Accumulator, result map[string]interface{}) {
 	if _, ok := result["alert"].(map[string]interface{}); !ok {
-		s.Log.Debug("The 'alert' sub-object does not have required structure")
+		s.Log.Debug("'alert' sub-object does not have required structure")
 		return
 	}
 
