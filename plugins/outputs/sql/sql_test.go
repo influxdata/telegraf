@@ -2,7 +2,7 @@ package sql
 
 import (
 	"context"
-	"database/sql"
+	gosql "database/sql"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -334,7 +334,7 @@ func TestSqlite(t *testing.T) {
 	))
 
 	//read directly from the database
-	db, err := sql.Open("sqlite", address)
+	db, err := gosql.Open("sqlite", address)
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -346,7 +346,7 @@ func TestSqlite(t *testing.T) {
 	require.NoError(t, db.QueryRow("select count(*) from metric_one").Scan(&countMetricTwo))
 	require.Equal(t, 1, countMetricTwo)
 
-	var rows *sql.Rows
+	var rows *gosql.Rows
 
 	// Check that tables were created as expected
 	rows, err = db.Query("select sql from sqlite_master")
@@ -365,7 +365,7 @@ func TestSqlite(t *testing.T) {
 		sql,
 	)
 	require.False(t, rows.Next())
-	require.NoError(t, rows.Close())
+	require.NoError(t, rows.Close()) //nolint:sqlclosecheck
 
 	// Check contents of table metric_one
 	rows, err = db.Query("select timestamp, tag_one, tag_two, int64_one, int64_two from metric_one")
@@ -383,7 +383,7 @@ func TestSqlite(t *testing.T) {
 	require.Equal(t, int64(1234), d)
 	require.Equal(t, int64(2345), e)
 	require.False(t, rows.Next())
-	require.NoError(t, rows.Close())
+	require.NoError(t, rows.Close()) //nolint:sqlclosecheck
 
 	// Check contents of table metric_one
 	rows, err = db.Query("select timestamp, tag_three, string_one from metric_two")
@@ -397,5 +397,5 @@ func TestSqlite(t *testing.T) {
 	require.Equal(t, "tag3", g)
 	require.Equal(t, "string1", h)
 	require.False(t, rows.Next())
-	require.NoError(t, rows.Close())
+	require.NoError(t, rows.Close()) //nolint:sqlclosecheck
 }
