@@ -17,16 +17,15 @@ var (
 	kbPrecisionByte = []byte("kB")
 )
 
-// default file paths
 const (
 	// the path where statistics are kept per NUMA nodes
-	NUMA_NODE_PATH = "/sys/devices/system/node"
+	numaNodePath = "/sys/devices/system/node"
 	// the path to the meminfo file which is produced by kernel
-	MEMINFO_PATH = "/proc/meminfo"
+	meminfoPath = "/proc/meminfo"
 
 	// hugepages stat field names on meminfo file
-	HUGE_PAGES_TOTAL = "HugePages_Total"
-	HUGE_PAGES_FREE  = "HugePages_Free"
+	hugePagesTotalFieldName = "HugePages_Total"
+	hugePagesFreeFieldName  = "HugePages_Free"
 )
 
 var hugepagesSampleConfig = `
@@ -158,7 +157,7 @@ func statsFromMeminfo(path string) (map[string]interface{}, error) {
 			continue
 		}
 		fieldName := string(bytes.TrimSuffix(fields[0], colonByte))
-		if fieldName == HUGE_PAGES_TOTAL || fieldName == HUGE_PAGES_FREE {
+		if fieldName == hugePagesTotalFieldName || fieldName == hugePagesFreeFieldName {
 			val, _ := strconv.Atoi(string(fields[1]))
 			stats[fieldName] = val
 		}
@@ -168,10 +167,10 @@ func statsFromMeminfo(path string) (map[string]interface{}, error) {
 
 func (mem *Hugepages) Init() {
 	if mem.NUMANodePath == "" {
-		mem.NUMANodePath = NUMA_NODE_PATH
+		mem.NUMANodePath = numaNodePath
 	}
 	if mem.MeminfoPath == "" {
-		mem.MeminfoPath = MEMINFO_PATH
+		mem.MeminfoPath = meminfoPath
 	}
 }
 
