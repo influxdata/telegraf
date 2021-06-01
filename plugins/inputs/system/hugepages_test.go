@@ -17,10 +17,7 @@ func init() {
 
 func TestHugepagesStatsFromMeminfo(t *testing.T) {
 	acc := &testutil.Accumulator{}
-	err := hugepages.GatherStatsFromMeminfo(acc)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, hugepages.GatherStatsFromMeminfo(acc))
 
 	fields := map[string]interface{}{
 		"HugePages_Total": int(666),
