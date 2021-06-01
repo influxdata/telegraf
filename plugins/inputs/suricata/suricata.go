@@ -105,7 +105,10 @@ func (s *Suricata) readInput(ctx context.Context, acc telegraf.Accumulator, conn
 			if rerr != nil {
 				return rerr
 			} else if len(line) > 0 {
-				s.parse(acc, line)
+				err := s.parse(acc, line)
+				if err != nil {
+					acc.AddError(err)
+				}
 			}
 		}
 	}
@@ -175,6 +178,7 @@ func (s *Suricata) parseAlert(acc telegraf.Accumulator, result map[string]interf
 		if err != nil {
 			s.Log.Debugf("Flattening alert failed: %v", err)
 			// we skip this subitem as something did not parse correctly
+			continue
 		}
 	}
 
@@ -198,7 +202,7 @@ func (s *Suricata) parseStats(acc telegraf.Accumulator, result map[string]interf
 					if threadStruct, ok := t.(map[string]interface{}); ok {
 						err := flexFlatten(outmap, "", threadStruct, s.Delimiter)
 						if err != nil {
-							s.Log.Debug(err)
+							s.Log.Debugf("Flattening alert failed: %v", err)
 							// we skip this thread as something did not parse correctly
 							continue
 						}
@@ -211,8 +215,9 @@ func (s *Suricata) parseStats(acc telegraf.Accumulator, result map[string]interf
 		} else {
 			err := flexFlatten(totalmap, k, v, s.Delimiter)
 			if err != nil {
-				s.Log.Debug(err.Error())
+				s.Log.Debugf("Flattening alert failed: %v", err)
 				// we skip this subitem as something did not parse correctly
+				continue
 			}
 		}
 	}
@@ -227,28 +232,26 @@ func (s *Suricata) parseStats(acc telegraf.Accumulator, result map[string]interf
 	}
 }
 
-func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
+func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) error {
 	// initial parsing
 	var result map[string]interface{}
 	err := json.Unmarshal(sjson, &result)
 	if err != nil {
-		acc.AddError(err)
-		return
+		return err
 	}
 	// check for presence of relevant stats or alert
-	if _, ok := result["stats"]; !ok {
-		s.Log.Debugf("Invalid input without 'stats': %v", result)
-		return fmt.Errorf("input does not contain 'stats' object")
+	_, ok := result["stats"]
+	_, ok2 := result["alert"]
+	if !ok && !ok2 {
+		s.Log.Debugf("Invalid input without 'stats' or 'alert' object: %v", result)
+		return fmt.Errorf("input does not contain 'stats' or 'alert' object")
 	}
-	if _, ok2 := result["alert"]; s.Alerts && !ok2 {
-		s.Log.Debugf("Invalid input without 'alert' when trying to parse it: %v", result)
-		return fmt.Errorf("input does not contain 'alert' object")
-	}
-	
-	s.parseStats(acc, result)
-	if s.Alerts {
+	if ok {
+		s.parseStats(acc, result)
+	} else if ok2 && s.Alerts {
 		s.parseAlert(acc, result)
 	}
+	return nil
 }
 
 // Gather measures and submits one full set of telemetry to Telegraf.
@@ -262,7 +265,6 @@ func init() {
 		return &Suricata{
 			Source:    "/var/run/suricata-stats.sock",
 			Delimiter: "_",
-			Alerts:    false,
 		}
 	})
 }
