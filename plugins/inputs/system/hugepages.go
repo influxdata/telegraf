@@ -57,11 +57,7 @@ func (mem *Hugepages) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	err = mem.GatherStatsFromMeminfo(acc)
-	if err != nil {
-		return err
-	}
-	return nil
+	return mem.GatherStatsFromMeminfo(acc)
 }
 
 // GatherHugepagesStatsPerNode collects hugepages stats per NUMA nodes
