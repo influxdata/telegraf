@@ -25,6 +25,7 @@ const (
 type Suricata struct {
 	Source    string `toml:"source"`
 	Delimiter string `toml:"delimiter"`
+	Alerts    bool   `toml:"alerts"`
 
 	inputListener *net.UnixListener
 	cancel        context.CancelFunc
@@ -36,11 +37,11 @@ type Suricata struct {
 
 // Description returns the plugin description.
 func (s *Suricata) Description() string {
-	return "Suricata stats plugin"
+	return "Suricata stats and alerts plugin"
 }
 
 const sampleConfig = `
-  ## Data sink for Suricata stats log
+  ## Data sink for Suricata stats and alerts logs
   # This is expected to be a filename of a
   # unix socket to be created for listening.
   source = "/var/run/suricata-stats.sock"
@@ -48,6 +49,9 @@ const sampleConfig = `
   # Delimiter for flattening field keys, e.g. subitem "alert" of "detect"
   # becomes "detect_alert" when delimiter is "_".
   delimiter = "_"
+  
+  # Detect alert logs 
+  alerts = false 
 `
 
 // SampleConfig returns a sample TOML section to illustrate configuration
@@ -150,27 +154,35 @@ func flexFlatten(outmap map[string]interface{}, field string, v interface{}, del
 		}
 	case float64:
 		outmap[field] = v.(float64)
+	case string:
+		outmap[field] = v.(string)
 	default:
 		return fmt.Errorf("unsupported type %T encountered", t)
 	}
 	return nil
 }
 
-func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
-	// initial parsing
-	var result map[string]interface{}
-	err := json.Unmarshal(sjson, &result)
-	if err != nil {
-		acc.AddError(err)
+func (s *Suricata) parseAlert(acc telegraf.Accumulator, result map[string]interface{}) {
+	if _, ok := result["alert"].(map[string]interface{}); !ok {
+		s.Log.Debug("The 'alert' sub-object does not have required structure")
 		return
 	}
 
-	// check for presence of relevant stats
-	if _, ok := result["stats"]; !ok {
-		s.Log.Debug("Input does not contain necessary 'stats' sub-object")
-		return
+	totalmap := make(map[string]interface{})
+	for k, v := range result["alert"].(map[string]interface{}) {
+		//source and target fields are maps
+		err := flexFlatten(totalmap, k, v, s.Delimiter)
+		if err != nil {
+			s.Log.Debug(err.Error())
+			// we skip this subitem as something did not parse correctly
+		}
 	}
 
+	//threads field do not exist in alert output, always global
+	acc.AddFields("suricata_alert", totalmap, nil)
+}
+
+func (s *Suricata) parseStats(acc telegraf.Accumulator, result map[string]interface{}) {
 	if _, ok := result["stats"].(map[string]interface{}); !ok {
 		s.Log.Debug("The 'stats' sub-object does not have required structure")
 		return
@@ -184,7 +196,7 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 				for k, t := range v {
 					outmap := make(map[string]interface{})
 					if threadStruct, ok := t.(map[string]interface{}); ok {
-						err = flexFlatten(outmap, "", threadStruct, s.Delimiter)
+						err := flexFlatten(outmap, "", threadStruct, s.Delimiter)
 						if err != nil {
 							s.Log.Debug(err)
 							// we skip this thread as something did not parse correctly
@@ -197,7 +209,7 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 				s.Log.Debug("The 'threads' sub-object does not have required structure")
 			}
 		} else {
-			err = flexFlatten(totalmap, k, v, s.Delimiter)
+			err := flexFlatten(totalmap, k, v, s.Delimiter)
 			if err != nil {
 				s.Log.Debug(err.Error())
 				// we skip this subitem as something did not parse correctly
@@ -215,6 +227,28 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 	}
 }
 
+func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
+	// initial parsing
+	var result map[string]interface{}
+	err := json.Unmarshal(sjson, &result)
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
+	// check for presence of relevant stats or alert
+	_, ok := result["stats"]
+	_, ok2 := result["alert"]
+	if !ok && !ok2 {
+		s.Log.Debug("Input does not contain necessary 'stats' or 'alert' sub-object")
+		return
+	}
+	if ok {
+		s.parseStats(acc, result)
+	} else if ok2 && s.Alerts {
+		s.parseAlert(acc, result)
+	}
+}
+
 // Gather measures and submits one full set of telemetry to Telegraf.
 // Not used here, submission is completely input-driven.
 func (s *Suricata) Gather(_ telegraf.Accumulator) error {
@@ -226,6 +260,7 @@ func init() {
 		return &Suricata{
 			Source:    "/var/run/suricata-stats.sock",
 			Delimiter: "_",
+			Alerts:    false,
 		}
 	})
 }
