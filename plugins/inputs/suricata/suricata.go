@@ -236,15 +236,17 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 		return
 	}
 	// check for presence of relevant stats or alert
-	_, ok := result["stats"]
-	_, ok2 := result["alert"]
-	if !ok && !ok2 {
-		s.Log.Debug("Input does not contain necessary 'stats' or 'alert' sub-object")
-		return
+	if _, ok := result["stats"]; !ok {
+		s.Log.Debugf("Invalid input without 'stats': %v", result)
+		return fmt.Errorf("input does not contain 'stats' object")
 	}
-	if ok {
-		s.parseStats(acc, result)
-	} else if ok2 && s.Alerts {
+	if _, ok2 := result["alert"]; s.Alerts && !ok2 {
+		s.Log.Debugf("Invalid input without 'alert' when trying to parse it: %v", result)
+		return fmt.Errorf("input does not contain 'alert' object")
+	}
+	
+	s.parseStats(acc, result)
+	if s.Alerts {
 		s.parseAlert(acc, result)
 	}
 }
