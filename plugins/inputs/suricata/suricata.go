@@ -173,7 +173,7 @@ func (s *Suricata) parseAlert(acc telegraf.Accumulator, result map[string]interf
 		//source and target fields are maps
 		err := flexFlatten(totalmap, k, v, s.Delimiter)
 		if err != nil {
-			s.Log.Debug(err.Error())
+			s.Log.Debugf("Flattening alert failed: %v", err)
 			// we skip this subitem as something did not parse correctly
 		}
 	}
