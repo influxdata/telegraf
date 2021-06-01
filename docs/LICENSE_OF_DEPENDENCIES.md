@@ -176,6 +176,7 @@ following works:
 - github.com/openzipkin/zipkin-go-opentracing [MIT License](https://github.com/openzipkin/zipkin-go-opentracing/blob/master/LICENSE)
 - github.com/philhofer/fwd [MIT License](https://github.com/philhofer/fwd/blob/master/LICENSE.md)
 - github.com/pierrec/lz4 [BSD 3-Clause "New" or "Revised" License](https://github.com/pierrec/lz4/blob/master/LICENSE)
+- github.com/pion/dtls [MIT License](https://github.com/pion/dtls/blob/master/LICENSE)
 - github.com/pkg/browser [BSD 2-Clause "Simplified" License](https://github.com/pkg/browser/blob/master/LICENSE)
 - github.com/pkg/errors [BSD 2-Clause "Simplified" License](https://github.com/pkg/errors/blob/master/LICENSE)
 - github.com/pmezard/go-difflib [BSD 3-Clause Clear License](https://github.com/pmezard/go-difflib/blob/master/LICENSE)
