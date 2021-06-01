@@ -135,7 +135,6 @@ func statsPerNUMA(path string) (map[string]hugepagesNUMAStats, error) {
 		}
 
 		hugepagesStats[d.Name()] = hugepagesNUMAStats{Free: f, NR: n}
-
 	}
 	return hugepagesStats, nil
 }
