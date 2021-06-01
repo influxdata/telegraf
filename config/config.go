@@ -686,10 +686,9 @@ func (c *Config) LoadDirectory(path string) error {
 }
 
 // Try to find a default config file at these locations (in order):
-//   1. $TELEGRAF_CONFIG_URL
-//   2. $TELEGRAF_CONFIG_PATH
-//   3. $HOME/.telegraf/telegraf.conf
-//   4. /etc/telegraf/telegraf.conf
+//   1. $TELEGRAF_CONFIG_PATH
+//   2. $HOME/.telegraf/telegraf.conf
+//   3. /etc/telegraf/telegraf.conf
 //
 func getDefaultConfigPath() (string, error) {
 	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
@@ -703,7 +702,7 @@ func getDefaultConfigPath() (string, error) {
 		etcfile = programFiles + `\Telegraf\telegraf.conf`
 	}
 	for _, path := range []string{envfile, homefile, etcfile} {
-		if valid := isUrl(path); valid {
+		if isUrl(path) {
 			log.Printf("I! Using config url: %s", path)
 			return path, nil
 		}
