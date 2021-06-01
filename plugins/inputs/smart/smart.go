@@ -701,14 +701,10 @@ func gatherDisk(acc telegraf.Accumulator, timeout config.Duration, usesudo, coll
 		// if not look for Device is in STANDBY which happens when
 		// nocheck is set to standby (will exit to not spin up the disk)
 		// otherwise nothing is found so nothing is printed (NVMe does not show power)
-		if powermodeInfo.FindStringSubmatch(line) != nil {
-			power := powermodeInfo.FindStringSubmatch(line)
-			if len(power) > 1 {
-				deviceTags["power"] = power[1]
-			}
+		if power := powermodeInfo.FindStringSubmatch(line); len(power) > 1 {
+			deviceTags["power"] = power[1]
 		} else {
-			power := standbyInfo.FindStringSubmatch(line)
-			if len(power) > 1 {
+			if power := standbyInfo.FindStringSubmatch(line); len(power) > 1 {
 				deviceTags["power"] = power[1]
 			}
 		}
