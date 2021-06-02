@@ -5,6 +5,7 @@ package simpleoutput
 import (
 	"bytes"
 	"context"
+	"log"
 
 	"github.com/Azure/azure-kusto-go/kusto"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
@@ -66,18 +67,24 @@ func (s *AzureDataExplorer) Close() error {
 }
 
 func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
-	result, err := s.Serializer.SerializeBatch(metrics)
 
-	if err != nil {
-		return err
+	reqBody := []byte{}
+	for _, m := range metrics {
+		metricInBytes, err := s.Serializer.Serialize(m)
+		if err != nil {
+			return err
+		}
+		reqBody = append(reqBody, metricInBytes[:]...)
+
 	}
 
-	reader := bytes.NewReader(result)
-	s.Ingester.FromReader(context.TODO(), reader)
+	reader := bytes.NewReader(reqBody)
+	result, error := s.Ingester.FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON))
+	if error != nil {
+		return error
+	}
 
-	// for _, metric := range metrics {
-	// 	// write `metric` to the output sink here
-	// }
+	log.Println(result)
 	return nil
 }
 
@@ -85,4 +92,8 @@ func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
 		return &AzureDataExplorer{}
 	})
+}
+
+func (s *AzureDataExplorer) SetSerializer(serializer serializers.Serializer) {
+	s.Serializer = serializer
 }
