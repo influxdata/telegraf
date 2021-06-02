@@ -96,7 +96,7 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	}
 
 	reader := bytes.NewReader(reqBody)
-	result, error := s.Ingester.FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef("metrics_mapping", ingest.JSON))
+	_, error := s.Ingester.FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef("metrics_mapping", ingest.JSON))
 	if error != nil {
 		s.Log.Errorf("error sending ingestion request to Azure Data Explorer: %v", error)
 		return error
