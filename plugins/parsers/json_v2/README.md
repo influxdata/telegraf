@@ -11,29 +11,28 @@ You configure this parser by describing the metric you want by defining the fiel
 ```toml
 data_format = "json_v2"
     [[xxx.xxx.json_v2]]
-        [[xxx.xxx.json_v2.metric]]
-            measurement_name =
-            measurement_name_path =
-            timestamp_path =
-            timestamp_format =
-            timestamp_timezone =
-            [[field]]
-                path =
-                rename =
-                type =
-            [[tag]]
-                path =
-                rename =
-            [[object]]
-                path =
-                disable_nesting =
-                disable_flattened_names =
-                excluded_keys =
-                tags =
-                [renames]
-                    key = new_name
-                [fields]
-                    key = type
+        measurement_name = ""
+        measurement_name_path = ""
+        timestamp_path = ""
+        timestamp_format = ""
+        timestamp_timezone = ""
+        [[field]]
+            path = ""
+            rename = ""
+            type = ""
+        [[tag]]
+            path = ""
+            rename = ""
+        [[object]]
+            path = ""
+            disable_prepend_keys = true/false
+            include_keys = []
+            excluded_keys = []
+            tags = []
+            [renames]
+                key = new_name
+            [fields]
+                key = type
 ```
 ---
 ### `metric` config options
