@@ -79,7 +79,7 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	}
 
 	reader := bytes.NewReader(reqBody)
-	result, error := s.Ingester.FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON))
+	result, error := s.Ingester.FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef("metrics_mapping", ingest.JSON))
 	if error != nil {
 		return error
 	}
