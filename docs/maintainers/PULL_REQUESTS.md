@@ -19,7 +19,7 @@ contributor to merge or rebase.
 
 ## Review
 
-[Review the pull request](docs/developers/REVIEWS.md).
+[Review the pull request](https://github.com/influxdata/telegraf/blob/master/docs/developers/REVIEWS.md).
 
 ## Merge
 
