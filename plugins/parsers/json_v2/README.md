@@ -88,6 +88,7 @@ The following keys can be set for `object_selection`:
 
 * **path (REQUIRED)**: You must define the path query that gathers the object with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md)
 * **disable_prepend_keys (OPTIONAL)**: Set to true to prevent resulting nested data to contain the parent key prepended to its key **NOTE**: duplicate names can overwrite each other when this is enabled
+* **included_keys (OPTIONAL)**: You can define a list of key's that should be the only data included in the metric, by default it will include everything.
 * **excluded_keys (OPTIONAL)**: You can define json keys to be excluded in the metric, use flattened names for nested results
 * **tags (OPTIONAL)**: You can define json keys to be set as tags instead of fields, if you define a key that is an array or object then all nested values will become a tag
 * **renames (OPTIONAL)**: A table matching the json key with the desired name (oppossed to defaulting to using the key), use names that include the prepended keys of its parent keys for nested results
