@@ -77,7 +77,7 @@ func stableMetric(
 var (
 	// 2021-05-17T22:04:45+00:00
 	// or 2021-05-17T16:04:45-06:00
-	ts = time.Unix(1621289085, 0)
+	ts = time.Unix(1621289085, 0).UTC()
 
 	testMetrics = []telegraf.Metric{
 		stableMetric(
@@ -389,7 +389,7 @@ func TestSqlite(t *testing.T) {
 	require.NoError(t, rows.Scan(&a, &b, &c, &d, &e))
 	actualTime, err = time.Parse(timeLayout, a)
 	require.NoError(t, err)
-	require.Equal(t, ts, actualTime)
+	require.Equal(t, ts, actualTime.UTC())
 	require.Equal(t, "tag1", b)
 	require.Equal(t, "tag2", c)
 	require.Equal(t, int64(1234), d)
@@ -407,7 +407,7 @@ func TestSqlite(t *testing.T) {
 	require.NoError(t, rows.Scan(&f, &g, &h))
 	actualTime, err = time.Parse(timeLayout, f)
 	require.NoError(t, err)
-	require.Equal(t, ts, actualTime)
+	require.Equal(t, ts, actualTime.UTC())
 	require.Equal(t, "tag3", g)
 	require.Equal(t, "string1", h)
 	require.False(t, rows.Next())
