@@ -7,12 +7,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql" // Register mysql sql driver
 	_ "github.com/jackc/pgx/stdlib"    // Register postgres pgx sql driver
-	_ "modernc.org/sqlite"
-
-	// These SQL drivers can be enabled if
-	// they are added to depencies
-	// _ "github.com/lib/pq"
-	// _ "github.com/zensqlmonitor/go-mssqldb"
+	_ "modernc.org/sqlite"             // Register sqlite sql driver
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"

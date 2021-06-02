@@ -75,6 +75,10 @@ func stableMetric(
 }
 
 var (
+	// 2021-05-17T22:04:45+00:00
+	// or 2021-05-17T16:04:45-06:00
+	ts = time.Unix(1621289085, 0)
+
 	testMetrics = []telegraf.Metric{
 		stableMetric(
 			"metric_one",
@@ -98,7 +102,7 @@ var (
 					Value: int64(2345),
 				},
 			},
-			time.Unix(1621289085, 0),
+			ts,
 		),
 		stableMetric(
 			"metric_two",
@@ -114,7 +118,7 @@ var (
 					Value: "string1",
 				},
 			},
-			time.Unix(1621289085, 0),
+			ts,
 		),
 	}
 )
@@ -320,8 +324,8 @@ func TestSqlite(t *testing.T) {
 	dbfile := filepath.Join(outDir, "db")
 
 	//use the plugin to write to the database
-	// host, port, username, password, dbname
-	address := fmt.Sprintf("file:%v", dbfile)
+	//address := fmt.Sprintf("file:%v", dbfile)
+	address := dbfile // accepts a path or a file: URI
 	p := newSQL()
 	p.Log = testutil.Logger{}
 	p.Driver = "sqlite"
@@ -367,6 +371,12 @@ func TestSqlite(t *testing.T) {
 	require.False(t, rows.Next())
 	require.NoError(t, rows.Close()) //nolint:sqlclosecheck
 
+	// sqlite stores dates as strings. They may be in the local
+	// timezone. The test needs to parse them back into a time.Time to
+	// check them.
+	timeLayout := "2006-01-02 15:04:05 -0700 MST"
+	var actualTime time.Time
+
 	// Check contents of table metric_one
 	rows, err = db.Query("select timestamp, tag_one, tag_two, int64_one, int64_two from metric_one")
 	require.NoError(t, err)
@@ -377,7 +387,9 @@ func TestSqlite(t *testing.T) {
 		d, e int64
 	)
 	require.NoError(t, rows.Scan(&a, &b, &c, &d, &e))
-	require.Equal(t, "2021-05-17 16:04:45 -0600 MDT", a)
+	actualTime, err = time.Parse(timeLayout, a)
+	require.NoError(t, err)
+	require.Equal(t, ts, actualTime)
 	require.Equal(t, "tag1", b)
 	require.Equal(t, "tag2", c)
 	require.Equal(t, int64(1234), d)
@@ -393,7 +405,9 @@ func TestSqlite(t *testing.T) {
 		f, g, h string
 	)
 	require.NoError(t, rows.Scan(&f, &g, &h))
-	require.Equal(t, "2021-05-17 16:04:45 -0600 MDT", f)
+	actualTime, err = time.Parse(timeLayout, f)
+	require.NoError(t, err)
+	require.Equal(t, ts, actualTime)
 	require.Equal(t, "tag3", g)
 	require.Equal(t, "string1", h)
 	require.False(t, rows.Next())
