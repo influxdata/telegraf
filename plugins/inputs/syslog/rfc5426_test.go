@@ -294,7 +294,8 @@ func TestBestEffort_unixgram(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unixgram.sock")
-	os.Create(sock)
+	_, err = os.Create(sock)
+	require.NoError(t, err)
 	testRFC5426(t, "unixgram", sock, true)
 }
 
@@ -307,7 +308,8 @@ func TestStrict_unixgram(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestStrict_unixgram.sock")
-	os.Create(sock)
+	_, err = os.Create(sock)
+	require.NoError(t, err)
 	testRFC5426(t, "unixgram", sock, false)
 }
 

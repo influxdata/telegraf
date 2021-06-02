@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -268,17 +269,17 @@ var (
 
 // Smart plugin reads metrics from storage devices supporting S.M.A.R.T.
 type Smart struct {
-	Path             string            `toml:"path"` //deprecated - to keep backward compatibility
-	PathSmartctl     string            `toml:"path_smartctl"`
-	PathNVMe         string            `toml:"path_nvme"`
-	Nocheck          string            `toml:"nocheck"`
-	EnableExtensions []string          `toml:"enable_extensions"`
-	Attributes       bool              `toml:"attributes"`
-	Excludes         []string          `toml:"excludes"`
-	Devices          []string          `toml:"devices"`
-	UseSudo          bool              `toml:"use_sudo"`
-	Timeout          internal.Duration `toml:"timeout"`
-	Log              telegraf.Logger   `toml:"-"`
+	Path             string          `toml:"path"` //deprecated - to keep backward compatibility
+	PathSmartctl     string          `toml:"path_smartctl"`
+	PathNVMe         string          `toml:"path_nvme"`
+	Nocheck          string          `toml:"nocheck"`
+	EnableExtensions []string        `toml:"enable_extensions"`
+	Attributes       bool            `toml:"attributes"`
+	Excludes         []string        `toml:"excludes"`
+	Devices          []string        `toml:"devices"`
+	UseSudo          bool            `toml:"use_sudo"`
+	Timeout          config.Duration `toml:"timeout"`
+	Log              telegraf.Logger `toml:"-"`
 }
 
 type nvmeDevice struct {
@@ -332,7 +333,7 @@ var sampleConfig = `
 
 func newSmart() *Smart {
 	return &Smart{
-		Timeout: internal.Duration{Duration: time.Second * 30},
+		Timeout: config.Duration(time.Second * 30),
 	}
 }
 
@@ -477,12 +478,12 @@ func (m *Smart) scanDevices(ignoreExcludes bool, scanArgs ...string) ([]string, 
 }
 
 // Wrap with sudo
-var runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+var runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 	cmd := exec.Command(command, args...)
 	if sudo {
 		cmd = exec.Command("sudo", append([]string{"-n", command}, args...)...)
 	}
-	return internal.CombinedOutputTimeout(cmd, timeout.Duration)
+	return internal.CombinedOutputTimeout(cmd, time.Duration(timeout))
 }
 
 func excludedDev(excludes []string, deviceLine string) bool {
@@ -529,7 +530,7 @@ func (m *Smart) getVendorNVMeAttributes(acc telegraf.Accumulator, devices []stri
 	wg.Wait()
 }
 
-func getDeviceInfoForNVMeDisks(acc telegraf.Accumulator, devices []string, nvme string, timeout internal.Duration, useSudo bool) []nvmeDevice {
+func getDeviceInfoForNVMeDisks(acc telegraf.Accumulator, devices []string, nvme string, timeout config.Duration, useSudo bool) []nvmeDevice {
 	var NVMeDevices []nvmeDevice
 
 	for _, device := range devices {
@@ -549,7 +550,7 @@ func getDeviceInfoForNVMeDisks(acc telegraf.Accumulator, devices []string, nvme 
 	return NVMeDevices
 }
 
-func gatherNVMeDeviceInfo(nvme, device string, timeout internal.Duration, useSudo bool) (string, string, string, error) {
+func gatherNVMeDeviceInfo(nvme, device string, timeout config.Duration, useSudo bool) (string, string, string, error) {
 	args := []string{"id-ctrl"}
 	args = append(args, strings.Split(device, " ")...)
 	out, err := runCmd(timeout, useSudo, nvme, args...)
@@ -589,7 +590,7 @@ func findNVMeDeviceInfo(output string) (string, string, string, error) {
 	return vid, sn, mn, nil
 }
 
-func gatherIntelNVMeDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo bool, nvme string, device nvmeDevice, wg *sync.WaitGroup) {
+func gatherIntelNVMeDisk(acc telegraf.Accumulator, timeout config.Duration, usesudo bool, nvme string, device nvmeDevice, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	args := []string{"intel", "smart-log-add"}
@@ -636,7 +637,7 @@ func gatherIntelNVMeDisk(acc telegraf.Accumulator, timeout internal.Duration, us
 	}
 }
 
-func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, collectAttributes bool, smartctl, nocheck, device string, wg *sync.WaitGroup) {
+func gatherDisk(acc telegraf.Accumulator, timeout config.Duration, usesudo, collectAttributes bool, smartctl, nocheck, device string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
 	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nocheck, "--format=brief"}

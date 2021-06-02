@@ -71,11 +71,11 @@ var sampleConfig = `
 // Connect initiates the primary connection to the GCP project.
 func (s *Stackdriver) Connect() error {
 	if s.Project == "" {
-		return fmt.Errorf("Project is a required field for stackdriver output")
+		return fmt.Errorf("project is a required field for stackdriver output")
 	}
 
 	if s.Namespace == "" {
-		return fmt.Errorf("Namespace is a required field for stackdriver output")
+		return fmt.Errorf("namespace is a required field for stackdriver output")
 	}
 
 	if s.ResourceType == "" {
@@ -300,7 +300,7 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 	case int64:
 		return &monitoringpb.TypedValue{
 			Value: &monitoringpb.TypedValue_Int64Value{
-				Int64Value: int64(v),
+				Int64Value: v,
 			},
 		}, nil
 	case float64:
@@ -312,7 +312,7 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 	case bool:
 		return &monitoringpb.TypedValue{
 			Value: &monitoringpb.TypedValue_BoolValue{
-				BoolValue: bool(v),
+				BoolValue: v,
 			},
 		}, nil
 	case string:

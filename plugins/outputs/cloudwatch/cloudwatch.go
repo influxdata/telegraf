@@ -68,10 +68,10 @@ func (f *statisticField) buildDatum() []*cloudwatch.MetricDatum {
 
 	if f.hasAllFields() {
 		// If we have all required fields, we build datum with StatisticValues
-		min, _ := f.values[statisticTypeMin]
-		max, _ := f.values[statisticTypeMax]
-		sum, _ := f.values[statisticTypeSum]
-		count, _ := f.values[statisticTypeCount]
+		min := f.values[statisticTypeMin]
+		max := f.values[statisticTypeMax]
+		sum := f.values[statisticTypeSum]
+		count := f.values[statisticTypeCount]
 
 		datum := &cloudwatch.MetricDatum{
 			MetricName: aws.String(strings.Join([]string{f.metricName, f.fieldName}, "_")),

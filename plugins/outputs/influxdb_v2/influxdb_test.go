@@ -94,7 +94,7 @@ func TestConnect(t *testing.T) {
 	}
 }
 
-func TestUnused(t *testing.T) {
+func TestUnused(_ *testing.T) {
 	thing := influxdb.InfluxDB{}
 	thing.Close()
 	thing.Description()

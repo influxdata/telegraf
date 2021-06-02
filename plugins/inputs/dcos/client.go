@@ -92,11 +92,10 @@ type AuthToken struct {
 
 // ClusterClient is a Client that uses the cluster URL.
 type ClusterClient struct {
-	clusterURL  *url.URL
-	httpClient  *http.Client
-	credentials *Credentials
-	token       string
-	semaphore   chan struct{}
+	clusterURL *url.URL
+	httpClient *http.Client
+	token      string
+	semaphore  chan struct{}
 }
 
 type claims struct {
@@ -293,6 +292,7 @@ func (c *ClusterClient) doGet(ctx context.Context, url string, v interface{}) er
 		return err
 	}
 	defer func() {
+		//nolint:errcheck,revive // we cannot do anything if the closing fails
 		resp.Body.Close()
 		<-c.semaphore
 	}()

@@ -65,10 +65,8 @@ func TryAddState(runErr error, metrics []telegraf.Metric) ([]telegraf.Metric, er
 	f := map[string]interface{}{
 		"state": state,
 	}
-	m, err := metric.New("nagios_state", nil, f, ts)
-	if err != nil {
-		return metrics, err
-	}
+	m := metric.New("nagios_state", nil, f, ts)
+
 	metrics = append(metrics, m)
 	return metrics, nil
 }
@@ -166,12 +164,8 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		fields["long_service_output"] = longmsg.String()
 	}
 
-	m, err := metric.New("nagios_state", nil, fields, ts)
-	if err == nil {
-		metrics = append(metrics, m)
-	} else {
-		log.Printf("E! [parser.nagios] failed to add nagios_state: %s\n", err)
-	}
+	m := metric.New("nagios_state", nil, fields, ts)
+	metrics = append(metrics, m)
 
 	return metrics, nil
 }
@@ -194,7 +188,7 @@ func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, er
 		fieldName := strings.Trim(perf[1], "'")
 		tags := map[string]string{"perfdata": fieldName}
 		if perf[3] != "" {
-			str := string(perf[3])
+			str := perf[3]
 			if str != "" {
 				tags["unit"] = str
 			}
@@ -202,10 +196,10 @@ func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, er
 
 		fields := make(map[string]interface{})
 		if perf[2] == "U" {
-			return nil, errors.New("Value undetermined")
+			return nil, errors.New("value undetermined")
 		}
 
-		f, err := strconv.ParseFloat(string(perf[2]), 64)
+		f, err := strconv.ParseFloat(perf[2], 64)
 		if err == nil {
 			fields["value"] = f
 		}
@@ -247,12 +241,10 @@ func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, er
 		}
 
 		// Create metric
-		metric, err := metric.New("nagios", tags, fields, timestamp)
-		if err != nil {
-			return nil, err
-		}
+		m := metric.New("nagios", tags, fields, timestamp)
+
 		// Add Metric
-		metrics = append(metrics, metric)
+		metrics = append(metrics, m)
 	}
 
 	return metrics, nil
@@ -264,14 +256,14 @@ const (
 	MinFloat64 = 4.940656458412465441765687928682213723651e-324 // 1 / 2**(1023 - 1 + 52)
 )
 
-var ErrBadThresholdFormat = errors.New("Bad threshold format")
+var ErrBadThresholdFormat = errors.New("bad threshold format")
 
 // Handles all cases from https://nagios-plugins.org/doc/guidelines.html#THRESHOLDFORMAT
 func parseThreshold(threshold string) (min float64, max float64, err error) {
 	thresh := strings.Split(threshold, ":")
 	switch len(thresh) {
 	case 1:
-		max, err = strconv.ParseFloat(string(thresh[0]), 64)
+		max, err = strconv.ParseFloat(thresh[0], 64)
 		if err != nil {
 			return 0, 0, ErrBadThresholdFormat
 		}
@@ -281,7 +273,7 @@ func parseThreshold(threshold string) (min float64, max float64, err error) {
 		if thresh[0] == "~" {
 			min = MinFloat64
 		} else {
-			min, err = strconv.ParseFloat(string(thresh[0]), 64)
+			min, err = strconv.ParseFloat(thresh[0], 64)
 			if err != nil {
 				min = 0
 			}
@@ -290,7 +282,7 @@ func parseThreshold(threshold string) (min float64, max float64, err error) {
 		if thresh[1] == "" {
 			max = MaxFloat64
 		} else {
-			max, err = strconv.ParseFloat(string(thresh[1]), 64)
+			max, err = strconv.ParseFloat(thresh[1], 64)
 			if err != nil {
 				return 0, 0, ErrBadThresholdFormat
 			}

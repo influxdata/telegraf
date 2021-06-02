@@ -12,16 +12,16 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	"github.com/soniah/gosnmp"
+	"github.com/gosnmp/gosnmp"
 )
 
-var defaultTimeout = internal.Duration{Duration: time.Second * 5}
+var defaultTimeout = config.Duration(time.Second * 5)
 
-type handler func(*gosnmp.SnmpPacket, *net.UDPAddr)
-type execer func(internal.Duration, string, ...string) ([]byte, error)
+type execer func(config.Duration, string, ...string) ([]byte, error)
 
 type mibEntry struct {
 	mibName string
@@ -29,9 +29,9 @@ type mibEntry struct {
 }
 
 type SnmpTrap struct {
-	ServiceAddress string            `toml:"service_address"`
-	Timeout        internal.Duration `toml:"timeout"`
-	Version        string            `toml:"version"`
+	ServiceAddress string          `toml:"service_address"`
+	Timeout        config.Duration `toml:"timeout"`
+	Version        string          `toml:"version"`
 
 	// Settings for version 3
 	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
@@ -49,7 +49,7 @@ type SnmpTrap struct {
 	timeFunc func() time.Time
 	errCh    chan error
 
-	makeHandlerWrapper func(handler) handler
+	makeHandlerWrapper func(gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -111,11 +111,11 @@ func init() {
 	})
 }
 
-func realExecCmd(Timeout internal.Duration, arg0 string, args ...string) ([]byte, error) {
+func realExecCmd(timeout config.Duration, arg0 string, args ...string) ([]byte, error) {
 	cmd := exec.Command(arg0, args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, Timeout.Duration)
+	err := internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +260,7 @@ func setTrapOid(tags map[string]string, oid string, e mibEntry) {
 	tags["mib"] = e.mibName
 }
 
-func makeTrapHandler(s *SnmpTrap) handler {
+func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 	return func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr) {
 		tm := s.timeFunc()
 		fields := map[string]interface{}{}

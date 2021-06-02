@@ -45,7 +45,7 @@ func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {
 				return err
 			}
 
-			fields[string(field)] = int64(m)
+			fields[string(field)] = m
 		}
 	}
 

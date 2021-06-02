@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTrig(t *testing.T) {
@@ -18,7 +19,7 @@ func TestTrig(t *testing.T) {
 		sine := math.Sin((i*math.Pi)/5.0) * s.Amplitude
 		cosine := math.Cos((i*math.Pi)/5.0) * s.Amplitude
 
-		s.Gather(&acc)
+		require.NoError(t, s.Gather(&acc))
 
 		fields := make(map[string]interface{})
 		fields["sine"] = sine

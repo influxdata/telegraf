@@ -18,9 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Midnight 9/22/2015
-const baseTimeSeconds = 1442905200
-
 const validJSON = `
 {
     "status": "green",
@@ -38,20 +35,6 @@ const validJSON = `
 const malformedJSON = `
 {
     "status": "green",
-`
-
-const lineProtocol = "cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1\n"
-const lineProtocolEmpty = ""
-const lineProtocolShort = "ab"
-
-const lineProtocolMulti = `
-cpu,cpu=cpu0,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu1,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu2,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu3,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu4,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu5,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
-cpu,cpu=cpu6,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
 `
 
 type CarriageReturnTest struct {
@@ -91,7 +74,7 @@ func newRunnerMock(out []byte, errout []byte, err error) Runner {
 	}
 }
 
-func (r runnerMock) Run(command string, _ time.Duration) ([]byte, []byte, error) {
+func (r runnerMock) Run(_ string, _ time.Duration) ([]byte, []byte, error) {
 	return r.out, r.errout, r.err
 }
 
@@ -217,12 +200,14 @@ func TestTruncate(t *testing.T) {
 			name: "should not truncate",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				b.WriteString("hello world")
+				_, err := b.WriteString("hello world")
+				require.NoError(t, err)
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				b.WriteString("hello world")
+				_, err := b.WriteString("hello world")
+				require.NoError(t, err)
 				return &b
 			},
 		},
@@ -230,12 +215,14 @@ func TestTruncate(t *testing.T) {
 			name: "should truncate up to the new line",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				b.WriteString("hello world\nand all the people")
+				_, err := b.WriteString("hello world\nand all the people")
+				require.NoError(t, err)
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				b.WriteString("hello world...")
+				_, err := b.WriteString("hello world...")
+				require.NoError(t, err)
 				return &b
 			},
 		},
@@ -244,24 +231,26 @@ func TestTruncate(t *testing.T) {
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
 				for i := 0; i < 2*MaxStderrBytes; i++ {
-					b.WriteByte('b')
+					require.NoError(t, b.WriteByte('b'))
 				}
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
 				for i := 0; i < MaxStderrBytes; i++ {
-					b.WriteByte('b')
+					require.NoError(t, b.WriteByte('b'))
 				}
-				b.WriteString("...")
+				_, err := b.WriteString("...")
+				require.NoError(t, err)
 				return &b
 			},
 		},
 	}
 
+	c := CommandRunner{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := truncate(*tt.bufF())
+			res := c.truncate(*tt.bufF())
 			require.Equal(t, tt.expF().Bytes(), res.Bytes())
 		})
 	}
@@ -272,14 +261,14 @@ func TestRemoveCarriageReturns(t *testing.T) {
 		// Test that all carriage returns are removed
 		for _, test := range crTests {
 			b := bytes.NewBuffer(test.input)
-			out := removeCarriageReturns(*b)
+			out := removeWindowsCarriageReturns(*b)
 			assert.True(t, bytes.Equal(test.output, out.Bytes()))
 		}
 	} else {
 		// Test that the buffer is returned unaltered
 		for _, test := range crTests {
 			b := bytes.NewBuffer(test.input)
-			out := removeCarriageReturns(*b)
+			out := removeWindowsCarriageReturns(*b)
 			assert.True(t, bytes.Equal(test.input, out.Bytes()))
 		}
 	}

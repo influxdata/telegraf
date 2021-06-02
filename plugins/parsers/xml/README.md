@@ -53,7 +53,8 @@ that need to be specified in a `fields_int` section.
 ```
 
 A configuration can contain muliple *xml* subsections for e.g. the file plugin to process the xml-string multiple times.
-Consult the [XPath syntax][xpath] and the [underlying library's functions][xpath lib] for details and help regarding XPath queries.
+Consult the [XPath syntax][xpath] and the [underlying library's functions][xpath lib] for details and help regarding XPath queries. Consider using an XPath tester such as [xpather.com][xpather] or [Code Beautify's XPath Tester][xpath tester] for help developing and debugging 
+your query.
 
 Alternatively to the configuration above, fields can also be specified in a batch way. So contrary to specify the fields
 in a section, you can define a `name` and a `value` selector used to determine the name and value of the fields in the
@@ -341,5 +342,7 @@ For each selected *field-node* we use `field_name` and `field_value` to determin
 [xpath lib]:    https://github.com/antchfx/xpath
 [xml]:          https://www.w3.org/XML/
 [xpath]:        https://www.w3.org/TR/xpath/
+[xpather]:      http://xpather.com/
+[xpath tester]: https://codebeautify.org/Xpath-Tester
 [time const]:   https://golang.org/pkg/time/#pkg-constants
 [time parse]:   https://golang.org/pkg/time/#Parse

@@ -10,12 +10,12 @@ import (
 )
 
 func createTestMetric() telegraf.Metric {
-	metric, _ := metric.New("m1",
+	m := metric.New("m1",
 		map[string]string{"metric_tag": "from_metric"},
 		map[string]interface{}{"value": int64(1)},
 		time.Now(),
 	)
-	return metric
+	return m
 }
 
 func calculateProcessedTags(processor Clone, metric telegraf.Metric) map[string]string {

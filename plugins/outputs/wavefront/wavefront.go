@@ -316,7 +316,7 @@ func buildValue(v interface{}, name string, w *Wavefront) (float64, error) {
 		for prefix, mappings := range w.StringToNumber {
 			if strings.HasPrefix(name, prefix) {
 				for _, mapping := range mappings {
-					val, hasVal := mapping[string(p)]
+					val, hasVal := mapping[p]
 					if hasVal {
 						return val, nil
 					}

@@ -13,14 +13,14 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 const (
 	oneAgentMetricsURL   = "http://127.0.0.1:14499/metrics/ingest"
-	dtIngestApiLineLimit = 1000
+	dtIngestAPILineLimit = 1000
 )
 
 var (
@@ -31,12 +31,12 @@ var (
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL               string            `toml:"url"`
-	APIToken          string            `toml:"api_token"`
-	Prefix            string            `toml:"prefix"`
-	Log               telegraf.Logger   `toml:"-"`
-	Timeout           internal.Duration `toml:"timeout"`
-	AddCounterMetrics []string          `toml:"additional_counters"`
+	URL               string          `toml:"url"`
+	APIToken          string          `toml:"api_token"`
+	Prefix            string          `toml:"prefix"`
+	Log               telegraf.Logger `toml:"-"`
+	Timeout           config.Duration `toml:"timeout"`
+	AddCounterMetrics []string        `toml:"additional_counters"`
 	State             map[string]string
 	SendCounter       int
 
@@ -235,7 +235,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 					fmt.Fprintf(&buf, "%s%s %v\n", metricID, tagb.String(), value)
 				}
 
-				if metricCounter%dtIngestApiLineLimit == 0 {
+				if metricCounter%dtIngestAPILineLimit == 0 {
 					err = d.send(buf.Bytes())
 					if err != nil {
 						return err
@@ -312,7 +312,7 @@ func (d *Dynatrace) Init() error {
 			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: d.Timeout.Duration,
+		Timeout: time.Duration(d.Timeout),
 	}
 	return nil
 }
@@ -320,7 +320,7 @@ func (d *Dynatrace) Init() error {
 func init() {
 	outputs.Add("dynatrace", func() telegraf.Output {
 		return &Dynatrace{
-			Timeout:     internal.Duration{Duration: time.Second * 5},
+			Timeout:     config.Duration(time.Second * 5),
 			SendCounter: 0,
 		}
 	})

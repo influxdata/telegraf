@@ -1,20 +1,9 @@
-# BigQuery Google Cloud Output Plugin
+# Google BigQuery Output Plugin
 
-This plugin writes to the [Google Cloud BigQuery][bigquery] and requires [authentication][] 
-with Google Cloud using either a service account or user credentials
+This plugin writes to the [Google Cloud BigQuery](https://cloud.google.com/bigquery) and requires [authentication](https://cloud.google.com/bigquery/docs/authentication) 
+with Google Cloud using either a service account or user credentials.
 
-This plugin accesses APIs which are [chargeable][pricing]; you might incur
-costs.
-
-Requires `project` to specify where BigQuery entries will be persisted.
-
-Requires `dataset` to specify under which BigQuery dataset the corresponding metrics tables reside.
-
-Each metric should have a corresponding table to BigQuery. 
-The schema of the table on BigQuery:
-* Should contain the field `timestamp` which is the timestamp of a telegraph metrics
-* Should contain the metric's tags with the same name and the column type should be set to string.
-* Should contain the metric's fields with the same name and the column type should match the field type.
+Be aware that this plugin accesses APIs that are [chargeable](https://cloud.google.com/bigquery/pricing) and might incur costs.
 
 ### Configuration
 
@@ -32,6 +21,15 @@ The schema of the table on BigQuery:
   ## Character to replace hyphens on Metric name
   # replace_hyphen_to = "_"
 ```
+Requires `project` to specify where BigQuery entries will be persisted.
+
+Requires `dataset` to specify under which BigQuery dataset the corresponding metrics tables reside.
+
+Each metric should have a corresponding table to BigQuery. 
+The schema of the table on BigQuery:
+* Should contain the field `timestamp` which is the timestamp of a telegraph metrics
+* Should contain the metric's tags with the same name and the column type should be set to string.
+* Should contain the metric's fields with the same name and the column type should match the field type.
 
 ### Restrictions
 

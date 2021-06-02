@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	framing "github.com/influxdata/telegraf/internal/syslog"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -40,17 +40,15 @@ func newUDPSyslogReceiver(address string, bestEffort bool) *Syslog {
 	}
 }
 
-func newTCPSyslogReceiver(address string, keepAlive *internal.Duration, maxConn int, bestEffort bool, f framing.Framing) *Syslog {
-	d := &internal.Duration{
-		Duration: defaultReadTimeout,
-	}
+func newTCPSyslogReceiver(address string, keepAlive *config.Duration, maxConn int, bestEffort bool, f framing.Framing) *Syslog {
+	d := config.Duration(defaultReadTimeout)
 	s := &Syslog{
 		Address: address,
 		now: func() time.Time {
 			return defaultTime
 		},
 		Framing:     f,
-		ReadTimeout: d,
+		ReadTimeout: &d,
 		BestEffort:  bestEffort,
 		Separator:   "_",
 	}

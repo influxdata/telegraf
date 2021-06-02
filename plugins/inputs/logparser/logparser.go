@@ -143,7 +143,7 @@ func (l *LogParserPlugin) Init() error {
 }
 
 // Gather is the primary function to collect the metrics for the plugin
-func (l *LogParserPlugin) Gather(acc telegraf.Accumulator) error {
+func (l *LogParserPlugin) Gather(_ telegraf.Accumulator) error {
 	l.Lock()
 	defer l.Unlock()
 

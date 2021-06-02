@@ -97,14 +97,16 @@ func (p *PowerdnsRecursor) gatherServer(address string, acc telegraf.Accumulator
 	}
 	defer conn.Close()
 
-	conn.SetDeadline(time.Now().Add(defaultTimeout))
+	if err := conn.SetDeadline(time.Now().Add(defaultTimeout)); err != nil {
+		return err
+	}
 
 	// Read and write buffer
 	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 
 	// Send command
 	if _, err := fmt.Fprint(rw, "get-all\n"); err != nil {
-		return nil
+		return err
 	}
 	if err := rw.Flush(); err != nil {
 		return err
@@ -130,9 +132,7 @@ func (p *PowerdnsRecursor) gatherServer(address string, acc telegraf.Accumulator
 
 	acc.AddFields("powerdns_recursor", fields, tags)
 
-	conn.Close()
-
-	return nil
+	return conn.Close()
 }
 
 func parseResponse(metrics string) map[string]interface{} {

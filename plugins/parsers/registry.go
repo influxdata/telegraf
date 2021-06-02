@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 	"github.com/influxdata/telegraf/plugins/parsers/xml"
@@ -248,6 +249,8 @@ func NewParser(config *Config) (Parser, error) {
 		)
 	case "prometheus":
 		parser, err = NewPrometheusParser(config.DefaultTags)
+	case "prometheusremotewrite":
+		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
 	case "xml":
 		parser, err = NewXMLParser(config.MetricName, config.DefaultTags, config.XMLConfig)
 	default:
@@ -357,6 +360,12 @@ func NewFormUrlencodedParser(
 
 func NewPrometheusParser(defaultTags map[string]string) (Parser, error) {
 	return &prometheus.Parser{
+		DefaultTags: defaultTags,
+	}, nil
+}
+
+func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, error) {
+	return &prometheusremotewrite.Parser{
 		DefaultTags: defaultTags,
 	}, nil
 }

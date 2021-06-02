@@ -113,7 +113,7 @@ func (r *AwsEc2Processor) Description() string {
 	return "Attach AWS EC2 metadata to metrics"
 }
 
-func (r *AwsEc2Processor) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
+func (r *AwsEc2Processor) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 	r.parallel.Enqueue(metric)
 	return nil
 }

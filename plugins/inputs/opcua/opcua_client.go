@@ -328,10 +328,18 @@ func newMP(n *Node) metricParts {
 	var sb strings.Builder
 	for i, key := range keys {
 		if i != 0 {
+			// Writes to a string-builder will always succeed
+			//nolint:errcheck,revive
 			sb.WriteString(", ")
 		}
+		// Writes to a string-builder will always succeed
+		//nolint:errcheck,revive
 		sb.WriteString(key)
+		// Writes to a string-builder will always succeed
+		//nolint:errcheck,revive
 		sb.WriteString("=")
+		// Writes to a string-builder will always succeed
+		//nolint:errcheck,revive
 		sb.WriteString(n.metricTags[key])
 	}
 	x := metricParts{
@@ -397,7 +405,9 @@ func Connect(o *OpcUA) error {
 		o.state = Connecting
 
 		if o.client != nil {
-			o.client.CloseSession()
+			if err := o.client.CloseSession(); err != nil {
+				return err
+			}
 		}
 
 		o.client = opcua.NewClient(o.Endpoint, o.opts...)
@@ -440,13 +450,16 @@ func (o *OpcUA) setupOptions() error {
 
 	if o.Certificate == "" && o.PrivateKey == "" {
 		if o.SecurityPolicy != "None" || o.SecurityMode != "None" {
-			o.Certificate, o.PrivateKey = generateCert("urn:telegraf:gopcua:client", 2048, o.Certificate, o.PrivateKey, (365 * 24 * time.Hour))
+			o.Certificate, o.PrivateKey, err = generateCert("urn:telegraf:gopcua:client", 2048, o.Certificate, o.PrivateKey, (365 * 24 * time.Hour))
+			if err != nil {
+				return err
+			}
 		}
 	}
 
-	o.opts = generateClientOpts(endpoints, o.Certificate, o.PrivateKey, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password, time.Duration(o.RequestTimeout))
+	o.opts, err = generateClientOpts(endpoints, o.Certificate, o.PrivateKey, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password, time.Duration(o.RequestTimeout))
 
-	return nil
+	return err
 }
 
 func (o *OpcUA) getData() error {
@@ -512,6 +525,8 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	err := o.getData()
 	if err != nil && o.state == Connected {
 		o.state = Disconnected
+		// Ignore returned error to not mask the original problem
+		//nolint:errcheck,revive
 		disconnect(o)
 		return err
 	}

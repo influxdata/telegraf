@@ -47,7 +47,7 @@ func Compile(filters []string) (Filter, error) {
 
 // hasMeta reports whether path contains any magic glob characters.
 func hasMeta(s string) bool {
-	return strings.IndexAny(s, "*?[") >= 0
+	return strings.ContainsAny(s, "*?[")
 }
 
 type filter struct {

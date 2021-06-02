@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
@@ -95,7 +95,7 @@ func TestConnectUDPConfig(t *testing.T) {
 
 	output := influxdb.InfluxDB{
 		URLs:       []string{"udp://localhost:8089"},
-		UDPPayload: internal.Size{Size: 42},
+		UDPPayload: config.Size(42),
 
 		CreateUDPClientF: func(config *influxdb.UDPConfig) (influxdb.Client, error) {
 			actual = config
@@ -120,7 +120,7 @@ func TestConnectHTTPConfig(t *testing.T) {
 		Database:         "telegraf",
 		RetentionPolicy:  "default",
 		WriteConsistency: "any",
-		Timeout:          internal.Duration{Duration: 5 * time.Second},
+		Timeout:          config.Duration(5 * time.Second),
 		Username:         "guy",
 		Password:         "smiley",
 		UserAgent:        "telegraf",
@@ -153,7 +153,7 @@ func TestConnectHTTPConfig(t *testing.T) {
 
 	require.Equal(t, output.URLs[0], actual.URL.String())
 	require.Equal(t, output.UserAgent, actual.UserAgent)
-	require.Equal(t, output.Timeout.Duration, actual.Timeout)
+	require.Equal(t, time.Duration(output.Timeout), actual.Timeout)
 	require.Equal(t, output.Username, actual.Username)
 	require.Equal(t, output.Password, actual.Password)
 	require.Equal(t, output.HTTPProxy, actual.Proxy.String())
@@ -200,7 +200,7 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 	err := output.Connect()
 	require.NoError(t, err)
 
-	m, err := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
@@ -208,7 +208,6 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 		},
 		time.Unix(0, 0),
 	)
-	require.NoError(t, err)
 	metrics := []telegraf.Metric{m}
 
 	err = output.Write(metrics)

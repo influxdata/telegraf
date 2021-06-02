@@ -14,7 +14,7 @@ import (
 
 func TestSimpleReverseLookup(t *testing.T) {
 	now := time.Now()
-	m, _ := metric.New("name", map[string]string{
+	m := metric.New("name", map[string]string{
 		"dest_ip": "8.8.8.8",
 	}, map[string]interface{}{
 		"source_ip": "127.0.0.1",

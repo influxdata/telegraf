@@ -15,6 +15,7 @@ Protocol or in JSON format.
 - [Logfmt](/plugins/parsers/logfmt)
 - [Nagios](/plugins/parsers/nagios)
 - [Prometheus](/plugins/parsers/prometheus)
+- [PrometheusRemoteWrite](/plugins/parsers/prometheusremotewrite)
 - [Value](/plugins/parsers/value), ie: 45 or "booyah"
 - [Wavefront](/plugins/parsers/wavefront)
 - [XML](/plugins/parsers/xml)

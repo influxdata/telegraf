@@ -54,15 +54,7 @@ written as a dimension on each Azure Monitor metric.
    [enable system-assigned managed identity][enable msi].
 2. Use a region that supports Azure Monitor Custom Metrics,
    For regions with Custom Metrics support, an endpoint will be available with
-   the format `https://<region>.monitoring.azure.com`. The following regions
-   are currently known to be supported:
-    - East US (eastus)
-    - West US 2 (westus2)
-    - South Central US (southcentralus)
-    - West Central US (westcentralus)
-    - North Europe (northeurope)
-    - West Europe (westeurope)
-    - Southeast Asia (southeastasia)
+   the format `https://<region>.monitoring.azure.com`.
 
 [resource provider]: https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-manager-supported-services
 [enable msi]: https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm

@@ -14,12 +14,13 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	parser_v2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
-	"github.com/kubernetes/apimachinery/pkg/fields"
-	"github.com/kubernetes/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1`
@@ -48,7 +49,7 @@ type Prometheus struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
 
 	MetricVersion int `toml:"metric_version"`
 
@@ -58,7 +59,8 @@ type Prometheus struct {
 
 	Log telegraf.Logger
 
-	client *http.Client
+	client  *http.Client
+	headers map[string]string
 
 	// Should we scrape Kubernetes services for prometheus annotations
 	MonitorPods       bool   `toml:"monitor_kubernetes_pods"`
@@ -74,7 +76,6 @@ type Prometheus struct {
 	// Only for monitor_kubernetes_pods=true and pod_scrape_scope="node"
 	podLabelSelector  labels.Selector
 	podFieldSelector  fields.Selector
-	nodeIP            string
 	isNodeScrapeScope bool
 }
 
@@ -87,12 +88,12 @@ var sampleConfig = `
   ## value in both plugins to ensure metrics are round-tripped without
   ## modification.
   ##
-  ##   example: metric_version = 1; deprecated in 1.13
+  ##   example: metric_version = 1; 
   ##            metric_version = 2; recommended version
   # metric_version = 1
 
   ## Url tag name (tag containing scrapped url. optional, default is "url")
-  # url_tag = "scrapeUrl"
+  # url_tag = "url"
 
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
@@ -156,9 +157,6 @@ func (p *Prometheus) Description() string {
 }
 
 func (p *Prometheus) Init() error {
-	if p.MetricVersion != 2 {
-		p.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
-	}
 
 	// Config proccessing for node scrape scope for monitor_kubernetes_pods
 	p.isNodeScrapeScope = strings.EqualFold(p.PodScrapeScope, "node")
@@ -170,8 +168,8 @@ func (p *Prometheus) Init() error {
 			// Check if set as env var and is valid IP address
 			envVarNodeIP := os.Getenv("NODE_IP")
 			if envVarNodeIP == "" || net.ParseIP(envVarNodeIP) == nil {
-				errorMessage := "The node_ip config and the environment variable NODE_IP are not set or invalid. Cannot get pod list for monitor_kubernetes_pods using node scrape scope"
-				return errors.New(errorMessage)
+				return errors.New("the node_ip config and the environment variable NODE_IP are not set or invalid; " +
+					"cannot get pod list for monitor_kubernetes_pods using node scrape scope")
 			}
 
 			p.NodeIP = envVarNodeIP
@@ -181,15 +179,15 @@ func (p *Prometheus) Init() error {
 		var err error
 		p.podLabelSelector, err = labels.Parse(p.KubernetesLabelSelector)
 		if err != nil {
-			return fmt.Errorf("Error parsing the specified label selector(s): %s", err.Error())
+			return fmt.Errorf("error parsing the specified label selector(s): %s", err.Error())
 		}
 		p.podFieldSelector, err = fields.ParseSelector(p.KubernetesFieldSelector)
 		if err != nil {
-			return fmt.Errorf("Error parsing the specified field selector(s): %s", err.Error())
+			return fmt.Errorf("error parsing the specified field selector(s): %s", err.Error())
 		}
 		isValid, invalidSelector := fieldSelectorIsSupported(p.podFieldSelector)
 		if !isValid {
-			return fmt.Errorf("The field selector %s is not supported for pods", invalidSelector)
+			return fmt.Errorf("the field selector %s is not supported for pods", invalidSelector)
 		}
 
 		p.Log.Infof("Using pod scrape scope at node level to get pod list using cAdvisor.")
@@ -228,7 +226,7 @@ type URLAndAddress struct {
 }
 
 func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
-	allURLs := make(map[string]URLAndAddress, 0)
+	allURLs := make(map[string]URLAndAddress)
 	for _, u := range p.URLs {
 		URL, err := url.Parse(u)
 		if err != nil {
@@ -277,6 +275,10 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		p.client = client
+		p.headers = map[string]string{
+			"User-Agent": internal.ProductToken(),
+			"Accept":     acceptHeader,
+		}
 	}
 
 	var wg sync.WaitGroup
@@ -309,7 +311,7 @@ func (p *Prometheus) createHTTPClient() (*http.Client, error) {
 			TLSClientConfig:   tlsCfg,
 			DisableKeepAlives: true,
 		},
-		Timeout: p.ResponseTimeout.Duration,
+		Timeout: time.Duration(p.ResponseTimeout),
 	}
 
 	return client, nil
@@ -342,7 +344,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 					return c, err
 				},
 			},
-			Timeout: p.ResponseTimeout.Duration,
+			Timeout: time.Duration(p.ResponseTimeout),
 		}
 	} else {
 		if u.URL.Path == "" {
@@ -354,7 +356,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		}
 	}
 
-	req.Header.Add("Accept", acceptHeader)
+	p.addHeaders(req)
 
 	if p.BearerToken != "" {
 		token, err := ioutil.ReadFile(p.BearerToken)
@@ -431,6 +433,12 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	return nil
 }
 
+func (p *Prometheus) addHeaders(req *http.Request) {
+	for header, value := range p.headers {
+		req.Header.Add(header, value)
+	}
+}
+
 /* Check if the field selector specified is valid.
  * See ToSelectableFields() for list of fields that are selectable:
  * https://github.com/kubernetes/kubernetes/release-1.20/pkg/registry/core/pod/strategy.go
@@ -456,7 +464,7 @@ func fieldSelectorIsSupported(fieldSelector fields.Selector) (bool, string) {
 }
 
 // Start will start the Kubernetes scraping if enabled in the configuration
-func (p *Prometheus) Start(a telegraf.Accumulator) error {
+func (p *Prometheus) Start(_ telegraf.Accumulator) error {
 	if p.MonitorPods {
 		var ctx context.Context
 		ctx, p.cancel = context.WithCancel(context.Background())
@@ -475,7 +483,7 @@ func (p *Prometheus) Stop() {
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
 		return &Prometheus{
-			ResponseTimeout: internal.Duration{Duration: time.Second * 3},
+			ResponseTimeout: config.Duration(time.Second * 3),
 			kubernetesPods:  map[string]URLAndAddress{},
 			URLTag:          "url",
 		}
