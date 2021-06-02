@@ -324,7 +324,6 @@ func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
 	require.Equal(t, 4, responseCounter)
 }
 
-
 func TestConfig_getDefaultConfigPathFromEnvURL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -339,6 +338,7 @@ func TestConfig_getDefaultConfigPathFromEnvURL(t *testing.T) {
 	require.Equal(t, ts.URL, configPath)
 	err = c.LoadConfig("")
 	require.NoError(t, err)
+}
 
 func TestConfig_URLLikeFileName(t *testing.T) {
 	c := NewConfig()
