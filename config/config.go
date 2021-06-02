@@ -712,7 +712,7 @@ func getDefaultConfigPath() (string, error) {
 		etcfile = programFiles + `\Telegraf\telegraf.conf`
 	}
 	for _, path := range []string{envfile, homefile, etcfile} {
-		if isUrl(path) {
+		if isURL(path) {
 			log.Printf("I! Using config url: %s", path)
 			return path, nil
 		}
@@ -727,8 +727,8 @@ func getDefaultConfigPath() (string, error) {
 		" in $TELEGRAF_CONFIG_PATH, %s, or %s", homefile, etcfile)
 }
 
-// isUrl checks if string is valid url
-func isUrl(str string) bool {
+// isURL checks if string is valid url
+func isURL(str string) bool {
 	u, err := url.Parse(str)
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
