@@ -25,14 +25,14 @@ data_format = "json_v2"
                 path =
                 rename =
             [[object]]
-                path = # (REQUIRED) A valid GJSON path
-                disable_nesting = # (OPTIONAL) Set to true to prevent going into sub-objects/arrays
-                disable_flattened_names = # (OPTIONAL) Set to true to prevent resulting nested names to be flattened in the result **NOTE**: duplicate names can overwrite each other when this is enabled
-                excluded_keys = [] # (OPTIONAL) You can define json keys to be excluded in the metric, use flattened names for nested results
-                tags = [] # (OPTIONAL) You can define json keys to be set as tags instead of fields
-                [renames] # (OPTIONAL) A table matching the json key with the desired name (oppossed to defaulting to using the key), use flattened names for nested results
+                path =
+                disable_nesting =
+                disable_flattened_names =
+                excluded_keys =
+                tags =
+                [renames]
                     key = new_name
-                [fields] # (OPTIONAL) A table matching the json key with the desired type (int,string,bool,float)
+                [fields]
                     key = type
 ```
 ---
