@@ -16,7 +16,6 @@ import (
 )
 
 type AzureDataExplorer struct {
-	Ok           bool            `toml:"ok"`
 	Endpoint     string          `toml:"endpoint_url"`
 	Database     string          `toml:"database"`
 	Table        string          `toml:"table"`
@@ -35,7 +34,25 @@ func (s *AzureDataExplorer) Description() string {
 
 func (s *AzureDataExplorer) SampleConfig() string {
 	return `
-  ok = true
+  ## Azure Data Exlorer cluster endpoint
+  ## ex: endpoint_url = "https://clustername.australiasoutheast.kusto.windows.net"
+  # endpoint_url = ""
+  
+  ## The name of the database in Azure Data Explorer where the ingestion will happen
+  # database = ""
+
+  ## The name of the table in Azure Data Explorer where the ingestion will happen
+  # table = ""
+
+  ## The client ID of the Service Principal in Azure that has ingestion rights to the Azure Data Exploer Cluster
+  # client_id = ""
+
+  ## The client secret of the Service Principal in Azure that has ingestion rights to the Azure Data Exploer Cluster
+
+  # client_secret = ""
+
+  ## The tenant ID of the Azure Subsciption in which the Service Principal belongs to
+  # tenant_id = ""
 `
 }
 
@@ -61,8 +78,10 @@ func (s *AzureDataExplorer) Connect() error {
 }
 
 func (s *AzureDataExplorer) Close() error {
-	// Close any connections here.
-	// Write will not be called once Close is called, so there is no need to synchronize.
+
+	s.Client = nil
+	s.Ingester = nil
+
 	return nil
 }
 
@@ -75,7 +94,6 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 		reqBody = append(reqBody, metricInBytes[:]...)
-
 	}
 
 	reader := bytes.NewReader(reqBody)
