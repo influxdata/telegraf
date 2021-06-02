@@ -3,10 +3,10 @@
 
 package sql
 
-// Register sqlite sql driver. This requires cgo. Telegraf's build
+// The modernc.org sqlite driver requires cgo. Telegraf's build
 // automation relies on cross compiling from linux and cgo doesn't
 // work well when cross compiling for different operating systems, so
 // this driver is limited to linux for now.
 import (
-	_ "modernc.org/sqlite" // register sqlite driver
+	_ "modernc.org/sqlite" // Register sqlite sql driver
 )
