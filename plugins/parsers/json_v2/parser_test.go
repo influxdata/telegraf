@@ -22,44 +22,40 @@ func TestData(t *testing.T) {
 		test string
 	}{
 		{
-			name: "Test a simple example of uniform_collection",
-			test: "simple_uniform_collection",
+			name: "Test using just fields and tags",
+			test: "fields_and_tags",
 		},
 		{
-			name: "Test type conversion",
+			name: "Test gathering from array of nested objects",
+			test: "nested_array_of_objects",
+		},
+		{
+			name: "Test setting timestamp",
+			test: "timestamp",
+		},
+		{
+			name: "Test setting measurement name from int",
+			test: "measurement_name_int",
+		},
+		{
+			name: "Test multiple types",
 			test: "types",
 		},
 		{
-			name: "Test nested fields and tags with object_selection",
-			test: "fields_tags_in_object",
-		},
-		{
-			name: "Test selecting with both uniform_collection and object_selection",
-			test: "uniform_and_objects_together",
-		},
-		{
-			name: "Test nested tags",
+			name: "Test settings tags in nested object",
 			test: "nested_tags",
 		},
 		{
-			name: "Test nested tags in a more complicated structure",
-			test: "nested_tags_complex",
+			name: "Test settings tags in nested and non-nested objects",
+			test: "nested_and_nonnested_tags",
 		},
 		{
-			name: "Test nested and non-nested tags",
-			test: "nested_and_nonnested_tags",
+			name: "Test a more complex nested tag retrieval",
+			test: "nested_tags_complex",
 		},
 		{
 			name: "Test multiple arrays in object",
 			test: "multiple_arrays_in_object",
-		},
-		{
-			name: "Test query for measurement name",
-			test: "measurement_name",
-		},
-		{
-			name: "Test query for measurement name with an integer",
-			test: "measurement_name_int",
 		},
 	}
 

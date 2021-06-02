@@ -1390,44 +1390,58 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 
 	//for JSONPath parser
 	if node, ok := tbl.Fields["json_v2"]; ok {
-		if subtbls, ok := node.([]*ast.Table); ok {
-			pc.JSONV2Config = make([]parsers.JSONV2Config, len(subtbls))
-			for i, subtbl := range subtbls {
-				subcfg := pc.JSONV2Config[i]
-				c.getFieldString(subtbl, "measurement_name_query", &subcfg.MeasurementNameQuery)
-				subcfg.DefaultMeasurementName = name
+		if metricConfigs, ok := node.([]*ast.Table); ok {
+			pc.JSONV2Config = make([]parsers.JSONV2Config, len(metricConfigs))
+			for i, metricConfig := range metricConfigs {
+				mc := pc.JSONV2Config[i]
+				c.getFieldString(metricConfig, "measurement_name", &mc.MeasurementName)
+				c.getFieldString(metricConfig, "measurement_name_path", &mc.MeasurementNamePath)
+				mc.DefaultMeasurementName = name // Used if measurement_name_path fails or returns an array/object
 
-				if subnode, ok := subtbl.Fields["uniform_collection"]; ok {
-					if subsubtbls, ok := subnode.([]*ast.Table); ok {
-						for _, subsubtbl := range subsubtbls {
-							var f json_v2.UniformCollection
-							c.getFieldString(subsubtbl, "query", &f.Query)
-							c.getFieldString(subsubtbl, "name", &f.Name)
-							c.getFieldString(subsubtbl, "value_type", &f.ValueType)
-							c.getFieldString(subsubtbl, "set_type", &f.SetType)
-							subcfg.UniformCollections = append(subcfg.UniformCollections, f)
+				c.getFieldString(metricConfig, "timestamp_path", &mc.TimestampPath)
+				c.getFieldString(metricConfig, "timestamp_format", &mc.TimestampFormat)
+				c.getFieldString(metricConfig, "timestamp_timezone", &mc.TimestampTimezone)
+
+				if fieldConfigs, ok := metricConfig.Fields["field"]; ok {
+					if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
+						for _, fieldconfig := range fieldConfigs {
+							var f json_v2.DataSet
+							c.getFieldString(fieldconfig, "path", &f.Path)
+							c.getFieldString(fieldconfig, "rename", &f.Rename)
+							c.getFieldString(fieldconfig, "type", &f.Type)
+							mc.Fields = append(mc.Fields, f)
+						}
+					}
+				}
+				if fieldConfigs, ok := metricConfig.Fields["tag"]; ok {
+					if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
+						for _, fieldconfig := range fieldConfigs {
+							var t json_v2.DataSet
+							c.getFieldString(fieldconfig, "path", &t.Path)
+							c.getFieldString(fieldconfig, "rename", &t.Rename)
+							t.Type = "string"
+							mc.Tags = append(mc.Tags, t)
 						}
 					}
 				}
 
-				if subnode, ok := subtbl.Fields["object_selection"]; ok {
-					if subsubtbls, ok := subnode.([]*ast.Table); ok {
-						for _, subsubtbl := range subsubtbls {
-							var f json_v2.ObjectSelection
-							c.getFieldString(subsubtbl, "query", &f.Query)
-
-							c.getFieldStringMap(subsubtbl, "names", &f.Names)
-							c.getFieldStringMap(subsubtbl, "value_types", &f.ValueTypes)
-
-							c.getFieldStringSlice(subsubtbl, "tag_list", &f.TagList)
-							c.getFieldStringSlice(subsubtbl, "included_keys", &f.IncludedKeys)
-							c.getFieldStringSlice(subsubtbl, "ignored_keys", &f.IgnoredKeys)
-							subcfg.ObjectSelections = append(subcfg.ObjectSelections, f)
+				if objectconfigs, ok := metricConfig.Fields["object"]; ok {
+					if objectconfigs, ok := objectconfigs.([]*ast.Table); ok {
+						for _, objectConfig := range objectconfigs {
+							var o json_v2.JSONObject
+							c.getFieldString(objectConfig, "path", &o.Path)
+							c.getFieldBool(objectConfig, "disable_prepend_keys", &o.DisablePrependKeys)
+							c.getFieldStringSlice(objectConfig, "included_keys", &o.IncludedKeys)
+							c.getFieldStringSlice(objectConfig, "excluded_keys", &o.ExcludedKeys)
+							c.getFieldStringSlice(objectConfig, "tags", &o.Tags)
+							c.getFieldStringMap(objectConfig, "renames", &o.Renames)
+							c.getFieldStringMap(objectConfig, "fields", &o.Fields)
+							mc.JSONObjects = append(mc.JSONObjects, o)
 						}
 					}
 				}
 
-				pc.JSONV2Config[i] = subcfg
+				pc.JSONV2Config[i] = mc
 			}
 		}
 	}

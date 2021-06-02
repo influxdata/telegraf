@@ -8,6 +8,13 @@
                     "Serial": "9JHNGTUT",
                     "Model": "WDC WUH721414ALE604",
                     "Firmware": "LDGSW07G"
+                },
+                {
+                    "Count": 2,
+                    "Errors": 0,
+                    "Serial": "9JHNGHJBT",
+                    "Model": "WDC WUH721414ALE604",
+                    "Firmware": "LDGSW07G"
                 }
             ]
         }

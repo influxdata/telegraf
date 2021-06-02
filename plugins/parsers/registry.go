@@ -411,10 +411,18 @@ func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs [
 func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
 	configs := make([]json_v2.Config, len(jsonv2config))
 	for i, cfg := range jsonv2config {
-		configs[i].MeasurementNameQuery = cfg.MeasurementNameQuery
+		configs[i].MeasurementName = cfg.MeasurementName
+		configs[i].MeasurementNamePath = cfg.MeasurementNamePath
 		configs[i].DefaultMeasurementName = cfg.DefaultMeasurementName
-		configs[i].UniformCollections = cfg.UniformCollections
-		configs[i].ObjectSelections = cfg.ObjectSelections
+
+		configs[i].TimestampPath = cfg.TimestampPath
+		configs[i].TimestampFormat = cfg.TimestampFormat
+		configs[i].TimestampTimezone = cfg.TimestampTimezone
+
+		configs[i].Fields = cfg.Fields
+		configs[i].Tags = cfg.Tags
+
+		configs[i].JSONObjects = cfg.JSONObjects
 	}
 	return &json_v2.Parser{
 		Configs: configs,
