@@ -2,7 +2,7 @@ package testutil
 
 import (
 	"fmt"
-	"log"
+	"log" //nolint
 
 	"github.com/influxdata/telegraf"
 )

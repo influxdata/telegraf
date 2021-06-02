@@ -1,3 +1,4 @@
+//nolint
 package influxdb_test
 
 import (
@@ -7,8 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-
-	//nolint:revive "log"
 	"net"
 	"net/http"
 	"net/http/httptest"
