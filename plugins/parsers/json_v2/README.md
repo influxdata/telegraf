@@ -26,7 +26,7 @@ data_format = "json_v2"
         [[object]]
             path = ""
             disable_prepend_keys = true/false
-            include_keys = []
+            included_keys = []
             excluded_keys = []
             tags = []
             [renames]
