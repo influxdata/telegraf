@@ -10,6 +10,12 @@ SET client_min_messages = warning;
 SET row_security = off;
 SET default_tablespace = '';
 SET default_table_access_method = heap;
+CREATE TABLE public."metric three" (
+    "timestamp" timestamp without time zone,
+    "tag four" text,
+    "string two" text
+);
+ALTER TABLE public."metric three" OWNER TO postgres;
 CREATE TABLE public.metric_one (
     "timestamp" timestamp without time zone,
     tag_one text,
@@ -24,9 +30,12 @@ CREATE TABLE public.metric_two (
     string_one text
 );
 ALTER TABLE public.metric_two OWNER TO postgres;
+COPY public."metric three" ("timestamp", "tag four", "string two") FROM stdin;
+2021-05-17 22:04:45	tag4	string2
+\.
 COPY public.metric_one ("timestamp", tag_one, tag_two, int64_one, int64_two) FROM stdin;
-2021-05-17 16:04:45	tag1	tag2	1234	2345
+2021-05-17 22:04:45	tag1	tag2	1234	2345
 \.
 COPY public.metric_two ("timestamp", tag_three, string_one) FROM stdin;
-2021-05-17 16:04:45	tag3	string1
+2021-05-17 22:04:45	tag3	string1
 \.

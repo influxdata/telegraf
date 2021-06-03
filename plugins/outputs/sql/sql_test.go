@@ -119,6 +119,22 @@ var (
 			},
 			ts,
 		),
+		stableMetric( //test spaces in metric, tag, and field names
+			"metric three",
+			[]telegraf.Tag{
+				{
+					Key:   "tag four",
+					Value: "tag4",
+				},
+			},
+			[]telegraf.Field{
+				{
+					Key:   "string two",
+					Value: "string2",
+				},
+			},
+			ts,
+		),
 	}
 )
 
@@ -182,6 +198,7 @@ func TestMysqlIntegration(t *testing.T) {
 	p.Driver = "mysql"
 	p.Address = address
 	p.Convert.Timestamp = "TEXT" //disable mysql default current_timestamp()
+	p.InitSQL = "SET sql_mode='ANSI_QUOTES';"
 
 	require.NoError(t, p.Connect())
 	require.NoError(t, p.Write(

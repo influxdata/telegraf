@@ -7,6 +7,15 @@ CREATE TABLE `bar` (
 INSERT INTO `bar` VALUES (1);
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `metric three` (
+  `timestamp` text DEFAULT NULL,
+  `tag four` text DEFAULT NULL,
+  `string two` text DEFAULT NULL
+);
+/*!40101 SET character_set_client = @saved_cs_client */;
+INSERT INTO `metric three` VALUES ('2021-05-17 22:04:45','tag4','string2');
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `metric_one` (
   `timestamp` text DEFAULT NULL,
   `tag_one` text DEFAULT NULL,

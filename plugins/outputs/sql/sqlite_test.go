@@ -57,13 +57,19 @@ func TestSqlite(t *testing.T) {
 	require.True(t, rows.Next())
 	require.NoError(t, rows.Scan(&sql))
 	require.Equal(t,
-		"CREATE TABLE metric_one(timestamp TIMESTAMP,tag_one TEXT,tag_two TEXT,int64_one INT,int64_two INT)",
+		`CREATE TABLE "metric_one"("timestamp" TIMESTAMP,"tag_one" TEXT,"tag_two" TEXT,"int64_one" INT,"int64_two" INT)`,
 		sql,
 	)
 	require.True(t, rows.Next())
 	require.NoError(t, rows.Scan(&sql))
 	require.Equal(t,
-		"CREATE TABLE metric_two(timestamp TIMESTAMP,tag_three TEXT,string_one TEXT)",
+		`CREATE TABLE "metric_two"("timestamp" TIMESTAMP,"tag_three" TEXT,"string_one" TEXT)`,
+		sql,
+	)
+	require.True(t, rows.Next())
+	require.NoError(t, rows.Scan(&sql))
+	require.Equal(t,
+		`CREATE TABLE "metric three"("timestamp" TIMESTAMP,"tag four" TEXT,"string two" TEXT)`,
 		sql,
 	)
 	require.False(t, rows.Next())
@@ -75,7 +81,7 @@ func TestSqlite(t *testing.T) {
 	timeLayout := "2006-01-02 15:04:05 -0700 MST"
 	var actualTime time.Time
 
-	// Check contents of table metric_one
+	// Check contents of tables
 	rows, err = db.Query("select timestamp, tag_one, tag_two, int64_one, int64_two from metric_one")
 	require.NoError(t, err)
 	require.True(t, rows.Next())
@@ -95,7 +101,6 @@ func TestSqlite(t *testing.T) {
 	require.False(t, rows.Next())
 	require.NoError(t, rows.Close()) //nolint:sqlclosecheck
 
-	// Check contents of table metric_one
 	rows, err = db.Query("select timestamp, tag_three, string_one from metric_two")
 	require.NoError(t, err)
 	require.True(t, rows.Next())
@@ -108,6 +113,21 @@ func TestSqlite(t *testing.T) {
 	require.Equal(t, ts, actualTime.UTC())
 	require.Equal(t, "tag3", g)
 	require.Equal(t, "string1", h)
+	require.False(t, rows.Next())
+	require.NoError(t, rows.Close()) //nolint:sqlclosecheck
+
+	rows, err = db.Query(`select timestamp, "tag four", "string two" from "metric three"`)
+	require.NoError(t, err)
+	require.True(t, rows.Next())
+	var (
+		i, j, k string
+	)
+	require.NoError(t, rows.Scan(&i, &j, &k))
+	actualTime, err = time.Parse(timeLayout, i)
+	require.NoError(t, err)
+	require.Equal(t, ts, actualTime.UTC())
+	require.Equal(t, "tag4", j)
+	require.Equal(t, "string2", k)
 	require.False(t, rows.Next())
 	require.NoError(t, rows.Close()) //nolint:sqlclosecheck
 }

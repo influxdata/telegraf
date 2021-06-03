@@ -27,10 +27,11 @@ type SQL struct {
 	Address             string
 	TableTemplate       string
 	TableExistsTemplate string
-	Tables              map[string]bool
+	InitSQL             string `toml:"init_sql"`
 	Convert             ConvertStruct
 
-	Log telegraf.Logger `toml:"-"`
+	Log    telegraf.Logger `toml:"-"`
+	Tables map[string]bool `toml:"-"`
 }
 
 func (p *SQL) Connect() error {
@@ -44,6 +45,13 @@ func (p *SQL) Connect() error {
 		return err
 	}
 
+	if p.InitSQL != "" {
+		_, err = db.Exec(p.InitSQL)
+		if err != nil {
+			return err
+		}
+	}
+
 	p.db = db
 	p.Tables = make(map[string]bool)
 
@@ -54,12 +62,29 @@ func (p *SQL) Close() error {
 	return p.db.Close()
 }
 
+// Quote an identifier (table or column name)
 func quoteIdent(name string) string {
-	return name
+	return `"` + strings.Replace(sanitizeQuoted(name), `"`, `""`, -1) + `"`
 }
 
-func quoteLiteral(name string) string {
+// Quote a string literal
+func quoteStr(name string) string {
 	return "'" + strings.Replace(name, "'", "''", -1) + "'"
+}
+
+func sanitizeQuoted(in string) string {
+	// https://dev.mysql.com/doc/refman/8.0/en/identifiers.html
+	// https://www.postgresql.org/docs/13/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
+
+	// Whitelist allowed characters
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r >= '\u0001' && r <= '\uFFFF':
+			return r
+		default:
+			return '_'
+		}
+	}, in)
 }
 
 func (p *SQL) deriveDatatype(value interface{}) string {
@@ -120,6 +145,9 @@ var sampleConfig = `
   ##
   # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
 
+  ## also NO_BACKSLASH_ESCAPES
+  # init_sql = "SET sql_mode='ANSI_QUOTES';"
+
   ## Convert Telegraf datatypes to these types
   #[outputs.sql.convert]
   #  integer              = "INT"
@@ -136,12 +164,10 @@ func (p *SQL) Description() string  { return "Send metrics to SQL Database" }
 func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	var columns []string
 	var pk []string
-	var sql []string
 
 	pk = append(pk, quoteIdent("timestamp"))
-	columns = append(columns, fmt.Sprintf("timestamp %s", p.Convert.Timestamp))
+	columns = append(columns, fmt.Sprintf("%s %s", quoteIdent("timestamp"), p.Convert.Timestamp))
 
-	// tags in measurement table
 	for _, tag := range metric.TagList() {
 		pk = append(pk, quoteIdent(tag.Key))
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(tag.Key), p.Convert.Text))
@@ -153,34 +179,36 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(field.Key), datatype))
 	}
 
-	var query string
-	query = strings.Replace(p.TableTemplate, "{TABLE}", quoteIdent(metric.Name()), -1) //metric name
-	query = strings.Replace(query, "{TABLELITERAL}", quoteLiteral(metric.Name()), -1)  //quoted metric name
+	query := p.TableTemplate
+	query = strings.Replace(query, "{TABLE}", quoteIdent(metric.Name()), -1)
+	query = strings.Replace(query, "{TABLELITERAL}", quoteStr(metric.Name()), -1)
 	query = strings.Replace(query, "{COLUMNS}", strings.Join(columns, ","), -1)
 	query = strings.Replace(query, "{KEY_COLUMNS}", strings.Join(pk, ","), -1)
 
-	sql = append(sql, query)
-	return strings.Join(sql, ";")
+	return query
 }
 
 func (p *SQL) generateInsert(tablename string, columns []string) string {
-	var placeholder, quoted []string
+	var placeholders, quotedColumns []string
 	for _, column := range columns {
-		quoted = append(quoted, quoteIdent(column))
+		quotedColumns = append(quotedColumns, quoteIdent(column))
 	}
 	if p.Driver == "pgx" {
 		// Postgres uses $1 $2 $3 as placeholders
 		for i := 0; i < len(columns); i++ {
-			placeholder = append(placeholder, fmt.Sprintf("$%d", i+1))
+			placeholders = append(placeholders, fmt.Sprintf("$%d", i+1))
 		}
 	} else {
 		// Everything else uses ? ? ? as placeholders
 		for i := 0; i < len(columns); i++ {
-			placeholder = append(placeholder, "?")
+			placeholders = append(placeholders, "?")
 		}
 	}
 
-	return fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", quoteIdent(tablename), strings.Join(quoted, ","), strings.Join(placeholder, ","))
+	return fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)",
+		quoteIdent(tablename),
+		strings.Join(quotedColumns, ","),
+		strings.Join(placeholders, ","))
 }
 
 func (p *SQL) tableExists(tableName string) bool {
