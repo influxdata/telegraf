@@ -1,12 +1,14 @@
-// +build linux
-// +build 386 amd64 arm arm64
+// +build !mips
+// +build !mipsle
+// +build !s390x
+// +build !ppc64le
+// +build !windows
 
 package sql
 
-// The modernc.org sqlite driver requires cgo. Telegraf's build
-// automation relies on cross compiling from linux and cgo doesn't
-// work well when cross compiling for different operating systems, so
-// this driver is limited to linux for now.
+// The modernc.org sqlite driver isn't supported on all
+// platforms. Register it with build constraints to prevent build
+// failures on unsupported platforms.
 import (
 	_ "modernc.org/sqlite" // Register sqlite sql driver
 )
