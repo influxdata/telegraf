@@ -8,7 +8,7 @@ import (
 	//Register sql drivers
 	_ "github.com/denisenkom/go-mssqldb"   // mssql (sql server)
 	_ "github.com/go-sql-driver/mysql"     // mysql
-	_ "github.com/jackc/pgx/stdlib"        // pgx (postgres)
+	_ "github.com/jackc/pgx/v4/stdlib"     // pgx (postgres)
 	_ "github.com/snowflakedb/gosnowflake" // snowflake
 
 	"github.com/influxdata/telegraf"
