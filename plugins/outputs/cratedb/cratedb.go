@@ -14,7 +14,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	_ "github.com/jackc/pgx/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
+	_ "github.com/jackc/pgx/v4/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
 )
 
 const MaxInt64 = int64(^uint64(0) >> 1)
@@ -28,8 +28,8 @@ type CrateDB struct {
 }
 
 var sampleConfig = `
-  # A github.com/jackc/pgx connection string.
-  # See https://godoc.org/github.com/jackc/pgx#ParseDSN
+  # A github.com/jackc/pgx/v4 connection string.
+  # See https://pkg.go.dev/github.com/jackc/pgx/v4#ParseConfig
   url = "postgres://user:password@localhost/schema?sslmode=disable"
   # Timeout for all CrateDB queries.
   timeout = "5s"
