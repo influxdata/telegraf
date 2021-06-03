@@ -291,9 +291,11 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 				m.AddTag(f.Key, f.Value)
 			}
 			n := MetricNode{
-				SetName: result.SetName,
-				Metric:  m,
-				Result:  val,
+				Tag:         result.Tag,
+				DesiredType: result.DesiredType,
+				SetName:     result.SetName,
+				Metric:      m,
+				Result:      val,
 			}
 			r, err := p.expandArray(n)
 			if err != nil {
