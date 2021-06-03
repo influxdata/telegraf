@@ -31,15 +31,13 @@ You configure this parser by describing the metric you want by defining the fiel
             included_keys = [] # List of JSON keys (with prepended keys) that should be only included in result
             excluded_keys = [] # List of JSON keys (with prepended keys) that shouldn't be included in result
             tags = [] # List of JSON keys (with prepended keys) to be a tag instead of a field
-            [renames] # A map of JSON keys (with prepended keys) with a new name for the tag key
+            [inputs.http.json_v2.renames] # A map of JSON keys (with prepended keys) with a new name for the tag key
                 key = "new name"
-            [fields] # A map of JSON keys (with prepended keys) with a type (int,uint,float,string,bool)
+            [inputs.http.json_v2.fields] # A map of JSON keys (with prepended keys) with a type (int,uint,float,string,bool)
                 key = "int"
 ```
 ---
-### `metric` config options
-
-A `metric` config table can be used to describe how to parse metrics from JSON. This configuration can return multiple metrics when parsing an array, but eac There are a list of root level config options that you can set that will be
+### root config options
 
 * **measurement_name (OPTIONAL)**:  Will set the measurement name to the provided string.
 * **measurement_name_path (OPTIONAL)**: You can define a query with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md) to set a measurement name from the JSON input. The query must return a single data value or it will use the default measurement name. This takes precedence over `measurement_name`.
