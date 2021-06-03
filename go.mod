@@ -93,6 +93,7 @@ require (
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
 	github.com/miekg/dns v1.1.31
 	github.com/moby/ipvs v1.0.1
+	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/multiplay/go-ts3 v1.0.0
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/nats-io/nats-server/v2 v2.1.4
