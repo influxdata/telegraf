@@ -123,6 +123,7 @@ require (
 	github.com/wavefronthq/wavefront-sdk-go v0.9.7
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
+	github.com/wz2b/modbus v0.1.1
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
 	go.starlark.net v0.0.0-20210406145628-7a1108eaa012
