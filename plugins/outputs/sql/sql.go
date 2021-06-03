@@ -25,14 +25,15 @@ type ConvertStruct struct {
 }
 
 type SQL struct {
-	db                  *gosql.DB
 	Driver              string
 	Address             string
+	InsertTimestamp     bool
 	TableTemplate       string
 	TableExistsTemplate string
 	InitSQL             string `toml:"init_sql"`
 	Convert             ConvertStruct
 
+	db     *gosql.DB       `toml:"-"`
 	Log    telegraf.Logger `toml:"-"`
 	Tables map[string]bool `toml:"-"`
 }
@@ -168,8 +169,10 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	var columns []string
 	var pk []string
 
-	pk = append(pk, quoteIdent("timestamp"))
-	columns = append(columns, fmt.Sprintf("%s %s", quoteIdent("timestamp"), p.Convert.Timestamp))
+	if p.InsertTimestamp {
+		pk = append(pk, quoteIdent("timestamp"))
+		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent("timestamp"), p.Convert.Timestamp))
+	}
 
 	for _, tag := range metric.TagList() {
 		pk = append(pk, quoteIdent(tag.Key))
@@ -238,9 +241,10 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		var columns []string
 		var values []interface{}
 
-		// We assume that SQL is making auto timestamp
-		columns = append(columns, "timestamp")
-		values = append(values, metric.Time())
+		if p.InsertTimestamp {
+			columns = append(columns, "timestamp")
+			values = append(values, metric.Time())
+		}
 
 		for column, value := range metric.Tags() {
 			columns = append(columns, column)
@@ -272,6 +276,7 @@ func newSQL() *SQL {
 	return &SQL{
 		TableTemplate:       "CREATE TABLE {TABLE}({COLUMNS})",
 		TableExistsTemplate: "SELECT 1 FROM {TABLE} LIMIT 1",
+		InsertTimestamp:     true,
 		Convert: ConvertStruct{
 			Integer:      "INT",
 			Real:         "DOUBLE",
