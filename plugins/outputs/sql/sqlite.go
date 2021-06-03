@@ -3,6 +3,7 @@
 // +build !s390x
 // +build !ppc64le
 // +build !windows
+// +build !freebsd
 
 package sql
 
