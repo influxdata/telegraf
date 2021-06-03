@@ -712,6 +712,10 @@ func getDefaultConfigPath() (string, error) {
 		etcfile = programFiles + `\Telegraf\telegraf.conf`
 	}
 	for _, path := range []string{envfile, homefile, etcfile} {
+		if isURL(path) {
+			log.Printf("I! Using config url: %s", path)
+			return path, nil
+		}
 		if _, err := os.Stat(path); err == nil {
 			log.Printf("I! Using config file: %s", path)
 			return path, nil
@@ -721,6 +725,12 @@ func getDefaultConfigPath() (string, error) {
 	// if we got here, we didn't find a file in a default location
 	return "", fmt.Errorf("No config file specified, and could not find one"+
 		" in $TELEGRAF_CONFIG_PATH, %s, or %s", homefile, etcfile)
+}
+
+// isURL checks if string is valid url
+func isURL(str string) bool {
+	u, err := url.Parse(str)
+	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
 // LoadConfig loads the given config file and applies it to c
