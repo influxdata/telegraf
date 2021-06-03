@@ -27,11 +27,11 @@ require (
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/aws/aws-sdk-go v1.34.34
-	github.com/aws/aws-sdk-go-v2 v1.1.0
-	github.com/aws/aws-sdk-go-v2/config v1.1.0
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.0.1
+	github.com/aws/aws-sdk-go-v2 v1.3.2
+	github.com/aws/aws-sdk-go-v2/config v1.1.5
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.0.6
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.1.0
-	github.com/aws/smithy-go v1.0.0
+	github.com/aws/smithy-go v1.3.1
 	github.com/benbjohnson/clock v1.0.3
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/bmatcuk/doublestar/v3 v3.0.0
@@ -112,6 +112,7 @@ require (
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
 	github.com/signalfx/golib/v3 v3.3.0
 	github.com/sirupsen/logrus v1.7.0
+	github.com/snowflakedb/gosnowflake v1.5.0
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62

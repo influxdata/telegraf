@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	_ "github.com/go-sql-driver/mysql" // Register mysql sql driver
-	_ "github.com/jackc/pgx/stdlib"    // Register postgres pgx sql driver
+	//Register sql drivers
+	_ "github.com/denisenkom/go-mssqldb"   // mssql (sql server)
+	_ "github.com/go-sql-driver/mysql"     // mysql
+	_ "github.com/jackc/pgx/stdlib"        // pgx (postgres)
+	_ "github.com/snowflakedb/gosnowflake" // snowflake
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
