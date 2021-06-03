@@ -31,9 +31,9 @@ You configure this parser by describing the metric you want by defining the fiel
             included_keys = [] # List of JSON keys (with prepended keys) that should be only included in result
             excluded_keys = [] # List of JSON keys (with prepended keys) that shouldn't be included in result
             tags = [] # List of JSON keys (with prepended keys) to be a tag instead of a field
-            [inputs.http.json_v2.renames] # A map of JSON keys (with prepended keys) with a new name for the tag key
+            [inputs.http.json_v2.object.renames] # A map of JSON keys (with prepended keys) with a new name for the tag key
                 key = "new name"
-            [inputs.http.json_v2.fields] # A map of JSON keys (with prepended keys) with a type (int,uint,float,string,bool)
+            [inputs.http.json_v2.object.fields] # A map of JSON keys (with prepended keys) with a type (int,uint,float,string,bool)
                 key = "int"
 ```
 ---

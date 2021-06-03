@@ -60,6 +60,7 @@ type JSONObject struct {
 }
 
 type MetricNode struct {
+	OutputName  string
 	SetName     string
 	Tag         bool
 	DesiredType string // Can be "int", "uint", "float", "bool", "string"
@@ -169,9 +170,11 @@ func (p *Parser) processMetric(data []DataSet, input []byte, tag bool) ([]telegr
 			s := strings.Split(c.Path, ".")
 			setName = s[len(s)-1]
 		}
+		setName = strings.ReplaceAll(setName, " ", "_")
 
 		mNode := MetricNode{
-			SetName:     strings.ReplaceAll(setName, " ", "_"),
+			OutputName:  setName,
+			SetName:     setName,
 			DesiredType: c.Type,
 			Tag:         tag,
 			Metric: metric.New(
@@ -293,6 +296,7 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 			n := MetricNode{
 				Tag:         result.Tag,
 				DesiredType: result.DesiredType,
+				OutputName:  result.OutputName,
 				SetName:     result.SetName,
 				Metric:      m,
 				Result:      val,
@@ -313,13 +317,13 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 			if err != nil {
 				return nil, err
 			}
-			result.Metric.AddField(result.SetName, v)
+			result.Metric.AddField(result.OutputName, v)
 		} else if !result.IsObject() {
 			v, err := p.convertType(result.Value(), "string", result.SetName)
 			if err != nil {
 				return nil, err
 			}
-			result.Metric.AddTag(result.SetName, v.(string))
+			result.Metric.AddTag(result.OutputName, v.(string))
 		}
 		results = append(results, result)
 	}
@@ -384,7 +388,7 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 				setName = strings.ReplaceAll(key.String(), " ", "_")
 			}
 
-			if p.isExcluded(setName) || !p.isIncluded(setName) {
+			if p.isExcluded(setName) || !p.isIncluded(setName, val) {
 				return true
 			}
 
@@ -404,7 +408,8 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 			arrayNode := MetricNode{
 				DesiredType: result.DesiredType,
 				Tag:         result.Tag,
-				SetName:     outputName,
+				OutputName:  outputName,
+				SetName:     setName,
 				Metric:      result.Metric,
 				Result:      val,
 			}
@@ -469,13 +474,19 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 	return results, nil
 }
 
-func (p *Parser) isIncluded(key string) bool {
+func (p *Parser) isIncluded(key string, val gjson.Result) bool {
 	if len(p.includedKeys) == 0 {
 		return true
 	}
 	for _, i := range p.includedKeys {
 		if i == key {
 			return true
+		}
+		if val.IsArray() || val.IsObject() {
+			// Check if the included key is a sub element
+			if strings.HasPrefix(i, key) {
+				return true
+			}
 		}
 	}
 	return false

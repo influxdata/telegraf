@@ -61,6 +61,10 @@ func TestData(t *testing.T) {
 			name: "Test fields and tags complex",
 			test: "fields_and_tags_complex",
 		},
+		{
+			name: "Test object",
+			test: "object",
+		},
 	}
 
 	for _, tc := range tests {
