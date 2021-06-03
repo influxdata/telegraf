@@ -1,6 +1,6 @@
 # JSON Parser - Version 2
 
-This parser takes valid JSON input and turns it into metrics. The query syntax supported is [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md). You can find multiple examples under the `testdata` folder.
+This parser takes valid JSON input and turns it into metrics. The query syntax supported is [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md), you can go to this playground to test out your GJSON path here: https://gjson.dev/. You can find multiple examples under the `testdata` folder.
 
 ## Configuration
 
@@ -9,30 +9,32 @@ You configure this parser by describing the metric you want by defining the fiel
 **Example configuration:**
 
 ```toml
-data_format = "json_v2"
-    [[xxx.xxx.json_v2]]
-        measurement_name = ""
-        measurement_name_path = ""
-        timestamp_path = ""
-        timestamp_format = ""
-        timestamp_timezone = ""
-        [[field]]
-            path = ""
-            rename = ""
-            type = ""
-        [[tag]]
-            path = ""
-            rename = ""
-        [[object]]
-            path = ""
-            disable_prepend_keys = true/false
-            included_keys = []
-            excluded_keys = []
-            tags = []
-            [renames]
-                key = new_name
-            [fields]
-                key = type
+ [[inputs.http.json_v2]]
+    urls = []
+    data_format = "json_v2"
+    [[inputs.http.json_v2]]
+        measurement_name = "" # A string that will become the new measurement name
+        measurement_name_path = "" # A string with valid GJSON path syntax, will override measurement_name
+        timestamp_path = "" # A string with valid GJSON path syntax to a valid timestamp (single value)
+        timestamp_format = "" # A string with a valid timestamp format (see below for possible values)
+        timestamp_timezone = "" # A string with with a valid timezone (see below for possible values)
+        [[inputs.http.json_v2.tag]]
+            path = "" # A string with valid GJSON path syntax
+            rename = "new name" # A string with a new name for the tag key
+        [[inputs.http.json_v2.field]]
+            path = "" # A string with valid GJSON path syntax
+            rename = "new name" # A string with a new name for the tag key
+            type = "int" # A string specifying the type (int,uint,float,string,bool)
+        [[inputs.http.json_v2.object]]
+            path = "" # A string with valid GJSON path syntax
+            disable_prepend_keys = false (or true, just not both)
+            included_keys = [] # List of JSON keys (with prepended keys) that should be only included in result
+            excluded_keys = [] # List of JSON keys (with prepended keys) that shouldn't be included in result
+            tags = [] # List of JSON keys (with prepended keys) to be a tag instead of a field
+            [renames] # A map of JSON keys (with prepended keys) with a new name for the tag key
+                key = "new name"
+            [fields] # A map of JSON keys (with prepended keys) with a type (int,uint,float,string,bool)
+                key = "int"
 ```
 ---
 ### `metric` config options
@@ -42,7 +44,7 @@ A `metric` config table can be used to describe how to parse metrics from JSON. 
 * **measurement_name (OPTIONAL)**:  Will set the measurement name to the provided string.
 * **measurement_name_path (OPTIONAL)**: You can define a query with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md) to set a measurement name from the JSON input. The query must return a single data value or it will use the default measurement name. This takes precedence over `measurement_name`.
 * **timestamp_path (OPTIONAL)**: You can define a query with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md) to set a timestamp from the JSON input. The query must return a single data value or it will default to the current time.
-* **timestamp_format (OPTIONAL, but REQUIRED when timestamp_query is defined**: ust be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`, or
+* **timestamp_format (OPTIONAL, but REQUIRED when timestamp_query is defined**: Must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`, or
 the Go "reference time" which is defined to be the specific time:
 `Mon Jan 2 15:04:05 MST 2006`
 * **timestamp_timezone (OPTIONAL, but REQUIRES timestamp_query**: This option should be set to a
@@ -82,9 +84,9 @@ For good examples in using `field` and `tag` you can reference the following exa
 ---
 ### object
 
-With the configuration section `object_selection`, you can gather metrics from objects. The data doesn't have to be "uniform" and can contain multiple types.
+With the configuration section `object`, you can gather metrics from [JSON objects](https://www.w3schools.com/js/js_json_objects.asp).
 
-The following keys can be set for `object_selection`:
+The following keys can be set for `object`:
 
 * **path (REQUIRED)**: You must define the path query that gathers the object with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md)
 * **disable_prepend_keys (OPTIONAL)**: Set to true to prevent resulting nested data to contain the parent key prepended to its key **NOTE**: duplicate names can overwrite each other when this is enabled
@@ -93,24 +95,6 @@ The following keys can be set for `object_selection`:
 * **tags (OPTIONAL)**: You can define json keys to be set as tags instead of fields, if you define a key that is an array or object then all nested values will become a tag
 * **renames (OPTIONAL)**: A table matching the json key with the desired name (oppossed to defaulting to using the key), use names that include the prepended keys of its parent keys for nested results
 * **fields (OPTIONAL)**: A table matching the json key with the desired type (int,string,bool,float), if you define a key that is an array or object then all nested values will become that type
-
-### Separate metrics
-
-You can define multiple "json_v2" under a plugin such as so:
-
-```toml
-[[inputs.file]]
-files = ["input.json"]
-data_format = "json_v2"
-        [[inputs.file.json_v2]]
-            [[inputs.file.json_v2.uniform_collection]]
-                query = "books.#.characters"
-        [[inputs.file.json_v2]]
-            [[inputs.file.json_v2.object_selection]]
-                query = "books"
-```
-
-This will ensure that the queried data isn't combined and will be outputted separately. Otherwise, all `uniform_collection` and `object_selection` under a `json_v2` subsections will be merged.
 
 ## Arrays and Objects
 
