@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/common"
 )
 
 type GithubWebhook struct {
@@ -18,6 +19,7 @@ type GithubWebhook struct {
 	Secret string
 	acc    telegraf.Accumulator
 	log    telegraf.Logger
+	common.BasicAuth
 }
 
 func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
@@ -30,6 +32,12 @@ func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator, 
 
 func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+
+	if !gh.Verify(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	eventType := r.Header.Get("X-Github-Event")
 	data, err := io.ReadAll(r.Body)
 	if err != nil {

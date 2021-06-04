@@ -9,12 +9,14 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/common"
 )
 
 type PapertrailWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
 	log  telegraf.Logger
+	common.BasicAuth
 }
 
 func (pt *PapertrailWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
@@ -27,6 +29,11 @@ func (pt *PapertrailWebhook) Register(router *mux.Router, acc telegraf.Accumulat
 func (pt *PapertrailWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
 		http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	if !pt.Verify(r) {
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
