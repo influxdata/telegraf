@@ -16,7 +16,8 @@ func (b *BasicAuth) Verify(r *http.Request) bool {
 	}
 
 	username, password, ok := r.BasicAuth()
-	return ok &&
-		subtle.ConstantTimeCompare([]byte(username), []byte(b.Username)) == 1 &&
-		subtle.ConstantTimeCompare([]byte(password), []byte(b.Password)) == 1
+
+	usernameComparison := subtle.ConstantTimeCompare([]byte(username), []byte(b.Username)) == 1
+	passwordComparison := subtle.ConstantTimeCompare([]byte(password), []byte(b.Password)) == 1
+	return ok && usernameComparison && passwordComparison
 }
