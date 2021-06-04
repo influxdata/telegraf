@@ -4,7 +4,7 @@ This parser takes valid JSON input and turns it into metrics. The query syntax s
 
 ## Configuration
 
-You configure this parser by describing the metric you want by defining the fields and tags from the input. The configuration is divided into config sub-tables labeled `metric`, within which you can define multiple `field`, `tag`, and `object` config tables. In the example below you can see all the possible configuration keys you can define for each config table. In the sections that follow these configuration keys are defined in more detail.
+You configure this parser by describing the metric you want by defining the fields and tags from the input. The configuration is divided into config sub-tables called `field`, `tag`, and `object`. In the example below you can see all the possible configuration keys you can define for each config table. In the sections that follow these configuration keys are defined in more detail.
 
 **Example configuration:**
 
