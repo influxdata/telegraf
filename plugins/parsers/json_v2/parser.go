@@ -20,14 +20,8 @@ type Parser struct {
 
 	measurementName string
 
-	// For objects
-	iterateObjects     bool
-	includedKeys       []string
-	excludedKeys       []string
-	renames            map[string]string
-	fieldTypes         map[string]string
-	tagList            []string
-	disablePrependKeys bool
+	iterateObjects  bool
+	currentSettings JSONObject
 }
 
 type Config struct {
@@ -143,7 +137,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 }
 
 // processMetric will iterate over all 'field' or 'tag' configs and create metrics for each
-// A uniform collection can either be a single value or an array of values, each resulting in its own metric
+// A field/tag can either be a single value or an array of values, each resulting in its own metric
 // For multiple configs, a set of metrics is created from the cartesian product of each separate config
 func (p *Parser) processMetric(data []DataSet, input []byte, tag bool) ([]telegraf.Metric, error) {
 	if len(data) == 0 {
@@ -160,7 +154,7 @@ func (p *Parser) processMetric(data []DataSet, input []byte, tag bool) ([]telegr
 		result := gjson.GetBytes(input, c.Path)
 
 		if result.IsObject() {
-			p.Log.Debugf("Found object in the uniform collection query: %s, ignoring it please use object_selection to gather metrics from objects", c.Path)
+			p.Log.Debugf("Found object in the path: %s, ignoring it please use 'object' to gather metrics from objects", c.Path)
 			continue
 		}
 
@@ -242,7 +236,7 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 
 	if result.IsObject() {
 		if !p.iterateObjects {
-			p.Log.Debugf("Found object in the uniform collection query ignoring it please use object_selection to gather metrics from objects")
+			p.Log.Debugf("Found object in query ignoring it please use 'object' to gather metrics from objects")
 			return results, nil
 		}
 		r, err := p.combineObject(result)
@@ -277,7 +271,7 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 
 					results = append(results, r...)
 				} else {
-					p.Log.Debugf("Found object in the uniform collection query ignoring it please use object_selection to gather metrics from objects")
+					p.Log.Debugf("Found object in query ignoring it please use 'object' to gather metrics from objects")
 				}
 				if len(results) != 0 {
 					for _, newResult := range results {
@@ -331,17 +325,12 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 	return results, nil
 }
 
-// processObjects will iterate over all 'object_selection' configs and create metrics for each
+// processObjects will iterate over all 'object' configs and create metrics for each
 func (p *Parser) processObjects(objects []JSONObject, input []byte) ([]telegraf.Metric, error) {
 	p.iterateObjects = true
 	var t []telegraf.Metric
 	for _, c := range objects {
-		p.disablePrependKeys = c.DisablePrependKeys
-		p.tagList = c.Tags
-		p.fieldTypes = c.Fields
-		p.renames = c.Renames
-		p.includedKeys = c.IncludedKeys
-		p.excludedKeys = c.ExcludedKeys
+		p.currentSettings = c
 		if c.Path == "" {
 			return nil, fmt.Errorf("GJSON path is required")
 		}
@@ -393,12 +382,12 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 			}
 
 			var outputName string
-			if p.disablePrependKeys {
+			if p.currentSettings.DisablePrependKeys {
 				outputName = strings.ReplaceAll(key.String(), " ", "_")
 			} else {
 				outputName = setName
 			}
-			for k, n := range p.renames {
+			for k, n := range p.currentSettings.Renames {
 				if k == setName {
 					outputName = n
 					break
@@ -414,7 +403,7 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 				Result:      val,
 			}
 
-			for k, t := range p.fieldTypes {
+			for k, t := range p.currentSettings.Fields {
 				if setName == k {
 					arrayNode.DesiredType = t
 					break
@@ -422,7 +411,7 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 			}
 
 			tag := false
-			for _, t := range p.tagList {
+			for _, t := range p.currentSettings.Tags {
 				if setName == t {
 					tag = true
 					break
@@ -475,10 +464,10 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 }
 
 func (p *Parser) isIncluded(key string, val gjson.Result) bool {
-	if len(p.includedKeys) == 0 {
+	if len(p.currentSettings.IncludedKeys) == 0 {
 		return true
 	}
-	for _, i := range p.includedKeys {
+	for _, i := range p.currentSettings.IncludedKeys {
 		if i == key {
 			return true
 		}
@@ -493,7 +482,7 @@ func (p *Parser) isIncluded(key string, val gjson.Result) bool {
 }
 
 func (p *Parser) isExcluded(key string) bool {
-	for _, i := range p.excludedKeys {
+	for _, i := range p.currentSettings.ExcludedKeys {
 		if i == key {
 			return true
 		}
