@@ -33,6 +33,7 @@ type RedisCommand struct {
 type Redis struct {
 	Commands []*RedisCommand
 	Servers  []string
+	Username string
 	Password string
 	tls.ClientConfig
 
@@ -240,12 +241,17 @@ func (r *Redis) connect() error {
 			return fmt.Errorf("unable to parse to address %q: %s", serv, err.Error())
 		}
 
+		username := ""
 		password := ""
 		if u.User != nil {
+			username = u.User.Username()
 			pw, ok := u.User.Password()
 			if ok {
 				password = pw
 			}
+		}
+		if len(r.Username) > 0 {
+			username = r.Username
 		}
 		if len(r.Password) > 0 {
 			password = r.Password
@@ -266,6 +272,7 @@ func (r *Redis) connect() error {
 		client := redis.NewClient(
 			&redis.Options{
 				Addr:      address,
+				Username:  username,
 				Password:  password,
 				Network:   u.Scheme,
 				PoolSize:  1,
