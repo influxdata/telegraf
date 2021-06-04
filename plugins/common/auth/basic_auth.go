@@ -1,4 +1,4 @@
-package common
+package auth
 
 import (
 	"crypto/subtle"

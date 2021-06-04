@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs/webhooks/common"
+	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
 type GithubWebhook struct {
@@ -19,7 +19,7 @@ type GithubWebhook struct {
 	Secret string
 	acc    telegraf.Accumulator
 	log    telegraf.Logger
-	common.BasicAuth
+	auth.BasicAuth
 }
 
 func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {

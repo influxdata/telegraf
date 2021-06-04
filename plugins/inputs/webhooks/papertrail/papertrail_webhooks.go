@@ -9,14 +9,14 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs/webhooks/common"
+	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
 type PapertrailWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
 	log  telegraf.Logger
-	common.BasicAuth
+	auth.BasicAuth
 }
 
 func (pt *PapertrailWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
