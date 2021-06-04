@@ -28,7 +28,7 @@ func TestSqlite(t *testing.T) {
 	p := newSQL()
 	p.Log = testutil.Logger{}
 	p.Driver = "sqlite"
-	p.Address = address
+	p.DataSourceName = address
 
 	require.NoError(t, p.Connect())
 	require.NoError(t, p.Write(

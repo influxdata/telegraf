@@ -196,8 +196,8 @@ func TestMysqlIntegration(t *testing.T) {
 	p := newSQL()
 	p.Log = testutil.Logger{}
 	p.Driver = "mysql"
-	p.Address = address
-	p.Convert.Timestamp = "TEXT" //disable mysql default current_timestamp()
+	p.DataSourceName = address
+	//p.Convert.Timestamp = "TEXT" //disable mysql default current_timestamp()
 	p.InitSQL = "SET sql_mode='ANSI_QUOTES';"
 
 	require.NoError(t, p.Connect())
@@ -287,8 +287,7 @@ func TestPostgresIntegration(t *testing.T) {
 	p := newSQL()
 	p.Log = testutil.Logger{}
 	p.Driver = "pgx"
-	p.Address = address
-	//p.Convert.Timestamp = "TEXT" //disable mysql default current_timestamp()
+	p.DataSourceName = address
 
 	require.NoError(t, p.Connect())
 	require.NoError(t, p.Write(

@@ -26,8 +26,8 @@ type ConvertStruct struct {
 
 type SQL struct {
 	Driver              string
-	Address             string
-	InsertTimestamp     bool
+	DataSourceName      string
+	TimestampColumn     string
 	TableTemplate       string
 	TableExistsTemplate string
 	InitSQL             string `toml:"init_sql"`
@@ -39,7 +39,7 @@ type SQL struct {
 }
 
 func (p *SQL) Connect() error {
-	db, err := gosql.Open(p.Driver, p.Address)
+	db, err := gosql.Open(p.Driver, p.DataSourceName)
 	if err != nil {
 		return err
 	}
@@ -111,48 +111,35 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 }
 
 var sampleConfig = `
-  ## Database Driver, required.
-  ## Valid options: mssql (SQLServer), mysql (MySQL), postgres (Postgres), sqlite3 (SQLite), [oci8 ora.v4 (Oracle)]
-  driver = "mysql"
+  ## Database driver
+  ## Valid options: mssql (Microsoft SQL Server), mysql (MySQL), pgx (Postgres),
+  ##  sqlite (SQLite3), snowflake (snowflake.com)
+  # driver = ""
 
-  ## specify address via a url matching:
-  ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
-  ##       ?sslmode=[disable|verify-ca|verify-full]
-  ## or a simple string:
-  ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
-  ##
-  ## All connection parameters are optional.
-  ##
-  ## Without the dbname parameter, the driver will default to a database
-  ## with the same name as the user. This dbname is just for instantiating a
-  ## connection with the server and doesn't restrict the databases we are trying
-  ## to grab metrics for.
-  ##
-  address = "username:password@tcp(server:port)/table"
+  ## Data source name
+  ## The format of the data source name is different for each database driver.
+  ## See the plugin readme for details.
+  # data_source_name = ""
 
-  ## Available Variables:
-  ##   {TABLE} - tablename as identifier
-  ##   {TABLELITERAL} - tablename as string literal
-  ##   {COLUMNS} - column definitions
-  ##   {KEY_COLUMNS} - comma-separated list of key columns (time + tags)
-  ##
+  ## Timestamp column name
+  # timestamp_column = "timestamp"
 
-  ## Check with this is table exists
-  ##
-  ## Template for MySQL is "SELECT 1 FROM {TABLE} LIMIT 1"
-  ##
-  table_exists_template = "SELECT 1 FROM {TABLE} LIMIT 1"
-
-  ## Template to use for generating tables
-
-  ## Default template
-  ##
+  ## Table creation template
+  ## Available template variables:
+  ##  {TABLE} - table name as a quoted identifier
+  ##  {TABLELITERAL} - table name as a quoted string literal
+  ##  {COLUMNS} - column definitions (list of quoted identifiers and types)
   # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
 
-  ## also NO_BACKSLASH_ESCAPES
-  # init_sql = "SET sql_mode='ANSI_QUOTES';"
+  ## Table existence check template
+  ## Available template variables:
+  ##  {TABLE} - tablename as a quoted identifier
+  # table_exists_template = "SELECT 1 FROM {TABLE} LIMIT 1"
 
-  ## Convert Telegraf datatypes to these types
+  ## Initialization SQL
+  # init_sql = ""
+
+  ## Metric type to SQL type conversion
   #[outputs.sql.convert]
   #  integer              = "INT"
   #  real                 = "DOUBLE"
@@ -167,15 +154,16 @@ func (p *SQL) Description() string  { return "Send metrics to SQL Database" }
 
 func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	var columns []string
-	var pk []string
+	//  ##  {KEY_COLUMNS} is a comma-separated list of key columns (timestamp and tags)
+	//var pk []string
 
-	if p.InsertTimestamp {
-		pk = append(pk, quoteIdent("timestamp"))
-		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent("timestamp"), p.Convert.Timestamp))
+	if p.TimestampColumn != "" {
+		//pk = append(pk, quoteIdent(p.TimestampColumn))
+		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(p.TimestampColumn), p.Convert.Timestamp))
 	}
 
 	for _, tag := range metric.TagList() {
-		pk = append(pk, quoteIdent(tag.Key))
+		//pk = append(pk, quoteIdent(tag.Key))
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(tag.Key), p.Convert.Text))
 	}
 
@@ -189,7 +177,7 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	query = strings.Replace(query, "{TABLE}", quoteIdent(metric.Name()), -1)
 	query = strings.Replace(query, "{TABLELITERAL}", quoteStr(metric.Name()), -1)
 	query = strings.Replace(query, "{COLUMNS}", strings.Join(columns, ","), -1)
-	query = strings.Replace(query, "{KEY_COLUMNS}", strings.Join(pk, ","), -1)
+	//query = strings.Replace(query, "{KEY_COLUMNS}", strings.Join(pk, ","), -1)
 
 	return query
 }
@@ -241,8 +229,8 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		var columns []string
 		var values []interface{}
 
-		if p.InsertTimestamp {
-			columns = append(columns, "timestamp")
+		if p.TimestampColumn != "" {
+			columns = append(columns, p.TimestampColumn)
 			values = append(values, metric.Time())
 		}
 
@@ -276,7 +264,7 @@ func newSQL() *SQL {
 	return &SQL{
 		TableTemplate:       "CREATE TABLE {TABLE}({COLUMNS})",
 		TableExistsTemplate: "SELECT 1 FROM {TABLE} LIMIT 1",
-		InsertTimestamp:     true,
+		TimestampColumn:     "timestamp",
 		Convert: ConvertStruct{
 			Integer:      "INT",
 			Real:         "DOUBLE",
