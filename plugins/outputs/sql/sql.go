@@ -33,9 +33,9 @@ type SQL struct {
 	InitSQL             string `toml:"init_sql"`
 	Convert             ConvertStruct
 
-	db     *gosql.DB       `toml:"-"`
+	db     *gosql.DB
 	Log    telegraf.Logger `toml:"-"`
-	Tables map[string]bool `toml:"-"`
+	tables map[string]bool
 }
 
 func (p *SQL) Connect() error {
@@ -57,7 +57,7 @@ func (p *SQL) Connect() error {
 	}
 
 	p.db = db
-	p.Tables = make(map[string]bool)
+	p.tables = make(map[string]bool)
 
 	return nil
 }
@@ -217,13 +217,13 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		tablename := metric.Name()
 
 		// create table if needed
-		if !p.Tables[tablename] && !p.tableExists(tablename) {
+		if !p.tables[tablename] && !p.tableExists(tablename) {
 			createStmt := p.generateCreateTable(metric)
 			_, err := p.db.Exec(createStmt)
 			if err != nil {
 				return err
 			}
-			p.Tables[tablename] = true
+			p.tables[tablename] = true
 		}
 
 		var columns []string
