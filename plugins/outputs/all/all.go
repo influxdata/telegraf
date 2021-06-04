@@ -40,6 +40,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/sensu"
 	_ "github.com/influxdata/telegraf/plugins/outputs/signalfx"
 	_ "github.com/influxdata/telegraf/plugins/outputs/socket_writer"
+	_ "github.com/influxdata/telegraf/plugins/outputs/sql"
 	_ "github.com/influxdata/telegraf/plugins/outputs/stackdriver"
 	_ "github.com/influxdata/telegraf/plugins/outputs/sumologic"
 	_ "github.com/influxdata/telegraf/plugins/outputs/syslog"
