@@ -210,6 +210,9 @@ var sampleConfig = `
   ## specify server password
   # password = "s#cr@t%"
 
+  ## specify username for ACL auth (Redis 6.0+)
+  # username = "default"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
