@@ -202,10 +202,6 @@ var testSimpleData = []testData{
 		{nil, nil, nil, "Service 2", "Fake service 2", 1, 2},
 		//{nil, nil, nil, "NoService 3", "Fake service 3", 1, 2},
 	}},
-	{[]string{"Service 1", "Service 2", "OtherSrvc"}, nil, nil, []serviceTestInfo{
-		{nil, nil, nil, "Service 1", "Fake service 21", 1, 2},
-		{nil, nil, nil, "Service 2", "Fake service 22", 1, 2},
-	}},
 }
 
 func TestGatherContainsTag(t *testing.T) {
@@ -233,7 +229,7 @@ func TestGatherContainsTag(t *testing.T) {
 func TestExcludingNamesTag(t *testing.T) {
 	winServices := &WinServices{
 		Log:          testutil.Logger{},
-		//ServiceNames: []string{"*"},
+		ServiceNames: []string{"*"}, // '*' == default, all included
 		ServiceNamesExcluded: []string{"Service*"},
 		mgrProvider:  &FakeMgProvider{testSimpleData[0]},
 	}
@@ -242,14 +238,13 @@ func TestExcludingNamesTag(t *testing.T) {
 	require.NoError(t, winServices.Gather(&acc1))
 	assert.Len(t, acc1.Errors, 0, "There should be no errors after gather")
 
-	for _, s := range testSimpleData[1].services {
+	for _, s := range testSimpleData[0].services {
 		fields := make(map[string]interface{})
 		tags := make(map[string]string)
 		fields["state"] = int(s.state)
 		fields["startup_mode"] = int(s.startUpMode)
 		tags["service_name"] = s.serviceName
 		tags["display_name"] = s.displayName
-		fmt.Print("service:", s.serviceName, " s.serviceName.\n")
 		acc1.AssertDoesNotContainsTaggedFields(t, "win_services", fields, tags) 
 	}
 }
