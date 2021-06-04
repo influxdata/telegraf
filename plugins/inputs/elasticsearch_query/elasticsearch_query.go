@@ -228,7 +228,7 @@ func (e *ElasticsearchQuery) connectToES() error {
 	}
 
 	i, err := strconv.Atoi(esVersionSplit[0])
-	if err != nil || i < 5 {
+	if err != nil || i < 5 || i > 6 {
 		return fmt.Errorf("elasticsearch version %s not supported (currently supported versions are 5.x and 6.x)", esVersion)
 	}
 
