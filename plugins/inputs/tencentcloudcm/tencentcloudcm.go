@@ -13,8 +13,6 @@ import (
 	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 
-	monitor "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor/v20180724"
-
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -86,9 +84,9 @@ type MetricObject struct {
 
 type cmClient interface {
 	GetMetricObjects(t TencentCloudCM) []MetricObject
-	NewClient(region string, crs *common.Credential, t TencentCloudCM) monitor.Client
-	NewGetMonitorDataRequest(namespace, metric string, instances []*Instance, t TencentCloudCM) *monitor.GetMonitorDataRequest
-	GatherMetrics(client monitor.Client, request *monitor.GetMonitorDataRequest, t TencentCloudCM) (*monitor.GetMonitorDataResponse, error)
+	NewClient(region string, crs *common.Credential, t TencentCloudCM) Client
+	NewGetMonitorDataRequest(namespace, metric string, instances []*Instance, t TencentCloudCM) *GetMonitorDataRequest
+	GatherMetrics(client Client, request *GetMonitorDataRequest, t TencentCloudCM) (*GetMonitorDataResponse, error)
 }
 
 // SampleConfig implements telegraf.Input interface
@@ -296,7 +294,7 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 
 	wg := sync.WaitGroup{}
 	rLock := sync.Mutex{}
-	results := []monitor.GetMonitorDataResponse{}
+	results := []GetMonitorDataResponse{}
 
 	// requestIDMap contains request ID and metric objects for later aggregation
 	requestIDMap := map[string]MetricObject{}
@@ -405,8 +403,8 @@ func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []MetricObject {
 	return metricObjects
 }
 
-func (c *cloudmonitorClient) NewClient(region string, crs *common.Credential, t TencentCloudCM) monitor.Client {
-	client := monitor.Client{}
+func (c *cloudmonitorClient) NewClient(region string, crs *common.Credential, t TencentCloudCM) Client {
+	client := Client{}
 	cpf := profile.NewClientProfile()
 	cpf.HttpProfile.Endpoint = fmt.Sprintf("monitor.%s", t.Endpoint)
 	cpf.HttpProfile.ReqTimeout = int(time.Duration(t.Timeout).Milliseconds()) / 1000
@@ -414,20 +412,20 @@ func (c *cloudmonitorClient) NewClient(region string, crs *common.Credential, t 
 	return client
 }
 
-func (c *cloudmonitorClient) NewGetMonitorDataRequest(namespace, metric string, instances []*Instance, t TencentCloudCM) *monitor.GetMonitorDataRequest {
-	request := monitor.NewGetMonitorDataRequest()
+func (c *cloudmonitorClient) NewGetMonitorDataRequest(namespace, metric string, instances []*Instance, t TencentCloudCM) *GetMonitorDataRequest {
+	request := NewGetMonitorDataRequest()
 	request.Namespace = common.StringPtr(namespace)
 	request.MetricName = common.StringPtr(metric)
 	period := uint64(time.Duration(t.Period).Seconds())
 	request.Period = &period
 	request.StartTime = common.StringPtr(t.windowStart.Format(time.RFC3339))
 	request.EndTime = common.StringPtr(t.windowEnd.Format(time.RFC3339))
-	request.Instances = []*monitor.Instance{}
+	request.Instances = []*MonitorInstance{}
 	// Transform instances and dimensions from config to monitor struct
 	for i := range instances {
-		request.Instances = append(request.Instances, &monitor.Instance{})
+		request.Instances = append(request.Instances, &MonitorInstance{})
 		for j := range instances[i].Dimensions {
-			request.Instances[i].Dimensions = append(request.Instances[i].Dimensions, &monitor.Dimension{
+			request.Instances[i].Dimensions = append(request.Instances[i].Dimensions, &MonitorDimension{
 				Name:  &instances[i].Dimensions[j].Name,
 				Value: &instances[i].Dimensions[j].Value,
 			})
@@ -436,7 +434,7 @@ func (c *cloudmonitorClient) NewGetMonitorDataRequest(namespace, metric string, 
 	return request
 }
 
-func (c *cloudmonitorClient) GatherMetrics(client monitor.Client, request *monitor.GetMonitorDataRequest, t TencentCloudCM) (*monitor.GetMonitorDataResponse, error) {
+func (c *cloudmonitorClient) GatherMetrics(client Client, request *GetMonitorDataRequest, t TencentCloudCM) (*GetMonitorDataResponse, error) {
 	response, err := client.GetMonitorData(request)
 	if val, ok := err.(*tcerrors.TencentCloudSDKError); ok {
 		t.Log.Errorf("An API error has returned for %s: %s", *request.Namespace, err)

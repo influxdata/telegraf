@@ -8,7 +8,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
-	monitor "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor/v20180724"
 )
 
 type mockGatherCloudMonitorClient struct{}
@@ -33,30 +32,30 @@ func (m *mockGatherCloudMonitorClient) GetMetricObjects(t TencentCloudCM) []Metr
 	}
 }
 
-func (m *mockGatherCloudMonitorClient) NewClient(region string, crs *common.Credential, t TencentCloudCM) monitor.Client {
-	return monitor.Client{}
+func (m *mockGatherCloudMonitorClient) NewClient(region string, crs *common.Credential, t TencentCloudCM) Client {
+	return Client{}
 }
 
-func (m *mockGatherCloudMonitorClient) NewGetMonitorDataRequest(namespace, metric string, instances []*Instance, t TencentCloudCM) *monitor.GetMonitorDataRequest {
-	return monitor.NewGetMonitorDataRequest()
+func (m *mockGatherCloudMonitorClient) NewGetMonitorDataRequest(namespace, metric string, instances []*Instance, t TencentCloudCM) *GetMonitorDataRequest {
+	return NewGetMonitorDataRequest()
 }
 
-func (m *mockGatherCloudMonitorClient) GatherMetrics(client monitor.Client, request *monitor.GetMonitorDataRequest, t TencentCloudCM) (*monitor.GetMonitorDataResponse, error) {
-	response := &monitor.GetMonitorDataResponse{
+func (m *mockGatherCloudMonitorClient) GatherMetrics(client Client, request *GetMonitorDataRequest, t TencentCloudCM) (*GetMonitorDataResponse, error) {
+	response := &GetMonitorDataResponse{
 		Response: &struct {
-			Period     *uint64              `json:"Period,omitempty" name:"Period"`
-			MetricName *string              `json:"MetricName,omitempty" name:"MetricName"`
-			DataPoints []*monitor.DataPoint `json:"DataPoints,omitempty" name:"DataPoints" list`
-			StartTime  *string              `json:"StartTime,omitempty" name:"StartTime"`
-			EndTime    *string              `json:"EndTime,omitempty" name:"EndTime"`
-			RequestId  *string              `json:"RequestId,omitempty" name:"RequestId"`
+			Period     *uint64             `json:"Period,omitempty" name:"Period"`
+			MetricName *string             `json:"MetricName,omitempty" name:"MetricName"`
+			DataPoints []*MonitorDataPoint `json:"DataPoints,omitempty" name:"DataPoints"`
+			StartTime  *string             `json:"StartTime,omitempty" name:"StartTime"`
+			EndTime    *string             `json:"EndTime,omitempty" name:"EndTime"`
+			RequestId  *string             `json:"RequestId,omitempty" name:"RequestId"`
 		}{
 			RequestId:  common.StringPtr("request_id"),
 			Period:     common.Uint64Ptr(300),
 			MetricName: common.StringPtr("CPUUsage"),
-			DataPoints: []*monitor.DataPoint{
+			DataPoints: []*MonitorDataPoint{
 				{
-					Dimensions: []*monitor.Dimension{
+					Dimensions: []*MonitorDimension{
 						{
 							Name:  common.StringPtr("InstanceId"),
 							Value: common.StringPtr("ins-xxxxxxx1"),
