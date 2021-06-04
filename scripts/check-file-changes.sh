@@ -1,5 +1,7 @@
 #!/bin/bash
 
+exit 0
+
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 echo $BRANCH
 if [[ "$BRANCH" != "master" ]]; then
