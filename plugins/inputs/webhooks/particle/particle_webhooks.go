@@ -7,7 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs/webhooks/common"
+	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
 type event struct {
@@ -39,7 +39,7 @@ func (e *event) Time() (time.Time, error) {
 type ParticleWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
-	common.BasicAuth
+	auth.BasicAuth
 }
 
 func (rb *ParticleWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
