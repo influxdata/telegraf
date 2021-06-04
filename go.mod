@@ -15,7 +15,6 @@ require (
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.6
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
-	github.com/Microsoft/go-winio v0.4.17-0.20210211115548-6eac466e5fa3 // indirect
 	github.com/Shopify/sarama v1.27.2
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/aerospike/aerospike-client-go v1.27.0
@@ -52,7 +51,7 @@ require (
 	github.com/go-logfmt/logfmt v0.5.0
 	github.com/go-ping/ping v0.0.0-20210201095549-52eed920f98c
 	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/go-sql-driver/mysql v1.5.0
+	github.com/go-sql-driver/mysql v1.6.0
 	github.com/goburrow/modbus v0.1.0 // indirect
 	github.com/goburrow/serial v0.1.0 // indirect
 	github.com/gobwas/glob v0.2.3
@@ -63,7 +62,6 @@ require (
 	github.com/golang/snappy v0.0.1
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-github/v32 v32.1.0
-	github.com/google/uuid v1.2.0 // indirect
 	github.com/gopcua/opcua v0.1.13
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.2
@@ -93,7 +91,6 @@ require (
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
 	github.com/miekg/dns v1.1.31
 	github.com/moby/ipvs v1.0.1
-	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/multiplay/go-ts3 v1.0.0
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/nats-io/nats-server/v2 v2.1.4
@@ -106,7 +103,7 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.15.0
-	github.com/prometheus/procfs v0.2.0
+	github.com/prometheus/procfs v0.6.0
 	github.com/prometheus/prometheus v1.8.2-0.20200911110723-e83ef207b6c2
 	github.com/riemann/riemann-go-client v0.5.0
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
@@ -119,6 +116,7 @@ require (
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
+	github.com/testcontainers/testcontainers-go v0.11.0
 	github.com/tidwall/gjson v1.6.0
 	github.com/tinylib/msgp v1.1.5
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
@@ -134,8 +132,8 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20210316164454-77fc1eacc6aa
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+	golang.org/x/sys v0.0.0-20210324051608-47abb6519492
 	golang.org/x/text v0.3.4
 	golang.org/x/tools v0.1.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
