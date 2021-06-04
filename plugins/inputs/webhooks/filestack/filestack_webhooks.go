@@ -9,11 +9,13 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/common"
 )
 
 type FilestackWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
+	common.BasicAuth
 }
 
 func (fs *FilestackWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
@@ -25,6 +27,12 @@ func (fs *FilestackWebhook) Register(router *mux.Router, acc telegraf.Accumulato
 
 func (fs *FilestackWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+
+	if !fs.Verify(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)

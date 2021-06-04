@@ -10,11 +10,13 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/common"
 )
 
 type MandrillWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
+	common.BasicAuth
 }
 
 func (md *MandrillWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
@@ -31,6 +33,12 @@ func (md *MandrillWebhook) returnOK(w http.ResponseWriter, _ *http.Request) {
 
 func (md *MandrillWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+
+	if !md.Verify(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
