@@ -1,15 +1,22 @@
 #!/bin/sh
 
-version="1.16.2"
-# This path is cachable, while saving directly in /usr/local/ will cause issues restoring the cache
+set -eux
+
+GO_ARCH="darwin-amd64"
+GO_VERSION="1.16.2"
+GO_VERSION_SHA="c98cde81517c5daf427f3071412f39d5bc58f6120e90a0d94cc51480fa04dbc1" # from https://golang.org/dl
+
+# This path is cachable. (Saving in /usr/local/ will cause issues restoring the cache.)
 path="/usr/local/Cellar"
 
-# Download Go directly from tar, the reason we aren't using brew: it is slow to update and we can't pull specific minor versions
+# Download Go and verify GO tarball. (Note: we aren't using brew because
+# it is slow to update and we can't pull specific minor versions.)
 setup_go () {
     echo "installing go"
-    curl -OL https://golang.org/dl/go${version}.darwin-amd64.tar.gz --output go${version}.darwin-amd64.tar.gz
+    curl -OL https://golang.org/dl/go${version}.${GO_ARCH}.tar.gz --output go${version}.${GO_ARCH}.tar.gz
+    echo "${GO_SHA} go${version}.${GO_ARCH}.tar.gz" | sha256sum --check
     sudo rm -rf ${path}/go
-    sudo tar -C $path -xzf go${version}.darwin-amd64.tar.gz
+    sudo tar -C $path -xzf go${version}.${GO_ARCH}.tar.gz
     ln -sf ${path}/go/bin/go /usr/local/bin/go
     ln -sf ${path}/go/bin/gofmt /usr/local/bin/gofmt
 }
