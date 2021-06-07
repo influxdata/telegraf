@@ -37,6 +37,11 @@ func (e APIError) Error() string {
 	return e.Title
 }
 
+type BucketNotFoundError struct {
+	APIError
+	Bucket string
+}
+
 const (
 	defaultRequestTimeout   = time.Second * 5
 	defaultMaxWait          = 60 // seconds
@@ -60,36 +65,39 @@ type createBucketRequest struct {
 }
 
 type HTTPConfig struct {
-	URL              *url.URL
-	Token            string
-	Organization     string
-	Bucket           string
-	BucketTag        string
-	ExcludeBucketTag bool
-	Timeout          time.Duration
-	Headers          map[string]string
-	Proxy            *url.URL
-	UserAgent        string
-	ContentEncoding  string
-	TLSConfig        *tls.Config
+	URL                *url.URL
+	Token              string
+	Organization       string
+	Bucket             string
+	BucketTag          string
+	ExcludeBucketTag   bool
+	SkipBucketCreation bool
+	Timeout            time.Duration
+	Headers            map[string]string
+	Proxy              *url.URL
+	UserAgent          string
+	ContentEncoding    string
+	TLSConfig          *tls.Config
 
 	Serializer *influx.Serializer
 }
 
 type httpClient struct {
-	ContentEncoding  string
-	Timeout          time.Duration
-	Headers          map[string]string
-	Organization     string
-	Bucket           string
-	BucketTag        string
-	ExcludeBucketTag bool
+	ContentEncoding    string
+	Timeout            time.Duration
+	Headers            map[string]string
+	Organization       string
+	Bucket             string
+	BucketTag          string
+	ExcludeBucketTag   bool
+	SkipBucketCreation bool
 
-	client     *http.Client
-	serializer *influx.Serializer
-	url        *url.URL
-	retryTime  time.Time
-	retryCount int
+	client               *http.Client
+	createBucketExecuted map[string]bool
+	serializer           *influx.Serializer
+	url                  *url.URL
+	retryTime            time.Time
+	retryCount           int
 }
 
 func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
@@ -153,14 +161,16 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 			Timeout:   timeout,
 			Transport: transport,
 		},
-		url:              config.URL,
-		ContentEncoding:  config.ContentEncoding,
-		Timeout:          timeout,
-		Headers:          headers,
-		Organization:     config.Organization,
-		Bucket:           config.Bucket,
-		BucketTag:        config.BucketTag,
-		ExcludeBucketTag: config.ExcludeBucketTag,
+		createBucketExecuted: make(map[string]bool),
+		url:                  config.URL,
+		ContentEncoding:      config.ContentEncoding,
+		Timeout:              timeout,
+		Headers:              headers,
+		Organization:         config.Organization,
+		Bucket:               config.Bucket,
+		BucketTag:            config.BucketTag,
+		ExcludeBucketTag:     config.ExcludeBucketTag,
+		SkipBucketCreation:   config.SkipBucketCreation,
 	}
 	return client, nil
 }
@@ -220,12 +230,19 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		}
 
 		for bucket, batch := range batches {
+			if !c.SkipBucketCreation && !c.createBucketExecuted[bucket] {
+				if err := c.CreateBucket(ctx, bucket); err != nil {
+					log.Printf("W! [outputs.influxdb_v2] When writing to [%s]: bucket %q creation failed: %v\n", c.URL(), bucket, err)
+				}
+			}
+
 			err := c.writeBatch(ctx, bucket, batch)
 			if err != nil {
 				return err
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -302,9 +319,15 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		return fmt.Errorf("waiting %s for server before sending metric again", retryDuration)
 	}
 
-	// TODO: check if should create database
 	if strings.Contains(desc, errStringBucketNotFound) {
-		return c.CreateBucket(ctx, bucket)
+		return &BucketNotFoundError{
+			APIError: APIError{
+				StatusCode:  resp.StatusCode,
+				Title:       resp.Status,
+				Description: desc,
+			},
+			Bucket: bucket,
+		}
 	}
 
 	// if it's any other 4xx code, the client should not retry as it's the client's mistake.
@@ -401,7 +424,7 @@ func (c *httpClient) CreateBucket(ctx context.Context, bucket string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 201 {
-		// TODO: keep track of created buckets
+		c.createBucketExecuted[bucket] = true
 		return nil
 	}
 

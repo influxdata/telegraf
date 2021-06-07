@@ -30,6 +30,11 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
   ## If true, the bucket tag will not be added to the metric.
   # exclude_bucket_tag = false
 
+  ## If true, no create bucket requests will be sent. Set to true when using
+  ## Telegraf with a user without permissions to create buckets or when the
+  ## the bucket already exists
+  # skip_database_creation = false
+
   ## Timeout for HTTP messages.
   # timeout = "5s"
 
