@@ -74,6 +74,7 @@ var sampleConfig = `
 `
 
 type Client interface {
+	CreateBucket(context.Context, string) error
 	Write(context.Context, []telegraf.Metric) error
 
 	URL() string // for logging

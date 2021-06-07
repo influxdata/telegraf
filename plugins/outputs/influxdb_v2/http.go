@@ -1,6 +1,7 @@
 package influxdb_v2
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -15,6 +16,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -36,9 +38,26 @@ func (e APIError) Error() string {
 }
 
 const (
-	defaultRequestTimeout = time.Second * 5
-	defaultMaxWait        = 60 // seconds
+	defaultRequestTimeout   = time.Second * 5
+	defaultMaxWait          = 60 // seconds
+	errStringBucketNotFound = "not found: bucket"
 )
+
+// orgIDResponse is the response body from the /orgs endpoint
+type orgIDResponse struct {
+	Orgs []orgInfo `json:"orgs"`
+}
+
+type orgInfo struct {
+	Id string `json:"id"`
+}
+
+// createBucketRequest is the payload used for creating a bucket
+type createBucketRequest struct {
+	Name  string `json:"name"`
+	OrgID string `json:"orgID"`
+	// TODO: support custom retention rule
+}
 
 type HTTPConfig struct {
 	URL              *url.URL
@@ -283,6 +302,11 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		return fmt.Errorf("waiting %s for server before sending metric again", retryDuration)
 	}
 
+	// TODO: check if should create database
+	if strings.Contains(desc, errStringBucketNotFound) {
+		return c.CreateBucket(ctx, bucket)
+	}
+
 	// if it's any other 4xx code, the client should not retry as it's the client's mistake.
 	// retrying will not make the request magically work.
 	if len(resp.Status) > 0 && resp.Status[0] == '4' {
@@ -301,6 +325,120 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		Title:       resp.Status,
 		Description: desc,
 	}
+}
+
+// getOrgID retrieves the organization's ID from its name
+func (c *httpClient) getOrgID(ctx context.Context) (string, error) {
+	loc, err := makeOrgIDURL(*c.url, c.Organization)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := c.makeAPIRequest("GET", loc, nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := c.client.Do(req.WithContext(ctx))
+	if err != nil {
+		internal.OnClientError(c.client, err)
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := c.validateResponse(resp.Body)
+	if err != nil {
+		return "", &APIError{
+			StatusCode:  resp.StatusCode,
+			Title:       resp.Status,
+			Description: "An error response was received while attempting to get the organization's ID for: " + c.Organization + ". Error: " + err.Error(),
+		}
+	}
+
+	orgIDResp := &orgIDResponse{}
+	if err := json.NewDecoder(body).Decode(orgIDResp); err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode == 200 && len(orgIDResp.Orgs) == 1 {
+		return orgIDResp.Orgs[0].Id, nil
+	}
+
+	return "", fmt.Errorf("failed to get ID for org %q (do you have org-level read permissions?)", c.Organization)
+}
+
+// CreateBucket creates a new bucket in the configured organization if it doesn't already exist
+func (c *httpClient) CreateBucket(ctx context.Context, bucket string) error {
+	orgId, err := c.getOrgID(ctx)
+	if err != nil {
+		return err
+	}
+
+	loc, err := makeCreateURL(*c.url)
+	if err != nil {
+		return err
+	}
+
+	bodyBytes, err := json.Marshal(createBucketRequest{
+		Name:  bucket,
+		OrgID: orgId,
+	})
+	if err != nil {
+		return err
+	}
+	body := bytes.NewBuffer(bodyBytes)
+
+	req, err := c.makeAPIRequest("POST", loc, body)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.client.Do(req.WithContext(ctx))
+	if err != nil {
+		internal.OnClientError(c.client, err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 201 {
+		// TODO: keep track of created buckets
+		return nil
+	}
+
+	createResp := &genericRespError{}
+	err = json.NewDecoder(resp.Body).Decode(createResp)
+	desc := createResp.Error()
+	if err != nil {
+		desc = resp.Status
+	}
+
+	return &APIError{
+		StatusCode:  resp.StatusCode,
+		Title:       resp.Status,
+		Description: desc,
+	}
+}
+
+// Implementation from influxdb v1 output
+func (c *httpClient) validateResponse(response io.ReadCloser) (io.ReadCloser, error) {
+	bodyBytes, err := ioutil.ReadAll(response)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Close()
+
+	originalResponse := ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	// Empty response is valid.
+	if response == http.NoBody || len(bodyBytes) == 0 || bodyBytes == nil {
+		return originalResponse, nil
+	}
+
+	if valid := json.Valid(bodyBytes); !valid {
+		err = errors.New(string(bodyBytes))
+	}
+
+	return originalResponse, err
 }
 
 // retryDuration takes the longer of the Retry-After header and our own back-off calculation
@@ -335,6 +473,25 @@ func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request
 	}
 
 	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
+	c.addHeaders(req)
+
+	if c.ContentEncoding == "gzip" {
+		req.Header.Set("Content-Encoding", "gzip")
+	}
+
+	return req, nil
+}
+
+func (c *httpClient) makeAPIRequest(method, url string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	req.Header.Set("Accept", "application/json")
 	c.addHeaders(req)
 
 	if c.ContentEncoding == "gzip" {
@@ -379,6 +536,39 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 		loc.Path = "/api/v2/write"
 	case "http", "https":
 		loc.Path = path.Join(loc.Path, "/api/v2/write")
+	default:
+		return "", fmt.Errorf("unsupported scheme: %q", loc.Scheme)
+	}
+	loc.RawQuery = params.Encode()
+	return loc.String(), nil
+}
+
+func makeCreateURL(loc url.URL) (string, error) {
+	switch loc.Scheme {
+	case "unix":
+		loc.Scheme = "http"
+		loc.Host = "127.0.0.1"
+		loc.Path = "/api/v2/buckets"
+	case "http", "https":
+		loc.Path = path.Join(loc.Path, "/api/v2/buckets")
+	default:
+		return "", fmt.Errorf("unsupported scheme: %q", loc.Scheme)
+	}
+	return loc.String(), nil
+}
+
+func makeOrgIDURL(loc url.URL, orgName string) (string, error) {
+	params := url.Values{}
+	params.Set("org", orgName)
+	params.Set("limit", "1")
+
+	switch loc.Scheme {
+	case "unix":
+		loc.Scheme = "http"
+		loc.Host = "127.0.0.1"
+		loc.Path = "/api/v2/orgs"
+	case "http", "https":
+		loc.Path = path.Join(loc.Path, "/api/v2/orgs")
 	default:
 		return "", fmt.Errorf("unsupported scheme: %q", loc.Scheme)
 	}
