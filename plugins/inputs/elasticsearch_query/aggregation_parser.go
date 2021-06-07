@@ -13,7 +13,7 @@ type resultMetric struct {
 	tags   map[string]string
 }
 
-func (e *ElasticsearchQuery) parseSimpleResult(acc telegraf.Accumulator, measurement string, searchResult *elastic5.SearchResult) {
+func parseSimpleResult(acc telegraf.Accumulator, measurement string, searchResult *elastic5.SearchResult) {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 
@@ -22,7 +22,7 @@ func (e *ElasticsearchQuery) parseSimpleResult(acc telegraf.Accumulator, measure
 	acc.AddFields(measurement, fields, tags)
 }
 
-func (e *ElasticsearchQuery) parseAggregationResult(acc telegraf.Accumulator, aggregationQueryList []aggregationQueryData, searchResult *elastic5.SearchResult) error {
+func parseAggregationResult(acc telegraf.Accumulator, aggregationQueryList []aggregationQueryData, searchResult *elastic5.SearchResult) error {
 	measurements := map[string]map[string]string{}
 
 	// organize the aggregation query data by measurement
@@ -46,7 +46,7 @@ func (e *ElasticsearchQuery) parseAggregationResult(acc telegraf.Accumulator, ag
 		m.tags = make(map[string]string)
 		m.name = measurement
 
-		_, err := e.recurseResponse(acc, aggNameFunction, searchResult.Aggregations, m)
+		_, err := recurseResponse(acc, aggNameFunction, searchResult.Aggregations, m)
 		if err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func (e *ElasticsearchQuery) parseAggregationResult(acc telegraf.Accumulator, ag
 	return nil
 }
 
-func (e *ElasticsearchQuery) recurseResponse(acc telegraf.Accumulator, aggNameFunction map[string]string, bucketResponse elastic5.Aggregations, m resultMetric) (resultMetric, error) {
+func recurseResponse(acc telegraf.Accumulator, aggNameFunction map[string]string, bucketResponse elastic5.Aggregations, m resultMetric) (resultMetric, error) {
 	var err error
 
 	aggNames := getAggNames(bucketResponse)
@@ -70,7 +70,7 @@ func (e *ElasticsearchQuery) recurseResponse(acc telegraf.Accumulator, aggNameFu
 			return m, fmt.Errorf("child aggregation function '%s' not found %v", aggName, aggNameFunction)
 		}
 
-		resp := e.getResponseAggregation(aggFunction, aggName, bucketResponse)
+		resp := getResponseAggregation(aggFunction, aggName, bucketResponse)
 		if resp == nil {
 			return m, fmt.Errorf("child aggregation '%s' not found", aggName)
 		}
@@ -88,7 +88,7 @@ func (e *ElasticsearchQuery) recurseResponse(acc telegraf.Accumulator, aggNameFu
 				m.tags[aggName] = s
 
 				// we need to recurse down through the buckets, as it may contain another terms aggregation
-				m, err = e.recurseResponse(acc, aggNameFunction, bucket.Aggregations, m)
+				m, err = recurseResponse(acc, aggNameFunction, bucket.Aggregations, m)
 				if err != nil {
 					return m, err
 				}
@@ -124,33 +124,25 @@ func (e *ElasticsearchQuery) recurseResponse(acc telegraf.Accumulator, aggNameFu
 	return m, nil
 }
 
-func (e *ElasticsearchQuery) getResponseAggregation(function string, aggName string, aggs elastic5.Aggregations) interface{} {
-	var agg interface{}
-	var found bool
-
+func getResponseAggregation(function string, aggName string, aggs elastic5.Aggregations) (agg interface{}) {
 	switch function {
 	case "avg":
-		agg, found = aggs.Avg(aggName)
+		agg, _ = aggs.Avg(aggName)
 	case "sum":
-		agg, found = aggs.Sum(aggName)
+		agg, _ = aggs.Sum(aggName)
 	case "min":
-		agg, found = aggs.Min(aggName)
+		agg, _ = aggs.Min(aggName)
 	case "max":
-		agg, found = aggs.Max(aggName)
+		agg, _ = aggs.Max(aggName)
 	case "terms":
-		agg, found = aggs.Terms(aggName)
+		agg, _ = aggs.Terms(aggName)
 	}
 
-	if found {
-		return agg
-	}
-
-	return nil
+	return agg
 }
 
 // getAggNames returns the aggregation names from a response aggregation
-func getAggNames(agg elastic5.Aggregations) []string {
-	var aggs []string
+func getAggNames(agg elastic5.Aggregations) (aggs []string) {
 	for k := range agg {
 		if (k != "key") && (k != "doc_count") {
 			aggs = append(aggs, k)

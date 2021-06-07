@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -27,17 +28,10 @@ type esAggregationQueryTest struct {
 	queryName                 string
 	testAggregationQueryInput esAggregation
 	testAggregationQueryData  []aggregationQueryData
-	testMapFields             map[string]string
-	expectedMetrics           []expectedMetric
+	expectedMetrics           []telegraf.Metric
 	wantBuildQueryErr         bool
 	wantGetMetricFieldsErr    bool
 	wantQueryResErr           bool
-}
-
-type expectedMetric struct {
-	measurement string
-	fields      map[string]interface{}
-	tags        map[string]string
 }
 
 var queryPeriod = config.Duration(time.Second * 600)
@@ -54,6 +48,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			DateField:       "@timestamp",
 			QueryPeriod:     queryPeriod,
 			Tags:            []string{"URI.keyword"},
+			mapMetricFields: map[string]string{"size": "long"},
 		},
 		[]aggregationQueryData{
 			{
@@ -65,13 +60,13 @@ var testEsAggregationData = []esAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		map[string]string{"size": "long"},
-		[]expectedMetric{
-			{
-				measurement: "measurement1",
-				fields:      map[string]interface{}{"size_avg": float64(202.30038022813687), "doc_count": int64(263)},
-				tags:        map[string]string{"URI_keyword": "/downloads/product_1"},
-			},
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"measurement1",
+				map[string]string{"URI_keyword": "/downloads/product_1"},
+				map[string]interface{}{"size_avg": float64(202.30038022813687), "doc_count": int64(263)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
 		},
 		false,
 		false,
@@ -88,6 +83,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			DateField:       "@timestamp",
 			QueryPeriod:     queryPeriod,
 			Tags:            []string{"URI.keyword"},
+			mapMetricFields: map[string]string{"size": "long"},
 		},
 		[]aggregationQueryData{
 			{
@@ -99,18 +95,19 @@ var testEsAggregationData = []esAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		map[string]string{"size": "long"},
-		[]expectedMetric{
-			{
-				measurement: "measurement2",
-				fields:      map[string]interface{}{"size_max": float64(3301), "doc_count": int64(263)},
-				tags:        map[string]string{"URI_keyword": "/downloads/product_1"},
-			},
-			{
-				measurement: "measurement2",
-				fields:      map[string]interface{}{"size_max": float64(3318), "doc_count": int64(237)},
-				tags:        map[string]string{"URI_keyword": "/downloads/product_2"},
-			},
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"measurement2",
+				map[string]string{"URI_keyword": "/downloads/product_1"},
+				map[string]interface{}{"size_max": float64(3301), "doc_count": int64(263)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
+			testutil.MustMetric(
+				"measurement2",
+				map[string]string{"URI_keyword": "/downloads/product_2"},
+				map[string]interface{}{"size_max": float64(3318), "doc_count": int64(237)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
 		},
 		false,
 		false,
@@ -127,6 +124,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			DateField:       "@timestamp",
 			QueryPeriod:     queryPeriod,
 			Tags:            []string{"response.keyword"},
+			mapMetricFields: map[string]string{"size": "long"},
 		},
 		[]aggregationQueryData{
 			{
@@ -138,23 +136,25 @@ var testEsAggregationData = []esAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		map[string]string{"size": "long"},
-		[]expectedMetric{
-			{
-				measurement: "measurement3",
-				fields:      map[string]interface{}{"size_sum": float64(22790), "doc_count": int64(22)},
-				tags:        map[string]string{"response_keyword": "200"},
-			},
-			{
-				measurement: "measurement3",
-				fields:      map[string]interface{}{"size_sum": float64(0), "doc_count": int64(219)},
-				tags:        map[string]string{"response_keyword": "304"},
-			},
-			{
-				measurement: "measurement3",
-				fields:      map[string]interface{}{"size_sum": float64(86932), "doc_count": int64(259)},
-				tags:        map[string]string{"response_keyword": "404"},
-			},
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"measurement3",
+				map[string]string{"response_keyword": "200"},
+				map[string]interface{}{"size_sum": float64(22790), "doc_count": int64(22)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
+			testutil.MustMetric(
+				"measurement3",
+				map[string]string{"response_keyword": "304"},
+				map[string]interface{}{"size_sum": float64(0), "doc_count": int64(219)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
+			testutil.MustMetric(
+				"measurement3",
+				map[string]string{"response_keyword": "404"},
+				map[string]interface{}{"size_sum": float64(86932), "doc_count": int64(259)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
 		},
 		false,
 		false,
@@ -173,6 +173,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			IncludeMissingTag: true,
 			MissingTagValue:   "missing",
 			Tags:              []string{"response.keyword", "URI.keyword", "method.keyword"},
+			mapMetricFields:   map[string]string{"size": "long", "response_time": "long"},
 		},
 		[]aggregationQueryData{
 			{
@@ -196,48 +197,55 @@ var testEsAggregationData = []esAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		map[string]string{"size": "long", "response_time": "long"},
-		[]expectedMetric{
-			{
-				measurement: "measurement4",
-				fields:      map[string]interface{}{"size_min": float64(318), "response_time_min": float64(126), "doc_count": int64(146)},
-				tags:        map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-			},
-			{
-				measurement: "measurement4",
-				fields:      map[string]interface{}{"size_min": float64(0), "response_time_min": float64(71), "doc_count": int64(113)},
-				tags:        map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-			},
-			{
-				measurement: "measurement4",
-				fields:      map[string]interface{}{"size_min": float64(490), "response_time_min": float64(1514), "doc_count": int64(3)},
-				tags:        map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-			},
-			{
-				measurement: "measurement4",
-				fields:      map[string]interface{}{"size_min": float64(318), "response_time_min": float64(237), "doc_count": int64(113)},
-				tags:        map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-			},
-			{
-				measurement: "measurement4",
-				fields:      map[string]interface{}{"size_min": float64(0), "response_time_min": float64(134), "doc_count": int64(106)},
-				tags:        map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-			},
-			{
-				measurement: "measurement4",
-				fields:      map[string]interface{}{"size_min": float64(490), "response_time_min": float64(2), "doc_count": int64(13)},
-				tags:        map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-			},
-			{
-				measurement: "measurement4",
-				fields:      map[string]interface{}{"size_min": float64(0), "response_time_min": float64(8479), "doc_count": int64(1)},
-				tags:        map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "HEAD"},
-			},
-			{
-				measurement: "measurement4",
-				fields:      map[string]interface{}{"size_min": float64(0), "response_time_min": float64(1059), "doc_count": int64(5)},
-				tags:        map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "HEAD"},
-			},
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"measurement4",
+				map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
+				map[string]interface{}{"size_min": float64(318), "response_time_min": float64(126), "doc_count": int64(146)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
+			testutil.MustMetric(
+				"measurement4",
+				map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
+				map[string]interface{}{"size_min": float64(0), "response_time_min": float64(71), "doc_count": int64(113)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
+			testutil.MustMetric(
+				"measurement4",
+				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
+				map[string]interface{}{"size_min": float64(490), "response_time_min": float64(1514), "doc_count": int64(3)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
+			testutil.MustMetric(
+				"measurement4",
+				map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
+				map[string]interface{}{"size_min": float64(318), "response_time_min": float64(237), "doc_count": int64(113)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
+			testutil.MustMetric(
+				"measurement4",
+				map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
+				map[string]interface{}{"size_min": float64(0), "response_time_min": float64(134), "doc_count": int64(106)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
+			testutil.MustMetric(
+				"measurement4",
+				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
+				map[string]interface{}{"size_min": float64(490), "response_time_min": float64(2), "doc_count": int64(13)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
+			testutil.MustMetric(
+				"measurement4",
+				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "HEAD"},
+				map[string]interface{}{"size_min": float64(0), "response_time_min": float64(8479), "doc_count": int64(1)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
+			testutil.MustMetric(
+				"measurement4",
+				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "HEAD"},
+				map[string]interface{}{"size_min": float64(0), "response_time_min": float64(1059), "doc_count": int64(5)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
 		},
 		false,
 		false,
@@ -252,6 +260,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			DateField:       "@timestamp",
 			QueryPeriod:     queryPeriod,
 			Tags:            []string{"URI.keyword"},
+			mapMetricFields: map[string]string{},
 		},
 		[]aggregationQueryData{
 			{
@@ -259,13 +268,13 @@ var testEsAggregationData = []esAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		map[string]string{},
-		[]expectedMetric{
-			{
-				measurement: "measurement5",
-				fields:      map[string]interface{}{"doc_count": int64(237)},
-				tags:        map[string]string{"URI_keyword": "/downloads/product_2"},
-			},
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"measurement5",
+				map[string]string{"URI_keyword": "/downloads/product_2"},
+				map[string]interface{}{"doc_count": int64(237)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
 		},
 		false,
 		false,
@@ -280,6 +289,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			DateField:       "@timestamp",
 			QueryPeriod:     queryPeriod,
 			Tags:            []string{"URI.keyword", "response.keyword"},
+			mapMetricFields: map[string]string{},
 		},
 		[]aggregationQueryData{
 			{
@@ -291,18 +301,19 @@ var testEsAggregationData = []esAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		map[string]string{},
-		[]expectedMetric{
-			{
-				measurement: "measurement6",
-				fields:      map[string]interface{}{"doc_count": int64(4)},
-				tags:        map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1"},
-			},
-			{
-				measurement: "measurement6",
-				fields:      map[string]interface{}{"doc_count": int64(18)},
-				tags:        map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2"},
-			},
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"measurement6",
+				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1"},
+				map[string]interface{}{"doc_count": int64(4)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
+			testutil.MustMetric(
+				"measurement6",
+				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2"},
+				map[string]interface{}{"doc_count": int64(18)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
 		},
 		false,
 		false,
@@ -317,15 +328,16 @@ var testEsAggregationData = []esAggregationQueryTest{
 			DateField:       "@timestamp",
 			QueryPeriod:     queryPeriod,
 			Tags:            []string{},
+			mapMetricFields: map[string]string{},
 		},
 		nil,
-		map[string]string{},
-		[]expectedMetric{
-			{
-				measurement: "measurement7",
-				fields:      map[string]interface{}{"doc_count": int64(22)},
-				tags:        map[string]string{},
-			},
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"measurement7",
+				map[string]string{},
+				map[string]interface{}{"doc_count": int64(22)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
 		},
 		false,
 		false,
@@ -342,6 +354,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			DateField:       "@timestamp",
 			QueryPeriod:     queryPeriod,
 			Tags:            []string{},
+			mapMetricFields: map[string]string{"size": "long"},
 		},
 		[]aggregationQueryData{
 			{
@@ -349,13 +362,13 @@ var testEsAggregationData = []esAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		map[string]string{"size": "long"},
-		[]expectedMetric{
-			{
-				measurement: "measurement8",
-				fields:      map[string]interface{}{"size_max": float64(3318)},
-				tags:        map[string]string{},
-			},
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"measurement8",
+				map[string]string{},
+				map[string]interface{}{"size_max": float64(3318)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
 		},
 		false,
 		false,
@@ -372,13 +385,13 @@ var testEsAggregationData = []esAggregationQueryTest{
 			DateField:       "@timestamp",
 			QueryPeriod:     queryPeriod,
 			Tags:            []string{},
+			mapMetricFields: map[string]string{"size": "long"},
 		},
 		nil,
-		map[string]string{"size": "long"},
 		nil,
 		true,
 		false,
-		false,
+		true,
 	},
 	{
 		"query 10 - non-existing metric field",
@@ -389,13 +402,13 @@ var testEsAggregationData = []esAggregationQueryTest{
 			DateField:       "@timestamp",
 			QueryPeriod:     queryPeriod,
 			Tags:            []string{},
+			mapMetricFields: map[string]string{},
 		},
 		nil,
-		map[string]string{},
 		nil,
 		false,
 		false,
-		false,
+		true,
 	},
 	{
 		"query 11 - non-existing index field",
@@ -405,9 +418,9 @@ var testEsAggregationData = []esAggregationQueryTest{
 			DateField:       "@timestamp",
 			QueryPeriod:     queryPeriod,
 			Tags:            []string{},
+			mapMetricFields: map[string]string{},
 		},
 		nil,
-		map[string]string{},
 		nil,
 		false,
 		false,
@@ -423,6 +436,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			DateField:       "@notatimestamp",
 			QueryPeriod:     queryPeriod,
 			Tags:            []string{},
+			mapMetricFields: map[string]string{"size": "long"},
 		},
 		[]aggregationQueryData{
 			{
@@ -430,8 +444,14 @@ var testEsAggregationData = []esAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		map[string]string{"size": "long"},
-		nil,
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"measurement12",
+				map[string]string{},
+				map[string]interface{}{"size_avg": float64(0)},
+				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			),
+		},
 		false,
 		false,
 		false,
@@ -447,6 +467,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			QueryPeriod:       queryPeriod,
 			IncludeMissingTag: false,
 			Tags:              []string{"nothere"},
+			mapMetricFields:   map[string]string{"size": "long"},
 		},
 		[]aggregationQueryData{
 			{
@@ -458,7 +479,6 @@ var testEsAggregationData = []esAggregationQueryTest{
 				isParent: true,
 			},
 		},
-		map[string]string{"size": "long"},
 		nil,
 		false,
 		false,
@@ -573,11 +593,13 @@ func TestElasticsearchQuery(t *testing.T) {
 		t.Errorf("%s", acc.Errors)
 	}
 
+	var expectedMetrics []telegraf.Metric
 	for _, result := range testEsAggregationData {
 		for _, r := range result.expectedMetrics {
-			acc.AssertContainsTaggedFields(t, r.measurement, r.fields, r.tags)
+			expectedMetrics = append(expectedMetrics, r)
 		}
 	}
+	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
 
 	// aggregations that should return an error
 	for _, agg := range testEsAggregationData {
@@ -633,7 +655,7 @@ func TestElasticsearchQuery_getMetricFields(t *testing.T) {
 			"getMetricFields " + d.queryName,
 			e,
 			args{context.Background(), d.testAggregationQueryInput},
-			d.testMapFields,
+			d.testAggregationQueryInput.mapMetricFields,
 			d.wantGetMetricFieldsErr,
 		})
 	}
@@ -654,23 +676,18 @@ func TestElasticsearchQuery_getMetricFields(t *testing.T) {
 }
 
 func TestElasticsearchQuery_buildAggregationQuery(t *testing.T) {
-	type args struct {
-		mapMetricFields map[string]string
-		aggregation     esAggregation
-	}
-
 	type test struct {
-		name    string
-		args    args
-		want    []aggregationQueryData
-		wantErr bool
+		name        string
+		aggregation esAggregation
+		want        []aggregationQueryData
+		wantErr     bool
 	}
 	var tests []test
 
 	for _, d := range testEsAggregationData {
 		tests = append(tests, test{
 			"build " + d.queryName,
-			args{d.testMapFields, d.testAggregationQueryInput},
+			d.testAggregationQueryInput,
 			d.testAggregationQueryData,
 			d.wantBuildQueryErr,
 		})
@@ -678,8 +695,7 @@ func TestElasticsearchQuery_buildAggregationQuery(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &ElasticsearchQuery{}
-			got, err := e.buildAggregationQuery(tt.args.mapMetricFields, tt.args.aggregation)
+			err := tt.aggregation.buildAggregationQuery()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ElasticsearchQuery.buildAggregationQuery() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -691,8 +707,8 @@ func TestElasticsearchQuery_buildAggregationQuery(t *testing.T) {
 				cmpopts.SortSlices(func(x, y aggregationQueryData) bool { return x.aggKey.name > y.aggKey.name }),
 			}
 
-			if !cmp.Equal(got, tt.want, opts...) {
-				t.Errorf("ElasticsearchQuery.buildAggregationQuery(): %s error = %s ", tt.name, cmp.Diff(got, tt.want, opts...))
+			if !cmp.Equal(tt.aggregation.aggregationQueryList, tt.want, opts...) {
+				t.Errorf("ElasticsearchQuery.buildAggregationQuery(): %s error = %s ", tt.name, cmp.Diff(tt.aggregation.aggregationQueryList, tt.want, opts...))
 			}
 		})
 	}

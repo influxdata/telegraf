@@ -147,34 +147,35 @@ func (e *ElasticsearchQuery) Init() error {
 		if agg.DateField == "" {
 			return fmt.Errorf("field 'date_field' is not set")
 		}
-		e.initAggregation(ctx, agg, i)
+		err = e.initAggregation(ctx, agg, i)
+		if err != nil {
+			e.Log.Errorf("%s", err)
+			return nil
+		}
 	}
 	return nil
 }
 
-func (e *ElasticsearchQuery) initAggregation(ctx context.Context, agg esAggregation, i int) {
+func (e *ElasticsearchQuery) initAggregation(ctx context.Context, agg esAggregation, i int) (err error) {
 	// retrieve field mapping and build queries only once
-	mapMetricFields, err := e.getMetricFields(ctx, agg)
+	agg.mapMetricFields, err = e.getMetricFields(ctx, agg)
 	if err != nil {
-		e.Log.Errorf("not possible to retrieve fields: %v", err.Error())
-		return
+		return fmt.Errorf("not possible to retrieve fields: %v", err.Error())
 	}
 
 	for _, metricField := range agg.MetricFields {
-		if _, ok := mapMetricFields[metricField]; !ok {
-			e.Log.Infof("metric field '%s' not found on index '%s'", metricField, agg.Index)
-			return
+		if _, ok := agg.mapMetricFields[metricField]; !ok {
+			return fmt.Errorf("metric field '%s' not found on index '%s'", metricField, agg.Index)
 		}
 	}
 
-	aggregationQueryList, err := e.buildAggregationQuery(mapMetricFields, agg)
+	err = agg.buildAggregationQuery()
 	if err != nil {
-		e.Log.Error(err.Error())
-		return
+		return err
 	}
-	agg.mapMetricFields = mapMetricFields
-	agg.aggregationQueryList = aggregationQueryList
+
 	e.Aggregations[i] = agg
+	return nil
 }
 
 func (e *ElasticsearchQuery) connectToES() error {
@@ -283,7 +284,10 @@ func (e *ElasticsearchQuery) esAggregationQuery(acc telegraf.Accumulator, aggreg
 
 	// try to init the aggregation query if it is not done already
 	if aggregation.aggregationQueryList == nil {
-		e.initAggregation(ctx, aggregation, i)
+		err := e.initAggregation(ctx, aggregation, i)
+		if err != nil {
+			return err
+		}
 		aggregation = e.Aggregations[i]
 	}
 
@@ -293,11 +297,11 @@ func (e *ElasticsearchQuery) esAggregationQuery(acc telegraf.Accumulator, aggreg
 	}
 
 	if searchResult.Aggregations == nil {
-		e.parseSimpleResult(acc, aggregation.MeasurementName, searchResult)
+		parseSimpleResult(acc, aggregation.MeasurementName, searchResult)
 		return nil
 	}
 
-	return e.parseAggregationResult(acc, aggregation.aggregationQueryList, searchResult)
+	return parseAggregationResult(acc, aggregation.aggregationQueryList, searchResult)
 }
 
 func init() {

@@ -118,11 +118,9 @@ func (e *ElasticsearchQuery) getMetricFields(ctx context.Context, aggregation es
 	return mapMetricFields, nil
 }
 
-func (e *ElasticsearchQuery) buildAggregationQuery(mapMetricFields map[string]string, aggregation esAggregation) ([]aggregationQueryData, error) {
-	var aggregationQueryList []aggregationQueryData
-
+func (aggregation *esAggregation) buildAggregationQuery() error {
 	// create one aggregation per metric field found & function defined for numeric fields
-	for k, v := range mapMetricFields {
+	for k, v := range aggregation.mapMetricFields {
 		switch v {
 		case "long":
 		case "float":
@@ -134,9 +132,9 @@ func (e *ElasticsearchQuery) buildAggregationQuery(mapMetricFields map[string]st
 			continue
 		}
 
-		agg, err := e.getFunctionAggregation(aggregation.MetricFunction, k)
+		agg, err := getFunctionAggregation(aggregation.MetricFunction, k)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		aggregationQuery := aggregationQueryData{
@@ -150,22 +148,45 @@ func (e *ElasticsearchQuery) buildAggregationQuery(mapMetricFields map[string]st
 			aggregation: agg,
 		}
 
-		aggregationQueryList = append(aggregationQueryList, aggregationQuery)
+		aggregation.aggregationQueryList = append(aggregation.aggregationQueryList, aggregationQuery)
 	}
 
+	// create a terms aggregation per tag
 	for _, term := range aggregation.Tags {
-		missingTagValue := aggregation.MissingTagValue
-		if !aggregation.IncludeMissingTag {
-			missingTagValue = ""
+		agg := elastic5.NewTermsAggregation()
+		if aggregation.IncludeMissingTag {
+			agg.Missing(aggregation.MissingTagValue)
 		}
 
-		aggregationQueryList = e.getTermsAggregation(aggregation.MeasurementName, term, missingTagValue, aggregationQueryList)
+		agg.Field(term).Size(1000)
+
+		// add each previous parent aggregations as subaggregations of this terms aggregation
+		for key, aggMap := range aggregation.aggregationQueryList {
+			if aggMap.isParent {
+				agg.Field(term).SubAggregation(aggMap.name, aggMap.aggregation).Size(1000)
+				// update subaggregation map with parent information
+				aggregation.aggregationQueryList[key].isParent = false
+			}
+		}
+
+		aggregationQuery := aggregationQueryData{
+			aggKey: aggKey{
+				measurement: aggregation.MeasurementName,
+				function:    "terms",
+				field:       term,
+				name:        strings.Replace(term, ".", "_", -1),
+			},
+			isParent:    true,
+			aggregation: agg,
+		}
+
+		aggregation.aggregationQueryList = append(aggregation.aggregationQueryList, aggregationQuery)
 	}
 
-	return aggregationQueryList, nil
+	return nil
 }
 
-func (e *ElasticsearchQuery) getFunctionAggregation(function string, aggfield string) (elastic5.Aggregation, error) {
+func getFunctionAggregation(function string, aggfield string) (elastic5.Aggregation, error) {
 	var agg elastic5.Aggregation
 
 	switch function {
@@ -182,38 +203,4 @@ func (e *ElasticsearchQuery) getFunctionAggregation(function string, aggfield st
 	}
 
 	return agg, nil
-}
-
-func (e *ElasticsearchQuery) getTermsAggregation(aggMeasurementName string, aggTerm string, missingTagValue string, subAggList []aggregationQueryData) []aggregationQueryData {
-	agg := elastic5.NewTermsAggregation()
-
-	if missingTagValue != "" {
-		agg.Missing(missingTagValue)
-	}
-
-	agg.Field(aggTerm).Size(1000)
-
-	// add each previous parent aggregations as subaggregations of this terms aggregation
-	for key, aggMap := range subAggList {
-		if aggMap.isParent {
-			agg.Field(aggTerm).SubAggregation(aggMap.name, aggMap.aggregation).Size(1000)
-			// update subaggregation map with parent information
-			subAggList[key].isParent = false
-		}
-	}
-
-	aggregationQuery := aggregationQueryData{
-		aggKey: aggKey{
-			measurement: aggMeasurementName,
-			function:    "terms",
-			field:       aggTerm,
-			name:        strings.Replace(aggTerm, ".", "_", -1),
-		},
-		isParent:    true,
-		aggregation: agg,
-	}
-
-	subAggList = append(subAggList, aggregationQuery)
-
-	return subAggList
 }
