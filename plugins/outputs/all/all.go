@@ -40,11 +40,13 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/sensu"
 	_ "github.com/influxdata/telegraf/plugins/outputs/signalfx"
 	_ "github.com/influxdata/telegraf/plugins/outputs/socket_writer"
+	_ "github.com/influxdata/telegraf/plugins/outputs/sql"
 	_ "github.com/influxdata/telegraf/plugins/outputs/stackdriver"
 	_ "github.com/influxdata/telegraf/plugins/outputs/sumologic"
 	_ "github.com/influxdata/telegraf/plugins/outputs/syslog"
 	_ "github.com/influxdata/telegraf/plugins/outputs/timestream"
 	_ "github.com/influxdata/telegraf/plugins/outputs/warp10"
 	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
+	_ "github.com/influxdata/telegraf/plugins/outputs/websocket"
 	_ "github.com/influxdata/telegraf/plugins/outputs/yandex_cloud_monitoring"
 )
