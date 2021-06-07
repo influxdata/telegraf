@@ -69,8 +69,8 @@ Set your Dynatrace environment URL (e.g.: `https://{your-environment-id}.live.dy
   ## Set Dynatrace environment URL (e.g.: https://YOUR_DOMAIN/api/v2/metrics/ingest) if you do not use a OneAgent
   url = ""
   api_token = ""
-  ## Optional prefix for metric names (e.g.: "telegraf.")
-  prefix = "telegraf."
+  ## Optional prefix for metric names (e.g.: "telegraf")
+  prefix = "telegraf"
   ## Flag for skipping the tls certificate check, just for testing purposes, should be false by default
   insecure_skip_verify = false
   ## If you want to convert values represented as gauges to counters, add the metric names here
