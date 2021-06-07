@@ -13,10 +13,10 @@ path="/usr/local/Cellar"
 # it is slow to update and we can't pull specific minor versions.)
 setup_go () {
     echo "installing go"
-    curl -OL https://golang.org/dl/go${${GO_VERSION}}.${GO_ARCH}.tar.gz --output go${${GO_VERSION}}.${GO_ARCH}.tar.gz
-    echo "${GO_SHA} go${${GO_VERSION}}.${GO_ARCH}.tar.gz" | sha256sum --check
+    curl -OL https://golang.org/dl/go${GO_VERSION}.${GO_ARCH}.tar.gz --output go${GO_VERSION}.${GO_ARCH}.tar.gz
+    echo "${GO_SHA} go${GO_VERSION}.${GO_ARCH}.tar.gz" | sha256sum --check
     sudo rm -rf ${path}/go
-    sudo tar -C $path -xzf go${${GO_VERSION}}.${GO_ARCH}.tar.gz
+    sudo tar -C $path -xzf go${GO_VERSION}.${GO_ARCH}.tar.gz
     ln -sf ${path}/go/bin/go /usr/local/bin/go
     ln -sf ${path}/go/bin/gofmt /usr/local/bin/gofmt
 }
@@ -24,8 +24,8 @@ setup_go () {
 if command -v go &> /dev/null; then
     echo "Go is already installed"
     v=`go version | { read _ _ v _; echo ${v#go}; }`
-    echo "$v is installed, required version is $${GO_VERSION}"
-    if [ "$v" != $${GO_VERSION} ]; then
+    echo "$v is installed, required version is ${GO_VERSION}"
+    if [ "$v" != ${GO_VERSION} ]; then
         setup_go
         go version
     fi
