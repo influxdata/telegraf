@@ -595,9 +595,7 @@ func TestElasticsearchQuery(t *testing.T) {
 
 	var expectedMetrics []telegraf.Metric
 	for _, result := range testEsAggregationData {
-		for _, r := range result.expectedMetrics {
-			expectedMetrics = append(expectedMetrics, r)
-		}
+		expectedMetrics = append(expectedMetrics, result.expectedMetrics...)
 	}
 	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
 
