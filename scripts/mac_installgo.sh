@@ -6,7 +6,7 @@ GO_ARCH="darwin-amd64"
 GO_VERSION="1.16.2"
 GO_VERSION_SHA="c98cde81517c5daf427f3071412f39d5bc58f6120e90a0d94cc51480fa04dbc1" # from https://golang.org/dl
 
-# This path is cachable. (Saving in /usr/local/ will cause issues restoring the cache.)
+# This path is cachable. (Saving in /usr/local/ would cause issues restoring the cache.)
 path="/usr/local/Cellar"
 
 # Download Go and verify Go tarball. (Note: we aren't using brew because
