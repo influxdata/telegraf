@@ -157,9 +157,7 @@ func (e *GzipEncoder) Encode(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := make([]byte, e.buf.Len())
-	copy(out, e.buf.Bytes())
-	return out, nil
+	return e.buf.Bytes(), nil
 }
 
 type ZlibEncoder struct {
@@ -240,9 +238,7 @@ func (d *GzipDecoder) Decode(data []byte, maxDecompressionSize int64) ([]byte, e
 	if err != nil {
 		return nil, err
 	}
-	out := make([]byte, d.buf.Len())
-	copy(out, d.buf.Bytes())
-	return out, nil
+	return d.buf.Bytes(), nil
 }
 
 type ZlibDecoder struct {
