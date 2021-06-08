@@ -161,7 +161,8 @@ func TestCreateBucket(t *testing.T) {
 				require.Equal(t, "telegraf", r.URL.Query().Get("org"))
 				require.Equal(t, "1", r.URL.Query().Get("limit"))
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"orgs": [{"id": "0123456789abcdef"}]}`))
+				_, err := w.Write([]byte(`{"orgs": [{"id": "0123456789abcdef"}]}`))
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -176,7 +177,8 @@ func TestCreateBucket(t *testing.T) {
 			},
 			orgIDHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"orgs": [{"id": "0123456789abcdef"}]}`))
+				_, err := w.Write([]byte(`{"orgs": [{"id": "0123456789abcdef"}]}`))
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -193,7 +195,8 @@ func TestCreateBucket(t *testing.T) {
 			config: influxdb.HTTPConfig{URL: u, Bucket: "bucket", Organization: "non-existent"},
 			orgIDHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"orgs": []}`))
+				_, err := w.Write([]byte(`{"orgs": []}`))
+				require.NoError(t, err)
 			},
 		},
 	}

@@ -54,7 +54,7 @@ type orgIDResponse struct {
 }
 
 type orgInfo struct {
-	Id string `json:"id"`
+	ID string `json:"id"`
 }
 
 // createBucketRequest is the payload used for creating a bucket
@@ -392,7 +392,7 @@ func (c *httpClient) getOrgID(ctx context.Context) (string, error) {
 	}
 
 	if resp.StatusCode == 200 && len(orgIDResp.Orgs) == 1 {
-		return orgIDResp.Orgs[0].Id, nil
+		return orgIDResp.Orgs[0].ID, nil
 	}
 
 	return "", fmt.Errorf("failed to get ID for org %q (do you have org-level read permissions?)", c.Organization)
@@ -400,7 +400,7 @@ func (c *httpClient) getOrgID(ctx context.Context) (string, error) {
 
 // CreateBucket creates a new bucket in the configured organization if it doesn't already exist
 func (c *httpClient) CreateBucket(ctx context.Context, bucket string) error {
-	orgId, err := c.getOrgID(ctx)
+	orgID, err := c.getOrgID(ctx)
 	if err != nil {
 		return err
 	}
@@ -412,7 +412,7 @@ func (c *httpClient) CreateBucket(ctx context.Context, bucket string) error {
 
 	bodyBytes, err := json.Marshal(createBucketRequest{
 		Name:  bucket,
-		OrgID: orgId,
+		OrgID: orgID,
 		RetentionRules: []retentionRule{{
 			EverySeconds: c.DefaultBucketRetention,
 			Type:         "expire",
@@ -517,8 +517,8 @@ func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request
 	return req, nil
 }
 
-func (c *httpClient) makeAPIRequest(method, url string, body io.Reader) (*http.Request, error) {
-	req, err := http.NewRequest(method, url, body)
+func (c *httpClient) makeAPIRequest(method, u string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequest(method, u, body)
 	if err != nil {
 		return nil, err
 	}

@@ -178,8 +178,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			return nil
 		}
 
-		switch apiError := err.(type) {
-		case *BucketNotFoundError:
+		if apiError, ok := err.(*BucketNotFoundError); ok {
 			if !i.SkipBucketCreation {
 				if err := client.CreateBucket(ctx, apiError.Bucket); err != nil {
 					i.Log.Errorf("When writing to [%s]: bucket %q not found and failed to recreate", client.URL(), apiError.Bucket)
@@ -193,14 +192,14 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	return err
 }
 
-func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.URL) (Client, error) {
+func (i *InfluxDB) getHTTPClient(ctx context.Context, u *url.URL, proxy *url.URL) (Client, error) {
 	tlsConfig, err := i.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
 
 	config := &HTTPConfig{
-		URL:                    url,
+		URL:                    u,
 		Token:                  i.Token,
 		Organization:           i.Organization,
 		Bucket:                 i.Bucket,
@@ -219,7 +218,7 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.U
 
 	c, err := NewHTTPClient(config)
 	if err != nil {
-		return nil, fmt.Errorf("error creating HTTP client [%s]: %v", url, err)
+		return nil, fmt.Errorf("error creating HTTP client [%s]: %v", u, err)
 	}
 
 	if !i.SkipBucketCreation {
