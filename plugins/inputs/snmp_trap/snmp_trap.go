@@ -11,7 +11,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/sleepinggenius2/gosmi"
 	"github.com/sleepinggenius2/gosmi/types"
@@ -30,6 +29,7 @@ type SnmpTrap struct {
 	ServiceAddress string          `toml:"service_address"`
 	Timeout        config.Duration `toml:"timeout"`
 	Version        string          `toml:"version"`
+	Path           []string        `toml:"path"`
 
 	// Settings for version 3
 	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
@@ -42,10 +42,12 @@ type SnmpTrap struct {
 	PrivProtocol string `toml:"priv_protocol"`
 	PrivPassword string `toml:"priv_password"`
 
-	acc      telegraf.Accumulator
-	listener *gosnmp.TrapListener
-	timeFunc func() time.Time
-	errCh    chan error
+	acc        telegraf.Accumulator
+	listener   *gosnmp.TrapListener
+	timeFunc   func() time.Time
+	lookupFunc func(string) (mibEntry, error)
+	//add look up func
+	errCh chan error
 
 	makeHandlerWrapper func(gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc
 
@@ -61,6 +63,10 @@ var sampleConfig = `
   ## 1024.  See README.md for details
   ##
   # service_address = "udp://:162"
+  ##
+  ## Path to mib files
+  # path = ["/usr/share/snmp/mibs"]
+  ##
   ## Timeout running snmptranslate command
   # timeout = "5s"
   ## Snmp version, defaults to 2c
@@ -94,37 +100,47 @@ func (s *SnmpTrap) Gather(_ telegraf.Accumulator) error {
 }
 
 func init() {
-	gosmi.Init()
-	gosmi.AppendPath("/usr/share/snmp/mibs")
-	root := "/usr/share/snmp/mibs"
-	var folders []string
-	folders = append(folders, root)
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if info.Mode()&os.ModeSymlink != 0 {
-			s, _ := os.Readlink(path)
-			folders = append(folders, s)
-		}
-		return nil
-	})
-	for _, folder := range folders {
-		filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
-			if info.IsDir() {
-				gosmi.AppendPath(path)
-			} else if info.Mode()&os.ModeSymlink == 0 {
-				gosmi.LoadModule(info.Name())
-			}
-			return nil
-		})
-	}
-
 	inputs.Add("snmp_trap", func() telegraf.Input {
 		return &SnmpTrap{
 			timeFunc:       time.Now,
+			lookupFunc:     lookup,
 			ServiceAddress: "udp://:162",
 			Timeout:        defaultTimeout,
 			Version:        "2c",
 		}
 	})
+}
+
+func (s *SnmpTrap) Init() error {
+	gosmi.Init()
+	s.getMibsPath()
+	return nil
+}
+
+func (s *SnmpTrap) getMibsPath() error {
+	var folders []string
+	for _, mibPath := range s.Path {
+		gosmi.AppendPath(mibPath)
+		folders = append(folders, mibPath)
+		filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
+			if info.Mode()&os.ModeSymlink != 0 {
+				s, _ := os.Readlink(path)
+				folders = append(folders, s)
+			}
+			return nil
+		})
+		for _, folder := range folders {
+			filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+				if info.IsDir() {
+					gosmi.AppendPath(path)
+				} else if info.Mode()&os.ModeSymlink == 0 {
+					gosmi.LoadModule(info.Name())
+				}
+				return nil
+			})
+		}
+	}
+	return nil
 }
 
 func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
@@ -280,7 +296,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 			}
 
 			if trapOid != "" {
-				e, err := s.lookup(trapOid)
+				e, err := s.lookupFunc(trapOid)
 				if err != nil {
 					s.Log.Errorf("Error resolving V1 OID, oid=%s, source=%s: %v", trapOid, tags["source"], err)
 					return
@@ -318,7 +334,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 
 				var e mibEntry
 				var err error
-				e, err = s.lookup(val)
+				e, err = s.lookupFunc(val)
 				if nil != err {
 					s.Log.Errorf("Error resolving value OID, oid=%s, source=%s: %v", val, tags["source"], err)
 					return
@@ -336,7 +352,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 				value = v.Value
 			}
 
-			e, err := s.lookup(v.Name)
+			e, err := s.lookupFunc(v.Name)
 			if nil != err {
 				s.Log.Errorf("Error resolving OID oid=%s, source=%s: %v", v.Name, tags["source"], err)
 				return
@@ -365,7 +381,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 	}
 }
 
-func (s *SnmpTrap) lookup(oid string) (e mibEntry, err error) {
+func lookup(oid string) (e mibEntry, err error) {
 	var node gosmi.SmiNode
 	node, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
 	if err != nil {

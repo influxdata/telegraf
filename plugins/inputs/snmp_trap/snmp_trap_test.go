@@ -1,7 +1,9 @@
 package snmp_trap
 
 import (
+	"fmt"
 	"net"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -10,7 +12,6 @@ import (
 	"github.com/gosnmp/gosnmp"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/require"
@@ -126,6 +127,15 @@ func sendTrap(t *testing.T, goSNMP gosnmp.GoSNMP, trap gosnmp.SnmpTrap) {
 	}
 }
 
+// func sendTrapGoSmi(t *testing.T, goSMI gosmi.SmiNode, trap gosnmp.SnmpTrap) {
+// 	goSMI, err := gosmi.GetNodeByOID(types.OidMustFromString(goSMI.Oid.String()))
+// 	if err != nil {
+// 		t.Errorf("GetNodeByOid err: %v", err)
+// 	}
+// 	// entry.e.oidText = goSMI.RenderQualified()
+// 	goSMI.RenderQualified()
+// }
+
 func TestReceiveTrap(t *testing.T) {
 	now := uint32(123123123)
 	fakeTime := time.Unix(456456456, 456)
@@ -218,6 +228,30 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
+		//Check that we're not running snmptranslate to look up oids
+		//when we shouldn't be.  This sends and receives a valid trap
+		//but metric production should fail because the oids aren't in
+		//the cache and oid lookup is intentionally mocked to fail.
+		{
+			name:    "missing oid",
+			version: gosnmp.Version2c,
+			trap: gosnmp.SnmpTrap{
+				Variables: []gosnmp.SnmpPDU{
+					{
+						Name:  ".1.3.6.1.2.1.1.3.0",
+						Type:  gosnmp.TimeTicks,
+						Value: now,
+					},
+					{
+						Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
+						Type:  gosnmp.ObjectIdentifier,
+						Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
+					},
+				},
+			},
+			entries: []entry{}, //nothing in cache
+			metrics: []telegraf.Metric{},
+		},
 		//v1 enterprise specific trap
 		{
 			name:    "v1 trap enterprise",
@@ -257,8 +291,8 @@ func TestReceiveTrap(t *testing.T) {
 					"snmp_trap", // name
 					map[string]string{ // tags
 						"oid":           ".1.2.3.0.55",
-						"name":          "iso",
-						"mib":           "<well-known>",
+						"name":          "enterpriseOID",
+						"mib":           "enterpriseMIB",
 						"version":       "1",
 						"source":        "127.0.0.1",
 						"agent_address": "10.20.30.40",
@@ -266,7 +300,7 @@ func TestReceiveTrap(t *testing.T) {
 					},
 					map[string]interface{}{ // fields
 						"sysUpTimeInstance": uint(now),
-						"iso":               "payload",
+						"valueOID":          "payload",
 					},
 					fakeTime,
 				),
@@ -311,8 +345,8 @@ func TestReceiveTrap(t *testing.T) {
 					"snmp_trap", // name
 					map[string]string{ // tags
 						"oid":           ".1.3.6.1.6.3.1.1.5.1",
-						"name":          "coldStart",
-						"mib":           "SNMPv2-MIB",
+						"name":          "coldStartOID",
+						"mib":           "coldStartMIB",
 						"version":       "1",
 						"source":        "127.0.0.1",
 						"agent_address": "10.20.30.40",
@@ -320,7 +354,7 @@ func TestReceiveTrap(t *testing.T) {
 					},
 					map[string]interface{}{ // fields
 						"sysUpTimeInstance": uint(now),
-						"iso":               "payload",
+						"valueOID":          "payload",
 					},
 					fakeTime,
 				),
@@ -1236,6 +1270,15 @@ func TestReceiveTrap(t *testing.T) {
 				timeFunc: func() time.Time {
 					return fakeTime
 				},
+				lookupFunc: func(input string) (mibEntry, error) {
+					for _, entry := range tt.entries {
+						if input == entry.oid {
+							return mibEntry{entry.e.mibName, entry.e.oidText}, nil
+						}
+					}
+					return mibEntry{}, fmt.Errorf("Unexpected oid")
+				},
+				//if cold start be answer otherwise err
 				Log:          testutil.Logger{},
 				Version:      tt.version.String(),
 				SecName:      tt.secName,
@@ -1275,4 +1318,97 @@ func TestReceiveTrap(t *testing.T) {
 				testutil.SortMetrics())
 		})
 	}
+
+}
+
+func TestGosmiSingleMib(t *testing.T) {
+	// We would prefer to specify port 0 and let the network
+	// stack choose an unused port for us but TrapListener
+	// doesn't have a way to return the autoselected port.
+	// Instead, we'll use an unusual port and hope it's
+	// unused.
+	const port = 12399
+
+	// Hook into the trap handler so the test knows when the
+	// trap has been received
+	received := make(chan int)
+	wrap := func(f gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc {
+		return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
+			f(p, a)
+			received <- 0
+		}
+	}
+
+	fakeTime := time.Unix(456456456, 456)
+	now := uint32(123123123)
+
+	testDataPath, err := filepath.Abs("./testdata")
+	require.NoError(t, err)
+
+	trap := gosnmp.SnmpTrap{
+		Variables: []gosnmp.SnmpPDU{
+			{
+				Name:  ".1.3.6.1.2.1.1.3.0",
+				Type:  gosnmp.TimeTicks,
+				Value: now,
+			},
+			{
+				Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
+				Type:  gosnmp.ObjectIdentifier,
+				Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
+			},
+		},
+	}
+
+	metrics := []telegraf.Metric{
+		testutil.MustMetric(
+			"snmp_trap", // name
+			map[string]string{ // tags
+				"oid":       ".1.3.6.1.6.3.1.1.5.1",
+				"name":      "coldStart",
+				"mib":       "SNMPv2-MIB",
+				"version":   "2c",
+				"source":    "127.0.0.1",
+				"community": "public",
+			},
+			map[string]interface{}{ // fields
+				"sysUpTimeInstance": now,
+			},
+			fakeTime,
+		),
+	}
+
+	// Set up the service input plugin
+	s := &SnmpTrap{
+		ServiceAddress:     "udp://:" + strconv.Itoa(port),
+		makeHandlerWrapper: wrap,
+		timeFunc: func() time.Time {
+			return fakeTime
+		},
+		lookupFunc: lookup,
+		Log:        testutil.Logger{},
+		Version:    "2c",
+		Path:       []string{testDataPath},
+	}
+
+	var acc testutil.Accumulator
+	require.Nil(t, s.Start(&acc))
+	defer s.Stop()
+
+	goSNMP := newGoSNMP(gosnmp.Version2c, port)
+
+	// Send the trap
+	sendTrap(t, goSNMP, trap)
+
+	// Wait for trap to be received
+	select {
+	case <-received:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for trap to be received")
+	}
+
+	// Verify plugin output
+	testutil.RequireMetricsEqual(t,
+		metrics, acc.GetTelegrafMetrics(),
+		testutil.SortMetrics())
 }
