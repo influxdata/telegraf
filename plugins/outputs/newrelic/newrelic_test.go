@@ -173,6 +173,14 @@ func TestNewRelic_Connect(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "Test: Metric URL ",
+			newrelic: &NewRelic{
+				InsightsKey: "12121212",
+				MetricURL:   "https://test.nr.com",
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

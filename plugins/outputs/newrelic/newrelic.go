@@ -21,6 +21,7 @@ type NewRelic struct {
 	MetricPrefix string          `toml:"metric_prefix"`
 	Timeout      config.Duration `toml:"timeout"`
 	HTTPProxy    string          `toml:"http_proxy"`
+	MetricURL 	 string 		 `toml:"metric_url"`
 
 	harvestor   *telemetry.Harvester
 	dc          *cumulative.DeltaCalculator
@@ -49,6 +50,10 @@ func (nr *NewRelic) SampleConfig() string {
   ## HTTP Proxy override. If unset use values from the standard
   ## proxy environment variables to determine proxy, if any.
   # http_proxy = "http://corporate.proxy:3128"
+
+  ## Metric URL override to enable geographic location endpoints.
+  # If not set use values from the standard 
+  # metric_url = "https://metric-api.newrelic.com/metric/v1"
 `
 }
 
@@ -76,6 +81,9 @@ func (nr *NewRelic) Connect() error {
 				}
 				nr.errorCount++
 				nr.savedErrors[nr.errorCount] = errorString
+			}
+			if nr.MetricURL != "" {
+				cfg.MetricsURLOverride = nr.MetricURL
 			}
 		})
 	if err != nil {
