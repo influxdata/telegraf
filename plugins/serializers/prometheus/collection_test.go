@@ -647,7 +647,7 @@ func TestExportTimestamps(t *testing.T) {
 	}{
 		{
 			name: "histogram bucket updates",
-			now:  time.Unix(0, 0),
+			now:  time.Unix(23, 0),
 			age:  10 * time.Second,
 			input: []Input{
 				{
@@ -661,7 +661,7 @@ func TestExportTimestamps(t *testing.T) {
 						time.Unix(15, 0),
 						telegraf.Histogram,
 					),
-					addtime: time.Unix(0, 0),
+					addtime: time.Unix(23, 0),
 				}, {
 					metric: testutil.MustMetric(
 						"prometheus",
@@ -672,7 +672,7 @@ func TestExportTimestamps(t *testing.T) {
 						time.Unix(15, 0),
 						telegraf.Histogram,
 					),
-					addtime: time.Unix(0, 0),
+					addtime: time.Unix(23, 0),
 				}, {
 					metric: testutil.MustMetric(
 						"prometheus",
@@ -683,7 +683,7 @@ func TestExportTimestamps(t *testing.T) {
 						time.Unix(15, 0),
 						telegraf.Histogram,
 					),
-					addtime: time.Unix(0, 0),
+					addtime: time.Unix(23, 0),
 				}, {
 					// Next interval
 					metric: testutil.MustMetric(
@@ -696,7 +696,7 @@ func TestExportTimestamps(t *testing.T) {
 						time.Unix(20, 0), // Updated timestamp
 						telegraf.Histogram,
 					),
-					addtime: time.Unix(0, 0),
+					addtime: time.Unix(23, 0),
 				}, {
 					metric: testutil.MustMetric(
 						"prometheus",
@@ -707,7 +707,7 @@ func TestExportTimestamps(t *testing.T) {
 						time.Unix(20, 0), // Updated timestamp
 						telegraf.Histogram,
 					),
-					addtime: time.Unix(0, 0),
+					addtime: time.Unix(23, 0),
 				}, {
 					metric: testutil.MustMetric(
 						"prometheus",
@@ -718,7 +718,7 @@ func TestExportTimestamps(t *testing.T) {
 						time.Unix(20, 0), // Updated timestamp
 						telegraf.Histogram,
 					),
-					addtime: time.Unix(0, 0),
+					addtime: time.Unix(23, 0),
 				},
 			},
 			expected: []*dto.MetricFamily{
@@ -751,7 +751,7 @@ func TestExportTimestamps(t *testing.T) {
 		},
 		{
 			name: "summary quantile updates",
-			now:  time.Unix(0, 0),
+			now:  time.Unix(23, 0),
 			age:  10 * time.Second,
 			input: []Input{
 				{
@@ -765,7 +765,7 @@ func TestExportTimestamps(t *testing.T) {
 						time.Unix(15, 0),
 						telegraf.Summary,
 					),
-					addtime: time.Unix(0, 0),
+					addtime: time.Unix(23, 0),
 				}, {
 					metric: testutil.MustMetric(
 						"prometheus",
@@ -776,7 +776,7 @@ func TestExportTimestamps(t *testing.T) {
 						time.Unix(15, 0),
 						telegraf.Summary,
 					),
-					addtime: time.Unix(0, 0),
+					addtime: time.Unix(23, 0),
 				}, {
 					// Updated Summary
 					metric: testutil.MustMetric(
@@ -789,7 +789,7 @@ func TestExportTimestamps(t *testing.T) {
 						time.Unix(20, 0), // Updated timestamp
 						telegraf.Summary,
 					),
-					addtime: time.Unix(0, 0),
+					addtime: time.Unix(23, 0),
 				}, {
 					metric: testutil.MustMetric(
 						"prometheus",
@@ -800,7 +800,7 @@ func TestExportTimestamps(t *testing.T) {
 						time.Unix(20, 0), // Updated timestamp
 						telegraf.Summary,
 					),
-					addtime: time.Unix(0, 0),
+					addtime: time.Unix(23, 0),
 				},
 			},
 			expected: []*dto.MetricFamily{
