@@ -318,16 +318,6 @@ func TestSuricataParse(t *testing.T) {
 				},
 				time.Unix(0, 0),
 			),
-			testutil.MustMetric(
-				"suricata",
-				map[string]string{
-					"thread": "total",
-				},
-				map[string]interface{}{
-					"uptime": float64(123),
-				},
-				time.Unix(0, 0),
-			),
 		},
 	},
 	}
