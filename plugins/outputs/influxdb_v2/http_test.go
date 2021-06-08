@@ -2,6 +2,8 @@ package influxdb_v2_test
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +16,11 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
+
+type createBucketRequest struct {
+	Name  string `json:"name"`
+	OrgID string `json:"orgID"`
+}
 
 func genURL(u string) *url.URL {
 	URL, _ := url.Parse(u)
@@ -110,4 +117,87 @@ func TestWriteBucketTagWorksOnRetry(t *testing.T) {
 	require.NoError(t, err)
 	err = client.Write(ctx, metrics)
 	require.NoError(t, err)
+}
+
+func parseBody(t *testing.T, reader io.ReadCloser) createBucketRequest {
+	var body createBucketRequest
+	require.NoError(t, json.NewDecoder(reader).Decode(&body))
+	return body
+}
+
+func TestCreateBucket(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
+	require.NoError(t, err)
+
+	tests := []struct {
+		name              string
+		config            influxdb.HTTPConfig
+		err               bool
+		createHandlerFunc func(*testing.T, http.ResponseWriter, *http.Request)
+		orgIDHandlerFunc  func(*testing.T, http.ResponseWriter, *http.Request)
+	}{
+		{
+			name:   "success",
+			config: influxdb.HTTPConfig{URL: u, Bucket: "bucket", Organization: "telegraf"},
+			createHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				body := parseBody(t, r.Body)
+				require.Equal(t, "bucket", body.Name)
+				require.Equal(t, "0123456789abcdef", body.OrgID)
+				w.WriteHeader(http.StatusCreated)
+			},
+			orgIDHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, "telegraf", r.URL.Query().Get("org"))
+				require.Equal(t, "1", r.URL.Query().Get("limit"))
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"orgs": [{"id": "0123456789abcdef"}]}`))
+			},
+		},
+		{
+			name:   "bad permissions",
+			err:    true,
+			config: influxdb.HTTPConfig{URL: u, Bucket: "bucket", Organization: "telegraf"},
+			orgIDHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusForbidden)
+			},
+		},
+		{
+			name:   "non-existent org",
+			err:    true,
+			config: influxdb.HTTPConfig{URL: u, Bucket: "bucket", Organization: "non-existent"},
+			orgIDHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"orgs": []}`))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/api/v2/orgs":
+					tt.orgIDHandlerFunc(t, w, r)
+				case "/api/v2/buckets":
+					tt.createHandlerFunc(t, w, r)
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			})
+
+			ctx := context.Background()
+
+			client, err := influxdb.NewHTTPClient(&tt.config)
+			require.NoError(t, err)
+
+			err = client.CreateBucket(ctx, client.Bucket)
+			if tt.err {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }

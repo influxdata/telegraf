@@ -1,6 +1,7 @@
 package influxdb_v2_test
 
 import (
+	"github.com/influxdata/telegraf/testutil"
 	"testing"
 
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -10,7 +11,7 @@ import (
 )
 
 func TestDefaultURL(t *testing.T) {
-	output := influxdb.InfluxDB{}
+	output := influxdb.InfluxDB{Log: testutil.Logger{}}
 	err := output.Connect()
 	require.NoError(t, err)
 	if len(output.URLs) < 1 {
@@ -25,6 +26,7 @@ func TestConnect(t *testing.T) {
 	}{
 		{
 			out: influxdb.InfluxDB{
+				Log:       testutil.Logger{},
 				URLs:      []string{"http://localhost:1234"},
 				HTTPProxy: "http://localhost:8086",
 				HTTPHeaders: map[string]string{
@@ -35,6 +37,7 @@ func TestConnect(t *testing.T) {
 		{
 			err: true,
 			out: influxdb.InfluxDB{
+				Log:       testutil.Logger{},
 				URLs:      []string{"!@#$qwert"},
 				HTTPProxy: "http://localhost:8086",
 				HTTPHeaders: map[string]string{
@@ -45,6 +48,7 @@ func TestConnect(t *testing.T) {
 		{
 			err: true,
 			out: influxdb.InfluxDB{
+				Log:       testutil.Logger{},
 				URLs:      []string{"http://localhost:1234"},
 				HTTPProxy: "!@#$%^&*()_+",
 				HTTPHeaders: map[string]string{
@@ -55,6 +59,7 @@ func TestConnect(t *testing.T) {
 		{
 			err: true,
 			out: influxdb.InfluxDB{
+				Log:       testutil.Logger{},
 				URLs:      []string{"!@#$%^&*()_+"},
 				HTTPProxy: "http://localhost:8086",
 				HTTPHeaders: map[string]string{
@@ -65,6 +70,7 @@ func TestConnect(t *testing.T) {
 		{
 			err: true,
 			out: influxdb.InfluxDB{
+				Log:       testutil.Logger{},
 				URLs:      []string{":::@#$qwert"},
 				HTTPProxy: "http://localhost:8086",
 				HTTPHeaders: map[string]string{
@@ -75,6 +81,7 @@ func TestConnect(t *testing.T) {
 		{
 			err: true,
 			out: influxdb.InfluxDB{
+				Log:  testutil.Logger{},
 				URLs: []string{"https://localhost:8080"},
 				ClientConfig: tls.ClientConfig{
 					TLSCA: "thing",

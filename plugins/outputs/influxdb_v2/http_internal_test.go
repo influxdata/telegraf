@@ -49,6 +49,74 @@ func TestMakeWriteURL(t *testing.T) {
 	}
 }
 
+func TestMakeCreateURL(t *testing.T) {
+	tests := []struct {
+		err bool
+		url *url.URL
+		act string
+	}{
+		{
+			url: genURL("http://localhost:9999"),
+			act: "http://localhost:9999/api/v2/buckets",
+		},
+		{
+			url: genURL("unix://var/run/influxd.sock"),
+			act: "http://127.0.0.1/api/v2/buckets",
+		},
+		{
+			err: true,
+			url: genURL("udp://localhost:9999"),
+		},
+	}
+
+	for i := range tests {
+		rURL, err := makeCreateURL(*tests[i].url)
+		if !tests[i].err {
+			require.NoError(t, err)
+		} else {
+			require.Error(t, err)
+			t.Log(err)
+		}
+		if err == nil {
+			require.Equal(t, tests[i].act, rURL)
+		}
+	}
+}
+
+func TestMakeOrgIDURL(t *testing.T) {
+	tests := []struct {
+		err bool
+		url *url.URL
+		act string
+	}{
+		{
+			url: genURL("http://localhost:9999"),
+			act: "http://localhost:9999/api/v2/orgs?limit=1&org=influx",
+		},
+		{
+			url: genURL("unix://var/run/influxd.sock"),
+			act: "http://127.0.0.1/api/v2/orgs?limit=1&org=influx",
+		},
+		{
+			err: true,
+			url: genURL("udp://localhost:9999"),
+		},
+	}
+
+	for i := range tests {
+		rURL, err := makeOrgIDURL(*tests[i].url, "influx")
+		if !tests[i].err {
+			require.NoError(t, err)
+		} else {
+			require.Error(t, err)
+			t.Log(err)
+		}
+		if err == nil {
+			require.Equal(t, tests[i].act, rURL)
+		}
+	}
+}
+
 func TestExponentialBackoffCalculation(t *testing.T) {
 	c := &httpClient{}
 	tests := []struct {
