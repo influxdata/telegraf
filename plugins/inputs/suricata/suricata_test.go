@@ -296,3 +296,52 @@ func TestSuricataStartStop(t *testing.T) {
 	require.NoError(t, s.Start(&acc))
 	s.Stop()
 }
+
+func TestSuricataParse(t *testing.T) {
+
+	tests := []struct {
+		filename string
+		expected []telegraf.Metric
+	}{{
+		filename: "test2.json",
+		expected: []telegraf.Metric{
+			testutil.MustMetric(
+				"suricata",
+				map[string]string{
+					"thread": "W#01-ens2f1",
+				},
+				map[string]interface{}{
+					"detect_alert":                float64(0),
+					"detect_engines_id":           float64(0),
+					"detect_engines_last_reload":  "2021-06-08T06:33:05.084872+0000",
+					"detect_engines_rules_failed": float64(0),
+					"detect_engines_rules_loaded": float64(22712),
+				},
+				time.Unix(0, 0),
+			),
+			testutil.MustMetric(
+				"suricata",
+				map[string]string{
+					"thread": "total",
+				},
+				map[string]interface{}{
+					"uptime": float64(123),
+				},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	}
+
+	for _, tc := range tests {
+		data, err := ioutil.ReadFile("testdata/" + tc.filename)
+		require.NoError(t, err)
+		s := Suricata{
+			Delimiter: "_",
+		}
+		acc := testutil.Accumulator{}
+		s.parse(&acc, data)
+
+		testutil.RequireMetricsEqual(t, tc.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+	}
+}
