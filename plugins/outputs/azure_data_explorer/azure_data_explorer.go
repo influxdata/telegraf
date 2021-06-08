@@ -5,9 +5,12 @@ package simpleoutput
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/Azure/azure-kusto-go/kusto"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
+	"github.com/Azure/azure-kusto-go/kusto/unsafe"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -23,9 +26,12 @@ type AzureDataExplorer struct {
 	TenantId     string          `toml:"tenant_id"`
 	Log          telegraf.Logger `toml:"-"`
 	Client       *kusto.Client
+	Ingesters    map[string]*ingest.Ingestion
 	Ingester     *ingest.Ingestion
 	Serializer   serializers.Serializer
 }
+
+const createTableCommand = `.create table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime)`
 
 func (s *AzureDataExplorer) Description() string {
 	return "Sends metrics to Azure Data Explorer"
@@ -67,11 +73,8 @@ func (s *AzureDataExplorer) Connect() error {
 		return err
 	}
 	s.Client = client
-	s.Ingester, err = ingest.New(client, s.Database, s.Table)
-
-	if err != nil {
-		return err
-	}
+	s.Ingesters = make(map[string]*ingest.Ingestion)
+	s.Ingester, _ = ingest.New(client, s.Database, s.Table)
 
 	return nil
 }
@@ -79,29 +82,86 @@ func (s *AzureDataExplorer) Connect() error {
 func (s *AzureDataExplorer) Close() error {
 
 	s.Client = nil
-	s.Ingester = nil
+	s.Ingesters = nil
 
 	return nil
 }
 
 func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 
-	reqBody := []byte{}
+	metricsPerNamespace := make(map[string][]byte)
+
 	for _, m := range metrics {
+		namespace := getNamespace(m)
 		metricInBytes, err := s.Serializer.Serialize(m)
 		if err != nil {
 			return err
 		}
-		reqBody = append(reqBody, metricInBytes[:]...)
+
+		if existingBytes, ok := metricsPerNamespace[namespace]; ok {
+			metricsPerNamespace[namespace] = append(existingBytes, metricInBytes...)
+		} else {
+			metricsPerNamespace[namespace] = metricInBytes
+		}
+
+		if _, ingestorExist := s.Ingesters[namespace]; !ingestorExist {
+			//create a table for the namespace
+			err := createAzureDataExplorerTableForNamespace(s.Client, s.Database, namespace)
+			if err != nil {
+				return err
+			}
+
+			//create a new ingestor client for the namespace
+			s.Ingesters[namespace], err = ingest.New(s.Client, s.Database, namespace)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	reader := bytes.NewReader(reqBody)
-	_, error := s.Ingester.FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef("metrics_mapping", ingest.JSON))
-	if error != nil {
-		s.Log.Errorf("error sending ingestion request to Azure Data Explorer: %v", error)
-		return error
+	for key, mPerNamespace := range metricsPerNamespace {
+		reader := bytes.NewReader(mPerNamespace)
+
+		_, error := s.Ingesters[key].FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef("metrics_mapping", ingest.JSON))
+		if error != nil {
+			s.Log.Errorf("error sending ingestion request to Azure Data Explorer: %v", error)
+			return error
+		}
 	}
 	return nil
+	////
+	// reqBody := []byte{}
+	// for _, m := range metrics {
+	// 	metricInBytes, err := s.Serializer.Serialize(m)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	reqBody = append(reqBody, metricInBytes[:]...)
+	// }
+
+	// reader := bytes.NewReader(reqBody)
+	// _, error := s.Ingester.FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef("metrics_mapping", ingest.JSON))
+	// if error != nil {
+	// 	s.Log.Errorf("error sending ingestion request to Azure Data Explorer: %v", error)
+	// 	return error
+	// }
+	// return nil
+}
+
+func createAzureDataExplorerTableForNamespace(client *kusto.Client, database string, tableName string) error {
+
+	stmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true}))
+	stmt.UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
+	_, err := client.Mgmt(context.TODO(), database, stmt)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func getNamespace(m telegraf.Metric) string {
+	names := strings.SplitN(m.Name(), "-", 2)
+	return names[0]
 }
 
 func init() {
