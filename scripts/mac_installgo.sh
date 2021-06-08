@@ -1,6 +1,6 @@
 #!/bin/sh
 
-version="1.16.2"
+version="1.16.5"
 # This path is cachable, while saving directly in /usr/local/ will cause issues restoring the cache
 path="/usr/local/Cellar"
 
