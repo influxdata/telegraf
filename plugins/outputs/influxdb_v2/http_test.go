@@ -18,8 +18,14 @@ import (
 )
 
 type createBucketRequest struct {
-	Name  string `json:"name"`
-	OrgID string `json:"orgID"`
+	Name           string          `json:"name"`
+	OrgID          string          `json:"orgID"`
+	RetentionRules []retentionRule `json:"retentionRules"`
+}
+
+type retentionRule struct {
+	EverySeconds int64  `json:"everySeconds"`
+	Type         string `json:"type"`
 }
 
 func genURL(u string) *url.URL {
@@ -146,11 +152,29 @@ func TestCreateBucket(t *testing.T) {
 				body := parseBody(t, r.Body)
 				require.Equal(t, "bucket", body.Name)
 				require.Equal(t, "0123456789abcdef", body.OrgID)
+				require.Len(t, body.RetentionRules, 1)
+				require.Equal(t, "expire", body.RetentionRules[0].Type)
+				require.Equal(t, int64(0), body.RetentionRules[0].EverySeconds)
 				w.WriteHeader(http.StatusCreated)
 			},
 			orgIDHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, "telegraf", r.URL.Query().Get("org"))
 				require.Equal(t, "1", r.URL.Query().Get("limit"))
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"orgs": [{"id": "0123456789abcdef"}]}`))
+			},
+		},
+		{
+			name:   "custom retention rule",
+			config: influxdb.HTTPConfig{URL: u, Bucket: "bucket", Organization: "telegraf", DefaultBucketRetention: 120},
+			createHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				body := parseBody(t, r.Body)
+				require.Len(t, body.RetentionRules, 1)
+				require.Equal(t, "expire", body.RetentionRules[0].Type)
+				require.Equal(t, int64(120), body.RetentionRules[0].EverySeconds)
+				w.WriteHeader(http.StatusCreated)
+			},
+			orgIDHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(`{"orgs": [{"id": "0123456789abcdef"}]}`))
 			},

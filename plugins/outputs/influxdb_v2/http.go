@@ -59,38 +59,45 @@ type orgInfo struct {
 
 // createBucketRequest is the payload used for creating a bucket
 type createBucketRequest struct {
-	Name  string `json:"name"`
-	OrgID string `json:"orgID"`
-	// TODO: support custom retention rule
+	Name           string          `json:"name"`
+	OrgID          string          `json:"orgID"`
+	RetentionRules []retentionRule `json:"retentionRules"`
+}
+
+type retentionRule struct {
+	EverySeconds int64  `json:"everySeconds"`
+	Type         string `json:"type"`
 }
 
 type HTTPConfig struct {
-	URL                *url.URL
-	Token              string
-	Organization       string
-	Bucket             string
-	BucketTag          string
-	ExcludeBucketTag   bool
-	SkipBucketCreation bool
-	Timeout            time.Duration
-	Headers            map[string]string
-	Proxy              *url.URL
-	UserAgent          string
-	ContentEncoding    string
-	TLSConfig          *tls.Config
+	URL                    *url.URL
+	Token                  string
+	Organization           string
+	Bucket                 string
+	BucketTag              string
+	ExcludeBucketTag       bool
+	SkipBucketCreation     bool
+	DefaultBucketRetention int64
+	Timeout                time.Duration
+	Headers                map[string]string
+	Proxy                  *url.URL
+	UserAgent              string
+	ContentEncoding        string
+	TLSConfig              *tls.Config
 
 	Serializer *influx.Serializer
 }
 
 type httpClient struct {
-	ContentEncoding    string
-	Timeout            time.Duration
-	Headers            map[string]string
-	Organization       string
-	Bucket             string
-	BucketTag          string
-	ExcludeBucketTag   bool
-	SkipBucketCreation bool
+	ContentEncoding        string
+	Timeout                time.Duration
+	Headers                map[string]string
+	Organization           string
+	Bucket                 string
+	BucketTag              string
+	ExcludeBucketTag       bool
+	SkipBucketCreation     bool
+	DefaultBucketRetention int64
 
 	client               *http.Client
 	createBucketExecuted map[string]bool
@@ -161,16 +168,17 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 			Timeout:   timeout,
 			Transport: transport,
 		},
-		createBucketExecuted: make(map[string]bool),
-		url:                  config.URL,
-		ContentEncoding:      config.ContentEncoding,
-		Timeout:              timeout,
-		Headers:              headers,
-		Organization:         config.Organization,
-		Bucket:               config.Bucket,
-		BucketTag:            config.BucketTag,
-		ExcludeBucketTag:     config.ExcludeBucketTag,
-		SkipBucketCreation:   config.SkipBucketCreation,
+		createBucketExecuted:   make(map[string]bool),
+		url:                    config.URL,
+		ContentEncoding:        config.ContentEncoding,
+		Timeout:                timeout,
+		Headers:                headers,
+		Organization:           config.Organization,
+		Bucket:                 config.Bucket,
+		BucketTag:              config.BucketTag,
+		ExcludeBucketTag:       config.ExcludeBucketTag,
+		SkipBucketCreation:     config.SkipBucketCreation,
+		DefaultBucketRetention: config.DefaultBucketRetention,
 	}
 	return client, nil
 }
@@ -405,6 +413,10 @@ func (c *httpClient) CreateBucket(ctx context.Context, bucket string) error {
 	bodyBytes, err := json.Marshal(createBucketRequest{
 		Name:  bucket,
 		OrgID: orgId,
+		RetentionRules: []retentionRule{{
+			EverySeconds: c.DefaultBucketRetention,
+			Type:         "expire",
+		}},
 	})
 	if err != nil {
 		return err
