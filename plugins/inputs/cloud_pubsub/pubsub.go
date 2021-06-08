@@ -184,10 +184,17 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 
 	// This function is called concurrently, but the decoder cannot.
 	ps.decoderMutex.Lock()
-	data, err := ps.decoder.Decode(msg.Data())
+	b, err := ps.decoder.Decode(msg.Data())
 	ps.decoderMutex.Unlock()
 	if err != nil {
 		return fmt.Errorf("unable to decode message: %v", err)
+	}
+	var data []byte
+	if ps.ContentEncoding == "gzip" {
+		data = make([]byte, len(b))
+		copy(data, b)
+	} else {
+		data = b
 	}
 	if ps.Base64Data {
 		strData, err := base64.StdEncoding.DecodeString(string(data))
