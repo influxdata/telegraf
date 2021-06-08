@@ -298,7 +298,6 @@ func TestSuricataStartStop(t *testing.T) {
 }
 
 func TestSuricataParse(t *testing.T) {
-
 	tests := []struct {
 		filename string
 		expected []telegraf.Metric
