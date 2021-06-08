@@ -154,7 +154,7 @@ func (aggregation *esAggregation) buildAggregationQuery() error {
 	// create a terms aggregation per tag
 	for _, term := range aggregation.Tags {
 		agg := elastic5.NewTermsAggregation()
-		if aggregation.IncludeMissingTag {
+		if aggregation.IncludeMissingTag && aggregation.MissingTagValue != "" {
 			agg.Missing(aggregation.MissingTagValue)
 		}
 
