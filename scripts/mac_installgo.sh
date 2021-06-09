@@ -12,12 +12,9 @@ path="/usr/local/Cellar"
 # Download Go and verify Go tarball. (Note: we aren't using brew because
 # it is slow to update and we can't pull specific minor versions.)
 setup_go () {
-
-    brew install coreutils # Install sha256sum util
-
     echo "installing go"
-    curl -OL https://golang.org/dl/go${GO_VERSION}.${GO_ARCH}.tar.gz --output go${GO_VERSION}.${GO_ARCH}.tar.gz
-    echo "${GO_VERSION_SHA} go${GO_VERSION}.${GO_ARCH}.tar.gz" | sha256sum --check
+    curl -L https://golang.org/dl/go${GO_VERSION}.${GO_ARCH}.tar.gz --output go${GO_VERSION}.${GO_ARCH}.tar.gz
+    echo "${GO_VERSION_SHA} go${GO_VERSION}.${GO_ARCH}.tar.gz" | shasum -a 256 --check
     sudo rm -rf ${path}/go
     sudo tar -C $path -xzf go${GO_VERSION}.${GO_ARCH}.tar.gz
     ln -sf ${path}/go/bin/go /usr/local/bin/go
