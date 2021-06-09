@@ -1382,11 +1382,6 @@ func TestGosmiSingleMib(t *testing.T) {
 		Log:        testutil.Logger{},
 		Version:    "2c",
 		Path:       []string{testDataPath},
-		// Path: []string{
-		// 	"/usr/share/snmp/mibs",
-		// 	// "/usr/share/snmp/mibs/ietf",
-		// 	// "/usr/share/snmp/mibs/iana",
-		// },
 	}
 	require.NoError(t, s.Init())
 
