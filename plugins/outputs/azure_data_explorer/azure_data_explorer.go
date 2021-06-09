@@ -106,10 +106,10 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 
 		if _, ingestorExist := s.Ingesters[namespace]; !ingestorExist {
 			//create a table for the namespace
-			err := createAzureDataExplorerTableForNamespace(s.Client, s.Database, namespace)
-			if err != nil {
-				return err
-			}
+			// err := createAzureDataExplorerTableForNamespace(s.Client, s.Database, namespace)
+			// if err != nil {
+			// 	return err
+			// }
 
 			//create a new ingestor client for the namespace
 			s.Ingesters[namespace], err = ingest.New(s.Client, s.Database, namespace)
@@ -129,23 +129,6 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 		}
 	}
 	return nil
-	////
-	// reqBody := []byte{}
-	// for _, m := range metrics {
-	// 	metricInBytes, err := s.Serializer.Serialize(m)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	reqBody = append(reqBody, metricInBytes[:]...)
-	// }
-
-	// reader := bytes.NewReader(reqBody)
-	// _, error := s.Ingester.FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef("metrics_mapping", ingest.JSON))
-	// if error != nil {
-	// 	s.Log.Errorf("error sending ingestion request to Azure Data Explorer: %v", error)
-	// 	return error
-	// }
-	// return nil
 }
 
 func createAzureDataExplorerTableForNamespace(client *kusto.Client, database string, tableName string) error {
