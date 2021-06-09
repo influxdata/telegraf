@@ -111,7 +111,7 @@ func init() {
 }
 
 func (s *SnmpTrap) Init() error {
-	// must init, append path for each directory, laod module for every file
+	// must init, append path for each directory, load module for every file
 	// or gosmi will fail without saying why
 	gosmi.Init()
 	s.getMibsPath()
@@ -265,6 +265,7 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 
 func (s *SnmpTrap) Stop() {
 	s.listener.Close()
+	defer gosmi.Exit()
 	err := <-s.errCh
 	if nil != err {
 		s.Log.Errorf("Error stopping trap listener %v", err)
