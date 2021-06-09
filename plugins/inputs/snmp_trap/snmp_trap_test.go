@@ -127,15 +127,6 @@ func sendTrap(t *testing.T, goSNMP gosnmp.GoSNMP, trap gosnmp.SnmpTrap) {
 	}
 }
 
-// func sendTrapGoSmi(t *testing.T, goSMI gosmi.SmiNode, trap gosnmp.SnmpTrap) {
-// 	goSMI, err := gosmi.GetNodeByOID(types.OidMustFromString(goSMI.Oid.String()))
-// 	if err != nil {
-// 		t.Errorf("GetNodeByOid err: %v", err)
-// 	}
-// 	// entry.e.oidText = goSMI.RenderQualified()
-// 	goSMI.RenderQualified()
-// }
-
 func TestReceiveTrap(t *testing.T) {
 	now := uint32(123123123)
 	fakeTime := time.Unix(456456456, 456)
