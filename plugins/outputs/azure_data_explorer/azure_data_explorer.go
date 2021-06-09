@@ -31,7 +31,8 @@ type AzureDataExplorer struct {
 	Serializer   serializers.Serializer
 }
 
-const createTableCommand = `.create table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime)`
+const createTableCommand = `.create table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
+const createTableMappingCommand = `.create table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
 
 func (s *AzureDataExplorer) Description() string {
 	return "Sends metrics to Azure Data Explorer"
@@ -106,10 +107,10 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 
 		if _, ingestorExist := s.Ingesters[namespace]; !ingestorExist {
 			//create a table for the namespace
-			// err := createAzureDataExplorerTableForNamespace(s.Client, s.Database, namespace)
-			// if err != nil {
-			// 	return err
-			// }
+			err := createAzureDataExplorerTableForNamespace(s.Client, s.Database, namespace)
+			if err != nil {
+				return err
+			}
 
 			//create a new ingestor client for the namespace
 			s.Ingesters[namespace], err = ingest.New(s.Client, s.Database, namespace)
@@ -122,7 +123,7 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	for key, mPerNamespace := range metricsPerNamespace {
 		reader := bytes.NewReader(mPerNamespace)
 
-		_, error := s.Ingesters[key].FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef("metrics_mapping", ingest.JSON))
+		_, error := s.Ingesters[key].FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON))
 		if error != nil {
 			s.Log.Errorf("error sending ingestion request to Azure Data Explorer: %v", error)
 			return error
@@ -133,12 +134,18 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 
 func createAzureDataExplorerTableForNamespace(client *kusto.Client, database string, tableName string) error {
 
-	stmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true}))
-	stmt.UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
+	stmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
+	_, errCreatingTable := client.Mgmt(context.TODO(), database, stmt)
+	if errCreatingTable != nil {
+		return errCreatingTable
+	}
+
+	stmt = kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true})).UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
 	_, err := client.Mgmt(context.TODO(), database, stmt)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
