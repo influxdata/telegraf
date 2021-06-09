@@ -394,7 +394,6 @@ func lookup(oid string) (e mibEntry, err error) {
 	}
 
 	e.oidText = node.RenderQualified()
-	fmt.Printf("node %v\n", node)
 
 	i := strings.Index(e.oidText, "::")
 	if i == -1 {
