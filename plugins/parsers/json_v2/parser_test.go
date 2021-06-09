@@ -65,6 +65,10 @@ func TestData(t *testing.T) {
 			name: "Test object",
 			test: "object",
 		},
+		{
+			name: "Test multiple timestamps",
+			test: "multiple_timestamps",
+		},
 	}
 
 	for _, tc := range tests {
@@ -85,6 +89,7 @@ func TestData(t *testing.T) {
 				err = i.Init()
 				require.NoError(t, err)
 				err = i.Gather(&acc)
+				require.NoError(t, err)
 			}
 			require.NoError(t, err)
 

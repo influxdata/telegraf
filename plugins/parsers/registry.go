@@ -413,7 +413,6 @@ func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
 	for i, cfg := range jsonv2config {
 		configs[i].MeasurementName = cfg.MeasurementName
 		configs[i].MeasurementNamePath = cfg.MeasurementNamePath
-		configs[i].DefaultMeasurementName = cfg.DefaultMeasurementName
 
 		configs[i].TimestampPath = cfg.TimestampPath
 		configs[i].TimestampFormat = cfg.TimestampFormat

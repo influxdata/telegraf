@@ -27,13 +27,16 @@ You configure this parser by describing the metric you want by defining the fiel
             type = "int" # A string specifying the type (int,uint,float,string,bool)
         [[inputs.http.json_v2.object]]
             path = "" # A string with valid GJSON path syntax
+            timestamp_key = "" # A JSON key (for a nested key, prepend the parent keys with underscores) to a valid timestamp
+            timestamp_format = "" # A string with a valid timestamp format (see below for possible values)
+            timestamp_timezone = "" # A string with with a valid timezone (see below for possible values)
             disable_prepend_keys = false (or true, just not both)
-            included_keys = [] # List of JSON keys (with prepended keys) that should be only included in result
-            excluded_keys = [] # List of JSON keys (with prepended keys) that shouldn't be included in result
-            tags = [] # List of JSON keys (with prepended keys) to be a tag instead of a field
-            [inputs.http.json_v2.object.renames] # A map of JSON keys (with prepended keys) with a new name for the tag key
+            included_keys = [] # List of JSON keys (for a nested key, prepend the parent keys with underscores) that should be only included in result
+            excluded_keys = [] # List of JSON keys (for a nested key, prepend the parent keys with underscores) that shouldn't be included in result
+            tags = [] # List of JSON keys (for a nested key, prepend the parent keys with underscores) to be a tag instead of a field
+            [inputs.http.json_v2.object.renames] # A map of JSON keys (for a nested key, prepend the parent keys with underscores) with a new name for the tag key
                 key = "new name"
-            [inputs.http.json_v2.object.fields] # A map of JSON keys (with prepended keys) with a type (int,uint,float,string,bool)
+            [inputs.http.json_v2.object.fields] # A map of JSON keys (for a nested key, prepend the parent keys with underscores) with a type (int,uint,float,string,bool)
                 key = "int"
 ```
 ---
@@ -87,9 +90,16 @@ With the configuration section `object`, you can gather metrics from [JSON objec
 The following keys can be set for `object`:
 
 * **path (REQUIRED)**: You must define the path query that gathers the object with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md)
+* **timestamp_key(OPTIONAL)**: You can define a json key (for a nested key, prepend the parent keys with underscores) for the value to be set as the timestamp from the JSON input.
+* **timestamp_format (OPTIONAL, but REQUIRED when timestamp_query is defined**: Must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`, or
+the Go "reference time" which is defined to be the specific time:
+`Mon Jan 2 15:04:05 MST 2006`
+* **timestamp_timezone (OPTIONAL, but REQUIRES timestamp_query**: This option should be set to a
+[Unix TZ value](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones),
+such as `America/New_York`, to `Local` to utilize the system timezone, or to `UTC`. Defaults to `UTC`
 * **disable_prepend_keys (OPTIONAL)**: Set to true to prevent resulting nested data to contain the parent key prepended to its key **NOTE**: duplicate names can overwrite each other when this is enabled
 * **included_keys (OPTIONAL)**: You can define a list of key's that should be the only data included in the metric, by default it will include everything.
-* **excluded_keys (OPTIONAL)**: You can define json keys to be excluded in the metric, use flattened names for nested results
+* **excluded_keys (OPTIONAL)**: You can define json keys to be excluded in the metric, for a nested key, prepend the parent keys with underscores
 * **tags (OPTIONAL)**: You can define json keys to be set as tags instead of fields, if you define a key that is an array or object then all nested values will become a tag
 * **renames (OPTIONAL)**: A table matching the json key with the desired name (oppossed to defaulting to using the key), use names that include the prepended keys of its parent keys for nested results
 * **fields (OPTIONAL)**: A table matching the json key with the desired type (int,string,bool,float), if you define a key that is an array or object then all nested values will become that type

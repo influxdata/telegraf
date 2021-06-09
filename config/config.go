@@ -1395,9 +1395,10 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 			for i, metricConfig := range metricConfigs {
 				mc := pc.JSONV2Config[i]
 				c.getFieldString(metricConfig, "measurement_name", &mc.MeasurementName)
+				if mc.MeasurementName == "" {
+					mc.MeasurementName = name
+				}
 				c.getFieldString(metricConfig, "measurement_name_path", &mc.MeasurementNamePath)
-				mc.DefaultMeasurementName = name // Used if measurement_name_path fails or returns an array/object
-
 				c.getFieldString(metricConfig, "timestamp_path", &mc.TimestampPath)
 				c.getFieldString(metricConfig, "timestamp_format", &mc.TimestampFormat)
 				c.getFieldString(metricConfig, "timestamp_timezone", &mc.TimestampTimezone)
@@ -1430,6 +1431,9 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 						for _, objectConfig := range objectconfigs {
 							var o json_v2.JSONObject
 							c.getFieldString(objectConfig, "path", &o.Path)
+							c.getFieldString(objectConfig, "timestamp_key", &o.TimestampKey)
+							c.getFieldString(objectConfig, "timestamp_format", &o.TimestampFormat)
+							c.getFieldString(objectConfig, "timestamp_timezone", &o.TimestampTimezone)
 							c.getFieldBool(objectConfig, "disable_prepend_keys", &o.DisablePrependKeys)
 							c.getFieldStringSlice(objectConfig, "included_keys", &o.IncludedKeys)
 							c.getFieldStringSlice(objectConfig, "excluded_keys", &o.ExcludedKeys)

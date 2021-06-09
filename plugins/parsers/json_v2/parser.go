@@ -25,12 +25,11 @@ type Parser struct {
 }
 
 type Config struct {
-	MeasurementName        string // OPTIONAL
-	DefaultMeasurementName string // OPTIONAL
-	MeasurementNamePath    string // OPTIONAL
-	TimestampPath          string // OPTIONAL
-	TimestampFormat        string // OPTIONAL, but REQUIRED when timestamp_path is defined
-	TimestampTimezone      string // OPTIONAL, but REQUIRES timestamp_path
+	MeasurementName     string `toml:"measurement_name"`      // OPTIONAL
+	MeasurementNamePath string `toml:"measurement_name_path"` // OPTIONAL
+	TimestampPath       string `toml:"timestamp_path"`        // OPTIONAL
+	TimestampFormat     string `toml:"timestamp_format"`      // OPTIONAL, but REQUIRED when timestamp_path is defined
+	TimestampTimezone   string `toml:"timestamp_timezone"`    // OPTIONAL, but REQUIRES timestamp_path
 
 	Fields      []DataSet
 	Tags        []DataSet
@@ -45,6 +44,9 @@ type DataSet struct {
 
 type JSONObject struct {
 	Path               string            `toml:"path"`                 // REQUIRED
+	TimestampKey       string            `toml:"timestamp_key"`        // OPTIONAL
+	TimestampFormat    string            `toml:"timestamp_format"`     // OPTIONAL, but REQUIRED when timestamp_path is defined
+	TimestampTimezone  string            `toml:"timestamp_timezone"`   // OPTIONAL, but REQUIRES timestamp_path
 	Renames            map[string]string `toml:"renames"`              // OPTIONAL
 	Fields             map[string]string `toml:"fields"`               // OPTIONAL
 	Tags               []string          `toml:"tags"`                 // OPTIONAL
@@ -73,11 +75,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 
 	for _, c := range p.Configs {
 		// Measurement name configuration
-		if c.MeasurementName != "" {
-			p.measurementName = c.MeasurementName
-		} else {
-			p.measurementName = c.DefaultMeasurementName
-		}
+		p.measurementName = c.MeasurementName
 		if c.MeasurementNamePath != "" {
 			result := gjson.GetBytes(input, c.MeasurementNamePath)
 			if !result.IsArray() && !result.IsObject() {
@@ -264,7 +262,8 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 						Metric:  m,
 						Result:  val,
 					}
-					r, err := p.combineObject(n)
+					var r []MetricNode
+					r, err = p.combineObject(n)
 					if err != nil {
 						return false
 					}
@@ -295,7 +294,8 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 				Metric:      m,
 				Result:      val,
 			}
-			r, err := p.expandArray(n)
+			var r []MetricNode
+			r, err = p.expandArray(n)
 			if err != nil {
 				return false
 			}
@@ -307,11 +307,23 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 		}
 	} else {
 		if !result.Tag && !result.IsObject() {
-			v, err := p.convertType(result.Value(), result.DesiredType, result.SetName)
-			if err != nil {
-				return nil, err
+			if result.SetName == p.currentSettings.TimestampKey {
+				if p.currentSettings.TimestampFormat == "" {
+					err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
+					return nil, err
+				}
+				timestamp, err := internal.ParseTimestamp(p.currentSettings.TimestampFormat, result.Value(), p.currentSettings.TimestampTimezone)
+				if err != nil {
+					return nil, err
+				}
+				result.Metric.SetTime(timestamp)
+			} else {
+				v, err := p.convertType(result.Value(), result.DesiredType, result.SetName)
+				if err != nil {
+					return nil, err
+				}
+				result.Metric.AddField(result.OutputName, v)
 			}
-			result.Metric.AddField(result.OutputName, v)
 		} else if !result.IsObject() {
 			v, err := p.convertType(result.Value(), "string", result.SetName)
 			if err != nil {
@@ -421,12 +433,13 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 			arrayNode.Tag = tag
 			if val.IsObject() {
 				prevArray = false
-				_, err := p.combineObject(arrayNode)
+				_, err = p.combineObject(arrayNode)
 				if err != nil {
 					return false
 				}
 			} else {
-				r, err := p.expandArray(arrayNode)
+				var r []MetricNode
+				r, err = p.expandArray(arrayNode)
 				if err != nil {
 					return false
 				}
