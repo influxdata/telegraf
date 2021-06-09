@@ -21,7 +21,7 @@ type NewRelic struct {
 	MetricPrefix string          `toml:"metric_prefix"`
 	Timeout      config.Duration `toml:"timeout"`
 	HTTPProxy    string          `toml:"http_proxy"`
-	MetricURL 	 string 		 `toml:"metric_url"`
+	MetricURL    string          `toml:"metric_url"`
 
 	harvestor   *telemetry.Harvester
 	dc          *cumulative.DeltaCalculator
