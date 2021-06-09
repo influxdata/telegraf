@@ -31,8 +31,9 @@ type AzureDataExplorer struct {
 	Serializer   serializers.Serializer
 }
 
+const dropTableCommand = `.drop table ['%s'] ifexists`
 const createTableCommand = `.create table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
-const createTableMappingCommand = `.create table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
+const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
 
 func (s *AzureDataExplorer) Description() string {
 	return "Sends metrics to Azure Data Explorer"
@@ -134,16 +135,23 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 
 func createAzureDataExplorerTableForNamespace(client *kusto.Client, database string, tableName string) error {
 
-	stmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
-	_, errCreatingTable := client.Mgmt(context.TODO(), database, stmt)
+	dropStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true})).UnsafeAdd(fmt.Sprintf(dropTableCommand, tableName))
+	_, errDroppingTable := client.Mgmt(context.TODO(), database, dropStmt)
+	if errDroppingTable != nil {
+		return errDroppingTable
+	}
+
+	// Create a database
+	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
+	_, errCreatingTable := client.Mgmt(context.TODO(), database, createStmt)
 	if errCreatingTable != nil {
 		return errCreatingTable
 	}
 
-	stmt = kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true})).UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
-	_, err := client.Mgmt(context.TODO(), database, stmt)
-	if err != nil {
-		return err
+	createTableMappingstmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true})).UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
+	_, errCreatingTableMapping := client.Mgmt(context.TODO(), database, createTableMappingstmt)
+	if errCreatingTableMapping != nil {
+		return errCreatingTableMapping
 	}
 
 	return nil
