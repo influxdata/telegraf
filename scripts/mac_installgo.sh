@@ -3,8 +3,8 @@
 set -eux
 
 GO_ARCH="darwin-amd64"
-GO_VERSION="1.16.2"
-GO_VERSION_SHA="c98cde81517c5daf427f3071412f39d5bc58f6120e90a0d94cc51480fa04dbc1" # from https://golang.org/dl
+GO_VERSION="1.16.5"
+GO_VERSION_SHA="be761716d5bfc958a5367440f68ba6563509da2f539ad1e1864bd42fe553f277" # from https://golang.org/dl
 
 # This path is cachable. (Saving in /usr/local/ would cause issues restoring the cache.)
 path="/usr/local/Cellar"
