@@ -1288,7 +1288,9 @@ func TestReceiveTrap(t *testing.T) {
 				PrivProtocol: tt.privProto,
 				PrivPassword: tt.privPass,
 			}
-			// Don't look up oid with snmptranslate.
+
+			require.NoError(t, s.Init())
+
 			var acc testutil.Accumulator
 			require.Nil(t, s.Start(&acc))
 			defer s.Stop()
@@ -1389,7 +1391,13 @@ func TestGosmiSingleMib(t *testing.T) {
 		Log:        testutil.Logger{},
 		Version:    "2c",
 		Path:       []string{testDataPath},
+		// Path: []string{
+		// 	"/usr/share/snmp/mibs",
+		// 	// "/usr/share/snmp/mibs/ietf",
+		// 	// "/usr/share/snmp/mibs/iana",
+		// },
 	}
+	require.NoError(t, s.Init())
 
 	var acc testutil.Accumulator
 	require.Nil(t, s.Start(&acc))

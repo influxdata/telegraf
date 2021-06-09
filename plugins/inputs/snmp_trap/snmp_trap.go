@@ -46,8 +46,7 @@ type SnmpTrap struct {
 	listener   *gosnmp.TrapListener
 	timeFunc   func() time.Time
 	lookupFunc func(string) (mibEntry, error)
-	//add look up func
-	errCh chan error
+	errCh      chan error
 
 	makeHandlerWrapper func(gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc
 
@@ -112,6 +111,8 @@ func init() {
 }
 
 func (s *SnmpTrap) Init() error {
+	// must init, append path for each directory, laod module for every file
+	// or gosmi will fail without saying why
 	gosmi.Init()
 	s.getMibsPath()
 	return nil
@@ -139,6 +140,7 @@ func (s *SnmpTrap) getMibsPath() error {
 				return nil
 			})
 		}
+		folders = []string{}
 	}
 	return nil
 }
@@ -384,11 +386,14 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 func lookup(oid string) (e mibEntry, err error) {
 	var node gosmi.SmiNode
 	node, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
+
+	// ensure modules are loaded or node will be empty (might not error)
 	if err != nil {
 		return e, err
 	}
 
 	e.oidText = node.RenderQualified()
+	fmt.Printf("node %v\n", node)
 
 	i := strings.Index(e.oidText, "::")
 	if i == -1 {
