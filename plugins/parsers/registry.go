@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
@@ -51,6 +52,8 @@ type Parser interface {
 	// and parses it into a telegraf metric.
 	//
 	// Must be thread-safe.
+	// This function is only called by plugins that expect line based protocols
+	// Doesn't need to be implemented by non-linebased parsers (e.g. json, xml)
 	ParseLine(line string) (telegraf.Metric, error)
 
 	// SetDefaultTags tells the parser to add all of the given tags
@@ -158,10 +161,17 @@ type Config struct {
 
 	// XML configuration
 	XMLConfig []XMLConfig `toml:"xml"`
+
+	// JSONPath configuration
+	JSONV2Config []JSONV2Config `toml:"json_v2"`
 }
 
 type XMLConfig struct {
 	xml.Config
+}
+
+type JSONV2Config struct {
+	json_v2.Config
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -253,6 +263,8 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
 	case "xml":
 		parser, err = NewXMLParser(config.MetricName, config.DefaultTags, config.XMLConfig)
+	case "json_v2":
+		parser, err = NewJSONPathParser(config.JSONV2Config)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -393,5 +405,25 @@ func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs [
 	return &xml.Parser{
 		Configs:     configs,
 		DefaultTags: defaultTags,
+	}, nil
+}
+
+func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
+	configs := make([]json_v2.Config, len(jsonv2config))
+	for i, cfg := range jsonv2config {
+		configs[i].MeasurementName = cfg.MeasurementName
+		configs[i].MeasurementNamePath = cfg.MeasurementNamePath
+
+		configs[i].TimestampPath = cfg.TimestampPath
+		configs[i].TimestampFormat = cfg.TimestampFormat
+		configs[i].TimestampTimezone = cfg.TimestampTimezone
+
+		configs[i].Fields = cfg.Fields
+		configs[i].Tags = cfg.Tags
+
+		configs[i].JSONObjects = cfg.JSONObjects
+	}
+	return &json_v2.Parser{
+		Configs: configs,
 	}, nil
 }
