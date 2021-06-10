@@ -55,7 +55,7 @@ func (p *Parser) Init() error {
 	case "json", "json_xpath":
 		p.document = &jsonDocument{}
 	case "protobuf":
-		pbdoc := protobufDocument{MessageType: p.MessageType}
+		pbdoc := protobufDocument{MessageType: p.MessageType, Log: p.Log}
 		if err := pbdoc.Init(); err != nil {
 			return err
 		}

@@ -2,7 +2,11 @@ package xpath
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
+
+	"github.com/influxdata/telegraf"
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -12,29 +16,28 @@ import (
 	path "github.com/antchfx/xpath"
 	"github.com/doclambda/protobufquery"
 
-	// Register all known definitions APIv2 types
-	// "github.com/doclambda/protobufquery/testcases/addressbook"
-
-	// Register all known definitions APIv1 types
+	// Register all known definitions
 	_ "github.com/doclambda/protobufquery/testcases/addressbook"
+	_ "github.com/doclambda/tahu/client_libraries/golang"
 )
 
 var once sync.Once
 
 type protobufDocument struct {
 	MessageType string
+	Log         telegraf.Logger
 	msg         *dynamicpb.Message
 }
 
 func (d *protobufDocument) Init() error {
 	var err error
 
-	// Register all APIv2 style packages. APIv1 style packages will register themselves, so nothing to do.
+	// Register all packages requiring manual registration. Usually packages register themselves on import.
 	once.Do(func() {
-		// if err = protoregistry.GlobalFiles.RegisterFile(addressbook.File_addressbook_proto); err != nil { return }
+		// if err = protoregistry.GlobalFiles.RegisterFile(tahu.File_sparkplug_b_proto); err != nil { return }
 	})
 	if err != nil {
-		return fmt.Errorf("registering APIv2 protocol-buffer failed: %v", err)
+		return fmt.Errorf("registering protocol-buffers manually failed: %v", err)
 	}
 
 	// Check the message type
@@ -46,6 +49,19 @@ func (d *protobufDocument) Init() error {
 	msgFullName := protoreflect.FullName(d.MessageType)
 	desc, err := protoregistry.GlobalFiles.FindDescriptorByName(msgFullName)
 	if err != nil {
+		d.Log.Infof("Could not find %q... Known messages:", msgFullName)
+		var known []string
+		protoregistry.GlobalFiles.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
+			name := strings.TrimSpace(string(fd.FullName()))
+			if name != "" {
+				known = append(known, name)
+			}
+			return true
+		})
+		sort.Strings(known)
+		for _, name := range known {
+			d.Log.Infof("  %s", name)
+		}
 		return err
 	}
 
