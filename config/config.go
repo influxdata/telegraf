@@ -50,6 +50,10 @@ var (
 		`\`, `\\`,
 	)
 	httpLoadConfigRetryInterval = 10 * time.Second
+
+	// fetchURLRe is a regex to determine whether the requested file should
+	// be fetched from a remote or read from the filesystem.
+	fetchURLRe = regexp.MustCompile(`^\w+://`)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -708,6 +712,10 @@ func getDefaultConfigPath() (string, error) {
 		etcfile = programFiles + `\Telegraf\telegraf.conf`
 	}
 	for _, path := range []string{envfile, homefile, etcfile} {
+		if isURL(path) {
+			log.Printf("I! Using config url: %s", path)
+			return path, nil
+		}
 		if _, err := os.Stat(path); err == nil {
 			log.Printf("I! Using config file: %s", path)
 			return path, nil
@@ -717,6 +725,12 @@ func getDefaultConfigPath() (string, error) {
 	// if we got here, we didn't find a file in a default location
 	return "", fmt.Errorf("No config file specified, and could not find one"+
 		" in $TELEGRAF_CONFIG_PATH, %s, or %s", homefile, etcfile)
+}
+
+// isURL checks if string is valid url
+func isURL(str string) bool {
+	u, err := url.Parse(str)
+	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
 // LoadConfig loads the given config file and applies it to c
@@ -902,17 +916,21 @@ func escapeEnv(value string) string {
 }
 
 func loadConfig(config string) ([]byte, error) {
-	u, err := url.Parse(config)
-	if err != nil {
-		return nil, err
+	if fetchURLRe.MatchString(config) {
+		u, err := url.Parse(config)
+		if err != nil {
+			return nil, err
+		}
+
+		switch u.Scheme {
+		case "https", "http":
+			return fetchConfig(u)
+		default:
+			return nil, fmt.Errorf("scheme %q not supported", u.Scheme)
+		}
 	}
 
-	switch u.Scheme {
-	case "https", "http":
-		return fetchConfig(u)
-	default:
-		// If it isn't a https scheme, try it as a file.
-	}
+	// If it isn't a https scheme, try it as a file
 	return ioutil.ReadFile(config)
 }
 
