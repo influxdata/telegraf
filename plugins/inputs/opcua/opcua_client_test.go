@@ -19,7 +19,7 @@ type OPCTags struct {
 	Want           string
 }
 
-func TestClient1(t *testing.T) {
+func TestClient1Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -34,7 +34,7 @@ func TestClient1(t *testing.T) {
 	var err error
 
 	o.MetricName = "testing"
-	o.Endpoint = "opc.tcp://opcua.rocks:4840"
+	o.Endpoint = "opc.tcp://localhost:4840"
 	o.AuthMethod = "Anonymous"
 	o.ConnectTimeout = config.Duration(10 * time.Second)
 	o.RequestTimeout = config.Duration(1 * time.Second)

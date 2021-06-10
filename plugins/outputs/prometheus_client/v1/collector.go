@@ -153,7 +153,6 @@ func CreateSampleID(tags map[string]string) SampleID {
 }
 
 func addSample(fam *MetricFamily, sample *Sample, sampleID SampleID) {
-
 	for k := range sample.Labels {
 		fam.LabelSet[k]++
 	}
@@ -363,7 +362,6 @@ func (c *Collector) Add(metrics []telegraf.Metric) error {
 					continue
 				}
 				c.addMetricFamily(point, sample, mname, sampleID)
-
 			}
 		}
 	}

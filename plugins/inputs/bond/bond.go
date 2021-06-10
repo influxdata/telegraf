@@ -157,10 +157,8 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 			acc.AddFields("bond_slave", fields, tags)
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-	return nil
+
+	return scanner.Err()
 }
 
 // loadPath can be used to read path firstly from config

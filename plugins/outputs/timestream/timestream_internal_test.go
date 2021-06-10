@@ -36,7 +36,6 @@ func TestGetTimestreamTime(t *testing.T) {
 }
 
 func TestPartitionRecords(t *testing.T) {
-
 	assertions := assert.New(t)
 
 	testDatum := timestreamwrite.Record{

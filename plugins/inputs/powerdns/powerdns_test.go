@@ -51,7 +51,6 @@ var intOverflowMetrics = "corrupt-packets=18446744073709550195,deferred-cache-in
 	"signature-cache-size=0,sys-msec=2889,uptime=86317,user-msec=2167,"
 
 func (s statServer) serverSocket(l net.Listener) {
-
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -64,7 +63,11 @@ func (s statServer) serverSocket(l net.Listener) {
 
 			data := buf[:n]
 			if string(data) == "show * \n" {
+				// Ignore the returned error as we need to close the socket anyway
+				//nolint:errcheck,revive
 				c.Write([]byte(metrics))
+				// Ignore the returned error as we cannot do anything about it anyway
+				//nolint:errcheck,revive
 				c.Close()
 			}
 		}(conn)

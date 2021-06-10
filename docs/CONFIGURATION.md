@@ -87,16 +87,16 @@ INFLUX_BUCKET="replace_with_your_bucket_name"
 # For InfluxDB OSS 2:
 [[outputs.influxdb_v2]]
   urls = ["${INFLUX_HOST}"]
-  token = ["${INFLUX_TOKEN}"]
-  org = ["${INFLUX_ORG}"]
-  bucket = ["${INFLUX_BUCKET}"]
+  token = "${INFLUX_TOKEN}"
+  organization = "${INFLUX_ORG}"
+  bucket = "${INFLUX_BUCKET}"
 
 # For InfluxDB Cloud 2:
 [[outputs.influxdb_v2]]
   urls = ["${INFLUX_HOST}"]
-  token = ["${INFLUX_TOKEN}"]
-  org = ["${INFLUX_ORG}"]
-  bucket = ["${INFLUX_BUCKET}"]
+  token = "${INFLUX_TOKEN}"
+  organization = "${INFLUX_ORG}"
+  bucket = "${INFLUX_BUCKET}"
 ```
 
 The above files will produce the following effective configuration file to be
@@ -117,7 +117,7 @@ parsed:
 [[outputs.influxdb_v2]]
   urls = ["http://127.0.0.1:8086"] # double check the port. could be 9999 if using OSS Beta
   token = "replace_with_your_token"
-  org = "your_username"
+  organization = "your_username"
   bucket = "replace_with_your_bucket_name"
 
 # For InfluxDB Cloud 2:
@@ -126,7 +126,7 @@ parsed:
   INFLUX_HOST="https://us-west-2-1.aws.cloud2.influxdata.com"
   # Other Cloud URLs at https://v2.docs.influxdata.com/v2.0/reference/urls/#influxdb-cloud-urls
   token = "replace_with_your_token"
-  org = "yourname@yourcompany.com"
+  organization = "yourname@yourcompany.com"
   bucket = "replace_with_your_bucket_name"
 ```
 
@@ -218,6 +218,10 @@ The agent table configures Telegraf and the defaults used across all plugins.
 - **logfile_rotation_max_archives**:
   Maximum number of rotated archives to keep, any older logs are deleted.  If
   set to -1, no archives are removed.
+
+- **log_with_timezone**:
+  Pick a timezone to use when logging or type 'local' for local time. Example: 'America/Chicago'.
+  [See this page for options/formats.](https://socketloop.com/tutorials/golang-display-list-of-timezones-with-gmt)
 
 - **hostname**:
   Override default hostname, if empty use os.Hostname()

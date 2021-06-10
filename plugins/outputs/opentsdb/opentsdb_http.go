@@ -13,7 +13,7 @@ import (
 	"net/url"
 )
 
-type HttpMetric struct {
+type HTTPMetric struct {
 	Metric    string            `json:"metric"`
 	Timestamp int64             `json:"timestamp"`
 	Value     interface{}       `json:"value"`
@@ -68,7 +68,7 @@ func (r *requestBody) reset(debug bool) {
 	r.empty = true
 }
 
-func (r *requestBody) addMetric(metric *HttpMetric) error {
+func (r *requestBody) addMetric(metric *HTTPMetric) error {
 	if !r.empty {
 		io.WriteString(r.w, ",")
 	}
@@ -92,7 +92,7 @@ func (r *requestBody) close() error {
 	return nil
 }
 
-func (o *openTSDBHttp) sendDataPoint(metric *HttpMetric) error {
+func (o *openTSDBHttp) sendDataPoint(metric *HTTPMetric) error {
 	if o.metricCounter == 0 {
 		o.body.reset(o.Debug)
 	}

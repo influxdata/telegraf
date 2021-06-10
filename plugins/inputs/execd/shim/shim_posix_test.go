@@ -37,7 +37,7 @@ func TestShimUSR1SignalingWorks(t *testing.T) {
 				return // test is done
 			default:
 				// test isn't done, keep going.
-				process.Signal(syscall.SIGUSR1)
+				require.NoError(t, process.Signal(syscall.SIGUSR1))
 				time.Sleep(200 * time.Millisecond)
 			}
 		}
@@ -51,7 +51,7 @@ func TestShimUSR1SignalingWorks(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "measurement,tag=tag field=1i 1234000005678\n", out)
 
-	stdinWriter.Close()
+	require.NoError(t, stdinWriter.Close())
 	readUntilEmpty(r)
 
 	<-exited

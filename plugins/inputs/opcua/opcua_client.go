@@ -3,7 +3,6 @@ package opcua_client
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/url"
 	"sort"
 	"strings"
@@ -198,7 +197,10 @@ func (o *OpcUA) Init() error {
 		return err
 	}
 
-	o.setupOptions()
+	err = o.setupOptions()
+	if err != nil {
+		return err
+	}
 
 	tags := map[string]string{
 		"endpoint": o.Endpoint,
@@ -207,7 +209,6 @@ func (o *OpcUA) Init() error {
 	o.ReadSuccess = selfstat.Register("opcua", "read_success", tags)
 
 	return nil
-
 }
 
 func (o *OpcUA) validateEndpoint() error {
@@ -327,10 +328,18 @@ func newMP(n *Node) metricParts {
 	var sb strings.Builder
 	for i, key := range keys {
 		if i != 0 {
+			// Writes to a string-builder will always succeed
+			//nolint:errcheck,revive
 			sb.WriteString(", ")
 		}
+		// Writes to a string-builder will always succeed
+		//nolint:errcheck,revive
 		sb.WriteString(key)
+		// Writes to a string-builder will always succeed
+		//nolint:errcheck,revive
 		sb.WriteString("=")
+		// Writes to a string-builder will always succeed
+		//nolint:errcheck,revive
 		sb.WriteString(n.metricTags[key])
 	}
 	x := metricParts{
@@ -353,10 +362,11 @@ func (o *OpcUA) validateOPCTags() error {
 		if _, ok := nameEncountered[mp]; ok {
 			return fmt.Errorf("name '%s' is duplicated (metric name '%s', tags '%s')",
 				mp.fieldName, mp.metricName, mp.tags)
-		} else {
-			//add it to the set
-			nameEncountered[mp] = struct{}{}
 		}
+
+		//add it to the set
+		nameEncountered[mp] = struct{}{}
+
 		//search identifier type
 		switch node.tag.IdentifierType {
 		case "s", "i", "g", "b":
@@ -395,21 +405,23 @@ func Connect(o *OpcUA) error {
 		o.state = Connecting
 
 		if o.client != nil {
-			o.client.CloseSession()
+			if err := o.client.CloseSession(); err != nil {
+				return err
+			}
 		}
 
 		o.client = opcua.NewClient(o.Endpoint, o.opts...)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.ConnectTimeout))
 		defer cancel()
 		if err := o.client.Connect(ctx); err != nil {
-			return fmt.Errorf("Error in Client Connection: %s", err)
+			return fmt.Errorf("error in Client Connection: %s", err)
 		}
 
 		regResp, err := o.client.RegisterNodes(&ua.RegisterNodesRequest{
 			NodesToRegister: o.nodeIDs,
 		})
 		if err != nil {
-			return fmt.Errorf("RegisterNodes failed: %v", err)
+			return fmt.Errorf("registerNodes failed: %v", err)
 		}
 
 		o.req = &ua.ReadRequest{
@@ -420,7 +432,7 @@ func Connect(o *OpcUA) error {
 
 		err = o.getData()
 		if err != nil {
-			return fmt.Errorf("Get Data Failed: %v", err)
+			return fmt.Errorf("get Data Failed: %v", err)
 		}
 
 	default:
@@ -430,22 +442,24 @@ func Connect(o *OpcUA) error {
 }
 
 func (o *OpcUA) setupOptions() error {
-
 	// Get a list of the endpoints for our target server
 	endpoints, err := opcua.GetEndpoints(o.Endpoint)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if o.Certificate == "" && o.PrivateKey == "" {
 		if o.SecurityPolicy != "None" || o.SecurityMode != "None" {
-			o.Certificate, o.PrivateKey = generateCert("urn:telegraf:gopcua:client", 2048, o.Certificate, o.PrivateKey, (365 * 24 * time.Hour))
+			o.Certificate, o.PrivateKey, err = generateCert("urn:telegraf:gopcua:client", 2048, o.Certificate, o.PrivateKey, (365 * 24 * time.Hour))
+			if err != nil {
+				return err
+			}
 		}
 	}
 
-	o.opts = generateClientOpts(endpoints, o.Certificate, o.PrivateKey, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password, time.Duration(o.RequestTimeout))
+	o.opts, err = generateClientOpts(endpoints, o.Certificate, o.PrivateKey, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password, time.Duration(o.RequestTimeout))
 
-	return nil
+	return err
 }
 
 func (o *OpcUA) getData() error {
@@ -457,7 +471,7 @@ func (o *OpcUA) getData() error {
 	o.ReadSuccess.Incr(1)
 	for i, d := range resp.Results {
 		if d.Status != ua.StatusOK {
-			return fmt.Errorf("Status not OK: %v", d.Status)
+			return fmt.Errorf("status not OK: %v", d.Status)
 		}
 		o.nodeData[i].TagName = o.nodes[i].tag.FieldName
 		if d.Value != nil {
@@ -511,6 +525,8 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	err := o.getData()
 	if err != nil && o.state == Connected {
 		o.state = Disconnected
+		// Ignore returned error to not mask the original problem
+		//nolint:errcheck,revive
 		disconnect(o)
 		return err
 	}

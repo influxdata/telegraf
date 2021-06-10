@@ -16,6 +16,7 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 ### Configuration:
 
 ```toml
+# Pull Metric Statistics from Amazon CloudWatch
 [[inputs.cloudwatch]]
   ## Amazon Region
   region = "us-east-1"
@@ -40,6 +41,9 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## default.
   ##   ex: endpoint_url = "http://localhost:8000"
   # endpoint_url = ""
+
+  ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
+  # http_proxy_url = "http://localhost:8888"
 
   # The minimum period for Cloudwatch metrics is 1 minute (60s). However not all
   # metrics are made available to the 1 minute period. Some are collected at
@@ -98,6 +102,7 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   #
   #  ## Dimension filters for Metric.  All dimensions defined for the metric names
   #  ## must be specified in order to retrieve the metric statistics.
+  #  ## 'value' has wildcard / 'glob' matching support such as 'p-*'.
   #  [[inputs.cloudwatch.metrics.dimensions]]
   #    name = "LoadBalancerName"
   #    value = "p-example"

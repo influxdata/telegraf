@@ -29,6 +29,7 @@ func TestAggregate(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -52,6 +53,7 @@ func TestAggregate(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -75,6 +77,7 @@ func TestAggregate(t *testing.T) {
 				Region:              "test",
 				ResourceID:          "/test",
 				StringsAsDimensions: true,
+				Log:                 testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -116,6 +119,7 @@ func TestAggregate(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 				cache:      make(map[time.Time]map[uint64]*aggregate, 36),
 			},
 			metrics: []telegraf.Metric{
@@ -153,6 +157,7 @@ func TestAggregate(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 				cache:      make(map[time.Time]map[uint64]*aggregate, 36),
 			},
 			metrics: []telegraf.Metric{
@@ -262,6 +267,7 @@ func TestWrite(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -282,6 +288,7 @@ func TestWrite(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -308,6 +315,7 @@ func TestWrite(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(

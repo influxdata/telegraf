@@ -7,13 +7,14 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -24,12 +25,12 @@ const (
 
 // Warp10 output plugin
 type Warp10 struct {
-	Prefix             string            `toml:"prefix"`
-	WarpURL            string            `toml:"warp_url"`
-	Token              string            `toml:"token"`
-	Timeout            internal.Duration `toml:"timeout"`
-	PrintErrorBody     bool              `toml:"print_error_body"`
-	MaxStringErrorSize int               `toml:"max_string_error_size"`
+	Prefix             string          `toml:"prefix"`
+	WarpURL            string          `toml:"warp_url"`
+	Token              string          `toml:"token"`
+	Timeout            config.Duration `toml:"timeout"`
+	PrintErrorBody     bool            `toml:"print_error_body"`
+	MaxStringErrorSize int             `toml:"max_string_error_size"`
 	client             *http.Client
 	tls.ClientConfig
 }
@@ -75,8 +76,8 @@ func (w *Warp10) createClient() (*http.Client, error) {
 		return nil, err
 	}
 
-	if w.Timeout.Duration == 0 {
-		w.Timeout.Duration = defaultClientTimeout
+	if w.Timeout == 0 {
+		w.Timeout = config.Duration(defaultClientTimeout)
 	}
 
 	client := &http.Client{
@@ -84,7 +85,7 @@ func (w *Warp10) createClient() (*http.Client, error) {
 			TLSClientConfig: tlsCfg,
 			Proxy:           http.ProxyFromEnvironment,
 		},
-		Timeout: w.Timeout.Duration,
+		Timeout: time.Duration(w.Timeout),
 	}
 
 	return client, nil
@@ -105,9 +106,7 @@ func (w *Warp10) Connect() error {
 func (w *Warp10) GenWarp10Payload(metrics []telegraf.Metric) string {
 	collectString := make([]string, 0)
 	for _, mm := range metrics {
-
 		for _, field := range mm.FieldList() {
-
 			metric := &MetricLine{
 				Metric:    fmt.Sprintf("%s%s", w.Prefix, mm.Name()+"."+field.Key),
 				Timestamp: mm.Time().UnixNano() / 1000,
@@ -170,15 +169,16 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 }
 
 func buildTags(tags []*telegraf.Tag) []string {
-
 	tagsString := make([]string, len(tags)+1)
 	indexSource := 0
 	for index, tag := range tags {
-		tagsString[index] = fmt.Sprintf("%s=%s", tag.Key, tag.Value)
+		key := url.QueryEscape(tag.Key)
+		value := url.QueryEscape(tag.Value)
+		tagsString[index] = fmt.Sprintf("%s=%s", key, value)
 		indexSource = index
 	}
 	indexSource++
-	tagsString[indexSource] = fmt.Sprintf("source=telegraf")
+	tagsString[indexSource] = "source=telegraf"
 	sort.Strings(tagsString)
 	return tagsString
 }
@@ -212,10 +212,6 @@ func intToString(inputNum int64) string {
 
 func boolToString(inputBool bool) string {
 	return strconv.FormatBool(inputBool)
-}
-
-func uIntToString(inputNum uint64) string {
-	return strconv.FormatUint(inputNum, 10)
 }
 
 func floatToString(inputNum float64) string {

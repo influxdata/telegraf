@@ -69,8 +69,6 @@ func (*EventHub) SampleConfig() string {
   ## This requires one of the following sets of environment variables to be set:
   ##
   ## 1) Expected Environment Variables:
-  ##    - "EVENTHUB_NAMESPACE"
-  ##    - "EVENTHUB_NAME"
   ##    - "EVENTHUB_CONNECTION_STRING"
   ##
   ## 2) Expected Environment Variables:
@@ -79,8 +77,17 @@ func (*EventHub) SampleConfig() string {
   ##    - "EVENTHUB_KEY_NAME"
   ##    - "EVENTHUB_KEY_VALUE"
 
+  ## 3) Expected Environment Variables:
+  ##    - "EVENTHUB_NAMESPACE"
+  ##    - "EVENTHUB_NAME"
+  ##    - "AZURE_TENANT_ID"
+  ##    - "AZURE_CLIENT_ID"
+  ##    - "AZURE_CLIENT_SECRET"
+
   ## Uncommenting the option below will create an Event Hub client based solely on the connection string.
   ## This can either be the associated environment variable or hard coded directly.
+  ## If this option is uncommented, environment variables will be ignored.
+  ## Connection string should contain EventHubName (EntityPath)
   # connection_string = ""
 
   ## Set persistence directory to a valid folder to use a file persister instead of an in-memory persister
@@ -207,11 +214,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	}()
 
 	// Configure receiver options
-	receiveOpts, err := e.configureReceiver()
-	if err != nil {
-		return err
-	}
-
+	receiveOpts := e.configureReceiver()
 	partitions := e.PartitionIDs
 
 	if len(e.PartitionIDs) == 0 {
@@ -224,7 +227,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	}
 
 	for _, partitionID := range partitions {
-		_, err = e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
+		_, err := e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
 		if err != nil {
 			return fmt.Errorf("creating receiver for partition %q: %v", partitionID, err)
 		}
@@ -233,7 +236,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *EventHub) configureReceiver() ([]eventhub.ReceiveOption, error) {
+func (e *EventHub) configureReceiver() []eventhub.ReceiveOption {
 	receiveOpts := []eventhub.ReceiveOption{}
 
 	if e.ConsumerGroup != "" {
@@ -254,7 +257,7 @@ func (e *EventHub) configureReceiver() ([]eventhub.ReceiveOption, error) {
 		receiveOpts = append(receiveOpts, eventhub.ReceiveWithEpoch(e.Epoch))
 	}
 
-	return receiveOpts, nil
+	return receiveOpts
 }
 
 // OnMessage handles an Event.  When this function returns without error the

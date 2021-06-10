@@ -179,6 +179,67 @@ func TestParseLine(t *testing.T) {
 			time:  testTime,
 		},
 		{
+			test:        "normal case with tag",
+			input:       `cpu.foo.bar;tag1=value1 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo":  "foo",
+				"bar":  "bar",
+				"tag1": "value1",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "wrong tag names",
+			input:       `cpu.foo.bar;tag!1=value1;tag^2=value2 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "empty tag name",
+			input:       `cpu.foo.bar;=value1 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "wrong tag value",
+			input:       `cpu.foo.bar;tag1=~value1 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "empty tag value",
+			input:       `cpu.foo.bar;tag1= 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
 			test:        "metric only with float value",
 			input:       `cpu 50.554 ` + strTime,
 			measurement: "cpu",
@@ -279,6 +340,20 @@ func TestParse(t *testing.T) {
 			value: 50,
 			time:  testTime,
 		},
+		{
+			test:        "normal case with tag",
+			input:       []byte(`cpu.foo.bar;tag1=value1 50 ` + strTime),
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo":  "foo",
+				"bar":  "bar",
+				"tag1": "value1",
+			},
+			value: 50,
+			time:  testTime,
+		},
+
 		{
 			test:        "metric only with float value",
 			input:       []byte(`cpu 50.554 ` + strTime),
@@ -397,11 +472,10 @@ func TestFilterMatchDefault(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("miss.servers.localhost.cpu_load",
+	exp := metric.New("miss.servers.localhost.cpu_load",
 		map[string]string{},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("miss.servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
@@ -415,11 +489,10 @@ func TestFilterMatchMultipleMeasurement(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu.cpu_load.10",
+	exp := metric.New("cpu.cpu_load.10",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("servers.localhost.cpu.cpu_load.10 11 1435077219")
 	assert.NoError(t, err)
@@ -434,11 +507,10 @@ func TestFilterMatchMultipleMeasurementSeparator(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	exp, err := metric.New("cpu_cpu_load_10",
+	exp := metric.New("cpu_cpu_load_10",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("servers.localhost.cpu.cpu_load.10 11 1435077219")
 	assert.NoError(t, err)
@@ -452,7 +524,7 @@ func TestFilterMatchSingle(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu_load",
+	exp := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -469,11 +541,10 @@ func TestParseNoMatch(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("servers.localhost.memory.VmallocChunk",
+	exp := metric.New("servers.localhost.memory.VmallocChunk",
 		map[string]string{},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("servers.localhost.memory.VmallocChunk 11 1435077219")
 	assert.NoError(t, err)
@@ -487,11 +558,10 @@ func TestFilterMatchWildcard(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu_load",
+	exp := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
@@ -507,11 +577,10 @@ func TestFilterMatchExactBeforeWildcard(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu_load",
+	exp := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
@@ -556,11 +625,10 @@ func TestFilterMatchMultipleWildcards(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu_load",
+	exp := metric.New("cpu_load",
 		map[string]string{"host": "server01"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("servers.server01.cpu_load 11 1435077219")
 	assert.NoError(t, err)

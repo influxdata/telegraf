@@ -43,10 +43,10 @@ func (c *TTLCache) Get(key keyType) (valType, bool, time.Duration) {
 	age := c.now().Sub(v.time)
 	if age < c.validDuration {
 		return v.val, ok, age
-	} else {
-		c.lru.Delete(key)
-		return valType{}, false, 0
 	}
+
+	c.lru.Delete(key)
+	return valType{}, false, 0
 }
 
 func (c *TTLCache) Put(key keyType, value valType) {

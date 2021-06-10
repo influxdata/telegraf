@@ -84,7 +84,6 @@ func (pa *PuppetAgent) Description() string {
 
 // Gather reads stats from all configured servers accumulates stats
 func (pa *PuppetAgent) Gather(acc telegraf.Accumulator) error {
-
 	if len(pa.Location) == 0 {
 		pa.Location = "/var/lib/puppet/state/last_run_summary.yaml"
 	}

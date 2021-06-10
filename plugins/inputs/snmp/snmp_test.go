@@ -9,13 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/gosnmp/gosnmp"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
-	config "github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
-	"github.com/soniah/gosnmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -93,8 +92,8 @@ func TestSampleConfig(t *testing.T) {
 	expected := &Snmp{
 		Agents:       []string{"udp://127.0.0.1:161"},
 		AgentHostTag: "",
-		ClientConfig: config.ClientConfig{
-			Timeout:        internal.Duration{Duration: 5 * time.Second},
+		ClientConfig: snmp.ClientConfig{
+			Timeout:        config.Duration(5 * time.Second),
 			Version:        2,
 			Community:      "public",
 			MaxRepetitions: 10,
@@ -239,8 +238,8 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 func TestGetSNMPConnection_v2(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
-		ClientConfig: config.ClientConfig{
-			Timeout:   internal.Duration{Duration: 3 * time.Second},
+		ClientConfig: snmp.ClientConfig{
+			Timeout:   config.Duration(3 * time.Second),
 			Retries:   4,
 			Version:   2,
 			Community: "foo",
@@ -308,7 +307,7 @@ func stubTCPServer(wg *sync.WaitGroup) {
 func TestGetSNMPConnection_v3(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4"},
-		ClientConfig: config.ClientConfig{
+		ClientConfig: snmp.ClientConfig{
 			Version:        3,
 			MaxRepetitions: 20,
 			ContextName:    "mycontext",
@@ -345,6 +344,125 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 	assert.EqualValues(t, 2, sp.AuthoritativeEngineTime)
 }
 
+func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
+	testCases := []struct {
+		Name      string
+		Algorithm gosnmp.SnmpV3PrivProtocol
+		Config    *Snmp
+	}{
+		{
+			Name:      "AES192",
+			Algorithm: gosnmp.AES192,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: snmp.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES192",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+		{
+			Name:      "AES192C",
+			Algorithm: gosnmp.AES192C,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: snmp.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES192C",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+		{
+			Name:      "AES256",
+			Algorithm: gosnmp.AES256,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: snmp.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES256",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+		{
+			Name:      "AES256C",
+			Algorithm: gosnmp.AES256C,
+			Config: &Snmp{
+				Agents: []string{"1.2.3.4"},
+				ClientConfig: snmp.ClientConfig{
+					Version:        3,
+					MaxRepetitions: 20,
+					ContextName:    "mycontext",
+					SecLevel:       "authPriv",
+					SecName:        "myuser",
+					AuthProtocol:   "md5",
+					AuthPassword:   "password123",
+					PrivProtocol:   "AES256C",
+					PrivPassword:   "password123",
+					EngineID:       "myengineid",
+					EngineBoots:    1,
+					EngineTime:     2,
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			s := tc.Config
+			err := s.init()
+			require.NoError(t, err)
+
+			gsc, err := s.getConnection(0)
+			require.NoError(t, err)
+			gs := gsc.(snmp.GosnmpWrapper)
+			assert.Equal(t, gs.Version, gosnmp.Version3)
+			sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
+			assert.Equal(t, "1.2.3.4", gsc.Host())
+			assert.EqualValues(t, 20, gs.MaxRepetitions)
+			assert.Equal(t, "mycontext", gs.ContextName)
+			assert.Equal(t, gosnmp.AuthPriv, gs.MsgFlags&gosnmp.AuthPriv)
+			assert.Equal(t, "myuser", sp.UserName)
+			assert.Equal(t, gosnmp.MD5, sp.AuthenticationProtocol)
+			assert.Equal(t, "password123", sp.AuthenticationPassphrase)
+			assert.Equal(t, tc.Algorithm, sp.PrivacyProtocol)
+			assert.Equal(t, "password123", sp.PrivacyPassphrase)
+			assert.Equal(t, "myengineid", sp.AuthoritativeEngineID)
+			assert.EqualValues(t, 1, sp.AuthoritativeEngineBoots)
+			assert.EqualValues(t, 2, sp.AuthoritativeEngineTime)
+		})
+	}
+}
+
 func TestGetSNMPConnection_caching(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4", "1.2.3.5", "1.2.3.5"},
@@ -369,8 +487,8 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 		t.Skip("Skipping test due to random failures.")
 	}
 	srvr, err := net.ListenUDP("udp4", &net.UDPAddr{})
-	defer srvr.Close()
 	require.NoError(t, err)
+	defer srvr.Close()
 	reqCount := 0
 	// Set up a WaitGroup to wait for the server goroutine to exit and protect
 	// reqCount.
@@ -388,7 +506,10 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 			}
 			reqCount++
 
-			srvr.WriteTo([]byte{'X'}, addr) // will cause decoding error
+			// will cause decoding error
+			if _, err := srvr.WriteTo([]byte{'X'}, addr); err != nil {
+				return
+			}
 		}
 	}()
 
@@ -408,7 +529,7 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 		GoSNMP: gs,
 	}
 	err = gsw.Walk(".1.0.0", func(_ gosnmp.SnmpPDU) error { return nil })
-	srvr.Close()
+	assert.NoError(t, srvr.Close())
 	wg.Wait()
 	assert.Error(t, err)
 	assert.False(t, gs.Conn == conn)
@@ -419,8 +540,8 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	// TODO: Fix this test
 	t.Skip("Test failing too often, skip for now and revisit later.")
 	srvr, err := net.ListenUDP("udp4", &net.UDPAddr{})
-	defer srvr.Close()
 	require.NoError(t, err)
+	defer srvr.Close()
 	reqCount := 0
 	// Set up a WaitGroup to wait for the server goroutine to exit and protect
 	// reqCount.
@@ -438,7 +559,10 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 			}
 			reqCount++
 
-			srvr.WriteTo([]byte{'X'}, addr) // will cause decoding error
+			// will cause decoding error
+			if _, err := srvr.WriteTo([]byte{'X'}, addr); err != nil {
+				return
+			}
 		}
 	}()
 
@@ -458,7 +582,7 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 		GoSNMP: gs,
 	}
 	_, err = gsw.Get([]string{".1.0.0"})
-	srvr.Close()
+	require.NoError(t, srvr.Close())
 	wg.Wait()
 	assert.Error(t, err)
 	assert.False(t, gs.Conn == conn)
@@ -641,7 +765,7 @@ func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	tstart := time.Now()
-	s.Gather(acc)
+	require.NoError(t, s.Gather(acc))
 	tstop := time.Now()
 
 	require.Len(t, acc.Metrics, 2)
@@ -688,7 +812,7 @@ func TestGather_host(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 
-	s.Gather(acc)
+	require.NoError(t, s.Gather(acc))
 
 	require.Len(t, acc.Metrics, 1)
 	m := acc.Metrics[0]

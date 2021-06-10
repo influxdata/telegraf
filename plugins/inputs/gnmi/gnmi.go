@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -44,7 +44,7 @@ type GNMI struct {
 	Password string
 
 	// Redial
-	Redial internal.Duration
+	Redial config.Duration
 
 	// GRPC TLS settings
 	EnableTLS bool `toml:"enable_tls"`
@@ -66,12 +66,12 @@ type Subscription struct {
 	Path   string
 
 	// Subscription mode and interval
-	SubscriptionMode string            `toml:"subscription_mode"`
-	SampleInterval   internal.Duration `toml:"sample_interval"`
+	SubscriptionMode string          `toml:"subscription_mode"`
+	SampleInterval   config.Duration `toml:"sample_interval"`
 
 	// Duplicate suppression
-	SuppressRedundant bool              `toml:"suppress_redundant"`
-	HeartbeatInterval internal.Duration `toml:"heartbeat_interval"`
+	SuppressRedundant bool            `toml:"suppress_redundant"`
+	HeartbeatInterval config.Duration `toml:"heartbeat_interval"`
 }
 
 // Start the http listener service
@@ -86,7 +86,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	// Validate configuration
 	if request, err = c.newSubscribeRequest(); err != nil {
 		return err
-	} else if c.Redial.Duration.Nanoseconds() <= 0 {
+	} else if time.Duration(c.Redial).Nanoseconds() <= 0 {
 		return fmt.Errorf("redial duration must be positive")
 	}
 
@@ -114,8 +114,14 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		longPath, _ := c.handlePath(gnmiLongPath, nil, "")
-		shortPath, _ := c.handlePath(gnmiShortPath, nil, "")
+		longPath, _, err := c.handlePath(gnmiLongPath, nil, "")
+		if err != nil {
+			return fmt.Errorf("handling long-path failed: %v", err)
+		}
+		shortPath, _, err := c.handlePath(gnmiShortPath, nil, "")
+		if err != nil {
+			return fmt.Errorf("handling short-path failed: %v", err)
+		}
 		name := subscription.Name
 
 		// If the user didn't provide a measurement name, use last path element
@@ -143,7 +149,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 
 				select {
 				case <-ctx.Done():
-				case <-time.After(c.Redial.Duration):
+				case <-time.After(time.Duration(c.Redial)):
 				}
 			}
 		}(addr)
@@ -167,9 +173,9 @@ func (c *GNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
 		subscriptions[i] = &gnmi.Subscription{
 			Path:              gnmiPath,
 			Mode:              gnmi.SubscriptionMode(mode),
-			SampleInterval:    uint64(subscription.SampleInterval.Duration.Nanoseconds()),
+			SampleInterval:    uint64(time.Duration(subscription.SampleInterval).Nanoseconds()),
 			SuppressRedundant: subscription.SuppressRedundant,
-			HeartbeatInterval: uint64(subscription.HeartbeatInterval.Duration.Nanoseconds()),
+			HeartbeatInterval: uint64(time.Duration(subscription.HeartbeatInterval).Nanoseconds()),
 		}
 	}
 
@@ -257,7 +263,10 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 	prefixTags := make(map[string]string)
 
 	if response.Update.Prefix != nil {
-		prefix, prefixAliasPath = c.handlePath(response.Update.Prefix, prefixTags, "")
+		var err error
+		if prefix, prefixAliasPath, err = c.handlePath(response.Update.Prefix, prefixTags, ""); err != nil {
+			c.Log.Errorf("handling path %q failed: %v", response.Update.Prefix, err)
+		}
 	}
 	prefixTags["source"], _, _ = net.SplitHostPort(address)
 	prefixTags["path"] = prefix
@@ -290,11 +299,11 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 		// Group metrics
 		for k, v := range fields {
 			key := k
-			if len(aliasPath) < len(key) {
+			if len(aliasPath) < len(key) && len(aliasPath) != 0 {
 				// This may not be an exact prefix, due to naming style
 				// conversion on the key.
 				key = key[len(aliasPath)+1:]
-			} else {
+			} else if len(aliasPath) >= len(key) {
 				// Otherwise use the last path element as the field key.
 				key = path.Base(key)
 
@@ -307,7 +316,9 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 				}
 			}
 
-			grouper.Add(name, tags, timestamp, key, v)
+			if err := grouper.Add(name, tags, timestamp, key, v); err != nil {
+				c.Log.Errorf("cannot add to grouper: %v", err)
+			}
 		}
 
 		lastAliasPath = aliasPath
@@ -321,14 +332,17 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 
 // HandleTelemetryField and add it to a measurement
 func (c *GNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
-	path, aliasPath := c.handlePath(update.Path, tags, prefix)
+	gpath, aliasPath, err := c.handlePath(update.Path, tags, prefix)
+	if err != nil {
+		c.Log.Errorf("handling path %q failed: %v", update.Path, err)
+	}
 
 	var value interface{}
 	var jsondata []byte
 
 	// Make sure a value is actually set
 	if update.Val == nil || update.Val.Value == nil {
-		c.Log.Infof("Discarded empty or legacy type value with path: %q", path)
+		c.Log.Infof("Discarded empty or legacy type value with path: %q", gpath)
 		return aliasPath, nil
 	}
 
@@ -355,7 +369,7 @@ func (c *GNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string,
 		jsondata = val.JsonVal
 	}
 
-	name := strings.Replace(path, "-", "_", -1)
+	name := strings.Replace(gpath, "-", "_", -1)
 	fields := make(map[string]interface{})
 	if value != nil {
 		fields[name] = value
@@ -364,28 +378,38 @@ func (c *GNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string,
 			c.acc.AddError(fmt.Errorf("failed to parse JSON value: %v", err))
 		} else {
 			flattener := jsonparser.JSONFlattener{Fields: fields}
-			flattener.FullFlattenJSON(name, value, true, true)
+			if err := flattener.FullFlattenJSON(name, value, true, true); err != nil {
+				c.acc.AddError(fmt.Errorf("failed to flatten JSON: %v", err))
+			}
 		}
 	}
 	return aliasPath, fields
 }
 
 // Parse path to path-buffer and tag-field
-func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string) (string, string) {
+func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string) (string, string, error) {
 	var aliasPath string
 	builder := bytes.NewBufferString(prefix)
 
 	// Prefix with origin
 	if len(path.Origin) > 0 {
-		builder.WriteString(path.Origin)
-		builder.WriteRune(':')
+		if _, err := builder.WriteString(path.Origin); err != nil {
+			return "", "", err
+		}
+		if _, err := builder.WriteRune(':'); err != nil {
+			return "", "", err
+		}
 	}
 
 	// Parse generic keys from prefix
 	for _, elem := range path.Elem {
 		if len(elem.Name) > 0 {
-			builder.WriteRune('/')
-			builder.WriteString(elem.Name)
+			if _, err := builder.WriteRune('/'); err != nil {
+				return "", "", err
+			}
+			if _, err := builder.WriteString(elem.Name); err != nil {
+				return "", "", err
+			}
 		}
 		name := builder.String()
 
@@ -403,12 +427,11 @@ func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string
 				} else {
 					tags[key] = val
 				}
-
 			}
 		}
 	}
 
-	return builder.String(), aliasPath
+	return builder.String(), aliasPath, nil
 }
 
 //ParsePath from XPath-like string to gNMI path structure
@@ -556,7 +579,7 @@ func (c *GNMI) Gather(_ telegraf.Accumulator) error {
 func New() telegraf.Input {
 	return &GNMI{
 		Encoding: "proto",
-		Redial:   internal.Duration{Duration: 10 * time.Second},
+		Redial:   config.Duration(10 * time.Second),
 	}
 }
 

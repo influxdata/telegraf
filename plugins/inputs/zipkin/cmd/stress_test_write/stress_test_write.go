@@ -35,8 +35,6 @@ var (
 	ZipkinServerHost  string
 )
 
-const usage = `./stress_test_write -batch_size=<batch_size> -max_backlog=<max_span_buffer_backlog> -batch_interval=<batch_interval_in_seconds> -span_count<number_of_spans_to_write> -zipkin_host=<zipkin_service_hostname>`
-
 func init() {
 	flag.IntVar(&BatchSize, "batch_size", 10000, "")
 	flag.IntVar(&MaxBackLog, "max_backlog", 100000, "")
@@ -53,10 +51,10 @@ func main() {
 		zipkin.HTTPBatchSize(BatchSize),
 		zipkin.HTTPMaxBacklog(MaxBackLog),
 		zipkin.HTTPBatchInterval(time.Duration(BatchTimeInterval)*time.Second))
-	defer collector.Close()
 	if err != nil {
 		log.Fatalf("Error initializing zipkin http collector: %v\n", err)
 	}
+	defer collector.Close()
 
 	tracer, err := zipkin.NewTracer(
 		zipkin.NewRecorder(collector, false, "127.0.0.1:0", "Trivial"))

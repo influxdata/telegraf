@@ -29,7 +29,8 @@ The plugin expects messages in one of the
   ##   "/var/log/**.log"  -> recursively find all .log files in /var/log
   ##   "/var/log/*/*.log" -> find all .log files with a parent dir in /var/log
   ##   "/var/log/apache.log" -> just tail the apache log file
-  ##
+  ##   "/var/log/log[!1-2]*  -> tail files without 1-2
+  ##   "/var/log/log[^1-2]*  -> identical behavior as above
   ## See https://github.com/gobwas/glob for more examples
   ##
   files = ["/var/mymetrics.out"]
@@ -62,6 +63,9 @@ The plugin expects messages in one of the
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Set the tag that will contain the path of the tailed file. If you don't want this tag, set it to an empty string.
+  # path_tag = "path"
 
   ## multiline parser/codec
   ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html

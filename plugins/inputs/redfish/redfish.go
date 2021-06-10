@@ -43,7 +43,7 @@ type Redfish struct {
 	Address          string          `toml:"address"`
 	Username         string          `toml:"username"`
 	Password         string          `toml:"password"`
-	ComputerSystemId string          `toml:"computer_system_id"`
+	ComputerSystemID string          `toml:"computer_system_id"`
 	Timeout          config.Duration `toml:"timeout"`
 
 	client http.Client
@@ -73,6 +73,7 @@ type Chassis struct {
 type Power struct {
 	PowerSupplies []struct {
 		Name                 string
+		MemberID             string
 		PowerInputWatts      *float64
 		PowerCapacityWatts   *float64
 		PowerOutputWatts     *float64
@@ -82,6 +83,7 @@ type Power struct {
 	}
 	Voltages []struct {
 		Name                   string
+		MemberID               string
 		ReadingVolts           *float64
 		UpperThresholdCritical *float64
 		UpperThresholdFatal    *float64
@@ -94,6 +96,7 @@ type Power struct {
 type Thermal struct {
 	Fans []struct {
 		Name                   string
+		MemberID               string
 		Reading                *int64
 		ReadingUnits           *string
 		UpperThresholdCritical *int64
@@ -104,6 +107,7 @@ type Thermal struct {
 	}
 	Temperatures []struct {
 		Name                   string
+		MemberID               string
 		ReadingCelsius         *float64
 		UpperThresholdCritical *float64
 		UpperThresholdFatal    *float64
@@ -146,7 +150,7 @@ func (r *Redfish) Init() error {
 		return fmt.Errorf("did not provide username and password")
 	}
 
-	if r.ComputerSystemId == "" {
+	if r.ComputerSystemID == "" {
 		return fmt.Errorf("did not provide the computer system ID of the resource")
 	}
 
@@ -189,9 +193,10 @@ func (r *Redfish) getData(url string, payload interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("received status code %d (%s), expected 200",
+		return fmt.Errorf("received status code %d (%s) for address %s, expected 200",
 			resp.StatusCode,
-			http.StatusText(resp.StatusCode))
+			http.StatusText(resp.StatusCode),
+			r.Address)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -253,7 +258,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		address = r.baseURL.Host
 	}
 
-	system, err := r.getComputerSystem(r.ComputerSystemId)
+	system, err := r.getComputerSystem(r.ComputerSystemID)
 	if err != nil {
 		return err
 	}
@@ -271,6 +276,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 		for _, j := range thermal.Temperatures {
 			tags := map[string]string{}
+			tags["member_id"] = j.MemberID
 			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
@@ -295,6 +301,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		for _, j := range thermal.Fans {
 			tags := map[string]string{}
 			fields := make(map[string]interface{})
+			tags["member_id"] = j.MemberID
 			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
@@ -326,6 +333,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 		for _, j := range power.PowerSupplies {
 			tags := map[string]string{}
+			tags["member_id"] = j.MemberID
 			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
@@ -349,6 +357,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 		for _, j := range power.Voltages {
 			tags := map[string]string{}
+			tags["member_id"] = j.MemberID
 			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname

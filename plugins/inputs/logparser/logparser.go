@@ -143,7 +143,7 @@ func (l *LogParserPlugin) Init() error {
 }
 
 // Gather is the primary function to collect the metrics for the plugin
-func (l *LogParserPlugin) Gather(acc telegraf.Accumulator) error {
+func (l *LogParserPlugin) Gather(_ telegraf.Accumulator) error {
 	l.Lock()
 	defer l.Unlock()
 
@@ -271,7 +271,6 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 
 	var line *tail.Line
 	for line = range tailer.Lines {
-
 		if line.Err != nil {
 			l.Log.Errorf("Error tailing file %s, Error: %s",
 				tailer.Filename, line.Err)
@@ -321,7 +320,6 @@ func (l *LogParserPlugin) parser() {
 		} else {
 			l.Log.Errorf("Error parsing log line: %s", err.Error())
 		}
-
 	}
 }
 

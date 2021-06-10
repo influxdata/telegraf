@@ -22,9 +22,9 @@ type CredentialConfig struct {
 func (c *CredentialConfig) Credentials() client.ConfigProvider {
 	if c.RoleARN != "" {
 		return c.assumeCredentials()
-	} else {
-		return c.rootCredentials()
 	}
+
+	return c.rootCredentials()
 }
 
 func (c *CredentialConfig) rootCredentials() client.ConfigProvider {

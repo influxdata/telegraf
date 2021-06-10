@@ -1,7 +1,6 @@
 package rabbitmq
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -31,16 +30,14 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		case "/api/nodes/rabbit@vagrant-ubuntu-trusty-64/memory":
 			jsonFilePath = "testdata/memory.json"
 		default:
-			panic("Cannot handle request")
+			require.Fail(t, "Cannot handle request")
 		}
 
 		data, err := ioutil.ReadFile(jsonFilePath)
+		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
 
-		if err != nil {
-			panic(fmt.Sprintf("could not read from data file %s", jsonFilePath))
-		}
-
-		w.Write(data)
+		_, err = w.Write(data)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 

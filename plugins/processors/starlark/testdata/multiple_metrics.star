@@ -15,7 +15,7 @@ def apply(metric):
     # Set the field "value" to b
     metric2.fields["value"] = "b"
     # Reset the time (only needed for testing purpose)
-    metric2.time = 0
+    metric2.time = metric.time
     # Add metric2 to the list of metrics
     metrics.append(metric2)
     # Rename the original metric to "mm1"

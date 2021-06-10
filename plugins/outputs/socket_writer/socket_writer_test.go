@@ -29,7 +29,7 @@ func TestSocketWriter_tcp(t *testing.T) {
 	lconn, err := listener.Accept()
 	require.NoError(t, err)
 
-	testSocketWriter_stream(t, sw, lconn)
+	testSocketWriterStream(t, sw, lconn)
 }
 
 func TestSocketWriter_udp(t *testing.T) {
@@ -42,7 +42,7 @@ func TestSocketWriter_udp(t *testing.T) {
 	err = sw.Connect()
 	require.NoError(t, err)
 
-	testSocketWriter_packet(t, sw, listener)
+	testSocketWriterPacket(t, sw, listener)
 }
 
 func TestSocketWriter_unix(t *testing.T) {
@@ -63,7 +63,7 @@ func TestSocketWriter_unix(t *testing.T) {
 	lconn, err := listener.Accept()
 	require.NoError(t, err)
 
-	testSocketWriter_stream(t, sw, lconn)
+	testSocketWriterStream(t, sw, lconn)
 }
 
 func TestSocketWriter_unixgram(t *testing.T) {
@@ -85,10 +85,10 @@ func TestSocketWriter_unixgram(t *testing.T) {
 	err = sw.Connect()
 	require.NoError(t, err)
 
-	testSocketWriter_packet(t, sw, listener)
+	testSocketWriterPacket(t, sw, listener)
 }
 
-func testSocketWriter_stream(t *testing.T, sw *SocketWriter, lconn net.Conn) {
+func testSocketWriterStream(t *testing.T, sw *SocketWriter, lconn net.Conn) {
 	metrics := []telegraf.Metric{}
 	metrics = append(metrics, testutil.TestMetric(1, "test"))
 	mbs1out, _ := sw.Serialize(metrics[0])
@@ -110,7 +110,7 @@ func testSocketWriter_stream(t *testing.T, sw *SocketWriter, lconn net.Conn) {
 	assert.Equal(t, string(mbs2out), mstr2in)
 }
 
-func testSocketWriter_packet(t *testing.T, sw *SocketWriter, lconn net.PacketConn) {
+func testSocketWriterPacket(t *testing.T, sw *SocketWriter, lconn net.PacketConn) {
 	metrics := []telegraf.Metric{}
 	metrics = append(metrics, testutil.TestMetric(1, "test"))
 	mbs1out, _ := sw.Serialize(metrics[0])
@@ -212,5 +212,5 @@ func TestSocketWriter_udp_gzip(t *testing.T) {
 	err = sw.Connect()
 	require.NoError(t, err)
 
-	testSocketWriter_packet(t, sw, listener)
+	testSocketWriterPacket(t, sw, listener)
 }

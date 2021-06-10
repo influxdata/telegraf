@@ -15,13 +15,14 @@ func TestKubernetesStats(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/stats/summary" {
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, responseStatsSummery)
+			_, err := fmt.Fprintln(w, responseStatsSummery)
+			require.NoError(t, err)
 		}
 		if r.RequestURI == "/pods" {
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, responsePods)
+			_, err := fmt.Fprintln(w, responsePods)
+			require.NoError(t, err)
 		}
-
 	}))
 	defer ts.Close()
 
@@ -155,7 +156,6 @@ func TestKubernetesStats(t *testing.T) {
 		"pod_name":  "foopod",
 	}
 	acc.AssertContainsTaggedFields(t, "kubernetes_pod_network", fields, tags)
-
 }
 
 var responsePods = `

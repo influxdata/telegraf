@@ -2,27 +2,31 @@ package dynatrace
 
 import (
 	"encoding/json"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 	"time"
+
+	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNilMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
+		err := json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
 	d := &Dynatrace{
-		Timeout: internal.Duration{Duration: time.Second * 5},
+		Timeout: config.Duration(time.Second * 5),
 	}
 
 	d.URL = ts.URL
@@ -41,7 +45,8 @@ func TestNilMetrics(t *testing.T) {
 func TestEmptyMetricsSlice(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
+		err := json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -64,7 +69,8 @@ func TestEmptyMetricsSlice(t *testing.T) {
 func TestMockURL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
+		err := json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -87,9 +93,10 @@ func TestMissingURL(t *testing.T) {
 
 	d.Log = testutil.Logger{}
 	err := d.Init()
-	require.Equal(t, oneAgentMetricsUrl, d.URL)
+	require.NoError(t, err)
+	require.Equal(t, apiconstants.GetDefaultOneAgentEndpoint(), d.URL)
 	err = d.Connect()
-	require.Equal(t, oneAgentMetricsUrl, d.URL)
+	require.Equal(t, apiconstants.GetDefaultOneAgentEndpoint(), d.URL)
 	require.NoError(t, err)
 }
 
@@ -98,9 +105,10 @@ func TestMissingAPITokenMissingURL(t *testing.T) {
 
 	d.Log = testutil.Logger{}
 	err := d.Init()
-	require.Equal(t, oneAgentMetricsUrl, d.URL)
+	require.NoError(t, err)
+	require.Equal(t, apiconstants.GetDefaultOneAgentEndpoint(), d.URL)
 	err = d.Connect()
-	require.Equal(t, oneAgentMetricsUrl, d.URL)
+	require.Equal(t, apiconstants.GetDefaultOneAgentEndpoint(), d.URL)
 	require.NoError(t, err)
 }
 
@@ -117,16 +125,15 @@ func TestSendMetric(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// check the encoded result
 		bodyBytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			require.NoError(t, err)
-		}
+		require.NoError(t, err)
 		bodyString := string(bodyBytes)
-		expected := "mymeasurement.myfield,host=\"192.168.0.1\",nix=\"nix\" 3.140000\nmymeasurement.value,host=\"192.168.0.1\" 3.140000\n"
+		expected := "mymeasurement.myfield,host=192.168.0.1 gauge,3.14\nmymeasurement.value,host=192.168.0.2 count,3.14"
 		if bodyString != expected {
-			t.Errorf("Metric encoding failed. expected: %s but got: %s", expected, bodyString)
+			t.Errorf("Metric encoding failed. expected: %#v but got: %#v", expected, bodyString)
 		}
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
+		err = json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -142,18 +149,19 @@ func TestSendMetric(t *testing.T) {
 
 	// Init metrics
 
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
-		map[string]string{"host": "192.168.0.1", "nix": "nix"},
+		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
-	m2, _ := metric.New(
+	m2 := metric.New(
 		"mymeasurement",
-		map[string]string{"host": "192.168.0.1"},
+		map[string]string{"host": "192.168.0.2"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		telegraf.Counter,
 	)
 
 	metrics := []telegraf.Metric{m1, m2}
@@ -166,16 +174,16 @@ func TestSendSingleMetricWithUnorderedTags(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// check the encoded result
 		bodyBytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			require.NoError(t, err)
-		}
+		require.NoError(t, err)
 		bodyString := string(bodyBytes)
-		expected := "mymeasurement.myfield,a=\"test\",b=\"test\",c=\"test\" 3.140000\n"
-		if bodyString != expected {
-			t.Errorf("Metric encoding failed. expected: %s but got: %s", expected, bodyString)
-		}
+		require.Regexp(t, regexp.MustCompile(`^mymeasurement\.myfield`), bodyString)
+		require.Regexp(t, regexp.MustCompile(`a=test`), bodyString)
+		require.Regexp(t, regexp.MustCompile(`b=test`), bodyString)
+		require.Regexp(t, regexp.MustCompile(`c=test`), bodyString)
+		require.Regexp(t, regexp.MustCompile(`gauge,3.14$`), bodyString)
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
+		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -191,7 +199,7 @@ func TestSendSingleMetricWithUnorderedTags(t *testing.T) {
 
 	// Init metrics
 
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"a": "test", "c": "test", "b": "test"},
 		map[string]interface{}{"myfield": float64(3.14)},
@@ -209,15 +217,14 @@ func TestSendMetricWithoutTags(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		// check the encoded result
 		bodyBytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			require.NoError(t, err)
-		}
+		require.NoError(t, err)
 		bodyString := string(bodyBytes)
-		expected := "mymeasurement.myfield 3.140000\n"
+		expected := "mymeasurement.myfield gauge,3.14"
 		if bodyString != expected {
-			t.Errorf("Metric encoding failed. expected: %s but got: %s", expected, bodyString)
+			t.Errorf("Metric encoding failed. expected: %#v but got: %#v", expected, bodyString)
 		}
-		json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
+		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -233,7 +240,7 @@ func TestSendMetricWithoutTags(t *testing.T) {
 
 	// Init metrics
 
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{},
 		map[string]interface{}{"myfield": float64(3.14)},
@@ -251,15 +258,19 @@ func TestSendMetricWithUpperCaseTagKeys(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		// check the encoded result
 		bodyBytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			require.NoError(t, err)
-		}
+		require.NoError(t, err)
 		bodyString := string(bodyBytes)
-		expected := "mymeasurement.myfield,aaa=\"test\",b_b=\"test\",ccc=\"test\" 3.140000\n"
-		if bodyString != expected {
-			t.Errorf("Metric encoding failed. expected: %s but got: %s", expected, bodyString)
-		}
-		json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
+
+		// expected := "mymeasurement.myfield,b_b=test,ccc=test,aaa=test gauge,3.14"
+		// use regex because dimension order isn't guaranteed
+		require.Regexp(t, regexp.MustCompile(`^mymeasurement\.myfield`), bodyString)
+		require.Regexp(t, regexp.MustCompile(`aaa=test`), bodyString)
+		require.Regexp(t, regexp.MustCompile(`b_b=test`), bodyString)
+		require.Regexp(t, regexp.MustCompile(`ccc=test`), bodyString)
+		require.Regexp(t, regexp.MustCompile(`gauge,3.14$`), bodyString)
+
+		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -275,7 +286,7 @@ func TestSendMetricWithUpperCaseTagKeys(t *testing.T) {
 
 	// Init metrics
 
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"AAA": "test", "CcC": "test", "B B": "test"},
 		map[string]interface{}{"myfield": float64(3.14)},
@@ -293,15 +304,13 @@ func TestSendBooleanMetricWithoutTags(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		// check the encoded result
 		bodyBytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			require.NoError(t, err)
-		}
+		require.NoError(t, err)
 		bodyString := string(bodyBytes)
-		expected := "mymeasurement.myfield 1\n"
-		if bodyString != expected {
-			t.Errorf("Metric encoding failed. expected: %s but got: %s", expected, bodyString)
-		}
-		json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
+		// use regex because field order isn't guaranteed
+		require.Contains(t, bodyString, "mymeasurement.yes gauge,1")
+		require.Contains(t, bodyString, "mymeasurement.no gauge,0")
+		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -317,10 +326,51 @@ func TestSendBooleanMetricWithoutTags(t *testing.T) {
 
 	// Init metrics
 
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{},
-		map[string]interface{}{"myfield": bool(true)},
+		map[string]interface{}{"yes": true, "no": false},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	metrics := []telegraf.Metric{m1}
+
+	err = d.Write(metrics)
+	require.NoError(t, err)
+}
+
+func TestSendCounterMetricWithoutTags(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		// check the encoded result
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		require.NoError(t, err)
+		bodyString := string(bodyBytes)
+		expected := "mymeasurement.value gauge,32"
+		if bodyString != expected {
+			t.Errorf("Metric encoding failed. expected: %#v but got: %#v", expected, bodyString)
+		}
+		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	d := &Dynatrace{}
+
+	d.URL = ts.URL
+	d.APIToken = "123"
+	d.Log = testutil.Logger{}
+	err := d.Init()
+	require.NoError(t, err)
+	err = d.Connect()
+	require.NoError(t, err)
+
+	// Init metrics
+
+	m1 := metric.New(
+		"mymeasurement",
+		map[string]string{},
+		map[string]interface{}{"value": 32},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 

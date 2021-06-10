@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/url"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -88,7 +87,7 @@ type InfluxDB struct {
 	Bucket           string            `toml:"bucket"`
 	BucketTag        string            `toml:"bucket_tag"`
 	ExcludeBucketTag bool              `toml:"exclude_bucket_tag"`
-	Timeout          internal.Duration `toml:"timeout"`
+	Timeout          config.Duration   `toml:"timeout"`
 	HTTPHeaders      map[string]string `toml:"http_headers"`
 	HTTPProxy        string            `toml:"http_proxy"`
 	UserAgent        string            `toml:"user_agent"`
@@ -96,12 +95,12 @@ type InfluxDB struct {
 	UintSupport      bool              `toml:"influx_uint_support"`
 	tls.ClientConfig
 
+	Log telegraf.Logger `toml:"-"`
+
 	clients []Client
 }
 
 func (i *InfluxDB) Connect() error {
-	ctx := context.Background()
-
 	if len(i.URLs) == 0 {
 		i.URLs = append(i.URLs, defaultURL)
 	}
@@ -122,7 +121,7 @@ func (i *InfluxDB) Connect() error {
 
 		switch parts.Scheme {
 		case "http", "https", "unix":
-			c, err := i.getHTTPClient(ctx, parts, proxy)
+			c, err := i.getHTTPClient(parts, proxy)
 			if err != nil {
 				return err
 			}
@@ -165,13 +164,13 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			return nil
 		}
 
-		log.Printf("E! [outputs.influxdb_v2] when writing to [%s]: %v", client.URL(), err)
+		i.Log.Errorf("When writing to [%s]: %v", client.URL(), err)
 	}
 
 	return err
 }
 
-func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.URL) (Client, error) {
+func (i *InfluxDB) getHTTPClient(url *url.URL, proxy *url.URL) (Client, error) {
 	tlsConfig, err := i.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -184,7 +183,7 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.U
 		Bucket:           i.Bucket,
 		BucketTag:        i.BucketTag,
 		ExcludeBucketTag: i.ExcludeBucketTag,
-		Timeout:          i.Timeout.Duration,
+		Timeout:          time.Duration(i.Timeout),
 		Headers:          i.HTTPHeaders,
 		Proxy:            proxy,
 		UserAgent:        i.UserAgent,
@@ -213,7 +212,7 @@ func (i *InfluxDB) newSerializer() *influx.Serializer {
 func init() {
 	outputs.Add("influxdb_v2", func() telegraf.Output {
 		return &InfluxDB{
-			Timeout:         internal.Duration{Duration: time.Second * 5},
+			Timeout:         config.Duration(time.Second * 5),
 			ContentEncoding: "gzip",
 		}
 	})

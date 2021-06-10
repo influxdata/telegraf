@@ -28,9 +28,9 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 `
 )
 
-func newTestUdpListener() (*UdpListener, chan []byte) {
+func newTestUDPListener() (*UDPListener, chan []byte) {
 	in := make(chan []byte, 1500)
-	listener := &UdpListener{
+	listener := &UDPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         ":8125",
 		AllowedPendingMessages: 10000,
@@ -41,7 +41,7 @@ func newTestUdpListener() (*UdpListener, chan []byte) {
 }
 
 // func TestHighTrafficUDP(t *testing.T) {
-// 	listener := UdpListener{
+// 	listener := UDPListener{
 // 		ServiceAddress:         ":8126",
 // 		AllowedPendingMessages: 100000,
 // 	}
@@ -78,7 +78,7 @@ func newTestUdpListener() (*UdpListener, chan []byte) {
 // }
 
 func TestConnectUDP(t *testing.T) {
-	listener := UdpListener{
+	listener := UDPListener{
 		Log:                    testutil.Logger{},
 		ServiceAddress:         ":8127",
 		AllowedPendingMessages: 10000,
@@ -93,7 +93,8 @@ func TestConnectUDP(t *testing.T) {
 	require.NoError(t, err)
 
 	// send single message to socket
-	fmt.Fprintf(conn, testMsg)
+	_, err = fmt.Fprint(conn, testMsg)
+	require.NoError(t, err)
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
@@ -101,7 +102,8 @@ func TestConnectUDP(t *testing.T) {
 	)
 
 	// send multiple messages to socket
-	fmt.Fprintf(conn, testMsgs)
+	_, err = fmt.Fprint(conn, testMsgs)
+	require.NoError(t, err)
 	acc.Wait(6)
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
@@ -117,7 +119,7 @@ func TestRunParser(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
 	var testmsg = []byte("cpu_load_short,host=server01 value=12.0 1422568543702900257\n")
 
-	listener, in := newTestUdpListener()
+	listener, in := newTestUDPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)
@@ -127,7 +129,7 @@ func TestRunParser(t *testing.T) {
 	go listener.udpParser()
 
 	in <- testmsg
-	listener.Gather(&acc)
+	require.NoError(t, listener.Gather(&acc))
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
@@ -136,11 +138,11 @@ func TestRunParser(t *testing.T) {
 	)
 }
 
-func TestRunParserInvalidMsg(t *testing.T) {
+func TestRunParserInvalidMsg(_ *testing.T) {
 	log.SetOutput(ioutil.Discard)
 	var testmsg = []byte("cpu_load_short")
 
-	listener, in := newTestUdpListener()
+	listener, in := newTestUDPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)
@@ -166,7 +168,7 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
 	var testmsg = []byte("cpu.load.graphite 12 1454780029")
 
-	listener, in := newTestUdpListener()
+	listener, in := newTestUDPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)
@@ -176,7 +178,7 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 	go listener.udpParser()
 
 	in <- testmsg
-	listener.Gather(&acc)
+	require.NoError(t, listener.Gather(&acc))
 
 	acc.Wait(1)
 	acc.AssertContainsFields(t, "cpu_load_graphite",
@@ -187,7 +189,7 @@ func TestRunParserJSONMsg(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
 	var testmsg = []byte("{\"a\": 5, \"b\": {\"c\": 6}}\n")
 
-	listener, in := newTestUdpListener()
+	listener, in := newTestUDPListener()
 	acc := testutil.Accumulator{}
 	listener.acc = &acc
 	defer close(listener.done)
@@ -200,7 +202,7 @@ func TestRunParserJSONMsg(t *testing.T) {
 	go listener.udpParser()
 
 	in <- testmsg
-	listener.Gather(&acc)
+	require.NoError(t, listener.Gather(&acc))
 
 	acc.Wait(1)
 	acc.AssertContainsFields(t, "udp_json_test",

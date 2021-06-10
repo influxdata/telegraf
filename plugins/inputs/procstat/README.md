@@ -44,6 +44,9 @@ Processes can be selected for monitoring using one of several methods:
   ## When true add the full cmdline as a tag.
   # cmdline_tag = false
 
+  ## Mode to use when calculating CPU usage. Can be one of 'solaris' or 'irix'.
+  # mode = "irix"
+
   ## Add the PID as a tag instead of as a field.  When collecting multiple
   ## processes with otherwise matching tags this setting should be enabled to
   ## ensure each process has a unique identity.

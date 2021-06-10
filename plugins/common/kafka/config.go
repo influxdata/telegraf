@@ -38,6 +38,9 @@ func (k *WriteConfig) SetConfig(config *sarama.Config) error {
 		config.Producer.MaxMessageBytes = k.MaxMessageBytes
 	}
 	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
+	if config.Producer.Idempotent {
+		config.Net.MaxOpenRequests = 1
+	}
 	return k.Config.SetConfig(config)
 }
 
@@ -86,9 +89,5 @@ func (k *Config) SetConfig(config *sarama.Config) error {
 		config.Net.TLS.Enable = true
 	}
 
-	if err := k.SetSASLConfig(config); err != nil {
-		return err
-	}
-
-	return nil
+	return k.SetSASLConfig(config)
 }

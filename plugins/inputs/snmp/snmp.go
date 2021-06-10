@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -14,19 +15,24 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/wlog"
-	"github.com/soniah/gosnmp"
 )
 
 const description = `Retrieves SNMP values from remote agents`
 const sampleConfig = `
   ## Agent addresses to retrieve values from.
+  ##   format:  agents = ["<scheme://><hostname>:<port>"]
+  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.
+  ##            default is udp
+  ##   port:    optional
   ##   example: agents = ["udp://127.0.0.1:161"]
   ##            agents = ["tcp://127.0.0.1:161"]
+  ##            agents = ["udp4://v4only-snmp-agent"]
   agents = ["udp://127.0.0.1:161"]
 
   ## Timeout for each request.
@@ -51,7 +57,7 @@ const sampleConfig = `
   ##
   ## Security Name.
   # sec_name = "myuser"
-  ## Authentication protocol; one of "MD5", "SHA", or "".
+  ## Authentication protocol; one of "MD5", "SHA", "SHA224", "SHA256", "SHA384", "SHA512" or "".
   # auth_protocol = "MD5"
   ## Authentication password.
   # auth_password = "pass"
@@ -250,19 +256,21 @@ func (f *Field) init() error {
 		return nil
 	}
 
-	_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
-	if err != nil {
-		return fmt.Errorf("translating: %w", err)
+	// check if oid needs translation or name is not set
+	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
+		_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
+		if err != nil {
+			return fmt.Errorf("translating: %w", err)
+		}
+		f.Oid = oidNum
+		if f.Name == "" {
+			f.Name = oidText
+		}
+		if f.Conversion == "" {
+			f.Conversion = conversion
+		}
+		//TODO use textual convention conversion from the MIB
 	}
-	f.Oid = oidNum
-	if f.Name == "" {
-		f.Name = oidText
-	}
-	if f.Conversion == "" {
-		f.Conversion = conversion
-	}
-
-	//TODO use textual convention conversion from the MIB
 
 	f.initialized = true
 	return nil
@@ -307,7 +315,7 @@ func init() {
 			ClientConfig: snmp.ClientConfig{
 				Retries:        3,
 				MaxRepetitions: 10,
-				Timeout:        internal.Duration{Duration: 5 * time.Second},
+				Timeout:        config.Duration(5 * time.Second),
 				Version:        2,
 				Community:      "public",
 			},
@@ -427,7 +435,17 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 			// empty string. This results in all the non-table fields sharing the same
 			// index, and being added on the same row.
 			if pkt, err := gs.Get([]string{oid}); err != nil {
-				return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
+				if errors.Is(err, gosnmp.ErrUnknownSecurityLevel) {
+					return nil, fmt.Errorf("unknown security level (sec_level)")
+				} else if errors.Is(err, gosnmp.ErrUnknownUsername) {
+					return nil, fmt.Errorf("unknown username (sec_name)")
+				} else if errors.Is(err, gosnmp.ErrWrongDigest) {
+					return nil, fmt.Errorf("wrong digest (auth_protocol, auth_password)")
+				} else if errors.Is(err, gosnmp.ErrDecryption) {
+					return nil, fmt.Errorf("decryption error (priv_protocol, priv_password)")
+				} else {
+					return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
+				}
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
 				fv, err := fieldConvert(f.Conversion, ent.Value)
@@ -454,7 +472,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 					i := f.OidIndexLength + 1 // leading separator
 					idx = strings.Map(func(r rune) rune {
 						if r == '.' {
-							i -= 1
+							i--
 						}
 						if i < 1 {
 							return -1
@@ -560,7 +578,8 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 	if err != nil {
 		return nil, err
 	}
-	gs.SetAgent(agent)
+
+	err = gs.SetAgent(agent)
 	if err != nil {
 		return nil, err
 	}
@@ -635,7 +654,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		case int32:
 			v = int64(vt)
 		case int64:
-			v = int64(vt)
+			v = vt
 		case uint:
 			v = int64(vt)
 		case uint8:
@@ -668,7 +687,6 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 
 	split := strings.Split(conv, ":")
 	if split[0] == "hextoint" && len(split) == 3 {
-
 		endian := split[1]
 		bit := split[2]
 
@@ -856,28 +874,6 @@ func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 	snmpTranslateCachesLock.Unlock()
 
 	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err
-}
-
-func SnmpTranslateForce(oid string, mibName string, oidNum string, oidText string, conversion string) {
-	snmpTranslateCachesLock.Lock()
-	defer snmpTranslateCachesLock.Unlock()
-	if snmpTranslateCaches == nil {
-		snmpTranslateCaches = map[string]snmpTranslateCache{}
-	}
-
-	var stc snmpTranslateCache
-	stc.mibName = mibName
-	stc.oidNum = oidNum
-	stc.oidText = oidText
-	stc.conversion = conversion
-	stc.err = nil
-	snmpTranslateCaches[oid] = stc
-}
-
-func SnmpTranslateClear() {
-	snmpTranslateCachesLock.Lock()
-	defer snmpTranslateCachesLock.Unlock()
-	snmpTranslateCaches = map[string]snmpTranslateCache{}
 }
 
 func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
