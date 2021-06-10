@@ -114,7 +114,10 @@ func (s *SnmpTrap) Init() error {
 	// must init, append path for each directory, load module for every file
 	// or gosmi will fail without saying why
 	gosmi.Init()
-	s.getMibsPath()
+	err := s.getMibsPath()
+	if err != nil {
+		s.Log.Errorf("Could not get path %v", err)
+	}
 	return nil
 }
 
@@ -123,22 +126,31 @@ func (s *SnmpTrap) getMibsPath() error {
 	for _, mibPath := range s.Path {
 		gosmi.AppendPath(mibPath)
 		folders = append(folders, mibPath)
-		filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
+		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
 			if info.Mode()&os.ModeSymlink != 0 {
 				s, _ := os.Readlink(path)
 				folders = append(folders, s)
 			}
 			return nil
 		})
+		if err != nil {
+			s.Log.Errorf("Filepath could not be walked %v", err)
+		}
 		for _, folder := range folders {
-			filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
 				if info.IsDir() {
 					gosmi.AppendPath(path)
 				} else if info.Mode()&os.ModeSymlink == 0 {
-					gosmi.LoadModule(info.Name())
+					_, err := gosmi.LoadModule(info.Name())
+					if err != nil {
+						s.Log.Errorf("Module could not be loaded %v", err)
+					}
 				}
 				return nil
 			})
+			if err != nil {
+				s.Log.Errorf("Filepath could not be walked %v", err)
+			}
 		}
 		folders = []string{}
 	}
