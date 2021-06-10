@@ -1297,6 +1297,11 @@ func (c *Config) buildParser(name string, tbl *ast.Table) (parsers.Parser, error
 	}
 	logger := models.NewLogger("parsers", config.DataFormat, name)
 	models.SetLoggerOnPlugin(parser, logger)
+	if initializer, ok := parser.(telegraf.Initializer); ok {
+		if err := initializer.Init(); err != nil {
+			return nil, err
+		}
+	}
 
 	return parser, nil
 }

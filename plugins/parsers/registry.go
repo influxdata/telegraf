@@ -396,15 +396,12 @@ func NewXPathParser(format, pbtype, metricName string, tags map[string]string, c
 		configs = append(configs, config)
 	}
 
-	parser := &xpath.Parser{
+	return &xpath.Parser{
 		Format:      format,
 		MessageType: pbtype,
 		Configs:     configs,
 		DefaultTags: tags,
-	}
-	err := parser.Init()
-
-	return parser, err
+	}, nil
 }
 
 func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
