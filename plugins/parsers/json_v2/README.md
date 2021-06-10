@@ -9,23 +9,23 @@ You configure this parser by describing the metric you want by defining the fiel
 **Example configuration:**
 
 ```toml
- [[inputs.http.json_v2]]
+ [[inputs.file]]
     urls = []
     data_format = "json_v2"
-    [[inputs.http.json_v2]]
+    [[inputs.file.json_v2]]
         measurement_name = "" # A string that will become the new measurement name
         measurement_name_path = "" # A string with valid GJSON path syntax, will override measurement_name
         timestamp_path = "" # A string with valid GJSON path syntax to a valid timestamp (single value)
         timestamp_format = "" # A string with a valid timestamp format (see below for possible values)
         timestamp_timezone = "" # A string with with a valid timezone (see below for possible values)
-        [[inputs.http.json_v2.tag]]
+        [[inputs.file.json_v2.tag]]
             path = "" # A string with valid GJSON path syntax
             rename = "new name" # A string with a new name for the tag key
-        [[inputs.http.json_v2.field]]
+        [[inputs.file.json_v2.field]]
             path = "" # A string with valid GJSON path syntax
             rename = "new name" # A string with a new name for the tag key
             type = "int" # A string specifying the type (int,uint,float,string,bool)
-        [[inputs.http.json_v2.object]]
+        [[inputs.file.json_v2.object]]
             path = "" # A string with valid GJSON path syntax
             timestamp_key = "" # A JSON key (for a nested key, prepend the parent keys with underscores) to a valid timestamp
             timestamp_format = "" # A string with a valid timestamp format (see below for possible values)
@@ -34,9 +34,9 @@ You configure this parser by describing the metric you want by defining the fiel
             included_keys = [] # List of JSON keys (for a nested key, prepend the parent keys with underscores) that should be only included in result
             excluded_keys = [] # List of JSON keys (for a nested key, prepend the parent keys with underscores) that shouldn't be included in result
             tags = [] # List of JSON keys (for a nested key, prepend the parent keys with underscores) to be a tag instead of a field
-            [inputs.http.json_v2.object.renames] # A map of JSON keys (for a nested key, prepend the parent keys with underscores) with a new name for the tag key
+            [inputs.file.json_v2.object.renames] # A map of JSON keys (for a nested key, prepend the parent keys with underscores) with a new name for the tag key
                 key = "new name"
-            [inputs.http.json_v2.object.fields] # A map of JSON keys (for a nested key, prepend the parent keys with underscores) with a type (int,uint,float,string,bool)
+            [inputs.file.json_v2.object.fields] # A map of JSON keys (for a nested key, prepend the parent keys with underscores) with a type (int,uint,float,string,bool)
                 key = "int"
 ```
 ---
