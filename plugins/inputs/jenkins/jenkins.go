@@ -41,8 +41,10 @@ type Jenkins struct {
 	jobFilterExclude  filter.Filter
 	jobFilterInclude  filter.Filter
 
-	NodeExclude []string `toml:"node_exclude"`
-	nodeFilter  filter.Filter
+	NodeExclude       []string `toml:"node_exclude"`
+	NodeInclude       []string `toml:"node_include"`
+	nodeFilterExclude filter.Filter
+	nodeFilterInclude filter.Filter
 
 	semaphore chan struct{}
 }
@@ -85,7 +87,9 @@ const sampleConfig = `
   # job_include = [ "*" ]
   # job_exclude = [ ]
 
-  ## Nodes to exclude from gathering
+  ## Nodes to include or exclude from gathering
+  ## When using both lists, node_exclude has priority.
+  # node_include = [ "*" ]
   # node_exclude = [ ]
 
   ## Worker pool for jenkins plugin only
@@ -173,10 +177,15 @@ func (j *Jenkins) initialize(client *http.Client) error {
 		return fmt.Errorf("error compile job filters[%s]: %v", j.URL, err)
 	}
 
-	// init node filter
-	j.nodeFilter, err = filter.Compile(j.NodeExclude)
+	// init node filters
+	j.nodeFilterExclude, err = filter.Compile(j.NodeExclude)
 	if err != nil {
-		return fmt.Errorf("error compile node filters[%s]: %v", j.URL, err)
+		return fmt.Errorf("error compiling node filters[%s]: %v", j.URL, err)
+	}
+
+	j.nodeFilterInclude, err = filter.Compile(j.NodeInclude)
+	if err != nil {
+		return fmt.Errorf("error compiling node filters[%s]: %v", j.URL, err)
 	}
 
 	// init tcp pool with default value
@@ -203,8 +212,13 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 	}
 
 	tags["node_name"] = n.DisplayName
+	// filter out not included node_name
+	if j.nodeFilterInclude != nil && !j.nodeFilterInclude.Match(tags["node_name"]) {
+		return nil
+	}
+
 	// filter out excluded node_name
-	if j.nodeFilter != nil && j.nodeFilter.Match(tags["node_name"]) {
+	if j.nodeFilterExclude != nil && j.nodeFilterExclude.Match(tags["node_name"]) {
 		return nil
 	}
 
