@@ -75,7 +75,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
-	// p.Log.Debugf("XML document equivalent: %q", p.document.OutputXML(doc))
+	p.Log.Debugf("XML document equivalent: %q", p.document.OutputXML(doc))
 
 	// Queries
 	metrics := make([]telegraf.Metric, 0)
