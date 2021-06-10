@@ -357,7 +357,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 
 	body, err := c.validateResponse(resp.Body)
 
-	// Check for poorly formatted response (can't be decoded)
+	// Check for poorly formatted response that can't be decoded
 	if err != nil {
 		return &APIError{
 			StatusCode:  resp.StatusCode,
