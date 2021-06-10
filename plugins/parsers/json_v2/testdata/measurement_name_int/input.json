@@ -1,0 +1,19 @@
+{
+    "value_id": "52-32-1-0",
+    "node_id": 52,
+    "class_id": 32,
+    "type": "byte",
+    "genre": "basic",
+    "instance": 1,
+    "index": 0,
+    "label": "Basic",
+    "units": "",
+    "help": "Basic status of the node",
+    "read_only": false,
+    "write_only": false,
+    "min": 0,
+    "max": 255,
+    "is_polled": false,
+    "value": 0,
+    "lastUpdate": 1584636017962
+}
