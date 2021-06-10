@@ -467,6 +467,8 @@ github.com/docker/libtrust v0.0.0-20150114040149-fa567046d9b1/go.mod h1:cyGadeNE
 github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96/go.mod h1:Qh8CwZgvJUkLughtfhJv5dyTYa91l1fOUCrgjqmcifM=
 github.com/doclambda/protobufquery v0.0.0-20210317203640-88ffabe06a60 h1:27379cxrsKlr7hAnW/xrusefspUPjqHVRW1K/bZgfGw=
 github.com/doclambda/protobufquery v0.0.0-20210317203640-88ffabe06a60/go.mod h1:8Ia4zp86glrUhC29AAdK9hwTYh8RB6v0WRCtpplYqEg=
+github.com/doclambda/tahu v0.5.12-0.20210610163413-bd4a8de19833 h1:YTA6x7t7A5q6TvWXGcemR3pV27Qm7nIn2JdZSJMcrU0=
+github.com/doclambda/tahu v0.5.12-0.20210610163413-bd4a8de19833/go.mod h1:dNLNEH3ZjPmaU90wtH9P8NTAxMl6trMFLjg13EFuWSA=
 github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815/go.mod h1:WwZ+bS3ebgob9U8Nd0kOddGdZWjyMGR8Wziv+TBNwSE=
 github.com/dropbox/godropbox v0.0.0-20180512210157-31879d3884b9 h1:NAvZb7gqQfLSNBPzVsvI7eZMosXtg2g2kxXrei90CtU=
 github.com/dropbox/godropbox v0.0.0-20180512210157-31879d3884b9/go.mod h1:glr97hP/JuXb+WMYCizc4PIFuzw1lCR97mwbe1VVXhQ=
