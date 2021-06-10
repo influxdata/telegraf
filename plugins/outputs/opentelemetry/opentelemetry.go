@@ -8,13 +8,17 @@ import (
 	"github.com/influxdata/influxdb-observability/influx2otel"
 	otlpcollectormetrics "github.com/influxdata/influxdb-observability/otlp/collector/metrics/v1"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 type OpenTelemetry struct {
 	ServiceAddress string `toml:"service_address"`
 	MetricsSchema  string `toml:"metrics_schema"`
+
+	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -41,6 +45,18 @@ const sampleConfig = `
   ## For more information about the alternatives, read the Prometheus input
   ## plugin notes.
   # metrics_schema = "prometheus-v1"
+
+  ## Optional TLS Config for use on HTTP connections.
+  ## Root certificates for verifying server certificates encoded in PEM format.
+  # tls_ca = "/etc/telegraf/ca.pem"
+  ## The public and private keypairs for the client encoded in PEM format.
+  ## May contain intermediate certificates.
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS, but skip TLS chain and host verification.
+  # insecure_skip_verify = false
+  ## Send the specified TLS server name via SNI.
+  # tls_server_name = "foo.example.com"
 `
 
 func (o *OpenTelemetry) SampleConfig() string {
@@ -68,7 +84,16 @@ func (o *OpenTelemetry) Connect() error {
 		return err
 	}
 
-	grpcClientConn, err := grpc.Dial(o.ServiceAddress, grpc.WithInsecure())
+	var grpcTLSDialOption grpc.DialOption
+	if tlsConfig, err := o.ClientConfig.TLSConfig(); err != nil {
+		return err
+	} else if tlsConfig != nil {
+		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
+	} else {
+		grpcTLSDialOption = grpc.WithInsecure()
+	}
+
+	grpcClientConn, err := grpc.Dial(o.ServiceAddress, grpcTLSDialOption)
 	if err != nil {
 		return err
 	}
