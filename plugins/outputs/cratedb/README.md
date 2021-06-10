@@ -26,8 +26,8 @@ config option, see below.
 ```toml
 # Configuration for CrateDB to send metrics to.
 [[outputs.cratedb]]
-  # A github.com/jackc/pgx connection string.
-  # See https://godoc.org/github.com/jackc/pgx#ParseDSN
+  # A github.com/jackc/pgx/v4 connection string.
+  # See https://pkg.go.dev/github.com/jackc/pgx/v4#ParseConfig
   url = "postgres://user:password@localhost/schema?sslmode=disable"
   # Timeout for all CrateDB queries.
   timeout = "5s"
