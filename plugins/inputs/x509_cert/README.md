@@ -3,6 +3,8 @@
 This plugin provides information about X509 certificate accessible via local
 file or network connection.
 
+When using a UDP address as a certificate source, the server must support [DTLS](https://en.wikipedia.org/wiki/Datagram_Transport_Layer_Security).
+
 
 ### Configuration
 
