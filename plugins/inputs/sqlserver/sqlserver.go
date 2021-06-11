@@ -18,17 +18,18 @@ import (
 
 // SQLServer struct
 type SQLServer struct {
-	Servers      []string `toml:"servers"`
-	QueryVersion int      `toml:"query_version"`
-	AzureDB      bool     `toml:"azuredb"`
-	DatabaseType string   `toml:"database_type"`
-	IncludeQuery []string `toml:"include_query"`
-	ExcludeQuery []string `toml:"exclude_query"`
-	HealthMetric bool     `toml:"health_metric"`
-	pools        []*sql.DB
-	queries      MapQuery
-	adalToken    *adal.Token
-	muCacheLock  sync.RWMutex
+	Servers              []string `toml:"servers"`
+	QueryVersion         int      `toml:"query_version"`
+	AzureDB              bool     `toml:"azuredb"`
+	DatabaseType         string   `toml:"database_type"`
+	IncludeQuery         []string `toml:"include_query"`
+	ExcludeQuery         []string `toml:"exclude_query"`
+	HealthMetric         bool     `toml:"health_metric"`
+	QueryStoreCollection bool     `toml:"query_store_collection"`
+	pools                []*sql.DB
+	queries              MapQuery
+	adalToken            *adal.Token
+	muCacheLock          sync.RWMutex
 }
 
 // Query struct
@@ -37,6 +38,8 @@ type Query struct {
 	Script         string
 	ResultByRow    bool
 	OrderedColumns []string
+	HasCachedData  bool
+	DataCache      *QueryDataCache
 }
 
 // MapQuery type
@@ -93,8 +96,12 @@ servers = [
 ## A list of queries to include. If not specified, all the above listed queries are used.
 # include_query = []
 
-## A list of queries to explicitly ignore.
-# exclude_query = []
+## A list of queries to explicitly ignore. Query Store queries are excluded by default.
+# exclude_query = [AzureSQLDBQueryStoreRuntimeStatistics, AzureSQLDBQueryStoreWaitStatistics]
+
+## Toggling this to true enables telegraf to start collecting data from query store.
+## This setting is optional and is disabled by default as it the queries are expensive and collection interval should be >=15m
+# query_store_collection = false
 
 ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
 ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
@@ -104,6 +111,7 @@ servers = [
 
 # include_query = []
 
+## A list of queries to explicitly ignore.
 # exclude_query = []
 
 ## Queries enabled by default for database_type = "SQLServer" are - 
@@ -165,6 +173,12 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLDBPerformanceCounters"] = Query{ScriptName: "AzureSQLDBPerformanceCounters", Script: sqlAzureDBPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLDBRequests"] = Query{ScriptName: "AzureSQLDBRequests", Script: sqlAzureDBRequests, ResultByRow: false}
 		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlAzureDBSchedulers, ResultByRow: false}
+		// These two Query Store queries are not run by default as they are expensive and collection interval should be >=15m.
+		// If user needs data from Query Store, they will need to toggle the setting to true. By default it is turned off
+		if s.QueryStoreCollection == true {
+			queries["AzureSQLDBQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreRuntimeStatistics", Script: sqlAzureDBQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
+			queries["AzureSQLDBQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreWaitStatistics", Script: sqlAzureDBQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
+		}
 	} else if s.DatabaseType == typeAzureSQLManagedInstance {
 		queries["AzureSQLMIResourceStats"] = Query{ScriptName: "AzureSQLMIResourceStats", Script: sqlAzureMIResourceStats, ResultByRow: false}
 		queries["AzureSQLMIResourceGovernance"] = Query{ScriptName: "AzureSQLMIResourceGovernance", Script: sqlAzureMIResourceGovernance, ResultByRow: false}
@@ -175,6 +189,12 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLMIPerformanceCounters"] = Query{ScriptName: "AzureSQLMIPerformanceCounters", Script: sqlAzureMIPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLMIRequests"] = Query{ScriptName: "AzureSQLMIRequests", Script: sqlAzureMIRequests, ResultByRow: false}
 		queries["AzureSQLMISchedulers"] = Query{ScriptName: "AzureSQLMISchedulers", Script: sqlAzureMISchedulers, ResultByRow: false}
+		// These two Query Store queries are not run by default as they are expensive and collection interval should be >=15m.
+		// If user needs data from Query Store, they will need to toggle the setting to true. By default it is turned off
+		if s.QueryStoreCollection == true {
+			queries["AzureSQLMIQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLMIQueryStoreRuntimeStatistics", Script: sqlAzureMIQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
+			queries["AzureSQLMIQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLMIQueryStoreWaitStatistics", Script: sqlAzureMIQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
+		}
 	} else if s.DatabaseType == typeSQLServer { //These are still V2 queries and have not been refactored yet.
 		queries["SQLServerPerformanceCounters"] = Query{ScriptName: "SQLServerPerformanceCounters", Script: sqlServerPerformanceCounters, ResultByRow: false}
 		queries["SQLServerWaitStatsCategorized"] = Query{ScriptName: "SQLServerWaitStatsCategorized", Script: sqlServerWaitStatsCategorized, ResultByRow: false}
@@ -251,11 +271,12 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 			wg.Add(1)
 			go func(pool *sql.DB, query Query, serverIndex int) {
 				defer wg.Done()
-				queryError := s.gatherServer(pool, query, acc)
+				server := s.Servers[serverIndex]
+				queryError := s.gatherServer(pool, server, query, acc)
 
 				if s.HealthMetric {
 					mutex.Lock()
-					s.gatherHealth(healthMetrics, s.Servers[serverIndex], queryError)
+					s.gatherHealth(healthMetrics, server, queryError)
 					mutex.Unlock()
 				}
 
@@ -337,9 +358,18 @@ func (s *SQLServer) Stop() {
 	}
 }
 
-func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumulator) error {
+func (s *SQLServer) gatherServer(pool *sql.DB, server string, query Query, acc telegraf.Accumulator) error {
+	var rows *sql.Rows
+	var err error
+
 	// execute query
-	rows, err := pool.Query(query.Script)
+	if query.HasCachedData {
+		cachedData, _ := query.DataCache.Get(server)
+		rows, err = pool.Query(query.Script, sql.Named("p1", cachedData))
+	} else {
+		rows, err = pool.Query(query.Script)
+	}
+
 	if err != nil {
 		return fmt.Errorf("script %s failed: %w", query.ScriptName, err)
 	}
@@ -357,6 +387,15 @@ func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumul
 			return err
 		}
 	}
+
+	if rows.Err() == nil && query.HasCachedData && rows.NextResultSet() && rows.Next() {
+		var newCachedData string
+		if err = rows.Scan(&newCachedData); err != nil {
+			return err
+		}
+		query.DataCache.Set(server, newCachedData)
+	}
+
 	return rows.Err()
 }
 
@@ -555,4 +594,26 @@ func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
 		return &SQLServer{Servers: []string{defaultServer}}
 	})
+}
+
+type QueryDataCache struct {
+	mx sync.RWMutex
+	m  map[string]string
+}
+
+func (c *QueryDataCache) Get(key string) (string, bool) {
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+	val, ok := c.m[key]
+	return val, ok
+}
+
+func (c *QueryDataCache) Set(key string, value string) {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+	c.m[key] = value
+}
+
+func InitQueryDataCache() *QueryDataCache {
+	return &QueryDataCache{m: make(map[string]string)}
 }
