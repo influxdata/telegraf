@@ -274,7 +274,7 @@ debs += telegraf_$(deb_version)_s390x.deb
 rpms += telegraf-$(rpm_version).s390x.rpm
 endif
 
-ifdef ppc641e
+ifdef ppc64le
 tars += telegraf-$(tar_version)_linux_ppc64le.tar.gz
 rpms += telegraf-$(rpm_version).ppc64le.rpm
 debs += telegraf_$(deb_version)_ppc64el.deb
