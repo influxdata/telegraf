@@ -33,7 +33,7 @@ func pwgen(n int) string {
 
 var spinup = flag.Bool("spinup", false, "Spin-up the required test containers")
 
-func TestMysql(t *testing.T) {
+func TestMariaDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -43,7 +43,7 @@ func TestMysql(t *testing.T) {
 	addr := "127.0.0.1"
 	port := "3306"
 	passwd := ""
-	database := "nation"
+	database := "foo"
 
 	if *spinup {
 		logger.Infof("Spinning up container...")
@@ -52,7 +52,7 @@ func TestMysql(t *testing.T) {
 		passwd = pwgen(32)
 
 		// Determine the test-data mountpoint
-		testdata, err := filepath.Abs("testdata")
+		testdata, err := filepath.Abs("testdata/mariadb")
 		require.NoError(t, err, "determining absolute path of test-data failed")
 
 		// Spin-up the container
@@ -62,6 +62,7 @@ func TestMysql(t *testing.T) {
 				Image: "mariadb",
 				Env: map[string]string{
 					"MYSQL_ROOT_PASSWORD": passwd,
+					"MYSQL_DATABASE":      database,
 				},
 				BindMounts: map[string]string{
 					testdata: "/docker-entrypoint-initdb.d",
@@ -71,16 +72,16 @@ func TestMysql(t *testing.T) {
 			},
 			Started: true,
 		}
-		mariadbContainer, err := testcontainers.GenericContainer(ctx, req)
+		container, err := testcontainers.GenericContainer(ctx, req)
 		require.NoError(t, err, "starting container failed")
 		defer func() {
-			require.NoError(t, mariadbContainer.Terminate(ctx), "terminating container failed")
+			require.NoError(t, container.Terminate(ctx), "terminating container failed")
 		}()
 
 		// Get the connection details from the container
-		addr, err = mariadbContainer.Host(ctx)
+		addr, err = container.Host(ctx)
 		require.NoError(t, err, "getting container host address failed")
-		p, err := mariadbContainer.MappedPort(ctx, "3306/tcp")
+		p, err := container.MappedPort(ctx, "3306/tcp")
 		require.NoError(t, err, "getting container host port failed")
 		port = p.Port()
 	}
@@ -92,44 +93,28 @@ func TestMysql(t *testing.T) {
 		expected []telegraf.Metric
 	}{
 		{
-			name: "guests",
+			name: "metric_one",
 			queries: []Query{
 				{
-					Query:               "SELECT * FROM guests",
-					TagColumnsInclude:   []string{"name"},
-					FieldColumnsExclude: []string{"name"},
+					Query:               "SELECT * FROM metric_one",
+					TagColumnsInclude:   []string{"tag_*"},
+					FieldColumnsExclude: []string{"tag_*", "timestamp"},
+					TimeColumn:          "timestamp",
+					TimeFormat:          "2006-01-02 15:04:05",
 				},
 			},
 			expected: []telegraf.Metric{
 				testutil.MustMetric(
 					"sql",
-					map[string]string{"name": "John"},
-					map[string]interface{}{"guest_id": int64(1)},
-					time.Unix(0, 0),
-				),
-				testutil.MustMetric(
-					"sql",
-					map[string]string{"name": "Jane"},
-					map[string]interface{}{"guest_id": int64(2)},
-					time.Unix(0, 0),
-				),
-				testutil.MustMetric(
-					"sql",
-					map[string]string{"name": "Jean"},
-					map[string]interface{}{"guest_id": int64(3)},
-					time.Unix(0, 0),
-				),
-				testutil.MustMetric(
-					"sql",
-					map[string]string{"name": "Storm"},
-					map[string]interface{}{"guest_id": int64(4)},
-					time.Unix(0, 0),
-				),
-				testutil.MustMetric(
-					"sql",
-					map[string]string{"name": "Beast"},
-					map[string]interface{}{"guest_id": int64(5)},
-					time.Unix(0, 0),
+					map[string]string{
+						"tag_one": "tag1",
+						"tag_two": "tag2",
+					},
+					map[string]interface{}{
+						"int64_one": int64(1234),
+						"int64_two": int64(2345),
+					},
+					time.Date(2021, 5, 17, 22, 4, 45, 0, time.UTC),
 				),
 			},
 		},
@@ -139,7 +124,7 @@ func TestMysql(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the plugin-under-test
 			plugin := &SQL{
-				Driver:  "mysql",
+				Driver:  "maria",
 				Dsn:     fmt.Sprintf("root:%s@tcp(%s:%s)/%s", passwd, addr, port, database),
 				Queries: tt.queries,
 				Log:     logger,
@@ -156,12 +141,132 @@ func TestMysql(t *testing.T) {
 			// Gather
 			err = plugin.Gather(&acc)
 			require.NoError(t, err)
+			require.Len(t, acc.Errors, 0)
 
 			// Stopping the plugin
 			plugin.Stop()
 
 			// Do the comparison
-			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
+		})
+	}
+}
+
+func TestPostgreSQL(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	logger := testutil.Logger{}
+
+	addr := "127.0.0.1"
+	port := "5432"
+	passwd := ""
+	database := "foo"
+
+	if *spinup {
+		logger.Infof("Spinning up container...")
+
+		// Generate a random password
+		passwd = pwgen(32)
+
+		// Determine the test-data mountpoint
+		testdata, err := filepath.Abs("testdata/postgres")
+		require.NoError(t, err, "determining absolute path of test-data failed")
+
+		// Spin-up the container
+		ctx := context.Background()
+		req := testcontainers.GenericContainerRequest{
+			ContainerRequest: testcontainers.ContainerRequest{
+				Image: "postgres",
+				Env: map[string]string{
+					"POSTGRES_PASSWORD": passwd,
+					"POSTGRES_DB":       database,
+				},
+				BindMounts: map[string]string{
+					testdata: "/docker-entrypoint-initdb.d",
+				},
+				ExposedPorts: []string{"5432/tcp"},
+				WaitingFor:   wait.ForListeningPort("5432/tcp"),
+			},
+			Started: true,
+		}
+		container, err := testcontainers.GenericContainer(ctx, req)
+		require.NoError(t, err, "starting container failed")
+		defer func() {
+			require.NoError(t, container.Terminate(ctx), "terminating container failed")
+		}()
+
+		// Get the connection details from the container
+		addr, err = container.Host(ctx)
+		require.NoError(t, err, "getting container host address failed")
+		p, err := container.MappedPort(ctx, "5432/tcp")
+		require.NoError(t, err, "getting container host port failed")
+		port = p.Port()
+	}
+
+	// Define the testset
+	var testset = []struct {
+		name     string
+		queries  []Query
+		expected []telegraf.Metric
+	}{
+		{
+			name: "metric_one",
+			queries: []Query{
+				{
+					Query:               "SELECT * FROM metric_one",
+					TagColumnsInclude:   []string{"tag_*"},
+					FieldColumnsExclude: []string{"tag_*", "timestamp"},
+					TimeColumn:          "timestamp",
+					TimeFormat:          "2006-01-02 15:04:05",
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"sql",
+					map[string]string{
+						"tag_one": "tag1",
+						"tag_two": "tag2",
+					},
+					map[string]interface{}{
+						"int64_one": int64(1234),
+						"int64_two": int64(2345),
+					},
+					time.Date(2021, 5, 17, 22, 4, 45, 0, time.UTC),
+				),
+			},
+		},
+	}
+
+	for _, tt := range testset {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the plugin-under-test
+			plugin := &SQL{
+				Driver:  "pgx",
+				Dsn:     fmt.Sprintf("postgres://postgres:%v@%v:%v/%v", passwd, addr, port, database),
+				Queries: tt.queries,
+				Log:     logger,
+			}
+
+			var acc testutil.Accumulator
+
+			// Startup the plugin
+			err := plugin.Init()
+			require.NoError(t, err)
+			err = plugin.Start(&acc)
+			require.NoError(t, err)
+
+			// Gather
+			err = plugin.Gather(&acc)
+			require.NoError(t, err)
+			require.Len(t, acc.Errors, 0)
+
+			// Stopping the plugin
+			plugin.Stop()
+
+			// Do the comparison
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
 }
