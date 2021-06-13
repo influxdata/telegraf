@@ -160,8 +160,26 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *dbsql
 			}
 
 			if q.TimeColumn != "" && name == q.TimeColumn {
-				if timestamp, err = internal.ParseTimestamp(q.TimeFormat, columnData[i], ""); err != nil {
-					return 0, fmt.Errorf("parsing time failed: %v", err)
+				var fieldvalue interface{}
+				var skipParsing bool
+
+				switch v := columnData[i].(type) {
+				case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+					fieldvalue = v
+				case []byte:
+					fieldvalue = string(v)
+				case time.Time:
+					timestamp = v
+					skipParsing = true
+				case fmt.Stringer:
+					fieldvalue = v.String()
+				default:
+					return 0, fmt.Errorf("time column %q of type \"%T\" unsupported", name, columnData[i])
+				}
+				if !skipParsing {
+					if timestamp, err = internal.ParseTimestamp(q.TimeFormat, fieldvalue, ""); err != nil {
+						return 0, fmt.Errorf("parsing time failed: %v", err)
+					}
 				}
 			}
 
