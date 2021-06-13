@@ -1,9 +1,5 @@
-// +build !mips
-// +build !mipsle
-// +build !s390x
-// +build !ppc64le
-// +build !windows
-// +build !freebsd
+// +build linux,freebsd
+// +build !mips !mips64
 
 package sql
 
