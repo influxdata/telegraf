@@ -697,7 +697,7 @@ IF @QueryData != '' AND @QueryData IS NOT NULL
 DECLARE @currIntervalStartTime DATETIMEOFFSET, @currIntervalEndTime DATETIMEOFFSET, @queryStartTime DATETIMEOFFSET;
 
 DECLARE @currTime DATETIMEOFFSET = SYSDATETIMEOFFSET();
-DECLARE @currTimeLimit DATETIMEOFFSET = DATEADD(hh, -4, @currTime);
+DECLARE @currTimeLimit DATETIMEOFFSET = DATEADD(hh, -3, @currTime);
 
 /*Get the last completed interval*/
 SELECT TOP 1 @queryStartTime = start_time,  @currIntervalEndTime = end_time
