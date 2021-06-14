@@ -105,6 +105,7 @@ type httpClient struct {
 	url                  *url.URL
 	retryTime            time.Time
 	retryCount           int
+	orgID                string
 }
 
 func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
@@ -400,9 +401,12 @@ func (c *httpClient) getOrgID(ctx context.Context) (string, error) {
 
 // CreateBucket creates a new bucket in the configured organization if it doesn't already exist
 func (c *httpClient) CreateBucket(ctx context.Context, bucket string) error {
-	orgID, err := c.getOrgID(ctx)
-	if err != nil {
-		return err
+	if len(c.orgID) == 0 {
+		var err error
+		c.orgID, err = c.getOrgID(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	loc, err := makeCreateURL(*c.url)
@@ -412,7 +416,7 @@ func (c *httpClient) CreateBucket(ctx context.Context, bucket string) error {
 
 	bodyBytes, err := json.Marshal(createBucketRequest{
 		Name:  bucket,
-		OrgID: orgID,
+		OrgID: c.orgID,
 		RetentionRules: []retentionRule{{
 			EverySeconds: c.DefaultBucketRetention,
 			Type:         "expire",
