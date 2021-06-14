@@ -41,6 +41,18 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
   ## default behaviour is "TCP" if the controller is TCP
   ## For Serial you can choose between "RTU" and "ASCII"
   # transmission_mode = "RTU"
+  ## Trace the connection to the modbus device as debug messages
+  # trace_connection = false
+
+  ## Enable workarounds required by some devices to work correctly
+  # workarounds = {
+      ## Pause between read requests sent to the device. This might be necessary for (slow) serial devices.
+      # pause_between_requests = "0ms"
+			## Close the connection after every gather cycle. Usually the plugin closes the connection after a certain
+			## idle-timeout, however, if you query a device with limited simultaneous connectivity (e.g. serial devices)
+      ## from multiple instances you might want to only stay connected during gather and disconnect afterwards.
+			# close_connection_after_gather = false
+	# }
 
   ## Measurements
   ##
@@ -131,6 +143,8 @@ with N decimal places'.
 from unsigned values).
 
 ### Trouble shooting
+
+#### Strange data
 Modbus documentations are often a mess. People confuse memory-address (starts at one) and register address (starts at zero) or stay unclear about the used word-order. Furthermore, there are some non-standard implementations that also
 swap the bytes within the register word (16-bit).
 
@@ -142,7 +156,15 @@ In case you get an `exception '2' (illegal data address)` error you might try to
 
 In case you see strange values, the `byte_order` might be off. You can either probe all combinations (`ABCD`, `CDBA`, `BADC` or `DCBA`) or you set `byte_order="ABCD" data_type="UINT32"` and use the resulting value(s) in an online converter like [this](https://www.scadacore.com/tools/programming-calculators/online-hex-converter/). This makes especially sense if you don't want to mess with the device, deal with 64-bit values and/or don't know the `data_type` of your register (e.g. fix-point floating values vs. IEEE floating point).
 
-If nothing helps, please post your configuration, error message and/or the output of `byte_order="ABCD" data_type="UINT32"` to one of the telegraf support channels (forum, slack or as issue).
+If your data still looks corrupted, please post your configuration, error message and/or the output of `byte_order="ABCD" data_type="UINT32"` to one of the telegraf support channels (forum, slack or as issue).
+
+#### Workarounds
+Some Modbus devices need special read characteristics when reading data and will fail otherwise. For example, there are certain serial devices that need a certain pause between register read requests. Others might only offer a limited number of simultaneously connected devices, like serial devices or some ModbusTCP devices. In case you need to access those devices in parallel you might want to disconnect immediately after the plugin finished reading.
+
+To allow this plugin to also handle those "special" devices there is the `workarounds` configuration options. In case your documentation states certain read requirements or you get read timeouts or other read errors you might want to try one or more workaround options.
+If you find that workarounds are required for your device, please let us know.
+
+In case your device needs a workaround that is not yet implemented, please open an issue or submit a pull-request.
 
 ### Example Output
 
