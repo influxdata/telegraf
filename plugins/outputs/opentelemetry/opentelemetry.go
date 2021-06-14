@@ -3,11 +3,13 @@ package opentelemetry
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/influxdb-observability/influx2otel"
 	otlpcollectormetrics "github.com/influxdata/influxdb-observability/otlp/collector/metrics/v1"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"google.golang.org/grpc"
@@ -19,34 +21,44 @@ type OpenTelemetry struct {
 	MetricsSchema  string `toml:"metrics_schema"`
 
 	tls.ClientConfig
+	Timeout     config.Duration   `toml:"timeout"`
+	Compression string            `toml:"compression"`
+	Headers     map[string]string `toml:"headers"`
+	Attributes  map[string]string `toml:"attributes"`
 
 	Log telegraf.Logger `toml:"-"`
 
 	metricsConverter     *influx2otel.LineProtocolToOtelMetrics
 	grpcClientConn       *grpc.ClientConn
 	metricsServiceClient otlpcollectormetrics.MetricsServiceClient
+	callOptions          []grpc.CallOption
 }
 
 func newOpenTelemetry() *OpenTelemetry {
 	return &OpenTelemetry{
 		ServiceAddress: "localhost:4317",
 		MetricsSchema:  "prometheus-v1",
+		Timeout:        config.Duration(5 * time.Second),
+		Compression:    "gzip",
 	}
 }
 
 const sampleConfig = `
-  ## Override the OpenTelemetry gRPC service address:port
+  ## Override the default (localhost:4317) OpenTelemetry gRPC service
+  ## address:port
   # service_address = "localhost:4317"
 
-  ## Override the default request timeout
+  ## Override the default (5s) request timeout
   # timeout = "5s"
 
-  ## Select a schema for metrics: prometheus-v1 or prometheus-v2
+  ## Override the default (prometheus-v1) metrics schema.
+  ## Supports: "prometheus-v1", "prometheus-v2"
   ## For more information about the alternatives, read the Prometheus input
   ## plugin notes.
   # metrics_schema = "prometheus-v1"
 
-  ## Optional TLS Config for use on HTTP connections.
+  ## Optional TLS Config.
+  ##
   ## Root certificates for verifying server certificates encoded in PEM format.
   # tls_ca = "/etc/telegraf/ca.pem"
   ## The public and private keypairs for the client encoded in PEM format.
@@ -57,6 +69,18 @@ const sampleConfig = `
   # insecure_skip_verify = false
   ## Send the specified TLS server name via SNI.
   # tls_server_name = "foo.example.com"
+
+  ## Override the default (gzip) compression used to send data.
+  ## Supports: "gzip", "none"
+  # compression = "gzip"
+
+  ## Additional OpenTelemetry resource attributes
+  # [outputs.opentelemetry.attributes]
+  # "service.name" = "demo"
+
+  ## Additional gRPC request metadata
+  # [outputs.opentelemetry.headers]
+  # key1 = "value1"
 `
 
 func (o *OpenTelemetry) SampleConfig() string {
@@ -104,6 +128,10 @@ func (o *OpenTelemetry) Connect() error {
 	o.grpcClientConn = grpcClientConn
 	o.metricsServiceClient = metricsServiceClient
 
+	if o.Compression != "" && o.Compression != "none" {
+		o.callOptions = append(o.callOptions, grpc.UseCompressor(o.Compression))
+	}
+
 	return nil
 }
 
@@ -141,7 +169,9 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 		ResourceMetrics: otlpResourceMetricss,
 	}
 
-	_, err := o.metricsServiceClient.Export(context.Background(), req)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
+	defer cancel()
+	_, err := o.metricsServiceClient.Export(ctx, req, o.callOptions...)
 	return err
 }
 
