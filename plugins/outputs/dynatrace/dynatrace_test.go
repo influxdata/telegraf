@@ -177,6 +177,7 @@ func TestSendSingleMetricWithUnorderedTags(t *testing.T) {
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
 		// use regex because dimension order isn't guaranteed
+		require.Equal(t, len(bodyString), 94)
 		require.Regexp(t, regexp.MustCompile(`^mymeasurement\.myfield`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`a=test`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`b=test`), bodyString)
@@ -264,6 +265,7 @@ func TestSendMetricWithUpperCaseTagKeys(t *testing.T) {
 		bodyString := string(bodyBytes)
 
 		// use regex because dimension order isn't guaranteed
+		require.Equal(t, len(bodyString), 100)
 		require.Regexp(t, regexp.MustCompile(`^mymeasurement\.myfield`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`aaa=test`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`b_b=test`), bodyString)
@@ -309,6 +311,7 @@ func TestSendBooleanMetricWithoutTags(t *testing.T) {
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
 		// use regex because field order isn't guaranteed
+		require.Equal(t, len(bodyString), 132)
 		require.Contains(t, bodyString, "mymeasurement.yes,dt.metrics.source=telegraf gauge,1 1289430000000")
 		require.Contains(t, bodyString, "mymeasurement.no,dt.metrics.source=telegraf gauge,0 1289430000000")
 		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
@@ -332,6 +335,49 @@ func TestSendBooleanMetricWithoutTags(t *testing.T) {
 		"mymeasurement",
 		map[string]string{},
 		map[string]interface{}{"yes": true, "no": false},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	metrics := []telegraf.Metric{m1}
+
+	err = d.Write(metrics)
+	require.NoError(t, err)
+}
+
+func TestSendMetricWithDefaultDimensions(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		// check the encoded result
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		require.NoError(t, err)
+		bodyString := string(bodyBytes)
+		// use regex because field order isn't guaranteed
+		require.Equal(t, len(bodyString), 79)
+		require.Regexp(t, regexp.MustCompile("^mymeasurement.value"), bodyString)
+		require.Regexp(t, regexp.MustCompile("dt.metrics.source=telegraf"), bodyString)
+		require.Regexp(t, regexp.MustCompile("dim=value"), bodyString)
+		require.Regexp(t, regexp.MustCompile("gauge,32 1289430000000$"), bodyString)
+		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	d := &Dynatrace{DefaultDimensions: map[string]string{"dim": "value"}}
+
+	d.URL = ts.URL
+	d.APIToken = "123"
+	d.Log = testutil.Logger{}
+	err := d.Init()
+	require.NoError(t, err)
+	err = d.Connect()
+	require.NoError(t, err)
+
+	// Init metrics
+
+	m1 := metric.New(
+		"mymeasurement",
+		map[string]string{},
+		map[string]interface{}{"value": 32},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
