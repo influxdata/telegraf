@@ -74,8 +74,9 @@ const sampleConfig = `
   additional_counters = [ ]
 
   ## Optional dimensions to be added to every metric
-  [[outputs.dynatrace.default_dimensions]]
-	some_key = "some value"
+  # default_dimensions = {
+  #   some_key = "some value"
+  # }
 `
 
 // Connect Connects the Dynatrace output plugin to the Telegraf stream

@@ -55,14 +55,6 @@ You can learn more about how to use the Dynatrace API [here](https://www.dynatra
 
 ## Configuration
 
-### `url`
-
-*required*: `false`
-
-*default*: Local OneAgent endpoint
-
-Set your Dynatrace environment URL (e.g.: `https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest`) if you do not use a OneAgent or wish to export metrics directly to a Dynatrace metrics v2 endpoint. If a URL is set to anything other than the local OneAgent endpoint, then an API token is required.
-
 ```toml
 [[outputs.dynatrace]]
   ## Leave empty or use the local ingest endpoint of your OneAgent monitored host (e.g.: http://127.0.0.1:14499/metrics/ingest).
@@ -75,6 +67,22 @@ Set your Dynatrace environment URL (e.g.: `https://{your-environment-id}.live.dy
   insecure_skip_verify = false
   ## If you want to convert values represented as gauges to counters, add the metric names here
   additional_counters = [ ]
+
+  ## Optional dimensions to be added to every metric
+  default_dimensions = {
+    some_key = "some value"
+  }
+```
+
+### `url`
+
+*required*: `false`
+
+*default*: Local OneAgent endpoint
+
+Set your Dynatrace environment URL (e.g.: `https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest`) if you do not use a OneAgent or wish to export metrics directly to a Dynatrace metrics v2 endpoint. If a URL is set to anything other than the local OneAgent endpoint, then an API token is required.
+
+```toml
 url = "https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest"
 ```
 
