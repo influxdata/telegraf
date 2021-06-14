@@ -196,6 +196,12 @@ func (t *Table) Init() error {
 // net-snmp tools will be used to look up the OID and auto-populate the table's
 // fields.
 func (t *Table) initBuild() error {
+	//makes sure oid or name is set in config file
+	//otherwise snmp will produce metrics with an empty name
+	if t.Oid == "" && t.Name == "" {
+		return fmt.Errorf("SNMP table in config file is not named. One or both of the oid and name settings must be set")
+	}
+
 	if t.Oid == "" {
 		return nil
 	}
