@@ -110,7 +110,8 @@ GO
 
   ## Toggling this to true enables telegraf to start collecting data from Query Store.
   ## This setting is optional and is disabled by default.
-  ## Collection interval should be >=15m. Shorter intervals may cause higher performance impact on source.
+  ## Collection interval should comply with the following restriction: 15m =< collection interval <= 3h. 
+  ## Intervals shorter than 15m may cause higher performance impact on source. Intervals longer than 3h may cause loss of data.
   # query_store_collection = false
 
   ## Possible queries accross different versions of the collectors

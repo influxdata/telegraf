@@ -696,17 +696,20 @@ IF @QueryData != '' AND @QueryData IS NOT NULL
 
 DECLARE @currIntervalStartTime DATETIMEOFFSET, @currIntervalEndTime DATETIMEOFFSET, @queryStartTime DATETIMEOFFSET;
 
+DECLARE @currTime DATETIMEOFFSET = SYSDATETIMEOFFSET();
+DECLARE @currTimeLimit DATETIMEOFFSET = DATEADD(hh, -4, @currTime);
+
 /*Get the last completed interval*/
 SELECT TOP 1 @queryStartTime = start_time,  @currIntervalEndTime = end_time
 FROM sys.query_store_runtime_stats_interval
-WHERE end_time < SYSDATETIMEOFFSET()
+WHERE end_time < @currTime
 ORDER BY runtime_stats_interval_id DESC;
 
 /* Query Store is disabled OR interval is already collected */
-if @currIntervalEndTime IS NULL OR @currIntervalEndTime = @lastIntervalEndTime
+if @currIntervalEndTime IS NULL OR @currIntervalEndTime < @currTimeLimit OR @currIntervalEndTime = @lastIntervalEndTime
 	RETURN;
 
-SET @currIntervalStartTime = IIF(@lastIntervalEndTime IS NOT NULL, @lastIntervalEndTime, @queryStartTime);
+SET @currIntervalStartTime = IIF(@lastIntervalEndTime IS NULL OR @lastIntervalEndTime < @currTimeLimit, @queryStartTime, @lastIntervalEndTime);
 `
 const sqlAzureDBQueryStoreRuntimeStatistics = sqlAzureDBPartQueryPeriod + `
 
