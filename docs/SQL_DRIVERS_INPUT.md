@@ -39,6 +39,5 @@ Please open an issue or even better send a pull-request!
 Please open an issue or even better send a pull-request!
 
 ### My database is not supported
-Please check if a **pure Go** driver for the [golang sql framework](https://golang.org/pkg/database/sql/) exists.
-We currently cannot support CGO drivers in telegraf! If you found such a driver, please let us know by opening an
-issue or even better by sending a pull-request!
+We currently cannot support CGO drivers in telegraf! Please check if a **pure Go** driver for the [golang sql framework](https://golang.org/pkg/database/sql/) exists.
+If you found such a driver, please let us know by opening an issue or even better by sending a pull-request!
