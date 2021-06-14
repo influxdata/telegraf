@@ -24,6 +24,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
@@ -1387,6 +1388,68 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 		}
 	}
 
+	//for JSONPath parser
+	if node, ok := tbl.Fields["json_v2"]; ok {
+		if metricConfigs, ok := node.([]*ast.Table); ok {
+			pc.JSONV2Config = make([]parsers.JSONV2Config, len(metricConfigs))
+			for i, metricConfig := range metricConfigs {
+				mc := pc.JSONV2Config[i]
+				c.getFieldString(metricConfig, "measurement_name", &mc.MeasurementName)
+				if mc.MeasurementName == "" {
+					mc.MeasurementName = name
+				}
+				c.getFieldString(metricConfig, "measurement_name_path", &mc.MeasurementNamePath)
+				c.getFieldString(metricConfig, "timestamp_path", &mc.TimestampPath)
+				c.getFieldString(metricConfig, "timestamp_format", &mc.TimestampFormat)
+				c.getFieldString(metricConfig, "timestamp_timezone", &mc.TimestampTimezone)
+
+				if fieldConfigs, ok := metricConfig.Fields["field"]; ok {
+					if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
+						for _, fieldconfig := range fieldConfigs {
+							var f json_v2.DataSet
+							c.getFieldString(fieldconfig, "path", &f.Path)
+							c.getFieldString(fieldconfig, "rename", &f.Rename)
+							c.getFieldString(fieldconfig, "type", &f.Type)
+							mc.Fields = append(mc.Fields, f)
+						}
+					}
+				}
+				if fieldConfigs, ok := metricConfig.Fields["tag"]; ok {
+					if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
+						for _, fieldconfig := range fieldConfigs {
+							var t json_v2.DataSet
+							c.getFieldString(fieldconfig, "path", &t.Path)
+							c.getFieldString(fieldconfig, "rename", &t.Rename)
+							t.Type = "string"
+							mc.Tags = append(mc.Tags, t)
+						}
+					}
+				}
+
+				if objectconfigs, ok := metricConfig.Fields["object"]; ok {
+					if objectconfigs, ok := objectconfigs.([]*ast.Table); ok {
+						for _, objectConfig := range objectconfigs {
+							var o json_v2.JSONObject
+							c.getFieldString(objectConfig, "path", &o.Path)
+							c.getFieldString(objectConfig, "timestamp_key", &o.TimestampKey)
+							c.getFieldString(objectConfig, "timestamp_format", &o.TimestampFormat)
+							c.getFieldString(objectConfig, "timestamp_timezone", &o.TimestampTimezone)
+							c.getFieldBool(objectConfig, "disable_prepend_keys", &o.DisablePrependKeys)
+							c.getFieldStringSlice(objectConfig, "included_keys", &o.IncludedKeys)
+							c.getFieldStringSlice(objectConfig, "excluded_keys", &o.ExcludedKeys)
+							c.getFieldStringSlice(objectConfig, "tags", &o.Tags)
+							c.getFieldStringMap(objectConfig, "renames", &o.Renames)
+							c.getFieldStringMap(objectConfig, "fields", &o.Fields)
+							mc.JSONObjects = append(mc.JSONObjects, o)
+						}
+					}
+				}
+
+				pc.JSONV2Config[i] = mc
+			}
+		}
+	}
+
 	pc.MetricName = name
 
 	if c.hasErrs() {
@@ -1494,7 +1557,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml":
+		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml", "json_v2":
 
 		// ignore fields that are common to all plugins.
 	default:
