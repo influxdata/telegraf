@@ -69,6 +69,10 @@ func TestData(t *testing.T) {
 			name: "Test multiple timestamps",
 			test: "multiple_timestamps",
 		},
+		{
+			name: "Test field with null",
+			test: "null",
+		},
 	}
 
 	for _, tc := range tests {
