@@ -21,16 +21,16 @@ import (
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL               string          `toml:"url"`
-	APIToken          string          `toml:"api_token"`
-	Prefix            string          `toml:"prefix"`
-	Log               telegraf.Logger `toml:"-"`
-	Timeout           config.Duration `toml:"timeout"`
-	AddCounterMetrics []string        `toml:"additional_counters"`
+	URL               string            `toml:"url"`
+	APIToken          string            `toml:"api_token"`
+	Prefix            string            `toml:"prefix"`
+	Log               telegraf.Logger   `toml:"-"`
+	Timeout           config.Duration   `toml:"timeout"`
+	AddCounterMetrics []string          `toml:"additional_counters"`
+	DefaultDimensions map[string]string `toml:"default_dimensions"`
 
-	defaultDimensionMap map[string]string `toml:"default_dimensions"`
-	defaultDimensions   dimensions.NormalizedDimensionList
-	staticDimensions    dimensions.NormalizedDimensionList
+	defaultDimensions dimensions.NormalizedDimensionList
+	staticDimensions  dimensions.NormalizedDimensionList
 
 	tls.ClientConfig
 
@@ -250,7 +250,7 @@ func (d *Dynatrace) Init() error {
 	}
 
 	dims := []dimensions.Dimension{}
-	for key, value := range d.defaultDimensionMap {
+	for key, value := range d.DefaultDimensions {
 		dims = append(dims, dimensions.NewDimension(key, value))
 	}
 	d.defaultDimensions = dimensions.NewNormalizedDimensionList(dims...)
