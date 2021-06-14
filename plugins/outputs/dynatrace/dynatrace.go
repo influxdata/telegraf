@@ -29,8 +29,8 @@ type Dynatrace struct {
 	AddCounterMetrics []string          `toml:"additional_counters"`
 	DefaultDimensions map[string]string `toml:"default_dimensions"`
 
-	defaultDimensions dimensions.NormalizedDimensionList
-	staticDimensions  dimensions.NormalizedDimensionList
+	normalizedDefaultDimensions dimensions.NormalizedDimensionList
+	normalizedStaticDimensions  dimensions.NormalizedDimensionList
 
 	tls.ClientConfig
 
@@ -150,9 +150,9 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				dtMetric.WithPrefix(d.Prefix),
 				dtMetric.WithDimensions(
 					dimensions.MergeLists(
-						d.defaultDimensions,
+						d.normalizedDefaultDimensions,
 						dimensions.NewNormalizedDimensionList(dims...),
-						d.staticDimensions,
+						d.normalizedStaticDimensions,
 					),
 				),
 				dtMetric.WithTimestamp(tm.Time()),
@@ -253,8 +253,8 @@ func (d *Dynatrace) Init() error {
 	for key, value := range d.DefaultDimensions {
 		dims = append(dims, dimensions.NewDimension(key, value))
 	}
-	d.defaultDimensions = dimensions.NewNormalizedDimensionList(dims...)
-	d.staticDimensions = dimensions.MergeLists(
+	d.normalizedDefaultDimensions = dimensions.NewNormalizedDimensionList(dims...)
+	d.normalizedStaticDimensions = dimensions.MergeLists(
 		dimensions.NewNormalizedDimensionList(dimensions.NewDimension("dt.metrics.source", "telegraf")),
 		oneagentenrichment.GetOneAgentMetadata(),
 	)

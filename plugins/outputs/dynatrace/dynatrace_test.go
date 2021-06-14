@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
+	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/dimensions"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
@@ -377,6 +378,93 @@ func TestSendMetricWithDefaultDimensions(t *testing.T) {
 	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{},
+		map[string]interface{}{"value": 32},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	metrics := []telegraf.Metric{m1}
+
+	err = d.Write(metrics)
+	require.NoError(t, err)
+}
+
+func TestMetricDimensionsOverrideDefault(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		// check the encoded result
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		require.NoError(t, err)
+		bodyString := string(bodyBytes)
+		// use regex because field order isn't guaranteed
+		require.Equal(t, len(bodyString), 80)
+		require.Regexp(t, regexp.MustCompile("^mymeasurement.value"), bodyString)
+		require.Regexp(t, regexp.MustCompile("dt.metrics.source=telegraf"), bodyString)
+		require.Regexp(t, regexp.MustCompile("dim=metric"), bodyString)
+		require.Regexp(t, regexp.MustCompile("gauge,32 1289430000000$"), bodyString)
+		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	d := &Dynatrace{DefaultDimensions: map[string]string{"dim": "default"}}
+
+	d.URL = ts.URL
+	d.APIToken = "123"
+	d.Log = testutil.Logger{}
+	err := d.Init()
+	require.NoError(t, err)
+	err = d.Connect()
+	require.NoError(t, err)
+
+	// Init metrics
+
+	m1 := metric.New(
+		"mymeasurement",
+		map[string]string{"dim": "metric"},
+		map[string]interface{}{"value": 32},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	metrics := []telegraf.Metric{m1}
+
+	err = d.Write(metrics)
+	require.NoError(t, err)
+}
+
+func TestStaticDimensionsOverrideMetric(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		// check the encoded result
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		require.NoError(t, err)
+		bodyString := string(bodyBytes)
+		// use regex because field order isn't guaranteed
+		require.Equal(t, len(bodyString), 53)
+		require.Regexp(t, regexp.MustCompile("^mymeasurement.value"), bodyString)
+		require.Regexp(t, regexp.MustCompile("dim=static"), bodyString)
+		require.Regexp(t, regexp.MustCompile("gauge,32 1289430000000$"), bodyString)
+		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	d := &Dynatrace{DefaultDimensions: map[string]string{"dim": "default"}}
+
+	d.URL = ts.URL
+	d.APIToken = "123"
+	d.Log = testutil.Logger{}
+	err := d.Init()
+	require.NoError(t, err)
+	err = d.Connect()
+	require.NoError(t, err)
+
+	d.normalizedStaticDimensions = dimensions.NewNormalizedDimensionList(dimensions.NewDimension("dim", "static"))
+
+	// Init metrics
+
+	m1 := metric.New(
+		"mymeasurement",
+		map[string]string{"dim": "metric"},
 		map[string]interface{}{"value": 32},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
