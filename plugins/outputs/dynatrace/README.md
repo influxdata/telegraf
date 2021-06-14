@@ -16,7 +16,7 @@ The Dynatrace exporter may be enabled by adding an `[[outputs.dynatrace]]` secti
 All configurations are optional, but if a `url` other than the OneAgent metric ingestion endpoint is specified then an `api_token` is required.
 To see all available options, see [Configuration](#configuration) below.
 
-### Running alongside Dynatrace OneAgent
+### Running alongside Dynatrace OneAgent (preferred)
 
 If you run the Telegraf agent on a host or VM that is monitored by the Dynatrace OneAgent then you only need to enable the plugin, but need no further configuration. The Dynatrace Telegraf output plugin will send all metrics to the OneAgent which will use its secure and load balanced connection to send the metrics to your Dynatrace SaaS or Managed environment.
 Depending on your environment, you might have to enable metrics ingestion on the OneAgent first as described in the [Dynatrace documentation](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/ingestion-methods/telegraf/).

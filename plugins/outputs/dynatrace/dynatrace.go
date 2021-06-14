@@ -16,6 +16,7 @@ import (
 	dtMetric "github.com/dynatrace-oss/dynatrace-metric-utils-go/metric"
 	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
 	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/dimensions"
+	"github.com/dynatrace-oss/dynatrace-metric-utils-go/oneagentenrichment"
 )
 
 // Dynatrace Configuration for the Dynatrace output plugin
@@ -26,6 +27,10 @@ type Dynatrace struct {
 	Log               telegraf.Logger `toml:"-"`
 	Timeout           config.Duration `toml:"timeout"`
 	AddCounterMetrics []string        `toml:"additional_counters"`
+
+	defaultDimensionMap map[string]string `toml:"default_dimensions"`
+	defaultDimensions   dimensions.NormalizedDimensionList
+	staticDimensions    dimensions.NormalizedDimensionList
 
 	tls.ClientConfig
 
@@ -67,6 +72,10 @@ const sampleConfig = `
 
   ## If you want to convert values represented as gauges to counters, add the metric names here
   additional_counters = [ ]
+
+  ## Optional dimensions to be added to every metric
+  [[outputs.dynatrace.default_dimensions]]
+	some_key = "some value"
 `
 
 // Connect Connects the Dynatrace output plugin to the Telegraf stream
@@ -140,10 +149,12 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				dtMetric.WithPrefix(d.Prefix),
 				dtMetric.WithDimensions(
 					dimensions.MergeLists(
-						// dimensions.NewNormalizedDimensionList(e.opts.DefaultDimensions...),
+						d.defaultDimensions,
 						dimensions.NewNormalizedDimensionList(dims...),
+						d.staticDimensions,
 					),
 				),
+				dtMetric.WithTimestamp(tm.Time()),
 				typeOpt,
 			)
 
@@ -236,6 +247,17 @@ func (d *Dynatrace) Init() error {
 		},
 		Timeout: time.Duration(d.Timeout),
 	}
+
+	dims := []dimensions.Dimension{}
+	for key, value := range d.defaultDimensionMap {
+		dims = append(dims, dimensions.NewDimension(key, value))
+	}
+	d.defaultDimensions = dimensions.NewNormalizedDimensionList(dims...)
+	d.staticDimensions = dimensions.MergeLists(
+		dimensions.NewNormalizedDimensionList(dimensions.NewDimension("dt.metrics.source", "telegraf")),
+		oneagentenrichment.GetOneAgentMetadata(),
+	)
+
 	return nil
 }
 

@@ -121,13 +121,13 @@ func TestMissingAPIToken(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestSendMetric(t *testing.T) {
+func TestSendMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// check the encoded result
 		bodyBytes, err := ioutil.ReadAll(r.Body)
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
-		expected := "mymeasurement.myfield,host=192.168.0.1 gauge,3.14\nmymeasurement.value,host=192.168.0.2 count,3.14"
+		expected := "mymeasurement.myfield,dt.metrics.source=telegraf gauge,3.14 1289430000000\nmymeasurement.value,dt.metrics.source=telegraf count,3.14 1289430000000"
 		if bodyString != expected {
 			t.Errorf("Metric encoding failed. expected: %#v but got: %#v", expected, bodyString)
 		}
@@ -151,14 +151,14 @@ func TestSendMetric(t *testing.T) {
 
 	m1 := metric.New(
 		"mymeasurement",
-		map[string]string{"host": "192.168.0.1"},
+		map[string]string{},
 		map[string]interface{}{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
 	m2 := metric.New(
 		"mymeasurement",
-		map[string]string{"host": "192.168.0.2"},
+		map[string]string{},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 		telegraf.Counter,
@@ -176,11 +176,13 @@ func TestSendSingleMetricWithUnorderedTags(t *testing.T) {
 		bodyBytes, err := ioutil.ReadAll(r.Body)
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
+		// use regex because dimension order isn't guaranteed
 		require.Regexp(t, regexp.MustCompile(`^mymeasurement\.myfield`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`a=test`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`b=test`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`c=test`), bodyString)
-		require.Regexp(t, regexp.MustCompile(`gauge,3.14$`), bodyString)
+		require.Regexp(t, regexp.MustCompile(`dt.metrics.source=telegraf`), bodyString)
+		require.Regexp(t, regexp.MustCompile(`gauge,3.14 1289430000000$`), bodyString)
 		w.WriteHeader(http.StatusOK)
 		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
 		require.NoError(t, err)
@@ -219,7 +221,7 @@ func TestSendMetricWithoutTags(t *testing.T) {
 		bodyBytes, err := ioutil.ReadAll(r.Body)
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
-		expected := "mymeasurement.myfield gauge,3.14"
+		expected := "mymeasurement.myfield,dt.metrics.source=telegraf gauge,3.14 1289430000000"
 		if bodyString != expected {
 			t.Errorf("Metric encoding failed. expected: %#v but got: %#v", expected, bodyString)
 		}
@@ -261,13 +263,13 @@ func TestSendMetricWithUpperCaseTagKeys(t *testing.T) {
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
 
-		// expected := "mymeasurement.myfield,b_b=test,ccc=test,aaa=test gauge,3.14"
 		// use regex because dimension order isn't guaranteed
 		require.Regexp(t, regexp.MustCompile(`^mymeasurement\.myfield`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`aaa=test`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`b_b=test`), bodyString)
 		require.Regexp(t, regexp.MustCompile(`ccc=test`), bodyString)
-		require.Regexp(t, regexp.MustCompile(`gauge,3.14$`), bodyString)
+		require.Regexp(t, regexp.MustCompile(`dt.metrics.source=telegraf`), bodyString)
+		require.Regexp(t, regexp.MustCompile(`gauge,3.14 1289430000000$`), bodyString)
 
 		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
 		require.NoError(t, err)
@@ -307,8 +309,8 @@ func TestSendBooleanMetricWithoutTags(t *testing.T) {
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
 		// use regex because field order isn't guaranteed
-		require.Contains(t, bodyString, "mymeasurement.yes gauge,1")
-		require.Contains(t, bodyString, "mymeasurement.no gauge,0")
+		require.Contains(t, bodyString, "mymeasurement.yes,dt.metrics.source=telegraf gauge,1 1289430000000")
+		require.Contains(t, bodyString, "mymeasurement.no,dt.metrics.source=telegraf gauge,0 1289430000000")
 		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
 		require.NoError(t, err)
 	}))
@@ -346,7 +348,7 @@ func TestSendCounterMetricWithoutTags(t *testing.T) {
 		bodyBytes, err := ioutil.ReadAll(r.Body)
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
-		expected := "mymeasurement.value gauge,32"
+		expected := "mymeasurement.value,dt.metrics.source=telegraf gauge,32 1289430000000"
 		if bodyString != expected {
 			t.Errorf("Metric encoding failed. expected: %#v but got: %#v", expected, bodyString)
 		}
