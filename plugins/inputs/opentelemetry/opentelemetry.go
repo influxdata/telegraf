@@ -119,8 +119,8 @@ func init() {
 	inputs.Add("opentelemetry", func() telegraf.Input {
 		return &OpenTelemetry{
 			ServiceAddress: "0.0.0.0:4317",
-			Timeout:        config.Duration(5 * time.Second),
 			MetricsSchema:  "prometheus-v1",
+			Timeout:        config.Duration(5 * time.Second),
 		}
 	})
 }

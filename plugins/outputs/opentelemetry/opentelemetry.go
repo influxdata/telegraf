@@ -34,15 +34,6 @@ type OpenTelemetry struct {
 	callOptions          []grpc.CallOption
 }
 
-func newOpenTelemetry() *OpenTelemetry {
-	return &OpenTelemetry{
-		ServiceAddress: "localhost:4317",
-		MetricsSchema:  "prometheus-v1",
-		Timeout:        config.Duration(5 * time.Second),
-		Compression:    "gzip",
-	}
-}
-
 const sampleConfig = `
   ## Override the default (localhost:4317) OpenTelemetry gRPC service
   ## address:port
@@ -177,6 +168,11 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("opentelemetry", func() telegraf.Output {
-		return newOpenTelemetry()
+		return &OpenTelemetry{
+			ServiceAddress: "localhost:4317",
+			MetricsSchema:  "prometheus-v1",
+			Timeout:        config.Duration(5 * time.Second),
+			Compression:    "gzip",
+		}
 	})
 }
