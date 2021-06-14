@@ -1,0 +1,2 @@
+new_metric,name=partition LogEndOffset=339238i,LogStartOffset=339238i,NumLogSegments=1i,Size=0i,UnderReplicatedPartitions=0i 1610056029037925000
+new_metric,name=partition LogEndOffset=33914i,LogStartOffset=33238i,NumLogSegments=1i,Size=2i,UnderReplicatedPartitions=5i 1610056029037956000

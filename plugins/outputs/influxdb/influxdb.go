@@ -210,6 +210,7 @@ func (i *InfluxDB) SampleConfig() string {
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 
+	allErrorsAreDatabaseNotFoundErrors := true
 	var err error
 	p := rand.Perm(len(i.clients))
 	for _, n := range p {
@@ -219,20 +220,28 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			return nil
 		}
 
+		i.Log.Errorf("When writing to [%s]: %v", client.URL(), err)
+
 		switch apiError := err.(type) {
 		case *DatabaseNotFoundError:
 			if !i.SkipDatabaseCreation {
+				allErrorsAreDatabaseNotFoundErrors = false
 				err := client.CreateDatabase(ctx, apiError.Database)
 				if err != nil {
 					i.Log.Errorf("When writing to [%s]: database %q not found and failed to recreate",
 						client.URL(), apiError.Database)
+				} else {
+					// try another client, if all clients fail with this error, do not return error
+					continue
 				}
 			}
 		}
-
-		i.Log.Errorf("When writing to [%s]: %v", client.URL(), err)
 	}
 
+	if allErrorsAreDatabaseNotFoundErrors {
+		// return nil because we should not be retrying this
+		return nil
+	}
 	return errors.New("could not write any address")
 }
 
