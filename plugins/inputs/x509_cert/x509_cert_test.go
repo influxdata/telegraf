@@ -282,6 +282,7 @@ func TestGatherUDPCert(t *testing.T) {
 
 	m := &X509Cert{
 		Sources: []string{"udp://" + listener.Addr().String()},
+		Log:     testutil.Logger{},
 	}
 	require.NoError(t, m.Init())
 
