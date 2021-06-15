@@ -1227,9 +1227,9 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	RETURN
 END;
 
-DROP PROCEDURE IF EXISTS #ExecForeachDb
+DROP PROCEDURE IF EXISTS #TelegrafMonitoringDataCollector
 /* Create a temporary procedure that iterates through all DBs that the user has access to in this managed instance, except system DBs, and execute the query specified with @queryText */
-EXEC('CREATE PROCEDURE #ExecForeachDb @queryText NVARCHAR(MAX)
+EXEC('CREATE PROCEDURE #TelegrafMonitoringDataCollector @queryText NVARCHAR(MAX)
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -1418,7 +1418,7 @@ OPTION (RECOMPILE);
 ' + @UpdateCollectionTimeSqlText;
 
 /* Iterate through all DBs in the managed instance */
-EXEC #ExecForeachDb @SqlText;
+EXEC #TelegrafMonitoringDataCollector @SqlText;
 
 /* Return the table with the accumulated result for all DBs */
 SELECT * FROM #QueryStoreMetrics;
@@ -1480,7 +1480,7 @@ IF EXISTS (SELECT * FROM sys.database_query_store_options WHERE wait_stats_captu
 ' + @UpdateCollectionTimeSqlText;
 
 /* Iterate through all DBs in the managed instance */
-EXEC #ExecForeachDb @SqlText;
+EXEC #TelegrafMonitoringDataCollector @SqlText;
 
 /* Return the table with the accumulated result for all DBs */
 SELECT * FROM #QueryStoreWaitStat;
