@@ -1,0 +1,5 @@
+FROM bitnami/minideb:buster
+
+RUN install_packages snmp
+
+ENTRYPOINT ["/app/send.sh"]
