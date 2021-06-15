@@ -15,7 +15,7 @@ require (
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.6
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
-	github.com/Shopify/sarama v1.29.0
+	github.com/Shopify/sarama v1.27.2
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/aerospike/aerospike-client-go v1.27.0
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d
@@ -23,7 +23,7 @@ require (
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/xmlquery v1.3.5
 	github.com/antchfx/xpath v1.1.11
-	github.com/apache/thrift v0.14.1
+	github.com/apache/thrift v0.13.0
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/aws/aws-sdk-go v1.34.34
@@ -59,15 +59,16 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/protobuf v1.5.1
-	github.com/golang/snappy v0.0.3
+	github.com/golang/snappy v0.0.1
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.1.13
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.2
 	github.com/gosnmp/gosnmp v1.32.0
 	github.com/grid-x/modbus v0.0.0-20210224155242-c4a3d042e99b
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
+	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/harlow/kinesis-consumer v0.3.1-0.20181230152818-2f58b136fee0
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
@@ -79,7 +80,6 @@ require (
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
 	github.com/jackc/pgx/v4 v4.6.0
-	github.com/jaegertracing/jaeger v1.23.0 // indirect
 	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/kardianos/service v1.0.0
@@ -126,14 +126,15 @@ require (
 	github.com/wavefronthq/wavefront-sdk-go v0.9.7
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
-	github.com/xdg/scram v1.0.3
+	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
 	go.starlark.net v0.0.0-20210406145628-7a1108eaa012
-	golang.org/x/net v0.0.0-20210510120150-4163338589ed
+	go.uber.org/multierr v1.6.0 // indirect
+	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
-	golang.org/x/sys v0.0.0-20210423082822-04245dca01da
-	golang.org/x/text v0.3.6
+	golang.org/x/sys v0.0.0-20210324051608-47abb6519492
+	golang.org/x/text v0.3.4
 	golang.org/x/tools v0.1.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	google.golang.org/api v0.29.0
