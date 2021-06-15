@@ -1268,14 +1268,14 @@ END');
 /* Obtain the previous times the query was called -- they are an array because we are working with a list of DBs in the Managed Instance -- and store them in a temporary table */
 IF OBJECT_ID ('tempdb.dbo.#CachedDbCollectionTimes') IS NOT NULL DROP TABLE #CachedDbCollectionTimes;
 CREATE TABLE #CachedDbCollectionTimes (
-	[id] INT,
+	[database_id] INT,
 	[collectionTime] DATETIMEOFFSET
 );
 
 DECLARE @XmlQueryData XML = @QueryData;
 INSERT INTO #CachedDbCollectionTimes
 SELECT
-	s.value('./id[1]', 'int') AS [id],
+	s.value('./id[1]', 'int') AS [database_id],
 	s.value('./collectionTime[1]', 'datetimeoffset') AS [collectionTime]
 FROM @XmlQueryData.nodes('/collectionTimes/ts') t(s);
 
@@ -1285,7 +1285,7 @@ DELETE FROM #CachedDbCollectionTimes WHERE collectionTime <= DATEADD(dd, -2, SYS
 DECLARE @SqlText NVARCHAR(MAX) = N'
 
 DECLARE @lastIntervalEndTime DATETIMEOFFSET;
-SELECT TOP 1 @lastIntervalEndTime = [collectionTime] FROM #CachedDbCollectionTimes WHERE [id] = DB_ID();
+SELECT TOP 1 @lastIntervalEndTime = [collectionTime] FROM #CachedDbCollectionTimes WHERE [database_id] = DB_ID();
 
 DECLARE @currIntervalStartTime DATETIMEOFFSET, @currIntervalEndTime DATETIMEOFFSET, @queryStartTime DATETIMEOFFSET;
 
@@ -1306,18 +1306,18 @@ SET @currIntervalStartTime = IIF(@lastIntervalEndTime IS NOT NULL, @lastInterval
 DECLARE @UpdateCollectionTimeSqlText NVARCHAR(MAX) = N'
 /* Update query call time for the current DB */
 MERGE #CachedDbCollectionTimes AS target  
-USING (SELECT DB_ID(), @currIntervalEndTime) AS source (id, collectionTime)  
-ON (target.id = source.id)  
+USING (SELECT DB_ID(), @currIntervalEndTime) AS source (database_id, collectionTime)  
+ON (target.database_id = source.database_id)  
 WHEN MATCHED THEN
     UPDATE SET collectionTime = source.collectionTime 
 WHEN NOT MATCHED THEN  
-    INSERT (id, collectionTime)  
-    VALUES (source.id, source.collectionTime);
+    INSERT (database_id, collectionTime)  
+    VALUES (source.database_id, source.collectionTime);
 ';
 
 DECLARE @ReturnCachedIntervalsSqlText VARCHAR(MAX) = '
 /* Return previous query call timestamps for all DBs */
-SELECT CONVERT(NVARCHAR(MAX),(SELECT id, CONVERT(varchar(35), collectionTime, 126) AS collectionTime FROM #CachedDbCollectionTimes FOR XML PATH(''ts''), ROOT(''collectionTimes''))) AS CachedData;
+SELECT CONVERT(NVARCHAR(MAX),(SELECT database_id AS id, CONVERT(varchar(35), collectionTime, 126) AS collectionTime FROM #CachedDbCollectionTimes FOR XML PATH(''ts''), ROOT(''collectionTimes''))) AS CachedData;
 DROP TABLE #CachedDbCollectionTimes;
 '
 `
