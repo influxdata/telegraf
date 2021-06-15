@@ -39,12 +39,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	t := time.Now()
 
 	// Parse the XML
-	p.Log.Debugf("Buffer: %q", string(buf))
 	doc, err := xmlquery.Parse(strings.NewReader(string(buf)))
 	if err != nil {
 		return nil, err
 	}
-	p.Log.Debugf("doc: %v", doc)
 
 	// Queries
 	metrics := make([]telegraf.Metric, 0)
