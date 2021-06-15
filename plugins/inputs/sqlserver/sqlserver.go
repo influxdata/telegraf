@@ -99,8 +99,10 @@ servers = [
 ## A list of queries to explicitly ignore. Query Store queries are excluded by default.
 # exclude_query = [AzureSQLDBQueryStoreRuntimeStatistics, AzureSQLDBQueryStoreWaitStatistics]
 
-## Toggling this to true enables telegraf to start collecting data from query store.
-## This setting is optional and is disabled by default as it the queries are expensive and collection interval should be >=15m
+## Toggling this to true enables telegraf to start collecting data from Query Store.
+## This setting is optional and is disabled by default.
+## Collection interval should comply with the following restriction: 15m =< collection interval <= 2h. 
+## Intervals shorter than 15m may cause higher performance impact on source. Intervals longer than 2h may cause some Query Store data not to be collected.
 # query_store_collection = false
 
 ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
