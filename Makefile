@@ -161,7 +161,7 @@ tidy:
 	go mod verify
 	go mod tidy
 	@if ! git diff --quiet go.mod go.sum; then \
-		echo "please run go mod tidy and check in changes"; \
+		echo "please run go mod tidy and check in changes, you might have to use the same version of Go as the CI"; \
 		exit 1; \
 	fi
 
@@ -201,8 +201,8 @@ ci-1.15:
 
 .PHONY: ci-1.16
 ci-1.16:
-	docker build -t quay.io/influxdb/telegraf-ci:1.16.2 - < scripts/ci-1.16.docker
-	docker push quay.io/influxdb/telegraf-ci:1.16.2
+	docker build -t quay.io/influxdb/telegraf-ci:1.16.5 - < scripts/ci-1.16.docker
+	docker push quay.io/influxdb/telegraf-ci:1.16.5
 
 .PHONY: install
 install: $(buildbin)
@@ -247,11 +247,11 @@ endif
 ifdef amd64
 tars += telegraf-$(tar_version)_freebsd_amd64.tar.gz
 tars += telegraf-$(tar_version)_linux_amd64.tar.gz
-debs := telegraf_$(deb_version)_amd64.deb
+debs += telegraf_$(deb_version)_amd64.deb
 rpms += telegraf-$(rpm_version).x86_64.rpm
 endif
 
-ifdef static 
+ifdef static
 tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
 endif
 
@@ -266,7 +266,7 @@ tars += telegraf-$(tar_version)_linux_armhf.tar.gz
 tars += telegraf-$(tar_version)_freebsd_armv7.tar.gz
 debs += telegraf_$(deb_version)_armhf.deb
 rpms += telegraf-$(rpm_version).armv6hl.rpm
-endif 
+endif
 
 ifdef s390x
 tars += telegraf-$(tar_version)_linux_s390x.tar.gz

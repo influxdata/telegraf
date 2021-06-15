@@ -1,0 +1,46 @@
+{
+    "message": "abc",
+    "fields": {
+        "status": 200,
+        "key": 1,
+        "json": [
+            {
+                "duration": 100,
+                "code": 1,
+                "label": 2,
+                "line": 3,
+                "many": 4,
+                "more": 5,
+                "numerical": 6,
+                "fields": 7,
+                "nest": {
+                    "label": 2,
+                    "line": 3,
+                    "many": 4,
+                    "more": 5,
+                    "numerical": 4,
+                    "fields": 7
+                }
+            },
+            {
+                "duration": 60,
+                "code": 1,
+                "label": 2,
+                "line": 3,
+                "many": 4,
+                "more": 5,
+                "numerical": 6,
+                "fields": 7,
+                "nest": {
+                    "label": 2,
+                    "line": 3,
+                    "many": 4,
+                    "more": 5,
+                    "numerical": 6,
+                    "fields": 7
+                }
+            }
+        ],
+        "duration": 2
+    }
+}
