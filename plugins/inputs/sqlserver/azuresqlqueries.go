@@ -1266,7 +1266,7 @@ BEGIN
 END');
 
 /* Obtain the previous times the query was called -- they are an array because we are working with a list of DBs in the Managed Instance -- and store them in a temporary table */
-IF OBJECT_ID ('tempdb.dbo.#CachedDbCollectionTimes') IS NOT NULL DROP TABLE #CachedDbCollectionTimes;
+DROP TABLE IF EXISTS #CachedDbCollectionTimes;
 CREATE TABLE #CachedDbCollectionTimes (
 	[database_id] INT NOT NULL PRIMARY KEY,
 	[collectionTime] DATETIMEOFFSET
@@ -1325,7 +1325,7 @@ DROP TABLE #CachedDbCollectionTimes;
 const sqlAzureMIQueryStoreRuntimeStatistics = sqlAzureMIPartQueryPeriod + `
 
 /* Create a temp table for accumulating the result for all DBs */
-IF OBJECT_ID ('tempdb.dbo.#QueryStoreMetrics') IS NOT NULL DROP TABLE #QueryStoreMetrics;
+DROP TABLE IF EXISTS #QueryStoreMetrics;
 CREATE TABLE #QueryStoreMetrics(
 	measurement varchar(42),
 	sql_instance nvarchar(256),
@@ -1428,7 +1428,7 @@ EXEC(@ReturnCachedIntervalsSqlText);
 `
 
 const sqlAzureMIQueryStoreWaitStatistics = sqlAzureMIPartQueryPeriod + `
-IF OBJECT_ID ('tempdb.dbo.#QueryStoreWaitStat') IS NOT NULL DROP TABLE #QueryStoreWaitStat;
+DROP TABLE IF EXISTS #QueryStoreWaitStat;
 CREATE TABLE #QueryStoreWaitStat(
 	measurement varchar(39),
 	sql_instance nvarchar(256),
