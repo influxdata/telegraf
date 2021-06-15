@@ -1363,7 +1363,8 @@ CREATE TABLE #QueryStoreMetrics(
 	avg_log_bytes_used float,
 	max_tempdb_space_used bigint,
 	avg_tempdb_space_used float
-);
+)
+WITH (DATA_COMPRESSION = ROW);
 
 /* Query the data from query store. Group by plan_id, execution_type, runtime_stats_interval_id, as specified here:
 https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-runtime-stats-transact-sql?view=sql-server-ver15
@@ -1444,7 +1445,8 @@ CREATE TABLE #QueryStoreWaitStat(
 	total_query_wait_time_ms_d bigint,
 	count_executions bigint,
 	max_query_wait_time_ms_d bigint
-);
+)
+WITH (DATA_COMPRESSION = ROW);
 
 /* Query the data from query store. Group  by plan_id, runtime_stats_interval_id, execution_type and wait_category, and specified here:
 https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15
