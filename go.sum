@@ -1284,12 +1284,12 @@ github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749/go.mod h1:ZY1cvUeJ
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/shurcooL/vfsgen v0.0.0-20181202132449-6a9ea43bcacd/go.mod h1:TrYk7fJVaAttu97ZZKrO9UbRa8izdowaMIZcxYMbVaw=
 github.com/shurcooL/vfsgen v0.0.0-20200627165143-92b8a710ab6c/go.mod h1:TrYk7fJVaAttu97ZZKrO9UbRa8izdowaMIZcxYMbVaw=
-github.com/signalfx/com_signalfx_metrics_protobuf v0.0.0-20190222193949-1fb69526e884 h1:KgLGEw137KEUtQnWBGzneCetphBj4+kKHRnhpAkXJC0=
-github.com/signalfx/com_signalfx_metrics_protobuf v0.0.0-20190222193949-1fb69526e884/go.mod h1:muYA2clvwCdj7nzAJ5vJIXYpJsUumhAl4Uu1wUNpWzA=
+github.com/signalfx/com_signalfx_metrics_protobuf v0.0.2 h1:X886QgwZH5qr9HIQkk3mWcNEhUxx6D8rUZumzLV4Wiw=
+github.com/signalfx/com_signalfx_metrics_protobuf v0.0.2/go.mod h1:tCQQqyJAVF1+mxNdqOi18sS/zaSrE6EMyWwRA2QTl70=
 github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 h1:WsShHmu12ZztYPfh9b+I+VjYD1o8iOHhB67WZCMEEE8=
 github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083/go.mod h1:adPDS6s7WaajdFBV9mQ7i0dKfQ8xiDnF9ZNETVPpp7c=
-github.com/signalfx/golib/v3 v3.3.0 h1:vSXsAb73bdrlnjk5rnZ7y3t09Qzu9qfBEbXdcyBHsmE=
-github.com/signalfx/golib/v3 v3.3.0/go.mod h1:GzjWpV0skAXZn7+u9LnkOkiXAx9KKd5XZcd5r+RoF5o=
+github.com/signalfx/golib/v3 v3.3.34 h1:s78S24+exS0jH21oeSB1qPeiekIKkeXGv0hg7f67HvU=
+github.com/signalfx/golib/v3 v3.3.34/go.mod h1:PB7OovVijH7OGhzMewarEcIZG3eG6akWMDucIb5Jnb4=
 github.com/signalfx/gomemcache v0.0.0-20180823214636-4f7ef64c72a9/go.mod h1:Ytb8KfCSyuwy/VILnROdgCvbQLA5ch0nkbG7lKT0BXw=
 github.com/signalfx/sapm-proto v0.4.0 h1:5lQX++6FeIjUZEIcnSgBqhOpmSjMkRBW3y/4ZiKMo5E=
 github.com/signalfx/sapm-proto v0.4.0/go.mod h1:x3gtwJ1GRejtkghB4nYpwixh2zqJrLbPU959ZNhM0Fk=
@@ -1433,6 +1433,7 @@ github.com/yvasiyarov/gorelic v0.0.0-20141212073537-a9bba5b9ab50/go.mod h1:NUSPS
 github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f/go.mod h1:GlGEuHIJweS1mbCqG+7vt2nvWLzLLnRHbXz5JKd/Qbg=
 github.com/zenazn/goji v0.9.0/go.mod h1:7S9M489iMyHBNxwZnk9/EHS098H4/F6TATF2mIxtB1Q=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
+go.etcd.io/bbolt v1.3.4/go.mod h1:G5EMThwa9y8QZGBClrRx5EY+Yw9kAhnjy3bSjsnlVTQ=
 go.etcd.io/bbolt v1.3.5/go.mod h1:G5EMThwa9y8QZGBClrRx5EY+Yw9kAhnjy3bSjsnlVTQ=
 go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738/go.mod h1:dnLIgRNXwCJa5e+c6mIZCrds/GIG4ncV9HhK5PX7jPg=
 go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489/go.mod h1:yVHk9ub3CSBatqGNg7GRmsnfLWtoW60w4eDYfh7vHDg=
