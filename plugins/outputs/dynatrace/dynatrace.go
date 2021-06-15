@@ -16,7 +16,6 @@ import (
 	dtMetric "github.com/dynatrace-oss/dynatrace-metric-utils-go/metric"
 	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
 	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/dimensions"
-	"github.com/dynatrace-oss/dynatrace-metric-utils-go/oneagentenrichment"
 )
 
 // Dynatrace Configuration for the Dynatrace output plugin
@@ -256,7 +255,7 @@ func (d *Dynatrace) Init() error {
 	d.normalizedDefaultDimensions = dimensions.NewNormalizedDimensionList(dims...)
 	d.normalizedStaticDimensions = dimensions.MergeLists(
 		dimensions.NewNormalizedDimensionList(dimensions.NewDimension("dt.metrics.source", "telegraf")),
-		oneagentenrichment.GetOneAgentMetadata(),
+		// oneagentenrichment.GetOneAgentMetadata(),
 	)
 
 	return nil
