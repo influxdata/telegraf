@@ -1248,7 +1248,8 @@ BEGIN
 	FETCH NEXT FROM dbCursor INTO @dbName;
 
 	WHILE @@Fetch_Status=0 BEGIN
-		SET @CurrSqlText = N''USE ''+ QUOTENAME(@dbName ,''"'') + @queryText
+		SET @CurrSqlText = N''USE ''+ QUOTENAME(@dbName ,''['') 
+				+ @queryText
 		BEGIN TRY
 			EXEC sp_executesql @CurrSqlText
 		END TRY
