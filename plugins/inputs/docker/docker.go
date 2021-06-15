@@ -123,7 +123,7 @@ var sampleConfig = `
   ## Whether to report for each container per-device blkio (8:0, 8:1...),
   ## network (eth0, eth1, ...) and cpu (cpu0, cpu1, ...) stats or not.
   ## Usage of this setting is discouraged since it will be deprecated in favor of 'perdevice_include'.
-  ## Default value is 'true' for backwards compatibility, please set it to 'false' so that 'perdevice_include' setting 
+  ## Default value is 'true' for backwards compatibility, please set it to 'false' so that 'perdevice_include' setting
   ## is honored.
   perdevice = true
 
@@ -134,12 +134,12 @@ var sampleConfig = `
 
   ## Whether to report for each container total blkio and network stats or not.
   ## Usage of this setting is discouraged since it will be deprecated in favor of 'total_include'.
-  ## Default value is 'false' for backwards compatibility, please set it to 'true' so that 'total_include' setting 
+  ## Default value is 'false' for backwards compatibility, please set it to 'true' so that 'total_include' setting
   ## is honored.
   total = false
 
   ## Specifies for which classes a total metric should be issued. Total is an aggregated of the 'perdevice' values.
-  ## Possible values are 'cpu', 'blkio' and 'network'  
+  ## Possible values are 'cpu', 'blkio' and 'network'
   ## Total 'cpu' is reported directly by Docker daemon, and 'network' and 'blkio' totals are aggregated by this plugin.
   ## Please note that this setting has no effect if 'total' is set to 'false'
   # total_include = ["cpu", "blkio", "network"]
@@ -212,6 +212,9 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		}
 		d.client = c
 	}
+
+	// Close any idle connections in the end of gathering
+	defer d.client.Close()
 
 	// Create label filters if not already created
 	if !d.filtersCreated {

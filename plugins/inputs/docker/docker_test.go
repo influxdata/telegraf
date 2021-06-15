@@ -26,6 +26,7 @@ type MockClient struct {
 	ServiceListF      func(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
 	TaskListF         func(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 	NodeListF         func(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
+	CloseF            func() error
 }
 
 func (c *MockClient) Info(ctx context.Context) (types.Info, error) {
@@ -75,6 +76,10 @@ func (c *MockClient) NodeList(
 	return c.NodeListF(ctx, options)
 }
 
+func (c *MockClient) Close() error {
+	return c.CloseF()
+}
+
 var baseClient = MockClient{
 	InfoF: func(context.Context) (types.Info, error) {
 		return info, nil
@@ -96,6 +101,9 @@ var baseClient = MockClient{
 	},
 	NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 		return NodeList, nil
+	},
+	CloseF: func() error {
+		return nil
 	},
 }
 
@@ -278,6 +286,9 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 				},
 				NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 					return NodeList, nil
+				},
+				CloseF: func() error {
+					return nil
 				},
 			}, nil
 		},
