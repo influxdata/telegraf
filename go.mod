@@ -117,7 +117,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/testcontainers/testcontainers-go v0.11.0
-	github.com/tidwall/gjson v1.6.0
+	github.com/tidwall/gjson v1.8.0
 	github.com/tinylib/msgp v1.1.5
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/vapourismo/knx-go v0.0.0-20201122213738-75fe09ace330
