@@ -16,7 +16,7 @@ The Dynatrace exporter may be enabled by adding an `[[outputs.dynatrace]]` secti
 All configurations are optional, but if a `url` other than the OneAgent metric ingestion endpoint is specified then an `api_token` is required.
 To see all available options, see [Configuration](#configuration) below.
 
-### Running alongside Dynatrace OneAgent
+### Running alongside Dynatrace OneAgent (preferred)
 
 If you run the Telegraf agent on a host or VM that is monitored by the Dynatrace OneAgent then you only need to enable the plugin, but need no further configuration. The Dynatrace Telegraf output plugin will send all metrics to the OneAgent which will use its secure and load balanced connection to send the metrics to your Dynatrace SaaS or Managed environment.
 Depending on your environment, you might have to enable metrics ingestion on the OneAgent first as described in the [Dynatrace documentation](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/ingestion-methods/telegraf/).
@@ -28,7 +28,7 @@ Note: The name and identifier of the host running Telegraf will be added as a di
   ## No options are required. By default, metrics will be exported via the OneAgent on the local host.
 ```
 
-## Running standalone
+### Running standalone
 
 If you run the Telegraf agent on a host or VM without a OneAgent you will need to configure the environment API endpoint to send the metrics to and an API token for security.
 
@@ -55,14 +55,6 @@ You can learn more about how to use the Dynatrace API [here](https://www.dynatra
 
 ## Configuration
 
-### `url`
-
-*required*: `false`
-
-*default*: Local OneAgent endpoint
-
-Set your Dynatrace environment URL (e.g.: `https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest`) if you do not use a OneAgent or wish to export metrics directly to a Dynatrace metrics v2 endpoint. If a URL is set to anything other than the local OneAgent endpoint, then an API token is required.
-
 ```toml
 [[outputs.dynatrace]]
   ## Leave empty or use the local ingest endpoint of your OneAgent monitored host (e.g.: http://127.0.0.1:14499/metrics/ingest).
@@ -75,6 +67,21 @@ Set your Dynatrace environment URL (e.g.: `https://{your-environment-id}.live.dy
   insecure_skip_verify = false
   ## If you want to convert values represented as gauges to counters, add the metric names here
   additional_counters = [ ]
+
+  ## Optional dimensions to be added to every metric
+  [outputs.dynatrace.default_dimensions]
+  default_key = "default value"
+```
+
+### `url`
+
+*required*: `false`
+
+*default*: Local OneAgent endpoint
+
+Set your Dynatrace environment URL (e.g.: `https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest`, see the [Dynatrace documentation](https://www.dynatrace.com/support/help/dynatrace-api/environment-api/metric-v2/post-ingest-metrics/) for details) if you do not use a OneAgent or wish to export metrics directly to a Dynatrace metrics v2 endpoint. If a URL is set to anything other than the local OneAgent endpoint, then an API token is required.
+
+```toml
 url = "https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest"
 ```
 
@@ -125,9 +132,8 @@ additional_counters = [ ]
 Default dimensions that will be added to every exported metric.
 
 ```toml
-default_dimensions = {
-  key = "value"
-}
+[outputs.dynatrace.default_dimensions]
+default_key = "default value"
 ```
 
 ## Limitations

@@ -20,12 +20,16 @@ import (
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL               string          `toml:"url"`
-	APIToken          string          `toml:"api_token"`
-	Prefix            string          `toml:"prefix"`
-	Log               telegraf.Logger `toml:"-"`
-	Timeout           config.Duration `toml:"timeout"`
-	AddCounterMetrics []string        `toml:"additional_counters"`
+	URL               string            `toml:"url"`
+	APIToken          string            `toml:"api_token"`
+	Prefix            string            `toml:"prefix"`
+	Log               telegraf.Logger   `toml:"-"`
+	Timeout           config.Duration   `toml:"timeout"`
+	AddCounterMetrics []string          `toml:"additional_counters"`
+	DefaultDimensions map[string]string `toml:"default_dimensions"`
+
+	normalizedDefaultDimensions dimensions.NormalizedDimensionList
+	normalizedStaticDimensions  dimensions.NormalizedDimensionList
 
 	tls.ClientConfig
 
@@ -67,6 +71,10 @@ const sampleConfig = `
 
   ## If you want to convert values represented as gauges to counters, add the metric names here
   additional_counters = [ ]
+
+  ## Optional dimensions to be added to every metric
+  # [outputs.dynatrace.default_dimensions]
+  # default_key = "default value"
 `
 
 // Connect Connects the Dynatrace output plugin to the Telegraf stream
@@ -140,10 +148,12 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				dtMetric.WithPrefix(d.Prefix),
 				dtMetric.WithDimensions(
 					dimensions.MergeLists(
-						// dimensions.NewNormalizedDimensionList(e.opts.DefaultDimensions...),
+						d.normalizedDefaultDimensions,
 						dimensions.NewNormalizedDimensionList(dims...),
+						d.normalizedStaticDimensions,
 					),
 				),
+				dtMetric.WithTimestamp(tm.Time()),
 				typeOpt,
 			)
 
