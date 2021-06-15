@@ -147,7 +147,7 @@ func TestCreateBucket(t *testing.T) {
 	}{
 		{
 			name:   "success",
-			config: influxdb.HTTPConfig{URL: u, Bucket: "bucket", Organization: "telegraf"},
+			config: influxdb.HTTPConfig{URL: u, Bucket: "bucket", Organization: "telegraf", CreateBuckets: true},
 			createHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				body := parseBody(t, r.Body)
 				require.Equal(t, "bucket", body.Name)

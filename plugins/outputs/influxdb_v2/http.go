@@ -76,7 +76,7 @@ type HTTPConfig struct {
 	Bucket                 string
 	BucketTag              string
 	ExcludeBucketTag       bool
-	SkipBucketCreation     bool
+	CreateBuckets          bool
 	DefaultBucketRetention int64
 	Timeout                time.Duration
 	Headers                map[string]string
@@ -96,7 +96,7 @@ type httpClient struct {
 	Bucket                 string
 	BucketTag              string
 	ExcludeBucketTag       bool
-	SkipBucketCreation     bool
+	CreateBuckets          bool
 	DefaultBucketRetention int64
 
 	client               *http.Client
@@ -178,7 +178,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 		Bucket:                 config.Bucket,
 		BucketTag:              config.BucketTag,
 		ExcludeBucketTag:       config.ExcludeBucketTag,
-		SkipBucketCreation:     config.SkipBucketCreation,
+		CreateBuckets:          config.CreateBuckets,
 		DefaultBucketRetention: config.DefaultBucketRetention,
 	}
 	return client, nil
@@ -239,7 +239,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		}
 
 		for bucket, batch := range batches {
-			if !c.SkipBucketCreation && !c.createBucketExecuted[bucket] {
+			if c.CreateBuckets && !c.createBucketExecuted[bucket] {
 				if err := c.CreateBucket(ctx, bucket); err != nil {
 					log.Printf("W! [outputs.influxdb_v2] When writing to [%s]: bucket %q creation failed: %v\n", c.URL(), bucket, err)
 				}

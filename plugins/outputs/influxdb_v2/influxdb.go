@@ -45,10 +45,8 @@ var sampleConfig = `
   ## If true, the bucket tag will not be added to the metric.
   # exclude_bucket_tag = false
 
-  ## If true, no create bucket requests will be sent. Set to true when using
-  ## Telegraf with a user without permissions to create buckets or when the
-  ## the bucket already exists
-  # skip_bucket_creation = false
+  ## Creates any buckets if they do not already exist
+  # create_buckets = false
 
   ## Default retention rule for any newly created buckets. If unset, the default
   ## retention rule is forever. Ignored if skip_bucket_creation is false.
@@ -103,7 +101,7 @@ type InfluxDB struct {
 	UserAgent              string            `toml:"user_agent"`
 	ContentEncoding        string            `toml:"content_encoding"`
 	UintSupport            bool              `toml:"influx_uint_support"`
-	SkipBucketCreation     bool              `toml:"skip_bucket_creation"`
+	CreateBuckets          bool              `toml:"create_buckets"`
 	DefaultBucketRetention config.Duration   `toml:"default_bucket_retention"`
 	tls.ClientConfig
 
@@ -179,7 +177,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 		}
 
 		if apiError, ok := err.(*BucketNotFoundError); ok {
-			if !i.SkipBucketCreation {
+			if i.CreateBuckets {
 				if err := client.CreateBucket(ctx, apiError.Bucket); err != nil {
 					i.Log.Errorf("When writing to [%s]: bucket %q not found and failed to recreate", client.URL(), apiError.Bucket)
 				}
@@ -205,7 +203,7 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, u *url.URL, proxy *url.URL
 		Bucket:                 i.Bucket,
 		BucketTag:              i.BucketTag,
 		ExcludeBucketTag:       i.ExcludeBucketTag,
-		SkipBucketCreation:     i.SkipBucketCreation,
+		CreateBuckets:          i.CreateBuckets,
 		DefaultBucketRetention: int64(time.Duration(i.DefaultBucketRetention).Seconds()),
 		Timeout:                time.Duration(i.Timeout),
 		Headers:                i.HTTPHeaders,
@@ -221,7 +219,7 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, u *url.URL, proxy *url.URL
 		return nil, fmt.Errorf("error creating HTTP client [%s]: %v", u, err)
 	}
 
-	if !i.SkipBucketCreation {
+	if i.CreateBuckets {
 		if err := c.CreateBucket(ctx, c.Bucket); err != nil {
 			i.Log.Warnf("When writing to [%s]: bucket %q creation failed: %v", c.URL(), c.Bucket, err)
 		}
