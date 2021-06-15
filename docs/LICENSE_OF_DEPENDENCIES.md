@@ -131,6 +131,7 @@ following works:
 - github.com/james4k/rcon [MIT License](https://github.com/james4k/rcon/blob/master/LICENSE)
 - github.com/jcmturner/gofork [BSD 3-Clause "New" or "Revised" License](https://github.com/jcmturner/gofork/blob/master/LICENSE)
 - github.com/jmespath/go-jmespath [Apache License 2.0](https://github.com/jmespath/go-jmespath/blob/master/LICENSE)
+- github.com/josharian/native [MIT License](https://github.com/josharian/native/blob/main/license)
 - github.com/jpillora/backoff [MIT License](https://github.com/jpillora/backoff/blob/master/LICENSE)
 - github.com/json-iterator/go [MIT License](https://github.com/json-iterator/go/blob/master/LICENSE)
 - github.com/kardianos/service [zlib License](https://github.com/kardianos/service/blob/master/LICENSE)
