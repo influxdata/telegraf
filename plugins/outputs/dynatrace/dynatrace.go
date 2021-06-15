@@ -255,7 +255,6 @@ func (d *Dynatrace) Init() error {
 	d.normalizedDefaultDimensions = dimensions.NewNormalizedDimensionList(dims...)
 	d.normalizedStaticDimensions = dimensions.MergeLists(
 		dimensions.NewNormalizedDimensionList(dimensions.NewDimension("dt.metrics.source", "telegraf")),
-		// oneagentenrichment.GetOneAgentMetadata(),
 	)
 
 	return nil
