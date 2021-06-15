@@ -28,7 +28,7 @@ Note: The name and identifier of the host running Telegraf will be added as a di
   ## No options are required. By default, metrics will be exported via the OneAgent on the local host.
 ```
 
-## Running standalone
+### Running standalone
 
 If you run the Telegraf agent on a host or VM without a OneAgent you will need to configure the environment API endpoint to send the metrics to and an API token for security.
 
@@ -80,7 +80,7 @@ You can learn more about how to use the Dynatrace API [here](https://www.dynatra
 
 *default*: Local OneAgent endpoint
 
-Set your Dynatrace environment URL (e.g.: `https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest`) if you do not use a OneAgent or wish to export metrics directly to a Dynatrace metrics v2 endpoint. If a URL is set to anything other than the local OneAgent endpoint, then an API token is required.
+Set your Dynatrace environment URL (e.g.: `https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest`, see the [Dynatrace documentation](https://www.dynatrace.com/support/help/dynatrace-api/environment-api/metric-v2/post-ingest-metrics/) for details) if you do not use a OneAgent or wish to export metrics directly to a Dynatrace metrics v2 endpoint. If a URL is set to anything other than the local OneAgent endpoint, then an API token is required.
 
 ```toml
 url = "https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest"
