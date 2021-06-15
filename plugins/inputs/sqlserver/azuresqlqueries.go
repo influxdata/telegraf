@@ -1268,7 +1268,7 @@ END');
 /* Obtain the previous times the query was called -- they are an array because we are working with a list of DBs in the Managed Instance -- and store them in a temporary table */
 IF OBJECT_ID ('tempdb.dbo.#CachedDbCollectionTimes') IS NOT NULL DROP TABLE #CachedDbCollectionTimes;
 CREATE TABLE #CachedDbCollectionTimes (
-	[database_id] INT,
+	[database_id] INT NOT NULL PRIMARY KEY,
 	[collectionTime] DATETIMEOFFSET
 );
 
@@ -1285,7 +1285,7 @@ DELETE FROM #CachedDbCollectionTimes WHERE collectionTime <= DATEADD(dd, -2, SYS
 DECLARE @SqlText NVARCHAR(MAX) = N'
 
 DECLARE @lastIntervalEndTime DATETIMEOFFSET;
-SELECT TOP 1 @lastIntervalEndTime = [collectionTime] FROM #CachedDbCollectionTimes WHERE [database_id] = DB_ID();
+SELECT @lastIntervalEndTime = [collectionTime] FROM #CachedDbCollectionTimes WHERE [database_id] = DB_ID();
 
 DECLARE @currIntervalStartTime DATETIMEOFFSET, @currIntervalEndTime DATETIMEOFFSET, @queryStartTime DATETIMEOFFSET;
 
