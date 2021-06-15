@@ -306,31 +306,35 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 			return nil, err
 		}
 	} else {
-		if !result.Tag && !result.IsObject() {
-			if result.SetName == p.currentSettings.TimestampKey {
-				if p.currentSettings.TimestampFormat == "" {
-					err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
-					return nil, err
+		if result.SetName == p.currentSettings.TimestampKey {
+			if p.currentSettings.TimestampFormat == "" {
+				err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
+				return nil, err
+			}
+			timestamp, err := internal.ParseTimestamp(p.currentSettings.TimestampFormat, result.Value(), p.currentSettings.TimestampTimezone)
+			if err != nil {
+				return nil, err
+			}
+			result.Metric.SetTime(timestamp)
+		} else {
+			switch result.Value().(type) {
+			case nil: // Ignore JSON values that are set as null
+			default:
+				if result.Tag {
+					result.DesiredType = "string"
 				}
-				timestamp, err := internal.ParseTimestamp(p.currentSettings.TimestampFormat, result.Value(), p.currentSettings.TimestampTimezone)
-				if err != nil {
-					return nil, err
-				}
-				result.Metric.SetTime(timestamp)
-			} else {
 				v, err := p.convertType(result.Value(), result.DesiredType, result.SetName)
 				if err != nil {
 					return nil, err
 				}
-				result.Metric.AddField(result.OutputName, v)
+				if result.Tag {
+					result.Metric.AddTag(result.OutputName, v.(string))
+				} else {
+					result.Metric.AddField(result.OutputName, v)
+				}
 			}
-		} else if !result.IsObject() {
-			v, err := p.convertType(result.Value(), "string", result.SetName)
-			if err != nil {
-				return nil, err
-			}
-			result.Metric.AddTag(result.OutputName, v.(string))
 		}
+
 		results = append(results, result)
 	}
 
