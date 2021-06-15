@@ -69,9 +69,8 @@ You can learn more about how to use the Dynatrace API [here](https://www.dynatra
   additional_counters = [ ]
 
   ## Optional dimensions to be added to every metric
-  default_dimensions = {
-    some_key = "some value"
-  }
+  [outputs.dynatrace.default_dimensions]
+  default_key = "default value"
 ```
 
 ### `url`
@@ -133,9 +132,8 @@ additional_counters = [ ]
 Default dimensions that will be added to every exported metric.
 
 ```toml
-default_dimensions = {
-  key = "value"
-}
+[outputs.dynatrace.default_dimensions]
+default_key = "default value"
 ```
 
 ## Limitations
