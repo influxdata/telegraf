@@ -1266,26 +1266,26 @@ BEGIN
 END');
 
 /* Obtain the previous times the query was called -- they are an array because we are working with a list of DBs in the Managed Instance -- and store them in a temporary table */
-DROP TABLE IF EXISTS #CachedDbCollectionTimes;
-CREATE TABLE #CachedDbCollectionTimes (
+DROP TABLE IF EXISTS #TelegrafCachedDbCollectionTimes;
+CREATE TABLE #TelegrafCachedDbCollectionTimes (
 	[database_id] INT NOT NULL PRIMARY KEY,
 	[collectionTime] DATETIMEOFFSET
 );
 
 DECLARE @XmlQueryData XML = @QueryData;
-INSERT INTO #CachedDbCollectionTimes
+INSERT INTO #TelegrafCachedDbCollectionTimes
 SELECT
 	s.value('./id[1]', 'int') AS [database_id],
 	s.value('./collectionTime[1]', 'datetimeoffset') AS [collectionTime]
 FROM @XmlQueryData.nodes('/collectionTimes/ts') t(s);
 
 /* Delete records older than <Max INTERVAL_LENGTH_MINUTES> * 2 */
-DELETE FROM #CachedDbCollectionTimes WHERE collectionTime <= DATEADD(dd, -2, SYSDATETIMEOFFSET());
+DELETE FROM #TelegrafCachedDbCollectionTimes WHERE collectionTime <= DATEADD(dd, -2, SYSDATETIMEOFFSET());
 
 DECLARE @SqlText NVARCHAR(MAX) = N'
 
 DECLARE @lastIntervalEndTime DATETIMEOFFSET;
-SELECT @lastIntervalEndTime = [collectionTime] FROM #CachedDbCollectionTimes WHERE [database_id] = DB_ID();
+SELECT @lastIntervalEndTime = [collectionTime] FROM #TelegrafCachedDbCollectionTimes WHERE [database_id] = DB_ID();
 
 DECLARE @currIntervalStartTime DATETIMEOFFSET, @currIntervalEndTime DATETIMEOFFSET, @queryStartTime DATETIMEOFFSET;
 
@@ -1305,7 +1305,7 @@ SET @currIntervalStartTime = IIF(@lastIntervalEndTime IS NOT NULL, @lastInterval
 
 DECLARE @UpdateCollectionTimeSqlText NVARCHAR(MAX) = N'
 /* Update query call time for the current DB */
-MERGE #CachedDbCollectionTimes AS target  
+MERGE #TelegrafCachedDbCollectionTimes AS target  
 USING (SELECT DB_ID(), @currIntervalEndTime) AS source (database_id, collectionTime)  
 ON (target.database_id = source.database_id)  
 WHEN MATCHED THEN
@@ -1317,8 +1317,8 @@ WHEN NOT MATCHED THEN
 
 DECLARE @ReturnCachedIntervalsSqlText VARCHAR(MAX) = '
 /* Return previous query call timestamps for all DBs */
-SELECT CONVERT(NVARCHAR(MAX),(SELECT database_id AS id, CONVERT(varchar(35), collectionTime, 126) AS collectionTime FROM #CachedDbCollectionTimes FOR XML PATH(''ts''), ROOT(''collectionTimes''))) AS CachedData;
-DROP TABLE #CachedDbCollectionTimes;
+SELECT CONVERT(NVARCHAR(MAX),(SELECT database_id AS id, CONVERT(varchar(35), collectionTime, 126) AS collectionTime FROM #TelegrafCachedDbCollectionTimes FOR XML PATH(''ts''), ROOT(''collectionTimes''))) AS CachedData;
+DROP TABLE #TelegrafCachedDbCollectionTimes;
 '
 `
 
