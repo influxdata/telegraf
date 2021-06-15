@@ -99,6 +99,7 @@ require (
 	github.com/nsqio/go-nsq v1.0.8
 	github.com/openconfig/gnmi v0.0.0-20180912164834-33a1865c3029
 	github.com/openzipkin/zipkin-go-opentracing v0.3.4
+	github.com/pebbe/zmq4 v1.2.7
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/client_model v0.2.0
