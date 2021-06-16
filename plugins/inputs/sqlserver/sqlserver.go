@@ -177,7 +177,7 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlAzureDBSchedulers, ResultByRow: false}
 		// These two Query Store queries are not run by default as they are expensive and collection interval should be >=15m.
 		// If user needs data from Query Store, they will need to toggle the setting to true. By default it is turned off
-		if s.QueryStoreCollection == true {
+		if s.QueryStoreCollection {
 			queries["AzureSQLDBQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreRuntimeStatistics", Script: sqlAzureDBQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
 			queries["AzureSQLDBQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreWaitStatistics", Script: sqlAzureDBQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
 		}
