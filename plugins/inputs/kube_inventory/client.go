@@ -29,6 +29,7 @@ func newClient(baseURL, namespace, bearerToken string, timeout time.Duration, tl
 			CertFile:   tlsConfig.TLSCert,
 			KeyFile:    tlsConfig.TLSKey,
 		},
+		Host:          baseURL,
 		BearerToken:   bearerToken,
 		ContentConfig: rest.ContentConfig{},
 	})

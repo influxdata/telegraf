@@ -324,6 +324,7 @@ For documentation on the latest development code see the [documentation index][d
 * [snmp_trap](./plugins/inputs/snmp_trap)
 * [socket_listener](./plugins/inputs/socket_listener)
 * [solr](./plugins/inputs/solr)
+* [sql](./plugins/inputs/sql) (generic SQL query plugin)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
 * [stackdriver](./plugins/inputs/stackdriver) (Google Cloud Monitoring)
 * [sql](./plugins/outputs/sql) (SQL generic output)

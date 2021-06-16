@@ -1,8 +1,9 @@
-## v1.19.0-rc0 [2021-06-04]
+## v1.19.0-rc1 [2021-06-10]
 
 #### Release Notes
 
 - Many linter fixes - thanks @zak-pawel and all!
+- [#9331](https://github.com/influxdata/telegraf/pull/9331) Update Go to 1.16.5
 
 #### Bugfixes
 
@@ -11,6 +12,7 @@
 - [#9196](https://github.com/influxdata/telegraf/pull/9196) `serializers.prometheusremotewrite` Update dependency and remove tags with empty values
 - [#9051](https://github.com/influxdata/telegraf/pull/9051) `outputs.kafka` Don't prevent telegraf from starting when there's a connection error
 - [#8795](https://github.com/influxdata/telegraf/pull/8795) `parsers.prometheusremotewrite` Update prometheus dependency to v2.21.0
+- [#9295](https://github.com/influxdata/telegraf/pull/9295) `outputs.dynatrace` Use dynatrace-metric-utils
 
 #### Features
 
@@ -62,6 +64,7 @@
 #### New Parser Plugins
 
 - [Prometheus Remote Write](https://github.com/influxdata/telegraf/tree/master/plugins/parsers/prometheusremotewrite) - contributed by @helenosheaa
+- [JSON V2](https://github.com/influxdata/telegraf/tree/master/plugins/parsers/json_v2) - contributed by @sspaink
 
 #### New External Plugins
 
