@@ -191,6 +191,7 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 		Servers:      []string{fakeServer1, fakeServer2},
 		IncludeQuery: []string{"DatabaseSize", "MemoryClerk"},
 		HealthMetric: true,
+		AuthMethod:   "default",
 	}
 
 	s2 := &SQLServer{
