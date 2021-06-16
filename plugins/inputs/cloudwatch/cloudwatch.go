@@ -140,8 +140,8 @@ func (c *CloudWatch) SampleConfig() string {
   ## Configure the TTL for the internal cache of metrics.
   # cache_ttl = "1h"
 
-  ## Metric Statistic Namespace (required)
-  namespace = "AWS/ELB"
+  ## Metric Statistic Namespaces (required)
+  namespaces = ["AWS/ELB"]
 
   ## Maximum requests per second. Note that the global default AWS rate limit is
   ## 50 reqs/sec, so if you define multiple namespaces, these should add up to a
