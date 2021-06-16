@@ -209,11 +209,11 @@ func TestSelectMetrics(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
 	internalDuration := config.Duration(duration)
 	c := &CloudWatch{
-		Region:    "us-east-1",
-		Namespace: "AWS/ELB",
-		Delay:     internalDuration,
-		Period:    internalDuration,
-		RateLimit: 200,
+		Region:     "us-east-1",
+		Namespaces: []string{"AWS/ELB"},
+		Delay:      internalDuration,
+		Period:     internalDuration,
+		RateLimit:  200,
 		Metrics: []*Metric{
 			{
 				MetricNames: []string{"Latency", "RequestCount"},
@@ -246,18 +246,20 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 		Value: aws.String("p-example"),
 	}
 
+	namespace := "AWS/ELB"
 	m := &cwClient.Metric{
 		MetricName: aws.String("Latency"),
 		Dimensions: []*cwClient.Dimension{d},
+		Namespace:  &namespace,
 	}
 
 	duration, _ := time.ParseDuration("1m")
 	internalDuration := config.Duration(duration)
 
 	c := &CloudWatch{
-		Namespace: "AWS/ELB",
-		Delay:     internalDuration,
-		Period:    internalDuration,
+		Namespaces: []string{namespace},
+		Delay:      internalDuration,
+		Period:     internalDuration,
 	}
 
 	require.NoError(t, c.initializeCloudWatch())
@@ -268,7 +270,7 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 
 	statFilter, _ := filter.NewIncludeExcludeFilter(nil, nil)
 	queries := c.getDataQueries([]filteredMetric{{metrics: []*cwClient.Metric{m}, statFilter: statFilter}})
-	params := c.getDataInputs(queries)
+	params := c.getDataInputs(queries[namespace])
 
 	require.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
 	require.EqualValues(t, *params.StartTime, now.Add(-time.Duration(c.Period)).Add(-time.Duration(c.Delay)))
@@ -283,18 +285,20 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 		Value: aws.String("p-example"),
 	}
 
+	namespace := "AWS/ELB"
 	m := &cwClient.Metric{
 		MetricName: aws.String("Latency"),
 		Dimensions: []*cwClient.Dimension{d},
+		Namespace:  &namespace,
 	}
 
 	duration, _ := time.ParseDuration("1m")
 	internalDuration := config.Duration(duration)
 
 	c := &CloudWatch{
-		Namespace: "AWS/ELB",
-		Delay:     internalDuration,
-		Period:    internalDuration,
+		Namespaces: []string{namespace},
+		Delay:      internalDuration,
+		Period:     internalDuration,
 	}
 
 	require.NoError(t, c.initializeCloudWatch())
@@ -305,7 +309,7 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 
 	statFilter, _ := filter.NewIncludeExcludeFilter([]string{"average", "sample_count"}, nil)
 	queries := c.getDataQueries([]filteredMetric{{metrics: []*cwClient.Metric{m}, statFilter: statFilter}})
-	params := c.getDataInputs(queries)
+	params := c.getDataInputs(queries[namespace])
 
 	require.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
 	require.EqualValues(t, *params.StartTime, now.Add(-time.Duration(c.Period)).Add(-time.Duration(c.Delay)))
