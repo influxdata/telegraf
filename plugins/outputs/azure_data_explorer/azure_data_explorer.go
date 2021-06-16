@@ -20,14 +20,12 @@ import (
 type AzureDataExplorer struct {
 	Endpoint     string          `toml:"endpoint_url"`
 	Database     string          `toml:"database"`
-	Table        string          `toml:"table"`
 	ClientId     string          `toml:"client_id"`
 	ClientSecret string          `toml:"client_secret"`
 	TenantId     string          `toml:"tenant_id"`
 	Log          telegraf.Logger `toml:"-"`
 	Client       *kusto.Client
 	Ingesters    map[string]*ingest.Ingestion
-	Ingester     *ingest.Ingestion
 	Serializer   serializers.Serializer
 }
 
@@ -76,7 +74,6 @@ func (s *AzureDataExplorer) Connect() error {
 	}
 	s.Client = client
 	s.Ingesters = make(map[string]*ingest.Ingestion)
-	s.Ingester, _ = ingest.New(client, s.Database, s.Table)
 
 	return nil
 }
