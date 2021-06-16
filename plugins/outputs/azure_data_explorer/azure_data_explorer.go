@@ -23,6 +23,7 @@ type AzureDataExplorer struct {
 	ClientId     string          `toml:"client_id"`
 	ClientSecret string          `toml:"client_secret"`
 	TenantId     string          `toml:"tenant_id"`
+	DataFormat   string          `toml:"data_format"`
 	Log          telegraf.Logger `toml:"-"`
 	Client       *kusto.Client
 	Ingesters    map[string]*ingest.Ingestion
@@ -62,6 +63,11 @@ func (s *AzureDataExplorer) SampleConfig() string {
 }
 
 func (s *AzureDataExplorer) Connect() error {
+
+	if s.DataFormat != "json" {
+		return fmt.Errorf("the azure data explorer supports json data format only, pleaes make sure to add the 'data_format=\"json\"' in the output configuration")
+	}
+
 	// Make any connection required here
 	authorizer := kusto.Authorization{
 		Config: auth.NewClientCredentialsConfig(s.ClientId, s.ClientSecret, s.TenantId),
