@@ -2,11 +2,20 @@ package directory_monitor
 
 import (
 	"bufio"
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"regexp"
+	"sync"
 	"time"
+
+	"golang.org/x/sync/semaphore"
+	"gopkg.in/djherbis/times.v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -14,15 +23,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/selfstat"
-	"golang.org/x/sync/semaphore"
-	"gopkg.in/djherbis/times.v1"
-
-	"compress/gzip"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"sync"
 )
 
 const sampleConfig = `
@@ -256,16 +256,14 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 
 func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader) error {
 	// Read the file line-by-line and parse with the configured parse method.
-	firstLine := true
+	lineNumber := 0
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
-		metrics, err := monitor.parseLine(parser, scanner.Bytes(), firstLine)
+		metrics, err := monitor.parseLine(parser, scanner.Bytes(), lineNumber)
 		if err != nil {
 			return err
 		}
-		if firstLine {
-			firstLine = false
-		}
+		lineNumber++
 
 		if err := monitor.sendMetrics(metrics); err != nil {
 			return err
@@ -275,11 +273,11 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 	return nil
 }
 
-func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte, firstLine bool) ([]telegraf.Metric, error) {
+func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte, lineNumber int) ([]telegraf.Metric, error) {
 	switch parser.(type) {
 	case *csv.Parser:
 		// The CSV parser parses headers in Parse and skips them in ParseLine.
-		if firstLine {
+		if lineNumber == 0 {
 			return parser.Parse(line)
 		}
 

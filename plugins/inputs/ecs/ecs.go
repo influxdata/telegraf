@@ -220,20 +220,20 @@ func mergeTags(a map[string]string, b map[string]string) map[string]string {
 }
 
 func (ecs *Ecs) createContainerNameFilters() error {
-	filter, err := filter.NewIncludeExcludeFilter(ecs.ContainerNameInclude, ecs.ContainerNameExclude)
+	containerNameFilter, err := filter.NewIncludeExcludeFilter(ecs.ContainerNameInclude, ecs.ContainerNameExclude)
 	if err != nil {
 		return err
 	}
-	ecs.containerNameFilter = filter
+	ecs.containerNameFilter = containerNameFilter
 	return nil
 }
 
 func (ecs *Ecs) createLabelFilters() error {
-	filter, err := filter.NewIncludeExcludeFilter(ecs.LabelInclude, ecs.LabelExclude)
+	labelFilter, err := filter.NewIncludeExcludeFilter(ecs.LabelInclude, ecs.LabelExclude)
 	if err != nil {
 		return err
 	}
-	ecs.labelFilter = filter
+	ecs.labelFilter = labelFilter
 	return nil
 }
 
@@ -250,11 +250,11 @@ func (ecs *Ecs) createContainerStatusFilters() error {
 		ecs.ContainerStatusExclude[i] = strings.ToUpper(exclude)
 	}
 
-	filter, err := filter.NewIncludeExcludeFilter(ecs.ContainerStatusInclude, ecs.ContainerStatusExclude)
+	statusFilter, err := filter.NewIncludeExcludeFilter(ecs.ContainerStatusInclude, ecs.ContainerStatusExclude)
 	if err != nil {
 		return err
 	}
-	ecs.statusFilter = filter
+	ecs.statusFilter = statusFilter
 	return nil
 }
 
