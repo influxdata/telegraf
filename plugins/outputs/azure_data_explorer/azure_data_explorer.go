@@ -63,10 +63,6 @@ func (s *AzureDataExplorer) SampleConfig() string {
 
 func (s *AzureDataExplorer) Connect() error {
 
-	if s.DataFormat != "json" {
-		return fmt.Errorf("the azure data explorer supports json data format only, pleaes make sure to add the 'data_format=\"json\"' in the output configuration")
-	}
-
 	// Make any connection required here
 	authorizer := kusto.Authorization{
 		Config: auth.NewClientCredentialsConfig(s.ClientId, s.ClientSecret, s.TenantId),
@@ -155,6 +151,12 @@ func createAzureDataExplorerTableForNamespace(client *kusto.Client, database str
 func getNamespace(m telegraf.Metric) string {
 	names := strings.SplitN(m.Name(), "-", 2)
 	return names[0]
+}
+
+func (s *AzureDataExplorer) Init() error {
+	if s.DataFormat != "json" {
+		return fmt.Errorf("the azure data explorer supports json data format only, pleaes make sure to add the 'data_format=\"json\"' in the output configuration")
+	}
 }
 
 func init() {
