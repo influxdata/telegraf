@@ -135,6 +135,26 @@ func TestGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_elb", fields, tags)
 }
 
+func TestGather_MultipleNamespaces(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := config.Duration(duration)
+	c := &CloudWatch{
+		Region:     "us-west-1",
+		Namespaces: []string{"AWS/ELB", "AWS/EC2"},
+		Delay:      internalDuration,
+		Period:     internalDuration,
+		RateLimit:  200,
+	}
+
+	var acc testutil.Accumulator
+	c.client = &mockGatherCloudWatchClient{}
+
+	require.NoError(t, acc.GatherError(c.Gather))
+
+	require.True(t, acc.HasMeasurement("cloudwatch_aws_elb"))
+	require.True(t, acc.HasMeasurement("cloudwatch_aws_ec2"))
+}
+
 type mockSelectMetricsCloudWatchClient struct{}
 
 func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ *cwClient.ListMetricsInput) (*cwClient.ListMetricsOutput, error) {
