@@ -234,7 +234,7 @@ func TestCreateBucketExecutionCache(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/v2/orgs" {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"orgs": [{"id": "0123456789abcdef"}]}`))
+			_, _ = w.Write([]byte(`{"orgs": [{"id": "0123456789abcdef"}]}`))
 			return
 		}
 
@@ -248,7 +248,7 @@ func TestCreateBucketExecutionCache(t *testing.T) {
 			t.FailNow()
 		}
 
-		executions += 1
+		executions++
 	}))
 	defer ts.Close()
 
