@@ -30,8 +30,7 @@ type AzureDataExplorer struct {
 	Serializer   serializers.Serializer
 }
 
-const dropTableCommand = `.drop table ['%s'] ifexists`
-const createTableCommand = `.create table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
+const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
 const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
 
 func (s *AzureDataExplorer) Description() string {
@@ -137,12 +136,6 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 }
 
 func createAzureDataExplorerTableForNamespace(client *kusto.Client, database string, tableName string) error {
-
-	dropStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true})).UnsafeAdd(fmt.Sprintf(dropTableCommand, tableName))
-	_, errDroppingTable := client.Mgmt(context.TODO(), database, dropStmt)
-	if errDroppingTable != nil {
-		return errDroppingTable
-	}
 
 	// Create a database
 	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
