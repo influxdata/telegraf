@@ -81,6 +81,10 @@ servers = [
   "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
 ]
 
+## Authentication method
+## valid methods: "default", "AAD"
+# auth_method = "default"
+
 ## "database_type" enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
 ## In the config file, the sql server plugin section should be repeated each with a set of servers for a specific database_type.
 ## Possible values for database_type are - "AzureSQLDB" or "AzureSQLManagedInstance" or "SQLServer"
