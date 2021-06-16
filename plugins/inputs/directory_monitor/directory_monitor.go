@@ -256,14 +256,14 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 
 func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader) error {
 	// Read the file line-by-line and parse with the configured parse method.
-	lineNumber := 0
+	firstLine := true
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
-		metrics, err := monitor.parseLine(parser, scanner.Bytes(), lineNumber)
+		metrics, err := monitor.parseLine(parser, scanner.Bytes(), firstLine)
 		if err != nil {
 			return err
 		}
-		lineNumber++
+		firstLine = false
 
 		if err := monitor.sendMetrics(metrics); err != nil {
 			return err
@@ -273,11 +273,11 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 	return nil
 }
 
-func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte, lineNumber int) ([]telegraf.Metric, error) {
+func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte, firstLine bool) ([]telegraf.Metric, error) {
 	switch parser.(type) {
 	case *csv.Parser:
 		// The CSV parser parses headers in Parse and skips them in ParseLine.
-		if lineNumber == 0 {
+		if firstLine {
 			return parser.Parse(line)
 		}
 
