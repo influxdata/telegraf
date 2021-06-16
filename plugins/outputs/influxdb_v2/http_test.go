@@ -228,3 +228,38 @@ func TestCreateBucket(t *testing.T) {
 		})
 	}
 }
+
+func TestCreateBucketExecutionCache(t *testing.T) {
+	executions := 0
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v2/orgs" {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"orgs": [{"id": "0123456789abcdef"}]}`))
+			return
+		}
+
+		switch executions {
+		case 0:
+			w.WriteHeader(http.StatusForbidden)
+		case 1:
+			w.WriteHeader(http.StatusCreated)
+		case 2:
+			t.Errorf("execution cache bypassed")
+			t.FailNow()
+		}
+
+		executions += 1
+	}))
+	defer ts.Close()
+
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
+	require.NoError(t, err)
+
+	client, err := influxdb.NewHTTPClient(&influxdb.HTTPConfig{URL: u, Organization: "organization"})
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	require.Error(t, client.CreateBucket(ctx, "bucket"))
+	require.NoError(t, client.CreateBucket(ctx, "bucket"))
+	require.NoError(t, client.CreateBucket(ctx, "bucket"))
+}

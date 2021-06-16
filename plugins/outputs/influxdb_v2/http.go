@@ -239,12 +239,6 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		}
 
 		for bucket, batch := range batches {
-			if c.CreateBuckets && !c.createBucketExecuted[bucket] {
-				if err := c.CreateBucket(ctx, bucket); err != nil {
-					log.Printf("W! [outputs.influxdb_v2] When writing to [%s]: bucket %q creation failed: %v\n", c.URL(), bucket, err)
-				}
-			}
-
 			err := c.writeBatch(ctx, bucket, batch)
 			if err != nil {
 				return err
@@ -401,6 +395,10 @@ func (c *httpClient) getOrgID(ctx context.Context) (string, error) {
 
 // CreateBucket creates a new bucket in the configured organization if it doesn't already exist
 func (c *httpClient) CreateBucket(ctx context.Context, bucket string) error {
+	if c.createBucketExecuted[bucket] {
+		return nil
+	}
+
 	if len(c.orgID) == 0 {
 		var err error
 		c.orgID, err = c.getOrgID(ctx)
@@ -449,6 +447,12 @@ func (c *httpClient) CreateBucket(ctx context.Context, bucket string) error {
 	desc := createResp.Error()
 	if err != nil {
 		desc = resp.Status
+	}
+
+	// Bucket already exists
+	if strings.Contains(desc, "bucket with name") {
+		c.createBucketExecuted[bucket] = true
+		return nil
 	}
 
 	return &APIError{
