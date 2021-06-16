@@ -65,8 +65,8 @@ GO
   ## A list of queries to include. 
   # include_query = []
 
-  ## A list of queries to explicitly ignore. Query Store queries are excluded by default.
-  # exclude_query = [AzureSQLDBQueryStoreRuntimeStatistics, AzureSQLDBQueryStoreWaitStatistics]
+  ## A list of queries to explicitly ignore.
+  # exclude_query = []
 
   ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
   ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
@@ -74,6 +74,7 @@ GO
 
   # database_type = "AzureSQLManagedInstance"
 
+  ## A list of queries to include.
   # include_query = []
 
   ## A list of queries to explicitly ignore.

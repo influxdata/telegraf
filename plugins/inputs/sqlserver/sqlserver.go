@@ -96,8 +96,8 @@ servers = [
 ## A list of queries to include. If not specified, all the above listed queries are used.
 # include_query = []
 
-## A list of queries to explicitly ignore. Query Store queries are excluded by default.
-# exclude_query = [AzureSQLDBQueryStoreRuntimeStatistics, AzureSQLDBQueryStoreWaitStatistics]
+## A list of queries to explicitly ignore.
+# exclude_query = []
 
 ## Toggling this to true enables telegraf to start collecting data from Query Store.
 ## This setting is optional and is disabled by default.
@@ -111,6 +111,7 @@ servers = [
 
 # database_type = "AzureSQLManagedInstance"
 
+## A list of queries to include.
 # include_query = []
 
 ## A list of queries to explicitly ignore.
