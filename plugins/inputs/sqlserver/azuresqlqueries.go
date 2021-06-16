@@ -1254,8 +1254,8 @@ BEGIN
 			EXEC sp_executesql @CurrSqlText
 		END TRY
 		BEGIN CATCH
-			-- Check if the user has no access to DB or DB was deleted
-			IF ERROR_NUMBER() NOT IN (911, 916)
+			-- Check if the user has no access to DB, DB was deleted or DB state doesn't allow connections
+			IF ERROR_NUMBER() NOT IN (911, 916, 922, 927, 941, 942, 952, 976, 978, 40863)
 				THROW;
 		END CATCH;
 		FETCH NEXT FROM dbCursor INTO @dbName;
