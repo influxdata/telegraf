@@ -128,8 +128,7 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 
 		_, error := s.Ingesters[key].FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON))
 		if error != nil {
-			s.Log.Errorf("error sending ingestion request to Azure Data Explorer: %v", error)
-			return error
+			s.Log.Errorf("error sending ingestion request to Azure Data Explorer for metric %s: %v", key, error)
 		}
 	}
 	return nil
