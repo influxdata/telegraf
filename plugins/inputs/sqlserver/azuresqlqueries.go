@@ -1218,6 +1218,14 @@ SELECT
 FROM sys.dm_os_schedulers AS s
 `
 
+// Both Query Store queries share the same logic: get the cached values from telegraf, enumerate databases, send the updated cache to teleraf.
+// For transferring cached values between telegraf and Sql Server XML format is used.
+// The cache contains date of the last collected Query Store interval for each DB.
+// The script executed during enumeration against each DB can be divided into the following parts:
+// 1 calculate time range for collection Query Store monitoring data using previously cached date of the last collected Query Store interval;
+// 2 collect monitoring data;
+// 3 update the cached interval date.
+
 const sqlAzureMIPartQueryPeriod = `
 DECLARE @QueryData NVARCHAR(MAX) = ?1; --input parameter
 
