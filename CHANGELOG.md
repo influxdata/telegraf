@@ -1,4 +1,4 @@
-## v1.19.0-rc1 [2021-06-10]
+## v1.19.0 [2021-06-17]
 
 #### Release Notes
 
@@ -13,6 +13,14 @@
 - [#9051](https://github.com/influxdata/telegraf/pull/9051) `outputs.kafka` Don't prevent telegraf from starting when there's a connection error
 - [#8795](https://github.com/influxdata/telegraf/pull/8795) `parsers.prometheusremotewrite` Update prometheus dependency to v2.21.0
 - [#9295](https://github.com/influxdata/telegraf/pull/9295) `outputs.dynatrace` Use dynatrace-metric-utils
+- [#9368](https://github.com/influxdata/telegraf/pull/9368) `parsers.json_v2` Update json_v2 parser to handle null types
+- [#9359](https://github.com/influxdata/telegraf/pull/9359) `inputs.sql` Fix import of sqlite and ignore it on all platforms that require CGO.
+- [#9329](https://github.com/influxdata/telegraf/pull/9329) `inputs.kube_inventory` Fix connecting to the wrong url
+- [#9358](https://github.com/influxdata/telegraf/pull/9358) upgrade denisenkom go-mssql to v0.10.0
+- [#9283](https://github.com/influxdata/telegraf/pull/9283) `processors.parser` Fix segfault
+- [#9243](https://github.com/influxdata/telegraf/pull/9243) `inputs.docker` Close all idle connections
+- [#9338](https://github.com/influxdata/telegraf/pull/9338) `inputs.suricata` Support new JSON format
+- [#9296](https://github.com/influxdata/telegraf/pull/9296) `outputs.influxdb` Fix endless retries
 
 #### Features
 
@@ -54,6 +62,7 @@
 - [OpenTelemetry](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/opentelemetry) - contributed by @jacobmarble
 - [Intel Data Plane Development Kit (DPDK)](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/dpdk) - contributed by @p-zak
 - [KNX](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/knx_listener) - contributed by @DocLambda
+- [SQL](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sql) - contributed by @srebhan
 
 #### New Output Plugins
 
