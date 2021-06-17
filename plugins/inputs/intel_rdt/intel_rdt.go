@@ -45,6 +45,7 @@ type IntelRDT struct {
 	Processes        []string `toml:"processes"`
 	SamplingInterval int32    `toml:"sampling_interval"`
 	ShortenedMetrics bool     `toml:"shortened_metrics"`
+	Sudo             bool     `toml:"sudo"`
 
 	Log              telegraf.Logger  `toml:"-"`
 	Publisher        Publisher        `toml:"-"`
@@ -96,6 +97,10 @@ func (r *IntelRDT) SampleConfig() string {
 	## Mandatory if cores aren't set and forbidden if cores are specified.
 	## e.g. ["qemu", "pmd"]
 	# processes = ["process"]
+
+	## Specify if the pqos process should be called with sudo.
+	## Mandatory if the telegraf process does not run as root.
+	# sudo = false
 `
 }
 
@@ -250,8 +255,15 @@ func (r *IntelRDT) createArgsAndStartPQOS(ctx context.Context) {
 func (r *IntelRDT) readData(ctx context.Context, args []string, processesPIDsAssociation map[string]string) {
 	r.wg.Add(1)
 	defer r.wg.Done()
-
-	cmd := exec.Command(r.PqosPath, append(args)...)
+	command := r.PqosPath
+	if r.Sudo {
+		// Command switched to sh with sudo, note entire command is one string for sudo
+		// must replace ';' with '\;' to allow the shell to pass the command correctly
+		args = []string{"-c", fmt.Sprintf("sudo %s %s", r.PqosPath, strings.Replace(strings.Join(args, " "), ";", "\\;", -1))}
+		command = "/bin/sh"
+		r.Log.Info(fmt.Sprintf("Running pqos with sudo: cmdline=%s %s", command, strings.Join(args, " ")))
+	}
+	cmd := exec.Command(command, args...)
 
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
@@ -378,6 +390,7 @@ func createArgsForGroups(coresOrPIDs []string) string {
 }
 
 func validatePqosPath(pqosPath string) error {
+	// TODO if sudo, check that too?
 	if len(pqosPath) == 0 {
 		return fmt.Errorf("monitoring start error, can not find pqos executable")
 	}
