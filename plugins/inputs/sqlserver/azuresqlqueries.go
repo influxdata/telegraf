@@ -697,7 +697,15 @@ IF @QueryData != '' AND @QueryData IS NOT NULL
 DECLARE @currIntervalStartTime DATETIMEOFFSET, @currIntervalEndTime DATETIMEOFFSET, @queryStartTime DATETIMEOFFSET;
 
 DECLARE @currTime DATETIMEOFFSET = SYSDATETIMEOFFSET();
-DECLARE @currTimeLimit DATETIMEOFFSET = DATEADD(hh, -3, @currTime);
+DECLARE @currTimeLimit DATETIMEOFFSET;
+
+/* Only Query Store intervals that ended after @currTimeLimit will be collected */
+SELECT @currTimeLimit =
+    CASE interval_length_minutes
+        WHEN 1440 THEN DATEADD(hh, -24, @currTime)
+        ELSE DATEADD(hh, -3, @currTime)
+    END
+FROM sys.database_query_store_options;
 
 /*Get the last completed interval*/
 SELECT TOP 1 @queryStartTime = start_time,  @currIntervalEndTime = end_time
