@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/Azure/azure-kusto-go/kusto"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
@@ -92,7 +91,7 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	metricsPerNamespace := make(map[string][]byte)
 
 	for _, m := range metrics {
-		namespace := getNamespace(m)
+		namespace := m.Name() // getNamespace(m)
 		metricInBytes, err := s.Serializer.Serialize(m)
 		if err != nil {
 			return err
@@ -148,15 +147,17 @@ func createAzureDataExplorerTableForNamespace(client *kusto.Client, database str
 	return nil
 }
 
-func getNamespace(m telegraf.Metric) string {
-	names := strings.SplitN(m.Name(), "-", 2)
-	return names[0]
-}
+// // This is to group metrics based on the convention of having a hyphen in the metric name. It complies with Azure Monitor way of metric categorization.
+// func getNamespace(m telegraf.Metric) string {
+// 	names := strings.SplitN(m.Name(), "-", 2)
+// 	return names[0]
+// }
 
 func (s *AzureDataExplorer) Init() error {
 	if s.DataFormat != "json" {
 		return fmt.Errorf("the azure data explorer supports json data format only, pleaes make sure to add the 'data_format=\"json\"' in the output configuration")
 	}
+	return nil
 }
 
 func init() {
