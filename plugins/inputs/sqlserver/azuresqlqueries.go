@@ -1293,7 +1293,7 @@ DELETE FROM #TelegrafCachedDbCollectionTimes WHERE collectionTime <= DATEADD(dd,
 DECLARE @SqlText NVARCHAR(MAX) = N'
 
 DECLARE @currDbLogicalGuid UNIQUEIDENTIFIER;
-SELECT @currDbLogicalGuid = logical_database_guid FROM sys.dm_user_db_resource_governance WHERE [database_name] = DB_NAME()
+SELECT @currDbLogicalGuid = logical_database_guid FROM sys.dm_user_db_resource_governance WHERE database_id = DB_ID();
 
 /* DB may be in a transient state */
 IF @currDbLogicalGuid IS NULL
