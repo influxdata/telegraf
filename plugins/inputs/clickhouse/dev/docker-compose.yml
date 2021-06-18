@@ -5,16 +5,19 @@ services:
 # choose `:latest` after resolve https://github.com/ClickHouse/ClickHouse/issues/13057
     image: docker.io/yandex/clickhouse-server:${CLICKHOUSE_VERSION:-latest}
     volumes:
+      - ./init_schema.sql:/docker-entrypoint-initdb.d/init_schema.sql
       - ./test_dictionary.xml:/etc/clickhouse-server/01-test_dictionary.xml
       - ./zookeeper.xml:/etc/clickhouse-server/config.d/00-zookeeper.xml
       - ./tls_settings.xml:/etc/clickhouse-server/config.d/01-tls_settings.xml
       # please comment text_log.xml when CLICKHOUSE_VERSION = 19.16
       - ./text_log.xml:/etc/clickhouse-server/config.d/02-text_log.xml
       - ./part_log.xml:/etc/clickhouse-server/config.d/03-part_log.xml
+      - ./mysql_port.xml:/etc/clickhouse-server/config.d/04-mysql_port.xml
       - ./dhparam.pem:/etc/clickhouse-server/dhparam.pem
       - ../../../../testutil/pki/serverkey.pem:/etc/clickhouse-server/server.key
       - ../../../../testutil/pki/servercert.pem:/etc/clickhouse-server/server.crt
     ports:
+      - 3306:3306
       - 8123:8123
       - 8443:8443
       - 9000:9000
