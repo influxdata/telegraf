@@ -1262,7 +1262,7 @@ BEGIN
 			EXEC sp_executesql @CurrSqlText
 		END TRY
 		BEGIN CATCH
-			-- Check if the user has no access to DB, DB was deleted or DB state doesn't allow connections
+			-- Check if the user has no access to DB, DB was deleted or DB state does not allow connections
 			IF ERROR_NUMBER() NOT IN (911, 916, 922, 927, 941, 942, 952, 976, 978, 40863)
 				THROW;
 		END CATCH;
@@ -1276,15 +1276,15 @@ END');
 /* Obtain the previous times the query was called -- they are an array because we are working with a list of DBs in the Managed Instance -- and store them in a temporary table */
 DROP TABLE IF EXISTS #TelegrafCachedDbCollectionTimes;
 CREATE TABLE #TelegrafCachedDbCollectionTimes (
-	[database_id] INT NOT NULL PRIMARY KEY,
+	[logical_database_guid] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
 	[collectionTime] DATETIMEOFFSET
 );
 
 DECLARE @XmlQueryData XML = @QueryData;
 INSERT INTO #TelegrafCachedDbCollectionTimes
 SELECT
-	s.value('./id[1]', 'int') AS [database_id],
-	s.value('./collectionTime[1]', 'datetimeoffset') AS [collectionTime]
+	s.value('./id[1]', 'uniqueidentifier') AS [logical_database_guid],
+	s.value('./ct[1]', 'datetimeoffset') AS [collectionTime]
 FROM @XmlQueryData.nodes('/collectionTimes/ts') t(s);
 
 /* Delete records older than <Max INTERVAL_LENGTH_MINUTES> * 2 */
@@ -1292,8 +1292,15 @@ DELETE FROM #TelegrafCachedDbCollectionTimes WHERE collectionTime <= DATEADD(dd,
 
 DECLARE @SqlText NVARCHAR(MAX) = N'
 
+DECLARE @currDbLogicalGuid UNIQUEIDENTIFIER;
+SELECT @currDbLogicalGuid = logical_database_guid FROM sys.dm_user_db_resource_governance WHERE [database_name] = DB_NAME()
+
+/* DB may be in a transient state */
+IF @currDbLogicalGuid IS NULL
+	RETURN;
+
 DECLARE @lastIntervalEndTime DATETIMEOFFSET;
-SELECT @lastIntervalEndTime = [collectionTime] FROM #TelegrafCachedDbCollectionTimes WHERE [database_id] = DB_ID();
+SELECT @lastIntervalEndTime = [collectionTime] FROM #TelegrafCachedDbCollectionTimes WHERE [logical_database_guid] = @currDbLogicalGuid;
 
 DECLARE @currIntervalStartTime DATETIMEOFFSET, @currIntervalEndTime DATETIMEOFFSET, @queryStartTime DATETIMEOFFSET;
 
@@ -1314,18 +1321,18 @@ SET @currIntervalStartTime = IIF(@lastIntervalEndTime IS NOT NULL, @lastInterval
 DECLARE @UpdateCollectionTimeSqlText NVARCHAR(MAX) = N'
 /* Update query call time for the current DB */
 MERGE #TelegrafCachedDbCollectionTimes AS target  
-USING (SELECT DB_ID(), @currIntervalEndTime) AS source (database_id, collectionTime)  
-ON (target.database_id = source.database_id)  
+USING (SELECT @currDbLogicalGuid, @currIntervalEndTime) AS source (logical_database_guid, collectionTime)  
+ON (target.logical_database_guid = source.logical_database_guid)  
 WHEN MATCHED THEN
     UPDATE SET collectionTime = source.collectionTime 
 WHEN NOT MATCHED THEN  
-    INSERT (database_id, collectionTime)  
-    VALUES (source.database_id, source.collectionTime);
+    INSERT (logical_database_guid, collectionTime)  
+    VALUES (source.logical_database_guid, source.collectionTime);
 ';
 
 DECLARE @ReturnCachedIntervalsSqlText VARCHAR(MAX) = '
 /* Return previous query call timestamps for all DBs */
-SELECT CONVERT(NVARCHAR(MAX),(SELECT database_id AS id, CONVERT(varchar(35), collectionTime, 126) AS collectionTime FROM #TelegrafCachedDbCollectionTimes FOR XML PATH(''ts''), ROOT(''collectionTimes''))) AS CachedData;
+SELECT CONVERT(NVARCHAR(MAX),(SELECT logical_database_guid AS id, CONVERT(varchar(35), collectionTime, 126) AS ct FROM #TelegrafCachedDbCollectionTimes FOR XML PATH(''ts''), ROOT(''collectionTimes''))) AS CachedData;
 DROP TABLE #TelegrafCachedDbCollectionTimes;
 '
 `
