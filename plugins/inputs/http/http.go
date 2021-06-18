@@ -80,9 +80,9 @@ var sampleConfig = `
 
   ## Cookie-based authentication
   # cookie_auth_url = "https://localhost/authMe"
-  # cookie_auth_method = "POST" [default: POST]
+  # cookie_auth_method = "POST" # default: POST
   # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
-  # cookie_auth_renewal = '8h' [default: '5m']
+  # cookie_auth_renewal = "8h" # default: "5m"
 
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
