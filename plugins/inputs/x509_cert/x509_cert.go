@@ -102,14 +102,15 @@ func (c *X509Cert) serverName(u *url.URL) (string, error) {
 }
 
 func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, error) {
+	protocol := u.Scheme
 	switch u.Scheme {
 	case "https":
-		u.Scheme = "tcp"
+		protocol = "tcp"
 		fallthrough
 	case "udp", "udp4", "udp6":
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
-		ipConn, err := net.DialTimeout(u.Scheme, u.Host, timeout)
+		ipConn, err := net.DialTimeout(protocol, u.Host, timeout)
 		if err != nil {
 			return nil, err
 		}
