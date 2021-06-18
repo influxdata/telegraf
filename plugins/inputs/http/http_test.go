@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/config"
+
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	oauth "github.com/influxdata/telegraf/plugins/common/oauth"
 	plugin "github.com/influxdata/telegraf/plugins/inputs/http"
@@ -360,7 +362,7 @@ func TestHTTPwithCookieAuth(t *testing.T) {
 	plugin := &plugin.HTTP{
 		URLs:              []string{url},
 		CookieAuthURL:     fakeServer.URL + "/auth",
-		CookieAuthRenewal: 20 * time.Millisecond,
+		CookieAuthRenewal: config.Duration(20 * time.Millisecond),
 	}
 	metricName := "metricName"
 

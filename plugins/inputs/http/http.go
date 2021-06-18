@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -36,10 +37,10 @@ type HTTP struct {
 	Password string `toml:"password"`
 
 	// Cookie authentication
-	CookieAuthURL     string        `toml:"cookie_auth_url"`
-	CookieAuthMethod  string        `toml:"cookie_auth_method"`
-	CookieAuthBody    string        `toml:"cookie_auth_body"`
-	CookieAuthRenewal time.Duration `toml:"cookie_auth_renewal"`
+	CookieAuthURL     string          `toml:"cookie_auth_url"`
+	CookieAuthMethod  string          `toml:"cookie_auth_method"`
+	CookieAuthBody    string          `toml:"cookie_auth_body"`
+	CookieAuthRenewal config.Duration `toml:"cookie_auth_renewal"`
 
 	// Absolute path to file with Bearer token
 	BearerToken string `toml:"bearer_token"`
@@ -80,8 +81,8 @@ var sampleConfig = `
   ## Cookie-based authentication
   # cookie_auth_url = "https://localhost/authMe"
   # cookie_auth_method = "POST" [default: POST]
-  # cookie_auth_body = {"username": "user", "password": "pa$$word", "authenticate": "me"}
-  # cookie_auth_renewal = 8h [default: 5m]
+  # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
+  # cookie_auth_renewal = '8h' [default: '5m']
 
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
@@ -137,8 +138,9 @@ func (h *HTTP) Init() error {
 
 	if h.CookieAuthURL != "" {
 		// cookie auth defaults
-		if h.CookieAuthRenewal == 0 {
-			h.CookieAuthRenewal = defaultCookieAuthRenewal
+		renewalInterval := defaultCookieAuthRenewal
+		if h.CookieAuthRenewal != 0 {
+			renewalInterval = time.Duration(h.CookieAuthRenewal)
 		}
 		if h.CookieAuthMethod == "" {
 			h.CookieAuthMethod = defaultCookieAuthMethod
@@ -148,7 +150,7 @@ func (h *HTTP) Init() error {
 			return err
 		}
 		// start auth ticker
-		if authErr := h.startCookieAuth(); authErr != nil {
+		if authErr := h.startCookieAuth(renewalInterval); authErr != nil {
 			return authErr
 		}
 	}
@@ -160,9 +162,9 @@ func (h *HTTP) Init() error {
 	return nil
 }
 
-func (h *HTTP) startCookieAuth() error {
+func (h *HTTP) startCookieAuth(interval time.Duration) error {
 	// continual auth ticker
-	ticker := time.NewTicker(h.CookieAuthRenewal)
+	ticker := time.NewTicker(interval)
 	go func() {
 		for range ticker.C {
 			_ = h.doCookieAuth()
