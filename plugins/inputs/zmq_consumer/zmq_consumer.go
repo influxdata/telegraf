@@ -13,6 +13,11 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
+const (
+	defaultMaxUndeliveredMessages = 1000
+	socketBufferSize              = 10
+)
+
 type empty struct{}
 type semaphore chan empty
 
@@ -24,7 +29,8 @@ type zmqConsumer struct {
 
 	Log telegraf.Logger
 
-	socket *zmq.Socket
+	in chan string
+
 	parser parsers.Parser
 	acc    telegraf.TrackingAccumulator
 
@@ -55,10 +61,6 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 `
-
-const (
-	defaultMaxUndeliveredMessages = 1000
-)
 
 func (z *zmqConsumer) SampleConfig() string {
 	return sampleConfig
@@ -93,39 +95,88 @@ func (z *zmqConsumer) Init() error {
 func (z *zmqConsumer) Start(acc telegraf.Accumulator) error {
 	z.acc = acc.WithTracking(z.MaxUndeliveredMessages)
 
-	if z.socket == nil {
-		// BEGIN TODO: extract to a separate func
-		// create the socket
-		socket, err := zmq.NewSocket(zmq.SUB)
-		if err != nil {
-			return err
-		}
-		z.socket = socket
+	ctx, cancel := context.WithCancel(context.Background())
+	z.cancel = cancel
 
-		// set subscription filters
-		for _, filter := range z.Subscriptions {
-			z.socket.SetSubscribe(filter)
-		}
-		// connect to endpoints
-		for _, endpoint := range z.Endpoints {
-			z.socket.Connect(endpoint)
-		}
-		// END TODO: extract to a separate func
+	z.in = make(chan string, socketBufferSize)
 
-		ctx, cancel := context.WithCancel(context.Background())
-		z.cancel = cancel
+	// start the message subscriber
+	z.wg.Add(1)
+	go func() {
+		defer z.wg.Done()
+		go z.subscriber(ctx)
+	}()
 
-		// start the message reader
-		z.wg.Add(1)
-		go func() {
-			defer z.wg.Done()
-			go z.receiver(ctx)
-		}()
-	}
+	// start the message receiver
+	z.wg.Add(1)
+	go func() {
+		defer z.wg.Done()
+		go z.receiver(ctx)
+	}()
+
 	return nil
 }
 
-// receiver() reads all published messages from the socket
+func (z *zmqConsumer) Stop() {
+	z.cancel()
+	z.wg.Wait()
+}
+
+// connect subscribes to the publisher socket(s)
+func (z *zmqConsumer) connect() (*zmq.Socket, error) {
+	// create the socket
+	socket, err := zmq.NewSocket(zmq.SUB)
+	if err != nil {
+		return nil, err
+	}
+
+	// set subscription filters
+	for _, filter := range z.Subscriptions {
+		err = socket.SetSubscribe(filter)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// connect to endpoints
+	for _, endpoint := range z.Endpoints {
+		err = socket.Connect(endpoint)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return socket, nil
+}
+
+// subscriber receives messages from the socket
+func (z *zmqConsumer) subscriber(ctx context.Context) {
+	// connect to PUB socket(s)
+	socket, err := z.connect()
+	if err != nil {
+		z.Log.Errorf("Error connecting to socket: %s", err.Error())
+		return
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			close(z.in)
+			return
+		default:
+			// non-blocking receive
+			msg, err := socket.Recv(zmq.DONTWAIT)
+			if err != nil {
+				if zmq.AsErrno(err) != zmq.Errno(syscall.EAGAIN) {
+					z.Log.Errorf("Error receiving from socket: %v", err)
+				}
+				continue
+			}
+			z.in <- msg
+		}
+	}
+}
+
+// receiver reads all published messages from the socket and converts them to metrics
 func (z *zmqConsumer) receiver(ctx context.Context) {
 	sem := make(semaphore, z.MaxUndeliveredMessages)
 
@@ -142,33 +193,17 @@ func (z *zmqConsumer) receiver(ctx context.Context) {
 			case <-z.acc.Delivered():
 				<-sem
 				<-sem
-			default:
-				msg, err := z.socket.Recv(zmq.DONTWAIT)
+			case msg := <-z.in:
+				metrics, err := z.parser.Parse([]byte(msg))
 				if err != nil {
-					if zmq.AsErrno(err) != zmq.Errno(syscall.EAGAIN) {
-						z.Log.Errorf("Error receiving from socket: %v", err)
-						<-sem
-						continue
-					}
-				} else {
-					metrics, err := z.parser.Parse([]byte(msg))
-					fmt.Println(msg)
-					if err != nil {
-						z.Log.Errorf("Error parsing message: %v", err)
-						<-sem
-						continue
-					}
-					z.acc.AddTrackingMetricGroup(metrics)
+					z.Log.Errorf("Error parsing message: %s", err.Error())
+					<-sem
+					continue
 				}
+				z.acc.AddTrackingMetricGroup(metrics)
 			}
 		}
 	}
-}
-
-func (z *zmqConsumer) Stop() {
-	z.cancel()
-	z.wg.Wait()
-	z.socket.Close()
 }
 
 func init() {
