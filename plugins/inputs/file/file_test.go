@@ -104,7 +104,7 @@ func TestGrokParser(t *testing.T) {
 
 	err = r.Gather(&acc)
 	require.NoError(t, err)
-	require.Equal(t, 2, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 2)
 }
 
 func TestCharacterEncoding(t *testing.T) {
