@@ -45,14 +45,10 @@ func (s *AzureDataExplorer) SampleConfig() string {
   ## The name of the database in Azure Data Explorer where the ingestion will happen
   # database = ""
 
-  ## The name of the table in Azure Data Explorer where the ingestion will happen
-  # table = ""
-
   ## The client ID of the Service Principal in Azure that has ingestion rights to the Azure Data Exploer Cluster
   # client_id = ""
 
   ## The client secret of the Service Principal in Azure that has ingestion rights to the Azure Data Exploer Cluster
-
   # client_secret = ""
 
   ## The tenant ID of the Azure Subsciption in which the Service Principal belongs to
