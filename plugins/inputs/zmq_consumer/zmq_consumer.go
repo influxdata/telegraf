@@ -156,6 +156,7 @@ func (z *zmqConsumer) subscriber(ctx context.Context) {
 		z.Log.Errorf("Error connecting to socket: %s", err.Error())
 		return
 	}
+	defer socket.Close()
 
 	for {
 		select {
