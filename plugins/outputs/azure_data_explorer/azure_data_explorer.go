@@ -29,6 +29,7 @@ type AzureDataExplorer struct {
 	Ingesters      map[string]localIngestor
 	Serializer     serializers.Serializer
 	CreateIngestor func(client localClient, database string, namespace string) (localIngestor, error)
+	CreateClient   func(endpoint string, clientId string, clientSecret string, tenantId string) (localClient, error)
 }
 
 type localIngestor interface {
@@ -68,13 +69,7 @@ func (s *AzureDataExplorer) SampleConfig() string {
 
 func (s *AzureDataExplorer) Connect() error {
 
-	// Make any connection required here
-	authorizer := kusto.Authorization{
-		Config: auth.NewClientCredentialsConfig(s.ClientId, s.ClientSecret, s.TenantId),
-	}
-
-	client, err := kusto.New(s.Endpoint, authorizer)
-
+	client, err := s.CreateClient(s.Endpoint, s.ClientId, s.ClientSecret, s.TenantId)
 	if err != nil {
 		return err
 	}
@@ -170,6 +165,7 @@ func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
 		return &AzureDataExplorer{
 			CreateIngestor: createIngestor,
+			CreateClient:   createClient,
 		}
 	})
 }
@@ -184,4 +180,19 @@ func createIngestor(client localClient, database string, namespace string) (loca
 		return ingestor, nil
 	}
 	return nil, err
+}
+
+func createClient(endpoint string, clientId string, clientSecret string, tenantId string) (localClient, error) {
+	// Make any connection required here
+	authorizer := kusto.Authorization{
+		Config: auth.NewClientCredentialsConfig(clientId, clientSecret, tenantId),
+	}
+
+	client, err := kusto.New(endpoint, authorizer)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
 }
