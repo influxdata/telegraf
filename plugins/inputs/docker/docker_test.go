@@ -12,10 +12,11 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 type MockClient struct {
@@ -120,7 +121,12 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_image": "redis/image",
 	}
 
-	parseContainerStats(stats, &acc, tags, "123456789", containerMetricClasses, containerMetricClasses, "linux")
+	d := &Docker{
+		Log:              testutil.Logger{},
+		PerDeviceInclude: containerMetricClasses,
+		TotalInclude:     containerMetricClasses,
+	}
+	d.parseContainerStats(stats, &acc, tags, "123456789", "linux")
 
 	// test docker_container_net measurement
 	netfields := map[string]interface{}{
@@ -1270,8 +1276,12 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			parseContainerStats(tt.args.stat, &acc, tt.args.tags, tt.args.id, tt.args.perDeviceInclude,
-				tt.args.totalInclude, tt.args.daemonOSType)
+			d := &Docker{
+				Log:              testutil.Logger{},
+				PerDeviceInclude: tt.args.perDeviceInclude,
+				TotalInclude:     tt.args.totalInclude,
+			}
+			d.parseContainerStats(tt.args.stat, &acc, tt.args.tags, tt.args.id, tt.args.daemonOSType)
 
 			actual := FilterMetrics(acc.GetTelegrafMetrics(), func(m telegraf.Metric) bool {
 				return choice.Contains(m.Name(),

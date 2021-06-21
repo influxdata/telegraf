@@ -13,7 +13,7 @@ type DiskStats struct {
 	ps system.PS
 
 	// Legacy support
-	Mountpoints []string `toml:"mountpoints"`
+	LegacyMountPoints []string `toml:"mountpoints"`
 
 	MountPoints []string `toml:"mount_points"`
 	IgnoreFS    []string `toml:"ignore_fs"`
@@ -38,8 +38,8 @@ func (ds *DiskStats) SampleConfig() string {
 
 func (ds *DiskStats) Gather(acc telegraf.Accumulator) error {
 	// Legacy support:
-	if len(ds.Mountpoints) != 0 {
-		ds.MountPoints = ds.Mountpoints
+	if len(ds.LegacyMountPoints) != 0 {
+		ds.MountPoints = ds.LegacyMountPoints
 	}
 
 	disks, partitions, err := ds.ps.DiskUsage(ds.MountPoints, ds.IgnoreFS)
