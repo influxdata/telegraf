@@ -1,4 +1,4 @@
-package simpleoutput
+package azure_data_explorer
 
 // simpleoutput.go
 
@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/Azure/azure-kusto-go/kusto"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
@@ -17,16 +18,25 @@ import (
 )
 
 type AzureDataExplorer struct {
-	Endpoint     string          `toml:"endpoint_url"`
-	Database     string          `toml:"database"`
-	ClientId     string          `toml:"client_id"`
-	ClientSecret string          `toml:"client_secret"`
-	TenantId     string          `toml:"tenant_id"`
-	DataFormat   string          `toml:"data_format"`
-	Log          telegraf.Logger `toml:"-"`
-	Client       *kusto.Client
-	Ingesters    map[string]*ingest.Ingestion
-	Serializer   serializers.Serializer
+	Endpoint       string          `toml:"endpoint_url"`
+	Database       string          `toml:"database"`
+	ClientId       string          `toml:"client_id"`
+	ClientSecret   string          `toml:"client_secret"`
+	TenantId       string          `toml:"tenant_id"`
+	DataFormat     string          `toml:"data_format"`
+	Log            telegraf.Logger `toml:"-"`
+	Client         localClient
+	Ingesters      map[string]localIngestor
+	Serializer     serializers.Serializer
+	CreateIngestor func(client localClient, database string, namespace string) (localIngestor, error)
+}
+
+type localIngestor interface {
+	FromReader(ctx context.Context, reader io.Reader, options ...ingest.FileOption) (*ingest.Result, error)
+}
+
+type localClient interface {
+	Mgmt(ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error)
 }
 
 const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
@@ -69,7 +79,7 @@ func (s *AzureDataExplorer) Connect() error {
 		return err
 	}
 	s.Client = client
-	s.Ingesters = make(map[string]*ingest.Ingestion)
+	s.Ingesters = make(map[string]localIngestor)
 
 	return nil
 }
@@ -107,7 +117,7 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 			}
 
 			//create a new ingestor client for the namespace
-			s.Ingesters[namespace], err = ingest.New(s.Client, s.Database, namespace)
+			s.Ingesters[namespace], err = createIngestor(s.Client, s.Database, namespace)
 			if err != nil {
 				return err
 			}
@@ -125,7 +135,7 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func createAzureDataExplorerTableForNamespace(client *kusto.Client, database string, tableName string) error {
+func createAzureDataExplorerTableForNamespace(client localClient, database string, tableName string) error {
 
 	// Create a database
 	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
@@ -158,10 +168,20 @@ func (s *AzureDataExplorer) Init() error {
 
 func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
-		return &AzureDataExplorer{}
+		return &AzureDataExplorer{
+			CreateIngestor: createIngestor,
+		}
 	})
 }
 
 func (s *AzureDataExplorer) SetSerializer(serializer serializers.Serializer) {
 	s.Serializer = serializer
+}
+
+func createIngestor(client localClient, database string, namespace string) (localIngestor, error) {
+	ingestor, err := ingest.New(client.(*kusto.Client), database, namespace)
+	if ingestor != nil {
+		return ingestor, nil
+	}
+	return nil, err
 }
