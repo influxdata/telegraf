@@ -86,10 +86,15 @@ func (s fakeServer) checkResp(t *testing.T, expCode int) {
 }
 
 func (s fakeServer) checkAuthCount(t *testing.T, expCount int) {
+	t.Helper()
 	require.EqualValues(t, expCount, atomic.LoadInt32(s.int32))
 }
 
 func TestAuthConfig_Start(t *testing.T) {
+	const (
+		renewal      = 20 * time.Millisecond
+		renewalCheck = 55 * time.Millisecond
+	)
 	type fields struct {
 		Method   string
 		Username string
@@ -121,7 +126,7 @@ func TestAuthConfig_Start(t *testing.T) {
 		{
 			name: "success no creds, no body, default method",
 			args: args{
-				renewal:  20 * time.Millisecond,
+				renewal:  renewal,
 				endpoint: authEndpoint,
 			},
 			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
@@ -130,7 +135,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				// default method set
 				require.Equal(t, http.MethodPost, c.Method)
 				srv.checkResp(t, http.StatusOK)
-				time.Sleep(59 * time.Millisecond)
+				time.Sleep(renewalCheck)
 				// should have Cookie Authed twice more
 				srv.checkAuthCount(t, 3)
 				srv.checkResp(t, http.StatusOK)
@@ -144,14 +149,14 @@ func TestAuthConfig_Start(t *testing.T) {
 				Password: reqPasswd,
 			},
 			args: args{
-				renewal:  20 * time.Millisecond,
+				renewal:  renewal,
 				endpoint: authEndpointWithBasicAuth,
 			},
 			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
 				// should have Cookie Authed once
 				srv.checkAuthCount(t, 1)
 				srv.checkResp(t, http.StatusOK)
-				time.Sleep(59 * time.Millisecond)
+				time.Sleep(renewalCheck)
 				// should have Cookie Authed twice more
 				srv.checkAuthCount(t, 3)
 				srv.checkResp(t, http.StatusOK)
@@ -165,7 +170,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				Password: "a bad password",
 			},
 			args: args{
-				renewal:  20 * time.Millisecond,
+				renewal:  renewal,
 				endpoint: authEndpointWithBasicAuth,
 			},
 			wantErr: fmt.Errorf("bad response code: 401"),
@@ -173,7 +178,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				// should have never Cookie Authed
 				srv.checkAuthCount(t, 0)
 				srv.checkResp(t, http.StatusForbidden)
-				time.Sleep(59 * time.Millisecond)
+				time.Sleep(renewalCheck)
 				// should have still never Cookie Authed
 				srv.checkAuthCount(t, 0)
 				srv.checkResp(t, http.StatusForbidden)
@@ -186,14 +191,14 @@ func TestAuthConfig_Start(t *testing.T) {
 				Body:   reqBody,
 			},
 			args: args{
-				renewal:  20 * time.Millisecond,
+				renewal:  renewal,
 				endpoint: authEndpointWithBody,
 			},
 			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
 				// should have Cookie Authed once
 				srv.checkAuthCount(t, 1)
 				srv.checkResp(t, http.StatusOK)
-				time.Sleep(59 * time.Millisecond)
+				time.Sleep(renewalCheck)
 				// should have Cookie Authed twice more
 				srv.checkAuthCount(t, 3)
 				srv.checkResp(t, http.StatusOK)
@@ -206,7 +211,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				Body:   "a bad body",
 			},
 			args: args{
-				renewal:  20 * time.Millisecond,
+				renewal:  renewal,
 				endpoint: authEndpointWithBody,
 			},
 			wantErr: fmt.Errorf("bad response code: 401"),
@@ -214,7 +219,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				// should have never Cookie Authed
 				srv.checkAuthCount(t, 0)
 				srv.checkResp(t, http.StatusForbidden)
-				time.Sleep(59 * time.Millisecond)
+				time.Sleep(renewalCheck)
 				// should have still never Cookie Authed
 				srv.checkAuthCount(t, 0)
 				srv.checkResp(t, http.StatusForbidden)
