@@ -18,15 +18,6 @@ const maxRecordsPerRequest uint32 = 500
 
 type (
 	KinesisOutput struct {
-		Region      string `toml:"region"`
-		AccessKey   string `toml:"access_key"`
-		SecretKey   string `toml:"secret_key"`
-		RoleARN     string `toml:"role_arn"`
-		Profile     string `toml:"profile"`
-		Filename    string `toml:"shared_credential_file"`
-		Token       string `toml:"token"`
-		EndpointURL string `toml:"endpoint_url"`
-
 		StreamName         string     `toml:"streamname"`
 		PartitionKey       string     `toml:"partitionkey"`
 		RandomPartitionKey bool       `toml:"use_random_partitionkey"`
@@ -36,6 +27,8 @@ type (
 		Log        telegraf.Logger `toml:"-"`
 		serializer serializers.Serializer
 		svc        kinesisiface.KinesisAPI
+
+		internalaws.CredentialConfig
 	}
 
 	Partition struct {
@@ -130,18 +123,7 @@ func (k *KinesisOutput) Connect() error {
 		k.Log.Infof("Establishing a connection to Kinesis in %s", k.Region)
 	}
 
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      k.Region,
-		AccessKey:   k.AccessKey,
-		SecretKey:   k.SecretKey,
-		RoleARN:     k.RoleARN,
-		Profile:     k.Profile,
-		Filename:    k.Filename,
-		Token:       k.Token,
-		EndpointURL: k.EndpointURL,
-	}
-	configProvider := credentialConfig.Credentials()
-	svc := kinesis.New(configProvider)
+	svc := kinesis.New(k.CredentialConfig.Credentials())
 
 	_, err := svc.DescribeStreamSummary(&kinesis.DescribeStreamSummaryInput{
 		StreamName: aws.String(k.StreamName),

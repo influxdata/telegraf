@@ -33,15 +33,6 @@ type cloudWatchLogs interface {
 
 // CloudWatchLogs plugin object definition
 type CloudWatchLogs struct {
-	Region      string `toml:"region"`
-	AccessKey   string `toml:"access_key"`
-	SecretKey   string `toml:"secret_key"`
-	RoleARN     string `toml:"role_arn"`
-	Profile     string `toml:"profile"`
-	Filename    string `toml:"shared_credential_file"`
-	Token       string `toml:"token"`
-	EndpointURL string `toml:"endpoint_url"`
-
 	LogGroup string                   `toml:"log_group"`
 	lg       *cloudwatchlogs.LogGroup //log group data
 
@@ -59,6 +50,8 @@ type CloudWatchLogs struct {
 	svc cloudWatchLogs //cloudwatch logs service
 
 	Log telegraf.Logger `toml:"-"`
+
+	internalaws.CredentialConfig
 }
 
 const (
@@ -191,19 +184,7 @@ func (c *CloudWatchLogs) Connect() error {
 	var logGroupsOutput = &cloudwatchlogs.DescribeLogGroupsOutput{NextToken: &dummyToken}
 	var err error
 
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      c.Region,
-		AccessKey:   c.AccessKey,
-		SecretKey:   c.SecretKey,
-		RoleARN:     c.RoleARN,
-		Profile:     c.Profile,
-		Filename:    c.Filename,
-		Token:       c.Token,
-		EndpointURL: c.EndpointURL,
-	}
-	configProvider := credentialConfig.Credentials()
-
-	c.svc = cloudwatchlogs.New(configProvider)
+	c.svc = cloudwatchlogs.New(c.CredentialConfig.Credentials())
 	if c.svc == nil {
 		return fmt.Errorf("can't create cloudwatch logs service endpoint")
 	}

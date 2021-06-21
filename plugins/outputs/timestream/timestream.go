@@ -19,15 +19,6 @@ import (
 
 type (
 	Timestream struct {
-		Region      string `toml:"region"`
-		AccessKey   string `toml:"access_key"`
-		SecretKey   string `toml:"secret_key"`
-		RoleARN     string `toml:"role_arn"`
-		Profile     string `toml:"profile"`
-		Filename    string `toml:"shared_credential_file"`
-		Token       string `toml:"token"`
-		EndpointURL string `toml:"endpoint_url"`
-
 		MappingMode             string `toml:"mapping_mode"`
 		DescribeDatabaseOnStart bool   `toml:"describe_database_on_start"`
 		DatabaseName            string `toml:"database_name"`
@@ -42,6 +33,8 @@ type (
 
 		Log telegraf.Logger
 		svc WriteClient
+
+		internalaws.CredentialConfig
 	}
 
 	WriteClient interface {
@@ -225,17 +218,7 @@ func (t *Timestream) Connect() error {
 
 	t.Log.Infof("Constructing Timestream client for '%s' mode", t.MappingMode)
 
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      t.Region,
-		AccessKey:   t.AccessKey,
-		SecretKey:   t.SecretKey,
-		RoleARN:     t.RoleARN,
-		Profile:     t.Profile,
-		Filename:    t.Filename,
-		Token:       t.Token,
-		EndpointURL: t.EndpointURL,
-	}
-	svc := WriteFactory(credentialConfig)
+	svc := WriteFactory(&t.CredentialConfig)
 
 	if t.DescribeDatabaseOnStart {
 		t.Log.Infof("Describing database '%s' in region '%s'", t.DatabaseName, t.Region)

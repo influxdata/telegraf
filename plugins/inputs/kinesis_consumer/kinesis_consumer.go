@@ -30,14 +30,6 @@ type (
 	}
 
 	KinesisConsumer struct {
-		Region                 string    `toml:"region"`
-		AccessKey              string    `toml:"access_key"`
-		SecretKey              string    `toml:"secret_key"`
-		RoleARN                string    `toml:"role_arn"`
-		Profile                string    `toml:"profile"`
-		Filename               string    `toml:"shared_credential_file"`
-		Token                  string    `toml:"token"`
-		EndpointURL            string    `toml:"endpoint_url"`
 		StreamName             string    `toml:"streamname"`
 		ShardIteratorType      string    `toml:"shard_iterator_type"`
 		DynamoDB               *DynamoDB `toml:"checkpoint_dynamodb"`
@@ -62,6 +54,8 @@ type (
 		processContentEncodingFunc processContent
 
 		lastSeqNum *big.Int
+
+		internalaws.CredentialConfig
 	}
 
 	checkpoint struct {
@@ -156,18 +150,7 @@ func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
 }
 
 func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      k.Region,
-		AccessKey:   k.AccessKey,
-		SecretKey:   k.SecretKey,
-		RoleARN:     k.RoleARN,
-		Profile:     k.Profile,
-		Filename:    k.Filename,
-		Token:       k.Token,
-		EndpointURL: k.EndpointURL,
-	}
-	configProvider := credentialConfig.Credentials()
-	client := kinesis.New(configProvider)
+	client := kinesis.New(k.CredentialConfig.Credentials())
 
 	k.checkpoint = &noopCheckpoint{}
 	if k.DynamoDB != nil {

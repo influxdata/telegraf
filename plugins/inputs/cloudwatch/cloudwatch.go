@@ -25,14 +25,6 @@ import (
 
 // CloudWatch contains the configuration and cache for the cloudwatch plugin.
 type CloudWatch struct {
-	Region           string          `toml:"region"`
-	AccessKey        string          `toml:"access_key"`
-	SecretKey        string          `toml:"secret_key"`
-	RoleARN          string          `toml:"role_arn"`
-	Profile          string          `toml:"profile"`
-	CredentialPath   string          `toml:"shared_credential_file"`
-	Token            string          `toml:"token"`
-	EndpointURL      string          `toml:"endpoint_url"`
 	StatisticExclude []string        `toml:"statistic_exclude"`
 	StatisticInclude []string        `toml:"statistic_include"`
 	Timeout          config.Duration `toml:"timeout"`
@@ -55,6 +47,8 @@ type CloudWatch struct {
 	queryDimensions map[string]*map[string]string
 	windowStart     time.Time
 	windowEnd       time.Time
+
+	internalaws.CredentialConfig
 }
 
 // Metric defines a simplified Cloudwatch metric.
@@ -258,18 +252,6 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 }
 
 func (c *CloudWatch) initializeCloudWatch() error {
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      c.Region,
-		AccessKey:   c.AccessKey,
-		SecretKey:   c.SecretKey,
-		RoleARN:     c.RoleARN,
-		Profile:     c.Profile,
-		Filename:    c.CredentialPath,
-		Token:       c.Token,
-		EndpointURL: c.EndpointURL,
-	}
-	configProvider := credentialConfig.Credentials()
-
 	proxy, err := c.HTTPProxy.Proxy()
 	if err != nil {
 		return err
@@ -295,7 +277,7 @@ func (c *CloudWatch) initializeCloudWatch() error {
 	}
 
 	loglevel := aws.LogOff
-	c.client = cwClient.New(configProvider, cfg.WithLogLevel(loglevel))
+	c.client = cwClient.New(c.CredentialConfig.Credentials(), cfg.WithLogLevel(loglevel))
 
 	// Initialize regex matchers for each Dimension value.
 	for _, m := range c.Metrics {

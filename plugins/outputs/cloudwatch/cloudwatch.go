@@ -15,15 +15,6 @@ import (
 )
 
 type CloudWatch struct {
-	Region      string `toml:"region"`
-	AccessKey   string `toml:"access_key"`
-	SecretKey   string `toml:"secret_key"`
-	RoleARN     string `toml:"role_arn"`
-	Profile     string `toml:"profile"`
-	Filename    string `toml:"shared_credential_file"`
-	Token       string `toml:"token"`
-	EndpointURL string `toml:"endpoint_url"`
-
 	Namespace             string `toml:"namespace"` // CloudWatch Metrics Namespace
 	HighResolutionMetrics bool   `toml:"high_resolution_metrics"`
 	svc                   *cloudwatch.CloudWatch
@@ -31,6 +22,8 @@ type CloudWatch struct {
 	WriteStatistics bool `toml:"write_statistics"`
 
 	Log telegraf.Logger `toml:"-"`
+
+	internalaws.CredentialConfig
 }
 
 type statisticType int
@@ -202,18 +195,7 @@ func (c *CloudWatch) Description() string {
 }
 
 func (c *CloudWatch) Connect() error {
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      c.Region,
-		AccessKey:   c.AccessKey,
-		SecretKey:   c.SecretKey,
-		RoleARN:     c.RoleARN,
-		Profile:     c.Profile,
-		Filename:    c.Filename,
-		Token:       c.Token,
-		EndpointURL: c.EndpointURL,
-	}
-	configProvider := credentialConfig.Credentials()
-	c.svc = cloudwatch.New(configProvider)
+	c.svc = cloudwatch.New(c.CredentialConfig.Credentials())
 	return nil
 }
 
