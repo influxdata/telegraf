@@ -85,15 +85,15 @@ func (s fakeServer) checkResp(t *testing.T, expCode int) {
 	}
 }
 
-func (s fakeServer) checkAuthCount(t *testing.T, expCount int) {
+func (s fakeServer) checkAuthCount(t *testing.T, atLeast int32) {
 	t.Helper()
-	require.EqualValues(t, expCount, atomic.LoadInt32(s.int32))
+	require.GreaterOrEqual(t, atomic.LoadInt32(s.int32), atLeast)
 }
 
 func TestAuthConfig_Start(t *testing.T) {
 	const (
-		renewal      = 20 * time.Millisecond
-		renewalCheck = 55 * time.Millisecond
+		renewal      = 10 * time.Millisecond
+		renewalCheck = 5 * renewal
 	)
 	type fields struct {
 		Method   string
