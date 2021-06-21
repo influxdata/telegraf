@@ -242,7 +242,7 @@ func (logstash *Logstash) gatherJVMStats(url string, accumulator telegraf.Accumu
 	return nil
 }
 
-// gatherJVMStats gather the Process metrics and add results to the accumulator
+// gatherProcessStats gather the Process metrics and add results to the accumulator
 func (logstash *Logstash) gatherProcessStats(url string, accumulator telegraf.Accumulator) error {
 	processStats := &ProcessStats{}
 
