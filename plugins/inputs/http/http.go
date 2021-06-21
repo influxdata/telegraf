@@ -6,22 +6,14 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/cookiejar"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-)
-
-var (
-	defaultCookieAuthRenewal = 5 * time.Minute
-	defaultCookieAuthMethod  = http.MethodPost
 )
 
 type HTTP struct {
@@ -35,12 +27,6 @@ type HTTP struct {
 	// HTTP Basic Auth Credentials
 	Username string `toml:"username"`
 	Password string `toml:"password"`
-
-	// Cookie authentication
-	CookieAuthURL     string          `toml:"cookie_auth_url"`
-	CookieAuthMethod  string          `toml:"cookie_auth_method"`
-	CookieAuthBody    string          `toml:"cookie_auth_body"`
-	CookieAuthRenewal config.Duration `toml:"cookie_auth_renewal"`
 
 	// Absolute path to file with Bearer token
 	BearerToken string `toml:"bearer_token"`
@@ -78,12 +64,6 @@ var sampleConfig = `
   ## HTTP entity-body to send with POST/PUT requests.
   # body = ""
 
-  ## Cookie-based authentication
-  # cookie_auth_url = "https://localhost/authMe"
-  # cookie_auth_method = "POST" # default: POST
-  # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
-  # cookie_auth_renewal = "8h" # default: "5m"
-
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
@@ -103,6 +83,14 @@ var sampleConfig = `
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Optional Cookie authentication
+  # cookie_auth_url = "https://localhost/authMe"
+  # cookie_auth_method = "POST"
+  # cookie_auth_username = "username"
+  # cookie_auth_password = "pa$$word"
+  # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
+  # cookie_auth_renewal = "5m"
 
   ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"
@@ -136,65 +124,9 @@ func (h *HTTP) Init() error {
 
 	h.client = client
 
-	if h.CookieAuthURL != "" {
-		// cookie auth defaults
-		renewalInterval := defaultCookieAuthRenewal
-		if h.CookieAuthRenewal != 0 {
-			renewalInterval = time.Duration(h.CookieAuthRenewal)
-		}
-		if h.CookieAuthMethod == "" {
-			h.CookieAuthMethod = defaultCookieAuthMethod
-		}
-		// add cookie jar to HTTP client
-		if h.client.Jar, err = cookiejar.New(nil); err != nil {
-			return err
-		}
-		// start auth ticker
-		if authErr := h.startCookieAuth(renewalInterval); authErr != nil {
-			return authErr
-		}
-	}
-
 	// Set default as [200]
 	if len(h.SuccessStatusCodes) == 0 {
 		h.SuccessStatusCodes = []int{200}
-	}
-	return nil
-}
-
-func (h *HTTP) startCookieAuth(interval time.Duration) error {
-	// continual auth ticker
-	ticker := time.NewTicker(interval)
-	go func() {
-		for range ticker.C {
-			_ = h.doCookieAuth()
-		}
-	}()
-
-	// initial auth will immediately error out the Init() if auth fails
-	return h.doCookieAuth()
-}
-
-func (h *HTTP) doCookieAuth() error {
-	request, err := h.newRequest(h.CookieAuthURL, h.CookieAuthMethod, h.CookieAuthBody)
-	if err != nil {
-		return err
-	}
-	defer request.Body.Close()
-
-	errBadRespCode := fmt.Errorf("bad response code")
-	resp, respErr := h.client.Do(request)
-	if respErr != nil {
-		return respErr
-	}
-	if _, err = io.Copy(ioutil.Discard, resp.Body); err != nil {
-		return err
-	}
-	if err = resp.Body.Close(); err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%w: %v", errBadRespCode, resp.StatusCode)
 	}
 	return nil
 }
@@ -234,11 +166,41 @@ func (h *HTTP) gatherURL(
 	acc telegraf.Accumulator,
 	url string,
 ) error {
-	request, err := h.newRequest(url, h.Method, h.Body)
+	body, err := makeRequestBodyReader(h.ContentEncoding, h.Body)
 	if err != nil {
 		return err
 	}
-	defer request.Body.Close()
+	defer body.Close()
+
+	request, err := http.NewRequest(h.Method, url, body)
+	if err != nil {
+		return err
+	}
+
+	if h.BearerToken != "" {
+		token, err := ioutil.ReadFile(h.BearerToken)
+		if err != nil {
+			return err
+		}
+		bearer := "Bearer " + strings.Trim(string(token), "\n")
+		request.Header.Set("Authorization", bearer)
+	}
+
+	if h.ContentEncoding == "gzip" {
+		request.Header.Set("Content-Encoding", "gzip")
+	}
+
+	for k, v := range h.Headers {
+		if strings.ToLower(k) == "host" {
+			request.Host = v
+		} else {
+			request.Header.Add(k, v)
+		}
+	}
+
+	if h.Username != "" || h.Password != "" {
+		request.SetBasicAuth(h.Username, h.Password)
+	}
 
 	resp, err := h.client.Do(request)
 	if err != nil {
@@ -281,46 +243,8 @@ func (h *HTTP) gatherURL(
 	return nil
 }
 
-func (h *HTTP) newRequest(url, method, body string) (*http.Request, error) {
-	bodyRC, err := makeRequestBodyReader(h.ContentEncoding, body)
-	if err != nil {
-		return nil, err
-	}
-
-	request, err := http.NewRequest(method, url, bodyRC)
-	if err != nil {
-		return nil, err
-	}
-
-	if h.BearerToken != "" {
-		token, err := ioutil.ReadFile(h.BearerToken)
-		if err != nil {
-			return nil, err
-		}
-		bearer := "Bearer " + strings.Trim(string(token), "\n")
-		request.Header.Set("Authorization", bearer)
-	}
-
-	if h.ContentEncoding == "gzip" {
-		request.Header.Set("Content-Encoding", "gzip")
-	}
-
-	for k, v := range h.Headers {
-		if strings.ToLower(k) == "host" {
-			request.Host = v
-		} else {
-			request.Header.Add(k, v)
-		}
-	}
-
-	if h.Username != "" || h.Password != "" {
-		request.SetBasicAuth(h.Username, h.Password)
-	}
-	return request, nil
-}
-
 func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) {
-	reader := strings.NewReader(body)
+	var reader io.Reader = strings.NewReader(body)
 	if contentEncoding == "gzip" {
 		rc, err := internal.CompressWithGzip(reader)
 		if err != nil {

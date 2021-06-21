@@ -8,9 +8,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
-	"time"
-
-	"github.com/influxdata/telegraf/config"
 
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	oauth "github.com/influxdata/telegraf/plugins/common/oauth"
@@ -336,59 +333,4 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-}
-
-func TestHTTPwithCookieAuth(t *testing.T) {
-	testCookie := &http.Cookie{
-		Name:  "test-cookie",
-		Value: "this is an auth cookie",
-	}
-	var authCount int
-	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/endpoint" {
-			_, err := r.Cookie("test-cookie")
-			require.NoError(t, err)
-			_, _ = w.Write([]byte(simpleJSON))
-		} else if r.URL.Path == "/auth" {
-			authCount++
-			http.SetCookie(w, testCookie)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer fakeServer.Close()
-
-	url := fakeServer.URL + "/endpoint"
-	plugin := &plugin.HTTP{
-		URLs:              []string{url},
-		CookieAuthURL:     fakeServer.URL + "/auth",
-		CookieAuthRenewal: config.Duration(20 * time.Millisecond),
-	}
-	metricName := "metricName"
-
-	p, _ := parsers.NewParser(&parsers.Config{
-		DataFormat: "json",
-		MetricName: "metricName",
-	})
-	plugin.SetParser(p)
-
-	require.NoError(t, plugin.Init())
-	require.Equal(t, 1, authCount)
-	require.Equal(t, http.MethodPost, plugin.CookieAuthMethod)
-
-	// wait for cookie auth renewal
-	time.Sleep(59 * time.Millisecond)
-	require.Equal(t, 3, authCount)
-
-	var acc testutil.Accumulator
-	require.NoError(t, acc.GatherError(plugin.Gather))
-	require.Len(t, acc.Metrics, 1)
-
-	// basic check to see if we got the right field, value and tag
-	var metric = acc.Metrics[0]
-	require.Equal(t, metric.Measurement, metricName)
-	require.Len(t, acc.Metrics[0].Fields, 1)
-	require.Equal(t, acc.Metrics[0].Fields["a"], 1.2)
-	require.Equal(t, acc.Metrics[0].Tags["url"], url)
-
 }
