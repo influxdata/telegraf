@@ -68,8 +68,11 @@ avoid cardinality issues:
   selector_exclude = ["*"]
 
   ## Optional TLS Config
+  ## Trusted root certificates for server
   # tls_ca = "/path/to/cafile"
+  ## Used for TLS client certificate authentication
   # tls_cert = "/path/to/certfile"
+  ## Used for TLS client certificate authentication
   # tls_key = "/path/to/keyfile"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
@@ -125,6 +128,26 @@ subjects:
   - kind: ServiceAccount
     name: telegraf
     namespace: default
+```
+
+## Quickstart in k3s
+
+When monitoring [k3s](https://k3s.io) server instances one can re-use already generated administration token.
+This is less secure than using the more restrictive dedicated telegraf user but more convienient to set up.
+
+```console
+# an empty token will make telegraf use the client cert/key files instead
+$ touch /run/telegraf-kubernetes-token
+# replace `telegraf` with the user the telegraf process is running as
+$ install -o telegraf -m400 /var/lib/rancher/k3s/server/tls/client-admin.crt /run/telegraf-kubernetes-cert
+$ install -o telegraf -m400 /var/lib/rancher/k3s/server/tls/client-admin.key /run/telegraf-kubernetes-key
+```
+
+```toml
+[kube_inventory]
+bearer_token = "/run/telegraf-kubernetes-token"
+tls_cert = "/run/telegraf-kubernetes-cert"
+tls_key = "/run/telegraf-kubernetes-key"
 ```
 
 ### Metrics:
