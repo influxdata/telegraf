@@ -9,14 +9,16 @@ import (
 )
 
 type CredentialConfig struct {
-	Region      string
-	AccessKey   string
-	SecretKey   string
-	RoleARN     string
-	Profile     string
-	Filename    string
-	Token       string
-	EndpointURL string
+	Region               string
+	AccessKey            string
+	SecretKey            string
+	RoleARN              string
+	Profile              string
+	Filename             string
+	Token                string
+	EndpointURL          string
+	RoleSessionName      string
+	WebIdentityTokenFile string
 }
 
 func (c *CredentialConfig) Credentials() client.ConfigProvider {
@@ -49,6 +51,12 @@ func (c *CredentialConfig) assumeCredentials() client.ConfigProvider {
 		Region:   aws.String(c.Region),
 		Endpoint: &c.EndpointURL,
 	}
-	config.Credentials = stscreds.NewCredentials(rootCredentials, c.RoleARN)
+
+	if c.WebIdentityTokenFile != "" {
+		config.Credentials = stscreds.NewWebIdentityCredentials(rootCredentials, c.RoleARN, c.RoleSessionName, c.WebIdentityTokenFile)
+	} else {
+		config.Credentials = stscreds.NewCredentials(rootCredentials, c.RoleARN)
+	}
+
 	return session.New(config)
 }
