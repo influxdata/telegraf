@@ -484,6 +484,8 @@ func (p *Parser) isIncluded(key string, val gjson.Result) bool {
 	if len(p.currentSettings.IncludedKeys) == 0 {
 		return true
 	}
+	// automatically adds tags to included_keys so it does NOT have to be repeated in the config
+	p.currentSettings.IncludedKeys = append(p.currentSettings.IncludedKeys, p.currentSettings.Tags...)
 	for _, i := range p.currentSettings.IncludedKeys {
 		if i == key {
 			return true
