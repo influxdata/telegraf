@@ -17,6 +17,7 @@ const (
 	defaultHighWaterMark          = 1000
 	defaultMaxUndeliveredMessages = 1000
 	defaultSubscription           = ""
+	defaultAffinity               = 0
 	socketBufferSize              = 1000
 )
 
@@ -27,6 +28,7 @@ type zmqConsumer struct {
 	Endpoints     []string `toml:"endpoints"`
 	Subscriptions []string `toml:"subscriptions"`
 	HighWaterMark int      `toml:"high_water_mark"`
+	Affinity      int      `toml:"affinity"`
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
@@ -54,6 +56,17 @@ var sampleConfig = `
   ## See: http://api.zeromq.org/4-1:zmq-setsockopt#toc28
   # high_water_mark = 1000
 
+  ## I/O thread affinity
+  ## Affinity determines which threads from the ØMQ I/O thread pool 
+  ## associated with the socket's context shall handle newly created 
+  ## connections. A value of zero specifies no affinity, meaning that 
+  ## work shall be distributed fairly among all ØMQ I/O threads in the 
+  ## thread pool. For non-zero values, the lowest bit corresponds to 
+  ## thread 1, second lowest bit to thread 2 and so on.
+  ## The default value is 0.
+  ## See: http://api.zeromq.org/4-1:zmq-setsockopt#toc3
+  # affinity = 0
+  
   ## Maximum messages to read from the broker that have not been written by an
   ## output. For best throughput set based on the number of metrics within
   ## each message and the size of the output's metric_batch_size.
@@ -143,7 +156,15 @@ func (z *zmqConsumer) connect() (*zmq.Socket, error) {
 	}
 
 	// set receive high water mark
-	socket.SetRcvhwm(z.HighWaterMark)
+	err = socket.SetRcvhwm(z.HighWaterMark)
+	if err != nil {
+		return nil, err
+	}
+	// set I/O thread affinity
+	err = socket.SetAffinity(uint64(z.Affinity))
+	if err != nil {
+		return nil, err
+	}
 
 	// set subscription filters
 	for _, filter := range z.Subscriptions {

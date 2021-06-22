@@ -19,6 +19,7 @@ func TestInit(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, plugin.HighWaterMark, defaultHighWaterMark)
+		require.Equal(t, plugin.Affinity, 0)
 		require.Equal(t, plugin.MaxUndeliveredMessages, defaultMaxUndeliveredMessages)
 		require.Len(t, plugin.Subscriptions, 1)
 		require.Contains(t, plugin.Subscriptions, defaultSubscription)
