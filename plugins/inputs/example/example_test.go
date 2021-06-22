@@ -23,15 +23,15 @@ func TestInitDefault(t *testing.T) {
 	// ATTENTION: Always initialze the "Log" as you will get SIGSEGV otherwise.
 	plugin := &Example{
 		DeviceName: "test",
-		Timeout: config.Duration(100 * time.Millisecond),
-		Log: testutil.Logger{},
+		Timeout:    config.Duration(100 * time.Millisecond),
+		Log:        testutil.Logger{},
 	}
 
 	// Test the initialization succeeds
 	require.NoError(t, plugin.Init())
 
 	// Also test that default values are set correctly
-	require.Equal(t, config.Duration(100 * time.Millisecond), plugin.Timeout)
+	require.Equal(t, config.Duration(100*time.Millisecond), plugin.Timeout)
 	require.Equal(t, "test", plugin.DeviceName)
 	require.Equal(t, int64(2), plugin.NumberFields)
 }
@@ -45,13 +45,13 @@ func TestInitFail(t *testing.T) {
 	// Eventhough it seems overkill here for the example plugin, we reuse this structure
 	// later for checking the metrics
 	tests := []struct {
-		name   string
-		plugin *Example
+		name     string
+		plugin   *Example
 		expected string
 	}{
 		{
-			name: "all empty",
-			plugin: &Example{},
+			name:     "all empty",
+			plugin:   &Example{},
 			expected: "device name cannot be empty",
 		},
 	}
@@ -74,14 +74,14 @@ func TestFixedValue(t *testing.T) {
 
 	// We again setup a table-test here to specify "setting" - "expected output metric" pairs.
 	tests := []struct {
-		name   string
-		plugin *Example
+		name     string
+		plugin   *Example
 		expected []telegraf.Metric
 	}{
 		{
 			name: "count only",
 			plugin: &Example{
-				DeviceName: "test",
+				DeviceName:   "test",
 				NumberFields: 1,
 			},
 			expected: []telegraf.Metric{
@@ -129,7 +129,7 @@ func TestFixedValue(t *testing.T) {
 						"device": "test",
 					},
 					map[string]interface{}{
-						"count": 1,
+						"count":  1,
 						"field1": float64(0),
 					},
 					time.Unix(0, 0),
@@ -140,7 +140,7 @@ func TestFixedValue(t *testing.T) {
 						"device": "test",
 					},
 					map[string]interface{}{
-						"count": 2,
+						"count":  2,
 						"field1": float64(0),
 					},
 					time.Unix(0, 0),
@@ -151,7 +151,7 @@ func TestFixedValue(t *testing.T) {
 						"device": "test",
 					},
 					map[string]interface{}{
-						"count": 3,
+						"count":  3,
 						"field1": float64(0),
 					},
 					time.Unix(0, 0),
@@ -161,7 +161,7 @@ func TestFixedValue(t *testing.T) {
 		{
 			name: "more fields",
 			plugin: &Example{
-				DeviceName: "test",
+				DeviceName:   "test",
 				NumberFields: 4,
 			},
 			expected: []telegraf.Metric{
@@ -171,7 +171,7 @@ func TestFixedValue(t *testing.T) {
 						"device": "test",
 					},
 					map[string]interface{}{
-						"count": 1,
+						"count":  1,
 						"field1": float64(0),
 						"field2": float64(0),
 						"field3": float64(0),
@@ -184,7 +184,7 @@ func TestFixedValue(t *testing.T) {
 						"device": "test",
 					},
 					map[string]interface{}{
-						"count": 2,
+						"count":  2,
 						"field1": float64(0),
 						"field2": float64(0),
 						"field3": float64(0),
@@ -197,7 +197,7 @@ func TestFixedValue(t *testing.T) {
 						"device": "test",
 					},
 					map[string]interface{}{
-						"count": 3,
+						"count":  3,
 						"field1": float64(0),
 						"field2": float64(0),
 						"field3": float64(0),
@@ -232,22 +232,21 @@ func TestFixedValue(t *testing.T) {
 	}
 }
 
-
 func TestRandomValue(t *testing.T) {
 	// Sometimes, you cannot know the exact outcome of the gather cycle e.g. if the gathering involves random data.
 	// However, you should check the result nevertheless, applying as many conditions as you can.
 
 	// We again setup a table-test here to specify "setting" - "expected output metric" pairs.
 	tests := []struct {
-		name   string
-		plugin *Example
+		name     string
+		plugin   *Example
 		template telegraf.Metric
 	}{
 		{
 			name: "count only",
 			plugin: &Example{
-				DeviceName: "test",
-				NumberFields: 1,
+				DeviceName:           "test",
+				NumberFields:         1,
 				EnableRandomVariable: true,
 			},
 			template: testutil.MustMetric(
@@ -264,7 +263,7 @@ func TestRandomValue(t *testing.T) {
 		{
 			name: "default settings",
 			plugin: &Example{
-				DeviceName: "test",
+				DeviceName:           "test",
 				EnableRandomVariable: true,
 			},
 			template: testutil.MustMetric(
@@ -273,7 +272,7 @@ func TestRandomValue(t *testing.T) {
 					"device": "test",
 				},
 				map[string]interface{}{
-					"count": 1,
+					"count":  1,
 					"field1": float64(0),
 				},
 				time.Unix(0, 0),
@@ -282,8 +281,8 @@ func TestRandomValue(t *testing.T) {
 		{
 			name: "more fields",
 			plugin: &Example{
-				DeviceName: "test",
-				NumberFields: 4,
+				DeviceName:           "test",
+				NumberFields:         4,
 				EnableRandomVariable: true,
 			},
 			template: testutil.MustMetric(
@@ -292,7 +291,7 @@ func TestRandomValue(t *testing.T) {
 					"device": "test",
 				},
 				map[string]interface{}{
-					"count": 1,
+					"count":  1,
 					"field1": float64(0),
 					"field2": float64(0),
 					"field3": float64(0),
@@ -343,14 +342,14 @@ func TestGatherFail(t *testing.T) {
 
 	// We again setup a table-test here to specify "setting" - "expected error" pair.
 	tests := []struct {
-		name   string
-		plugin *Example
+		name     string
+		plugin   *Example
 		expected string
 	}{
 		{
 			name: "too many fields",
 			plugin: &Example{
-				DeviceName: "test",
+				DeviceName:   "test",
 				NumberFields: 11,
 			},
 			expected: "too many fields",
@@ -377,16 +376,16 @@ func TestRandomValueFailPartial(t *testing.T) {
 
 	// We again setup a table-test here to specify "setting" - "expected output metric" and "errors".
 	tests := []struct {
-		name   string
-		plugin *Example
-		expected []telegraf.Metric
+		name        string
+		plugin      *Example
+		expected    []telegraf.Metric
 		expectedErr string
 	}{
 		{
 			name: "flappy gather",
 			plugin: &Example{
-				DeviceName: "flappy",
-				NumberFields: 1,
+				DeviceName:           "flappy",
+				NumberFields:         1,
 				EnableRandomVariable: true,
 			},
 			expected: []telegraf.Metric{
