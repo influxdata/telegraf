@@ -13,12 +13,13 @@ maybe useful for users to review Amazons official documentation which is availab
 
 This plugin uses a credential chain for Authentication with the Kinesis API endpoint. In the following order the plugin
 will attempt to authenticate.
-1. Assumed credentials via STS if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules)
-2. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
-3. Shared profile from `profile` attribute
-4. [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables)
-5. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
-6. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
+1. Web identity provider credentials via STS if `role_arn` and `web_identity_token_file` are specified
+2. Assumed credentials via STS if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules)
+3. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
+4. Shared profile from `profile` attribute
+5. [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables)
+6. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
+7. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
 
 
 ## Config
