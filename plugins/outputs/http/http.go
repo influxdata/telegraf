@@ -94,6 +94,7 @@ type HTTP struct {
 	ContentEncoding string            `toml:"content_encoding"`
 	tls.ClientConfig
 	httpconfig.HTTPClientConfig
+	Log telegraf.Logger `toml:"-"`
 
 	client     *http.Client
 	serializer serializers.Serializer
@@ -113,7 +114,7 @@ func (h *HTTP) Connect() error {
 	}
 
 	ctx := context.Background()
-	client, err := h.HTTPClientConfig.CreateClient(ctx)
+	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err
 	}

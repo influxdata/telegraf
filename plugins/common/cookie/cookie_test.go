@@ -12,6 +12,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/cookie"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -188,7 +189,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				renewal:  renewal,
 				endpoint: authEndpointWithBasicAuth,
 			},
-			wantErr: fmt.Errorf("bad response code: 401"),
+			wantErr: fmt.Errorf("cookie auth renewal received status code: 401 (Unauthorized)"),
 			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
 				// should have never Cookie Authed
 				srv.checkAuthCount(t, 0)
@@ -229,7 +230,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				renewal:  renewal,
 				endpoint: authEndpointWithBody,
 			},
-			wantErr: fmt.Errorf("bad response code: 401"),
+			wantErr: fmt.Errorf("cookie auth renewal received status code: 401 (Unauthorized)"),
 			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
 				// should have never Cookie Authed
 				srv.checkAuthCount(t, 0)
@@ -254,7 +255,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				Renewal:  config.Duration(tt.args.renewal),
 			}
 
-			if err := c.Start(srv.Client()); tt.wantErr != nil {
+			if err := c.Start(srv.Client(), testutil.Logger{Name: "cookie_auth"}); tt.wantErr != nil {
 				require.EqualError(t, err, tt.wantErr.Error())
 			} else {
 				require.NoError(t, err)

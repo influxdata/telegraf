@@ -35,6 +35,7 @@ type HTTP struct {
 
 	client *http.Client
 	httpconfig.HTTPClientConfig
+	Log telegraf.Logger `toml:"-"`
 
 	// The parser will automatically be set by Telegraf core code because
 	// this plugin implements the ParserInput interface (i.e. the SetParser method)
@@ -118,7 +119,7 @@ func (*HTTP) Description() string {
 
 func (h *HTTP) Init() error {
 	ctx := context.Background()
-	client, err := h.HTTPClientConfig.CreateClient(ctx)
+	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err
 	}

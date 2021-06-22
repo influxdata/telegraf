@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/sirupsen/logrus"
 )
 
 type CookieAuthConfig struct {
@@ -27,7 +27,7 @@ type CookieAuthConfig struct {
 	client *http.Client
 }
 
-func (c *CookieAuthConfig) Start(client *http.Client) (err error) {
+func (c *CookieAuthConfig) Start(client *http.Client, log telegraf.Logger) (err error) {
 	c.client = client
 
 	if c.Method == "" {
@@ -39,20 +39,23 @@ func (c *CookieAuthConfig) Start(client *http.Client) (err error) {
 		return err
 	}
 
+	if err = c.auth(); err != nil {
+		return err
+	}
+
 	// continual auth renewal if set
 	if c.Renewal > 0 {
 		ticker := time.NewTicker(time.Duration(c.Renewal))
 		go func() {
 			for range ticker.C {
-				if err := c.auth(); err != nil {
-					logrus.WithError(err).Error("cookie auth renewal failure")
+				if err = c.auth(); err != nil {
+					log.Errorf("Error in plugin: [url=%v]: %v", c.URL, err)
 				}
 			}
 		}()
 	}
 
-	// initial auth will immediately error out the Init() if auth fails
-	return c.auth()
+	return nil
 }
 
 func (c *CookieAuthConfig) auth() error {
@@ -82,7 +85,10 @@ func (c *CookieAuthConfig) auth() error {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad response code: %v", resp.StatusCode)
+		return fmt.Errorf("cookie auth renewal received status code: %v (%v)",
+			resp.StatusCode,
+			http.StatusText(resp.StatusCode),
+		)
 	}
 
 	return nil
