@@ -93,11 +93,11 @@ func (m *Example) Gather(acc telegraf.Accumulator) error {
 
 	// For illustration we gather three metrics in one go
 	for run := 0; run < 3; run++ {
-		// Imageine an error occurs here but you want to keep the other
+		// Imagine an error occurs here but you want to keep the other
 		// metrics, then you cannot simply return, as this would drop
 		// all later metrics. Simply accumulate errors in this case
 		// and ignore the metric.
-		if m.EnableRandomVariable && run > 2 {
+		if m.EnableRandomVariable && m.DeviceName == "flappy" && run > 1 {
 			acc.AddError(fmt.Errorf("too many runs for random values"))
 			continue
 		}
