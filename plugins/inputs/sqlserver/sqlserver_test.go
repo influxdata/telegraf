@@ -525,7 +525,7 @@ func TestSqlServer_QueryDataCache(t *testing.T) {
 			defer wg.Done()
 			<-c
 			for i := 0; i < iterCount; i++ {
-				_,_ = dc.Get(currEntry)
+				_, _ = dc.Get(currEntry)
 			}
 		}(currEntry)
 	}
