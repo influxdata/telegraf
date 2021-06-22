@@ -16,12 +16,14 @@ import (
 )
 
 const (
-	reqUser                   = "testUser"
-	reqPasswd                 = "testPassword"
-	reqBody                   = "a body"
-	authEndpoint              = "/auth"
-	authEndpointWithBasicAuth = "/authWithCreds"
-	authEndpointWithBody      = "/authWithBody"
+	reqUser   = "testUser"
+	reqPasswd = "testPassword"
+	reqBody   = "a body"
+
+	authEndpointNoCreds                   = "/auth"
+	authEndpointWithBasicAuth             = "/authWithCreds"
+	authEndpointWithBasicAuthOnlyUsername = "/authWithCredsUser"
+	authEndpointWithBody                  = "/authWithBody"
 )
 
 var fakeCookie = &http.Cookie{
@@ -38,10 +40,13 @@ func newFakeServer(t *testing.T) fakeServer {
 	var c int32
 	return fakeServer{
 		Server: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			switch r.URL.Path {
-			case authEndpoint:
+			authed := func() {
 				atomic.AddInt32(&c, 1)        // increment auth counter
 				http.SetCookie(w, fakeCookie) // set fake cookie
+			}
+			switch r.URL.Path {
+			case authEndpointNoCreds:
+				authed()
 			case authEndpointWithBody:
 				body, err := ioutil.ReadAll(r.Body)
 				require.NoError(t, err)
@@ -49,16 +54,21 @@ func newFakeServer(t *testing.T) fakeServer {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
-				atomic.AddInt32(&c, 1)        // increment auth counter
-				http.SetCookie(w, fakeCookie) // set fake cookie
+				authed()
 			case authEndpointWithBasicAuth:
 				u, p, ok := r.BasicAuth()
 				if !ok || u != reqUser || p != reqPasswd {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
-				atomic.AddInt32(&c, 1)        // increment auth counter
-				http.SetCookie(w, fakeCookie) // set fake cookie
+				authed()
+			case authEndpointWithBasicAuthOnlyUsername:
+				u, p, ok := r.BasicAuth()
+				if !ok || u != reqUser || p != "" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				authed()
 			default:
 				// ensure cookie exists on request
 				if _, err := r.Cookie(fakeCookie.Name); err != nil {
@@ -113,21 +123,26 @@ func TestAuthConfig_Start(t *testing.T) {
 		assert  func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer)
 	}{
 		{
-			name:    "sets renewal default",
-			wantErr: fmt.Errorf("bad response code: 403"),
+			name: "zero renewal does not renew",
+			args: args{
+				renewal:  0,
+				endpoint: authEndpointNoCreds,
+			},
 			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
-				// default renewal set
-				require.EqualValues(t, 5*time.Minute, c.Renewal)
-				// should have never Cookie Authed
-				srv.checkAuthCount(t, 0)
-				srv.checkResp(t, http.StatusForbidden)
+				// should have Cookie Authed once
+				srv.checkAuthCount(t, 1)
+				srv.checkResp(t, http.StatusOK)
+				time.Sleep(renewalCheck)
+				// should have never Cookie Authed again
+				srv.checkAuthCount(t, 1)
+				srv.checkResp(t, http.StatusOK)
 			},
 		},
 		{
 			name: "success no creds, no body, default method",
 			args: args{
 				renewal:  renewal,
-				endpoint: authEndpoint,
+				endpoint: authEndpointNoCreds,
 			},
 			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
 				// should have Cookie Authed once

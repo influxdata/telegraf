@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/sirupsen/logrus"
 )
 
 type CookieAuthConfig struct {
@@ -29,32 +30,29 @@ type CookieAuthConfig struct {
 func (c *CookieAuthConfig) Start(client *http.Client) (err error) {
 	c.client = client
 
-	c.setDefaults()
+	if c.Method == "" {
+		c.Method = http.MethodPost
+	}
 
 	// add cookie jar to HTTP client
 	if c.client.Jar, err = cookiejar.New(nil); err != nil {
 		return err
 	}
 
-	// continual auth renewal
-	ticker := time.NewTicker(time.Duration(c.Renewal))
-	go func() {
-		for range ticker.C {
-			_ = c.auth()
-		}
-	}()
+	// continual auth renewal if set
+	if c.Renewal > 0 {
+		ticker := time.NewTicker(time.Duration(c.Renewal))
+		go func() {
+			for range ticker.C {
+				if err := c.auth(); err != nil {
+					logrus.WithError(err).Error("cookie auth renewal failure")
+				}
+			}
+		}()
+	}
 
 	// initial auth will immediately error out the Init() if auth fails
 	return c.auth()
-}
-
-func (c *CookieAuthConfig) setDefaults() {
-	if c.Renewal == 0 {
-		c.Renewal = config.Duration(5 * time.Minute)
-	}
-	if c.Method == "" {
-		c.Method = http.MethodPost
-	}
 }
 
 func (c *CookieAuthConfig) auth() error {
@@ -69,7 +67,7 @@ func (c *CookieAuthConfig) auth() error {
 		return err
 	}
 
-	if c.Username != "" || c.Password != "" {
+	if c.Username != "" {
 		req.SetBasicAuth(c.Username, c.Password)
 	}
 

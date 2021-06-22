@@ -55,6 +55,7 @@ var sampleConfig = `
   # cookie_auth_username = "username"
   # cookie_auth_password = "pa$$word"
   # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
+  ## cookie_auth_renewal not set or set to "0" will auth once and never renew the cookie
   # cookie_auth_renewal = "5m"
 
   ## Data format to output.
