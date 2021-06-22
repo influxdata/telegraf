@@ -3,6 +3,7 @@ package sqlserver
 import (
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -496,6 +497,47 @@ func TestSqlServer_AGQueryFieldsOutputBasedOnSQLServerVersion(t *testing.T) {
 	require.False(t, acc2012.HasField("sqlserver_hadr_dbreplica_states", "secondary_lag_seconds"))
 	s2019.Stop()
 	s2012.Stop()
+}
+
+func TestSqlServer_QueryDataCache(t *testing.T) {
+	// The test checks that QueryDataCache properly handles race condition
+
+	cacheEntries := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i"}
+	iterCount := 40
+	dc := InitQueryDataCache()
+	var wg sync.WaitGroup
+	c := make(chan bool)
+
+	for _, currEntry := range cacheEntries {
+		wg.Add(1)
+		go func(currEntry string) {
+			defer wg.Done()
+			<-c
+			for i := 0; i < iterCount; i++ {
+				dc.Set(currEntry, currEntry)
+			}
+		}(currEntry)
+	}
+
+	for _, currEntry := range cacheEntries {
+		wg.Add(1)
+		go func(currEntry string) {
+			defer wg.Done()
+			<-c
+			for i := 0; i < iterCount; i++ {
+				_,_ = dc.Get(currEntry)
+			}
+		}(currEntry)
+	}
+
+	close(c)
+	wg.Wait()
+
+	for _, currEntry := range cacheEntries {
+		val, isOk := dc.Get(currEntry)
+		require.True(t, isOk)
+		require.Equal(t, currEntry, val)
+	}
 }
 
 const mockPerformanceMetrics = `measurement;servername;type;Point In Time Recovery;Available physical memory (bytes);Average pending disk IO;Average runnable tasks;Average tasks;Buffer pool rate (bytes/sec);Connection memory per connection (bytes);Memory grant pending;Page File Usage (%);Page lookup per batch request;Page split per batch request;Readahead per page read;Signal wait (%);Sql compilation per batch request;Sql recompilation per batch request;Total target memory ratio
