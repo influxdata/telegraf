@@ -66,8 +66,7 @@ func (c *X509Cert) SampleConfig() string {
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
 		if strings.HasPrefix(source, "file://") ||
-			strings.HasPrefix(source, "/") ||
-			strings.Index(source, ":\\") != 1 {
+			strings.HasPrefix(source, "/") {
 			source = filepath.ToSlash(strings.TrimPrefix(source, "file://"))
 			g, err := globpath.Compile(source)
 			if err != nil {
@@ -82,7 +81,6 @@ func (c *X509Cert) sourcesToURLs() error {
 			if err != nil {
 				return fmt.Errorf("failed to parse cert location - %s", err.Error())
 			}
-
 			c.locations = append(c.locations, u)
 		}
 	}
@@ -126,6 +124,9 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		c.tlsCfg.InsecureSkipVerify = true
 		conn := tls.Client(ipConn, c.tlsCfg)
 		defer conn.Close()
+
+		// reset SNI between requests
+		defer func() { c.tlsCfg.ServerName = "" }()
 
 		hsErr := conn.Handshake()
 		if hsErr != nil {
@@ -313,6 +314,14 @@ func (c *X509Cert) Init() error {
 		tlsCfg = &tls.Config{}
 	}
 
+	if tlsCfg.ServerName != "" && c.ServerName == "" {
+		// Save SNI from tlsCfg.ServerName to c.ServerName and reset tlsCfg.ServerName.
+		// We need to reset c.tlsCfg.ServerName for each certificate when there's
+		// no explicit SNI (c.tlsCfg.ServerName or c.ServerName) otherwise we'll always (re)use
+		// first uri HostName for all certs (see issue 8914)
+		c.ServerName = tlsCfg.ServerName
+		tlsCfg.ServerName = ""
+	}
 	c.tlsCfg = tlsCfg
 
 	return nil
