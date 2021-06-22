@@ -35,6 +35,7 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   #token = ""
   #role_arn = ""
   #web_identity_token_file = ""
+  #role_session_name = ""
   #profile = ""
   #shared_credential_file = ""
 

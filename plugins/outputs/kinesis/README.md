@@ -21,6 +21,9 @@ will attempt to authenticate.
 6. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
 7. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
 
+If you are using credentials from a web identity provider, you can specify the session name using `role_session_name`. If
+left empty, the current timestamp will be used.
+
 
 ## Config
 

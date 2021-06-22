@@ -72,6 +72,7 @@ var sampleConfig = `
   #token = ""
   #role_arn = ""
   #web_identity_token_file = ""
+  #role_session_name = ""
   #profile = ""
   #shared_credential_file = ""
   

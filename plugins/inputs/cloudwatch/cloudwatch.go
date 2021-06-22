@@ -98,7 +98,8 @@ func (c *CloudWatch) SampleConfig() string {
   # secret_key = ""
   # token = ""
   # role_arn = ""
-  #web_identity_token_file = ""
+  # web_identity_token_file = ""
+  # role_session_name = ""
   # profile = ""
   # shared_credential_file = ""
 
