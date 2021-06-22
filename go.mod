@@ -110,7 +110,7 @@ require (
 	github.com/sensu/sensu-go/api/core/v2 v2.6.0
 	github.com/shirou/gopsutil v3.21.3+incompatible
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
-	github.com/signalfx/golib/v3 v3.3.0
+	github.com/signalfx/golib/v3 v3.3.34
 	github.com/sirupsen/logrus v1.7.0
 	github.com/sleepinggenius2/gosmi v0.4.3
 	github.com/snowflakedb/gosnowflake v1.5.0
