@@ -17,8 +17,7 @@ const (
 	defaultHighWaterMark          = 1000
 	defaultMaxUndeliveredMessages = 1000
 	defaultSubscription           = ""
-	defaultAffinity               = 0
-	socketBufferSize              = 1000
+	channelBufferSize             = 1000
 )
 
 type empty struct{}
@@ -29,6 +28,7 @@ type zmqConsumer struct {
 	Subscriptions []string `toml:"subscriptions"`
 	HighWaterMark int      `toml:"high_water_mark"`
 	Affinity      int      `toml:"affinity"`
+	BufferSize    int      `toml:"receive_buffer_size"`
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
@@ -52,7 +52,8 @@ var sampleConfig = `
   # subscriptions = ["telegraf"]
 
   ## High water mark for inbound messages. Sets the ZMQ_RCVHWM option 
-  ## on the specified socket. The default value is 1000.
+  ## on the specified socket. 
+  ## The default value is 1000.
   ## See: http://api.zeromq.org/4-1:zmq-setsockopt#toc28
   # high_water_mark = 1000
 
@@ -67,6 +68,14 @@ var sampleConfig = `
   ## See: http://api.zeromq.org/4-1:zmq-setsockopt#toc3
   # affinity = 0
   
+  ## Kernel receive buffer size
+  ## Sets the underlying kernel receive buffer size for the socket to the 
+  ## specified size in bytes. A value of zero means leave the OS default
+  ## unchanged.
+  ## The default value is 0.
+  ## See: http://api.zeromq.org/4-1:zmq-setsockopt#toc27
+  # receive_buffer_size = 0
+
   ## Maximum messages to read from the broker that have not been written by an
   ## output. For best throughput set based on the number of metrics within
   ## each message and the size of the output's metric_batch_size.
@@ -123,7 +132,7 @@ func (z *zmqConsumer) Start(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	z.cancel = cancel
 
-	z.in = make(chan string, socketBufferSize)
+	z.in = make(chan string, channelBufferSize)
 
 	// start the message subscriber
 	z.wg.Add(1)
@@ -162,6 +171,11 @@ func (z *zmqConsumer) connect() (*zmq.Socket, error) {
 	}
 	// set I/O thread affinity
 	err = socket.SetAffinity(uint64(z.Affinity))
+	if err != nil {
+		return nil, err
+	}
+	// set kernel receive buffer size
+	err = socket.SetRcvbuf(z.BufferSize)
 	if err != nil {
 		return nil, err
 	}
