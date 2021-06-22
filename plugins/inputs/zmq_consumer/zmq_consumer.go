@@ -14,8 +14,10 @@ import (
 )
 
 const (
+	defaultHighWaterMark          = 1000
 	defaultMaxUndeliveredMessages = 1000
-	socketBufferSize              = 10
+	defaultSubscription           = ""
+	socketBufferSize              = 1000
 )
 
 type empty struct{}
@@ -24,6 +26,7 @@ type semaphore chan empty
 type zmqConsumer struct {
 	Endpoints     []string `toml:"endpoints"`
 	Subscriptions []string `toml:"subscriptions"`
+	HighWaterMark int      `toml:"high_water_mark"`
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
@@ -39,11 +42,17 @@ type zmqConsumer struct {
 }
 
 var sampleConfig = `
-  ## ZeroMQ publisher endpoints
-  # endpoints = ["tcp://localhost:6060"]
+  ## ZeroMQ publisher endpoint urls.
+  # endpoints = ["tcp://localhost:6001", "tcp://localhost:6002"]
 
-  ## Subscription filters
+  ## Subscription filters. If not specified the plugin  will subscribe 
+  ## to all incoming  messages.
   # subscriptions = ["telegraf"]
+
+  ## High water mark for inbound messages. Sets the ZMQ_RCVHWM option 
+  ## on the specified socket. The default value is 1000.
+  ## See: http://api.zeromq.org/4-1:zmq-setsockopt#toc28
+  # high_water_mark = 1000
 
   ## Maximum messages to read from the broker that have not been written by an
   ## output. For best throughput set based on the number of metrics within
@@ -79,14 +88,17 @@ func (z *zmqConsumer) Gather(_ telegraf.Accumulator) error {
 }
 
 func (z *zmqConsumer) Init() error {
-	if z.MaxUndeliveredMessages == 0 {
-		z.MaxUndeliveredMessages = defaultMaxUndeliveredMessages
-	}
 	if len(z.Endpoints) == 0 {
 		return fmt.Errorf("missing publisher endpoints")
 	}
 	if len(z.Subscriptions) == 0 {
-		return fmt.Errorf("missing subscription filters")
+		z.Subscriptions = append(z.Subscriptions, defaultSubscription)
+	}
+	if z.HighWaterMark == 0 {
+		z.HighWaterMark = defaultHighWaterMark
+	}
+	if z.MaxUndeliveredMessages == 0 {
+		z.MaxUndeliveredMessages = defaultMaxUndeliveredMessages
 	}
 	return nil
 }
@@ -129,6 +141,9 @@ func (z *zmqConsumer) connect() (*zmq.Socket, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// set receive high water mark
+	socket.SetRcvhwm(z.HighWaterMark)
 
 	// set subscription filters
 	for _, filter := range z.Subscriptions {

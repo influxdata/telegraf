@@ -11,14 +11,17 @@ import (
 func TestInit(t *testing.T) {
 	t.Run("default config", func(t *testing.T) {
 		plugin := &zmqConsumer{
-			Endpoints:     []string{""},
-			Subscriptions: []string{""},
+			Endpoints: []string{""},
 		}
 
 		err := plugin.Init()
 
 		require.NoError(t, err)
+
+		require.Equal(t, plugin.HighWaterMark, defaultHighWaterMark)
 		require.Equal(t, plugin.MaxUndeliveredMessages, defaultMaxUndeliveredMessages)
+		require.Len(t, plugin.Subscriptions, 1)
+		require.Contains(t, plugin.Subscriptions, defaultSubscription)
 	})
 
 	t.Run("invalid endpoints", func(t *testing.T) {
