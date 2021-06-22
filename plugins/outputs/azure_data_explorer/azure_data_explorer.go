@@ -112,7 +112,7 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 			}
 
 			//create a new ingestor client for the namespace
-			s.Ingesters[namespace], err = createIngestor(s.Client, s.Database, namespace)
+			s.Ingesters[namespace], err = s.CreateIngestor(s.Client, s.Database, namespace)
 			if err != nil {
 				return err
 			}
