@@ -1,15 +1,17 @@
-package inputs
+package example
 
 import (
 	"fmt"
 	"math/rand"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// MockPlugin struct should be named the same as the Plugin
-type MockPlugin struct {
+// Example struct should be named the same as the Plugin
+type Example struct {
 	// Example for a mandatory option to set a tag
 	DeviceName string `toml:"device_name"`
 
@@ -20,7 +22,7 @@ type MockPlugin struct {
 	EnableRandomVariable bool `toml:"enable_random"`
 
 	// Example of passing a duration option allowing the format of e.g. "100ms", "5m" or "1h"
-	Timout config.Duration `toml:"timeout"`
+	Timeout config.Duration `toml:"timeout"`
 
 	// Telegraf logging facility
 	// The exact name is important to allow automatic initialization by telegraf.
@@ -52,17 +54,17 @@ const sampleConfig = `
 `
 
 // Description will appear directly above the plugin definition in the config file
-func (m *MockPlugin) Description() string {
+func (m *Example) Description() string {
 	return `This is an example plugin`
 }
 
 // SampleConfig will populate the sample configuration portion of the plugin's configuration
-func (m *MockPlugin) SampleConfig() string {
+func (m *Example) SampleConfig() string {
 	return sampleConfig
 }
 
 // Init can be implemented to do one-time processing stuff like initializing variables
-func (m *MockPlugin) Init() error {
+func (m *Example) Init() error {
 	// Check your options according to your requirements
 	if m.DeviceName == "" {
 		return fmt.Errorf("device name cannot be empty")
@@ -83,7 +85,7 @@ func (m *MockPlugin) Init() error {
 }
 
 // Gather defines what data the plugin will gather.
-func (m *MockPlugin) Gather(acc telegraf.Accumulator) error {
+func (m *Example) Gather(acc telegraf.Accumulator) error {
 	// Imagine some completely arbitrary error occuring here
 	if m.NumberFields > 10 {
 		return fmt.Errorf("too many fields")
@@ -95,14 +97,14 @@ func (m *MockPlugin) Gather(acc telegraf.Accumulator) error {
 		// metrics, then you cannot simply return, as this would drop
 		// all later metrics. Simply accumulate errors in this case
 		// and ignore the metric.
-		if enable_random && run > 2 {
-			acc.AddError("too many runs for random values")
+		if m.EnableRandomVariable && run > 2 {
+			acc.AddError(fmt.Errorf("too many runs for random values"))
 			continue
 		}
 
 		// Construct the fields
 		fields := map[string]interface{}{"count": m.count}
-		for i := 1; i < m.NumberFields; i++ {
+		for i := int64(1); i < m.NumberFields; i++ {
 			name := fmt.Sprintf("field%d", i)
 			value := 0.0
 			if m.EnableRandomVariable {
@@ -121,4 +123,14 @@ func (m *MockPlugin) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+// Register the plugin
+func init() {
+	inputs.Add("example", func() telegraf.Input {
+		return &Example{
+			// Set the default timeout here to distinguish it from the user setting it to zero
+			Timeout: config.Duration(100 * time.Millisecond),
+		}
+	})
 }
