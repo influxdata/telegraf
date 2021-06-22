@@ -1,5 +1,7 @@
 # Azure Data Explorer
 
+The Azure Data Explorer plugin sends Telegraf metrics to [Azure Data Explorer](https://azure.microsoft.com/en-au/services/data-explorer/#security). The plugin assumes that there is a Database already exist in the Azure Data Explorer server. 
+
 ### Configuration:
 
 ```toml
@@ -28,3 +30,29 @@
   # data_format = "json"
 
 ```
+
+### Metrics Grouping
+
+The plugin will group the metrics by the metric name, and will send each group of metrics to an Azure Data Explorer table. If the table doesn't exist the plugin will create the table, if the table exists then the plugin will try to merge the Telegraf metric schema to the existing table. For more information about the merge process check the [`.create-merge` documentation](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/create-merge-table-command).
+
+The table name will match the `name` property of the metric, this means that the name of the metric should comply with the Azure Data Explorer table naming constraints. 
+
+### Tables' Schema
+
+The schema of the table will match the structure of the Telegraf `Metric` object. The corresponding Azure Data Explorer command would be like the following:
+```
+.create-merge table ['table-name']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime)
+```
+
+The corresponding table maping would be like the following:
+```
+.create-or-alter table ['table-name'] ingestion json mapping 'table-name_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'
+```
+
+**Note**: Since the `Metric` object is a complex type, the only output format supported is JSON, so make sure to set the `data_format` configuration in `telegraf.conf` to `json`.
+
+### Authentiation and Permissions
+
+The plugin uses Service Principal credentials to authenticate to the Azure Data Explorer server. The Service Principal should have the following permissions on the Azure Data Explorer to work properly:
+ - permission 1: 
+ - permission 2:
