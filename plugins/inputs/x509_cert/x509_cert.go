@@ -66,8 +66,7 @@ func (c *X509Cert) SampleConfig() string {
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
 		if strings.HasPrefix(source, "file://") ||
-			strings.HasPrefix(source, "/") ||
-			strings.Index(source, ":\\") != 1 {
+			strings.HasPrefix(source, "/") {
 			source = filepath.ToSlash(strings.TrimPrefix(source, "file://"))
 			g, err := globpath.Compile(source)
 			if err != nil {
@@ -82,7 +81,6 @@ func (c *X509Cert) sourcesToURLs() error {
 			if err != nil {
 				return fmt.Errorf("failed to parse cert location - %s", err.Error())
 			}
-
 			c.locations = append(c.locations, u)
 		}
 	}
