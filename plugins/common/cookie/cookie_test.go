@@ -102,7 +102,7 @@ func (s fakeServer) checkAuthCount(t *testing.T, atLeast int32) {
 
 func TestAuthConfig_Start(t *testing.T) {
 	const (
-		renewal      = 10 * time.Millisecond
+		renewal      = 50 * time.Millisecond
 		renewalCheck = 5 * renewal
 	)
 	type fields struct {
@@ -151,7 +151,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				require.Equal(t, http.MethodPost, c.Method)
 				srv.checkResp(t, http.StatusOK)
 				time.Sleep(renewalCheck)
-				// should have Cookie Authed twice more
+				// should have Cookie Authed at least twice more
 				srv.checkAuthCount(t, 3)
 				srv.checkResp(t, http.StatusOK)
 			},
@@ -172,7 +172,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				srv.checkAuthCount(t, 1)
 				srv.checkResp(t, http.StatusOK)
 				time.Sleep(renewalCheck)
-				// should have Cookie Authed twice more
+				// should have Cookie Authed at least twice more
 				srv.checkAuthCount(t, 3)
 				srv.checkResp(t, http.StatusOK)
 			},
@@ -214,7 +214,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				srv.checkAuthCount(t, 1)
 				srv.checkResp(t, http.StatusOK)
 				time.Sleep(renewalCheck)
-				// should have Cookie Authed twice more
+				// should have Cookie Authed at least twice more
 				srv.checkAuthCount(t, 3)
 				srv.checkResp(t, http.StatusOK)
 			},
