@@ -9,7 +9,7 @@ require (
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.5.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
-	github.com/Azure/azure-kusto-go v0.3.2 // indirect
+	github.com/Azure/azure-kusto-go v0.3.2
 	github.com/Azure/azure-storage-queue-go v0.0.0-20191125232315-636801874cdd
 	github.com/Azure/go-autorest/autorest v0.11.17
 	github.com/Azure/go-autorest/autorest/adal v0.9.10
