@@ -47,6 +47,7 @@ require (
 	github.com/docker/docker v20.10.6+incompatible
 	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.1.0
 	github.com/eclipse/paho.mqtt.golang v1.3.0
+	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logfmt/logfmt v0.5.0
 	github.com/go-ping/ping v0.0.0-20210201095549-52eed920f98c
@@ -93,6 +94,7 @@ require (
 	github.com/moby/ipvs v1.0.1
 	github.com/multiplay/go-ts3 v1.0.0
 	github.com/naoina/go-stringutil v0.1.0 // indirect
+	github.com/nats-io/jwt v1.2.2 // indirect
 	github.com/nats-io/nats-server/v2 v2.1.4
 	github.com/nats-io/nats.go v1.10.0
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.5.1
