@@ -244,7 +244,11 @@ func (z *zmqConsumer) receiver(ctx context.Context) {
 			case <-z.acc.Delivered():
 				<-sem
 				<-sem
-			case msg := <-z.in:
+			case msg, ok := <-z.in:
+				if !ok {
+					z.in = nil
+					continue
+				}
 				metrics, err := z.parser.Parse([]byte(msg))
 				if err != nil {
 					z.Log.Errorf("Error parsing message: %s", err.Error())
