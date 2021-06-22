@@ -14,6 +14,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/plugins/inputs/execd"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
@@ -238,6 +240,25 @@ func (a *Agent) startInputs(
 
 	unit := &inputUnit{
 		dst: dst,
+	}
+
+	// Update input plugins to use execd
+	if a.Config.IsolatedPlugin == "" {
+		for _, input := range inputs {
+			e := execd.Execd{
+				Command: []string{
+					"telegraf", "plugin", input.Config.Name, a.Config.ConfigPath,
+				},
+				Signal: "STDIN",
+				Log:    models.NewLogger("input-execd", "test", ""),
+			}
+			parser, err := parsers.NewInfluxParser()
+			if err != nil {
+				return nil, err
+			}
+			e.SetParser(parser)
+			input.Input = &e
+		}
 	}
 
 	for _, input := range inputs {

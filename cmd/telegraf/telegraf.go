@@ -26,13 +26,16 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/goplugin"
 	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/models"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+	output_file "github.com/influxdata/telegraf/plugins/outputs/file"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"gopkg.in/tomb.v1"
 )
 
@@ -356,7 +359,51 @@ func formatFullVersion() string {
 	return strings.Join(parts, " ")
 }
 
+func isolatedPlugin(name string, configPath string) {
+
+	c := config.NewConfig()
+	c.IsolatedPlugin = name
+	err := c.LoadConfig(configPath)
+	if err != nil {
+		fmt.Printf("Issue with loading config: %v\n", err)
+		return
+	}
+
+	// Remove unwanted plugins
+	var plugins []*models.RunningInput
+	for _, inputs := range c.Inputs {
+		if inputs.Config.Name == name {
+			plugins = append(plugins, inputs)
+			break
+		}
+	}
+
+	c.Inputs = plugins
+
+	c.Outputs = []*models.RunningOutput{}
+
+	// Add [[outputs.file]]
+	var o telegraf.Output
+	fileOutputPlugin := &output_file.File{
+		Files: []string{"stdout"},
+	}
+	fileOutputPlugin.SetSerializer(influx.NewSerializer())
+	o = fileOutputPlugin
+	var outputConfig models.OutputConfig
+	outputConfig.Name = "file"
+	ro := models.NewRunningOutput(o, &outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
+	c.Outputs = append(c.Outputs, ro)
+	ag, err := agent.NewAgent(c)
+	if err != nil {
+		fmt.Printf("Issue with new aggent: %v \n", err)
+		return
+	}
+	ag.Run(context.Background())
+
+}
+
 func main() {
+	// flag.Var(&fInputPlugins, "input-plugin", "start a input plugin in a separate process")
 	flag.Var(&fConfigs, "config", "configuration file to load")
 	flag.Var(&fConfigDirs, "config-directory", "directory containing additional *.conf files")
 
@@ -428,6 +475,10 @@ func main() {
 				aggregatorFilters,
 				processorFilters,
 			)
+			return
+		case "plugin":
+			log.Println(args[0], args[1], args[2])
+			isolatedPlugin(args[1], args[2])
 			return
 		}
 	}

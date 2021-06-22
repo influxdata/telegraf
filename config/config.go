@@ -73,11 +73,13 @@ type Config struct {
 	InputFilters  []string
 	OutputFilters []string
 
-	Agent       *AgentConfig
-	Inputs      []*models.RunningInput
-	Outputs     []*models.RunningOutput
-	Aggregators []*models.RunningAggregator
-	Parsers     []*models.RunningParser
+	IsolatedPlugin string
+	ConfigPath     string
+	Agent          *AgentConfig
+	Inputs         []*models.RunningInput
+	Outputs        []*models.RunningOutput
+	Aggregators    []*models.RunningAggregator
+	Parsers        []*models.RunningParser
 	// Processors have a slice wrapper type because they need to be sorted
 	Processors    models.RunningProcessors
 	AggProcessors models.RunningProcessors
@@ -785,6 +787,7 @@ func isURL(str string) bool {
 
 // LoadConfig loads the given config file and applies it to c
 func (c *Config) LoadConfig(path string) error {
+	c.ConfigPath = path
 	var err error
 	if path == "" {
 		if path, err = getDefaultConfigPath(); err != nil {
@@ -1366,6 +1369,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	rp := models.NewRunningInput(input, pluginConfig)
 	rp.SetDefaultTags(c.Tags)
+
 	c.Inputs = append(c.Inputs, rp)
 
 	// Check the number of misses against the threshold
