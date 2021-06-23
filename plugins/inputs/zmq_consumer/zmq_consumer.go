@@ -15,6 +15,10 @@ import (
 
 const (
 	defaultHighWaterMark          = 1000
+	defaultReceiveBufferSize      = -1
+	defaultTcpKeepAlive           = -1
+	defaultTcpKeepAliveIdle       = -1
+	defaultTcpKeepAliveInterval   = -1
 	defaultMaxUndeliveredMessages = 1000
 	defaultSubscription           = ""
 	channelBufferSize             = 1000
@@ -24,11 +28,14 @@ type empty struct{}
 type semaphore chan empty
 
 type zmqConsumer struct {
-	Endpoints     []string `toml:"endpoints"`
-	Subscriptions []string `toml:"subscriptions"`
-	HighWaterMark int      `toml:"high_water_mark"`
-	Affinity      int      `toml:"affinity"`
-	BufferSize    int      `toml:"receive_buffer_size"`
+	Endpoints            []string `toml:"endpoints"`
+	Subscriptions        []string `toml:"subscriptions"`
+	HighWaterMark        int      `toml:"high_water_mark"`
+	Affinity             int      `toml:"affinity"`
+	ReceiveBufferSize    int      `toml:"receive_buffer_size"`
+	TcpKeepAlive         int      `toml:"tcp_keepalive"`
+	TcpKeepAliveIdle     int      `toml:"tcp_keepalive_idle"`
+	TcpKeepAliveInterval int      `toml:"tcp_keepalive_interval"`
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
@@ -76,6 +83,25 @@ var sampleConfig = `
   ## See: http://api.zeromq.org/4-1:zmq-setsockopt#toc27
   # receive_buffer_size = 0
 
+  ## Overrides SO_KEEPALIVE socket option (where supported by OS). 
+  ## The default value of -1 means to skip any overrides and leave it to 
+  ## OS default.
+  ## See: http://api.zeromq.org/master:zmq-setsockopt#toc57
+  # tcp_keepalive = -1
+
+  ## Overrides TCP_KEEPIDLE (or TCP_KEEPALIVE on some OS) socket option 
+  ## (where supported by OS). 
+  ## The default value of -1 means to skip any overrides and leave it to 
+  ## OS default.
+  ## See: http://api.zeromq.org/master:zmq-setsockopt#toc59
+  # tcp_keepalive_idle = -1
+
+  ## Overrides TCP_KEEPINTVL socket option (where supported by OS). 
+  ## The default value of -1 means to skip any overrides and leave it to 
+  ## OS default.
+  ## See: http://api.zeromq.org/master:zmq-setsockopt#toc60
+  # tcp_keepalive_interval = -1
+
   ## Maximum messages to read from the broker that have not been written by an
   ## output. For best throughput set based on the number of metrics within
   ## each message and the size of the output's metric_batch_size.
@@ -118,6 +144,18 @@ func (z *zmqConsumer) Init() error {
 	}
 	if z.HighWaterMark == 0 {
 		z.HighWaterMark = defaultHighWaterMark
+	}
+	if z.ReceiveBufferSize == 0 {
+		z.ReceiveBufferSize = defaultReceiveBufferSize
+	}
+	if z.TcpKeepAlive == 0 {
+		z.TcpKeepAlive = defaultTcpKeepAlive
+	}
+	if z.TcpKeepAliveIdle == 0 {
+		z.TcpKeepAliveIdle = defaultTcpKeepAliveIdle
+	}
+	if z.TcpKeepAliveInterval == 0 {
+		z.TcpKeepAliveInterval = defaultTcpKeepAliveInterval
 	}
 	if z.MaxUndeliveredMessages == 0 {
 		z.MaxUndeliveredMessages = defaultMaxUndeliveredMessages
@@ -175,7 +213,22 @@ func (z *zmqConsumer) connect() (*zmq.Socket, error) {
 		return nil, err
 	}
 	// set kernel receive buffer size
-	err = socket.SetRcvbuf(z.BufferSize)
+	err = socket.SetRcvbuf(z.ReceiveBufferSize)
+	if err != nil {
+		return nil, err
+	}
+	// set TCP keep alive
+	err = socket.SetTcpKeepalive(z.TcpKeepAlive)
+	if err != nil {
+		return nil, err
+	}
+	// set TCP keep alive idle
+	err = socket.SetTcpKeepaliveIdle(z.TcpKeepAliveIdle)
+	if err != nil {
+		return nil, err
+	}
+	// set TCP keep alive interval
+	err = socket.SetTcpKeepaliveIntvl(z.TcpKeepAliveInterval)
 	if err != nil {
 		return nil, err
 	}

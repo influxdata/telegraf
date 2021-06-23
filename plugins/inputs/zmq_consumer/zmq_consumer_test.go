@@ -63,7 +63,10 @@ func TestInit(t *testing.T) {
 
 		require.Equal(t, plugin.HighWaterMark, defaultHighWaterMark)
 		require.Equal(t, plugin.Affinity, 0)
-		require.Equal(t, plugin.BufferSize, 0)
+		require.Equal(t, plugin.ReceiveBufferSize, defaultReceiveBufferSize)
+		require.Equal(t, plugin.TcpKeepAlive, defaultTcpKeepAlive)
+		require.Equal(t, plugin.TcpKeepAliveIdle, defaultTcpKeepAliveIdle)
+		require.Equal(t, plugin.TcpKeepAliveInterval, defaultTcpKeepAliveInterval)
 		require.Equal(t, plugin.MaxUndeliveredMessages, defaultMaxUndeliveredMessages)
 		require.Len(t, plugin.Subscriptions, 1)
 		require.Contains(t, plugin.Subscriptions, defaultSubscription)
