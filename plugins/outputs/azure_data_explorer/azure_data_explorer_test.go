@@ -19,6 +19,9 @@ var logger testutil.Logger = testutil.Logger{}
 var actualOutputMetric map[string]interface{}
 var queriesSentToAzureDataExplorer = make([]string, 0)
 
+const createTableCommandExpected = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
+const createTableMappingCommandExpected = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
+
 func TestWrite(t *testing.T) {
 	azureDataExplorerOutput := AzureDataExplorer{
 		Endpoint:       "",
@@ -45,9 +48,14 @@ func TestWrite(t *testing.T) {
 		t.Errorf("Error in Write: expected %s, but actual %s", expectedNameOfMetric, actualOutputMetric["name"])
 	}
 
-	createTableString := fmt.Sprintf(createTableCommand, expectedNameOfMetric)
+	createTableString := fmt.Sprintf(createTableCommandExpected, expectedNameOfMetric)
 	if queriesSentToAzureDataExplorer[0] != createTableString {
-		t.Errorf("Error in Write: expected create table query is %s, but actual is %s", queriesSentToAzureDataExplorer[0], createTableString)
+		t.Errorf("Error in Write: expected create table query is %s, but actual is %s", createTableString, queriesSentToAzureDataExplorer[0])
+	}
+
+	createTableMappingString := fmt.Sprintf(createTableMappingCommandExpected, expectedNameOfMetric, expectedNameOfMetric)
+	if queriesSentToAzureDataExplorer[0] != createTableString {
+		t.Errorf("Error in Write: expected create table mapping query is %s, but actual is %s", queriesSentToAzureDataExplorer[1], createTableMappingString)
 	}
 
 	fields := actualOutputMetric["fields"]
