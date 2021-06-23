@@ -67,33 +67,33 @@ func (s *AzureDataExplorer) SampleConfig() string {
 `
 }
 
-func (s *AzureDataExplorer) Connect() error {
+func (adx *AzureDataExplorer) Connect() error {
 
-	client, err := s.CreateClient(s.Endpoint, s.ClientId, s.ClientSecret, s.TenantId)
+	client, err := adx.CreateClient(adx.Endpoint, adx.ClientId, adx.ClientSecret, adx.TenantId)
 	if err != nil {
 		return err
 	}
-	s.Client = client
-	s.Ingesters = make(map[string]localIngestor)
+	adx.Client = client
+	adx.Ingesters = make(map[string]localIngestor)
 
 	return nil
 }
 
-func (s *AzureDataExplorer) Close() error {
+func (adx *AzureDataExplorer) Close() error {
 
-	s.Client = nil
-	s.Ingesters = nil
+	adx.Client = nil
+	adx.Ingesters = nil
 
 	return nil
 }
 
-func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
+func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 
 	metricsPerNamespace := make(map[string][]byte)
 
 	for _, m := range metrics {
 		namespace := m.Name() // getNamespace(m)
-		metricInBytes, err := s.Serializer.Serialize(m)
+		metricInBytes, err := adx.Serializer.Serialize(m)
 		if err != nil {
 			return err
 		}
@@ -104,15 +104,15 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 			metricsPerNamespace[namespace] = metricInBytes
 		}
 
-		if _, ingestorExist := s.Ingesters[namespace]; !ingestorExist {
+		if _, ingestorExist := adx.Ingesters[namespace]; !ingestorExist {
 			//create a table for the namespace
-			err := createAzureDataExplorerTableForNamespace(s.Client, s.Database, namespace)
+			err := createAzureDataExplorerTableForNamespace(adx.Client, adx.Database, namespace)
 			if err != nil {
 				return err
 			}
 
 			//create a new ingestor client for the namespace
-			s.Ingesters[namespace], err = s.CreateIngestor(s.Client, s.Database, namespace)
+			adx.Ingesters[namespace], err = adx.CreateIngestor(adx.Client, adx.Database, namespace)
 			if err != nil {
 				return err
 			}
@@ -122,9 +122,9 @@ func (s *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	for key, mPerNamespace := range metricsPerNamespace {
 		reader := bytes.NewReader(mPerNamespace)
 
-		_, error := s.Ingesters[key].FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON))
+		_, error := adx.Ingesters[key].FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON))
 		if error != nil {
-			s.Log.Errorf("error sending ingestion request to Azure Data Explorer for metric %s: %v", key, error)
+			adx.Log.Errorf("error sending ingestion request to Azure Data Explorer for metric %s: %v", key, error)
 		}
 	}
 	return nil
@@ -154,8 +154,8 @@ func createAzureDataExplorerTableForNamespace(client localClient, database strin
 // 	return names[0]
 // }
 
-func (s *AzureDataExplorer) Init() error {
-	if s.DataFormat != "json" {
+func (adx *AzureDataExplorer) Init() error {
+	if adx.DataFormat != "json" {
 		return fmt.Errorf("the azure data explorer supports json data format only, pleaes make sure to add the 'data_format=\"json\"' in the output configuration")
 	}
 	return nil
@@ -170,8 +170,8 @@ func init() {
 	})
 }
 
-func (s *AzureDataExplorer) SetSerializer(serializer serializers.Serializer) {
-	s.Serializer = serializer
+func (adx *AzureDataExplorer) SetSerializer(serializer serializers.Serializer) {
+	adx.Serializer = serializer
 }
 
 func createIngestor(client localClient, database string, namespace string) (localIngestor, error) {
