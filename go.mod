@@ -152,7 +152,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.20.4
-	k8s.io/apimachinery v0.21.2
+	k8s.io/apimachinery v0.21.1
 	k8s.io/client-go v0.20.4
 	modernc.org/sqlite v1.10.8
 )
