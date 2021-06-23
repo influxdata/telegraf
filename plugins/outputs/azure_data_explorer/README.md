@@ -53,6 +53,6 @@ The corresponding table maping would be like the following:
 
 ### Authentiation and Permissions
 
-The plugin uses Service Principal credentials to authenticate to the Azure Data Explorer server. The Service Principal should have the following permissions on the Azure Data Explorer to work properly:
- - permission 1: 
- - permission 2:
+The plugin uses Service Principal credentials to authenticate to the Azure Data Explorer server. For guidance on how to create and register an App in Azure Active Directory check [this article](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app#register-an-application), and for more information on the Service Principals check [this article](https://docs.microsoft.com/en-us/azure/active-directory/develop/app-objects-and-service-principals).
+
+The Service Principal should be assigned the `Database User` role on the Database level in Azure Data Explorer. This role will allow the plugin to create the required tables and ingest data into it.
