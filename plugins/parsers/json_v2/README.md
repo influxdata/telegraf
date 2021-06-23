@@ -185,3 +185,82 @@ The type values you can set:
 * `string`, any data can be formatted as a string.
 * `float`, string values (with valid numbers) or integers can be converted to a float.
 * `bool`, the string values "true" or "false" (regardless of capitalization) or the integer values `0` or `1`  can be turned to a bool.
+
+## Migrating from the original JSON parser to json_v2
+
+The json_v2 parser offers an improved approach to gather metrics from JSON but still supports all the features of the original JSON parser (which will be referred to as json_v1 to avoid confusion). Therefore migration should be possible for all configurations, and in the process hopefully improve on the old configuration. This section will highlight the main differences between the two parsers and provide examples of converting from a json_v1 config to a json_v2 config.
+
+### More verbose but clearer Telegraf configuration
+
+The configuration no longer follows the format of needing a prepended `json_` for the config key, but instead uses TOML sub-tables. The goal with this change is to provide an easier to read configuration file that you can clearly see the distinct difference between the plugin config and the parser config. While this does lead to a more verbose config file, the improved ability to write/read the file should make up for this.
+
+### More control over the field type
+
+When using json_v1 you were limited to using `json_string_fields` to specify a field as a string. In json_v2 you can now specify any type that the influx line protocol supports for a field, even converting between types if possible. Read the section [#Types](#Types) for more details.
+
+### Independent GJSON queries
+
+A limitation with the json_v1 parser was that you could only provide a single GJSON query, and you could only use the returned data from that query to build your line protocol. The json_v2 parser lets you provide multiple independent GJSON queries so that you can gather the timestamp, measurement name, and field/tags from anywhere in the JSON.
+
+### Control over the resulting tag/fields names
+
+The json_v2 parser provides you the ability to rename all tags/fields without requiring a post-processing step like the json_v1 parser. You also have access to the setting `disable_prepend_keys` which you can enable to automatically provide cleaner field/tag names that don't include the parent keys prependend when gathering from nested arrays/objects.
+
+### Example 1
+
+This example was taken from the issue [#9376](https://github.com/influxdata/telegraf/issues/9376). Given the following JSON:
+
+```json
+{
+  "timestamp": 1623786169180,
+  "values": [
+    {
+      "id": "GET_S19_GATEHOST.VGF120B.VGF120_D435.Variables_HMI.Host_IdPart",
+      "v": 630,
+      "q": true,
+      "t": 1623785875134
+    },
+    {
+      "id": "GET_S19_GATEHOST.VGF120B.VGF120_D435.Variables_HMI.Host_MSN",
+      "v": "MSN0573_CG10563",
+      "q": true,
+      "t": 1623784689919
+    }
+  ]
+}
+```
+
+Parsing it with json_v1 would look like:
+
+```toml
+[[inputs.mqtt_consumer]]
+  # ....
+  data_format = "json"
+  json_query = "values"
+
+  json_string_fields= ["v", "q"]
+  tag_keys = ["id"]
+  json_time_key = "t"
+  json_time_format = "unix_ms"
+```
+
+Parsing it with json_v2 would look like:
+
+```toml
+[[inputs.mqtt_consumer]]
+    # ....
+    data_format = "json_v2"
+    [[inputs.file.json_v2]]
+        timestamp_path = "timestamp"
+        timestamp_format = "unix_ms"
+        [[inputs.file.json_v2.object]]
+            path = "values"
+            tags = ["id"]
+```
+
+Both leading to the expected output:
+
+```
+file,id=GET_S19_GATEHOST.VGF120B.VGF120_D435.Variables_HMI.Host_IdPart v=630,q=true,t=1623785875134 162378616918000000
+file,id=GET_S19_GATEHOST.VGF120B.VGF120_D435.Variables_HMI.Host_MSN v="MSN0573_CG10563",q=true,t=1623785875134,t=1623784689919 1623786169180000000
+```
