@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"io/ioutil"
 
@@ -29,6 +30,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 			jsonFilePath = "testdata/federation-links.json"
 		case "/api/nodes/rabbit@vagrant-ubuntu-trusty-64/memory":
 			jsonFilePath = "testdata/memory.json"
+		case "/api/vhosts":
+			jsonFilePath = "testdata/vhosts.json"
 		default:
 			require.Fail(t, "Cannot handle request")
 		}
@@ -71,6 +74,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	compareMetrics(t, overviewMetrics, acc, "rabbitmq_overview")
 
 	queuesMetrics := map[string]interface{}{
+		"now_timestamp":             time.Now().Unix(),
+		"head_message_timestamp":    1607602902,
 		"consumers":                 3,
 		"consumer_utilisation":      1.0,
 		"memory":                    143776,
@@ -172,6 +177,40 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"messages_return_unroutable": 1,
 	}
 	compareMetrics(t, federationLinkMetrics, acc, "rabbitmq_federation")
+
+	vhostMetrics := map[string]interface{}{
+		"message_stats_ack":                    8519,
+		"message_stats_ack_rate":               0,
+		"message_stats_confirm":                8519,
+		"message_stats_confirm_rate":           0,
+		"message_stats_deliver":                8938,
+		"message_stats_deliver_get":            8938,
+		"message_stats_deliver_get_rate":       0,
+		"message_stats_deliver_no_ack":         0,
+		"message_stats_deliver_no_ack_rate":    0,
+		"message_stats_deliver_rate":           0,
+		"message_stats_get":                    0,
+		"message_stats_get_no_ack":             0,
+		"message_stats_get_no_ack_rate":        0,
+		"message_stats_get_rate":               0,
+		"message_stats_publish":                18608,
+		"message_stats_publish_rate":           0,
+		"message_stats_redeliver":              0,
+		"message_stats_redeliver_rate":         0,
+		"message_stats_return_unroutable":      0,
+		"message_stats_return_unroutable_rate": 0,
+		"messages":                             16,
+		"messages_rate":                        0,
+		"messages_ready":                       0,
+		"messages_ready_rate":                  0,
+		"messages_unacknowledged":              0,
+		"messages_unacknowledged_rate":         0,
+		"recv_oct":                             27000876,
+		"recv_oct_rate":                        4.8,
+		"send_oct":                             20255042,
+		"send_oct_rate":                        8,
+	}
+	compareMetrics(t, vhostMetrics, acc, "rabbitmq_vhost")
 }
 
 func compareMetrics(t *testing.T, expectedMetrics map[string]interface{},

@@ -1,0 +1,68 @@
+[
+  {
+    "name": "test-vhost",
+    "tracing": false,
+    "send_oct": 20255042,
+    "send_oct_details": {
+      "rate": 8
+    },
+    "recv_oct": 27000876,
+    "recv_oct_details": {
+      "rate": 4.8
+    },
+    "messages_ready": 0,
+    "messages_ready_details": {
+      "rate": 0
+    },
+    "messages_unacknowledged": 0,
+    "messages_unacknowledged_details": {
+      "rate": 0
+    },
+    "messages": 16,
+    "messages_details": {
+      "rate": 0
+    },
+    "message_stats": {
+      "publish": 18608,
+      "publish_details": {
+        "rate": 0
+      },
+      "confirm": 8519,
+      "confirm_details": {
+        "rate": 0
+      },
+      "return_unroutable": 0,
+      "return_unroutable_details": {
+        "rate": 0
+      },
+      "get": 0,
+      "get_details": {
+        "rate": 0
+      },
+      "get_no_ack": 0,
+      "get_no_ack_details": {
+        "rate": 0
+      },
+      "deliver": 8938,
+      "deliver_details": {
+        "rate": 0
+      },
+      "deliver_no_ack": 0,
+      "deliver_no_ack_details": {
+        "rate": 0
+      },
+      "redeliver": 0,
+      "redeliver_details": {
+        "rate": 0
+      },
+      "ack": 8519,
+      "ack_details": {
+        "rate": 0
+      },
+      "deliver_get": 8938,
+      "deliver_get_details": {
+        "rate": 0
+      }
+    }
+  }
+]
