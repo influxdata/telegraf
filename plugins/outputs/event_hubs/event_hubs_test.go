@@ -42,7 +42,7 @@ func (eh *mockEventHub) SendBatch(ctx context.Context, iterator eventhub.BatchIt
 /* End wrapper interface */
 
 func TestInitAndWrite(t *testing.T) {
-	serializer, _ := json.NewSerializer(time.Duration(time.Second))
+	serializer, _ := json.NewSerializer(time.Second)
 	mockHub := &mockEventHub{}
 	e := &EventHubs{
 		Hub:              mockHub,
@@ -77,7 +77,7 @@ func TestInitAndWriteIntegration(t *testing.T) {
 		t.Skip("Missing environment variable EVENTHUB_CONNECTION_STRING")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
 	// Create a new, empty Event Hub
@@ -93,13 +93,14 @@ func TestInitAndWriteIntegration(t *testing.T) {
 
 	// Delete the test hub
 	defer func() {
-		mHub.Delete(ctx, entity.Name)
+		err := mHub.Delete(ctx, entity.Name)
+		require.NoError(t, err)
 	}()
 
 	testHubCS := os.Getenv("EVENTHUB_CONNECTION_STRING") + ";EntityPath=" + entity.Name
 
 	// Configure the plugin to target the newly created hub
-	serializer, _ := json.NewSerializer(time.Duration(time.Second))
+	serializer, _ := json.NewSerializer(time.Second)
 
 	e := &EventHubs{
 		Hub:              &eventHub{},

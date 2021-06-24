@@ -116,7 +116,6 @@ func (e *EventHubs) Write(metrics []telegraf.Metric) error {
 	var events []*eventhub.Event
 
 	for _, metric := range metrics {
-
 		payload, err := e.serializer.Serialize(metric)
 
 		if err != nil {
