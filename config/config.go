@@ -1373,9 +1373,16 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
 
 	//for XPath parser family
-	if choice.Contains(pc.DataFormat, []string{"xml", "json_xpath", "protobuf"}) {
+	if choice.Contains(pc.DataFormat, []string{"xml", "xpath_json", "xpath_protobuf"}) {
 		c.getFieldString(tbl, "xpath_protobuf_type", &pc.XPathProtobufType)
-		if node, ok := tbl.Fields[pc.DataFormat]; ok {
+
+		// Determine the actual xpath configuration tables
+		node, xpath_ok := tbl.Fields["xpath"]
+		if !xpath_ok {
+			// Add this for backward compatibility
+			node, xpath_ok = tbl.Fields[pc.DataFormat]
+		}
+		if xpath_ok {
 			if subtbls, ok := node.([]*ast.Table); ok {
 				pc.XPathConfig = make([]parsers.XPathConfig, len(subtbls))
 				for i, subtbl := range subtbls {
@@ -1560,14 +1567,14 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
 		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_sort_fields",
 		"influx_uint_support", "interval", "json_name_key", "json_query", "json_strict",
-		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_units", "json_timezone",
+		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_units", "json_timezone", "json_v2",
 		"metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
 		"name_suffix", "namedrop", "namepass", "order", "pass", "period", "precision",
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
 		"value_field_name", "wavefront_source_override", "wavefront_use_strict",
-		"xml", "json_xpath", "protobuf", "xpath_protobuf_type", "json_v2":
+		"xml", "xpath_json", "xpath_protobuf", "xpath_protobuf_type":
 
 		// ignore fields that are common to all plugins.
 	default:
