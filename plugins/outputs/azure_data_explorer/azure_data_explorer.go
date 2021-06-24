@@ -133,13 +133,13 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 func createAzureDataExplorerTableForNamespace(client localClient, database string, tableName string) error {
 
 	// Create a database
-	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
+	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
 	_, errCreatingTable := client.Mgmt(context.TODO(), database, createStmt)
 	if errCreatingTable != nil {
 		return errCreatingTable
 	}
 
-	createTableMappingstmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true})).UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
+	createTableMappingstmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
 	_, errCreatingTableMapping := client.Mgmt(context.TODO(), database, createTableMappingstmt)
 	if errCreatingTableMapping != nil {
 		return errCreatingTableMapping
