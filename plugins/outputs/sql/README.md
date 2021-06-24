@@ -70,7 +70,7 @@ through the convert settings.
 [[outputs.sql]]
   ## Database driver
   ## Valid options: mssql (Microsoft SQL Server), mysql (MySQL), pgx (Postgres),
-  ##  sqlite (SQLite3), snowflake (snowflake.com)
+  ##  sqlite (SQLite3)
   # driver = ""
 
   ## Data source name
@@ -142,9 +142,4 @@ docs](https://modernc.org/sqlite) for details.
 ### denisenkom/go-mssqldb
 
 Telegraf doesn't have unit tests for go-mssqldb so it should be
-treated as experimental.
-
-### snowflakedb/gosnowflake
-
-Telegraf doesn't have unit tests for gosnowflake so it should be
 treated as experimental.
