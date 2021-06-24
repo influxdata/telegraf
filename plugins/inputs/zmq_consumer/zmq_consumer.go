@@ -251,6 +251,15 @@ func (z *zmqConsumer) connect() (*zmq.Socket, error) {
 	return socket, nil
 }
 
+func (z *zmqConsumer) cleanup(socket *zmq.Socket) {
+	// discard pending messages
+	socket.SetLinger(0)
+	err := socket.Close()
+	if err != nil {
+		z.Log.Errorf("Error closing socket: %s", err.Error())
+	}
+}
+
 // subscriber receives messages from the socket
 func (z *zmqConsumer) subscriber(ctx context.Context) {
 	// connect to PUB socket(s)
@@ -259,7 +268,7 @@ func (z *zmqConsumer) subscriber(ctx context.Context) {
 		z.Log.Errorf("Error connecting to socket: %s", err.Error())
 		return
 	}
-	defer socket.Close()
+	defer z.cleanup(socket)
 
 	for {
 		select {
