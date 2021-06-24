@@ -7,17 +7,12 @@ For supported XPath functions check [the underlying XPath library][xpath lib].
 **NOTE:** The type of fields are specified using [XPath functions][xpath lib]. The only exception are *integer* fields that need to be specified in a `fields_int` section.
 
 ### Supported data formats
-#### Extensible Markup Language (XML)
-By specifying `data_format = "xml"` you are able to parse [XML][xml] data using XPath expressions.
-
-#### JSON
-By specifying `data_format = "xpath_json"` you are able to parse [JSON][json] data using XPath expressions.
-
-#### Protocol buffers
-By specifying `data_format = "xpath_protobuf"` you are able to parse [ProtocolBuffers][protobuf] messages using XPath expressions. You additionally have to specify `xpath_protobuf_type` in this case to select the type of the protocol buffer to use for decoding.
-
-**NOTE:** New protocol-buffer message types have to be added at compile time due to a missing runtime decoding
-ability using `.proto` files. This is a limitation of the protocol-buffer library itself. 
+| name                                    | `data_format` setting | comment |
+| --------------------------------------- | --------------------- | ------- |
+| [Extensible Markup Language (XML)][xml] | `"xml"`               |         |
+| [JSON][json]                            | `"xpath_json"`        |         |
+| [MessagePack][msgpack]                  | `"xpath_msgpack"`     |         |
+| [Protocol buffers][protobuf]            | `"xpath_protobuf"`    | Specify the protocol-buffer type via `xpath_protobuf_type` <br>**NOTE:** New protocol-buffer message types have to be added at compile time due to  limitation of the protocol-buffer library.|
 
 ### Configuration (explicit)
 In this configuration mode, you explicitly specify the field and tags you want to scrape out of your data.
@@ -375,6 +370,7 @@ For each selected *field-node* we use `field_name` and `field_value` to determin
 
 [xpath lib]:    https://github.com/antchfx/xpath
 [json]:         https://www.json.org/
+[msgpack]:      https://msgpack.org/
 [protobuf]:     https://developers.google.com/protocol-buffers
 [xml]:          https://www.w3.org/XML/
 [xpath]:        https://www.w3.org/TR/xpath/
