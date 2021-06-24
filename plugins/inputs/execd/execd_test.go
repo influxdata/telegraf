@@ -139,8 +139,8 @@ func (tm *TestMetricMaker) LogName() string {
 	return tm.Name()
 }
 
-func (tm *TestMetricMaker) MakeMetric(metric telegraf.Metric) telegraf.Metric {
-	return metric
+func (tm *TestMetricMaker) MakeMetric(aMetric telegraf.Metric) telegraf.Metric {
+	return aMetric
 }
 
 func (tm *TestMetricMaker) Log() telegraf.Logger {

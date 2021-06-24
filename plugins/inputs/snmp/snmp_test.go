@@ -199,11 +199,12 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 			{Oid: ".1.1.1.3"},
 		},
 		Tables: []Table{
-			{Fields: []Field{
-				{Oid: ".1.1.1.4", Name: "four", IsTag: true},
-				{Oid: ".1.1.1.5", Name: "five"},
-				{Oid: ".1.1.1.6"},
-			}},
+			{Name: "testing",
+				Fields: []Field{
+					{Oid: ".1.1.1.4", Name: "four", IsTag: true},
+					{Oid: ".1.1.1.5", Name: "five"},
+					{Oid: ".1.1.1.6"},
+				}},
 		},
 	}
 
@@ -233,6 +234,21 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 	assert.Equal(t, ".1.1.1.6", s.Tables[0].Fields[2].Oid)
 	assert.Equal(t, ".1.1.1.6", s.Tables[0].Fields[2].Name)
 	assert.Equal(t, false, s.Tables[0].Fields[2].IsTag)
+}
+
+func TestSnmpInit_noName_noOid(t *testing.T) {
+	s := &Snmp{
+		Tables: []Table{
+			{Fields: []Field{
+				{Oid: ".1.1.1.4", Name: "four", IsTag: true},
+				{Oid: ".1.1.1.5", Name: "five"},
+				{Oid: ".1.1.1.6"},
+			}},
+		},
+	}
+
+	err := s.init()
+	require.Error(t, err)
 }
 
 func TestGetSNMPConnection_v2(t *testing.T) {
