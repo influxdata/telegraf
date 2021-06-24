@@ -19,7 +19,7 @@ that need to be specified in a `fields_int` section.
   data_format = "xml"
 
   ## Multiple parsing sections are allowed
-  [[inputs.file.xml]]
+  [[inputs.file.xpath]]
     ## Optional: XPath-query to select a subset of nodes from the XML document.
     #metric_selection = "/Bus/child::Sensor"
 
@@ -35,17 +35,17 @@ that need to be specified in a `fields_int` section.
     #timestamp_format = "2006-01-02T15:04:05Z"
 
     ## Tag definitions using the given XPath queries.
-    [inputs.file.xml.tags]
+    [inputs.file.xpath.tags]
       name   = "substring-after(Sensor/@name, ' ')"
       device = "string('the ultimate sensor')"
 
     ## Integer field definitions using XPath queries.
-    [inputs.file.xml.fields_int]
+    [inputs.file.xpath.fields_int]
       consumers = "Variable/@consumers"
 
     ## Non-integer field definitions using XPath queries.
     ## The field type is defined using XPath expressions such as number(), boolean() or string(). If no conversion is performed the field will be of type string.
-    [inputs.file.xml.fields]
+    [inputs.file.xpath.fields]
       temperature = "number(Variable/@temperature)"
       power       = "number(Variable/@power)"
       frequency   = "number(Variable/@frequency)"
@@ -53,7 +53,7 @@ that need to be specified in a `fields_int` section.
 ```
 
 A configuration can contain muliple *xml* subsections for e.g. the file plugin to process the xml-string multiple times.
-Consult the [XPath syntax][xpath] and the [underlying library's functions][xpath lib] for details and help regarding XPath queries. Consider using an XPath tester such as [xpather.com][xpather] or [Code Beautify's XPath Tester][xpath tester] for help developing and debugging 
+Consult the [XPath syntax][xpath] and the [underlying library's functions][xpath lib] for details and help regarding XPath queries. Consider using an XPath tester such as [xpather.com][xpather] or [Code Beautify's XPath Tester][xpath tester] for help developing and debugging
 your query.
 
 Alternatively to the configuration above, fields can also be specified in a batch way. So contrary to specify the fields
@@ -70,7 +70,7 @@ metric.
   data_format = "xml"
 
   ## Multiple parsing sections are allowed
-  [[inputs.file.xml]]
+  [[inputs.file.xpath]]
     ## Optional: XPath-query to select a subset of nodes from the XML document.
     metric_selection = "/Bus/child::Sensor"
 
@@ -99,7 +99,7 @@ metric.
     #field_name_expansion = false
 
     ## Tag definitions using the given XPath queries.
-    [inputs.file.xml.tags]
+    [inputs.file.xpath.tags]
       name   = "substring-after(Sensor/@name, ' ')"
       device = "string('the ultimate sensor')"
 
@@ -215,14 +215,14 @@ Config:
   files = ["example.xml"]
   data_format = "xml"
 
-  [[inputs.file.xml]]
-    [inputs.file.xml.tags]
+  [[inputs.file.xpath]]
+    [inputs.file.xpath.tags]
       gateway = "substring-before(/Gateway/Name, ' ')"
 
-    [inputs.file.xml.fields_int]
+    [inputs.file.xpath.fields_int]
       seqnr = "/Gateway/Sequence"
 
-    [inputs.file.xml.fields]
+    [inputs.file.xpath.fields]
       ok = "/Gateway/Status = 'ok'"
 ```
 
@@ -244,16 +244,16 @@ Config:
   files = ["example.xml"]
   data_format = "xml"
 
-  [[inputs.file.xml]]
+  [[inputs.file.xpath]]
     metric_name = "name(/Gateway/Status)"
 
     timestamp = "/Gateway/Timestamp"
     timestamp_format = "2006-01-02T15:04:05Z"
 
-    [inputs.file.xml.tags]
+    [inputs.file.xpath.tags]
       gateway = "substring-before(/Gateway/Name, ' ')"
 
-    [inputs.file.xml.fields]
+    [inputs.file.xpath.fields]
       ok = "/Gateway/Status = 'ok'"
 ```
 
@@ -273,7 +273,7 @@ Config:
   files = ["example.xml"]
   data_format = "xml"
 
-  [[inputs.file.xml]]
+  [[inputs.file.xpath]]
     metric_selection = "/Bus/child::Sensor"
 
     metric_name = "string('sensors')"
@@ -281,13 +281,13 @@ Config:
     timestamp = "/Gateway/Timestamp"
     timestamp_format = "2006-01-02T15:04:05Z"
 
-    [inputs.file.xml.tags]
+    [inputs.file.xpath.tags]
       name = "substring-after(@name, ' ')"
 
-    [inputs.file.xml.fields_int]
+    [inputs.file.xpath.fields_int]
       consumers = "Variable/@consumers"
 
-    [inputs.file.xml.fields]
+    [inputs.file.xpath.fields]
       temperature = "number(Variable/@temperature)"
       power       = "number(Variable/@power)"
       frequency   = "number(Variable/@frequency)"
@@ -314,7 +314,7 @@ Config:
   files = ["example.xml"]
   data_format = "xml"
 
-  [[inputs.file.xml]]
+  [[inputs.file.xpath]]
     metric_selection = "/Bus/child::Sensor"
     metric_name = "string('sensors')"
 
@@ -325,7 +325,7 @@ Config:
     field_name = "name(@*[1])"
     field_value = "number(@*[1])"
 
-    [inputs.file.xml.tags]
+    [inputs.file.xpath.tags]
       name = "substring-after(@name, ' ')"
 ```
 
