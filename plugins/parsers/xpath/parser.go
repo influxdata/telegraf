@@ -23,11 +23,12 @@ type dataDocument interface {
 }
 
 type Parser struct {
-	Format      string
-	MessageType string
-	Configs     []Config
-	DefaultTags map[string]string
-	Log         telegraf.Logger
+	Format        string
+	MessageType   string
+	PrintDocument bool
+	Configs       []Config
+	DefaultTags   map[string]string
+	Log           telegraf.Logger
 
 	document dataDocument
 }
@@ -75,7 +76,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
-	p.Log.Debugf("XML document equivalent: %q", p.document.OutputXML(doc))
+	if p.PrintDocument {
+		p.Log.Debugf("XML document equivalent: %q", p.document.OutputXML(doc))
+	}
 
 	// Queries
 	metrics := make([]telegraf.Metric, 0)
