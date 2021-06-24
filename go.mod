@@ -9,6 +9,7 @@ require (
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.5.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
+	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-storage-queue-go v0.0.0-20181215014128-6ed74e755687
 	github.com/Azure/go-autorest/autorest v0.11.17
 	github.com/Azure/go-autorest/autorest/adal v0.9.10
@@ -115,7 +116,6 @@ require (
 	github.com/signalfx/golib/v3 v3.3.34
 	github.com/sirupsen/logrus v1.7.0
 	github.com/sleepinggenius2/gosmi v0.4.3
-	github.com/snowflakedb/gosnowflake v1.5.0
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
