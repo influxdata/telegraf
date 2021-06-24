@@ -1118,6 +1118,10 @@ func TestTestCases(t *testing.T) {
 			filename: "testcases/multisensor_selection_batch.conf",
 		},
 		{
+			name:     "earthquakes quakeml",
+			filename: "testcases/earthquakes.conf",
+		},
+		{
 			name:     "openweathermap forecast (xml)",
 			filename: "testcases/openweathermap_xml.conf",
 		},
@@ -1130,8 +1134,8 @@ func TestTestCases(t *testing.T) {
 			filename: "testcases/addressbook.conf",
 		},
 		{
-			name:     "earthquakes quakeml",
-			filename: "testcases/earthquakes.conf",
+			name:     "message-pack",
+			filename: "testcases/tracker_msgpack.conf",
 		},
 	}
 
