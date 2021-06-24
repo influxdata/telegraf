@@ -1378,12 +1378,12 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 		c.getFieldBool(tbl, "xpath_print_document", &pc.XPathPrintDocument)
 
 		// Determine the actual xpath configuration tables
-		node, xpath_ok := tbl.Fields["xpath"]
-		if !xpath_ok {
+		node, xpathOK := tbl.Fields["xpath"]
+		if !xpathOK {
 			// Add this for backward compatibility
-			node, xpath_ok = tbl.Fields[pc.DataFormat]
+			node, xpathOK = tbl.Fields[pc.DataFormat]
 		}
-		if xpath_ok {
+		if xpathOK {
 			if subtbls, ok := node.([]*ast.Table); ok {
 				pc.XPathConfig = make([]parsers.XPathConfig, len(subtbls))
 				for i, subtbl := range subtbls {

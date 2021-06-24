@@ -389,7 +389,7 @@ func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, erro
 	}, nil
 }
 
-func NewXPathParser(format, pbtype, metricName string, print bool, tags map[string]string, cfgs []XPathConfig) (Parser, error) {
+func NewXPathParser(format, pbtype, metricName string, printDoc bool, tags map[string]string, cfgs []XPathConfig) (Parser, error) {
 	// Convert the config formats which is a one-to-one copy
 	configs := make([]xpath.Config, 0, len(cfgs))
 	for _, cfg := range cfgs {
@@ -401,7 +401,7 @@ func NewXPathParser(format, pbtype, metricName string, print bool, tags map[stri
 	return &xpath.Parser{
 		Format:        format,
 		MessageType:   pbtype,
-		PrintDocument: print,
+		PrintDocument: printDoc,
 		Configs:       configs,
 		DefaultTags:   tags,
 	}, nil
