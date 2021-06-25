@@ -27,8 +27,8 @@ type AzureDataExplorer struct {
 	ClientSecret   string          `toml:"client_secret"`
 	TenantID       string          `toml:"tenant_id"`
 	Log            telegraf.Logger `toml:"-"`
-	Client         localClient
-	Ingesters      map[string]localIngestor
+	client         localClient
+	ingesters      map[string]localIngestor
 	serializer     serializers.Serializer
 	CreateIngestor func(client localClient, database string, namespace string) (localIngestor, error)
 	CreateClient   func(endpoint string, clientId string, clientSecret string, tenantId string) (localClient, error)
@@ -74,15 +74,15 @@ func (adx *AzureDataExplorer) Connect() error {
 	if err != nil {
 		return err
 	}
-	adx.Client = client
-	adx.Ingesters = make(map[string]localIngestor)
+	adx.client = client
+	adx.ingesters = make(map[string]localIngestor)
 
 	return nil
 }
 
 func (adx *AzureDataExplorer) Close() error {
-	adx.Client = nil
-	adx.Ingesters = nil
+	adx.client = nil
+	adx.ingesters = nil
 
 	return nil
 }
@@ -103,15 +103,15 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 			metricsPerNamespace[namespace] = metricInBytes
 		}
 
-		if _, ingestorExist := adx.Ingesters[namespace]; !ingestorExist {
+		if _, ingestorExist := adx.ingesters[namespace]; !ingestorExist {
 			//create a table for the namespace
-			err := createAzureDataExplorerTableForNamespace(adx.Client, adx.Database, namespace)
+			err := createAzureDataExplorerTableForNamespace(adx.client, adx.Database, namespace)
 			if err != nil {
 				return err
 			}
 
 			//create a new ingestor client for the namespace
-			adx.Ingesters[namespace], err = adx.CreateIngestor(adx.Client, adx.Database, namespace)
+			adx.ingesters[namespace], err = adx.CreateIngestor(adx.client, adx.Database, namespace)
 			if err != nil {
 				return err
 			}
@@ -121,7 +121,7 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	for key, mPerNamespace := range metricsPerNamespace {
 		reader := bytes.NewReader(mPerNamespace)
 
-		_, errorIngesting := adx.Ingesters[key].FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON))
+		_, errorIngesting := adx.ingesters[key].FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON))
 		if errorIngesting != nil {
 			adx.Log.Errorf("error sending ingestion request to Azure Data Explorer for metric %s: %v", key, errorIngesting)
 		}

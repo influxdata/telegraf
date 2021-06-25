@@ -22,18 +22,22 @@ const createTableMappingCommandExpected = `.create-or-alter table ['%s'] ingesti
 
 func TestWrite(t *testing.T) {
 	azureDataExplorerOutput := AzureDataExplorer{
-		Endpoint:       "",
-		Database:       "",
-		ClientID:       "",
-		ClientSecret:   "",
-		TenantID:       "",
+		Endpoint:       "someendpoint",
+		Database:       "databasename",
+		ClientID:       "longclientid",
+		ClientSecret:   "longclientsecret",
+		TenantID:       "longtenantid",
 		Log:            logger,
-		Client:         &kusto.Client{},
-		Ingesters:      map[string]localIngestor{},
+		client:         &kusto.Client{},
+		ingesters:      map[string]localIngestor{},
 		CreateIngestor: createFakeIngestor,
 		CreateClient:   createFakeClient,
 	}
 
+	errorInit := azureDataExplorerOutput.Init()
+	if errorInit != nil {
+		t.Errorf("Error in Init: %s", errorInit)
+	}
 	errorConnect := azureDataExplorerOutput.Connect()
 	if errorConnect != nil {
 		t.Errorf("Error in Connect: %s", errorConnect)
