@@ -21,7 +21,7 @@ const createTableCommandExpected = `.create-merge table ['%s']  (['fields']:dyna
 const createTableMappingCommandExpected = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
 
 func TestWrite(t *testing.T) {
-	azureDataExplorerOutput := AzureDataExplorer{
+	plugin := AzureDataExplorer{
 		Endpoint:     "someendpoint",
 		Database:     "databasename",
 		ClientID:     "longclientid",
@@ -35,16 +35,16 @@ func TestWrite(t *testing.T) {
 	createClient = createFakeClient
 	createIngestor = createFakeIngestor
 
-	errorInit := azureDataExplorerOutput.Init()
+	errorInit := plugin.Init()
 	if errorInit != nil {
 		t.Errorf("Error in Init: %s", errorInit)
 	}
-	errorConnect := azureDataExplorerOutput.Connect()
+	errorConnect := plugin.Connect()
 	if errorConnect != nil {
 		t.Errorf("Error in Connect: %s", errorConnect)
 	}
 
-	errorWrite := azureDataExplorerOutput.Write(testutil.MockMetrics())
+	errorWrite := plugin.Write(testutil.MockMetrics())
 	if errorWrite != nil {
 		t.Errorf("Error in Write: %s", errorWrite)
 	}
