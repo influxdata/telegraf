@@ -23,12 +23,13 @@ type dataDocument interface {
 }
 
 type Parser struct {
-	Format        string
-	MessageType   string
-	PrintDocument bool
-	Configs       []Config
-	DefaultTags   map[string]string
-	Log           telegraf.Logger
+	Format              string
+	ProtobufMessageDef  string
+	ProtobufMessageType string
+	PrintDocument       bool
+	Configs             []Config
+	DefaultTags         map[string]string
+	Log                 telegraf.Logger
 
 	document dataDocument
 }
@@ -58,7 +59,11 @@ func (p *Parser) Init() error {
 	case "xpath_msgpack":
 		p.document = &msgpackDocument{}
 	case "xpath_protobuf":
-		pbdoc := protobufDocument{MessageType: p.MessageType, Log: p.Log}
+		pbdoc := protobufDocument{
+			MessageDefinition: p.ProtobufMessageDef,
+			MessageType:       p.ProtobufMessageType,
+			Log:               p.Log,
+		}
 		if err := pbdoc.Init(); err != nil {
 			return err
 		}

@@ -161,6 +161,7 @@ type Config struct {
 
 	// XPath configuration
 	XPathPrintDocument bool   `toml:"xpath_print_document"`
+	XPathProtobufFile  string `toml:"xpath_protobuf_file"`
 	XPathProtobufType  string `toml:"xpath_protobuf_type"`
 	XPathConfig        []XPathConfig
 
@@ -264,6 +265,7 @@ func NewParser(config *Config) (Parser, error) {
 	case "xml", "xpath_json", "xpath_msgpack", "xpath_protobuf":
 		parser, err = NewXPathParser(
 			config.DataFormat,
+			config.XPathProtobufFile,
 			config.XPathProtobufType,
 			config.MetricName,
 			config.XPathPrintDocument,
@@ -389,7 +391,7 @@ func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, erro
 	}, nil
 }
 
-func NewXPathParser(format, pbtype, metricName string, printDoc bool, tags map[string]string, cfgs []XPathConfig) (Parser, error) {
+func NewXPathParser(format, pbdef, pbtype, metricName string, printDoc bool, tags map[string]string, cfgs []XPathConfig) (Parser, error) {
 	// Convert the config formats which is a one-to-one copy
 	configs := make([]xpath.Config, 0, len(cfgs))
 	for _, cfg := range cfgs {
@@ -399,11 +401,12 @@ func NewXPathParser(format, pbtype, metricName string, printDoc bool, tags map[s
 	}
 
 	return &xpath.Parser{
-		Format:        format,
-		MessageType:   pbtype,
-		PrintDocument: printDoc,
-		Configs:       configs,
-		DefaultTags:   tags,
+		Format:              format,
+		ProtobufMessageDef:  pbdef,
+		ProtobufMessageType: pbtype,
+		PrintDocument:       printDoc,
+		Configs:             configs,
+		DefaultTags:         tags,
 	}, nil
 }
 

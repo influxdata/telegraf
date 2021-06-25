@@ -1157,12 +1157,21 @@ func TestTestCases(t *testing.T) {
 			require.GreaterOrEqual(t, len(filefields), 1)
 			datafile := filepath.FromSlash(filefields[0])
 			fileformat := ""
-			pbmsgtype := ""
 			if len(filefields) > 1 {
 				fileformat = filefields[1]
 			}
-			if len(filefields) > 2 {
-				pbmsgtype = filefields[2]
+
+			// Load the protocol buffer information if required
+			var pbmsgdef, pbmsgtype string
+			if fileformat == "xpath_protobuf" {
+				input, err := testutil.ParseRawLinesFrom(header, "Protobuf:")
+				require.NoError(t, err)
+				require.Len(t, input, 1)
+
+				protofields := strings.Fields(input[0])
+				require.Len(t, protofields, 2)
+				pbmsgdef = protofields[0]
+				pbmsgtype = protofields[1]
 			}
 
 			content, err := ioutil.ReadFile(datafile)
@@ -1176,10 +1185,11 @@ func TestTestCases(t *testing.T) {
 
 			// Setup the parser and run it.
 			parser := &Parser{
-				Format:      fileformat,
-				MessageType: pbmsgtype,
-				Configs:     []Config{*cfg},
-				Log:         testutil.Logger{Name: "parsers.xml"},
+				Format:              fileformat,
+				ProtobufMessageDef:  pbmsgdef,
+				ProtobufMessageType: pbmsgtype,
+				Configs:             []Config{*cfg},
+				Log:                 testutil.Logger{Name: "parsers.xml"},
 			}
 			require.NoError(t, parser.Init())
 			outputs, err := parser.Parse(content)

@@ -4,52 +4,68 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/influxdata/telegraf"
 
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/dynamicpb"
 
+	"github.com/jhump/protoreflect/desc/protoparse"
+
 	path "github.com/antchfx/xpath"
 	"github.com/doclambda/protobufquery"
-
-	// Register all known definitions
-	_ "github.com/doclambda/protobufquery/testcases/addressbook"
-	_ "github.com/doclambda/tahu/client_libraries/golang"
 )
 
-var once sync.Once
-
 type protobufDocument struct {
-	MessageType string
-	Log         telegraf.Logger
-	msg         *dynamicpb.Message
+	MessageDefinition string
+	MessageType       string
+	Log               telegraf.Logger
+	msg               *dynamicpb.Message
 }
 
 func (d *protobufDocument) Init() error {
-	var err error
-
-	// Register all packages requiring manual registration. Usually packages register themselves on import.
-	once.Do(func() {
-		// if err = protoregistry.GlobalFiles.RegisterFile(tahu.File_sparkplug_b_proto); err != nil { return }
-	})
-	if err != nil {
-		return fmt.Errorf("registering protocol-buffers manually failed: %v", err)
+	// Check the message definition and type
+	if d.MessageDefinition == "" {
+		return fmt.Errorf("protocol-buffer message-definition not set")
 	}
-
-	// Check the message type
 	if d.MessageType == "" {
 		return fmt.Errorf("protocol-buffer message-type not set")
 	}
 
-	// Get a prototypical message for later use
+	// Load the file descriptors from the given protocol-buffer definition
+	parser := protoparse.Parser{}
+	fds, err := parser.ParseFiles(d.MessageDefinition)
+	if err != nil {
+		return fmt.Errorf("parsing protocol-buffer definition in %q failed: %v", d.MessageDefinition, err)
+	}
+	if len(fds) < 1 {
+		return fmt.Errorf("file %q does not contain file descriptors", d.MessageDefinition)
+	}
+
+	// Register all definitions in the file in the global registry
+	for _, fd := range fds {
+		if fd == nil {
+			continue
+		}
+		fileDescProto := fd.AsFileDescriptorProto()
+		fileDesc, err := protodesc.NewFile(fileDescProto, nil)
+		if err != nil {
+			return fmt.Errorf("creating file descriptor from proto failed: %v", err)
+		}
+		if err := protoregistry.GlobalFiles.RegisterFile(fileDesc); err != nil {
+			return fmt.Errorf("registering file descriptor %q failed: %v", fileDesc.Package(), err)
+		}
+	}
+
+	// Lookup given type in the loaded file descriptors
 	msgFullName := protoreflect.FullName(d.MessageType)
 	desc, err := protoregistry.GlobalFiles.FindDescriptorByName(msgFullName)
 	if err != nil {
 		d.Log.Infof("Could not find %q... Known messages:", msgFullName)
+
 		var known []string
 		protoregistry.GlobalFiles.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
 			name := strings.TrimSpace(string(fd.FullName()))
@@ -65,12 +81,17 @@ func (d *protobufDocument) Init() error {
 		return err
 	}
 
+	// Get a prototypical message for later use
 	msgDesc, ok := desc.(protoreflect.MessageDescriptor)
 	if !ok {
-		return fmt.Errorf("found type for %q is not a message descriptor (%T)", msgFullName, desc)
+		return fmt.Errorf("%q is not a message descriptor (%T)", msgFullName, desc)
 	}
 
 	d.msg = dynamicpb.NewMessage(msgDesc)
+	if d.msg == nil {
+		return fmt.Errorf("creating message template for %q failed", msgDesc.FullName())
+	}
+
 	return nil
 }
 
