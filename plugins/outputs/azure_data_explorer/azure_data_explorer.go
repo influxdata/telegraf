@@ -54,19 +54,19 @@ func (adx *AzureDataExplorer) SampleConfig() string {
 	return `
   ## Azure Data Exlorer cluster endpoint
   ## ex: endpoint_url = "https://clustername.australiasoutheast.kusto.windows.net"
-  # endpoint_url = ""
+  endpoint_url = ""
   
   ## The name of the database in Azure Data Explorer where the ingestion will happen
-  # database = ""
+  database = ""
 
   ## The client ID of the Service Principal in Azure that has ingestion rights to the Azure Data Exploer Cluster
-  # client_id = ""
+  client_id = ""
 
   ## The client secret of the Service Principal in Azure that has ingestion rights to the Azure Data Exploer Cluster
-  # client_secret = ""
+  client_secret = ""
 
   ## The tenant ID of the Azure Subsciption in which the Service Principal belongs to
-  # tenant_id = ""
+  tenant_id = ""
 `
 }
 
