@@ -5,6 +5,7 @@ package azure_data_explorer
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -152,6 +153,21 @@ func createAzureDataExplorerTableForNamespace(client localClient, database strin
 // }
 
 func (adx *AzureDataExplorer) Init() error {
+	if adx.Endpoint == "" {
+		return errors.New("Endpoint configuration cannot be empty")
+	}
+	if adx.Database == "" {
+		return errors.New("Database configuration cannot be empty")
+	}
+	if adx.ClientID == "" {
+		return errors.New("ClientID configuration cannot be empty")
+	}
+	if adx.ClientSecret == "" {
+		return errors.New("ClientSecret configuration cannot be empty")
+	}
+	if adx.TenantID == "" {
+		return errors.New("TenantID configuration cannot be empty")
+	}
 	serializer, err := json.NewSerializer(time.Second)
 	if err != nil {
 		return err
