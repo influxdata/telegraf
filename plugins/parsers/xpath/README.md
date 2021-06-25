@@ -12,7 +12,10 @@ For supported XPath functions check [the underlying XPath library][xpath lib].
 | [Extensible Markup Language (XML)][xml] | `"xml"`               |         |
 | [JSON][json]                            | `"xpath_json"`        |         |
 | [MessagePack][msgpack]                  | `"xpath_msgpack"`     |         |
-| [Protocol buffers][protobuf]            | `"xpath_protobuf"`    | Specify the protocol-buffer type via `xpath_protobuf_type` <br>**NOTE:** New protocol-buffer message types have to be added at compile time due to  limitation of the protocol-buffer library.|
+| [Protocol buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](protocol-buffers-additiona-settings)|
+
+#### Protocol buffers additional settings
+For using the protocol-buffer format you need to specify a protocol buffer definition file (`.proto`) in `xpath_protobuf_file`, Furthermore, you need to specify which message type you want to use via `xpath_protobuf_type`.
 
 ### Configuration (explicit)
 In this configuration mode, you explicitly specify the field and tags you want to scrape out of your data.
@@ -26,10 +29,11 @@ In this configuration mode, you explicitly specify the field and tags you want t
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "xml"
 
-  ## Name of the protocol buffer type to use.
-  ## This is only relevant when parsing protocol buffers and must contain the fully qualified
-  ## name of the type e.g. "org.eclipse.tahu.protobuf.Payload".
-  # xpath_protobuf_type = ""
+  ## PROTOCOL BUFFER definitions
+  ## Protocol buffer definition file
+  # xpath_protobuf_file = "sparkplug_b.proto"
+  ## Name of the protocol buffer message type to use in a fully qualified form.
+  # xpath_protobuf_type = ""org.eclipse.tahu.protobuf.Payload""
 
   ## Print the internal XML document when in debug logging mode.
   ## This is especially useful when using the parser with non-XML formats like protocol buffers
