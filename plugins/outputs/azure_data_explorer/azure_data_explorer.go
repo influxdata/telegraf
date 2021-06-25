@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/Azure/azure-kusto-go/kusto"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
@@ -15,19 +16,19 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 
 type AzureDataExplorer struct {
 	Endpoint       string          `toml:"endpoint_url"`
 	Database       string          `toml:"database"`
-	ClientId       string          `toml:"client_id"`
+	ClientID       string          `toml:"client_id"`
 	ClientSecret   string          `toml:"client_secret"`
-	TenantId       string          `toml:"tenant_id"`
-	DataFormat     string          `toml:"data_format"`
+	TenantID       string          `toml:"tenant_id"`
 	Log            telegraf.Logger `toml:"-"`
 	Client         localClient
 	Ingesters      map[string]localIngestor
-	Serializer     serializers.Serializer
+	serializer     serializers.Serializer
 	CreateIngestor func(client localClient, database string, namespace string) (localIngestor, error)
 	CreateClient   func(endpoint string, clientId string, clientSecret string, tenantId string) (localClient, error)
 }
@@ -43,11 +44,11 @@ type localClient interface {
 const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
 const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
 
-func (s *AzureDataExplorer) Description() string {
+func (adx *AzureDataExplorer) Description() string {
 	return "Sends metrics to Azure Data Explorer"
 }
 
-func (s *AzureDataExplorer) SampleConfig() string {
+func (adx *AzureDataExplorer) SampleConfig() string {
 	return `
   ## Azure Data Exlorer cluster endpoint
   ## ex: endpoint_url = "https://clustername.australiasoutheast.kusto.windows.net"
@@ -68,8 +69,7 @@ func (s *AzureDataExplorer) SampleConfig() string {
 }
 
 func (adx *AzureDataExplorer) Connect() error {
-
-	client, err := adx.CreateClient(adx.Endpoint, adx.ClientId, adx.ClientSecret, adx.TenantId)
+	client, err := adx.CreateClient(adx.Endpoint, adx.ClientID, adx.ClientSecret, adx.TenantID)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,6 @@ func (adx *AzureDataExplorer) Connect() error {
 }
 
 func (adx *AzureDataExplorer) Close() error {
-
 	adx.Client = nil
 	adx.Ingesters = nil
 
@@ -88,12 +87,11 @@ func (adx *AzureDataExplorer) Close() error {
 }
 
 func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
-
 	metricsPerNamespace := make(map[string][]byte)
 
 	for _, m := range metrics {
 		namespace := m.Name() // getNamespace(m)
-		metricInBytes, err := adx.Serializer.Serialize(m)
+		metricInBytes, err := adx.serializer.Serialize(m)
 		if err != nil {
 			return err
 		}
@@ -122,16 +120,15 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	for key, mPerNamespace := range metricsPerNamespace {
 		reader := bytes.NewReader(mPerNamespace)
 
-		_, error := adx.Ingesters[key].FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON))
-		if error != nil {
-			adx.Log.Errorf("error sending ingestion request to Azure Data Explorer for metric %s: %v", key, error)
+		_, errorIngesting := adx.Ingesters[key].FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON))
+		if errorIngesting != nil {
+			adx.Log.Errorf("error sending ingestion request to Azure Data Explorer for metric %s: %v", key, errorIngesting)
 		}
 	}
 	return nil
 }
 
 func createAzureDataExplorerTableForNamespace(client localClient, database string, tableName string) error {
-
 	// Create a database
 	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
 	_, errCreatingTable := client.Mgmt(context.TODO(), database, createStmt)
@@ -155,9 +152,11 @@ func createAzureDataExplorerTableForNamespace(client localClient, database strin
 // }
 
 func (adx *AzureDataExplorer) Init() error {
-	if adx.DataFormat != "json" {
-		return fmt.Errorf("the azure data explorer supports json data format only, pleaes make sure to add the 'data_format=\"json\"' in the output configuration")
+	serializer, err := json.NewSerializer(time.Second)
+	if err != nil {
+		return err
 	}
+	adx.serializer = serializer
 	return nil
 }
 
@@ -170,10 +169,6 @@ func init() {
 	})
 }
 
-func (adx *AzureDataExplorer) SetSerializer(serializer serializers.Serializer) {
-	adx.Serializer = serializer
-}
-
 func createIngestor(client localClient, database string, namespace string) (localIngestor, error) {
 	ingestor, err := ingest.New(client.(*kusto.Client), database, namespace)
 	if ingestor != nil {
@@ -182,10 +177,10 @@ func createIngestor(client localClient, database string, namespace string) (loca
 	return nil, err
 }
 
-func createClient(endpoint string, clientId string, clientSecret string, tenantId string) (localClient, error) {
+func createClient(endpoint string, clientID string, clientSecret string, tenantID string) (localClient, error) {
 	// Make any connection required here
 	authorizer := kusto.Authorization{
-		Config: auth.NewClientCredentialsConfig(clientId, clientSecret, tenantId),
+		Config: auth.NewClientCredentialsConfig(clientID, clientSecret, tenantID),
 	}
 
 	client, err := kusto.New(endpoint, authorizer)

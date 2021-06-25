@@ -7,11 +7,9 @@ import (
 	"fmt"
 	"io"
 	"testing"
-	"time"
 
 	"github.com/Azure/azure-kusto-go/kusto"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -26,22 +24,25 @@ func TestWrite(t *testing.T) {
 	azureDataExplorerOutput := AzureDataExplorer{
 		Endpoint:       "",
 		Database:       "",
-		ClientId:       "",
+		ClientID:       "",
 		ClientSecret:   "",
-		TenantId:       "",
-		DataFormat:     "",
+		TenantID:       "",
 		Log:            logger,
 		Client:         &kusto.Client{},
 		Ingesters:      map[string]localIngestor{},
-		Serializer:     nil,
 		CreateIngestor: createFakeIngestor,
 		CreateClient:   createFakeClient,
 	}
 
-	azureDataExplorerOutput.Connect()
-	serializerJson, _ := serializers.NewJSONSerializer(time.Second)
-	azureDataExplorerOutput.SetSerializer(serializerJson)
-	azureDataExplorerOutput.Write(testutil.MockMetrics())
+	errorConnect := azureDataExplorerOutput.Connect()
+	if errorConnect != nil {
+		t.Errorf("Error in Connect: %s", errorConnect)
+	}
+
+	errorWrite := azureDataExplorerOutput.Write(testutil.MockMetrics())
+	if errorWrite != nil {
+		t.Errorf("Error in Write: %s", errorWrite)
+	}
 
 	expectedNameOfMetric := "test1"
 	if actualOutputMetric["name"] != expectedNameOfMetric {
@@ -57,17 +58,15 @@ func TestWrite(t *testing.T) {
 	if queriesSentToAzureDataExplorer[0] != createTableString {
 		t.Errorf("Error in Write: expected create table mapping query is %s, but actual is %s", queriesSentToAzureDataExplorer[1], createTableMappingString)
 	}
-
 	fields := actualOutputMetric["fields"]
 	logger.Debug((fields.(map[string]interface{}))["value"])
-
 }
 
 func createFakeIngestor(client localClient, database string, namespace string) (localIngestor, error) {
 	return &fakeIngestor{}, nil
 }
 
-func createFakeClient(endpoint string, clientId string, clientSecret string, tenantId string) (localClient, error) {
+func createFakeClient(endpoint string, clientID string, clientSecret string, tenantID string) (localClient, error) {
 	return &fakeClient{}, nil
 }
 
@@ -83,7 +82,6 @@ type fakeIngestor struct {
 }
 
 func (f *fakeIngestor) FromReader(ctx context.Context, reader io.Reader, options ...ingest.FileOption) (*ingest.Result, error) {
-
 	scanner := bufio.NewScanner(reader)
 	scanner.Scan()
 	firstLine := scanner.Text()
