@@ -87,7 +87,7 @@ func (f *fakeIngestor) FromReader(ctx context.Context, reader io.Reader, options
 	firstLine := scanner.Text()
 	err := json.Unmarshal([]byte(firstLine), &actualOutputMetric)
 	if err != nil {
-		logger.Errorf(err.Error())
+		return nil, err
 	}
 	return &ingest.Result{}, nil
 }
