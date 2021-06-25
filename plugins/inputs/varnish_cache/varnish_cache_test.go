@@ -81,7 +81,7 @@ func TestParseVarnishNames(t *testing.T) {
 	}
 }
 
-func getJson(fileName string, v interface{}) error {
+func getJSON(fileName string, v interface{}) error {
 	f, _ := os.Open("test_data/" + fileName)
 	dec := json.NewDecoder(f)
 	dec.UseNumber()
@@ -109,7 +109,7 @@ func TestReloadPrefix(t *testing.T) {
 		{jsonFile: "varnish4_4.json", activeReloadPrefix: ""},
 	} {
 		var rootJSON map[string]interface{}
-		e := getJson(c.jsonFile, &rootJSON)
+		e := getJSON(c.jsonFile, &rootJSON)
 		require.NoError(t, e)
 		countersJSON, e := getCountersJSON(rootJSON)
 		require.NoError(t, e)
@@ -143,7 +143,12 @@ func TestVBEMetricParsing(t *testing.T) {
 		id          string
 	}
 	for _, c := range []testConfig{
+		{vName: "VBE.VCL_xxxx_xxx_VOD_SHIELD_Vxxxxxxxxxxxxx_xxxxxxxxxxxxx.goto.000007d3.(xx.xx.xxx.xx).(http://xxxxxxx-xxxxx-xxxxx-xxxxxx-xx-xxxx-x-xxxx.xx-xx-xxxx-x.amazonaws.com:80).(ttl:5.000000).fail_eacces",
+			backend: "vcl_xxxx_xxx_vod_shield_vxxxxxxxxxxxxx_xxxxxxxxxxxxx.goto.000007d3.(xx.xx.xxx.xx).(http://xxxxxxx-xxxxx-xxxxx-xxxxxx-xx-xxxx-x-xxxx.xx-xx-xxxx-x.amazonaws.com:80)",
+			server:  "ttl:5.000000",
+			field:   "fail_eacces", id: "", measurement: "vbe"},
 		//old varnish 4.x
+		{vName: "VBE.VCL_ROUTER_V1622831742298_1622831742298.default.happy", backend: "vcl_router_v1622831742298_1622831742298.default", server: "", field: "happy", measurement: "vbe"},
 		{vName: "VBE.aa_b.c.-d:d(10.100.0.108,,8080).happy", backend: "aa_b.c.-d:d", server: "10.100.0.108:8080", field: "happy", measurement: "vbe"},
 		{vName: "VBE.root:aa2_b.c-d:e.happy", backend: "aa2_b.c-d:e", server: "", field: "happy", measurement: "vbe"},
 		{vName: "VBE.34f022e6-55f3-4167-b213-95fac1921a0e.aa1_x.y-z:8080.happy", backend: "aa1_x.y-z:8080", server: "34f022e6-55f3-4167-b213-95fac1921a0e", field: "happy", measurement: "vbe"},

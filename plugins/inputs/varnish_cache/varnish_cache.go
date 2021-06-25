@@ -132,7 +132,6 @@ func varnishRunner(
 // The prefix of each stat (eg MAIN, MEMPOOL, LCK, etc) will be used as a
 // measurement name, string after last "." parsed as a field, middle part is parsed into tags.
 func (s *VarnishCache) Gather(acc telegraf.Accumulator) error {
-
 	out, err := s.run(s.Binary, s.Args, s.UseSudo, s.InstanceName, s.Timeout)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
@@ -147,32 +146,25 @@ func (s *VarnishCache) Gather(acc telegraf.Accumulator) error {
 }
 
 func getCountersJSON(rootJSON map[string]interface{}) (map[string]interface{}, error) {
-
-	countersJSON := make(map[string]interface{})
-
-	// schema version and counters structure added in 6.5+
 	version := rootJSON["version"]
-	if version != nil {
-		versionNum, ok := version.(json.Number)
-		if !ok {
-			return nil, fmt.Errorf("invalid json schema version")
-		}
-		switch versionNum.String() {
-		case "1":
-			countersJSON = rootJSON["counters"].(map[string]interface{})
-		default:
-			return nil, fmt.Errorf("unsupported json stats version: %s", versionNum)
-		}
-	} else {
-		countersJSON = rootJSON
+	if version == nil {
+		return rootJSON, nil
 	}
-	return countersJSON, nil
-
+	// schema version and counters structure added in 6.5+
+	versionNum, ok := version.(json.Number)
+	if !ok {
+		return nil, fmt.Errorf("invalid json schema version")
+	}
+	switch versionNum.String() {
+	case "1":
+		return rootJSON["counters"].(map[string]interface{}), nil
+	default:
+		return nil, fmt.Errorf("unsupported json stats version: %s", versionNum)
+	}
 }
 
 // Adds varnish stats json into into accumulator
 func (s *VarnishCache) processJSON(acc telegraf.Accumulator, rootJSON map[string]interface{}) error {
-
 	countersJSON, err := getCountersJSON(rootJSON)
 	if err != nil {
 		acc.AddError(err)
@@ -195,7 +187,7 @@ func (s *VarnishCache) processJSON(acc telegraf.Accumulator, rootJSON map[string
 		data, ok := raw.(map[string]interface{})
 
 		if !ok {
-			acc.AddError(fmt.Errorf("W: unexpected data from json: %s: %#v\n", vFieldName, raw))
+			acc.AddError(fmt.Errorf("unexpected data from json: %s: %#v", vFieldName, raw))
 			continue
 		}
 		var (
@@ -205,7 +197,7 @@ func (s *VarnishCache) processJSON(acc telegraf.Accumulator, rootJSON map[string
 			vErr error
 		)
 
-		flag, _ := data["flag"]
+		flag := data["flag"]
 
 		// parse value
 		if value, ok := data["value"]; ok {
@@ -281,9 +273,7 @@ func createMetric(vName string) (measurement string, name string, tags map[strin
 func cleanBackendName(name string) string {
 	name = strings.Trim(name, ".")
 	for _, prefix := range []string{"boot.", "root:"} {
-		if strings.HasPrefix(name, prefix) {
-			name = name[len(prefix):]
-		}
+		name = strings.TrimPrefix(name, prefix)
 	}
 	// reload_20191014_091124_78599.<name>
 	if strings.HasPrefix(name, "reload_") {
@@ -297,9 +287,9 @@ func cleanBackendName(name string) string {
 
 // Find the most recent 'VBE.reload_' prefix using string compare
 // 'VBE.reload_20210623_170621_31083'
-func findActiveReloadPrefix(json map[string]interface{}) string {
+func findActiveReloadPrefix(countersJSON map[string]interface{}) string {
 	var prefix string
-	for vName := range json {
+	for vName := range countersJSON {
 		if strings.HasPrefix(vName, reloadPrefix) && strings.HasSuffix(vName, ".happy") {
 			dotAfterPrefixIndex := len(reloadPrefix) + strings.Index(vName[len(reloadPrefix):], ".")
 			vbeReloadPrefix := vName[:dotAfterPrefixIndex]
