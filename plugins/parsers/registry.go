@@ -263,15 +263,14 @@ func NewParser(config *Config) (Parser, error) {
 	case "prometheusremotewrite":
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
 	case "xml", "xpath_json", "xpath_msgpack", "xpath_protobuf":
-		parser, err = NewXPathParser(
-			config.DataFormat,
-			config.XPathProtobufFile,
-			config.XPathProtobufType,
-			config.MetricName,
-			config.XPathPrintDocument,
-			config.DefaultTags,
-			config.XPathConfig,
-		)
+		parser = &xpath.Parser{
+			Format:              config.DataFormat,
+			ProtobufMessageDef:  config.XPathProtobufFile,
+			ProtobufMessageType: config.XPathProtobufType,
+			PrintDocument:       config.XPathPrintDocument,
+			DefaultTags:         config.DefaultTags,
+			Configs:             NewXPathParserConfigs(config.MetricName, config.XPathConfig),
+		}
 	case "json_v2":
 		parser, err = NewJSONPathParser(config.JSONV2Config)
 	default:
@@ -391,7 +390,7 @@ func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, erro
 	}, nil
 }
 
-func NewXPathParser(format, pbdef, pbtype, metricName string, printDoc bool, tags map[string]string, cfgs []XPathConfig) (Parser, error) {
+func NewXPathParserConfigs(metricName string, cfgs []XPathConfig) []xpath.Config {
 	// Convert the config formats which is a one-to-one copy
 	configs := make([]xpath.Config, 0, len(cfgs))
 	for _, cfg := range cfgs {
@@ -399,15 +398,7 @@ func NewXPathParser(format, pbdef, pbtype, metricName string, printDoc bool, tag
 		config.MetricName = metricName
 		configs = append(configs, config)
 	}
-
-	return &xpath.Parser{
-		Format:              format,
-		ProtobufMessageDef:  pbdef,
-		ProtobufMessageType: pbtype,
-		PrintDocument:       printDoc,
-		Configs:             configs,
-		DefaultTags:         tags,
-	}, nil
+	return configs
 }
 
 func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
