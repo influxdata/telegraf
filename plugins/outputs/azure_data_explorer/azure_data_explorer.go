@@ -20,18 +20,19 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 
+var createIngestor = createRealIngestor
+var createClient = createRealClient
+
 type AzureDataExplorer struct {
-	Endpoint       string          `toml:"endpoint_url"`
-	Database       string          `toml:"database"`
-	ClientID       string          `toml:"client_id"`
-	ClientSecret   string          `toml:"client_secret"`
-	TenantID       string          `toml:"tenant_id"`
-	Log            telegraf.Logger `toml:"-"`
-	client         localClient
-	ingesters      map[string]localIngestor
-	serializer     serializers.Serializer
-	CreateIngestor func(client localClient, database string, namespace string) (localIngestor, error)
-	CreateClient   func(endpoint string, clientId string, clientSecret string, tenantId string) (localClient, error)
+	Endpoint     string          `toml:"endpoint_url"`
+	Database     string          `toml:"database"`
+	ClientID     string          `toml:"client_id"`
+	ClientSecret string          `toml:"client_secret"`
+	TenantID     string          `toml:"tenant_id"`
+	Log          telegraf.Logger `toml:"-"`
+	client       localClient
+	ingesters    map[string]localIngestor
+	serializer   serializers.Serializer
 }
 
 type localIngestor interface {
@@ -70,7 +71,7 @@ func (adx *AzureDataExplorer) SampleConfig() string {
 }
 
 func (adx *AzureDataExplorer) Connect() error {
-	client, err := adx.CreateClient(adx.Endpoint, adx.ClientID, adx.ClientSecret, adx.TenantID)
+	client, err := createClient(adx.Endpoint, adx.ClientID, adx.ClientSecret, adx.TenantID)
 	if err != nil {
 		return err
 	}
@@ -111,7 +112,7 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 			}
 
 			//create a new ingestor client for the namespace
-			adx.ingesters[namespace], err = adx.CreateIngestor(adx.client, adx.Database, namespace)
+			adx.ingesters[namespace], err = createIngestor(adx.client, adx.Database, namespace)
 			if err != nil {
 				return err
 			}
@@ -178,14 +179,11 @@ func (adx *AzureDataExplorer) Init() error {
 
 func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
-		return &AzureDataExplorer{
-			CreateIngestor: createIngestor,
-			CreateClient:   createClient,
-		}
+		return &AzureDataExplorer{}
 	})
 }
 
-func createIngestor(client localClient, database string, namespace string) (localIngestor, error) {
+func createRealIngestor(client localClient, database string, namespace string) (localIngestor, error) {
 	ingestor, err := ingest.New(client.(*kusto.Client), database, namespace)
 	if ingestor != nil {
 		return ingestor, nil
@@ -193,7 +191,7 @@ func createIngestor(client localClient, database string, namespace string) (loca
 	return nil, err
 }
 
-func createClient(endpoint string, clientID string, clientSecret string, tenantID string) (localClient, error) {
+func createRealClient(endpoint string, clientID string, clientSecret string, tenantID string) (localClient, error) {
 	// Make any connection required here
 	authorizer := kusto.Authorization{
 		Config: auth.NewClientCredentialsConfig(clientID, clientSecret, tenantID),
