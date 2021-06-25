@@ -75,16 +75,14 @@ func createFakeClient(endpoint string, clientID string, clientSecret string, ten
 	return &fakeClient{}, nil
 }
 
-type fakeClient struct {
-}
+type fakeClient struct{}
 
 func (f *fakeClient) Mgmt(ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error) {
 	queriesSentToAzureDataExplorer = append(queriesSentToAzureDataExplorer, query.String())
 	return &kusto.RowIterator{}, nil
 }
 
-type fakeIngestor struct {
-}
+type fakeIngestor struct{}
 
 func (f *fakeIngestor) FromReader(ctx context.Context, reader io.Reader, options ...ingest.FileOption) (*ingest.Result, error) {
 	scanner := bufio.NewScanner(reader)
