@@ -20,6 +20,7 @@ func TestData(t *testing.T) {
 		name string
 		test string
 	}{
+		// !!!! TEST JSON THAT ISN'T PRETTY FORMATTED !!!!
 		{
 			name: "Test complex nesting",
 			test: "complex_nesting",

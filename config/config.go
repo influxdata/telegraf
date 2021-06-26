@@ -1421,28 +1421,8 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 				c.getFieldString(metricConfig, "timestamp_format", &mc.TimestampFormat)
 				c.getFieldString(metricConfig, "timestamp_timezone", &mc.TimestampTimezone)
 
-				if fieldConfigs, ok := metricConfig.Fields["field"]; ok {
-					if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
-						for _, fieldconfig := range fieldConfigs {
-							var f json_v2.DataSet
-							c.getFieldString(fieldconfig, "path", &f.Path)
-							c.getFieldString(fieldconfig, "rename", &f.Rename)
-							c.getFieldString(fieldconfig, "type", &f.Type)
-							mc.Fields = append(mc.Fields, f)
-						}
-					}
-				}
-				if fieldConfigs, ok := metricConfig.Fields["tag"]; ok {
-					if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
-						for _, fieldconfig := range fieldConfigs {
-							var t json_v2.DataSet
-							c.getFieldString(fieldconfig, "path", &t.Path)
-							c.getFieldString(fieldconfig, "rename", &t.Rename)
-							t.Type = "string"
-							mc.Tags = append(mc.Tags, t)
-						}
-					}
-				}
+				mc.Fields = getFieldSubtable(c, metricConfig)
+				mc.Tags = getTagSubtable(c, metricConfig)
 
 				if objectconfigs, ok := metricConfig.Fields["object"]; ok {
 					if objectconfigs, ok := objectconfigs.([]*ast.Table); ok {
@@ -1458,6 +1438,10 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 							c.getFieldStringSlice(objectConfig, "tags", &o.Tags)
 							c.getFieldStringMap(objectConfig, "renames", &o.Renames)
 							c.getFieldStringMap(objectConfig, "fields", &o.Fields)
+
+							o.FieldPaths = getFieldSubtable(c, metricConfig)
+							o.TagPaths = getTagSubtable(c, metricConfig)
+
 							mc.JSONObjects = append(mc.JSONObjects, o)
 						}
 					}
@@ -1475,6 +1459,42 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	}
 
 	return pc, nil
+}
+
+func getFieldSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
+	var fields []json_v2.DataSet
+
+	if fieldConfigs, ok := metricConfig.Fields["field"]; ok {
+		if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
+			for _, fieldconfig := range fieldConfigs {
+				var f json_v2.DataSet
+				c.getFieldString(fieldconfig, "path", &f.Path)
+				c.getFieldString(fieldconfig, "rename", &f.Rename)
+				c.getFieldString(fieldconfig, "type", &f.Type)
+				fields = append(fields, f)
+			}
+		}
+	}
+
+	return fields
+}
+
+func getTagSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
+	var tags []json_v2.DataSet
+
+	if fieldConfigs, ok := metricConfig.Fields["tag"]; ok {
+		if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
+			for _, fieldconfig := range fieldConfigs {
+				var t json_v2.DataSet
+				c.getFieldString(fieldconfig, "path", &t.Path)
+				c.getFieldString(fieldconfig, "rename", &t.Rename)
+				t.Type = "string"
+				tags = append(tags, t)
+			}
+		}
+	}
+
+	return tags
 }
 
 // buildSerializer grabs the necessary entries from the ast.Table for creating

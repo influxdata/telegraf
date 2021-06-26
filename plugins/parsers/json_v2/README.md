@@ -19,21 +19,37 @@ You configure this parser by describing the metric you want by defining the fiel
         timestamp_format = "" # A string with a valid timestamp format (see below for possible values)
         timestamp_timezone = "" # A string with with a valid timezone (see below for possible values)
         [[inputs.file.json_v2.tag]]
-            path = "" # A string with valid GJSON path syntax
+            path = "" # A string with valid GJSON path syntax to a non-array/non-object value
             rename = "new name" # A string with a new name for the tag key
         [[inputs.file.json_v2.field]]
-            path = "" # A string with valid GJSON path syntax
+            path = "" # A string with valid GJSON path syntax to a non-array/non-object value
             rename = "new name" # A string with a new name for the tag key
             type = "int" # A string specifying the type (int,uint,float,string,bool)
         [[inputs.file.json_v2.object]]
-            path = "" # A string with valid GJSON path syntax
+            path = "" # A string with valid GJSON path syntax, can include array's and object's
+
+            ## Configuration to define what JSON keys should be used as timestamps ##
             timestamp_key = "" # A JSON key (for a nested key, prepend the parent keys with underscores) to a valid timestamp
             timestamp_format = "" # A string with a valid timestamp format (see below for possible values)
             timestamp_timezone = "" # A string with with a valid timezone (see below for possible values)
-            disable_prepend_keys = false (or true, just not both)
+
+            ### Configuration to define what JSON keys should be included and how (field/tag) ###
+            tags = [] # List of JSON keys (for a nested key, prepend the parent keys with underscores) to be a tag instead of a field, when adding a JSON key in this list you don't have to define it in the included_keys list
             included_keys = [] # List of JSON keys (for a nested key, prepend the parent keys with underscores) that should be only included in result
             excluded_keys = [] # List of JSON keys (for a nested key, prepend the parent keys with underscores) that shouldn't be included in result
-            tags = [] # List of JSON keys (for a nested key, prepend the parent keys with underscores) to be a tag instead of a field
+            # When a tag/field sub-table is defined, they will be the only field/tag's along with any keys defined in the included_keys list.
+            # If the resulting values aren't included in the object/array returned by the root object path, it won't be included.
+            # You can define as many tag/field sub-tables as you want.
+            [[inputs.file.json_v2.object.tag]]
+                path = "" # A string with valid GJSON path syntax to a non-array/non-object value
+                rename = "new name" # A string with a new name for the tag key
+            [[inputs.file.json_v2.object.field]]
+                path = "" # A string with valid GJSON path syntax to a non-array/non-object value
+                rename = "new name" # A string with a new name for the tag key
+                type = "int" # A string specifying the type (int,uint,float,string,bool)
+
+            ### Configuration to modify the resutling line protocol ###
+            disable_prepend_keys = false (or true, just not both)
             [inputs.file.json_v2.object.renames] # A map of JSON keys (for a nested key, prepend the parent keys with underscores) with a new name for the tag key
                 key = "new name"
             [inputs.file.json_v2.object.fields] # A map of JSON keys (for a nested key, prepend the parent keys with underscores) with a type (int,uint,float,string,bool)
@@ -185,3 +201,6 @@ The type values you can set:
 * `string`, any data can be formatted as a string.
 * `float`, string values (with valid numbers) or integers can be converted to a float.
 * `bool`, the string values "true" or "false" (regardless of capitalization) or the integer values `0` or `1`  can be turned to a bool.
+
+## The JSON path formats: GJSON, prepended keys, and limited GJSON
+
