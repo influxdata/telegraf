@@ -382,16 +382,17 @@ func (p *Parser) processObjects(objects []JSONObject, input []byte) ([]telegraf.
 		result := gjson.GetBytes(input, c.Path)
 
 		// hastag doesn't return index! idea: replace all hastags with index, and find lenght of array
+		scopedJSON := []byte(result.Raw)
 		for _, f := range c.FieldPaths {
 			var r PathResult
-			r.result = gjson.GetBytes(input, f.Path)
+			r.result = gjson.GetBytes(scopedJSON, f.Path)
 			r.DataSet = f
 			p.fieldPathResults = append(p.fieldPathResults, r)
 		}
 
 		for _, f := range c.TagPaths {
 			var r PathResult
-			r.result = gjson.GetBytes(input, f.Path)
+			r.result = gjson.GetBytes(scopedJSON, f.Path)
 			r.DataSet = f
 			p.tagPathResults = append(p.tagPathResults, r)
 		}
@@ -432,7 +433,7 @@ func (p *Parser) processObjects(objects []JSONObject, input []byte) ([]telegraf.
 		}
 
 		rootObject := MetricNode{
-			ParentIndex: result.Index,
+			ParentIndex: 0,
 			Metric: metric.New(
 				p.measurementName,
 				map[string]string{},
