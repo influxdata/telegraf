@@ -1304,17 +1304,28 @@ SELECT @lastIntervalEndTime = [collectionTime] FROM #TelegrafCachedDbCollectionT
 
 DECLARE @currIntervalStartTime DATETIMEOFFSET, @currIntervalEndTime DATETIMEOFFSET, @queryStartTime DATETIMEOFFSET;
 
+DECLARE @currTime DATETIMEOFFSET = SYSDATETIMEOFFSET();
+DECLARE @currTimeLimit DATETIMEOFFSET;
+
+/* Only Query Store intervals that ended after @currTimeLimit will be collected */
+SELECT @currTimeLimit =
+    CASE interval_length_minutes
+        WHEN 1440 THEN DATEADD(hh, -24, @currTime)
+        ELSE DATEADD(hh, -3, @currTime)
+    END
+FROM sys.database_query_store_options;
+
 /*Get the last completed interval*/
 SELECT TOP 1 @queryStartTime = start_time,  @currIntervalEndTime = end_time
 FROM sys.query_store_runtime_stats_interval
-WHERE end_time < SYSDATETIMEOFFSET()
+WHERE end_time < @currTime
 ORDER BY runtime_stats_interval_id DESC;
 
 /* Query Store is disabled OR interval is already collected */
-if @currIntervalEndTime IS NULL OR @currIntervalEndTime = @lastIntervalEndTime
+if @currIntervalEndTime IS NULL OR @currIntervalEndTime < @currTimeLimit OR @currIntervalEndTime = @lastIntervalEndTime
 	RETURN;
 
-SET @currIntervalStartTime = IIF(@lastIntervalEndTime IS NOT NULL, @lastIntervalEndTime, @queryStartTime);
+SET @currIntervalStartTime = IIF(@lastIntervalEndTime IS NULL OR @lastIntervalEndTime < @currTimeLimit, @queryStartTime, @lastIntervalEndTime);
 
 ';
 
