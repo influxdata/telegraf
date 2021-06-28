@@ -149,6 +149,7 @@ following works:
 - github.com/mdlayher/netlink [MIT License](https://github.com/mdlayher/netlink/blob/master/LICENSE.md)
 - github.com/microsoft/ApplicationInsights-Go [MIT License](https://github.com/microsoft/ApplicationInsights-Go/blob/master/LICENSE)
 - github.com/miekg/dns [BSD 3-Clause Clear License](https://github.com/miekg/dns/blob/master/LICENSE)
+- github.com/minio/highwayhash [Apache License 2.0](https://github.com/minio/highwayhash/blob/master/LICENSE)
 - github.com/mitchellh/go-homedir [MIT License](https://github.com/mitchellh/go-homedir/blob/master/LICENSE)
 - github.com/mitchellh/mapstructure [MIT License](https://github.com/mitchellh/mapstructure/blob/master/LICENSE)
 - github.com/moby/ipvs [Apache License 2.0](https://github.com/moby/ipvs/blob/master/LICENSE)
