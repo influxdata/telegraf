@@ -164,11 +164,11 @@ type Node struct {
 	GcNumDetails             Details `json:"gc_num_details"`
 	GcBytesReclaimed         int64   `json:"gc_bytes_reclaimed"`
 	GcBytesReclaimedDetails  Details `json:"gc_bytes_reclaimed_details"`
-	IoReadAvgTime            int64   `json:"io_read_avg_time"`
+	IoReadAvgTime            float64 `json:"io_read_avg_time"`
 	IoReadAvgTimeDetails     Details `json:"io_read_avg_time_details"`
 	IoReadBytes              int64   `json:"io_read_bytes"`
 	IoReadBytesDetails       Details `json:"io_read_bytes_details"`
-	IoWriteAvgTime           int64   `json:"io_write_avg_time"`
+	IoWriteAvgTime           float64 `json:"io_write_avg_time"`
 	IoWriteAvgTimeDetails    Details `json:"io_write_avg_time_details"`
 	IoWriteBytes             int64   `json:"io_write_bytes"`
 	IoWriteBytesDetails      Details `json:"io_write_bytes_details"`
