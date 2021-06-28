@@ -337,3 +337,55 @@ func TestRabbitMQCornerCaseMetrics(t *testing.T) {
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 }
+
+func TestRabbitMQMetricFilerts(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, fmt.Sprintf("unknown path %q", r.URL.Path), http.StatusNotFound)
+	}))
+	defer ts.Close()
+
+	metricErrors := map[string]error{
+		"exchange":   fmt.Errorf("getting \"/api/exchanges\" failed: 404 Not Found"),
+		"federation": fmt.Errorf("getting \"/api/federation-links\" failed: 404 Not Found"),
+		"node":       fmt.Errorf("getting \"/api/nodes\" failed: 404 Not Found"),
+		"overview":   fmt.Errorf("getting \"/api/overview\" failed: 404 Not Found"),
+		"queue":      fmt.Errorf("getting \"/api/queues\" failed: 404 Not Found"),
+	}
+
+	// Include test
+	for name, expected := range metricErrors {
+		plugin := &RabbitMQ{
+			URL:           ts.URL,
+			Log:           testutil.Logger{},
+			MetricInclude: []string{name},
+		}
+		require.NoError(t, plugin.Init())
+
+		acc := &testutil.Accumulator{}
+		require.NoError(t, plugin.Gather(acc))
+		require.Len(t, acc.Errors, 1)
+		require.ElementsMatch(t, []error{expected}, acc.Errors)
+	}
+
+	// Exclude test
+	for name := range metricErrors {
+		// Exclude the current metric error from the list of expected errors
+		var expected []error
+		for n, e := range metricErrors {
+			if n != name {
+				expected = append(expected, e)
+			}
+		}
+		plugin := &RabbitMQ{
+			URL:           ts.URL,
+			Log:           testutil.Logger{},
+			MetricExclude: []string{name},
+		}
+		require.NoError(t, plugin.Init())
+
+		acc := &testutil.Accumulator{}
+		require.NoError(t, plugin.Gather(acc))
+		require.Len(t, acc.Errors, len(expected))
+		require.ElementsMatch(t, expected, acc.Errors)
+	}
+}
