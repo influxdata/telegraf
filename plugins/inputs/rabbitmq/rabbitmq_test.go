@@ -21,17 +21,17 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 
 		switch r.URL.Path {
 		case "/api/overview":
-			jsonFilePath = "testdata/overview.json"
+			jsonFilePath = "testdata/set1/overview.json"
 		case "/api/nodes":
-			jsonFilePath = "testdata/nodes.json"
+			jsonFilePath = "testdata/set1/nodes.json"
 		case "/api/queues":
-			jsonFilePath = "testdata/queues.json"
+			jsonFilePath = "testdata/set1/queues.json"
 		case "/api/exchanges":
-			jsonFilePath = "testdata/exchanges.json"
+			jsonFilePath = "testdata/set1/exchanges.json"
 		case "/api/federation-links":
-			jsonFilePath = "testdata/federation-links.json"
+			jsonFilePath = "testdata/set1/federation-links.json"
 		case "/api/nodes/rabbit@vagrant-ubuntu-trusty-64/memory":
-			jsonFilePath = "testdata/memory.json"
+			jsonFilePath = "testdata/set1/memory.json"
 		default:
 			http.Error(w, fmt.Sprintf("unknown path %q", r.URL.Path), http.StatusNotFound)
 			return
@@ -235,7 +235,7 @@ func TestRabbitMQCornerCaseMetrics(t *testing.T) {
 		case "/api/nodes":
 			jsonFilePath = "testdata/nodes_corner_case.json"
 		case "/api/nodes/rabbit@rmqserver/memory":
-			jsonFilePath = "testdata/memory.json"
+			jsonFilePath = "testdata/set1/memory.json"
 		default:
 			http.Error(w, fmt.Sprintf("unknown path %q", r.URL.Path), http.StatusNotFound)
 			return
