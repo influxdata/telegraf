@@ -37,19 +37,9 @@ func TestWrite(t *testing.T) {
 	createClient = createFakeClient
 	createIngestor = createFakeIngestor
 
-	errorInit := plugin.Init()
-	if errorInit != nil {
-		t.Errorf("Error in Init: %s", errorInit)
-	}
-	errorConnect := plugin.Connect()
-	if errorConnect != nil {
-		t.Errorf("Error in Connect: %s", errorConnect)
-	}
-
-	errorWrite := plugin.Write(testutil.MockMetrics())
-	if errorWrite != nil {
-		t.Errorf("Error in Write: %s", errorWrite)
-	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, plugin.Write(testutil.MockMetrics()))
 
 	expectedNameOfMetric := "test1"
 	require.Equal(t, expectedNameOfMetric, actualOutputMetric["name"])
