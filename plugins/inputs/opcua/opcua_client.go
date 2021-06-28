@@ -138,10 +138,10 @@ const sampleConfig = `
   ## Password. Required for auth_method = "UserName"
   # password = ""
   #
-	## Option to select the metric timestamp to use. Valid options are:
-	##     "gather" -- uses the time of receiving the data in telegraf
-	##     "server" -- uses the timestamp provided by the server
-	##     "source" -- uses the timestamp provided by the source
+  ## Option to select the metric timestamp to use. Valid options are:
+  ##     "gather" -- uses the time of receiving the data in telegraf
+  ##     "server" -- uses the timestamp provided by the server
+  ##     "source" -- uses the timestamp provided by the source
   # timestamp = "gather"
   #
   ## Node ID configuration

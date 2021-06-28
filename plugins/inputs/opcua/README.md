@@ -47,9 +47,9 @@ Plugin minimum tested version: 1.16
   # password = ""
   #
   ## Option to select the metric timestamp to use. Valid options are:
-	##     "gather" -- uses the time of receiving the data in telegraf
-	##     "server" -- uses the timestamp provided by the server
-	##     "source" -- uses the timestamp provided by the source
+  ##     "gather" -- uses the time of receiving the data in telegraf
+  ##     "server" -- uses the timestamp provided by the server
+  ##     "source" -- uses the timestamp provided by the source
   # timestamp = "gather"
   #
   ## Node ID configuration
