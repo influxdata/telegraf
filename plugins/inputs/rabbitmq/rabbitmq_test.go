@@ -230,6 +230,8 @@ func TestRabbitMQCornerCaseMetrics(t *testing.T) {
 		var jsonFilePath string
 
 		switch r.URL.Path {
+		case "/api/federation-links":
+			jsonFilePath = "testdata/federation-links_error.json"
 		case "/api/nodes":
 			jsonFilePath = "testdata/nodes_corner_case.json"
 		case "/api/nodes/rabbit@rmqserver/memory":
@@ -311,8 +313,10 @@ func TestRabbitMQCornerCaseMetrics(t *testing.T) {
 		),
 	}
 
-	var expectedErrors []error
-	exclude := []string{"exchanges", "queues", "federation-links", "overview"}
+	expectedErrors := []error{
+		fmt.Errorf("error response trying to get \"/api/federation-links\": \"Object Not Found\" (reason: \"Not Found\")"),
+	}
+	exclude := []string{"exchanges", "queues", "overview"}
 	for _, u := range exclude {
 		expectedErrors = append(expectedErrors, fmt.Errorf("getting %q failed: 404 Not Found", "/api/"+u))
 	}
@@ -328,7 +332,6 @@ func TestRabbitMQCornerCaseMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// acc.Wait(len(expected))
-	fmt.Println(acc.Errors)
 	require.Len(t, acc.Errors, len(expectedErrors))
 	require.ElementsMatch(t, expectedErrors, acc.Errors)
 
