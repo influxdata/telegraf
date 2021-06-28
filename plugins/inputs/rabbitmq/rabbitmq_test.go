@@ -214,10 +214,10 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		URL: ts.URL,
 		Log: testutil.Logger{},
 	}
+	require.NoError(t, plugin.Init())
 
 	acc := &testutil.Accumulator{}
-	err := plugin.Gather(acc)
-	require.NoError(t, err)
+	require.NoError(t, plugin.Gather(acc))
 
 	acc.Wait(len(expected))
 	require.Len(t, acc.Errors, 0)
@@ -326,12 +326,12 @@ func TestRabbitMQCornerCaseMetrics(t *testing.T) {
 		URL: ts.URL,
 		Log: testutil.Logger{},
 	}
+	require.NoError(t, plugin.Init())
 
 	acc := &testutil.Accumulator{}
-	err := plugin.Gather(acc)
-	require.NoError(t, err)
+	require.NoError(t, plugin.Gather(acc))
 
-	// acc.Wait(len(expected))
+	acc.Wait(len(expected))
 	require.Len(t, acc.Errors, len(expectedErrors))
 	require.ElementsMatch(t, expectedErrors, acc.Errors)
 

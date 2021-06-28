@@ -48,6 +48,8 @@ type RabbitMQ struct {
 	Queues    []string `toml:"queues"`
 	Exchanges []string `toml:"exchanges"`
 
+	MetricInclude             []string `toml:"metric_include"`
+	MetricExclude             []string `toml:"metric_exclude"`
 	QueueInclude              []string `toml:"queue_name_include"`
 	QueueExclude              []string `toml:"queue_name_exclude"`
 	FederationUpstreamInclude []string `toml:"federation_upstream_include"`
@@ -58,6 +60,7 @@ type RabbitMQ struct {
 
 	filterCreated     bool
 	excludeEveryQueue bool
+	metricFilter      filter.Filter
 	queueFilter       filter.Filter
 	upstreamFilter    filter.Filter
 }
@@ -259,7 +262,13 @@ type ErrorResponse struct {
 // gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator)
 
-var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues, gatherExchanges, gatherFederationLinks}
+var gatherFunctions = map[string]gatherFunc{
+	"exchange":   gatherExchanges,
+	"federation": gatherFederationLinks,
+	"node":       gatherNodes,
+	"overview":   gatherOverview,
+	"queue":      gatherQueues,
+}
 
 var sampleConfig = `
   ## Management Plugin url. (default: http://localhost:15672)
@@ -299,6 +308,12 @@ var sampleConfig = `
   ## specified, metrics for all exchanges are gathered.
   # exchanges = ["telegraf"]
 
+  ## Metrics to include and exclude. Globs accepted.
+  ## Note that an empty array for both will include all metrics
+  ## Currently the following metrics are supported: "exchange", "federation", "node", "overview", "queue"
+  # metric_include = []
+  # metric_exclude = []
+
   ## Queues to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all queues
   queue_name_include = []
@@ -329,6 +344,17 @@ func (r *RabbitMQ) SampleConfig() string {
 // Description ...
 func (r *RabbitMQ) Description() string {
 	return "Reads metrics from RabbitMQ servers via the Management Plugin"
+}
+
+func (r *RabbitMQ) Init() error {
+	var err error
+
+	// Create a filter for the metrics
+	if r.metricFilter, err = filter.NewIncludeExcludeFilter(r.MetricInclude, r.MetricExclude); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Gather ...
@@ -362,8 +388,12 @@ func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(len(gatherFunctions))
-	for _, f := range gatherFunctions {
+	for name, f := range gatherFunctions {
+		// Query only metrics that are supported
+		if !r.metricFilter.Match(name) {
+			continue
+		}
+		wg.Add(1)
 		go func(gf gatherFunc) {
 			defer wg.Done()
 			gf(r, acc)
