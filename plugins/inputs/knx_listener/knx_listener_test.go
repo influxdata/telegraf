@@ -142,7 +142,6 @@ func TestRegularReceives_DPT(t *testing.T) {
 }
 
 func TestRegularReceives_MultipleMessages(t *testing.T) {
-
 	listener := KNXListener{
 		ServiceType: "dummy",
 		Measurements: []Measurement{
