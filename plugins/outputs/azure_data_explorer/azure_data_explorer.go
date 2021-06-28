@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/azure-kusto-go/kusto/unsafe"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
@@ -30,6 +31,7 @@ type AzureDataExplorer struct {
 	ClientSecret string          `toml:"client_secret"`
 	TenantID     string          `toml:"tenant_id"`
 	Log          telegraf.Logger `toml:"-"`
+	Timeout      config.Duration `toml:"timeout"`
 	client       localClient
 	ingesters    map[string]localIngestor
 	serializer   serializers.Serializer
@@ -106,7 +108,7 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 
 		if _, ingestorExist := adx.ingesters[namespace]; !ingestorExist {
 			//create a table for the namespace
-			err := createAzureDataExplorerTableForNamespace(adx.client, adx.Database, namespace)
+			err := createAzureDataExplorerTableForNamespace(adx.client, adx.Database, namespace, adx.Timeout)
 			if err != nil {
 				return err
 			}
@@ -125,14 +127,13 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 		time.Sleep(20 * time.Second)
 		_, errorIngesting := adx.ingesters[key].FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON))
 		if errorIngesting != nil {
-			adx.Log.Errorf("sending ingestion request to Azure Data Explorer for metric %q failed: %v", key, error)
+			adx.Log.Errorf("sending ingestion request to Azure Data Explorer for metric %q failed: %v", key, errorIngesting)
 		}
 	}
 	return nil
 }
 
-func createAzureDataExplorerTableForNamespace(client localClient, database string, tableName string) error {
-	var timeout = 30 * time.Second
+func createAzureDataExplorerTableForNamespace(client localClient, database string, tableName string, timeout config.Duration) error {
 	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout))
@@ -140,7 +141,6 @@ func createAzureDataExplorerTableForNamespace(client localClient, database strin
 
 	_, errCreatingTable := client.Mgmt(ctx, database, createStmt)
 	if errCreatingTable != nil {
-		fmt.Println(errCreatingTable.Error())
 		return errCreatingTable
 	}
 
@@ -189,7 +189,9 @@ func (adx *AzureDataExplorer) Init() error {
 
 func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
-		return &AzureDataExplorer{}
+		return &AzureDataExplorer{
+			Timeout: config.Duration(10 * time.Second),
+		}
 	})
 }
 
