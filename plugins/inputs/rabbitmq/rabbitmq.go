@@ -448,14 +448,12 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 		return err
 	}
 	err = json.Unmarshal(buf, target)
-	if err != nil {
-		if _, ok := err.(*json.UnmarshalTypeError); ok {
-			// Try to get the error reason from the response
-			var errResponse ErrorResponse
-			if json.Unmarshal(buf, &errResponse) == nil {
-				// Return the error reason in the response
-				return fmt.Errorf("error response trying to get %q: %q (reason: %q)", u, errResponse.Error, errResponse.Reason)
-			}
+	if _, ok := err.(*json.UnmarshalTypeError); ok {
+		// Try to get the error reason from the response
+		var errResponse ErrorResponse
+		if json.Unmarshal(buf, &errResponse) == nil {
+			// Return the error reason in the response
+			return fmt.Errorf("error response trying to get %q: %q (reason: %q)", u, errResponse.Error, errResponse.Reason)
 		}
 	}
 	return err
