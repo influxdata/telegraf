@@ -122,6 +122,7 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	for key, mPerNamespace := range metricsPerNamespace {
 		reader := bytes.NewReader(mPerNamespace)
 
+		time.Sleep(20 * time.Second)
 		_, errorIngesting := adx.ingesters[key].FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON))
 		if errorIngesting != nil {
 			adx.Log.Errorf("sending ingestion request to Azure Data Explorer for metric %q failed: %v", key, error)
@@ -131,15 +132,24 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 }
 
 func createAzureDataExplorerTableForNamespace(client localClient, database string, tableName string) error {
-	// Create a database
+	var timeout = 30 * time.Second
 	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
-	_, errCreatingTable := client.Mgmt(context.TODO(), database, createStmt)
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout))
+	defer cancel()
+
+	_, errCreatingTable := client.Mgmt(ctx, database, createStmt)
 	if errCreatingTable != nil {
+		fmt.Println(errCreatingTable.Error())
 		return errCreatingTable
 	}
 
+	ctxMapping := context.Background()
+	ctxMapping, cancelMapping := context.WithTimeout(ctxMapping, time.Duration(timeout))
+	defer cancelMapping()
+
 	createTableMappingstmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
-	_, errCreatingTableMapping := client.Mgmt(context.TODO(), database, createTableMappingstmt)
+	_, errCreatingTableMapping := client.Mgmt(ctxMapping, database, createTableMappingstmt)
 	if errCreatingTableMapping != nil {
 		return errCreatingTableMapping
 	}
