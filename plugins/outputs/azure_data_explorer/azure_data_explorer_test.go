@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"testing"
@@ -60,6 +61,59 @@ func TestWrite(t *testing.T) {
 	require.Equal(t, createTableMappingString, queriesSentToAzureDataExplorer[1])
 }
 
+func TestWriteBlankEndpoint(t *testing.T) {
+	plugin := AzureDataExplorer{
+		Endpoint:     "",
+		Database:     "",
+		ClientID:     "",
+		ClientSecret: "",
+		TenantID:     "",
+		Log:          logger,
+		client:       &kusto.Client{},
+		ingesters:    map[string]localIngestor{},
+	}
+
+	createClient = createFakeClient
+	createIngestor = createFakeIngestor
+
+	errorInit := plugin.Init()
+	require.Error(t, errorInit)
+	require.Equal(t, "Endpoint configuration cannot be empty", errorInit.Error())
+}
+
+func TestWriteErrorInMgmt(t *testing.T) {
+	plugin := AzureDataExplorer{
+		Endpoint:     "s",
+		Database:     "s",
+		ClientID:     "s",
+		ClientSecret: "s",
+		TenantID:     "s",
+		Log:          logger,
+		client:       &kusto.Client{},
+		ingesters:    map[string]localIngestor{},
+	}
+
+	createClient = func(endpoint string, clientID string, clientSecret string, tenantID string) (localClient, error) {
+		return &fakeClientMgmtProduceError{}, nil
+	}
+
+	createIngestor = createFakeIngestor
+
+	errorInit := plugin.Init()
+	if errorInit != nil {
+		t.Errorf(errorInit.Error())
+	}
+
+	errorConnect := plugin.Connect()
+	if errorConnect != nil {
+		t.Errorf(errorConnect.Error())
+	}
+
+	errorWrite := plugin.Write(testutil.MockMetrics())
+	require.Error(t, errorWrite)
+	require.Equal(t, "Something went wrong", errorWrite.Error())
+}
+
 func createFakeIngestor(client localClient, database string, namespace string) (localIngestor, error) {
 	return &fakeIngestor{}, nil
 }
@@ -73,6 +127,12 @@ type fakeClient struct{}
 func (f *fakeClient) Mgmt(ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error) {
 	queriesSentToAzureDataExplorer = append(queriesSentToAzureDataExplorer, query.String())
 	return &kusto.RowIterator{}, nil
+}
+
+type fakeClientMgmtProduceError struct{}
+
+func (f *fakeClientMgmtProduceError) Mgmt(ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error) {
+	return nil, errors.New("Something went wrong")
 }
 
 type fakeIngestor struct{}
