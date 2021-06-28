@@ -212,6 +212,7 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	// Run the test
 	plugin := &RabbitMQ{
 		URL: ts.URL,
+		Log: testutil.Logger{},
 	}
 
 	acc := &testutil.Accumulator{}
@@ -219,6 +220,114 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	acc.Wait(len(expected))
+	require.Len(t, acc.Errors, 0)
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func TestRabbitMQCornerCaseMetrics(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var jsonFilePath string
+
+		switch r.URL.Path {
+		case "/api/nodes":
+			jsonFilePath = "testdata/nodes_corner_case.json"
+		default:
+			http.Error(w, fmt.Sprintf("unknown path %q", r.URL.Path), http.StatusNotFound)
+			return
+		}
+
+		data, err := ioutil.ReadFile(jsonFilePath)
+		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
+
+		_, err = w.Write(data)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	// Define test cases
+	expected := []telegraf.Metric{
+		testutil.MustMetric("rabbitmq_node",
+			map[string]string{
+				"node": "rabbit@vagrant-ubuntu-trusty-64",
+				"url":  ts.URL,
+			},
+			map[string]interface{}{
+				"disk_free":                 3776,
+				"disk_free_limit":           50000000,
+				"disk_free_alarm":           0,
+				"fd_total":                  1024,
+				"fd_used":                   63,
+				"mem_limit":                 2503,
+				"mem_used":                  159707080,
+				"mem_alarm":                 1,
+				"proc_total":                1048576,
+				"proc_used":                 783,
+				"run_queue":                 0,
+				"sockets_total":             829,
+				"sockets_used":              45,
+				"uptime":                    7464827,
+				"running":                   1,
+				"mnesia_disk_tx_count":      16,
+				"mnesia_ram_tx_count":       296,
+				"mnesia_disk_tx_count_rate": 1.1,
+				"mnesia_ram_tx_count_rate":  2.2,
+				"gc_num":                    57280132,
+				"gc_bytes_reclaimed":        2533,
+				"gc_num_rate":               274.2,
+				"gc_bytes_reclaimed_rate":   16490856.3,
+				"io_read_avg_time":          983,
+				"io_read_avg_time_rate":     88.77,
+				"io_read_bytes":             1111,
+				"io_read_bytes_rate":        99.99,
+				"io_write_avg_time":         134,
+				"io_write_avg_time_rate":    4.32,
+				"io_write_bytes":            823,
+				"io_write_bytes_rate":       32.8,
+				"mem_connection_readers":    1234,
+				"mem_connection_writers":    5678,
+				"mem_connection_channels":   1133,
+				"mem_connection_other":      2840,
+				"mem_queue_procs":           2840,
+				"mem_queue_slave_procs":     0,
+				"mem_plugins":               1755976,
+				"mem_other_proc":            23056584,
+				"mem_metrics":               196536,
+				"mem_mgmt_db":               491272,
+				"mem_mnesia":                115600,
+				"mem_other_ets":             2121872,
+				"mem_binary":                418848,
+				"mem_msg_index":             42848,
+				"mem_code":                  25179322,
+				"mem_atom":                  1041593,
+				"mem_other_system":          14741981,
+				"mem_allocated_unused":      38208528,
+				"mem_reserved_unallocated":  0,
+				"mem_total":                 83025920,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	var expectedErrors []error
+	exclude := []string{"exchanges", "queues", "federation-links", "overview", "nodes/rabbit@rmqserver/memory"}
+	for _, u := range exclude {
+		expectedErrors = append(expectedErrors, fmt.Errorf("getting %q failed: 404 Not Found", "/api/"+u))
+	}
+
+	// Run the test
+	plugin := &RabbitMQ{
+		URL: ts.URL,
+		Log: testutil.Logger{},
+	}
+
+	acc := &testutil.Accumulator{}
+	err := plugin.Gather(acc)
+	require.NoError(t, err)
+
+	// acc.Wait(len(expected))
+	require.Len(t, acc.Errors, len(expectedErrors))
+	require.ElementsMatch(t, expectedErrors, acc.Errors)
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 }
