@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/azure-kusto-go/kusto"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 var logger testutil.Logger = testutil.Logger{}
@@ -50,21 +51,13 @@ func TestWrite(t *testing.T) {
 	}
 
 	expectedNameOfMetric := "test1"
-	if actualOutputMetric["name"] != expectedNameOfMetric {
-		t.Errorf("Error in Write: expected %s, but actual %s", expectedNameOfMetric, actualOutputMetric["name"])
-	}
+	require.Equal(t, expectedNameOfMetric, actualOutputMetric["name"])
 
 	createTableString := fmt.Sprintf(createTableCommandExpected, expectedNameOfMetric)
-	if queriesSentToAzureDataExplorer[0] != createTableString {
-		t.Errorf("Error in Write: expected create table query is %s, but actual is %s", createTableString, queriesSentToAzureDataExplorer[0])
-	}
+	require.Equal(t, createTableString, queriesSentToAzureDataExplorer[0])
 
 	createTableMappingString := fmt.Sprintf(createTableMappingCommandExpected, expectedNameOfMetric, expectedNameOfMetric)
-	if queriesSentToAzureDataExplorer[0] != createTableString {
-		t.Errorf("Error in Write: expected create table mapping query is %s, but actual is %s", queriesSentToAzureDataExplorer[1], createTableMappingString)
-	}
-	fields := actualOutputMetric["fields"]
-	logger.Debug((fields.(map[string]interface{}))["value"])
+	require.Equal(t, createTableMappingString, queriesSentToAzureDataExplorer[1])
 }
 
 func createFakeIngestor(client localClient, database string, namespace string) (localIngestor, error) {
