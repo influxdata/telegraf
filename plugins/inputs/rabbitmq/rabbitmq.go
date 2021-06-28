@@ -52,7 +52,8 @@ type RabbitMQ struct {
 	FederationUpstreamInclude []string `toml:"federation_upstream_include"`
 	FederationUpstreamExclude []string `toml:"federation_upstream_exclude"`
 
-	Client *http.Client `toml:"-"`
+	Log    telegraf.Logger `toml:"-"`
+	Client *http.Client    `toml:"-"`
 
 	filterCreated     bool
 	excludeEveryQueue bool
@@ -370,9 +371,10 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 	if r.URL == "" {
 		r.URL = DefaultURL
 	}
-	u = fmt.Sprintf("%s%s", r.URL, u)
+	endpoint := r.URL + u
+	r.Log.Debugf("Requesting %q...", endpoint)
 
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		return err
 	}
@@ -393,9 +395,12 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 	if err != nil {
 		return err
 	}
-
 	defer resp.Body.Close()
 
+	r.Log.Debugf("HTTP status code: %v %v", resp.StatusCode, http.StatusText(resp.StatusCode))
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("getting %q failed: %v %v", u, resp.StatusCode, http.StatusText(resp.StatusCode))
+	}
 	return json.NewDecoder(resp.Body).Decode(target)
 }
 
