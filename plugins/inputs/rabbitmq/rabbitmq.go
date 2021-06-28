@@ -55,9 +55,9 @@ type RabbitMQ struct {
 	FederationUpstreamInclude []string `toml:"federation_upstream_include"`
 	FederationUpstreamExclude []string `toml:"federation_upstream_exclude"`
 
-	Log    telegraf.Logger `toml:"-"`
-	Client *http.Client    `toml:"-"`
+	Log telegraf.Logger `toml:"-"`
 
+	client            *http.Client
 	excludeEveryQueue bool
 	metricFilter      filter.Filter
 	queueFilter       filter.Filter
@@ -369,7 +369,7 @@ func (r *RabbitMQ) Init() error {
 		ResponseHeaderTimeout: time.Duration(r.ResponseHeaderTimeout),
 		TLSClientConfig:       tlsCfg,
 	}
-	r.Client = &http.Client{
+	r.client = &http.Client{
 		Transport: tr,
 		Timeout:   time.Duration(r.ClientTimeout),
 	}
@@ -420,7 +420,7 @@ func (r *RabbitMQ) requestEndpoint(u string) ([]byte, error) {
 
 	req.SetBasicAuth(username, password)
 
-	resp, err := r.Client.Do(req)
+	resp, err := r.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
