@@ -48,8 +48,8 @@ func (c *CookieAuthConfig) Start(client *http.Client, log telegraf.Logger) (err 
 		ticker := time.NewTicker(time.Duration(c.Renewal))
 		go func() {
 			for range ticker.C {
-				if err = c.auth(); err != nil {
-					log.Errorf("Error in plugin: [url=%v]: %v", c.URL, err)
+				if err := c.auth(); err != nil && log != nil {
+					log.Errorf("renewal failed for %q: %v", c.URL, err)
 				}
 			}
 		}()
