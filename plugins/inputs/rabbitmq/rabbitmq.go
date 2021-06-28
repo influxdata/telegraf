@@ -231,26 +231,26 @@ type MemoryResponse struct {
 
 // Memory details
 type Memory struct {
-	ConnectionReaders   int64 `json:"connection_readers"`
-	ConnectionWriters   int64 `json:"connection_writers"`
-	ConnectionChannels  int64 `json:"connection_channels"`
-	ConnectionOther     int64 `json:"connection_other"`
-	QueueProcs          int64 `json:"queue_procs"`
-	QueueSlaveProcs     int64 `json:"queue_slave_procs"`
-	Plugins             int64 `json:"plugins"`
-	OtherProc           int64 `json:"other_proc"`
-	Metrics             int64 `json:"metrics"`
-	MgmtDb              int64 `json:"mgmt_db"`
-	Mnesia              int64 `json:"mnesia"`
-	OtherEts            int64 `json:"other_ets"`
-	Binary              int64 `json:"binary"`
-	MsgIndex            int64 `json:"msg_index"`
-	Code                int64 `json:"code"`
-	Atom                int64 `json:"atom"`
-	OtherSystem         int64 `json:"other_system"`
-	AllocatedUnused     int64 `json:"allocated_unused"`
-	ReservedUnallocated int64 `json:"reserved_unallocated"`
-	Total               int64 `json:"total"`
+	ConnectionReaders   int64       `json:"connection_readers"`
+	ConnectionWriters   int64       `json:"connection_writers"`
+	ConnectionChannels  int64       `json:"connection_channels"`
+	ConnectionOther     int64       `json:"connection_other"`
+	QueueProcs          int64       `json:"queue_procs"`
+	QueueSlaveProcs     int64       `json:"queue_slave_procs"`
+	Plugins             int64       `json:"plugins"`
+	OtherProc           int64       `json:"other_proc"`
+	Metrics             int64       `json:"metrics"`
+	MgmtDb              int64       `json:"mgmt_db"`
+	Mnesia              int64       `json:"mnesia"`
+	OtherEts            int64       `json:"other_ets"`
+	Binary              int64       `json:"binary"`
+	MsgIndex            int64       `json:"msg_index"`
+	Code                int64       `json:"code"`
+	Atom                int64       `json:"atom"`
+	OtherSystem         int64       `json:"other_system"`
+	AllocatedUnused     int64       `json:"allocated_unused"`
+	ReservedUnallocated int64       `json:"reserved_unallocated"`
+	Total               interface{} `json:"total"`
 }
 
 // Error response
@@ -447,16 +447,20 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(buf, target)
-	if _, ok := err.(*json.UnmarshalTypeError); ok {
-		// Try to get the error reason from the response
-		var errResponse ErrorResponse
-		if json.Unmarshal(buf, &errResponse) == nil {
-			// Return the error reason in the response
-			return fmt.Errorf("error response trying to get %q: %q (reason: %q)", u, errResponse.Error, errResponse.Reason)
+	if err := json.Unmarshal(buf, target); err != nil {
+		if _, ok := err.(*json.UnmarshalTypeError); ok {
+			// Try to get the error reason from the response
+			var errResponse ErrorResponse
+			if json.Unmarshal(buf, &errResponse) == nil && errResponse.Error != "" {
+				// Return the error reason in the response
+				return fmt.Errorf("error response trying to get %q: %q (reason: %q)", u, errResponse.Error, errResponse.Reason)
+			}
 		}
+
+		return fmt.Errorf("decoding answer from %q failed: %v", u, err)
 	}
-	return err
+
+	return nil
 }
 
 func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
@@ -593,7 +597,31 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				fields["mem_other_system"] = memory.Memory.OtherSystem
 				fields["mem_allocated_unused"] = memory.Memory.AllocatedUnused
 				fields["mem_reserved_unallocated"] = memory.Memory.ReservedUnallocated
-				fields["mem_total"] = memory.Memory.Total
+				switch v := memory.Memory.Total.(type) {
+				case int64:
+					fields["mem_total"] = v
+				case float64:
+					fields["mem_total"] = int64(v)
+				case map[string]interface{}:
+					var total interface{}
+					if x, found := v["rss"]; found {
+						total = x
+					} else if x, found := v["allocated"]; found {
+						total = x
+					} else if x, found := v["erlang"]; found {
+						total = x
+					} else {
+						acc.AddError(fmt.Errorf("no known memory estimation in %v", v))
+					}
+					switch vTotal := total.(type) {
+					case int64:
+						fields["mem_total"] = vTotal
+					case float64:
+						fields["mem_total"] = int64(vTotal)
+					}
+				default:
+					acc.AddError(fmt.Errorf("unknown type %T for total memory", memory.Memory.Total))
+				}
 			}
 
 			acc.AddFields("rabbitmq_node", fields, tags)
