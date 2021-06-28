@@ -316,6 +316,16 @@ func TestGatherCertMustNotTimeout(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("x509_cert"))
 }
 
+func TestSourcesToURLs(t *testing.T) {
+	m := &X509Cert{
+		Sources: []string{"https://www.influxdata.com:443", "tcp://influxdata.com:443", "file:///dummy_test_path_file.pem", "/tmp/dummy_test_path_glob*.pem"},
+	}
+	require.NoError(t, m.Init())
+
+	assert.Equal(t, len(m.globpaths), 2)
+	assert.Equal(t, len(m.locations), 2)
+}
+
 func TestServerName(t *testing.T) {
 	tests := []struct {
 		name     string

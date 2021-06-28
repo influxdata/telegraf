@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os/exec"
+	osExec "os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/kballard/go-shellquote"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -17,7 +19,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
-	"github.com/kballard/go-shellquote"
 )
 
 const sampleConfig = `
@@ -76,7 +77,7 @@ func (c CommandRunner) Run(
 		return nil, nil, fmt.Errorf("exec: unable to parse command, %s", err)
 	}
 
-	cmd := exec.Command(splitCmd[0], splitCmd[1:]...)
+	cmd := osExec.Command(splitCmd[0], splitCmd[1:]...)
 
 	var (
 		out    bytes.Buffer

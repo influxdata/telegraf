@@ -2,11 +2,20 @@ package directory_monitor
 
 import (
 	"bufio"
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"regexp"
+	"sync"
 	"time"
+
+	"golang.org/x/sync/semaphore"
+	"gopkg.in/djherbis/times.v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -14,15 +23,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/selfstat"
-	"golang.org/x/sync/semaphore"
-	"gopkg.in/djherbis/times.v1"
-
-	"compress/gzip"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"sync"
 )
 
 const sampleConfig = `
@@ -263,9 +263,7 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 		if err != nil {
 			return err
 		}
-		if firstLine {
-			firstLine = false
-		}
+		firstLine = false
 
 		if err := monitor.sendMetrics(metrics); err != nil {
 			return err
