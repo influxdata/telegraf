@@ -58,7 +58,6 @@ type RabbitMQ struct {
 	Log    telegraf.Logger `toml:"-"`
 	Client *http.Client    `toml:"-"`
 
-	filterCreated     bool
 	excludeEveryQueue bool
 	metricFilter      filter.Filter
 	queueFilter       filter.Filter
@@ -349,9 +348,30 @@ func (r *RabbitMQ) Description() string {
 func (r *RabbitMQ) Init() error {
 	var err error
 
+	// Create gather filters
+	if err := r.createQueueFilter(); err != nil {
+		return err
+	}
+	if err := r.createUpstreamFilter(); err != nil {
+		return err
+	}
+
 	// Create a filter for the metrics
 	if r.metricFilter, err = filter.NewIncludeExcludeFilter(r.MetricInclude, r.MetricExclude); err != nil {
 		return err
+	}
+
+	tlsCfg, err := r.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+	tr := &http.Transport{
+		ResponseHeaderTimeout: time.Duration(r.ResponseHeaderTimeout),
+		TLSClientConfig:       tlsCfg,
+	}
+	r.Client = &http.Client{
+		Transport: tr,
+		Timeout:   time.Duration(r.ClientTimeout),
 	}
 
 	return nil
@@ -359,34 +379,6 @@ func (r *RabbitMQ) Init() error {
 
 // Gather ...
 func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
-	if r.Client == nil {
-		tlsCfg, err := r.ClientConfig.TLSConfig()
-		if err != nil {
-			return err
-		}
-		tr := &http.Transport{
-			ResponseHeaderTimeout: time.Duration(r.ResponseHeaderTimeout),
-			TLSClientConfig:       tlsCfg,
-		}
-		r.Client = &http.Client{
-			Transport: tr,
-			Timeout:   time.Duration(r.ClientTimeout),
-		}
-	}
-
-	// Create gather filters if not already created
-	if !r.filterCreated {
-		err := r.createQueueFilter()
-		if err != nil {
-			return err
-		}
-		err = r.createUpstreamFilter()
-		if err != nil {
-			return err
-		}
-		r.filterCreated = true
-	}
-
 	var wg sync.WaitGroup
 	for name, f := range gatherFunctions {
 		// Query only metrics that are supported
