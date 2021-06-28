@@ -3,6 +3,7 @@ package rabbitmq
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"sync"
@@ -249,6 +250,12 @@ type Memory struct {
 	Total               int64 `json:"total"`
 }
 
+// Error response
+type ErrorResponse struct {
+	Error  string `json:"error"`
+	Reason string `json:"reason"`
+}
+
 // gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator)
 
@@ -367,7 +374,7 @@ func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
+func (r *RabbitMQ) requestEndpoint(u string) ([]byte, error) {
 	if r.URL == "" {
 		r.URL = DefaultURL
 	}
@@ -376,7 +383,7 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	username := r.Username
@@ -393,15 +400,35 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 
 	resp, err := r.Client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	r.Log.Debugf("HTTP status code: %v %v", resp.StatusCode, http.StatusText(resp.StatusCode))
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("getting %q failed: %v %v", u, resp.StatusCode, http.StatusText(resp.StatusCode))
+		return nil, fmt.Errorf("getting %q failed: %v %v", u, resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
-	return json.NewDecoder(resp.Body).Decode(target)
+
+	return ioutil.ReadAll(resp.Body)
+}
+
+func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
+	buf, err := r.requestEndpoint(u)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(buf, target)
+	if err != nil {
+		if _, ok := err.(*json.UnmarshalTypeError); ok {
+			// Try to get the error reason from the response
+			var errResponse ErrorResponse
+			if json.Unmarshal(buf, &errResponse) == nil {
+				// Return the error reason in the response
+				return fmt.Errorf("error response trying to get %q: %q (reason: %q)", u, errResponse.Error, errResponse.Reason)
+			}
+		}
+	}
+	return err
 }
 
 func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
