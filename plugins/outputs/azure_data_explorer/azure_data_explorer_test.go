@@ -106,7 +106,7 @@ func TestWrite(t *testing.T) {
 	}
 }
 
-func TestInirBlankEndpoint(t *testing.T) {
+func TestInitBlankEndpoint(t *testing.T) {
 	plugin := AzureDataExplorer{
 		Log:            testutil.Logger{},
 		client:         &fakeClient{},
