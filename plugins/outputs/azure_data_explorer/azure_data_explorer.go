@@ -69,6 +69,9 @@ func (adx *AzureDataExplorer) SampleConfig() string {
 
   ## The tenant ID of the Azure Subsciption in which the Service Principal belongs to
   tenant_id = ""
+
+  ## Timeout for Azure Data Explorer operations
+  # timeout = "15s"
 `
 }
 
