@@ -23,11 +23,12 @@ const createTableMappingCommandExpected = `.create-or-alter table ['%s'] ingesti
 
 func TestWrite(t *testing.T) {
 	testCases := []struct {
-		name           string
-		inputMetric    []telegraf.Metric
-		client         *fakeClient
-		createIngestor ingestorFactory
-		expected       map[string]interface{}
+		name               string
+		inputMetric        []telegraf.Metric
+		client             *fakeClient
+		createIngestor     ingestorFactory
+		expected           map[string]interface{}
+		expectedWriteError string
 	}{
 		{
 			name:        "Valid metric",
@@ -44,7 +45,6 @@ func TestWrite(t *testing.T) {
 				"metricName":                "test1",
 				"createTableCommand":        "",
 				"createTableMappingCommand": "",
-				"error":                     "",
 			},
 		},
 		{
@@ -61,8 +61,8 @@ func TestWrite(t *testing.T) {
 				"metricName":                "test1",
 				"createTableCommand":        "",
 				"createTableMappingCommand": "",
-				"error":                     "Something went wrong",
 			},
+			expectedWriteError: "Something went wrong",
 		},
 	}
 
@@ -85,8 +85,8 @@ func TestWrite(t *testing.T) {
 
 			errorInWrite := plugin.Write(testutil.MockMetrics())
 
-			if tC.expected["error"] != "" {
-				require.EqualError(t, errorInWrite, tC.expected["error"].(string))
+			if tC.expectedWriteError != "" {
+				require.EqualError(t, errorInWrite, tC.expectedWriteError)
 			} else {
 				require.NoError(t, errorInWrite)
 
