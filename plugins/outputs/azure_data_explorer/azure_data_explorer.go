@@ -21,20 +21,18 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 
-var createIngestor = createRealIngestor
-var createClient = createRealClient
-
 type AzureDataExplorer struct {
-	Endpoint     string          `toml:"endpoint_url"`
-	Database     string          `toml:"database"`
-	ClientID     string          `toml:"client_id"`
-	ClientSecret string          `toml:"client_secret"`
-	TenantID     string          `toml:"tenant_id"`
-	Log          telegraf.Logger `toml:"-"`
-	Timeout      config.Duration `toml:"timeout"`
-	client       localClient
-	ingesters    map[string]localIngestor
-	serializer   serializers.Serializer
+	Endpoint       string          `toml:"endpoint_url"`
+	Database       string          `toml:"database"`
+	ClientID       string          `toml:"client_id"`
+	ClientSecret   string          `toml:"client_secret"`
+	TenantID       string          `toml:"tenant_id"`
+	Log            telegraf.Logger `toml:"-"`
+	Timeout        config.Duration `toml:"timeout"`
+	client         localClient
+	ingesters      map[string]localIngestor
+	serializer     serializers.Serializer
+	createIngestor ingestorFactory
 }
 
 type localIngestor interface {
@@ -44,6 +42,8 @@ type localIngestor interface {
 type localClient interface {
 	Mgmt(ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error)
 }
+
+type ingestorFactory func(localClient, string, string) (localIngestor, error)
 
 const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
 const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
@@ -73,12 +73,18 @@ func (adx *AzureDataExplorer) SampleConfig() string {
 }
 
 func (adx *AzureDataExplorer) Connect() error {
-	client, err := createClient(adx.Endpoint, adx.ClientID, adx.ClientSecret, adx.TenantID)
+	authorizer := kusto.Authorization{
+		Config: auth.NewClientCredentialsConfig(adx.ClientID, adx.ClientSecret, adx.TenantID),
+	}
+
+	client, err := kusto.New(adx.Endpoint, authorizer)
+
 	if err != nil {
 		return err
 	}
 	adx.client = client
 	adx.ingesters = make(map[string]localIngestor)
+	adx.createIngestor = createRealIngestor
 
 	return nil
 }
@@ -117,7 +123,7 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 			}
 
 			//create a new ingestor client for the namespace
-			adx.ingesters[namespace], err = createIngestor(adx.client, adx.Database, namespace)
+			adx.ingesters[namespace], err = adx.createIngestor(adx.client, adx.Database, namespace)
 			if err != nil {
 				return err
 			}
@@ -196,19 +202,4 @@ func createRealIngestor(client localClient, database string, namespace string) (
 		return ingestor, nil
 	}
 	return nil, err
-}
-
-func createRealClient(endpoint string, clientID string, clientSecret string, tenantID string) (localClient, error) {
-	// Make any connection required here
-	authorizer := kusto.Authorization{
-		Config: auth.NewClientCredentialsConfig(clientID, clientSecret, tenantID),
-	}
-
-	client, err := kusto.New(endpoint, authorizer)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return client, nil
 }

@@ -8,63 +8,63 @@ import (
 	"fmt"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/Azure/azure-kusto-go/kusto"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
+	telegrafJson "github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
-var logger testutil.Logger = testutil.Logger{}
 var actualOutputMetric map[string]interface{}
-var queriesSentToAzureDataExplorer = make([]string, 0)
 
 const createTableCommandExpected = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
 const createTableMappingCommandExpected = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
 
 func TestWrite(t *testing.T) {
+	fakeClientInstance := &fakeClient{
+		queries: make([]string, 0),
+	}
 	plugin := AzureDataExplorer{
-		Endpoint:     "someendpoint",
-		Database:     "databasename",
-		ClientID:     "longclientid",
-		ClientSecret: "longclientsecret",
-		TenantID:     "longtenantid",
-		Log:          logger,
-		client:       &kusto.Client{},
-		ingesters:    map[string]localIngestor{},
+		Endpoint:       "someendpoint",
+		Database:       "databasename",
+		ClientID:       "longclientid",
+		ClientSecret:   "longclientsecret",
+		TenantID:       "longtenantid",
+		Log:            testutil.Logger{},
+		client:         fakeClientInstance,
+		ingesters:      map[string]localIngestor{},
+		createIngestor: createFakeIngestor,
 	}
 
-	createClient = createFakeClient
-	createIngestor = createFakeIngestor
+	serializer, _ := telegrafJson.NewSerializer(time.Second)
+	plugin.serializer = serializer
 
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Connect())
 	require.NoError(t, plugin.Write(testutil.MockMetrics()))
 
 	expectedNameOfMetric := "test1"
 	require.Equal(t, expectedNameOfMetric, actualOutputMetric["name"])
 
 	createTableString := fmt.Sprintf(createTableCommandExpected, expectedNameOfMetric)
-	require.Equal(t, createTableString, queriesSentToAzureDataExplorer[0])
+	require.Equal(t, createTableString, fakeClientInstance.queries[0])
 
 	createTableMappingString := fmt.Sprintf(createTableMappingCommandExpected, expectedNameOfMetric, expectedNameOfMetric)
-	require.Equal(t, createTableMappingString, queriesSentToAzureDataExplorer[1])
+	require.Equal(t, createTableMappingString, fakeClientInstance.queries[1])
 }
 
 func TestWriteBlankEndpoint(t *testing.T) {
 	plugin := AzureDataExplorer{
-		Endpoint:     "",
-		Database:     "",
-		ClientID:     "",
-		ClientSecret: "",
-		TenantID:     "",
-		Log:          logger,
-		client:       &kusto.Client{},
-		ingesters:    map[string]localIngestor{},
+		Endpoint:       "",
+		Database:       "",
+		ClientID:       "",
+		ClientSecret:   "",
+		TenantID:       "",
+		Log:            testutil.Logger{},
+		client:         &fakeClient{},
+		ingesters:      map[string]localIngestor{},
+		createIngestor: createFakeIngestor,
 	}
-
-	createClient = createFakeClient
-	createIngestor = createFakeIngestor
 
 	errorInit := plugin.Init()
 	require.Error(t, errorInit)
@@ -73,49 +73,31 @@ func TestWriteBlankEndpoint(t *testing.T) {
 
 func TestWriteErrorInMgmt(t *testing.T) {
 	plugin := AzureDataExplorer{
-		Endpoint:     "s",
-		Database:     "s",
-		ClientID:     "s",
-		ClientSecret: "s",
-		TenantID:     "s",
-		Log:          logger,
-		client:       &kusto.Client{},
-		ingesters:    map[string]localIngestor{},
+		Endpoint:       "s",
+		Database:       "s",
+		ClientID:       "s",
+		ClientSecret:   "s",
+		TenantID:       "s",
+		Log:            testutil.Logger{},
+		client:         &fakeClientMgmtProduceError{},
+		ingesters:      map[string]localIngestor{},
+		createIngestor: createFakeIngestor,
 	}
 
-	createClient = func(endpoint string, clientID string, clientSecret string, tenantID string) (localClient, error) {
-		return &fakeClientMgmtProduceError{}, nil
-	}
-
-	createIngestor = createFakeIngestor
-
-	errorInit := plugin.Init()
-	if errorInit != nil {
-		t.Errorf(errorInit.Error())
-	}
-
-	errorConnect := plugin.Connect()
-	if errorConnect != nil {
-		t.Errorf(errorConnect.Error())
-	}
+	serializer, _ := telegrafJson.NewSerializer(time.Second)
+	plugin.serializer = serializer
 
 	errorWrite := plugin.Write(testutil.MockMetrics())
 	require.Error(t, errorWrite)
 	require.Equal(t, "Something went wrong", errorWrite.Error())
 }
 
-func createFakeIngestor(client localClient, database string, namespace string) (localIngestor, error) {
-	return &fakeIngestor{}, nil
+type fakeClient struct {
+	queries []string
 }
-
-func createFakeClient(endpoint string, clientID string, clientSecret string, tenantID string) (localClient, error) {
-	return &fakeClient{}, nil
-}
-
-type fakeClient struct{}
 
 func (f *fakeClient) Mgmt(ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error) {
-	queriesSentToAzureDataExplorer = append(queriesSentToAzureDataExplorer, query.String())
+	f.queries = append(f.queries, query.String())
 	return &kusto.RowIterator{}, nil
 }
 
@@ -127,6 +109,9 @@ func (f *fakeClientMgmtProduceError) Mgmt(ctx context.Context, db string, query 
 
 type fakeIngestor struct{}
 
+func createFakeIngestor(client localClient, database string, namespace string) (localIngestor, error) {
+	return &fakeIngestor{}, nil
+}
 func (f *fakeIngestor) FromReader(ctx context.Context, reader io.Reader, options ...ingest.FileOption) (*ingest.Result, error) {
 	scanner := bufio.NewScanner(reader)
 	scanner.Scan()
