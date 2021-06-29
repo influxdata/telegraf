@@ -62,7 +62,7 @@ func TestWrite(t *testing.T) {
 				"createTableCommand":        "",
 				"createTableMappingCommand": "",
 			},
-			expectedWriteError: "Something went wrong",
+			expectedWriteError: "creating table for \"test1\" failed: Something went wrong",
 		},
 	}
 

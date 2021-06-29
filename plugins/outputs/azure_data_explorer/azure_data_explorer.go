@@ -99,41 +99,43 @@ func (adx *AzureDataExplorer) Close() error {
 
 func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	metricsPerNamespace := make(map[string][]byte)
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(adx.Timeout))
-	defer cancel()
-
+	// Group metrics by name and serialize them
 	for _, m := range metrics {
-		namespace := m.Name() // getNamespace(m)
+		namespace := m.Name()
 		metricInBytes, err := adx.serializer.Serialize(m)
 		if err != nil {
 			return err
 		}
-
 		if existingBytes, ok := metricsPerNamespace[namespace]; ok {
 			metricsPerNamespace[namespace] = append(existingBytes, metricInBytes...)
 		} else {
 			metricsPerNamespace[namespace] = metricInBytes
 		}
-
-		if _, ingestorExist := adx.ingesters[namespace]; !ingestorExist {
-			//create a table for the namespace
-			if err := createAzureDataExplorerTableForNamespace(ctx, adx.client, adx.Database, namespace); err != nil {
-				return err
-			}
-
-			//create a new ingestor client for the namespace
-			if adx.ingesters[namespace], err = adx.createIngestor(adx.client, adx.Database, namespace); err != nil {
-				return err
-			}
-		}
 	}
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(adx.Timeout))
+	defer cancel()
 
-	for key, mPerNamespace := range metricsPerNamespace {
+	// Push the metrics namespace-wise
+	format := ingest.FileFormat(ingest.JSON)
+	for namespace, mPerNamespace := range metricsPerNamespace {
 		reader := bytes.NewReader(mPerNamespace)
+		//create a table for the namespace if it doesn't exist
+		if adx.ingesters[namespace] == nil {
+			if err := createAzureDataExplorerTableForNamespace(ctx, adx.client, adx.Database, namespace); err != nil {
+				return fmt.Errorf("creating table for %q failed: %v", namespace, err)
+			}
+			//create a new ingestor client for the namespace
+			ingestor, err := adx.createIngestor(adx.client, adx.Database, namespace)
+			if err != nil {
+				return fmt.Errorf("creating ingestor for %q failed: %v", namespace, err)
+			}
+			adx.ingesters[namespace] = ingestor
+		}
 
-		if _, err := adx.ingesters[key].FromReader(ctx, reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON)); err != nil {
-			adx.Log.Errorf("sending ingestion request to Azure Data Explorer for metric %q failed: %v", key, err)
+		mapping := ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", namespace), ingest.JSON)
+		if _, err := adx.ingesters[namespace].FromReader(ctx, reader, format, mapping); err != nil {
+			adx.Log.Errorf("sending ingestion request to Azure Data Explorer for metric %q failed: %v", namespace, err)
 		}
 	}
 	return nil
