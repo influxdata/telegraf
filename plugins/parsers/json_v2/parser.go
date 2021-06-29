@@ -397,37 +397,6 @@ func (p *Parser) processObjects(objects []JSONObject, input []byte) ([]telegraf.
 			p.tagPathResults = append(p.tagPathResults, r)
 		}
 
-		// resultTest := gjson.GetBytes(input, "root.station")
-		// subResult := gjson.GetBytes(input, "root.station.0.etd.0.estimate.0.minutes")
-
-		// fmt.Println("key", subResult.Str, "val", subResult.Raw, "val index", subResult.Index)
-		// fmt.Println(string(input[subResult.Index : subResult.Index+len(subResult.Raw)]))
-
-		// // fmt.Println(string(input[10 : 10+len(result.Raw)]))
-		// resultTest.ForEach(func(key, val gjson.Result) bool {
-		// 	// fmt.Println("key", key.Str, "val", val.Raw, "val index", val.Index)
-		// 	// fmt.Println(string(input[val.Index : val.Index+len(val.Raw)]))
-		// 	// if val.IsArray() {
-		// 	// 	val.ForEach(func(subkey, subval gjson.Result) bool {
-		// 	// 		fmt.Println("key", subkey.Str, "val", subval.Raw, "val index", subval.Index)
-		// 	// 		newIndex := subval.Index + val.Index
-		// 	// 		fmt.Println(newIndex)
-		// 	// 		fmt.Println(string(input[newIndex : newIndex+len(subval.Raw)]))
-		// 	if val.IsObject() {
-		// 		val.ForEach(func(subsubkey, subsubval gjson.Result) bool {
-		// 			fmt.Println("key", subsubkey.Str, "val", subsubval.Raw, "val index", subsubval.Index)
-		// 			newnewIndex := subsubval.Index + (val.Index + resultTest.Index)
-		// 			fmt.Println(newnewIndex)
-		// 			fmt.Println(string(input[newnewIndex : newnewIndex+len(subsubval.Raw)]))
-		// 			return true
-		// 		})
-		// 	}
-		// 	// 		return true
-		// 	// 	})
-		// 	// }
-		// 	return true
-		// })
-
 		if result.Type == gjson.Null {
 			return nil, fmt.Errorf("GJSON Path returned null")
 		}
