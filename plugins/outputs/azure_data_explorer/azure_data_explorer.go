@@ -92,6 +92,9 @@ func (adx *AzureDataExplorer) Close() error {
 
 func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	metricsPerNamespace := make(map[string][]byte)
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(adx.Timeout))
+	defer cancel()
 
 	for _, m := range metrics {
 		namespace := m.Name() // getNamespace(m)
@@ -108,7 +111,7 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 
 		if _, ingestorExist := adx.ingesters[namespace]; !ingestorExist {
 			//create a table for the namespace
-			err := createAzureDataExplorerTableForNamespace(adx.client, adx.Database, namespace, adx.Timeout)
+			err := createAzureDataExplorerTableForNamespace(ctx, adx.client, adx.Database, namespace)
 			if err != nil {
 				return err
 			}
@@ -133,23 +136,15 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func createAzureDataExplorerTableForNamespace(client localClient, database string, tableName string, timeout config.Duration) error {
+func createAzureDataExplorerTableForNamespace(ctx context.Context, client localClient, database string, tableName string) error {
 	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout))
-	defer cancel()
-
 	_, errCreatingTable := client.Mgmt(ctx, database, createStmt)
 	if errCreatingTable != nil {
 		return errCreatingTable
 	}
 
-	ctxMapping := context.Background()
-	ctxMapping, cancelMapping := context.WithTimeout(ctxMapping, time.Duration(timeout))
-	defer cancelMapping()
-
 	createTableMappingstmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
-	_, errCreatingTableMapping := client.Mgmt(ctxMapping, database, createTableMappingstmt)
+	_, errCreatingTableMapping := client.Mgmt(ctx, database, createTableMappingstmt)
 	if errCreatingTableMapping != nil {
 		return errCreatingTableMapping
 	}
@@ -190,7 +185,7 @@ func (adx *AzureDataExplorer) Init() error {
 func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
 		return &AzureDataExplorer{
-			Timeout: config.Duration(10 * time.Second),
+			Timeout: config.Duration(15 * time.Second),
 		}
 	})
 }
