@@ -120,14 +120,12 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 
 		if _, ingestorExist := adx.ingesters[namespace]; !ingestorExist {
 			//create a table for the namespace
-			err := createAzureDataExplorerTableForNamespace(ctx, adx.client, adx.Database, namespace)
-			if err != nil {
+			if err := createAzureDataExplorerTableForNamespace(ctx, adx.client, adx.Database, namespace); err != nil {
 				return err
 			}
 
 			//create a new ingestor client for the namespace
-			adx.ingesters[namespace], err = adx.createIngestor(adx.client, adx.Database, namespace)
-			if err != nil {
+			if adx.ingesters[namespace], err = adx.createIngestor(adx.client, adx.Database, namespace); err != nil {
 				return err
 			}
 		}
@@ -136,9 +134,8 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	for key, mPerNamespace := range metricsPerNamespace {
 		reader := bytes.NewReader(mPerNamespace)
 
-		_, errorIngesting := adx.ingesters[key].FromReader(ctx, reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON))
-		if errorIngesting != nil {
-			adx.Log.Errorf("sending ingestion request to Azure Data Explorer for metric %q failed: %v", key, errorIngesting)
+		if _, err := adx.ingesters[key].FromReader(ctx, reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON)); err != nil {
+			adx.Log.Errorf("sending ingestion request to Azure Data Explorer for metric %q failed: %v", key, err)
 		}
 	}
 	return nil
@@ -146,15 +143,13 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 
 func createAzureDataExplorerTableForNamespace(ctx context.Context, client localClient, database string, tableName string) error {
 	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
-	_, errCreatingTable := client.Mgmt(ctx, database, createStmt)
-	if errCreatingTable != nil {
-		return errCreatingTable
+	if _, err := client.Mgmt(ctx, database, createStmt); err != nil {
+		return err
 	}
 
 	createTableMappingstmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
-	_, errCreatingTableMapping := client.Mgmt(ctx, database, createTableMappingstmt)
-	if errCreatingTableMapping != nil {
-		return errCreatingTableMapping
+	if _, err := client.Mgmt(ctx, database, createTableMappingstmt); err != nil {
+		return err
 	}
 
 	return nil
