@@ -200,7 +200,7 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 	tags["node_name"] = n.DisplayName
 
 	// filter out excluded or not included node_name
-	if j.nodeFilter != nil && !j.nodeFilter.Match(tags["node_name"]) {
+	if !j.nodeFilter.Match(tags["node_name"]) {
 		return nil
 	}
 
@@ -297,7 +297,7 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 	}
 
 	// filter out excluded or not included jobs
-	if j.jobFilter != nil && !j.jobFilter.Match(jr.hierarchyName()) {
+	if !j.jobFilter.Match(jr.hierarchyName()) {
 		return nil
 	}
 
