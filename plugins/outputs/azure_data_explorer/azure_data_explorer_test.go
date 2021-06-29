@@ -17,8 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var actualOutputMetric map[string]interface{}
-
 const createTableCommandExpected = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
 const createTableMappingCommandExpected = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
 
@@ -44,7 +42,10 @@ func TestWrite(t *testing.T) {
 	require.NoError(t, plugin.Write(testutil.MockMetrics()))
 
 	expectedNameOfMetric := "test1"
-	require.Equal(t, expectedNameOfMetric, actualOutputMetric["name"])
+	createdIngestor := plugin.ingesters["test1"]
+	require.NotNil(t, createdIngestor)
+	createdFakeIngestor := createdIngestor.(*fakeIngestor)
+	require.Equal(t, expectedNameOfMetric, createdFakeIngestor.actualOutputMetric["name"])
 
 	createTableString := fmt.Sprintf(createTableCommandExpected, expectedNameOfMetric)
 	require.Equal(t, createTableString, fakeClientInstance.queries[0])
@@ -107,7 +108,9 @@ func (f *fakeClientMgmtProduceError) Mgmt(ctx context.Context, db string, query 
 	return nil, errors.New("Something went wrong")
 }
 
-type fakeIngestor struct{}
+type fakeIngestor struct {
+	actualOutputMetric map[string]interface{}
+}
 
 func createFakeIngestor(client localClient, database string, namespace string) (localIngestor, error) {
 	return &fakeIngestor{}, nil
@@ -116,7 +119,7 @@ func (f *fakeIngestor) FromReader(ctx context.Context, reader io.Reader, options
 	scanner := bufio.NewScanner(reader)
 	scanner.Scan()
 	firstLine := scanner.Text()
-	err := json.Unmarshal([]byte(firstLine), &actualOutputMetric)
+	err := json.Unmarshal([]byte(firstLine), &f.actualOutputMetric)
 	if err != nil {
 		return nil, err
 	}
