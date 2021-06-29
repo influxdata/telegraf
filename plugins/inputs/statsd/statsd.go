@@ -37,6 +37,20 @@ const (
 
 var errParsing = errors.New("error parsing statsd line")
 
+type Number struct {
+	Value float64
+}
+
+func (n *Number) UnmarshalTOML(b []byte) error {
+	value, err := strconv.ParseFloat(string(b), 64)
+	if err != nil {
+		return err
+	}
+
+	n.Value = value
+	return nil
+}
+
 // Statsd allows the importing of statsd and dogstatsd data.
 type Statsd struct {
 	// Protocol used on listener - udp or tcp
@@ -51,7 +65,7 @@ type Statsd struct {
 
 	// Percentiles specifies the percentiles that will be calculated for timing
 	// and histogram stats.
-	Percentiles     []float64
+	Percentiles     []Number
 	PercentileLimit int
 
 	DeleteGauges   bool
@@ -306,8 +320,8 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 			fields[prefix+"lower"] = stats.Lower()
 			fields[prefix+"count"] = stats.Count()
 			for _, percentile := range s.Percentiles {
-				name := fmt.Sprintf("%s%v_percentile", prefix, percentile)
-				fields[name] = stats.Percentile(percentile)
+				name := fmt.Sprintf("%s%v_percentile", prefix, percentile.Value)
+				fields[name] = stats.Percentile(percentile.Value)
 			}
 		}
 
