@@ -1465,12 +1465,12 @@ CREATE TABLE #QueryStoreWaitStat(
 	query_hash nvarchar(20),
 	plan_id nvarchar(20),
 	query_plan_hash nvarchar(20),
-	wait_category_s nvarchar(60),
-	exec_type_d tinyint,
+	wait_category nvarchar(60),
+	exec_type tinyint,
 	exec_type_desc nvarchar(128),
-	total_query_wait_time_ms_d bigint,
+	total_query_wait_time_ms bigint,
 	count_executions bigint,
-	max_query_wait_time_ms_d bigint
+	max_query_wait_time_ms bigint
 )
 WITH (DATA_COMPRESSION = ROW);
 
