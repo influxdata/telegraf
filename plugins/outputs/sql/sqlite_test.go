@@ -1,5 +1,5 @@
-// +build linux
-// +build 386 amd64 arm arm64
+// +build linux,freebsd
+// +build !mips !mips64
 
 package sql
 

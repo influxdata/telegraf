@@ -50,7 +50,7 @@ linters-settings:
       - name: error-return
       - name: error-strings
       - name: errorf
-      - name: flag-parameter
+#      - name: flag-parameter #disable for now
       - name: function-result-limit
         arguments: [ 3 ]
       - name: identical-branches

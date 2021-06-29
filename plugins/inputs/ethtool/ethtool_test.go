@@ -6,9 +6,10 @@ import (
 	"net"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var command *Ethtool
@@ -31,13 +32,12 @@ func (c *CommandEthtoolMock) Init() error {
 	return nil
 }
 
-func (c *CommandEthtoolMock) DriverName(intf string) (driverName string, err error) {
+func (c *CommandEthtoolMock) DriverName(intf string) (string, error) {
 	i := c.InterfaceMap[intf]
 	if i != nil {
-		driverName = i.DriverName
-		return
+		return i.DriverName, nil
 	}
-	return driverName, errors.New("interface not found")
+	return "", errors.New("interface not found")
 }
 
 func (c *CommandEthtoolMock) Interfaces() ([]net.Interface, error) {
@@ -66,13 +66,12 @@ func (c *CommandEthtoolMock) Interfaces() ([]net.Interface, error) {
 	return interfaceNames, nil
 }
 
-func (c *CommandEthtoolMock) Stats(intf string) (stat map[string]uint64, err error) {
+func (c *CommandEthtoolMock) Stats(intf string) (map[string]uint64, error) {
 	i := c.InterfaceMap[intf]
 	if i != nil {
-		stat = i.Stat
-		return
+		return i.Stat, nil
 	}
-	return stat, errors.New("interface not found")
+	return nil, errors.New("interface not found")
 }
 
 func setup() {
