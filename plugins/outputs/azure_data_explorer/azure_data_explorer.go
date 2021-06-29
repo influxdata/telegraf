@@ -1,7 +1,5 @@
 package azure_data_explorer
 
-// simpleoutput.go
-
 import (
 	"bytes"
 	"context"
@@ -154,12 +152,6 @@ func createAzureDataExplorerTableForNamespace(ctx context.Context, client localC
 
 	return nil
 }
-
-// // This is to group metrics based on the convention of having a hyphen in the metric name. It complies with Azure Monitor way of metric categorization.
-// func getNamespace(m telegraf.Metric) string {
-// 	names := strings.SplitN(m.Name(), "-", 2)
-// 	return names[0]
-// }
 
 func (adx *AzureDataExplorer) Init() error {
 	if adx.Endpoint == "" {
