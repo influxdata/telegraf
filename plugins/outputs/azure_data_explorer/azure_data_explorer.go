@@ -133,7 +133,6 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	for key, mPerNamespace := range metricsPerNamespace {
 		reader := bytes.NewReader(mPerNamespace)
 
-		time.Sleep(20 * time.Second)
 		_, errorIngesting := adx.ingesters[key].FromReader(context.TODO(), reader, ingest.FileFormat(ingest.JSON), ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", key), ingest.JSON))
 		if errorIngesting != nil {
 			adx.Log.Errorf("sending ingestion request to Azure Data Explorer for metric %q failed: %v", key, errorIngesting)
