@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/azure-kusto-go/kusto"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
+	"github.com/influxdata/telegraf"
 	telegrafJson "github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -21,40 +22,91 @@ const createTableCommandExpected = `.create-merge table ['%s']  (['fields']:dyna
 const createTableMappingCommandExpected = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
 
 func TestWrite(t *testing.T) {
-	fakeClientInstance := &fakeClient{
-		queries: make([]string, 0),
+	testCases := []struct {
+		name           string
+		inputMetric    []telegraf.Metric
+		client         *fakeClient
+		createIngestor ingestorFactory
+		expected       map[string]interface{}
+	}{
+		{
+			name:        "Valid metric",
+			inputMetric: testutil.MockMetrics(),
+			client: &fakeClient{
+				queries: make([]string, 0),
+				internalMgmt: func(f *fakeClient, ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error) {
+					f.queries = append(f.queries, query.String())
+					return &kusto.RowIterator{}, nil
+				},
+			},
+			createIngestor: createFakeIngestor,
+			expected: map[string]interface{}{
+				"metricName":                "test1",
+				"createTableCommand":        "",
+				"createTableMappingCommand": "",
+				"error":                     "",
+			},
+		},
+		{
+			name:        "Error in Mgmt",
+			inputMetric: testutil.MockMetrics(),
+			client: &fakeClient{
+				queries: make([]string, 0),
+				internalMgmt: func(f *fakeClient, ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error) {
+					return nil, errors.New("Something went wrong")
+				},
+			},
+			createIngestor: createFakeIngestor,
+			expected: map[string]interface{}{
+				"metricName":                "test1",
+				"createTableCommand":        "",
+				"createTableMappingCommand": "",
+				"error":                     "Something went wrong",
+			},
+		},
 	}
-	plugin := AzureDataExplorer{
-		Endpoint:       "someendpoint",
-		Database:       "databasename",
-		ClientID:       "longclientid",
-		ClientSecret:   "longclientsecret",
-		TenantID:       "longtenantid",
-		Log:            testutil.Logger{},
-		client:         fakeClientInstance,
-		ingesters:      map[string]localIngestor{},
-		createIngestor: createFakeIngestor,
+
+	for _, tC := range testCases {
+		t.Run(tC.name, func(t *testing.T) {
+			serializer, _ := telegrafJson.NewSerializer(time.Second)
+
+			plugin := AzureDataExplorer{
+				Endpoint:       "someendpoint",
+				Database:       "databasename",
+				ClientID:       "longclientid",
+				ClientSecret:   "longclientsecret",
+				TenantID:       "longtenantid",
+				Log:            testutil.Logger{},
+				client:         tC.client,
+				ingesters:      map[string]localIngestor{},
+				createIngestor: tC.createIngestor,
+				serializer:     serializer,
+			}
+
+			errorInWrite := plugin.Write(testutil.MockMetrics())
+
+			if tC.expected["error"] != "" {
+				require.EqualError(t, errorInWrite, tC.expected["error"].(string))
+			} else {
+				require.NoError(t, errorInWrite)
+
+				expectedNameOfMetric := tC.expected["metricName"]
+				createdIngestor := plugin.ingesters[tC.expected["metricName"].(string)]
+				require.NotNil(t, createdIngestor)
+				createdFakeIngestor := createdIngestor.(*fakeIngestor)
+				require.Equal(t, expectedNameOfMetric, createdFakeIngestor.actualOutputMetric["name"])
+
+				createTableString := fmt.Sprintf(createTableCommandExpected, expectedNameOfMetric)
+				require.Equal(t, createTableString, tC.client.queries[0])
+
+				createTableMappingString := fmt.Sprintf(createTableMappingCommandExpected, expectedNameOfMetric, expectedNameOfMetric)
+				require.Equal(t, createTableMappingString, tC.client.queries[1])
+			}
+		})
 	}
-
-	serializer, _ := telegrafJson.NewSerializer(time.Second)
-	plugin.serializer = serializer
-
-	require.NoError(t, plugin.Write(testutil.MockMetrics()))
-
-	expectedNameOfMetric := "test1"
-	createdIngestor := plugin.ingesters["test1"]
-	require.NotNil(t, createdIngestor)
-	createdFakeIngestor := createdIngestor.(*fakeIngestor)
-	require.Equal(t, expectedNameOfMetric, createdFakeIngestor.actualOutputMetric["name"])
-
-	createTableString := fmt.Sprintf(createTableCommandExpected, expectedNameOfMetric)
-	require.Equal(t, createTableString, fakeClientInstance.queries[0])
-
-	createTableMappingString := fmt.Sprintf(createTableMappingCommandExpected, expectedNameOfMetric, expectedNameOfMetric)
-	require.Equal(t, createTableMappingString, fakeClientInstance.queries[1])
 }
 
-func TestWriteBlankEndpoint(t *testing.T) {
+func TestInirBlankEndpoint(t *testing.T) {
 	plugin := AzureDataExplorer{
 		Endpoint:       "",
 		Database:       "",
@@ -72,40 +124,13 @@ func TestWriteBlankEndpoint(t *testing.T) {
 	require.Equal(t, "Endpoint configuration cannot be empty", errorInit.Error())
 }
 
-func TestWriteErrorInMgmt(t *testing.T) {
-	plugin := AzureDataExplorer{
-		Endpoint:       "s",
-		Database:       "s",
-		ClientID:       "s",
-		ClientSecret:   "s",
-		TenantID:       "s",
-		Log:            testutil.Logger{},
-		client:         &fakeClientMgmtProduceError{},
-		ingesters:      map[string]localIngestor{},
-		createIngestor: createFakeIngestor,
-	}
-
-	serializer, _ := telegrafJson.NewSerializer(time.Second)
-	plugin.serializer = serializer
-
-	errorWrite := plugin.Write(testutil.MockMetrics())
-	require.Error(t, errorWrite)
-	require.Equal(t, "Something went wrong", errorWrite.Error())
-}
-
 type fakeClient struct {
-	queries []string
+	queries      []string
+	internalMgmt func(client *fakeClient, ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error)
 }
 
 func (f *fakeClient) Mgmt(ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error) {
-	f.queries = append(f.queries, query.String())
-	return &kusto.RowIterator{}, nil
-}
-
-type fakeClientMgmtProduceError struct{}
-
-func (f *fakeClientMgmtProduceError) Mgmt(ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error) {
-	return nil, errors.New("Something went wrong")
+	return f.internalMgmt(f, ctx, db, query, options...)
 }
 
 type fakeIngestor struct {
