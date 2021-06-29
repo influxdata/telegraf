@@ -600,9 +600,8 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 								fields["mem_total"] = int64(total)
 								foundEstimator = true
 								break
-							} else {
-								acc.AddError(fmt.Errorf("unknown type %T for %q total memory", x, estimator))
 							}
+							acc.AddError(fmt.Errorf("unknown type %T for %q total memory", x, estimator))
 						}
 					}
 					if !foundEstimator {
