@@ -108,11 +108,6 @@ func TestWrite(t *testing.T) {
 
 func TestInirBlankEndpoint(t *testing.T) {
 	plugin := AzureDataExplorer{
-		Endpoint:       "",
-		Database:       "",
-		ClientID:       "",
-		ClientSecret:   "",
-		TenantID:       "",
 		Log:            testutil.Logger{},
 		client:         &fakeClient{},
 		ingesters:      map[string]localIngestor{},
