@@ -590,26 +590,23 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				fields["mem_allocated_unused"] = memory.Memory.AllocatedUnused
 				fields["mem_reserved_unallocated"] = memory.Memory.ReservedUnallocated
 				switch v := memory.Memory.Total.(type) {
-				case int64:
-					fields["mem_total"] = v
 				case float64:
 					fields["mem_total"] = int64(v)
 				case map[string]interface{}:
-					var total interface{}
-					if x, found := v["rss"]; found {
-						total = x
-					} else if x, found := v["allocated"]; found {
-						total = x
-					} else if x, found := v["erlang"]; found {
-						total = x
-					} else {
-						acc.AddError(fmt.Errorf("no known memory estimation in %v", v))
+					var foundEstimator bool
+					for _, estimator := range []string{"rss", "allocated", "erlang"} {
+						if x, found := v[estimator]; found {
+							if total, ok := x.(float64); ok {
+								fields["mem_total"] = int64(total)
+								foundEstimator = true
+								break
+							} else {
+								acc.AddError(fmt.Errorf("unknown type %T for %q total memory", x, estimator))
+							}
+						}
 					}
-					switch vTotal := total.(type) {
-					case int64:
-						fields["mem_total"] = vTotal
-					case float64:
-						fields["mem_total"] = int64(vTotal)
+					if !foundEstimator {
+						acc.AddError(fmt.Errorf("no known memory estimation in %v", v))
 					}
 				default:
 					acc.AddError(fmt.Errorf("unknown type %T for total memory", memory.Memory.Total))
