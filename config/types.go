@@ -14,6 +14,9 @@ type Duration time.Duration
 // Size is an int64
 type Size int64
 
+// Number will get parsed as an int or float depending on what is passed
+type Number float64
+
 // UnmarshalTOML parses the duration from the TOML config file
 func (d *Duration) UnmarshalTOML(b []byte) error {
 	var err error
@@ -85,4 +88,14 @@ func (s *Size) UnmarshalTOML(b []byte) error {
 
 func (s *Size) UnmarshalText(text []byte) error {
 	return s.UnmarshalTOML(text)
+}
+
+func (n *Number) UnmarshalTOML(b []byte) error {
+	value, err := strconv.ParseFloat(string(b), 64)
+	if err != nil {
+		return err
+	}
+
+	*n = Number(value)
+	return nil
 }
