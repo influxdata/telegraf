@@ -1,6 +1,7 @@
 package couchbase
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"regexp"
@@ -39,7 +40,14 @@ var sampleConfig = `
 `
 
 var regexpURI = regexp.MustCompile(`(\S+://)?(\S+\:\S+@)`)
-var client = &http.Client{Timeout: 10 * time.Second}
+var client = &http.Client{
+	Timeout: 10 * time.Second,
+	Transport: &http.Transport{
+		// The couchbase library defaults to insecure, unless certificates are provided
+		// https://github.com/couchbase/go-couchbase/blob/v0.1.0/pools.go#L68-L70
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	},
+}
 
 func (cb *Couchbase) SampleConfig() string {
 	return sampleConfig
