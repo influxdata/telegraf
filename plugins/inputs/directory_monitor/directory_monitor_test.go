@@ -8,9 +8,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCSVGZImport(t *testing.T) {
@@ -77,8 +78,9 @@ func TestCSVGZImport(t *testing.T) {
 
 	// File should have gone back to the test directory, as we configured.
 	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvFile))
-	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvGzFile))
+	require.NoError(t, err)
 
+	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvGzFile))
 	require.NoError(t, err)
 }
 
