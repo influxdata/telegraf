@@ -82,8 +82,8 @@ servers = [
 ]
 
 ## Authentication method
-## valid methods: "default", "AAD"
-# auth_method = "default"
+## valid methods: "connection_string", "AAD"
+# auth_method = "connection_string"
 
 ## "database_type" enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
 ## In the config file, the sql server plugin section should be repeated each with a set of servers for a specific database_type.
@@ -292,7 +292,7 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 		var pool *sql.DB
 
 		switch strings.ToLower(s.AuthMethod) {
-		case "default":
+		case "connection_string":
 			// Use the DSN (connection string) directly. In this case,
 			// empty username/password causes use of Windows
 			// integrated authentication.
@@ -562,7 +562,7 @@ func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
 		return &SQLServer{
 			Servers:    []string{defaultServer},
-			AuthMethod: "default",
+			AuthMethod: "connection_string",
 		}
 	})
 }
