@@ -1664,3 +1664,12 @@ func TestUdp(t *testing.T) {
 		testutil.IgnoreTime(),
 	)
 }
+
+func TestParse_Ints(t *testing.T) {
+	s := NewTestStatsd()
+	s.Percentiles = []config.Number{90}
+	acc := &testutil.Accumulator{}
+
+	require.NoError(t, s.Gather(acc))
+	require.Equal(t, s.Percentiles, []config.Number{90.0})
+}
