@@ -56,10 +56,14 @@ func (adx *AzureDataExplorer) SampleConfig() string {
   ## ex: endpoint_url = "https://clustername.australiasoutheast.kusto.windows.net"
   endpoint_url = ""
   
-  ## The name of the database in Azure Data Explorer where the ingestion will happen
+  ## The Azure Data Explorer database that the metrics will be ingested into.
+  ## The plugin will NOT generate this database automatically, it's expected that this database already exists before ingestion.
+  ## ex: "exampledatabase"
   database = ""
 
-  ## The client ID of the Service Principal in Azure that has ingestion rights to the Azure Data Exploer Cluster
+  ## Client ID of the Azure Active Directory App (Service Principal). This Service Principal should have permissions on the Azure Data Explorer database
+  ## to create Tables and ingest data into these tables
+  ## ex: client_id = "dc871111-1222-4eee-bwww-111111111111"
   client_id = ""
 
   ## The client secret of the Service Principal in Azure that has ingestion rights to the Azure Data Exploer Cluster

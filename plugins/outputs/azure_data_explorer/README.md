@@ -31,8 +31,8 @@ This plugin writes metrics collected by any of the input plugins of Telegraf to 
   ## The Azure Tenant ID this Service Principal above belongs to
   # tenant_id = ""
 
-  ## The data format in which the metrics data will be sent to the Azure Data Explorer. This option is required and has to be 'json'.
-  # data_format = "json"
+  ## Timeout for Azure Data Explorer operations
+  # timeout = "15s"
 
 ```
 
