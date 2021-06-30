@@ -74,9 +74,6 @@ func TestWrite(t *testing.T) {
 			plugin := AzureDataExplorer{
 				Endpoint:       "someendpoint",
 				Database:       "databasename",
-				ClientID:       "longclientid",
-				ClientSecret:   "longclientsecret",
-				TenantID:       "longtenantid",
 				Log:            testutil.Logger{},
 				client:         tC.client,
 				ingesters:      map[string]localIngestor{},

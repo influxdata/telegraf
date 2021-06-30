@@ -22,9 +22,6 @@ import (
 type AzureDataExplorer struct {
 	Endpoint       string          `toml:"endpoint_url"`
 	Database       string          `toml:"database"`
-	ClientID       string          `toml:"client_id"`
-	ClientSecret   string          `toml:"client_secret"`
-	TenantID       string          `toml:"tenant_id"`
 	Log            telegraf.Logger `toml:"-"`
 	Timeout        config.Duration `toml:"timeout"`
 	client         localClient
@@ -61,28 +58,20 @@ func (adx *AzureDataExplorer) SampleConfig() string {
   ## ex: "exampledatabase"
   database = ""
 
-  ## Client ID of the Azure Active Directory App (Service Principal). This Service Principal should have permissions on the Azure Data Explorer database
-  ## to create Tables and ingest data into these tables
-  ## ex: client_id = "dc871111-1222-4eee-bwww-111111111111"
-  client_id = ""
-
-  ## The client secret of the Service Principal in Azure that has ingestion rights to the Azure Data Exploer Cluster
-  client_secret = ""
-
-  ## The tenant ID of the Azure Subsciption in which the Service Principal belongs to
-  tenant_id = ""
-
   ## Timeout for Azure Data Explorer operations
   # timeout = "15s"
 `
 }
 
 func (adx *AzureDataExplorer) Connect() error {
-	authorizer := kusto.Authorization{
-		Config: auth.NewClientCredentialsConfig(adx.ClientID, adx.ClientSecret, adx.TenantID),
+	authorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(adx.Endpoint)
+	if err != nil {
+		return err
 	}
-
-	client, err := kusto.New(adx.Endpoint, authorizer)
+	authorization := kusto.Authorization{
+		Authorizer: authorizer,
+	}
+	client, err := kusto.New(adx.Endpoint, authorization)
 
 	if err != nil {
 		return err
@@ -165,15 +154,6 @@ func (adx *AzureDataExplorer) Init() error {
 	}
 	if adx.Database == "" {
 		return errors.New("Database configuration cannot be empty")
-	}
-	if adx.ClientID == "" {
-		return errors.New("ClientID configuration cannot be empty")
-	}
-	if adx.ClientSecret == "" {
-		return errors.New("ClientSecret configuration cannot be empty")
-	}
-	if adx.TenantID == "" {
-		return errors.New("TenantID configuration cannot be empty")
 	}
 	serializer, err := json.NewSerializer(time.Second)
 	if err != nil {
