@@ -1,13 +1,17 @@
 package sqlserver
 
 import (
+	"bytes"
+	"log"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -220,6 +224,32 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 	var acc2 testutil.Accumulator
 	require.NoError(t, s2.Gather(&acc2))
 	require.False(t, acc2.HasMeasurement(healthMetricName))
+}
+
+func TestSqlServer_Retry(t *testing.T) {
+	fakeServer := "localhost\\fakeinstance1;Database=fakedb1;Password=ABCabc01;"
+
+	var logOutputBuffer bytes.Buffer
+	log.SetOutput(&logOutputBuffer)
+
+	server := &SQLServer{
+		Servers:       []string{fakeServer},
+		IncludeQuery:  []string{"DatabaseSize", "MemoryClerk"},
+		HealthMetric:  true,
+		RetryCount:    2,
+		RetryWaitTime: config.Duration(1 * time.Millisecond),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, server.Start(&acc))
+	require.NoError(t, server.Gather(&acc))
+
+	logOutputString := logOutputBuffer.String()
+
+	assert.False(t, strings.Contains(logOutputString, "W! [inputs.sqlserver] Error gathering data, retrying 3 more time(s)"))
+	assert.True(t, strings.Contains(logOutputString, "W! [inputs.sqlserver] Error gathering data, retrying 2 more time(s)"))
+	assert.True(t, strings.Contains(logOutputString, "W! [inputs.sqlserver] Error gathering data, retrying 1 more time(s)"))
+	assert.False(t, strings.Contains(logOutputString, "W! [inputs.sqlserver] Error gathering data, retrying 0 more time(s)"))
 }
 
 func TestSqlServer_MultipleInit(t *testing.T) {
