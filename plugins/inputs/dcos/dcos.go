@@ -10,6 +10,7 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go/v4"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
@@ -352,13 +353,13 @@ func (d *DCOS) createClient() (Client, error) {
 		return nil, err
 	}
 
-	url, err := url.Parse(d.ClusterURL)
+	address, err := url.Parse(d.ClusterURL)
 	if err != nil {
 		return nil, err
 	}
 
 	client := NewClusterClient(
-		url,
+		address,
 		time.Duration(d.ResponseTimeout),
 		d.MaxConnections,
 		tlsCfg,

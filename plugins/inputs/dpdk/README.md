@@ -1,4 +1,4 @@
-# DPDK Input Plugin
+# Data Plane Development Kit (DPDK) Input Plugin
 The `dpdk` plugin collects metrics exposed by applications built with [Data Plane Development Kit](https://www.dpdk.org/)
 which is an extensive set of open source libraries designed for accelerating packet processing workloads.
 

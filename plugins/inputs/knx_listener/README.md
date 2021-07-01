@@ -1,4 +1,4 @@
-# KNX input plugin
+# KNX Input Plugin
 
 The KNX input plugin that listens for messages on the KNX home-automation bus.
 This plugin connects to the KNX bus via a KNX-IP interface.
