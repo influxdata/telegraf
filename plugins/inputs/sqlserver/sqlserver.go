@@ -601,8 +601,7 @@ type QueryDataCache struct {
 func (c *QueryDataCache) Get(key string) (string, bool) {
 	c.mx.RLock()
 	defer c.mx.RUnlock()
-	val, ok := c.m[key]
-	return val, ok
+	return c.m[key]
 }
 
 func (c *QueryDataCache) Set(key string, value string) {
