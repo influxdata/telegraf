@@ -91,8 +91,8 @@ func TestWrite(t *testing.T) {
 			} else {
 				require.NoError(t, errorInWrite)
 
-				expectedNameOfMetric := tC.expected["metricName"]
-				createdIngestor := plugin.ingesters[tC.expected["metricName"].(string)]
+				expectedNameOfMetric := tC.expected["metricName"].(string)
+				createdIngestor := plugin.ingesters[expectedNameOfMetric]
 				require.NotNil(t, createdIngestor)
 				createdFakeIngestor := createdIngestor.(*fakeIngestor)
 				require.Equal(t, expectedNameOfMetric, createdFakeIngestor.actualOutputMetric["name"])
