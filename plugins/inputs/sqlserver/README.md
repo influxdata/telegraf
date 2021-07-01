@@ -107,6 +107,18 @@ GO
   ## This setting/metric is optional and is disabled by default.
   # health_metric = false
 
+  ## Number of query retry attempts to perform. Setting this to N will run the query a total of N+1 times.   
+  # retry_count = 2
+
+  ## The amount of time to wait between query retries
+  # retry_wait_time = 500ms
+
+  ## If true, subsequent retries will wait with an exponentially increasing wait time. 
+  ## When this property is set to true, the wait time is calculated as (2 ^ retry_attempt) * (retry_wait_time), 
+  ## for 0 <= retry_attempt <= retry_count, retry_attempt++. 
+  ## When this property is false, the wait time is the same for all retries.
+  # retry_exponential_backoff = false
+
   ## Possible queries accross different versions of the collectors
   ## Queries enabled by default for specific Database Type
   
@@ -204,6 +216,12 @@ EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
   ]
 ```
 - Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
+
+### Retry Logic
+This plugin supports retry logic for the queries used to gather metrics from SQL Server. The following parameters are available to configure the retry behavior:
+- `retry_count` - Number of query retry attempts to perform. Setting this to N will run the query a total of N+1 times
+- `retry_wait_time` - The amount of time to wait between query retries. Examples: "100ms", "5s"
+- `retry_exponential_backoff` - If true, subsequent retries will wait with an exponentially increasing wait time. When this property is set to true, the wait time is calculated as `(2 ^ retry_attempt) * (retry_wait_time)`, for `0 <= retry_attempt <= retry_count` and `retry_attempt++`. When this property is false, the wait time is the same for all retries.
 
 ### Metrics:
 To provide backwards compatibility, this plugin support two versions of metrics queries.
