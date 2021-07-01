@@ -126,7 +126,7 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 		reader := bytes.NewReader(mPerNamespace)
 		//create a table for the namespace if it doesn't exist
 		if adx.ingesters[namespace] == nil {
-			if err := createAzureDataExplorerTableForNamespace(ctx, adx.client, adx.Database, namespace); err != nil {
+			if err := adx.createAzureDataExplorerTableForNamespace(ctx, namespace); err != nil {
 				return fmt.Errorf("creating table for %q failed: %v", namespace, err)
 			}
 			//create a new ingestor client for the namespace
@@ -145,14 +145,14 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func createAzureDataExplorerTableForNamespace(ctx context.Context, client localClient, database string, tableName string) error {
+func (adx *AzureDataExplorer) createAzureDataExplorerTableForNamespace(ctx context.Context, tableName string) error {
 	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
-	if _, err := client.Mgmt(ctx, database, createStmt); err != nil {
+	if _, err := adx.client.Mgmt(ctx, adx.Database, createStmt); err != nil {
 		return err
 	}
 
 	createTableMappingstmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
-	if _, err := client.Mgmt(ctx, database, createTableMappingstmt); err != nil {
+	if _, err := adx.client.Mgmt(ctx, adx.Database, createTableMappingstmt); err != nil {
 		return err
 	}
 
