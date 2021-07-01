@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -233,11 +232,10 @@ func TestSqlServer_Retry(t *testing.T) {
 	log.SetOutput(&logOutputBuffer)
 
 	server := &SQLServer{
-		Servers:       []string{fakeServer},
-		IncludeQuery:  []string{"DatabaseSize", "MemoryClerk"},
-		HealthMetric:  true,
-		RetryCount:    2,
-		RetryWaitTime: config.Duration(1 * time.Millisecond),
+		Servers:      []string{fakeServer},
+		IncludeQuery: []string{"DatabaseSize", "MemoryClerk"},
+		HealthMetric: true,
+		RetryCount:   2,
 	}
 
 	var acc testutil.Accumulator
