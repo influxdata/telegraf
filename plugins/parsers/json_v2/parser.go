@@ -20,7 +20,8 @@ type Parser struct {
 
 	measurementName string
 
-	iterateObjects   bool
+	iterateObjects bool
+
 	currentSettings  JSONObject
 	fieldPathResults []PathResult
 	tagPathResults   []PathResult
@@ -326,16 +327,27 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 			switch result.Value().(type) {
 			case nil: // Ignore JSON values that are set as null
 			default:
-				fieldDataSet := existsInPathResults(result.ParentIndex, p.fieldPathResults)
-				tagDataSet := existsInPathResults(result.ParentIndex, p.tagPathResults)
-				if fieldDataSet == nil && tagDataSet == nil {
-					return results, nil
-				}
 				outputName := result.OutputName
-				if fieldDataSet == nil && tagDataSet != nil {
-					result.Tag = true
-					if tagDataSet.Rename != "" {
-						outputName = tagDataSet.Rename
+				desiredType := result.DesiredType
+
+				if len(p.currentSettings.FieldPaths) > 0 || len(p.currentSettings.TagPaths) > 0 {
+					fieldDataSet := existsInPathResults(result.ParentIndex, p.fieldPathResults)
+					tagDataSet := existsInPathResults(result.ParentIndex, p.tagPathResults)
+					if fieldDataSet == nil && tagDataSet == nil {
+						return results, nil
+					}
+					if tagDataSet != nil {
+						result.Tag = true
+						if tagDataSet.Rename != "" {
+							outputName = tagDataSet.Rename
+						}
+					}
+
+					if fieldDataSet != nil {
+						desiredType = fieldDataSet.Type
+						if fieldDataSet.Rename != "" {
+							outputName = fieldDataSet.Rename
+						}
 					}
 				}
 
@@ -362,7 +374,13 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 
 func existsInPathResults(index int, indexList []PathResult) *DataSet {
 	for _, f := range indexList {
-		if f.result.Index == index {
+		if f.result.Index == 0 {
+			for _, i := range f.result.HashtagIndexes {
+				if index == i {
+					return &f.DataSet
+				}
+			}
+		} else if f.result.Index == index {
 			return &f.DataSet
 		}
 	}
