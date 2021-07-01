@@ -161,7 +161,7 @@ func initQueries(s *SQLServer) error {
 	// Constant defintiions for type "SQLServer" start with sqlServer
 	if s.DatabaseType == typeAzureSQLDB {
 		queries["AzureSQLDBResourceStats"] = Query{ScriptName: "AzureSQLDBResourceStats", Script: sqlAzureDBResourceStats, ResultByRow: false}
-		queries["AzureSQLDBResourceGovernance"] = Query{ScriptName: "AzureSQLDBResourceGovernance", Script: sqlAzureDBResourceGovernance, ResultByRow: false}
+		/*queries["AzureSQLDBResourceGovernance"] = Query{ScriptName: "AzureSQLDBResourceGovernance", Script: sqlAzureDBResourceGovernance, ResultByRow: false}
 		queries["AzureSQLDBWaitStats"] = Query{ScriptName: "AzureSQLDBWaitStats", Script: sqlAzureDBWaitStats, ResultByRow: false}
 		queries["AzureSQLDBDatabaseIO"] = Query{ScriptName: "AzureSQLDBDatabaseIO", Script: sqlAzureDBDatabaseIO, ResultByRow: false}
 		queries["AzureSQLDBServerProperties"] = Query{ScriptName: "AzureSQLDBServerProperties", Script: sqlAzureDBProperties, ResultByRow: false}
@@ -169,7 +169,7 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLDBMemoryClerks"] = Query{ScriptName: "AzureSQLDBMemoryClerks", Script: sqlAzureDBMemoryClerks, ResultByRow: false}
 		queries["AzureSQLDBPerformanceCounters"] = Query{ScriptName: "AzureSQLDBPerformanceCounters", Script: sqlAzureDBPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLDBRequests"] = Query{ScriptName: "AzureSQLDBRequests", Script: sqlAzureDBRequests, ResultByRow: false}
-		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlAzureDBSchedulers, ResultByRow: false}
+		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlAzureDBSchedulers, ResultByRow: false}*/
 	} else if s.DatabaseType == typeAzureSQLManagedInstance {
 		queries["AzureSQLMIResourceStats"] = Query{ScriptName: "AzureSQLMIResourceStats", Script: sqlAzureMIResourceStats, ResultByRow: false}
 		queries["AzureSQLMIResourceGovernance"] = Query{ScriptName: "AzureSQLMIResourceGovernance", Script: sqlAzureMIResourceGovernance, ResultByRow: false}
@@ -343,26 +343,25 @@ func (s *SQLServer) Stop() {
 }
 
 func (s *SQLServer) gatherServerWithRetry(pool *sql.DB, query Query, acc telegraf.Accumulator) error {
-	for retry := 0; retry <= s.RetryCount; retry++ {
+	for retryAttempt := 0; retryAttempt <= s.RetryCount; retryAttempt++ {
 		queryError := s.gatherServer(pool, query, acc)
 		if queryError == nil {
 			break
-		} else {
-			if retry != s.RetryCount {
-				log.Printf("W! [inputs.sqlserver] Error gathering data, retrying %d more time(s): %s.", s.RetryCount-retry, queryError)
-
-				multiplier := 1.0
-				if s.RetryExponentialBackoff {
-					multiplier = math.Pow(2, float64(retry))
-				}
-
-				waitTime := time.Duration(s.RetryWaitTime * config.Duration(multiplier))
-				time.Sleep(waitTime)
-				continue
-			} else {
-				return queryError
-			}
 		}
+
+		if retryAttempt == s.RetryCount {
+			return queryError
+		}
+
+		log.Printf("W! [inputs.sqlserver] Error gathering data, retrying %d more time(s): %s.", s.RetryCount-retryAttempt, queryError)
+
+		multiplier := 1.0
+		if s.RetryExponentialBackoff {
+			multiplier = math.Pow(2, float64(retryAttempt))
+		}
+
+		waitTime := time.Duration(s.RetryWaitTime * config.Duration(multiplier))
+		time.Sleep(waitTime)
 	}
 
 	return nil
