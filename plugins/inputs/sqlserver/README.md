@@ -220,7 +220,7 @@ EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
 ### Retry Logic
 This plugin supports retry logic for the queries used to gather metrics from SQL Server. The following parameters are available to configure the retry behavior:
 - `retry_count` - Number of query retry attempts to perform. Setting this to N will run the query a total of N+1 times
-- `retry_wait_time` - The amount of time to wait between query retries. Examples: "100ms", "5s"
+- `retry_wait_time` - The amount of time to wait between query retries. Examples: `"100ms"`, `"5s"`
 - `retry_exponential_backoff` - If true, subsequent retries will wait with an exponentially increasing wait time. When this property is set to true, the wait time is calculated as `(2 ^ retry_attempt) * (retry_wait_time)`, for `0 <= retry_attempt <= retry_count` and `retry_attempt++`. When this property is false, the wait time is the same for all retries.
 
 ### Metrics:
