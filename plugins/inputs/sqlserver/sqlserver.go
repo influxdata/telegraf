@@ -251,11 +251,12 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 			wg.Add(1)
 			go func(pool *sql.DB, query Query, serverIndex int) {
 				defer wg.Done()
-				queryError := s.gatherServer(pool, query, acc)
+				connectionString := s.Servers[serverIndex]
+				queryError := s.gatherServer(pool, query, acc, connectionString)
 
 				if s.HealthMetric {
 					mutex.Lock()
-					s.gatherHealth(healthMetrics, s.Servers[serverIndex], queryError)
+					s.gatherHealth(healthMetrics, connectionString, queryError)
 					mutex.Unlock()
 				}
 
@@ -337,12 +338,21 @@ func (s *SQLServer) Stop() {
 	}
 }
 
-func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumulator) error {
+func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumulator, connectionString string) error {
 	// execute query
 	rows, err := pool.Query(query.Script)
 	if err != nil {
-		return fmt.Errorf("script %s failed: %w", query.ScriptName, err)
+		serverName, databaseName := getConnectionIdentifiers(connectionString)
+
+		// Error msg based on the format in SSMS. SQLErrorClass() is another term for severity/level: http://msdn.microsoft.com/en-us/library/dd304156.aspx
+		if sqlerr, ok := err.(mssql.Error); ok {
+			return fmt.Errorf("Query %s failed for server: %s and database: %s with Msg %d, Level %d, State %d:, Line %d, Error: %w", query.ScriptName,
+				serverName, databaseName, sqlerr.SQLErrorNumber(), sqlerr.SQLErrorClass(), sqlerr.SQLErrorState(), sqlerr.SQLErrorLineNo(), err)
+		}
+
+		return fmt.Errorf("Query %s failed for server: %s and database: %s with Error: %w", query.ScriptName, serverName, databaseName, err)
 	}
+
 	defer rows.Close()
 
 	// grab the column information from the result
