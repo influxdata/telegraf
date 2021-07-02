@@ -13,6 +13,7 @@ import (
 )
 
 type Parser struct {
+	InputJSON   []byte
 	Configs     []Config
 	DefaultTags map[string]string
 	Log         telegraf.Logger
@@ -22,13 +23,13 @@ type Parser struct {
 
 	iterateObjects bool
 
-	currentSettings  JSONObject
-	fieldPathResults []PathResult
-	tagPathResults   []PathResult
+	currentSettings JSONObject
+	pathResults     []PathResult
 }
 
 type PathResult struct {
 	result gjson.Result
+	tag    bool
 	DataSet
 }
 
@@ -66,19 +67,21 @@ type JSONObject struct {
 }
 
 type MetricNode struct {
-	ParentIndex int
-	OutputName  string
-	SetName     string
-	Tag         bool
-	DesiredType string // Can be "int", "uint", "float", "bool", "string"
+	ParentIndex       int
+	OutputName        string
+	SetName           string
+	Tag               bool
+	DesiredType       string      // Can be "int", "uint", "float", "bool", "string"
+	IncludeCollection *PathResult // If set to true, it should be auto included
 
 	Metric telegraf.Metric
 	gjson.Result
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
+	p.InputJSON = input
 	// Only valid JSON is supported
-	if !gjson.Valid(string(input)) {
+	if !gjson.Valid(string(p.InputJSON)) {
 		return nil, fmt.Errorf("Invalid JSON provided, unable to parse")
 	}
 
@@ -88,7 +91,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 		// Measurement name configuration
 		p.measurementName = c.MeasurementName
 		if c.MeasurementNamePath != "" {
-			result := gjson.GetBytes(input, c.MeasurementNamePath)
+			result := gjson.GetBytes(p.InputJSON, c.MeasurementNamePath)
 			if !result.IsArray() && !result.IsObject() {
 				p.measurementName = result.String()
 			}
@@ -97,7 +100,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 		// Timestamp configuration
 		p.Timestamp = time.Now()
 		if c.TimestampPath != "" {
-			result := gjson.GetBytes(input, c.TimestampPath)
+			result := gjson.GetBytes(p.InputJSON, c.TimestampPath)
 			if !result.IsArray() && !result.IsObject() {
 				if c.TimestampFormat == "" {
 					err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
@@ -112,17 +115,17 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 			}
 		}
 
-		fields, err := p.processMetric(c.Fields, input, false)
+		fields, err := p.processMetric(c.Fields, false)
 		if err != nil {
 			return nil, err
 		}
 
-		tags, err := p.processMetric(c.Tags, input, true)
+		tags, err := p.processMetric(c.Tags, true)
 		if err != nil {
 			return nil, err
 		}
 
-		objects, err := p.processObjects(c.JSONObjects, input)
+		objects, err := p.processObjects(c.JSONObjects)
 		if err != nil {
 			return nil, err
 		}
@@ -148,7 +151,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 // processMetric will iterate over all 'field' or 'tag' configs and create metrics for each
 // A field/tag can either be a single value or an array of values, each resulting in its own metric
 // For multiple configs, a set of metrics is created from the cartesian product of each separate config
-func (p *Parser) processMetric(data []DataSet, input []byte, tag bool) ([]telegraf.Metric, error) {
+func (p *Parser) processMetric(data []DataSet, tag bool) ([]telegraf.Metric, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
@@ -160,7 +163,7 @@ func (p *Parser) processMetric(data []DataSet, input []byte, tag bool) ([]telegr
 		if c.Path == "" {
 			return nil, fmt.Errorf("GJSON path is required")
 		}
-		result := gjson.GetBytes(input, c.Path)
+		result := gjson.GetBytes(p.InputJSON, c.Path)
 
 		if result.IsObject() {
 			p.Log.Debugf("Found object in the path: %s, ignoring it please use 'object' to gather metrics from objects", c.Path)
@@ -244,6 +247,9 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 			p.Log.Debugf("Found object in query ignoring it please use 'object' to gather metrics from objects")
 			return results, nil
 		}
+		if result.IncludeCollection == nil && (len(p.currentSettings.FieldPaths) > 0 || len(p.currentSettings.TagPaths) > 0) {
+			result.IncludeCollection = p.checkIfIncludedCollection(result.Index, result.Raw)
+		}
 		r, err := p.combineObject(result)
 		if err != nil {
 			return nil, err
@@ -254,6 +260,9 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 
 	if result.IsArray() {
 		var err error
+		if result.IncludeCollection == nil && (len(p.currentSettings.FieldPaths) > 0 || len(p.currentSettings.TagPaths) > 0) {
+			result.IncludeCollection = p.checkIfIncludedCollection(result.Index, result.Raw)
+		}
 		result.ForEach(func(_, val gjson.Result) bool {
 			m := metric.New(
 				p.measurementName,
@@ -261,14 +270,14 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 				map[string]interface{}{},
 				p.Timestamp,
 			)
-
 			if val.IsObject() {
 				if p.iterateObjects {
-					n := MetricNode{
-						ParentIndex: result.ParentIndex + val.Index,
-						SetName:     result.SetName,
-						Metric:      m,
-						Result:      val,
+					n := result
+					n.ParentIndex += val.Index
+					n.Metric = m
+					n.Result = val
+					if n.IncludeCollection == nil && (len(p.currentSettings.FieldPaths) > 0 || len(p.currentSettings.TagPaths) > 0) {
+						n.IncludeCollection = p.checkIfIncludedCollection(n.Index, n.Raw)
 					}
 					r, err := p.combineObject(n)
 					if err != nil {
@@ -293,14 +302,12 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 			for _, f := range result.Metric.TagList() {
 				m.AddTag(f.Key, f.Value)
 			}
-			n := MetricNode{
-				ParentIndex: result.ParentIndex + val.Index,
-				Tag:         result.Tag,
-				DesiredType: result.DesiredType,
-				OutputName:  result.OutputName,
-				SetName:     result.SetName,
-				Metric:      m,
-				Result:      val,
+			n := result
+			n.ParentIndex += val.Index
+			n.Metric = m
+			n.Result = val
+			if n.IncludeCollection == nil && (len(p.currentSettings.FieldPaths) > 0 || len(p.currentSettings.TagPaths) > 0) {
+				n.IncludeCollection = p.checkIfIncludedCollection(n.Index, n.Raw)
 			}
 			r, err := p.expandArray(n)
 			if err != nil {
@@ -331,28 +338,30 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 				desiredType := result.DesiredType
 
 				if len(p.currentSettings.FieldPaths) > 0 || len(p.currentSettings.TagPaths) > 0 {
-					fieldDataSet := existsInPathResults(result.ParentIndex, p.fieldPathResults)
-					tagDataSet := existsInPathResults(result.ParentIndex, p.tagPathResults)
-					if fieldDataSet == nil && tagDataSet == nil {
+					var pathResult *PathResult
+					if result.IncludeCollection != nil {
+						pathResult = result.IncludeCollection
+					} else {
+						pathResult = p.existsInpathResults(result.ParentIndex, result.Raw)
+					}
+					if pathResult == nil {
 						return results, nil
 					}
-					if tagDataSet != nil {
+					if pathResult.tag {
 						result.Tag = true
-						if tagDataSet.Rename != "" {
-							outputName = tagDataSet.Rename
-						}
 					}
 
-					if fieldDataSet != nil {
-						desiredType = fieldDataSet.Type
-						if fieldDataSet.Rename != "" {
-							outputName = fieldDataSet.Rename
-						}
+					if !pathResult.tag {
+						desiredType = pathResult.Type
+					}
+
+					if pathResult.Rename != "" {
+						outputName = pathResult.Rename
 					}
 				}
 
 				if result.Tag {
-					result.DesiredType = "string"
+					desiredType = "string"
 				}
 				v, err := p.convertType(result.Result, result.DesiredType, result.SetName)
 				if err != nil {
@@ -372,23 +381,38 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 	return results, nil
 }
 
-func existsInPathResults(index int, indexList []PathResult) *DataSet {
-	for _, f := range indexList {
+func (p *Parser) existsInpathResults(index int, raw string) *PathResult {
+	for _, f := range p.pathResults {
 		if f.result.Index == 0 {
 			for _, i := range f.result.HashtagIndexes {
-				if index == i {
-					return &f.DataSet
+				if i == index {
+					return &f
 				}
 			}
 		} else if f.result.Index == index {
-			return &f.DataSet
+			return &f
+		}
+	}
+	return nil
+}
+
+func (p *Parser) checkIfIncludedCollection(index int, raw string) *PathResult {
+	for _, f := range p.pathResults {
+		if f.result.Index == 0 {
+			for _, i := range f.result.HashtagIndexes {
+				if string(p.InputJSON[i:i+len(raw)]) == raw {
+					return &f
+				}
+			}
+		} else if f.result.Index == index {
+			return &f
 		}
 	}
 	return nil
 }
 
 // processObjects will iterate over all 'object' configs and create metrics for each
-func (p *Parser) processObjects(objects []JSONObject, input []byte) ([]telegraf.Metric, error) {
+func (p *Parser) processObjects(objects []JSONObject) ([]telegraf.Metric, error) {
 	p.iterateObjects = true
 	var t []telegraf.Metric
 	for _, c := range objects {
@@ -397,7 +421,7 @@ func (p *Parser) processObjects(objects []JSONObject, input []byte) ([]telegraf.
 		if c.Path == "" {
 			return nil, fmt.Errorf("GJSON path is required")
 		}
-		result := gjson.GetBytes(input, c.Path)
+		result := gjson.GetBytes(p.InputJSON, c.Path)
 
 		// hastag doesn't return index! idea: replace all hastags with index, and find lenght of array
 		scopedJSON := []byte(result.Raw)
@@ -405,14 +429,15 @@ func (p *Parser) processObjects(objects []JSONObject, input []byte) ([]telegraf.
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
 			r.DataSet = f
-			p.fieldPathResults = append(p.fieldPathResults, r)
+			p.pathResults = append(p.pathResults, r)
 		}
 
 		for _, f := range c.TagPaths {
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
 			r.DataSet = f
-			p.tagPathResults = append(p.tagPathResults, r)
+			r.tag = true
+			p.pathResults = append(p.pathResults, r)
 		}
 
 		if result.Type == gjson.Null {
@@ -471,15 +496,11 @@ func (p *Parser) combineObject(result MetricNode) ([]telegraf.Metric, error) {
 				}
 			}
 
-			arrayNode := MetricNode{
-				ParentIndex: result.ParentIndex + val.Index,
-				DesiredType: result.DesiredType,
-				Tag:         result.Tag,
-				OutputName:  outputName,
-				SetName:     setName,
-				Metric:      result.Metric,
-				Result:      val,
-			}
+			arrayNode := result
+			arrayNode.ParentIndex += val.Index
+			arrayNode.OutputName = outputName
+			arrayNode.SetName = setName
+			arrayNode.Result = val
 
 			for k, t := range p.currentSettings.Fields {
 				if setName == k {
