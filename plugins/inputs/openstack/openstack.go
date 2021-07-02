@@ -10,9 +10,14 @@ package openstack
 
 import (
 	"crypto/sha256"
-	"crypto/tls"
 	"encoding/hex"
 	"fmt"
+	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/extensions/schedulerstats"
@@ -32,81 +37,20 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	"github.com/gophercloud/gophercloud/openstack/orchestration/v1/stacks"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"log"
-	"net/http"
-	"reflect"
-	"strconv"
-	"strings"
-)
-
-const (
-	// plugin is used to identify ourselves in log output
-	plugin = "openstack"
 )
 
 // serviceType is an OpenStack service type
 type serviceType string
 
 const (
+	// plugin is used to identify ourselves in log output
+	plugin                      = "openstack"
 	volumeV2Service serviceType = "volumev2"
 	Orchestration   serviceType = "orchestration"
 )
-
-// tagMap maps a tag name to value.
-type tagMap map[string]string
-
-// fieldMap maps a field to an arbitrary data type.
-type fieldMap map[string]interface{}
-
-// serverDiag is a map of server diagnostics fields
-type serverDiag map[string]interface{}
-
-// serviceMap maps service id to a Service struct.
-type serviceMap map[string]services.Service
-
-// stackMap maps stack id to a Stack struct.
-type stackMap map[string]stacks.ListedStack
-
-// nova_serviceMap maps nova_service id to a nova Service struct.
-type nova_serviceMap map[string]nova_services.Service
-
-// ContainsService indicates whether a particular service is enabled
-func (s serviceMap) ContainsService(t serviceType) bool {
-	for _, service := range s {
-		if service.Type == string(t) {
-			return true
-		}
-	}
-	return false
-}
-
-// projectMap maps a project id to a Project struct.
-type projectMap map[string]projects.Project
-
-// hypervisorMap maps a hypervisor id a Hypervisor struct.
-type hypervisorMap map[string]hypervisors.Hypervisor
-
-// serverMap maps a server id to a Server struct.
-type serverMap map[string]servers.Server
-
-// flavorMap maps a flavor id to a Flavor struct.
-type flavorMap map[string]flavors.Flavor
-
-// subnetMap maps a subnet id to a Subnet struct.
-type subnetMap map[string]subnets.Subnet
-
-// portMap maps a port id to a Port struct.
-type portMap map[string]ports.Port
-
-// networkMap maps a network id to a Network struct.
-type networkMap map[string]networks.Network
-
-// aggregateMap maps a aggregate id to a Aggregate struct.
-type aggregateMap map[int]aggregates.Aggregate
-
-// agentMap maps a agent id to a agents struct.
-type agentMap map[string]agents.Agent
 
 // volume is a structure used to unmarshal raw JSON from the API into.
 type volume struct {
@@ -114,23 +58,17 @@ type volume struct {
 	volumetenants.VolumeTenantExt
 }
 
-// volumeMap maps a volume id to a volume struct.
-type volumeMap map[string]volume
-
-// storagePoolMap maps a storage pool name to a StoragePool struct.
-type storagePoolMap map[string]schedulerstats.StoragePool
-
 // OpenStack is the main structure associated with a collection instance.
 type OpenStack struct {
 	// Configuration variables
-	IdentityEndpoint   string
-	Domain             string
-	Project            string
-	Username           string
-	Password           string
-	EnabledServices    []string
-	ServerDiagnotics   bool
-	InsecureSkipVerify bool
+	IdentityEndpoint string          `toml:"authentication_endpoint"`
+	Domain           string          `toml:"domain"`
+	Project          string          `toml:"project"`
+	Username         string          `toml:"username"`
+	Password         string          `toml:"password"`
+	EnabledServices  []string        `toml:"enabled_services"`
+	ServerDiagnotics bool            `toml:"server_diagnotics"`
+	Timeout          config.Duration `toml:"timeout"`
 
 	// Locally cached clients
 	identity *gophercloud.ServiceClient
@@ -140,21 +78,36 @@ type OpenStack struct {
 	stack    *gophercloud.ServiceClient
 
 	// Locally cached resources
-	services      serviceMap
-	projects      projectMap
-	hypervisors   hypervisorMap
-	flavors       flavorMap
-	servers       serverMap
-	volumes       volumeMap
-	storagePools  storagePoolMap
-	subnets       subnetMap
-	ports         portMap
-	networks      networkMap
-	aggregates    aggregateMap
-	nova_services nova_serviceMap
-	agents        agentMap
-	stacks        stackMap
-	diag          serverDiag
+	agents         map[string]agents.Agent
+	aggregates     map[int]aggregates.Aggregate
+	diag           map[string]interface{}
+	flavors        map[string]flavors.Flavor
+	hypervisors    map[string]hypervisors.Hypervisor
+	networks       map[string]networks.Network
+	nova_services  map[string]nova_services.Service
+	ports          map[string]ports.Port
+	projects       map[string]projects.Project
+	servers        map[string]servers.Server
+	services       map[string]services.Service
+	stacks         map[string]stacks.ListedStack
+	storagePools   map[string]schedulerstats.StoragePool
+	subnets        map[string]subnets.Subnet
+	volumes        map[string]volume
+	gather_servers bool
+
+	Log telegraf.Logger `toml:"-"`
+
+	tls.ClientConfig
+}
+
+// ContainsService indicates whether a particular service is enabled
+func (o *OpenStack) ContainsService(t serviceType) bool {
+	for _, service := range o.services {
+		if service.Type == string(t) {
+			return true
+		}
+	}
+	return false
 }
 
 // Description returns a description string of the input plugin and implements
@@ -165,39 +118,38 @@ func (o *OpenStack) Description() string {
 
 // sampleConfig is a sample configuration file entry.
 var sampleConfig = `
-  ## This is the recommended interval to poll.
-  interval = '30m'
+  ## The recommended interval to poll is '30m'
 
-  ## The identity endpoint to authenticate against and get the
-  ## service catalog from
-  identity_endpoint = "https://my.openstack.cloud:5000"
+  ## The identity endpoint to authenticate against and get the service catalog from.
+  authentication_endpoint = "https://my.openstack.cloud:5000"
 
-  ## The domain to authenticate against when using a V3
-  ## identity endpoint.  Defaults to 'default'
-  domain = "default"
+  ## The domain to authenticate against when using a V3 identity endpoint. Defaults to 'default'.
+  # domain = "default"
 
-  ## The project to authenticate as
-  project = "admin"
+  ## The project to authenticate as. Defaults to 'admin'.
+  # project = "admin"
 
-  ## The user to authenticate as, must have admin rights
-  username = "admin"
+  ## User authentication credentials. Must have admin rights. username defaults to 'admin'.
+  # username = "admin"
+  password = "password"
 
-  ## The user's password to authenticate with
-  password = "Passw0rd"
-
-  ## Services to be enabled
-  #enabled_services = ["stacks","services", "projects", "hypervisors", "flavors", "servers", "volumes", "storage" , "subnets", "ports", "networks", "aggregates", "nova_services", "agents"]
-  enabled_services = ["services", "projects", "hypervisors", "flavors", "networks", "volumes"]
-
-  #Dependencies
-  # | Service | Depends on |
-  # | servers | projects, hypervisors, flavors |
-  # | volumes | projects |
+  ## Available services are: 
+  ## "agents", "aggregates", "flavors", "hypervisors", "networks", "nova_services",
+  ## "ports", "projects", "servers", "services", "stacks", "storage_pools", "subnets", "volumes"
+  # enabled_services = ["services", "projects", "hypervisors", "flavors", "networks", "volumes"]
 
   ## Collect Server Diagnostics
-  server_diagnotics = false
+  # server_diagnotics = false
 
-  InsecureSkipVerify = false
+  ## Amount of time allowed to complete the HTTP(s) request. Defaults to '15s'.
+  # timeout = "15s"
+
+  ## Optional TLS Config
+  # tls_ca = /path/to/cafile
+  # tls_cert = /path/to/certfile
+  # tls_key = /path/to/keyfile
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 // SampleConfig return a sample configuration file for auto-generation and
@@ -206,70 +158,9 @@ func (o *OpenStack) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather gathers resources from the OpenStack API and accumulates metrics.  This
-// implements the Input interface.
-func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
-	// Perform any required set up
-	if err := o.initialize(); err != nil {
-		return err
-	}
-
-	// Gather resources.  Note service harvesting must come first as the other
-	// gatherers are dependant on this information.
-	gatherers := map[string]func() error{
-		"projects":      o.gatherProjects,
-		"hypervisors":   o.gatherHypervisors,
-		"flavors":       o.gatherFlavors,
-		"servers":       o.gatherServers,
-		"volumes":       o.gatherVolumes,
-		"storage pools": o.gatherStoragePools,
-		"subnets":       o.gatherSubnets,
-		"ports":         o.gatherPorts,
-		"networks":      o.gatherNetworks,
-		"aggregates":    o.gatherAggregates,
-		"nova_services": o.gatherNovaServices,
-		"agents":        o.gatherAgents,
-		"stacks":        o.gatherStacks,
-	}
-	for resources, gatherer := range gatherers {
-		for _, i := range o.EnabledServices {
-			if resources == i {
-				if err := gatherer(); err != nil {
-					log.Println("W!", plugin, "failed to get", resources, err)
-				}
-			}
-		}
-	}
-
-	// Accumulate statistics
-	accumulators := map[string]func(telegraf.Accumulator){
-		"services":      o.accumulateServices,
-		"projects":      o.accumulateIdentity,
-		"hypervisors":   o.accumulateHypervisors,
-		"flavors":       o.accumulateFlavors,
-		"servers":       o.accumulateServers,
-		"volumes":       o.accumulateVolumes,
-		"storage pools": o.accumulateStoragePools,
-		"subnets":       o.accumulateSubnets,
-		"ports":         o.accumulatePorts,
-		"networks":      o.accumulateNetworks,
-		"aggregates":    o.accumulateAggregates,
-		"nova_services": o.accumulateNovaServices,
-		"agents":        o.accumulateAgents,
-		"stacks":        o.accumulateStacks,
-	}
-	for resources, accumulator := range accumulators {
-		for _, i := range o.EnabledServices {
-			if resources == i {
-				accumulator(acc)
-			}
-		}
-	}
-	return nil
-}
-
 // initialize performs any necessary initialization functions
-func (o *OpenStack) initialize() error {
+func (o *OpenStack) Init() error {
+
 	// Authenticate against Keystone and get a token provider
 	authOption := gophercloud.AuthOptions{
 		IdentityEndpoint: o.IdentityEndpoint,
@@ -280,67 +171,127 @@ func (o *OpenStack) initialize() error {
 	}
 	provider, err := openstack.NewClient(authOption.IdentityEndpoint)
 	if err != nil {
-		return fmt.Errorf("Unable to create Newclient for OpenStack endpoint: %v", err)
+		return fmt.Errorf("unable to create Newclient for OpenStack endpoint %v", err)
 	}
 
-	tlsconfig := &tls.Config{}
-	tlsconfig.InsecureSkipVerify = o.InsecureSkipVerify
-	transport := &http.Transport{TLSClientConfig: tlsconfig}
-	provider.HTTPClient = http.Client{
-		Transport: transport,
-	}
-
-	err = openstack.Authenticate(provider, authOption)
-
+	tlsCfg, err := o.ClientConfig.TLSConfig()
 	if err != nil {
-		return fmt.Errorf("Unable to authenticate OpenStack user: %v", err)
+		return err
+	}
+
+	provider.HTTPClient = http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+			Proxy:           http.ProxyFromEnvironment,
+		},
+		Timeout: time.Duration(o.Timeout),
+	}
+
+	if err := openstack.Authenticate(provider, authOption); err != nil {
+		return fmt.Errorf("unable to authenticate OpenStack user %v", err)
 	}
 
 	// Create required clients and attach to the OpenStack struct
 	if o.identity, err = openstack.NewIdentityV3(provider, gophercloud.EndpointOpts{}); err != nil {
-		return fmt.Errorf("unable to create V3 identity client: %v", err)
+		return fmt.Errorf("unable to create V3 identity client %v", err)
 	}
 
-	o.services = serviceMap{}
-	o.gatherServices()
+	if err := o.gatherServices(); err != nil {
+		o.Log.Warnf("failed to get resource openstack services %v", err)
+	}
 
 	if o.compute, err = openstack.NewComputeV2(provider, gophercloud.EndpointOpts{}); err != nil {
-		return fmt.Errorf("unable to create V2 compute client: %v", err)
+		return fmt.Errorf("unable to create V2 compute client %v", err)
 	}
 
 	// Create required clients and attach to the OpenStack struct
 	if o.network, err = openstack.NewNetworkV2(provider, gophercloud.EndpointOpts{}); err != nil {
-		return fmt.Errorf("unable to create V2 network client: %v", err)
+		return fmt.Errorf("unable to create V2 network client %v", err)
 	}
 
 	// The Orchestration service is optional
-	if o.services.ContainsService(Orchestration) {
+	if o.ContainsService(Orchestration) {
 		if o.stack, err = openstack.NewOrchestrationV1(provider, gophercloud.EndpointOpts{}); err != nil {
-			return fmt.Errorf("unable to create V1 stack client: %v", err)
+			return fmt.Errorf("unable to create V1 stack client %v", err)
 		}
 	}
 
 	// The Cinder volume storage service is optional
-	if o.services.ContainsService(volumeV2Service) {
+	if o.ContainsService(volumeV2Service) {
 		if o.volume, err = openstack.NewBlockStorageV2(provider, gophercloud.EndpointOpts{}); err != nil {
-			return fmt.Errorf("unable to create V2 volume client: %v", err)
+			return fmt.Errorf("unable to create V2 volume client %v", err)
 		}
 	}
 
-	// Initialize resource maps and slices
-	o.projects = projectMap{}
-	o.hypervisors = hypervisorMap{}
-	o.flavors = flavorMap{}
-	o.servers = serverMap{}
-	o.volumes = volumeMap{}
-	o.storagePools = storagePoolMap{}
-	o.subnets = subnetMap{}
-	o.networks = networkMap{}
-	o.ports = portMap{}
-	o.aggregates = aggregateMap{}
-	o.nova_services = nova_serviceMap{}
-	o.agents = agentMap{}
-	o.diag = serverDiag{}
+	o.gather_servers = false
+
+	return nil
+}
+
+// Gather gathers resources from the OpenStack API and accumulates metrics.  This
+// implements the Input interface.
+func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
+
+	// Gather resources.  Note service harvesting must come first as the other
+	// gatherers are dependant on this information.
+	gatherers := map[string]func() error{
+		"projects":      o.gatherProjects,
+		"hypervisors":   o.gatherHypervisors,
+		"flavors":       o.gatherFlavors,
+		"servers":       o.gatherServers,
+		"volumes":       o.gatherVolumes,
+		"storage_pools": o.gatherStoragePools,
+		"subnets":       o.gatherSubnets,
+		"ports":         o.gatherPorts,
+		"networks":      o.gatherNetworks,
+		"aggregates":    o.gatherAggregates,
+		"nova_services": o.gatherNovaServices,
+		"agents":        o.gatherAgents,
+		"stacks":        o.gatherStacks,
+	}
+
+	for _, service := range o.EnabledServices {
+		if service != "services" {
+			gatherer := gatherers[service]
+			if err := gatherer(); err != nil {
+				o.Log.Warnf("failed to get resource %q %v", service, err)
+			}
+		}
+	}
+
+	// Accumulate statistics
+	accumulators := map[string]func(telegraf.Accumulator){
+		"services":      o.accumulateServices,
+		"projects":      o.accumulateProjects,
+		"hypervisors":   o.accumulateHypervisors,
+		"flavors":       o.accumulateFlavors,
+		"servers":       o.accumulateServers,
+		"volumes":       o.accumulateVolumes,
+		"storage_pools": o.accumulateStoragePools,
+		"subnets":       o.accumulateSubnets,
+		"ports":         o.accumulatePorts,
+		"networks":      o.accumulateNetworks,
+		"aggregates":    o.accumulateAggregates,
+		"nova_services": o.accumulateNovaServices,
+		"agents":        o.accumulateAgents,
+		"stacks":        o.accumulateStacks,
+	}
+
+	for _, service := range o.EnabledServices {
+		accumulator := accumulators[service]
+		accumulator(acc)
+	}
+
+	if o.ServerDiagnotics && !o.gather_servers {
+		if err := o.gatherServers(); err != nil {
+			o.Log.Warnf("failed to get resource servers %v", err)
+		} else {
+			o.accumulateServerDiagnostics(acc)
+		}
+	} else if o.ServerDiagnotics {
+		o.accumulateServerDiagnostics(acc)
+	}
+
 	return nil
 }
 
@@ -348,7 +299,7 @@ func (o *OpenStack) initialize() error {
 func (o *OpenStack) gatherStacks() error {
 	page, err := stacks.List(o.stack, &stacks.ListOpts{}).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list stacks: %v", err)
+		return fmt.Errorf("unable to list stacks %v", err)
 	}
 	stacks, err := stacks.ExtractStacks(page)
 	if err != nil {
@@ -364,7 +315,7 @@ func (o *OpenStack) gatherStacks() error {
 func (o *OpenStack) gatherServices() error {
 	page, err := services.List(o.identity, &services.ListOpts{}).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list services: %v", err)
+		return fmt.Errorf("unable to list services %v", err)
 	}
 	services, err := services.ExtractServices(page)
 	if err != nil {
@@ -380,7 +331,7 @@ func (o *OpenStack) gatherServices() error {
 func (o *OpenStack) gatherNovaServices() error {
 	page, err := nova_services.List(o.compute, &nova_services.ListOpts{}).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list nova_services: %v", err)
+		return fmt.Errorf("unable to list nova_services %v", err)
 	}
 	nova_services, err := nova_services.ExtractServices(page)
 	if err != nil {
@@ -396,7 +347,7 @@ func (o *OpenStack) gatherNovaServices() error {
 func (o *OpenStack) gatherSubnets() error {
 	page, err := subnets.List(o.network, &subnets.ListOpts{}).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list subnets: %v", err)
+		return fmt.Errorf("unable to list subnets %v", err)
 	}
 	subnets, err := subnets.ExtractSubnets(page)
 	if err != nil {
@@ -412,7 +363,7 @@ func (o *OpenStack) gatherSubnets() error {
 func (o *OpenStack) gatherPorts() error {
 	page, err := ports.List(o.network, &ports.ListOpts{}).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list ports: %v", err)
+		return fmt.Errorf("unable to list ports %v", err)
 	}
 	ports, err := ports.ExtractPorts(page)
 	if err != nil {
@@ -428,7 +379,7 @@ func (o *OpenStack) gatherPorts() error {
 func (o *OpenStack) gatherNetworks() error {
 	page, err := networks.List(o.network, &networks.ListOpts{}).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list networks: %v", err)
+		return fmt.Errorf("unable to list networks %v", err)
 	}
 	networks, err := networks.ExtractNetworks(page)
 	if err != nil {
@@ -444,7 +395,7 @@ func (o *OpenStack) gatherNetworks() error {
 func (o *OpenStack) gatherAgents() error {
 	page, err := agents.List(o.network, &agents.ListOpts{}).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list newtron agents: %v", err)
+		return fmt.Errorf("unable to list newtron agents %v", err)
 	}
 	agents, err := agents.ExtractAgents(page)
 	if err != nil {
@@ -460,7 +411,7 @@ func (o *OpenStack) gatherAgents() error {
 func (o *OpenStack) gatherAggregates() error {
 	page, err := aggregates.List(o.compute).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list aggregates: %v", err)
+		return fmt.Errorf("unable to list aggregates %v", err)
 	}
 	aggregates, err := aggregates.ExtractAggregates(page)
 	if err != nil {
@@ -476,11 +427,11 @@ func (o *OpenStack) gatherAggregates() error {
 func (o *OpenStack) gatherProjects() error {
 	page, err := projects.List(o.identity, &projects.ListOpts{}).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list projects: %v", err)
+		return fmt.Errorf("unable to list projects %v", err)
 	}
 	projects, err := projects.ExtractProjects(page)
 	if err != nil {
-		return fmt.Errorf("unable to extract projects: %v", err)
+		return fmt.Errorf("unable to extract projects %v", err)
 	}
 	for _, project := range projects {
 		o.projects[project.ID] = project
@@ -492,11 +443,11 @@ func (o *OpenStack) gatherProjects() error {
 func (o *OpenStack) gatherHypervisors() error {
 	page, err := hypervisors.List(o.compute).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list hypervisors: %v", err)
+		return fmt.Errorf("unable to list hypervisors %v", err)
 	}
 	hypervisors, err := hypervisors.ExtractHypervisors(page)
 	if err != nil {
-		return fmt.Errorf("unable to extract hypervisors: %v", err)
+		return fmt.Errorf("unable to extract hypervisors %v", err)
 	}
 	for _, hypervisor := range hypervisors {
 		o.hypervisors[hypervisor.ID] = hypervisor
@@ -508,11 +459,11 @@ func (o *OpenStack) gatherHypervisors() error {
 func (o *OpenStack) gatherFlavors() error {
 	page, err := flavors.ListDetail(o.compute, &flavors.ListOpts{}).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list flavors: %v", err)
+		return fmt.Errorf("unable to list flavors %v", err)
 	}
 	flavors, err := flavors.ExtractFlavors(page)
 	if err != nil {
-		return fmt.Errorf("unable to extract flavors: %v", err)
+		return fmt.Errorf("unable to extract flavors %v", err)
 	}
 	for _, flavor := range flavors {
 		o.flavors[flavor.ID] = flavor
@@ -522,13 +473,14 @@ func (o *OpenStack) gatherFlavors() error {
 
 // gatherServers collects servers from the OpenStack API.
 func (o *OpenStack) gatherServers() error {
+	o.gather_servers = true
 	page, err := servers.List(o.compute, &servers.ListOpts{AllTenants: true}).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list servers: %v", err)
+		return fmt.Errorf("unable to list servers %v", err)
 	}
 	servers, err := servers.ExtractServers(page)
 	if err != nil {
-		return fmt.Errorf("unable to extract servers: %v", err)
+		return fmt.Errorf("unable to extract servers %v", err)
 	}
 	for _, server := range servers {
 		o.servers[server.ID] = server
@@ -545,12 +497,9 @@ func (o *OpenStack) gatherServers() error {
 
 // gatherVolumes collects volumes from the OpenStack API.
 func (o *OpenStack) gatherVolumes() error {
-	//if !o.services.ContainsService(volumeV2Service) {
-	//	return nil
-	//}
 	page, err := volumes.List(o.volume, &volumes.ListOpts{AllTenants: true}).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list volumes: %v", err)
+		return fmt.Errorf("unable to list volumes %v", err)
 	}
 	v := []volume{}
 	volumes.ExtractVolumesInto(page, &v)
@@ -562,16 +511,13 @@ func (o *OpenStack) gatherVolumes() error {
 
 // gatherStoragePools collects storage pools from the OpenStack API.
 func (o *OpenStack) gatherStoragePools() error {
-	//if !o.services.ContainsService(volumeV2Service) {
-	//	return nil
-	//}
 	results, err := schedulerstats.List(o.volume, &schedulerstats.ListOpts{Detail: true}).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list storage pools: %v", err)
+		return fmt.Errorf("unable to list storage pools %v", err)
 	}
 	storagePools, err := schedulerstats.ExtractStoragePools(results)
 	if err != nil {
-		return fmt.Errorf("unable to extract storage pools: %v", err)
+		return fmt.Errorf("unable to extract storage pools %v", err)
 	}
 	for _, storagePool := range storagePools {
 		o.storagePools[storagePool.Name] = storagePool
@@ -580,55 +526,88 @@ func (o *OpenStack) gatherStoragePools() error {
 }
 
 // accumulateServerDiagnostics accumulates statistics from the compute(nova) service.
+// currently only supports 'libvirt' driver.
 func (o *OpenStack) accumulateServerDiagnostics(acc telegraf.Accumulator) {
+
+	var type_port = regexp.MustCompile(`_rx$|_rx_drop$|_rx_errors$|_rx_packets$|_tx$|_tx_drop$|_tx_errors$|_tx_packets$`)
+	var type_cpu = regexp.MustCompile(`cpu[0-9]{1,2}_time$`)
+
 	for server_id, diagnostic := range o.diag {
-		tags := tagMap{
+
+		tags := map[string]string{
 			"server_id": server_id,
 		}
-		fields := fieldMap{
-			"server_id": server_id,
+		fields := map[string]interface{}{}
+
+		port_name := make(map[string]bool)
+
+		// for metrics other than port/interface or cpu
+		other_metrics := make(map[string]interface{})
+		s, ok := diagnostic.(map[string]interface{})
+		if !ok {
+			o.Log.Warnf("unknown type for diagnostics %T", diagnostic)
+			continue
 		}
-		switch reflect.TypeOf(diagnostic).Kind() {
-		case reflect.Map:
-			s := reflect.ValueOf(diagnostic).MapRange()
-			port_map := make(map[string]string)
-			port_count := 0
-			for s.Next() {
-				if strings.Contains(s.Key().Interface().(string), "tap") {
-					tap_list := strings.Split(s.Key().Interface().(string), "_")
-					if val, ok := port_map[tap_list[0]]; ok {
-						fields["port_"+val+"_"+strings.Join(tap_list[1:], "_")] = s.Value().Interface().(float64)
-						tags["port_"+val] = tap_list[0]
-					} else {
-						port_count += 1
-						port_map[tap_list[0]] = strconv.Itoa(port_count)
-						fields["port_"+port_map[tap_list[0]]+"_"+strings.Join(tap_list[1:], "_")] = s.Value().Interface().(float64)
-						tags["port_"+port_map[tap_list[0]]] = tap_list[0]
-					}
-				} else {
-					fields[s.Key().Interface().(string)] = s.Value().Interface().(float64)
-				}
+
+		for k, v := range s {
+			if type_port.MatchString(k) {
+				port_name[strings.Split(k, "_")[0]] = true
+			} else if type_cpu.MatchString(k) {
+				fields[k] = v
+			} else {
+				other_metrics[k] = v
 			}
-			fields["no_of_ports"] = port_count
 		}
-		acc.AddFields("openstack_server_diagnostics", fields, tags)
+
+		fields["hdd_errors"] = other_metrics["hdd_errors"]
+		fields["hdd_read"] = other_metrics["hdd_read"]
+		fields["hdd_read_req"] = other_metrics["hdd_read_req"]
+		fields["hdd_write"] = other_metrics["hdd_write"]
+		fields["hdd_write_req"] = other_metrics["hdd_write_req"]
+		fields["memory"] = other_metrics["memory"]
+		fields["memory-actual"] = other_metrics["memory-actual"]
+		fields["memory-rss"] = other_metrics["memory-rss"]
+		fields["memory-swap_in"] = other_metrics["memory-swap_in"]
+		fields["vda_errors"] = other_metrics["vda_errors"]
+		fields["vda_read"] = other_metrics["vda_read"]
+		fields["vda_read_req"] = other_metrics["vda_read_req"]
+		fields["vda_write"] = other_metrics["vda_write"]
+		fields["vda_write_req"] = other_metrics["vda_write_req"]
+		tags["no_of_ports"] = strconv.Itoa(len(port_name))
+
+		if len(port_name) > 0 {
+			for key := range port_name {
+				fields["port_rx"] = s[key+"_rx"]
+				fields["port_rx_drop"] = s[key+"_rx_drop"]
+				fields["port_rx_errors"] = s[key+"_rx_errors"]
+				fields["port_rx_packets"] = s[key+"_rx_packets"]
+				fields["port_tx"] = s[key+"_tx"]
+				fields["port_tx_drop"] = s[key+"_tx_drop"]
+				fields["port_tx_errors"] = s[key+"_tx_errors"]
+				fields["port_tx_packets"] = s[key+"_tx_packets"]
+				tags["port_name"] = key
+				acc.AddFields("openstack_server_diagnostics", fields, tags)
+			}
+		} else {
+			acc.AddFields("openstack_server_diagnostics", fields, tags)
+		}
 	}
 }
 
 // accumulateStacks accumulates statistics from the stack service.
 func (o *OpenStack) accumulateStacks(acc telegraf.Accumulator) {
 	for _, stack := range o.stacks {
-		tags := tagMap{
-			"id": stack.ID,
+		tags := map[string]string{
+			"creation_time": stack.CreationTime.Format("2006-01-02T15:04:05.999999999Z07:00"),
+			"description":   stack.Description,
+			"id":            stack.ID,
+			"name":          stack.Name,
+			"stack_tags":    strings.Join(stack.Tags[:], ","),
+			"updated_time":  stack.UpdatedTime.Format("2006-01-02T15:04:05.999999999Z07:00"),
 		}
-		fields := fieldMap{
-			"creation_time":       stack.CreationTime.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"description":         stack.Description,
-			"id":                  stack.ID,
-			"stack_name":          stack.Name,
-			"stack_status":        stack.Status,
-			"stack_status_reason": stack.StatusReason,
-			"updated_time":        stack.UpdatedTime.Format("2006-01-02T15:04:05.999999999Z07:00"),
+		fields := map[string]interface{}{
+			"status":        stack.Status,
+			"status_reason": stack.StatusReason,
 		}
 		acc.AddFields("openstack_stack", fields, tags)
 	}
@@ -637,39 +616,38 @@ func (o *OpenStack) accumulateStacks(acc telegraf.Accumulator) {
 // accumulateFlavors accumulates statistics from the flavor service.
 func (o *OpenStack) accumulateFlavors(acc telegraf.Accumulator) {
 	for _, flavor := range o.flavors {
-		tags := tagMap{
-			"id": flavor.ID,
+		tags := map[string]string{
+			"id":        flavor.ID,
+			"name":      flavor.Name,
+			"is_public": strconv.FormatBool(flavor.IsPublic),
 		}
-		fields := fieldMap{
-			"id":          flavor.ID,
+		fields := map[string]interface{}{
 			"disk":        flavor.Disk,
 			"ram":         flavor.RAM,
-			"name":        flavor.Name,
 			"rxtx_factor": flavor.RxTxFactor,
-			"swap_mb":     flavor.Swap,
+			"swap":        flavor.Swap,
 			"vcpus":       flavor.VCPUs,
-			"is_public":   flavor.IsPublic,
 			"ephemeral":   flavor.Ephemeral,
 		}
 		acc.AddFields("openstack_flavor", fields, tags)
 	}
 }
 
-// accumulateIdentity accumulates statistics from the identity service.
-func (o *OpenStack) accumulateIdentity(acc telegraf.Accumulator) {
+// accumulateProjects accumulates statistics from the identity service.
+func (o *OpenStack) accumulateProjects(acc telegraf.Accumulator) {
 	for _, project := range o.projects {
-		tags := tagMap{
-			"id": project.ID,
+		tags := map[string]string{
+			"description":  project.Description,
+			"domain_id":    project.DomainID,
+			"id":           project.ID,
+			"name":         project.Name,
+			"parent_id":    project.ParentID,
+			"project_tags": strings.Join(project.Tags[:], ","),
 		}
-		fields := fieldMap{
-			"projects":    len(o.projects),
-			"is_domain":   project.IsDomain,
-			"description": project.Description,
-			"domain_id":   project.DomainID,
-			"enabled":     project.Enabled,
-			"id":          project.ID,
-			"name":        project.Name,
-			"parent_id":   project.ParentID,
+		fields := map[string]interface{}{
+			"is_domain": project.IsDomain,
+			"enabled":   project.Enabled,
+			"projects":  len(o.projects),
 		}
 		acc.AddFields("openstack_identity", fields, tags)
 	}
@@ -678,38 +656,38 @@ func (o *OpenStack) accumulateIdentity(acc telegraf.Accumulator) {
 // accumulateHypervisors accumulates statistics from hypervisors.
 func (o *OpenStack) accumulateHypervisors(acc telegraf.Accumulator) {
 	for _, hypervisor := range o.hypervisors {
-		tags := tagMap{
-			"id": hypervisor.ID,
-		}
-		fields := fieldMap{
+		tags := map[string]string{
 			"cpu_vendor":              hypervisor.CPUInfo.Vendor,
 			"cpu_arch":                hypervisor.CPUInfo.Arch,
 			"cpu_model":               hypervisor.CPUInfo.Model,
-			"cpu_features":            hypervisor.CPUInfo.Features,
-			"cpu_topology_sockets":    hypervisor.CPUInfo.Topology.Sockets,
-			"cpu_topology_cores":      hypervisor.CPUInfo.Topology.Cores,
-			"cpu_topology_threads":    hypervisor.CPUInfo.Topology.Threads,
-			"current_workload":        hypervisor.CurrentWorkload,
+			"cpu_features":            strings.Join(hypervisor.CPUInfo.Features[:], ","),
 			"status":                  hypervisor.Status,
 			"state":                   hypervisor.State,
-			"disk_available_least":    hypervisor.DiskAvailableLeast,
 			"host_ip":                 hypervisor.HostIP,
-			"free_disk_gb":            hypervisor.FreeDiskGB,
-			"free_ram_mb":             hypervisor.FreeRamMB,
 			"hypervisor_hostname":     hypervisor.HypervisorHostname,
 			"hypervisor_type":         hypervisor.HypervisorType,
-			"version":                 hypervisor.HypervisorVersion,
+			"hypervisor_version":      strconv.Itoa(hypervisor.HypervisorVersion),
 			"id":                      hypervisor.ID,
-			"local_gb":                hypervisor.LocalGB,
-			"local_gb_used":           hypervisor.LocalGBUsed,
-			"memory_mb":               hypervisor.MemoryMB,
-			"memory_mb_used":          hypervisor.MemoryMBUsed,
-			"running_vms":             hypervisor.RunningVMs,
 			"service_host":            hypervisor.Service.Host,
 			"service_id":              hypervisor.Service.ID,
 			"service_disabled_reason": hypervisor.Service.DisabledReason,
-			"vcpus":                   hypervisor.VCPUs,
-			"vcpus_used":              hypervisor.VCPUsUsed,
+		}
+		fields := map[string]interface{}{
+
+			"cpu_topology_sockets": hypervisor.CPUInfo.Topology.Sockets,
+			"cpu_topology_cores":   hypervisor.CPUInfo.Topology.Cores,
+			"cpu_topology_threads": hypervisor.CPUInfo.Topology.Threads,
+			"current_workload":     hypervisor.CurrentWorkload,
+			"disk_available_least": hypervisor.DiskAvailableLeast,
+			"free_disk_gb":         hypervisor.FreeDiskGB,
+			"free_ram_mb":          hypervisor.FreeRamMB,
+			"local_gb":             hypervisor.LocalGB,
+			"local_gb_used":        hypervisor.LocalGBUsed,
+			"memory_mb":            hypervisor.MemoryMB,
+			"memory_mb_used":       hypervisor.MemoryMBUsed,
+			"running_vms":          hypervisor.RunningVMs,
+			"vcpus":                hypervisor.VCPUs,
+			"vcpus_used":           hypervisor.VCPUsUsed,
 		}
 		acc.AddFields("openstack_hypervisor", fields, tags)
 	}
@@ -718,6 +696,7 @@ func (o *OpenStack) accumulateHypervisors(acc telegraf.Accumulator) {
 // accumulateServers accumulates statistics about servers.
 func (o *OpenStack) accumulateServers(acc telegraf.Accumulator) {
 	var compute_hosts = map[string]map[string]string{}
+	// establishing relation between server host_id and hypervisor host_name.
 	for _, project := range o.projects {
 		compute_hosts[project.ID] = map[string]string{}
 		for _, hypervisor := range o.hypervisors {
@@ -727,15 +706,25 @@ func (o *OpenStack) accumulateServers(acc telegraf.Accumulator) {
 		}
 	}
 	for _, server := range o.servers {
+
+		tags := map[string]string{}
+
 		// Extract the flavor details to avoid joins (ignore errors and leave as zero values)
 		var vcpus, ram, disk int
 		if flavorIDInterface, ok := server.Flavor["id"]; ok {
 			if flavorID, ok := flavorIDInterface.(string); ok {
+				tags["flavor"] = flavorID
 				if flavor, ok := o.flavors[flavorID]; ok {
 					vcpus = flavor.VCPUs
 					ram = flavor.RAM
 					disk = flavor.Disk
 				}
+			}
+		}
+
+		if imageIDInterface, ok := server.Image["id"]; ok {
+			if imageID, ok := imageIDInterface.(string); ok {
+				tags["image"] = imageID
 			}
 		}
 
@@ -745,127 +734,93 @@ func (o *OpenStack) accumulateServers(acc telegraf.Accumulator) {
 			project = p.Name
 		}
 
-		tags := tagMap{
-			"id":        server.ID,
-			"name":      server.Name,
-			"project":   project,
-			"tenant_id": server.TenantID,
-			"host_id":   server.HostID,
-		}
-
-		host_name := "na"
+		host_name := "unknown"
 		for k, v := range compute_hosts[server.TenantID] {
 			if k == server.HostID {
 				host_name = v
 			}
 		}
-		fields := fieldMap{
-			"status":           strings.ToLower(server.Status),
-			"vcpus":            vcpus,
-			"ram_mb":           ram,
-			"disk_gb":          disk,
-			"id":               server.ID,
-			"tenant_id":        server.TenantID,
-			"user_id":          server.UserID,
-			"name":             server.Name,
-			"updated":          server.Updated.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"created":          server.Created.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"host_name":        host_name,
-			"host_id":          server.HostID,
+
+		tags["id"] = server.ID
+		tags["tenant_id"] = server.TenantID
+		tags["user_id"] = server.UserID
+		tags["name"] = server.Name
+		tags["updated"] = server.Updated.Format("2006-01-02T15:04:05.999999999Z07:00")
+		tags["created"] = server.Created.Format("2006-01-02T15:04:05.999999999Z07:00")
+		tags["host_id"] = server.HostID
+		tags["status"] = strings.ToLower(server.Status)
+		tags["key_name"] = server.KeyName
+		tags["fault_created"] = server.Fault.Created.Format("2006-01-02T15:04:05.999999999Z07:00")
+		tags["fault_message"] = server.Fault.Message
+		tags["host_name"] = host_name
+		tags["project"] = project
+
+		fields := map[string]interface{}{
 			"progress":         server.Progress,
 			"accessIPv4":       server.AccessIPv4,
 			"accessIPv6":       server.AccessIPv6,
-			"image":            server.Image["id"],
-			"flavor":           server.Flavor["id"],
 			"addresses":        len(server.Addresses),
-			"key_name":         server.KeyName,
 			"adminPass":        server.AdminPass,
 			"security_groups":  len(server.SecurityGroups),
 			"volumes_attached": len(server.AttachedVolumes),
 			"fault_code":       server.Fault.Code,
-			"fault_created":    server.Fault.Created,
 			"fault_details":    server.Fault.Details,
-			"fault_message":    server.Fault.Message,
+			"vcpus":            vcpus,
+			"ram_mb":           ram,
+			"disk_gb":          disk,
 		}
-		acc.AddFields("openstack_server", fields, tags)
-	}
-	if o.ServerDiagnotics {
-		o.accumulateServerDiagnostics(acc)
+		if len(server.AttachedVolumes) > 0 {
+			for _, AttachedVolume := range server.AttachedVolumes {
+				fields["volume_id"] = AttachedVolume.ID
+				acc.AddFields("openstack_server", fields, tags)
+			}
+		} else {
+			acc.AddFields("openstack_server", fields, tags)
+		}
 	}
 }
 
 // accumulateVolumes accumulates statistics about volumes.
 func (o *OpenStack) accumulateVolumes(acc telegraf.Accumulator) {
 	for _, volume := range o.volumes {
-		// Give empty types some form of field key
-		volumeType := "unknown"
-		if len(volume.VolumeType) != 0 {
-			volumeType = volume.VolumeType
+
+		tags := map[string]string{
+			"id":                   volume.ID,
+			"status":               volume.Status,
+			"availability_zone":    volume.AvailabilityZone,
+			"created_at":           volume.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
+			"updated_at":           volume.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
+			"name":                 volume.Name,
+			"description":          volume.Description,
+			"volume_type":          volume.VolumeType,
+			"snapshot_id":          volume.SnapshotID,
+			"source_volid":         volume.SourceVolID,
+			"user_id":              volume.UserID,
+			"bootable":             volume.Bootable,
+			"replication_status":   volume.ReplicationStatus,
+			"consistency_group_id": volume.ConsistencyGroupID,
 		}
 
-		// Try derive the associated project
-		project := "unknown"
-		if p, ok := o.projects[volume.TenantID]; ok {
-			project = p.Name
+		fields := map[string]interface{}{
+			"size":              volume.Size,
+			"total_attachments": len(volume.Attachments),
+			"encrypted":         volume.Encrypted,
+			"multiattach":       volume.Multiattach,
 		}
 
-		attachment_attached_at := "na"
-		attachment_attachment_id := "na"
-		attachment_device := "na"
-		attachment_host_name := "na"
-		attachment_id := "na"
-		attachment_server_id := "na"
-		attachment_volume_id := "na"
+		if len(volume.Attachments) > 0 {
+			for _, attachment := range volume.Attachments {
 
-		// only getting first attachment in Attachments
-		for _, attachment := range volume.Attachments {
+				tags["attachment_attached_at"] = attachment.AttachedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
+				tags["attachment_attachment_id"] = attachment.AttachmentID
+				tags["attachment_device"] = attachment.Device
+				tags["attachment_host_name"] = attachment.HostName
 
-			attachment_attached_at = attachment.AttachedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
-			attachment_attachment_id = attachment.AttachmentID
-			attachment_device = attachment.Device
-			attachment_host_name = attachment.HostName
-			attachment_id = attachment.ID
-			attachment_server_id = attachment.ServerID
-			attachment_volume_id = attachment.VolumeID
-			//	break
-			//}
+				fields["attachment_server_id"] = attachment.ServerID
 
-			tags := tagMap{
-				"name":                 volume.Name,
-				"project":              project,
-				"type":                 volumeType,
-				"id":                   volume.ID,
-				"attachment_server_id": attachment_server_id,
+				acc.AddFields("openstack_volume", fields, tags)
 			}
-
-			fields := fieldMap{
-				"size_gb":                  volume.Size,
-				"id":                       volume.ID,
-				"status":                   volume.Status,
-				"size":                     volume.Size,
-				"availability_zone":        volume.AvailabilityZone,
-				"created_at":               volume.CreatedAt,
-				"updated_at":               volume.UpdatedAt,
-				"total_attachments":        len(volume.Attachments),
-				"attachment_attached_at":   attachment_attached_at,
-				"attachment_attachment_id": attachment_attachment_id,
-				"attachment_device":        attachment_device,
-				"attachment_host_name":     attachment_host_name,
-				"attachment_id":            attachment_id,
-				"attachment_server_id":     attachment_server_id,
-				"attachment_volume_id":     attachment_volume_id,
-				"name":                     volume.Name,
-				"description":              volume.Description,
-				"volume_type":              volume.VolumeType,
-				"snapshot_id":              volume.SnapshotID,
-				"source_volid":             volume.SourceVolID,
-				"user_id":                  volume.UserID,
-				"bootable":                 volume.Bootable,
-				"encrypted":                volume.Encrypted,
-				"replication_status":       volume.ReplicationStatus,
-				"consistency_group_id":     volume.ConsistencyGroupID,
-				"multiattach":              volume.Multiattach,
-			}
+		} else {
 			acc.AddFields("openstack_volume", fields, tags)
 		}
 	}
@@ -874,16 +829,16 @@ func (o *OpenStack) accumulateVolumes(acc telegraf.Accumulator) {
 // accumulateStoragePools accumulates statistics about storage pools.
 func (o *OpenStack) accumulateStoragePools(acc telegraf.Accumulator) {
 	for _, storagePool := range o.storagePools {
-		tags := tagMap{
-			"name": storagePool.Capabilities.VolumeBackendName,
-		}
-		fields := fieldMap{
-			"total_capacity_gb":   storagePool.Capabilities.TotalCapacityGB,
-			"free_capacity_gb":    storagePool.Capabilities.FreeCapacityGB,
+		tags := map[string]string{
+			"name":                storagePool.Capabilities.VolumeBackendName,
 			"driver_version":      storagePool.Capabilities.DriverVersion,
 			"storage_protocol":    storagePool.Capabilities.StorageProtocol,
 			"vendor_name":         storagePool.Capabilities.VendorName,
 			"volume_backend_name": storagePool.Capabilities.VolumeBackendName,
+		}
+		fields := map[string]interface{}{
+			"total_capacity_gb": storagePool.Capabilities.TotalCapacityGB,
+			"free_capacity_gb":  storagePool.Capabilities.FreeCapacityGB,
 		}
 		acc.AddFields("openstack_storage_pool", fields, tags)
 	}
@@ -893,12 +848,11 @@ func (o *OpenStack) accumulateStoragePools(acc telegraf.Accumulator) {
 // accumulateServices accumulates statistics from services.
 func (o *OpenStack) accumulateServices(acc telegraf.Accumulator) {
 	for _, service := range o.services {
-		tags := tagMap{
+		tags := map[string]string{
 			"service_id": service.ID,
+			"name":       service.Type,
 		}
-		fields := fieldMap{
-			"name":            service.Type,
-			"service_id":      service.ID,
+		fields := map[string]interface{}{
 			"service_enabled": service.Enabled,
 		}
 		acc.AddFields("openstack_service", fields, tags)
@@ -908,23 +862,30 @@ func (o *OpenStack) accumulateServices(acc telegraf.Accumulator) {
 // accumulateSubnets accumulates statistics from subnets.
 func (o *OpenStack) accumulateSubnets(acc telegraf.Accumulator) {
 	for _, subnet := range o.subnets {
-		tags := tagMap{
-			"subnet_id": subnet.ID,
+
+		var allocation_pools []string
+		for _, pool := range subnet.AllocationPools {
+			allocation_pools = append(allocation_pools, pool.Start+"-"+pool.End)
 		}
-		fields := fieldMap{
-			"subnet_id":         subnet.ID,
-			"name":              subnet.Name,
+		tags := map[string]string{
+			"id":                subnet.ID,
 			"network_id":        subnet.NetworkID,
+			"name":              subnet.Name,
+			"description":       subnet.Description,
 			"ip_version":        strconv.Itoa(subnet.IPVersion),
-			"tenant_id":         subnet.TenantID,
-			"project_id":        subnet.ProjectID,
-			"dhcp_enabled":      subnet.EnableDHCP,
 			"cidr":              subnet.CIDR,
 			"gateway_ip":        subnet.GatewayIP,
-			"dns_nameservers":   len(subnet.DNSNameservers),
+			"dns_nameservers":   strings.Join(subnet.DNSNameservers[:], ","),
+			"allocation_pools":  strings.Join(allocation_pools[:], ","),
+			"tenant_id":         subnet.TenantID,
+			"project_id":        subnet.ProjectID,
 			"ipv6_address_mode": subnet.IPv6AddressMode,
 			"ipv6_ra_mode":      subnet.IPv6RAMode,
 			"subnet_pool_id":    subnet.SubnetPoolID,
+			"subnet_tags":       strings.Join(subnet.Tags[:], ","),
+		}
+		fields := map[string]interface{}{
+			"dhcp_enabled": subnet.EnableDHCP,
 		}
 		acc.AddFields("openstack_subnet", fields, tags)
 	}
@@ -933,93 +894,112 @@ func (o *OpenStack) accumulateSubnets(acc telegraf.Accumulator) {
 // accumulateNetworks accumulates statistics from networks.
 func (o *OpenStack) accumulateNetworks(acc telegraf.Accumulator) {
 	for _, network := range o.networks {
-		tags := tagMap{
-			"id":        network.ID,
-			"tenant_id": network.TenantID,
-		}
-		fields := fieldMap{
+		tags := map[string]string{
 			"id":                      network.ID,
-			"description":             network.Description,
-			"admin_state_up":          network.AdminStateUp,
-			"status":                  network.Status,
 			"name":                    network.Name,
-			"subnets":                 len(network.Subnets),
+			"description":             network.Description,
+			"status":                  strings.ToLower(network.Status),
 			"tenant_id":               network.TenantID,
 			"updated_at":              network.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
 			"created_at":              network.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
 			"project_id":              network.ProjectID,
-			"shared":                  network.Shared,
-			"availability_zone_hints": len(network.AvailabilityZoneHints),
+			"availability_zone_hints": strings.Join(network.AvailabilityZoneHints[:], ","),
+			"network_tags":            strings.Join(network.Tags[:], ","),
 		}
-		acc.AddFields("openstack_network", fields, tags)
+		fields := map[string]interface{}{
+			"admin_state_up": network.AdminStateUp,
+			"subnets":        len(network.Subnets),
+			"shared":         network.Shared,
+		}
+
+		if len(network.Subnets) > 0 {
+			for _, subnet := range network.Subnets {
+				fields["subnet_id"] = subnet
+				acc.AddFields("openstack_network", fields, tags)
+			}
+		} else {
+			acc.AddFields("openstack_network", fields, tags)
+		}
 	}
 }
 
 // accumulatePorts accumulates statistics from ports.
 func (o *OpenStack) accumulatePorts(acc telegraf.Accumulator) {
 	for _, port := range o.ports {
-		tags := tagMap{
-			"id":         port.ID,
-			"status":     port.Status,
-			"network_id": port.NetworkID,
+		tags := map[string]string{
+			"id":              port.ID,
+			"network_id":      port.NetworkID,
+			"name":            port.Name,
+			"description":     port.Description,
+			"status":          port.Status,
+			"mac_address":     port.MACAddress,
+			"tenant_id":       port.TenantID,
+			"project_id":      port.ProjectID,
+			"device_owner":    port.DeviceOwner,
+			"security_groups": strings.Join(port.SecurityGroups[:], ","),
+			"device_id":       port.DeviceID,
+			"port_tags":       strings.Join(port.Tags[:], ","),
 		}
-		fields := fieldMap{
-			"id":                    port.ID,
-			"network_id":            port.NetworkID,
-			"description":           port.Description,
+		fields := map[string]interface{}{
 			"admin_state_up":        port.AdminStateUp,
-			"name":                  port.Name,
-			"status":                port.Status,
-			"mac_address":           port.MACAddress,
 			"fixed_ips":             len(port.FixedIPs),
-			"tenant_id":             port.TenantID,
-			"project_id":            port.ProjectID,
-			"device_owner":          port.DeviceOwner,
-			"security_groups":       len(port.SecurityGroups),
-			"device_id":             port.DeviceID,
 			"allowed_address_pairs": len(port.AllowedAddressPairs),
 		}
-		acc.AddFields("openstack_port", fields, tags)
+		if len(port.FixedIPs) > 0 {
+			for _, ip := range port.FixedIPs {
+				fields["subnet_id"] = ip.SubnetID
+				fields["ip_address"] = ip.IPAddress
+				acc.AddFields("openstack_port", fields, tags)
+			}
+		} else {
+			acc.AddFields("openstack_port", fields, tags)
+		}
+
 	}
 }
 
 // accumulateAggregates accumulates statistics from aggregates.
 func (o *OpenStack) accumulateAggregates(acc telegraf.Accumulator) {
 	for _, aggregate := range o.aggregates {
-		tags := tagMap{
-			"id":   strconv.Itoa(aggregate.ID),
-			"name": aggregate.Name,
-		}
-		fields := fieldMap{
-			"id":                strconv.Itoa(aggregate.ID),
+		tags := map[string]string{
+
 			"availability_zone": aggregate.AvailabilityZone,
+			"id":                strconv.Itoa(aggregate.ID),
 			"name":              aggregate.Name,
-			"hosts":             len(aggregate.Hosts),
-			"updated_at":        aggregate.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
 			"created_at":        aggregate.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
+			"updated_at":        aggregate.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
 			"deleted_at":        aggregate.DeletedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"deleted":           aggregate.Deleted,
 		}
-		acc.AddFields("openstack_aggregate", fields, tags)
+		fields := map[string]interface{}{
+			"aggregate_hosts": len(aggregate.Hosts),
+			"deleted":         aggregate.Deleted,
+		}
+		if len(aggregate.Hosts) > 0 {
+			for _, host := range aggregate.Hosts {
+				fields["aggregate_host"] = host
+				acc.AddFields("openstack_aggregate", fields, tags)
+			}
+		} else {
+			acc.AddFields("openstack_aggregate", fields, tags)
+		}
 	}
 }
 
 // accumulateNovaServices accumulates statistics from nova_services.
 func (o *OpenStack) accumulateNovaServices(acc telegraf.Accumulator) {
 	for _, nova_service := range o.nova_services {
-		tags := tagMap{
-			"id":     nova_service.ID,
-			"binary": nova_service.Binary,
-		}
-		fields := fieldMap{
-			"id":              nova_service.ID,
-			"updated_at":      nova_service.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"binary":          nova_service.Binary,
+		tags := map[string]string{
+			"name":            nova_service.Binary,
 			"disabled_reason": nova_service.DisabledReason,
 			"host_machine":    nova_service.Host,
+			"id":              nova_service.ID,
 			"state":           nova_service.State,
 			"status":          nova_service.Status,
+			"updated_at":      nova_service.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
 			"zone":            nova_service.Zone,
+		}
+		fields := map[string]interface{}{
+			"forced_down": nova_service.ForcedDown,
 		}
 		acc.AddFields("openstack_nova_service", fields, tags)
 	}
@@ -1028,22 +1008,22 @@ func (o *OpenStack) accumulateNovaServices(acc telegraf.Accumulator) {
 // accumulateAgents accumulates statistics from agents.
 func (o *OpenStack) accumulateAgents(acc telegraf.Accumulator) {
 	for _, agent := range o.agents {
-		tags := tagMap{
-			"id":     agent.ID,
-			"binary": agent.Binary,
-		}
-		fields := fieldMap{
-			"admin_state_up":      agent.AdminStateUp,
+		tags := map[string]string{
+			"id":                  agent.ID,
 			"agent_type":          agent.AgentType,
-			"alive":               agent.Alive,
-			"binary":              agent.Binary,
 			"availability_zone":   agent.AvailabilityZone,
+			"binary":              agent.Binary,
 			"created_at":          agent.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
 			"started_at":          agent.StartedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
 			"heartbeat_timestamp": agent.HeartbeatTimestamp.Format("2006-01-02T15:04:05.999999999Z07:00"),
 			"description":         agent.Description,
-			"host_name":           agent.Host,
+			"agent_host":          agent.Host,
 			"topic":               agent.Topic,
+		}
+		fields := map[string]interface{}{
+			"admin_state_up":   agent.AdminStateUp,
+			"alive":            agent.Alive,
+			"resources_synced": agent.ResourcesSynced,
 		}
 		acc.AddFields("openstack_newtron_agent", fields, tags)
 	}
@@ -1053,7 +1033,27 @@ func (o *OpenStack) accumulateAgents(acc telegraf.Accumulator) {
 func init() {
 	inputs.Add("openstack", func() telegraf.Input {
 		return &OpenStack{
-			Domain: "Default",
+			Domain:           "default",
+			Project:          "admin",
+			Username:         "admin",
+			EnabledServices:  []string{"services", "projects", "hypervisors", "flavors", "networks", "volumes"},
+			ServerDiagnotics: false,
+			Timeout:          config.Duration(time.Second * 15),
+			agents:           map[string]agents.Agent{},
+			aggregates:       map[int]aggregates.Aggregate{},
+			diag:             map[string]interface{}{},
+			flavors:          map[string]flavors.Flavor{},
+			hypervisors:      map[string]hypervisors.Hypervisor{},
+			networks:         map[string]networks.Network{},
+			nova_services:    map[string]nova_services.Service{},
+			ports:            map[string]ports.Port{},
+			projects:         map[string]projects.Project{},
+			servers:          map[string]servers.Server{},
+			services:         map[string]services.Service{},
+			stacks:           map[string]stacks.ListedStack{},
+			storagePools:     map[string]schedulerstats.StoragePool{},
+			subnets:          map[string]subnets.Subnet{},
+			volumes:          map[string]volume{},
 		}
 	})
 }
