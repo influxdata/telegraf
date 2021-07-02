@@ -1,10 +1,10 @@
 # JSON Parser - Version 2
 
-This parser takes valid JSON input and turns it into metrics. The query syntax supported is [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md), you can go to this playground to test out your GJSON path here: https://gjson.dev/. You can find multiple examples under the `testdata` folder.
+This parser takes valid JSON input and turns it into line protocol. The query syntax supported is [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md), you can go to this playground to test out your GJSON path here: https://gjson.dev/. You can find multiple examples under the `testdata` folder.
 
 ## Configuration
 
-You configure this parser by describing the metric you want by defining the fields and tags from the input. The configuration is divided into config sub-tables called `field`, `tag`, and `object`. In the example below you can see all the possible configuration keys you can define for each config table. In the sections that follow these configuration keys are defined in more detail.
+You configure this parser by describing the line protocol you want by defining the fields and tags from the input. The configuration is divided into config sub-tables called `field`, `tag`, and `object`. In the example below you can see all the possible configuration keys you can define for each config table. In the sections that follow these configuration keys are defined in more detail.
 
 **Example configuration:**
 
@@ -74,7 +74,7 @@ such as `America/New_York`, to `Local` to utilize the system timezone, or to `UT
 
 ### `field` and `tag` config options
 
-`field` and `tag` represent the elements of [line protocol](https://docs.influxdata.com/influxdb/v2.0/reference/syntax/line-protocol/), which is used to define a `metric`. You can use the `field` and `tag` config tables to gather a single value or an array of values that all share the same type and name. With this you can add a field or tag to a metric from data stored anywhere in your JSON. If you define the GJSON path to return a single value then you will get a single resutling metric that contains the field/tag. If you define the GJSON path to return an array of values, then each field/tag will be put into a separate metric (you use the # character to retrieve JSON arrays, find examples [here](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md#arrays)).
+`field` and `tag` represent the elements of [line protocol](https://docs.influxdata.com/influxdb/v2.0/reference/syntax/line-protocol/). You can use the `field` and `tag` config tables to gather a single value or an array of values that all share the same type and name. With this you can add a field or tag to a line protocol from data stored anywhere in your JSON. If you define the GJSON path to return a single value then you will get a single resutling line protocol that contains the field/tag. If you define the GJSON path to return an array of values, then each field/tag will be put into a separate line protocol (you use the # character to retrieve JSON arrays, find examples [here](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md#arrays)).
 
 Note that objects are handled separately, therefore if you provide a path that returns a object it will be ignored. You will need use the `object` config table to parse objects, because `field` and `tag` doesn't handle relationships between data. Each `field` and `tag` you define is handled as a separate data point.
 
@@ -88,7 +88,7 @@ The notable difference between `field` and `tag`, is that `tag` values will alwa
 
 #### **field**
 
-Using this field configuration you can gather a non-array/non-object values. Note this acts as a global field when used with the `object` configuration, if you gather an array of metrics using `object` then the field gathered will be added to each resulting metric without acknowledging its location in the original JSON. This is defined in TOML as an array table using double brackets.
+Using this field configuration you can gather a non-array/non-object values. Note this acts as a global field when used with the `object` configuration, if you gather an array of values using `object` then the field gathered will be added to each resulting line protocol without acknowledging its location in the original JSON. This is defined in TOML as an array table using double brackets.
 
 * **path (REQUIRED)**: A string with valid GJSON path syntax to a non-array/non-object value
 * **name (OPTIONAL)**: You can define a string value to set the field name. If not defined it will use the trailing word from the provided query.
@@ -96,7 +96,8 @@ Using this field configuration you can gather a non-array/non-object values. Not
 
 #### **tag**
 
-Using this tag configuration you can gather a non-array/non-object values. Note this acts as a global tag when used with the `object` configuration, if you gather an array of metrics using `object` then the tag gathered will be added to each resulting metric without acknowledging its location in the original JSON. This is defined in TOML as an array table using double brackets.
+Using this tag configuration you can gather a non-array/non-object values. Note this acts as a global tag when used with the `object` configuration, if you gather an array of values using `object` then the tag gathered will be added to each resulting line protocol without acknowledging its location in the original JSON. This is defined in TOML as an array table using double brackets.
+
 
 * **path (REQUIRED)**: A string with valid GJSON path syntax to a non-array/non-object value
 * **name (OPTIONAL)**: You can define a string value to set the field name. If not defined it will use the trailing word from the provided query.
@@ -107,8 +108,7 @@ For good examples in using `field` and `tag` you can reference the following exa
 
 ### object
 
-With the configuration section `object`, you can gather metrics from [JSON objects](https://www.w3schools.com/js/js_json_objects.asp). This is defined in TOML as an array table using double brackets.
-
+With the configuration section `object`, you can gather values from [JSON objects](https://www.w3schools.com/js/js_json_objects.asp). This is defined in TOML as an array table using double brackets.
 
 #### The following keys can be set for `object`
 
@@ -126,8 +126,8 @@ such as `America/New_York`, to `Local` to utilize the system timezone, or to `UT
 
 *Configuration to define what JSON keys should be included and how (field/tag):*
 
-* **included_keys (OPTIONAL)**: You can define a list of key's that should be the only data included in the metric, by default it will include everything.
-* **excluded_keys (OPTIONAL)**: You can define json keys to be excluded in the metric, for a nested key, prepend the parent keys with underscores
+* **included_keys (OPTIONAL)**: You can define a list of key's that should be the only data included in the line protocol, by default it will include everything.
+* **excluded_keys (OPTIONAL)**: You can define json keys to be excluded in the line protocol, for a nested key, prepend the parent keys with underscores
 * **tags (OPTIONAL)**: You can define json keys to be set as tags instead of fields, if you define a key that is an array or object then all nested values will become a tag
 * **field (OPTIONAL, defined in TOML as an array table using double brackets)**: Identical to the [field](#field) table you can define, but with two key differences. The path supports arrays and objects and is defined under the object table and therefore will adhere to how the JSON is structured. You want to use this if you want the field/tag to be added as it would if it were in the included_key list, but then use the GJSON path syntax.
 * **tag (OPTIONAL, defined in TOML as an array table using double brackets)**: Identical to the [tag](#tag) table you can define, but with two key differences. The path supports arrays and objects and is defined under the object table and therefore will adhere to how the JSON is structured. You want to use this if you want the field/tag to be added as it would if it were in the included_key list, but then use the GJSON path syntax.
@@ -142,11 +142,11 @@ such as `America/New_York`, to `Local` to utilize the system timezone, or to `UT
 
 The following describes the high-level approach when parsing arrays and objects:
 
-**Array**: Every element in an array is treated as a *separate* metric
+**Array**: Every element in an array is treated as a *separate* line protocol
 
-**Object**: Every key/value in a object is treated as a *single* metric
+**Object**: Every key/value in a object is treated as a *single* line protocol
 
-When handling nested arrays and objects, these above rules continue to apply as the parser creates metrics. When an object has multiple array's as values, the array's will become separate metrics containing only non-array values from the obejct. Below you can see an example of this behavior, with an input json containing an array of book objects that has a nested array of characters.
+When handling nested arrays and objects, these above rules continue to apply as the parser creates line protocol. When an object has multiple array's as values, the array's will become separate line protocol containing only non-array values from the obejct. Below you can see an example of this behavior, with an input json containing an array of book objects that has a nested array of characters.
 
 Example JSON:
 
@@ -191,7 +191,7 @@ Example configuration:
             disable_prepend_keys = true
 ```
 
-Expected metrics:
+Expected line protocol:
 
 ```
 file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="A Long-expected Party"
@@ -207,7 +207,7 @@ You can find more complicated examples under the folder `testdata`.
 
 ## Types
 
-For each field you have the option to define the types for each metric. The following rules are in place for this configuration:
+For each field you have the option to define the types. The following rules are in place for this configuration:
 
 * If a type is explicitly defined, the parser will enforce this type and convert the data to the defined type if possible. If the type can't be converted then the parser will fail.
 * If a type isn't defined, the parser will use the default type defined in the JSON (int, float, string)
