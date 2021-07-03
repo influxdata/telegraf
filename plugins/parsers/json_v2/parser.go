@@ -248,7 +248,7 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 			return results, nil
 		}
 		if result.IncludeCollection == nil && (len(p.currentSettings.FieldPaths) > 0 || len(p.currentSettings.TagPaths) > 0) {
-			result.IncludeCollection = p.checkIfIncludedCollection(result.Index, result.Raw)
+			result.IncludeCollection = p.existsInpathResults(result.Index, result.Raw)
 		}
 		r, err := p.combineObject(result)
 		if err != nil {
@@ -261,7 +261,7 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 	if result.IsArray() {
 		var err error
 		if result.IncludeCollection == nil && (len(p.currentSettings.FieldPaths) > 0 || len(p.currentSettings.TagPaths) > 0) {
-			result.IncludeCollection = p.checkIfIncludedCollection(result.Index, result.Raw)
+			result.IncludeCollection = p.existsInpathResults(result.Index, result.Raw)
 		}
 		result.ForEach(func(_, val gjson.Result) bool {
 			m := metric.New(
@@ -277,7 +277,7 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 					n.Metric = m
 					n.Result = val
 					if n.IncludeCollection == nil && (len(p.currentSettings.FieldPaths) > 0 || len(p.currentSettings.TagPaths) > 0) {
-						n.IncludeCollection = p.checkIfIncludedCollection(n.Index, n.Raw)
+						n.IncludeCollection = p.existsInpathResults(n.Index, n.Raw)
 					}
 					r, err := p.combineObject(n)
 					if err != nil {
@@ -307,7 +307,7 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 			n.Metric = m
 			n.Result = val
 			if n.IncludeCollection == nil && (len(p.currentSettings.FieldPaths) > 0 || len(p.currentSettings.TagPaths) > 0) {
-				n.IncludeCollection = p.checkIfIncludedCollection(n.Index, n.Raw)
+				n.IncludeCollection = p.existsInpathResults(n.Index, n.Raw)
 			}
 			r, err := p.expandArray(n)
 			if err != nil {
@@ -386,21 +386,6 @@ func (p *Parser) existsInpathResults(index int, raw string) *PathResult {
 		if f.result.Index == 0 {
 			for _, i := range f.result.HashtagIndexes {
 				if i == index {
-					return &f
-				}
-			}
-		} else if f.result.Index == index {
-			return &f
-		}
-	}
-	return nil
-}
-
-func (p *Parser) checkIfIncludedCollection(index int, raw string) *PathResult {
-	for _, f := range p.pathResults {
-		if f.result.Index == 0 {
-			for _, i := range f.result.HashtagIndexes {
-				if string(p.InputJSON[i:i+len(raw)]) == raw {
 					return &f
 				}
 			}
