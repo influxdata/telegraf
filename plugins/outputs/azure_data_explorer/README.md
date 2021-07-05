@@ -121,7 +121,7 @@ As "fields" and "tags" are of dynamic data type so following multiple ways to qu
    Tablename
    | where fields.size_kb == 9120
    ```
-2. **Use [Update policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**: to transform data, in this case, to flatten dynamic data type columns**: This is the recommended performant way for querying over large data volumes compared to querying directly over JSON attributes. 
+2. **Use [Update policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**: to transform data, in this case, to flatten dynamic data type columns. This is the recommended performant way for querying over large data volumes compared to querying directly over JSON attributes. 
       ```
       // Function to transform data
       .create-or-alter function Transform_TargetTableName() {
