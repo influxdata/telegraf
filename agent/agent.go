@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -247,10 +248,10 @@ func (a *Agent) startInputs(
 		for _, input := range inputs {
 			e := execd.Execd{
 				Command: []string{
-					"telegraf", "plugin", input.Config.Name, a.Config.ConfigPath,
+					"telegraf", "plugin", input.Config.Name, strconv.Itoa(input.Config.ID),
 				},
 				Signal: "STDIN",
-				Log:    models.NewLogger("input-execd", "test", ""),
+				Log:    models.NewLogger("isolated-plugin", "test", ""),
 			}
 			parser, err := parsers.NewInfluxParser()
 			if err != nil {

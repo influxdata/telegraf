@@ -1353,6 +1353,9 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return err
 	}
 
+	// Use line of the plugin table as ID
+	pluginConfig.ID = table.Line
+
 	if err := c.toml.UnmarshalTable(table, input); err != nil {
 		return err
 	}
