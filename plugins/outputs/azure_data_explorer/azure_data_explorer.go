@@ -20,24 +20,35 @@ import (
 )
 
 type AzureDataExplorer struct {
-	Endpoint       string          `toml:"endpoint_url"`
-	Database       string          `toml:"database"`
-	Log            telegraf.Logger `toml:"-"`
-	Timeout        config.Duration `toml:"timeout"`
-	MappingType    MappingType     `toml:"mapping_type"`
-	TableName      string          `toml:"table_name"`
-	client         localClient
-	ingesters      map[string]localIngestor
-	serializer     serializers.Serializer
-	createIngestor ingestorFactory
+	Endpoint        string          `toml:"endpoint_url"`
+	Database        string          `toml:"database"`
+	Log             telegraf.Logger `toml:"-"`
+	Timeout         config.Duration `toml:"timeout"`
+	MetricsGrouping string          `toml:"metrics_grouping_type"`
+	TableName       string          `toml:"table_name"`
+	client          localClient
+	ingesters       map[string]localIngestor
+	serializer      serializers.Serializer
+	createIngestor  ingestorFactory
 }
 
-type MappingType int
+type MetricsGroupingType int
 
 const (
-	TablePerMetric MappingType = iota
+	TablePerMetric MetricsGroupingType = iota
 	SingleTable
 )
+
+func (m MetricsGroupingType) String() string {
+	switch m {
+	case TablePerMetric:
+		return "TablePerMetric"
+	case SingleTable:
+		return "SingleTable"
+	default:
+		return "unknown"
+	}
+}
 
 type localIngestor interface {
 	FromReader(ctx context.Context, reader io.Reader, options ...ingest.FileOption) (*ingest.Result, error)
@@ -70,10 +81,10 @@ func (adx *AzureDataExplorer) SampleConfig() string {
   ## Timeout for Azure Data Explorer operations
   # timeout = "15s"
 
-  ## Mapping type for metrics in Azure Data Explorer. Default is the value 0 for one table per different metric. Other options include 1 for having all metrics in one table.
-  # mapping_type = 0
+  ## Metrics grouping type for metrics in Azure Data Explorer. Default is the "TablePerMetric" for one table per different metric. Other options include "SingleTable" for having all metrics in one table.
+  # metrics_grouping_type = "TablePerMetric"
 
-  ## Name of the single table to store all the metrics (Only needed if mapping_type is 1).
+  ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
   # table_name = ""
 
 `
@@ -107,7 +118,7 @@ func (adx *AzureDataExplorer) Close() error {
 }
 
 func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
-	if adx.MappingType == TablePerMetric {
+	if adx.MetricsGrouping == TablePerMetric.String() {
 		return adx.writeTablePerMetric(metrics)
 	} else {
 		return adx.writeSingleTable(metrics)
@@ -220,9 +231,17 @@ func (adx *AzureDataExplorer) Init() error {
 	if adx.Database == "" {
 		return errors.New("Database configuration cannot be empty")
 	}
-	if adx.MappingType == SingleTable && adx.TableName == "" {
-		return errors.New("Table name cannot be empty for SingleTable mapping type")
+
+	if adx.MetricsGrouping == SingleTable.String() && adx.TableName == "" {
+		return errors.New("Table name cannot be empty for SingleTable metrics grouping type")
 	}
+	if adx.MetricsGrouping == "" {
+		adx.MetricsGrouping = TablePerMetric.String()
+	}
+	if !(adx.MetricsGrouping == SingleTable.String() || adx.MetricsGrouping == TablePerMetric.String() || adx.MetricsGrouping == "") {
+		return errors.New("Metrics grouping type is not valid")
+	}
+
 	serializer, err := json.NewSerializer(time.Second)
 	if err != nil {
 		return err
@@ -235,7 +254,6 @@ func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
 		return &AzureDataExplorer{
 			Timeout: config.Duration(15 * time.Second),
-			//TODO: put default if doesn't value isn't specified for MappingType
 		}
 	})
 }
