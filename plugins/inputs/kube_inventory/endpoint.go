@@ -39,7 +39,9 @@ func (ki *KubernetesInventory) gatherEndpoint(e corev1.Endpoints, acc telegraf.A
 			fields["ready"] = true
 
 			tags["hostname"] = readyAddr.Hostname
-			tags["node_name"] = *readyAddr.NodeName
+			if readyAddr.NodeName != nil {
+				tags["node_name"] = *readyAddr.NodeName
+			}
 			if readyAddr.TargetRef != nil {
 				tags[strings.ToLower(readyAddr.TargetRef.Kind)] = readyAddr.TargetRef.Name
 			}
@@ -57,7 +59,9 @@ func (ki *KubernetesInventory) gatherEndpoint(e corev1.Endpoints, acc telegraf.A
 			fields["ready"] = false
 
 			tags["hostname"] = notReadyAddr.Hostname
-			tags["node_name"] = *notReadyAddr.NodeName
+			if notReadyAddr.NodeName != nil {
+				tags["node_name"] = *notReadyAddr.NodeName
+			}
 			if notReadyAddr.TargetRef != nil {
 				tags[strings.ToLower(notReadyAddr.TargetRef.Kind)] = notReadyAddr.TargetRef.Name
 			}
