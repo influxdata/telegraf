@@ -43,7 +43,7 @@ The corresponding table mapping would be like the following:
 .create-or-alter table ['table-name'] ingestion json mapping 'table-name_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'
 ```
 
-**Note**: This plugin will automatically create Azure Data Explorer tables and corresponding table mapping as per the above mentioned commands. Since the `Metric` object is a complex type, the only output format supported is JSON, so make sure to set the `data_format` configuration in `telegraf.conf` to `json`.
+**Note**: This plugin will automatically create Azure Data Explorer tables and corresponding table mapping as per the above mentioned commands. Since the `Metric` object is a complex type, the only output format supported is JSON.
 
 ## Authentiation
 
@@ -59,8 +59,8 @@ These methods are:
 
 
 2. AAD User Tokens 
-    - Allows Telegraf to authenticate like a user. It is best to use this method
-      for development.
+    - Allows Telegraf to authenticate like a user. This method is mainly used 
+      for development purposes only.
 
 3. Managed Service Identity (MSI) token
     - If you are running Telegraf from Azure VM or infrastructure, then this is the prefered authentication method. 
@@ -69,7 +69,7 @@ These methods are:
 
 Whichever method, the designated Principal needs to be assigned the `Database User` role on the Database level in the Azure Data Explorer. This role will allow the plugin to create the required tables and ingest data into it.
 
-### Choosing The Authentication Method
+### Configurations of the chosen Authentication Method 
 
 The plugin will authenticate using the first available of the
 following configurations, **it's important to understand that the assessment, and consequently choosing the authentication method, will happen in order as below**:
@@ -106,7 +106,7 @@ following configurations, **it's important to understand that the assessment, an
 [arm]: https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview
 
 
-## Querying
+## Querying collected metrics data in Azure Data Explorer
 With all above configurations, you will have data stored in following standard format for each metric type stored as an Azure Data Explorer table -
 ColumnName | ColumnType
 ---------- | ----------
@@ -121,7 +121,7 @@ As "fields" and "tags" are of dynamic data type so following multiple ways to qu
    Tablename
    | where fields.size_kb == 9120
    ```
-2. **Use [Update policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**: to transform data, in this case, to flatten dynamic data type columns**: This is the recommended performant way for querying over large data volumes compared to querying directly over JSON attributes. 
+2. **Use [Update policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**: to transform data, in this case, to flatten dynamic data type columns. This is the recommended performant way for querying over large data volumes compared to querying directly over JSON attributes. 
       ```
       // Function to transform data
       .create-or-alter function Transform_TargetTableName() {
