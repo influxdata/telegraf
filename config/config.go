@@ -19,6 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -1296,6 +1297,11 @@ func (c *Config) buildParser(name string, tbl *ast.Table) (parsers.Parser, error
 	}
 	logger := models.NewLogger("parsers", config.DataFormat, name)
 	models.SetLoggerOnPlugin(parser, logger)
+	if initializer, ok := parser.(telegraf.Initializer); ok {
+		if err := initializer.Init(); err != nil {
+			return nil, err
+		}
+	}
 
 	return parser, nil
 }
@@ -1366,24 +1372,36 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 
 	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
 
-	//for XML parser
-	if node, ok := tbl.Fields["xml"]; ok {
-		if subtbls, ok := node.([]*ast.Table); ok {
-			pc.XMLConfig = make([]parsers.XMLConfig, len(subtbls))
-			for i, subtbl := range subtbls {
-				subcfg := pc.XMLConfig[i]
-				c.getFieldString(subtbl, "metric_name", &subcfg.MetricQuery)
-				c.getFieldString(subtbl, "metric_selection", &subcfg.Selection)
-				c.getFieldString(subtbl, "timestamp", &subcfg.Timestamp)
-				c.getFieldString(subtbl, "timestamp_format", &subcfg.TimestampFmt)
-				c.getFieldStringMap(subtbl, "tags", &subcfg.Tags)
-				c.getFieldStringMap(subtbl, "fields", &subcfg.Fields)
-				c.getFieldStringMap(subtbl, "fields_int", &subcfg.FieldsInt)
-				c.getFieldString(subtbl, "field_selection", &subcfg.FieldSelection)
-				c.getFieldBool(subtbl, "field_name_expansion", &subcfg.FieldNameExpand)
-				c.getFieldString(subtbl, "field_name", &subcfg.FieldNameQuery)
-				c.getFieldString(subtbl, "field_value", &subcfg.FieldValueQuery)
-				pc.XMLConfig[i] = subcfg
+	//for XPath parser family
+	if choice.Contains(pc.DataFormat, []string{"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf"}) {
+		c.getFieldString(tbl, "xpath_protobuf_file", &pc.XPathProtobufFile)
+		c.getFieldString(tbl, "xpath_protobuf_type", &pc.XPathProtobufType)
+		c.getFieldBool(tbl, "xpath_print_document", &pc.XPathPrintDocument)
+
+		// Determine the actual xpath configuration tables
+		node, xpathOK := tbl.Fields["xpath"]
+		if !xpathOK {
+			// Add this for backward compatibility
+			node, xpathOK = tbl.Fields[pc.DataFormat]
+		}
+		if xpathOK {
+			if subtbls, ok := node.([]*ast.Table); ok {
+				pc.XPathConfig = make([]parsers.XPathConfig, len(subtbls))
+				for i, subtbl := range subtbls {
+					subcfg := pc.XPathConfig[i]
+					c.getFieldString(subtbl, "metric_name", &subcfg.MetricQuery)
+					c.getFieldString(subtbl, "metric_selection", &subcfg.Selection)
+					c.getFieldString(subtbl, "timestamp", &subcfg.Timestamp)
+					c.getFieldString(subtbl, "timestamp_format", &subcfg.TimestampFmt)
+					c.getFieldStringMap(subtbl, "tags", &subcfg.Tags)
+					c.getFieldStringMap(subtbl, "fields", &subcfg.Fields)
+					c.getFieldStringMap(subtbl, "fields_int", &subcfg.FieldsInt)
+					c.getFieldString(subtbl, "field_selection", &subcfg.FieldSelection)
+					c.getFieldBool(subtbl, "field_name_expansion", &subcfg.FieldNameExpand)
+					c.getFieldString(subtbl, "field_name", &subcfg.FieldNameQuery)
+					c.getFieldString(subtbl, "field_value", &subcfg.FieldValueQuery)
+					pc.XPathConfig[i] = subcfg
+				}
 			}
 		}
 	}
@@ -1551,13 +1569,15 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
 		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_sort_fields",
 		"influx_uint_support", "interval", "json_name_key", "json_query", "json_strict",
-		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_units", "json_timezone",
+		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_units", "json_timezone", "json_v2",
 		"metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
 		"name_suffix", "namedrop", "namepass", "order", "pass", "period", "precision",
 		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "xml", "json_v2":
+		"value_field_name", "wavefront_source_override", "wavefront_use_strict",
+		"xml", "xpath", "xpath_json", "xpath_msgpack", "xpath_protobuf", "xpath_print_document",
+		"xpath_protobuf_file", "xpath_protobuf_type":
 
 		// ignore fields that are common to all plugins.
 	default:

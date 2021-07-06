@@ -1,13 +1,24 @@
-# XML
+# XPath
 
-The XML data format parser parses a [XML][xml] string into metric fields using [XPath][xpath] expressions. For supported
-XPath functions check [the underlying XPath library][xpath lib].
+The XPath data format parser parses different formats into metric fields using [XPath][xpath] expressions.
 
-**NOTE:** The type of fields are specified using [XPath functions][xpath lib]. The only exception are *integer* fields
-that need to be specified in a `fields_int` section.
+For supported XPath functions check [the underlying XPath library][xpath lib].
 
-### Configuration
+**NOTE:** The type of fields are specified using [XPath functions][xpath lib]. The only exception are *integer* fields that need to be specified in a `fields_int` section.
 
+### Supported data formats
+| name                                    | `data_format` setting | comment |
+| --------------------------------------- | --------------------- | ------- |
+| [Extensible Markup Language (XML)][xml] | `"xml"`               |         |
+| [JSON][json]                            | `"xpath_json"`        |         |
+| [MessagePack][msgpack]                  | `"xpath_msgpack"`     |         |
+| [Protocol buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](protocol-buffers-additiona-settings)|
+
+#### Protocol buffers additional settings
+For using the protocol-buffer format you need to specify a protocol buffer definition file (`.proto`) in `xpath_protobuf_file`, Furthermore, you need to specify which message type you want to use via `xpath_protobuf_type`.
+
+### Configuration (explicit)
+In this configuration mode, you explicitly specify the field and tags you want to scrape out of your data.
 ```toml
 [[inputs.file]]
   files = ["example.xml"]
@@ -18,43 +29,55 @@ that need to be specified in a `fields_int` section.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "xml"
 
+  ## PROTOCOL BUFFER definitions
+  ## Protocol buffer definition file
+  # xpath_protobuf_file = "sparkplug_b.proto"
+  ## Name of the protocol buffer message type to use in a fully qualified form.
+  # xpath_protobuf_type = ""org.eclipse.tahu.protobuf.Payload""
+
+  ## Print the internal XML document when in debug logging mode.
+  ## This is especially useful when using the parser with non-XML formats like protocol buffers
+  ## to get an idea on the expression necessary to derive fields etc.
+  # xpath_print_document = false
+
   ## Multiple parsing sections are allowed
-  [[inputs.file.xml]]
+  [[inputs.file.xpath]]
     ## Optional: XPath-query to select a subset of nodes from the XML document.
-    #metric_selection = "/Bus/child::Sensor"
+    # metric_selection = "/Bus/child::Sensor"
 
     ## Optional: XPath-query to set the metric (measurement) name.
-    #metric_name = "string('example')"
+    # metric_name = "string('example')"
 
     ## Optional: Query to extract metric timestamp.
     ## If not specified the time of execution is used.
-    #timestamp = "/Gateway/Timestamp"
+    # timestamp = "/Gateway/Timestamp"
     ## Optional: Format of the timestamp determined by the query above.
     ## This can be any of "unix", "unix_ms", "unix_us", "unix_ns" or a valid Golang
     ## time format. If not specified, a "unix" timestamp (in seconds) is expected.
-    #timestamp_format = "2006-01-02T15:04:05Z"
+    # timestamp_format = "2006-01-02T15:04:05Z"
 
     ## Tag definitions using the given XPath queries.
-    [inputs.file.xml.tags]
+    [inputs.file.xpath.tags]
       name   = "substring-after(Sensor/@name, ' ')"
       device = "string('the ultimate sensor')"
 
     ## Integer field definitions using XPath queries.
-    [inputs.file.xml.fields_int]
+    [inputs.file.xpath.fields_int]
       consumers = "Variable/@consumers"
 
     ## Non-integer field definitions using XPath queries.
     ## The field type is defined using XPath expressions such as number(), boolean() or string(). If no conversion is performed the field will be of type string.
-    [inputs.file.xml.fields]
+    [inputs.file.xpath.fields]
       temperature = "number(Variable/@temperature)"
       power       = "number(Variable/@power)"
       frequency   = "number(Variable/@frequency)"
       ok          = "Mode != 'ok'"
 ```
 
-A configuration can contain muliple *xml* subsections for e.g. the file plugin to process the xml-string multiple times.
-Consult the [XPath syntax][xpath] and the [underlying library's functions][xpath lib] for details and help regarding XPath queries. Consider using an XPath tester such as [xpather.com][xpather] or [Code Beautify's XPath Tester][xpath tester] for help developing and debugging 
+A configuration can contain muliple *xpath* subsections for e.g. the file plugin to process the xml-string multiple times. Consult the [XPath syntax][xpath] and the [underlying library's functions][xpath lib] for details and help regarding XPath queries. Consider using an XPath tester such as [xpather.com][xpather] or [Code Beautify's XPath Tester][xpath tester] for help developing and debugging
 your query.
+
+## Configuration (batch)
 
 Alternatively to the configuration above, fields can also be specified in a batch way. So contrary to specify the fields
 in a section, you can define a `name` and a `value` selector used to determine the name and value of the fields in the
@@ -69,21 +92,31 @@ metric.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "xml"
 
+  ## Name of the protocol buffer type to use.
+  ## This is only relevant when parsing protocol buffers and must contain the fully qualified
+  ## name of the type e.g. "org.eclipse.tahu.protobuf.Payload".
+  # xpath_protobuf_type = ""
+
+  ## Print the internal XML document when in debug logging mode.
+  ## This is especially useful when using the parser with non-XML formats like protocol buffers
+  ## to get an idea on the expression necessary to derive fields etc.
+  # xpath_print_document = false
+
   ## Multiple parsing sections are allowed
-  [[inputs.file.xml]]
+  [[inputs.file.xpath]]
     ## Optional: XPath-query to select a subset of nodes from the XML document.
     metric_selection = "/Bus/child::Sensor"
 
     ## Optional: XPath-query to set the metric (measurement) name.
-    #metric_name = "string('example')"
+    # metric_name = "string('example')"
 
     ## Optional: Query to extract metric timestamp.
     ## If not specified the time of execution is used.
-    #timestamp = "/Gateway/Timestamp"
+    # timestamp = "/Gateway/Timestamp"
     ## Optional: Format of the timestamp determined by the query above.
     ## This can be any of "unix", "unix_ms", "unix_us", "unix_ns" or a valid Golang
     ## time format. If not specified, a "unix" timestamp (in seconds) is expected.
-    #timestamp_format = "2006-01-02T15:04:05Z"
+    # timestamp_format = "2006-01-02T15:04:05Z"
 
     ## Field specifications using a selector.
     field_selection = "child::*"
@@ -91,15 +124,15 @@ metric.
     ## These options are only to be used in combination with 'field_selection'!
     ## By default the node name and node content is used if a field-selection
     ## is specified.
-    #field_name  = "name()"
-    #field_value = "."
+    # field_name  = "name()"
+    # field_value = "."
 
     ## Optional: Expand field names relative to the selected node
     ## This allows to flatten out nodes with non-unique names in the subtree
-    #field_name_expansion = false
+    # field_name_expansion = false
 
     ## Tag definitions using the given XPath queries.
-    [inputs.file.xml.tags]
+    [inputs.file.xpath.tags]
       name   = "substring-after(Sensor/@name, ' ')"
       device = "string('the ultimate sensor')"
 
@@ -215,14 +248,14 @@ Config:
   files = ["example.xml"]
   data_format = "xml"
 
-  [[inputs.file.xml]]
-    [inputs.file.xml.tags]
+  [[inputs.file.xpath]]
+    [inputs.file.xpath.tags]
       gateway = "substring-before(/Gateway/Name, ' ')"
 
-    [inputs.file.xml.fields_int]
+    [inputs.file.xpath.fields_int]
       seqnr = "/Gateway/Sequence"
 
-    [inputs.file.xml.fields]
+    [inputs.file.xpath.fields]
       ok = "/Gateway/Status = 'ok'"
 ```
 
@@ -244,16 +277,16 @@ Config:
   files = ["example.xml"]
   data_format = "xml"
 
-  [[inputs.file.xml]]
+  [[inputs.file.xpath]]
     metric_name = "name(/Gateway/Status)"
 
     timestamp = "/Gateway/Timestamp"
     timestamp_format = "2006-01-02T15:04:05Z"
 
-    [inputs.file.xml.tags]
+    [inputs.file.xpath.tags]
       gateway = "substring-before(/Gateway/Name, ' ')"
 
-    [inputs.file.xml.fields]
+    [inputs.file.xpath.fields]
       ok = "/Gateway/Status = 'ok'"
 ```
 
@@ -273,7 +306,7 @@ Config:
   files = ["example.xml"]
   data_format = "xml"
 
-  [[inputs.file.xml]]
+  [[inputs.file.xpath]]
     metric_selection = "/Bus/child::Sensor"
 
     metric_name = "string('sensors')"
@@ -281,13 +314,13 @@ Config:
     timestamp = "/Gateway/Timestamp"
     timestamp_format = "2006-01-02T15:04:05Z"
 
-    [inputs.file.xml.tags]
+    [inputs.file.xpath.tags]
       name = "substring-after(@name, ' ')"
 
-    [inputs.file.xml.fields_int]
+    [inputs.file.xpath.fields_int]
       consumers = "Variable/@consumers"
 
-    [inputs.file.xml.fields]
+    [inputs.file.xpath.fields]
       temperature = "number(Variable/@temperature)"
       power       = "number(Variable/@power)"
       frequency   = "number(Variable/@frequency)"
@@ -314,7 +347,7 @@ Config:
   files = ["example.xml"]
   data_format = "xml"
 
-  [[inputs.file.xml]]
+  [[inputs.file.xpath]]
     metric_selection = "/Bus/child::Sensor"
     metric_name = "string('sensors')"
 
@@ -325,7 +358,7 @@ Config:
     field_name = "name(@*[1])"
     field_value = "number(@*[1])"
 
-    [inputs.file.xml.tags]
+    [inputs.file.xpath.tags]
       name = "substring-after(@name, ' ')"
 ```
 
@@ -340,6 +373,9 @@ Using the `metric_selection` option we select all `Sensor` nodes in the XML docu
 For each selected *field-node* we use `field_name` and `field_value` to determining the field's name and value, respectively. The `field_name` derives the name of the first attribute of the node, while `field_value` derives the value of the first attribute  and converts the result to a number.
 
 [xpath lib]:    https://github.com/antchfx/xpath
+[json]:         https://www.json.org/
+[msgpack]:      https://msgpack.org/
+[protobuf]:     https://developers.google.com/protocol-buffers
 [xml]:          https://www.w3.org/XML/
 [xpath]:        https://www.w3.org/TR/xpath/
 [xpather]:      http://xpather.com/

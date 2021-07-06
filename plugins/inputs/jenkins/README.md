@@ -45,7 +45,9 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
   # job_include = [ "*" ]
   # job_exclude = [ ]
 
-  ## Nodes to exclude from gathering
+  ## Nodes to include or exclude from gathering
+  ## When using both lists, node_exclude has priority.
+  # node_include = [ "*" ]
   # node_exclude = [ ]
 
   ## Worker pool for jenkins plugin only

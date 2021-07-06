@@ -156,7 +156,7 @@ func TestGatherNodeData(t *testing.T) {
 			},
 		},
 		{
-			name: "filtered nodes",
+			name: "filtered nodes (excluded)",
 			input: mockHandler{
 				responseMap: map[string]interface{}{
 					"/api/json": struct{}{},
@@ -166,6 +166,35 @@ func TestGatherNodeData(t *testing.T) {
 						Computers: []node{
 							{DisplayName: "ignore-1"},
 							{DisplayName: "ignore-2"},
+						},
+					},
+				},
+			},
+			output: &testutil.Accumulator{
+				Metrics: []*testutil.Metric{
+					{
+						Tags: map[string]string{
+							"source": "127.0.0.1",
+						},
+						Fields: map[string]interface{}{
+							"busy_executors":  4,
+							"total_executors": 8,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "filtered nodes (included)",
+			input: mockHandler{
+				responseMap: map[string]interface{}{
+					"/api/json": struct{}{},
+					"/computer/api/json": nodeResponse{
+						BusyExecutors:  4,
+						TotalExecutors: 8,
+						Computers: []node{
+							{DisplayName: "filtered-1"},
+							{DisplayName: "filtered-1"},
 						},
 					},
 				},
@@ -306,6 +335,7 @@ func TestGatherNodeData(t *testing.T) {
 				URL:             ts.URL,
 				ResponseTimeout: config.Duration(time.Microsecond),
 				NodeExclude:     []string{"ignore-1", "ignore-2"},
+				NodeInclude:     []string{"master", "slave"},
 			}
 			te := j.initialize(&http.Client{Transport: &http.Transport{}})
 			acc := new(testutil.Accumulator)
