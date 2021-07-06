@@ -82,3 +82,7 @@ The default values below are added if the input format does not specify a value:
 - http
   - tags:
     - url
+
+### Optional Cookie Authentication Settings:
+
+The optional Cookie Authentication Settings will retrieve a cookie from the given authorization endpoint, and use it in subsequent API requests.  This is useful for services that do not provide OAuth or Basic Auth authentication, e.g. the [Tesla Powerwall API](https://www.tesla.com/support/energy/powerwall/own/monitoring-from-home-network), which uses a Cookie Auth Body to retrieve an authorization cookie.  The Cookie Auth Renewal interval will renew the authorization by retrieving a new cookie at the given interval.
