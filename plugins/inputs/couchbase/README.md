@@ -20,6 +20,14 @@ This plugin gets metrics for each Couchbase node, as well as detailed metrics fo
 
   ## Filter bucket fields to include only here.
   # bucket_stats_included = ["quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"]
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification (defaults to true)
+  ## If set to false, tls_cert and tls_key are required
+  # insecure_skip_verify = true
 ```
 
 ## Measurements:
