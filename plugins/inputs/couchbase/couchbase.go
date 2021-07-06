@@ -1,8 +1,8 @@
 package couchbase
 
 import (
-	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"regexp"
 	"sync"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -21,6 +22,9 @@ type Couchbase struct {
 	BucketStatsIncluded []string `toml:"bucket_stats_included"`
 
 	bucketInclude filter.Filter
+	client        *http.Client
+
+	tls.ClientConfig
 }
 
 var sampleConfig = `
@@ -37,17 +41,17 @@ var sampleConfig = `
 
   ## Filter bucket fields to include only here.
   # bucket_stats_included = ["quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"]
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification (defaults to true)
+  ## If set to false, tls_cert and tls_key are required
+  # insecure_skip_verify = true
 `
 
 var regexpURI = regexp.MustCompile(`(\S+://)?(\S+\:\S+@)`)
-var client = &http.Client{
-	Timeout: 10 * time.Second,
-	Transport: &http.Transport{
-		// The couchbase library defaults to insecure, unless certificates are provided
-		// https://github.com/couchbase/go-couchbase/blob/v0.1.0/pools.go#L68-L70
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	},
-}
 
 func (cb *Couchbase) SampleConfig() string {
 	return sampleConfig
@@ -377,7 +381,7 @@ func (cb *Couchbase) queryDetailedBucketStats(server, bucket string, bucketStats
 		return err
 	}
 
-	r, err := client.Do(req)
+	r, err := cb.client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -395,6 +399,29 @@ func (cb *Couchbase) Init() error {
 
 	cb.bucketInclude = f
 
+	tlsConfig, err := cb.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	cb.client = &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConnsPerHost: couchbaseClient.MaxIdleConnsPerHost,
+			TLSClientConfig:     tlsConfig,
+		},
+	}
+
+	// Couchbase requires that a TLS cert and key be provided when insecure skip verify is disabled
+	if !cb.ClientConfig.InsecureSkipVerify && (cb.ClientConfig.TLSCert == "" || cb.ClientConfig.TLSKey == "") {
+		return fmt.Errorf("tls_cert and tls_key are required when insecure_skip_verify = false")
+	}
+
+	couchbaseClient.SetSkipVerify(cb.ClientConfig.InsecureSkipVerify)
+	couchbaseClient.SetCertFile(cb.ClientConfig.TLSCert)
+	couchbaseClient.SetKeyFile(cb.ClientConfig.TLSKey)
+	couchbaseClient.SetRootFile(cb.ClientConfig.TLSCA)
+
 	return nil
 }
 
@@ -402,6 +429,9 @@ func init() {
 	inputs.Add("couchbase", func() telegraf.Input {
 		return &Couchbase{
 			BucketStatsIncluded: []string{"quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"},
+			ClientConfig: tls.ClientConfig{
+				InsecureSkipVerify: true,
+			},
 		}
 	})
 }
