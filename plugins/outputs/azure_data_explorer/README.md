@@ -22,14 +22,32 @@ This plugin writes metrics collected by any of the input plugins of Telegraf to 
 
   ## Timeout for Azure Data Explorer operations
   # timeout = "15s"
+  
+  ## Type of metrics grouping used when pushing to Azure Data Explorer. 
+  ## Default is "TablePerMetric" for one table per different metric. 
+  ## For more information, please check the plugin README.
+  # metrics_grouping_type = "TablePerMetric"
+  
+  ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
+  # table_name = ""
+
 
 ```
 
 ## Metrics Grouping
 
+### TablePerMetric
+
 The plugin will group the metrics by the metric name, and will send each group of metrics to an Azure Data Explorer table. If the table doesn't exist the plugin will create the table, if the table exists then the plugin will try to merge the Telegraf metric schema to the existing table. For more information about the merge process check the [`.create-merge` documentation](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/create-merge-table-command).
 
 The table name will match the `name` property of the metric, this means that the name of the metric should comply with the Azure Data Explorer table naming constraints in case you plan to add a prefix to the metric name.
+
+This is the default behaviour if no value is given to `metrics_grouping_type` in the config file.
+
+### SingleTable
+
+The plugin will send all the metrics received to a single Azure Data Explorer table. The name of the table must be supplied via `table_name` the config file. If the table doesn't exist the plugin will create the table, if the table exists then the plugin will try to merge the Telegraf metric schema to the existing table. For more information about the merge process check the [`.create-merge` documentation](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/create-merge-table-command). 
+
 
 ## Tables Schema
 

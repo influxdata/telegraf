@@ -68,7 +68,9 @@ func (adx *AzureDataExplorer) SampleConfig() string {
   ## Timeout for Azure Data Explorer operations
   # timeout = "15s"
 
-  ## Metrics grouping type for metrics in Azure Data Explorer. Default is the "TablePerMetric" for one table per different metric. Other options include "SingleTable" for having all metrics in one table.
+  ## Type of metrics grouping used when pushing to Azure Data Explorer. 
+  ## Default is "TablePerMetric" for one table per different metric. 
+  ## For more information, please check the plugin README.
   # metrics_grouping_type = "TablePerMetric"
 
   ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
