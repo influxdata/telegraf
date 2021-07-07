@@ -115,28 +115,28 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 }
 
 func (adx *AzureDataExplorer) writeTablePerMetric(metrics []telegraf.Metric) error {
-	metricsPerNamespace := make(map[string][]byte)
+	tableMetricsMapping := make(map[string][]byte)
 	// Group metrics by name and serialize them
 	for _, m := range metrics {
-		namespace := m.Name()
+		tableName := m.Name()
 		metricInBytes, err := adx.serializer.Serialize(m)
 		if err != nil {
 			return err
 		}
-		if existingBytes, ok := metricsPerNamespace[namespace]; ok {
-			metricsPerNamespace[namespace] = append(existingBytes, metricInBytes...)
+		if existingBytes, ok := tableMetricsMapping[tableName]; ok {
+			tableMetricsMapping[tableName] = append(existingBytes, metricInBytes...)
 		} else {
-			metricsPerNamespace[namespace] = metricInBytes
+			tableMetricsMapping[tableName] = metricInBytes
 		}
 	}
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(adx.Timeout))
 	defer cancel()
 
-	// Push the metrics namespace-wise
+	// Push the metrics for each table
 	format := ingest.FileFormat(ingest.JSON)
-	for namespace, mPerNamespace := range metricsPerNamespace {
-		if err := adx.pushMetrics(ctx, format, namespace, mPerNamespace); err != nil {
+	for tableName, tableMetrics := range tableMetricsMapping {
+		if err := adx.pushMetrics(ctx, format, tableName, tableMetrics); err != nil {
 			return err
 		}
 	}
@@ -168,40 +168,40 @@ func (adx *AzureDataExplorer) writeSingleTable(metrics []telegraf.Metric) error 
 	return nil
 }
 
-func (adx *AzureDataExplorer) pushMetrics(ctx context.Context, format ingest.FileOption, namespace string, metricsArray []byte) error {
-	ingestor, err := adx.getIngestor(ctx, namespace)
+func (adx *AzureDataExplorer) pushMetrics(ctx context.Context, format ingest.FileOption, tableName string, metricsArray []byte) error {
+	ingestor, err := adx.getIngestor(ctx, tableName)
 	if err != nil {
 		return err
 	}
 
 	reader := bytes.NewReader(metricsArray)
-	mapping := ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", namespace), ingest.JSON)
+	mapping := ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", tableName), ingest.JSON)
 	if _, err := ingestor.FromReader(ctx, reader, format, mapping); err != nil {
-		adx.Log.Errorf("sending ingestion request to Azure Data Explorer for metric %q failed: %v", namespace, err)
+		adx.Log.Errorf("sending ingestion request to Azure Data Explorer for table %q failed: %v", tableName, err)
 	}
 	return nil
 }
 
-func (adx *AzureDataExplorer) getIngestor(ctx context.Context, namespace string) (localIngestor, error) {
-	ingestor := adx.ingesters[namespace]
+func (adx *AzureDataExplorer) getIngestor(ctx context.Context, tableName string) (localIngestor, error) {
+	ingestor := adx.ingesters[tableName]
 
 	if ingestor == nil {
-		if err := adx.createAzureDataExplorerTableForNamespace(ctx, namespace); err != nil {
-			return nil, fmt.Errorf("creating table for %q failed: %v", namespace, err)
+		if err := adx.createAzureDataExplorerTable(ctx, tableName); err != nil {
+			return nil, fmt.Errorf("creating table for %q failed: %v", tableName, err)
 		}
-		//create a new ingestor client for the namespace
-		tempIngestor, err := adx.createIngestor(adx.client, adx.Database, namespace)
+		//create a new ingestor client for the table
+		tempIngestor, err := adx.createIngestor(adx.client, adx.Database, tableName)
 		if err != nil {
-			return nil, fmt.Errorf("creating ingestor for %q failed: %v", namespace, err)
+			return nil, fmt.Errorf("creating ingestor for %q failed: %v", tableName, err)
 		} else {
-			adx.ingesters[namespace] = tempIngestor
+			adx.ingesters[tableName] = tempIngestor
 			ingestor = tempIngestor
 		}
 	}
 	return ingestor, nil
 }
 
-func (adx *AzureDataExplorer) createAzureDataExplorerTableForNamespace(ctx context.Context, tableName string) error {
+func (adx *AzureDataExplorer) createAzureDataExplorerTable(ctx context.Context, tableName string) error {
 	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
 	if _, err := adx.client.Mgmt(ctx, adx.Database, createStmt); err != nil {
 		return err
@@ -249,8 +249,8 @@ func init() {
 	})
 }
 
-func createRealIngestor(client localClient, database string, namespace string) (localIngestor, error) {
-	ingestor, err := ingest.New(client.(*kusto.Client), database, namespace)
+func createRealIngestor(client localClient, database string, tableName string) (localIngestor, error) {
+	ingestor, err := ingest.New(client.(*kusto.Client), database, tableName)
 	if ingestor != nil {
 		return ingestor, nil
 	}

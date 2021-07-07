@@ -155,7 +155,7 @@ type fakeIngestor struct {
 	actualOutputMetric map[string]interface{}
 }
 
-func createFakeIngestor(client localClient, database string, namespace string) (localIngestor, error) {
+func createFakeIngestor(client localClient, database string, tableName string) (localIngestor, error) {
 	return &fakeIngestor{}, nil
 }
 func (f *fakeIngestor) FromReader(ctx context.Context, reader io.Reader, options ...ingest.FileOption) (*ingest.Result, error) {
