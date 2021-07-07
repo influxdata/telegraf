@@ -238,6 +238,7 @@ func TestSqlServer_Retry(t *testing.T) {
 		IncludeQuery: []string{"DatabaseSize", "MemoryClerk"},
 		HealthMetric: true,
 		RetryCount:   2,
+		AuthMethod:   "connection_string",
 	}
 
 	var acc testutil.Accumulator
