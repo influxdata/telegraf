@@ -22,6 +22,10 @@ func TestData(t *testing.T) {
 		test string
 	}{
 		{
+			name: "Test having an array of objects",
+			test: "array_of_objects",
+		},
+		{
 			name: "Test using just fields and tags",
 			test: "fields_and_tags",
 		},
