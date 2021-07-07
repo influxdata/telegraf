@@ -1,6 +1,7 @@
 package file
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -21,6 +22,9 @@ type File struct {
 	parserFunc telegraf.ParserFunc
 	filenames  []string
 	decoder    *encoding.Decoder
+
+	// Read from stdin, a hidden configuration for isolating processes
+	Stdin bool
 }
 
 const sampleConfig = `
@@ -72,19 +76,36 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	for _, k := range f.filenames {
-		metrics, err := f.readMetric(k)
-		if err != nil {
+	if f.Stdin {
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			metrics, err := f.parser.Parse(scanner.Bytes())
+			if err != nil {
+				return err
+			}
+			for _, m := range metrics {
+				acc.AddMetric(m)
+			}
+		}
+		if err := scanner.Err(); err != nil {
 			return err
 		}
-
-		for _, m := range metrics {
-			if f.FileTag != "" {
-				m.AddTag(f.FileTag, filepath.Base(k))
+	} else {
+		for _, k := range f.filenames {
+			metrics, err := f.readMetric(k)
+			if err != nil {
+				return err
 			}
-			acc.AddMetric(m)
+
+			for _, m := range metrics {
+				if f.FileTag != "" {
+					m.AddTag(f.FileTag, filepath.Base(k))
+				}
+				acc.AddMetric(m)
+			}
 		}
 	}
+
 	return nil
 }
 

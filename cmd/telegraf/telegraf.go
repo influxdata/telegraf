@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -30,9 +31,10 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
+	inputFile "github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
-	output_file "github.com/influxdata/telegraf/plugins/outputs/file"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -359,7 +361,7 @@ func formatFullVersion() string {
 	return strings.Join(parts, " ")
 }
 
-func isolatedPlugin(name string, configPath string) {
+func isolatedPlugin(name string, configPath string, ID int) {
 
 	c := config.NewConfig()
 	c.IsolatedPlugin = name
@@ -369,30 +371,57 @@ func isolatedPlugin(name string, configPath string) {
 		return
 	}
 
-	// Remove unwanted plugins
-	var plugins []*models.RunningInput
+	// Only added wanted plugins
+	var inputPlugins []*models.RunningInput
 	for _, inputs := range c.Inputs {
-		if inputs.Config.Name == name {
-			plugins = append(plugins, inputs)
+		if inputs.Config.Name == name && inputs.Config.ID == ID {
+			inputPlugins = append(inputPlugins, inputs)
+			break
+		}
+	}
+	var outputPlugins []*models.RunningOutput
+	for _, output := range c.Outputs {
+		if output.Config.Name == name && output.Config.ID == ID {
+			outputPlugins = append(outputPlugins, output)
 			break
 		}
 	}
 
-	c.Inputs = plugins
-
-	c.Outputs = []*models.RunningOutput{}
+	c.Inputs = inputPlugins
+	c.Outputs = outputPlugins
 
 	// Add [[outputs.file]]
-	var o telegraf.Output
-	fileOutputPlugin := &output_file.File{
-		Files: []string{"stdout"},
+	if len(c.Inputs) > 0 {
+		c.Outputs = []*models.RunningOutput{}
+		var o telegraf.Output
+		fileOutputPlugin := &outputFile.File{
+			Files: []string{"stdout"},
+		}
+		fileOutputPlugin.SetSerializer(influx.NewSerializer())
+		o = fileOutputPlugin
+		var outputConfig models.OutputConfig
+		outputConfig.Name = "file"
+		ro := models.NewRunningOutput(o, &outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
+		c.Outputs = append(c.Outputs, ro)
+	} else if len(c.Outputs) > 0 {
+		c.Inputs = []*models.RunningInput{}
+		var i telegraf.Input
+		fileInputPlugin := &inputFile.File{
+			Stdin: true,
+		}
+		parser, err := parsers.NewInfluxParser()
+		if err != nil {
+			fmt.Printf("Issue with new aggent: %v \n", err)
+			return
+		}
+		fileInputPlugin.SetParser(parser)
+		i = fileInputPlugin
+		var inputConfig models.InputConfig
+		inputConfig.Name = "file"
+		ro := models.NewRunningInput(i, &inputConfig)
+		c.Inputs = append(c.Inputs, ro)
 	}
-	fileOutputPlugin.SetSerializer(influx.NewSerializer())
-	o = fileOutputPlugin
-	var outputConfig models.OutputConfig
-	outputConfig.Name = "file"
-	ro := models.NewRunningOutput(o, &outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
-	c.Outputs = append(c.Outputs, ro)
+
 	ag, err := agent.NewAgent(c)
 	if err != nil {
 		fmt.Printf("Issue with new aggent: %v \n", err)
@@ -477,8 +506,11 @@ func main() {
 			)
 			return
 		case "plugin":
-			log.Println(args[0], args[1], args[2])
-			isolatedPlugin(args[1], args[2])
+			id, err := strconv.Atoi(args[3])
+			if err != nil {
+				log.Fatalf("oh no a problem! %v", err)
+			}
+			isolatedPlugin(args[1], args[2], id)
 			return
 		}
 	}

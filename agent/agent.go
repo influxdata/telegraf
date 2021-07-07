@@ -15,7 +15,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
-	"github.com/influxdata/telegraf/plugins/inputs/execd"
+	inputExecd "github.com/influxdata/telegraf/plugins/inputs/execd"
+	outputExecd "github.com/influxdata/telegraf/plugins/outputs/execd"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
@@ -246,12 +247,12 @@ func (a *Agent) startInputs(
 	// Update input plugins to use execd
 	if a.Config.IsolatedPlugin == "" {
 		for _, input := range inputs {
-			e := execd.Execd{
+			e := inputExecd.Execd{
 				Command: []string{
-					"telegraf", "plugin", input.Config.Name, strconv.Itoa(input.Config.ID),
+					"telegraf", "plugin", input.Config.Name, a.Config.ConfigPath, strconv.Itoa(input.Config.ID),
 				},
 				Signal: "STDIN",
-				Log:    models.NewLogger("isolated-plugin", "test", ""),
+				Log:    models.NewLogger("isolated-plugin", "input-"+input.Config.Name+"-"+strconv.Itoa(input.Config.ID), ""),
 			}
 			parser, err := parsers.NewInfluxParser()
 			if err != nil {
@@ -712,6 +713,22 @@ func (a *Agent) startOutputs(
 ) (chan<- telegraf.Metric, *outputUnit, error) {
 	src := make(chan telegraf.Metric, 100)
 	unit := &outputUnit{src: src}
+
+	// Update input plugins to use execd
+	if a.Config.IsolatedPlugin == "" {
+		for _, output := range outputs {
+			e := outputExecd.Execd{
+				Command: []string{
+					"telegraf", "plugin", output.Config.Name, a.Config.ConfigPath, strconv.Itoa(output.Config.ID),
+				},
+				Log: models.NewLogger("isolated-plugin", "output-"+output.Config.Name+"-"+strconv.Itoa(output.Config.ID), ""),
+			}
+			e.SetSerializer(influx.NewSerializer())
+			e.Init()
+			output.Output = &e
+		}
+	}
+
 	for _, output := range outputs {
 		err := a.connectOutput(ctx, output)
 		if err != nil {

@@ -21,6 +21,7 @@ const (
 type OutputConfig struct {
 	Name   string
 	Alias  string
+	ID     int
 	Filter Filter
 
 	FlushInterval     time.Duration
