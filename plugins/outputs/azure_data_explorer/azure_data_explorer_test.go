@@ -45,9 +45,7 @@ func TestWrite(t *testing.T) {
 			createIngestor:  createFakeIngestor,
 			metricsGrouping: "TablePerMetric",
 			expected: map[string]interface{}{
-				"metricName":                "test1",
-				"createTableCommand":        "",
-				"createTableMappingCommand": "",
+				"metricName": "test1",
 			},
 		},
 		{
@@ -62,9 +60,7 @@ func TestWrite(t *testing.T) {
 			createIngestor:  createFakeIngestor,
 			metricsGrouping: "TablePerMetric",
 			expected: map[string]interface{}{
-				"metricName":                "test1",
-				"createTableCommand":        "",
-				"createTableMappingCommand": "",
+				"metricName": "test1",
 			},
 			expectedWriteError: "creating table for \"test1\" failed: Something went wrong",
 		},
@@ -81,9 +77,7 @@ func TestWrite(t *testing.T) {
 			createIngestor:  createFakeIngestor,
 			metricsGrouping: "SingleTable",
 			expected: map[string]interface{}{
-				"metricName":                "test1",
-				"createTableCommand":        "",
-				"createTableMappingCommand": "",
+				"metricName": "test1",
 			},
 		},
 	}
@@ -116,7 +110,7 @@ func TestWrite(t *testing.T) {
 				expectedNameOfTable := expectedNameOfMetric
 				createdIngestor := plugin.ingesters[expectedNameOfMetric]
 
-				if tC.metricsGrouping == SingleTable {
+				if tC.metricsGrouping == singleTable {
 					expectedNameOfTable = tC.tableName
 					createdIngestor = plugin.ingesters[expectedNameOfTable]
 				}

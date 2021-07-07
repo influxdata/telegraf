@@ -33,8 +33,8 @@ type AzureDataExplorer struct {
 }
 
 const (
-	TablePerMetric = "TablePerMetric"
-	SingleTable    = "SingleTable"
+	tablePerMetric = "TablePerMetric"
+	singleTable    = "SingleTable"
 )
 
 type localIngestor interface {
@@ -107,7 +107,7 @@ func (adx *AzureDataExplorer) Close() error {
 }
 
 func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
-	if adx.MetricsGrouping == TablePerMetric {
+	if adx.MetricsGrouping == tablePerMetric {
 		return adx.writeTablePerMetric(metrics)
 	} else {
 		return adx.writeSingleTable(metrics)
@@ -223,13 +223,13 @@ func (adx *AzureDataExplorer) Init() error {
 		return errors.New("Database configuration cannot be empty")
 	}
 
-	if adx.MetricsGrouping == SingleTable && adx.TableName == "" {
+	if adx.MetricsGrouping == singleTable && adx.TableName == "" {
 		return errors.New("Table name cannot be empty for SingleTable metrics grouping type")
 	}
 	if adx.MetricsGrouping == "" {
-		adx.MetricsGrouping = TablePerMetric
+		adx.MetricsGrouping = tablePerMetric
 	}
-	if !(adx.MetricsGrouping == SingleTable || adx.MetricsGrouping == TablePerMetric || adx.MetricsGrouping == "") {
+	if !(adx.MetricsGrouping == singleTable || adx.MetricsGrouping == tablePerMetric) {
 		return errors.New("Metrics grouping type is not valid")
 	}
 

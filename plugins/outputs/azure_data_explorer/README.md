@@ -36,13 +36,14 @@ This plugin writes metrics collected by any of the input plugins of Telegraf to 
 
 ## Metrics Grouping
 
+Metrics can be grouped in two ways to be sent to Azure Data Explorer. To specify which metric grouping type the plugin should use, the respective value should be given to the `metrics_grouping_type` in the config file. If no value is given to `metrics_grouping_type`, by default, the metrics will be grouped using `TablePerMetric`.
+
 ### TablePerMetric
 
 The plugin will group the metrics by the metric name, and will send each group of metrics to an Azure Data Explorer table. If the table doesn't exist the plugin will create the table, if the table exists then the plugin will try to merge the Telegraf metric schema to the existing table. For more information about the merge process check the [`.create-merge` documentation](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/create-merge-table-command).
 
 The table name will match the `name` property of the metric, this means that the name of the metric should comply with the Azure Data Explorer table naming constraints in case you plan to add a prefix to the metric name.
 
-This is the default behaviour if no value is given to `metrics_grouping_type` in the config file.
 
 ### SingleTable
 
