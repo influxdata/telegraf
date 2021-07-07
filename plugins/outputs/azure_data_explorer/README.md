@@ -32,7 +32,7 @@ This plugin writes metrics collected by any of the input plugins of Telegraf to 
   # tenant_id = ""
 
   ## Timeout for Azure Data Explorer operations
-  # timeout = "15s"
+  # timeout = "20s"
 
 ```
 
@@ -54,7 +54,7 @@ The corresponding table mapping would be like the following:
 .create-or-alter table ['table-name'] ingestion json mapping 'table-name_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'
 ```
 
-**Note**: This plugin will automatically create Azure Data Explorer tables and corresponding table mapping as per the above mentioned commands. Since the `Metric` object is a complex type, the only output format supported is JSON, so make sure to set the `data_format` configuration in `telegraf.conf` to `json`.
+**Note**: This plugin will automatically create Azure Data Explorer tables and corresponding table mapping as per the above mentioned commands. Since the `Metric` object is a complex type, the only output format supported is JSON.
 
 ### Authentiation and Permissions
 

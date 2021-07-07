@@ -73,7 +73,7 @@ func (adx *AzureDataExplorer) SampleConfig() string {
   tenant_id = ""
 
   ## Timeout for Azure Data Explorer operations
-  # timeout = "15s"
+  # timeout = "20s"
 `
 }
 
@@ -186,7 +186,7 @@ func (adx *AzureDataExplorer) Init() error {
 func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
 		return &AzureDataExplorer{
-			Timeout: config.Duration(15 * time.Second),
+			Timeout: config.Duration(20 * time.Second),
 		}
 	})
 }
