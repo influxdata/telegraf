@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +19,7 @@ import (
 // SQLServer struct
 type SQLServer struct {
 	Servers      []string `toml:"servers"`
+	AuthMethod   string   `toml:"auth_method"`
 	QueryVersion int      `toml:"query_version"`
 	AzureDB      bool     `toml:"azuredb"`
 	DatabaseType string   `toml:"database_type"`
@@ -79,6 +80,10 @@ const sampleConfig = `
 servers = [
   "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
 ]
+
+## Authentication method
+## valid methods: "connection_string", "AAD"
+# auth_method = "connection_string"
 
 ## "database_type" enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
 ## In the config file, the sql server plugin section should be repeated each with a set of servers for a specific database_type.
@@ -286,11 +291,11 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 	for _, serv := range s.Servers {
 		var pool *sql.DB
 
-		// setup connection based on authentication
-		rx := regexp.MustCompile(`\b(?:(Password=((?:&(?:[a-z]+|#[0-9]+);|[^;]){0,})))\b`)
-
-		// when password is provided in connection string, use SQL auth
-		if rx.MatchString(serv) {
+		switch strings.ToLower(s.AuthMethod) {
+		case "connection_string":
+			// Use the DSN (connection string) directly. In this case,
+			// empty username/password causes use of Windows
+			// integrated authentication.
 			var err error
 			pool, err = sql.Open("mssql", serv)
 
@@ -298,8 +303,8 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				continue
 			}
-		} else {
-			// otherwise assume AAD Auth with system-assigned managed identity (MSI)
+		case "aad":
+			// AAD Auth with system-assigned managed identity (MSI)
 
 			// AAD Auth is only supported for Azure SQL Database or Azure SQL Managed Instance
 			if s.DatabaseType == "SQLServer" {
@@ -322,6 +327,8 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			}
 
 			pool = sql.OpenDB(connector)
+		default:
+			return fmt.Errorf("unknown auth method: %v", s.AuthMethod)
 		}
 
 		s.pools = append(s.pools, pool)
@@ -553,6 +560,9 @@ func (s *SQLServer) refreshToken() (*adal.Token, error) {
 
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
-		return &SQLServer{Servers: []string{defaultServer}}
+		return &SQLServer{
+			Servers:    []string{defaultServer},
+			AuthMethod: "connection_string",
+		}
 	})
 }
