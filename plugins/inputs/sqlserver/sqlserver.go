@@ -22,7 +22,7 @@ import (
 // SQLServer struct
 type SQLServer struct {
 	Servers                 []string        `toml:"servers"`
-  AuthMethod              string          `toml:"auth_method"`
+	AuthMethod              string          `toml:"auth_method"`
 	QueryVersion            int             `toml:"query_version"`
 	AzureDB                 bool            `toml:"azuredb"`
 	DatabaseType            string          `toml:"database_type"`
