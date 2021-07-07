@@ -1217,3 +1217,304 @@ SELECT
 	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
 FROM sys.dm_os_schedulers AS s
 `
+
+// Both Query Store queries share the same logic: get the cached values from telegraf, enumerate databases, send the updated cache to teleraf.
+// For transferring cached values between telegraf and Sql Server XML format is used.
+// The cache contains date of the last collected Query Store interval for each DB.
+// The script executed during enumeration against each DB can be divided into the following parts:
+// 1 calculate time range for collection Query Store monitoring data using previously cached date of the last collected Query Store interval;
+// 2 collect monitoring data;
+// 3 update the cached interval date.
+
+const sqlAzureMIPartQueryPeriod = `
+DECLARE @QueryData NVARCHAR(MAX) = ?1; --input parameter
+
+IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure Managed Instance. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END;
+
+DROP PROCEDURE IF EXISTS #TelegrafMonitoringDataCollector
+/* Create a temporary procedure that iterates through all DBs that the user has access to in this managed instance, except system DBs, and execute the query specified with @queryText */
+EXEC('CREATE PROCEDURE #TelegrafMonitoringDataCollector @queryText NVARCHAR(MAX)
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+	DECLARE dbCursor CURSOR FAST_FORWARD LOCAL FOR 
+	SELECT 
+		[name] 
+	FROM sys.databases
+	WHERE HAS_DBACCESS([name]) = 1 
+		AND [name] NOT IN (''master'', ''tempdb'', ''model'', ''msdb'');
+
+	DECLARE @CurrSqlText nvarchar(max);
+	DECLARE @dbName sysname;
+
+	OPEN dbCursor;
+	FETCH NEXT FROM dbCursor INTO @dbName;
+
+	WHILE @@Fetch_Status=0 BEGIN
+		SET @CurrSqlText = N''USE ''+ QUOTENAME(@dbName) + CONCAT(CHAR(13), CHAR(10)) + @queryText;
+
+		BEGIN TRY
+			EXEC sp_executesql @CurrSqlText
+		END TRY
+		BEGIN CATCH
+			-- Check if the user has no access to DB, DB was deleted or DB state does not allow connections
+			IF ERROR_NUMBER() NOT IN (911, 916, 922, 927, 941, 942, 952, 976, 978, 40863)
+				THROW;
+		END CATCH;
+		FETCH NEXT FROM dbCursor INTO @dbName;
+	END
+
+	CLOSE dbCursor;
+	DEALLOCATE dbCursor;
+END');
+
+/* Obtain the previous times the query was called -- they are an array because we are working with a list of DBs in the Managed Instance -- and store them in a temporary table */
+DROP TABLE IF EXISTS #TelegrafCachedDbCollectionTimes;
+CREATE TABLE #TelegrafCachedDbCollectionTimes (
+	[logical_database_guid] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
+	[collectionTime] DATETIMEOFFSET
+);
+
+DECLARE @XmlQueryData XML = @QueryData;
+INSERT INTO #TelegrafCachedDbCollectionTimes
+SELECT
+	s.value('./id[1]', 'uniqueidentifier') AS [logical_database_guid],
+	s.value('./ct[1]', 'datetimeoffset') AS [collectionTime]
+FROM @XmlQueryData.nodes('/collectionTimes/ts') t(s);
+
+/* Delete records older than <Max INTERVAL_LENGTH_MINUTES> * 2 */
+DELETE FROM #TelegrafCachedDbCollectionTimes WHERE collectionTime <= DATEADD(dd, -2, SYSDATETIMEOFFSET());
+
+DECLARE @SqlText NVARCHAR(MAX) = N'
+
+DECLARE @currDbLogicalGuid UNIQUEIDENTIFIER;
+SELECT @currDbLogicalGuid = logical_database_guid FROM sys.dm_user_db_resource_governance WHERE database_id = DB_ID();
+
+/* DB may be in a transient state */
+IF @currDbLogicalGuid IS NULL
+	RETURN;
+
+DECLARE @lastIntervalEndTime DATETIMEOFFSET;
+SELECT @lastIntervalEndTime = [collectionTime] FROM #TelegrafCachedDbCollectionTimes WHERE [logical_database_guid] = @currDbLogicalGuid;
+
+DECLARE @currIntervalStartTime DATETIMEOFFSET, @currIntervalEndTime DATETIMEOFFSET, @queryStartTime DATETIMEOFFSET;
+
+DECLARE @currTime DATETIMEOFFSET = SYSDATETIMEOFFSET();
+DECLARE @currTimeLimit DATETIMEOFFSET;
+
+/* Only Query Store intervals that ended after @currTimeLimit will be collected */
+SELECT @currTimeLimit =
+    CASE interval_length_minutes
+        WHEN 1440 THEN DATEADD(hh, -24, @currTime)
+        ELSE DATEADD(hh, -3, @currTime)
+    END
+FROM sys.database_query_store_options;
+
+/*Get the last completed interval*/
+SELECT TOP 1 @queryStartTime = start_time,  @currIntervalEndTime = end_time
+FROM sys.query_store_runtime_stats_interval
+WHERE end_time < @currTime
+ORDER BY runtime_stats_interval_id DESC;
+
+/* Query Store is disabled OR interval is already collected */
+if @currIntervalEndTime IS NULL OR @currIntervalEndTime < @currTimeLimit OR @currIntervalEndTime = @lastIntervalEndTime
+	RETURN;
+
+SET @currIntervalStartTime = IIF(@lastIntervalEndTime IS NULL OR @lastIntervalEndTime < @currTimeLimit, @queryStartTime, @lastIntervalEndTime);
+
+';
+
+DECLARE @UpdateCollectionTimeSqlText NVARCHAR(MAX) = N'
+/* Update query call time for the current DB */
+MERGE #TelegrafCachedDbCollectionTimes AS target  
+USING (SELECT @currDbLogicalGuid, @currIntervalEndTime) AS source (logical_database_guid, collectionTime)  
+ON (target.logical_database_guid = source.logical_database_guid)  
+WHEN MATCHED THEN
+    UPDATE SET collectionTime = source.collectionTime 
+WHEN NOT MATCHED THEN  
+    INSERT (logical_database_guid, collectionTime)  
+    VALUES (source.logical_database_guid, source.collectionTime);
+';
+
+DECLARE @ReturnCachedIntervalsSqlText VARCHAR(MAX) = '
+/* Return previous query call timestamps for all DBs */
+SELECT CONVERT(NVARCHAR(MAX),(SELECT logical_database_guid AS id, CONVERT(varchar(35), collectionTime, 126) AS ct FROM #TelegrafCachedDbCollectionTimes FOR XML PATH(''ts''), ROOT(''collectionTimes''))) AS CachedData;
+DROP TABLE #TelegrafCachedDbCollectionTimes;
+'
+`
+
+const sqlAzureMIQueryStoreRuntimeStatistics = sqlAzureMIPartQueryPeriod + `
+
+/* Create a temp table for accumulating the result for all DBs */
+DROP TABLE IF EXISTS #QueryStoreMetrics;
+CREATE TABLE #QueryStoreMetrics(
+	measurement varchar(42),
+	sql_instance nvarchar(256),
+	[database_name] nvarchar(128),
+	interval_start_time varchar(35),
+	interval_end_time varchar(35),
+	query_id varchar(20),
+	query_hash varchar(20),
+	plan_id varchar(20),
+	query_plan_hash varchar(20),
+	max_logical_io_reads bigint,
+	avg_logical_io_reads float,
+	max_physical_io_reads bigint,
+	avg_physical_io_reads float,
+	max_logical_io_writes bigint,
+	avg_logical_io_writes float,
+	execution_type tinyint,
+	execution_type_desc nvarchar(128),
+	count_executions bigint,
+	max_cpu_time bigint,
+	avg_cpu_time float,
+	max_dop bigint,
+	avg_dop float,
+	max_rowcount bigint,
+	avg_rowcount float,
+	max_query_max_used_memory bigint,
+	avg_query_max_used_memory float,
+	[max_duration] bigint,
+	avg_duration float,
+	max_num_physical_io_reads bigint,
+	avg_num_physical_io_reads float,
+	max_page_server_io_reads bigint,
+	avg_page_server_io_reads float,
+	max_log_bytes_used bigint,
+	avg_log_bytes_used float,
+	max_tempdb_space_used bigint,
+	avg_tempdb_space_used float
+)
+WITH (DATA_COMPRESSION = ROW);
+
+/* Query the data from query store. Group by plan_id, execution_type, runtime_stats_interval_id, as specified here:
+https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-runtime-stats-transact-sql?view=sql-server-ver15
+*/
+SET @SqlText = @SqlText + N'
+INSERT INTO #QueryStoreMetrics
+SELECT
+	''sqlserver_azuremi_querystore_runtime_stats'' AS [measurement],
+	REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance],
+	DB_NAME() AS [database_name],
+	CONVERT(varchar(35), MAX(rsi.start_time), 126) AS interval_start_time,
+	CONVERT(varchar(35), MAX(rsi.end_time), 126) AS interval_end_time,
+	CAST(MAX(q.query_id) AS nvarchar(20)) AS query_id,
+	CONVERT(nvarchar(20), MAX(q.query_hash), 1) as query_hash,
+	CAST(rs.plan_id AS nvarchar(20)) AS plan_id,
+	CONVERT(nvarchar(20), MAX(p.query_plan_hash), 1) as query_plan_hash,
+	MAX(rs.max_logical_io_reads) as max_logical_io_reads,
+	SUM(rs.avg_logical_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_logical_io_reads,
+	MAX(rs.max_physical_io_reads) as max_physical_io_reads,
+	SUM(rs.avg_physical_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_physical_io_reads,
+	MAX(rs.max_logical_io_writes) as max_logical_io_writes,
+	SUM(rs.avg_logical_io_writes * rs.count_executions) / SUM(rs.count_executions) as avg_logical_io_writes,
+	rs.execution_type,
+	MAX(rs.execution_type_desc) AS execution_type_desc,
+	SUM(rs.count_executions) as count_executions,
+	MAX(rs.max_cpu_time) as max_cpu_time,
+	SUM(rs.avg_cpu_time * rs.count_executions) / SUM(rs.count_executions) as avg_cpu_time,
+	MAX(rs.max_dop) as max_dop,
+	SUM(rs.avg_dop * rs.count_executions) / SUM(rs.count_executions) as avg_dop,
+	MAX(rs.max_rowcount) as max_rowcount,
+	SUM(rs.avg_rowcount * rs.count_executions) / SUM(rs.count_executions) as avg_rowcount,
+	MAX(rs.max_query_max_used_memory) AS max_query_max_used_memory,
+	SUM(rs.avg_query_max_used_memory * rs.count_executions) / SUM(rs.count_executions) AS avg_query_max_used_memory,
+	MAX(rs.max_duration) as [max_duration],
+	SUM(rs.avg_duration * rs.count_executions) / SUM(rs.count_executions) as avg_duration,
+	MAX(rs.max_num_physical_io_reads) as max_num_physical_io_reads,
+	SUM(rs.avg_num_physical_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_num_physical_io_reads,
+	MAX(rs.max_page_server_io_reads) as max_page_server_io_reads,
+	SUM(rs.avg_page_server_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_page_server_io_reads,
+	MAX(rs.max_log_bytes_used) as [max_log_bytes_used],
+	SUM(rs.avg_log_bytes_used * rs.count_executions) / SUM(rs.count_executions) as avg_log_bytes_used,
+	MAX(rs.max_tempdb_space_used) as max_tempdb_space_used,
+	SUM(rs.avg_tempdb_space_used * rs.count_executions) / SUM(rs.count_executions) as avg_tempdb_space_used
+FROM sys.query_store_query q
+	JOIN sys.query_store_plan p ON q.query_id = p.query_id
+	JOIN sys.query_store_runtime_stats rs ON p.plan_id = rs.plan_id
+	JOIN sys.query_store_runtime_stats_interval rsi ON rs.runtime_stats_interval_id = rsi.runtime_stats_interval_id
+WHERE rsi.start_time >= @currIntervalStartTime AND rsi.end_time <= @currIntervalEndTime
+GROUP BY rs.plan_id, rs.execution_type, rs.runtime_stats_interval_id
+OPTION (RECOMPILE);
+' + @UpdateCollectionTimeSqlText;
+
+/* Iterate through all DBs in the managed instance */
+EXEC #TelegrafMonitoringDataCollector @SqlText;
+
+/* Return the table with the accumulated result for all DBs */
+SELECT * FROM #QueryStoreMetrics;
+DROP TABLE #QueryStoreMetrics;
+
+EXEC(@ReturnCachedIntervalsSqlText);
+`
+
+const sqlAzureMIQueryStoreWaitStatistics = sqlAzureMIPartQueryPeriod + `
+DROP TABLE IF EXISTS #QueryStoreWaitStat;
+CREATE TABLE #QueryStoreWaitStat(
+	measurement varchar(39),
+	sql_instance nvarchar(256),
+	[database_name] nvarchar(128),
+	interval_start_time nvarchar(30),
+	interval_end_time nvarchar(30),
+	query_id nvarchar(20),
+	query_hash nvarchar(20),
+	plan_id nvarchar(20),
+	query_plan_hash nvarchar(20),
+	wait_category nvarchar(60),
+	exec_type tinyint,
+	exec_type_desc nvarchar(128),
+	total_query_wait_time_ms bigint,
+	count_executions bigint,
+	max_query_wait_time_ms bigint
+)
+WITH (DATA_COMPRESSION = ROW);
+
+/* Query the data from query store. Group  by plan_id, runtime_stats_interval_id, execution_type and wait_category, and specified here:
+https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15
+*/
+SET @SqlText = @SqlText + N'
+IF EXISTS (SELECT * FROM sys.database_query_store_options WHERE wait_stats_capture_mode = 1)
+	INSERT INTO #QueryStoreWaitStat
+	SELECT
+		''sqlserver_azuremi_querystore_wait_stats'' AS [measurement],
+		REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance],
+		DB_NAME() AS [database_name],
+		CONVERT(nvarchar(35), MAX(rsi.start_time), 126) AS interval_start_time,
+		CONVERT(nvarchar(35), MAX(rsi.end_time), 126) AS interval_end_time,
+		CAST(MAX(q.query_id) AS nvarchar(20)) AS query_id,
+		CONVERT(nvarchar(20), MAX(q.query_hash), 1) as query_hash,
+		CAST(ws.plan_id AS nvarchar(20)) AS plan_id,
+		CONVERT(nvarchar(20), MAX(p.query_plan_hash), 1) as query_plan_hash,
+		ws.wait_category_desc AS wait_category,
+		ws.execution_type AS exec_type,
+		MAX(ws.execution_type_desc) AS exec_type_desc,
+		SUM(ws.total_query_wait_time_ms) AS total_query_wait_time_ms,
+		CAST(SUM(IIF(ws.avg_query_wait_time_ms = 0, 0, ws.total_query_wait_time_ms / ws.avg_query_wait_time_ms)) AS BIGINT) AS count_executions,
+		MAX(ws.max_query_wait_time_ms) AS max_query_wait_time_ms
+	FROM sys.query_store_query q
+		JOIN sys.query_store_plan p ON q.query_id = p.query_id
+		JOIN sys.query_store_wait_stats ws ON p.plan_id = ws.plan_id
+		JOIN sys.query_store_runtime_stats_interval rsi ON ws.runtime_stats_interval_id = rsi.runtime_stats_interval_id
+	WHERE rsi.start_time >= @currIntervalStartTime AND rsi.end_time <= @currIntervalEndTime
+	GROUP BY ws.plan_id, ws.execution_type, ws.runtime_stats_interval_id, ws.wait_category_desc
+	OPTION (RECOMPILE);
+' + @UpdateCollectionTimeSqlText;
+
+/* Iterate through all DBs in the managed instance */
+EXEC #TelegrafMonitoringDataCollector @SqlText;
+
+/* Return the table with the accumulated result for all DBs */
+SELECT * FROM #QueryStoreWaitStat;
+DROP TABLE #QueryStoreWaitStat;
+
+EXEC(@ReturnCachedIntervalsSqlText);
+`
+
+// Placeholders
+const sqlAzureDBQueryStoreRuntimeStatistics = ``
+const sqlAzureDBQueryStoreWaitStatistics = ``
