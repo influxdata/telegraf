@@ -194,11 +194,13 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 		Servers:      []string{fakeServer1, fakeServer2},
 		IncludeQuery: []string{"DatabaseSize", "MemoryClerk"},
 		HealthMetric: true,
+		AuthMethod:   "connection_string",
 	}
 
 	s2 := &SQLServer{
 		Servers:      []string{fakeServer1},
 		IncludeQuery: []string{"DatabaseSize"},
+		AuthMethod:   "connection_string",
 	}
 
 	// acc1 should have the health metric because it is specified in the config

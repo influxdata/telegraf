@@ -38,10 +38,10 @@ type Jenkins struct {
 	MaxSubJobPerLayer int             `toml:"max_subjob_per_layer"`
 	JobExclude        []string        `toml:"job_exclude"`
 	JobInclude        []string        `toml:"job_include"`
-	jobFilterExclude  filter.Filter
-	jobFilterInclude  filter.Filter
+	jobFilter         filter.Filter
 
 	NodeExclude []string `toml:"node_exclude"`
+	NodeInclude []string `toml:"node_include"`
 	nodeFilter  filter.Filter
 
 	semaphore chan struct{}
@@ -85,7 +85,9 @@ const sampleConfig = `
   # job_include = [ "*" ]
   # job_exclude = [ ]
 
-  ## Nodes to exclude from gathering
+  ## Nodes to include or exclude from gathering
+  ## When using both lists, node_exclude has priority.
+  # node_include = [ "*" ]
   # node_exclude = [ ]
 
   ## Worker pool for jenkins plugin only
@@ -162,21 +164,14 @@ func (j *Jenkins) initialize(client *http.Client) error {
 	}
 	j.Source = u.Hostname()
 
-	// init job filters
-	j.jobFilterExclude, err = filter.Compile(j.JobExclude)
+	// init filters
+	j.jobFilter, err = filter.NewIncludeExcludeFilter(j.JobInclude, j.JobExclude)
 	if err != nil {
-		return fmt.Errorf("error compile job filters[%s]: %v", j.URL, err)
+		return fmt.Errorf("error compiling job filters[%s]: %v", j.URL, err)
 	}
-
-	j.jobFilterInclude, err = filter.Compile(j.JobInclude)
+	j.nodeFilter, err = filter.NewIncludeExcludeFilter(j.NodeInclude, j.NodeExclude)
 	if err != nil {
-		return fmt.Errorf("error compile job filters[%s]: %v", j.URL, err)
-	}
-
-	// init node filter
-	j.nodeFilter, err = filter.Compile(j.NodeExclude)
-	if err != nil {
-		return fmt.Errorf("error compile node filters[%s]: %v", j.URL, err)
+		return fmt.Errorf("error compiling node filters[%s]: %v", j.URL, err)
 	}
 
 	// init tcp pool with default value
@@ -203,8 +198,9 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 	}
 
 	tags["node_name"] = n.DisplayName
-	// filter out excluded node_name
-	if j.nodeFilter != nil && j.nodeFilter.Match(tags["node_name"]) {
+
+	// filter out excluded or not included node_name
+	if !j.nodeFilter.Match(tags["node_name"]) {
 		return nil
 	}
 
@@ -300,13 +296,8 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	// filter out not included job.
-	if j.jobFilterInclude != nil && !j.jobFilterInclude.Match(jr.hierarchyName()) {
-		return nil
-	}
-
-	// filter out excluded job.
-	if j.jobFilterExclude != nil && j.jobFilterExclude.Match(jr.hierarchyName()) {
+	// filter out excluded or not included jobs
+	if !j.jobFilter.Match(jr.hierarchyName()) {
 		return nil
 	}
 
