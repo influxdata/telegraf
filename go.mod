@@ -26,7 +26,7 @@ require (
 	github.com/apache/thrift v0.13.0
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
-	github.com/aws/aws-sdk-go v1.34.34
+	github.com/aws/aws-sdk-go v1.38.69
 	github.com/aws/aws-sdk-go-v2 v1.3.2
 	github.com/aws/aws-sdk-go-v2/config v1.1.5
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.0.6
@@ -60,7 +60,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/protobuf v1.5.1
-	github.com/golang/snappy v0.0.1
+	github.com/golang/snappy v0.0.3
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.1.13
@@ -86,6 +86,7 @@ require (
 	github.com/kardianos/service v1.0.0
 	github.com/karrick/godirwalk v1.16.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
+	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/lib/pq v1.3.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 	github.com/mdlayher/apcupsd v0.0.0-20200608131503-2bf01da7bf1b
@@ -129,14 +130,17 @@ require (
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
+	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
+	go.mongodb.org/mongo-driver v1.5.3
 	go.starlark.net v0.0.0-20210406145628-7a1108eaa012
 	go.uber.org/multierr v1.6.0 // indirect
+	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e // indirect
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
-	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
-	golang.org/x/text v0.3.4
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
+	golang.org/x/text v0.3.6
 	golang.org/x/tools v0.1.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	google.golang.org/api v0.29.0
