@@ -20,15 +20,22 @@ import (
 )
 
 type AzureDataExplorer struct {
-	Endpoint       string          `toml:"endpoint_url"`
-	Database       string          `toml:"database"`
-	Log            telegraf.Logger `toml:"-"`
-	Timeout        config.Duration `toml:"timeout"`
-	client         localClient
-	ingesters      map[string]localIngestor
-	serializer     serializers.Serializer
-	createIngestor ingestorFactory
+	Endpoint        string          `toml:"endpoint_url"`
+	Database        string          `toml:"database"`
+	Log             telegraf.Logger `toml:"-"`
+	Timeout         config.Duration `toml:"timeout"`
+	MetricsGrouping string          `toml:"metrics_grouping_type"`
+	TableName       string          `toml:"table_name"`
+	client          localClient
+	ingesters       map[string]localIngestor
+	serializer      serializers.Serializer
+	createIngestor  ingestorFactory
 }
+
+const (
+	tablePerMetric = "TablePerMetric"
+	singleTable    = "SingleTable"
+)
 
 type localIngestor interface {
 	FromReader(ctx context.Context, reader io.Reader, options ...ingest.FileOption) (*ingest.Result, error)
@@ -60,6 +67,15 @@ func (adx *AzureDataExplorer) SampleConfig() string {
 
   ## Timeout for Azure Data Explorer operations
   # timeout = "15s"
+
+  ## Type of metrics grouping used when pushing to Azure Data Explorer. 
+  ## Default is "TablePerMetric" for one table per different metric. 
+  ## For more information, please check the plugin README.
+  # metrics_grouping_type = "TablePerMetric"
+
+  ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
+  # table_name = ""
+
 `
 }
 
@@ -91,6 +107,14 @@ func (adx *AzureDataExplorer) Close() error {
 }
 
 func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
+	if adx.MetricsGrouping == tablePerMetric {
+		return adx.writeTablePerMetric(metrics)
+	} else {
+		return adx.writeSingleTable(metrics)
+	}
+}
+
+func (adx *AzureDataExplorer) writeTablePerMetric(metrics []telegraf.Metric) error {
 	metricsPerNamespace := make(map[string][]byte)
 	// Group metrics by name and serialize them
 	for _, m := range metrics {
@@ -112,26 +136,69 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	// Push the metrics namespace-wise
 	format := ingest.FileFormat(ingest.JSON)
 	for namespace, mPerNamespace := range metricsPerNamespace {
-		reader := bytes.NewReader(mPerNamespace)
-		//create a table for the namespace if it doesn't exist
-		if adx.ingesters[namespace] == nil {
-			if err := adx.createAzureDataExplorerTableForNamespace(ctx, namespace); err != nil {
-				return fmt.Errorf("creating table for %q failed: %v", namespace, err)
-			}
-			//create a new ingestor client for the namespace
-			ingestor, err := adx.createIngestor(adx.client, adx.Database, namespace)
-			if err != nil {
-				return fmt.Errorf("creating ingestor for %q failed: %v", namespace, err)
-			}
-			adx.ingesters[namespace] = ingestor
-		}
-
-		mapping := ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", namespace), ingest.JSON)
-		if _, err := adx.ingesters[namespace].FromReader(ctx, reader, format, mapping); err != nil {
-			adx.Log.Errorf("sending ingestion request to Azure Data Explorer for metric %q failed: %v", namespace, err)
+		if err := adx.pushMetrics(ctx, format, namespace, mPerNamespace); err != nil {
+			return err
 		}
 	}
+
 	return nil
+}
+
+func (adx *AzureDataExplorer) writeSingleTable(metrics []telegraf.Metric) error {
+	//serialise each metric in metrics - store in byte[]
+	metricsArray := make([]byte, 0)
+	for _, m := range metrics {
+		metricsInBytes, err := adx.serializer.Serialize(m)
+		if err != nil {
+			return err
+		}
+		metricsArray = append(metricsArray, metricsInBytes...)
+	}
+
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(adx.Timeout))
+	defer cancel()
+
+	//push metrics to a single table
+	format := ingest.FileFormat(ingest.JSON)
+	if err := adx.pushMetrics(ctx, format, adx.TableName, metricsArray); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (adx *AzureDataExplorer) pushMetrics(ctx context.Context, format ingest.FileOption, namespace string, metricsArray []byte) error {
+	ingestor, err := adx.getIngestor(ctx, namespace)
+	if err != nil {
+		return err
+	}
+
+	reader := bytes.NewReader(metricsArray)
+	mapping := ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", namespace), ingest.JSON)
+	if _, err := ingestor.FromReader(ctx, reader, format, mapping); err != nil {
+		adx.Log.Errorf("sending ingestion request to Azure Data Explorer for metric %q failed: %v", namespace, err)
+	}
+	return nil
+}
+
+func (adx *AzureDataExplorer) getIngestor(ctx context.Context, namespace string) (localIngestor, error) {
+	ingestor := adx.ingesters[namespace]
+
+	if ingestor == nil {
+		if err := adx.createAzureDataExplorerTableForNamespace(ctx, namespace); err != nil {
+			return nil, fmt.Errorf("creating table for %q failed: %v", namespace, err)
+		}
+		//create a new ingestor client for the namespace
+		tempIngestor, err := adx.createIngestor(adx.client, adx.Database, namespace)
+		if err != nil {
+			return nil, fmt.Errorf("creating ingestor for %q failed: %v", namespace, err)
+		} else {
+			adx.ingesters[namespace] = tempIngestor
+			ingestor = tempIngestor
+		}
+	}
+	return ingestor, nil
 }
 
 func (adx *AzureDataExplorer) createAzureDataExplorerTableForNamespace(ctx context.Context, tableName string) error {
@@ -155,6 +222,17 @@ func (adx *AzureDataExplorer) Init() error {
 	if adx.Database == "" {
 		return errors.New("Database configuration cannot be empty")
 	}
+
+	if adx.MetricsGrouping == singleTable && adx.TableName == "" {
+		return errors.New("Table name cannot be empty for SingleTable metrics grouping type")
+	}
+	if adx.MetricsGrouping == "" {
+		adx.MetricsGrouping = tablePerMetric
+	}
+	if !(adx.MetricsGrouping == singleTable || adx.MetricsGrouping == tablePerMetric) {
+		return errors.New("Metrics grouping type is not valid")
+	}
+
 	serializer, err := json.NewSerializer(time.Second)
 	if err != nil {
 		return err

@@ -27,6 +27,8 @@ func TestWrite(t *testing.T) {
 		inputMetric        []telegraf.Metric
 		client             *fakeClient
 		createIngestor     ingestorFactory
+		metricsGrouping    string
+		tableName          string
 		expected           map[string]interface{}
 		expectedWriteError string
 	}{
@@ -40,11 +42,10 @@ func TestWrite(t *testing.T) {
 					return &kusto.RowIterator{}, nil
 				},
 			},
-			createIngestor: createFakeIngestor,
+			createIngestor:  createFakeIngestor,
+			metricsGrouping: "TablePerMetric",
 			expected: map[string]interface{}{
-				"metricName":                "test1",
-				"createTableCommand":        "",
-				"createTableMappingCommand": "",
+				"metricName": "test1",
 			},
 		},
 		{
@@ -56,13 +57,28 @@ func TestWrite(t *testing.T) {
 					return nil, errors.New("Something went wrong")
 				},
 			},
-			createIngestor: createFakeIngestor,
+			createIngestor:  createFakeIngestor,
+			metricsGrouping: "TablePerMetric",
 			expected: map[string]interface{}{
-				"metricName":                "test1",
-				"createTableCommand":        "",
-				"createTableMappingCommand": "",
+				"metricName": "test1",
 			},
 			expectedWriteError: "creating table for \"test1\" failed: Something went wrong",
+		},
+		{
+			name:        "SingleTable metric grouping type",
+			inputMetric: testutil.MockMetrics(),
+			client: &fakeClient{
+				queries: make([]string, 0),
+				internalMgmt: func(f *fakeClient, ctx context.Context, db string, query kusto.Stmt, options ...kusto.MgmtOption) (*kusto.RowIterator, error) {
+					f.queries = append(f.queries, query.String())
+					return &kusto.RowIterator{}, nil
+				},
+			},
+			createIngestor:  createFakeIngestor,
+			metricsGrouping: "SingleTable",
+			expected: map[string]interface{}{
+				"metricName": "test1",
+			},
 		},
 	}
 
@@ -72,13 +88,15 @@ func TestWrite(t *testing.T) {
 			require.NoError(t, err)
 
 			plugin := AzureDataExplorer{
-				Endpoint:       "someendpoint",
-				Database:       "databasename",
-				Log:            testutil.Logger{},
-				client:         tC.client,
-				ingesters:      map[string]localIngestor{},
-				createIngestor: tC.createIngestor,
-				serializer:     serializer,
+				Endpoint:        "someendpoint",
+				Database:        "databasename",
+				Log:             testutil.Logger{},
+				MetricsGrouping: tC.metricsGrouping,
+				TableName:       tC.tableName,
+				client:          tC.client,
+				ingesters:       map[string]localIngestor{},
+				createIngestor:  tC.createIngestor,
+				serializer:      serializer,
 			}
 
 			errorInWrite := plugin.Write(testutil.MockMetrics())
@@ -89,15 +107,22 @@ func TestWrite(t *testing.T) {
 				require.NoError(t, errorInWrite)
 
 				expectedNameOfMetric := tC.expected["metricName"].(string)
+				expectedNameOfTable := expectedNameOfMetric
 				createdIngestor := plugin.ingesters[expectedNameOfMetric]
+
+				if tC.metricsGrouping == singleTable {
+					expectedNameOfTable = tC.tableName
+					createdIngestor = plugin.ingesters[expectedNameOfTable]
+				}
+
 				require.NotNil(t, createdIngestor)
 				createdFakeIngestor := createdIngestor.(*fakeIngestor)
 				require.Equal(t, expectedNameOfMetric, createdFakeIngestor.actualOutputMetric["name"])
 
-				createTableString := fmt.Sprintf(createTableCommandExpected, expectedNameOfMetric)
+				createTableString := fmt.Sprintf(createTableCommandExpected, expectedNameOfTable)
 				require.Equal(t, createTableString, tC.client.queries[0])
 
-				createTableMappingString := fmt.Sprintf(createTableMappingCommandExpected, expectedNameOfMetric, expectedNameOfMetric)
+				createTableMappingString := fmt.Sprintf(createTableMappingCommandExpected, expectedNameOfTable, expectedNameOfTable)
 				require.Equal(t, createTableMappingString, tC.client.queries[1])
 			}
 		})
