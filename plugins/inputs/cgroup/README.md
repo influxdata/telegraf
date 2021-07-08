@@ -27,11 +27,11 @@ VAL1\n
 VAL0 VAL1 ...\n
 ```
 
-* New line separated key-space-value's
+* Space separated keys and value, separated by new line
 
 ```
-KEY0 VAL0\n
-KEY1 VAL1\n
+KEY0 ... VAL0\n
+KEY1 ... VAL1\n
 ```
 
 
