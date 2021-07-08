@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/go-syslog/v2/nontransparent"
-	"github.com/influxdata/go-syslog/v2/rfc5424"
+	"github.com/influxdata/go-syslog/v3/nontransparent"
+	"github.com/influxdata/go-syslog/v3/rfc5424"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	framing "github.com/influxdata/telegraf/internal/syslog"

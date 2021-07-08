@@ -13,11 +13,11 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/influxdata/go-syslog/v2"
-	"github.com/influxdata/go-syslog/v2/nontransparent"
-	"github.com/influxdata/go-syslog/v2/octetcounting"
-	"github.com/influxdata/go-syslog/v2/rfc5424"
-
+	syslog "github.com/influxdata/go-syslog/v3"
+	"github.com/influxdata/go-syslog/v3/nontransparent"
+	"github.com/influxdata/go-syslog/v3/octetcounting"
+	"github.com/influxdata/go-syslog/v3/rfc3164"
+	"github.com/influxdata/go-syslog/v3/rfc5424"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	framing "github.com/influxdata/telegraf/internal/syslog"
@@ -25,8 +25,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+type syslogRFC string
+
 const defaultReadTimeout = time.Second * 5
 const ipMaxPacketSize = 64 * 1024
+const syslogRFC3164 = "RFC3164"
+const syslogRFC5424 = "RFC5424"
 
 // Syslog is a syslog plugin
 type Syslog struct {
@@ -36,6 +40,7 @@ type Syslog struct {
 	MaxConnections  int
 	ReadTimeout     *config.Duration
 	Framing         framing.Framing
+	SyslogStandard  syslogRFC
 	Trailer         nontransparent.TrailerType
 	BestEffort      bool
 	Separator       string `toml:"sdparam_separator"`
@@ -96,6 +101,11 @@ var sampleConfig = `
   ## Whether to parse in best effort mode or not (default = false).
   ## By default best effort parsing is off.
   # best_effort = false
+
+  ## The RFC standard to use for message parsing
+  ## By default RFC5424 is used. RFC3164 only supports UDP transport (no streaming support)
+  ## Must be one of "RFC5424", or "RFC3164".
+  # syslog_standard = "RFC5424"
 
   ## Character to prepend to SD-PARAMs (default = "_").
   ## A syslog message can contain multiple parameters and multiple identifiers within structured data section.
@@ -228,10 +238,15 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 	defer s.wg.Done()
 	b := make([]byte, ipMaxPacketSize)
 	var p syslog.Machine
-	if s.BestEffort {
-		p = rfc5424.NewParser(rfc5424.WithBestEffort())
-	} else {
+	switch {
+	case !s.BestEffort && s.SyslogStandard == syslogRFC5424:
 		p = rfc5424.NewParser()
+	case s.BestEffort && s.SyslogStandard == syslogRFC5424:
+		p = rfc5424.NewParser(rfc5424.WithBestEffort())
+	case !s.BestEffort && s.SyslogStandard == syslogRFC3164:
+		p = rfc3164.NewParser(rfc3164.WithYear(rfc3164.CurrentYear{}))
+	case s.BestEffort && s.SyslogStandard == syslogRFC3164:
+		p = rfc3164.NewParser(rfc3164.WithYear(rfc3164.CurrentYear{}), rfc3164.WithBestEffort())
 	}
 	for {
 		n, _, err := s.udpListener.ReadFrom(b)
@@ -379,58 +394,70 @@ func tags(msg syslog.Message) map[string]string {
 	ts["severity"] = *msg.SeverityShortLevel()
 	ts["facility"] = *msg.FacilityLevel()
 
-	if msg.Hostname() != nil {
-		ts["hostname"] = *msg.Hostname()
+	switch m := msg.(type) {
+	case *rfc5424.SyslogMessage:
+		populateCommonTags(&m.Base, ts)
+	case *rfc3164.SyslogMessage:
+		populateCommonTags(&m.Base, ts)
 	}
-
-	if msg.Appname() != nil {
-		ts["appname"] = *msg.Appname()
-	}
-
 	return ts
 }
 
 func fields(msg syslog.Message, s *Syslog) map[string]interface{} {
-	// Not checking assuming a minimally valid message
-	flds := map[string]interface{}{
-		"version": msg.Version(),
-	}
-	flds["severity_code"] = int(*msg.Severity())
-	flds["facility_code"] = int(*msg.Facility())
+	flds := map[string]interface{}{}
 
-	if msg.Timestamp() != nil {
-		flds["timestamp"] = (*msg.Timestamp()).UnixNano()
-	}
+	switch m := msg.(type) {
+	case *rfc5424.SyslogMessage:
+		populateCommonFields(&m.Base, flds)
+		// Not checking assuming a minimally valid message
+		flds["version"] = m.Version
 
-	if msg.ProcID() != nil {
-		flds["procid"] = *msg.ProcID()
-	}
-
-	if msg.MsgID() != nil {
-		flds["msgid"] = *msg.MsgID()
-	}
-
-	if msg.Message() != nil {
-		flds["message"] = strings.TrimRightFunc(*msg.Message(), func(r rune) bool {
-			return unicode.IsSpace(r)
-		})
-	}
-
-	if msg.StructuredData() != nil {
-		for sdid, sdparams := range *msg.StructuredData() {
-			if len(sdparams) == 0 {
-				// When SD-ID does not have params we indicate its presence with a bool
-				flds[sdid] = true
-				continue
-			}
-			for name, value := range sdparams {
-				// Using whitespace as separator since it is not allowed by the grammar within SDID
-				flds[sdid+s.Separator+name] = value
+		if m.StructuredData != nil {
+			for sdid, sdparams := range *m.StructuredData {
+				if len(sdparams) == 0 {
+					// When SD-ID does not have params we indicate its presence with a bool
+					flds[sdid] = true
+					continue
+				}
+				for name, value := range sdparams {
+					// Using whitespace as separator since it is not allowed by the grammar within SDID
+					flds[sdid+s.Separator+name] = value
+				}
 			}
 		}
+	case *rfc3164.SyslogMessage:
+		populateCommonFields(&m.Base, flds)
 	}
 
 	return flds
+}
+
+func populateCommonFields(msg *syslog.Base, flds map[string]interface{}) {
+	flds["facility_code"] = int(*msg.Facility)
+	flds["severity_code"] = int(*msg.Severity)
+	if msg.Timestamp != nil {
+		flds["timestamp"] = (*msg.Timestamp).UnixNano()
+	}
+	if msg.ProcID != nil {
+		flds["procid"] = *msg.ProcID
+	}
+	if msg.MsgID != nil {
+		flds["msgid"] = *msg.MsgID
+	}
+	if msg.Message != nil {
+		flds["message"] = strings.TrimRightFunc(*msg.Message, func(r rune) bool {
+			return unicode.IsSpace(r)
+		})
+	}
+}
+
+func populateCommonTags(msg *syslog.Base, ts map[string]string) {
+	if msg.Hostname != nil {
+		ts["hostname"] = *msg.Hostname
+	}
+	if msg.Appname != nil {
+		ts["appname"] = *msg.Appname
+	}
 }
 
 type unixCloser struct {
@@ -463,12 +490,13 @@ func init() {
 	defaultTimeout := config.Duration(defaultReadTimeout)
 	inputs.Add("syslog", func() telegraf.Input {
 		return &Syslog{
-			Address:     ":6514",
-			now:         getNanoNow,
-			ReadTimeout: &defaultTimeout,
-			Framing:     framing.OctetCounting,
-			Trailer:     nontransparent.LF,
-			Separator:   "_",
+			Address:        ":6514",
+			now:            getNanoNow,
+			ReadTimeout:    &defaultTimeout,
+			Framing:        framing.OctetCounting,
+			SyslogStandard: syslogRFC5424,
+			Trailer:        nontransparent.LF,
+			Separator:      "_",
 		}
 	})
 }
