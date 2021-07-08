@@ -1,0 +1,134 @@
+{
+    "?xml": {
+        "@version": "1.0",
+        "@encoding": "utf-8"
+    },
+    "root": {
+        "@id": "1",
+        "uri": {
+            "#cdata-section": "http://api.bart.gov/api/etd.aspx?cmd=etd&orig=POWL&dir=s&json=y"
+        },
+        "date": "07/02/2021",
+        "time": "06:06:01 PM PDT",
+        "station": [
+            {
+                "name": "Powell St.",
+                "abbr": "POWL",
+                "etd": [
+                    {
+                        "destination": "Daly City",
+                        "abbreviation": "DALY",
+                        "limited": "0",
+                        "estimate": [
+                            {
+                                "minutes": "6",
+                                "platform": "1",
+                                "direction": "South",
+                                "length": "10",
+                                "color": "GREEN",
+                                "hexcolor": "#339933",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            },
+                            {
+                                "minutes": "26",
+                                "platform": "1",
+                                "direction": "South",
+                                "length": "9",
+                                "color": "BLUE",
+                                "hexcolor": "#0099cc",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            },
+                            {
+                                "minutes": "36",
+                                "platform": "1",
+                                "direction": "South",
+                                "length": "10",
+                                "color": "GREEN",
+                                "hexcolor": "#339933",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            }
+                        ]
+                    },
+                    {
+                        "destination": "Millbrae",
+                        "abbreviation": "MLBR",
+                        "limited": "0",
+                        "estimate": [
+                            {
+                                "minutes": "19",
+                                "platform": "1",
+                                "direction": "South",
+                                "length": "10",
+                                "color": "RED",
+                                "hexcolor": "#ff0000",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            },
+                            {
+                                "minutes": "49",
+                                "platform": "1",
+                                "direction": "South",
+                                "length": "10",
+                                "color": "RED",
+                                "hexcolor": "#ff0000",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            },
+                            {
+                                "minutes": "79",
+                                "platform": "1",
+                                "direction": "South",
+                                "length": "10",
+                                "color": "RED",
+                                "hexcolor": "#ff0000",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            }
+                        ]
+                    },
+                    {
+                        "destination": "SF Airport",
+                        "abbreviation": "SFIA",
+                        "limited": "0",
+                        "estimate": [
+                            {
+                                "minutes": "7",
+                                "platform": "1",
+                                "direction": "South",
+                                "length": "10",
+                                "color": "YELLOW",
+                                "hexcolor": "#ffff33",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            },
+                            {
+                                "minutes": "37",
+                                "platform": "1",
+                                "direction": "South",
+                                "length": "10",
+                                "color": "YELLOW",
+                                "hexcolor": "#ffff33",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            },
+                            {
+                                "minutes": "67",
+                                "platform": "1",
+                                "direction": "South",
+                                "length": "10",
+                                "color": "YELLOW",
+                                "hexcolor": "#ffff33",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "message": ""
+    }
+}

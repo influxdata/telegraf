@@ -165,3 +165,5 @@ replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
 
 // replaced due to https//github.com/mdlayher/apcupsd/issues/10
 replace github.com/mdlayher/apcupsd => github.com/influxdata/apcupsd v0.0.0-20210427145308-694d5caead0e
+
+replace github.com/tidwall/gjson => github.com/sspaink/gjson v1.8.1-0.20210701110044-7460ecfe6948
