@@ -120,7 +120,7 @@ func reloadLoop(
 		if *fWatchConfig != "" {
 			for _, fConfig := range fConfigs {
 				if _, err := os.Stat(fConfig); err == nil {
-					go watchLocalConfig(signals)
+					go watchLocalConfig(signals, fConfig)
 				} else {
 					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
 				}
@@ -147,48 +147,46 @@ func reloadLoop(
 	}
 }
 
-func watchLocalConfig(signals chan os.Signal) {
-	for _, fConfig := range fConfigs {
-		var mytomb tomb.Tomb
-		var watcher watch.FileWatcher
-		if *fWatchConfig == "poll" {
-			watcher = watch.NewPollingFileWatcher(fConfig)
-		} else {
-			watcher = watch.NewInotifyFileWatcher(fConfig)
+func watchLocalConfig(signals chan os.Signal, fConfig string) {
+	var mytomb tomb.Tomb
+	var watcher watch.FileWatcher
+	if *fWatchConfig == "poll" {
+		watcher = watch.NewPollingFileWatcher(fConfig)
+	} else {
+		watcher = watch.NewInotifyFileWatcher(fConfig)
+	}
+	for {
+		changes, err := watcher.ChangeEvents(&mytomb, 0)
+		if err != nil {
+			log.Printf("E! Error watching config: %s\n", err)
+			return
 		}
-		for {
-			changes, err := watcher.ChangeEvents(&mytomb, 0)
-			if err != nil {
-				log.Printf("E! Error watching config: %s\n", err)
-				return
-			}
-			log.Println("I! Config watcher started")
-			select {
-			case <-changes.Modified:
-				log.Println("I! Config file modified")
-			case <-changes.Deleted:
-				// deleted can mean moved. wait a bit a check existence
-				<-time.After(time.Second)
-				if _, err := os.Stat(fConfig); err == nil {
-					log.Println("I! Config file overwritten")
-				} else {
-					log.Println("W! Config file deleted")
-					if err := watcher.BlockUntilExists(&mytomb); err != nil {
-						log.Printf("E! Cannot watch for config: %s\n", err.Error())
-						return
-					}
-					log.Println("I! Config file appeared")
+		log.Println("I! Config watcher started")
+		select {
+		case <-changes.Modified:
+			log.Println("I! Config file modified")
+		case <-changes.Deleted:
+			// deleted can mean moved. wait a bit a check existence
+			<-time.After(time.Second)
+			if _, err := os.Stat(fConfig); err == nil {
+				log.Println("I! Config file overwritten")
+			} else {
+				log.Println("W! Config file deleted")
+				if err := watcher.BlockUntilExists(&mytomb); err != nil {
+					log.Printf("E! Cannot watch for config: %s\n", err.Error())
+					return
 				}
-			case <-changes.Truncated:
-				log.Println("I! Config file truncated")
-			case <-mytomb.Dying():
-				log.Println("I! Config watcher ended")
-				return
+				log.Println("I! Config file appeared")
 			}
-			mytomb.Done()
-			signals <- syscall.SIGHUP
-			break
+		case <-changes.Truncated:
+			log.Println("I! Config file truncated")
+		case <-mytomb.Dying():
+			log.Println("I! Config watcher ended")
+			return
 		}
+		mytomb.Done()
+		signals <- syscall.SIGHUP
+		break
 	}
 }
 
