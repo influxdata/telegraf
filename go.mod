@@ -152,6 +152,7 @@ require (
 	gopkg.in/ldap.v3 v3.1.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
 	gopkg.in/olivere/elastic.v5 v5.0.70
+	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.20.4
