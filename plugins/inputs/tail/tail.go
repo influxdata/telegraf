@@ -170,11 +170,11 @@ func (t *Tail) GetState() interface{} {
 }
 
 func (t *Tail) SetState(state interface{}) error {
-	offsets_state, ok := state.(map[string]int64)
+	offsetsState, ok := state.(map[string]int64)
 	if !ok {
 		return errors.New("state has to be of type 'map[string]int64'")
 	}
-	for k, v := range offsets_state {
+	for k, v := range offsetsState {
 		t.offsets[k] = v
 	}
 	return nil

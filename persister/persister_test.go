@@ -208,7 +208,7 @@ func TestPersister_StateCollection(t *testing.T) {
 	require.Equal(t, expectedState, state)
 
 	// State should not change when collected anew
-	persister.collect()
+	require.NoError(t, persister.collect())
 	state, found = persister.GetState(id)
 	require.True(t, found)
 	require.Equal(t, expectedState, state)
@@ -221,7 +221,7 @@ func TestPersister_StateCollection(t *testing.T) {
 	require.Equal(t, expectedState, state)
 
 	// Check if update works
-	persister.collect()
+	require.NoError(t, persister.collect())
 	state, found = persister.GetState(id)
 	require.True(t, found)
 	require.NotEqual(t, expectedState, state)
@@ -255,7 +255,6 @@ func TestPersister_StoreLoad(t *testing.T) {
 	// Reserve a temporary state file
 	filename := filepath.Join(t.TempDir(), "telegraf_test_state-store_load.json")
 	require.NotEmpty(t, filename)
-	fmt.Printf("using temporary file %q...\n", filename)
 
 	persisterStore := Persister{
 		Enabled:  true,
@@ -330,9 +329,7 @@ type MockupPlugin struct {
 	Log              telegraf.Logger        `toml:"-"`
 	tls.ServerConfig
 
-	command string
-	file    string
-	state   MockupState
+	state MockupState
 }
 
 func (m *MockupPlugin) Init() error {

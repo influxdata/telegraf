@@ -623,7 +623,8 @@ func printFilteredGlobalSections(sectionFilters []string) {
 	}
 
 	if sliceContains("persister", sectionFilters) {
-		fmt.Printf(persisterConfig)
+		//nolint:revive  // What could possibly go wrong? ;-)
+		fmt.Println(persisterConfig)
 	}
 }
 

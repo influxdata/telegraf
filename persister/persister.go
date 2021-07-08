@@ -100,9 +100,7 @@ func (p *Persister) Register(prefix string, plugin telegraf.StatefulPlugin) erro
 		return fmt.Errorf("plugin with ID %q already registered", id)
 	}
 	p.register[id] = plugin
-	p.SetState(id, plugin.GetState())
-
-	return nil
+	return p.SetState(id, plugin.GetState())
 }
 
 func (p *Persister) GetState(id string) (interface{}, bool) {
@@ -159,7 +157,9 @@ func (p *Persister) Store() error {
 	}
 
 	// Update the states before writing
-	p.collect()
+	if err := p.collect(); err != nil {
+		return fmt.Errorf("collection failed: %v", err)
+	}
 
 	// Write the states to disk
 	return p.store.Write()
@@ -192,9 +192,12 @@ func (p *Persister) SetPersisterOnPlugin(prefix string, plugin interface{}) {
 
 // Internal
 
-func (p *Persister) collect() {
+func (p *Persister) collect() error {
 	for id, plugin := range p.register {
 		state := plugin.GetState()
-		p.SetState(id, state)
+		if err := p.SetState(id, state); err != nil {
+			return fmt.Errorf("%v: %v", id, err)
+		}
 	}
+	return nil
 }
