@@ -46,6 +46,13 @@ func TestWrite(t *testing.T) {
 			metricsGrouping: tablePerMetric,
 			expected: map[string]interface{}{
 				"metricName": "test1",
+				"fields": map[string]interface{}{
+					"value": 1.0,
+				},
+				"tags": map[string]interface{}{
+					"tag1": "value1",
+				},
+				"timestamp": float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).UnixNano() / int64(time.Second)),
 			},
 		},
 		{
@@ -61,6 +68,13 @@ func TestWrite(t *testing.T) {
 			metricsGrouping: tablePerMetric,
 			expected: map[string]interface{}{
 				"metricName": "test1",
+				"fields": map[string]interface{}{
+					"value": 1.0,
+				},
+				"tags": map[string]interface{}{
+					"tag1": "value1",
+				},
+				"timestamp": float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).UnixNano() / int64(time.Second)),
 			},
 			expectedWriteError: "creating table for \"test1\" failed: Something went wrong",
 		},
@@ -118,6 +132,15 @@ func TestWrite(t *testing.T) {
 				require.NotNil(t, createdIngestor)
 				createdFakeIngestor := createdIngestor.(*fakeIngestor)
 				require.Equal(t, expectedNameOfMetric, createdFakeIngestor.actualOutputMetric["name"])
+
+				expectedFields := tC.expected["fields"].(map[string]interface{})
+				require.Equal(t, expectedFields, createdFakeIngestor.actualOutputMetric["fields"])
+
+				expectedTags := tC.expected["tags"].(map[string]interface{})
+				require.Equal(t, expectedTags, createdFakeIngestor.actualOutputMetric["tags"])
+
+				expectedTime := tC.expected["timestamp"].(float64)
+				require.Equal(t, expectedTime, createdFakeIngestor.actualOutputMetric["timestamp"])
 
 				createTableString := fmt.Sprintf(createTableCommandExpected, expectedNameOfTable)
 				require.Equal(t, createTableString, tC.client.queries[0])

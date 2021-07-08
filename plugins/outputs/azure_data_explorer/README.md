@@ -31,6 +31,7 @@ This plugin writes metrics collected by any of the input plugins of Telegraf to 
   ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
   # table_name = ""
 
+  # timeout = "20s"
 
 ```
 
