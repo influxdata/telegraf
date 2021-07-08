@@ -115,7 +115,7 @@ func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 }
 
 func (adx *AzureDataExplorer) writeTablePerMetric(metrics []telegraf.Metric) error {
-	tableMetricsMapping := make(map[string][]byte)
+	tableMetricGroups := make(map[string][]byte)
 	// Group metrics by name and serialize them
 	for _, m := range metrics {
 		tableName := m.Name()
@@ -123,10 +123,10 @@ func (adx *AzureDataExplorer) writeTablePerMetric(metrics []telegraf.Metric) err
 		if err != nil {
 			return err
 		}
-		if existingBytes, ok := tableMetricsMapping[tableName]; ok {
-			tableMetricsMapping[tableName] = append(existingBytes, metricInBytes...)
+		if existingBytes, ok := tableMetricGroups[tableName]; ok {
+			tableMetricGroups[tableName] = append(existingBytes, metricInBytes...)
 		} else {
-			tableMetricsMapping[tableName] = metricInBytes
+			tableMetricGroups[tableName] = metricInBytes
 		}
 	}
 	ctx := context.Background()
@@ -135,7 +135,7 @@ func (adx *AzureDataExplorer) writeTablePerMetric(metrics []telegraf.Metric) err
 
 	// Push the metrics for each table
 	format := ingest.FileFormat(ingest.JSON)
-	for tableName, tableMetrics := range tableMetricsMapping {
+	for tableName, tableMetrics := range tableMetricGroups {
 		if err := adx.pushMetrics(ctx, format, tableName, tableMetrics); err != nil {
 			return err
 		}
