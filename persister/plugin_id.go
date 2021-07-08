@@ -69,7 +69,7 @@ func normalizePluginConfig(plugin interface{}) ([]telegraf.Tag, error) {
 
 	result := make([]telegraf.Tag, 0, len(options))
 	for k, v := range options {
-		result = append(result, telegraf.Tag{k, v})
+		result = append(result, telegraf.Tag{Key: k, Value: v})
 	}
 	sort.SliceStable(result, func(i, j int) bool { return result[i].Key < result[j].Key })
 
