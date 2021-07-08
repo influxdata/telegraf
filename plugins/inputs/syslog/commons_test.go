@@ -29,6 +29,14 @@ type testCaseStream struct {
 	werr           int // how many errors we expect in the strict mode?
 }
 
+// addSourceTag will conditionally add a source tag to the given tags if a source IP is given
+func addSourceTag(tags map[string]string, source string) map[string]string {
+	if source != "" {
+		tags["source"] = source
+	}
+	return tags
+}
+
 func newUDPSyslogReceiver(address string, bestEffort bool) *Syslog {
 	return &Syslog{
 		Address: address,

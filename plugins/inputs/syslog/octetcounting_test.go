@@ -18,7 +18,12 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func getTestCasesForOctetCounting() []testCaseStream {
+func getTestCasesForOctetCounting(hasRemoteAddr bool) []testCaseStream {
+	sourceAddr := ""
+	if hasRemoteAddr {
+		sourceAddr = "127.0.0.1"
+	}
+
 	testCases := []testCaseStream{
 		{
 			name: "1st/avg/ok",
@@ -26,12 +31,12 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantStrict: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "notice",
 						"facility": "daemon",
 						"hostname": "web1",
 						"appname":  "someservice",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(1),
 						"timestamp":     time.Unix(1456029177, 0).UnixNano(),
@@ -50,12 +55,12 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantBestEffort: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "notice",
 						"facility": "daemon",
 						"hostname": "web1",
 						"appname":  "someservice",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(1),
 						"timestamp":     time.Unix(1456029177, 0).UnixNano(),
@@ -78,10 +83,10 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantStrict: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "alert",
 						"facility": "kern",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(2),
 						"severity_code": 1,
@@ -91,10 +96,10 @@ func getTestCasesForOctetCounting() []testCaseStream {
 				),
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "warning",
 						"facility": "kern",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(11),
 						"severity_code": 4,
@@ -106,10 +111,10 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantBestEffort: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "alert",
 						"facility": "kern",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(2),
 						"severity_code": 1,
@@ -119,10 +124,10 @@ func getTestCasesForOctetCounting() []testCaseStream {
 				),
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "warning",
 						"facility": "kern",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(11),
 						"severity_code": 4,
@@ -138,10 +143,10 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantStrict: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "alert",
 						"facility": "kern",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(1),
 						"message":       "hellø",
@@ -154,10 +159,10 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantBestEffort: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "alert",
 						"facility": "kern",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(1),
 						"message":       "hellø",
@@ -174,10 +179,10 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantStrict: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "alert",
 						"facility": "kern",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(3),
 						"message":       "hello\nworld",
@@ -190,10 +195,10 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantBestEffort: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "alert",
 						"facility": "kern",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(3),
 						"message":       "hello\nworld",
@@ -211,10 +216,10 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantBestEffort: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "alert",
 						"facility": "kern",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(2),
 						"severity_code": 1,
@@ -231,10 +236,10 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantStrict: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "alert",
 						"facility": "kern",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(1),
 						"severity_code": 1,
@@ -246,10 +251,10 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantBestEffort: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "alert",
 						"facility": "kern",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(1),
 						"severity_code": 1,
@@ -266,10 +271,10 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantBestEffort: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "alert",
 						"facility": "kern",
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       uint16(217),
 						"severity_code": 1,
@@ -291,12 +296,12 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantStrict: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "debug",
 						"facility": "local7",
 						"hostname": maxH,
 						"appname":  maxA,
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       maxV,
 						"timestamp":     time.Unix(1514764799, 999999000).UnixNano(),
@@ -312,12 +317,12 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			wantBestEffort: []telegraf.Metric{
 				testutil.MustMetric(
 					"syslog",
-					map[string]string{
+					addSourceTag(map[string]string{
 						"severity": "debug",
 						"facility": "local7",
 						"hostname": maxH,
 						"appname":  maxA,
-					},
+					}, sourceAddr),
 					map[string]interface{}{
 						"version":       maxV,
 						"timestamp":     time.Unix(1514764799, 999999000).UnixNano(),
@@ -337,7 +342,7 @@ func getTestCasesForOctetCounting() []testCaseStream {
 }
 
 func testStrictOctetCounting(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *config.Duration) {
-	for _, tc := range getTestCasesForOctetCounting() {
+	for _, tc := range getTestCasesForOctetCounting(protocol != "unix") {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
 			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false, framing.OctetCounting)
@@ -396,7 +401,7 @@ func testStrictOctetCounting(t *testing.T, protocol string, address string, want
 
 func testBestEffortOctetCounting(t *testing.T, protocol string, address string, wantTLS bool) {
 	keepAlive := (*config.Duration)(nil)
-	for _, tc := range getTestCasesForOctetCounting() {
+	for _, tc := range getTestCasesForOctetCounting(protocol != "unix") {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
 			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true, framing.OctetCounting)

@@ -17,17 +17,22 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func getTestCasesForRFC5426() []testCasePacket {
+func getTestCasesForRFC5426(hasRemoteAddr bool) []testCasePacket {
+	sourceAddr := ""
+	if hasRemoteAddr {
+		sourceAddr = "127.0.0.1"
+	}
+
 	testCases := []testCasePacket{
 		{
 			name: "complete",
 			data: []byte("<1>1 - - - - - - A"),
 			wantBestEffort: testutil.MustMetric(
 				"syslog",
-				map[string]string{
+				addSourceTag(map[string]string{
 					"severity": "alert",
 					"facility": "kern",
-				},
+				}, sourceAddr),
 				map[string]interface{}{
 					"version":       uint16(1),
 					"message":       "A",
@@ -38,10 +43,10 @@ func getTestCasesForRFC5426() []testCasePacket {
 			),
 			wantStrict: testutil.MustMetric(
 				"syslog",
-				map[string]string{
+				addSourceTag(map[string]string{
 					"severity": "alert",
 					"facility": "kern",
-				},
+				}, sourceAddr),
 				map[string]interface{}{
 					"version":       uint16(1),
 					"message":       "A",
@@ -56,10 +61,10 @@ func getTestCasesForRFC5426() []testCasePacket {
 			data: []byte("<1>3 - - - - - - A<1>4 - - - - - - B"),
 			wantBestEffort: testutil.MustMetric(
 				"syslog",
-				map[string]string{
+				addSourceTag(map[string]string{
 					"severity": "alert",
 					"facility": "kern",
-				},
+				}, sourceAddr),
 				map[string]interface{}{
 					"version":       uint16(3),
 					"message":       "A<1>4 - - - - - - B",
@@ -70,10 +75,10 @@ func getTestCasesForRFC5426() []testCasePacket {
 			),
 			wantStrict: testutil.MustMetric(
 				"syslog",
-				map[string]string{
+				addSourceTag(map[string]string{
 					"severity": "alert",
 					"facility": "kern",
-				},
+				}, sourceAddr),
 				map[string]interface{}{
 					"version":       uint16(3),
 					"message":       "A<1>4 - - - - - - B",
@@ -88,12 +93,12 @@ func getTestCasesForRFC5426() []testCasePacket {
 			data: []byte(`<29>1 2016-02-21T04:32:57+00:00 web1 someservice 2341 2 [origin][meta sequence="14125553" service="someservice"] "GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`),
 			wantBestEffort: testutil.MustMetric(
 				"syslog",
-				map[string]string{
+				addSourceTag(map[string]string{
 					"severity": "notice",
 					"facility": "daemon",
 					"hostname": "web1",
 					"appname":  "someservice",
-				},
+				}, sourceAddr),
 				map[string]interface{}{
 					"version":       uint16(1),
 					"timestamp":     time.Unix(1456029177, 0).UnixNano(),
@@ -110,12 +115,12 @@ func getTestCasesForRFC5426() []testCasePacket {
 			),
 			wantStrict: testutil.MustMetric(
 				"syslog",
-				map[string]string{
+				addSourceTag(map[string]string{
 					"severity": "notice",
 					"facility": "daemon",
 					"hostname": "web1",
 					"appname":  "someservice",
-				},
+				}, sourceAddr),
 				map[string]interface{}{
 					"version":       uint16(1),
 					"timestamp":     time.Unix(1456029177, 0).UnixNano(),
@@ -136,12 +141,12 @@ func getTestCasesForRFC5426() []testCasePacket {
 			data: []byte(fmt.Sprintf("<%d>%d %s %s %s %s %s - %s", maxP, maxV, maxTS, maxH, maxA, maxPID, maxMID, message7681)),
 			wantBestEffort: testutil.MustMetric(
 				"syslog",
-				map[string]string{
+				addSourceTag(map[string]string{
 					"severity": "debug",
 					"facility": "local7",
 					"hostname": maxH,
 					"appname":  maxA,
-				},
+				}, sourceAddr),
 				map[string]interface{}{
 					"version":       maxV,
 					"timestamp":     time.Unix(1514764799, 999999000).UnixNano(),
@@ -155,12 +160,12 @@ func getTestCasesForRFC5426() []testCasePacket {
 			),
 			wantStrict: testutil.MustMetric(
 				"syslog",
-				map[string]string{
+				addSourceTag(map[string]string{
 					"severity": "debug",
 					"facility": "local7",
 					"hostname": maxH,
 					"appname":  maxA,
-				},
+				}, sourceAddr),
 				map[string]interface{}{
 					"version":       maxV,
 					"timestamp":     time.Unix(1514764799, 999999000).UnixNano(),
@@ -178,10 +183,10 @@ func getTestCasesForRFC5426() []testCasePacket {
 			data: []byte("<1>2"),
 			wantBestEffort: testutil.MustMetric(
 				"syslog",
-				map[string]string{
+				addSourceTag(map[string]string{
 					"severity": "alert",
 					"facility": "kern",
-				},
+				}, sourceAddr),
 				map[string]interface{}{
 					"version":       uint16(2),
 					"facility_code": 0,
@@ -196,10 +201,10 @@ func getTestCasesForRFC5426() []testCasePacket {
 			data: []byte("<1>1 - - - - - - \tA\n"),
 			wantBestEffort: testutil.MustMetric(
 				"syslog",
-				map[string]string{
+				addSourceTag(map[string]string{
 					"severity": "alert",
 					"facility": "kern",
-				},
+				}, sourceAddr),
 				map[string]interface{}{
 					"version":       uint16(1),
 					"message":       "\tA",
@@ -210,10 +215,10 @@ func getTestCasesForRFC5426() []testCasePacket {
 			),
 			wantStrict: testutil.MustMetric(
 				"syslog",
-				map[string]string{
+				addSourceTag(map[string]string{
 					"severity": "alert",
 					"facility": "kern",
-				},
+				}, sourceAddr),
 				map[string]interface{}{
 					"version":       uint16(1),
 					"message":       "\tA",
@@ -229,7 +234,7 @@ func getTestCasesForRFC5426() []testCasePacket {
 }
 
 func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool) {
-	for _, tc := range getTestCasesForRFC5426() {
+	for _, tc := range getTestCasesForRFC5426(protocol != "unixgram") {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create receiver
 			receiver := newUDPSyslogReceiver(protocol+"://"+address, bestEffort)
@@ -353,6 +358,7 @@ func TestTimeIncrement_udp(t *testing.T) {
 			map[string]string{
 				"severity": "alert",
 				"facility": "kern",
+				"source":   "127.0.0.1",
 			},
 			map[string]interface{}{
 				"version":       uint16(1),
@@ -383,6 +389,7 @@ func TestTimeIncrement_udp(t *testing.T) {
 			map[string]string{
 				"severity": "alert",
 				"facility": "kern",
+				"source":   "127.0.0.1",
 			},
 			map[string]interface{}{
 				"version":       uint16(1),
@@ -412,6 +419,7 @@ func TestTimeIncrement_udp(t *testing.T) {
 			map[string]string{
 				"severity": "alert",
 				"facility": "kern",
+				"source":   "127.0.0.1",
 			},
 			map[string]interface{}{
 				"version":       uint16(1),

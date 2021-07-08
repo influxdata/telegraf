@@ -120,6 +120,7 @@ To complete TLS setup please refer to [rsyslog docs](https://www.rsyslog.com/doc
     - facility (string)
     - hostname (string)
     - appname (string)
+    - source (string)
   - fields
     - version (integer)
     - severity_code (integer)
@@ -140,6 +141,9 @@ Structured data produces field keys by combining the `SD_ID` with the `PARAM_NAM
 ```
 syslog,appname=evntslog,facility=local4,hostname=mymachine.example.com,severity=notice exampleSDID@32473_eventID="1011",exampleSDID@32473_eventSource="Application",exampleSDID@32473_iut="3",facility_code=20i,message="An application event log entry...",msgid="ID47",severity_code=5i,timestamp=1065910455003000000i,version=1i 1538421339749472344
 ```
+
+### Resolving Source IPs
+The `source` tag stores the remote IP address of the syslog sender. To resolve these IPs to DNS names, use the [`reverse_dns` processor](../../../plugins/processors/reverse_dns).
 
 ### Troubleshooting
 
