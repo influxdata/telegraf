@@ -43,7 +43,7 @@ func TestWrite(t *testing.T) {
 				},
 			},
 			createIngestor:  createFakeIngestor,
-			metricsGrouping: "TablePerMetric",
+			metricsGrouping: tablePerMetric,
 			expected: map[string]interface{}{
 				"metricName": "test1",
 			},
@@ -58,7 +58,7 @@ func TestWrite(t *testing.T) {
 				},
 			},
 			createIngestor:  createFakeIngestor,
-			metricsGrouping: "TablePerMetric",
+			metricsGrouping: tablePerMetric,
 			expected: map[string]interface{}{
 				"metricName": "test1",
 			},
@@ -75,7 +75,7 @@ func TestWrite(t *testing.T) {
 				},
 			},
 			createIngestor:  createFakeIngestor,
-			metricsGrouping: "SingleTable",
+			metricsGrouping: singleTable,
 			expected: map[string]interface{}{
 				"metricName": "test1",
 			},

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-kusto-go/kusto"
@@ -33,8 +34,8 @@ type AzureDataExplorer struct {
 }
 
 const (
-	tablePerMetric = "TablePerMetric"
-	singleTable    = "SingleTable"
+	tablePerMetric = "tablepermetric"
+	singleTable    = "singletable"
 )
 
 type localIngestor interface {
@@ -223,6 +224,7 @@ func (adx *AzureDataExplorer) Init() error {
 		return errors.New("Database configuration cannot be empty")
 	}
 
+	adx.MetricsGrouping = strings.ToLower(adx.MetricsGrouping)
 	if adx.MetricsGrouping == singleTable && adx.TableName == "" {
 		return errors.New("Table name cannot be empty for SingleTable metrics grouping type")
 	}
