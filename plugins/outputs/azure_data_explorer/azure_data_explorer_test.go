@@ -92,6 +92,13 @@ func TestWrite(t *testing.T) {
 			metricsGrouping: singleTable,
 			expected: map[string]interface{}{
 				"metricName": "test1",
+				"fields": map[string]interface{}{
+					"value": 1.0,
+				},
+				"tags": map[string]interface{}{
+					"tag1": "value1",
+				},
+				"timestamp": float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).UnixNano() / int64(time.Second)),
 			},
 		},
 	}
