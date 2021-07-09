@@ -116,15 +116,24 @@ func (m *MongoDB) Init() error {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
-		opts := options.Client().ApplyURI(connUrl).SetReadPreference(readpref.Nearest())
+		opts := options.Client().ApplyURI(connUrl)
 		if tlsConfig != nil {
 			opts.TLSConfig = tlsConfig
+		}
+		if opts.ReadPreference == nil {
+			opts.ReadPreference = readpref.Nearest()
 		}
 
 		client, err := mongo.Connect(ctx, opts)
 		if err != nil {
 			cancel()
 			return fmt.Errorf("unable to connect to MongoDB: %q", err)
+		}
+
+		err = client.Ping(ctx, opts.ReadPreference)
+		if err != nil {
+			cancel()
+			return fmt.Errorf("unable to connect to MongoDB: %s", err)
 		}
 
 		server := &Server{
