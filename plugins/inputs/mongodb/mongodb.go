@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
@@ -113,9 +114,16 @@ func (m *MongoDB) Init() error {
 			return fmt.Errorf("unable to parse connection URL: %q", err)
 		}
 
-		opts := options.Client().ApplyURI(connUrl).SetTLSConfig(tlsConfig).SetReadPreference(readpref.Nearest())
-		client, err := mongo.Connect(context.Background(), opts)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+		opts := options.Client().ApplyURI(connUrl).SetReadPreference(readpref.Nearest())
+		if tlsConfig != nil {
+			opts.TLSConfig = tlsConfig
+		}
+
+		client, err := mongo.Connect(ctx, opts)
 		if err != nil {
+			cancel()
 			return fmt.Errorf("unable to connect to MongoDB: %q", err)
 		}
 
@@ -125,6 +133,8 @@ func (m *MongoDB) Init() error {
 			Log:      m.Log,
 		}
 		m.clients = append(m.clients, server)
+
+		cancel()
 	}
 
 	return nil
