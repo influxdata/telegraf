@@ -2,6 +2,7 @@ package podman
 
 import (
 	"context"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -154,6 +155,7 @@ func (p *Podman) gatherContainer(container entities.ListContainer, acc telegraf.
 
 	containerStats, err := p.client.ContainerStats(cname)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
@@ -164,6 +166,7 @@ func (p *Podman) gatherContainer(container entities.ListContainer, acc telegraf.
 		"mem_limit":    containerStats.Stats[0].MemLimit,
 	}
 	acc.AddFields("podman", fields, tags, time.Now())
+	log.Println("hello")
 	return nil
 }
 

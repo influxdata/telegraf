@@ -3,6 +3,8 @@ package podman
 import (
 	"context"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/containers/podman/v3/libpod/define"
 	"github.com/containers/podman/v3/pkg/bindings"
@@ -39,12 +41,16 @@ func (c *SocketClient) ContainerList(filters map[string][]string) ([]entities.Li
 }
 
 func (c *SocketClient) ContainerStats(container string) (*entities.ContainerStatsReport, error) {
+	log.Println(container)
 	stats, err := containers.Stats(c.client, []string{container}, nil)
 	if err != nil {
 		return nil, err
-	} else if len(stats) != 1 {
+	}
+	select {
+	case containerStats := <-stats:
+		fmt.Println(containerStats)
+		return &containerStats, nil
+	case <-time.After(5 * time.Second):
 		return nil, fmt.Errorf("Invalid number of stats")
 	}
-	containerStats := <-stats
-	return &containerStats, nil
 }
