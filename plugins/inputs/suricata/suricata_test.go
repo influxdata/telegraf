@@ -78,7 +78,7 @@ func TestSuricataAlerts(t *testing.T) {
 	require.NoError(t, s.Start(&acc))
 	defer s.Stop()
 
-	data, err := ioutil.ReadFile("testdata/test2.json")
+	data, err := ioutil.ReadFile("testdata/test3.json")
 	require.NoError(t, err)
 
 	c, err := net.Dial("unix", tmpfn)
@@ -90,6 +90,29 @@ func TestSuricataAlerts(t *testing.T) {
 	require.NoError(t, c.Close())
 
 	acc.Wait(1)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"suricata_alert",
+			map[string]string{},
+			map[string]interface{}{
+				"action":       "allowed",
+				"category":     "Misc activity",
+				"gid":          float64(1),
+				"rev":          float64(0),
+				"signature":    "Corrupted HTTP body",
+				"signature_id": float64(6),
+				"severity":     float64(3),
+				"source.ip":    "10.0.0.5",
+				"target.ip":    "179.60.192.3",
+				"source.port":  float64(18715),
+				"target.port":  float64(80),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestSuricata(t *testing.T) {

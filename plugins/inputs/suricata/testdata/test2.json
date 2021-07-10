@@ -1,4 +1,3 @@
- suricata-alerts
 {
     "timestamp": "2021-06-08T06:34:49.237367+0000",
     "event_type": "stats",
@@ -20,4 +19,3 @@
         }
     }
 }
- master

@@ -167,8 +167,6 @@ func flexFlatten(outmap map[string]interface{}, field string, v interface{}, del
 		outmap[field] = v
 	case float64:
 		outmap[field] = t
-	case string:
-		outmap[field] = t
 	default:
 		return fmt.Errorf("unsupported type %T encountered", t)
 	}
