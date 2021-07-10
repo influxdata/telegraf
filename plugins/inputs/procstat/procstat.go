@@ -25,22 +25,19 @@ var (
 type PID int32
 
 type Procstat struct {
-	PidFinder   string `toml:"pid_finder"`
-	PidFile     string `toml:"pid_file"`
-	Exe         string
-	Pattern     string
-	Prefix      string
-	CmdLineTag  bool `toml:"cmdline_tag"`
-	ProcessName string
-	User        string
-	SystemdUnit string
-	SystemdAll  bool   `toml:"systemd_all"`
-	CGroup      string `toml:"cgroup"`
-	PidTag      bool
-	WinService  string `toml:"win_service"`
-	Mode        string
-
-	solarisMode bool
+	PidFinder              string `toml:"pid_finder"`
+	PidFile                string `toml:"pid_file"`
+	Exe                    string
+	Pattern                string
+	Prefix                 string
+	CmdLineTag             bool `toml:"cmdline_tag"`
+	ProcessName            string
+	User                   string
+	SystemdUnit            string `toml:"systemd_unit"`
+	IncludeSystemdChildren bool   `toml:"include_systemd_children"`
+	CGroup                 string `toml:"cgroup"`
+	PidTag                 bool
+	WinService             string `toml:"win_service"`
 
 	finder PIDFinder
 
@@ -58,10 +55,10 @@ var sampleConfig = `
   # pattern = "nginx"
   ## user as argument for pgrep (ie, pgrep -u <user>)
   # user = "nginx"
-  ## Systemd unit name
+  ## Systemd unit name, supports globs when include_systemd_children is set to true
   # systemd_unit = "nginx.service"
-  # systemd_all = true
-  ## CGroup name or path
+  # include_systemd_children = false
+  ## CGroup name or path, supports globs
   # cgroup = "systemd/system.slice/nginx.service"
 
   ## Windows service name
@@ -442,7 +439,7 @@ func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, map[string]string, error)
 var execCommand = exec.Command
 
 func (p *Procstat) systemdUnitPIDs() []PIDS_TAGS_ERR_GROUP {
-	if p.SystemdAll {
+	if p.IncludeSystemdChildren {
 		p.CGroup = fmt.Sprintf("systemd/system.slice/%s", p.SystemdUnit)
 		return p.cgroupPIDs()
 	} else {
