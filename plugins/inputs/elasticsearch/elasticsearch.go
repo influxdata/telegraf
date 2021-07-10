@@ -644,7 +644,8 @@ func (e *Elasticsearch) gatherSingleIndexStats(name string, index indexStat, now
 
 				// determine shard tag and primary/replica designation
 				shardType := "replica"
-				if flattened.Fields["routing_primary"] == true {
+				routingPrimary, _ := flattened.Fields["routing_primary"].(bool)
+				if routingPrimary {
 					shardType = "primary"
 				}
 				delete(flattened.Fields, "routing_primary")

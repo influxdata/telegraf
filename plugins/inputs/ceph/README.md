@@ -2,7 +2,7 @@
 
 Collects performance metrics from the MON and OSD nodes in a Ceph storage cluster.
 
-Ceph has introduced a Telegraf and Influx plugin in the 13.x Mimic release. The Telegraf module sends to a Telegraf configured with a socket_listener. [Learn more in their docs](http://docs.ceph.com/docs/mimic/mgr/telegraf/)
+Ceph has introduced a Telegraf and Influx plugin in the 13.x Mimic release. The Telegraf module sends to a Telegraf configured with a socket_listener. [Learn more in their docs](https://docs.ceph.com/en/latest/mgr/telegraf/)
 
 *Admin Socket Stats*
 

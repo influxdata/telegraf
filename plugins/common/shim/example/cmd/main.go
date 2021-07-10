@@ -30,7 +30,7 @@ var err error
 //
 // shim.AddInput(myInput)
 //
-// // now the shim.Run() call as below.
+// // now the shim.Run() call as below. Note the shim is only intended to run a single plugin.
 //
 func main() {
 	// parse command line options
@@ -52,7 +52,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// run the input plugin(s) until stdin closes or we receive a termination signal
+	// run a single plugin until stdin closes or we receive a termination signal
 	if err := shim.Run(*pollInterval); err != nil {
 		fmt.Fprintf(os.Stderr, "Err: %s\n", err)
 		os.Exit(1)

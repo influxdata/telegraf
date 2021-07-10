@@ -13,7 +13,7 @@ executors:
   go-1_16:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.16.2'
+      - image: 'quay.io/influxdb/telegraf-ci:1.16.5'
     environment:
       GOFLAGS: -p=8
   mac:
@@ -73,7 +73,10 @@ commands:
             - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 NIGHTLY=1 make package'
             - run: 'make upload-nightly'
       - unless:
-          condition: << parameters.nightly >>
+          condition:
+            or:
+              - << parameters.nightly >>
+              - << parameters.release >>
           steps:
             - run: '<< parameters.type >>=1 make package'
       - store_artifacts:
@@ -147,7 +150,7 @@ jobs:
     steps:
       - checkout
       - check-changed-files-or-halt-windows
-      - run: choco upgrade golang --version=1.16.2
+      - run: choco upgrade golang --version=1.16.5
       - run: choco install make
       - run: git config --system core.longpaths true
       - run: make test-windows

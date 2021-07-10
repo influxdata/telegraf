@@ -156,6 +156,15 @@ func flexFlatten(outmap map[string]interface{}, field string, v interface{}, del
 				return err
 			}
 		}
+	case []interface{}:
+		for _, v := range t {
+			err := flexFlatten(outmap, field, v, delimiter)
+			if err != nil {
+				return err
+			}
+		}
+	case string:
+		outmap[field] = v
 	case float64:
 		outmap[field] = t
 	case string:
