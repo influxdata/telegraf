@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -366,4 +367,11 @@ func TestWrite(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	// Set up a fake environment for adal.getMSIType()
+	// Root cause: https://github.com/Azure/go-autorest/commit/def88ef859fb980eff240c755a70597bc9b490d0
+	os.Setenv("MSI_ENDPOINT", "fake.endpoint")
+	os.Exit(m.Run())
 }
