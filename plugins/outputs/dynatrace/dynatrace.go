@@ -253,6 +253,7 @@ func (d *Dynatrace) Init() error {
 	}
 	d.normalizedDefaultDimensions = dimensions.NewNormalizedDimensionList(dims...)
 	d.normalizedStaticDimensions = dimensions.NewNormalizedDimensionList(dimensions.NewDimension("dt.metrics.source", "telegraf"))
+	d.loggedMetrics = make(map[string]bool)
 
 	return nil
 }

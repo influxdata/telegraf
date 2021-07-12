@@ -515,3 +515,36 @@ func TestSendCounterMetricWithoutTags(t *testing.T) {
 	err = d.Write(metrics)
 	require.NoError(t, err)
 }
+
+func TestSendUnsupportedMetric(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("should not export because the only metric is an invalid type")
+	}))
+	defer ts.Close()
+
+	d := &Dynatrace{}
+
+	d.URL = ts.URL
+	d.APIToken = "123"
+	d.Log = testutil.Logger{}
+	err := d.Init()
+	require.NoError(t, err)
+	err = d.Connect()
+	require.NoError(t, err)
+
+	// Init metrics
+
+	m1 := metric.New(
+		"mymeasurement",
+		map[string]string{},
+		map[string]interface{}{"unsupported": "type"},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	metrics := []telegraf.Metric{m1}
+
+	err = d.Write(metrics)
+	require.NoError(t, err)
+
+	require.Equal(t, true, d.loggedMetrics["mymeasurement.unsupported"])
+}
