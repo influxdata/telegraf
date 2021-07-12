@@ -38,6 +38,9 @@ type Procstat struct {
 	CGroup                 string `toml:"cgroup"`
 	PidTag                 bool
 	WinService             string `toml:"win_service"`
+	Mode                   string
+
+	solarisMode bool
 
 	finder PIDFinder
 
@@ -155,7 +158,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	p.procs = new_procs
 
 	for _, proc := range p.procs {
-		p.addMetric(proc, acc)
+		p.addMetric(proc, acc, time.Now())
 	}
 
 	fields := map[string]interface{}{
