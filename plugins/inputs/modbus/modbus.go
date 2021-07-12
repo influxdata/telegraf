@@ -116,11 +116,11 @@ const sampleConfig = `
   # workarounds = {
       ## Pause between read requests sent to the device. This might be necessary for (slow) serial devices.
       # pause_between_requests = "0ms"
-			## Close the connection after every gather cycle. Usually the plugin closes the connection after a certain
-			## idle-timeout, however, if you query a device with limited simultaneous connectivity (e.g. serial devices)
+      ## Close the connection after every gather cycle. Usually the plugin closes the connection after a certain
+      ## idle-timeout, however, if you query a device with limited simultaneous connectivity (e.g. serial devices)
       ## from multiple instances you might want to only stay connected during gather and disconnect afterwards.
-			# close_connection_after_gather = false
-	# }
+      # close_connection_after_gather = false
+    # }
 
 
   ## For Modbus over TCP you can choose between "TCP", "RTUoverTCP" and "ASCIIoverTCP"
