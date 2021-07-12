@@ -474,8 +474,8 @@ github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4/go.mod h1:Htrtb
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
-github.com/dynatrace-oss/dynatrace-metric-utils-go v0.1.0 h1:ldKn47mFgWCoiJRXA32psdEACPKffX9O1Msh1K8M+f0=
-github.com/dynatrace-oss/dynatrace-metric-utils-go v0.1.0/go.mod h1:qw0E9EJ0PnSlhWawDNuqE0zhc1hqOBUCFIAj3dd9DNw=
+github.com/dynatrace-oss/dynatrace-metric-utils-go v0.2.0 h1:TEG5Jj7RYM2JBCUH3nLqCmSZy6srnaefvXxjUTCuHyA=
+github.com/dynatrace-oss/dynatrace-metric-utils-go v0.2.0/go.mod h1:qw0E9EJ0PnSlhWawDNuqE0zhc1hqOBUCFIAj3dd9DNw=
 github.com/eapache/go-resiliency v1.1.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
 github.com/eapache/go-resiliency v1.2.0 h1:v7g92e/KSN71Rq7vSThKaWIq68fL4YHvWyiUKorFR1Q=
 github.com/eapache/go-resiliency v1.2.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
@@ -860,8 +860,8 @@ github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANyt
 github.com/influxdata/apcupsd v0.0.0-20210427145308-694d5caead0e h1:3J1OB4RDKwXs5l8uEV6BP/tucOJOPDQysiT7/9cuXzA=
 github.com/influxdata/apcupsd v0.0.0-20210427145308-694d5caead0e/go.mod h1:WYK/Z/aXq9cbMFIL5ihcA4sX/r/3/WCas/Qvs/2fXcA=
 github.com/influxdata/flux v0.65.0/go.mod h1:BwN2XG2lMszOoquQaFdPET8FRQfrXiZsWmcMO9rkaVY=
-github.com/influxdata/go-syslog/v2 v2.0.1 h1:l44S4l4Q8MhGQcoOxJpbo+QQYxJqp0vdgIVHh4+DO0s=
-github.com/influxdata/go-syslog/v2 v2.0.1/go.mod h1:hjvie1UTaD5E1fTnDmxaCw8RRDrT4Ve+XHr5O2dKSCo=
+github.com/influxdata/go-syslog/v3 v3.0.0 h1:jichmjSZlYK0VMmlz+k4WeOQd7z745YLsvGMqwtYt4I=
+github.com/influxdata/go-syslog/v3 v3.0.0/go.mod h1:tulsOp+CecTAYC27u9miMgq21GqXRW6VdKbOG+QSP4Q=
 github.com/influxdata/influxdb v1.8.2/go.mod h1:SIzcnsjaHRFpmlxpJ4S3NT64qtEKYweNTUMb/vh0OMQ=
 github.com/influxdata/influxdb-observability/common v0.0.0-20210428231528-a010f53e3e02/go.mod h1:PMngVYsW4uwtzIVmj0ZfLL9UIOwo7Vs+09QHkoYMZv8=
 github.com/influxdata/influxdb-observability/common v0.0.0-20210429174543-86ae73cafd31 h1:pfWcpiOrWLJvicIpCiFR8vqrkVbAuKUttWvQDmSlfUM=

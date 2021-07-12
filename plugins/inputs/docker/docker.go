@@ -75,7 +75,7 @@ const (
 
 	defaultEndpoint = "unix:///var/run/docker.sock"
 
-	perDeviceIncludeDeprecationWarning = "'perdevice' setting is set to 'true' so 'blkio' and 'network' metrics will" +
+	perDeviceIncludeDeprecationWarning = "'perdevice' setting is set to 'true' so 'blkio' and 'network' metrics will " +
 		"be collected. Please set it to 'false' and use 'perdevice_include' instead to control this behaviour as " +
 		"'perdevice' will be deprecated"
 

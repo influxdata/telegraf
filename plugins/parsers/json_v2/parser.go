@@ -381,6 +381,7 @@ func (p *Parser) processObjects(objects []JSONObject, input []byte) ([]telegraf.
 // If the object has multiple array's as elements it won't comine those, they will remain separate metrics
 func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 	var results []MetricNode
+	var combineObjectResult []MetricNode
 	if result.IsArray() || result.IsObject() {
 		var err error
 		var prevArray bool
@@ -437,7 +438,7 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 			arrayNode.Tag = tag
 			if val.IsObject() {
 				prevArray = false
-				_, err = p.combineObject(arrayNode)
+				combineObjectResult, err = p.combineObject(arrayNode)
 				if err != nil {
 					return false
 				}
@@ -475,6 +476,12 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if len(results) == 0 {
+		// If the results are empty, use the results of the call to combine object
+		// This happens with nested objects in array's, see the test array_of_objects
+		results = combineObjectResult
 	}
 
 	return results, nil
