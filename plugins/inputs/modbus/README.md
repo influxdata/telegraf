@@ -52,7 +52,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
       ## idle-timeout, however, if you query a device with limited simultaneous connectivity (e.g. serial devices)
       ## from multiple instances you might want to only stay connected during gather and disconnect afterwards.
       # close_connection_after_gather = false
-	# }
+  # }
 
   ## Measurements
   ##
