@@ -523,7 +523,7 @@ type loggerStub struct {
 }
 
 func (l loggerStub) Warnf(format string, args ...interface{}) {
-	warnfCalledTimes += 1
+	warnfCalledTimes++
 }
 
 func TestSendUnsupportedMetric(t *testing.T) {

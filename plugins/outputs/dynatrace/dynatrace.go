@@ -210,17 +210,18 @@ func (d *Dynatrace) send(msg string) error {
 	}
 	defer resp.Body.Close()
 
-	// print metric line results as info log
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusBadRequest {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			d.Log.Errorf("Dynatrace error reading response")
-		}
-		bodyString := string(bodyBytes)
-		d.Log.Debugf("Dynatrace returned: %s", bodyString)
-	} else {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusBadRequest {
 		return fmt.Errorf("request failed with response code:, %d", resp.StatusCode)
 	}
+
+	// print metric line results as info log
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		d.Log.Errorf("Dynatrace error reading response")
+	}
+	bodyString := string(bodyBytes)
+	d.Log.Debugf("Dynatrace returned: %s", bodyString)
+
 	return nil
 }
 
