@@ -126,6 +126,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	pidCount := 0
+	now := time.Now()
 	newProcs := make(map[PID]Process, len(p.procs))
 	pidTags := p.findPids()
 	for _, pidTag := range pidTags {
@@ -143,7 +144,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 				"pid_finder": p.PidFinder,
 				"result":     "lookup_error",
 			}
-			acc.AddFields("procstat_lookup", fields, tags)
+			acc.AddFields("procstat_lookup", fields, tags, now)
 			return err
 		}
 
@@ -157,7 +158,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	p.procs = newProcs
 
 	for _, proc := range p.procs {
-		p.addMetric(proc, acc, time.Now())
+		p.addMetric(proc, acc, now)
 	}
 
 	fields := map[string]interface{}{
@@ -168,7 +169,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	tags := make(map[string]string)
 	tags["pid_finder"] = p.PidFinder
 	tags["result"] = "success"
-	acc.AddFields("procstat_lookup", fields, tags)
+	acc.AddFields("procstat_lookup", fields, tags, now)
 
 	return nil
 }
