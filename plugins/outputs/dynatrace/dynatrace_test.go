@@ -516,7 +516,18 @@ func TestSendCounterMetricWithoutTags(t *testing.T) {
 	require.NoError(t, err)
 }
 
+var warnfCalledTimes int
+
+type loggerStub struct {
+	testutil.Logger
+}
+
+func (l loggerStub) Warnf(format string, args ...interface{}) {
+	warnfCalledTimes += 1
+}
+
 func TestSendUnsupportedMetric(t *testing.T) {
+	warnfCalledTimes = 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("should not export because the only metric is an invalid type")
 	}))
@@ -524,9 +535,11 @@ func TestSendUnsupportedMetric(t *testing.T) {
 
 	d := &Dynatrace{}
 
+	logStub := loggerStub{}
+
 	d.URL = ts.URL
 	d.APIToken = "123"
-	d.Log = testutil.Logger{}
+	d.Log = logStub
 	err := d.Init()
 	require.NoError(t, err)
 	err = d.Connect()
@@ -545,6 +558,9 @@ func TestSendUnsupportedMetric(t *testing.T) {
 
 	err = d.Write(metrics)
 	require.NoError(t, err)
+	require.Equal(t, 1, warnfCalledTimes)
 
-	require.Equal(t, true, d.loggedMetrics["mymeasurement.unsupported"])
+	err = d.Write(metrics)
+	require.NoError(t, err)
+	require.Equal(t, 1, warnfCalledTimes)
 }
