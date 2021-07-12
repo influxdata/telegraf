@@ -109,22 +109,22 @@ func (m *MongoDB) Init() error {
 		m.Servers = []string{"mongodb://127.0.0.1:27017"}
 	}
 
-	for _, connUrl := range m.Servers {
-		if !strings.HasPrefix(connUrl, "mongodb://") || !strings.HasPrefix(connUrl, "mongodb+srv://") {
+	for _, connURL := range m.Servers {
+		if !strings.HasPrefix(connURL, "mongodb://") && !strings.HasPrefix(connURL, "mongodb+srv://") {
 			// Preserve backwards compatibility for hostnames without a
 			// scheme, broken in go 1.8. Remove in Telegraf 2.0
-			connUrl = "mongodb://" + connUrl
-			m.Log.Warnf("Using %q as connection URL; please update your configuration to use an URL", connUrl)
+			connURL = "mongodb://" + connURL
+			m.Log.Warnf("Using %q as connection URL; please update your configuration to use an URL", connURL)
 		}
 
-		u, err := url.Parse(connUrl)
+		u, err := url.Parse(connURL)
 		if err != nil {
 			return fmt.Errorf("unable to parse connection URL: %q", err)
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
-		opts := options.Client().ApplyURI(connUrl)
+		opts := options.Client().ApplyURI(connURL)
 		if tlsConfig != nil {
 			opts.TLSConfig = tlsConfig
 		}
