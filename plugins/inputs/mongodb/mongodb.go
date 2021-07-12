@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -109,6 +110,13 @@ func (m *MongoDB) Init() error {
 	}
 
 	for _, connUrl := range m.Servers {
+		if !strings.HasPrefix(connUrl, "mongodb://") || !strings.HasPrefix(connUrl, "mongodb+srv://") {
+			// Preserve backwards compatibility for hostnames without a
+			// scheme, broken in go 1.8. Remove in Telegraf 2.0
+			connUrl = "mongodb://" + connUrl
+			m.Log.Warnf("Using %q as connection URL; please update your configuration to use an URL", connUrl)
+		}
+
 		u, err := url.Parse(connUrl)
 		if err != nil {
 			return fmt.Errorf("unable to parse connection URL: %q", err)
