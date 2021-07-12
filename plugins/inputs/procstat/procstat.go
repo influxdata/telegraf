@@ -103,14 +103,13 @@ func (p *Procstat) Description() string {
 	return "Monitor process cpu and memory usage"
 }
 
-type PIDS_TAGS_ERR_GROUP struct {
+type PidsTags struct {
 	PIDS []PID
 	Tags map[string]string
 	Err  error
 }
 
 func (p *Procstat) Gather(acc telegraf.Accumulator) error {
-
 	if p.createPIDFinder == nil {
 		switch p.PidFinder {
 		case "native":
@@ -126,14 +125,14 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		p.createProcess = defaultProcess
 	}
 
-	pid_count := 0
-	new_procs := make(map[PID]Process, len(p.procs))
-	pid_tag_groups := p.findPids()
-	for _, pid_tag_group := range pid_tag_groups {
-		pids := pid_tag_group.PIDS
-		tags := pid_tag_group.Tags
-		err := pid_tag_group.Err
-		pid_count += len(pids)
+	pidCount := 0
+	newProcs := make(map[PID]Process, len(p.procs))
+	pidTags := p.findPids()
+	for _, pidTag := range pidTags {
+		pids := pidTag.PIDS
+		tags := pidTag.Tags
+		err := pidTag.Err
+		pidCount += len(pids)
 		if err != nil {
 			fields := map[string]interface{}{
 				"pid_count":   0,
@@ -148,21 +147,21 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		err = p.updateProcesses(pids, tags, p.procs, new_procs)
+		err = p.updateProcesses(pids, tags, p.procs, newProcs)
 		if err != nil {
 			acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
 				p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
 		}
 	}
 
-	p.procs = new_procs
+	p.procs = newProcs
 
 	for _, proc := range p.procs {
 		p.addMetric(proc, acc, time.Now())
 	}
 
 	fields := map[string]interface{}{
-		"pid_count":   pid_count,
+		"pid_count":   pidCount,
 		"running":     len(p.procs),
 		"result_code": 0,
 	}
@@ -207,9 +206,9 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator, t time.Time
 	//If cmd_line tag is true and it is not already set add cmdline as a tag
 	if p.CmdLineTag {
 		if _, ok := proc.Tags()["cmdline"]; !ok {
-			Cmdline, err := proc.Cmdline()
+			cmdline, err := proc.Cmdline()
 			if err == nil {
-				proc.Tags()["cmdline"] = Cmdline
+				proc.Tags()["cmdline"] = cmdline
 			}
 		}
 	}
@@ -388,12 +387,12 @@ func (p *Procstat) getPIDFinder() (PIDFinder, error) {
 }
 
 // Get matching PIDs and their initial tags
-func (p *Procstat) findPids() []PIDS_TAGS_ERR_GROUP {
-	var pids_tags_err_groups []PIDS_TAGS_ERR_GROUP
+func (p *Procstat) findPids() []PidsTags {
+	var pidTags []PidsTags
 
 	f, err := p.getPIDFinder()
 	if err != nil {
-		pids_tags_err_groups = append(pids_tags_err_groups, PIDS_TAGS_ERR_GROUP{nil, nil, err})
+		pidTags = append(pidTags, PidsTags{nil, nil, err})
 	}
 
 	if p.SystemdUnit != "" {
@@ -404,10 +403,10 @@ func (p *Procstat) findPids() []PIDS_TAGS_ERR_GROUP {
 		return groups
 	} else {
 		pids, tags, err := p.SimpleFindPids(f)
-		pids_tags_err_groups = append(pids_tags_err_groups, PIDS_TAGS_ERR_GROUP{pids, tags, err})
+		pidTags = append(pidTags, PidsTags{pids, tags, err})
 	}
 
-	return pids_tags_err_groups
+	return pidTags
 }
 
 // Get matching PIDs and their initial tags
@@ -441,18 +440,18 @@ func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, map[string]string, error)
 // execCommand is so tests can mock out exec.Command usage.
 var execCommand = exec.Command
 
-func (p *Procstat) systemdUnitPIDs() []PIDS_TAGS_ERR_GROUP {
+func (p *Procstat) systemdUnitPIDs() []PidsTags {
 	if p.IncludeSystemdChildren {
 		p.CGroup = fmt.Sprintf("systemd/system.slice/%s", p.SystemdUnit)
 		return p.cgroupPIDs()
-	} else {
-		var pids_tags_err_group []PIDS_TAGS_ERR_GROUP
-
-		pids, err := p.simpleSystemdUnitPIDs()
-		tags := map[string]string{"systemd_unit": p.SystemdUnit}
-		pids_tags_err_group = append(pids_tags_err_group, PIDS_TAGS_ERR_GROUP{pids, tags, err})
-		return pids_tags_err_group
 	}
+
+	var pidTags []PidsTags
+
+	pids, err := p.simpleSystemdUnitPIDs()
+	tags := map[string]string{"systemd_unit": p.SystemdUnit}
+	pidTags = append(pidTags, PidsTags{pids, tags, err})
+	return pidTags
 }
 
 func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
@@ -484,8 +483,8 @@ func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
 	return pids, nil
 }
 
-func (p *Procstat) cgroupPIDs() []PIDS_TAGS_ERR_GROUP {
-	var pids_tags_err_group []PIDS_TAGS_ERR_GROUP
+func (p *Procstat) cgroupPIDs() []PidsTags {
+	var pidTags []PidsTags
 
 	procsPath := p.CGroup
 	if procsPath[0] != '/' {
@@ -493,16 +492,16 @@ func (p *Procstat) cgroupPIDs() []PIDS_TAGS_ERR_GROUP {
 	}
 	items, err := filepath.Glob(procsPath)
 	if err != nil {
-		pids_tags_err_group = append(pids_tags_err_group, PIDS_TAGS_ERR_GROUP{nil, nil, fmt.Errorf("glob failed '%s'", err)})
-		return pids_tags_err_group
+		pidTags = append(pidTags, PidsTags{nil, nil, fmt.Errorf("glob failed '%s'", err)})
+		return pidTags
 	}
 	for _, item := range items {
 		pids, err := p.singleCgroupPIDs(item)
 		tags := map[string]string{"cgroup": p.CGroup, "cgroup_full": item}
-		pids_tags_err_group = append(pids_tags_err_group, PIDS_TAGS_ERR_GROUP{pids, tags, err})
+		pidTags = append(pidTags, PidsTags{pids, tags, err})
 	}
 
-	return pids_tags_err_group
+	return pidTags
 }
 
 func (p *Procstat) singleCgroupPIDs(path string) ([]PID, error) {
