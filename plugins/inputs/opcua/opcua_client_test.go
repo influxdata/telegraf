@@ -20,7 +20,9 @@ type OPCTags struct {
 }
 
 func TestClient1Integration(t *testing.T) {
-	t.Skip("Skipping due to dial tcp 195.254.227.245:4840: connect: connection refused")
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var testopctags = []OPCTags{
 		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
@@ -32,7 +34,7 @@ func TestClient1Integration(t *testing.T) {
 	var err error
 
 	o.MetricName = "testing"
-	o.Endpoint = "opc.tcp://opcua.rocks:4840"
+	o.Endpoint = "opc.tcp://localhost:4840"
 	o.AuthMethod = "Anonymous"
 	o.ConnectTimeout = config.Duration(10 * time.Second)
 	o.RequestTimeout = config.Duration(1 * time.Second)

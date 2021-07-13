@@ -49,13 +49,11 @@ type jmxMetric interface {
 	addTagsFields(out map[string]interface{})
 }
 
-func newJavaMetric(host string, metric string,
-	acc telegraf.Accumulator) *javaMetric {
+func newJavaMetric(acc telegraf.Accumulator, host string, metric string) *javaMetric {
 	return &javaMetric{host: host, metric: metric, acc: acc}
 }
 
-func newCassandraMetric(host string, metric string,
-	acc telegraf.Accumulator) *cassandraMetric {
+func newCassandraMetric(acc telegraf.Accumulator, host string, metric string) *cassandraMetric {
 	return &cassandraMetric{host: host, metric: metric, acc: acc}
 }
 
@@ -72,13 +70,15 @@ func addValuesAsFields(values map[string]interface{}, fields map[string]interfac
 func parseJmxMetricRequest(mbean string) map[string]string {
 	tokens := make(map[string]string)
 	classAndPairs := strings.Split(mbean, ":")
-	if classAndPairs[0] == "org.apache.cassandra.metrics" {
+	switch classAndPairs[0] {
+	case "org.apache.cassandra.metrics":
 		tokens["class"] = "cassandra"
-	} else if classAndPairs[0] == "java.lang" {
+	case "java.lang":
 		tokens["class"] = "java"
-	} else {
+	default:
 		return tokens
 	}
+
 	pairs := strings.Split(classAndPairs[1], ",")
 	for _, pair := range pairs {
 		p := strings.Split(pair, "=")
@@ -129,9 +129,7 @@ func (j javaMetric) addTagsFields(out map[string]interface{}) {
 	}
 }
 
-func addCassandraMetric(mbean string, c cassandraMetric,
-	values map[string]interface{}) {
-
+func addCassandraMetric(mbean string, c cassandraMetric, values map[string]interface{}) {
 	tags := make(map[string]string)
 	fields := make(map[string]interface{})
 	tokens := parseJmxMetricRequest(mbean)
@@ -139,11 +137,9 @@ func addCassandraMetric(mbean string, c cassandraMetric,
 	tags["cassandra_host"] = c.host
 	addValuesAsFields(values, fields, tags["mname"])
 	c.acc.AddFields(tokens["class"]+tokens["type"], fields, tags)
-
 }
 
 func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
-
 	r := out["request"]
 
 	tokens := parseJmxMetricRequest(r.(map[string]interface{})["mbean"].(string))
@@ -151,22 +147,21 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 	// maps in the json response
 	if (tokens["type"] == "Table" || tokens["type"] == "ColumnFamily") && (tokens["keyspace"] == "*" ||
 		tokens["scope"] == "*") {
-		if valuesMap, ok := out["value"]; ok {
-			for k, v := range valuesMap.(map[string]interface{}) {
-				addCassandraMetric(k, c, v.(map[string]interface{}))
-			}
-		} else {
+		valuesMap, ok := out["value"]
+		if !ok {
 			c.acc.AddError(fmt.Errorf("missing key 'value' in '%s' output response: %v", c.metric, out))
 			return
+		}
+		for k, v := range valuesMap.(map[string]interface{}) {
+			addCassandraMetric(k, c, v.(map[string]interface{}))
 		}
 	} else {
-		if values, ok := out["value"]; ok {
-			addCassandraMetric(r.(map[string]interface{})["mbean"].(string),
-				c, values.(map[string]interface{}))
-		} else {
+		values, ok := out["value"]
+		if !ok {
 			c.acc.AddError(fmt.Errorf("missing key 'value' in '%s' output response: %v", c.metric, out))
 			return
 		}
+		addCassandraMetric(r.(map[string]interface{})["mbean"].(string), c, values.(map[string]interface{}))
 	}
 }
 
@@ -281,10 +276,10 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 
 			var m jmxMetric
 			if strings.HasPrefix(metric, "/java.lang:") {
-				m = newJavaMetric(serverTokens["host"], metric, acc)
+				m = newJavaMetric(acc, serverTokens["host"], metric)
 			} else if strings.HasPrefix(metric,
 				"/org.apache.cassandra.metrics:") {
-				m = newCassandraMetric(serverTokens["host"], metric, acc)
+				m = newCassandraMetric(acc, serverTokens["host"], metric)
 			} else {
 				// unsupported metric type
 				acc.AddError(fmt.Errorf("unsupported Cassandra metric [%s], skipping", metric))

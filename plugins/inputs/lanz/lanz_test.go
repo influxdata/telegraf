@@ -51,7 +51,6 @@ var testProtoBufGlobalBufferUsageRecord = &pb.LanzRecord{
 }
 
 func TestLanzGeneratesMetrics(t *testing.T) {
-
 	var acc testutil.Accumulator
 
 	l := NewLanz()
@@ -133,5 +132,4 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsFields(t, "lanz_global_buffer_usage_record", gburVals1)
 	acc.AssertContainsTaggedFields(t, "lanz_global_buffer_usage_record", gburVals1, gburTags1)
-
 }

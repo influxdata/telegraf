@@ -17,7 +17,8 @@ func TestMailChimpGatherReports(t *testing.T) {
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				fmt.Fprintln(w, sampleReports)
+				_, err := fmt.Fprintln(w, sampleReports)
+				require.NoError(t, err)
 			},
 		))
 	defer ts.Close()
@@ -80,7 +81,8 @@ func TestMailChimpGatherReport(t *testing.T) {
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				fmt.Fprintln(w, sampleReport)
+				_, err := fmt.Fprintln(w, sampleReport)
+				require.NoError(t, err)
 			},
 		))
 	defer ts.Close()
@@ -137,7 +139,6 @@ func TestMailChimpGatherReport(t *testing.T) {
 		"industry_type":            "Social Networks and Online Communities",
 	}
 	acc.AssertContainsTaggedFields(t, "mailchimp", fields, tags)
-
 }
 
 func TestMailChimpGatherError(t *testing.T) {
@@ -145,7 +146,8 @@ func TestMailChimpGatherError(t *testing.T) {
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				fmt.Fprintln(w, sampleError)
+				_, err := fmt.Fprintln(w, sampleError)
+				require.NoError(t, err)
 			},
 		))
 	defer ts.Close()

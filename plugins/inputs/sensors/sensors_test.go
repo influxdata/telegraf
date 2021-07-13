@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -22,10 +24,7 @@ func TestGatherDefault(t *testing.T) {
 	defer func() { execCommand = exec.Command }()
 	var acc testutil.Accumulator
 
-	err := s.Gather(&acc)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.Gather(&acc))
 
 	var tests = []struct {
 		tags   map[string]string
@@ -163,10 +162,7 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 	defer func() { execCommand = exec.Command }()
 	var acc testutil.Accumulator
 
-	err := s.Gather(&acc)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.Gather(&acc))
 
 	var tests = []struct {
 		tags   map[string]string
@@ -306,7 +302,7 @@ func fakeExecCommand(command string, args ...string) *exec.Cmd {
 // For example, if you run:
 // GO_WANT_HELPER_PROCESS=1 go test -test.run=TestHelperProcess -- chrony tracking
 // it returns below mockData.
-func TestHelperProcess(t *testing.T) {
+func TestHelperProcess(_ *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -373,11 +369,12 @@ Vcore Voltage:
 	cmd, args := args[3], args[4:]
 
 	if cmd == "sensors" {
+		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, mockData)
 	} else {
+		//nolint:errcheck,revive
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
-
 	}
 	os.Exit(0)
 }

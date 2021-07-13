@@ -38,6 +38,9 @@ func (k *WriteConfig) SetConfig(config *sarama.Config) error {
 		config.Producer.MaxMessageBytes = k.MaxMessageBytes
 	}
 	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
+	if config.Producer.Idempotent {
+		config.Net.MaxOpenRequests = 1
+	}
 	return k.Config.SetConfig(config)
 }
 

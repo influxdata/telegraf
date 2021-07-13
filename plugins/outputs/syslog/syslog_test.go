@@ -20,7 +20,7 @@ func TestGetSyslogMessageWithFramingOctectCounting(t *testing.T) {
 	s.initializeSyslogMapper()
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"testmetric",
 		map[string]string{
 			"hostname": "testhost",
@@ -44,7 +44,7 @@ func TestGetSyslogMessageWithFramingNonTransparent(t *testing.T) {
 	s.Framing = framing.NonTransparent
 
 	// Init metrics
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"testmetric",
 		map[string]string{
 			"hostname": "testhost",
@@ -92,7 +92,7 @@ func TestSyslogWriteWithUdp(t *testing.T) {
 
 func testSyslogWriteWithStream(t *testing.T, s *Syslog, lconn net.Conn) {
 	metrics := []telegraf.Metric{}
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"testmetric",
 		map[string]string{},
 		map[string]interface{}{},
@@ -116,7 +116,7 @@ func testSyslogWriteWithStream(t *testing.T, s *Syslog, lconn net.Conn) {
 func testSyslogWriteWithPacket(t *testing.T, s *Syslog, lconn net.PacketConn) {
 	s.Framing = framing.NonTransparent
 	metrics := []telegraf.Metric{}
-	m1, _ := metric.New(
+	m1 := metric.New(
 		"testmetric",
 		map[string]string{},
 		map[string]interface{}{},

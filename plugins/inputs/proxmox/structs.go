@@ -6,15 +6,15 @@ import (
 	"net/url"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
 type Proxmox struct {
-	BaseURL         string            `toml:"base_url"`
-	APIToken        string            `toml:"api_token"`
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
-	NodeName        string            `toml:"node_name"`
+	BaseURL         string          `toml:"base_url"`
+	APIToken        string          `toml:"api_token"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
+	NodeName        string          `toml:"node_name"`
 
 	tls.ClientConfig
 

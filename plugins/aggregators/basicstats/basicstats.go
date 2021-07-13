@@ -167,7 +167,6 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range b.cache {
 		fields := map[string]interface{}{}
 		for k, v := range aggregate.fields {
-
 			if b.statsConfig.count {
 				fields[k+"_count"] = v.count
 			}

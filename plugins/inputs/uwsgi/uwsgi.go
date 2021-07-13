@@ -15,14 +15,14 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Uwsgi server struct
 type Uwsgi struct {
-	Servers []string          `toml:"servers"`
-	Timeout internal.Duration `toml:"timeout"`
+	Servers []string        `toml:"servers"`
+	Timeout config.Duration `toml:"timeout"`
 
 	client *http.Client
 }
@@ -51,7 +51,7 @@ func (u *Uwsgi) SampleConfig() string {
 func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
 	if u.client == nil {
 		u.client = &http.Client{
-			Timeout: u.Timeout.Duration,
+			Timeout: time.Duration(u.Timeout),
 		}
 	}
 	wg := &sync.WaitGroup{}
@@ -85,13 +85,13 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 
 	switch url.Scheme {
 	case "tcp":
-		r, err = net.DialTimeout(url.Scheme, url.Host, u.Timeout.Duration)
+		r, err = net.DialTimeout(url.Scheme, url.Host, time.Duration(u.Timeout))
 		if err != nil {
 			return err
 		}
 		s.source = url.Host
 	case "unix":
-		r, err = net.DialTimeout(url.Scheme, url.Path, u.Timeout.Duration)
+		r, err = net.DialTimeout(url.Scheme, url.Path, time.Duration(u.Timeout))
 		if err != nil {
 			return err
 		}
@@ -210,14 +210,13 @@ func (u *Uwsgi) gatherCores(acc telegraf.Accumulator, s *StatsServer) {
 			}
 			acc.AddFields("uwsgi_cores", fields, tags)
 		}
-
 	}
 }
 
 func init() {
 	inputs.Add("uwsgi", func() telegraf.Input {
 		return &Uwsgi{
-			Timeout: internal.Duration{Duration: 5 * time.Second},
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }

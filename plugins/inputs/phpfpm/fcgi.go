@@ -45,20 +45,20 @@ const (
 	maxPad   = 255
 )
 
+//nolint:varcheck // For having proper order
 const (
 	roleResponder = iota + 1 // only Responders are implemented.
 	roleAuthorizer
 	roleFilter
 )
 
+//nolint:varcheck // For having proper order
 const (
 	statusRequestComplete = iota
 	statusCantMultiplex
 	statusOverloaded
 	statusUnknownRole
 )
-
-const headerLen = 8
 
 type header struct {
 	Version       uint8
@@ -72,7 +72,7 @@ type header struct {
 type beginRequest struct {
 	role     uint16
 	flags    uint8
-	reserved [5]uint8
+	reserved [5]uint8 //nolint:unused // Memory reservation
 }
 
 func (br *beginRequest) read(content []byte) error {
@@ -186,8 +186,7 @@ func (c *conn) writePairs(recType recType, reqID uint16, pairs map[string]string
 			return err
 		}
 	}
-	w.Close()
-	return nil
+	return w.Close()
 }
 
 func readSize(s []byte) (uint32, int) {
@@ -232,6 +231,8 @@ type bufWriter struct {
 
 func (w *bufWriter) Close() error {
 	if err := w.Writer.Flush(); err != nil {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		w.closer.Close()
 		return err
 	}

@@ -41,7 +41,6 @@ func (pt *PapertrailWebhook) eventHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	if payload.Events != nil {
-
 		// Handle event-based payload
 		for _, e := range payload.Events {
 			// Warning: Duplicate event timestamps will overwrite each other
@@ -54,9 +53,7 @@ func (pt *PapertrailWebhook) eventHandler(w http.ResponseWriter, r *http.Request
 			}
 			pt.acc.AddFields("papertrail", fields, tags, e.ReceivedAt)
 		}
-
 	} else if payload.Counts != nil {
-
 		// Handle count-based payload
 		for _, c := range payload.Counts {
 			for ts, count := range *c.TimeSeries {

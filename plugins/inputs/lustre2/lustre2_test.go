@@ -133,7 +133,6 @@ const mdtJobStatsContents = `job_stats:
 `
 
 func TestLustre2GeneratesMetrics(t *testing.T) {
-
 	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
 	ostName := "OST0001"
 
@@ -206,7 +205,6 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 }
 
 func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
-
 	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
 	ostName := "OST0001"
 	jobNames := []string{"cluster-testjob1", "testjob2"}

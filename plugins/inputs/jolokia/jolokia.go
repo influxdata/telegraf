@@ -10,13 +10,13 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Default http timeouts
-var DefaultResponseHeaderTimeout = internal.Duration{Duration: 3 * time.Second}
-var DefaultClientTimeout = internal.Duration{Duration: 4 * time.Second}
+var DefaultResponseHeaderTimeout = config.Duration(3 * time.Second)
+var DefaultClientTimeout = config.Duration(4 * time.Second)
 
 type Server struct {
 	Name     string
@@ -54,9 +54,9 @@ type Jolokia struct {
 	Proxy     Server
 	Delimiter string
 
-	ResponseHeaderTimeout internal.Duration `toml:"response_header_timeout"`
-	ClientTimeout         internal.Duration `toml:"client_timeout"`
-	Log                   telegraf.Logger   `toml:"-"`
+	ResponseHeaderTimeout config.Duration `toml:"response_header_timeout"`
+	ClientTimeout         config.Duration `toml:"client_timeout"`
+	Log                   telegraf.Logger `toml:"-"`
 }
 
 const sampleConfig = `
@@ -160,7 +160,7 @@ func (j *Jolokia) doRequest(req *http.Request) ([]map[string]interface{}, error)
 
 	// Unmarshal json
 	var jsonOut []map[string]interface{}
-	if err = json.Unmarshal([]byte(body), &jsonOut); err != nil {
+	if err = json.Unmarshal(body, &jsonOut); err != nil {
 		return nil, fmt.Errorf("error decoding JSON response: %s: %s", err, body)
 	}
 
@@ -217,7 +217,6 @@ func (j *Jolokia) prepareRequest(server Server, metrics []Metric) (*http.Request
 			}
 
 			jolokiaURL = proxyURL
-
 		} else {
 			serverURL, err := url.Parse("http://" + server.Host + ":" + server.Port + context)
 			if err != nil {
@@ -264,10 +263,10 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 			"in favor of the jolokia2 plugin " +
 			"(https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2)")
 
-		tr := &http.Transport{ResponseHeaderTimeout: j.ResponseHeaderTimeout.Duration}
+		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(j.ResponseHeaderTimeout)}
 		j.jClient = &JolokiaClientImpl{&http.Client{
 			Transport: tr,
-			Timeout:   j.ClientTimeout.Duration,
+			Timeout:   time.Duration(j.ClientTimeout),
 		}}
 	}
 
