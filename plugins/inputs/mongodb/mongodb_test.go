@@ -6,15 +6,11 @@ import (
 	"context"
 	"log"
 	"math/rand"
-	"net/url"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf/testutil"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 var server *Server
@@ -25,22 +21,16 @@ func testSetup(_ *testing.M) {
 		connectionString = "mongodb://127.0.0.1:27017"
 	}
 
-	u, err := url.Parse(connectionString)
-	if err != nil {
-		log.Fatalf("Unable to parse URL: %v", err)
+	m := &MongoDB{
+		Log:     testutil.Logger{},
+		Servers: []string{connectionString},
 	}
-
-	opts := options.Client().ApplyURI(connectionString).SetReadPreference(readpref.Nearest())
-	client, err := mongo.Connect(context.Background(), opts)
+	err := m.Init()
 	if err != nil {
 		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
 
-	server = &Server{
-		client:   client,
-		hostname: u.Host,
-		Log:      testutil.Logger{},
-	}
+	server = m.clients[0]
 }
 
 func testTeardown(_ *testing.M) {
