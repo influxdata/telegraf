@@ -550,7 +550,7 @@ func TestSendUnsupportedMetric(t *testing.T) {
 	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{},
-		map[string]interface{}{"1": "unsupported_type"},
+		map[string]interface{}{"metric1": "unsupported_type"},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -569,7 +569,7 @@ func TestSendUnsupportedMetric(t *testing.T) {
 	m2 := metric.New(
 		"mymeasurement",
 		map[string]string{},
-		map[string]interface{}{"2": "unsupported_type"},
+		map[string]interface{}{"metric2": "unsupported_type"},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
