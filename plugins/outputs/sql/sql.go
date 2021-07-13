@@ -6,10 +6,9 @@ import (
 	"strings"
 
 	//Register sql drivers
-	_ "github.com/denisenkom/go-mssqldb"   // mssql (sql server)
-	_ "github.com/go-sql-driver/mysql"     // mysql
-	_ "github.com/jackc/pgx/v4/stdlib"     // pgx (postgres)
-	_ "github.com/snowflakedb/gosnowflake" // snowflake
+	_ "github.com/denisenkom/go-mssqldb" // mssql (sql server)
+	_ "github.com/go-sql-driver/mysql"   // mysql
+	_ "github.com/jackc/pgx/v4/stdlib"   // pgx (postgres)
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -113,7 +112,7 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 var sampleConfig = `
   ## Database driver
   ## Valid options: mssql (Microsoft SQL Server), mysql (MySQL), pgx (Postgres),
-  ##  sqlite (SQLite3), snowflake (snowflake.com)
+  ##  sqlite (SQLite3)
   # driver = ""
 
   ## Data source name
