@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -17,11 +18,13 @@ type Interrupts struct {
 }
 
 type IRQ struct {
-	ID     string
-	Type   string
-	Device string
-	Total  int64
-	Cpus   []int64
+	ID                string
+	Type              string
+	Device            string
+	Total             int64
+	Cpus              []int64
+	SpuriousCount     uint64
+	SpuriousUnhandled uint64
 }
 
 func NewIRQ(id string) *IRQ {
@@ -43,7 +46,7 @@ const sampleConfig = `
 `
 
 func (s *Interrupts) Description() string {
-	return "This plugin gathers interrupts data from /proc/interrupts and /proc/softirqs."
+	return "This plugin gathers interrupts data from /proc/interrupts, /proc/softirqs, and /proc/irq/*/spurious."
 }
 
 func (s *Interrupts) SampleConfig() string {
@@ -90,12 +93,68 @@ scan:
 		} else if len(fields) > cpucount {
 			irq.Type = strings.Join(fields[cpucount+1:], " ")
 		}
+
+		// collect spurious interrupt data for this irq.ID
+		irq.SpuriousCount, irq.SpuriousUnhandled = parseSpurious(filepath.Join("/proc/irq", irq.ID, "spurious"))
 		irqs = append(irqs, *irq)
 	}
 	if scanner.Err() != nil {
 		return nil, fmt.Errorf("Error scanning file: %s", scanner.Err())
 	}
+
+	// For some Linux systems there can be fixed, large number of CPUs reported in
+	// the `/proc/softirqs` file. This number could be much larger than the actual number of
+	// CPUs in the system. The fields for these phantom CPUs contain zeroes. The approach
+	// taken to remove these phantom CPUs is to remove the columns containing all zeros
+	// to the right (higher CPU numbers). For systems where CPUs are dynamically enabled,
+	// this can lead to CPUs not being reported until enabled. However, this is preferable
+	// to collecting metrics for tens or hundreds of phantom CPUs. This cleanup is done in
+	// two steps:
+	// First, determine the rightmost CPU column with non-zero data
+	validCPUIndex := 0
+	for _, irq := range irqs {
+		var i int
+		for i = len(irq.Cpus) - 1; i > validCPUIndex && irq.Cpus[i] == 0; i-- {
+		}
+		if i > validCPUIndex {
+			validCPUIndex = i
+		}
+	}
+	// Secondly, remove data for any CPUs above the validCpuIndex
+	validCPUCount := validCPUIndex + 1
+	for i := 0; i < len(irqs); i++ {
+		if len(irqs[i].Cpus) > validCPUCount {
+			irqs[i].Cpus = append(irqs[i].Cpus[:validCPUCount])
+		}
+	}
+
 	return irqs, nil
+}
+
+func parseSpurious(filename string) (uint64, uint64) {
+	count := uint64(0)
+	unhandled := uint64(0)
+
+	f, err := os.Open(filename)
+	if err != nil {
+		return count, unhandled
+	}
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		s := strings.Fields(scanner.Text())
+		if len(s) < 2 {
+			continue
+		}
+		switch s[0] {
+		case "count":
+			count, _ = strconv.ParseUint(s[1], 10, 64)
+		case "unhandled":
+			unhandled, _ = strconv.ParseUint(s[1], 10, 64)
+		}
+	}
+	_ = f.Close()
+	return count, unhandled
 }
 
 func gatherTagsFields(irq IRQ) (map[string]string, map[string]interface{}) {
@@ -115,13 +174,14 @@ func (s *Interrupts) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("Could not open file: %s", file))
 			continue
 		}
-		defer f.Close()
 		irqs, err := parseInterrupts(f)
+		_ = f.Close()
 		if err != nil {
 			acc.AddError(fmt.Errorf("Parsing %s: %s", file, err))
 			continue
 		}
 		reportMetrics(measurement, irqs, acc, s.CPUAsTag)
+		reportSpuriousMetrics(irqs, acc)
 	}
 	return nil
 }
@@ -140,6 +200,18 @@ func reportMetrics(measurement string, irqs []IRQ, acc telegraf.Accumulator, cpu
 		} else {
 			acc.AddFields(measurement, fields, tags)
 		}
+	}
+}
+
+func reportSpuriousMetrics(irqs []IRQ, acc telegraf.Accumulator) {
+	for _, irq := range irqs {
+		tags, _ := gatherTagsFields(irq)
+		spuriousFields := map[string]interface{}{
+			"count":     irq.SpuriousCount,
+			"unhandled": irq.SpuriousUnhandled,
+			"total":     irq.Total,
+		}
+		acc.AddFields("spurious_interrupts", spuriousFields, tags)
 	}
 }
 
