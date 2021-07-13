@@ -11,25 +11,25 @@ import (
 	"time"
   "unicode"
 
-  //"github.com/DamRCorba/huawei_routers_sensorPath"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-telemetry"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-bfd"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-bgp"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-devm"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-driver"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-ifm"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-isis"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-mpls"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-ospfv2"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-ospfv3"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-qos"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-sem"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-telemEmdi"
-    "github.com/DamRCorba/huawei_routers_sensorPath/sensors/huaweiV8R10-trafficmng"
+    "github.com/DamRCorba/huawei_sensors/huawei-telemetry"
+	//"github.com/DamRCorba/huawei_sensors/bfd_rten"
+	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-bgp"
+	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-devm"
+	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-driver"
+	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-ifm"
+	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-isis"
+	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-mpls"
+	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-ospfv2"
+//"github.com/DamRCorba/huawei_sensors/huaweiV8R10-ospfv3"
+	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-qos"
+	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-sem"
+	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-telemEmdi"
+	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-trafficmng"
 
 	"github.com/golang/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
+  //"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -41,6 +41,7 @@ type setReadBufferer interface {
 
 type HuaweiRoutersTelemetry struct {
 	ServicePort     string        `toml:"service_port"`
+  Vrp_Version     string        `toml:"vrp_version"`
 	ReadBufferSize  internal.Size `toml:"read_buffer_size"`
 	ContentEncoding string        `toml:"content_encoding"`
 	Log telegraf.Logger `toml:"-"`
@@ -58,7 +59,7 @@ type HuaweiRoutersTelemetry struct {
 
 */
 func HuaweiTelemetryDecoder(body []byte, h *HuaweiRoutersTelemetry) (*metric.SeriesGrouper, error) {
-	msg := &huaweiV8R10_telemetry.Telemetry{}
+	msg := &huawei_telemetry.Telemetry{}
 	err := proto.Unmarshal(body[12:], msg)
 	if err != nil {
 		h.Log.Error("Unable to decode incoming packet:  %v", err)		
@@ -142,8 +143,9 @@ func (h *HuaweiRoutersTelemetry) listen() {
 func GetMessageType(path string) (proto.Message) {
   sensorType := strings.Split(path,":")
   switch sensorType[0] {
-  case "huawei-bfd":
+ /* case "huawei-bfd":
       return &huaweiV8R10_bfd.Bfd{}
+      */
 
   case "huawei-bgp":
     switch sensorType[1] {
@@ -189,8 +191,8 @@ func GetMessageType(path string) (proto.Message) {
     }
     return &huaweiV8R10_ospfv2.OspfNbrStateChange{}
 
-  case "huawei-ospfv3":
-    return &huaweiV8R10_ospfv3.Ospfv3NbrStateChange{}
+  //case "huawei-ospfv3":
+  //  return &huaweiV8R10_ospfv3.Ospfv3NbrStateChange{}
 
   case "huawei-qos":
     return &huaweiV8R10_qos.Qos{}
@@ -465,14 +467,14 @@ func GetTypeValue (path string) map[string]reflect.Type {
     }
     return resolve
 
-  case "huawei-ospfv3":
+ /* case "huawei-ospfv3":
     fooType := reflect.TypeOf(huaweiV8R10_ospfv3.Ospfv3NbrStateChange{})
     for i := 0; i < fooType.NumField(); i ++ {
       keys := fooType.Field(i)
       resolve[LcFirst(keys.Name)] = keys.Type
       }
     return resolve
-
+*/
   case "huawei-qos":
     switch splited[1] {
     case "qos/qosBuffers/qosBuffer":
@@ -787,7 +789,7 @@ func Find(a []string, x string) int {
   - keys (string) - Keys of the fields
   - vals (string) - Vals of the fields
 */
-func SearchKey(Message *huaweiV8R10_telemetry.TelemetryRowGPB, path string)  ([]string, []string){
+func SearchKey(Message *huawei_telemetry.TelemetryRowGPB, path string)  ([]string, []string){
   sensorType := strings.Split(path,":")[0]
   //sensorMsg := huawei_routers_sensorPath.GetMessageType(sensorType)
   sensorMsg := GetMessageType(sensorType)
