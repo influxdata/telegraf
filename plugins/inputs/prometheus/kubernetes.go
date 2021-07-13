@@ -151,7 +151,7 @@ func (p *Prometheus) cAdvisor(ctx context.Context, bearerToken string) error {
 	req, err := http.NewRequest("GET", podsURL, nil)
 	req.Header.Set("Authorization", "Bearer "+bearerToken)
 	req.Header.Add("Accept", "application/json")
-	
+
 	if err != nil {
 		return fmt.Errorf("error when creating request to %s to get pod list: %w", podsURL, err)
 	}
