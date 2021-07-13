@@ -88,7 +88,7 @@ func (p *Prometheus) start(ctx context.Context) error {
 				return
 			case <-time.After(time.Second):
 				if p.isNodeScrapeScope {
-					err = p.cAdvisor(ctx)
+					err = p.cAdvisor(ctx, config.BearerToken)
 					if err != nil {
 						p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
 					}
@@ -145,10 +145,13 @@ func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset)
 	return nil
 }
 
-func (p *Prometheus) cAdvisor(ctx context.Context) error {
+func (p *Prometheus) cAdvisor(ctx context.Context, string token) error {
 	// The request will be the same each time
 	podsURL := fmt.Sprintf("https://%s:10250/pods", p.NodeIP)
 	req, err := http.NewRequest("GET", podsURL, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Add("Accept", "application/json")
+	
 	if err != nil {
 		return fmt.Errorf("error when creating request to %s to get pod list: %w", podsURL, err)
 	}
