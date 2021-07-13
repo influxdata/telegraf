@@ -14,12 +14,12 @@ import (
 )
 
 func TestWrite(t *testing.T) {
-	readBody := func(r *http.Request) (yandexCloudMonitoringMessage, error) {
+	readBody := func(r *http.Request) yandexCloudMonitoringMessage {
 		decoder := json.NewDecoder(r.Body)
 		var message yandexCloudMonitoringMessage
 		err := decoder.Decode(&message)
 		require.NoError(t, err)
-		return message, nil
+		return message
 	}
 
 	testMetadataHTTPServer := httptest.NewServer(
@@ -67,8 +67,7 @@ func TestWrite(t *testing.T) {
 				),
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				message, err := readBody(r)
-				require.NoError(t, err)
+				message := readBody(r)
 				require.Len(t, message.Metrics, 1)
 				require.Equal(t, "cpu", message.Metrics[0].Name)
 				require.Equal(t, 42.0, message.Metrics[0].Value)

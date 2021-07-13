@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -14,7 +14,7 @@ var sampleConfig = `
 `
 
 type Dedup struct {
-	DedupInterval internal.Duration `toml:"dedup_interval"`
+	DedupInterval config.Duration `toml:"dedup_interval"`
 	FlushTime     time.Time
 	Cache         map[uint64]telegraf.Metric
 }
@@ -36,13 +36,13 @@ func remove(slice []telegraf.Metric, i int) []telegraf.Metric {
 // Remove expired items from cache
 func (d *Dedup) cleanup() {
 	// No need to cleanup cache too often. Lets save some CPU
-	if time.Since(d.FlushTime) < d.DedupInterval.Duration {
+	if time.Since(d.FlushTime) < time.Duration(d.DedupInterval) {
 		return
 	}
 	d.FlushTime = time.Now()
-	keep := make(map[uint64]telegraf.Metric, 0)
+	keep := make(map[uint64]telegraf.Metric)
 	for id, metric := range d.Cache {
-		if time.Since(metric.Time()) < d.DedupInterval.Duration {
+		if time.Since(metric.Time()) < time.Duration(d.DedupInterval) {
 			keep[id] = metric
 		}
 	}
@@ -68,7 +68,7 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		}
 
 		// If cache item has expired then refresh it
-		if time.Since(m.Time()) >= d.DedupInterval.Duration {
+		if time.Since(m.Time()) >= time.Duration(d.DedupInterval) {
 			d.save(metric, id)
 			continue
 		}
@@ -120,7 +120,7 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 func init() {
 	processors.Add("dedup", func() telegraf.Processor {
 		return &Dedup{
-			DedupInterval: internal.Duration{Duration: 10 * time.Minute},
+			DedupInterval: config.Duration(10 * time.Minute),
 			FlushTime:     time.Now(),
 			Cache:         make(map[uint64]telegraf.Metric),
 		}

@@ -24,7 +24,7 @@ func (t *testClient) Info() *redis.StringCmd {
 	return nil
 }
 
-func (t *testClient) Do(returnType string, args ...interface{}) (interface{}, error) {
+func (t *testClient) Do(_ string, _ ...interface{}) (interface{}, error) {
 	return 2, nil
 }
 

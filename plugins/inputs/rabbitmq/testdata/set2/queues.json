@@ -1,0 +1,356 @@
+[
+  {
+    "arguments": {
+      "x-expires": 300000
+    },
+    "auto_delete": false,
+    "backing_queue_status": {
+      "avg_ack_egress_rate": 0,
+      "avg_ack_ingress_rate": 0,
+      "avg_egress_rate": 0,
+      "avg_ingress_rate": 0,
+      "delta": [
+        "delta",
+        "undefined",
+        0,
+        0,
+        "undefined"
+      ],
+      "len": 0,
+      "mode": "default",
+      "next_seq_id": 180,
+      "q1": 0,
+      "q2": 0,
+      "q3": 0,
+      "q4": 0,
+      "target_ram_count": "infinity"
+    },
+    "consumer_capacity": 1,
+    "consumer_utilisation": 1,
+    "consumers": 1,
+    "durable": false,
+    "effective_policy_definition": {},
+    "exclusive": false,
+    "exclusive_consumer_tag": null,
+    "garbage_collection": {
+      "fullsweep_after": 65535,
+      "max_heap_size": 0,
+      "min_bin_vheap_size": 46422,
+      "min_heap_size": 233,
+      "minor_gcs": 16174
+    },
+    "head_message_timestamp": null,
+    "idle_since": "2021-06-28 15:54:14",
+    "memory": 15840,
+    "message_bytes": 0,
+    "message_bytes_paged_out": 0,
+    "message_bytes_persistent": 0,
+    "message_bytes_ram": 0,
+    "message_bytes_ready": 0,
+    "message_bytes_unacknowledged": 0,
+    "message_stats": {
+      "ack": 180,
+      "ack_details": {
+        "rate": 0
+      },
+      "deliver": 180,
+      "deliver_details": {
+        "rate": 0
+      },
+      "deliver_get": 180,
+      "deliver_get_details": {
+        "rate": 0
+      },
+      "deliver_no_ack": 0,
+      "deliver_no_ack_details": {
+        "rate": 0
+      },
+      "get": 0,
+      "get_details": {
+        "rate": 0
+      },
+      "get_empty": 0,
+      "get_empty_details": {
+        "rate": 0
+      },
+      "get_no_ack": 0,
+      "get_no_ack_details": {
+        "rate": 0
+      },
+      "publish": 180,
+      "publish_details": {
+        "rate": 0
+      },
+      "redeliver": 0,
+      "redeliver_details": {
+        "rate": 0
+      }
+    },
+    "messages": 0,
+    "messages_details": {
+      "rate": 0
+    },
+    "messages_paged_out": 0,
+    "messages_persistent": 0,
+    "messages_ram": 0,
+    "messages_ready": 0,
+    "messages_ready_details": {
+      "rate": 0
+    },
+    "messages_ready_ram": 0,
+    "messages_unacknowledged": 0,
+    "messages_unacknowledged_details": {
+      "rate": 0
+    },
+    "messages_unacknowledged_ram": 0,
+    "name": "39fd2caf-63e5-41e3-c15a-ba8fa11434b2",
+    "node": "rabbit@rmqserver",
+    "operator_policy": null,
+    "policy": null,
+    "recoverable_slaves": null,
+    "reductions": 11766294,
+    "reductions_details": {
+      "rate": 0
+    },
+    "single_active_consumer_tag": null,
+    "state": "running",
+    "type": "classic",
+    "vhost": "/"
+  },
+  {
+    "arguments": {
+      "x-expires": 300000
+    },
+    "auto_delete": false,
+    "backing_queue_status": {
+      "avg_ack_egress_rate": 0,
+      "avg_ack_ingress_rate": 0,
+      "avg_egress_rate": 0,
+      "avg_ingress_rate": 0,
+      "delta": [
+        "delta",
+        "undefined",
+        0,
+        0,
+        "undefined"
+      ],
+      "len": 0,
+      "mode": "default",
+      "next_seq_id": 177,
+      "q1": 0,
+      "q2": 0,
+      "q3": 0,
+      "q4": 0,
+      "target_ram_count": "infinity"
+    },
+    "consumer_capacity": 1,
+    "consumer_utilisation": 1,
+    "consumers": 1,
+    "durable": false,
+    "effective_policy_definition": {},
+    "exclusive": false,
+    "exclusive_consumer_tag": null,
+    "garbage_collection": {
+      "fullsweep_after": 65535,
+      "max_heap_size": 0,
+      "min_bin_vheap_size": 46422,
+      "min_heap_size": 233,
+      "minor_gcs": 16205
+    },
+    "head_message_timestamp": null,
+    "idle_since": "2021-06-28 15:54:14",
+    "memory": 15600,
+    "message_bytes": 0,
+    "message_bytes_paged_out": 0,
+    "message_bytes_persistent": 0,
+    "message_bytes_ram": 0,
+    "message_bytes_ready": 0,
+    "message_bytes_unacknowledged": 0,
+    "message_stats": {
+      "ack": 177,
+      "ack_details": {
+        "rate": 0
+      },
+      "deliver": 177,
+      "deliver_details": {
+        "rate": 0
+      },
+      "deliver_get": 177,
+      "deliver_get_details": {
+        "rate": 0
+      },
+      "deliver_no_ack": 0,
+      "deliver_no_ack_details": {
+        "rate": 0
+      },
+      "get": 0,
+      "get_details": {
+        "rate": 0
+      },
+      "get_empty": 0,
+      "get_empty_details": {
+        "rate": 0
+      },
+      "get_no_ack": 0,
+      "get_no_ack_details": {
+        "rate": 0
+      },
+      "publish": 177,
+      "publish_details": {
+        "rate": 0
+      },
+      "redeliver": 0,
+      "redeliver_details": {
+        "rate": 0
+      }
+    },
+    "messages": 0,
+    "messages_details": {
+      "rate": 0
+    },
+    "messages_paged_out": 0,
+    "messages_persistent": 0,
+    "messages_ram": 0,
+    "messages_ready": 0,
+    "messages_ready_details": {
+      "rate": 0
+    },
+    "messages_ready_ram": 0,
+    "messages_unacknowledged": 0,
+    "messages_unacknowledged_details": {
+      "rate": 0
+    },
+    "messages_unacknowledged_ram": 0,
+    "name": "39fd2cb4-aa2d-c08b-457a-62d0893523a1",
+    "node": "rabbit@rmqserver",
+    "operator_policy": null,
+    "policy": null,
+    "recoverable_slaves": null,
+    "reductions": 11706656,
+    "reductions_details": {
+      "rate": 0
+    },
+    "single_active_consumer_tag": null,
+    "state": "running",
+    "type": "classic",
+    "vhost": "/"
+  },
+  {
+    "arguments": {
+      "x-expires": 300000
+    },
+    "auto_delete": false,
+    "backing_queue_status": {
+      "avg_ack_egress_rate": 0,
+      "avg_ack_ingress_rate": 0,
+      "avg_egress_rate": 0,
+      "avg_ingress_rate": 0,
+      "delta": [
+        "delta",
+        "undefined",
+        0,
+        0,
+        "undefined"
+      ],
+      "len": 0,
+      "mode": "default",
+      "next_seq_id": 175,
+      "q1": 0,
+      "q2": 0,
+      "q3": 0,
+      "q4": 0,
+      "target_ram_count": "infinity"
+    },
+    "consumer_capacity": 1,
+    "consumer_utilisation": 1,
+    "consumers": 1,
+    "durable": false,
+    "effective_policy_definition": {},
+    "exclusive": false,
+    "exclusive_consumer_tag": null,
+    "garbage_collection": {
+      "fullsweep_after": 65535,
+      "max_heap_size": 0,
+      "min_bin_vheap_size": 46422,
+      "min_heap_size": 233,
+      "minor_gcs": 16183
+    },
+    "head_message_timestamp": null,
+    "idle_since": "2021-06-28 15:54:15",
+    "memory": 15584,
+    "message_bytes": 0,
+    "message_bytes_paged_out": 0,
+    "message_bytes_persistent": 0,
+    "message_bytes_ram": 0,
+    "message_bytes_ready": 0,
+    "message_bytes_unacknowledged": 0,
+    "message_stats": {
+      "ack": 175,
+      "ack_details": {
+        "rate": 0
+      },
+      "deliver": 175,
+      "deliver_details": {
+        "rate": 0
+      },
+      "deliver_get": 175,
+      "deliver_get_details": {
+        "rate": 0
+      },
+      "deliver_no_ack": 0,
+      "deliver_no_ack_details": {
+        "rate": 0
+      },
+      "get": 0,
+      "get_details": {
+        "rate": 0
+      },
+      "get_empty": 0,
+      "get_empty_details": {
+        "rate": 0
+      },
+      "get_no_ack": 0,
+      "get_no_ack_details": {
+        "rate": 0
+      },
+      "publish": 175,
+      "publish_details": {
+        "rate": 0
+      },
+      "redeliver": 0,
+      "redeliver_details": {
+        "rate": 0
+      }
+    },
+    "messages": 0,
+    "messages_details": {
+      "rate": 0
+    },
+    "messages_paged_out": 0,
+    "messages_persistent": 0,
+    "messages_ram": 0,
+    "messages_ready": 0,
+    "messages_ready_details": {
+      "rate": 0
+    },
+    "messages_ready_ram": 0,
+    "messages_unacknowledged": 0,
+    "messages_unacknowledged_details": {
+      "rate": 0
+    },
+    "messages_unacknowledged_ram": 0,
+    "name": "39fd2cb5-3820-e01b-6e20-ba29d5553fc3",
+    "node": "rabbit@rmqserver",
+    "operator_policy": null,
+    "policy": null,
+    "recoverable_slaves": null,
+    "reductions": 11649471,
+    "reductions_details": {
+      "rate": 0
+    },
+    "single_active_consumer_tag": null,
+    "state": "running",
+    "type": "classic",
+    "vhost": "/"
+  }
+]

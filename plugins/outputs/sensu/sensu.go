@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	defaultUrl           = "http://127.0.0.1:3031"
+	defaultURL           = "http://127.0.0.1:3031"
 	defaultClientTimeout = 5 * time.Second
 	defaultContentType   = "application/json; charset=utf-8"
 )
@@ -82,9 +82,9 @@ type SensuMetrics struct {
 }
 
 type Sensu struct {
-	ApiKey        *string           `toml:"api_key"`
-	AgentApiUrl   *string           `toml:"agent_api_url"`
-	BackendApiUrl *string           `toml:"backend_api_url"`
+	APIKey        *string           `toml:"api_key"`
+	AgentAPIURL   *string           `toml:"agent_api_url"`
+	BackendAPIURL *string           `toml:"backend_api_url"`
 	Entity        *SensuEntity      `toml:"entity"`
 	Tags          map[string]string `toml:"tags"`
 	Metrics       *SensuMetrics     `toml:"metrics"`
@@ -93,7 +93,7 @@ type Sensu struct {
 	Timeout         config.Duration `toml:"timeout"`
 	ContentEncoding string          `toml:"content_encoding"`
 
-	EndpointUrl string
+	EndpointURL string
 	OutEntity   *OutputEntity
 
 	Log telegraf.Logger `toml:"-"`
@@ -167,7 +167,7 @@ var sampleConfig = `
   ## Check specification
   ## The check name is the name to give the Sensu check associated with the event
   ## created. This maps to check.metatadata.name in the event.
-  [outputs.sensu-go.check]
+  [outputs.sensu.check]
   name = "telegraf"
 
   ## Entity specification
@@ -178,17 +178,17 @@ var sampleConfig = `
   ## backend_api_url and entity_name is not set, the value returned by
   ## os.Hostname() will be used; if the output plugin is configured to send
   ## events to an agent_api_url, entity_name and entity_namespace are not used.
-  # [outputs.sensu-go.entity]
+  # [outputs.sensu.entity]
   #   name = "server-01"
   #   namespace = "default"
 
   ## Metrics specification
   ## Configure the tags for the metrics that are sent as part of the Sensu event
-  # [outputs.sensu-go.tags]
+  # [outputs.sensu.tags]
   #   source = "telegraf"
 
   ## Configure the handler(s) for processing the provided metrics
-  # [outputs.sensu-go.metrics]
+  # [outputs.sensu.metrics]
   #   handlers = ["influxdb","elasticsearch"]
 `
 
@@ -219,7 +219,7 @@ func (s *Sensu) createClient() (*http.Client, error) {
 }
 
 func (s *Sensu) Connect() error {
-	err := s.setEndpointUrl()
+	err := s.setEndpointURL()
 	if err != nil {
 		return err
 	}
@@ -292,7 +292,7 @@ func (s *Sensu) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	reqBody, err := s.encodeToJson(points)
+	reqBody, err := s.encodeToJSON(points)
 	if err != nil {
 		return err
 	}
@@ -313,7 +313,7 @@ func (s *Sensu) write(reqBody []byte) error {
 		reqBodyBuffer = rc
 	}
 
-	req, err := http.NewRequest(method, s.EndpointUrl, reqBodyBuffer)
+	req, err := http.NewRequest(method, s.EndpointURL, reqBodyBuffer)
 	if err != nil {
 		return err
 	}
@@ -325,8 +325,8 @@ func (s *Sensu) write(reqBody []byte) error {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
 
-	if s.ApiKey != nil {
-		req.Header.Set("Authorization", "Key "+*s.ApiKey)
+	if s.APIKey != nil {
+		req.Header.Set("Authorization", "Key "+*s.APIKey)
 	}
 
 	resp, err := s.client.Do(req)
@@ -342,7 +342,7 @@ func (s *Sensu) write(reqBody []byte) error {
 		}
 		s.Log.Debugf("Failed to write, response: %v", string(bodyData))
 		if resp.StatusCode < 400 || resp.StatusCode > 499 {
-			return fmt.Errorf("when writing to [%s] received status code: %d", s.EndpointUrl, resp.StatusCode)
+			return fmt.Errorf("when writing to [%s] received status code: %d", s.EndpointURL, resp.StatusCode)
 		}
 	}
 
@@ -350,37 +350,37 @@ func (s *Sensu) write(reqBody []byte) error {
 }
 
 // Resolves the event write endpoint
-func (s *Sensu) setEndpointUrl() error {
+func (s *Sensu) setEndpointURL() error {
 	var (
-		endpointUrl string
-		path_suffix string
+		endpointURL string
+		pathSuffix  string
 	)
 
-	if s.BackendApiUrl != nil {
-		endpointUrl = *s.BackendApiUrl
+	if s.BackendAPIURL != nil {
+		endpointURL = *s.BackendAPIURL
 		namespace := "default"
 		if s.Entity != nil && s.Entity.Namespace != nil {
 			namespace = *s.Entity.Namespace
 		}
-		path_suffix = "/api/core/v2/namespaces/" + namespace + "/events"
-	} else if s.AgentApiUrl != nil {
-		endpointUrl = *s.AgentApiUrl
-		path_suffix = "/events"
+		pathSuffix = "/api/core/v2/namespaces/" + namespace + "/events"
+	} else if s.AgentAPIURL != nil {
+		endpointURL = *s.AgentAPIURL
+		pathSuffix = "/events"
 	}
 
-	if len(endpointUrl) == 0 {
-		s.Log.Debugf("no backend or agent API URL provided, falling back to default agent API URL %s", defaultUrl)
-		endpointUrl = defaultUrl
-		path_suffix = "/events"
+	if len(endpointURL) == 0 {
+		s.Log.Debugf("no backend or agent API URL provided, falling back to default agent API URL %s", defaultURL)
+		endpointURL = defaultURL
+		pathSuffix = "/events"
 	}
 
-	u, err := url.Parse(endpointUrl)
+	u, err := url.Parse(endpointURL)
 	if err != nil {
 		return err
 	}
 
-	u.Path = path.Join(u.Path, path_suffix)
-	s.EndpointUrl = u.String()
+	u.Path = path.Join(u.Path, pathSuffix)
+	s.EndpointURL = u.String()
 
 	return nil
 }
@@ -389,33 +389,33 @@ func (s *Sensu) Init() error {
 	if len(s.ContentEncoding) != 0 {
 		validEncoding := []string{"identity", "gzip"}
 		if !choice.Contains(s.ContentEncoding, validEncoding) {
-			return fmt.Errorf("Unsupported content_encoding [%q] specified", s.ContentEncoding)
+			return fmt.Errorf("unsupported content_encoding [%q] specified", s.ContentEncoding)
 		}
 	}
 
-	if s.BackendApiUrl != nil && s.ApiKey == nil {
-		return fmt.Errorf("backend_api_url [%q] specified, but no API Key provided", *s.BackendApiUrl)
+	if s.BackendAPIURL != nil && s.APIKey == nil {
+		return fmt.Errorf("backend_api_url [%q] specified, but no API Key provided", *s.BackendAPIURL)
 	}
 
 	return nil
 }
 
 func init() {
-	outputs.Add("sensu-go", func() telegraf.Output {
+	outputs.Add("sensu", func() telegraf.Output {
 		// Default configuration values
 
-		// make a string from the defaultUrl const
-		agentApiUrl := defaultUrl
+		// make a string from the defaultURL const
+		agentAPIURL := defaultURL
 
 		return &Sensu{
-			AgentApiUrl:     &agentApiUrl,
+			AgentAPIURL:     &agentAPIURL,
 			Timeout:         config.Duration(defaultClientTimeout),
 			ContentEncoding: "identity",
 		}
 	})
 }
 
-func (s *Sensu) encodeToJson(metricPoints []*OutputMetric) ([]byte, error) {
+func (s *Sensu) encodeToJSON(metricPoints []*OutputMetric) ([]byte, error) {
 	timestamp := time.Now().Unix()
 
 	check, err := s.getCheck(metricPoints)
@@ -439,7 +439,7 @@ func (s *Sensu) encodeToJson(metricPoints []*OutputMetric) ([]byte, error) {
 // Constructs the entity payload
 // Throws when no entity name is provided and fails resolve to hostname
 func (s *Sensu) setEntity() error {
-	if s.BackendApiUrl != nil {
+	if s.BackendAPIURL != nil {
 		var entityName string
 		if s.Entity != nil && s.Entity.Name != nil {
 			entityName = *s.Entity.Name

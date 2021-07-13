@@ -142,7 +142,6 @@ func TestGetSummary(t *testing.T) {
 			require.Equal(t, tt.expectedValue, summary)
 		})
 	}
-
 }
 
 func TestGetNodeMetrics(t *testing.T) {
@@ -184,7 +183,6 @@ func TestGetNodeMetrics(t *testing.T) {
 			require.Equal(t, tt.expectedValue, m)
 		})
 	}
-
 }
 
 func TestGetContainerMetrics(t *testing.T) {
@@ -226,5 +224,4 @@ func TestGetContainerMetrics(t *testing.T) {
 			require.Equal(t, tt.expectedValue, m)
 		})
 	}
-
 }

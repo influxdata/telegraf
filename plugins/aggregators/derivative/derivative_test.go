@@ -8,7 +8,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var start, _ = metric.New("TestMetric",
+var start = metric.New("TestMetric",
 	map[string]string{"state": "full"},
 	map[string]interface{}{
 		"increasing": int64(0),
@@ -20,7 +20,7 @@ var start, _ = metric.New("TestMetric",
 	time.Now(),
 )
 
-var finish, _ = metric.New("TestMetric",
+var finish = metric.New("TestMetric",
 	map[string]string{"state": "full"},
 	map[string]interface{}{
 		"increasing": int64(1000),
@@ -94,14 +94,14 @@ func TestTwoFullEventsWithoutParameter(t *testing.T) {
 	duration, _ := time.ParseDuration("2s")
 	endTime := startTime.Add(duration)
 
-	first, _ := metric.New("One Field",
+	first := metric.New("One Field",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(10),
 		},
 		startTime,
 	)
-	last, _ := metric.New("One Field",
+	last := metric.New("One Field",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(20),
@@ -119,7 +119,6 @@ func TestTwoFullEventsWithoutParameter(t *testing.T) {
 			"value_rate": float64(5),
 		},
 	)
-
 }
 
 func TestTwoFullEventsInSeperatePushes(t *testing.T) {
@@ -223,7 +222,7 @@ func TestIgnoresMissingVariable(t *testing.T) {
 	derivative.Log = testutil.Logger{}
 	derivative.Init()
 
-	noParameter, _ := metric.New("TestMetric",
+	noParameter := metric.New("TestMetric",
 		map[string]string{"state": "no_parameter"},
 		map[string]interface{}{
 			"increasing": int64(100),
@@ -266,17 +265,17 @@ func TestMergesDifferenMetricsWithSameHash(t *testing.T) {
 	startTime := time.Now()
 	duration, _ := time.ParseDuration("2s")
 	endTime := startTime.Add(duration)
-	part1, _ := metric.New("TestMetric",
+	part1 := metric.New("TestMetric",
 		map[string]string{"state": "full"},
 		map[string]interface{}{"field1": int64(10)},
 		startTime,
 	)
-	part2, _ := metric.New("TestMetric",
+	part2 := metric.New("TestMetric",
 		map[string]string{"state": "full"},
 		map[string]interface{}{"field2": int64(20)},
 		startTime,
 	)
-	final, _ := metric.New("TestMetric",
+	final := metric.New("TestMetric",
 		map[string]string{"state": "full"},
 		map[string]interface{}{
 			"field1": int64(30),
@@ -360,7 +359,7 @@ func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
 	derivative.Init()
 
 	startTime := time.Now()
-	first, _ := metric.New("One Field",
+	first := metric.New("One Field",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(10),
@@ -371,7 +370,7 @@ func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
 	derivative.Push(&acc)
 	derivative.Reset()
 
-	second, _ := metric.New("One Field",
+	second := metric.New("One Field",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(20),
@@ -387,7 +386,7 @@ func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
 	})
 
 	acc.ClearMetrics()
-	third, _ := metric.New("One Field",
+	third := metric.New("One Field",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(40),

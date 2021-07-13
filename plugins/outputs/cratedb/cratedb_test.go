@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -37,7 +37,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	c := &CrateDB{
 		URL:         url,
 		Table:       table,
-		Timeout:     internal.Duration{Duration: time.Second * 5},
+		Timeout:     config.Duration(time.Second * 5),
 		TableCreate: true,
 	}
 
@@ -203,19 +203,19 @@ func Test_hashID(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		m, err := metric.New(
+		m := metric.New(
 			test.Name,
 			test.Tags,
 			test.Fields,
 			time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 		)
-		require.NoError(t, err)
 		if got := hashID(m); got != test.Want {
 			t.Errorf("test #%d: got=%d want=%d", i, got, test.Want)
 		}
 	}
 }
 
+//nolint:unused // Used in skipped tests
 func testURL() string {
 	url := os.Getenv("CRATE_URL")
 	if url == "" {

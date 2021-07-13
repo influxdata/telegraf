@@ -96,7 +96,7 @@ Metric are custom and configured using the `discrete_inputs`, `coils`,
 
 The field `data_type` defines the representation of the data value on input from the modbus registers.
 The input values are then converted from the given `data_type` to a type that is apropriate when
-sending the value to the output plugin. These output types are usually one of string, 
+sending the value to the output plugin. These output types are usually one of string,
 integer or floating-point-number. The size of the output type is assumed to be large enough
 for all supported input types. The mapping from the input type to the output type is fixed
 and cannot be configured.
@@ -114,7 +114,7 @@ always include the sign and therefore there exists no variant.
 
 These types are handled as an integer type on input, but are converted to floating point representation
 for further processing (e.g. scaling). Use one of these types when the input value is a decimal fixed point
-representation of a non-integer value. 
+representation of a non-integer value.
 
 Select the type `UFIXED` when the input type is declared to hold unsigned integer values, which cannot
 be negative. The documentation of your modbus device should indicate this by a term like
@@ -126,6 +126,20 @@ with N decimal places'.
 
 (FLOAT32 is deprecated and should not be used any more. UFIXED provides the same conversion
 from unsigned values).
+
+### Trouble shooting
+Modbus documentations are often a mess. People confuse memory-address (starts at one) and register address (starts at zero) or stay unclear about the used word-order. Furthermore, there are some non-standard implementations that also
+swap the bytes within the register word (16-bit).
+
+If you get an error or don't get the expected values from your device, you can try the following steps (assuming a 32-bit value).
+
+In case are using a serial device and get an `permission denied` error, please check the permissions of your serial device and change accordingly.
+
+In case you get an `exception '2' (illegal data address)` error you might try to offset your `address` entries by minus one as it is very likely that there is a confusion between memory and register addresses.
+
+In case you see strange values, the `byte_order` might be off. You can either probe all combinations (`ABCD`, `CDBA`, `BADC` or `DCBA`) or you set `byte_order="ABCD" data_type="UINT32"` and use the resulting value(s) in an online converter like [this](https://www.scadacore.com/tools/programming-calculators/online-hex-converter/). This makes especially sense if you don't want to mess with the device, deal with 64-bit values and/or don't know the `data_type` of your register (e.g. fix-point floating values vs. IEEE floating point).
+
+If nothing helps, please post your configuration, error message and/or the output of `byte_order="ABCD" data_type="UINT32"` to one of the telegraf support channels (forum, slack or as issue).
 
 ### Example Output
 

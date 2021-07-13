@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -17,9 +17,9 @@ import (
 // YandexCloudMonitoring allows publishing of metrics to the Yandex Cloud Monitoring custom metrics
 // service
 type YandexCloudMonitoring struct {
-	Timeout     internal.Duration `toml:"timeout"`
-	EndpointURL string            `toml:"endpoint_url"`
-	Service     string            `toml:"service"`
+	Timeout     config.Duration `toml:"timeout"`
+	EndpointURL string          `toml:"endpoint_url"`
+	Service     string          `toml:"service"`
 
 	Log telegraf.Logger
 
@@ -60,7 +60,7 @@ const (
 	defaultRequestTimeout    = time.Second * 20
 	defaultEndpointURL       = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
 	defaultMetadataTokenURL  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
-	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/instance/attributes/folder-id"
+	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
 )
 
 var sampleConfig = `
@@ -86,8 +86,8 @@ func (a *YandexCloudMonitoring) SampleConfig() string {
 
 // Connect initializes the plugin and validates connectivity
 func (a *YandexCloudMonitoring) Connect() error {
-	if a.Timeout.Duration <= 0 {
-		a.Timeout.Duration = defaultRequestTimeout
+	if a.Timeout <= 0 {
+		a.Timeout = config.Duration(defaultRequestTimeout)
 	}
 	if a.EndpointURL == "" {
 		a.EndpointURL = defaultEndpointURL
@@ -106,7 +106,7 @@ func (a *YandexCloudMonitoring) Connect() error {
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: a.Timeout.Duration,
+		Timeout: time.Duration(a.Timeout),
 	}
 
 	var err error
@@ -235,6 +235,7 @@ func (a *YandexCloudMonitoring) send(body []byte) error {
 	req.Header.Set("Authorization", "Bearer "+a.IAMToken)
 
 	a.Log.Debugf("sending metrics to %s", req.URL.String())
+	a.Log.Debugf("body: %s", body)
 	resp, err := a.client.Do(req)
 	if err != nil {
 		return err

@@ -1,0 +1,35 @@
+{
+    "Group A": [
+        {
+            "Sub-group 1": [
+                {
+                    "Count": 0,
+                    "Errors": 0,
+                    "Serial": "9JHNGTUT",
+                    "Model": "WDC WUH721414ALE604",
+                    "Firmware": "LDGSW07G"
+                },
+                {
+                    "Count": 2,
+                    "Errors": 0,
+                    "Serial": "9JHNGHJBT",
+                    "Model": "WDC WUH721414ALE604",
+                    "Firmware": "LDGSW07G"
+                }
+            ]
+        }
+    ],
+    "Group B": [
+        {
+            "Sub-group 1": [
+                {
+                    "Count": 0,
+                    "Errors": 0,
+                    "Serial": "9JHLPW9T",
+                    "Model": "WDC WUH721414ALE604",
+                    "Firmware": "LDGSW07G"
+                }
+            ]
+        }
+    ]
+}

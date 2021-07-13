@@ -14,7 +14,7 @@ import (
 func Test_Gather(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		_, _ = w.Write([]byte(testJson))
+		_, _ = w.Write([]byte(testJSON))
 	}))
 	defer fakeServer.Close()
 
@@ -35,7 +35,7 @@ func Test_Gather(t *testing.T) {
 	require.Len(t, m.Tags, 2)
 }
 
-var testJson = `{
+var testJSON = `{
   "ConcurrentAsyncGetReportInstances" : {
     "Max" : 200,
     "Remaining" : 200
