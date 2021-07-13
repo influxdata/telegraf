@@ -14,7 +14,7 @@ require (
 	github.com/Azure/go-autorest/autorest/adal v0.9.10
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.6
 	github.com/BurntSushi/toml v0.3.1
-	github.com/DamRCorba/huawei_sensors v0.0.0-20210709002407-14463aaec72a // indirect
+	github.com/DamRCorba/huawei_sensors v0.0.0-20210709002407-14463aaec72a
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
 	github.com/Shopify/sarama v1.27.2
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
