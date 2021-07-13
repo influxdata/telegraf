@@ -17,10 +17,10 @@ const sampleConfigPartPerRequest = `
     # slave_id = 0
 
     ## Byte order of the data.
-    ##  |---ABCD -- Big Endian (Motorola)
-    ##  |---DCBA -- Little Endian (Intel)
-    ##  |---BADC -- Big Endian with byte swap
-    ##  |---CDAB -- Little Endian with byte swap
+    ##  |---ABCD or MSW-BE -- Big Endian (Motorola)
+    ##  |---DCBA or LSW-LE -- Little Endian (Intel)
+    ##  |---BADC or MSW-LE -- Big Endian with byte swap
+    ##  |---CDAB or LSW-BE -- Little Endian with byte swap
     # byte_order = "ABCD"
 
     ## Type of the register for the request
@@ -112,7 +112,7 @@ func (c *ConfigurationPerRequest) Check() error {
 		switch def.ByteOrder {
 		case "":
 			def.ByteOrder = "ABCD"
-		case "ABCD", "DCBA", "BADC", "CDAB":
+		case "ABCD", "DCBA", "BADC", "CDAB", "MSW-BE", "MSW-LE", "LSW-LE", "LSW-BE":
 		default:
 			return fmt.Errorf("unknown byte-order %q", def.ByteOrder)
 		}
