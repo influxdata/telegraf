@@ -114,6 +114,7 @@ scan:
 	validCPUIndex := 0
 	for _, irq := range irqs {
 		var i int
+		// nolint:empty-block,revive // pining for a while
 		for i = len(irq.Cpus) - 1; i > validCPUIndex && irq.Cpus[i] == 0; i-- {
 		}
 		if i > validCPUIndex {
@@ -131,6 +132,7 @@ scan:
 	return irqs, nil
 }
 
+// nolint:confusing-results,revive // no-win situation: if results are named, lint complains about length
 func parseSpurious(filename string) (uint64, uint64) {
 	count := uint64(0)
 	unhandled := uint64(0)
