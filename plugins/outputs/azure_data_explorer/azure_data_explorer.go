@@ -110,9 +110,8 @@ func (adx *AzureDataExplorer) Close() error {
 func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
 	if adx.MetricsGrouping == tablePerMetric {
 		return adx.writeTablePerMetric(metrics)
-	} else {
-		return adx.writeSingleTable(metrics)
 	}
+	return adx.writeSingleTable(metrics)
 }
 
 func (adx *AzureDataExplorer) writeTablePerMetric(metrics []telegraf.Metric) error {
@@ -162,11 +161,8 @@ func (adx *AzureDataExplorer) writeSingleTable(metrics []telegraf.Metric) error 
 
 	//push metrics to a single table
 	format := ingest.FileFormat(ingest.JSON)
-	if err := adx.pushMetrics(ctx, format, adx.TableName, metricsArray); err != nil {
-		return err
-	}
-
-	return nil
+	err := adx.pushMetrics(ctx, format, adx.TableName, metricsArray)
+	return err
 }
 
 func (adx *AzureDataExplorer) pushMetrics(ctx context.Context, format ingest.FileOption, tableName string, metricsArray []byte) error {
@@ -194,10 +190,9 @@ func (adx *AzureDataExplorer) getIngestor(ctx context.Context, tableName string)
 		tempIngestor, err := adx.createIngestor(adx.client, adx.Database, tableName)
 		if err != nil {
 			return nil, fmt.Errorf("creating ingestor for %q failed: %v", tableName, err)
-		} else {
-			adx.ingesters[tableName] = tempIngestor
-			ingestor = tempIngestor
 		}
+		adx.ingesters[tableName] = tempIngestor
+		ingestor = tempIngestor
 	}
 	return ingestor, nil
 }
