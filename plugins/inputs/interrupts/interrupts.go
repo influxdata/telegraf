@@ -124,7 +124,7 @@ scan:
 	validCPUCount := validCPUIndex + 1
 	for i := 0; i < len(irqs); i++ {
 		if len(irqs[i].Cpus) > validCPUCount {
-			irqs[i].Cpus = append(irqs[i].Cpus[:validCPUCount])
+			irqs[i].Cpus = irqs[i].Cpus[:validCPUCount]
 		}
 	}
 
