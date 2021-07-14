@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/influxdata/telegraf"
@@ -55,19 +54,21 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 		resp, err := http.Get("https://api.chess.com/pub/leaderboards")
 		if err != nil {
 			c.Log.Errorf("failed to GET leaderboards json: %w", err)
-			os.Exit(1)
+			return err
 		}
+
 		data, err := io.ReadAll(resp.Body)
 		defer resp.Body.Close()
 		if err != nil {
 			c.Log.Errorf("failed to read leaderboards json response body: %w", err)
+			return err
 		}
 
 		//unmarshall the data
 		err = json.Unmarshal(data, &Leaderboards)
 		if err != nil {
 			c.Log.Errorf("failed to unmarshall leaderboards json: %w", err)
-			os.Exit(1)
+			return err
 		}
 
 		for _, stat := range Leaderboards.Daily {
