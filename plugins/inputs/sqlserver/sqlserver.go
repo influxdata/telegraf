@@ -25,7 +25,6 @@ type SQLServer struct {
 	IncludeQuery         []string `toml:"include_query"`
 	ExcludeQuery         []string `toml:"exclude_query"`
 	HealthMetric         bool     `toml:"health_metric"`
-	QueryStoreCollection bool     `toml:"query_store_collection"`
 	pools                []*sql.DB
 	queries              MapQuery
 	adalToken            *adal.Token
@@ -97,13 +96,10 @@ servers = [
 # include_query = []
 
 ## A list of queries to explicitly ignore.
-# exclude_query = []
-
-## Toggling this to true enables telegraf to start collecting data from Query Store.
-## This setting is optional and is disabled by default.
-## Collection interval should comply with the following restriction: 15m =< collection interval <= 2h. 
+## Query Store queries (AzureSQLDBQueryStoreRuntimeStatistics and AzureSQLDBQueryStoreWaitStatistics) are excluded by default.
+## If you enable Query Store queries, the collection interval should comply with the following restriction: 15m =< collection interval <= 2h. 
 ## Intervals shorter than 15m may cause higher performance impact on source. Intervals longer than 2h may cause some Query Store data not to be collected.
-# query_store_collection = false
+# exclude_query = ["AzureSQLDBQueryStoreRuntimeStatistics", "AzureSQLDBQueryStoreWaitStatistics"]
 
 ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
 ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
@@ -176,12 +172,10 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLDBPerformanceCounters"] = Query{ScriptName: "AzureSQLDBPerformanceCounters", Script: sqlAzureDBPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLDBRequests"] = Query{ScriptName: "AzureSQLDBRequests", Script: sqlAzureDBRequests, ResultByRow: false}
 		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlAzureDBSchedulers, ResultByRow: false}
-		// These two Query Store queries are not run by default as they are expensive and collection interval should be >=15m.
-		// If user needs data from Query Store, they will need to toggle the setting to true. By default it is turned off
-		if s.QueryStoreCollection {
-			queries["AzureSQLDBQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreRuntimeStatistics", Script: sqlAzureDBQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
-			queries["AzureSQLDBQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreWaitStatistics", Script: sqlAzureDBQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
-		}
+		// These two Query Store queries should not run by default as they are expensive and collection interval should be >=15m.
+		queries["AzureSQLDBQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreRuntimeStatistics", Script: sqlAzureDBQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
+		queries["AzureSQLDBQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreWaitStatistics", Script: sqlAzureDBQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
+
 	} else if s.DatabaseType == typeAzureSQLManagedInstance {
 		queries["AzureSQLMIResourceStats"] = Query{ScriptName: "AzureSQLMIResourceStats", Script: sqlAzureMIResourceStats, ResultByRow: false}
 		queries["AzureSQLMIResourceGovernance"] = Query{ScriptName: "AzureSQLMIResourceGovernance", Script: sqlAzureMIResourceGovernance, ResultByRow: false}

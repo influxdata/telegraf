@@ -66,7 +66,10 @@ GO
   # include_query = []
 
   ## A list of queries to explicitly ignore.
-  # exclude_query = []
+  ## Query Store queries (AzureSQLDBQueryStoreRuntimeStatistics and AzureSQLDBQueryStoreWaitStatistics) are excluded by default.
+  ## If you enable Query Store queries, the collection interval should comply with the following restriction: 15m =< collection interval <= 2h. 
+  ## Intervals shorter than 15m may cause higher performance impact on source. Intervals longer than 2h may cause some Query Store data not to be collected.
+  # exclude_query = ["AzureSQLDBQueryStoreRuntimeStatistics", "AzureSQLDBQueryStoreWaitStatistics"]
 
   ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
   ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
@@ -108,12 +111,6 @@ GO
   ## The purpose of this metric is to assist with identifying and diagnosing any connectivity or query issues. 
   ## This setting/metric is optional and is disabled by default.
   # health_metric = false
-
-  ## Toggling this to true enables telegraf to start collecting data from Query Store.
-  ## This setting is optional and is disabled by default.
-  ## Collection interval should comply with the following restriction: 15m =< collection interval <= 2h. 
-  ## Intervals shorter than 15m may cause higher performance impact on source. Intervals longer than 2h may cause some Query Store data not to be collected.
-  # query_store_collection = false
 
   ## Possible queries accross different versions of the collectors
   ## Queries enabled by default for specific Database Type
