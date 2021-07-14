@@ -241,13 +241,12 @@ func GetMessageType(path string, version string) proto.Message {
 				return &huaweiV8R12_debug.Debug{}
 
 			default:
-				//  fmt.Println("Error Sensor Desconocido", sensorType[1])
 				return &huaweiV8R12_debug.Debug{}
 			}
 		}
 		break
 	default:
-		fmt.Println("Error Sensor Desconocido en GetMessageType", path)
+		//	fmt.Println("Error Sensor Desconocido en GetMessageType", path)
 		return &huaweiV8R10_devm.Devm{}
 	}
 	return &huaweiV8R10_devm.Devm{}
@@ -689,7 +688,7 @@ func GetTypeValue(path string, version string) map[string]reflect.Type {
 		}
 		return resolve
 	default:
-		fmt.Println("Error Sensor Desconocido", path)
+		//fmt.Println("Error Sensor Desconocido", path)
 		//fmt.Println(path)
 
 		return resolve
@@ -924,19 +923,12 @@ func SearchKey(Message *huawei_telemetry.TelemetryRowGPB, path string, version s
 	jsonString = strings.Replace(jsonString, "}", "", -1)
 	jsonString = "\"" + jsonString
 	if version == "V8R10" {
-		//fmt.Println("-------------------------jsonString-----------------------")
-		//fmt.Println(jsonString)
-		//fmt.Println("-------------------------jsonString-----------------------")
+
 		if path == "huawei-ifm:ifm/interfaces/interface/ifDynamicInfo" { // caso particular....
 			jsonString = strings.Replace(jsonString, "IfOperStatus_UPifName\"", "IfOperStatus_UP \"ifName\"", -1)
 		}
 	} else {
-		//interfaces:{interface:{name:"Eth-Trunk176"  mib_statistics:{receive_byte:26548635462  send_byte:425072856851  receive_packet:48418804  send_packet:316258640  receive_unicast_packet:47678976  receive_multicast_packet:737414  receive_broad_packet:2414  send_unicast_packet:293657  send_multicast_packet:315964983}}}
-		// jsonString = strings.Replace(jsonString,"  ", " ",-1)
-		//jsonString = strings.Replace(jsonString," ", ",",-1)
-		fmt.Printf("\n\n%s\n\n", path)
-
-		// if path == "huawei-ifm:ifm/interfaces/interface/mib-statistics" || path=="huawei-ifm:ifm/interfaces/interface/mib-statistics/huawei-pic:eth-port-err-sts" || path == "huawei-ifm:ifm/interfaces/interface"{
+		// TODO Check V8R12 structure
 		jsonString = strings.Replace(jsonString, " interface\": name\"", " \"interface\": \"name\"", -1)
 		jsonString = strings.Replace(jsonString, " \" \"", " \"", -1)
 		jsonString = strings.Replace(jsonString, "receive_byte\"", "\"receive_byte\"", -1)
@@ -946,11 +938,6 @@ func SearchKey(Message *huawei_telemetry.TelemetryRowGPB, path string, version s
 		jsonString = strings.Replace(jsonString, "\":1\" ", "_1\" ", -1)
 		jsonString = strings.Replace(jsonString, "\":2\" ", "_2\" ", -1)
 		jsonString = strings.Replace(jsonString, "\":3\" ", "_3\" ", -1)
-
-		//  }
-		fmt.Println("-------------------------jsonString Modificado-----------------------")
-		fmt.Println(jsonString)
-		fmt.Println("-------------------------jsonString Modificado-----------------------")
 	}
 	lastQuote := rune(0)
 	f := func(c rune) bool {
