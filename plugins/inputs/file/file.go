@@ -9,6 +9,7 @@ import (
 
 	"github.com/dimchansky/utfbom"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -66,6 +67,16 @@ func (f *File) Description() string {
 }
 
 func (f *File) Init() error {
+
+	// SECCOMP MAGIC
+	var syscalls = []string{"futex", "rt_sigaction", "mmap", "rt_sigprocmask", "pread64", "clone", "mprotect", "openat", "read",
+		"epoll_ctl", "close", "rt_sigreturn", "readlinkat", "fcntl", "fstat", "munmap", "sched_yield", "getrandom", "brk", "pipe2",
+		"sigaltstack", "epoll_create1", "write", "ioctl", "epoll_pwait", "arch_prctl", "gettid", "sched_getaffinity", "set_tid_address",
+		"prlimit64", "connect", "getsockname", "getpeername", "set_robust_list", "access", "getpid", "socket", "execve", "uname", "sysinfo",
+		"getuid", "getgid", "newfstatat", "exit_group", "readdir", "getdents64"}
+	internal.WhiteList(syscalls)
+	// SECCOMP MAGIC
+
 	var err error
 	f.decoder, err = encoding.NewDecoder(f.CharacterEncoding)
 	return err
@@ -115,6 +126,7 @@ func (f *File) SetParserFunc(fn telegraf.ParserFunc) {
 
 func (f *File) refreshFilePaths() error {
 	var allFiles []string
+	fmt.Println("files", f.Files[0])
 	for _, file := range f.Files {
 		g, err := globpath.Compile(file)
 		if err != nil {

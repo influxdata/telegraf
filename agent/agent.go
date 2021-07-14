@@ -105,10 +105,12 @@ func (a *Agent) Run(ctx context.Context) error {
 		time.Duration(a.Config.Agent.Interval), a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
 
-	log.Printf("D! [agent] Initializing plugins")
-	err := a.initPlugins()
-	if err != nil {
-		return err
+	if a.Config.IsolatedPlugin != "" {
+		log.Printf("D! [agent] Initializing plugins")
+		err := a.initPlugins()
+		if err != nil {
+			return err
+		}
 	}
 
 	startTime := time.Now()
