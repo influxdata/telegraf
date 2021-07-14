@@ -9,7 +9,8 @@ require (
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.5.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
-	github.com/Azure/azure-storage-queue-go v0.0.0-20181215014128-6ed74e755687
+	github.com/Azure/azure-kusto-go v0.3.2
+	github.com/Azure/azure-storage-queue-go v0.0.0-20191125232315-636801874cdd
 	github.com/Azure/go-autorest/autorest v0.11.17
 	github.com/Azure/go-autorest/autorest/adal v0.9.10
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.6
@@ -21,6 +22,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1004
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
+	github.com/antchfx/jsonquery v1.1.4
 	github.com/antchfx/xmlquery v1.3.5
 	github.com/antchfx/xpath v1.1.11
 	github.com/apache/thrift v0.13.0
@@ -45,7 +47,8 @@ require (
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/docker/docker v20.10.6+incompatible
-	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.1.0
+	github.com/doclambda/protobufquery v0.0.0-20210317203640-88ffabe06a60
+	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.2.0
 	github.com/eclipse/paho.mqtt.golang v1.3.0
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
@@ -73,7 +76,7 @@ require (
 	github.com/harlow/kinesis-consumer v0.3.1-0.20181230152818-2f58b136fee0
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
-	github.com/influxdata/go-syslog/v2 v2.0.1
+	github.com/influxdata/go-syslog/v3 v3.0.0
 	github.com/influxdata/influxdb-observability/common v0.0.0-20210429174543-86ae73cafd31
 	github.com/influxdata/influxdb-observability/otel2influx v0.0.0-20210429174543-86ae73cafd31
 	github.com/influxdata/influxdb-observability/otlp v0.0.0-20210429174543-86ae73cafd31
@@ -82,6 +85,7 @@ require (
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
 	github.com/jackc/pgx/v4 v4.6.0
 	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
+	github.com/jhump/protoreflect v1.8.3-0.20210616212123-6cc1efa697ca
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/kardianos/service v1.0.0
 	github.com/karrick/godirwalk v1.16.1
@@ -109,7 +113,7 @@ require (
 	github.com/riemann/riemann-go-client v0.5.0
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/sensu/sensu-go/api/core/v2 v2.6.0
-	github.com/shirou/gopsutil v3.21.3+incompatible
+	github.com/shirou/gopsutil v3.21.6-0.20210624221800-cb512c850043+incompatible
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
 	github.com/signalfx/golib/v3 v3.3.34
 	github.com/sirupsen/logrus v1.7.0
@@ -142,6 +146,7 @@ require (
 	google.golang.org/api v0.29.0
 	google.golang.org/genproto v0.0.0-20201110150050-8816d57aaa9a
 	google.golang.org/grpc v1.37.0
+	google.golang.org/protobuf v1.26.0
 	gopkg.in/djherbis/times.v1 v1.2.0
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/gorethink/gorethink.v3 v3.0.5

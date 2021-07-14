@@ -52,6 +52,10 @@ GO
     "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
   ]
 
+  ## Authentication method
+  ## valid methods: "connection_string", "AAD"
+  # auth_method = "connection_string"
+
   ## "database_type" enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
   ## In the config file, the sql server plugin section should be repeated each with a set of servers for a specific database_type.
   ## Possible values for database_type are - "AzureSQLDB" or "AzureSQLManagedInstance" or "SQLServer"
@@ -202,11 +206,12 @@ EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
 - On the SQL Server resource of the database(s) being monitored, go to "Firewalls and Virtual Networks" tab and allowlist the monitoring VM IP address.
 - On the Monitoring VM, update the telegraf config file with the database connection string in the following format. Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
 - On the Monitoring VM, update the telegraf config file with the database connection string in the following format.
-- On the Monitoring VM, update the telegraf config file with the database connection string in the following format. The connection string only provides the server and database name, but no password (since the VM's system-assigned managed identity would be used for authentication).
+- On the Monitoring VM, update the telegraf config file with the database connection string in the following format. The connection string only provides the server and database name, but no password (since the VM's system-assigned managed identity would be used for authentication). The auth method must be set to "AAD"
 ```toml
   servers = [
     "Server=<Azure_SQL_Server_Name>.database.windows.net;Port=1433;Database=<Azure_SQL_Database_Name>;app name=telegraf;log=1;",
   ]
+  auth_method = "AAD"
 ```
 - Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
 
