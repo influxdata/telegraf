@@ -14,7 +14,7 @@ import (
 
 // chess.go
 
-// chess is the plugin type
+// Chess is the plugin type
 type Chess struct {
 	Profiles []string        `toml:"profiles"`
 	Log      telegraf.Logger `toml:"-"`
@@ -53,7 +53,7 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 		var responseLeaderData ResponseLeaderboards
 		// request and unmarshall leaderboard information
 		// and add it to the accumulator
-		resp, err := http.Get("http://api.chess.com/pub.leaderboards")
+		resp, err := http.Get("http://api.chess.com/pub/leaderboards")
 		if err != nil {
 			fmt.Print(err.Error())
 			os.Exit(1)
@@ -69,7 +69,8 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 			fmt.Print(err.Error())
 			os.Exit(1)
 		}
-		fmt.Print(responseLeaderData)
+		c.Log.Info(responseLeaderData)
+		//fmt.Print(responseLeaderData)
 	}
 	return nil
 }
