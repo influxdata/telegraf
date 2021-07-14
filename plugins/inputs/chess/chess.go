@@ -59,6 +59,7 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 			os.Exit(1)
 		}
 		data, err := ioutil.ReadAll(resp.Body)
+		defer resp.Body.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
