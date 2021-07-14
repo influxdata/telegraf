@@ -1,6 +1,7 @@
 package chess
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -49,6 +50,7 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 
 	// check if profiles is not included
 	if c.Profiles == nil {
+		var responseLeaderData ResponseLeaderboards
 		// request and unmarshall leaderboard information
 		// and add it to the accumulator
 		resp, err := http.Get("http://api.chess.com/pub.leaderboards")
@@ -60,7 +62,14 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(data)
+		//fmt.Println(data)
+		//unmarshall the data
+		err = json.Unmarshal(data, &responseLeaderData)
+		if err != nil {
+			fmt.Print(err.Error())
+			os.Exit(1)
+		}
+		fmt.Print(responseLeaderData)
 	}
 	return nil
 }
