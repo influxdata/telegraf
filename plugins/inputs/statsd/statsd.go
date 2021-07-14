@@ -37,6 +37,19 @@ const (
 
 var errParsing = errors.New("error parsing statsd line")
 
+// Number will get parsed as an int or float depending on what is passed
+type Number float64
+
+func (n *Number) UnmarshalTOML(b []byte) error {
+	value, err := strconv.ParseFloat(string(b), 64)
+	if err != nil {
+		return err
+	}
+
+	*n = Number(value)
+	return nil
+}
+
 // Statsd allows the importing of statsd and dogstatsd data.
 type Statsd struct {
 	// Protocol used on listener - udp or tcp
@@ -51,7 +64,7 @@ type Statsd struct {
 
 	// Percentiles specifies the percentiles that will be calculated for timing
 	// and histogram stats.
-	Percentiles     []config.Number
+	Percentiles     []Number
 	PercentileLimit int
 
 	DeleteGauges   bool
