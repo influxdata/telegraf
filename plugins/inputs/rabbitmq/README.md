@@ -61,7 +61,8 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
 
   ## Federation upstreams to include and exclude specified as an array of glob
   ## pattern strings.  Federation links can also be limited by the queue and
-  ## exchange filters.
+  ## exchange filters.  If the federation plugin is not enabled these settings
+  ## are ignored.
   # federation_upstream_include = []
   # federation_upstream_exclude = []
 ```

@@ -625,11 +625,10 @@ func TestRabbitMQMetricFilerts(t *testing.T) {
 	defer ts.Close()
 
 	metricErrors := map[string]error{
-		"exchange":   fmt.Errorf("getting \"/api/exchanges\" failed: 404 Not Found"),
-		"federation": fmt.Errorf("getting \"/api/federation-links\" failed: 404 Not Found"),
-		"node":       fmt.Errorf("getting \"/api/nodes\" failed: 404 Not Found"),
-		"overview":   fmt.Errorf("getting \"/api/overview\" failed: 404 Not Found"),
-		"queue":      fmt.Errorf("getting \"/api/queues\" failed: 404 Not Found"),
+		"exchange": fmt.Errorf("getting \"/api/exchanges\" failed: 404 Not Found"),
+		"node":     fmt.Errorf("getting \"/api/nodes\" failed: 404 Not Found"),
+		"overview": fmt.Errorf("getting \"/api/overview\" failed: 404 Not Found"),
+		"queue":    fmt.Errorf("getting \"/api/queues\" failed: 404 Not Found"),
 	}
 
 	// Include test

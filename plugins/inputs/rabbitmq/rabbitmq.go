@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -720,7 +721,11 @@ func gatherFederationLinks(r *RabbitMQ, acc telegraf.Accumulator) {
 	federationLinks := make([]FederationLink, 0)
 	err := r.requestJSON("/api/federation-links", &federationLinks)
 	if err != nil {
-		acc.AddError(err)
+		// Absence of federation plugin is not an error
+		if !strings.HasSuffix(err.Error(), ": 404 Not Found") {
+			acc.AddError(err)
+		}
+
 		return
 	}
 
