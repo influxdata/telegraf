@@ -18,17 +18,17 @@ import (
 
 // SQLServer struct
 type SQLServer struct {
-	Servers              []string `toml:"servers"`
-	QueryVersion         int      `toml:"query_version"`
-	AzureDB              bool     `toml:"azuredb"`
-	DatabaseType         string   `toml:"database_type"`
-	IncludeQuery         []string `toml:"include_query"`
-	ExcludeQuery         []string `toml:"exclude_query"`
-	HealthMetric         bool     `toml:"health_metric"`
-	pools                []*sql.DB
-	queries              MapQuery
-	adalToken            *adal.Token
-	muCacheLock          sync.RWMutex
+	Servers      []string `toml:"servers"`
+	QueryVersion int      `toml:"query_version"`
+	AzureDB      bool     `toml:"azuredb"`
+	DatabaseType string   `toml:"database_type"`
+	IncludeQuery []string `toml:"include_query"`
+	ExcludeQuery []string `toml:"exclude_query"`
+	HealthMetric bool     `toml:"health_metric"`
+	pools        []*sql.DB
+	queries      MapQuery
+	adalToken    *adal.Token
+	muCacheLock  sync.RWMutex
 }
 
 // Query struct
