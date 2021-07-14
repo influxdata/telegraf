@@ -25,11 +25,15 @@ import (
 	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-sem"
 	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-telemEmdi"
 	"github.com/DamRCorba/huawei_sensors/huaweiV8R10-trafficmng"
+  "github.com/DamRCorba/huawei_sensors/huaweiV8R12-debug"
+  "github.com/DamRCorba/huawei_sensors/huaweiV8R12-devm"
+  "github.com/DamRCorba/huawei_sensors/huaweiV8R12-ifm"
+  "github.com/DamRCorba/huawei_sensors/huaweiV8R12-qos"
 
 	"github.com/golang/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
-  //"github.com/influxdata/telegraf/config"
+  "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -41,8 +45,8 @@ type setReadBufferer interface {
 
 type HuaweiRoutersTelemetry struct {
 	ServicePort     string        `toml:"service_port"`
-  Vrp_Version     string        `toml:"vrp_version"`
-	ReadBufferSize  internal.Size `toml:"read_buffer_size"`
+  VrpVersion     string        `toml:"vrp_version"`
+	ReadBufferSize  config.Size   `toml:"read_buffer_size"`
 	ContentEncoding string        `toml:"content_encoding"`
 	Log telegraf.Logger `toml:"-"`
 	connection net.PacketConn
@@ -73,14 +77,14 @@ func HuaweiTelemetryDecoder(body []byte, h *HuaweiRoutersTelemetry) (*metric.Ser
 		}
 		timestamp := time.Unix(0, int64(dataTime)*1000000)
 		//sensorMsg := huawei_routers_sensorPath.GetMessageType(msg.GetSensorPath())
-    sensorMsg := GetMessageType(msg.GetSensorPath())
+    sensorMsg := GetMessageType(msg.GetSensorPath(), h.VrpVersion)
 		err = proto.Unmarshal(gpbkv.Content, sensorMsg)
 		if err != nil {
 			h.Log.Error("Sensor Error:  %v", err)			
 			return nil, err
 		}
 		//fields, vals := huawei_routers_sensorPath.SearchKey(gpbkv, msg.GetSensorPath())
-    fields, vals := SearchKey(gpbkv, msg.GetSensorPath())
+    fields, vals := SearchKey(gpbkv, msg.GetSensorPath(), h.VrpVersion)
 		tags := make(map[string]string, len(fields)+3)
 		tags["source"] = msg.GetNodeIdStr()
 		tags["subscription"] = msg.GetSubscriptionIdStr()
@@ -88,11 +92,11 @@ func HuaweiTelemetryDecoder(body []byte, h *HuaweiRoutersTelemetry) (*metric.Ser
 		// Search for Tags
 		for i := 0; i < len(fields); i++ {
 			//tags = huawei_routers_sensorPath.AppendTags(fields[i], vals[i], tags, msg.GetSensorPath())
-      tags = AppendTags(fields[i], vals[i], tags, msg.GetSensorPath())
+      tags = AppendTags(fields[i], vals[i], tags, msg.GetSensorPath(), h.VrpVersion)
 		}
 		// Create Metrics
 		for i := 0; i < len(fields); i++ {
-			CreateMetrics(grouper, tags, timestamp, msg.GetSensorPath(), fields[i], vals[i])
+			CreateMetrics(grouper, tags, timestamp, msg.GetSensorPath(), fields[i], vals[i], h.VrpVersion)
 		}
 	}
 	return grouper, nil
@@ -140,7 +144,7 @@ func (h *HuaweiRoutersTelemetry) listen() {
   @params: path (string) - The head of the sensor path. Example: "huawei-ifm"
   @returns: sensor-path proto message
 */
-func GetMessageType(path string) (proto.Message) {
+func GetMessageType(path string, version string) (proto.Message) {
   sensorType := strings.Split(path,":")
   switch sensorType[0] {
  /* case "huawei-bfd":
@@ -157,7 +161,11 @@ func GetMessageType(path string) (proto.Message) {
     return &huaweiV8R10_bgp.ESTABLISHED{}
 
   case "huawei-devm":
-    return &huaweiV8R10_devm.Devm{}
+    if version == "V8R10" {
+      return &huaweiV8R10_devm.Devm{}
+    } else {
+      return &__huaweiV8R12_devm.Devm{}
+    }
 
   case "huawei-driver":
     switch sensorType[1] {
@@ -173,7 +181,12 @@ func GetMessageType(path string) (proto.Message) {
     return &huaweiV8R10_driver.HwEntityInvalid{}
 
   case "huawei-ifm":
-    return &huaweiV8R10_ifm.Ifm{}
+    if(version == "V8R10") {
+      return &huaweiV8R10_ifm.Ifm{}
+    } else {
+      return &huaweiV8R12_ifm.Ifm{}
+    }
+    
 
   case "huawei-isis":
   case "huawei-isiscomm":
@@ -195,7 +208,11 @@ func GetMessageType(path string) (proto.Message) {
   //  return &huaweiV8R10_ospfv3.Ospfv3NbrStateChange{}
 
   case "huawei-qos":
-    return &huaweiV8R10_qos.Qos{}
+    if version == "V8R10"{
+      return &huaweiV8R10_qos.Qos{}
+    } else {
+      return &huaweiV8R12_qos.Qos{}
+    }
 
   case "huawei-sem":
     switch sensorType[1] {
@@ -217,8 +234,24 @@ func GetMessageType(path string) (proto.Message) {
   case "huawei-trafficmng":
     return &huaweiV8R10_trafficmng.Trafficmng{}
 
+  case "huawei-debug":
+      if(len(sensorType) == 1) {
+      return &huaweiV8R12_debug.Debug{}
+    } else {
+      switch sensorType[1] {
+      case "debug/cpu-infos/cpu-info":
+        return &huaweiV8R12_debug.Debug{}
+      case "debug/memory-infos/memory-info":
+        return &huaweiV8R12_debug.Debug{}     
+      
+      default:
+      //  fmt.Println("Error Sensor Desconocido", sensorType[1])
+        return &huaweiV8R12_debug.Debug{}
+      }
+    }
+      break
   default:
-    fmt.Println("Error Sensor Desconocido")
+    fmt.Println("Error Sensor Desconocido en GetMessageType", path)
     return &huaweiV8R10_devm.Devm{}
   }
     return &huaweiV8R10_devm.Devm{}
@@ -231,12 +264,12 @@ func GetMessageType(path string) (proto.Message) {
   @Params: a string with the telemetry complete path
   @Returns: a Map with keys and types of the endpoint
 */
-func GetTypeValue (path string) map[string]reflect.Type {
+func GetTypeValue (path string, version string) map[string]reflect.Type {
   resolve := make(map[string]reflect.Type)
   splited := strings.Split(path,":")
   switch splited[0] {
   case "huawei-bfd":
-
+      // TODO bfd is not working
       return resolve
 
   case "huawei-bgp":
@@ -260,6 +293,14 @@ func GetTypeValue (path string) map[string]reflect.Type {
     return resolve
 
   case "huawei-devm":
+    if version != "V8R10" {
+      fooType := reflect.TypeOf(__huaweiV8R12_devm.Devm{})
+          for i := 0; i < fooType.NumField(); i ++ {
+            keys := fooType.Field(i)
+            resolve[LcFirst(keys.Name)] = keys.Type
+            }
+        return resolve
+    }
     switch splited[1] {
     case "devm/cpuInfos/cpuInfo":
           fooType := reflect.TypeOf(huaweiV8R10_devm.Devm_CpuInfos_CpuInfo{})
@@ -386,51 +427,99 @@ func GetTypeValue (path string) map[string]reflect.Type {
     return resolve
 
   case "huawei-ifm":
-    fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface{})
-    for i := 0; i < fooType.NumField(); i ++ {
-      keys := fooType.Field(i)
-      if keys.Name == "IfName" {
+        if(version == "V8R10") {
+      fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface{})
+      for i := 0; i < fooType.NumField(); i ++ {
+        keys := fooType.Field(i)
+        if keys.Name == "IfName" {
+            resolve[LcFirst(keys.Name)] = keys.Type
+            }
+        }
+      switch splited[1] {
+      case "ifm/interfaces/interface": // No trae data mas que IfIndex, IfName e IfAdminStatus_UP si la interface esta Down no devuevle el campo.
+        fooType = reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface{})
+        for i := 0; i < fooType.NumField(); i ++ {
+          keys := fooType.Field(i)
           resolve[LcFirst(keys.Name)] = keys.Type
           }
+          break;
+      case "ifm/interfaces/interface/ifClearedStat":
+        fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface_IfClearedStat{})
+        for i := 0; i < fooType.NumField(); i ++ {
+          keys := fooType.Field(i)
+          resolve[LcFirst(keys.Name)] = keys.Type
+          }
+          break;
+      case "ifm/interfaces/interface/ifDynamicInfo":
+        fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface_IfDynamicInfo{})
+        for i := 0; i < fooType.NumField(); i ++ {
+          keys := fooType.Field(i)
+          resolve[LcFirst(keys.Name)] = keys.Type
+          }
+          break;
+      case "ifm/interfaces/interface/ifStatistics":
+        fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface_IfStatistics{})
+        for i := 0; i < fooType.NumField(); i ++ {
+          keys := fooType.Field(i)
+          resolve[LcFirst(keys.Name)] = keys.Type
+          }
+          break;
+      case "ifm/interfaces/interface/ifStatistics/ethPortErrSts":
+        fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface_IfStatistics_EthPortErrSts{})
+        for i := 0; i < fooType.NumField(); i ++ {
+          keys := fooType.Field(i)
+          resolve[LcFirst(keys.Name)] = keys.Type
+          }
+          break;
       }
-    switch splited[1] {
-    case "ifm/interfaces/interface": // No trae data mas que IfIndex, IfName e IfAdminStatus_UP si la interface esta Down no devuevle el campo.
-      fooType = reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface{})
+      return resolve
+    } else { // V8R11 & V8R12
+       fooType := reflect.TypeOf(huaweiV8R12_ifm.Ifm_Interfaces_Interface{})
       for i := 0; i < fooType.NumField(); i ++ {
         keys := fooType.Field(i)
-        resolve[LcFirst(keys.Name)] = keys.Type
+        if keys.Name == "Name" {
+            resolve[LcFirst(keys.Name)] = keys.Type
+            }
         }
-        break;
-    case "ifm/interfaces/interface/ifClearedStat":
-      fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface_IfClearedStat{})
-      for i := 0; i < fooType.NumField(); i ++ {
-        keys := fooType.Field(i)
-        resolve[LcFirst(keys.Name)] = keys.Type
-        }
-        break;
-    case "ifm/interfaces/interface/ifDynamicInfo":
-      fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface_IfDynamicInfo{})
-      for i := 0; i < fooType.NumField(); i ++ {
-        keys := fooType.Field(i)
-        resolve[LcFirst(keys.Name)] = keys.Type
-        }
-        break;
-    case "ifm/interfaces/interface/ifStatistics":
-      fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface_IfStatistics{})
-      for i := 0; i < fooType.NumField(); i ++ {
-        keys := fooType.Field(i)
-        resolve[LcFirst(keys.Name)] = keys.Type
-        }
-        break;
-    case "ifm/interfaces/interface/ifStatistics/ethPortErrSts":
-      fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface_IfStatistics_EthPortErrSts{})
-      for i := 0; i < fooType.NumField(); i ++ {
-        keys := fooType.Field(i)
-        resolve[LcFirst(keys.Name)] = keys.Type
-        }
-        break;
+      switch splited[1] {
+      case "ifm/interfaces/interface": // No trae data mas que IfIndex, IfName e IfAdminStatus_UP si la interface esta Down no devuevle el campo.
+        fooType = reflect.TypeOf(huaweiV8R12_ifm.Ifm_Interfaces_Interface{})
+        for i := 0; i < fooType.NumField(); i ++ {
+          keys := fooType.Field(i)
+          resolve[LcFirst(keys.Name)] = keys.Type
+          }
+          break;
+      case "ifm/interfaces/interface/ifClearedStat":
+        fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface_IfClearedStat{})
+        for i := 0; i < fooType.NumField(); i ++ {
+          keys := fooType.Field(i)
+          resolve[LcFirst(keys.Name)] = keys.Type
+          }
+          break;
+      case "ifm/interfaces/interface/ifDynamicInfo":
+        fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface_IfDynamicInfo{})
+        for i := 0; i < fooType.NumField(); i ++ {
+          keys := fooType.Field(i)
+          resolve[LcFirst(keys.Name)] = keys.Type
+          }
+          break;
+      case "ifm/interfaces/interface/ifStatistics":
+        fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface_IfStatistics{})
+        for i := 0; i < fooType.NumField(); i ++ {
+          keys := fooType.Field(i)
+          resolve[LcFirst(keys.Name)] = keys.Type
+          }
+          break;
+      case "ifm/interfaces/interface/ifStatistics/ethPortErrSts":
+        fooType := reflect.TypeOf(huaweiV8R10_ifm.Ifm_Interfaces_Interface_IfStatistics_EthPortErrSts{})
+        for i := 0; i < fooType.NumField(); i ++ {
+          keys := fooType.Field(i)
+          resolve[LcFirst(keys.Name)] = keys.Type
+          }
+          break;
+      }
+      return resolve
     }
-    return resolve
   case "huawei-isiscomm":
   case "huawei-isis":
     fooType := reflect.TypeOf(huaweiV8R10_isiscomm.IsisAdjacencyChange{})
@@ -586,9 +675,29 @@ func GetTypeValue (path string) map[string]reflect.Type {
 
     }
     return resolve
-
+    /* Sensores V8R12 */
+  case "huawei-debug":
+    switch splited[1] {
+    case "debug/cpu-infos/cpu-info":
+          fooType := reflect.TypeOf(huaweiV8R12_debug.Debug_CpuInfos_CpuInfo{})
+          for i := 0; i < fooType.NumField(); i ++ {
+            keys := fooType.Field(i)
+            resolve[LcFirst(keys.Name)] = keys.Type
+            }
+        break;
+    case "debug/memory-infos/memory-info":
+      fooType := reflect.TypeOf(huaweiV8R12_debug.Debug_MemoryInfos_MemoryInfo{})
+      for i := 0; i < fooType.NumField(); i ++ {
+        keys := fooType.Field(i)
+        resolve[LcFirst(keys.Name)] = keys.Type
+        }
+    break;
+      }
+    return resolve
   default:
-    fmt.Println("Error Sensor Desconocido")
+    fmt.Println("Error Sensor Desconocido", path)
+    //fmt.Println(path)
+    
     return resolve
   }
  return resolve
@@ -624,7 +733,9 @@ func (h *HuaweiRoutersTelemetry) Description() string {
 func (h *HuaweiRoutersTelemetry) SampleConfig() string {
 	return `
   ## UDP Service Port to capture Telemetry
-  # service_port = "8080"
+  # service_port = "5600"
+  # vrp_version = "V8R10"
+  # read_buffer_size = "64KiB"
 
 `
 }
@@ -647,9 +758,9 @@ func (h *HuaweiRoutersTelemetry) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	if h.ReadBufferSize.Size > 0 {
+	if h.ReadBufferSize > 0 { // internal.Size
 		if srb, ok := pc.(setReadBufferer); ok {
-			srb.SetReadBuffer(int(h.ReadBufferSize.Size))
+			srb.SetReadBuffer(int(h.ReadBufferSize)) //internal.Size
 		} else {
 			h.Log.Warnf("Unable to set read buffer on a %s socket", "udp")
 		}
@@ -679,7 +790,7 @@ func (h *HuaweiRoutersTelemetry) Start(acc telegraf.Accumulator) error {
     vals (string) - subkey content
 
 */
-func CreateMetrics(grouper *metric.SeriesGrouper, tags map[string]string, timestamp time.Time, path string, subfield string, vals string)  {
+func CreateMetrics(grouper *metric.SeriesGrouper, tags map[string]string, timestamp time.Time, path string, subfield string, vals string, version string)  {
   if subfield == "ifAdminStatus" {
     name:= strings.Replace(subfield,"\"","",-1)
     if vals == "IfAdminStatus_UP" {
@@ -700,7 +811,7 @@ func CreateMetrics(grouper *metric.SeriesGrouper, tags map[string]string, timest
   subfield != "queueType" && subfield != "ifAdminStatus" && subfield != "ifOperStatus" {
     name:= strings.Replace(subfield,"\"","",-1)
     //endPointTypes:=huawei_routers_sensorPath.GetTypeValue(path)
-    endPointTypes:=GetTypeValue(path)
+    endPointTypes:=GetTypeValue(path, version)
     grouper.Add(path, tags, timestamp, string(name), decodeVal(endPointTypes[name], vals))
   }
 }
@@ -716,10 +827,10 @@ func CreateMetrics(grouper *metric.SeriesGrouper, tags map[string]string, timest
   original tag append the key if its a name Key.
 
 */
-func AppendTags(k string, v string, tags map[string]string, path string) map[string]string {
+func AppendTags(k string, v string, tags map[string]string, path string, version string) map[string]string {
   resolve := tags
   //endPointTypes:=huawei_routers_sensorPath.GetTypeValue(path)
-  endPointTypes:=GetTypeValue(path)
+  endPointTypes:=GetTypeValue(path, version)
   if endPointTypes[k] != nil {
     if reflect.TypeOf(decodeVal(endPointTypes[k], v)) == reflect.TypeOf("") {
       if k != "ifAdminStatus" {
@@ -727,7 +838,7 @@ func AppendTags(k string, v string, tags map[string]string, path string) map[str
       }
     }
   } else {
-    if k == "ifName" || k == "position" || k == "pemIndex" || k == "i2c"{
+    if k == "ifName" || k == "position" || k == "pemIndex" || k == "i2c" || k == "name" || k == "description" {
       resolve[k] = v
     }
 
@@ -789,10 +900,10 @@ func Find(a []string, x string) int {
   - keys (string) - Keys of the fields
   - vals (string) - Vals of the fields
 */
-func SearchKey(Message *huawei_telemetry.TelemetryRowGPB, path string)  ([]string, []string){
+func SearchKey(Message *huawei_telemetry.TelemetryRowGPB, path string, version string)  ([]string, []string){
   sensorType := strings.Split(path,":")[0]
   //sensorMsg := huawei_routers_sensorPath.GetMessageType(sensorType)
-  sensorMsg := GetMessageType(sensorType)
+  sensorMsg := GetMessageType(sensorType, version)
   err := proto.Unmarshal(Message.Content, sensorMsg)
   if (err != nil) {
     panic(err)
@@ -812,8 +923,34 @@ func SearchKey(Message *huawei_telemetry.TelemetryRowGPB, path string)  ([]strin
   jsonString= strings.Replace(jsonString,"{"," ",-1)
   jsonString= strings.Replace(jsonString,"}","",-1)
   jsonString="\""+jsonString
-  if path == "huawei-ifm:ifm/interfaces/interface/ifDynamicInfo" { // Particular case.....
-    jsonString= strings.Replace(jsonString,"IfOperStatus_UPifName\"","IfOperStatus_UP \"ifName\"",-1)
+    if version == "V8R10" {
+    //fmt.Println("-------------------------jsonString-----------------------")
+    //fmt.Println(jsonString)
+    //fmt.Println("-------------------------jsonString-----------------------")
+    if path == "huawei-ifm:ifm/interfaces/interface/ifDynamicInfo" { // caso particular....
+      jsonString= strings.Replace(jsonString,"IfOperStatus_UPifName\"","IfOperStatus_UP \"ifName\"",-1)
+    }
+  } else {
+    //interfaces:{interface:{name:"Eth-Trunk176"  mib_statistics:{receive_byte:26548635462  send_byte:425072856851  receive_packet:48418804  send_packet:316258640  receive_unicast_packet:47678976  receive_multicast_packet:737414  receive_broad_packet:2414  send_unicast_packet:293657  send_multicast_packet:315964983}}}
+   // jsonString = strings.Replace(jsonString,"  ", " ",-1)
+    //jsonString = strings.Replace(jsonString," ", ",",-1)
+    fmt.Printf("\n\n%s\n\n",path)
+    
+   // if path == "huawei-ifm:ifm/interfaces/interface/mib-statistics" || path=="huawei-ifm:ifm/interfaces/interface/mib-statistics/huawei-pic:eth-port-err-sts" || path == "huawei-ifm:ifm/interfaces/interface"{
+      jsonString = strings.Replace(jsonString," interface\": name\""," \"interface\": \"name\"",-1)
+      jsonString= strings.Replace(jsonString," \" \""," \"",-1)
+      jsonString= strings.Replace(jsonString,"receive_byte\"", "\"receive_byte\"",-1)
+      jsonString= strings.Replace(jsonString,"eth_port_err_sts\"", "\"eth_port_err_sts\"",-1)
+      jsonString= strings.Replace(jsonString,"rx_jumbo_octets\"", "\"rx_jumbo_octets\"",-1)
+      jsonString= strings.Replace(jsonString,"\":0\" ", "_0\" ",-1 )
+      jsonString= strings.Replace(jsonString,"\":1\" ", "_1\" ",-1 )
+      jsonString= strings.Replace(jsonString,"\":2\" ", "_2\" ",-1 )
+      jsonString= strings.Replace(jsonString,"\":3\" ", "_3\" ",-1 )
+
+  //  }
+    fmt.Println("-------------------------jsonString Modificado-----------------------")
+  fmt.Println(jsonString)
+  fmt.Println("-------------------------jsonString Modificado-----------------------")
   }
   lastQuote := rune(0)
       f := func(c rune) bool {
