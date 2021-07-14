@@ -53,7 +53,7 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 		var responseLeaderData ResponseLeaderboards
 		// request and unmarshall leaderboard information
 		// and add it to the accumulator
-		resp, err := http.Get("http://api.chess.com/pub/leaderboards")
+		resp, err := http.Get("https://api.chess.com/pub/leaderboards")
 		if err != nil {
 			fmt.Print(err.Error())
 			os.Exit(1)
