@@ -2,9 +2,7 @@ package chess
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -56,22 +54,21 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 		// and add it to the accumulator
 		resp, err := http.Get("https://api.chess.com/pub/leaderboards")
 		if err != nil {
-			fmt.Print(err.Error())
+			c.Log.Errorf("failed to GET leaderboards json: %w", err)
 			os.Exit(1)
 		}
 		data, err := ioutil.ReadAll(resp.Body)
 		defer resp.Body.Close()
 		if err != nil {
-			log.Fatal(err)
+			c.Log.Errorf("failed to read leaderboards json response body: %w", err)
 		}
-		//fmt.Println(string(data))
+
 		//unmarshall the data
 		err = json.Unmarshal(data, &Leaderboards)
 		if err != nil {
-			fmt.Print(err.Error())
+			c.Log.Errorf("failed to unmarshall leaderboards json: %w", err)
 			os.Exit(1)
 		}
-		//fmt.Printf("%+v\n", Leaderboards)
 
 		for _, stat := range Leaderboards.Daily {
 			var fields = make(map[string]interface{}, len(Leaderboards.Daily))
@@ -81,7 +78,7 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 			fields["username"] = stat.Username
 			fields["rank"] = stat.Rank
 			fields["score"] = stat.Score
-			acc.AddFields("leaderboards", fields, tags)
+			acc.AddFields(leaderboards, fields, tags)
 		}
 	}
 	return nil
