@@ -50,6 +50,15 @@ The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The 
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional Cookie authentication
+  # cookie_auth_url = "https://localhost/authMe"
+  # cookie_auth_method = "POST"
+  # cookie_auth_username = "username"
+  # cookie_auth_password = "pa$$word"
+  # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
+  ## cookie_auth_renewal not set or set to "0" will auth once and never renew the cookie
+  # cookie_auth_renewal = "5m"
+
   ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"
 
@@ -73,3 +82,7 @@ The default values below are added if the input format does not specify a value:
 - http
   - tags:
     - url
+
+### Optional Cookie Authentication Settings:
+
+The optional Cookie Authentication Settings will retrieve a cookie from the given authorization endpoint, and use it in subsequent API requests.  This is useful for services that do not provide OAuth or Basic Auth authentication, e.g. the [Tesla Powerwall API](https://www.tesla.com/support/energy/powerwall/own/monitoring-from-home-network), which uses a Cookie Auth Body to retrieve an authorization cookie.  The Cookie Auth Renewal interval will renew the authorization by retrieving a new cookie at the given interval.

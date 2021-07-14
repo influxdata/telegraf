@@ -9,7 +9,8 @@ require (
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.5.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
-	github.com/Azure/azure-storage-queue-go v0.0.0-20181215014128-6ed74e755687
+	github.com/Azure/azure-kusto-go v0.3.2
+	github.com/Azure/azure-storage-queue-go v0.0.0-20191125232315-636801874cdd
 	github.com/Azure/go-autorest/autorest v0.11.17
 	github.com/Azure/go-autorest/autorest/adal v0.9.10
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.6
@@ -47,7 +48,7 @@ require (
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/docker/docker v20.10.6+incompatible
 	github.com/doclambda/protobufquery v0.0.0-20210317203640-88ffabe06a60
-	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.1.0
+	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.2.0
 	github.com/eclipse/paho.mqtt.golang v1.3.0
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
@@ -75,7 +76,7 @@ require (
 	github.com/harlow/kinesis-consumer v0.3.1-0.20181230152818-2f58b136fee0
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
-	github.com/influxdata/go-syslog/v2 v2.0.1
+	github.com/influxdata/go-syslog/v3 v3.0.0
 	github.com/influxdata/influxdb-observability/common v0.0.0-20210429174543-86ae73cafd31
 	github.com/influxdata/influxdb-observability/otel2influx v0.0.0-20210429174543-86ae73cafd31
 	github.com/influxdata/influxdb-observability/otlp v0.0.0-20210429174543-86ae73cafd31
