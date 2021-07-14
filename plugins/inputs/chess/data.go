@@ -10,3 +10,7 @@ type ResponseLeaderboards struct {
 	Rank     int    `json:"rank"`
 	Score    int    `json:"score"`
 }
+
+type Leaderboards struct {
+	Daily []ResponseLeaderboards `json:"daily"`
+}
