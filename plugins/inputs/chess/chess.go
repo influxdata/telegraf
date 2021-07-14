@@ -2,7 +2,7 @@ package chess
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -57,7 +57,7 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 			c.Log.Errorf("failed to GET leaderboards json: %w", err)
 			os.Exit(1)
 		}
-		data, err := ioutil.ReadAll(resp.Body)
+		data, err := io.ReadAll(resp.Body)
 		defer resp.Body.Close()
 		if err != nil {
 			c.Log.Errorf("failed to read leaderboards json response body: %w", err)
