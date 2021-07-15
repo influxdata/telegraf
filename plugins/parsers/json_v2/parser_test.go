@@ -22,6 +22,10 @@ func TestData(t *testing.T) {
 		test string
 	}{
 		{
+			name: "Test complex nesting",
+			test: "complex_nesting",
+		},
+		{
 			name: "Test having an array of objects",
 			test: "array_of_objects",
 		},
