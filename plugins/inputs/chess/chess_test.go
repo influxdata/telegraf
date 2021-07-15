@@ -24,7 +24,7 @@ func Test_Chess_Leaderboards_Simple(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, string(out))
 
-	metric, hasMeas := acc.Get(leaderboards)
+	metric, hasMeas := acc.Get("leaderboards")
 	require.True(t, hasMeas)
 	require.NotNil(t, metric)
 

@@ -14,13 +14,15 @@ import (
 
 // Chess is the plugin type
 type Chess struct {
-	Profiles []string        `toml:"profiles"`
-	Log      telegraf.Logger `toml:"-"`
+	Profiles    []string        `toml:"profiles"`
+	Leaderboard bool            `toml:"leaderboard"`
+	Log         telegraf.Logger `toml:"-"`
 }
 
 const SampleConfig = `
   # A list of profiles for monotoring 
   profiles = ["username1", "username2"]
+  leaderboard = false
 `
 
 func (c *Chess) Description() string {
@@ -47,8 +49,8 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 	// }
 
 	// check if profiles is not included
-	if c.Profiles == nil && len(c.Profiles) == 0 {
-		var Leaderboards Leaderboards
+	if c.Leaderboard {
+		var leaderboards Leaderboards
 		// request and unmarshall leaderboard information
 		// and add it to the accumulator
 		resp, err := http.Get("https://api.chess.com/pub/leaderboards")
@@ -65,21 +67,21 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 		}
 
 		//unmarshall the data
-		err = json.Unmarshal(data, &Leaderboards)
+		err = json.Unmarshal(data, &leaderboards)
 		if err != nil {
 			c.Log.Errorf("failed to unmarshall leaderboards json: %w", err)
 			return err
 		}
 
-		for _, stat := range Leaderboards.Daily {
-			var fields = make(map[string]interface{}, len(Leaderboards.Daily))
+		for _, stat := range leaderboards.Daily {
+			var fields = make(map[string]interface{}, len(leaderboards.Daily))
 			var tags = map[string]string{
-				"playerId": strconv.Itoa(stat.PlayerId),
+				"playerId": strconv.Itoa(stat.PlayerID),
 			}
 			fields["username"] = stat.Username
 			fields["rank"] = stat.Rank
 			fields["score"] = stat.Score
-			acc.AddFields(leaderboards, fields, tags)
+			acc.AddFields("leaderboards", fields, tags)
 		}
 	}
 	return nil

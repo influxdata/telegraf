@@ -11,6 +11,8 @@ distribution of players and clubs.
 [[inputs.chess]]
 # A list of profiles for monotoring 
   profiles = ["username1", "username2"]
+#track leaderboard
+  leaderboard = false
 ```
 
 ### Troubleshooting
