@@ -180,7 +180,6 @@ func initQueries(s *SQLServer) error {
 		// These two Query Store queries should not run by default as they are expensive and collection interval should be >=15m.
 		queries["AzureSQLDBQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreRuntimeStatistics", Script: sqlAzureDBQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
 		queries["AzureSQLDBQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreWaitStatistics", Script: sqlAzureDBQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
-
 	} else if s.DatabaseType == typeAzureSQLManagedInstance {
 		queries["AzureSQLMIResourceStats"] = Query{ScriptName: "AzureSQLMIResourceStats", Script: sqlAzureMIResourceStats, ResultByRow: false}
 		queries["AzureSQLMIResourceGovernance"] = Query{ScriptName: "AzureSQLMIResourceGovernance", Script: sqlAzureMIResourceGovernance, ResultByRow: false}
