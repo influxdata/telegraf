@@ -2,7 +2,6 @@ package opentelemetry
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
@@ -18,7 +17,6 @@ import (
 
 type OpenTelemetry struct {
 	ServiceAddress string `toml:"service_address"`
-	MetricsSchema  string `toml:"metrics_schema"`
 
 	tls.ClientConfig
 	Timeout     config.Duration   `toml:"timeout"`
@@ -41,12 +39,6 @@ const sampleConfig = `
 
   ## Override the default (5s) request timeout
   # timeout = "5s"
-
-  ## Override the default (prometheus-v1) metrics schema.
-  ## Supports: "prometheus-v1", "prometheus-v2"
-  ## For more information about the alternatives, read the Prometheus input
-  ## plugin notes.
-  # metrics_schema = "prometheus-v1"
 
   ## Optional TLS Config.
   ##
@@ -82,19 +74,20 @@ func (o *OpenTelemetry) Description() string {
 	return "Send OpenTelemetry metrics over gRPC"
 }
 
-var metricsSchemata = map[string]common.MetricsSchema{
-	"prometheus-v1": common.MetricsSchemaTelegrafPrometheusV1,
-	"prometheus-v2": common.MetricsSchemaTelegrafPrometheusV2,
-}
-
 func (o *OpenTelemetry) Connect() error {
 	logger := &otelLogger{o.Log}
-	ms, found := metricsSchemata[o.MetricsSchema]
-	if !found {
-		return fmt.Errorf("schema '%s' not recognized", o.MetricsSchema)
+
+	if o.ServiceAddress == "" {
+		o.ServiceAddress = defaultServiceAddress
+	}
+	if o.Timeout <= 0 {
+		o.Timeout = defaultTimeout
+	}
+	if o.Compression == "" {
+		o.Compression = defaultCompression
 	}
 
-	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(logger, ms)
+	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(logger)
 	if err != nil {
 		return err
 	}
@@ -166,13 +159,18 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	return err
 }
 
+const (
+	defaultServiceAddress = "localhost:4317"
+	defaultTimeout        = config.Duration(5 * time.Second)
+	defaultCompression    = "gzip"
+)
+
 func init() {
 	outputs.Add("opentelemetry", func() telegraf.Output {
 		return &OpenTelemetry{
-			ServiceAddress: "localhost:4317",
-			MetricsSchema:  "prometheus-v1",
-			Timeout:        config.Duration(5 * time.Second),
-			Compression:    "gzip",
+			ServiceAddress: defaultServiceAddress,
+			Timeout:        defaultTimeout,
+			Compression:    defaultCompression,
 		}
 	})
 }

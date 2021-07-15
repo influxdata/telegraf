@@ -13,12 +13,6 @@ This plugin sends metrics to [OpenTelemetry](https://opentelemetry.io) servers a
   ## Override the default (5s) request timeout
   # timeout = "5s"
 
-  ## Override the default (prometheus-v1) metrics schema.
-  ## Supports: "prometheus-v1", "prometheus-v2"
-  ## For more information about the alternatives, read the Prometheus input
-  ## plugin notes.
-  # metrics_schema = "prometheus-v1"
-
   ## Optional TLS Config.
   ##
   ## Root certificates for verifying server certificates encoded in PEM format.
@@ -51,11 +45,15 @@ The InfluxDB->OpenTelemetry conversion [schema](https://github.com/influxdata/in
 and [implementation](https://github.com/influxdata/influxdb-observability/tree/main/influx2otel)
 are hosted at https://github.com/influxdata/influxdb-observability .
 
-For metrics, two output schemata exist.
-When this plugin is configured with `metrics_schema=prometheus-v1`,
-measurement name is used for OTel `Metric.name`.
-When this plugin is configured with `metrics_schema=prometheus-v2`,
-input points are expected to have measurement `prometheus`,
-and OTel `Metric.name` is inferred from field keys.
+For metrics, two input schemata exist.
+Line protocol with measurement name `prometheus` is assumed to have a schema
+matching [Prometheus input plugin](../../inputs/prometheus/README.md) when `metric_version = 2`.
+Line protocol with other measurement names is assumed to have schema
+matching [Prometheus input plugin](../../inputs/prometheus/README.md) when `metric_version = 1`.
+If both schema assumptions fail, then the line protocol data is interpreted as:
+- Metric type = gauge (or counter, if indicated by the input plugin)
+- Metric name = `[measurement]_[field key]`
+- Metric value = line protocol field value, cast to float
+- Metric labels = line protocol tags
 
-Also see the OpenTelemetry input plugin for Telegraf.
+Also see the [OpenTelemetry input plugin](../../inputs/opentelemetry/README.md).
