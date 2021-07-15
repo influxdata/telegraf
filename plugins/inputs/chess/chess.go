@@ -42,11 +42,6 @@ func (c *Chess) Init() error {
 }
 
 func (c *Chess) Gather(acc telegraf.Accumulator) error {
-	// if c.Ok {
-	// 	acc.AddFields("state", map[string]interface{}{"value": "pretty good"}, nil)
-	// } else {
-	// 	acc.AddFields("state", map[string]interface{}{"value": "not great"}, nil)
-	// }
 
 	// check if profiles is not included
 	if c.Leaderboard {
