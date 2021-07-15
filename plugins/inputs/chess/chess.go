@@ -14,13 +14,15 @@ import (
 
 // Chess is the plugin type
 type Chess struct {
-	Profiles []string        `toml:"profiles"`
-	Log      telegraf.Logger `toml:"-"`
+	Profiles    []string        `toml:"profiles"`
+	Leaderboard bool            `toml:"leaderboard"`
+	Log         telegraf.Logger `toml:"-"`
 }
 
 const SampleConfig = `
   # A list of profiles for monotoring 
   profiles = ["username1", "username2"]
+  leaderboard = false
 `
 
 func (c *Chess) Description() string {
@@ -47,7 +49,7 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 	// }
 
 	// check if profiles is not included
-	if c.Profiles == nil && len(c.Profiles) == 0 {
+	if c.Leaderboard {
 		var Leaderboards Leaderboards
 		// request and unmarshall leaderboard information
 		// and add it to the accumulator
