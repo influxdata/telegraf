@@ -2,11 +2,11 @@
 
 This Plugin read the Huawei Routers Telemetry Information. This first version only support UDP configuration. It was tested with Huawei NE40 and NE9000 series routers running V8R10.
 
-The telemetry information is analized by https://github.com/DamRCorba/huawei_telemetry_sensors.
+The telemetry information is analized by https://github.com/DamRCorba/huawei_sensors.
 
 ## Router configuration
 
-```
+```bash
 telemetry
  #
  sensor-group DeviceManager
@@ -32,14 +32,14 @@ telemetry
 
 # Plugin Configuration
 
-```
+```bash
 [[inputs.huawei_routers_telemetry]]
   service_port = "8080"
 ```
 
 # Influx Data Stored.
 
-```
+```bash
 SELECT * FROM "huawei-ifm:ifm/interfaces/interface/ifStatistics" WHERE ("source" = 'HuaweiRouter' AND "ifName" = '"Eth-Trunk200"')
 
 1583267858284000000 debian "Eth-Trunk200"              huawei-ifm:ifm/interfaces/interface/ifStatistics                1879172       1154727861   1194213864700 1156607033    145599231578  689075043  689075043     HuaweiRouter TelemetryTestSubscripcion

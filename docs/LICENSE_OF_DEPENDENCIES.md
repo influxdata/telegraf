@@ -14,7 +14,7 @@ following works:
 - github.com/Azure/azure-storage-queue-go [MIT License](https://github.com/Azure/azure-storage-queue-go/blob/master/LICENSE)
 - github.com/Azure/go-amqp [MIT License](https://github.com/Azure/go-amqp/blob/master/LICENSE)
 - github.com/Azure/go-autorest [Apache License 2.0](https://github.com/Azure/go-autorest/blob/master/LICENSE)
-- github.com/DamRCorba/huawei_telemetry_sensors [MIT License](https://github.com/DamRCorba/huawei_telemetry_sensors/blob/master/LICENCE)
+- github.com/DamRCorba/huawei_sensors [MIT License](https://github.com/DamRCorba/huawei_sensors/blob/master/LICENCE)
 - github.com/Mellanox/rdmamap [Apache License 2.0](https://github.com/Mellanox/rdmamap/blob/master/LICENSE)
 - github.com/Microsoft/go-winio [MIT License](https://github.com/Microsoft/go-winio/blob/master/LICENSE)
 - github.com/Shopify/sarama [MIT License](https://github.com/Shopify/sarama/blob/master/LICENSE)
