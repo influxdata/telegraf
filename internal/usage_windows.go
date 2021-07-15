@@ -16,6 +16,9 @@ The commands & flags are:
   --aggregator-filter <filter>   filter the aggregators to enable, separator is :
   --config <file>                configuration file to load
   --config-directory <directory> directory containing additional *.conf files
+  --watch-config                 Telegraf will restart on local config changes. Monitor changes 
+                                 using either fs notifications or polling.  Valid values: 'inotify' or 'poll'. 
+                                 Monitoring is off by default.
   --debug                        turn on debug logging
   --input-filter <filter>        filter the inputs to enable, separator is :
   --input-list                   print available input plugins.
