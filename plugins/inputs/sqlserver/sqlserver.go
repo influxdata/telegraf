@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -12,24 +13,28 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 	mssql "github.com/denisenkom/go-mssqldb"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // SQLServer struct
 type SQLServer struct {
-	Servers      []string `toml:"servers"`
-	AuthMethod   string   `toml:"auth_method"`
-	QueryVersion int      `toml:"query_version"`
-	AzureDB      bool     `toml:"azuredb"`
-	DatabaseType string   `toml:"database_type"`
-	IncludeQuery []string `toml:"include_query"`
-	ExcludeQuery []string `toml:"exclude_query"`
-	HealthMetric bool     `toml:"health_metric"`
-	pools        []*sql.DB
-	queries      MapQuery
-	adalToken    *adal.Token
-	muCacheLock  sync.RWMutex
+	Servers                 []string        `toml:"servers"`
+	AuthMethod              string          `toml:"auth_method"`
+	QueryVersion            int             `toml:"query_version"`
+	AzureDB                 bool            `toml:"azuredb"`
+	DatabaseType            string          `toml:"database_type"`
+	IncludeQuery            []string        `toml:"include_query"`
+	ExcludeQuery            []string        `toml:"exclude_query"`
+	HealthMetric            bool            `toml:"health_metric"`
+	RetryCount              int             `toml:"retry_count"`
+	RetryWaitTime           config.Duration `toml:"retry_wait_time"`
+	RetryExponentialBackoff bool            `toml:"retry_exponential_backoff"`
+	pools                   []*sql.DB
+	queries                 MapQuery
+	adalToken               *adal.Token
+	muCacheLock             sync.RWMutex
 }
 
 // Query struct
@@ -257,7 +262,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 			go func(pool *sql.DB, query Query, serverIndex int) {
 				defer wg.Done()
 				connectionString := s.Servers[serverIndex]
-				queryError := s.gatherServer(pool, query, acc, connectionString)
+				queryError := s.gatherServerWithRetry(pool, query, acc, connectionString)
 
 				if s.HealthMetric {
 					mutex.Lock()
@@ -343,6 +348,36 @@ func (s *SQLServer) Stop() {
 	for _, pool := range s.pools {
 		_ = pool.Close()
 	}
+}
+
+func (s *SQLServer) gatherServerWithRetry(pool *sql.DB, query Query, acc telegraf.Accumulator, connectionString string) error {
+	for retryAttempt := 0; retryAttempt <= s.RetryCount; retryAttempt++ {
+		queryError := s.gatherServer(pool, query, acc, connectionString)
+		if queryError == nil {
+			// gatherServer completed successfully
+			break
+		}
+
+		if retryAttempt >= s.RetryCount {
+			// gatherServer failed on the final retry attempt
+			return queryError
+		}
+
+		log.Printf("W! [inputs.sqlserver] Error gathering data, retrying %d more time(s): %s.", s.RetryCount-retryAttempt, queryError)
+
+		// Calculate the wait time - either constant or exponential
+		multiplier := 1.0
+		if s.RetryExponentialBackoff {
+			multiplier = math.Pow(2, float64(retryAttempt))
+		}
+
+		waitTime := time.Duration(s.RetryWaitTime * config.Duration(multiplier))
+
+		// gatherServer failed, and we'll retry after waiting
+		time.Sleep(waitTime)
+	}
+
+	return nil
 }
 
 func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumulator, connectionString string) error {
@@ -475,6 +510,10 @@ func (s *SQLServer) getDatabaseTypeToLog() string {
 func (s *SQLServer) Init() error {
 	if len(s.Servers) == 0 {
 		log.Println("W! Warning: Server list is empty.")
+	}
+
+	if s.RetryCount < 0 {
+		return fmt.Errorf("Retry count cannot be negative")
 	}
 
 	return nil
