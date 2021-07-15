@@ -14,3 +14,14 @@ type ResponseLeaderboards struct {
 type Leaderboards struct {
 	Daily []ResponseLeaderboards `json:"daily"`
 }
+
+type ResponseStreamerData struct {
+	Username  string `json:"username"`
+	Avatar    string `json:"avatar"`
+	TwitchUrl string `json:"twitch_url"`
+	Url       string `json:"url"`
+}
+
+type Streamers struct {
+	Data []ResponseStreamerData `json:"streamers"`
+}

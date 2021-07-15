@@ -16,6 +16,7 @@ import (
 type Chess struct {
 	Profiles    []string        `toml:"profiles"`
 	Leaderboard bool            `toml:"leaderboard"`
+	Streamers   bool            `toml:"streamers"`
 	Log         telegraf.Logger `toml:"-"`
 }
 
@@ -43,8 +44,10 @@ func (c *Chess) Init() error {
 
 func (c *Chess) Gather(acc telegraf.Accumulator) error {
 
-	// check if profiles is not included
 	if c.Leaderboard {
+		// Obtain all public leaderboard information from the
+		// chess.com api
+
 		var leaderboards Leaderboards
 		// request and unmarshall leaderboard information
 		// and add it to the accumulator
@@ -77,6 +80,42 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 			fields["rank"] = stat.Rank
 			fields["score"] = stat.Score
 			acc.AddFields("leaderboards", fields, tags)
+		}
+	} else if c.Streamers {
+		// Obtain all public Streamer information from the
+		// chess.com api
+
+		var streams Streamers
+		// erquest and unmarshall streamer information
+		// and add it to the accumulator
+		resp, err := http.Get("https://api.chess.com/pub/streamers")
+		if err != nil {
+			c.Log.Errorf("failed to get streamers json: %w", err)
+			return err
+		}
+
+		data, err := io.ReadAll(resp.Body)
+		defer resp.Body.Close()
+		if err != nil {
+			c.Log.Errorf("failed to read streamer json response body: %w", err)
+			return err
+		}
+
+		err = json.Unmarshal(data, &streams)
+		if err != nil {
+			c.Log.Errorf("failed to unmarshall streamers json: %w", err)
+			return err
+		}
+
+		for _, stat := range streams.Data {
+			var fields = make(map[string]interface{}, len(streams.Data))
+			var tags = map[string]string{
+				"url": stat.Url,
+			}
+			fields["username"] = stat.Username
+			fields["avatar"] = stat.Avatar
+			fields["twitch_url"] = stat.TwitchUrl
+			acc.AddFields("Streamers", fields, tags)
 		}
 	}
 	return nil
