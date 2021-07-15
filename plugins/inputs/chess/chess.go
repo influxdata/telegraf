@@ -43,7 +43,6 @@ func (c *Chess) Init() error {
 }
 
 func (c *Chess) Gather(acc telegraf.Accumulator) error {
-
 	if c.Leaderboard {
 		// Obtain all public leaderboard information from the
 		// chess.com api
