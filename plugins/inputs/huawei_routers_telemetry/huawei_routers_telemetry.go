@@ -244,7 +244,6 @@ func GetMessageType(path string, version string) proto.Message {
 				return &huaweiV8R12_debug.Debug{}
 			}
 		}
-		break
 	default:
 		//	fmt.Println("Error Sensor Desconocido en GetMessageType", path)
 		return &huaweiV8R10_devm.Devm{}
