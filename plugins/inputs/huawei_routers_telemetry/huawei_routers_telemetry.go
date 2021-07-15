@@ -60,7 +60,8 @@ type HuaweiRoutersTelemetry struct {
 
 /*
   Telemetry Decoder.
-
+  @params {byte[]} body - message body
+  @params {HuaweiRoutersTelemetry} h - HuaweiRoutersTelemetry structure
 */
 func HuaweiTelemetryDecoder(body []byte, h *HuaweiRoutersTelemetry) (*metric.SeriesGrouper, error) {
 	msg := &huawei_telemetry.Telemetry{}
