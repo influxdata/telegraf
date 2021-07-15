@@ -30,6 +30,7 @@ const sampleConfig = `
   dsn = "username:password@mysqlserver:3307/dbname?param=value"
 
   ## Timeout for any operation
+  ## Note that the timeout for queries is per query not per gather.
   # timeout = "5s"
 
   ## Connection time limits
@@ -486,16 +487,13 @@ func (s *SQL) Stop() {
 
 func (s *SQL) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
-	defer cancel()
-
 	tstart := time.Now()
 	for _, query := range s.Queries {
 		wg.Add(1)
-
 		go func(q Query) {
 			defer wg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Timeout))
+			defer cancel()
 			if err := s.executeQuery(ctx, acc, q, tstart); err != nil {
 				acc.AddError(err)
 			}
