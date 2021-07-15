@@ -12,8 +12,9 @@ import (
 
 func Test_Chess_Leaderboards_Simple(t *testing.T) {
 	chess := &Chess{
-		Profiles: nil,
-		Log:      testutil.Logger{Name: "chess"},
+		Profiles:    nil,
+		Leaderboard: true,
+		Log:         testutil.Logger{Name: "chess"},
 	}
 	b := bytes.NewBufferString("")
 	log.SetOutput(b)

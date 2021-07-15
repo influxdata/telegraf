@@ -11,13 +11,17 @@ distribution of players and clubs.
 [[inputs.chess]]
 # A list of profiles for monotoring 
   profiles = ["username1", "username2"]
+  leaderboard = false/true
+  streamers = false/true
 #track leaderboard
   leaderboard = false
 ```
 
 ### Troubleshooting
 
-Check that the username is spelt correctly. 
+Check that the username is spelt correctly. When trying to gather information
+from an endpoint not pertaining to user profiles, the variable must be set to
+true. However, Only one should be set to true at a time.
 
 ### Example Output
 

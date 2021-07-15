@@ -110,11 +110,11 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 		for _, stat := range streams.Data {
 			var fields = make(map[string]interface{}, len(streams.Data))
 			var tags = map[string]string{
-				"url": stat.Url,
+				"url": stat.URL,
 			}
 			fields["username"] = stat.Username
 			fields["avatar"] = stat.Avatar
-			fields["twitch_url"] = stat.TwitchUrl
+			fields["twitch_url"] = stat.TwitchURL
 			acc.AddFields("Streamers", fields, tags)
 		}
 	}

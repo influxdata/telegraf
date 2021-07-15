@@ -18,8 +18,8 @@ type Leaderboards struct {
 type ResponseStreamerData struct {
 	Username  string `json:"username"`
 	Avatar    string `json:"avatar"`
-	TwitchUrl string `json:"twitch_url"`
-	Url       string `json:"url"`
+	TwitchURL string `json:"twitch_url"`
+	URL       string `json:"url"`
 }
 
 type Streamers struct {
