@@ -50,7 +50,7 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 
 	// check if profiles is not included
 	if c.Leaderboard {
-		var Leaderboards Leaderboards
+		var leaderboards Leaderboards
 		// request and unmarshall leaderboard information
 		// and add it to the accumulator
 		resp, err := http.Get("https://api.chess.com/pub/leaderboards")
@@ -67,21 +67,21 @@ func (c *Chess) Gather(acc telegraf.Accumulator) error {
 		}
 
 		//unmarshall the data
-		err = json.Unmarshal(data, &Leaderboards)
+		err = json.Unmarshal(data, &leaderboards)
 		if err != nil {
 			c.Log.Errorf("failed to unmarshall leaderboards json: %w", err)
 			return err
 		}
 
-		for _, stat := range Leaderboards.Daily {
-			var fields = make(map[string]interface{}, len(Leaderboards.Daily))
+		for _, stat := range leaderboards.Daily {
+			var fields = make(map[string]interface{}, len(leaderboards.Daily))
 			var tags = map[string]string{
-				"playerId": strconv.Itoa(stat.PlayerId),
+				"playerId": strconv.Itoa(stat.PlayerID),
 			}
 			fields["username"] = stat.Username
 			fields["rank"] = stat.Rank
 			fields["score"] = stat.Score
-			acc.AddFields(leaderboards, fields, tags)
+			acc.AddFields("leaderboards", fields, tags)
 		}
 	}
 	return nil
