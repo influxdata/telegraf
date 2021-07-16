@@ -66,8 +66,8 @@ GO
 
   # database_type = "AzureSQLDB"
 
-  ## A list of queries to include. 
-  # include_query = []
+  ## A list of queries to include. If not specified, all the above listed queries are used.
+  # include_query = ["AzureSQLDBResourceStats", "AzureSQLDBResourceGovernance", "AzureSQLDBWaitStats", "AzureSQLDBDatabaseIO", "AzureSQLDBServerProperties", "AzureSQLDBOsWaitstats", "AzureSQLDBMemoryClerks", "AzureSQLDBPerformanceCounters", "AzureSQLDBRequests", "AzureSQLDBSchedulers"]
 
   ## A list of queries to explicitly ignore.
   ## Query Store queries (AzureSQLDBQueryStoreRuntimeStatistics and AzureSQLDBQueryStoreWaitStatistics) are excluded by default.
