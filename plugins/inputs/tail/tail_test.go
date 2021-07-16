@@ -519,14 +519,14 @@ func TestCharacterEncoding(t *testing.T) {
 				return influx.NewParser(handler), nil
 			})
 
+			err := tt.plugin.Init()
+			require.NoError(t, err)
+
 			if tt.offset != 0 {
 				tt.plugin.offsets = map[string]int64{
 					tt.plugin.Files[0]: tt.offset,
 				}
 			}
-
-			err := tt.plugin.Init()
-			require.NoError(t, err)
 
 			var acc testutil.Accumulator
 			err = tt.plugin.Start(&acc)

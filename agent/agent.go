@@ -102,9 +102,18 @@ func (a *Agent) Run(ctx context.Context) error {
 		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
 
 	log.Printf("D! [agent] Initializing plugins")
-	err := a.initPlugins()
-	if err != nil {
+	if err := a.initPlugins(); err != nil {
 		return err
+	}
+
+	if a.Config.Persister.Enabled {
+		log.Printf("D! [agent] Initializing plugin states")
+		if err := a.initPersister(); err != nil {
+			return err
+		}
+		if err := a.Config.Persister.Load(); err != nil {
+			return err
+		}
 	}
 
 	startTime := time.Now()
@@ -179,6 +188,13 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	wg.Wait()
 
+	if a.Config.Persister.Enabled {
+		log.Printf("D! [agent] Persisting plugin states")
+		if err := a.Config.Persister.Store(); err != nil {
+			return err
+		}
+	}
+
 	log.Printf("D! [agent] Stopped Successfully")
 	return err
 }
@@ -220,6 +236,89 @@ func (a *Agent) initPlugins() error {
 				output.Config.Name, err)
 		}
 	}
+	return nil
+}
+
+// initPersister initializes the persister and registers the plugins.
+func (a *Agent) initPersister() error {
+	if !a.Config.Persister.Enabled {
+		return nil
+	}
+
+	if err := a.Config.Persister.Init(); err != nil {
+		return err
+	}
+
+	for _, input := range a.Config.Inputs {
+		plugin, ok := input.Input.(telegraf.StatefulPlugin)
+		if !ok {
+			log.Printf("D! [agent] Skipping registration of plugin %q...", input.LogName())
+			continue
+		}
+
+		prefix := input.LogName()
+		if err := a.Config.Persister.Register(prefix, plugin); err != nil {
+			return fmt.Errorf("could not register input %s: %v", input.LogName(), err)
+		}
+		a.Config.Persister.SetPersisterOnPlugin(prefix, plugin)
+	}
+
+	for _, processor := range a.Config.Processors {
+		plugin, ok := processor.Processor.(telegraf.StatefulPlugin)
+		if !ok {
+			log.Printf("D! [agent] Skipping registration of plugin %q...", processor.LogName())
+			continue
+		}
+
+		prefix := processor.LogName()
+		if err := a.Config.Persister.Register(prefix, plugin); err != nil {
+			return fmt.Errorf("could not register processor %s: %v", processor.LogName(), err)
+		}
+		a.Config.Persister.SetPersisterOnPlugin(prefix, plugin)
+	}
+
+	for _, aggregator := range a.Config.Aggregators {
+		plugin, ok := aggregator.Aggregator.(telegraf.StatefulPlugin)
+		if !ok {
+			log.Printf("D! [agent] Skipping registration of plugin %q...", aggregator.LogName())
+			continue
+		}
+
+		prefix := aggregator.LogName()
+		if err := a.Config.Persister.Register(prefix, plugin); err != nil {
+			return fmt.Errorf("could not register aggregator %s: %v", aggregator.LogName(), err)
+		}
+		a.Config.Persister.SetPersisterOnPlugin(prefix, plugin)
+	}
+
+	for _, processor := range a.Config.AggProcessors {
+		plugin, ok := processor.Processor.(telegraf.StatefulPlugin)
+		if !ok {
+			log.Printf("D! [agent] Skipping registration of plugin %q...", processor.LogName())
+			continue
+		}
+
+		prefix := processor.LogName()
+		if err := a.Config.Persister.Register(prefix, plugin); err != nil {
+			return fmt.Errorf("could not register aggregating processor %s: %v", processor.LogName(), err)
+		}
+		a.Config.Persister.SetPersisterOnPlugin(prefix, plugin)
+	}
+
+	for _, output := range a.Config.Outputs {
+		plugin, ok := output.Output.(telegraf.StatefulPlugin)
+		if !ok {
+			log.Printf("D! [agent] Skipping registration of plugin %q...", output.LogName())
+			continue
+		}
+
+		prefix := output.LogName()
+		if err := a.Config.Persister.Register(prefix, plugin); err != nil {
+			return fmt.Errorf("could not register output %s: %v", output.LogName(), err)
+		}
+		a.Config.Persister.SetPersisterOnPlugin(prefix, plugin)
+	}
+
 	return nil
 }
 

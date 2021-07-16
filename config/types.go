@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/units"
@@ -13,6 +14,17 @@ type Duration time.Duration
 
 // Size is an int64
 type Size int64
+
+func (d *Duration) MarshalTOML() ([]byte, error) {
+	if d == nil || *d == 0 {
+		return []byte(`"0s"`), nil
+	}
+	s := time.Duration(*d).String()
+	s = strings.TrimSuffix(s, "0s")
+	s = strings.TrimSuffix(s, "0m")
+
+	return []byte(`"` + s + `"`), nil
+}
 
 // UnmarshalTOML parses the duration from the TOML config file
 func (d *Duration) UnmarshalTOML(b []byte) error {
@@ -55,6 +67,13 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 
 func (d *Duration) UnmarshalText(text []byte) error {
 	return d.UnmarshalTOML(text)
+}
+
+func (s *Size) MarshalTOML() ([]byte, error) {
+	if s == nil {
+		return []byte("0"), nil
+	}
+	return []byte(strconv.FormatInt(int64(*s), 10)), nil
 }
 
 func (s *Size) UnmarshalTOML(b []byte) error {

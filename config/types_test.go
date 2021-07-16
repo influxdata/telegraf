@@ -30,7 +30,65 @@ func TestConfigDuration(t *testing.T) {
 	require.Equal(t, p.Ordered, true)
 }
 
-func TestDuration(t *testing.T) {
+func TestDuration_Marshal(t *testing.T) {
+	var d config.Duration
+	var p *config.Duration
+
+	b, err := p.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, `"0s"`, string(b))
+
+	b, err = d.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, `"0s"`, string(b))
+
+	d = config.Duration(1 * time.Millisecond)
+	b, err = d.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, `"1ms"`, string(b))
+
+	d = config.Duration(1 * time.Second)
+	b, err = d.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, `"1s"`, string(b))
+
+	d = config.Duration(1 * time.Minute)
+	b, err = d.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, `"1m"`, string(b))
+
+	d = config.Duration(1 * time.Hour)
+	b, err = d.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, `"1h"`, string(b))
+
+	d = config.Duration(36 * time.Hour)
+	b, err = d.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, `"36h"`, string(b))
+
+	d = config.Duration(6*time.Hour + 12*time.Minute)
+	b, err = d.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, `"6h12m"`, string(b))
+
+	d = config.Duration(6*time.Hour + 12*time.Minute + 5*time.Second)
+	b, err = d.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, `"6h12m5s"`, string(b))
+
+	d = config.Duration(6*time.Hour + 12*time.Minute + 5*time.Second + 39*time.Millisecond)
+	b, err = d.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, `"6h12m5.039s"`, string(b))
+
+	d = config.Duration(6*time.Hour + 12*time.Minute + 5*time.Second + 39*time.Millisecond + 23*time.Microsecond)
+	b, err = d.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, `"6h12m5.039023s"`, string(b))
+}
+
+func TestDuration_Unmarshal(t *testing.T) {
 	var d config.Duration
 
 	require.NoError(t, d.UnmarshalTOML([]byte(`"1s"`)))
@@ -53,7 +111,40 @@ func TestDuration(t *testing.T) {
 	require.Equal(t, time.Second, time.Duration(d))
 }
 
-func TestSize(t *testing.T) {
+func TestSize_Marshal(t *testing.T) {
+	var s config.Size
+	var p *config.Size
+
+	b, err := p.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, "0", string(b))
+
+	b, err = s.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, "0", string(b))
+
+	s = config.Size(11)
+	b, err = s.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, "11", string(b))
+
+	s = config.Size(11 * 1024)
+	b, err = s.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, "11264", string(b))
+
+	s = config.Size(11 * 1024 * 1024)
+	b, err = s.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, "11534336", string(b))
+
+	s = config.Size(454867870564751864)
+	b, err = s.MarshalTOML()
+	require.NoError(t, err)
+	require.Equal(t, "454867870564751864", string(b))
+}
+
+func TestSize_Unmarshal(t *testing.T) {
 	var s config.Size
 
 	require.NoError(t, s.UnmarshalTOML([]byte(`"1B"`)))
