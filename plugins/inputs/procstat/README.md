@@ -26,8 +26,9 @@ Processes can be selected for monitoring using one of several methods:
   # pattern = "nginx"
   ## user as argument for pgrep (ie, pgrep -u <user>)
   # user = "nginx"
-  ## Systemd unit name
+  ## Systemd unit name or glob and if all processes of the unit should get collected
   # systemd_unit = "nginx.service"
+  # systemd_all = true
   ## CGroup name or path
   # cgroup = "systemd/system.slice/nginx.service"
 
@@ -80,6 +81,7 @@ the `win_perf_counters` input plugin as a more mature alternative.
     - user (when selected)
     - systemd_unit (when defined)
     - cgroup (when defined)
+    - cgroup_full (when cgroup or systemd_unit is used with glob)
     - win_service (when defined)
   - fields:
     - child_major_faults (int)
