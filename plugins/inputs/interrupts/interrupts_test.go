@@ -3,6 +3,9 @@ package interrupts
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -153,4 +156,52 @@ func TestCpuAsFieldsHwIrqs(t *testing.T) {
 	for _, irq := range hwIrqsExpectedArgs {
 		expectCPUAsFields(acc, t, "interrupts", irq)
 	}
+}
+
+const extendedSoftirqsContents = `                    CPU0       CPU1       CPU2       CPU3       CPU4       CPU5
+       XYZ:     15045046   15424064          0          0          0          0
+       ABC:     15045046   15424064          0   15499303          0          0
+`
+
+var extendedSoftirqsExpected = []IRQ{
+	{ID: "XYZ", Type: "", Device: "", Total: 30469110, Cpus: []int64{15045046, 15424064, 0, 0}, SpuriousCount: 0, SpuriousUnhandled: 0},
+	{ID: "ABC", Type: "", Device: "", Total: 45968413, Cpus: []int64{15045046, 15424064, 0, 15499303}, SpuriousCount: 0, SpuriousUnhandled: 0},
+}
+
+func TestExtendedSoftirqs(t *testing.T) {
+	var testSoftirqsDir = filepath.Join(os.TempDir(), "telegraf", "interrupts")
+	err := os.MkdirAll(testSoftirqsDir, 0755)
+	require.NoError(t, err)
+	testSoftirqsFile := filepath.Join(testSoftirqsDir, "softirqs")
+	err = ioutil.WriteFile(testSoftirqsFile, []byte(extendedSoftirqsContents), 0644)
+	require.NoError(t, err)
+
+	f, err := os.Open(testSoftirqsFile)
+	require.NoError(t, err)
+	irqs, err := parseInterrupts(f)
+	require.NoError(t, err)
+	_ = f.Close()
+	require.Equal(t, extendedSoftirqsExpected, irqs)
+}
+
+const spuriousIrqsContents = `
+count 12345
+unhandled 89
+last_unhandled 6677
+`
+
+func TestSpuriousParser(t *testing.T) {
+	var testSpuriousDir = filepath.Join(os.TempDir(), "telegraf", "interrupts")
+	err := os.MkdirAll(testSpuriousDir, 0755)
+	require.NoError(t, err)
+	testSpuriousFile := filepath.Join(testSpuriousDir, "spurious")
+	err = ioutil.WriteFile(testSpuriousFile, []byte(spuriousIrqsContents), 0644)
+	require.NoError(t, err)
+
+	count, unhandled := parseSpurious(testSpuriousFile)
+	require.Equal(t, uint64(12345), count, "incorrect parsed count")
+	require.Equal(t, uint64(89), unhandled, "incorrect parsed unhandled")
+
+	err = os.RemoveAll(testSpuriousDir)
+	require.NoError(t, err)
 }
