@@ -144,6 +144,7 @@ combining an integer value and time unit as a string value.  Valid time units ar
 
 Global tags can be specified in the `[global_tags]` table in key="value"
 format. All metrics that are gathered will be tagged with the tags specified.
+Global tags are overriden by tags set by plugins.
 
 ```toml
 [global_tags]
@@ -432,7 +433,7 @@ Parameters that can be used with any aggregator plugin:
   the name of the input).
 - **name_prefix**: Specifies a prefix to attach to the measurement name.
 - **name_suffix**: Specifies a suffix to attach to the measurement name.
-- **tags**: A map of tags to apply to a specific input's measurements.
+- **tags**: A map of tags to apply to the measurement - behavior varies based on aggregator.
 
 The [metric filtering][] parameters can be used to limit what metrics are
 handled by the aggregator.  Excluded metrics are passed downstream to the next
