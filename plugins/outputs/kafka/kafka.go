@@ -48,6 +48,7 @@ type Kafka struct {
 
 	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
 	producer     sarama.SyncProducer
+	config       *sarama.Config
 
 	serializer serializers.Serializer
 }
@@ -276,9 +277,9 @@ func (k *Kafka) Init() error {
 	if err != nil {
 		return err
 	}
-	config := sarama.NewConfig()
+	k.config = sarama.NewConfig()
 
-	if err := k.SetConfig(config); err != nil {
+	if err := k.SetConfig(k.config); err != nil {
 		return err
 	}
 
@@ -289,15 +290,15 @@ func (k *Kafka) Init() error {
 		k.TLSKey = k.Key
 	}
 
-	producer, err := k.producerFunc(k.Brokers, config)
-	if err != nil {
-		return err
-	}
-	k.producer = producer
 	return nil
 }
 
 func (k *Kafka) Connect() error {
+	producer, err := k.producerFunc(k.Brokers, k.config)
+	if err != nil {
+		return err
+	}
+	k.producer = producer
 	return nil
 }
 

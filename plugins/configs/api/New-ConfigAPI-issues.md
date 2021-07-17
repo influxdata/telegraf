@@ -26,10 +26,10 @@ x started plugins shouldn't run until the agent tells them to, or at least the m
 [done]  default order from config
 [done]  add config plugin support, connect endpoints to this?
 
-[todo]  add REST interface to api package
+[done]  add REST interface to api package
 [maybe] add gRPC interface to api package?
-[todo]  support persistenting api configuration
-[todo] migration tool to migrate to config api plugins
+[done]  support persistenting api configuration
+[maybe] migration tool to migrate to config api plugins
 
 
 ## out of scope

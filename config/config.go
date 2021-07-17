@@ -1155,7 +1155,7 @@ func (c *Config) addInput(ctx context.Context, name string, table *ast.Table) er
 	if t, ok := input.(parsers.ParserInput); ok {
 		parser, err := c.buildParser(name, table)
 		if err != nil {
-			return err
+			return fmt.Errorf("buildParser: %w", err)
 		}
 		t.SetParser(parser)
 	}
@@ -1163,7 +1163,7 @@ func (c *Config) addInput(ctx context.Context, name string, table *ast.Table) er
 	if t, ok := input.(parsers.ParserFuncInput); ok {
 		config, err := c.getParserConfig(name, table)
 		if err != nil {
-			return err
+			return fmt.Errorf("getParserConfig: %w", err)
 		}
 		t.SetParserFunc(func() (parsers.Parser, error) {
 			return parsers.NewParser(config)
@@ -1172,7 +1172,7 @@ func (c *Config) addInput(ctx context.Context, name string, table *ast.Table) er
 
 	pluginConfig, err := c.buildInput(name, table)
 	if err != nil {
-		return err
+		return fmt.Errorf("buildInput: %w", err)
 	}
 
 	if err := c.toml.UnmarshalTable(table, input); err != nil {
@@ -1183,7 +1183,7 @@ func (c *Config) addInput(ctx context.Context, name string, table *ast.Table) er
 	rp.SetDefaultTags(c.Tags)
 
 	if err := rp.Init(); err != nil {
-		return err
+		return fmt.Errorf("init: %w", err)
 	}
 	c.controller.AddInput(rp)
 

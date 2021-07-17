@@ -80,26 +80,34 @@ func TestAgentPluginConnectionsAfterAddAndRemoveProcessor(t *testing.T) {
 	cfg := config.NewConfig()
 	a := NewAgent(ctx, cfg)
 	// cfg.SetAgent(a)
+
+	// start an input
 	inp := &testInputPlugin{}
 	_ = inp.Init()
 	ri := models.NewRunningInput(inp, &models.InputConfig{Name: "in"})
 	a.AddInput(ri)
 	go a.RunInput(ri, time.Now())
 
+	// start output
 	outputCtx, outputCancel := context.WithCancel(context.Background())
 	o := &testOutputPlugin{}
 	_ = o.Init()
 	ro := models.NewRunningOutput(o, &models.OutputConfig{Name: "out"}, 100, 100)
 	a.AddOutput(ro)
 	go a.RunOutput(outputCtx, ro)
+
+	// Run agent
 	go a.RunWithAPI(outputCancel)
 
+	// wait for plugins to start
 	waitForStatus(t, ri, "running", 1*time.Second)
 	waitForStatus(t, ro, "running", 1*time.Second)
 
+	// inject a metric into the input plugin as if it collected it
 	m, _ := metric.New("mojo", nil, map[string]interface{}{"jenkins": "leroy"}, now)
 	inp.injectMetric(m)
 
+	// wait for the output to get it
 	o.wait(1)
 	testutil.RequireMetricEqual(t, m, o.receivedMetrics[0])
 	o.clear()
@@ -109,11 +117,15 @@ func TestAgentPluginConnectionsAfterAddAndRemoveProcessor(t *testing.T) {
 	a.AddProcessor(rp)
 	go a.RunProcessor(rp)
 
-	waitForStatus(t, rp, "running", 1*time.Second)
+	// wait for the processor to start
+	waitForStatus(t, rp, "running", 5*time.Second)
 
+	// inject a metric into the input
 	inp.injectMetric(m)
+	// wait for it to arrive
 	o.wait(1)
 
+	// create the expected output for comparison
 	expected := m.Copy()
 	expected.AddField("capital", "Ottawa")
 
@@ -121,19 +133,24 @@ func TestAgentPluginConnectionsAfterAddAndRemoveProcessor(t *testing.T) {
 
 	o.clear()
 
+	// stop processor and wait for it to stop
 	a.StopProcessor(rp)
-	waitForStatus(t, rp, "dead", 1*time.Second)
+	waitForStatus(t, rp, "dead", 5*time.Second)
 
+	// inject a new metric
 	inp.injectMetric(m)
 
+	// wait for the output to get it
 	o.wait(1)
 	testutil.RequireMetricEqual(t, m, o.receivedMetrics[0])
 	o.clear()
 
+	// cancel the app's context
 	cancel()
 
-	waitForStatus(t, ri, "dead", 1*time.Second)
-	waitForStatus(t, ro, "dead", 1*time.Second)
+	// wait for plugins to stop
+	waitForStatus(t, ri, "dead", 5*time.Second)
+	waitForStatus(t, ro, "dead", 5*time.Second)
 }
 
 type hasState interface {
@@ -175,7 +192,12 @@ func (p *testInputPlugin) Start(a telegraf.Accumulator) error {
 	p.Cond.Broadcast()
 	return nil
 }
-func (p *testInputPlugin) Stop() {}
+func (p *testInputPlugin) Stop() {
+	println("stopping input (waiting for lock)")
+	p.Lock()
+	defer p.Unlock()
+	println("stopped input")
+}
 func (p *testInputPlugin) injectMetric(m telegraf.Metric) {
 	p.Lock()
 	defer p.Unlock()

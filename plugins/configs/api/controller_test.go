@@ -215,6 +215,7 @@ func TestAllPluginLifecycle(t *testing.T) {
 		waitForStatus(t, api, id, "dead", 300*time.Millisecond)
 	}
 
+	time.Sleep(1 * time.Second)
 	// list running should have none
 	runningPlugins = api.ListRunningPlugins()
 	require.Len(t, runningPlugins, 0)

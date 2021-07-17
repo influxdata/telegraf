@@ -2,6 +2,7 @@ package execd
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -29,10 +30,10 @@ func TestSettingConfigWorks(t *testing.T) {
 		signal = "SIGHUP"
 	`
 	conf := config.NewConfig()
-	require.NoError(t, conf.LoadConfigData([]byte(cfg)))
+	require.NoError(t, conf.LoadConfigData(context.Background(), context.Background(), []byte(cfg)))
 
-	require.Len(t, conf.Inputs, 1)
-	inp, ok := conf.Inputs[0].Input.(*Execd)
+	require.Len(t, conf.Inputs(), 1)
+	inp, ok := conf.Inputs()[0].Input.(*Execd)
 	require.True(t, ok)
 	require.EqualValues(t, []string{"a", "b", "c"}, inp.Command)
 	require.EqualValues(t, 1*time.Minute, inp.RestartDelay)

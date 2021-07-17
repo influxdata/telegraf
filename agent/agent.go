@@ -162,12 +162,6 @@ func (a *Agent) RunWithAPI(outputCancel context.CancelFunc) {
 
 	<-a.Context().Done()
 
-	a.inputGroupUnit.Lock()
-	for _, iu := range a.inputGroupUnit.inputUnits {
-		iu.input.Stop()
-	}
-	a.inputGroupUnit.Unlock()
-
 	// wait for all plugins to stop
 	a.waitForPluginsToStop()
 
@@ -361,12 +355,13 @@ func (a *Agent) RunInput(input *models.RunningInput, startTime time.Time) {
 	a.inputGroupUnit.Unlock()
 
 	a.gatherLoop(ctx, acc, input, ticker, interval)
+	input.Stop()
 
 	a.inputGroupUnit.Lock()
 	for i, iu := range a.inputGroupUnit.inputUnits {
 		if iu.input == input {
 			// remove from list
-			a.inputGroupUnit.inputUnits = append(a.inputGroupUnit.inputUnits[0:i], a.inputGroupUnit.inputUnits[i:]...)
+			a.inputGroupUnit.inputUnits = append(a.inputGroupUnit.inputUnits[0:i], a.inputGroupUnit.inputUnits[i+1:]...)
 			break
 		}
 	}
@@ -476,9 +471,6 @@ func (a *Agent) StopInput(i *models.RunningInput) {
 	defer a.inputGroupUnit.Unlock()
 retry:
 	a.inputGroupUnit.Lock()
-	if len(a.inputGroupUnit.inputUnits) == 0 {
-		return
-	}
 	for pos, iu := range a.inputGroupUnit.inputUnits {
 		if iu.input == i {
 			if iu.cancelGather == nil {
@@ -488,17 +480,11 @@ retry:
 				goto retry
 			}
 			iu.cancelGather()
-			// TODO(steven): do I need to wait for the gather to stop?
+			// TODO(steven): do I need to wait for the gather to stop? yes?
 			i.Stop()
 			// drop from the list
-			a.inputGroupUnit.inputUnits = append(a.inputGroupUnit.inputUnits[0:pos], a.inputGroupUnit.inputUnits[pos+1:len(a.inputGroupUnit.inputUnits)]...)
+			a.inputGroupUnit.inputUnits = append(a.inputGroupUnit.inputUnits[:pos], a.inputGroupUnit.inputUnits[pos+1:]...)
 			break
-		}
-	}
-	// close the channel if we're the last one and the context is closed.
-	if len(a.inputGroupUnit.inputUnits) == 0 {
-		if a.ctx.Err() != nil {
-			close(a.inputGroupUnit.dst)
 		}
 	}
 }
@@ -694,6 +680,18 @@ func (a *Agent) RunProcessor(p models.ProcessorRunner) {
 		}
 		a.processorGroupUnit.Unlock()
 	}
+
+	a.processorGroupUnit.Lock()
+	defer a.processorGroupUnit.Unlock()
+
+	for i, curr := range a.processorGroupUnit.processorUnits {
+		if pu == curr {
+			// remove it from the slice
+			// Remove the stopped processor from the units list
+			a.processorGroupUnit.processorUnits = append(a.processorGroupUnit.processorUnits[0:i], a.processorGroupUnit.processorUnits[i+1:len(a.processorGroupUnit.processorUnits)]...)
+		}
+	}
+
 }
 
 // StopProcessor stops processors or aggregators.
@@ -712,10 +710,6 @@ func (a *Agent) StopProcessor(p models.ProcessorRunner) {
 			}
 
 			close(curr.src) // closing source will tell the processor to stop.
-
-			// remove it from the slice
-			// Remove the stopped processor from the units list
-			a.processorGroupUnit.processorUnits = append(a.processorGroupUnit.processorUnits[0:i], a.processorGroupUnit.processorUnits[i+1:len(a.processorGroupUnit.processorUnits)]...)
 		}
 	}
 }
@@ -727,7 +721,6 @@ func (a *Agent) RunConfigPlugin(ctx context.Context, plugin config.ConfigPlugin)
 	a.configPluginUnit.Unlock()
 
 	<-ctx.Done()
-	fmt.Println("config plugin context closed")
 	//TODO: we might want to wait for all other plugins to close?
 	if err := plugin.Close(); err != nil {
 		log.Printf("E! [agent] Configuration plugin failed to close: %v", err)
@@ -765,11 +758,8 @@ func (a *Agent) StopOutput(p *models.RunningOutput) {
 	defer a.outputUnit.Unlock()
 
 	// find plugin
-	for i, output := range a.outputUnit.outputs {
+	for _, output := range a.outputUnit.outputs {
 		if output.ID == p.ID {
-			// disconnect it from the output broadcaster and remove it from the list
-			a.outputUnit.outputs = append(a.outputUnit.outputs[0:i], a.outputUnit.outputs[i+1:len(a.outputUnit.outputs)]...)
-
 			// tell the plugin to stop
 			go output.Close()
 		}
@@ -898,6 +888,17 @@ func (a *Agent) RunOutput(ctx context.Context, output *models.RunningOutput) {
 
 	a.flushLoop(ctx, output, ticker)
 	output.Close()
+
+	a.outputUnit.Lock()
+	defer a.outputUnit.Unlock()
+
+	// find plugin
+	for i, o := range a.outputUnit.outputs {
+		if o == output {
+			// disconnect it from the output broadcaster and remove it from the list
+			a.outputUnit.outputs = append(a.outputUnit.outputs[:i], a.outputUnit.outputs[i+1:]...)
+		}
+	}
 }
 
 // runOutputFanout does the outputUnit fanout, copying a metric to all outputs
@@ -1191,41 +1192,53 @@ func (a *Agent) Context() context.Context {
 
 func (a *Agent) waitForPluginsToStop() {
 	for {
-		time.Sleep(10 * time.Millisecond)
 		a.inputGroupUnit.Lock()
 		if len(a.inputGroupUnit.inputUnits) > 0 {
 			fmt.Printf("waiting for %d inputs\n", len(a.inputGroupUnit.inputUnits))
 			a.inputGroupUnit.Unlock()
+			time.Sleep(100 * time.Millisecond)
 			continue
 		}
+		break
+	}
+	close(a.inputGroupUnit.dst)
+	a.inputGroupUnit.Unlock()
+	for {
+		time.Sleep(100 * time.Millisecond)
 		a.processorGroupUnit.Lock()
 		if len(a.processorGroupUnit.processorUnits) > 0 {
 			fmt.Printf("waiting for %d processors\n", len(a.processorGroupUnit.processorUnits))
 			a.processorGroupUnit.Unlock()
-			a.inputGroupUnit.Unlock()
+			time.Sleep(100 * time.Millisecond)
 			continue
 		}
+		break
+	}
+	a.processorGroupUnit.Unlock()
+	for {
 		a.outputUnit.Lock()
 		if len(a.outputUnit.outputs) > 0 {
 			fmt.Printf("waiting for %d outputs\n", len(a.outputUnit.outputs))
 			a.outputUnit.Unlock()
-			a.processorGroupUnit.Unlock()
-			a.inputGroupUnit.Unlock()
+			time.Sleep(100 * time.Millisecond)
 			continue
 		}
-		a.outputUnit.Unlock()
-		a.processorGroupUnit.Unlock()
-		a.inputGroupUnit.Unlock()
+		break
+	}
+	a.outputUnit.Unlock()
 
+	for {
 		a.configPluginUnit.Lock()
 		if len(a.configPluginUnit.plugins) > 0 {
 			fmt.Printf("waiting for %d config plugins\n", len(a.configPluginUnit.plugins))
 			a.configPluginUnit.Unlock()
 			continue
 		}
-		a.configPluginUnit.Unlock()
-
-		// everything closed; shut down
-		return
+		break
 	}
+	a.configPluginUnit.Unlock()
+
+	// everything closed; shut down
+	return
+
 }

@@ -1,6 +1,7 @@
 package opcua_client
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -107,12 +108,12 @@ nodes = [{name="name4", identifier="4000", tags=[["tag1", "override"]]}]
 `
 
 	c := config.NewConfig()
-	err := c.LoadConfigData([]byte(toml))
+	err := c.LoadConfigData(context.Background(), context.Background(), []byte(toml))
 	require.NoError(t, err)
 
 	require.Len(t, c.Inputs, 1)
 
-	o, ok := c.Inputs[0].Input.(*OpcUA)
+	o, ok := c.Inputs()[0].Input.(*OpcUA)
 	require.True(t, ok)
 
 	require.Len(t, o.RootNodes, 2)

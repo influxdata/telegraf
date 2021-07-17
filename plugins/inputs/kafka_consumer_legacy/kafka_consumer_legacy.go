@@ -91,6 +91,7 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 	defer k.Unlock()
 	var consumerErr error
 
+	k.done = make(chan struct{})
 	k.acc = acc
 
 	config := consumergroup.NewConfig()
@@ -121,8 +122,6 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 		k.in = k.Consumer.Messages()
 		k.errs = k.Consumer.Errors()
 	}
-
-	k.done = make(chan struct{})
 
 	// Start the kafka message reader
 	go k.receiver()
@@ -171,7 +170,9 @@ func (k *Kafka) receiver() {
 func (k *Kafka) Stop() {
 	k.Lock()
 	defer k.Unlock()
-	close(k.done)
+	if k.done != nil {
+		close(k.done)
+	}
 	if err := k.Consumer.Close(); err != nil {
 		k.acc.AddError(fmt.Errorf("Error closing consumer: %s\n", err.Error()))
 	}

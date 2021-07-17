@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -435,9 +436,9 @@ func TestTOMLConfig(t *testing.T) {
 			c := config.NewConfig()
 
 			if tt.expectedError {
-				require.Error(t, c.LoadConfigData(tt.configBytes))
+				require.Error(t, c.LoadConfigData(context.Background(), context.Background(), tt.configBytes))
 			} else {
-				require.NoError(t, c.LoadConfigData(tt.configBytes))
+				require.NoError(t, c.LoadConfigData(context.Background(), context.Background(), tt.configBytes))
 			}
 		})
 	}
