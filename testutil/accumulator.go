@@ -401,6 +401,7 @@ func (a *Accumulator) AssertContainsFields(
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
+		fmt.Printf("%+v | %s\n", p, measurement)
 		if p.Measurement == measurement {
 			assert.Equal(t, fields, p.Fields)
 			return
