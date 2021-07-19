@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
 type event struct {
@@ -38,6 +39,7 @@ func (e *event) Time() (time.Time, error) {
 type ParticleWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
+	auth.BasicAuth
 }
 
 func (rb *ParticleWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
@@ -47,6 +49,12 @@ func (rb *ParticleWebhook) Register(router *mux.Router, acc telegraf.Accumulator
 
 func (rb *ParticleWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+
+	if !rb.Verify(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	e := newEvent()
 	if err := json.NewDecoder(r.Body).Decode(e); err != nil {
 		rb.acc.AddError(err)
