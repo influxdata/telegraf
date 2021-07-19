@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
+	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/testutil"
@@ -105,7 +106,9 @@ func TestGather(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
 	internalDuration := config.Duration(duration)
 	c := &CloudWatch{
-		Region:    "us-east-1",
+		CredentialConfig: internalaws.CredentialConfig{
+			Region: "us-east-1",
+		},
 		Namespace: "AWS/ELB",
 		Delay:     internalDuration,
 		Period:    internalDuration,
@@ -189,7 +192,9 @@ func TestSelectMetrics(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
 	internalDuration := config.Duration(duration)
 	c := &CloudWatch{
-		Region:    "us-east-1",
+		CredentialConfig: internalaws.CredentialConfig{
+			Region: "us-east-1",
+		},
 		Namespace: "AWS/ELB",
 		Delay:     internalDuration,
 		Period:    internalDuration,
