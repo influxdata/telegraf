@@ -88,17 +88,17 @@ func (m *MongoDB) Init() error {
 		tlsConfig = &tls.Config{
 			InsecureSkipVerify: m.ClientConfig.InsecureSkipVerify,
 		}
-		if len(m.Ssl.CaCerts) > 0 {
-			roots := x509.NewCertPool()
-			for _, caCert := range m.Ssl.CaCerts {
-				if ok := roots.AppendCertsFromPEM([]byte(caCert)); !ok {
-					return fmt.Errorf("failed to parse root certificate")
-				}
-			}
-			tlsConfig.RootCAs = roots
-		} else {
+		if len(m.Ssl.CaCerts) == 0 {
 			return fmt.Errorf("you must explicitly set insecure_skip_verify to skip cerificate validation")
 		}
+
+		roots := x509.NewCertPool()
+		for _, caCert := range m.Ssl.CaCerts {
+			if ok := roots.AppendCertsFromPEM([]byte(caCert)); !ok {
+				return fmt.Errorf("failed to parse root certificate")
+			}
+		}
+		tlsConfig.RootCAs = roots
 	} else {
 		var err error
 		tlsConfig, err = m.ClientConfig.TLSConfig()
