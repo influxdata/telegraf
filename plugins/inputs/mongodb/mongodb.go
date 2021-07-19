@@ -123,6 +123,7 @@ func (m *MongoDB) Init() error {
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel() //nolint:revive
 
 		opts := options.Client().ApplyURI(connURL)
 		if tlsConfig != nil {
@@ -134,13 +135,11 @@ func (m *MongoDB) Init() error {
 
 		client, err := mongo.Connect(ctx, opts)
 		if err != nil {
-			cancel()
 			return fmt.Errorf("unable to connect to MongoDB: %q", err)
 		}
 
 		err = client.Ping(ctx, opts.ReadPreference)
 		if err != nil {
-			cancel()
 			return fmt.Errorf("unable to connect to MongoDB: %s", err)
 		}
 
@@ -150,8 +149,6 @@ func (m *MongoDB) Init() error {
 			Log:      m.Log,
 		}
 		m.clients = append(m.clients, server)
-
-		cancel()
 	}
 
 	return nil
