@@ -456,6 +456,7 @@ For documentation on the latest development code see the [documentation index][d
 * [http](./plugins/outputs/http)
 * [instrumental](./plugins/outputs/instrumental)
 * [kafka](./plugins/outputs/kafka)
+* [kairosdb](./plugins/outputs/kairosdb)
 * [librato](./plugins/outputs/librato)
 * [logz.io](./plugins/outputs/logzio)
 * [mqtt](./plugins/outputs/mqtt)
