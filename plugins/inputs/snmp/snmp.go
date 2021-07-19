@@ -10,6 +10,7 @@ import (
 	"math"
 	"net"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -500,18 +501,13 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 
 				fv, err := fieldConvert(f.Conversion, ent.Value)
 				if err != nil {
-					return &walkError{
-						msg: fmt.Sprintf("converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name),
-						err: err,
-					}
+					return fmt.Errorf("converting %q (OID %s) for field %s: %w", ent.Value, ent.Name, f.Name, err)
 				}
 				ifv[idx] = fv
 				return nil
 			})
 			if err != nil {
-				// Our callback always wraps errors in a walkError.
-				// If this error isn't a walkError, we know it's not
-				// from the callback
+				// If the error is a walkError from the callback, we can safely ignore it
 				if _, ok := err.(*walkError); !ok {
 					return nil, fmt.Errorf("performing bulk walk for field %s: %w", f.Name, err)
 				}
@@ -931,19 +927,10 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 				conversion = "ipaddr"
 			}
 		} else if strings.HasPrefix(line, "::= { ") {
-			objs := strings.TrimPrefix(line, "::= { ")
-			objs = strings.TrimSuffix(objs, " }")
+			re := regexp.MustCompile(`(?:\w+\()?(\d+)\)?`)
 
-			for _, obj := range strings.Split(objs, " ") {
-				if len(obj) == 0 {
-					continue
-				}
-				if i := strings.Index(obj, "("); i != -1 {
-					obj = obj[i+1:]
-					oidNum += "." + obj[:strings.Index(obj, ")")]
-				} else {
-					oidNum += "." + obj
-				}
+			for _, match := range re.FindAllStringSubmatch(line, -1) {
+				oidNum += "." + match[1]
 			}
 			break
 		}
