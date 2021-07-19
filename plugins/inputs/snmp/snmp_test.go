@@ -248,7 +248,7 @@ func TestSnmpInit_noName_noOid(t *testing.T) {
 	}
 
 	err := s.init()
-	require.Error(t, err)
+	require.NoError(t, err)
 }
 
 func TestGetSNMPConnection_v2(t *testing.T) {
