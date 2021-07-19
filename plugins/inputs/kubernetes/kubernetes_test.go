@@ -141,6 +141,8 @@ func TestKubernetesStats(t *testing.T) {
 		"volume_name": "volume1",
 		"namespace":   "foons",
 		"pod_name":    "foopod",
+		"app":         "foo",
+		"superkey":    "foobar",
 	}
 	acc.AssertContainsTaggedFields(t, "kubernetes_pod_volume", fields, tags)
 
@@ -154,6 +156,8 @@ func TestKubernetesStats(t *testing.T) {
 		"node_name": "node1",
 		"namespace": "foons",
 		"pod_name":  "foopod",
+		"app":       "foo",
+		"superkey":  "foobar",
 	}
 	acc.AssertContainsTaggedFields(t, "kubernetes_pod_network", fields, tags)
 }
