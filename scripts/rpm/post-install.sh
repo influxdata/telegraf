@@ -24,6 +24,22 @@ function install_chkconfig {
     chkconfig --add telegraf
 }
 
+function install_systemd_or_chkconfig {
+    # RHEL-variant logic
+    if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
+        install_systemd /usr/lib/systemd/system/telegraf.service
+    else
+        # Assuming SysVinit
+        install_init
+        # Run update-rc.d or fallback to chkconfig if not available
+        if which update-rc.d &>/dev/null; then
+            install_update_rcd
+        else
+            install_chkconfig
+        fi
+    fi
+}
+
 # Remove legacy symlink, if it exists
 if [[ -L /etc/init.d/telegraf ]]; then
     rm -f /etc/init.d/telegraf
@@ -54,19 +70,7 @@ chmod 755 $LOG_DIR
 
 # Distribution-specific logic
 if [[ -f /etc/redhat-release ]] || [[ -f /etc/SuSE-release ]]; then
-    # RHEL-variant logic
-    if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
-        install_systemd /usr/lib/systemd/system/telegraf.service
-    else
-        # Assuming SysVinit
-        install_init
-        # Run update-rc.d or fallback to chkconfig if not available
-        if which update-rc.d &>/dev/null; then
-            install_update_rcd
-        else
-            install_chkconfig
-        fi
-    fi
+    install_systemd_or_chkconfig
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
     if [[ "$NAME" = "Amazon Linux" ]]; then
@@ -84,5 +88,7 @@ elif [[ -f /etc/os-release ]]; then
     elif [[ "$NAME" = "Solus" ]]; then
         # Solus logic
         install_systemd /usr/lib/systemd/system/telegraf.service
+    elif [[ "$NAME" = "SLES" ]]; then
+        install_systemd_or_chkconfig
     fi
 fi
