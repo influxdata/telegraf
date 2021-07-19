@@ -45,6 +45,13 @@ var sampleConfig = `
   ## If true, the bucket tag will not be added to the metric.
   # exclude_bucket_tag = false
 
+  ## Creates any buckets if they do not already exist
+  # create_buckets = false
+
+  ## Default retention rule for any newly created buckets. If unset, the default
+  ## retention rule is forever. Ignored if skip_bucket_creation is false.
+  # default_bucket_retention = "0s"
+
   ## Timeout for HTTP messages.
   # timeout = "5s"
 
@@ -74,6 +81,7 @@ var sampleConfig = `
 `
 
 type Client interface {
+	CreateBucket(context.Context, string) error
 	Write(context.Context, []telegraf.Metric) error
 
 	URL() string // for logging
@@ -81,18 +89,20 @@ type Client interface {
 }
 
 type InfluxDB struct {
-	URLs             []string          `toml:"urls"`
-	Token            string            `toml:"token"`
-	Organization     string            `toml:"organization"`
-	Bucket           string            `toml:"bucket"`
-	BucketTag        string            `toml:"bucket_tag"`
-	ExcludeBucketTag bool              `toml:"exclude_bucket_tag"`
-	Timeout          config.Duration   `toml:"timeout"`
-	HTTPHeaders      map[string]string `toml:"http_headers"`
-	HTTPProxy        string            `toml:"http_proxy"`
-	UserAgent        string            `toml:"user_agent"`
-	ContentEncoding  string            `toml:"content_encoding"`
-	UintSupport      bool              `toml:"influx_uint_support"`
+	URLs                   []string          `toml:"urls"`
+	Token                  string            `toml:"token"`
+	Organization           string            `toml:"organization"`
+	Bucket                 string            `toml:"bucket"`
+	BucketTag              string            `toml:"bucket_tag"`
+	ExcludeBucketTag       bool              `toml:"exclude_bucket_tag"`
+	Timeout                config.Duration   `toml:"timeout"`
+	HTTPHeaders            map[string]string `toml:"http_headers"`
+	HTTPProxy              string            `toml:"http_proxy"`
+	UserAgent              string            `toml:"user_agent"`
+	ContentEncoding        string            `toml:"content_encoding"`
+	UintSupport            bool              `toml:"influx_uint_support"`
+	CreateBuckets          bool              `toml:"create_buckets"`
+	DefaultBucketRetention config.Duration   `toml:"default_bucket_retention"`
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -101,6 +111,8 @@ type InfluxDB struct {
 }
 
 func (i *InfluxDB) Connect() error {
+	ctx := context.Background()
+
 	if len(i.URLs) == 0 {
 		i.URLs = append(i.URLs, defaultURL)
 	}
@@ -121,7 +133,7 @@ func (i *InfluxDB) Connect() error {
 
 		switch parts.Scheme {
 		case "http", "https", "unix":
-			c, err := i.getHTTPClient(parts, proxy)
+			c, err := i.getHTTPClient(ctx, parts, proxy)
 			if err != nil {
 				return err
 			}
@@ -164,37 +176,53 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			return nil
 		}
 
+		if apiError, ok := err.(*BucketNotFoundError); ok {
+			if i.CreateBuckets {
+				if err := client.CreateBucket(ctx, apiError.Bucket); err != nil {
+					i.Log.Errorf("When writing to [%s]: bucket %q not found and failed to recreate", client.URL(), apiError.Bucket)
+				}
+			}
+		}
+
 		i.Log.Errorf("When writing to [%s]: %v", client.URL(), err)
 	}
 
 	return err
 }
 
-func (i *InfluxDB) getHTTPClient(url *url.URL, proxy *url.URL) (Client, error) {
+func (i *InfluxDB) getHTTPClient(ctx context.Context, u *url.URL, proxy *url.URL) (Client, error) {
 	tlsConfig, err := i.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
 
 	config := &HTTPConfig{
-		URL:              url,
-		Token:            i.Token,
-		Organization:     i.Organization,
-		Bucket:           i.Bucket,
-		BucketTag:        i.BucketTag,
-		ExcludeBucketTag: i.ExcludeBucketTag,
-		Timeout:          time.Duration(i.Timeout),
-		Headers:          i.HTTPHeaders,
-		Proxy:            proxy,
-		UserAgent:        i.UserAgent,
-		ContentEncoding:  i.ContentEncoding,
-		TLSConfig:        tlsConfig,
-		Serializer:       i.newSerializer(),
+		URL:                    u,
+		Token:                  i.Token,
+		Organization:           i.Organization,
+		Bucket:                 i.Bucket,
+		BucketTag:              i.BucketTag,
+		ExcludeBucketTag:       i.ExcludeBucketTag,
+		CreateBuckets:          i.CreateBuckets,
+		DefaultBucketRetention: int64(time.Duration(i.DefaultBucketRetention).Seconds()),
+		Timeout:                time.Duration(i.Timeout),
+		Headers:                i.HTTPHeaders,
+		Proxy:                  proxy,
+		UserAgent:              i.UserAgent,
+		ContentEncoding:        i.ContentEncoding,
+		TLSConfig:              tlsConfig,
+		Serializer:             i.newSerializer(),
 	}
 
 	c, err := NewHTTPClient(config)
 	if err != nil {
-		return nil, fmt.Errorf("error creating HTTP client [%s]: %v", url, err)
+		return nil, fmt.Errorf("error creating HTTP client [%s]: %v", u, err)
+	}
+
+	if i.CreateBuckets {
+		if err := c.CreateBucket(ctx, c.Bucket); err != nil {
+			i.Log.Warnf("When writing to [%s]: bucket %q creation failed: %v", c.URL(), c.Bucket, err)
+		}
 	}
 
 	return c, nil
@@ -212,8 +240,9 @@ func (i *InfluxDB) newSerializer() *influx.Serializer {
 func init() {
 	outputs.Add("influxdb_v2", func() telegraf.Output {
 		return &InfluxDB{
-			Timeout:         config.Duration(time.Second * 5),
-			ContentEncoding: "gzip",
+			Timeout:                config.Duration(time.Second * 5),
+			ContentEncoding:        "gzip",
+			DefaultBucketRetention: config.Duration(0),
 		}
 	})
 }

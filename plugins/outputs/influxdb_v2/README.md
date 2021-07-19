@@ -30,6 +30,13 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
   ## If true, the bucket tag will not be added to the metric.
   # exclude_bucket_tag = false
 
+  ## Creates any buckets if they do not already exist
+  # create_buckets = false
+
+  ## Default retention rule for any newly created buckets. If unset, the default
+  ## retention rule is forever. Ignored if create_buckets is false.
+  # default_bucket_retention = "0s"
+
   ## Timeout for HTTP messages.
   # timeout = "5s"
 
