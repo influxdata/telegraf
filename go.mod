@@ -67,6 +67,7 @@ require (
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.1.13
+	github.com/gophercloud/gophercloud v0.12.0
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.2
 	github.com/gosnmp/gosnmp v1.32.0
