@@ -85,7 +85,9 @@ func (m *MongoDB) Init() error {
 	var tlsConfig *tls.Config
 	if m.Ssl.Enabled {
 		// Deprecated TLS config
-		tlsConfig = &tls.Config{}
+		tlsConfig = &tls.Config{
+			InsecureSkipVerify: m.ClientConfig.InsecureSkipVerify,
+		}
 		if len(m.Ssl.CaCerts) > 0 {
 			roots := x509.NewCertPool()
 			for _, caCert := range m.Ssl.CaCerts {
@@ -95,7 +97,7 @@ func (m *MongoDB) Init() error {
 			}
 			tlsConfig.RootCAs = roots
 		} else {
-			tlsConfig.InsecureSkipVerify = true
+			return fmt.Errorf("you must explicitly set insecure_skip_verify to skip cerificate validation")
 		}
 	} else {
 		var err error
