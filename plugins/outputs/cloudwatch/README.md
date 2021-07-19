@@ -15,6 +15,10 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 
 The IAM user needs only the `cloudwatch:PutMetricData` permission.
 
+Note that if `EC2 Instance Profile` Authentication method is preferred, the `shared_credential_file` must be
+initialized to an empty string anyways due to predefined Authentication precedence. Otherwise it would error
+out with "no such file".
+
 ## Config
 
 For this output plugin to function correctly the following variables
