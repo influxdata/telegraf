@@ -19,14 +19,14 @@ func TestConvertGlobalStatus(t *testing.T) {
 			name:        "default",
 			key:         "ssl_ctx_verify_depth",
 			value:       []byte("0"),
-			expected:    int64(0),
+			expected:    uint64(0),
 			expectedErr: nil,
 		},
 		{
 			name:        "overflow int64",
 			key:         "ssl_ctx_verify_depth",
 			value:       []byte("18446744073709551615"),
-			expected:    int64(9223372036854775807),
+			expected:    uint64(18446744073709551615),
 			expectedErr: nil,
 		},
 		{
