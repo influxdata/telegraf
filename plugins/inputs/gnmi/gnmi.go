@@ -14,16 +14,17 @@ import (
 	"sync"
 	"time"
 
+	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
-	"github.com/openconfig/gnmi/proto/gnmi"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
 )
 
 // gNMI plugin instance
@@ -51,10 +52,10 @@ type GNMI struct {
 	internaltls.ClientConfig
 
 	// Internal state
-	aliases map[string]string
-	acc     telegraf.Accumulator
-	cancel  context.CancelFunc
-	wg      sync.WaitGroup
+	internalAliases map[string]string
+	acc             telegraf.Accumulator
+	cancel          context.CancelFunc
+	wg              sync.WaitGroup
 
 	Log telegraf.Logger
 }
@@ -79,7 +80,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	var err error
 	var ctx context.Context
 	var tlscfg *tls.Config
-	var request *gnmi.SubscribeRequest
+	var request *gnmiLib.SubscribeRequest
 	c.acc = acc
 	ctx, c.cancel = context.WithCancel(context.Background())
 
@@ -102,9 +103,9 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	}
 
 	// Invert explicit alias list and prefill subscription names
-	c.aliases = make(map[string]string, len(c.Subscriptions)+len(c.Aliases))
+	c.internalAliases = make(map[string]string, len(c.Subscriptions)+len(c.Aliases))
 	for _, subscription := range c.Subscriptions {
-		var gnmiLongPath, gnmiShortPath *gnmi.Path
+		var gnmiLongPath, gnmiShortPath *gnmiLib.Path
 
 		// Build the subscription path without keys
 		if gnmiLongPath, err = parsePath(subscription.Origin, subscription.Path, ""); err != nil {
@@ -129,12 +130,12 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 			name = path.Base(shortPath)
 		}
 		if len(name) > 0 {
-			c.aliases[longPath] = name
-			c.aliases[shortPath] = name
+			c.internalAliases[longPath] = name
+			c.internalAliases[shortPath] = name
 		}
 	}
-	for alias, path := range c.Aliases {
-		c.aliases[path] = alias
+	for alias, encodingPath := range c.Aliases {
+		c.internalAliases[encodingPath] = alias
 	}
 
 	// Create a goroutine for each device, dial and subscribe
@@ -158,21 +159,21 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 }
 
 // Create a new gNMI SubscribeRequest
-func (c *GNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
+func (c *GNMI) newSubscribeRequest() (*gnmiLib.SubscribeRequest, error) {
 	// Create subscription objects
-	subscriptions := make([]*gnmi.Subscription, len(c.Subscriptions))
+	subscriptions := make([]*gnmiLib.Subscription, len(c.Subscriptions))
 	for i, subscription := range c.Subscriptions {
 		gnmiPath, err := parsePath(subscription.Origin, subscription.Path, "")
 		if err != nil {
 			return nil, err
 		}
-		mode, ok := gnmi.SubscriptionMode_value[strings.ToUpper(subscription.SubscriptionMode)]
+		mode, ok := gnmiLib.SubscriptionMode_value[strings.ToUpper(subscription.SubscriptionMode)]
 		if !ok {
 			return nil, fmt.Errorf("invalid subscription mode %s", subscription.SubscriptionMode)
 		}
-		subscriptions[i] = &gnmi.Subscription{
+		subscriptions[i] = &gnmiLib.Subscription{
 			Path:              gnmiPath,
-			Mode:              gnmi.SubscriptionMode(mode),
+			Mode:              gnmiLib.SubscriptionMode(mode),
 			SampleInterval:    uint64(time.Duration(subscription.SampleInterval).Nanoseconds()),
 			SuppressRedundant: subscription.SuppressRedundant,
 			HeartbeatInterval: uint64(time.Duration(subscription.HeartbeatInterval).Nanoseconds()),
@@ -189,12 +190,12 @@ func (c *GNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
 		return nil, fmt.Errorf("unsupported encoding %s", c.Encoding)
 	}
 
-	return &gnmi.SubscribeRequest{
-		Request: &gnmi.SubscribeRequest_Subscribe{
-			Subscribe: &gnmi.SubscriptionList{
+	return &gnmiLib.SubscribeRequest{
+		Request: &gnmiLib.SubscribeRequest_Subscribe{
+			Subscribe: &gnmiLib.SubscriptionList{
 				Prefix:       gnmiPath,
-				Mode:         gnmi.SubscriptionList_STREAM,
-				Encoding:     gnmi.Encoding(gnmi.Encoding_value[strings.ToUpper(c.Encoding)]),
+				Mode:         gnmiLib.SubscriptionList_STREAM,
+				Encoding:     gnmiLib.Encoding(gnmiLib.Encoding_value[strings.ToUpper(c.Encoding)]),
 				Subscription: subscriptions,
 				UpdatesOnly:  c.UpdatesOnly,
 			},
@@ -203,7 +204,7 @@ func (c *GNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
 }
 
 // SubscribeGNMI and extract telemetry data
-func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Config, request *gnmi.SubscribeRequest) error {
+func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Config, request *gnmiLib.SubscribeRequest) error {
 	var opt grpc.DialOption
 	if tlscfg != nil {
 		opt = grpc.WithTransportCredentials(credentials.NewTLS(tlscfg))
@@ -217,7 +218,7 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Co
 	}
 	defer client.Close()
 
-	subscribeClient, err := gnmi.NewGNMIClient(client).Subscribe(ctx)
+	subscribeClient, err := gnmiLib.NewGNMIClient(client).Subscribe(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to setup subscription: %v", err)
 	}
@@ -233,7 +234,7 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Co
 	c.Log.Debugf("Connection to gNMI device %s established", address)
 	defer c.Log.Debugf("Connection to gNMI device %s closed", address)
 	for ctx.Err() == nil {
-		var reply *gnmi.SubscribeResponse
+		var reply *gnmiLib.SubscribeResponse
 		if reply, err = subscribeClient.Recv(); err != nil {
 			if err != io.EOF && ctx.Err() == nil {
 				return fmt.Errorf("aborted gNMI subscription: %v", err)
@@ -246,17 +247,17 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Co
 	return nil
 }
 
-func (c *GNMI) handleSubscribeResponse(address string, reply *gnmi.SubscribeResponse) {
+func (c *GNMI) handleSubscribeResponse(address string, reply *gnmiLib.SubscribeResponse) {
 	switch response := reply.Response.(type) {
-	case *gnmi.SubscribeResponse_Update:
+	case *gnmiLib.SubscribeResponse_Update:
 		c.handleSubscribeResponseUpdate(address, response)
-	case *gnmi.SubscribeResponse_Error:
+	case *gnmiLib.SubscribeResponse_Error:
 		c.Log.Errorf("Subscribe error (%d), %q", response.Error.Code, response.Error.Message)
 	}
 }
 
 // Handle SubscribeResponse_Update message from gNMI and parse contained telemetry data
-func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.SubscribeResponse_Update) {
+func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.SubscribeResponse_Update) {
 	var prefix, prefixAliasPath string
 	grouper := metric.NewSeriesGrouper()
 	timestamp := time.Unix(0, response.Update.Timestamp)
@@ -289,7 +290,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 		// Lookup alias if alias-path has changed
 		if aliasPath != lastAliasPath {
 			name = prefix
-			if alias, ok := c.aliases[aliasPath]; ok {
+			if alias, ok := c.internalAliases[aliasPath]; ok {
 				name = alias
 			} else {
 				c.Log.Debugf("No measurement alias for gNMI path: %s", name)
@@ -325,13 +326,13 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 	}
 
 	// Add grouped measurements
-	for _, metric := range grouper.Metrics() {
-		c.acc.AddMetric(metric)
+	for _, metricToAdd := range grouper.Metrics() {
+		c.acc.AddMetric(metricToAdd)
 	}
 }
 
 // HandleTelemetryField and add it to a measurement
-func (c *GNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
+func (c *GNMI) handleTelemetryField(update *gnmiLib.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
 	gpath, aliasPath, err := c.handlePath(update.Path, tags, prefix)
 	if err != nil {
 		c.Log.Errorf("handling path %q failed: %v", update.Path, err)
@@ -347,25 +348,25 @@ func (c *GNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string,
 	}
 
 	switch val := update.Val.Value.(type) {
-	case *gnmi.TypedValue_AsciiVal:
+	case *gnmiLib.TypedValue_AsciiVal:
 		value = val.AsciiVal
-	case *gnmi.TypedValue_BoolVal:
+	case *gnmiLib.TypedValue_BoolVal:
 		value = val.BoolVal
-	case *gnmi.TypedValue_BytesVal:
+	case *gnmiLib.TypedValue_BytesVal:
 		value = val.BytesVal
-	case *gnmi.TypedValue_DecimalVal:
+	case *gnmiLib.TypedValue_DecimalVal:
 		value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
-	case *gnmi.TypedValue_FloatVal:
+	case *gnmiLib.TypedValue_FloatVal:
 		value = val.FloatVal
-	case *gnmi.TypedValue_IntVal:
+	case *gnmiLib.TypedValue_IntVal:
 		value = val.IntVal
-	case *gnmi.TypedValue_StringVal:
+	case *gnmiLib.TypedValue_StringVal:
 		value = val.StringVal
-	case *gnmi.TypedValue_UintVal:
+	case *gnmiLib.TypedValue_UintVal:
 		value = val.UintVal
-	case *gnmi.TypedValue_JsonIetfVal:
+	case *gnmiLib.TypedValue_JsonIetfVal:
 		jsondata = val.JsonIetfVal
-	case *gnmi.TypedValue_JsonVal:
+	case *gnmiLib.TypedValue_JsonVal:
 		jsondata = val.JsonVal
 	}
 
@@ -387,13 +388,12 @@ func (c *GNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string,
 }
 
 // Parse path to path-buffer and tag-field
-func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string) (string, string, error) {
-	var aliasPath string
+func (c *GNMI) handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, prefix string) (pathBuffer string, aliasPath string, err error) {
 	builder := bytes.NewBufferString(prefix)
 
 	// Prefix with origin
-	if len(path.Origin) > 0 {
-		if _, err := builder.WriteString(path.Origin); err != nil {
+	if len(gnmiPath.Origin) > 0 {
+		if _, err := builder.WriteString(gnmiPath.Origin); err != nil {
 			return "", "", err
 		}
 		if _, err := builder.WriteRune(':'); err != nil {
@@ -402,7 +402,7 @@ func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string
 	}
 
 	// Parse generic keys from prefix
-	for _, elem := range path.Elem {
+	for _, elem := range gnmiPath.Elem {
 		if len(elem.Name) > 0 {
 			if _, err := builder.WriteRune('/'); err != nil {
 				return "", "", err
@@ -413,7 +413,7 @@ func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string
 		}
 		name := builder.String()
 
-		if _, exists := c.aliases[name]; exists {
+		if _, exists := c.internalAliases[name]; exists {
 			aliasPath = name
 		}
 
@@ -435,21 +435,21 @@ func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string
 }
 
 //ParsePath from XPath-like string to gNMI path structure
-func parsePath(origin string, path string, target string) (*gnmi.Path, error) {
+func parsePath(origin string, pathToParse string, target string) (*gnmiLib.Path, error) {
 	var err error
-	gnmiPath := gnmi.Path{Origin: origin, Target: target}
+	gnmiPath := gnmiLib.Path{Origin: origin, Target: target}
 
-	if len(path) > 0 && path[0] != '/' {
-		return nil, fmt.Errorf("path does not start with a '/': %s", path)
+	if len(pathToParse) > 0 && pathToParse[0] != '/' {
+		return nil, fmt.Errorf("path does not start with a '/': %s", pathToParse)
 	}
 
-	elem := &gnmi.PathElem{}
+	elem := &gnmiLib.PathElem{}
 	start, name, value, end := 0, -1, -1, -1
 
-	path = path + "/"
+	pathToParse = pathToParse + "/"
 
-	for i := 0; i < len(path); i++ {
-		if path[i] == '[' {
+	for i := 0; i < len(pathToParse); i++ {
+		if pathToParse[i] == '[' {
 			if name >= 0 {
 				break
 			}
@@ -458,37 +458,37 @@ func parsePath(origin string, path string, target string) (*gnmi.Path, error) {
 				elem.Key = make(map[string]string)
 			}
 			name = i + 1
-		} else if path[i] == '=' {
+		} else if pathToParse[i] == '=' {
 			if name <= 0 || value >= 0 {
 				break
 			}
 			value = i + 1
-		} else if path[i] == ']' {
+		} else if pathToParse[i] == ']' {
 			if name <= 0 || value <= name {
 				break
 			}
-			elem.Key[path[name:value-1]] = strings.Trim(path[value:i], "'\"")
+			elem.Key[pathToParse[name:value-1]] = strings.Trim(pathToParse[value:i], "'\"")
 			name, value = -1, -1
-		} else if path[i] == '/' {
+		} else if pathToParse[i] == '/' {
 			if name < 0 {
 				if end < 0 {
 					end = i
 				}
 
 				if end > start {
-					elem.Name = path[start:end]
+					elem.Name = pathToParse[start:end]
 					gnmiPath.Elem = append(gnmiPath.Elem, elem)
-					gnmiPath.Element = append(gnmiPath.Element, path[start:i])
+					gnmiPath.Element = append(gnmiPath.Element, pathToParse[start:i])
 				}
 
 				start, name, value, end = i+1, -1, -1, -1
-				elem = &gnmi.PathElem{}
+				elem = &gnmiLib.PathElem{}
 			}
 		}
 	}
 
 	if name >= 0 || value >= 0 {
-		err = fmt.Errorf("Invalid gNMI path: %s", path)
+		err = fmt.Errorf("Invalid gNMI path: %s", pathToParse)
 	}
 
 	if err != nil {

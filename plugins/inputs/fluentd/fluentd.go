@@ -63,11 +63,11 @@ func parse(data []byte) (datapointArray []pluginData, err error) {
 
 	if err = json.Unmarshal(data, &endpointData); err != nil {
 		err = fmt.Errorf("processing JSON structure")
-		return
+		return nil, err
 	}
 
 	datapointArray = append(datapointArray, endpointData.Payload...)
-	return
+	return datapointArray, err
 }
 
 // Description - display description
