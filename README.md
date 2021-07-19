@@ -316,6 +316,7 @@ For documentation on the latest development code see the [documentation index][d
 * [ravendb](./plugins/inputs/ravendb)
 * [redfish](./plugins/inputs/redfish)
 * [redis](./plugins/inputs/redis)
+* [redis_sentinel](./plugins/inputs/redis_sentinel)
 * [rethinkdb](./plugins/inputs/rethinkdb)
 * [riak](./plugins/inputs/riak)
 * [salesforce](./plugins/inputs/salesforce)
