@@ -16,6 +16,49 @@ import (
 
 // Set config file variables to point to fake directory structure instead of /proc?
 
+// Subset of a brw_stats file. Contains all headers, with representative buckets.
+const brwstatsProcContents = `snapshot_time:         1589909588.327213269 (secs.nsecs)
+
+                           read      |     write
+pages per bulk r/w     rpcs  % cum % |  rpcs        % cum %
+1:                    5271   0   0   | 337023  22  22
+2:                    3030   0   0   | 5672   0  23
+4:                    4449   0   0   | 255983  17  40
+8:                    2780   0   0   | 33612   2  42
+
+                           read      |     write
+discontiguous pages    rpcs  % cum % |  rpcs        % cum %
+0:                43942683 100 100   | 337023  22  22
+1:                       0   0 100   | 5672   0  23
+2:                       0   0 100   | 28016   1  24
+3:                       0   0 100   | 227967  15  40
+4:                       0   0 100   | 12869   0  41
+
+                           read      |     write
+disk I/Os in flight    ios   % cum % |  ios         % cum %
+1:                 2892221   6   6   | 1437946  96  96
+2:                 2763141   6  12   | 44373   2  99
+3:                 3014304   6  19   | 2677   0  99
+4:                 3212360   7  27   |  183   0  99
+
+                           read      |     write
+I/O time (1/1000s)     ios   % cum % |  ios         % cum %
+1:                  521780   1   1   |    0   0   0
+16:                6035560  16  22   |    0   0   0
+128:               5044958  14  98   |    0   0   0
+1K:                    651   0  99   |    0   0   0
+
+                           read      |     write
+disk I/O size          ios   % cum % |  ios         % cum %
+1:                       0   0   0   | 327301  22  22
+16:                      0   0   0   |    0   0  22
+128:                    35   0   0   |  209   0  22
+1K:                      0   0   0   | 1703   0  22
+16K:                  4449   0   0   | 255983  17  40
+128K:                  855   0   0   |   23   0  42
+1M:               43866371  99 100   | 850248  57 100
+`
+
 const obdfilterProcContents = `snapshot_time             1438693064.430544 secs.usecs
 read_bytes                203238095 samples [bytes] 4096 1048576 78026117632000
 write_bytes               71893382 samples [bytes] 1 1048576 15201500833981
@@ -199,6 +242,83 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 	}
 
 	acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
+
+	err = os.RemoveAll(os.TempDir() + "/telegraf")
+	require.NoError(t, err)
+}
+
+func TestLustre2GeneratesBrwstatsMetrics(t *testing.T) {
+
+	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
+	ost_name := "OST0001"
+
+	osddir := tempdir + "/osd-ldiskfs/"
+	err := os.MkdirAll(osddir+"/"+ost_name, 0755)
+	require.NoError(t, err)
+
+	err = ioutil.WriteFile(osddir+"/"+ost_name+"/brw_stats", []byte(brwstatsProcContents), 0644)
+	require.NoError(t, err)
+
+	m := &Lustre2{
+		OstProcfiles: []string{osddir + "/*/brw_stats"},
+	}
+
+	var acc testutil.Accumulator
+
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+
+	expected_data := map[string]map[string][]uint64{
+		"pages_per_bulk_rw": {
+			"1": {5271, 0, 337023, 22},
+			"2": {3030, 0, 5672, 0},
+			"4": {4449, 0, 255983, 17},
+			"8": {2780, 0, 33612, 2}},
+		"discontiguous_pages": {
+			"0": {43942683, 100, 337023, 22},
+			"1": {0, 0, 5672, 0},
+			"2": {0, 0, 28016, 1},
+			"3": {0, 0, 227967, 15},
+			"4": {0, 0, 12869, 0}},
+		"disk_ios_in_flight": {
+			"1": {2892221, 6, 1437946, 96},
+			"2": {2763141, 6, 44373, 2},
+			"3": {3014304, 6, 2677, 0},
+			"4": {3212360, 7, 183, 0}},
+		"io_time": {
+			"1":   {521780, 1, 0, 0},
+			"16":  {6035560, 16, 0, 0},
+			"128": {5044958, 14, 0, 0},
+			"1K":  {651, 0, 0, 0}},
+		"disk_io_size": {
+			"1":    {0, 0, 327301, 22},
+			"16":   {0, 0, 0, 0},
+			"128":  {35, 0, 209, 0},
+			"1K":   {0, 0, 1703, 0},
+			"16K":  {4449, 0, 255983, 17},
+			"128K": {855, 0, 23, 0},
+			"1M":   {43866371, 99, 850248, 57}},
+	}
+
+	for brw_section, buckets := range expected_data {
+		for bucket, values := range buckets {
+			tags := map[string]string{
+				"name":        ost_name,
+				"brw_section": brw_section,
+				"bucket":      bucket,
+			}
+
+			fields := map[string]interface{}{
+				"read_ios":      values[0],
+				"read_percent":  values[1],
+				"write_ios":     values[2],
+				"write_percent": values[3],
+			}
+			t.Log("\n", tags)
+			t.Log("\n", fields)
+			acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
+		}
+	}
 
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
 	require.NoError(t, err)

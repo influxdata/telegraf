@@ -11,16 +11,20 @@ This plugin monitors the Lustre file system using its entries in the proc filesy
 # Read metrics from local Lustre service on OST, MDS
 [[inputs.lustre2]]
   ## An array of /proc globs to search for Lustre stats
-  ## If not specified, the default will work on Lustre 2.5.x
+  ## If not specified, the default will work on Lustre 2.12.x
   ##
   # ost_procfiles = [
   #   "/proc/fs/lustre/obdfilter/*/stats",
   #   "/proc/fs/lustre/osd-ldiskfs/*/stats",
   #   "/proc/fs/lustre/obdfilter/*/job_stats",
+  #   "/proc/fs/lustre/osd-ldiskfs/*/brw_stats",
+  #   "/proc/fs/lustre/osd-zfs/*/brw_stats",
   # ]
   # mds_procfiles = [
   #   "/proc/fs/lustre/mdt/*/md_stats",
   #   "/proc/fs/lustre/mdt/*/job_stats",
+  #   "/proc/fs/lustre/osd-ldiskfs/*/brw_stats",
+  #   "/proc/fs/lustre/osd-zfs/*/brw_stats",
   # ]
 ```
 
@@ -39,6 +43,19 @@ From `/proc/fs/lustre/obdfilter/*/stats` and `/proc/fs/lustre/osd-ldiskfs/*/stat
     - cache_hit
     - cache_miss
     - cache_access
+
+From `/proc/fs/lustre/osd-ldiskfs/*/brw_stats` and `/proc/fs/lustre/osd-zfs/*/brw_stats`:
+
+- lustre2
+  - tags:
+    - name
+    - brw_section
+    - bucket
+  - fields:
+    - read_ios
+    - read_percent
+    - write_ios
+    - write_percent
 
 From `/proc/fs/lustre/obdfilter/*/job_stats`:
 
