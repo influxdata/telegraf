@@ -14,6 +14,7 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.24/)
   ## Docker Endpoint
   ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
+  ##   To Use Windows npipe, set endpoint = "npipe:////./pipe/docker_engine"
   endpoint = "unix:///var/run/docker.sock"
 
   ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
