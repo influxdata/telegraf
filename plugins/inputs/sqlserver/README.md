@@ -67,10 +67,13 @@ GO
   # database_type = "AzureSQLDB"
 
   ## A list of queries to include. If not specified, all the above listed queries are used.
-  # include_query = []
+  # include_query = ["AzureSQLDBResourceStats", "AzureSQLDBResourceGovernance", "AzureSQLDBWaitStats", "AzureSQLDBDatabaseIO", "AzureSQLDBServerProperties", "AzureSQLDBOsWaitstats", "AzureSQLDBMemoryClerks", "AzureSQLDBPerformanceCounters", "AzureSQLDBRequests", "AzureSQLDBSchedulers"]
 
   ## A list of queries to explicitly ignore.
-  # exclude_query = []
+  ## Query Store queries (AzureSQLDBQueryStoreRuntimeStatistics and AzureSQLDBQueryStoreWaitStatistics) are excluded by default.
+  ## If you enable Query Store queries, the collection interval should comply with the following restriction: 15m =< collection interval <= 2h. 
+  ## Intervals shorter than 15m may cause higher performance impact on source. Intervals longer than 2h may cause some Query Store data not to be collected.
+  # exclude_query = ["AzureSQLDBQueryStoreRuntimeStatistics", "AzureSQLDBQueryStoreWaitStatistics"]
 
   ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
   ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
@@ -78,8 +81,10 @@ GO
 
   # database_type = "AzureSQLManagedInstance"
 
+  ## A list of queries to include.
   # include_query = []
 
+  ## A list of queries to explicitly ignore.
   # exclude_query = []
 
   ## Queries enabled by default for database_type = "SQLServer" are - 
@@ -275,9 +280,10 @@ These are metrics for Azure SQL Database (single database) and are very similar 
 - AzureSQLDBServerProperties: Relevant Azure SQL relevant properties from  such as Tier, #Vcores, Memory etc, storage, etc.
 - AzureSQLDBWaitstats: Wait time in ms from `sys.dm_db_wait_stats`, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store. These waits are collected only as of the end of the a statement. and for a specific database only.
 - *AzureSQLOsWaitstats*: Wait time in ms from `sys.dm_os_wait_stats`, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store. These waits are collected as they occur and instance wide
-- *AzureSQLDBRequests: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`
-- *AzureSQLDBSchedulers* - This captures `sys.dm_os_schedulers` snapshots.
-
+- *AzureSQLDBRequests*: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`
+- *AzureSQLDBSchedulers*: This captures `sys.dm_os_schedulers` snapshots
+- AzureSQLDBQueryStoreRuntimeStatistics: Collects queries runtime statistics from `sys.query_store_runtime_stats` and other views related to Query Store
+- AzureSQLDBQueryStoreWaitStatistics: Collects queries wait statistics from `sys.query_store_wait_stats` and other views related to Query Store
 
 #### database_type = "AzureSQLManagedInstance 
 These are metrics for Azure SQL Managed instance, are very similar to version 2 but split out for maintenance reasons, better ability to test, differences in DMVs:

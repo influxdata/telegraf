@@ -679,6 +679,145 @@ SELECT
 FROM sys.dm_os_schedulers AS s
 `
 
+const sqlAzureDBPartQueryPeriod = `
+DECLARE @QueryData VARCHAR(MAX) = ?1; --input parameter
+
+IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END;
+
+DECLARE @lastIntervalEndTime DATETIMEOFFSET;
+
+/*Get the time when the query was previously called*/
+IF @QueryData != '' AND @QueryData IS NOT NULL
+	SET @lastIntervalEndTime = CAST(@QueryData AS DATETIMEOFFSET);
+
+DECLARE @currIntervalStartTime DATETIMEOFFSET, @currIntervalEndTime DATETIMEOFFSET, @queryStartTime DATETIMEOFFSET;
+
+DECLARE @currTime DATETIMEOFFSET = SYSDATETIMEOFFSET();
+DECLARE @currTimeLimit DATETIMEOFFSET;
+
+/* Only Query Store intervals that ended after @currTimeLimit will be collected */
+SELECT @currTimeLimit =
+    CASE interval_length_minutes
+        WHEN 1440 THEN DATEADD(hh, -24, @currTime)
+        ELSE DATEADD(hh, -3, @currTime)
+    END
+FROM sys.database_query_store_options;
+
+/*Get the last completed interval*/
+SELECT TOP 1 @queryStartTime = start_time,  @currIntervalEndTime = end_time
+FROM sys.query_store_runtime_stats_interval
+WHERE end_time < @currTime
+ORDER BY runtime_stats_interval_id DESC;
+
+/* Query Store is disabled OR interval is already collected */
+if @currIntervalEndTime IS NULL OR @currIntervalEndTime < @currTimeLimit OR @currIntervalEndTime = @lastIntervalEndTime
+	RETURN;
+
+SET @currIntervalStartTime = IIF(@lastIntervalEndTime IS NULL OR @lastIntervalEndTime < @currTimeLimit, @queryStartTime, @lastIntervalEndTime);
+`
+const sqlAzureDBQueryStoreRuntimeStatistics = sqlAzureDBPartQueryPeriod + `
+
+/*Query Store is not enabled on read-only replicas: https://docs.microsoft.com/en-us/sql/t-sql/functions/databasepropertyex-transact-sql?view=sql-server-ver15*/
+IF DATABASEPROPERTYEX(DB_Name(), 'Updateability') = 'READ_ONLY'  
+	RETURN
+
+/* Query the data from query store. Group by plan_id, execution_type, runtime_stats_interval_id, as specified here:
+https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-runtime-stats-transact-sql?view=sql-server-ver15
+*/
+SELECT
+	'sqlserver_azuredb_querystore_runtime_stats' AS [measurement],
+	REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance],
+	DB_NAME() AS [database_name],
+	CONVERT(varchar(35), MAX(rsi.start_time), 126) AS interval_start_time,
+	CONVERT(varchar(35), MAX(rsi.end_time), 126) AS interval_end_time,
+	CAST(MAX(q.query_id) AS varchar(20)) AS query_id,
+	CONVERT(varchar(20), MAX(q.query_hash), 1) as query_hash,
+	CAST(rs.plan_id AS varchar(20)) AS plan_id,
+	CONVERT(varchar(20), MAX(p.query_plan_hash), 1) as query_plan_hash,
+	MAX(rs.max_logical_io_reads) as max_logical_io_reads,
+	SUM(rs.avg_logical_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_logical_io_reads,
+	MAX(rs.max_physical_io_reads) as max_physical_io_reads,
+	SUM(rs.avg_physical_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_physical_io_reads,
+	MAX(rs.max_logical_io_writes) as max_logical_io_writes,
+	SUM(rs.avg_logical_io_writes * rs.count_executions) / SUM(rs.count_executions) as avg_logical_io_writes,
+	rs.execution_type,
+	MAX(rs.execution_type_desc) AS execution_type_desc,
+	SUM(rs.count_executions) as count_executions,
+	MAX(rs.max_cpu_time) as max_cpu_time,
+	SUM(rs.avg_cpu_time * rs.count_executions) / SUM(rs.count_executions) as avg_cpu_time,
+	MAX(rs.max_dop) as max_dop,
+	SUM(rs.avg_dop * rs.count_executions) / SUM(rs.count_executions) as avg_dop,
+	MAX(rs.max_rowcount) as max_rowcount,
+	SUM(rs.avg_rowcount * rs.count_executions) / SUM(rs.count_executions) as avg_rowcount,
+	MAX(rs.max_query_max_used_memory) AS max_query_max_used_memory,
+	SUM(rs.avg_query_max_used_memory * rs.count_executions) / SUM(rs.count_executions) AS avg_query_max_used_memory,
+	MAX(rs.max_duration) as [max_duration],
+	SUM(rs.avg_duration * rs.count_executions) / SUM(rs.count_executions) as avg_duration,
+	MAX(rs.max_num_physical_io_reads) as max_num_physical_io_reads,
+	SUM(rs.avg_num_physical_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_num_physical_io_reads,
+	MAX(rs.max_page_server_io_reads) as max_page_server_io_reads,
+	SUM(rs.avg_page_server_io_reads * rs.count_executions) / SUM(rs.count_executions) as avg_page_server_io_reads,
+	MAX(rs.max_log_bytes_used) as [max_log_bytes_used],
+	SUM(rs.avg_log_bytes_used * rs.count_executions) / SUM(rs.count_executions) as avg_log_bytes_used,
+	MAX(rs.max_tempdb_space_used) as max_tempdb_space_used,
+	SUM(rs.avg_tempdb_space_used * rs.count_executions) / SUM(rs.count_executions) as avg_tempdb_space_used
+FROM sys.query_store_query q
+	JOIN sys.query_store_plan p ON q.query_id = p.query_id
+	JOIN sys.query_store_runtime_stats rs ON p.plan_id = rs.plan_id
+	JOIN sys.query_store_runtime_stats_interval rsi ON rs.runtime_stats_interval_id = rsi.runtime_stats_interval_id
+WHERE rsi.start_time >= @currIntervalStartTime AND rsi.end_time <= @currIntervalEndTime
+GROUP BY rs.plan_id, rs.execution_type, rs.runtime_stats_interval_id
+OPTION (RECOMPILE);
+
+/* Return the timestamp when the query was run, to be used in the next call */
+SELECT CONVERT(varchar(35), @currIntervalEndTime, 126) AS QueryData;
+`
+
+const sqlAzureDBQueryStoreWaitStatistics = sqlAzureDBPartQueryPeriod + `
+
+/*Query Store is not enabled on read-only replicas: https://docs.microsoft.com/en-us/sql/t-sql/functions/databasepropertyex-transact-sql?view=sql-server-ver15*/
+IF DATABASEPROPERTYEX(DB_Name(), 'Updateability') = 'READ_ONLY'  
+	RETURN
+
+/* Skip the data collection logic if Query Store is not configured to capture wait statistics */
+IF NOT EXISTS (SELECT * FROM sys.database_query_store_options WHERE wait_stats_capture_mode = 1)
+	RETURN;
+
+/* Query the data from query store. Group  by plan_id, runtime_stats_interval_id, execution_type and wait_category, and specified here:
+https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver15
+*/
+SELECT
+	'sqlserver_azuredb_querystore_wait_stats' AS [measurement],
+	REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance],
+	DB_NAME() AS [database_name],
+	CONVERT(varchar(35), MAX(rsi.start_time), 126) AS interval_start_time,
+	CONVERT(varchar(35), MAX(rsi.end_time), 126) AS interval_end_time,
+	CAST(MAX(q.query_id) AS varchar(20)) AS query_id,
+	CONVERT(varchar(20), MAX(q.query_hash), 1) as query_hash,
+	CAST(ws.plan_id AS varchar(20)) AS plan_id,
+	CONVERT(varchar(20), MAX(p.query_plan_hash), 1) as query_plan_hash,
+	ws.wait_category_desc AS wait_category,
+	ws.execution_type AS exec_type,
+	MAX(ws.execution_type_desc) AS exec_type_desc,
+	SUM(ws.total_query_wait_time_ms) AS total_query_wait_time_ms,
+	CAST(SUM(IIF(ws.avg_query_wait_time_ms = 0, 0, ws.total_query_wait_time_ms / ws.avg_query_wait_time_ms)) AS BIGINT) AS count_executions,
+	MAX(ws.max_query_wait_time_ms) AS max_query_wait_time_ms
+FROM sys.query_store_query q
+	JOIN sys.query_store_plan p ON q.query_id = p.query_id
+	JOIN sys.query_store_wait_stats ws ON p.plan_id = ws.plan_id
+	JOIN sys.query_store_runtime_stats_interval rsi on ws.runtime_stats_interval_id = rsi.runtime_stats_interval_id
+WHERE rsi.start_time >= @currIntervalStartTime AND rsi.end_time <= @currIntervalEndTime
+GROUP BY ws.plan_id, ws.execution_type, ws.runtime_stats_interval_id, ws.wait_category_desc
+OPTION (RECOMPILE);
+
+/* Return the timestamp when the query was run, to be used in the next call */
+SELECT CONVERT(varchar(35), @currIntervalEndTime, 126) AS QueryData;
+`
+
 //------------------------------------------------------------------------------------------------
 //------------------ Azure Managed Instance ------------------------------------------------------
 //------------------------------------------------------------------------------------------------

@@ -38,6 +38,8 @@ type Query struct {
 	Script         string
 	ResultByRow    bool
 	OrderedColumns []string
+	HasCachedData  bool
+	DataCache      *QueryDataCache
 }
 
 // MapQuery type
@@ -96,10 +98,13 @@ servers = [
 # database_type = "AzureSQLDB"
 
 ## A list of queries to include. If not specified, all the above listed queries are used.
-# include_query = []
+# include_query = ["AzureSQLDBResourceStats", "AzureSQLDBResourceGovernance", "AzureSQLDBWaitStats", "AzureSQLDBDatabaseIO", "AzureSQLDBServerProperties", "AzureSQLDBOsWaitstats", "AzureSQLDBMemoryClerks", "AzureSQLDBPerformanceCounters", "AzureSQLDBRequests", "AzureSQLDBSchedulers"]
 
 ## A list of queries to explicitly ignore.
-# exclude_query = []
+## Query Store queries (AzureSQLDBQueryStoreRuntimeStatistics and AzureSQLDBQueryStoreWaitStatistics) are excluded by default.
+## If you enable Query Store queries, the collection interval should comply with the following restriction: 15m =< collection interval <= 2h. 
+## Intervals shorter than 15m may cause higher performance impact on source. Intervals longer than 2h may cause some Query Store data not to be collected.
+# exclude_query = ["AzureSQLDBQueryStoreRuntimeStatistics", "AzureSQLDBQueryStoreWaitStatistics"]
 
 ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
 ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
@@ -107,8 +112,10 @@ servers = [
 
 # database_type = "AzureSQLManagedInstance"
 
+## A list of queries to include.
 # include_query = []
 
+## A list of queries to explicitly ignore.
 # exclude_query = []
 
 ## Queries enabled by default for database_type = "SQLServer" are - 
@@ -170,6 +177,9 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLDBPerformanceCounters"] = Query{ScriptName: "AzureSQLDBPerformanceCounters", Script: sqlAzureDBPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLDBRequests"] = Query{ScriptName: "AzureSQLDBRequests", Script: sqlAzureDBRequests, ResultByRow: false}
 		queries["AzureSQLDBSchedulers"] = Query{ScriptName: "AzureSQLDBSchedulers", Script: sqlAzureDBSchedulers, ResultByRow: false}
+		// These two Query Store queries should not run by default as they are expensive and collection interval should be >=15m.
+		queries["AzureSQLDBQueryStoreRuntimeStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreRuntimeStatistics", Script: sqlAzureDBQueryStoreRuntimeStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
+		queries["AzureSQLDBQueryStoreWaitStatistics"] = Query{ScriptName: "AzureSQLDBQueryStoreWaitStatistics", Script: sqlAzureDBQueryStoreWaitStatistics, ResultByRow: false, HasCachedData: true, DataCache: InitQueryDataCache()}
 	} else if s.DatabaseType == typeAzureSQLManagedInstance {
 		queries["AzureSQLMIResourceStats"] = Query{ScriptName: "AzureSQLMIResourceStats", Script: sqlAzureMIResourceStats, ResultByRow: false}
 		queries["AzureSQLMIResourceGovernance"] = Query{ScriptName: "AzureSQLMIResourceGovernance", Script: sqlAzureMIResourceGovernance, ResultByRow: false}
@@ -346,8 +356,17 @@ func (s *SQLServer) Stop() {
 }
 
 func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumulator, connectionString string) error {
+	var rows *sql.Rows
+	var err error
+
 	// execute query
-	rows, err := pool.Query(query.Script)
+	if query.HasCachedData {
+		cachedData, _ := query.DataCache.Get(connectionString)
+		rows, err = pool.Query(query.Script, sql.Named("p1", cachedData))
+	} else {
+		rows, err = pool.Query(query.Script)
+	}
+
 	if err != nil {
 		serverName, databaseName := getConnectionIdentifiers(connectionString)
 
@@ -374,6 +393,15 @@ func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumul
 			return err
 		}
 	}
+
+	if rows.Err() == nil && query.HasCachedData && rows.NextResultSet() && rows.Next() {
+		var newCachedData string
+		if err = rows.Scan(&newCachedData); err != nil {
+			return err
+		}
+		query.DataCache.Set(connectionString, newCachedData)
+	}
+
 	return rows.Err()
 }
 
@@ -575,4 +603,26 @@ func init() {
 			AuthMethod: "connection_string",
 		}
 	})
+}
+
+type QueryDataCache struct {
+	mx sync.RWMutex
+	m  map[string]string
+}
+
+func (c *QueryDataCache) Get(key string) (string, bool) {
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+	val, ok := c.m[key]
+	return val, ok
+}
+
+func (c *QueryDataCache) Set(key string, value string) {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+	c.m[key] = value
+}
+
+func InitQueryDataCache() *QueryDataCache {
+	return &QueryDataCache{m: make(map[string]string)}
 }
