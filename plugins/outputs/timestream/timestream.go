@@ -6,6 +6,7 @@ import (
 	"hash/fnv"
 	"reflect"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -13,8 +14,14 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/timestreamwrite"
 	internalaws "github.com/influxdata/telegraf/config/aws"
+	"golang.org/x/net/http2"
+	"net"
+	"net/http"
 )
 
 type (
@@ -174,8 +181,69 @@ var sampleConfig = `
 
 // WriteFactory function provides a way to mock the client instantiation for testing purposes.
 var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) WriteClient {
-	configProvider := credentialConfig.Credentials()
-	return timestreamwrite.New(configProvider)
+	/**
+	* Recommended Timestream write client SDK configuration:
+	*  - Use SDK DEFAULT_BACKOFF_STRATEGY
+	*  - Request timeout of 20 seconds
+	 */
+
+	// Setting 20 seconds for timeout
+	tr := &http.Transport{
+		ResponseHeaderTimeout: 20 * time.Second,
+		// Using DefaultTransport values for other parameters: https://golang.org/pkg/net/http/#RoundTripper
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+			Timeout:   30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+
+	// So client makes HTTP/2 requests
+	http2.ConfigureTransport(tr)
+	sess := timestreamSession(credentialConfig, tr)
+	return timestreamwrite.New(sess)
+}
+
+// This is motivated from config/aws/credentials.go with additional settings that are timestream related
+var timestreamSession = func(c *internalaws.CredentialConfig, tr *http.Transport) *session.Session {
+	if c.RoleARN != "" {
+		return assumeCredentials(c, tr)
+	} else {
+		return rootCredentials(c, tr)
+	}
+}
+
+var rootCredentials = func(c *internalaws.CredentialConfig, tr *http.Transport) *session.Session {
+	config := &aws.Config{
+		Region: aws.String(c.Region),
+	}
+	if c.EndpointURL != "" {
+		config.Endpoint = &c.EndpointURL
+	}
+	if c.AccessKey != "" || c.SecretKey != "" {
+		config.Credentials = credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, c.Token)
+	} else if c.Profile != "" || c.Filename != "" {
+		config.Credentials = credentials.NewSharedCredentials(c.Filename, c.Profile)
+	}
+
+	config.HTTPClient = &http.Client{Transport: tr}
+	return session.New(config)
+}
+
+var assumeCredentials = func(c *internalaws.CredentialConfig, tr *http.Transport) *session.Session {
+	rootCredentials := rootCredentials(c, tr)
+	config := &aws.Config{
+		Region:   aws.String(c.Region),
+		Endpoint: &c.EndpointURL,
+	}
+	config.Credentials = stscreds.NewCredentials(rootCredentials, c.RoleARN)
+	config.HTTPClient = &http.Client{Transport: tr}
+	return session.New(config)
 }
 
 func (t *Timestream) Connect() error {
@@ -275,11 +343,39 @@ func init() {
 
 func (t *Timestream) Write(metrics []telegraf.Metric) error {
 	writeRecordsInputs := t.TransformMetrics(metrics)
+
+	errs := make(chan error, len(writeRecordsInputs))
+	var wg sync.WaitGroup
+	wg.Add(len(writeRecordsInputs))
+
+	start := time.Now()
 	for _, writeRecordsInput := range writeRecordsInputs {
-		if err := t.writeToTimestream(writeRecordsInput, true); err != nil {
-			return err
-		}
+		go func(inp *timestreamwrite.WriteRecordsInput) {
+			defer wg.Done()
+			if err := t.writeToTimestream(inp, true); err != nil {
+				errs <- err
+			}
+
+		}(writeRecordsInput)
 	}
+
+	wg.Wait()
+	now := time.Now()
+	elapsed := now.Sub(start)
+
+	close(errs)
+
+	t.Log.Infof("##WriteToTimestream - Metrics size: %d request size: %d time(ms): %d",
+		len(metrics), len(writeRecordsInputs), elapsed.Milliseconds())
+
+	// On partial failures, Telegraf will reject the entire batch of metrics and
+	// retry. writeToTimestream will return retryable exceptions only.
+	err, _ := <-errs
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -323,25 +419,26 @@ func (t *Timestream) logWriteToTimestreamError(err error, tableName *string) {
 }
 
 func (t *Timestream) createTableAndRetry(writeRecordsInput *timestreamwrite.WriteRecordsInput) error {
+	var tableName = *writeRecordsInput.TableName
 	if t.CreateTableIfNotExists {
-		t.Log.Infof("Trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'true'.", *writeRecordsInput.TableName, t.DatabaseName)
-		if err := t.createTable(writeRecordsInput.TableName); err != nil {
-			t.Log.Errorf("Failed to create table '%s' in database '%s': %s. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName, err)
+		t.Log.Infof("Trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'true'.", tableName, t.DatabaseName)
+		if err := t.createTable(tableName); err != nil {
+			t.Log.Errorf("Failed to create table '%s' in database '%s': %s. Skipping metric!", tableName, t.DatabaseName, err)
 		} else {
-			t.Log.Infof("Table '%s' in database '%s' created. Retrying writing.", *writeRecordsInput.TableName, t.DatabaseName)
+			t.Log.Infof("Table '%s' in database '%s' created. Retrying writing.", tableName, t.DatabaseName)
 			return t.writeToTimestream(writeRecordsInput, false)
 		}
 	} else {
-		t.Log.Errorf("Not trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'false'. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName)
+		t.Log.Errorf("Not trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'false'. Skipping metric!", tableName, t.DatabaseName)
 	}
 	return nil
 }
 
 // createTable creates a Timestream table according to the configuration.
-func (t *Timestream) createTable(tableName *string) error {
+func (t *Timestream) createTable(tableName string) error {
 	createTableInput := &timestreamwrite.CreateTableInput{
 		DatabaseName: aws.String(t.DatabaseName),
-		TableName:    aws.String(*tableName),
+		TableName:    aws.String(tableName),
 		RetentionProperties: &timestreamwrite.RetentionProperties{
 			MagneticStoreRetentionPeriodInDays: aws.Int64(t.CreateTableMagneticStoreRetentionPeriodInDays),
 			MemoryStoreRetentionPeriodInHours:  aws.Int64(t.CreateTableMemoryStoreRetentionPeriodInHours),
@@ -373,35 +470,36 @@ func (t *Timestream) createTable(tableName *string) error {
 // Telegraf Metrics are grouped by Name, Tag Keys and Time to use Timestream CommonAttributes.
 // Returns collection of write requests to be performed to Timestream.
 func (t *Timestream) TransformMetrics(metrics []telegraf.Metric) []*timestreamwrite.WriteRecordsInput {
-	writeRequests := make(map[uint64]*timestreamwrite.WriteRecordsInput, len(metrics))
+	writeRequests := make(map[string]*timestreamwrite.WriteRecordsInput, len(metrics))
+
 	for _, m := range metrics {
 		// build MeasureName, MeasureValue, MeasureValueType
+
 		records := t.buildWriteRecords(m)
+
 		if len(records) == 0 {
 			continue
 		}
-		id := hashFromMetricTimeNameTagKeys(m)
-		if curr, ok := writeRequests[id]; !ok {
-			// No current CommonAttributes/WriteRecordsInput found for current Telegraf Metric
-			dimensions := t.buildDimensions(m)
-			timeUnit, timeValue := getTimestreamTime(m.Time())
+
+		var tableName string
+
+		if t.MappingMode == MappingModeSingleTable {
+			tableName = t.SingleTableName
+		}
+
+		if t.MappingMode == MappingModeMultiTable {
+			tableName = m.Name()
+		}
+
+		if curr, ok := writeRequests[tableName]; !ok {
 			newWriteRecord := &timestreamwrite.WriteRecordsInput{
-				DatabaseName: aws.String(t.DatabaseName),
-				Records:      records,
-				CommonAttributes: &timestreamwrite.Record{
-					Dimensions: dimensions,
-					Time:       aws.String(timeValue),
-					TimeUnit:   aws.String(timeUnit),
-				},
-			}
-			if t.MappingMode == MappingModeSingleTable {
-				newWriteRecord.SetTableName(t.SingleTableName)
-			}
-			if t.MappingMode == MappingModeMultiTable {
-				newWriteRecord.SetTableName(m.Name())
+				DatabaseName:     aws.String(t.DatabaseName),
+				TableName:        aws.String(tableName),
+				Records:          records,
+				CommonAttributes: &timestreamwrite.Record{},
 			}
 
-			writeRequests[id] = newWriteRecord
+			writeRequests[tableName] = newWriteRecord
 		} else {
 			curr.Records = append(curr.Records, records...)
 		}
@@ -473,6 +571,8 @@ func (t *Timestream) buildDimensions(point telegraf.Metric) []*timestreamwrite.D
 // It returns an array of Timestream write records.
 func (t *Timestream) buildWriteRecords(point telegraf.Metric) []*timestreamwrite.Record {
 	var records []*timestreamwrite.Record
+	dimensions := t.buildDimensions(point)
+
 	for fieldName, fieldValue := range point.Fields() {
 		stringFieldValue, stringFieldValueType, ok := convertValue(fieldValue)
 		if !ok {
@@ -481,13 +581,21 @@ func (t *Timestream) buildWriteRecords(point telegraf.Metric) []*timestreamwrite
 				fieldName, reflect.TypeOf(fieldValue))
 			continue
 		}
+
+		timeUnit, timeValue := getTimestreamTime(point.Time())
+
 		record := &timestreamwrite.Record{
 			MeasureName:      aws.String(fieldName),
 			MeasureValueType: aws.String(stringFieldValueType),
 			MeasureValue:     aws.String(stringFieldValue),
+			Dimensions:       dimensions,
+			Time:             aws.String(timeValue),
+			TimeUnit:         aws.String(timeUnit),
 		}
+
 		records = append(records, record)
 	}
+
 	return records
 }
 
