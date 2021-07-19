@@ -29,6 +29,7 @@ func TestSuricataLarge(t *testing.T) {
 	s := Suricata{
 		Source:    tmpfn,
 		Delimiter: ".",
+		Alerts:    true,
 		Log: testutil.Logger{
 			Name: "inputs.suricata",
 		},
@@ -46,9 +47,72 @@ func TestSuricataLarge(t *testing.T) {
 	require.NoError(t, err)
 	_, err = c.Write([]byte("\n"))
 	require.NoError(t, err)
+
+	//test suricata alerts
+	data2, err := ioutil.ReadFile("testdata/test2.json")
+	require.NoError(t, err)
+	_, err = c.Write(data2)
+	require.NoError(t, err)
+	_, err = c.Write([]byte("\n"))
+	require.NoError(t, err)
 	require.NoError(t, c.Close())
 
 	acc.Wait(1)
+}
+
+func TestSuricataAlerts(t *testing.T) {
+	dir, err := ioutil.TempDir("", "test")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
+
+	s := Suricata{
+		Source:    tmpfn,
+		Delimiter: ".",
+		Alerts:    true,
+		Log: testutil.Logger{
+			Name: "inputs.suricata",
+		},
+	}
+	acc := testutil.Accumulator{}
+	require.NoError(t, s.Start(&acc))
+	defer s.Stop()
+
+	data, err := ioutil.ReadFile("testdata/test3.json")
+	require.NoError(t, err)
+
+	c, err := net.Dial("unix", tmpfn)
+	require.NoError(t, err)
+	_, err = c.Write(data)
+	require.NoError(t, err)
+	_, err = c.Write([]byte("\n"))
+	require.NoError(t, err)
+	require.NoError(t, c.Close())
+
+	acc.Wait(1)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"suricata_alert",
+			map[string]string{},
+			map[string]interface{}{
+				"action":       "allowed",
+				"category":     "Misc activity",
+				"gid":          float64(1),
+				"rev":          float64(0),
+				"signature":    "Corrupted HTTP body",
+				"signature_id": float64(6),
+				"severity":     float64(3),
+				"source.ip":    "10.0.0.5",
+				"target.ip":    "179.60.192.3",
+				"source.port":  float64(18715),
+				"target.port":  float64(80),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestSuricata(t *testing.T) {

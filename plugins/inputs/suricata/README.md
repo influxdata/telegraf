@@ -4,6 +4,7 @@ This plugin reports internal performance counters of the Suricata IDS/IPS
 engine, such as captured traffic volume, memory usage, uptime, flow counters,
 and much more. It provides a socket for the Suricata log output to write JSON
 stats output to, and processes the incoming data to fit Telegraf's format.
+It can also report for triggered Suricata IDS/IPS alerts.
 
 ### Configuration
 
@@ -17,6 +18,9 @@ stats output to, and processes the incoming data to fit Telegraf's format.
   # Delimiter for flattening field keys, e.g. subitem "alert" of "detect"
   # becomes "detect_alert" when delimiter is "_".
   delimiter = "_"
+
+  # Detect alert logs 
+  alerts = false
 ```
 
 ### Metrics
@@ -26,7 +30,7 @@ stats output.
 See http://suricata.readthedocs.io/en/latest/performance/statistics.html for
 more information.
 
-All fields are numeric.
+All fields for Suricata stats are numeric.
 - suricata
   - tags:
     - thread: `Global` for global statistics (if enabled), thread IDs (e.g. `W#03-enp0s31f6`) for thread-specific statistics
@@ -94,6 +98,19 @@ All fields are numeric.
     - tcp_synack
     - ...
 
+Some fields of the Suricata alerts are strings, for example the signatures. See https://suricata.readthedocs.io/en/suricata-6.0.0/output/eve/eve-json-format.html?highlight=priority#event-type-alert for more information.
+
+- suricata_alert
+  - fields:
+    - action
+    - gid
+    - severity
+    - signature
+    - source_ip
+    - source_port
+    - target_port
+    - target_port
+    - ...
 
 #### Suricata configuration
 
