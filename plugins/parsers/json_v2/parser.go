@@ -323,7 +323,7 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 				if result.Tag {
 					result.DesiredType = "string"
 				}
-				v, err := p.convertType(result.Value(), result.DesiredType, result.SetName)
+				v, err := p.convertType(result.Result, result.DesiredType, result.SetName)
 				if err != nil {
 					return nil, err
 				}
@@ -525,8 +525,8 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 // convertType will convert the value parsed from the input JSON to the specified type in the config
-func (p *Parser) convertType(input interface{}, desiredType string, name string) (interface{}, error) {
-	switch inputType := input.(type) {
+func (p *Parser) convertType(input gjson.Result, desiredType string, name string) (interface{}, error) {
+	switch inputType := input.Value().(type) {
 	case string:
 		if desiredType != "string" {
 			switch desiredType {
@@ -537,7 +537,7 @@ func (p *Parser) convertType(input interface{}, desiredType string, name string)
 				}
 				return r, nil
 			case "int":
-				r, err := strconv.Atoi(inputType)
+				r, err := strconv.ParseInt(inputType, 10, 64)
 				if err != nil {
 					return nil, fmt.Errorf("Unable to convert field '%s' to type int: %v", name, err)
 				}
@@ -579,9 +579,9 @@ func (p *Parser) convertType(input interface{}, desiredType string, name string)
 			case "string":
 				return fmt.Sprint(inputType), nil
 			case "int":
-				return int64(inputType), nil
+				return input.Int(), nil
 			case "uint":
-				return uint64(inputType), nil
+				return input.Uint(), nil
 			case "bool":
 				if inputType == 0 {
 					return false, nil
@@ -596,5 +596,5 @@ func (p *Parser) convertType(input interface{}, desiredType string, name string)
 		return nil, fmt.Errorf("unknown format '%T' for field  '%s'", inputType, name)
 	}
 
-	return input, nil
+	return input.Value(), nil
 }
