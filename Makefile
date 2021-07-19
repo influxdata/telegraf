@@ -53,7 +53,7 @@ endif
 
 
 GOFILES ?= $(shell git ls-files '*.go')
-GOFMT ?= $(shell gofmt -l -s $(filter-out plugins/parsers/influx/machine.go, $(GOFILES)))
+GOFILES_FMT ?= $(filter-out plugins/parsers/influx/machine.go, $(GOFILES))
 
 prefix ?= /usr/local
 bindir ?= $(prefix)/bin
@@ -107,17 +107,27 @@ test-integration:
 
 .PHONY: fmt
 fmt:
-	@gofmt -s -w $(filter-out plugins/parsers/influx/machine.go, $(GOFILES))
+ifeq ($(OS),Windows_NT)
+	@echo "make fmt not supported on Windows, run 'go fmt' in the modified directories instead"
+else
+	@gofmt -s -w $(GOFILES_FMT)
+endif
 
 .PHONY: fmtcheck
 fmtcheck:
-	@if [ ! -z "$(GOFMT)" ]; then \
+ifeq ($(OS),Windows_NT)
+	@echo "make fmtcheck not supported on Windows, run 'go fmt' in the modified directories instead"
+else
+	@set -e; \
+	GOFMT_OUTPUT=$$(gofmt -l -s $(GOFILES_FMT)); \
+	if [ ! -z "$${GOFMT_OUTPUT}" ]; then \
 		echo "[ERROR] gofmt has found errors in the following files:"  ; \
-		echo "$(GOFMT)" ; \
+		echo "$${GOFMT_OUTPUT}" ; \
 		echo "" ;\
 		echo "Run make fmt to fix them." ; \
 		exit 1 ;\
 	fi
+endif
 
 .PHONY: test-windows
 test-windows:
