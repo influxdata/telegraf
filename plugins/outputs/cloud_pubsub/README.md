@@ -18,6 +18,10 @@ generate it using `telegraf --usage cloud_pubsub`.
   ## Required. Name of PubSub topic to publish metrics to.
   topic = "my-topic"
 
+  ## Content encoding for message payloads, can be set to "gzip" or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
+
   ## Required. Data format to consume.
   ## Each data format has its own unique set of configuration options.
   ## Read more about them here:
