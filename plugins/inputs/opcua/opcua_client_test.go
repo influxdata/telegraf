@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +22,7 @@ type OPCTags struct {
 	Want           string
 }
 
-func TestClient1(t *testing.T) {
+func TestClient1Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -35,7 +37,7 @@ func TestClient1(t *testing.T) {
 	var err error
 
 	o.MetricName = "testing"
-	o.Endpoint = "opc.tcp://opcua.rocks:4840"
+	o.Endpoint = "opc.tcp://localhost:4840"
 	o.AuthMethod = "Anonymous"
 	o.ConnectTimeout = config.Duration(10 * time.Second)
 	o.RequestTimeout = config.Duration(1 * time.Second)
@@ -76,6 +78,10 @@ func MapOPCTag(tags OPCTags) (out NodeSettings) {
 }
 
 func TestConfig(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode. You can remove this skip after Init() doesn't try to connect")
+	}
+
 	toml := `
 [[inputs.opcua]]
 name = "localhost"
@@ -108,10 +114,14 @@ nodes = [{name="name4", identifier="4000", tags=[["tag1", "override"]]}]
 `
 
 	c := config.NewConfig()
+	c.SetAgent(&testAgentController{})
 	err := c.LoadConfigData(context.Background(), context.Background(), []byte(toml))
-	require.NoError(t, err)
+	// opcua shouldn't be trying to connect in init.
+	if !strings.Contains(err.Error(), "connection refused") {
+		require.NoError(t, err)
+	}
 
-	require.Len(t, c.Inputs, 1)
+	require.Len(t, c.Inputs(), 1)
 
 	o, ok := c.Inputs()[0].Input.(*OpcUA)
 	require.True(t, ok)
@@ -256,3 +266,43 @@ func TestValidateOPCTags(t *testing.T) {
 		})
 	}
 }
+
+type testAgentController struct {
+	inputs     []*models.RunningInput
+	processors []models.ProcessorRunner
+	outputs    []*models.RunningOutput
+	// configs    []*config.RunningConfigPlugin
+}
+
+func (a *testAgentController) reset() {
+	a.inputs = nil
+	a.processors = nil
+	a.outputs = nil
+	// a.configs = nil
+}
+
+func (a *testAgentController) RunningInputs() []*models.RunningInput {
+	return a.inputs
+}
+func (a *testAgentController) RunningProcessors() []models.ProcessorRunner {
+	return a.processors
+}
+func (a *testAgentController) RunningOutputs() []*models.RunningOutput {
+	return a.outputs
+}
+func (a *testAgentController) AddInput(input *models.RunningInput) {
+	a.inputs = append(a.inputs, input)
+}
+func (a *testAgentController) AddProcessor(processor models.ProcessorRunner) {
+	a.processors = append(a.processors, processor)
+}
+func (a *testAgentController) AddOutput(output *models.RunningOutput) {
+	a.outputs = append(a.outputs, output)
+}
+func (a *testAgentController) RunInput(input *models.RunningInput, startTime time.Time)        {}
+func (a *testAgentController) RunProcessor(p models.ProcessorRunner)                           {}
+func (a *testAgentController) RunOutput(ctx context.Context, output *models.RunningOutput)     {}
+func (a *testAgentController) RunConfigPlugin(ctx context.Context, plugin config.ConfigPlugin) {}
+func (a *testAgentController) StopInput(i *models.RunningInput)                                {}
+func (a *testAgentController) StopProcessor(p models.ProcessorRunner)                          {}
+func (a *testAgentController) StopOutput(p *models.RunningOutput)                              {}

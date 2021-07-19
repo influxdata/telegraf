@@ -3,10 +3,10 @@ package boltdb
 import (
 	"fmt"
 
-	"github.com/boltdb/bolt"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/storage"
 	"github.com/ugorji/go/codec"
+	bolt "go.etcd.io/bbolt"
 )
 
 var (

@@ -143,6 +143,18 @@ func (r *RunningInput) Start(acc telegraf.Accumulator) error {
 }
 
 func (r *RunningInput) Stop() {
+	state := r.GetState()
+
+	switch state {
+	case PluginStateCreated, PluginStateStarting:
+		// shutting down before it got started. nothing to close
+		r.setState(PluginStateDead)
+		return
+	}
+
+	if state != PluginStateRunning {
+		panic("plugin state was not running, it was: " + state.String())
+	}
 	r.setState(PluginStateStopping)
 	if si, ok := r.Input.(telegraf.ServiceInput); ok {
 		si.Stop()

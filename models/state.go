@@ -35,7 +35,6 @@ type State struct {
 
 func (s *State) setState(newState PluginState) {
 	atomic.StoreInt32((*int32)(&s.state), int32(newState))
-
 }
 
 func (s *State) GetState() PluginState {

@@ -65,7 +65,7 @@ func TestStartPlugin(t *testing.T) {
 	}{}
 
 	for statusResp.Status != "running" {
-		resp, err = http.Get(srv.URL + "/plugins/9acb044200000001/status")
+		resp, err = http.Get(srv.URL + "/plugins/" + createResp.ID + "/status")
 		require.NoError(t, err)
 
 		require.EqualValues(t, 200, resp.StatusCode)

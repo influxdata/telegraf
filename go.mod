@@ -30,7 +30,6 @@ require (
 	github.com/benbjohnson/clock v1.0.3
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
-	github.com/boltdb/bolt v1.3.1
 	github.com/caio/go-tdigest v2.3.0+incompatible // indirect
 	github.com/cenkalti/backoff v2.0.0+incompatible // indirect
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6
@@ -136,13 +135,14 @@ require (
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
+	go.etcd.io/bbolt v1.3.6
 	go.starlark.net v0.0.0-20200901195727-6e684ef5eeee
 	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
-	golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
+	golang.org/x/sys v0.0.0-20200923182605-d9f96fdee20d
 	golang.org/x/text v0.3.3
 	golang.org/x/tools v0.0.0-20200317043434-63da46f3035e // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4

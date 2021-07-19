@@ -218,6 +218,17 @@ func (ro *RunningOutput) WriteBatch() error {
 
 // Close closes the output
 func (r *RunningOutput) Close() {
+	state := r.GetState()
+
+	switch state {
+	case PluginStateCreated, PluginStateStarting:
+		r.setState(PluginStateDead)
+		return
+	}
+
+	if state != PluginStateRunning {
+		panic("expected output plugin to be running, but was: " + state.String())
+	}
 	r.setState(PluginStateStopping)
 	err := r.Output.Close()
 	if err != nil {
