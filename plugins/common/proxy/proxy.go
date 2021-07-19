@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
+	"golang.org/x/net/proxy"
 )
 
 type HTTPProxy struct {
@@ -21,4 +23,26 @@ func (p *HTTPProxy) Proxy() (proxyFunc, error) {
 		return http.ProxyURL(url), nil
 	}
 	return http.ProxyFromEnvironment, nil
+}
+
+type TCPProxy struct {
+	ProxyURL string `toml:"proxy_url"`
+}
+
+func (p *TCPProxy) Proxy() (*ProxiedDialer, error) {
+	var dialer proxy.Dialer
+	if len(p.ProxyURL) > 0 {
+		parsed, err := url.Parse(p.ProxyURL)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing proxy url %q: %w", p.ProxyURL, err)
+		}
+
+		if dialer, err = proxy.FromURL(parsed, proxy.Direct); err != nil {
+			return nil, err
+		}
+	} else {
+		dialer = proxy.FromEnvironment()
+	}
+
+	return &ProxiedDialer{dialer}, nil
 }

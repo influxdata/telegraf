@@ -8,7 +8,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -38,6 +38,9 @@ const sampleConfig = `
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
+
+  ## Set the proxy settings (telegraf uses the system wide proxy settings if it isn't set)
+  # proxy_url = "http://localhost:8888"
 `
 const description = "Reads metrics from a SSL certificate"
 
@@ -48,6 +51,7 @@ type X509Cert struct {
 	ServerName string          `toml:"server_name"`
 	tlsCfg     *tls.Config
 	_tls.ClientConfig
+	proxy.TCPProxy
 	locations []*url.URL
 	globpaths []*globpath.GlobPath
 	Log       telegraf.Logger
@@ -110,7 +114,12 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 	case "udp", "udp4", "udp6":
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
-		ipConn, err := net.DialTimeout(protocol, u.Host, timeout)
+		dialer, err := c.Proxy()
+		if err != nil {
+			return nil, err
+		}
+
+		ipConn, err := dialer.DialTimeout(protocol, u.Host, timeout)
 		if err != nil {
 			return nil, err
 		}
