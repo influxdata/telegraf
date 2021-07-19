@@ -9,7 +9,9 @@ import (
 	"log"
 	"math"
 	"net"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,6 +23,8 @@ import (
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/wlog"
+	"github.com/sleepinggenius2/gosmi"
+	"github.com/sleepinggenius2/gosmi/types"
 )
 
 const description = `Retrieves SNMP values from remote agents`
@@ -34,25 +38,20 @@ const sampleConfig = `
   ##            agents = ["tcp://127.0.0.1:161"]
   ##            agents = ["udp4://v4only-snmp-agent"]
   agents = ["udp://127.0.0.1:161"]
-
   ## Timeout for each request.
   # timeout = "5s"
-
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
-
+  ## Path to mib files
+  # path = ["/usr/share/snmp/mibs"]
   ## Agent host tag; the tag used to reference the source host
   # agent_host_tag = "agent_host"
-
   ## SNMP community string.
   # community = "public"
-
   ## Number of retries to attempt.
   # retries = 3
-
   ## The GETBULK max-repetitions parameter.
   # max_repetitions = 10
-
   ## SNMPv3 authentication and encryption options.
   ##
   ## Security Name.
@@ -69,7 +68,6 @@ const sampleConfig = `
   # priv_protocol = ""
   ## Privacy password used for encrypted messages.
   # priv_password = ""
-
   ## Add fields and tables defining the variables you wish to collect.  This
   ## example collects the system uptime and interface variables.  Reference the
   ## full plugin documentation for configuration details.
@@ -105,6 +103,9 @@ type Snmp struct {
 	// udp://1.2.3.4:161).  If the scheme is not specified then "udp" is used.
 	Agents []string `toml:"agents"`
 
+	// The path to the mib files
+	//Path []string `toml:"path"`
+
 	// The tag used to name the agent host
 	AgentHostTag string `toml:"agent_host_tag"`
 
@@ -120,11 +121,18 @@ type Snmp struct {
 
 	connectionCache []snmpConnection
 	initialized     bool
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 func (s *Snmp) init() error {
 	if s.initialized {
 		return nil
+	}
+
+	err := s.getMibsPath()
+	if err != nil {
+		s.Log.Errorf("Could not get path %v", err)
 	}
 
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
@@ -146,6 +154,43 @@ func (s *Snmp) init() error {
 	}
 
 	s.initialized = true
+	return nil
+}
+
+func (s *Snmp) getMibsPath() error {
+	gosmi.Init()
+	var folders []string
+	for _, mibPath := range s.Path {
+		gosmi.AppendPath(mibPath)
+		folders = append(folders, mibPath)
+		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
+			if info.Mode()&os.ModeSymlink != 0 {
+				s, _ := os.Readlink(path)
+				folders = append(folders, s)
+			}
+			return nil
+		})
+		if err != nil {
+			s.Log.Errorf("Filepath could not be walked %v", err)
+		}
+		for _, folder := range folders {
+			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+				if info.IsDir() {
+					gosmi.AppendPath(path)
+				} else if info.Mode()&os.ModeSymlink == 0 {
+					_, err := gosmi.LoadModule(info.Name())
+					if err != nil {
+						s.Log.Errorf("Module could not be loaded %v", err)
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				s.Log.Errorf("Filepath could not be walked %v", err)
+			}
+		}
+		folders = []string{}
+	}
 	return nil
 }
 
@@ -264,7 +309,7 @@ func (f *Field) init() error {
 
 	// check if oid needs translation or name is not set
 	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
-		_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
+		_, oidNum, oidText, conversion, err := snmpTranslateCall(f.Oid)
 		if err != nil {
 			return fmt.Errorf("translating: %w", err)
 		}
@@ -490,7 +535,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				// snmptranslate table field value here
 				if f.Translate {
 					if entOid, ok := ent.Value.(string); ok {
-						_, _, oidText, _, err := SnmpTranslate(entOid)
+						_, _, oidText, _, err := snmpTranslateCall(entOid)
 						if err == nil {
 							// If no error translating, the original value for ent.Value should be replaced
 							ent.Value = oidText
@@ -786,7 +831,7 @@ func snmpTable(oid string) (mibName string, oidNum string, oidText string, field
 }
 
 func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
-	mibName, oidNum, oidText, _, err = SnmpTranslate(oid)
+	mibName, oidNum, oidText, _, err = snmpTranslateCall(oid)
 	if err != nil {
 		return "", "", "", nil, fmt.Errorf("translating: %w", err)
 	}
@@ -844,110 +889,44 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 	return mibName, oidNum, oidText, fields, err
 }
 
-type snmpTranslateCache struct {
-	mibName    string
-	oidNum     string
-	oidText    string
-	conversion string
-	err        error
-}
-
-var snmpTranslateCachesLock sync.Mutex
-var snmpTranslateCaches map[string]snmpTranslateCache
-
-// snmpTranslate resolves the given OID.
-func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
-	snmpTranslateCachesLock.Lock()
-	if snmpTranslateCaches == nil {
-		snmpTranslateCaches = map[string]snmpTranslateCache{}
-	}
-
-	var stc snmpTranslateCache
-	var ok bool
-	if stc, ok = snmpTranslateCaches[oid]; !ok {
-		// This will result in only one call to snmptranslate running at a time.
-		// We could speed it up by putting a lock in snmpTranslateCache and then
-		// returning it immediately, and multiple callers would then release the
-		// snmpTranslateCachesLock and instead wait on the individual
-		// snmpTranslation.Lock to release. But I don't know that the extra complexity
-		// is worth it. Especially when it would slam the system pretty hard if lots
-		// of lookups are being performed.
-
-		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err = snmpTranslateCall(oid)
-		snmpTranslateCaches[oid] = stc
-	}
-
-	snmpTranslateCachesLock.Unlock()
-
-	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err
-}
-
+// make this work using gosmi getNode
+// slice on :: begining is module and after is node - write a function
 func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
-	var out []byte
-	if strings.ContainsAny(oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {
-		out, err = execCmd("snmptranslate", "-Td", "-Ob", oid)
+	var out gosmi.SmiNode
+	if strings.ContainsAny(oid, "::") {
+		// slpit given oid
+		// for example RFC1213-MIB::sysUpTime.0
+		s := strings.Split(oid, "::")
+		// node becomes sysUpTime.0
+		node := s[1]
+		if strings.ContainsAny(node, ".") {
+			s = strings.Split(node, ".")
+			// node becomes sysUpTime
+			node = s[0]
+		}
+
+		out, err = gosmi.GetNode(node)
+		if err != nil {
+			return "", "", "", "", err
+		}
+
+		oidNum = out.RenderNumeric()
+	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxy") {
+		//TODO: handle something .iso.2.3 into .1.2.3
 	} else {
-		out, err = execCmd("snmptranslate", "-Td", "-Ob", "-m", "all", oid)
-		if err, ok := err.(*exec.Error); ok && err.Err == exec.ErrNotFound {
-			// Silently discard error if snmptranslate not found and we have a numeric OID.
-			// Meaning we can get by without the lookup.
-			return "", oid, oid, "", nil
+		out, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
+		// ensure modules are loaded or node will be empty (might not error)
+		if err != nil {
+			return "", "", "", "", err
 		}
 	}
-	if err != nil {
-		return "", "", "", "", err
-	}
 
-	scanner := bufio.NewScanner(bytes.NewBuffer(out))
-	ok := scanner.Scan()
-	if !ok && scanner.Err() != nil {
-		return "", "", "", "", fmt.Errorf("getting OID text: %w", scanner.Err())
-	}
-
-	oidText = scanner.Text()
-
+	oidText = out.RenderQualified()
 	i := strings.Index(oidText, "::")
 	if i == -1 {
-		// was not found in MIB.
-		if bytes.Contains(out, []byte("[TRUNCATED]")) {
-			return "", oid, oid, "", nil
-		}
-		// not truncated, but not fully found. We still need to parse out numeric OID, so keep going
-		oidText = oid
-	} else {
-		mibName = oidText[:i]
-		oidText = oidText[i+2:]
+		return "", oid, oid, "", fmt.Errorf("not found")
 	}
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		if strings.HasPrefix(line, "  -- TEXTUAL CONVENTION ") {
-			tc := strings.TrimPrefix(line, "  -- TEXTUAL CONVENTION ")
-			switch tc {
-			case "MacAddress", "PhysAddress":
-				conversion = "hwaddr"
-			case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
-				conversion = "ipaddr"
-			}
-		} else if strings.HasPrefix(line, "::= { ") {
-			objs := strings.TrimPrefix(line, "::= { ")
-			objs = strings.TrimSuffix(objs, " }")
-
-			for _, obj := range strings.Split(objs, " ") {
-				if len(obj) == 0 {
-					continue
-				}
-				if i := strings.Index(obj, "("); i != -1 {
-					obj = obj[i+1:]
-					oidNum += "." + obj[:strings.Index(obj, ")")]
-				} else {
-					oidNum += "." + obj
-				}
-			}
-			break
-		}
-	}
-
-	return mibName, oidNum, oidText, conversion, nil
+	mibName = oidText[:i]
+	oidText = oidText[i+2:]
+	return mibName, oidNum, oidText, "", nil
 }
