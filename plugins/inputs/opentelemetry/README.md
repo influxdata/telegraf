@@ -6,16 +6,28 @@ This plugin receives traces, metrics and logs from [OpenTelemetry](https://opent
 
 ```toml
 [[inputs.opentelemetry]]
-  ## Override the OpenTelemetry gRPC service address:port 
+  ## Override the default (0.0.0.0:4317) destination OpenTelemetry gRPC service
+  ## address:port
   # service_address = "0.0.0.0:4317"
-  
-  ## Override the default request timeout
+
+  ## Override the default (5s) new connection timeout
   # timeout = "5s"
-  
-  ## Select a schema for metrics: "prometheus-v1" or "prometheus-v2"
+
+  ## Override the default (prometheus-v1) metrics schema.
+  ## Supports: "prometheus-v1", "prometheus-v2"
   ## For more information about the alternatives, read the Prometheus input
   ## plugin notes.
   # metrics_schema = "prometheus-v1"
+
+  ## Optional TLS Config.
+  ## For advanced options: https://github.com/influxdata/telegraf/blob/v1.18.3/docs/TLS.md
+  ##
+  ## Set one or more allowed client CA certificate file names to
+  ## enable mutually authenticated TLS connections.
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+  ## Add service certificate and key.
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
 ```
 
 #### Schema
@@ -30,6 +42,8 @@ Logs are stored in measurement `logs`.
 For metrics, two output schemata exist.
 Metrics received with `metrics_schema=prometheus-v1` are assigned measurement from the OTel field `Metric.name`.
 Metrics received with `metrics_schema=prometheus-v2` are stored in measurement `prometheus`.
+
+Also see the OpenTelemetry output plugin for Telegraf.
 
 ### Example Output
 

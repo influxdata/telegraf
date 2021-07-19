@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/influxdata/influxdb-observability/otel2influx"
+	"github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/telegraf"
 )
 
@@ -13,20 +13,20 @@ type writeToAccumulator struct {
 	accumulator telegraf.Accumulator
 }
 
-func (w *writeToAccumulator) WritePoint(_ context.Context, measurement string, tags map[string]string, fields map[string]interface{}, ts time.Time, vType otel2influx.InfluxWriterValueType) error {
+func (w *writeToAccumulator) WritePoint(_ context.Context, measurement string, tags map[string]string, fields map[string]interface{}, ts time.Time, vType common.InfluxMetricValueType) error {
 	switch vType {
-	case otel2influx.InfluxWriterValueTypeUntyped:
+	case common.InfluxMetricValueTypeUntyped:
 		w.accumulator.AddFields(measurement, fields, tags, ts)
-	case otel2influx.InfluxWriterValueTypeGauge:
+	case common.InfluxMetricValueTypeGauge:
 		w.accumulator.AddGauge(measurement, fields, tags, ts)
-	case otel2influx.InfluxWriterValueTypeSum:
+	case common.InfluxMetricValueTypeSum:
 		w.accumulator.AddCounter(measurement, fields, tags, ts)
-	case otel2influx.InfluxWriterValueTypeHistogram:
+	case common.InfluxMetricValueTypeHistogram:
 		w.accumulator.AddHistogram(measurement, fields, tags, ts)
-	case otel2influx.InfluxWriterValueTypeSummary:
+	case common.InfluxMetricValueTypeSummary:
 		w.accumulator.AddSummary(measurement, fields, tags, ts)
 	default:
-		return fmt.Errorf("unrecognized InfluxWriterValueType %q", vType)
+		return fmt.Errorf("unrecognized InfluxMetricValueType %q", vType)
 	}
 	return nil
 }
