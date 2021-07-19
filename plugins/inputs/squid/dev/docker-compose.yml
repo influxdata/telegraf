@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  squid:
+    image: b4tman/squid:latest
+    restart: always
+    volumes:
+      - ./squid.conf:/etc/squid/squid.conf:ro
+    ports:
+      - "3128:3128"
+  telegraf:
+    image: glinton/scratch
+    depends_on:
+      - squid
+    volumes:
+      - ./telegraf.conf:/telegraf.conf:ro
+      - ../../../../telegraf:/telegraf:ro
+    entrypoint:
+      - /telegraf
+      - --config
+      - /telegraf.conf
