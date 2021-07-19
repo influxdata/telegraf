@@ -306,31 +306,35 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 			return nil, err
 		}
 	} else {
-		if !result.Tag && !result.IsObject() {
-			if result.SetName == p.currentSettings.TimestampKey {
-				if p.currentSettings.TimestampFormat == "" {
-					err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
-					return nil, err
+		if result.SetName == p.currentSettings.TimestampKey {
+			if p.currentSettings.TimestampFormat == "" {
+				err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
+				return nil, err
+			}
+			timestamp, err := internal.ParseTimestamp(p.currentSettings.TimestampFormat, result.Value(), p.currentSettings.TimestampTimezone)
+			if err != nil {
+				return nil, err
+			}
+			result.Metric.SetTime(timestamp)
+		} else {
+			switch result.Value().(type) {
+			case nil: // Ignore JSON values that are set as null
+			default:
+				if result.Tag {
+					result.DesiredType = "string"
 				}
-				timestamp, err := internal.ParseTimestamp(p.currentSettings.TimestampFormat, result.Value(), p.currentSettings.TimestampTimezone)
-				if err != nil {
-					return nil, err
-				}
-				result.Metric.SetTime(timestamp)
-			} else {
 				v, err := p.convertType(result.Value(), result.DesiredType, result.SetName)
 				if err != nil {
 					return nil, err
 				}
-				result.Metric.AddField(result.OutputName, v)
+				if result.Tag {
+					result.Metric.AddTag(result.OutputName, v.(string))
+				} else {
+					result.Metric.AddField(result.OutputName, v)
+				}
 			}
-		} else if !result.IsObject() {
-			v, err := p.convertType(result.Value(), "string", result.SetName)
-			if err != nil {
-				return nil, err
-			}
-			result.Metric.AddTag(result.OutputName, v.(string))
 		}
+
 		results = append(results, result)
 	}
 
@@ -377,6 +381,7 @@ func (p *Parser) processObjects(objects []JSONObject, input []byte) ([]telegraf.
 // If the object has multiple array's as elements it won't comine those, they will remain separate metrics
 func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 	var results []MetricNode
+	var combineObjectResult []MetricNode
 	if result.IsArray() || result.IsObject() {
 		var err error
 		var prevArray bool
@@ -433,7 +438,7 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 			arrayNode.Tag = tag
 			if val.IsObject() {
 				prevArray = false
-				_, err = p.combineObject(arrayNode)
+				combineObjectResult, err = p.combineObject(arrayNode)
 				if err != nil {
 					return false
 				}
@@ -473,6 +478,12 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 		}
 	}
 
+	if len(results) == 0 {
+		// If the results are empty, use the results of the call to combine object
+		// This happens with nested objects in array's, see the test array_of_objects
+		results = combineObjectResult
+	}
+
 	return results, nil
 }
 
@@ -480,6 +491,8 @@ func (p *Parser) isIncluded(key string, val gjson.Result) bool {
 	if len(p.currentSettings.IncludedKeys) == 0 {
 		return true
 	}
+	// automatically adds tags to included_keys so it does NOT have to be repeated in the config
+	p.currentSettings.IncludedKeys = append(p.currentSettings.IncludedKeys, p.currentSettings.Tags...)
 	for _, i := range p.currentSettings.IncludedKeys {
 		if i == key {
 			return true

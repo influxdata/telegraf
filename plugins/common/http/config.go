@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/cookie"
 	oauthConfig "github.com/influxdata/telegraf/plugins/common/oauth"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -19,9 +21,10 @@ type HTTPClientConfig struct {
 	proxy.HTTPProxy
 	tls.ClientConfig
 	oauthConfig.OAuth2Config
+	cookie.CookieAuthConfig
 }
 
-func (h *HTTPClientConfig) CreateClient(ctx context.Context) (*http.Client, error) {
+func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger) (*http.Client, error) {
 	tlsCfg, err := h.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -49,6 +52,12 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context) (*http.Client, erro
 	}
 
 	client = h.OAuth2Config.CreateOauth2Client(ctx, client)
+
+	if h.CookieAuthConfig.URL != "" {
+		if err := h.CookieAuthConfig.Start(client, log); err != nil {
+			return nil, err
+		}
+	}
 
 	return client, nil
 }

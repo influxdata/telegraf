@@ -1,4 +1,29 @@
-## v1.19.0-rc1 [2021-06-10]
+## v1.19.1 [2021-07-07]
+
+#### Bugfixes
+
+  - [#9388](https://github.com/influxdata/telegraf/pull/9388) `inputs.sqlserver` Require authentication method to be specified
+  - [#9456](https://github.com/influxdata/telegraf/pull/9456) `inputs.kube_inventory` Fix segfault in kube_inventory
+  - [#9448](https://github.com/influxdata/telegraf/pull/9448) `inputs.couchbase` Fix panic
+  - [#9444](https://github.com/influxdata/telegraf/pull/9444) `inputs.knx_listener` Fix nil pointer panic
+  - [#9446](https://github.com/influxdata/telegraf/pull/9446) `inputs.procstat` Update gopsutil module to fix panic
+  - [#9443](https://github.com/influxdata/telegraf/pull/9443) `inputs.rabbitmq` Fix JSON unmarshall regression
+  - [#9369](https://github.com/influxdata/telegraf/pull/9369) Update nat-server module to v2.2.6
+  - [#9429](https://github.com/influxdata/telegraf/pull/9429) `inputs.dovecot` Exclude read-timeout from being an error
+  - [#9423](https://github.com/influxdata/telegraf/pull/9423) `inputs.statsd` Don't stop parsing after parsing error
+  - [#9370](https://github.com/influxdata/telegraf/pull/9370) Update apimachinary module to v0.21.1
+  - [#9373](https://github.com/influxdata/telegraf/pull/9373) Update jwt module to v1.2.2 and jwt-go module to v3.2.3
+  - [#9412](https://github.com/influxdata/telegraf/pull/9412) Update couchbase Module to v0.1.0
+  - [#9366](https://github.com/influxdata/telegraf/pull/9366) `inputs.snmp` Add a check for oid and name to prevent empty metrics
+  - [#9413](https://github.com/influxdata/telegraf/pull/9413) `outputs.http` Fix toml error when parsing insecure_skip_verify
+  - [#9400](https://github.com/influxdata/telegraf/pull/9400) `inputs.x509_cert` Fix 'source' tag for https
+  - [#9375](https://github.com/influxdata/telegraf/pull/9375) Update signalfx module to v3.3.34
+  - [#9406](https://github.com/influxdata/telegraf/pull/9406) `parsers.json_v2` Don't require tags to be added to included_keys
+  - [#9289](https://github.com/influxdata/telegraf/pull/9289) `inputs.x509_cert` Fix SNI support
+  - [#9372](https://github.com/influxdata/telegraf/pull/9372) Update gjson module to v1.8.0
+  - [#9379](https://github.com/influxdata/telegraf/pull/9379) Linter fixes for plugins/inputs/[de]*
+
+## v1.19.0 [2021-06-17]
 
 #### Release Notes
 
@@ -13,6 +38,14 @@
 - [#9051](https://github.com/influxdata/telegraf/pull/9051) `outputs.kafka` Don't prevent telegraf from starting when there's a connection error
 - [#8795](https://github.com/influxdata/telegraf/pull/8795) `parsers.prometheusremotewrite` Update prometheus dependency to v2.21.0
 - [#9295](https://github.com/influxdata/telegraf/pull/9295) `outputs.dynatrace` Use dynatrace-metric-utils
+- [#9368](https://github.com/influxdata/telegraf/pull/9368) `parsers.json_v2` Update json_v2 parser to handle null types
+- [#9359](https://github.com/influxdata/telegraf/pull/9359) `inputs.sql` Fix import of sqlite and ignore it on all platforms that require CGO.
+- [#9329](https://github.com/influxdata/telegraf/pull/9329) `inputs.kube_inventory` Fix connecting to the wrong url
+- [#9358](https://github.com/influxdata/telegraf/pull/9358) upgrade denisenkom go-mssql to v0.10.0
+- [#9283](https://github.com/influxdata/telegraf/pull/9283) `processors.parser` Fix segfault
+- [#9243](https://github.com/influxdata/telegraf/pull/9243) `inputs.docker` Close all idle connections
+- [#9338](https://github.com/influxdata/telegraf/pull/9338) `inputs.suricata` Support new JSON format
+- [#9296](https://github.com/influxdata/telegraf/pull/9296) `outputs.influxdb` Fix endless retries
 
 #### Features
 
@@ -54,6 +87,7 @@
 - [OpenTelemetry](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/opentelemetry) - contributed by @jacobmarble
 - [Intel Data Plane Development Kit (DPDK)](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/dpdk) - contributed by @p-zak
 - [KNX](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/knx_listener) - contributed by @DocLambda
+- [SQL](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sql) - contributed by @srebhan
 
 #### New Output Plugins
 
