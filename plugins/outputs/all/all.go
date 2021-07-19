@@ -12,6 +12,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch_logs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cratedb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/datadog"
+	_ "github.com/influxdata/telegraf/plugins/outputs/devo"
 	_ "github.com/influxdata/telegraf/plugins/outputs/discard"
 	_ "github.com/influxdata/telegraf/plugins/outputs/dynatrace"
 	_ "github.com/influxdata/telegraf/plugins/outputs/elasticsearch"
