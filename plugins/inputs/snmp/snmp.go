@@ -176,7 +176,7 @@ func (t *Table) Init() error {
 	//makes sure oid or name is set in config file
 	//otherwise snmp will produce metrics with an empty name
 	if t.Oid == "" && t.Name == "" {
-		fmt.Println("W! [inputs.snmp] SNMP table in config file is not named. Metrics will have no name")
+		log.Println("W! [inputs.snmp] SNMP table in config file is not named. Metrics will have no name")
 	}
 
 	if t.initialized {
