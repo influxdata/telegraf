@@ -19,6 +19,17 @@ For tags transforms, if `append` is set to `true`, it will append the transforma
     ## Matches of the pattern will be replaced with this string.  Use ${1}
     ## notation to use the text of the first submatch.
     replacement = "${1}xx"
+    
+  ## here is an example how to change the name of the measurement
+  ## if measurement is given to reult_key then it is changed the name os the measurement (not a tag!!)
+  ## at the moment it's implemented just for tags i.e the measurement name is calculated from a tag
+  [[processors.regex.tags]]
+    ## tag that we use to 'calculate' the name of the measurment
+    key = "topic"
+    pattern = 'sensors/(\w+)/(\w+)/(\w+)'
+    replacement = "${2}"
+    result_key = "measurement"
+  
 
   [[processors.regex.fields]]
     ## Field to change
