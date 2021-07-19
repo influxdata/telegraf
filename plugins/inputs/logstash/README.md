@@ -125,6 +125,7 @@ Logstash 5 and later is supported.
     - duration_in_millis
     - in
     - out
+    - failures(if exists)
 
 - logstash_queue
   - tags:
