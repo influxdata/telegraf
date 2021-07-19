@@ -121,30 +121,25 @@ state = {
 }
 
 def extractTopicTags(metric):
-    msg_format   = 'xx'
-    groupid      = 'xx'
-    msg_type     = 'xx'
-    edgeid       = 'xx'
-    deviceid     = 'xx'
+    msg_format   = ''
+    groupid      = ''
+    msg_type     = ''
+    edgeid       = ''
+    deviceid     = ''
 
     topic = metric.tags.get("topic", "");
     fields = topic.split("/");
     nfields = len(fields)
-    if nfields > 0:
-      msg_format = fields[0]
-      if nfields > 1:
-        groupid = fields[1]
-        if nfields > 2:
-          msg_type = fields[2]
-          if nfields > 3:
-            edgeid = fields[3]
-            if nfields > 4:
-              deviceid = fields[4]
+    if nfields > 0: msg_format = fields[0]
+    if nfields > 1: groupid    = fields[1]
+    if nfields > 2: msg_type   = fields[2]
+    if nfields > 3: edgeid     = fields[3]
+    if nfields > 4: deviceid   = fields[4]
     return [msg_format, groupid, msg_type, edgeid, deviceid]
    
                 
 def buildTopicTags(metric, topicFields):
-    # Remove topic and host tags - not very useful
+    # Remove topic and host tags - they are not useful for analysis
     metric.tags.pop("topic")
     metric.tags.pop("host")
 
@@ -156,83 +151,82 @@ def buildTopicTags(metric, topicFields):
 
 
 def buildNameTags(metric,name):
-    # Remove type and alias from metric.fields - They are not useful
-    wow = 5
+    # Remove type and alias from metric.fields - They are not useful for analysis
     metric.fields.pop("type")
     metric.fields.pop("alias")
     if "name" in metric.fields:
         metric.fields.pop("name")
 
-    # The Groov EPIC metric names are comprised of 3 fields
+    # The Groov EPIC metric names are comprised of 3 fields separated by a '/'
     #   source, datatype, and metric name
     # Extract these fields and include them as tags.
     fields = name.split('/')
     nfields = len(fields)
     if nfields > 0: 
         metric.tags["Source"] = fields[0]
-        if nfields > 1:
-            # Shorten excessively long datatype strings
-            metric.tags["Datatype"] = fields[1]
-            if nfields > 2: 
-                metric.tags["Metric"] = fields[2]
+    if nfields > 1:
+        # Shorten excessively long datatype strings
+        metric.tags["Datatype"] = fields[1]
+    if nfields > 2: 
+        metric.tags["Metric"] = fields[2]
 
-                # OPTIONAL
-                #
-                # By using underscore characters the metric name can be further
-                # divided into additional tags.  
-                # How this is defined is site specific.  
-                # Customize this as you wish
+        # OPTIONAL
+        #
+        # By using underscore characters the metric name can be further
+        # divided into additional tags.  
+        # How this is defined is site specific.  
+        # Customize this as you wish
 
-                # The following demonstrates dividing the metric name into 4 new tags
-                # A metric name can have from 2-5 underscore separated fields 
-                
-                # If there is only one field then the only tag created is 'metric'
-                #
-                # The last field is Units is filled before fields 3, 4 and 5
-                # Ex: C, V, Torr, W, psi, RPM, On....
-                #
-                # 
-                # Fields 3, 4 and 5 (device, position, composition) are optional
-                #    measurement_component_device_position_composition_units
-                #
-                # Ex:  I_FuelTank1_C                    (2 fields) 
-                #         Measurement   I
-                #         Component     FuelTank1   
-                #         Units         C
-                #      I_FuelTank1_TC_Outlet_C          (5 fields)           
-                #         Measurement   I
-                #         Component     FuelTank1   
-                #         Device        TC
-                #         Position      Outlet
-                #         Units         C
-                #      I_FuelTank1_TC_Outlet_Premium_C  (6 fields) 
-                #         Measurement   I
-                #         Component     FuelTank1   
-                #         Device        TC  
-                #         Position      Outlet
-                #         Composition   Premium   
-                #         Units         C
+        # The following demonstrates dividing the metric name into 4 new tags
+        # A metric name can have from 2-5 underscore separated fields 
+        
+        # If there is only one field then the only tag created is 'metric'
+        #
+        # The last field is Units is filled before fields 3, 4 and 5
+        # Ex: C, V, Torr, W, psi, RPM, On....
+        #
+        # 
+        # Fields 3, 4 and 5 (device, position, composition) are optional
+        #    measurement_component_device_position_composition_units
+        #
+        # Ex:  I_FuelTank1_C                    (2 fields) 
+        #         Measurement   I
+        #         Component     FuelTank1   
+        #         Units         C
+        #      I_FuelTank1_TC_Outlet_C          (5 fields)           
+        #         Measurement   I
+        #         Component     FuelTank1   
+        #         Device        TC
+        #         Position      Outlet
+        #         Units         C
+        #      I_FuelTank1_TC_Outlet_Premium_C  (6 fields) 
+        #         Measurement   I
+        #         Component     FuelTank1   
+        #         Device        TC  
+        #         Position      Outlet
+        #         Composition   Premium   
+        #         Units         C
 
-                # Split the metric name into fields using '_' 
-                sfields = fields[2].split('_')
-                nf = len(sfields)
-                # Don't split the name if it's one or two fields 
-                if nf <= 2:
-                    metric.name = "Name"
-                else:
-                    metric.name = sfields[nf-1]     # The Units are used for the metric name
-                    metric.tags["Component"] = sfields[1]
-                if nf > 3:
-                    metric.tags["Device"] = sfields[2]
-                if nf > 4:
-                    metric.tags["Position"] = sfields[3]
-                if nf > 5:
-                    metric.tags["Composition"] = sfields[4]
+        # Split the metric name into fields using '_' 
+        sfields = fields[2].split('_')
+        nf = len(sfields)
+        # Don't split the name if it's one or two fields 
+        if nf <= 2:
+            metric.name = "Name"
+        if nf > 2:
+            metric.name = sfields[nf-1]     # The Units are used for the metric name
+            metric.tags["Component"] = sfields[1]
+        if nf > 3:
+            metric.tags["Device"] = sfields[2]
+        if nf > 4:
+            metric.tags["Position"] = sfields[3]
+        if nf > 5:
+            metric.tags["Composition"] = sfields[4]
 
 def apply(metric):
     output = metric
 
-#   log.debug("apply metric: {}".format(metric))
+    log.debug("apply metric: {}".format(metric))
 
     topic = metric.tags.get("topic", "")
     topicFields = extractTopicTags(metric)
@@ -243,14 +237,13 @@ def apply(metric):
     if DEATH_TAG in topic:
         output = None
     elif BIRTH_TAG in topic:
-#       log.debug("    metric msg_type: {}    edgeid: {}   topic: {}".format(BIRTH_TAG, edgeid, topic))
+        log.debug("    metric msg_type: {}    edgeid: {}   topic: {}".format(BIRTH_TAG, edgeid, topic))
         if "alias" in metric.fields and "name" in metric.fields:
             # Create the lookup-table using "${edgeid}/${alias}" as the key and "${name}" as value
             alias = metric.fields.get("alias")
             name = metric.fields.get("name")
-
             id = "{}/{}".format(edgeid,alias)
-#           log.debug("  --> setting alias: {}    name: {}   id: {}'".format(alias, name, id))
+            log.debug("  --> setting alias: {}    name: {}   id: {}'".format(alias, name, id))
             state["aliases"][id] = name
             if "value" in metric.fields:
                 buildTopicTags(metric, topicFields)
@@ -261,12 +254,12 @@ def apply(metric):
             # Try to resolve the unresolved if any
             if len(state["unresolved"]) > 0:
                 # Filter out the matching metrics and keep the rest as unresolved
-#               log.debug("    unresolved")
+                log.debug("    unresolved")
                 unresolved = [("{}/{}".format(edgeid, m.fields["alias"]), m) for m in state["unresolved"]]
                 matching = [(mid, m) for mid, m in unresolved if mid == id]
                 state["unresolved"] = [m for mid, m in unresolved if mid != id]
 
-#               log.debug("    found {} matching unresolved metrics".format(len(matching)))
+                log.debug("    found {} matching unresolved metrics".format(len(matching)))
                 # Process the matching metrics and output - needs work
                 # for mid, m in matching:
                 #     buildTopicTags(m,topicFields)
@@ -274,7 +267,7 @@ def apply(metric):
                 # output = [m for _, m in matching] + [metric]
 
     elif DATA_TAG in topic:
-#       log.debug("    metric msg_type: {}    edgeid: {}   topic: {}".format(DATA_TAG, edgeid, topic))
+        log.debug("    metric msg_type: {}    edgeid: {}   topic: {}".format(DATA_TAG, edgeid, topic))
         if "alias" in metric.fields:
             alias = metric.fields.get("alias")
 
@@ -284,19 +277,19 @@ def apply(metric):
             id = "{}/{}".format(edgeid,alias)
             if id in state["aliases"]:
                 name = state["aliases"][id]
-#               log.debug("    found alias: {}     name: {}".format(alias, name))
+                log.debug("    found alias: {}     name: {}".format(alias, name))
                 buildTopicTags(metric,topicFields)
                 buildNameTags(metric,name)
             else:
                 # We want to hold the metric until we get the corresponding birth message
-#               log.debug("    id not found: {}".format(id))
+                log.debug("    id not found: {}".format(id))
                 output = None
                 if len(state["unresolved"]) >= MAX_UNRESOLVED:
-#                   log.warn("    metric overflow, trimming {}".format(len(state["unresolved"]) - MAX_UNRESOLVED+1))
+                    log.warn("    metric overflow, trimming {}".format(len(state["unresolved"]) - MAX_UNRESOLVED+1))
                     # Release the unresolved metrics as raw and trim buffer
                     output = state["unresolved"][MAX_UNRESOLVED-1:]
                     state["unresolved"] = state["unresolved"][:MAX_UNRESOLVED-1]
-#               log.debug("    --> keeping metric")
+                log.debug("    --> keeping metric")
                 state["unresolved"].append(metric)
         else:
             output = None
