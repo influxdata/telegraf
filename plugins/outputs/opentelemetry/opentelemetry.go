@@ -6,11 +6,11 @@ import (
 
 	"github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/influxdb-observability/influx2otel"
-	otlpcollectormetrics "github.com/influxdata/influxdb-observability/otlp/collector/metrics/v1"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"go.opentelemetry.io/collector/model/otlpgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -28,7 +28,7 @@ type OpenTelemetry struct {
 
 	metricsConverter     *influx2otel.LineProtocolToOtelMetrics
 	grpcClientConn       *grpc.ClientConn
-	metricsServiceClient otlpcollectormetrics.MetricsServiceClient
+	metricsServiceClient otlpgrpc.MetricsClient
 	callOptions          []grpc.CallOption
 }
 
@@ -106,7 +106,7 @@ func (o *OpenTelemetry) Connect() error {
 		return err
 	}
 
-	metricsServiceClient := otlpcollectormetrics.NewMetricsServiceClient(grpcClientConn)
+	metricsServiceClient := otlpgrpc.NewMetricsClient(grpcClientConn)
 
 	o.metricsConverter = metricsConverter
 	o.grpcClientConn = grpcClientConn
@@ -120,7 +120,12 @@ func (o *OpenTelemetry) Connect() error {
 }
 
 func (o *OpenTelemetry) Close() error {
-	return o.grpcClientConn.Close()
+	if o.grpcClientConn != nil {
+		err := o.grpcClientConn.Close()
+		o.grpcClientConn = nil
+		return err
+	}
+	return nil
 }
 
 func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
@@ -148,14 +153,15 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 			continue
 		}
 	}
-	otlpResourceMetricss := batch.ToProto()
-	req := &otlpcollectormetrics.ExportMetricsServiceRequest{
-		ResourceMetrics: otlpResourceMetricss,
+
+	md := batch.GetMetrics()
+	if md.ResourceMetrics().Len() == 0 {
+		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
 	defer cancel()
-	_, err := o.metricsServiceClient.Export(ctx, req, o.callOptions...)
+	_, err := o.metricsServiceClient.Export(ctx, md, o.callOptions...)
 	return err
 }
 

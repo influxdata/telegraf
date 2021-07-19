@@ -6,13 +6,11 @@ import (
 	"sync"
 	"time"
 
-	otlpcollectorlogs "github.com/influxdata/influxdb-observability/otlp/collector/logs/v1"
-	otlpcollectormetrics "github.com/influxdata/influxdb-observability/otlp/collector/metrics/v1"
-	otlpcollectortrace "github.com/influxdata/influxdb-observability/otlp/collector/trace/v1"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"go.opentelemetry.io/collector/model/otlpgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -83,13 +81,13 @@ func (o *OpenTelemetry) Start(accumulator telegraf.Accumulator) error {
 	influxWriter := &writeToAccumulator{accumulator}
 	o.grpcServer = grpc.NewServer(grpcOptions...)
 
-	otlpcollectortrace.RegisterTraceServiceServer(o.grpcServer, newTraceService(logger, influxWriter))
+	otlpgrpc.RegisterTracesServer(o.grpcServer, newTraceService(logger, influxWriter))
 	ms, err := newMetricsService(logger, influxWriter, o.MetricsSchema)
 	if err != nil {
 		return err
 	}
-	otlpcollectormetrics.RegisterMetricsServiceServer(o.grpcServer, ms)
-	otlpcollectorlogs.RegisterLogsServiceServer(o.grpcServer, newLogsService(logger, influxWriter))
+	otlpgrpc.RegisterMetricsServer(o.grpcServer, ms)
+	otlpgrpc.RegisterLogsServer(o.grpcServer, newLogsService(logger, influxWriter))
 
 	listener, err := net.Listen("tcp", o.ServiceAddress)
 	if err != nil {
