@@ -20,17 +20,102 @@ import (
 // Agent runs a set of plugins.
 type Agent struct {
 	Config *config.Config
+
+	// units hold channels and define connections between plugins
+	outputGroupUnit    outputGroupUnit
+	processorGroupUnit processorGroupUnit
+	// inputUnit          inputUnit
+	inputGroupUnit   inputGroupUnit
+	configPluginUnit configPluginUnit
+
+	ctx context.Context
+
+	started    *sync.Cond // a condition that lets plugins know when hasStarted is true (when the agent starts)
+	hasStarted bool
 }
 
 // NewAgent returns an Agent for the given Config.
-func NewAgent(config *config.Config) (*Agent, error) {
-	a := &Agent{
-		Config: config,
+func NewAgent(ctx context.Context, config *config.Config) *Agent {
+	inputDestCh := make(chan telegraf.Metric)
+	outputSrcCh := make(chan telegraf.Metric)
+
+	// by default, connect the dest of the inputs directly to the src for the outputs,
+	// as processors are added, they will be inserted between these two.
+
+	return &Agent{
+		Config:  config,
+		ctx:     ctx,
+		started: sync.NewCond(&sync.Mutex{}),
+		inputGroupUnit: inputGroupUnit{
+			dst:   inputDestCh,
+			relay: channel.NewRelay(inputDestCh, outputSrcCh),
+		},
+		outputGroupUnit: outputGroupUnit{
+			src: outputSrcCh,
+		},
 	}
-	return a, nil
 }
 
-// inputUnit is a group of input plugins and the shared channel they write to.
+type inputUnit struct {
+	input        *models.RunningInput
+	cancelGather context.CancelFunc // used to cancel the gather loop for plugin shutdown
+}
+
+type configPluginUnit struct {
+	sync.Mutex
+	plugins []config.ConfigPlugin
+}
+
+//  ______     ┌───────────┐     ______
+// ()_____)──▶ │ Processor │──▶ ()_____)
+//             └───────────┘
+type processorUnit struct {
+	order       int
+	src         chan telegraf.Metric   // owns this src
+	dst         chan<- telegraf.Metric // reference to another chan owned elsewhere
+	processor   models.ProcessorRunner
+	accumulator *accumulator
+}
+
+// outputGroupUnit is a group of Outputs and their source channel.  Metrics on the
+// channel are written to all outputs.
+//
+//                            ┌────────┐
+//                       ┌──▶ │ Output │
+//                       │    └────────┘
+//  ______     ┌─────┐   │    ┌────────┐
+// ()_____)──▶ │ Fan │───┼──▶ │ Output │
+//    src      └─────┘   │    └────────┘
+//                       │    ┌────────┐
+//                       └──▶ │ Output │
+//                            └────────┘
+type outputGroupUnit struct {
+	sync.Mutex
+	src     chan telegraf.Metric
+	outputs []outputUnit
+}
+
+type outputUnit struct {
+	output      *models.RunningOutput
+	cancelFlush context.CancelFunc // used to cancel the flush loop for plugin shutdown
+}
+
+type processorGroupUnit struct {
+	sync.Mutex
+	accumulator    telegraf.Accumulator
+	processorUnits []*processorUnit
+}
+
+func (pg *processorGroupUnit) Find(pr models.ProcessorRunner) *processorUnit {
+	for _, unit := range pg.processorUnits {
+		if unit.processor.GetID() == pr.GetID() {
+			return unit
+		}
+	}
+	return nil
+}
+
+// inputGroupUnit is a group of input plugins and the shared channel they write to.
 //
 // ┌───────┐
 // │ Input │───┐
@@ -41,386 +126,174 @@ func NewAgent(config *config.Config) (*Agent, error) {
 // ┌───────┐   │
 // │ Input │───┘
 // └───────┘
-type inputUnit struct {
-	dst    chan<- telegraf.Metric
-	inputs []*models.RunningInput
+type inputGroupUnit struct {
+	sync.Mutex
+	dst        chan<- telegraf.Metric // owns channel; must stay open until app is shutting down
+	relay      *channel.Relay
+	inputUnits []inputUnit
 }
 
-//  ______     ┌───────────┐     ______
-// ()_____)──▶ │ Processor │──▶ ()_____)
-//             └───────────┘
-type processorUnit struct {
-	src       <-chan telegraf.Metric
-	dst       chan<- telegraf.Metric
-	processor *models.RunningProcessor
-}
+// RunWithAPI runs Telegraf in API mode where all the plugins are controlled by
+// the user through the config API. When running in this mode plugins are not
+// loaded from the toml file.
+// if ctx errors (eg cancels), inputs will be notified to shutdown
+// during shutdown, once the output fanout has received the last metric,
+// outputCancel is called as a sort of callback to notify the outputs to finish up.
+// you don't want outputs subscribing to the same ctx as the inputs,
+// otherwise they'd stop working before receiving all the messages (this is because
+// they maintain their own internal buffers rather than depending on metrics buffered
+// in a channel)
+func (a *Agent) RunWithAPI(outputCancel context.CancelFunc) {
+	go func() {
+		a.runOutputFanout()
+		// then the fanout closes, notify the outputs that they won't be receiving
+		// more metrics via this cancel function.
+		outputCancel()
+	}()
 
-// aggregatorUnit is a group of Aggregators and their source and sink channels.
-// Typically the aggregators write to a processor channel and pass the original
-// metrics to the output channel.  The sink channels may be the same channel.
-//
-//                 ┌────────────┐
-//            ┌──▶ │ Aggregator │───┐
-//            │    └────────────┘   │
-//  ______    │    ┌────────────┐   │     ______
-// ()_____)───┼──▶ │ Aggregator │───┼──▶ ()_____)
-//            │    └────────────┘   │
-//            │    ┌────────────┐   │
-//            ├──▶ │ Aggregator │───┘
-//            │    └────────────┘
-//            │                           ______
-//            └────────────────────────▶ ()_____)
-type aggregatorUnit struct {
-	src         <-chan telegraf.Metric
-	aggC        chan<- telegraf.Metric
-	outputC     chan<- telegraf.Metric
-	aggregators []*models.RunningAggregator
-}
-
-// outputUnit is a group of Outputs and their source channel.  Metrics on the
-// channel are written to all outputs.
-//
-//                            ┌────────┐
-//                       ┌──▶ │ Output │
-//                       │    └────────┘
-//  ______     ┌─────┐   │    ┌────────┐
-// ()_____)──▶ │ Fan │───┼──▶ │ Output │
-//             └─────┘   │    └────────┘
-//                       │    ┌────────┐
-//                       └──▶ │ Output │
-//                            └────────┘
-type outputUnit struct {
-	src     <-chan telegraf.Metric
-	outputs []*models.RunningOutput
-}
-
-// Run starts and runs the Agent until the context is done.
-func (a *Agent) Run(ctx context.Context) error {
 	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s",
-		time.Duration(a.Config.Agent.Interval), a.Config.Agent.Quiet,
-		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
+		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
+		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
 
-	log.Printf("D! [agent] Initializing plugins")
-	err := a.initPlugins()
-	if err != nil {
-		return err
-	}
+	a.inputGroupUnit.relay.Start()
 
-	startTime := time.Now()
+	a.started.L.Lock()
+	a.hasStarted = true
+	a.started.Broadcast()
+	a.started.L.Unlock()
 
-	log.Printf("D! [agent] Connecting outputs")
-	next, ou, err := a.startOutputs(ctx, a.Config.Outputs)
-	if err != nil {
-		return err
-	}
+	<-a.Context().Done()
 
-	var apu []*processorUnit
-	var au *aggregatorUnit
-	if len(a.Config.Aggregators) != 0 {
-		aggC := next
-		if len(a.Config.AggProcessors) != 0 {
-			aggC, apu, err = a.startProcessors(next, a.Config.AggProcessors)
-			if err != nil {
-				return err
-			}
-		}
-
-		next, au = a.startAggregators(aggC, next, a.Config.Aggregators)
-	}
-
-	var pu []*processorUnit
-	if len(a.Config.Processors) != 0 {
-		next, pu, err = a.startProcessors(next, a.Config.Processors)
-		if err != nil {
-			return err
-		}
-	}
-
-	iu, err := a.startInputs(next, a.Config.Inputs)
-	if err != nil {
-		return err
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		a.runOutputs(ou)
-	}()
-
-	if au != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			a.runProcessors(apu)
-		}()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			a.runAggregators(startTime, au)
-		}()
-	}
-
-	if pu != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			a.runProcessors(pu)
-		}()
-	}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		a.runInputs(ctx, startTime, iu)
-	}()
-
-	wg.Wait()
+	// wait for all plugins to stop
+	a.waitForPluginsToStop()
 
 	log.Printf("D! [agent] Stopped Successfully")
-	return err
 }
 
-// initPlugins runs the Init function on plugins.
-func (a *Agent) initPlugins() error {
-	for _, input := range a.Config.Inputs {
-		err := input.Init()
-		if err != nil {
-			return fmt.Errorf("could not initialize input %s: %v",
-				input.LogName(), err)
-		}
-	}
-	for _, processor := range a.Config.Processors {
-		err := processor.Init()
-		if err != nil {
-			return fmt.Errorf("could not initialize processor %s: %v",
-				processor.Config.Name, err)
-		}
-	}
-	for _, aggregator := range a.Config.Aggregators {
-		err := aggregator.Init()
-		if err != nil {
-			return fmt.Errorf("could not initialize aggregator %s: %v",
-				aggregator.Config.Name, err)
-		}
-	}
-	for _, processor := range a.Config.AggProcessors {
-		err := processor.Init()
-		if err != nil {
-			return fmt.Errorf("could not initialize processor %s: %v",
-				processor.Config.Name, err)
-		}
-	}
-	for _, output := range a.Config.Outputs {
-		err := output.Init()
-		if err != nil {
-			return fmt.Errorf("could not initialize output %s: %v",
-				output.Config.Name, err)
-		}
-	}
-	return nil
+func (a *Agent) AddInput(input *models.RunningInput) {
+	a.inputGroupUnit.Lock()
+	defer a.inputGroupUnit.Unlock()
+
+	a.inputGroupUnit.inputUnits = append(a.inputGroupUnit.inputUnits,
+		inputUnit{
+			input: input,
+		})
 }
 
-func (a *Agent) startInputs(
-	dst chan<- telegraf.Metric,
-	inputs []*models.RunningInput,
-) (*inputUnit, error) {
-	log.Printf("D! [agent] Starting service inputs")
-
-	unit := &inputUnit{
-		dst: dst,
+func (a *Agent) startInput(input *models.RunningInput) error {
+	// plugins can start before the agent has started; wait until it's asked to
+	// start before collecting metrics in case other plugins are still loading.
+	a.started.L.Lock()
+	for !a.hasStarted {
+		a.started.Wait()
 	}
 
-	for _, input := range inputs {
-		if si, ok := input.Input.(telegraf.ServiceInput); ok {
-			// Service input plugins are not normally subject to timestamp
-			// rounding except for when precision is set on the input plugin.
-			//
-			// This only applies to the accumulator passed to Start(), the
-			// Gather() accumulator does apply rounding according to the
-			// precision and interval agent/plugin settings.
-			var interval time.Duration
-			var precision time.Duration
-			if input.Config.Precision != 0 {
-				precision = input.Config.Precision
-			}
+	a.started.L.Unlock()
+	a.inputGroupUnit.Lock()
+	// Service input plugins are not normally subject to timestamp
+	// rounding except for when precision is set on the input plugin.
+	//
+	// This only applies to the accumulator passed to Start(), the
+	// Gather() accumulator does apply rounding according to the
+	// precision and interval agent/plugin settings.
+	var interval time.Duration
+	var precision time.Duration
+	if input.Config.Precision != 0 {
+		precision = input.Config.Precision
+	}
 
-			acc := NewAccumulator(input, dst)
-			acc.SetPrecision(getPrecision(precision, interval))
+	// the plugin's Start() gets its own accumulator with no rounding, etc
+	acc := NewAccumulator(input, a.inputGroupUnit.dst)
+	acc.SetPrecision(getPrecision(precision, interval))
 
-			err := si.Start(acc)
-			if err != nil {
-				stopServiceInputs(unit.inputs)
-				return nil, fmt.Errorf("starting input %s: %w", input.LogName(), err)
-			}
+	for _, inp := range a.inputGroupUnit.inputUnits {
+		if inp.input.GetID() == input.GetID() {
+			a.inputGroupUnit.Unlock()
+			return input.Start(acc)
 		}
-		unit.inputs = append(unit.inputs, input)
 	}
+	a.inputGroupUnit.Unlock()
 
-	return unit, nil
+	return errors.New("cannot start input; call AddInput first")
 }
 
-// runInputs starts and triggers the periodic gather for Inputs.
-//
-// When the context is done the timers are stopped and this function returns
-// after all ongoing Gather calls complete.
-func (a *Agent) runInputs(
-	ctx context.Context,
-	startTime time.Time,
-	unit *inputUnit,
-) {
-	var wg sync.WaitGroup
-	for _, input := range unit.inputs {
-		// Overwrite agent interval if this plugin has its own.
-		interval := time.Duration(a.Config.Agent.Interval)
-		if input.Config.Interval != 0 {
-			interval = input.Config.Interval
-		}
-
-		// Overwrite agent precision if this plugin has its own.
-		precision := time.Duration(a.Config.Agent.Precision)
-		if input.Config.Precision != 0 {
-			precision = input.Config.Precision
-		}
-
-		// Overwrite agent collection_jitter if this plugin has its own.
-		jitter := time.Duration(a.Config.Agent.CollectionJitter)
-		if input.Config.CollectionJitter != 0 {
-			jitter = input.Config.CollectionJitter
-		}
-
-		var ticker Ticker
-		if a.Config.Agent.RoundInterval {
-			ticker = NewAlignedTicker(startTime, interval, jitter)
-		} else {
-			ticker = NewUnalignedTicker(interval, jitter)
-		}
-		defer ticker.Stop()
-
-		acc := NewAccumulator(input, unit.dst)
-		acc.SetPrecision(getPrecision(precision, interval))
-
-		wg.Add(1)
-		go func(input *models.RunningInput) {
-			defer wg.Done()
-			a.gatherLoop(ctx, acc, input, ticker, interval)
-		}(input)
+// RunInput is a blocking call that runs an input forever
+func (a *Agent) RunInput(input *models.RunningInput, startTime time.Time) {
+	// default to agent interval but check for override
+	interval := a.Config.Agent.Interval.Duration
+	if input.Config.Interval != 0 {
+		interval = input.Config.Interval
+	}
+	// default to agent precision but check for override
+	precision := a.Config.Agent.Precision.Duration
+	if input.Config.Precision != 0 {
+		precision = input.Config.Precision
+	}
+	// default to agent collection_jitter but check for override
+	jitter := a.Config.Agent.CollectionJitter.Duration
+	if input.Config.CollectionJitter != 0 {
+		jitter = input.Config.CollectionJitter
 	}
 
-	wg.Wait()
+	var ticker Ticker
+	if a.Config.Agent.RoundInterval {
+		ticker = NewAlignedTicker(startTime, interval, jitter)
+	} else {
+		ticker = NewUnalignedTicker(interval, jitter)
+	}
+	defer ticker.Stop()
 
-	log.Printf("D! [agent] Stopping service inputs")
-	stopServiceInputs(unit.inputs)
+	acc := NewAccumulator(input, a.inputGroupUnit.dst)
+	acc.SetPrecision(getPrecision(precision, interval))
+	ctx, cancelFunc := context.WithCancel(a.ctx)
+	defer cancelFunc() // just to keep linters happy
 
-	close(unit.dst)
-	log.Printf("D! [agent] Input channel closed")
+	err := errors.New("loop at least once")
+	for err != nil && ctx.Err() == nil {
+		if err = a.startInput(input); err != nil {
+			log.Printf("E! [agent] failed to start plugin %q: %v", input.LogName(), err)
+			time.Sleep(10 * time.Second)
+		}
+	}
+
+	a.inputGroupUnit.Lock()
+	for i, iu := range a.inputGroupUnit.inputUnits {
+		if iu.input == input {
+			a.inputGroupUnit.inputUnits[i].cancelGather = cancelFunc
+			break
+		}
+	}
+	a.inputGroupUnit.Unlock()
+
+	a.gatherLoop(ctx, acc, input, ticker, interval)
+	input.Stop()
+
+	a.inputGroupUnit.Lock()
+	for i, iu := range a.inputGroupUnit.inputUnits {
+		if iu.input == input {
+			// remove from list
+			a.inputGroupUnit.inputUnits = append(a.inputGroupUnit.inputUnits[0:i], a.inputGroupUnit.inputUnits[i+1:]...)
+			break
+		}
+	}
+	a.inputGroupUnit.Unlock()
 }
 
-// testStartInputs is a variation of startInputs for use in --test and --once
-// mode.  It differs by logging Start errors and returning only plugins
-// successfully started.
-func (a *Agent) testStartInputs(
-	dst chan<- telegraf.Metric,
-	inputs []*models.RunningInput,
-) *inputUnit {
-	log.Printf("D! [agent] Starting service inputs")
-
-	unit := &inputUnit{
-		dst: dst,
-	}
-
-	for _, input := range inputs {
-		if si, ok := input.Input.(telegraf.ServiceInput); ok {
-			// Service input plugins are not subject to timestamp rounding.
-			// This only applies to the accumulator passed to Start(), the
-			// Gather() accumulator does apply rounding according to the
-			// precision agent setting.
-			acc := NewAccumulator(input, dst)
-			acc.SetPrecision(time.Nanosecond)
-
-			err := si.Start(acc)
-			if err != nil {
-				log.Printf("E! [agent] Starting input %s: %v", input.LogName(), err)
+func (a *Agent) StopInput(i *models.RunningInput) {
+	defer a.inputGroupUnit.Unlock()
+retry:
+	a.inputGroupUnit.Lock()
+	for _, iu := range a.inputGroupUnit.inputUnits {
+		if iu.input == i {
+			if iu.cancelGather == nil {
+				// plugin hasn't finished starting, wait longer.
+				a.inputGroupUnit.Unlock()
+				time.Sleep(1 * time.Millisecond)
+				goto retry
 			}
-		}
-
-		unit.inputs = append(unit.inputs, input)
-	}
-
-	return unit
-}
-
-// testRunInputs is a variation of runInputs for use in --test and --once mode.
-// Instead of using a ticker to run the inputs they are called once immediately.
-func (a *Agent) testRunInputs(
-	ctx context.Context,
-	wait time.Duration,
-	unit *inputUnit,
-) {
-	var wg sync.WaitGroup
-
-	nul := make(chan telegraf.Metric)
-	go func() {
-		for range nul {
-		}
-	}()
-
-	for _, input := range unit.inputs {
-		wg.Add(1)
-		go func(input *models.RunningInput) {
-			defer wg.Done()
-
-			// Overwrite agent interval if this plugin has its own.
-			interval := time.Duration(a.Config.Agent.Interval)
-			if input.Config.Interval != 0 {
-				interval = input.Config.Interval
-			}
-
-			// Overwrite agent precision if this plugin has its own.
-			precision := time.Duration(a.Config.Agent.Precision)
-			if input.Config.Precision != 0 {
-				precision = input.Config.Precision
-			}
-
-			// Run plugins that require multiple gathers to calculate rate
-			// and delta metrics twice.
-			switch input.Config.Name {
-			case "cpu", "mongodb", "procstat":
-				nulAcc := NewAccumulator(input, nul)
-				nulAcc.SetPrecision(getPrecision(precision, interval))
-				if err := input.Input.Gather(nulAcc); err != nil {
-					nulAcc.AddError(err)
-				}
-
-				time.Sleep(500 * time.Millisecond)
-			}
-
-			acc := NewAccumulator(input, unit.dst)
-			acc.SetPrecision(getPrecision(precision, interval))
-
-			if err := input.Input.Gather(acc); err != nil {
-				acc.AddError(err)
-			}
-		}(input)
-	}
-	wg.Wait()
-
-	internal.SleepContext(ctx, wait)
-
-	log.Printf("D! [agent] Stopping service inputs")
-	stopServiceInputs(unit.inputs)
-
-	close(unit.dst)
-	log.Printf("D! [agent] Input channel closed")
-}
-
-// stopServiceInputs stops all service inputs.
-func stopServiceInputs(inputs []*models.RunningInput) {
-	for _, input := range inputs {
-		if si, ok := input.Input.(telegraf.ServiceInput); ok {
-			si.Stop()
+			iu.cancelGather()
+			break
 		}
 	}
 }
@@ -489,145 +362,196 @@ func (a *Agent) gatherOnce(
 	}
 }
 
-// startProcessors sets up the processor chain and calls Start on all
-// processors.  If an error occurs any started processors are Stopped.
-func (a *Agent) startProcessors(
-	dst chan<- telegraf.Metric,
-	processors models.RunningProcessors,
-) (chan<- telegraf.Metric, []*processorUnit, error) {
-	var units []*processorUnit
+func (a *Agent) AddProcessor(processor models.ProcessorRunner) {
+	a.inputGroupUnit.Lock()
+	defer a.inputGroupUnit.Unlock()
+	a.processorGroupUnit.Lock()
+	defer a.processorGroupUnit.Unlock()
 
-	// Sort from last to first
-	sort.SliceStable(processors, func(i, j int) bool {
-		return processors[i].Config.Order > processors[j].Config.Order
-	})
+	pu := processorUnit{
+		src:       make(chan telegraf.Metric, 100),
+		processor: processor,
+	}
 
-	var src chan telegraf.Metric
-	for _, processor := range processors {
-		src = make(chan telegraf.Metric, 100)
-		acc := NewAccumulator(processor, dst)
+	// insertPos is the position in the list after the slice insert operation
+	insertPos := 0
 
-		err := processor.Start(acc)
-		if err != nil {
-			for _, u := range units {
-				u.processor.Stop()
-				close(u.dst)
+	if len(a.processorGroupUnit.processorUnits) > 0 {
+		// figure out where in the list to put us
+		for i, unit := range a.processorGroupUnit.processorUnits {
+			if unit.order > int(processor.Order()) {
+				break
 			}
-			return nil, nil, fmt.Errorf("starting processor %s: %w", processor.LogName(), err)
+			insertPos = i + 1
 		}
-
-		units = append(units, &processorUnit{
-			src:       src,
-			dst:       dst,
-			processor: processor,
-		})
-
-		dst = src
 	}
 
-	return src, units, nil
+	// if we're the last processor in the list
+	if insertPos == len(a.processorGroupUnit.processorUnits) {
+		pu.dst = a.outputGroupUnit.src
+	} else {
+		// we're not the last processor
+		pu.dst = a.processorGroupUnit.processorUnits[insertPos].src
+	}
+
+	acc := NewAccumulator(processor.(MetricMaker), pu.dst)
+	pu.accumulator = acc.(*accumulator)
+
+	// only if we're the first processor or being inserted at front-of-line:
+	if insertPos == 0 {
+		a.inputGroupUnit.relay.SetDest(pu.src)
+	} else {
+		// not the first processor to be added
+		prev := a.processorGroupUnit.processorUnits[insertPos-1]
+		prev.accumulator.setOutput(pu.src)
+	}
+
+	list := a.processorGroupUnit.processorUnits
+	// list[0:insertPos] + pu + list[insertPos:]
+	// list = [0,1,2,3,4]
+	// [0,1] + pu + [2,3,4]
+	a.processorGroupUnit.processorUnits = append(append(list[0:insertPos], &pu), list[insertPos:]...)
 }
 
-// runProcessors begins processing metrics and runs until the source channel is
-// closed and all metrics have been written.
-func (a *Agent) runProcessors(
-	units []*processorUnit,
-) {
-	var wg sync.WaitGroup
-	for _, unit := range units {
-		wg.Add(1)
-		go func(unit *processorUnit) {
-			defer wg.Done()
+func (a *Agent) startProcessor(processor models.ProcessorRunner) error {
+	a.processorGroupUnit.Lock()
 
-			acc := NewAccumulator(unit.processor, unit.dst)
-			for m := range unit.src {
-				if err := unit.processor.Add(m, acc); err != nil {
-					acc.AddError(err)
-					m.Drop()
-				}
-			}
-			unit.processor.Stop()
-			close(unit.dst)
-			log.Printf("D! [agent] Processor channel closed")
-		}(unit)
-	}
-	wg.Wait()
-}
-
-// startAggregators sets up the aggregator unit and returns the source channel.
-func (a *Agent) startAggregators(
-	aggC chan<- telegraf.Metric,
-	outputC chan<- telegraf.Metric,
-	aggregators []*models.RunningAggregator,
-) (chan<- telegraf.Metric, *aggregatorUnit) {
-	src := make(chan telegraf.Metric, 100)
-	unit := &aggregatorUnit{
-		src:         src,
-		aggC:        aggC,
-		outputC:     outputC,
-		aggregators: aggregators,
-	}
-	return src, unit
-}
-
-// runAggregators beings aggregating metrics and runs until the source channel
-// is closed and all metrics have been written.
-func (a *Agent) runAggregators(
-	startTime time.Time,
-	unit *aggregatorUnit,
-) {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// Before calling Add, initialize the aggregation window.  This ensures
-	// that any metric created after start time will be aggregated.
-	for _, agg := range a.Config.Aggregators {
-		since, until := updateWindow(startTime, a.Config.Agent.RoundInterval, agg.Period())
-		agg.UpdateWindow(since, until)
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for metric := range unit.src {
-			var dropOriginal bool
-			for _, agg := range a.Config.Aggregators {
-				if ok := agg.Add(metric); ok {
-					dropOriginal = true
-				}
+	for _, pu := range a.processorGroupUnit.processorUnits {
+		if pu.processor.GetID() == processor.GetID() {
+			a.processorGroupUnit.Unlock()
+			err := processor.Start(pu.accumulator)
+			if err != nil {
+				return fmt.Errorf("starting processor %s: %w", processor.LogName(), err)
 			}
 
-			if !dropOriginal {
-				unit.outputC <- metric // keep original.
+			return nil
+		}
+	}
+
+	a.processorGroupUnit.Unlock()
+	return nil
+}
+
+// RunProcessor is a blocking call that runs a processor forever
+func (a *Agent) RunProcessor(p models.ProcessorRunner) {
+	a.processorGroupUnit.Lock()
+	pu := a.processorGroupUnit.Find(p)
+	a.processorGroupUnit.Unlock()
+
+	if pu == nil {
+		log.Print("W! [agent] Must call AddProcessor before calling RunProcessor")
+		return
+	}
+
+	err := errors.New("loop at least once")
+	for err != nil && a.ctx.Err() == nil {
+		if err = a.startProcessor(p); err != nil {
+			log.Printf("E! [agent] failed to start processor %q: %v", p.LogName(), err)
+			time.Sleep(10 * time.Second)
+		}
+	}
+
+	// processors own their src channel, if it's closed either it's been asked to stop or we're shutting down
+	for m := range pu.src {
+		if err := pu.processor.Add(m, pu.accumulator); err != nil {
+			pu.accumulator.AddError(err)
+			m.Reject()
+		}
+	}
+
+	pu.processor.Stop()
+	// only close dst channel if we're shutting down
+	if a.ctx.Err() != nil {
+		a.processorGroupUnit.Lock()
+		if pu.dst != nil {
+			close(pu.dst)
+		}
+		a.processorGroupUnit.Unlock()
+	}
+
+	a.processorGroupUnit.Lock()
+	defer a.processorGroupUnit.Unlock()
+	for i, curr := range a.processorGroupUnit.processorUnits {
+		if pu == curr {
+			// remove it from the slice
+			// Remove the stopped processor from the units list
+			a.processorGroupUnit.processorUnits = append(a.processorGroupUnit.processorUnits[0:i], a.processorGroupUnit.processorUnits[i+1:len(a.processorGroupUnit.processorUnits)]...)
+		}
+	}
+}
+
+// StopProcessor stops processors or aggregators.
+// ProcessorRunner could be a *models.RunningProcessor or a *models.RunningAggregator
+func (a *Agent) StopProcessor(p models.ProcessorRunner) {
+	a.processorGroupUnit.Lock()
+	defer a.processorGroupUnit.Unlock()
+
+	for i, curr := range a.processorGroupUnit.processorUnits {
+		if p.GetID() == curr.processor.GetID() {
+			if i == 0 {
+				a.inputGroupUnit.relay.SetDest(curr.dst)
 			} else {
-				metric.Drop()
+				prev := a.processorGroupUnit.processorUnits[i-1]
+				prev.accumulator.setOutput(curr.dst)
 			}
+			close(curr.src) // closing source will tell the processor to stop.
 		}
-		cancel()
-	}()
+	}
+}
 
-	for _, agg := range a.Config.Aggregators {
-		wg.Add(1)
-		go func(agg *models.RunningAggregator) {
-			defer wg.Done()
+// RunProcessor is a blocking call that runs a processor forever
+func (a *Agent) RunConfigPlugin(ctx context.Context, plugin config.ConfigPlugin) {
+	a.configPluginUnit.Lock()
+	a.configPluginUnit.plugins = append(a.configPluginUnit.plugins, plugin)
+	a.configPluginUnit.Unlock()
 
-			interval := time.Duration(a.Config.Agent.Interval)
-			precision := time.Duration(a.Config.Agent.Precision)
-
-			acc := NewAccumulator(agg, unit.aggC)
-			acc.SetPrecision(getPrecision(precision, interval))
-			a.push(ctx, agg, acc)
-		}(agg)
+	<-ctx.Done()
+	//TODO: we might want to wait for all other plugins to close?
+	if err := plugin.Close(); err != nil {
+		log.Printf("E! [agent] Configuration plugin failed to close: %v", err)
 	}
 
-	wg.Wait()
+	// because we don't have wrappers for config plugins, check to see if there's a storage plugin attached and close it.
+	p := reflect.ValueOf(plugin)
+	if p.Kind() == reflect.Ptr {
+		p = p.Elem()
+	}
+	if v := p.FieldByName("Storage"); !v.IsZero() && v.IsValid() && !v.IsNil() {
+		if sp, ok := v.Interface().(config.StoragePlugin); ok {
+			if err := sp.Close(); err != nil {
+				log.Printf("E! [agent] Storage plugin failed to close: %v", err)
+			}
+		}
+		 }
 
-	// In the case that there are no processors, both aggC and outputC are the
-	// same channel.  If there are processors, we close the aggC and the
-	// processor chain will close the outputC when it finishes processing.
-	close(unit.aggC)
-	log.Printf("D! [agent] Aggregator channel closed")
+	a.configPluginUnit.Lock()
+	pos := -1
+	for i, p := range a.configPluginUnit.plugins {
+		if p == plugin {
+			pos = i
+			break
+		}
+	}
+	if pos > -1 {
+		a.configPluginUnit.plugins = append(a.configPluginUnit.plugins[0:pos], a.configPluginUnit.plugins[pos+1:]...)
+	}
+	a.configPluginUnit.Unlock()
 }
+
+func (a *Agent) StopOutput(output *models.RunningOutput) {
+	a.outputGroupUnit.Lock()
+	defer a.outputGroupUnit.Unlock()
+
+	// find plugin
+	for _, o := range a.outputGroupUnit.outputs {
+		if o.output == output {
+			if o.cancelFlush != nil {
+				o.cancelFlush()
+			}
+		}
+	}
+}
+
 
 func updateWindow(start time.Time, roundInterval bool, period time.Duration) (time.Time, time.Time) {
 	var until time.Time
@@ -645,57 +569,24 @@ func updateWindow(start time.Time, roundInterval bool, period time.Duration) (ti
 	return since, until
 }
 
-// push runs the push for a single aggregator every period.
-func (a *Agent) push(
-	ctx context.Context,
-	aggregator *models.RunningAggregator,
-	acc telegraf.Accumulator,
-) {
-	for {
-		// Ensures that Push will be called for each period, even if it has
-		// already elapsed before this function is called.  This is guaranteed
-		// because so long as only Push updates the EndPeriod.  This method
-		// also avoids drift by not using a ticker.
-		until := time.Until(aggregator.EndPeriod())
+func (a *Agent) AddOutput(output *models.RunningOutput) {
+	a.outputGroupUnit.Lock()
+	a.outputGroupUnit.outputs = append(a.outputGroupUnit.outputs, outputUnit{output: output})
+	a.outputGroupUnit.Unlock()
+	 }
 
-		select {
-		case <-time.After(until):
-			aggregator.Push(acc)
-			break
-		case <-ctx.Done():
-			aggregator.Push(acc)
-			return
-		}
-	}
-}
+func (a *Agent) startOutput(output *models.RunningOutput) error {
+	if err := a.connectOutput(a.ctx, output); err != nil {
+		return fmt.Errorf("connecting output %s: %w", output.LogName(), err)
+			 }
 
-// startOutputs calls Connect on all outputs and returns the source channel.
-// If an error occurs calling Connect all stared plugins have Close called.
-func (a *Agent) startOutputs(
-	ctx context.Context,
-	outputs []*models.RunningOutput,
-) (chan<- telegraf.Metric, *outputUnit, error) {
-	src := make(chan telegraf.Metric, 100)
-	unit := &outputUnit{src: src}
-	for _, output := range outputs {
-		err := a.connectOutput(ctx, output)
-		if err != nil {
-			for _, output := range unit.outputs {
-				output.Close()
-			}
-			return nil, nil, fmt.Errorf("connecting output %s: %w", output.LogName(), err)
-		}
-
-		unit.outputs = append(unit.outputs, output)
-	}
-
-	return src, unit, nil
-}
+	return nil
+		 }
 
 // connectOutputs connects to all outputs.
 func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput) error {
 	log.Printf("D! [agent] Attempting connection to [%s]", output.LogName())
-	err := output.Output.Connect()
+	err := output.Connect()
 	if err != nil {
 		log.Printf("E! [agent] Failed to connect to [%s], retrying in 15s, "+
 			"error was '%s'", output.LogName(), err)
@@ -705,7 +596,7 @@ func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput)
 			return err
 		}
 
-		err = output.Output.Connect()
+		err = output.Connect()
 		if err != nil {
 			return fmt.Errorf("Error connecting to output %q: %w", output.LogName(), err)
 		}
@@ -714,64 +605,82 @@ func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput)
 	return nil
 }
 
-// runOutputs begins processing metrics and returns until the source channel is
-// closed and all metrics have been written.  On shutdown metrics will be
-// written one last time and dropped if unsuccessful.
-func (a *Agent) runOutputs(
-	unit *outputUnit,
-) {
-	var wg sync.WaitGroup
+// RunOutput runs an output; note the context should be a special context that
+// only cancels when it's time for the outputs to close: when the main context
+// has closed AND all the input and processor plugins are done.
+func (a *Agent) RunOutput(ctx context.Context, output *models.RunningOutput) {
+	var cancel context.CancelFunc
+	// wrap with a cancel context so that the StopOutput can stop this individual output without stopping all the outputs.
+	ctx, cancel = context.WithCancel(ctx)
+	defer cancel()
 
-	// Start flush loop
-	interval := time.Duration(a.Config.Agent.FlushInterval)
-	jitter := time.Duration(a.Config.Agent.FlushJitter)
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	for _, output := range unit.outputs {
-		interval := interval
-		// Overwrite agent flush_interval if this plugin has its own.
-		if output.Config.FlushInterval != 0 {
-			interval = output.Config.FlushInterval
-		}
-
-		jitter := jitter
-		// Overwrite agent flush_jitter if this plugin has its own.
-		if output.Config.FlushJitter != 0 {
-			jitter = output.Config.FlushJitter
-		}
-
-		wg.Add(1)
-		go func(output *models.RunningOutput) {
-			defer wg.Done()
-
-			ticker := NewRollingTicker(interval, jitter)
-			defer ticker.Stop()
-
-			a.flushLoop(ctx, output, ticker)
-		}(output)
-	}
-
-	for metric := range unit.src {
-		for i, output := range unit.outputs {
-			if i == len(a.Config.Outputs)-1 {
-				output.AddMetric(metric)
-			} else {
-				output.AddMetric(metric.Copy())
-			}
+	a.outputGroupUnit.Lock()
+	for i, o := range a.outputGroupUnit.outputs {
+		if o.output == output {
+			a.outputGroupUnit.outputs[i].cancelFlush = cancel
 		}
 	}
+	a.outputGroupUnit.Unlock()
 
-	log.Println("I! [agent] Hang on, flushing any cached metrics before shutdown")
-	cancel()
-	wg.Wait()
+		 interval := a.Config.Agent.FlushInterval.Duration
+		 jitter := a.Config.Agent.FlushJitter.Duration
+	// Overwrite agent flush_interval if this plugin has its own.
+	if output.Config.FlushInterval != 0 {
+		interval = output.Config.FlushInterval
+	}
 
-	log.Println("I! [agent] Stopping running outputs")
-	stopRunningOutputs(unit.outputs)
+	// Overwrite agent flush_jitter if this plugin has its own.
+	if output.Config.FlushJitter != 0 {
+		jitter = output.Config.FlushJitter
+	}
+
+	ticker := NewRollingTicker(interval, jitter)
+	defer ticker.Stop()
+
+	err := errors.New("loop at least once")
+	for err != nil && a.ctx.Err() == nil {
+		if err = a.startOutput(output); err != nil {
+			log.Printf("E! [agent] failed to start output %q: %v", output.LogName(), err)
+			time.Sleep(10 * time.Second)
+			 }
+	}
+
+	a.flushLoop(ctx, output, ticker)
+
+	a.outputGroupUnit.Lock()
+
+	// find plugin
+	for i, o := range a.outputGroupUnit.outputs {
+		if o.output == output {
+			// disconnect it from the output broadcaster and remove it from the list
+			a.outputGroupUnit.outputs = append(a.outputGroupUnit.outputs[:i], a.outputGroupUnit.outputs[i+1:]...)
+		}
+		 }
+	a.outputGroupUnit.Unlock()
+
+	a.flushOnce(output, ticker, output.Write)
+
+	output.Close()
 }
 
-// flushLoop runs an output's flush function periodically until the context is
-// done.
+// runOutputFanout does the outputGroupUnit fanout, copying a metric to all outputs
+func (a *Agent) runOutputFanout() {
+	for metric := range a.outputGroupUnit.src {
+		// if there are no outputs I guess we're dropping them.
+		a.outputGroupUnit.Lock()
+		outs := a.outputGroupUnit.outputs
+		a.outputGroupUnit.Unlock()
+		for i, output := range outs {
+			if i == len(outs)-1 {
+				output.output.AddMetric(metric)
+				 } else {
+				output.output.AddMetric(metric.Copy())
+				 }
+			 }
+		 }
+
+
+// flushLoop runs an output's flush function periodically until the context is done.
 func (a *Agent) flushLoop(
 	ctx context.Context,
 	output *models.RunningOutput,
@@ -838,218 +747,7 @@ func (a *Agent) flushOnce(
 	}
 }
 
-// Test runs the inputs, processors and aggregators for a single gather and
-// writes the metrics to stdout.
-func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
-	src := make(chan telegraf.Metric, 100)
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		s := influx.NewSerializer()
-		s.SetFieldSortOrder(influx.SortFields)
-
-		for metric := range src {
-			octets, err := s.Serialize(metric)
-			if err == nil {
-				fmt.Print("> ", string(octets))
-			}
-			metric.Reject()
-		}
-	}()
-
-	err := a.test(ctx, wait, src)
-	if err != nil {
-		return err
-	}
-
-	wg.Wait()
-
-	if models.GlobalGatherErrors.Get() != 0 {
-		return fmt.Errorf("input plugins recorded %d errors", models.GlobalGatherErrors.Get())
-	}
-	return nil
-}
-
-// Test runs the agent and performs a single gather sending output to the
-// outputF.  After gathering pauses for the wait duration to allow service
-// inputs to run.
-func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- telegraf.Metric) error {
-	log.Printf("D! [agent] Initializing plugins")
-	err := a.initPlugins()
-	if err != nil {
-		return err
-	}
-
-	startTime := time.Now()
-
-	next := outputC
-
-	var apu []*processorUnit
-	var au *aggregatorUnit
-	if len(a.Config.Aggregators) != 0 {
-		procC := next
-		if len(a.Config.AggProcessors) != 0 {
-			procC, apu, err = a.startProcessors(next, a.Config.AggProcessors)
-			if err != nil {
-				return err
-			}
-		}
-
-		next, au = a.startAggregators(procC, next, a.Config.Aggregators)
-	}
-
-	var pu []*processorUnit
-	if len(a.Config.Processors) != 0 {
-		next, pu, err = a.startProcessors(next, a.Config.Processors)
-		if err != nil {
-			return err
-		}
-	}
-
-	iu := a.testStartInputs(next, a.Config.Inputs)
-
-	var wg sync.WaitGroup
-	if au != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			a.runProcessors(apu)
-		}()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			a.runAggregators(startTime, au)
-		}()
-	}
-
-	if pu != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			a.runProcessors(pu)
-		}()
-	}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		a.testRunInputs(ctx, wait, iu)
-	}()
-
-	wg.Wait()
-
-	log.Printf("D! [agent] Stopped Successfully")
-
-	return nil
-}
-
-// Once runs the full agent for a single gather.
-func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
-	err := a.once(ctx, wait)
-	if err != nil {
-		return err
-	}
-
-	if models.GlobalGatherErrors.Get() != 0 {
-		return fmt.Errorf("input plugins recorded %d errors", models.GlobalGatherErrors.Get())
-	}
-
-	unsent := 0
-	for _, output := range a.Config.Outputs {
-		unsent += output.BufferLength()
-	}
-	if unsent != 0 {
-		return fmt.Errorf("output plugins unable to send %d metrics", unsent)
-	}
-	return nil
-}
-
-// On runs the agent and performs a single gather sending output to the
-// outputF.  After gathering pauses for the wait duration to allow service
-// inputs to run.
-func (a *Agent) once(ctx context.Context, wait time.Duration) error {
-	log.Printf("D! [agent] Initializing plugins")
-	err := a.initPlugins()
-	if err != nil {
-		return err
-	}
-
-	startTime := time.Now()
-
-	log.Printf("D! [agent] Connecting outputs")
-	next, ou, err := a.startOutputs(ctx, a.Config.Outputs)
-	if err != nil {
-		return err
-	}
-
-	var apu []*processorUnit
-	var au *aggregatorUnit
-	if len(a.Config.Aggregators) != 0 {
-		procC := next
-		if len(a.Config.AggProcessors) != 0 {
-			procC, apu, err = a.startProcessors(next, a.Config.AggProcessors)
-			if err != nil {
-				return err
-			}
-		}
-
-		next, au = a.startAggregators(procC, next, a.Config.Aggregators)
-	}
-
-	var pu []*processorUnit
-	if len(a.Config.Processors) != 0 {
-		next, pu, err = a.startProcessors(next, a.Config.Processors)
-		if err != nil {
-			return err
-		}
-	}
-
-	iu := a.testStartInputs(next, a.Config.Inputs)
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		a.runOutputs(ou)
-	}()
-
-	if au != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			a.runProcessors(apu)
-		}()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			a.runAggregators(startTime, au)
-		}()
-	}
-
-	if pu != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			a.runProcessors(pu)
-		}()
-	}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		a.testRunInputs(ctx, wait, iu)
-	}()
-
-	wg.Wait()
-
-	log.Printf("D! [agent] Stopped Successfully")
-
-	return nil
-}
 
 // Returns the rounding precision for metrics.
 func getPrecision(precision, interval time.Duration) time.Duration {
@@ -1080,4 +778,96 @@ func panicRecover(input *models.RunningInput) {
 			"stack trace, configuration, and OS information: " +
 			"https://github.com/influxdata/telegraf/issues/new/choose")
 	}
+}
+
+func (a *Agent) RunningInputs() []*models.RunningInput {
+	a.inputGroupUnit.Lock()
+	defer a.inputGroupUnit.Unlock()
+	runningInputs := []*models.RunningInput{}
+
+	for _, iu := range a.inputGroupUnit.inputUnits {
+		runningInputs = append(runningInputs, iu.input)
+	}
+	return runningInputs
+}
+
+func (a *Agent) RunningProcessors() []models.ProcessorRunner {
+	a.processorGroupUnit.Lock()
+	defer a.processorGroupUnit.Unlock()
+	runningProcessors := []models.ProcessorRunner{}
+	for _, pu := range a.processorGroupUnit.processorUnits {
+		runningProcessors = append(runningProcessors, pu.processor)
+	}
+	return runningProcessors
+}
+
+func (a *Agent) RunningOutputs() []*models.RunningOutput {
+	a.outputGroupUnit.Lock()
+	defer a.outputGroupUnit.Unlock()
+	runningOutputs := []*models.RunningOutput{}
+	// make sure we allocate and use a new slice that doesn't need a lock
+	for _, o := range a.outputGroupUnit.outputs {
+		runningOutputs = append(runningOutputs, o.output)
+	}
+
+	return runningOutputs
+}
+
+func (a *Agent) Context() context.Context {
+	a.inputGroupUnit.Lock()
+	defer a.inputGroupUnit.Unlock()
+	return a.ctx
+}
+
+func (a *Agent) waitForPluginsToStop() {
+	for {
+		a.inputGroupUnit.Lock()
+		if len(a.inputGroupUnit.inputUnits) > 0 {
+			// fmt.Printf("waiting for %d inputs\n", len(a.inputGroupUnit.inputUnits))
+			a.inputGroupUnit.Unlock()
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		break
+	}
+	close(a.inputGroupUnit.dst)
+	a.inputGroupUnit.Unlock()
+	for {
+		time.Sleep(100 * time.Millisecond)
+		a.processorGroupUnit.Lock()
+		if len(a.processorGroupUnit.processorUnits) > 0 {
+			// fmt.Printf("waiting for %d processors\n", len(a.processorGroupUnit.processorUnits))
+			a.processorGroupUnit.Unlock()
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		break
+	}
+	a.processorGroupUnit.Unlock()
+	for {
+		a.outputGroupUnit.Lock()
+		if len(a.outputGroupUnit.outputs) > 0 {
+			// fmt.Printf("waiting for %d outputs\n", len(a.outputGroupUnit.outputs))
+			a.outputGroupUnit.Unlock()
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		break
+	}
+	a.outputGroupUnit.Unlock()
+
+	for {
+		a.configPluginUnit.Lock()
+		if len(a.configPluginUnit.plugins) > 0 {
+			// fmt.Printf("waiting for %d config plugins\n", len(a.configPluginUnit.plugins))
+			a.configPluginUnit.Unlock()
+			continue
+		}
+		break
+	}
+	a.configPluginUnit.Unlock()
+
+	// everything closed; shut down
+	return
+
 }

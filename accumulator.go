@@ -52,6 +52,8 @@ type Accumulator interface {
 	// Upgrade to a TrackingAccumulator with space for maxTracked
 	// metrics/batches.
 	WithTracking(maxTracked int) TrackingAccumulator
+
+	WithNewMetricMaker(logName string, logger Logger, f func(metric Metric) Metric) Accumulator
 }
 
 // TrackingID uniquely identifies a tracked metric group
