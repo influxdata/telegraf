@@ -978,6 +978,10 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		oidNum = out.RenderNumeric()
 	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxy") {
 		//TODO: handle something .iso.2.3 into .1.2.3
+		// have any dots split on dots
+		// look up first name
+		// do in loop and then merge with the dot split above
+		// get node and then look at info -- look inside types.smiNode
 	} else {
 		out, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
 		// ensure modules are loaded or node will be empty (might not error)
