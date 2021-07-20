@@ -111,15 +111,15 @@ GO
   ## This setting/metric is optional and is disabled by default.
   # health_metric = false
 
-  ## Number of query retry attempts to perform. Setting this to N will run the query a total of N+1 times.   
+  ## Number of query retry attempts to perform. Setting this to N will run the query a total of N+1 times.
   # retry_count = 2
 
   ## The amount of time to wait between query retries
   # retry_wait_time = 500ms
 
-  ## If true, subsequent retries will wait with an exponentially increasing wait time. 
-  ## When this property is set to true, the wait time is calculated as (2 ^ retry_attempt) * (retry_wait_time), 
-  ## for 0 <= retry_attempt <= retry_count, retry_attempt++. 
+  ## If true, subsequent retries will wait with an exponentially increasing wait time.
+  ## When this property is set to true, the wait time is calculated as (2 ^ retry_attempt) * (retry_wait_time),
+  ## for 0 <= retry_attempt <= retry_count, retry_attempt++.
   ## When this property is false, the wait time is the same for all retries.
   # retry_exponential_backoff = false
 
