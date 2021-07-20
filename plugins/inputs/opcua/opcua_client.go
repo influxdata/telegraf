@@ -46,6 +46,9 @@ type OpcUA struct {
 	client *opcua.Client
 	req    *ua.ReadRequest
 	opts   []opcua.Option
+
+	// Logger
+	Log telegraf.Logger `toml:"-"`
 }
 
 // OPCTag type
@@ -470,15 +473,16 @@ func (o *OpcUA) getData() error {
 	}
 	o.ReadSuccess.Incr(1)
 	for i, d := range resp.Results {
+		o.nodeData[i].Quality = d.Status
 		if d.Status != ua.StatusOK {
-			return fmt.Errorf("status not OK: %v", d.Status)
+			o.Log.Errorf("status not OK for node %v: %v", o.nodes[i].tag.FieldName, d.Status)
+			continue
 		}
 		o.nodeData[i].TagName = o.nodes[i].tag.FieldName
 		if d.Value != nil {
 			o.nodeData[i].Value = d.Value.Value()
 			o.nodeData[i].DataType = d.Value.Type()
 		}
-		o.nodeData[i].Quality = d.Status
 		o.nodeData[i].TimeStamp = d.ServerTimestamp.String()
 		o.nodeData[i].Time = d.SourceTimestamp.String()
 	}
@@ -532,17 +536,19 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for i, n := range o.nodes {
-		fields := make(map[string]interface{})
-		tags := map[string]string{
-			"id": n.idStr,
-		}
-		for k, v := range n.metricTags {
-			tags[k] = v
-		}
+		if o.nodeData[i].Quality == ua.StatusOK {
+			fields := make(map[string]interface{})
+			tags := map[string]string{
+				"id": n.idStr,
+			}
+			for k, v := range n.metricTags {
+				tags[k] = v
+			}
 
-		fields[o.nodeData[i].TagName] = o.nodeData[i].Value
-		fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
-		acc.AddFields(n.metricName, fields, tags)
+			fields[o.nodeData[i].TagName] = o.nodeData[i].Value
+			fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
+			acc.AddFields(n.metricName, fields, tags)
+		}
 	}
 	return nil
 }
