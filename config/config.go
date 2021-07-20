@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -51,7 +52,7 @@ var (
 		`"`, `\"`,
 		`\`, `\\`,
 	)
-	httpLoadConfigRetryInterval = 10 * time.Second
+	HttpLoadConfigRetryInterval = 10 * time.Second
 
 	// fetchURLRe is a regex to determine whether the requested file should
 	// be fetched from a remote or read from the filesystem.
@@ -70,13 +71,10 @@ type Config struct {
 	InputFilters  []string
 	OutputFilters []string
 
-	Agent       *AgentConfig
-	Inputs      []*models.RunningInput
-	Outputs     []*models.RunningOutput
-	Aggregators []*models.RunningAggregator
-	// Processors have a slice wrapper type because they need to be sorted
-	Processors    models.RunningProcessors
-	AggProcessors models.RunningProcessors
+	Agent      *AgentConfig
+	controller AgentController
+	// ConfigPlugins  []ConfigPlugin
+	// StoragePlugins []StoragePlugin
 }
 
 // NewConfig creates a new struct to hold the Telegraf config.
@@ -96,10 +94,6 @@ func NewConfig() *Config {
 		},
 
 		Tags:          make(map[string]string),
-		Inputs:        make([]*models.RunningInput, 0),
-		Outputs:       make([]*models.RunningOutput, 0),
-		Processors:    make([]*models.RunningProcessor, 0),
-		AggProcessors: make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
 	}
@@ -110,7 +104,6 @@ func NewConfig() *Config {
 		MissingField:  c.missingTomlField,
 	}
 	c.toml = tomlCfg
-
 	return c
 }
 
@@ -204,7 +197,7 @@ type AgentConfig struct {
 // InputNames returns a list of strings of the configured inputs.
 func (c *Config) InputNames() []string {
 	var name []string
-	for _, input := range c.Inputs {
+	for _, input := range c.controller.RunningInputs() {
 		name = append(name, input.Config.Name)
 	}
 	return PluginNameCounts(name)
@@ -213,8 +206,10 @@ func (c *Config) InputNames() []string {
 // AggregatorNames returns a list of strings of the configured aggregators.
 func (c *Config) AggregatorNames() []string {
 	var name []string
-	for _, aggregator := range c.Aggregators {
-		name = append(name, aggregator.Config.Name)
+	for _, processor := range c.controller.RunningProcessors() {
+		if p, ok := processor.(*models.RunningAggregator); ok {
+			name = append(name, p.Config.Name)
+		}
 	}
 	return PluginNameCounts(name)
 }
@@ -222,8 +217,10 @@ func (c *Config) AggregatorNames() []string {
 // ProcessorNames returns a list of strings of the configured processors.
 func (c *Config) ProcessorNames() []string {
 	var name []string
-	for _, processor := range c.Processors {
-		name = append(name, processor.Config.Name)
+	for _, processor := range c.controller.RunningProcessors() {
+		if p, ok := processor.(*models.RunningProcessor); ok {
+			name = append(name, p.Config.Name)
+		}
 	}
 	return PluginNameCounts(name)
 }
@@ -231,10 +228,14 @@ func (c *Config) ProcessorNames() []string {
 // OutputNames returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() []string {
 	var name []string
-	for _, output := range c.Outputs {
+	for _, output := range c.controller.RunningOutputs() {
 		name = append(name, output.Config.Name)
 	}
 	return PluginNameCounts(name)
+}
+
+func (c *Config) SetAgent(agent AgentController) {
+	c.controller = agent
 }
 
 // PluginNameCounts returns a list of sorted plugin names and their count
@@ -285,7 +286,6 @@ var header = `# Telegraf Configuration
 # Environment variables can be used anywhere in this config file, simply surround
 # them with ${}. For strings the variable must be within quotes (ie, "${STR_VAR}"),
 # for numbers and booleans they should be plain (ie, ${INT_VAR}, ${BOOL_VAR})
-
 `
 var globalTagsConfig = `
 # Global tags can be specified here in key="value" format.
@@ -294,7 +294,6 @@ var globalTagsConfig = `
   # rack = "1a"
   ## Environment variables can be used as tags, and throughout the config file
   # user = "$USER"
-
 `
 var agentConfig = `
 # Configuration for telegraf agent
@@ -379,35 +378,30 @@ var outputHeader = `
 ###############################################################################
 #                            OUTPUT PLUGINS                                   #
 ###############################################################################
-
 `
 
 var processorHeader = `
 ###############################################################################
 #                            PROCESSOR PLUGINS                                #
 ###############################################################################
-
 `
 
 var aggregatorHeader = `
 ###############################################################################
 #                            AGGREGATOR PLUGINS                               #
 ###############################################################################
-
 `
 
 var inputHeader = `
 ###############################################################################
 #                            INPUT PLUGINS                                    #
 ###############################################################################
-
 `
 
 var serviceInputHeader = `
 ###############################################################################
 #                            SERVICE INPUT PLUGINS                            #
 ###############################################################################
-
 `
 
 // PrintSampleConfig prints the sample config
@@ -419,7 +413,7 @@ func PrintSampleConfig(
 	processorFilters []string,
 ) {
 	// print headers
-	fmt.Printf(header)
+	fmt.Println(header)
 
 	if len(sectionFilters) == 0 {
 		sectionFilters = sectionDefaults
@@ -430,11 +424,11 @@ func PrintSampleConfig(
 	if sliceContains("outputs", sectionFilters) {
 		if len(outputFilters) != 0 {
 			if len(outputFilters) >= 3 && outputFilters[1] != "none" {
-				fmt.Printf(outputHeader)
+				fmt.Println(outputHeader)
 			}
 			printFilteredOutputs(outputFilters, false)
 		} else {
-			fmt.Printf(outputHeader)
+			fmt.Println(outputHeader)
 			printFilteredOutputs(outputDefaults, false)
 			// Print non-default outputs, commented
 			var pnames []string
@@ -452,11 +446,11 @@ func PrintSampleConfig(
 	if sliceContains("processors", sectionFilters) {
 		if len(processorFilters) != 0 {
 			if len(processorFilters) >= 3 && processorFilters[1] != "none" {
-				fmt.Printf(processorHeader)
+				fmt.Println(processorHeader)
 			}
 			printFilteredProcessors(processorFilters, false)
 		} else {
-			fmt.Printf(processorHeader)
+			fmt.Println(processorHeader)
 			pnames := []string{}
 			for pname := range processors.Processors {
 				pnames = append(pnames, pname)
@@ -470,11 +464,11 @@ func PrintSampleConfig(
 	if sliceContains("aggregators", sectionFilters) {
 		if len(aggregatorFilters) != 0 {
 			if len(aggregatorFilters) >= 3 && aggregatorFilters[1] != "none" {
-				fmt.Printf(aggregatorHeader)
+				fmt.Println(aggregatorHeader)
 			}
 			printFilteredAggregators(aggregatorFilters, false)
 		} else {
-			fmt.Printf(aggregatorHeader)
+			fmt.Println(aggregatorHeader)
 			pnames := []string{}
 			for pname := range aggregators.Aggregators {
 				pnames = append(pnames, pname)
@@ -488,11 +482,11 @@ func PrintSampleConfig(
 	if sliceContains("inputs", sectionFilters) {
 		if len(inputFilters) != 0 {
 			if len(inputFilters) >= 3 && inputFilters[1] != "none" {
-				fmt.Printf(inputHeader)
+				fmt.Println(inputHeader)
 			}
 			printFilteredInputs(inputFilters, false)
 		} else {
-			fmt.Printf(inputHeader)
+			fmt.Println(inputHeader)
 			printFilteredInputs(inputDefaults, false)
 			// Print non-default inputs, commented
 			var pnames []string
@@ -582,7 +576,7 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 	}
 	sort.Strings(servInputNames)
 
-	fmt.Printf(serviceInputHeader)
+	fmt.Println(serviceInputHeader)
 	for _, name := range servInputNames {
 		printConfig(name, servInputs[name], "inputs", commented)
 	}
@@ -608,11 +602,11 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 
 func printFilteredGlobalSections(sectionFilters []string) {
 	if sliceContains("global_tags", sectionFilters) {
-		fmt.Printf(globalTagsConfig)
+		fmt.Println(globalTagsConfig)
 	}
 
 	if sliceContains("agent", sectionFilters) {
-		fmt.Printf(agentConfig)
+		fmt.Println(agentConfig)
 	}
 }
 
@@ -669,7 +663,7 @@ func PrintOutputConfig(name string) error {
 }
 
 // LoadDirectory loads all toml config files found in the specified path, recursively.
-func (c *Config) LoadDirectory(path string) error {
+func (c *Config) LoadDirectory(ctx context.Context, outputCtx context.Context, path string) error {
 	walkfn := func(thispath string, info os.FileInfo, _ error) error {
 		if info == nil {
 			log.Printf("W! Telegraf is not permitted to read %s", thispath)
@@ -688,7 +682,7 @@ func (c *Config) LoadDirectory(path string) error {
 		if len(name) < 6 || name[len(name)-5:] != ".conf" {
 			return nil
 		}
-		err := c.LoadConfig(thispath)
+		err := c.LoadConfig(ctx, outputCtx, thispath)
 		if err != nil {
 			return err
 		}
@@ -702,7 +696,7 @@ func (c *Config) LoadDirectory(path string) error {
 //   2. $HOME/.telegraf/telegraf.conf
 //   3. /etc/telegraf/telegraf.conf
 //
-func getDefaultConfigPath() (string, error) {
+func GetDefaultConfigPath() (string, error) {
 	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
 	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
 	etcfile := "/etc/telegraf/telegraf.conf"
@@ -736,10 +730,10 @@ func isURL(str string) bool {
 }
 
 // LoadConfig loads the given config file and applies it to c
-func (c *Config) LoadConfig(path string) error {
+func (c *Config) LoadConfig(ctx context.Context, outputCtx context.Context, path string) error {
 	var err error
 	if path == "" {
-		if path, err = getDefaultConfigPath(); err != nil {
+		if path, err = GetDefaultConfigPath(); err != nil {
 			return err
 		}
 	}
@@ -748,14 +742,14 @@ func (c *Config) LoadConfig(path string) error {
 		return fmt.Errorf("Error loading config file %s: %w", path, err)
 	}
 
-	if err = c.LoadConfigData(data); err != nil {
+	if err = c.LoadConfigData(ctx, outputCtx, data); err != nil {
 		return fmt.Errorf("Error loading config file %s: %w", path, err)
 	}
 	return nil
 }
 
 // LoadConfigData loads TOML-formatted config data
-func (c *Config) LoadConfigData(data []byte) error {
+func (c *Config) LoadConfigData(ctx context.Context, outputCtx context.Context, data []byte) error {
 	tbl, err := parseConfig(data)
 	if err != nil {
 		return fmt.Errorf("Error parsing data: %s", err)
@@ -816,12 +810,12 @@ func (c *Config) LoadConfigData(data []byte) error {
 				switch pluginSubTable := pluginVal.(type) {
 				// legacy [outputs.influxdb] support
 				case *ast.Table:
-					if err = c.addOutput(pluginName, pluginSubTable); err != nil {
+					if err = c.addOutput(outputCtx, pluginName, pluginSubTable); err != nil {
 						return fmt.Errorf("error parsing %s, %w", pluginName, err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addOutput(pluginName, t); err != nil {
+						if err = c.addOutput(outputCtx, pluginName, t); err != nil {
 							return fmt.Errorf("error parsing %s array, %w", pluginName, err)
 						}
 					}
@@ -838,12 +832,12 @@ func (c *Config) LoadConfigData(data []byte) error {
 				switch pluginSubTable := pluginVal.(type) {
 				// legacy [inputs.cpu] support
 				case *ast.Table:
-					if err = c.addInput(pluginName, pluginSubTable); err != nil {
+					if err = c.addInput(ctx, pluginName, pluginSubTable); err != nil {
 						return fmt.Errorf("error parsing %s, %w", pluginName, err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addInput(pluginName, t); err != nil {
+						if err = c.addInput(ctx, pluginName, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
@@ -889,17 +883,30 @@ func (c *Config) LoadConfigData(data []byte) error {
 					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
+		case "config":
+			for pluginName, pluginVal := range subTable.Fields {
+				switch pluginSubTable := pluginVal.(type) {
+				case []*ast.Table:
+					for _, t := range pluginSubTable {
+						if err = c.addConfigPlugin(ctx, pluginName, t); err != nil {
+							return fmt.Errorf("Error parsing %s, %s", pluginName, err)
+						}
+					}
+				default:
+					return fmt.Errorf("Unsupported config format: %s",
+						pluginName)
+				}
+				if len(c.UnusedFields) > 0 {
+					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
+				}
+			}
 		// Assume it's an input input for legacy config file support if no other
 		// identifiers are present
 		default:
-			if err = c.addInput(name, subTable); err != nil {
+			if err = c.addInput(ctx, name, subTable); err != nil {
 				return fmt.Errorf("Error parsing %s, %s", name, err)
 			}
 		}
-	}
-
-	if len(c.Processors) > 1 {
-		sort.Sort(c.Processors)
 	}
 
 	return nil
@@ -957,8 +964,8 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 
 		if resp.StatusCode != http.StatusOK {
 			if i < retries {
-				log.Printf("Error getting HTTP config.  Retry %d of %d in %s.  Status=%d", i, retries, httpLoadConfigRetryInterval, resp.StatusCode)
-				time.Sleep(httpLoadConfigRetryInterval)
+				log.Printf("Error getting HTTP config.  Retry %d of %d in %s.  Status=%d", i, retries, HttpLoadConfigRetryInterval, resp.StatusCode)
+				time.Sleep(HttpLoadConfigRetryInterval)
 				continue
 			}
 			return nil, fmt.Errorf("Retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status)
@@ -1001,6 +1008,44 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	return toml.Parse(contents)
 }
 
+func (c *Config) addConfigPlugin(ctx context.Context, name string, table *ast.Table) error {
+	creator, ok := ConfigPlugins[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested config plugin: %s", name)
+	}
+	configPlugin := creator()
+
+	if stCfg, ok := table.Fields["storage"]; ok {
+		storageCfgTable := stCfg.(*ast.Table)
+		if cfg, ok := storageCfgTable.Fields["internal"]; ok {
+			// create internal storage plugin
+			// set cfg
+			sp := StoragePlugins["internal"]()
+			if err := c.toml.UnmarshalTable(cfg.(*ast.Table), sp); err != nil {
+				return err
+			}
+			reflect.ValueOf(configPlugin).Elem().FieldByName("Storage").Set(reflect.ValueOf(sp))
+		}
+		delete(table.Fields, "storage")
+	}
+
+	if err := c.toml.UnmarshalTable(table, configPlugin); err != nil {
+		return err
+	}
+
+	// TODO: set storage
+
+	// TODO: this init is expecting to see all of the config, I think?
+	// what it's really getting is a reference to this config object that isn't doing much.
+	if err := configPlugin.Init(ctx, c, c.controller); err != nil {
+		return err
+	}
+
+	go c.controller.RunConfigPlugin(ctx, configPlugin)
+
+	return nil
+}
+
 func (c *Config) addAggregator(name string, table *ast.Table) error {
 	creator, ok := aggregators.Aggregators[name]
 	if !ok {
@@ -1017,7 +1062,16 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 		return err
 	}
 
-	c.Aggregators = append(c.Aggregators, models.NewRunningAggregator(aggregator, conf))
+	ra := models.NewRunningAggregator(aggregator, conf)
+
+	if err := ra.Init(); err != nil {
+		return err
+	}
+
+	c.controller.AddProcessor(ra)
+
+	go c.controller.RunProcessor(ra)
+
 	return nil
 }
 
@@ -1036,14 +1090,14 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	if err != nil {
 		return err
 	}
-	c.Processors = append(c.Processors, rf)
 
-	// save a copy for the aggregator
-	rf, err = c.newRunningProcessor(creator, processorConfig, table)
-	if err != nil {
+	if err := rf.Init(); err != nil {
 		return err
 	}
-	c.AggProcessors = append(c.AggProcessors, rf)
+
+	c.controller.AddProcessor(rf)
+
+	go c.controller.RunProcessor(rf)
 
 	return nil
 }
@@ -1069,7 +1123,7 @@ func (c *Config) newRunningProcessor(
 	return rf, nil
 }
 
-func (c *Config) addOutput(name string, table *ast.Table) error {
+func (c *Config) addOutput(ctx context.Context, name string, table *ast.Table) error {
 	if len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters) {
 		return nil
 	}
@@ -1099,12 +1153,19 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	ro := models.NewRunningOutput(output, outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
-	c.Outputs = append(c.Outputs, ro)
+	ro := models.NewRunningOutput(output, outputConfig,
+		c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
+
+	if err := ro.Init(); err != nil {
+		return err
+	}
+
+	c.controller.AddOutput(ro)
+	go c.controller.RunOutput(ctx, ro)
 	return nil
 }
 
-func (c *Config) addInput(name string, table *ast.Table) error {
+func (c *Config) addInput(ctx context.Context, name string, table *ast.Table) error {
 	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
 		return nil
 	}
@@ -1124,7 +1185,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	if t, ok := input.(parsers.ParserInput); ok {
 		parser, err := c.buildParser(name, table)
 		if err != nil {
-			return err
+			return fmt.Errorf("buildParser: %w", err)
 		}
 		t.SetParser(parser)
 	}
@@ -1132,7 +1193,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	if t, ok := input.(parsers.ParserFuncInput); ok {
 		config, err := c.getParserConfig(name, table)
 		if err != nil {
-			return err
+			return fmt.Errorf("getParserConfig: %w", err)
 		}
 		t.SetParserFunc(func() (parsers.Parser, error) {
 			return parsers.NewParser(config)
@@ -1141,7 +1202,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	pluginConfig, err := c.buildInput(name, table)
 	if err != nil {
-		return err
+		return fmt.Errorf("buildInput: %w", err)
 	}
 
 	if err := c.toml.UnmarshalTable(table, input); err != nil {
@@ -1150,7 +1211,14 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	rp := models.NewRunningInput(input, pluginConfig)
 	rp.SetDefaultTags(c.Tags)
-	c.Inputs = append(c.Inputs, rp)
+
+	if err := rp.Init(); err != nil {
+		return fmt.Errorf("init: %w", err)
+	}
+	c.controller.AddInput(rp)
+
+	go c.controller.RunInput(rp, time.Now())
+
 	return nil
 }
 
@@ -1173,6 +1241,9 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 	c.getFieldString(tbl, "name_suffix", &conf.MeasurementSuffix)
 	c.getFieldString(tbl, "name_override", &conf.NameOverride)
 	c.getFieldString(tbl, "alias", &conf.Alias)
+	if !c.getFieldInt64(tbl, "order", &conf.Order) {
+		conf.Order = -10000000 + int64(tbl.Position.Begin)
+	}
 
 	conf.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
@@ -1201,7 +1272,9 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 func (c *Config) buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{Name: name}
 
-	c.getFieldInt64(tbl, "order", &conf.Order)
+	if !c.getFieldInt64(tbl, "order", &conf.Order) {
+		conf.Order = -10000000 + int64(tbl.Position.Begin)
+	}
 	c.getFieldString(tbl, "alias", &conf.Alias)
 
 	if c.hasErrs() {
@@ -1652,19 +1725,29 @@ func (c *Config) getFieldInt(tbl *ast.Table, fieldName string, target *int) {
 	}
 }
 
-func (c *Config) getFieldInt64(tbl *ast.Table, fieldName string, target *int64) {
-	if node, ok := tbl.Fields[fieldName]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if iAst, ok := kv.Value.(*ast.Integer); ok {
-				i, err := iAst.Int()
-				if err != nil {
-					c.addError(tbl, fmt.Errorf("unexpected int type %q, expecting int", iAst.Value))
-					return
-				}
-				*target = i
-			}
-		}
+// getFieldInt64 returns true if the value was defined in config
+func (c *Config) getFieldInt64(tbl *ast.Table, fieldName string, target *int64) bool {
+	node, ok := tbl.Fields[fieldName]
+	if !ok {
+		return false
 	}
+	kv, ok := node.(*ast.KeyValue)
+	if !ok {
+		c.addError(tbl, fmt.Errorf("expected key/value pair for node %q, but got %t", fieldName, node))
+		return false
+	}
+	iAst, ok := kv.Value.(*ast.Integer)
+	if !ok {
+		c.addError(tbl, fmt.Errorf("expected int variable type for %q, but got %t", fieldName, kv.Value))
+		return false
+	}
+	i, err := iAst.Int()
+	if err != nil {
+		c.addError(tbl, fmt.Errorf("unexpected int type %q, expecting int", iAst.Value))
+		return false
+	}
+	*target = i
+	return true
 }
 
 func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string, target *[]string) {
@@ -1743,6 +1826,24 @@ func (c *Config) firstErr() error {
 
 func (c *Config) addError(tbl *ast.Table, err error) {
 	c.errs = append(c.errs, fmt.Errorf("line %d:%d: %w", tbl.Line, tbl.Position, err))
+}
+
+// Inputs is a convenience method that lets you get a list of running Inputs from the config
+// this is supported for historical reasons
+func (c *Config) Inputs() []*models.RunningInput {
+	return c.controller.RunningInputs()
+}
+
+// Processors is a convenience method that lets you get a list of running Processors from the config
+// this is supported for historical reasons
+func (c *Config) Processors() []models.ProcessorRunner {
+	return c.controller.RunningProcessors()
+}
+
+// Outputs is a convenience method that lets you get a list of running Outputs from the config
+// this is supported for historical reasons
+func (c *Config) Outputs() []*models.RunningOutput {
+	return c.controller.RunningOutputs()
 }
 
 // unwrappable lets you retrieve the original telegraf.Processor from the

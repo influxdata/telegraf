@@ -1,6 +1,7 @@
-package config
+package config_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -11,19 +12,28 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
+	_ "github.com/influxdata/telegraf/plugins/aggregators/minmax"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	_ "github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	_ "github.com/influxdata/telegraf/plugins/outputs/file"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	_ "github.com/influxdata/telegraf/plugins/processors/rename"
 	"github.com/stretchr/testify/require"
 )
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
 	require.NoError(t, os.Setenv("MY_TEST_SERVER", "192.168.1.1"))
 	require.NoError(t, os.Setenv("TEST_INTERVAL", "10s"))
-	c.LoadConfig("./testdata/single_plugin_env_vars.toml")
+	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/single_plugin_env_vars.toml")
+	require.NoError(t, err)
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"192.168.1.1"}
@@ -54,16 +64,22 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	}
 	inputConfig.Tags = make(map[string]string)
 
+	require.Len(t, c.Inputs(), 1)
+
 	// Ignore Log and Parser
-	c.Inputs[0].Input.(*MockupInputPlugin).Log = nil
-	c.Inputs[0].Input.(*MockupInputPlugin).parser = nil
-	require.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct mockup struct.")
-	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct input metadata.")
+	c.Inputs()[0].Input.(*MockupInputPlugin).Log = nil
+	c.Inputs()[0].Input.(*MockupInputPlugin).parser = nil
+	require.Equal(t, input, c.Inputs()[0].Input, "Testdata did not produce a correct mockup struct.")
+	require.Equal(t, inputConfig, c.Inputs()[0].Config, "Testdata did not produce correct input metadata.")
 }
 
 func TestConfig_LoadSingleInput(t *testing.T) {
-	c := NewConfig()
-	c.LoadConfig("./testdata/single_plugin.toml")
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/single_plugin.toml")
+	require.NoError(t, err)
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"localhost"}
@@ -94,17 +110,22 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	}
 	inputConfig.Tags = make(map[string]string)
 
+	require.Len(t, c.Inputs(), 1)
+
 	// Ignore Log and Parser
-	c.Inputs[0].Input.(*MockupInputPlugin).Log = nil
-	c.Inputs[0].Input.(*MockupInputPlugin).parser = nil
-	require.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct memcached struct.")
-	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
+	c.Inputs()[0].Input.(*MockupInputPlugin).Log = nil
+	c.Inputs()[0].Input.(*MockupInputPlugin).parser = nil
+	require.Equal(t, input, c.Inputs()[0].Input, "Testdata did not produce a correct memcached struct.")
+	require.Equal(t, inputConfig, c.Inputs()[0].Config, "Testdata did not produce correct memcached metadata.")
 }
 
 func TestConfig_LoadDirectory(t *testing.T) {
-	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/single_plugin.toml"))
-	require.NoError(t, c.LoadDirectory("./testdata/subconfig"))
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	require.NoError(t, c.LoadConfig(context.Background(), context.Background(), "./testdata/single_plugin.toml"))
+	require.NoError(t, c.LoadDirectory(context.Background(), context.Background(), "./testdata/subconfig"))
 
 	// Create the expected data
 	expectedPlugins := make([]*MockupInputPlugin, 4)
@@ -189,9 +210,9 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedConfigs[3].Tags = make(map[string]string)
 
 	// Check the generated plugins
-	require.Len(t, c.Inputs, len(expectedPlugins))
-	require.Len(t, c.Inputs, len(expectedConfigs))
-	for i, plugin := range c.Inputs {
+	require.Len(t, c.Inputs(), len(expectedPlugins))
+	require.Len(t, c.Inputs(), len(expectedConfigs))
+	for i, plugin := range c.Inputs() {
 		input := plugin.Input.(*MockupInputPlugin)
 		// Check the logger and ignore it for comparison
 		require.NotNil(t, input.Log)
@@ -208,59 +229,75 @@ func TestConfig_LoadDirectory(t *testing.T) {
 }
 
 func TestConfig_LoadSpecialTypes(t *testing.T) {
-	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/special_types.toml"))
-	require.Len(t, c.Inputs, 1)
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/special_types.toml")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(c.Inputs()))
 
-	input, ok := c.Inputs[0].Input.(*MockupInputPlugin)
+	input, ok := c.Inputs()[0].Input.(*MockupInputPlugin)
 	require.True(t, ok)
 	// Tests telegraf duration parsing.
-	require.Equal(t, Duration(time.Second), input.WriteTimeout)
-	// Tests telegraf size parsing.
+	require.Equal(t, Duration(time.Second), input.WriteTimeout) // Tests telegraf size parsing.
 	require.Equal(t, Size(1024*1024), input.MaxBodySize)
 	// Tests toml multiline basic strings.
 	require.Equal(t, "/path/to/my/cert", strings.TrimRight(input.TLSCert, "\r\n"))
 }
 
 func TestConfig_FieldNotDefined(t *testing.T) {
-	c := NewConfig()
-	err := c.LoadConfig("./testdata/invalid_field.toml")
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/invalid_field.toml")
 	require.Error(t, err, "invalid field name")
 	require.Equal(t, "Error loading config file ./testdata/invalid_field.toml: plugin inputs.http_listener_v2: line 1: configuration specified the fields [\"not_a_field\"], but they weren't used", err.Error())
 }
 
 func TestConfig_WrongFieldType(t *testing.T) {
-	c := NewConfig()
-	err := c.LoadConfig("./testdata/wrong_field_type.toml")
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/wrong_field_type.toml")
 	require.Error(t, err, "invalid field type")
 	require.Equal(t, "Error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Port) cannot unmarshal TOML string into int", err.Error())
 
-	c = NewConfig()
-	err = c.LoadConfig("./testdata/wrong_field_type2.toml")
+	c = config.NewConfig()
+	c.SetAgent(agentController)
+	err = c.LoadConfig(context.Background(), context.Background(), "./testdata/wrong_field_type2.toml")
 	require.Error(t, err, "invalid field type2")
 	require.Equal(t, "Error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Methods) cannot unmarshal TOML string into []string", err.Error())
 }
 
 func TestConfig_InlineTables(t *testing.T) {
 	// #4098
-	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/inline_table.toml"))
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	require.NoError(t, c.LoadConfig(context.Background(), context.Background(), "./testdata/inline_table.toml"))
 	require.Len(t, c.Outputs, 2)
 
-	output, ok := c.Outputs[1].Output.(*MockupOuputPlugin)
+	output, ok := c.Outputs()[1].Output.(*MockupOuputPlugin)
 	require.True(t, ok)
 	require.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, output.Headers)
-	require.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
+	require.Equal(t, []string{"org_id"}, c.Outputs()[0].Config.Filter.TagInclude)
 }
 
 func TestConfig_SliceComment(t *testing.T) {
 	t.Skipf("Skipping until #3642 is resolved")
 
-	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/slice_comment.toml"))
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	require.NoError(t, c.LoadConfig(context.Background(), context.Background(), "./testdata/slice_comment.toml"))
 	require.Len(t, c.Outputs, 1)
 
-	output, ok := c.Outputs[0].Output.(*MockupOuputPlugin)
+	output, ok := c.Outputs()[0].Output.(*MockupOuputPlugin)
 	require.True(t, ok)
 	require.Equal(t, []string{"test"}, output.Scopes)
 }
@@ -268,20 +305,26 @@ func TestConfig_SliceComment(t *testing.T) {
 func TestConfig_BadOrdering(t *testing.T) {
 	// #3444: when not using inline tables, care has to be taken so subsequent configuration
 	// doesn't become part of the table. This is not a bug, but TOML syntax.
-	c := NewConfig()
-	err := c.LoadConfig("./testdata/non_slice_slice.toml")
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/non_slice_slice.toml")
 	require.Error(t, err, "bad ordering")
 	require.Equal(t, "Error loading config file ./testdata/non_slice_slice.toml: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
 }
 
 func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 	// #8256 Cannot use empty string as the namespace prefix
-	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/azure_monitor.toml"))
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	require.NoError(t, c.LoadConfig(context.Background(), context.Background(), "./testdata/azure_monitor.toml"))
 	require.Len(t, c.Outputs, 2)
 
 	expectedPrefix := []string{"Telegraf/", ""}
-	for i, plugin := range c.Outputs {
+	for i, plugin := range c.Outputs() {
 		output, ok := plugin.Output.(*MockupOuputPlugin)
 		require.True(t, ok)
 		require.Equal(t, expectedPrefix[i], output.NamespacePrefix)
@@ -289,7 +332,7 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 }
 
 func TestConfig_URLRetries3Fails(t *testing.T) {
-	httpLoadConfigRetryInterval = 0 * time.Second
+	config.HttpLoadConfigRetryInterval = 0 * time.Second
 	responseCounter := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -299,15 +342,18 @@ func TestConfig_URLRetries3Fails(t *testing.T) {
 
 	expected := fmt.Sprintf("Error loading config file %s: Retry 3 of 3 failed to retrieve remote config: 404 Not Found", ts.URL)
 
-	c := NewConfig()
-	err := c.LoadConfig(ts.URL)
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	err := c.LoadConfig(context.Background(), context.Background(), ts.URL)
 	require.Error(t, err)
 	require.Equal(t, expected, err.Error())
 	require.Equal(t, 4, responseCounter)
 }
 
 func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
-	httpLoadConfigRetryInterval = 0 * time.Second
+	config.HttpLoadConfigRetryInterval = 0 * time.Second
 	responseCounter := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if responseCounter <= 2 {
@@ -319,8 +365,11 @@ func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c := NewConfig()
-	require.NoError(t, c.LoadConfig(ts.URL))
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	require.NoError(t, c.LoadConfig(context.Background(), context.Background(), ts.URL))
 	require.Equal(t, 4, responseCounter)
 }
 
@@ -330,19 +379,25 @@ func TestConfig_getDefaultConfigPathFromEnvURL(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c := NewConfig()
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
 	err := os.Setenv("TELEGRAF_CONFIG_PATH", ts.URL)
 	require.NoError(t, err)
-	configPath, err := getDefaultConfigPath()
+	configPath, err := config.GetDefaultConfigPath()
 	require.NoError(t, err)
 	require.Equal(t, ts.URL, configPath)
-	err = c.LoadConfig("")
+	err = c.LoadConfig(context.Background(), context.Background(), "")
 	require.NoError(t, err)
 }
 
 func TestConfig_URLLikeFileName(t *testing.T) {
-	c := NewConfig()
-	err := c.LoadConfig("http:##www.example.com.conf")
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	err := c.LoadConfig(context.Background(), context.Background(), "http:##www.example.com.conf")
 	require.Error(t, err)
 
 	if runtime.GOOS == "windows" {
@@ -352,6 +407,95 @@ func TestConfig_URLLikeFileName(t *testing.T) {
 		require.Equal(t, "Error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: no such file or directory", err.Error())
 	}
 }
+
+func TestConfig_OrderingProcessorsWithAggregators(t *testing.T) {
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/processor_and_aggregator_order.toml")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(c.Inputs()))
+	require.Equal(t, 4, len(c.Processors()))
+	require.Equal(t, 1, len(c.Outputs()))
+
+	actual := map[string]int64{}
+	expected := map[string]int64{
+		"aggregators.minmax::one":   1,
+		"processors.rename::two":    2,
+		"aggregators.minmax::three": 3,
+		"processors.rename::four":   4,
+	}
+	for _, p := range c.Processors() {
+		actual[p.LogName()] = p.Order()
+	}
+	require.EqualValues(t, expected, actual)
+}
+
+func TestConfig_DefaultOrderingProcessorsWithAggregators(t *testing.T) {
+	c := config.NewConfig()
+	agentController := &testAgentController{}
+	c.SetAgent(agentController)
+	defer agentController.reset()
+	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/processor_and_aggregator_unordered.toml")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(c.Inputs()))
+	require.Equal(t, 4, len(c.Processors()))
+	require.Equal(t, 1, len(c.Outputs()))
+
+	actual := map[string]int64{}
+	// negative orders are defaults based on file position order  -10,000,000
+	expected := map[string]int64{
+		"aggregators.minmax::one":   -9999984,
+		"processors.rename::two":    -9999945,
+		"aggregators.minmax::three": -9999907,
+		"processors.rename::four":   4,
+	}
+	for _, p := range c.Processors() {
+		actual[p.LogName()] = p.Order()
+	}
+	require.EqualValues(t, expected, actual)
+}
+
+type testAgentController struct {
+	inputs     []*models.RunningInput
+	processors []models.ProcessorRunner
+	outputs    []*models.RunningOutput
+	// configs    []*config.RunningConfigPlugin
+}
+
+func (a *testAgentController) reset() {
+	a.inputs = nil
+	a.processors = nil
+	a.outputs = nil
+	// a.configs = nil
+}
+
+func (a *testAgentController) RunningInputs() []*models.RunningInput {
+	return a.inputs
+}
+func (a *testAgentController) RunningProcessors() []models.ProcessorRunner {
+	return a.processors
+}
+func (a *testAgentController) RunningOutputs() []*models.RunningOutput {
+	return a.outputs
+}
+func (a *testAgentController) AddInput(input *models.RunningInput) {
+	a.inputs = append(a.inputs, input)
+}
+func (a *testAgentController) AddProcessor(processor models.ProcessorRunner) {
+	a.processors = append(a.processors, processor)
+}
+func (a *testAgentController) AddOutput(output *models.RunningOutput) {
+	a.outputs = append(a.outputs, output)
+}
+func (a *testAgentController) RunInput(input *models.RunningInput, startTime time.Time)        {}
+func (a *testAgentController) RunProcessor(p models.ProcessorRunner)                           {}
+func (a *testAgentController) RunOutput(ctx context.Context, output *models.RunningOutput)     {}
+func (a *testAgentController) RunConfigPlugin(ctx context.Context, plugin config.ConfigPlugin) {}
+func (a *testAgentController) StopInput(i *models.RunningInput)                                {}
+func (a *testAgentController) StopProcessor(p models.ProcessorRunner)                          {}
+func (a *testAgentController) StopOutput(p *models.RunningOutput)                              {}
 
 /*** Mockup INPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupInputPlugin struct {
