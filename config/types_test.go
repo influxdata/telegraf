@@ -13,6 +13,7 @@ import (
 
 func TestConfigDuration(t *testing.T) {
 	c := config.NewConfig()
+	c.SetAgent(&testAgentController{})
 	err := c.LoadConfigData(context.Background(), context.Background(), []byte(`
 [[processors.reverse_dns]]
   cache_ttl = "3h"
@@ -23,7 +24,6 @@ func TestConfigDuration(t *testing.T) {
     field = "source_ip"
     dest = "source_name"
 `))
-	c.SetAgent(&testAgentController{})
 	require.NoError(t, err)
 	require.Len(t, c.Processors(), 1)
 	p := c.Processors()[0].(*models.RunningProcessor).Processor.(*reverse_dns.ReverseDNS)
