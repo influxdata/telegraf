@@ -379,3 +379,73 @@ func TestSendCounterMetricWithoutTags(t *testing.T) {
 	err = d.Write(metrics)
 	require.NoError(t, err)
 }
+
+var warnfCalledTimes int
+
+type loggerStub struct {
+	testutil.Logger
+}
+
+func (l loggerStub) Warnf(format string, args ...interface{}) {
+	warnfCalledTimes++
+}
+
+func TestSendUnsupportedMetric(t *testing.T) {
+	warnfCalledTimes = 0
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("should not export because the only metric is an invalid type")
+	}))
+	defer ts.Close()
+
+	d := &Dynatrace{}
+
+	logStub := loggerStub{}
+
+	d.URL = ts.URL
+	d.APIToken = "123"
+	d.Log = logStub
+	err := d.Init()
+	require.NoError(t, err)
+	err = d.Connect()
+	require.NoError(t, err)
+
+	// Init metrics
+
+	m1 := metric.New(
+		"mymeasurement",
+		map[string]string{},
+		map[string]interface{}{"metric1": "unsupported_type"},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	metrics := []telegraf.Metric{m1}
+
+	err = d.Write(metrics)
+	require.NoError(t, err)
+	// Warnf called for invalid export
+	require.Equal(t, 1, warnfCalledTimes)
+
+	err = d.Write(metrics)
+	require.NoError(t, err)
+	// Warnf skipped for more invalid exports with the same name
+	require.Equal(t, 1, warnfCalledTimes)
+
+	m2 := metric.New(
+		"mymeasurement",
+		map[string]string{},
+		map[string]interface{}{"metric2": "unsupported_type"},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	metrics = []telegraf.Metric{m2}
+
+	err = d.Write(metrics)
+	require.NoError(t, err)
+	// Warnf called again for invalid export with a new metric name
+	require.Equal(t, 2, warnfCalledTimes)
+
+	err = d.Write(metrics)
+	require.NoError(t, err)
+	// Warnf skipped for more invalid exports with the same name
+	require.Equal(t, 2, warnfCalledTimes)
+}

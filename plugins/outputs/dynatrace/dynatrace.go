@@ -200,17 +200,18 @@ func (d *Dynatrace) send(msg string) error {
 	}
 	defer resp.Body.Close()
 
-	// print metric line results as info log
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusBadRequest {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			d.Log.Errorf("Dynatrace error reading response")
-		}
-		bodyString := string(bodyBytes)
-		d.Log.Debugf("Dynatrace returned: %s", bodyString)
-	} else {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusBadRequest {
 		return fmt.Errorf("request failed with response code:, %d", resp.StatusCode)
 	}
+
+	// print metric line results as info log
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		d.Log.Errorf("Dynatrace error reading response")
+	}
+	bodyString := string(bodyBytes)
+	d.Log.Debugf("Dynatrace returned: %s", bodyString)
+
 	return nil
 }
 
@@ -236,6 +237,15 @@ func (d *Dynatrace) Init() error {
 		},
 		Timeout: time.Duration(d.Timeout),
 	}
+
+	dims := []dimensions.Dimension{}
+	for key, value := range d.DefaultDimensions {
+		dims = append(dims, dimensions.NewDimension(key, value))
+	}
+	d.normalizedDefaultDimensions = dimensions.NewNormalizedDimensionList(dims...)
+	d.normalizedStaticDimensions = dimensions.NewNormalizedDimensionList(dimensions.NewDimension("dt.metrics.source", "telegraf"))
+	d.loggedMetrics = make(map[string]bool)
+
 	return nil
 }
 
