@@ -224,17 +224,19 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 
 		switch apiError := err.(type) {
 		case *DatabaseNotFoundError:
-			if !i.SkipDatabaseCreation {
-				allErrorsAreDatabaseNotFoundErrors = false
-				err := client.CreateDatabase(ctx, apiError.Database)
-				if err != nil {
-					i.Log.Errorf("When writing to [%s]: database %q not found and failed to recreate",
-						client.URL(), apiError.Database)
-				} else {
-					// try another client, if all clients fail with this error, do not return error
-					continue
-				}
+			if i.SkipDatabaseCreation {
+				continue
 			}
+
+			err := client.CreateDatabase(ctx, apiError.Database)
+			if err != nil {
+				i.Log.Errorf("When writing to [%s]: database %q not found and failed to recreate",
+					client.URL(), apiError.Database)
+			} else {
+				return errors.New("database created; retry write")
+			}
+		default:
+			allErrorsAreDatabaseNotFoundErrors = false
 		}
 	}
 
@@ -295,6 +297,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 	}
 
 	if !i.SkipDatabaseCreation {
+		fmt.Println("I am the request in http client")
 		err = c.CreateDatabase(ctx, c.Database())
 		if err != nil {
 			i.Log.Warnf("When writing to [%s]: database %q creation failed: %v",

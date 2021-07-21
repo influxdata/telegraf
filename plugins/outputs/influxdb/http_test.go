@@ -1079,6 +1079,20 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 		handlers: []http.HandlerFunc{
 			func(w http.ResponseWriter, r *http.Request) {
 				switch r.URL.Path {
+				case "/query":
+					if r.FormValue("q") != `CREATE DATABASE "telegraf"` {
+						w.WriteHeader(http.StatusInternalServerError)
+						return
+					}
+					w.WriteHeader(http.StatusForbidden)
+					w.Write([]byte(`{"results": [{"error": "error authorizing query"}]}`))
+				default:
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			},
+			func(w http.ResponseWriter, r *http.Request) {
+				fmt.Println("one:", r.URL.Path, r.FormValue("q"))
+				switch r.URL.Path {
 				case "/write":
 					w.WriteHeader(http.StatusNotFound)
 					w.Write([]byte(`{"error": "database not found: \"telegraf\""}`))
@@ -1087,6 +1101,7 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 				}
 			},
 			func(w http.ResponseWriter, r *http.Request) {
+				fmt.Println("two:", r.URL.Path, r.FormValue("q"))
 				switch r.URL.Path {
 				case "/query":
 					if r.FormValue("q") != `CREATE DATABASE "telegraf"` {
@@ -1099,6 +1114,7 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 				}
 			},
 			func(w http.ResponseWriter, r *http.Request) {
+				fmt.Println("three:", r.URL.Path)
 				switch r.URL.Path {
 				case "/write":
 					w.WriteHeader(http.StatusNoContent)
@@ -1133,8 +1149,12 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 
 	err = output.Connect()
 	require.NoError(t, err)
+
+	// this write fails, but we're expecting it to drop the metrics and not retry, so no error.
 	err = output.Write(metrics)
 	require.NoError(t, err)
+
+	// expects write to succeed
 	err = output.Write(metrics)
 	require.NoError(t, err)
 
