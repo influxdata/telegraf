@@ -1,12 +1,14 @@
 package reverse_dns
 
 import (
+	"context"
 	"runtime"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
@@ -54,8 +56,11 @@ func TestSimpleReverseLookup(t *testing.T) {
 
 func TestLoadingConfig(t *testing.T) {
 	c := config.NewConfig()
-	err := c.LoadConfigData([]byte("[[processors.reverse_dns]]\n" + sampleConfig))
+	ctx := context.Background()
+	a := agent.NewAgent(ctx, c)
+	c.SetAgent(a)
+	err := c.LoadConfigData(ctx, ctx, []byte("[[processors.reverse_dns]]\n"+sampleConfig))
 	require.NoError(t, err)
 
-	require.Len(t, c.Processors, 1)
+	require.Len(t, c.Processors(), 1)
 }

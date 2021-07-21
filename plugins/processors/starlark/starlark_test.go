@@ -3189,7 +3189,7 @@ func TestAllScriptTestData(t *testing.T) {
 	paths := []string{"testdata", "plugins/processors/starlark/testdata"}
 	for _, testdataPath := range paths {
 		filepath.Walk(testdataPath, func(path string, info os.FileInfo, err error) error {
-			if info == nil || info.IsDir() {
+			if info == nil || info.IsDir() || !strings.HasSuffix(info.Name(), ".star") {
 				return nil
 			}
 			fn := path

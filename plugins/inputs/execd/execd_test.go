@@ -29,10 +29,11 @@ func TestSettingConfigWorks(t *testing.T) {
 		signal = "SIGHUP"
 	`
 	conf := config.NewConfig()
-	require.NoError(t, conf.LoadConfigData([]byte(cfg)))
+	conf.SetAgent(&testAgentController{})
+	require.NoError(t, conf.LoadConfigData(context.Background(), context.Background(), []byte(cfg)))
 
-	require.Len(t, conf.Inputs, 1)
-	inp, ok := conf.Inputs[0].Input.(*Execd)
+	require.Len(t, conf.Inputs(), 1)
+	inp, ok := conf.Inputs()[0].Input.(*Execd)
 	require.True(t, ok)
 	require.EqualValues(t, []string{"a", "b", "c"}, inp.Command)
 	require.EqualValues(t, 1*time.Minute, inp.RestartDelay)
@@ -194,3 +195,43 @@ func runCounterProgram() error {
 	}
 	return nil
 }
+
+type testAgentController struct {
+	inputs     []*models.RunningInput
+	processors []models.ProcessorRunner
+	outputs    []*models.RunningOutput
+	// configs    []*config.RunningConfigPlugin
+}
+
+func (a *testAgentController) reset() {
+	a.inputs = nil
+	a.processors = nil
+	a.outputs = nil
+	// a.configs = nil
+}
+
+func (a *testAgentController) RunningInputs() []*models.RunningInput {
+	return a.inputs
+}
+func (a *testAgentController) RunningProcessors() []models.ProcessorRunner {
+	return a.processors
+}
+func (a *testAgentController) RunningOutputs() []*models.RunningOutput {
+	return a.outputs
+}
+func (a *testAgentController) AddInput(input *models.RunningInput) {
+	a.inputs = append(a.inputs, input)
+}
+func (a *testAgentController) AddProcessor(processor models.ProcessorRunner) {
+	a.processors = append(a.processors, processor)
+}
+func (a *testAgentController) AddOutput(output *models.RunningOutput) {
+	a.outputs = append(a.outputs, output)
+}
+func (a *testAgentController) RunInput(input *models.RunningInput, startTime time.Time)        {}
+func (a *testAgentController) RunProcessor(p models.ProcessorRunner)                           {}
+func (a *testAgentController) RunOutput(ctx context.Context, output *models.RunningOutput)     {}
+func (a *testAgentController) RunConfigPlugin(ctx context.Context, plugin config.ConfigPlugin) {}
+func (a *testAgentController) StopInput(i *models.RunningInput)                                {}
+func (a *testAgentController) StopProcessor(p models.ProcessorRunner)                          {}
+func (a *testAgentController) StopOutput(p *models.RunningOutput)                              {}
