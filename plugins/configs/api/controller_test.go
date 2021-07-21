@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
@@ -431,7 +431,7 @@ func TestExampleWorstPlugin(t *testing.T) {
 			1,
 		},
 	}
-	readTimeout := internal.Duration{Duration: 5 * time.Second}
+	readTimeout := config.Duration(5 * time.Second)
 	b := true
 	var i int = 1
 	f := float64(6)
@@ -441,10 +441,10 @@ func TestExampleWorstPlugin(t *testing.T) {
 	}
 	expected := ExampleWorstPlugin{
 		Elapsed:       config.Duration(3 * time.Second),
-		Elapsed2:      internal.Duration{Duration: 4 * time.Second},
+		Elapsed2:      config.Duration(4 * time.Second),
 		ReadTimeout:   &readTimeout,
 		Size1:         config.Size(8 * 1024 * 1024),
-		Size2:         internal.Size{Size: 9 * 1024 * 1024},
+		Size2:         config.Size(9 * 1024 * 1024),
 		PointerStruct: &baseopts{Field: "f"},
 		B:             &b,
 		I:             &i,
@@ -484,8 +484,8 @@ func TestExampleWorstPlugin(t *testing.T) {
 				},
 			},
 		},
-		Percentiles: []internal.Number{
-			{Value: 1},
+		Percentiles: []json.Number{
+			"1",
 		},
 		FloatPercentiles: []float64{1.0},
 		MapOfStructs: map[string]baseopts{
@@ -514,10 +514,10 @@ func TestExampleWorstPlugin(t *testing.T) {
 
 type ExampleWorstPlugin struct {
 	Elapsed           config.Duration
-	Elapsed2          internal.Duration
-	ReadTimeout       *internal.Duration
+	Elapsed2          config.Duration
+	ReadTimeout       *config.Duration
 	Size1             config.Size
-	Size2             internal.Size
+	Size2             config.Size
 	PointerStruct     *baseopts
 	B                 *bool
 	I                 *int
@@ -535,7 +535,7 @@ type ExampleWorstPlugin struct {
 	Templates         []*baseopts
 	Value             interface{} `json:"value"`
 	DeviceTags        map[string][]map[string]string
-	Percentiles       []internal.Number
+	Percentiles       []json.Number
 	FloatPercentiles  []float64
 	MapOfStructs      map[string]baseopts
 	Command           []interface{}

@@ -27,7 +27,7 @@ func TestAgentPluginControllerLifecycle(t *testing.T) {
 	a.AddInput(ri)
 	go a.RunInput(ri, time.Now())
 
-	m, _ := metric.New("testing",
+	m := metric.New("testing",
 		map[string]string{
 			"country": "canada",
 		},
@@ -104,7 +104,7 @@ func TestAgentPluginConnectionsAfterAddAndRemoveProcessor(t *testing.T) {
 	waitForStatus(t, ro, "running", 1*time.Second)
 
 	// inject a metric into the input plugin as if it collected it
-	m, _ := metric.New("mojo", nil, map[string]interface{}{"jenkins": "leroy"}, now)
+	m := metric.New("mojo", nil, map[string]interface{}{"jenkins": "leroy"}, now)
 	inp.injectMetric(m)
 
 	// wait for the output to get it

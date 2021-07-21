@@ -555,11 +555,11 @@ func getFieldConfig(p interface{}, cfg map[string]FieldConfig) {
 		if f.IsValid() && !f.IsZero() {
 			fc.Default = f.Interface()
 			// special handling for internal struct types so the struct doesn't serialize to an object.
-			if d, ok := fc.Default.(internal.Duration); ok {
-				fc.Default = d.Duration
+			if d, ok := fc.Default.(config.Duration); ok {
+				fc.Default = d
 			}
-			if s, ok := fc.Default.(internal.Size); ok {
-				fc.Default = s.Size
+			if s, ok := fc.Default.(config.Size); ok {
+				fc.Default = s
 			}
 		}
 

@@ -154,8 +154,8 @@ func (a *Agent) RunWithAPI(outputCancel context.CancelFunc) {
 
 	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s",
-		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
-		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
+		time.Duration(a.Config.Agent.Interval), a.Config.Agent.Quiet,
+		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
 
 	a.inputGroupUnit.relay.Start()
 
@@ -222,17 +222,17 @@ func (a *Agent) startInput(input *models.RunningInput) error {
 // RunInput is a blocking call that runs an input forever
 func (a *Agent) RunInput(input *models.RunningInput, startTime time.Time) {
 	// default to agent interval but check for override
-	interval := a.Config.Agent.Interval.Duration
+	interval := time.Duration(a.Config.Agent.Interval)
 	if input.Config.Interval != 0 {
 		interval = input.Config.Interval
 	}
 	// default to agent precision but check for override
-	precision := a.Config.Agent.Precision.Duration
+	precision := time.Duration(a.Config.Agent.Precision)
 	if input.Config.Precision != 0 {
 		precision = input.Config.Precision
 	}
 	// default to agent collection_jitter but check for override
-	jitter := a.Config.Agent.CollectionJitter.Duration
+	jitter := time.Duration(a.Config.Agent.CollectionJitter)
 	if input.Config.CollectionJitter != 0 {
 		jitter = input.Config.CollectionJitter
 	}
@@ -622,8 +622,8 @@ func (a *Agent) RunOutput(ctx context.Context, output *models.RunningOutput) {
 	}
 	a.outputGroupUnit.Unlock()
 
-	interval := a.Config.Agent.FlushInterval.Duration
-	jitter := a.Config.Agent.FlushJitter.Duration
+	interval := time.Duration(a.Config.Agent.FlushInterval)
+	jitter := time.Duration(a.Config.Agent.FlushJitter)
 	// Overwrite agent flush_interval if this plugin has its own.
 	if output.Config.FlushInterval != 0 {
 		interval = output.Config.FlushInterval
