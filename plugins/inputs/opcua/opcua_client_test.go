@@ -1,12 +1,15 @@
 package opcua_client
 
 import (
+	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

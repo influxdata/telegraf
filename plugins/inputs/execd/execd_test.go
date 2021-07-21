@@ -2,6 +2,7 @@ package execd
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"os"
