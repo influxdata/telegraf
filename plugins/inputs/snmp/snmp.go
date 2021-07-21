@@ -976,12 +976,25 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		}
 
 		oidNum = out.RenderNumeric()
-	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxy") {
+	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxyz") {
 		//TODO: handle something .iso.2.3 into .1.2.3
 		// have any dots split on dots
 		// look up first name
 		// do in loop and then merge with the dot split above
 		// get node and then look at info -- look inside types.smiNode
+		s := strings.Split(oid, ".")
+		//oidNum := make([]string, len(s))
+		for i := range s {
+			if strings.ContainsAny(s[i], "abcdefghijklmnopqrstuvwxyz") {
+				out, err = gosmi.GetNode(s[i])
+				if err != nil {
+					return "", "", "", "", err
+				}
+				s[i] = out.RenderNumeric()
+			}
+		}
+		oidNum := strings.Join(s, ".")
+		out, _ = gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
 	} else {
 		out, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
 		// ensure modules are loaded or node will be empty (might not error)
@@ -997,5 +1010,6 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	}
 	mibName = oidText[:i]
 	oidText = oidText[i+2:]
+
 	return mibName, oidNum, oidText, "", nil
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/sleepinggenius2/gosmi"
+	"github.com/sleepinggenius2/gosmi/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1233,8 +1234,8 @@ func TestGoSmi(t *testing.T) {
 				if info.IsDir() {
 					gosmi.AppendPath(path)
 				} else if info.Mode()&os.ModeSymlink == 0 {
-					load, _ := gosmi.LoadModule(info.Name())
-					println(load)
+					gosmi.LoadModule(info.Name())
+					//println(load)
 				}
 				return nil
 			})
@@ -1242,16 +1243,37 @@ func TestGoSmi(t *testing.T) {
 		}
 		folders = []string{}
 	}
-	println("path", gosmi.GetPath())
-	_, err := gosmi.GetModule("RFC1213-MIB")
-	require.NoError(t, err)
-	out, err := gosmi.GetNode("sysUpTime")
-	require.NoError(t, err)
+	// println("path", gosmi.GetPath())
+	// _, err := gosmi.GetModule("RFC1213-MIB")
+	// require.NoError(t, err)
+	// out, err := gosmi.GetNode("sysUpTime")
+	// require.NoError(t, err)
+	// oidText := out.RenderQualified()
+	// i := strings.Index(oidText, "::")
+	var out gosmi.SmiNode
+	var err error
+	oid := "iso.3.6.1.2.1.1.3"
+	s := strings.Split(oid, ".")
+	for i := range s {
+		if strings.ContainsAny(s[i], "abcdefghijklmnopqrstuvwxyz") {
+			out, _ = gosmi.GetNode(s[i])
+			s[i] = out.RenderNumeric()
+
+		}
+	}
+	oidJoin := strings.Join(s, ".")
+	println(oidJoin)
+	out, _ = gosmi.GetNodeByOID(types.OidMustFromString(oidJoin))
+	//println(out)
 	oidText := out.RenderQualified()
 	i := strings.Index(oidText, "::")
-
+	fmt.Printf("oid:%v\n", oidText)
+	if i == -1 {
+		println("issues")
+	}
 	mibName := oidText[:i]
 	oidText = oidText[i+2:]
 
-	println(mibName, oidText)
+	println(mibName, oidText, oidJoin)
+	require.Error(t, err)
 }
