@@ -107,10 +107,10 @@ func (rp *RunningProcessor) Stop() {
 	rp.setState(PluginStateDead)
 }
 
-func (r *RunningProcessor) Order() int64 {
-	return r.Config.Order
+func (rp *RunningProcessor) Order() int64 {
+	return rp.Config.Order
 }
 
-func (r *RunningProcessor) GetID() uint64 {
-	return r.ID
+func (rp *RunningProcessor) GetID() uint64 {
+	return rp.ID
 }
