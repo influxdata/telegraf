@@ -363,7 +363,7 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 				if result.Tag {
 					desiredType = "string"
 				}
-				v, err := p.convertType(result.Result, result.DesiredType, result.SetName)
+				v, err := p.convertType(result.Result, desiredType, result.SetName)
 				if err != nil {
 					return nil, err
 				}
