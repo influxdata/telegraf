@@ -263,13 +263,13 @@ func TestConfig_WrongFieldType(t *testing.T) {
 	defer agentController.reset()
 	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/wrong_field_type.toml")
 	require.Error(t, err, "invalid field type")
-	require.Equal(t, "Error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Port) cannot unmarshal TOML string into int", err.Error())
+	require.Equal(t, "Error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: (config_test.MockupInputPlugin.Port) cannot unmarshal TOML string into int", err.Error())
 
 	c = config.NewConfig()
 	c.SetAgent(agentController)
 	err = c.LoadConfig(context.Background(), context.Background(), "./testdata/wrong_field_type2.toml")
 	require.Error(t, err, "invalid field type2")
-	require.Equal(t, "Error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Methods) cannot unmarshal TOML string into []string", err.Error())
+	require.Equal(t, "Error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (config_test.MockupInputPlugin.Methods) cannot unmarshal TOML string into []string", err.Error())
 }
 
 func TestConfig_InlineTables(t *testing.T) {
@@ -279,7 +279,7 @@ func TestConfig_InlineTables(t *testing.T) {
 	c.SetAgent(agentController)
 	defer agentController.reset()
 	require.NoError(t, c.LoadConfig(context.Background(), context.Background(), "./testdata/inline_table.toml"))
-	require.Len(t, c.Outputs, 2)
+	require.Len(t, c.Outputs(), 2)
 
 	output, ok := c.Outputs()[1].Output.(*MockupOuputPlugin)
 	require.True(t, ok)
@@ -295,7 +295,7 @@ func TestConfig_SliceComment(t *testing.T) {
 	c.SetAgent(agentController)
 	defer agentController.reset()
 	require.NoError(t, c.LoadConfig(context.Background(), context.Background(), "./testdata/slice_comment.toml"))
-	require.Len(t, c.Outputs, 1)
+	require.Len(t, c.Outputs(), 1)
 
 	output, ok := c.Outputs()[0].Output.(*MockupOuputPlugin)
 	require.True(t, ok)
@@ -321,7 +321,7 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 	c.SetAgent(agentController)
 	defer agentController.reset()
 	require.NoError(t, c.LoadConfig(context.Background(), context.Background(), "./testdata/azure_monitor.toml"))
-	require.Len(t, c.Outputs, 2)
+	require.Len(t, c.Outputs(), 2)
 
 	expectedPrefix := []string{"Telegraf/", ""}
 	for i, plugin := range c.Outputs() {
