@@ -2,19 +2,20 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 	"runtime"
-	"sort"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/channel"
 	"github.com/influxdata/telegraf/models"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
 // Agent runs a set of plugins.
@@ -522,7 +523,7 @@ func (a *Agent) RunConfigPlugin(ctx context.Context, plugin config.ConfigPlugin)
 				log.Printf("E! [agent] Storage plugin failed to close: %v", err)
 			}
 		}
-		 }
+	}
 
 	a.configPluginUnit.Lock()
 	pos := -1
@@ -552,7 +553,6 @@ func (a *Agent) StopOutput(output *models.RunningOutput) {
 	}
 }
 
-
 func updateWindow(start time.Time, roundInterval bool, period time.Duration) (time.Time, time.Time) {
 	var until time.Time
 	if roundInterval {
@@ -573,15 +573,15 @@ func (a *Agent) AddOutput(output *models.RunningOutput) {
 	a.outputGroupUnit.Lock()
 	a.outputGroupUnit.outputs = append(a.outputGroupUnit.outputs, outputUnit{output: output})
 	a.outputGroupUnit.Unlock()
-	 }
+}
 
 func (a *Agent) startOutput(output *models.RunningOutput) error {
 	if err := a.connectOutput(a.ctx, output); err != nil {
 		return fmt.Errorf("connecting output %s: %w", output.LogName(), err)
-			 }
+	}
 
 	return nil
-		 }
+}
 
 // connectOutputs connects to all outputs.
 func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput) error {
@@ -622,8 +622,8 @@ func (a *Agent) RunOutput(ctx context.Context, output *models.RunningOutput) {
 	}
 	a.outputGroupUnit.Unlock()
 
-		 interval := a.Config.Agent.FlushInterval.Duration
-		 jitter := a.Config.Agent.FlushJitter.Duration
+	interval := a.Config.Agent.FlushInterval.Duration
+	jitter := a.Config.Agent.FlushJitter.Duration
 	// Overwrite agent flush_interval if this plugin has its own.
 	if output.Config.FlushInterval != 0 {
 		interval = output.Config.FlushInterval
@@ -642,7 +642,7 @@ func (a *Agent) RunOutput(ctx context.Context, output *models.RunningOutput) {
 		if err = a.startOutput(output); err != nil {
 			log.Printf("E! [agent] failed to start output %q: %v", output.LogName(), err)
 			time.Sleep(10 * time.Second)
-			 }
+		}
 	}
 
 	a.flushLoop(ctx, output, ticker)
@@ -655,7 +655,7 @@ func (a *Agent) RunOutput(ctx context.Context, output *models.RunningOutput) {
 			// disconnect it from the output broadcaster and remove it from the list
 			a.outputGroupUnit.outputs = append(a.outputGroupUnit.outputs[:i], a.outputGroupUnit.outputs[i+1:]...)
 		}
-		 }
+	}
 	a.outputGroupUnit.Unlock()
 
 	a.flushOnce(output, ticker, output.Write)
@@ -673,12 +673,12 @@ func (a *Agent) runOutputFanout() {
 		for i, output := range outs {
 			if i == len(outs)-1 {
 				output.output.AddMetric(metric)
-				 } else {
+			} else {
 				output.output.AddMetric(metric.Copy())
-				 }
-			 }
-		 }
-
+			}
+		}
+	}
+}
 
 // flushLoop runs an output's flush function periodically until the context is done.
 func (a *Agent) flushLoop(
@@ -746,8 +746,6 @@ func (a *Agent) flushOnce(
 		}
 	}
 }
-
-
 
 // Returns the rounding precision for metrics.
 func getPrecision(precision, interval time.Duration) time.Duration {

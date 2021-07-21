@@ -240,8 +240,8 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 	input, ok := c.Inputs()[0].Input.(*MockupInputPlugin)
 	require.True(t, ok)
 	// Tests telegraf duration parsing.
-	require.Equal(t, Duration(time.Second), input.WriteTimeout) // Tests telegraf size parsing.
-	require.Equal(t, Size(1024*1024), input.MaxBodySize)
+	require.Equal(t, config.Duration(time.Second), input.WriteTimeout) // Tests telegraf size parsing.
+	require.Equal(t, config.Size(1024*1024), input.MaxBodySize)
 	// Tests toml multiline basic strings.
 	require.Equal(t, "/path/to/my/cert", strings.TrimRight(input.TLSCert, "\r\n"))
 }
@@ -499,13 +499,13 @@ func (a *testAgentController) StopOutput(p *models.RunningOutput)               
 
 /*** Mockup INPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupInputPlugin struct {
-	Servers      []string `toml:"servers"`
-	Methods      []string `toml:"methods"`
-	Timeout      Duration `toml:"timeout"`
-	ReadTimeout  Duration `toml:"read_timeout"`
-	WriteTimeout Duration `toml:"write_timeout"`
-	MaxBodySize  Size     `toml:"max_body_size"`
-	Port         int      `toml:"port"`
+	Servers      []string        `toml:"servers"`
+	Methods      []string        `toml:"methods"`
+	Timeout      config.Duration `toml:"timeout"`
+	ReadTimeout  config.Duration `toml:"read_timeout"`
+	WriteTimeout config.Duration `toml:"write_timeout"`
+	MaxBodySize  config.Size     `toml:"max_body_size"`
+	Port         int             `toml:"port"`
 	Command      string
 	PidFile      string
 	Log          telegraf.Logger `toml:"-"`
@@ -538,7 +538,7 @@ func (m *MockupOuputPlugin) Write(metrics []telegraf.Metric) error { return nil 
 // Register the mockup plugin on loading
 func init() {
 	// Register the mockup input plugin for the required names
-	inputs.Add("exec", func() telegraf.Input { return &MockupInputPlugin{Timeout: Duration(time.Second * 5)} })
+	inputs.Add("exec", func() telegraf.Input { return &MockupInputPlugin{Timeout: config.Duration(time.Second * 5)} })
 	inputs.Add("http_listener_v2", func() telegraf.Input { return &MockupInputPlugin{} })
 	inputs.Add("memcached", func() telegraf.Input { return &MockupInputPlugin{} })
 	inputs.Add("procstat", func() telegraf.Input { return &MockupInputPlugin{} })
