@@ -13,6 +13,7 @@ type RunningProcessor struct {
 	log       telegraf.Logger
 	Processor telegraf.StreamingProcessor
 	Config    *ProcessorConfig
+	State
 }
 
 // FilterConfig containing a name and filter
