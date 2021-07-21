@@ -14,7 +14,6 @@ import (
 	"github.com/alecthomas/units"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -647,7 +646,7 @@ func setObject(from, to reflect.Value, destType reflect.Type) error {
 		}
 
 		if destType.String() == "internal.Number" {
-			n := internal.Number{Value: float64(from.Int())}
+			n := float64(from.Int())
 			to.Set(reflect.ValueOf(n))
 			return nil
 		}
@@ -673,7 +672,7 @@ func setObject(from, to reflect.Value, destType reflect.Type) error {
 		}
 
 		if destType.String() == "internal.Number" {
-			n := internal.Number{Value: float64(from.Uint())}
+			n := float64(from.Uint())
 			to.Set(reflect.ValueOf(n))
 			return nil
 		}
@@ -691,7 +690,7 @@ func setObject(from, to reflect.Value, destType reflect.Type) error {
 			to = ptr.Elem()
 		}
 		if destType.String() == "internal.Number" {
-			n := internal.Number{Value: from.Float()}
+			n := from.Float()
 			to.Set(reflect.ValueOf(n))
 			return nil
 		}

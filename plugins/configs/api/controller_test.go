@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -484,8 +483,8 @@ func TestExampleWorstPlugin(t *testing.T) {
 				},
 			},
 		},
-		Percentiles: []json.Number{
-			"1",
+		Percentiles: []int64{
+			1,
 		},
 		FloatPercentiles: []float64{1.0},
 		MapOfStructs: map[string]baseopts{
@@ -535,7 +534,7 @@ type ExampleWorstPlugin struct {
 	Templates         []*baseopts
 	Value             interface{} `json:"value"`
 	DeviceTags        map[string][]map[string]string
-	Percentiles       []json.Number
+	Percentiles       []int64
 	FloatPercentiles  []float64
 	MapOfStructs      map[string]baseopts
 	Command           []interface{}

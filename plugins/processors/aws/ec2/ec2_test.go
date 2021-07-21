@@ -1,8 +1,10 @@
 package ec2
 
 import (
+	"context"
 	"testing"
 
+	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -51,8 +53,11 @@ func TestBasicInitInvalidTagsReturnAnError(t *testing.T) {
 
 func TestLoadingConfig(t *testing.T) {
 	confFile := []byte("[[processors.aws_ec2]]" + "\n" + sampleConfig)
+	ctx := context.Background()
 	c := config.NewConfig()
-	err := c.LoadConfigData(confFile)
+	a := agent.NewAgent(ctx, c)
+	c.SetAgent(a)
+	err := c.LoadConfigData(ctx, ctx, []byte(confFile))
 	require.NoError(t, err)
 
 	require.Len(t, c.Processors, 1)
