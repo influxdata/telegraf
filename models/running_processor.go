@@ -8,17 +8,12 @@ import (
 )
 
 type RunningProcessor struct {
+	ID uint64
 	sync.Mutex
 	log       telegraf.Logger
 	Processor telegraf.StreamingProcessor
 	Config    *ProcessorConfig
 }
-
-type RunningProcessors []*RunningProcessor
-
-func (rp RunningProcessors) Len() int           { return len(rp) }
-func (rp RunningProcessors) Swap(i, j int)      { rp[i], rp[j] = rp[j], rp[i] }
-func (rp RunningProcessors) Less(i, j int) bool { return rp[i].Config.Order < rp[j].Config.Order }
 
 // FilterConfig containing a name and filter
 type ProcessorConfig struct {
@@ -41,14 +36,18 @@ func NewRunningProcessor(processor telegraf.StreamingProcessor, config *Processo
 	})
 	SetLoggerOnPlugin(processor, logger)
 
-	return &RunningProcessor{
+	p := &RunningProcessor{
+		ID:        NextPluginID(),
 		Processor: processor,
 		Config:    config,
 		log:       logger,
 	}
+	p.setState(PluginStateCreated)
+	return p
 }
 
 func (rp *RunningProcessor) metricFiltered(metric telegraf.Metric) {
+	//TODO(steve): rp.MetricsFiltered.Incr(1)
 	metric.Drop()
 }
 
@@ -75,7 +74,13 @@ func (rp *RunningProcessor) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 }
 
 func (rp *RunningProcessor) Start(acc telegraf.Accumulator) error {
-	return rp.Processor.Start(acc)
+	r.setState(PluginStateStarting)
+	err := r.Processor.Start(acc)
+	if err != nil {
+		return err
+	}
+	r.setState(PluginStateRunning)
+	return nil
 }
 
 func (rp *RunningProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
@@ -96,5 +101,15 @@ func (rp *RunningProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) err
 }
 
 func (rp *RunningProcessor) Stop() {
+	r.setState(PluginStateStopping)
 	rp.Processor.Stop()
+	r.setState(PluginStateDead)
+}
+
+func (r *RunningProcessor) Order() int64 {
+	return r.Config.Order
+}
+
+func (r *RunningProcessor) GetID() uint64 {
+	return r.ID
 }
