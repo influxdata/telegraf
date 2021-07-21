@@ -407,7 +407,9 @@ func Connect(o *OpcUA) error {
 
 		if o.client != nil {
 			if err := o.client.CloseSession(); err != nil {
-				return err
+				// Only log the error but to not bail-out here as this prevents
+				// reconnections for multiple parties (see e.g. #9523).
+				o.Log.Errorf("Closing session failed: %v", err)
 			}
 		}
 
