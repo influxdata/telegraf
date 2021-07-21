@@ -2,13 +2,16 @@ package json_v2_test
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -96,12 +99,13 @@ func TestData(t *testing.T) {
 				return &file.File{}
 			})
 			cfg := config.NewConfig()
-			err = cfg.LoadConfigData(buf)
+			cfg.SetAgent(&testAgentController{})
+			err = cfg.LoadConfigData(context.Background(), context.Background(), []byte(buf))
 			require.NoError(t, err)
 
 			// Gather the metrics from the input file configure
 			acc := testutil.Accumulator{}
-			for _, i := range cfg.Inputs {
+			for _, i := range cfg.Inputs() {
 				err = i.Init()
 				require.NoError(t, err)
 				err = i.Gather(&acc)
@@ -144,3 +148,43 @@ func readMetricFile(path string) ([]telegraf.Metric, error) {
 
 	return metrics, nil
 }
+
+type testAgentController struct {
+	inputs     []*models.RunningInput
+	processors []models.ProcessorRunner
+	outputs    []*models.RunningOutput
+	// configs    []*config.RunningConfigPlugin
+}
+
+func (a *testAgentController) reset() {
+	a.inputs = nil
+	a.processors = nil
+	a.outputs = nil
+	// a.configs = nil
+}
+
+func (a *testAgentController) RunningInputs() []*models.RunningInput {
+	return a.inputs
+}
+func (a *testAgentController) RunningProcessors() []models.ProcessorRunner {
+	return a.processors
+}
+func (a *testAgentController) RunningOutputs() []*models.RunningOutput {
+	return a.outputs
+}
+func (a *testAgentController) AddInput(input *models.RunningInput) {
+	a.inputs = append(a.inputs, input)
+}
+func (a *testAgentController) AddProcessor(processor models.ProcessorRunner) {
+	a.processors = append(a.processors, processor)
+}
+func (a *testAgentController) AddOutput(output *models.RunningOutput) {
+	a.outputs = append(a.outputs, output)
+}
+func (a *testAgentController) RunInput(input *models.RunningInput, startTime time.Time)        {}
+func (a *testAgentController) RunProcessor(p models.ProcessorRunner)                           {}
+func (a *testAgentController) RunOutput(ctx context.Context, output *models.RunningOutput)     {}
+func (a *testAgentController) RunConfigPlugin(ctx context.Context, plugin config.ConfigPlugin) {}
+func (a *testAgentController) StopInput(i *models.RunningInput)                                {}
+func (a *testAgentController) StopProcessor(p models.ProcessorRunner)                          {}
+func (a *testAgentController) StopOutput(p *models.RunningOutput)                              {}
