@@ -1,0 +1,5 @@
+sqlserver_requests,database_name=AdventureWorks2016,sql_instance=QDLP03:SQL2017,query_hash=aaa Somefield=10
+sqlserver_requests,database_name=AdventureWorks2016,sql_instance=QDLP03:SQL2017,query_hash=bbb Somefield=2
+sqlserver_requests,database_name=Northwind,sql_instance=QDLP03:SQL2017,query_hash=ccc Somefield=4
+sqlserver_requests,database_name=Northwind,sql_instance=QDLP03:SQL2017,query_hash=ddd Somefield=6
+sqlserver_cpu,sql_instance=QDLP03:SQL2017 other_process_cpu=8i,sqlserver_process_cpu=12i,system_idle_cpu=80i
