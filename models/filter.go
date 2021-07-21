@@ -16,22 +16,22 @@ type TagFilter struct {
 
 // Filter containing drop/pass and tagdrop/tagpass rules
 type Filter struct {
-	NameDrop []string
+	NameDrop []string `toml:"namedrop"`
 	nameDrop filter.Filter
-	NamePass []string
+	NamePass []string `toml:"namepass"`
 	namePass filter.Filter
 
-	FieldDrop []string
+	FieldDrop []string `toml:"fielddrop"`
 	fieldDrop filter.Filter
-	FieldPass []string
+	FieldPass []string `toml:"fieldpass"`
 	fieldPass filter.Filter
 
-	TagDrop []TagFilter
-	TagPass []TagFilter
+	TagDrop []TagFilter `toml:"tagdrop"`
+	TagPass []TagFilter `toml:"tagpass"`
 
-	TagExclude []string
+	TagExclude []string `toml:"tagexclude"`
 	tagExclude filter.Filter
-	TagInclude []string
+	TagInclude []string `toml:"taginclude"`
 	tagInclude filter.Filter
 
 	isActive bool
