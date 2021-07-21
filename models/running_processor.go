@@ -75,12 +75,12 @@ func (rp *RunningProcessor) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 }
 
 func (rp *RunningProcessor) Start(acc telegraf.Accumulator) error {
-	r.setState(PluginStateStarting)
-	err := r.Processor.Start(acc)
+	rp.setState(PluginStateStarting)
+	err := rp.Processor.Start(acc)
 	if err != nil {
 		return err
 	}
-	r.setState(PluginStateRunning)
+	rp.setState(PluginStateRunning)
 	return nil
 }
 
@@ -102,9 +102,9 @@ func (rp *RunningProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) err
 }
 
 func (rp *RunningProcessor) Stop() {
-	r.setState(PluginStateStopping)
+	rp.setState(PluginStateStopping)
 	rp.Processor.Stop()
-	r.setState(PluginStateDead)
+	rp.setState(PluginStateDead)
 }
 
 func (r *RunningProcessor) Order() int64 {
