@@ -15,6 +15,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -36,6 +37,7 @@ type TimeFunc func() time.Time
 // HTTPListenerV2 is an input plugin that collects external metrics sent via HTTP
 type HTTPListenerV2 struct {
 	ServiceAddress string            `toml:"service_address"`
+	Path           string            `toml:"path"`
 	Paths          []string          `toml:"paths"`
 	PathTag        string            `toml:"path_tag"`
 	Methods        []string          `toml:"methods"`
@@ -63,6 +65,10 @@ type HTTPListenerV2 struct {
 const sampleConfig = `
   ## Address and port to host HTTP listener on
   service_address = ":8080"
+
+  ## Path to listen to.
+  ## This is depracated and will be appended to paths
+  # path = "/telegraf"
 
   ## Paths to listen to.
   # paths = ["/telegraf"]
@@ -143,6 +149,9 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 
 	h.PathTag = strings.TrimSpace(h.PathTag)
 
+	// Append h.Path to h.Paths
+	h.Paths = append(h.Paths, h.Path)
+
 	h.acc = acc
 
 	tlsConf, err := h.ServerConfig.TLSConfig()
@@ -193,20 +202,10 @@ func (h *HTTPListenerV2) Stop() {
 	h.wg.Wait()
 }
 
-func (h *HTTPListenerV2) containsPath(needle string) bool {
-	for _, v := range h.Paths {
-		if v == needle {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	handler := h.serveWrite
 
-	if !h.containsPath(req.URL.Path) {
+	if !choice.Contains(req.URL.Path, h.Paths) {
 		handler = http.NotFound
 	}
 
@@ -391,6 +390,7 @@ func init() {
 		return &HTTPListenerV2{
 			ServiceAddress: ":8080",
 			TimeFunc:       time.Now,
+			Path:           "/telegraf",
 			Paths:          []string{"/telegraf"},
 			Methods:        []string{"POST", "PUT"},
 			DataSource:     body,
