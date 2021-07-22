@@ -36,7 +36,8 @@ type TimeFunc func() time.Time
 // HTTPListenerV2 is an input plugin that collects external metrics sent via HTTP
 type HTTPListenerV2 struct {
 	ServiceAddress string            `toml:"service_address"`
-	Path           string            `toml:"path"`
+	Paths          []string          `toml:"paths"`
+	PathTag        string            `toml:"path_tag"`
 	Methods        []string          `toml:"methods"`
 	DataSource     string            `toml:"data_source"`
 	ReadTimeout    config.Duration   `toml:"read_timeout"`
@@ -63,8 +64,12 @@ const sampleConfig = `
   ## Address and port to host HTTP listener on
   service_address = ":8080"
 
-  ## Path to listen to.
-  # path = "/telegraf"
+  ## Paths to listen to.
+  # paths = ["/telegraf"]
+
+  ## Save path in path_tag
+  ## Do not include path in tag if path_tag is an empty string
+  # path_tag = ""
 
   ## HTTP methods to accept.
   # methods = ["POST", "PUT"]
@@ -136,6 +141,8 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 		h.WriteTimeout = config.Duration(time.Second * 10)
 	}
 
+	h.PathTag = strings.TrimSpace(h.PathTag)
+
 	h.acc = acc
 
 	tlsConf, err := h.ServerConfig.TLSConfig()
@@ -186,10 +193,20 @@ func (h *HTTPListenerV2) Stop() {
 	h.wg.Wait()
 }
 
+func (h *HTTPListenerV2) containsPath(needle string) bool {
+	for _, v := range h.Paths {
+		if v == needle {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	handler := h.serveWrite
 
-	if req.URL.Path != h.Path {
+	if !h.containsPath(req.URL.Path) {
 		handler = http.NotFound
 	}
 
@@ -249,6 +266,10 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 			if len(headerValues) > 0 {
 				m.AddTag(measurementName, headerValues)
 			}
+		}
+
+		if h.PathTag != "" {
+			m.AddTag(h.PathTag, req.URL.Path)
 		}
 
 		h.acc.AddMetric(m)
@@ -370,7 +391,7 @@ func init() {
 		return &HTTPListenerV2{
 			ServiceAddress: ":8080",
 			TimeFunc:       time.Now,
-			Path:           "/telegraf",
+			Paths:          []string{"/telegraf"},
 			Methods:        []string{"POST", "PUT"},
 			DataSource:     body,
 		}

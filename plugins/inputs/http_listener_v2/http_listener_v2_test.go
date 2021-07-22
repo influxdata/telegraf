@@ -49,7 +49,7 @@ func newTestHTTPListenerV2() *HTTPListenerV2 {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		Path:           "/write",
+		Paths:          []string{"/write"},
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		TimeFunc:       time.Now,
@@ -72,7 +72,7 @@ func newTestHTTPSListenerV2() *HTTPListenerV2 {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		Path:           "/write",
+		Paths:          []string{"/write"},
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		ServerConfig:   *pki.TLSServerConfig(),
@@ -110,7 +110,7 @@ func TestInvalidListenerConfig(t *testing.T) {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "address_without_port",
-		Path:           "/write",
+		Paths:          []string{"/write"},
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		TimeFunc:       time.Now,
@@ -230,6 +230,50 @@ func TestWriteHTTP(t *testing.T) {
 	)
 }
 
+// http listener should add request path as configured path_tag
+func TestWriteHTTPWithPathTag(t *testing.T) {
+	listener := newTestHTTPListenerV2()
+	listener.PathTag = "path"
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post single message to listener
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	acc.Wait(1)
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01", "path": "/write"},
+	)
+}
+
+// http listener should add request path as configured path_tag (trimming it before)
+func TestWriteHTTPWithWhiteSpacesPathTag(t *testing.T) {
+	listener := newTestHTTPListenerV2()
+	listener.PathTag = "  path  "
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post single message to listener
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	acc.Wait(1)
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01", "path": "/write"},
+	)
+}
+
 // http listener should add a newline at the end of the buffer if it's not there
 func TestWriteHTTPNoNewline(t *testing.T) {
 	listener := newTestHTTPListenerV2()
@@ -257,7 +301,7 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		Path:           "/write",
+		Paths:          []string{"/write"},
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		MaxBodySize:    config.Size(len(hugeMetric)),
@@ -280,7 +324,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		Path:           "/write",
+		Paths:          []string{"/write"},
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		MaxBodySize:    config.Size(4096),

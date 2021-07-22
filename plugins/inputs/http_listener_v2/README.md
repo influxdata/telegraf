@@ -18,8 +18,12 @@ This is a sample configuration for the plugin.
   ## Address and port to host HTTP listener on
   service_address = ":8080"
 
-  ## Path to listen to.
-  # path = "/telegraf"
+  ## Paths to listen to.
+  # paths = ["/telegraf"]
+
+  ## Save path in path_tag
+  ## Do not include path in tag if path_tag is an empty string
+  # path_tag = ""
 
   ## HTTP methods to accept.
   # methods = ["POST", "PUT"]
