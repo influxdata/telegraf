@@ -1091,7 +1091,6 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 				}
 			},
 			func(w http.ResponseWriter, r *http.Request) {
-				fmt.Println("one:", r.URL.Path, r.FormValue("q"))
 				switch r.URL.Path {
 				case "/write":
 					w.WriteHeader(http.StatusNotFound)
@@ -1101,7 +1100,6 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 				}
 			},
 			func(w http.ResponseWriter, r *http.Request) {
-				fmt.Println("two:", r.URL.Path, r.FormValue("q"))
 				switch r.URL.Path {
 				case "/query":
 					if r.FormValue("q") != `CREATE DATABASE "telegraf"` {
@@ -1114,7 +1112,6 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 				}
 			},
 			func(w http.ResponseWriter, r *http.Request) {
-				fmt.Println("three:", r.URL.Path)
 				switch r.URL.Path {
 				case "/write":
 					w.WriteHeader(http.StatusNoContent)

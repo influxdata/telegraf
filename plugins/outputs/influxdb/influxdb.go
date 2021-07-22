@@ -1,3 +1,4 @@
+//nolint
 package influxdb
 
 import (
@@ -227,7 +228,8 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			if i.SkipDatabaseCreation {
 				continue
 			}
-
+			// retry control
+			// error so the write is retried
 			err := client.CreateDatabase(ctx, apiError.Database)
 			if err != nil {
 				i.Log.Errorf("When writing to [%s]: database %q not found and failed to recreate",
@@ -297,7 +299,6 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 	}
 
 	if !i.SkipDatabaseCreation {
-		fmt.Println("I am the request in http client")
 		err = c.CreateDatabase(ctx, c.Database())
 		if err != nil {
 			i.Log.Warnf("When writing to [%s]: database %q creation failed: %v",
