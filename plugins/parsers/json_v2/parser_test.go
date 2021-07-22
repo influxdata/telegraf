@@ -77,6 +77,10 @@ func TestData(t *testing.T) {
 			name: "Test field with null",
 			test: "null",
 		},
+		{
+			name: "Test large numbers (int64, uin64, float64)",
+			test: "large_numbers",
+		},
 	}
 
 	for _, tc := range tests {
