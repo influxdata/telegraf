@@ -25,10 +25,10 @@ For Go plugins, there is a [Execd Go Shim](/plugins/common/shim/) that will make
 - [processors.execd](/plugins/processors/execd)
 - [outputs.execd](/plugins/outputs/execd)
 
-Follow the [Steps to externalize a plugin](/plugins/common/shim#steps-to-externalize-a-plugin) and [Steps to build and run your plugin](/plugins/common/shim#steps-to-build-and-run-your-plugin) to properly with the Execd Go Shim
+Follow the Execd Go Shim's [Steps to externalize a plugin](/plugins/common/shim#steps-to-externalize-a-plugin) and [Steps to build and run your plugin](/plugins/common/shim#steps-to-build-and-run-your-plugin) guides to use the shim. 
 
 #### Step-by-Step guidelines
-This is a guide to help you set up your plugin to use it with `execd`
+This is a guide to help you set up your plugin to use it with `execd`. Check out Christopher Piggott's [Execd Toolkit](https://github.com/wz2b/telegraf-execd-toolkit) for metric generation and plugin logging. 
 1. Write your Telegraf plugin.  Depending on the plugin, follow the guidelines on how to create the plugin itself using InfluxData's best practices:
    - [Input Plugins](/docs/INPUTS.md)
    - [Processor Plugins](/docs/PROCESSORS.md)
