@@ -12,6 +12,9 @@ import (
 )
 
 func TestBasicStartup(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipped test that connects to external service")
+	}
 	p := newAwsEc2Processor()
 	p.Log = &testutil.Logger{}
 	p.ImdsTags = []string{"accountId", "instanceId"}
@@ -24,6 +27,9 @@ func TestBasicStartup(t *testing.T) {
 }
 
 func TestBasicStartupWithEC2Tags(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipped test that connects to external service")
+	}
 	p := newAwsEc2Processor()
 	p.Log = &testutil.Logger{}
 	p.ImdsTags = []string{"accountId", "instanceId"}
@@ -67,7 +73,7 @@ func TestLoadingConfig(t *testing.T) {
 	))
 
 	require.NoError(t, err)
-	require.Len(t, c.Processors, 1)
+	require.Len(t, c.Processors(), 1)
 }
 
 type testAgentController struct {

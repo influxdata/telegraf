@@ -274,7 +274,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 //When not passing server config, we default to localhost
 //We just want to make sure we did request stat from localhost
 func TestPhpFpmDefaultGetFromLocalhost(t *testing.T) {
-	r := &phpfpm{}
+	r := &phpfpm{Urls: []string{"http://bad.localhost:62001/status"}}
 
 	require.NoError(t, r.Init())
 
@@ -282,7 +282,7 @@ func TestPhpFpmDefaultGetFromLocalhost(t *testing.T) {
 
 	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "127.0.0.1/status")
+	assert.Contains(t, err.Error(), "/status")
 }
 
 func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t *testing.T) {
