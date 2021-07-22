@@ -59,7 +59,6 @@ func TestBasicInitInvalidTagsReturnAnError(t *testing.T) {
 }
 
 func TestLoadingConfig(t *testing.T) {
-	// confFile := []byte("[[processors.aws_ec2]]" + "\n" + sampleConfig)
 	c := config.NewConfig()
 	c.SetAgent(&testAgentController{})
 	err := c.LoadConfigData(context.Background(), context.Background(), []byte(
