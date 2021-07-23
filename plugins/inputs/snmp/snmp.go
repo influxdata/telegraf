@@ -977,11 +977,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 
 		oidNum = out.RenderNumeric()
 	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxyz") {
-		//TODO: handle something .iso.2.3 into .1.2.3
-		// have any dots split on dots
-		// look up first name
-		// do in loop and then merge with the dot split above
-		// get node and then look at info -- look inside types.smiNode
+		//handle mixed oid ex. .iso.2.3
 		s := strings.Split(oid, ".")
 		//oidNum := make([]string, len(s))
 		for i := range s {
