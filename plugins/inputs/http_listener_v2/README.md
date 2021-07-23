@@ -20,7 +20,7 @@ This is a sample configuration for the plugin.
 
   ## Path to listen to.
   ## This option is deprecated and only available for backward-compatibility. Please use paths instead.
-  # path = "/telegraf"
+  # path = ""
 
   ## Paths to listen to.
   # paths = ["/telegraf"]

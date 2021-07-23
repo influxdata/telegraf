@@ -69,7 +69,7 @@ const sampleConfig = `
 
   ## Path to listen to.
   ## This option is deprecated and only available for backward-compatibility. Please use paths instead.
-  # path = "/telegraf"
+  # path = ""
 
   ## Paths to listen to.
   # paths = ["/telegraf"]
@@ -390,7 +390,6 @@ func init() {
 		return &HTTPListenerV2{
 			ServiceAddress: ":8080",
 			TimeFunc:       time.Now,
-			Path:           "/telegraf",
 			Paths:          []string{"/telegraf"},
 			Methods:        []string{"POST", "PUT"},
 			DataSource:     body,
