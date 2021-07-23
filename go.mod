@@ -76,9 +76,9 @@ require (
 	github.com/hashicorp/consul/api v1.9.1
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
 	github.com/influxdata/go-syslog/v3 v3.0.0
-	github.com/influxdata/influxdb-observability/common v0.2.3
-	github.com/influxdata/influxdb-observability/influx2otel v0.2.3
-	github.com/influxdata/influxdb-observability/otel2influx v0.2.3
+	github.com/influxdata/influxdb-observability/common v0.2.4
+	github.com/influxdata/influxdb-observability/influx2otel v0.2.4
+	github.com/influxdata/influxdb-observability/otel2influx v0.2.4
 	github.com/influxdata/tail v1.0.1-0.20210707231403-b283181d1fa7
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
@@ -137,7 +137,7 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
 	go.mongodb.org/mongo-driver v1.5.3
-	go.opentelemetry.io/collector/model v0.30.0
+	go.opentelemetry.io/collector/model v0.0.0-20210723184018-3b7d6ce4830c
 	go.starlark.net v0.0.0-20210406145628-7a1108eaa012
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e // indirect
