@@ -2,6 +2,8 @@ package couchbase
 
 import (
 	"encoding/json"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"regexp"
 	"sync"
@@ -373,8 +375,10 @@ func (cb *Couchbase) queryDetailedBucketStats(server, bucket string, bucketStats
 	if err != nil {
 		return err
 	}
-
 	defer r.Body.Close()
+
+	//nolint:errcheck  // We discard the body anyway
+	defer io.Copy(ioutil.Discard, r.Body)
 
 	return json.NewDecoder(r.Body).Decode(bucketStats)
 }
