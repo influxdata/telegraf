@@ -104,24 +104,8 @@ const sampleConfig = `
   # stop_bits = 1
   # transmission_mode = "RTU"
 
-  ## Close the connection to the server after each gather cycle
-  ## This option is helpful for devices only accepting a limited number of
-  ## simultaneous connections (some ModbusTCP devices).
-  # close_connection = false
-
   ## Trace the connection to the modbus device as debug messages
   # debug_connection = false
-
-  ## Enable workarounds required by some devices to work correctly
-  # workarounds = {
-      ## Pause between read requests sent to the device. This might be necessary for (slow) serial devices.
-      # pause_between_requests = "0ms"
-      ## Close the connection after every gather cycle. Usually the plugin closes the connection after a certain
-      ## idle-timeout, however, if you query a device with limited simultaneous connectivity (e.g. serial devices)
-      ## from multiple instances you might want to only stay connected during gather and disconnect afterwards.
-      # close_connection_after_gather = false
-    # }
-
 
   ## For Modbus over TCP you can choose between "TCP", "RTUoverTCP" and "ASCIIoverTCP"
   ## default behaviour is "TCP" if the controller is TCP
@@ -175,6 +159,15 @@ const sampleConfig = `
     { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
     { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
   ]
+
+  ## Enable workarounds required by some devices to work correctly
+  # [inputs.modbus.workarounds]
+    ## Pause between read requests sent to the device. This might be necessary for (slow) serial devices.
+    # pause_between_requests = "0ms"
+    ## Close the connection after every gather cycle. Usually the plugin closes the connection after a certain
+    ## idle-timeout, however, if you query a device with limited simultaneous connectivity (e.g. serial devices)
+    ## from multiple instances you might want to only stay connected during gather and disconnect afterwards.
+    # close_connection_after_gather = false
 `
 
 // SampleConfig returns a basic configuration for the plugin
