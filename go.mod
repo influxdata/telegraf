@@ -76,9 +76,9 @@ require (
 	github.com/hashicorp/consul/api v1.9.1
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
 	github.com/influxdata/go-syslog/v3 v3.0.0
-	github.com/influxdata/influxdb-observability/common v0.2.0
-	github.com/influxdata/influxdb-observability/influx2otel v0.2.0
-	github.com/influxdata/influxdb-observability/otel2influx v0.2.0
+	github.com/influxdata/influxdb-observability/common v0.2.3
+	github.com/influxdata/influxdb-observability/influx2otel v0.2.3
+	github.com/influxdata/influxdb-observability/otel2influx v0.2.3
 	github.com/influxdata/tail v1.0.1-0.20210707231403-b283181d1fa7
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
