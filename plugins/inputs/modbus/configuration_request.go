@@ -119,7 +119,9 @@ func (c *ConfigurationPerRequest) Check() error {
 
 		// Check register type
 		switch def.RegisterType {
-		case "", "coil", "discrete", "holding", "input":
+		case "":
+			def.RegisterType = "holding"
+		case "coil", "discrete", "holding", "input":
 		default:
 			return fmt.Errorf("unknown register-type %q", def.RegisterType)
 		}
@@ -186,6 +188,11 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 	result := map[byte]requestSet{}
 
 	for _, def := range c.Requests {
+		// Set default
+		if def.RegisterType == "" {
+			def.RegisterType = "holding"
+		}
+
 		// Construct the fields
 		isTyped := def.RegisterType == "holding" || def.RegisterType == "input"
 		fields, err := c.initFields(def.Fields, isTyped, def.ByteOrder)
@@ -211,7 +218,7 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 		case "discrete":
 			requests := newRequestsFromFields(fields, maxQuantityDiscreteInput)
 			set.discrete = append(set.discrete, requests...)
-		case "", "holding":
+		case "holding":
 			requests := newRequestsFromFields(fields, maxQuantityHoldingRegisters)
 			set.holding = append(set.holding, requests...)
 		case "input":
