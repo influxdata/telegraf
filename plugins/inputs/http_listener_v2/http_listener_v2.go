@@ -148,7 +148,9 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 	}
 
 	// Append h.Path to h.Paths
-	h.Paths = append(h.Paths, h.Path)
+	if h.Path != "" && !choice.Contains(h.Path, h.Paths) {
+		h.Paths = append(h.Paths, h.Path)
+	}
 
 	h.acc = acc
 
