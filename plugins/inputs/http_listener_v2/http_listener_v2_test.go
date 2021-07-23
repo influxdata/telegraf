@@ -233,7 +233,7 @@ func TestWriteHTTP(t *testing.T) {
 // http listener should add request path as configured path_tag
 func TestWriteHTTPWithPathTag(t *testing.T) {
 	listener := newTestHTTPListenerV2()
-	listener.PathTag = "path"
+	listener.PathTag = true
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -248,29 +248,7 @@ func TestWriteHTTPWithPathTag(t *testing.T) {
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
-		map[string]string{"host": "server01", "path": "/write"},
-	)
-}
-
-// http listener should add request path as configured path_tag (trimming it before)
-func TestWriteHTTPWithWhiteSpacesPathTag(t *testing.T) {
-	listener := newTestHTTPListenerV2()
-	listener.PathTag = "  path  "
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, listener.Start(acc))
-	defer listener.Stop()
-
-	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
-
-	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
-		map[string]string{"host": "server01", "path": "/write"},
+		map[string]string{"host": "server01", "http_listener_v2_path": "/write"},
 	)
 }
 
@@ -278,7 +256,7 @@ func TestWriteHTTPWithWhiteSpacesPathTag(t *testing.T) {
 func TestWriteHTTPWithMultiplePaths(t *testing.T) {
 	listener := newTestHTTPListenerV2()
 	listener.Paths = []string{"/alternative_write"}
-	listener.PathTag = "path"
+	listener.PathTag = true
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -299,12 +277,12 @@ func TestWriteHTTPWithMultiplePaths(t *testing.T) {
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
-		map[string]string{"host": "server01", "path": "/write"},
+		map[string]string{"host": "server01", "http_listener_v2_path": "/write"},
 	)
 
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
-		map[string]string{"host": "server01", "path": "/alternative_write"},
+		map[string]string{"host": "server01", "http_listener_v2_path": "/alternative_write"},
 	)
 }
 

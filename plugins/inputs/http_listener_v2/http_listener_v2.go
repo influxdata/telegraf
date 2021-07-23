@@ -27,8 +27,9 @@ import (
 const defaultMaxBodySize = 500 * 1024 * 1024
 
 const (
-	body  = "body"
-	query = "query"
+	body    = "body"
+	query   = "query"
+	pathTag = "http_listener_v2_path"
 )
 
 // TimeFunc provides a timestamp for the metrics
@@ -39,7 +40,7 @@ type HTTPListenerV2 struct {
 	ServiceAddress string            `toml:"service_address"`
 	Path           string            `toml:"path"`
 	Paths          []string          `toml:"paths"`
-	PathTag        string            `toml:"path_tag"`
+	PathTag        bool              `toml:"path_tag"`
 	Methods        []string          `toml:"methods"`
 	DataSource     string            `toml:"data_source"`
 	ReadTimeout    config.Duration   `toml:"read_timeout"`
@@ -67,15 +68,14 @@ const sampleConfig = `
   service_address = ":8080"
 
   ## Path to listen to.
-  ## This is depracated and will be appended to paths
+  ## This option is deprecated and only available for backward-compatibility. Please use paths instead.
   # path = "/telegraf"
 
   ## Paths to listen to.
   # paths = ["/telegraf"]
 
-  ## Save path in path_tag
-  ## Do not include path in tag if path_tag is an empty string
-  # path_tag = ""
+  ## Save path as http_listener_v2_path tag if set to true
+  # path_tag = false
 
   ## HTTP methods to accept.
   # methods = ["POST", "PUT"]
@@ -86,7 +86,7 @@ const sampleConfig = `
   # write_timeout = "10s"
 
   ## Maximum allowed http request body size in bytes.
-  ## 0 means to use the default of 524,288,00 bytes (500 mebibytes)
+  ## 0 means to use the default of 524,288,000 bytes (500 mebibytes)
   # max_body_size = "500MB"
 
   ## Part of the request to consume.  Available options are "body" and
@@ -146,8 +146,6 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 	if h.WriteTimeout < config.Duration(time.Second) {
 		h.WriteTimeout = config.Duration(time.Second * 10)
 	}
-
-	h.PathTag = strings.TrimSpace(h.PathTag)
 
 	// Append h.Path to h.Paths
 	h.Paths = append(h.Paths, h.Path)
@@ -267,8 +265,8 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 			}
 		}
 
-		if h.PathTag != "" {
-			m.AddTag(h.PathTag, req.URL.Path)
+		if h.PathTag {
+			m.AddTag(pathTag, req.URL.Path)
 		}
 
 		h.acc.AddMetric(m)
