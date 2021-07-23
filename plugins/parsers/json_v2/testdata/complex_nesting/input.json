@@ -1,0 +1,31 @@
+{
+    "type": "FeatureCollection",
+    "metadata": {
+        "generated": 1626285886000,
+        "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_week.geojson",
+        "title": "USGS Significant Earthquakes, Past Week",
+        "status": 200,
+        "api": "1.10.3",
+        "count": 1
+    },
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "mag": 6,
+                "place": "Antelope Valley, CA",
+                "time": 1625784588110,
+                "updated": 1626277167263
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -119.4998333,
+                    38.5075,
+                    7.45
+                ]
+            },
+            "id": "nc73584926"
+        }
+    ]
+}
