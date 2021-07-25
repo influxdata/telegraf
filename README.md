@@ -16,6 +16,8 @@ Telegraf is plugin-driven and has the concept of 4 distinct plugin types:
 
 New plugins are designed to be easy to contribute, pull requests are welcomed
 and we work to incorporate as many pull requests as possible.
+If none of the internal plugins fit your needs, you could have a look at the
+[list of external plugins](EXTERNAL_PLUGINS.md).
 
 ## Try in Browser :rocket:
 
@@ -29,7 +31,7 @@ There are many ways to contribute:
 - [Review code and feature proposals](https://github.com/influxdata/telegraf/pulls)
 - Answer questions and discuss here on github and on the [Community Site](https://community.influxdata.com/)
 - [Contribute plugins](CONTRIBUTING.md)
-- [Contribute external plugins](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/execd/shim) *(experimental)*
+- [Contribute external plugins](docs/EXTERNAL_PLUGINS.md)
 
 ## Minimum Requirements
 
@@ -291,6 +293,7 @@ For documentation on the latest development code see the [documentation index][d
 * [openldap](./plugins/inputs/openldap)
 * [openntpd](./plugins/inputs/openntpd)
 * [opensmtpd](./plugins/inputs/opensmtpd)
+* [opentelemetry](./plugins/inputs/opentelemetry)
 * [openweathermap](./plugins/inputs/openweathermap)
 * [pf](./plugins/inputs/pf)
 * [pgbouncer](./plugins/inputs/pgbouncer)

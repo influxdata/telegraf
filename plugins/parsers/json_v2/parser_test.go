@@ -22,6 +22,14 @@ func TestData(t *testing.T) {
 		test string
 	}{
 		{
+			name: "Test complex nesting",
+			test: "complex_nesting",
+		},
+		{
+			name: "Test having an array of objects",
+			test: "array_of_objects",
+		},
+		{
 			name: "Test using just fields and tags",
 			test: "fields_and_tags",
 		},
@@ -72,6 +80,10 @@ func TestData(t *testing.T) {
 		{
 			name: "Test field with null",
 			test: "null",
+		},
+		{
+			name: "Test large numbers (int64, uin64, float64)",
+			test: "large_numbers",
 		},
 	}
 
