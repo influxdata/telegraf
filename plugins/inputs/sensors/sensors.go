@@ -5,6 +5,7 @@ package sensors
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -117,7 +118,10 @@ func init() {
 	path, _ := exec.LookPath("sensors")
 	if len(path) > 0 {
 		s.path = path
+	} else if _, err := os.Stat("/usr/bin/sensors"); err == nil {
+		s.path = "/usr/bin/sensors"
 	}
+
 	inputs.Add("sensors", func() telegraf.Input {
 		return &s
 	})
