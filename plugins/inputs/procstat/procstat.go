@@ -150,7 +150,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 
 		err = p.updateProcesses(pids, tags, p.procs, newProcs)
 		if err != nil {
-			acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
+			acc.AddError(fmt.Errorf("procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
 				p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
 		}
 	}
@@ -391,11 +391,6 @@ func (p *Procstat) getPIDFinder() (PIDFinder, error) {
 func (p *Procstat) findPids() []PidsTags {
 	var pidTags []PidsTags
 
-	f, err := p.getPIDFinder()
-	if err != nil {
-		pidTags = append(pidTags, PidsTags{nil, nil, err})
-	}
-
 	if p.SystemdUnit != "" {
 		groups := p.systemdUnitPIDs()
 		return groups
@@ -403,6 +398,11 @@ func (p *Procstat) findPids() []PidsTags {
 		groups := p.cgroupPIDs()
 		return groups
 	} else {
+		f, err := p.getPIDFinder()
+		if err != nil {
+			pidTags = append(pidTags, PidsTags{nil, nil, err})
+			return pidTags
+		}
 		pids, tags, err := p.SimpleFindPids(f)
 		pidTags = append(pidTags, PidsTags{pids, tags, err})
 	}

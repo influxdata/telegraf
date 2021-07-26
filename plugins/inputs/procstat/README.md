@@ -26,7 +26,7 @@ Processes can be selected for monitoring using one of several methods:
   # pattern = "nginx"
   ## user as argument for pgrep (ie, pgrep -u <user>)
   # user = "nginx"
-  ## Systemd unit name or glob and if all processes of the unit should get collected
+  ## Systemd unit name, supports globs when include_systemd_children is set to true
   # systemd_unit = "nginx.service"
   # systemd_all = true
   ## CGroup name or path
