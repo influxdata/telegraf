@@ -6,6 +6,8 @@ package varnish
 import (
 	"bytes"
 	"fmt"
+	"github.com/stretchr/testify/require"
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -15,8 +17,8 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func fakeVarnishStat(output string) func(string, bool, string, config.Duration) (*bytes.Buffer, error) {
-	return func(string, bool, string, config.Duration) (*bytes.Buffer, error) {
+func fakeVarnishRunner(output string) func(string, bool, []string, config.Duration) (*bytes.Buffer, error) {
+	return func(string, bool, []string, config.Duration) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -24,7 +26,7 @@ func fakeVarnishStat(output string) func(string, bool, string, config.Duration) 
 func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(smOutput),
+		run:   fakeVarnishRunner(smOutput),
 		Stats: []string{"*"},
 	}
 	require.NoError(t, v.Gather(acc))
@@ -40,7 +42,7 @@ func TestGather(t *testing.T) {
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput),
+		run:   fakeVarnishRunner(fullOutput),
 		Stats: []string{"*"},
 	}
 	require.NoError(t, v.Gather(acc))
@@ -54,7 +56,7 @@ func TestParseFullOutput(t *testing.T) {
 func TestFilterSomeStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput),
+		run:   fakeVarnishRunner(fullOutput),
 		Stats: []string{"MGT.*", "VBE.*"},
 	}
 	require.NoError(t, v.Gather(acc))
@@ -76,7 +78,7 @@ func TestFieldConfig(t *testing.T) {
 	for fieldCfg, expected := range expect {
 		acc := &testutil.Accumulator{}
 		v := &Varnish{
-			run:   fakeVarnishStat(fullOutput),
+			run:   fakeVarnishRunner(fullOutput),
 			Stats: strings.Split(fieldCfg, ","),
 		}
 		require.NoError(t, v.Gather(acc))
@@ -427,3 +429,212 @@ LCK.pipestat.creat                                       1         0.00 Created 
 LCK.pipestat.destroy                                     0         0.00 Destroyed locks
 LCK.pipestat.locks                                       0         0.00 Lock Operations
 `
+
+type testConfig struct {
+	vName       string
+	measurement string
+	tags        map[string]string
+	field       string
+	activeVcl   string
+	value       interface{}
+}
+
+func TestV2ParseVarnishNames(t *testing.T) {
+	for _, c := range []testConfig{
+		{
+			vName:       "MGT.uptime",
+			measurement: "varnish_mgt",
+			tags:        map[string]string{},
+			field:       "uptime",
+		},
+		{
+			vName:       "VBE.boot.default.fail",
+			measurement: "varnish_vbe",
+			tags:        map[string]string{"backend": "default"},
+			field:       "fail",
+			activeVcl:   "boot",
+		},
+		{
+			vName:       "MEMPOOL.req1.allocs",
+			measurement: "varnish_mempool",
+			tags:        map[string]string{"id": "req1"},
+			field:       "allocs",
+		},
+		{
+			vName:       "SMF.s0.c_bytes",
+			measurement: "varnish_smf",
+			tags:        map[string]string{"id": "s0"},
+			field:       "c_bytes",
+		},
+		{
+			vName: "VBE.reload_20210622_153544_23757.server1.happy", measurement: "varnish_vbe",
+			tags:      map[string]string{"backend": "server1"},
+			field:     "happy",
+			activeVcl: "reload_20210622_153544_23757",
+		},
+		{
+			vName:       "XXX.YYY.AAA",
+			measurement: "varnish_xxx",
+			tags:        map[string]string{"id": "YYY"},
+			field:       "AAA",
+		},
+		{
+			vName:       "VBE.vcl_20211502_214503.goto.000007d4.(10.100.0.1).(https://example.com:443).(ttl:10.000000).beresp_bodybytes",
+			measurement: "varnish_vbe",
+			tags:        map[string]string{"backend": "10.100.0.1", "server": "https://example.com:443"},
+			activeVcl:   "vcl_20211502_214503",
+			field:       "beresp_bodybytes",
+		},
+		{
+			vName:       "VBE.VCL_xxxx_xxx_VOD_SHIELD_Vxxxxxxxxxxxxx_xxxxxxxxxxxxx.default.bereq_hdrbytes",
+			measurement: "varnish_vbe",
+			tags:        map[string]string{"backend": "default"},
+			activeVcl:   "VCL_xxxx_xxx_VOD_SHIELD_Vxxxxxxxxxxxxx_xxxxxxxxxxxxx",
+			field:       "bereq_hdrbytes",
+		},
+		{
+			vName:       "VBE.VCL_ROUTER_V123_123.default.happy",
+			tags:        map[string]string{"backend": "default"},
+			field:       "happy",
+			activeVcl:   "VCL_ROUTER_V123_123",
+			measurement: "varnish_vbe"},
+		{
+			vName:       "KVSTORE.ds_stats.VCL_xxxx_xxx_A_B_C.shield",
+			tags:        map[string]string{"id": "ds_stats"},
+			field:       "shield",
+			activeVcl:   "VCL_xxxx_xxx_A_B_C",
+			measurement: "varnish_kvstore",
+		},
+		{
+			vName:       "LCK.goto.director.destroy",
+			tags:        map[string]string{"id": "goto.director"},
+			field:       "destroy",
+			activeVcl:   "",
+			measurement: "varnish_lck",
+		},
+		{
+			vName:       "XCNT.1111.XXX+_LINE.cr.deliver_stub_restart.val",
+			tags:        map[string]string{"group": "XXX+_LINE.cr"},
+			field:       "deliver_stub_restart",
+			activeVcl:   "1111",
+			measurement: "varnish_xcnt",
+		},
+		{
+			vName:       "XCNT.vcl123.my_field.val",
+			tags:        map[string]string{},
+			field:       "my_field",
+			activeVcl:   "vcl123",
+			measurement: "varnish_xcnt",
+		},
+	} {
+		vMetric := parseMetricV2(c.vName)
+		require.Equal(t, c.activeVcl, vMetric.vclName)
+		require.Equal(t, c.measurement, vMetric.measurement, c.vName)
+		require.Equal(t, c.field, vMetric.fieldName)
+		require.Equal(t, c.tags, vMetric.tags)
+	}
+}
+
+func TestVersions(t *testing.T) {
+	server := &Varnish{}
+	require.Equal(t, "A plugin to collect stats from Varnish HTTP Cache", server.Description())
+	acc := &testutil.Accumulator{}
+
+	require.Equal(t, 0, len(acc.Metrics))
+
+	type testConfig struct {
+		jsonFile           string
+		activeReloadPrefix string
+		size               int
+	}
+
+	for _, c := range []testConfig{
+		{jsonFile: "varnish_types.json", activeReloadPrefix: "", size: 3},
+		{jsonFile: "varnish6.2.1_reload.json", activeReloadPrefix: "reload_20210623_170621_31083", size: 374},
+		{jsonFile: "varnish6.2.1_reload.json", activeReloadPrefix: "", size: 434},
+		{jsonFile: "varnish6.6.json", activeReloadPrefix: "boot", size: 358},
+		{jsonFile: "varnish4_4.json", activeReloadPrefix: "boot", size: 295},
+	} {
+		output, _ := ioutil.ReadFile("test_data/" + c.jsonFile)
+		err := server.processMetricsV2(c.activeReloadPrefix, acc, bytes.NewBuffer(output))
+		require.NoError(t, err)
+		require.Equal(t, c.size, len(acc.Metrics))
+		for _, m := range acc.Metrics {
+			require.NotEmpty(t, m.Fields)
+			require.Contains(t, m.Measurement, "varnish_")
+			for field := range m.Fields {
+				require.NotContains(t, field, "reload_")
+			}
+			for tag := range m.Tags {
+				require.NotContains(t, tag, "reload_")
+			}
+		}
+		acc.ClearMetrics()
+	}
+}
+
+func TestJsonTypes(t *testing.T) {
+	json := `{
+		"timestamp": "2021-06-23T17:06:37",
+			"counters": {
+			"XXX.floatTest": {
+				"description": "floatTest",
+					"flag": "c",
+					"format": "d",
+					"value": 123.45
+			},
+			"XXX.stringTest": {
+				"description": "stringTest",
+					"flag": "c",
+					"format": "d",
+					"value": "abc_def"
+			},
+			"XXX.intTest": {
+				"description": "intTest",
+					"flag": "c",
+					"format": "d",
+					"value": 12345
+			}
+		}}`
+	exp := []testConfig{
+		{measurement: "varnish_xxx", field: "floatTest", value: 123.45},
+		{measurement: "varnish_xxx", field: "stringTest", value: "abc_def"},
+		{measurement: "varnish_xxx", field: "intTest", value: int64(12345)},
+	}
+	//output, _ := ioutil.ReadFile("test_data/" + "varnish_types.json")
+	acc := &testutil.Accumulator{}
+	v := &Varnish{
+		run:           fakeVarnishRunner(json),
+		Stats:         []string{"*"},
+		MetricVersion: 2,
+	}
+	assert.NoError(t, v.Gather(acc))
+	require.Equal(t, 3, len(acc.Metrics))
+
+	for i, m := range acc.Metrics {
+		c := exp[i]
+		require.Equal(t, c.measurement, m.Measurement)
+		require.Equal(t, c.value, m.Fields[c.field])
+	}
+}
+
+func TestV1Dump(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	file, _ := ioutil.ReadFile("test_data/" + "varnish_v1_reload.txt")
+	output := string(file)
+	v := &Varnish{
+		run: fakeVarnishRunner(output),
+		admRun: fakeVarnishRunner(`available   cold    cold         0    boot
+available   cold    cold         0    reload_20210719_143559_60674
+available   cold    cold         0    test
+available   cold    cold         0    test2
+available   cold    cold         0    test3
+available   auto    warm         0    reload_20210722_162225_1979744
+active      auto    warm         0    reload_20210723_091821_2056185
+`),
+		MetricVersion: 1,
+		Stats:         []string{"*"},
+	}
+	assert.NoError(t, v.Gather(acc))
+	assert.Len(t, acc.Metrics, 6)
+}
