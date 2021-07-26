@@ -103,7 +103,7 @@ require (
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.0
 	github.com/nsqio/go-nsq v1.0.8
 	github.com/onsi/gomega v1.14.0 // indirect
-	github.com/openconfig/gnmi v0.0.0-20210707145734-c69a5df04b53
+	github.com/openconfig/gnmi v0.0.0-20180912164834-33a1865c3029
 	github.com/openzipkin/zipkin-go-opentracing v0.3.4
 	github.com/pion/dtls/v2 v2.0.9
 	github.com/pkg/errors v0.9.1
