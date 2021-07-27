@@ -88,6 +88,52 @@ func TestPersistentVolumeClaim(t *testing.T) {
 			},
 			hasError: false,
 		},
+		{
+			name:     "no label selectors",
+			hasError: false,
+			handler: &mockHandler{
+				responseMap: map[string]interface{}{
+					"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{
+						Items: []corev1.PersistentVolumeClaim{
+							{
+								Status: corev1.PersistentVolumeClaimStatus{
+									Phase: "bound",
+								},
+								Spec: corev1.PersistentVolumeClaimSpec{
+									VolumeName:       "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
+									StorageClassName: toStrPtr("ebs-1"),
+									Selector:         nil,
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns1",
+									Name:      "pc1",
+									Labels: map[string]string{
+										"lab1": "v1",
+										"lab2": "v2",
+									},
+									CreationTimestamp: metav1.Time{Time: now},
+								},
+							},
+						},
+					},
+				},
+			},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_persistentvolumeclaim",
+					map[string]string{
+						"pvc_name":     "pc1",
+						"namespace":    "ns1",
+						"storageclass": "ebs-1",
+						"phase":        "bound",
+					},
+					map[string]interface{}{
+						"phase_type": 0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, v := range tests {
