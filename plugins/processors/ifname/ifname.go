@@ -349,7 +349,7 @@ func init() {
 func makeTableNoMock(fieldName string) (*si.Table, error) {
 	var err error
 	tab := si.Table{
-		Name:       "ifName",
+		Name:       "ifTable",
 		IndexAsTag: true,
 		Fields: []si.Field{
 			{Oid: fieldName},
