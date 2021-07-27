@@ -31,6 +31,7 @@ type OpcUA struct {
 	RequestTimeout config.Duration `toml:"request_timeout"`
 	RootNodes      []NodeSettings  `toml:"nodes"`
 	Groups         []GroupSettings `toml:"group"`
+	Log            telegraf.Logger `toml:"-"`
 
 	nodes       []Node
 	nodeData    []OPCData
@@ -46,9 +47,6 @@ type OpcUA struct {
 	client *opcua.Client
 	req    *ua.ReadRequest
 	opts   []opcua.Option
-
-	// Logger
-	Log telegraf.Logger `toml:"-"`
 }
 
 // OPCTag type

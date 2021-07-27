@@ -255,6 +255,7 @@ func TestValidateOPCTags(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			o := OpcUA{
 				nodes: tt.nodes,
+				Log:   testutil.Logger{},
 			}
 			require.Equal(t, tt.err, o.validateOPCTags())
 		})
