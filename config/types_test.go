@@ -8,12 +8,13 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/processors/reverse_dns"
+	"github.com/influxdata/telegraf/testhelper"
 	"github.com/stretchr/testify/require"
 )
 
 func TestConfigDuration(t *testing.T) {
 	c := config.NewConfig()
-	c.SetAgent(&testAgentController{})
+	c.SetAgent(&testhelper.TestAgentController{})
 	err := c.LoadConfigData(context.Background(), context.Background(), []byte(`
 [[processors.reverse_dns]]
   cache_ttl = "3h"

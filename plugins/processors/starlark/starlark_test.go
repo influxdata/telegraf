@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/testhelper"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	starlarktime "go.starlark.net/lib/time"
@@ -2606,7 +2607,7 @@ def apply(metric):
 // Build a Starlark plugin from the provided configuration.
 func buildPlugin(configContent string) (*Starlark, error) {
 	c := config.NewConfig()
-	c.SetAgent(&testAgentController{})
+	c.SetAgent(&testhelper.TestAgentController{})
 	err := c.LoadConfigData(context.Background(), context.Background(), []byte(configContent))
 	if err != nil {
 		return nil, err
@@ -3301,43 +3302,3 @@ func testLoadFunc(module string, logger telegraf.Logger) (starlark.StringDict, e
 func testNow(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	return starlarktime.Time(time.Date(2021, 4, 15, 12, 0, 0, 999, time.UTC)), nil
 }
-
-type testAgentController struct {
-	inputs     []*models.RunningInput
-	processors []models.ProcessorRunner
-	outputs    []*models.RunningOutput
-	// configs    []*config.RunningConfigPlugin
-}
-
-func (a *testAgentController) reset() {
-	a.inputs = nil
-	a.processors = nil
-	a.outputs = nil
-	// a.configs = nil
-}
-
-func (a *testAgentController) RunningInputs() []*models.RunningInput {
-	return a.inputs
-}
-func (a *testAgentController) RunningProcessors() []models.ProcessorRunner {
-	return a.processors
-}
-func (a *testAgentController) RunningOutputs() []*models.RunningOutput {
-	return a.outputs
-}
-func (a *testAgentController) AddInput(input *models.RunningInput) {
-	a.inputs = append(a.inputs, input)
-}
-func (a *testAgentController) AddProcessor(processor models.ProcessorRunner) {
-	a.processors = append(a.processors, processor)
-}
-func (a *testAgentController) AddOutput(output *models.RunningOutput) {
-	a.outputs = append(a.outputs, output)
-}
-func (a *testAgentController) RunInput(input *models.RunningInput, startTime time.Time)        {}
-func (a *testAgentController) RunProcessor(p models.ProcessorRunner)                           {}
-func (a *testAgentController) RunOutput(ctx context.Context, output *models.RunningOutput)     {}
-func (a *testAgentController) RunConfigPlugin(ctx context.Context, plugin config.ConfigPlugin) {}
-func (a *testAgentController) StopInput(i *models.RunningInput)                                {}
-func (a *testAgentController) StopProcessor(p models.ProcessorRunner)                          {}
-func (a *testAgentController) StopOutput(p *models.RunningOutput)                              {}
