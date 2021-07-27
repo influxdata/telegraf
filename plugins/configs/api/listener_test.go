@@ -31,9 +31,9 @@ func TestStartPlugin(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	c := config.NewConfig()
-	agent := agent.NewAgent(ctx, c)
-	api, outputCancel := newAPI(ctx, c, agent)
-	go agent.RunWithAPI(outputCancel)
+	a := agent.NewAgent(ctx, c)
+	api, outputCancel := newAPI(ctx, c, a)
+	go a.RunWithAPI(outputCancel)
 
 	s := &ConfigAPIService{
 		api: api,
@@ -55,7 +55,7 @@ func TestStartPlugin(t *testing.T) {
 	require.EqualValues(t, 200, resp.StatusCode)
 	err = json.NewDecoder(resp.Body).Decode(&createResp)
 	require.NoError(t, err)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	require.Regexp(t, `^[\da-f]{8}\d{8}$`, createResp.ID)
 
@@ -71,7 +71,7 @@ func TestStartPlugin(t *testing.T) {
 		require.EqualValues(t, 200, resp.StatusCode)
 		err = json.NewDecoder(resp.Body).Decode(&statusResp)
 		require.NoError(t, err)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	require.EqualValues(t, "running", statusResp.Status)
@@ -82,7 +82,7 @@ func TestStartPlugin(t *testing.T) {
 	listResp := []PluginConfigTypeInfo{}
 	err = json.NewDecoder(resp.Body).Decode(&listResp)
 	require.NoError(t, err)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if len(listResp) < 20 {
 		require.FailNow(t, "expected there to be more than 20 plugins loaded, was only", len(listResp))
@@ -94,10 +94,9 @@ func TestStartPlugin(t *testing.T) {
 	runningList := []Plugin{}
 	err = json.NewDecoder(resp.Body).Decode(&runningList)
 	require.NoError(t, err)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if len(runningList) != 1 {
 		require.FailNow(t, "expected there to be 1 running plugin, was", len(runningList))
 	}
-
 }

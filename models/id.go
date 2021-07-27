@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	globalPluginIDIncrement uint32 = 0
-	globalInstanceID        uint32 = rand.Uint32() // set a new instance ID on every app load.
+	globalPluginIDIncrement uint32
+	globalInstanceID        = rand.Uint32() // set a new instance ID on every app load.
 )
 
 // NextPluginID generates a globally unique plugin ID for use referencing the plugin within the lifetime of Telegraf.

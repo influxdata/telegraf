@@ -36,7 +36,7 @@ type Agent struct {
 }
 
 // NewAgent returns an Agent for the given Config.
-func NewAgent(ctx context.Context, config *config.Config) *Agent {
+func NewAgent(ctx context.Context, cfg *config.Config) *Agent {
 	inputDestCh := make(chan telegraf.Metric)
 	outputSrcCh := make(chan telegraf.Metric)
 
@@ -44,7 +44,7 @@ func NewAgent(ctx context.Context, config *config.Config) *Agent {
 	// as processors are added, they will be inserted between these two.
 
 	return &Agent{
-		Config:  config,
+		Config:  cfg,
 		ctx:     ctx,
 		started: sync.NewCond(&sync.Mutex{}),
 		inputGroupUnit: inputGroupUnit{
@@ -103,7 +103,6 @@ type outputUnit struct {
 
 type processorGroupUnit struct {
 	sync.Mutex
-	accumulator    telegraf.Accumulator
 	processorUnits []*processorUnit
 }
 
@@ -658,7 +657,9 @@ func (a *Agent) RunOutput(ctx context.Context, output *models.RunningOutput) {
 	}
 	a.outputGroupUnit.Unlock()
 
-	a.flushOnce(output, ticker, output.Write)
+	if err = a.flushOnce(output, ticker, output.Write); err != nil {
+		log.Printf("E! [agent] Error writing to %s: %v", output.LogName(), err)
+	}
 
 	output.Close()
 }
@@ -866,6 +867,4 @@ func (a *Agent) waitForPluginsToStop() {
 	a.configPluginUnit.Unlock()
 
 	// everything closed; shut down
-	return
-
 }

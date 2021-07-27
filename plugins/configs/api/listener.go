@@ -4,28 +4,32 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log" // nolint:revive
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 )
 
 type ConfigAPIService struct {
 	server *http.Server
 	api    *api
+	Log    telegraf.Logger
 }
 
-func newConfigAPIService(server *http.Server, api *api) *ConfigAPIService {
+func newConfigAPIService(server *http.Server, api *api, logger telegraf.Logger) *ConfigAPIService {
 	service := &ConfigAPIService{
 		server: server,
 		api:    api,
+		Log:    logger,
 	}
 	server.Handler = service.mux()
 	return service
 }
 
+// nolint:revive
 func (s *ConfigAPIService) mux() *mux.Router {
 	m := mux.NewRouter()
 	m.HandleFunc("/status", s.status)
@@ -51,13 +55,13 @@ func (s *ConfigAPIService) createPlugin(w http.ResponseWriter, req *http.Request
 
 	dec := json.NewDecoder(req.Body)
 	if err := dec.Decode(&cfg); err != nil {
-		log.Printf("E! [configapi] decode error %v", err)
+		s.Log.Error("decode error %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	id, err := s.api.CreatePlugin(cfg)
 	if err != nil {
-		log.Printf("E! [configapi] error creating plugin %v", err)
+		s.Log.Error("error creating plugin %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

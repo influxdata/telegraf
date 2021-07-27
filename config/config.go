@@ -52,7 +52,7 @@ var (
 		`"`, `\"`,
 		`\`, `\\`,
 	)
-	HttpLoadConfigRetryInterval = 10 * time.Second
+	HTTPLoadConfigRetryInterval = 10 * time.Second
 
 	// fetchURLRe is a regex to determine whether the requested file should
 	// be fetched from a remote or read from the filesystem.
@@ -412,7 +412,7 @@ func PrintSampleConfig(
 	aggregatorFilters []string,
 	processorFilters []string,
 ) {
-	// print headers
+	// nolint:revive // print headers
 	fmt.Println(header)
 
 	if len(sectionFilters) == 0 {
@@ -424,10 +424,12 @@ func PrintSampleConfig(
 	if sliceContains("outputs", sectionFilters) {
 		if len(outputFilters) != 0 {
 			if len(outputFilters) >= 3 && outputFilters[1] != "none" {
+				// nolint:revive
 				fmt.Println(outputHeader)
 			}
 			printFilteredOutputs(outputFilters, false)
 		} else {
+			// nolint:revive
 			fmt.Println(outputHeader)
 			printFilteredOutputs(outputDefaults, false)
 			// Print non-default outputs, commented
@@ -446,10 +448,12 @@ func PrintSampleConfig(
 	if sliceContains("processors", sectionFilters) {
 		if len(processorFilters) != 0 {
 			if len(processorFilters) >= 3 && processorFilters[1] != "none" {
+				// nolint:revive
 				fmt.Println(processorHeader)
 			}
 			printFilteredProcessors(processorFilters, false)
 		} else {
+			// nolint:revive
 			fmt.Println(processorHeader)
 			pnames := []string{}
 			for pname := range processors.Processors {
@@ -464,10 +468,12 @@ func PrintSampleConfig(
 	if sliceContains("aggregators", sectionFilters) {
 		if len(aggregatorFilters) != 0 {
 			if len(aggregatorFilters) >= 3 && aggregatorFilters[1] != "none" {
+				// nolint:revive
 				fmt.Println(aggregatorHeader)
 			}
 			printFilteredAggregators(aggregatorFilters, false)
 		} else {
+			// nolint:revive
 			fmt.Println(aggregatorHeader)
 			pnames := []string{}
 			for pname := range aggregators.Aggregators {
@@ -482,10 +488,12 @@ func PrintSampleConfig(
 	if sliceContains("inputs", sectionFilters) {
 		if len(inputFilters) != 0 {
 			if len(inputFilters) >= 3 && inputFilters[1] != "none" {
+				// nolint:revive
 				fmt.Println(inputHeader)
 			}
 			printFilteredInputs(inputFilters, false)
 		} else {
+			// nolint:revive
 			fmt.Println(inputHeader)
 			printFilteredInputs(inputDefaults, false)
 			// Print non-default inputs, commented
@@ -576,6 +584,7 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 	}
 	sort.Strings(servInputNames)
 
+	// nolint:revive
 	fmt.Println(serviceInputHeader)
 	for _, name := range servInputNames {
 		printConfig(name, servInputs[name], "inputs", commented)
@@ -602,10 +611,12 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 
 func printFilteredGlobalSections(sectionFilters []string) {
 	if sliceContains("global_tags", sectionFilters) {
+		// nolint:revive
 		fmt.Println(globalTagsConfig)
 	}
 
 	if sliceContains("agent", sectionFilters) {
+		// nolint:revive
 		fmt.Println(agentConfig)
 	}
 }
@@ -663,7 +674,7 @@ func PrintOutputConfig(name string) error {
 }
 
 // LoadDirectory loads all toml config files found in the specified path, recursively.
-func (c *Config) LoadDirectory(ctx context.Context, outputCtx context.Context, path string) error {
+func (c *Config) LoadDirectory(ctx context.Context, outputCtx context.Context, path string) error { // nolint:revive
 	walkfn := func(thispath string, info os.FileInfo, _ error) error {
 		if info == nil {
 			log.Printf("W! Telegraf is not permitted to read %s", thispath)
@@ -730,7 +741,7 @@ func isURL(str string) bool {
 }
 
 // LoadConfig loads the given config file and applies it to c
-func (c *Config) LoadConfig(ctx context.Context, outputCtx context.Context, path string) error {
+func (c *Config) LoadConfig(ctx context.Context, outputCtx context.Context, path string) error { // nolint:revive
 	var err error
 	if path == "" {
 		if path, err = GetDefaultConfigPath(); err != nil {
@@ -749,7 +760,7 @@ func (c *Config) LoadConfig(ctx context.Context, outputCtx context.Context, path
 }
 
 // LoadConfigData loads TOML-formatted config data
-func (c *Config) LoadConfigData(ctx context.Context, outputCtx context.Context, data []byte) error {
+func (c *Config) LoadConfigData(ctx context.Context, outputCtx context.Context, data []byte) error { // nolint:revive
 	tbl, err := parseConfig(data)
 	if err != nil {
 		return fmt.Errorf("Error parsing data: %s", err)
@@ -964,8 +975,8 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 
 		if resp.StatusCode != http.StatusOK {
 			if i < retries {
-				log.Printf("Error getting HTTP config.  Retry %d of %d in %s.  Status=%d", i, retries, HttpLoadConfigRetryInterval, resp.StatusCode)
-				time.Sleep(HttpLoadConfigRetryInterval)
+				log.Printf("Error getting HTTP config.  Retry %d of %d in %s.  Status=%d", i, retries, HTTPLoadConfigRetryInterval, resp.StatusCode)
+				time.Sleep(HTTPLoadConfigRetryInterval)
 				continue
 			}
 			return nil, fmt.Errorf("Retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status)
@@ -1033,10 +1044,9 @@ func (c *Config) addConfigPlugin(ctx context.Context, name string, table *ast.Ta
 		return err
 	}
 
-	// TODO: set storage
+	logger := models.NewLogger("config", name, name)
+	models.SetLoggerOnPlugin(configPlugin, logger)
 
-	// TODO: this init is expecting to see all of the config, I think?
-	// what it's really getting is a reference to this config object that isn't doing much.
 	if err := configPlugin.Init(ctx, c, c.controller); err != nil {
 		return err
 	}

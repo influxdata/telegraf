@@ -79,9 +79,6 @@ func TestListPluginTypes(t *testing.T) {
 
 	// check anonymous composed fields
 	require.EqualValues(t, "bool", gnmi.Config["InsecureSkipVerify"].Type)
-
-	// TODO: check named composed fields
-
 }
 
 func TestInputPluginLifecycle(t *testing.T) {
@@ -432,7 +429,7 @@ func TestExampleWorstPlugin(t *testing.T) {
 	}
 	readTimeout := config.Duration(5 * time.Second)
 	b := true
-	var i int = 1
+	i := 1
 	f := float64(6)
 	s := "I am a string pointer"
 	header := http.Header{

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/configs"
@@ -19,6 +20,7 @@ type ConfigAPIPlugin struct {
 	cancel context.CancelFunc
 	server *ConfigAPIService
 
+	Log     telegraf.Logger `toml:"-"`
 	plugins []PluginConfig
 }
 
@@ -29,9 +31,8 @@ func (a *ConfigAPIPlugin) GetName() string {
 func (a *ConfigAPIPlugin) Init(ctx context.Context, cfg *config.Config, agent config.AgentController) error {
 	a.api, a.cancel = newAPI(ctx, cfg, agent)
 
-	// TODO: is this needed?
 	if err := a.Storage.Init(); err != nil {
-		return nil
+		return fmt.Errorf("initializing storage: %w", err)
 	}
 
 	if err := a.Storage.Load("config-api", "plugins", &a.plugins); err != nil {
@@ -49,7 +50,7 @@ func (a *ConfigAPIPlugin) Init(ctx context.Context, cfg *config.Config, agent co
 	a.server = newConfigAPIService(&http.Server{
 		Addr:      a.ServiceAddress,
 		TLSConfig: tlsConfig,
-	}, a.api)
+	}, a.api, a.Log)
 
 	a.server.Start()
 	return nil

@@ -72,7 +72,6 @@ func TestAgentPluginControllerLifecycle(t *testing.T) {
 		},
 		now)
 	testutil.RequireMetricEqual(t, expected, o.receivedMetrics[0])
-
 }
 
 func TestAgentPluginConnectionsAfterAddAndRemoveProcessor(t *testing.T) {
@@ -183,20 +182,16 @@ func (p *testInputPlugin) SampleConfig() string                { return "" }
 func (p *testInputPlugin) Description() string                 { return "testInputPlugin" }
 func (p *testInputPlugin) Gather(a telegraf.Accumulator) error { return nil }
 func (p *testInputPlugin) Start(a telegraf.Accumulator) error {
-	println("locking")
 	p.Lock()
 	defer p.Unlock()
-	println("started")
 	p.acc = a
 	p.started = true
 	p.Cond.Broadcast()
 	return nil
 }
 func (p *testInputPlugin) Stop() {
-	println("stopping input (waiting for lock)")
 	p.Lock()
 	defer p.Unlock()
-	println("stopped input")
 }
 func (p *testInputPlugin) injectMetric(m telegraf.Metric) {
 	p.Lock()
@@ -214,9 +209,9 @@ func (p *testProcessorPlugin) Init() error                          { return nil
 func (p *testProcessorPlugin) SampleConfig() string                 { return "" }
 func (p *testProcessorPlugin) Description() string                  { return "testProcessorPlugin" }
 func (p *testProcessorPlugin) Start(acc telegraf.Accumulator) error { return nil }
-func (p *testProcessorPlugin) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
-	metric.AddField("capital", "Ottawa")
-	acc.AddMetric(metric)
+func (p *testProcessorPlugin) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
+	m.AddField("capital", "Ottawa")
+	acc.AddMetric(m)
 	return nil
 }
 func (p *testProcessorPlugin) Stop() error { return nil }

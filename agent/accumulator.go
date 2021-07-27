@@ -149,7 +149,7 @@ func (ac *accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator
 	}
 }
 
-func (ac *accumulator) WithNewMetricMaker(logName string, logger telegraf.Logger, f func(metric telegraf.Metric) telegraf.Metric) telegraf.Accumulator {
+func (ac *accumulator) WithNewMetricMaker(logName string, logger telegraf.Logger, f func(m telegraf.Metric) telegraf.Metric) telegraf.Accumulator {
 	return &metricMakerAccumulator{
 		Accumulator: ac,
 		makerFunc:   f,

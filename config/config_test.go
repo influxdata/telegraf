@@ -332,7 +332,7 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 }
 
 func TestConfig_URLRetries3Fails(t *testing.T) {
-	config.HttpLoadConfigRetryInterval = 0 * time.Second
+	config.HTTPLoadConfigRetryInterval = 0 * time.Second
 	responseCounter := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -353,7 +353,7 @@ func TestConfig_URLRetries3Fails(t *testing.T) {
 }
 
 func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
-	config.HttpLoadConfigRetryInterval = 0 * time.Second
+	config.HTTPLoadConfigRetryInterval = 0 * time.Second
 	responseCounter := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if responseCounter <= 2 {

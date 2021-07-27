@@ -4,7 +4,7 @@ package rotate
 import (
 	"fmt"
 	"io"
-	"log"
+	"log" // nolint:revive
 	"os"
 	"path/filepath"
 	"sort"

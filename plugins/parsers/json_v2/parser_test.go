@@ -100,7 +100,7 @@ func TestData(t *testing.T) {
 			})
 			cfg := config.NewConfig()
 			cfg.SetAgent(&testAgentController{})
-			err = cfg.LoadConfigData(context.Background(), context.Background(), []byte(buf))
+			err = cfg.LoadConfigData(context.Background(), context.Background(), buf)
 			require.NoError(t, err)
 
 			// Gather the metrics from the input file configure

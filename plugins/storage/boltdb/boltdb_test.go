@@ -19,7 +19,7 @@ func TestSaveLoadCycle(t *testing.T) {
 		Filename: "testdb.db",
 	}
 	defer func() {
-		os.Remove("testdb.db")
+		_ = os.Remove("testdb.db")
 	}()
 	err := p.Init()
 	require.NoError(t, err)

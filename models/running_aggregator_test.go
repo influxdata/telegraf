@@ -282,7 +282,8 @@ func TestAddDoesNotModifyMetric(t *testing.T) {
 		},
 		now)
 	expected := m.Copy()
-	ra.Add(m, &testutil.Accumulator{})
+	err := ra.Add(m, &testutil.Accumulator{})
+	require.NoError(t, err)
 
 	testutil.RequireMetricEqual(t, expected, m)
 }

@@ -135,6 +135,7 @@ func (m *MongoDB) Init() error {
 			opts.ReadPreference = readpref.Nearest()
 		}
 
+		// TODO: should not connect in Init() function!
 		client, err := mongo.Connect(ctx, opts)
 		if err != nil {
 			return fmt.Errorf("unable to connect to MongoDB: %q", err)

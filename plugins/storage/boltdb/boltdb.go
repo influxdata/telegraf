@@ -32,7 +32,6 @@ func (s *BoltDBStorage) Init() error {
 }
 
 func (s *BoltDBStorage) Close() error {
-	fmt.Println("boltdb closing")
 	return s.db.Close()
 }
 

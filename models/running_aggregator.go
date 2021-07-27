@@ -254,9 +254,9 @@ func (r *RunningAggregator) pushLoop(acc telegraf.Accumulator) {
 	}
 }
 
-func (r *RunningAggregator) pushMetricMaker(metric telegraf.Metric) telegraf.Metric {
+func (r *RunningAggregator) pushMetricMaker(inMetric telegraf.Metric) telegraf.Metric {
 	m := makemetric(
-		metric,
+		inMetric,
 		r.Config.NameOverride,
 		r.Config.MeasurementPrefix,
 		r.Config.MeasurementSuffix,

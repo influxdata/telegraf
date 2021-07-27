@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log" // nolint:revive
 	"reflect"
 	"sort"
 	"strings"
@@ -154,21 +154,20 @@ func (a *api) ListRunningPlugins() (runningPlugins []Plugin) {
 		}
 		getFieldConfig(v.Config, p.Config)
 		runningPlugins = append(runningPlugins, p)
-
 	}
 	// TODO: add more types?
 	return runningPlugins
 }
 
-func (a *api) UpdatePlugin(ID models.PluginID, config PluginConfigCreate) error {
+func (a *api) UpdatePlugin(id models.PluginID, cfg PluginConfigCreate) error {
 	// TODO: shut down plugin and start a new plugin with the same id.
 	return nil
 }
 
-func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
-	log.Printf("I! [configapi] creating plugin %q", config.Name)
+func (a *api) CreatePlugin(cfg PluginConfigCreate) (models.PluginID, error) {
+	log.Printf("I! [configapi] creating plugin %q", cfg.Name)
 
-	parts := strings.Split(config.Name, ".")
+	parts := strings.Split(cfg.Name, ".")
 	pluginType, name := parts[0], parts[1]
 	switch pluginType {
 	case "inputs":
@@ -180,7 +179,7 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 		// create a copy
 		i := input()
 		// set the config
-		if err := setFieldConfig(config.Config, i); err != nil {
+		if err := setFieldConfig(cfg.Config, i); err != nil {
 			return "", err
 		}
 
@@ -191,7 +190,7 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 				JSONStrict: true,
 				DataFormat: "influx",
 			}
-			if err := setFieldConfig(config.Config, pc); err != nil {
+			if err := setFieldConfig(cfg.Config, pc); err != nil {
 				return "", err
 			}
 			parser, err := parsers.NewParser(pc)
@@ -207,7 +206,7 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 				JSONStrict: true,
 				DataFormat: "influx",
 			}
-			if err := setFieldConfig(config.Config, pc); err != nil {
+			if err := setFieldConfig(cfg.Config, pc); err != nil {
 				return "", err
 			}
 
@@ -218,11 +217,11 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 
 		// start it and put it into the agent manager?
 		pluginConfig := &models.InputConfig{Name: name}
-		if err := setFieldConfig(config.Config, pluginConfig); err != nil {
+		if err := setFieldConfig(cfg.Config, pluginConfig); err != nil {
 			return "", err
 		}
 
-		if err := setFieldConfig(config.Config, &pluginConfig.Filter); err != nil {
+		if err := setFieldConfig(cfg.Config, &pluginConfig.Filter); err != nil {
 			return "", err
 		}
 
@@ -247,25 +246,25 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 		// create a copy
 		o := output()
 		// set the config
-		if err := setFieldConfig(config.Config, o); err != nil {
+		if err := setFieldConfig(cfg.Config, o); err != nil {
 			return "", err
 		}
 		// start it and put it into the agent manager?
 		pluginConfig := &models.OutputConfig{Name: name}
-		if err := setFieldConfig(config.Config, pluginConfig); err != nil {
+		if err := setFieldConfig(cfg.Config, pluginConfig); err != nil {
 			return "", err
 		}
 
-		if err := setFieldConfig(config.Config, &pluginConfig.Filter); err != nil {
+		if err := setFieldConfig(cfg.Config, &pluginConfig.Filter); err != nil {
 			return "", err
 		}
 
 		if t, ok := o.(serializers.SerializerOutput); ok {
 			sc := &serializers.Config{
-				TimestampUnits: time.Duration(1 * time.Second),
+				TimestampUnits: 1 * time.Second,
 				DataFormat:     "influx",
 			}
-			if err := setFieldConfig(config.Config, sc); err != nil {
+			if err := setFieldConfig(cfg.Config, sc); err != nil {
 				return "", err
 			}
 			serializer, err := serializers.NewSerializer(sc)
@@ -294,7 +293,7 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 		agg := aggregator()
 
 		// set the config
-		if err := setFieldConfig(config.Config, agg); err != nil {
+		if err := setFieldConfig(cfg.Config, agg); err != nil {
 			return "", err
 		}
 		aggCfg := &models.AggregatorConfig{
@@ -303,11 +302,11 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 			Period: time.Second * 30,
 			Grace:  time.Second * 0,
 		}
-		if err := setFieldConfig(config.Config, aggCfg); err != nil {
+		if err := setFieldConfig(cfg.Config, aggCfg); err != nil {
 			return "", err
 		}
 
-		if err := setFieldConfig(config.Config, &aggCfg.Filter); err != nil {
+		if err := setFieldConfig(cfg.Config, &aggCfg.Filter); err != nil {
 			return "", err
 		}
 
@@ -332,15 +331,15 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 			rootp = unwrapme.Unwrap()
 		}
 		// set the config
-		if err := setFieldConfig(config.Config, rootp); err != nil {
+		if err := setFieldConfig(cfg.Config, rootp); err != nil {
 			return "", err
 		}
 		// start it and put it into the agent manager?
 		pluginConfig := &models.ProcessorConfig{Name: name}
-		if err := setFieldConfig(config.Config, pluginConfig); err != nil {
+		if err := setFieldConfig(cfg.Config, pluginConfig); err != nil {
 			return "", err
 		}
-		if err := setFieldConfig(config.Config, &pluginConfig.Filter); err != nil {
+		if err := setFieldConfig(cfg.Config, &pluginConfig.Filter); err != nil {
 			return "", err
 		}
 
@@ -360,44 +359,43 @@ func (a *api) CreatePlugin(config PluginConfigCreate) (models.PluginID, error) {
 	}
 }
 
-func (a *api) GetPluginStatus(ID models.PluginID) models.PluginState {
+func (a *api) GetPluginStatus(id models.PluginID) models.PluginState {
 	for _, v := range a.agent.RunningInputs() {
-		if v.ID == ID.Uint64() {
+		if v.ID == id.Uint64() {
 			return v.GetState()
 		}
 	}
 	for _, v := range a.agent.RunningProcessors() {
-		if v.GetID() == ID.Uint64() {
+		if v.GetID() == id.Uint64() {
 			return v.GetState()
 		}
 	}
 	for _, v := range a.agent.RunningOutputs() {
-		if v.ID == ID.Uint64() {
+		if v.ID == id.Uint64() {
 			return v.GetState()
 		}
 	}
 	return models.PluginStateDead
 }
 
-func (a *api) getPluginByID(ID models.PluginID) {
-
-}
-
-func (a *api) DeletePlugin(ID models.PluginID) error {
+func (a *api) DeletePlugin(id models.PluginID) error {
 	for _, v := range a.agent.RunningInputs() {
-		if v.ID == ID.Uint64() {
+		if v.ID == id.Uint64() {
+			log.Printf("I! [configapi] stopping plugin %q", v.LogName())
 			a.agent.StopInput(v)
 			return nil
 		}
 	}
 	for _, v := range a.agent.RunningProcessors() {
-		if v.GetID() == ID.Uint64() {
+		if v.GetID() == id.Uint64() {
+			log.Printf("I! [configapi] stopping plugin %q", v.LogName())
 			a.agent.StopProcessor(v)
 			return nil
 		}
 	}
 	for _, v := range a.agent.RunningOutputs() {
-		if v.ID == ID.Uint64() {
+		if v.ID == id.Uint64() {
+			log.Printf("I! [configapi] stopping plugin %q", v.LogName())
 			a.agent.StopOutput(v)
 			return nil
 		}
@@ -405,11 +403,11 @@ func (a *api) DeletePlugin(ID models.PluginID) error {
 	return nil
 }
 
-// func (a *API) PausePlugin(ID models.PluginID) {
+// func (a *API) PausePlugin(id models.PluginID) {
 
 // }
 
-// func (a *API) ResumePlugin(ID models.PluginID) {
+// func (a *API) ResumePlugin(id models.PluginID) {
 
 // }
 
@@ -433,15 +431,12 @@ func setFieldConfig(cfg map[string]interface{}, p interface{}) error {
 		}
 		if !destField.CanSet() {
 			destField.Addr()
-			// TODO: error?
-			fmt.Println("cannot set", k, destFieldType.Name())
-			continue
+			return fmt.Errorf("cannot set %s (%s)", k, destFieldType.Name())
 		}
 		val := reflect.ValueOf(v)
 		if err := setObject(val, destField, destFieldType); err != nil {
 			return fmt.Errorf("Could not set field %s: %w", k, err)
 		}
-
 	}
 	return nil
 }
@@ -631,7 +626,7 @@ func setObject(from, to reflect.Value, destType reflect.Type) error {
 			if err != nil {
 				return fmt.Errorf("Couldn't parse size %q: %w", from.Interface().(string), err)
 			}
-			to.SetInt(int64(size))
+			to.SetInt(size)
 		// TODO: handle slice types?
 		default:
 			// to.SetString(from.Interface().(string))
@@ -657,7 +652,7 @@ func setObject(from, to reflect.Value, destType reflect.Type) error {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			to.SetInt(from.Int())
 		case reflect.Float32, reflect.Float64:
-			to.SetFloat(float64(from.Float()))
+			to.SetFloat(from.Float())
 		case reflect.Interface:
 			to.Set(from)
 		default:
