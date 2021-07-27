@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"os/user"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/ghodss/yaml"
@@ -55,7 +54,7 @@ func loadClient(kubeconfigPath string) (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(&config)
 }
 
-func (p *Prometheus) start(ctx context.Context) error {
+func (p *Prometheus) startK8s(ctx context.Context) error {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get InClusterConfig - %v", err)
@@ -76,8 +75,6 @@ func (p *Prometheus) start(ctx context.Context) error {
 			return err
 		}
 	}
-
-	p.wg = sync.WaitGroup{}
 
 	p.wg.Add(1)
 	go func() {
