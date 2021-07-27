@@ -112,7 +112,7 @@ Create a new plugin. It will be started upon creation.
 
 ```json
   {
-    "name": "mqtt_consumer",
+    "name": "inputs.mqtt_consumer",
     "config": {.
       // ..
     },
