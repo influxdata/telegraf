@@ -28,7 +28,7 @@ Processes can be selected for monitoring using one of several methods:
   # user = "nginx"
   ## Systemd unit name, supports globs when include_systemd_children is set to true
   # systemd_unit = "nginx.service"
-  # systemd_all = true
+  # include_systemd_children = false
   ## CGroup name or path
   # cgroup = "systemd/system.slice/nginx.service"
 
