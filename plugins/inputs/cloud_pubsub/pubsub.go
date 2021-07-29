@@ -177,16 +177,16 @@ func (ps *PubSub) startReceiver(parentCtx context.Context) error {
 
 // onMessage handles parsing and adding a received message to the accumulator.
 func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
-	defer msg.Ack()
 	if ps.MaxMessageLen > 0 && len(msg.Data()) > ps.MaxMessageLen {
+		msg.Ack()
 		return fmt.Errorf("message longer than max_message_len (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
 	}
 
 	// This function is called concurrently, but the decoder cannot.
 	ps.decoderMutex.Lock()
 	b, err := ps.decoder.Decode(msg.Data())
-	ps.decoderMutex.Unlock()
 	if err != nil {
+		ps.decoderMutex.Unlock()
 		return fmt.Errorf("unable to decode message: %v", err)
 	}
 	var data []byte
@@ -196,6 +196,7 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 	} else {
 		data = b
 	}
+	ps.decoderMutex.Unlock()
 	if ps.Base64Data {
 		strData, err := base64.StdEncoding.DecodeString(string(data))
 		if err != nil {
@@ -206,10 +207,12 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 
 	metrics, err := ps.parser.Parse(data)
 	if err != nil {
+		msg.Ack()
 		return fmt.Errorf("unable to parse decoded message: %v", err)
 	}
 
 	if len(metrics) == 0 {
+		msg.Ack()
 		return nil
 	}
 

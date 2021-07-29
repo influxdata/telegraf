@@ -241,14 +241,7 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 		if err != nil {
 			return nil, err
 		}
-		var data []byte
-		if ps.ContentEncoding == "gzip" {
-			data = make([]byte, len(b))
-			copy(data, b)
-		} else {
-			data = b
-		}
-		msg := &pubsub.Message{Data: data}
+		msg := &pubsub.Message{Data: b}
 		if ps.Attributes != nil {
 			msg.Attributes = ps.Attributes
 		}
