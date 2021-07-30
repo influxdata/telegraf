@@ -19,13 +19,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/agenthelper"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
-	"github.com/influxdata/telegraf/testhelper"
 )
 
 func getMetric(t *testing.T) telegraf.Metric {
@@ -434,7 +434,7 @@ func TestTOMLConfig(t *testing.T) {
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
 			c := config.NewConfig()
-			c.SetAgent(&testhelper.TestAgentController{})
+			c.SetAgent(&agenthelper.TestAgentController{})
 
 			if tt.expectedError {
 				require.Error(t, c.LoadConfigData(context.Background(), context.Background(), tt.configBytes))

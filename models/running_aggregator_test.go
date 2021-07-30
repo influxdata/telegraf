@@ -23,7 +23,7 @@ func TestAdd(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	now := time.Now()
-	ra.updateWindow(now, now.Add(ra.Config.Period))
+	ra.UpdateWindow(now, now.Add(ra.Config.Period))
 
 	m := testutil.MustMetric("RITest",
 		map[string]string{},
@@ -54,7 +54,7 @@ func TestAddWithoutDrop(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	now := time.Now()
-	ra.updateWindow(now, now.Add(ra.Config.Period))
+	ra.UpdateWindow(now, now.Add(ra.Config.Period))
 
 	m := testutil.MustMetric("RITest",
 		map[string]string{},
@@ -88,7 +88,7 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 	require.NoError(t, ra.Config.Filter.Compile())
 	acc := &testutil.Accumulator{}
 	now := time.Now()
-	ra.updateWindow(now, now.Add(ra.Config.Period))
+	ra.UpdateWindow(now, now.Add(ra.Config.Period))
 
 	m := testutil.MustMetric("RITest",
 		map[string]string{},
@@ -143,7 +143,7 @@ func TestAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) {
 	require.NoError(t, ra.Config.Filter.Compile())
 	acc := &testutil.Accumulator{}
 	now := time.Now()
-	ra.updateWindow(now, now.Add(ra.Config.Period))
+	ra.UpdateWindow(now, now.Add(ra.Config.Period))
 
 	m := testutil.MustMetric("RITest",
 		map[string]string{},
@@ -209,7 +209,7 @@ func TestAddAndPushOnePeriod(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	now := time.Now()
-	ra.updateWindow(now, now.Add(ra.Config.Period))
+	ra.UpdateWindow(now, now.Add(ra.Config.Period))
 
 	m := testutil.MustMetric("RITest",
 		map[string]string{},
@@ -237,7 +237,7 @@ func TestAddDropOriginal(t *testing.T) {
 	require.NoError(t, ra.Config.Filter.Compile())
 
 	now := time.Now()
-	ra.updateWindow(now, now.Add(ra.Config.Period))
+	ra.UpdateWindow(now, now.Add(ra.Config.Period))
 
 	m := testutil.MustMetric("RITest",
 		map[string]string{},

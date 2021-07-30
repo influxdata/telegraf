@@ -113,15 +113,7 @@ func (r *RunningAggregator) Init() error {
 	return nil
 }
 
-// func (r *RunningAggregator) Period() time.Duration {
-// 	return r.Config.Period
-// }
-
-// func (r *RunningAggregator) EndPeriod() time.Time {
-// 	return r.periodEnd
-// }
-
-func (r *RunningAggregator) updateWindow(start, until time.Time) {
+func (r *RunningAggregator) UpdateWindow(start, until time.Time) {
 	r.periodStart = start
 	r.periodEnd = until
 	r.log.Debugf("Updated aggregation range [%s, %s]", start, until)
@@ -178,7 +170,7 @@ func (r *RunningAggregator) Push(acc telegraf.Accumulator) {
 
 	since := r.periodEnd
 	until := r.periodEnd.Add(r.Config.Period)
-	r.updateWindow(since, until)
+	r.UpdateWindow(since, until)
 
 	r.push(acc.WithNewMetricMaker(r.LogName(), r.Log(), r.pushMetricMaker))
 	r.Aggregator.Reset()
@@ -189,7 +181,7 @@ func (r *RunningAggregator) Start(acc telegraf.Accumulator) error {
 	r.setState(PluginStateRunning)
 
 	since, until := r.calculateUpdateWindow(time.Now())
-	r.updateWindow(since, until)
+	r.UpdateWindow(since, until)
 
 	r.ctx, r.cancel = context.WithCancel(context.Background())
 	r.wg.Add(1)

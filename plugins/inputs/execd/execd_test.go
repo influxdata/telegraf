@@ -14,12 +14,12 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
+	"github.com/influxdata/telegraf/agenthelper"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/influxdata/telegraf/testhelper"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -31,7 +31,7 @@ func TestSettingConfigWorks(t *testing.T) {
 		signal = "SIGHUP"
 	`
 	conf := config.NewConfig()
-	conf.SetAgent(&testhelper.TestAgentController{})
+	conf.SetAgent(&agenthelper.TestAgentController{})
 	require.NoError(t, conf.LoadConfigData(context.Background(), context.Background(), []byte(cfg)))
 
 	require.Len(t, conf.Inputs(), 1)

@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/agenthelper"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/testhelper"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	starlarktime "go.starlark.net/lib/time"
@@ -2607,7 +2607,7 @@ def apply(metric):
 // Build a Starlark plugin from the provided configuration.
 func buildPlugin(configContent string) (*Starlark, error) {
 	c := config.NewConfig()
-	c.SetAgent(&testhelper.TestAgentController{})
+	c.SetAgent(&agenthelper.TestAgentController{})
 	err := c.LoadConfigData(context.Background(), context.Background(), []byte(configContent))
 	if err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-package testhelper
+package agenthelper
 
 // Do not import other Telegraf packages as it causes dependency loops
 import (
@@ -9,6 +9,8 @@ import (
 	"github.com/influxdata/telegraf/models"
 )
 
+// For use in unit tests where the test needs a config object but doesn't
+// need to run its plugins. For example when testing parsing toml config.
 type TestAgentController struct {
 	inputs     []*models.RunningInput
 	processors []models.ProcessorRunner

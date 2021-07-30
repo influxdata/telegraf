@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/agenthelper"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/testhelper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -114,7 +114,7 @@ nodes = [{name="name4", identifier="4000", tags=[["tag1", "override"]]}]
 `
 
 	c := config.NewConfig()
-	c.SetAgent(&testhelper.TestAgentController{})
+	c.SetAgent(&agenthelper.TestAgentController{})
 	err := c.LoadConfigData(context.Background(), context.Background(), []byte(toml))
 	// opcua shouldn't be trying to connect in init.
 	if !strings.Contains(err.Error(), "connection refused") {

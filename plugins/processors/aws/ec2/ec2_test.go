@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/influxdata/telegraf/agenthelper"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/testhelper"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -59,7 +59,7 @@ func TestBasicInitInvalidTagsReturnAnError(t *testing.T) {
 
 func TestLoadingConfig(t *testing.T) {
 	c := config.NewConfig()
-	c.SetAgent(&testhelper.TestAgentController{})
+	c.SetAgent(&agenthelper.TestAgentController{})
 	err := c.LoadConfigData(context.Background(), context.Background(), []byte(
 		`
 	[[processors.aws_ec2]]

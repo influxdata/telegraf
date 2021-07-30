@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/agenthelper"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/minmax"
@@ -22,13 +23,12 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/file"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	_ "github.com/influxdata/telegraf/plugins/processors/rename"
-	"github.com/influxdata/telegraf/testhelper"
 	"github.com/stretchr/testify/require"
 )
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	require.NoError(t, os.Setenv("MY_TEST_SERVER", "192.168.1.1"))
@@ -76,7 +76,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 func TestConfig_LoadSingleInput(t *testing.T) {
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/single_plugin.toml")
@@ -122,7 +122,7 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 
 func TestConfig_LoadDirectory(t *testing.T) {
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	require.NoError(t, c.LoadConfig(context.Background(), context.Background(), "./testdata/single_plugin.toml"))
@@ -231,7 +231,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 func TestConfig_LoadSpecialTypes(t *testing.T) {
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/special_types.toml")
@@ -249,7 +249,7 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 
 func TestConfig_FieldNotDefined(t *testing.T) {
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/invalid_field.toml")
@@ -259,7 +259,7 @@ func TestConfig_FieldNotDefined(t *testing.T) {
 
 func TestConfig_WrongFieldType(t *testing.T) {
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/wrong_field_type.toml")
@@ -276,7 +276,7 @@ func TestConfig_WrongFieldType(t *testing.T) {
 func TestConfig_InlineTables(t *testing.T) {
 	// #4098
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	require.NoError(t, c.LoadConfig(context.Background(), context.Background(), "./testdata/inline_table.toml"))
@@ -292,7 +292,7 @@ func TestConfig_SliceComment(t *testing.T) {
 	t.Skipf("Skipping until #3642 is resolved")
 
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	require.NoError(t, c.LoadConfig(context.Background(), context.Background(), "./testdata/slice_comment.toml"))
@@ -307,7 +307,7 @@ func TestConfig_BadOrdering(t *testing.T) {
 	// #3444: when not using inline tables, care has to be taken so subsequent configuration
 	// doesn't become part of the table. This is not a bug, but TOML syntax.
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/non_slice_slice.toml")
@@ -318,7 +318,7 @@ func TestConfig_BadOrdering(t *testing.T) {
 func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 	// #8256 Cannot use empty string as the namespace prefix
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	require.NoError(t, c.LoadConfig(context.Background(), context.Background(), "./testdata/azure_monitor.toml"))
@@ -344,7 +344,7 @@ func TestConfig_URLRetries3Fails(t *testing.T) {
 	expected := fmt.Sprintf("Error loading config file %s: Retry 3 of 3 failed to retrieve remote config: 404 Not Found", ts.URL)
 
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	err := c.LoadConfig(context.Background(), context.Background(), ts.URL)
@@ -367,7 +367,7 @@ func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
 	defer ts.Close()
 
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	require.NoError(t, c.LoadConfig(context.Background(), context.Background(), ts.URL))
@@ -381,7 +381,7 @@ func TestConfig_getDefaultConfigPathFromEnvURL(t *testing.T) {
 	defer ts.Close()
 
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	err := os.Setenv("TELEGRAF_CONFIG_PATH", ts.URL)
@@ -395,7 +395,7 @@ func TestConfig_getDefaultConfigPathFromEnvURL(t *testing.T) {
 
 func TestConfig_URLLikeFileName(t *testing.T) {
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	err := c.LoadConfig(context.Background(), context.Background(), "http:##www.example.com.conf")
@@ -411,7 +411,7 @@ func TestConfig_URLLikeFileName(t *testing.T) {
 
 func TestConfig_OrderingProcessorsWithAggregators(t *testing.T) {
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/processor_and_aggregator_order.toml")
@@ -435,7 +435,7 @@ func TestConfig_OrderingProcessorsWithAggregators(t *testing.T) {
 
 func TestConfig_DefaultOrderingProcessorsWithAggregators(t *testing.T) {
 	c := config.NewConfig()
-	agentController := &testhelper.TestAgentController{}
+	agentController := &agenthelper.TestAgentController{}
 	c.SetAgent(agentController)
 	defer agentController.Reset()
 	err := c.LoadConfig(context.Background(), context.Background(), "./testdata/processor_and_aggregator_unordered.toml")
