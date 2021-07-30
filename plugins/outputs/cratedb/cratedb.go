@@ -68,11 +68,27 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout))
 	defer cancel()
-	if sql, err := insertSQL(c.Table, metrics); err != nil {
-		return err
-	} else if _, err := c.DB.ExecContext(ctx, sql); err != nil {
+
+	generatedSql, err := insertSQL(c.Table, metrics)
+	if err != nil {
 		return err
 	}
+
+	result, err := c.DB.ExecContext(ctx, generatedSql)
+	if err != nil {
+		return err
+	}
+
+	if affected, err := result.RowsAffected(); err != nil {
+		return err
+	} else if affected != int64(len(metrics)) {
+		// Unfortunately this is the most we can do to ensure everything was written. CrateDB
+		// does not return an error for a single row when doing bulk inserts, instead it just
+		// decrements the number of affected rows.
+		// https://crate.io/docs/crate/reference/en/latest/general/dml.html#inserting-data
+		return fmt.Errorf("failed to insert %d rows", int64(len(metrics))-affected)
+	}
+
 	return nil
 }
 
