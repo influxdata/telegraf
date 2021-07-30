@@ -4,6 +4,8 @@ The `regex` plugin transforms tag and field values with regex pattern. If `resul
 
 For tags transforms, if `append` is set to `true`, it will append the transformation to the existing tag value, instead of overwriting it.
 
+For metrics transforms, `key` denotes the element that should be transformed. Furthermore, `result_key` allows control over the behavior applied in case the resulting `tag` or `field` name already exists.
+
 ### Configuration:
 
 ```toml
@@ -38,6 +40,19 @@ For tags transforms, if `append` is set to `true`, it will append the transforma
     pattern = ".*category=(\\w+).*"
     replacement = "${1}"
     result_key = "search_category"
+
+  # Replace metric element names such as "measurement", "tag" or "field" name
+  [[processors.regex.metrics]]
+    ## Element name to change, can be "measurement", "tags" or "fields"
+    key = "fields"
+    ## Regular expression to match on a element name
+    pattern = "^search_(\\w+)d$"
+    ## Matches of the pattern will be replaced with this string.  Use ${1}
+    ## notation to use the text of the first submatch.
+    replacement = "${1}"
+    ## If the new tag or field name is already present, you can either
+    ## "overwrite" or "keep" the existing tag or field.
+    # result_key = "keep"
 ```
 
 ### Tags:
