@@ -5,15 +5,14 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func newM1() telegraf.Metric {
-	m1 := metric.New("access_log",
+	return testutil.MustMetric(
+		"access_log",
 		map[string]string{
 			"verb":      "GET",
 			"resp_code": "200",
@@ -23,11 +22,11 @@ func newM1() telegraf.Metric {
 		},
 		time.Now(),
 	)
-	return m1
 }
 
 func newM2() telegraf.Metric {
-	m2 := metric.New("access_log",
+	return testutil.MustMetric(
+		"access_log",
 		map[string]string{
 			"verb":      "GET",
 			"resp_code": "200",
@@ -39,7 +38,6 @@ func newM2() telegraf.Metric {
 		},
 		time.Now(),
 	)
-	return m2
 }
 
 func TestFieldConversions(t *testing.T) {
@@ -89,9 +87,9 @@ func TestFieldConversions(t *testing.T) {
 			"resp_code": "200",
 		}
 
-		assert.Equal(t, test.expectedFields, processed[0].Fields(), test.message)
-		assert.Equal(t, expectedTags, processed[0].Tags(), "Should not change tags")
-		assert.Equal(t, "access_log", processed[0].Name(), "Should not change name")
+		require.Equal(t, test.expectedFields, processed[0].Fields(), test.message)
+		require.Equal(t, expectedTags, processed[0].Tags(), "Should not change tags")
+		require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
 	}
 }
 
@@ -157,9 +155,9 @@ func TestTagConversions(t *testing.T) {
 			"request": "/users/42/",
 		}
 
-		assert.Equal(t, expectedFields, processed[0].Fields(), test.message, "Should not change fields")
-		assert.Equal(t, test.expectedTags, processed[0].Tags(), test.message)
-		assert.Equal(t, "access_log", processed[0].Name(), "Should not change name")
+		require.Equal(t, expectedFields, processed[0].Fields(), test.message, "Should not change fields")
+		require.Equal(t, test.expectedTags, processed[0].Tags(), test.message)
+		require.Equal(t, "access_log", processed[0].Name(), "Should not change name")
 	}
 }
 
@@ -612,8 +610,8 @@ func TestMultipleConversions(t *testing.T) {
 		"resp_code_text":  "OK",
 	}
 
-	assert.Equal(t, expectedFields, processed[0].Fields())
-	assert.Equal(t, expectedTags, processed[0].Tags())
+	require.Equal(t, expectedFields, processed[0].Fields())
+	require.Equal(t, expectedTags, processed[0].Tags())
 }
 
 func TestNoMatches(t *testing.T) {
@@ -668,7 +666,7 @@ func TestNoMatches(t *testing.T) {
 
 		processed := regex.Apply(newM1())
 
-		assert.Equal(t, test.expectedFields, processed[0].Fields(), test.message)
+		require.Equal(t, test.expectedFields, processed[0].Fields(), test.message)
 	}
 }
 
