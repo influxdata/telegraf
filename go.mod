@@ -130,7 +130,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/vapourismo/knx-go v0.0.0-20201122213738-75fe09ace330
 	github.com/vjeantet/grok v1.0.1
-	github.com/vmware/govmomi v0.19.0
+	github.com/vmware/govmomi v0.26.0
 	github.com/wavefronthq/wavefront-sdk-go v0.9.7
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
