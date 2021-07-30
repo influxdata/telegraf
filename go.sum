@@ -819,8 +819,6 @@ github.com/googleapis/gnostic v0.1.0/go.mod h1:sJBsCZ4ayReDTBIg8b9dl28c5xFWyhBTV
 github.com/googleapis/gnostic v0.4.0/go.mod h1:on+2t9HRStVgn95RSsFWFz+6Q0Snyqv1awfrALZdbtU=
 github.com/googleapis/gnostic v0.4.1 h1:DLJCy1n/vrD4HPjOvYcT8aYQXpPIzoRZONaYwyycI+I=
 github.com/googleapis/gnostic v0.4.1/go.mod h1:LRhVm6pbyptWbWbuZ38d1eyptfvIytN3ir6b65WBswg=
-github.com/gopcua/opcua v0.1.13 h1:UP746MKRFNbv+CQGfrPwgH7rGxOlSGzVu9ieZdcox4E=
-github.com/gopcua/opcua v0.1.13/go.mod h1:a6QH4F9XeODklCmWuvaOdL8v9H0d73CEKUHWVZLQyE8=
 github.com/gopcua/opcua v0.2.0-rc2.0.20210409063412-baabb9b14fd2 h1:OtFKr0Kwe1oLpMR+uNMh/DPgC5fxAq4xRe6HBv8LDqQ=
 github.com/gopcua/opcua v0.2.0-rc2.0.20210409063412-baabb9b14fd2/go.mod h1:a6QH4F9XeODklCmWuvaOdL8v9H0d73CEKUHWVZLQyE8=
 github.com/gophercloud/gophercloud v0.1.0/go.mod h1:vxM41WHh5uqHVBMZHzuwNOHh8XEoIEcSTewFxm1c5g8=
