@@ -187,12 +187,15 @@ func escapeObject(m map[string]interface{}) (string, error) {
 	// Now we build our key = val pairs
 	pairs := make([]string, 0, len(m))
 	for _, k := range keys {
-		// escape the value of our key k (potentially recursive)
+		key := strings.ReplaceAll(escapeString(k, `"`), ".", "_")
+
+		// escape the value of the value at k (potentially recursive)
 		val, err := escapeValue(m[k])
 		if err != nil {
 			return "", err
 		}
-		pairs = append(pairs, escapeString(k, `"`)+" = "+val)
+
+		pairs = append(pairs, key+" = "+val)
 	}
 	return `{` + strings.Join(pairs, ", ") + `}`, nil
 }
