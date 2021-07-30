@@ -128,9 +128,8 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 		for _, converter := range r.Fields {
 			if value, ok := metric.GetField(converter.Key); ok {
-				switch value := value.(type) {
-				case string:
-					if key, newValue := r.convert(converter, value); newValue != "" {
+				if v, ok := value.(string); ok {
+					if key, newValue := r.convert(converter, v); newValue != "" {
 						metric.AddField(key, newValue)
 					}
 				}
@@ -214,10 +213,9 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return in
 }
 
-func (r *Regex) convert(c converter, src string) (string, string) {
+func (r *Regex) convert(c converter, src string) (key string, value string) {
 	regex := r.regexCache[c.Pattern]
 
-	value := ""
 	if c.ResultKey == "" || regex.MatchString(src) {
 		value = regex.ReplaceAllString(src, c.Replacement)
 	}
