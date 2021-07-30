@@ -445,8 +445,10 @@ func Connect(o *OpcUA) error {
 }
 
 func (o *OpcUA) setupOptions() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.ConnectTimeout))
+	defer cancel()
 	// Get a list of the endpoints for our target server
-	endpoints, err := opcua.GetEndpoints(o.Endpoint)
+	endpoints, err := opcua.GetEndpoints(ctx, o.Endpoint)
 	if err != nil {
 		return err
 	}
