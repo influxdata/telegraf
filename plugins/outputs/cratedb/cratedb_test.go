@@ -2,7 +2,6 @@ package cratedb
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -93,6 +92,38 @@ VALUES
 	}
 }
 
+var escapeValueTests = []struct {
+	Val  interface{}
+	Want string
+}{
+	// string
+	{`foo`, `'foo'`},
+	{`foo'bar 'yeah`, `'foo''bar ''yeah'`},
+	// int types
+	{int64(123), `123`},
+	{uint64(123), `123`},
+	{uint64(MaxInt64) + 1, `9223372036854775807`},
+	{true, `true`},
+	{false, `false`},
+	// float types
+	{float64(123.456), `123.456`},
+	// time.Time
+	{time.Date(2017, 8, 7, 16, 44, 52, 123*1000*1000, time.FixedZone("Dreamland", 5400)), `'2017-08-07T16:44:52.123+0130'`},
+	// map[string]string
+	{map[string]string{}, `{}`},
+	{map[string]string(nil), `{}`},
+	{map[string]string{"foo": "bar"}, `{"foo" = 'bar'}`},
+	{map[string]string{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
+	{map[string]string{"f.oo": "bar", "o.n.e": "more"}, `{"f_oo" = 'bar', "o_n_e" = 'more'}`},
+	// map[string]interface{}
+	{map[string]interface{}{}, `{}`},
+	{map[string]interface{}(nil), `{}`},
+	{map[string]interface{}{"foo": "bar"}, `{"foo" = 'bar'}`},
+	{map[string]interface{}{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
+	{map[string]interface{}{"foo": map[string]interface{}{"one": "more"}}, `{"foo" = {"one" = 'more'}}`},
+	{map[string]interface{}{`fo"o`: `b'ar`, `ab'c`: `xy"z`, `on"""e`: `mo'''re`}, `{"ab'c" = 'xy"z', "fo""o" = 'b''ar', "on""""""e" = 'mo''''''re'}`},
+}
+
 func Test_escapeValueIntegration(t *testing.T) {
 	t.Skip("Skipping due to trust authentication failure")
 
@@ -100,56 +131,27 @@ func Test_escapeValueIntegration(t *testing.T) {
 		t.Skip("Skipping test on CircleCI due to docker failures")
 	}
 
-	tests := []struct {
-		Val  interface{}
-		Want string
-	}{
-		// string
-		{`foo`, `'foo'`},
-		{`foo'bar 'yeah`, `'foo''bar ''yeah'`},
-		// int types
-		{int64(123), `123`},
-		{uint64(123), `123`},
-		{uint64(MaxInt64) + 1, `9223372036854775807`},
-		{true, `true`},
-		{false, `false`},
-		// float types
-		{float64(123.456), `123.456`},
-		// time.Time
-		{time.Date(2017, 8, 7, 16, 44, 52, 123*1000*1000, time.FixedZone("Dreamland", 5400)), `'2017-08-07T16:44:52.123+0130'`},
-		// map[string]string
-		{map[string]string{}, `{}`},
-		{map[string]string(nil), `{}`},
-		{map[string]string{"foo": "bar"}, `{"foo" = 'bar'}`},
-		{map[string]string{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
-		// map[string]interface{}
-		{map[string]interface{}{}, `{}`},
-		{map[string]interface{}(nil), `{}`},
-		{map[string]interface{}{"foo": "bar"}, `{"foo" = 'bar'}`},
-		{map[string]interface{}{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
-		{map[string]interface{}{"foo": map[string]interface{}{"one": "more"}}, `{"foo" = {"one" = 'more'}}`},
-		{map[string]interface{}{`fo"o`: `b'ar`, `ab'c`: `xy"z`, `on"""e`: `mo'''re`}, `{"ab'c" = 'xy"z', "fo""o" = 'b''ar', "on""""""e" = 'mo''''''re'}`},
-	}
-
-	url := testURL()
-	fmt.Println("url", url)
-	db, err := sql.Open("pgx", url)
+	db, err := sql.Open("pgx", testURL())
 	require.NoError(t, err)
 	defer db.Close()
 
-	for _, test := range tests {
+	for _, test := range escapeValueTests {
 		got, err := escapeValue(test.Val)
-		if err != nil {
-			t.Errorf("val: %#v: %s", test.Val, err)
-		} else if got != test.Want {
-			t.Errorf("got:\n%s\n\nwant:\n%s", got, test.Want)
-		}
+		require.NoError(t, err, "value: %#v", test.Val)
 
 		// This is a smoke test that will blow up if our escaping causing a SQL
-		// syntax error, which may allow for an attack.
+		// syntax error, which may allow for an attack.=
 		var reply interface{}
 		row := db.QueryRow("SELECT " + got)
 		require.NoError(t, row.Scan(&reply))
+	}
+}
+
+func Test_escapeValue(t *testing.T) {
+	for _, test := range escapeValueTests {
+		got, err := escapeValue(test.Val)
+		require.NoError(t, err, "value: %#v", test.Val)
+		require.Equal(t, got, test.Want)
 	}
 }
 
