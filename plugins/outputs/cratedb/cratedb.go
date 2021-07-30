@@ -69,12 +69,12 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout))
 	defer cancel()
 
-	generatedSql, err := insertSQL(c.Table, metrics)
+	generatedSQL, err := insertSQL(c.Table, metrics)
 	if err != nil {
 		return err
 	}
 
-	result, err := c.DB.ExecContext(ctx, generatedSql)
+	result, err := c.DB.ExecContext(ctx, generatedSQL)
 	if err != nil {
 		return err
 	}
