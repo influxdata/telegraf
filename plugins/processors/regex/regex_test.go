@@ -6,7 +6,9 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newM1() telegraf.Metric {
@@ -72,10 +74,12 @@ func TestFieldConversions(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		regex := NewRegex()
-		regex.Fields = []converter{
-			test.converter,
+		regex := Regex{
+			Fields: []converter{
+				test.converter,
+			},
 		}
+		require.NoError(t, regex.Init())
 
 		processed := regex.Apply(newM1())
 
@@ -139,10 +143,12 @@ func TestTagConversions(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		regex := NewRegex()
-		regex.Tags = []converter{
-			test.converter,
+		regex := Regex{
+			Tags: []converter{
+				test.converter,
+			},
 		}
+		require.NoError(t, regex.Init())
 
 		processed := regex.Apply(newM1())
 
@@ -157,35 +163,37 @@ func TestTagConversions(t *testing.T) {
 }
 
 func TestMultipleConversions(t *testing.T) {
-	regex := NewRegex()
-	regex.Tags = []converter{
-		{
-			Key:         "resp_code",
-			Pattern:     "^(\\d)\\d\\d$",
-			Replacement: "${1}xx",
-			ResultKey:   "resp_code_group",
+	regex := Regex{
+		Tags: []converter{
+			{
+				Key:         "resp_code",
+				Pattern:     "^(\\d)\\d\\d$",
+				Replacement: "${1}xx",
+				ResultKey:   "resp_code_group",
+			},
+			{
+				Key:         "resp_code_group",
+				Pattern:     "2xx",
+				Replacement: "OK",
+				ResultKey:   "resp_code_text",
+			},
 		},
-		{
-			Key:         "resp_code_group",
-			Pattern:     "2xx",
-			Replacement: "OK",
-			ResultKey:   "resp_code_text",
+		Fields: []converter{
+			{
+				Key:         "request",
+				Pattern:     "^/api(?P<method>/[\\w/]+)\\S*",
+				Replacement: "${method}",
+				ResultKey:   "method",
+			},
+			{
+				Key:         "request",
+				Pattern:     ".*category=(\\w+).*",
+				Replacement: "${1}",
+				ResultKey:   "search_category",
+			},
 		},
 	}
-	regex.Fields = []converter{
-		{
-			Key:         "request",
-			Pattern:     "^/api(?P<method>/[\\w/]+)\\S*",
-			Replacement: "${method}",
-			ResultKey:   "method",
-		},
-		{
-			Key:         "request",
-			Pattern:     ".*category=(\\w+).*",
-			Replacement: "${1}",
-			ResultKey:   "search_category",
-		},
-	}
+	require.NoError(t, regex.Init())
 
 	processed := regex.Apply(newM2())
 
@@ -250,10 +258,12 @@ func TestNoMatches(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		regex := NewRegex()
-		regex.Fields = []converter{
-			test.converter,
+		regex := Regex{
+			Fields: []converter{
+				test.converter,
+			},
 		}
+		require.NoError(t, regex.Init())
 
 		processed := regex.Apply(newM1())
 
@@ -262,22 +272,24 @@ func TestNoMatches(t *testing.T) {
 }
 
 func BenchmarkConversions(b *testing.B) {
-	regex := NewRegex()
-	regex.Tags = []converter{
-		{
-			Key:         "resp_code",
-			Pattern:     "^(\\d)\\d\\d$",
-			Replacement: "${1}xx",
-			ResultKey:   "resp_code_group",
+	regex := Regex{
+		Tags: []converter{
+			{
+				Key:         "resp_code",
+				Pattern:     "^(\\d)\\d\\d$",
+				Replacement: "${1}xx",
+				ResultKey:   "resp_code_group",
+			},
+		},
+		Fields: []converter{
+			{
+				Key:         "request",
+				Pattern:     "^/users/\\d+/$",
+				Replacement: "/users/{id}/",
+			},
 		},
 	}
-	regex.Fields = []converter{
-		{
-			Key:         "request",
-			Pattern:     "^/users/\\d+/$",
-			Replacement: "/users/{id}/",
-		},
-	}
+	require.NoError(b, regex.Init())
 
 	for n := 0; n < b.N; n++ {
 		processed := regex.Apply(newM1())

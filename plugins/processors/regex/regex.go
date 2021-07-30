@@ -8,17 +8,18 @@ import (
 )
 
 type Regex struct {
-	Tags       []converter
-	Fields     []converter
+	Tags       []converter     `toml:"tags"`
+	Fields     []converter     `toml:"fields"`
+	Log        telegraf.Logger `toml:"-"`
 	regexCache map[string]*regexp.Regexp
 }
 
 type converter struct {
-	Key         string
-	Pattern     string
-	Replacement string
-	ResultKey   string
-	Append      bool
+	Key         string `toml:"key"`
+	Pattern     string `toml:"pattern"`
+	Replacement string `toml:"replacement"`
+	ResultKey   string `toml:"result_key"`
+	Append      bool   `toml:"append"`
 }
 
 const sampleConfig = `
@@ -52,10 +53,22 @@ const sampleConfig = `
   #   result_key = "search_category"
 `
 
-func NewRegex() *Regex {
-	return &Regex{
-		regexCache: make(map[string]*regexp.Regexp),
+func (r *Regex) Init() error {
+	r.regexCache = make(map[string]*regexp.Regexp)
+
+	// Compile the regular expressions
+	for _, c := range r.Tags {
+		if _, compiled := r.regexCache[c.Pattern]; !compiled {
+			r.regexCache[c.Pattern] = regexp.MustCompile(c.Pattern)
+		}
 	}
+	for _, c := range r.Fields {
+		if _, compiled := r.regexCache[c.Pattern]; !compiled {
+			r.regexCache[c.Pattern] = regexp.MustCompile(c.Pattern)
+		}
+	}
+
+	return nil
 }
 
 func (r *Regex) SampleConfig() string {
@@ -97,11 +110,7 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 }
 
 func (r *Regex) convert(c converter, src string) (string, string) {
-	regex, compiled := r.regexCache[c.Pattern]
-	if !compiled {
-		regex = regexp.MustCompile(c.Pattern)
-		r.regexCache[c.Pattern] = regex
-	}
+	regex := r.regexCache[c.Pattern]
 
 	value := ""
 	if c.ResultKey == "" || regex.MatchString(src) {
@@ -116,7 +125,5 @@ func (r *Regex) convert(c converter, src string) (string, string) {
 }
 
 func init() {
-	processors.Add("regex", func() telegraf.Processor {
-		return NewRegex()
-	})
+	processors.Add("regex", func() telegraf.Processor { return &Regex{} })
 }
