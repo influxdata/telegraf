@@ -74,7 +74,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/harlow/kinesis-consumer v0.3.1-0.20181230152818-2f58b136fee0
-	github.com/hashicorp/consul/api v1.8.1
+	github.com/hashicorp/consul/api v1.9.1
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
 	github.com/influxdata/go-syslog/v3 v3.0.0
 	github.com/influxdata/influxdb-observability/common v0.0.0-20210429174543-86ae73cafd31
@@ -130,7 +130,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/vapourismo/knx-go v0.0.0-20201122213738-75fe09ace330
 	github.com/vjeantet/grok v1.0.1
-	github.com/vmware/govmomi v0.19.0
+	github.com/vmware/govmomi v0.26.0
 	github.com/wavefronthq/wavefront-sdk-go v0.9.7
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
