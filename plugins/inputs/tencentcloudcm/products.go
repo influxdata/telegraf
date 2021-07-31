@@ -10,23 +10,15 @@ import (
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	cvm "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm/v20170312"
 	es "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/es/v20180416"
+	monitor "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor/v20180724"
 	redis "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/redis/v20180412"
 )
 
 // Product defines cloud product
 type Product interface {
 	Namespace() string // Tencent Cloud CM Product Namespace
-	Discover(crs *common.Credential, region, endpoint string) (instances []*Instance, err error)
+	Discover(crs *common.Credential, region, endpoint string) (instances []*monitor.Instance, err error)
 	Metrics() []string // Supported metrics
-}
-
-func init() {
-	Add("QCE/CVM", &CVM{})
-	Add("QCE/CDB", &CDB{})
-	Add("QCE/REDIS", &Redis{})
-	Add("QCE/LB_PUBLIC", &LBPublic{})
-	Add("QCE/LB_PRIVATE", &LBPrivate{})
-	Add("QCE/CES", &CES{})
 }
 
 // CVM defines Cloud Virtual Machine, see: https://intl.cloud.tencent.com/document/product/213
@@ -63,11 +55,10 @@ func (c CVM) discover(crs *common.Credential, region, endpoint string, offset, l
 }
 
 // Discover implements Product interface
-func (c CVM) Discover(crs *common.Credential, region, endpoint string) ([]*Instance, error) {
-
+func (c CVM) Discover(crs *common.Credential, region, endpoint string) ([]*monitor.Instance, error) {
 	offset, limit := int64(0), int64(100)
 	cvmInstances := []*cvm.Instance{}
-	instances := []*Instance{}
+	instances := []*monitor.Instance{}
 
 	response, err := c.discover(crs, region, endpoint, offset, limit)
 	if err != nil {
@@ -90,11 +81,11 @@ func (c CVM) Discover(crs *common.Credential, region, endpoint string) ([]*Insta
 			continue
 		}
 
-		instances = append(instances, &Instance{
-			Dimensions: []*Dimension{
+		instances = append(instances, &monitor.Instance{
+			Dimensions: []*monitor.Dimension{
 				{
-					Name:  "InstanceId",
-					Value: *cvmInstance.InstanceId,
+					Name:  common.StringPtr("InstanceId"),
+					Value: cvmInstance.InstanceId,
 				},
 			},
 		})
@@ -162,11 +153,10 @@ func (c CDB) discover(crs *common.Credential, region, endpoint string, offset, l
 }
 
 // Discover implements Product interface
-func (c CDB) Discover(crs *common.Credential, region, endpoint string) ([]*Instance, error) {
-
+func (c CDB) Discover(crs *common.Credential, region, endpoint string) ([]*monitor.Instance, error) {
 	offset, limit := int64(0), int64(100)
 	cdbInstances := []*cdb.InstanceInfo{}
-	instances := []*Instance{}
+	instances := []*monitor.Instance{}
 
 	response, err := c.discover(crs, region, endpoint, offset, limit)
 	if err != nil {
@@ -189,11 +179,11 @@ func (c CDB) Discover(crs *common.Credential, region, endpoint string) ([]*Insta
 			continue
 		}
 
-		instances = append(instances, &Instance{
-			Dimensions: []*Dimension{
+		instances = append(instances, &monitor.Instance{
+			Dimensions: []*monitor.Dimension{
 				{
-					Name:  "InstanceId",
-					Value: *cdbInstance.InstanceId,
+					Name:  common.StringPtr("InstanceId"),
+					Value: cdbInstance.InstanceId,
 				},
 			},
 		})
@@ -258,11 +248,10 @@ func (r Redis) discover(crs *common.Credential, region, endpoint string, offset,
 }
 
 // Discover implements Product interface
-func (r Redis) Discover(crs *common.Credential, region, endpoint string) ([]*Instance, error) {
-
+func (r Redis) Discover(crs *common.Credential, region, endpoint string) ([]*monitor.Instance, error) {
 	offset, limit := int64(0), int64(100)
 	redisInstances := []*redis.InstanceSet{}
-	instances := []*Instance{}
+	instances := []*monitor.Instance{}
 
 	response, err := r.discover(crs, region, endpoint, offset, limit)
 	if err != nil {
@@ -285,11 +274,11 @@ func (r Redis) Discover(crs *common.Credential, region, endpoint string) ([]*Ins
 			continue
 		}
 
-		instances = append(instances, &Instance{
-			Dimensions: []*Dimension{
+		instances = append(instances, &monitor.Instance{
+			Dimensions: []*monitor.Dimension{
 				{
-					Name:  "instanceid",
-					Value: *redisInstance.InstanceId,
+					Name:  common.StringPtr("instanceid"),
+					Value: redisInstance.InstanceId,
 				},
 			},
 		})
@@ -347,11 +336,10 @@ func (l LBPublic) discover(crs *common.Credential, region, endpoint string, offs
 }
 
 // Discover implements Product interface
-func (l LBPublic) Discover(crs *common.Credential, region, endpoint string) ([]*Instance, error) {
-
+func (l LBPublic) Discover(crs *common.Credential, region, endpoint string) ([]*monitor.Instance, error) {
 	offset, limit := int64(0), int64(100)
 	lbPublicInstances := []*clb.LoadBalancer{}
-	instances := []*Instance{}
+	instances := []*monitor.Instance{}
 
 	response, err := l.discover(crs, region, endpoint, offset, limit)
 	if err != nil {
@@ -374,11 +362,11 @@ func (l LBPublic) Discover(crs *common.Credential, region, endpoint string) ([]*
 			continue
 		}
 
-		instances = append(instances, &Instance{
-			Dimensions: []*Dimension{
+		instances = append(instances, &monitor.Instance{
+			Dimensions: []*monitor.Dimension{
 				{
-					Name:  "vip",
-					Value: *lbPlubicInstance.LoadBalancerVips[0],
+					Name:  common.StringPtr("vip"),
+					Value: lbPlubicInstance.LoadBalancerVips[0],
 				},
 			},
 		})
@@ -433,11 +421,10 @@ func (l *LBPrivate) discover(crs *common.Credential, region, endpoint string, of
 }
 
 // Discover implements Product interface
-func (l *LBPrivate) Discover(crs *common.Credential, region, endpoint string) ([]*Instance, error) {
-
+func (l *LBPrivate) Discover(crs *common.Credential, region, endpoint string) ([]*monitor.Instance, error) {
 	offset, limit := int64(0), int64(100)
 	lbPrivateInstances := []*clb.LoadBalancer{}
-	instances := []*Instance{}
+	instances := []*monitor.Instance{}
 
 	response, err := l.discover(crs, region, endpoint, offset, limit)
 	if err != nil {
@@ -459,15 +446,15 @@ func (l *LBPrivate) Discover(crs *common.Credential, region, endpoint string) ([
 			continue
 		}
 
-		instances = append(instances, &Instance{
-			Dimensions: []*Dimension{
+		instances = append(instances, &monitor.Instance{
+			Dimensions: []*monitor.Dimension{
 				{
-					Name:  "vip",
-					Value: *lbPrivateInstance.LoadBalancerVips[0],
+					Name:  common.StringPtr("vip"),
+					Value: lbPrivateInstance.LoadBalancerVips[0],
 				},
 				{
-					Name:  "vpcId",
-					Value: *lbPrivateInstance.VpcId,
+					Name:  common.StringPtr("vpcId"),
+					Value: lbPrivateInstance.VpcId,
 				},
 			},
 		})
@@ -516,11 +503,10 @@ func (c *CES) discover(crs *common.Credential, region, endpoint string, offset, 
 }
 
 // Discover implements Product interface
-func (c *CES) Discover(crs *common.Credential, region, endpoint string) ([]*Instance, error) {
-
+func (c *CES) Discover(crs *common.Credential, region, endpoint string) ([]*monitor.Instance, error) {
 	offset, limit := int64(0), int64(100)
 	esInstances := []*es.InstanceInfo{}
-	instances := []*Instance{}
+	instances := []*monitor.Instance{}
 
 	response, err := c.discover(crs, region, endpoint, offset, limit)
 	if err != nil {
@@ -544,11 +530,11 @@ func (c *CES) Discover(crs *common.Credential, region, endpoint string) ([]*Inst
 			continue
 		}
 
-		instances = append(instances, &Instance{
-			Dimensions: []*Dimension{
+		instances = append(instances, &monitor.Instance{
+			Dimensions: []*monitor.Dimension{
 				{
-					Name:  "uInstanceId",
-					Value: *esInstance.InstanceId,
+					Name:  common.StringPtr("uInstanceId"),
+					Value: esInstance.InstanceId,
 				},
 			},
 		})

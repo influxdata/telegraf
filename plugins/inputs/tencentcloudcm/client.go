@@ -1,48 +1,83 @@
 package tencentcloudcm
 
 import (
+	"errors"
+	"fmt"
+	"time"
+
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
-	tchttp "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/http"
+	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
+	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
+	monitor "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor/v20180724"
 )
 
-// These codes is forked and tweaked from original tencentcloud-sdk-go.
-// Optimized struct field tags to fix incompatibility issue when using 'go vet'
-// source: https://github.com/TencentCloud/tencentcloud-sdk-go/blob/master/tencentcloud/monitor/v20180724/client.go
-
-// Client defines cloud monitor sdk client
-type Client struct {
-	common.Client
+type cloudmonitorClient struct {
+	Accounts []*Account `toml:"accounts"`
 }
 
-// APIVersion defines cloud monitor API version
-const APIVersion = "2018-07-24"
+func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
+	// metricObejcts holds all metrics with it's corresponding region,
+	// namespace, credential and instances(dimensions) information.
+	metricObjects := []metricObject{}
 
-// NewGetMonitorDataRequest factory
-func NewGetMonitorDataRequest() (request *GetMonitorDataRequest) {
-	request = &GetMonitorDataRequest{
-		BaseRequest: &tchttp.BaseRequest{},
+	// construct metric object
+	for i := range t.Accounts {
+		for j := range t.Accounts[i].Namespaces {
+			for k := range t.Accounts[i].Namespaces[j].Regions {
+				for l := range t.Accounts[i].Namespaces[j].Metrics {
+					instances := t.Accounts[i].Namespaces[j].Regions[k].Instances
+					if len(instances) == 0 {
+						instances = t.discoverTool.GetInstances(t.Accounts[i].Name, t.Accounts[i].Namespaces[j].Name, t.Accounts[i].Namespaces[j].Regions[k].RegionName)
+					}
+					if len(instances) == 0 {
+						continue
+					}
+					metricObjects = append(metricObjects, metricObject{
+						t.Accounts[i].Namespaces[j].Metrics[l],
+						t.Accounts[i].Namespaces[j].Regions[k].RegionName,
+						t.Accounts[i].Namespaces[j].Name,
+						t.Accounts[i],
+						instances,
+					})
+				}
+			}
+		}
 	}
-	request.Init().WithApiInfo("monitor", APIVersion, "GetMonitorData")
-	return
+	return metricObjects
 }
 
-// NewGetMonitorDataResponse factory
-func NewGetMonitorDataResponse() (response *GetMonitorDataResponse) {
-	response = &GetMonitorDataResponse{
-		BaseResponse: &tchttp.BaseResponse{},
-	}
-	return
+func (c *cloudmonitorClient) NewClient(region string, crs *common.Credential, t TencentCloudCM) monitor.Client {
+	client := monitor.Client{}
+	cpf := profile.NewClientProfile()
+	cpf.HttpProfile.Endpoint = fmt.Sprintf("monitor.%s", t.Endpoint)
+	cpf.HttpProfile.ReqTimeout = int(time.Duration(t.Timeout).Milliseconds()) / 1000
+	client.Init(region).WithCredential(crs).WithProfile(cpf)
+	return client
 }
 
-// 获取云产品的监控数据。传入产品的命名空间、对象维度描述和监控指标即可获得相应的监控数据。
-// 接口调用频率限制为：20次/秒，1200次/分钟。单请求最多可支持批量拉取10个实例的监控数据，单请求的数据点数限制为1440个。
-// 若您需要调用的指标、对象较多，可能存在因限频出现拉取失败的情况，建议尽量将请求按时间维度均摊。
-// Details please refer to https://intl.cloud.tencent.com/document/product/248/33881
-func (c *Client) GetMonitorData(request *GetMonitorDataRequest) (response *GetMonitorDataResponse, err error) {
-	if request == nil {
-		request = NewGetMonitorDataRequest()
+func (c *cloudmonitorClient) NewGetMonitorDataRequest(namespace, metric string, instances []*monitor.Instance, t TencentCloudCM) *monitor.GetMonitorDataRequest {
+	request := monitor.NewGetMonitorDataRequest()
+	request.Namespace = common.StringPtr(namespace)
+	request.MetricName = common.StringPtr(metric)
+	period := uint64(time.Duration(t.Period).Seconds())
+	request.Period = &period
+	request.StartTime = common.StringPtr(t.windowStart.Format(time.RFC3339))
+	request.EndTime = common.StringPtr(t.windowEnd.Format(time.RFC3339))
+	request.Instances = []*monitor.Instance{}
+	// Transform instances and dimensions from config to monitor struct
+	request.Instances = instances
+	return request
+}
+
+func (c *cloudmonitorClient) GatherMetrics(client monitor.Client, request *monitor.GetMonitorDataRequest, t TencentCloudCM) (*monitor.GetMonitorDataResponse, error) {
+	response, err := client.GetMonitorData(request)
+	if val, ok := err.(*tcerrors.TencentCloudSDKError); ok {
+		t.Log.Errorf("An API error has returned for %s: %s", *request.Namespace, err)
+		return nil, errors.New(val.Error())
 	}
-	response = NewGetMonitorDataResponse()
-	err = c.Send(request, response)
-	return
+	if err != nil {
+		t.Log.Errorf("GetMonitorData failed, error: %s", err)
+		return nil, err
+	}
+	return response, nil
 }

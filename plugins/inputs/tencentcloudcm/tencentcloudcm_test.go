@@ -8,54 +8,55 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
+	monitor "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor/v20180724"
 )
 
 type mockGatherCloudMonitorClient struct{}
 
-func (m *mockGatherCloudMonitorClient) GetMetricObjects(t TencentCloudCM) []MetricObject {
-	return []MetricObject{
+func (m *mockGatherCloudMonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
+	return []metricObject{
 		{
 			Metric:    "CPUUsage",
 			Region:    "ap-hongkong",
 			Namespace: "QCE/CVM",
 			Account: &Account{
 				Name: "name",
-				Crs:  common.NewCredential("secret_id", "secret_key"),
+				crs:  common.NewCredential("secret_id", "secret_key"),
 			},
-			Instances: []*Instance{{
-				Dimensions: []*Dimension{{
-					Name:  "InstanceId",
-					Value: "ins-xxxxxxx1",
+			Instances: []*monitor.Instance{{
+				Dimensions: []*monitor.Dimension{{
+					Name:  common.StringPtr("InstanceId"),
+					Value: common.StringPtr("ins-xxxxxxx1"),
 				}},
 			}},
 		},
 	}
 }
 
-func (m *mockGatherCloudMonitorClient) NewClient(region string, crs *common.Credential, t TencentCloudCM) Client {
-	return Client{}
+func (m *mockGatherCloudMonitorClient) NewClient(region string, crs *common.Credential, t TencentCloudCM) monitor.Client {
+	return monitor.Client{}
 }
 
-func (m *mockGatherCloudMonitorClient) NewGetMonitorDataRequest(namespace, metric string, instances []*Instance, t TencentCloudCM) *GetMonitorDataRequest {
-	return NewGetMonitorDataRequest()
+func (m *mockGatherCloudMonitorClient) NewGetMonitorDataRequest(namespace, metric string, instances []*monitor.Instance, t TencentCloudCM) *monitor.GetMonitorDataRequest {
+	return monitor.NewGetMonitorDataRequest()
 }
 
-func (m *mockGatherCloudMonitorClient) GatherMetrics(client Client, request *GetMonitorDataRequest, t TencentCloudCM) (*GetMonitorDataResponse, error) {
-	response := &GetMonitorDataResponse{
+func (m *mockGatherCloudMonitorClient) GatherMetrics(client monitor.Client, request *monitor.GetMonitorDataRequest, t TencentCloudCM) (*monitor.GetMonitorDataResponse, error) {
+	response := &monitor.GetMonitorDataResponse{
 		Response: &struct {
-			Period     *uint64             `json:"Period,omitempty" name:"Period"`
-			MetricName *string             `json:"MetricName,omitempty" name:"MetricName"`
-			DataPoints []*MonitorDataPoint `json:"DataPoints,omitempty" name:"DataPoints"`
-			StartTime  *string             `json:"StartTime,omitempty" name:"StartTime"`
-			EndTime    *string             `json:"EndTime,omitempty" name:"EndTime"`
-			RequestId  *string             `json:"RequestId,omitempty" name:"RequestId"`
+			Period     *uint64              `json:"Period,omitempty" name:"Period"`
+			MetricName *string              `json:"MetricName,omitempty" name:"MetricName"`
+			DataPoints []*monitor.DataPoint `json:"DataPoints,omitempty" name:"DataPoints"`
+			StartTime  *string              `json:"StartTime,omitempty" name:"StartTime"`
+			EndTime    *string              `json:"EndTime,omitempty" name:"EndTime"`
+			RequestId  *string              `json:"RequestId,omitempty" name:"RequestId"`
 		}{
 			RequestId:  common.StringPtr("request_id"),
 			Period:     common.Uint64Ptr(300),
 			MetricName: common.StringPtr("CPUUsage"),
-			DataPoints: []*MonitorDataPoint{
+			DataPoints: []*monitor.DataPoint{
 				{
-					Dimensions: []*MonitorDimension{
+					Dimensions: []*monitor.Dimension{
 						{
 							Name:  common.StringPtr("InstanceId"),
 							Value: common.StringPtr("ins-xxxxxxx1"),
@@ -75,7 +76,6 @@ func (m *mockGatherCloudMonitorClient) GatherMetrics(client Client, request *Get
 }
 
 func TestUpdateWindow(t *testing.T) {
-
 	cm := &TencentCloudCM{
 		Period: config.Duration(1 * time.Minute),
 		Delay:  config.Duration(5 * time.Minute),
@@ -90,11 +90,9 @@ func TestUpdateWindow(t *testing.T) {
 
 	assert.EqualValues(t, cm.windowEnd, now.Add(-time.Duration(cm.Delay)))
 	assert.EqualValues(t, cm.windowStart, now.Add(-time.Duration(cm.Delay)).Add(-time.Duration(cm.Period)*2))
-
 }
 
 func TestNewClient(t *testing.T) {
-
 	cm := &TencentCloudCM{
 		Period: config.Duration(1 * time.Minute),
 		Delay:  config.Duration(5 * time.Minute),
@@ -108,23 +106,21 @@ func TestNewClient(t *testing.T) {
 
 	assert.NotZero(t, client)
 	assert.EqualValues(t, "ap-hongkong", client.GetRegion())
-
 }
 
 func TestNewGetMonitorDataRequest(t *testing.T) {
-
 	cm := &TencentCloudCM{
 		Period: config.Duration(1 * time.Minute),
 		Delay:  config.Duration(5 * time.Minute),
 		client: &cloudmonitorClient{},
 	}
 
-	request := cm.client.NewGetMonitorDataRequest("QCE/CVM", "CPUUsage", []*Instance{
+	request := cm.client.NewGetMonitorDataRequest("QCE/CVM", "CPUUsage", []*monitor.Instance{
 		{
-			Dimensions: []*Dimension{
+			Dimensions: []*monitor.Dimension{
 				{
-					Name:  "InstanceId",
-					Value: "ins-xxxxxxxx",
+					Name:  common.StringPtr("InstanceId"),
+					Value: common.StringPtr("ins-xxxxxxxx"),
 				},
 			},
 		},
@@ -138,11 +134,9 @@ func TestNewGetMonitorDataRequest(t *testing.T) {
 
 	assert.EqualValues(t, "InstanceId", *request.Instances[len(request.Instances)-1].Dimensions[0].Name)
 	assert.EqualValues(t, "ins-xxxxxxxx", *request.Instances[len(request.Instances)-1].Dimensions[0].Value)
-
 }
 
 func TestGetMetricObjects(t *testing.T) {
-
 	cm := &TencentCloudCM{
 		Period: config.Duration(1 * time.Minute),
 		Delay:  config.Duration(5 * time.Minute),
@@ -156,10 +150,10 @@ func TestGetMetricObjects(t *testing.T) {
 				Metrics: []string{"CPUUsage", "MemUsage", "MemUsed"},
 				Regions: []*Region{{
 					RegionName: "ap-hongkong",
-					Instances: []*Instance{{
-						Dimensions: []*Dimension{{
-							Name:  "InstanceId",
-							Value: "ins-xxxxxxx1",
+					Instances: []*monitor.Instance{{
+						Dimensions: []*monitor.Dimension{{
+							Name:  common.StringPtr("InstanceId"),
+							Value: common.StringPtr("ins-xxxxxxx1"),
 						}},
 					}},
 				}}}, {
@@ -167,10 +161,10 @@ func TestGetMetricObjects(t *testing.T) {
 				Metrics: []string{"CPUUseRate", "MemoryUseRate", "RealCapacity"},
 				Regions: []*Region{{
 					RegionName: "ap-hongkong",
-					Instances: []*Instance{{
-						Dimensions: []*Dimension{{
-							Name:  "InstanceId",
-							Value: "cdb-xxxxxxx1",
+					Instances: []*monitor.Instance{{
+						Dimensions: []*monitor.Dimension{{
+							Name:  common.StringPtr("InstanceId"),
+							Value: common.StringPtr("cdb-xxxxxxx1"),
 						}},
 					}},
 				}},
@@ -181,11 +175,9 @@ func TestGetMetricObjects(t *testing.T) {
 	metricObjects := cm.client.GetMetricObjects(*cm)
 
 	assert.Len(t, metricObjects, 6)
-
 }
 
 func TestGather(t *testing.T) {
-
 	cm := &TencentCloudCM{
 		Period:    config.Duration(1 * time.Minute),
 		Delay:     config.Duration(5 * time.Minute),

@@ -1,7 +1,6 @@
 package tencentcloudcm
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -10,8 +9,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
-	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
-	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
+	monitor "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor/v20180724"
 
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -46,7 +44,7 @@ type Account struct {
 	SecretKey  string       `toml:"secret_key"`
 	Namespaces []*Namespace `toml:"namespaces"`
 
-	Crs *common.Credential
+	crs *common.Credential
 }
 
 // Namespace defines a Tencent Cloud CM namespace
@@ -58,35 +56,35 @@ type Namespace struct {
 
 // Region defines a Tencent Cloud region
 type Region struct {
-	RegionName string      `toml:"region"`
-	Instances  []*Instance `toml:"instances"`
+	RegionName string              `toml:"region"`
+	Instances  []*monitor.Instance `toml:"instances"`
 }
 
-// Instance defines a generic Tencent Cloud instance
-type Instance struct {
-	Dimensions []*Dimension `toml:"dimensions"`
-}
+// // Instance defines a generic Tencent Cloud instance
+// type Instance struct {
+// 	Dimensions []*Dimension `toml:"dimensions"`
+// }
 
-// Dimension defines a simplified Tencent Cloud Cloud Monitor dimension.
-type Dimension struct {
-	Name  string `toml:"name"`
-	Value string `toml:"value"`
-}
+// // Dimension defines a simplified Tencent Cloud Cloud Monitor dimension.
+// type Dimension struct {
+// 	Name  string `toml:"name"`
+// 	Value string `toml:"value"`
+// }
 
-// MetricObject defines a metric with additional information
-type MetricObject struct {
+// metricObject defines a metric with additional information
+type metricObject struct {
 	Metric    string
 	Region    string
 	Namespace string
 	Account   *Account
-	Instances []*Instance
+	Instances []*monitor.Instance
 }
 
 type cmClient interface {
-	GetMetricObjects(t TencentCloudCM) []MetricObject
-	NewClient(region string, crs *common.Credential, t TencentCloudCM) Client
-	NewGetMonitorDataRequest(namespace, metric string, instances []*Instance, t TencentCloudCM) *GetMonitorDataRequest
-	GatherMetrics(client Client, request *GetMonitorDataRequest, t TencentCloudCM) (*GetMonitorDataResponse, error)
+	GetMetricObjects(t TencentCloudCM) []metricObject
+	NewClient(region string, crs *common.Credential, t TencentCloudCM) monitor.Client
+	NewGetMonitorDataRequest(namespace, metric string, instances []*monitor.Instance, t TencentCloudCM) *monitor.GetMonitorDataRequest
+	GatherMetrics(client monitor.Client, request *monitor.GetMonitorDataRequest, t TencentCloudCM) (*monitor.GetMonitorDataResponse, error)
 }
 
 // SampleConfig implements telegraf.Input interface
@@ -170,14 +168,15 @@ func (t *TencentCloudCM) Description() string {
 
 // Init is for setup, and validating config.
 func (t *TencentCloudCM) Init() error {
-
 	if t.Period <= 0 {
 		return fmt.Errorf("period is empty")
 	}
 
 	if len(t.Accounts) == 0 {
-		return errors.New("account is empty")
+		return fmt.Errorf("account is empty")
 	}
+
+	t.discoverTool = NewDiscoverTool(t.Log)
 
 	// create account credential
 	for i := range t.Accounts {
@@ -189,12 +188,12 @@ func (t *TencentCloudCM) Init() error {
 			return fmt.Errorf("secret_key is empty")
 		}
 
-		t.Accounts[i].Crs = common.NewCredential(
+		t.Accounts[i].crs = common.NewCredential(
 			t.Accounts[i].SecretID,
 			t.Accounts[i].SecretKey,
 		)
 		if t.Accounts[i].Name == "" {
-			t.Accounts[i].Name = fmt.Sprintf("%v", i)
+			t.Accounts[i].Name = fmt.Sprintf("account_%v", i)
 		}
 		// check if namespace supports auto discovery
 		for _, namespace := range t.Accounts[i].Namespaces {
@@ -205,7 +204,7 @@ func (t *TencentCloudCM) Init() error {
 				if region.RegionName == "" {
 					return fmt.Errorf("region is empty")
 				}
-				_, ok := Registry[namespace.Name]
+				_, ok := t.discoverTool.registry[namespace.Name]
 				if len(region.Instances) == 0 && !ok {
 					return fmt.Errorf(
 						"unsupported namespace %s for discovering instances, please specify instances and dimensions",
@@ -217,7 +216,6 @@ func (t *TencentCloudCM) Init() error {
 	}
 
 	// start discovery
-	t.discoverTool = NewDiscoverTool(t.Log)
 	go t.discoverTool.Discover(t.Accounts, t.DiscoveryInterval, t.Endpoint)
 	t.discoverTool.DiscoverMetrics()
 	for i := range t.Accounts {
@@ -226,10 +224,8 @@ func (t *TencentCloudCM) Init() error {
 			if len(t.Accounts[i].Namespaces[j].Metrics) == 0 {
 				metrics, ok := t.discoverTool.DiscoveredMetrics[t.Accounts[i].Namespaces[j].Name]
 				if !ok {
-					errorInfo := fmt.Sprintf("unsupported namespace %s for discovering metrics, please specify metrics",
+					return fmt.Errorf("unsupported namespace %s for discovering metrics, please specify metrics",
 						t.Accounts[i].Namespaces[j].Name)
-					t.Log.Error(errorInfo)
-					return errors.New(errorInfo)
 				}
 				t.Accounts[i].Namespaces[j].Metrics = metrics
 			}
@@ -243,48 +239,16 @@ func (t *TencentCloudCM) Init() error {
 }
 
 func (t *TencentCloudCM) updateWindow(relativeTo time.Time) {
+
 	windowEnd := relativeTo.Add(-time.Duration(t.Delay))
 
+	// starting point is two times the aggregation period to make sure all points are covered
 	t.windowStart = windowEnd.Add(-time.Duration(t.Period) * 2)
 
 	t.windowEnd = windowEnd
 }
 
-// GetMetricObjects gets all metric objects
-func (t *TencentCloudCM) GetMetricObjects() []MetricObject {
-
-	// metricObejcts holds all metrics with it's corresponding region,
-	// namespace, credential and instances(dimensions) information.
-	metricObjects := []MetricObject{}
-
-	// construct metric object
-	for i := range t.Accounts {
-		for j := range t.Accounts[i].Namespaces {
-			for k := range t.Accounts[i].Namespaces[j].Regions {
-				for l := range t.Accounts[i].Namespaces[j].Metrics {
-					instances := t.Accounts[i].Namespaces[j].Regions[k].Instances
-					if len(instances) == 0 {
-						instances = t.discoverTool.GetInstances(t.Accounts[i].Name, t.Accounts[i].Namespaces[j].Name, t.Accounts[i].Namespaces[j].Regions[k].RegionName)
-					}
-					if len(instances) == 0 {
-						continue
-					}
-					metricObjects = append(metricObjects, MetricObject{
-						t.Accounts[i].Namespaces[j].Metrics[l],
-						t.Accounts[i].Namespaces[j].Regions[k].RegionName,
-						t.Accounts[i].Namespaces[j].Name,
-						t.Accounts[i],
-						instances,
-					})
-				}
-			}
-		}
-	}
-	return metricObjects
-}
-
 func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
-
 	t.updateWindow(time.Now())
 
 	metricObjects := t.client.GetMetricObjects(*t)
@@ -294,19 +258,19 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 
 	wg := sync.WaitGroup{}
 	rLock := sync.Mutex{}
-	results := []GetMonitorDataResponse{}
+	results := []monitor.GetMonitorDataResponse{}
 
 	// requestIDMap contains request ID and metric objects for later aggregation
-	requestIDMap := map[string]MetricObject{}
+	requestIDMap := map[string]metricObject{}
 
-	for i := range metricObjects {
+	for _, obj := range metricObjects {
 
 		wg.Add(1)
 		<-lmtr.C
-		go func(m MetricObject) {
+		go func(m metricObject) {
 			defer wg.Done()
 
-			client := t.client.NewClient(m.Region, m.Account.Crs, *t)
+			client := t.client.NewClient(m.Region, m.Account.crs, *t)
 			request := t.client.NewGetMonitorDataRequest(m.Namespace, m.Metric, m.Instances, *t)
 
 			result, err := t.client.GatherMetrics(client, request, *t)
@@ -317,33 +281,32 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 
 			rLock.Lock()
 			requestIDMap[*result.Response.RequestId] = m
-			rLock.Unlock()
 
-			rLock.Lock()
 			results = append(results, *result)
 			rLock.Unlock()
 
-		}(metricObjects[i])
+		}(obj)
 
 	}
 	wg.Wait()
 
-	for i := range results {
-		for j := range results[i].Response.DataPoints {
+	for _, result := range results {
+		for _, datapoints := range result.Response.DataPoints {
 			tags := map[string]string{}
-			for k := range results[i].Response.DataPoints[j].Dimensions {
-				tags[*results[i].Response.DataPoints[j].Dimensions[k].Name] = *results[i].Response.DataPoints[j].Dimensions[k].Value
+			for _, v := range datapoints.Dimensions {
+				tags[*v.Name] = *v.Value
 			}
-			metricObject := requestIDMap[*results[i].Response.RequestId]
+			metricObject := requestIDMap[*result.Response.RequestId]
 			tags["account"] = metricObject.Account.Name
 			tags["namespace"] = metricObject.Namespace
 			tags["region"] = metricObject.Region
-			tags["period"] = fmt.Sprintf("%v", *results[i].Response.Period)
-			tags["metric"] = *results[i].Response.MetricName
-			tags["request_id"] = *results[i].Response.RequestId
+			tags["period"] = fmt.Sprintf("%v", *result.Response.Period)
+			tags["metric"] = *result.Response.MetricName
+			tags["request_id"] = *result.Response.RequestId
 
-			for index := range results[i].Response.DataPoints[j].Values {
-				acc.AddFields(metricObject.Namespace, map[string]interface{}{"value": results[i].Response.DataPoints[j].Values[index]}, tags, time.Unix(int64(*results[i].Response.DataPoints[j].Timestamps[index]), 0).Local())
+			for index := range datapoints.Values {
+				acc.AddFields(metricObject.Namespace, map[string]interface{}{"value": datapoints.Values[index]},
+					tags, time.Unix(int64(*datapoints.Timestamps[index]), 0).Local())
 			}
 
 		}
@@ -354,95 +317,11 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("tencentcloudcm", func() telegraf.Input {
-		return New()
+		return &TencentCloudCM{
+			Endpoint:          "tencentcloudapi.com",
+			RateLimit:         20,
+			Timeout:           config.Duration(5 * time.Second),
+			DiscoveryInterval: config.Duration(1 * time.Minute),
+		}
 	})
-}
-
-// New instance of the Tencent Cloud Cloud Monitor plugin
-func New() *TencentCloudCM {
-	return &TencentCloudCM{
-		Endpoint:          "tencentcloudapi.com",
-		RateLimit:         20,
-		Timeout:           config.Duration(5 * time.Second),
-		DiscoveryInterval: config.Duration(1 * time.Minute),
-	}
-}
-
-type cloudmonitorClient struct {
-	Accounts []*Account `toml:"accounts"`
-}
-
-func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []MetricObject {
-	// metricObejcts holds all metrics with it's corresponding region,
-	// namespace, credential and instances(dimensions) information.
-	metricObjects := []MetricObject{}
-
-	// construct metric object
-	for i := range t.Accounts {
-		for j := range t.Accounts[i].Namespaces {
-			for k := range t.Accounts[i].Namespaces[j].Regions {
-				for l := range t.Accounts[i].Namespaces[j].Metrics {
-					instances := t.Accounts[i].Namespaces[j].Regions[k].Instances
-					if len(instances) == 0 {
-						instances = t.discoverTool.GetInstances(t.Accounts[i].Name, t.Accounts[i].Namespaces[j].Name, t.Accounts[i].Namespaces[j].Regions[k].RegionName)
-					}
-					if len(instances) == 0 {
-						continue
-					}
-					metricObjects = append(metricObjects, MetricObject{
-						t.Accounts[i].Namespaces[j].Metrics[l],
-						t.Accounts[i].Namespaces[j].Regions[k].RegionName,
-						t.Accounts[i].Namespaces[j].Name,
-						t.Accounts[i],
-						instances,
-					})
-				}
-			}
-		}
-	}
-	return metricObjects
-}
-
-func (c *cloudmonitorClient) NewClient(region string, crs *common.Credential, t TencentCloudCM) Client {
-	client := Client{}
-	cpf := profile.NewClientProfile()
-	cpf.HttpProfile.Endpoint = fmt.Sprintf("monitor.%s", t.Endpoint)
-	cpf.HttpProfile.ReqTimeout = int(time.Duration(t.Timeout).Milliseconds()) / 1000
-	client.Init(region).WithCredential(crs).WithProfile(cpf)
-	return client
-}
-
-func (c *cloudmonitorClient) NewGetMonitorDataRequest(namespace, metric string, instances []*Instance, t TencentCloudCM) *GetMonitorDataRequest {
-	request := NewGetMonitorDataRequest()
-	request.Namespace = common.StringPtr(namespace)
-	request.MetricName = common.StringPtr(metric)
-	period := uint64(time.Duration(t.Period).Seconds())
-	request.Period = &period
-	request.StartTime = common.StringPtr(t.windowStart.Format(time.RFC3339))
-	request.EndTime = common.StringPtr(t.windowEnd.Format(time.RFC3339))
-	request.Instances = []*MonitorInstance{}
-	// Transform instances and dimensions from config to monitor struct
-	for i := range instances {
-		request.Instances = append(request.Instances, &MonitorInstance{})
-		for j := range instances[i].Dimensions {
-			request.Instances[i].Dimensions = append(request.Instances[i].Dimensions, &MonitorDimension{
-				Name:  &instances[i].Dimensions[j].Name,
-				Value: &instances[i].Dimensions[j].Value,
-			})
-		}
-	}
-	return request
-}
-
-func (c *cloudmonitorClient) GatherMetrics(client Client, request *GetMonitorDataRequest, t TencentCloudCM) (*GetMonitorDataResponse, error) {
-	response, err := client.GetMonitorData(request)
-	if val, ok := err.(*tcerrors.TencentCloudSDKError); ok {
-		t.Log.Errorf("An API error has returned for %s: %s", *request.Namespace, err)
-		return nil, errors.New(val.Error())
-	}
-	if err != nil {
-		t.Log.Errorf("GetMonitorData failed, error: %s", err)
-		return nil, err
-	}
-	return response, nil
 }
