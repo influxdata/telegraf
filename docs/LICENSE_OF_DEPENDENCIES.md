@@ -121,7 +121,6 @@ following works:
 - github.com/karrick/godirwalk [BSD 2-Clause "Simplified" License](https://github.com/karrick/godirwalk/blob/master/LICENSE)
 - github.com/kballard/go-shellquote [MIT License](https://github.com/kballard/go-shellquote/blob/master/LICENSE)
 - github.com/klauspost/compress [BSD 3-Clause Clear License](https://github.com/klauspost/compress/blob/master/LICENSE)
-- github.com/konsorten/go-windows-terminal-sequences [MIT License](https://github.com/konsorten/go-windows-terminal-sequences/blob/master/LICENSE)
 - github.com/leodido/ragel-machinery [MIT License](https://github.com/leodido/ragel-machinery/blob/develop/LICENSE)
 - github.com/mailru/easyjson [MIT License](https://github.com/mailru/easyjson/blob/master/LICENSE)
 - github.com/mattn/go-colorable [MIT License](https://github.com/mattn/go-colorable/blob/master/LICENSE)
