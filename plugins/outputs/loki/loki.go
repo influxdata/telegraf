@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -146,6 +147,10 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 		}
 
 		s.insertLog(tags, Log{fmt.Sprintf("%d", m.Time().UnixNano()), line})
+	}
+
+	for _, stream := range s {
+		sort.SliceStable(stream.Logs, func(i, j int) bool { return stream.Logs[i][0] < stream.Logs[j][0] })
 	}
 
 	return l.write(s)
