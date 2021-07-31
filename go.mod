@@ -118,13 +118,13 @@ require (
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdb v1.0.216
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb v1.0.216
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.216
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm v1.0.216
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/es v1.0.216
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor v1.0.216
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/redis v1.0.216
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdb v1.0.218
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb v1.0.218
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.218
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm v1.0.218
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/es v1.0.218
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor v1.0.218
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/redis v1.0.218
 	github.com/tidwall/gjson v1.8.0
 	github.com/tinylib/msgp v1.1.5
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
