@@ -138,6 +138,10 @@ func (l *Loki) Close() error {
 func (l *Loki) Write(metrics []telegraf.Metric) error {
 	s := Streams{}
 
+	sort.SliceStable(metrics, func(i, j int) bool {
+		return metrics[i].Time().Before(metrics[j].Time())
+	})
+
 	for _, m := range metrics {
 		tags := m.TagList()
 		var line string
@@ -147,10 +151,6 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 		}
 
 		s.insertLog(tags, Log{fmt.Sprintf("%d", m.Time().UnixNano()), line})
-	}
-
-	for _, stream := range s {
-		sort.SliceStable(stream.Logs, func(i, j int) bool { return stream.Logs[i][0] < stream.Logs[j][0] })
 	}
 
 	return l.write(s)

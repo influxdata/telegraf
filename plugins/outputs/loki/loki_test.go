@@ -42,7 +42,7 @@ func getOutOfOrderMetrics() []telegraf.Metric {
 				"line":  "newer log",
 				"field": 3.14,
 			},
-			time.Unix(456, 0),
+			time.Unix(1230, 0),
 		),
 		testutil.MustMetric(
 			"log",
@@ -53,7 +53,7 @@ func getOutOfOrderMetrics() []telegraf.Metric {
 				"line":  "older log",
 				"field": 3.14,
 			},
-			time.Unix(123, 0),
+			time.Unix(456, 0),
 		),
 	}
 }
@@ -404,10 +404,10 @@ func TestMetricSorting(t *testing.T) {
 			require.Len(t, s.Streams[0].Logs, 2)
 			require.Len(t, s.Streams[0].Logs[0], 2)
 			require.Equal(t, map[string]string{"key1": "value1"}, s.Streams[0].Labels)
-			require.Equal(t, "123000000000", s.Streams[0].Logs[0][0])
+			require.Equal(t, "456000000000", s.Streams[0].Logs[0][0])
 			require.Contains(t, s.Streams[0].Logs[0][1], "line=\"older log\"")
 			require.Contains(t, s.Streams[0].Logs[0][1], "field=\"3.14\"")
-			require.Equal(t, "456000000000", s.Streams[0].Logs[1][0])
+			require.Equal(t, "1230000000000", s.Streams[0].Logs[1][0])
 			require.Contains(t, s.Streams[0].Logs[1][1], "line=\"newer log\"")
 			require.Contains(t, s.Streams[0].Logs[1][1], "field=\"3.14\"")
 
