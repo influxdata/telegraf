@@ -88,6 +88,10 @@ const sampleConfig = `
 
   # TCP - connect via Modbus/TCP
   controller = "tcp://localhost:502"
+  
+  # RTU over TCP - connect via Modbus RTU over TCP
+  # controller = "tcp://localhost:502"
+  # transmission_mode = "RTU"
 
   ## Serial (RS485; RS232)
   # controller = "file:///dev/ttyUSB0"
@@ -246,9 +250,16 @@ func (m *Modbus) initClient() error {
 		if err != nil {
 			return err
 		}
-		handler := mb.NewTCPClientHandler(host + ":" + port)
-		handler.Timeout = time.Duration(m.Timeout)
-		m.handler = handler
+		switch m.TransmissionMode {
+		case "RTU":
+			handler := mb.NewRTUOverTCPClientHandler(host + ":" + port)
+			handler.Timeout = time.Duration(m.Timeout)
+			m.handler = handler
+		default:
+			handler := mb.NewTCPClientHandler(host + ":" + port)
+			handler.Timeout = time.Duration(m.Timeout)
+			m.handler = handler
+		}
 	case "file":
 		switch m.TransmissionMode {
 		case "RTU":
