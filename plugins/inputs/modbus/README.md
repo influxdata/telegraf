@@ -29,6 +29,10 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
 
   # TCP - connect via Modbus/TCP
   controller = "tcp://localhost:502"
+  
+  # RTU over TCP - connect via Modbus RTU over TCP
+  # controller = "tcp://localhost:502"
+  # transmission_mode = "RTU"
 
   ## Serial (RS485; RS232)
   # controller = "file:///dev/ttyUSB0"
