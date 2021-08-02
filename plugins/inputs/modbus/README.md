@@ -9,7 +9,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
 [[inputs.modbus]]
   ## Connection Configuration
   ##
-  ## The plugin supports connections to PLCs via MODBUS/TCP or
+  ## The plugin supports connections to PLCs via MODBUS/TCP, RTU over TCP, ASCII over TCP or
   ## via serial line communication in binary (RTU) or readable (ASCII) encoding
   ##
   ## Device name
@@ -30,18 +30,17 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
   # TCP - connect via Modbus/TCP
   controller = "tcp://localhost:502"
   
-  # RTU over TCP - connect via Modbus RTU over TCP
-  # controller = "tcp://localhost:502"
-  # transmission_mode = "RTU"
-
   ## Serial (RS485; RS232)
   # controller = "file:///dev/ttyUSB0"
   # baud_rate = 9600
   # data_bits = 8
   # parity = "N"
   # stop_bits = 1
-  # transmission_mode = "RTU"
 
+  ## For Modbus over TCP you can choose between "TCP", "RTUoverTCP" and "ASCIIoverTCP"
+  ## default behaviour is "TCP" if the controller is TCP
+  ## For Serial you can choose between "RTU" and "ASCII"
+  # transmission_mode = "RTU"
 
   ## Measurements
   ##
