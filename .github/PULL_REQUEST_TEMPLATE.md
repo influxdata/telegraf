@@ -5,6 +5,7 @@ show completion. -->
 
 - [ ] Updated associated README.md.
 - [ ] Wrote appropriate unit tests.
+- [ ] Pull request title is in [conventional commit format](https://www.conventionalcommits.org/en/v1.0.0/#summary) (e.g. feat: or fix:)
 
 <!-- Link to issues that describe the need for the change. Issues
 should include context that will help reviewers understand why the

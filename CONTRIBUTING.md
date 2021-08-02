@@ -1,17 +1,18 @@
 ### Contributing
 
 1. [Sign the CLA][cla].
-1. Open a [new issue][] to discuss the changes you would like to make.  This is
+2. Open a [new issue][] to discuss the changes you would like to make.  This is
    not strictly required but it may help reduce the amount of rework you need
    to do later.
-1. Make changes or write plugin using the guidelines in the following
+3. Make changes or write plugin using the guidelines in the following
    documents:
    - [Input Plugins][inputs]
    - [Processor Plugins][processors]
    - [Aggregator Plugins][aggregators]
    - [Output Plugins][outputs]
-1. Ensure you have added proper unit tests and documentation.
-1. Open a new [pull request][].
+4. Ensure you have added proper unit tests and documentation.
+5. Open a new [pull request][].
+6. The pull request title needs to follow [conventional commit format](https://www.conventionalcommits.org/en/v1.0.0/#summary)
 
 #### Contributing an External Plugin *(new)*
 
