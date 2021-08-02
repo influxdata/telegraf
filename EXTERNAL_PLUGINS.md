@@ -21,6 +21,7 @@ Pull requests welcome.
 - [x509_crl](https://github.com/jcgonnard/telegraf-input-x590crl) - Gather information from your X509 CRL files
 - [s7comm](https://github.com/nicolasme/s7comm) - Gather information from Siemens PLC
 - [net_irtt](https://github.com/iAnatoly/telegraf-input-net_irtt) - Gather information from IRTT network test
+- [dht_sensor](https://github.com/iAnatoly/telegraf-input-dht_sensor) - Gather temperature and humidity from DHTXX sensors
 
 ## Outputs
 - [kinesis](https://github.com/morfien101/telegraf-output-kinesis) - Aggregation and compression of metrics to send Amazon Kinesis.
