@@ -20,11 +20,12 @@ import (
 const MaxInt64 = int64(^uint64(0) >> 1)
 
 type CrateDB struct {
-	URL         string
-	Timeout     config.Duration
-	Table       string
-	TableCreate bool `toml:"table_create"`
-	DB          *sql.DB
+	URL          string
+	Timeout      config.Duration
+	Table        string
+	TableCreate  bool   `toml:"table_create"`
+	KeySeparator string `toml:"key_separator"`
+	DB           *sql.DB
 }
 
 var sampleConfig = `
@@ -37,6 +38,8 @@ var sampleConfig = `
   table = "metrics"
   # If true, and the metrics table does not exist, create it automatically.
   table_create = true
+  # The character(s) to replace any '.' in an object key with
+  key_separator = "_"
 `
 
 func (c *CrateDB) Connect() error {
@@ -69,7 +72,7 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout))
 	defer cancel()
 
-	generatedSQL, err := insertSQL(c.Table, metrics)
+	generatedSQL, err := insertSQL(c.Table, c.KeySeparator, metrics)
 	if err != nil {
 		return err
 	}
@@ -92,7 +95,7 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
+func insertSQL(table string, keyReplacement string, metrics []telegraf.Metric) (string, error) {
 	rows := make([]string, len(metrics))
 	for i, m := range metrics {
 		cols := []interface{}{
@@ -105,7 +108,7 @@ func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
 
 		escapedCols := make([]string, len(cols))
 		for i, col := range cols {
-			escaped, err := escapeValue(col)
+			escaped, err := escapeValue(col, keyReplacement)
 			if err != nil {
 				return "", err
 			}
@@ -129,7 +132,7 @@ VALUES
 // inputs.
 //
 // [1] https://github.com/influxdata/telegraf/pull/3210#issuecomment-339273371
-func escapeValue(val interface{}) (string, error) {
+func escapeValue(val interface{}, keyReplacement string) (string, error) {
 	switch t := val.(type) {
 	case string:
 		return escapeString(t, `'`), nil
@@ -147,11 +150,11 @@ func escapeValue(val interface{}) (string, error) {
 		return strconv.FormatBool(t), nil
 	case time.Time:
 		// see https://crate.io/docs/crate/reference/sql/data_types.html#timestamp
-		return escapeValue(t.Format("2006-01-02T15:04:05.999-0700"))
+		return escapeValue(t.Format("2006-01-02T15:04:05.999-0700"), keyReplacement)
 	case map[string]string:
-		return escapeObject(convertMap(t))
+		return escapeObject(convertMap(t), keyReplacement)
 	case map[string]interface{}:
-		return escapeObject(t)
+		return escapeObject(t, keyReplacement)
 	default:
 		// This might be panic worthy under normal circumstances, but it's probably
 		// better to not shut down the entire telegraf process because of one
@@ -170,7 +173,7 @@ func convertMap(m map[string]string) map[string]interface{} {
 	return c
 }
 
-func escapeObject(m map[string]interface{}) (string, error) {
+func escapeObject(m map[string]interface{}, keyReplacement string) (string, error) {
 	// There is a decent chance that the implementation below doesn't catch all
 	// edge cases, but it's hard to tell since the format seems to be a bit
 	// underspecified.
@@ -187,10 +190,10 @@ func escapeObject(m map[string]interface{}) (string, error) {
 	// Now we build our key = val pairs
 	pairs := make([]string, 0, len(m))
 	for _, k := range keys {
-		key := strings.ReplaceAll(escapeString(k, `"`), ".", "_")
+		key := strings.ReplaceAll(escapeString(k, `"`), ".", keyReplacement)
 
 		// escape the value of the value at k (potentially recursive)
-		val, err := escapeValue(m[k])
+		val, err := escapeValue(m[k], keyReplacement)
 		if err != nil {
 			return "", err
 		}

@@ -48,9 +48,9 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	// the rows using their primary keys in order to take advantage of
 	// read-after-write consistency in CrateDB.
 	for _, m := range metrics {
-		hashIDVal, err := escapeValue(hashID(m))
+		hashIDVal, err := escapeValue(hashID(m), "_")
 		require.NoError(t, err)
-		timestamp, err := escapeValue(m.Time())
+		timestamp, err := escapeValue(m.Time(), "_")
 		require.NoError(t, err)
 
 		var id int64
@@ -84,7 +84,7 @@ VALUES
 	}
 
 	for _, test := range tests {
-		if got, err := insertSQL("my_table", test.Metrics); err != nil {
+		if got, err := insertSQL("my_table", "_", test.Metrics); err != nil {
 			t.Error(err)
 		} else if got != test.Want {
 			t.Errorf("got:\n%s\n\nwant:\n%s", got, test.Want)
@@ -141,7 +141,7 @@ func Test_escapeValueIntegration(t *testing.T) {
 
 	tests := escapeValueTests()
 	for _, test := range tests {
-		got, err := escapeValue(test.Value)
+		got, err := escapeValue(test.Value, "_")
 		require.NoError(t, err, "value: %#v", test.Value)
 
 		// This is a smoke test that will blow up if our escaping causing a SQL
@@ -155,7 +155,7 @@ func Test_escapeValueIntegration(t *testing.T) {
 func Test_escapeValue(t *testing.T) {
 	tests := escapeValueTests()
 	for _, test := range tests {
-		got, err := escapeValue(test.Value)
+		got, err := escapeValue(test.Value, "_")
 		require.NoError(t, err, "value: %#v", test.Value)
 		require.Equal(t, got, test.Want)
 	}
