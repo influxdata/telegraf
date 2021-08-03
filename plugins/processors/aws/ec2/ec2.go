@@ -125,7 +125,7 @@ func (r *AwsEc2Processor) Init() error {
 	}
 
 	for _, tag := range r.ImdsTags {
-		if len(tag) == 0 && !isImdsTagAllowed(tag) {
+		if len(tag) == 0 || !isImdsTagAllowed(tag) {
 			return fmt.Errorf("not allowed metadata tag specified in configuration: %s", tag)
 		}
 		r.imdsTags[tag] = struct{}{}
