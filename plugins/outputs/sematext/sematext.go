@@ -39,7 +39,8 @@ type Sematext struct {
 }
 
 const sampleConfig = `
-  ## Docs at https://sematext.com/docs/monitoring
+  ## Docs at https://sematext.com/docs/monitoring provide info about getting
+  ## started with Sematext monitoring.
 
   ## URL of your Sematext metrics receiver. US-region metrics receiver is used
   ## in this example (it is also the default when receiver_url value is empty),
@@ -52,12 +53,12 @@ const sampleConfig = `
   ## here.
   token = ""
 
-  ## Optional TLS Config
+  ## Optional TLS Config.
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
 
-  ## Optional flag for ignoring tls certificate check
+  ## Optional flag for ignoring tls certificate check.
   # insecure_skip_verify = false
 `
 
