@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -286,10 +285,9 @@ var ptests = []struct {
 		input:   []byte("cpu value=9223372036854775808i"),
 		metrics: nil,
 		err: &ParseError{
-			Offset:     30,
 			LineNumber: 1,
-			Column:     31,
-			msg:        strconv.ErrRange.Error(),
+			Column:     11,
+			msg:        `cannot parse value for field key "value": line-protocol value out of range`,
 			buf:        "cpu value=9223372036854775808i",
 		},
 	},
@@ -328,10 +326,9 @@ var ptests = []struct {
 		input:   []byte("cpu value=18446744073709551616u"),
 		metrics: nil,
 		err: &ParseError{
-			Offset:     31,
 			LineNumber: 1,
-			Column:     32,
-			msg:        strconv.ErrRange.Error(),
+			Column:     11,
+			msg:        `cannot parse value for field key "value": line-protocol value out of range`,
 			buf:        "cpu value=18446744073709551616u",
 		},
 	},
@@ -486,10 +483,9 @@ var ptests = []struct {
 		input:   []byte("cpu"),
 		metrics: nil,
 		err: &ParseError{
-			Offset:     3,
 			LineNumber: 1,
 			Column:     4,
-			msg:        ErrTagParse.Error(),
+			msg:        "empty tag name",
 			buf:        "cpu",
 		},
 	},
@@ -567,8 +563,7 @@ var ptests = []struct {
 func TestParser(t *testing.T) {
 	for _, tt := range ptests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := NewMetricHandler()
-			parser := NewParser(handler)
+			parser := NewParser()
 			parser.SetTimeFunc(DefaultTime)
 			if tt.timeFunc != nil {
 				parser.SetTimeFunc(tt.timeFunc)
@@ -591,8 +586,7 @@ func TestParser(t *testing.T) {
 func BenchmarkParser(b *testing.B) {
 	for _, tt := range ptests {
 		b.Run(tt.name, func(b *testing.B) {
-			handler := NewMetricHandler()
-			parser := NewParser(handler)
+			parser := NewParser()
 			for n := 0; n < b.N; n++ {
 				metrics, err := parser.Parse(tt.input)
 				_ = err
@@ -675,10 +669,9 @@ func TestSeriesParser(t *testing.T) {
 			input:   []byte("cpu,a="),
 			metrics: []telegraf.Metric{},
 			err: &ParseError{
-				Offset:     6,
 				LineNumber: 1,
 				Column:     7,
-				msg:        ErrTagParse.Error(),
+				msg:        `expected tag value after tag key "a", but none found`,
 				buf:        "cpu,a=",
 			},
 		},
@@ -687,18 +680,16 @@ func TestSeriesParser(t *testing.T) {
 			input:   []byte("cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b"),
 			metrics: []telegraf.Metric{},
 			err: &ParseError{
-				Offset:     1031,
 				LineNumber: 1,
-				Column:     1032,
-				msg:        "parse error",
+				Column:     1031,
+				msg:        `expected '=' after tag key "", but got '\r' instead`,
 				buf:        "cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := NewMetricHandler()
-			parser := NewSeriesParser(handler)
+			parser := NewSeriesParser()
 			if tt.timeFunc != nil {
 				parser.SetTimeFunc(tt.timeFunc)
 			}
@@ -727,29 +718,28 @@ func TestParserErrorString(t *testing.T) {
 		{
 			name:      "multiple line error",
 			input:     []byte("cpu value=42\ncpu value=invalid\ncpu value=42"),
-			errString: `metric parse error: expected field at 2:11: "cpu value=invalid"`,
+			errString: `metric parse error: field value has unrecognized type at 2:11: "cpu value=invalid"`,
 		},
 		{
 			name:      "handler error",
 			input:     []byte("cpu value=9223372036854775808i\ncpu value=42"),
-			errString: `metric parse error: value out of range at 1:31: "cpu value=9223372036854775808i"`,
+			errString: `metric parse error: cannot parse value for field key "value": line-protocol value out of range at 1:11: "cpu value=9223372036854775808i"`,
 		},
 		{
 			name:      "buffer too long",
 			input:     []byte("cpu " + strings.Repeat("ab", maxErrorBufferSize) + "=invalid\ncpu value=42"),
-			errString: "metric parse error: expected field at 1:2054: \"...b" + strings.Repeat("ab", maxErrorBufferSize/2-1) + "=<-- here\"",
+			errString: "metric parse error: field value has unrecognized type at 1:2054: \"...b" + strings.Repeat("ab", maxErrorBufferSize/2-1) + "=<-- here\"",
 		},
 		{
 			name:      "multiple line error",
 			input:     []byte("cpu value=42\ncpu value=invalid\ncpu value=42\ncpu value=invalid"),
-			errString: `metric parse error: expected field at 2:11: "cpu value=invalid"`,
+			errString: `metric parse error: field value has unrecognized type at 2:11: "cpu value=invalid"`,
 		},
 	}
 
 	for _, tt := range ptests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := NewMetricHandler()
-			parser := NewParser(handler)
+			parser := NewParser()
 
 			_, err := parser.Parse(tt.input)
 			require.Equal(t, tt.errString, err.Error())

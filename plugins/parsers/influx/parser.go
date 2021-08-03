@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/influxdata/line-protocol/v2/lineprotocol"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 const (
@@ -21,6 +22,26 @@ var (
 
 type TimeFunc func() time.Time
 
+// nthIndexAny finds the nth index of some unicode code point in a string or returns -1
+func nthIndexAny(s, chars string, n int) int {
+	offset := 0
+	for found := 1; found <= n; found++ {
+		i := strings.IndexAny(s[offset:], chars)
+		if i < 0 {
+			break
+		}
+
+		offset += i
+		if found == n {
+			return offset
+		}
+
+		offset += len(chars)
+	}
+
+	return -1
+}
+
 // ParseError indicates a error in the parsing of the text.
 type ParseError struct {
 	Offset     int
@@ -32,14 +53,15 @@ type ParseError struct {
 }
 
 func (e *ParseError) Error() string {
-	buffer := e.buf[e.LineOffset:]
+	lineStart := nthIndexAny(e.buf, "\n", e.LineNumber-1) + 1
+	buffer := e.buf[lineStart:]
 	eol := strings.IndexAny(buffer, "\n")
 	if eol >= 0 {
 		buffer = strings.TrimSuffix(buffer[:eol], "\r")
 	}
 	if len(buffer) > maxErrorBufferSize {
 		startEllipsis := true
-		offset := e.Offset - e.LineOffset
+		offset := e.Column - 1 - lineStart
 		start := offset - maxErrorBufferSize
 		if start < 0 {
 			startEllipsis = false
@@ -56,69 +78,102 @@ func (e *ParseError) Error() string {
 	return fmt.Sprintf("metric parse error: %s at %d:%d: %q", e.msg, e.LineNumber, e.Column, buffer)
 }
 
+// convertToParseError attempts to convert a lineprotocol.DecodeError to a ParseError
+func convertToParseError(input []byte, rawErr error) error {
+	err, ok := rawErr.(*lineprotocol.DecodeError)
+	if !ok {
+		return rawErr
+	}
+
+	return &ParseError{
+		LineNumber: int(err.Line),
+		Column:     err.Column,
+		msg:        err.Err.Error(),
+		buf:        string(input),
+	}
+}
+
 // Parser is an InfluxDB Line Protocol parser that implements the
 // parsers.Parser interface.
 type Parser struct {
 	DefaultTags map[string]string
 
-	sync.Mutex
-	*machine
-	handler *MetricHandler
+	defaultTime  TimeFunc
+	precision    lineprotocol.Precision
+	allowPartial bool
 }
 
 // NewParser returns a Parser than accepts line protocol
-func NewParser(handler *MetricHandler) *Parser {
+func NewParser() *Parser {
 	return &Parser{
-		machine: NewMachine(handler),
-		handler: handler,
+		defaultTime: time.Now,
+		precision:   lineprotocol.Nanosecond,
 	}
 }
 
 // NewSeriesParser returns a Parser than accepts a measurement and tagset
-func NewSeriesParser(handler *MetricHandler) *Parser {
+func NewSeriesParser() *Parser {
 	return &Parser{
-		machine: NewSeriesMachine(handler),
-		handler: handler,
+		defaultTime:  time.Now,
+		precision:    lineprotocol.Nanosecond,
+		allowPartial: true,
 	}
 }
 
 func (p *Parser) SetTimeFunc(f TimeFunc) {
-	p.handler.SetTimeFunc(f)
+	p.defaultTime = f
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
-	p.Lock()
-	defer p.Unlock()
 	metrics := make([]telegraf.Metric, 0)
-	p.machine.SetData(input)
+	decoder := lineprotocol.NewDecoderWithBytes(input)
 
-	for {
-		err := p.machine.Next()
-		if err == EOF {
-			break
-		}
-
+	for decoder.Next() {
+		measurement, err := decoder.Measurement()
 		if err != nil {
-			return nil, &ParseError{
-				Offset:     p.machine.Position(),
-				LineOffset: p.machine.LineOffset(),
-				LineNumber: p.machine.LineNumber(),
-				Column:     p.machine.Column(),
-				msg:        err.Error(),
-				buf:        string(input),
+			return nil, convertToParseError(input, err)
+		}
+		m := metric.New(string(measurement), nil, nil, time.Time{})
+
+		for {
+			key, value, err := decoder.NextTag()
+			if err != nil {
+				// Allow empty tags for series parser
+				if strings.Contains(err.Error(), "empty tag name") && p.allowPartial {
+					break
+				}
+
+				return nil, convertToParseError(input, err)
+			} else if key == nil {
+				break
 			}
+
+			m.AddTag(string(key), string(value))
 		}
 
-		metric, err := p.handler.Metric()
-		if err != nil {
-			return nil, err
+		for {
+			key, value, err := decoder.NextField()
+			if err != nil {
+				// Allow empty fields for series parser
+				if strings.Contains(err.Error(), "expected field key") && p.allowPartial {
+					break
+				}
+
+				return nil, convertToParseError(input, err)
+			} else if key == nil {
+				break
+			}
+
+			m.AddField(string(key), value.Interface())
 		}
 
-		if metric == nil {
-			continue
+		t, err := decoder.Time(p.precision, p.defaultTime())
+		if err != nil && !p.allowPartial {
+			return nil, convertToParseError(input, err)
 		}
 
-		metrics = append(metrics, metric)
+		m.SetTime(t)
+		metrics = append(metrics, m)
 	}
 
 	p.applyDefaultTags(metrics)
