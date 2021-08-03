@@ -176,6 +176,12 @@ func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 		}
 	}
 
+	if r.Ordered {
+		r.parallel = parallel.NewOrdered(acc, r.asyncAdd, DefaultMaxOrderedQueueSize, r.MaxParallelCalls)
+	} else {
+		r.parallel = parallel.NewUnordered(acc, r.asyncAdd, r.MaxParallelCalls)
+	}
+
 	return nil
 }
 
