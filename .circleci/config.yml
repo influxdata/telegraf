@@ -123,11 +123,11 @@ commands:
       - when:
           condition: << parameters.release >>
           steps:
-            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 make package'
+            - run: 'make package'
       - when:
           condition: << parameters.nightly >>
           steps:
-            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 NIGHTLY=1 make package'
+            - run: 'make package'
             - run: 'make upload-nightly'
       - unless:
           condition:
@@ -135,7 +135,7 @@ commands:
               - << parameters.nightly >>
               - << parameters.release >>
           steps:
-            - run: '<< parameters.type >>=1 make package'
+            - run: 'make package << parameters.type >>'
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
@@ -204,62 +204,62 @@ jobs:
     executor: go-1_17
     steps:
       - package-build:
-          type: windows
+          type: zips="windows_i386.zip windows_amd64.zip" debs="" tars="" rpms=""
   darwin-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: darwin
+          type: zips="" debs="" tars="darwin_amd64.tar.gz" rpms=""
   i386-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: i386
+          type: zips="" debs="i386.deb" tars="freebsd_i386.tar.gz linux_i386.tar.gz" rpms="i386.rpm"
   ppc641e-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: ppc641e
+          type: zips="" debs="ppc64el.deb" tars="linux_ppc64le.tar.gz" rpms="ppc64le.rpm"
   s390x-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: s390x
+          type: zips="" debs="s390x.deb" tars="linux_s390x.tar.gz" rpms="s390x.rpm"
   armel-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: armel
+          type: zips="" debs="armel.deb" tars="linux_armel.tar.gz" rpms="armel.rpm"
   amd64-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: amd64
+          type: zips="" debs="x86_64.rpm" tars="freebsd_amd64.tar.gz linux_amd64.tar.gz" rpms="x86_64.rpm"
   arm64-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: arm64
+          type: zips="" debs="arm64.deb" tars="linux_arm64.tar.gz" rpms="aarch64.rpm"
   mipsel-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: mipsel
+          type: zips="" debs="mipsel.deb" tars="linux_mipsel.tar.gz" rpms=""
   mips-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: mips
+          type: zips="" debs="mips.deb" tars="linux_mips.tar.gz" rpms=""
   static-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: static
+          type: zips="" debs="" tars="static_linux_amd64.tar.gz" rpms=""
   armhf-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: armhf
+          type: zips="" debs="armhf.deb" tars="linux_armhf.tar.gz freebsd_armv7.tar.gz" rpms="armv6hl.rpm"
 
   release:
     executor: go-1_17

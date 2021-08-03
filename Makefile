@@ -224,73 +224,61 @@ $(buildbin):
 	@mkdir -pv $(dir $@)
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
-ifdef mips
-debs += telegraf_$(deb_version)_mips.deb
-tars += telegraf-$(tar_version)_linux_mips.tar.gz
-endif
+# mips
+debs += mips.deb
+tars += linux_mips.tar.gz
 
-ifdef mipsel
-debs += telegraf_$(deb_version)_mipsel.deb
-tars += telegraf-$(tar_version)_linux_mipsel.tar.gz
-endif
+# mipsel
+debs += mipsel.deb
+tars += linux_mipsel.tar.gz
 
-ifdef arm64
-tars += telegraf-$(tar_version)_linux_arm64.tar.gz
-debs += telegraf_$(deb_version)_arm64.deb
-rpms += telegraf-$(rpm_version).aarch64.rpm
-endif
+# arm64
+tars += linux_arm64.tar.gz
+debs += arm64.deb
+rpms += aarch64.rpm
 
-ifdef amd64
-tars += telegraf-$(tar_version)_freebsd_amd64.tar.gz
-tars += telegraf-$(tar_version)_linux_amd64.tar.gz
-debs += telegraf_$(deb_version)_amd64.deb
-rpms += telegraf-$(rpm_version).x86_64.rpm
-endif
+# amd64
+tars += freebsd_amd64.tar.gz
+tars += linux_amd64.tar.gz
+debs += amd64.deb
+rpms += x86_64.rpm
 
-ifdef static
-tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
-endif
+# static
+tars += static_linux_amd64.tar.gz
 
-ifdef armel
-tars += telegraf-$(tar_version)_linux_armel.tar.gz
-rpms += telegraf-$(rpm_version).armel.rpm
-debs += telegraf_$(deb_version)_armel.deb
-endif
+# armel
+tars += linux_armel.tar.gz
+rpms += armel.rpm
+debs += armel.deb
 
-ifdef armhf
-tars += telegraf-$(tar_version)_linux_armhf.tar.gz
-tars += telegraf-$(tar_version)_freebsd_armv7.tar.gz
-debs += telegraf_$(deb_version)_armhf.deb
-rpms += telegraf-$(rpm_version).armv6hl.rpm
-endif
+# armhf
+tars += linux_armhf.tar.gz
+tars += freebsd_armv7.tar.gz
+debs += armhf.deb
+rpms += armv6hl.rpm
 
-ifdef s390x
-tars += telegraf-$(tar_version)_linux_s390x.tar.gz
-debs += telegraf_$(deb_version)_s390x.deb
-rpms += telegraf-$(rpm_version).s390x.rpm
-endif
+# s390x
+tars += linux_s390x.tar.gz
+debs += s390x.deb
+rpms += s390x.rpm
 
-ifdef ppc641e
-tars += telegraf-$(tar_version)_linux_ppc64le.tar.gz
-rpms += telegraf-$(rpm_version).ppc64le.rpm
-debs += telegraf_$(deb_version)_ppc64el.deb
-endif
+# ppc641e
+tars += linux_ppc64le.tar.gz
+rpms += ppc64le.rpm
+debs += ppc64el.deb
 
-ifdef i386
-tars += telegraf-$(tar_version)_freebsd_i386.tar.gz
-debs += telegraf_$(deb_version)_i386.deb
-tars += telegraf-$(tar_version)_linux_i386.tar.gz
-rpms += telegraf-$(rpm_version).i386.rpm
-endif
+# i386
+tars += freebsd_i386.tar.gz
+debs += i386.deb
+tars += linux_i386.tar.gz
+rpms += i386.rpm
 
-ifdef windows
-zips += telegraf-$(tar_version)_windows_i386.zip
-zips += telegraf-$(tar_version)_windows_amd64.zip
-endif
+# windows
+zips += windows_i386.zip
+zips += windows_amd64.zip
 
-ifdef darwin
-tars += telegraf-$(tar_version)_darwin_amd64.tar.gz
-endif
+# darwin
+tars += darwin_amd64.tar.gz
 
 dists := $(debs) $(rpms) $(tars) $(zips)
 
@@ -332,7 +320,7 @@ $(rpms):
 		--version $(version) \
 		--iteration $(rpm_iteration) \
         --chdir $(DESTDIR) \
-		--package $(pkgdir)/$@
+		--package $(pkgdir)/telegraf-$(rpm_version).$@
 
 deb_amd64 := amd64
 deb_386 := i386
@@ -369,19 +357,19 @@ $(debs):
 		--version $(version) \
 		--iteration $(deb_iteration) \
 		--chdir $(DESTDIR) \
-		--package $(pkgdir)/$@
+		--package $(pkgdir)/telegraf_$(deb_version)_$@
 
 .PHONY: $(zips)
 $(zips):
 	@$(MAKE) install
 	@mkdir -p $(pkgdir)
-	(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/$@
+	(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/telegraf-$(tar_version)_$@
 
 .PHONY: $(tars)
 $(tars):
 	@$(MAKE) install
 	@mkdir -p $(pkgdir)
-	tar --owner 0 --group 0 -czvf $(pkgdir)/$@ -C $(dir $(DESTDIR)) .
+	tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) .
 
 .PHONY: upload-nightly
 upload-nightly:
@@ -393,63 +381,63 @@ upload-nightly:
 		--include "*.zip" \
 		--acl public-read
 
-%amd64.deb %x86_64.rpm %linux_amd64.tar.gz: export GOOS := linux
-%amd64.deb %x86_64.rpm %linux_amd64.tar.gz: export GOARCH := amd64
+amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOOS := linux
+amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOARCH := amd64
 
-%static_linux_amd64.tar.gz: export cgo := -nocgo
-%static_linux_amd64.tar.gz: export CGO_ENABLED := 0
+static_linux_amd64.tar.gz: export cgo := -nocgo
+static_linux_amd64.tar.gz: export CGO_ENABLED := 0
 
-%i386.deb %i386.rpm %linux_i386.tar.gz: export GOOS := linux
-%i386.deb %i386.rpm %linux_i386.tar.gz: export GOARCH := 386
+i386.deb i386.rpm linux_i386.tar.gz: export GOOS := linux
+i386.deb i386.rpm linux_i386.tar.gz: export GOARCH := 386
 
-%armel.deb %armel.rpm %linux_armel.tar.gz: export GOOS := linux
-%armel.deb %armel.rpm %linux_armel.tar.gz: export GOARCH := arm
-%armel.deb %armel.rpm %linux_armel.tar.gz: export GOARM := 5
+armel.deb armel.rpm linux_armel.tar.gz: export GOOS := linux
+armel.deb armel.rpm linux_armel.tar.gz: export GOARCH := arm
+armel.deb armel.rpm linux_armel.tar.gz: export GOARM := 5
 
-%armhf.deb %armv6hl.rpm %linux_armhf.tar.gz: export GOOS := linux
-%armhf.deb %armv6hl.rpm %linux_armhf.tar.gz: export GOARCH := arm
-%armhf.deb %armv6hl.rpm %linux_armhf.tar.gz: export GOARM := 6
+armhf.deb armv6hl.rpm linux_armhf.tar.gz: export GOOS := linux
+armhf.deb armv6hl.rpm linux_armhf.tar.gz: export GOARCH := arm
+armhf.deb armv6hl.rpm linux_armhf.tar.gz: export GOARM := 6
 
-%arm64.deb %aarch64.rpm %linux_arm64.tar.gz: export GOOS := linux
-%arm64.deb %aarch64.rpm %linux_arm64.tar.gz: export GOARCH := arm64
-%arm64.deb %aarch64.rpm %linux_arm64.tar.gz: export GOARM := 7
+arm64.deb aarch64.rpm linux_arm64.tar.gz: export GOOS := linux
+arm64.deb aarch64.rpm linux_arm64.tar.gz: export GOARCH := arm64
+arm64.deb aarch64.rpm linux_arm64.tar.gz: export GOARM := 7
 
-%mips.deb %linux_mips.tar.gz: export GOOS := linux
-%mips.deb %linux_mips.tar.gz: export GOARCH := mips
+mips.deb linux_mips.tar.gz: export GOOS := linux
+mips.deb linux_mips.tar.gz: export GOARCH := mips
 
-%mipsel.deb %linux_mipsel.tar.gz: export GOOS := linux
-%mipsel.deb %linux_mipsel.tar.gz: export GOARCH := mipsle
+mipsel.deb linux_mipsel.tar.gz: export GOOS := linux
+mipsel.deb linux_mipsel.tar.gz: export GOARCH := mipsle
 
-%s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOOS := linux
-%s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOARCH := s390x
+s390x.deb s390x.rpm linux_s390x.tar.gz: export GOOS := linux
+s390x.deb s390x.rpm linux_s390x.tar.gz: export GOARCH := s390x
 
-%ppc64el.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOOS := linux
-%ppc64el.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOARCH := ppc64le
+ppc64el.deb ppc64le.rpm linux_ppc64le.tar.gz: export GOOS := linux
+ppc64el.deb ppc64le.rpm linux_ppc64le.tar.gz: export GOARCH := ppc64le
 
-%freebsd_amd64.tar.gz: export GOOS := freebsd
-%freebsd_amd64.tar.gz: export GOARCH := amd64
+freebsd_amd64.tar.gz: export GOOS := freebsd
+freebsd_amd64.tar.gz: export GOARCH := amd64
 
-%freebsd_i386.tar.gz: export GOOS := freebsd
-%freebsd_i386.tar.gz: export GOARCH := 386
+freebsd_i386.tar.gz: export GOOS := freebsd
+freebsd_i386.tar.gz: export GOARCH := 386
 
-%freebsd_armv7.tar.gz: export GOOS := freebsd
-%freebsd_armv7.tar.gz: export GOARCH := arm
-%freebsd_armv7.tar.gz: export GOARM := 7
+freebsd_armv7.tar.gz: export GOOS := freebsd
+freebsd_armv7.tar.gz: export GOARCH := arm
+freebsd_armv7.tar.gz: export GOARM := 7
 
-%windows_amd64.zip: export GOOS := windows
-%windows_amd64.zip: export GOARCH := amd64
+windows_amd64.zip: export GOOS := windows
+windows_amd64.zip: export GOARCH := amd64
 
-%darwin_amd64.tar.gz: export GOOS := darwin
-%darwin_amd64.tar.gz: export GOARCH := amd64
+darwin_amd64.tar.gz: export GOOS := darwin
+darwin_amd64.tar.gz: export GOARCH := amd64
 
-%windows_i386.zip: export GOOS := windows
-%windows_i386.zip: export GOARCH := 386
+windows_i386.zip: export GOOS := windows
+windows_i386.zip: export GOARCH := 386
 
-%windows_i386.zip %windows_amd64.zip: export prefix =
-%windows_i386.zip %windows_amd64.zip: export bindir = $(prefix)
-%windows_i386.zip %windows_amd64.zip: export sysconfdir = $(prefix)
-%windows_i386.zip %windows_amd64.zip: export localstatedir = $(prefix)
-%windows_i386.zip %windows_amd64.zip: export EXEEXT := .exe
+windows_i386.zip windows_amd64.zip: export prefix =
+windows_i386.zip windows_amd64.zip: export bindir = $(prefix)
+windows_i386.zip windows_amd64.zip: export sysconfdir = $(prefix)
+windows_i386.zip windows_amd64.zip: export localstatedir = $(prefix)
+windows_i386.zip windows_amd64.zip: export EXEEXT := .exe
 
 %.deb: export pkg := deb
 %.deb: export prefix := /usr
