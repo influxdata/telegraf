@@ -406,10 +406,10 @@ func Connect(o *OpcUA) error {
 		o.state = Connecting
 
 		if o.client != nil {
-			if err := o.client.CloseSession(); err != nil {
+			if err := o.client.Close(); err != nil {
 				// Only log the error but to not bail-out here as this prevents
 				// reconnections for multiple parties (see e.g. #9523).
-				o.Log.Errorf("Closing session failed: %v", err)
+				o.Log.Errorf("Closing connection failed: %v", err)
 			}
 		}
 
