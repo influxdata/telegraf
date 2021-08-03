@@ -92,36 +92,40 @@ VALUES
 	}
 }
 
-var escapeValueTests = []struct {
-	Val  interface{}
-	Want string
-}{
-	// string
-	{`foo`, `'foo'`},
-	{`foo'bar 'yeah`, `'foo''bar ''yeah'`},
-	// int types
-	{int64(123), `123`},
-	{uint64(123), `123`},
-	{uint64(MaxInt64) + 1, `9223372036854775807`},
-	{true, `true`},
-	{false, `false`},
-	// float types
-	{float64(123.456), `123.456`},
-	// time.Time
-	{time.Date(2017, 8, 7, 16, 44, 52, 123*1000*1000, time.FixedZone("Dreamland", 5400)), `'2017-08-07T16:44:52.123+0130'`},
-	// map[string]string
-	{map[string]string{}, `{}`},
-	{map[string]string(nil), `{}`},
-	{map[string]string{"foo": "bar"}, `{"foo" = 'bar'}`},
-	{map[string]string{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
-	{map[string]string{"f.oo": "bar", "o.n.e": "more"}, `{"f_oo" = 'bar', "o_n_e" = 'more'}`},
-	// map[string]interface{}
-	{map[string]interface{}{}, `{}`},
-	{map[string]interface{}(nil), `{}`},
-	{map[string]interface{}{"foo": "bar"}, `{"foo" = 'bar'}`},
-	{map[string]interface{}{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
-	{map[string]interface{}{"foo": map[string]interface{}{"one": "more"}}, `{"foo" = {"one" = 'more'}}`},
-	{map[string]interface{}{`fo"o`: `b'ar`, `ab'c`: `xy"z`, `on"""e`: `mo'''re`}, `{"ab'c" = 'xy"z', "fo""o" = 'b''ar', "on""""""e" = 'mo''''''re'}`},
+type escapeValueTest struct {
+	Value interface{}
+	Want  string
+}
+
+func escapeValueTests() []escapeValueTest {
+	return []escapeValueTest{
+		// string
+		{`foo`, `'foo'`},
+		{`foo'bar 'yeah`, `'foo''bar ''yeah'`},
+		// int types
+		{int64(123), `123`},
+		{uint64(123), `123`},
+		{uint64(MaxInt64) + 1, `9223372036854775807`},
+		{true, `true`},
+		{false, `false`},
+		// float types
+		{float64(123.456), `123.456`},
+		// time.Time
+		{time.Date(2017, 8, 7, 16, 44, 52, 123*1000*1000, time.FixedZone("Dreamland", 5400)), `'2017-08-07T16:44:52.123+0130'`},
+		// map[string]string
+		{map[string]string{}, `{}`},
+		{map[string]string(nil), `{}`},
+		{map[string]string{"foo": "bar"}, `{"foo" = 'bar'}`},
+		{map[string]string{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
+		{map[string]string{"f.oo": "bar", "o.n.e": "more"}, `{"f_oo" = 'bar', "o_n_e" = 'more'}`},
+		// map[string]interface{}
+		{map[string]interface{}{}, `{}`},
+		{map[string]interface{}(nil), `{}`},
+		{map[string]interface{}{"foo": "bar"}, `{"foo" = 'bar'}`},
+		{map[string]interface{}{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
+		{map[string]interface{}{"foo": map[string]interface{}{"one": "more"}}, `{"foo" = {"one" = 'more'}}`},
+		{map[string]interface{}{`fo"o`: `b'ar`, `ab'c`: `xy"z`, `on"""e`: `mo'''re`}, `{"ab'c" = 'xy"z', "fo""o" = 'b''ar', "on""""""e" = 'mo''''''re'}`},
+	}
 }
 
 func Test_escapeValueIntegration(t *testing.T) {
@@ -135,9 +139,10 @@ func Test_escapeValueIntegration(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	for _, test := range escapeValueTests {
-		got, err := escapeValue(test.Val)
-		require.NoError(t, err, "value: %#v", test.Val)
+	tests := escapeValueTests()
+	for _, test := range tests {
+		got, err := escapeValue(test.Value)
+		require.NoError(t, err, "value: %#v", test.Value)
 
 		// This is a smoke test that will blow up if our escaping causing a SQL
 		// syntax error, which may allow for an attack.=
@@ -148,9 +153,10 @@ func Test_escapeValueIntegration(t *testing.T) {
 }
 
 func Test_escapeValue(t *testing.T) {
-	for _, test := range escapeValueTests {
-		got, err := escapeValue(test.Val)
-		require.NoError(t, err, "value: %#v", test.Val)
+	tests := escapeValueTests()
+	for _, test := range tests {
+		got, err := escapeValue(test.Value)
+		require.NoError(t, err, "value: %#v", test.Value)
 		require.Equal(t, got, test.Want)
 	}
 }
