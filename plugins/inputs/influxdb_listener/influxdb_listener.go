@@ -295,10 +295,13 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 			parser.SetTimePrecision(precision)
 		}
 
+		if req.ContentLength >= 0 {
+			h.bytesRecv.Incr(req.ContentLength)
+		}
+
 		var m telegraf.Metric
 		var err error
 		var parseErrorCount int
-		var lastPos int
 		var firstParseErrorStr string
 		for {
 			select {
@@ -310,9 +313,6 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 			}
 
 			m, err = parser.Next()
-			pos := parser.Position()
-			h.bytesRecv.Incr(int64(pos - lastPos))
-			lastPos = pos
 
 			// Continue parsing metrics even if some are malformed
 			if parseErr, ok := err.(*influx.ParseError); ok {
@@ -324,7 +324,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 				continue
 			} else if err != nil {
 				// Either we're exiting cleanly (err ==
-				// influx.EOF) or there's an unexpected error
+				// influx.ErrEOF) or there's an unexpected error
 				break
 			}
 
@@ -338,7 +338,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 
 			h.acc.AddMetric(m)
 		}
-		if err != influx.EOF {
+		if err != influx.ErrEOF {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
 			if err := badRequest(res, err.Error()); err != nil {
 				h.Log.Debugf("error in bad-request: %v", err)

@@ -144,7 +144,7 @@ func runCountMultiplierProgram() {
 	for {
 		m, err := parser.Next()
 		if err != nil {
-			if err == influx.EOF {
+			if err == influx.ErrEOF {
 				return // stream ended
 			}
 			if parseErr, isParseError := err.(*influx.ParseError); isParseError {

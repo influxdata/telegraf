@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/influxdata/line-protocol/v2/lineprotocol"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 const (
@@ -17,29 +18,57 @@ const (
 
 var (
 	ErrNoMetric = errors.New("no metric in line")
+	ErrEOF      = errors.New("EOF")
 )
 
 type TimeFunc func() time.Time
 
+// nthIndexAny finds the nth index of some unicode code point in a string or returns -1
+func nthIndexAny(s, chars string, n int) int {
+	offset := 0
+	for found := 1; found <= n; found++ {
+		i := strings.IndexAny(s[offset:], chars)
+		if i < 0 {
+			break
+		}
+
+		offset += i
+		if found == n {
+			return offset
+		}
+
+		offset += len(chars)
+	}
+
+	return -1
+}
+
 // ParseError indicates a error in the parsing of the text.
 type ParseError struct {
-	Offset     int
-	LineOffset int
-	LineNumber int
-	Column     int
-	msg        string
-	buf        string
+	*lineprotocol.DecodeError
+	buf string
 }
 
 func (e *ParseError) Error() string {
-	buffer := e.buf[e.LineOffset:]
+	// When an error occurs within the stream decoder, we do not have access
+	// to the internal buffer, so we cannot display the contents of the invalid
+	// metric
+	if e.buf == "" {
+		return fmt.Sprintf("metric parse error: %s at %d:%d", e.Err, e.Line, e.Column)
+	}
+
+	lineStart := nthIndexAny(e.buf, "\n", int(e.Line-1)) + 1
+	buffer := e.buf[lineStart:]
 	eol := strings.IndexAny(buffer, "\n")
 	if eol >= 0 {
 		buffer = strings.TrimSuffix(buffer[:eol], "\r")
 	}
 	if len(buffer) > maxErrorBufferSize {
 		startEllipsis := true
-		offset := e.Offset - e.LineOffset
+		offset := e.Column - 1 - lineStart
+		if offset > len(buffer) || offset < 0 {
+			offset = len(buffer)
+		}
 		start := offset - maxErrorBufferSize
 		if start < 0 {
 			startEllipsis = false
@@ -53,7 +82,20 @@ func (e *ParseError) Error() string {
 			buffer = "..." + buffer
 		}
 	}
-	return fmt.Sprintf("metric parse error: %s at %d:%d: %q", e.msg, e.LineNumber, e.Column, buffer)
+	return fmt.Sprintf("metric parse error: %s at %d:%d: %q", e.Err, e.Line, e.Column, buffer)
+}
+
+// convertToParseError attempts to convert a lineprotocol.DecodeError to a ParseError
+func convertToParseError(input []byte, rawErr error) error {
+	err, ok := rawErr.(*lineprotocol.DecodeError)
+	if !ok {
+		return rawErr
+	}
+
+	return &ParseError{
+		DecodeError: err,
+		buf:         string(input),
+	}
 }
 
 // Parser is an InfluxDB Line Protocol parser that implements the
@@ -61,64 +103,42 @@ func (e *ParseError) Error() string {
 type Parser struct {
 	DefaultTags map[string]string
 
-	sync.Mutex
-	*machine
-	handler *MetricHandler
+	defaultTime  TimeFunc
+	precision    lineprotocol.Precision
+	allowPartial bool
 }
 
 // NewParser returns a Parser than accepts line protocol
-func NewParser(handler *MetricHandler) *Parser {
+func NewParser() *Parser {
 	return &Parser{
-		machine: NewMachine(handler),
-		handler: handler,
+		defaultTime: time.Now,
+		precision:   lineprotocol.Nanosecond,
 	}
 }
 
 // NewSeriesParser returns a Parser than accepts a measurement and tagset
-func NewSeriesParser(handler *MetricHandler) *Parser {
+func NewSeriesParser() *Parser {
 	return &Parser{
-		machine: NewSeriesMachine(handler),
-		handler: handler,
+		defaultTime:  time.Now,
+		precision:    lineprotocol.Nanosecond,
+		allowPartial: true,
 	}
 }
 
 func (p *Parser) SetTimeFunc(f TimeFunc) {
-	p.handler.SetTimeFunc(f)
+	p.defaultTime = f
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
-	p.Lock()
-	defer p.Unlock()
 	metrics := make([]telegraf.Metric, 0)
-	p.machine.SetData(input)
+	decoder := lineprotocol.NewDecoderWithBytes(input)
 
-	for {
-		err := p.machine.Next()
-		if err == EOF {
-			break
-		}
-
+	for decoder.Next() {
+		m, err := nextMetric(decoder, p.precision, p.defaultTime, p.allowPartial)
 		if err != nil {
-			return nil, &ParseError{
-				Offset:     p.machine.Position(),
-				LineOffset: p.machine.LineOffset(),
-				LineNumber: p.machine.LineNumber(),
-				Column:     p.machine.Column(),
-				msg:        err.Error(),
-				buf:        string(input),
-			}
+			return nil, convertToParseError(input, err)
 		}
-
-		metric, err := p.handler.Metric()
-		if err != nil {
-			return nil, err
-		}
-
-		if metric == nil {
-			continue
-		}
-
-		metrics = append(metrics, metric)
+		metrics = append(metrics, m)
 	}
 
 	p.applyDefaultTags(metrics)
@@ -142,6 +162,19 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
+func (p *Parser) SetTimePrecision(u time.Duration) {
+	switch u {
+	case time.Nanosecond:
+		p.precision = lineprotocol.Nanosecond
+	case time.Microsecond:
+		p.precision = lineprotocol.Microsecond
+	case time.Millisecond:
+		p.precision = lineprotocol.Millisecond
+	case time.Second:
+		p.precision = lineprotocol.Second
+	}
+}
+
 func (p *Parser) applyDefaultTags(metrics []telegraf.Metric) {
 	if len(p.DefaultTags) == 0 {
 		return
@@ -163,15 +196,17 @@ func (p *Parser) applyDefaultTagsSingle(metric telegraf.Metric) {
 // StreamParser is an InfluxDB Line Protocol parser.  It is not safe for
 // concurrent use in multiple goroutines.
 type StreamParser struct {
-	machine *streamMachine
-	handler *MetricHandler
+	decoder     *lineprotocol.Decoder
+	defaultTime TimeFunc
+	precision   lineprotocol.Precision
+	lastError   error
 }
 
 func NewStreamParser(r io.Reader) *StreamParser {
-	handler := NewMetricHandler()
 	return &StreamParser{
-		machine: NewStreamMachine(r, handler),
-		handler: handler,
+		decoder:     lineprotocol.NewDecoder(r),
+		defaultTime: time.Now,
+		precision:   lineprotocol.Nanosecond,
 	}
 }
 
@@ -179,66 +214,86 @@ func NewStreamParser(r io.Reader) *StreamParser {
 // without a timestamp.  The default TimeFunc is time.Now.  Useful mostly for
 // testing, or perhaps if you want all metrics to have the same timestamp.
 func (sp *StreamParser) SetTimeFunc(f TimeFunc) {
-	sp.handler.SetTimeFunc(f)
+	sp.defaultTime = f
 }
 
 func (sp *StreamParser) SetTimePrecision(u time.Duration) {
-	sp.handler.SetTimePrecision(u)
+	switch u {
+	case time.Nanosecond:
+		sp.precision = lineprotocol.Nanosecond
+	case time.Microsecond:
+		sp.precision = lineprotocol.Microsecond
+	case time.Millisecond:
+		sp.precision = lineprotocol.Millisecond
+	case time.Second:
+		sp.precision = lineprotocol.Second
+	}
 }
 
 // Next parses the next item from the stream.  You can repeat calls to this
 // function if it returns ParseError to get the next metric or error.
 func (sp *StreamParser) Next() (telegraf.Metric, error) {
-	err := sp.machine.Next()
-	if err == EOF {
-		return nil, err
-	}
-
-	if e, ok := err.(*readErr); ok {
-		return nil, e.Err
-	}
-
-	if err != nil {
-		return nil, &ParseError{
-			Offset:     sp.machine.Position(),
-			LineOffset: sp.machine.LineOffset(),
-			LineNumber: sp.machine.LineNumber(),
-			Column:     sp.machine.Column(),
-			msg:        err.Error(),
-			buf:        sp.machine.LineText(),
+	if !sp.decoder.Next() {
+		if err := sp.decoder.Err(); err != nil && err != sp.lastError {
+			sp.lastError = err
+			return nil, err
 		}
+
+		return nil, ErrEOF
 	}
 
-	metric, err := sp.handler.Metric()
+	m, err := nextMetric(sp.decoder, sp.precision, sp.defaultTime, false)
+	if err != nil {
+		return nil, convertToParseError([]byte{}, err)
+	}
+
+	return m, nil
+}
+
+func nextMetric(decoder *lineprotocol.Decoder, precision lineprotocol.Precision, defaultTime TimeFunc, allowPartial bool) (telegraf.Metric, error) {
+	measurement, err := decoder.Measurement()
 	if err != nil {
 		return nil, err
 	}
+	m := metric.New(string(measurement), nil, nil, time.Time{})
 
-	return metric, nil
-}
+	for {
+		key, value, err := decoder.NextTag()
+		if err != nil {
+			// Allow empty tags for series parser
+			if strings.Contains(err.Error(), "empty tag name") && allowPartial {
+				break
+			}
 
-// Position returns the current byte offset into the data.
-func (sp *StreamParser) Position() int {
-	return sp.machine.Position()
-}
+			return nil, err
+		} else if key == nil {
+			break
+		}
 
-// LineOffset returns the byte offset of the current line.
-func (sp *StreamParser) LineOffset() int {
-	return sp.machine.LineOffset()
-}
+		m.AddTag(string(key), string(value))
+	}
 
-// LineNumber returns the current line number.  Lines are counted based on the
-// regular expression `\r?\n`.
-func (sp *StreamParser) LineNumber() int {
-	return sp.machine.LineNumber()
-}
+	for {
+		key, value, err := decoder.NextField()
+		if err != nil {
+			// Allow empty fields for series parser
+			if strings.Contains(err.Error(), "expected field key") && allowPartial {
+				break
+			}
 
-// Column returns the current column.
-func (sp *StreamParser) Column() int {
-	return sp.machine.Column()
-}
+			return nil, err
+		} else if key == nil {
+			break
+		}
 
-// LineText returns the text of the current line that has been parsed so far.
-func (sp *StreamParser) LineText() string {
-	return sp.machine.LineText()
+		m.AddField(string(key), value.Interface())
+	}
+
+	t, err := decoder.Time(precision, defaultTime())
+	if err != nil && !allowPartial {
+		return nil, err
+	}
+	m.SetTime(t)
+
+	return m, nil
 }

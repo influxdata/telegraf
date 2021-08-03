@@ -69,6 +69,19 @@ func main() {
             fmt.Fprintf(os.Stderr, "ERR %v\n", err)
             os.Exit(1)
         }
+    for {
+        metric, err := parser.Next()
+        if err != nil {
+            if err == influx.ErrEOF {
+                return // stream ended
+            }
+            if parseErr, isParseError := err.(*influx.ParseError); isParseError {
+                fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
+                os.Exit(1)
+            }
+            fmt.Fprintf(os.Stderr, "ERR %v\n", err)
+            os.Exit(1)
+        }
 
         c, found := metric.GetField("count")
         if !found {

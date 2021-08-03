@@ -152,7 +152,7 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 
 		if err != nil {
 			// Stop parsing when we've reached the end.
-			if err == influx.EOF {
+			if err == influx.ErrEOF {
 				break
 			}
 

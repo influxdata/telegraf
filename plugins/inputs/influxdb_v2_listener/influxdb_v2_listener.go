@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -264,14 +265,13 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 			}
 			return
 		}
-		metricHandler := influx.NewMetricHandler()
-		parser := influx.NewParser(metricHandler)
+		parser := influx.NewParser()
 		parser.SetTimeFunc(h.timeFunc)
 
 		precisionStr := req.URL.Query().Get("precision")
 		if precisionStr != "" {
 			precision := getPrecisionMultiplier(precisionStr)
-			metricHandler.SetTimePrecision(precision)
+			parser.SetTimePrecision(precision)
 		}
 
 		var metrics []telegraf.Metric
@@ -279,7 +279,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 
 		metrics, err = parser.Parse(bytes)
 
-		if err != influx.EOF && err != nil {
+		if !errors.Is(err, influx.ErrEOF) && err != nil {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
 			if err := badRequest(res, Invalid, err.Error()); err != nil {
 				h.Log.Debugf("error in bad-request: %v", err)

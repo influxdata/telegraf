@@ -55,7 +55,7 @@ endif
 
 
 GOFILES ?= $(shell git ls-files '*.go')
-GOFMT ?= $(shell gofmt -l -s $(filter-out plugins/parsers/influx/machine.go, $(GOFILES)))
+GOFMT ?= $(shell gofmt -l -s $(GOFILES))
 
 prefix ?= /usr/local
 bindir ?= $(prefix)/bin
@@ -128,7 +128,7 @@ test-integration:
 
 .PHONY: fmt
 fmt:
-	@gofmt -s -w $(filter-out plugins/parsers/influx/machine.go, $(GOFILES))
+	@gofmt -s -w $(GOFILES)
 
 .PHONY: fmtcheck
 fmtcheck:
@@ -142,8 +142,8 @@ fmtcheck:
 
 .PHONY: vet
 vet:
-	@echo 'go vet $$(go list ./... | grep -v ./plugins/parsers/influx)'
-	@go vet $$(go list ./... | grep -v ./plugins/parsers/influx) ; if [ $$? -ne 0 ]; then \
+	@echo 'go vet $$(go list ./...)'
+	@go vet $$(go list ./...) ; if [ $$? -ne 0 ]; then \
 		echo ""; \
 		echo "go vet has found suspicious constructs. Please remediate any reported errors"; \
 		echo "to fix them before submitting code for review."; \
@@ -210,9 +210,6 @@ clean:
 .PHONY: docker-image
 docker-image:
 	docker build -f scripts/buster.docker -t "telegraf:$(commit)" .
-
-plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
-	ragel -Z -G2 $^ -o $@
 
 .PHONY: plugin-%
 plugin-%:

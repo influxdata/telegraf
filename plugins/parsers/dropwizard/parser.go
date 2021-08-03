@@ -54,8 +54,7 @@ type parser struct {
 }
 
 func NewParser() *parser {
-	handler := influx.NewMetricHandler()
-	seriesParser := influx.NewSeriesParser(handler)
+	seriesParser := influx.NewSeriesParser()
 
 	parser := &parser{
 		timeFunc:     time.Now,

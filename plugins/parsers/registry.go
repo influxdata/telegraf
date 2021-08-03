@@ -315,8 +315,7 @@ func NewNagiosParser() (Parser, error) {
 }
 
 func NewInfluxParser() (Parser, error) {
-	handler := influx.NewMetricHandler()
-	return influx.NewParser(handler), nil
+	return influx.NewParser(), nil
 }
 
 func NewGraphiteParser(

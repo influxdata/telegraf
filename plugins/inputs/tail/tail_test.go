@@ -574,8 +574,7 @@ func TestCharacterEncoding(t *testing.T) {
 			}
 
 			plugin.SetParserFunc(func() (parsers.Parser, error) {
-				handler := influx.NewMetricHandler()
-				return influx.NewParser(handler), nil
+				return influx.NewParser(), nil
 			})
 
 			if tt.offset != 0 {
