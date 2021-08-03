@@ -37,6 +37,7 @@ func (s *ConfigAPIService) mux() *mux.Router {
 	m.HandleFunc("/plugins/{id:[0-9a-f]+}/status", s.pluginStatus)
 	m.HandleFunc("/plugins/list", s.listPlugins)
 	m.HandleFunc("/plugins/running", s.runningPlugins)
+	m.HandleFunc("/plugins/{id:[0-9a-f]+}", s.deleteOrUpdatePlugin)
 	return m
 }
 
@@ -124,4 +125,34 @@ func (s *ConfigAPIService) Stop() {
 	if err := s.server.Shutdown(ctx); err != nil {
 		log.Printf("W! [configapi] error on shutdown: %s", err)
 	}
+}
+
+func (s *ConfigAPIService) deleteOrUpdatePlugin(w http.ResponseWriter, req *http.Request) {
+	switch req.Method {
+	case "DELETE":
+		s.deletePlugin(w, req)
+	case "PUT":
+		s.updatePlugin(w, req)
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+	}
+}
+
+func (s *ConfigAPIService) deletePlugin(w http.ResponseWriter, req *http.Request) {
+	defer req.Body.Close()
+	id := mux.Vars(req)["id"]
+	if len(id) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := s.api.DeletePlugin(models.PluginID(id)); err != nil {
+		s.Log.Error("error deleting plugin %v", err)
+		// TODO: improve error handling? Would like to see status based on error type
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *ConfigAPIService) updatePlugin(w http.ResponseWriter, req *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
 }
