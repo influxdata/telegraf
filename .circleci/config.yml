@@ -234,7 +234,7 @@ jobs:
     executor: go-1_17
     steps:
       - package-build:
-          type: zips="" debs="x86_64.rpm" tars="freebsd_amd64.tar.gz linux_amd64.tar.gz" rpms="x86_64.rpm"
+          type: zips="" debs="amd64.deb" tars="freebsd_amd64.tar.gz linux_amd64.tar.gz" rpms="x86_64.rpm"
   arm64-package:
     executor: go-1_17
     steps:
