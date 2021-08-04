@@ -60,10 +60,10 @@ func TestPod(t *testing.T) {
 											},
 											Resources: corev1.ResourceRequirements{
 												Limits: corev1.ResourceList{
-													"cpu": resource.Quantity{Format: "100m"},
+													"cpu": resource.MustParse("100m"),
 												},
 												Requests: corev1.ResourceList{
-													"cpu": resource.Quantity{Format: "100m"},
+													"cpu": resource.MustParse("100m"),
 												},
 											},
 										},
@@ -78,10 +78,10 @@ func TestPod(t *testing.T) {
 											},
 											Resources: corev1.ResourceRequirements{
 												Limits: corev1.ResourceList{
-													"cpu": resource.Quantity{Format: "100m"},
+													"cpu": resource.MustParse("100m"),
 												},
 												Requests: corev1.ResourceList{
-													"cpu": resource.Quantity{Format: "100m"},
+													"cpu": resource.MustParse("100m"),
 												},
 											},
 										},
@@ -96,10 +96,10 @@ func TestPod(t *testing.T) {
 											},
 											Resources: corev1.ResourceRequirements{
 												Limits: corev1.ResourceList{
-													"cpu": resource.Quantity{Format: "100m"},
+													"cpu": resource.MustParse("100m"),
 												},
 												Requests: corev1.ResourceList{
-													"cpu": resource.Quantity{Format: "100m"},
+													"cpu": resource.MustParse("100m"),
 												},
 											},
 										},
@@ -335,10 +335,10 @@ func TestPodSelectorFilter(t *testing.T) {
 								},
 								Resources: corev1.ResourceRequirements{
 									Limits: corev1.ResourceList{
-										"cpu": resource.Quantity{Format: "100m"},
+										"cpu": resource.MustParse("100m"),
 									},
 									Requests: corev1.ResourceList{
-										"cpu": resource.Quantity{Format: "100m"},
+										"cpu": resource.MustParse("100m"),
 									},
 								},
 							},
@@ -582,10 +582,10 @@ func TestPodPendingContainers(t *testing.T) {
 											},
 											Resources: corev1.ResourceRequirements{
 												Limits: corev1.ResourceList{
-													"cpu": resource.Quantity{Format: "100m"},
+													"cpu": resource.MustParse("100m"),
 												},
 												Requests: corev1.ResourceList{
-													"cpu": resource.Quantity{Format: "100m"},
+													"cpu": resource.MustParse("100m"),
 												},
 											},
 										},
@@ -600,10 +600,10 @@ func TestPodPendingContainers(t *testing.T) {
 											},
 											Resources: corev1.ResourceRequirements{
 												Limits: corev1.ResourceList{
-													"cpu": resource.Quantity{Format: "100m"},
+													"cpu": resource.MustParse("100m"),
 												},
 												Requests: corev1.ResourceList{
-													"cpu": resource.Quantity{Format: "100m"},
+													"cpu": resource.MustParse("100m"),
 												},
 											},
 										},
