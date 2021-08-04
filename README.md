@@ -467,6 +467,7 @@ For documentation on the latest development code see the [documentation index][d
 * [nats](./plugins/outputs/nats)
 * [newrelic](./plugins/outputs/newrelic)
 * [nsq](./plugins/outputs/nsq)
+* [opentelemetry](./plugins/outputs/opentelemetry)
 * [opentsdb](./plugins/outputs/opentsdb)
 * [prometheus](./plugins/outputs/prometheus_client)
 * [riemann](./plugins/outputs/riemann)

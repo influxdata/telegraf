@@ -64,7 +64,7 @@ require (
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.3
-	github.com/google/go-cmp v0.5.5
+	github.com/google/go-cmp v0.5.6
 	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.1.13
 	github.com/gorilla/mux v1.7.3
@@ -76,9 +76,9 @@ require (
 	github.com/hashicorp/consul/api v1.9.1
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
 	github.com/influxdata/go-syslog/v3 v3.0.0
-	github.com/influxdata/influxdb-observability/common v0.0.0-20210429174543-86ae73cafd31
-	github.com/influxdata/influxdb-observability/otel2influx v0.0.0-20210429174543-86ae73cafd31
-	github.com/influxdata/influxdb-observability/otlp v0.0.0-20210429174543-86ae73cafd31
+	github.com/influxdata/influxdb-observability/common v0.2.4
+	github.com/influxdata/influxdb-observability/influx2otel v0.2.4
+	github.com/influxdata/influxdb-observability/otel2influx v0.2.4
 	github.com/influxdata/tail v1.0.1-0.20210707231403-b283181d1fa7
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
@@ -137,10 +137,11 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
 	go.mongodb.org/mongo-driver v1.5.3
+	go.opentelemetry.io/collector/model v0.0.0-20210723184018-3b7d6ce4830c
 	go.starlark.net v0.0.0-20210406145628-7a1108eaa012
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e // indirect
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
+	golang.org/x/net v0.0.0-20210610132358-84b48f89b13b
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
@@ -148,9 +149,9 @@ require (
 	golang.org/x/tools v0.1.2
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	google.golang.org/api v0.29.0
-	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
-	google.golang.org/grpc v1.38.0
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/genproto v0.0.0-20210604141403-392c879c8b08
+	google.golang.org/grpc v1.39.0
+	google.golang.org/protobuf v1.27.1
 	gopkg.in/djherbis/times.v1 v1.2.0
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
