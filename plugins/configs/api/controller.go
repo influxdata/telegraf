@@ -156,6 +156,9 @@ func (a *api) ListRunningPlugins() (runningPlugins []Plugin) {
 		runningPlugins = append(runningPlugins, p)
 	}
 	// TODO: add more types?
+	if runningPlugins == nil {
+		return []Plugin{}
+	}
 	return runningPlugins
 }
 

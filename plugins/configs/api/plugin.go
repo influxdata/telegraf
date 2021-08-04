@@ -30,13 +30,16 @@ func (a *ConfigAPIPlugin) GetName() string {
 
 func (a *ConfigAPIPlugin) Init(ctx context.Context, cfg *config.Config, agent config.AgentController) error {
 	a.api, a.cancel = newAPI(ctx, cfg, agent)
+	if a.Storage == nil {
+		a.Log.Warn("initializing config-api without storage, changes via the api will not be persisted.")
+	} else {
+		if err := a.Storage.Init(); err != nil {
+			return fmt.Errorf("initializing storage: %w", err)
+		}
 
-	if err := a.Storage.Init(); err != nil {
-		return fmt.Errorf("initializing storage: %w", err)
-	}
-
-	if err := a.Storage.Load("config-api", "plugins", &a.plugins); err != nil {
-		return fmt.Errorf("loading plugin state: %w", err)
+		if err := a.Storage.Load("config-api", "plugins", &a.plugins); err != nil {
+			return fmt.Errorf("loading plugin state: %w", err)
+		}
 	}
 
 	// start listening for HTTP requests
@@ -63,8 +66,10 @@ func (a *ConfigAPIPlugin) Close() error {
 	a.server.Stop()
 
 	// store state
-	if err := a.Storage.Save("config-api", "plugins", &a.plugins); err != nil {
-		return fmt.Errorf("saving plugin state: %w", err)
+	if a.Storage != nil {
+		if err := a.Storage.Save("config-api", "plugins", &a.plugins); err != nil {
+			return fmt.Errorf("saving plugin state: %w", err)
+		}
 	}
 	return nil
 }

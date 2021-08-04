@@ -66,6 +66,7 @@ func (s *ConfigAPIService) createPlugin(w http.ResponseWriter, req *http.Request
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write([]byte(fmt.Sprintf(`{"id": "%s"}`, id)))
 }
 
@@ -88,6 +89,7 @@ func (s *ConfigAPIService) listPlugins(w http.ResponseWriter, req *http.Request)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(bytes)
 }
 
@@ -101,6 +103,7 @@ func (s *ConfigAPIService) runningPlugins(w http.ResponseWriter, req *http.Reque
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(bytes)
 }
 
@@ -112,6 +115,7 @@ func (s *ConfigAPIService) pluginStatus(w http.ResponseWriter, req *http.Request
 		return
 	}
 	state := s.api.GetPluginStatus(models.PluginID(id))
+	w.Header().Set("Content-Type", "application/json")
 	_, err := w.Write([]byte(fmt.Sprintf(`{"status": %q}`, state.String())))
 	if err != nil {
 		log.Printf("W! error writing to connection: %v", err)
