@@ -291,7 +291,7 @@ $(rpms):
 	@mkdir -p $(pkgdir)
 	fpm --force \
 		--log info \
-		--architecture $(rpm_$(GOARCH)$(GOARM)) \
+		--architecture $(basename $@) \
 		--input-type dir \
 		--output-type rpm \
 		--vendor InfluxData \
@@ -319,7 +319,7 @@ $(debs):
 	@mkdir -pv $(pkgdir)
 	fpm --force \
 		--log info \
-		--architecture $(deb_$(GOARCH)$(GOARM)) \
+		--architecture $(basename $@) \
 		--input-type dir \
 		--output-type deb \
 		--vendor InfluxData \
