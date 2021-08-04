@@ -18,6 +18,19 @@ import (
 	"github.com/influxdata/telegraf/models"
 )
 
+// agentState describes the running state of the agent.
+// Plugins can only be ran once the agent is running,
+// you can add plugins before the agent has started.
+// you cannot remove plugins before the agent has started.
+// you cannot add or remove plugins once it has started shutting down.
+type agentState int8
+
+const (
+	agentStateStarting agentState = iota
+	agentStateRunning
+	agentStateShuttingDown
+)
+
 // Agent runs a set of plugins.
 type Agent struct {
 	Config *config.Config
@@ -31,8 +44,8 @@ type Agent struct {
 
 	ctx context.Context
 
-	started    *sync.Cond // a condition that lets plugins know when hasStarted is true (when the agent starts)
-	hasStarted bool
+	stateChanged *sync.Cond // a condition that lets plugins know when when the agent state changes
+	state        agentState
 }
 
 // NewAgent returns an Agent for the given Config.
@@ -44,9 +57,10 @@ func NewAgent(ctx context.Context, cfg *config.Config) *Agent {
 	// as processors are added, they will be inserted between these two.
 
 	return &Agent{
-		Config:  cfg,
-		ctx:     ctx,
-		started: sync.NewCond(&sync.Mutex{}),
+		Config:       cfg,
+		ctx:          ctx,
+		stateChanged: sync.NewCond(&sync.Mutex{}),
+		state:        agentStateStarting,
 		inputGroupUnit: inputGroupUnit{
 			dst:   inputDestCh,
 			relay: channel.NewRelay(inputDestCh, outputSrcCh),
@@ -158,12 +172,11 @@ func (a *Agent) RunWithAPI(outputCancel context.CancelFunc) {
 
 	a.inputGroupUnit.relay.Start()
 
-	a.started.L.Lock()
-	a.hasStarted = true
-	a.started.Broadcast()
-	a.started.L.Unlock()
+	a.setState(agentStateRunning)
 
 	<-a.Context().Done()
+
+	a.setState(agentStateShuttingDown)
 
 	// wait for all plugins to stop
 	a.waitForPluginsToStop()
@@ -171,7 +184,11 @@ func (a *Agent) RunWithAPI(outputCancel context.CancelFunc) {
 	log.Printf("D! [agent] Stopped Successfully")
 }
 
+// AddInput adds an input to the agent to be managed
 func (a *Agent) AddInput(input *models.RunningInput) {
+	if a.isState(agentStateShuttingDown) {
+		return
+	}
 	a.inputGroupUnit.Lock()
 	defer a.inputGroupUnit.Unlock()
 
@@ -184,12 +201,8 @@ func (a *Agent) AddInput(input *models.RunningInput) {
 func (a *Agent) startInput(input *models.RunningInput) error {
 	// plugins can start before the agent has started; wait until it's asked to
 	// start before collecting metrics in case other plugins are still loading.
-	a.started.L.Lock()
-	for !a.hasStarted {
-		a.started.Wait()
-	}
+	a.waitUntilState(agentStateRunning)
 
-	a.started.L.Unlock()
 	a.inputGroupUnit.Lock()
 	// Service input plugins are not normally subject to timestamp
 	// rounding except for when precision is set on the input plugin.
@@ -363,6 +376,9 @@ func (a *Agent) gatherOnce(
 }
 
 func (a *Agent) AddProcessor(processor models.ProcessorRunner) {
+	if a.isState(agentStateShuttingDown) {
+		return
+	}
 	a.inputGroupUnit.Lock()
 	defer a.inputGroupUnit.Unlock()
 	a.processorGroupUnit.Lock()
@@ -483,6 +499,10 @@ func (a *Agent) RunProcessor(p models.ProcessorRunner) {
 // StopProcessor stops processors or aggregators.
 // ProcessorRunner could be a *models.RunningProcessor or a *models.RunningAggregator
 func (a *Agent) StopProcessor(p models.ProcessorRunner) {
+	if a.isState(agentStateShuttingDown) {
+		return
+	}
+
 	a.processorGroupUnit.Lock()
 	defer a.processorGroupUnit.Unlock()
 
@@ -539,6 +559,9 @@ func (a *Agent) RunConfigPlugin(ctx context.Context, plugin config.ConfigPlugin)
 }
 
 func (a *Agent) StopOutput(output *models.RunningOutput) {
+	if a.isState(agentStateShuttingDown) {
+		return
+	}
 	a.outputGroupUnit.Lock()
 	defer a.outputGroupUnit.Unlock()
 
@@ -569,6 +592,9 @@ func updateWindow(start time.Time, roundInterval bool, period time.Duration) (ti
 }
 
 func (a *Agent) AddOutput(output *models.RunningOutput) {
+	if a.isState(agentStateShuttingDown) {
+		return
+	}
 	a.outputGroupUnit.Lock()
 	a.outputGroupUnit.outputs = append(a.outputGroupUnit.outputs, outputUnit{output: output})
 	a.outputGroupUnit.Unlock()
@@ -867,4 +893,28 @@ func (a *Agent) waitForPluginsToStop() {
 	a.configPluginUnit.Unlock()
 
 	// everything closed; shut down
+}
+
+// setState sets the agent's internal state.
+func (a *Agent) setState(newState agentState) {
+	a.stateChanged.L.Lock()
+	a.state = newState
+	a.stateChanged.Broadcast()
+	a.stateChanged.L.Unlock()
+}
+
+// isState returns true if the agent state matches the state parameter
+func (a *Agent) isState(state agentState) bool {
+	a.stateChanged.L.Lock()
+	defer a.stateChanged.L.Unlock()
+	return a.state == state
+}
+
+// waitUntilState waits until the agent state is the requested state.
+func (a *Agent) waitUntilState(state agentState) {
+	a.stateChanged.L.Lock()
+	for a.state != state {
+		a.stateChanged.Wait()
+	}
+	a.stateChanged.L.Unlock()
 }
