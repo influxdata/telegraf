@@ -229,7 +229,7 @@ jobs:
     executor: go-1_17
     steps:
       - package-build:
-          type:"linux_armel.tar.gz armel.rpm armel.deb"
+          type: "linux_armel.tar.gz armel.rpm armel.deb"
   amd64-package:
     executor: go-1_17
     steps:
