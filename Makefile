@@ -285,22 +285,13 @@ dists := $(debs) $(rpms) $(tars) $(zips)
 .PHONY: package
 package: $(dists)
 
-rpm_amd64 := amd64
-rpm_386 := i386
-rpm_s390x := s390x
-rpm_ppc64le := ppc64le
-rpm_arm5 := armel
-rpm_arm6 := armv6hl
-rpm_arm647 := aarch64
-rpm_arch = $(rpm_$(GOARCH)$(GOARM))
-
 .PHONY: $(rpms)
 $(rpms):
 	@$(MAKE) install
 	@mkdir -p $(pkgdir)
 	fpm --force \
 		--log info \
-		--architecture $(rpm_arch) \
+		--architecture $(rpm_$(GOARCH)$(GOARM)) \
 		--input-type dir \
 		--output-type rpm \
 		--vendor InfluxData \
@@ -322,24 +313,13 @@ $(rpms):
         --chdir $(DESTDIR) \
 		--package $(pkgdir)/telegraf-$(rpm_version).$@
 
-deb_amd64 := amd64
-deb_386 := i386
-deb_s390x := s390x
-deb_ppc64le := ppc64el
-deb_arm5 := armel
-deb_arm6 := armhf
-deb_arm647 := arm64
-deb_mips := mips
-deb_mipsle := mipsel
-deb_arch = $(deb_$(GOARCH)$(GOARM))
-
 .PHONY: $(debs)
 $(debs):
 	@$(MAKE) install
 	@mkdir -pv $(pkgdir)
 	fpm --force \
 		--log info \
-		--architecture $(deb_arch) \
+		--architecture $(deb_$(GOARCH)$(GOARM)) \
 		--input-type dir \
 		--output-type deb \
 		--vendor InfluxData \
