@@ -503,6 +503,7 @@ func disconnect(o *OpcUA) error {
 	case "opc.tcp":
 		o.state = Disconnected
 		o.client.Close()
+		o.client = nil
 		return nil
 	default:
 		return fmt.Errorf("invalid controller")
