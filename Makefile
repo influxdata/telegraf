@@ -80,9 +80,11 @@ help:
 	@echo '  lint-install - install linter'
 	@echo '  check-deps   - check docs/LICENSE_OF_DEPENDENCIES.md'
 	@echo '  clean        - delete build artifacts'
+	@echo '  package      - build all supported packages, override include_packages to only build a subset'
+	@echo '                 e.g.: make package include_packages="amd64.deb'
 	@echo ''
-	@echo 'Package Targets:'
-	@$(foreach dist,$(dists),echo "  $(dist)";)
+	@echo 'Possible values for include_packages variable'
+	@$(foreach package,$(include_packages),echo "  $(package)";)
 
 .PHONY: deps
 deps:
@@ -224,132 +226,80 @@ $(buildbin):
 	@mkdir -pv $(dir $@)
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
-# mips
-debs += mips.deb
-tars += linux_mips.tar.gz
+mips += mips.deb linux_mips.tar.gz
+mipsel += mipsel.deb linux_mipsel.tar.gz
+arm64 += linux_arm64.tar.gz arm64.deb aarch64.rpm
+amd64 += freebsd_amd64.tar.gz linux_amd64.tar.gz amd64.deb x86_64.rpm
+static += static_linux_amd64.tar.gz
+armel += linux_armel.tar.gz armel.rpm armel.deb
+armhf += linux_armhf.tar.gz freebsd_armv7.tar.gz armhf.deb armv6hl.rpm
+s390x += linux_s390x.tar.gz s390x.deb s390x.rpm
+ppc641e += linux_ppc64le.tar.gz ppc64le.rpm ppc64el.deb
+i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gzi386.rpm
+windows += windows_i386.zip windows_amd64.zip
+darwin += darwin_amd64.tar.gz
 
-# mipsel
-debs += mipsel.deb
-tars += linux_mipsel.tar.gz
-
-# arm64
-tars += linux_arm64.tar.gz
-debs += arm64.deb
-rpms += aarch64.rpm
-
-# amd64
-tars += freebsd_amd64.tar.gz
-tars += linux_amd64.tar.gz
-debs += amd64.deb
-rpms += x86_64.rpm
-
-# static
-tars += static_linux_amd64.tar.gz
-
-# armel
-tars += linux_armel.tar.gz
-rpms += armel.rpm
-debs += armel.deb
-
-# armhf
-tars += linux_armhf.tar.gz
-tars += freebsd_armv7.tar.gz
-debs += armhf.deb
-rpms += armv6hl.rpm
-
-# s390x
-tars += linux_s390x.tar.gz
-debs += s390x.deb
-rpms += s390x.rpm
-
-# ppc641e
-tars += linux_ppc64le.tar.gz
-rpms += ppc64le.rpm
-debs += ppc64el.deb
-
-# i386
-tars += freebsd_i386.tar.gz
-debs += i386.deb
-tars += linux_i386.tar.gz
-rpms += i386.rpm
-
-# windows
-zips += windows_i386.zip
-zips += windows_amd64.zip
-
-# darwin
-tars += darwin_amd64.tar.gz
-
-dists := $(debs) $(rpms) $(tars) $(zips)
+include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(s390x) $(ppc641e) $(i386) $(windows) $(darwin) 
 
 .PHONY: package
-package: $(dists)
+package: $(include_packages)
 
-.PHONY: $(rpms)
-$(rpms):
+.PHONY: $(include_packages)
+$(include_packages):
 	@$(MAKE) install
 	@mkdir -p $(pkgdir)
-	fpm --force \
-		--log info \
-		--architecture $(basename $@) \
-		--input-type dir \
-		--output-type rpm \
-		--vendor InfluxData \
-		--url https://github.com/influxdata/telegraf \
-		--license MIT \
-		--maintainer support@influxdb.com \
-		--config-files /etc/telegraf/telegraf.conf \
-		--config-files /etc/logrotate.d/telegraf \
-		--after-install scripts/rpm/post-install.sh \
-		--before-install scripts/rpm/pre-install.sh \
-		--after-remove scripts/rpm/post-remove.sh \
-		--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
-		--depends coreutils \
-		--depends shadow-utils \
-		--rpm-posttrans scripts/rpm/post-install.sh \
-		--name telegraf \
-		--version $(version) \
-		--iteration $(rpm_iteration) \
-        --chdir $(DESTDIR) \
-		--package $(pkgdir)/telegraf-$(rpm_version).$@
 
-.PHONY: $(debs)
-$(debs):
-	@$(MAKE) install
-	@mkdir -pv $(pkgdir)
-	fpm --force \
-		--log info \
-		--architecture $(basename $@) \
-		--input-type dir \
-		--output-type deb \
-		--vendor InfluxData \
-		--url https://github.com/influxdata/telegraf \
-		--license MIT \
-		--maintainer support@influxdb.com \
-		--config-files /etc/telegraf/telegraf.conf.sample \
-		--config-files /etc/logrotate.d/telegraf \
-		--after-install scripts/deb/post-install.sh \
-		--before-install scripts/deb/pre-install.sh \
-		--after-remove scripts/deb/post-remove.sh \
-		--before-remove scripts/deb/pre-remove.sh \
-		--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
-		--name telegraf \
-		--version $(version) \
-		--iteration $(deb_iteration) \
-		--chdir $(DESTDIR) \
-		--package $(pkgdir)/telegraf_$(deb_version)_$@
-
-.PHONY: $(zips)
-$(zips):
-	@$(MAKE) install
-	@mkdir -p $(pkgdir)
-	(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/telegraf-$(tar_version)_$@
-
-.PHONY: $(tars)
-$(tars):
-	@$(MAKE) install
-	@mkdir -p $(pkgdir)
-	tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) .
+	@if [ "$(suffix $@)" = ".rpm" ]; then \
+		fpm --force \
+			--log info \
+			--architecture $(basename $@) \
+			--input-type dir \
+			--output-type rpm \
+			--vendor InfluxData \
+			--url https://github.com/influxdata/telegraf \
+			--license MIT \
+			--maintainer support@influxdb.com \
+			--config-files /etc/telegraf/telegraf.conf \
+			--config-files /etc/logrotate.d/telegraf \
+			--after-install scripts/rpm/post-install.sh \
+			--before-install scripts/rpm/pre-install.sh \
+			--after-remove scripts/rpm/post-remove.sh \
+			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
+			--depends coreutils \
+			--depends shadow-utils \
+			--rpm-posttrans scripts/rpm/post-install.sh \
+			--name telegraf \
+			--version $(version) \
+			--iteration $(rpm_iteration) \
+			--chdir $(DESTDIR) \
+			--package $(pkgdir)/telegraf-$(rpm_version).$@ ;\
+	elif [ "$(suffix $@)" = ".deb" ]; then \
+		fpm --force \
+			--log info \
+			--architecture $(basename $@) \
+			--input-type dir \
+			--output-type deb \
+			--vendor InfluxData \
+			--url https://github.com/influxdata/telegraf \
+			--license MIT \
+			--maintainer support@influxdb.com \
+			--config-files /etc/telegraf/telegraf.conf.sample \
+			--config-files /etc/logrotate.d/telegraf \
+			--after-install scripts/deb/post-install.sh \
+			--before-install scripts/deb/pre-install.sh \
+			--after-remove scripts/deb/post-remove.sh \
+			--before-remove scripts/deb/pre-remove.sh \
+			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
+			--name telegraf \
+			--version $(version) \
+			--iteration $(deb_iteration) \
+			--chdir $(DESTDIR) \
+			--package $(pkgdir)/telegraf_$(deb_version)_$@	;\
+	elif [ "$(suffix $@)" = ".zip" ]; then \
+		(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/telegraf-$(tar_version)_$@ ;\
+	elif [ "$(suffix $@)" = ".tar.gz" ]; then \
+		tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) . ;\
+	fi
 
 .PHONY: upload-nightly
 upload-nightly:
