@@ -288,7 +288,7 @@ func (m *Modbus) initClient() error {
 			if m.DebugConnection {
 				handler.Logger = m
 			}
-		m.handler = handler
+			m.handler = handler
 		default:
 			handler := mb.NewTCPClientHandler(host + ":" + port)
 			handler.Timeout = time.Duration(m.Timeout)

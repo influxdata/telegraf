@@ -29,7 +29,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
 
   # TCP - connect via Modbus/TCP
   controller = "tcp://localhost:502"
-  
+
   ## Serial (RS485; RS232)
   # controller = "file:///dev/ttyUSB0"
   # baud_rate = 9600
@@ -41,6 +41,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
   ## default behaviour is "TCP" if the controller is TCP
   ## For Serial you can choose between "RTU" and "ASCII"
   # transmission_mode = "RTU"
+
   ## Trace the connection to the modbus device as debug messages
   # trace_connection = false
 
