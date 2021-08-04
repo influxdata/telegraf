@@ -18,20 +18,15 @@ docker run -ti quay.io/influxdb/telegraf-ci:1.9.7 /bin/bash
 ```
 
 From within the container:
-```
-go get -d github.com/influxdata/telegraf
-cd /go/src/github.com/influxdata/telegraf
 
-# Use tag of Telegraf version you would like to build
-git checkout release-1.10
-git reset --hard 1.10.2
-make deps
-
-# To build packages run:
-
-```
-make package amd64=1
-```
+1. `go get -d github.com/influxdata/telegraf`
+2. `cd /go/src/github.com/influxdata/telegraf`
+3. `git checkout release-1.10`
+   * Replace tag `release-1.10` with the version of Telegraf you would like to build
+4. `git reset --hard 1.10.2`
+5. `make deps`
+6. `make package include_packages="amd64.deb"`
+    * Change `include_packages` to change what package you want, run `make help` to see possible values
 
 From the host system, copy the build artifacts out of the container:
 ```
