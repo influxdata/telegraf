@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/model/otlpgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 )
 
 type OpenTelemetry struct {
@@ -160,6 +161,10 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
+
+	if len(o.Headers) > 0 {
+		ctx = metadata.NewOutgoingContext(ctx, metadata.New(o.Headers))
+	}
 	defer cancel()
 	_, err := o.metricsServiceClient.Export(ctx, md, o.callOptions...)
 	return err
