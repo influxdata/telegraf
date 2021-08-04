@@ -35,7 +35,7 @@ func TestOpenTelemetry(t *testing.T) {
 		dp.SetTimestamp(pdata.Timestamp(1622848686000000000))
 		dp.SetValue(87.332)
 	}
-	m := NewMockOtelService(t)
+	m := newMockOtelService(t)
 	t.Cleanup(m.Cleanup)
 
 	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
@@ -91,7 +91,7 @@ type mockOtelService struct {
 	metrics pdata.Metrics
 }
 
-func NewMockOtelService(t *testing.T) *mockOtelService {
+func newMockOtelService(t *testing.T) *mockOtelService {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	grpcServer := grpc.NewServer()
