@@ -135,7 +135,7 @@ commands:
               - << parameters.nightly >>
               - << parameters.release >>
           steps:
-            - run: 'make package include_packages=<< parameters.type >>'
+            - run: 'make package include_packages="$(make << parameters.type >>)"'
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
@@ -204,62 +204,62 @@ jobs:
     executor: go-1_17
     steps:
       - package-build:
-          type: "windows_i386.zip windows_amd64.zip"
+          type: windows
   darwin-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: "darwin_amd64.tar.gz"
+          type: darwin
   i386-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: "freebsd_i386.tar.gz i386.deb linux_i386.tar.gzi386.rpm"
+          type: i386
   ppc641e-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: "linux_ppc64le.tar.gz ppc64le.rpm ppc64el.deb"
+          type: ppc641e
   s390x-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: "linux_s390x.tar.gz s390x.deb s390x.rpm"
+          type: s390x
   armel-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: "linux_armel.tar.gz armel.rpm armel.deb"
+          type: armel
   amd64-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: "freebsd_amd64.tar.gz linux_amd64.tar.gz amd64.deb x86_64.rpm"
+          type: amd64
   arm64-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: "linux_arm64.tar.gz arm64.deb aarch64.rpm"
+          type: arm64
   mipsel-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: "mipsel.deb linux_mipsel.tar.gz"
+          type: mipsel
   mips-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: "mips.deb linux_mips.tar.gz"
+          type: mips
   static-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: "static_linux_amd64.tar.gz"
+          type: static
   armhf-package:
     executor: go-1_17
     steps:
       - package-build:
-          type: "linux_armhf.tar.gz freebsd_armv7.tar.gz armhf.deb armv6hl.rpm"
+          type: armhf
 
   release:
     executor: go-1_17

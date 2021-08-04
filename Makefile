@@ -81,7 +81,7 @@ help:
 	@echo '  check-deps   - check docs/LICENSE_OF_DEPENDENCIES.md'
 	@echo '  clean        - delete build artifacts'
 	@echo '  package      - build all supported packages, override include_packages to only build a subset'
-	@echo '                 e.g.: make package include_packages="amd64.deb'
+	@echo '                 e.g.: make package include_packages="amd64.deb"'
 	@echo ''
 	@echo 'Possible values for include_packages variable'
 	@$(foreach package,$(include_packages),echo "  $(package)";)
@@ -226,18 +226,56 @@ $(buildbin):
 	@mkdir -pv $(dir $@)
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
-mips += mips.deb linux_mips.tar.gz
+# Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
+# e.g. make package include_packages="$(make amd64)"
+mips += linux_mips.tar.gz mips.deb 
+.PHONY: mips
+mips:
+	@ echo $(mips)
 mipsel += mipsel.deb linux_mipsel.tar.gz
+.PHONY: mipsel
+mipsel:
+	@ echo $(mipsel)
 arm64 += linux_arm64.tar.gz arm64.deb aarch64.rpm
+.PHONY: arm64
+arm64:
+	@ echo $(arm64)
 amd64 += freebsd_amd64.tar.gz linux_amd64.tar.gz amd64.deb x86_64.rpm
+.PHONY: amd64
+amd64:
+	@ echo $(amd64)
 static += static_linux_amd64.tar.gz
+.PHONY: static
+static:
+	@ echo $(static)
 armel += linux_armel.tar.gz armel.rpm armel.deb
+.PHONY: armel
+armel:
+	@ echo $(armel)
 armhf += linux_armhf.tar.gz freebsd_armv7.tar.gz armhf.deb armv6hl.rpm
+.PHONY: armhf
+armhf:
+	@ echo $(armhf)
 s390x += linux_s390x.tar.gz s390x.deb s390x.rpm
+.PHONY: s390x
+s390x:
+	@ echo $(s390x)
 ppc641e += linux_ppc64le.tar.gz ppc64le.rpm ppc64el.deb
+.PHONY: ppc641e
+ppc641e:
+	@ echo $(ppc641e)
 i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gzi386.rpm
+.PHONY: i386
+i386:
+	@ echo $(i386)
 windows += windows_i386.zip windows_amd64.zip
+.PHONY: windows
+windows:
+	@ echo $(windows)
 darwin += darwin_amd64.tar.gz
+.PHONY: darwin
+darwin:
+	@ echo $(darwin)
 
 include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(s390x) $(ppc641e) $(i386) $(windows) $(darwin) 
 
@@ -297,7 +335,7 @@ $(include_packages):
 			--package $(pkgdir)/telegraf_$(deb_version)_$@	;\
 	elif [ "$(suffix $@)" = ".zip" ]; then \
 		(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/telegraf-$(tar_version)_$@ ;\
-	elif [ "$(suffix $@)" = ".tar.gz" ]; then \
+	elif [ "$(suffix $@)" = ".gz" ]; then \
 		tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) . ;\
 	fi
 
