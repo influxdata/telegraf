@@ -1,5 +1,20 @@
 # Config API
 
+The Config API allows you to use HTTP requests to make changes to the set of running 
+plugins, starting or stopping plugins as needed without restarting Telegraf. When 
+configured with storage, the current list of running plugins and their configuration is 
+saved, and will persist across restarts of Telegraf.
+
+## Example Config
+
+```toml
+    [[config.api]]
+        service_address = ":7551"
+        [config.api.storage.internal]
+            file = "config_state.db"
+```
+
+
 ## Endpoints
 
 ### GET /plugins/list
@@ -93,7 +108,8 @@ none
         "persistent_session": false,
         "client_id": "",
         "username": "telegraf",
-        // password not returned
+        // some fields, like "password", are settable, but their values are not returned
+        "password": "********",
         "tls_ca": "/etc/telegraf/ca.pem",
         "tls_cert": "/etc/telegraf/cert.pem",
         "tls_key": "/etc/telegraf/key.pem",
@@ -113,7 +129,7 @@ Create a new plugin. It will be started upon creation.
 ```json
   {
     "name": "inputs.mqtt_consumer",
-    "config": {.
+    "config": {
       // ..
     },
   },
