@@ -32,12 +32,12 @@ func newConfigAPIService(server *http.Server, api *api, logger telegraf.Logger) 
 // nolint:revive
 func (s *ConfigAPIService) mux() *mux.Router {
 	m := mux.NewRouter()
-	m.HandleFunc("/status", s.status)
-	m.HandleFunc("/plugins/create", s.createPlugin)
-	m.HandleFunc("/plugins/{id:[0-9a-f]+}/status", s.pluginStatus)
-	m.HandleFunc("/plugins/list", s.listPlugins)
-	m.HandleFunc("/plugins/running", s.runningPlugins)
-	m.HandleFunc("/plugins/{id:[0-9a-f]+}", s.deleteOrUpdatePlugin)
+	m.HandleFunc("/status", s.status).Methods("GET")
+	m.HandleFunc("/plugins/create", s.createPlugin).Methods("POST")
+	m.HandleFunc("/plugins/{id:[0-9a-f]+}/status", s.pluginStatus).Methods("GET")
+	m.HandleFunc("/plugins/list", s.listPlugins).Methods("GET")
+	m.HandleFunc("/plugins/running", s.runningPlugins).Methods("GET")
+	m.HandleFunc("/plugins/{id:[0-9a-f]+}", s.deleteOrUpdatePlugin).Methods("DELETE", "PUT")
 	return m
 }
 
