@@ -794,6 +794,7 @@ func getPrecision(precision, interval time.Duration) time.Duration {
 
 // panicRecover displays an error if an input panics.
 func panicRecover(input *models.RunningInput) {
+	// nolint:revive // this function must be called with defer
 	if err := recover(); err != nil {
 		trace := make([]byte, 2048)
 		runtime.Stack(trace, true)
@@ -891,7 +892,6 @@ func (a *Agent) waitForPluginsToStop() {
 		break
 	}
 	a.configPluginUnit.Unlock()
-
 	// everything closed; shut down
 }
 
