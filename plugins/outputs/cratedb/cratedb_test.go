@@ -161,6 +161,12 @@ func Test_escapeValue(t *testing.T) {
 	}
 }
 
+func Test_circumeventingStringEscape(t *testing.T) {
+	value, err := escapeObject(map[string]interface{}{"a.b": "c"}, `_"`)
+	require.NoError(t, err)
+	require.Equal(t, value, `{"a_""b" = 'c'}`)
+}
+
 func Test_hashID(t *testing.T) {
 	tests := []struct {
 		Name   string
