@@ -8,6 +8,7 @@ import (
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -44,7 +45,6 @@ func TestClient1Integration(t *testing.T) {
 	o.SecurityPolicy = "None"
 	o.SecurityMode = "None"
 	o.Log = testutil.Logger{}
-
 	for _, tags := range testopctags {
 		o.RootNodes = append(o.RootNodes, MapOPCTag(tags))
 	}
