@@ -46,7 +46,6 @@ type InfluxDBListener struct {
 
 	acc telegraf.Accumulator
 
-	bytesRecv       selfstat.Stat
 	requestsServed  selfstat.Stat
 	writesServed    selfstat.Stat
 	queriesServed   selfstat.Stat
@@ -127,7 +126,6 @@ func (h *InfluxDBListener) Init() error {
 	tags := map[string]string{
 		"address": h.ServiceAddress,
 	}
-	h.bytesRecv = selfstat.Register("influxdb_listener", "bytes_received", tags)
 	h.requestsServed = selfstat.Register("influxdb_listener", "requests_served", tags)
 	h.writesServed = selfstat.Register("influxdb_listener", "writes_served", tags)
 	h.queriesServed = selfstat.Register("influxdb_listener", "queries_served", tags)
@@ -298,7 +296,6 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 		var m telegraf.Metric
 		var err error
 		var parseErrorCount int
-		var lastPos int
 		var firstParseErrorStr string
 		for {
 			select {
@@ -310,9 +307,6 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 			}
 
 			m, err = parser.Next()
-			pos := parser.Position()
-			h.bytesRecv.Incr(int64(pos - lastPos))
-			lastPos = pos
 
 			// Continue parsing metrics even if some are malformed
 			if parseErr, ok := err.(*influx.ParseError); ok {

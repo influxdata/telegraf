@@ -18,7 +18,6 @@ func newListener() *InfluxDBListener {
 	listener := &InfluxDBListener{
 		timeFunc:     time.Now,
 		acc:          &testutil.NopAccumulator{},
-		bytesRecv:    selfstat.Register("influxdb_listener", "bytes_received", map[string]string{}),
 		writesServed: selfstat.Register("influxdb_listener", "writes_served", map[string]string{}),
 		MaxBodySize:  config.Size(defaultMaxBodySize),
 	}

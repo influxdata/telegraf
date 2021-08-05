@@ -618,13 +618,14 @@ func TestWriteParseErrors(t *testing.T) {
 		{
 			name:     "one parse error",
 			input:    "foo value=1.0\nfoo value=2asdf2.0\nfoo value=3.0\nfoo value=4.0",
-			expected: `metric parse error: expected field at 2:12: "foo value=2"`,
+			expected: `metric parse error: cannot parse value for field key "value": invalid float value syntax at 2:11`,
 		},
 		{
 			name:     "two parse errors",
 			input:    "foo value=1asdf2.0\nfoo value=2.0\nfoo value=3asdf2.0\nfoo value=4.0",
-			expected: `metric parse error: expected field at 1:12: "foo value=1" (and 1 other parse error)`,
+			expected: `metric parse error: cannot parse value for field key "value": invalid float value syntax at 1:11 (and 1 other parse error)`,
 		},
+		// test failing, blocked by influxdata/line-protocol#43
 		{
 			name:     "three or more parse errors",
 			input:    "foo value=1asdf2.0\nfoo value=2.0\nfoo value=3asdf2.0\nfoo value=4asdf2.0",
