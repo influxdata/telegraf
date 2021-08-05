@@ -2,7 +2,6 @@ package couchbase
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"regexp"
 	"sync"
@@ -48,7 +47,7 @@ var sampleConfig = `
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification (defaults to true)
   ## If set to false, tls_cert and tls_key are required
-  # insecure_skip_verify = true
+  # insecure_skip_verify = false
 `
 
 var regexpURI = regexp.MustCompile(`(\S+://)?(\S+\:\S+@)`)
@@ -412,11 +411,6 @@ func (cb *Couchbase) Init() error {
 		},
 	}
 
-	// Couchbase requires that a TLS cert and key be provided when insecure skip verify is disabled
-	if !cb.ClientConfig.InsecureSkipVerify && (cb.ClientConfig.TLSCert == "" || cb.ClientConfig.TLSKey == "") {
-		return fmt.Errorf("tls_cert and tls_key are required when insecure_skip_verify = false")
-	}
-
 	couchbaseClient.SetSkipVerify(cb.ClientConfig.InsecureSkipVerify)
 	couchbaseClient.SetCertFile(cb.ClientConfig.TLSCert)
 	couchbaseClient.SetKeyFile(cb.ClientConfig.TLSKey)
@@ -429,9 +423,6 @@ func init() {
 	inputs.Add("couchbase", func() telegraf.Input {
 		return &Couchbase{
 			BucketStatsIncluded: []string{"quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"},
-			ClientConfig: tls.ClientConfig{
-				InsecureSkipVerify: true,
-			},
 		}
 	})
 }
