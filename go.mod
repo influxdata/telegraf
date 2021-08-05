@@ -146,8 +146,7 @@ require (
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	golang.org/x/text v0.3.6
 	golang.org/x/tools v0.1.5
-	golang.zx2c4.com/wireguard v0.0.20200121 // indirect
-	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20210506160403-92e472f520a5
+	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	google.golang.org/api v0.51.0
 	google.golang.org/genproto v0.0.0-20210726200206-e7812ac95cc0
 	google.golang.org/grpc v1.39.0
