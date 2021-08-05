@@ -264,14 +264,13 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 			}
 			return
 		}
-		metricHandler := influx.NewMetricHandler()
-		parser := influx.NewParser(metricHandler)
+		parser := influx.NewParser()
 		parser.SetTimeFunc(h.timeFunc)
 
 		precisionStr := req.URL.Query().Get("precision")
 		if precisionStr != "" {
 			precision := getPrecisionMultiplier(precisionStr)
-			metricHandler.SetTimePrecision(precision)
+			parser.SetTimePrecision(precision)
 		}
 
 		var metrics []telegraf.Metric

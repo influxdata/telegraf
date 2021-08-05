@@ -125,7 +125,7 @@ func readMetricFile(path string) ([]telegraf.Metric, error) {
 	}
 	defer expectedFile.Close()
 
-	parser := influx.NewParser(influx.NewMetricHandler())
+	parser := influx.NewParser()
 	scanner := bufio.NewScanner(expectedFile)
 	for scanner.Scan() {
 		line := scanner.Text()

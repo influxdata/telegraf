@@ -501,7 +501,6 @@ func TestCharacterEncoding(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			plugin := &Tail{
 				Files:               []string{filepath.Join(testdataDir, tt.testfiles)},
 				FromBeginning:       tt.fromBeginning,
@@ -512,8 +511,7 @@ func TestCharacterEncoding(t *testing.T) {
 			}
 
 			plugin.SetParserFunc(func() (parsers.Parser, error) {
-				handler := influx.NewMetricHandler()
-				return influx.NewParser(handler), nil
+				return influx.NewParser(), nil
 			})
 
 			if tt.offset != 0 {

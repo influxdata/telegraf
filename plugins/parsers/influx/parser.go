@@ -162,6 +162,19 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
+func (p *Parser) SetTimePrecision(u time.Duration) {
+	switch u {
+	case time.Nanosecond:
+		p.precision = lineprotocol.Nanosecond
+	case time.Microsecond:
+		p.precision = lineprotocol.Microsecond
+	case time.Millisecond:
+		p.precision = lineprotocol.Millisecond
+	case time.Second:
+		p.precision = lineprotocol.Second
+	}
+}
+
 func (p *Parser) applyDefaultTags(metrics []telegraf.Metric) {
 	if len(p.DefaultTags) == 0 {
 		return
