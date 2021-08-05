@@ -19,7 +19,14 @@ This is a sample configuration for the plugin.
   service_address = ":8080"
 
   ## Path to listen to.
-  # path = "/telegraf"
+  ## This option is deprecated and only available for backward-compatibility. Please use paths instead.
+  # path = ""
+
+  ## Paths to listen to.
+  # paths = ["/telegraf"]
+
+  ## Save path as http_listener_v2_path tag if set to true
+  # path_tag = false
 
   ## HTTP methods to accept.
   # methods = ["POST", "PUT"]
@@ -59,7 +66,7 @@ This is a sample configuration for the plugin.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "json"
+  data_format = "influx"
 ```
 
 ### Metrics:

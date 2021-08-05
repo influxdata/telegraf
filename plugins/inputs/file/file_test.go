@@ -11,15 +11,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestRefreshFilePaths(t *testing.T) {
 	wd, err := os.Getwd()
+	require.NoError(t, err)
+
 	r := File{
 		Files: []string{filepath.Join(wd, "dev/testfiles/**.log")},
 	}
@@ -100,7 +103,8 @@ func TestGrokParser(t *testing.T) {
 	require.NoError(t, err)
 
 	err = r.Gather(&acc)
-	require.Equal(t, len(acc.Metrics), 2)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 2)
 }
 
 func TestCharacterEncoding(t *testing.T) {

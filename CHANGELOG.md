@@ -1,3 +1,36 @@
+## v1.19.2 [2021-07-28]
+
+#### Release Notes
+
+  - [#9542](https://github.com/influxdata/telegraf/pull/9542) Update Go to v1.16.6
+
+#### Bugfixes
+
+  - [#9363](https://github.com/influxdata/telegraf/pull/9363) `outputs.dynatrace` Update dynatrace output to allow optional default dimensions
+  - [#9526](https://github.com/influxdata/telegraf/pull/9526) `outputs.influxdb` Fix metrics reported as written but not actually written 
+  - [#9549](https://github.com/influxdata/telegraf/pull/9549) `inputs.kube_inventory` Prevent segfault in persistent volume claims
+  - [#9503](https://github.com/influxdata/telegraf/pull/9503) `inputs.nsq_consumer` Fix connection error when not using server setting
+  - [#9540](https://github.com/influxdata/telegraf/pull/9540) `inputs.sql` Fix handling bool column
+  - [#9387](https://github.com/influxdata/telegraf/pull/9387) Linter fixes for plugins/inputs/[fg]*
+  - [#9438](https://github.com/influxdata/telegraf/pull/9438) `inputs.kubernetes` Attach the pod labels to kubernetes_pod_volume and kubernetes_pod_network metrics
+  - [#9519](https://github.com/influxdata/telegraf/pull/9519) `processors.ifname` Fix SNMP empty metric name
+  - [#8587](https://github.com/influxdata/telegraf/pull/8587) `inputs.sqlserver` Add tempdb troubleshooting stats and missing V2 query metrics
+  - [#9323](https://github.com/influxdata/telegraf/pull/9323) `inputs.x509_cert` Prevent x509_cert from hanging on UDP connection
+  - [#9504](https://github.com/influxdata/telegraf/pull/9504) `parsers.json_v2` Simplify how nesting is handled
+  - [#9493](https://github.com/influxdata/telegraf/pull/9493) `inputs.mongodb` Switch to official mongo-go-driver module to fix SSL auth failure
+  - [#9491](https://github.com/influxdata/telegraf/pull/9491) `outputs.dynatrace` Fix panic caused by uninitialized loggedMetrics map
+  - [#9497](https://github.com/influxdata/telegraf/pull/9497) `inputs.prometheus` Fix prometheus cadvisor authentication
+  - [#9520](https://github.com/influxdata/telegraf/pull/9520) `parsers.json_v2` Add support for large uint64 and int64 numbers
+  - [#9447](https://github.com/influxdata/telegraf/pull/9447) `inputs.statsd` Fix regression that didn't allow integer percentiles
+  - [#9466](https://github.com/influxdata/telegraf/pull/9466) `inputs.sqlserver` Provide detailed error message in telegraf log
+  - [#9399](https://github.com/influxdata/telegraf/pull/9399) Update dynatrace-metric-utils-go module to v0.2.0
+  - [#8108](https://github.com/influxdata/telegraf/pull/8108) `inputs.cgroup` Allow multiple keys when parsing cgroups
+  - [#9479](https://github.com/influxdata/telegraf/pull/9479) `parsers.json_v2` Fix json_v2 parser to handle nested objects in arrays properly
+
+#### Features
+
+  - [#9485](https://github.com/influxdata/telegraf/pull/9485) Add option to automatically reload settings when config file is modified
+
 ## v1.19.1 [2021-07-07]
 
 #### Bugfixes

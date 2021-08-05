@@ -13,7 +13,7 @@ executors:
   go-1_16:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.16.5'
+      - image: 'quay.io/influxdb/telegraf-ci:1.16.6'
     environment:
       GOFLAGS: -p=8
   mac:
@@ -150,7 +150,7 @@ jobs:
     steps:
       - checkout
       - check-changed-files-or-halt-windows
-      - run: choco upgrade golang --version=1.16.5
+      - run: choco upgrade golang --version=1.16.6
       - run: choco install make
       - run: git config --system core.longpaths true
       - run: make test-windows

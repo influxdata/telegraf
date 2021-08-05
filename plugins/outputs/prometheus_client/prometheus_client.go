@@ -159,12 +159,16 @@ func (p *PrometheusClient) Init() error {
 	authHandler := internal.AuthHandler(p.BasicUsername, p.BasicPassword, "prometheus", onAuthError)
 	rangeHandler := internal.IPRangeHandler(ipRange, onError)
 	promHandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
+	landingPageHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Telegraf Output Plugin: Prometheus Client "))
+	})
 
 	mux := http.NewServeMux()
 	if p.Path == "" {
-		p.Path = "/"
+		p.Path = "/metrics"
 	}
 	mux.Handle(p.Path, authHandler(rangeHandler(promHandler)))
+	mux.Handle("/", authHandler(rangeHandler(landingPageHandler)))
 
 	tlsConfig, err := p.TLSConfig()
 	if err != nil {
