@@ -44,8 +44,6 @@ func nthIndexAny(s, chars string, n int) int {
 
 // ParseError indicates a error in the parsing of the text.
 type ParseError struct {
-	Offset     int
-	LineOffset int
 	LineNumber int
 	Column     int
 	msg        string
@@ -53,6 +51,13 @@ type ParseError struct {
 }
 
 func (e *ParseError) Error() string {
+	// When an error occurs within the stream decoder, we do not have access
+	// to the internal buffer, so we cannot display the contents of the invalid
+	// metric
+	if e.buf == "" {
+		return fmt.Sprintf("metric parse error: %s at %d:%d", e.msg, e.LineNumber, e.Column)
+	}
+
 	lineStart := nthIndexAny(e.buf, "\n", e.LineNumber-1) + 1
 	buffer := e.buf[lineStart:]
 	eol := strings.IndexAny(buffer, "\n")
@@ -129,50 +134,10 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 	decoder := lineprotocol.NewDecoderWithBytes(input)
 
 	for decoder.Next() {
-		measurement, err := decoder.Measurement()
+		m, err := nextMetric(decoder, p.precision, p.defaultTime, p.allowPartial)
 		if err != nil {
 			return nil, convertToParseError(input, err)
 		}
-		m := metric.New(string(measurement), nil, nil, time.Time{})
-
-		for {
-			key, value, err := decoder.NextTag()
-			if err != nil {
-				// Allow empty tags for series parser
-				if strings.Contains(err.Error(), "empty tag name") && p.allowPartial {
-					break
-				}
-
-				return nil, convertToParseError(input, err)
-			} else if key == nil {
-				break
-			}
-
-			m.AddTag(string(key), string(value))
-		}
-
-		for {
-			key, value, err := decoder.NextField()
-			if err != nil {
-				// Allow empty fields for series parser
-				if strings.Contains(err.Error(), "expected field key") && p.allowPartial {
-					break
-				}
-
-				return nil, convertToParseError(input, err)
-			} else if key == nil {
-				break
-			}
-
-			m.AddField(string(key), value.Interface())
-		}
-
-		t, err := decoder.Time(p.precision, p.defaultTime())
-		if err != nil && !p.allowPartial {
-			return nil, convertToParseError(input, err)
-		}
-
-		m.SetTime(t)
 		metrics = append(metrics, m)
 	}
 
@@ -218,15 +183,17 @@ func (p *Parser) applyDefaultTagsSingle(metric telegraf.Metric) {
 // StreamParser is an InfluxDB Line Protocol parser.  It is not safe for
 // concurrent use in multiple goroutines.
 type StreamParser struct {
-	machine *streamMachine
-	handler *MetricHandler
+	decoder     *lineprotocol.Decoder
+	defaultTime TimeFunc
+	precision   lineprotocol.Precision
+	lastError   error
 }
 
 func NewStreamParser(r io.Reader) *StreamParser {
-	handler := NewMetricHandler()
 	return &StreamParser{
-		machine: NewStreamMachine(r, handler),
-		handler: handler,
+		decoder:     lineprotocol.NewDecoder(r),
+		defaultTime: time.Now,
+		precision:   lineprotocol.Nanosecond,
 	}
 }
 
@@ -234,66 +201,86 @@ func NewStreamParser(r io.Reader) *StreamParser {
 // without a timestamp.  The default TimeFunc is time.Now.  Useful mostly for
 // testing, or perhaps if you want all metrics to have the same timestamp.
 func (sp *StreamParser) SetTimeFunc(f TimeFunc) {
-	sp.handler.SetTimeFunc(f)
+	sp.defaultTime = f
 }
 
 func (sp *StreamParser) SetTimePrecision(u time.Duration) {
-	sp.handler.SetTimePrecision(u)
+	switch u {
+	case time.Nanosecond:
+		sp.precision = lineprotocol.Nanosecond
+	case time.Microsecond:
+		sp.precision = lineprotocol.Microsecond
+	case time.Millisecond:
+		sp.precision = lineprotocol.Millisecond
+	case time.Second:
+		sp.precision = lineprotocol.Second
+	}
 }
 
 // Next parses the next item from the stream.  You can repeat calls to this
 // function if it returns ParseError to get the next metric or error.
 func (sp *StreamParser) Next() (telegraf.Metric, error) {
-	err := sp.machine.Next()
-	if err == EOF {
-		return nil, err
-	}
-
-	if e, ok := err.(*readErr); ok {
-		return nil, e.Err
-	}
-
-	if err != nil {
-		return nil, &ParseError{
-			Offset:     sp.machine.Position(),
-			LineOffset: sp.machine.LineOffset(),
-			LineNumber: sp.machine.LineNumber(),
-			Column:     sp.machine.Column(),
-			msg:        err.Error(),
-			buf:        sp.machine.LineText(),
+	if !sp.decoder.Next() {
+		if err := sp.decoder.Err(); err != nil && err != sp.lastError {
+			sp.lastError = err
+			return nil, err
 		}
+
+		return nil, EOF
 	}
 
-	metric, err := sp.handler.Metric()
+	m, err := nextMetric(sp.decoder, sp.precision, sp.defaultTime, false)
+	if err != nil {
+		return nil, convertToParseError([]byte{}, err)
+	}
+
+	return m, nil
+}
+
+func nextMetric(decoder *lineprotocol.Decoder, precision lineprotocol.Precision, defaultTime TimeFunc, allowPartial bool) (telegraf.Metric, error) {
+	measurement, err := decoder.Measurement()
 	if err != nil {
 		return nil, err
 	}
+	m := metric.New(string(measurement), nil, nil, time.Time{})
 
-	return metric, nil
-}
+	for {
+		key, value, err := decoder.NextTag()
+		if err != nil {
+			// Allow empty tags for series parser
+			if strings.Contains(err.Error(), "empty tag name") && allowPartial {
+				break
+			}
 
-// Position returns the current byte offset into the data.
-func (sp *StreamParser) Position() int {
-	return sp.machine.Position()
-}
+			return nil, err
+		} else if key == nil {
+			break
+		}
 
-// LineOffset returns the byte offset of the current line.
-func (sp *StreamParser) LineOffset() int {
-	return sp.machine.LineOffset()
-}
+		m.AddTag(string(key), string(value))
+	}
 
-// LineNumber returns the current line number.  Lines are counted based on the
-// regular expression `\r?\n`.
-func (sp *StreamParser) LineNumber() int {
-	return sp.machine.LineNumber()
-}
+	for {
+		key, value, err := decoder.NextField()
+		if err != nil {
+			// Allow empty fields for series parser
+			if strings.Contains(err.Error(), "expected field key") && allowPartial {
+				break
+			}
 
-// Column returns the current column.
-func (sp *StreamParser) Column() int {
-	return sp.machine.Column()
-}
+			return nil, err
+		} else if key == nil {
+			break
+		}
 
-// LineText returns the text of the current line that has been parsed so far.
-func (sp *StreamParser) LineText() string {
-	return sp.machine.LineText()
+		m.AddField(string(key), value.Interface())
+	}
+
+	t, err := decoder.Time(precision, defaultTime())
+	if err != nil && !allowPartial {
+		return nil, err
+	}
+	m.SetTime(t)
+
+	return m, nil
 }
