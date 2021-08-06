@@ -107,6 +107,7 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 // pod, causing errors in the logs. This is only true if the pod going offline is not
 // directed to do so by K8s.
 func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset) error {
+	p.Log.Debugf("watching pods endpoint")
 	watcher, err := client.CoreV1().Pods(p.PodNamespace).Watch(ctx, metav1.ListOptions{
 		LabelSelector: p.KubernetesLabelSelector,
 		FieldSelector: p.KubernetesFieldSelector,
@@ -114,13 +115,26 @@ func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset)
 	if err != nil {
 		return err
 	}
-	pod := &corev1.Pod{}
-	go func() {
-		for event := range watcher.ResultChan() {
-			pod = &corev1.Pod{}
+
+	defer watcher.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case event, ok := <-watcher.ResultChan():
+			if !ok {
+				return ctx.Err()
+			}
+
+			pod, ok := event.Object.(*corev1.Pod)
+			if !ok {
+				continue
+			}
+
 			// If the pod is not "ready", there will be no ip associated with it.
 			if pod.Annotations["prometheus.io/scrape"] != "true" ||
 				!podReady(pod.Status.ContainerStatuses) {
+				p.Log.Debugf("ignoring pod %s", pod.Name)
 				continue
 			}
 
@@ -137,9 +151,7 @@ func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset)
 				}
 			}
 		}
-	}()
-
-	return nil
+	}
 }
 
 func (p *Prometheus) cAdvisor(ctx context.Context, bearerToken string) error {
@@ -293,7 +305,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 		return
 	}
 
-	log.Printf("D! [inputs.prometheus] will scrape metrics from %q", *targetURL)
+	log.Printf("D! [inputs.prometheus] will scrape metrics from %s (%q)", pod.Name, *targetURL)
 	// add annotation as metrics tags
 	tags := pod.Annotations
 	if tags == nil {
