@@ -54,7 +54,6 @@ func (ki *KubernetesInventory) gatherIngress(i netv1.Ingress, acc telegraf.Accum
 					acc.AddFields(ingressMeasurement, fields, tags)
 				}
 			}
-
 		}
 	}
 }
