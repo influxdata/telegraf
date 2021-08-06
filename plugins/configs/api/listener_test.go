@@ -149,6 +149,7 @@ func TestStopPlugin(t *testing.T) {
 	// stop plugin
 	client := &http.Client{}
 	req, err := http.NewRequest("DELETE", srv.URL+"/plugins/"+createResp.ID, nil)
+	require.NoError(t, err)
 
 	resp, err = client.Do(req)
 	require.NoError(t, err)
@@ -172,6 +173,7 @@ func TestStopPlugin(t *testing.T) {
 
 	// try to delete a plugin which was already been deleted
 	req, err = http.NewRequest("DELETE", srv.URL+"/plugins/"+createResp.ID, nil)
+	require.NoError(t, err)
 
 	resp, err = client.Do(req)
 	require.NoError(t, err)
