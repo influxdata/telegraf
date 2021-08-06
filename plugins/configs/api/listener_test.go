@@ -100,3 +100,84 @@ func TestStartPlugin(t *testing.T) {
 		require.FailNow(t, "expected there to be 1 running plugin, was", len(runningList))
 	}
 }
+
+func TestStopPlugin(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	c := config.NewConfig()
+	a := agent.NewAgent(ctx, c)
+	api, outputCancel := newAPI(ctx, c, a)
+	go a.RunWithAPI(outputCancel)
+
+	s := &ConfigAPIService{
+		api: api,
+	}
+	srv := httptest.NewServer(s.mux())
+
+	// start plugin
+	buf := bytes.NewBufferString(`{
+		"name": "inputs.cpu",
+		"config": {
+			"percpu": true
+		}
+}`)
+	resp, err := http.Post(srv.URL+"/plugins/create", "application/json", buf)
+	require.NoError(t, err)
+	createResp := struct {
+		ID string
+	}{}
+	require.EqualValues(t, 200, resp.StatusCode)
+	err = json.NewDecoder(resp.Body).Decode(&createResp)
+	require.NoError(t, err)
+	_ = resp.Body.Close()
+
+	require.Regexp(t, `^[\da-f]{8}\d{8}$`, createResp.ID)
+
+	resp, err = http.Get(srv.URL + "/plugins/running")
+	require.NoError(t, err)
+	require.EqualValues(t, 200, resp.StatusCode)
+	runningList := []Plugin{}
+	err = json.NewDecoder(resp.Body).Decode(&runningList)
+	require.NoError(t, err)
+	_ = resp.Body.Close()
+
+	// confirm plugin is running
+	if len(runningList) != 1 {
+		require.FailNow(t, "expected there to be 1 running plugin, was", len(runningList))
+	}
+
+	// stop plugin
+	client := &http.Client{}
+	req, err := http.NewRequest("DELETE", srv.URL+"/plugins/"+createResp.ID, nil)
+
+	resp, err = client.Do(req)
+	require.NoError(t, err)
+	_ = resp.Body.Close()
+
+	require.EqualValues(t, 200, resp.StatusCode)
+	require.NoError(t, err)
+
+	resp, err = http.Get(srv.URL + "/plugins/running")
+	require.NoError(t, err)
+	require.EqualValues(t, 200, resp.StatusCode)
+	runningList = []Plugin{}
+	err = json.NewDecoder(resp.Body).Decode(&runningList)
+	require.NoError(t, err)
+	_ = resp.Body.Close()
+
+	// confirm plugin has stopped
+	if len(runningList) >= 1 {
+		require.FailNow(t, "expected there to be no running plugin, was", len(runningList))
+	}
+
+	// try to delete a plugin which was already been deleted
+	req, err = http.NewRequest("DELETE", srv.URL+"/plugins/"+createResp.ID, nil)
+
+	resp, err = client.Do(req)
+	require.NoError(t, err)
+	_ = resp.Body.Close()
+
+	// still expect 200 response
+	require.EqualValues(t, 200, resp.StatusCode)
+	require.NoError(t, err)
+}
