@@ -22,6 +22,7 @@ type ConvertStruct struct {
 	Timestamp    string
 	Defaultvalue string
 	Unsigned     string
+	Bool         string
 }
 
 type SQL struct {
@@ -103,6 +104,8 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 		datatype = p.Convert.Real
 	case string:
 		datatype = p.Convert.Text
+	case bool:
+		datatype = p.Convert.Bool
 	default:
 		datatype = p.Convert.Defaultvalue
 		p.Log.Errorf("Unknown datatype: '%T' %v", value, value)
@@ -272,6 +275,7 @@ func newSQL() *SQL {
 			Timestamp:    "TIMESTAMP",
 			Defaultvalue: "TEXT",
 			Unsigned:     "UNSIGNED",
+			Bool:         "BOOL",
 		},
 	}
 }
