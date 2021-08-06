@@ -179,7 +179,8 @@ func (a *Agent) RunWithAPI(outputCancel context.CancelFunc) {
 	a.setState(agentStateShuttingDown)
 
 	// wait for all plugins to stop
-	a.waitForPluginsToStop()
+	a.waitForMainPluginsToStop()
+	a.waitForConfigPluginsToStop()
 
 	log.Printf("D! [agent] Stopped Successfully")
 }
@@ -526,7 +527,8 @@ func (a *Agent) RunConfigPlugin(ctx context.Context, plugin config.ConfigPlugin)
 	a.configPluginUnit.Unlock()
 
 	<-ctx.Done()
-	//TODO: we might want to wait for all other plugins to close?
+	a.waitForMainPluginsToStop()
+
 	if err := plugin.Close(); err != nil {
 		log.Printf("E! [agent] Configuration plugin failed to close: %v", err)
 	}
@@ -845,7 +847,8 @@ func (a *Agent) Context() context.Context {
 	return a.ctx
 }
 
-func (a *Agent) waitForPluginsToStop() {
+// waitForMainPluginsToStop waits for inputs, processors, and outputs to stop.
+func (a *Agent) waitForMainPluginsToStop() {
 	for {
 		a.inputGroupUnit.Lock()
 		if len(a.inputGroupUnit.inputUnits) > 0 {
@@ -881,7 +884,10 @@ func (a *Agent) waitForPluginsToStop() {
 		break
 	}
 	a.outputGroupUnit.Unlock()
+}
 
+// waitForConfigPluginsToStop waits for config plugins to stop
+func (a *Agent) waitForConfigPluginsToStop() {
 	for {
 		a.configPluginUnit.Lock()
 		if len(a.configPluginUnit.plugins) > 0 {

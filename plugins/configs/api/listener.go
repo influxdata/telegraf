@@ -60,7 +60,7 @@ func (s *ConfigAPIService) createPlugin(w http.ResponseWriter, req *http.Request
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	id, err := s.api.CreatePlugin(cfg)
+	id, err := s.api.CreatePlugin(cfg, "")
 	if err != nil {
 		s.Log.Error("error creating plugin %v", err)
 		w.WriteHeader(http.StatusBadRequest)

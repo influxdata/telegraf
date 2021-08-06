@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agenthelper"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/minmax"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -458,6 +459,27 @@ func TestConfig_DefaultOrderingProcessorsWithAggregators(t *testing.T) {
 	require.EqualValues(t, expected, actual)
 }
 
+func TestConfig_OutputFieldPass(t *testing.T) {
+	now := time.Date(2021, 7, 5, 14, 45, 0, 0, time.UTC)
+	output := outputs.Outputs["http"]().(*MockupOuputPlugin)
+
+	filter := models.Filter{
+		FieldPass: []string{"good"},
+	}
+	require.NoError(t, filter.Compile())
+	outputConfig := &models.OutputConfig{
+		Name:   "http-test",
+		Filter: filter,
+	}
+	ro := models.NewRunningOutput(output, outputConfig, 1, 10)
+	ro.AddMetric(metric.New("test", map[string]string{"tag": "foo"}, map[string]interface{}{"good": "bar", "ignored": "woo"}, now))
+	require.NoError(t, ro.Write())
+	ro.Close()
+	require.Len(t, output.metrics, 1)
+	require.True(t, output.metrics[0].HasField("good"))
+	require.False(t, output.metrics[0].HasField("ignored"))
+}
+
 /*** Mockup INPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupInputPlugin struct {
 	Servers      []string        `toml:"servers"`
@@ -488,13 +510,17 @@ type MockupOuputPlugin struct {
 	NamespacePrefix string            `toml:"namespace_prefix"`
 	Log             telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
+	metrics []telegraf.Metric
 }
 
-func (m *MockupOuputPlugin) Connect() error                        { return nil }
-func (m *MockupOuputPlugin) Close() error                          { return nil }
-func (m *MockupOuputPlugin) Description() string                   { return "Mockup test output plugin" }
-func (m *MockupOuputPlugin) SampleConfig() string                  { return "Mockup test output plugin" }
-func (m *MockupOuputPlugin) Write(metrics []telegraf.Metric) error { return nil }
+func (m *MockupOuputPlugin) Connect() error       { return nil }
+func (m *MockupOuputPlugin) Close() error         { return nil }
+func (m *MockupOuputPlugin) Description() string  { return "Mockup test output plugin" }
+func (m *MockupOuputPlugin) SampleConfig() string { return "Mockup test output plugin" }
+func (m *MockupOuputPlugin) Write(metrics []telegraf.Metric) error {
+	m.metrics = append(m.metrics, metrics...)
+	return nil
+}
 
 // Register the mockup plugin on loading
 func init() {

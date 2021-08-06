@@ -41,7 +41,7 @@ func TestListPluginTypes(t *testing.T) {
 	// find the gnmi plugin
 	var gnmi PluginConfigTypeInfo
 	for _, conf := range pluginConfigs {
-		if conf.Name == "gnmi" {
+		if conf.Name == "inputs.gnmi" {
 			gnmi = conf
 			break
 		}
@@ -50,7 +50,7 @@ func TestListPluginTypes(t *testing.T) {
 	// find the cloudwatch plugin
 	var cloudwatch PluginConfigTypeInfo
 	for _, conf := range pluginConfigs {
-		if conf.Name == "cloudwatch" {
+		if conf.Name == "inputs.cloudwatch" {
 			cloudwatch = conf
 			break
 		}
@@ -90,13 +90,9 @@ func TestInputPluginLifecycle(t *testing.T) {
 	api, outputCancel := newAPI(ctx, cfg, a)
 	defer outputCancel()
 
-	// t.Log("Running")
-
 	go a.RunWithAPI(outputCancel)
-	// TODO: defer a.Shutdown()
 
 	// create
-	// t.Log("Create plugin")
 	newPluginID, err := api.CreatePlugin(PluginConfigCreate{
 		Name: "inputs.cpu",
 		Config: map[string]interface{}{
@@ -105,27 +101,23 @@ func TestInputPluginLifecycle(t *testing.T) {
 			"collect_cpu_time": true,
 			"report_active":    true,
 		},
-	})
+	}, "")
 	require.NoError(t, err)
 	require.NotZero(t, len(newPluginID))
 
 	// get plugin status
-	// t.Log("wait for start state")
 	waitForStatus(t, api, newPluginID, "running", 20*time.Second)
 
 	// list running
-	// t.Log("List running plugins")
 	runningPlugins := api.ListRunningPlugins()
 	require.Len(t, runningPlugins, 1)
 
 	status := api.GetPluginStatus(newPluginID)
 	require.Equal(t, "running", status.String())
 	// delete
-	// t.Log("delete plugin")
 	err = api.DeletePlugin(newPluginID)
 	require.NoError(t, err)
 
-	// t.Log("wait for dead state")
 	waitForStatus(t, api, newPluginID, "dead", 300*time.Millisecond)
 
 	// get plugin status until dead
@@ -133,7 +125,6 @@ func TestInputPluginLifecycle(t *testing.T) {
 	require.Equal(t, "dead", status.String())
 
 	// list running should have none
-	// t.Log("list plugins")
 	runningPlugins = api.ListRunningPlugins()
 	require.Len(t, runningPlugins, 0)
 }
@@ -148,17 +139,14 @@ func TestAllPluginLifecycle(t *testing.T) {
 	api, outputCancel := newAPI(runCtx, cfg, a)
 	defer outputCancel()
 
-	// t.Log("Running")
 	go a.RunWithAPI(outputCancel)
 
 	// create
-	// t.Log("Create plugin")
 	pluginIDs := []models.PluginID{}
 	newPluginID, err := api.CreatePlugin(PluginConfigCreate{
 		Name:   "inputs.cpu",
 		Config: map[string]interface{}{},
-	})
-	// t.Log("inputs.cpu", newPluginID)
+	}, "")
 	pluginIDs = append(pluginIDs, newPluginID)
 	require.NoError(t, err)
 	require.NotZero(t, len(newPluginID))
@@ -171,7 +159,7 @@ func TestAllPluginLifecycle(t *testing.T) {
 				"dest": "a_host",
 			}},
 		},
-	})
+	}, "")
 	require.NoError(t, err)
 	pluginIDs = append(pluginIDs, newPluginID)
 	require.NotZero(t, len(newPluginID))
@@ -181,32 +169,27 @@ func TestAllPluginLifecycle(t *testing.T) {
 		Config: map[string]interface{}{
 			"files": []string{"stdout"},
 		},
-	})
-	// t.Log("outputs.file", newPluginID)
+	}, "")
 	pluginIDs = append(pluginIDs, newPluginID)
 	require.NoError(t, err)
 	require.NotZero(t, len(newPluginID))
 
 	for _, id := range pluginIDs {
-		// t.Log("waiting for plugin", id)
 		waitForStatus(t, api, id, "running", 10*time.Second)
 	}
 
 	// list running
-	// t.Log("List running plugins")
 	runningPlugins := api.ListRunningPlugins()
 	require.Len(t, runningPlugins, 3)
 
 	time.Sleep(5 * time.Second)
 
 	// delete
-	// t.Log("delete plugins")
 	for _, id := range pluginIDs {
 		err = api.DeletePlugin(id)
 		require.NoError(t, err)
 	}
 
-	// t.Log("wait for dead state")
 	for _, id := range pluginIDs {
 		waitForStatus(t, api, id, "dead", 300*time.Millisecond)
 	}
@@ -226,7 +209,6 @@ func waitForStatus(t *testing.T, api *api, newPluginID models.PluginID, waitStat
 	timeoutAt := time.Now().Add(timeout)
 	for timeoutAt.After(time.Now()) {
 		status := api.GetPluginStatus(newPluginID)
-		// t.Log("plugin", newPluginID, "status", status)
 		if status.String() == waitStatus {
 			return
 		}
@@ -342,8 +324,6 @@ func TestSetFieldConfig(t *testing.T) {
 
 	require.Equal(t, expected, icfg)
 }
-
-// TODO: test different plugin types
 
 func TestExampleWorstPlugin(t *testing.T) {
 	input := map[string]interface{}{

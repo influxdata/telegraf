@@ -106,7 +106,7 @@ func (a *api) ListPluginTypes() []PluginConfigTypeInfo {
 	for _, name := range inputNames {
 		creator := inputs.Inputs[name]
 		cfg := PluginConfigTypeInfo{
-			Name:   name,
+			Name:   "inputs." + name,
 			Config: map[string]FieldConfig{},
 		}
 
@@ -115,7 +115,64 @@ func (a *api) ListPluginTypes() []PluginConfigTypeInfo {
 
 		result = append(result, cfg)
 	}
-	// TODO: add more types?
+
+	processorNames := []string{}
+	for name := range processors.Processors {
+		processorNames = append(processorNames, name)
+	}
+	sort.Strings(processorNames)
+
+	for _, name := range processorNames {
+		creator := processors.Processors[name]
+		cfg := PluginConfigTypeInfo{
+			Name:   "processors." + name,
+			Config: map[string]FieldConfig{},
+		}
+
+		p := creator()
+		getFieldConfig(p, cfg.Config)
+
+		result = append(result, cfg)
+	}
+
+	aggregatorNames := []string{}
+	for name := range aggregators.Aggregators {
+		aggregatorNames = append(aggregatorNames, name)
+	}
+	sort.Strings(aggregatorNames)
+
+	for _, name := range aggregatorNames {
+		creator := aggregators.Aggregators[name]
+		cfg := PluginConfigTypeInfo{
+			Name:   "aggregators." + name,
+			Config: map[string]FieldConfig{},
+		}
+
+		p := creator()
+		getFieldConfig(p, cfg.Config)
+
+		result = append(result, cfg)
+	}
+
+	outputNames := []string{}
+	for name := range outputs.Outputs {
+		outputNames = append(outputNames, name)
+	}
+	sort.Strings(outputNames)
+
+	for _, name := range outputNames {
+		creator := outputs.Outputs[name]
+		cfg := PluginConfigTypeInfo{
+			Name:   "outputs." + name,
+			Config: map[string]FieldConfig{},
+		}
+
+		p := creator()
+		getFieldConfig(p, cfg.Config)
+
+		result = append(result, cfg)
+	}
+
 	return result
 }
 
@@ -155,7 +212,7 @@ func (a *api) ListRunningPlugins() (runningPlugins []Plugin) {
 		getFieldConfig(v.Config, p.Config)
 		runningPlugins = append(runningPlugins, p)
 	}
-	// TODO: add more types?
+
 	if runningPlugins == nil {
 		return []Plugin{}
 	}
@@ -163,11 +220,28 @@ func (a *api) ListRunningPlugins() (runningPlugins []Plugin) {
 }
 
 func (a *api) UpdatePlugin(id models.PluginID, cfg PluginConfigCreate) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	// TODO: shut down plugin and start a new plugin with the same id.
-	return nil
+	if err := a.DeletePlugin(id); err != nil {
+		return err
+	}
+	// wait for plugin to stop before recreating it with the same ID, otherwise we'll have issues.
+	for a.GetPluginStatus(id) != models.PluginStateDead {
+		select {
+		case <-ctx.Done():
+			// plugin didn't stop in time.. do we recreate it anyway?
+			return errors.New("timed out shutting down plugin for update")
+		case <-time.After(100 * time.Millisecond):
+			// try again
+		}
+	}
+	_, err := a.CreatePlugin(cfg, id)
+	return err
 }
 
-func (a *api) CreatePlugin(cfg PluginConfigCreate) (models.PluginID, error) {
+// CreatePlugin creates a new plugin from a specified config. forcedID should be left blank when used by users via the API.
+func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (models.PluginID, error) {
 	log.Printf("I! [configapi] creating plugin %q", cfg.Name)
 
 	parts := strings.Split(cfg.Name, ".")
@@ -229,6 +303,9 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate) (models.PluginID, error) {
 		}
 
 		rp := models.NewRunningInput(i, pluginConfig)
+		if len(forcedID) > 0 {
+			rp.ID = forcedID.Uint64()
+		}
 		rp.SetDefaultTags(a.config.Tags)
 
 		if err := rp.Init(); err != nil {

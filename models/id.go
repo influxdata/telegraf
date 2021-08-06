@@ -1,7 +1,7 @@
 package models
 
 import (
-	"math/rand" // TODO: maybe switch to crypto/rand
+	"math/rand"
 	"sync/atomic"
 )
 
