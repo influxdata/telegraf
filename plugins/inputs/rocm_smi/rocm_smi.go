@@ -154,18 +154,18 @@ func genTagsFields(gpus map[string]GPU, system map[string]sysInfo) []metric {
 			}
 			fields := map[string]interface{}{}
 
-			totVRAM, _ := strconv.Atoi(payload.Gpu_VRAM_total_memory)
-			usdVRAM, _ := strconv.Atoi(payload.Gpu_VRAM_total_used_memory)
-			strFree := strconv.Itoa(totVRAM - usdVRAM)
+			totVRAM, _ := strconv.ParseInt(payload.Gpu_VRAM_total_memory, 10, 64)
+			usdVRAM, _ := strconv.ParseInt(payload.Gpu_VRAM_total_used_memory, 10, 64)
+			strFree := strconv.FormatInt(totVRAM-usdVRAM, 10)
 
 			setTagIfUsed(tags, "gpu_id", payload.Gpu_id)
 			setTagIfUsed(tags, "gpu_unique_id", payload.Gpu_unique_id)
 
 			setIfUsed("int", fields, "driver_version", strings.Replace(system["system"].Driver_version, ".", "", -1))
 			setIfUsed("int", fields, "fan_speed", payload.Gpu_fan_speed_percentage)
-			setIfUsed("int", fields, "memory_total", payload.Gpu_VRAM_total_memory)
-			setIfUsed("int", fields, "memory_used", payload.Gpu_VRAM_total_used_memory)
-			setIfUsed("int", fields, "memory_free", strFree)
+			setIfUsed("int64", fields, "memory_total", payload.Gpu_VRAM_total_memory)
+			setIfUsed("int64", fields, "memory_used", payload.Gpu_VRAM_total_used_memory)
+			setIfUsed("int64", fields, "memory_free", strFree)
 			setIfUsed("float", fields, "temperature_sensor_edge", payload.Gpu_temperature_sensor_edge)
 			setIfUsed("float", fields, "temperature_sensor_sensor_junction", payload.Gpu_temperature_sensor_junction)
 			setIfUsed("float", fields, "temperature_sensor_memory", payload.Gpu_temperature_sensor_memory)
@@ -206,6 +206,13 @@ func setIfUsed(t string, m map[string]interface{}, k, v string) {
 	case "int":
 		if val != "" {
 			i, err := strconv.Atoi(val)
+			if err == nil {
+				m[k] = i
+			}
+		}
+	case "int64":
+		if val != "" {
+			i, err := strconv.ParseInt(val, 10, 64)
 			if err == nil {
 				m[k] = i
 			}
