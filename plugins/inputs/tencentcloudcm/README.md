@@ -25,16 +25,16 @@ This plugin uses [Access Key](https://intl.cloud.tencent.com/document/product/59
   # and will not be collected by Telegraf.
   #
   # Requested Tencent Cloud Cloud Monitor aggregation Period (required - must be a multiple of 60s)
-  period = "1m"
+  # period = "5m"
 
   # Collection Delay (must account for metrics availability via Tencent Cloud API)
-  delay = "5m"
+  # delay = "0m"
 
   ## Maximum requests per second. Note that the global default Tencent Cloud API rate limit is
   ## 20 calls/second (1,200 calls/minute), so if you define multiple namespaces, these should add up to a
   ## maximum of 20.
   ## See https://intl.cloud.tencent.com/document/product/248/33881
-  ratelimit = 1000
+  # ratelimit = 20
 
   # Timeout for http requests made by the Tencent Cloud client.
   timeout = "5s"

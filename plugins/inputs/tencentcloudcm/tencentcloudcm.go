@@ -34,7 +34,7 @@ type TencentCloudCM struct {
 
 	windowStart  time.Time
 	windowEnd    time.Time
-	discoverTool *DiscoverTool
+	discoverTool *discoverTool
 }
 
 // Account defines a Tencent Cloud account
@@ -60,18 +60,6 @@ type Region struct {
 	Instances  []*monitor.Instance `toml:"instances"`
 }
 
-// // Instance defines a generic Tencent Cloud instance
-// type Instance struct {
-// 	Dimensions []*Dimension `toml:"dimensions"`
-// }
-
-// // Dimension defines a simplified Tencent Cloud Cloud Monitor dimension.
-// type Dimension struct {
-// 	Name  string `toml:"name"`
-// 	Value string `toml:"value"`
-// }
-
-// metricObject defines a metric with additional information
 type metricObject struct {
 	Metric    string
 	Region    string
@@ -82,7 +70,7 @@ type metricObject struct {
 
 type cmClient interface {
 	GetMetricObjects(t TencentCloudCM) []metricObject
-	NewClient(region string, crs *common.Credential, t TencentCloudCM) monitor.Client
+	NewClient(region string, crs *common.Credential, t TencentCloudCM) (monitor.Client, error)
 	NewGetMonitorDataRequest(namespace, metric string, instances []*monitor.Instance, t TencentCloudCM) *monitor.GetMonitorDataRequest
 	GatherMetrics(client monitor.Client, request *monitor.GetMonitorDataRequest, t TencentCloudCM) (*monitor.GetMonitorDataResponse, error)
 }
@@ -105,16 +93,16 @@ func (t *TencentCloudCM) SampleConfig() string {
 	# and will not be collected by Telegraf.
 	#
 	# Requested Tencent Cloud Cloud Monitor aggregation Period (required - must be a multiple of 60s)
-	period = "1m"
+	# period = "5m"
   
 	# Collection Delay (must account for metrics availability via Tencent Cloud API)
-	delay = "5m"
+	# delay = "0m"
   
 	## Maximum requests per second. Note that the global default Tencent Cloud API rate limit is
 	## 20 calls/second (1,200 calls/minute), so if you define multiple namespaces, these should add up to a
 	## maximum of 20.
 	## See https://intl.cloud.tencent.com/document/product/248/33881
-	ratelimit = 1000
+	# ratelimit = 20
   
 	# Timeout for http requests made by the Tencent Cloud client.
 	timeout = "5s"
@@ -123,7 +111,7 @@ func (t *TencentCloudCM) SampleConfig() string {
 	## This sets the interval for discover and update the instances discovered.
 	##
 	## how often the discovery API call executed (default 1m)
-	# discovery_interval = "1m"
+	# discovery_interval = "5m"
   
 	# Tencent Cloud Account (required - you can provide multiple entries and distinguish them using
 	# optional name field, if name is empty, index number will be used as default)
@@ -169,7 +157,10 @@ func (t *TencentCloudCM) Description() string {
 // Init is for setup, and validating config.
 func (t *TencentCloudCM) Init() error {
 	if t.Period <= 0 {
-		return fmt.Errorf("period is empty")
+		t.Period = config.Duration(5 * time.Minute)
+	}
+	if t.Delay <= 0 {
+		t.Delay = config.Duration(0 * time.Minute)
 	}
 
 	if len(t.Accounts) == 0 {
@@ -180,7 +171,6 @@ func (t *TencentCloudCM) Init() error {
 
 	// create account credential
 	for i := range t.Accounts {
-
 		if t.Accounts[i].SecretID == "" {
 			return fmt.Errorf("secret_id is empty")
 		}
@@ -270,7 +260,11 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 		go func(m metricObject) {
 			defer wg.Done()
 
-			client := t.client.NewClient(m.Region, m.Account.crs, *t)
+			client, err := t.client.NewClient(m.Region, m.Account.crs, *t)
+			if err != nil {
+				acc.AddError(err)
+				return
+			}
 			request := t.client.NewGetMonitorDataRequest(m.Namespace, m.Metric, m.Instances, *t)
 
 			result, err := t.client.GatherMetrics(client, request, *t)
@@ -306,7 +300,7 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 
 			for index := range datapoints.Values {
 				acc.AddFields(metricObject.Namespace, map[string]interface{}{"value": datapoints.Values[index]},
-					tags, time.Unix(int64(*datapoints.Timestamps[index]), 0).Local())
+					tags, time.Unix(int64(*datapoints.Timestamps[index]), 0))
 			}
 
 		}
@@ -321,7 +315,7 @@ func init() {
 			Endpoint:          "tencentcloudapi.com",
 			RateLimit:         20,
 			Timeout:           config.Duration(5 * time.Second),
-			DiscoveryInterval: config.Duration(1 * time.Minute),
+			DiscoveryInterval: config.Duration(5 * time.Minute),
 		}
 	})
 }

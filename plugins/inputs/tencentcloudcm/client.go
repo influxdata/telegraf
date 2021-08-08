@@ -10,7 +10,7 @@ import (
 )
 
 type cloudmonitorClient struct {
-	Accounts []*Account `toml:"accounts"`
+	Accounts []*Account
 }
 
 func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
@@ -18,22 +18,22 @@ func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
 	metricObjects := []metricObject{}
 
 	// construct metric object
-	for i := range t.Accounts {
-		for j := range t.Accounts[i].Namespaces {
-			for k := range t.Accounts[i].Namespaces[j].Regions {
-				for l := range t.Accounts[i].Namespaces[j].Metrics {
-					instances := t.Accounts[i].Namespaces[j].Regions[k].Instances
+	for _, account := range t.Accounts {
+		for _, namespace := range account.Namespaces {
+			for _, region := range namespace.Regions {
+				for _, metric := range namespace.Metrics {
+					instances := region.Instances
 					if len(instances) == 0 {
-						instances = t.discoverTool.GetInstances(t.Accounts[i].Name, t.Accounts[i].Namespaces[j].Name, t.Accounts[i].Namespaces[j].Regions[k].RegionName)
+						instances = t.discoverTool.GetInstances(account.Name, namespace.Name, region.RegionName)
 					}
 					if len(instances) == 0 {
 						continue
 					}
 					metricObjects = append(metricObjects, metricObject{
-						t.Accounts[i].Namespaces[j].Metrics[l],
-						t.Accounts[i].Namespaces[j].Regions[k].RegionName,
-						t.Accounts[i].Namespaces[j].Name,
-						t.Accounts[i],
+						metric,
+						region.RegionName,
+						namespace.Name,
+						account,
 						instances,
 					})
 				}
@@ -43,13 +43,12 @@ func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
 	return metricObjects
 }
 
-func (c *cloudmonitorClient) NewClient(region string, crs *common.Credential, t TencentCloudCM) monitor.Client {
-	client := monitor.Client{}
+func (c *cloudmonitorClient) NewClient(region string, crs *common.Credential, t TencentCloudCM) (monitor.Client, error) {
 	cpf := profile.NewClientProfile()
 	cpf.HttpProfile.Endpoint = fmt.Sprintf("monitor.%s", t.Endpoint)
 	cpf.HttpProfile.ReqTimeout = int(time.Duration(t.Timeout).Milliseconds()) / 1000
-	client.Init(region).WithCredential(crs).WithProfile(cpf)
-	return client
+	client, err := monitor.NewClient(crs, region, cpf)
+	return *client, err
 }
 
 func (c *cloudmonitorClient) NewGetMonitorDataRequest(namespace, metric string, instances []*monitor.Instance, t TencentCloudCM) *monitor.GetMonitorDataRequest {

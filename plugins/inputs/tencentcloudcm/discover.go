@@ -1,6 +1,7 @@
 package tencentcloudcm
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -9,8 +10,8 @@ import (
 	monitor "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor/v20180724"
 )
 
-// DiscoverTool discovers objects for given regions
-type DiscoverTool struct {
+// discoverTool discovers objects for given regions
+type discoverTool struct {
 	DiscoveredInstances map[string]map[string]map[string][]*monitor.Instance
 	DiscoveredMetrics   map[string][]string
 	rw                  *sync.RWMutex
@@ -21,8 +22,8 @@ type DiscoverTool struct {
 }
 
 // NewDiscoverTool Factory
-func NewDiscoverTool(log telegraf.Logger) *DiscoverTool {
-	discoverTool := &DiscoverTool{
+func NewDiscoverTool(log telegraf.Logger) *discoverTool {
+	discoverTool := &discoverTool{
 		DiscoveredInstances: map[string]map[string]map[string][]*monitor.Instance{},
 		rw:                  &sync.RWMutex{},
 		registry:            map[string]Product{},
@@ -38,7 +39,7 @@ func NewDiscoverTool(log telegraf.Logger) *DiscoverTool {
 }
 
 // DiscoverMetrics discovers metrics supported by registered products
-func (d *DiscoverTool) DiscoverMetrics() {
+func (d *discoverTool) DiscoverMetrics() {
 	// discover metrics once
 	for namespace, p := range d.registry {
 		if d.DiscoveredMetrics == nil {
@@ -48,12 +49,12 @@ func (d *DiscoverTool) DiscoverMetrics() {
 	}
 }
 
-func (d *DiscoverTool) discover(accounts []*Account, endpoint string) error {
+func (d *discoverTool) discover(accounts []*Account, endpoint string) error {
 	discoveries := map[string]map[string]map[string][]*monitor.Instance{}
 	for _, account := range accounts {
 		for _, namespace := range account.Namespaces {
 			for _, region := range namespace.Regions {
-				// skip discover is specified
+				// skip discover if instances are explicitly specified
 				if len(region.Instances) != 0 {
 					continue
 				}
@@ -63,9 +64,8 @@ func (d *DiscoverTool) discover(accounts []*Account, endpoint string) error {
 				}
 				instances, err := p.Discover(account.crs, region.RegionName, endpoint)
 				if err != nil {
-					d.Log.Errorf("discover account:%s region:%s endpoint:%s failed, error: %s",
+					return fmt.Errorf("discover account:%s region:%s endpoint:%s failed, error: %s",
 						account.Name, region.RegionName, endpoint, err)
-					return err
 				}
 				if discoveries[account.Name] == nil {
 					discoveries[account.Name] = map[string]map[string][]*monitor.Instance{}
@@ -87,27 +87,28 @@ func (d *DiscoverTool) discover(accounts []*Account, endpoint string) error {
 }
 
 // Discover discovers instances of registered products
-func (d *DiscoverTool) Discover(accounts []*Account, interval config.Duration, endpoint string) {
+func (d *discoverTool) Discover(accounts []*Account, interval config.Duration, endpoint string) {
 	ticker := time.NewTicker(time.Duration(interval))
 	defer ticker.Stop()
 
 	err := d.discover(accounts, endpoint)
 	if err != nil {
-		d.Log.Errorf(err.Error())
+		d.Log.Errorf("discovery failed: %v", err)
 	}
 
 	// discover instances periodically
 	for range ticker.C {
 		err = d.discover(accounts, endpoint)
 		if err != nil {
-			d.Log.Errorf(err.Error())
+			d.Log.Errorf("discovery failed: %v", err)
 		}
 	}
 }
 
 // GetInstances Get discovered instances
-func (d *DiscoverTool) GetInstances(account, namespace, region string) []*monitor.Instance {
+func (d *discoverTool) GetInstances(account, namespace, region string) []*monitor.Instance {
 	d.rw.RLock()
+	defer d.rw.RUnlock()
 	v1, ok := d.DiscoveredInstances[account]
 	if !ok {
 		return nil
@@ -117,12 +118,9 @@ func (d *DiscoverTool) GetInstances(account, namespace, region string) []*monito
 		return nil
 	}
 	instances, ok := v2[region]
-	d.rw.RUnlock()
 	return instances
 }
 
-// var Registry = map[string]Product{}
-
-func (d *DiscoverTool) Add(namespace string, p Product) {
+func (d *discoverTool) Add(namespace string, p Product) {
 	d.registry[namespace] = p
 }

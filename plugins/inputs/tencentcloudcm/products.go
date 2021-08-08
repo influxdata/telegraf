@@ -22,8 +22,7 @@ type Product interface {
 }
 
 // CVM defines Cloud Virtual Machine, see: https://intl.cloud.tencent.com/document/product/213
-type CVM struct {
-}
+type CVM struct{}
 
 // Namespace implements Product interface
 func (c CVM) Namespace() string {
@@ -45,12 +44,10 @@ func (c CVM) discover(crs *common.Credential, region, endpoint string, offset, l
 	request.Limit = common.Int64Ptr(limit)
 
 	response, err := client.DescribeInstances(request)
-	if _, ok := err.(*errors.TencentCloudSDKError); ok {
-		return nil, fmt.Errorf("DescribeInstances an API error has returned: %s", err)
-	}
 	if err != nil {
-		return nil, fmt.Errorf("DescribeInstances failed, error: %s", err)
+		return nil, fmt.Errorf("discover instances for namespace %s failed: %s", c.Namespace(), err)
 	}
+
 	return response, nil
 }
 
@@ -151,6 +148,8 @@ func (c CDB) discover(crs *common.Credential, region, endpoint string, offset, l
 	}
 	return response, nil
 }
+
+func Discover() {}
 
 // Discover implements Product interface
 func (c CDB) Discover(crs *common.Credential, region, endpoint string) ([]*monitor.Instance, error) {

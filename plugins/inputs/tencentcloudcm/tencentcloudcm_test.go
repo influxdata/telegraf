@@ -33,8 +33,8 @@ func (m *mockGatherCloudMonitorClient) GetMetricObjects(t TencentCloudCM) []metr
 	}
 }
 
-func (m *mockGatherCloudMonitorClient) NewClient(region string, crs *common.Credential, t TencentCloudCM) monitor.Client {
-	return monitor.Client{}
+func (m *mockGatherCloudMonitorClient) NewClient(region string, crs *common.Credential, t TencentCloudCM) (monitor.Client, error) {
+	return monitor.Client{}, nil
 }
 
 func (m *mockGatherCloudMonitorClient) NewGetMonitorDataRequest(namespace, metric string, instances []*monitor.Instance, t TencentCloudCM) *monitor.GetMonitorDataRequest {
@@ -99,7 +99,7 @@ func TestNewClient(t *testing.T) {
 		client: &cloudmonitorClient{},
 	}
 
-	client := cm.client.NewClient("ap-hongkong", common.NewCredential(
+	client, _ := cm.client.NewClient("ap-hongkong", common.NewCredential(
 		"secret_id",
 		"secret_key",
 	), *cm)
