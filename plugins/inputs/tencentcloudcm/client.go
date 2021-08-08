@@ -16,8 +16,7 @@ type cloudmonitorClient struct {
 }
 
 func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
-	// metricObejcts holds all metrics with it's corresponding region,
-	// namespace, credential and instances(dimensions) information.
+	// holds all metrics with it's corresponding region, namespace, credential and instances(dimensions) information.
 	metricObjects := []metricObject{}
 
 	// construct metric object
