@@ -70,12 +70,8 @@ func (c *cloudmonitorClient) NewGetMonitorDataRequest(namespace, metric string, 
 
 func (c *cloudmonitorClient) GatherMetrics(client monitor.Client, request *monitor.GetMonitorDataRequest, t TencentCloudCM) (*monitor.GetMonitorDataResponse, error) {
 	response, err := client.GetMonitorData(request)
-	if val, ok := err.(*tcerrors.TencentCloudSDKError); ok {
-		t.Log.Errorf("An API error has returned for %s: %s", *request.Namespace, err)
-		return nil, errors.New(val.Error())
-	}
 	if err != nil {
-		t.Log.Errorf("GetMonitorData failed, error: %s", err)
+		t.Log.Errorf("getting monitoring data for namespace %q failed: %v", *request.Namespace, err)
 		return nil, err
 	}
 	return response, nil
