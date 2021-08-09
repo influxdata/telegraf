@@ -201,9 +201,13 @@ var sampleConfig = `
 
   ## Optional. Specify redis commands to retrieve values
   # [[inputs.redis.commands]]
-  # command = ["get", "sample-key"]
-  # field = "sample-key-value"
-  # type = "string"
+  #   # The command to run where each argument is a separate element 
+  #   command = ["get", "sample-key"]
+  #   # The field to store the result in
+  #   field = "sample-key-value"
+  #   # The type of the result
+  #   # Can be "string", "integer", or "float"
+  #   type = "string"
 
   ## specify server password
   # password = "s#cr@t%"
