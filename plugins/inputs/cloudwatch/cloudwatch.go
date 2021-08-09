@@ -184,14 +184,17 @@ func (c *CloudWatch) Description() string {
 	return "Pull Metric Statistics from Amazon CloudWatch"
 }
 
+func (c *CloudWatch) Init() error {
+	if len(c.Namespace) != 0 {
+		c.Namespaces = append(c.Namespaces, c.Namespace)
+	}
+
+	return nil
+}
+
 // Gather takes in an accumulator and adds the metrics that the Input
 // gathers. This is called every "interval".
 func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
-	if len(c.Namespace) != 0 {
-		c.Namespaces = append(c.Namespaces, c.Namespace)
-		c.Namespace = ""
-	}
-
 	if c.statFilter == nil {
 		var err error
 		// Set config level filter (won't change throughout life of plugin).

@@ -118,6 +118,7 @@ func TestGather(t *testing.T) {
 	var acc testutil.Accumulator
 	c.client = &mockGatherCloudWatchClient{}
 
+	require.NoError(t, c.Init())
 	require.NoError(t, acc.GatherError(c.Gather))
 
 	fields := map[string]interface{}{}
