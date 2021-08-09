@@ -32,8 +32,8 @@ type Redis struct {
 
 	Log telegraf.Logger
 
-	clients     []Client
-	initialized bool
+	clients   []Client
+	connected bool
 }
 
 type Client interface {
@@ -234,8 +234,18 @@ var Tracking = map[string]string{
 	"role":              "replication_role",
 }
 
-func (r *Redis) init() error {
-	if r.initialized {
+func (r *Redis) Init() error {
+	for _, command := range r.Commands {
+		if command.Type != "string" && command.Type != "integer" && command.Type != "float" {
+			return fmt.Errorf(`unknown result type: expected one of "string", "integer", "float"; got %q`, command.Type)
+		}
+	}
+
+	return nil
+}
+
+func (r *Redis) connect() error {
+	if r.connected {
 		return nil
 	}
 
@@ -303,15 +313,15 @@ func (r *Redis) init() error {
 		}
 	}
 
-	r.initialized = true
+	r.connected = true
 	return nil
 }
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (r *Redis) Gather(acc telegraf.Accumulator) error {
-	if !r.initialized {
-		err := r.init()
+	if !r.connected {
+		err := r.connect()
 		if err != nil {
 			return err
 		}
@@ -337,6 +347,10 @@ func (r *Redis) gatherCommandValues(client Client, acc telegraf.Accumulator) err
 	for _, command := range r.Commands {
 		val, err := client.Do(command.Type, command.Command...)
 		if err != nil {
+			if strings.Contains(err.Error(), "unexpected type=") {
+				return fmt.Errorf("could not get command result: %s", err)
+			}
+
 			return err
 		}
 
